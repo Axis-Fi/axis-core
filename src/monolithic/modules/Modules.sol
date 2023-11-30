@@ -79,6 +79,12 @@ abstract contract WithModules is Owned {
         newModule_.INIT();
     }
 
+    // TODO may need to use proxies instead of this design to allow for upgrading due to a bug and keeping collateral in a derivative contract
+    // The downside is that you have the additional gas costs and potential for exploits in OCG
+    // It may be better to just not have the modules be upgradable
+    // Having a shutdown mechanism for a specific module and an entire auctionhouse version might be good as well. 
+    // Though it would still need to allow for claiming of outstanding derivative tokens.
+
     function upgradeModule(Module newModule_) external onlyOwner {
         // Validate new module and get its keycode
         Keycode keycode = _validateModule(newModule_);
