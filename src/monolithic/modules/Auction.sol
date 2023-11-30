@@ -218,7 +218,7 @@ abstract contract AuctionModule is Auction, Module {
         lotData[id] = lot;
 
         // Call internal createAuction function to store implementation-specific data
-        _createAuction(id, core, params_.implParams);
+        _createAuction(id, lot, params_.implParams);
 
         emit AuctionCreated(id, address(params_.payoutToken), address(params_.quoteToken));
     }

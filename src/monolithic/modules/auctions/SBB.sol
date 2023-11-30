@@ -1,0 +1,1 @@
+// sealed bid batch auction

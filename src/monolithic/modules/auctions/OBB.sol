@@ -1,0 +1,1 @@
+// open bid batch auction

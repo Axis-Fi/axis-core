@@ -1,0 +1,1 @@
+// 2 variable GDA. Price is dependent on time. The other variable is independent of time.
