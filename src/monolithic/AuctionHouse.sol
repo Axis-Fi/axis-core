@@ -8,13 +8,14 @@ import {SignatureCheckerLib} from "solady/utils/SignatureCheckerLib.sol";
 
 import "src/monolithic/bases/Vault.sol";
 import "src/monolithic/bases/Auctioneer.sol";
+import "src/monolithic/modules/Condenser.sol";
 
 abstract contract FeeManager {
     // TODO write fee logic in separate contract to keep it organized
     // Router can inherit
 }
 
-abstract contract Router is EIP712 {
+abstract contract Router is EIP712, FeeManager {
     // ========== DATA STRUCTURES ========== //
     struct LotOrder {
         address user;
@@ -210,15 +211,12 @@ contract AuctionHouse is Vault, Auctioneer, Router {
         uint256 lotId_,
         Auction.Routing memory routing_,
         address recipient_,
-        uint256 payout_
+        uint256 payout_,
+        bytes memory auctionOutput_
     ) internal {
-        // Get derivative info for lot
-        // We assume that the lotId has already been checked to be valid
-        LotDerivative memory lotDerivative = lotDerivatives[lotId_];
-
-        // Get the derivative type for the lot
-        // If there isn't one, then the payout is sent directly to the recipient
-        if (lotDerivative.dType == toKeycode("")) {
+        // If no derivative, then the payout is sent directly to the recipient
+        // Otherwise, send parameters and payout to the derivative to mint to recipient
+        if (routing_.derivativeType == toKeycode("")) {
             // No derivative, send payout to recipient
             routing_.payoutToken.safeTransfer(recipient_, payout_);
         } else {
@@ -226,11 +224,22 @@ contract AuctionHouse is Vault, Auctioneer, Router {
             // We assume that the module type has been checked when the lot was created
             DerivativeModule module = DerivativeModule(_getModuleIfInstalled(lotDerivative.dType));
 
+            bytes memory derivativeParams = routing_derivativeParams;
+            
+            // If condenser specified, condense auction output and derivative params before sending to derivative module
+            if (routing_.condenserType != toKeycode("")) {
+               // Get condenser module
+                CondenserModule condenser = CondenserModule(_getModuleIfInstalled(routing_.condenserType));
+
+                // Condense auction output and derivative params
+                derivativeParams = condenser.condense(auctionOutput_, derivativeParams);
+            }
+
             // Approve the module to transfer payout tokens
             routing_.payoutToken.safeApprove(address(module), payout_);
 
             // Call the module to mint derivative tokens to the recipient
-            module.mint(recipient_, payout_, lotDerivative.params, lotDerivative.wrapped);
-        }
+            module.mint(recipient_, payout_, derivativeParams, routing_.wrapDerivative);
+        } 
     }
 }

@@ -3,6 +3,7 @@ pragma solidity 0.8.19;
 
 import "src/monolithic/modules/Derivative.sol";
 
-abstract contract Vault is VaultStorage, ERC6909, WithModules {
+// TODO better name?
+abstract contract Tokenizer is WithModules {
     
 }

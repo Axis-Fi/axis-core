@@ -17,6 +17,8 @@ abstract contract Auctioneer is WithModules {
         IAllowlist allowlist; // (optional) contract that implements an allowlist for the market, based on IAllowlist
         Keycode derivativeType; // (optional) derivative type, represented by the Keycode for the derivative submodule. If not set, no derivative will be created.
         bytes derivativeParams; // (optional) abi-encoded data to be used to create payout derivatives on a purchase
+        bool wrapDerivative; // (optional) whether to wrap the derivative in a ERC20 token instead of the native ERC6909 format.
+        Keycode condenserType; // (optional) condenser type, represented by the Keycode for the condenser submodule. If not set, no condenser will be used.
     }
 
     struct RoutingParams {
@@ -29,6 +31,7 @@ abstract contract Auctioneer is WithModules {
         bytes payoutData;
         Keycode derivativeType; // (optional) derivative type, represented by the Keycode for the derivative submodule. If not set, no derivative will be created.
         bytes derivativeParams; // (optional) data to be used to create payout derivatives on a purchase
+        Keycode condenserType; // (optional) condenser type, represented by the Keycode for the condenser submodule. If not set, no condenser will be used.
     }
 
     // ========= STATE ========== //
