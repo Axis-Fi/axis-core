@@ -1,33 +1,28 @@
 /// SPDX-License-Identifier: AGPL-3.0
 pragma solidity 0.8.19;
 
-import {ERC6909} from "lib/solmate/src/tokens/ERC6909.sol";
-import "src/monolithic/modules/Modules.sol";
+import "src/monolithic/modules/Derivative.sol";
 
-abstract contract Derivative {
-
-    // ========== DATA STRUCTURES ========== //
-
-    struct Token {
-        bool exists;
-        address wrapped;
-        uint8 decimals;
-        string name;
-        string symbol;
-        bytes data;
-    }
-
-    // ========== STATE VARIABLES ========== //
-    mapping(Keycode dType => address) public wrappedImplementations;
-    mapping(uint256 tokenId => Token metadata) tokenMetadata;
-    mapping(uint256 lotId => uint256[] tokenIds) public lotDerivatives;
+abstract contract Derivatizer is WithModules {
 
     // ========== DERIVATIVE MANAGEMENT ========== //
 
-    function deploy(bytes memory data, bool wrap) external virtual returns (uint256, address);
+    // Return address will be zero if not wrapped
+    function deploy(Keycode dType, bytes memory data, bool wrapped) external virtual returns (uint256, address) {
+        // Load the derivative module, will revert if not installed
+        Derivative derivative = Derivative(address(_getModuleIfInstalled(dType)));
 
-    function mint(bytes memory data, uint256 amount, bool wrap) external virtual returns (bytes memory);
-    function mint(uint256 tokenId, uint256 amount, bool wrap) external virtual returns (bytes memory);
+        // Check that the type hasn't been sunset 
+        if (moduleSunset[dType]) revert("Derivatizer: type sunset");
+
+        // Call the deploy function on the derivative module
+        (uint256 tokenId, address wrappedToken) = derivative.deploy(data, wrapped);
+
+        return (tokenId, wrappedToken);
+    }
+
+    function mint(bytes memory data, uint256 amount, bool wrapped) external virtual returns (bytes memory);
+    function mint(uint256 tokenId, uint256 amount, bool wrapped) external virtual returns (bytes memory);
 
     function redeem(bytes memory data, uint256 amount) external virtual;
 
@@ -53,10 +48,4 @@ abstract contract Derivative {
 
     // Compute unique token ID for params on the submodule
     function computeId(bytes memory params_) external pure virtual returns (uint256);
-}
-
-abstract contract DerivativeModule is Derivative, ERC6909, Module {
-
-
-
 }

@@ -77,7 +77,8 @@ abstract contract Router is EIP712, FeeManager {
     /// @param approval_ - (Optional) Permit approval signature for the quoteToken
     function purchase(address recipient_, address referrer_, uint256 id_, uint256 amount_, uint256 minAmountOut_, bytes calldata approval_) external virtual returns (uint256 payout);
 
-    function purchase(address recipient_, address referrer_, ERC20 quoteToken_, ERC20 payoutToken_, uint256 amount_, uint256 minAmountOut_, bytes calldata approval_) external virtual returns (uint256 payout);
+    // Don't think this scales to many lots due to gas issues, better to enable off-chain and settle orders on lots that match
+    // function purchase(address recipient_, address referrer_, ERC20 quoteToken_, ERC20 payoutToken_, uint256 amount_, uint256 minAmountOut_, bytes calldata approval_) external virtual returns (uint256 payout);
 
     function bid(address recipient_, address referrer_, uint256 id_, uint256 amount_, uint256 minAmountOut_, bytes calldata approval_) external virtual;
 
@@ -85,6 +86,7 @@ abstract contract Router is EIP712, FeeManager {
 
     function settleBatch(uint256 id_, Auction.Bid[] memory bids_) external virtual returns (uint256[] memory amountsOut);
 
+    // Enables off-chain collection and submission of orders as is done in the current limit order system
     function executeOrder(LotOrder calldata order_, bytes calldata signature_, uint256 fee_) external virtual;
 
     function executeOrders(LotOrder[] calldata orders_, bytes[] calldata signatures_, uint256[] calldata fees_) external virtual;
@@ -129,10 +131,11 @@ contract AuctionHouse is Vault, Auctioneer, Router {
         uint256 toProtocol = ((amount_ * (protocolFee + referrerFees[referrer_])) / FEE_DECIMALS) -
             toReferrer;
 
-        // Send purchase to auction house and get payout and routing information
-        // Getting routing data in the same call saves gas by avoiding a second call
-        Auction.Routing memory routing;
-        (payout, routing) = module.purchase(id_, amount_ - toReferrer - toProtocol, minAmountOut_);
+        // Load routing data for the lot
+        Routing memory routing = lotRouting[id_];
+
+        // Send purchase to auction house and get payout plus any extra output
+        (payout, auctionOutput) = module.purchase(id_, amount_ - toReferrer - toProtocol, minAmountOut_);
 
         // Update fee balances if non-zero
         if (toReferrer > 0) rewards[referrer_][routing.quoteToken] += toReferrer;
@@ -142,9 +145,7 @@ contract AuctionHouse is Vault, Auctioneer, Router {
         _handleTransfers(routing, amount_, payout, toReferrer + toProtocol, approval_);
 
         // Handle payout to user, including creation of derivative tokens
-        // TODO how to lookup and pass derivative data? Require lookup in the module?
-        // Just pass id and handle there?
-        _handlePayout(id_, recipient_, payout);
+        _handlePayout(id_, routing, recipient_, payout, auctionOutput);
 
         // Emit event
         emit Purchase(id_, msg.sender, referrer_, amount_, payout);
@@ -158,7 +159,7 @@ contract AuctionHouse is Vault, Auctioneer, Router {
 
     /// @notice     Handles transfer of funds from user and market owner/callback
     function _handleTransfers(
-        Auction.Routing memory routing_,
+        Routing memory routing_,
         uint256 amount_,
         uint256 payout_,
         uint256 feePaid_,
@@ -209,7 +210,7 @@ contract AuctionHouse is Vault, Auctioneer, Router {
 
     function _handlePayout(
         uint256 lotId_,
-        Auction.Routing memory routing_,
+        Routing memory routing_,
         address recipient_,
         uint256 payout_,
         bytes memory auctionOutput_
@@ -224,7 +225,7 @@ contract AuctionHouse is Vault, Auctioneer, Router {
             // We assume that the module type has been checked when the lot was created
             DerivativeModule module = DerivativeModule(_getModuleIfInstalled(lotDerivative.dType));
 
-            bytes memory derivativeParams = routing_derivativeParams;
+            bytes memory derivativeParams = routing_.derivativeParams;
             
             // If condenser specified, condense auction output and derivative params before sending to derivative module
             if (routing_.condenserType != toKeycode("")) {

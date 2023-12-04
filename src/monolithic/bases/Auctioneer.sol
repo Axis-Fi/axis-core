@@ -57,12 +57,9 @@ abstract contract Auctioneer is WithModules {
     function _getModuleForId(uint256 id_) internal view returns (AuctionModule) {
         // Confirm lot ID is valid
         if (id_ >= lotCounter) revert HOUSE_InvalidLotId(id_);      
-        
-        // Get lot type
-        Keycode auctionType = lotType[id_];
 
         // Load module, will revert if not installed
-        return AuctionModule(_getModuleIfInstalled(auctionType));
+        return AuctionModule(_getModuleIfInstalled(lotRouting[id_].auctionType));
     }
 
     // TODO, these functions need to be moved to the Router and integrated with the _handle functions

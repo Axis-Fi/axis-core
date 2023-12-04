@@ -7,18 +7,18 @@ import {Owned} from "lib/solmate/src/auth/Owned.sol";
 
 // Keycode functions
 
-type Keycode is bytes5; // 3-5 characters, A-Z only
+type Keycode is bytes10; // 3-10 characters, A-Z only first 3, A-Z, blank, ., or 0-9 for the rest
 
 error TargetNotAContract(address target_);
 error InvalidKeycode(Keycode keycode_);
 
 // solhint-disable-next-line func-visibility
-function toKeycode(bytes5 keycode_) pure returns (Keycode) {
+function toKeycode(bytes10 keycode_) pure returns (Keycode) {
     return Keycode.wrap(keycode_);
 }
 
 // solhint-disable-next-line func-visibility
-function fromKeycode(Keycode keycode_) pure returns (bytes5) {
+function fromKeycode(Keycode keycode_) pure returns (bytes10) {
     return Keycode.unwrap(keycode_);
 }
 
@@ -29,15 +29,15 @@ function ensureContract(address target_) view {
 
 // solhint-disable-next-line func-visibility
 function ensureValidKeycode(Keycode keycode_) pure {
-    bytes5 unwrapped = Keycode.unwrap(keycode_);
+    bytes10 unwrapped = Keycode.unwrap(keycode_);
     for (uint256 i; i < 5; ) {
         bytes1 char = unwrapped[i];
         if (i < 3) {
             // First 3 characters must be A-Z
             if (char < 0x41 || char > 0x5A) revert InvalidKeycode(keycode_);
         } else {
-            // Characters after the first 3 can be A-Z or blank
-            if (char != 0x00 && (char < 0x41 || char > 0x5A)) revert InvalidKeycode(keycode_);
+            // Characters after the first 3 can be A-Z, blank, 0-9, or .
+            if (char != 0x00 && (char < 0x41 || char > 0x5A) && (char < 0x30 || char > 0x39) && char != 0x2E) revert InvalidKeycode(keycode_);
         }
         unchecked {
             i++;
@@ -53,6 +53,7 @@ abstract contract WithModules is Owned {
     error ModuleAlreadyInstalled(Keycode keycode_);
     error ModuleNotInstalled(Keycode keycode_);
     error ModuleExecutionReverted(bytes error_);
+    error ModuleAlreadySunset(Keycode keycode_);
 
     // ========= MODULE MANAGEMENT ========= //
 
@@ -61,6 +62,9 @@ abstract contract WithModules is Owned {
 
     /// @notice Mapping of Keycode to Module address.
     mapping(Keycode => Module) public getModuleForKeycode;
+
+    /// @notice Mapping of Keycode to whether the module is sunset.
+    mapping(Keycode => bool) public moduleSunset;
 
     function installModule(Module newModule_) external onlyOwner {
         // Validate new module and get its subkeycode
@@ -79,29 +83,46 @@ abstract contract WithModules is Owned {
         newModule_.INIT();
     }
 
+    /// @notice Prevents future use of module, but functionality remains for existing users. Modules should implement functionality such that creation functions are disabled if sunset.
+    function sunsetModule(Keycode keycode_) external onlyOwner {
+        // Check that the module is installed
+        if (!_moduleIsInstalled(keycode_)) revert ModuleNotInstalled(keycode_);
+
+        // Check that the module is not already sunset
+        if (moduleSunset[keycode_]) revert ModuleAlreadySunset(keycode_);
+
+        // Set the module to sunset
+        moduleSunset[keycode_] = true;
+    }
+    
+
     // TODO may need to use proxies instead of this design to allow for upgrading due to a bug and keeping collateral in a derivative contract
     // The downside is that you have the additional gas costs and potential for exploits in OCG
     // It may be better to just not have the modules be upgradable
     // Having a shutdown mechanism for a specific module and an entire auctionhouse version might be good as well. 
     // Though it would still need to allow for claiming of outstanding derivative tokens.
 
-    function upgradeModule(Module newModule_) external onlyOwner {
-        // Validate new module and get its keycode
-        Keycode keycode = _validateModule(newModule_);
+    // NOTE: don't use upgradable modules. simply require a new module to be installed and sunset the old one to migrate functionality.
+    // This doesn't allow fixing a contract for existing users / data, but it prevents malicious upgrades.
+    // Versions can be used in the keycode to denote a new version of the same module, e.g. SDA v1.1
+    // function upgradeModule(Module newModule_) external onlyOwner {
+    //     // Validate new module and get its keycode
+    //     Keycode keycode = _validateModule(newModule_);
 
-        // Get the existing module, ensure that it's not zero and not the same as the new module
-        // If this reverts due to no module being installed, then the new module should be installed via installModule
-        Module oldModule = getModuleForKeycode[keycode];
-        if (oldModule == Module(address(0)) || oldModule == newModule_)
-            revert InvalidModuleUpgrade(keycode);
+    //     // Get the existing module, ensure that it's not zero and not the same as the new module
+    //     // If this reverts due to no module being installed, then the new module should be installed via installModule
+    //     Module oldModule = getModuleForKeycode[keycode];
+    //     if (oldModule == Module(address(0)) || oldModule == newModule_)
+    //         revert InvalidModuleUpgrade(keycode);
 
-        // Update module in module
-        getModuleForKeycode[keycode] = newModule_;
+    //     // Update module in module
+    //     getModuleForKeycode[keycode] = newModule_;
 
-        // Initialize the module
-        newModule_.INIT();
-    }
+    //     // Initialize the module
+    //     newModule_.INIT();
+    // }
 
+    // TODO decide if we need this function, i.e. do we need to set any parameters or call permissioned functions on any modules?
     function execOnModule(
         Keycode keycode_,
         bytes memory callData_
@@ -112,6 +133,7 @@ abstract contract WithModules is Owned {
         return returnData;
     }
 
+    // Need to consider the implications of not having upgradable modules and the affect of this list growing over time
     function getModules() external view returns (Keycode[] memory) {
         return modules;
     }
