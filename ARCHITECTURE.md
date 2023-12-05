@@ -1,4 +1,6 @@
-# Moonraker Contract Architecture
+# Moonraker Architecture
+
+## Contract
 
 ```mermaid
 classDiagram
@@ -185,4 +187,32 @@ classDiagram
 
   Module ..> WithModules
   
+```
+
+## Processes
+
+### Create an Auction
+
+```mermaid
+sequenceDiagram
+  participant Auction Owner
+  participant AuctionHouse
+  participant SDAAuctionModule
+
+  Auction Owner->>AuctionHouse: Auctioneer.auction(RoutingParams routing, Auction.AuctionParams params)
+
+  AuctionHouse->>AuctionHouse: _getModuleIfInstalled(auctionType)
+
+  AuctionHouse->>SDAAuctionModule: auction(uint256 id, Auction.AuctionParams params)
+
+  SDAAuctionModule->>SDAAuctionModule: AuctionModule.createAuction(AuctionParams auctionParams)
+  Note right of SDAAuctionModule: validation, creates Lot record
+  SDAAuctionModule->>SDAAuctionModule: _createAuction(uint256 id, Lot lot, bytes implParams)
+  Note right of SDAAuctionModule: module-specific actions
+
+  SDAAuctionModule-->>AuctionHouse: 
+
+  Note over AuctionHouse: store routing information
+
+  AuctionHouse-->>Auction Owner: auction id
 ```
