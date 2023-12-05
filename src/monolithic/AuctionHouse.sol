@@ -24,9 +24,9 @@ abstract contract Router is EIP712, FeeManager {
         uint256 lotId;
         uint256 amount;
         uint256 minAmountOut;
-        uint256 maxFee;
-        uint256 submitted;
-        uint256 deadline;
+        uint256 maxFee; // TODO needs to be uint256? can it refer to FeeManager?
+        uint256 submitted; // TODO can uint48 be used?
+        uint256 deadline; // TODO can uint48 be used?
     }
 
     // TODO: review this initial attempt at Orders for a token pair vs. a specific auction lot
@@ -39,9 +39,9 @@ abstract contract Router is EIP712, FeeManager {
         bytes parameters; // idea is to allow specifying allowable derivative types and criteria for them
         uint256 amount;
         uint256 minAmountOut;
-        uint256 maxFee;
-        uint256 submitted;
-        uint256 deadline;
+        uint256 maxFee; // TODO needs to be uint256? can it refer to FeeManager?
+        uint256 submitted; // TODO can uint48 be used?
+        uint256 deadline; // TODO can uint48 be used?
     }
 
     // ========== STATE VARIABLES ========== //

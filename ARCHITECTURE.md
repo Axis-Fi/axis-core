@@ -6,6 +6,10 @@ classDiagram
   EIP712 --|> Router
   FeeManager --|> Router
 
+  class EIP712 {
+    +eip712Domain() (bytes1 fields, string name, string version, uint256 chainId, address verifyingContract, bytes32 salt, uint256[] extensions)
+  }
+
   Owned --|> WithModules
   class Owned {
     <<Abstract>>
