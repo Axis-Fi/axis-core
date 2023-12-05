@@ -14,6 +14,7 @@ abstract contract Derivative {
         uint8 decimals;
         string name;
         string symbol;
+        // TODO clarify what kind of data could be contained here
         bytes data;
     }
 
@@ -35,8 +36,10 @@ abstract contract Derivative {
 
     function exercise(bytes memory data, uint256 amount) external virtual;
 
+    // TODO how is this different to exercise or redeem?
     function reclaim(bytes memory data) external virtual;
 
+    // TODO what does this do?
     function convert(bytes memory data, uint256 amount) external virtual;
 
     // TODO Consider best inputs for UX
