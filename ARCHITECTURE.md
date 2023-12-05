@@ -216,3 +216,41 @@ sequenceDiagram
 
   AuctionHouse-->>Auction Owner: auction id
 ```
+
+### Purchase from an Auction
+
+#### No Derivative
+
+```mermaid
+sequenceDiagram
+  participant Buyer
+  participant AuctionHouse
+  participant SDAAuctionModule
+  participant Auction Owner
+
+  Buyer->>AuctionHouse: purchase(address recipient, address referrer, uint256 auctionId, uint256 amount, uint256 minAmountOut, bytes approval)
+
+  AuctionHouse->>AuctionHouse: _getModuleForId(uint256 auctionId)
+
+  AuctionHouse->>SDAAuctionModule: purchase(uint256 auctionId, uint256 amount, uint256 minAmountOut)
+
+  SDAAuctionModule-->>AuctionHouse: uint256 payoutAmount, bytes auctionOutput
+
+  Note over AuctionHouse: transfers
+
+  AuctionHouse->>AuctionHouse: _handleTransfers(uint256 id, Routing routing, address recipient, uint256 amount, bytes auctionOutput)
+
+  AuctionHouse->>Buyer: quoteToken.safeTransferFrom(buyer, auctionHouse, amount)
+  Buyer-->>AuctionHouse: transfer quote tokens
+
+  AuctionHouse->>Auction Owner: payoutToken.safeTransferFrom(auctionOwner, auctionHouse, payoutAmount)
+  Auction Owner-->>AuctionHouse: transfer payout tokens
+
+  AuctionHouse->>Auction Owner: quoteToken.safeTransfer(auctionOwner, amountLessFee)
+
+  Note over AuctionHouse: payout
+
+  AuctionHouse->>Buyer: payoutToken.safeTransfer(recipient, payoutAmount)
+
+  AuctionHouse-->>Buyer: payout amount
+```
