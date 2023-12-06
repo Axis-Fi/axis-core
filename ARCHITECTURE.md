@@ -277,3 +277,74 @@ sequenceDiagram
     AuctionHouse-->>Buyer: payout amount
   deactivate AuctionHouse
 ```
+
+#### With Derivative
+
+```mermaid
+sequenceDiagram
+  autoNumber
+  participant Buyer
+  participant AuctionHouse
+  participant SDAAuctionModule
+  participant DerivativeModule
+  participant CondenserModule
+  participant Auction Owner
+  participant QuoteToken
+  participant PayoutToken
+  participant DerivativeToken
+
+  Buyer->>AuctionHouse: purchase(address recipient, address referrer, uint256 auctionId, uint256 amount, uint256 minAmountOut, bytes approval)
+  activate AuctionHouse
+    AuctionHouse->>AuctionHouse: _getModuleForId(uint256 auctionId)
+
+    Note over AuctionHouse: purchase
+
+    AuctionHouse->>SDAAuctionModule: purchase(uint256 auctionId, uint256 amount, uint256 minAmountOut)
+    activate SDAAuctionModule
+      SDAAuctionModule-->>AuctionHouse: uint256 payoutAmount, bytes auctionOutput
+    deactivate SDAAuctionModule
+
+    Note over AuctionHouse: transfers
+
+    AuctionHouse->>AuctionHouse: _handleTransfers(Routing routing, uint256 amount, address recipient, uint256 payout, bytes auctionOutput)
+    activate AuctionHouse
+
+      AuctionHouse->>QuoteToken: safeTransferFrom(buyer, auctionHouse, amount)
+      activate AuctionHouse
+        Buyer-->>AuctionHouse: transfer quote tokens
+      deactivate AuctionHouse
+
+      AuctionHouse->>PayoutToken: safeTransferFrom(auctionOwner, auctionHouse, payoutAmount)
+      activate AuctionHouse
+        Auction Owner-->>AuctionHouse: transfer payout tokens
+      deactivate AuctionHouse
+
+      AuctionHouse->>QuoteToken: safeTransfer(auctionOwner, amountLessFee)
+      activate AuctionHouse
+        AuctionHouse-->>Auction Owner: transfer quote tokens
+      deactivate AuctionHouse
+    deactivate AuctionHouse
+
+    Note over AuctionHouse: derivative payout
+
+    AuctionHouse->>AuctionHouse: _handlePayout(uint256 id, Routing routing, address recipient, uint256 payout, bytes auctionOutput)
+    activate AuctionHouse
+      AuctionHouse->>AuctionHouse: _getModuleIfInstalled(derivativeType)
+
+      AuctionHouse->>AuctionHouse: _getModuleIfInstalled(condenserType)
+
+      AuctionHouse->>CondenserModule: condense(auctionOutput, derivativeParams)
+      activate CondenserModule
+        CondenserModule-->>AuctionHouse: derivative params
+      deactivate CondenserModule
+
+      AuctionHouse->>DerivativeModule: mint(recipient, payout, derivativeParams, wrapDerivative)
+      activate DerivativeModule
+        DerivativeModule->>DerivativeToken: safeTransfer(buyer, payout)
+        DerivativeToken-->>Buyer: transfer derivative tokens
+      deactivate DerivativeModule
+    deactivate AuctionHouse
+
+    AuctionHouse-->>Buyer: payout amount
+  deactivate AuctionHouse
+```
