@@ -3,12 +3,7 @@
 ```mermaid
 classDiagram
   direction BT
-  EIP712 --|> Router
   FeeManager --|> Router
-
-  class EIP712 {
-    +eip712Domain() (bytes1 fields, string name, string version, uint256 chainId, address verifyingContract, bytes32 salt, uint256[] extensions)
-  }
 
   Owned --|> WithModules
   class Owned {
@@ -30,42 +25,38 @@ classDiagram
     +uint256 lotCounter
     +mapping[Keycode auctionType -> bool] typeSunset
     +mapping[uint256 lotId -> Routing] lotRouting
-    +auction(RoutingParams routing_, Auction.AuctionParams params_) uint256
-    +close(uint256 id_)
-    +getRouting(uint256 id_) Routing
-    +payoutFor(uint256 id_) Routing
-    +priceFor(uint256 id_, uint256 amount_) uint256
-    +maxPayout(uint256 id_) uint256
-    +maxAmountAccepted(uint256 id_) uint256
-    +isLive(uint256 id_) bool
-    +ownerOf(uint256 id_) address
-    +remainingCapacity(id_) uint256
+    +createAuction(RoutingParams routing, Auction.AuctionParams params) uint256
+    +closeAuction(uint256 lotId)
+    +getRouting(uint256 lotId) Routing
+    +payoutFor(uint256 lotId) Routing
+    +priceFor(uint256 lotId, uint256 amount) uint256
+    +maxPayout(uint256 lotId) uint256
+    +maxAmountAccepted(uint256 lotId) uint256
+    +isLive(uint256 lotId) bool
+    +ownerOf(uint256 lotId) address
+    +remainingCapacity(lotId) uint256
   }
 
   class Router {
     <<Abstract>>
-    struct Order
     +uint48 protocolFee
     +uint48 constant FEE_DECIMALS = 1e5
     +mapping[address referrer -> uint48] referrerFees
-    +mapping[address -> Mapping[ERC20 -> uint256]] rewards
+    +mapping[address -> mapping[ERC20 -> uint256]] rewards
     ~address immutable treasury
-    +purchase(address recipient, address referrer, uint256 lotId, uint256 amount, uint256 minAmountOut, bytes approval): uint256
-    +bid(address recipient, address referrer, uint256 lotId, uint256 amount, uint256 minAmountOut, bytes approval)
-    +settleBatch(uint256 lotId, Auction.Bid[] bids): uint256[]
-    +executeOrder(Order order, bytes signature, uint256 fee)
-    +executeOrders(Order[] orders, bytes[] signatures, uint256[] fees)
-    +orderDigest(Order order): bytes32
-    +cancelOrder(Order order)
-    +reinstateOrder(Order order)
-    +DOMAIN_SEPARATOR(): bytes32
-    +updateDomainSeparator()
+    +purchase(address recipient, address referrer, uint256 lotId, uint256 amount, uint256 minAmountOut, bytes auctionData, bytes approval): uint256
+    +bid(address recipient, address referrer, uint256 lotId, uint256 amount, uint256 minAmountOut, bytes auctionData, bytes approval)
+    +settle(uint256 lotId): uint256[]
+    +settle(uint256 lotId, Auction.Bid[] bids): uint256[]
   }
 
   class AuctionHouse {
-    +purchase(address recipient, address referrer, uint256 lotId, uint256 amount, uint256 minAmountOut, bytes approval): uint256
+    +purchase(address recipient, address referrer, uint256 lotId, uint256 amount, uint256 minAmountOut, bytes auctionData, bytes approval): uint256
     ~handleTransfers(Routing routing, uint256 amount, uint256 payout, uint256 feePaid, bytes approval)
     ~handlePayouts(uint256 lotId, Routing routing, address recipient, uint256 payout, bytes auctionOutput)
+    +bid(address recipient, address referrer, uint256 lotId, uint256 amount, uint256 minAmountOut, bytes32 auctionData, bytes approval)
+    +settle(uint256 lotId): uint256[]
+    +settle(uint256 lotId, Auction.Bid[] bids): uint256[]
   }
 
   class Condenser {
@@ -120,30 +111,34 @@ classDiagram
     +bool allowNewMarkets
     +uint48 minAuctionDuration
     ~uint48 ONE_HUNDRED_PERCENT = 1e5
-    +mapping[uint256 id => Lot] lotData
-    +purchase(uint256 id_, uint256 amount_, uint256 minAmountOut_) (uint256, bytes)
-    +settle(uint256 id_, Bid[] bids_) uint256[]
-    +createAuction(uint256 id_, bytes param_)
-    +closeAuction(uint256 id_)
-    +getRouting(uint256 id_) Routing
-    +payoutFor(uint256 id_, uint256 amount_) uint256
-    +maxPayout(uint256 id_) uint256
-    +maxAmountAccepted(uint256 id_) uint256
-    +isLive(uint256 id_) bool
-    +ownerOf(uint256 id_) address
-    +remainingCapacity(uint256 id_) uint256
+    +mapping[uint256 lotId => Lot] lotData
+    +purchase(uint256 lotId, uint256 amount, uint256 minAmountOut, bytes auctionData) (uint256, bytes)
+    +bid(uint256 lotId, uint256 amount, uint256 minAmountOut, bytes auctionData) (uint256, bytes)
+    +settle(uint256 lotId) uint256[]
+    +settle(uint256 lotId, Bid[] bids) uint256[]
+    +createAuction(uint256 lotId, AuctionParams params)
+    +closeAuction(uint256 lotId)
+    +getRouting(uint256 lotId) Routing
+    +payoutFor(uint256 lotId, uint256 amount) uint256
+    +maxPayout(uint256 lotId) uint256
+    +maxAmountAccepted(uint256 lotId) uint256
+    +isLive(uint256 lotId) bool
+    +ownerOf(uint256 lotId) address
+    +remainingCapacity(uint256 lotId) uint256
   }
 
   class AuctionModule {
     <<abstract>>
-    +purchase(uint256 id_, uint256 amount_, uint256 minAmountOut_) uint256
-    +settle(uint256 id_, Bid[] bids_) uint256[]
-    +createAuction(uint256 id_, AuctionParams params_)
-    +closeAuction(uint256 id_)
-    +getRouting(uint256 id_) Routing
-    +isLive(uint256 id_) bool
-    +ownerOf(uint256 id_) address
-    +remainingCapacity(uint256 id_) uint256
+    +purchase(uint256 lotId, uint256 amount, uint256 minAmountOut, bytes auctionData) (uint256, bytes)
+    +bid(uint256 lotId, uint256 amount, uint256 minAmountOut, bytes auctionData) (uint256, bytes)
+    +settle(uint256 lotId) uint256[]
+    +settle(uint256 lotId, Bid[] bids) uint256[]
+    +createAuction(uint256 lotId, AuctionParams params)
+    +closeAuction(uint256 lotId)
+    +getRouting(uint256 lotId) Routing
+    +isLive(uint256 lotId) bool
+    +ownerOf(uint256 lotId) address
+    +remainingCapacity(uint256 lotId) uint256
   }
 
   Module --|> DerivativeModule

@@ -39,6 +39,7 @@ abstract contract Auction {
         address bidder;
         uint256 amount;
         uint256 minAmountOut;
+        bytes32 param; // optional implementation-specific parameter for the bid
     }
 
     struct AuctionParams {
@@ -81,7 +82,7 @@ abstract contract Auction {
 
     // ========== AUCTION MANAGEMENT ========== //
 
-    function createAuction(uint256 id_, bytes memory param_) external virtual;
+    function createAuction(uint256 id_, bytes memory params_) external virtual;
 
     function closeAuction(uint256 id_) external virtual;
 
@@ -108,7 +109,7 @@ abstract contract AuctionModule is Auction, Module {
 
     // ========== AUCTION EXECUTION ========== //
 
-    function purchase(uint256 id_, uint256 amount_, uint256 minAmountOut_) external override onlyParent returns (uint256 payout) {
+    function purchase(uint256 id_, uint256 amount_, uint256 minAmountOut_, bytes calldata auctionData_) external override onlyParent returns (uint256 payout, bytes memory auctionOutput) {
         Lot storage lot = lotData[id_];
 
         // Check if market is live, if not revert

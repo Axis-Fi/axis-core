@@ -15,34 +15,7 @@ abstract contract FeeManager {
     // Router can inherit
 }
 
-abstract contract Router is EIP712, FeeManager {
-    // ========== DATA STRUCTURES ========== //
-    struct LotOrder {
-        address user;
-        address recipient;
-        address referrer;
-        uint256 lotId;
-        uint256 amount;
-        uint256 minAmountOut;
-        uint256 maxFee; // TODO needs to be uint256? can it refer to FeeManager?
-        uint256 submitted; // TODO can uint48 be used?
-        uint256 deadline; // TODO can uint48 be used?
-    }
-
-    // TODO: review this initial attempt at Orders for a token pair vs. a specific auction lot
-    struct PairOrder {
-        address user;
-        address recipient;
-        address referrer;
-        ERC20 quoteToken;
-        ERC20 payoutToken;
-        bytes parameters; // idea is to allow specifying allowable derivative types and criteria for them
-        uint256 amount;
-        uint256 minAmountOut;
-        uint256 maxFee; // TODO needs to be uint256? can it refer to FeeManager?
-        uint256 submitted; // TODO can uint48 be used?
-        uint256 deadline; // TODO can uint48 be used?
-    }
+abstract contract Router is FeeManager {
 
     // ========== STATE VARIABLES ========== //
 
@@ -68,49 +41,20 @@ abstract contract Router is EIP712, FeeManager {
     // TODO make this updatable
     address internal immutable _protocol;
 
-    // BondAggregator contract with utility functions
-    IBondAggregator internal immutable _aggregator;
-
-
-    // ========== DIRECT EXECUTION ========== //
+    // ========== ATOMIC AUCTIONS ========== //
 
     /// @param approval_ - (Optional) Permit approval signature for the quoteToken
-    function purchase(address recipient_, address referrer_, uint256 id_, uint256 amount_, uint256 minAmountOut_, bytes calldata approval_) external virtual returns (uint256 payout);
+    function purchase(address recipient_, address referrer_, uint256 id_, uint256 amount_, uint256 minAmountOut_, bytes calldata auctionData_, bytes calldata approval_) external virtual returns (uint256 payout);
 
-    // Don't think this scales to many lots due to gas issues, better to enable off-chain and settle orders on lots that match
-    // function purchase(address recipient_, address referrer_, ERC20 quoteToken_, ERC20 payoutToken_, uint256 amount_, uint256 minAmountOut_, bytes calldata approval_) external virtual returns (uint256 payout);
+    // ========== BATCH AUCTIONS ========== //
 
-    function bid(address recipient_, address referrer_, uint256 id_, uint256 amount_, uint256 minAmountOut_, bytes calldata approval_) external virtual;
+    // On-chain auction variant
+    function bid(address recipient_, address referrer_, uint256 id_, uint256 amount_, uint256 minAmountOut_, bytes calldata auctionData_, bytes calldata approval_) external virtual;
 
-    // ========== DELEGATED EXECUTION ========== //
+    function settle(uint256 id_) external virtual returns (uint256[] memory amountsOut);
 
-    function settleBatch(uint256 id_, Auction.Bid[] memory bids_) external virtual returns (uint256[] memory amountsOut);
-
-    // Enables off-chain collection and submission of orders as is done in the current limit order system
-    function executeOrder(LotOrder calldata order_, bytes calldata signature_, uint256 fee_) external virtual;
-
-    function executeOrders(LotOrder[] calldata orders_, bytes[] calldata signatures_, uint256[] calldata fees_) external virtual;
-
-    function executeOrder(PairOrder calldata order_, bytes calldata signature_, uint256 fee_) external virtual;
-
-    function executeOrders(PairOrder[] calldata orders_, bytes[] calldata signatures_, uint256[] calldata fees_) external virtual;
-
-    
-    // TODO how to handle placing bids or purchases on multiple auctions at once?
-    // TODO how to allow executor to place bids and then settle an auction?
-
-    // TODO having multiple order types opens up a tiny possibility of hash collisions.
-    // Think through if it's worth having both
-    function orderDigest(Order calldata order_) external view returns (bytes32);
-
-    function cancelOrder(Order calldata order_) external;
-
-    function reinstateOrder(Order calldata order_) external;
-    
-    function DOMAIN_SEPARATOR() external view returns (bytes32);
-
-    function updateDomainSeparator() external;    
-
+    // Off-chain auction variant
+    function settle(uint256 id_, Auction.Bid[] memory bids_) external virtual returns (uint256[] memory amountsOut);
 }
 
 // TODO change Vault to Tokenizer if collateral will be held in the Derivative contracts
@@ -119,7 +63,7 @@ contract AuctionHouse is Vault, Auctioneer, Router {
 
     // ========== DIRECT EXECUTION ========== //
 
-    function purchase(address recipient_, address referrer_, uint256 id_, uint256 amount_, uint256 minAmountOut_, bytes calldata approval_) external override returns (uint256 payout) {
+    function purchase(address recipient_, address referrer_, uint256 id_, uint256 amount_, uint256 minAmountOut_, bytes calldata auctionData_, bytes calldata approval_) external override returns (uint256 payout) {
         AuctionModule module = _getModuleForId(id_);
 
         // Calculate fees for purchase
@@ -135,7 +79,7 @@ contract AuctionHouse is Vault, Auctioneer, Router {
         Routing memory routing = lotRouting[id_];
 
         // Send purchase to auction house and get payout plus any extra output
-        (payout, auctionOutput) = module.purchase(id_, amount_ - toReferrer - toProtocol, minAmountOut_);
+        (payout, auctionOutput) = module.purchase(id_, amount_ - toReferrer - toProtocol, minAmountOut_, auctionData_);
 
         // Update fee balances if non-zero
         if (toReferrer > 0) rewards[referrer_][routing.quoteToken] += toReferrer;
