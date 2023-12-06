@@ -200,14 +200,12 @@ sequenceDiagram
   participant AuctionHouse
   participant SDAAuctionModule
 
+  Auction Owner->>AuctionHouse: Auctioneer.auction(RoutingParams routing, Auction.AuctionParams params)
   activate AuctionHouse
-    Auction Owner->>AuctionHouse: Auctioneer.auction(RoutingParams routing, Auction.AuctionParams params)
-
     AuctionHouse->>AuctionHouse: _getModuleIfInstalled(auctionType)
 
+    AuctionHouse->>SDAAuctionModule: auction(uint256 id, Auction.AuctionParams params)
     activate SDAAuctionModule
-      AuctionHouse->>SDAAuctionModule: auction(uint256 id, Auction.AuctionParams params)
-
       SDAAuctionModule->>SDAAuctionModule: AuctionModule.createAuction(AuctionParams auctionParams)
       Note right of SDAAuctionModule: validation, creates Lot record
       SDAAuctionModule->>SDAAuctionModule: _createAuction(uint256 id, Lot lot, bytes implParams)
@@ -233,44 +231,47 @@ sequenceDiagram
   participant AuctionHouse
   participant SDAAuctionModule
   participant Auction Owner
-
+  participant QuoteToken
+  participant PayoutToken
+  
+  Buyer->>AuctionHouse: purchase(address recipient, address referrer, uint256 auctionId, uint256 amount, uint256 minAmountOut, bytes approval)
   activate AuctionHouse
-    Buyer->>AuctionHouse: purchase(address recipient, address referrer, uint256 auctionId, uint256 amount, uint256 minAmountOut, bytes approval)
-
     AuctionHouse->>AuctionHouse: _getModuleForId(uint256 auctionId)
 
     Note over AuctionHouse: purchase
 
+    AuctionHouse->>SDAAuctionModule: purchase(uint256 auctionId, uint256 amount, uint256 minAmountOut)
     activate SDAAuctionModule
-      AuctionHouse->>SDAAuctionModule: purchase(uint256 auctionId, uint256 amount, uint256 minAmountOut)
-
       SDAAuctionModule-->>AuctionHouse: uint256 payoutAmount, bytes auctionOutput
     deactivate SDAAuctionModule
 
     Note over AuctionHouse: transfers
 
+    AuctionHouse->>AuctionHouse: _handleTransfers(Routing routing, uint256 amount, address recipient, uint256 payout, bytes auctionOutput)
     activate AuctionHouse
-      AuctionHouse->>AuctionHouse: _handleTransfers(Routing routing, uint256 amount, address recipient, uint256 payout, bytes auctionOutput)
 
-      activate Buyer
-        AuctionHouse->>Buyer: quoteToken.safeTransferFrom(buyer, auctionHouse, amount)
+      AuctionHouse->>QuoteToken: safeTransferFrom(buyer, auctionHouse, amount)
+      activate AuctionHouse
         Buyer-->>AuctionHouse: transfer quote tokens
-      deactivate Buyer
+      deactivate AuctionHouse
 
-      activate Auction Owner
-        AuctionHouse->>Auction Owner: payoutToken.safeTransferFrom(auctionOwner, auctionHouse, payoutAmount)
+      AuctionHouse->>PayoutToken: safeTransferFrom(auctionOwner, auctionHouse, payoutAmount)
+      activate AuctionHouse
         Auction Owner-->>AuctionHouse: transfer payout tokens
-      deactivate Auction Owner
+      deactivate AuctionHouse
 
-      AuctionHouse->>Auction Owner: quoteToken.safeTransfer(auctionOwner, amountLessFee)
+      AuctionHouse->>QuoteToken: safeTransfer(auctionOwner, amountLessFee)
+      activate AuctionHouse
+        AuctionHouse-->>Auction Owner: transfer quote tokens
+      deactivate AuctionHouse
     deactivate AuctionHouse
 
     Note over AuctionHouse: payout
 
+    AuctionHouse->>AuctionHouse: _handlePayout(uint256 id, Routing routing, address recipient, uint256 payout, bytes auctionOutput)
     activate AuctionHouse
-      AuctionHouse->>AuctionHouse: _handlePayout(uint256 id, Routing routing, address recipient, uint256 payout, bytes auctionOutput)mermaidjs
-
-      AuctionHouse->>Buyer: payoutToken.safeTransfer(recipient, payoutAmount)
+      AuctionHouse->>PayoutToken: safeTransfer(recipient, payoutAmount)
+      AuctionHouse-->>Buyer: transfer payout tokens
     deactivate AuctionHouse
 
     AuctionHouse-->>Buyer: payout amount
