@@ -252,11 +252,15 @@ sequenceDiagram
     activate AuctionHouse
       AuctionHouse->>AuctionHouse: _handleTransfers(Routing routing, uint256 amount, address recipient, uint256 payout, bytes auctionOutput)
 
-      AuctionHouse->>Buyer: quoteToken.safeTransferFrom(buyer, auctionHouse, amount)
-      Buyer-->>AuctionHouse: transfer quote tokens
+      activate Buyer
+        AuctionHouse->>Buyer: quoteToken.safeTransferFrom(buyer, auctionHouse, amount)
+        Buyer-->>AuctionHouse: transfer quote tokens
+      deactivate Buyer
 
-      AuctionHouse->>Auction Owner: payoutToken.safeTransferFrom(auctionOwner, auctionHouse, payoutAmount)
-      Auction Owner-->>AuctionHouse: transfer payout tokens
+      activate Auction Owner
+        AuctionHouse->>Auction Owner: payoutToken.safeTransferFrom(auctionOwner, auctionHouse, payoutAmount)
+        Auction Owner-->>AuctionHouse: transfer payout tokens
+      deactivate Auction Owner
 
       AuctionHouse->>Auction Owner: quoteToken.safeTransfer(auctionOwner, amountLessFee)
     deactivate AuctionHouse
