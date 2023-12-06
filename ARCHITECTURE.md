@@ -17,6 +17,7 @@ classDiagram
 
   WithModules --|> Auctioneer
   class WithModules {
+    <<Abstract>>
     +List~WithModules.Keycode~ modules
   }
 
@@ -39,17 +40,26 @@ classDiagram
     +remainingCapacity(lotId) uint256
   }
 
-  class Router {
+  class FeeManager {
     <<Abstract>>
     +uint48 protocolFee
     +uint48 constant FEE_DECIMALS = 1e5
     +mapping[address referrer -> uint48] referrerFees
     +mapping[address -> mapping[ERC20 -> uint256]] rewards
+    +claimFees(): uint256
+  }
+
+  class Router {
+    <<Abstract>>
     ~address immutable treasury
     +purchase(address recipient, address referrer, uint256 lotId, uint256 amount, uint256 minAmountOut, bytes auctionData, bytes approval): uint256
     +bid(address recipient, address referrer, uint256 lotId, uint256 amount, uint256 minAmountOut, bytes auctionData, bytes approval)
     +settle(uint256 lotId): uint256[]
     +settle(uint256 lotId, Auction.Bid[] bids): uint256[]
+  }
+
+  class Derivatizer {
+    
   }
 
   class AuctionHouse {
@@ -164,7 +174,7 @@ classDiagram
     +unwrap(uint256 tokenId, uint256 amount)
     +exerciseCost(bytes data, uint256 amount) uint256
     +convertsTo(bytes data, uint256 amount) uint256
-    +computeId(bytes params_) uint256
+    +computeTokenId(bytes data) uint256
   }
 
   class ERC6909 {
@@ -183,6 +193,12 @@ classDiagram
   Module ..> WithModules
   
 ```
+
+### TODOs
+- [ ] Decide if Derivatives should be mintable from auction house (by providing Keycode) or only from the module directly
+  - If not, do not need Derivatizer.
+- [ ] Add section for Auction and Derivative module implementations after we prioritize which ones to build first
+
 
 ## Processes
 
