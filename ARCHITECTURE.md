@@ -1,4 +1,6 @@
-# Moonraker Contract Architecture
+# Moonraker Architecture
+
+## Contract
 
 ```mermaid
 classDiagram
@@ -180,4 +182,155 @@ classDiagram
 
   Module ..> WithModules
   
+```
+
+## Processes
+
+### Create an Auction
+
+```mermaid
+sequenceDiagram
+  autoNumber
+  participant AuctionOwner
+  participant AuctionHouse
+  participant SDAAuctionModule
+
+  AuctionOwner->>AuctionHouse: Auctioneer.auction(RoutingParams routing, Auction.AuctionParams params)
+  activate AuctionHouse
+    AuctionHouse->>AuctionHouse: _getModuleIfInstalled(auctionType)
+
+    AuctionHouse->>SDAAuctionModule: auction(uint256 id, Auction.AuctionParams params)
+    activate SDAAuctionModule
+      SDAAuctionModule->>SDAAuctionModule: AuctionModule.createAuction(AuctionParams auctionParams)
+      Note right of SDAAuctionModule: validation, creates Lot record
+      SDAAuctionModule->>SDAAuctionModule: _createAuction(uint256 id, Lot lot, bytes implParams)
+      Note right of SDAAuctionModule: module-specific actions
+
+      SDAAuctionModule-->>AuctionHouse: 
+    deactivate SDAAuctionModule
+
+    Note over AuctionHouse: store routing information
+  deactivate AuctionHouse
+
+  AuctionHouse-->>AuctionOwner: auction id
+```
+
+### Purchase from an Auction
+
+#### No Derivative
+
+```mermaid
+sequenceDiagram
+  autoNumber
+  participant Buyer
+  participant AuctionHouse
+  
+  activate AuctionHouse
+    Buyer->>AuctionHouse: purchase(address recipient, address referrer, uint256 auctionId, uint256 amount, uint256 minAmountOut, bytes approval)
+    AuctionHouse->>AuctionHouse: _getModuleForId(uint256 auctionId)
+
+    Note over AuctionHouse: purchase
+
+    create participant SDAAuctionModule
+    AuctionHouse->>SDAAuctionModule: purchase(uint256 auctionId, uint256 amount, uint256 minAmountOut)
+    destroy SDAAuctionModule
+    SDAAuctionModule-->>AuctionHouse: uint256 payoutAmount, bytes auctionOutput
+
+    Note over AuctionHouse: transfers
+
+    activate AuctionHouse
+      AuctionHouse->>AuctionHouse: _handleTransfers(Routing routing, uint256 amount, address recipient, uint256 payout, bytes auctionOutput)
+      create participant QuoteToken
+      AuctionHouse->>QuoteToken: safeTransferFrom(buyer, auctionHouse, amount)
+      Buyer-->>AuctionHouse: quote tokens transferred to AuctionHouse
+
+      create participant PayoutToken
+      AuctionHouse->>PayoutToken: safeTransferFrom(auctionOwner, auctionHouse, payoutAmount)
+      AuctionOwner-->>AuctionHouse: payout tokens transferred to AuctionHouse
+
+      destroy QuoteToken
+      AuctionHouse->>QuoteToken: safeTransfer(auctionOwner, amountLessFee)
+      AuctionHouse-->>AuctionOwner: quote tokens transferred to AuctionOwner
+    deactivate AuctionHouse
+
+    Note over AuctionHouse: payout
+
+    AuctionHouse->>AuctionHouse: _handlePayout(uint256 id, Routing routing, address recipient, uint256 payout, bytes auctionOutput)
+    destroy PayoutToken
+    AuctionHouse->>PayoutToken: safeTransfer(recipient, payoutAmount)
+    AuctionHouse-->>Buyer: transfer payout tokens
+
+    AuctionHouse-->>Buyer: payout amount
+  deactivate AuctionHouse
+```
+
+#### With Derivative
+
+```mermaid
+sequenceDiagram
+  autoNumber
+  participant Buyer
+  participant AuctionHouse
+
+  activate AuctionHouse
+    Buyer->>AuctionHouse: purchase(address recipient, address referrer, uint256 auctionId, uint256 amount, uint256 minAmountOut, bytes approval)
+    AuctionHouse->>AuctionHouse: _getModuleForId(uint256 auctionId)
+
+    Note over AuctionHouse: purchase
+
+    create participant SDAAuctionModule
+    AuctionHouse->>SDAAuctionModule: purchase(uint256 auctionId, uint256 amount, uint256 minAmountOut)
+    destroy SDAAuctionModule
+    SDAAuctionModule-->>AuctionHouse: uint256 payoutAmount, bytes auctionOutput
+
+    Note over AuctionHouse: transfers
+
+    activate AuctionHouse
+      AuctionHouse->>AuctionHouse: _handleTransfers(Routing routing, uint256 amount, address recipient, uint256 payout, bytes auctionOutput)
+
+      activate AuctionHouse
+        create participant QuoteToken
+        AuctionHouse->>QuoteToken: safeTransferFrom(buyer, auctionHouse, amount)
+        Buyer-->>AuctionHouse: quote tokens transferred to AuctionHouse
+      deactivate AuctionHouse
+
+      activate AuctionHouse
+        create participant PayoutToken
+        AuctionHouse->>PayoutToken: safeTransferFrom(auctionOwner, auctionHouse, payoutAmount)
+        AuctionOwner-->>AuctionHouse: payout tokens transferred to AuctionHouse
+      deactivate AuctionHouse
+
+      activate AuctionHouse
+        destroy QuoteToken
+        AuctionHouse->>QuoteToken: safeTransfer(auctionOwner, amountLessFee)
+        AuctionHouse-->>AuctionOwner: quote tokens transferred to AuctionOwner
+      deactivate AuctionHouse
+    deactivate AuctionHouse
+
+    Note over AuctionHouse: derivative payout
+
+    activate AuctionHouse
+      AuctionHouse->>AuctionHouse: _handlePayout(uint256 id, Routing routing, address recipient, uint256 payout, bytes auctionOutput)
+
+      AuctionHouse->>AuctionHouse: _getModuleIfInstalled(derivativeType)
+
+      AuctionHouse->>AuctionHouse: _getModuleIfInstalled(condenserType)
+
+      create participant CondenserModule
+      AuctionHouse->>CondenserModule: condense(auctionOutput, derivativeParams)
+      destroy CondenserModule
+      CondenserModule-->>AuctionHouse: derivative params
+
+      create participant DerivativeModule
+      AuctionHouse->>DerivativeModule: mint(recipient, payout, derivativeParams, wrapDerivative)
+
+      create participant DerivativeToken
+      DerivativeModule->>DerivativeToken: safeTransfer(buyer, payout)
+
+      destroy DerivativeToken
+      DerivativeToken-->>Buyer: transfer derivative tokens
+    deactivate AuctionHouse
+
+    AuctionHouse-->>Buyer: payout amount
+  deactivate AuctionHouse
 ```
