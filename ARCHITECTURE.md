@@ -350,3 +350,32 @@ sequenceDiagram
     AuctionHouse-->>Buyer: payout amount
   deactivate AuctionHouse
 ```
+
+### Close Auction
+
+```mermaid
+sequenceDiagram
+  autoNumber
+  participant AuctionOwner
+  participant AuctionHouse
+  participant SDAAuctionModule
+
+  activate AuctionHouse
+    AuctionOwner->>AuctionHouse: close(uint256 id)
+    
+    AuctionHouse->>AuctionHouse: _getModuleForId(id)
+
+    activate SDAAuctionModule
+      AuctionHouse->>SDAAuctionModule: isOwner(id, auctionOwner)
+      SDAAuctionModule-->>AuctionHouse: returns bool
+    deactivate SDAAuctionModule
+
+    alt isOwner == false
+      AuctionHouse->>AuctionOwner: revert
+    else
+      AuctionHouse->>SDAAuctionModule: close(id, auctionOwner)
+    end    
+  deactivate AuctionHouse
+```
+
+TODO decide on whether this is the correct approach. this is not what is currently implemented in code
