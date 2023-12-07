@@ -330,12 +330,14 @@ sequenceDiagram
 
       AuctionHouse->>AuctionHouse: _getModuleIfInstalled(derivativeType)
 
-      AuctionHouse->>AuctionHouse: _getModuleIfInstalled(condenserType)
+      alt condenserType is set
+        AuctionHouse->>AuctionHouse: _getModuleIfInstalled(condenserType)
 
-      create participant CondenserModule
-      AuctionHouse->>CondenserModule: condense(auctionOutput, derivativeParams)
-      destroy CondenserModule
-      CondenserModule-->>AuctionHouse: derivative params
+        create participant CondenserModule
+        AuctionHouse->>CondenserModule: condense(auctionOutput, derivativeParams)
+        destroy CondenserModule
+        CondenserModule-->>AuctionHouse: derivative params
+      end
 
       create participant DerivativeModule
       AuctionHouse->>DerivativeModule: mint(recipient, payout, derivativeParams, wrapDerivative)
