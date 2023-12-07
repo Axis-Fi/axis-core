@@ -383,6 +383,70 @@ sequenceDiagram
   deactivate AuctionHouse
 ```
 
+### Bid on an Auction
+
+```mermaid
+sequenceDiagram
+  autoNumber
+  participant Buyer
+  participant AuctionHouse
+  participant SDAAuctionModule
+
+  activate AuctionHouse
+    Buyer->>AuctionHouse: bid(address recipient_, address referrer_, uint256 id_, uint256 amount_, uint256 minAmountOut_, bytes calldata auctionData_, bytes calldata approval_)
+    AuctionHouse->>AuctionHouse: _getModuleForId(uint256 auctionId)
+
+    Note over SDAAuctionModule: TODO where are the bids stored?
+    activate SDAAuctionModule
+      AuctionHouse->>SDAAuctionModule: bid(address recipient_, address referrer_, uint256 id_, uint256 amount_, uint256 minAmountOut_, bytes calldata auctionData_, bytes calldata approval_)
+      SDAAuctionModule->>SDAAuctionModule: records bid
+      SDAAuctionModule-->>AuctionHouse: uint256 payoutAmount, bytes auctionOutput
+    deactivate SDAAuctionModule
+
+    activate AuctionHouse
+      AuctionHouse->>AuctionHouse: _handleTransfers(Routing routing, uint256 amount, address recipient, uint256 payout, bytes auctionOutput)
+      create participant QuoteToken
+      AuctionHouse->>QuoteToken: safeTransferFrom(buyer, auctionHouse, amount)
+      Buyer-->>AuctionHouse: quote tokens transferred to AuctionHouse
+    deactivate AuctionHouse
+  deactivate AuctionHouse
+```
+
+TODO transfer to AuctionHouse or the module?
+TODO how buyer can claim quote tokens if the bid is unsuccessful?
+
+### Settle an Auction
+
+```mermaid
+sequenceDiagram
+  autoNumber
+  participant AuctionOwner
+  participant AuctionHouse
+  participant SDAAuctionModule
+
+  activate AuctionHouse
+    AuctionOwner->>AuctionHouse: settle(uint256 auctionId)
+    AuctionHouse->>AuctionHouse: _getModuleForId(uint256 auctionId)
+
+    Note over SDAAuctionModule: TODO where are the bids stored?
+
+    activate SDAAuctionModule
+      AuctionHouse->>SDAAuctionModule: settle(auctionId, bids)
+
+      Note over SDAAuctionModule: module-specific logic to determine payout
+      SDAAuctionModule->>SDAAuctionModule: _settle(auctionId, bids)
+
+      Note over SDAAuctionModule: TODO also needs bidId to retrieve recipient address?
+
+      SDAAuctionModule-->>AuctionHouse: array of amounts
+    deactivate SDAAuctionModule
+    
+  deactivate AuctionHouse
+```
+
+TODO when to transfer quote tokens to auction owner?
+TODO when to transfer payout tokens from auction owner to auction house and then to buyer?
+
 ### User Redeems Derivative Token
 
 ```mermaid

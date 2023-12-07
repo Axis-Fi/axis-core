@@ -66,6 +66,8 @@ contract AuctionHouse is Vault, Auctioneer, Router {
     function purchase(address recipient_, address referrer_, uint256 id_, uint256 amount_, uint256 minAmountOut_, bytes calldata auctionData_, bytes calldata approval_) external override returns (uint256 payout) {
         AuctionModule module = _getModuleForId(id_);
 
+        // TODO should this not check if the auction is atomic?
+
         // Calculate fees for purchase
         // 1. Calculate referrer fee
         // 2. Calculate protocol fee as the total expected fee amount minus the referrer fee
