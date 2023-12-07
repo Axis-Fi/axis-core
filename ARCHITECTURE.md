@@ -376,6 +376,7 @@ sequenceDiagram
       AuctionHouse->>AuctionOwner: revert
     else
       AuctionHouse->>SDAAuctionModule: close(id, auctionOwner)
+      AuctionHouse-->>AuctionOwner: returns
     end    
   deactivate AuctionHouse
 ```
