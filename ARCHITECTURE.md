@@ -209,21 +209,21 @@ sequenceDiagram
   autoNumber
   participant AuctionOwner
   participant AuctionHouse
-  participant SDAAuctionModule
+  participant AtomicAuctionModule
 
   AuctionOwner->>AuctionHouse: Auctioneer.auction(RoutingParams routing, Auction.AuctionParams params)
   activate AuctionHouse
     AuctionHouse->>AuctionHouse: _getModuleIfInstalled(auctionType)
 
-    AuctionHouse->>SDAAuctionModule: auction(uint256 id, Auction.AuctionParams params)
-    activate SDAAuctionModule
-      SDAAuctionModule->>SDAAuctionModule: AuctionModule.createAuction(AuctionParams auctionParams)
-      Note right of SDAAuctionModule: validation, creates Lot record
-      SDAAuctionModule->>SDAAuctionModule: _createAuction(uint256 id, Lot lot, bytes implParams)
-      Note right of SDAAuctionModule: module-specific actions
+    AuctionHouse->>AtomicAuctionModule: auction(uint256 id, Auction.AuctionParams params)
+    activate AtomicAuctionModule
+      AtomicAuctionModule->>AtomicAuctionModule: AuctionModule.createAuction(AuctionParams auctionParams)
+      Note right of AtomicAuctionModule: validation, creates Lot record
+      AtomicAuctionModule->>AtomicAuctionModule: _createAuction(uint256 id, Lot lot, bytes implParams)
+      Note right of AtomicAuctionModule: module-specific actions
 
-      SDAAuctionModule-->>AuctionHouse: 
-    deactivate SDAAuctionModule
+      AtomicAuctionModule-->>AuctionHouse: 
+    deactivate AtomicAuctionModule
 
     Note over AuctionHouse: store routing information
   deactivate AuctionHouse
@@ -231,7 +231,7 @@ sequenceDiagram
   AuctionHouse-->>AuctionOwner: auction id
 ```
 
-### Purchase from an Auction
+### Purchase from an Atomic Auction
 
 #### No Derivative
 
@@ -247,10 +247,10 @@ sequenceDiagram
 
     Note over AuctionHouse: purchase
 
-    create participant SDAAuctionModule
-    AuctionHouse->>SDAAuctionModule: purchase(uint256 auctionId, uint256 amount, uint256 minAmountOut)
-    destroy SDAAuctionModule
-    SDAAuctionModule-->>AuctionHouse: uint256 payoutAmount, bytes auctionOutput
+    create participant AtomicAuctionModule
+    AuctionHouse->>AtomicAuctionModule: purchase(uint256 auctionId, uint256 amount, uint256 minAmountOut)
+    destroy AtomicAuctionModule
+    AtomicAuctionModule-->>AuctionHouse: uint256 payoutAmount, bytes auctionOutput
 
     Note over AuctionHouse: transfers
 
@@ -294,10 +294,10 @@ sequenceDiagram
 
     Note over AuctionHouse: purchase
 
-    create participant SDAAuctionModule
-    AuctionHouse->>SDAAuctionModule: purchase(uint256 auctionId, uint256 amount, uint256 minAmountOut)
-    destroy SDAAuctionModule
-    SDAAuctionModule-->>AuctionHouse: uint256 payoutAmount, bytes auctionOutput
+    create participant AtomicAuctionModule
+    AuctionHouse->>AtomicAuctionModule: purchase(uint256 auctionId, uint256 amount, uint256 minAmountOut)
+    destroy AtomicAuctionModule
+    AtomicAuctionModule-->>AuctionHouse: uint256 payoutAmount, bytes auctionOutput
 
     Note over AuctionHouse: transfers
 
@@ -353,31 +353,31 @@ sequenceDiagram
   deactivate AuctionHouse
 ```
 
-### Close Auction
+### Close Atomic Auction
 
 ```mermaid
 sequenceDiagram
   autoNumber
   participant AuctionOwner
   participant AuctionHouse
-  participant SDAAuctionModule
+  participant AtomicAuctionModule
 
   activate AuctionHouse
     AuctionOwner->>AuctionHouse: close(uint256 id)
     
     AuctionHouse->>AuctionHouse: _getModuleForId(id)
 
-    activate SDAAuctionModule
-      AuctionHouse->>SDAAuctionModule: isOwner(id, auctionOwner)
-      SDAAuctionModule-->>AuctionHouse: returns bool
-    deactivate SDAAuctionModule
+    activate AtomicAuctionModule
+      AuctionHouse->>AtomicAuctionModule: isOwner(id, auctionOwner)
+      AtomicAuctionModule-->>AuctionHouse: returns bool
+    deactivate AtomicAuctionModule
 
     alt isOwner == false
       AuctionHouse->>AuctionOwner: revert
     else
-      AuctionHouse->>SDAAuctionModule: close(id, auctionOwner)
-      Note over SDAAuctionModule: reverts if not called by AuctionHouse
-      SDAAuctionModule->>SDAAuctionModule: permissioned()
+      AuctionHouse->>AtomicAuctionModule: close(id, auctionOwner)
+      Note over AtomicAuctionModule: reverts if not called by AuctionHouse
+      AtomicAuctionModule->>AtomicAuctionModule: permissioned()
       AuctionHouse-->>AuctionOwner: returns
     end    
   deactivate AuctionHouse
