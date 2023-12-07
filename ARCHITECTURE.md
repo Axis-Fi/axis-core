@@ -376,12 +376,12 @@ sequenceDiagram
       AuctionHouse->>AuctionOwner: revert
     else
       AuctionHouse->>SDAAuctionModule: close(id, auctionOwner)
+      Note over SDAAuctionModule: reverts if not called by AuctionHouse
+      SDAAuctionModule->>SDAAuctionModule: permissioned()
       AuctionHouse-->>AuctionOwner: returns
     end    
   deactivate AuctionHouse
 ```
-
-TODO decide on whether this is the correct approach. this is not what is currently implemented in code
 
 ### User Redeems Derivative Token
 
