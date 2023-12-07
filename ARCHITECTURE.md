@@ -336,7 +336,7 @@ sequenceDiagram
         create participant CondenserModule
         AuctionHouse->>CondenserModule: condense(auctionOutput, derivativeParams)
         destroy CondenserModule
-        CondenserModule-->>AuctionHouse: derivative params
+        CondenserModule-->>AuctionHouse: derivative params overwritten
       end
 
       create participant DerivativeModule
@@ -382,3 +382,47 @@ sequenceDiagram
 ```
 
 TODO decide on whether this is the correct approach. this is not what is currently implemented in code
+
+### User Redeems Derivative Token
+
+```mermaid
+sequenceDiagram
+  autoNumber
+  participant User
+  participant AuctionHouse
+  participant DerivativeModule
+  participant AuctionOwner
+  participant DerivativeToken
+  participant PayoutToken
+
+  activate AuctionHouse
+    User->>AuctionHouse: redeem(uint256 auctionId, uint256 tokenId, uint256 amount)
+
+    alt auction.derivativeType not set
+      AuctionHouse-->>User: reverts
+    else
+      AuctionHouse->>AuctionHouse: getModuleIfInstalled(derivativeType)
+
+      activate DerivativeModule
+        AuctionHouse->>DerivativeModule: redeem(tokenId, amount)
+
+        activate DerivativeToken
+          DerivativeModule->>DerivativeToken: safeTransferFrom(user, derivativeModule, amount)
+          User-->>DerivativeModule: derivative tokens transferred
+
+          DerivativeModule->>DerivativeToken: burn(amount)
+        deactivate DerivativeToken
+
+        activate PayoutToken
+          DerivativeModule->>PayoutToken: safeTransferFrom(auctionOwner, derivativeModule, amount)
+          AuctionOwner-->>DerivativeModule: payout tokens transferred
+          DerivativeModule->>PayoutToken: safeTransfer(user, amount)
+          DerivativeModule-->>User: payout tokens transferred
+        deactivate PayoutToken
+      deactivate DerivativeModule
+    end
+  deactivate AuctionHouse
+```
+
+TODO how to get the tokenId? It's stored in the derivative module and not returned to the during payout
+TODO should the transfers be handled by DerivativeModule? Given that at purchase-time, transfers are handled by the AuctionHouse

@@ -8,6 +8,7 @@ abstract contract Derivative {
 
     // ========== DATA STRUCTURES ========== //
 
+    // TODO are some of the properties not redundant? exists, decimals, name, symbol. Can be fetched from the ERC20.
     struct Token {
         bool exists;
         address wrapped;
