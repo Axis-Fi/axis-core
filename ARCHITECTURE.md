@@ -222,20 +222,20 @@ sequenceDiagram
   autoNumber
   participant AuctionOwner
   participant AuctionHouse
-  participant SDA
+  participant AtomicAuctionModule
 
   AuctionOwner->>AuctionHouse: Auctioneer.createAuction(RoutingParams routing, Auction.AuctionParams params)
   activate AuctionHouse
     AuctionHouse->>AuctionHouse: _getModuleIfInstalled(auctionType)
 
-    AuctionHouse->>SDA: createAuction(uint256 id, Auction.AuctionParams params)
-    activate SDA
-      Note right of SDA: validation, creates Lot record
-      SDA->>SDA: _createAuction(uint256 id, Lot lot, bytes implParams)
-      Note right of SDA: module-specific actions
+    AuctionHouse->>AtomicAuctionModule: createAuction(uint256 id, Auction.AuctionParams params)
+    activate AtomicAuctionModule
+      Note right of AtomicAuctionModule: validation, creates Lot record
+      AtomicAuctionModule->>AtomicAuctionModule: _createAuction(uint256 id, Lot lot, bytes implParams)
+      Note right of AtomicAuctionModule: module-specific actions
 
-      SDA-->>AuctionHouse: 
-    deactivate SDA
+      AtomicAuctionModule-->>AuctionHouse: 
+    deactivate AtomicAuctionModule
 
     Note over AuctionHouse: store routing information
   deactivate AuctionHouse
@@ -243,7 +243,7 @@ sequenceDiagram
   AuctionHouse-->>AuctionOwner: auction id
 ```
 
-### Purchase from an Auction (without hooks)
+### Purchase from an Atomic Auction (without hooks)
 
 #### No Derivative
 
@@ -259,10 +259,10 @@ sequenceDiagram
 
     Note over AuctionHouse: purchase
 
-    create participant SDA
-    AuctionHouse->>SDA: purchase(uint256 auctionId, uint256 amount, uint256 minAmountOut)
-    destroy SDA
-    SDA-->>AuctionHouse: uint256 payoutAmount, bytes auctionOutput
+    create participant AtomicAuctionModule
+    AuctionHouse->>AtomicAuctionModule: purchase(uint256 auctionId, uint256 amount, uint256 minAmountOut)
+    destroy AtomicAuctionModule
+    AtomicAuctionModule-->>AuctionHouse: uint256 payoutAmount, bytes auctionOutput
 
     Note over AuctionHouse: transfers
 
@@ -309,10 +309,10 @@ sequenceDiagram
 
     Note over AuctionHouse: purchase
 
-    create participant SDA
-    AuctionHouse->>SDA: purchase(uint256 auctionId, uint256 amount, uint256 minAmountOut)
-    destroy SDA
-    SDA-->>AuctionHouse: uint256 payoutAmount, bytes auctionOutput
+    create participant AtomicAuctionModule
+    AuctionHouse->>AtomicAuctionModule: purchase(uint256 auctionId, uint256 amount, uint256 minAmountOut)
+    destroy AtomicAuctionModule
+    AtomicAuctionModule-->>AuctionHouse: uint256 payoutAmount, bytes auctionOutput
 
     Note over AuctionHouse: transfers
 
@@ -371,7 +371,66 @@ sequenceDiagram
   deactivate AuctionHouse
 ```
 
-### Close Auction
+### Close Atomic Auction
+
+```mermaid
+sequenceDiagram
+  autoNumber
+  participant AuctionOwner
+  participant AuctionHouse
+  participant AtomicAuctionModule
+
+  activate AuctionHouse
+    AuctionOwner->>AuctionHouse: close(uint256 id)
+    
+    AuctionHouse->>AuctionHouse: _getModuleForId(id)
+
+    AuctionHouse->>AuctionHouse: lotRouting(id)
+
+    alt isOwner == false
+      AuctionHouse->>AuctionOwner: revert
+    else
+      AuctionHouse->>AtomicAuctionModule: close(id, auctionOwner)
+      AuctionHouse-->>AuctionOwner: returns
+    else
+      AuctionHouse->>AuctionOwner: revert
+    end    
+  deactivate AuctionHouse
+```
+
+### Bid on an Auction
+
+```mermaid
+sequenceDiagram
+  autoNumber
+  participant Buyer
+  participant AuctionHouse
+  participant SDAAuctionModule
+
+  activate AuctionHouse
+    Buyer->>AuctionHouse: bid(address recipient_, address referrer_, uint256 id_, uint256 amount_, uint256 minAmountOut_, bytes calldata auctionData_, bytes calldata approval_)
+    AuctionHouse->>AuctionHouse: _getModuleForId(uint256 auctionId)
+
+    Note over SDAAuctionModule: TODO where are the bids stored?
+    activate SDAAuctionModule
+      AuctionHouse->>SDAAuctionModule: bid(address recipient_, address referrer_, uint256 id_, uint256 amount_, uint256 minAmountOut_, bytes calldata auctionData_, bytes calldata approval_)
+      SDAAuctionModule->>SDAAuctionModule: records bid
+      SDAAuctionModule-->>AuctionHouse: uint256 payoutAmount, bytes auctionOutput
+    deactivate SDAAuctionModule
+
+    activate AuctionHouse
+      AuctionHouse->>AuctionHouse: _handleTransfers(Routing routing, uint256 amount, address recipient, uint256 payout, bytes auctionOutput)
+      create participant QuoteToken
+      AuctionHouse->>QuoteToken: safeTransferFrom(buyer, auctionHouse, amount)
+      Buyer-->>AuctionHouse: quote tokens transferred to AuctionHouse
+    deactivate AuctionHouse
+  deactivate AuctionHouse
+```
+
+TODO transfer to AuctionHouse or the module?
+TODO how buyer can claim quote tokens if the bid is unsuccessful?
+
+### Settle an Auction
 
 ```mermaid
 sequenceDiagram
@@ -381,20 +440,27 @@ sequenceDiagram
   participant SDAAuctionModule
 
   activate AuctionHouse
-    AuctionOwner->>AuctionHouse: close(uint256 id)
+    AuctionOwner->>AuctionHouse: settle(uint256 auctionId)
+    AuctionHouse->>AuctionHouse: _getModuleForId(uint256 auctionId)
+
+    Note over SDAAuctionModule: TODO where are the bids stored?
+
+    activate SDAAuctionModule
+      AuctionHouse->>SDAAuctionModule: settle(auctionId, bids)
+
+      Note over SDAAuctionModule: module-specific logic to determine payout
+      SDAAuctionModule->>SDAAuctionModule: _settle(auctionId, bids)
+
+      Note over SDAAuctionModule: TODO also needs bidId to retrieve recipient address?
+
+      SDAAuctionModule-->>AuctionHouse: array of amounts
+    deactivate SDAAuctionModule
     
-    AuctionHouse->>AuctionHouse: _getModuleForId(id)
-
-    AuctionHouse->>AuctionHouse: lotRouting(id)
-
-    alt routing.owner == msg.sender
-      AuctionHouse->>SDAAuctionModule: close(id, auctionOwner)
-      AuctionHouse-->>AuctionOwner: returns
-    else
-      AuctionHouse->>AuctionOwner: revert
-    end    
   deactivate AuctionHouse
 ```
+
+TODO when to transfer quote tokens to auction owner?
+TODO when to transfer payout tokens from auction owner to auction house and then to buyer?
 
 ### User Redeems Derivative Token - V1 (through AuctionHouse, requires refactoring AuctionModule)
 

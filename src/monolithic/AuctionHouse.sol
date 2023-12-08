@@ -6,7 +6,7 @@ import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 import {EIP712} from "solady/utils/EIP712.sol";
 import {SignatureCheckerLib} from "solady/utils/SignatureCheckerLib.sol";
 
-import "src/monolithic/bases/Vault.sol";
+import "src/monolithic/bases/Derivatizer.sol";
 import "src/monolithic/bases/Auctioneer.sol";
 import "src/monolithic/modules/Condenser.sol";
 
@@ -57,14 +57,16 @@ abstract contract Router is FeeManager {
     function settle(uint256 id_, Auction.Bid[] memory bids_) external virtual returns (uint256[] memory amountsOut);
 }
 
-// TODO change Vault to Tokenizer if collateral will be held in the Derivative contracts
-contract AuctionHouse is Vault, Auctioneer, Router {
+contract AuctionHouse is Derivatizer, Auctioneer, Router {
     /// Implement the router functionality here since it combines all of the base functionality
 
     // ========== DIRECT EXECUTION ========== //
 
     function purchase(address recipient_, address referrer_, uint256 id_, uint256 amount_, uint256 minAmountOut_, bytes calldata auctionData_, bytes calldata approval_) external override returns (uint256 payout) {
         AuctionModule module = _getModuleForId(id_);
+
+        // TODO should this not check if the auction is atomic?
+        // Response: No, my thought was that the module will just revert on `purchase` if it's not atomic. Vice versa 
 
         // Calculate fees for purchase
         // 1. Calculate referrer fee
