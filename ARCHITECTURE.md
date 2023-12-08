@@ -1,10 +1,10 @@
 # Moonraker Architecture
 
-## Contract
+## Contracts
 
 ```mermaid
 classDiagram
-  direction BT
+  direction LR
   FeeManager --|> Router
 
   Owned --|> WithModules
@@ -59,7 +59,10 @@ classDiagram
   }
 
   class Derivatizer {
-    
+    <<Abstract>>
+    +transform(Keycode fromType, bytes calldata fromData, Keycode toType, bytes calldata toData, uint256 amount)
+    +transform(Keycode fromType, uint256 fromTokenId, Keycode toType, bytes calldata toData, uint256 amount)
+    +transform(Keycode fromType, uint256 fromTokenId, Keycode toType, uint256 toTokenId, uint256 amount)
   }
 
   class AuctionHouse {
@@ -164,16 +167,17 @@ classDiagram
     +mapping[uint256 tokenId => Token] tokenMetadata
     +mapping[uint256 lotId => uint256[]] lotDerivatives
     +deploy(bytes data, bool wrap) (uint256, address)
-    +mint(bytes data, uint256 amount, bool wrap) bytes
-    +mint(uint256 tokenId, uint256 amount, bool wrap) bytes
-    +redeem(bytes data, uint256 amount)
-    +exercise(bytes data, uint256 amount)
-    +reclaim(bytes data)
-    +convert(bytes data, uint256 amount)
+    +mint(bytes data, uint256 amount, bool wrapped) bytes
+    +mint(uint256 tokenId, uint256 amount, bool wrapped) bytes
+    +redeem(uint256 tokenId, uint256 amount)
+    +exercise(uint256 tokenId, uint256 amount)
+    +reclaim(uint256 tokenId)
+    +convert(uint256 tokenId, uint256 amount)
     +wrap(uint256 tokenId, uint256 amount)
     +unwrap(uint256 tokenId, uint256 amount)
-    +exerciseCost(bytes data, uint256 amount) uint256
-    +convertsTo(bytes data, uint256 amount) uint256
+    #transform(uint256 tokenId, uint256 amount, bool wrapped)
+    +exerciseCost(uint256 tokenId, uint256 amount) uint256
+    +convertsTo(uint256 tokenId, uint256 amount) uint256
     +computeTokenId(bytes data) uint256
   }
 
@@ -191,13 +195,22 @@ classDiagram
   }
 
   Module ..> WithModules
+
+  AuctionModule --|> GDA
+  AuctionModule --|> 2DGDA
+  
+  DerivativeModule --|> CliffVesting
+  DerivativeModule --|> StakedCliffVesting
+  DerivativeModule --|> RageVesting
+  DerivativeModule --|> FixedStrikeOption
+  DerivativeModule --|> SuccessToken
+
   
 ```
 
 ### TODOs
-- [ ] Decide if Derivatives should be mintable from auction house (by providing Keycode) or only from the module directly
-  - If not, do not need Derivatizer.
 - [ ] Add section for Auction and Derivative module implementations after we prioritize which ones to build first
+- [ ] Create a function or add return values so that a solver / user can determine the derivative token that a market will return (useful for then creating off-chain orders for that token). This also brings up a point about how certain auction view functions that rely solely on an amount need to be refactored for a multi-variate auction world, e.g. `payoutFor(uint256)` -> `payoutFor(uint256, bytes)`
 
 
 ## Processes
@@ -209,21 +222,20 @@ sequenceDiagram
   autoNumber
   participant AuctionOwner
   participant AuctionHouse
-  participant SDAAuctionModule
+  participant SDA
 
-  AuctionOwner->>AuctionHouse: Auctioneer.auction(RoutingParams routing, Auction.AuctionParams params)
+  AuctionOwner->>AuctionHouse: Auctioneer.createAuction(RoutingParams routing, Auction.AuctionParams params)
   activate AuctionHouse
     AuctionHouse->>AuctionHouse: _getModuleIfInstalled(auctionType)
 
-    AuctionHouse->>SDAAuctionModule: auction(uint256 id, Auction.AuctionParams params)
-    activate SDAAuctionModule
-      SDAAuctionModule->>SDAAuctionModule: AuctionModule.createAuction(AuctionParams auctionParams)
-      Note right of SDAAuctionModule: validation, creates Lot record
-      SDAAuctionModule->>SDAAuctionModule: _createAuction(uint256 id, Lot lot, bytes implParams)
-      Note right of SDAAuctionModule: module-specific actions
+    AuctionHouse->>SDA: createAuction(uint256 id, Auction.AuctionParams params)
+    activate SDA
+      Note right of SDA: validation, creates Lot record
+      SDA->>SDA: _createAuction(uint256 id, Lot lot, bytes implParams)
+      Note right of SDA: module-specific actions
 
-      SDAAuctionModule-->>AuctionHouse: 
-    deactivate SDAAuctionModule
+      SDA-->>AuctionHouse: 
+    deactivate SDA
 
     Note over AuctionHouse: store routing information
   deactivate AuctionHouse
@@ -231,7 +243,7 @@ sequenceDiagram
   AuctionHouse-->>AuctionOwner: auction id
 ```
 
-### Purchase from an Auction
+### Purchase from an Auction (without hooks)
 
 #### No Derivative
 
@@ -247,16 +259,19 @@ sequenceDiagram
 
     Note over AuctionHouse: purchase
 
-    create participant SDAAuctionModule
-    AuctionHouse->>SDAAuctionModule: purchase(uint256 auctionId, uint256 amount, uint256 minAmountOut)
-    destroy SDAAuctionModule
-    SDAAuctionModule-->>AuctionHouse: uint256 payoutAmount, bytes auctionOutput
+    create participant SDA
+    AuctionHouse->>SDA: purchase(uint256 auctionId, uint256 amount, uint256 minAmountOut)
+    destroy SDA
+    SDA-->>AuctionHouse: uint256 payoutAmount, bytes auctionOutput
 
     Note over AuctionHouse: transfers
 
     activate AuctionHouse
       AuctionHouse->>AuctionHouse: _handleTransfers(Routing routing, uint256 amount, address recipient, uint256 payout, bytes auctionOutput)
       create participant QuoteToken
+      alt approval data is set
+        AuctionHouse->>QuoteToken: permit(approval)
+      end
       AuctionHouse->>QuoteToken: safeTransferFrom(buyer, auctionHouse, amount)
       Buyer-->>AuctionHouse: quote tokens transferred to AuctionHouse
 
@@ -276,7 +291,7 @@ sequenceDiagram
     AuctionHouse->>PayoutToken: safeTransfer(recipient, payoutAmount)
     AuctionHouse-->>Buyer: transfer payout tokens
 
-    AuctionHouse-->>Buyer: payout amount
+    AuctionHouse-->>Buyer: payout amount and encoded module + tokenId or wrapped token address
   deactivate AuctionHouse
 ```
 
@@ -294,10 +309,10 @@ sequenceDiagram
 
     Note over AuctionHouse: purchase
 
-    create participant SDAAuctionModule
-    AuctionHouse->>SDAAuctionModule: purchase(uint256 auctionId, uint256 amount, uint256 minAmountOut)
-    destroy SDAAuctionModule
-    SDAAuctionModule-->>AuctionHouse: uint256 payoutAmount, bytes auctionOutput
+    create participant SDA
+    AuctionHouse->>SDA: purchase(uint256 auctionId, uint256 amount, uint256 minAmountOut)
+    destroy SDA
+    SDA-->>AuctionHouse: uint256 payoutAmount, bytes auctionOutput
 
     Note over AuctionHouse: transfers
 
@@ -306,6 +321,9 @@ sequenceDiagram
 
       activate AuctionHouse
         create participant QuoteToken
+        alt approval data is set
+          AuctionHouse->>QuoteToken: permit(approval)
+        end
         AuctionHouse->>QuoteToken: safeTransferFrom(buyer, auctionHouse, amount)
         Buyer-->>AuctionHouse: quote tokens transferred to AuctionHouse
       deactivate AuctionHouse
@@ -367,23 +385,18 @@ sequenceDiagram
     
     AuctionHouse->>AuctionHouse: _getModuleForId(id)
 
-    activate SDAAuctionModule
-      AuctionHouse->>SDAAuctionModule: isOwner(id, auctionOwner)
-      SDAAuctionModule-->>AuctionHouse: returns bool
-    deactivate SDAAuctionModule
+    AuctionHouse->>AuctionHouse: lotRouting(id)
 
-    alt isOwner == false
-      AuctionHouse->>AuctionOwner: revert
-    else
+    alt routing.owner == msg.sender
       AuctionHouse->>SDAAuctionModule: close(id, auctionOwner)
       AuctionHouse-->>AuctionOwner: returns
+    else
+      AuctionHouse->>AuctionOwner: revert
     end    
   deactivate AuctionHouse
 ```
 
-TODO decide on whether this is the correct approach. this is not what is currently implemented in code
-
-### User Redeems Derivative Token
+### User Redeems Derivative Token - V1 (through AuctionHouse, requires refactoring AuctionModule)
 
 ```mermaid
 sequenceDiagram
@@ -391,38 +404,52 @@ sequenceDiagram
   participant User
   participant AuctionHouse
   participant DerivativeModule
-  participant AuctionOwner
-  participant DerivativeToken
   participant PayoutToken
 
   activate AuctionHouse
-    User->>AuctionHouse: redeem(uint256 auctionId, uint256 tokenId, uint256 amount)
+    User->>AuctionHouse: redeem(Keycode dType, uint256 tokenId, uint256 amount)
 
-    alt auction.derivativeType not set
-      AuctionHouse-->>User: reverts
-    else
-      AuctionHouse->>AuctionHouse: getModuleIfInstalled(derivativeType)
+    AuctionHouse->>AuctionHouse: getModuleIfInstalled(dType)
 
-      activate DerivativeModule
-        AuctionHouse->>DerivativeModule: redeem(tokenId, amount)
+    activate DerivativeModule
+      AuctionHouse->>DerivativeModule: redeem(tokenId, amount)
 
-        activate DerivativeToken
-          DerivativeModule->>DerivativeToken: safeTransferFrom(user, derivativeModule, amount)
-          User-->>DerivativeModule: derivative tokens transferred
-
-          DerivativeModule->>DerivativeToken: burn(amount)
-        deactivate DerivativeToken
-
-        activate PayoutToken
-          DerivativeModule->>PayoutToken: safeTransferFrom(auctionOwner, derivativeModule, amount)
-          AuctionOwner-->>DerivativeModule: payout tokens transferred
-          DerivativeModule->>PayoutToken: safeTransfer(user, amount)
-          DerivativeModule-->>User: payout tokens transferred
-        deactivate PayoutToken
-      deactivate DerivativeModule
-    end
+      alt derivative token is wrapped
+        create participant DerivativeToken
+        DerivativeModule->>DerivativeToken: burn(user, amount)
+        destroy DerivativeToken
+        User-->>DerivativeToken: derivative tokens burned
+      else 
+        DerivativeModule->>DerivativeModule: burn(tokenId, user, amount)
+        User-->>DerivativeModule: derivative tokens burned
+      end
+      DerivativeModule->>PayoutToken: safeTransfer(user, amount)
+      DerivativeModule-->>User: payout tokens transferred
+    deactivate DerivativeModule
   deactivate AuctionHouse
 ```
 
-TODO how to get the tokenId? It's stored in the derivative module and not returned to the during payout
-TODO should the transfers be handled by DerivativeModule? Given that at purchase-time, transfers are handled by the AuctionHouse
+### User Redeems Derivative Token - V2 (direct with module)
+
+```mermaid
+sequenceDiagram
+  autoNumber
+  participant User
+  participant DerivativeModule
+  participant PayoutToken
+
+  activate DerivativeModule
+    User->>DerivativeModule: redeem(uint256 tokenId, uint256 amount)
+    alt derivative token is wrapped
+      create participant DerivativeToken
+      DerivativeModule->>DerivativeToken: burn(user, amount)
+      destroy DerivativeToken
+      User-->>DerivativeToken: derivative tokens burned
+    else 
+      DerivativeModule->>DerivativeModule: burn(tokenId, user, amount)
+      User-->>DerivativeModule: derivative tokens burned
+    end
+    DerivativeModule->>PayoutToken: safeTransfer(user, amount)
+    DerivativeModule-->>User: payout tokens transferred
+  deactivate DerivativeModule
+```
