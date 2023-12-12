@@ -67,6 +67,8 @@ For this reason, V2 supports off-chain bids and settlement computation. This ena
 - providing Bond Protocol auctions as a liquidity source for CoW Protocol's off-chain solvers
 - off-chain computation by first-party solvers
 
+TODO what else can be done off-chain?
+
 ### Auction Types
 
 Atomic
