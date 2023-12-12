@@ -1,80 +1,9 @@
 /// SPDX-License-Identifier: AGPL-3.0
 pragma solidity 0.8.19;
 
-import "src/Submodules.sol";
+import "src/monolithic/modules/Modules.sol";
 
-abstract contract HOUSEv1 is ModuleWithSubmodules {
-
-    // Requirements
-    // [ ] - Combine aggregator and auctioneer functionality into this single module with submodules
-    // [ ] - Allow for adding new types of auctions
-    // [ ] - Track market IDs and their types
-
-    // Auction data will be split between 3 contracts based on how it is used
-    // HOUSE (here) - primary auction information including what, when, how, and who
-    // VAULT - information about what type of payout derivatives should be used for a market
-    // Router - allowlist information for the auction and hooks to be executed before and after a purchase
-    // IHooks hooks; // address to call for any hooks to be executed on a purchase. Must implement IHooks.
-    // IAllowlist allowlist; // (optional) contract that implements an allowlist for the market, based on IAllowlist
-
-    // ========= STATE ========== //
-    
-    // TODO do we need a global variable or just the type sunsetting?
-    /// @notice Whether or not the new lots can be listed
-    /// @dev    Changing to false will prevent new lots from being listed, but does not affect existing lots
-    bool public allowNewLots;
-
-    // 1% = 1_000 or 1e3. 100% = 100_000 or 1e5.
-    uint48 internal constant ONE_HUNDRED_PERCENT = 1e5;
-
-    /// @notice Counter for auctions
-    uint256 public auctionCount;
-
-    /// @notice Designates whether an auction type is sunset on this contract
-    /// @dev We can remove SubKeycodes from the module to completely remove them,
-    ///      However, that would brick any existing auctions of that type.
-    ///      Therefore, we can sunset them instead, which will prevent new auctions.
-    ///      After they have all ended, then we can remove them.
-    mapping(SubKeycode => bool) public typeSunset;
-
-    /// @notice Mapping of lot IDs to their auction type (represented by the SubKeycode for the auction submodule)
-    mapping(uint256 id => SubKeycode auctionType) public lotType;
-
-
-    // ========== AUCTION EXECUTION ========== //
-
-    function purchase(uint256 id_, uint256 amount_, uint256 minAmountOut_) external virtual returns (uint256);
-
-    function settle(uint256 id_, AUCTIONv1.Bid[] memory bids_) external virtual returns (uint256[] memory);
-    
-    // ========== AUCTION MANAGEMENT ========== //
-
-    function createAuction(bytes calldata params_) external virtual returns (uint256);
-
-    function closeAuction(uint256 id_) external virtual;
-
-    // ========== AUCTION INFORMATION ========== //
-
-    function getRouting(uint256 id_) external view virtual returns (AUCTIONv1.Routing memory);
-
-    // TODO remove fee calculations from here and have the Router wrap these functions with referrer math?
-    function payoutFor(uint256 id_, uint256 amount_, address referrer_) public view virtual returns (uint256);
-
-    function priceFor(uint256 id_, uint256 payout_, address referrer_) public view virtual returns (uint256);
-
-    function maxPayout(uint256 id_) public view virtual returns (uint256);
-
-    function maxAmountAccepted(uint256 id_) public view virtual returns (uint256);
-
-    function isLive(uint256 id_) public view virtual returns (bool);
-
-    function ownerOf(uint256 id_) external view virtual returns (address);
-
-    function remainingCapacity(uint256 id_) external view virtual returns (uint256);
-
-}
-
-abstract contract AUCTIONv1 {
+abstract contract Auction {
 
     /* ========== ERRORS ========== */
 
@@ -88,41 +17,29 @@ abstract contract AUCTIONv1 {
 
     /* ========== EVENTS ========== */
 
-    event MarketCreated(
+    event AuctionCreated(
         uint256 indexed id,
         address indexed payoutToken,
         address indexed quoteToken
     );
-    event MarketClosed(uint256 indexed id);
+    event AuctionClosed(uint256 indexed id);
 
     // ========== DATA STRUCTURES ========== //
     /// @notice Core data for an auction lot
     struct Lot {
-        address owner; // market owner. sends payout tokens, receives quote tokens
         uint48 start; // timestamp when market starts
         uint48 conclusion; // timestamp when market no longer offered
-        address payoutToken; // TODO think about a better way to describe quote and payout assets
-        address quoteToken; // token to accept as payment
-        IHooks hooks; // address to call for any hooks to be executed on a purchase. Must implement IHooks.
-        IAllowlist allowlist; // (optional) contract that implements an allowlist for the market, based on IAllowlist
         bool capacityInQuote; // capacity limit is in payment token (true) or in payout (false, default)
         uint256 capacity; // capacity remaining
         uint256 sold; // payout tokens out
         uint256 purchased; // quote tokens in
     }
 
-    struct Routing {
-        address owner;
-        address payoutToken;
-        address quoteToken;
-        IHooks hooks;
-        IAllowlist allowlist;
-    }
-
     struct Bid {
         address bidder;
         uint256 amount;
         uint256 minAmountOut;
+        bytes32 param; // optional implementation-specific parameter for the bid
     }
 
     struct AuctionParams {
@@ -155,17 +72,25 @@ abstract contract AUCTIONv1 {
     /// @notice General information pertaining to auction lots
     mapping(uint256 id => Lot lot) public lotData;
 
+    // ========== ATOMIC AUCTIONS ========== //
 
-    // ========== AUCTION EXECUTION ========== //
+    /// @param approval_ - (Optional) Permit approval signature for the quoteToken
+    function purchase(address recipient_, address referrer_, uint256 id_, uint256 amount_, uint256 minAmountOut_, bytes calldata auctionData_, bytes calldata approval_) external virtual returns (uint256 payout);
 
-    function purchase(uint256 id_, uint256 amount_, uint256 minAmountOut_) external virtual returns (uint256);
+    // ========== BATCH AUCTIONS ========== //
 
+    // On-chain auction variant
+    function bid(address recipient_, address referrer_, uint256 id_, uint256 amount_, uint256 minAmountOut_, bytes calldata auctionData_, bytes calldata approval_) external virtual;
+
+    function settle(uint256 id_) external virtual returns (uint256[] memory amountsOut);
+
+    // Off-chain auction variant
     // TODO use solady data packing library to make bids smaller on the actual module to store
-    function settle(uint256 id_, Bid[] memory bids_) external virtual returns (uint256[] memory);
+    function settle(uint256 id_, Bid[] memory bids_) external virtual returns (uint256[] memory amountsOut);
 
     // ========== AUCTION MANAGEMENT ========== //
 
-    function createAuction(uint256 id_, bytes memory param_) external virtual;
+    function createAuction(uint256 id_, bytes memory params_) external virtual;
 
     function closeAuction(uint256 id_) external virtual;
 
@@ -188,19 +113,11 @@ abstract contract AUCTIONv1 {
     function remainingCapacity(uint256 id_) external view virtual returns (uint256); 
 }
 
-abstract contract AuctionSubmodule is AUCTIONv1, Submodule {
-    // ========== SUBMODULE SETUP ========== //
-    function PARENT() public pure override returns (Keycode) {
-        return toKeycode("HOUSE");
-    }
-
-    function _HOUSE() internal view returns (HOUSEv1) {
-        return HOUSEv1(address(parent));
-    }
+abstract contract AuctionModule is Auction, Module {
 
     // ========== AUCTION EXECUTION ========== //
 
-    function purchase(uint256 id_, uint256 amount_, uint256 minAmountOut_) external override onlyParent returns (uint256 payout) {
+    function purchase(uint256 id_, uint256 amount_, uint256 minAmountOut_, bytes calldata auctionData_) external override onlyParent returns (uint256 payout, bytes memory auctionOutput) {
         Lot storage lot = lotData[id_];
 
         // Check if market is live, if not revert
@@ -310,7 +227,7 @@ abstract contract AuctionSubmodule is AUCTIONv1, Submodule {
         lotData[id] = lot;
 
         // Call internal createAuction function to store implementation-specific data
-        _createAuction(id, core, params_.implParams);
+        _createAuction(id, lot, params_.implParams);
 
         emit AuctionCreated(id, address(params_.payoutToken), address(params_.quoteToken));
     }
@@ -325,7 +242,7 @@ abstract contract AuctionSubmodule is AUCTIONv1, Submodule {
     // TODO functions that use msg.sender for Authentication can't be called from the parent contract
     // Can we use another method for identifying the owner? a signature? UX would be worse though
     // Can just leave this function open and use the msg.sender check. Requires users to interact with this submodule directly though.
-    function closeAuction(uint256 id_) external override {
+    function closeAuction(uint256 id_) external override onlyParent {
         Lot memory lot = lotData[id_];
         if (msg.sender != lot.owner) revert Auction_OnlyMarketOwner();
         lot.conclusion = uint48(block.timestamp);
@@ -346,15 +263,6 @@ abstract contract AuctionSubmodule is AUCTIONv1, Submodule {
             lot.allowlist
         );
     }
-
-    // These functions do not include fees. Policies can call these functions with the after-fee amount to get a payout value.
-    // function payoutFor(uint256 id_, uint256 amount_) public view virtual returns (uint256);
-
-    // function priceFor(uint256 id_, uint256 payout_) public view virtual returns (uint256);
-
-    // function maxPayout(uint256 id_) public view virtual returns (uint256);
-
-    // function maxAmountAccepted(uint256 id_) public view virtual returns (uint256);
 
     function isLive(uint256 id_) public view override returns (bool) {
         return (markets[id_].capacity != 0 &&

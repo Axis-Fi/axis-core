@@ -169,10 +169,9 @@ classDiagram
     +deploy(bytes data, bool wrap) (uint256, address)
     +mint(bytes data, uint256 amount, bool wrapped) bytes
     +mint(uint256 tokenId, uint256 amount, bool wrapped) bytes
-    +redeem(uint256 tokenId, uint256 amount)
-    +exercise(uint256 tokenId, uint256 amount)
+    +redeem(uint256 tokenId, uint256 amount, bool wrapped)
+    +exercise(uint256 tokenId, uint256 amount, bool wrapped)
     +reclaim(uint256 tokenId)
-    +convert(uint256 tokenId, uint256 amount)
     +wrap(uint256 tokenId, uint256 amount)
     +unwrap(uint256 tokenId, uint256 amount)
     #transform(uint256 tokenId, uint256 amount, bool wrapped)

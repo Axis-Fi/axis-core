@@ -2,9 +2,11 @@
 pragma solidity 0.8.19;
 
 import {ClonesWithImmutableArgs} from "src/lib/clones/ClonesWithImmutableArgs.sol";
-import "src/modules/VAULT/VAULT.v1.sol";
+import "src/monolithic/modules/Derivative.sol";
 
-contract FixedExpiryVesting is VaultSubmodule {
+
+// TODO this only uses the ERC20 clones, need to convert to ERC6909 with optional ERC20 via wrapping the ERC6909
+contract CliffVesting is DerivativeModule {
     using ClonesWithImmutableArgs for address;
 
     // ========== EVENTS ========== //
@@ -13,7 +15,7 @@ contract FixedExpiryVesting is VaultSubmodule {
 
     // ========== STATE VARIABLES ========== //
 
-    struct FixedExpiry {
+    struct Cliff {
         ERC20 base;
         uint48 expiry;
     }
@@ -24,13 +26,8 @@ contract FixedExpiryVesting is VaultSubmodule {
 
     constructor(Module parent_) Submodule(parent_) {}
 
-    function SUBKEYCODE() public pure override returns (SubKeycode) {
+    function KEYCODE() public pure override returns (SubKeycode) {
         return toSubKeycode("VAULT.FIXED_EXPIRY");
-    }
-
-    function VERSION() public pure override returns (uint8 major, uint8 minor) {
-        major = 1;
-        minor = 0;
     }
 
     // ========== DERIVATIVE MANAGEMENT ========== //

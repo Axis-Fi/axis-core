@@ -12,8 +12,9 @@ abstract contract GDA {
     }
 
     /// @notice Auction pricing data
-    struct Impl {
+    struct AuctionData {
         uint256 equilibriumPrice; // price at which the auction is balanced
+        uint256 minimumPrice; // minimum price the auction can reach
         uint256 payoutScale;
         uint256 quoteScale;
         uint48 lastAuctionStart;
@@ -21,17 +22,18 @@ abstract contract GDA {
         SD59x18 decayConstant; // speed at which the price decays, as SD59x18.
         SD59x18 emissionsRate; // number of tokens released per second, as SD59x18. Calculated as capacity / duration.
     }
+
+    /* ========== STATE ========== */
+
+    SD59x18 public constant ONE = convert(int256(1));
+    mapping(uint256 lotId => AuctionData) public auctionData;
 }
 
 contract GradualDutchAuctioneer is AuctionModule, GDA {
     /* ========== ERRORS ========== */
 
 
-    /* ========== STATE ========== */
-
-    SD59x18 public constant ONE = convert(int256(1));
-
-    mapping(uint256 id => AuctionData data) public auctionData;
+    
 
     /* ========== CONSTRUCTOR ========== */
 
