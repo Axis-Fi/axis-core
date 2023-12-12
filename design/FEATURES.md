@@ -2,19 +2,32 @@
 
 ## Terminology
 
-Auction
-
-- Sale offering for tokens
-
 Lot
 
 - A token or group of tokens that are available for bidding through an auction
-- TODO can an auction have multiple, differing lots?
+- The current design supports a single lot per auction
+
+Auction
+
+- The auction (specifically the type) specifies _how_ the lot is being sold
 
 Market
 
 - This term was used in the V1 protocol
 - `Auction` is a more expansive term that encompasses the functionality in the V2 protocol
+
+Quote Token
+
+- The token that is offered by the bidder in return for the payout token
+
+Payout Token
+
+- The token that is provided to the bidder as a payment for the quote token
+- A payout token is used when the payout is non-vesting, where the payout token is transferred at the time of auction settlement
+
+Derivative Token
+
+- A form of a payout token that is used when the payout vests over time
 
 ### Actions
 
@@ -44,16 +57,77 @@ Close
 
 ## Features
 
-On-chain vs off-chain
+### Flexibility in Storage and Computation
+
+Bond Protocol V1 required bids to be stored on-chain and auctions to be settled on-chain. Not all auction types are suited to this.
+
+For this reason, V2 supports off-chain bids and settlement computation. This enables auctions that were not possible earlier:
+
+- sealed bid auctions
+- providing Bond Protocol auctions as a liquidity source for CoW Protocol's off-chain solvers
+- off-chain computation by first-party solvers
+
+### Auction Types
 
 Atomic
 
-- Transfer at time of purchase
+- Atomic auctions are settled at the time of purchase
+- Settled immediately: offered tokens are transferred at time of purchase
 
 Batch
 
-- Two versions: one for on-chain auctions where the contract already has all the bids, and another where the bids have to be supplied on settlement (for sealed bid auctions). In the latter case, it will need to be permissioned because the bids submitted must be trusted.
-- Transfer at time of settlement
+- Two major types:
+    - Open
+        - Bids are recorded on-chain
+    - Sealed
+        - Bids are recorded off-chain and submitted on-chain at the time of settlement
+        - The submission function will be permissioned in order to restrict who can submit the set of sealed bids
+        - This auction type prevents other bidders from seeing active bids
+- Quote tokens are only transferred at the time of settlement
+    - This avoids having to provide functionality for bidders to claim a refund of their quote tokens
+- Payout tokens are transferred at the time of settlement
 
+### Payout Types
 
-Sealed Batch
+Payout
+
+- If an auction has a payout configured (or has a lack of a derivative type), the payout token will be transferred to the bidder at the time of settlement
+
+Derivative
+
+- If an auction has a derivative type configured, the derivative token will be minted and transferred to the bidder at the time of settlement
+- Structured as an ERC6909, but can be optionally wrapped as an ERC20
+    - TODO why ERC6909?
+- Actions that can be performed on a derivative token by a token holder/bidder:
+    - Redeem: when the conditions are fulfilled, redeems/cashes in the derivative tokens for the payout token
+    - Exercise: TODO how is this different to redeem?
+    - Wrap: wraps the derivative token into an ERC20
+    - Unwrap: unwraps the derivative token back into the underlying ERC6909
+- Actions that can be performed on a derivative token by the auction owner:
+    - Deploy: deploys a new derivative token
+    - Mint: mints an amount of the derivative token
+    - Reclaim: enables an auction owner to reclaim the payout tokens that have not been redeemed
+    - Transform: transfers the derivative into another form
+        - TODO examples
+- A derivative token can have a number of uses:
+    - Cliff vesting
+        - At a certain expiration date, the full amount is vested
+    - Success token
+    - TODO complete list of uses
+
+### Fees
+
+Fees can be taken by the protocol at the following points:
+
+- Auction creation?
+- Bid/purchase
+- Settlement?
+- Redemption of derivative token
+
+TODO are fees set at the time of auction creation, or can they be modified after?
+
+TODO any support for referrers? (see Olympus Cooler Loans discussion for distributed frontends)
+
+## Design Principles
+
+Where functionality is concentrated - AuctionHouse vs modules
