@@ -92,6 +92,24 @@ Batch
     - This avoids having to provide functionality for bidders to claim a refund of their quote tokens
 - Payout tokens are transferred at the time of settlement
 
+### Auction Configuration
+
+Auctions (and auction types) will have different configuration options. This will include:
+
+- Auction owner
+- Auction type
+- Starting time
+- Duration
+- Payout token
+- Quote token
+- Purchase hook addresses
+- Optional whitelist of allowed bidders
+- Capacity (in quote or payout token)
+- Optional derivative type and parameters
+- Optional condenser type (used to manipulate auction output for the derivative module)
+
+Auction modules may have additional configuration options, too.
+
 ### Payout Types
 
 Payout
@@ -123,6 +141,10 @@ Derivative
     - Rage Vesting
     - TODO complete list of uses
 
+### Hooks
+
+TODO purchase hooks
+
 ### Fees
 
 Fees can be taken by the protocol at the following points:
@@ -146,3 +168,10 @@ TODO any support for referrers? (see Olympus Cooler Loans discussion for distrib
     - For example, it makes the most sense for quote and payout token transfers to be performed at the level of `AuctionHouse`,
     while derivative token transfers be handled in the respective derivative module (due to potential variations in behaviour and conditions)
 - Third-parties will mainly interact with the auction and derivative modules
+
+## Security Considerations
+
+- The goal is for the protocol to be permissionless and community-owned, which alters the security considerations
+- The functions that solvers interact with (for off-chain computation and/or bid storage) will need to be permissioned
+    - This would likely that the form of a whitelist of addresses that can call the function
+- Auctions should only be administered by the owner
