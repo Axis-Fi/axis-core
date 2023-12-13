@@ -4,6 +4,7 @@
 
 Lot
 
+- _What_ is being sold
 - A token or group of tokens that are available for bidding through an auction
 - The current design supports a single lot per auction
 
@@ -64,10 +65,12 @@ Bond Protocol V1 required bids to be stored on-chain and auctions to be settled 
 For this reason, V2 supports off-chain bids and settlement computation. This enables auctions that were not possible earlier:
 
 - sealed bid auctions
-- providing Bond Protocol auctions as a liquidity source for CoW Protocol's off-chain solvers
-- off-chain computation by first-party solvers
+- providing Bond Protocol auctions as a liquidity source for CoW Protocol
+- off-chain computation of auction settlement by solvers
 
 TODO what else can be done off-chain?
+
+TODO can the settlement be performed off-chain and the accepted bids be passed to the AuctionHouse or auction module?
 
 ### Auction Types
 
@@ -115,6 +118,9 @@ Derivative
     - Cliff vesting
         - At a certain expiration date, the full amount is vested
     - Success token
+        - See [Outcome Finance](https://docs.outcome.finance/success-tokens/what-are-success-tokens)
+    - Options
+    - Rage Vesting
     - TODO complete list of uses
 
 ### Fees
@@ -126,10 +132,17 @@ Fees can be taken by the protocol at the following points:
 - Settlement?
 - Redemption of derivative token
 
-TODO are fees set at the time of auction creation, or can they be modified after?
+TODO are fees locked at the time of auction creation, or can they be modified after?
 
 TODO any support for referrers? (see Olympus Cooler Loans discussion for distributed frontends)
 
 ## Design Principles
 
-Where functionality is concentrated - AuctionHouse vs modules
+- The architecture should be modular, enabling support for different types of auction and derivatives
+- Only handle at the auction-level (e.g. `AuctionHouse`) what needs to be done there
+    - This means that at least initially, there won't be pass-through functions to auction and derivative modules
+    - The reasoning for this is that different auction and derivative types may have different functions and arguments,
+    and catering for those in the `AuctionHouse` core contract will increase complexity
+    - For example, it makes the most sense for quote and payout token transfers to be performed at the level of `AuctionHouse`,
+    while derivative token transfers be handled in the respective derivative module (due to potential variations in behaviour and conditions)
+- Third-parties will mainly interact with the auction and derivative modules
