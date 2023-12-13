@@ -30,6 +30,8 @@ Derivative Token
 
 - A form of a payout token that is used when the payout vests over time
 
+TODO grab definitions from whitepaper
+
 ### Actions
 
 Purchase
@@ -62,15 +64,23 @@ Close
 
 Bond Protocol V1 required bids to be stored on-chain and auctions to be settled on-chain. Not all auction types are suited to this.
 
+core system only supports atomic auctions. Batch auctions not supported. Except through Gnosis Auctions, which is entirely on-chain.
+
 For this reason, V2 supports off-chain bids and settlement computation. This enables auctions that were not possible earlier:
 
 - sealed bid auctions
+    - list of winning bidders provided to the contract for settlement
 - providing Bond Protocol auctions as a liquidity source for CoW Protocol
 - off-chain computation of auction settlement by solvers
 
-TODO what else can be done off-chain?
+solver is trying to put together a set of contract interactions that gives an ideal outcome for users
 
-TODO can the settlement be performed off-chain and the accepted bids be passed to the AuctionHouse or auction module?
+limit order system is a version of intents. Custom settlement contract.
+
+sweet spot for GDA to do a TWAP swap. Solvers can plug into it. Better than FraxSwap TWAP (req ext liquidity) or CoW Swap TWAP (paying gas every time)
+OTC swap is an exchange between parties without 3PL
+
+sealed batch auctions could be done on-chain, but are difficult
 
 ### Auction Types
 
@@ -120,7 +130,9 @@ Derivative
 
 - If an auction has a derivative type configured, the derivative token will be minted and transferred to the bidder at the time of settlement
 - Structured as an ERC6909, but can be optionally wrapped as an ERC20
-    - TODO why ERC6909?
+    - TODO why ERC6909? Newer version of ERC1155. More ERC20-compatible.
+    - Needed because there may be many different derivatives. e.g. fixed expiry vs fixed term.
+    - More gas efficient, enabling giving receipt tokens.
 - Actions that can be performed on a derivative token by a token holder/bidder:
     - Redeem: when the conditions are fulfilled, redeems/cashes in the derivative tokens for the payout token
     - Exercise: TODO how is this different to redeem?
@@ -131,7 +143,7 @@ Derivative
     - Mint: mints an amount of the derivative token
     - Reclaim: enables an auction owner to reclaim the payout tokens that have not been redeemed
     - Transform: transfers the derivative into another form
-        - TODO examples
+        - e.g. transform a vesting token into an option token and creates an auction for it.
 - A derivative token can have a number of uses:
     - Cliff vesting
         - At a certain expiration date, the full amount is vested
@@ -140,23 +152,57 @@ Derivative
     - Options
     - Rage Vesting
     - TODO complete list of uses
+    - Staked vesting
 
 ### Hooks
+
+Uniswap V4
+Expansion of V1 callback function. Provides some flexibility, e.g. enables the auction owner to mint tokens upon purchase. Quote tokens also sent to the callback to give owner flexibility of where to send them.
+
+Custom logic at other places in the transaction. before payment, between payment and payout, after payout.
+
+Hooks/callbacks will not be gated/whitelisted in V2 (unlike V1)
+
+Could also be available upon settlement.
+
+Security risks:
+
+- Need to check balances. After each step, or only at the end? Invariants.
+- 
 
 TODO purchase hooks
 
 ### Fees
 
+Current system:
+
+- Purchase
+- Protocol fee (to BP treasury)
+- Referrer fee (for frontends to claim later)
+- Fee variables can be set at any time
+- Option teller has fee on exercise of the option
+- Has slippage check that would mitigate against fees being changed before a bid
+
+V2:
+
 Fees can be taken by the protocol at the following points:
 
-- Auction creation?
-- Bid/purchase
-- Settlement?
-- Redemption of derivative token
+- Auction creation? - not contingent on volume
+- Atomic auction purchase
+- Batch auction settlement
+- Exercising of derivative token
+    - e.g. early exercising of vesting token, take a cut of residual collateral
+    - would make sense when there's a profit for the bidder
+
+taken in the quote token
+
+can only take a fee when value is being produced for both parties, due to clever design
+
+don't take fees on basic stuff, e.g. redemption, cliff vesting
+
+referrer fee carrying over? Sushi likely to use it.
 
 TODO are fees locked at the time of auction creation, or can they be modified after?
-
-TODO any support for referrers? (see Olympus Cooler Loans discussion for distributed frontends)
 
 ## Design Principles
 
@@ -175,3 +221,7 @@ TODO any support for referrers? (see Olympus Cooler Loans discussion for distrib
 - The functions that solvers interact with (for off-chain computation and/or bid storage) will need to be permissioned
     - This would likely that the form of a whitelist of addresses that can call the function
 - Auctions should only be administered by the owner
+
+
+vesting token: collateral is the underlying asset that the bidder will receive after vesting is complete
+call option: needs to be a "covered call", meaning that the collateral needs to be provided ahead of time
