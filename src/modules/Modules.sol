@@ -122,7 +122,8 @@ abstract contract WithModules is Owned {
     //     newModule_.INIT();
     // }
 
-    // TODO decide if we need this function, i.e. do we need to set any parameters or call permissioned functions on any modules?
+    // Decide if we need this function, i.e. do we need to set any parameters or call permissioned functions on any modules?
+    // Answer: yes, e.g. when setting default values on an Auction module, like minimum duration or minimum deposit interval
     function execOnModule(
         Keycode keycode_,
         bytes memory callData_
