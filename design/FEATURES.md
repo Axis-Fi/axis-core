@@ -147,8 +147,7 @@ Derivative
 
 - If an auction has a derivative type configured, the derivative token will be minted and transferred to the bidder at the time of settlement
 - Structured as an ERC6909, but can be optionally wrapped as an ERC20
-  - TODO why ERC6909? Newer version of ERC1155. More ERC20-compatible.
-  - Needed because there may be many different derivatives. e.g. fixed expiry vs fixed term.
+  - Needed because there may be many different derivatives from a single auction. For example, a long-running auction with a fixed-term derivative type would have numerous derivative tokens, each with different expiry dates.
   - More gas efficient, enabling giving receipt tokens.
 - Actions that can be performed on a derivative token by a token holder/bidder:
   - Redeem: when the conditions are fulfilled, redeems/cashes in the derivative tokens for the payout token
@@ -161,17 +160,28 @@ Derivative
   - Reclaim: enables an auction owner to reclaim the payout tokens that have not been redeemed
   - Transform: transfers the derivative into another form
     - e.g. transform a vesting token into an option token and creates an auction for it.
-- A derivative token can have a number of uses:
-  - Cliff vesting
-    - At a certain expiration date, the full amount is vested
+- There are a number of different derivative types:
+  - Fixed expiry
+    - Expires on a specific date
+  - Fixed term
+    - Expires after a specific term, e.g. 3 months
+  - Vesting
+    - Cliff vesting
+      - At a certain expiration date, the full amount is vested
+      - Different users can have different cliff dates (hence it requires ERC6909)
+    - Linear vesting
+    - Rage vesting
+      > Rage Vesting introduces the concept of Rage Quitting, where users can unlock their proportional share of tokens vested at a point in time but forfeit the remaining balance.
+    - Staked vesting
+    - Dynamic
+      - Could implement an arbitrary vesting algorithm
+  - Call options
+    - Call options give buyers the opportunity to buy an asset at a specified price within a specific time period
+    - Only covered calls are supported: the auction owner has to provide the collateral so that call options are guaranteed to settle if they are exercised
+    - TODO fixed vs oracle strike
   - Success token
     - See [Outcome Finance](https://docs.outcome.finance/success-tokens/what-are-success-tokens)
-  - Options
-  - Rage Vesting
-  - TODO complete list of uses
-  - Staked vesting
-  - Fixed expiry
-  - Fixed term
+    - Combination of a vesting token and an option for those tokens
 
 ### Hooks
 
