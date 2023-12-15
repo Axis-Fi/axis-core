@@ -241,7 +241,8 @@ Fees can be taken by the protocol at the following points:
   - The reasoning for this is that different auction and derivative types may have different functions and arguments,
     and catering for those in the `AuctionHouse` core contract will increase complexity
   - For example, it makes the most sense for quote and payout token transfers to be performed at the level of `AuctionHouse`,
-    while derivative token transfers be handled in the respective derivative module (due to potential variations in behaviour and conditions)
+    while derivative token transfers be handled in the respective derivative module (due to potential variations in behaviour and conditions)\
+  - Data should also be stored in a similar manner
 - Third-parties will mainly interact with the auction and derivative modules
 
 ## Security Considerations
