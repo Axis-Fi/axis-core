@@ -30,8 +30,6 @@ Derivative Token
 
 - A form of a payout token that is used when the payout vests over time
 
-TODO grab definitions from whitepaper
-
 ### Actions
 
 Purchase
@@ -185,24 +183,27 @@ Derivative
 
 ### Hooks
 
-Uniswap V4
-Expansion of V1 callback function. Provides some flexibility, e.g. enables the auction owner to mint tokens upon purchase. Quote tokens also sent to the callback to give owner flexibility of where to send them.
+Hooks are an expansion of the callback function in Bond Protocol V1, modelled after Uniswap V4 hooks.
 
-Custom logic at other places in the transaction. before payment, between payment and payout, after payout.
+The callback function in Bond Protocol V1 offered flexibility to the auction owner. For example:
 
-Hooks/callbacks will not be gated/whitelisted in V2 (unlike V1)
+- Enables the auction owner to mint tokens upon purchase
+- Quote tokens also sent to the callback to give owner flexibility of where to send them.
 
-Could also be available upon settlement.
+Hooks in the V2 protocol provide further flexibility and customisation for the auction owner. For example:
+
+- Custom logic at other places in the transaction, such as before payment, between payment and payout, after payout, settlement
+
+Unlike in V1, hooks will not be gated.
 
 Security risks:
 
-- Need to check balances. After each step, or only at the end? Invariants.
-
-TODO purchase hooks
+- There are inherent security risks in running arbitrary code
+- There will be a need to check balances to ensure that after each step (or at the end), invariants are not broken
 
 ### Fees
 
-Current system:
+#### V1
 
 - Purchase
 - Protocol fee (to BP treasury)
@@ -211,26 +212,26 @@ Current system:
 - Option teller has fee on exercise of the option
 - Has slippage check that would mitigate against fees being changed before a bid
 
-V2:
+#### V2
+
+Principles:
+
+- Fees are taken in the quote token.
+- The protocol should only take a fee when value is being produced for both parties
+- Don't take fees on basic actions, e.g. redemption and cliff vesting
+- Referrer fees should carry over
+- TODO decide if fees are locked at the time of auction creation
+  - If not locked, a governance action could dramatically alter the fees for open auctions and derivatives
 
 Fees can be taken by the protocol at the following points:
 
-- Auction creation? - not contingent on volume
+- Auction creation
+  - e.g. service fee not contingent on volume
 - Atomic auction purchase
 - Batch auction settlement
 - Exercising of derivative token
   - e.g. early exercising of vesting token, take a cut of residual collateral
   - would make sense when there's a profit for the bidder
-
-taken in the quote token
-
-can only take a fee when value is being produced for both parties, due to clever design
-
-don't take fees on basic stuff, e.g. redemption, cliff vesting
-
-referrer fee carrying over? Sushi likely to use it.
-
-TODO are fees locked at the time of auction creation, or can they be modified after?
 
 ## Design Principles
 
