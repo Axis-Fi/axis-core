@@ -397,69 +397,66 @@ sequenceDiagram
   deactivate AuctionHouse
 ```
 
-### Bid on an Auction
+### Batch Auction: Buyer bids on an on-chain batch auction (not relevant to off-chain batch auctions)
 
 ```mermaid
 sequenceDiagram
   autoNumber
   participant Buyer
   participant AuctionHouse
-  participant SDAAuctionModule
+  participant BatchAuctionModule
 
   activate AuctionHouse
     Buyer->>AuctionHouse: bid(address recipient_, address referrer_, uint256 id_, uint256 amount_, uint256 minAmountOut_, bytes calldata auctionData_, bytes calldata approval_)
     AuctionHouse->>AuctionHouse: _getModuleForId(uint256 auctionId)
 
-    Note over SDAAuctionModule: TODO where are the bids stored?
-    activate SDAAuctionModule
-      AuctionHouse->>SDAAuctionModule: bid(address recipient_, address referrer_, uint256 id_, uint256 amount_, uint256 minAmountOut_, bytes calldata auctionData_, bytes calldata approval_)
-      SDAAuctionModule->>SDAAuctionModule: records bid
-      SDAAuctionModule-->>AuctionHouse: uint256 payoutAmount, bytes auctionOutput
-    deactivate SDAAuctionModule
+    activate BatchAuctionModule
+      AuctionHouse->>BatchAuctionModule: bid(address recipient_, address referrer_, uint256 id_, uint256 amount_, uint256 minAmountOut_, bytes calldata auctionData_, bytes calldata approval_)
+      SDAAuctionModule->>BatchAuctionModule: records bid
+    deactivate BatchAuctionModule
 
-    activate AuctionHouse
-      AuctionHouse->>AuctionHouse: _handleTransfers(Routing routing, uint256 amount, address recipient, uint256 payout, bytes auctionOutput)
-      create participant QuoteToken
-      AuctionHouse->>QuoteToken: safeTransferFrom(buyer, auctionHouse, amount)
-      Buyer-->>AuctionHouse: quote tokens transferred to AuctionHouse
-    deactivate AuctionHouse
   deactivate AuctionHouse
 ```
 
-TODO transfer to AuctionHouse or the module?
-TODO how buyer can claim quote tokens if the bid is unsuccessful?
-
-### Settle an Auction
+### Batch Auction: Auction is settled from bids stored on-chain or passed in
 
 ```mermaid
 sequenceDiagram
   autoNumber
   participant AuctionOwner
   participant AuctionHouse
-  participant SDAAuctionModule
+  participant BatchAuctionModule
+  participant DerivativeModule
+  participant Buyer(s)
 
   activate AuctionHouse
     AuctionOwner->>AuctionHouse: settle(uint256 auctionId)
     AuctionHouse->>AuctionHouse: _getModuleForId(uint256 auctionId)
 
-    Note over SDAAuctionModule: TODO where are the bids stored?
+    activate BatchAuctionModule
+      AuctionHouse->>BatchAuctionModule: settle(auctionId)
 
-    activate SDAAuctionModule
-      AuctionHouse->>SDAAuctionModule: settle(auctionId, bids)
+      Note over BatchAuctionModule: module-specific logic to determine winning bids from stored bids
+      BatchAuctionModule->>BatchAuctionModule: _settle(auctionId): Bids[] winningBids, bytes auctionOutput
 
-      Note over SDAAuctionModule: module-specific logic to determine payout
-      SDAAuctionModule->>SDAAuctionModule: _settle(auctionId, bids)
+      BatchAuctionModule-->>AuctionHouse: array of winningBids
+    deactivate BatchAuctionModule
 
-      Note over SDAAuctionModule: TODO also needs bidId to retrieve recipient address?
+    AuctionOwner-->>AuctionHouse: base tokens transferred to AuctionHouse
+    activate AuctionHouse
+      Note over AuctionHouse: for each winning bid
+      AuctionHouse->>AuctionHouse: _handleTransfers(Routing routing, uint256 amount, address recipient, uint256 payout)
+      Buyer(s)-->>AuctionHouse: quote tokens transferred to AuctionHouse
+      AuctionHouse->>AuctionHouse: _handlePayout(uint256 id, Routing routing, address recipient, uint256 payout, bytes auctionOutput)
+      AuctionHouse-->>DerivativeModule: base tokens transferred to Derivative Module
+      DerivativeModule-->>Buyer(s): payout tokens transferred to Buyer(s)
+    deactivate AuctionHouse
+    AuctionHouse-->>AuctionOwner: quote tokens transferred to AuctionOwner
 
-      SDAAuctionModule-->>AuctionHouse: array of amounts
-    deactivate SDAAuctionModule
-    
   deactivate AuctionHouse
 ```
+Need to think about the implications of transferring to/from the AuctionOwner once here, because _handleTransfers is not currently designed for this.
 
-TODO when to transfer quote tokens to auction owner?
-TODO when to transfer payout tokens from auction owner to auction house and then to buyer?
 
 ### User Redeems Derivative Token - V1 (through AuctionHouse, requires refactoring AuctionModule)
 
@@ -518,3 +515,43 @@ sequenceDiagram
     DerivativeModule-->>User: payout tokens transferred
   deactivate DerivativeModule
 ```
+
+### Transform Derivative Token into a new Derivative Token
+
+```mermaid
+sequenceDiagram
+  autoNumber
+  participant User
+  participant AuctionHouse
+  participant Transformer
+  participant DerivativeModule
+  participant DerivativeToken
+  participant NewDerivativeModule
+
+  activate AuctionHouse
+    User->>AuctionHouse: transform(Keycode fromType, uint256 fromId, Keycode toType, bytes toData, uint256 amount)
+
+    AuctionHouse->>AuctionHouse: getModuleIfInstalled(fromType): DerivativeModule
+    AuctionHouse->>AuctionHouse: getModuleIfInstalled(toType): NewDerivativeModule
+    AuctionHouse->>AuctionHouse: getTransformer(fromType, toType): Transformer
+
+    AuctionHouse->>Transformer: canTransform(fromModule, fromId, toModule, toData): bool
+
+    activate DerivativeModule
+      AuctionHouse->>DerivativeModule: transform(uint256 fromId, uint256 amount)
+      DerivativeModule->>DerivativeModule: burn(fromId, user, amount)
+      User-->>DerivativeModule: derivative tokens burned
+      DerivativeModule-->>AuctionHouse: base tokens transferred to AuctionHouse
+    deactivate DerivativeModule
+
+    activate NewDerivativeModule
+      AuctionHouse->>NewDerivativeModule: mint(toData, user, amount)
+      AuctionHouse-->>NewDerivativeModule: base tokens transferred to NewDerivativeModule
+      NewDerivativeModule-->>User: derivative tokens minted to user
+    deactivate NewDerivativeModule
+  deactivate AuctionHouse
+```
+
+### Create Auction by transforming one Derivative to another
+TODO determine if it makes sense to build this as a specific workflow within the system.
+It's a bit of an edge case and will add several variables to the auction creation process that are optional.
