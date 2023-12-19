@@ -127,15 +127,17 @@ abstract contract Auctioneer is WithModules {
         routing.quoteToken = routing_.quoteToken;
         routing.hooks = routing_.hooks;
 
-
+        emit AuctionCreated(id_, address(routing.payoutToken), address(routing.quoteToken));
     }
 
-    function close(uint256 id_) external override {
+    function cancel(uint256 id_) external override {
+        // Check that caller is the auction owner
+        if (msg.sender != lotRouting[id_].owner) revert HOUSE_NotAuctionOwner(msg.sender);
+
         AuctionModule module = _getModuleForId(id_);
 
-        // Close the auction on the module
-        // Module checks that msg.sender is auction owner
-        module.close(id_, msg.sender);
+        // Cancel the auction on the module
+        module.cancel(id_);
     }
 
     // ========== AUCTION INFORMATION ========== //

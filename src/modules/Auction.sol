@@ -1,19 +1,18 @@
 /// SPDX-License-Identifier: AGPL-3.0
 pragma solidity 0.8.19;
 
-import "src/monolithic/modules/Modules.sol";
+import "src/modules/Modules.sol";
 
 abstract contract Auction {
 
     /* ========== ERRORS ========== */
 
-    // error Auctioneer_OnlyMarketOwner();
-    // error Auctioneer_MarketNotActive();
-    // error Auctioneer_AmountLessThanMinimum();
-    // error Auctioneer_NotEnoughCapacity();
-    // error Auctioneer_InvalidParams();
-    // error Auctioneer_NotAuthorized();
-    // error Auctioneer_NewMarketsNotAllowed();
+    error Auction_OnlyMarketOwner();
+    error Auction_MarketNotActive();
+    error Auction_AmountLessThanMinimum();
+    error Auction_NotEnoughCapacity();
+    error Auction_InvalidParams();
+    error Auction_NotAuthorized();
 
     /* ========== EVENTS ========== */
 
@@ -43,25 +42,14 @@ abstract contract Auction {
     }
 
     struct AuctionParams {
-        address owner; // must be set to msg.sender in the Registrar or could cause tokens to be pulled from someone else
         uint48 start;
         uint48 duration;
-        address payoutToken;
-        address quoteToken;
-        IHooks hooks; // address to call for any hooks to be executed on a purchase. Must implement IHooks.
-        IAllowlist allowlist; // (optional) contract that implements an allowlist for the market, based on IAllowlist
-        bytes allowlistParams; // abi-encoded params for specific allowlist implementations
         bool capacityInQuote;
         uint256 capacity;
         bytes implParams; // abi-encoded params for specific auction implementations
     }
 
     // ========= STATE ========== //
-
-    // TODO determine if this should only be at the HOUSE level
-    /// @notice Whether or not the auctioneer allows new markets to be created
-    /// @dev    Changing to false will sunset the auctioneer after all active markets end
-    bool public allowNewMarkets;
 
     /// @notice Minimum auction duration in seconds
     uint48 public minAuctionDuration;
@@ -75,7 +63,7 @@ abstract contract Auction {
     // ========== ATOMIC AUCTIONS ========== //
 
     /// @param approval_ - (Optional) Permit approval signature for the quoteToken
-    function purchase(address recipient_, address referrer_, uint256 id_, uint256 amount_, uint256 minAmountOut_, bytes calldata auctionData_, bytes calldata approval_) external virtual returns (uint256 payout);
+    function purchase(address recipient_, address referrer_, uint256 id_, uint256 amount_, bytes calldata auctionData_, bytes calldata approval_) external virtual returns (uint256 payout);
 
     // ========== BATCH AUCTIONS ========== //
 
@@ -90,13 +78,11 @@ abstract contract Auction {
 
     // ========== AUCTION MANAGEMENT ========== //
 
-    function createAuction(uint256 id_, bytes memory params_) external virtual;
+    function createAuction(uint256 id_, address owner_, AuctionParams memory params_) external virtual;
 
-    function closeAuction(uint256 id_) external virtual;
+    function cancelAuction(uint256 id_) external virtual;
 
     // ========== AUCTION INFORMATION ========== //
-
-    function getRouting(uint256 id_) external view virtual returns (Routing memory);
 
     function payoutFor(uint256 id_, uint256 amount_) public view virtual returns (uint256);
 
@@ -117,7 +103,7 @@ abstract contract AuctionModule is Auction, Module {
 
     // ========== AUCTION EXECUTION ========== //
 
-    function purchase(uint256 id_, uint256 amount_, uint256 minAmountOut_, bytes calldata auctionData_) external override onlyParent returns (uint256 payout, bytes memory auctionOutput) {
+    function purchase(uint256 id_, uint256 amount_, bytes calldata auctionData_) external override onlyParent returns (uint256 payout, bytes memory auctionOutput) {
         Lot storage lot = lotData[id_];
 
         // Check if market is live, if not revert
@@ -125,9 +111,6 @@ abstract contract AuctionModule is Auction, Module {
 
         // Get payout from implementation-specific auction logic
         payout = _purchase(id_, amount_);
-
-        // Check that payout is at least minimum amount out
-        if (payout < minAmountOut_) revert Auctioneer_AmountLessThanMinimum();
 
         // Update Capacity
 
@@ -187,7 +170,7 @@ abstract contract AuctionModule is Auction, Module {
 
     // ========== AUCTION MANAGEMENT ========== //
 
-    function createAuction(uint256 id_, AuctionParams memory params_) external override onlyParent {
+    function auction(uint256 id_, address owner_, AuctionParams memory params_) external override onlyParent {
         // Start time must be zero or in the future
         if (params_.start > 0 && params_.start < uint48(block.timestamp))
             revert Auction_InvalidParams();
@@ -224,50 +207,38 @@ abstract contract AuctionModule is Auction, Module {
         }
 
         // Store lot data
-        lotData[id] = lot;
+        lotData[id_] = lot;
 
         // Call internal createAuction function to store implementation-specific data
-        _createAuction(id, lot, params_.implParams);
-
-        emit AuctionCreated(id, address(params_.payoutToken), address(params_.quoteToken));
+        _auction(id_, lot, params_.implParams);
     }
 
     /// @dev implementation-specific auction creation logic can be inserted by overriding this function
-    function _createAuction(
+    function _auction(
         uint256 id_,
         Lot memory lot_,
         bytes calldata params_
     ) internal returns (uint256);
 
-    // TODO functions that use msg.sender for Authentication can't be called from the parent contract
-    // Can we use another method for identifying the owner? a signature? UX would be worse though
-    // Can just leave this function open and use the msg.sender check. Requires users to interact with this submodule directly though.
-    function closeAuction(uint256 id_) external override onlyParent {
-        Lot memory lot = lotData[id_];
-        if (msg.sender != lot.owner) revert Auction_OnlyMarketOwner();
+    /// @dev Owner is stored in the Routing information on the AuctionHouse, so we check permissions there
+    function cancel(uint256 id_) external override onlyParent {
+        Lot storage lot = lotData[id_];
         lot.conclusion = uint48(block.timestamp);
         lot.capacity = 0;
 
-        emit AuctionClosed(id_);
+        // Call internal closeAuction function to update any other required parameters
+        _cancel(id_);
     }
+
+    function _cancel(uint256 id_) internal virtual;
 
     // ========== AUCTION INFORMATION ========== //
 
-    function getRouting(uint256 id_) external view override returns (Routing memory) {
-        Lot storage lot = lotData[id_];
-        return Routing(
-            lot.owner,
-            lot.payoutToken,
-            lot.quoteToken,
-            lot.hooks,
-            lot.allowlist
-        );
-    }
-
+    // TODO does this need to change for batch auctions?
     function isLive(uint256 id_) public view override returns (bool) {
-        return (markets[id_].capacity != 0 &&
-            terms[id_].conclusion > uint48(block.timestamp) &&
-            terms[id_].start <= uint48(block.timestamp));
+        return (lotData[id_].capacity != 0 &&
+            lotData[id_].conclusion > uint48(block.timestamp) &&
+            lotData[id_].start <= uint48(block.timestamp));
     }
 
     function ownerOf(uint256 id_) external view override returns (address) {

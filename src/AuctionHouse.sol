@@ -81,7 +81,11 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
         Routing memory routing = lotRouting[id_];
 
         // Send purchase to auction house and get payout plus any extra output
-        (payout, auctionOutput) = module.purchase(id_, amount_ - toReferrer - toProtocol, minAmountOut_, auctionData_);
+        (payout, auctionOutput) = module.purchase(id_, amount_ - toReferrer - toProtocol, auctionData_);
+
+        // Check that payout is at least minimum amount out
+        // @dev Moved the slippage check from the auction to the AuctionHouse to allow different routing and purchase logic
+        if (payout < minAmountOut_) revert AuctionHouse_AmountLessThanMinimum();
 
         // Update fee balances if non-zero
         if (toReferrer > 0) rewards[referrer_][routing.quoteToken] += toReferrer;
