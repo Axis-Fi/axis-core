@@ -1,37 +1,7 @@
 /// SPDX-License-Identifier: AGPL-3.0
 pragma solidity 0.8.19;
 
-import "src/monolithic/modules/auctions/bases/AtomicAuction.sol";
-
-struct StyleData {
-        uint48 depositInterval; // target interval between deposits
-        uint256 maxPayout; // maximum payout for a single purchase
-        uint256 scale; // stored scale for market price
-    }
-
-    /* ========== ADMIN FUNCTIONS ========== */
-
-    /// @notice Set the minimum deposit interval
-    /// @notice Access controlled
-    /// @param depositInterval_ Minimum deposit interval in seconds
-    function setMinDepositInterval(uint48 depositInterval_) external;
-
-    /* ========== VIEW FUNCTIONS ========== */
-
-    /// @notice             Calculate current market price of payout token in quote tokens
-    /// @param id_          ID of market
-    /// @return             Price for market in configured decimals
-    function marketPrice(uint256 id_) public view virtual returns (uint256);
-
-    /// @notice             Scale value to use when converting between quote token and payout token amounts with marketPrice()
-    /// @param id_          ID of market
-    /// @return             Scaling factor for market in configured decimals
-    function marketScale(uint256 id_) public view virtual returns (uint256);
-
-
-    function maxPayout(uint256 id_) external view returns (uint256);
-}
-
+import "src/modules/auctions/bases/AtomicAuction.sol";
 
 abstract contract DiscreteAuction {
     /* ========== ERRORS ========== */
@@ -69,6 +39,8 @@ abstract contract DiscreteAuction {
     /// @param id_          ID of market
     /// @return             Scaling factor for market in configured decimals
     function marketScale(uint256 id_) external view returns (uint256);
+
+    function maxPayout(uint256 id_) external view returns(uint256);
 }
 
 abstract contract DiscreteAuctionModule is AtomicAuctionModule, DiscreteAuction {

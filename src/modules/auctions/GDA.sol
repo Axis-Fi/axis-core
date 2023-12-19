@@ -1,7 +1,7 @@
 /// SPDX-License-Identifier: AGPL-3.0
 pragma solidity 0.8.19;
 
-import {AuctionModule} from "src/monolithic/modules/Auction.sol";
+import "src/modules/auctions/bases/AtomicAuction.sol";
 import {SD59x18, sd, convert, uUNIT} from "prb-math/SD59x18.sol";
 
 abstract contract GDA {
@@ -29,7 +29,7 @@ abstract contract GDA {
     mapping(uint256 lotId => AuctionData) public auctionData;
 }
 
-contract GradualDutchAuctioneer is AuctionModule, GDA {
+contract GradualDutchAuctioneer is AtomicAuctionModule, GDA {
     /* ========== ERRORS ========== */
 
 
@@ -43,7 +43,7 @@ contract GradualDutchAuctioneer is AuctionModule, GDA {
 
     /* ========== MARKET FUNCTIONS ========== */
 
-    function _createMarket(
+    function _auction(
         uint256 id_,
         Lot memory lot_,
         bytes memory params_
@@ -94,7 +94,7 @@ contract GradualDutchAuctioneer is AuctionModule, GDA {
 
     /* ========== PRICE FUNCTIONS ========== */
 
-    function marketPriceFor(uint256 id_, uint256 payout_) external view returns (uint256) {
+    function priceFor(uint256 id_, uint256 payout_) external view returns (uint256) {
         Decay decayType = auctionData[id_].decayType;
 
         uint256 amount;

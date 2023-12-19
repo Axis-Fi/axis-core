@@ -1,7 +1,7 @@
 /// SPDX-License-Identifier: AGPL-3.0
 pragma solidity 0.8.19;
 
-import {AuctionModule} from "src/monolithic/modules/Auction.sol";
+import "src/modules/auctions/bases/AtomicAuction.sol";
 import {SD59x18, sd, convert, uUNIT} from "prb-math/SD59x18.sol";
 
 /// @notice Two variable GDA. Price is dependent on time. The other variable is independent of time.
@@ -27,7 +27,7 @@ abstract contract TVGDA {
     }
 }
 
-contract TwoVariableGradualDutchAuctioneer is AuctionModule, TVGDA {
+contract TwoVariableGradualDutchAuctioneer is AtomicAuctionModule, TVGDA {
     
     /* ========== CONSTRUCTOR ========== */
 
@@ -37,7 +37,7 @@ contract TwoVariableGradualDutchAuctioneer is AuctionModule, TVGDA {
 
     /* ========== AUCTION FUNCTIONS ========== */
 
-    function _createAuction(
+    function _auction(
         uint256 lotId_,
         Lot memory lot_,
         bytes memory params_

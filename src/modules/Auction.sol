@@ -78,9 +78,9 @@ abstract contract Auction {
 
     // ========== AUCTION MANAGEMENT ========== //
 
-    function createAuction(uint256 id_, address owner_, AuctionParams memory params_) external virtual;
+    function auction(uint256 id_, address owner_, AuctionParams memory params_) external virtual;
 
-    function cancelAuction(uint256 id_) external virtual;
+    function cancel(uint256 id_) external virtual;
 
     // ========== AUCTION INFORMATION ========== //
 
@@ -101,73 +101,6 @@ abstract contract Auction {
 
 abstract contract AuctionModule is Auction, Module {
 
-    // ========== AUCTION EXECUTION ========== //
-
-    function purchase(uint256 id_, uint256 amount_, bytes calldata auctionData_) external override onlyParent returns (uint256 payout, bytes memory auctionOutput) {
-        Lot storage lot = lotData[id_];
-
-        // Check if market is live, if not revert
-        if (!isLive(id_)) revert Auction_MarketNotActive();
-
-        // Get payout from implementation-specific auction logic
-        payout = _purchase(id_, amount_);
-
-        // Update Capacity
-
-        // Capacity is either the number of payout tokens that the market can sell
-        // (if capacity in quote is false),
-        //
-        // or the number of quote tokens that the market can buy
-        // (if capacity in quote is true)
-
-        // If amount/payout is greater than capacity remaining, revert
-        if (lot.capacityInQuote ? amount_ > lot.capacity : payout > lot.capacity)
-            revert Auction_NotEnoughCapacity();
-        // Capacity is decreased by the deposited or paid amount
-        lot.capacity -= lot.capacityInQuote ? amount_ : payout;
-
-        // Markets keep track of how many quote tokens have been
-        // purchased, and how many payout tokens have been sold
-        lot.purchased += amount_;
-        lot.sold += payout;
-    }
-
-    /// @dev implementation-specific purchase logic can be inserted by overriding this function
-    function _purchase(
-        uint256 id_,
-        uint256 amount_,
-        uint256 minAmountOut_
-    ) internal virtual returns (uint256);
-
-    /// @notice Settle a batch auction with the provided bids
-    function settle(uint256 id_, Bid[] memory bids_) external override onlyParent returns (uint256[] memory amountsOut) {
-        Lot storage lot = lotData[id_];
-
-        // Must be past the conclusion time to settle
-        if (uint48(block.timestamp) < lotData[id_].conclusion) revert Auction_NotConcluded();
-
-        // Bids must not be greater than the capacity
-        uint256 len = bids_.length;
-        uint256 sum;
-        if (lot.capacityInQuote) {
-            for (uint256 i; i < len; i++) {
-                sum += bids_[i].amount;
-            }
-            if (sum > lot.capacity) revert Auction_NotEnoughCapacity();
-        } else {
-            for (uint256 i; i < len; i++) {
-                sum += bids_[i].minAmountOut;
-            }
-            if (sum > lot.capacity) revert Auction_NotEnoughCapacity();
-        }
-
-        // TODO other generic validation?
-        // Check approvals in the Auctioneer since it handles token transfers
-
-        // Get amounts out from implementation-specific auction logic
-        amountsOut = _settle(id_, bids_);
-    }
-
     // ========== AUCTION MANAGEMENT ========== //
 
     function auction(uint256 id_, address owner_, AuctionParams memory params_) external override onlyParent {
@@ -178,47 +111,27 @@ abstract contract AuctionModule is Auction, Module {
         // Duration must be at least min duration
         if (params_.duration < minAuctionDuration) revert Auction_InvalidParams();
 
-        // Ensure token decimals are in-bounds
-        {
-            uint8 payoutTokenDecimals = params_.payoutToken.decimals();
-            uint8 quoteTokenDecimals = params_.quoteToken.decimals();
-
-            if (payoutTokenDecimals < 6 || payoutTokenDecimals > 18)
-                revert Auction_InvalidParams();
-            if (quoteTokenDecimals < 6 || quoteTokenDecimals > 18)
-                revert Auction_InvalidParams();
-        }
 
         // Create core market data
         Lot memory lot;
-        lot.owner = params_.owner; // TODO: this needs to be set with msg.sender further up in the stack to avoid allowing creating a market for someone else
         lot.start = params_.start == 0 ? uint48(block.timestamp) : params_.start;
         lot.conclusion = lot.start + params_.duration;
-        lot.payoutToken = params_.payoutToken;
-        lot.quoteToken = params_.quoteToken;
-        lot.hooks = params_.hooks;
-        lot.allowlist = params_.allowlist;
         lot.capacityInQuote = params_.capacityInQuote;
         lot.capacity = params_.capacity;
 
-        // Register market on allowlist, if applicable
-        if (address(params_.allowlist) != address(0)) {
-            params_.allowlist.registerMarket(id_, params_.allowlistParams);
-        }
+        // Call internal createAuction function to store implementation-specific data
+        _auction(id_, lot, params_.implParams);
 
         // Store lot data
         lotData[id_] = lot;
-
-        // Call internal createAuction function to store implementation-specific data
-        _auction(id_, lot, params_.implParams);
     }
 
     /// @dev implementation-specific auction creation logic can be inserted by overriding this function
     function _auction(
         uint256 id_,
         Lot memory lot_,
-        bytes calldata params_
-    ) internal returns (uint256);
+        bytes memory params_
+    ) internal virtual returns (uint256);
 
     /// @dev Owner is stored in the Routing information on the AuctionHouse, so we check permissions there
     function cancel(uint256 id_) external override onlyParent {
@@ -239,10 +152,6 @@ abstract contract AuctionModule is Auction, Module {
         return (lotData[id_].capacity != 0 &&
             lotData[id_].conclusion > uint48(block.timestamp) &&
             lotData[id_].start <= uint48(block.timestamp));
-    }
-
-    function ownerOf(uint256 id_) external view override returns (address) {
-        return lotData[id_].owner;
     }
 
     function remainingCapacity(uint256 id_) external view override returns (uint256) {
