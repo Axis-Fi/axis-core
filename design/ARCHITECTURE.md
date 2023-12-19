@@ -53,6 +53,8 @@ classDiagram
     <<Abstract>>
     ~address immutable treasury
     +purchase(address recipient, address referrer, uint256 lotId, uint256 amount, uint256 minAmountOut, bytes auctionData, bytes approval): uint256
+    +batchPurchase(address recipient, address referrer, uint256[] lotIds, uint256[] amounts, uint256[] minAmountsOut, bytes[] auctionData, bytes[] approval): uint256[]
+    +routePurchase(address recipient, address referrer, uint256[] lotIds, uint256 amount, uint256 minAmountOut, bytes[] auctionData, bytes approval): uint256
     +bid(address recipient, address referrer, uint256 lotId, uint256 amount, uint256 minAmountOut, bytes auctionData, bytes approval)
     +settle(uint256 lotId): uint256[]
     +settle(uint256 lotId, Auction.Bid[] bids): uint256[]
@@ -67,6 +69,8 @@ classDiagram
 
   class AuctionHouse {
     +purchase(address recipient, address referrer, uint256 lotId, uint256 amount, uint256 minAmountOut, bytes auctionData, bytes approval): uint256
+    +batchPurchase(address recipient, address referrer, uint256[] lotIds, uint256[] amounts, uint256[] minAmountsOut, bytes[] auctionData, bytes[] approval): uint256[]
+    +routePurchase(address recipient, address referrer, uint256[] lotIds, uint256 amount, uint256 minAmountOut, bytes[] auctionData, bytes approval): uint256
     ~handleTransfers(Routing routing, uint256 amount, uint256 payout, uint256 feePaid, bytes approval)
     ~handlePayouts(uint256 lotId, Routing routing, address recipient, uint256 payout, bytes auctionOutput)
     +bid(address recipient, address referrer, uint256 lotId, uint256 amount, uint256 minAmountOut, bytes32 auctionData, bytes approval)
