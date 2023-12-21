@@ -28,9 +28,8 @@ classDiagram
     +uint256 lotCounter
     +mapping[Keycode auctionType -> bool] typeSunset
     +mapping[uint256 lotId -> Routing] lotRouting
-    +createAuction(RoutingParams routing, Auction.AuctionParams params) uint256
-    +closeAuction(uint256 lotId)
-    +getRouting(uint256 lotId) Routing
+    +auction(RoutingParams routing, Auction.AuctionParams params) uint256
+    +cancel(uint256 lotId)
     +payoutFor(uint256 lotId) Routing
     +priceFor(uint256 lotId, uint256 amount) uint256
     +maxPayout(uint256 lotId) uint256
@@ -131,13 +130,12 @@ classDiagram
     +uint48 minAuctionDuration
     ~uint48 ONE_HUNDRED_PERCENT = 1e5
     +mapping[uint256 lotId => Lot] lotData
-    +purchase(uint256 lotId, uint256 amount, uint256 minAmountOut, bytes auctionData) (uint256, bytes)
+    +purchase(uint256 lotId, uint256 amount, bytes auctionData) (uint256, bytes)
     +bid(uint256 lotId, uint256 amount, uint256 minAmountOut, bytes auctionData) (uint256, bytes)
     +settle(uint256 lotId) uint256[]
     +settle(uint256 lotId, Bid[] bids) uint256[]
-    +createAuction(uint256 lotId, AuctionParams params)
-    +closeAuction(uint256 lotId)
-    +getRouting(uint256 lotId) Routing
+    +auction(uint256 lotId, address owner, AuctionParams params)
+    +cancel(uint256 lotId)
     +payoutFor(uint256 lotId, uint256 amount) uint256
     +maxPayout(uint256 lotId) uint256
     +maxAmountAccepted(uint256 lotId) uint256
@@ -148,13 +146,12 @@ classDiagram
 
   class AuctionModule {
     <<abstract>>
-    +purchase(uint256 lotId, uint256 amount, uint256 minAmountOut, bytes auctionData) (uint256, bytes)
+    +purchase(uint256 lotId, uint256 amount, bytes auctionData) (uint256, bytes)
     +bid(uint256 lotId, uint256 amount, uint256 minAmountOut, bytes auctionData) (uint256, bytes)
     +settle(uint256 lotId) uint256[]
     +settle(uint256 lotId, Bid[] bids) uint256[]
-    +createAuction(uint256 lotId, AuctionParams params)
-    +closeAuction(uint256 lotId)
-    +getRouting(uint256 lotId) Routing
+    +auction(uint256 lotId, address owner, AuctionParams params)
+    +cancel(uint256 lotId)
     +isLive(uint256 lotId) bool
     +ownerOf(uint256 lotId) address
     +remainingCapacity(uint256 lotId) uint256
@@ -200,7 +197,7 @@ classDiagram
   Module ..> WithModules
 
   AuctionModule --|> GDA
-  AuctionModule --|> 2DGDA
+  AuctionModule --|> TVGDA
   
   DerivativeModule --|> CliffVesting
   DerivativeModule --|> StakedCliffVesting
@@ -227,14 +224,14 @@ sequenceDiagram
   participant AuctionHouse
   participant AtomicAuctionModule
 
-  AuctionOwner->>AuctionHouse: Auctioneer.createAuction(RoutingParams routing, Auction.AuctionParams params)
+  AuctionOwner->>AuctionHouse: Auctioneer.auction(RoutingParams routing, Auction.AuctionParams params)
   activate AuctionHouse
     AuctionHouse->>AuctionHouse: _getModuleIfInstalled(auctionType)
 
-    AuctionHouse->>AtomicAuctionModule: createAuction(uint256 id, Auction.AuctionParams params)
+    AuctionHouse->>AtomicAuctionModule: auction(uint256 id, Auction.AuctionParams params)
     activate AtomicAuctionModule
       Note right of AtomicAuctionModule: validation, creates Lot record
-      AtomicAuctionModule->>AtomicAuctionModule: _createAuction(uint256 id, Lot lot, bytes implParams)
+      AtomicAuctionModule->>AtomicAuctionModule: _auction(uint256 id, Lot lot, bytes implParams)
       Note right of AtomicAuctionModule: module-specific actions
 
       AtomicAuctionModule-->>AuctionHouse: 

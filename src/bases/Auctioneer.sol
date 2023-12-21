@@ -1,7 +1,9 @@
 /// SPDX-License-Identifier: AGPL-3.0
 pragma solidity 0.8.19;
 
-import "src/monolithic/modules/Auction.sol";
+import {ERC20} from "lib/solmate/src/tokens/ERC20.sol";
+
+import "src/modules/Auction.sol";
 
 abstract contract Auctioneer is WithModules {
 
@@ -11,19 +13,19 @@ abstract contract Auctioneer is WithModules {
     struct Routing {
         Keycode auctionType; // auction type, represented by the Keycode for the auction submodule
         address owner; // market owner. sends payout tokens, receives quote tokens
-        ERC20 payoutToken; // TODO think about a better way to describe quote and payout assets
+        ERC20 baseToken; // token provided by seller
         ERC20 quoteToken; // token to accept as payment
-        IHooks hooks; // address to call for any hooks to be executed on a purchase. Must implement IHooks.
+        IHooks hooks; // (optional) address to call for any hooks to be executed on a purchase. Must implement IHooks.
         IAllowlist allowlist; // (optional) contract that implements an allowlist for the market, based on IAllowlist
         Keycode derivativeType; // (optional) derivative type, represented by the Keycode for the derivative submodule. If not set, no derivative will be created.
         bytes derivativeParams; // (optional) abi-encoded data to be used to create payout derivatives on a purchase
         bool wrapDerivative; // (optional) whether to wrap the derivative in a ERC20 token instead of the native ERC6909 format.
-        Keycode condenserType; // (optional) condenser type, represented by the Keycode for the condenser submodule. If not set, no condenser will be used.
+        Keycode condenserType; // (optional) condenser type, represented by the Keycode for the condenser submodule. If not set, no condenser will be used. TODO should a condenser be stored on the auctionhouse for a particular auction/derivative combination and looked up?
     }
 
     struct RoutingParams {
         Keycode auctionType;
-        ERC20 payoutToken;
+        ERC20 baseToken;
         ERC20 quoteToken;
         IHooks hooks;
         IAllowlist allowlist;
@@ -52,32 +54,6 @@ abstract contract Auctioneer is WithModules {
     /// @notice Mapping of lot IDs to their auction type (represented by the Keycode for the auction submodule)
     mapping(uint256 lotId => Routing) public lotRouting;
 
-    // ========== AUCTION EXECUTION ========== //
-
-    function _getModuleForId(uint256 id_) internal view returns (AuctionModule) {
-        // Confirm lot ID is valid
-        if (id_ >= lotCounter) revert HOUSE_InvalidLotId(id_);      
-
-        // Load module, will revert if not installed
-        return AuctionModule(_getModuleIfInstalled(lotRouting[id_].auctionType));
-    }
-
-    // TODO, these functions need to be moved to the Router and integrated with the _handle functions
-
-    // function purchase(uint256 id_, uint256 amount_, uint256 minAmountOut_) external override permissioned returns (uint256 payout) {
-    //     AuctionModule module = _getModuleForId(id_);
-
-    //     // Send purchase to module and return payout
-    //     payout = module.purchase(id_, amount_, minAmountOut_);
-    // }
-
-    // function settle(uint256 id_, Auction.Bid[] memory bids_) external override returns (uint256[] memory amountsOut) {
-    //     AuctionModule module = _getModuleForId(id_);
-
-    //     // Send purchase to module and return amountsOut payout
-    //     amountsOut = module.settle(id_, bids_);
-    // }
-
     // ========== AUCTION MANAGEMENT ========== //
 
     function auction(RoutingParams calldata routing_, Auction.AuctionParams calldata params_) external override returns (uint256 id) {
@@ -97,10 +73,10 @@ abstract contract Auctioneer is WithModules {
         // Validate routing information
 
         // Confirm tokens are within the required decimal range
-        uint8 payoutTokenDecimals = params_.payoutToken.decimals();
+        uint8 baseTokenDecimals = params_.baseToken.decimals();
         uint8 quoteTokenDecimals = params_.quoteToken.decimals();
 
-        if (payoutTokenDecimals < 6 || payoutTokenDecimals > 18)
+        if (baseTokenDecimals < 6 || baseTokenDecimals > 18)
             revert Auctioneer_InvalidParams();
         if (quoteTokenDecimals < 6 || quoteTokenDecimals > 18)
             revert Auctioneer_InvalidParams();
@@ -123,19 +99,21 @@ abstract contract Auctioneer is WithModules {
         Routing storage routing = lotRouting[id];
         routing.auctionType = auctionType_;
         routing.owner = msg.sender;
-        routing.payoutToken = routing_.payoutToken;
+        routing.baseToken = routing_.baseToken;
         routing.quoteToken = routing_.quoteToken;
         routing.hooks = routing_.hooks;
 
-
+        emit AuctionCreated(id_, address(routing.baseToken), address(routing.quoteToken));
     }
 
-    function close(uint256 id_) external override {
+    function cancel(uint256 id_) external override {
+        // Check that caller is the auction owner
+        if (msg.sender != lotRouting[id_].owner) revert HOUSE_NotAuctionOwner(msg.sender);
+
         AuctionModule module = _getModuleForId(id_);
 
-        // Close the auction on the module
-        // Module checks that msg.sender is auction owner
-        module.close(id_, msg.sender);
+        // Cancel the auction on the module
+        module.cancel(id_);
     }
 
     // ========== AUCTION INFORMATION ========== //
@@ -197,5 +175,15 @@ abstract contract Auctioneer is WithModules {
 
         // Get remaining capacity from module
         return module.remainingCapacity(id_);
+    }
+
+    // ========== INTERNAL HELPER FUNCTIONS ========== //
+
+    function _getModuleForId(uint256 id_) internal view returns (AuctionModule) {
+        // Confirm lot ID is valid
+        if (id_ >= lotCounter) revert HOUSE_InvalidLotId(id_);      
+
+        // Load module, will revert if not installed
+        return AuctionModule(_getModuleIfInstalled(lotRouting[id_].auctionType));
     }
 }

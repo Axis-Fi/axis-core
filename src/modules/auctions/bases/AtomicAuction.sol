@@ -20,7 +20,7 @@ abstract contract AtomicAuctionModule is AuctionModule, AtomicAuction {
 
     // ========== AUCTION EXECUTION ========== //
 
-    function purchase(uint256 id_, uint256 amount_, uint256 minAmountOut_, bytes calldata auctionData_) external override onlyParent returns (uint256 payout, bytes memory auctionOutput) {
+    function purchase(uint256 id_, uint256 amount_, bytes calldata auctionData_) external override onlyParent returns (uint256 payout, bytes memory auctionOutput) {
         Lot storage lot = lotData[id_];
 
         // Check if market is live, if not revert
@@ -28,9 +28,6 @@ abstract contract AtomicAuctionModule is AuctionModule, AtomicAuction {
 
         // Get payout from implementation-specific auction logic
         payout = _purchase(id_, amount_);
-
-        // Check that payout is at least minimum amount out
-        if (payout < minAmountOut_) revert Auctioneer_AmountLessThanMinimum();
 
         // Update Capacity
 
@@ -60,15 +57,15 @@ abstract contract AtomicAuctionModule is AuctionModule, AtomicAuction {
     ) internal virtual returns (uint256);
 
     function bid(uint256 id_, uint256 amount_, uint256 minAmountOut_, bytes calldata auctionData_) external override onlyParent {
-        revert AtomicAuction_NotImplemented();
+        revert Auction_NotImplemented();
     }
 
     function settle(uint256 id_, Bid[] memory bids_) external override onlyParent returns (uint256[] memory amountsOut) {
-        revert AtomicAuction_NotImplemented();
+        revert Auction_NotImplemented();
     }
 
     function settle(uint256 id_) external override onlyParent returns (uint256[] memory amountsOut) {
-        revert AtomicAuction_NotImplemented();
+        revert Auction_NotImplemented();
     }
 
     // ========== AUCTION INFORMATION ========== //
