@@ -13,6 +13,7 @@ abstract contract Auction {
     error Auction_NotEnoughCapacity();
     error Auction_InvalidParams();
     error Auction_NotAuthorized();
+    error Auction_NotImplemented();
 
     /* ========== EVENTS ========== */
 
@@ -73,12 +74,12 @@ abstract contract Auction {
     function settle(uint256 id_) external virtual returns (uint256[] memory amountsOut);
 
     // Off-chain auction variant
-    // TODO use solady data packing library to make bids smaller on the actual module to store
+    // TODO use solady data packing library to make bids smaller on the actual module to store?
     function settle(uint256 id_, Bid[] memory bids_) external virtual returns (uint256[] memory amountsOut);
 
     // ========== AUCTION MANAGEMENT ========== //
 
-    function auction(uint256 id_, address owner_, AuctionParams memory params_) external virtual;
+    function auction(uint256 id_, AuctionParams memory params_) external virtual;
 
     function cancel(uint256 id_) external virtual;
 
@@ -94,8 +95,6 @@ abstract contract Auction {
 
     function isLive(uint256 id_) public view virtual returns (bool);
 
-    function ownerOf(uint256 id_) external view virtual returns (address);
-
     function remainingCapacity(uint256 id_) external view virtual returns (uint256); 
 }
 
@@ -103,7 +102,7 @@ abstract contract AuctionModule is Auction, Module {
 
     // ========== AUCTION MANAGEMENT ========== //
 
-    function auction(uint256 id_, address owner_, AuctionParams memory params_) external override onlyParent {
+    function auction(uint256 id_, AuctionParams memory params_) external override onlyParent {
         // Start time must be zero or in the future
         if (params_.start > 0 && params_.start < uint48(block.timestamp))
             revert Auction_InvalidParams();

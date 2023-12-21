@@ -24,23 +24,21 @@ import "src/modules/Auction.sol";
 //    - info to tell the teller what the auctioned value is and how to settle the auction. need to think on this more
 
 abstract contract BatchAuction {
+    error BatchAuction_NotConcluded();
+
 
     // ========== STATE VARIABLES ========== //
 
-    mapping(uint256 lotId => Bid[] bids) public lotBids;
+    mapping(uint256 lotId => Auction.Bid[] bids) public lotBids;
 
     // ========== AUCTION INFORMATION ========== //
 
     // TODO add batch auction specific getters
 }
 
-abstract contract BatchAuctionModule is AuctionModule, BatchAuction {
 
-    // ========== AUCTION EXECUTION ========== //
+abstract contract OnChainBatchAuctionModule is AuctionModule, BatchAuction {
 
-    // TODO should there be two separate abstracts for these so they can revert the wrong one?
-
-    // On-chain auction variants
     function bid(address recipient_, address referrer_, uint256 id_, uint256 amount_, uint256 minAmountOut_, bytes calldata auctionData_, bytes calldata approval_) external override onlyParent {
         // TODO
         // Validate inputs
@@ -61,14 +59,29 @@ abstract contract BatchAuctionModule is AuctionModule, BatchAuction {
         // Store settle data
     }
 
+    function settle(uint256 id_, Auction.Bid[] memory bids_) external override onlyParent returns (uint256[] memory amountsOut) {
+        revert Auction_NotImplemented();
+    }
+}
+
+abstract contract OffChainBatchAuctionModule is AuctionModule, BatchAuction {
+
+    // ========== AUCTION EXECUTION ========== //
+
+    function bid(address recipient_, address referrer_, uint256 id_, uint256 amount_, uint256 minAmountOut_, bytes calldata auctionData_, bytes calldata approval_) external override onlyParent {
+        revert Auction_NotImplemented();
+    }
+
+    function settle(uint256 id_) external override onlyParent returns (uint256[] memory amountsOut) {
+        revert Auction_NotImplemented();
+    }
     
-    // Off-chain auction variants
     /// @notice Settle a batch auction with the provided bids
     function settle(uint256 id_, Bid[] memory bids_) external override onlyParent returns (uint256[] memory amountsOut) {
         Lot storage lot = lotData[id_];
 
         // Must be past the conclusion time to settle
-        if (uint48(block.timestamp) < lotData[id_].conclusion) revert Auction_NotConcluded();
+        if (uint48(block.timestamp) < lotData[id_].conclusion) revert BatchAuction_NotConcluded();
 
         // Bids must not be greater than the capacity
         uint256 len = bids_.length;

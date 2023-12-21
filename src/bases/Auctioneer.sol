@@ -1,6 +1,8 @@
 /// SPDX-License-Identifier: AGPL-3.0
 pragma solidity 0.8.19;
 
+import {ERC20} from "lib/solmate/src/tokens/ERC20.sol";
+
 import "src/modules/Auction.sol";
 
 abstract contract Auctioneer is WithModules {
@@ -51,16 +53,6 @@ abstract contract Auctioneer is WithModules {
 
     /// @notice Mapping of lot IDs to their auction type (represented by the Keycode for the auction submodule)
     mapping(uint256 lotId => Routing) public lotRouting;
-
-    // ========== AUCTION EXECUTION ========== //
-
-    function _getModuleForId(uint256 id_) internal view returns (AuctionModule) {
-        // Confirm lot ID is valid
-        if (id_ >= lotCounter) revert HOUSE_InvalidLotId(id_);      
-
-        // Load module, will revert if not installed
-        return AuctionModule(_getModuleIfInstalled(lotRouting[id_].auctionType));
-    }
 
     // ========== AUCTION MANAGEMENT ========== //
 
@@ -183,5 +175,15 @@ abstract contract Auctioneer is WithModules {
 
         // Get remaining capacity from module
         return module.remainingCapacity(id_);
+    }
+
+    // ========== INTERNAL HELPER FUNCTIONS ========== //
+
+    function _getModuleForId(uint256 id_) internal view returns (AuctionModule) {
+        // Confirm lot ID is valid
+        if (id_ >= lotCounter) revert HOUSE_InvalidLotId(id_);      
+
+        // Load module, will revert if not installed
+        return AuctionModule(_getModuleIfInstalled(lotRouting[id_].auctionType));
     }
 }

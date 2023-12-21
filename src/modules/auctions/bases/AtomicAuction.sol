@@ -57,15 +57,15 @@ abstract contract AtomicAuctionModule is AuctionModule, AtomicAuction {
     ) internal virtual returns (uint256);
 
     function bid(uint256 id_, uint256 amount_, uint256 minAmountOut_, bytes calldata auctionData_) external override onlyParent {
-        revert AtomicAuction_NotImplemented();
+        revert Auction_NotImplemented();
     }
 
     function settle(uint256 id_, Bid[] memory bids_) external override onlyParent returns (uint256[] memory amountsOut) {
-        revert AtomicAuction_NotImplemented();
+        revert Auction_NotImplemented();
     }
 
     function settle(uint256 id_) external override onlyParent returns (uint256[] memory amountsOut) {
-        revert AtomicAuction_NotImplemented();
+        revert Auction_NotImplemented();
     }
 
     // ========== AUCTION INFORMATION ========== //

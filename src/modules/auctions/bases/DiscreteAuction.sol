@@ -11,7 +11,7 @@ abstract contract DiscreteAuction {
     struct StyleData {
         uint48 depositInterval; // target interval between deposits
         uint256 maxPayout; // maximum payout for a single purchase
-        uint256 scale; // stored scale for market price
+        uint256 scale; // stored scale for auction price
     }
 
     /* ========== STATE ========== */
@@ -30,15 +30,15 @@ abstract contract DiscreteAuction {
 
     /* ========== VIEW FUNCTIONS ========== */
 
-    /// @notice             Calculate current market price of payout token in quote tokens
-    /// @param id_          ID of market
-    /// @return             Price for market in configured decimals
-    function marketPrice(uint256 id_) external view returns (uint256);
+    /// @notice             Calculate current auction price of base token in quote tokens
+    /// @param id_          ID of auction
+    /// @return             Price for auction in configured decimals
+    function auctionPrice(uint256 id_) external view returns (uint256);
 
-    /// @notice             Scale value to use when converting between quote token and payout token amounts with marketPrice()
-    /// @param id_          ID of market
-    /// @return             Scaling factor for market in configured decimals
-    function marketScale(uint256 id_) external view returns (uint256);
+    /// @notice             Scale value to use when converting between quote token and base token amounts with auctionPrice()
+    /// @param id_          ID of auction
+    /// @return             Scaling factor for auction in configured decimals
+    function auctionScale(uint256 id_) external view returns (uint256);
 
     function maxPayout(uint256 id_) external view returns(uint256);
 }
@@ -55,7 +55,7 @@ abstract contract DiscreteAuctionModule is AtomicAuctionModule, DiscreteAuction 
 
     /* ========== MARKET FUNCTIONS ========== */
 
-    function _createMarket(
+    function _auction(
         uint256 id_,
         LotData memory lot_,
         bytes calldata params_
@@ -76,12 +76,12 @@ abstract contract DiscreteAuctionModule is AtomicAuctionModule, DiscreteAuction 
         // Call internal __createMarket function to store implementation-specific data
         __createMarket(id, lot_, style, params);
 
-        // Set max payout (depends on marketPrice being available so must be done after __createMarket)
-        style.maxPayout = _payoutCapacity(lot_).mulDiv(depositInterval, duration);
+        // Set max payout (depends on auctionPrice being available so must be done after __createMarket)
+        style.maxPayout = _baseCapacity(lot_).mulDiv(depositInterval, duration);
     }
 
-    /// @dev implementation-specific market creation logic can be inserted by overriding this function
-    function __createMarket(
+    /// @dev implementation-specific auction creation logic can be inserted by overriding this function
+    function __auction(
         uint256 id_,
         LotData memory lot_,
         StyleData memory style_,
@@ -109,7 +109,7 @@ abstract contract DiscreteAuctionModule is AtomicAuctionModule, DiscreteAuction 
     function setMinDepositInterval(uint48 depositInterval_) external override onlyParent {
         // Restricted to authorized addresses
 
-        // Require min deposit interval to be less than minimum market duration and at least 1 hour
+        // Require min deposit interval to be less than minimum auction duration and at least 1 hour
         if (depositInterval_ > minAuctionDuration || depositInterval_ < 1 hours)
             revert Auction_InvalidParams();
 
@@ -118,21 +118,21 @@ abstract contract DiscreteAuctionModule is AtomicAuctionModule, DiscreteAuction 
 
     /* ========== VIEW FUNCTIONS ========== */
 
-    function _payoutCapacity(LotData memory lot_) internal view returns (uint256) {
-        // Calculate capacity in terms of payout tokens
-        // If capacity is in quote tokens, convert to payout tokens with market price
+    function _baseCapacity(LotData memory lot_) internal view returns (uint256) {
+        // Calculate capacity in terms of base tokens
+        // If capacity is in quote tokens, convert to base tokens with auction price
         // Otherwise, return capacity as-is
         return
             lot_.capacityInQuote
-                ? lot_.capacity.mulDiv(styleData[id_].scale, marketPrice(id_))
+                ? lot_.capacity.mulDiv(styleData[id_].scale, auctionPrice(id_))
                 : lot_.capacity;
     }
 
     /// @inheritdoc DiscreteAuction    
-    function marketPrice(uint256 id_) public view virtual returns (uint256);
+    function auctionPrice(uint256 id_) public view virtual returns (uint256);
 
     /// @inheritdoc DiscreteAuction
-    function marketScale(uint256 id_) external view override returns (uint256) {
+    function auctionScale(uint256 id_) external view override returns (uint256) {
         return styleData[id_].scale;
     }
 
@@ -141,7 +141,7 @@ abstract contract DiscreteAuctionModule is AtomicAuctionModule, DiscreteAuction 
         // TODO handle payout greater than max payout - revert?
         
         // Calculate payout for amount of quote tokens
-        return amount_.mulDiv(styleData[id_].scale, marketPrice(id_));
+        return amount_.mulDiv(styleData[id_].scale, auctionPrice(id_));
     }
 
     /// @dev This function is gated by onlyParent because it does not include any fee logic, which is applied in the parent contract
@@ -149,7 +149,7 @@ abstract contract DiscreteAuctionModule is AtomicAuctionModule, DiscreteAuction 
         // TODO handle payout greater than max payout - revert?
 
         // Calculate price for payout in quote tokens
-        return payout_.mulDiv(marketPrice(id_), styleData[id_].scale);
+        return payout_.mulDiv(auctionPrice(id_), styleData[id_].scale);
     }
 
     /// @dev This function is gated by onlyParent because it does not include any fee logic, which is applied in the parent contract
@@ -158,7 +158,7 @@ abstract contract DiscreteAuctionModule is AtomicAuctionModule, DiscreteAuction 
         // Maximum of the maxPayout and the remaining capacity converted to quote tokens
         LotData memory lot = lotData[id_];
         StyleData memory style = styleData[id_];
-        uint256 price = marketPrice(id_);
+        uint256 price = auctionPrice(id_);
         uint256 quoteCapacity = lot.capacityInQuote
             ? lot.capacity
             : lot.capacity.mulDiv(price, style.scale);
@@ -168,14 +168,14 @@ abstract contract DiscreteAuctionModule is AtomicAuctionModule, DiscreteAuction 
         return amountAccepted;
     }
 
-    /// @notice             Calculate max payout of the market in payout tokens
+    /// @notice             Calculate max payout of the auction in base tokens
     /// @dev                Returns a dynamically calculated payout or the maximum set by the creator, whichever is less.
-    /// @param id_          ID of market
-    /// @return             Current max payout for the market in payout tokens
+    /// @param id_          ID of auction
+    /// @return             Current max payout for the auction in base tokens
     /// @dev This function is gated by onlyParent because it does not include any fee logic, which is applied in the parent contract
     function maxPayout(uint256 id_) public view override onlyParent returns (uint256) {
-        // Convert capacity to payout token units for comparison with max payout
-        uint256 capacity = _payoutCapacity(lotData[id_]);
+        // Convert capacity to base token units for comparison with max payout
+        uint256 capacity = _baseCapacity(lotData[id_]);
 
         // Cap max payout at the remaining capacity
         return styleData[id_].maxPayout > capacity ? capacity : styleData[id_].maxPayout;
