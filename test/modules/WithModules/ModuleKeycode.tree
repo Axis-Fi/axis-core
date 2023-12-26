@@ -1,0 +1,11 @@
+# ModuleKeycodeTest
+## When a string is given
+### It should encode the string to a ModuleKeycode
+## When a ModuleKeycode is given
+### It should decode the ModuleKeycode into bytes5
+## When a valid ModuleKeycode is given
+### It should pass
+## When any of the first three characters are not in the alphabet
+### It should revert
+## When any of the last two characters are not in the alphabet or blank
+### It should revert

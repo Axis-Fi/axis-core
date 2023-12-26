@@ -7,32 +7,43 @@ import {Owned} from "lib/solmate/src/auth/Owned.sol";
 
 // Keycode functions
 
-// Type VersionedKeycode: 5 byte characters, 2 bytes for versions
+// Type VersionedKeycode: 5 byte characters, 1 bytes for versions
 // Descendent contracts will need to store the versioned keycode
 // WithModules will track the versions of the modules installed
 
 /// @notice     5 byte/character identifier for the Module
+/// @dev        3-5 characters from A-Z
 type ModuleKeycode is bytes5;
 
-/// @notice     Uniquely identifies a specific module version
-struct Keycode {
-    ModuleKeycode moduleKeycode;
-    uint8 version;
-}
-
-type Keycode is bytes10; // 3-10 characters, A-Z only first 3, A-Z, blank, ., or 0-9 for the rest
+/// @notice     6 byte identifier for the Module, including version
+/// @dev        ModuleKeycode, followed by 1 byte for version
+type Keycode is bytes6;
 
 error TargetNotAContract(address target_);
 error InvalidKeycode(Keycode keycode_);
 
-// solhint-disable-next-line func-visibility
-function toKeycode(bytes10 keycode_) pure returns (Keycode) {
-    return Keycode.wrap(keycode_);
+function toModuleKeycode(bytes5 moduleKeycode_) pure returns (ModuleKeycode) {
+    return ModuleKeycode.wrap(moduleKeycode_);
+}
+
+function fromModuleKeycode(ModuleKeycode moduleKeycode_) pure returns (bytes5) {
+    return ModuleKeycode.unwrap(moduleKeycode_);
 }
 
 // solhint-disable-next-line func-visibility
-function fromKeycode(Keycode keycode_) pure returns (bytes10) {
-    return Keycode.unwrap(keycode_);
+function toKeycode(ModuleKeycode moduleKeycode_, uint8 version_) pure returns (Keycode) {
+    return Keycode.wrap(bytes6(abi.encode(moduleKeycode_, version_)));
+}
+
+// solhint-disable-next-line func-visibility
+function fromKeycode(Keycode keycode_) pure returns (ModuleKeycode, uint8) {
+    bytes6 unwrappedKeycode = Keycode.unwrap(keycode_);
+    bytes memory keycodeBytes = new bytes(6);
+    for (uint256 i; i < 6; i++) {
+        keycodeBytes[i] = unwrappedKeycode[i];
+    }
+
+    return abi.decode(keycodeBytes, (ModuleKeycode, uint8));
 }
 
 // solhint-disable-next-line func-visibility

@@ -1,4 +1,5 @@
-KeycodeTest
-# Encodes a ModuleKeycode and version to a Keycode
-# Decodes a Keycode to a ModuleKeycode and version
-# Encodes a string to a ModuleKeycode
+# KeycodeTest
+## When
+## Encodes a ModuleKeycode and version to a Keycode
+## Encodes a ModuleKeycode and a two-digit version number
+## Decodes a Keycode to a ModuleKeycode and version
