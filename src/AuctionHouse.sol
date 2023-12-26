@@ -6,9 +6,9 @@ import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 import {EIP712} from "solady/utils/EIP712.sol";
 import {SignatureCheckerLib} from "solady/utils/SignatureCheckerLib.sol";
 
-import "src/monolithic/bases/Derivatizer.sol";
-import "src/monolithic/bases/Auctioneer.sol";
-import "src/monolithic/modules/Condenser.sol";
+import "src/bases/Derivatizer.sol";
+import "src/bases/Auctioneer.sol";
+import "src/modules/Condenser.sol";
 
 abstract contract FeeManager {
     // TODO write fee logic in separate contract to keep it organized

@@ -2,7 +2,7 @@
 pragma solidity 0.8.19;
 
 import {ClonesWithImmutableArgs} from "src/lib/clones/ClonesWithImmutableArgs.sol";
-import "src/monolithic/modules/Derivative.sol";
+import "src/modules/Derivative.sol";
 
 
 // TODO this only uses the ERC20 clones, need to convert to ERC6909 with optional ERC20 via wrapping the ERC6909

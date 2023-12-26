@@ -1,7 +1,7 @@
 /// SPDX-License-Identifier: AGPL-3.0
 pragma solidity 0.8.19;
 
-import "src/monolithic/modules/Auction.sol";
+import "src/modules/Auction.sol";
 
 abstract contract AtomicAuction {
 

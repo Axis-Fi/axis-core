@@ -2,7 +2,7 @@
 pragma solidity 0.8.19;
 
 import {ERC6909} from "lib/solmate/src/tokens/ERC6909.sol";
-import "src/monolithic/modules/Modules.sol";
+import "src/modules/Modules.sol";
 
 abstract contract Derivative {
 
