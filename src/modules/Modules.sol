@@ -7,6 +7,19 @@ import {Owned} from "lib/solmate/src/auth/Owned.sol";
 
 // Keycode functions
 
+// Type VersionedKeycode: 5 byte characters, 2 bytes for versions
+// Descendent contracts will need to store the versioned keycode
+// WithModules will track the versions of the modules installed
+
+/// @notice     5 byte/character identifier for the Module
+type ModuleKeycode is bytes5;
+
+/// @notice     Uniquely identifies a specific module version
+struct Keycode {
+    ModuleKeycode moduleKeycode;
+    uint8 version;
+}
+
 type Keycode is bytes10; // 3-10 characters, A-Z only first 3, A-Z, blank, ., or 0-9 for the rest
 
 error TargetNotAContract(address target_);
@@ -55,6 +68,10 @@ abstract contract WithModules is Owned {
     error ModuleExecutionReverted(bytes error_);
     error ModuleAlreadySunset(Keycode keycode_);
 
+    // ========= CONSTRUCTOR ========= //
+
+    constructor(address owner_) Owned(owner_) {}
+
     // ========= MODULE MANAGEMENT ========= //
 
     /// @notice Array of all modules currently installed.
@@ -94,12 +111,12 @@ abstract contract WithModules is Owned {
         // Set the module to sunset
         moduleSunset[keycode_] = true;
     }
-    
+
 
     // TODO may need to use proxies instead of this design to allow for upgrading due to a bug and keeping collateral in a derivative contract
     // The downside is that you have the additional gas costs and potential for exploits in OCG
     // It may be better to just not have the modules be upgradable
-    // Having a shutdown mechanism for a specific module and an entire auctionhouse version might be good as well. 
+    // Having a shutdown mechanism for a specific module and an entire auctionhouse version might be good as well.
     // Though it would still need to allow for claiming of outstanding derivative tokens.
 
     // NOTE: don't use upgradable modules. simply require a new module to be installed and sunset the old one to migrate functionality.

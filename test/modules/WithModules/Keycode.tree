@@ -1,0 +1,4 @@
+KeycodeTest
+# Encodes a ModuleKeycode and version to a Keycode
+# Decodes a Keycode to a ModuleKeycode and version
+# Encodes a string to a ModuleKeycode

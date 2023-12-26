@@ -1,0 +1,36 @@
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity 0.8.19;
+
+// Libraries
+import {Test} from "forge-std/Test.sol";
+
+// Mocks
+import {MockWithModules} from "test/modules/WithModules/MockWithModules.sol";
+import {MockModule} from "test/modules/WithModules/MockModule.sol";
+
+// Contracts
+import {WithModules} from "src/modules/Modules.sol";
+
+contract GetModuleForKeycodeTest is Test {
+    WithModules internal withModules;
+    Module internal mockModule;
+
+    function setUp() external {
+        withModules = new MockWithModules(address(this));
+        mockModule = new MockModule(address(withModules));
+    }
+
+    modifier whenAModuleIsInstalled() {
+        // Install the module
+        withModules.installModule(mockModule);
+        _;
+    }
+
+    function test_WhenAMatchingModuleCannotBeFound() external whenAModuleIsInstalled {
+        // It should revert
+    }
+
+    function test_WhenAMatchingModuleAndVersionIsFound() external whenAModuleIsInstalled {
+        // It should return the versioned keycode and module
+    }
+}
