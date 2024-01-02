@@ -1,7 +1,7 @@
 [profile.default]
 src = "src"
 out = "out"
-libs = ["lib"]
+# libs = ["lib"]
 
 remappings = [
   "ds-test/=lib/forge-std/lib/ds-test/src/",
