@@ -7,17 +7,13 @@ import {Owned} from "lib/solmate/src/auth/Owned.sol";
 
 // Keycode functions
 
-// Type VersionedKeycode: 5 byte characters, 1 bytes for versions
-// Descendent contracts will need to store the versioned keycode
-// WithModules will track the versions of the modules installed
-
 /// @notice     5 byte/character identifier for the Module
 /// @dev        3-5 characters from A-Z
 type ModuleKeycode is bytes5;
 
-/// @notice     6 byte identifier for the Module, including version
-/// @dev        ModuleKeycode, followed by 1 byte for version
-type Keycode is bytes6;
+/// @notice     7 byte identifier for the Module, including version
+/// @dev        ModuleKeycode, followed by 2 characters from 0-9
+type Keycode is bytes7;
 
 error TargetNotAContract(address target_);
 error InvalidKeycode(Keycode keycode_);
@@ -32,23 +28,28 @@ function fromModuleKeycode(ModuleKeycode moduleKeycode_) pure returns (bytes5) {
 
 // solhint-disable-next-line func-visibility
 function toKeycode(ModuleKeycode moduleKeycode_, uint8 version_) pure returns (Keycode) {
-    return Keycode.wrap(bytes6(abi.encode(moduleKeycode_, version_)));
-}
+    bytes5 moduleKeycodeBytes = fromModuleKeycode(moduleKeycode_);
+    bytes memory keycodeBytes = new bytes(7);
 
-// solhint-disable-next-line func-visibility
-function fromKeycode(Keycode keycode_) pure returns (bytes6) {
-    return Keycode.unwrap(keycode_);
-}
-
-// solhint-disable-next-line func-visibility
-function unwrapKeycode(Keycode keycode_) pure returns (ModuleKeycode, uint8) {
-    bytes6 unwrappedKeycode = Keycode.unwrap(keycode_);
-    bytes memory keycodeBytes = new bytes(6);
-    for (uint256 i; i < 6; i++) {
-        keycodeBytes[i] = unwrappedKeycode[i];
+    // Copy moduleKeycode_ into keycodeBytes
+    for (uint256 i; i < 5; i++) {
+        keycodeBytes[i] = moduleKeycodeBytes[i];
     }
 
-    return abi.decode(keycodeBytes, (ModuleKeycode, uint8));
+    // Get the digits of the version
+    uint8 firstDigit = version_ / 10;
+    uint8 secondDigit = version_ % 10;
+
+    // Convert the digits to bytes
+    keycodeBytes[5] = bytes1(firstDigit + 0x30);
+    keycodeBytes[6] = bytes1(secondDigit + 0x30);
+
+    return Keycode.wrap(bytes7(keycodeBytes));
+}
+
+// solhint-disable-next-line func-visibility
+function fromKeycode(Keycode keycode_) pure returns (bytes7) {
+    return Keycode.unwrap(keycode_);
 }
 
 // solhint-disable-next-line func-visibility
@@ -58,22 +59,24 @@ function ensureContract(address target_) view {
 
 // solhint-disable-next-line func-visibility
 function ensureValidKeycode(Keycode keycode_) pure {
-    bytes10 unwrapped = Keycode.unwrap(keycode_);
-    for (uint256 i; i < 5; ) {
+    bytes7 unwrapped = Keycode.unwrap(keycode_);
+    for (uint256 i; i < 7; ) {
         bytes1 char = unwrapped[i];
         if (i < 3) {
             // First 3 characters must be A-Z
             if (char < 0x41 || char > 0x5A) revert InvalidKeycode(keycode_);
+        } else if (i < 5) {
+            // Next 2 characters after the first 3 can be A-Z or blank, 0-9, or .
+            if (char != 0x00 && (char < 0x41 || char > 0x5A) && (char < 0x30 || char > 0x39)) revert InvalidKeycode(keycode_);
         } else {
-            // Characters after the first 3 can be A-Z, blank, 0-9, or .
-            if (char != 0x00 && (char < 0x41 || char > 0x5A) && (char < 0x30 || char > 0x39) && char != 0x2E) revert InvalidKeycode(keycode_);
+            // Last 2 character must be 0-9
+            if (char < 0x30 || char > 0x39) revert InvalidKeycode(keycode_);
         }
         unchecked {
             i++;
         }
     }
 }
-
 
 abstract contract WithModules is Owned {
     // ========= ERRORS ========= //

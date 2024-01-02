@@ -1,8 +1,0 @@
-GetModuleForVersionedKeycodeTest
-└── When a module is installed
-    ├── When a matching module and version cannot be found
-    │   └── It should revert.
-    ├── When a matching module is found but no version
-    │   └── It should revert.
-    └── When a matching module and version is found
-        └── It should return the module.

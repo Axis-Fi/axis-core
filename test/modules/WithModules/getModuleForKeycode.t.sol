@@ -13,7 +13,7 @@ import {WithModules} from "src/modules/Modules.sol";
 
 contract GetModuleForKeycodeTest is Test {
     WithModules internal withModules;
-    Module internal mockModule;
+    MockModule internal mockModule;
 
     function setUp() external {
         withModules = new MockWithModules(address(this));
@@ -28,9 +28,11 @@ contract GetModuleForKeycodeTest is Test {
 
     function test_WhenAMatchingModuleCannotBeFound() external whenAModuleIsInstalled {
         // It should revert
+        assertTrue(false);
     }
 
     function test_WhenAMatchingModuleAndVersionIsFound() external whenAModuleIsInstalled {
         // It should return the versioned keycode and module
+        assertTrue(false);
     }
 }

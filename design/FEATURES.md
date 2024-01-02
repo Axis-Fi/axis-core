@@ -233,6 +233,17 @@ Fees can be taken by the protocol at the following points:
   - e.g. early exercising of vesting token, take a cut of residual collateral
   - would make sense when there's a profit for the bidder
 
+### Module Management
+
+- Module references
+  - Specific module versions are referred to by keycodes that are stored as 7 bytes
+  - The first 5 bytes are the module name (e.g. "TEST"), followed by 2 bytes of 1 number each
+  - For example, `TEST12` would refer to version 12 of the `TEST` module
+- When a new record is created:
+  - The calling contract will have a module keycode referring to the desired module type
+  - The module keycode will be used to get the versioned keycode of the latest version
+  - The record will reference the versioned keycode, so that subsequent usage will be tied to that implementation
+
 ## Design Principles
 
 - The architecture should be modular, enabling support for different types of auction and derivatives
