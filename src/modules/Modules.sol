@@ -36,7 +36,12 @@ function toKeycode(ModuleKeycode moduleKeycode_, uint8 version_) pure returns (K
 }
 
 // solhint-disable-next-line func-visibility
-function fromKeycode(Keycode keycode_) pure returns (ModuleKeycode, uint8) {
+function fromKeycode(Keycode keycode_) pure returns (bytes6) {
+    return Keycode.unwrap(keycode_);
+}
+
+// solhint-disable-next-line func-visibility
+function unwrapKeycode(Keycode keycode_) pure returns (ModuleKeycode, uint8) {
     bytes6 unwrappedKeycode = Keycode.unwrap(keycode_);
     bytes memory keycodeBytes = new bytes(6);
     for (uint256 i; i < 6; i++) {
@@ -156,8 +161,8 @@ abstract contract WithModules is Owned {
         Keycode keycode_,
         bytes memory callData_
     ) external onlyOwner returns (bytes memory) {
-        Module module = _getModuleIfInstalled(keycode_);
-        (bool success, bytes memory returnData) = address(module).call(callData_);
+        address module = _getModuleIfInstalled(keycode_);
+        (bool success, bytes memory returnData) = module.call(callData_);
         if (!success) revert ModuleExecutionReverted(returnData);
         return returnData;
     }
@@ -172,10 +177,10 @@ abstract contract WithModules is Owned {
         return address(module) != address(0);
     }
 
-    function _getModuleIfInstalled(Keycode keycode_) internal view returns (Module) {
+    function _getModuleIfInstalled(Keycode keycode_) internal view returns (address) {
         Module module = getModuleForKeycode[keycode_];
         if (address(module) == address(0)) revert ModuleNotInstalled(keycode_);
-        return module;
+        return address(module);
     }
 
     function _validateModule(Module newModule_) internal view returns (Keycode) {

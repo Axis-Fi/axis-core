@@ -63,7 +63,7 @@ abstract contract Derivative {
 
     /// @notice Reclaim posted collateral for a derivative token which can no longer be exercised
     /// @notice Access controlled: only callable by the derivative issuer via the auction house.
-    /// @dev 
+    /// @dev
     function reclaim(uint256 tokenId_) external virtual;
 
     /// @notice Transforms an existing derivative issued by this contract into something else. Derivative is burned and collateral sent to the auction house.
@@ -91,7 +91,7 @@ abstract contract Derivative {
 
 abstract contract DerivativeModule is Derivative, ERC6909, Module {
 
-
+    function validate(bytes memory params_) external view virtual returns (bool);
 
 }
 

@@ -5,7 +5,37 @@ import {ERC20} from "lib/solmate/src/tokens/ERC20.sol";
 
 import "src/modules/Auction.sol";
 
+import {fromKeycode} from "src/modules/Modules.sol";
+
+import {DerivativeModule} from "src/modules/Derivative.sol";
+
+interface IHooks {
+
+}
+
+interface IAllowlist {
+
+}
+
 abstract contract Auctioneer is WithModules {
+
+    // ========= ERRORS ========= //
+
+    error HOUSE_AuctionTypeSunset(Keycode auctionType);
+
+    error HOUSE_NotAuctionOwner(address caller);
+
+    error HOUSE_InvalidLotId(uint256 id);
+
+    error Auctioneer_InvalidParams();
+
+    // ========= EVENTS ========= //
+
+    event AuctionCreated(
+        uint256 indexed id,
+        address indexed baseToken,
+        address indexed quoteToken
+    );
 
     // ========= DATA STRUCTURES ========== //
 
@@ -56,25 +86,26 @@ abstract contract Auctioneer is WithModules {
 
     // ========== AUCTION MANAGEMENT ========== //
 
-    function auction(RoutingParams calldata routing_, Auction.AuctionParams calldata params_) external override returns (uint256 id) {
+    function auction(RoutingParams calldata routing_, Auction.AuctionParams calldata params_) external returns (uint256 id) {
         // Load auction type module, this checks that it is installed.
         // We load it here vs. later to avoid two checks.
-        AuctionModule auctionModule = AuctionModule(_getModuleIfInstalled(routing_.auctionType));
+        Keycode auctionType = routing_.auctionType;
+        AuctionModule auctionModule = AuctionModule(_getModuleIfInstalled(auctionType));
 
         // Check that the auction type is allowing new auctions to be created
-        if (typeSunset[auctionType_]) revert HOUSE_AuctionTypeSunset(routing_.auctionType);
+        if (typeSunset[auctionType]) revert HOUSE_AuctionTypeSunset(auctionType);
 
         // Increment lot count and get ID
         id = lotCounter++;
 
         // Call module auction function to store implementation-specific data
-        module.auction(id, params_);
+        auctionModule.auction(id, params_);
 
         // Validate routing information
 
         // Confirm tokens are within the required decimal range
-        uint8 baseTokenDecimals = params_.baseToken.decimals();
-        uint8 quoteTokenDecimals = params_.quoteToken.decimals();
+        uint8 baseTokenDecimals = routing_.baseToken.decimals();
+        uint8 quoteTokenDecimals = routing_.quoteToken.decimals();
 
         if (baseTokenDecimals < 6 || baseTokenDecimals > 18)
             revert Auctioneer_InvalidParams();
@@ -82,7 +113,7 @@ abstract contract Auctioneer is WithModules {
             revert Auctioneer_InvalidParams();
 
         // If payout is a derivative, validate derivative data on the derivative module
-        if (routing_.derivativeType != toKeycode("")) {
+        if (fromKeycode(routing_.derivativeType) != bytes6(0)) {
             // Load derivative module, this checks that it is installed.
             DerivativeModule derivativeModule = DerivativeModule(_getModuleIfInstalled(routing_.derivativeType));
 
@@ -97,16 +128,16 @@ abstract contract Auctioneer is WithModules {
 
         // Store routing information
         Routing storage routing = lotRouting[id];
-        routing.auctionType = auctionType_;
+        routing.auctionType = auctionType;
         routing.owner = msg.sender;
         routing.baseToken = routing_.baseToken;
         routing.quoteToken = routing_.quoteToken;
         routing.hooks = routing_.hooks;
 
-        emit AuctionCreated(id_, address(routing.baseToken), address(routing.quoteToken));
+        emit AuctionCreated(id, address(routing.baseToken), address(routing.quoteToken));
     }
 
-    function cancel(uint256 id_) external override {
+    function cancel(uint256 id_) external {
         // Check that caller is the auction owner
         if (msg.sender != lotRouting[id_].owner) revert HOUSE_NotAuctionOwner(msg.sender);
 
@@ -118,7 +149,7 @@ abstract contract Auctioneer is WithModules {
 
     // ========== AUCTION INFORMATION ========== //
 
-    function getRouting(uint256 id_) external view override returns (Routing memory) {
+    function getRouting(uint256 id_) external view returns (Routing memory) {
         // Check that lot ID is valid
         if (id_ >= lotCounter) revert HOUSE_InvalidLotId(id_);
 
@@ -127,42 +158,42 @@ abstract contract Auctioneer is WithModules {
     }
 
     // TODO need to add the fee calculations back in at this level for all of these functions
-    function payoutFor(uint256 id_, uint256 amount_) external view override returns (uint256) {
+    function payoutFor(uint256 id_, uint256 amount_) external view returns (uint256) {
         AuctionModule module = _getModuleForId(id_);
 
         // Get payout from module
         return module.payoutFor(id_, amount_);
     }
 
-    function priceFor(uint256 id_, uint256 payout_) external view override returns (uint256) {
+    function priceFor(uint256 id_, uint256 payout_) external view returns (uint256) {
         AuctionModule module = _getModuleForId(id_);
 
         // Get price from module
         return module.priceFor(id_, payout_);
     }
 
-    function maxPayout(uint256 id_) external view override returns (uint256) {
+    function maxPayout(uint256 id_) external view returns (uint256) {
         AuctionModule module = _getModuleForId(id_);
 
         // Get max payout from module
         return module.maxPayout(id_);
     }
 
-    function maxAmountAccepted(uint256 id_) external view override returns (uint256) {
+    function maxAmountAccepted(uint256 id_) external view returns (uint256) {
         AuctionModule module = _getModuleForId(id_);
 
         // Get max amount accepted from module
         return module.maxAmountAccepted(id_);
     }
 
-    function isLive(uint256 id_) external view override returns (bool) {
+    function isLive(uint256 id_) external view returns (bool) {
         AuctionModule module = _getModuleForId(id_);
 
         // Get isLive from module
         return module.isLive(id_);
     }
 
-    function ownerOf(uint256 id_) external view override returns (address) {
+    function ownerOf(uint256 id_) external view returns (address) {
         // Check that lot ID is valid
         if (id_ >= lotCounter) revert HOUSE_InvalidLotId(id_);
 
@@ -170,7 +201,7 @@ abstract contract Auctioneer is WithModules {
         return lotRouting[id_].owner;
     }
 
-    function remainingCapacity(id_) external view override returns (uint256) {
+    function remainingCapacity(uint256 id_) external view returns (uint256) {
         AuctionModule module = _getModuleForId(id_);
 
         // Get remaining capacity from module
@@ -181,7 +212,7 @@ abstract contract Auctioneer is WithModules {
 
     function _getModuleForId(uint256 id_) internal view returns (AuctionModule) {
         // Confirm lot ID is valid
-        if (id_ >= lotCounter) revert HOUSE_InvalidLotId(id_);      
+        if (id_ >= lotCounter) revert HOUSE_InvalidLotId(id_);
 
         // Load module, will revert if not installed
         return AuctionModule(_getModuleIfInstalled(lotRouting[id_].auctionType));

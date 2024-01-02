@@ -12,7 +12,7 @@ abstract contract Derivatizer is WithModules {
         // Load the derivative module, will revert if not installed
         Derivative derivative = Derivative(address(_getModuleIfInstalled(dType)));
 
-        // Check that the type hasn't been sunset 
+        // Check that the type hasn't been sunset
         if (moduleSunset[dType]) revert("Derivatizer: type sunset");
 
         // Call the deploy function on the derivative module
