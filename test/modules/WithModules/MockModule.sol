@@ -11,3 +11,11 @@ contract MockModule is Module {
         return toKeycode(toModuleKeycode("MOCK"), 1);
     }
 }
+
+contract MockUpgradedModule is Module {
+    constructor(address _owner) Module(_owner) {}
+
+    function KEYCODE() public pure override returns (Keycode) {
+        return toKeycode(toModuleKeycode("MOCK"), 2);
+    }
+}

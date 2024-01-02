@@ -52,6 +52,18 @@ function fromKeycode(Keycode keycode_) pure returns (bytes7) {
     return Keycode.unwrap(keycode_);
 }
 
+function versionFromKeycode(Keycode keycode_) pure returns (uint8) {
+    bytes7 unwrapped = Keycode.unwrap(keycode_);
+    uint8 firstDigit = uint8(unwrapped[5]) - 0x30;
+    uint8 secondDigit = uint8(unwrapped[6]) - 0x30;
+    return firstDigit * 10 + secondDigit;
+}
+
+function moduleFromKeycode(Keycode keycode_) pure returns (ModuleKeycode) {
+    bytes7 unwrapped = Keycode.unwrap(keycode_);
+    return ModuleKeycode.wrap(bytes5(unwrapped));
+}
+
 // solhint-disable-next-line func-visibility
 function ensureContract(address target_) view {
     if (target_.code.length == 0) revert TargetNotAContract(target_);
@@ -76,6 +88,10 @@ function ensureValidKeycode(Keycode keycode_) pure {
             i++;
         }
     }
+
+    // Check that the version is not 0
+    // This is because the version is by default 0 if the module is not installed
+    if (versionFromKeycode(keycode_) == 0) revert InvalidKeycode(keycode_);
 }
 
 abstract contract WithModules is Owned {
@@ -99,6 +115,9 @@ abstract contract WithModules is Owned {
     /// @notice Mapping of Keycode to Module address.
     mapping(Keycode => Module) public getModuleForKeycode;
 
+    /// @notice Mapping of ModuleKeycode to latest version.
+    mapping(ModuleKeycode => uint8) public getModuleLatestVersion;
+
     /// @notice Mapping of Keycode to whether the module is sunset.
     mapping(Keycode => bool) public moduleSunset;
 
@@ -114,6 +133,10 @@ abstract contract WithModules is Owned {
         // Store module in module
         getModuleForKeycode[keycode] = newModule_;
         modules.push(keycode);
+
+        // Update latest version
+        ModuleKeycode moduleKeycode = moduleFromKeycode(keycode);
+        getModuleLatestVersion[moduleKeycode] = versionFromKeycode(keycode);
 
         // Initialize the module
         newModule_.INIT();
@@ -228,3 +251,5 @@ abstract contract Module {
     /// @dev    MUST BE GATED BY onlyParent. Used to encompass any initialization or upgrade logic.
     function INIT() external virtual onlyParent {}
 }
+
+// TODO handle version number

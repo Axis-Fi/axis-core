@@ -9,7 +9,7 @@ import {MockWithModules} from "test/modules/WithModules/MockWithModules.sol";
 import {MockModule} from "test/modules/WithModules/MockModule.sol";
 
 // Contracts
-import {WithModules} from "src/modules/Modules.sol";
+import {WithModules, Module} from "src/modules/Modules.sol";
 
 contract GetModuleForKeycodeTest is Test {
     WithModules internal withModules;
@@ -26,13 +26,15 @@ contract GetModuleForKeycodeTest is Test {
         _;
     }
 
-    function test_WhenAMatchingModuleCannotBeFound() external whenAModuleIsInstalled {
-        // It should revert
-        assertTrue(false);
+    function test_WhenAMatchingModuleCannotBeFound() external {
+        Module module = withModules.getModuleForKeycode(mockModule.KEYCODE());
+
+        assertEq(address(module), address(0));
     }
 
-    function test_WhenAMatchingModuleAndVersionIsFound() external whenAModuleIsInstalled {
-        // It should return the versioned keycode and module
-        assertTrue(false);
+    function test_WhenAMatchingModuleIsFound() external whenAModuleIsInstalled {
+        Module module = withModules.getModuleForKeycode(mockModule.KEYCODE());
+
+        assertEq(address(module), address(mockModule));
     }
 }
