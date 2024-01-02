@@ -12,12 +12,14 @@ abstract contract Auctioneer is WithModules {
     /// @notice Auction routing information for a lot
     struct Routing {
         Keycode auctionType; // auction type, represented by the Keycode for the auction submodule
+        uint8 auctionVersion; // auction version, represented by the version number of the auction submodule
         address owner; // market owner. sends payout tokens, receives quote tokens
         ERC20 baseToken; // token provided by seller
         ERC20 quoteToken; // token to accept as payment
         IHooks hooks; // (optional) address to call for any hooks to be executed on a purchase. Must implement IHooks.
         IAllowlist allowlist; // (optional) contract that implements an allowlist for the market, based on IAllowlist
         Keycode derivativeType; // (optional) derivative type, represented by the Keycode for the derivative submodule. If not set, no derivative will be created.
+        uint8 derivativeVersion; // (optional) derivative version, represented by the version number of the derivative submodule, must be set if derivative type is set
         bytes derivativeParams; // (optional) abi-encoded data to be used to create payout derivatives on a purchase
         bool wrapDerivative; // (optional) whether to wrap the derivative in a ERC20 token instead of the native ERC6909 format.
         Keycode condenserType; // (optional) condenser type, represented by the Keycode for the condenser submodule. If not set, no condenser will be used. TODO should a condenser be stored on the auctionhouse for a particular auction/derivative combination and looked up?
@@ -59,8 +61,15 @@ abstract contract Auctioneer is WithModules {
     function auction(RoutingParams calldata routing_, Auction.AuctionParams calldata params_) external override returns (uint256 id) {
         // Load auction type module, this checks that it is installed.
         // We load it here vs. later to avoid two checks.
-        AuctionModule auctionModule = AuctionModule(_getModuleIfInstalled(routing_.auctionType));
+        AuctionModule auctionModule;
+        uint8 auctionVersion;
+        {
+            (Module mod, uint8 version) = _getLatestModuleIfInstalled(routing_.auctionType);
+            auctionModule = AuctionModule(mod);
+            auctionVersion = version;
+        }
 
+        // TODO use the module sunset feature instead of this
         // Check that the auction type is allowing new auctions to be created
         if (typeSunset[auctionType_]) revert HOUSE_AuctionTypeSunset(routing_.auctionType);
 
@@ -81,27 +90,34 @@ abstract contract Auctioneer is WithModules {
         if (quoteTokenDecimals < 6 || quoteTokenDecimals > 18)
             revert Auctioneer_InvalidParams();
 
+        // Store routing information
+        Routing storage routing = lotRouting[id];
+        routing.auctionType = auctionType_;
+        routing.auctionVersion = auctionVersion;
+        routing.owner = msg.sender;
+        routing.baseToken = routing_.baseToken;
+        routing.quoteToken = routing_.quoteToken;
+        routing.hooks = routing_.hooks;
+
         // If payout is a derivative, validate derivative data on the derivative module
         if (routing_.derivativeType != toKeycode("")) {
             // Load derivative module, this checks that it is installed.
-            DerivativeModule derivativeModule = DerivativeModule(_getModuleIfInstalled(routing_.derivativeType));
+            (Module mod, uint8 version) = _getLatestModuleIfInstalled(routing_.derivativeType);
+            DerivativeModule derivativeModule = DerivativeModule(mod);
 
             // Call module validate function to validate implementation-specific data
             derivativeModule.validate(routing_.derivativeParams);
+
+            // Store derivative information
+            routing.derivativeType = routing_.derivativeType;
+            routing.derivativeVersion = version;
+            routing.derivativeParams = routing_.derivativeParams;
         }
 
         // If allowlist is being used, validate the allowlist data and register the auction on the allowlist
         if (address(routing_.allowlist) != address(0)) {
             // TODO
         }
-
-        // Store routing information
-        Routing storage routing = lotRouting[id];
-        routing.auctionType = auctionType_;
-        routing.owner = msg.sender;
-        routing.baseToken = routing_.baseToken;
-        routing.quoteToken = routing_.quoteToken;
-        routing.hooks = routing_.hooks;
 
         emit AuctionCreated(id_, address(routing.baseToken), address(routing.quoteToken));
     }
@@ -184,6 +200,7 @@ abstract contract Auctioneer is WithModules {
         if (id_ >= lotCounter) revert HOUSE_InvalidLotId(id_);      
 
         // Load module, will revert if not installed
-        return AuctionModule(_getModuleIfInstalled(lotRouting[id_].auctionType));
+        (Module mod, ) = _getSpecificModuleIfInstalled(lotRouting[id_].auctionType, lotRouting[id_].auctionVersion);
+        return AuctionModule(mod);
     }
 }

@@ -9,11 +9,8 @@ abstract contract Derivatizer is WithModules {
 
     // Return address will be zero if not wrapped
     function deploy(Keycode dType, bytes memory data, bool wrapped) external virtual returns (uint256, address) {
-        // Load the derivative module, will revert if not installed
-        Derivative derivative = Derivative(address(_getModuleIfInstalled(dType)));
-
-        // Check that the type hasn't been sunset 
-        if (moduleSunset[dType]) revert("Derivatizer: type sunset");
+        // Load the derivative module, will revert if not installed or sunset
+        DerivativeModule derivative = _getLatestDerivativeModule(dType);
 
         // Call the deploy function on the derivative module
         (uint256 tokenId, address wrappedToken) = derivative.deploy(data, wrapped);
@@ -48,4 +45,17 @@ abstract contract Derivatizer is WithModules {
 
     // Compute unique token ID for params on the submodule
     function computeId(bytes memory params_) external pure virtual returns (uint256);
+
+    // ========== INTERNAL FUNCTIONS ========== //
+
+    function _getLatestDerivativeModule(Keycode keycode_) internal view returns (DerivativeModule) {
+        (Module mod, uint8 version) = _getLatestModuleIfInstalled(keycode_);
+        if (moduleData[keycode_].versions[version].sunset) revert ModuleSunset(keycode_, version);
+        return DerivativeModule(mod);
+    }
+
+    function _getSpecificDerivativeModule(Keycode keycode_, uint8 version_) internal view returns (DerivativeModule) {
+        (Module mod, uint8 version) = _getSpecificModuleIfInstalled(keycode_, version_);
+        return DerivativeModule(mod);
+    }
 }

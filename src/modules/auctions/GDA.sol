@@ -41,6 +41,11 @@ contract GradualDutchAuctioneer is AtomicAuctionModule, GDA {
         address auctionHouse_
     ) Module(auctionHouse_) {}
 
+    /* ========== MODULE FUNCTIONS ========== */
+    function ID() public pure override returns (Keycode, uint8) {
+        return (toKeycode("GDA"), 1);
+    }
+
     /* ========== MARKET FUNCTIONS ========== */
 
     function _auction(
