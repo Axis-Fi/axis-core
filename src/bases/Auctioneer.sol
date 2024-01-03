@@ -58,26 +58,19 @@ abstract contract Auctioneer is WithModules {
     /// @notice Counter for auction lots
     uint256 public lotCounter;
 
-    /// @notice Designates whether an auction type is sunset on this contract
-    /// @dev We can remove Keycodes from the module to completely remove them,
-    ///      However, that would brick any existing auctions of that type.
-    ///      Therefore, we can sunset them instead, which will prevent new auctions.
-    ///      After they have all ended, then we can remove them.
-    mapping(Keycode auctionType => bool) public typeSunset;
-
     /// @notice Mapping of lot IDs to their auction type (represented by the Keycode for the auction submodule)
     mapping(uint256 lotId => Routing) public lotRouting;
 
     // ========== AUCTION MANAGEMENT ========== //
 
-    function auction(RoutingParams calldata routing_, Auction.AuctionParams calldata params_) external override returns (uint256 id) {
+    function auction(RoutingParams calldata routing_, Auction.AuctionParams calldata params_) external returns (uint256 id) {
         // Load auction type module, this checks that it is installed.
         // We load it here vs. later to avoid two checks.
         AuctionModule auctionModule;
         uint8 auctionVersion;
         {
             (Module mod, uint8 version) = _getLatestModuleIfInstalled(routing_.auctionType);
-            if (moduleData[routing_.auctionType].versions[version].sunset) revert ModuleSunset(routing_.auctionType, version);
+            if (moduleData[routing_.auctionType].sunset) revert ModuleSunset(routing_.auctionType);
 
             auctionModule = AuctionModule(address(mod));
             auctionVersion = version;

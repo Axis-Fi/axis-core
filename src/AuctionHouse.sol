@@ -40,6 +40,12 @@ abstract contract Router is FeeManager {
     // TODO make this updatable
     address internal immutable _protocol;
 
+    // ========== CONSTRUCTOR ========== //
+
+    constructor(address protocol_) {
+        _protocol = protocol_;
+    }
+
     // ========== ATOMIC AUCTIONS ========== //
 
     /// @param approval_ - (Optional) Permit approval signature for the quoteToken
@@ -56,7 +62,8 @@ abstract contract Router is FeeManager {
     function settle(uint256 id_, Auction.Bid[] memory bids_) external virtual returns (uint256[] memory amountsOut);
 }
 
-contract AuctionHouse is Derivatizer, Auctioneer, Router {
+// TODO abstract for now so compiler doesn't complain
+abstract contract AuctionHouse is Derivatizer, Auctioneer, Router {
     using SafeTransferLib for ERC20;
 
     /// Implement the router functionality here since it combines all of the base functionality
@@ -70,9 +77,7 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
     event Purchase(uint256 id, address buyer, address referrer, uint256 amount, uint256 payout);
 
     // ========== CONSTRUCTOR ========== //
-    constructor(address protocol_) {
-        _protocol = protocol_;
-    }
+    constructor(address protocol_) Router(protocol_) {}
 
     // ========== DIRECT EXECUTION ========== //
 
