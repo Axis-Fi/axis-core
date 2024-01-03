@@ -12,6 +12,14 @@ contract MockModule is Module {
     }
 }
 
+contract MockInvalidModule is Module {
+    constructor(address _owner) Module(_owner) {}
+
+    function KEYCODE() public pure override returns (Keycode) {
+        return toKeycode(toModuleKeycode("INVA_"), 100);
+    }
+}
+
 contract MockUpgradedModule is Module {
     constructor(address _owner) Module(_owner) {}
 

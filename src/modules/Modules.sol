@@ -98,10 +98,14 @@ abstract contract WithModules is Owned {
     // ========= ERRORS ========= //
     error InvalidModule();
     error InvalidModuleUpgrade(Keycode keycode_);
-    error ModuleAlreadyInstalled(Keycode keycode_);
+    error ModuleAlreadyInstalled(ModuleKeycode moduleKeycode_, uint8 version_);
     error ModuleNotInstalled(Keycode keycode_);
     error ModuleExecutionReverted(bytes error_);
     error ModuleAlreadySunset(Keycode keycode_);
+
+    // ========= EVENTS ========= //
+
+    event ModuleInstalled(ModuleKeycode indexed moduleKeycode_, uint8 indexed version_, address indexed address_);
 
     // ========= CONSTRUCTOR ========= //
 
@@ -121,25 +125,43 @@ abstract contract WithModules is Owned {
     /// @notice Mapping of Keycode to whether the module is sunset.
     mapping(Keycode => bool) public moduleSunset;
 
+    /// @notice     Installs a new module
+    /// @notice     Subsequent versions should be installed via upgradeModule
+    /// @dev        This function performs the following:
+    /// @dev        - Validates the new module
+    /// @dev        - Checks that the module (or other versions) is not already installed
+    /// @dev        - Stores the module details
+    ///
+    /// @dev        This function reverts if:
+    /// @dev        - The caller is not the owner
+    /// @dev        - The module is not a contract
+    /// @dev        - The module has an invalid Keycode
+    /// @dev        - The module (or other versions) is already installed
+    ///
+    /// @param newModule_  The new module
     function installModule(Module newModule_) external onlyOwner {
         // Validate new module and get its subkeycode
         Keycode keycode = _validateModule(newModule_);
+        ModuleKeycode moduleKeycode = moduleFromKeycode(keycode);
+        uint8 moduleVersion = versionFromKeycode(keycode);
 
-        // Check that a module with this keycode is not already installed
+        // Check that the module is not already installed
         // If this reverts, then the new module should be installed via upgradeModule
-        if (address(getModuleForKeycode[keycode]) != address(0))
-            revert ModuleAlreadyInstalled(keycode);
+        uint8 moduleInstalledVersion = getModuleLatestVersion[moduleKeycode];
+        if (moduleInstalledVersion > 0)
+            revert ModuleAlreadyInstalled(moduleKeycode, moduleInstalledVersion);
 
         // Store module in module
         getModuleForKeycode[keycode] = newModule_;
         modules.push(keycode);
 
         // Update latest version
-        ModuleKeycode moduleKeycode = moduleFromKeycode(keycode);
-        getModuleLatestVersion[moduleKeycode] = versionFromKeycode(keycode);
+        getModuleLatestVersion[moduleKeycode] = moduleVersion;
 
         // Initialize the module
         newModule_.INIT();
+
+        emit ModuleInstalled(moduleKeycode, moduleVersion, address(newModule_));
     }
 
     /// @notice Prevents future use of module, but functionality remains for existing users. Modules should implement functionality such that creation functions are disabled if sunset.
