@@ -9,60 +9,54 @@ import {Owned} from "lib/solmate/src/auth/Owned.sol";
 
 /// @notice     5 byte/character identifier for the Module
 /// @dev        3-5 characters from A-Z
-type ModuleKeycode is bytes5;
+type Keycode is bytes5;
 
 /// @notice     7 byte identifier for the Module, including version
-/// @dev        ModuleKeycode, followed by 2 characters from 0-9
-type Keycode is bytes7;
+/// @dev        2 characters from 0-9 (a version number), followed by Keycode
+type Veecode is bytes7;
 
 error TargetNotAContract(address target_);
-error InvalidKeycode(Keycode keycode_);
+error InvalidVeecode(Veecode veecode_);
 
-function toModuleKeycode(bytes5 moduleKeycode_) pure returns (ModuleKeycode) {
-    return ModuleKeycode.wrap(moduleKeycode_);
+function toKeycode(bytes5 keycode_) pure returns (Keycode) {
+    return Keycode.wrap(keycode_);
 }
 
-function fromModuleKeycode(ModuleKeycode moduleKeycode_) pure returns (bytes5) {
-    return ModuleKeycode.unwrap(moduleKeycode_);
-}
-
-// solhint-disable-next-line func-visibility
-function toKeycode(ModuleKeycode moduleKeycode_, uint8 version_) pure returns (Keycode) {
-    bytes5 moduleKeycodeBytes = fromModuleKeycode(moduleKeycode_);
-    bytes memory keycodeBytes = new bytes(7);
-
-    // Copy moduleKeycode_ into keycodeBytes
-    for (uint256 i; i < 5; i++) {
-        keycodeBytes[i] = moduleKeycodeBytes[i];
-    }
-
-    // Get the digits of the version
-    uint8 firstDigit = version_ / 10;
-    uint8 secondDigit = version_ % 10;
-
-    // Convert the digits to bytes
-    keycodeBytes[5] = bytes1(firstDigit + 0x30);
-    keycodeBytes[6] = bytes1(secondDigit + 0x30);
-
-    return Keycode.wrap(bytes7(keycodeBytes));
-}
-
-// solhint-disable-next-line func-visibility
-function fromKeycode(Keycode keycode_) pure returns (bytes7) {
+function fromKeycode(Keycode keycode_) pure returns (bytes5) {
     return Keycode.unwrap(keycode_);
 }
 
-function unwrapKeycode(Keycode keycode_) pure returns (ModuleKeycode, uint8) {
-    bytes7 unwrapped = Keycode.unwrap(keycode_);
+// solhint-disable-next-line func-visibility
+function wrapVeecode(Keycode keycode_, uint8 version_) pure returns (Veecode) {
+    // Get the digits of the version
+    bytes1 firstDigit = bytes1(version_ / 10 + 0x30);
+    bytes1 secondDigit = bytes1(version_ % 10 + 0x30);
 
-    // Get the moduleKeycode
-    ModuleKeycode moduleKeycode = ModuleKeycode.wrap(bytes5(unwrapped));
+    // Pack everything and wrap as a Veecode
+    return Veecode.wrap(bytes7(abi.encodePacked(firstDigit, secondDigit, keycode_)));
+}
 
-    // Get the version
-    uint8 moduleVersion = (uint8(unwrapped[5]) - 0x30) * 10;
-    moduleVersion += uint8(unwrapped[6]) - 0x30;
+// solhint-disable-next-line func-visibility
+function toVeecode(bytes7 veecode_) pure returns (Veecode) {
+    return Veecode.wrap(veecode_);
+}
 
-    return (moduleKeycode, moduleVersion);
+// solhint-disable-next-line func-visibility
+function fromVeecode(Veecode veecode_) pure returns (bytes7) {
+    return Veecode.unwrap(veecode_);
+}
+
+function unwrapVeecode(Veecode veecode_) pure returns (Keycode, uint8) {
+    bytes7 unwrapped = Veecode.unwrap(veecode_);
+
+    // Get the version from the first 2 bytes
+    uint8 version = (uint8(unwrapped[0]) - 0x30) * 10;
+    version += uint8(unwrapped[1]) - 0x30;
+
+    // Get the Keycode by shifting the full Veecode to the left by 2 bytes
+    Keycode keycode = Keycode.wrap(bytes5(unwrapped << 16));
+
+    return (keycode, version);
 }
 
 // solhint-disable-next-line func-visibility
@@ -71,19 +65,19 @@ function ensureContract(address target_) view {
 }
 
 // solhint-disable-next-line func-visibility
-function ensureValidKeycode(Keycode keycode_) pure {
-    bytes7 unwrapped = Keycode.unwrap(keycode_);
+function ensureValidVeecode(Veecode veecode_) pure {
+    bytes7 unwrapped = Veecode.unwrap(veecode_);
     for (uint256 i; i < 7; ) {
         bytes1 char = unwrapped[i];
-        if (i < 3) {
-            // First 3 characters must be A-Z
-            if (char < 0x41 || char > 0x5A) revert InvalidKeycode(keycode_);
+        if (i < 2) {
+            // First 2 characters must be the version, each character is a number 0-9
+            if (char < 0x30 || char > 0x39) revert InvalidVeecode(veecode_);
         } else if (i < 5) {
-            // Next 2 characters after the first 3 can be A-Z or blank, 0-9, or .
-            if (char != 0x00 && (char < 0x41 || char > 0x5A) && (char < 0x30 || char > 0x39)) revert InvalidKeycode(keycode_);
+            // Next 3 characters after the first 3 can be A-Z
+            if (char < 0x41 || char > 0x5A) revert InvalidVeecode(veecode_);
         } else {
-            // Last 2 character must be 0-9
-            if (char < 0x30 || char > 0x39) revert InvalidKeycode(keycode_);
+            // Last 2 character must be A-Z or blank
+            if (char != 0x00 && (char < 0x41 || char > 0x5A)) revert InvalidVeecode(veecode_);
         }
         unchecked {
             i++;
@@ -92,24 +86,24 @@ function ensureValidKeycode(Keycode keycode_) pure {
 
     // Check that the version is not 0
     // This is because the version is by default 0 if the module is not installed
-    (, uint8 moduleVersion) = unwrapKeycode(keycode_);
-    if (moduleVersion == 0) revert InvalidKeycode(keycode_);
+    (, uint8 moduleVersion) = unwrapVeecode(veecode_);
+    if (moduleVersion == 0) revert InvalidVeecode(veecode_);
 }
 
 abstract contract WithModules is Owned {
     // ========= ERRORS ========= //
     error InvalidModule();
-    error InvalidModuleUpgrade(Keycode keycode_);
-    error ModuleAlreadyInstalled(ModuleKeycode moduleKeycode_, uint8 version_);
-    error ModuleNotInstalled(ModuleKeycode moduleKeycode_, uint8 version_);
+    error InvalidModuleInstall(Keycode keycode_, uint8 version_);
+    error ModuleAlreadyInstalled(Keycode keycode_, uint8 version_);
+    error ModuleNotInstalled(Keycode keycode_, uint8 version_);
     error ModuleExecutionReverted(bytes error_);
     error ModuleAlreadySunset(Keycode keycode_);
+    error ModuleSunset(Keycode keycode_);
+
 
     // ========= EVENTS ========= //
 
-    event ModuleInstalled(ModuleKeycode indexed moduleKeycode_, uint8 indexed version_, address indexed address_);
-
-    event ModuleUpgraded(ModuleKeycode indexed moduleKeycode_, uint8 indexed version_, address indexed address_);
+    event ModuleInstalled(Keycode indexed keycode_, uint8 indexed version_, address indexed address_);
 
     // ========= CONSTRUCTOR ========= //
 
@@ -117,118 +111,74 @@ abstract contract WithModules is Owned {
 
     // ========= MODULE MANAGEMENT ========= //
 
+    struct ModStatus {
+        uint8 latestVersion;
+        bool sunset;
+    }
+
     /// @notice Array of all modules currently installed.
     Keycode[] public modules;
 
-    /// @notice Mapping of Keycode to Module address.
-    mapping(Keycode => Module) public getModuleForKeycode;
+    /// @notice Mapping of Veecode to Module address.
+    mapping(Veecode => Module) public getModuleForVeecode;
 
-    /// @notice Mapping of ModuleKeycode to latest version.
-    mapping(ModuleKeycode => uint8) public getModuleLatestVersion;
+    /// @notice Mapping of Keycode to module status information
+    mapping(Keycode => ModStatus) public getModuleStatus;
 
-    /// @notice Mapping of Keycode to whether the module is sunset.
-    mapping(Keycode => bool) public moduleSunset;
-
-    /// @notice     Installs a new module
-    /// @notice     Subsequent versions should be installed via upgradeModule
-    /// @dev        This function performs the following:
-    /// @dev        - Validates the new module
-    /// @dev        - Checks that the module (or other versions) is not already installed
-    /// @dev        - Stores the module details
+    /// @notice Installs a module. Can be used to install a new module or upgrade an existing one.
+    /// @dev The version of the installed module must be one greater than the latest version. If it's a new module, then the version must be 1.
+    /// @dev Only one version of a module is active for creation functions at a time. Older versions continue to work for existing data.
+    /// @dev If a module is currently sunset, installing a new version will remove the sunset.
     ///
     /// @dev        This function reverts if:
     /// @dev        - The caller is not the owner
     /// @dev        - The module is not a contract
-    /// @dev        - The module has an invalid Keycode
+    /// @dev        - The module has an invalid Veecode
     /// @dev        - The module (or other versions) is already installed
-    ///
-    /// @param newModule_  The new module
+    /// @dev        - The module version is not one greater than the latest version
     function installModule(Module newModule_) external onlyOwner {
-        // Validate new module and get its keycode
-        Keycode keycode = _validateModule(newModule_);
-        (ModuleKeycode moduleKeycode, uint8 moduleVersion) = unwrapKeycode(keycode);
+        // Validate new module is a contract, has correct parent, and has valid Keycode
+        ensureContract(address(newModule_));
+        Veecode veecode = newModule_.VEECODE();
+        ensureValidVeecode(veecode);
+        (Keycode keycode, uint8 version) = unwrapVeecode(veecode);
 
-        // Check that the module is not already installed
-        // If this reverts, then the new module should be installed via upgradeModule
-        uint8 moduleInstalledVersion = getModuleLatestVersion[moduleKeycode];
-        if (moduleInstalledVersion > 0)
-            revert ModuleAlreadyInstalled(moduleKeycode, moduleInstalledVersion);
+        // Validate that the module version is one greater than the latest version
+        ModStatus storage status = getModuleStatus[keycode];
+        if (version != status.latestVersion + 1) revert InvalidModuleInstall(keycode, version);
 
-        // Store module in module
-        getModuleForKeycode[keycode] = newModule_;
-        modules.push(keycode);
+        // Store module data and remove sunset if applied
+        status.latestVersion = version;
+        if (status.sunset) status.sunset = false;
+        getModuleForVeecode[veecode] = newModule_;
 
-        // Update latest version
-        getModuleLatestVersion[moduleKeycode] = moduleVersion;
+        // If the module is not already installed, add it to the list of modules
+        if (version == uint8(1)) modules.push(keycode);
 
         // Initialize the module
         newModule_.INIT();
 
-        emit ModuleInstalled(moduleKeycode, moduleVersion, address(newModule_));
+        emit ModuleInstalled(keycode, version, address(newModule_));
     }
 
     /// @notice Prevents future use of module, but functionality remains for existing users. Modules should implement functionality such that creation functions are disabled if sunset.
+    /// @dev Sunset is used to disable a module type without installing a new one.
     function sunsetModule(Keycode keycode_) external onlyOwner {
-        (ModuleKeycode moduleKeycode, uint8 moduleVersion) = unwrapKeycode(keycode_);
-
         // Check that the module is installed
-        if (!_moduleIsInstalled(keycode_)) revert ModuleNotInstalled(moduleKeycode, moduleVersion);
+        if (!_moduleIsInstalled(keycode_)) revert ModuleNotInstalled(keycode_, 0);
 
         // Check that the module is not already sunset
-        if (moduleSunset[keycode_]) revert ModuleAlreadySunset(keycode_);
+        ModStatus storage status = getModuleStatus[keycode_];
+        if (status.sunset) revert ModuleAlreadySunset(keycode_);
 
         // Set the module to sunset
-        moduleSunset[keycode_] = true;
-    }
-
-    /// @notice     Upgrades an existing module
-    /// @dev        This function performs the following:
-    /// @dev        - Validates the new module
-    /// @dev        - Checks that a prior version of the module is already installed
-    /// @dev        - Stores the module details
-    /// @dev        - Marks the previous version as sunset
-    ///
-    /// @dev        This function reverts if:
-    /// @dev        - The caller is not the owner
-    /// @dev        - The module is not a contract
-    /// @dev        - The module has an invalid Keycode
-    /// @dev        - The module is not already installed
-    /// @dev        - The same or newer module version is already installed
-    function upgradeModule(Module newModule_) external onlyOwner {
-        // Validate new module and get its keycode
-        Keycode keycode = _validateModule(newModule_);
-        (ModuleKeycode moduleKeycode, uint8 moduleVersion) = unwrapKeycode(keycode);
-
-        // Check that an earlier version of the module is installed
-        // If this reverts, then the new module should be installed via installModule
-        uint8 moduleInstalledVersion = getModuleLatestVersion[moduleKeycode];
-        if (moduleInstalledVersion == 0)
-            revert ModuleNotInstalled(moduleKeycode, moduleInstalledVersion);
-
-        if (moduleInstalledVersion >= moduleVersion)
-            revert ModuleAlreadyInstalled(moduleKeycode, moduleInstalledVersion);
-
-        // Update module records
-        getModuleForKeycode[keycode] = newModule_;
-        modules.push(keycode);
-
-        // Update latest version
-        getModuleLatestVersion[moduleKeycode] = moduleVersion;
-
-        // Sunset the previous version
-        Keycode previousKeycode = toKeycode(moduleKeycode, moduleInstalledVersion);
-        moduleSunset[previousKeycode] = true;
-
-        // Initialize the module
-        newModule_.INIT();
-
-        emit ModuleUpgraded(moduleKeycode, moduleVersion, address(newModule_));
+        status.sunset = true;
     }
 
     // Decide if we need this function, i.e. do we need to set any parameters or call permissioned functions on any modules?
     // Answer: yes, e.g. when setting default values on an Auction module, like minimum duration or minimum deposit interval
     function execOnModule(
-        Keycode keycode_,
+        Veecode keycode_,
         bytes memory callData_
     ) external onlyOwner returns (bytes memory) {
         address module = _getModuleIfInstalled(keycode_);
@@ -242,26 +192,50 @@ abstract contract WithModules is Owned {
         return modules;
     }
 
+    // Checks whether any module is installed under the keycode
     function _moduleIsInstalled(Keycode keycode_) internal view returns (bool) {
-        Module module = getModuleForKeycode[keycode_];
-        return address(module) != address(0);
+        // Any module that has been installed will have a latest version greater than 0
+        // We can check not equal here to save gas
+        uint8 latestVersion = getModuleStatus[keycode_].latestVersion;
+        return latestVersion != uint8(0);
     }
 
-    function _getModuleIfInstalled(Keycode keycode_) internal view returns (address) {
-        Module module = getModuleForKeycode[keycode_];
-        (ModuleKeycode moduleKeycode_, uint8 moduleVersion_) = unwrapKeycode(keycode_);
+    function _getLatestModuleIfActive(Keycode keycode_) internal view returns (address) {
+        // Check that the module is installed
+        ModStatus memory status = getModuleStatus[keycode_];
+        if (status.latestVersion == uint8(0)) revert ModuleNotInstalled(keycode_, 0);
 
-        if (address(module) == address(0)) revert ModuleNotInstalled(moduleKeycode_, moduleVersion_);
-        return address(module);
+        // Check that the module is not sunset
+        if (status.sunset) revert ModuleSunset(keycode_);
+
+        // Wrap into a Veecode, get module address and return
+        // We don't need to check that the Veecode is valid because we already checked that the module is installed and pulled the version from the contract
+        Veecode veecode = wrapVeecode(keycode_, status.latestVersion);
+        return address(getModuleForVeecode[veecode]);
     }
 
-    function _validateModule(Module newModule_) internal view returns (Keycode) {
-        // Validate new module is a contract, has correct parent, and has valid Keycode
-        ensureContract(address(newModule_));
-        Keycode keycode = newModule_.KEYCODE();
-        ensureValidKeycode(keycode);
+    function _getModuleIfInstalled(Keycode keycode_, uint8 version_) internal view returns (address) {
+        // Check that the module is installed
+        ModStatus memory status = getModuleStatus[keycode_];
+        if (status.latestVersion == uint8(0)) revert ModuleNotInstalled(keycode_, 0);
 
-        return keycode;
+        // Check that the module version is less than or equal to the latest version and greater than 0
+        if (version_ > status.latestVersion || version_ == 0) revert ModuleNotInstalled(keycode_, version_);
+
+        // Wrap into a Veecode, get module address and return
+        // We don't need to check that the Veecode is valid because we already checked that the module is installed and pulled the version from the contract
+        Veecode veecode = wrapVeecode(keycode_, version_);
+        return address(getModuleForVeecode[veecode]);
+    }
+
+    function _getModuleIfInstalled(Veecode veecode_) internal view returns (address) {
+        // In this case, it's simpler to check that the stored address is not zero
+        Module mod = getModuleForVeecode[veecode_];
+        if (address(mod) == address(0)) {
+            (Keycode keycode, uint8 version) = unwrapVeecode(veecode_);
+            revert ModuleNotInstalled(keycode, version);
+        }
+        return address(mod);
     }
 }
 
@@ -289,8 +263,8 @@ abstract contract Module {
         _;
     }
 
-    /// @notice 5 byte identifier for the module. 3-5 characters from A-Z.
-    function KEYCODE() public pure virtual returns (Keycode) {}
+    /// @notice 7 byte, versioned identifier for the module. 2 characters from 0-9 that signify the version and 3-5 characters from A-Z.
+    function VEECODE() public pure virtual returns (Veecode) {}
 
     /// @notice Initialization function for the module
     /// @dev    This function is called when the module is installed or upgraded by the module.
