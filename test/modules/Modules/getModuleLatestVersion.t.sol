@@ -41,8 +41,7 @@ contract GetModuleLatestVersionTest is Test {
     function test_WhenMultipleVersionsAreFound() external whenAModuleIsInstalled {
         // Install an upgraded module
         MockUpgradedModule upgradedMockModule = new MockUpgradedModule(address(withModules));
-        // TODO change to upgradeModule
-        withModules.installModule(upgradedMockModule);
+        withModules.upgradeModule(upgradedMockModule);
 
         uint8 version = withModules.getModuleLatestVersion(toModuleKeycode("MOCK"));
 

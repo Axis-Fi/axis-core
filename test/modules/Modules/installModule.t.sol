@@ -9,7 +9,7 @@ import {MockWithModules} from "test/modules/Modules/MockWithModules.sol";
 import {MockModule, MockUpgradedModule, MockInvalidModule} from "test/modules/Modules/MockModule.sol";
 
 // Contracts
-import {WithModules, Module, moduleFromKeycode, InvalidKeycode} from "src/modules/Modules.sol";
+import {WithModules, Module, Keycode, fromKeycode, toKeycode, toModuleKeycode, moduleFromKeycode, InvalidKeycode} from "src/modules/Modules.sol";
 
 contract InstallModuleTest is Test {
     WithModules internal withModules;
@@ -76,5 +76,10 @@ contract InstallModuleTest is Test {
         // Check that the latest version is recorded
         uint8 version = withModules.getModuleLatestVersion(moduleFromKeycode(mockModule.KEYCODE()));
         assertEq(version, 1);
+
+        // Check that the modules array is updated
+        Keycode[] memory modules = withModules.getModules();
+        assertEq(modules.length, 1);
+        assertEq(fromKeycode(modules[0]), fromKeycode(toKeycode(toModuleKeycode("MOCK"), 1)));
     }
 }

@@ -99,13 +99,15 @@ abstract contract WithModules is Owned {
     error InvalidModule();
     error InvalidModuleUpgrade(Keycode keycode_);
     error ModuleAlreadyInstalled(ModuleKeycode moduleKeycode_, uint8 version_);
-    error ModuleNotInstalled(Keycode keycode_);
+    error ModuleNotInstalled(ModuleKeycode moduleKeycode_, uint8 version_);
     error ModuleExecutionReverted(bytes error_);
     error ModuleAlreadySunset(Keycode keycode_);
 
     // ========= EVENTS ========= //
 
     event ModuleInstalled(ModuleKeycode indexed moduleKeycode_, uint8 indexed version_, address indexed address_);
+
+    event ModuleUpgraded(ModuleKeycode indexed moduleKeycode_, uint8 indexed version_, address indexed address_);
 
     // ========= CONSTRUCTOR ========= //
 
@@ -140,7 +142,7 @@ abstract contract WithModules is Owned {
     ///
     /// @param newModule_  The new module
     function installModule(Module newModule_) external onlyOwner {
-        // Validate new module and get its subkeycode
+        // Validate new module and get its keycode
         Keycode keycode = _validateModule(newModule_);
         ModuleKeycode moduleKeycode = moduleFromKeycode(keycode);
         uint8 moduleVersion = versionFromKeycode(keycode);
@@ -167,7 +169,9 @@ abstract contract WithModules is Owned {
     /// @notice Prevents future use of module, but functionality remains for existing users. Modules should implement functionality such that creation functions are disabled if sunset.
     function sunsetModule(Keycode keycode_) external onlyOwner {
         // Check that the module is installed
-        if (!_moduleIsInstalled(keycode_)) revert ModuleNotInstalled(keycode_);
+        ModuleKeycode moduleKeycode_ = moduleFromKeycode(keycode_);
+        uint8 moduleVersion_ = versionFromKeycode(keycode_);
+        if (!_moduleIsInstalled(keycode_)) revert ModuleNotInstalled(moduleKeycode_, moduleVersion_);
 
         // Check that the module is not already sunset
         if (moduleSunset[keycode_]) revert ModuleAlreadySunset(keycode_);
@@ -176,32 +180,50 @@ abstract contract WithModules is Owned {
         moduleSunset[keycode_] = true;
     }
 
+    /// @notice     Upgrades an existing module
+    /// @dev        This function performs the following:
+    /// @dev        - Validates the new module
+    /// @dev        - Checks that a prior version of the module is already installed
+    /// @dev        - Stores the module details
+    /// @dev        - Marks the previous version as sunset
+    ///
+    /// @dev        This function reverts if:
+    /// @dev        - The caller is not the owner
+    /// @dev        - The module is not a contract
+    /// @dev        - The module has an invalid Keycode
+    /// @dev        - The module is not already installed
+    /// @dev        - The same or newer module version is already installed
+    function upgradeModule(Module newModule_) external onlyOwner {
+        // Validate new module and get its keycode
+        Keycode keycode = _validateModule(newModule_);
 
-    // TODO may need to use proxies instead of this design to allow for upgrading due to a bug and keeping collateral in a derivative contract
-    // The downside is that you have the additional gas costs and potential for exploits in OCG
-    // It may be better to just not have the modules be upgradable
-    // Having a shutdown mechanism for a specific module and an entire auctionhouse version might be good as well.
-    // Though it would still need to allow for claiming of outstanding derivative tokens.
+        // Check that an earlier version of the module is installed
+        // If this reverts, then the new module should be installed via installModule
+        ModuleKeycode moduleKeycode = moduleFromKeycode(keycode);
+        uint8 moduleVersion = versionFromKeycode(keycode);
+        uint8 moduleInstalledVersion = getModuleLatestVersion[moduleKeycode];
+        if (moduleInstalledVersion == 0)
+            revert ModuleNotInstalled(moduleKeycode, moduleInstalledVersion);
 
-    // NOTE: don't use upgradable modules. simply require a new module to be installed and sunset the old one to migrate functionality.
-    // This doesn't allow fixing a contract for existing users / data, but it prevents malicious upgrades.
-    // Versions can be used in the keycode to denote a new version of the same module, e.g. SDA v1.1
-    // function upgradeModule(Module newModule_) external onlyOwner {
-    //     // Validate new module and get its keycode
-    //     Keycode keycode = _validateModule(newModule_);
+        if (moduleInstalledVersion >= moduleVersion)
+            revert ModuleAlreadyInstalled(moduleKeycode, moduleInstalledVersion);
 
-    //     // Get the existing module, ensure that it's not zero and not the same as the new module
-    //     // If this reverts due to no module being installed, then the new module should be installed via installModule
-    //     Module oldModule = getModuleForKeycode[keycode];
-    //     if (oldModule == Module(address(0)) || oldModule == newModule_)
-    //         revert InvalidModuleUpgrade(keycode);
+        // Update module records
+        getModuleForKeycode[keycode] = newModule_;
+        modules.push(keycode);
 
-    //     // Update module in module
-    //     getModuleForKeycode[keycode] = newModule_;
+        // Update latest version
+        getModuleLatestVersion[moduleKeycode] = moduleVersion;
 
-    //     // Initialize the module
-    //     newModule_.INIT();
-    // }
+        // Sunset the previous version
+        Keycode previousKeycode = toKeycode(moduleKeycode, moduleInstalledVersion);
+        moduleSunset[previousKeycode] = true;
+
+        // Initialize the module
+        newModule_.INIT();
+
+        emit ModuleUpgraded(moduleKeycode, moduleVersion, address(newModule_));
+    }
 
     // Decide if we need this function, i.e. do we need to set any parameters or call permissioned functions on any modules?
     // Answer: yes, e.g. when setting default values on an Auction module, like minimum duration or minimum deposit interval
@@ -227,7 +249,9 @@ abstract contract WithModules is Owned {
 
     function _getModuleIfInstalled(Keycode keycode_) internal view returns (address) {
         Module module = getModuleForKeycode[keycode_];
-        if (address(module) == address(0)) revert ModuleNotInstalled(keycode_);
+        ModuleKeycode moduleKeycode_ = moduleFromKeycode(keycode_);
+        uint8 moduleVersion_ = versionFromKeycode(keycode_);
+        if (address(module) == address(0)) revert ModuleNotInstalled(moduleKeycode_, moduleVersion_);
         return address(module);
     }
 
