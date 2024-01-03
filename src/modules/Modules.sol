@@ -18,7 +18,7 @@ function toKeycode(bytes5 keycode_) pure returns (Keycode) {
 }
 
 // solhint-disable-next-line func-visibility
-function fromKeycode(Keycode keycode_) pure returns (bytes10) {
+function fromKeycode(Keycode keycode_) pure returns (bytes5) {
     return Keycode.unwrap(keycode_);
 }
 
@@ -49,23 +49,19 @@ function ensureValidKeycode(Keycode keycode_) pure {
 abstract contract WithModules is Owned {
     // ========= ERRORS ========= //
     error InvalidModule();
-    error InvalidModuleUpgrade(Keycode keycode_, uint8 version_);
+    error InvalidModuleInstall(Keycode keycode_, uint8 version_);
     error ModuleAlreadyInstalled(Keycode keycode_);
     error ModuleNotInstalled(Keycode keycode_);
     error ModuleExecutionReverted(bytes error_);
-    error ModuleAlreadySunset(Keycode keycode_, uint8 version_);
-    error ModuleSunset(Keycode keycode_, uint8 version_);
+    error ModuleAlreadySunset(Keycode keycode_);
+    error ModuleSunset(Keycode keycode_);
 
     // ========= MODULE MANAGEMENT ========= //
 
-    struct Version {
-        Module module;
-        bool sunset;
-    }
-
     struct Mod {
         uint8 latestVersion;
-        mapping(uint8 => Version) versions;
+        bool sunset;
+        mapping(uint8 => Module) versions;
     }
 
     /// @notice Array of all modules currently installed.
@@ -74,66 +70,46 @@ abstract contract WithModules is Owned {
     /// @notice Mapping of Keycode to Module data.
     mapping(Keycode => Mod) public moduleData;
 
+    /// @notice Installs a module. Can be used to install a new module or upgrade an existing one.
+    /// @dev The version of the installed module must be one greater than the latest version. If it's a new module, then the version must be 1.
+    /// @dev Only one version of a module is active for creation functions at a time. Older versions continue to work for existing data.
     function installModule(Module newModule_) external onlyOwner {
-        // Validate new module and get its keycode and version
-        // This function checks that the version is one greater than the latest version, which in this case should be 1
-        // The module is installed check below validates that the latest version is zero
-        (Keycode keycode, uint8 version) = _validateModule(newModule_);
+        // Validate new module is a contract, has correct parent, and has valid Keycode
+        ensureContract(address(newModule_));
+        (Keycode keycode, uint8 version) = newModule_.ID();
+        ensureValidKeycode(keycode);
 
-        // Check that a module with this keycode is not already installed
-        // If this reverts, then the new module should be installed via upgradeModule
-        if (_moduleIsInstalled(keycode))
-            revert ModuleAlreadyInstalled(keycode);
+        // Validate that the module version is one greater than the latest version
+        if (version != moduleData[keycode].latestVersion + 1) revert InvalidModuleInstall(keycode, version);
 
         // Store module data
         Mod storage mod = moduleData[keycode];
         mod.latestVersion = version;
-        mod.versions[version] = Version(newModule_, false);
-        modules.push(keycode);
+        mod.versions[version] = newModule_;
+
+        // If the module is not already installed, add it to the list of modules
+        if (version == 1) modules.push(keycode);
 
         // Initialize the module
         newModule_.INIT();
     }
 
     /// @notice Prevents future use of module, but functionality remains for existing users. Modules should implement functionality such that creation functions are disabled if sunset.
-    /// @dev    Sunsets the latest version the module and doesn't allow further use for creation. If you want to replace the module, use upgradeModule.
+    /// @dev    Sunsets the the module and doesn't allow further use for creation. If you want to replace the module, use upgradeModule.
     function sunsetModule(Keycode keycode_) external onlyOwner {
         // Check that the module is installed
         if (!_moduleIsInstalled(keycode_)) revert ModuleNotInstalled(keycode_);
 
         // Check that the module is not already sunset
         Mod storage mod = moduleData[keycode_];
-        uint8 latest = mod.latestVersion;
-        if (mod.versions[latest].sunset) revert ModuleAlreadySunset(keycode_, latest);
+        if (mod.sunset) revert ModuleAlreadySunset(keycode_);
 
         // Set the module to sunset
-        mod.versions[latest].sunset = true;
-    }
-
-    /// @notice Upgrades a module to a new version. The current version will be sunset.
-    /// @dev Only one version of a module can be active at a time for new creation. Sunset versions will continue to work for existing uses.
-    function upgradeModule(Module newModule_) external onlyOwner {
-        // Validate new module and get its keycode + version
-        (Keycode keycode, uint8 version) = _validateModule(newModule_);
-
-        // Check that the module is installed (latest version will be non-zero)
-        Mod storage mod = moduleData[keycode];
-        uint8 latest = mod.latestVersion;
-        if (latest == uint8(0)) revert ModuleNotInstalled(keycode);
-
-        // Sunset the current version of the module
-        mod.versions[latest].sunset = true;
-
-        // Store the new module version
-        mod.latestVersion = version;
-        mod.versions[version] = Version(newModule_, false);
-
-        // Initialize the new module
-        newModule_.INIT();
+        mod.sunset = true;
     }
     
-
     /// @notice Execute a permissioned function on a module.
+    // TODO should we be able to execute on a specific version?
     function execOnModule(
         Keycode keycode_,
         bytes memory callData_
@@ -156,25 +132,13 @@ abstract contract WithModules is Owned {
     function _getLatestModuleIfInstalled(Keycode keycode_) internal view returns (Module, uint8) {
         uint8 latest = moduleData[keycode_].latestVersion;
         if (latest == uint8(0)) revert ModuleNotInstalled(keycode_);
-        return (moduleData[keycode_].versions[latest].module, latest);
+        return (moduleData[keycode_].versions[latest], latest);
     }
 
     function _getSpecificModuleIfInstalled(Keycode keycode_, uint8 version_) internal view returns (Module, uint8) {
         if (version_ == uint8(0)) revert InvalidModule();
         if (version_ > moduleData[keycode_].latestVersion) revert InvalidModule();
-        return (moduleData[keycode_].versions[version_].module, version_);
-    }
-
-    function _validateModule(Module newModule_) internal view returns (Keycode, uint8) {
-        // Validate new module is a contract, has correct parent, and has valid Keycode
-        ensureContract(address(newModule_));
-        (Keycode keycode, uint8 version) = newModule_.ID();
-        ensureValidKeycode(keycode);
-
-        // Validate that the module version is one greater than the latest version
-        if (version != moduleData[keycode].latestVersion + 1) revert InvalidModuleUpgrade(keycode, version);
-
-        return (keycode, version);
+        return (moduleData[keycode_].versions[version_], version_);
     }
 }
 
