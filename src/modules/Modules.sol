@@ -52,16 +52,17 @@ function fromKeycode(Keycode keycode_) pure returns (bytes7) {
     return Keycode.unwrap(keycode_);
 }
 
-function versionFromKeycode(Keycode keycode_) pure returns (uint8) {
+function unwrapKeycode(Keycode keycode_) pure returns (ModuleKeycode, uint8) {
     bytes7 unwrapped = Keycode.unwrap(keycode_);
-    uint8 firstDigit = uint8(unwrapped[5]) - 0x30;
-    uint8 secondDigit = uint8(unwrapped[6]) - 0x30;
-    return firstDigit * 10 + secondDigit;
-}
 
-function moduleFromKeycode(Keycode keycode_) pure returns (ModuleKeycode) {
-    bytes7 unwrapped = Keycode.unwrap(keycode_);
-    return ModuleKeycode.wrap(bytes5(unwrapped));
+    // Get the moduleKeycode
+    ModuleKeycode moduleKeycode = ModuleKeycode.wrap(bytes5(unwrapped));
+
+    // Get the version
+    uint8 moduleVersion = (uint8(unwrapped[5]) - 0x30) * 10;
+    moduleVersion += uint8(unwrapped[6]) - 0x30;
+
+    return (moduleKeycode, moduleVersion);
 }
 
 // solhint-disable-next-line func-visibility
@@ -91,7 +92,8 @@ function ensureValidKeycode(Keycode keycode_) pure {
 
     // Check that the version is not 0
     // This is because the version is by default 0 if the module is not installed
-    if (versionFromKeycode(keycode_) == 0) revert InvalidKeycode(keycode_);
+    (, uint8 moduleVersion) = unwrapKeycode(keycode_);
+    if (moduleVersion == 0) revert InvalidKeycode(keycode_);
 }
 
 abstract contract WithModules is Owned {
@@ -144,8 +146,7 @@ abstract contract WithModules is Owned {
     function installModule(Module newModule_) external onlyOwner {
         // Validate new module and get its keycode
         Keycode keycode = _validateModule(newModule_);
-        ModuleKeycode moduleKeycode = moduleFromKeycode(keycode);
-        uint8 moduleVersion = versionFromKeycode(keycode);
+        (ModuleKeycode moduleKeycode, uint8 moduleVersion) = unwrapKeycode(keycode);
 
         // Check that the module is not already installed
         // If this reverts, then the new module should be installed via upgradeModule
@@ -168,10 +169,10 @@ abstract contract WithModules is Owned {
 
     /// @notice Prevents future use of module, but functionality remains for existing users. Modules should implement functionality such that creation functions are disabled if sunset.
     function sunsetModule(Keycode keycode_) external onlyOwner {
+        (ModuleKeycode moduleKeycode, uint8 moduleVersion) = unwrapKeycode(keycode_);
+
         // Check that the module is installed
-        ModuleKeycode moduleKeycode_ = moduleFromKeycode(keycode_);
-        uint8 moduleVersion_ = versionFromKeycode(keycode_);
-        if (!_moduleIsInstalled(keycode_)) revert ModuleNotInstalled(moduleKeycode_, moduleVersion_);
+        if (!_moduleIsInstalled(keycode_)) revert ModuleNotInstalled(moduleKeycode, moduleVersion);
 
         // Check that the module is not already sunset
         if (moduleSunset[keycode_]) revert ModuleAlreadySunset(keycode_);
@@ -196,11 +197,10 @@ abstract contract WithModules is Owned {
     function upgradeModule(Module newModule_) external onlyOwner {
         // Validate new module and get its keycode
         Keycode keycode = _validateModule(newModule_);
+        (ModuleKeycode moduleKeycode, uint8 moduleVersion) = unwrapKeycode(keycode);
 
         // Check that an earlier version of the module is installed
         // If this reverts, then the new module should be installed via installModule
-        ModuleKeycode moduleKeycode = moduleFromKeycode(keycode);
-        uint8 moduleVersion = versionFromKeycode(keycode);
         uint8 moduleInstalledVersion = getModuleLatestVersion[moduleKeycode];
         if (moduleInstalledVersion == 0)
             revert ModuleNotInstalled(moduleKeycode, moduleInstalledVersion);
@@ -249,8 +249,8 @@ abstract contract WithModules is Owned {
 
     function _getModuleIfInstalled(Keycode keycode_) internal view returns (address) {
         Module module = getModuleForKeycode[keycode_];
-        ModuleKeycode moduleKeycode_ = moduleFromKeycode(keycode_);
-        uint8 moduleVersion_ = versionFromKeycode(keycode_);
+        (ModuleKeycode moduleKeycode_, uint8 moduleVersion_) = unwrapKeycode(keycode_);
+
         if (address(module) == address(0)) revert ModuleNotInstalled(moduleKeycode_, moduleVersion_);
         return address(module);
     }

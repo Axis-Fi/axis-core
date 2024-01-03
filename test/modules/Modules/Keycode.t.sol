@@ -4,7 +4,7 @@ pragma solidity 0.8.19;
 import {Test} from "forge-std/Test.sol";
 import {console2} from "forge-std/console2.sol";
 
-import {ModuleKeycode, toModuleKeycode, fromModuleKeycode, Keycode, toKeycode, fromKeycode, versionFromKeycode, moduleFromKeycode, ensureValidKeycode, InvalidKeycode} from "src/modules/Modules.sol";
+import {ModuleKeycode, toModuleKeycode, fromModuleKeycode, Keycode, toKeycode, fromKeycode, unwrapKeycode, ensureValidKeycode, InvalidKeycode} from "src/modules/Modules.sol";
 
 contract KeycodeTest is Test {
     function test_moduleKeycode() external {
@@ -15,8 +15,6 @@ contract KeycodeTest is Test {
     function test_ensureValidKeycode_singleDigitNumber() external {
         ModuleKeycode moduleKeycode = toModuleKeycode("TEST");
         Keycode t1_keycode = toKeycode(moduleKeycode, 1);
-
-        bytes7 unwrapped = Keycode.unwrap(t1_keycode);
 
         ensureValidKeycode(t1_keycode);
     }
@@ -128,29 +126,30 @@ contract KeycodeTest is Test {
         ensureValidKeycode(t1_keycode);
     }
 
-    function test_versionFromKeycode() external {
+    function test_unwrapKeycode() external {
         ModuleKeycode moduleKeycode = toModuleKeycode("TEST");
         Keycode t1_keycode = toKeycode(moduleKeycode, 1);
-        assertEq(versionFromKeycode(t1_keycode), 1);
+        (ModuleKeycode moduleKeycode_, uint8 moduleVersion_) = unwrapKeycode(t1_keycode);
+        assertEq(moduleVersion_, 1);
 
         Keycode t2_keycode = toKeycode(moduleKeycode, 11);
-        assertEq(versionFromKeycode(t2_keycode), 11);
+        (moduleKeycode_, moduleVersion_) = unwrapKeycode(t2_keycode);
+        assertEq(moduleVersion_, 11);
 
         Keycode t3_keycode = toKeycode(moduleKeycode, 99);
-        assertEq(versionFromKeycode(t3_keycode), 99);
+        (moduleKeycode_, moduleVersion_) = unwrapKeycode(t3_keycode);
+        assertEq(moduleVersion_, 99);
 
         Keycode t4_keycode = toKeycode(moduleKeycode, 0);
-        assertEq(versionFromKeycode(t4_keycode), 0);
-    }
+        (moduleKeycode_, moduleVersion_) = unwrapKeycode(t4_keycode);
+        assertEq(moduleVersion_, 0);
 
-    function test_moduleFromKeycode() external {
-        Keycode t1_keycode = toKeycode(toModuleKeycode("TEST"), 1);
-        assertEq(fromModuleKeycode(moduleFromKeycode(t1_keycode)), "TEST");
+        Keycode t5_keycode = toKeycode(toModuleKeycode("TES"), 11);
+        (moduleKeycode_, moduleVersion_) = unwrapKeycode(t5_keycode);
+        assertEq(fromModuleKeycode(moduleKeycode_), "TES");
 
-        Keycode t2_keycode = toKeycode(toModuleKeycode("TES"), 11);
-        assertEq(fromModuleKeycode(moduleFromKeycode(t2_keycode)), "TES");
-
-        Keycode t3_keycode = toKeycode(toModuleKeycode("TESTT"), 11);
-        assertEq(fromModuleKeycode(moduleFromKeycode(t3_keycode)), "TESTT");
+        Keycode t6_keycode = toKeycode(toModuleKeycode("TESTT"), 11);
+        (moduleKeycode_, moduleVersion_) = unwrapKeycode(t6_keycode);
+        assertEq(fromModuleKeycode(moduleKeycode_), "TESTT");
     }
 }

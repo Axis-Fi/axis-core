@@ -9,7 +9,7 @@ import {MockWithModules} from "test/modules/Modules/MockWithModules.sol";
 import {MockModule, MockUpgradedModule, MockInvalidModule} from "test/modules/Modules/MockModule.sol";
 
 // Contracts
-import {WithModules, Module, Keycode, fromKeycode, toKeycode, toModuleKeycode, moduleFromKeycode, InvalidKeycode, moduleFromKeycode} from "src/modules/Modules.sol";
+import {WithModules, Module, Keycode, fromKeycode, toKeycode, toModuleKeycode, unwrapKeycode, InvalidKeycode} from "src/modules/Modules.sol";
 
 contract UpgradeModuleTest is Test {
     WithModules internal withModules;
@@ -34,7 +34,7 @@ contract UpgradeModuleTest is Test {
         assertEq(address(upgradedModule_), address(upgradedModule));
 
         // Check that the version is correct
-        uint8 upgradedModuleVersion_ = withModules.getModuleLatestVersion(moduleFromKeycode(upgradedModule.KEYCODE()));
+        uint8 upgradedModuleVersion_ = withModules.getModuleLatestVersion(toModuleKeycode("MOCK"));
         assertEq(upgradedModuleVersion_, 2);
 
         // Check that the new version is NOT sunset
@@ -60,7 +60,7 @@ contract UpgradeModuleTest is Test {
         // Install version 1
         withModules.installModule(mockModule);
 
-        bytes memory err = abi.encodeWithSelector(WithModules.ModuleAlreadyInstalled.selector, moduleFromKeycode(mockModule.KEYCODE()), 1);
+        bytes memory err = abi.encodeWithSelector(WithModules.ModuleAlreadyInstalled.selector, toModuleKeycode("MOCK"), 1);
         vm.expectRevert(err);
 
         // Upgrade to version 1
@@ -72,7 +72,7 @@ contract UpgradeModuleTest is Test {
         Module upgradedModule = new MockUpgradedModule(address(withModules));
         withModules.installModule(upgradedModule);
 
-        bytes memory err = abi.encodeWithSelector(WithModules.ModuleAlreadyInstalled.selector, moduleFromKeycode(upgradedModule.KEYCODE()), 2);
+        bytes memory err = abi.encodeWithSelector(WithModules.ModuleAlreadyInstalled.selector, toModuleKeycode("MOCK"), 2);
         vm.expectRevert(err);
 
         // Upgrade to version 1
@@ -89,7 +89,7 @@ contract UpgradeModuleTest is Test {
     }
 
     function testReverts_whenNoVersionIsInstalled() external {
-        bytes memory err = abi.encodeWithSelector(WithModules.ModuleNotInstalled.selector, moduleFromKeycode(mockModule.KEYCODE()), 0);
+        bytes memory err = abi.encodeWithSelector(WithModules.ModuleNotInstalled.selector, toModuleKeycode("MOCK"), 0);
         vm.expectRevert(err);
 
         withModules.upgradeModule(mockModule);

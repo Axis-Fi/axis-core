@@ -9,7 +9,7 @@ import {MockWithModules} from "test/modules/Modules/MockWithModules.sol";
 import {MockModule, MockUpgradedModule, MockInvalidModule} from "test/modules/Modules/MockModule.sol";
 
 // Contracts
-import {WithModules, Module, Keycode, fromKeycode, toKeycode, toModuleKeycode, moduleFromKeycode, InvalidKeycode} from "src/modules/Modules.sol";
+import {WithModules, Module, Keycode, fromKeycode, toKeycode, toModuleKeycode, unwrapKeycode, InvalidKeycode} from "src/modules/Modules.sol";
 
 contract InstallModuleTest is Test {
     WithModules internal withModules;
@@ -26,7 +26,7 @@ contract InstallModuleTest is Test {
 
         Module upgradedModule = new MockUpgradedModule(address(withModules));
 
-        bytes memory err = abi.encodeWithSelector(WithModules.ModuleAlreadyInstalled.selector, moduleFromKeycode(mockModule.KEYCODE()), 1);
+        bytes memory err = abi.encodeWithSelector(WithModules.ModuleAlreadyInstalled.selector, toModuleKeycode("MOCK"), 1);
         vm.expectRevert(err);
 
         // Install version 2
@@ -37,7 +37,7 @@ contract InstallModuleTest is Test {
         // Install version 1
         withModules.installModule(mockModule);
 
-        bytes memory err = abi.encodeWithSelector(WithModules.ModuleAlreadyInstalled.selector, moduleFromKeycode(mockModule.KEYCODE()), 1);
+        bytes memory err = abi.encodeWithSelector(WithModules.ModuleAlreadyInstalled.selector, toModuleKeycode("MOCK"), 1);
         vm.expectRevert(err);
 
         // Install version 1 again
@@ -49,7 +49,7 @@ contract InstallModuleTest is Test {
         Module upgradedModule = new MockUpgradedModule(address(withModules));
         withModules.installModule(upgradedModule);
 
-        bytes memory err = abi.encodeWithSelector(WithModules.ModuleAlreadyInstalled.selector, moduleFromKeycode(upgradedModule.KEYCODE()), 2);
+        bytes memory err = abi.encodeWithSelector(WithModules.ModuleAlreadyInstalled.selector, toModuleKeycode("MOCK"), 2);
         vm.expectRevert(err);
 
         // Install version 1
@@ -74,7 +74,7 @@ contract InstallModuleTest is Test {
         assertEq(address(module), address(mockModule));
 
         // Check that the latest version is recorded
-        uint8 version = withModules.getModuleLatestVersion(moduleFromKeycode(mockModule.KEYCODE()));
+        uint8 version = withModules.getModuleLatestVersion(toModuleKeycode("MOCK"));
         assertEq(version, 1);
 
         // Check that the modules array is updated
