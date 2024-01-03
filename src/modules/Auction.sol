@@ -63,13 +63,12 @@ abstract contract Auction {
 
     // ========== ATOMIC AUCTIONS ========== //
 
-    /// @param approval_ - (Optional) Permit approval signature for the quoteToken
-    function purchase(address recipient_, address referrer_, uint256 id_, uint256 amount_, bytes calldata auctionData_, bytes calldata approval_) external virtual returns (uint256 payout);
+    function purchase(uint256 id_, uint256 amount_, bytes calldata auctionData_) external virtual returns (uint256 payout, bytes memory auctionOutput);
 
     // ========== BATCH AUCTIONS ========== //
 
     // On-chain auction variant
-    function bid(address recipient_, address referrer_, uint256 id_, uint256 amount_, uint256 minAmountOut_, bytes calldata auctionData_, bytes calldata approval_) external virtual;
+    function bid(uint256 id_, uint256 amount_, uint256 minAmountOut_, bytes calldata auctionData_) external virtual;
 
     function settle(uint256 id_) external virtual returns (uint256[] memory amountsOut);
 
@@ -99,6 +98,10 @@ abstract contract Auction {
 }
 
 abstract contract AuctionModule is Auction, Module {
+
+    // ========== CONSTRUCTOR ========== //
+
+    constructor(address auctionHouse_) Module(auctionHouse_) {}
 
     // ========== AUCTION MANAGEMENT ========== //
 

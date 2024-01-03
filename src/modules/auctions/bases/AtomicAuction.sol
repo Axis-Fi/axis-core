@@ -3,20 +3,26 @@ pragma solidity 0.8.19;
 
 import "src/modules/Auction.sol";
 
-abstract contract AtomicAuction {
+// abstract contract AtomicAuction {
 
-    // ========== AUCTION INFORMATION ========== //
+//     // ========== AUCTION INFORMATION ========== //
 
-    function payoutFor(uint256 id_, uint256 amount_) public view virtual returns (uint256);
+//     function payoutFor(uint256 id_, uint256 amount_) public view virtual returns (uint256);
 
-    function priceFor(uint256 id_, uint256 payout_) public view virtual returns (uint256);
+//     function priceFor(uint256 id_, uint256 payout_) public view virtual returns (uint256);
 
-    function maxPayout(uint256 id_) public view virtual returns (uint256);
+//     function maxPayout(uint256 id_) public view virtual returns (uint256);
 
-    function maxAmountAccepted(uint256 id_) public view virtual returns (uint256);
-}
+//     function maxAmountAccepted(uint256 id_) public view virtual returns (uint256);
+// }
 
-abstract contract AtomicAuctionModule is AuctionModule, AtomicAuction {
+abstract contract AtomicAuctionModule is AuctionModule {
+
+    // ========== CONSTRUCTOR ========== //
+
+    constructor(
+        address auctionHouse_
+    ) AuctionModule(auctionHouse_) {}
 
     // ========== AUCTION EXECUTION ========== //
 
@@ -27,7 +33,7 @@ abstract contract AtomicAuctionModule is AuctionModule, AtomicAuction {
         if (!isLive(id_)) revert Auction_MarketNotActive();
 
         // Get payout from implementation-specific auction logic
-        payout = _purchase(id_, amount_);
+        (payout, auctionOutput) = _purchase(id_, amount_, auctionData_);
 
         // Update Capacity
 
@@ -53,8 +59,8 @@ abstract contract AtomicAuctionModule is AuctionModule, AtomicAuction {
     function _purchase(
         uint256 id_,
         uint256 amount_,
-        uint256 minAmountOut_
-    ) internal virtual returns (uint256);
+        bytes memory auctionData_
+    ) internal virtual returns (uint256, bytes memory);
 
     function bid(uint256 id_, uint256 amount_, uint256 minAmountOut_, bytes calldata auctionData_) external override onlyParent {
         revert Auction_NotImplemented();

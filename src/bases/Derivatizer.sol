@@ -51,11 +51,11 @@ abstract contract Derivatizer is WithModules {
     function _getLatestDerivativeModule(Keycode keycode_) internal view returns (DerivativeModule) {
         (Module mod, uint8 version) = _getLatestModuleIfInstalled(keycode_);
         if (moduleData[keycode_].versions[version].sunset) revert ModuleSunset(keycode_, version);
-        return DerivativeModule(mod);
+        return DerivativeModule(address(mod));
     }
 
     function _getSpecificDerivativeModule(Keycode keycode_, uint8 version_) internal view returns (DerivativeModule) {
-        (Module mod, uint8 version) = _getSpecificModuleIfInstalled(keycode_, version_);
-        return DerivativeModule(mod);
+        (Module mod, ) = _getSpecificModuleIfInstalled(keycode_, version_);
+        return DerivativeModule(address(mod));
     }
 }
