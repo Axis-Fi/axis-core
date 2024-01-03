@@ -92,9 +92,7 @@ function ensureValidVeecode(Veecode veecode_) pure {
 
 abstract contract WithModules is Owned {
     // ========= ERRORS ========= //
-    error InvalidModule();
     error InvalidModuleInstall(Keycode keycode_, uint8 version_);
-    error ModuleAlreadyInstalled(Keycode keycode_, uint8 version_);
     error ModuleNotInstalled(Keycode keycode_, uint8 version_);
     error ModuleExecutionReverted(bytes error_);
     error ModuleAlreadySunset(Keycode keycode_);
@@ -178,10 +176,10 @@ abstract contract WithModules is Owned {
     // Decide if we need this function, i.e. do we need to set any parameters or call permissioned functions on any modules?
     // Answer: yes, e.g. when setting default values on an Auction module, like minimum duration or minimum deposit interval
     function execOnModule(
-        Veecode keycode_,
+        Veecode veecode_,
         bytes memory callData_
     ) external onlyOwner returns (bytes memory) {
-        address module = _getModuleIfInstalled(keycode_);
+        address module = _getModuleIfInstalled(veecode_);
         (bool success, bytes memory returnData) = module.call(callData_);
         if (!success) revert ModuleExecutionReverted(returnData);
         return returnData;
@@ -271,5 +269,3 @@ abstract contract Module {
     /// @dev    MUST BE GATED BY onlyParent. Used to encompass any initialization or upgrade logic.
     function INIT() external virtual onlyParent {}
 }
-
-// TODO handle version number
