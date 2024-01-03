@@ -11,7 +11,7 @@ import {MockModule, MockUpgradedModule, MockInvalidModule} from "test/modules/Mo
 // Contracts
 import {WithModules, Module, moduleFromKeycode, InvalidKeycode} from "src/modules/Modules.sol";
 
-contract InstallModule is Test {
+contract InstallModuleTest is Test {
     WithModules internal withModules;
     MockModule internal mockModule;
 
