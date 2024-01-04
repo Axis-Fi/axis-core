@@ -2,28 +2,44 @@
 pragma solidity 0.8.19;
 
 // Contracts
-import {Module, Keycode, toKeycode, toModuleKeycode} from "src/modules/Modules.sol";
+import {Module, Veecode, toKeycode, wrapVeecode} from "src/modules/Modules.sol";
 
-contract MockModule is Module {
+contract MockModuleV1 is Module {
     constructor(address _owner) Module(_owner) {}
 
-    function KEYCODE() public pure override returns (Keycode) {
-        return toKeycode(toModuleKeycode("MOCK"), 1);
+    function VEECODE() public pure override returns (Veecode) {
+        return wrapVeecode(toKeycode("MOCK"), 1);
+    }
+}
+
+contract MockModuleV2 is Module {
+    constructor(address _owner) Module(_owner) {}
+
+    function VEECODE() public pure override returns (Veecode) {
+        return wrapVeecode(toKeycode("MOCK"), 2);
+    }
+}
+
+contract MockModuleV3 is Module {
+    constructor(address _owner) Module(_owner) {}
+
+    function VEECODE() public pure override returns (Veecode) {
+        return wrapVeecode(toKeycode("MOCK"), 3);
+    }
+}
+
+contract MockModuleV0 is Module {
+    constructor(address _owner) Module(_owner) {}
+
+    function VEECODE() public pure override returns (Veecode) {
+        return wrapVeecode(toKeycode("MOCK"), 0);
     }
 }
 
 contract MockInvalidModule is Module {
     constructor(address _owner) Module(_owner) {}
 
-    function KEYCODE() public pure override returns (Keycode) {
-        return toKeycode(toModuleKeycode("INVA_"), 100);
-    }
-}
-
-contract MockUpgradedModule is Module {
-    constructor(address _owner) Module(_owner) {}
-
-    function KEYCODE() public pure override returns (Keycode) {
-        return toKeycode(toModuleKeycode("MOCK"), 2);
+    function VEECODE() public pure override returns (Veecode) {
+        return wrapVeecode(toKeycode("INVA_"), 100);
     }
 }

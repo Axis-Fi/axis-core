@@ -90,7 +90,7 @@ abstract contract Auctioneer is WithModules {
         // Load auction type module, this checks that it is installed.
         // We load it here vs. later to avoid two checks.
         Keycode auctionType = routing_.auctionType;
-        AuctionModule auctionModule = AuctionModule(_getModuleIfInstalled(auctionType));
+        AuctionModule auctionModule = AuctionModule(_getLatestModuleIfActive(auctionType));
 
         // Check that the auction type is allowing new auctions to be created
         if (typeSunset[auctionType]) revert HOUSE_AuctionTypeSunset(auctionType);
@@ -115,7 +115,7 @@ abstract contract Auctioneer is WithModules {
         // If payout is a derivative, validate derivative data on the derivative module
         if (fromKeycode(routing_.derivativeType) != bytes6(0)) {
             // Load derivative module, this checks that it is installed.
-            DerivativeModule derivativeModule = DerivativeModule(_getModuleIfInstalled(routing_.derivativeType));
+            DerivativeModule derivativeModule = DerivativeModule(_getLatestModuleIfActive(routing_.derivativeType));
 
             // Call module validate function to validate implementation-specific data
             derivativeModule.validate(routing_.derivativeParams);
@@ -215,6 +215,6 @@ abstract contract Auctioneer is WithModules {
         if (id_ >= lotCounter) revert HOUSE_InvalidLotId(id_);
 
         // Load module, will revert if not installed
-        return AuctionModule(_getModuleIfInstalled(lotRouting[id_].auctionType));
+        return AuctionModule(_getLatestModuleIfActive(lotRouting[id_].auctionType));
     }
 }

@@ -6,38 +6,25 @@ import {Test} from "forge-std/Test.sol";
 
 // Mocks
 import {MockWithModules} from "test/modules/Modules/MockWithModules.sol";
-import {MockModule, MockUpgradedModule, MockInvalidModule} from "test/modules/Modules/MockModule.sol";
+import {MockModuleV0, MockModuleV1, MockModuleV2, MockModuleV3, MockInvalidModule} from "test/modules/Modules/MockModule.sol";
 
 // Contracts
-import {WithModules, Module, Keycode, fromKeycode, toKeycode, toModuleKeycode, unwrapKeycode, InvalidKeycode} from "src/modules/Modules.sol";
+import {WithModules, Module, Keycode, fromKeycode, toKeycode, wrapVeecode, InvalidVeecode} from "src/modules/Modules.sol";
 
 contract InstallModuleTest is Test {
     WithModules internal withModules;
-    MockModule internal mockModule;
+    MockModuleV1 internal mockModule;
 
     function setUp() external {
         withModules = new MockWithModules(address(this));
-        mockModule = new MockModule(address(withModules));
-    }
-
-    function testReverts_whenPreviousVersionIsInstalled() external {
-        // Install version 1
-        withModules.installModule(mockModule);
-
-        Module upgradedModule = new MockUpgradedModule(address(withModules));
-
-        bytes memory err = abi.encodeWithSelector(WithModules.ModuleAlreadyInstalled.selector, toModuleKeycode("MOCK"), 1);
-        vm.expectRevert(err);
-
-        // Install version 2
-        withModules.installModule(upgradedModule);
+        mockModule = new MockModuleV1(address(withModules));
     }
 
     function testReverts_whenSameVersionIsInstalled() external {
         // Install version 1
         withModules.installModule(mockModule);
 
-        bytes memory err = abi.encodeWithSelector(WithModules.ModuleAlreadyInstalled.selector, toModuleKeycode("MOCK"), 1);
+        bytes memory err = abi.encodeWithSelector(WithModules.InvalidModuleInstall.selector, toKeycode("MOCK"), 1);
         vm.expectRevert(err);
 
         // Install version 1 again
@@ -45,41 +32,105 @@ contract InstallModuleTest is Test {
     }
 
     function testReverts_whenNewerVersionIsInstalled() external {
+        // Install version 1
+        withModules.installModule(mockModule);
+
         // Install version 2
-        Module upgradedModule = new MockUpgradedModule(address(withModules));
+        Module upgradedModule = new MockModuleV2(address(withModules));
         withModules.installModule(upgradedModule);
 
-        bytes memory err = abi.encodeWithSelector(WithModules.ModuleAlreadyInstalled.selector, toModuleKeycode("MOCK"), 2);
+        bytes memory err = abi.encodeWithSelector(WithModules.InvalidModuleInstall.selector, toKeycode("MOCK"), 1);
         vm.expectRevert(err);
 
         // Install version 1
         withModules.installModule(mockModule);
     }
 
-    function testReverts_invalidKeycode() external {
+    function testReverts_whenInitialVersionZero() external {
+        Module moduleZero = new MockModuleV0(address(withModules));
+
+        bytes memory err = abi.encodeWithSelector(InvalidVeecode.selector, moduleZero.VEECODE());
+        vm.expectRevert(err);
+
+        // Install version 0
+        withModules.installModule(moduleZero);
+    }
+
+    function testReverts_whenInitialVersionIncorrect() external {
+        Module upgradedModule = new MockModuleV2(address(withModules));
+
+        bytes memory err = abi.encodeWithSelector(WithModules.InvalidModuleInstall.selector, toKeycode("MOCK"), 2);
+        vm.expectRevert(err);
+
+        // Install version 2 (skips version 1)
+        withModules.installModule(upgradedModule);
+    }
+
+    function testReverts_whenNewerVersionSkips() external {
+        // Install version 1
+        withModules.installModule(mockModule);
+
+        Module upgradedModule = new MockModuleV3(address(withModules));
+
+        bytes memory err = abi.encodeWithSelector(WithModules.InvalidModuleInstall.selector, toKeycode("MOCK"), 3);
+        vm.expectRevert(err);
+
+        // Install version 3
+        withModules.installModule(upgradedModule);
+    }
+
+    function testReverts_invalidVeecode() external {
         Module invalidModule = new MockInvalidModule(address(withModules));
 
-        bytes memory err = abi.encodeWithSelector(InvalidKeycode.selector, invalidModule.KEYCODE());
+        bytes memory err = abi.encodeWithSelector(InvalidVeecode.selector, invalidModule.VEECODE());
         vm.expectRevert(err);
 
         withModules.installModule(invalidModule);
     }
 
-    function test_success_whenNoPreviousVersionIsInstalled() external {
+    function test_whenNoPreviousVersionIsInstalled() external {
         // Install the module
         withModules.installModule(mockModule);
 
         // Check that the module is installed
-        Module module = withModules.getModuleForKeycode(mockModule.KEYCODE());
+        Module module = withModules.getModuleForVeecode(mockModule.VEECODE());
         assertEq(address(module), address(mockModule));
 
         // Check that the latest version is recorded
-        uint8 version = withModules.getModuleLatestVersion(toModuleKeycode("MOCK"));
-        assertEq(version, 1);
+        (uint8 moduleLatestVersion, ) = withModules.getModuleStatus(toKeycode("MOCK"));
+        assertEq(moduleLatestVersion, 1);
 
         // Check that the modules array is updated
         Keycode[] memory modules = withModules.getModules();
         assertEq(modules.length, 1);
-        assertEq(fromKeycode(modules[0]), fromKeycode(toKeycode(toModuleKeycode("MOCK"), 1)));
+        assertEq(fromKeycode(modules[0]), "MOCK");
+    }
+
+    function test_whenPreviousVersionIsInstalled() external {
+        // Install version 1
+        withModules.installModule(mockModule);
+
+        Module upgradedModule = new MockModuleV2(address(withModules));
+
+        // Upgrade to version 2
+        withModules.installModule(upgradedModule);
+
+        // Check that the module is installed
+        Module upgradedModule_ = withModules.getModuleForVeecode(upgradedModule.VEECODE());
+        assertEq(address(upgradedModule_), address(upgradedModule));
+
+        // Check that the version is correct
+        (uint8 moduleLatestVersion, bool moduleIsSunset) = withModules.getModuleStatus(toKeycode("MOCK"));
+        assertEq(moduleLatestVersion, 2);
+        assertEq(moduleIsSunset, false);
+
+        // Check that the previous version is still installed
+        Module previousModule_ = withModules.getModuleForVeecode(mockModule.VEECODE());
+        assertEq(address(previousModule_), address(mockModule));
+
+        // Check that the modules array remains the same
+        Keycode[] memory modules = withModules.getModules();
+        assertEq(modules.length, 1);
+        assertEq(fromKeycode(modules[0]), "MOCK");
     }
 }
