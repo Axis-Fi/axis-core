@@ -126,10 +126,10 @@ abstract contract WithModules is Owned {
     /// @notice Mapping of Keycode to module status information
     mapping(Keycode => ModStatus) public getModuleStatus;
 
-    /// @notice Installs a module. Can be used to install a new module or upgrade an existing one.
-    /// @dev The version of the installed module must be one greater than the latest version. If it's a new module, then the version must be 1.
-    /// @dev Only one version of a module is active for creation functions at a time. Older versions continue to work for existing data.
-    /// @dev If a module is currently sunset, installing a new version will remove the sunset.
+    /// @notice     Installs a module. Can be used to install a new module or upgrade an existing one.
+    /// @dev        The version of the installed module must be one greater than the latest version. If it's a new module, then the version must be 1.
+    /// @dev        Only one version of a module is active for creation functions at a time. Older versions continue to work for existing data.
+    /// @dev        If a module is currently sunset, installing a new version will remove the sunset.
     ///
     /// @dev        This function reverts if:
     /// @dev        - The caller is not the owner
@@ -162,8 +162,15 @@ abstract contract WithModules is Owned {
         emit ModuleInstalled(keycode, version, address(newModule_));
     }
 
-    /// @notice Prevents future use of module, but functionality remains for existing users. Modules should implement functionality such that creation functions are disabled if sunset.
-    /// @dev Sunset is used to disable a module type without installing a new one.
+    /// @notice         Sunsets a module
+    /// @notice         Sunsetting a module prevents future deployments that use the module, but functionality remains for existing users.
+    /// @notice         Modules should implement functionality such that creation functions are disabled if sunset.
+    /// @dev            Sunset is used to disable a module type without installing a new one.
+    ///
+    /// @dev            This function reverts if:
+    /// @dev            - The caller is not the owner
+    /// @dev            - The module is not installed
+    /// @dev            - The module is already sunset
     function sunsetModule(Keycode keycode_) external onlyOwner {
         // Check that the module is installed
         if (!_moduleIsInstalled(keycode_)) revert ModuleNotInstalled(keycode_, 0);
