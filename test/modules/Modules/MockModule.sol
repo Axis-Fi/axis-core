@@ -10,6 +10,10 @@ contract MockModuleV1 is Module {
     function VEECODE() public pure override returns (Veecode) {
         return wrapVeecode(toKeycode("MOCK"), 1);
     }
+
+    function mock() external pure returns (bool) {
+        return true;
+    }
 }
 
 contract MockModuleV2 is Module {

@@ -9,7 +9,7 @@ import {MockWithModules} from "test/modules/Modules/MockWithModules.sol";
 import {MockModuleV0, MockModuleV1, MockModuleV2, MockModuleV3, MockInvalidModule} from "test/modules/Modules/MockModule.sol";
 
 // Contracts
-import {WithModules, Module, Keycode, fromKeycode, toKeycode, wrapVeecode, InvalidVeecode} from "src/modules/Modules.sol";
+import {WithModules, Module, Keycode, fromKeycode, toKeycode, InvalidVeecode} from "src/modules/Modules.sol";
 
 contract InstallModuleTest is Test {
     WithModules internal withModules;
