@@ -6,18 +6,18 @@ import {Test} from "forge-std/Test.sol";
 
 // Mocks
 import {MockWithModules} from "test/modules/Modules/MockWithModules.sol";
-import {MockModule} from "test/modules/Modules/MockModule.sol";
+import {MockModuleV1} from "test/modules/Modules/MockModule.sol";
 
 // Contracts
 import {WithModules, Module} from "src/modules/Modules.sol";
 
-contract GetModuleForKeycodeTest is Test {
+contract GetModuleForVeecodeTest is Test {
     WithModules internal withModules;
-    MockModule internal mockModule;
+    MockModuleV1 internal mockModule;
 
     function setUp() external {
         withModules = new MockWithModules(address(this));
-        mockModule = new MockModule(address(withModules));
+        mockModule = new MockModuleV1(address(withModules));
     }
 
     modifier whenAModuleIsInstalled() {
@@ -27,13 +27,13 @@ contract GetModuleForKeycodeTest is Test {
     }
 
     function test_WhenAMatchingModuleCannotBeFound() external {
-        Module module = withModules.getModuleForKeycode(mockModule.KEYCODE());
+        Module module = withModules.getModuleForVeecode(mockModule.VEECODE());
 
         assertEq(address(module), address(0));
     }
 
     function test_WhenAMatchingModuleIsFound() external whenAModuleIsInstalled {
-        Module module = withModules.getModuleForKeycode(mockModule.KEYCODE());
+        Module module = withModules.getModuleForVeecode(mockModule.VEECODE());
 
         assertEq(address(module), address(mockModule));
     }

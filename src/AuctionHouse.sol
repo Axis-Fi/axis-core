@@ -203,14 +203,14 @@ abstract contract AuctionHouse is Derivatizer, Auctioneer, Router {
         } else {
             // Get the module for the derivative type
             // We assume that the module type has been checked when the lot was created
-            DerivativeModule module = DerivativeModule(_getModuleIfInstalled(routing_.derivativeType));
+            DerivativeModule module = DerivativeModule(_getLatestModuleIfActive(routing_.derivativeType));
 
             bytes memory derivativeParams = routing_.derivativeParams;
 
             // If condenser specified, condense auction output and derivative params before sending to derivative module
             if (fromKeycode(routing_.condenserType) != bytes6(0)) {
                // Get condenser module
-                CondenserModule condenser = CondenserModule(_getModuleIfInstalled(routing_.condenserType));
+                CondenserModule condenser = CondenserModule(_getLatestModuleIfActive(routing_.condenserType));
 
                 // Condense auction output and derivative params
                 derivativeParams = condenser.condense(auctionOutput_, derivativeParams);
