@@ -117,13 +117,13 @@ abstract contract WithModules is Owned {
         bool sunset;
     }
 
-    /// @notice Array of all modules currently installed.
+    /// @notice Array of the Keycodes corresponding to the currently installed modules.
     Keycode[] public modules;
 
     /// @notice Mapping of Veecode to Module address.
     mapping(Veecode => Module) public getModuleForVeecode;
 
-    /// @notice Mapping of Keycode to module status information
+    /// @notice Mapping of Keycode to module status information.
     mapping(Keycode => ModStatus) public getModuleStatus;
 
     /// @notice     Installs a module. Can be used to install a new module or upgrade an existing one.
@@ -137,6 +137,8 @@ abstract contract WithModules is Owned {
     /// @dev        - The module has an invalid Veecode
     /// @dev        - The module (or other versions) is already installed
     /// @dev        - The module version is not one greater than the latest version
+    ///
+    /// @param      newModule_  The new module
     function installModule(Module newModule_) external onlyOwner {
         // Validate new module is a contract, has correct parent, and has valid Keycode
         ensureContract(address(newModule_));
@@ -171,6 +173,8 @@ abstract contract WithModules is Owned {
     /// @dev            - The caller is not the owner
     /// @dev            - The module is not installed
     /// @dev            - The module is already sunset
+    ///
+    /// @param          keycode_    The module keycode
     function sunsetModule(Keycode keycode_) external onlyOwner {
         // Check that the module is installed
         if (!_moduleIsInstalled(keycode_)) revert ModuleNotInstalled(keycode_, 0);
@@ -183,8 +187,16 @@ abstract contract WithModules is Owned {
         status.sunset = true;
     }
 
-    // Decide if we need this function, i.e. do we need to set any parameters or call permissioned functions on any modules?
-    // Answer: yes, e.g. when setting default values on an Auction module, like minimum duration or minimum deposit interval
+    /// @notice         Performs a call on a module
+    /// @notice         This can be used to perform administrative functions on a module, such as setting parameters or calling permissioned functions
+    /// @dev            This function reverts if:
+    /// @dev            - The caller is not the owner
+    /// @dev            - The module is not installed
+    /// @dev            - The call is made to a prohibited function
+    /// @dev            - The call reverted
+    ///
+    /// @param          veecode_    The module Veecode
+    /// @param          callData_   The call data
     function execOnModule(
         Veecode veecode_,
         bytes memory callData_
@@ -195,12 +207,16 @@ abstract contract WithModules is Owned {
         return returnData;
     }
 
-    // Need to consider the implications of not having upgradable modules and the affect of this list growing over time
+    // TODO Need to consider the implications of not having upgradable modules and the affect of this list growing over time
+    /// @notice         Returns the Keycodes of the installed modules
     function getModules() external view returns (Keycode[] memory) {
         return modules;
     }
 
-    // Checks whether any module is installed under the keycode
+    /// @notice         Checks whether any module is installed under the keycode
+    ///
+    /// @param          keycode_    The module keycode
+    /// @return         True if the module is installed, false otherwise
     function _moduleIsInstalled(Keycode keycode_) internal view returns (bool) {
         // Any module that has been installed will have a latest version greater than 0
         // We can check not equal here to save gas
@@ -208,6 +224,13 @@ abstract contract WithModules is Owned {
         return latestVersion != uint8(0);
     }
 
+    /// @notice         Returns the address of the latest version of a module
+    /// @dev            This function reverts if:
+    /// @dev            - The module is not installed
+    /// @dev            - The module is sunset
+    ///
+    /// @param          keycode_    The module keycode
+    /// @return         The address of the latest version of the module
     function _getLatestModuleIfActive(Keycode keycode_) internal view returns (address) {
         // Check that the module is installed
         ModStatus memory status = getModuleStatus[keycode_];
@@ -222,6 +245,13 @@ abstract contract WithModules is Owned {
         return address(getModuleForVeecode[veecode]);
     }
 
+    /// @notice         Returns the address of a module
+    /// @dev            This function reverts if:
+    /// @dev            - The specific module and version is not installed
+    ///
+    /// @param          keycode_    The module keycode
+    /// @param          version_    The module version
+    /// @return         The address of the module
     function _getModuleIfInstalled(
         Keycode keycode_,
         uint8 version_
@@ -240,6 +270,12 @@ abstract contract WithModules is Owned {
         return address(getModuleForVeecode[veecode]);
     }
 
+    /// @notice         Returns the address of a module
+    /// @dev            This function reverts if:
+    /// @dev            - The specific module and version is not installed
+    ///
+    /// @param          veecode_    The module Veecode
+    /// @return         The address of the module
     function _getModuleIfInstalled(Veecode veecode_) internal view returns (address) {
         // In this case, it's simpler to check that the stored address is not zero
         Module mod = getModuleForVeecode[veecode_];
