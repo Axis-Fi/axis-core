@@ -14,6 +14,14 @@ contract MockModuleV1 is Module {
     function mock() external pure returns (bool) {
         return true;
     }
+
+    function prohibited() external pure returns (bool) {
+        return true;
+    }
+
+    function prohibitedTwo() external pure returns (bool) {
+        return true;
+    }
 }
 
 contract MockModuleV2 is Module {

@@ -95,6 +95,8 @@ abstract contract WithModules is Owned {
     error InvalidModuleInstall(Keycode keycode_, uint8 version_);
     error ModuleNotInstalled(Keycode keycode_, uint8 version_);
     error ModuleExecutionReverted(bytes error_);
+    error ModuleFunctionProhibited(Veecode veecode_, bytes4 function_);
+    error ModuleFunctionInvalid(bytes4 function_);
     error ModuleAlreadySunset(Keycode keycode_);
     error ModuleIsSunset(Keycode keycode_);
 
@@ -108,16 +110,22 @@ abstract contract WithModules is Owned {
 
     event ModuleSunset(Keycode indexed keycode_);
 
+    event ModuleFunctionProhibitionAdded(bytes4 indexed function_);
+
+    event ModuleFunctionProhibitionRemoved(bytes4 indexed function_);
+
     // ========= CONSTRUCTOR ========= //
 
     constructor(address owner_) Owned(owner_) {}
 
-    // ========= MODULE MANAGEMENT ========= //
+    // ========= STRUCTS ========= //
 
     struct ModStatus {
         uint8 latestVersion;
         bool sunset;
     }
+
+    // ========= STATE VARIABLES ========= //
 
     /// @notice Array of the Keycodes corresponding to the currently installed modules.
     Keycode[] public modules;
@@ -127,6 +135,15 @@ abstract contract WithModules is Owned {
 
     /// @notice Mapping of Keycode to module status information.
     mapping(Keycode => ModStatus) public getModuleStatus;
+
+    /// @notice     Functions that are prohibited from being called on a module
+    /// @dev        This is used to prevent governance calling functions on modules that are not administrative.
+    bytes4[] public prohibitedModuleFunctions;
+
+    /// @notice     The number of prohibited module functions
+    uint256 public prohibitedModuleFunctionsCount;
+
+    // ========= MODULE MANAGEMENT ========= //
 
     /// @notice     Installs a module. Can be used to install a new module or upgrade an existing one.
     /// @dev        The version of the installed module must be one greater than the latest version. If it's a new module, then the version must be 1.
@@ -189,26 +206,6 @@ abstract contract WithModules is Owned {
         status.sunset = true;
 
         emit ModuleSunset(keycode_);
-    }
-
-    /// @notice         Performs a call on a module
-    /// @notice         This can be used to perform administrative functions on a module, such as setting parameters or calling permissioned functions
-    /// @dev            This function reverts if:
-    /// @dev            - The caller is not the owner
-    /// @dev            - The module is not installed
-    /// @dev            - The call is made to a prohibited function
-    /// @dev            - The call reverted
-    ///
-    /// @param          veecode_    The module Veecode
-    /// @param          callData_   The call data
-    function execOnModule(
-        Veecode veecode_,
-        bytes memory callData_
-    ) external onlyOwner returns (bytes memory) {
-        address module = _getModuleIfInstalled(veecode_);
-        (bool success, bytes memory returnData) = module.call(callData_);
-        if (!success) revert ModuleExecutionReverted(returnData);
-        return returnData;
     }
 
     // TODO Need to consider the implications of not having upgradable modules and the affect of this list growing over time
@@ -288,6 +285,92 @@ abstract contract WithModules is Owned {
             revert ModuleNotInstalled(keycode, version);
         }
         return address(mod);
+    }
+
+    // ========= MODULE FUNCTIONS ========= //
+
+    /// @notice         Performs a call on a module
+    /// @notice         This can be used to perform administrative functions on a module, such as setting parameters or calling permissioned functions
+    /// @dev            This function reverts if:
+    /// @dev            - The caller is not the owner
+    /// @dev            - The module is not installed
+    /// @dev            - The call is made to a prohibited function
+    /// @dev            - The call reverted
+    ///
+    /// @param          veecode_    The module Veecode
+    /// @param          callData_   The call data
+    function execOnModule(
+        Veecode veecode_,
+        bytes calldata callData_
+    ) external onlyOwner returns (bytes memory) {
+        address module = _getModuleIfInstalled(veecode_);
+
+        // Check that the function is not prohibited
+        bytes4 functionSelector = bytes4(callData_[:4]);
+        if (_isModuleFunctionProhibited(functionSelector))
+            revert ModuleFunctionProhibited(veecode_, functionSelector);
+
+        (bool success, bytes memory returnData) = module.call(callData_);
+        if (!success) revert ModuleExecutionReverted(returnData);
+        return returnData;
+    }
+
+    function _isModuleFunctionProhibited(bytes4 function_) internal view returns (bool) {
+        uint256 length = prohibitedModuleFunctions.length;
+        for (uint256 i; i < length; i++) {
+            if (prohibitedModuleFunctions[i] == function_) return true;
+        }
+        return false;
+    }
+
+    /// @notice         Adds a function selector to the list of prohibited module functions
+    /// @notice         This will prevent the function from being called on any module
+    /// @dev            This function reverts if:
+    /// @dev            - The caller is not the owner
+    /// @dev            - The function selector is already prohibited
+    /// @dev            - The function selector is zero
+    ///
+    /// @param          function_   The function selector
+    function addProhibitedModuleFunction(bytes4 function_) external onlyOwner {
+        if (function_ == bytes4(0)) revert ModuleFunctionInvalid(function_);
+
+        // Check for duplicates
+        if (_isModuleFunctionProhibited(function_)) revert ModuleFunctionInvalid(function_);
+
+        prohibitedModuleFunctions.push(function_);
+        prohibitedModuleFunctionsCount++;
+
+        emit ModuleFunctionProhibitionAdded(function_);
+    }
+
+    /// @notice         Removes a function selector from the list of prohibited module functions
+    /// @notice         This will allow the function to be called on any module
+    /// @dev            This function reverts if:
+    /// @dev            - The caller is not the owner
+    /// @dev            - The function selector is not prohibited
+    /// @dev            - The function selector is zero
+    ///
+    /// @param          function_   The function selector
+    function removeProhibitedModuleFunction(bytes4 function_) external onlyOwner {
+        if (function_ == bytes4(0)) revert ModuleFunctionInvalid(function_);
+
+        uint256 length = prohibitedModuleFunctions.length;
+        bool functionFound;
+
+        for (uint256 i; i < length; i++) {
+            if (prohibitedModuleFunctions[i] == function_) {
+                prohibitedModuleFunctions[i] = prohibitedModuleFunctions[length - 1];
+                prohibitedModuleFunctions.pop();
+                functionFound = true;
+                break;
+            }
+        }
+
+        if (!functionFound) revert ModuleFunctionInvalid(function_);
+
+        prohibitedModuleFunctionsCount--;
+
+        emit ModuleFunctionProhibitionRemoved(function_);
     }
 }
 

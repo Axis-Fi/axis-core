@@ -44,6 +44,21 @@ contract ExecOnModule is Test {
         withModules.execOnModule(veecode, abi.encodeWithSelector(MockModuleV1.mock.selector));
     }
 
+    function testReverts_whenFunctionIsProhibited() external whenVersion1IsInstalled() {
+        Veecode veecode = mockModule.VEECODE();
+
+        // Call the function
+        withModules.execOnModule(veecode, abi.encodeWithSelector(MockModuleV1.prohibited.selector));
+
+        // Set it as prohibited
+        withModules.addProhibitedModuleFunction(MockModuleV1.prohibited.selector);
+
+        bytes memory err = abi.encodeWithSelector(WithModules.ModuleFunctionProhibited.selector, veecode, MockModuleV1.prohibited.selector);
+        vm.expectRevert(err);
+
+        withModules.execOnModule(veecode, abi.encodeWithSelector(MockModuleV1.prohibited.selector));
+    }
+
     function test_success() external whenVersion1IsInstalled() {
         bytes memory returnData = withModules.execOnModule(mockModule.VEECODE(), abi.encodeWithSelector(MockModuleV1.mock.selector));
 
