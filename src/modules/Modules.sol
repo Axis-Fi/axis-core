@@ -90,6 +90,8 @@ function ensureValidVeecode(Veecode veecode_) pure {
     if (moduleVersion == 0) revert InvalidVeecode(veecode_);
 }
 
+/// @notice    Abstract contract that provides functionality for installing and interacting with modules.
+/// @dev       This contract is intended to be inherited by any contract that needs to install modules.
 abstract contract WithModules is Owned {
     // ========= ERRORS ========= //
     error InvalidModuleInstall(Keycode keycode_, uint8 version_);
@@ -376,27 +378,40 @@ abstract contract WithModules is Owned {
 
 /// @notice Modules are isolated components of a contract that can be upgraded independently.
 /// @dev    Two main patterns are considered for Modules:
-///         1. Directly calling modules from the parent contract to execute upgradable logic or having the option to add new sub-components to a contract
-///         2. Delegate calls to modules to execute upgradable logic, similar to a proxy, but only for specific functions and being able to add new sub-components to a contract
+/// @dev    1. Directly calling modules from the parent contract to execute upgradable logic or having the option to add new sub-components to a contract
+/// @dev    2. Delegate calls to modules to execute upgradable logic, similar to a proxy, but only for specific functions and being able to add new sub-components to a contract
 abstract contract Module {
+    // ========= ERRORS ========= //
+
     error Module_OnlyParent(address caller_);
     error Module_InvalidParent();
 
+    // ========= STATE VARIABLES ========= //
+
     /// @notice The parent contract for this module.
-    // TODO should we use an Owner pattern here to be able to change the parent?
-    // May be useful if the parent contract needs to be replaced.
-    // On the otherhand, it may be better to just deploy a new module with the new parent to reduce the governance burden.
-    address public parent;
+    address public immutable parent;
+
+    // ========= CONSTRUCTOR ========= //
 
     constructor(address parent_) {
+        if (parent_ == address(0)) revert Module_InvalidParent();
+
         parent = parent_;
     }
+
+    // ========= MODIFIERS ========= //
 
     /// @notice Modifier to restrict functions to be called only by parent module.
     modifier onlyParent() {
         if (msg.sender != parent) revert Module_OnlyParent(msg.sender);
         _;
     }
+
+    // ========= FUNCTIONS ========= //
+
+    /// @notice     2 byte identifier for the module type
+    /// @dev        This enables the parent contract to check the module type
+    function TYPE() public pure virtual returns (bytes2) {}
 
     /// @notice 7 byte, versioned identifier for the module. 2 characters from 0-9 that signify the version and 3-5 characters from A-Z.
     function VEECODE() public pure virtual returns (Veecode) {}
