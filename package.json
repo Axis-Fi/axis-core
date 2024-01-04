@@ -12,8 +12,9 @@
     "prettier": "prettier --write 'src/**/*.sol' '**/*.md'",
     "prettier:check": "prettier --check 'src/**/*.sol' '**/*.md'",
     "solhint": "solhint --config ./.solhint.json 'src/**/*.sol' --fix",
+    "solhint:check": "solhint --fix --config ./.solhint.json 'src/**/*.sol'",
     "lint": "npm run prettier && npm run solhint",
-    "lint:check": "pnpm run prettier:check && pnpm run solhint",
+    "lint:check": "pnpm run prettier:check && pnpm run solhint:check",
     "test": "forge test -vvv"
   },
   "keywords": [],
