@@ -9,7 +9,7 @@ import {MockWithModules} from "test/modules/Modules/MockWithModules.sol";
 import {MockModuleV1} from "test/modules/Modules/MockModule.sol";
 
 // Contracts
-import {WithModules, Module, toKeycode} from "src/modules/Modules.sol";
+import {WithModules, Module, toKeycode, fromKeycode} from "src/modules/Modules.sol";
 
 contract SunsetModuleTest is Test {
     WithModules internal withModules;
@@ -59,5 +59,10 @@ contract SunsetModuleTest is Test {
         // Assert that the status has been changed
         ( , bool sunset) = withModules.getModuleStatus(toKeycode("MOCK"));
         assertEq(sunset, true);
+
+        // Check that the modules array remains the same
+        uint256 modulesCount = withModules.modulesCount();
+        assertEq(modulesCount, 1);
+        assertEq(fromKeycode(withModules.modules(0)), "MOCK");
     }
 }

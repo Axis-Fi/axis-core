@@ -130,6 +130,9 @@ abstract contract WithModules is Owned {
     /// @notice Array of the Keycodes corresponding to the currently installed modules.
     Keycode[] public modules;
 
+    /// @notice The number of modules installed.
+    uint256 public modulesCount;
+
     /// @notice Mapping of Veecode to Module address.
     mapping(Veecode => Module) public getModuleForVeecode;
 
@@ -175,7 +178,10 @@ abstract contract WithModules is Owned {
         getModuleForVeecode[veecode] = newModule_;
 
         // If the module is not already installed, add it to the list of modules
-        if (version == uint8(1)) modules.push(keycode);
+        if (version == uint8(1)) {
+            modules.push(keycode);
+            modulesCount++;
+        }
 
         // Initialize the module
         newModule_.INIT();
@@ -206,12 +212,6 @@ abstract contract WithModules is Owned {
         status.sunset = true;
 
         emit ModuleSunset(keycode_);
-    }
-
-    // TODO Need to consider the implications of not having upgradable modules and the affect of this list growing over time
-    /// @notice         Returns the Keycodes of the installed modules
-    function getModules() external view returns (Keycode[] memory) {
-        return modules;
     }
 
     /// @notice         Checks whether any module is installed under the keycode

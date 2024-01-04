@@ -106,9 +106,9 @@ contract InstallModuleTest is Test {
         assertEq(moduleLatestVersion, 1);
 
         // Check that the modules array is updated
-        Keycode[] memory modules = withModules.getModules();
-        assertEq(modules.length, 1);
-        assertEq(fromKeycode(modules[0]), "MOCK");
+        uint256 modulesCount = withModules.modulesCount();
+        assertEq(modulesCount, 1);
+        assertEq(fromKeycode(withModules.modules(0)), "MOCK");
     }
 
     function test_whenPreviousVersionIsInstalled() external whenVersion1IsInstalled() {
@@ -131,9 +131,9 @@ contract InstallModuleTest is Test {
         assertEq(address(previousModule_), address(mockModule));
 
         // Check that the modules array remains the same
-        Keycode[] memory modules = withModules.getModules();
-        assertEq(modules.length, 1);
-        assertEq(fromKeycode(modules[0]), "MOCK");
+        uint256 modulesCount = withModules.modulesCount();
+        assertEq(modulesCount, 1);
+        assertEq(fromKeycode(withModules.modules(0)), "MOCK");
     }
 
     function test_whenModuleIsSunset() external whenVersion1IsInstalled() {
@@ -152,5 +152,10 @@ contract InstallModuleTest is Test {
         (uint8 moduleLatestVersion, bool moduleIsSunset) = withModules.getModuleStatus(toKeycode("MOCK"));
         assertEq(moduleLatestVersion, 2);
         assertEq(moduleIsSunset, false);
+
+        // Check that the modules array remains the same
+        uint256 modulesCount = withModules.modulesCount();
+        assertEq(modulesCount, 1);
+        assertEq(fromKeycode(withModules.modules(0)), "MOCK");
     }
 }
