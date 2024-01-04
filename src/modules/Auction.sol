@@ -4,7 +4,6 @@ pragma solidity 0.8.19;
 import "src/modules/Modules.sol";
 
 abstract contract Auction {
-
     /* ========== ERRORS ========== */
 
     error Auction_OnlyMarketOwner();
@@ -64,18 +63,36 @@ abstract contract Auction {
     // ========== ATOMIC AUCTIONS ========== //
 
     /// @param approval_ - (Optional) Permit approval signature for the quoteToken
-    function purchase(address recipient_, address referrer_, uint256 id_, uint256 amount_, bytes calldata auctionData_, bytes calldata approval_) external virtual returns (uint256 payout);
+    function purchase(
+        address recipient_,
+        address referrer_,
+        uint256 id_,
+        uint256 amount_,
+        bytes calldata auctionData_,
+        bytes calldata approval_
+    ) external virtual returns (uint256 payout);
 
     // ========== BATCH AUCTIONS ========== //
 
     // On-chain auction variant
-    function bid(address recipient_, address referrer_, uint256 id_, uint256 amount_, uint256 minAmountOut_, bytes calldata auctionData_, bytes calldata approval_) external virtual;
+    function bid(
+        address recipient_,
+        address referrer_,
+        uint256 id_,
+        uint256 amount_,
+        uint256 minAmountOut_,
+        bytes calldata auctionData_,
+        bytes calldata approval_
+    ) external virtual;
 
     function settle(uint256 id_) external virtual returns (uint256[] memory amountsOut);
 
     // Off-chain auction variant
     // TODO use solady data packing library to make bids smaller on the actual module to store?
-    function settle(uint256 id_, Bid[] memory bids_) external virtual returns (uint256[] memory amountsOut);
+    function settle(
+        uint256 id_,
+        Bid[] memory bids_
+    ) external virtual returns (uint256[] memory amountsOut);
 
     // ========== AUCTION MANAGEMENT ========== //
 
@@ -95,11 +112,10 @@ abstract contract Auction {
 
     function isLive(uint256 id_) public view virtual returns (bool);
 
-    function remainingCapacity(uint256 id_) external view virtual returns (uint256); 
+    function remainingCapacity(uint256 id_) external view virtual returns (uint256);
 }
 
 abstract contract AuctionModule is Auction, Module {
-
     // ========== AUCTION MANAGEMENT ========== //
 
     function auction(uint256 id_, AuctionParams memory params_) external override onlyParent {
@@ -109,7 +125,6 @@ abstract contract AuctionModule is Auction, Module {
 
         // Duration must be at least min duration
         if (params_.duration < minAuctionDuration) revert Auction_InvalidParams();
-
 
         // Create core market data
         Lot memory lot;

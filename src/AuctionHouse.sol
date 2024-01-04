@@ -23,7 +23,6 @@ abstract contract FeeManager {
 }
 
 abstract contract Router is FeeManager {
-
     // ========== STATE VARIABLES ========== //
 
     /// @notice Fee paid to a front end operator in basis points (3 decimals). Set by the referrer, must be less than or equal to 5% (5e3).
@@ -51,17 +50,36 @@ abstract contract Router is FeeManager {
     // ========== ATOMIC AUCTIONS ========== //
 
     /// @param approval_ - (Optional) Permit approval signature for the quoteToken
-    function purchase(address recipient_, address referrer_, uint256 id_, uint256 amount_, uint256 minAmountOut_, bytes calldata auctionData_, bytes calldata approval_) external virtual returns (uint256 payout);
+    function purchase(
+        address recipient_,
+        address referrer_,
+        uint256 id_,
+        uint256 amount_,
+        uint256 minAmountOut_,
+        bytes calldata auctionData_,
+        bytes calldata approval_
+    ) external virtual returns (uint256 payout);
 
     // ========== BATCH AUCTIONS ========== //
 
     // On-chain auction variant
-    function bid(address recipient_, address referrer_, uint256 id_, uint256 amount_, uint256 minAmountOut_, bytes calldata auctionData_, bytes calldata approval_) external virtual;
+    function bid(
+        address recipient_,
+        address referrer_,
+        uint256 id_,
+        uint256 amount_,
+        uint256 minAmountOut_,
+        bytes calldata auctionData_,
+        bytes calldata approval_
+    ) external virtual;
 
     function settle(uint256 id_) external virtual returns (uint256[] memory amountsOut);
 
     // Off-chain auction variant
-    function settle(uint256 id_, Auction.Bid[] memory bids_) external virtual returns (uint256[] memory amountsOut);
+    function settle(
+        uint256 id_,
+        Auction.Bid[] memory bids_
+    ) external virtual returns (uint256[] memory amountsOut);
 }
 
 // contract AuctionHouse is Derivatizer, Auctioneer, Router {
@@ -92,7 +110,15 @@ abstract contract AuctionHouse is Derivatizer, Auctioneer, Router {
 
     // ========== DIRECT EXECUTION ========== //
 
-    function purchase(address recipient_, address referrer_, uint256 id_, uint256 amount_, uint256 minAmountOut_, bytes calldata auctionData_, bytes calldata approval_) external override returns (uint256 payout) {
+    function purchase(
+        address recipient_,
+        address referrer_,
+        uint256 id_,
+        uint256 amount_,
+        uint256 minAmountOut_,
+        bytes calldata auctionData_,
+        bytes calldata approval_
+    ) external override returns (uint256 payout) {
         AuctionModule module = _getModuleForId(id_);
 
         // TODO should this not check if the auction is atomic?
@@ -103,7 +129,9 @@ abstract contract AuctionHouse is Derivatizer, Auctioneer, Router {
         // 2. Calculate protocol fee as the total expected fee amount minus the referrer fee
         //    to avoid issues with rounding from separate fee calculations
         // TODO think about how to reduce storage loads
-        uint256 toReferrer = referrer_ == address(0) ? 0 : (amount_ * referrerFees[referrer_]) / FEE_DECIMALS;
+        uint256 toReferrer = referrer_ == address(0)
+            ? 0
+            : (amount_ * referrerFees[referrer_]) / FEE_DECIMALS;
         uint256 toProtocol = ((amount_ * (protocolFee + referrerFees[referrer_])) / FEE_DECIMALS) -
             toReferrer;
 
@@ -111,7 +139,14 @@ abstract contract AuctionHouse is Derivatizer, Auctioneer, Router {
         Routing memory routing = lotRouting[id_];
 
         // Send purchase to auction house and get payout plus any extra output
-        (payout) = module.purchase(recipient_, referrer_, amount_ - toReferrer - toProtocol, id_, auctionData_, approval_);
+        (payout) = module.purchase(
+            recipient_,
+            referrer_,
+            amount_ - toReferrer - toProtocol,
+            id_,
+            auctionData_,
+            approval_
+        );
 
         // Check that payout is at least minimum amount out
         // @dev Moved the slippage check from the auction to the AuctionHouse to allow different routing and purchase logic
@@ -131,9 +166,7 @@ abstract contract AuctionHouse is Derivatizer, Auctioneer, Router {
         emit Purchase(id_, msg.sender, referrer_, amount_, payout);
     }
 
-
     // ============ DELEGATED EXECUTION ========== //
-
 
     // ============ INTERNAL EXECUTION FUNCTIONS ========== //
 
@@ -203,14 +236,18 @@ abstract contract AuctionHouse is Derivatizer, Auctioneer, Router {
         } else {
             // Get the module for the derivative type
             // We assume that the module type has been checked when the lot was created
-            DerivativeModule module = DerivativeModule(_getLatestModuleIfActive(routing_.derivativeType));
+            DerivativeModule module = DerivativeModule(
+                _getLatestModuleIfActive(routing_.derivativeType)
+            );
 
             bytes memory derivativeParams = routing_.derivativeParams;
 
             // If condenser specified, condense auction output and derivative params before sending to derivative module
             if (fromKeycode(routing_.condenserType) != bytes6(0)) {
-               // Get condenser module
-                CondenserModule condenser = CondenserModule(_getLatestModuleIfActive(routing_.condenserType));
+                // Get condenser module
+                CondenserModule condenser = CondenserModule(
+                    _getLatestModuleIfActive(routing_.condenserType)
+                );
 
                 // Condense auction output and derivative params
                 derivativeParams = condenser.condense(auctionOutput_, derivativeParams);

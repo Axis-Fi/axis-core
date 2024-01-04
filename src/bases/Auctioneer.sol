@@ -9,16 +9,11 @@ import {fromKeycode} from "src/modules/Modules.sol";
 
 import {DerivativeModule} from "src/modules/Derivative.sol";
 
-interface IHooks {
+interface IHooks {}
 
-}
-
-interface IAllowlist {
-
-}
+interface IAllowlist {}
 
 abstract contract Auctioneer is WithModules {
-
     // ========= ERRORS ========= //
 
     error HOUSE_AuctionTypeSunset(Keycode auctionType);
@@ -31,11 +26,7 @@ abstract contract Auctioneer is WithModules {
 
     // ========= EVENTS ========= //
 
-    event AuctionCreated(
-        uint256 indexed id,
-        address indexed baseToken,
-        address indexed quoteToken
-    );
+    event AuctionCreated(uint256 indexed id, address indexed baseToken, address indexed quoteToken);
 
     // ========= DATA STRUCTURES ========== //
 
@@ -86,7 +77,10 @@ abstract contract Auctioneer is WithModules {
 
     // ========== AUCTION MANAGEMENT ========== //
 
-    function auction(RoutingParams calldata routing_, Auction.AuctionParams calldata params_) external returns (uint256 id) {
+    function auction(
+        RoutingParams calldata routing_,
+        Auction.AuctionParams calldata params_
+    ) external returns (uint256 id) {
         // Load auction type module, this checks that it is installed.
         // We load it here vs. later to avoid two checks.
         Keycode auctionType = routing_.auctionType;
@@ -107,15 +101,15 @@ abstract contract Auctioneer is WithModules {
         uint8 baseTokenDecimals = routing_.baseToken.decimals();
         uint8 quoteTokenDecimals = routing_.quoteToken.decimals();
 
-        if (baseTokenDecimals < 6 || baseTokenDecimals > 18)
-            revert Auctioneer_InvalidParams();
-        if (quoteTokenDecimals < 6 || quoteTokenDecimals > 18)
-            revert Auctioneer_InvalidParams();
+        if (baseTokenDecimals < 6 || baseTokenDecimals > 18) revert Auctioneer_InvalidParams();
+        if (quoteTokenDecimals < 6 || quoteTokenDecimals > 18) revert Auctioneer_InvalidParams();
 
         // If payout is a derivative, validate derivative data on the derivative module
         if (fromKeycode(routing_.derivativeType) != bytes6(0)) {
             // Load derivative module, this checks that it is installed.
-            DerivativeModule derivativeModule = DerivativeModule(_getLatestModuleIfActive(routing_.derivativeType));
+            DerivativeModule derivativeModule = DerivativeModule(
+                _getLatestModuleIfActive(routing_.derivativeType)
+            );
 
             // Call module validate function to validate implementation-specific data
             derivativeModule.validate(routing_.derivativeParams);

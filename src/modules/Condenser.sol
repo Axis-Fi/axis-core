@@ -4,9 +4,10 @@ pragma solidity 0.8.19;
 import "src/modules/Modules.sol";
 
 abstract contract Condenser {
-    function condense(bytes memory auctionOutput_, bytes memory derivativeConfig_) external pure virtual returns (bytes memory);
+    function condense(
+        bytes memory auctionOutput_,
+        bytes memory derivativeConfig_
+    ) external pure virtual returns (bytes memory);
 }
 
-abstract contract CondenserModule is Condenser, Module {
-   
-}
+abstract contract CondenserModule is Condenser, Module {}

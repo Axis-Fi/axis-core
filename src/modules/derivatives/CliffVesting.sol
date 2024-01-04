@@ -1,9 +1,8 @@
-// /// SPDX-License-Identifier: AGPL-3.0
-// pragma solidity 0.8.19;
+/// SPDX-License-Identifier: AGPL-3.0
+pragma solidity 0.8.19;
 
 // import {ClonesWithImmutableArgs} from "src/lib/clones/ClonesWithImmutableArgs.sol";
 // import "src/modules/Derivative.sol";
-
 
 // // TODO this only uses the ERC20 clones, need to convert to ERC6909 with optional ERC20 via wrapping the ERC6909
 // contract CliffVesting is DerivativeModule {
@@ -19,8 +18,6 @@
 //         ERC20 base;
 //         uint48 expiry;
 //     }
-
-
 
 //     // ========== SUBMODULE SETUP ========== //
 
@@ -69,12 +66,6 @@
 //             // Emit event
 //             emit DerivativeCreated(dType, id, t.wrapped, base, expiry);
 //         }
-
-
-
-
-
-
 
 //         // // Get address of fixed expiry token using salt
 //         // address feToken = ClonesWithImmutableArgs.addressOfClone3(salt);
@@ -145,6 +136,5 @@
 //         (ERC20 base, uint48 expiry) = _decodeAndNormalize(params_);
 //         return _computeId(base, expiry);
 //     }
-
 
 // }

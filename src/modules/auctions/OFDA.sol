@@ -1,5 +1,5 @@
-// /// SPDX-License-Identifier: AGPL-3.0
-// pragma solidity 0.8.19;
+/// SPDX-License-Identifier: AGPL-3.0
+pragma solidity 0.8.19;
 
 // import {IMaxPayoutAuctioneer} from "src/interfaces/IMaxPayoutAuctioneer.sol";
 
@@ -29,8 +29,6 @@
 //     // if price is below minimum price, minimum price is returned
 //     function marketPrice(uint256 id_) external view returns (uint256);
 // }
-
-
 
 // import {MaxPayoutAuctioneer, IAggregator, Authority} from "src/auctioneers/bases/MaxPayoutAuctioneer.sol";
 // import {IFixedPriceAuctioneer} from "src/interfaces/IFixedPriceAuctioneer.sol";

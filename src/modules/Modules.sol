@@ -30,7 +30,7 @@ function fromKeycode(Keycode keycode_) pure returns (bytes5) {
 function wrapVeecode(Keycode keycode_, uint8 version_) pure returns (Veecode) {
     // Get the digits of the version
     bytes1 firstDigit = bytes1(version_ / 10 + 0x30);
-    bytes1 secondDigit = bytes1(version_ % 10 + 0x30);
+    bytes1 secondDigit = bytes1((version_ % 10) + 0x30);
 
     // Pack everything and wrap as a Veecode
     return Veecode.wrap(bytes7(abi.encodePacked(firstDigit, secondDigit, keycode_)));
@@ -98,10 +98,13 @@ abstract contract WithModules is Owned {
     error ModuleAlreadySunset(Keycode keycode_);
     error ModuleSunset(Keycode keycode_);
 
-
     // ========= EVENTS ========= //
 
-    event ModuleInstalled(Keycode indexed keycode_, uint8 indexed version_, address indexed address_);
+    event ModuleInstalled(
+        Keycode indexed keycode_,
+        uint8 indexed version_,
+        address indexed address_
+    );
 
     // ========= CONSTRUCTOR ========= //
 
@@ -212,13 +215,17 @@ abstract contract WithModules is Owned {
         return address(getModuleForVeecode[veecode]);
     }
 
-    function _getModuleIfInstalled(Keycode keycode_, uint8 version_) internal view returns (address) {
+    function _getModuleIfInstalled(
+        Keycode keycode_,
+        uint8 version_
+    ) internal view returns (address) {
         // Check that the module is installed
         ModStatus memory status = getModuleStatus[keycode_];
         if (status.latestVersion == uint8(0)) revert ModuleNotInstalled(keycode_, 0);
 
         // Check that the module version is less than or equal to the latest version and greater than 0
-        if (version_ > status.latestVersion || version_ == 0) revert ModuleNotInstalled(keycode_, version_);
+        if (version_ > status.latestVersion || version_ == 0)
+            revert ModuleNotInstalled(keycode_, version_);
 
         // Wrap into a Veecode, get module address and return
         // We don't need to check that the Veecode is valid because we already checked that the module is installed and pulled the version from the contract

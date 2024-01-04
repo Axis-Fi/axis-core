@@ -1,5 +1,5 @@
-// /// SPDX-License-Identifier: AGPL-3.0
-// pragma solidity 0.8.19;
+/// SPDX-License-Identifier: AGPL-3.0
+pragma solidity 0.8.19;
 
 // import "src/modules/auctions/bases/AtomicAuction.sol";
 // import {SD59x18, sd, convert, uUNIT} from "prb-math/SD59x18.sol";
@@ -32,9 +32,6 @@
 // contract GradualDutchAuctioneer is AtomicAuctionModule, GDA {
 //     /* ========== ERRORS ========== */
 
-
-
-
 //     /* ========== CONSTRUCTOR ========== */
 
 //     constructor(
@@ -61,7 +58,6 @@
 //         // Calculate scale from payout token decimals
 //         uint256 payoutScale = 10 ** uint256(lot_.payoutToken.decimals());
 //         uint256 quoteScale = 10 ** uint256(lot_.quoteToken.decimals());
-
 
 //         // Calculate emissions rate
 //         uint256 payoutCapacity = lot_.capacityInQuote ? lot_.capacity.mulDiv(payoutScale, equilibriumPrice_) : lot_.capacity;

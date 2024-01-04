@@ -4,11 +4,14 @@ pragma solidity 0.8.19;
 import "src/modules/Derivative.sol";
 
 abstract contract Derivatizer is WithModules {
-
     // ========== DERIVATIVE MANAGEMENT ========== //
 
     // Return address will be zero if not wrapped
-    function deploy(Keycode dType, bytes memory data, bool wrapped) external virtual returns (uint256, address) {
+    function deploy(
+        Keycode dType,
+        bytes memory data,
+        bool wrapped
+    ) external virtual returns (uint256, address) {
         // Load the derivative module, will revert if not installed
         Derivative derivative = Derivative(address(_getLatestModuleIfActive(dType)));
 
@@ -22,8 +25,16 @@ abstract contract Derivatizer is WithModules {
         return (tokenId, wrappedToken);
     }
 
-    function mint(bytes memory data, uint256 amount, bool wrapped) external virtual returns (bytes memory);
-    function mint(uint256 tokenId, uint256 amount, bool wrapped) external virtual returns (bytes memory);
+    function mint(
+        bytes memory data,
+        uint256 amount,
+        bool wrapped
+    ) external virtual returns (bytes memory);
+    function mint(
+        uint256 tokenId,
+        uint256 amount,
+        bool wrapped
+    ) external virtual returns (bytes memory);
 
     function redeem(bytes memory data, uint256 amount) external virtual;
 
@@ -43,7 +54,10 @@ abstract contract Derivatizer is WithModules {
 
     // TODO view function to format implementation specific token data correctly and return to user
 
-    function exerciseCost(bytes memory data, uint256 amount) external view virtual returns (uint256);
+    function exerciseCost(
+        bytes memory data,
+        uint256 amount
+    ) external view virtual returns (uint256);
 
     function convertsTo(bytes memory data, uint256 amount) external view virtual returns (uint256);
 

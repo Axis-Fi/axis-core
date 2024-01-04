@@ -1,5 +1,5 @@
-// /// SPDX-License-Identifier: AGPL-3.0
-// pragma solidity 0.8.19;
+/// SPDX-License-Identifier: AGPL-3.0
+pragma solidity 0.8.19;
 
 // import {MaxPayoutAuctioneer, IAggregator, Authority} from "src/auctioneers/bases/MaxPayoutAuctioneer.sol";
 
@@ -17,7 +17,6 @@
 //     //
 //     function marketPrice(uint256 id_) external view override returns (uint256);
 // }
-
 
 // contract FixedPriceAuctioneer is MaxPayoutAuctioneer, IFixedPriceAuctioneer {
 //     /* ========== STATE ========== */

@@ -1,5 +1,5 @@
-// /// SPDX-License-Identifier: AGPL-3.0
-// pragma solidity 0.8.19;
+/// SPDX-License-Identifier: AGPL-3.0
+pragma solidity 0.8.19;
 
 // import "src/modules/Auction.sol";
 
@@ -26,7 +26,6 @@
 // abstract contract BatchAuction {
 //     error BatchAuction_NotConcluded();
 
-
 //     // ========== STATE VARIABLES ========== //
 
 //     mapping(uint256 lotId => Auction.Bid[] bids) public lotBids;
@@ -35,7 +34,6 @@
 
 //     // TODO add batch auction specific getters
 // }
-
 
 // abstract contract OnChainBatchAuctionModule is AuctionModule, BatchAuction {
 
