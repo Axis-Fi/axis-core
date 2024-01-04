@@ -1,0 +1,6 @@
+cache/
+coverage/
+docs/
+lib/
+node_modules/
+out/
