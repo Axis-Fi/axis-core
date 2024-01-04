@@ -96,7 +96,7 @@ abstract contract WithModules is Owned {
     error ModuleNotInstalled(Keycode keycode_, uint8 version_);
     error ModuleExecutionReverted(bytes error_);
     error ModuleAlreadySunset(Keycode keycode_);
-    error ModuleSunset(Keycode keycode_);
+    error ModuleIsSunset(Keycode keycode_);
 
     // ========= EVENTS ========= //
 
@@ -105,6 +105,8 @@ abstract contract WithModules is Owned {
         uint8 indexed version_,
         address indexed address_
     );
+
+    event ModuleSunset(Keycode indexed keycode_);
 
     // ========= CONSTRUCTOR ========= //
 
@@ -185,6 +187,8 @@ abstract contract WithModules is Owned {
 
         // Set the module to sunset
         status.sunset = true;
+
+        emit ModuleSunset(keycode_);
     }
 
     /// @notice         Performs a call on a module
@@ -237,7 +241,7 @@ abstract contract WithModules is Owned {
         if (status.latestVersion == uint8(0)) revert ModuleNotInstalled(keycode_, 0);
 
         // Check that the module is not sunset
-        if (status.sunset) revert ModuleSunset(keycode_);
+        if (status.sunset) revert ModuleIsSunset(keycode_);
 
         // Wrap into a Veecode, get module address and return
         // We don't need to check that the Veecode is valid because we already checked that the module is installed and pulled the version from the contract
