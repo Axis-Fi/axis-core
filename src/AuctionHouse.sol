@@ -121,7 +121,8 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
         // 2. Calculate protocol fee as the total expected fee amount minus the referrer fee
         //    to avoid issues with rounding from separate fee calculations
         // TODO think about how to reduce storage loads
-        toReferrer = referrer_ == address(0) ? 0 : (amount_ * referrerFees[referrer_]) / FEE_DECIMALS;
+        toReferrer =
+            referrer_ == address(0) ? 0 : (amount_ * referrerFees[referrer_]) / FEE_DECIMALS;
         toProtocol =
             ((amount_ * (protocolFee + referrerFees[referrer_])) / FEE_DECIMALS) - toReferrer;
 
@@ -155,7 +156,6 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
         bytes calldata auctionData_,
         bytes calldata approval_
     ) external override returns (uint256 payout) {
-
         // TODO should this not check if the auction is atomic?
         // Response: No, my thought was that the module will just revert on `purchase` if it's not atomic. Vice versa
 
