@@ -10,4 +10,17 @@ remappings = [
   "solmate/=lib/solmate/src/"
 ]
 
+[fmt]
+line_length = 100
+tab_width = 4
+bracket_spacing = false
+multiline_func_header = "params_first"
+quote_style = "double"
+number_underscore = "thousands"
+wrap_comments = false
+ignore = [
+  "lib/**",
+  "src/lib/**",
+]
+
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options

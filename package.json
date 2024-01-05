@@ -9,29 +9,18 @@
   },
   "scripts": {
     "build": "forge build",
-    "prettier": "prettier --write 'src/**/*.sol' '**/*.md'",
-    "prettier:check": "prettier --check 'src/**/*.sol' '**/*.md'",
+    "fmt": "forge fmt",
+    "fmt:check": "forge fmt --check",
     "solhint": "solhint --fix --noPrompt --config ./.solhint.json 'src/**/*.sol'",
     "solhint:check": "solhint --config ./.solhint.json 'src/**/*.sol'",
-    "lint": "npm run prettier && npm run solhint",
-    "lint:check": "pnpm run prettier:check && pnpm run solhint:check",
+    "lint": "npm run fmt && npm run solhint",
+    "lint:check": "pnpm run fmt:check && pnpm run solhint:check",
     "test": "forge test -vvv"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "prettier": {
-    "tabWidth": 4,
-    "singleQuote": false,
-    "bracketSpacing": false,
-    "printWidth": 100,
-    "plugins": [
-      "prettier-plugin-solidity"
-    ]
-  },
   "devDependencies": {
-    "prettier": "^3.1.1",
-    "prettier-plugin-solidity": "^1.3.1",
     "solhint": "^4.0.0"
   }
 }
