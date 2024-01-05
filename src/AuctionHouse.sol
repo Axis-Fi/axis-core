@@ -83,7 +83,7 @@ abstract contract Router is FeeManager {
 }
 
 // contract AuctionHouse is Derivatizer, Auctioneer, Router {
-abstract contract AuctionHouse is Derivatizer, Auctioneer, Router {
+contract AuctionHouse is Derivatizer, Auctioneer, Router {
     using SafeTransferLib for ERC20;
 
     /// Implement the router functionality here since it combines all of the base functionality
@@ -110,6 +110,42 @@ abstract contract AuctionHouse is Derivatizer, Auctioneer, Router {
 
     // ========== DIRECT EXECUTION ========== //
 
+    // ========== AUCTION FUNCTIONS ========== //
+
+    function calculateFees(
+        address referrer_,
+        uint256 amount_
+    ) internal view returns (uint256 toReferrer, uint256 toProtocol) {
+        // Calculate fees for purchase
+        // 1. Calculate referrer fee
+        // 2. Calculate protocol fee as the total expected fee amount minus the referrer fee
+        //    to avoid issues with rounding from separate fee calculations
+        // TODO think about how to reduce storage loads
+        toReferrer = referrer_ == address(0) ? 0 : (amount_ * referrerFees[referrer_]) / FEE_DECIMALS;
+        toProtocol =
+            ((amount_ * (protocolFee + referrerFees[referrer_])) / FEE_DECIMALS) - toReferrer;
+
+        return (toReferrer, toProtocol);
+    }
+
+    function allocateFees(
+        address referrer_,
+        ERC20 quoteToken_,
+        uint256 amount_
+    ) internal returns (uint256 totalFees) {
+        (uint256 toReferrer, uint256 toProtocol) = calculateFees(referrer_, amount_);
+
+        // Update fee balances if non-zero
+        if (referrerFees[referrer_] > 0) {
+            rewards[referrer_][quoteToken_] += toReferrer;
+        }
+        if (protocolFee > 0) {
+            rewards[_protocol][quoteToken_] += toProtocol;
+        }
+
+        return toReferrer + toProtocol;
+    }
+
     function purchase(
         address recipient_,
         address referrer_,
@@ -119,45 +155,119 @@ abstract contract AuctionHouse is Derivatizer, Auctioneer, Router {
         bytes calldata auctionData_,
         bytes calldata approval_
     ) external override returns (uint256 payout) {
-        AuctionModule module = _getModuleForId(id_);
 
         // TODO should this not check if the auction is atomic?
         // Response: No, my thought was that the module will just revert on `purchase` if it's not atomic. Vice versa
 
-        // Calculate fees for purchase
-        // 1. Calculate referrer fee
-        // 2. Calculate protocol fee as the total expected fee amount minus the referrer fee
-        //    to avoid issues with rounding from separate fee calculations
-        // TODO think about how to reduce storage loads
-        uint256 toReferrer =
-            referrer_ == address(0) ? 0 : (amount_ * referrerFees[referrer_]) / FEE_DECIMALS;
-        uint256 toProtocol =
-            ((amount_ * (protocolFee + referrerFees[referrer_])) / FEE_DECIMALS) - toReferrer;
-
         // Load routing data for the lot
         Routing memory routing = lotRouting[id_];
 
+        uint256 totalFees = allocateFees(referrer_, routing.quoteToken, amount_);
+
         // Send purchase to auction house and get payout plus any extra output
-        (payout) = module.purchase(
-            recipient_, referrer_, amount_ - toReferrer - toProtocol, id_, auctionData_, approval_
-        );
+        {
+            AuctionModule module = _getModuleForId(id_);
+            (payout) = module.purchase(
+                recipient_, referrer_, amount_ - totalFees, id_, auctionData_, approval_
+            );
+        }
 
         // Check that payout is at least minimum amount out
         // @dev Moved the slippage check from the auction to the AuctionHouse to allow different routing and purchase logic
         if (payout < minAmountOut_) revert AuctionHouse_AmountLessThanMinimum();
 
-        // Update fee balances if non-zero
-        if (toReferrer > 0) rewards[referrer_][routing.quoteToken] += toReferrer;
-        if (toProtocol > 0) rewards[_protocol][routing.quoteToken] += toProtocol;
-
         // Handle transfers from purchaser and seller
-        _handleTransfers(routing, amount_, payout, toReferrer + toProtocol, approval_);
+        _handleTransfers(routing, amount_, payout, totalFees, approval_);
 
         // Handle payout to user, including creation of derivative tokens
         // _handlePayout(id_, routing, recipient_, payout, auctionOutput);
 
         // Emit event
         emit Purchase(id_, msg.sender, referrer_, amount_, payout);
+    }
+
+    function bid(
+        address recipient_,
+        address referrer_,
+        uint256 id_,
+        uint256 amount_,
+        uint256 minAmountOut_,
+        bytes calldata auctionData_,
+        bytes calldata approval_
+    ) external override {
+        // TODO
+    }
+
+    function settle(uint256 id_) external override returns (uint256[] memory amountsOut) {
+        // TODO
+    }
+
+    // Off-chain auction variant
+    function settle(
+        uint256 id_,
+        Auction.Bid[] memory bids_
+    ) external override returns (uint256[] memory amountsOut) {
+        // TODO
+    }
+
+    // ========== DERIVATIVE FUNCTIONS ========== //
+
+    function mint(
+        bytes memory data,
+        uint256 amount,
+        bool wrapped
+    ) external override returns (bytes memory) {
+        // TODO
+    }
+
+    function mint(
+        uint256 tokenId,
+        uint256 amount,
+        bool wrapped
+    ) external override returns (bytes memory) {
+        // TODO
+    }
+
+    function redeem(bytes memory data, uint256 amount) external override {
+        // TODO
+    }
+
+    function exercise(bytes memory data, uint256 amount) external override {
+        // TODO
+    }
+
+    function reclaim(bytes memory data) external override {
+        // TODO
+    }
+
+    function convert(bytes memory data, uint256 amount) external override {
+        // TODO
+    }
+
+    function wrap(uint256 tokenId, uint256 amount) external override {
+        // TODO
+    }
+
+    function unwrap(uint256 tokenId, uint256 amount) external override {
+        // TODO
+    }
+
+    function exerciseCost(
+        bytes memory data,
+        uint256 amount
+    ) external view override returns (uint256) {
+        // TODO
+    }
+
+    function convertsTo(
+        bytes memory data,
+        uint256 amount
+    ) external view override returns (uint256) {
+        // TODO
+    }
+
+    function computeId(bytes memory params_) external pure override returns (uint256) {
+        // TODO
     }
 
     // ============ DELEGATED EXECUTION ========== //
