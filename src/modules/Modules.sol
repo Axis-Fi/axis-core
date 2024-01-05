@@ -359,6 +359,16 @@ abstract contract Module {
     /// @notice Error when the parent contract is invalid
     error Module_InvalidParent(address parent_);
 
+    // ========= DATA TYPES ========= //
+
+    /// @notice Enum of module types
+    enum Type {
+        Auction,
+        Derivative,
+        Condenser,
+        Transformer
+    }
+
     // ========= STATE VARIABLES ========= //
 
     /// @notice The parent contract for this module.
@@ -389,8 +399,9 @@ abstract contract Module {
     // ========= FUNCTIONS ========= //
 
     /// @notice     2 byte identifier for the module type
-    /// @dev        This enables the parent contract to check the module type
-    function TYPE() public pure virtual returns (bytes2) {}
+    /// @dev        This enables the parent contract to check that the module Keycode specified
+    /// @dev        is of the correct type
+    function TYPE() public pure virtual returns (Type) {}
 
     /// @notice 7 byte, versioned identifier for the module. 2 characters from 0-9 that signify the version and 3-5 characters from A-Z.
     function VEECODE() public pure virtual returns (Veecode) {}
