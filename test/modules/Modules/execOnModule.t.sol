@@ -9,10 +9,10 @@ import {MockWithModules} from "test/modules/Modules/MockWithModules.sol";
 import {MockModuleV1} from "test/modules/Modules/MockModule.sol";
 
 // Contracts
-import {WithModules, Veecode, toKeycode} from "src/modules/Modules.sol";
+import {WithModules, Module, Veecode, toKeycode} from "src/modules/Modules.sol";
 
 contract ExecOnModule is Test {
-    WithModules internal withModules;
+    MockWithModules internal withModules;
     MockModuleV1 internal mockModule;
 
     function setUp() external {
@@ -45,21 +45,32 @@ contract ExecOnModule is Test {
         withModules.execOnModule(veecode, abi.encodeWithSelector(MockModuleV1.mock.selector));
     }
 
-    function testReverts_whenFunctionIsProhibited() external whenVersion1IsInstalled {
+    function testReverts_whenFunctionIsOnlyInternal() external whenVersion1IsInstalled {
         Veecode veecode = mockModule.VEECODE();
 
-        // Call the function
-        withModules.execOnModule(veecode, abi.encodeWithSelector(MockModuleV1.prohibited.selector));
-
-        // Set it as prohibited
-        withModules.addProhibitedModuleFunction(MockModuleV1.prohibited.selector);
-
         bytes memory err = abi.encodeWithSelector(
-            WithModules.ModuleFunctionProhibited.selector, veecode, MockModuleV1.prohibited.selector
+            WithModules.ModuleExecutionReverted.selector,
+            abi.encodeWithSelector(Module.Module_OnlyInternal.selector)
         );
         vm.expectRevert(err);
 
         withModules.execOnModule(veecode, abi.encodeWithSelector(MockModuleV1.prohibited.selector));
+    }
+
+    function test_whenFunctionIsOnlyInternal() external whenVersion1IsInstalled {
+        Veecode veecode = mockModule.VEECODE();
+
+        bytes memory returnData = withModules.execInternalFunction(
+            veecode, abi.encodeWithSelector(MockModuleV1.prohibited.selector)
+        );
+
+        // Decode the return data
+        (bool returnValue) = abi.decode(returnData, (bool));
+
+        assertEq(returnValue, true);
+
+        // Check that the internal flag was reset
+        assertEq(withModules.isExecOnModuleInternal(), false);
     }
 
     function test_success() external whenVersion1IsInstalled {

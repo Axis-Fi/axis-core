@@ -94,10 +94,10 @@ function ensureValidVeecode(Veecode veecode_) pure {
 /// @dev       This contract is intended to be inherited by any contract that needs to install modules.
 abstract contract WithModules is Owned {
     // ========= ERRORS ========= //
+
     error InvalidModuleInstall(Keycode keycode_, uint8 version_);
     error ModuleNotInstalled(Keycode keycode_, uint8 version_);
     error ModuleExecutionReverted(bytes error_);
-    error ModuleFunctionProhibited(Veecode veecode_, bytes4 function_);
     error ModuleFunctionInvalid(bytes4 function_);
     error ModuleAlreadySunset(Keycode keycode_);
     error ModuleIsSunset(Keycode keycode_);
@@ -109,10 +109,6 @@ abstract contract WithModules is Owned {
     );
 
     event ModuleSunset(Keycode indexed keycode_);
-
-    event ModuleFunctionProhibitionAdded(bytes4 indexed function_);
-
-    event ModuleFunctionProhibitionRemoved(bytes4 indexed function_);
 
     // ========= CONSTRUCTOR ========= //
 
@@ -139,12 +135,7 @@ abstract contract WithModules is Owned {
     /// @notice Mapping of Keycode to module status information.
     mapping(Keycode => ModStatus) public getModuleStatus;
 
-    /// @notice     Functions that are prohibited from being called on a module
-    /// @dev        This is used to prevent governance calling functions on modules that are not administrative.
-    bytes4[] public prohibitedModuleFunctions;
-
-    /// @notice     The number of prohibited module functions
-    uint256 public prohibitedModuleFunctionsCount;
+    bool public isExecOnModuleInternal;
 
     // ========= MODULE MANAGEMENT ========= //
 
@@ -300,79 +291,55 @@ abstract contract WithModules is Owned {
     ///
     /// @param          veecode_    The module Veecode
     /// @param          callData_   The call data
+    /// @return         The return data from the call
     function execOnModule(
         Veecode veecode_,
         bytes calldata callData_
     ) external onlyOwner returns (bytes memory) {
+        // Set the internal flag to false
+        isExecOnModuleInternal = false;
+
+        // Call the internal function
+        return _execOnModule(veecode_, callData_);
+    }
+
+    /// @notice         Performs a call on a module from an internal function
+    /// @notice         This can be used to perform administrative functions on a module, such as setting parameters or calling permissioned functions
+    /// @dev            This function reverts if:
+    /// @dev            - The module is not installed
+    /// @dev            - The call is made to a prohibited function
+    /// @dev            - The call reverted
+    ///
+    /// @param          veecode_    The module Veecode
+    /// @param          callData_   The call data
+    /// @return         The return data from the call
+    function execOnModuleInternal(
+        Veecode veecode_,
+        bytes calldata callData_
+    ) internal returns (bytes memory) {
+        // Set the internal flag to true
+        isExecOnModuleInternal = true;
+
+        // Perform the call
+        bytes memory returnValue = _execOnModule(veecode_, callData_);
+
+        // Reset the internal flag to false
+        isExecOnModuleInternal = false;
+
+        return returnValue;
+    }
+
+    function _execOnModule(
+        Veecode veecode_,
+        bytes calldata callData_
+    ) internal returns (bytes memory) {
         address module = _getModuleIfInstalled(veecode_);
 
-        // Check that the function is not prohibited
-        bytes4 functionSelector = bytes4(callData_[:4]);
-        if (_isModuleFunctionProhibited(functionSelector)) {
-            revert ModuleFunctionProhibited(veecode_, functionSelector);
-        }
-
+        // Call the module
         (bool success, bytes memory returnData) = module.call(callData_);
+
         if (!success) revert ModuleExecutionReverted(returnData);
         return returnData;
-    }
-
-    function _isModuleFunctionProhibited(bytes4 function_) internal view returns (bool) {
-        uint256 length = prohibitedModuleFunctions.length;
-        for (uint256 i; i < length; i++) {
-            if (prohibitedModuleFunctions[i] == function_) return true;
-        }
-        return false;
-    }
-
-    /// @notice         Adds a function selector to the list of prohibited module functions
-    /// @notice         This will prevent the function from being called on any module
-    /// @dev            This function reverts if:
-    /// @dev            - The caller is not the owner
-    /// @dev            - The function selector is already prohibited
-    /// @dev            - The function selector is zero
-    ///
-    /// @param          function_   The function selector
-    function addProhibitedModuleFunction(bytes4 function_) external onlyOwner {
-        if (function_ == bytes4(0)) revert ModuleFunctionInvalid(function_);
-
-        // Check for duplicates
-        if (_isModuleFunctionProhibited(function_)) revert ModuleFunctionInvalid(function_);
-
-        prohibitedModuleFunctions.push(function_);
-        prohibitedModuleFunctionsCount++;
-
-        emit ModuleFunctionProhibitionAdded(function_);
-    }
-
-    /// @notice         Removes a function selector from the list of prohibited module functions
-    /// @notice         This will allow the function to be called on any module
-    /// @dev            This function reverts if:
-    /// @dev            - The caller is not the owner
-    /// @dev            - The function selector is not prohibited
-    /// @dev            - The function selector is zero
-    ///
-    /// @param          function_   The function selector
-    function removeProhibitedModuleFunction(bytes4 function_) external onlyOwner {
-        if (function_ == bytes4(0)) revert ModuleFunctionInvalid(function_);
-
-        uint256 length = prohibitedModuleFunctions.length;
-        bool functionFound;
-
-        for (uint256 i; i < length; i++) {
-            if (prohibitedModuleFunctions[i] == function_) {
-                prohibitedModuleFunctions[i] = prohibitedModuleFunctions[length - 1];
-                prohibitedModuleFunctions.pop();
-                functionFound = true;
-                break;
-            }
-        }
-
-        if (!functionFound) revert ModuleFunctionInvalid(function_);
-
-        prohibitedModuleFunctionsCount--;
-
-        emit ModuleFunctionProhibitionRemoved(function_);
     }
 }
 
@@ -383,8 +350,14 @@ abstract contract WithModules is Owned {
 abstract contract Module {
     // ========= ERRORS ========= //
 
+    /// @notice Error when a module function is called by a non-parent contract
     error Module_OnlyParent(address caller_);
-    error Module_InvalidParent();
+
+    /// @notice Error when a module function is called by a non-internal contract
+    error Module_OnlyInternal();
+
+    /// @notice Error when the parent contract is invalid
+    error Module_InvalidParent(address parent_);
 
     // ========= STATE VARIABLES ========= //
 
@@ -394,7 +367,7 @@ abstract contract Module {
     // ========= CONSTRUCTOR ========= //
 
     constructor(address parent_) {
-        if (parent_ == address(0)) revert Module_InvalidParent();
+        if (parent_ == address(0)) revert Module_InvalidParent(parent_);
 
         parent = parent_;
     }
@@ -404,6 +377,12 @@ abstract contract Module {
     /// @notice Modifier to restrict functions to be called only by parent module.
     modifier onlyParent() {
         if (msg.sender != parent) revert Module_OnlyParent(msg.sender);
+        _;
+    }
+
+    /// @notice Modifier to restrict functions to be called only by internal module.
+    modifier onlyInternal() {
+        if (!WithModules(parent).isExecOnModuleInternal()) revert Module_OnlyInternal();
         _;
     }
 

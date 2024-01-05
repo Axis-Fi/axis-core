@@ -15,11 +15,7 @@ contract MockModuleV1 is Module {
         return true;
     }
 
-    function prohibited() external pure returns (bool) {
-        return true;
-    }
-
-    function prohibitedTwo() external pure returns (bool) {
+    function prohibited() external view onlyInternal returns (bool) {
         return true;
     }
 }
