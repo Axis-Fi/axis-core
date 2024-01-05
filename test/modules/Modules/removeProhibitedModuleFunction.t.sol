@@ -23,7 +23,7 @@ contract RemoveProhibitedModuleFunctionTest is Test {
         _;
     }
 
-    function testReverts_whenUnauthorized() external whenAModuleFunctionIsProhibited() {
+    function testReverts_whenUnauthorized() external whenAModuleFunctionIsProhibited {
         address alice = address(0x1);
 
         vm.expectRevert("UNAUTHORIZED");
@@ -33,21 +33,24 @@ contract RemoveProhibitedModuleFunctionTest is Test {
     }
 
     function testReverts_whenNotProhibited() external {
-        bytes memory err = abi.encodeWithSelector(WithModules.ModuleFunctionInvalid.selector, MockModuleV1.mock.selector);
+        bytes memory err = abi.encodeWithSelector(
+            WithModules.ModuleFunctionInvalid.selector, MockModuleV1.mock.selector
+        );
         vm.expectRevert(err);
 
         withModules.removeProhibitedModuleFunction(MockModuleV1.mock.selector);
     }
 
     function testReverts_whenZero() external {
-        bytes memory err = abi.encodeWithSelector(WithModules.ModuleFunctionInvalid.selector, bytes4(0));
+        bytes memory err =
+            abi.encodeWithSelector(WithModules.ModuleFunctionInvalid.selector, bytes4(0));
         vm.expectRevert(err);
 
         // Set as prohibited again
         withModules.removeProhibitedModuleFunction(bytes4(0));
     }
 
-    function test_success() external whenAModuleFunctionIsProhibited() {
+    function test_success() external whenAModuleFunctionIsProhibited {
         // Remove
         withModules.removeProhibitedModuleFunction(MockModuleV1.prohibited.selector);
 

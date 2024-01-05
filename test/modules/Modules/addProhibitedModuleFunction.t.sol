@@ -31,7 +31,9 @@ contract AddProhibitedModuleFunctionTest is Test {
         // Set as prohibited
         withModules.addProhibitedModuleFunction(MockModuleV1.prohibited.selector);
 
-        bytes memory err = abi.encodeWithSelector(WithModules.ModuleFunctionInvalid.selector, MockModuleV1.prohibited.selector);
+        bytes memory err = abi.encodeWithSelector(
+            WithModules.ModuleFunctionInvalid.selector, MockModuleV1.prohibited.selector
+        );
         vm.expectRevert(err);
 
         // Set as prohibited again
@@ -39,7 +41,8 @@ contract AddProhibitedModuleFunctionTest is Test {
     }
 
     function testReverts_whenZero() external {
-        bytes memory err = abi.encodeWithSelector(WithModules.ModuleFunctionInvalid.selector, bytes4(0));
+        bytes memory err =
+            abi.encodeWithSelector(WithModules.ModuleFunctionInvalid.selector, bytes4(0));
         vm.expectRevert(err);
 
         // Set as prohibited again

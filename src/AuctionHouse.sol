@@ -18,8 +18,8 @@ import {Auction, AuctionModule} from "src/modules/Auction.sol";
 import {fromKeycode, WithModules} from "src/modules/Modules.sol";
 
 abstract contract FeeManager {
-    // TODO write fee logic in separate contract to keep it organized
-    // Router can inherit
+// TODO write fee logic in separate contract to keep it organized
+// Router can inherit
 }
 
 abstract contract Router is FeeManager {
@@ -129,23 +129,17 @@ abstract contract AuctionHouse is Derivatizer, Auctioneer, Router {
         // 2. Calculate protocol fee as the total expected fee amount minus the referrer fee
         //    to avoid issues with rounding from separate fee calculations
         // TODO think about how to reduce storage loads
-        uint256 toReferrer = referrer_ == address(0)
-            ? 0
-            : (amount_ * referrerFees[referrer_]) / FEE_DECIMALS;
-        uint256 toProtocol = ((amount_ * (protocolFee + referrerFees[referrer_])) / FEE_DECIMALS) -
-            toReferrer;
+        uint256 toReferrer =
+            referrer_ == address(0) ? 0 : (amount_ * referrerFees[referrer_]) / FEE_DECIMALS;
+        uint256 toProtocol =
+            ((amount_ * (protocolFee + referrerFees[referrer_])) / FEE_DECIMALS) - toReferrer;
 
         // Load routing data for the lot
         Routing memory routing = lotRouting[id_];
 
         // Send purchase to auction house and get payout plus any extra output
         (payout) = module.purchase(
-            recipient_,
-            referrer_,
-            amount_ - toReferrer - toProtocol,
-            id_,
-            auctionData_,
-            approval_
+            recipient_, referrer_, amount_ - toReferrer - toProtocol, id_, auctionData_, approval_
         );
 
         // Check that payout is at least minimum amount out
@@ -236,18 +230,16 @@ abstract contract AuctionHouse is Derivatizer, Auctioneer, Router {
         } else {
             // Get the module for the derivative type
             // We assume that the module type has been checked when the lot was created
-            DerivativeModule module = DerivativeModule(
-                _getLatestModuleIfActive(routing_.derivativeType)
-            );
+            DerivativeModule module =
+                DerivativeModule(_getLatestModuleIfActive(routing_.derivativeType));
 
             bytes memory derivativeParams = routing_.derivativeParams;
 
             // If condenser specified, condense auction output and derivative params before sending to derivative module
             if (fromKeycode(routing_.condenserType) != bytes6(0)) {
                 // Get condenser module
-                CondenserModule condenser = CondenserModule(
-                    _getLatestModuleIfActive(routing_.condenserType)
-                );
+                CondenserModule condenser =
+                    CondenserModule(_getLatestModuleIfActive(routing_.condenserType));
 
                 // Condense auction output and derivative params
                 derivativeParams = condenser.condense(auctionOutput_, derivativeParams);

@@ -27,14 +27,16 @@ contract GetModuleStatusTest is Test {
     }
 
     function test_WhenAMatchingModuleCannotBeFound() external {
-        (uint8 moduleLatestVersion, bool moduleIsSunset) = withModules.getModuleStatus(toKeycode("MOCK"));
+        (uint8 moduleLatestVersion, bool moduleIsSunset) =
+            withModules.getModuleStatus(toKeycode("MOCK"));
 
         assertEq(moduleLatestVersion, 0);
         assertFalse(moduleIsSunset);
     }
 
     function test_WhenAMatchingModuleIsFound() external whenAModuleIsInstalled {
-        (uint8 moduleLatestVersion, bool moduleIsSunset) = withModules.getModuleStatus(toKeycode("MOCK"));
+        (uint8 moduleLatestVersion, bool moduleIsSunset) =
+            withModules.getModuleStatus(toKeycode("MOCK"));
 
         assertEq(moduleLatestVersion, 1);
         assertFalse(moduleIsSunset);
@@ -45,7 +47,8 @@ contract GetModuleStatusTest is Test {
         MockModuleV2 upgradedMockModule = new MockModuleV2(address(withModules));
         withModules.installModule(upgradedMockModule);
 
-        (uint8 moduleLatestVersion, bool moduleIsSunset) = withModules.getModuleStatus(toKeycode("MOCK"));
+        (uint8 moduleLatestVersion, bool moduleIsSunset) =
+            withModules.getModuleStatus(toKeycode("MOCK"));
 
         assertEq(moduleLatestVersion, 2);
         assertFalse(moduleIsSunset);
@@ -55,7 +58,8 @@ contract GetModuleStatusTest is Test {
         // Sunset the module
         withModules.sunsetModule(toKeycode("MOCK"));
 
-        (uint8 moduleLatestVersion, bool moduleIsSunset) = withModules.getModuleStatus(toKeycode("MOCK"));
+        (uint8 moduleLatestVersion, bool moduleIsSunset) =
+            withModules.getModuleStatus(toKeycode("MOCK"));
 
         assertEq(moduleLatestVersion, 1);
         assertTrue(moduleIsSunset);

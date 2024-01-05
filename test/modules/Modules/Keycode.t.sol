@@ -4,7 +4,17 @@ pragma solidity 0.8.19;
 import {Test} from "forge-std/Test.sol";
 import {console2} from "forge-std/console2.sol";
 
-import {Keycode, toKeycode, fromKeycode, Veecode, wrapVeecode, fromVeecode, unwrapVeecode, ensureValidVeecode, InvalidVeecode} from "src/modules/Modules.sol";
+import {
+    Keycode,
+    toKeycode,
+    fromKeycode,
+    Veecode,
+    wrapVeecode,
+    fromVeecode,
+    unwrapVeecode,
+    ensureValidVeecode,
+    InvalidVeecode
+} from "src/modules/Modules.sol";
 
 contract KeycodeTest is Test {
     function test_keycode() external {
@@ -26,7 +36,11 @@ contract KeycodeTest is Test {
         ensureValidVeecode(t1_veecode);
     }
 
-    function _modifyKeycode(bytes5 keycode_, uint8 index_, uint8 character_) internal pure returns (bytes5) {
+    function _modifyKeycode(
+        bytes5 keycode_,
+        uint8 index_,
+        uint8 character_
+    ) internal pure returns (bytes5) {
         bytes memory keycodeBytes = abi.encodePacked(keycode_);
         keycodeBytes[index_] = bytes1(character_);
         return bytes5(keycodeBytes);
@@ -53,7 +67,10 @@ contract KeycodeTest is Test {
         assertFalse(fromVeecode(t3_veecode) == fromVeecode(t4_veecode));
     }
 
-    function testRevert_ensureValidVeecode_invalidRequiredCharacter(uint8 character_, uint8 index_) external {
+    function testRevert_ensureValidVeecode_invalidRequiredCharacter(
+        uint8 character_,
+        uint8 index_
+    ) external {
         // Only manipulating the first 3 characters
         vm.assume(index_ < 3);
 
@@ -66,16 +83,16 @@ contract KeycodeTest is Test {
         Keycode keycode = toKeycode(keycodeInput);
         Veecode t1_veecode = wrapVeecode(keycode, 1);
 
-        bytes memory err = abi.encodeWithSelector(
-            InvalidVeecode.selector,
-            t1_veecode
-        );
+        bytes memory err = abi.encodeWithSelector(InvalidVeecode.selector, t1_veecode);
         vm.expectRevert(err);
 
         ensureValidVeecode(t1_veecode);
     }
 
-    function testRevert_ensureValidVeecode_invalidOptionalCharacter(uint8 character_, uint8 index_) external {
+    function testRevert_ensureValidVeecode_invalidOptionalCharacter(
+        uint8 character_,
+        uint8 index_
+    ) external {
         // Only manipulating the characters 4-5
         vm.assume(index_ < 3);
 
@@ -88,10 +105,7 @@ contract KeycodeTest is Test {
         Keycode keycode = toKeycode(keycodeInput);
         Veecode t1_veecode = wrapVeecode(keycode, 1);
 
-        bytes memory err = abi.encodeWithSelector(
-            InvalidVeecode.selector,
-            t1_veecode
-        );
+        bytes memory err = abi.encodeWithSelector(InvalidVeecode.selector, t1_veecode);
         vm.expectRevert(err);
 
         ensureValidVeecode(t1_veecode);
@@ -101,10 +115,7 @@ contract KeycodeTest is Test {
         Keycode keycode = toKeycode("TEST");
         Veecode t1_veecode = wrapVeecode(keycode, 0);
 
-        bytes memory err = abi.encodeWithSelector(
-            InvalidVeecode.selector,
-            t1_veecode
-        );
+        bytes memory err = abi.encodeWithSelector(InvalidVeecode.selector, t1_veecode);
         vm.expectRevert(err);
 
         ensureValidVeecode(t1_veecode);
@@ -117,10 +128,7 @@ contract KeycodeTest is Test {
         Keycode keycode = toKeycode("TEST");
         Veecode t1_veecode = wrapVeecode(keycode, version_);
 
-        bytes memory err = abi.encodeWithSelector(
-            InvalidVeecode.selector,
-            t1_veecode
-        );
+        bytes memory err = abi.encodeWithSelector(InvalidVeecode.selector, t1_veecode);
         vm.expectRevert(err);
 
         ensureValidVeecode(t1_veecode);

@@ -25,7 +25,7 @@ contract SunsetModuleTest is Test {
         _;
     }
 
-    function testReverts_whenUnauthorized() external whenVersion1IsInstalled() {
+    function testReverts_whenUnauthorized() external whenVersion1IsInstalled {
         address alice = address(0x1);
 
         vm.expectRevert("UNAUTHORIZED");
@@ -35,29 +35,31 @@ contract SunsetModuleTest is Test {
     }
 
     function testReverts_whenModuleIsNotInstalled() external {
-        bytes memory err = abi.encodeWithSelector(WithModules.ModuleNotInstalled.selector, toKeycode("MOCK"), 0);
+        bytes memory err =
+            abi.encodeWithSelector(WithModules.ModuleNotInstalled.selector, toKeycode("MOCK"), 0);
         vm.expectRevert(err);
 
         withModules.sunsetModule(toKeycode("MOCK"));
     }
 
-    function testReverts_whenModuleAlreadySunset() external whenVersion1IsInstalled() {
+    function testReverts_whenModuleAlreadySunset() external whenVersion1IsInstalled {
         // Sunset the module
         withModules.sunsetModule(toKeycode("MOCK"));
 
-        bytes memory err = abi.encodeWithSelector(WithModules.ModuleAlreadySunset.selector, toKeycode("MOCK"));
+        bytes memory err =
+            abi.encodeWithSelector(WithModules.ModuleAlreadySunset.selector, toKeycode("MOCK"));
         vm.expectRevert(err);
 
         // Sunset the module again
         withModules.sunsetModule(toKeycode("MOCK"));
     }
 
-    function test_success() external whenVersion1IsInstalled() {
+    function test_success() external whenVersion1IsInstalled {
         // Sunset the module
         withModules.sunsetModule(toKeycode("MOCK"));
 
         // Assert that the status has been changed
-        ( , bool sunset) = withModules.getModuleStatus(toKeycode("MOCK"));
+        (, bool sunset) = withModules.getModuleStatus(toKeycode("MOCK"));
         assertEq(sunset, true);
 
         // Check that the modules array remains the same

@@ -101,7 +101,10 @@ abstract contract Derivative {
         uint256 amount
     ) external view virtual returns (uint256);
 
-    function convertsTo(bytes memory data, uint256 amount) external view virtual returns (uint256);
+    function convertsTo(
+        bytes memory data,
+        uint256 amount
+    ) external view virtual returns (uint256);
 
     // Compute unique token ID for params on the submodule
     function computeId(bytes memory params_) external pure virtual returns (uint256);

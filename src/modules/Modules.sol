@@ -67,7 +67,7 @@ function ensureContract(address target_) view {
 // solhint-disable-next-line func-visibility
 function ensureValidVeecode(Veecode veecode_) pure {
     bytes7 unwrapped = Veecode.unwrap(veecode_);
-    for (uint256 i; i < 7; ) {
+    for (uint256 i; i < 7;) {
         bytes1 char = unwrapped[i];
         if (i < 2) {
             // First 2 characters must be the version, each character is a number 0-9
@@ -105,9 +105,7 @@ abstract contract WithModules is Owned {
     // ========= EVENTS ========= //
 
     event ModuleInstalled(
-        Keycode indexed keycode_,
-        uint8 indexed version_,
-        address indexed address_
+        Keycode indexed keycode_, uint8 indexed version_, address indexed address_
     );
 
     event ModuleSunset(Keycode indexed keycode_);
@@ -264,8 +262,9 @@ abstract contract WithModules is Owned {
         if (status.latestVersion == uint8(0)) revert ModuleNotInstalled(keycode_, 0);
 
         // Check that the module version is less than or equal to the latest version and greater than 0
-        if (version_ > status.latestVersion || version_ == 0)
+        if (version_ > status.latestVersion || version_ == 0) {
             revert ModuleNotInstalled(keycode_, version_);
+        }
 
         // Wrap into a Veecode, get module address and return
         // We don't need to check that the Veecode is valid because we already checked that the module is installed and pulled the version from the contract
@@ -309,8 +308,9 @@ abstract contract WithModules is Owned {
 
         // Check that the function is not prohibited
         bytes4 functionSelector = bytes4(callData_[:4]);
-        if (_isModuleFunctionProhibited(functionSelector))
+        if (_isModuleFunctionProhibited(functionSelector)) {
             revert ModuleFunctionProhibited(veecode_, functionSelector);
+        }
 
         (bool success, bytes memory returnData) = module.call(callData_);
         if (!success) revert ModuleExecutionReverted(returnData);

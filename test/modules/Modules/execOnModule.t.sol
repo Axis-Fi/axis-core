@@ -25,7 +25,7 @@ contract ExecOnModule is Test {
         _;
     }
 
-    function testReverts_whenUnauthorized() external whenVersion1IsInstalled() {
+    function testReverts_whenUnauthorized() external whenVersion1IsInstalled {
         address alice = address(0x1);
         Veecode veecode = mockModule.VEECODE();
 
@@ -38,13 +38,14 @@ contract ExecOnModule is Test {
     function testReverts_whenModuleNotInstalled() external {
         Veecode veecode = mockModule.VEECODE();
 
-        bytes memory err = abi.encodeWithSelector(WithModules.ModuleNotInstalled.selector, toKeycode("MOCK"), 1);
+        bytes memory err =
+            abi.encodeWithSelector(WithModules.ModuleNotInstalled.selector, toKeycode("MOCK"), 1);
         vm.expectRevert(err);
 
         withModules.execOnModule(veecode, abi.encodeWithSelector(MockModuleV1.mock.selector));
     }
 
-    function testReverts_whenFunctionIsProhibited() external whenVersion1IsInstalled() {
+    function testReverts_whenFunctionIsProhibited() external whenVersion1IsInstalled {
         Veecode veecode = mockModule.VEECODE();
 
         // Call the function
@@ -53,14 +54,18 @@ contract ExecOnModule is Test {
         // Set it as prohibited
         withModules.addProhibitedModuleFunction(MockModuleV1.prohibited.selector);
 
-        bytes memory err = abi.encodeWithSelector(WithModules.ModuleFunctionProhibited.selector, veecode, MockModuleV1.prohibited.selector);
+        bytes memory err = abi.encodeWithSelector(
+            WithModules.ModuleFunctionProhibited.selector, veecode, MockModuleV1.prohibited.selector
+        );
         vm.expectRevert(err);
 
         withModules.execOnModule(veecode, abi.encodeWithSelector(MockModuleV1.prohibited.selector));
     }
 
-    function test_success() external whenVersion1IsInstalled() {
-        bytes memory returnData = withModules.execOnModule(mockModule.VEECODE(), abi.encodeWithSelector(MockModuleV1.mock.selector));
+    function test_success() external whenVersion1IsInstalled {
+        bytes memory returnData = withModules.execOnModule(
+            mockModule.VEECODE(), abi.encodeWithSelector(MockModuleV1.mock.selector)
+        );
 
         // Decode the return data
         (bool returnValue) = abi.decode(returnData, (bool));

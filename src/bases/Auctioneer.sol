@@ -107,9 +107,8 @@ abstract contract Auctioneer is WithModules {
         // If payout is a derivative, validate derivative data on the derivative module
         if (fromKeycode(routing_.derivativeType) != bytes6(0)) {
             // Load derivative module, this checks that it is installed.
-            DerivativeModule derivativeModule = DerivativeModule(
-                _getLatestModuleIfActive(routing_.derivativeType)
-            );
+            DerivativeModule derivativeModule =
+                DerivativeModule(_getLatestModuleIfActive(routing_.derivativeType));
 
             // Call module validate function to validate implementation-specific data
             derivativeModule.validate(routing_.derivativeParams);

@@ -17,9 +17,7 @@ abstract contract Auction {
     /* ========== EVENTS ========== */
 
     event AuctionCreated(
-        uint256 indexed id,
-        address indexed payoutToken,
-        address indexed quoteToken
+        uint256 indexed id, address indexed payoutToken, address indexed quoteToken
     );
     event AuctionClosed(uint256 indexed id);
 
@@ -120,8 +118,9 @@ abstract contract AuctionModule is Auction, Module {
 
     function auction(uint256 id_, AuctionParams memory params_) external override onlyParent {
         // Start time must be zero or in the future
-        if (params_.start > 0 && params_.start < uint48(block.timestamp))
+        if (params_.start > 0 && params_.start < uint48(block.timestamp)) {
             revert Auction_InvalidParams();
+        }
 
         // Duration must be at least min duration
         if (params_.duration < minAuctionDuration) revert Auction_InvalidParams();
@@ -163,9 +162,10 @@ abstract contract AuctionModule is Auction, Module {
 
     // TODO does this need to change for batch auctions?
     function isLive(uint256 id_) public view override returns (bool) {
-        return (lotData[id_].capacity != 0 &&
-            lotData[id_].conclusion > uint48(block.timestamp) &&
-            lotData[id_].start <= uint48(block.timestamp));
+        return (
+            lotData[id_].capacity != 0 && lotData[id_].conclusion > uint48(block.timestamp)
+                && lotData[id_].start <= uint48(block.timestamp)
+        );
     }
 
     function remainingCapacity(uint256 id_) external view override returns (uint256) {
