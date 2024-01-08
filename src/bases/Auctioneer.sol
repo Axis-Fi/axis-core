@@ -8,6 +8,7 @@ import "src/modules/Auction.sol";
 import {fromKeycode, Module} from "src/modules/Modules.sol";
 
 import {DerivativeModule} from "src/modules/Derivative.sol";
+import {CondenserModule} from "src/modules/Condenser.sol";
 
 interface IHooks {}
 
@@ -153,7 +154,7 @@ abstract contract Auctioneer is WithModules {
             }
         }
 
-        // If payout is a derivative, validate derivative data on the derivative module
+        // Derivative
         Veecode derivativeType;
         bytes memory derivativeParams;
         if (fromKeycode(routing_.derivativeType) != bytes5(0)) {
@@ -175,6 +176,21 @@ abstract contract Auctioneer is WithModules {
             derivativeParams = routing_.derivativeParams;
         }
 
+        // Condenser
+        Veecode condenserType;
+        if (fromKeycode(routing_.condenserType) != bytes5(0)) {
+            // Load condenser module, this checks that it is installed.
+            CondenserModule condenserModule =
+                CondenserModule(_getLatestModuleIfActive(routing_.condenserType));
+
+            // Check that the module for the condenser type is valid
+            if (condenserModule.TYPE() != Module.Type.Condenser) {
+                revert Auctioneer_Params_InvalidType(Module.Type.Condenser, condenserModule.TYPE());
+            }
+
+            condenserType = condenserModule.VEECODE();
+        }
+
         // If allowlist is being used, validate the allowlist data and register the auction on the allowlist
         if (address(routing_.allowlist) != address(0)) {
             // TODO
@@ -189,6 +205,7 @@ abstract contract Auctioneer is WithModules {
         routing.hooks = routing_.hooks;
         routing.derivativeType = derivativeType;
         routing.derivativeParams = derivativeParams;
+        routing.condenserType = condenserType;
 
         emit AuctionCreated(lotId, address(routing.baseToken), address(routing.quoteToken));
     }

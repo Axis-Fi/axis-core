@@ -9,6 +9,7 @@ import {ERC20} from "lib/solmate/src/tokens/ERC20.sol";
 import {MockERC20} from "lib/solmate/src/test/utils/mocks/MockERC20.sol";
 import {MockAuctionModule} from "test/modules/Auction/MockAuctionModule.sol";
 import {MockDerivativeModule} from "test/modules/Derivative/MockDerivativeModule.sol";
+import {MockCondenserModule} from "test/modules/Condenser/MockCondenserModule.sol";
 
 // Auctions
 import {AuctionHouse} from "src/AuctionHouse.sol";
@@ -31,6 +32,7 @@ contract AuctionTest is Test {
     MockERC20 internal quoteToken;
     MockAuctionModule internal mockAuctionModule;
     MockDerivativeModule internal mockDerivativeModule;
+    MockCondenserModule internal mockCondenserModule;
 
     AuctionHouse internal auctionHouse;
     Auctioneer.RoutingParams internal routingParams;
@@ -43,6 +45,7 @@ contract AuctionTest is Test {
         auctionHouse = new AuctionHouse();
         mockAuctionModule = new MockAuctionModule(address(auctionHouse));
         mockDerivativeModule = new MockDerivativeModule(address(auctionHouse));
+        mockCondenserModule = new MockCondenserModule(address(auctionHouse));
 
         auctionParams = Auction.AuctionParams({
             start: uint48(block.timestamp),
@@ -76,6 +79,11 @@ contract AuctionTest is Test {
         _;
     }
 
+    modifier whenCondenserModuleIsInstalled() {
+        auctionHouse.installModule(mockCondenserModule);
+        _;
+    }
+
     // auction
     // [X] reverts when auction module is sunset
     // [X] reverts when auction module is not installed
@@ -94,11 +102,12 @@ contract AuctionTest is Test {
     // [ ] allowlist
     //  [ ] reverts when allowlist validation fails
     //  [ ] sets the allowlist on the auction lot
-    // [ ] condenser
-    //  [ ] reverts when condenser type is sunset
-    //  [ ] reverts when condenser type is not installed
-    //  [ ] reverts when condenser type is not a condenser
-    //  [ ] sets the condenser on the auction lot
+    // [X] condenser
+    //  [X] reverts when condenser type is sunset
+    //  [X] reverts when condenser type is not installed
+    //  [X] reverts when condenser type is not a condenser
+    //  [ ] reverts when compatibility check fails
+    //  [X] sets the condenser on the auction lot
     // [ ] hooks
     //  [ ] sets the hooks on the auction lot
 
@@ -358,5 +367,71 @@ contract AuctionTest is Test {
             "derivative type mismatch"
         );
         assertEq(lotDerivativeParams, abi.encode("derivative params"), "derivative params mismatch");
+    }
+
+    function testReverts_whenCondenserModuleNotInstalled() external whenAuctionModuleIsInstalled {
+        // Update routing params
+        routingParams.condenserType = toKeycode("COND");
+
+        // Expect revert
+        bytes memory err =
+            abi.encodeWithSelector(WithModules.ModuleNotInstalled.selector, toKeycode("COND"), 0);
+        vm.expectRevert(err);
+
+        auctionHouse.auction(routingParams, auctionParams);
+    }
+
+    function testReverts_whenCondenserTypeIncorrect() external whenAuctionModuleIsInstalled {
+        // Update routing params
+        routingParams.condenserType = toKeycode("MOCK");
+
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(
+            Auctioneer.Auctioneer_Params_InvalidType.selector,
+            Module.Type.Condenser,
+            Module.Type.Auction
+        );
+        vm.expectRevert(err);
+
+        auctionHouse.auction(routingParams, auctionParams);
+    }
+
+    function testReverts_whenCondenserTypeIsSunset()
+        external
+        whenAuctionModuleIsInstalled
+        whenCondenserModuleIsInstalled
+    {
+        // Sunset the module, which prevents the creation of new auctions using that module
+        auctionHouse.sunsetModule(toKeycode("COND"));
+
+        // Update routing params
+        routingParams.condenserType = toKeycode("COND");
+
+        // Expect revert
+        bytes memory err =
+            abi.encodeWithSelector(WithModules.ModuleIsSunset.selector, toKeycode("COND"));
+        vm.expectRevert(err);
+
+        auctionHouse.auction(routingParams, auctionParams);
+    }
+
+    function test_whenCondenserIsSet()
+        external
+        whenAuctionModuleIsInstalled
+        whenCondenserModuleIsInstalled
+    {
+        // Update routing params
+        routingParams.condenserType = toKeycode("COND");
+
+        // Create the auction
+        uint256 lotId = auctionHouse.auction(routingParams, auctionParams);
+
+        // Assert values
+        (,,,,,,,,, Veecode lotCondenserType) = auctionHouse.lotRouting(lotId);
+        assertEq(
+            fromVeecode(lotCondenserType),
+            fromVeecode(mockCondenserModule.VEECODE()),
+            "condenser type mismatch"
+        );
     }
 }
