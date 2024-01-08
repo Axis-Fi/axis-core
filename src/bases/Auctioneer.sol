@@ -77,18 +77,26 @@ abstract contract Auctioneer is WithModules {
 
     // ========== AUCTION MANAGEMENT ========== //
 
+    // TODO condenser version compatibility
+
     /// @notice     Creates a new auction lot
     /// @dev        The function reverts if:
     ///             - The module for the auction type is not installed
     ///             - The auction type is sunset
     ///             - The base token or quote token decimals are not within the required range
+    ///             - Validation for the auction parameters fails
     ///             - The module for the optional specified derivative type is not installed
     ///             - Validation for the optional specified derivative type fails
     ///             - Validation for the optional allowlist fails
+    ///             - The module for the optional specified condenser type is not installed
+    ///
+    /// @param      routing_    Routing information for the auction lot
+    /// @param      params_     Auction parameters for the auction lot
+    /// @return     lotId       ID of the auction lot
     function auction(
         RoutingParams calldata routing_,
         Auction.AuctionParams calldata params_
-    ) external returns (uint256 id) {
+    ) external returns (uint256 lotId) {
         // Load auction type module, this checks that it is installed.
         // We load it here vs. later to avoid two checks.
         Keycode auctionType = routing_.auctionType;
@@ -98,10 +106,10 @@ abstract contract Auctioneer is WithModules {
         if (typeSunset[auctionType]) revert HOUSE_AuctionTypeSunset(auctionType);
 
         // Increment lot count and get ID
-        id = lotCounter++;
+        lotId = lotCounter++;
 
         // Call module auction function to store implementation-specific data
-        auctionModule.auction(id, params_);
+        auctionModule.auction(lotId, params_);
 
         // Validate routing information
 
@@ -128,14 +136,14 @@ abstract contract Auctioneer is WithModules {
         }
 
         // Store routing information
-        Routing storage routing = lotRouting[id];
+        Routing storage routing = lotRouting[lotId];
         routing.auctionType = auctionType;
         routing.owner = msg.sender;
         routing.baseToken = routing_.baseToken;
         routing.quoteToken = routing_.quoteToken;
         routing.hooks = routing_.hooks;
 
-        emit AuctionCreated(id, address(routing.baseToken), address(routing.quoteToken));
+        emit AuctionCreated(lotId, address(routing.baseToken), address(routing.quoteToken));
     }
 
     function cancel(uint256 id_) external {
