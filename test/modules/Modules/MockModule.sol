@@ -11,7 +11,7 @@ contract MockModuleV1 is Module {
         return wrapVeecode(toKeycode("MOCK"), 1);
     }
 
-    function mock() external pure returns (bool) {
+    function mock() external view onlyParent returns (bool) {
         return true;
     }
 
