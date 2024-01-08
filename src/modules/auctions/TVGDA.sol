@@ -1,5 +1,5 @@
-// /// SPDX-License-Identifier: AGPL-3.0
-// pragma solidity 0.8.19;
+/// SPDX-License-Identifier: AGPL-3.0
+pragma solidity 0.8.19;
 
 // import "src/modules/auctions/bases/AtomicAuction.sol";
 // import {SD59x18, sd, convert, uUNIT} from "prb-math/SD59x18.sol";
@@ -118,5 +118,3 @@
 
 //     }
 // }
-
-

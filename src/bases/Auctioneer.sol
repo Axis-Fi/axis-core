@@ -4,7 +4,7 @@ pragma solidity 0.8.19;
 import {ERC20} from "lib/solmate/src/tokens/ERC20.sol";
 
 import "src/modules/Auction.sol";
-import {Derivative} from "src/modules/Derivative.sol";
+import {DerivativeModule} from "src/modules/Derivative.sol";
 import "src/interfaces/IHooks.sol";
 import "src/interfaces/IAllowlist.sol";
 
@@ -63,17 +63,18 @@ abstract contract Auctioneer is WithModules {
 
     // ========== AUCTION MANAGEMENT ========== //
 
-    function auction(RoutingParams calldata routing_, Auction.AuctionParams calldata params_) external returns (uint256 id) {
+    function auction(
+        RoutingParams calldata routing_,
+        Auction.AuctionParams calldata params_
+    ) external returns (uint256 id) {
         // Load auction type module, this checks that it is installed.
         // We load it here vs. later to avoid two checks.
         AuctionModule auctionModule;
         uint8 auctionVersion;
         {
-            (Module mod, uint8 version) = _getLatestModuleIfInstalled(routing_.auctionType);
-            if (moduleData[routing_.auctionType].sunset) revert ModuleSunset(routing_.auctionType);
-
-            auctionModule = AuctionModule(address(mod));
-            auctionVersion = version;
+            auctionModule = AuctionModule(_getLatestModuleIfActive(routing_.auctionType));
+            Veecode veecode = auctionModule.VEECODE();
+            ( , auctionVersion) = unwrapVeecode(veecode);
         }
 
         // Increment lot count and get ID
@@ -105,8 +106,9 @@ abstract contract Auctioneer is WithModules {
         // If payout is a derivative, validate derivative data on the derivative module
         if (fromKeycode(routing_.derivativeType) != bytes5("")) {
             // Load derivative module, this checks that it is installed.
-            (Module mod, uint8 version) = _getLatestModuleIfInstalled(routing_.derivativeType);
-            Derivative derivative = Derivative(address(mod));
+            DerivativeModule derivative = DerivativeModule(_getLatestModuleIfActive(routing_.derivativeType));
+            Veecode veecode = derivative.VEECODE();
+            ( , uint8 version) = unwrapVeecode(veecode);
 
             // Call module validate function to validate implementation-specific data
             if (!derivative.validate(routing_.derivativeParams)) revert InvalidParams();
@@ -203,7 +205,6 @@ abstract contract Auctioneer is WithModules {
         if (id_ >= lotCounter) revert InvalidLotId(id_);      
 
         // Load module, will revert if not installed
-        (Module mod, ) = _getSpecificModuleIfInstalled(lotRouting[id_].auctionType, lotRouting[id_].auctionVersion);
-        return AuctionModule(address(mod));
+        return AuctionModule(_getModuleIfInstalled(lotRouting[id_].auctionType, lotRouting[id_].auctionVersion));
     }
 }

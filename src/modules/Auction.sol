@@ -4,7 +4,6 @@ pragma solidity 0.8.19;
 import "src/modules/Modules.sol";
 
 abstract contract Auction {
-
     /* ========== ERRORS ========== */
 
     error Auction_OnlyMarketOwner();
@@ -18,9 +17,7 @@ abstract contract Auction {
     /* ========== EVENTS ========== */
 
     event AuctionCreated(
-        uint256 indexed id,
-        address indexed payoutToken,
-        address indexed quoteToken
+        uint256 indexed id, address indexed payoutToken, address indexed quoteToken
     );
     event AuctionClosed(uint256 indexed id);
 
@@ -74,7 +71,10 @@ abstract contract Auction {
 
     // Off-chain auction variant
     // TODO use solady data packing library to make bids smaller on the actual module to store?
-    function settle(uint256 id_, Bid[] memory bids_) external virtual returns (uint256[] memory amountsOut);
+    function settle(
+        uint256 id_,
+        Bid[] memory bids_
+    ) external virtual returns (uint256[] memory amountsOut);
 
     // ========== AUCTION MANAGEMENT ========== //
 
@@ -94,7 +94,7 @@ abstract contract Auction {
 
     function isLive(uint256 id_) public view virtual returns (bool);
 
-    function remainingCapacity(uint256 id_) external view virtual returns (uint256); 
+    function remainingCapacity(uint256 id_) external view virtual returns (uint256);
 }
 
 abstract contract AuctionModule is Auction, Module {
@@ -107,12 +107,12 @@ abstract contract AuctionModule is Auction, Module {
 
     function auction(uint256 id_, AuctionParams memory params_) external override onlyParent {
         // Start time must be zero or in the future
-        if (params_.start > 0 && params_.start < uint48(block.timestamp))
+        if (params_.start > 0 && params_.start < uint48(block.timestamp)) {
             revert Auction_InvalidParams();
+        }
 
         // Duration must be at least min duration
         if (params_.duration < minAuctionDuration) revert Auction_InvalidParams();
-
 
         // Create core market data
         Lot memory lot;
@@ -151,9 +151,10 @@ abstract contract AuctionModule is Auction, Module {
 
     // TODO does this need to change for batch auctions?
     function isLive(uint256 id_) public view override returns (bool) {
-        return (lotData[id_].capacity != 0 &&
-            lotData[id_].conclusion > uint48(block.timestamp) &&
-            lotData[id_].start <= uint48(block.timestamp));
+        return (
+            lotData[id_].capacity != 0 && lotData[id_].conclusion > uint48(block.timestamp)
+                && lotData[id_].start <= uint48(block.timestamp)
+        );
     }
 
     function remainingCapacity(uint256 id_) external view override returns (uint256) {

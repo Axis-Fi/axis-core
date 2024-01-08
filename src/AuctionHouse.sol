@@ -1,21 +1,28 @@
 /// SPDX-License-Identifier: AGPL-3.0
 pragma solidity 0.8.19;
 
-import {SafeTransferLib} from "solmate/utils/SafeTransferLib.sol";
-import {EIP712} from "solady/utils/EIP712.sol";
-import {SignatureCheckerLib} from "solady/utils/SignatureCheckerLib.sol";
+import {ERC20} from "lib/solmate/src/tokens/ERC20.sol";
+import {SafeTransferLib} from "lib/solmate/src/utils/SafeTransferLib.sol";
+import {EIP712} from "lib/solady/src/utils/EIP712.sol";
+import {SignatureCheckerLib} from "lib/solady/src/utils/SignatureCheckerLib.sol";
+import {Owned} from "lib/solmate/src/auth/Owned.sol";
 
-import "src/bases/Derivatizer.sol";
-import "src/bases/Auctioneer.sol";
-import "src/modules/Condenser.sol";
+import {Derivatizer} from "src/bases/Derivatizer.sol";
+import {Auctioneer} from "src/bases/Auctioneer.sol";
+import {CondenserModule} from "src/modules/Condenser.sol";
+
+import {DerivativeModule} from "src/modules/Derivative.sol";
+
+import {Auction, AuctionModule} from "src/modules/Auction.sol";
+
+import {fromKeycode, WithModules} from "src/modules/Modules.sol";
 
 abstract contract FeeManager {
-    // TODO write fee logic in separate contract to keep it organized
-    // Router can inherit
+// TODO write fee logic in separate contract to keep it organized
+// Router can inherit
 }
 
 abstract contract Router is FeeManager {
-
     // ========== STATE VARIABLES ========== //
 
     /// @notice Fee paid to a front end operator in basis points (3 decimals). Set by the referrer, must be less than or equal to 5% (5e3).
@@ -49,17 +56,36 @@ abstract contract Router is FeeManager {
     // ========== ATOMIC AUCTIONS ========== //
 
     /// @param approval_ - (Optional) Permit approval signature for the quoteToken
-    function purchase(address recipient_, address referrer_, uint256 id_, uint256 amount_, uint256 minAmountOut_, bytes calldata auctionData_, bytes calldata approval_) external virtual returns (uint256 payout);
+    function purchase(
+        address recipient_,
+        address referrer_,
+        uint256 id_,
+        uint256 amount_,
+        uint256 minAmountOut_,
+        bytes calldata auctionData_,
+        bytes calldata approval_
+    ) external virtual returns (uint256 payout);
 
     // ========== BATCH AUCTIONS ========== //
 
     // On-chain auction variant
-    function bid(address recipient_, address referrer_, uint256 id_, uint256 amount_, uint256 minAmountOut_, bytes calldata auctionData_, bytes calldata approval_) external virtual;
+    function bid(
+        address recipient_,
+        address referrer_,
+        uint256 id_,
+        uint256 amount_,
+        uint256 minAmountOut_,
+        bytes calldata auctionData_,
+        bytes calldata approval_
+    ) external virtual;
 
     function settle(uint256 id_) external virtual returns (uint256[] memory amountsOut);
 
     // Off-chain auction variant
-    function settle(uint256 id_, Auction.Bid[] memory bids_) external virtual returns (uint256[] memory amountsOut);
+    function settle(
+        uint256 id_,
+        Auction.Bid[] memory bids_
+    ) external virtual returns (uint256[] memory amountsOut);
 }
 
 // TODO abstract for now so compiler doesn't complain
@@ -77,24 +103,33 @@ abstract contract AuctionHouse is Derivatizer, Auctioneer, Router {
     event Purchase(uint256 id, address buyer, address referrer, uint256 amount, uint256 payout);
 
     // ========== CONSTRUCTOR ========== //
-    constructor(address protocol_) Router(protocol_) {}
+    constructor(address protocol_) Router(protocol_) WithModules(msg.sender) {}
 
     // ========== DIRECT EXECUTION ========== //
 
-    function purchase(address recipient_, address referrer_, uint256 id_, uint256 amount_, uint256 minAmountOut_, bytes calldata auctionData_, bytes calldata approval_) external override returns (uint256 payout) {
+    function purchase(
+        address recipient_,
+        address referrer_,
+        uint256 id_,
+        uint256 amount_,
+        uint256 minAmountOut_,
+        bytes calldata auctionData_,
+        bytes calldata approval_
+    ) external override returns (uint256 payout) {
         AuctionModule module = _getModuleForId(id_);
 
         // TODO should this not check if the auction is atomic?
-        // Response: No, my thought was that the module will just revert on `purchase` if it's not atomic. Vice versa 
+        // Response: No, my thought was that the module will just revert on `purchase` if it's not atomic. Vice versa
 
         // Calculate fees for purchase
         // 1. Calculate referrer fee
         // 2. Calculate protocol fee as the total expected fee amount minus the referrer fee
         //    to avoid issues with rounding from separate fee calculations
         // TODO think about how to reduce storage loads
-        uint256 toReferrer = referrer_ == address(0) ? 0 : (amount_ * referrerFees[referrer_]) / FEE_DECIMALS;
-        uint256 toProtocol = ((amount_ * (protocolFee + referrerFees[referrer_])) / FEE_DECIMALS) -
-            toReferrer;
+        uint256 toReferrer =
+            referrer_ == address(0) ? 0 : (amount_ * referrerFees[referrer_]) / FEE_DECIMALS;
+        uint256 toProtocol =
+            ((amount_ * (protocolFee + referrerFees[referrer_])) / FEE_DECIMALS) - toReferrer;
 
         // Load routing data for the lot
         Routing memory routing = lotRouting[id_];
@@ -121,9 +156,7 @@ abstract contract AuctionHouse is Derivatizer, Auctioneer, Router {
         emit Purchase(id_, msg.sender, referrer_, amount_, payout);
     }
 
-
     // ============ DELEGATED EXECUTION ========== //
-
 
     // ============ INTERNAL EXECUTION FUNCTIONS ========== //
 
@@ -194,18 +227,19 @@ abstract contract AuctionHouse is Derivatizer, Auctioneer, Router {
         } else {
             // Get the module for the derivative type
             // We assume that the module type has been checked when the lot was created
-            DerivativeModule module = _getSpecificDerivativeModule(routing_.derivativeType, routing_.derivativeVersion);
+            DerivativeModule module = DerivativeModule(_getModuleIfInstalled(routing_.derivativeType, routing_.derivativeVersion));
 
             bytes memory derivativeParams = routing_.derivativeParams;
             
             // TODO lookup condensor module from combination of auction and derivative types
             // If condenser specified, condense auction output and derivative params before sending to derivative module
             if (fromKeycode(routing_.condenserType) != bytes5("")) {
-               // Get condenser module
-                // CondenserModule condenser = CondenserModule(_getModuleIfInstalled(routing_.condenserType));
+                // Get condenser module
+                CondenserModule condenser =
+                    CondenserModule(_getLatestModuleIfActive(routing_.condenserType));
 
                 // Condense auction output and derivative params
-                // derivativeParams = condenser.condense(auctionOutput_, derivativeParams);
+                derivativeParams = condenser.condense(auctionOutput_, derivativeParams);
             }
 
             // Approve the module to transfer payout tokens

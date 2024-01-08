@@ -107,7 +107,7 @@ classDiagram
   AuctionModule ..> Auctioneer
 
   DerivativeModule ..> Derivatizer
-  
+
   CondenserModule ..> AuctionHouse
   Auctioneer --|> AuctionHouse
   Derivatizer --|> AuctionHouse
@@ -198,20 +198,20 @@ classDiagram
 
   AuctionModule --|> GDA
   AuctionModule --|> TVGDA
-  
+
   DerivativeModule --|> CliffVesting
   DerivativeModule --|> StakedCliffVesting
   DerivativeModule --|> RageVesting
   DerivativeModule --|> FixedStrikeOption
   DerivativeModule --|> SuccessToken
 
-  
+
 ```
 
 ### TODOs
-- [ ] Add section for Auction and Derivative module implementations after we prioritize which ones to build first
-- [ ] Create a function or add return values so that a solver / user can determine the derivative token that a market will return (useful for then creating off-chain orders for that token). This also brings up a point about how certain auction view functions that rely solely on an amount need to be refactored for a multi-variate auction world, e.g. `payoutFor(uint256)` -> `payoutFor(uint256, bytes)`
 
+-   [ ] Add section for Auction and Derivative module implementations after we prioritize which ones to build first
+-   [ ] Create a function or add return values so that a solver / user can determine the derivative token that a market will return (useful for then creating off-chain orders for that token). This also brings up a point about how certain auction view functions that rely solely on an amount need to be refactored for a multi-variate auction world, e.g. `payoutFor(uint256)` -> `payoutFor(uint256, bytes)`
 
 ## Processes
 
@@ -234,7 +234,7 @@ sequenceDiagram
       AtomicAuctionModule->>AtomicAuctionModule: _auction(uint256 id, Lot lot, bytes implParams)
       Note right of AtomicAuctionModule: module-specific actions
 
-      AtomicAuctionModule-->>AuctionHouse: 
+      AtomicAuctionModule-->>AuctionHouse:
     deactivate AtomicAuctionModule
 
     Note over AuctionHouse: store routing information
@@ -252,7 +252,7 @@ sequenceDiagram
   autoNumber
   participant Buyer
   participant AuctionHouse
-  
+
   activate AuctionHouse
     Buyer->>AuctionHouse: purchase(address recipient, address referrer, uint256 auctionId, uint256 amount, uint256 minAmountOut, bytes approval)
     AuctionHouse->>AuctionHouse: _getModuleForId(uint256 auctionId)
@@ -382,7 +382,7 @@ sequenceDiagram
 
   activate AuctionHouse
     AuctionOwner->>AuctionHouse: close(uint256 id)
-    
+
     AuctionHouse->>AuctionHouse: _getModuleForId(id)
 
     AuctionHouse->>AuctionHouse: lotRouting(id)
@@ -394,7 +394,7 @@ sequenceDiagram
       AuctionHouse-->>AuctionOwner: returns
     else
       AuctionHouse->>AuctionOwner: revert
-    end    
+    end
   deactivate AuctionHouse
 ```
 
@@ -456,8 +456,8 @@ sequenceDiagram
 
   deactivate AuctionHouse
 ```
-Need to think about the implications of transferring to/from the AuctionOwner once here, because _handleTransfers is not currently designed for this.
 
+Need to think about the implications of transferring to/from the AuctionOwner once here, because \_handleTransfers is not currently designed for this.
 
 ### User Redeems Derivative Token - V1 (through AuctionHouse, requires refactoring AuctionModule)
 
@@ -482,7 +482,7 @@ sequenceDiagram
         DerivativeModule->>DerivativeToken: burn(user, amount)
         destroy DerivativeToken
         User-->>DerivativeToken: derivative tokens burned
-      else 
+      else
         DerivativeModule->>DerivativeModule: burn(tokenId, user, amount)
         User-->>DerivativeModule: derivative tokens burned
       end
@@ -508,7 +508,7 @@ sequenceDiagram
       DerivativeModule->>DerivativeToken: burn(user, amount)
       destroy DerivativeToken
       User-->>DerivativeToken: derivative tokens burned
-    else 
+    else
       DerivativeModule->>DerivativeModule: burn(tokenId, user, amount)
       User-->>DerivativeModule: derivative tokens burned
     end
@@ -554,5 +554,6 @@ sequenceDiagram
 ```
 
 ### Create Auction by transforming one Derivative to another
+
 TODO determine if it makes sense to build this as a specific workflow within the system.
 It's a bit of an edge case and will add several variables to the auction creation process that are optional.

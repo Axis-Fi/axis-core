@@ -4,13 +4,12 @@ pragma solidity 0.8.19;
 import "src/modules/Derivative.sol";
 
 abstract contract Derivatizer is WithModules {
-
     // ========== DERIVATIVE MANAGEMENT ========== //
 
     // Return address will be zero if not wrapped
     function deploy(Keycode dType, bytes memory data, bool wrapped) external virtual returns (uint256, address) {
         // Load the derivative module, will revert if not installed or sunset
-        DerivativeModule derivative = _getLatestDerivativeModule(dType);
+        DerivativeModule derivative = DerivativeModule(_getLatestModuleIfActive(dType));
 
         // Call the deploy function on the derivative module
         (uint256 tokenId, address wrappedToken) = derivative.deploy(data, wrapped);
@@ -18,8 +17,16 @@ abstract contract Derivatizer is WithModules {
         return (tokenId, wrappedToken);
     }
 
-    function mint(bytes memory data, uint256 amount, bool wrapped) external virtual returns (bytes memory);
-    function mint(uint256 tokenId, uint256 amount, bool wrapped) external virtual returns (bytes memory);
+    function mint(
+        bytes memory data,
+        uint256 amount,
+        bool wrapped
+    ) external virtual returns (bytes memory);
+    function mint(
+        uint256 tokenId,
+        uint256 amount,
+        bool wrapped
+    ) external virtual returns (bytes memory);
 
     function redeem(bytes memory data, uint256 amount) external virtual;
 
@@ -39,23 +46,16 @@ abstract contract Derivatizer is WithModules {
 
     // TODO view function to format implementation specific token data correctly and return to user
 
-    function exerciseCost(bytes memory data, uint256 amount) external view virtual returns (uint256);
+    function exerciseCost(
+        bytes memory data,
+        uint256 amount
+    ) external view virtual returns (uint256);
 
-    function convertsTo(bytes memory data, uint256 amount) external view virtual returns (uint256);
+    function convertsTo(
+        bytes memory data,
+        uint256 amount
+    ) external view virtual returns (uint256);
 
     // Compute unique token ID for params on the submodule
     function computeId(bytes memory params_) external pure virtual returns (uint256);
-
-    // ========== INTERNAL FUNCTIONS ========== //
-
-    function _getLatestDerivativeModule(Keycode keycode_) internal view returns (DerivativeModule) {
-        (Module mod, ) = _getLatestModuleIfInstalled(keycode_);
-        if (moduleData[keycode_].sunset) revert ModuleSunset(keycode_);
-        return DerivativeModule(address(mod));
-    }
-
-    function _getSpecificDerivativeModule(Keycode keycode_, uint8 version_) internal view returns (DerivativeModule) {
-        (Module mod, ) = _getSpecificModuleIfInstalled(keycode_, version_);
-        return DerivativeModule(address(mod));
-    }
 }
