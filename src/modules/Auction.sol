@@ -60,12 +60,21 @@ abstract contract Auction {
 
     // ========== ATOMIC AUCTIONS ========== //
 
-    function purchase(uint256 id_, uint256 amount_, bytes calldata auctionData_) external virtual returns (uint256 payout, bytes memory auctionOutput);
+    function purchase(
+        uint256 id_,
+        uint256 amount_,
+        bytes calldata auctionData_
+    ) external virtual returns (uint256 payout, bytes memory auctionOutput);
 
     // ========== BATCH AUCTIONS ========== //
 
     // On-chain auction variant
-    function bid(uint256 id_, uint256 amount_, uint256 minAmountOut_, bytes calldata auctionData_) external virtual;
+    function bid(
+        uint256 id_,
+        uint256 amount_,
+        uint256 minAmountOut_,
+        bytes calldata auctionData_
+    ) external virtual;
 
     function settle(uint256 id_) external virtual returns (uint256[] memory amountsOut);
 
@@ -98,7 +107,6 @@ abstract contract Auction {
 }
 
 abstract contract AuctionModule is Auction, Module {
-
     // ========== CONSTRUCTOR ========== //
 
     constructor(address auctionHouse_) Module(auctionHouse_) {}

@@ -136,7 +136,8 @@ abstract contract AuctionHouse is Derivatizer, Auctioneer, Router {
 
         // Send purchase to auction house and get payout plus any extra output
         bytes memory auctionOutput;
-        (payout, auctionOutput) = module.purchase(id_, amount_ - toReferrer - toProtocol, auctionData_);
+        (payout, auctionOutput) =
+            module.purchase(id_, amount_ - toReferrer - toProtocol, auctionData_);
 
         // Check that payout is at least minimum amount out
         // @dev Moved the slippage check from the auction to the AuctionHouse to allow different routing and purchase logic
@@ -181,8 +182,9 @@ abstract contract AuctionHouse is Derivatizer, Auctioneer, Router {
         // Handles edge cases like fee-on-transfer tokens (which are not supported)
         uint256 quoteBalance = routing_.quoteToken.balanceOf(address(this));
         routing_.quoteToken.safeTransferFrom(msg.sender, address(this), amount_);
-        if (routing_.quoteToken.balanceOf(address(this)) < quoteBalance + amount_)
+        if (routing_.quoteToken.balanceOf(address(this)) < quoteBalance + amount_) {
             revert UnsupportedToken(routing_.quoteToken);
+        }
 
         // If callback address supplied, transfer tokens from teller to callback, then execute callback function,
         // and ensure proper amount of tokens transferred in.
@@ -196,8 +198,9 @@ abstract contract AuctionHouse is Derivatizer, Auctioneer, Router {
             routing_.hooks.mid(id_, amountLessFee, payout_);
 
             // Check to ensure that the callback sent the requested amount of payout tokens back to the teller
-            if (routing_.baseToken.balanceOf(address(this)) < (baseBalance + payout_))
+            if (routing_.baseToken.balanceOf(address(this)) < (baseBalance + payout_)) {
                 revert InvalidHook();
+            }
         } else {
             // If no callback is provided, transfer tokens from market owner to this contract
             // for payout.
@@ -205,8 +208,9 @@ abstract contract AuctionHouse is Derivatizer, Auctioneer, Router {
             // Handles edge cases like fee-on-transfer tokens (which are not supported)
             uint256 baseBalance = routing_.baseToken.balanceOf(address(this));
             routing_.baseToken.safeTransferFrom(routing_.owner, address(this), payout_);
-            if (routing_.baseToken.balanceOf(address(this)) < (baseBalance + payout_))
+            if (routing_.baseToken.balanceOf(address(this)) < (baseBalance + payout_)) {
                 revert UnsupportedToken(routing_.baseToken);
+            }
 
             routing_.quoteToken.safeTransfer(routing_.owner, amountLessFee);
         }
@@ -227,10 +231,12 @@ abstract contract AuctionHouse is Derivatizer, Auctioneer, Router {
         } else {
             // Get the module for the derivative type
             // We assume that the module type has been checked when the lot was created
-            DerivativeModule module = DerivativeModule(_getModuleIfInstalled(routing_.derivativeType, routing_.derivativeVersion));
+            DerivativeModule module = DerivativeModule(
+                _getModuleIfInstalled(routing_.derivativeType, routing_.derivativeVersion)
+            );
 
             bytes memory derivativeParams = routing_.derivativeParams;
-            
+
             // TODO lookup condensor module from combination of auction and derivative types
             // If condenser specified, condense auction output and derivative params before sending to derivative module
             if (fromKeycode(routing_.condenserType) != bytes5("")) {
@@ -246,7 +252,7 @@ abstract contract AuctionHouse is Derivatizer, Auctioneer, Router {
             routing_.baseToken.safeApprove(address(module), payout_);
 
             // Call the module to mint derivative tokens to the recipient
-            module.mint(recipient_,derivativeParams, payout_, routing_.wrapDerivative);
-        } 
+            module.mint(recipient_, derivativeParams, payout_, routing_.wrapDerivative);
+        }
     }
 }

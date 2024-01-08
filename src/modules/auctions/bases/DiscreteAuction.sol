@@ -142,7 +142,7 @@ pragma solidity 0.8.19;
 //     /// @dev This function is gated by onlyParent because it does not include any fee logic, which is applied in the parent contract
 //     function payoutFor(uint256 id_, uint256 amount_) public view override onlyParent returns (uint256) {
 //         // TODO handle payout greater than max payout - revert?
-        
+
 //         // Calculate payout for amount of quote tokens
 //         return amount_.mulDiv(styleData[id_].scale, auctionPrice(id_));
 //     }

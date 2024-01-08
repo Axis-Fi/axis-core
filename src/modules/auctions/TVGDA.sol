@@ -28,7 +28,7 @@ pragma solidity 0.8.19;
 // }
 
 // contract TwoVariableGradualDutchAuctioneer is AtomicAuctionModule, TVGDA {
-    
+
 //     /* ========== CONSTRUCTOR ========== */
 
 //     constructor(
@@ -58,8 +58,8 @@ pragma solidity 0.8.19;
 //         // Calculate scale from payout token decimals
 //         uint256 payoutScale = 10 ** uint256(lot_.payoutToken.decimals());
 //         uint256 quoteScale = 10 ** uint256(lot_.quoteToken.decimals());
-        
-//         // Calculate emissions rate        
+
+//         // Calculate emissions rate
 //         uint256 payoutCapacity = lot_.capacityInQuote ? lot_.capacity.mulDiv(payoutScale, equilibriumPrice_) : lot_.capacity;
 //         SD59x18 emissionsRate = sd(int256(payoutCapacity.mulDiv(uUNIT, (lot_.conclusion - lot_.start) * payoutScale)));
 

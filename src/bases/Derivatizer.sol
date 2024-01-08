@@ -7,7 +7,11 @@ abstract contract Derivatizer is WithModules {
     // ========== DERIVATIVE MANAGEMENT ========== //
 
     // Return address will be zero if not wrapped
-    function deploy(Keycode dType, bytes memory data, bool wrapped) external virtual returns (uint256, address) {
+    function deploy(
+        Keycode dType,
+        bytes memory data,
+        bool wrapped
+    ) external virtual returns (uint256, address) {
         // Load the derivative module, will revert if not installed or sunset
         DerivativeModule derivative = DerivativeModule(_getLatestModuleIfActive(dType));
 

@@ -9,7 +9,6 @@ import "src/interfaces/IHooks.sol";
 import "src/interfaces/IAllowlist.sol";
 
 abstract contract Auctioneer is WithModules {
-
     // ========= ERRORS ========= //
     error InvalidParams();
     error InvalidLotId(uint256 id_);
@@ -17,7 +16,6 @@ abstract contract Auctioneer is WithModules {
 
     // ========= EVENTS ========= //
     event AuctionCreated(uint256 id, address baseToken, address quoteToken);
-
 
     // ========= DATA STRUCTURES ========== //
 
@@ -74,7 +72,7 @@ abstract contract Auctioneer is WithModules {
         {
             auctionModule = AuctionModule(_getLatestModuleIfActive(routing_.auctionType));
             Veecode veecode = auctionModule.VEECODE();
-            ( , auctionVersion) = unwrapVeecode(veecode);
+            (, auctionVersion) = unwrapVeecode(veecode);
         }
 
         // Increment lot count and get ID
@@ -89,10 +87,12 @@ abstract contract Auctioneer is WithModules {
         uint8 baseTokenDecimals = routing_.baseToken.decimals();
         uint8 quoteTokenDecimals = routing_.quoteToken.decimals();
 
-        if (baseTokenDecimals < 6 || baseTokenDecimals > 18)
+        if (baseTokenDecimals < 6 || baseTokenDecimals > 18) {
             revert InvalidParams();
-        if (quoteTokenDecimals < 6 || quoteTokenDecimals > 18)
+        }
+        if (quoteTokenDecimals < 6 || quoteTokenDecimals > 18) {
             revert InvalidParams();
+        }
 
         // Store routing information
         Routing storage routing = lotRouting[id];
@@ -106,9 +106,10 @@ abstract contract Auctioneer is WithModules {
         // If payout is a derivative, validate derivative data on the derivative module
         if (fromKeycode(routing_.derivativeType) != bytes5("")) {
             // Load derivative module, this checks that it is installed.
-            DerivativeModule derivative = DerivativeModule(_getLatestModuleIfActive(routing_.derivativeType));
+            DerivativeModule derivative =
+                DerivativeModule(_getLatestModuleIfActive(routing_.derivativeType));
             Veecode veecode = derivative.VEECODE();
-            ( , uint8 version) = unwrapVeecode(veecode);
+            (, uint8 version) = unwrapVeecode(veecode);
 
             // Call module validate function to validate implementation-specific data
             if (!derivative.validate(routing_.derivativeParams)) revert InvalidParams();
@@ -202,9 +203,11 @@ abstract contract Auctioneer is WithModules {
 
     function _getModuleForId(uint256 id_) internal view returns (AuctionModule) {
         // Confirm lot ID is valid
-        if (id_ >= lotCounter) revert InvalidLotId(id_);      
+        if (id_ >= lotCounter) revert InvalidLotId(id_);
 
         // Load module, will revert if not installed
-        return AuctionModule(_getModuleIfInstalled(lotRouting[id_].auctionType, lotRouting[id_].auctionVersion));
+        return AuctionModule(
+            _getModuleIfInstalled(lotRouting[id_].auctionType, lotRouting[id_].auctionVersion)
+        );
     }
 }

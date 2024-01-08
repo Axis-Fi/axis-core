@@ -66,8 +66,7 @@ pragma solidity 0.8.19;
 //         uint256 baseScale = 10 ** uint256(lot_.baseToken.decimals());
 //         uint256 quoteScale = 10 ** uint256(lot_.quoteToken.decimals());
 
-        
-//         // Calculate emissions rate        
+//         // Calculate emissions rate
 //         uint256 baseCapacity = lot_.capacityInQuote ? lot_.capacity.mulDiv(baseScale, equilibriumPrice_) : lot_.capacity;
 //         SD59x18 emissionsRate = sd(int256(baseCapacity.mulDiv(uUNIT, (lot_.conclusion - lot_.start) * baseScale)));
 
@@ -219,7 +218,7 @@ pragma solidity 0.8.19;
 //     ) internal view returns (uint256, uint48) {
 //         AuctionData memory auction = auctionData[id_];
 
-//         // Convert to 18 decimals for fixed math by pre-computing the Q / p0 factor 
+//         // Convert to 18 decimals for fixed math by pre-computing the Q / p0 factor
 //         SD59x18 scaledQ = sd(
 //             int256(
 //                 amount_.mulDiv(auction.uUNIT, auction.equilibriumPrice)
@@ -271,7 +270,7 @@ pragma solidity 0.8.19;
 //     function _payoutForLinearDecay(uint256 id_, uint256 amount_) internal view returns (uint256) {
 //         AuctionData memory auction = auctionData[id_];
 
-//         // Convert to 18 decimals for fixed math by pre-computing the Q / p0 factor 
+//         // Convert to 18 decimals for fixed math by pre-computing the Q / p0 factor
 //         SD59x18 scaledQ = sd(
 //             int256(amount_.mulDiv(uUNIT, auction.equilibriumPrice))
 //         );

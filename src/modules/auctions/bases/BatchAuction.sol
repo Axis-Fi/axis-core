@@ -19,7 +19,7 @@ pragma solidity 0.8.19;
 // //    - duration (start & conclusion)
 // //    - allowlist
 // //    - amount sold & amount purchased - do we need to track this since it is just for historical purposes? can we emit the data in an event?
-// //    - minimum value to settle auction - minimum value for whatever parameter is being auctioned. 
+// //    - minimum value to settle auction - minimum value for whatever parameter is being auctioned.
 // //      need to think if we need to have a maximum value option, but it can probably just use an inverse.
 // //    - info to tell the teller what the auctioned value is and how to settle the auction. need to think on this more
 
@@ -36,7 +36,6 @@ pragma solidity 0.8.19;
 
 //     // TODO add batch auction specific getters
 // }
-
 
 // abstract contract OnChainBatchAuctionModule is AuctionModule, BatchAuction {
 
@@ -76,7 +75,7 @@ pragma solidity 0.8.19;
 //     function settle(uint256 id_) external override onlyParent returns (uint256[] memory amountsOut) {
 //         revert Auction_NotImplemented();
 //     }
-    
+
 //     /// @notice Settle a batch auction with the provided bids
 //     function settle(uint256 id_, Bid[] memory bids_) external override onlyParent returns (uint256[] memory amountsOut) {
 //         Lot storage lot = lotData[id_];

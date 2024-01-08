@@ -20,7 +20,6 @@ pragma solidity 0.8.19;
 //         uint48 expiry;
 //     }
 
-
 //     // ========== MODULE SETUP ========== //
 
 //     constructor(Module parent_) Module(parent_) {}
@@ -72,72 +71,71 @@ pragma solidity 0.8.19;
 //         // // Get address of fixed expiry token using salt
 //         // address feToken = ClonesWithImmutableArgs.addressOfClone3(salt);
 
-        // // Check if the token already exists. If not, deploy it.
-        // if (feToken.code.length == 0) {
-        //     (string memory name, string memory symbol) = _getNameAndSymbol(underlying_, expiry);
-        //     bytes memory tokenData = abi.encodePacked(
-        //         bytes32(bytes(name)),
-        //         bytes32(bytes(symbol)),
-        //         uint8(base.decimals()),
-        //         base,
-        //         uint256(expiry),
-        //         address(this)
-        //     );
-        //     feToken = address(dStore.implementation).clone3(tokenData, salt);
-        //     emit FixedExpiryERC20Created(feToken, base, expiry);
-        // }
-        // return bytes32(uint256(uint160(feToken)));
-    // }
+// // Check if the token already exists. If not, deploy it.
+// if (feToken.code.length == 0) {
+//     (string memory name, string memory symbol) = _getNameAndSymbol(underlying_, expiry);
+//     bytes memory tokenData = abi.encodePacked(
+//         bytes32(bytes(name)),
+//         bytes32(bytes(symbol)),
+//         uint8(base.decimals()),
+//         base,
+//         uint256(expiry),
+//         address(this)
+//     );
+//     feToken = address(dStore.implementation).clone3(tokenData, salt);
+//     emit FixedExpiryERC20Created(feToken, base, expiry);
+// }
+// return bytes32(uint256(uint160(feToken)));
+// }
 
 //     function create(bytes memory data, uint256 amount) external override onlyParent returns (bytes memory) {}
 
-    // function redeem(bytes memory data, uint256 amount) external override onlyParent {}
+// function redeem(bytes memory data, uint256 amount) external override onlyParent {}
 
-    // // function batchRedeem(bytes[] memory data, uint256[] memory amounts) external override {}
+// // function batchRedeem(bytes[] memory data, uint256[] memory amounts) external override {}
 
-    // function exercise(bytes memory data, uint256 amount) external override {}
+// function exercise(bytes memory data, uint256 amount) external override {}
 
-    // function reclaim(bytes memory data) external override {}
+// function reclaim(bytes memory data) external override {}
 
-    // function convert(bytes memory data, uint256 amount) external override {}
+// function convert(bytes memory data, uint256 amount) external override {}
 
-    // // ========== DERIVATIVE INFORMATION ========== //
+// // ========== DERIVATIVE INFORMATION ========== //
 
-    // function exerciseCost(bytes memory data, uint256 amount) external view override returns (uint256) {}
+// function exerciseCost(bytes memory data, uint256 amount) external view override returns (uint256) {}
 
-    // function convertsTo(bytes memory data, uint256 amount) external view override returns (uint256) {}
+// function convertsTo(bytes memory data, uint256 amount) external view override returns (uint256) {}
 
-    // function derivativeForMarket(uint256 id_) external view override returns (bytes memory) {}
+// function derivativeForMarket(uint256 id_) external view override returns (bytes memory) {}
 
-    // // ========== INTERNAL FUNCTIONS ========== //
+// // ========== INTERNAL FUNCTIONS ========== //
 
-    // // unique to this submodule by using the hash of the params and then hashing again with the subkeycode
-    // function _computeId(ERC20 base_, uint48 expiry_) internal pure returns (uint256) {
-    //     return uint256(keccak256(
-    //         abi.encodePacked(
-    //             SUBKEYCODE(),
-    //             keccak256(
-    //                 abi.encode(
-    //                     base_,
-    //                     expiry_
-    //                 )
-    //             )
-    //         )
-    //     ));
-    // }
+// // unique to this submodule by using the hash of the params and then hashing again with the subkeycode
+// function _computeId(ERC20 base_, uint48 expiry_) internal pure returns (uint256) {
+//     return uint256(keccak256(
+//         abi.encodePacked(
+//             SUBKEYCODE(),
+//             keccak256(
+//                 abi.encode(
+//                     base_,
+//                     expiry_
+//                 )
+//             )
+//         )
+//     ));
+// }
 
-    // function _decodeAndNormalize(bytes memory params_) internal pure returns (ERC20 base, uint48 expiry) {
-    //     (base, expiry) = abi.decode(params_, (ERC20, uint48));
+// function _decodeAndNormalize(bytes memory params_) internal pure returns (ERC20 base, uint48 expiry) {
+//     (base, expiry) = abi.decode(params_, (ERC20, uint48));
 
-    //     // Expiry is rounded to the nearest day at 0000 UTC (in seconds) since fixed expiry tokens
-    //     // are only unique to a day, not a specific timestamp.
-    //     expiry = uint48(expiry / 1 days) * 1 days;
-    // }
+//     // Expiry is rounded to the nearest day at 0000 UTC (in seconds) since fixed expiry tokens
+//     // are only unique to a day, not a specific timestamp.
+//     expiry = uint48(expiry / 1 days) * 1 days;
+// }
 
-    // function computeId(bytes memory params_) external pure override returns (uint256) {
-    //     (ERC20 base, uint48 expiry) = _decodeAndNormalize(params_);
-    //     return _computeId(base, expiry);
-    // }
-
+// function computeId(bytes memory params_) external pure override returns (uint256) {
+//     (ERC20 base, uint48 expiry) = _decodeAndNormalize(params_);
+//     return _computeId(base, expiry);
+// }
 
 // }
