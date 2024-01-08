@@ -69,6 +69,17 @@ contract ExecOnModule is Test {
         assertEq(returnValue, true);
     }
 
+    function testReverts_whenFunctionIsOnlyParent_whenExternalIsCalling()
+        external
+        whenVersion1IsInstalled
+    {
+        bytes memory err = abi.encodeWithSelector(Module.Module_OnlyParent.selector, address(this));
+        vm.expectRevert(err);
+
+        // Mimic the parent contract calling a protected function directly
+        mockModule.mock();
+    }
+
     function testReverts_whenFunctionIsOnlyInternal_whenExternalIsCalling()
         external
         whenVersion1IsInstalled
