@@ -7,8 +7,7 @@ pragma solidity ^0.8.4;
 /// @notice Enables creating clone contracts with immutable args
 library ClonesWithImmutableArgs {
     /// @dev The CREATE3 proxy bytecode.
-    uint256 private constant _CREATE3_PROXY_BYTECODE =
-        0x67363d3d37363d34f03d5260086018f3;
+    uint256 private constant _CREATE3_PROXY_BYTECODE = 0x67363d3d37363d34f03d5260086018f3;
 
     /// @dev Hash of the `_CREATE3_PROXY_BYTECODE`.
     /// Equivalent to `keccak256(abi.encodePacked(hex"67363d3d37363d34f03d5260086018f3"))`.
@@ -23,10 +22,10 @@ library ClonesWithImmutableArgs {
     /// @param implementation The implementation contract to clone
     /// @param data Encoded immutable args
     /// @return instance The address of the created clone
-    function clone(address implementation, bytes memory data)
-        internal
-        returns (address payable instance)
-    {
+    function clone(
+        address implementation,
+        bytes memory data
+    ) internal returns (address payable instance) {
         // unrealistic for memory ptr or data length to exceed 256 bits
         unchecked {
             uint256 extraLength = data.length + 2; // +2 bytes for telling how much data there is appended to the call
@@ -43,10 +42,7 @@ library ClonesWithImmutableArgs {
                 // -------------------------------------------------------------------------------------------------------------
 
                 // 61 runtime  | PUSH2 runtime (r)     | r                             | –
-                mstore(
-                    ptr,
-                    0x6100000000000000000000000000000000000000000000000000000000000000
-                )
+                mstore(ptr, 0x6100000000000000000000000000000000000000000000000000000000000000)
                 mstore(add(ptr, 0x01), shl(240, runSize)) // size of the contract running bytecode (16 bits)
 
                 // creation size = 0a
@@ -135,7 +131,7 @@ library ClonesWithImmutableArgs {
                 copyPtr += 32;
                 dataPtr += 32;
             }
-            uint256 mask = ~(256**(32 - counter) - 1);
+            uint256 mask = ~(256 ** (32 - counter) - 1);
             // solhint-disable-next-line no-inline-assembly
             assembly {
                 mstore(copyPtr, and(mload(dataPtr), mask))
@@ -181,10 +177,7 @@ library ClonesWithImmutableArgs {
 
                 // 3d          | RETURNDATASIZE        | 0                       | –
                 // 61 runtime  | PUSH2 runtime (r)     | r 0                     | –
-                mstore(
-                    ptr,
-                    0x3d61000000000000000000000000000000000000000000000000000000000000
-                )
+                mstore(ptr, 0x3d61000000000000000000000000000000000000000000000000000000000000)
                 mstore(add(ptr, 0x02), shl(240, sub(creationSize, 11))) // size of the contract running bytecode (16 bits)
 
                 // creation size = 0b
@@ -280,7 +273,7 @@ library ClonesWithImmutableArgs {
                 copyPtr += 32;
                 dataPtr += 32;
             }
-            uint256 mask = ~(256**(32 - counter) - 1);
+            uint256 mask = ~(256 ** (32 - counter) - 1);
             // solhint-disable-next-line no-inline-assembly
             assembly {
                 mstore(copyPtr, and(mload(dataPtr), mask))
@@ -347,11 +340,7 @@ library ClonesWithImmutableArgs {
     /// @notice Returns the CREATE3 deterministic address of the contract deployed via cloneDeterministic().
     /// @dev Forked from https://github.com/Vectorized/solady/blob/main/src/utils/CREATE3.sol
     /// @param salt The salt used by the CREATE3 deployment
-    function addressOfClone3(bytes32 salt)
-        internal
-        view
-        returns (address deployed)
-    {
+    function addressOfClone3(bytes32 salt) internal view returns (address deployed) {
         /// @solidity memory-safe-assembly
         // solhint-disable-next-line no-inline-assembly
         assembly {

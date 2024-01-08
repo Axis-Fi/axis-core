@@ -1,6 +1,10 @@
 name: test
 
-on: workflow_dispatch
+on:
+    push:
+        branches:
+            - master
+    pull_request:
 
 env:
   FOUNDRY_PROFILE: ci
@@ -17,10 +21,25 @@ jobs:
         with:
           submodules: recursive
 
+      - uses: actions/setup-node@v2
+
+      - uses: pnpm/action-setup@v2
+        with:
+            version: 8
+
+      - name: Install Node dependencies
+        run: pnpm install
+
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
         with:
-          version: nightly
+          version: nightly-ca67d15f4abd46394b324c50e21e66f306a1162d
+
+      - name: Install Foundry dependencies
+        run: forge install
+
+      - name: Run lint check
+        run: pnpm run lint:check
 
       - name: Run Forge build
         run: |
@@ -30,5 +49,5 @@ jobs:
 
       - name: Run Forge tests
         run: |
-          forge test -vvv
+          pnpm run test
         id: test
