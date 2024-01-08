@@ -5,7 +5,7 @@ import {ERC20} from "lib/solmate/src/tokens/ERC20.sol";
 
 import "src/modules/Auction.sol";
 
-import {fromKeycode} from "src/modules/Modules.sol";
+import {fromKeycode, Module} from "src/modules/Modules.sol";
 
 import {DerivativeModule} from "src/modules/Derivative.sol";
 
@@ -27,6 +27,8 @@ abstract contract Auctioneer is WithModules {
     error Auctioneer_Params_InvalidToken(address token_);
 
     error Auctioneer_Params_InvalidDuration(uint48 duration_);
+
+    error Auctioneer_Params_InvalidType(Module.Type expectedType_, Module.Type actualType_);
 
     error Auctioneer_InvalidParams();
 
@@ -111,43 +113,66 @@ abstract contract Auctioneer is WithModules {
         // Check that the auction type is allowing new auctions to be created
         if (typeSunset[auctionType]) revert HOUSE_AuctionTypeSunset(auctionType);
 
+        // Check that the module for the auction type is valid
+        if (auctionModule.TYPE() != Module.Type.Auction) {
+            revert Auctioneer_Params_InvalidType(Module.Type.Auction, auctionModule.TYPE());
+        }
+
         // Increment lot count and get ID
         lotId = lotCounter++;
 
-        // Call module auction function to store implementation-specific data
-        auctionModule.auction(lotId, params_);
-
-        // Validate routing information
-        if (address(routing_.baseToken) == address(0)) {
-            revert Auctioneer_Params_InvalidToken(address(routing_.baseToken));
-        }
-        if (address(routing_.quoteToken) == address(0)) {
-            revert Auctioneer_Params_InvalidToken(address(routing_.quoteToken));
+        // Auction Module
+        {
+            // Call module auction function to store implementation-specific data
+            auctionModule.auction(lotId, params_);
         }
 
-        // Confirm tokens are within the required decimal range
-        uint8 baseTokenDecimals = routing_.baseToken.decimals();
-        uint8 quoteTokenDecimals = routing_.quoteToken.decimals();
+        // Routing
+        {
+            // Validate routing information
+            if (address(routing_.baseToken) == address(0)) {
+                revert Auctioneer_Params_InvalidToken(address(routing_.baseToken));
+            }
+            if (address(routing_.quoteToken) == address(0)) {
+                revert Auctioneer_Params_InvalidToken(address(routing_.quoteToken));
+            }
 
-        if (baseTokenDecimals < 6 || baseTokenDecimals > 18) {
-            revert Auctioneer_Params_InvalidTokenDecimals(
-                address(routing_.baseToken), baseTokenDecimals
-            );
-        }
-        if (quoteTokenDecimals < 6 || quoteTokenDecimals > 18) {
-            revert Auctioneer_Params_InvalidTokenDecimals(
-                address(routing_.quoteToken), quoteTokenDecimals
-            );
+            // Confirm tokens are within the required decimal range
+            uint8 baseTokenDecimals = routing_.baseToken.decimals();
+            uint8 quoteTokenDecimals = routing_.quoteToken.decimals();
+
+            if (baseTokenDecimals < 6 || baseTokenDecimals > 18) {
+                revert Auctioneer_Params_InvalidTokenDecimals(
+                    address(routing_.baseToken), baseTokenDecimals
+                );
+            }
+            if (quoteTokenDecimals < 6 || quoteTokenDecimals > 18) {
+                revert Auctioneer_Params_InvalidTokenDecimals(
+                    address(routing_.quoteToken), quoteTokenDecimals
+                );
+            }
         }
 
         // If payout is a derivative, validate derivative data on the derivative module
-        if (fromKeycode(routing_.derivativeType) != bytes6(0)) {
+        Veecode derivativeType;
+        bytes memory derivativeParams;
+        if (fromKeycode(routing_.derivativeType) != bytes5(0)) {
             // Load derivative module, this checks that it is installed.
             DerivativeModule derivativeModule =
                 DerivativeModule(_getLatestModuleIfActive(routing_.derivativeType));
 
+            // Check that the module for the derivative type is valid
+            if (derivativeModule.TYPE() != Module.Type.Derivative) {
+                revert Auctioneer_Params_InvalidType(
+                    Module.Type.Derivative, derivativeModule.TYPE()
+                );
+            }
+
             // Call module validate function to validate implementation-specific data
             derivativeModule.validate(routing_.derivativeParams);
+
+            derivativeType = derivativeModule.VEECODE();
+            derivativeParams = routing_.derivativeParams;
         }
 
         // If allowlist is being used, validate the allowlist data and register the auction on the allowlist
@@ -162,6 +187,8 @@ abstract contract Auctioneer is WithModules {
         routing.baseToken = routing_.baseToken;
         routing.quoteToken = routing_.quoteToken;
         routing.hooks = routing_.hooks;
+        routing.derivativeType = derivativeType;
+        routing.derivativeParams = derivativeParams;
 
         emit AuctionCreated(lotId, address(routing.baseToken), address(routing.quoteToken));
     }

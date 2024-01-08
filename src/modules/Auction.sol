@@ -94,6 +94,9 @@ abstract contract Auction {
 
     // ========== AUCTION MANAGEMENT ========== //
 
+    // TODO NatSpec comments
+    // TODO validate function
+
     function auction(uint256 id_, AuctionParams memory params_) external virtual;
 
     function cancel(uint256 id_) external virtual;

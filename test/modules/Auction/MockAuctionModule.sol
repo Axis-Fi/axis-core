@@ -16,6 +16,10 @@ contract MockAuctionModule is AuctionModule {
         return wrapVeecode(toKeycode("MOCK"), 1);
     }
 
+    function TYPE() public pure virtual override returns (Type) {
+        return Type.Auction;
+    }
+
     function _auction(
         uint256 id_,
         Lot memory lot_,

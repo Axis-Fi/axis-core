@@ -111,5 +111,6 @@ abstract contract Derivative {
 }
 
 abstract contract DerivativeModule is Derivative, ERC6909, Module {
+    // TODO consider if boolean return value is required - should revert instead
     function validate(bytes memory params_) external view virtual returns (bool);
 }

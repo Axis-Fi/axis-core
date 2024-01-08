@@ -8,6 +8,7 @@ import {ERC20} from "lib/solmate/src/tokens/ERC20.sol";
 // Mocks
 import {MockERC20} from "lib/solmate/src/test/utils/mocks/MockERC20.sol";
 import {MockAuctionModule} from "test/modules/Auction/MockAuctionModule.sol";
+import {MockDerivativeModule} from "test/modules/Derivative/MockDerivativeModule.sol";
 
 // Auctions
 import {AuctionHouse} from "src/AuctionHouse.sol";
@@ -21,13 +22,15 @@ import {
     Veecode,
     wrapVeecode,
     fromVeecode,
-    WithModules
+    WithModules,
+    Module
 } from "src/modules/Modules.sol";
 
 contract AuctionTest is Test {
     MockERC20 internal baseToken;
     MockERC20 internal quoteToken;
-    MockAuctionModule internal mockModule;
+    MockAuctionModule internal mockAuctionModule;
+    MockDerivativeModule internal mockDerivativeModule;
 
     AuctionHouse internal auctionHouse;
     Auctioneer.RoutingParams internal routingParams;
@@ -38,7 +41,8 @@ contract AuctionTest is Test {
         quoteToken = new MockERC20("Quote Token", "QUOTE", 18);
 
         auctionHouse = new AuctionHouse();
-        mockModule = new MockAuctionModule(address(auctionHouse));
+        mockAuctionModule = new MockAuctionModule(address(auctionHouse));
+        mockDerivativeModule = new MockDerivativeModule(address(auctionHouse));
 
         auctionParams = Auction.AuctionParams({
             start: uint48(block.timestamp),
@@ -63,29 +67,37 @@ contract AuctionTest is Test {
     }
 
     modifier whenAuctionModuleIsInstalled() {
-        auctionHouse.installModule(mockModule);
+        auctionHouse.installModule(mockAuctionModule);
+        _;
+    }
+
+    modifier whenDerivativeModuleIsInstalled() {
+        auctionHouse.installModule(mockDerivativeModule);
         _;
     }
 
     // auction
     // [X] reverts when auction module is sunset
     // [X] reverts when auction module is not installed
+    // [X] reverts when auction type is not auction
     // [X] reverts when base token decimals are out of bounds
     // [X] reverts when quote token decimals are out of bounds
     // [X] reverts when base token is 0
     // [X] reverts when quote token is 0
     // [X] stores the auction lot
-    // [ ] derivatives
-    //  [ ] reverts when derivative type is sunset
-    //  [ ] reverts when derivative type is not installed
-    //  [ ] reverts when derivation validation fails
-    //  [ ] sets the derivative on the auction lot
+    // [X] derivatives
+    //  [X] reverts when derivative type is sunset
+    //  [X] reverts when derivative type is not installed
+    //  [X] reverts when derivative type is not a derivative
+    //  [X] reverts when derivation validation fails
+    //  [X] sets the derivative on the auction lot
     // [ ] allowlist
     //  [ ] reverts when allowlist validation fails
     //  [ ] sets the allowlist on the auction lot
     // [ ] condenser
     //  [ ] reverts when condenser type is sunset
     //  [ ] reverts when condenser type is not installed
+    //  [ ] reverts when condenser type is not a condenser
     //  [ ] sets the condenser on the auction lot
     // [ ] hooks
     //  [ ] sets the hooks on the auction lot
@@ -93,6 +105,24 @@ contract AuctionTest is Test {
     function testReverts_whenModuleNotInstalled() external {
         bytes memory err =
             abi.encodeWithSelector(WithModules.ModuleNotInstalled.selector, toKeycode("MOCK"), 0);
+        vm.expectRevert(err);
+
+        auctionHouse.auction(routingParams, auctionParams);
+    }
+
+    function testReverts_whenModuleTypeIncorrect()
+        external
+        whenAuctionModuleIsInstalled
+        whenDerivativeModuleIsInstalled
+    {
+        // Set the auction type to a derivative module
+        routingParams.auctionType = toKeycode("DERV");
+
+        bytes memory err = abi.encodeWithSelector(
+            Auctioneer.Auctioneer_Params_InvalidType.selector,
+            Module.Type.Auction,
+            Module.Type.Derivative
+        );
         vm.expectRevert(err);
 
         auctionHouse.auction(routingParams, auctionParams);
@@ -209,7 +239,7 @@ contract AuctionTest is Test {
         assertEq(fromVeecode(lotCondenserType), "", "condenser type mismatch");
 
         // Auction module also updated
-        (uint48 lotStart,,,,,) = mockModule.lotData(lotId);
+        (uint48 lotStart,,,,,) = mockAuctionModule.lotData(lotId);
         assertEq(lotStart, block.timestamp, "start mismatch");
     }
 
@@ -224,5 +254,109 @@ contract AuctionTest is Test {
         (,, ERC20 lotBaseToken, ERC20 lotQuoteToken,,,,,,) = auctionHouse.lotRouting(lotId);
         assertEq(address(lotBaseToken), address(baseToken), "base token mismatch");
         assertEq(address(lotQuoteToken), address(baseToken), "quote token mismatch");
+    }
+
+    function testReverts_whenDerivativeModuleNotInstalled() external whenAuctionModuleIsInstalled {
+        // Update routing params
+        routingParams.derivativeType = toKeycode("DERV");
+
+        // Expect revert
+        bytes memory err =
+            abi.encodeWithSelector(WithModules.ModuleNotInstalled.selector, toKeycode("DERV"), 0);
+        vm.expectRevert(err);
+
+        auctionHouse.auction(routingParams, auctionParams);
+    }
+
+    function testReverts_whenDerivativeTypeIncorrect() external whenAuctionModuleIsInstalled {
+        // Update routing params
+        routingParams.derivativeType = toKeycode("MOCK");
+
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(
+            Auctioneer.Auctioneer_Params_InvalidType.selector,
+            Module.Type.Derivative,
+            Module.Type.Auction
+        );
+        vm.expectRevert(err);
+
+        auctionHouse.auction(routingParams, auctionParams);
+    }
+
+    function testReverts_whenDerivativeTypeIsSunset()
+        external
+        whenAuctionModuleIsInstalled
+        whenDerivativeModuleIsInstalled
+    {
+        // Sunset the module, which prevents the creation of new auctions using that module
+        auctionHouse.sunsetModule(toKeycode("DERV"));
+
+        // Update routing params
+        routingParams.derivativeType = toKeycode("DERV");
+
+        // Expect revert
+        bytes memory err =
+            abi.encodeWithSelector(WithModules.ModuleIsSunset.selector, toKeycode("DERV"));
+        vm.expectRevert(err);
+
+        auctionHouse.auction(routingParams, auctionParams);
+    }
+
+    function testReverts_whenDerivativeValidationFails()
+        external
+        whenAuctionModuleIsInstalled
+        whenDerivativeModuleIsInstalled
+    {
+        // Update routing params
+        routingParams.derivativeType = toKeycode("DERV");
+
+        // Expect revert
+        mockDerivativeModule.setValidateFails(true);
+        vm.expectRevert("validation error");
+
+        auctionHouse.auction(routingParams, auctionParams);
+    }
+
+    function test_whenDerivativeIsSet()
+        external
+        whenAuctionModuleIsInstalled
+        whenDerivativeModuleIsInstalled
+    {
+        // Update routing params
+        routingParams.derivativeType = toKeycode("DERV");
+
+        // Create the auction
+        uint256 lotId = auctionHouse.auction(routingParams, auctionParams);
+
+        // Assert values
+        (,,,,,, Veecode lotDerivativeType,,,) = auctionHouse.lotRouting(lotId);
+        assertEq(
+            fromVeecode(lotDerivativeType),
+            fromVeecode(mockDerivativeModule.VEECODE()),
+            "derivative type mismatch"
+        );
+    }
+
+    function test_whenDerivativeIsSet_whenDerivativeParamsIsSet()
+        external
+        whenAuctionModuleIsInstalled
+        whenDerivativeModuleIsInstalled
+    {
+        // Update routing params
+        routingParams.derivativeType = toKeycode("DERV");
+        routingParams.derivativeParams = abi.encode("derivative params");
+
+        // Create the auction
+        uint256 lotId = auctionHouse.auction(routingParams, auctionParams);
+
+        // Assert values
+        (,,,,,, Veecode lotDerivativeType, bytes memory lotDerivativeParams,,) =
+            auctionHouse.lotRouting(lotId);
+        assertEq(
+            fromVeecode(lotDerivativeType),
+            fromVeecode(mockDerivativeModule.VEECODE()),
+            "derivative type mismatch"
+        );
+        assertEq(lotDerivativeParams, abi.encode("derivative params"), "derivative params mismatch");
     }
 }
