@@ -15,7 +15,7 @@ import {DerivativeModule} from "src/modules/Derivative.sol";
 
 import {Auction, AuctionModule} from "src/modules/Auction.sol";
 
-import {fromKeycode, WithModules} from "src/modules/Modules.sol";
+import {fromKeycode, fromVeecode, WithModules} from "src/modules/Modules.sol";
 
 abstract contract FeeManager {
 // TODO write fee logic in separate contract to keep it organized
@@ -334,22 +334,22 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
     ) internal {
         // If no derivative, then the payout is sent directly to the recipient
         // Otherwise, send parameters and payout to the derivative to mint to recipient
-        if (fromKeycode(routing_.derivativeType) == bytes6(0)) {
+        if (fromVeecode(routing_.derivativeType) == bytes6(0)) {
             // No derivative, send payout to recipient
             // routing_.payoutToken.safeTransfer(recipient_, payout_);
         } else {
             // Get the module for the derivative type
             // We assume that the module type has been checked when the lot was created
             DerivativeModule module =
-                DerivativeModule(_getLatestModuleIfActive(routing_.derivativeType));
+                DerivativeModule(_getModuleIfInstalled(routing_.derivativeType));
 
             bytes memory derivativeParams = routing_.derivativeParams;
 
             // If condenser specified, condense auction output and derivative params before sending to derivative module
-            if (fromKeycode(routing_.condenserType) != bytes6(0)) {
+            if (fromVeecode(routing_.condenserType) != bytes6(0)) {
                 // Get condenser module
                 CondenserModule condenser =
-                    CondenserModule(_getLatestModuleIfActive(routing_.condenserType));
+                    CondenserModule(_getModuleIfInstalled(routing_.condenserType));
 
                 // Condense auction output and derivative params
                 derivativeParams = condenser.condense(auctionOutput_, derivativeParams);

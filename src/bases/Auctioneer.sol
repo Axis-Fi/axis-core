@@ -22,6 +22,12 @@ abstract contract Auctioneer is WithModules {
 
     error HOUSE_InvalidLotId(uint256 id);
 
+    error Auctioneer_Params_InvalidTokenDecimals(address token_, uint8 decimals_);
+
+    error Auctioneer_Params_InvalidToken(address token_);
+
+    error Auctioneer_Params_InvalidDuration(uint48 duration_);
+
     error Auctioneer_InvalidParams();
 
     // ========= EVENTS ========= //
@@ -32,16 +38,16 @@ abstract contract Auctioneer is WithModules {
 
     /// @notice Auction routing information for a lot
     struct Routing {
-        Keycode auctionType; // auction type, represented by the Keycode for the auction submodule
+        Veecode auctionType; // auction type, represented by the Keycode for the auction submodule
         address owner; // market owner. sends payout tokens, receives quote tokens
         ERC20 baseToken; // token provided by seller
         ERC20 quoteToken; // token to accept as payment
         IHooks hooks; // (optional) address to call for any hooks to be executed on a purchase. Must implement IHooks.
         IAllowlist allowlist; // (optional) contract that implements an allowlist for the market, based on IAllowlist
-        Keycode derivativeType; // (optional) derivative type, represented by the Keycode for the derivative submodule. If not set, no derivative will be created.
+        Veecode derivativeType; // (optional) derivative type, represented by the Keycode for the derivative submodule. If not set, no derivative will be created.
         bytes derivativeParams; // (optional) abi-encoded data to be used to create payout derivatives on a purchase
         bool wrapDerivative; // (optional) whether to wrap the derivative in a ERC20 token instead of the native ERC6909 format.
-        Keycode condenserType; // (optional) condenser type, represented by the Keycode for the condenser submodule. If not set, no condenser will be used. TODO should a condenser be stored on the auctionhouse for a particular auction/derivative combination and looked up?
+        Veecode condenserType; // (optional) condenser type, represented by the Keycode for the condenser submodule. If not set, no condenser will be used. TODO should a condenser be stored on the auctionhouse for a particular auction/derivative combination and looked up?
     }
 
     struct RoutingParams {
@@ -112,13 +118,27 @@ abstract contract Auctioneer is WithModules {
         auctionModule.auction(lotId, params_);
 
         // Validate routing information
+        if (address(routing_.baseToken) == address(0)) {
+            revert Auctioneer_Params_InvalidToken(address(routing_.baseToken));
+        }
+        if (address(routing_.quoteToken) == address(0)) {
+            revert Auctioneer_Params_InvalidToken(address(routing_.quoteToken));
+        }
 
         // Confirm tokens are within the required decimal range
         uint8 baseTokenDecimals = routing_.baseToken.decimals();
         uint8 quoteTokenDecimals = routing_.quoteToken.decimals();
 
-        if (baseTokenDecimals < 6 || baseTokenDecimals > 18) revert Auctioneer_InvalidParams();
-        if (quoteTokenDecimals < 6 || quoteTokenDecimals > 18) revert Auctioneer_InvalidParams();
+        if (baseTokenDecimals < 6 || baseTokenDecimals > 18) {
+            revert Auctioneer_Params_InvalidTokenDecimals(
+                address(routing_.baseToken), baseTokenDecimals
+            );
+        }
+        if (quoteTokenDecimals < 6 || quoteTokenDecimals > 18) {
+            revert Auctioneer_Params_InvalidTokenDecimals(
+                address(routing_.quoteToken), quoteTokenDecimals
+            );
+        }
 
         // If payout is a derivative, validate derivative data on the derivative module
         if (fromKeycode(routing_.derivativeType) != bytes6(0)) {
@@ -137,7 +157,7 @@ abstract contract Auctioneer is WithModules {
 
         // Store routing information
         Routing storage routing = lotRouting[lotId];
-        routing.auctionType = auctionType;
+        routing.auctionType = auctionModule.VEECODE();
         routing.owner = msg.sender;
         routing.baseToken = routing_.baseToken;
         routing.quoteToken = routing_.quoteToken;
@@ -224,6 +244,6 @@ abstract contract Auctioneer is WithModules {
         if (id_ >= lotCounter) revert HOUSE_InvalidLotId(id_);
 
         // Load module, will revert if not installed
-        return AuctionModule(_getLatestModuleIfActive(lotRouting[id_].auctionType));
+        return AuctionModule(_getModuleIfInstalled(lotRouting[id_].auctionType));
     }
 }

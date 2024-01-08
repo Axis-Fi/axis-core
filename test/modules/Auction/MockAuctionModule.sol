@@ -8,9 +8,11 @@ import {Module, Veecode, toKeycode, wrapVeecode} from "src/modules/Modules.sol";
 import {AuctionModule} from "src/modules/Auction.sol";
 
 contract MockAuctionModule is AuctionModule {
-    constructor(address _owner) Module(_owner) {}
+    constructor(address _owner) Module(_owner) {
+        minAuctionDuration = 1 days;
+    }
 
-    function VEECODE() public pure override returns (Veecode) {
+    function VEECODE() public pure virtual override returns (Veecode) {
         return wrapVeecode(toKeycode("MOCK"), 1);
     }
 
@@ -45,9 +47,7 @@ contract MockAuctionModule is AuctionModule {
         bytes calldata approval_
     ) external virtual override {}
 
-    function settle(
-        uint256 id_
-    ) external virtual override returns (uint256[] memory amountsOut) {}
+    function settle(uint256 id_) external virtual override returns (uint256[] memory amountsOut) {}
 
     function settle(
         uint256 id_,
@@ -64,11 +64,15 @@ contract MockAuctionModule is AuctionModule {
         uint256 payout_
     ) public view virtual override returns (uint256) {}
 
-    function maxPayout(
-        uint256 id_
-    ) public view virtual override returns (uint256) {}
+    function maxPayout(uint256 id_) public view virtual override returns (uint256) {}
 
-    function maxAmountAccepted(
-        uint256 id_
-    ) public view virtual override returns (uint256) {}
+    function maxAmountAccepted(uint256 id_) public view virtual override returns (uint256) {}
+}
+
+contract MockAuctionModuleV2 is MockAuctionModule {
+    constructor(address _owner) MockAuctionModule(_owner) {}
+
+    function VEECODE() public pure override returns (Veecode) {
+        return wrapVeecode(toKeycode("MOCK"), 2);
+    }
 }
