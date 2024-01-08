@@ -135,7 +135,7 @@ abstract contract WithModules is Owned {
     /// @notice Mapping of Keycode to module status information.
     mapping(Keycode => ModStatus) public getModuleStatus;
 
-    bool public isExecOnModuleInternal;
+    bool public isExecOnModule;
 
     // ========= MODULE MANAGEMENT ========= //
 
@@ -284,7 +284,7 @@ abstract contract WithModules is Owned {
     /// @notice         Performs a call on a module
     /// @notice         This can be used to perform administrative functions on a module, such as setting parameters or calling permissioned functions
     /// @dev            This function reverts if:
-    /// @dev            - The caller is not the owner
+    /// @dev            - The caller is not the parent
     /// @dev            - The module is not installed
     /// @dev            - The call is made to a prohibited function
     /// @dev            - The call reverted
@@ -296,49 +296,19 @@ abstract contract WithModules is Owned {
         Veecode veecode_,
         bytes calldata callData_
     ) external onlyOwner returns (bytes memory) {
-        // Set the internal flag to false
-        isExecOnModuleInternal = false;
+        // Set the flag to true
+        isExecOnModule = true;
 
-        // Call the internal function
-        return _execOnModule(veecode_, callData_);
-    }
-
-    /// @notice         Performs a call on a module from an internal function
-    /// @notice         This can be used to perform administrative functions on a module, such as setting parameters or calling permissioned functions
-    /// @dev            This function reverts if:
-    /// @dev            - The module is not installed
-    /// @dev            - The call is made to a prohibited function
-    /// @dev            - The call reverted
-    ///
-    /// @param          veecode_    The module Veecode
-    /// @param          callData_   The call data
-    /// @return         The return data from the call
-    function execOnModuleInternal(
-        Veecode veecode_,
-        bytes calldata callData_
-    ) internal returns (bytes memory) {
-        // Set the internal flag to true
-        isExecOnModuleInternal = true;
-
-        // Perform the call
-        bytes memory returnValue = _execOnModule(veecode_, callData_);
-
-        // Reset the internal flag to false
-        isExecOnModuleInternal = false;
-
-        return returnValue;
-    }
-
-    function _execOnModule(
-        Veecode veecode_,
-        bytes calldata callData_
-    ) internal returns (bytes memory) {
+        // Check that the module is installed (or revert)
         address module = _getModuleIfInstalled(veecode_);
 
         // Call the module
         (bool success, bytes memory returnData) = module.call(callData_);
-
         if (!success) revert ModuleExecutionReverted(returnData);
+
+        // Reset the flag to false
+        isExecOnModule = false;
+
         return returnData;
     }
 }
@@ -384,15 +354,19 @@ abstract contract Module {
 
     // ========= MODIFIERS ========= //
 
-    /// @notice Modifier to restrict functions to be called only by parent module.
+    /// @notice Modifier to restrict functions to be called only by the parent module.
     modifier onlyParent() {
         if (msg.sender != parent) revert Module_OnlyParent(msg.sender);
         _;
     }
 
     /// @notice Modifier to restrict functions to be called only by internal module.
+    /// @notice If a function is called through `execOnModule()` on the parent contract, this modifier will revert.
+    /// @dev    This modifier can be used to prevent functions from being called by governance or other external actors through `execOnModule()`.
     modifier onlyInternal() {
-        if (!WithModules(parent).isExecOnModuleInternal()) revert Module_OnlyInternal();
+        if (msg.sender != parent) revert Module_OnlyParent(msg.sender);
+
+        if (WithModules(parent).isExecOnModule()) revert Module_OnlyInternal();
         _;
     }
 

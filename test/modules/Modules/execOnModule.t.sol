@@ -48,6 +48,7 @@ contract ExecOnModule is Test {
     function testReverts_whenFunctionIsOnlyInternal() external whenVersion1IsInstalled {
         Veecode veecode = mockModule.VEECODE();
 
+        // This mimics that the function was called from the outside (e.g. governance) via execOnModule
         bytes memory err = abi.encodeWithSelector(
             WithModules.ModuleExecutionReverted.selector,
             abi.encodeWithSelector(Module.Module_OnlyInternal.selector)
@@ -57,20 +58,37 @@ contract ExecOnModule is Test {
         withModules.execOnModule(veecode, abi.encodeWithSelector(MockModuleV1.prohibited.selector));
     }
 
-    function test_whenFunctionIsOnlyInternal() external whenVersion1IsInstalled {
+    function test_whenFunctionIsOnlyInternal_whenParentIsCalling()
+        external
+        whenVersion1IsInstalled
+    {
         Veecode veecode = mockModule.VEECODE();
 
-        bytes memory returnData = withModules.execInternalFunction(
-            veecode, abi.encodeWithSelector(MockModuleV1.prohibited.selector)
-        );
-
-        // Decode the return data
-        (bool returnValue) = abi.decode(returnData, (bool));
-
+        // Mimic the parent contract calling a protected function directly
+        bool returnValue = withModules.callProhibited(veecode);
         assertEq(returnValue, true);
+    }
 
-        // Check that the internal flag was reset
-        assertEq(withModules.isExecOnModuleInternal(), false);
+    function testReverts_whenFunctionIsOnlyParent_whenExternalIsCalling()
+        external
+        whenVersion1IsInstalled
+    {
+        bytes memory err = abi.encodeWithSelector(Module.Module_OnlyParent.selector, address(this));
+        vm.expectRevert(err);
+
+        // Mimic the parent contract calling a protected function directly
+        mockModule.mock();
+    }
+
+    function testReverts_whenFunctionIsOnlyInternal_whenExternalIsCalling()
+        external
+        whenVersion1IsInstalled
+    {
+        bytes memory err = abi.encodeWithSelector(Module.Module_OnlyParent.selector, address(this));
+        vm.expectRevert(err);
+
+        // Mimic the parent contract calling a protected function directly
+        mockModule.prohibited();
     }
 
     function test_success() external whenVersion1IsInstalled {

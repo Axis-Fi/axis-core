@@ -11,10 +11,12 @@ contract MockModuleV1 is Module {
         return wrapVeecode(toKeycode("MOCK"), 1);
     }
 
-    function mock() external pure returns (bool) {
+    /// @notice Mock function that can be called by execOnModule or from the parent contract
+    function mock() external view onlyParent returns (bool) {
         return true;
     }
 
+    /// @notice Mock function that can only be called from the parent contract and not execOnModule
     function prohibited() external view onlyInternal returns (bool) {
         return true;
     }
