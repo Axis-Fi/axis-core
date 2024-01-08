@@ -77,6 +77,14 @@ abstract contract Auctioneer is WithModules {
 
     // ========== AUCTION MANAGEMENT ========== //
 
+    /// @notice     Creates a new auction lot
+    /// @dev        The function reverts if:
+    ///             - The module for the auction type is not installed
+    ///             - The auction type is sunset
+    ///             - The base token or quote token decimals are not within the required range
+    ///             - The module for the optional specified derivative type is not installed
+    ///             - Validation for the optional specified derivative type fails
+    ///             - Validation for the optional allowlist fails
     function auction(
         RoutingParams calldata routing_,
         Auction.AuctionParams calldata params_
