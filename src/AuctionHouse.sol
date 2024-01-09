@@ -3,9 +3,6 @@ pragma solidity 0.8.19;
 
 import {ERC20} from "lib/solmate/src/tokens/ERC20.sol";
 import {SafeTransferLib} from "lib/solmate/src/utils/SafeTransferLib.sol";
-import {EIP712} from "lib/solady/src/utils/EIP712.sol";
-import {SignatureCheckerLib} from "lib/solady/src/utils/SignatureCheckerLib.sol";
-import {Owned} from "lib/solmate/src/auth/Owned.sol";
 
 import {Derivatizer} from "src/bases/Derivatizer.sol";
 import {Auctioneer} from "src/bases/Auctioneer.sol";
@@ -45,12 +42,12 @@ abstract contract Router is FeeManager {
 
     // Address the protocol receives fees at
     // TODO make this updatable
-    address internal immutable _protocol;
+    address internal immutable PROTOCOL;
 
     // ========== CONSTRUCTOR ========== //
 
     constructor(address protocol_) {
-        _protocol = protocol_;
+        PROTOCOL = protocol_;
     }
 
     // ========== ATOMIC AUCTIONS ========== //
@@ -145,7 +142,7 @@ abstract contract AuctionHouse is Derivatizer, Auctioneer, Router {
 
         // Update fee balances if non-zero
         if (toReferrer > 0) rewards[referrer_][routing.quoteToken] += toReferrer;
-        if (toProtocol > 0) rewards[_protocol][routing.quoteToken] += toProtocol;
+        if (toProtocol > 0) rewards[PROTOCOL][routing.quoteToken] += toProtocol;
 
         // Handle transfers from purchaser and seller
         _handleTransfers(id_, routing, amount_, payout, toReferrer + toProtocol, approval_);
