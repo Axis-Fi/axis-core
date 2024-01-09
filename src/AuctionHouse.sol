@@ -12,7 +12,7 @@ import {DerivativeModule} from "src/modules/Derivative.sol";
 
 import {Auction, AuctionModule} from "src/modules/Auction.sol";
 
-import {fromKeycode, WithModules} from "src/modules/Modules.sol";
+import {Veecode, fromVeecode, WithModules} from "src/modules/Modules.sol";
 
 abstract contract FeeManager {
 // TODO write fee logic in separate contract to keep it organized
@@ -148,7 +148,7 @@ abstract contract AuctionHouse is Derivatizer, Auctioneer, Router {
         _handleTransfers(id_, routing, amount_, payout, toReferrer + toProtocol, approval_);
 
         // Handle payout to user, including creation of derivative tokens
-        _handlePayout(id_, routing, recipient_, payout, auctionOutput);
+        _handlePayout(routing, recipient_, payout, auctionOutput);
 
         // Emit event
         emit Purchase(id_, msg.sender, referrer_, amount_, payout);
@@ -214,7 +214,6 @@ abstract contract AuctionHouse is Derivatizer, Auctioneer, Router {
     }
 
     function _handlePayout(
-        uint256 lotId_,
         Routing memory routing_,
         address recipient_,
         uint256 payout_,
@@ -222,24 +221,24 @@ abstract contract AuctionHouse is Derivatizer, Auctioneer, Router {
     ) internal {
         // If no derivative, then the payout is sent directly to the recipient
         // Otherwise, send parameters and payout to the derivative to mint to recipient
-        if (fromKeycode(routing_.derivativeType) == bytes5("")) {
+        if (fromVeecode(routing_.derivativeReference) == bytes7("")) {
             // No derivative, send payout to recipient
             routing_.baseToken.safeTransfer(recipient_, payout_);
         } else {
             // Get the module for the derivative type
             // We assume that the module type has been checked when the lot was created
-            DerivativeModule module = DerivativeModule(
-                _getModuleIfInstalled(routing_.derivativeType, routing_.derivativeVersion)
-            );
+            DerivativeModule module =
+                DerivativeModule(_getModuleIfInstalled(routing_.derivativeReference));
 
             bytes memory derivativeParams = routing_.derivativeParams;
 
-            // TODO lookup condensor module from combination of auction and derivative types
+            // Lookup condensor module from combination of auction and derivative types
             // If condenser specified, condense auction output and derivative params before sending to derivative module
-            if (fromKeycode(routing_.condenserType) != bytes5("")) {
+            Veecode condenserRef =
+                condensers[routing_.auctionReference][routing_.derivativeReference];
+            if (fromVeecode(condenserRef) != bytes7("")) {
                 // Get condenser module
-                CondenserModule condenser =
-                    CondenserModule(_getLatestModuleIfActive(routing_.condenserType));
+                CondenserModule condenser = CondenserModule(_getModuleIfInstalled(condenserRef));
 
                 // Condense auction output and derivative params
                 derivativeParams = condenser.condense(auctionOutput_, derivativeParams);
