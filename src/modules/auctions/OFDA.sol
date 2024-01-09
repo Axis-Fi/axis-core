@@ -37,17 +37,11 @@ pragma solidity 0.8.19;
 // contract OracleFixedDiscountAuctioneer is MaxPayoutAuctioneer, IOracleFixedDiscountAuctioneer {
 //     /* ========== ERRORS ========== */
 //     error Auctioneer_OraclePriceZero();
-// contract OracleFixedDiscountAuctioneer is MaxPayoutAuctioneer, IOracleFixedDiscountAuctioneer {
-//     /* ========== ERRORS ========== */
-//     error Auctioneer_OraclePriceZero();
 
-//     /* ========== STATE ========== */
 //     /* ========== STATE ========== */
 
 //     mapping(uint256 id => AuctionData) internal auctionData;
-//     mapping(uint256 id => AuctionData) internal auctionData;
 
-//     /* ========== CONSTRUCTOR ========== */
 //     /* ========== CONSTRUCTOR ========== */
 
 //     constructor(

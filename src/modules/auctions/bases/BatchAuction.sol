@@ -28,8 +28,6 @@ pragma solidity 0.8.19;
 
 //     // ========== STATE VARIABLES ========== //
 
-//     // ========== STATE VARIABLES ========== //
-
 //     mapping(uint256 lotId => Auction.Bid[] bids) public lotBids;
 
 //     // ========== AUCTION INFORMATION ========== //

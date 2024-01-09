@@ -53,10 +53,6 @@ pragma solidity 0.8.19;
 // import {IFixedPriceAuctioneer} from "src/interfaces/IFixedPriceAuctioneer.sol";
 // import {OracleHelper} from "src/lib/OracleHelper.sol";
 
-// import {MaxPayoutAuctioneer, IAggregator, Authority} from "src/auctioneers/bases/MaxPayoutAuctioneer.sol";
-// import {IFixedPriceAuctioneer} from "src/interfaces/IFixedPriceAuctioneer.sol";
-// import {OracleHelper} from "src/lib/OracleHelper.sol";
-
 // contract OracleSequentialDutchAuctioneer is MaxPayoutAuctioneer, IOracleSequentialDutchAuctioneer {
 //     /* ========== ERRORS ========== */
 //     error Auctioneer_OraclePriceZero();
