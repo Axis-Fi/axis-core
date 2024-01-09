@@ -76,52 +76,44 @@ contract CancelTest is Test {
     }
 
     // cancel
-    // [X] reverts if not the owner
-    // [X] reverts if lot is not active
+    // [X] reverts if not the parent
     // [X] reverts if lot id is invalid
-    // [X] sets the lot to inactive on the AuctionModule
+    // [X] reverts if lot is not active
+    // [X] sets the lot to inactive
 
-    function testReverts_whenNotAuctionOwner() external whenLotIsCreated {
-        bytes memory err =
-            abi.encodeWithSelector(Auctioneer.HOUSE_NotAuctionOwner.selector, address(this));
+    function testReverts_whenCallerIsNotParent() external whenLotIsCreated {
+        bytes memory err = abi.encodeWithSelector(Module.Module_OnlyParent.selector, address(this));
         vm.expectRevert(err);
 
-        auctionHouse.cancel(lotId);
-    }
-
-    function testReverts_whenUnauthorized(address user_) external whenLotIsCreated {
-        vm.assume(user_ != auctionOwner);
-
-        bytes memory err = abi.encodeWithSelector(Auctioneer.HOUSE_NotAuctionOwner.selector, user_);
-        vm.expectRevert(err);
-
-        vm.prank(user_);
-        auctionHouse.cancel(lotId);
+        mockAuctionModule.cancel(lotId);
     }
 
     function testReverts_whenLotIdInvalid() external {
-        bytes memory err = abi.encodeWithSelector(Auctioneer.HOUSE_InvalidLotId.selector, lotId);
+        bytes memory err = abi.encodeWithSelector(Auction.Auction_InvalidLotId.selector, lotId);
         vm.expectRevert(err);
 
-        auctionHouse.cancel(lotId);
+        vm.prank(address(auctionHouse));
+        mockAuctionModule.cancel(lotId);
     }
 
     function testReverts_whenLotIsInactive() external whenLotIsCreated {
-        vm.prank(auctionOwner);
-        auctionHouse.cancel(lotId);
+        // Cancel once
+        vm.prank(address(auctionHouse));
+        mockAuctionModule.cancel(lotId);
 
+        // Cancel again
         bytes memory err = abi.encodeWithSelector(Auction.Auction_MarketNotActive.selector, lotId);
         vm.expectRevert(err);
 
-        vm.prank(auctionOwner);
-        auctionHouse.cancel(lotId);
+        vm.prank(address(auctionHouse));
+        mockAuctionModule.cancel(lotId);
     }
 
     function test_success() external whenLotIsCreated {
         assertTrue(mockAuctionModule.isLive(lotId), "before cancellation: isLive mismatch");
 
-        vm.prank(auctionOwner);
-        auctionHouse.cancel(lotId);
+        vm.prank(address(auctionHouse));
+        mockAuctionModule.cancel(lotId);
 
         // Get lot data from the module
         (, uint48 lotConclusion,, uint256 lotCapacity,,) = mockAuctionModule.lotData(lotId);

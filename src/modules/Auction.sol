@@ -12,6 +12,8 @@ abstract contract Auction {
 
     error Auction_InvalidDuration(uint48 duration_, uint48 minimum_);
 
+    error Auction_InvalidLotId(uint256 lotId);
+
     error Auction_OnlyMarketOwner();
     error Auction_AmountLessThanMinimum();
     error Auction_NotEnoughCapacity();
@@ -175,7 +177,7 @@ abstract contract AuctionModule is Auction, Module {
         Lot storage lot = lotData[lotId_];
 
         // Invalid lot
-        if (lot.start == 0) revert Auction_InvalidParams();
+        if (lot.start == 0) revert Auction_InvalidLotId(lotId_);
 
         // Inactive lot
         if (lot.capacity == 0) revert Auction_MarketNotActive(lotId_);
