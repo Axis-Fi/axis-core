@@ -71,6 +71,7 @@ contract AuctionTest is Test {
     // [X] reverts when start time is 0
     // [X] reverts when start time is in the past
     // [X] reverts when the duration is less than the minimum
+    // [X] reverts when called by non-parent
     // [X] creates the auction lot
     // [X] creates the auction lot with a custom duration
     // [X] creates the auction lot when the start time is in the future
@@ -119,6 +120,14 @@ contract AuctionTest is Test {
         vm.expectRevert(err);
 
         auctionHouse.auction(routingParams, auctionParams);
+    }
+
+    function testReverts_whenCallerIsNotParent() external {
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(Module.Module_OnlyParent.selector, address(this));
+        vm.expectRevert(err);
+
+        mockAuctionModule.auction(0, auctionParams);
     }
 
     function test_success() external {
