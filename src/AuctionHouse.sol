@@ -82,7 +82,8 @@ abstract contract Router is FeeManager {
     ) external virtual returns (uint256[] memory amountsOut);
 }
 
-// contract AuctionHouse is Derivatizer, Auctioneer, Router {
+/// @title      AuctionHouse
+/// @notice     As its name implies, the AuctionHouse is where auctions take place and the core of the protocol.
 contract AuctionHouse is Derivatizer, Auctioneer, Router {
     using SafeTransferLib for ERC20;
 

@@ -14,6 +14,11 @@ interface IHooks {}
 
 interface IAllowlist {}
 
+/// @title  Auctioneer
+/// @notice The Auctioneer handles the following:
+///         - Creating new auction lots
+///         - Cancelling auction lots
+///         - Storing information about how to handle inputs and outputs for auctions ("routing")
 abstract contract Auctioneer is WithModules {
     // ========= ERRORS ========= //
 
@@ -57,6 +62,8 @@ abstract contract Auctioneer is WithModules {
         Veecode condenserType; // (optional) condenser type, represented by the Keycode for the condenser submodule. If not set, no condenser will be used. TODO should a condenser be stored on the auctionhouse for a particular auction/derivative combination and looked up?
     }
 
+    /// @notice     Auction routing information provided as input parameters
+    /// @dev        After validation, this information is stored in the Routing struct
     struct RoutingParams {
         Keycode auctionType;
         ERC20 baseToken;
@@ -72,20 +79,21 @@ abstract contract Auctioneer is WithModules {
 
     // ========= STATE ========== //
 
-    // 1% = 1_000 or 1e3. 100% = 100_000 or 1e5.
+    /// @notice     Constant representing 100%
+    /// @dev        1% = 1_000 or 1e3. 100% = 100_000 or 1e5
     uint48 internal constant ONE_HUNDRED_PERCENT = 1e5;
 
-    /// @notice Counter for auction lots
+    /// @notice     Counter for auction lots
     uint256 public lotCounter;
 
     /// @notice Designates whether an auction type is sunset on this contract
-    /// @dev We can remove Keycodes from the module to completely remove them,
-    ///      However, that would brick any existing auctions of that type.
-    ///      Therefore, we can sunset them instead, which will prevent new auctions.
-    ///      After they have all ended, then we can remove them.
+    /// @dev    We can remove Keycodes from the module to completely remove them,
+    ///         However, that would brick any existing auctions of that type.
+    ///         Therefore, we can sunset them instead, which will prevent new auctions.
+    ///         After they have all ended, then we can remove them.
     mapping(Keycode auctionType => bool) public typeSunset;
 
-    /// @notice Mapping of lot IDs to their auction type (represented by the Keycode for the auction submodule)
+    /// @notice     Mapping of lot IDs to their auction type (represented by the Keycode for the auction submodule)
     mapping(uint256 lotId => Routing) public lotRouting;
 
     /// @notice     Maps auction and derivative types to the Condenser module that handles them
@@ -252,6 +260,12 @@ abstract contract Auctioneer is WithModules {
 
     // ========== AUCTION INFORMATION ========== //
 
+    /// @notice     Gets the routing information for a given lot ID
+    /// @dev        The function reverts if:
+    ///             - The lot ID is invalid
+    ///
+    /// @param      id_     ID of the auction lot
+    /// @return     routing Routing information for the auction lot
     function getRouting(uint256 id_) external view returns (Routing memory) {
         // Check that lot ID is valid
         if (id_ >= lotCounter) revert HOUSE_InvalidLotId(id_);
@@ -316,12 +330,12 @@ abstract contract Auctioneer is WithModules {
     /// @notice     Sets the value of the Condenser for a given auction and derivative combination
     /// @dev        To remove a condenser, set the value of `condenserType_` to a blank Keycode
     ///
-    /// @dev        This function will revert if:
-    /// @dev        - The caller is not the owner
-    /// @dev        - `auctionKeycode_` or `derivativeKeycode_` are empty
-    /// @dev        - `auctionKeycode_` does not belong to an auction module
-    /// @dev        - `derivativeKeycode_` does not belong to a derivative module
-    /// @dev        - `condenserType_` does not belong to a condenser module
+    ///             This function will revert if:
+    ///             - The caller is not the owner
+    ///             - `auctionKeycode_` or `derivativeKeycode_` are empty
+    ///             - `auctionKeycode_` does not belong to an auction module
+    ///             - `derivativeKeycode_` does not belong to a derivative module
+    ///             - `condenserType_` does not belong to a condenser module
     ///
     /// @param      auctionKeycode_    The auction type
     /// @param      derivativeKeycode_ The derivative type
@@ -384,11 +398,17 @@ abstract contract Auctioneer is WithModules {
 
     // ========== INTERNAL HELPER FUNCTIONS ========== //
 
-    function _getModuleForId(uint256 id_) internal view returns (AuctionModule) {
+    /// @notice     Gets the module for a given lot ID
+    /// @dev        The function reverts if:
+    ///             - The lot ID is invalid
+    ///             - The module for the auction type is not installed
+    ///
+    /// @param      lotId_      ID of the auction lot
+    function _getModuleForId(uint256 lotId_) internal view returns (AuctionModule) {
         // Confirm lot ID is valid
-        if (id_ >= lotCounter) revert HOUSE_InvalidLotId(id_);
+        if (lotId_ >= lotCounter) revert HOUSE_InvalidLotId(lotId_);
 
         // Load module, will revert if not installed
-        return AuctionModule(_getModuleIfInstalled(lotRouting[id_].auctionType));
+        return AuctionModule(_getModuleIfInstalled(lotRouting[lotId_].auctionType));
     }
 }
