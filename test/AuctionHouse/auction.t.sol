@@ -79,8 +79,23 @@ contract AuctionTest is Test {
         _;
     }
 
+    modifier whenDerivativeTypeIsSet() {
+        routingParams.derivativeType = toKeycode("DERV");
+        _;
+    }
+
     modifier whenCondenserModuleIsInstalled() {
         auctionHouse.installModule(mockCondenserModule);
+        _;
+    }
+
+    modifier whenCondenserTypeIsSet() {
+        routingParams.condenserType = toKeycode("COND");
+        _;
+    }
+
+    modifier whenCondenserIsMapped() {
+        auctionHouse.setCondenserLookup(toKeycode("MOCK"), toKeycode("DERV"), toKeycode("COND"));
         _;
     }
 
@@ -93,23 +108,6 @@ contract AuctionTest is Test {
     // [X] reverts when base token is 0
     // [X] reverts when quote token is 0
     // [X] stores the auction lot
-    // [X] derivatives
-    //  [X] reverts when derivative type is sunset
-    //  [X] reverts when derivative type is not installed
-    //  [X] reverts when derivative type is not a derivative
-    //  [X] reverts when derivation validation fails
-    //  [X] sets the derivative on the auction lot
-    // [ ] allowlist
-    //  [ ] reverts when allowlist validation fails
-    //  [ ] sets the allowlist on the auction lot
-    // [X] condenser
-    //  [X] reverts when condenser type is sunset
-    //  [X] reverts when condenser type is not installed
-    //  [X] reverts when condenser type is not a condenser
-    //  [ ] reverts when compatibility check fails
-    //  [X] sets the condenser on the auction lot
-    // [ ] hooks
-    //  [ ] sets the hooks on the auction lot
 
     function testReverts_whenModuleNotInstalled() external {
         bytes memory err =
@@ -265,10 +263,18 @@ contract AuctionTest is Test {
         assertEq(address(lotQuoteToken), address(baseToken), "quote token mismatch");
     }
 
-    function testReverts_whenDerivativeModuleNotInstalled() external whenAuctionModuleIsInstalled {
-        // Update routing params
-        routingParams.derivativeType = toKeycode("DERV");
+    // [X] derivatives
+    //  [X] reverts when derivative type is sunset
+    //  [X] reverts when derivative type is not installed
+    //  [X] reverts when derivative type is not a derivative
+    //  [X] reverts when derivation validation fails
+    //  [X] sets the derivative on the auction lot
 
+    function testReverts_whenDerivativeModuleNotInstalled()
+        external
+        whenAuctionModuleIsInstalled
+        whenDerivativeTypeIsSet
+    {
         // Expect revert
         bytes memory err =
             abi.encodeWithSelector(WithModules.ModuleNotInstalled.selector, toKeycode("DERV"), 0);
@@ -296,12 +302,10 @@ contract AuctionTest is Test {
         external
         whenAuctionModuleIsInstalled
         whenDerivativeModuleIsInstalled
+        whenDerivativeTypeIsSet
     {
         // Sunset the module, which prevents the creation of new auctions using that module
         auctionHouse.sunsetModule(toKeycode("DERV"));
-
-        // Update routing params
-        routingParams.derivativeType = toKeycode("DERV");
 
         // Expect revert
         bytes memory err =
@@ -315,10 +319,8 @@ contract AuctionTest is Test {
         external
         whenAuctionModuleIsInstalled
         whenDerivativeModuleIsInstalled
+        whenDerivativeTypeIsSet
     {
-        // Update routing params
-        routingParams.derivativeType = toKeycode("DERV");
-
         // Expect revert
         mockDerivativeModule.setValidateFails(true);
         vm.expectRevert("validation error");
@@ -330,10 +332,8 @@ contract AuctionTest is Test {
         external
         whenAuctionModuleIsInstalled
         whenDerivativeModuleIsInstalled
+        whenDerivativeTypeIsSet
     {
-        // Update routing params
-        routingParams.derivativeType = toKeycode("DERV");
-
         // Create the auction
         uint256 lotId = auctionHouse.auction(routingParams, auctionParams);
 
@@ -350,9 +350,9 @@ contract AuctionTest is Test {
         external
         whenAuctionModuleIsInstalled
         whenDerivativeModuleIsInstalled
+        whenDerivativeTypeIsSet
     {
         // Update routing params
-        routingParams.derivativeType = toKeycode("DERV");
         routingParams.derivativeParams = abi.encode("derivative params");
 
         // Create the auction
@@ -369,10 +369,20 @@ contract AuctionTest is Test {
         assertEq(lotDerivativeParams, abi.encode("derivative params"), "derivative params mismatch");
     }
 
-    function testReverts_whenCondenserModuleNotInstalled() external whenAuctionModuleIsInstalled {
-        // Update routing params
-        routingParams.condenserType = toKeycode("COND");
+    // [X] condenser
+    //  [X] reverts when condenser type is sunset
+    //  [X] reverts when condenser type is not installed
+    //  [X] reverts when condenser type is not a condenser
+    //  [X] reverts when compatibility check fails
+    //  [X] sets the condenser on the auction lot
 
+    function testReverts_whenCondenserModuleNotInstalled()
+        external
+        whenAuctionModuleIsInstalled
+        whenDerivativeModuleIsInstalled
+        whenDerivativeTypeIsSet
+        whenCondenserTypeIsSet
+    {
         // Expect revert
         bytes memory err =
             abi.encodeWithSelector(WithModules.ModuleNotInstalled.selector, toKeycode("COND"), 0);
@@ -381,7 +391,12 @@ contract AuctionTest is Test {
         auctionHouse.auction(routingParams, auctionParams);
     }
 
-    function testReverts_whenCondenserTypeIncorrect() external whenAuctionModuleIsInstalled {
+    function testReverts_whenCondenserTypeIncorrect()
+        external
+        whenAuctionModuleIsInstalled
+        whenDerivativeModuleIsInstalled
+        whenDerivativeTypeIsSet
+    {
         // Update routing params
         routingParams.condenserType = toKeycode("MOCK");
 
@@ -399,13 +414,14 @@ contract AuctionTest is Test {
     function testReverts_whenCondenserTypeIsSunset()
         external
         whenAuctionModuleIsInstalled
+        whenDerivativeModuleIsInstalled
+        whenDerivativeTypeIsSet
         whenCondenserModuleIsInstalled
+        whenCondenserTypeIsSet
+        whenCondenserIsMapped
     {
         // Sunset the module, which prevents the creation of new auctions using that module
         auctionHouse.sunsetModule(toKeycode("COND"));
-
-        // Update routing params
-        routingParams.condenserType = toKeycode("COND");
 
         // Expect revert
         bytes memory err =
@@ -415,14 +431,54 @@ contract AuctionTest is Test {
         auctionHouse.auction(routingParams, auctionParams);
     }
 
-    function test_whenCondenserIsSet()
+    function testReverts_whenCondenserLookupIsMissing()
+        external
+        whenAuctionModuleIsInstalled
+        whenDerivativeModuleIsInstalled
+        whenDerivativeTypeIsSet
+        whenCondenserModuleIsInstalled
+        whenCondenserTypeIsSet
+    {
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(
+            Auctioneer.Auctioneer_Params_InvalidCondenser.selector,
+            toKeycode("MOCK"),
+            toKeycode("DERV"),
+            toKeycode("COND")
+        );
+        vm.expectRevert(err);
+
+        auctionHouse.auction(routingParams, auctionParams);
+    }
+
+    function testReverts_whenCondenserIsSet_whenDerivativeIsEmpty()
         external
         whenAuctionModuleIsInstalled
         whenCondenserModuleIsInstalled
+        whenCondenserTypeIsSet
+        whenCondenserIsMapped
     {
-        // Update routing params
-        routingParams.condenserType = toKeycode("COND");
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(
+            Auctioneer.Auctioneer_Params_InvalidCondenser.selector,
+            toKeycode("MOCK"),
+            toKeycode(""),
+            toKeycode("COND")
+        );
+        vm.expectRevert(err);
 
+        auctionHouse.auction(routingParams, auctionParams);
+    }
+
+    function test_whenCondenserIsSet()
+        external
+        whenAuctionModuleIsInstalled
+        whenDerivativeModuleIsInstalled
+        whenDerivativeTypeIsSet
+        whenCondenserModuleIsInstalled
+        whenCondenserTypeIsSet
+        whenCondenserIsMapped
+    {
         // Create the auction
         uint256 lotId = auctionHouse.auction(routingParams, auctionParams);
 
@@ -434,4 +490,11 @@ contract AuctionTest is Test {
             "condenser type mismatch"
         );
     }
+
+    // [ ] allowlist
+    //  [ ] reverts when allowlist validation fails
+    //  [ ] sets the allowlist on the auction lot
+
+    // [ ] hooks
+    //  [ ] sets the hooks on the auction lot
 }

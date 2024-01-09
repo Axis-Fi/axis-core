@@ -31,6 +31,10 @@ abstract contract Auctioneer is WithModules {
 
     error Auctioneer_Params_InvalidType(Module.Type expectedType_, Module.Type actualType_);
 
+    error Auctioneer_Params_InvalidCondenser(
+        Keycode auctionKeycode_, Keycode derivativeKeycode_, Keycode condenserKeycode_
+    );
+
     error Auctioneer_InvalidParams();
 
     // ========= EVENTS ========= //
@@ -83,6 +87,10 @@ abstract contract Auctioneer is WithModules {
 
     /// @notice Mapping of lot IDs to their auction type (represented by the Keycode for the auction submodule)
     mapping(uint256 lotId => Routing) public lotRouting;
+
+    /// @notice     Maps auction and derivative types to the Condenser module that handles them
+    /// @dev        Auction Keycode -> Derivative Keycode -> Condenser Keycode
+    mapping(Keycode => mapping(Keycode => Keycode)) public condenserLookup;
 
     // ========== AUCTION MANAGEMENT ========== //
 
@@ -177,6 +185,7 @@ abstract contract Auctioneer is WithModules {
         }
 
         // Condenser
+        // TODO: decide if routing_.condenserType is an override for the existing lookup, otherwise do the lookup only if the condenserType is not specified
         Veecode condenserType;
         if (fromKeycode(routing_.condenserType) != bytes5(0)) {
             // Load condenser module, this checks that it is installed.
@@ -186,6 +195,16 @@ abstract contract Auctioneer is WithModules {
             // Check that the module for the condenser type is valid
             if (condenserModule.TYPE() != Module.Type.Condenser) {
                 revert Auctioneer_Params_InvalidType(Module.Type.Condenser, condenserModule.TYPE());
+            }
+
+            // Check that the condenser type is valid for the auction and derivative types
+            if (
+                fromKeycode(condenserLookup[routing_.auctionType][routing_.derivativeType])
+                    != fromKeycode(routing_.condenserType)
+            ) {
+                revert Auctioneer_Params_InvalidCondenser(
+                    routing_.auctionType, routing_.derivativeType, routing_.condenserType
+                );
             }
 
             condenserType = condenserModule.VEECODE();
@@ -279,6 +298,29 @@ abstract contract Auctioneer is WithModules {
 
         // Get remaining capacity from module
         return module.remainingCapacity(id_);
+    }
+
+    // ========== ADMIN FUNCTIONS ========== //
+
+    /// @notice     Sets the value of the Condenser for a given auction and derivative combination
+    /// @dev        To remove a condenser, set the value of `condenserType_` to a blank Keycode
+    ///
+    /// @dev        This function will revert if:
+    /// @dev        - The caller is not the owner
+    /// @dev        - `auctionKeycode_` or `derivativeKeycode_` are empty
+    /// @dev        - `auctionKeycode_` does not belong to an auction module
+    /// @dev        - `derivativeKeycode_` does not belong to a derivative module
+    /// @dev        - `condenserType_` does not belong to a condenser module
+    ///
+    /// @param      auctionKeycode_    The auction type
+    /// @param      derivativeKeycode_ The derivative type
+    /// @param      condenserKeycode_  The condenser type
+    function setCondenserLookup(
+        Keycode auctionKeycode_,
+        Keycode derivativeKeycode_,
+        Keycode condenserKeycode_
+    ) external onlyOwner {
+        condenserLookup[auctionKeycode_][derivativeKeycode_] = condenserKeycode_;
     }
 
     // ========== INTERNAL HELPER FUNCTIONS ========== //
