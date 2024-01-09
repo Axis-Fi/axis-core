@@ -118,6 +118,8 @@ contract AuctionTest is Test {
     }
 
     function test_success() external whenLotIsCreated {
+        assertTrue(mockAuctionModule.isLive(lotId), "before cancellation: isLive mismatch");
+
         vm.prank(auctionOwner);
         auctionHouse.cancel(lotId);
 
@@ -125,5 +127,7 @@ contract AuctionTest is Test {
         (, uint48 lotConclusion,, uint256 lotCapacity,,) = mockAuctionModule.lotData(lotId);
         assertEq(lotConclusion, uint48(block.timestamp));
         assertEq(lotCapacity, 0);
+
+        assertFalse(mockAuctionModule.isLive(lotId), "after cancellation: isLive mismatch");
     }
 }
