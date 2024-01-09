@@ -94,8 +94,6 @@ abstract contract Auctioneer is WithModules {
 
     // ========== AUCTION MANAGEMENT ========== //
 
-    // TODO condenser version compatibility
-
     /// @notice     Creates a new auction lot
     /// @dev        The function reverts if:
     ///             - The module for the auction type is not installed
@@ -229,14 +227,25 @@ abstract contract Auctioneer is WithModules {
         emit AuctionCreated(lotId, address(routing.baseToken), address(routing.quoteToken));
     }
 
-    function cancel(uint256 id_) external {
-        // Check that caller is the auction owner
-        if (msg.sender != lotRouting[id_].owner) revert HOUSE_NotAuctionOwner(msg.sender);
+    /// @notice     Cancels an auction lot
+    /// @dev        The function reverts if:
+    ///             - The caller is not the auction owner
+    ///             - The lot ID is invalid
+    ///             - The respective auction module reverts
+    ///
+    /// @param      lotId_      ID of the auction lot
+    function cancel(uint256 lotId_) external {
+        address lotOwner = lotRouting[lotId_].owner;
+        // Check that it is a valid lot id
+        if (lotOwner == address(0)) revert HOUSE_InvalidLotId(lotId_);
 
-        AuctionModule module = _getModuleForId(id_);
+        // Check that caller is the auction owner
+        if (msg.sender != lotOwner) revert HOUSE_NotAuctionOwner(msg.sender);
+
+        AuctionModule module = _getModuleForId(lotId_);
 
         // Cancel the auction on the module
-        module.cancel(id_);
+        module.cancel(lotId_);
     }
 
     // ========== AUCTION INFORMATION ========== //

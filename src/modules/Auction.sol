@@ -7,7 +7,7 @@ abstract contract Auction {
     /* ========== ERRORS ========== */
 
     error Auction_OnlyMarketOwner();
-    error Auction_MarketNotActive();
+    error Auction_MarketNotActive(uint256 lotId);
     error Auction_AmountLessThanMinimum();
     error Auction_NotEnoughCapacity();
     error Auction_InvalidParams();
@@ -119,7 +119,14 @@ abstract contract Auction {
 abstract contract AuctionModule is Auction, Module {
     // ========== AUCTION MANAGEMENT ========== //
 
-    function auction(uint256 id_, AuctionParams memory params_) external override onlyParent {
+    /// @notice     Create an auction lot
+    /// @dev        This function reverts if:
+    ///             - the caller is not the parent of the module
+    ///             - the start time is in the past
+    ///             - the duration is less than the minimum
+    ///
+    /// @param      lotId_      The lot id
+    function auction(uint256 lotId_, AuctionParams memory params_) external override onlyParent {
         // Start time must be zero or in the future
         if (params_.start > 0 && params_.start < uint48(block.timestamp)) {
             revert Auction_InvalidParams();
@@ -136,10 +143,10 @@ abstract contract AuctionModule is Auction, Module {
         lot.capacity = params_.capacity;
 
         // Call internal createAuction function to store implementation-specific data
-        _auction(id_, lot, params_.implParams);
+        _auction(lotId_, lot, params_.implParams);
 
         // Store lot data
-        lotData[id_] = lot;
+        lotData[lotId_] = lot;
     }
 
     /// @dev implementation-specific auction creation logic can be inserted by overriding this function
@@ -149,14 +156,28 @@ abstract contract AuctionModule is Auction, Module {
         bytes memory params_
     ) internal virtual returns (uint256);
 
-    /// @dev Owner is stored in the Routing information on the AuctionHouse, so we check permissions there
-    function cancel(uint256 id_) external override onlyParent {
-        Lot storage lot = lotData[id_];
+    /// @notice     Cancel an auction lot
+    /// @dev        Owner is stored in the Routing information on the AuctionHouse, so we check permissions there
+    /// @dev        This function reverts if:
+    ///             - the caller is not the parent of the module
+    ///             - the lot id is invalid
+    ///             - the lot is not active
+    ///
+    /// @param      lotId_      The lot id
+    function cancel(uint256 lotId_) external override onlyParent {
+        Lot storage lot = lotData[lotId_];
+
+        // Invalid lot
+        if (lot.start == 0) revert Auction_InvalidParams();
+
+        // Inactive lot
+        if (lot.capacity == 0) revert Auction_MarketNotActive(lotId_);
+
         lot.conclusion = uint48(block.timestamp);
         lot.capacity = 0;
 
         // Call internal closeAuction function to update any other required parameters
-        _cancel(id_);
+        _cancel(lotId_);
     }
 
     function _cancel(uint256 id_) internal virtual;
