@@ -6,8 +6,13 @@ import "src/modules/Modules.sol";
 abstract contract Auction {
     /* ========== ERRORS ========== */
 
-    error Auction_OnlyMarketOwner();
     error Auction_MarketNotActive(uint256 lotId);
+
+    error Auction_InvalidStart(uint48 start_, uint48 minimum_);
+
+    error Auction_InvalidDuration(uint48 duration_, uint48 minimum_);
+
+    error Auction_OnlyMarketOwner();
     error Auction_AmountLessThanMinimum();
     error Auction_NotEnoughCapacity();
     error Auction_InvalidParams();
@@ -129,11 +134,13 @@ abstract contract AuctionModule is Auction, Module {
     function auction(uint256 lotId_, AuctionParams memory params_) external override onlyParent {
         // Start time must be zero or in the future
         if (params_.start > 0 && params_.start < uint48(block.timestamp)) {
-            revert Auction_InvalidParams();
+            revert Auction_InvalidStart(params_.start, uint48(block.timestamp));
         }
 
         // Duration must be at least min duration
-        if (params_.duration < minAuctionDuration) revert Auction_InvalidParams();
+        if (params_.duration < minAuctionDuration) {
+            revert Auction_InvalidDuration(params_.duration, minAuctionDuration);
+        }
 
         // Create core market data
         Lot memory lot;

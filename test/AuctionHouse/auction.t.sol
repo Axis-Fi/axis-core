@@ -113,7 +113,7 @@ contract AuctionTest is Test {
     // [X] reverts when quote token decimals are out of bounds
     // [X] reverts when base token is 0
     // [X] reverts when quote token is 0
-    // [X] stores the auction lot
+    // [X] creates the auction lot
 
     function testReverts_whenModuleNotInstalled() external {
         bytes memory err =
