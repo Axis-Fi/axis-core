@@ -10,6 +10,8 @@ import {MockERC20} from "lib/solmate/src/test/utils/mocks/MockERC20.sol";
 import {MockAuctionModule} from "test/modules/Auction/MockAuctionModule.sol";
 import {MockDerivativeModule} from "test/modules/Derivative/MockDerivativeModule.sol";
 import {MockCondenserModule} from "test/modules/Condenser/MockCondenserModule.sol";
+import {MockAllowlist} from "test/modules/Auction/MockAllowlist.sol";
+import {MockHook} from "test/modules/Auction/MockHook.sol";
 
 // Auctions
 import {AuctionHouse} from "src/AuctionHouse.sol";
@@ -33,6 +35,8 @@ contract AuctionTest is Test {
     MockAuctionModule internal mockAuctionModule;
     MockDerivativeModule internal mockDerivativeModule;
     MockCondenserModule internal mockCondenserModule;
+    MockAllowlist internal mockAllowlist;
+    MockHook internal mockHook;
 
     AuctionHouse internal auctionHouse;
     Auctioneer.RoutingParams internal routingParams;
@@ -46,6 +50,8 @@ contract AuctionTest is Test {
         mockAuctionModule = new MockAuctionModule(address(auctionHouse));
         mockDerivativeModule = new MockDerivativeModule(address(auctionHouse));
         mockCondenserModule = new MockCondenserModule(address(auctionHouse));
+        mockAllowlist = new MockAllowlist();
+        mockHook = new MockHook();
 
         auctionParams = Auction.AuctionParams({
             start: uint48(block.timestamp),
@@ -494,8 +500,34 @@ contract AuctionTest is Test {
 
     // [ ] allowlist
     //  [ ] reverts when allowlist validation fails
-    //  [ ] sets the allowlist on the auction lot
+    //  [X] sets the allowlist on the auction lot
 
-    // [ ] hooks
-    //  [ ] sets the hooks on the auction lot
+    function test_success_allowlistIsSet() external whenAuctionModuleIsInstalled {
+        // Update routing params
+        routingParams.allowlist = mockAllowlist;
+
+        // Create the auction
+        uint256 lotId = auctionHouse.auction(routingParams, auctionParams);
+
+        // Assert values
+        (,,,,, IAllowlist lotAllowlist,,,,) = auctionHouse.lotRouting(lotId);
+
+        assertEq(address(lotAllowlist), address(mockAllowlist), "allowlist mismatch");
+    }
+
+    // [X] hooks
+    //  [X] sets the hooks on the auction lot
+
+    function test_success_hooksIsSet() external whenAuctionModuleIsInstalled {
+        // Update routing params
+        routingParams.hooks = mockHook;
+
+        // Create the auction
+        uint256 lotId = auctionHouse.auction(routingParams, auctionParams);
+
+        // Assert values
+        (,,,, IHooks lotHooks,,,,,) = auctionHouse.lotRouting(lotId);
+
+        assertEq(address(lotHooks), address(mockHook), "hooks mismatch");
+    }
 }

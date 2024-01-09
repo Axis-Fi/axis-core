@@ -128,7 +128,10 @@ Auctions (and auction types) will have different configuration options. This wil
 -   Payout token
 -   Quote token
 -   Purchase hook addresses
--   Optional whitelist of allowed bidders
+-   Optional allowlist of allowed bidders
+    - The allowlist is a contract that supports two approaches:
+        - Determining if a user address is allowed, in general
+        - Determining if a user address is allowed for a specific auction lot
 -   Capacity (in quote or payout token)
 -   Optional derivative type and parameters
 -   Optional condenser type (used to manipulate auction output for the derivative module)

@@ -210,7 +210,8 @@ abstract contract Auctioneer is WithModules {
 
         // If allowlist is being used, validate the allowlist data and register the auction on the allowlist
         if (address(routing_.allowlist) != address(0)) {
-            // TODO
+            // TODO validation
+            // TODO registration with allowlist
         }
 
         // Store routing information
@@ -223,6 +224,7 @@ abstract contract Auctioneer is WithModules {
         routing.derivativeType = derivativeType;
         routing.derivativeParams = derivativeParams;
         routing.condenserType = condenserType;
+        routing.allowlist = routing_.allowlist;
 
         emit AuctionCreated(lotId, address(routing.baseToken), address(routing.quoteToken));
     }
