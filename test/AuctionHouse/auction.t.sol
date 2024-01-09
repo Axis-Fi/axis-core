@@ -454,6 +454,7 @@ contract AuctionTest is Test {
     function testReverts_whenCondenserIsSet_whenDerivativeIsEmpty()
         external
         whenAuctionModuleIsInstalled
+        whenDerivativeModuleIsInstalled
         whenCondenserModuleIsInstalled
         whenCondenserTypeIsSet
         whenCondenserIsMapped

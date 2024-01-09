@@ -320,6 +320,54 @@ abstract contract Auctioneer is WithModules {
         Keycode derivativeKeycode_,
         Keycode condenserKeycode_
     ) external onlyOwner {
+        // Check that auction and derivative keycodes are not empty
+        if (fromKeycode(auctionKeycode_) == bytes5(0)) {
+            revert Auctioneer_Params_InvalidCondenser(
+                auctionKeycode_, derivativeKeycode_, condenserKeycode_
+            );
+        }
+
+        if (fromKeycode(derivativeKeycode_) == bytes5(0)) {
+            revert Auctioneer_Params_InvalidCondenser(
+                auctionKeycode_, derivativeKeycode_, condenserKeycode_
+            );
+        }
+
+        // Check that the auction type is valid
+        {
+            AuctionModule auctionModule = AuctionModule(_getLatestModuleIfActive(auctionKeycode_));
+
+            if (auctionModule.TYPE() != Module.Type.Auction) {
+                revert Auctioneer_Params_InvalidCondenser(
+                    auctionKeycode_, derivativeKeycode_, condenserKeycode_
+                );
+            }
+        }
+
+        // Check that the derivative type is valid
+        {
+            DerivativeModule derivativeModule =
+                DerivativeModule(_getLatestModuleIfActive(derivativeKeycode_));
+
+            if (derivativeModule.TYPE() != Module.Type.Derivative) {
+                revert Auctioneer_Params_InvalidCondenser(
+                    auctionKeycode_, derivativeKeycode_, condenserKeycode_
+                );
+            }
+        }
+
+        // Check that the condenser type is valid
+        if (fromKeycode(condenserKeycode_) != bytes5(0)) {
+            CondenserModule condenserModule =
+                CondenserModule(_getLatestModuleIfActive(condenserKeycode_));
+
+            if (condenserModule.TYPE() != Module.Type.Condenser) {
+                revert Auctioneer_Params_InvalidCondenser(
+                    auctionKeycode_, derivativeKeycode_, condenserKeycode_
+                );
+            }
+        }
+
         condenserLookup[auctionKeycode_][derivativeKeycode_] = condenserKeycode_;
     }
 
