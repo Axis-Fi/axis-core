@@ -401,8 +401,9 @@ contract AuctionTest is Test {
         // Won't revert
     }
 
-    // [ ] allowlist
-    //  [ ] reverts when allowlist validation fails
+    // [X] allowlist
+    //  [X] reverts when the allowlist address is not a contract
+    //  [X] reverts when allowlist validation fails
     //  [X] sets the allowlist on the auction lot
 
     function test_success_allowlistIsSet() external whenAuctionModuleIsInstalled {
@@ -416,10 +417,49 @@ contract AuctionTest is Test {
         (,,,,, IAllowlist lotAllowlist,,,) = auctionHouse.lotRouting(lotId);
 
         assertEq(address(lotAllowlist), address(mockAllowlist), "allowlist mismatch");
+
+        // Check that it has been registered with the allowlist
+        uint256[] memory registeredIds = mockAllowlist.getRegisteredIds();
+        assertEq(registeredIds.length, 1, "registered ids length mismatch");
+        assertEq(registeredIds[0], lotId, "registered id mismatch");
+    }
+
+    function testReverts_whenAllowlistIsNotContract() external whenAuctionModuleIsInstalled {
+        // Update routing params
+        routingParams.allowlist = IAllowlist(address(0x10));
+
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(Auctioneer.InvalidParams.selector);
+        vm.expectRevert(err);
+
+        auctionHouse.auction(routingParams, auctionParams);
+    }
+
+    function testReverts_whenAllowlistValidationFails() external whenAuctionModuleIsInstalled {
+        // Update routing params
+        routingParams.allowlist = mockAllowlist;
+
+        // Expect revert
+        mockAllowlist.setRegisterReverts(true);
+        vm.expectRevert("MockAllowlist: register reverted");
+
+        auctionHouse.auction(routingParams, auctionParams);
     }
 
     // [X] hooks
+    //  [X] reverts when the hooks address is not a contract
     //  [X] sets the hooks on the auction lot
+
+    function testReverts_whenHooksIsNotContract() external whenAuctionModuleIsInstalled {
+        // Update routing params
+        routingParams.hooks = IHooks(address(0x10));
+
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(Auctioneer.InvalidParams.selector);
+        vm.expectRevert(err);
+
+        auctionHouse.auction(routingParams, auctionParams);
+    }
 
     function test_success_hooksIsSet() external whenAuctionModuleIsInstalled {
         // Update routing params

@@ -93,8 +93,9 @@ abstract contract Auctioneer is WithModules {
     ///             - Validation for the auction parameters fails
     ///             - The module for the optional specified derivative type is not installed
     ///             - Validation for the optional specified derivative type fails
-    ///             - Validation for the optional allowlist fails
-    ///             - The module for the optional specified condenser type is not installed
+    ///             - Registration for the optional allowlist fails
+    ///             - The optional specified hooks contract is not a contract
+    ///             - The condenser module is not installed or is sunset
     ///
     /// @param      routing_    Routing information for the auction lot
     /// @param      params_     Auction parameters for the auction lot
@@ -150,7 +151,6 @@ abstract contract Auctioneer is WithModules {
         routing.owner = msg.sender;
         routing.baseToken = routing_.baseToken;
         routing.quoteToken = routing_.quoteToken;
-        routing.hooks = routing_.hooks;
 
         // Derivative
         if (fromKeycode(routing_.derivativeType) != bytes5("")) {
@@ -197,11 +197,25 @@ abstract contract Auctioneer is WithModules {
 
         // If allowlist is being used, validate the allowlist data and register the auction on the allowlist
         if (address(routing_.allowlist) != address(0)) {
-            // TODO validation
-            // TODO registration with allowlist
+            // Check that it is a contract
+            // It is assumed that the user will do validation of the allowlist
+            if (address(routing_.allowlist).code.length == 0) revert InvalidParams();
+
+            // Register with the allowlist
+            routing_.allowlist.register(lotId, routing_.allowlistParams);
 
             // Store allowlist information
             routing.allowlist = routing_.allowlist;
+        }
+
+        // If hooks are being used, validate the hooks data
+        if (address(routing_.hooks) != address(0)) {
+            // Check that it is a contract
+            // It is assumed that the user will do validation of the hooks
+            if (address(routing_.hooks).code.length == 0) revert InvalidParams();
+
+            // Store hooks information
+            routing.hooks = routing_.hooks;
         }
 
         emit AuctionCreated(lotId, address(routing.baseToken), address(routing.quoteToken));
