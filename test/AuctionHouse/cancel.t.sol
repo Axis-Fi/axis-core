@@ -104,6 +104,7 @@ contract CancelTest is Test {
         bytes memory err = abi.encodeWithSelector(Auctioneer.InvalidLotId.selector, lotId);
         vm.expectRevert(err);
 
+        vm.prank(auctionOwner);
         auctionHouse.cancel(lotId);
     }
 

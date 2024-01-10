@@ -7,6 +7,7 @@ import {
     fromKeycode,
     Keycode,
     fromVeecode,
+    unwrapVeecode,
     Veecode,
     Module,
     WithModules
@@ -171,10 +172,36 @@ abstract contract Auctioneer is WithModules {
             routing.derivativeParams = routing_.derivativeParams;
         }
 
+        // Condenser
+        {
+            // Get condenser reference
+            Veecode condenserRef = condensers[auctionRef][routing.derivativeReference];
+
+            // Check that the module for the condenser type is valid
+            if (fromVeecode(condenserRef) != bytes7(0)) {
+                CondenserModule condenserModule =
+                    CondenserModule(_getModuleIfInstalled(condenserRef));
+
+                if (condenserModule.TYPE() != Module.Type.Condenser) {
+                    revert InvalidModuleType(condenserRef);
+                }
+
+                // Check module status
+                (Keycode moduleKeycode,) = unwrapVeecode(condenserRef);
+                ModStatus memory status = getModuleStatus[moduleKeycode];
+                if (status.sunset == true) {
+                    revert ModuleIsSunset(moduleKeycode);
+                }
+            }
+        }
+
         // If allowlist is being used, validate the allowlist data and register the auction on the allowlist
         if (address(routing_.allowlist) != address(0)) {
             // TODO validation
             // TODO registration with allowlist
+
+            // Store allowlist information
+            routing.allowlist = routing_.allowlist;
         }
 
         emit AuctionCreated(lotId, address(routing.baseToken), address(routing.quoteToken));
@@ -188,8 +215,13 @@ abstract contract Auctioneer is WithModules {
     ///
     /// @param      lotId_      ID of the auction lot
     function cancel(uint256 lotId_) external {
+        address lotOwner = lotRouting[lotId_].owner;
+
+        // Check that lot ID is valid
+        if (lotOwner == address(0)) revert InvalidLotId(lotId_);
+
         // Check that caller is the auction owner
-        if (msg.sender != lotRouting[lotId_].owner) revert NotAuctionOwner(msg.sender);
+        if (msg.sender != lotOwner) revert NotAuctionOwner(msg.sender);
 
         AuctionModule module = _getModuleForId(lotId_);
 

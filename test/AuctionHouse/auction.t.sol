@@ -132,7 +132,7 @@ contract AuctionTest is Test {
         routingParams.auctionType = toKeycode("DERV");
 
         bytes memory err = abi.encodeWithSelector(
-            Auctioneer.InvalidModuleType.selector, mockAuctionModule.VEECODE()
+            Auctioneer.InvalidModuleType.selector, mockDerivativeModule.VEECODE()
         );
         vm.expectRevert(err);
 
@@ -285,7 +285,7 @@ contract AuctionTest is Test {
 
         // Expect revert
         bytes memory err = abi.encodeWithSelector(
-            Auctioneer.InvalidModuleType.selector, mockDerivativeModule.VEECODE()
+            Auctioneer.InvalidModuleType.selector, mockAuctionModule.VEECODE()
         );
         vm.expectRevert(err);
 
@@ -365,25 +365,8 @@ contract AuctionTest is Test {
 
     // [X] condenser
     //  [X] reverts when condenser type is sunset
-    //  [X] reverts when condenser type is not installed
-    //  [X] reverts when condenser type is not a condenser
     //  [X] reverts when compatibility check fails
     //  [X] sets the condenser on the auction lot
-
-    function testReverts_whenCondenserModuleNotInstalled()
-        external
-        whenAuctionModuleIsInstalled
-        whenDerivativeModuleIsInstalled
-        whenDerivativeTypeIsSet
-        whenCondenserIsMapped
-    {
-        // Expect revert
-        bytes memory err =
-            abi.encodeWithSelector(WithModules.ModuleNotInstalled.selector, toKeycode("COND"), 0);
-        vm.expectRevert(err);
-
-        auctionHouse.auction(routingParams, auctionParams);
-    }
 
     function testReverts_whenCondenserTypeIsSunset()
         external

@@ -70,6 +70,8 @@ contract MockDerivativeModule is DerivativeModule {
 
     function validate(bytes memory params_) external view virtual override returns (bool) {
         if (validateFails) revert("validation error");
+
+        return true;
     }
 
     function setValidateFails(bool validateFails_) external {

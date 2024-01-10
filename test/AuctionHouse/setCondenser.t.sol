@@ -39,6 +39,11 @@ contract SetCondenserTest is Test {
 
     address internal protocol = address(0x2);
 
+    Veecode internal auctionVeecode;
+    Veecode internal derivativeVeecode;
+    Veecode internal condenserVeecode;
+    Veecode internal blankVeecode;
+
     function setUp() external {
         baseToken = new MockERC20("Base Token", "BASE", 18);
         quoteToken = new MockERC20("Quote Token", "QUOTE", 18);
@@ -47,6 +52,11 @@ contract SetCondenserTest is Test {
         mockAuctionModule = new MockAuctionModule(address(auctionHouse));
         mockDerivativeModule = new MockDerivativeModule(address(auctionHouse));
         mockCondenserModule = new MockCondenserModule(address(auctionHouse));
+
+        auctionVeecode = mockAuctionModule.VEECODE();
+        derivativeVeecode = mockDerivativeModule.VEECODE();
+        condenserVeecode = mockCondenserModule.VEECODE();
+        blankVeecode = toVeecode("");
     }
 
     modifier whenAuctionModuleIsInstalled() {
@@ -64,14 +74,14 @@ contract SetCondenserTest is Test {
         _;
     }
 
-    // addCondenserLookup
+    // setCondenser
     // [X] reverts if not the owner
-    // [X] reverts if auction keycode is 0
-    // [X] reverts if derivative keycode is 0
+    // [X] reverts if auction Veecode is 0
+    // [X] reverts if derivative Veecode is 0
     // [X] reverts if auction module is not an auction
-    // [X] reverts if derivative module is not a derivative
-    // [X] reverts if condenser keycode is not 0 and condenser module is not a condenser
-    // [X] unsets if condenser keycode is 0
+    // [X] reverts if derivative Veecode is not a derivative
+    // [X] reverts if condenser Veecode is not 0 and condenser module is not a condenser
+    // [X] unsets if condenser Veecode is 0
     // [X] sets the condenser lookup values
 
     function testReverts_whenUnauthorized() external {
@@ -80,41 +90,29 @@ contract SetCondenserTest is Test {
         vm.expectRevert("UNAUTHORIZED");
 
         vm.prank(alice);
-        auctionHouse.setCondenser(
-            mockAuctionModule.VEECODE(),
-            mockDerivativeModule.VEECODE(),
-            mockCondenserModule.VEECODE()
-        );
+        auctionHouse.setCondenser(auctionVeecode, derivativeVeecode, condenserVeecode);
     }
 
-    function testReverts_whenAuctionKeycodeIsEmpty() external {
+    function testReverts_whenAuctionVeecodeIsEmpty() external {
         bytes memory err = abi.encodeWithSelector(Auctioneer.InvalidParams.selector);
         vm.expectRevert(err);
 
-        auctionHouse.setCondenser(
-            toVeecode(""), mockDerivativeModule.VEECODE(), mockCondenserModule.VEECODE()
-        );
+        auctionHouse.setCondenser(blankVeecode, derivativeVeecode, condenserVeecode);
     }
 
-    function testReverts_whenDerivativeKeycodeIsEmpty() external {
+    function testReverts_whenDerivativeVeecodeIsEmpty() external {
         bytes memory err = abi.encodeWithSelector(Auctioneer.InvalidParams.selector);
         vm.expectRevert(err);
 
-        auctionHouse.setCondenser(
-            mockAuctionModule.VEECODE(), toVeecode(""), mockCondenserModule.VEECODE()
-        );
+        auctionHouse.setCondenser(auctionVeecode, blankVeecode, condenserVeecode);
     }
 
     function testReverts_whenAuctionModuleNotInstalled() external {
         bytes memory err =
-            abi.encodeWithSelector(WithModules.ModuleNotInstalled.selector, toKeycode("MOCK"), 0);
+            abi.encodeWithSelector(WithModules.ModuleNotInstalled.selector, toKeycode("MOCK"), 1);
         vm.expectRevert(err);
 
-        auctionHouse.setCondenser(
-            mockAuctionModule.VEECODE(),
-            mockDerivativeModule.VEECODE(),
-            mockCondenserModule.VEECODE()
-        );
+        auctionHouse.setCondenser(auctionVeecode, derivativeVeecode, condenserVeecode);
     }
 
     function testReverts_whenAuctionTypeIncorrect()
@@ -123,28 +121,19 @@ contract SetCondenserTest is Test {
         whenDerivativeModuleIsInstalled
         whenCondenserModuleIsInstalled
     {
-        bytes memory err = abi.encodeWithSelector(
-            Auctioneer.InvalidModuleType.selector, mockDerivativeModule.VEECODE()
-        );
+        bytes memory err =
+            abi.encodeWithSelector(Auctioneer.InvalidModuleType.selector, derivativeVeecode);
         vm.expectRevert(err);
 
-        auctionHouse.setCondenser(
-            mockDerivativeModule.VEECODE(),
-            mockDerivativeModule.VEECODE(),
-            mockCondenserModule.VEECODE()
-        );
+        auctionHouse.setCondenser(derivativeVeecode, derivativeVeecode, condenserVeecode);
     }
 
     function testReverts_whenDerivativeModuleNotInstalled() external whenAuctionModuleIsInstalled {
         bytes memory err =
-            abi.encodeWithSelector(WithModules.ModuleNotInstalled.selector, toKeycode("DERV"), 0);
+            abi.encodeWithSelector(WithModules.ModuleNotInstalled.selector, toKeycode("DERV"), 1);
         vm.expectRevert(err);
 
-        auctionHouse.setCondenser(
-            mockAuctionModule.VEECODE(),
-            mockDerivativeModule.VEECODE(),
-            mockCondenserModule.VEECODE()
-        );
+        auctionHouse.setCondenser(auctionVeecode, derivativeVeecode, condenserVeecode);
     }
 
     function testReverts_whenDerivativeTypeIncorrect()
@@ -153,14 +142,11 @@ contract SetCondenserTest is Test {
         whenDerivativeModuleIsInstalled
         whenCondenserModuleIsInstalled
     {
-        bytes memory err = abi.encodeWithSelector(
-            Auctioneer.InvalidModuleType.selector, mockAuctionModule.VEECODE()
-        );
+        bytes memory err =
+            abi.encodeWithSelector(Auctioneer.InvalidModuleType.selector, auctionVeecode);
         vm.expectRevert(err);
 
-        auctionHouse.setCondenser(
-            mockAuctionModule.VEECODE(), mockAuctionModule.VEECODE(), mockCondenserModule.VEECODE()
-        );
+        auctionHouse.setCondenser(auctionVeecode, auctionVeecode, condenserVeecode);
     }
 
     function testReverts_whenCondenserModuleNotInstalled()
@@ -169,14 +155,10 @@ contract SetCondenserTest is Test {
         whenDerivativeModuleIsInstalled
     {
         bytes memory err =
-            abi.encodeWithSelector(WithModules.ModuleNotInstalled.selector, toKeycode("COND"), 0);
+            abi.encodeWithSelector(WithModules.ModuleNotInstalled.selector, toKeycode("COND"), 1);
         vm.expectRevert(err);
 
-        auctionHouse.setCondenser(
-            mockAuctionModule.VEECODE(),
-            mockDerivativeModule.VEECODE(),
-            mockCondenserModule.VEECODE()
-        );
+        auctionHouse.setCondenser(auctionVeecode, derivativeVeecode, condenserVeecode);
     }
 
     function testReverts_whenCondenserTypeIncorrect()
@@ -185,46 +167,33 @@ contract SetCondenserTest is Test {
         whenDerivativeModuleIsInstalled
         whenCondenserModuleIsInstalled
     {
-        bytes memory err = abi.encodeWithSelector(
-            Auctioneer.InvalidModuleType.selector, mockDerivativeModule.VEECODE()
-        );
+        bytes memory err =
+            abi.encodeWithSelector(Auctioneer.InvalidModuleType.selector, derivativeVeecode);
         vm.expectRevert(err);
 
-        auctionHouse.setCondenser(
-            mockAuctionModule.VEECODE(),
-            mockDerivativeModule.VEECODE(),
-            mockDerivativeModule.VEECODE()
-        );
+        auctionHouse.setCondenser(auctionVeecode, derivativeVeecode, derivativeVeecode);
     }
 
-    function test_success_whenCondenserKeycodeIsEmpty()
+    function test_success_whenCondenserVeecodeIsEmpty()
         external
         whenAuctionModuleIsInstalled
         whenDerivativeModuleIsInstalled
     {
-        auctionHouse.setCondenser(
-            mockAuctionModule.VEECODE(), mockDerivativeModule.VEECODE(), toVeecode("")
-        );
+        auctionHouse.setCondenser(auctionVeecode, derivativeVeecode, blankVeecode);
 
-        Veecode condenserVeecode =
-            auctionHouse.condensers(mockAuctionModule.VEECODE(), mockDerivativeModule.VEECODE());
-        assertEq(fromVeecode(condenserVeecode), "");
+        Veecode veecode_ = auctionHouse.condensers(auctionVeecode, derivativeVeecode);
+        assertEq(fromVeecode(veecode_), "");
     }
 
-    function test_success_whenCondenserKeycodeIsNotEmpty()
+    function test_success_whenCondenserVeecodeIsNotEmpty()
         external
         whenAuctionModuleIsInstalled
         whenDerivativeModuleIsInstalled
         whenCondenserModuleIsInstalled
     {
-        auctionHouse.setCondenser(
-            mockAuctionModule.VEECODE(),
-            mockDerivativeModule.VEECODE(),
-            mockCondenserModule.VEECODE()
-        );
+        auctionHouse.setCondenser(auctionVeecode, derivativeVeecode, condenserVeecode);
 
-        Veecode condenserVeecode =
-            auctionHouse.condensers(mockAuctionModule.VEECODE(), mockDerivativeModule.VEECODE());
-        assertEq(fromVeecode(condenserVeecode), fromVeecode(mockCondenserModule.VEECODE()));
+        Veecode veecode_ = auctionHouse.condensers(auctionVeecode, derivativeVeecode);
+        assertEq(fromVeecode(veecode_), fromVeecode(condenserVeecode));
     }
 }
