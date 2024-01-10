@@ -115,7 +115,7 @@ abstract contract Auctioneer is WithModules {
 
         // If allowlist is being used, validate the allowlist data and register the auction on the allowlist
         if (address(routing_.allowlist) != address(0)) {
-            // TODO
+            // TODO register auction on allowlist
         }
 
         emit AuctionCreated(id, address(routing.baseToken), address(routing.quoteToken));
