@@ -12,12 +12,8 @@ abstract contract Derivatizer is WithModules {
         bytes memory data,
         bool wrapped
     ) external virtual returns (uint256, address) {
-        // Load the derivative module, will revert if not installed
-        Derivative derivative = Derivative(address(_getLatestModuleIfActive(dType)));
-
-        // Check that the type hasn't been sunset
-        ModStatus storage moduleStatus = getModuleStatus[dType];
-        if (moduleStatus.sunset) revert("Derivatizer: type sunset");
+        // Load the derivative module, will revert if not installed or sunset
+        DerivativeModule derivative = DerivativeModule(_getLatestModuleIfActive(dType));
 
         // Call the deploy function on the derivative module
         (uint256 tokenId, address wrappedToken) = derivative.deploy(data, wrapped);

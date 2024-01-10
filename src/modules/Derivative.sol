@@ -36,6 +36,7 @@ abstract contract Derivative {
     ) external virtual returns (uint256, address);
 
     /// @notice Mint new derivative tokens. Deploys the derivative token if it does not already exist.
+    /// @param to_ The address to mint the derivative tokens to
     /// @param params_ ABI-encoded parameters for the derivative to be created
     /// @param amount_ The amount of derivative tokens to create
     /// @param wrapped_ Whether (true) or not (false) the derivative should be wrapped in an ERC20 token for composability
@@ -43,12 +44,14 @@ abstract contract Derivative {
     /// @return wrappedAddress_ The address of the ERC20 wrapped derivative token, if wrapped_ is true, otherwise, it's the zero address.
     /// @return amountCreated_ The amount of derivative tokens created
     function mint(
+        address to_,
         bytes memory params_,
         uint256 amount_,
         bool wrapped_
     ) external virtual returns (uint256, address, uint256);
 
     /// @notice Mint new derivative tokens for a specific token Id
+    /// @param to_ The address to mint the derivative tokens to
     /// @param tokenId_ The ID of the derivative token
     /// @param amount_ The amount of derivative tokens to create
     /// @param wrapped_ Whether (true) or not (false) the derivative should be wrapped in an ERC20 token for composability
@@ -56,6 +59,7 @@ abstract contract Derivative {
     /// @return wrappedAddress_ The address of the ERC20 wrapped derivative token, if wrapped_ is true, otherwise, it's the zero address.
     /// @return amountCreated_ The amount of derivative tokens created
     function mint(
+        address to_,
         uint256 tokenId_,
         uint256 amount_,
         bool wrapped_
@@ -92,6 +96,9 @@ abstract contract Derivative {
     // Unwrap an ERC20 derivative token into the underlying ERC6909 derivative
     function unwrap(uint256 tokenId_, uint256 amount_) external virtual;
 
+    // Validate derivative params for the specific implementation
+    function validate(bytes memory params_) external view virtual returns (bool);
+
     // ========== DERIVATIVE INFORMATION ========== //
 
     // TODO view function to format implementation specific token data correctly and return to user
@@ -110,7 +117,4 @@ abstract contract Derivative {
     function computeId(bytes memory params_) external pure virtual returns (uint256);
 }
 
-abstract contract DerivativeModule is Derivative, ERC6909, Module {
-    // TODO consider if boolean return value is required - should revert instead
-    function validate(bytes memory params_) external view virtual returns (bool);
-}
+abstract contract DerivativeModule is Derivative, ERC6909, Module {}

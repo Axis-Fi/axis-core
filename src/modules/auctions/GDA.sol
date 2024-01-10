@@ -15,7 +15,7 @@ pragma solidity 0.8.19;
 //     struct AuctionData {
 //         uint256 equilibriumPrice; // price at which the auction is balanced
 //         uint256 minimumPrice; // minimum price the auction can reach
-//         uint256 payoutScale;
+//         uint256 baseScale;
 //         uint256 quoteScale;
 //         uint48 lastAuctionStart;
 //         Decay decayType; // type of decay to use for the market
@@ -25,18 +25,25 @@ pragma solidity 0.8.19;
 
 //     /* ========== STATE ========== */
 
-//     SD59x18 public constant ONE = convert(int256(1));
+//     SD59x18 public constant ONE = SD59x18.wrap(1e18);
 //     mapping(uint256 lotId => AuctionData) public auctionData;
 // }
 
 // contract GradualDutchAuctioneer is AtomicAuctionModule, GDA {
 //     /* ========== ERRORS ========== */
+//     error InsufficientCapacity();
+//     error InvalidParams();
 
 //     /* ========== CONSTRUCTOR ========== */
 
 //     constructor(
 //         address auctionHouse_
 //     ) Module(auctionHouse_) {}
+
+//     /* ========== MODULE FUNCTIONS ========== */
+//     function ID() public pure override returns (Keycode, uint8) {
+//         return (toKeycode("GDA"), 1);
+//     }
 
 //     /* ========== MARKET FUNCTIONS ========== */
 
@@ -47,7 +54,7 @@ pragma solidity 0.8.19;
 //     ) internal override {
 //         // Decode params
 //         (
-//             uint256 equilibriumPrice_, // quote tokens per payout token, so would be in quote token decimals?
+//             uint256 equilibriumPrice_, // quote tokens per base token, so would be in quote token decimals?
 //             Decay decayType_,
 //             SD59x18 decayConstant_
 //         ) = abi.decode(params_, (uint256, Decay, SD59x18));
@@ -55,18 +62,18 @@ pragma solidity 0.8.19;
 //         // Validate params
 //         // TODO
 
-//         // Calculate scale from payout token decimals
-//         uint256 payoutScale = 10 ** uint256(lot_.payoutToken.decimals());
+//         // Calculate scale from base token decimals
+//         uint256 baseScale = 10 ** uint256(lot_.baseToken.decimals());
 //         uint256 quoteScale = 10 ** uint256(lot_.quoteToken.decimals());
 
 //         // Calculate emissions rate
-//         uint256 payoutCapacity = lot_.capacityInQuote ? lot_.capacity.mulDiv(payoutScale, equilibriumPrice_) : lot_.capacity;
-//         SD59x18 emissionsRate = sd(int256(payoutCapacity.mulDiv(uUNIT, (lot_.conclusion - lot_.start) * payoutScale)));
+//         uint256 baseCapacity = lot_.capacityInQuote ? lot_.capacity.mulDiv(baseScale, equilibriumPrice_) : lot_.capacity;
+//         SD59x18 emissionsRate = sd(int256(baseCapacity.mulDiv(uUNIT, (lot_.conclusion - lot_.start) * baseScale)));
 
 //         // Set auction data
 //         AuctionData storage auction = auctionData[id_];
 //         auction.equilibriumPrice = equilibriumPrice_;
-//         auction.payoutScale = payoutScale;
+//         auction.baseScale = baseScale;
 //         auction.quoteScale = quoteScale;
 //         auction.lastAuctionStart = uint48(block.timestamp);
 //         auction.decayType = decayType_;
@@ -90,7 +97,7 @@ pragma solidity 0.8.19;
 
 //     /* ========== PRICE FUNCTIONS ========== */
 
-//     function priceFor(uint256 id_, uint256 payout_) external view returns (uint256) {
+//     function priceFor(uint256 id_, uint256 payout_) public view override returns (uint256) {
 //         Decay decayType = auctionData[id_].decayType;
 
 //         uint256 amount;
@@ -103,7 +110,9 @@ pragma solidity 0.8.19;
 //         // Check that amount in or payout do not exceed remaining capacity
 //         Lot memory lot = lotData[id_];
 //         if (lot.capacityInQuote ? amount > lot.capacity : payout_ > lot.capacity)
-//             revert Auctioneer_InsufficientCapacity();
+//             revert InsufficientCapacity();
+
+//         return amount;
 //     }
 
 //     // For Continuos GDAs with exponential decay, the price of a given token t seconds after being emitted is: p(t) = p0 * e^(-k*t)
@@ -113,8 +122,8 @@ pragma solidity 0.8.19;
 //         Lot memory lot = lotData[id_];
 //         AuctionData memory auction = auctionData[id_];
 
-//         // Convert payout to SD59x18. We scale first to 18 decimals from the payout token decimals
-//         SD59x18 payout = sd(int256(payout_.mulDiv(uUNIT, auction.payoutScale)));
+//         // Convert payout to SD59x18. We scale first to 18 decimals from the base token decimals
+//         SD59x18 payout = sd(int256(payout_.mulDiv(uUNIT, auction.baseScale)));
 
 //         // Calculate time since last auction start
 //         SD59x18 timeSinceLastAuctionStart = convert(
@@ -134,7 +143,7 @@ pragma solidity 0.8.19;
 
 //         // Calculate return value
 //         // This value should always be positive, therefore, we can safely cast to uint256
-//         // We scale the return value back to payout token decimals
+//         // We scale the return value back to base token decimals
 //         return num1.mul(num2).div(denominator).intoUint256().mulDiv(auction.quoteScale, uUNIT);
 //     }
 
@@ -145,8 +154,8 @@ pragma solidity 0.8.19;
 //         Lot memory lot = lotData[id_];
 //         AuctionData memory auction = auctionData[id_];
 
-//         // Convert payout to SD59x18. We scale first to 18 decimals from the payout token decimals
-//         SD59x18 payout = sd(int256(payout_.mulDiv(uUNIT, auction.payoutScale)));
+//         // Convert payout to SD59x18. We scale first to 18 decimals from the base token decimals
+//         SD59x18 payout = sd(int256(payout_.mulDiv(uUNIT, auction.baseScale)));
 
 //         // Calculate time since last auction start
 //         SD59x18 timeSinceLastAuctionStart = convert(
@@ -174,13 +183,13 @@ pragma solidity 0.8.19;
 
 //     /* ========== PAYOUT CALCULATIONS ========== */
 
-//     function _payoutFor(uint256 id_, uint256 amount_) internal view override returns (uint256) {
+//     function _payoutFor(uint256 id_, uint256 amount_) internal view returns (uint256) {
 //         (uint256 payout, ) = _payoutAndEmissionsFor(id_, amount_);
 
 //         // Check that amount in or payout do not exceed remaining capacity
 //         Lot memory lot = lotData[id_];
 //         if (lot.capacityInQuote ? amount_ > lot.capacity : payout > lot.capacity)
-//             revert Auctioneer_InsufficientCapacity();
+//             revert InsufficientCapacity();
 
 //         return payout;
 //     }
@@ -196,18 +205,17 @@ pragma solidity 0.8.19;
 //         } else if (decayType == Decay.LINEAR) {
 //             return _payoutForLinearDecay(id_, amount_);
 //         } else {
-//             revert Auctioneer_InvalidParams();
+//             revert InvalidParams();
 //         }
 //     }
 
 //     // TODO check this math again
-//     // P = (r / k) * ln(Q * k / p0 * e^(k*T) + 1) where P is the number of payout tokens, Q is the number of quote tokens, r is the emissions rate, k is the decay constant,
+//     // P = (r / k) * ln(Q * k / p0 * e^(k*T) + 1) where P is the number of base tokens, Q is the number of quote tokens, r is the emissions rate, k is the decay constant,
 //     // p0 is the price target of the market, and T is the time since the last auction start
 //     function _payoutForExpDecay(
 //         uint256 id_,
 //         uint256 amount_
 //     ) internal view returns (uint256, uint48) {
-//         CoreData memory core = coreData[id_];
 //         AuctionData memory auction = auctionData[id_];
 
 //         // Convert to 18 decimals for fixed math by pre-computing the Q / p0 factor
@@ -235,15 +243,15 @@ pragma solidity 0.8.19;
 //         // Calculate the payout
 //         SD59x18 payout = logFactor.mul(auction.emissionsRate).div(auction.decayConstant);
 
-//         // Scale back to payout token decimals
+//         // Scale back to base token decimals
 //         // TODO verify we can safely cast to uint256
-//         return payout.intoUint256().mulDiv(auction.payoutScale, uUNIT);
+//         return payout.intoUint256().mulDiv(auction.baseScale, uUNIT);
 
 //         // Calculate seconds of emissions from payout or amount (depending on capacity type)
-//         // TODO emissionsRate is being set only in payout tokens over, need to think about this
+//         // TODO emissionsRate is being set only in base tokens over, need to think about this
 //         // Might just use equilibrium price to convert the quote amount here to payout amount and then divide by emissions rate
 //         uint48 secondsOfEmissions;
-//         if (core.capacityInQuote) {
+//         if (lotData[id_].capacityInQuote) {
 //             // Convert amount to SD59x18
 //             SD59x18 amount = sd(int256(amount_.mulDiv(uUNIT, auction.quoteScale)));
 //             secondsOfEmissions = uint48(amount.div(auction.emissionsRate).intoUint256());
@@ -251,16 +259,15 @@ pragma solidity 0.8.19;
 //             secondsOfEmissions = uint48(payout.div(auction.emissionsRate).intoUint256());
 //         }
 
-//         // Scale payout to payout token decimals and return
+//         // Scale payout to base token decimals and return
 //         // Payout should always be positive since it is atleast 1, therefore, we can safely cast to uint256
-//         return (payout.intoUint256().mulDiv(auction.payoutScale, uUNIT), secondsOfEmissions);
+//         return (payout.intoUint256().mulDiv(auction.baseScale, uUNIT), secondsOfEmissions);
 //     }
 
 //     // TODO check this math again
-//     // P = (r / k) * (sqrt(2 * k * Q / p0) + k * T - 1) where P is the number of payout tokens, Q is the number of quote tokens, r is the emissions rate, k is the decay constant,
+//     // P = (r / k) * (sqrt(2 * k * Q / p0) + k * T - 1) where P is the number of base tokens, Q is the number of quote tokens, r is the emissions rate, k is the decay constant,
 //     // p0 is the price target of the market, and T is the time since the last auction start
 //     function _payoutForLinearDecay(uint256 id_, uint256 amount_) internal view returns (uint256) {
-//         Lot memory lot = lotData[id_];
 //         AuctionData memory auction = auctionData[id_];
 
 //         // Convert to 18 decimals for fixed math by pre-computing the Q / p0 factor
@@ -285,7 +292,7 @@ pragma solidity 0.8.19;
 //         // Calculate seconds of emissions from payout or amount (depending on capacity type)
 //         // TODO same as in the above function
 //         uint48 secondsOfEmissions;
-//         if (core.capacityInQuote) {
+//         if (lotData[id_].capacityInQuote) {
 //             // Convert amount to SD59x18
 //             SD59x18 amount = sd(int256(amount_.mulDiv(uUNIT, auction.scale)));
 //             secondsOfEmissions = uint48(amount.div(auction.emissionsRate).intoUint256());
@@ -293,8 +300,8 @@ pragma solidity 0.8.19;
 //             secondsOfEmissions = uint48(payout.div(auction.emissionsRate).intoUint256());
 //         }
 
-//         // Scale payout to payout token decimals and return
-//         return (payout.intoUint256().mulDiv(auction.payoutScale, uUNIT), secondsOfEmissions);
+//         // Scale payout to base token decimals and return
+//         return (payout.intoUint256().mulDiv(auction.baseScale, uUNIT), secondsOfEmissions);
 //     }
 //     /* ========== ADMIN FUNCTIONS ========== */
 //     /* ========== VIEW FUNCTIONS ========== */
