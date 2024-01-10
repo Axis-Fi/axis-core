@@ -22,12 +22,13 @@ import {
     fromKeycode,
     Veecode,
     wrapVeecode,
+    toVeecode,
     fromVeecode,
     WithModules,
     Module
 } from "src/modules/Modules.sol";
 
-contract SetCondenserLookupTest is Test {
+contract SetCondenserTest is Test {
     MockERC20 internal baseToken;
     MockERC20 internal quoteToken;
     MockAuctionModule internal mockAuctionModule;
@@ -36,11 +37,13 @@ contract SetCondenserLookupTest is Test {
 
     AuctionHouse internal auctionHouse;
 
+    address internal protocol = address(0x2);
+
     function setUp() external {
         baseToken = new MockERC20("Base Token", "BASE", 18);
         quoteToken = new MockERC20("Quote Token", "QUOTE", 18);
 
-        auctionHouse = new AuctionHouse();
+        auctionHouse = new AuctionHouse(protocol);
         mockAuctionModule = new MockAuctionModule(address(auctionHouse));
         mockDerivativeModule = new MockDerivativeModule(address(auctionHouse));
         mockCondenserModule = new MockCondenserModule(address(auctionHouse));
@@ -77,31 +80,29 @@ contract SetCondenserLookupTest is Test {
         vm.expectRevert("UNAUTHORIZED");
 
         vm.prank(alice);
-        auctionHouse.setCondenserLookup(toKeycode("MOCK"), toKeycode("DERV"), toKeycode("COND"));
+        auctionHouse.setCondenser(
+            mockAuctionModule.VEECODE(),
+            mockDerivativeModule.VEECODE(),
+            mockCondenserModule.VEECODE()
+        );
     }
 
     function testReverts_whenAuctionKeycodeIsEmpty() external {
-        bytes memory err = abi.encodeWithSelector(
-            Auctioneer.Auctioneer_Params_InvalidCondenser.selector,
-            toKeycode(""),
-            toKeycode("DERV"),
-            toKeycode("COND")
-        );
+        bytes memory err = abi.encodeWithSelector(Auctioneer.InvalidParams.selector);
         vm.expectRevert(err);
 
-        auctionHouse.setCondenserLookup(toKeycode(""), toKeycode("DERV"), toKeycode("COND"));
+        auctionHouse.setCondenser(
+            toVeecode(""), mockDerivativeModule.VEECODE(), mockCondenserModule.VEECODE()
+        );
     }
 
     function testReverts_whenDerivativeKeycodeIsEmpty() external {
-        bytes memory err = abi.encodeWithSelector(
-            Auctioneer.Auctioneer_Params_InvalidCondenser.selector,
-            toKeycode("MOCK"),
-            toKeycode(""),
-            toKeycode("COND")
-        );
+        bytes memory err = abi.encodeWithSelector(Auctioneer.InvalidParams.selector);
         vm.expectRevert(err);
 
-        auctionHouse.setCondenserLookup(toKeycode("MOCK"), toKeycode(""), toKeycode("COND"));
+        auctionHouse.setCondenser(
+            mockAuctionModule.VEECODE(), toVeecode(""), mockCondenserModule.VEECODE()
+        );
     }
 
     function testReverts_whenAuctionModuleNotInstalled() external {
@@ -109,7 +110,11 @@ contract SetCondenserLookupTest is Test {
             abi.encodeWithSelector(WithModules.ModuleNotInstalled.selector, toKeycode("MOCK"), 0);
         vm.expectRevert(err);
 
-        auctionHouse.setCondenserLookup(toKeycode("MOCK"), toKeycode("DERV"), toKeycode("COND"));
+        auctionHouse.setCondenser(
+            mockAuctionModule.VEECODE(),
+            mockDerivativeModule.VEECODE(),
+            mockCondenserModule.VEECODE()
+        );
     }
 
     function testReverts_whenAuctionTypeIncorrect()
@@ -119,14 +124,15 @@ contract SetCondenserLookupTest is Test {
         whenCondenserModuleIsInstalled
     {
         bytes memory err = abi.encodeWithSelector(
-            Auctioneer.Auctioneer_Params_InvalidCondenser.selector,
-            toKeycode("DERV"),
-            toKeycode("DERV"),
-            toKeycode("COND")
+            Auctioneer.InvalidModuleType.selector, mockDerivativeModule.VEECODE()
         );
         vm.expectRevert(err);
 
-        auctionHouse.setCondenserLookup(toKeycode("DERV"), toKeycode("DERV"), toKeycode("COND"));
+        auctionHouse.setCondenser(
+            mockDerivativeModule.VEECODE(),
+            mockDerivativeModule.VEECODE(),
+            mockCondenserModule.VEECODE()
+        );
     }
 
     function testReverts_whenDerivativeModuleNotInstalled() external whenAuctionModuleIsInstalled {
@@ -134,7 +140,11 @@ contract SetCondenserLookupTest is Test {
             abi.encodeWithSelector(WithModules.ModuleNotInstalled.selector, toKeycode("DERV"), 0);
         vm.expectRevert(err);
 
-        auctionHouse.setCondenserLookup(toKeycode("MOCK"), toKeycode("DERV"), toKeycode("COND"));
+        auctionHouse.setCondenser(
+            mockAuctionModule.VEECODE(),
+            mockDerivativeModule.VEECODE(),
+            mockCondenserModule.VEECODE()
+        );
     }
 
     function testReverts_whenDerivativeTypeIncorrect()
@@ -144,14 +154,13 @@ contract SetCondenserLookupTest is Test {
         whenCondenserModuleIsInstalled
     {
         bytes memory err = abi.encodeWithSelector(
-            Auctioneer.Auctioneer_Params_InvalidCondenser.selector,
-            toKeycode("MOCK"),
-            toKeycode("MOCK"),
-            toKeycode("COND")
+            Auctioneer.InvalidModuleType.selector, mockAuctionModule.VEECODE()
         );
         vm.expectRevert(err);
 
-        auctionHouse.setCondenserLookup(toKeycode("MOCK"), toKeycode("MOCK"), toKeycode("COND"));
+        auctionHouse.setCondenser(
+            mockAuctionModule.VEECODE(), mockAuctionModule.VEECODE(), mockCondenserModule.VEECODE()
+        );
     }
 
     function testReverts_whenCondenserModuleNotInstalled()
@@ -163,7 +172,11 @@ contract SetCondenserLookupTest is Test {
             abi.encodeWithSelector(WithModules.ModuleNotInstalled.selector, toKeycode("COND"), 0);
         vm.expectRevert(err);
 
-        auctionHouse.setCondenserLookup(toKeycode("MOCK"), toKeycode("DERV"), toKeycode("COND"));
+        auctionHouse.setCondenser(
+            mockAuctionModule.VEECODE(),
+            mockDerivativeModule.VEECODE(),
+            mockCondenserModule.VEECODE()
+        );
     }
 
     function testReverts_whenCondenserTypeIncorrect()
@@ -173,14 +186,15 @@ contract SetCondenserLookupTest is Test {
         whenCondenserModuleIsInstalled
     {
         bytes memory err = abi.encodeWithSelector(
-            Auctioneer.Auctioneer_Params_InvalidCondenser.selector,
-            toKeycode("MOCK"),
-            toKeycode("DERV"),
-            toKeycode("DERV")
+            Auctioneer.InvalidModuleType.selector, mockDerivativeModule.VEECODE()
         );
         vm.expectRevert(err);
 
-        auctionHouse.setCondenserLookup(toKeycode("MOCK"), toKeycode("DERV"), toKeycode("DERV"));
+        auctionHouse.setCondenser(
+            mockAuctionModule.VEECODE(),
+            mockDerivativeModule.VEECODE(),
+            mockDerivativeModule.VEECODE()
+        );
     }
 
     function test_success_whenCondenserKeycodeIsEmpty()
@@ -188,11 +202,13 @@ contract SetCondenserLookupTest is Test {
         whenAuctionModuleIsInstalled
         whenDerivativeModuleIsInstalled
     {
-        auctionHouse.setCondenserLookup(toKeycode("MOCK"), toKeycode("DERV"), toKeycode(""));
+        auctionHouse.setCondenser(
+            mockAuctionModule.VEECODE(), mockDerivativeModule.VEECODE(), toVeecode("")
+        );
 
-        Keycode condenserKeycode =
-            auctionHouse.condenserLookup(toKeycode("MOCK"), toKeycode("DERV"));
-        assertEq(fromKeycode(condenserKeycode), "");
+        Veecode condenserVeecode =
+            auctionHouse.condensers(mockAuctionModule.VEECODE(), mockDerivativeModule.VEECODE());
+        assertEq(fromVeecode(condenserVeecode), "");
     }
 
     function test_success_whenCondenserKeycodeIsNotEmpty()
@@ -201,10 +217,14 @@ contract SetCondenserLookupTest is Test {
         whenDerivativeModuleIsInstalled
         whenCondenserModuleIsInstalled
     {
-        auctionHouse.setCondenserLookup(toKeycode("MOCK"), toKeycode("DERV"), toKeycode("COND"));
+        auctionHouse.setCondenser(
+            mockAuctionModule.VEECODE(),
+            mockDerivativeModule.VEECODE(),
+            mockCondenserModule.VEECODE()
+        );
 
-        Keycode condenserKeycode =
-            auctionHouse.condenserLookup(toKeycode("MOCK"), toKeycode("DERV"));
-        assertEq(fromKeycode(condenserKeycode), "COND");
+        Veecode condenserVeecode =
+            auctionHouse.condensers(mockAuctionModule.VEECODE(), mockDerivativeModule.VEECODE());
+        assertEq(fromVeecode(condenserVeecode), fromVeecode(mockCondenserModule.VEECODE()));
     }
 }

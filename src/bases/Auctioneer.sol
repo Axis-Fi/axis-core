@@ -3,7 +3,14 @@ pragma solidity 0.8.19;
 
 import {ERC20} from "lib/solmate/src/tokens/ERC20.sol";
 
-import {fromKeycode, Keycode, fromVeecode, Veecode, Module, WithModules} from "src/modules/Modules.sol";
+import {
+    fromKeycode,
+    Keycode,
+    fromVeecode,
+    Veecode,
+    Module,
+    WithModules
+} from "src/modules/Modules.sol";
 
 import {Auction, AuctionModule} from "src/modules/Auction.sol";
 
@@ -153,9 +160,7 @@ abstract contract Auctioneer is WithModules {
 
             // Check that the module for the derivative type is valid
             if (derivativeModule.TYPE() != Module.Type.Derivative) {
-                revert InvalidModuleType(
-                    derivativeRef
-                );
+                revert InvalidModuleType(derivativeRef);
             }
 
             // Call module validate function to validate implementation-specific data
@@ -297,13 +302,11 @@ abstract contract Auctioneer is WithModules {
     ) external onlyOwner {
         // Check that auction and derivative keycodes are not empty
         if (fromVeecode(auctionRef_) == bytes7(0)) {
-            revert InvalidParams(
-            );
+            revert InvalidParams();
         }
 
         if (fromVeecode(derivativeRef_) == bytes7(0)) {
-            revert InvalidParams(
-            );
+            revert InvalidParams();
         }
 
         // Check that the auction type is valid
@@ -311,9 +314,7 @@ abstract contract Auctioneer is WithModules {
             AuctionModule auctionModule = AuctionModule(_getModuleIfInstalled(auctionRef_));
 
             if (auctionModule.TYPE() != Module.Type.Auction) {
-                revert InvalidModuleType(
-                    auctionRef_
-                );
+                revert InvalidModuleType(auctionRef_);
             }
         }
 
@@ -323,19 +324,16 @@ abstract contract Auctioneer is WithModules {
                 DerivativeModule(_getModuleIfInstalled(derivativeRef_));
 
             if (derivativeModule.TYPE() != Module.Type.Derivative) {
-                revert InvalidModuleType(derivativeRef_
-                );
+                revert InvalidModuleType(derivativeRef_);
             }
         }
 
         // Check that the condenser type is valid
         if (fromVeecode(condenserRef_) != bytes7(0)) {
-            CondenserModule condenserModule =
-                CondenserModule(_getModuleIfInstalled(condenserRef_));
+            CondenserModule condenserModule = CondenserModule(_getModuleIfInstalled(condenserRef_));
 
             if (condenserModule.TYPE() != Module.Type.Condenser) {
-                revert InvalidModuleType(condenserRef_
-                );
+                revert InvalidModuleType(condenserRef_);
             }
         }
 

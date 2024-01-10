@@ -38,11 +38,13 @@ contract CancelTest is Test {
 
     address internal auctionOwner = address(0x1);
 
+    address internal protocol = address(0x2);
+
     function setUp() external {
         baseToken = new MockERC20("Base Token", "BASE", 18);
         quoteToken = new MockERC20("Quote Token", "QUOTE", 18);
 
-        auctionHouse = new AuctionHouse();
+        auctionHouse = new AuctionHouse(protocol);
         mockAuctionModule = new MockAuctionModule(address(auctionHouse));
 
         auctionHouse.installModule(mockAuctionModule);
@@ -64,8 +66,7 @@ contract CancelTest is Test {
             allowlistParams: abi.encode(""),
             payoutData: abi.encode(""),
             derivativeType: toKeycode(""),
-            derivativeParams: abi.encode(""),
-            condenserType: toKeycode("")
+            derivativeParams: abi.encode("")
         });
     }
 

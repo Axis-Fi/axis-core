@@ -38,11 +38,13 @@ contract CancelTest is Test {
 
     address internal auctionOwner = address(0x1);
 
+    address internal protocol = address(0x2);
+
     function setUp() external {
         baseToken = new MockERC20("Base Token", "BASE", 18);
         quoteToken = new MockERC20("Quote Token", "QUOTE", 18);
 
-        auctionHouse = new AuctionHouse();
+        auctionHouse = new AuctionHouse(auctionOwner);
         mockAuctionModule = new MockAuctionModule(address(auctionHouse));
 
         auctionHouse.installModule(mockAuctionModule);
@@ -64,8 +66,7 @@ contract CancelTest is Test {
             allowlistParams: abi.encode(""),
             payoutData: abi.encode(""),
             derivativeType: toKeycode(""),
-            derivativeParams: abi.encode(""),
-            condenserType: toKeycode("")
+            derivativeParams: abi.encode("")
         });
     }
 
@@ -83,7 +84,7 @@ contract CancelTest is Test {
 
     function testReverts_whenNotAuctionOwner() external whenLotIsCreated {
         bytes memory err =
-            abi.encodeWithSelector(Auctioneer.HOUSE_NotAuctionOwner.selector, address(this));
+            abi.encodeWithSelector(Auctioneer.NotAuctionOwner.selector, address(this));
         vm.expectRevert(err);
 
         auctionHouse.cancel(lotId);
@@ -92,7 +93,7 @@ contract CancelTest is Test {
     function testReverts_whenUnauthorized(address user_) external whenLotIsCreated {
         vm.assume(user_ != auctionOwner);
 
-        bytes memory err = abi.encodeWithSelector(Auctioneer.HOUSE_NotAuctionOwner.selector, user_);
+        bytes memory err = abi.encodeWithSelector(Auctioneer.NotAuctionOwner.selector, user_);
         vm.expectRevert(err);
 
         vm.prank(user_);
@@ -100,7 +101,7 @@ contract CancelTest is Test {
     }
 
     function testReverts_whenLotIdInvalid() external {
-        bytes memory err = abi.encodeWithSelector(Auctioneer.HOUSE_InvalidLotId.selector, lotId);
+        bytes memory err = abi.encodeWithSelector(Auctioneer.InvalidLotId.selector, lotId);
         vm.expectRevert(err);
 
         auctionHouse.cancel(lotId);

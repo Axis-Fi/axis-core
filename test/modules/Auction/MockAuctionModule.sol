@@ -8,7 +8,7 @@ import {Module, Veecode, toKeycode, wrapVeecode} from "src/modules/Modules.sol";
 import {AuctionModule} from "src/modules/Auction.sol";
 
 contract MockAuctionModule is AuctionModule {
-    constructor(address _owner) Module(_owner) {
+    constructor(address _owner) AuctionModule(_owner) {
         minAuctionDuration = 1 days;
     }
 
@@ -24,7 +24,7 @@ contract MockAuctionModule is AuctionModule {
         uint256 id_,
         Lot memory lot_,
         bytes memory params_
-    ) internal override returns (uint256) {
+    ) internal virtual override returns (uint256) {
         return 0;
     }
 
@@ -33,22 +33,16 @@ contract MockAuctionModule is AuctionModule {
     }
 
     function purchase(
-        address recipient_,
-        address referrer_,
         uint256 id_,
         uint256 amount_,
-        bytes calldata auctionData_,
-        bytes calldata approval_
-    ) external virtual override returns (uint256 payout) {}
+        bytes calldata auctionData_
+    ) external virtual override returns (uint256 payout, bytes memory auctionOutput) {}
 
     function bid(
-        address recipient_,
-        address referrer_,
         uint256 id_,
         uint256 amount_,
         uint256 minAmountOut_,
-        bytes calldata auctionData_,
-        bytes calldata approval_
+        bytes calldata auctionData_
     ) external virtual override {}
 
     function settle(uint256 id_) external virtual override returns (uint256[] memory amountsOut) {}

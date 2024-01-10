@@ -34,6 +34,8 @@ contract AuctionTest is Test {
     Auctioneer.RoutingParams internal routingParams;
     Auction.AuctionParams internal auctionParams;
 
+    address internal protocol = address(0x2);
+
     function setUp() external {
         // Ensure the block timestamp is a sane value
         vm.warp(1_000_000);
@@ -41,7 +43,7 @@ contract AuctionTest is Test {
         baseToken = new MockERC20("Base Token", "BASE", 18);
         quoteToken = new MockERC20("Quote Token", "QUOTE", 18);
 
-        auctionHouse = new AuctionHouse();
+        auctionHouse = new AuctionHouse(protocol);
         mockAuctionModule = new MockAuctionModule(address(auctionHouse));
 
         auctionHouse.installModule(mockAuctionModule);
@@ -63,8 +65,7 @@ contract AuctionTest is Test {
             allowlistParams: abi.encode(""),
             payoutData: abi.encode(""),
             derivativeType: toKeycode(""),
-            derivativeParams: abi.encode(""),
-            condenserType: toKeycode("")
+            derivativeParams: abi.encode("")
         });
     }
 

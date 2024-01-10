@@ -42,11 +42,13 @@ contract AuctionTest is Test {
     Auctioneer.RoutingParams internal routingParams;
     Auction.AuctionParams internal auctionParams;
 
+    address internal immutable protocol = address(0x2);
+
     function setUp() external {
         baseToken = new MockERC20("Base Token", "BASE", 18);
         quoteToken = new MockERC20("Quote Token", "QUOTE", 18);
 
-        auctionHouse = new AuctionHouse();
+        auctionHouse = new AuctionHouse(protocol);
         mockAuctionModule = new MockAuctionModule(address(auctionHouse));
         mockDerivativeModule = new MockDerivativeModule(address(auctionHouse));
         mockCondenserModule = new MockCondenserModule(address(auctionHouse));
@@ -70,8 +72,7 @@ contract AuctionTest is Test {
             allowlistParams: abi.encode(""),
             payoutData: abi.encode(""),
             derivativeType: toKeycode(""),
-            derivativeParams: abi.encode(""),
-            condenserType: toKeycode("")
+            derivativeParams: abi.encode("")
         });
     }
 
@@ -95,13 +96,12 @@ contract AuctionTest is Test {
         _;
     }
 
-    modifier whenCondenserTypeIsSet() {
-        routingParams.condenserType = toKeycode("COND");
-        _;
-    }
-
     modifier whenCondenserIsMapped() {
-        auctionHouse.setCondenserLookup(toKeycode("MOCK"), toKeycode("DERV"), toKeycode("COND"));
+        auctionHouse.setCondenser(
+            mockAuctionModule.VEECODE(),
+            mockDerivativeModule.VEECODE(),
+            mockCondenserModule.VEECODE()
+        );
         _;
     }
 
@@ -132,9 +132,7 @@ contract AuctionTest is Test {
         routingParams.auctionType = toKeycode("DERV");
 
         bytes memory err = abi.encodeWithSelector(
-            Auctioneer.Auctioneer_Params_InvalidType.selector,
-            Module.Type.Auction,
-            Module.Type.Derivative
+            Auctioneer.InvalidModuleType.selector, mockAuctionModule.VEECODE()
         );
         vm.expectRevert(err);
 
@@ -167,9 +165,7 @@ contract AuctionTest is Test {
         routingParams.baseToken = token;
 
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(
-            Auctioneer.Auctioneer_Params_InvalidTokenDecimals.selector, address(token), decimals
-        );
+        bytes memory err = abi.encodeWithSelector(Auctioneer.InvalidParams.selector);
         vm.expectRevert(err);
 
         auctionHouse.auction(routingParams, auctionParams);
@@ -189,9 +185,7 @@ contract AuctionTest is Test {
         routingParams.quoteToken = token;
 
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(
-            Auctioneer.Auctioneer_Params_InvalidTokenDecimals.selector, address(token), decimals
-        );
+        bytes memory err = abi.encodeWithSelector(Auctioneer.InvalidParams.selector);
         vm.expectRevert(err);
 
         auctionHouse.auction(routingParams, auctionParams);
@@ -201,8 +195,7 @@ contract AuctionTest is Test {
         routingParams.baseToken = ERC20(address(0));
 
         // Expect revert
-        bytes memory err =
-            abi.encodeWithSelector(Auctioneer.Auctioneer_Params_InvalidToken.selector, address(0));
+        bytes memory err = abi.encodeWithSelector(Auctioneer.InvalidParams.selector);
         vm.expectRevert(err);
 
         auctionHouse.auction(routingParams, auctionParams);
@@ -212,8 +205,7 @@ contract AuctionTest is Test {
         routingParams.quoteToken = ERC20(address(0));
 
         // Expect revert
-        bytes memory err =
-            abi.encodeWithSelector(Auctioneer.Auctioneer_Params_InvalidToken.selector, address(0));
+        bytes memory err = abi.encodeWithSelector(Auctioneer.InvalidParams.selector);
         vm.expectRevert(err);
 
         auctionHouse.auction(routingParams, auctionParams);
@@ -233,8 +225,7 @@ contract AuctionTest is Test {
             IAllowlist lotAllowlist,
             Veecode lotDerivativeType,
             bytes memory lotDerivativeParams,
-            bool lotWrapDerivative,
-            Veecode lotCondenserType
+            bool lotWrapDerivative
         ) = auctionHouse.lotRouting(lotId);
         assertEq(
             fromVeecode(lotAuctionType),
@@ -249,7 +240,6 @@ contract AuctionTest is Test {
         assertEq(fromVeecode(lotDerivativeType), "", "derivative type mismatch");
         assertEq(lotDerivativeParams, "", "derivative params mismatch");
         assertEq(lotWrapDerivative, false, "wrap derivative mismatch");
-        assertEq(fromVeecode(lotCondenserType), "", "condenser type mismatch");
 
         // Auction module also updated
         (uint48 lotStart,,,,,) = mockAuctionModule.lotData(lotId);
@@ -264,7 +254,7 @@ contract AuctionTest is Test {
         uint256 lotId = auctionHouse.auction(routingParams, auctionParams);
 
         // Assert values
-        (,, ERC20 lotBaseToken, ERC20 lotQuoteToken,,,,,,) = auctionHouse.lotRouting(lotId);
+        (,, ERC20 lotBaseToken, ERC20 lotQuoteToken,,,,,) = auctionHouse.lotRouting(lotId);
         assertEq(address(lotBaseToken), address(baseToken), "base token mismatch");
         assertEq(address(lotQuoteToken), address(baseToken), "quote token mismatch");
     }
@@ -295,9 +285,7 @@ contract AuctionTest is Test {
 
         // Expect revert
         bytes memory err = abi.encodeWithSelector(
-            Auctioneer.Auctioneer_Params_InvalidType.selector,
-            Module.Type.Derivative,
-            Module.Type.Auction
+            Auctioneer.InvalidModuleType.selector, mockDerivativeModule.VEECODE()
         );
         vm.expectRevert(err);
 
@@ -344,7 +332,7 @@ contract AuctionTest is Test {
         uint256 lotId = auctionHouse.auction(routingParams, auctionParams);
 
         // Assert values
-        (,,,,,, Veecode lotDerivativeType,,,) = auctionHouse.lotRouting(lotId);
+        (,,,,,, Veecode lotDerivativeType,,) = auctionHouse.lotRouting(lotId);
         assertEq(
             fromVeecode(lotDerivativeType),
             fromVeecode(mockDerivativeModule.VEECODE()),
@@ -365,7 +353,7 @@ contract AuctionTest is Test {
         uint256 lotId = auctionHouse.auction(routingParams, auctionParams);
 
         // Assert values
-        (,,,,,, Veecode lotDerivativeType, bytes memory lotDerivativeParams,,) =
+        (,,,,,, Veecode lotDerivativeType, bytes memory lotDerivativeParams,) =
             auctionHouse.lotRouting(lotId);
         assertEq(
             fromVeecode(lotDerivativeType),
@@ -387,31 +375,11 @@ contract AuctionTest is Test {
         whenAuctionModuleIsInstalled
         whenDerivativeModuleIsInstalled
         whenDerivativeTypeIsSet
-        whenCondenserTypeIsSet
+        whenCondenserIsMapped
     {
         // Expect revert
         bytes memory err =
             abi.encodeWithSelector(WithModules.ModuleNotInstalled.selector, toKeycode("COND"), 0);
-        vm.expectRevert(err);
-
-        auctionHouse.auction(routingParams, auctionParams);
-    }
-
-    function testReverts_whenCondenserTypeIncorrect()
-        external
-        whenAuctionModuleIsInstalled
-        whenDerivativeModuleIsInstalled
-        whenDerivativeTypeIsSet
-    {
-        // Update routing params
-        routingParams.condenserType = toKeycode("MOCK");
-
-        // Expect revert
-        bytes memory err = abi.encodeWithSelector(
-            Auctioneer.Auctioneer_Params_InvalidType.selector,
-            Module.Type.Condenser,
-            Module.Type.Auction
-        );
         vm.expectRevert(err);
 
         auctionHouse.auction(routingParams, auctionParams);
@@ -423,7 +391,6 @@ contract AuctionTest is Test {
         whenDerivativeModuleIsInstalled
         whenDerivativeTypeIsSet
         whenCondenserModuleIsInstalled
-        whenCondenserTypeIsSet
         whenCondenserIsMapped
     {
         // Sunset the module, which prevents the creation of new auctions using that module
@@ -437,65 +404,18 @@ contract AuctionTest is Test {
         auctionHouse.auction(routingParams, auctionParams);
     }
 
-    function testReverts_whenCondenserLookupIsMissing()
-        external
-        whenAuctionModuleIsInstalled
-        whenDerivativeModuleIsInstalled
-        whenDerivativeTypeIsSet
-        whenCondenserModuleIsInstalled
-        whenCondenserTypeIsSet
-    {
-        // Expect revert
-        bytes memory err = abi.encodeWithSelector(
-            Auctioneer.Auctioneer_Params_InvalidCondenser.selector,
-            toKeycode("MOCK"),
-            toKeycode("DERV"),
-            toKeycode("COND")
-        );
-        vm.expectRevert(err);
-
-        auctionHouse.auction(routingParams, auctionParams);
-    }
-
-    function testReverts_whenCondenserIsSet_whenDerivativeIsEmpty()
-        external
-        whenAuctionModuleIsInstalled
-        whenDerivativeModuleIsInstalled
-        whenCondenserModuleIsInstalled
-        whenCondenserTypeIsSet
-        whenCondenserIsMapped
-    {
-        // Expect revert
-        bytes memory err = abi.encodeWithSelector(
-            Auctioneer.Auctioneer_Params_InvalidCondenser.selector,
-            toKeycode("MOCK"),
-            toKeycode(""),
-            toKeycode("COND")
-        );
-        vm.expectRevert(err);
-
-        auctionHouse.auction(routingParams, auctionParams);
-    }
-
     function test_whenCondenserIsSet()
         external
         whenAuctionModuleIsInstalled
         whenDerivativeModuleIsInstalled
         whenDerivativeTypeIsSet
         whenCondenserModuleIsInstalled
-        whenCondenserTypeIsSet
         whenCondenserIsMapped
     {
         // Create the auction
-        uint256 lotId = auctionHouse.auction(routingParams, auctionParams);
+        auctionHouse.auction(routingParams, auctionParams);
 
-        // Assert values
-        (,,,,,,,,, Veecode lotCondenserType) = auctionHouse.lotRouting(lotId);
-        assertEq(
-            fromVeecode(lotCondenserType),
-            fromVeecode(mockCondenserModule.VEECODE()),
-            "condenser type mismatch"
-        );
+        // Won't revert
     }
 
     // [ ] allowlist
@@ -510,7 +430,7 @@ contract AuctionTest is Test {
         uint256 lotId = auctionHouse.auction(routingParams, auctionParams);
 
         // Assert values
-        (,,,,, IAllowlist lotAllowlist,,,,) = auctionHouse.lotRouting(lotId);
+        (,,,,, IAllowlist lotAllowlist,,,) = auctionHouse.lotRouting(lotId);
 
         assertEq(address(lotAllowlist), address(mockAllowlist), "allowlist mismatch");
     }
@@ -526,7 +446,7 @@ contract AuctionTest is Test {
         uint256 lotId = auctionHouse.auction(routingParams, auctionParams);
 
         // Assert values
-        (,,,, IHooks lotHooks,,,,,) = auctionHouse.lotRouting(lotId);
+        (,,,, IHooks lotHooks,,,,) = auctionHouse.lotRouting(lotId);
 
         assertEq(address(lotHooks), address(mockHook), "hooks mismatch");
     }

@@ -26,12 +26,14 @@ contract MockDerivativeModule is DerivativeModule {
     ) external virtual override returns (uint256, address) {}
 
     function mint(
+        address to_,
         bytes memory params_,
         uint256 amount_,
         bool wrapped_
     ) external virtual override returns (uint256, address, uint256) {}
 
     function mint(
+        address to_,
         uint256 tokenId_,
         uint256 amount_,
         bool wrapped_

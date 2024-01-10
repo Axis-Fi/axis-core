@@ -163,9 +163,7 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
         bytes memory auctionOutput;
         {
             AuctionModule module = _getModuleForId(id_);
-            (payout, auctionOutput) = module.purchase(
-                id_, amount_ - totalFees, auctionData_
-            );
+            (payout, auctionOutput) = module.purchase(id_, amount_ - totalFees, auctionData_);
         }
 
         // Check that payout is at least minimum amount out
