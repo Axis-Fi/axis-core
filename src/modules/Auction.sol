@@ -127,6 +127,8 @@ abstract contract AuctionModule is Auction, Module {
     // ========== AUCTION MANAGEMENT ========== //
 
     /// @notice     Create an auction lot
+    /// @dev        If the start time is zero, the auction will have a start time of the current block timestamp
+    ///
     /// @dev        This function reverts if:
     ///             - the caller is not the parent of the module
     ///             - the start time is in the past
