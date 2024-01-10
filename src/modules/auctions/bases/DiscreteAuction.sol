@@ -3,8 +3,6 @@ pragma solidity 0.8.19;
 
 // import "src/modules/auctions/bases/AtomicAuction.sol";
 
-// import {Auction} from "src/modules/Auction.sol";
-
 // abstract contract DiscreteAuction {
 //     /* ========== ERRORS ========== */
 //     error Auction_MaxPayoutExceeded();
@@ -47,6 +45,9 @@ pragma solidity 0.8.19;
 
 // abstract contract DiscreteAuctionModule is AtomicAuctionModule, DiscreteAuction {
 
+//     /* ========== ERRORS ========== */
+//     error InvalidParams();
+
 //     /* ========== CONSTRUCTOR ========== */
 
 //     constructor(
@@ -59,7 +60,7 @@ pragma solidity 0.8.19;
 
 //     function _auction(
 //         uint256 id_,
-//         Auction.Lot memory lot_,
+//         Lot memory lot_,
 //         bytes calldata params_
 //     ) internal override {
 //         // Decode provided params
@@ -67,8 +68,8 @@ pragma solidity 0.8.19;
 
 //         // Validate that deposit interval is in-bounds
 //         uint48 duration = lot_.conclusion - lot_.start;
-//         if (depositInterval < MIN_DEPOSIT_INTERVAL || depositInterval > duration)
-//             revert Auctioneer_InvalidParams();
+//         if (depositInterval < minDepositInterval || depositInterval > duration)
+//             revert InvalidParams();
 
 //         // Set style data
 //         StyleData memory style = styleData[id_];
@@ -76,34 +77,34 @@ pragma solidity 0.8.19;
 //         style.scale = 10 ** lot_.quoteToken.decimals();
 
 //         // Call internal __createMarket function to store implementation-specific data
-//         __createMarket(id, lot_, style, params);
+//         __auction(id_, lot_, style, params);
 
 //         // Set max payout (depends on auctionPrice being available so must be done after __createMarket)
-//         style.maxPayout = _baseCapacity(lot_).mulDiv(depositInterval, duration);
+//         style.maxPayout = _baseCapacity(id_, lot_).mulDiv(depositInterval, duration);
 //     }
 
 //     /// @dev implementation-specific auction creation logic can be inserted by overriding this function
 //     function __auction(
 //         uint256 id_,
-//         Auction.Lot memory lot_,
+//         Lot memory lot_,
 //         StyleData memory style_,
 //         bytes memory params_
 //     ) internal virtual;
 
 //     /* ========== TELLER FUNCTIONS ========== */
 
-//     function _purchase(uint256 id_, uint256 amount_) internal returns (uint256) {
+//     function _purchase(uint256 id_, uint256 amount_, bytes memory auctionData_) internal returns (uint256, bytes memory) {
 //         // Get payout from implementation-specific purchase logic
-//         uint256 payout = __purchaseBond(id_, amount_);
+//         (uint256 payout, bytes memory auctionOutput) = __purchase(id_, amount_, auctionData_);
 
 //         // Check that payout is less than or equal to max payout
 //         if (payout > styleData[id_].maxPayout) revert Auction_MaxPayoutExceeded();
 
-//         return payout;
+//         return (payout, auctionOutput);
 //     }
 
 //     /// @dev implementation-specific purchase logic can be inserted by overriding this function
-//     function __purchase(uint256 id_, uint256 amount_) internal virtual returns (uint256);
+//     function __purchase(uint256 id_, uint256 amount_, bytes memory auctionData_) internal virtual returns (uint256, bytes memory);
 
 //     /* ========== ADMIN FUNCTIONS ========== */
 
@@ -120,7 +121,7 @@ pragma solidity 0.8.19;
 
 //     /* ========== VIEW FUNCTIONS ========== */
 
-//     function _baseCapacity(Auction.Lot memory lot_) internal view returns (uint256) {
+//     function _baseCapacity(uint256 id_, Lot memory lot_) internal view returns (uint256) {
 //         // Calculate capacity in terms of base tokens
 //         // If capacity is in quote tokens, convert to base tokens with auction price
 //         // Otherwise, return capacity as-is
@@ -158,7 +159,7 @@ pragma solidity 0.8.19;
 //     function maxAmountAccepted(uint256 id_) external view override onlyParent returns (uint256) {
 //         // Calculate maximum amount of quote tokens that correspond to max bond size
 //         // Maximum of the maxPayout and the remaining capacity converted to quote tokens
-//         Auction.Lot memory lot = lotData[id_];
+//         Lot memory lot = lotData[id_];
 //         StyleData memory style = styleData[id_];
 //         uint256 price = auctionPrice(id_);
 //         uint256 quoteCapacity = lot.capacityInQuote
@@ -177,7 +178,7 @@ pragma solidity 0.8.19;
 //     /// @dev This function is gated by onlyParent because it does not include any fee logic, which is applied in the parent contract
 //     function maxPayout(uint256 id_) public view override onlyParent returns (uint256) {
 //         // Convert capacity to base token units for comparison with max payout
-//         uint256 capacity = _baseCapacity(lotData[id_]);
+//         uint256 capacity = _baseCapacity(id_, lotData[id_]);
 
 //         // Cap max payout at the remaining capacity
 //         return styleData[id_].maxPayout > capacity ? capacity : styleData[id_].maxPayout;

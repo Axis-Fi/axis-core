@@ -4,44 +4,33 @@ pragma solidity 0.8.19;
 import {ERC20} from "lib/solmate/src/tokens/ERC20.sol";
 
 import "src/modules/Auction.sol";
-
-import {fromKeycode} from "src/modules/Modules.sol";
-
 import {DerivativeModule} from "src/modules/Derivative.sol";
-
-interface IHooks {}
-
-interface IAllowlist {}
+import {IHooks} from "src/interfaces/IHooks.sol";
+import {IAllowlist} from "src/interfaces/IAllowlist.sol";
 
 abstract contract Auctioneer is WithModules {
     // ========= ERRORS ========= //
-
-    error HOUSE_AuctionTypeSunset(Keycode auctionType);
-
-    error HOUSE_NotAuctionOwner(address caller);
-
-    error HOUSE_InvalidLotId(uint256 id);
-
-    error Auctioneer_InvalidParams();
+    error InvalidParams();
+    error InvalidLotId(uint256 id_);
+    error InvalidModuleType(Veecode reference_);
+    error NotAuctionOwner(address caller_);
 
     // ========= EVENTS ========= //
-
-    event AuctionCreated(uint256 indexed id, address indexed baseToken, address indexed quoteToken);
+    event AuctionCreated(uint256 id, address baseToken, address quoteToken);
 
     // ========= DATA STRUCTURES ========== //
 
     /// @notice Auction routing information for a lot
     struct Routing {
-        Keycode auctionType; // auction type, represented by the Keycode for the auction submodule
+        Veecode auctionReference; // auction module, represented by its Veecode
         address owner; // market owner. sends payout tokens, receives quote tokens
         ERC20 baseToken; // token provided by seller
         ERC20 quoteToken; // token to accept as payment
         IHooks hooks; // (optional) address to call for any hooks to be executed on a purchase. Must implement IHooks.
         IAllowlist allowlist; // (optional) contract that implements an allowlist for the market, based on IAllowlist
-        Keycode derivativeType; // (optional) derivative type, represented by the Keycode for the derivative submodule. If not set, no derivative will be created.
+        Veecode derivativeReference; // (optional) derivative module, represented by its Veecode. If not set, no derivative will be created.
         bytes derivativeParams; // (optional) abi-encoded data to be used to create payout derivatives on a purchase
         bool wrapDerivative; // (optional) whether to wrap the derivative in a ERC20 token instead of the native ERC6909 format.
-        Keycode condenserType; // (optional) condenser type, represented by the Keycode for the condenser submodule. If not set, no condenser will be used. TODO should a condenser be stored on the auctionhouse for a particular auction/derivative combination and looked up?
     }
 
     struct RoutingParams {
@@ -54,7 +43,6 @@ abstract contract Auctioneer is WithModules {
         bytes payoutData;
         Keycode derivativeType; // (optional) derivative type, represented by the Keycode for the derivative submodule. If not set, no derivative will be created.
         bytes derivativeParams; // (optional) data to be used to create payout derivatives on a purchase
-        Keycode condenserType; // (optional) condenser type, represented by the Keycode for the condenser submodule. If not set, no condenser will be used.
     }
 
     // ========= STATE ========== //
@@ -65,15 +53,12 @@ abstract contract Auctioneer is WithModules {
     /// @notice Counter for auction lots
     uint256 public lotCounter;
 
-    /// @notice Designates whether an auction type is sunset on this contract
-    /// @dev We can remove Keycodes from the module to completely remove them,
-    ///      However, that would brick any existing auctions of that type.
-    ///      Therefore, we can sunset them instead, which will prevent new auctions.
-    ///      After they have all ended, then we can remove them.
-    mapping(Keycode auctionType => bool) public typeSunset;
-
     /// @notice Mapping of lot IDs to their auction type (represented by the Keycode for the auction submodule)
     mapping(uint256 lotId => Routing) public lotRouting;
+
+    /// @notice Mapping auction and derivative references to the condenser that is used to pass data between them
+    mapping(Veecode auctionRef => mapping(Veecode derivativeRef => Veecode condenserRef)) public
+        condensers;
 
     // ========== AUCTION MANAGEMENT ========== //
 
@@ -83,11 +68,8 @@ abstract contract Auctioneer is WithModules {
     ) external returns (uint256 id) {
         // Load auction type module, this checks that it is installed.
         // We load it here vs. later to avoid two checks.
-        Keycode auctionType = routing_.auctionType;
-        AuctionModule auctionModule = AuctionModule(_getLatestModuleIfActive(auctionType));
-
-        // Check that the auction type is allowing new auctions to be created
-        if (typeSunset[auctionType]) revert HOUSE_AuctionTypeSunset(auctionType);
+        AuctionModule auctionModule = AuctionModule(_getLatestModuleIfActive(routing_.auctionType));
+        Veecode auctionRef = auctionModule.VEECODE();
 
         // Increment lot count and get ID
         id = lotCounter++;
@@ -101,38 +83,47 @@ abstract contract Auctioneer is WithModules {
         uint8 baseTokenDecimals = routing_.baseToken.decimals();
         uint8 quoteTokenDecimals = routing_.quoteToken.decimals();
 
-        if (baseTokenDecimals < 6 || baseTokenDecimals > 18) revert Auctioneer_InvalidParams();
-        if (quoteTokenDecimals < 6 || quoteTokenDecimals > 18) revert Auctioneer_InvalidParams();
-
-        // If payout is a derivative, validate derivative data on the derivative module
-        if (fromKeycode(routing_.derivativeType) != bytes6(0)) {
-            // Load derivative module, this checks that it is installed.
-            DerivativeModule derivativeModule =
-                DerivativeModule(_getLatestModuleIfActive(routing_.derivativeType));
-
-            // Call module validate function to validate implementation-specific data
-            derivativeModule.validate(routing_.derivativeParams);
+        if (baseTokenDecimals < 6 || baseTokenDecimals > 18) {
+            revert InvalidParams();
         }
-
-        // If allowlist is being used, validate the allowlist data and register the auction on the allowlist
-        if (address(routing_.allowlist) != address(0)) {
-            // TODO
+        if (quoteTokenDecimals < 6 || quoteTokenDecimals > 18) {
+            revert InvalidParams();
         }
 
         // Store routing information
         Routing storage routing = lotRouting[id];
-        routing.auctionType = auctionType;
+        routing.auctionReference = auctionRef;
         routing.owner = msg.sender;
         routing.baseToken = routing_.baseToken;
         routing.quoteToken = routing_.quoteToken;
         routing.hooks = routing_.hooks;
+
+        // If payout is a derivative, validate derivative data on the derivative module
+        if (fromKeycode(routing_.derivativeType) != bytes5("")) {
+            // Load derivative module, this checks that it is installed.
+            DerivativeModule derivative =
+                DerivativeModule(_getLatestModuleIfActive(routing_.derivativeType));
+            Veecode derivativeRef = derivative.VEECODE();
+
+            // Call module validate function to validate implementation-specific data
+            if (!derivative.validate(routing_.derivativeParams)) revert InvalidParams();
+
+            // Store derivative information
+            routing.derivativeReference = derivativeRef;
+            routing.derivativeParams = routing_.derivativeParams;
+        }
+
+        // If allowlist is being used, validate the allowlist data and register the auction on the allowlist
+        if (address(routing_.allowlist) != address(0)) {
+            // TODO register auction on allowlist
+        }
 
         emit AuctionCreated(id, address(routing.baseToken), address(routing.quoteToken));
     }
 
     function cancel(uint256 id_) external {
         // Check that caller is the auction owner
-        if (msg.sender != lotRouting[id_].owner) revert HOUSE_NotAuctionOwner(msg.sender);
+        if (msg.sender != lotRouting[id_].owner) revert NotAuctionOwner(msg.sender);
 
         AuctionModule module = _getModuleForId(id_);
 
@@ -144,7 +135,7 @@ abstract contract Auctioneer is WithModules {
 
     function getRouting(uint256 id_) external view returns (Routing memory) {
         // Check that lot ID is valid
-        if (id_ >= lotCounter) revert HOUSE_InvalidLotId(id_);
+        if (id_ >= lotCounter) revert InvalidLotId(id_);
 
         // Get routing from lot routing
         return lotRouting[id_];
@@ -188,7 +179,7 @@ abstract contract Auctioneer is WithModules {
 
     function ownerOf(uint256 id_) external view returns (address) {
         // Check that lot ID is valid
-        if (id_ >= lotCounter) revert HOUSE_InvalidLotId(id_);
+        if (id_ >= lotCounter) revert InvalidLotId(id_);
 
         // Get owner from lot routing
         return lotRouting[id_].owner;
@@ -205,9 +196,33 @@ abstract contract Auctioneer is WithModules {
 
     function _getModuleForId(uint256 id_) internal view returns (AuctionModule) {
         // Confirm lot ID is valid
-        if (id_ >= lotCounter) revert HOUSE_InvalidLotId(id_);
+        if (id_ >= lotCounter) revert InvalidLotId(id_);
 
         // Load module, will revert if not installed
-        return AuctionModule(_getLatestModuleIfActive(lotRouting[id_].auctionType));
+        return AuctionModule(_getModuleIfInstalled(lotRouting[id_].auctionReference));
+    }
+
+    // ========== GOVERNANCE FUNCTIONS ========== //
+
+    // TODO set access control
+    function setCondenser(
+        Veecode auctionRef_,
+        Veecode derivativeRef_,
+        Veecode condenserRef_
+    ) external {
+        // Validate that the modules are installed and of the correct type
+        Module auctionModule = Module(_getModuleIfInstalled(auctionRef_));
+        Module derivativeModule = Module(_getModuleIfInstalled(derivativeRef_));
+        Module condenserModule = Module(_getModuleIfInstalled(condenserRef_));
+
+        if (auctionModule.TYPE() != Module.Type.Auction) revert InvalidModuleType(auctionRef_);
+        if (derivativeModule.TYPE() != Module.Type.Derivative) {
+            revert InvalidModuleType(derivativeRef_);
+        }
+        if (condenserModule.TYPE() != Module.Type.Condenser) {
+            revert InvalidModuleType(condenserRef_);
+        }
+
+        condensers[auctionRef_][derivativeRef_] = condenserRef_;
     }
 }
