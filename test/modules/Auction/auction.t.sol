@@ -68,26 +68,13 @@ contract AuctionTest is Test {
         });
     }
 
-    // [X] reverts when start time is 0
     // [X] reverts when start time is in the past
     // [X] reverts when the duration is less than the minimum
     // [X] reverts when called by non-parent
     // [X] creates the auction lot
+    // [X] creates the auction lot when start time is 0
     // [X] creates the auction lot with a custom duration
     // [X] creates the auction lot when the start time is in the future
-
-    function testReverts_whenStartTimeIsZero() external {
-        // Update auction params
-        auctionParams.start = 0;
-
-        // Expect revert
-        bytes memory err = abi.encodeWithSelector(
-            Auction.Auction_InvalidStart.selector, auctionParams.start, uint48(block.timestamp)
-        );
-        vm.expectRevert(err);
-
-        auctionHouse.auction(routingParams, auctionParams);
-    }
 
     function testReverts_whenStartTimeIsInThePast(uint48 timestamp_) external {
         console2.log("block.timestamp", block.timestamp);
@@ -149,6 +136,19 @@ contract AuctionTest is Test {
         assertEq(lotCapacity, auctionParams.capacity);
         assertEq(sold, 0);
         assertEq(purchased, 0);
+    }
+
+    function test_whenStartTimeIsZero() external {
+        // Update auction params
+        auctionParams.start = 0;
+
+        uint256 lotId = auctionHouse.auction(routingParams, auctionParams);
+
+        // Get lot data from the module
+        (uint48 lotStart, uint48 lotConclusion,,,,) = mockAuctionModule.lotData(lotId);
+
+        assertEq(lotStart, uint48(block.timestamp)); // Sets to current timestamp
+        assertEq(lotConclusion, lotStart + auctionParams.duration);
     }
 
     function test_success_withCustomDuration(uint48 duration_) external {
