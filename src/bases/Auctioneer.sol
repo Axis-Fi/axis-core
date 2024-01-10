@@ -5,8 +5,8 @@ import {ERC20} from "lib/solmate/src/tokens/ERC20.sol";
 
 import "src/modules/Auction.sol";
 import {DerivativeModule} from "src/modules/Derivative.sol";
-import "src/interfaces/IHooks.sol";
-import "src/interfaces/IAllowlist.sol";
+import {IHooks} from "src/interfaces/IHooks.sol";
+import {IAllowlist} from "src/interfaces/IAllowlist.sol";
 
 abstract contract Auctioneer is WithModules {
     // ========= ERRORS ========= //
