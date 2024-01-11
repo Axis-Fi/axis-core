@@ -52,11 +52,20 @@ abstract contract Router is FeeManager {
 
     // ========== ATOMIC AUCTIONS ========== //
 
-    /// @param approval_ - (Optional) Permit approval signature for the quoteToken
+    /// @notice     Purchase a lot from an auction
+    ///
+    /// @param      recipient_      Address to receive payout
+    /// @param      referrer_       Address of referrer
+    /// @param      lotId_          Lot ID
+    /// @param      amount_         Amount of quoteToken to purchase with (in native decimals)
+    /// @param      minAmountOut_   Minimum amount of baseToken to receive
+    /// @param      auctionData_    Custom data used by the auction module
+    /// @param      approval_       Permit approval signature for the quoteToken
+    /// @return     payout          Amount of baseToken received by `recipient_` (in native decimals)
     function purchase(
         address recipient_,
         address referrer_,
-        uint256 id_,
+        uint256 lotId_,
         uint256 amount_,
         uint256 minAmountOut_,
         bytes calldata auctionData_,
@@ -107,7 +116,7 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
 
     // ========== AUCTION FUNCTIONS ========== //
 
-    function calculateFees(
+    function _calculateFees(
         address referrer_,
         uint256 amount_
     ) internal view returns (uint256 toReferrer, uint256 toProtocol) {
@@ -124,12 +133,12 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
         return (toReferrer, toProtocol);
     }
 
-    function allocateFees(
+    function _allocateFees(
         address referrer_,
         ERC20 quoteToken_,
         uint256 amount_
     ) internal returns (uint256 totalFees) {
-        (uint256 toReferrer, uint256 toProtocol) = calculateFees(referrer_, amount_);
+        (uint256 toReferrer, uint256 toProtocol) = _calculateFees(referrer_, amount_);
 
         // Update fee balances if non-zero
         if (referrerFees[referrer_] > 0) {
@@ -142,10 +151,13 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
         return toReferrer + toProtocol;
     }
 
+    // ========== ATOMIC AUCTIONS ========== //
+
+    /// @inheritdoc Router
     function purchase(
         address recipient_,
         address referrer_,
-        uint256 id_,
+        uint256 lotId_,
         uint256 amount_,
         uint256 minAmountOut_,
         bytes calldata auctionData_,
@@ -155,15 +167,15 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
         // Response: No, my thought was that the module will just revert on `purchase` if it's not atomic. Vice versa
 
         // Load routing data for the lot
-        Routing memory routing = lotRouting[id_];
+        Routing memory routing = lotRouting[lotId_];
 
-        uint256 totalFees = allocateFees(referrer_, routing.quoteToken, amount_);
+        uint256 totalFees = _allocateFees(referrer_, routing.quoteToken, amount_);
 
         // Send purchase to auction house and get payout plus any extra output
         bytes memory auctionOutput;
         {
-            AuctionModule module = _getModuleForId(id_);
-            (payout, auctionOutput) = module.purchase(id_, amount_ - totalFees, auctionData_);
+            AuctionModule module = _getModuleForId(lotId_);
+            (payout, auctionOutput) = module.purchase(lotId_, amount_ - totalFees, auctionData_);
         }
 
         // Check that payout is at least minimum amount out
@@ -171,14 +183,16 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
         if (payout < minAmountOut_) revert AmountLessThanMinimum();
 
         // Handle transfers from purchaser and seller
-        _handleTransfers(id_, routing, amount_, payout, totalFees, approval_);
+        _handleTransfers(lotId_, routing, amount_, payout, totalFees, approval_);
 
         // Handle payout to user, including creation of derivative tokens
         _handlePayout(routing, recipient_, payout, auctionOutput);
 
         // Emit event
-        emit Purchase(id_, msg.sender, referrer_, amount_, payout);
+        emit Purchase(lotId_, msg.sender, referrer_, amount_, payout);
     }
+
+    // ========== BATCH AUCTIONS ========== //
 
     function bid(
         address recipient_,
