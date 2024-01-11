@@ -136,7 +136,6 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
                 toReferrer = (amount_ * referrerFee) / FEE_DECIMALS;
                 toProtocol = ((amount_ * (protocolFee + referrerFee)) / FEE_DECIMALS) - toReferrer;
             }
-
         }
 
         // Update fee balances if non-zero
