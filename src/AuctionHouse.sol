@@ -154,6 +154,21 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
     // ========== ATOMIC AUCTIONS ========== //
 
     /// @inheritdoc Router
+    /// @dev        This fuction handles the following:
+    ///             1. Calculates the fees for the purchase
+    ///             2. Sends the purchase amount to the auction module
+    ///             3. Records the purchase on the auction module
+    ///             4. Transfers the quote token from the caller
+    ///             5. Transfers the quote token to the auction owner or executes the callback
+    ///             6. Transfers the payout token to the recipient
+    ///
+    ///             This function reverts if:
+    ///             - The respective auction module reverts
+    ///             - `payout` is less than `minAmountOut_`
+    ///             - The caller does not have sufficient balance of the quote token
+    ///             - The auction owner does not have sufficient balance of the payout token
+    ///             - Any of the callbacks fail
+    ///             - Any of the token transfers fail
     function purchase(
         address recipient_,
         address referrer_,
