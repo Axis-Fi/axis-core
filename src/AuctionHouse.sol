@@ -112,6 +112,8 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
         ERC20 quoteToken_,
         uint256 amount_
     ) internal returns (uint256 totalFees) {
+        // TODO should protocol and/or referrer be able to charge different fees based on the type of auction being used?
+
         // Calculate fees for purchase
         // 1. Calculate referrer fee
         // 2. Calculate protocol fee as the total expected fee amount minus the referrer fee
