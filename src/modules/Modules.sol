@@ -342,21 +342,21 @@ abstract contract Module {
     // ========= STATE VARIABLES ========= //
 
     /// @notice The parent contract for this module.
-    address public immutable parent;
+    address public immutable PARENT;
 
     // ========= CONSTRUCTOR ========= //
 
     constructor(address parent_) {
         if (parent_ == address(0)) revert Module_InvalidParent(parent_);
 
-        parent = parent_;
+        PARENT = parent_;
     }
 
     // ========= MODIFIERS ========= //
 
     /// @notice Modifier to restrict functions to be called only by the parent module.
     modifier onlyParent() {
-        if (msg.sender != parent) revert Module_OnlyParent(msg.sender);
+        if (msg.sender != PARENT) revert Module_OnlyParent(msg.sender);
         _;
     }
 
@@ -364,9 +364,9 @@ abstract contract Module {
     /// @notice If a function is called through `execOnModule()` on the parent contract, this modifier will revert.
     /// @dev    This modifier can be used to prevent functions from being called by governance or other external actors through `execOnModule()`.
     modifier onlyInternal() {
-        if (msg.sender != parent) revert Module_OnlyParent(msg.sender);
+        if (msg.sender != PARENT) revert Module_OnlyParent(msg.sender);
 
-        if (WithModules(parent).isExecOnModule()) revert Module_OnlyInternal();
+        if (WithModules(PARENT).isExecOnModule()) revert Module_OnlyInternal();
         _;
     }
 

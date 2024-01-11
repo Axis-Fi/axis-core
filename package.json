@@ -21,6 +21,6 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "solhint": "^4.0.0"
+    "solhint": "^4.1.1"
   }
 }

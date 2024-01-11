@@ -8,20 +8,13 @@ contract MockAllowlist is IAllowlist {
 
     uint256[] public registeredIds;
 
-    function isAllowed(
-        address user_,
-        bytes calldata proof_
-    ) external view override returns (bool) {}
+    function isAllowed(address, bytes calldata) external view override returns (bool) {}
 
-    function isAllowed(
-        uint256 id_,
-        address user_,
-        bytes calldata proof_
-    ) external view override returns (bool) {}
+    function isAllowed(uint256, address, bytes calldata) external view override returns (bool) {}
 
-    function register(bytes calldata params_) external override {}
+    function register(bytes calldata) external override {}
 
-    function register(uint256 id_, bytes calldata params_) external override {
+    function register(uint256 id_, bytes calldata) external override {
         if (registerReverts) {
             revert("MockAllowlist: register reverted");
         }

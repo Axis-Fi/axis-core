@@ -21,9 +21,9 @@ contract MockAuctionModule is AuctionModule {
     }
 
     function _auction(
-        uint256 id_,
-        Lot memory lot_,
-        bytes memory params_
+        uint256,
+        Lot memory,
+        bytes memory
     ) internal virtual override returns (uint256) {
         return 0;
     }
