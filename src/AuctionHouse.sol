@@ -120,6 +120,8 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
         address referrer_,
         uint256 amount_
     ) internal view returns (uint256 toReferrer, uint256 toProtocol) {
+        // TODO shift into FeeManager?
+
         // Calculate fees for purchase
         // 1. Calculate referrer fee
         // 2. Calculate protocol fee as the total expected fee amount minus the referrer fee
@@ -163,6 +165,7 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
     ///             6. Transfers the payout token to the recipient
     ///
     ///             This function reverts if:
+    ///             - `lotId_` is invalid
     ///             - The respective auction module reverts
     ///             - `payout` is less than `minAmountOut_`
     ///             - The caller does not have sufficient balance of the quote token
