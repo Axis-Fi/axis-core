@@ -24,21 +24,26 @@ abstract contract Router is FeeManager {
 
     /// @notice     Parameters used by the purchase function
     /// @dev        This reduces the number of variables in scope for the purchase function
-    /// @param      recipient      Address to receive payout
-    /// @param      referrer       Address of referrer
-    /// @param      lotId          Lot ID
-    /// @param      amount         Amount of quoteToken to purchase with (in native decimals)
-    /// @param      minAmountOut   Minimum amount of baseToken to receive
-    /// @param      auctionData    Custom data used by the auction module
-    /// @param      approval       Permit approval signature for the quoteToken
+    ///
+    /// @param      recipient           Address to receive payout
+    /// @param      referrer            Address of referrer
+    /// @param      approvalDeadline    Deadline for approval signature
+    /// @param      lotId               Lot ID
+    /// @param      amount              Amount of quoteToken to purchase with (in native decimals)
+    /// @param      minAmountOut        Minimum amount of baseToken to receive
+    /// @param      approvalNonce       Nonce for permit approval signature
+    /// @param      auctionData         Custom data used by the auction module
+    /// @param      approvalSignature   Permit approval signature for the quoteToken
     struct PurchaseParams {
         address recipient;
         address referrer;
+        uint48 approvalDeadline;
         uint256 lotId;
         uint256 amount;
         uint256 minAmountOut;
+        uint256 approvalNonce;
         bytes auctionData;
-        bytes approval;
+        bytes approvalSignature;
     }
 
     // ========== STATE VARIABLES ========== //
@@ -208,7 +213,7 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
 
         // Handle transfers from purchaser and seller
         _handleTransfers(
-            params_.lotId, routing, params_.amount, payout, totalFees, params_.approval
+            params_.lotId, routing, params_.amount, payout, totalFees, params_.approvalSignature
         );
 
         // Handle payout to user, including creation of derivative tokens

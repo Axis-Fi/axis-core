@@ -4,6 +4,8 @@ pragma solidity 0.8.19;
 // Libraries
 import {Test} from "forge-std/Test.sol";
 import {ERC20} from "lib/solmate/src/tokens/ERC20.sol";
+import {IPermit2} from "src/lib/permit2/interfaces/IPermit2.sol";
+import {Permit2Helper} from "test/lib/permit2/Permit2Helper.sol";
 
 // Mocks
 import {MockERC20} from "lib/solmate/src/test/utils/mocks/MockERC20.sol";
@@ -30,7 +32,7 @@ import {
     Module
 } from "src/modules/Modules.sol";
 
-contract PurchaseTest is Test {
+contract PurchaseTest is Test, Permit2Helper {
     MockERC20 internal baseToken;
     MockERC20 internal quoteToken;
     MockAtomicAuctionModule internal mockAuctionModule;
@@ -53,6 +55,8 @@ contract PurchaseTest is Test {
 
     uint256 internal constant AMOUNT_IN = 1e18;
     uint256 internal AMOUNT_OUT;
+
+    uint256 internal constant APPROVAL_NONCE = 222;
 
     function setUp() external {
         baseToken = new MockERC20("Base Token", "BASE", 18);
@@ -101,11 +105,13 @@ contract PurchaseTest is Test {
         purchaseParams = Router.PurchaseParams({
             recipient: alice,
             referrer: referrer,
+            approvalDeadline: uint48(block.timestamp),
             lotId: lotId,
             amount: AMOUNT_IN,
             minAmountOut: AMOUNT_OUT,
+            approvalNonce: APPROVAL_NONCE,
             auctionData: bytes(""),
-            approval: bytes("")
+            approvalSignature: bytes("")
         });
     }
 
@@ -184,7 +190,8 @@ contract PurchaseTest is Test {
     // [ ] quote token transfers
     //  [X] reverts if the caller does not have sufficient balance of the quote token
     //  [ ] reverts if the caller has not approved the Permit2 contract
-    //  [ ] reverts if the Permit2 approval is invalid
+    //  [ ] reverts if the Permit2 approval signature is invalid
+    //  [ ] reverts if the Permit2 approval signature is expired
     // [ ] allowlist
     //  [ ] reverts if the caller is not on the allowlist
     // [ ] derivative payout token
