@@ -74,6 +74,7 @@ abstract contract Router is FeeManager {
     // ========== ATOMIC AUCTIONS ========== //
 
     /// @notice     Purchase a lot from an auction
+    /// @notice     Permit2 is utilised to simplify token transfers
     ///
     /// @param      params_         Purchase parameters
     /// @return     payout          Amount of baseToken received by `recipient_` (in native decimals)

@@ -165,6 +165,16 @@ contract PurchaseTest is Test {
         _;
     }
 
+    modifier whenPermit2IsApproved() {
+        // TODO
+        _;
+    }
+
+    modifier whenPermit2ApprovalIsValid() {
+        // TODO
+        _;
+    }
+
     // purchase
     // [X] reverts if the lot id is invalid
     // [X] reverts if the auction is not atomic
@@ -172,15 +182,16 @@ contract PurchaseTest is Test {
     // [X] reverts if the auction module reverts
     // [X] reverts if the payout amount is less than the minimum
     // [ ] quote token transfers
-    //  [ ] reverts if the caller does not have sufficient balance of the quote token
+    //  [X] reverts if the caller does not have sufficient balance of the quote token
     //  [ ] reverts if the caller has not approved the Permit2 contract
     //  [ ] reverts if the Permit2 approval is invalid
     // [ ] allowlist
     //  [ ] reverts if the caller is not on the allowlist
-    // [ ] derivative
+    // [ ] derivative payout token
     //  [ ] mints derivative tokens to the recipient
     //  [ ] if specified, uses the condenser
-    // [ ] non-derivative
+    // [ ] non-derivative payout token
+    //  [X] reverts if the auction owner does not have sufficient balance of the payout token
     //  [ ] transfers the base token to the recipient
     // [ ] fees
     //  [ ] protocol fees recorded
@@ -196,8 +207,8 @@ contract PurchaseTest is Test {
     //  [ ] performs post-purchase hook
     //  [ ] performs post-purchase hook with fees
     // [ ] non-hooks
-    //  [ ] reverts if the auction owner does not have sufficient balance of the payout token
     //  [ ] success - transfers the quote token to the auction owner
+    // permutations: hooks/no hooks, derivative/non-derivative payout token
 
     function testReverts_whenLotIdIsInvalid() external {
         // Update the lot id to an invalid value
