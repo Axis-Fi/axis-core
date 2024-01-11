@@ -9,6 +9,7 @@ import {AuctionModule} from "src/modules/Auction.sol";
 
 contract MockAtomicAuctionModule is AuctionModule {
     mapping(uint256 => uint256) public payoutData;
+    bool public purchaseReverts;
 
     constructor(address _owner) AuctionModule(_owner) {
         minAuctionDuration = 1 days;
@@ -39,6 +40,8 @@ contract MockAtomicAuctionModule is AuctionModule {
         uint256 amount_,
         bytes calldata auctionData_
     ) external virtual override returns (uint256 payout, bytes memory auctionOutput) {
+        if (purchaseReverts) revert("error");
+
         payout = payoutData[id_] * amount_;
         auctionOutput = auctionData_;
     }
@@ -47,8 +50,12 @@ contract MockAtomicAuctionModule is AuctionModule {
         payoutData[id_] = multiplier_;
     }
 
+    function setPurchaseReverts(bool reverts_) external virtual {
+        purchaseReverts = reverts_;
+    }
+
     function bid(uint256, uint256, uint256, bytes calldata) external virtual override {
-        revert("unsupported");
+        revert Auction_NotImplemented();
     }
 
     function settle(uint256 id_) external virtual override returns (uint256[] memory amountsOut) {}

@@ -15,7 +15,7 @@ import {MockAllowlist} from "test/modules/Auction/MockAllowlist.sol";
 import {MockHook} from "test/modules/Auction/MockHook.sol";
 
 // Auctions
-import {AuctionHouse} from "src/AuctionHouse.sol";
+import {AuctionHouse, Router} from "src/AuctionHouse.sol";
 import {Auction} from "src/modules/Auction.sol";
 import {IHooks, IAllowlist, Auctioneer} from "src/bases/Auctioneer.sol";
 
@@ -42,10 +42,17 @@ contract PurchaseTest is Test {
     AuctionHouse internal auctionHouse;
     Auctioneer.RoutingParams internal routingParams;
     Auction.AuctionParams internal auctionParams;
+    Router.PurchaseParams internal purchaseParams;
 
     address internal immutable protocol = address(0x2);
+    address internal immutable alice = address(0x3);
+    address internal immutable referrer = address(0x4);
+    address internal immutable auctionOwner = address(0x5);
 
     uint256 internal lotId;
+
+    uint256 internal constant AMOUNT_IN = 1e18;
+    uint256 internal AMOUNT_OUT;
 
     function setUp() external {
         baseToken = new MockERC20("Base Token", "BASE", 18);
@@ -82,7 +89,24 @@ contract PurchaseTest is Test {
         auctionHouse.installModule(mockAuctionModule);
 
         // Create an auction
+        vm.prank(auctionOwner);
         lotId = auctionHouse.auction(routingParams, auctionParams);
+
+        // Set the default payout multiplier to 1
+        mockAuctionModule.setPayoutMultiplier(lotId, 1);
+
+        // 1:1 exchange rate
+        AMOUNT_OUT = AMOUNT_IN;
+
+        purchaseParams = Router.PurchaseParams({
+            recipient: alice,
+            referrer: referrer,
+            lotId: lotId,
+            amount: AMOUNT_IN,
+            minAmountOut: AMOUNT_OUT,
+            auctionData: bytes(""),
+            approval: bytes("")
+        });
     }
 
     modifier whenDerivativeModuleIsInstalled() {
@@ -120,21 +144,37 @@ contract PurchaseTest is Test {
         routingParams.auctionType = toKeycode("BATCH");
 
         // Create the batch auction
+        vm.prank(auctionOwner);
         lotId = auctionHouse.auction(routingParams, auctionParams);
         _;
     }
 
+    modifier whenAccountHasQuoteTokenBalance(uint256 amount_) {
+        quoteToken.mint(alice, amount_);
+        _;
+    }
+
+    modifier whenAccountHasBaseTokenBalance(uint256 amount_) {
+        baseToken.mint(auctionOwner, amount_);
+        _;
+    }
+
+    modifier whenAuctionIsCancelled() {
+        vm.prank(auctionOwner);
+        auctionHouse.cancel(lotId);
+        _;
+    }
+
     // purchase
-    // [ ] reverts if the lot id is invalid
-    // [ ] reverts if the auction is not atomic
-    // [ ] reverts if the auction is not active
-    // [ ] reverts if the auction module reverts
-    // [ ] reverts if the payout amount is less than the minimum
-    // [ ] reverts if the caller does not have sufficient balance of the quote token
-    // [ ] reverts if the caller has not approved the Permit2 contract
-    // [ ] reverts if the auction owner does not have sufficient balance of the payout token
-    // [ ] reverts if there is a callback that fails
-    // [ ] reverts if the Permit2 approval is invalid
+    // [X] reverts if the lot id is invalid
+    // [X] reverts if the auction is not atomic
+    // [X] reverts if the auction is not active
+    // [X] reverts if the auction module reverts
+    // [X] reverts if the payout amount is less than the minimum
+    // [ ] quote token transfers
+    //  [ ] reverts if the caller does not have sufficient balance of the quote token
+    //  [ ] reverts if the caller has not approved the Permit2 contract
+    //  [ ] reverts if the Permit2 approval is invalid
     // [ ] allowlist
     //  [ ] reverts if the caller is not on the allowlist
     // [ ] derivative
@@ -156,5 +196,110 @@ contract PurchaseTest is Test {
     //  [ ] performs post-purchase hook
     //  [ ] performs post-purchase hook with fees
     // [ ] non-hooks
+    //  [ ] reverts if the auction owner does not have sufficient balance of the payout token
     //  [ ] success - transfers the quote token to the auction owner
+
+    function testReverts_whenLotIdIsInvalid() external {
+        // Update the lot id to an invalid value
+        purchaseParams.lotId = 1;
+
+        // Expect revert
+        bytes memory err =
+            abi.encodeWithSelector(Auctioneer.InvalidLotId.selector, purchaseParams.lotId);
+        vm.expectRevert(err);
+
+        // Purchase
+        vm.prank(alice);
+        auctionHouse.purchase(purchaseParams);
+    }
+
+    function testReverts_whenNotAtomicAuction()
+        external
+        whenBatchAuctionIsCreated
+        whenAccountHasQuoteTokenBalance(AMOUNT_IN)
+        whenAccountHasBaseTokenBalance(AMOUNT_OUT)
+    {
+        // Update purchase params
+        purchaseParams.lotId = lotId;
+
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(Auction.Auction_NotImplemented.selector);
+        vm.expectRevert(err);
+
+        // Purchase
+        vm.prank(alice);
+        auctionHouse.purchase(purchaseParams);
+    }
+
+    function testReverts_whenAuctionNotActive()
+        external
+        whenAuctionIsCancelled
+        whenAccountHasQuoteTokenBalance(AMOUNT_IN)
+        whenAccountHasBaseTokenBalance(AMOUNT_OUT)
+    {
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(Auction.Auction_MarketNotActive.selector, lotId);
+        vm.expectRevert(err);
+
+        // Purchase
+        vm.prank(alice);
+        auctionHouse.purchase(purchaseParams);
+    }
+
+    function testReverts_whenAuctionModuleReverts()
+        external
+        whenAccountHasQuoteTokenBalance(AMOUNT_IN)
+        whenAccountHasBaseTokenBalance(AMOUNT_OUT)
+    {
+        // Set the auction module to revert
+        mockAuctionModule.setPurchaseReverts(true);
+
+        // Expect revert
+        vm.expectRevert("error");
+
+        // Purchase
+        vm.prank(alice);
+        auctionHouse.purchase(purchaseParams);
+    }
+
+    function testReverts_whenPayoutAmountLessThanMinimum()
+        external
+        whenAccountHasQuoteTokenBalance(AMOUNT_IN)
+        whenAccountHasBaseTokenBalance(AMOUNT_OUT)
+    {
+        // Set the payout multiplier so that the payout is less than the minimum
+        mockAuctionModule.setPayoutMultiplier(lotId, 0);
+
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(AuctionHouse.AmountLessThanMinimum.selector);
+        vm.expectRevert(err);
+
+        // Purchase
+        vm.prank(alice);
+        auctionHouse.purchase(purchaseParams);
+    }
+
+    function testReverts_whenCallerHasInsufficientBalanceOfQuoteToken()
+        external
+        whenAccountHasBaseTokenBalance(AMOUNT_OUT)
+    {
+        // Expect revert
+        vm.expectRevert();
+
+        // Purchase
+        vm.prank(alice);
+        auctionHouse.purchase(purchaseParams);
+    }
+
+    function testReverts_whenOwnerHasInsufficientBalanceOfBaseToken()
+        external
+        whenAccountHasQuoteTokenBalance(AMOUNT_IN)
+    {
+        // Expect revert
+        vm.expectRevert();
+
+        // Purchase
+        vm.prank(alice);
+        auctionHouse.purchase(purchaseParams);
+    }
 }

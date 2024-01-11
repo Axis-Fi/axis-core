@@ -20,6 +20,27 @@ abstract contract FeeManager {
 }
 
 abstract contract Router is FeeManager {
+    // ========== STRUCTS ========== //
+
+    /// @notice     Parameters used by the purchase function
+    /// @dev        This reduces the number of variables in scope for the purchase function
+    /// @param      recipient      Address to receive payout
+    /// @param      referrer       Address of referrer
+    /// @param      lotId          Lot ID
+    /// @param      amount         Amount of quoteToken to purchase with (in native decimals)
+    /// @param      minAmountOut   Minimum amount of baseToken to receive
+    /// @param      auctionData    Custom data used by the auction module
+    /// @param      approval       Permit approval signature for the quoteToken
+    struct PurchaseParams {
+        address recipient;
+        address referrer;
+        uint256 lotId;
+        uint256 amount;
+        uint256 minAmountOut;
+        bytes auctionData;
+        bytes approval;
+    }
+
     // ========== STATE VARIABLES ========== //
 
     /// @notice Fee paid to a front end operator in basis points (3 decimals). Set by the referrer, must be less than or equal to 5% (5e3).
@@ -54,23 +75,9 @@ abstract contract Router is FeeManager {
 
     /// @notice     Purchase a lot from an auction
     ///
-    /// @param      recipient_      Address to receive payout
-    /// @param      referrer_       Address of referrer
-    /// @param      lotId_          Lot ID
-    /// @param      amount_         Amount of quoteToken to purchase with (in native decimals)
-    /// @param      minAmountOut_   Minimum amount of baseToken to receive
-    /// @param      auctionData_    Custom data used by the auction module
-    /// @param      approval_       Permit approval signature for the quoteToken
+    /// @param      params_         Purchase parameters
     /// @return     payout          Amount of baseToken received by `recipient_` (in native decimals)
-    function purchase(
-        address recipient_,
-        address referrer_,
-        uint256 lotId_,
-        uint256 amount_,
-        uint256 minAmountOut_,
-        bytes calldata auctionData_,
-        bytes calldata approval_
-    ) external virtual returns (uint256 payout);
+    function purchase(PurchaseParams memory params_) external virtual returns (uint256 payout);
 
     // ========== BATCH AUCTIONS ========== //
 
@@ -172,42 +179,42 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
     ///             - The auction owner does not have sufficient balance of the payout token
     ///             - Any of the callbacks fail
     ///             - Any of the token transfers fail
-    function purchase(
-        address recipient_,
-        address referrer_,
-        uint256 lotId_,
-        uint256 amount_,
-        uint256 minAmountOut_,
-        bytes calldata auctionData_,
-        bytes calldata approval_
-    ) external override isValidLot(lotId_) returns (uint256 payout) {
+    function purchase(PurchaseParams memory params_)
+        external
+        override
+        isValidLot(params_.lotId)
+        returns (uint256 payout)
+    {
         // TODO should this not check if the auction is atomic?
         // Response: No, my thought was that the module will just revert on `purchase` if it's not atomic. Vice versa
 
         // Load routing data for the lot
-        Routing memory routing = lotRouting[lotId_];
+        Routing memory routing = lotRouting[params_.lotId];
 
-        uint256 totalFees = _allocateFees(referrer_, routing.quoteToken, amount_);
+        uint256 totalFees = _allocateFees(params_.referrer, routing.quoteToken, params_.amount);
 
         // Send purchase to auction house and get payout plus any extra output
         bytes memory auctionOutput;
         {
-            AuctionModule module = _getModuleForId(lotId_);
-            (payout, auctionOutput) = module.purchase(lotId_, amount_ - totalFees, auctionData_);
+            AuctionModule module = _getModuleForId(params_.lotId);
+            (payout, auctionOutput) =
+                module.purchase(params_.lotId, params_.amount - totalFees, params_.auctionData);
         }
 
         // Check that payout is at least minimum amount out
         // @dev Moved the slippage check from the auction to the AuctionHouse to allow different routing and purchase logic
-        if (payout < minAmountOut_) revert AmountLessThanMinimum();
+        if (payout < params_.minAmountOut) revert AmountLessThanMinimum();
 
         // Handle transfers from purchaser and seller
-        _handleTransfers(lotId_, routing, amount_, payout, totalFees, approval_);
+        _handleTransfers(
+            params_.lotId, routing, params_.amount, payout, totalFees, params_.approval
+        );
 
         // Handle payout to user, including creation of derivative tokens
-        _handlePayout(routing, recipient_, payout, auctionOutput);
+        _handlePayout(routing, params_.recipient, payout, auctionOutput);
 
         // Emit event
-        emit Purchase(lotId_, msg.sender, referrer_, amount_, payout);
+        emit Purchase(params_.lotId, msg.sender, params_.referrer, params_.amount, payout);
     }
 
     // ========== BATCH AUCTIONS ========== //
@@ -307,7 +314,7 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
         uint256 amount_,
         uint256 payout_,
         uint256 feePaid_,
-        bytes calldata approval_
+        bytes memory approval_
     ) internal {
         // Calculate amount net of fees
         uint256 amountLessFee = amount_ - feePaid_;

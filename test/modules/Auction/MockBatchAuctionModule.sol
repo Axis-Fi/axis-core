@@ -37,7 +37,7 @@ contract MockBatchAuctionModule is AuctionModule {
         uint256,
         bytes calldata
     ) external virtual override returns (uint256, bytes memory) {
-        revert("unsupported");
+        revert Auction_NotImplemented();
     }
 
     function bid(uint256, uint256, uint256, bytes calldata) external virtual override {}
