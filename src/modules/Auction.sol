@@ -6,8 +6,15 @@ import "src/modules/Modules.sol";
 abstract contract Auction {
     /* ========== ERRORS ========== */
 
+    error Auction_MarketNotActive(uint256 lotId);
+
+    error Auction_InvalidStart(uint48 start_, uint48 minimum_);
+
+    error Auction_InvalidDuration(uint48 duration_, uint48 minimum_);
+
+    error Auction_InvalidLotId(uint256 lotId);
+
     error Auction_OnlyMarketOwner();
-    error Auction_MarketNotActive();
     error Auction_AmountLessThanMinimum();
     error Auction_NotEnoughCapacity();
     error Auction_InvalidParams();
@@ -87,6 +94,9 @@ abstract contract Auction {
 
     // ========== AUCTION MANAGEMENT ========== //
 
+    // TODO NatSpec comments
+    // TODO validate function
+
     function auction(uint256 id_, AuctionParams memory params_) external virtual;
 
     function cancel(uint256 id_) external virtual;
@@ -113,14 +123,25 @@ abstract contract AuctionModule is Auction, Module {
 
     // ========== AUCTION MANAGEMENT ========== //
 
-    function auction(uint256 id_, AuctionParams memory params_) external override onlyParent {
+    /// @notice     Create an auction lot
+    /// @dev        If the start time is zero, the auction will have a start time of the current block timestamp
+    ///
+    /// @dev        This function reverts if:
+    ///             - the caller is not the parent of the module
+    ///             - the start time is in the past
+    ///             - the duration is less than the minimum
+    ///
+    /// @param      lotId_      The lot id
+    function auction(uint256 lotId_, AuctionParams memory params_) external override onlyParent {
         // Start time must be zero or in the future
         if (params_.start > 0 && params_.start < uint48(block.timestamp)) {
-            revert Auction_InvalidParams();
+            revert Auction_InvalidStart(params_.start, uint48(block.timestamp));
         }
 
         // Duration must be at least min duration
-        if (params_.duration < minAuctionDuration) revert Auction_InvalidParams();
+        if (params_.duration < minAuctionDuration) {
+            revert Auction_InvalidDuration(params_.duration, minAuctionDuration);
+        }
 
         // Create core market data
         Lot memory lot;
@@ -130,10 +151,10 @@ abstract contract AuctionModule is Auction, Module {
         lot.capacity = params_.capacity;
 
         // Call internal createAuction function to store implementation-specific data
-        _auction(id_, lot, params_.implParams);
+        _auction(lotId_, lot, params_.implParams);
 
         // Store lot data
-        lotData[id_] = lot;
+        lotData[lotId_] = lot;
     }
 
     /// @dev implementation-specific auction creation logic can be inserted by overriding this function
@@ -143,14 +164,28 @@ abstract contract AuctionModule is Auction, Module {
         bytes memory params_
     ) internal virtual returns (uint256);
 
-    /// @dev Owner is stored in the Routing information on the AuctionHouse, so we check permissions there
-    function cancel(uint256 id_) external override onlyParent {
-        Lot storage lot = lotData[id_];
+    /// @notice     Cancel an auction lot
+    /// @dev        Owner is stored in the Routing information on the AuctionHouse, so we check permissions there
+    /// @dev        This function reverts if:
+    ///             - the caller is not the parent of the module
+    ///             - the lot id is invalid
+    ///             - the lot is not active
+    ///
+    /// @param      lotId_      The lot id
+    function cancel(uint256 lotId_) external override onlyParent {
+        Lot storage lot = lotData[lotId_];
+
+        // Invalid lot
+        if (lot.start == 0) revert Auction_InvalidLotId(lotId_);
+
+        // Inactive lot
+        if (lot.capacity == 0) revert Auction_MarketNotActive(lotId_);
+
         lot.conclusion = uint48(block.timestamp);
         lot.capacity = 0;
 
         // Call internal closeAuction function to update any other required parameters
-        _cancel(id_);
+        _cancel(lotId_);
     }
 
     function _cancel(uint256 id_) internal virtual;

@@ -85,8 +85,9 @@ abstract contract Router is FeeManager {
     ) external virtual returns (uint256[] memory amountsOut);
 }
 
-// TODO abstract for now so compiler doesn't complain
-abstract contract AuctionHouse is Derivatizer, Auctioneer, Router {
+/// @title      AuctionHouse
+/// @notice     As its name implies, the AuctionHouse is where auctions take place and the core of the protocol.
+contract AuctionHouse is Derivatizer, Auctioneer, Router {
     using SafeTransferLib for ERC20;
 
     /// Implement the router functionality here since it combines all of the base functionality
@@ -104,6 +105,46 @@ abstract contract AuctionHouse is Derivatizer, Auctioneer, Router {
 
     // ========== DIRECT EXECUTION ========== //
 
+    // ========== AUCTION FUNCTIONS ========== //
+
+    function allocateFees(
+        address referrer_,
+        ERC20 quoteToken_,
+        uint256 amount_
+    ) internal returns (uint256 totalFees) {
+        // TODO should protocol and/or referrer be able to charge different fees based on the type of auction being used?
+
+        // Calculate fees for purchase
+        // 1. Calculate referrer fee
+        // 2. Calculate protocol fee as the total expected fee amount minus the referrer fee
+        //    to avoid issues with rounding from separate fee calculations
+        uint256 toReferrer;
+        uint256 toProtocol;
+        if (referrer_ == address(0)) {
+            // There is no referrer
+            toProtocol = (amount_ * protocolFee) / FEE_DECIMALS;
+        } else {
+            uint256 referrerFee = referrerFees[referrer_]; // reduce to single SLOAD
+            if (referrerFee == 0) {
+                // There is a referrer, but they have not set a fee
+                // If protocol fee is zero, return zero
+                // Otherwise, calcualte protocol fee
+                if (protocolFee == 0) return 0;
+                toProtocol = (amount_ * protocolFee) / FEE_DECIMALS;
+            } else {
+                // There is a referrer and they have set a fee
+                toReferrer = (amount_ * referrerFee) / FEE_DECIMALS;
+                toProtocol = ((amount_ * (protocolFee + referrerFee)) / FEE_DECIMALS) - toReferrer;
+            }
+        }
+
+        // Update fee balances if non-zero
+        if (toReferrer > 0) rewards[referrer_][quoteToken_] += toReferrer;
+        if (toProtocol > 0) rewards[PROTOCOL][quoteToken_] += toProtocol;
+
+        return toReferrer + toProtocol;
+    }
+
     function purchase(
         address recipient_,
         address referrer_,
@@ -113,39 +154,27 @@ abstract contract AuctionHouse is Derivatizer, Auctioneer, Router {
         bytes calldata auctionData_,
         bytes calldata approval_
     ) external override returns (uint256 payout) {
-        AuctionModule module = _getModuleForId(id_);
-
         // TODO should this not check if the auction is atomic?
         // Response: No, my thought was that the module will just revert on `purchase` if it's not atomic. Vice versa
-
-        // Calculate fees for purchase
-        // 1. Calculate referrer fee
-        // 2. Calculate protocol fee as the total expected fee amount minus the referrer fee
-        //    to avoid issues with rounding from separate fee calculations
-        // TODO think about how to reduce storage loads
-        uint256 toReferrer =
-            referrer_ == address(0) ? 0 : (amount_ * referrerFees[referrer_]) / FEE_DECIMALS;
-        uint256 toProtocol =
-            ((amount_ * (protocolFee + referrerFees[referrer_])) / FEE_DECIMALS) - toReferrer;
 
         // Load routing data for the lot
         Routing memory routing = lotRouting[id_];
 
+        uint256 totalFees = allocateFees(referrer_, routing.quoteToken, amount_);
+
         // Send purchase to auction house and get payout plus any extra output
         bytes memory auctionOutput;
-        (payout, auctionOutput) =
-            module.purchase(id_, amount_ - toReferrer - toProtocol, auctionData_);
+        {
+            AuctionModule module = _getModuleForId(id_);
+            (payout, auctionOutput) = module.purchase(id_, amount_ - totalFees, auctionData_);
+        }
 
         // Check that payout is at least minimum amount out
         // @dev Moved the slippage check from the auction to the AuctionHouse to allow different routing and purchase logic
         if (payout < minAmountOut_) revert AmountLessThanMinimum();
 
-        // Update fee balances if non-zero
-        if (toReferrer > 0) rewards[referrer_][routing.quoteToken] += toReferrer;
-        if (toProtocol > 0) rewards[PROTOCOL][routing.quoteToken] += toProtocol;
-
         // Handle transfers from purchaser and seller
-        _handleTransfers(id_, routing, amount_, payout, toReferrer + toProtocol, approval_);
+        _handleTransfers(id_, routing, amount_, payout, totalFees, approval_);
 
         // Handle payout to user, including creation of derivative tokens
         _handlePayout(routing, recipient_, payout, auctionOutput);
@@ -154,7 +183,29 @@ abstract contract AuctionHouse is Derivatizer, Auctioneer, Router {
         emit Purchase(id_, msg.sender, referrer_, amount_, payout);
     }
 
-    // ============ DELEGATED EXECUTION ========== //
+    function bid(
+        address recipient_,
+        address referrer_,
+        uint256 id_,
+        uint256 amount_,
+        uint256 minAmountOut_,
+        bytes calldata auctionData_,
+        bytes calldata approval_
+    ) external override {
+        // TODO
+    }
+
+    function settle(uint256 id_) external override returns (uint256[] memory amountsOut) {
+        // TODO
+    }
+
+    // Off-chain auction variant
+    function settle(
+        uint256 id_,
+        Auction.Bid[] memory bids_
+    ) external override returns (uint256[] memory amountsOut) {
+        // TODO
+    }
 
     // ============ INTERNAL EXECUTION FUNCTIONS ========== //
 

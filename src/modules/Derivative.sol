@@ -20,7 +20,7 @@ abstract contract Derivative {
 
     // ========== STATE VARIABLES ========== //
     mapping(Keycode dType => address) public wrappedImplementations;
-    mapping(uint256 tokenId => Token metadata) tokenMetadata;
+    mapping(uint256 tokenId => Token metadata) public tokenMetadata;
     mapping(uint256 lotId => uint256[] tokenIds) public lotDerivatives;
 
     // ========== DERIVATIVE MANAGEMENT ========== //
