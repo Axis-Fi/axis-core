@@ -81,8 +81,14 @@ abstract contract Router is FeeManager {
     // Off-chain auction variant
     function settle(
         uint256 id_,
-        Auction.Bid[] memory bids_
-    ) external virtual returns (uint256[] memory amountsOut);
+        Auction.Bid[] calldata winningBids_,
+        bytes[] calldata bidSignatures_,
+        uint256[] calldata amountsIn_,
+        uint256[] calldata amountsOut_,
+        bytes calldata validityProof_,
+        bytes[] calldata approvals_,
+        bytes[] calldata allowlistProofs_
+    ) external virtual;
 }
 
 /// @title      AuctionHouse
@@ -95,6 +101,8 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
     // ========== ERRORS ========== //
     error AmountLessThanMinimum();
     error InvalidHook();
+    error InvalidBidder(address bidder_);
+    error NotAuthorized();
     error UnsupportedToken(ERC20 token_);
 
     // ========== EVENTS ========== //
@@ -112,14 +120,23 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
         ERC20 quoteToken_,
         uint256 amount_
     ) internal returns (uint256 totalFees) {
+        // Calculate fees for purchase
+        (uint256 toReferrer, uint256 toProtocol) = calculateFees(referrer_, quoteToken_, amount_);
+
+        // Update fee balances if non-zero
+        if (toReferrer > 0) rewards[referrer_][quoteToken_] += toReferrer;
+        if (toProtocol > 0) rewards[PROTOCOL][quoteToken_] += toProtocol;
+
+        return toReferrer + toProtocol;
+    }
+
+    function calculateFees(address referrer_, ERC20 quoteToken_, uint256 amount_) internal view returns (uint256 toReferrer, uint256 toProtocol) {
         // TODO should protocol and/or referrer be able to charge different fees based on the type of auction being used?
 
         // Calculate fees for purchase
         // 1. Calculate referrer fee
         // 2. Calculate protocol fee as the total expected fee amount minus the referrer fee
         //    to avoid issues with rounding from separate fee calculations
-        uint256 toReferrer;
-        uint256 toProtocol;
         if (referrer_ == address(0)) {
             // There is no referrer
             toProtocol = (amount_ * protocolFee) / FEE_DECIMALS;
@@ -127,9 +144,6 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
             uint256 referrerFee = referrerFees[referrer_]; // reduce to single SLOAD
             if (referrerFee == 0) {
                 // There is a referrer, but they have not set a fee
-                // If protocol fee is zero, return zero
-                // Otherwise, calcualte protocol fee
-                if (protocolFee == 0) return 0;
                 toProtocol = (amount_ * protocolFee) / FEE_DECIMALS;
             } else {
                 // There is a referrer and they have set a fee
@@ -137,12 +151,6 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
                 toProtocol = ((amount_ * (protocolFee + referrerFee)) / FEE_DECIMALS) - toReferrer;
             }
         }
-
-        // Update fee balances if non-zero
-        if (toReferrer > 0) rewards[referrer_][quoteToken_] += toReferrer;
-        if (toProtocol > 0) rewards[PROTOCOL][quoteToken_] += toProtocol;
-
-        return toReferrer + toProtocol;
     }
 
     function purchase(
@@ -160,6 +168,11 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
         // Load routing data for the lot
         Routing memory routing = lotRouting[id_];
 
+        // Check that sender is on the allowlist, if there is one
+        // TODO
+
+
+        // Calculate fees for purchase
         uint256 totalFees = allocateFees(referrer_, routing.quoteToken, amount_);
 
         // Send purchase to auction house and get payout plus any extra output
@@ -183,6 +196,8 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
         emit Purchase(id_, msg.sender, referrer_, amount_, payout);
     }
 
+    // TODO need a delegated execution function for purchase and bid because we check allowlist on the caller in the normal functions
+
     function bid(
         address recipient_,
         address referrer_,
@@ -200,11 +215,125 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
     }
 
     // Off-chain auction variant
+    // Lots of parameters, likely need to consolidate
     function settle(
         uint256 id_,
-        Auction.Bid[] memory bids_
-    ) external override returns (uint256[] memory amountsOut) {
+        Auction.Bid[] calldata winningBids_,
+        bytes[] calldata bidSignatures_,
+        uint256[] calldata amountsIn_,
+        uint256[] calldata amountsOut_,
+        bytes calldata validityProof_,
+        bytes[] calldata approvals_,
+        bytes[] calldata allowlistProofs_
+    ) external override {
+        // Load routing data for the lot
+        Routing memory routing = lotRouting[id_];
+
+        // Validate that sender is authorized to settle the auction
         // TODO
+
+        // Validate array lengths all match
+        uint256 len = winningBids_.length;
+        if (len != bidSignatures_.length || len != amountsIn_.length || len != amountsOut_.length || len != approvals_.length || len != allowlistProofs_.length) revert InvalidParams();
+
+        // Bid-level validation and fee calculations
+        uint256[] memory amountsInLessFees = new uint256[](len);
+        uint256 totalProtocolFee;
+        uint256 totalAmountInLessFees;
+        uint256 totalAmountOut;
+        for (uint256 i; i < len; i++) {
+            // If there is an allowlist, validate that the winners are on the allowlist
+            if (address(routing.allowlist) != address(0)) {
+                if (!routing.allowlist.isAllowed(winningBids_[i].bidder, allowlistProofs_[i])) revert InvalidBidder(winningBids_[i].bidder);
+            }
+
+            // Check that the amounts out are at least the minimum specified by the bidder
+            // If a bid is a partial fill, then it's amountIn will be less than the amount specified by the bidder
+            // If so, we need to adjust the minAmountOut proportionally for the slippage check
+            // We also verify that the amountIn is not more than the bidder specified
+            uint256 minAmountOut = winningBids_[i].minAmountOut;
+            if (amountsIn_[i] > winningBids_[i].amount) {
+                revert InvalidParams();
+            } else if (amountsIn_[i] < winningBids_[i].amount) {
+                minAmountOut = (minAmountOut * amountsIn_[i]) / winningBids_[i].amount; // TODO need to think about scaling and rounding here
+            }
+            if (amountsOut_[i] < minAmountOut) revert AmountLessThanMinimum();
+
+            // Calculate fees from bid amount
+            (uint256 toReferrer, uint256 toProtocol) = calculateFees(winningBids_[i].referrer, routing.quoteToken, amountsIn_[i]);
+            amountsInLessFees[i] = amountsIn_[i] - toReferrer - toProtocol;
+
+            // Update referrer fee balances if non-zero and increment the total protocol fee
+            if (toReferrer > 0) rewards[winningBids_[i].referrer][routing.quoteToken] += toReferrer;
+            totalProtocolFee += toProtocol;
+
+            // Increment total amount out
+            totalAmountInLessFees += amountsInLessFees[i];
+            totalAmountOut += amountsOut_[i];
+        }
+
+        // Update protocol fee if not zero
+        if (totalProtocolFee > 0) rewards[PROTOCOL][routing.quoteToken] += totalProtocolFee;
+
+        // Send auction inputs to auction module to validate settlement
+        // We do this because the format of the bids and signatures is specific to the auction module
+        // Some common things to check:
+        // 1. Total of amounts out is not greater than capacity
+        // 2. Minimum price is enforced
+        // 3. Minimum bid size is enforced
+        // 4. Minimum capacity sold is enforced
+        AuctionModule module = _getModuleForId(id_);
+
+        // TODO update auction module interface and base function to handle these inputs, and perhaps others
+        bytes memory auctionOutput = module.settle(id_, winningBids_, bidSignatures_, amountsInLessFees, amountsOut_, validityProof_);
+        
+        // Iterate through bids, handling transfers and payouts
+        // Have to transfer to auction house first since fee is in quote token
+        // Check balance before and after to ensure full amount received, revert if not
+        // Handles edge cases like fee-on-transfer tokens (which are not supported)
+        for (uint256 i; i < len; i++) {
+            // TODO use permit2 approvals if provided
+
+            uint256 quoteBalance = routing.quoteToken.balanceOf(address(this));
+            routing.quoteToken.safeTransferFrom(msg.sender, address(this), amountsIn_[i]);
+            if (routing.quoteToken.balanceOf(address(this)) < quoteBalance + amountsIn_[i]) {
+                revert UnsupportedToken(routing.quoteToken);
+            }
+        }
+
+        // If hooks address supplied, transfer tokens from auction house to hooks contract, 
+        // then execute the hook function, and ensure proper amount of tokens transferred in.
+        if (address(routing.hooks) != address(0)) {
+            // Send quote token to callback (transferred in first to allow use during callback)
+            routing.quoteToken.safeTransfer(address(routing.hooks), totalAmountInLessFees);
+
+            // Call the callback function to receive payout tokens for payout
+            uint256 baseBalance = routing.baseToken.balanceOf(address(this));
+            routing.hooks.mid(id_, totalAmountInLessFees, totalAmountOut);
+
+            // Check to ensure that the callback sent the requested amount of payout tokens back to the teller
+            if (routing.baseToken.balanceOf(address(this)) < (baseBalance + totalAmountOut)) {
+                revert InvalidHook();
+            }
+        } else {
+            // If no hook is provided, transfer tokens from auction owner to this contract
+            // for payout.
+            // Check balance before and after to ensure full amount received, revert if not
+            // Handles edge cases like fee-on-transfer tokens (which are not supported)
+            uint256 baseBalance = routing.baseToken.balanceOf(address(this));
+            routing.baseToken.safeTransferFrom(routing.owner, address(this), totalAmountOut);
+            if (routing.baseToken.balanceOf(address(this)) < (baseBalance + totalAmountOut)) {
+                revert UnsupportedToken(routing.baseToken);
+            }
+
+            routing.quoteToken.safeTransfer(routing.owner, totalAmountInLessFees);
+        }
+
+        // Handle payouts to bidders
+        for (uint256 i; i < len; i++) {
+            // Handle payout to user, including creation of derivative tokens
+            _handlePayout(routing, winningBids_[i].bidder, amountsOut_[i], auctionOutput);
+        }
     }
 
     // ============ INTERNAL EXECUTION FUNCTIONS ========== //

@@ -39,11 +39,15 @@ abstract contract Auction {
         uint256 purchased; // quote tokens in
     }
 
+    // TODO pack if we anticipate on-chain auction variants
     struct Bid {
+        uint256 lotId;
         address bidder;
+        address recipient;
+        address referrer;
         uint256 amount;
         uint256 minAmountOut;
-        bytes32 param; // optional implementation-specific parameter for the bid
+        bytes32 auctionParam; // optional implementation-specific parameter for the bid
     }
 
     struct AuctionParams {
@@ -89,8 +93,12 @@ abstract contract Auction {
     // TODO use solady data packing library to make bids smaller on the actual module to store?
     function settle(
         uint256 id_,
-        Bid[] memory bids_
-    ) external virtual returns (uint256[] memory amountsOut);
+        Bid[] calldata winningBids_,
+        bytes[] calldata bidSignatures_,
+        uint256[] memory amountsIn_,
+        uint256[] calldata amountsOut_,
+        bytes calldata validityProof_
+    ) external virtual returns (bytes memory);
 
     // ========== AUCTION MANAGEMENT ========== //
 

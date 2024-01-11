@@ -49,8 +49,12 @@ contract MockAuctionModule is AuctionModule {
 
     function settle(
         uint256 id_,
-        Bid[] memory bids_
-    ) external virtual override returns (uint256[] memory amountsOut) {}
+        Bid[] calldata winningBids_,
+        bytes[] calldata bidSignatures_,
+        uint256[] memory amountsIn_,
+        uint256[] calldata amountsOut_,
+        bytes calldata validityProof_
+    ) external virtual override returns (bytes memory) {}
 
     function payoutFor(
         uint256 id_,
