@@ -204,68 +204,6 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
         // TODO
     }
 
-    // ========== DERIVATIVE FUNCTIONS ========== //
-
-    function mint(
-        bytes memory data,
-        uint256 amount,
-        bool wrapped
-    ) external override returns (bytes memory) {
-        // TODO
-    }
-
-    function mint(
-        uint256 tokenId,
-        uint256 amount,
-        bool wrapped
-    ) external override returns (bytes memory) {
-        // TODO
-    }
-
-    function redeem(bytes memory data, uint256 amount) external override {
-        // TODO
-    }
-
-    function exercise(bytes memory data, uint256 amount) external override {
-        // TODO
-    }
-
-    function reclaim(bytes memory data) external override {
-        // TODO
-    }
-
-    function convert(bytes memory data, uint256 amount) external override {
-        // TODO
-    }
-
-    function wrap(uint256 tokenId, uint256 amount) external override {
-        // TODO
-    }
-
-    function unwrap(uint256 tokenId, uint256 amount) external override {
-        // TODO
-    }
-
-    function exerciseCost(
-        bytes memory data,
-        uint256 amount
-    ) external view override returns (uint256) {
-        // TODO
-    }
-
-    function convertsTo(
-        bytes memory data,
-        uint256 amount
-    ) external view override returns (uint256) {
-        // TODO
-    }
-
-    function computeId(bytes memory params_) external pure override returns (uint256) {
-        // TODO
-    }
-
-    // ============ DELEGATED EXECUTION ========== //
-
     // ============ INTERNAL EXECUTION FUNCTIONS ========== //
 
     /// @notice     Handles transfer of funds from user and market owner/callback
