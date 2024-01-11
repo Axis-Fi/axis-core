@@ -107,37 +107,39 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
 
     // ========== AUCTION FUNCTIONS ========== //
 
-    function calculateFees(
-        address referrer_,
-        uint256 amount_
-    ) internal view returns (uint256 toReferrer, uint256 toProtocol) {
-        // Calculate fees for purchase
-        // 1. Calculate referrer fee
-        // 2. Calculate protocol fee as the total expected fee amount minus the referrer fee
-        //    to avoid issues with rounding from separate fee calculations
-        // TODO think about how to reduce storage loads
-        toReferrer =
-            referrer_ == address(0) ? 0 : (amount_ * referrerFees[referrer_]) / FEE_DECIMALS;
-        toProtocol =
-            ((amount_ * (protocolFee + referrerFees[referrer_])) / FEE_DECIMALS) - toReferrer;
-
-        return (toReferrer, toProtocol);
-    }
-
     function allocateFees(
         address referrer_,
         ERC20 quoteToken_,
         uint256 amount_
     ) internal returns (uint256 totalFees) {
-        (uint256 toReferrer, uint256 toProtocol) = calculateFees(referrer_, amount_);
+        // Calculate fees for purchase
+        // 1. Calculate referrer fee
+        // 2. Calculate protocol fee as the total expected fee amount minus the referrer fee
+        //    to avoid issues with rounding from separate fee calculations
+        uint256 toReferrer;
+        uint256 toProtocol;
+        if (referrer_ == address(0)) {
+            // There is no referrer
+            toProtocol = (amount_ * protocolFee) / FEE_DECIMALS;
+        } else {
+            uint256 referrerFee = referrerFees[referrer_]; // reduce to single SLOAD
+            if (referrerFee == 0) {
+                // There is a referrer, but they have not set a fee
+                // If protocol fee is zero, return zero
+                // Otherwise, calcualte protocol fee
+                if (protocolFee == 0) return 0;
+                toProtocol = (amount_ * protocolFee) / FEE_DECIMALS;
+            } else {
+                // There is a referrer and they have set a fee
+                toReferrer = (amount_ * referrerFee) / FEE_DECIMALS;
+                toProtocol = ((amount_ * (protocolFee + referrerFee)) / FEE_DECIMALS) - toReferrer;
+            }
+
+        }
 
         // Update fee balances if non-zero
-        if (referrerFees[referrer_] > 0) {
-            rewards[referrer_][quoteToken_] += toReferrer;
-        }
-        if (protocolFee > 0) {
-            rewards[PROTOCOL][quoteToken_] += toProtocol;
-        }
+        if (toReferrer > 0) rewards[referrer_][quoteToken_] += toReferrer;
+        if (toProtocol > 0) rewards[PROTOCOL][quoteToken_] += toProtocol;
 
         return toReferrer + toProtocol;
     }
