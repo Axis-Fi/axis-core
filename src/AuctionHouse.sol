@@ -180,7 +180,7 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
         uint256 minAmountOut_,
         bytes calldata auctionData_,
         bytes calldata approval_
-    ) external override returns (uint256 payout) {
+    ) external override isValidLot(lotId_) returns (uint256 payout) {
         // TODO should this not check if the auction is atomic?
         // Response: No, my thought was that the module will just revert on `purchase` if it's not atomic. Vice versa
 
