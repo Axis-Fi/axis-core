@@ -200,7 +200,7 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
         // Load routing data for the lot
         Routing memory routing = lotRouting[params_.lotId];
 
-        uint256 totalFees = _allocateFees(params_.referrer, routing.quoteToken, params_.amount);
+        uint256 totalFees = allocateFees(params_.referrer, routing.quoteToken, params_.amount);
 
         // Send purchase to auction house and get payout plus any extra output
         bytes memory auctionOutput;
