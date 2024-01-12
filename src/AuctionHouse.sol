@@ -14,6 +14,8 @@ import {Auction, AuctionModule} from "src/modules/Auction.sol";
 
 import {Veecode, fromVeecode, WithModules} from "src/modules/Modules.sol";
 
+import {IHooks} from "src/interfaces/IHooks.sol";
+
 // TODO define purpose
 abstract contract FeeManager {
 // TODO write fee logic in separate contract to keep it organized
@@ -107,6 +109,40 @@ abstract contract Router is FeeManager {
         uint256 id_,
         Auction.Bid[] memory bids_
     ) external virtual returns (uint256[] memory amountsOut);
+
+    // ========== TOKEN TRANSFERS ========== //
+
+    /// @notice     Collects payment of the quote token from the user
+    /// @dev        This function handles the following:
+    ///             1. Calls the pre hook on the hooks contract (if provided)
+    ///             2. Transfers the quote token from the user
+    ///             2a. Uses Permit2 to transfer if approval signature is provided
+    ///             2b. Otherwise uses a standard ERC20 transfer
+    ///
+    ///             This function reverts if:
+    ///             - The Permit2 approval is invalid
+    ///             - The caller does not have sufficient balance of the quote token
+    ///             - Approval has not been granted to transfer the quote token
+    ///             - The quote token transfer fails
+    ///             - Transferring the quote token would result in a lesser amount being received
+    ///             - The pre-hook reverts
+    ///
+    /// @param      lotId_              Lot ID
+    /// @param      amount_             Amount of quoteToken to collect (in native decimals)
+    /// @param      quoteToken_         Quote token to collect
+    /// @param      hooks_              Hooks contract to call (optional)
+    /// @param      approvalDeadline_   Deadline for Permit2 approval signature
+    /// @param      approvalNonce_      Nonce for Permit2 approval signature
+    /// @param      approvalSignature_  Permit2 approval signature for the quoteToken
+    function _collectPayment(
+        uint256 lotId_,
+        uint256 amount_,
+        ERC20 quoteToken_,
+        IHooks hooks_,
+        uint48 approvalDeadline_,
+        uint256 approvalNonce_,
+        bytes memory approvalSignature_
+    ) internal {}
 }
 
 /// @title      AuctionHouse

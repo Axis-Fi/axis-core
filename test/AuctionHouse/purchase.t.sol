@@ -199,42 +199,6 @@ contract PurchaseTest is Test, Permit2Helper {
     // [ ] when the caller is on the allowlist
     //  [ ] it succeeds
     //
-    // pre hook
-    // [ ] given the auction has hooks defined
-    //  [ ] when the pre hook reverts
-    //   [ ] it reverts
-    //  [ ] when the pre hook does not revert
-    //   [ ] given the invariant is not violated - TODO define invariant
-    //    [ ] it succeeds
-    //   [ ] given the invariant is violated
-    //    [ ] it reverts
-    //
-    // transfers quote token from caller to auction house
-    // [ ] when the Permit2 signature is provided
-    //  [ ] when the Permit2 signature is invalid
-    //   [ ] it reverts
-    //  [ ] when the Permit2 signature is expired
-    //   [ ] it reverts
-    //  [ ] when the Permit2 signature is valid
-    //   [ ] given the caller has insufficient balance of the quote token
-    //    [ ] it reverts
-    //   [ ] given the caller has sufficient balance of the quote token
-    //    [ ] given the received amount is less than the transferred amount
-    //     [ ] it reverts
-    //    [ ] given the received amount is the same as the transferred amount
-    //     [ ] quote tokens (including fees) are transferred from the caller to the auction owner
-    // [ ] when the Permit2 signature is not provided
-    //  [ ] given the caller has insufficient balance of the quote token
-    //   [ ] it reverts
-    //  [ ] given the caller has sufficient balance of the quote token
-    //   [ ] given the caller has not approved the auction house to transfer the quote token
-    //    [ ] it reverts
-    //   [ ] given the caller has approved the auction house to transfer the quote token
-    //    [ ] given the received amount is less than the transferred amount
-    //     [ ] it reverts
-    //    [ ] given the received amount is the same as the transferred amount
-    //     [ ] quote tokens (including fees) are transferred from the caller to the auction owner
-    //
     // exchange of quote and base tokens
     // [ ] given the auction has hooks defined
     //  [ ] when the mid hook reverts
@@ -244,6 +208,8 @@ contract PurchaseTest is Test, Permit2Helper {
     //  [ ] when the mid hook transfers enough base tokens to the auction house
     //   [ ] it succeeds - quote tokens (minus fees) transferred to the auction owner
     // [ ] given the auction does not have hooks defined
+    //   [ ] given that approval has not been given to the auction house to transfer base tokens
+    //    [ ] it reverts
     //   [ ] given the received amount is less than the transferred amount
     //    [ ] it reverts
     //   [ ] given the received amount is the same as the transferred amount
