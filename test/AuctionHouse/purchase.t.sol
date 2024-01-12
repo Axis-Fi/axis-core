@@ -181,41 +181,89 @@ contract PurchaseTest is Test, Permit2Helper {
         _;
     }
 
-    // purchase
-    // [X] reverts if the lot id is invalid
-    // [X] reverts if the auction is not atomic
-    // [X] reverts if the auction is not active
-    // [X] reverts if the auction module reverts
-    // [X] reverts if the payout amount is less than the minimum
-    // [ ] quote token transfers
-    //  [X] reverts if the caller does not have sufficient balance of the quote token
-    //  [ ] reverts if the caller has not approved the Permit2 contract
-    //  [ ] reverts if the Permit2 approval signature is invalid
-    //  [ ] reverts if the Permit2 approval signature is expired
-    // [ ] allowlist
-    //  [ ] reverts if the caller is not on the allowlist
-    // [ ] derivative payout token
-    //  [ ] mints derivative tokens to the recipient
-    //  [ ] if specified, uses the condenser
-    // [ ] non-derivative payout token
-    //  [X] reverts if the auction owner does not have sufficient balance of the payout token
-    //  [ ] transfers the base token to the recipient
-    // [ ] fees
-    //  [ ] protocol fees recorded
-    //  [ ] referrer fees recorded
-    // [ ] hooks
-    //  [ ] reverts if pre-purchase hook reverts
-    //  [ ] reverts if mid-purchase hook reverts
-    //  [ ] reverts if post-purchase hook reverts
-    //  [ ] performs pre-purchase hook
-    //  [ ] performs pre-purchase hook with fees
-    //  [ ] performs mid-purchase hook
-    //  [ ] performs mid-purchase hook with fees
-    //  [ ] performs post-purchase hook
-    //  [ ] performs post-purchase hook with fees
-    // [ ] non-hooks
-    //  [ ] success - transfers the quote token to the auction owner
-    // permutations: hooks/no hooks, derivative/non-derivative payout token
+    // parameter checks
+    // [ ] when the lot id is invalid
+    //  [ ] it reverts
+    // [ ] given the auction is not atomic
+    //  [ ] it reverts
+    // [ ] given the auction is not active
+    //  [ ] it reverts
+    // [ ] when the auction module reverts
+    //  [ ] it reverts
+    // [ ] when the calculated payout amount is less than the minimum
+    //  [ ] it reverts
+    //
+    // allowlist
+    // [ ] when the caller is not on the allowlist
+    //  [ ] it reverts
+    // [ ] when the caller is on the allowlist
+    //  [ ] it succeeds
+    //
+    // pre hook
+    // [ ] given the auction has hooks defined
+    //  [ ] when the pre hook reverts
+    //   [ ] it reverts
+    //  [ ] when the pre hook does not revert
+    //   [ ] given the invariant is not violated - TODO define invariant
+    //    [ ] it succeeds
+    //   [ ] given the invariant is violated
+    //    [ ] it reverts
+    //
+    // transfers quote token from caller to auction house
+    // [ ] when the Permit2 signature is provided
+    //  [ ] when the Permit2 signature is invalid
+    //   [ ] it reverts
+    //  [ ] when the Permit2 signature is expired
+    //   [ ] it reverts
+    //  [ ] when the Permit2 signature is valid
+    //   [ ] given the caller has insufficient balance of the quote token
+    //    [ ] it reverts
+    //   [ ] given the caller has sufficient balance of the quote token
+    //    [ ] given the received amount is less than the transferred amount
+    //     [ ] it reverts
+    //    [ ] given the received amount is the same as the transferred amount
+    //     [ ] quote tokens (including fees) are transferred from the caller to the auction owner
+    // [ ] when the Permit2 signature is not provided
+    //  [ ] given the caller has insufficient balance of the quote token
+    //   [ ] it reverts
+    //  [ ] given the caller has sufficient balance of the quote token
+    //   [ ] given the caller has not approved the auction house to transfer the quote token
+    //    [ ] it reverts
+    //   [ ] given the caller has approved the auction house to transfer the quote token
+    //    [ ] given the received amount is less than the transferred amount
+    //     [ ] it reverts
+    //    [ ] given the received amount is the same as the transferred amount
+    //     [ ] quote tokens (including fees) are transferred from the caller to the auction owner
+    //
+    // exchange of quote and base tokens
+    // [ ] given the auction has hooks defined
+    //  [ ] when the mid hook reverts
+    //   [ ] it reverts
+    //  [ ] when the mid hook does not transfer enough base tokens to the auction house
+    //   [ ] it reverts
+    //  [ ] when the mid hook transfers enough base tokens to the auction house
+    //   [ ] it succeeds - quote tokens (minus fees) transferred to the auction owner
+    // [ ] given the auction does not have hooks defined
+    //   [ ] given the received amount is less than the transferred amount
+    //    [ ] it reverts
+    //   [ ] given the received amount is the same as the transferred amount
+    //    [ ] quote tokens (minus fees) are transferred to the auction owner
+    //
+    // transfers base token from auction house to recipient
+    // [ ] given the base token is a derivative
+    //  [ ] given a condenser is set
+    //   [ ] it uses the condenser to determine derivative parameters
+    //  [ ] given a condenser is not set
+    //   [ ] it uses the routing derivative parameters
+    //  [ ] it mints derivative tokens to the recipient using the derivative module
+    // [ ] given the base token is not a derivative
+    //  [ ] it transfers the base token to the recipient
+    //
+    // records fees
+    // [ ] given that a protocol fee is defined
+    //  [ ] it records the protocol fee
+    // [ ] given that a referrer fee is defined
+    //  [ ] it records the referrer fee
 
     function testReverts_whenLotIdIsInvalid() external {
         // Update the lot id to an invalid value
