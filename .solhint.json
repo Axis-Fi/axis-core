@@ -8,7 +8,7 @@
     "avoid-low-level-calls": "off",
     "const-name-snakecase": "warn",
     "var-name-mixedcase": "warn",
-    "func-name-mixedcase": "warn",
+    "func-name-mixedcase": "off",
     "immutable-name-snakecase": "warn",
     "modifier-name-mixedcase": "warn",
     "private-vars-leading-underscore": "warn",
