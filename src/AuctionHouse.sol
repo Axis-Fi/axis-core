@@ -14,11 +14,13 @@ import {Auction, AuctionModule} from "src/modules/Auction.sol";
 
 import {Veecode, fromVeecode, WithModules} from "src/modules/Modules.sol";
 
+// TODO define purpose
 abstract contract FeeManager {
 // TODO write fee logic in separate contract to keep it organized
 // Router can inherit
 }
 
+// TODO define purpose
 abstract contract Router is FeeManager {
     // ========== STRUCTS ========== //
 
