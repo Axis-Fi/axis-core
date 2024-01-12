@@ -1,7 +1,7 @@
 /// SPDX-License-Identifier: AGPL-3.0
 pragma solidity 0.8.19;
 
-import "src/modules/Modules.sol";
+import {Module} from "src/modules/Modules.sol";
 
 abstract contract Condenser {
     function condense(

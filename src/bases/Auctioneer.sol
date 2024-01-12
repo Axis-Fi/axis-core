@@ -71,7 +71,7 @@ abstract contract Auctioneer is WithModules {
 
     /// @notice     Constant representing 100%
     /// @dev        1% = 1_000 or 1e3. 100% = 100_000 or 1e5
-    uint48 internal constant ONE_HUNDRED_PERCENT = 1e5;
+    uint48 internal constant _ONE_HUNDRED_PERCENT = 1e5;
 
     /// @notice     Counter for auction lots
     uint256 public lotCounter;

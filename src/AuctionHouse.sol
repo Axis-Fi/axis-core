@@ -70,12 +70,12 @@ abstract contract Router is FeeManager {
 
     // Address the protocol receives fees at
     // TODO make this updatable
-    address internal immutable PROTOCOL;
+    address internal immutable _PROTOCOL;
 
     // ========== CONSTRUCTOR ========== //
 
     constructor(address protocol_) {
-        PROTOCOL = protocol_;
+        _PROTOCOL = protocol_;
     }
 
     // ========== ATOMIC AUCTIONS ========== //
@@ -131,7 +131,7 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
 
     // ========== AUCTION FUNCTIONS ========== //
 
-    function allocateFees(
+    function _allocateFees(
         address referrer_,
         ERC20 quoteToken_,
         uint256 amount_
@@ -164,7 +164,7 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
 
         // Update fee balances if non-zero
         if (toReferrer > 0) rewards[referrer_][quoteToken_] += toReferrer;
-        if (toProtocol > 0) rewards[PROTOCOL][quoteToken_] += toProtocol;
+        if (toProtocol > 0) rewards[_PROTOCOL][quoteToken_] += toProtocol;
 
         return toReferrer + toProtocol;
     }
@@ -200,7 +200,7 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
         // Load routing data for the lot
         Routing memory routing = lotRouting[params_.lotId];
 
-        uint256 totalFees = allocateFees(params_.referrer, routing.quoteToken, params_.amount);
+        uint256 totalFees = _allocateFees(params_.referrer, routing.quoteToken, params_.amount);
 
         // Send purchase to auction house and get payout plus any extra output
         bytes memory auctionOutput;
