@@ -11,6 +11,8 @@ contract MockAtomicAuctionModule is AuctionModule {
     mapping(uint256 => uint256) public payoutData;
     bool public purchaseReverts;
 
+    mapping(uint256 lotId => bool isCancelled) public cancelled;
+
     constructor(address _owner) AuctionModule(_owner) {
         minAuctionDuration = 1 days;
     }
@@ -32,7 +34,7 @@ contract MockAtomicAuctionModule is AuctionModule {
     }
 
     function _cancel(uint256 id_) internal override {
-        //
+        cancelled[id_] = true;
     }
 
     function purchase(
@@ -41,6 +43,8 @@ contract MockAtomicAuctionModule is AuctionModule {
         bytes calldata auctionData_
     ) external virtual override returns (uint256 payout, bytes memory auctionOutput) {
         if (purchaseReverts) revert("error");
+
+        if (cancelled[id_]) revert Auction_MarketNotActive(id_);
 
         payout = payoutData[id_] * amount_;
         auctionOutput = auctionData_;

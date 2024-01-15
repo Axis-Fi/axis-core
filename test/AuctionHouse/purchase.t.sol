@@ -171,16 +171,6 @@ contract PurchaseTest is Test, Permit2User {
         _;
     }
 
-    modifier whenPermit2IsApproved() {
-        // TODO
-        _;
-    }
-
-    modifier whenPermit2ApprovalIsValid() {
-        // TODO
-        _;
-    }
-
     // parameter checks
     // [ ] when the lot id is invalid
     //  [ ] it reverts
