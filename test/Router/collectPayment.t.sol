@@ -7,6 +7,7 @@ import {MockHook} from "test/modules/Auction/MockHook.sol";
 import {ConcreteRouter} from "test/Router/ConcreteRouter.sol";
 import {MockFeeOnTransferERC20} from "test/Router/MockFeeOnTransferERC20.sol";
 
+import {Router} from "src/AuctionHouse.sol";
 import {IHooks} from "src/interfaces/IHooks.sol";
 
 contract RouterTest is Test {
@@ -64,6 +65,8 @@ contract RouterTest is Test {
         _;
     }
 
+    // ============ Permit2 flow ============
+
     // [ ] when the Permit2 signature is provided
     //  [ ] when the Permit2 signature is invalid
     //   [ ] it reverts
@@ -76,25 +79,89 @@ contract RouterTest is Test {
     //    [ ] it reverts
     //   [ ] given the received amount is the same as the transferred amount
     //    [ ] quote tokens are transferred from the caller to the auction owner
-    // [ ] when the Permit2 signature is not provided
-    //  [ ] given the caller has insufficient balance of the quote token
-    //   [ ] it reverts
-    //  [ ] given the caller has sufficient balance of the quote token
-    //   [ ] given the caller has not approved the auction house to transfer the quote token
-    //    [ ] it reverts
-    //   [ ] given the received amount is not equal to the transferred amount
-    //    [ ] it reverts
-    //   [ ] given the received amount is the same as the transferred amount
-    //    [ ] quote tokens are transferred from the caller to the auction owner
 
-    // [ ] given the auction has hooks defined
-    //  [ ] when the pre hook reverts
-    //   [ ] it reverts
+    // ============ Transfer flow ============
+
+    // [X] when the Permit2 signature is not provided
+    //  [X] given the caller has insufficient balance of the quote token
+    //   [X] it reverts
+    //  [X] given the caller has sufficient balance of the quote token
+    //   [X] given the caller has not approved the auction house to transfer the quote token
+    //    [X] it reverts
+    //   [X] given the received amount is not equal to the transferred amount
+    //    [X] it reverts
+    //   [X] given the received amount is the same as the transferred amount
+    //    [X] quote tokens are transferred from the caller to the auction owner
+
+    function test_transfer_insufficientBalance_reverts() public {
+        // Expect the error
+        bytes memory err =
+            abi.encodeWithSelector(Router.InsufficientBalance.selector, address(quoteToken), amount);
+        vm.expectRevert(err);
+
+        // Call
+        vm.prank(USER);
+        router.collectPayment(
+            lotId, amount, quoteToken, hook, approvalDeadline, approvalNonce, approvalSignature
+        );
+    }
+
+    function test_transfer_noApproval_reverts() public givenUserHasBalance(amount) {
+        // Expect the error
+        bytes memory err = abi.encodeWithSelector(
+            Router.InsufficientAllowance.selector, address(quoteToken), address(router), amount
+        );
+        vm.expectRevert(err);
+
+        // Call
+        vm.prank(USER);
+        router.collectPayment(
+            lotId, amount, quoteToken, hook, approvalDeadline, approvalNonce, approvalSignature
+        );
+    }
+
+    function test_transfer_feeOnTransfer_reverts()
+        public
+        givenUserHasBalance(amount)
+        givenUserHasApprovedRouter
+        givenTokenTakesFeeOnTransfer
+    {
+        // Expect the error
+        bytes memory err =
+            abi.encodeWithSelector(Router.UnsupportedToken.selector, address(quoteToken));
+        vm.expectRevert(err);
+
+        // Call
+        vm.prank(USER);
+        router.collectPayment(
+            lotId, amount, quoteToken, hook, approvalDeadline, approvalNonce, approvalSignature
+        );
+    }
+
+    function test_transfer() public givenUserHasBalance(amount) givenUserHasApprovedRouter {
+        // Call
+        vm.prank(USER);
+        router.collectPayment(
+            lotId, amount, quoteToken, hook, approvalDeadline, approvalNonce, approvalSignature
+        );
+
+        // Expect the user to have no balance
+        assertEq(quoteToken.balanceOf(USER), 0);
+
+        // Expect the router to have the balance
+        assertEq(quoteToken.balanceOf(address(router)), amount);
+    }
+
+    // ============ Hooks flow ============
+
+    // [X] given the auction has hooks defined
+    //  [X] when the pre hook reverts
+    //   [X] it reverts
     //  [ ] when the pre hook does not revert
     //   [ ] given the invariant is violated
     //    [ ] it reverts
-    //   [ ] given the invariant is not violated - TODO define invariant
-    //    [ ] it succeeds
+    //   [X] given the invariant is not violated - TODO define invariant
+    //    [X] it succeeds
 
     modifier whenHooksIsSet() {
         hook = new MockHook();
@@ -104,5 +171,39 @@ contract RouterTest is Test {
     modifier whenPreHookReverts() {
         hook.setPreHookReverts(true);
         _;
+    }
+
+    modifier whenPreHookBalanceIsRecorded() {
+        hook.setPreHookValues(address(quoteToken), USER);
+        _;
+    }
+
+    function test_preHook_reverts() public whenHooksIsSet whenPreHookReverts {
+        // Expect the error
+        vm.expectRevert("revert");
+
+        // Call
+        vm.prank(USER);
+        router.collectPayment(
+            lotId, amount, quoteToken, hook, approvalDeadline, approvalNonce, approvalSignature
+        );
+    }
+
+    function test_preHook()
+        public
+        givenUserHasBalance(amount)
+        givenUserHasApprovedRouter
+        whenHooksIsSet
+        whenPreHookBalanceIsRecorded
+    {
+        // Call
+        vm.prank(USER);
+        router.collectPayment(
+            lotId, amount, quoteToken, hook, approvalDeadline, approvalNonce, approvalSignature
+        );
+
+        // Expect the pre hook to have recorded the balance of USER before the transfer
+        assertEq(hook.preHookBalance(), amount);
+        assertEq(quoteToken.balanceOf(USER), 0);
     }
 }

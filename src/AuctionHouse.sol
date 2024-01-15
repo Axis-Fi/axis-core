@@ -24,6 +24,16 @@ abstract contract FeeManager {
 
 // TODO define purpose
 abstract contract Router is FeeManager {
+    using SafeTransferLib for ERC20;
+
+    // ========== ERRORS ========== //
+
+    error InsufficientBalance(address token_, uint256 requiredAmount_);
+
+    error InsufficientAllowance(address token_, address router_, uint256 requiredAmount_);
+
+    error UnsupportedToken(address token_);
+
     // ========== STRUCTS ========== //
 
     /// @notice     Parameters used by the purchase function
@@ -142,7 +152,41 @@ abstract contract Router is FeeManager {
         uint48 approvalDeadline_,
         uint256 approvalNonce_,
         bytes memory approvalSignature_
-    ) internal {}
+    ) internal {
+        // Call pre hook on hooks contract if provided
+        if (address(hooks_) != address(0)) {
+            hooks_.pre(lotId_, amount_);
+        }
+
+        // Check that the user has sufficient balance of the quote token
+        if (quoteToken_.balanceOf(msg.sender) < amount_) {
+            revert InsufficientBalance(address(quoteToken_), amount_);
+        }
+
+        // Check if approval signature has been provided, if so use it to transfer
+        if (approvalSignature_.length != 0) {
+            // TODO
+        } else {
+            _transfer(amount_, quoteToken_);
+        }
+    }
+
+    function _transfer(uint256 amount_, ERC20 token_) internal {
+        // Check that the user has granted approval to transfer the quote token
+        if (token_.allowance(msg.sender, address(this)) < amount_) {
+            revert InsufficientAllowance(address(token_), address(this), amount_);
+        }
+
+        uint256 balanceBefore = token_.balanceOf(address(this));
+
+        // Transfer the quote token from the user
+        token_.safeTransferFrom(msg.sender, address(this), amount_);
+
+        // Check that it is not a fee-on-transfer token
+        if (token_.balanceOf(address(this)) < balanceBefore + amount_) {
+            revert UnsupportedToken(address(token_));
+        }
+    }
 }
 
 /// @title      AuctionHouse
@@ -155,7 +199,6 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
     // ========== ERRORS ========== //
     error AmountLessThanMinimum();
     error InvalidHook();
-    error UnsupportedToken(ERC20 token_);
 
     // ========== EVENTS ========== //
     event Purchase(uint256 id, address buyer, address referrer, uint256 amount, uint256 payout);
@@ -312,7 +355,7 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
         uint256 quoteBalance = routing_.quoteToken.balanceOf(address(this));
         routing_.quoteToken.safeTransferFrom(msg.sender, address(this), amount_);
         if (routing_.quoteToken.balanceOf(address(this)) < quoteBalance + amount_) {
-            revert UnsupportedToken(routing_.quoteToken);
+            revert UnsupportedToken(address(routing_.quoteToken));
         }
 
         // If callback address supplied, transfer tokens from teller to callback, then execute callback function,
@@ -338,7 +381,7 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
             uint256 baseBalance = routing_.baseToken.balanceOf(address(this));
             routing_.baseToken.safeTransferFrom(routing_.owner, address(this), payout_);
             if (routing_.baseToken.balanceOf(address(this)) < (baseBalance + payout_)) {
-                revert UnsupportedToken(routing_.baseToken);
+                revert UnsupportedToken(address(routing_.baseToken));
             }
 
             routing_.quoteToken.safeTransfer(routing_.owner, amountLessFee);
