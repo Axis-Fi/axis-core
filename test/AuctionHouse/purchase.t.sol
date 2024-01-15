@@ -5,7 +5,6 @@ pragma solidity 0.8.19;
 import {Test} from "forge-std/Test.sol";
 import {ERC20} from "lib/solmate/src/tokens/ERC20.sol";
 import {IPermit2} from "src/lib/permit2/interfaces/IPermit2.sol";
-import {Permit2Helper} from "test/lib/permit2/Permit2Helper.sol";
 
 // Mocks
 import {MockERC20} from "lib/solmate/src/test/utils/mocks/MockERC20.sol";
@@ -15,6 +14,7 @@ import {MockDerivativeModule} from "test/modules/Derivative/MockDerivativeModule
 import {MockCondenserModule} from "test/modules/Condenser/MockCondenserModule.sol";
 import {MockAllowlist} from "test/modules/Auction/MockAllowlist.sol";
 import {MockHook} from "test/modules/Auction/MockHook.sol";
+import {Permit2User} from "test/lib/permit2/Permit2User.sol";
 
 // Auctions
 import {AuctionHouse, Router} from "src/AuctionHouse.sol";
@@ -32,7 +32,7 @@ import {
     Module
 } from "src/modules/Modules.sol";
 
-contract PurchaseTest is Test, Permit2Helper {
+contract PurchaseTest is Test, Permit2User {
     MockERC20 internal baseToken;
     MockERC20 internal quoteToken;
     MockAtomicAuctionModule internal mockAuctionModule;
@@ -62,7 +62,7 @@ contract PurchaseTest is Test, Permit2Helper {
         baseToken = new MockERC20("Base Token", "BASE", 18);
         quoteToken = new MockERC20("Quote Token", "QUOTE", 18);
 
-        auctionHouse = new AuctionHouse(protocol);
+        auctionHouse = new AuctionHouse(protocol, _PERMIT2_ADDRESS);
         mockAuctionModule = new MockAtomicAuctionModule(address(auctionHouse));
         mockDerivativeModule = new MockDerivativeModule(address(auctionHouse));
         mockCondenserModule = new MockCondenserModule(address(auctionHouse));

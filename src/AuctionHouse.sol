@@ -4,10 +4,12 @@ pragma solidity 0.8.19;
 import {ERC20} from "lib/solmate/src/tokens/ERC20.sol";
 import {SafeTransferLib} from "lib/solmate/src/utils/SafeTransferLib.sol";
 
-import {Derivatizer} from "src/bases/Derivatizer.sol";
+import {IPermit2} from "src/lib/permit2/interfaces/IPermit2.sol";
+
 import {Auctioneer} from "src/bases/Auctioneer.sol";
 import {CondenserModule} from "src/modules/Condenser.sol";
 
+import {Derivatizer} from "src/bases/Derivatizer.sol";
 import {DerivativeModule} from "src/modules/Derivative.sol";
 
 import {Auction, AuctionModule} from "src/modules/Auction.sol";
@@ -30,7 +32,7 @@ abstract contract Router is FeeManager {
 
     error InsufficientBalance(address token_, uint256 requiredAmount_);
 
-    error InsufficientAllowance(address token_, address router_, uint256 requiredAmount_);
+    error InsufficientAllowance(address token_, address spender_, uint256 requiredAmount_);
 
     error UnsupportedToken(address token_);
 
@@ -84,10 +86,13 @@ abstract contract Router is FeeManager {
     // TODO make this updatable
     address internal immutable _PROTOCOL;
 
+    IPermit2 public immutable _PERMIT2;
+
     // ========== CONSTRUCTOR ========== //
 
-    constructor(address protocol_) {
+    constructor(address protocol_, address permit2_) {
         _PROTOCOL = protocol_;
+        _PERMIT2 = IPermit2(permit2_);
     }
 
     // ========== ATOMIC AUCTIONS ========== //
@@ -163,10 +168,14 @@ abstract contract Router is FeeManager {
             revert InsufficientBalance(address(quoteToken_), amount_);
         }
 
-        // Check if approval signature has been provided, if so use it to transfer
+        // If a Permit2 approval signature is provided, use it to transfer the quote token
         if (approvalSignature_.length != 0) {
-            // TODO
-        } else {
+            _permit2Transfer(
+                amount_, quoteToken_, approvalDeadline_, approvalNonce_, approvalSignature_
+            );
+        }
+        // Otherwise fallback to a standard ERC20 transfer
+        else {
             _transfer(amount_, quoteToken_);
         }
     }
@@ -181,6 +190,38 @@ abstract contract Router is FeeManager {
 
         // Transfer the quote token from the user
         token_.safeTransferFrom(msg.sender, address(this), amount_);
+
+        // Check that it is not a fee-on-transfer token
+        if (token_.balanceOf(address(this)) < balanceBefore + amount_) {
+            revert UnsupportedToken(address(token_));
+        }
+    }
+
+    function _permit2Transfer(
+        uint256 amount_,
+        ERC20 token_,
+        uint48 approvalDeadline_,
+        uint256 approvalNonce_,
+        bytes memory approvalSignature_
+    ) internal {
+        // Check that the user has granted approval to PERMIT2 to transfer the quote token
+        if (token_.allowance(msg.sender, address(_PERMIT2)) < amount_) {
+            revert InsufficientAllowance(address(token_), address(_PERMIT2), amount_);
+        }
+
+        uint256 balanceBefore = token_.balanceOf(address(this));
+
+        // Use PERMIT2 to transfer the token from the user
+        _PERMIT2.permitTransferFrom(
+            IPermit2.PermitTransferFrom(
+                IPermit2.TokenPermissions(address(token_), amount_),
+                approvalNonce_,
+                approvalDeadline_
+            ),
+            IPermit2.SignatureTransferDetails({to: address(this), requestedAmount: amount_}),
+            msg.sender, // Spender of the tokens
+            approvalSignature_
+        );
 
         // Check that it is not a fee-on-transfer token
         if (token_.balanceOf(address(this)) < balanceBefore + amount_) {
@@ -204,7 +245,10 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
     event Purchase(uint256 id, address buyer, address referrer, uint256 amount, uint256 payout);
 
     // ========== CONSTRUCTOR ========== //
-    constructor(address protocol_) Router(protocol_) WithModules(msg.sender) {}
+    constructor(
+        address protocol_,
+        address permit2_
+    ) Router(protocol_, permit2_) WithModules(msg.sender) {}
 
     // ========== DIRECT EXECUTION ========== //
 

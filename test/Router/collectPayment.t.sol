@@ -6,15 +6,20 @@ import {Test} from "forge-std/Test.sol";
 import {MockHook} from "test/modules/Auction/MockHook.sol";
 import {ConcreteRouter} from "test/Router/ConcreteRouter.sol";
 import {MockFeeOnTransferERC20} from "test/Router/MockFeeOnTransferERC20.sol";
+import {Permit2Clone} from "test/lib/permit2/Permit2Clone.sol";
+import {Permit2User} from "test/lib/permit2/Permit2User.sol";
 
+import {IPermit2} from "src/lib/permit2/interfaces/IPermit2.sol";
 import {Router} from "src/AuctionHouse.sol";
 import {IHooks} from "src/interfaces/IHooks.sol";
 
-contract RouterTest is Test {
+contract RouterTest is Test, Permit2User {
     ConcreteRouter internal router;
 
     address internal constant PROTOCOL = address(0x1);
-    address internal constant USER = address(0x2);
+
+    uint256 internal userKey;
+    address internal USER;
 
     // Function parameters
     uint256 internal lotId = 1;
@@ -26,29 +31,20 @@ contract RouterTest is Test {
     bytes internal approvalSignature = "";
 
     function setUp() public {
-        router = new ConcreteRouter(PROTOCOL);
+        // Set reasonable starting block
+        vm.warp(1_000_000);
+
+        router = new ConcreteRouter(PROTOCOL, _PERMIT2_ADDRESS);
 
         quoteToken = new MockFeeOnTransferERC20("QUOTE", "QT", 18);
         quoteToken.setTransferFee(0);
+
+        userKey = _getRandomUint256();
+        USER = vm.addr(userKey);
     }
 
     modifier givenUserHasBalance(uint256 amount_) {
         quoteToken.mint(USER, amount_);
-        _;
-    }
-
-    modifier whenPermit2ApprovalIsValid() {
-        // TODO
-        _;
-    }
-
-    modifier whenPermit2ApprovalIsInvalid() {
-        // TODO
-        _;
-    }
-
-    modifier whenPermit2ApprovalIsExpired() {
-        // TODO
         _;
     }
 
@@ -67,18 +63,240 @@ contract RouterTest is Test {
 
     // ============ Permit2 flow ============
 
-    // [ ] when the Permit2 signature is provided
-    //  [ ] when the Permit2 signature is invalid
-    //   [ ] it reverts
-    //  [ ] when the Permit2 signature is expired
-    //   [ ] it reverts
-    //  [ ] when the Permit2 signature is valid
-    //   [ ] given the caller has insufficient balance of the quote token
-    //    [ ] it reverts
-    //   [ ] given the received amount is not equal to the transferred amount
-    //    [ ] it reverts
-    //   [ ] given the received amount is the same as the transferred amount
-    //    [ ] quote tokens are transferred from the caller to the auction owner
+    // [X] when the Permit2 signature is provided
+    //  [X] when the Permit2 signature is invalid
+    //   [X] it reverts
+    //  [X] when the Permit2 signature is expired
+    //   [X] it reverts
+    //  [X] when the Permit2 signature is valid
+    //   [X] given the caller has insufficient balance of the quote token
+    //    [X] it reverts
+    //   [X] given the received amount is not equal to the transferred amount
+    //    [X] it reverts
+    //   [X] given the received amount is the same as the transferred amount
+    //    [X] quote tokens are transferred from the caller to the auction owner
+
+    modifier givenPermit2Approved() {
+        // Approve the Permit2 contract to spend the quote token
+        vm.prank(USER);
+        quoteToken.approve(_PERMIT2_ADDRESS, type(uint256).max);
+        _;
+    }
+
+    modifier whenPermit2ApprovalIsValid() {
+        // Assumes approval has been given
+
+        approvalNonce = _getRandomUint256();
+        approvalDeadline = uint48(block.timestamp + 1 days);
+        approvalSignature = _signPermit(
+            IPermit2.PermitTransferFrom({
+                permitted: IPermit2.TokenPermissions({token: address(quoteToken), amount: amount}),
+                nonce: approvalNonce,
+                deadline: approvalDeadline
+            }),
+            address(router),
+            userKey
+        );
+        _;
+    }
+
+    modifier whenPermit2ApprovalNonceIsUsed() {
+        // Assumes that whenPermit2ApprovalIsValid precedes this modifier
+        require(approvalNonce != 0, "approval nonce is 0");
+
+        // Mint tokens
+        quoteToken.mint(USER, amount);
+
+        // Consume the nonce
+        vm.prank(USER);
+        router.collectPayment(
+            lotId, amount, quoteToken, hook, approvalDeadline, approvalNonce, approvalSignature
+        );
+        _;
+    }
+
+    modifier whenPermit2ApprovalIsOtherSigner() {
+        // Sign as another user
+        uint256 anotherUserKey = _getRandomUint256();
+
+        approvalNonce = _getRandomUint256();
+        approvalDeadline = uint48(block.timestamp + 1 days);
+        approvalSignature = _signPermit(
+            IPermit2.PermitTransferFrom({
+                permitted: IPermit2.TokenPermissions({token: address(quoteToken), amount: amount}),
+                nonce: approvalNonce,
+                deadline: approvalDeadline
+            }),
+            address(router),
+            anotherUserKey
+        );
+        _;
+    }
+
+    modifier whenPermit2ApprovalIsInvalid() {
+        approvalNonce = _getRandomUint256();
+        approvalDeadline = uint48(block.timestamp + 1 days);
+        approvalSignature = "JUNK";
+        _;
+    }
+
+    modifier whenPermit2ApprovalIsExpired() {
+        approvalNonce = _getRandomUint256();
+        approvalDeadline = uint48(block.timestamp - 1 days);
+        approvalSignature = _signPermit(
+            IPermit2.PermitTransferFrom({
+                permitted: IPermit2.TokenPermissions({token: address(quoteToken), amount: amount}),
+                nonce: approvalNonce,
+                deadline: approvalDeadline
+            }),
+            address(router),
+            userKey
+        );
+        _;
+    }
+
+    function test_permit2_noApproval_reverts()
+        public
+        givenUserHasBalance(amount)
+        whenPermit2ApprovalIsValid
+    {
+        // Expect the error
+        bytes memory err = abi.encodeWithSelector(
+            Router.InsufficientAllowance.selector, address(quoteToken), _PERMIT2_ADDRESS, amount
+        );
+        vm.expectRevert(err);
+
+        // Call
+        vm.prank(USER);
+        router.collectPayment(
+            lotId, amount, quoteToken, hook, approvalDeadline, approvalNonce, approvalSignature
+        );
+    }
+
+    function test_permit2_reusedSignature_reverts()
+        public
+        givenUserHasBalance(amount)
+        givenPermit2Approved
+        whenPermit2ApprovalIsValid
+        whenPermit2ApprovalNonceIsUsed
+    {
+        // Expect the error
+        bytes memory err = abi.encodeWithSelector(Permit2Clone.InvalidNonce.selector);
+        vm.expectRevert(err);
+
+        // Call
+        vm.prank(USER);
+        router.collectPayment(
+            lotId, amount, quoteToken, hook, approvalDeadline, approvalNonce, approvalSignature
+        );
+    }
+
+    function test_permit2_invalidSignature_reverts()
+        public
+        givenUserHasBalance(amount)
+        givenPermit2Approved
+        whenPermit2ApprovalIsInvalid
+    {
+        // Expect the error
+        bytes memory err = abi.encodeWithSelector(Permit2Clone.InvalidSignatureLength.selector);
+        vm.expectRevert(err);
+
+        // Call
+        vm.prank(USER);
+        router.collectPayment(
+            lotId, amount, quoteToken, hook, approvalDeadline, approvalNonce, approvalSignature
+        );
+    }
+
+    function test_permit2_expiredSignature_reverts()
+        public
+        givenUserHasBalance(amount)
+        givenPermit2Approved
+        whenPermit2ApprovalIsExpired
+    {
+        // Expect the error
+        bytes memory err =
+            abi.encodeWithSelector(Permit2Clone.SignatureExpired.selector, approvalDeadline);
+        vm.expectRevert(err);
+
+        // Call
+        vm.prank(USER);
+        router.collectPayment(
+            lotId, amount, quoteToken, hook, approvalDeadline, approvalNonce, approvalSignature
+        );
+    }
+
+    function test_permit2_otherSigner_reverts()
+        public
+        givenUserHasBalance(amount)
+        givenPermit2Approved
+        whenPermit2ApprovalIsOtherSigner
+    {
+        // Expect the error
+        bytes memory err = abi.encodeWithSelector(Permit2Clone.InvalidSigner.selector);
+        vm.expectRevert(err);
+
+        // Call
+        vm.prank(USER);
+        router.collectPayment(
+            lotId, amount, quoteToken, hook, approvalDeadline, approvalNonce, approvalSignature
+        );
+    }
+
+    function test_permit2_insufficientBalance_reverts()
+        public
+        givenPermit2Approved
+        whenPermit2ApprovalIsValid
+    {
+        // Expect the error
+        bytes memory err =
+            abi.encodeWithSelector(Router.InsufficientBalance.selector, address(quoteToken), amount);
+        vm.expectRevert(err);
+
+        // Call
+        vm.prank(USER);
+        router.collectPayment(
+            lotId, amount, quoteToken, hook, approvalDeadline, approvalNonce, approvalSignature
+        );
+    }
+
+    function test_permit2_feeOnTransfer_reverts()
+        public
+        givenUserHasBalance(amount)
+        givenTokenTakesFeeOnTransfer
+        givenPermit2Approved
+        whenPermit2ApprovalIsValid
+    {
+        // Expect the error
+        bytes memory err =
+            abi.encodeWithSelector(Router.UnsupportedToken.selector, address(quoteToken));
+        vm.expectRevert(err);
+
+        // Call
+        vm.prank(USER);
+        router.collectPayment(
+            lotId, amount, quoteToken, hook, approvalDeadline, approvalNonce, approvalSignature
+        );
+    }
+
+    function test_permit2()
+        public
+        givenUserHasBalance(amount)
+        givenPermit2Approved
+        whenPermit2ApprovalIsValid
+    {
+        // Call
+        vm.prank(USER);
+        router.collectPayment(
+            lotId, amount, quoteToken, hook, approvalDeadline, approvalNonce, approvalSignature
+        );
+
+        // Expect the user to have no balance
+        assertEq(quoteToken.balanceOf(USER), 0);
+
+        // Expect the router to have the balance
+        assertEq(quoteToken.balanceOf(address(router)), amount);
+    }
 
     // ============ Transfer flow ============
 
@@ -189,10 +407,29 @@ contract RouterTest is Test {
         );
     }
 
-    function test_preHook()
+    function test_preHook_transfer()
         public
         givenUserHasBalance(amount)
         givenUserHasApprovedRouter
+        whenHooksIsSet
+        whenPreHookBalanceIsRecorded
+    {
+        // Call
+        vm.prank(USER);
+        router.collectPayment(
+            lotId, amount, quoteToken, hook, approvalDeadline, approvalNonce, approvalSignature
+        );
+
+        // Expect the pre hook to have recorded the balance of USER before the transfer
+        assertEq(hook.preHookBalance(), amount);
+        assertEq(quoteToken.balanceOf(USER), 0);
+    }
+
+    function test_preHook_permit2()
+        public
+        givenUserHasBalance(amount)
+        givenPermit2Approved
+        whenPermit2ApprovalIsValid
         whenHooksIsSet
         whenPreHookBalanceIsRecorded
     {

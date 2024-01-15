@@ -9,7 +9,7 @@ import {Auction} from "src/modules/Auction.sol";
 import {IHooks} from "src/interfaces/IHooks.sol";
 
 contract ConcreteRouter is Router {
-    constructor(address protocol_) Router(protocol_) {}
+    constructor(address protocol_, address permit2_) Router(protocol_, permit2_) {}
 
     function purchase(PurchaseParams memory params_)
         external

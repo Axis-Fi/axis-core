@@ -7,6 +7,9 @@ import {IPermit2} from "src/lib/permit2/interfaces/IPermit2.sol";
 contract Permit2Clone is IPermit2 {
     error InvalidNonce();
     error InvalidSigner();
+    error SignatureExpired(uint256 deadline);
+    error InvalidAmount(uint256 amount);
+    error InvalidSignatureLength();
 
     constructor() {
         // Deployed Permit2 bytecode at
