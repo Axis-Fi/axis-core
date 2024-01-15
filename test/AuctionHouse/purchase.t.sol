@@ -221,7 +221,7 @@ contract PurchaseTest is Test, Permit2User {
     // [ ] given that a referrer fee is defined
     //  [ ] it records the referrer fee
 
-    function testReverts_whenLotIdIsInvalid() external {
+    function test_whenLotIdIsInvalid_reverts() external {
         // Update the lot id to an invalid value
         purchaseParams.lotId = 1;
 
@@ -235,7 +235,7 @@ contract PurchaseTest is Test, Permit2User {
         auctionHouse.purchase(purchaseParams);
     }
 
-    function testReverts_whenNotAtomicAuction()
+    function test_whenNotAtomicAuction_reverts()
         external
         whenBatchAuctionIsCreated
         whenAccountHasQuoteTokenBalance(AMOUNT_IN)
@@ -253,7 +253,7 @@ contract PurchaseTest is Test, Permit2User {
         auctionHouse.purchase(purchaseParams);
     }
 
-    function testReverts_whenAuctionNotActive()
+    function test_whenAuctionNotActive_reverts()
         external
         whenAuctionIsCancelled
         whenAccountHasQuoteTokenBalance(AMOUNT_IN)
@@ -268,7 +268,7 @@ contract PurchaseTest is Test, Permit2User {
         auctionHouse.purchase(purchaseParams);
     }
 
-    function testReverts_whenAuctionModuleReverts()
+    function test_whenAuctionModuleReverts_reverts()
         external
         whenAccountHasQuoteTokenBalance(AMOUNT_IN)
         whenAccountHasBaseTokenBalance(AMOUNT_OUT)
@@ -284,7 +284,7 @@ contract PurchaseTest is Test, Permit2User {
         auctionHouse.purchase(purchaseParams);
     }
 
-    function testReverts_whenPayoutAmountLessThanMinimum()
+    function test_whenPayoutAmountLessThanMinimum_reverts()
         external
         whenAccountHasQuoteTokenBalance(AMOUNT_IN)
         whenAccountHasBaseTokenBalance(AMOUNT_OUT)
@@ -301,7 +301,7 @@ contract PurchaseTest is Test, Permit2User {
         auctionHouse.purchase(purchaseParams);
     }
 
-    function testReverts_whenCallerHasInsufficientBalanceOfQuoteToken()
+    function test_whenCallerHasInsufficientBalanceOfQuoteToken_reverts()
         external
         whenAccountHasBaseTokenBalance(AMOUNT_OUT)
     {
@@ -313,7 +313,7 @@ contract PurchaseTest is Test, Permit2User {
         auctionHouse.purchase(purchaseParams);
     }
 
-    function testReverts_whenOwnerHasInsufficientBalanceOfBaseToken()
+    function test_whenOwnerHasInsufficientBalanceOfBaseToken_reverts()
         external
         whenAccountHasQuoteTokenBalance(AMOUNT_IN)
     {
