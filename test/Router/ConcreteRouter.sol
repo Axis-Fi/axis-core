@@ -55,4 +55,13 @@ contract ConcreteRouter is Router {
             approvalSignature_
         );
     }
+
+    function collectPayout(
+        uint256 lotId_,
+        uint256 amount_,
+        ERC20 payoutToken_,
+        IHooks hooks_
+    ) external {
+        return _collectPayout(lotId_, amount_, payoutToken_, hooks_);
+    }
 }

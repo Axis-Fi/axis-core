@@ -8,23 +8,38 @@ import {IHooks} from "src/bases/Auctioneer.sol";
 contract MockHook is IHooks {
     address public preHookToken;
     address public preHookUser;
+
+    /// @notice     Use this to determine if the hook was called at the right time
     uint256 public preHookBalance;
+
+    /// @notice     Use this to determine if the hook was called
+    bool public preHookCalled;
     bool public preHookReverts;
 
     address public midHookToken;
     address public midHookUser;
+    /// @notice     Use this to determine if the hook was called at the right time
     uint256 public midHookBalance;
+
+    /// @notice     Use this to determine if the hook was called
+    bool public midHookCalled;
     bool public midHookReverts;
 
     address public postHookToken;
     address public postHookUser;
+    /// @notice     Use this to determine if the hook was called at the right time
     uint256 public postHookBalance;
+
+    /// @notice     Use this to determine if the hook was called
+    bool public postHookCalled;
     bool public postHookReverts;
 
     function pre(uint256, uint256) external override {
         if (preHookReverts) {
             revert("revert");
         }
+
+        preHookCalled = true;
 
         if (preHookToken != address(0) && preHookUser != address(0)) {
             preHookBalance = ERC20(preHookToken).balanceOf(preHookUser);
@@ -47,6 +62,8 @@ contract MockHook is IHooks {
             revert("revert");
         }
 
+        midHookCalled = true;
+
         if (midHookToken != address(0) && midHookUser != address(0)) {
             midHookBalance = ERC20(midHookToken).balanceOf(midHookUser);
         } else {
@@ -67,6 +84,8 @@ contract MockHook is IHooks {
         if (postHookReverts) {
             revert("revert");
         }
+
+        postHookCalled = true;
 
         if (postHookToken != address(0) && postHookUser != address(0)) {
             postHookBalance = ERC20(postHookToken).balanceOf(postHookUser);

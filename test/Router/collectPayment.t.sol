@@ -13,7 +13,7 @@ import {IPermit2} from "src/lib/permit2/interfaces/IPermit2.sol";
 import {Router} from "src/AuctionHouse.sol";
 import {IHooks} from "src/interfaces/IHooks.sol";
 
-contract RouterTest is Test, Permit2User {
+contract CollectPaymentTest is Test, Permit2User {
     ConcreteRouter internal router;
 
     address internal constant PROTOCOL = address(0x1);
@@ -434,8 +434,13 @@ contract RouterTest is Test, Permit2User {
         );
 
         // Expect the pre hook to have recorded the balance of USER before the transfer
+        assertEq(hook.preHookCalled(), true);
         assertEq(hook.preHookBalance(), amount);
         assertEq(quoteToken.balanceOf(USER), 0);
+
+        // Ensure that the mid and post hooks were not called
+        assertEq(hook.midHookCalled(), false);
+        assertEq(hook.postHookCalled(), false);
     }
 
     function test_preHook_withPermit2()
@@ -453,7 +458,12 @@ contract RouterTest is Test, Permit2User {
         );
 
         // Expect the pre hook to have recorded the balance of USER before the transfer
+        assertEq(hook.preHookCalled(), true);
         assertEq(hook.preHookBalance(), amount);
         assertEq(quoteToken.balanceOf(USER), 0);
+
+        // Ensure that the mid and post hooks were not called
+        assertEq(hook.midHookCalled(), false);
+        assertEq(hook.postHookCalled(), false);
     }
 }
