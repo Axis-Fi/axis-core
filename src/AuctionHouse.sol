@@ -271,6 +271,8 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
     error AmountLessThanMinimum();
     error InvalidHook();
 
+    error NotAuthorized();
+
     // ========== EVENTS ========== //
     event Purchase(uint256 id, address buyer, address referrer, uint256 amount, uint256 payout);
 

@@ -37,10 +37,18 @@ contract Permit2User is Test {
 
     // Generate a signature for a permit message.
     function _signPermit(
-        IPermit2.PermitTransferFrom memory permit,
+        address token_,
+        uint256 amount_,
+        uint256 nonce_,
+        uint256 deadline_,
         address spender,
         uint256 signerKey
     ) internal view returns (bytes memory sig) {
+        IPermit2.PermitTransferFrom memory permit = IPermit2.PermitTransferFrom({
+            permitted: IPermit2.TokenPermissions({token: token_, amount: amount_}),
+            nonce: nonce_,
+            deadline: deadline_
+        });
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerKey, _getEIP712Hash(permit, spender));
         return abi.encodePacked(r, s, v);
     }

@@ -89,13 +89,7 @@ contract RouterTest is Test, Permit2User {
         approvalNonce = _getRandomUint256();
         approvalDeadline = uint48(block.timestamp + 1 days);
         approvalSignature = _signPermit(
-            IPermit2.PermitTransferFrom({
-                permitted: IPermit2.TokenPermissions({token: address(quoteToken), amount: amount}),
-                nonce: approvalNonce,
-                deadline: approvalDeadline
-            }),
-            address(router),
-            userKey
+            address(quoteToken), amount, approvalNonce, approvalDeadline, address(router), userKey
         );
         _;
     }
@@ -122,13 +116,21 @@ contract RouterTest is Test, Permit2User {
         approvalNonce = _getRandomUint256();
         approvalDeadline = uint48(block.timestamp + 1 days);
         approvalSignature = _signPermit(
-            IPermit2.PermitTransferFrom({
-                permitted: IPermit2.TokenPermissions({token: address(quoteToken), amount: amount}),
-                nonce: approvalNonce,
-                deadline: approvalDeadline
-            }),
+            address(quoteToken),
+            amount,
+            approvalNonce,
+            approvalDeadline,
             address(router),
             anotherUserKey
+        );
+        _;
+    }
+
+    modifier whenPermit2ApprovalIsOtherSpender() {
+        approvalNonce = _getRandomUint256();
+        approvalDeadline = uint48(block.timestamp + 1 days);
+        approvalSignature = _signPermit(
+            address(quoteToken), amount, approvalNonce, approvalDeadline, address(PROTOCOL), userKey
         );
         _;
     }
@@ -144,18 +146,12 @@ contract RouterTest is Test, Permit2User {
         approvalNonce = _getRandomUint256();
         approvalDeadline = uint48(block.timestamp - 1 days);
         approvalSignature = _signPermit(
-            IPermit2.PermitTransferFrom({
-                permitted: IPermit2.TokenPermissions({token: address(quoteToken), amount: amount}),
-                nonce: approvalNonce,
-                deadline: approvalDeadline
-            }),
-            address(router),
-            userKey
+            address(quoteToken), amount, approvalNonce, approvalDeadline, address(router), userKey
         );
         _;
     }
 
-    function test_permit2_noApproval_reverts()
+    function test_permit2_givenNoTokenApproval_reverts()
         public
         givenUserHasBalance(amount)
         whenPermit2ApprovalIsValid
@@ -173,7 +169,7 @@ contract RouterTest is Test, Permit2User {
         );
     }
 
-    function test_permit2_reusedSignature_reverts()
+    function test_permit2_whenApprovalSignatureIsReused_reverts()
         public
         givenUserHasBalance(amount)
         givenPermit2Approved
@@ -191,7 +187,7 @@ contract RouterTest is Test, Permit2User {
         );
     }
 
-    function test_permit2_invalidSignature_reverts()
+    function test_permit2_whenApprovalSignatureIsInvalid_reverts()
         public
         givenUserHasBalance(amount)
         givenPermit2Approved
@@ -208,7 +204,7 @@ contract RouterTest is Test, Permit2User {
         );
     }
 
-    function test_permit2_expiredSignature_reverts()
+    function test_permit2_whenApprovalSignatureIsExpired_reverts()
         public
         givenUserHasBalance(amount)
         givenPermit2Approved
@@ -226,7 +222,7 @@ contract RouterTest is Test, Permit2User {
         );
     }
 
-    function test_permit2_otherSigner_reverts()
+    function test_permit2_whenApprovalSignatureBelongsToOtherSigner_reverts()
         public
         givenUserHasBalance(amount)
         givenPermit2Approved
@@ -243,7 +239,24 @@ contract RouterTest is Test, Permit2User {
         );
     }
 
-    function test_permit2_insufficientBalance_reverts()
+    function test_permit2_whenApprovalSignatureBelongsToOtherSpender_reverts()
+        public
+        givenUserHasBalance(amount)
+        givenPermit2Approved
+        whenPermit2ApprovalIsOtherSpender
+    {
+        // Expect the error
+        bytes memory err = abi.encodeWithSelector(Permit2Clone.InvalidSigner.selector);
+        vm.expectRevert(err);
+
+        // Call
+        vm.prank(USER);
+        router.collectPayment(
+            lotId, amount, quoteToken, hook, approvalDeadline, approvalNonce, approvalSignature
+        );
+    }
+
+    function test_permit2_whenUserHasInsufficientBalance_reverts()
         public
         givenPermit2Approved
         whenPermit2ApprovalIsValid
@@ -260,7 +273,7 @@ contract RouterTest is Test, Permit2User {
         );
     }
 
-    function test_permit2_feeOnTransfer_reverts()
+    function test_permit2_givenTokenTakesFeeOnTransfer_reverts()
         public
         givenUserHasBalance(amount)
         givenTokenTakesFeeOnTransfer
@@ -311,7 +324,7 @@ contract RouterTest is Test, Permit2User {
     //   [X] given the received amount is the same as the transferred amount
     //    [X] quote tokens are transferred from the caller to the auction owner
 
-    function test_transfer_insufficientBalance_reverts() public {
+    function test_transfer_whenUserHasInsufficientBalance_reverts() public {
         // Expect the error
         bytes memory err =
             abi.encodeWithSelector(Router.InsufficientBalance.selector, address(quoteToken), amount);
@@ -324,7 +337,7 @@ contract RouterTest is Test, Permit2User {
         );
     }
 
-    function test_transfer_noApproval_reverts() public givenUserHasBalance(amount) {
+    function test_transfer_givenNoTokenApproval_reverts() public givenUserHasBalance(amount) {
         // Expect the error
         bytes memory err = abi.encodeWithSelector(
             Router.InsufficientAllowance.selector, address(quoteToken), address(router), amount
@@ -338,7 +351,7 @@ contract RouterTest is Test, Permit2User {
         );
     }
 
-    function test_transfer_feeOnTransfer_reverts()
+    function test_transfer_givenTokenTakesFeeOnTransfer_reverts()
         public
         givenUserHasBalance(amount)
         givenUserHasApprovedRouter
@@ -407,7 +420,7 @@ contract RouterTest is Test, Permit2User {
         );
     }
 
-    function test_preHook_transfer()
+    function test_preHook_withTransfer()
         public
         givenUserHasBalance(amount)
         givenUserHasApprovedRouter
@@ -425,7 +438,7 @@ contract RouterTest is Test, Permit2User {
         assertEq(quoteToken.balanceOf(USER), 0);
     }
 
-    function test_preHook_permit2()
+    function test_preHook_withPermit2()
         public
         givenUserHasBalance(amount)
         givenPermit2Approved

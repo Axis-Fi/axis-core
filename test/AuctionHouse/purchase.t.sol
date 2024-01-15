@@ -42,23 +42,32 @@ contract PurchaseTest is Test, Permit2User {
     MockHook internal mockHook;
 
     AuctionHouse internal auctionHouse;
-    Auctioneer.RoutingParams internal routingParams;
-    Auction.AuctionParams internal auctionParams;
-    Router.PurchaseParams internal purchaseParams;
 
     address internal immutable protocol = address(0x2);
-    address internal immutable alice = address(0x3);
     address internal immutable referrer = address(0x4);
     address internal immutable auctionOwner = address(0x5);
+
+    uint256 internal aliceKey;
+    address internal alice;
 
     uint256 internal lotId;
 
     uint256 internal constant AMOUNT_IN = 1e18;
     uint256 internal AMOUNT_OUT;
 
-    uint256 internal constant APPROVAL_NONCE = 222;
+    uint256 internal approvalNonce;
+    bytes internal approvalSignature;
+    uint48 internal approvalDeadline;
+
+    // Function parameters (can be modified)
+    Auctioneer.RoutingParams internal routingParams;
+    Auction.AuctionParams internal auctionParams;
+    Router.PurchaseParams internal purchaseParams;
 
     function setUp() external {
+        aliceKey = _getRandomUint256();
+        alice = vm.addr(aliceKey);
+
         baseToken = new MockERC20("Base Token", "BASE", 18);
         quoteToken = new MockERC20("Quote Token", "QUOTE", 18);
 
@@ -102,16 +111,19 @@ contract PurchaseTest is Test, Permit2User {
         // 1:1 exchange rate
         AMOUNT_OUT = AMOUNT_IN;
 
+        approvalNonce = _getRandomUint256();
+        approvalDeadline = uint48(block.timestamp) + 1 days;
+
         purchaseParams = Router.PurchaseParams({
             recipient: alice,
             referrer: referrer,
-            approvalDeadline: uint48(block.timestamp),
+            approvalDeadline: approvalDeadline,
             lotId: lotId,
             amount: AMOUNT_IN,
             minAmountOut: AMOUNT_OUT,
-            approvalNonce: APPROVAL_NONCE,
+            approvalNonce: approvalNonce,
             auctionData: bytes(""),
-            approvalSignature: bytes("")
+            approvalSignature: approvalSignature
         });
     }
 
@@ -172,54 +184,14 @@ contract PurchaseTest is Test, Permit2User {
     }
 
     // parameter checks
-    // [ ] when the lot id is invalid
-    //  [ ] it reverts
-    // [ ] given the auction is not atomic
-    //  [ ] it reverts
-    // [ ] given the auction is not active
-    //  [ ] it reverts
-    // [ ] when the auction module reverts
-    //  [ ] it reverts
-    // [ ] when the calculated payout amount is less than the minimum
-    //  [ ] it reverts
-    //
-    // allowlist
-    // [ ] when the caller is not on the allowlist
-    //  [ ] it reverts
-    // [ ] when the caller is on the allowlist
-    //  [ ] it succeeds
-    //
-    // exchange of quote and base tokens
-    // [ ] given the auction has hooks defined
-    //  [ ] when the mid hook reverts
-    //   [ ] it reverts
-    //  [ ] when the mid hook does not transfer enough base tokens to the auction house
-    //   [ ] it reverts
-    //  [ ] when the mid hook transfers enough base tokens to the auction house
-    //   [ ] it succeeds - quote tokens (minus fees) transferred to the auction owner
-    // [ ] given the auction does not have hooks defined
-    //   [ ] given that approval has not been given to the auction house to transfer base tokens
-    //    [ ] it reverts
-    //   [ ] given the received amount is less than the transferred amount
-    //    [ ] it reverts
-    //   [ ] given the received amount is the same as the transferred amount
-    //    [ ] quote tokens (minus fees) are transferred to the auction owner
-    //
-    // transfers base token from auction house to recipient
-    // [ ] given the base token is a derivative
-    //  [ ] given a condenser is set
-    //   [ ] it uses the condenser to determine derivative parameters
-    //  [ ] given a condenser is not set
-    //   [ ] it uses the routing derivative parameters
-    //  [ ] it mints derivative tokens to the recipient using the derivative module
-    // [ ] given the base token is not a derivative
-    //  [ ] it transfers the base token to the recipient
-    //
-    // records fees
-    // [ ] given that a protocol fee is defined
-    //  [ ] it records the protocol fee
-    // [ ] given that a referrer fee is defined
-    //  [ ] it records the referrer fee
+    // [X] when the lot id is invalid
+    //  [X] it reverts
+    // [X] given the auction is not atomic
+    //  [X] it reverts
+    // [X] given the auction is not active
+    //  [X] it reverts
+    // [X] when the auction module reverts
+    //  [X] it reverts
 
     function test_whenLotIdIsInvalid_reverts() external {
         // Update the lot id to an invalid value
@@ -284,6 +256,142 @@ contract PurchaseTest is Test, Permit2User {
         auctionHouse.purchase(purchaseParams);
     }
 
+    // allowlist
+    // [X] given an allowlist is set
+    //  [X] when the caller is not on the allowlist
+    //   [X] it reverts
+    //  [X] when the caller is on the allowlist
+    //   [X] it succeeds
+
+    modifier givenAuctionHasAllowlist() {
+        // Register a new auction with an allowlist
+        routingParams.allowlist = mockAllowlist;
+        lotId = auctionHouse.auction(routingParams, auctionParams);
+        _;
+    }
+
+    modifier givenCallerIsOnAllowlist() {
+        // Assumes the allowlist is set
+        require(address(routingParams.allowlist) != address(0), "allowlist not set");
+
+        // Set the caller to be on the allowlist
+        mockAllowlist.setAllowed(alice, true);
+        _;
+    }
+
+    function test_givenCallerNotOnAllowlist() external givenAuctionHasAllowlist {
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(AuctionHouse.NotAuthorized.selector);
+        vm.expectRevert(err);
+
+        // Purchase
+        vm.prank(alice);
+        auctionHouse.purchase(purchaseParams);
+    }
+
+    function test_givenCallerOnAllowlist()
+        external
+        givenAuctionHasAllowlist
+        givenCallerIsOnAllowlist
+        whenAccountHasQuoteTokenBalance(AMOUNT_IN)
+        whenAccountHasBaseTokenBalance(AMOUNT_OUT)
+    {
+        // Purchase
+        vm.prank(alice);
+        auctionHouse.purchase(purchaseParams);
+
+        // Caller has no quote tokens
+        assertEq(quoteToken.balanceOf(alice), 0);
+
+        // Caller has base tokens
+        assertEq(baseToken.balanceOf(alice), AMOUNT_OUT);
+    }
+
+    // transfer quote token to auction house
+    // [X] when the permit2 signature is provided
+    //  [X] it succeeds using Permit2
+    // [X] when the permit2 signature is not provided
+    //  [X] it succeeds using ERC20 transfer
+
+    modifier givenQuoteTokenSpendingIsApproved() {
+        quoteToken.approve(address(auctionHouse), AMOUNT_IN);
+        _;
+    }
+
+    function test_whenPermit2Signature()
+        external
+        whenAccountHasQuoteTokenBalance(AMOUNT_IN)
+        whenAccountHasBaseTokenBalance(AMOUNT_OUT)
+    {
+        // Set the permit2 signature
+        purchaseParams.approvalSignature = _signPermit(
+            address(quoteToken),
+            AMOUNT_IN,
+            approvalNonce,
+            approvalDeadline,
+            address(auctionHouse),
+            aliceKey
+        );
+
+        // Purchase
+        vm.prank(alice);
+        auctionHouse.purchase(purchaseParams);
+
+        // Check balances
+        assertEq(quoteToken.balanceOf(address(auctionHouse)), AMOUNT_IN);
+        assertEq(quoteToken.balanceOf(alice), 0);
+
+        // Ignore the rest
+    }
+
+    function test_whenNoPermit2Signature()
+        external
+        givenQuoteTokenSpendingIsApproved
+        whenAccountHasQuoteTokenBalance(AMOUNT_IN)
+        whenAccountHasBaseTokenBalance(AMOUNT_OUT)
+    {
+        // Purchase
+        vm.prank(alice);
+        auctionHouse.purchase(purchaseParams);
+
+        // Check balances
+        assertEq(quoteToken.balanceOf(address(auctionHouse)), AMOUNT_IN);
+        assertEq(quoteToken.balanceOf(alice), 0);
+
+        // Ignore the rest
+    }
+
+    // exchange of quote and base tokens
+    // [ ] given the auction has hooks defined
+    //  [ ] when the mid hook reverts
+    //   [ ] it reverts
+    //  [ ] when the mid hook does not transfer enough base tokens to the auction house
+    //   [ ] it reverts
+    //  [ ] when the mid hook transfers enough base tokens to the auction house
+    //   [ ] it succeeds - quote tokens (minus fees) transferred to the auction owner
+    // [ ] given the auction does not have hooks defined
+    //   [ ] given that approval has not been given to the auction house to transfer base tokens
+    //    [ ] it reverts
+    //   [ ] given the received amount is less than the transferred amount
+    //    [ ] it reverts
+    //   [ ] given the received amount is the same as the transferred amount
+    //    [ ] quote tokens (minus fees) are transferred to the auction owner
+
+    // [ ] when the calculated payout amount is less than the minimum
+    //  [ ] it reverts
+
+    function test_whenOwnerHasInsufficientBalanceOfBaseToken_reverts()
+        external
+        whenAccountHasQuoteTokenBalance(AMOUNT_IN)
+    {
+        // Expect revert
+        vm.expectRevert();
+
+        // Purchase
+        vm.prank(alice);
+        auctionHouse.purchase(purchaseParams);
+    }
+
     function test_whenPayoutAmountLessThanMinimum_reverts()
         external
         whenAccountHasQuoteTokenBalance(AMOUNT_IN)
@@ -301,27 +409,19 @@ contract PurchaseTest is Test, Permit2User {
         auctionHouse.purchase(purchaseParams);
     }
 
-    function test_whenCallerHasInsufficientBalanceOfQuoteToken_reverts()
-        external
-        whenAccountHasBaseTokenBalance(AMOUNT_OUT)
-    {
-        // Expect revert
-        vm.expectRevert();
-
-        // Purchase
-        vm.prank(alice);
-        auctionHouse.purchase(purchaseParams);
-    }
-
-    function test_whenOwnerHasInsufficientBalanceOfBaseToken_reverts()
-        external
-        whenAccountHasQuoteTokenBalance(AMOUNT_IN)
-    {
-        // Expect revert
-        vm.expectRevert();
-
-        // Purchase
-        vm.prank(alice);
-        auctionHouse.purchase(purchaseParams);
-    }
+    // transfers base token from auction house to recipient
+    // [ ] given the base token is a derivative
+    //  [ ] given a condenser is set
+    //   [ ] it uses the condenser to determine derivative parameters
+    //  [ ] given a condenser is not set
+    //   [ ] it uses the routing derivative parameters
+    //  [ ] it mints derivative tokens to the recipient using the derivative module
+    // [ ] given the base token is not a derivative
+    //  [ ] it transfers the base token to the recipient
+    //
+    // records fees
+    // [ ] given that a protocol fee is defined
+    //  [ ] it records the protocol fee
+    // [ ] given that a referrer fee is defined
+    //  [ ] it records the referrer fee
 }
