@@ -180,6 +180,19 @@ abstract contract Router is FeeManager {
         }
     }
 
+    /// @notice     Performs an ERC20 transfer of `token_` from the caller
+    /// @dev        This function handles the following:
+    ///             1. Checks that the user has granted approval to transfer the token
+    ///             2. Transfers the token from the user
+    ///             3. Checks that the transferred amount was received
+    ///
+    ///             This function reverts if:
+    ///             - Approval has not been granted to this contract to transfer the token
+    ///             - The token transfer fails
+    ///             - The transferred amount is less than the requested amount
+    ///
+    /// @param      amount_   Amount of tokens to transfer (in native decimals)
+    /// @param      token_    Token to transfer
     function _transfer(uint256 amount_, ERC20 token_) internal {
         // Check that the user has granted approval to transfer the quote token
         if (token_.allowance(msg.sender, address(this)) < amount_) {
@@ -189,6 +202,7 @@ abstract contract Router is FeeManager {
         uint256 balanceBefore = token_.balanceOf(address(this));
 
         // Transfer the quote token from the user
+        // `safeTransferFrom()` will revert upon failure
         token_.safeTransferFrom(msg.sender, address(this), amount_);
 
         // Check that it is not a fee-on-transfer token
@@ -197,6 +211,22 @@ abstract contract Router is FeeManager {
         }
     }
 
+    /// @notice     Performs a Permit2 transfer of `token_` from the caller
+    /// @dev        This function handles the following:
+    ///             1. Checks that the user has granted approval to transfer the token
+    ///             2. Uses Permit2 to transfer the token from the user
+    ///             3. Checks that the transferred amount was received
+    ///
+    ///             This function reverts if:
+    ///             - Approval has not been granted to Permit2 to transfer the token
+    ///             - The Permit2 transfer (or signature validation) fails
+    ///             - The transferred amount is less than the requested amount
+    ///
+    /// @param      amount_               Amount of tokens to transfer (in native decimals)
+    /// @param      token_                Token to transfer
+    /// @param      approvalDeadline_     Deadline for Permit2 approval signature
+    /// @param      approvalNonce_        Nonce for Permit2 approval signature
+    /// @param      approvalSignature_    Permit2 approval signature for the token
     function _permit2Transfer(
         uint256 amount_,
         ERC20 token_,
