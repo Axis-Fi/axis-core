@@ -183,6 +183,35 @@ abstract contract Router is FeeManager {
         }
     }
 
+    /// @notice     Sends payment of the quote token to the auction owner
+    /// @dev        This function handles the following:
+    ///             1. Sends the payment amount to the auction owner or hook (if provided)
+    ///             This function assumes:
+    ///             - The quote token has already been transferred to this contract
+    ///             - The quote token is supported (e.g. not fee-on-transfer)
+    ///
+    ///             This function reverts if:
+    ///             - The transfer fails
+    ///
+    /// @param      lotOwner_       Owner of the lot
+    /// @param      amount_         Amount of quoteToken to send (in native decimals)
+    /// @param      quoteToken_     Quote token to send
+    /// @param      hooks_          Hooks contract to call (optional)
+    function _sendPayment(
+        address lotOwner_,
+        uint256 amount_,
+        ERC20 quoteToken_,
+        IHooks hooks_
+    ) internal {
+        if (address(hooks_) != address(0)) {
+            // Send quote token to hooks contract
+            quoteToken_.safeTransfer(address(hooks_), amount_);
+        } else {
+            // Send quote token to auction owner
+            quoteToken_.safeTransfer(lotOwner_, amount_);
+        }
+    }
+
     /// @notice     Collects the payout token from the auction owner
     /// @dev        This function handles the following:
     ///             1. Calls the mid hook on the hooks contract (if provided)
