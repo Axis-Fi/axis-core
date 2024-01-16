@@ -46,7 +46,12 @@ contract MockAtomicAuctionModule is AuctionModule {
 
         if (cancelled[id_]) revert Auction_MarketNotActive(id_);
 
-        payout = payoutData[id_] * amount_;
+        if (payoutData[id_] == 0) {
+            payout = amount_;
+        } else {
+            payout = payoutData[id_] * amount_ / 1e5;
+        }
+
         auctionOutput = auctionData_;
     }
 

@@ -121,12 +121,9 @@ contract PurchaseTest is Test, Permit2User {
         auctionHouse.setProtocolFee(protocolFee);
         auctionHouse.setReferrerFee(referrer, referrerFee);
 
-        amountInReferrerFee = (AMOUNT_IN * referrerFee) / 10_000;
-        amountInProtocolFee = (AMOUNT_IN * protocolFee) / 10_000;
+        amountInReferrerFee = (AMOUNT_IN * referrerFee) / 1e5;
+        amountInProtocolFee = (AMOUNT_IN * protocolFee) / 1e5;
         amountInLessFee = AMOUNT_IN - amountInReferrerFee - amountInProtocolFee;
-
-        // Set the default payout multiplier to 1
-        mockAuctionModule.setPayoutMultiplier(lotId, 1);
 
         // 1:1 exchange rate
         AMOUNT_OUT = amountInLessFee;
@@ -212,8 +209,26 @@ contract PurchaseTest is Test, Permit2User {
         _;
     }
 
+    modifier givenQuoteTokenPermit2IsApproved() {
+        vm.prank(alice);
+        quoteToken.approve(address(_PERMIT2_ADDRESS), type(uint256).max);
+        _;
+    }
+
+    modifier givenBaseTokenSpendingIsApproved() {
+        vm.prank(auctionOwner);
+        baseToken.approve(address(auctionHouse), AMOUNT_OUT);
+        _;
+    }
+
     modifier givenAuctionHasHooks() {
         routingParams.hooks = IHooks(address(mockHook));
+
+        // Create a new auction with the hooks
+        lotId = auctionHouse.auction(routingParams, auctionParams);
+
+        // Update the purchase params
+        purchaseParams.lotId = lotId;
         _;
     }
 
@@ -296,7 +311,7 @@ contract PurchaseTest is Test, Permit2User {
         givenOwnerHasBaseTokenBalance(AMOUNT_OUT)
     {
         // Set the payout multiplier so that the payout is less than the minimum
-        mockAuctionModule.setPayoutMultiplier(lotId, 0);
+        mockAuctionModule.setPayoutMultiplier(lotId, 90_000);
 
         // Expect revert
         bytes memory err = abi.encodeWithSelector(AuctionHouse.AmountLessThanMinimum.selector);
@@ -314,10 +329,17 @@ contract PurchaseTest is Test, Permit2User {
     //  [X] when the caller is on the allowlist
     //   [X] it succeeds
 
+    // TODO add support for allowlist proof
+
     modifier givenAuctionHasAllowlist() {
         // Register a new auction with an allowlist
         routingParams.allowlist = mockAllowlist;
+
+        vm.prank(auctionOwner);
         lotId = auctionHouse.auction(routingParams, auctionParams);
+
+        // Update the purchase params
+        purchaseParams.lotId = lotId;
         _;
     }
 
@@ -347,6 +369,7 @@ contract PurchaseTest is Test, Permit2User {
         givenUserHasQuoteTokenBalance(AMOUNT_IN)
         givenOwnerHasBaseTokenBalance(AMOUNT_OUT)
         givenQuoteTokenSpendingIsApproved
+        givenBaseTokenSpendingIsApproved
     {
         // Purchase
         vm.prank(alice);
@@ -370,6 +393,8 @@ contract PurchaseTest is Test, Permit2User {
         external
         givenUserHasQuoteTokenBalance(AMOUNT_IN)
         givenOwnerHasBaseTokenBalance(AMOUNT_OUT)
+        givenBaseTokenSpendingIsApproved
+        givenQuoteTokenPermit2IsApproved
     {
         // Set the permit2 signature
         purchaseParams.approvalSignature = _signPermit(
@@ -386,8 +411,13 @@ contract PurchaseTest is Test, Permit2User {
         auctionHouse.purchase(purchaseParams);
 
         // Check balances
-        assertEq(quoteToken.balanceOf(address(auctionHouse)), amountInLessFee);
         assertEq(quoteToken.balanceOf(alice), 0);
+        assertEq(quoteToken.balanceOf(recipient), 0);
+        assertEq(quoteToken.balanceOf(address(mockHook)), 0);
+        assertEq(
+            quoteToken.balanceOf(address(auctionHouse)), amountInProtocolFee + amountInReferrerFee
+        );
+        assertEq(quoteToken.balanceOf(auctionOwner), amountInLessFee);
 
         // Ignore the rest
     }
@@ -397,14 +427,20 @@ contract PurchaseTest is Test, Permit2User {
         givenUserHasQuoteTokenBalance(AMOUNT_IN)
         givenOwnerHasBaseTokenBalance(AMOUNT_OUT)
         givenQuoteTokenSpendingIsApproved
+        givenBaseTokenSpendingIsApproved
     {
         // Purchase
         vm.prank(alice);
         auctionHouse.purchase(purchaseParams);
 
         // Check balances
-        assertEq(quoteToken.balanceOf(address(auctionHouse)), amountInLessFee);
         assertEq(quoteToken.balanceOf(alice), 0);
+        assertEq(quoteToken.balanceOf(recipient), 0);
+        assertEq(quoteToken.balanceOf(address(mockHook)), 0);
+        assertEq(
+            quoteToken.balanceOf(address(auctionHouse)), amountInProtocolFee + amountInReferrerFee
+        );
+        assertEq(quoteToken.balanceOf(auctionOwner), amountInLessFee);
 
         // Ignore the rest
     }
@@ -416,10 +452,11 @@ contract PurchaseTest is Test, Permit2User {
 
     function test_hooks()
         public
+        givenAuctionHasHooks
         givenUserHasQuoteTokenBalance(AMOUNT_IN)
         givenHookHasBaseTokenBalance(AMOUNT_OUT)
         givenQuoteTokenSpendingIsApproved
-        givenAuctionHasHooks
+        givenBaseTokenSpendingIsApproved
     {
         // Purchase
         vm.prank(alice);
@@ -463,6 +500,7 @@ contract PurchaseTest is Test, Permit2User {
         givenUserHasQuoteTokenBalance(AMOUNT_IN)
         givenOwnerHasBaseTokenBalance(AMOUNT_OUT)
         givenQuoteTokenSpendingIsApproved
+        givenBaseTokenSpendingIsApproved
     {
         // Purchase
         vm.prank(alice);

@@ -486,8 +486,9 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
     ///             2. Sends the purchase amount to the auction module
     ///             3. Records the purchase on the auction module
     ///             4. Transfers the quote token from the caller
-    ///             5. Transfers the quote token to the auction owner or executes the callback
-    ///             6. Transfers the payout token to the recipient
+    ///             5. Transfers the quote token to the auction owner
+    ///             5. Transfers the base token from the auction owner or executes the callback
+    ///             6. Transfers the base token to the recipient
     ///
     ///             This function reverts if:
     ///             - `lotId_` is invalid
@@ -503,33 +504,52 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
         isValidLot(params_.lotId)
         returns (uint256 payout)
     {
-        // TODO should this not check if the auction is atomic?
-        // Response: No, my thought was that the module will just revert on `purchase` if it's not atomic. Vice versa
-
         // Load routing data for the lot
         Routing memory routing = lotRouting[params_.lotId];
 
+        // Check if the purchaser is on the allowlist
+        if (address(routing.allowlist) != address(0)) {
+            if (!routing.allowlist.isAllowed(params_.lotId, msg.sender, bytes(""))) {
+                revert NotAuthorized();
+            }
+        }
+
         uint256 totalFees = _allocateFees(params_.referrer, routing.quoteToken, params_.amount);
+        uint256 amountLessFees = params_.amount - totalFees;
 
         // Send purchase to auction house and get payout plus any extra output
         bytes memory auctionOutput;
         {
             AuctionModule module = _getModuleForId(params_.lotId);
             (payout, auctionOutput) =
-                module.purchase(params_.lotId, params_.amount - totalFees, params_.auctionData);
+                module.purchase(params_.lotId, amountLessFees, params_.auctionData);
         }
 
         // Check that payout is at least minimum amount out
         // @dev Moved the slippage check from the auction to the AuctionHouse to allow different routing and purchase logic
         if (payout < params_.minAmountOut) revert AmountLessThanMinimum();
 
-        // Handle transfers from purchaser and seller
-        _handleTransfers(
-            params_.lotId, routing, params_.amount, payout, totalFees, params_.approvalSignature
+        // Collect payment from the purchaser
+        _collectPayment(
+            params_.lotId,
+            params_.amount,
+            routing.quoteToken,
+            routing.hooks,
+            params_.approvalDeadline,
+            params_.approvalNonce,
+            params_.approvalSignature
         );
 
-        // Handle payout to user, including creation of derivative tokens
-        _handlePayout(routing, params_.recipient, payout, auctionOutput);
+        // Send payment to auction owner
+        _sendPayment(routing.owner, amountLessFees, routing.quoteToken, routing.hooks);
+
+        // Collect payout from auction owner
+        _collectPayout(
+            params_.lotId, routing.owner, amountLessFees, payout, routing.baseToken, routing.hooks
+        );
+
+        // Send payout to recipient
+        _sendPayout(params_.lotId, params_.recipient, payout, routing.baseToken, routing.hooks);
 
         // Emit event
         emit Purchase(params_.lotId, msg.sender, params_.referrer, params_.amount, payout);
@@ -559,101 +579,5 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
         Auction.Bid[] memory bids_
     ) external override returns (uint256[] memory amountsOut) {
         // TODO
-    }
-
-    // ============ INTERNAL EXECUTION FUNCTIONS ========== //
-
-    /// @notice     Handles transfer of funds from user and market owner/callback
-    function _handleTransfers(
-        uint256 id_,
-        Routing memory routing_,
-        uint256 amount_,
-        uint256 payout_,
-        uint256 feePaid_,
-        bytes memory approval_
-    ) internal {
-        // Calculate amount net of fees
-        uint256 amountLessFee = amount_ - feePaid_;
-
-        // Check if approval signature has been provided, if so use it increase allowance
-        // TODO a bunch of extra data has to be provided for Permit.
-        if (approval_.length != 0) {}
-
-        // Have to transfer to teller first since fee is in quote token
-        // Check balance before and after to ensure full amount received, revert if not
-        // Handles edge cases like fee-on-transfer tokens (which are not supported)
-        uint256 quoteBalance = routing_.quoteToken.balanceOf(address(this));
-        routing_.quoteToken.safeTransferFrom(msg.sender, address(this), amount_);
-        if (routing_.quoteToken.balanceOf(address(this)) < quoteBalance + amount_) {
-            revert UnsupportedToken(address(routing_.quoteToken));
-        }
-
-        // If callback address supplied, transfer tokens from teller to callback, then execute callback function,
-        // and ensure proper amount of tokens transferred in.
-        // TODO substitute callback for hooks (and implement in more places)?
-        if (address(routing_.hooks) != address(0)) {
-            // Send quote token to callback (transferred in first to allow use during callback)
-            routing_.quoteToken.safeTransfer(address(routing_.hooks), amountLessFee);
-
-            // Call the callback function to receive payout tokens for payout
-            uint256 baseBalance = routing_.baseToken.balanceOf(address(this));
-            routing_.hooks.mid(id_, amountLessFee, payout_);
-
-            // Check to ensure that the callback sent the requested amount of payout tokens back to the teller
-            if (routing_.baseToken.balanceOf(address(this)) < (baseBalance + payout_)) {
-                revert InvalidHook();
-            }
-        } else {
-            // If no callback is provided, transfer tokens from market owner to this contract
-            // for payout.
-            // Check balance before and after to ensure full amount received, revert if not
-            // Handles edge cases like fee-on-transfer tokens (which are not supported)
-            uint256 baseBalance = routing_.baseToken.balanceOf(address(this));
-            routing_.baseToken.safeTransferFrom(routing_.owner, address(this), payout_);
-            if (routing_.baseToken.balanceOf(address(this)) < (baseBalance + payout_)) {
-                revert UnsupportedToken(address(routing_.baseToken));
-            }
-
-            routing_.quoteToken.safeTransfer(routing_.owner, amountLessFee);
-        }
-    }
-
-    function _handlePayout(
-        Routing memory routing_,
-        address recipient_,
-        uint256 payout_,
-        bytes memory auctionOutput_
-    ) internal {
-        // If no derivative, then the payout is sent directly to the recipient
-        // Otherwise, send parameters and payout to the derivative to mint to recipient
-        if (fromVeecode(routing_.derivativeReference) == bytes7("")) {
-            // No derivative, send payout to recipient
-            routing_.baseToken.safeTransfer(recipient_, payout_);
-        } else {
-            // Get the module for the derivative type
-            // We assume that the module type has been checked when the lot was created
-            DerivativeModule module =
-                DerivativeModule(_getModuleIfInstalled(routing_.derivativeReference));
-
-            bytes memory derivativeParams = routing_.derivativeParams;
-
-            // Lookup condensor module from combination of auction and derivative types
-            // If condenser specified, condense auction output and derivative params before sending to derivative module
-            Veecode condenserRef =
-                condensers[routing_.auctionReference][routing_.derivativeReference];
-            if (fromVeecode(condenserRef) != bytes7("")) {
-                // Get condenser module
-                CondenserModule condenser = CondenserModule(_getModuleIfInstalled(condenserRef));
-
-                // Condense auction output and derivative params
-                derivativeParams = condenser.condense(auctionOutput_, derivativeParams);
-            }
-
-            // Approve the module to transfer payout tokens
-            routing_.baseToken.safeApprove(address(module), payout_);
-
-            // Call the module to mint derivative tokens to the recipient
-            module.mint(recipient_, derivativeParams, payout_, routing_.wrapDerivative);
-        }
     }
 }
