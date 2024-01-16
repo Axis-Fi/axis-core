@@ -46,6 +46,7 @@ contract PurchaseTest is Test, Permit2User {
     address internal immutable protocol = address(0x2);
     address internal immutable referrer = address(0x4);
     address internal immutable auctionOwner = address(0x5);
+    address internal immutable recipient = address(0x6);
 
     uint256 internal aliceKey;
     address internal alice;
@@ -55,14 +56,20 @@ contract PurchaseTest is Test, Permit2User {
     uint256 internal constant AMOUNT_IN = 1e18;
     uint256 internal AMOUNT_OUT;
 
-    uint256 internal approvalNonce;
-    bytes internal approvalSignature;
-    uint48 internal approvalDeadline;
+    uint48 internal referrerFee;
+    uint48 internal protocolFee;
+
+    uint256 internal amountInLessFee;
+    uint256 internal amountInReferrerFee;
+    uint256 internal amountInProtocolFee;
 
     // Function parameters (can be modified)
     Auctioneer.RoutingParams internal routingParams;
     Auction.AuctionParams internal auctionParams;
     Router.PurchaseParams internal purchaseParams;
+    uint256 internal approvalNonce;
+    bytes internal approvalSignature;
+    uint48 internal approvalDeadline;
 
     function setUp() external {
         aliceKey = _getRandomUint256();
@@ -105,17 +112,28 @@ contract PurchaseTest is Test, Permit2User {
         vm.prank(auctionOwner);
         lotId = auctionHouse.auction(routingParams, auctionParams);
 
+        approvalNonce = _getRandomUint256();
+        approvalDeadline = uint48(block.timestamp) + 1 days;
+
+        // Fees
+        referrerFee = 1000;
+        protocolFee = 2000;
+        auctionHouse.setProtocolFee(protocolFee);
+        auctionHouse.setReferrerFee(referrer, referrerFee);
+
+        amountInReferrerFee = (AMOUNT_IN * referrerFee) / 10_000;
+        amountInProtocolFee = (AMOUNT_IN * protocolFee) / 10_000;
+        amountInLessFee = AMOUNT_IN - amountInReferrerFee - amountInProtocolFee;
+
         // Set the default payout multiplier to 1
         mockAuctionModule.setPayoutMultiplier(lotId, 1);
 
         // 1:1 exchange rate
-        AMOUNT_OUT = AMOUNT_IN;
+        AMOUNT_OUT = amountInLessFee;
 
-        approvalNonce = _getRandomUint256();
-        approvalDeadline = uint48(block.timestamp) + 1 days;
-
+        // Purchase parameters
         purchaseParams = Router.PurchaseParams({
-            recipient: alice,
+            recipient: recipient,
             referrer: referrer,
             approvalDeadline: approvalDeadline,
             lotId: lotId,
@@ -167,19 +185,35 @@ contract PurchaseTest is Test, Permit2User {
         _;
     }
 
-    modifier whenAccountHasQuoteTokenBalance(uint256 amount_) {
+    modifier givenUserHasQuoteTokenBalance(uint256 amount_) {
         quoteToken.mint(alice, amount_);
         _;
     }
 
-    modifier whenAccountHasBaseTokenBalance(uint256 amount_) {
+    modifier givenOwnerHasBaseTokenBalance(uint256 amount_) {
         baseToken.mint(auctionOwner, amount_);
         _;
     }
 
-    modifier whenAuctionIsCancelled() {
+    modifier givenHookHasBaseTokenBalance(uint256 amount_) {
+        baseToken.mint(address(mockHook), amount_);
+        _;
+    }
+
+    modifier givenAuctionIsCancelled() {
         vm.prank(auctionOwner);
         auctionHouse.cancel(lotId);
+        _;
+    }
+
+    modifier givenQuoteTokenSpendingIsApproved() {
+        vm.prank(alice);
+        quoteToken.approve(address(auctionHouse), AMOUNT_IN);
+        _;
+    }
+
+    modifier givenAuctionHasHooks() {
+        routingParams.hooks = IHooks(address(mockHook));
         _;
     }
 
@@ -210,8 +244,8 @@ contract PurchaseTest is Test, Permit2User {
     function test_whenNotAtomicAuction_reverts()
         external
         whenBatchAuctionIsCreated
-        whenAccountHasQuoteTokenBalance(AMOUNT_IN)
-        whenAccountHasBaseTokenBalance(AMOUNT_OUT)
+        givenUserHasQuoteTokenBalance(AMOUNT_IN)
+        givenOwnerHasBaseTokenBalance(AMOUNT_OUT)
     {
         // Update purchase params
         purchaseParams.lotId = lotId;
@@ -227,9 +261,9 @@ contract PurchaseTest is Test, Permit2User {
 
     function test_whenAuctionNotActive_reverts()
         external
-        whenAuctionIsCancelled
-        whenAccountHasQuoteTokenBalance(AMOUNT_IN)
-        whenAccountHasBaseTokenBalance(AMOUNT_OUT)
+        givenAuctionIsCancelled
+        givenUserHasQuoteTokenBalance(AMOUNT_IN)
+        givenOwnerHasBaseTokenBalance(AMOUNT_OUT)
     {
         // Expect revert
         bytes memory err = abi.encodeWithSelector(Auction.Auction_MarketNotActive.selector, lotId);
@@ -242,14 +276,31 @@ contract PurchaseTest is Test, Permit2User {
 
     function test_whenAuctionModuleReverts_reverts()
         external
-        whenAccountHasQuoteTokenBalance(AMOUNT_IN)
-        whenAccountHasBaseTokenBalance(AMOUNT_OUT)
+        givenUserHasQuoteTokenBalance(AMOUNT_IN)
+        givenOwnerHasBaseTokenBalance(AMOUNT_OUT)
     {
         // Set the auction module to revert
         mockAuctionModule.setPurchaseReverts(true);
 
         // Expect revert
         vm.expectRevert("error");
+
+        // Purchase
+        vm.prank(alice);
+        auctionHouse.purchase(purchaseParams);
+    }
+
+    function test_whenPayoutAmountLessThanMinimum_reverts()
+        external
+        givenUserHasQuoteTokenBalance(AMOUNT_IN)
+        givenOwnerHasBaseTokenBalance(AMOUNT_OUT)
+    {
+        // Set the payout multiplier so that the payout is less than the minimum
+        mockAuctionModule.setPayoutMultiplier(lotId, 0);
+
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(AuctionHouse.AmountLessThanMinimum.selector);
+        vm.expectRevert(err);
 
         // Purchase
         vm.prank(alice);
@@ -293,8 +344,9 @@ contract PurchaseTest is Test, Permit2User {
         external
         givenAuctionHasAllowlist
         givenCallerIsOnAllowlist
-        whenAccountHasQuoteTokenBalance(AMOUNT_IN)
-        whenAccountHasBaseTokenBalance(AMOUNT_OUT)
+        givenUserHasQuoteTokenBalance(AMOUNT_IN)
+        givenOwnerHasBaseTokenBalance(AMOUNT_OUT)
+        givenQuoteTokenSpendingIsApproved
     {
         // Purchase
         vm.prank(alice);
@@ -303,8 +355,9 @@ contract PurchaseTest is Test, Permit2User {
         // Caller has no quote tokens
         assertEq(quoteToken.balanceOf(alice), 0);
 
-        // Caller has base tokens
-        assertEq(baseToken.balanceOf(alice), AMOUNT_OUT);
+        // Recipient has base tokens
+        assertEq(baseToken.balanceOf(alice), 0);
+        assertEq(baseToken.balanceOf(recipient), amountInLessFee);
     }
 
     // transfer quote token to auction house
@@ -313,15 +366,10 @@ contract PurchaseTest is Test, Permit2User {
     // [X] when the permit2 signature is not provided
     //  [X] it succeeds using ERC20 transfer
 
-    modifier givenQuoteTokenSpendingIsApproved() {
-        quoteToken.approve(address(auctionHouse), AMOUNT_IN);
-        _;
-    }
-
     function test_whenPermit2Signature()
         external
-        whenAccountHasQuoteTokenBalance(AMOUNT_IN)
-        whenAccountHasBaseTokenBalance(AMOUNT_OUT)
+        givenUserHasQuoteTokenBalance(AMOUNT_IN)
+        givenOwnerHasBaseTokenBalance(AMOUNT_OUT)
     {
         // Set the permit2 signature
         purchaseParams.approvalSignature = _signPermit(
@@ -338,7 +386,7 @@ contract PurchaseTest is Test, Permit2User {
         auctionHouse.purchase(purchaseParams);
 
         // Check balances
-        assertEq(quoteToken.balanceOf(address(auctionHouse)), AMOUNT_IN);
+        assertEq(quoteToken.balanceOf(address(auctionHouse)), amountInLessFee);
         assertEq(quoteToken.balanceOf(alice), 0);
 
         // Ignore the rest
@@ -346,86 +394,112 @@ contract PurchaseTest is Test, Permit2User {
 
     function test_whenNoPermit2Signature()
         external
+        givenUserHasQuoteTokenBalance(AMOUNT_IN)
+        givenOwnerHasBaseTokenBalance(AMOUNT_OUT)
         givenQuoteTokenSpendingIsApproved
-        whenAccountHasQuoteTokenBalance(AMOUNT_IN)
-        whenAccountHasBaseTokenBalance(AMOUNT_OUT)
     {
         // Purchase
         vm.prank(alice);
         auctionHouse.purchase(purchaseParams);
 
         // Check balances
-        assertEq(quoteToken.balanceOf(address(auctionHouse)), AMOUNT_IN);
+        assertEq(quoteToken.balanceOf(address(auctionHouse)), amountInLessFee);
         assertEq(quoteToken.balanceOf(alice), 0);
 
         // Ignore the rest
     }
 
-    // transfer quote token to auction owner
-    // [ ] given the auction has hooks defined
-    //  [ ] the quote token is transferred to the hook before the hook is called
-    // [ ] given the auction does not have hooks defined
-    //  [ ] the quote token is transferred to the auction owner
+    // [X] given the auction has hooks defined
+    //  [X] it succeeds - quote token transferred to hook, payout token (minus fees) transferred to recipient
+    // [X] given the auction does not have hooks defined
+    //  [X] it succeeds - quote token transferred to auction owner, payout token (minus fees) transferred to recipient
 
-    // transfer payout token to router
-    // [ ] given the payout token is not a derivative
-    //  [ ] given the auction has hooks defined
-    //   [ ] the payout token is tranferred by the hook to the router
-    //  [ ] given the auction does not have hooks defined
-    //   [ ] the payout token is transferred to the router
-
-    // transfer payout token to recipient
-    // [ ] given the payout token is not a derivative
-    //  [ ] when the recipient is different to the caller
-    //   [ ] the payout token is transferred from the router to the recipient
-    // [ ] given the payout token is a derivative
-    //  [ ] when the recipient is different to the caller
-    //   [ ] it mints a derivative to the recipient
-
-    // TODO check invariants for entire flow
-
-    function test_whenOwnerHasInsufficientBalanceOfBaseToken_reverts()
-        external
-        whenAccountHasQuoteTokenBalance(AMOUNT_IN)
+    function test_hooks()
+        public
+        givenUserHasQuoteTokenBalance(AMOUNT_IN)
+        givenHookHasBaseTokenBalance(AMOUNT_OUT)
+        givenQuoteTokenSpendingIsApproved
+        givenAuctionHasHooks
     {
-        // Expect revert
-        vm.expectRevert();
-
         // Purchase
         vm.prank(alice);
         auctionHouse.purchase(purchaseParams);
+
+        // Check balances
+        assertEq(quoteToken.balanceOf(alice), 0);
+        assertEq(quoteToken.balanceOf(recipient), 0);
+        assertEq(quoteToken.balanceOf(address(mockHook)), amountInLessFee);
+        assertEq(
+            quoteToken.balanceOf(address(auctionHouse)), amountInProtocolFee + amountInReferrerFee
+        );
+        assertEq(quoteToken.balanceOf(auctionOwner), 0);
+
+        assertEq(baseToken.balanceOf(alice), 0);
+        assertEq(baseToken.balanceOf(recipient), AMOUNT_OUT);
+        assertEq(baseToken.balanceOf(address(mockHook)), 0);
+        assertEq(baseToken.balanceOf(address(auctionHouse)), 0);
+        assertEq(baseToken.balanceOf(auctionOwner), 0);
+
+        // Check accrued fees
+        assertEq(auctionHouse.rewards(alice, quoteToken), 0);
+        assertEq(auctionHouse.rewards(recipient, quoteToken), 0);
+        assertEq(auctionHouse.rewards(referrer, quoteToken), amountInReferrerFee);
+        assertEq(auctionHouse.rewards(protocol, quoteToken), amountInProtocolFee);
+        assertEq(auctionHouse.rewards(address(mockHook), quoteToken), 0);
+        assertEq(auctionHouse.rewards(address(auctionHouse), quoteToken), 0);
+        assertEq(auctionHouse.rewards(auctionOwner, quoteToken), 0);
+
+        assertEq(auctionHouse.rewards(alice, baseToken), 0);
+        assertEq(auctionHouse.rewards(recipient, baseToken), 0);
+        assertEq(auctionHouse.rewards(referrer, baseToken), 0);
+        assertEq(auctionHouse.rewards(protocol, baseToken), 0);
+        assertEq(auctionHouse.rewards(address(mockHook), baseToken), 0);
+        assertEq(auctionHouse.rewards(address(auctionHouse), baseToken), 0);
+        assertEq(auctionHouse.rewards(auctionOwner, baseToken), 0);
     }
 
-    function test_whenPayoutAmountLessThanMinimum_reverts()
-        external
-        whenAccountHasQuoteTokenBalance(AMOUNT_IN)
-        whenAccountHasBaseTokenBalance(AMOUNT_OUT)
+    function test_noHooks()
+        public
+        givenUserHasQuoteTokenBalance(AMOUNT_IN)
+        givenOwnerHasBaseTokenBalance(AMOUNT_OUT)
+        givenQuoteTokenSpendingIsApproved
     {
-        // Set the payout multiplier so that the payout is less than the minimum
-        mockAuctionModule.setPayoutMultiplier(lotId, 0);
-
-        // Expect revert
-        bytes memory err = abi.encodeWithSelector(AuctionHouse.AmountLessThanMinimum.selector);
-        vm.expectRevert(err);
-
         // Purchase
         vm.prank(alice);
         auctionHouse.purchase(purchaseParams);
+
+        // Check balances
+        assertEq(quoteToken.balanceOf(alice), 0);
+        assertEq(quoteToken.balanceOf(recipient), 0);
+        assertEq(quoteToken.balanceOf(address(mockHook)), 0);
+        assertEq(
+            quoteToken.balanceOf(address(auctionHouse)), amountInProtocolFee + amountInReferrerFee
+        );
+        assertEq(quoteToken.balanceOf(auctionOwner), amountInLessFee);
+
+        assertEq(baseToken.balanceOf(alice), 0);
+        assertEq(baseToken.balanceOf(recipient), AMOUNT_OUT);
+        assertEq(baseToken.balanceOf(address(mockHook)), 0);
+        assertEq(baseToken.balanceOf(address(auctionHouse)), 0);
+        assertEq(baseToken.balanceOf(auctionOwner), 0);
+
+        // Check accrued fees
+        assertEq(auctionHouse.rewards(alice, quoteToken), 0);
+        assertEq(auctionHouse.rewards(recipient, quoteToken), 0);
+        assertEq(auctionHouse.rewards(referrer, quoteToken), amountInReferrerFee);
+        assertEq(auctionHouse.rewards(protocol, quoteToken), amountInProtocolFee);
+        assertEq(auctionHouse.rewards(address(mockHook), quoteToken), 0);
+        assertEq(auctionHouse.rewards(address(auctionHouse), quoteToken), 0);
+        assertEq(auctionHouse.rewards(auctionOwner, quoteToken), 0);
+
+        assertEq(auctionHouse.rewards(alice, baseToken), 0);
+        assertEq(auctionHouse.rewards(recipient, baseToken), 0);
+        assertEq(auctionHouse.rewards(referrer, baseToken), 0);
+        assertEq(auctionHouse.rewards(protocol, baseToken), 0);
+        assertEq(auctionHouse.rewards(address(mockHook), baseToken), 0);
+        assertEq(auctionHouse.rewards(address(auctionHouse), baseToken), 0);
+        assertEq(auctionHouse.rewards(auctionOwner, baseToken), 0);
     }
 
-    // transfers base token from auction house to recipient
-    // [ ] given the base token is a derivative
-    //  [ ] given a condenser is set
-    //   [ ] it uses the condenser to determine derivative parameters
-    //  [ ] given a condenser is not set
-    //   [ ] it uses the routing derivative parameters
-    //  [ ] it mints derivative tokens to the recipient using the derivative module
-    // [ ] given the base token is not a derivative
-    //  [ ] it transfers the base token to the recipient
-    //
-    // records fees
-    // [ ] given that a protocol fee is defined
-    //  [ ] it records the protocol fee
-    // [ ] given that a referrer fee is defined
-    //  [ ] it records the referrer fee
+    // TODO derivative module
 }

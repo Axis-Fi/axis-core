@@ -22,6 +22,8 @@ import {IHooks} from "src/interfaces/IHooks.sol";
 abstract contract FeeManager {
 // TODO write fee logic in separate contract to keep it organized
 // Router can inherit
+
+// TODO disbursing fees
 }
 
 // TODO define purpose
@@ -358,6 +360,18 @@ abstract contract Router is FeeManager {
         if (token_.balanceOf(address(this)) < balanceBefore + amount_) {
             revert UnsupportedToken(address(token_));
         }
+    }
+
+    // ========== FEE MANAGEMENT ========== //
+
+    function setProtocolFee(uint48 protocolFee_) external {
+        // TOOD make this permissioned
+        protocolFee = protocolFee_;
+    }
+
+    function setReferrerFee(address referrer_, uint48 referrerFee_) external {
+        // TOOD make this permissioned
+        referrerFees[referrer_] = referrerFee_;
     }
 }
 
