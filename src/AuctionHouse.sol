@@ -502,7 +502,7 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
         external
         override
         isValidLot(params_.lotId)
-        returns (uint256 payout)
+        returns (uint256 payoutAmount)
     {
         // Load routing data for the lot
         Routing memory routing = lotRouting[params_.lotId];
@@ -521,13 +521,13 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
         bytes memory auctionOutput;
         {
             AuctionModule module = _getModuleForId(params_.lotId);
-            (payout, auctionOutput) =
+            (payoutAmount, auctionOutput) =
                 module.purchase(params_.lotId, amountLessFees, params_.auctionData);
         }
 
         // Check that payout is at least minimum amount out
         // @dev Moved the slippage check from the auction to the AuctionHouse to allow different routing and purchase logic
-        if (payout < params_.minAmountOut) revert AmountLessThanMinimum();
+        if (payoutAmount < params_.minAmountOut) revert AmountLessThanMinimum();
 
         // Collect payment from the purchaser
         _collectPayment(
@@ -545,14 +545,21 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
 
         // Collect payout from auction owner
         _collectPayout(
-            params_.lotId, routing.owner, amountLessFees, payout, routing.baseToken, routing.hooks
+            params_.lotId,
+            routing.owner,
+            amountLessFees,
+            payoutAmount,
+            routing.baseToken,
+            routing.hooks
         );
 
         // Send payout to recipient
-        _sendPayout(params_.lotId, params_.recipient, payout, routing.baseToken, routing.hooks);
+        _sendPayout(
+            params_.lotId, params_.recipient, payoutAmount, routing.baseToken, routing.hooks
+        );
 
         // Emit event
-        emit Purchase(params_.lotId, msg.sender, params_.referrer, params_.amount, payout);
+        emit Purchase(params_.lotId, msg.sender, params_.referrer, params_.amount, payoutAmount);
     }
 
     // ========== BATCH AUCTIONS ========== //
