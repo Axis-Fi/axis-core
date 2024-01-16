@@ -36,6 +36,8 @@ abstract contract Router is FeeManager {
 
     error UnsupportedToken(address token_);
 
+    error InvalidHook();
+
     // ========== STRUCTS ========== //
 
     /// @notice     Parameters used by the purchase function
@@ -141,6 +143,7 @@ abstract contract Router is FeeManager {
     ///             - The quote token transfer fails
     ///             - Transferring the quote token would result in a lesser amount being received
     ///             - The pre-hook reverts
+    ///             - TODO: The pre-hook invariant is violated
     ///
     /// @param      lotId_              Lot ID
     /// @param      amount_             Amount of quoteToken to collect (in native decimals)
@@ -179,6 +182,73 @@ abstract contract Router is FeeManager {
             _transfer(amount_, quoteToken_);
         }
     }
+
+    /// @notice     Collects the payout token from the auction owner
+    /// @dev        This function handles the following:
+    ///             1. Calls the mid hook on the hooks contract (if provided)
+    ///             2. Transfers the payout token from the auction owner
+    ///
+    ///             This function reverts if:
+    ///             - Approval has not been granted to transfer the payout token
+    ///             - The auction owner does not have sufficient balance of the payout token
+    ///             - The payout token transfer fails
+    ///             - Transferring the payout token would result in a lesser amount being received
+    ///             - The mid-hook reverts
+    ///             - The mid-hook invariant is violated
+    ///
+    /// @param      lotId_          Lot ID
+    /// @param      lotOwner_       Owner of the lot
+    /// @param      paymentAmount_  Amount of quoteToken collected (in native decimals)
+    /// @param      payoutAmount_   Amount of payoutToken to collect (in native decimals)
+    /// @param      payoutToken_    Payout token to collect
+    /// @param      hooks_          Hooks contract to call (optional)
+    function _collectPayout(
+        uint256 lotId_,
+        address lotOwner_,
+        uint256 paymentAmount_,
+        uint256 payoutAmount_,
+        ERC20 payoutToken_,
+        IHooks hooks_
+    ) internal {
+        // Get the balance of the payout token before the transfer
+        uint256 balanceBefore = payoutToken_.balanceOf(address(this));
+
+        // Call mid hook on hooks contract if provided
+        if (address(hooks_) != address(0)) {
+            // The mid hook is expected to transfer the payout token to this contract
+            hooks_.mid(lotId_, paymentAmount_, payoutAmount_);
+
+            // Check that the mid hook transferred the expected amount of payout tokens
+            if (payoutToken_.balanceOf(address(this)) < balanceBefore + payoutAmount_) {
+                revert InvalidHook();
+            }
+        }
+        // Otherwise fallback to a standard ERC20 transfer
+        else {
+            // Check that the auction owner has sufficient balance of the payout token
+            if (payoutToken_.balanceOf(lotOwner_) < payoutAmount_) {
+                revert InsufficientBalance(address(payoutToken_), payoutAmount_);
+            }
+
+            // Check that the auction owner has granted approval to transfer the payout token
+            if (payoutToken_.allowance(lotOwner_, address(this)) < payoutAmount_) {
+                revert InsufficientAllowance(address(payoutToken_), address(this), payoutAmount_);
+            }
+
+            // Transfer the payout token from the auction owner
+            // `safeTransferFrom()` will revert upon failure
+            payoutToken_.safeTransferFrom(lotOwner_, address(this), payoutAmount_);
+
+            // Check that it is not a fee-on-transfer token
+            if (payoutToken_.balanceOf(address(this)) < balanceBefore + payoutAmount_) {
+                revert UnsupportedToken(address(payoutToken_));
+            }
+        }
+    }
+
+    // TODO sendPayout
+
+    // TODO sendPayment
 
     /// @notice     Performs an ERC20 transfer of `token_` from the caller
     /// @dev        This function handles the following:
@@ -269,7 +339,6 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
 
     // ========== ERRORS ========== //
     error AmountLessThanMinimum();
-    error InvalidHook();
 
     error NotAuthorized();
 

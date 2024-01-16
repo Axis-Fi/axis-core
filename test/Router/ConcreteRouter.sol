@@ -58,10 +58,13 @@ contract ConcreteRouter is Router {
 
     function collectPayout(
         uint256 lotId_,
-        uint256 amount_,
+        address lotOwner_,
+        uint256 paymentAmount_,
+        uint256 payoutAmount_,
         ERC20 payoutToken_,
         IHooks hooks_
     ) external {
-        return _collectPayout(lotId_, amount_, payoutToken_, hooks_);
+        return
+            _collectPayout(lotId_, lotOwner_, paymentAmount_, payoutAmount_, payoutToken_, hooks_);
     }
 }

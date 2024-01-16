@@ -395,17 +395,20 @@ contract CollectPaymentTest is Test, Permit2User {
     //    [X] it succeeds
 
     modifier whenHooksIsSet() {
-        hook = new MockHook();
+        hook = new MockHook(address(quoteToken), address(0));
+
+        // Set the addresses to track
+        address[] memory addresses = new address[](3);
+        addresses[0] = USER;
+        addresses[1] = address(router);
+        addresses[2] = address(hook);
+
+        hook.setBalanceAddresses(addresses);
         _;
     }
 
     modifier whenPreHookReverts() {
         hook.setPreHookReverts(true);
-        _;
-    }
-
-    modifier whenPreHookBalanceIsRecorded() {
-        hook.setPreHookValues(address(quoteToken), USER);
         _;
     }
 
@@ -425,7 +428,6 @@ contract CollectPaymentTest is Test, Permit2User {
         givenUserHasBalance(amount)
         givenUserHasApprovedRouter
         whenHooksIsSet
-        whenPreHookBalanceIsRecorded
     {
         // Call
         vm.prank(USER);
@@ -435,7 +437,7 @@ contract CollectPaymentTest is Test, Permit2User {
 
         // Expect the pre hook to have recorded the balance of USER before the transfer
         assertEq(hook.preHookCalled(), true);
-        assertEq(hook.preHookBalance(), amount);
+        assertEq(hook.preHookBalances(quoteToken, USER), amount);
         assertEq(quoteToken.balanceOf(USER), 0);
 
         // Ensure that the mid and post hooks were not called
@@ -449,7 +451,6 @@ contract CollectPaymentTest is Test, Permit2User {
         givenPermit2Approved
         whenPermit2ApprovalIsValid
         whenHooksIsSet
-        whenPreHookBalanceIsRecorded
     {
         // Call
         vm.prank(USER);
@@ -459,7 +460,7 @@ contract CollectPaymentTest is Test, Permit2User {
 
         // Expect the pre hook to have recorded the balance of USER before the transfer
         assertEq(hook.preHookCalled(), true);
-        assertEq(hook.preHookBalance(), amount);
+        assertEq(hook.preHookBalances(quoteToken, USER), amount);
         assertEq(quoteToken.balanceOf(USER), 0);
 
         // Ensure that the mid and post hooks were not called

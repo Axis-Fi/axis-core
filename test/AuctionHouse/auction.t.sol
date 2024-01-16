@@ -54,7 +54,7 @@ contract AuctionTest is Test, Permit2User {
         mockDerivativeModule = new MockDerivativeModule(address(auctionHouse));
         mockCondenserModule = new MockCondenserModule(address(auctionHouse));
         mockAllowlist = new MockAllowlist();
-        mockHook = new MockHook();
+        mockHook = new MockHook(address(quoteToken), address(baseToken));
 
         auctionParams = Auction.AuctionParams({
             start: uint48(block.timestamp),

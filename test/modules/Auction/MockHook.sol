@@ -5,34 +5,49 @@ import {ERC20} from "solmate/tokens/ERC20.sol";
 
 import {IHooks} from "src/bases/Auctioneer.sol";
 
+import {SafeTransferLib} from "solmate/utils/SafeTransferLib.sol";
+
 contract MockHook is IHooks {
-    address public preHookToken;
-    address public preHookUser;
+    using SafeTransferLib for ERC20;
+
+    ERC20 public quoteToken;
+    ERC20 public payoutToken;
+    ERC20[] public tokens;
+
+    address[] public balanceAddresses;
 
     /// @notice     Use this to determine if the hook was called at the right time
-    uint256 public preHookBalance;
+    mapping(ERC20 token_ => mapping(address user_ => uint256 balance_)) public preHookBalances;
 
     /// @notice     Use this to determine if the hook was called
     bool public preHookCalled;
     bool public preHookReverts;
 
-    address public midHookToken;
-    address public midHookUser;
     /// @notice     Use this to determine if the hook was called at the right time
-    uint256 public midHookBalance;
+    mapping(ERC20 token_ => mapping(address user_ => uint256 balance_)) public midHookBalances;
 
     /// @notice     Use this to determine if the hook was called
     bool public midHookCalled;
     bool public midHookReverts;
+    uint256 public midHookMultiplier;
 
-    address public postHookToken;
-    address public postHookUser;
     /// @notice     Use this to determine if the hook was called at the right time
-    uint256 public postHookBalance;
+    mapping(ERC20 token_ => mapping(address user_ => uint256 balance_)) public postHookBalances;
 
     /// @notice     Use this to determine if the hook was called
     bool public postHookCalled;
     bool public postHookReverts;
+
+    constructor(address quoteToken_, address payoutToken_) {
+        quoteToken = ERC20(quoteToken_);
+        payoutToken = ERC20(payoutToken_);
+
+        tokens = new ERC20[](2);
+        tokens[0] = quoteToken;
+        tokens[1] = payoutToken;
+
+        midHookMultiplier = 10_000;
+    }
 
     function pre(uint256, uint256) external override {
         if (preHookReverts) {
@@ -41,43 +56,56 @@ contract MockHook is IHooks {
 
         preHookCalled = true;
 
-        if (preHookToken != address(0) && preHookUser != address(0)) {
-            preHookBalance = ERC20(preHookToken).balanceOf(preHookUser);
-        } else {
-            preHookBalance = 0;
-        }
-    }
+        // Iterate over tokens and balance addresses
+        for (uint256 i = 0; i < tokens.length; i++) {
+            ERC20 token = tokens[i];
+            if (address(token) == address(0)) {
+                continue;
+            }
 
-    function setPreHookValues(address token_, address user_) external {
-        preHookToken = token_;
-        preHookUser = user_;
+            for (uint256 j = 0; j < balanceAddresses.length; j++) {
+                preHookBalances[token][balanceAddresses[j]] = token.balanceOf(balanceAddresses[j]);
+            }
+        }
+
+        // Does nothing at the moment
     }
 
     function setPreHookReverts(bool reverts_) external {
         preHookReverts = reverts_;
     }
 
-    function mid(uint256, uint256, uint256) external override {
+    function mid(uint256, uint256, uint256 payout_) external override {
         if (midHookReverts) {
             revert("revert");
         }
 
         midHookCalled = true;
 
-        if (midHookToken != address(0) && midHookUser != address(0)) {
-            midHookBalance = ERC20(midHookToken).balanceOf(midHookUser);
-        } else {
-            midHookBalance = 0;
-        }
-    }
+        // Iterate over tokens and balance addresses
+        for (uint256 i = 0; i < tokens.length; i++) {
+            ERC20 token = tokens[i];
+            if (address(token) == address(0)) {
+                continue;
+            }
 
-    function setMidHookValues(address token_, address user_) external {
-        midHookToken = token_;
-        midHookUser = user_;
+            for (uint256 j = 0; j < balanceAddresses.length; j++) {
+                midHookBalances[token][balanceAddresses[j]] = token.balanceOf(balanceAddresses[j]);
+            }
+        }
+
+        uint256 actualPayout = payout_ * midHookMultiplier / 10_000;
+
+        // Has to transfer the payout token to the router
+        ERC20(payoutToken).safeTransfer(msg.sender, actualPayout);
     }
 
     function setMidHookReverts(bool reverts_) external {
         midHookReverts = reverts_;
+    }
+
+    function setMidHookMultiplier(uint256 multiplier_) external {
+        midHookMultiplier = multiplier_;
     }
 
     function post(uint256, uint256) external override {
@@ -87,19 +115,36 @@ contract MockHook is IHooks {
 
         postHookCalled = true;
 
-        if (postHookToken != address(0) && postHookUser != address(0)) {
-            postHookBalance = ERC20(postHookToken).balanceOf(postHookUser);
-        } else {
-            postHookBalance = 0;
-        }
-    }
+        // Iterate over tokens and balance addresses
+        for (uint256 i = 0; i < tokens.length; i++) {
+            ERC20 token = tokens[i];
+            if (address(token) == address(0)) {
+                continue;
+            }
 
-    function setPostHookValues(address token_, address user_) external {
-        postHookToken = token_;
-        postHookUser = user_;
+            for (uint256 j = 0; j < balanceAddresses.length; j++) {
+                midHookBalances[token][balanceAddresses[j]] = token.balanceOf(balanceAddresses[j]);
+            }
+        }
+
+        // Does nothing at the moment
     }
 
     function setPostHookReverts(bool reverts_) external {
         postHookReverts = reverts_;
+    }
+
+    function setBalanceAddresses(address[] memory addresses_) external {
+        for (uint256 i = 0; i < addresses_.length; i++) {
+            balanceAddresses.push(addresses_[i]);
+        }
+    }
+
+    function setQuoteToken(address quoteToken_) external {
+        quoteToken = ERC20(quoteToken_);
+    }
+
+    function setPayoutToken(address payoutToken_) external {
+        payoutToken = ERC20(payoutToken_);
     }
 }

@@ -76,7 +76,7 @@ contract PurchaseTest is Test, Permit2User {
         mockDerivativeModule = new MockDerivativeModule(address(auctionHouse));
         mockCondenserModule = new MockCondenserModule(address(auctionHouse));
         mockAllowlist = new MockAllowlist();
-        mockHook = new MockHook();
+        mockHook = new MockHook(address(quoteToken), address(baseToken));
 
         auctionParams = Auction.AuctionParams({
             start: uint48(block.timestamp),
@@ -361,24 +361,28 @@ contract PurchaseTest is Test, Permit2User {
         // Ignore the rest
     }
 
-    // exchange of quote and base tokens
+    // transfer quote token to auction owner
     // [ ] given the auction has hooks defined
-    //  [ ] when the mid hook reverts
-    //   [ ] it reverts
-    //  [ ] when the mid hook does not transfer enough base tokens to the auction house
-    //   [ ] it reverts
-    //  [ ] when the mid hook transfers enough base tokens to the auction house
-    //   [ ] it succeeds - quote tokens (minus fees) transferred to the auction owner
+    //  [ ] the quote token is transferred to the hook before the hook is called
     // [ ] given the auction does not have hooks defined
-    //   [ ] given that approval has not been given to the auction house to transfer base tokens
-    //    [ ] it reverts
-    //   [ ] given the received amount is less than the transferred amount
-    //    [ ] it reverts
-    //   [ ] given the received amount is the same as the transferred amount
-    //    [ ] quote tokens (minus fees) are transferred to the auction owner
+    //  [ ] the quote token is transferred to the auction owner
 
-    // [ ] when the calculated payout amount is less than the minimum
-    //  [ ] it reverts
+    // transfer payout token to router
+    // [ ] given the payout token is not a derivative
+    //  [ ] given the auction has hooks defined
+    //   [ ] the payout token is tranferred by the hook to the router
+    //  [ ] given the auction does not have hooks defined
+    //   [ ] the payout token is transferred to the router
+
+    // transfer payout token to recipient
+    // [ ] given the payout token is not a derivative
+    //  [ ] when the recipient is different to the caller
+    //   [ ] the payout token is transferred from the router to the recipient
+    // [ ] given the payout token is a derivative
+    //  [ ] when the recipient is different to the caller
+    //   [ ] it mints a derivative to the recipient
+
+    // TODO check invariants for entire flow
 
     function test_whenOwnerHasInsufficientBalanceOfBaseToken_reverts()
         external
