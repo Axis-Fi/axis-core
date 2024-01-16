@@ -85,6 +85,8 @@ contract PurchaseTest is Test, Permit2User {
         mockAllowlist = new MockAllowlist();
         mockHook = new MockHook(address(quoteToken), address(baseToken));
 
+        mockDerivativeModule.setDerivativeToken(baseToken);
+
         auctionParams = Auction.AuctionParams({
             start: uint48(block.timestamp),
             duration: uint48(1 days),
@@ -142,13 +144,8 @@ contract PurchaseTest is Test, Permit2User {
         });
     }
 
-    modifier whenDerivativeModuleIsInstalled() {
+    modifier givenDerivativeModuleIsInstalled() {
         auctionHouse.installModule(mockDerivativeModule);
-        _;
-    }
-
-    modifier whenDerivativeTypeIsSet() {
-        routingParams.derivativeType = toKeycode("DERV");
         _;
     }
 
@@ -179,6 +176,9 @@ contract PurchaseTest is Test, Permit2User {
         // Create the batch auction
         vm.prank(auctionOwner);
         lotId = auctionHouse.auction(routingParams, auctionParams);
+
+        // Update purchase parameters
+        purchaseParams.lotId = lotId;
         _;
     }
 
@@ -262,9 +262,6 @@ contract PurchaseTest is Test, Permit2User {
         givenUserHasQuoteTokenBalance(AMOUNT_IN)
         givenOwnerHasBaseTokenBalance(AMOUNT_OUT)
     {
-        // Update purchase params
-        purchaseParams.lotId = lotId;
-
         // Expect revert
         bytes memory err = abi.encodeWithSelector(Auction.Auction_NotImplemented.selector);
         vm.expectRevert(err);
@@ -539,5 +536,49 @@ contract PurchaseTest is Test, Permit2User {
         assertEq(auctionHouse.rewards(auctionOwner, baseToken), 0);
     }
 
-    // TODO derivative module
+    // ======== Derivative flow ======== //
+
+    modifier givenAuctionHasDerivative() {
+        // Assumes the derivative module is already installed
+
+        // Set up a new auction with a derivative
+        routingParams.derivativeType = toKeycode("DERV");
+        routingParams.derivativeParams = abi.encode("");
+        vm.prank(auctionOwner);
+        lotId = auctionHouse.auction(routingParams, auctionParams);
+
+        // Set purchase parameters
+        purchaseParams.lotId = lotId;
+        _;
+    }
+
+    // [X] given the auction has a derivative defined
+    //  [X] it succeeds - derivative is minted
+
+    function test_derivative()
+        public
+        givenDerivativeModuleIsInstalled
+        givenAuctionHasDerivative
+        givenUserHasQuoteTokenBalance(AMOUNT_IN)
+        givenQuoteTokenSpendingIsApproved
+    {
+        // Call
+        vm.prank(alice);
+        auctionHouse.purchase(purchaseParams);
+
+        // Check balances
+        assertEq(quoteToken.balanceOf(alice), 0);
+        assertEq(quoteToken.balanceOf(recipient), 0);
+        assertEq(quoteToken.balanceOf(address(mockHook)), 0);
+        assertEq(
+            quoteToken.balanceOf(address(auctionHouse)), amountInProtocolFee + amountInReferrerFee
+        );
+        assertEq(quoteToken.balanceOf(auctionOwner), amountInLessFee);
+
+        assertEq(baseToken.balanceOf(alice), 0);
+        assertEq(baseToken.balanceOf(recipient), AMOUNT_OUT);
+        assertEq(baseToken.balanceOf(address(mockHook)), 0);
+        assertEq(baseToken.balanceOf(address(auctionHouse)), 0);
+        assertEq(baseToken.balanceOf(auctionOwner), 0);
+    }
 }

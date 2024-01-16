@@ -7,8 +7,11 @@ import {Module, Veecode, toKeycode, wrapVeecode} from "src/modules/Modules.sol";
 // Auctions
 import {DerivativeModule} from "src/modules/Derivative.sol";
 
+import {MockERC20} from "solmate/test/utils/mocks/MockERC20.sol";
+
 contract MockDerivativeModule is DerivativeModule {
     bool internal validateFails;
+    MockERC20 internal derivativeToken;
 
     constructor(address _owner) Module(_owner) {}
 
@@ -37,7 +40,9 @@ contract MockDerivativeModule is DerivativeModule {
         uint256 tokenId_,
         uint256 amount_,
         bool wrapped_
-    ) external virtual override returns (uint256, address, uint256) {}
+    ) external virtual override returns (uint256, address, uint256) {
+        derivativeToken.mint(to_, amount_);
+    }
 
     function redeem(uint256 tokenId_, uint256 amount_, bool wrapped_) external virtual override {}
 
@@ -76,5 +81,9 @@ contract MockDerivativeModule is DerivativeModule {
 
     function setValidateFails(bool validateFails_) external {
         validateFails = validateFails_;
+    }
+
+    function setDerivativeToken(MockERC20 token_) external {
+        derivativeToken = token_;
     }
 }
