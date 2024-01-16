@@ -6,10 +6,8 @@ import {Test} from "forge-std/Test.sol";
 import {MockHook} from "test/modules/Auction/MockHook.sol";
 import {ConcreteRouter} from "test/Router/ConcreteRouter.sol";
 import {MockFeeOnTransferERC20} from "test/Router/MockFeeOnTransferERC20.sol";
-import {Permit2Clone} from "test/lib/permit2/Permit2Clone.sol";
 import {Permit2User} from "test/lib/permit2/Permit2User.sol";
 
-import {IPermit2} from "src/lib/permit2/interfaces/IPermit2.sol";
 import {Router} from "src/AuctionHouse.sol";
 import {IHooks} from "src/interfaces/IHooks.sol";
 

@@ -244,6 +244,8 @@ abstract contract Router is FeeManager {
                 revert UnsupportedToken(address(payoutToken_));
             }
         }
+
+        // TODO handle derivative
     }
 
     // TODO sendPayout
