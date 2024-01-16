@@ -279,9 +279,49 @@ abstract contract Router is FeeManager {
         // TODO handle derivative
     }
 
-    // TODO sendPayout
+    /// @notice     Sends the payout token to the recipient
+    /// @dev        This function handles the following:
+    ///             1. Sends the payout token from the router to the recipient
+    ///             2. Calls the post hook on the hooks contract (if provided)
+    ///
+    ///             This function assumes that:
+    ///             - The payout token has already been transferred to this contract
+    ///             - The payout token is supported (e.g. not fee-on-transfer)
+    ///
+    ///             This function reverts if:
+    ///             - The payout token transfer fails
+    ///             - The payout token transfer would result in a lesser amount being received
+    ///             - The post-hook reverts
+    ///             - The post-hook invariant is violated
+    ///
+    /// @param      lotId_          Lot ID
+    /// @param      recipient_      Address to receive payout
+    /// @param      payoutAmount_   Amount of payoutToken to send (in native decimals)
+    /// @param      payoutToken_    Payout token to send
+    /// @param      hooks_          Hooks contract to call (optional)
+    function _sendPayout(
+        uint256 lotId_,
+        address recipient_,
+        uint256 payoutAmount_,
+        ERC20 payoutToken_,
+        IHooks hooks_
+    ) internal {
+        // Get the pre-transfer balance
+        uint256 balanceBefore = payoutToken_.balanceOf(recipient_);
 
-    // TODO sendPayment
+        // Send payout token to recipient
+        payoutToken_.safeTransfer(recipient_, payoutAmount_);
+
+        // Check that the recipient received the expected amount of payout tokens
+        if (payoutToken_.balanceOf(recipient_) < balanceBefore + payoutAmount_) {
+            revert UnsupportedToken(address(payoutToken_));
+        }
+
+        // Call post hook on hooks contract if provided
+        if (address(hooks_) != address(0)) {
+            hooks_.post(lotId_, payoutAmount_);
+        }
+    }
 
     /// @notice     Performs an ERC20 transfer of `token_` from the caller
     /// @dev        This function handles the following:

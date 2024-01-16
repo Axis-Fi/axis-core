@@ -123,7 +123,7 @@ contract MockHook is IHooks {
             }
 
             for (uint256 j = 0; j < balanceAddresses.length; j++) {
-                midHookBalances[token][balanceAddresses[j]] = token.balanceOf(balanceAddresses[j]);
+                postHookBalances[token][balanceAddresses[j]] = token.balanceOf(balanceAddresses[j]);
             }
         }
 
