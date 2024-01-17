@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.19;
 
+import {ClonesWithImmutableArgs} from "src/lib/clones/ClonesWithImmutableArgs.sol";
+
 // Modules
 import {Module, Veecode, toKeycode, wrapVeecode} from "src/modules/Modules.sol";
 
@@ -8,12 +10,15 @@ import {Module, Veecode, toKeycode, wrapVeecode} from "src/modules/Modules.sol";
 import {DerivativeModule} from "src/modules/Derivative.sol";
 
 import {MockERC6909} from "solmate/test/utils/mocks/MockERC6909.sol";
-
-import {console2} from "forge-std/console2.sol";
+import {MockWrappedDerivative} from "test/lib/mocks/MockWrappedDerivative.sol";
 
 contract MockDerivativeModule is DerivativeModule {
+    using ClonesWithImmutableArgs for address;
+
     bool internal validateFails;
-    MockERC6909 internal derivativeToken;
+    MockERC6909 public derivativeToken;
+    uint256 internal tokenCount;
+    MockWrappedDerivative internal wrappedImplementation;
 
     error InvalidDerivativeParams();
 
@@ -22,7 +27,9 @@ contract MockDerivativeModule is DerivativeModule {
         uint256 multiplier;
     }
 
-    constructor(address _owner) Module(_owner) {}
+    constructor(address _owner) Module(_owner) {
+        derivativeToken = new MockERC6909();
+    }
 
     function VEECODE() public pure virtual override returns (Veecode) {
         return wrapVeecode(toKeycode("DERV"), 1);
@@ -35,7 +42,37 @@ contract MockDerivativeModule is DerivativeModule {
     function deploy(
         bytes memory params_,
         bool wrapped_
-    ) external virtual override returns (uint256, address) {}
+    ) external virtual override onlyParent returns (uint256, address) {
+        uint256 tokenId = tokenCount;
+        address wrappedAddress;
+
+        if (wrapped_) {
+            // If there is no wrapped implementation, abort
+            if (address(wrappedImplementation) == address(0)) revert("");
+
+            // Deploy the wrapped implementation
+            wrappedAddress = address(wrappedImplementation).clone3(
+                abi.encodePacked(derivativeToken, tokenId), bytes32(tokenId)
+            );
+        }
+
+        // Create new token metadata
+        Token memory tokenData = Token({
+            exists: true,
+            wrapped: wrappedAddress,
+            decimals: 18,
+            name: "Mock Derivative",
+            symbol: "MDER",
+            data: ""
+        });
+
+        // Store metadata
+        tokenMetadata[tokenId] = tokenData;
+
+        tokenCount++;
+
+        return (tokenId, wrappedAddress);
+    }
 
     function mint(
         address to_,
@@ -45,12 +82,31 @@ contract MockDerivativeModule is DerivativeModule {
     ) external virtual override returns (uint256, address, uint256) {
         if (params_.length != 64) revert("");
 
-        // TODO wrapping
         Params memory params = abi.decode(params_, (Params));
+
+        // Check that tokenId exists
+        Token storage token = tokenMetadata[params.tokenId];
+        if (!token.exists) revert("");
+
+        // Check that the wrapped status is correct
+        if (token.wrapped != address(0) && !wrapped_) revert("");
 
         uint256 outputAmount = params.multiplier == 0 ? amount_ : amount_ * params.multiplier;
 
-        derivativeToken.mint(to_, params.tokenId, outputAmount);
+        // If wrapped, mint and deposit
+        if (wrapped_) {
+            derivativeToken.mint(address(this), params.tokenId, outputAmount);
+
+            derivativeToken.approve(token.wrapped, params.tokenId, outputAmount);
+
+            MockWrappedDerivative(token.wrapped).deposit(outputAmount, to_);
+        }
+        // Otherwise mint as normal
+        else {
+            derivativeToken.mint(to_, params.tokenId, outputAmount);
+        }
+
+        return (params.tokenId, token.wrapped, outputAmount);
     }
 
     function mint(
@@ -99,7 +155,7 @@ contract MockDerivativeModule is DerivativeModule {
         validateFails = validateFails_;
     }
 
-    function setDerivativeToken(MockERC6909 token_) external {
-        derivativeToken = token_;
+    function setWrappedImplementation(MockWrappedDerivative implementation_) external {
+        wrappedImplementation = implementation_;
     }
 }

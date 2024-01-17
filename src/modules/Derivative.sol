@@ -25,15 +25,16 @@ abstract contract Derivative {
 
     // ========== DERIVATIVE MANAGEMENT ========== //
 
-    /// @notice Deploy a new derivative token. Optionally, deploys an ERC20 wrapper for composability.
-    /// @param params_ ABI-encoded parameters for the derivative to be created
-    /// @param wrapped_ Whether (true) or not (false) the derivative should be wrapped in an ERC20 token for composability
-    /// @return tokenId_ The ID of the newly created derivative token
-    /// @return wrappedAddress_ The address of the ERC20 wrapped derivative token, if wrapped_ is true, otherwise, it's the zero address.
+    /// @notice     Deploy a new derivative token. Optionally, deploys an ERC20 wrapper for composability.
+    ///
+    /// @param      params_         ABI-encoded parameters for the derivative to be created
+    /// @param      wrapped_        Whether (true) or not (false) the derivative should be wrapped in an ERC20 token for composability
+    /// @return     tokenId_        The ID of the newly created derivative token
+    /// @return     wrappedAddress_ The address of the ERC20 wrapped derivative token, if wrapped_ is true, otherwise, it's the zero address.
     function deploy(
         bytes memory params_,
         bool wrapped_
-    ) external virtual returns (uint256, address);
+    ) external virtual returns (uint256 tokenId_, address wrappedAddress_);
 
     /// @notice Mint new derivative tokens. Deploys the derivative token if it does not already exist.
     /// @param to_ The address to mint the derivative tokens to

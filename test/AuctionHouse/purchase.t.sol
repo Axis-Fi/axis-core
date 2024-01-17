@@ -8,7 +8,6 @@ import {IPermit2} from "src/lib/permit2/interfaces/IPermit2.sol";
 
 // Mocks
 import {MockERC20} from "solmate/test/utils/mocks/MockERC20.sol";
-import {MockERC6909} from "solmate/test/utils/mocks/MockERC6909.sol";
 import {MockAtomicAuctionModule} from "test/modules/Auction/MockAtomicAuctionModule.sol";
 import {MockBatchAuctionModule} from "test/modules/Auction/MockBatchAuctionModule.sol";
 import {MockDerivativeModule} from "test/modules/Derivative/MockDerivativeModule.sol";
@@ -36,7 +35,6 @@ import {
 contract PurchaseTest is Test, Permit2User {
     MockERC20 internal baseToken;
     MockERC20 internal quoteToken;
-    MockERC6909 internal derivativeToken;
     MockAtomicAuctionModule internal mockAuctionModule;
     MockDerivativeModule internal mockDerivativeModule;
     MockCondenserModule internal mockCondenserModule;
@@ -81,7 +79,6 @@ contract PurchaseTest is Test, Permit2User {
 
         baseToken = new MockERC20("Base Token", "BASE", 18);
         quoteToken = new MockERC20("Quote Token", "QUOTE", 18);
-        derivativeToken = new MockERC6909();
 
         auctionHouse = new AuctionHouse(protocol, _PERMIT2_ADDRESS);
         mockAuctionModule = new MockAtomicAuctionModule(address(auctionHouse));
@@ -549,10 +546,12 @@ contract PurchaseTest is Test, Permit2User {
         // Install the derivative module
         auctionHouse.installModule(mockDerivativeModule);
 
-        mockDerivativeModule.setDerivativeToken(derivativeToken);
+        // Deploy a new derivative token
+        (uint256 tokenId,) =
+            auctionHouse.deploy(mockDerivativeModule.VEECODE(), abi.encode(""), false);
 
         // Set up a new auction with a derivative
-        derivativeTokenId = 20;
+        derivativeTokenId = tokenId;
         routingParams.derivativeType = toKeycode("DERV");
         routingParams.derivativeParams =
             abi.encode(MockDerivativeModule.Params({tokenId: derivativeTokenId, multiplier: 0}));
@@ -599,11 +598,29 @@ contract PurchaseTest is Test, Permit2User {
         assertEq(baseToken.balanceOf(address(mockDerivativeModule)), AMOUNT_OUT);
 
         // Check balances of the derivative token
-        assertEq(derivativeToken.balanceOf(alice, derivativeTokenId), 0);
-        assertEq(derivativeToken.balanceOf(recipient, derivativeTokenId), AMOUNT_OUT);
-        assertEq(derivativeToken.balanceOf(address(mockHook), derivativeTokenId), 0);
-        assertEq(derivativeToken.balanceOf(address(auctionHouse), derivativeTokenId), 0);
-        assertEq(derivativeToken.balanceOf(auctionOwner, derivativeTokenId), 0);
-        assertEq(derivativeToken.balanceOf(address(mockDerivativeModule), derivativeTokenId), 0);
+        assertEq(mockDerivativeModule.derivativeToken().balanceOf(alice, derivativeTokenId), 0);
+        assertEq(
+            mockDerivativeModule.derivativeToken().balanceOf(recipient, derivativeTokenId),
+            AMOUNT_OUT
+        );
+        assertEq(
+            mockDerivativeModule.derivativeToken().balanceOf(address(mockHook), derivativeTokenId),
+            0
+        );
+        assertEq(
+            mockDerivativeModule.derivativeToken().balanceOf(
+                address(auctionHouse), derivativeTokenId
+            ),
+            0
+        );
+        assertEq(
+            mockDerivativeModule.derivativeToken().balanceOf(auctionOwner, derivativeTokenId), 0
+        );
+        assertEq(
+            mockDerivativeModule.derivativeToken().balanceOf(
+                address(mockDerivativeModule), derivativeTokenId
+            ),
+            0
+        );
     }
 }

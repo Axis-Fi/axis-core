@@ -164,6 +164,23 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
         _PERMIT2 = IPermit2(permit2_);
     }
 
+    // ========== DERIVATIVE MANAGEMENT ========== //
+
+    /// @inheritdoc Derivatizer
+    function deploy(
+        Veecode dType,
+        bytes memory data,
+        bool wrapped
+    ) external override returns (uint256, address) {
+        // Load the derivative module, will revert if not installed or sunset
+        DerivativeModule derivative = DerivativeModule(_getModuleIfInstalled(dType));
+
+        // Call the deploy function on the derivative module
+        (uint256 tokenId, address wrappedToken) = derivative.deploy(data, wrapped);
+
+        return (tokenId, wrappedToken);
+    }
+
     // ========== DIRECT EXECUTION ========== //
 
     // ========== AUCTION FUNCTIONS ========== //
