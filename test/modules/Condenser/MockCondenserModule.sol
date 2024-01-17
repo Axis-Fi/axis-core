@@ -21,5 +21,14 @@ contract MockCondenserModule is CondenserModule {
     function condense(
         bytes memory auctionOutput_,
         bytes memory derivativeConfig_
-    ) external pure virtual override returns (bytes memory) {}
+    ) external pure virtual override returns (bytes memory) {
+        // Get auction output
+        (uint256 auctionMultiplier) = abi.decode(auctionOutput_, (uint256));
+
+        // Get derivative params
+        (uint256 derivativeTokenId) = abi.decode(derivativeConfig_, (uint256));
+
+        // Return condensed output
+        return abi.encode(derivativeTokenId, auctionMultiplier);
+    }
 }

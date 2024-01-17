@@ -7,11 +7,13 @@ import {Module, Veecode, toKeycode, wrapVeecode} from "src/modules/Modules.sol";
 // Auctions
 import {DerivativeModule} from "src/modules/Derivative.sol";
 
-import {MockERC20} from "solmate/test/utils/mocks/MockERC20.sol";
+import {MockERC6909} from "solmate/test/utils/mocks/MockERC6909.sol";
 
 contract MockDerivativeModule is DerivativeModule {
     bool internal validateFails;
-    MockERC20 internal derivativeToken;
+    MockERC6909 internal derivativeToken;
+
+    error InvalidDerivativeParams();
 
     constructor(address _owner) Module(_owner) {}
 
@@ -33,16 +35,21 @@ contract MockDerivativeModule is DerivativeModule {
         bytes memory params_,
         uint256 amount_,
         bool wrapped_
-    ) external virtual override returns (uint256, address, uint256) {}
+    ) external virtual override returns (uint256, address, uint256) {
+        // TODO wrapping
+        (uint256 tokenId, uint256 multiplier) = abi.decode(params_, (uint256, uint256));
+
+        uint256 outputAmount = multiplier == 0 ? amount_ : amount_ * multiplier;
+
+        derivativeToken.mint(to_, tokenId, outputAmount);
+    }
 
     function mint(
         address to_,
         uint256 tokenId_,
         uint256 amount_,
         bool wrapped_
-    ) external virtual override returns (uint256, address, uint256) {
-        derivativeToken.mint(to_, amount_);
-    }
+    ) external virtual override returns (uint256, address, uint256) {}
 
     function redeem(uint256 tokenId_, uint256 amount_, bool wrapped_) external virtual override {}
 
@@ -83,7 +90,7 @@ contract MockDerivativeModule is DerivativeModule {
         validateFails = validateFails_;
     }
 
-    function setDerivativeToken(MockERC20 token_) external {
+    function setDerivativeToken(MockERC6909 token_) external {
         derivativeToken = token_;
     }
 }

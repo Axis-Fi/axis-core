@@ -56,8 +56,9 @@ contract MockAuctionHouse is AuctionHouse {
         uint256 lotId_,
         address recipient_,
         uint256 payoutAmount_,
-        Auctioneer.Routing memory routingParams_
+        Auctioneer.Routing memory routingParams_,
+        bytes memory auctionOutput_
     ) external {
-        return _sendPayout(lotId_, recipient_, payoutAmount_, routingParams_);
+        return _sendPayout(lotId_, recipient_, payoutAmount_, routingParams_, auctionOutput_);
     }
 }

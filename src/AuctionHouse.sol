@@ -273,7 +273,7 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
         _collectPayout(params_.lotId, amountLessFees, payoutAmount, routing);
 
         // Send payout to recipient
-        _sendPayout(params_.lotId, params_.recipient, payoutAmount, routing);
+        _sendPayout(params_.lotId, params_.recipient, payoutAmount, routing, auctionOutput);
 
         // Emit event
         emit Purchase(params_.lotId, msg.sender, params_.referrer, params_.amount, payoutAmount);
@@ -486,11 +486,13 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
     /// @param      recipient_      Address to receive payout
     /// @param      payoutAmount_   Amount of payoutToken to send (in native decimals)
     /// @param      routingParams_  Routing parameters for the lot
+    /// @param      auctionOutput_  Custom data returned by the auction module
     function _sendPayout(
         uint256 lotId_,
         address recipient_,
         uint256 payoutAmount_,
-        Routing memory routingParams_
+        Routing memory routingParams_,
+        bytes memory auctionOutput_
     ) internal {
         // Get the pre-transfer balance
         uint256 balanceBefore = routingParams_.baseToken.balanceOf(recipient_);

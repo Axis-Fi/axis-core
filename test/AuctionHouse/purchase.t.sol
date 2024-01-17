@@ -85,7 +85,7 @@ contract PurchaseTest is Test, Permit2User {
         mockAllowlist = new MockAllowlist();
         mockHook = new MockHook(address(quoteToken), address(baseToken));
 
-        mockDerivativeModule.setDerivativeToken(baseToken);
+        // mockDerivativeModule.setDerivativeToken(baseToken);
 
         auctionParams = Auction.AuctionParams({
             start: uint48(block.timestamp),
