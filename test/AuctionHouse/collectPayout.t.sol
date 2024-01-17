@@ -34,6 +34,8 @@ contract CollectPayoutTest is Test, Permit2User {
     bytes internal derivativeParams;
     bool internal wrapDerivative;
 
+    Auctioneer.Routing internal routingParams;
+
     function setUp() public {
         // Set reasonable starting block
         vm.warp(1_000_000);
@@ -49,6 +51,18 @@ contract CollectPayoutTest is Test, Permit2User {
         derivativeReference = wrapVeecode(toKeycode(""), 0);
         derivativeParams = bytes("");
         wrapDerivative = false;
+
+        routingParams = Auctioneer.Routing({
+            auctionReference: wrapVeecode(toKeycode("MOCK"), 1),
+            owner: OWNER,
+            baseToken: payoutToken,
+            quoteToken: quoteToken,
+            hooks: hook,
+            allowlist: IAllowlist(address(0)),
+            derivativeReference: derivativeReference,
+            derivativeParams: derivativeParams,
+            wrapDerivative: wrapDerivative
+        });
     }
 
     modifier givenOwnerHasBalance(uint256 amount_) {
@@ -80,6 +94,7 @@ contract CollectPayoutTest is Test, Permit2User {
 
     modifier givenAuctionHasHook() {
         hook = new MockHook(address(quoteToken), address(payoutToken));
+        routingParams.hooks = hook;
 
         // Set the addresses to track
         address[] memory addresses = new address[](4);
@@ -123,7 +138,7 @@ contract CollectPayoutTest is Test, Permit2User {
 
         // Call
         vm.prank(USER);
-        auctionHouse.collectPayout(lotId, OWNER, paymentAmount, payoutAmount, payoutToken, hook);
+        auctionHouse.collectPayout(lotId, paymentAmount, payoutAmount, routingParams);
     }
 
     function test_givenAuctionHasHook_whenMidHookBreaksInvariant_reverts()
@@ -139,7 +154,7 @@ contract CollectPayoutTest is Test, Permit2User {
 
         // Call
         vm.prank(USER);
-        auctionHouse.collectPayout(lotId, OWNER, paymentAmount, payoutAmount, payoutToken, hook);
+        auctionHouse.collectPayout(lotId, paymentAmount, payoutAmount, routingParams);
     }
 
     function test_givenAuctionHasHook_feeOnTransfer_reverts()
@@ -155,7 +170,7 @@ contract CollectPayoutTest is Test, Permit2User {
 
         // Call
         vm.prank(USER);
-        auctionHouse.collectPayout(lotId, OWNER, paymentAmount, payoutAmount, payoutToken, hook);
+        auctionHouse.collectPayout(lotId, paymentAmount, payoutAmount, routingParams);
     }
 
     function test_givenAuctionHasHook()
@@ -166,7 +181,7 @@ contract CollectPayoutTest is Test, Permit2User {
     {
         // Call
         vm.prank(USER);
-        auctionHouse.collectPayout(lotId, OWNER, paymentAmount, payoutAmount, payoutToken, hook);
+        auctionHouse.collectPayout(lotId, paymentAmount, payoutAmount, routingParams);
 
         // Expect the hook to be called prior to any transfer of the payout token
         assertEq(hook.midHookCalled(), true);
@@ -218,7 +233,7 @@ contract CollectPayoutTest is Test, Permit2User {
 
         // Call
         vm.prank(USER);
-        auctionHouse.collectPayout(lotId, OWNER, paymentAmount, payoutAmount, payoutToken, hook);
+        auctionHouse.collectPayout(lotId, paymentAmount, payoutAmount, routingParams);
     }
 
     function test_insufficientAllowance_reverts() public givenOwnerHasBalance(payoutAmount) {
@@ -233,7 +248,7 @@ contract CollectPayoutTest is Test, Permit2User {
 
         // Call
         vm.prank(USER);
-        auctionHouse.collectPayout(lotId, OWNER, paymentAmount, payoutAmount, payoutToken, hook);
+        auctionHouse.collectPayout(lotId, paymentAmount, payoutAmount, routingParams);
     }
 
     function test_feeOnTransfer_reverts()
@@ -249,13 +264,13 @@ contract CollectPayoutTest is Test, Permit2User {
 
         // Call
         vm.prank(USER);
-        auctionHouse.collectPayout(lotId, OWNER, paymentAmount, payoutAmount, payoutToken, hook);
+        auctionHouse.collectPayout(lotId, paymentAmount, payoutAmount, routingParams);
     }
 
     function test_success() public givenOwnerHasBalance(payoutAmount) givenOwnerHasApprovedRouter {
         // Call
         vm.prank(USER);
-        auctionHouse.collectPayout(lotId, OWNER, paymentAmount, payoutAmount, payoutToken, hook);
+        auctionHouse.collectPayout(lotId, paymentAmount, payoutAmount, routingParams);
 
         // Expect payout token balance to be transferred to the auctionHouse
         assertEq(payoutToken.balanceOf(OWNER), 0);

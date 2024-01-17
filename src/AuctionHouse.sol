@@ -270,17 +270,7 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
         _sendPayment(routing.owner, amountLessFees, routing.quoteToken, routing.hooks);
 
         // Collect payout from auction owner
-        _collectPayout(
-            params_.lotId,
-            routing.owner,
-            amountLessFees,
-            payoutAmount,
-            routing.baseToken,
-            routing.hooks,
-            routing.derivativeReference,
-            routing.derivativeParams,
-            routing.wrapDerivative
-        );
+        _collectPayout(params_.lotId, amountLessFees, payoutAmount, routing);
 
         // Send payout to recipient
         _sendPayout(
@@ -416,56 +406,58 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
     ///             - The mid-hook invariant is violated
     ///
     /// @param      lotId_          Lot ID
-    /// @param      lotOwner_       Owner of the lot
     /// @param      paymentAmount_  Amount of quoteToken collected (in native decimals)
     /// @param      payoutAmount_   Amount of payoutToken to collect (in native decimals)
-    /// @param      payoutToken_    Payout token to collect
-    /// @param      hooks_          Hooks contract to call (optional)
+    /// @param      routingParams_  Routing parameters for the lot
     function _collectPayout(
         uint256 lotId_,
-        address lotOwner_,
         uint256 paymentAmount_,
         uint256 payoutAmount_,
-        ERC20 payoutToken_,
-        IHooks hooks_,
-        Veecode derivativeReference,
-        bytes memory derivativeParams,
-        bool wrapDerivative
+        Routing memory routingParams_
     ) internal {
         // Get the balance of the payout token before the transfer
-        uint256 balanceBefore = payoutToken_.balanceOf(address(this));
+        uint256 balanceBefore = routingParams_.baseToken.balanceOf(address(this));
 
         // Call mid hook on hooks contract if provided
-        if (address(hooks_) != address(0)) {
+        if (address(routingParams_.hooks) != address(0)) {
             // The mid hook is expected to transfer the payout token to this contract
-            hooks_.mid(lotId_, paymentAmount_, payoutAmount_);
+            routingParams_.hooks.mid(lotId_, paymentAmount_, payoutAmount_);
 
             // Check that the mid hook transferred the expected amount of payout tokens
-            if (payoutToken_.balanceOf(address(this)) < balanceBefore + payoutAmount_) {
+            if (routingParams_.baseToken.balanceOf(address(this)) < balanceBefore + payoutAmount_) {
                 revert InvalidHook();
             }
         }
         // Otherwise fallback to a standard ERC20 transfer
         else {
             // Check that the auction owner has sufficient balance of the payout token
-            if (payoutToken_.balanceOf(lotOwner_) < payoutAmount_) {
-                revert InsufficientBalance(address(payoutToken_), payoutAmount_);
+            if (routingParams_.baseToken.balanceOf(routingParams_.owner) < payoutAmount_) {
+                revert InsufficientBalance(address(routingParams_.baseToken), payoutAmount_);
             }
 
             // Check that the auction owner has granted approval to transfer the payout token
-            if (payoutToken_.allowance(lotOwner_, address(this)) < payoutAmount_) {
-                revert InsufficientAllowance(address(payoutToken_), address(this), payoutAmount_);
+            if (
+                routingParams_.baseToken.allowance(routingParams_.owner, address(this))
+                    < payoutAmount_
+            ) {
+                revert InsufficientAllowance(
+                    address(routingParams_.baseToken), address(this), payoutAmount_
+                );
             }
 
             // Transfer the payout token from the auction owner
             // `safeTransferFrom()` will revert upon failure
-            payoutToken_.safeTransferFrom(lotOwner_, address(this), payoutAmount_);
+            routingParams_.baseToken.safeTransferFrom(
+                routingParams_.owner, address(this), payoutAmount_
+            );
 
             // Check that it is not a fee-on-transfer token
-            if (payoutToken_.balanceOf(address(this)) < balanceBefore + payoutAmount_) {
-                revert UnsupportedToken(address(payoutToken_));
+            if (routingParams_.baseToken.balanceOf(address(this)) < balanceBefore + payoutAmount_) {
+                revert UnsupportedToken(address(routingParams_.baseToken));
             }
         }
+
+        // TODO payout token needs to be collected from the auction owner in case of derivative
 
         // TODO handle derivative
     }

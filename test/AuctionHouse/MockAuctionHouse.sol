@@ -6,7 +6,7 @@ import {ERC20} from "solmate/tokens/ERC20.sol";
 import {AuctionHouse} from "src/AuctionHouse.sol";
 import {IHooks} from "src/interfaces/IHooks.sol";
 
-import {wrapVeecode, toKeycode} from "src/modules/Modules.sol";
+import {Auctioneer} from "src/bases/Auctioneer.sol";
 
 /// @notice     Mock AuctionHouse contract for testing
 /// @dev        It currently exposes some internal functions so that they can be tested in isolation
@@ -36,23 +36,11 @@ contract MockAuctionHouse is AuctionHouse {
 
     function collectPayout(
         uint256 lotId_,
-        address lotOwner_,
         uint256 paymentAmount_,
         uint256 payoutAmount_,
-        ERC20 payoutToken_,
-        IHooks hooks_
+        Auctioneer.Routing memory routingParams_
     ) external {
-        return _collectPayout(
-            lotId_,
-            lotOwner_,
-            paymentAmount_,
-            payoutAmount_,
-            payoutToken_,
-            hooks_,
-            wrapVeecode(toKeycode("MOCK"), 1),
-            bytes(""),
-            false
-        );
+        return _collectPayout(lotId_, paymentAmount_, payoutAmount_, routingParams_);
     }
 
     function sendPayment(
