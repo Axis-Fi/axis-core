@@ -3,8 +3,6 @@ pragma solidity 0.8.19;
 
 import {WithModules, Veecode} from "src/modules/Modules.sol";
 
-import {DerivativeModule} from "src/modules/Derivative.sol";
-
 abstract contract Derivatizer is WithModules {
     // ========== DERIVATIVE MANAGEMENT ========== //
 
