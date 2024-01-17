@@ -273,9 +273,7 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
         _collectPayout(params_.lotId, amountLessFees, payoutAmount, routing);
 
         // Send payout to recipient
-        _sendPayout(
-            params_.lotId, params_.recipient, payoutAmount, routing.baseToken, routing.hooks
-        );
+        _sendPayout(params_.lotId, params_.recipient, payoutAmount, routing);
 
         // Emit event
         emit Purchase(params_.lotId, msg.sender, params_.referrer, params_.amount, payoutAmount);
@@ -487,29 +485,27 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
     /// @param      lotId_          Lot ID
     /// @param      recipient_      Address to receive payout
     /// @param      payoutAmount_   Amount of payoutToken to send (in native decimals)
-    /// @param      payoutToken_    Payout token to send
-    /// @param      hooks_          Hooks contract to call (optional)
+    /// @param      routingParams_  Routing parameters for the lot
     function _sendPayout(
         uint256 lotId_,
         address recipient_,
         uint256 payoutAmount_,
-        ERC20 payoutToken_,
-        IHooks hooks_
+        Routing memory routingParams_
     ) internal {
         // Get the pre-transfer balance
-        uint256 balanceBefore = payoutToken_.balanceOf(recipient_);
+        uint256 balanceBefore = routingParams_.baseToken.balanceOf(recipient_);
 
         // Send payout token to recipient
-        payoutToken_.safeTransfer(recipient_, payoutAmount_);
+        routingParams_.baseToken.safeTransfer(recipient_, payoutAmount_);
 
         // Check that the recipient received the expected amount of payout tokens
-        if (payoutToken_.balanceOf(recipient_) < balanceBefore + payoutAmount_) {
-            revert UnsupportedToken(address(payoutToken_));
+        if (routingParams_.baseToken.balanceOf(recipient_) < balanceBefore + payoutAmount_) {
+            revert UnsupportedToken(address(routingParams_.baseToken));
         }
 
         // Call post hook on hooks contract if provided
-        if (address(hooks_) != address(0)) {
-            hooks_.post(lotId_, payoutAmount_);
+        if (address(routingParams_.hooks) != address(0)) {
+            routingParams_.hooks.post(lotId_, payoutAmount_);
         }
     }
 

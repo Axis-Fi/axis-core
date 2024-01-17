@@ -5,14 +5,20 @@ import {Test} from "forge-std/Test.sol";
 
 import {MockHook} from "test/modules/Auction/MockHook.sol";
 import {MockAuctionHouse} from "test/AuctionHouse/MockAuctionHouse.sol";
+import {MockDerivativeModule} from "test/modules/Derivative/MockDerivativeModule.sol";
 import {MockFeeOnTransferERC20} from "test/lib/mocks/MockFeeOnTransferERC20.sol";
 import {Permit2User} from "test/lib/permit2/Permit2User.sol";
 
 import {AuctionHouse} from "src/AuctionHouse.sol";
 import {IHooks} from "src/interfaces/IHooks.sol";
+import {IAllowlist} from "src/interfaces/IAllowlist.sol";
+import {Auctioneer} from "src/bases/Auctioneer.sol";
+
+import {Veecode, toVeecode, wrapVeecode, toKeycode} from "src/modules/Modules.sol";
 
 contract SendPayoutTest is Test, Permit2User {
     MockAuctionHouse internal auctionHouse;
+    MockDerivativeModule internal mockDerivativeModule;
 
     address internal constant PROTOCOL = address(0x1);
 
@@ -23,17 +29,43 @@ contract SendPayoutTest is Test, Permit2User {
     // Function parameters
     uint256 internal lotId = 1;
     uint256 internal payoutAmount = 10e18;
+    MockFeeOnTransferERC20 internal quoteToken;
     MockFeeOnTransferERC20 internal payoutToken;
     MockHook internal hook;
+    Veecode internal derivativeReference;
+    bytes internal derivativeParams;
+    bool internal wrapDerivative;
+
+    Auctioneer.Routing internal routingParams;
 
     function setUp() public {
         // Set reasonable starting block
         vm.warp(1_000_000);
 
         auctionHouse = new MockAuctionHouse(PROTOCOL, _PERMIT2_ADDRESS);
+        mockDerivativeModule = new MockDerivativeModule(address(auctionHouse));
+
+        quoteToken = new MockFeeOnTransferERC20("Quote Token", "QUOTE", 18);
+        quoteToken.setTransferFee(0);
 
         payoutToken = new MockFeeOnTransferERC20("Payout Token", "PAYOUT", 18);
         payoutToken.setTransferFee(0);
+
+        derivativeReference = toVeecode(bytes7(""));
+        derivativeParams = bytes("");
+        wrapDerivative = false;
+
+        routingParams = Auctioneer.Routing({
+            auctionReference: wrapVeecode(toKeycode("MOCK"), 1),
+            owner: OWNER,
+            baseToken: payoutToken,
+            quoteToken: quoteToken,
+            hooks: hook,
+            allowlist: IAllowlist(address(0)),
+            derivativeReference: derivativeReference,
+            derivativeParams: derivativeParams,
+            wrapDerivative: wrapDerivative
+        });
     }
 
     modifier givenTokenTakesFeeOnTransfer() {
@@ -59,14 +91,16 @@ contract SendPayoutTest is Test, Permit2User {
 
     modifier givenAuctionHasHook() {
         hook = new MockHook(address(0), address(payoutToken));
+        routingParams.hooks = hook;
 
         // Set the addresses to track
-        address[] memory addresses = new address[](5);
+        address[] memory addresses = new address[](6);
         addresses[0] = USER;
         addresses[1] = OWNER;
         addresses[2] = address(auctionHouse);
         addresses[3] = address(hook);
         addresses[4] = RECIPIENT;
+        addresses[5] = address(mockDerivativeModule);
 
         hook.setBalanceAddresses(addresses);
         _;
@@ -88,7 +122,7 @@ contract SendPayoutTest is Test, Permit2User {
 
         // Call
         vm.prank(USER);
-        auctionHouse.sendPayout(lotId, RECIPIENT, payoutAmount, payoutToken, hook);
+        auctionHouse.sendPayout(lotId, RECIPIENT, payoutAmount, routingParams);
     }
 
     function test_hooks_feeOnTransfer_reverts()
@@ -104,13 +138,13 @@ contract SendPayoutTest is Test, Permit2User {
 
         // Call
         vm.prank(USER);
-        auctionHouse.sendPayout(lotId, RECIPIENT, payoutAmount, payoutToken, hook);
+        auctionHouse.sendPayout(lotId, RECIPIENT, payoutAmount, routingParams);
     }
 
     function test_hooks() public givenAuctionHasHook givenRouterHasBalance(payoutAmount) {
         // Call
         vm.prank(USER);
-        auctionHouse.sendPayout(lotId, RECIPIENT, payoutAmount, payoutToken, hook);
+        auctionHouse.sendPayout(lotId, RECIPIENT, payoutAmount, routingParams);
 
         // Check balances
         assertEq(payoutToken.balanceOf(USER), 0, "user balance mismatch");
@@ -118,6 +152,11 @@ contract SendPayoutTest is Test, Permit2User {
         assertEq(payoutToken.balanceOf(address(auctionHouse)), 0, "auctionHouse balance mismatch");
         assertEq(payoutToken.balanceOf(address(hook)), 0, "hook balance mismatch");
         assertEq(payoutToken.balanceOf(RECIPIENT), payoutAmount, "recipient balance mismatch");
+        assertEq(
+            payoutToken.balanceOf(address(mockDerivativeModule)),
+            0,
+            "derivative module balance mismatch"
+        );
 
         // Check the hook was called at the right time
         assertEq(hook.preHookCalled(), false, "pre hook mismatch");
@@ -137,6 +176,11 @@ contract SendPayoutTest is Test, Permit2User {
             hook.postHookBalances(payoutToken, RECIPIENT),
             payoutAmount,
             "post hook recipient balance mismatch"
+        );
+        assertEq(
+            hook.postHookBalances(payoutToken, address(mockDerivativeModule)),
+            0,
+            "post hook derivative module balance mismatch"
         );
     }
 
@@ -159,13 +203,13 @@ contract SendPayoutTest is Test, Permit2User {
 
         // Call
         vm.prank(USER);
-        auctionHouse.sendPayout(lotId, RECIPIENT, payoutAmount, payoutToken, hook);
+        auctionHouse.sendPayout(lotId, RECIPIENT, payoutAmount, routingParams);
     }
 
     function test_noHooks() public givenRouterHasBalance(payoutAmount) {
         // Call
         vm.prank(USER);
-        auctionHouse.sendPayout(lotId, RECIPIENT, payoutAmount, payoutToken, hook);
+        auctionHouse.sendPayout(lotId, RECIPIENT, payoutAmount, routingParams);
 
         // Check balances
         assertEq(payoutToken.balanceOf(USER), 0, "user balance mismatch");
@@ -173,7 +217,14 @@ contract SendPayoutTest is Test, Permit2User {
         assertEq(payoutToken.balanceOf(address(auctionHouse)), 0, "auctionHouse balance mismatch");
         assertEq(payoutToken.balanceOf(address(hook)), 0, "hook balance mismatch");
         assertEq(payoutToken.balanceOf(RECIPIENT), payoutAmount, "recipient balance mismatch");
+        assertEq(
+            payoutToken.balanceOf(address(mockDerivativeModule)),
+            0,
+            "derivative module balance mismatch"
+        );
     }
+
+    // ========== Derivative flow ========== //
 
     // transfers base token from auction house to recipient
     // [ ] given the base token is a derivative

@@ -34,15 +34,6 @@ contract MockAuctionHouse is AuctionHouse {
         );
     }
 
-    function collectPayout(
-        uint256 lotId_,
-        uint256 paymentAmount_,
-        uint256 payoutAmount_,
-        Auctioneer.Routing memory routingParams_
-    ) external {
-        return _collectPayout(lotId_, paymentAmount_, payoutAmount_, routingParams_);
-    }
-
     function sendPayment(
         address lotOwner_,
         uint256 paymentAmount_,
@@ -52,13 +43,21 @@ contract MockAuctionHouse is AuctionHouse {
         return _sendPayment(lotOwner_, paymentAmount_, quoteToken_, hooks_);
     }
 
+    function collectPayout(
+        uint256 lotId_,
+        uint256 paymentAmount_,
+        uint256 payoutAmount_,
+        Auctioneer.Routing memory routingParams_
+    ) external {
+        return _collectPayout(lotId_, paymentAmount_, payoutAmount_, routingParams_);
+    }
+
     function sendPayout(
         uint256 lotId_,
         address recipient_,
         uint256 payoutAmount_,
-        ERC20 payoutToken_,
-        IHooks hooks_
+        Auctioneer.Routing memory routingParams_
     ) external {
-        return _sendPayout(lotId_, recipient_, payoutAmount_, payoutToken_, hooks_);
+        return _sendPayout(lotId_, recipient_, payoutAmount_, routingParams_);
     }
 }
