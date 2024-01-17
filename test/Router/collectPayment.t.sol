@@ -5,7 +5,7 @@ import {Test} from "forge-std/Test.sol";
 
 import {MockHook} from "test/modules/Auction/MockHook.sol";
 import {ConcreteRouter} from "test/Router/ConcreteRouter.sol";
-import {MockFeeOnTransferERC20} from "test/Router/MockFeeOnTransferERC20.sol";
+import {MockFeeOnTransferERC20} from "test/lib/mocks/MockFeeOnTransferERC20.sol";
 import {Permit2Clone} from "test/lib/permit2/Permit2Clone.sol";
 import {Permit2User} from "test/lib/permit2/Permit2User.sol";
 
