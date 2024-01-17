@@ -4,17 +4,17 @@ pragma solidity 0.8.19;
 import {Test} from "forge-std/Test.sol";
 
 import {MockHook} from "test/modules/Auction/MockHook.sol";
-import {ConcreteRouter} from "test/Router/ConcreteRouter.sol";
+import {MockAuctionHouse} from "test/AuctionHouse/MockAuctionHouse.sol";
 import {MockFeeOnTransferERC20} from "test/lib/mocks/MockFeeOnTransferERC20.sol";
 import {Permit2Clone} from "test/lib/permit2/Permit2Clone.sol";
 import {Permit2User} from "test/lib/permit2/Permit2User.sol";
 
 import {IPermit2} from "src/lib/permit2/interfaces/IPermit2.sol";
-import {Router} from "src/AuctionHouse.sol";
+import {AuctionHouse} from "src/AuctionHouse.sol";
 import {IHooks} from "src/interfaces/IHooks.sol";
 
 contract CollectPaymentTest is Test, Permit2User {
-    ConcreteRouter internal router;
+    MockAuctionHouse internal auctionHouse;
 
     address internal constant PROTOCOL = address(0x1);
 
@@ -34,7 +34,7 @@ contract CollectPaymentTest is Test, Permit2User {
         // Set reasonable starting block
         vm.warp(1_000_000);
 
-        router = new ConcreteRouter(PROTOCOL, _PERMIT2_ADDRESS);
+        auctionHouse = new MockAuctionHouse(PROTOCOL, _PERMIT2_ADDRESS);
 
         quoteToken = new MockFeeOnTransferERC20("QUOTE", "QT", 18);
         quoteToken.setTransferFee(0);
@@ -49,9 +49,9 @@ contract CollectPaymentTest is Test, Permit2User {
     }
 
     modifier givenUserHasApprovedRouter() {
-        // As USER, grant approval to transfer quote tokens to the router
+        // As USER, grant approval to transfer quote tokens to the auctionHouse
         vm.prank(USER);
-        quoteToken.approve(address(router), amount);
+        quoteToken.approve(address(auctionHouse), amount);
         _;
     }
 
@@ -89,7 +89,12 @@ contract CollectPaymentTest is Test, Permit2User {
         approvalNonce = _getRandomUint256();
         approvalDeadline = uint48(block.timestamp + 1 days);
         approvalSignature = _signPermit(
-            address(quoteToken), amount, approvalNonce, approvalDeadline, address(router), userKey
+            address(quoteToken),
+            amount,
+            approvalNonce,
+            approvalDeadline,
+            address(auctionHouse),
+            userKey
         );
         _;
     }
@@ -103,7 +108,7 @@ contract CollectPaymentTest is Test, Permit2User {
 
         // Consume the nonce
         vm.prank(USER);
-        router.collectPayment(
+        auctionHouse.collectPayment(
             lotId, amount, quoteToken, hook, approvalDeadline, approvalNonce, approvalSignature
         );
         _;
@@ -120,7 +125,7 @@ contract CollectPaymentTest is Test, Permit2User {
             amount,
             approvalNonce,
             approvalDeadline,
-            address(router),
+            address(auctionHouse),
             anotherUserKey
         );
         _;
@@ -146,7 +151,12 @@ contract CollectPaymentTest is Test, Permit2User {
         approvalNonce = _getRandomUint256();
         approvalDeadline = uint48(block.timestamp - 1 days);
         approvalSignature = _signPermit(
-            address(quoteToken), amount, approvalNonce, approvalDeadline, address(router), userKey
+            address(quoteToken),
+            amount,
+            approvalNonce,
+            approvalDeadline,
+            address(auctionHouse),
+            userKey
         );
         _;
     }
@@ -158,13 +168,16 @@ contract CollectPaymentTest is Test, Permit2User {
     {
         // Expect the error
         bytes memory err = abi.encodeWithSelector(
-            Router.InsufficientAllowance.selector, address(quoteToken), _PERMIT2_ADDRESS, amount
+            AuctionHouse.InsufficientAllowance.selector,
+            address(quoteToken),
+            _PERMIT2_ADDRESS,
+            amount
         );
         vm.expectRevert(err);
 
         // Call
         vm.prank(USER);
-        router.collectPayment(
+        auctionHouse.collectPayment(
             lotId, amount, quoteToken, hook, approvalDeadline, approvalNonce, approvalSignature
         );
     }
@@ -182,7 +195,7 @@ contract CollectPaymentTest is Test, Permit2User {
 
         // Call
         vm.prank(USER);
-        router.collectPayment(
+        auctionHouse.collectPayment(
             lotId, amount, quoteToken, hook, approvalDeadline, approvalNonce, approvalSignature
         );
     }
@@ -199,7 +212,7 @@ contract CollectPaymentTest is Test, Permit2User {
 
         // Call
         vm.prank(USER);
-        router.collectPayment(
+        auctionHouse.collectPayment(
             lotId, amount, quoteToken, hook, approvalDeadline, approvalNonce, approvalSignature
         );
     }
@@ -217,7 +230,7 @@ contract CollectPaymentTest is Test, Permit2User {
 
         // Call
         vm.prank(USER);
-        router.collectPayment(
+        auctionHouse.collectPayment(
             lotId, amount, quoteToken, hook, approvalDeadline, approvalNonce, approvalSignature
         );
     }
@@ -234,7 +247,7 @@ contract CollectPaymentTest is Test, Permit2User {
 
         // Call
         vm.prank(USER);
-        router.collectPayment(
+        auctionHouse.collectPayment(
             lotId, amount, quoteToken, hook, approvalDeadline, approvalNonce, approvalSignature
         );
     }
@@ -251,7 +264,7 @@ contract CollectPaymentTest is Test, Permit2User {
 
         // Call
         vm.prank(USER);
-        router.collectPayment(
+        auctionHouse.collectPayment(
             lotId, amount, quoteToken, hook, approvalDeadline, approvalNonce, approvalSignature
         );
     }
@@ -262,13 +275,14 @@ contract CollectPaymentTest is Test, Permit2User {
         whenPermit2ApprovalIsValid
     {
         // Expect the error
-        bytes memory err =
-            abi.encodeWithSelector(Router.InsufficientBalance.selector, address(quoteToken), amount);
+        bytes memory err = abi.encodeWithSelector(
+            AuctionHouse.InsufficientBalance.selector, address(quoteToken), amount
+        );
         vm.expectRevert(err);
 
         // Call
         vm.prank(USER);
-        router.collectPayment(
+        auctionHouse.collectPayment(
             lotId, amount, quoteToken, hook, approvalDeadline, approvalNonce, approvalSignature
         );
     }
@@ -282,12 +296,12 @@ contract CollectPaymentTest is Test, Permit2User {
     {
         // Expect the error
         bytes memory err =
-            abi.encodeWithSelector(Router.UnsupportedToken.selector, address(quoteToken));
+            abi.encodeWithSelector(AuctionHouse.UnsupportedToken.selector, address(quoteToken));
         vm.expectRevert(err);
 
         // Call
         vm.prank(USER);
-        router.collectPayment(
+        auctionHouse.collectPayment(
             lotId, amount, quoteToken, hook, approvalDeadline, approvalNonce, approvalSignature
         );
     }
@@ -300,15 +314,15 @@ contract CollectPaymentTest is Test, Permit2User {
     {
         // Call
         vm.prank(USER);
-        router.collectPayment(
+        auctionHouse.collectPayment(
             lotId, amount, quoteToken, hook, approvalDeadline, approvalNonce, approvalSignature
         );
 
         // Expect the user to have no balance
         assertEq(quoteToken.balanceOf(USER), 0);
 
-        // Expect the router to have the balance
-        assertEq(quoteToken.balanceOf(address(router)), amount);
+        // Expect the auctionHouse to have the balance
+        assertEq(quoteToken.balanceOf(address(auctionHouse)), amount);
     }
 
     // ============ Transfer flow ============
@@ -326,13 +340,14 @@ contract CollectPaymentTest is Test, Permit2User {
 
     function test_transfer_whenUserHasInsufficientBalance_reverts() public {
         // Expect the error
-        bytes memory err =
-            abi.encodeWithSelector(Router.InsufficientBalance.selector, address(quoteToken), amount);
+        bytes memory err = abi.encodeWithSelector(
+            AuctionHouse.InsufficientBalance.selector, address(quoteToken), amount
+        );
         vm.expectRevert(err);
 
         // Call
         vm.prank(USER);
-        router.collectPayment(
+        auctionHouse.collectPayment(
             lotId, amount, quoteToken, hook, approvalDeadline, approvalNonce, approvalSignature
         );
     }
@@ -340,13 +355,16 @@ contract CollectPaymentTest is Test, Permit2User {
     function test_transfer_givenNoTokenApproval_reverts() public givenUserHasBalance(amount) {
         // Expect the error
         bytes memory err = abi.encodeWithSelector(
-            Router.InsufficientAllowance.selector, address(quoteToken), address(router), amount
+            AuctionHouse.InsufficientAllowance.selector,
+            address(quoteToken),
+            address(auctionHouse),
+            amount
         );
         vm.expectRevert(err);
 
         // Call
         vm.prank(USER);
-        router.collectPayment(
+        auctionHouse.collectPayment(
             lotId, amount, quoteToken, hook, approvalDeadline, approvalNonce, approvalSignature
         );
     }
@@ -359,12 +377,12 @@ contract CollectPaymentTest is Test, Permit2User {
     {
         // Expect the error
         bytes memory err =
-            abi.encodeWithSelector(Router.UnsupportedToken.selector, address(quoteToken));
+            abi.encodeWithSelector(AuctionHouse.UnsupportedToken.selector, address(quoteToken));
         vm.expectRevert(err);
 
         // Call
         vm.prank(USER);
-        router.collectPayment(
+        auctionHouse.collectPayment(
             lotId, amount, quoteToken, hook, approvalDeadline, approvalNonce, approvalSignature
         );
     }
@@ -372,15 +390,15 @@ contract CollectPaymentTest is Test, Permit2User {
     function test_transfer() public givenUserHasBalance(amount) givenUserHasApprovedRouter {
         // Call
         vm.prank(USER);
-        router.collectPayment(
+        auctionHouse.collectPayment(
             lotId, amount, quoteToken, hook, approvalDeadline, approvalNonce, approvalSignature
         );
 
         // Expect the user to have no balance
         assertEq(quoteToken.balanceOf(USER), 0);
 
-        // Expect the router to have the balance
-        assertEq(quoteToken.balanceOf(address(router)), amount);
+        // Expect the auctionHouse to have the balance
+        assertEq(quoteToken.balanceOf(address(auctionHouse)), amount);
     }
 
     // ============ Hooks flow ============
@@ -400,7 +418,7 @@ contract CollectPaymentTest is Test, Permit2User {
         // Set the addresses to track
         address[] memory addresses = new address[](3);
         addresses[0] = USER;
-        addresses[1] = address(router);
+        addresses[1] = address(auctionHouse);
         addresses[2] = address(hook);
 
         hook.setBalanceAddresses(addresses);
@@ -418,7 +436,7 @@ contract CollectPaymentTest is Test, Permit2User {
 
         // Call
         vm.prank(USER);
-        router.collectPayment(
+        auctionHouse.collectPayment(
             lotId, amount, quoteToken, hook, approvalDeadline, approvalNonce, approvalSignature
         );
     }
@@ -431,7 +449,7 @@ contract CollectPaymentTest is Test, Permit2User {
     {
         // Call
         vm.prank(USER);
-        router.collectPayment(
+        auctionHouse.collectPayment(
             lotId, amount, quoteToken, hook, approvalDeadline, approvalNonce, approvalSignature
         );
 
@@ -454,7 +472,7 @@ contract CollectPaymentTest is Test, Permit2User {
     {
         // Call
         vm.prank(USER);
-        router.collectPayment(
+        auctionHouse.collectPayment(
             lotId, amount, quoteToken, hook, approvalDeadline, approvalNonce, approvalSignature
         );
 

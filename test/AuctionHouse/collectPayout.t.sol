@@ -4,11 +4,11 @@ pragma solidity 0.8.19;
 import {Test} from "forge-std/Test.sol";
 
 import {MockHook} from "test/modules/Auction/MockHook.sol";
-import {ConcreteRouter} from "test/Router/ConcreteRouter.sol";
+import {MockAuctionHouse} from "test/AuctionHouse/MockAuctionHouse.sol";
 import {MockFeeOnTransferERC20} from "test/lib/mocks/MockFeeOnTransferERC20.sol";
 import {Permit2User} from "test/lib/permit2/Permit2User.sol";
 
-import {Router} from "src/AuctionHouse.sol";
+import {AuctionHouse} from "src/AuctionHouse.sol";
 import {IHooks} from "src/interfaces/IHooks.sol";
 import {IAllowlist} from "src/interfaces/IAllowlist.sol";
 import {Auctioneer} from "src/bases/Auctioneer.sol";
@@ -16,7 +16,7 @@ import {Auctioneer} from "src/bases/Auctioneer.sol";
 import {Veecode, wrapVeecode, toKeycode} from "src/modules/Modules.sol";
 
 contract CollectPayoutTest is Test, Permit2User {
-    ConcreteRouter internal router;
+    MockAuctionHouse internal auctionHouse;
 
     address internal constant PROTOCOL = address(0x1);
 
@@ -38,7 +38,7 @@ contract CollectPayoutTest is Test, Permit2User {
         // Set reasonable starting block
         vm.warp(1_000_000);
 
-        router = new ConcreteRouter(PROTOCOL, _PERMIT2_ADDRESS);
+        auctionHouse = new MockAuctionHouse(PROTOCOL, _PERMIT2_ADDRESS);
 
         quoteToken = new MockFeeOnTransferERC20("Quote Token", "QUOTE", 18);
         quoteToken.setTransferFee(0);
@@ -58,7 +58,7 @@ contract CollectPayoutTest is Test, Permit2User {
 
     modifier givenOwnerHasApprovedRouter() {
         vm.prank(OWNER);
-        payoutToken.approve(address(router), type(uint256).max);
+        payoutToken.approve(address(auctionHouse), type(uint256).max);
         _;
     }
 
@@ -85,7 +85,7 @@ contract CollectPayoutTest is Test, Permit2User {
         address[] memory addresses = new address[](4);
         addresses[0] = USER;
         addresses[1] = OWNER;
-        addresses[2] = address(router);
+        addresses[2] = address(auctionHouse);
         addresses[3] = address(hook);
 
         hook.setBalanceAddresses(addresses);
@@ -109,7 +109,7 @@ contract CollectPayoutTest is Test, Permit2User {
 
     modifier givenHookHasApprovedRouter() {
         vm.prank(address(hook));
-        payoutToken.approve(address(router), type(uint256).max);
+        payoutToken.approve(address(auctionHouse), type(uint256).max);
         _;
     }
 
@@ -123,7 +123,7 @@ contract CollectPayoutTest is Test, Permit2User {
 
         // Call
         vm.prank(USER);
-        router.collectPayout(lotId, OWNER, paymentAmount, payoutAmount, payoutToken, hook);
+        auctionHouse.collectPayout(lotId, OWNER, paymentAmount, payoutAmount, payoutToken, hook);
     }
 
     function test_givenAuctionHasHook_whenMidHookBreaksInvariant_reverts()
@@ -134,12 +134,12 @@ contract CollectPayoutTest is Test, Permit2User {
         whenMidHookBreaksInvariant
     {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(Router.InvalidHook.selector);
+        bytes memory err = abi.encodeWithSelector(AuctionHouse.InvalidHook.selector);
         vm.expectRevert(err);
 
         // Call
         vm.prank(USER);
-        router.collectPayout(lotId, OWNER, paymentAmount, payoutAmount, payoutToken, hook);
+        auctionHouse.collectPayout(lotId, OWNER, paymentAmount, payoutAmount, payoutToken, hook);
     }
 
     function test_givenAuctionHasHook_feeOnTransfer_reverts()
@@ -150,12 +150,12 @@ contract CollectPayoutTest is Test, Permit2User {
         givenTokenTakesFeeOnTransfer
     {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(Router.InvalidHook.selector);
+        bytes memory err = abi.encodeWithSelector(AuctionHouse.InvalidHook.selector);
         vm.expectRevert(err);
 
         // Call
         vm.prank(USER);
-        router.collectPayout(lotId, OWNER, paymentAmount, payoutAmount, payoutToken, hook);
+        auctionHouse.collectPayout(lotId, OWNER, paymentAmount, payoutAmount, payoutToken, hook);
     }
 
     function test_givenAuctionHasHook()
@@ -166,16 +166,16 @@ contract CollectPayoutTest is Test, Permit2User {
     {
         // Call
         vm.prank(USER);
-        router.collectPayout(lotId, OWNER, paymentAmount, payoutAmount, payoutToken, hook);
+        auctionHouse.collectPayout(lotId, OWNER, paymentAmount, payoutAmount, payoutToken, hook);
 
         // Expect the hook to be called prior to any transfer of the payout token
         assertEq(hook.midHookCalled(), true);
         assertEq(hook.midHookBalances(payoutToken, OWNER), 0, "mid-hook: owner balance mismatch");
         assertEq(hook.midHookBalances(payoutToken, USER), 0, "mid-hook: user balance mismatch");
         assertEq(
-            hook.midHookBalances(payoutToken, address(router)),
+            hook.midHookBalances(payoutToken, address(auctionHouse)),
             0,
-            "mid-hook: router balance mismatch"
+            "mid-hook: auctionHouse balance mismatch"
         );
         assertEq(
             hook.midHookBalances(payoutToken, address(hook)),
@@ -187,10 +187,14 @@ contract CollectPayoutTest is Test, Permit2User {
         assertEq(hook.preHookCalled(), false);
         assertEq(hook.postHookCalled(), false);
 
-        // Expect payout token balance to be transferred to the router
+        // Expect payout token balance to be transferred to the auctionHouse
         assertEq(payoutToken.balanceOf(OWNER), 0, "owner balance mismatch");
         assertEq(payoutToken.balanceOf(USER), 0, "user balance mismatch");
-        assertEq(payoutToken.balanceOf(address(router)), payoutAmount, "router balance mismatch");
+        assertEq(
+            payoutToken.balanceOf(address(auctionHouse)),
+            payoutAmount,
+            "auctionHouse balance mismatch"
+        );
         assertEq(payoutToken.balanceOf(address(hook)), 0, "hook balance mismatch");
     }
 
@@ -199,7 +203,7 @@ contract CollectPayoutTest is Test, Permit2User {
     // [X] given the auction does not have hooks defined
     //  [X] given the auction owner has insufficient balance of the payout token
     //   [X] it reverts
-    //  [X] given the auction owner has not approved the router to transfer the payout token
+    //  [X] given the auction owner has not approved the auctionHouse to transfer the payout token
     //   [X] it reverts
     //  [X] given transferring the payout token would result in a lesser amount being received
     //   [X] it reverts
@@ -208,28 +212,28 @@ contract CollectPayoutTest is Test, Permit2User {
     function test_insufficientBalance_reverts() public {
         // Expect revert
         bytes memory err = abi.encodeWithSelector(
-            Router.InsufficientBalance.selector, address(payoutToken), payoutAmount
+            AuctionHouse.InsufficientBalance.selector, address(payoutToken), payoutAmount
         );
         vm.expectRevert(err);
 
         // Call
         vm.prank(USER);
-        router.collectPayout(lotId, OWNER, paymentAmount, payoutAmount, payoutToken, hook);
+        auctionHouse.collectPayout(lotId, OWNER, paymentAmount, payoutAmount, payoutToken, hook);
     }
 
     function test_insufficientAllowance_reverts() public givenOwnerHasBalance(payoutAmount) {
         // Expect revert
         bytes memory err = abi.encodeWithSelector(
-            Router.InsufficientAllowance.selector,
+            AuctionHouse.InsufficientAllowance.selector,
             address(payoutToken),
-            address(router),
+            address(auctionHouse),
             payoutAmount
         );
         vm.expectRevert(err);
 
         // Call
         vm.prank(USER);
-        router.collectPayout(lotId, OWNER, paymentAmount, payoutAmount, payoutToken, hook);
+        auctionHouse.collectPayout(lotId, OWNER, paymentAmount, payoutAmount, payoutToken, hook);
     }
 
     function test_feeOnTransfer_reverts()
@@ -240,23 +244,23 @@ contract CollectPayoutTest is Test, Permit2User {
     {
         // Expect revert
         bytes memory err =
-            abi.encodeWithSelector(Router.UnsupportedToken.selector, address(payoutToken));
+            abi.encodeWithSelector(AuctionHouse.UnsupportedToken.selector, address(payoutToken));
         vm.expectRevert(err);
 
         // Call
         vm.prank(USER);
-        router.collectPayout(lotId, OWNER, paymentAmount, payoutAmount, payoutToken, hook);
+        auctionHouse.collectPayout(lotId, OWNER, paymentAmount, payoutAmount, payoutToken, hook);
     }
 
     function test_success() public givenOwnerHasBalance(payoutAmount) givenOwnerHasApprovedRouter {
         // Call
         vm.prank(USER);
-        router.collectPayout(lotId, OWNER, paymentAmount, payoutAmount, payoutToken, hook);
+        auctionHouse.collectPayout(lotId, OWNER, paymentAmount, payoutAmount, payoutToken, hook);
 
-        // Expect payout token balance to be transferred to the router
+        // Expect payout token balance to be transferred to the auctionHouse
         assertEq(payoutToken.balanceOf(OWNER), 0);
         assertEq(payoutToken.balanceOf(USER), 0);
-        assertEq(payoutToken.balanceOf(address(router)), payoutAmount);
+        assertEq(payoutToken.balanceOf(address(auctionHouse)), payoutAmount);
         assertEq(payoutToken.balanceOf(address(hook)), 0);
     }
 
@@ -266,9 +270,9 @@ contract CollectPayoutTest is Test, Permit2User {
     //  [ ] given the auction has hooks defined
     //   [ ] given the hook breaks the invariant
     //    [ ] it reverts
-    //   [ ] it succeeds - derivative is minted to the router, mid hook is called before minting
+    //   [ ] it succeeds - derivative is minted to the auctionHouse, mid hook is called before minting
     //  [ ] given the auction does not have hooks defined
-    //   [ ] it succeeds - derivative is minted to the router
+    //   [ ] it succeeds - derivative is minted to the auctionHouse
 
     // transfers base token from auction house to recipient
     // [ ] given the base token is a derivative

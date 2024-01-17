@@ -28,18 +28,6 @@ abstract contract FeeManager {
 
 // TODO define purpose
 abstract contract Router is FeeManager {
-    using SafeTransferLib for ERC20;
-
-    // ========== ERRORS ========== //
-
-    error InsufficientBalance(address token_, uint256 requiredAmount_);
-
-    error InsufficientAllowance(address token_, address spender_, uint256 requiredAmount_);
-
-    error UnsupportedToken(address token_);
-
-    error InvalidHook();
-
     // ========== STRUCTS ========== //
 
     /// @notice     Parameters used by the purchase function
@@ -90,13 +78,10 @@ abstract contract Router is FeeManager {
     // TODO make this updatable
     address internal immutable _PROTOCOL;
 
-    IPermit2 public immutable _PERMIT2;
-
     // ========== CONSTRUCTOR ========== //
 
-    constructor(address protocol_, address permit2_) {
+    constructor(address protocol_) {
         _PROTOCOL = protocol_;
-        _PERMIT2 = IPermit2(permit2_);
     }
 
     // ========== ATOMIC AUCTIONS ========== //
@@ -129,9 +114,210 @@ abstract contract Router is FeeManager {
         Auction.Bid[] memory bids_
     ) external virtual returns (uint256[] memory amountsOut);
 
-    // ========== TOKEN TRANSFERS ========== //
+    // ========== FEE MANAGEMENT ========== //
 
-    // TODO shift functions to AuctionHouse
+    function setProtocolFee(uint48 protocolFee_) external {
+        // TOOD make this permissioned
+        protocolFee = protocolFee_;
+    }
+
+    function setReferrerFee(address referrer_, uint48 referrerFee_) external {
+        // TOOD make this permissioned
+        referrerFees[referrer_] = referrerFee_;
+    }
+}
+
+/// @title      AuctionHouse
+/// @notice     As its name implies, the AuctionHouse is where auctions take place and the core of the protocol.
+contract AuctionHouse is Derivatizer, Auctioneer, Router {
+    using SafeTransferLib for ERC20;
+
+    /// Implement the router functionality here since it combines all of the base functionality
+
+    // ========== ERRORS ========== //
+
+    error AmountLessThanMinimum();
+
+    error NotAuthorized();
+
+    error InsufficientBalance(address token_, uint256 requiredAmount_);
+
+    error InsufficientAllowance(address token_, address spender_, uint256 requiredAmount_);
+
+    error UnsupportedToken(address token_);
+
+    error InvalidHook();
+
+    // ========== EVENTS ========== //
+
+    event Purchase(uint256 id, address buyer, address referrer, uint256 amount, uint256 payout);
+
+    // ========== STATE VARIABLES ========== //
+
+    IPermit2 public immutable _PERMIT2;
+
+    // ========== CONSTRUCTOR ========== //
+
+    constructor(address protocol_, address permit2_) Router(protocol_) WithModules(msg.sender) {
+        _PERMIT2 = IPermit2(permit2_);
+    }
+
+    // ========== DIRECT EXECUTION ========== //
+
+    // ========== AUCTION FUNCTIONS ========== //
+
+    function _allocateFees(
+        address referrer_,
+        ERC20 quoteToken_,
+        uint256 amount_
+    ) internal returns (uint256 totalFees) {
+        // TODO should protocol and/or referrer be able to charge different fees based on the type of auction being used?
+
+        // Calculate fees for purchase
+        // 1. Calculate referrer fee
+        // 2. Calculate protocol fee as the total expected fee amount minus the referrer fee
+        //    to avoid issues with rounding from separate fee calculations
+        uint256 toReferrer;
+        uint256 toProtocol;
+        if (referrer_ == address(0)) {
+            // There is no referrer
+            toProtocol = (amount_ * protocolFee) / FEE_DECIMALS;
+        } else {
+            uint256 referrerFee = referrerFees[referrer_]; // reduce to single SLOAD
+            if (referrerFee == 0) {
+                // There is a referrer, but they have not set a fee
+                // If protocol fee is zero, return zero
+                // Otherwise, calcualte protocol fee
+                if (protocolFee == 0) return 0;
+                toProtocol = (amount_ * protocolFee) / FEE_DECIMALS;
+            } else {
+                // There is a referrer and they have set a fee
+                toReferrer = (amount_ * referrerFee) / FEE_DECIMALS;
+                toProtocol = ((amount_ * (protocolFee + referrerFee)) / FEE_DECIMALS) - toReferrer;
+            }
+        }
+
+        // Update fee balances if non-zero
+        if (toReferrer > 0) rewards[referrer_][quoteToken_] += toReferrer;
+        if (toProtocol > 0) rewards[_PROTOCOL][quoteToken_] += toProtocol;
+
+        return toReferrer + toProtocol;
+    }
+
+    // ========== ATOMIC AUCTIONS ========== //
+
+    /// @inheritdoc Router
+    /// @dev        This fuction handles the following:
+    ///             1. Calculates the fees for the purchase
+    ///             2. Sends the purchase amount to the auction module
+    ///             3. Records the purchase on the auction module
+    ///             4. Transfers the quote token from the caller
+    ///             5. Transfers the quote token to the auction owner
+    ///             5. Transfers the base token from the auction owner or executes the callback
+    ///             6. Transfers the base token to the recipient
+    ///
+    ///             This function reverts if:
+    ///             - `lotId_` is invalid
+    ///             - The respective auction module reverts
+    ///             - `payout` is less than `minAmountOut_`
+    ///             - The caller does not have sufficient balance of the quote token
+    ///             - The auction owner does not have sufficient balance of the payout token
+    ///             - Any of the callbacks fail
+    ///             - Any of the token transfers fail
+    function purchase(PurchaseParams memory params_)
+        external
+        override
+        isValidLot(params_.lotId)
+        returns (uint256 payoutAmount)
+    {
+        // Load routing data for the lot
+        Routing memory routing = lotRouting[params_.lotId];
+
+        // Check if the purchaser is on the allowlist
+        if (address(routing.allowlist) != address(0)) {
+            if (!routing.allowlist.isAllowed(params_.lotId, msg.sender, bytes(""))) {
+                revert NotAuthorized();
+            }
+        }
+
+        uint256 totalFees = _allocateFees(params_.referrer, routing.quoteToken, params_.amount);
+        uint256 amountLessFees = params_.amount - totalFees;
+
+        // Send purchase to auction house and get payout plus any extra output
+        bytes memory auctionOutput;
+        {
+            AuctionModule module = _getModuleForId(params_.lotId);
+            (payoutAmount, auctionOutput) =
+                module.purchase(params_.lotId, amountLessFees, params_.auctionData);
+        }
+
+        // Check that payout is at least minimum amount out
+        // @dev Moved the slippage check from the auction to the AuctionHouse to allow different routing and purchase logic
+        if (payoutAmount < params_.minAmountOut) revert AmountLessThanMinimum();
+
+        // Collect payment from the purchaser
+        _collectPayment(
+            params_.lotId,
+            params_.amount,
+            routing.quoteToken,
+            routing.hooks,
+            params_.approvalDeadline,
+            params_.approvalNonce,
+            params_.approvalSignature
+        );
+
+        // Send payment to auction owner
+        _sendPayment(routing.owner, amountLessFees, routing.quoteToken, routing.hooks);
+
+        // Collect payout from auction owner
+        _collectPayout(
+            params_.lotId,
+            routing.owner,
+            amountLessFees,
+            payoutAmount,
+            routing.baseToken,
+            routing.hooks,
+            routing.derivativeReference,
+            routing.derivativeParams,
+            routing.wrapDerivative
+        );
+
+        // Send payout to recipient
+        _sendPayout(
+            params_.lotId, params_.recipient, payoutAmount, routing.baseToken, routing.hooks
+        );
+
+        // Emit event
+        emit Purchase(params_.lotId, msg.sender, params_.referrer, params_.amount, payoutAmount);
+    }
+
+    // ========== BATCH AUCTIONS ========== //
+
+    function bid(
+        address recipient_,
+        address referrer_,
+        uint256 id_,
+        uint256 amount_,
+        uint256 minAmountOut_,
+        bytes calldata auctionData_,
+        bytes calldata approval_
+    ) external override {
+        // TODO
+    }
+
+    function settle(uint256 id_) external override returns (uint256[] memory amountsOut) {
+        // TODO
+    }
+
+    // Off-chain auction variant
+    function settle(
+        uint256 id_,
+        Auction.Bid[] memory bids_
+    ) external override returns (uint256[] memory amountsOut) {
+        // TODO
+    }
+
+    // ========== TOKEN TRANSFERS ========== //
 
     /// @notice     Collects payment of the quote token from the user
     /// @dev        This function handles the following:
@@ -405,194 +591,5 @@ abstract contract Router is FeeManager {
         if (token_.balanceOf(address(this)) < balanceBefore + amount_) {
             revert UnsupportedToken(address(token_));
         }
-    }
-
-    // ========== FEE MANAGEMENT ========== //
-
-    function setProtocolFee(uint48 protocolFee_) external {
-        // TOOD make this permissioned
-        protocolFee = protocolFee_;
-    }
-
-    function setReferrerFee(address referrer_, uint48 referrerFee_) external {
-        // TOOD make this permissioned
-        referrerFees[referrer_] = referrerFee_;
-    }
-}
-
-/// @title      AuctionHouse
-/// @notice     As its name implies, the AuctionHouse is where auctions take place and the core of the protocol.
-contract AuctionHouse is Derivatizer, Auctioneer, Router {
-    using SafeTransferLib for ERC20;
-
-    /// Implement the router functionality here since it combines all of the base functionality
-
-    // ========== ERRORS ========== //
-    error AmountLessThanMinimum();
-
-    error NotAuthorized();
-
-    // ========== EVENTS ========== //
-    event Purchase(uint256 id, address buyer, address referrer, uint256 amount, uint256 payout);
-
-    // ========== CONSTRUCTOR ========== //
-    constructor(
-        address protocol_,
-        address permit2_
-    ) Router(protocol_, permit2_) WithModules(msg.sender) {}
-
-    // ========== DIRECT EXECUTION ========== //
-
-    // ========== AUCTION FUNCTIONS ========== //
-
-    function _allocateFees(
-        address referrer_,
-        ERC20 quoteToken_,
-        uint256 amount_
-    ) internal returns (uint256 totalFees) {
-        // TODO should protocol and/or referrer be able to charge different fees based on the type of auction being used?
-
-        // Calculate fees for purchase
-        // 1. Calculate referrer fee
-        // 2. Calculate protocol fee as the total expected fee amount minus the referrer fee
-        //    to avoid issues with rounding from separate fee calculations
-        uint256 toReferrer;
-        uint256 toProtocol;
-        if (referrer_ == address(0)) {
-            // There is no referrer
-            toProtocol = (amount_ * protocolFee) / FEE_DECIMALS;
-        } else {
-            uint256 referrerFee = referrerFees[referrer_]; // reduce to single SLOAD
-            if (referrerFee == 0) {
-                // There is a referrer, but they have not set a fee
-                // If protocol fee is zero, return zero
-                // Otherwise, calcualte protocol fee
-                if (protocolFee == 0) return 0;
-                toProtocol = (amount_ * protocolFee) / FEE_DECIMALS;
-            } else {
-                // There is a referrer and they have set a fee
-                toReferrer = (amount_ * referrerFee) / FEE_DECIMALS;
-                toProtocol = ((amount_ * (protocolFee + referrerFee)) / FEE_DECIMALS) - toReferrer;
-            }
-        }
-
-        // Update fee balances if non-zero
-        if (toReferrer > 0) rewards[referrer_][quoteToken_] += toReferrer;
-        if (toProtocol > 0) rewards[_PROTOCOL][quoteToken_] += toProtocol;
-
-        return toReferrer + toProtocol;
-    }
-
-    // ========== ATOMIC AUCTIONS ========== //
-
-    /// @inheritdoc Router
-    /// @dev        This fuction handles the following:
-    ///             1. Calculates the fees for the purchase
-    ///             2. Sends the purchase amount to the auction module
-    ///             3. Records the purchase on the auction module
-    ///             4. Transfers the quote token from the caller
-    ///             5. Transfers the quote token to the auction owner
-    ///             5. Transfers the base token from the auction owner or executes the callback
-    ///             6. Transfers the base token to the recipient
-    ///
-    ///             This function reverts if:
-    ///             - `lotId_` is invalid
-    ///             - The respective auction module reverts
-    ///             - `payout` is less than `minAmountOut_`
-    ///             - The caller does not have sufficient balance of the quote token
-    ///             - The auction owner does not have sufficient balance of the payout token
-    ///             - Any of the callbacks fail
-    ///             - Any of the token transfers fail
-    function purchase(PurchaseParams memory params_)
-        external
-        override
-        isValidLot(params_.lotId)
-        returns (uint256 payoutAmount)
-    {
-        // Load routing data for the lot
-        Routing memory routing = lotRouting[params_.lotId];
-
-        // Check if the purchaser is on the allowlist
-        if (address(routing.allowlist) != address(0)) {
-            if (!routing.allowlist.isAllowed(params_.lotId, msg.sender, bytes(""))) {
-                revert NotAuthorized();
-            }
-        }
-
-        uint256 totalFees = _allocateFees(params_.referrer, routing.quoteToken, params_.amount);
-        uint256 amountLessFees = params_.amount - totalFees;
-
-        // Send purchase to auction house and get payout plus any extra output
-        bytes memory auctionOutput;
-        {
-            AuctionModule module = _getModuleForId(params_.lotId);
-            (payoutAmount, auctionOutput) =
-                module.purchase(params_.lotId, amountLessFees, params_.auctionData);
-        }
-
-        // Check that payout is at least minimum amount out
-        // @dev Moved the slippage check from the auction to the AuctionHouse to allow different routing and purchase logic
-        if (payoutAmount < params_.minAmountOut) revert AmountLessThanMinimum();
-
-        // Collect payment from the purchaser
-        _collectPayment(
-            params_.lotId,
-            params_.amount,
-            routing.quoteToken,
-            routing.hooks,
-            params_.approvalDeadline,
-            params_.approvalNonce,
-            params_.approvalSignature
-        );
-
-        // Send payment to auction owner
-        _sendPayment(routing.owner, amountLessFees, routing.quoteToken, routing.hooks);
-
-        // Collect payout from auction owner
-        _collectPayout(
-            params_.lotId,
-            routing.owner,
-            amountLessFees,
-            payoutAmount,
-            routing.baseToken,
-            routing.hooks,
-            routing.derivativeReference,
-            routing.derivativeParams,
-            routing.wrapDerivative
-        );
-
-        // Send payout to recipient
-        _sendPayout(
-            params_.lotId, params_.recipient, payoutAmount, routing.baseToken, routing.hooks
-        );
-
-        // Emit event
-        emit Purchase(params_.lotId, msg.sender, params_.referrer, params_.amount, payoutAmount);
-    }
-
-    // ========== BATCH AUCTIONS ========== //
-
-    function bid(
-        address recipient_,
-        address referrer_,
-        uint256 id_,
-        uint256 amount_,
-        uint256 minAmountOut_,
-        bytes calldata auctionData_,
-        bytes calldata approval_
-    ) external override {
-        // TODO
-    }
-
-    function settle(uint256 id_) external override returns (uint256[] memory amountsOut) {
-        // TODO
-    }
-
-    // Off-chain auction variant
-    function settle(
-        uint256 id_,
-        Auction.Bid[] memory bids_
-    ) external override returns (uint256[] memory amountsOut) {
-        // TODO
     }
 }

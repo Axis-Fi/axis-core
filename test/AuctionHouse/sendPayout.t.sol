@@ -4,15 +4,15 @@ pragma solidity 0.8.19;
 import {Test} from "forge-std/Test.sol";
 
 import {MockHook} from "test/modules/Auction/MockHook.sol";
-import {ConcreteRouter} from "test/Router/ConcreteRouter.sol";
+import {MockAuctionHouse} from "test/AuctionHouse/MockAuctionHouse.sol";
 import {MockFeeOnTransferERC20} from "test/lib/mocks/MockFeeOnTransferERC20.sol";
 import {Permit2User} from "test/lib/permit2/Permit2User.sol";
 
-import {Router} from "src/AuctionHouse.sol";
+import {AuctionHouse} from "src/AuctionHouse.sol";
 import {IHooks} from "src/interfaces/IHooks.sol";
 
 contract SendPayoutTest is Test, Permit2User {
-    ConcreteRouter internal router;
+    MockAuctionHouse internal auctionHouse;
 
     address internal constant PROTOCOL = address(0x1);
 
@@ -30,7 +30,7 @@ contract SendPayoutTest is Test, Permit2User {
         // Set reasonable starting block
         vm.warp(1_000_000);
 
-        router = new ConcreteRouter(PROTOCOL, _PERMIT2_ADDRESS);
+        auctionHouse = new MockAuctionHouse(PROTOCOL, _PERMIT2_ADDRESS);
 
         payoutToken = new MockFeeOnTransferERC20("Payout Token", "PAYOUT", 18);
         payoutToken.setTransferFee(0);
@@ -42,7 +42,7 @@ contract SendPayoutTest is Test, Permit2User {
     }
 
     modifier givenRouterHasBalance(uint256 amount_) {
-        payoutToken.mint(address(router), amount_);
+        payoutToken.mint(address(auctionHouse), amount_);
         _;
     }
 
@@ -55,7 +55,7 @@ contract SendPayoutTest is Test, Permit2User {
     //   [X] it reverts
     //  [ ] when the post hook invariant is broken
     //   [ ] it reverts
-    //  [X] it succeeds - transfers the payout from the router to the recipient
+    //  [X] it succeeds - transfers the payout from the auctionHouse to the recipient
 
     modifier givenAuctionHasHook() {
         hook = new MockHook(address(0), address(payoutToken));
@@ -64,7 +64,7 @@ contract SendPayoutTest is Test, Permit2User {
         address[] memory addresses = new address[](5);
         addresses[0] = USER;
         addresses[1] = OWNER;
-        addresses[2] = address(router);
+        addresses[2] = address(auctionHouse);
         addresses[3] = address(hook);
         addresses[4] = RECIPIENT;
 
@@ -88,7 +88,7 @@ contract SendPayoutTest is Test, Permit2User {
 
         // Call
         vm.prank(USER);
-        router.sendPayout(lotId, RECIPIENT, payoutAmount, payoutToken, hook);
+        auctionHouse.sendPayout(lotId, RECIPIENT, payoutAmount, payoutToken, hook);
     }
 
     function test_hooks_feeOnTransfer_reverts()
@@ -99,23 +99,23 @@ contract SendPayoutTest is Test, Permit2User {
     {
         // Expect revert
         bytes memory err =
-            abi.encodeWithSelector(Router.UnsupportedToken.selector, address(payoutToken));
+            abi.encodeWithSelector(AuctionHouse.UnsupportedToken.selector, address(payoutToken));
         vm.expectRevert(err);
 
         // Call
         vm.prank(USER);
-        router.sendPayout(lotId, RECIPIENT, payoutAmount, payoutToken, hook);
+        auctionHouse.sendPayout(lotId, RECIPIENT, payoutAmount, payoutToken, hook);
     }
 
     function test_hooks() public givenAuctionHasHook givenRouterHasBalance(payoutAmount) {
         // Call
         vm.prank(USER);
-        router.sendPayout(lotId, RECIPIENT, payoutAmount, payoutToken, hook);
+        auctionHouse.sendPayout(lotId, RECIPIENT, payoutAmount, payoutToken, hook);
 
         // Check balances
         assertEq(payoutToken.balanceOf(USER), 0, "user balance mismatch");
         assertEq(payoutToken.balanceOf(OWNER), 0, "owner balance mismatch");
-        assertEq(payoutToken.balanceOf(address(router)), 0, "router balance mismatch");
+        assertEq(payoutToken.balanceOf(address(auctionHouse)), 0, "auctionHouse balance mismatch");
         assertEq(payoutToken.balanceOf(address(hook)), 0, "hook balance mismatch");
         assertEq(payoutToken.balanceOf(RECIPIENT), payoutAmount, "recipient balance mismatch");
 
@@ -126,9 +126,9 @@ contract SendPayoutTest is Test, Permit2User {
         assertEq(hook.postHookBalances(payoutToken, USER), 0, "post hook user balance mismatch");
         assertEq(hook.postHookBalances(payoutToken, OWNER), 0, "post hook owner balance mismatch");
         assertEq(
-            hook.postHookBalances(payoutToken, address(router)),
+            hook.postHookBalances(payoutToken, address(auctionHouse)),
             0,
-            "post hook router balance mismatch"
+            "post hook auctionHouse balance mismatch"
         );
         assertEq(
             hook.postHookBalances(payoutToken, address(hook)), 0, "post hook hook balance mismatch"
@@ -145,7 +145,7 @@ contract SendPayoutTest is Test, Permit2User {
     // [X] given the auction does not have hooks defined
     //  [X] given transferring the payout token would result in a lesser amount being received
     //   [X] it reverts
-    //  [X] it succeeds - transfers the payout from the router to the recipient
+    //  [X] it succeeds - transfers the payout from the auctionHouse to the recipient
 
     function test_noHooks_feeOnTransfer_reverts()
         public
@@ -154,23 +154,23 @@ contract SendPayoutTest is Test, Permit2User {
     {
         // Expect revert
         bytes memory err =
-            abi.encodeWithSelector(Router.UnsupportedToken.selector, address(payoutToken));
+            abi.encodeWithSelector(AuctionHouse.UnsupportedToken.selector, address(payoutToken));
         vm.expectRevert(err);
 
         // Call
         vm.prank(USER);
-        router.sendPayout(lotId, RECIPIENT, payoutAmount, payoutToken, hook);
+        auctionHouse.sendPayout(lotId, RECIPIENT, payoutAmount, payoutToken, hook);
     }
 
     function test_noHooks() public givenRouterHasBalance(payoutAmount) {
         // Call
         vm.prank(USER);
-        router.sendPayout(lotId, RECIPIENT, payoutAmount, payoutToken, hook);
+        auctionHouse.sendPayout(lotId, RECIPIENT, payoutAmount, payoutToken, hook);
 
         // Check balances
         assertEq(payoutToken.balanceOf(USER), 0, "user balance mismatch");
         assertEq(payoutToken.balanceOf(OWNER), 0, "owner balance mismatch");
-        assertEq(payoutToken.balanceOf(address(router)), 0, "router balance mismatch");
+        assertEq(payoutToken.balanceOf(address(auctionHouse)), 0, "auctionHouse balance mismatch");
         assertEq(payoutToken.balanceOf(address(hook)), 0, "hook balance mismatch");
         assertEq(payoutToken.balanceOf(RECIPIENT), payoutAmount, "recipient balance mismatch");
     }

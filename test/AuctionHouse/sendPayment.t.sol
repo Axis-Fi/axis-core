@@ -4,7 +4,7 @@ pragma solidity 0.8.19;
 import {Test} from "forge-std/Test.sol";
 
 import {MockHook} from "test/modules/Auction/MockHook.sol";
-import {ConcreteRouter} from "test/Router/ConcreteRouter.sol";
+import {MockAuctionHouse} from "test/AuctionHouse/MockAuctionHouse.sol";
 import {MockFeeOnTransferERC20} from "test/lib/mocks/MockFeeOnTransferERC20.sol";
 import {Permit2User} from "test/lib/permit2/Permit2User.sol";
 
@@ -12,7 +12,7 @@ import {Router} from "src/AuctionHouse.sol";
 import {IHooks} from "src/interfaces/IHooks.sol";
 
 contract SendPaymentTest is Test, Permit2User {
-    ConcreteRouter internal router;
+    MockAuctionHouse internal auctionHouse;
 
     address internal constant PROTOCOL = address(0x1);
 
@@ -29,7 +29,7 @@ contract SendPaymentTest is Test, Permit2User {
         // Set reasonable starting block
         vm.warp(1_000_000);
 
-        router = new ConcreteRouter(PROTOCOL, _PERMIT2_ADDRESS);
+        auctionHouse = new MockAuctionHouse(PROTOCOL, _PERMIT2_ADDRESS);
 
         quoteToken = new MockFeeOnTransferERC20("Quote Token", "QUOTE", 18);
         quoteToken.setTransferFee(0);
@@ -47,7 +47,7 @@ contract SendPaymentTest is Test, Permit2User {
         address[] memory addresses = new address[](4);
         addresses[0] = address(USER);
         addresses[1] = address(OWNER);
-        addresses[2] = address(router);
+        addresses[2] = address(auctionHouse);
         addresses[3] = address(hook);
 
         hook.setBalanceAddresses(addresses);
@@ -55,7 +55,7 @@ contract SendPaymentTest is Test, Permit2User {
     }
 
     modifier givenRouterHasBalance(uint256 amount_) {
-        quoteToken.mint(address(router), amount_);
+        quoteToken.mint(address(auctionHouse), amount_);
         _;
     }
 
@@ -66,12 +66,12 @@ contract SendPaymentTest is Test, Permit2User {
     {
         // Call
         vm.prank(USER);
-        router.sendPayment(OWNER, paymentAmount, quoteToken, hook);
+        auctionHouse.sendPayment(OWNER, paymentAmount, quoteToken, hook);
 
         // Check balances
         assertEq(quoteToken.balanceOf(USER), 0, "user balance mismatch");
         assertEq(quoteToken.balanceOf(OWNER), 0, "owner balance mismatch");
-        assertEq(quoteToken.balanceOf(address(router)), 0, "router balance mismatch");
+        assertEq(quoteToken.balanceOf(address(auctionHouse)), 0, "auctionHouse balance mismatch");
         assertEq(quoteToken.balanceOf(address(hook)), paymentAmount, "hook balance mismatch");
 
         // Hooks not called
@@ -83,11 +83,11 @@ contract SendPaymentTest is Test, Permit2User {
     function test_givenAuctionHasNoHook() public givenRouterHasBalance(paymentAmount) {
         // Call
         vm.prank(USER);
-        router.sendPayment(OWNER, paymentAmount, quoteToken, hook);
+        auctionHouse.sendPayment(OWNER, paymentAmount, quoteToken, hook);
 
         // Check balances
         assertEq(quoteToken.balanceOf(USER), 0, "user balance mismatch");
         assertEq(quoteToken.balanceOf(OWNER), paymentAmount, "owner balance mismatch");
-        assertEq(quoteToken.balanceOf(address(router)), 0, "router balance mismatch");
+        assertEq(quoteToken.balanceOf(address(auctionHouse)), 0, "auctionHouse balance mismatch");
     }
 }
