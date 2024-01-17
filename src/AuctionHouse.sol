@@ -156,7 +156,7 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
 
     // ========== STATE VARIABLES ========== //
 
-    IPermit2 public immutable _PERMIT2;
+    IPermit2 internal immutable _PERMIT2;
 
     // ========== CONSTRUCTOR ========== //
 
