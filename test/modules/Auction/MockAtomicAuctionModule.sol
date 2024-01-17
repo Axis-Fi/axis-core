@@ -11,6 +11,10 @@ contract MockAtomicAuctionModule is AuctionModule {
     mapping(uint256 => uint256) public payoutData;
     bool public purchaseReverts;
 
+    struct Output {
+        uint256 multiplier;
+    }
+
     mapping(uint256 lotId => bool isCancelled) public cancelled;
 
     constructor(address _owner) AuctionModule(_owner) {
@@ -52,7 +56,9 @@ contract MockAtomicAuctionModule is AuctionModule {
             payout = payoutData[id_] * amount_ / 1e5;
         }
 
-        auctionOutput = auctionData_;
+        Output memory output = Output({multiplier: 1});
+
+        auctionOutput = abi.encode(output);
     }
 
     function setPayoutMultiplier(uint256 id_, uint256 multiplier_) external virtual {

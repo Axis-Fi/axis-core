@@ -470,6 +470,7 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
     /// @notice     Sends the payout token to the recipient
     /// @dev        This function handles the following:
     ///             1. Sends the payout token from the router to the recipient
+    ///             1a. If the lot is a derivative, mints the derivative token to the recipient
     ///             2. Calls the post hook on the hooks contract (if provided)
     ///
     ///             This function assumes that:
@@ -494,15 +495,42 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
         Routing memory routingParams_,
         bytes memory auctionOutput_
     ) internal {
-        // Get the pre-transfer balance
-        uint256 balanceBefore = routingParams_.baseToken.balanceOf(recipient_);
+        // If no derivative, then the payout is sent directly to the recipient
+        if (fromVeecode(routingParams_.derivativeReference) == bytes7("")) {
+            // Get the pre-transfer balance
+            uint256 balanceBefore = routingParams_.baseToken.balanceOf(recipient_);
 
-        // Send payout token to recipient
-        routingParams_.baseToken.safeTransfer(recipient_, payoutAmount_);
+            // Send payout token to recipient
+            routingParams_.baseToken.safeTransfer(recipient_, payoutAmount_);
 
-        // Check that the recipient received the expected amount of payout tokens
-        if (routingParams_.baseToken.balanceOf(recipient_) < balanceBefore + payoutAmount_) {
-            revert UnsupportedToken(address(routingParams_.baseToken));
+            // Check that the recipient received the expected amount of payout tokens
+            if (routingParams_.baseToken.balanceOf(recipient_) < balanceBefore + payoutAmount_) {
+                revert UnsupportedToken(address(routingParams_.baseToken));
+            }
+        }
+        // Otherwise, send parameters and payout to the derivative to mint to recipient
+        else {
+            // Get the module for the derivative type
+            // We assume that the module type has been checked when the lot was created
+            DerivativeModule module =
+                DerivativeModule(_getModuleIfInstalled(routingParams_.derivativeReference));
+
+            bytes memory derivativeParams = routingParams_.derivativeParams;
+
+            // Lookup condensor module from combination of auction and derivative types
+            // If condenser specified, condense auction output and derivative params before sending to derivative module
+            Veecode condenserRef =
+                condensers[routingParams_.auctionReference][routingParams_.derivativeReference];
+            if (fromVeecode(condenserRef) != bytes7("")) {
+                // Get condenser module
+                CondenserModule condenser = CondenserModule(_getModuleIfInstalled(condenserRef));
+
+                // Condense auction output and derivative params
+                derivativeParams = condenser.condense(auctionOutput_, derivativeParams);
+            }
+
+            // Call the module to mint derivative tokens to the recipient
+            module.mint(recipient_, derivativeParams, payoutAmount_, routingParams_.wrapDerivative);
         }
 
         // Call post hook on hooks contract if provided

@@ -55,6 +55,7 @@ contract SendPayoutTest is Test, Permit2User {
         mockAuctionModule = new MockAtomicAuctionModule(address(auctionHouse));
         mockDerivativeModule = new MockDerivativeModule(address(auctionHouse));
         mockCondenserModule = new MockCondenserModule(address(auctionHouse));
+        auctionHouse.installModule(mockAuctionModule);
 
         quoteToken = new MockFeeOnTransferERC20("Quote Token", "QUOTE", 18);
         quoteToken.setTransferFee(0);
@@ -68,7 +69,8 @@ contract SendPayoutTest is Test, Permit2User {
         derivativeParams = bytes("");
         wrapDerivative = false;
         auctionOutputMultiplier = 2;
-        auctionOutput = abi.encode(auctionOutputMultiplier); // Does nothing unless the condenser is set
+        auctionOutput =
+            abi.encode(MockAtomicAuctionModule.Output({multiplier: auctionOutputMultiplier})); // Does nothing unless the condenser is set
 
         routingParams = Auctioneer.Routing({
             auctionReference: mockAuctionModule.VEECODE(),
@@ -265,7 +267,8 @@ contract SendPayoutTest is Test, Permit2User {
         // Update parameters
         derivativeReference = mockDerivativeModule.VEECODE();
         derivativeTokenId = 20;
-        derivativeParams = abi.encode(derivativeTokenId, 0);
+        derivativeParams =
+            abi.encode(MockDerivativeModule.Params({tokenId: derivativeTokenId, multiplier: 0}));
         routingParams.derivativeReference = derivativeReference;
         routingParams.derivativeParams = derivativeParams;
         _;
@@ -301,10 +304,8 @@ contract SendPayoutTest is Test, Permit2User {
         givenAuctionHasDerivative
         givenDerivativeParamsAreInvalid
     {
-        // Expect revert
-        bytes memory err =
-            abi.encodeWithSelector(MockDerivativeModule.InvalidDerivativeParams.selector);
-        vm.expectRevert(err);
+        // Expect revert while decoding parameters
+        vm.expectRevert();
 
         // Call
         vm.prank(USER);

@@ -15,6 +15,11 @@ contract MockDerivativeModule is DerivativeModule {
 
     error InvalidDerivativeParams();
 
+    struct Params {
+        uint256 tokenId;
+        uint256 multiplier;
+    }
+
     constructor(address _owner) Module(_owner) {}
 
     function VEECODE() public pure virtual override returns (Veecode) {
@@ -37,11 +42,11 @@ contract MockDerivativeModule is DerivativeModule {
         bool wrapped_
     ) external virtual override returns (uint256, address, uint256) {
         // TODO wrapping
-        (uint256 tokenId, uint256 multiplier) = abi.decode(params_, (uint256, uint256));
+        Params memory params = abi.decode(params_, (Params));
 
-        uint256 outputAmount = multiplier == 0 ? amount_ : amount_ * multiplier;
+        uint256 outputAmount = params.multiplier == 0 ? amount_ : amount_ * params.multiplier;
 
-        derivativeToken.mint(to_, tokenId, outputAmount);
+        derivativeToken.mint(to_, params.tokenId, outputAmount);
     }
 
     function mint(
