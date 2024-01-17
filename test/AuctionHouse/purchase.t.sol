@@ -3,11 +3,12 @@ pragma solidity 0.8.19;
 
 // Libraries
 import {Test} from "forge-std/Test.sol";
-import {ERC20} from "lib/solmate/src/tokens/ERC20.sol";
+import {ERC20} from "solmate/tokens/ERC20.sol";
 import {IPermit2} from "src/lib/permit2/interfaces/IPermit2.sol";
 
 // Mocks
-import {MockERC20} from "lib/solmate/src/test/utils/mocks/MockERC20.sol";
+import {MockERC20} from "solmate/test/utils/mocks/MockERC20.sol";
+import {MockERC6909} from "solmate/test/utils/mocks/MockERC6909.sol";
 import {MockAtomicAuctionModule} from "test/modules/Auction/MockAtomicAuctionModule.sol";
 import {MockBatchAuctionModule} from "test/modules/Auction/MockBatchAuctionModule.sol";
 import {MockDerivativeModule} from "test/modules/Derivative/MockDerivativeModule.sol";
@@ -35,6 +36,7 @@ import {
 contract PurchaseTest is Test, Permit2User {
     MockERC20 internal baseToken;
     MockERC20 internal quoteToken;
+    MockERC6909 internal derivativeToken;
     MockAtomicAuctionModule internal mockAuctionModule;
     MockDerivativeModule internal mockDerivativeModule;
     MockCondenserModule internal mockCondenserModule;
@@ -70,6 +72,7 @@ contract PurchaseTest is Test, Permit2User {
     uint256 internal approvalNonce;
     bytes internal approvalSignature;
     uint48 internal approvalDeadline;
+    uint256 internal derivativeTokenId;
 
     function setUp() external {
         aliceKey = _getRandomUint256();
@@ -77,6 +80,7 @@ contract PurchaseTest is Test, Permit2User {
 
         baseToken = new MockERC20("Base Token", "BASE", 18);
         quoteToken = new MockERC20("Quote Token", "QUOTE", 18);
+        derivativeToken = new MockERC6909();
 
         auctionHouse = new AuctionHouse(protocol, _PERMIT2_ADDRESS);
         mockAuctionModule = new MockAtomicAuctionModule(address(auctionHouse));
@@ -84,8 +88,6 @@ contract PurchaseTest is Test, Permit2User {
         mockCondenserModule = new MockCondenserModule(address(auctionHouse));
         mockAllowlist = new MockAllowlist();
         mockHook = new MockHook(address(quoteToken), address(baseToken));
-
-        // mockDerivativeModule.setDerivativeToken(baseToken);
 
         auctionParams = Auction.AuctionParams({
             start: uint48(block.timestamp),
@@ -149,12 +151,11 @@ contract PurchaseTest is Test, Permit2User {
         _;
     }
 
-    modifier whenCondenserModuleIsInstalled() {
+    modifier givenDerivativeHasCondenser() {
+        // Install the condenser module
         auctionHouse.installModule(mockCondenserModule);
-        _;
-    }
 
-    modifier whenCondenserIsMapped() {
+        // Set the condenser
         auctionHouse.setCondenser(
             mockAuctionModule.VEECODE(),
             mockDerivativeModule.VEECODE(),
@@ -539,11 +540,17 @@ contract PurchaseTest is Test, Permit2User {
     // ======== Derivative flow ======== //
 
     modifier givenAuctionHasDerivative() {
-        // Assumes the derivative module is already installed
+        // Install the derivative module
+        auctionHouse.installModule(mockDerivativeModule);
+
+        mockDerivativeModule.setDerivativeToken(derivativeToken);
 
         // Set up a new auction with a derivative
+        derivativeTokenId = 20;
         routingParams.derivativeType = toKeycode("DERV");
-        routingParams.derivativeParams = abi.encode("");
+        routingParams.derivativeParams =
+            abi.encode(MockDerivativeModule.Params({tokenId: derivativeTokenId, multiplier: 0}));
+
         vm.prank(auctionOwner);
         lotId = auctionHouse.auction(routingParams, auctionParams);
 
@@ -557,16 +564,17 @@ contract PurchaseTest is Test, Permit2User {
 
     function test_derivative()
         public
-        givenDerivativeModuleIsInstalled
         givenAuctionHasDerivative
         givenUserHasQuoteTokenBalance(AMOUNT_IN)
+        givenOwnerHasBaseTokenBalance(AMOUNT_OUT)
         givenQuoteTokenSpendingIsApproved
+        givenBaseTokenSpendingIsApproved
     {
         // Call
         vm.prank(alice);
         auctionHouse.purchase(purchaseParams);
 
-        // Check balances
+        // Check balances of the quote token
         assertEq(quoteToken.balanceOf(alice), 0);
         assertEq(quoteToken.balanceOf(recipient), 0);
         assertEq(quoteToken.balanceOf(address(mockHook)), 0);
@@ -574,11 +582,22 @@ contract PurchaseTest is Test, Permit2User {
             quoteToken.balanceOf(address(auctionHouse)), amountInProtocolFee + amountInReferrerFee
         );
         assertEq(quoteToken.balanceOf(auctionOwner), amountInLessFee);
+        assertEq(quoteToken.balanceOf(address(mockDerivativeModule)), 0);
 
+        // Check balances of the base token
         assertEq(baseToken.balanceOf(alice), 0);
-        assertEq(baseToken.balanceOf(recipient), AMOUNT_OUT);
+        assertEq(baseToken.balanceOf(recipient), 0);
         assertEq(baseToken.balanceOf(address(mockHook)), 0);
         assertEq(baseToken.balanceOf(address(auctionHouse)), 0);
         assertEq(baseToken.balanceOf(auctionOwner), 0);
+        assertEq(baseToken.balanceOf(address(mockDerivativeModule)), AMOUNT_OUT);
+
+        // Check balances of the derivative token
+        assertEq(derivativeToken.balanceOf(alice, derivativeTokenId), 0);
+        assertEq(derivativeToken.balanceOf(recipient, derivativeTokenId), AMOUNT_OUT);
+        assertEq(derivativeToken.balanceOf(address(mockHook), derivativeTokenId), 0);
+        assertEq(derivativeToken.balanceOf(address(auctionHouse), derivativeTokenId), 0);
+        assertEq(derivativeToken.balanceOf(auctionOwner, derivativeTokenId), 0);
+        assertEq(derivativeToken.balanceOf(address(mockDerivativeModule), derivativeTokenId), 0);
     }
 }
