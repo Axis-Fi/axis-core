@@ -21,12 +21,19 @@ abstract contract FeeManager {
 
 abstract contract Router is FeeManager {
     // ========== DATA STRUCTURES ========== //
-    struct Settlement {
-        Auction.Bid[] winningBids;
-        bytes[] bidSignatures;
-        uint256[] amountsIn;
-        uint256[] amountsOut;
-        bytes validityProof;
+    struct ExternalSettlement {
+        Auction.Bid[] bids; // user bids submitted externally
+        bytes[] bidSignatures; // user signatures for bids submitted externally
+        bytes[] approvals; // optional, permit 2 token approvals
+        bytes[] allowlistProofs; // optional, allowlist proofs
+        uint256[] amountsIn; // actual amount in for the corresponding bids
+        uint256[] amountsOut; // actual amount out for the corresponding bids
+        bytes validityProof; // optional, provide proof of settlement validity to be verified by module
+    }
+
+    struct LocalSettlement {
+        Auction.Bid[] bids; // user bids submitted externally
+        bytes[] bidSignatures; // user signatures for bids submitted externally
         bytes[] approvals; // optional, permit 2 token approvals
         bytes[] allowlistProofs; // optional, allowlist proofs
     }
@@ -218,9 +225,11 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
         // TODO
     }
 
-    // Off-chain auction variant
-    // Lots of parameters, likely need to consolidate
-    function settle(uint256 id_, Settlement memory settlement_) external override {
+    // External submission and local evaluation
+    function settle(uint256 id_, LocalSettlement memory settlement_) external override {}
+
+    // External submission and evaluation
+    function settle(uint256 id_, ExternalSettlement memory settlement_) external override {
         // Load routing data for the lot
         Routing memory routing = lotRouting[id_];
 
