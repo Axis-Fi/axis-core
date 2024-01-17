@@ -131,6 +131,8 @@ abstract contract Router is FeeManager {
 
     // ========== TOKEN TRANSFERS ========== //
 
+    // TODO shift functions to AuctionHouse
+
     /// @notice     Collects payment of the quote token from the user
     /// @dev        This function handles the following:
     ///             1. Calls the pre hook on the hooks contract (if provided)
@@ -239,7 +241,10 @@ abstract contract Router is FeeManager {
         uint256 paymentAmount_,
         uint256 payoutAmount_,
         ERC20 payoutToken_,
-        IHooks hooks_
+        IHooks hooks_,
+        Veecode derivativeReference,
+        bytes memory derivativeParams,
+        bool wrapDerivative
     ) internal {
         // Get the balance of the payout token before the transfer
         uint256 balanceBefore = payoutToken_.balanceOf(address(this));
@@ -550,7 +555,10 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
             amountLessFees,
             payoutAmount,
             routing.baseToken,
-            routing.hooks
+            routing.hooks,
+            routing.derivativeReference,
+            routing.derivativeParams,
+            routing.wrapDerivative
         );
 
         // Send payout to recipient

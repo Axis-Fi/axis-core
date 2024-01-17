@@ -8,6 +8,8 @@ import {Router} from "src/AuctionHouse.sol";
 import {Auction} from "src/modules/Auction.sol";
 import {IHooks} from "src/interfaces/IHooks.sol";
 
+import {wrapVeecode, toKeycode} from "src/modules/Modules.sol";
+
 contract ConcreteRouter is Router {
     constructor(address protocol_, address permit2_) Router(protocol_, permit2_) {}
 
@@ -64,8 +66,17 @@ contract ConcreteRouter is Router {
         ERC20 payoutToken_,
         IHooks hooks_
     ) external {
-        return
-            _collectPayout(lotId_, lotOwner_, paymentAmount_, payoutAmount_, payoutToken_, hooks_);
+        return _collectPayout(
+            lotId_,
+            lotOwner_,
+            paymentAmount_,
+            payoutAmount_,
+            payoutToken_,
+            hooks_,
+            wrapVeecode(toKeycode("MOCK"), 1),
+            bytes(""),
+            false
+        );
     }
 
     function sendPayment(

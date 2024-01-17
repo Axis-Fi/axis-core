@@ -10,6 +10,10 @@ import {Permit2User} from "test/lib/permit2/Permit2User.sol";
 
 import {Router} from "src/AuctionHouse.sol";
 import {IHooks} from "src/interfaces/IHooks.sol";
+import {IAllowlist} from "src/interfaces/IAllowlist.sol";
+import {Auctioneer} from "src/bases/Auctioneer.sol";
+
+import {Veecode, wrapVeecode, toKeycode} from "src/modules/Modules.sol";
 
 contract CollectPayoutTest is Test, Permit2User {
     ConcreteRouter internal router;
@@ -23,8 +27,12 @@ contract CollectPayoutTest is Test, Permit2User {
     uint256 internal lotId = 1;
     uint256 internal paymentAmount = 1e18;
     uint256 internal payoutAmount = 10e18;
+    MockFeeOnTransferERC20 internal quoteToken;
     MockFeeOnTransferERC20 internal payoutToken;
     MockHook internal hook;
+    Veecode internal derivativeReference;
+    bytes internal derivativeParams;
+    bool internal wrapDerivative;
 
     function setUp() public {
         // Set reasonable starting block
@@ -32,8 +40,15 @@ contract CollectPayoutTest is Test, Permit2User {
 
         router = new ConcreteRouter(PROTOCOL, _PERMIT2_ADDRESS);
 
+        quoteToken = new MockFeeOnTransferERC20("Quote Token", "QUOTE", 18);
+        quoteToken.setTransferFee(0);
+
         payoutToken = new MockFeeOnTransferERC20("Payout Token", "PAYOUT", 18);
         payoutToken.setTransferFee(0);
+
+        derivativeReference = wrapVeecode(toKeycode(""), 0);
+        derivativeParams = bytes("");
+        wrapDerivative = false;
     }
 
     modifier givenOwnerHasBalance(uint256 amount_) {
@@ -64,7 +79,7 @@ contract CollectPayoutTest is Test, Permit2User {
     //    [X] it succeeds
 
     modifier givenAuctionHasHook() {
-        hook = new MockHook(address(0), address(payoutToken));
+        hook = new MockHook(address(quoteToken), address(payoutToken));
 
         // Set the addresses to track
         address[] memory addresses = new address[](4);
@@ -264,4 +279,9 @@ contract CollectPayoutTest is Test, Permit2User {
     //  [ ] it mints derivative tokens to the recipient using the derivative module
     // [ ] given the base token is not a derivative
     //  [ ] it transfers the base token to the recipient
+
+    modifier givenAuctionHasDerivative() {
+        derivativeReference = wrapVeecode(toKeycode("DERV"), 1);
+        _;
+    }
 }
