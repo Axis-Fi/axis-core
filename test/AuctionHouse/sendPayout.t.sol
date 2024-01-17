@@ -174,4 +174,14 @@ contract SendPayoutTest is Test, Permit2User {
         assertEq(payoutToken.balanceOf(address(hook)), 0, "hook balance mismatch");
         assertEq(payoutToken.balanceOf(RECIPIENT), payoutAmount, "recipient balance mismatch");
     }
+
+    // transfers base token from auction house to recipient
+    // [ ] given the base token is a derivative
+    //  [ ] given a condenser is set
+    //   [ ] it uses the condenser to determine derivative parameters
+    //  [ ] given a condenser is not set
+    //   [ ] it uses the routing derivative parameters
+    //  [ ] it mints derivative tokens to the recipient using the derivative module
+    // [ ] given the base token is not a derivative
+    //  [ ] it transfers the base token to the recipient
 }

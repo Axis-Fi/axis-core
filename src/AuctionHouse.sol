@@ -396,6 +396,7 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
     /// @dev        This function handles the following:
     ///             1. Calls the mid hook on the hooks contract (if provided)
     ///             2. Transfers the payout token from the auction owner
+    ///             2a. If the lot is a derivative, transfers the payout token to the derivative module
     ///
     ///             This function reverts if:
     ///             - Approval has not been granted to transfer the payout token
@@ -457,9 +458,15 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
             }
         }
 
-        // TODO payout token needs to be collected from the auction owner in case of derivative
+        // If the lot is a derivative, transfer the base token as collateral to the derivative module
+        if (fromVeecode(routingParams_.derivativeReference) != bytes7("")) {
+            // Get the details of the derivative module
+            address derivativeModuleAddress =
+                _getModuleIfInstalled(routingParams_.derivativeReference);
 
-        // TODO handle derivative
+            // Transfer the base token to the derivative module
+            routingParams_.baseToken.safeTransfer(derivativeModuleAddress, payoutAmount_);
+        }
     }
 
     /// @notice     Sends the payout token to the recipient

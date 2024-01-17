@@ -5,6 +5,7 @@ import {Test} from "forge-std/Test.sol";
 
 import {MockHook} from "test/modules/Auction/MockHook.sol";
 import {MockAuctionHouse} from "test/AuctionHouse/MockAuctionHouse.sol";
+import {MockDerivativeModule} from "test/modules/Derivative/MockDerivativeModule.sol";
 import {MockFeeOnTransferERC20} from "test/lib/mocks/MockFeeOnTransferERC20.sol";
 import {Permit2User} from "test/lib/permit2/Permit2User.sol";
 
@@ -13,10 +14,11 @@ import {IHooks} from "src/interfaces/IHooks.sol";
 import {IAllowlist} from "src/interfaces/IAllowlist.sol";
 import {Auctioneer} from "src/bases/Auctioneer.sol";
 
-import {Veecode, wrapVeecode, toKeycode} from "src/modules/Modules.sol";
+import {Veecode, wrapVeecode, toVeecode, toKeycode} from "src/modules/Modules.sol";
 
 contract CollectPayoutTest is Test, Permit2User {
     MockAuctionHouse internal auctionHouse;
+    MockDerivativeModule internal mockDerivativeModule;
 
     address internal constant PROTOCOL = address(0x1);
 
@@ -41,6 +43,7 @@ contract CollectPayoutTest is Test, Permit2User {
         vm.warp(1_000_000);
 
         auctionHouse = new MockAuctionHouse(PROTOCOL, _PERMIT2_ADDRESS);
+        mockDerivativeModule = new MockDerivativeModule(address(auctionHouse));
 
         quoteToken = new MockFeeOnTransferERC20("Quote Token", "QUOTE", 18);
         quoteToken.setTransferFee(0);
@@ -48,7 +51,7 @@ contract CollectPayoutTest is Test, Permit2User {
         payoutToken = new MockFeeOnTransferERC20("Payout Token", "PAYOUT", 18);
         payoutToken.setTransferFee(0);
 
-        derivativeReference = wrapVeecode(toKeycode(""), 0);
+        derivativeReference = toVeecode(bytes7(""));
         derivativeParams = bytes("");
         wrapDerivative = false;
 
@@ -97,11 +100,12 @@ contract CollectPayoutTest is Test, Permit2User {
         routingParams.hooks = hook;
 
         // Set the addresses to track
-        address[] memory addresses = new address[](4);
+        address[] memory addresses = new address[](5);
         addresses[0] = USER;
         addresses[1] = OWNER;
         addresses[2] = address(auctionHouse);
         addresses[3] = address(hook);
+        addresses[4] = address(mockDerivativeModule);
 
         hook.setBalanceAddresses(addresses);
         _;
@@ -197,6 +201,11 @@ contract CollectPayoutTest is Test, Permit2User {
             payoutAmount,
             "mid-hook: hook balance mismatch"
         );
+        assertEq(
+            hook.midHookBalances(payoutToken, address(mockDerivativeModule)),
+            0,
+            "mid-hook: derivativeModule balance mismatch"
+        );
 
         // Expect the other hooks not to be called
         assertEq(hook.preHookCalled(), false);
@@ -211,6 +220,11 @@ contract CollectPayoutTest is Test, Permit2User {
             "auctionHouse balance mismatch"
         );
         assertEq(payoutToken.balanceOf(address(hook)), 0, "hook balance mismatch");
+        assertEq(
+            payoutToken.balanceOf(address(mockDerivativeModule)),
+            0,
+            "derivativeModule balance mismatch"
+        );
     }
 
     // ========== Non-hooks flow ========== //
@@ -277,30 +291,158 @@ contract CollectPayoutTest is Test, Permit2User {
         assertEq(payoutToken.balanceOf(USER), 0);
         assertEq(payoutToken.balanceOf(address(auctionHouse)), payoutAmount);
         assertEq(payoutToken.balanceOf(address(hook)), 0);
+        assertEq(payoutToken.balanceOf(address(mockDerivativeModule)), 0);
     }
 
     // ========== Derivative flow ========== //
 
-    // [ ] given the auction has a derivative defined
-    //  [ ] given the auction has hooks defined
-    //   [ ] given the hook breaks the invariant
-    //    [ ] it reverts
-    //   [ ] it succeeds - derivative is minted to the auctionHouse, mid hook is called before minting
-    //  [ ] given the auction does not have hooks defined
-    //   [ ] it succeeds - derivative is minted to the auctionHouse
-
-    // transfers base token from auction house to recipient
-    // [ ] given the base token is a derivative
-    //  [ ] given a condenser is set
-    //   [ ] it uses the condenser to determine derivative parameters
-    //  [ ] given a condenser is not set
-    //   [ ] it uses the routing derivative parameters
-    //  [ ] it mints derivative tokens to the recipient using the derivative module
-    // [ ] given the base token is not a derivative
-    //  [ ] it transfers the base token to the recipient
+    // [X] given the auction has a derivative defined
+    //  [X] given the auction has hooks defined
+    //   [X] given the hook breaks the invariant
+    //    [X] it reverts
+    //   [X] it succeeds - base token is transferred to the derivativeModule, mid hook is called before transfer
+    //  [X] given the auction does not have hooks defined
+    //   [X] given the auction owner has insufficient balance of the payout token
+    //    [X] it reverts
+    //   [X] given the auction owner has not approved the auctionHouse to transfer the payout token
+    //    [X] it reverts
+    //   [X] given transferring the payout token would result in a lesser amount being received
+    //    [X] it reverts
+    //   [X] it succeeds - base token is transferred to the derivativeModule
 
     modifier givenAuctionHasDerivative() {
-        derivativeReference = wrapVeecode(toKeycode("DERV"), 1);
+        // Install the derivative module
+        auctionHouse.installModule(mockDerivativeModule);
+
+        // Update parameters
+        derivativeReference = mockDerivativeModule.VEECODE();
+        routingParams.derivativeReference = derivativeReference;
         _;
+    }
+
+    function test_derivative_hasHook_whenHookBreaksInvariant_reverts()
+        public
+        givenAuctionHasDerivative
+        givenAuctionHasHook
+        givenHookHasBalance(payoutAmount)
+        givenHookHasApprovedRouter
+        whenMidHookBreaksInvariant
+    {
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(AuctionHouse.InvalidHook.selector);
+        vm.expectRevert(err);
+
+        // Call
+        vm.prank(USER);
+        auctionHouse.collectPayout(lotId, paymentAmount, payoutAmount, routingParams);
+    }
+
+    function test_derivative_hasHook_success()
+        public
+        givenAuctionHasDerivative
+        givenAuctionHasHook
+        givenHookHasBalance(payoutAmount)
+        givenHookHasApprovedRouter
+    {
+        // Call
+        vm.prank(USER);
+        auctionHouse.collectPayout(lotId, paymentAmount, payoutAmount, routingParams);
+
+        // Expect payout token balance to be transferred to the derivative module
+        assertEq(payoutToken.balanceOf(OWNER), 0);
+        assertEq(payoutToken.balanceOf(USER), 0);
+        assertEq(payoutToken.balanceOf(address(auctionHouse)), 0);
+        assertEq(payoutToken.balanceOf(address(hook)), 0);
+        assertEq(payoutToken.balanceOf(address(mockDerivativeModule)), payoutAmount);
+
+        // Expect the hook to be called prior to any transfer of the payout token
+        assertEq(hook.midHookCalled(), true);
+        assertEq(hook.midHookBalances(payoutToken, OWNER), 0, "mid-hook: owner balance mismatch");
+        assertEq(hook.midHookBalances(payoutToken, USER), 0, "mid-hook: user balance mismatch");
+        assertEq(
+            hook.midHookBalances(payoutToken, address(auctionHouse)),
+            0,
+            "mid-hook: auctionHouse balance mismatch"
+        );
+        assertEq(
+            hook.midHookBalances(payoutToken, address(hook)),
+            payoutAmount,
+            "mid-hook: hook balance mismatch"
+        );
+        assertEq(
+            hook.midHookBalances(payoutToken, address(mockDerivativeModule)),
+            0,
+            "mid-hook: derivativeModule balance mismatch"
+        );
+
+        // Expect the other hooks not to be called
+        assertEq(hook.preHookCalled(), false);
+        assertEq(hook.postHookCalled(), false);
+    }
+
+    function test_derivative_insufficientBalance_reverts() public givenAuctionHasDerivative {
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(
+            AuctionHouse.InsufficientBalance.selector, address(payoutToken), payoutAmount
+        );
+        vm.expectRevert(err);
+
+        // Call
+        vm.prank(USER);
+        auctionHouse.collectPayout(lotId, paymentAmount, payoutAmount, routingParams);
+    }
+
+    function test_derivative_insufficientAllowance_reverts()
+        public
+        givenAuctionHasDerivative
+        givenOwnerHasBalance(payoutAmount)
+    {
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(
+            AuctionHouse.InsufficientAllowance.selector,
+            address(payoutToken),
+            address(auctionHouse),
+            payoutAmount
+        );
+        vm.expectRevert(err);
+
+        // Call
+        vm.prank(USER);
+        auctionHouse.collectPayout(lotId, paymentAmount, payoutAmount, routingParams);
+    }
+
+    function test_derivative_feeOnTransfer_reverts()
+        public
+        givenAuctionHasDerivative
+        givenOwnerHasBalance(payoutAmount)
+        givenOwnerHasApprovedRouter
+        givenTokenTakesFeeOnTransfer
+    {
+        // Expect revert
+        bytes memory err =
+            abi.encodeWithSelector(AuctionHouse.UnsupportedToken.selector, address(payoutToken));
+        vm.expectRevert(err);
+
+        // Call
+        vm.prank(USER);
+        auctionHouse.collectPayout(lotId, paymentAmount, payoutAmount, routingParams);
+    }
+
+    function test_derivative_success()
+        public
+        givenAuctionHasDerivative
+        givenOwnerHasBalance(payoutAmount)
+        givenOwnerHasApprovedRouter
+    {
+        // Call
+        vm.prank(USER);
+        auctionHouse.collectPayout(lotId, paymentAmount, payoutAmount, routingParams);
+
+        // Expect payout token balance to be transferred to the derivative module
+        assertEq(payoutToken.balanceOf(OWNER), 0);
+        assertEq(payoutToken.balanceOf(USER), 0);
+        assertEq(payoutToken.balanceOf(address(auctionHouse)), 0);
+        assertEq(payoutToken.balanceOf(address(hook)), 0);
+        assertEq(payoutToken.balanceOf(address(mockDerivativeModule)), payoutAmount);
     }
 }
