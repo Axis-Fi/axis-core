@@ -73,6 +73,7 @@ contract PurchaseTest is Test, Permit2User {
     bytes internal approvalSignature;
     uint48 internal approvalDeadline;
     uint256 internal derivativeTokenId;
+    bytes internal allowlistProof;
 
     function setUp() external {
         aliceKey = _getRandomUint256();
@@ -142,7 +143,8 @@ contract PurchaseTest is Test, Permit2User {
             minAmountOut: AMOUNT_OUT,
             approvalNonce: approvalNonce,
             auctionData: bytes(""),
-            approvalSignature: approvalSignature
+            approvalSignature: approvalSignature,
+            allowlistProof: allowlistProof
         });
     }
 
@@ -327,8 +329,6 @@ contract PurchaseTest is Test, Permit2User {
     //  [X] when the caller is on the allowlist
     //   [X] it succeeds
 
-    // TODO add support for allowlist proof
-
     modifier givenAuctionHasAllowlist() {
         // Register a new auction with an allowlist
         routingParams.allowlist = mockAllowlist;
@@ -345,8 +345,14 @@ contract PurchaseTest is Test, Permit2User {
         // Assumes the allowlist is set
         require(address(routingParams.allowlist) != address(0), "allowlist not set");
 
+        // Set the allowlist proof
+        allowlistProof = abi.encode("i am allowed");
+
         // Set the caller to be on the allowlist
-        mockAllowlist.setAllowed(alice, true);
+        mockAllowlist.setAllowedWithProof(alice, allowlistProof, true);
+
+        // Update the purchase params
+        purchaseParams.allowlistProof = allowlistProof;
         _;
     }
 

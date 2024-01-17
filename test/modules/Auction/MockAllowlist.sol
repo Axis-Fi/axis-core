@@ -8,18 +8,21 @@ contract MockAllowlist is IAllowlist {
 
     uint256[] public registeredIds;
 
-    mapping(address => bool) public allowed;
+    mapping(address => mapping(bytes => bool)) public allowedWithProof;
 
-    function isAllowed(address address_, bytes calldata) external view override returns (bool) {
-        return allowed[address_];
+    function isAllowed(
+        address address_,
+        bytes calldata proof_
+    ) external view override returns (bool) {
+        return allowedWithProof[address_][proof_];
     }
 
     function isAllowed(
         uint256,
         address address_,
-        bytes calldata
+        bytes calldata proof_
     ) external view override returns (bool) {
-        return allowed[address_];
+        return allowedWithProof[address_][proof_];
     }
 
     function register(bytes calldata) external override {}
@@ -40,7 +43,7 @@ contract MockAllowlist is IAllowlist {
         return registeredIds;
     }
 
-    function setAllowed(address account, bool allowed_) external {
-        allowed[account] = allowed_;
+    function setAllowedWithProof(address account, bytes calldata proof, bool allowed_) external {
+        allowedWithProof[account][proof] = allowed_;
     }
 }

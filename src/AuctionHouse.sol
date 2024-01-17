@@ -42,6 +42,7 @@ abstract contract Router is FeeManager {
     /// @param      approvalNonce       Nonce for permit approval signature
     /// @param      auctionData         Custom data used by the auction module
     /// @param      approvalSignature   Permit approval signature for the quoteToken
+    /// @param      allowlistProof      Proof of allowlist inclusion
     struct PurchaseParams {
         address recipient;
         address referrer;
@@ -52,6 +53,7 @@ abstract contract Router is FeeManager {
         uint256 approvalNonce;
         bytes auctionData;
         bytes approvalSignature;
+        bytes allowlistProof;
     }
 
     // ========== STATE VARIABLES ========== //
@@ -235,7 +237,7 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
 
         // Check if the purchaser is on the allowlist
         if (address(routing.allowlist) != address(0)) {
-            if (!routing.allowlist.isAllowed(params_.lotId, msg.sender, bytes(""))) {
+            if (!routing.allowlist.isAllowed(params_.lotId, msg.sender, params_.allowlistProof)) {
                 revert NotAuthorized();
             }
         }
