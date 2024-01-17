@@ -244,9 +244,9 @@ contract SendPayoutTest is Test, Permit2User {
     // ========== Derivative flow ========== //
 
     // [ ] given the base token is a derivative
-    //  [ ] given a condenser is set
-    //   [ ] given the derivative parameters are invalid
-    //     [ ] it reverts
+    //  [X] given a condenser is set
+    //   [X] given the derivative parameters are invalid
+    //     [X] it reverts
     //   [X] it uses the condenser to determine derivative parameters
     //  [ ] given a condenser is not set
     //   [ ] given the derivative is wrapped
@@ -294,7 +294,7 @@ contract SendPayoutTest is Test, Permit2User {
     }
 
     modifier givenDerivativeParamsAreInvalid() {
-        derivativeParams = abi.encode(0);
+        derivativeParams = abi.encode("one", "two", uint256(2));
         routingParams.derivativeParams = derivativeParams;
         _;
     }
@@ -350,6 +350,20 @@ contract SendPayoutTest is Test, Permit2User {
             0, // This would normally be non-zero, but we didn't transfer the collateral to it
             "derivative module balance mismatch"
         );
+    }
+
+    function test_derivative_condenser_invalidParams_reverts()
+        public
+        givenAuctionHasDerivative
+        givenDerivativeHasCondenser
+        givenDerivativeParamsAreInvalid
+    {
+        // Expect revert while decoding parameters
+        vm.expectRevert();
+
+        // Call
+        vm.prank(USER);
+        auctionHouse.sendPayout(lotId, RECIPIENT, payoutAmount, routingParams, auctionOutput);
     }
 
     function test_derivative_condenser()

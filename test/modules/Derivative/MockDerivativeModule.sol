@@ -9,6 +9,8 @@ import {DerivativeModule} from "src/modules/Derivative.sol";
 
 import {MockERC6909} from "solmate/test/utils/mocks/MockERC6909.sol";
 
+import {console2} from "forge-std/console2.sol";
+
 contract MockDerivativeModule is DerivativeModule {
     bool internal validateFails;
     MockERC6909 internal derivativeToken;
@@ -41,6 +43,8 @@ contract MockDerivativeModule is DerivativeModule {
         uint256 amount_,
         bool wrapped_
     ) external virtual override returns (uint256, address, uint256) {
+        if (params_.length != 64) revert("");
+
         // TODO wrapping
         Params memory params = abi.decode(params_, (Params));
 

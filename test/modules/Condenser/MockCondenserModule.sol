@@ -30,10 +30,12 @@ contract MockCondenserModule is CondenserModule {
             abi.decode(auctionOutput_, (MockAtomicAuctionModule.Output));
 
         // Get derivative params
-        (uint256 derivativeTokenId) = abi.decode(derivativeConfig_, (uint256));
+        if (derivativeConfig_.length != 64) revert("");
+        MockDerivativeModule.Params memory originalDerivativeParams =
+            abi.decode(derivativeConfig_, (MockDerivativeModule.Params));
 
         MockDerivativeModule.Params memory derivativeParams = MockDerivativeModule.Params({
-            tokenId: derivativeTokenId,
+            tokenId: originalDerivativeParams.tokenId,
             multiplier: auctionOutput.multiplier
         });
 
