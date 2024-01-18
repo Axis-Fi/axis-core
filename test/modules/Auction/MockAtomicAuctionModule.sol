@@ -69,7 +69,15 @@ contract MockAtomicAuctionModule is AuctionModule {
         purchaseReverts = reverts_;
     }
 
-    function bid(uint256, uint256, uint256, bytes calldata) external virtual override {
+    function bid(
+        address,
+        address,
+        uint256,
+        uint256,
+        uint256,
+        bytes calldata,
+        bytes calldata
+    ) external virtual override {
         revert Auction_NotImplemented();
     }
 

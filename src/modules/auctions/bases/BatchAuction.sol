@@ -44,7 +44,7 @@ abstract contract OnChainBatchAuctionModule is AuctionModule, BatchAuction {
         uint256 minAmountOut_,
         bytes calldata auctionData_,
         bytes calldata approval_
-    ) external onlyParent {
+    ) external override onlyParent {
         // TODO
         // Validate inputs
 
@@ -88,7 +88,7 @@ abstract contract OffChainBatchAuctionModule is AuctionModule, BatchAuction {
         uint256 minAmountOut_,
         bytes calldata auctionData_,
         bytes calldata approval_
-    ) external onlyParent {
+    ) external override onlyParent {
         revert Auction_NotImplemented();
     }
 
@@ -145,7 +145,7 @@ abstract contract ExternalBatchAuction is AuctionModule, BatchAuction {
         uint256 minAmountOut_,
         bytes calldata auctionData_,
         bytes calldata approval_
-    ) external onlyParent {
+    ) external override onlyParent {
         revert Auction_NotImplemented();
     }
 

@@ -34,7 +34,7 @@ abstract contract Router is FeeManager {
     struct ExternalSettlement {
         Auction.Bid[] bids; // user bids submitted externally
         bytes[] bidSignatures; // user signatures for bids submitted externally
-        bytes[] approvals; // optional, permit 2 token approvals
+        bytes[] approvals; // optional, permit 2 token approvals // TODO this requires an approval deadline, nonce and signatures
         bytes[] allowlistProofs; // optional, allowlist proofs
         uint256[] amountsIn; // actual amount in for the corresponding bids
         uint256[] amountsOut; // actual amount out for the corresponding bids
@@ -373,9 +373,16 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
 
         // Record the bid on the auction module
         // The module will determine if the bid is valid - minimum bid size, minimum price, etc
-        // TODO add additional parameters to the bid function? e.g. bidder, referrer, recipient
         AuctionModule module = _getModuleForId(params_.lotId);
-        module.bid(params_.lotId, params_.amount, params_.minAmountOut, params_.auctionData);
+        module.bid(
+            params_.recipient,
+            params_.referrer,
+            params_.lotId,
+            params_.amount,
+            params_.minAmountOut,
+            params_.auctionData,
+            bytes("")
+        );
     }
 
     function settle(uint256 id_) external override returns (uint256[] memory amountsOut) {

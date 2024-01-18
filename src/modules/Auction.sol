@@ -81,10 +81,13 @@ abstract contract Auction {
 
     // On-chain auction variant
     function bid(
+        address recipient_,
+        address referrer_,
         uint256 id_,
         uint256 amount_,
         uint256 minAmountOut_,
-        bytes calldata auctionData_
+        bytes calldata auctionData_,
+        bytes calldata approval_
     ) external virtual;
 
     function settle(uint256 id_) external virtual returns (uint256[] memory amountsOut);
