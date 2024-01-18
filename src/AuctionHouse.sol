@@ -48,6 +48,19 @@ abstract contract Router is FeeManager {
         bytes[] allowlistProofs; // optional, allowlist proofs
     }
 
+    /// @notice     Parameters used by the settle function for on-chain bid storage and external settlement
+    ///
+    /// @param      bidIds              IDs of bids to settle
+    /// @param      amountsIn           Actual amounts in for the corresponding bids
+    /// @param      amountsOut          Actual amounts out for the corresponding bids
+    /// @param      validityProof       Optional, provide proof of settlement validity to be verified by module
+    struct LocalStorageExternalSettlement {
+        uint256[] bidIds;
+        uint256[] amountsIn;
+        uint256[] amountsOut;
+        bytes validityProof;
+    }
+
     /// @notice     Parameters used by the purchase function
     /// @dev        This reduces the number of variables in scope for the purchase function
     ///
@@ -150,13 +163,19 @@ abstract contract Router is FeeManager {
     /// @param      params_         Bid parameters
     function bid(BidParams memory params_) external virtual;
 
-    // TODO is a separate bid function needed to support SBA?
-
+    // On-chain bid storage, local settlement
     function settle(uint256 id_) external virtual returns (uint256[] memory amountsOut);
 
-    // Off-chain auction variant
+    // On-chain bid storage, external settlement
+    function settle(
+        uint256 id_,
+        LocalStorageExternalSettlement memory settlement_
+    ) external virtual;
+
+    // Off-chain bid storage, local settlement
     function settle(uint256 id_, LocalSettlement memory settlement_) external virtual;
 
+    // Off-chain bid storage, external settlement
     function settle(uint256 id_, ExternalSettlement memory settlement_) external virtual;
 
     // TODO bid refunds
@@ -389,8 +408,17 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
         // TODO
     }
 
+    function settle(
+        uint256 id_,
+        LocalStorageExternalSettlement memory settlement_
+    ) external virtual override {
+        // TODO
+    }
+
     // External submission and local evaluation
-    function settle(uint256 id_, LocalSettlement memory settlement_) external override {}
+    function settle(uint256 id_, LocalSettlement memory settlement_) external override {
+        // TODO
+    }
 
     // External submission and evaluation
     function settle(uint256 id_, ExternalSettlement memory settlement_) external override {
