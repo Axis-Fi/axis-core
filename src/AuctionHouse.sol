@@ -204,8 +204,6 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
 
     error AmountLessThanMinimum();
 
-    error NotAuthorized();
-
     error UnsupportedToken(address token_);
 
     error InvalidHook();
@@ -323,7 +321,7 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
 
         // Check if the purchaser is on the allowlist
         if (!_isAllowed(routing.allowlist, params_.lotId, msg.sender, params_.allowlistProof)) {
-            revert NotAuthorized();
+            revert InvalidBidder(msg.sender);
         }
 
         uint256 totalFees = _allocateFees(params_.referrer, routing.quoteToken, params_.amount);
@@ -376,7 +374,7 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
 
         // Determine if the bidder is authorized to bid
         if (!_isAllowed(routing.allowlist, params_.lotId, msg.sender, params_.allowlistProof)) {
-            revert NotAuthorized();
+            revert InvalidBidder(msg.sender);
         }
 
         // Transfer the quote token from the bidder
@@ -443,12 +441,15 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
         uint256 totalAmountOut;
         for (uint256 i; i < len; i++) {
             // If there is an allowlist, validate that the winners are on the allowlist
-            if (address(routing.allowlist) != address(0)) {
-                if (
-                    !routing.allowlist.isAllowed(
-                        settlement_.bids[i].bidder, settlement_.allowlistProofs[i]
-                    )
-                ) revert InvalidBidder(settlement_.bids[i].bidder);
+            if (
+                !_isAllowed(
+                    routing.allowlist,
+                    id_,
+                    settlement_.bids[i].bidder,
+                    settlement_.allowlistProofs[i]
+                )
+            ) {
+                revert InvalidBidder(settlement_.bids[i].bidder);
             }
 
             // Check that the amounts out are at least the minimum specified by the bidder

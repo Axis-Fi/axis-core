@@ -355,7 +355,7 @@ contract PurchaseTest is Test, Permit2User {
 
     function test_givenCallerNotOnAllowlist() external givenAuctionHasAllowlist {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(AuctionHouse.NotAuthorized.selector);
+        bytes memory err = abi.encodeWithSelector(AuctionHouse.InvalidBidder.selector, alice);
         vm.expectRevert(err);
 
         // Purchase
