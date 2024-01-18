@@ -47,20 +47,18 @@ abstract contract Router is FeeManager {
         bytes[] allowlistProofs; // optional, allowlist proofs
     }
 
-    // ========== STRUCTS ========== //
-
     /// @notice     Parameters used by the purchase function
     /// @dev        This reduces the number of variables in scope for the purchase function
     ///
     /// @param      recipient           Address to receive payout
     /// @param      referrer            Address of referrer
-    /// @param      approvalDeadline    Deadline for approval signature
+    /// @param      approvalDeadline    Deadline for Permit2 approval signature
     /// @param      lotId               Lot ID
     /// @param      amount              Amount of quoteToken to purchase with (in native decimals)
     /// @param      minAmountOut        Minimum amount of baseToken to receive
-    /// @param      approvalNonce       Nonce for permit approval signature
+    /// @param      approvalNonce       Nonce for permit Permit2 approval signature
     /// @param      auctionData         Custom data used by the auction module
-    /// @param      approvalSignature   Permit approval signature for the quoteToken
+    /// @param      approvalSignature   Permit2 approval signature for the quoteToken
     /// @param      allowlistProof      Proof of allowlist inclusion
     struct PurchaseParams {
         address recipient;
@@ -107,7 +105,7 @@ abstract contract Router is FeeManager {
 
     // ========== ATOMIC AUCTIONS ========== //
 
-    /// @notice     Purchase a lot from an auction
+    /// @notice     Purchase a lot from an atomic auction
     /// @notice     Permit2 is utilised to simplify token transfers
     ///
     /// @param      params_         Purchase parameters
