@@ -49,7 +49,7 @@ contract MockDerivativeModule is DerivativeModule {
     function deploy(
         bytes memory params_,
         bool wrapped_
-    ) external virtual override onlyParent returns (uint256, address) {
+    ) external virtual override returns (uint256, address) {
         uint256 tokenId = tokenCount;
         address wrappedAddress;
 

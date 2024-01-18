@@ -286,8 +286,7 @@ contract SendPayoutTest is Test, Permit2User {
         // Deploy a new derivative token
         MockDerivativeModule.DeployParams memory deployParams =
             MockDerivativeModule.DeployParams({collateralToken: address(payoutToken)});
-        (uint256 tokenId,) =
-            auctionHouse.deploy(mockDerivativeModule.VEECODE(), abi.encode(deployParams), false);
+        (uint256 tokenId,) = mockDerivativeModule.deploy(abi.encode(deployParams), false);
 
         // Update parameters
         derivativeReference = mockDerivativeModule.VEECODE();
@@ -304,7 +303,7 @@ contract SendPayoutTest is Test, Permit2User {
         MockDerivativeModule.DeployParams memory deployParams =
             MockDerivativeModule.DeployParams({collateralToken: address(payoutToken)});
         (uint256 tokenId_, address wrappedToken_) =
-            auctionHouse.deploy(mockDerivativeModule.VEECODE(), abi.encode(deployParams), true);
+            mockDerivativeModule.deploy(abi.encode(deployParams), true);
 
         // Update parameters
         wrappedDerivative = ERC20(wrappedToken_);

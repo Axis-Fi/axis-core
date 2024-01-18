@@ -549,8 +549,7 @@ contract PurchaseTest is Test, Permit2User {
         // Deploy a new derivative token
         MockDerivativeModule.DeployParams memory deployParams =
             MockDerivativeModule.DeployParams({collateralToken: address(baseToken)});
-        (uint256 tokenId,) =
-            auctionHouse.deploy(mockDerivativeModule.VEECODE(), abi.encode(deployParams), false);
+        (uint256 tokenId,) = mockDerivativeModule.deploy(abi.encode(deployParams), false);
 
         // Set up a new auction with a derivative
         derivativeTokenId = tokenId;
