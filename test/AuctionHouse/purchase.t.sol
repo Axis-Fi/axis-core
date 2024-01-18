@@ -547,14 +547,16 @@ contract PurchaseTest is Test, Permit2User {
         auctionHouse.installModule(mockDerivativeModule);
 
         // Deploy a new derivative token
+        MockDerivativeModule.DeployParams memory deployParams =
+            MockDerivativeModule.DeployParams({collateralToken: address(baseToken)});
         (uint256 tokenId,) =
-            auctionHouse.deploy(mockDerivativeModule.VEECODE(), abi.encode(""), false);
+            auctionHouse.deploy(mockDerivativeModule.VEECODE(), abi.encode(deployParams), false);
 
         // Set up a new auction with a derivative
         derivativeTokenId = tokenId;
         routingParams.derivativeType = toKeycode("DERV");
         routingParams.derivativeParams =
-            abi.encode(MockDerivativeModule.Params({tokenId: derivativeTokenId, multiplier: 0}));
+            abi.encode(MockDerivativeModule.MintParams({tokenId: derivativeTokenId, multiplier: 0}));
 
         vm.prank(auctionOwner);
         lotId = auctionHouse.auction(routingParams, auctionParams);

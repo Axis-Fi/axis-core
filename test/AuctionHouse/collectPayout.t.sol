@@ -340,11 +340,19 @@ contract CollectPayoutTest is Test, Permit2User {
         auctionHouse.collectPayout(lotId, paymentAmount, payoutAmount, routingParams);
 
         // Expect payout token balance to be transferred to the derivative module
-        assertEq(payoutToken.balanceOf(OWNER), 0);
-        assertEq(payoutToken.balanceOf(USER), 0);
-        assertEq(payoutToken.balanceOf(address(auctionHouse)), 0);
-        assertEq(payoutToken.balanceOf(address(hook)), 0);
-        assertEq(payoutToken.balanceOf(address(mockDerivativeModule)), payoutAmount);
+        assertEq(payoutToken.balanceOf(OWNER), 0, "payout token: owner balance mismatch");
+        assertEq(payoutToken.balanceOf(USER), 0, "payout token: user balance mismatch");
+        assertEq(
+            payoutToken.balanceOf(address(auctionHouse)),
+            payoutAmount,
+            "payout token: auctionHouse balance mismatch"
+        );
+        assertEq(payoutToken.balanceOf(address(hook)), 0, "payout token: hook balance mismatch");
+        assertEq(
+            payoutToken.balanceOf(address(mockDerivativeModule)),
+            0,
+            "payout token: derivativeModule balance mismatch"
+        );
 
         // Expect the hook to be called prior to any transfer of the payout token
         assertEq(hook.midHookCalled(), true);
@@ -420,11 +428,19 @@ contract CollectPayoutTest is Test, Permit2User {
         vm.prank(USER);
         auctionHouse.collectPayout(lotId, paymentAmount, payoutAmount, routingParams);
 
-        // Expect payout token balance to be transferred to the derivative module
-        assertEq(payoutToken.balanceOf(OWNER), 0);
-        assertEq(payoutToken.balanceOf(USER), 0);
-        assertEq(payoutToken.balanceOf(address(auctionHouse)), 0);
-        assertEq(payoutToken.balanceOf(address(hook)), 0);
-        assertEq(payoutToken.balanceOf(address(mockDerivativeModule)), payoutAmount);
+        // Expect payout token balance to be transferred to the auction house
+        assertEq(payoutToken.balanceOf(OWNER), 0, "payout token: owner balance mismatch");
+        assertEq(payoutToken.balanceOf(USER), 0, "payout token: user balance mismatch");
+        assertEq(
+            payoutToken.balanceOf(address(auctionHouse)),
+            payoutAmount,
+            "payout token: auctionHouse balance mismatch"
+        );
+        assertEq(payoutToken.balanceOf(address(hook)), 0, "payout token: hook balance mismatch");
+        assertEq(
+            payoutToken.balanceOf(address(mockDerivativeModule)),
+            0,
+            "payout token: derivativeModule balance mismatch"
+        );
     }
 }

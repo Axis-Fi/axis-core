@@ -2,6 +2,8 @@
 pragma solidity 0.8.19;
 
 import {ClonesWithImmutableArgs} from "src/lib/clones/ClonesWithImmutableArgs.sol";
+import {SafeTransferLib} from "solmate/utils/SafeTransferLib.sol";
+import {ERC20} from "solmate/tokens/ERC20.sol";
 
 // Modules
 import {Module, Veecode, toKeycode, wrapVeecode} from "src/modules/Modules.sol";
@@ -14,6 +16,7 @@ import {MockWrappedDerivative} from "test/lib/mocks/MockWrappedDerivative.sol";
 
 contract MockDerivativeModule is DerivativeModule {
     using ClonesWithImmutableArgs for address;
+    using SafeTransferLib for ERC20;
 
     bool internal validateFails;
     MockERC6909 public derivativeToken;
@@ -22,7 +25,11 @@ contract MockDerivativeModule is DerivativeModule {
 
     error InvalidDerivativeParams();
 
-    struct Params {
+    struct DeployParams {
+        address collateralToken;
+    }
+
+    struct MintParams {
         uint256 tokenId;
         uint256 multiplier;
     }
@@ -46,6 +53,13 @@ contract MockDerivativeModule is DerivativeModule {
         uint256 tokenId = tokenCount;
         address wrappedAddress;
 
+        // Check length
+        if (params_.length != 32) revert InvalidDerivativeParams();
+
+        // Decode params
+        DeployParams memory decodedParams = abi.decode(params_, (DeployParams));
+        if (decodedParams.collateralToken == address(0)) revert InvalidDerivativeParams();
+
         if (wrapped_) {
             // If there is no wrapped implementation, abort
             if (address(wrappedImplementation) == address(0)) revert("");
@@ -63,7 +77,7 @@ contract MockDerivativeModule is DerivativeModule {
             decimals: 18,
             name: "Mock Derivative",
             symbol: "MDER",
-            data: ""
+            data: params_ // Should collateralToken be present on every set of metadata?
         });
 
         // Store metadata
@@ -82,7 +96,9 @@ contract MockDerivativeModule is DerivativeModule {
     ) external virtual override returns (uint256, address, uint256) {
         if (params_.length != 64) revert("");
 
-        Params memory params = abi.decode(params_, (Params));
+        // TODO this should be deploying a new derivative token if it doesn't exist
+
+        MintParams memory params = abi.decode(params_, (MintParams));
 
         // Check that tokenId exists
         Token storage token = tokenMetadata[params.tokenId];
@@ -90,6 +106,12 @@ contract MockDerivativeModule is DerivativeModule {
 
         // Check that the wrapped status is correct
         if (token.wrapped != address(0) && !wrapped_) revert("");
+
+        // Decode extra token data
+        DeployParams memory decodedParams = abi.decode(token.data, (DeployParams));
+
+        // Transfer collateral token to this contract
+        ERC20(decodedParams.collateralToken).safeTransferFrom(msg.sender, address(this), amount_);
 
         uint256 outputAmount = params.multiplier == 0 ? amount_ : amount_ * params.multiplier;
 

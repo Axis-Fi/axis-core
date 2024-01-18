@@ -93,7 +93,7 @@ contract SendPayoutTest is Test, Permit2User {
         _;
     }
 
-    modifier givenRouterHasBalance(uint256 amount_) {
+    modifier givenAuctionHouseHasBalance(uint256 amount_) {
         payoutToken.mint(address(auctionHouse), amount_);
         _;
     }
@@ -135,7 +135,7 @@ contract SendPayoutTest is Test, Permit2User {
         public
         givenAuctionHasHook
         givenPostHookReverts
-        givenRouterHasBalance(payoutAmount)
+        givenAuctionHouseHasBalance(payoutAmount)
     {
         // Expect revert
         vm.expectRevert("revert");
@@ -148,7 +148,7 @@ contract SendPayoutTest is Test, Permit2User {
     function test_hooks_feeOnTransfer_reverts()
         public
         givenAuctionHasHook
-        givenRouterHasBalance(payoutAmount)
+        givenAuctionHouseHasBalance(payoutAmount)
         givenTokenTakesFeeOnTransfer
     {
         // Expect revert
@@ -161,7 +161,16 @@ contract SendPayoutTest is Test, Permit2User {
         auctionHouse.sendPayout(lotId, RECIPIENT, payoutAmount, routingParams, auctionOutput);
     }
 
-    function test_hooks() public givenAuctionHasHook givenRouterHasBalance(payoutAmount) {
+    function test_hooks_insufficientBalance_reverts() public givenAuctionHasHook {
+        // Expect revert
+        vm.expectRevert(bytes("TRANSFER_FAILED"));
+
+        // Call
+        vm.prank(USER);
+        auctionHouse.sendPayout(lotId, RECIPIENT, payoutAmount, routingParams, auctionOutput);
+    }
+
+    function test_hooks() public givenAuctionHasHook givenAuctionHouseHasBalance(payoutAmount) {
         // Call
         vm.prank(USER);
         auctionHouse.sendPayout(lotId, RECIPIENT, payoutAmount, routingParams, auctionOutput);
@@ -213,7 +222,7 @@ contract SendPayoutTest is Test, Permit2User {
 
     function test_noHooks_feeOnTransfer_reverts()
         public
-        givenRouterHasBalance(payoutAmount)
+        givenAuctionHouseHasBalance(payoutAmount)
         givenTokenTakesFeeOnTransfer
     {
         // Expect revert
@@ -226,7 +235,16 @@ contract SendPayoutTest is Test, Permit2User {
         auctionHouse.sendPayout(lotId, RECIPIENT, payoutAmount, routingParams, auctionOutput);
     }
 
-    function test_noHooks() public givenRouterHasBalance(payoutAmount) {
+    function test_noHooks_insufficientBalance_reverts() public {
+        // Expect revert
+        vm.expectRevert(bytes("TRANSFER_FAILED"));
+
+        // Call
+        vm.prank(USER);
+        auctionHouse.sendPayout(lotId, RECIPIENT, payoutAmount, routingParams, auctionOutput);
+    }
+
+    function test_noHooks() public givenAuctionHouseHasBalance(payoutAmount) {
         // Call
         vm.prank(USER);
         auctionHouse.sendPayout(lotId, RECIPIENT, payoutAmount, routingParams, auctionOutput);
@@ -266,14 +284,16 @@ contract SendPayoutTest is Test, Permit2User {
         auctionHouse.installModule(mockDerivativeModule);
 
         // Deploy a new derivative token
+        MockDerivativeModule.DeployParams memory deployParams =
+            MockDerivativeModule.DeployParams({collateralToken: address(payoutToken)});
         (uint256 tokenId,) =
-            auctionHouse.deploy(mockDerivativeModule.VEECODE(), abi.encode(""), false);
+            auctionHouse.deploy(mockDerivativeModule.VEECODE(), abi.encode(deployParams), false);
 
         // Update parameters
         derivativeReference = mockDerivativeModule.VEECODE();
         derivativeTokenId = tokenId;
         derivativeParams =
-            abi.encode(MockDerivativeModule.Params({tokenId: derivativeTokenId, multiplier: 0}));
+            abi.encode(MockDerivativeModule.MintParams({tokenId: derivativeTokenId, multiplier: 0}));
         routingParams.derivativeReference = derivativeReference;
         routingParams.derivativeParams = derivativeParams;
         _;
@@ -281,14 +301,16 @@ contract SendPayoutTest is Test, Permit2User {
 
     modifier givenDerivativeIsWrapped() {
         // Deploy a new wrapped derivative token
+        MockDerivativeModule.DeployParams memory deployParams =
+            MockDerivativeModule.DeployParams({collateralToken: address(payoutToken)});
         (uint256 tokenId_, address wrappedToken_) =
-            auctionHouse.deploy(mockDerivativeModule.VEECODE(), abi.encode(""), true);
+            auctionHouse.deploy(mockDerivativeModule.VEECODE(), abi.encode(deployParams), true);
 
         // Update parameters
         wrappedDerivative = ERC20(wrappedToken_);
         derivativeTokenId = tokenId_;
         derivativeParams =
-            abi.encode(MockDerivativeModule.Params({tokenId: derivativeTokenId, multiplier: 0}));
+            abi.encode(MockDerivativeModule.MintParams({tokenId: derivativeTokenId, multiplier: 0}));
         routingParams.derivativeParams = derivativeParams;
 
         wrapDerivative = true;
@@ -317,6 +339,7 @@ contract SendPayoutTest is Test, Permit2User {
 
     function test_derivative_invalidParams()
         public
+        givenAuctionHouseHasBalance(payoutAmount)
         givenAuctionHasDerivative
         givenDerivativeParamsAreInvalid
     {
@@ -328,7 +351,20 @@ contract SendPayoutTest is Test, Permit2User {
         auctionHouse.sendPayout(lotId, RECIPIENT, payoutAmount, routingParams, auctionOutput);
     }
 
-    function test_derivative() public givenAuctionHasDerivative {
+    function test_derivative_insufficientBalance_reverts() public givenAuctionHasDerivative {
+        // Expect revert
+        vm.expectRevert(bytes("TRANSFER_FROM_FAILED"));
+
+        // Call
+        vm.prank(USER);
+        auctionHouse.sendPayout(lotId, RECIPIENT, payoutAmount, routingParams, auctionOutput);
+    }
+
+    function test_derivative()
+        public
+        givenAuctionHouseHasBalance(payoutAmount)
+        givenAuctionHasDerivative
+    {
         // Call
         vm.prank(USER);
         auctionHouse.sendPayout(lotId, RECIPIENT, payoutAmount, routingParams, auctionOutput);
@@ -337,121 +373,151 @@ contract SendPayoutTest is Test, Permit2User {
         assertEq(
             mockDerivativeModule.derivativeToken().balanceOf(USER, derivativeTokenId),
             0,
-            "user balance mismatch"
+            "derivative token: user balance mismatch"
         );
         assertEq(
             mockDerivativeModule.derivativeToken().balanceOf(OWNER, derivativeTokenId),
             0,
-            "owner balance mismatch"
+            "derivative token: owner balance mismatch"
         );
         assertEq(
             mockDerivativeModule.derivativeToken().balanceOf(
                 address(auctionHouse), derivativeTokenId
             ),
             0,
-            "auctionHouse balance mismatch"
+            "derivative token: auctionHouse balance mismatch"
         );
         assertEq(
             mockDerivativeModule.derivativeToken().balanceOf(address(hook), derivativeTokenId),
             0,
-            "hook balance mismatch"
+            "derivative token: hook balance mismatch"
         );
         assertEq(
             mockDerivativeModule.derivativeToken().balanceOf(RECIPIENT, derivativeTokenId),
             payoutAmount,
-            "recipient balance mismatch"
+            "derivative token: recipient balance mismatch"
         );
         assertEq(
             mockDerivativeModule.derivativeToken().balanceOf(
                 address(mockDerivativeModule), derivativeTokenId
             ),
             0,
-            "derivative module balance mismatch"
+            "derivative token: derivative module balance mismatch"
         );
 
         // Check balances of payout token
-        assertEq(payoutToken.balanceOf(USER), 0, "user balance mismatch");
-        assertEq(payoutToken.balanceOf(OWNER), 0, "owner balance mismatch");
-        assertEq(payoutToken.balanceOf(address(auctionHouse)), 0, "auctionHouse balance mismatch");
-        assertEq(payoutToken.balanceOf(address(hook)), 0, "hook balance mismatch");
-        assertEq(payoutToken.balanceOf(RECIPIENT), 0, "recipient balance mismatch");
+        assertEq(payoutToken.balanceOf(USER), 0, "payout token: user balance mismatch");
+        assertEq(payoutToken.balanceOf(OWNER), 0, "payout token: owner balance mismatch");
+        assertEq(
+            payoutToken.balanceOf(address(auctionHouse)),
+            0,
+            "payout token: auctionHouse balance mismatch"
+        );
+        assertEq(payoutToken.balanceOf(address(hook)), 0, "payout token: hook balance mismatch");
+        assertEq(payoutToken.balanceOf(RECIPIENT), 0, "payout token: recipient balance mismatch");
         assertEq(
             payoutToken.balanceOf(address(mockDerivativeModule)),
-            0, // This would normally be non-zero, but we didn't transfer the collateral to it
-            "derivative module balance mismatch"
+            payoutAmount,
+            "payout token: derivative module balance mismatch"
         );
     }
 
-    function test_derivative_wrapped() public givenAuctionHasDerivative givenDerivativeIsWrapped {
+    function test_derivative_wrapped()
+        public
+        givenAuctionHouseHasBalance(payoutAmount)
+        givenAuctionHasDerivative
+        givenDerivativeIsWrapped
+    {
         // Call
         vm.prank(USER);
         auctionHouse.sendPayout(lotId, RECIPIENT, payoutAmount, routingParams, auctionOutput);
 
         // Check balances of the wrapped derivative token
-        assertEq(wrappedDerivative.balanceOf(USER), 0, "user balance mismatch");
-        assertEq(wrappedDerivative.balanceOf(OWNER), 0, "owner balance mismatch");
         assertEq(
-            wrappedDerivative.balanceOf(address(auctionHouse)), 0, "auctionHouse balance mismatch"
+            wrappedDerivative.balanceOf(USER), 0, "wrapped derivative token: user balance mismatch"
         );
-        assertEq(wrappedDerivative.balanceOf(address(hook)), 0, "hook balance mismatch");
-        assertEq(wrappedDerivative.balanceOf(RECIPIENT), payoutAmount, "recipient balance mismatch");
+        assertEq(
+            wrappedDerivative.balanceOf(OWNER),
+            0,
+            "wrapped derivative token: owner balance mismatch"
+        );
+        assertEq(
+            wrappedDerivative.balanceOf(address(auctionHouse)),
+            0,
+            "wrapped derivative token: auctionHouse balance mismatch"
+        );
+        assertEq(
+            wrappedDerivative.balanceOf(address(hook)),
+            0,
+            "wrapped derivative token: hook balance mismatch"
+        );
+        assertEq(
+            wrappedDerivative.balanceOf(RECIPIENT),
+            payoutAmount,
+            "wrapped derivative token: recipient balance mismatch"
+        );
         assertEq(
             wrappedDerivative.balanceOf(address(mockDerivativeModule)),
             0,
-            "derivative module balance mismatch"
+            "wrapped derivative token: derivative module balance mismatch"
         );
 
         // Check balances of the derivative token
         assertEq(
             mockDerivativeModule.derivativeToken().balanceOf(USER, derivativeTokenId),
             0,
-            "user balance mismatch"
+            "derivative token: user balance mismatch"
         );
         assertEq(
             mockDerivativeModule.derivativeToken().balanceOf(OWNER, derivativeTokenId),
             0,
-            "owner balance mismatch"
+            "derivative token: owner balance mismatch"
         );
         assertEq(
             mockDerivativeModule.derivativeToken().balanceOf(
                 address(auctionHouse), derivativeTokenId
             ),
             0,
-            "auctionHouse balance mismatch"
+            "derivative token: auctionHouse balance mismatch"
         );
         assertEq(
             mockDerivativeModule.derivativeToken().balanceOf(address(hook), derivativeTokenId),
             0,
-            "hook balance mismatch"
+            "derivative token: hook balance mismatch"
         );
         assertEq(
             mockDerivativeModule.derivativeToken().balanceOf(RECIPIENT, derivativeTokenId),
             0, // No raw derivative
-            "recipient balance mismatch"
+            "derivative token: recipient balance mismatch"
         );
         assertEq(
             mockDerivativeModule.derivativeToken().balanceOf(
                 address(mockDerivativeModule), derivativeTokenId
             ),
             0,
-            "derivative module balance mismatch"
+            "derivative token: derivative module balance mismatch"
         );
 
         // Check balances of payout token
-        assertEq(payoutToken.balanceOf(USER), 0, "user balance mismatch");
-        assertEq(payoutToken.balanceOf(OWNER), 0, "owner balance mismatch");
-        assertEq(payoutToken.balanceOf(address(auctionHouse)), 0, "auctionHouse balance mismatch");
-        assertEq(payoutToken.balanceOf(address(hook)), 0, "hook balance mismatch");
-        assertEq(payoutToken.balanceOf(RECIPIENT), 0, "recipient balance mismatch");
+        assertEq(payoutToken.balanceOf(USER), 0, "payout token: user balance mismatch");
+        assertEq(payoutToken.balanceOf(OWNER), 0, "payout token: owner balance mismatch");
+        assertEq(
+            payoutToken.balanceOf(address(auctionHouse)),
+            0,
+            "payout token: auctionHouse balance mismatch"
+        );
+        assertEq(payoutToken.balanceOf(address(hook)), 0, "payout token: hook balance mismatch");
+        assertEq(payoutToken.balanceOf(RECIPIENT), 0, "payout token: recipient balance mismatch");
         assertEq(
             payoutToken.balanceOf(address(mockDerivativeModule)),
-            0, // This would normally be non-zero, but we didn't transfer the collateral to it
-            "derivative module balance mismatch"
+            payoutAmount,
+            "payout token: derivative module balance mismatch"
         );
     }
 
     function test_derivative_wrapped_invalidParams()
         public
+        givenAuctionHouseHasBalance(payoutAmount)
         givenAuctionHasDerivative
         givenDerivativeIsWrapped
         givenDerivativeParamsAreInvalid
@@ -466,6 +532,7 @@ contract SendPayoutTest is Test, Permit2User {
 
     function test_derivative_condenser_invalidParams_reverts()
         public
+        givenAuctionHouseHasBalance(payoutAmount)
         givenAuctionHasDerivative
         givenDerivativeHasCondenser
         givenDerivativeParamsAreInvalid
@@ -480,6 +547,7 @@ contract SendPayoutTest is Test, Permit2User {
 
     function test_derivative_condenser()
         public
+        givenAuctionHouseHasBalance(payoutAmount)
         givenAuctionHasDerivative
         givenDerivativeHasCondenser
     {
@@ -531,7 +599,7 @@ contract SendPayoutTest is Test, Permit2User {
         assertEq(payoutToken.balanceOf(RECIPIENT), 0, "recipient balance mismatch");
         assertEq(
             payoutToken.balanceOf(address(mockDerivativeModule)),
-            0, // This would normally be non-zero, but we didn't transfer the collateral to it
+            payoutAmount,
             "derivative module balance mismatch"
         );
     }
