@@ -26,20 +26,25 @@ import "src/modules/Auction.sol";
 abstract contract BatchAuction {
     error BatchAuction_NotConcluded();
 
-    
-
     // ========== AUCTION INFORMATION ========== //
 
     // TODO add batch auction specific getters
 }
 
 abstract contract OnChainBatchAuctionModule is AuctionModule, BatchAuction {
-
     // ========== STATE VARIABLES ========== //
 
     mapping(uint256 lotId => Auction.Bid[] bids) public lotBids;
 
-    function bid(address recipient_, address referrer_, uint256 id_, uint256 amount_, uint256 minAmountOut_, bytes calldata auctionData_, bytes calldata approval_) external override onlyParent {
+    function bid(
+        address recipient_,
+        address referrer_,
+        uint256 id_,
+        uint256 amount_,
+        uint256 minAmountOut_,
+        bytes calldata auctionData_,
+        bytes calldata approval_
+    ) external onlyParent {
         // TODO
         // Validate inputs
 
@@ -50,7 +55,12 @@ abstract contract OnChainBatchAuctionModule is AuctionModule, BatchAuction {
         // Store bid data
     }
 
-    function settle(uint256 id_) external override onlyParent returns (uint256[] memory amountsOut) {
+    function settle(uint256 id_)
+        external
+        override
+        onlyParent
+        returns (uint256[] memory amountsOut)
+    {
         // TODO
         // Validate inputs
 
@@ -59,25 +69,43 @@ abstract contract OnChainBatchAuctionModule is AuctionModule, BatchAuction {
         // Store settle data
     }
 
-    function settle(uint256 id_, Auction.Bid[] memory bids_) external override onlyParent returns (uint256[] memory amountsOut) {
+    function settle(
+        uint256 id_,
+        Auction.Bid[] memory bids_
+    ) external onlyParent returns (uint256[] memory amountsOut) {
         revert Auction_NotImplemented();
     }
 }
 
 abstract contract OffChainBatchAuctionModule is AuctionModule, BatchAuction {
-
     // ========== AUCTION EXECUTION ========== //
 
-    function bid(address recipient_, address referrer_, uint256 id_, uint256 amount_, uint256 minAmountOut_, bytes calldata auctionData_, bytes calldata approval_) external override onlyParent {
+    function bid(
+        address recipient_,
+        address referrer_,
+        uint256 id_,
+        uint256 amount_,
+        uint256 minAmountOut_,
+        bytes calldata auctionData_,
+        bytes calldata approval_
+    ) external onlyParent {
         revert Auction_NotImplemented();
     }
 
-    function settle(uint256 id_) external override onlyParent returns (uint256[] memory amountsOut) {
+    function settle(uint256 id_)
+        external
+        override
+        onlyParent
+        returns (uint256[] memory amountsOut)
+    {
         revert Auction_NotImplemented();
     }
 
     /// @notice Settle a batch auction with the provided bids
-    function settle(uint256 id_, Bid[] memory bids_) external override onlyParent returns (uint256[] memory amountsOut) {
+    function settle(
+        uint256 id_,
+        Bid[] memory bids_
+    ) external onlyParent returns (uint256[] memory amountsOut) {
         Lot storage lot = lotData[id_];
 
         // Must be past the conclusion time to settle
@@ -102,19 +130,33 @@ abstract contract OffChainBatchAuctionModule is AuctionModule, BatchAuction {
         amountsOut = _settle(id_, bids_);
     }
 
-    function _settle(uint256 id_, Bid[] memory bids_) internal virtual returns (uint256[] memory amountsOut);
-
+    function _settle(
+        uint256 id_,
+        Bid[] memory bids_
+    ) internal virtual returns (uint256[] memory amountsOut);
 }
 
 abstract contract ExternalBatchAuction is AuctionModule, BatchAuction {
-    function bid(address recipient_, address referrer_, uint256 id_, uint256 amount_, uint256 minAmountOut_, bytes calldata auctionData_, bytes calldata approval_) external override onlyParent {
+    function bid(
+        address recipient_,
+        address referrer_,
+        uint256 id_,
+        uint256 amount_,
+        uint256 minAmountOut_,
+        bytes calldata auctionData_,
+        bytes calldata approval_
+    ) external onlyParent {
         revert Auction_NotImplemented();
     }
 
-    function settle(uint256 id_) external override onlyParent returns (uint256[] memory amountsOut) {
+    function settle(uint256 id_)
+        external
+        override
+        onlyParent
+        returns (uint256[] memory amountsOut)
+    {
         revert Auction_NotImplemented();
     }
 
-    function settle(uint256 id_, )
-
+    // function settle(uint256 id_, )
 }

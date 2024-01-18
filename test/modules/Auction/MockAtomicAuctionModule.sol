@@ -53,7 +53,7 @@ contract MockAtomicAuctionModule is AuctionModule {
         if (payoutData[id_] == 0) {
             payout = amount_;
         } else {
-            payout = payoutData[id_] * amount_ / 1e5;
+            payout = (payoutData[id_] * amount_) / 1e5;
         }
 
         Output memory output = Output({multiplier: 1});
@@ -78,7 +78,7 @@ contract MockAtomicAuctionModule is AuctionModule {
     function settle(
         uint256 id_,
         Bid[] memory bids_
-    ) external virtual override returns (uint256[] memory amountsOut) {}
+    ) external virtual returns (uint256[] memory amountsOut) {}
 
     function payoutFor(
         uint256 id_,
@@ -93,4 +93,13 @@ contract MockAtomicAuctionModule is AuctionModule {
     function maxPayout(uint256 id_) public view virtual override returns (uint256) {}
 
     function maxAmountAccepted(uint256 id_) public view virtual override returns (uint256) {}
+
+    function settle(
+        uint256 id_,
+        Bid[] calldata winningBids_,
+        bytes[] calldata bidSignatures_,
+        uint256[] memory amountsIn_,
+        uint256[] calldata amountsOut_,
+        bytes calldata validityProof_
+    ) external virtual override returns (bytes memory) {}
 }

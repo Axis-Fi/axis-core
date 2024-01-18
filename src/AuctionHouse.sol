@@ -130,7 +130,9 @@ abstract contract Router is FeeManager {
     function settle(uint256 id_) external virtual returns (uint256[] memory amountsOut);
 
     // Off-chain auction variant
-    function settle(uint256 id_, Settlement memory settlement_) external virtual;
+    function settle(uint256 id_, LocalSettlement memory settlement_) external virtual;
+
+    function settle(uint256 id_, ExternalSettlement memory settlement_) external virtual;
 
     // ========== FEE MANAGEMENT ========== //
 
@@ -192,7 +194,7 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
 
         // Update fee balances if non-zero
         if (toReferrer > 0) rewards[referrer_][quoteToken_] += toReferrer;
-        if (toProtocol > 0) rewards[PROTOCOL][quoteToken_] += toProtocol;
+        if (toProtocol > 0) rewards[_PROTOCOL][quoteToken_] += toProtocol;
 
         return toReferrer + toProtocol;
     }
@@ -330,7 +332,7 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
         // TODO
 
         // Validate array lengths all match
-        uint256 len = settlement_.winningBids.length;
+        uint256 len = settlement_.bids.length;
         if (
             len != settlement_.bidSignatures.length || len != settlement_.amountsIn.length
                 || len != settlement_.amountsOut.length || len != settlement_.approvals.length
@@ -347,32 +349,32 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
             if (address(routing.allowlist) != address(0)) {
                 if (
                     !routing.allowlist.isAllowed(
-                        settlement_.winningBids[i].bidder, settlement_.allowlistProofs[i]
+                        settlement_.bids[i].bidder, settlement_.allowlistProofs[i]
                     )
-                ) revert InvalidBidder(settlement_.winningBids[i].bidder);
+                ) revert InvalidBidder(settlement_.bids[i].bidder);
             }
 
             // Check that the amounts out are at least the minimum specified by the bidder
             // If a bid is a partial fill, then it's amountIn will be less than the amount specified by the bidder
             // If so, we need to adjust the minAmountOut proportionally for the slippage check
             // We also verify that the amountIn is not more than the bidder specified
-            uint256 minAmountOut = settlement_.winningBids[i].minAmountOut;
-            if (settlement_.amountsIn[i] > settlement_.winningBids[i].amount) {
+            uint256 minAmountOut = settlement_.bids[i].minAmountOut;
+            if (settlement_.amountsIn[i] > settlement_.bids[i].amount) {
                 revert InvalidParams();
-            } else if (settlement_.amountsIn[i] < settlement_.winningBids[i].amount) {
+            } else if (settlement_.amountsIn[i] < settlement_.bids[i].amount) {
                 minAmountOut =
-                    (minAmountOut * settlement_.amountsIn[i]) / settlement_.winningBids[i].amount; // TODO need to think about scaling and rounding here
+                    (minAmountOut * settlement_.amountsIn[i]) / settlement_.bids[i].amount; // TODO need to think about scaling and rounding here
             }
             if (settlement_.amountsOut[i] < minAmountOut) revert AmountLessThanMinimum();
 
             // Calculate fees from bid amount
             (uint256 toReferrer, uint256 toProtocol) =
-                calculateFees(settlement_.winningBids[i].referrer, settlement_.amountsIn[i]);
+                calculateFees(settlement_.bids[i].referrer, settlement_.amountsIn[i]);
             amountsInLessFees[i] = settlement_.amountsIn[i] - toReferrer - toProtocol;
 
             // Update referrer fee balances if non-zero and increment the total protocol fee
             if (toReferrer > 0) {
-                rewards[settlement_.winningBids[i].referrer][routing.quoteToken] += toReferrer;
+                rewards[settlement_.bids[i].referrer][routing.quoteToken] += toReferrer;
             }
             totalProtocolFee += toProtocol;
 
@@ -382,7 +384,7 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
         }
 
         // Update protocol fee if not zero
-        if (totalProtocolFee > 0) rewards[PROTOCOL][routing.quoteToken] += totalProtocolFee;
+        if (totalProtocolFee > 0) rewards[_PROTOCOL][routing.quoteToken] += totalProtocolFee;
 
         // Send auction inputs to auction module to validate settlement
         // We do this because the format of the bids and signatures is specific to the auction module
@@ -396,63 +398,26 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
         // TODO update auction module interface and base function to handle these inputs, and perhaps others
         bytes memory auctionOutput = module.settle(
             id_,
-            settlement_.winningBids,
+            settlement_.bids,
             settlement_.bidSignatures,
             amountsInLessFees,
             settlement_.amountsOut,
             settlement_.validityProof
         );
 
-        // Iterate through bids, handling transfers and payouts
-        // Have to transfer to auction house first since fee is in quote token
-        // Check balance before and after to ensure full amount received, revert if not
-        // Handles edge cases like fee-on-transfer tokens (which are not supported)
-        for (uint256 i; i < len; i++) {
-            // TODO use permit2 approvals if provided
+        // Assumes that payment has already been collected for each bid
 
-            uint256 quoteBalance = routing.quoteToken.balanceOf(address(this));
-            routing.quoteToken.safeTransferFrom(msg.sender, address(this), settlement_.amountsIn[i]);
-            if (
-                routing.quoteToken.balanceOf(address(this))
-                    < quoteBalance + settlement_.amountsIn[i]
-            ) {
-                revert UnsupportedToken(address(routing.quoteToken));
-            }
-        }
+        // Send payment in bulk to auction owner
+        _sendPayment(routing.owner, totalAmountInLessFees, routing.quoteToken, routing.hooks);
 
-        // If hooks address supplied, transfer tokens from auction house to hooks contract,
-        // then execute the hook function, and ensure proper amount of tokens transferred in.
-        if (address(routing.hooks) != address(0)) {
-            // Send quote token to callback (transferred in first to allow use during callback)
-            routing.quoteToken.safeTransfer(address(routing.hooks), totalAmountInLessFees);
-
-            // Call the callback function to receive payout tokens for payout
-            uint256 baseBalance = routing.baseToken.balanceOf(address(this));
-            routing.hooks.mid(id_, totalAmountInLessFees, totalAmountOut);
-
-            // Check to ensure that the callback sent the requested amount of payout tokens back to the teller
-            if (routing.baseToken.balanceOf(address(this)) < (baseBalance + totalAmountOut)) {
-                revert InvalidHook();
-            }
-        } else {
-            // If no hook is provided, transfer tokens from auction owner to this contract
-            // for payout.
-            // Check balance before and after to ensure full amount received, revert if not
-            // Handles edge cases like fee-on-transfer tokens (which are not supported)
-            uint256 baseBalance = routing.baseToken.balanceOf(address(this));
-            routing.baseToken.safeTransferFrom(routing.owner, address(this), totalAmountOut);
-            if (routing.baseToken.balanceOf(address(this)) < (baseBalance + totalAmountOut)) {
-                revert UnsupportedToken(address(routing.baseToken));
-            }
-
-            routing.quoteToken.safeTransfer(routing.owner, totalAmountInLessFees);
-        }
+        // Collect payout in bulk from the auction owner
+        _collectPayout(id_, totalAmountInLessFees, totalAmountOut, routing);
 
         // Handle payouts to bidders
         for (uint256 i; i < len; i++) {
-            // Handle payout to user, including creation of derivative tokens
-            _handlePayout(
-                routing, settlement_.winningBids[i].bidder, settlement_.amountsOut[i], auctionOutput
+            // Send payout to each bidder
+            _sendPayout(
+                id_, settlement_.bids[i].bidder, settlement_.amountsOut[i], routing, auctionOutput
             );
         }
     }
