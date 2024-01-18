@@ -17,6 +17,7 @@ import {Auction, AuctionModule} from "src/modules/Auction.sol";
 import {Veecode, fromVeecode, WithModules} from "src/modules/Modules.sol";
 
 import {IHooks} from "src/interfaces/IHooks.sol";
+import {IAllowlist} from "src/interfaces/IAllowlist.sol";
 
 // TODO define purpose
 abstract contract FeeManager {
@@ -73,6 +74,32 @@ abstract contract Router is FeeManager {
         bytes allowlistProof;
     }
 
+    /// @notice     Parameters used by the bid function
+    /// @dev        This reduces the number of variables in scope for the bid function
+    ///
+    /// @param      recipient           Address to receive payout
+    /// @param      referrer            Address of referrer
+    /// @param      approvalDeadline    Deadline for Permit2 approval signature
+    /// @param      lotId               Lot ID
+    /// @param      amount              Amount of quoteToken to purchase with (in native decimals)
+    /// @param      minAmountOut        Minimum amount of baseToken to receive
+    /// @param      approvalNonce       Nonce for Permit2 approval signature
+    /// @param      auctionData         Custom data used by the auction module
+    /// @param      approvalSignature   Permit2 approval signature for the quoteToken
+    /// @param      allowlistProof      Proof of allowlist inclusion
+    struct BidParams {
+        address recipient;
+        address referrer;
+        uint48 approvalDeadline;
+        uint256 lotId;
+        uint256 amount;
+        uint256 minAmountOut;
+        uint256 approvalNonce;
+        bytes auctionData;
+        bytes approvalSignature;
+        bytes allowlistProof;
+    }
+
     // ========== STATE VARIABLES ========== //
 
     /// @notice Fee paid to a front end operator in basis points (3 decimals). Set by the referrer, must be less than or equal to 5% (5e3).
@@ -114,16 +141,16 @@ abstract contract Router is FeeManager {
 
     // ========== BATCH AUCTIONS ========== //
 
-    // On-chain auction variant
-    function bid(
-        address recipient_,
-        address referrer_,
-        uint256 id_,
-        uint256 amount_,
-        uint256 minAmountOut_,
-        bytes calldata auctionData_,
-        bytes calldata approval_
-    ) external virtual;
+    /// @notice     Bid on a lot in a batch auction
+    /// @notice     The implementing function must perform the following:
+    ///             1. Validate the bid
+    ///             2. Store the bid
+    ///             3. Transfer the amount of quote token from the bidder
+    ///
+    /// @param      params_         Bid parameters
+    function bid(BidParams memory params_) external virtual;
+
+    // TODO is a separate bid function needed to support SBA?
 
     function settle(uint256 id_) external virtual returns (uint256[] memory amountsOut);
 
@@ -131,6 +158,8 @@ abstract contract Router is FeeManager {
     function settle(uint256 id_, LocalSettlement memory settlement_) external virtual;
 
     function settle(uint256 id_, ExternalSettlement memory settlement_) external virtual;
+
+    // TODO bid refunds
 
     // ========== FEE MANAGEMENT ========== //
 
@@ -223,6 +252,27 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
         }
     }
 
+    /// @notice     Determines if `caller_` is allowed to purchase/bid on a lot.
+    ///             If no allowlist is defined, this function will return true.
+    ///
+    /// @param      allowlist_       Allowlist contract
+    /// @param      lotId_           Lot ID
+    /// @param      caller_          Address of caller
+    /// @param      allowlistProof_  Proof of allowlist inclusion
+    /// @return     bool             True if caller is allowed to purchase/bid on the lot
+    function _isAllowed(
+        IAllowlist allowlist_,
+        uint256 lotId_,
+        address caller_,
+        bytes memory allowlistProof_
+    ) internal view returns (bool) {
+        if (address(allowlist_) == address(0)) {
+            return true;
+        } else {
+            return allowlist_.isAllowed(lotId_, caller_, allowlistProof_);
+        }
+    }
+
     // ========== ATOMIC AUCTIONS ========== //
 
     /// @inheritdoc Router
@@ -253,10 +303,8 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
         Routing memory routing = lotRouting[params_.lotId];
 
         // Check if the purchaser is on the allowlist
-        if (address(routing.allowlist) != address(0)) {
-            if (!routing.allowlist.isAllowed(params_.lotId, msg.sender, params_.allowlistProof)) {
-                revert NotAuthorized();
-            }
+        if (!_isAllowed(routing.allowlist, params_.lotId, msg.sender, params_.allowlistProof)) {
+            revert NotAuthorized();
         }
 
         uint256 totalFees = _allocateFees(params_.referrer, routing.quoteToken, params_.amount);
@@ -302,16 +350,32 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
 
     // ========== BATCH AUCTIONS ========== //
 
-    function bid(
-        address recipient_,
-        address referrer_,
-        uint256 id_,
-        uint256 amount_,
-        uint256 minAmountOut_,
-        bytes calldata auctionData_,
-        bytes calldata approval_
-    ) external override {
-        // TODO
+    /// @inheritdoc Router
+    function bid(BidParams memory params_) external override isValidLot(params_.lotId) {
+        // Load routing data for the lot
+        Routing memory routing = lotRouting[params_.lotId];
+
+        // Determine if the bidder is authorized to bid
+        if (!_isAllowed(routing.allowlist, params_.lotId, msg.sender, params_.allowlistProof)) {
+            revert NotAuthorized();
+        }
+
+        // Transfer the quote token from the bidder
+        _collectPayment(
+            params_.lotId,
+            params_.amount,
+            routing.quoteToken,
+            routing.hooks,
+            params_.approvalDeadline,
+            params_.approvalNonce,
+            params_.approvalSignature
+        );
+
+        // Record the bid on the auction module
+        // The module will determine if the bid is valid - minimum bid size, minimum price, etc
+        // TODO add additional parameters to the bid function? e.g. bidder, referrer, recipient
+        AuctionModule module = _getModuleForId(params_.lotId);
+        module.bid(params_.lotId, params_.amount, params_.minAmountOut, params_.auctionData);
     }
 
     function settle(uint256 id_) external override returns (uint256[] memory amountsOut) {
