@@ -1,25 +1,24 @@
 /// SPDX-License-Identifier: AGPL-3.0
 pragma solidity 0.8.19;
 
-import "src/modules/Derivative.sol";
+import {WithModules, Veecode} from "src/modules/Modules.sol";
 
 abstract contract Derivatizer is WithModules {
-// // ========== DERIVATIVE MANAGEMENT ========== //
+// ========== DERIVATIVE MANAGEMENT ========== //
 
-// // Return address will be zero if not wrapped
+// /// @notice         Deploys a new derivative token
+// ///
+// /// @param          dType           The derivative module code
+// /// @param          data            The derivative module parameters
+// /// @param          wrapped         Whether or not to wrap the derivative token
+// ///
+// /// @return         tokenId         The unique derivative token ID
+// /// @return         wrappedToken    The wrapped derivative token address (or zero)
 // function deploy(
-//     Keycode dType,
+//     Veecode dType,
 //     bytes memory data,
 //     bool wrapped
-// ) external virtual returns (uint256, address) {
-//     // Load the derivative module, will revert if not installed or sunset
-//     DerivativeModule derivative = DerivativeModule(_getLatestModuleIfActive(dType));
-
-//     // Call the deploy function on the derivative module
-//     (uint256 tokenId, address wrappedToken) = derivative.deploy(data, wrapped);
-
-//     return (tokenId, wrappedToken);
-// }
+// ) external virtual returns (uint256 tokenId, address wrappedToken);
 
 // function mint(
 //     bytes memory data,

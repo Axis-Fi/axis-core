@@ -128,7 +128,7 @@ classDiagram
     struct AuctionParams
     +bool allowNewMarkets
     +uint48 minAuctionDuration
-    ~uint48 ONE_HUNDRED_PERCENT = 1e5
+    ~uint48 _ONE_HUNDRED_PERCENT = 1e5
     +mapping[uint256 lotId => Lot] lotData
     +purchase(uint256 lotId, uint256 amount, bytes auctionData) (uint256, bytes)
     +bid(uint256 lotId, uint256 amount, uint256 minAmountOut, bytes auctionData) (uint256, bytes)

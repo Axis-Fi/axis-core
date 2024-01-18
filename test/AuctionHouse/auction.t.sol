@@ -12,6 +12,7 @@ import {MockDerivativeModule} from "test/modules/Derivative/MockDerivativeModule
 import {MockCondenserModule} from "test/modules/Condenser/MockCondenserModule.sol";
 import {MockAllowlist} from "test/modules/Auction/MockAllowlist.sol";
 import {MockHook} from "test/modules/Auction/MockHook.sol";
+import {Permit2User} from "test/lib/permit2/Permit2User.sol";
 
 // Auctions
 import {AuctionHouse} from "src/AuctionHouse.sol";
@@ -29,7 +30,7 @@ import {
     Module
 } from "src/modules/Modules.sol";
 
-contract AuctionTest is Test {
+contract AuctionTest is Test, Permit2User {
     MockERC20 internal baseToken;
     MockERC20 internal quoteToken;
     MockAuctionModule internal mockAuctionModule;
@@ -48,12 +49,12 @@ contract AuctionTest is Test {
         baseToken = new MockERC20("Base Token", "BASE", 18);
         quoteToken = new MockERC20("Quote Token", "QUOTE", 18);
 
-        auctionHouse = new AuctionHouse(protocol);
+        auctionHouse = new AuctionHouse(protocol, _PERMIT2_ADDRESS);
         mockAuctionModule = new MockAuctionModule(address(auctionHouse));
         mockDerivativeModule = new MockDerivativeModule(address(auctionHouse));
         mockCondenserModule = new MockCondenserModule(address(auctionHouse));
         mockAllowlist = new MockAllowlist();
-        mockHook = new MockHook();
+        mockHook = new MockHook(address(quoteToken), address(baseToken));
 
         auctionParams = Auction.AuctionParams({
             start: uint48(block.timestamp),
