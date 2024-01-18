@@ -142,10 +142,6 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
 
     error NotAuthorized();
 
-    error InsufficientBalance(address token_, uint256 requiredAmount_);
-
-    error InsufficientAllowance(address token_, address spender_, uint256 requiredAmount_);
-
     error UnsupportedToken(address token_);
 
     error InvalidHook();
@@ -363,11 +359,6 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
             hooks_.pre(lotId_, amount_);
         }
 
-        // Check that the user has sufficient balance of the quote token
-        if (quoteToken_.balanceOf(msg.sender) < amount_) {
-            revert InsufficientBalance(address(quoteToken_), amount_);
-        }
-
         // If a Permit2 approval signature is provided, use it to transfer the quote token
         if (approvalSignature_.length != 0) {
             _permit2Transfer(
@@ -448,23 +439,8 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
         }
         // Otherwise fallback to a standard ERC20 transfer
         else {
-            // Check that the auction owner has sufficient balance of the payout token
-            if (routingParams_.baseToken.balanceOf(routingParams_.owner) < payoutAmount_) {
-                revert InsufficientBalance(address(routingParams_.baseToken), payoutAmount_);
-            }
-
-            // Check that the auction owner has granted approval to transfer the payout token
-            if (
-                routingParams_.baseToken.allowance(routingParams_.owner, address(this))
-                    < payoutAmount_
-            ) {
-                revert InsufficientAllowance(
-                    address(routingParams_.baseToken), address(this), payoutAmount_
-                );
-            }
-
             // Transfer the payout token from the auction owner
-            // `safeTransferFrom()` will revert upon failure
+            // `safeTransferFrom()` will revert upon failure or the lack of allowance or balance
             routingParams_.baseToken.safeTransferFrom(
                 routingParams_.owner, address(this), payoutAmount_
             );
@@ -572,15 +548,10 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
     /// @param      amount_   Amount of tokens to transfer (in native decimals)
     /// @param      token_    Token to transfer
     function _transfer(uint256 amount_, ERC20 token_) internal {
-        // Check that the user has granted approval to transfer the quote token
-        if (token_.allowance(msg.sender, address(this)) < amount_) {
-            revert InsufficientAllowance(address(token_), address(this), amount_);
-        }
-
         uint256 balanceBefore = token_.balanceOf(address(this));
 
         // Transfer the quote token from the user
-        // `safeTransferFrom()` will revert upon failure
+        // `safeTransferFrom()` will revert upon failure or the lack of allowance or balance
         token_.safeTransferFrom(msg.sender, address(this), amount_);
 
         // Check that it is not a fee-on-transfer token
@@ -612,11 +583,6 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
         uint256 approvalNonce_,
         bytes memory approvalSignature_
     ) internal {
-        // Check that the user has granted approval to PERMIT2 to transfer the quote token
-        if (token_.allowance(msg.sender, address(_PERMIT2)) < amount_) {
-            revert InsufficientAllowance(address(token_), address(_PERMIT2), amount_);
-        }
-
         uint256 balanceBefore = token_.balanceOf(address(this));
 
         // Use PERMIT2 to transfer the token from the user

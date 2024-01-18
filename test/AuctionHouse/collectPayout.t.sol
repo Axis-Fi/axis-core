@@ -240,10 +240,7 @@ contract CollectPayoutTest is Test, Permit2User {
 
     function test_insufficientBalance_reverts() public {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(
-            AuctionHouse.InsufficientBalance.selector, address(payoutToken), payoutAmount
-        );
-        vm.expectRevert(err);
+        vm.expectRevert(bytes("TRANSFER_FROM_FAILED"));
 
         // Call
         vm.prank(USER);
@@ -252,13 +249,7 @@ contract CollectPayoutTest is Test, Permit2User {
 
     function test_insufficientAllowance_reverts() public givenOwnerHasBalance(payoutAmount) {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(
-            AuctionHouse.InsufficientAllowance.selector,
-            address(payoutToken),
-            address(auctionHouse),
-            payoutAmount
-        );
-        vm.expectRevert(err);
+        vm.expectRevert(bytes("TRANSFER_FROM_FAILED"));
 
         // Call
         vm.prank(USER);
@@ -382,10 +373,7 @@ contract CollectPayoutTest is Test, Permit2User {
 
     function test_derivative_insufficientBalance_reverts() public givenAuctionHasDerivative {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(
-            AuctionHouse.InsufficientBalance.selector, address(payoutToken), payoutAmount
-        );
-        vm.expectRevert(err);
+        vm.expectRevert(bytes("TRANSFER_FROM_FAILED"));
 
         // Call
         vm.prank(USER);
@@ -398,13 +386,7 @@ contract CollectPayoutTest is Test, Permit2User {
         givenOwnerHasBalance(payoutAmount)
     {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(
-            AuctionHouse.InsufficientAllowance.selector,
-            address(payoutToken),
-            address(auctionHouse),
-            payoutAmount
-        );
-        vm.expectRevert(err);
+        vm.expectRevert(bytes("TRANSFER_FROM_FAILED"));
 
         // Call
         vm.prank(USER);
