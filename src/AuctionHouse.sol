@@ -113,6 +113,8 @@ abstract contract Router is FeeManager {
         bytes allowlistProof;
     }
 
+    // TODO consolidate PurchaseParams and BidParams if there are no further changes
+
     // ========== STATE VARIABLES ========== //
 
     /// @notice Fee paid to a front end operator in basis points (3 decimals). Set by the referrer, must be less than or equal to 5% (5e3).
@@ -182,15 +184,11 @@ abstract contract Router is FeeManager {
 
     // ========== FEE MANAGEMENT ========== //
 
-    function setProtocolFee(uint48 protocolFee_) external {
-        // TOOD make this permissioned
-        protocolFee = protocolFee_;
-    }
+    /// @notice     Sets the fee for the protocol
+    function setProtocolFee(uint48 protocolFee_) external virtual;
 
-    function setReferrerFee(address referrer_, uint48 referrerFee_) external {
-        // TOOD make this permissioned
-        referrerFees[referrer_] = referrerFee_;
-    }
+    /// @notice     Sets the fee for a referrer
+    function setReferrerFee(address referrer_, uint48 referrerFee_) external virtual;
 }
 
 /// @title      AuctionHouse
@@ -793,5 +791,17 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
         if (token_.balanceOf(address(this)) < balanceBefore + amount_) {
             revert UnsupportedToken(address(token_));
         }
+    }
+
+    // ========== FEE MANAGEMENT ========== //
+
+    /// @inheritdoc Router
+    function setProtocolFee(uint48 protocolFee_) external override onlyOwner {
+        protocolFee = protocolFee_;
+    }
+
+    /// @inheritdoc Router
+    function setReferrerFee(address referrer_, uint48 referrerFee_) external override onlyOwner {
+        referrerFees[referrer_] = referrerFee_;
     }
 }
