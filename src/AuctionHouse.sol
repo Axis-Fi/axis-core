@@ -190,7 +190,7 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
         uint256 amount_
     ) internal returns (uint256 totalFees) {
         // Calculate fees for purchase
-        (uint256 toReferrer, uint256 toProtocol) = calculateFees(referrer_, amount_);
+        (uint256 toReferrer, uint256 toProtocol) = _calculateFees(referrer_, amount_);
 
         // Update fee balances if non-zero
         if (toReferrer > 0) rewards[referrer_][quoteToken_] += toReferrer;
@@ -199,7 +199,7 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
         return toReferrer + toProtocol;
     }
 
-    function calculateFees(
+    function _calculateFees(
         address referrer_,
         uint256 amount_
     ) internal view returns (uint256 toReferrer, uint256 toProtocol) {
@@ -369,7 +369,7 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
 
             // Calculate fees from bid amount
             (uint256 toReferrer, uint256 toProtocol) =
-                calculateFees(settlement_.bids[i].referrer, settlement_.amountsIn[i]);
+                _calculateFees(settlement_.bids[i].referrer, settlement_.amountsIn[i]);
             amountsInLessFees[i] = settlement_.amountsIn[i] - toReferrer - toProtocol;
 
             // Update referrer fee balances if non-zero and increment the total protocol fee
