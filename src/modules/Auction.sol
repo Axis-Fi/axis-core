@@ -79,29 +79,38 @@ abstract contract Auction {
 
     // ========== BATCH AUCTIONS ========== //
 
-    // On-chain auction variant
+    /// @notice     Bid on an auction lot
+    ///
+    /// @param      lotId_          The lot id
+    /// @param      recipient_      The recipient of the purchased tokens
+    /// @param      referrer_       The referrer of the bid
+    /// @param      amount_         The amount of quote tokens to bid
+    /// @param      auctionData_    The auction-specific data
+    /// @param      approval_       The user approval data
     function bid(
+        uint96 lotId_,
         address recipient_,
         address referrer_,
-        uint256 id_,
         uint256 amount_,
-        uint256 minAmountOut_,
         bytes calldata auctionData_,
         bytes calldata approval_
     ) external virtual;
 
-    function settle(uint256 id_) external virtual returns (uint256[] memory amountsOut);
-
-    // Off-chain auction variant
-    // TODO use solady data packing library to make bids smaller on the actual module to store?
+    /// @notice     Settle a batch auction with the provided bids
+    /// @notice     This function is used for on-chain storage of bids and external settlement
+    ///
+    /// @param      lotId_              Lot id
+    /// @param      winningBids_        Winning bids
+    /// @param      settlementProof_    Proof of settlement validity
+    /// @param      settlementData_     Settlement data
+    /// @return     amountsOut          Amount out for each bid
+    /// @return     auctionOutput       Auction-specific output
     function settle(
-        uint256 id_,
+        uint96 lotId_,
         Bid[] calldata winningBids_,
-        bytes[] calldata bidSignatures_,
-        uint256[] memory amountsIn_,
-        uint256[] calldata amountsOut_,
-        bytes calldata validityProof_
-    ) external virtual returns (bytes memory);
+        bytes calldata settlementProof_,
+        bytes calldata settlementData_
+    ) external virtual returns (uint256[] memory amountsOut, bytes memory auctionOutput);
 
     // ========== AUCTION MANAGEMENT ========== //
 
