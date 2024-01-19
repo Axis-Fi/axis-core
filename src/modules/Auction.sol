@@ -41,7 +41,6 @@ abstract contract Auction {
 
     // TODO pack if we anticipate on-chain auction variants
     struct Bid {
-        uint256 lotId;
         address bidder;
         address recipient;
         address referrer;
