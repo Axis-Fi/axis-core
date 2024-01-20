@@ -5,7 +5,7 @@ pragma solidity 0.8.19;
 import {AuctionModule} from "src/modules/Auction.sol";
 import {Veecode, toVeecode, Module} from "src/modules/Modules.sol";
 import {RSAOAEP} from "src/lib/RSA.sol";
-import {MinPriorityQueue} from "src/modules/auctions/LSBBA/MinPriorityQueue.sol";
+import {MinPriorityQueue, Bid as QueueBid} from "src/modules/auctions/LSBBA/MinPriorityQueue.sol";
 
 // A completely on-chain sealed bid batch auction that uses RSA encryption to hide bids until after the auction ends
 // The auction occurs in three phases:
@@ -59,6 +59,7 @@ abstract contract LocalSealedBidBatchAuction is AuctionModule {
         AuctionStatus status;
         uint96 nextDecryptIndex;
         uint256 minimumPrice;
+        uint256 minFilled; // minimum amount of capacity that must be filled to settle the auction
         uint256 minBidSize; // minimum amount that can be bid for the lot, determined by the percentage of capacity that must be filled per bid times the min bid price
         bytes publicKeyModulus;
     }
@@ -197,13 +198,83 @@ abstract contract LocalSealedBidBatchAuction is AuctionModule {
         // Check that auction is in the right state for settlement
         if (auctionData[lotId_].status != AuctionStatus.Decrypted) revert Auction_WrongState();
 
-        // Iterate over bid queue to calculate the marginal clearing price of the auction
+        // Cache capacity
+        uint256 capacity = lotData[lotId_].capacity;
 
+        // Iterate over bid queue to calculate the marginal clearing price of the auction
+        MinPriorityQueue.Queue storage queue = lotSortedBids[lotId_];
+        uint256 marginalPrice;
+        uint256 totalAmountIn;
+        uint256 winningBidIndex;
+        for (uint256 i = 1; i <= queue.numBids; i++) {
+            // Load bid
+            QueueBid storage qBid = queue.getBid(i);
+
+            // Calculate bid price
+            uint256 price = (qBid.amountIn * SCALE) / qBid.minAmountOut;
+
+            // Increment total amount in
+            totalAmountIn += qBid.amountIn;
+
+            // Determine total capacity expended at this price
+            uint256 expended = (totalAmountIn * SCALE) / price;
+
+            // If total capacity expended is greater than or equal to the capacity, we have found the marginal price
+            if (expended >= capacity) {
+                marginalPrice = price;
+                winningBidIndex = i;
+                break;
+            }
+
+            // If we have reached the end of the queue, we have found the marginal price and the maximum capacity that can be filled
+            if (i == queue.numBids) {
+                // If the total filled is less than the minimum filled, mark as settled and return no winning bids (so users can claim refunds)
+                if (expended < auctionData[lotId_].minFilled) {
+                    auctionData[lotId_].status = AuctionStatus.Settled;
+                    return winningBids_;
+                } else {
+                    marginalPrice = price;
+                    winningBidIndex = i;
+                }
+            }
+            
+        }
+
+        // Check if the minimum price for the auction was reached
+        // If not, mark as settled and return no winning bids (so users can claim refunds)
+        if (marginalPrice < auctionData[lotId_].minimumPrice) {
+            auctionData[lotId_].status = AuctionStatus.Settled;
+            return winningBids_;
+        }
+
+        // Auction can be settled at the marginal price if we reach this point
         // Create winning bid array using marginal price to set amounts out
+        winningBids_ = new Bid[](winningBidIndex);
+        for (uint256 i; i < winningBidIndex; i++) {
+            // Load bid
+            QueueBid memory qBid = queue.delMin();
+
+            // Calculate amount out
+            uint256 amountOut = (qBid.amountIn * SCALE) / marginalPrice;
+
+            // Create winning bid from encrypted bid and calculated amount out
+            EncryptedBid memory encBid = lotBids[lotId_][qBid.encId];
+            Bid memory winningBid;
+            winningBid.bidder = encBid.bidder;
+            winningBid.recipient = encBid.recipient;
+            winningBid.referrer = encBid.referrer;
+            winningBid.amount = encBid.amount;
+            winningBid.minAmountOut = amountOut;
+
+            // Add winning bid to array
+            winningBids_[i] = winningBid;
+        }
 
         // Set auction status to settled
+        auctionData[lotId_].status = AuctionStatus.Settled;
 
         // Return winning bids
+        return winningBids_;
     }
 
 
