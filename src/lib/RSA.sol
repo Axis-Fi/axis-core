@@ -23,7 +23,7 @@ library RSAOAEP {
     function decrypt(bytes memory cipherText, bytes memory d, bytes memory n, bytes memory label)
         internal
         view
-        returns (bytes memory)
+        returns (bytes memory message, bytes32 seed)
     {
         // Implements 7.1.2 RSAES-OAEP-DECRYPT as defined in RFC8017: https://www.rfc-editor.org/rfc/rfc8017
         // Error messages are intentionally vague to prevent oracle attacks
@@ -72,7 +72,6 @@ library RSAOAEP {
 
         // 3. c. Calculate seed mask
         // 3. d. Calculate seed
-        bytes32 seed;
         {
             bytes32 seedMask = bytes32(_mgf(maskedDb, 32));
             seed = maskedSeed ^ seedMask;
@@ -96,7 +95,6 @@ library RSAOAEP {
         //   Y is nonzero, output "decryption error" and stop.
         bytes32 recoveredHash = bytes32(db);
         bytes1 one;
-        bytes memory message;
         assembly {
             // Iterate over bytes after the label hash until hitting a non-zero byte
             // Skip the first word since it is the recovered hash
@@ -149,8 +147,7 @@ library RSAOAEP {
 
         if (one != 0x01 || lhash != recoveredHash || y != 0x00) revert("decryption error");
 
-        // 4. Return the message
-        return message;
+        // 4. Return the message and seed used for encryption
     }
 
     function encrypt(bytes memory message, bytes memory label, bytes memory e, bytes memory n, uint256 seed)

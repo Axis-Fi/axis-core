@@ -27,7 +27,6 @@ abstract contract LocalSealedBidBatchAuction is AuctionModule {
 
     enum AuctionStatus {
         Created,
-        KeyRevealed,
         Decrypted,
         Settled
     }
@@ -57,7 +56,6 @@ abstract contract LocalSealedBidBatchAuction is AuctionModule {
     struct AuctionData {
         AuctionStatus status;
         bytes publicKeyModulus;
-        bytes privateKey;
         uint256 minimumPrice;
         uint256 minBidSize; // minimum amount that can be bid for the lot, determined by the percentage of capacity that must be filled per bid times the min bid price
         uint256 nextDecryptIndex;
@@ -131,22 +129,9 @@ abstract contract LocalSealedBidBatchAuction is AuctionModule {
 
     // =========== DECRYPTION =========== //
 
-    function revealKey(uint96 lotId_, bytes calldata privateKey_) external onlyInternal {
-        // Check that the auction is in the right state for reveal
-        if (auctionData[lotId_].status != AuctionStatus.Created || block.timestamp < lotData[lotId_].conclusion) revert Auction_NotConcluded();
-        
-        // Validate inputs
-        // We should be able to generate the public key from the private key
-        // TODO trickier than it seems
-
-        // Store key and set auction status to key revealed
-        auctionData[lotId_].status = AuctionStatus.KeyRevealed;
-        auctionData[lotId_].privateKey = privateKey_;
-    }
-
-    function decryptBids(uint96 lotId_, Decrypt[] memory decrypts_) external {
+    function decryptAndSortBids(uint96 lotId_, Decrypt[] memory decrypts_) external {
         // Check that auction is in the right state for decryption
-        if (auctionData[lotId_].status != AuctionStatus.KeyRevealed) revert Auction_WrongState();
+        if (auctionData[lotId_].status != AuctionStatus.Created || block.timestamp < lotData[lotId_].conclusion) revert Auction_WrongState();
         
         // Load next decrypt index
         uint256 nextDecryptIndex = auctionData[lotId_].nextDecryptIndex;
@@ -181,7 +166,25 @@ abstract contract LocalSealedBidBatchAuction is AuctionModule {
     }
 
     function _encrypt(uint96 lotId_, Decrypt memory decrypt_) internal view returns (bytes memory) {
-        return RSAOAEP.encrypt(abi.encodePacked(decrypt_.amountOut), bytes(""), abi.encodePacked(PUB_KEY_EXPONENT), auctionData[lotId_].publicKeyModulus, decrypt_.seed);
+        return RSAOAEP.encrypt(abi.encodePacked(decrypt_.amountOut), abi.encodePacked(lotId_), abi.encodePacked(PUB_KEY_EXPONENT), auctionData[lotId_].publicKeyModulus, decrypt_.seed);
+    }
+
+    /// @notice View function that can be used to obtain the amount out and seed for a given bid by providing the private key
+    /// @dev This function can be used to decrypt bids off-chain if you know the private key
+    function decryptBid(uint96 lotId_, uint96 bidId_, bytes memory privateKey_) external view returns (Decrypt memory) {
+        // Load encrypted bid
+        EncryptedBid memory encBid = lotBids[lotId_][bidId_];
+
+        // Decrypt the encrypted amount out
+        (bytes memory amountOut, bytes32 seed) = RSAOAEP.decrypt(encBid.encryptedAmountOut, abi.encodePacked(lotId_), privateKey_, auctionData[lotId_].publicKeyModulus);
+
+        // Cast the decrypted values
+        Decrypt memory decrypt;
+        decrypt.amountOut = abi.decode(amountOut, (uint256));
+        decrypt.seed = uint256(seed);
+
+        // Return the decrypt
+        return decrypt;
     }
 
 
