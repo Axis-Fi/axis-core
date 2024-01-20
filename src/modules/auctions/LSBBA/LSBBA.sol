@@ -5,6 +5,7 @@ pragma solidity 0.8.19;
 import {AuctionModule} from "src/modules/Auction.sol";
 import {Veecode, toVeecode, Module} from "src/modules/Modules.sol";
 import {RSAOAEP} from "src/lib/RSA.sol";
+import {MinPriorityQueue} from "src/modules/auctions/LSBBA/MinPriorityQueue.sol";
 
 // A completely on-chain sealed bid batch auction that uses RSA encryption to hide bids until after the auction ends
 // The auction occurs in three phases:
@@ -13,6 +14,7 @@ import {RSAOAEP} from "src/lib/RSA.sol";
 // 3. Settlement - once all bids are decryped, the auction can be settled and proceeds transferred
 // TODO abstract since not everything is implemented here
 abstract contract LocalSealedBidBatchAuction is AuctionModule {
+    using MinPriorityQueue for MinPriorityQueue.Queue;
 
     // ========== ERRORS ========== //
     error Auction_BidDoesNotExist();
@@ -55,19 +57,20 @@ abstract contract LocalSealedBidBatchAuction is AuctionModule {
 
     struct AuctionData {
         AuctionStatus status;
-        bytes publicKeyModulus;
+        uint96 nextDecryptIndex;
         uint256 minimumPrice;
         uint256 minBidSize; // minimum amount that can be bid for the lot, determined by the percentage of capacity that must be filled per bid times the min bid price
-        uint256 nextDecryptIndex;
+        bytes publicKeyModulus;
     }
 
     // ========== STATE VARIABLES ========== //
 
-    uint256 public constant PUB_KEY_EXPONENT = 65537; // TODO can be 3 to save gas
+    uint256 public constant PUB_KEY_EXPONENT = 65537; // TODO can be 3 to save gas, but 65537 is probably more secure
     uint256 public constant SCALE = 1e18; // TODO maybe set this per auction if decimals mess us up
 
     mapping(uint96 lotId => AuctionData) public auctionData;
     mapping(uint96 lotId => EncryptedBid[] bids) public lotBids;
+    mapping(uint96 lotId => MinPriorityQueue.Queue) public lotSortedBids; // TODO must create and call `initialize` on it during auction creation
 
     // ========== SETUP ========== //
 
@@ -134,11 +137,14 @@ abstract contract LocalSealedBidBatchAuction is AuctionModule {
         if (auctionData[lotId_].status != AuctionStatus.Created || block.timestamp < lotData[lotId_].conclusion) revert Auction_WrongState();
         
         // Load next decrypt index
-        uint256 nextDecryptIndex = auctionData[lotId_].nextDecryptIndex;
-        uint256 len = decrypts_.length;
+        uint96 nextDecryptIndex = auctionData[lotId_].nextDecryptIndex;
+        uint96 len = uint96(decrypts_.length);
+
+        // Check that the number of decrypts is less than or equal to the number of bids remaining to be decrypted
+        if (len > lotBids[lotId_].length - nextDecryptIndex) revert Auction_InvalidDecrypt();
 
         // Iterate over decrypts, validate that they match the stored encrypted bids, then store them in the sorted bid queue
-        for (uint256 i; i < len; i++) {
+        for (uint96 i; i < len; i++) {
             // Re-encrypt the decrypt to confirm that it matches the stored encrypted bid
             bytes memory ciphertext = _encrypt(lotId_, decrypts_[i]);
 
@@ -147,12 +153,9 @@ abstract contract LocalSealedBidBatchAuction is AuctionModule {
 
             // Check that the encrypted bid matches the re-encrypted decrypt by hashing both
             if (keccak256(ciphertext) != keccak256(encBid.encryptedAmountOut)) revert Auction_InvalidDecrypt();
-
-            // Derive price from bid amount and decrypt amount out
-            uint256 price = (encBid.amount * SCALE) / decrypts_[i].amountOut;
             
             // Store the decrypt in the sorted bid queue
-            // TODO need to determine which data structure to use for the queue
+            lotSortedBids[lotId_].insert(nextDecryptIndex + i, encBid.amount, decrypts_[i].amountOut);
 
             // Set bid status to decrypted
             encBid.status = BidStatus.Decrypted;
