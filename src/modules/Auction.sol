@@ -95,6 +95,8 @@ abstract contract Auction {
         bytes calldata approval_
     ) external virtual;
 
+    function cancelBid(uint96 lotId_, uint96 bidId_) external virtual;
+
     /// @notice     Settle a batch auction with the provided bids
     /// @notice     This function is used for on-chain storage of bids and external settlement
     ///
@@ -116,9 +118,9 @@ abstract contract Auction {
     // TODO NatSpec comments
     // TODO validate function
 
-    function auction(uint256 id_, AuctionParams memory params_) external virtual;
+    function auction(uint96 id_, AuctionParams memory params_) external virtual;
 
-    function cancel(uint256 id_) external virtual;
+    function cancelAuction(uint96 id_) external virtual;
 
     // ========== AUCTION INFORMATION ========== //
 
@@ -151,7 +153,7 @@ abstract contract AuctionModule is Auction, Module {
     ///             - the duration is less than the minimum
     ///
     /// @param      lotId_      The lot id
-    function auction(uint256 lotId_, AuctionParams memory params_) external override onlyParent {
+    function auction(uint96 lotId_, AuctionParams memory params_) external override onlyParent {
         // Start time must be zero or in the future
         if (params_.start > 0 && params_.start < uint48(block.timestamp)) {
             revert Auction_InvalidStart(params_.start, uint48(block.timestamp));
@@ -178,10 +180,10 @@ abstract contract AuctionModule is Auction, Module {
 
     /// @dev implementation-specific auction creation logic can be inserted by overriding this function
     function _auction(
-        uint256 id_,
+        uint96 lotId_,
         Lot memory lot_,
         bytes memory params_
-    ) internal virtual returns (uint256);
+    ) internal virtual;
 
     /// @notice     Cancel an auction lot
     /// @dev        Owner is stored in the Routing information on the AuctionHouse, so we check permissions there
@@ -191,7 +193,7 @@ abstract contract AuctionModule is Auction, Module {
     ///             - the lot is not active
     ///
     /// @param      lotId_      The lot id
-    function cancel(uint256 lotId_) external override onlyParent {
+    function cancelAuction(uint96 lotId_) external override onlyParent {
         Lot storage lot = lotData[lotId_];
 
         // Invalid lot
@@ -204,10 +206,10 @@ abstract contract AuctionModule is Auction, Module {
         lot.capacity = 0;
 
         // Call internal closeAuction function to update any other required parameters
-        _cancel(lotId_);
+        _cancelAuction(lotId_);
     }
 
-    function _cancel(uint256 id_) internal virtual;
+    function _cancelAuction(uint96 id_) internal virtual;
 
     // ========== AUCTION INFORMATION ========== //
 

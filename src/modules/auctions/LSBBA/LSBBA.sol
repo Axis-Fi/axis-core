@@ -37,7 +37,7 @@ abstract contract LocalSealedBidBatchAuction is AuctionModule {
         Submitted,
         Cancelled,
         Decrypted,
-        Settled,
+        Won,
         Refunded
     }
 
@@ -66,11 +66,13 @@ abstract contract LocalSealedBidBatchAuction is AuctionModule {
 
     // ========== STATE VARIABLES ========== //
 
-    uint256 public constant PUB_KEY_EXPONENT = 65537; // TODO can be 3 to save gas, but 65537 is probably more secure
-    uint256 public constant SCALE = 1e18; // TODO maybe set this per auction if decimals mess us up
+    uint256 internal constant MIN_BID_PERCENT = 1_000; // 1%
+    uint256 internal constant ONE_HUNDRED_PERCENT = 100_000;
+    uint256 internal constant PUB_KEY_EXPONENT = 65537; // TODO can be 3 to save gas, but 65537 is probably more secure
+    uint256 internal constant SCALE = 1e18; // TODO maybe set this per auction if decimals mess us up
 
     mapping(uint96 lotId => AuctionData) public auctionData;
-    mapping(uint96 lotId => EncryptedBid[] bids) public lotBids;
+    mapping(uint96 lotId => EncryptedBid[] bids) public lotEncryptedBids;
     mapping(uint96 lotId => MinPriorityQueue.Queue) public lotSortedBids; // TODO must create and call `initialize` on it during auction creation
 
     // ========== SETUP ========== //
@@ -106,10 +108,10 @@ abstract contract LocalSealedBidBatchAuction is AuctionModule {
         userBid.status = BidStatus.Submitted;
 
         // Bid ID is the next index in the lot's bid array
-        bidId = lotBids[lotId_].length;
+        bidId = lotEncryptedBids[lotId_].length;
 
         // Add bid to lot
-        lotBids[lotId_].push(userBid);
+        lotEncryptedBids[lotId_].push(userBid);
     }
 
     function cancelBid(uint96 lotId_, uint96 bidId_, address sender_) external onlyInternal {
@@ -119,16 +121,42 @@ abstract contract LocalSealedBidBatchAuction is AuctionModule {
         if (auctionData[lotId_].status != AuctionStatus.Created || block.timestamp < lotData[lotId_].start || block.timestamp >= lotData[lotId_].conclusion) revert Auction_NotLive();
 
         // Bid ID must be less than number of bids for lot
-        if (bidId_ >= lotBids[lotId_].length) revert Auction_BidDoesNotExist();
+        if (bidId_ >= lotEncryptedBids[lotId_].length) revert Auction_BidDoesNotExist();
 
         // Sender must be bidder
-        if (sender_ != lotBids[lotId_][bidId_].bidder) revert Auction_NotBidder();
+        if (sender_ != lotEncryptedBids[lotId_][bidId_].bidder) revert Auction_NotBidder();
 
         // Bid is not already cancelled
-        if (lotBids[lotId_][bidId_].status != BidStatus.Submitted) revert Auction_AlreadyCancelled();
+        if (lotEncryptedBids[lotId_][bidId_].status != BidStatus.Submitted) revert Auction_AlreadyCancelled();
 
         // Set bid status to cancelled
-        lotBids[lotId_][bidId_].status = BidStatus.Cancelled;
+        lotEncryptedBids[lotId_][bidId_].status = BidStatus.Cancelled;
+    }
+
+    // TODO need a top-level function on the Auction House that actually sends the funds to the recipient
+    function claimRefund(uint96 lotId_, uint96 bidId_, address sender_) external onlyInternal {
+        // Validate inputs
+        // Sender must be bidder
+        if (sender_ != lotEncryptedBids[lotId_][bidId_].bidder) revert Auction_NotBidder();
+
+        // Auction for must have settled to claim refund
+        // User must not have won the auction or claimed a refund already
+        // TODO should we allow cancel bids to claim earlier?
+        // Might allow legit users to change their bids
+        // But also allows a malicious user to use the same funds to create 
+        // multiple bids in an attempt to grief the settlement
+        BidStatus bidStatus = lotEncryptedBids[lotId_][bidId_].status;
+        if (
+            auctionData[lotId_].status != AuctionStatus.Settled || 
+            bidStatus == BidStatus.Refunded ||
+            bidStatus == BidStatus.Won
+        ) revert Auction_WrongState();
+
+        // Bid ID must be less than number of bids for lot
+        if (bidId_ >= lotEncryptedBids[lotId_].length) revert Auction_BidDoesNotExist();
+
+        // Set bid status to refunded
+        lotEncryptedBids[lotId_][bidId_].status = BidStatus.Refunded;
     }
 
     // =========== DECRYPTION =========== //
@@ -142,7 +170,7 @@ abstract contract LocalSealedBidBatchAuction is AuctionModule {
         uint96 len = uint96(decrypts_.length);
 
         // Check that the number of decrypts is less than or equal to the number of bids remaining to be decrypted
-        if (len > lotBids[lotId_].length - nextDecryptIndex) revert Auction_InvalidDecrypt();
+        if (len > lotEncryptedBids[lotId_].length - nextDecryptIndex) revert Auction_InvalidDecrypt();
 
         // Iterate over decrypts, validate that they match the stored encrypted bids, then store them in the sorted bid queue
         for (uint96 i; i < len; i++) {
@@ -150,11 +178,15 @@ abstract contract LocalSealedBidBatchAuction is AuctionModule {
             bytes memory ciphertext = _encrypt(lotId_, decrypts_[i]);
 
             // Load encrypted bid
-            EncryptedBid storage encBid = lotBids[lotId_][nextDecryptIndex + i];
+            EncryptedBid storage encBid = lotEncryptedBids[lotId_][nextDecryptIndex + i];
 
             // Check that the encrypted bid matches the re-encrypted decrypt by hashing both
             if (keccak256(ciphertext) != keccak256(encBid.encryptedAmountOut)) revert Auction_InvalidDecrypt();
             
+            // If the bid has been cancelled, it shouldn't be added to the queue
+            // TODO should this just check != Submitted?
+            if (encBid.status == BidStatus.Cancelled) continue;
+
             // Store the decrypt in the sorted bid queue
             lotSortedBids[lotId_].insert(nextDecryptIndex + i, encBid.amount, decrypts_[i].amountOut);
 
@@ -166,7 +198,7 @@ abstract contract LocalSealedBidBatchAuction is AuctionModule {
         auctionData[lotId_].nextDecryptIndex += len;
 
         // If all bids have been decrypted, set auction status to decrypted
-        if (auctionData[lotId_].nextDecryptIndex == lotBids[lotId_].length) auctionData[lotId_].status = AuctionStatus.Decrypted;
+        if (auctionData[lotId_].nextDecryptIndex == lotEncryptedBids[lotId_].length) auctionData[lotId_].status = AuctionStatus.Decrypted;
     }
 
     function _encrypt(uint96 lotId_, Decrypt memory decrypt_) internal view returns (bytes memory) {
@@ -177,7 +209,7 @@ abstract contract LocalSealedBidBatchAuction is AuctionModule {
     /// @dev This function can be used to decrypt bids off-chain if you know the private key
     function decryptBid(uint96 lotId_, uint96 bidId_, bytes memory privateKey_) external view returns (Decrypt memory) {
         // Load encrypted bid
-        EncryptedBid memory encBid = lotBids[lotId_][bidId_];
+        EncryptedBid memory encBid = lotEncryptedBids[lotId_][bidId_];
 
         // Decrypt the encrypted amount out
         (bytes memory amountOut, bytes32 seed) = RSAOAEP.decrypt(encBid.encryptedAmountOut, abi.encodePacked(lotId_), privateKey_, auctionData[lotId_].publicKeyModulus);
@@ -258,13 +290,16 @@ abstract contract LocalSealedBidBatchAuction is AuctionModule {
             uint256 amountOut = (qBid.amountIn * SCALE) / marginalPrice;
 
             // Create winning bid from encrypted bid and calculated amount out
-            EncryptedBid memory encBid = lotBids[lotId_][qBid.encId];
+            EncryptedBid storage encBid = lotEncryptedBids[lotId_][qBid.encId];
             Bid memory winningBid;
             winningBid.bidder = encBid.bidder;
             winningBid.recipient = encBid.recipient;
             winningBid.referrer = encBid.referrer;
             winningBid.amount = encBid.amount;
             winningBid.minAmountOut = amountOut;
+
+            // Set bid status to won
+            encBid.status = BidStatus.Won;
 
             // Add winning bid to array
             winningBids_[i] = winningBid;
@@ -281,6 +316,47 @@ abstract contract LocalSealedBidBatchAuction is AuctionModule {
     // =========== AUCTION MANAGEMENT ========== //
 
     // TODO auction creation
-    // TODO auction cancellation?
+    function _auction(uint96 lotId_, Lot memory lot_, bytes memory params_) internal override {
+        // Decode implementation params
+        (
+            uint256 minimumPrice,
+            uint256 minFillPercent,
+            uint256 minBidPercent,
+            bytes memory publicKeyModulus
+        ) = abi.decode(params_, (uint256, uint256, uint256, bytes));
+
+        // Validate params
+        // Capacity must be in base token for this auction type
+        if (lot_.capacityInQuote) revert Auction_InvalidParams();
+
+        // minFillPercent must be less than or equal to 100%
+        // TODO should there be a minimum? 
+        if (minFillPercent > ONE_HUNDRED_PERCENT) revert Auction_InvalidParams();
+
+        // minBidPercent must be greater than or equal to the global min and less than or equal to 100%
+        // TODO should we cap this below 100%?
+        if (minBidPercent < MIN_BID_PERCENT || minBidPercent > ONE_HUNDRED_PERCENT) revert Auction_InvalidParams();
+
+        // publicKeyModulus must be 1024 bits (128 bytes)
+        if (publicKeyModulus.length != 128) revert Auction_InvalidParams();
+
+        // Store auction data
+        AuctionData storage data = auctionData[lotId_];
+        data.minimumPrice = minimumPrice;
+        data.minFilled = (lot_.capacity * minFillPercent) / ONE_HUNDRED_PERCENT;
+        data.minBidSize = (lot_.capacity * minBidPercent) / ONE_HUNDRED_PERCENT;
+        data.publicKeyModulus = publicKeyModulus;
+
+        // Initialize sorted bid queue
+        lotSortedBids[lotId_].initialize();
+    }
+    
+    function _cancelAuction(uint96 lotId_) internal override {
+        // Auction cannot be cancelled once it has concluded
+        if (auctionData[lotId_].status != AuctionStatus.Created || block.timestamp < lotData[lotId_].conclusion) revert Auction_WrongState();
+
+        // Set auction status to settled so that bids can be refunded
+        auctionData[lotId_].status = AuctionStatus.Settled;
+    }
 
 }
