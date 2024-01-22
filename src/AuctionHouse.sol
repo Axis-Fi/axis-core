@@ -361,6 +361,11 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
     // ========== BATCH AUCTIONS ========== //
 
     /// @inheritdoc Router
+    /// @dev        This function reverts if:
+    ///             - lotId is invalid
+    ///             - the bidder is not on the optional allowlist
+    ///             - the auction module reverts when creating a bid
+    ///             - the quote token transfer fails
     function bid(BidParams memory params_)
         external
         override

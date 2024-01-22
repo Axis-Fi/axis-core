@@ -353,7 +353,12 @@ contract BidTest is Test, Permit2User {
         assertEq(bid.auctionParam, auctionData, "auctionParam mismatch");
     }
 
-    function test_whenAuctionParamIsProvided() external givenLotIsCreated givenUserHasQuoteTokenBalance(BID_AMOUNT) givenUserHasApprovedQuoteToken(BID_AMOUNT) {
+    function test_whenAuctionParamIsProvided()
+        external
+        givenLotIsCreated
+        givenUserHasQuoteTokenBalance(BID_AMOUNT)
+        givenUserHasApprovedQuoteToken(BID_AMOUNT)
+    {
         auctionData = abi.encode("auction data");
 
         // Update bid parameters
