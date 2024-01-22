@@ -6,13 +6,13 @@ import {Module} from "src/modules/Modules.sol";
 abstract contract Auction {
     /* ========== ERRORS ========== */
 
-    error Auction_MarketNotActive(uint256 lotId);
+    error Auction_MarketNotActive(uint96 lotId);
 
     error Auction_InvalidStart(uint48 start_, uint48 minimum_);
 
     error Auction_InvalidDuration(uint48 duration_, uint48 minimum_);
 
-    error Auction_InvalidLotId(uint256 lotId);
+    error Auction_InvalidLotId(uint96 lotId);
 
     error Auction_OnlyMarketOwner();
     error Auction_AmountLessThanMinimum();
@@ -71,7 +71,7 @@ abstract contract Auction {
     // ========== ATOMIC AUCTIONS ========== //
 
     function purchase(
-        uint256 id_,
+        uint96 id_,
         uint256 amount_,
         bytes calldata auctionData_
     ) external virtual returns (uint256 payout, bytes memory auctionOutput);
@@ -81,6 +81,7 @@ abstract contract Auction {
     /// @notice     Bid on an auction lot
     ///
     /// @param      lotId_          The lot id
+    /// @param      bidder_         The bidder of the purchased tokens
     /// @param      recipient_      The recipient of the purchased tokens
     /// @param      referrer_       The referrer of the bid
     /// @param      amount_         The amount of quote tokens to bid
@@ -88,6 +89,7 @@ abstract contract Auction {
     /// @param      approval_       The user approval data
     function bid(
         uint96 lotId_,
+        address bidder_,
         address recipient_,
         address referrer_,
         uint256 amount_,

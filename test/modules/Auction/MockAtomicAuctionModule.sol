@@ -36,7 +36,7 @@ contract MockAtomicAuctionModule is AuctionModule {
     }
 
     function purchase(
-        uint256 id_,
+        uint96 id_,
         uint256 amount_,
         bytes calldata
     ) external virtual override returns (uint256 payout, bytes memory auctionOutput) {
@@ -65,6 +65,7 @@ contract MockAtomicAuctionModule is AuctionModule {
 
     function bid(
         uint96,
+        address,
         address,
         address,
         uint256,

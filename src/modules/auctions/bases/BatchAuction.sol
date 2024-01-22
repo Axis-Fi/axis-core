@@ -41,6 +41,7 @@ abstract contract OnChainBatchAuctionModule is AuctionModule, BatchAuction {
     /// @inheritdoc Auction
     function bid(
         uint96 lotId_,
+        address bidder_,
         address recipient_,
         address referrer_,
         uint256 amount_,

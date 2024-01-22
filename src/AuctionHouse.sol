@@ -43,25 +43,41 @@ abstract contract Router is FeeManager {
     ///
     /// @param      recipient           Address to receive payout
     /// @param      referrer            Address of referrer
-    /// @param      approvalDeadline    Deadline for Permit2 approval signature
     /// @param      lotId               Lot ID
     /// @param      amount              Amount of quoteToken to purchase with (in native decimals)
     /// @param      minAmountOut        Minimum amount of baseToken to receive
-    /// @param      approvalNonce       Nonce for permit Permit2 approval signature
     /// @param      auctionData         Custom data used by the auction module
-    /// @param      approvalSignature   Permit2 approval signature for the quoteToken
     /// @param      allowlistProof      Proof of allowlist inclusion
+    /// @param      permit2Data_        Permit2 approval for the quoteToken
     struct PurchaseParams {
         address recipient;
         address referrer;
-        uint48 approvalDeadline;
         uint96 lotId;
         uint256 amount;
         uint256 minAmountOut;
-        uint256 approvalNonce;
         bytes auctionData;
-        bytes approvalSignature;
         bytes allowlistProof;
+        bytes permit2Data;
+    }
+
+    /// @notice     Parameters used by the bid function
+    /// @dev        This reduces the number of variables in scope for the bid function
+    ///
+    /// @param      lotId               Lot ID
+    /// @param      recipient           Address to receive payout
+    /// @param      referrer            Address of referrer
+    /// @param      amount              Amount of quoteToken to purchase with (in native decimals)
+    /// @param      auctionData         Custom data used by the auction module
+    /// @param      allowlistProof      Proof of allowlist inclusion
+    /// @param      permit2Data_        Permit2 approval for the quoteToken (abi-encoded Permit2Approval struct)
+    struct BidParams {
+        uint96 lotId;
+        address recipient;
+        address referrer;
+        uint256 amount;
+        bytes auctionData;
+        bytes allowlistProof;
+        bytes permit2Data;
     }
 
     // ========== STATE VARIABLES ========== //
@@ -111,22 +127,9 @@ abstract contract Router is FeeManager {
     ///             2. Store the bid
     ///             3. Transfer the amount of quote token from the bidder
     ///
-    /// @param      lotId_           Lot ID
-    /// @param      recipient_       Address to receive payout
-    /// @param      referrer_        Address of referrer
-    /// @param      amount_          Amount of quoteToken to purchase with (in native decimals)
-    /// @param      auctionData_     Custom data used by the auction module
-    /// @param      allowlistProof_  Allowlist proof
-    /// @param      permit2Data_     Permit2 data
-    function bid(
-        uint96 lotId_,
-        address recipient_,
-        address referrer_,
-        uint256 amount_,
-        bytes calldata auctionData_, // sequential hash of bids, minimum amount out encrypted with auction public key
-        bytes calldata allowlistProof_,
-        bytes calldata permit2Data_
-    ) external virtual returns (uint256 bidId);
+    /// @param      params_         Bid parameters
+    /// @return     bidId           Bid ID
+    function bid(BidParams memory params_) external virtual returns (uint256 bidId);
 
     /// @notice     Settle a batch auction with the provided bids
     /// @notice     This function is used for on-chain storage of bids and external settlement
@@ -333,15 +336,14 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
         if (payoutAmount < params_.minAmountOut) revert AmountLessThanMinimum();
 
         // Collect payment from the purchaser
-        _collectPayment(
-            params_.lotId,
-            params_.amount,
-            routing.quoteToken,
-            routing.hooks,
-            params_.approvalDeadline,
-            params_.approvalNonce,
-            params_.approvalSignature
-        );
+        {
+            Permit2Approval memory permit2Approval = params_.permit2Data.length == 0
+                ? Permit2Approval({nonce: 0, deadline: 0, signature: bytes("")})
+                : abi.decode(params_.permit2Data, (Permit2Approval));
+            _collectPayment(
+                params_.lotId, params_.amount, routing.quoteToken, routing.hooks, permit2Approval
+            );
+        }
 
         // Send payment to auction owner
         _sendPayment(routing.owner, amountLessFees, routing.quoteToken, routing.hooks);
@@ -356,53 +358,50 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
         emit Purchase(params_.lotId, msg.sender, params_.referrer, params_.amount, payoutAmount);
     }
 
-    // TODO need a delegated execution function for purchase and bid because we check allowlist on the caller in the normal functions
-
     // ========== BATCH AUCTIONS ========== //
 
     /// @inheritdoc Router
-    function bid(
-        uint96 lotId_,
-        address recipient_,
-        address referrer_,
-        uint256 amount_,
-        bytes calldata auctionData_,
-        bytes calldata allowlistProof_,
-        bytes calldata permit2Data_
-    ) external override isValidLot(lotId_) returns (uint256) {
+    function bid(BidParams memory params_)
+        external
+        override
+        isValidLot(params_.lotId)
+        returns (uint256)
+    {
         // Load routing data for the lot
-        Routing memory routing = lotRouting[lotId_];
+        Routing memory routing = lotRouting[params_.lotId];
 
         // Determine if the bidder is authorized to bid
-        if (!_isAllowed(routing.allowlist, lotId_, msg.sender, allowlistProof_)) {
+        if (!_isAllowed(routing.allowlist, params_.lotId, msg.sender, params_.allowlistProof)) {
             revert InvalidBidder(msg.sender);
+        }
+
+        // Record the bid on the auction module
+        // The module will determine if the bid is valid - minimum bid size, minimum price, auction status, etc
+        uint256 bidId;
+        {
+            AuctionModule module = _getModuleForId(params_.lotId);
+            bidId = module.bid(
+                params_.lotId,
+                msg.sender,
+                params_.recipient,
+                params_.referrer,
+                params_.amount,
+                params_.auctionData,
+                bytes("") // TODO approval param
+            );
         }
 
         // Transfer the quote token from the bidder
         {
-            Permit2Approval memory permit2Approval = abi.decode(permit2Data_, (Permit2Approval));
+            Permit2Approval memory permit2Approval = params_.permit2Data.length == 0
+                ? Permit2Approval({nonce: 0, deadline: 0, signature: bytes("")})
+                : abi.decode(params_.permit2Data, (Permit2Approval));
             _collectPayment(
-                lotId_,
-                amount_,
-                routing.quoteToken,
-                routing.hooks,
-                permit2Approval.deadline,
-                permit2Approval.nonce,
-                permit2Approval.signature
+                params_.lotId, params_.amount, routing.quoteToken, routing.hooks, permit2Approval
             );
         }
 
-        // Record the bid on the auction module
-        // The module will determine if the bid is valid - minimum bid size, minimum price, etc
-        AuctionModule module = _getModuleForId(lotId_);
-        return module.bid(
-            lotId_,
-            recipient_,
-            referrer_,
-            amount_,
-            auctionData_,
-            bytes("") // TODO approval param
-        );
+        return bidId;
     }
 
     /// @inheritdoc Router
@@ -595,17 +594,13 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
     /// @param      amount_             Amount of quoteToken to collect (in native decimals)
     /// @param      quoteToken_         Quote token to collect
     /// @param      hooks_              Hooks contract to call (optional)
-    /// @param      approvalDeadline_   Deadline for Permit2 approval signature
-    /// @param      approvalNonce_      Nonce for Permit2 approval signature
-    /// @param      approvalSignature_  Permit2 approval signature for the quoteToken
+    /// @param      permit2Approval_    Permit2 approval data (optional)
     function _collectPayment(
         uint256 lotId_,
         uint256 amount_,
         ERC20 quoteToken_,
         IHooks hooks_,
-        uint48 approvalDeadline_,
-        uint256 approvalNonce_,
-        bytes memory approvalSignature_
+        Permit2Approval memory permit2Approval_
     ) internal {
         // Call pre hook on hooks contract if provided
         if (address(hooks_) != address(0)) {
@@ -613,10 +608,8 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
         }
 
         // If a Permit2 approval signature is provided, use it to transfer the quote token
-        if (approvalSignature_.length != 0) {
-            _permit2Transfer(
-                amount_, quoteToken_, approvalDeadline_, approvalNonce_, approvalSignature_
-            );
+        if (permit2Approval_.signature.length != 0) {
+            _permit2Transfer(amount_, quoteToken_, permit2Approval_);
         }
         // Otherwise fallback to a standard ERC20 transfer
         else {
@@ -818,15 +811,11 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
     ///
     /// @param      amount_               Amount of tokens to transfer (in native decimals)
     /// @param      token_                Token to transfer
-    /// @param      approvalDeadline_     Deadline for Permit2 approval signature
-    /// @param      approvalNonce_        Nonce for Permit2 approval signature
-    /// @param      approvalSignature_    Permit2 approval signature for the token
+    /// @param      permit2Approval_      Permit2 approval data
     function _permit2Transfer(
         uint256 amount_,
         ERC20 token_,
-        uint48 approvalDeadline_,
-        uint256 approvalNonce_,
-        bytes memory approvalSignature_
+        Permit2Approval memory permit2Approval_
     ) internal {
         uint256 balanceBefore = token_.balanceOf(address(this));
 
@@ -834,12 +823,12 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
         _PERMIT2.permitTransferFrom(
             IPermit2.PermitTransferFrom(
                 IPermit2.TokenPermissions(address(token_), amount_),
-                approvalNonce_,
-                approvalDeadline_
+                permit2Approval_.nonce,
+                permit2Approval_.deadline
             ),
             IPermit2.SignatureTransferDetails({to: address(this), requestedAmount: amount_}),
             msg.sender, // Spender of the tokens
-            approvalSignature_
+            permit2Approval_.signature
         );
 
         // Check that it is not a fee-on-transfer token

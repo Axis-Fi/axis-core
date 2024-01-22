@@ -23,15 +23,13 @@ contract MockAuctionHouse is AuctionHouse {
         uint256 approvalNonce_,
         bytes memory approvalSignature_
     ) external {
-        return _collectPayment(
-            lotId_,
-            amount_,
-            quoteToken_,
-            hooks_,
-            approvalDeadline_,
-            approvalNonce_,
-            approvalSignature_
-        );
+        Permit2Approval memory approval = Permit2Approval({
+            deadline: approvalDeadline_,
+            nonce: approvalNonce_,
+            signature: approvalSignature_
+        });
+
+        return _collectPayment(lotId_, amount_, quoteToken_, hooks_, approval);
     }
 
     function sendPayment(

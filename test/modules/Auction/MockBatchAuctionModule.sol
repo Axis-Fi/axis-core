@@ -5,9 +5,11 @@ pragma solidity 0.8.19;
 import {Module, Veecode, toKeycode, wrapVeecode} from "src/modules/Modules.sol";
 
 // Auctions
-import {AuctionModule} from "src/modules/Auction.sol";
+import {Auction, AuctionModule} from "src/modules/Auction.sol";
 
 contract MockBatchAuctionModule is AuctionModule {
+    mapping(uint96 lotId => Bid[]) public bidData;
+
     constructor(address _owner) AuctionModule(_owner) {
         minAuctionDuration = 1 days;
     }
@@ -27,7 +29,7 @@ contract MockBatchAuctionModule is AuctionModule {
     }
 
     function purchase(
-        uint256,
+        uint96,
         uint256,
         bytes calldata
     ) external virtual override returns (uint256, bytes memory) {
@@ -35,13 +37,36 @@ contract MockBatchAuctionModule is AuctionModule {
     }
 
     function bid(
-        uint96 id_,
+        uint96 lotId_,
+        address bidder_,
         address recipient_,
         address referrer_,
         uint256 amount_,
         bytes calldata auctionData_,
         bytes calldata approval_
-    ) external virtual override returns (uint256) {}
+    ) external virtual override returns (uint256) {
+        // Valid lot
+        if (lotData[lotId_].start == 0) revert Auction.Auction_InvalidLotId(lotId_);
+
+        // If auction is cancelled
+        if (isLive(lotId_) == false) revert Auction.Auction_MarketNotActive(lotId_);
+
+        // Create a new bid
+        Bid memory newBid = Bid({
+            bidder: bidder_,
+            recipient: recipient_,
+            referrer: referrer_,
+            amount: amount_,
+            minAmountOut: 0,
+            auctionParam: bytes32("") // TODO fix this
+        });
+
+        uint256 bidId = bidData[lotId_].length;
+
+        bidData[lotId_].push(newBid);
+
+        return bidId;
+    }
 
     function cancelBid(uint96 lotId_, uint96 bidId_) external virtual override {}
 
@@ -70,4 +95,8 @@ contract MockBatchAuctionModule is AuctionModule {
         bytes calldata settlementProof_,
         bytes calldata settlementData_
     ) external virtual override returns (uint256[] memory amountsOut, bytes memory auctionOutput) {}
+
+    function getBid(uint96 lotId_, uint256 bidId_) external view returns (Bid memory bid_) {
+        bid_ = bidData[lotId_][bidId_];
+    }
 }

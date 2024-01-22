@@ -109,13 +109,16 @@ abstract contract LocalSealedBidBatchAuction is AuctionModule {
     }
 
     // =========== BID =========== //
+
     function bid(
         uint96 lotId_,
+        address bidder_,
         address recipient_,
         address referrer_,
         uint256 amount_,
-        bytes calldata auctionData_
-    ) external onlyInternal auctionIsLive(lotId_) returns (uint256 bidId) {
+        bytes calldata auctionData_,
+        bytes calldata approval_
+    ) external override onlyInternal auctionIsLive(lotId_) returns (uint256 bidId) {
         // Validate inputs
         // Amount at least minimum bid size for lot
         if (amount_ < auctionData[lotId_].minBidSize) revert Auction_WrongState();
@@ -123,7 +126,7 @@ abstract contract LocalSealedBidBatchAuction is AuctionModule {
         // Store bid data
         // Auction data should just be the encrypted amount out (no decoding required)
         EncryptedBid memory userBid;
-        userBid.bidder = msg.sender;
+        userBid.bidder = bidder_;
         userBid.recipient = recipient_;
         userBid.referrer = referrer_;
         userBid.amount = amount_;

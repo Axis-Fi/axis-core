@@ -114,9 +114,6 @@ contract PurchaseTest is Test, Permit2User {
         vm.prank(auctionOwner);
         lotId = auctionHouse.auction(routingParams, auctionParams);
 
-        approvalNonce = _getRandomUint256();
-        approvalDeadline = uint48(block.timestamp) + 1 days;
-
         // Fees
         referrerFee = 1000;
         protocolFee = 2000;
@@ -134,14 +131,12 @@ contract PurchaseTest is Test, Permit2User {
         purchaseParams = Router.PurchaseParams({
             recipient: recipient,
             referrer: referrer,
-            approvalDeadline: approvalDeadline,
             lotId: lotId,
             amount: AMOUNT_IN,
             minAmountOut: AMOUNT_OUT,
-            approvalNonce: approvalNonce,
             auctionData: bytes(""),
-            approvalSignature: approvalSignature,
-            allowlistProof: allowlistProof
+            allowlistProof: allowlistProof,
+            permit2Data: bytes("")
         });
     }
 
@@ -390,15 +385,10 @@ contract PurchaseTest is Test, Permit2User {
     // [X] when the permit2 signature is not provided
     //  [X] it succeeds using ERC20 transfer
 
-    function test_whenPermit2Signature()
-        external
-        givenUserHasQuoteTokenBalance(AMOUNT_IN)
-        givenOwnerHasBaseTokenBalance(AMOUNT_OUT)
-        givenBaseTokenSpendingIsApproved
-        givenQuoteTokenPermit2IsApproved
-    {
-        // Set the permit2 signature
-        purchaseParams.approvalSignature = _signPermit(
+    modifier whenPermit2DataIsProvided() {
+        approvalNonce = _getRandomUint256();
+        approvalDeadline = uint48(block.timestamp) + 1 days;
+        approvalSignature = _signPermit(
             address(quoteToken),
             AMOUNT_IN,
             approvalNonce,
@@ -407,6 +397,25 @@ contract PurchaseTest is Test, Permit2User {
             aliceKey
         );
 
+        // Update parameters
+        purchaseParams.permit2Data = abi.encode(
+            Router.Permit2Approval({
+                deadline: approvalDeadline,
+                nonce: approvalNonce,
+                signature: approvalSignature
+            })
+        );
+        _;
+    }
+
+    function test_whenPermit2Signature()
+        external
+        givenUserHasQuoteTokenBalance(AMOUNT_IN)
+        givenOwnerHasBaseTokenBalance(AMOUNT_OUT)
+        givenBaseTokenSpendingIsApproved
+        givenQuoteTokenPermit2IsApproved
+        whenPermit2DataIsProvided
+    {
         // Purchase
         vm.prank(alice);
         auctionHouse.purchase(purchaseParams);
