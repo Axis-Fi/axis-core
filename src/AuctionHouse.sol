@@ -123,10 +123,10 @@ abstract contract Router is FeeManager {
         address recipient_,
         address referrer_,
         uint256 amount_,
-        bytes calldata auctionData_,
+        bytes calldata auctionData_, // sequential hash of bids, minimum amount out encrypted with auction public key
         bytes calldata allowlistProof_,
         bytes calldata permit2Data_
-    ) external virtual;
+    ) external virtual returns (uint256 bidId);
 
     /// @notice     Settle a batch auction with the provided bids
     /// @notice     This function is used for on-chain storage of bids and external settlement
@@ -407,6 +407,7 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
         }
 
         // Calculate fees
+        // TODO extract this to a function
         uint256 totalAmountInLessFees;
         uint256 totalAmountOut;
         {
