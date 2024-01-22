@@ -192,9 +192,7 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
         _PERMIT2 = IPermit2(permit2_);
     }
 
-    // ========== DIRECT EXECUTION ========== //
-
-    // ========== AUCTION FUNCTIONS ========== //
+    // ========== FEE FUNCTIONS ========== //
 
     function _allocateFees(
         address referrer_,
@@ -209,6 +207,31 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
         if (toProtocol > 0) rewards[_PROTOCOL][quoteToken_] += toProtocol;
 
         return toReferrer + toProtocol;
+    }
+
+    function _allocateFees(
+        Auction.Bid[] memory bids_,
+        ERC20 quoteToken_
+    ) internal returns (uint256 totalAmountIn, uint256 totalFees) {
+        // Calculate fees for purchase
+        uint256 bidCount = bids_.length;
+        for (uint256 i; i < bidCount; i++) {
+            // Calculate fees from bid amount
+            (uint256 toReferrer, uint256 toProtocol) =
+                _calculateFees(bids_[i].referrer, bids_[i].amount);
+
+            // Update referrer fee balances if non-zero and increment the total protocol fee
+            if (toReferrer > 0) {
+                rewards[bids_[i].referrer][quoteToken_] += toReferrer;
+            }
+            totalFees += toReferrer + toProtocol;
+
+            // Increment total amount in
+            totalAmountIn += bids_[i].amount;
+        }
+
+        // Update protocol fee if not zero
+        if (totalFees > 0) rewards[_PROTOCOL][quoteToken_] += totalFees;
     }
 
     function _calculateFees(
@@ -236,6 +259,8 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
             }
         }
     }
+
+    // ========== AUCTION FUNCTIONS ========== //
 
     /// @notice     Determines if `caller_` is allowed to purchase/bid on a lot.
     ///             If no allowlist is defined, this function will return true.
@@ -409,32 +434,11 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
         }
 
         // Calculate fees
-        // TODO extract this to a function
         uint256 totalAmountInLessFees;
-        uint256 totalAmountOut;
         {
-            uint256 bidCount = winningBids_.length;
-            uint256 totalProtocolFee;
-            for (uint256 i; i < bidCount; i++) {
-                // No need to check if the bid amount is greater than the amount out because it is checked in `bid()`
-
-                // Calculate fees from bid amount
-                (uint256 toReferrer, uint256 toProtocol) =
-                    _calculateFees(winningBids_[i].referrer, winningBids_[i].amount);
-
-                // Update referrer fee balances if non-zero and increment the total protocol fee
-                if (toReferrer > 0) {
-                    rewards[winningBids_[i].referrer][routing.quoteToken] += toReferrer;
-                }
-                totalProtocolFee += toProtocol;
-
-                // Increment total amount out
-                totalAmountInLessFees += winningBids_[i].amount - toReferrer - toProtocol;
-                totalAmountOut += amountsOut[i];
-            }
-
-            // Update protocol fee if not zero
-            if (totalProtocolFee > 0) rewards[_PROTOCOL][routing.quoteToken] += totalProtocolFee;
+            (uint256 totalAmountIn, uint256 totalFees) =
+                _allocateFees(winningBids_, routing.quoteToken);
+            totalAmountInLessFees = totalAmountIn - totalFees;
         }
 
         // Assumes that payment has already been collected for each bid
@@ -443,7 +447,19 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
         _sendPayment(routing.owner, totalAmountInLessFees, routing.quoteToken, routing.hooks);
 
         // Collect payout in bulk from the auction owner
-        _collectPayout(lotId_, totalAmountInLessFees, totalAmountOut, routing);
+        {
+            // Calculate amount out
+            uint256 totalAmountOut;
+            {
+                uint256 bidCount = amountsOut.length;
+                for (uint256 i; i < bidCount; i++) {
+                    // Increment total amount out
+                    totalAmountOut += amountsOut[i];
+                }
+            }
+
+            _collectPayout(lotId_, totalAmountInLessFees, totalAmountOut, routing);
+        }
 
         // Handle payouts to bidders
         {
