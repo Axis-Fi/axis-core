@@ -11,7 +11,7 @@
     "build": "forge build",
     "fmt": "forge fmt",
     "fmt:check": "forge fmt --check",
-    "solhint": "solhint --fix --noPrompt --config ./.solhint.json 'src/**/*.sol'",
+    "solhint": "solhint --fix --config ./.solhint.json 'src/**/*.sol'",
     "solhint:check": "solhint --config ./.solhint.json 'src/**/*.sol'",
     "lint": "npm run fmt && npm run solhint",
     "lint:check": "pnpm run fmt:check && pnpm run solhint:check",
@@ -20,7 +20,7 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "devDependencies": {
-    "solhint": "^4.1.1"
+  "dependencies": {
+    "solhint-community": "^3.7.0"
   }
 }

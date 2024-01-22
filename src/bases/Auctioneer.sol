@@ -71,7 +71,7 @@ abstract contract Auctioneer is WithModules {
 
     /// @notice     Constant representing 100%
     /// @dev        1% = 1_000 or 1e3. 100% = 100_000 or 1e5
-    uint48 internal constant ONE_HUNDRED_PERCENT = 1e5;
+    uint48 internal constant _ONE_HUNDRED_PERCENT = 1e5;
 
     /// @notice     Counter for auction lots
     uint256 public lotCounter;
@@ -82,6 +82,19 @@ abstract contract Auctioneer is WithModules {
     /// @notice Mapping auction and derivative references to the condenser that is used to pass data between them
     mapping(Veecode auctionRef => mapping(Veecode derivativeRef => Veecode condenserRef)) public
         condensers;
+
+    // ========= MODIFIERS ========= //
+
+    /// @notice     Checks that the lot ID is valid
+    /// @dev        Reverts if the lot ID is invalid
+    ///
+    /// @param      lotId_  ID of the auction lot
+    modifier isValidLot(uint256 lotId_) {
+        if (lotId_ >= lotCounter) revert InvalidLotId(lotId_);
+
+        if (lotRouting[lotId_].owner == address(0)) revert InvalidLotId(lotId_);
+        _;
+    }
 
     // ========== AUCTION MANAGEMENT ========== //
 
@@ -228,14 +241,9 @@ abstract contract Auctioneer is WithModules {
     ///             - The respective auction module reverts
     ///
     /// @param      lotId_      ID of the auction lot
-    function cancel(uint256 lotId_) external {
-        address lotOwner = lotRouting[lotId_].owner;
-
-        // Check that lot ID is valid
-        if (lotOwner == address(0)) revert InvalidLotId(lotId_);
-
+    function cancel(uint256 lotId_) external isValidLot(lotId_) {
         // Check that caller is the auction owner
-        if (msg.sender != lotOwner) revert NotAuctionOwner(msg.sender);
+        if (msg.sender != lotRouting[lotId_].owner) revert NotAuctionOwner(msg.sender);
 
         AuctionModule module = _getModuleForId(lotId_);
 
@@ -251,10 +259,7 @@ abstract contract Auctioneer is WithModules {
     ///
     /// @param      id_     ID of the auction lot
     /// @return     routing Routing information for the auction lot
-    function getRouting(uint256 id_) external view returns (Routing memory) {
-        // Check that lot ID is valid
-        if (id_ >= lotCounter) revert InvalidLotId(id_);
-
+    function getRouting(uint256 id_) external view isValidLot(id_) returns (Routing memory) {
         // Get routing from lot routing
         return lotRouting[id_];
     }

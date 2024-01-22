@@ -70,8 +70,8 @@ pragma solidity 0.8.19;
 
 //         // Validate discounts
 //         if (
-//             fixedDiscount >= ONE_HUNDRED_PERCENT ||
-//             maxDiscountFromCurrent > ONE_HUNDRED_PERCENT ||
+//             fixedDiscount >= _ONE_HUNDRED_PERCENT ||
+//             maxDiscountFromCurrent > _ONE_HUNDRED_PERCENT ||
 //             fixedDiscount > maxDiscountFromCurrent
 //         ) revert Auctioneer_InvalidParams();
 
@@ -82,8 +82,8 @@ pragma solidity 0.8.19;
 //         auction.conversionMul = conversionMul;
 //         auction.conversionFactor = conversionFactor;
 //         auction.minPrice = oraclePrice.mulDivUp(
-//             ONE_HUNDRED_PERCENT - maxDiscountFromCurrent,
-//             ONE_HUNDRED_PERCENT
+//             _ONE_HUNDRED_PERCENT - maxDiscountFromCurrent,
+//             _ONE_HUNDRED_PERCENT
 //         );
 //     }
 
@@ -116,8 +116,8 @@ pragma solidity 0.8.19;
 
 //         // Apply fixed discount
 //         uint256 price = oraclePrice.mulDivUp(
-//             uint256(ONE_HUNDRED_PERCENT - auction.fixedDiscount),
-//             uint256(ONE_HUNDRED_PERCENT)
+//             uint256(_ONE_HUNDRED_PERCENT - auction.fixedDiscount),
+//             uint256(_ONE_HUNDRED_PERCENT)
 //         );
 
 //         // Compare the current price to the minimum price and return the maximum

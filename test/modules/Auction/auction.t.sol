@@ -8,6 +8,7 @@ import {console2} from "forge-std/console2.sol";
 // Mocks
 import {MockERC20} from "lib/solmate/src/test/utils/mocks/MockERC20.sol";
 import {MockAuctionModule} from "test/modules/Auction/MockAuctionModule.sol";
+import {Permit2User} from "test/lib/permit2/Permit2User.sol";
 
 // Auctions
 import {AuctionHouse} from "src/AuctionHouse.sol";
@@ -25,7 +26,7 @@ import {
     Module
 } from "src/modules/Modules.sol";
 
-contract AuctionTest is Test {
+contract AuctionTest is Test, Permit2User {
     MockERC20 internal baseToken;
     MockERC20 internal quoteToken;
     MockAuctionModule internal mockAuctionModule;
@@ -43,7 +44,7 @@ contract AuctionTest is Test {
         baseToken = new MockERC20("Base Token", "BASE", 18);
         quoteToken = new MockERC20("Quote Token", "QUOTE", 18);
 
-        auctionHouse = new AuctionHouse(protocol);
+        auctionHouse = new AuctionHouse(protocol, _PERMIT2_ADDRESS);
         mockAuctionModule = new MockAuctionModule(address(auctionHouse));
 
         auctionHouse.installModule(mockAuctionModule);
