@@ -56,6 +56,8 @@ contract PurchaseTest is Test, Permit2User {
     uint256 internal constant AMOUNT_IN = 1e18;
     uint256 internal AMOUNT_OUT;
 
+    uint48 internal constant DERIVATIVE_EXPIRY = 1 days;
+
     uint48 internal referrerFee;
     uint48 internal protocolFee;
 
@@ -547,15 +549,15 @@ contract PurchaseTest is Test, Permit2User {
         auctionHouse.installModule(mockDerivativeModule);
 
         // Deploy a new derivative token
-        MockDerivativeModule.DeployParams memory deployParams =
-            MockDerivativeModule.DeployParams({collateralToken: address(baseToken)});
-        (uint256 tokenId,) = mockDerivativeModule.deploy(abi.encode(deployParams), false);
+        MockDerivativeModule.DerivativeParams memory deployParams =
+            MockDerivativeModule.DerivativeParams({expiry: DERIVATIVE_EXPIRY, multiplier: 0});
+        (uint256 tokenId,) =
+            mockDerivativeModule.deploy(address(baseToken), abi.encode(deployParams), false);
 
         // Set up a new auction with a derivative
         derivativeTokenId = tokenId;
         routingParams.derivativeType = toKeycode("DERV");
-        routingParams.derivativeParams =
-            abi.encode(MockDerivativeModule.MintParams({tokenId: derivativeTokenId, multiplier: 0}));
+        routingParams.derivativeParams = abi.encode(deployParams);
 
         vm.prank(auctionOwner);
         lotId = auctionHouse.auction(routingParams, auctionParams);

@@ -27,11 +27,13 @@ abstract contract Derivative {
 
     /// @notice     Deploy a new derivative token. Optionally, deploys an ERC20 wrapper for composability.
     ///
-    /// @param      params_         ABI-encoded parameters for the derivative to be created
-    /// @param      wrapped_        Whether (true) or not (false) the derivative should be wrapped in an ERC20 token for composability
-    /// @return     tokenId_        The ID of the newly created derivative token
-    /// @return     wrappedAddress_ The address of the ERC20 wrapped derivative token, if wrapped_ is true, otherwise, it's the zero address.
+    /// @param      underlyingToken_    The address of the underlying token
+    /// @param      params_             ABI-encoded parameters for the derivative to be created
+    /// @param      wrapped_            Whether (true) or not (false) the derivative should be wrapped in an ERC20 token for composability
+    /// @return     tokenId_            The ID of the newly created derivative token
+    /// @return     wrappedAddress_     The address of the ERC20 wrapped derivative token, if wrapped_ is true, otherwise, it's the zero address.
     function deploy(
+        address underlyingToken_,
         bytes memory params_,
         bool wrapped_
     ) external virtual returns (uint256 tokenId_, address wrappedAddress_);
@@ -40,15 +42,17 @@ abstract contract Derivative {
     /// @notice     Deploys the derivative token if it does not already exist.
     /// @notice     The module is expected to transfer the collateral token to itself.
     ///
-    /// @param      to_             The address to mint the derivative tokens to
-    /// @param      params_         ABI-encoded parameters for the derivative to be created
-    /// @param      amount_         The amount of derivative tokens to create
-    /// @param      wrapped_        Whether (true) or not (false) the derivative should be wrapped in an ERC20 token for composability
-    /// @return     tokenId_        The ID of the newly created derivative token
-    /// @return     wrappedAddress_ The address of the ERC20 wrapped derivative token, if wrapped_ is true, otherwise, it's the zero address.
-    /// @return     amountCreated_  The amount of derivative tokens created
+    /// @param      to_                 The address to mint the derivative tokens to
+    /// @param      underlyingToken_    The address of the underlying token
+    /// @param      params_             ABI-encoded parameters for the derivative to be created
+    /// @param      amount_             The amount of derivative tokens to create
+    /// @param      wrapped_            Whether (true) or not (false) the derivative should be wrapped in an ERC20 token for composability
+    /// @return     tokenId_            The ID of the newly created derivative token
+    /// @return     wrappedAddress_     The address of the ERC20 wrapped derivative token, if wrapped_ is true, otherwise, it's the zero address.
+    /// @return     amountCreated_      The amount of derivative tokens created
     function mint(
         address to_,
+        address underlyingToken_,
         bytes memory params_,
         uint256 amount_,
         bool wrapped_

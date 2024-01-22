@@ -500,7 +500,13 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
             routingParams_.baseToken.safeApprove(address(module), payoutAmount_);
 
             // Call the module to mint derivative tokens to the recipient
-            module.mint(recipient_, derivativeParams, payoutAmount_, routingParams_.wrapDerivative);
+            module.mint(
+                recipient_,
+                address(routingParams_.baseToken),
+                derivativeParams,
+                payoutAmount_,
+                routingParams_.wrapDerivative
+            );
         }
 
         // Call post hook on hooks contract if provided

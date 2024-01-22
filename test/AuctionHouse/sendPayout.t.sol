@@ -33,6 +33,8 @@ contract SendPayoutTest is Test, Permit2User {
     address internal OWNER = address(0x3);
     address internal RECIPIENT = address(0x4);
 
+    uint48 internal constant DERIVATIVE_EXPIRY = 1 days;
+
     // Function parameters
     uint256 internal lotId = 1;
     uint256 internal payoutAmount = 10e18;
@@ -284,15 +286,15 @@ contract SendPayoutTest is Test, Permit2User {
         auctionHouse.installModule(mockDerivativeModule);
 
         // Deploy a new derivative token
-        MockDerivativeModule.DeployParams memory deployParams =
-            MockDerivativeModule.DeployParams({collateralToken: address(payoutToken)});
-        (uint256 tokenId,) = mockDerivativeModule.deploy(abi.encode(deployParams), false);
+        MockDerivativeModule.DerivativeParams memory deployParams =
+            MockDerivativeModule.DerivativeParams({expiry: DERIVATIVE_EXPIRY, multiplier: 0});
+        (uint256 tokenId,) =
+            mockDerivativeModule.deploy(address(payoutToken), abi.encode(deployParams), false);
 
         // Update parameters
         derivativeReference = mockDerivativeModule.VEECODE();
         derivativeTokenId = tokenId;
-        derivativeParams =
-            abi.encode(MockDerivativeModule.MintParams({tokenId: derivativeTokenId, multiplier: 0}));
+        derivativeParams = abi.encode(deployParams);
         routingParams.derivativeReference = derivativeReference;
         routingParams.derivativeParams = derivativeParams;
         _;
@@ -300,16 +302,15 @@ contract SendPayoutTest is Test, Permit2User {
 
     modifier givenDerivativeIsWrapped() {
         // Deploy a new wrapped derivative token
-        MockDerivativeModule.DeployParams memory deployParams =
-            MockDerivativeModule.DeployParams({collateralToken: address(payoutToken)});
+        MockDerivativeModule.DerivativeParams memory deployParams =
+            MockDerivativeModule.DerivativeParams({expiry: DERIVATIVE_EXPIRY + 1, multiplier: 0}); // Different expiry which leads to a different token id
         (uint256 tokenId_, address wrappedToken_) =
-            mockDerivativeModule.deploy(abi.encode(deployParams), true);
+            mockDerivativeModule.deploy(address(payoutToken), abi.encode(deployParams), true);
 
         // Update parameters
         wrappedDerivative = ERC20(wrappedToken_);
         derivativeTokenId = tokenId_;
-        derivativeParams =
-            abi.encode(MockDerivativeModule.MintParams({tokenId: derivativeTokenId, multiplier: 0}));
+        derivativeParams = abi.encode(deployParams);
         routingParams.derivativeParams = derivativeParams;
 
         wrapDerivative = true;

@@ -20,17 +20,12 @@ contract MockDerivativeModule is DerivativeModule {
 
     bool internal validateFails;
     MockERC6909 public derivativeToken;
-    uint256 internal tokenCount;
     MockWrappedDerivative internal wrappedImplementation;
 
     error InvalidDerivativeParams();
 
-    struct DeployParams {
-        address collateralToken;
-    }
-
-    struct MintParams {
-        uint256 tokenId;
+    struct DerivativeParams {
+        uint48 expiry;
         uint256 multiplier;
     }
 
@@ -47,88 +42,61 @@ contract MockDerivativeModule is DerivativeModule {
     }
 
     function deploy(
+        address underlyingToken_,
         bytes memory params_,
         bool wrapped_
     ) external virtual override returns (uint256, address) {
-        uint256 tokenId = tokenCount;
-        address wrappedAddress;
+        if (underlyingToken_ == address(0)) revert InvalidDerivativeParams();
 
         // Check length
-        if (params_.length != 32) revert InvalidDerivativeParams();
+        if (params_.length != 64) revert InvalidDerivativeParams();
 
         // Decode params
-        DeployParams memory decodedParams = abi.decode(params_, (DeployParams));
-        if (decodedParams.collateralToken == address(0)) revert InvalidDerivativeParams();
+        DerivativeParams memory decodedParams = abi.decode(params_, (DerivativeParams));
 
-        if (wrapped_) {
-            // If there is no wrapped implementation, abort
-            if (address(wrappedImplementation) == address(0)) revert("");
-
-            // Deploy the wrapped implementation
-            wrappedAddress = address(wrappedImplementation).clone3(
-                abi.encodePacked(derivativeToken, tokenId), bytes32(tokenId)
-            );
-        }
-
-        // Create new token metadata
-        Token memory tokenData = Token({
-            exists: true,
-            wrapped: wrappedAddress,
-            decimals: 18,
-            name: "Mock Derivative",
-            symbol: "MDER",
-            data: params_ // Should collateralToken be present on every set of metadata?
-        });
-
-        // Store metadata
-        tokenMetadata[tokenId] = tokenData;
-
-        tokenCount++;
-
+        (uint256 tokenId, address wrappedAddress) =
+            _deployIfNeeded(underlyingToken_, decodedParams, wrapped_);
         return (tokenId, wrappedAddress);
     }
 
     function mint(
         address to_,
+        address underlyingToken_,
         bytes memory params_,
         uint256 amount_,
         bool wrapped_
     ) external virtual override returns (uint256, address, uint256) {
         if (params_.length != 64) revert("");
 
-        // TODO this should be deploying a new derivative token if it doesn't exist
+        DerivativeParams memory decodedParams = abi.decode(params_, (DerivativeParams));
 
-        MintParams memory params = abi.decode(params_, (MintParams));
-
-        // Check that tokenId exists
-        Token storage token = tokenMetadata[params.tokenId];
-        if (!token.exists) revert("");
+        // Deploy if needed
+        (uint256 tokenId, address wrappedAddress) =
+            _deployIfNeeded(underlyingToken_, decodedParams, wrapped_);
 
         // Check that the wrapped status is correct
-        if (token.wrapped != address(0) && !wrapped_) revert("");
-
-        // Decode extra token data
-        DeployParams memory decodedParams = abi.decode(token.data, (DeployParams));
+        if (wrappedAddress != address(0) && !wrapped_) revert("");
 
         // Transfer collateral token to this contract
-        ERC20(decodedParams.collateralToken).safeTransferFrom(msg.sender, address(this), amount_);
+        ERC20(underlyingToken_).safeTransferFrom(msg.sender, address(this), amount_);
 
-        uint256 outputAmount = params.multiplier == 0 ? amount_ : amount_ * params.multiplier;
+        uint256 outputAmount =
+            decodedParams.multiplier == 0 ? amount_ : amount_ * decodedParams.multiplier;
 
         // If wrapped, mint and deposit
         if (wrapped_) {
-            derivativeToken.mint(address(this), params.tokenId, outputAmount);
+            derivativeToken.mint(address(this), tokenId, outputAmount);
 
-            derivativeToken.approve(token.wrapped, params.tokenId, outputAmount);
+            derivativeToken.approve(wrappedAddress, tokenId, outputAmount);
 
-            MockWrappedDerivative(token.wrapped).deposit(outputAmount, to_);
+            MockWrappedDerivative(wrappedAddress).deposit(outputAmount, to_);
         }
         // Otherwise mint as normal
         else {
-            derivativeToken.mint(to_, params.tokenId, outputAmount);
+            derivativeToken.mint(to_, tokenId, outputAmount);
         }
 
-        return (params.tokenId, token.wrapped, outputAmount);
+        return (tokenId, wrappedAddress, outputAmount);
     }
 
     function mint(
@@ -179,5 +147,57 @@ contract MockDerivativeModule is DerivativeModule {
 
     function setWrappedImplementation(MockWrappedDerivative implementation_) external {
         wrappedImplementation = implementation_;
+    }
+
+    function _computeId(ERC20 base_, uint48 expiry_) internal pure returns (uint256) {
+        return
+            uint256(keccak256(abi.encodePacked(VEECODE(), keccak256(abi.encode(base_, expiry_)))));
+    }
+
+    function _getNameAndSymbol(
+        ERC20 base_,
+        uint48 expiry_
+    ) internal view returns (string memory, string memory) {
+        return (
+            string(abi.encodePacked(base_.name(), "-", expiry_)),
+            string(abi.encodePacked(base_.symbol(), "-", expiry_))
+        );
+    }
+
+    function _deployIfNeeded(
+        address underlyingToken_,
+        DerivativeParams memory params_,
+        bool wrapped_
+    ) internal returns (uint256, address) {
+        address wrappedAddress;
+
+        // Generate the token id
+        uint256 tokenId = _computeId(ERC20(underlyingToken_), params_.expiry);
+
+        // Check if the derivative exists
+        Token storage token = tokenMetadata[tokenId];
+        if (!token.exists) {
+            if (wrapped_) {
+                // If there is no wrapped implementation, abort
+                if (address(wrappedImplementation) == address(0)) revert("");
+
+                // Deploy the wrapped implementation
+                wrappedAddress = address(wrappedImplementation).clone3(
+                    abi.encodePacked(derivativeToken, tokenId), bytes32(tokenId)
+                );
+                token.wrapped = wrappedAddress;
+            }
+
+            // Store derivative data
+            token.exists = true;
+            (token.name, token.symbol) = _getNameAndSymbol(ERC20(underlyingToken_), params_.expiry);
+            token.decimals = ERC20(underlyingToken_).decimals();
+            token.data = abi.encode(params_);
+
+            // Store metadata
+            tokenMetadata[tokenId] = token;
+        }
+
+        return (tokenId, token.wrapped);
     }
 }
