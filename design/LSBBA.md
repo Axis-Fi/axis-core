@@ -20,7 +20,6 @@ LSSBA is a fully on-chain sealed bid batch auction system built on the Axis Prot
 - Settlement is permissionless
 - System is on-chain and transparent
 
-
 ## Components and Design Decisions
 This version of a sealed bid auction system has a few key properties that make it attractive:
 1. Maximally Permissionless. The entire auction process happens on-chain and can be executed without relying on our off-chain infrastructure.
@@ -32,6 +31,7 @@ However, the user experience is not as good as an off-chain or hybrid system cou
 ### Smart Contracts
 
 #### Axis Protocol
+Axis enables arbitrary auction and derivative combinations in a single settlement contract (the AuctionHouse). For this particular solution, there are only 3 contracts required.
   - Auction House
   - LSBBA (Auction Module)
   - Vesting Module
@@ -46,8 +46,27 @@ What: Need to be able to encrypt bids and other data with a key that no interest
 
 Solution: API and private database that creates RSA keypairs and store the private key until an auction ends. If an auction is cancelled, the private key is never released.
 
-### UI
-SPA hosted on [IPFS](https://docs.ipfs.tech/how-to/websites-on-ipfs/single-page-website/) with [Eth.limo](https://eth.limo/) domain resolution to ENS owned by the protocol
+Axis will provide a simple API that provides key management for RSA keypairs generated on auction creation. The API will generate a new keypair and store the private key in a database. The public key is returned to the user and stored on the auction contract. Once the auction ends, the private key is released from the database and can be used to decrypt the bids. The API will also provide a convenience function for returning the next bids that need to be decrypted for a given auction. This will allow anyone to decrypt the bids and submit them to the contract for verification.
+
+The API will be written in Rust and the database will be a MongoDB instance following the architecture of the Bond Protocol Limit Orders system. This can be easily hosted on Railway and provides good CI/CD support.
+
+In addition to the API, there will be a Rust service that watches for new auction creation events, checks whether the API provided the key, and stores the auction ID and conclusion timestamp in the database. This will allow the API to release the private key at the correct time. We need this service since we cannot be sure of the auction ID when a key is generated (it may be front-run by another transaction, for example).
+
+### UI / dApp
+We will provide a user interface (aka dApp) for both Sellers and Buyers to interact with the product. The key user actions are defined below in the Actions section. The core pages we be:
+- List of auctions (TBD on design and filtering between statuses)
+- Create auction page - for sellers to create new auctions
+- Auction page - Details the status and available actions for a given auction. The auction page will need to support these differents states:
+  - Created - Auction has been created, but not started
+  - Live - Auction is created and currently accepting bids. Buyers should be able to bid and cancel bids they have made.
+  - Concluded - Auction has ended and bids are being decrypted. Anyone should be able to decrypt the bids and submit them to the contract for verification.
+  - Decrypted - Bids are decrypted and awaiting settlement. Anyone should be able to settle the auction.
+  - Settled - Auction payouts have been issued. Buyers that did not win can claim refunds.
+
+The architecture will be a Single Page App (SPA) hosted on [IPFS](https://docs.ipfs.tech/how-to/websites-on-ipfs/single-page-website/) with [Eth.limo](https://eth.limo/) domain resolution to ENS owned by the protocol.
+
+#### Subgraph
+In order to display user bids on the dapp, it is most convenient to use a subgraph to index the bids from events emitted from the smart contracts. Therefore, we will need to create a subgraph for the AuctionHouse (and possibly other modules depending on where the events reside).
 
 ## Actions
 
@@ -141,7 +160,35 @@ sequenceDiagram
 ```
 
 ### Buyer Cancels Bid
-TODO
+Buyers are able to cancel bids they make prior to the auction concluding and receive their deposit back. The bid must be deleted from the stored bids so as to not require it to be decrypted.
+
+```mermaid
+sequenceDiagram
+  autoNumber
+  participant Buyer
+  participant UI
+  participant AuctionHouse
+  participant LSBBA
+  participant Subgraph
+
+  Buyer->>UI: Navigate to Auction page
+  UI->>AuctionHouse: Fetch data for auction ID (base token, quote token, public key, start, conclusion, auction type, derivative type + info, capacity, min bid size)
+  UI->>Subgraph: Fetch bids for user on auction ID
+  UI-->Buyer: Display bids for user
+  Buyer->>UI: Click "Cancel bid" button
+  UI->>AuctionHouse: Send `cancelBid(lotId, bidId)` transaction to blockchain.
+  activate AuctionHouse
+    Note over AuctionHouse: Not exactly sure the separation of duties between module and AuctionHouse yet
+    AuctionHouse->>AuctionHouse: Validate and delete bid, if it exists
+    AuctionHouse->>LSBBA: Call cancelBid function with auction ID and bid ID
+    activate LSBBA
+        LSBBA->>LSBBA: Validate and delete bid (ensuring that it doesn't mess up settlement)
+        LSBBA-->AuctionHouse: Hand execution back to AuctionHouse
+    deactivate LSBBA
+    AuctionHouse-->UI: Return transaction result
+  deactivate AuctionHouse
+  UI-->Buyer: Display transaction result and update bids
+```
 
 ### Seller Cancels Auction
 TODO

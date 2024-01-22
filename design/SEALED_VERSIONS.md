@@ -2,7 +2,7 @@
 
 ## Context
 
-Bond Protocol, rebranding to Axis, is changing directions from our current "atomic" auction products to focus on developing and deploying a Sealed Bid Batch Auction product. The primary expected use cases are token launches, issuing token derivatives, etc. We believe a decentralized sealed bid batch auction can allow for superior price discovery and outcomes for teams over current market solutions.
+Bond Protocol, rebranding to Axis, is changing directions from our current "atomic" auction products to focus on developing and deploying a Sealed Bid Batch Auction product. The primary expected use cases are token sales and issuing token derivatives. We believe a decentralized sealed bid batch auction can allow for superior price discovery and outcomes for teams over current market solutions.
 
 ## Design
 
