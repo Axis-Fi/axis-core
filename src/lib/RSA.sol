@@ -6,11 +6,11 @@ pragma solidity 0.8.19;
 /// @author Oighty
 // TODO Need to add tests for this library
 library RSAOAEP {
-    function modexp(bytes memory base, bytes memory exponent, bytes memory modulus)
-        public
-        view
-        returns (bytes memory)
-    {
+    function modexp(
+        bytes memory base,
+        bytes memory exponent,
+        bytes memory modulus
+    ) public view returns (bytes memory) {
         (bool success, bytes memory output) = address(0x05).staticcall(
             abi.encodePacked(base.length, exponent.length, modulus.length, base, exponent, modulus)
         );
@@ -20,11 +20,12 @@ library RSAOAEP {
         return output;
     }
 
-    function decrypt(bytes memory cipherText, bytes memory d, bytes memory n, bytes memory label)
-        internal
-        view
-        returns (bytes memory message, bytes32 seed)
-    {
+    function decrypt(
+        bytes memory cipherText,
+        bytes memory d,
+        bytes memory n,
+        bytes memory label
+    ) internal view returns (bytes memory message, bytes32 seed) {
         // Implements 7.1.2 RSAES-OAEP-DECRYPT as defined in RFC8017: https://www.rfc-editor.org/rfc/rfc8017
         // Error messages are intentionally vague to prevent oracle attacks
 
@@ -66,7 +67,10 @@ library RSAOAEP {
 
             // Store the remaining bytes into the maskedDb
             for { let i := 0 } lt(i, words) { i := add(i, 1) } {
-                mstore(add(add(maskedDb, 0x20), mul(i, 0x20)), mload(add(add(encoded, 0x41), mul(i, 0x20))))
+                mstore(
+                    add(add(maskedDb, 0x20), mul(i, 0x20)),
+                    mload(add(add(encoded, 0x41), mul(i, 0x20)))
+                )
             }
         }
 
@@ -150,11 +154,13 @@ library RSAOAEP {
         // 4. Return the message and seed used for encryption
     }
 
-    function encrypt(bytes memory message, bytes memory label, bytes memory e, bytes memory n, uint256 seed)
-        internal
-        view
-        returns (bytes memory)
-    {
+    function encrypt(
+        bytes memory message,
+        bytes memory label,
+        bytes memory e,
+        bytes memory n,
+        uint256 seed
+    ) internal view returns (bytes memory) {
         // Implements 7.1.1. RSAES-OAEP-ENCRYPT as defined in RFC8017: https://www.rfc-editor.org/rfc/rfc8017
 
         // 1. a. Check that the label length is less than the max for sha256

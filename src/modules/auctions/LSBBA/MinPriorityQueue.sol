@@ -13,19 +13,18 @@ struct Bid {
 /// @author FrankieIsLost
 /// @author Oighty (edits)
 library MinPriorityQueue {
-
     struct Queue {
         ///@notice incrementing bid id
         uint96 nextBidId;
         ///@notice array backing priority queue
         uint96[] bidIdList;
-        ///@notice total number of bids in queue 
+        ///@notice total number of bids in queue
         uint96 numBids;
         //@notice map bid ids to bids
         mapping(uint96 => Bid) bidIdToBidMap;
     }
 
-    ///@notice initialize must be called before using queue. 
+    ///@notice initialize must be called before using queue.
     function initialize(Queue storage self) public {
         self.bidIdList.push(0);
         self.nextBidId = 1;
@@ -55,17 +54,17 @@ library MinPriorityQueue {
 
     ///@notice move bid up heap
     function swim(Queue storage self, uint96 k) private {
-        while(k > 1 && isGreater(self, k/2, k)) {
-            exchange(self, k, k/2);
-            k = k/2;
+        while (k > 1 && isGreater(self, k / 2, k)) {
+            exchange(self, k, k / 2);
+            k = k / 2;
         }
     }
 
     ///@notice move bid down heap
     function sink(Queue storage self, uint96 k) private {
-        while(2 * k <= self.numBids) {
+        while (2 * k <= self.numBids) {
             uint96 j = 2 * k;
-            if(j < self.numBids && isGreater(self, j, j+1)) {
+            if (j < self.numBids && isGreater(self, j, j + 1)) {
                 j++;
             }
             if (!isGreater(self, k, j)) {
@@ -76,12 +75,17 @@ library MinPriorityQueue {
         }
     }
 
-    ///@notice insert bid in heap 
-    function insert(Queue storage self, uint96 encId, uint256 amountIn, uint256 minAmountOut) public {
+    ///@notice insert bid in heap
+    function insert(
+        Queue storage self,
+        uint96 encId,
+        uint256 amountIn,
+        uint256 minAmountOut
+    ) public {
         insert(self, Bid(self.nextBidId++, encId, amountIn, minAmountOut));
     }
 
-    ///@notice insert bid in heap 
+    ///@notice insert bid in heap
     function insert(Queue storage self, Bid memory bid) private {
         self.bidIdList.push(bid.bidId);
         self.bidIdToBidMap[bid.bidId] = bid;
@@ -89,7 +93,7 @@ library MinPriorityQueue {
         swim(self, self.numBids);
     }
 
-     ///@notice delete min bid from heap and return
+    ///@notice delete min bid from heap and return
     function delMin(Queue storage self) public returns (Bid memory) {
         require(!isEmpty(self), "nothing to delete");
         Bid memory min = self.bidIdToBidMap[self.bidIdList[1]];
@@ -100,7 +104,7 @@ library MinPriorityQueue {
         return min;
     }
 
-    ///@notice helper function to determine ordering. When two bids have the same price, give priority 
+    ///@notice helper function to determine ordering. When two bids have the same price, give priority
     ///to the lower bid ID (inserted earlier)
     function isGreater(Queue storage self, uint256 i, uint256 j) private view returns (bool) {
         uint96 iId = self.bidIdList[i];
@@ -109,16 +113,16 @@ library MinPriorityQueue {
         Bid memory bidJ = self.bidIdToBidMap[jId];
         uint256 relI = bidI.amountIn * bidJ.minAmountOut;
         uint256 relJ = bidJ.amountIn * bidI.minAmountOut;
-        if(relI == relJ) {
+        if (relI == relJ) {
             return iId < jId;
         }
         return relI > relJ;
-    } 
+    }
 
     ///@notice helper function to exchange to bids in the heap
     function exchange(Queue storage self, uint256 i, uint256 j) private {
         uint96 tempId = self.bidIdList[i];
         self.bidIdList[i] = self.bidIdList[j];
         self.bidIdList[j] = tempId;
-    } 
+    }
 }

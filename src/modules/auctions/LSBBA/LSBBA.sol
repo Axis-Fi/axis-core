@@ -66,9 +66,9 @@ abstract contract LocalSealedBidBatchAuction is AuctionModule {
 
     // ========== STATE VARIABLES ========== //
 
-    uint256 internal constant MIN_BID_PERCENT = 1_000; // 1%
+    uint256 internal constant MIN_BID_PERCENT = 1000; // 1%
     uint256 internal constant ONE_HUNDRED_PERCENT = 100_000;
-    uint256 internal constant PUB_KEY_EXPONENT = 65537; // TODO can be 3 to save gas, but 65537 is probably more secure
+    uint256 internal constant PUB_KEY_EXPONENT = 65_537; // TODO can be 3 to save gas, but 65537 is probably more secure
     uint256 internal constant SCALE = 1e18; // TODO maybe set this per auction if decimals mess us up
 
     mapping(uint96 lotId => AuctionData) public auctionData;
@@ -77,8 +77,7 @@ abstract contract LocalSealedBidBatchAuction is AuctionModule {
 
     // ========== SETUP ========== //
 
-    constructor(address auctionHouse_) AuctionModule(auctionHouse_) {
-    }
+    constructor(address auctionHouse_) AuctionModule(auctionHouse_) {}
 
     function VEECODE() public pure override returns (Veecode) {
         return toVeecode("01LSBBA");
@@ -89,10 +88,20 @@ abstract contract LocalSealedBidBatchAuction is AuctionModule {
     }
 
     // =========== BID =========== //
-    function bid(uint96 lotId_, address recipient_, address referrer_, uint256 amount_, bytes calldata auctionData_) external onlyInternal returns (uint256 bidId) {
+    function bid(
+        uint96 lotId_,
+        address recipient_,
+        address referrer_,
+        uint256 amount_,
+        bytes calldata auctionData_
+    ) external onlyInternal returns (uint256 bidId) {
         // Check that bids are allowed to be submitted for the lot
-        if (auctionData[lotId_].status != AuctionStatus.Created || block.timestamp < lotData[lotId_].start || block.timestamp >= lotData[lotId_].conclusion) revert Auction_NotLive();
-        
+        if (
+            auctionData[lotId_].status != AuctionStatus.Created
+                || block.timestamp < lotData[lotId_].start
+                || block.timestamp >= lotData[lotId_].conclusion
+        ) revert Auction_NotLive();
+
         // Validate inputs
         // Amount at least minimum bid size for lot
         if (amount_ < auctionData[lotId_].minBidSize) revert Auction_WrongState();
@@ -115,10 +124,13 @@ abstract contract LocalSealedBidBatchAuction is AuctionModule {
     }
 
     function cancelBid(uint96 lotId_, uint96 bidId_, address sender_) external onlyInternal {
-
         // Validate inputs
         // Auction for lot must still be live
-        if (auctionData[lotId_].status != AuctionStatus.Created || block.timestamp < lotData[lotId_].start || block.timestamp >= lotData[lotId_].conclusion) revert Auction_NotLive();
+        if (
+            auctionData[lotId_].status != AuctionStatus.Created
+                || block.timestamp < lotData[lotId_].start
+                || block.timestamp >= lotData[lotId_].conclusion
+        ) revert Auction_NotLive();
 
         // Bid ID must be less than number of bids for lot
         if (bidId_ >= lotEncryptedBids[lotId_].length) revert Auction_BidDoesNotExist();
@@ -127,7 +139,9 @@ abstract contract LocalSealedBidBatchAuction is AuctionModule {
         if (sender_ != lotEncryptedBids[lotId_][bidId_].bidder) revert Auction_NotBidder();
 
         // Bid is not already cancelled
-        if (lotEncryptedBids[lotId_][bidId_].status != BidStatus.Submitted) revert Auction_AlreadyCancelled();
+        if (lotEncryptedBids[lotId_][bidId_].status != BidStatus.Submitted) {
+            revert Auction_AlreadyCancelled();
+        }
 
         // Set bid status to cancelled
         lotEncryptedBids[lotId_][bidId_].status = BidStatus.Cancelled;
@@ -143,13 +157,12 @@ abstract contract LocalSealedBidBatchAuction is AuctionModule {
         // User must not have won the auction or claimed a refund already
         // TODO should we allow cancel bids to claim earlier?
         // Might allow legit users to change their bids
-        // But also allows a malicious user to use the same funds to create 
+        // But also allows a malicious user to use the same funds to create
         // multiple bids in an attempt to grief the settlement
         BidStatus bidStatus = lotEncryptedBids[lotId_][bidId_].status;
         if (
-            auctionData[lotId_].status != AuctionStatus.Settled || 
-            bidStatus == BidStatus.Refunded ||
-            bidStatus == BidStatus.Won
+            auctionData[lotId_].status != AuctionStatus.Settled || bidStatus == BidStatus.Refunded
+                || bidStatus == BidStatus.Won
         ) revert Auction_WrongState();
 
         // Bid ID must be less than number of bids for lot
@@ -163,14 +176,19 @@ abstract contract LocalSealedBidBatchAuction is AuctionModule {
 
     function decryptAndSortBids(uint96 lotId_, Decrypt[] memory decrypts_) external {
         // Check that auction is in the right state for decryption
-        if (auctionData[lotId_].status != AuctionStatus.Created || block.timestamp < lotData[lotId_].conclusion) revert Auction_WrongState();
-        
+        if (
+            auctionData[lotId_].status != AuctionStatus.Created
+                || block.timestamp < lotData[lotId_].conclusion
+        ) revert Auction_WrongState();
+
         // Load next decrypt index
         uint96 nextDecryptIndex = auctionData[lotId_].nextDecryptIndex;
         uint96 len = uint96(decrypts_.length);
 
         // Check that the number of decrypts is less than or equal to the number of bids remaining to be decrypted
-        if (len > lotEncryptedBids[lotId_].length - nextDecryptIndex) revert Auction_InvalidDecrypt();
+        if (len > lotEncryptedBids[lotId_].length - nextDecryptIndex) {
+            revert Auction_InvalidDecrypt();
+        }
 
         // Iterate over decrypts, validate that they match the stored encrypted bids, then store them in the sorted bid queue
         for (uint96 i; i < len; i++) {
@@ -181,14 +199,18 @@ abstract contract LocalSealedBidBatchAuction is AuctionModule {
             EncryptedBid storage encBid = lotEncryptedBids[lotId_][nextDecryptIndex + i];
 
             // Check that the encrypted bid matches the re-encrypted decrypt by hashing both
-            if (keccak256(ciphertext) != keccak256(encBid.encryptedAmountOut)) revert Auction_InvalidDecrypt();
-            
+            if (keccak256(ciphertext) != keccak256(encBid.encryptedAmountOut)) {
+                revert Auction_InvalidDecrypt();
+            }
+
             // If the bid has been cancelled, it shouldn't be added to the queue
             // TODO should this just check != Submitted?
             if (encBid.status == BidStatus.Cancelled) continue;
 
             // Store the decrypt in the sorted bid queue
-            lotSortedBids[lotId_].insert(nextDecryptIndex + i, encBid.amount, decrypts_[i].amountOut);
+            lotSortedBids[lotId_].insert(
+                nextDecryptIndex + i, encBid.amount, decrypts_[i].amountOut
+            );
 
             // Set bid status to decrypted
             encBid.status = BidStatus.Decrypted;
@@ -198,21 +220,41 @@ abstract contract LocalSealedBidBatchAuction is AuctionModule {
         auctionData[lotId_].nextDecryptIndex += len;
 
         // If all bids have been decrypted, set auction status to decrypted
-        if (auctionData[lotId_].nextDecryptIndex == lotEncryptedBids[lotId_].length) auctionData[lotId_].status = AuctionStatus.Decrypted;
+        if (auctionData[lotId_].nextDecryptIndex == lotEncryptedBids[lotId_].length) {
+            auctionData[lotId_].status = AuctionStatus.Decrypted;
+        }
     }
 
-    function _encrypt(uint96 lotId_, Decrypt memory decrypt_) internal view returns (bytes memory) {
-        return RSAOAEP.encrypt(abi.encodePacked(decrypt_.amountOut), abi.encodePacked(lotId_), abi.encodePacked(PUB_KEY_EXPONENT), auctionData[lotId_].publicKeyModulus, decrypt_.seed);
+    function _encrypt(
+        uint96 lotId_,
+        Decrypt memory decrypt_
+    ) internal view returns (bytes memory) {
+        return RSAOAEP.encrypt(
+            abi.encodePacked(decrypt_.amountOut),
+            abi.encodePacked(lotId_),
+            abi.encodePacked(PUB_KEY_EXPONENT),
+            auctionData[lotId_].publicKeyModulus,
+            decrypt_.seed
+        );
     }
 
     /// @notice View function that can be used to obtain the amount out and seed for a given bid by providing the private key
     /// @dev This function can be used to decrypt bids off-chain if you know the private key
-    function decryptBid(uint96 lotId_, uint96 bidId_, bytes memory privateKey_) external view returns (Decrypt memory) {
+    function decryptBid(
+        uint96 lotId_,
+        uint96 bidId_,
+        bytes memory privateKey_
+    ) external view returns (Decrypt memory) {
         // Load encrypted bid
         EncryptedBid memory encBid = lotEncryptedBids[lotId_][bidId_];
 
         // Decrypt the encrypted amount out
-        (bytes memory amountOut, bytes32 seed) = RSAOAEP.decrypt(encBid.encryptedAmountOut, abi.encodePacked(lotId_), privateKey_, auctionData[lotId_].publicKeyModulus);
+        (bytes memory amountOut, bytes32 seed) = RSAOAEP.decrypt(
+            encBid.encryptedAmountOut,
+            abi.encodePacked(lotId_),
+            privateKey_,
+            auctionData[lotId_].publicKeyModulus
+        );
 
         // Cast the decrypted values
         Decrypt memory decrypt;
@@ -222,7 +264,6 @@ abstract contract LocalSealedBidBatchAuction is AuctionModule {
         // Return the decrypt
         return decrypt;
     }
-
 
     // =========== SETTLEMENT =========== //
 
@@ -269,7 +310,6 @@ abstract contract LocalSealedBidBatchAuction is AuctionModule {
                     winningBidIndex = i;
                 }
             }
-            
         }
 
         // Check if the minimum price for the auction was reached
@@ -312,7 +352,6 @@ abstract contract LocalSealedBidBatchAuction is AuctionModule {
         return winningBids_;
     }
 
-
     // =========== AUCTION MANAGEMENT ========== //
 
     // TODO auction creation
@@ -330,12 +369,14 @@ abstract contract LocalSealedBidBatchAuction is AuctionModule {
         if (lot_.capacityInQuote) revert Auction_InvalidParams();
 
         // minFillPercent must be less than or equal to 100%
-        // TODO should there be a minimum? 
+        // TODO should there be a minimum?
         if (minFillPercent > ONE_HUNDRED_PERCENT) revert Auction_InvalidParams();
 
         // minBidPercent must be greater than or equal to the global min and less than or equal to 100%
         // TODO should we cap this below 100%?
-        if (minBidPercent < MIN_BID_PERCENT || minBidPercent > ONE_HUNDRED_PERCENT) revert Auction_InvalidParams();
+        if (minBidPercent < MIN_BID_PERCENT || minBidPercent > ONE_HUNDRED_PERCENT) {
+            revert Auction_InvalidParams();
+        }
 
         // publicKeyModulus must be 1024 bits (128 bytes)
         if (publicKeyModulus.length != 128) revert Auction_InvalidParams();
@@ -350,13 +391,15 @@ abstract contract LocalSealedBidBatchAuction is AuctionModule {
         // Initialize sorted bid queue
         lotSortedBids[lotId_].initialize();
     }
-    
+
     function _cancelAuction(uint96 lotId_) internal override {
         // Auction cannot be cancelled once it has concluded
-        if (auctionData[lotId_].status != AuctionStatus.Created || block.timestamp < lotData[lotId_].conclusion) revert Auction_WrongState();
+        if (
+            auctionData[lotId_].status != AuctionStatus.Created
+                || block.timestamp < lotData[lotId_].conclusion
+        ) revert Auction_WrongState();
 
         // Set auction status to settled so that bids can be refunded
         auctionData[lotId_].status = AuctionStatus.Settled;
     }
-
 }

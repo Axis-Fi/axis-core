@@ -179,11 +179,7 @@ abstract contract AuctionModule is Auction, Module {
     }
 
     /// @dev implementation-specific auction creation logic can be inserted by overriding this function
-    function _auction(
-        uint96 lotId_,
-        Lot memory lot_,
-        bytes memory params_
-    ) internal virtual;
+    function _auction(uint96 lotId_, Lot memory lot_, bytes memory params_) internal virtual;
 
     /// @notice     Cancel an auction lot
     /// @dev        Owner is stored in the Routing information on the AuctionHouse, so we check permissions there
