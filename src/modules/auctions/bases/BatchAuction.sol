@@ -1,7 +1,9 @@
 /// SPDX-License-Identifier: AGPL-3.0
 pragma solidity 0.8.19;
 
-import "src/modules/Auction.sol";
+// TODO may not need this file. Lot of implementation specifics.
+
+import {Auction, AuctionModule} from "src/modules/Auction.sol";
 
 // Spec
 // - Allow issuers to create batch auctions to sell a payout token (or a derivative of it) for a quote token
