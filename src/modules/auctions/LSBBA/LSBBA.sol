@@ -99,7 +99,7 @@ abstract contract LocalSealedBidBatchAuction is AuctionModule {
         _;
     }
 
-    modifier onlyBidder(address sender_, uint96 lotId_, uint96 bidId_) {
+    modifier onlyBidder(address sender_, uint96 lotId_, uint256 bidId_) {
         // Bid ID must be less than number of bids for lot
         if (bidId_ >= lotEncryptedBids[lotId_].length) revert Auction_BidDoesNotExist();
 
@@ -144,7 +144,7 @@ abstract contract LocalSealedBidBatchAuction is AuctionModule {
     /// @inheritdoc Auction
     function cancelBid(
         uint96 lotId_,
-        uint96 bidId_,
+        uint256 bidId_,
         address bidder_
     ) external override onlyInternal auctionIsLive(lotId_) onlyBidder(bidder_, lotId_, bidId_) {
         // Validate inputs
@@ -157,12 +157,12 @@ abstract contract LocalSealedBidBatchAuction is AuctionModule {
         lotEncryptedBids[lotId_][bidId_].status = BidStatus.Cancelled;
     }
 
-    // TODO need a top-level function on the Auction House that actually sends the funds to the recipient
+    /// @inheritdoc Auction
     function claimRefund(
         uint96 lotId_,
-        uint96 bidId_,
+        uint256 bidId_,
         address sender_
-    ) external onlyInternal onlyBidder(sender_, lotId_, bidId_) {
+    ) external override onlyInternal onlyBidder(sender_, lotId_, bidId_) {
         // Validate inputs
         // Auction for must have settled to claim refund
         // User must not have won the auction or claimed a refund already

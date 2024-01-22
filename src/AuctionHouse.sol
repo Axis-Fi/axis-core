@@ -153,7 +153,15 @@ abstract contract Router is FeeManager {
         bytes calldata settlementData_
     ) external virtual;
 
-    // TODO bid refunds
+    /// @notice     Claims a refund for a failed or cancelled bid
+    /// @dev        The implementing function must perform the following:
+    ///             1. Validate that the `lotId_` is valid
+    ///             2. Pass the request to the auction module to validate and update data
+    ///             3. Send the refund to the bidder
+    ///
+    /// @param      lotId_           Lot ID
+    /// @param      bidId_           Bid ID
+    function claimRefund(uint96 lotId_, uint256 bidId_) external virtual;
 
     // ========== FEE MANAGEMENT ========== //
 
@@ -410,6 +418,13 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
     }
 
     /// @inheritdoc Router
+    /// @dev        This function reverts if:
+    ///             - the lot ID is invalid
+    ///             - the caller is not authorized to settle the auction
+    ///             - the auction module reverts when settling the auction
+    ///             - transferring the quote token to the auction owner fails
+    ///             - collecting the payout from the auction owner fails
+    ///             - sending the payout to each bidder fails
     function settle(
         uint96 lotId_,
         Auction.Bid[] calldata winningBids_,
@@ -473,6 +488,11 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
                 _sendPayout(lotId_, winningBids_[i].bidder, amountsOut[i], routing, auctionOutput);
             }
         }
+    }
+
+    /// @inheritdoc Router
+    function claimRefund(uint96 lotId_, uint256 bidId_) external override isValidLot(lotId_) {
+        //
     }
 
     // // External submission and evaluation

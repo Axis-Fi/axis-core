@@ -46,10 +46,14 @@ contract MockBatchAuctionModule is AuctionModule {
         bytes calldata approval_
     ) external virtual override returns (uint256) {
         // Valid lot
-        if (lotData[lotId_].start == 0) revert Auction.Auction_InvalidLotId(lotId_);
+        if (lotData[lotId_].start == 0) {
+            revert Auction.Auction_InvalidLotId(lotId_);
+        }
 
         // If auction is cancelled
-        if (isLive(lotId_) == false) revert Auction.Auction_MarketNotActive(lotId_);
+        if (isLive(lotId_) == false) {
+            revert Auction.Auction_MarketNotActive(lotId_);
+        }
 
         // Create a new bid
         Bid memory newBid = Bid({
@@ -68,7 +72,7 @@ contract MockBatchAuctionModule is AuctionModule {
         return bidId;
     }
 
-    function cancelBid(uint96 lotId_, uint96 bidId_, address bidder_) external virtual override {}
+    function cancelBid(uint96 lotId_, uint256 bidId_, address bidder_) external virtual override {}
 
     function settle(
         uint256 id_,
@@ -99,4 +103,10 @@ contract MockBatchAuctionModule is AuctionModule {
     function getBid(uint96 lotId_, uint256 bidId_) external view returns (Bid memory bid_) {
         bid_ = bidData[lotId_][bidId_];
     }
+
+    function claimRefund(
+        uint96 lotId_,
+        uint256 bidId_,
+        address bidder_
+    ) external virtual override {}
 }
