@@ -79,6 +79,9 @@ abstract contract Auction {
     // ========== BATCH AUCTIONS ========== //
 
     /// @notice     Bid on an auction lot
+    /// @dev        The implementing function should handle the following:
+    ///             - Validate the bid parameters
+    ///             - Store the bid data
     ///
     /// @param      lotId_          The lot id
     /// @param      bidder_         The bidder of the purchased tokens
@@ -97,7 +100,15 @@ abstract contract Auction {
         bytes calldata approval_
     ) external virtual returns (uint256 bidId);
 
-    function cancelBid(uint96 lotId_, uint96 bidId_) external virtual;
+    /// @notice     Cancel a bid
+    /// @dev        The implementing function should handle the following:
+    ///             - Validate the bid parameters
+    ///             - Update the bid data
+    ///
+    /// @param      lotId_      The lot id
+    /// @param      bidId_      The bid id
+    /// @param      bidder_     The bidder of the purchased tokens
+    function cancelBid(uint96 lotId_, uint96 bidId_, address bidder_) external virtual;
 
     /// @notice     Settle a batch auction with the provided bids
     /// @notice     This function is used for on-chain storage of bids and external settlement

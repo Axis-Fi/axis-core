@@ -75,7 +75,7 @@ contract MockAtomicAuctionModule is AuctionModule {
         revert Auction_NotImplemented();
     }
 
-    function cancelBid(uint96, uint96) external virtual override {
+    function cancelBid(uint96, uint96, address) external virtual override {
         revert Auction_NotImplemented();
     }
 

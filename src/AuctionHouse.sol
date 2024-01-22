@@ -82,10 +82,10 @@ abstract contract Router is FeeManager {
 
     // ========== STATE VARIABLES ========== //
 
-    /// @notice Fee paid to a front end operator in basis points (3 decimals). Set by the referrer, must be less than or equal to 5% (5e3).
-    /// @dev There are some situations where the fees may round down to zero if quantity of baseToken
-    ///      is < 1e5 wei (can happen with big price differences on small decimal tokens). This is purely
-    ///      a theoretical edge case, as the bond amount would not be practical.
+    /// @notice     Fee paid to a front end operator in basis points (3 decimals). Set by the referrer, must be less than or equal to 5% (5e3).
+    /// @dev        There are some situations where the fees may round down to zero if quantity of baseToken
+    ///             is < 1e5 wei (can happen with big price differences on small decimal tokens). This is purely
+    ///             a theoretical edge case, as the bond amount would not be practical.
     mapping(address => uint48) public referrerFees;
 
     // TODO allow charging fees based on the auction type and/or derivative type
@@ -122,7 +122,7 @@ abstract contract Router is FeeManager {
     // ========== BATCH AUCTIONS ========== //
 
     /// @notice     Bid on a lot in a batch auction
-    /// @notice     The implementing function must perform the following:
+    /// @dev        The implementing function must perform the following:
     ///             1. Validate the bid
     ///             2. Store the bid
     ///             3. Transfer the amount of quote token from the bidder
@@ -134,7 +134,7 @@ abstract contract Router is FeeManager {
     /// @notice     Settle a batch auction with the provided bids
     /// @notice     This function is used for on-chain storage of bids and external settlement
     ///
-    /// @notice     The implementing function must perform the following:
+    /// @dev        The implementing function must perform the following:
     ///             1. Validate that the caller is authorized to settle the auction
     ///             2. Calculate fees
     ///             3. Pass the bids to the auction module to validate the settlement

@@ -68,7 +68,7 @@ contract MockBatchAuctionModule is AuctionModule {
         return bidId;
     }
 
-    function cancelBid(uint96 lotId_, uint96 bidId_) external virtual override {}
+    function cancelBid(uint96 lotId_, uint96 bidId_, address bidder_) external virtual override {}
 
     function settle(
         uint256 id_,

@@ -2,7 +2,7 @@
 pragma solidity 0.8.19;
 
 // import "src/modules/auctions/bases/BatchAuction.sol";
-import {AuctionModule} from "src/modules/Auction.sol";
+import {Auction, AuctionModule} from "src/modules/Auction.sol";
 import {Veecode, toVeecode, Module} from "src/modules/Modules.sol";
 import {RSAOAEP} from "src/lib/RSA.sol";
 import {MinPriorityQueue, Bid as QueueBid} from "src/modules/auctions/LSBBA/MinPriorityQueue.sol";
@@ -110,6 +110,7 @@ abstract contract LocalSealedBidBatchAuction is AuctionModule {
 
     // =========== BID =========== //
 
+    /// @inheritdoc Auction
     function bid(
         uint96 lotId_,
         address bidder_,
@@ -140,11 +141,12 @@ abstract contract LocalSealedBidBatchAuction is AuctionModule {
         lotEncryptedBids[lotId_].push(userBid);
     }
 
+    /// @inheritdoc Auction
     function cancelBid(
         uint96 lotId_,
         uint96 bidId_,
-        address sender_
-    ) external onlyInternal auctionIsLive(lotId_) onlyBidder(sender_, lotId_, bidId_) {
+        address bidder_
+    ) external override onlyInternal auctionIsLive(lotId_) onlyBidder(bidder_, lotId_, bidId_) {
         // Validate inputs
         // Bid is not already cancelled
         if (lotEncryptedBids[lotId_][bidId_].status != BidStatus.Submitted) {
