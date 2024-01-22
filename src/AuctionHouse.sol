@@ -344,13 +344,13 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
 
         // If a Permit2 approval signature is provided, use it to transfer the quote token
         if (approvalSignature_.length != 0) {
-            _permit2Transfer(
+            _permit2TransferFrom(
                 amount_, quoteToken_, approvalDeadline_, approvalNonce_, approvalSignature_
             );
         }
         // Otherwise fallback to a standard ERC20 transfer
         else {
-            _transfer(amount_, quoteToken_);
+            _transferFrom(amount_, quoteToken_);
         }
     }
 
@@ -522,7 +522,7 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
     ///
     /// @param      amount_   Amount of tokens to transfer (in native decimals)
     /// @param      token_    Token to transfer
-    function _transfer(uint256 amount_, ERC20 token_) internal {
+    function _transferFrom(uint256 amount_, ERC20 token_) internal {
         uint256 balanceBefore = token_.balanceOf(address(this));
 
         // Transfer the quote token from the user
@@ -551,7 +551,7 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
     /// @param      approvalDeadline_     Deadline for Permit2 approval signature
     /// @param      approvalNonce_        Nonce for Permit2 approval signature
     /// @param      approvalSignature_    Permit2 approval signature for the token
-    function _permit2Transfer(
+    function _permit2TransferFrom(
         uint256 amount_,
         ERC20 token_,
         uint48 approvalDeadline_,
