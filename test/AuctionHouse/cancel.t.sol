@@ -35,7 +35,7 @@ contract CancelTest is Test, Permit2User {
     Auctioneer.RoutingParams internal routingParams;
     Auction.AuctionParams internal auctionParams;
 
-    uint256 internal lotId;
+    uint96 internal lotId;
 
     address internal auctionOwner = address(0x1);
 

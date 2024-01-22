@@ -93,7 +93,7 @@ abstract contract Auction {
         uint256 amount_,
         bytes calldata auctionData_,
         bytes calldata approval_
-    ) external virtual;
+    ) external virtual returns (uint256 bidId);
 
     function cancelBid(uint96 lotId_, uint96 bidId_) external virtual;
 

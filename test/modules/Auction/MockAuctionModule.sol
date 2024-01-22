@@ -20,15 +20,9 @@ contract MockAuctionModule is AuctionModule {
         return Type.Auction;
     }
 
-    function _auction(
-        uint256,
-        Lot memory,
-        bytes memory
-    ) internal virtual override returns (uint256) {
-        return 0;
-    }
+    function _auction(uint96, Lot memory, bytes memory) internal virtual override {}
 
-    function _cancel(uint256 id_) internal override {
+    function _cancelAuction(uint96 id_) internal override {
         //
     }
 
@@ -45,7 +39,7 @@ contract MockAuctionModule is AuctionModule {
         uint256 amount_,
         bytes calldata auctionData_,
         bytes calldata approval_
-    ) external virtual override {}
+    ) external virtual override returns (uint256) {}
 
     function payoutFor(
         uint256 id_,
@@ -67,6 +61,8 @@ contract MockAuctionModule is AuctionModule {
         bytes calldata settlementProof_,
         bytes calldata settlementData_
     ) external virtual override returns (uint256[] memory amountsOut, bytes memory auctionOutput) {}
+
+    function cancelBid(uint96 lotId_, uint96 bidId_) external virtual override {}
 }
 
 contract MockAuctionModuleV2 is MockAuctionModule {

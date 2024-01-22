@@ -214,7 +214,7 @@ contract AuctionTest is Test, Permit2User {
 
     function test_success() external whenAuctionModuleIsInstalled {
         // Create the auction
-        uint256 lotId = auctionHouse.auction(routingParams, auctionParams);
+        uint96 lotId = auctionHouse.auction(routingParams, auctionParams);
 
         // Assert values
         (
@@ -252,7 +252,7 @@ contract AuctionTest is Test, Permit2User {
         routingParams.quoteToken = baseToken;
 
         // Create the auction
-        uint256 lotId = auctionHouse.auction(routingParams, auctionParams);
+        uint96 lotId = auctionHouse.auction(routingParams, auctionParams);
 
         // Assert values
         (,, ERC20 lotBaseToken, ERC20 lotQuoteToken,,,,,) = auctionHouse.lotRouting(lotId);
@@ -330,7 +330,7 @@ contract AuctionTest is Test, Permit2User {
         whenDerivativeTypeIsSet
     {
         // Create the auction
-        uint256 lotId = auctionHouse.auction(routingParams, auctionParams);
+        uint96 lotId = auctionHouse.auction(routingParams, auctionParams);
 
         // Assert values
         (,,,,,, Veecode lotDerivativeType,,) = auctionHouse.lotRouting(lotId);
@@ -351,7 +351,7 @@ contract AuctionTest is Test, Permit2User {
         routingParams.derivativeParams = abi.encode("derivative params");
 
         // Create the auction
-        uint256 lotId = auctionHouse.auction(routingParams, auctionParams);
+        uint96 lotId = auctionHouse.auction(routingParams, auctionParams);
 
         // Assert values
         (,,,,,, Veecode lotDerivativeType, bytes memory lotDerivativeParams,) =
@@ -412,7 +412,7 @@ contract AuctionTest is Test, Permit2User {
         routingParams.allowlist = mockAllowlist;
 
         // Create the auction
-        uint256 lotId = auctionHouse.auction(routingParams, auctionParams);
+        uint96 lotId = auctionHouse.auction(routingParams, auctionParams);
 
         // Assert values
         (,,,,, IAllowlist lotAllowlist,,,) = auctionHouse.lotRouting(lotId);
@@ -467,7 +467,7 @@ contract AuctionTest is Test, Permit2User {
         routingParams.hooks = mockHook;
 
         // Create the auction
-        uint256 lotId = auctionHouse.auction(routingParams, auctionParams);
+        uint96 lotId = auctionHouse.auction(routingParams, auctionParams);
 
         // Assert values
         (,,,, IHooks lotHooks,,,,) = auctionHouse.lotRouting(lotId);

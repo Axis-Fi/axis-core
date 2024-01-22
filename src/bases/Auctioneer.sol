@@ -30,13 +30,13 @@ abstract contract Auctioneer is WithModules {
     // ========= ERRORS ========= //
 
     error InvalidParams();
-    error InvalidLotId(uint256 id_);
+    error InvalidLotId(uint96 id_);
     error InvalidModuleType(Veecode reference_);
     error NotAuctionOwner(address caller_);
 
     // ========= EVENTS ========= //
 
-    event AuctionCreated(uint256 id, address baseToken, address quoteToken);
+    event AuctionCreated(uint96 id, address baseToken, address quoteToken);
 
     // ========= DATA STRUCTURES ========== //
 
@@ -74,10 +74,10 @@ abstract contract Auctioneer is WithModules {
     uint48 internal constant _ONE_HUNDRED_PERCENT = 1e5;
 
     /// @notice     Counter for auction lots
-    uint256 public lotCounter;
+    uint96 public lotCounter;
 
     /// @notice Mapping of lot IDs to their auction type (represented by the Keycode for the auction submodule)
-    mapping(uint256 lotId => Routing) public lotRouting;
+    mapping(uint96 lotId => Routing) public lotRouting;
 
     /// @notice Mapping auction and derivative references to the condenser that is used to pass data between them
     mapping(Veecode auctionRef => mapping(Veecode derivativeRef => Veecode condenserRef)) public
@@ -89,7 +89,7 @@ abstract contract Auctioneer is WithModules {
     /// @dev        Reverts if the lot ID is invalid
     ///
     /// @param      lotId_  ID of the auction lot
-    modifier isValidLot(uint256 lotId_) {
+    modifier isValidLot(uint96 lotId_) {
         if (lotId_ >= lotCounter) revert InvalidLotId(lotId_);
 
         if (lotRouting[lotId_].owner == address(0)) revert InvalidLotId(lotId_);
@@ -116,7 +116,7 @@ abstract contract Auctioneer is WithModules {
     function auction(
         RoutingParams calldata routing_,
         Auction.AuctionParams calldata params_
-    ) external returns (uint256 lotId) {
+    ) external returns (uint96 lotId) {
         // Load auction type module, this checks that it is installed.
         // We load it here vs. later to avoid two checks.
         AuctionModule auctionModule = AuctionModule(_getLatestModuleIfActive(routing_.auctionType));
@@ -241,14 +241,14 @@ abstract contract Auctioneer is WithModules {
     ///             - The respective auction module reverts
     ///
     /// @param      lotId_      ID of the auction lot
-    function cancel(uint256 lotId_) external isValidLot(lotId_) {
+    function cancel(uint96 lotId_) external isValidLot(lotId_) {
         // Check that caller is the auction owner
         if (msg.sender != lotRouting[lotId_].owner) revert NotAuctionOwner(msg.sender);
 
         AuctionModule module = _getModuleForId(lotId_);
 
         // Cancel the auction on the module
-        module.cancel(lotId_);
+        module.cancelAuction(lotId_);
     }
 
     // ========== AUCTION INFORMATION ========== //
@@ -259,48 +259,48 @@ abstract contract Auctioneer is WithModules {
     ///
     /// @param      id_     ID of the auction lot
     /// @return     routing Routing information for the auction lot
-    function getRouting(uint256 id_) external view isValidLot(id_) returns (Routing memory) {
+    function getRouting(uint96 id_) external view isValidLot(id_) returns (Routing memory) {
         // Get routing from lot routing
         return lotRouting[id_];
     }
 
     // TODO need to add the fee calculations back in at this level for all of these functions
-    function payoutFor(uint256 id_, uint256 amount_) external view returns (uint256) {
+    function payoutFor(uint96 id_, uint256 amount_) external view returns (uint256) {
         AuctionModule module = _getModuleForId(id_);
 
         // Get payout from module
         return module.payoutFor(id_, amount_);
     }
 
-    function priceFor(uint256 id_, uint256 payout_) external view returns (uint256) {
+    function priceFor(uint96 id_, uint256 payout_) external view returns (uint256) {
         AuctionModule module = _getModuleForId(id_);
 
         // Get price from module
         return module.priceFor(id_, payout_);
     }
 
-    function maxPayout(uint256 id_) external view returns (uint256) {
+    function maxPayout(uint96 id_) external view returns (uint256) {
         AuctionModule module = _getModuleForId(id_);
 
         // Get max payout from module
         return module.maxPayout(id_);
     }
 
-    function maxAmountAccepted(uint256 id_) external view returns (uint256) {
+    function maxAmountAccepted(uint96 id_) external view returns (uint256) {
         AuctionModule module = _getModuleForId(id_);
 
         // Get max amount accepted from module
         return module.maxAmountAccepted(id_);
     }
 
-    function isLive(uint256 id_) external view returns (bool) {
+    function isLive(uint96 id_) external view returns (bool) {
         AuctionModule module = _getModuleForId(id_);
 
         // Get isLive from module
         return module.isLive(id_);
     }
 
-    function ownerOf(uint256 id_) external view returns (address) {
+    function ownerOf(uint96 id_) external view returns (address) {
         // Check that lot ID is valid
         if (id_ >= lotCounter) revert InvalidLotId(id_);
 
@@ -308,7 +308,7 @@ abstract contract Auctioneer is WithModules {
         return lotRouting[id_].owner;
     }
 
-    function remainingCapacity(uint256 id_) external view returns (uint256) {
+    function remainingCapacity(uint96 id_) external view returns (uint256) {
         AuctionModule module = _getModuleForId(id_);
 
         // Get remaining capacity from module
@@ -323,7 +323,7 @@ abstract contract Auctioneer is WithModules {
     ///             - The module for the auction type is not installed
     ///
     /// @param      lotId_      ID of the auction lot
-    function _getModuleForId(uint256 lotId_) internal view returns (AuctionModule) {
+    function _getModuleForId(uint96 lotId_) internal view returns (AuctionModule) {
         // Confirm lot ID is valid
         if (lotId_ >= lotCounter) revert InvalidLotId(lotId_);
 

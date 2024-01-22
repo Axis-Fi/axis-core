@@ -87,6 +87,27 @@ abstract contract LocalSealedBidBatchAuction is AuctionModule {
         return Type.Auction;
     }
 
+    // ========== MODIFIERS ========== //
+
+    modifier auctionIsLive(uint96 lotId_) {
+        // Check that bids are allowed to be submitted for the lot
+        if (
+            auctionData[lotId_].status != AuctionStatus.Created
+                || block.timestamp < lotData[lotId_].start
+                || block.timestamp >= lotData[lotId_].conclusion
+        ) revert Auction_NotLive();
+        _;
+    }
+
+    modifier onlyBidder(address sender_, uint96 lotId_, uint96 bidId_) {
+        // Bid ID must be less than number of bids for lot
+        if (bidId_ >= lotEncryptedBids[lotId_].length) revert Auction_BidDoesNotExist();
+
+        // Check that sender is the bidder
+        if (sender_ != lotEncryptedBids[lotId_][bidId_].bidder) revert Auction_NotBidder();
+        _;
+    }
+
     // =========== BID =========== //
     function bid(
         uint96 lotId_,
@@ -94,14 +115,7 @@ abstract contract LocalSealedBidBatchAuction is AuctionModule {
         address referrer_,
         uint256 amount_,
         bytes calldata auctionData_
-    ) external onlyInternal returns (uint256 bidId) {
-        // Check that bids are allowed to be submitted for the lot
-        if (
-            auctionData[lotId_].status != AuctionStatus.Created
-                || block.timestamp < lotData[lotId_].start
-                || block.timestamp >= lotData[lotId_].conclusion
-        ) revert Auction_NotLive();
-
+    ) external onlyInternal auctionIsLive(lotId_) returns (uint256 bidId) {
         // Validate inputs
         // Amount at least minimum bid size for lot
         if (amount_ < auctionData[lotId_].minBidSize) revert Auction_WrongState();
@@ -123,21 +137,12 @@ abstract contract LocalSealedBidBatchAuction is AuctionModule {
         lotEncryptedBids[lotId_].push(userBid);
     }
 
-    function cancelBid(uint96 lotId_, uint96 bidId_, address sender_) external onlyInternal {
+    function cancelBid(
+        uint96 lotId_,
+        uint96 bidId_,
+        address sender_
+    ) external onlyInternal auctionIsLive(lotId_) onlyBidder(sender_, lotId_, bidId_) {
         // Validate inputs
-        // Auction for lot must still be live
-        if (
-            auctionData[lotId_].status != AuctionStatus.Created
-                || block.timestamp < lotData[lotId_].start
-                || block.timestamp >= lotData[lotId_].conclusion
-        ) revert Auction_NotLive();
-
-        // Bid ID must be less than number of bids for lot
-        if (bidId_ >= lotEncryptedBids[lotId_].length) revert Auction_BidDoesNotExist();
-
-        // Sender must be bidder
-        if (sender_ != lotEncryptedBids[lotId_][bidId_].bidder) revert Auction_NotBidder();
-
         // Bid is not already cancelled
         if (lotEncryptedBids[lotId_][bidId_].status != BidStatus.Submitted) {
             revert Auction_AlreadyCancelled();
@@ -148,11 +153,12 @@ abstract contract LocalSealedBidBatchAuction is AuctionModule {
     }
 
     // TODO need a top-level function on the Auction House that actually sends the funds to the recipient
-    function claimRefund(uint96 lotId_, uint96 bidId_, address sender_) external onlyInternal {
+    function claimRefund(
+        uint96 lotId_,
+        uint96 bidId_,
+        address sender_
+    ) external onlyInternal onlyBidder(sender_, lotId_, bidId_) {
         // Validate inputs
-        // Sender must be bidder
-        if (sender_ != lotEncryptedBids[lotId_][bidId_].bidder) revert Auction_NotBidder();
-
         // Auction for must have settled to claim refund
         // User must not have won the auction or claimed a refund already
         // TODO should we allow cancel bids to claim earlier?
@@ -164,9 +170,6 @@ abstract contract LocalSealedBidBatchAuction is AuctionModule {
             auctionData[lotId_].status != AuctionStatus.Settled || bidStatus == BidStatus.Refunded
                 || bidStatus == BidStatus.Won
         ) revert Auction_WrongState();
-
-        // Bid ID must be less than number of bids for lot
-        if (bidId_ >= lotEncryptedBids[lotId_].length) revert Auction_BidDoesNotExist();
 
         // Set bid status to refunded
         lotEncryptedBids[lotId_][bidId_].status = BidStatus.Refunded;

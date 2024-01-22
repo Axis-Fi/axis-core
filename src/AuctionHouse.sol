@@ -55,7 +55,7 @@ abstract contract Router is FeeManager {
         address recipient;
         address referrer;
         uint48 approvalDeadline;
-        uint256 lotId;
+        uint96 lotId;
         uint256 amount;
         uint256 minAmountOut;
         uint256 approvalNonce;
@@ -344,7 +344,7 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
         bytes calldata auctionData_,
         bytes calldata allowlistProof_,
         bytes calldata permit2Data_
-    ) external override isValidLot(lotId_) {
+    ) external override isValidLot(lotId_) returns (uint256) {
         // Load routing data for the lot
         Routing memory routing = lotRouting[lotId_];
 
@@ -354,21 +354,23 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
         }
 
         // Transfer the quote token from the bidder
-        Permit2Approval memory permit2Approval = abi.decode(permit2Data_, (Permit2Approval));
-        _collectPayment(
-            lotId_,
-            amount_,
-            routing.quoteToken,
-            routing.hooks,
-            permit2Approval.deadline,
-            permit2Approval.nonce,
-            permit2Approval.signature
-        );
+        {
+            Permit2Approval memory permit2Approval = abi.decode(permit2Data_, (Permit2Approval));
+            _collectPayment(
+                lotId_,
+                amount_,
+                routing.quoteToken,
+                routing.hooks,
+                permit2Approval.deadline,
+                permit2Approval.nonce,
+                permit2Approval.signature
+            );
+        }
 
         // Record the bid on the auction module
         // The module will determine if the bid is valid - minimum bid size, minimum price, etc
         AuctionModule module = _getModuleForId(lotId_);
-        module.bid(
+        return module.bid(
             lotId_,
             recipient_,
             referrer_,

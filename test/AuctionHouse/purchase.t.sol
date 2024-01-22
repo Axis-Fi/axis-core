@@ -51,7 +51,7 @@ contract PurchaseTest is Test, Permit2User {
     uint256 internal aliceKey;
     address internal alice;
 
-    uint256 internal lotId;
+    uint96 internal lotId;
 
     uint256 internal constant AMOUNT_IN = 1e18;
     uint256 internal AMOUNT_OUT;

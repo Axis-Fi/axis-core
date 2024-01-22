@@ -46,7 +46,7 @@ abstract contract OnChainBatchAuctionModule is AuctionModule, BatchAuction {
         uint256 amount_,
         bytes calldata auctionData_,
         bytes calldata approval_
-    ) external override onlyParent {
+    ) external override onlyParent returns (uint256 bidId) {
         // TODO
         // Validate inputs
 
