@@ -18,7 +18,6 @@ abstract contract LocalSealedBidBatchAuction is AuctionModule {
 
     // ========== ERRORS ========== //
     error Auction_BidDoesNotExist();
-    error Auction_NotBidder();
     error Auction_AlreadyCancelled();
     error Auction_WrongState();
     error Auction_NotLive();

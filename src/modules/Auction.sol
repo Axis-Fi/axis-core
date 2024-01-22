@@ -14,12 +14,16 @@ abstract contract Auction {
 
     error Auction_InvalidLotId(uint96 lotId);
 
+    error Auction_InvalidBidId(uint256 bidId);
+
     error Auction_OnlyMarketOwner();
     error Auction_AmountLessThanMinimum();
     error Auction_NotEnoughCapacity();
     error Auction_InvalidParams();
     error Auction_NotAuthorized();
     error Auction_NotImplemented();
+
+    error Auction_NotBidder();
 
     /* ========== EVENTS ========== */
 
@@ -103,6 +107,7 @@ abstract contract Auction {
     /// @notice     Cancel a bid
     /// @dev        The implementing function should handle the following:
     ///             - Validate the bid parameters
+    ///             - Authorize `bidder_`
     ///             - Update the bid data
     ///
     /// @param      lotId_      The lot id
@@ -113,6 +118,7 @@ abstract contract Auction {
     /// @notice     Claim a refund for a bid
     /// @dev        The implementing function should handle the following:
     ///             - Validate the bid parameters
+    ///             - Authorize `bidder_`
     ///             - Update the bid data
     ///
     /// @param      lotId_      The lot id

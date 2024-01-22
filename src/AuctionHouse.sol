@@ -131,6 +131,15 @@ abstract contract Router is FeeManager {
     /// @return     bidId           Bid ID
     function bid(BidParams memory params_) external virtual returns (uint256 bidId);
 
+    /// @notice     Cancel a bid on a lot in a batch auction
+    /// @dev        The implementing function must perform the following:
+    ///             1. Validate the bid
+    ///             2. Call the auction module to cancel the bid
+    ///
+    /// @param      lotId_          Lot ID
+    /// @param      bidId_          Bid ID
+    function cancelBid(uint96 lotId_, uint256 bidId_) external virtual;
+
     /// @notice     Settle a batch auction with the provided bids
     /// @notice     This function is used for on-chain storage of bids and external settlement
     ///
@@ -415,6 +424,13 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
         }
 
         return bidId;
+    }
+
+    /// @inheritdoc Router
+    function cancelBid(uint96 lotId_, uint256 bidId_) external override isValidLot(lotId_) {
+        // Cancel the bid on the auction module
+        AuctionModule module = _getModuleForId(lotId_);
+        module.cancelBid(lotId_, bidId_, msg.sender);
     }
 
     /// @inheritdoc Router
