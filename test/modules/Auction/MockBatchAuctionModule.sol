@@ -58,7 +58,7 @@ contract MockBatchAuctionModule is AuctionModule {
             referrer: referrer_,
             amount: amount_,
             minAmountOut: 0,
-            auctionParam: bytes32("") // TODO fix this
+            auctionParam: auctionData_
         });
 
         uint256 bidId = bidData[lotId_].length;

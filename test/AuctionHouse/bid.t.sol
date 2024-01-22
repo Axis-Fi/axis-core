@@ -322,7 +322,7 @@ contract BidTest is Test, Permit2User {
         assertEq(bid.referrer, referrer, "referrer mismatch");
         assertEq(bid.amount, BID_AMOUNT, "amount mismatch");
         assertEq(bid.minAmountOut, 0, "minAmountOut mismatch");
-        assertEq(bid.auctionParam, bytes32(auctionData), "auctionParam mismatch");
+        assertEq(bid.auctionParam, auctionData, "auctionParam mismatch");
     }
 
     function test_whenPermit2ApprovalIsNotProvided()
@@ -350,6 +350,21 @@ contract BidTest is Test, Permit2User {
         assertEq(bid.referrer, referrer, "referrer mismatch");
         assertEq(bid.amount, BID_AMOUNT, "amount mismatch");
         assertEq(bid.minAmountOut, 0, "minAmountOut mismatch");
-        assertEq(bid.auctionParam, bytes32(auctionData), "auctionParam mismatch");
+        assertEq(bid.auctionParam, auctionData, "auctionParam mismatch");
+    }
+
+    function test_whenAuctionParamIsProvided() external givenLotIsCreated givenUserHasQuoteTokenBalance(BID_AMOUNT) givenUserHasApprovedQuoteToken(BID_AMOUNT) {
+        auctionData = abi.encode("auction data");
+
+        // Update bid parameters
+        bidParams.auctionData = auctionData;
+
+        // Call the function
+        vm.prank(alice);
+        uint256 bidId = auctionHouse.bid(bidParams);
+
+        // Check the bid
+        Auction.Bid memory bid = mockAuctionModule.getBid(lotId, bidId);
+        assertEq(bid.auctionParam, auctionData, "auctionParam mismatch");
     }
 }

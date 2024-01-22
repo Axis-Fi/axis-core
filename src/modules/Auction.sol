@@ -46,7 +46,7 @@ abstract contract Auction {
         address referrer;
         uint256 amount;
         uint256 minAmountOut;
-        bytes32 auctionParam; // optional implementation-specific parameter for the bid
+        bytes auctionParam; // optional implementation-specific parameter for the bid
     }
 
     struct AuctionParams {
