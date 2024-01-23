@@ -64,7 +64,8 @@ contract CollectPayoutTest is Test, Permit2User {
             allowlist: IAllowlist(address(0)),
             derivativeReference: derivativeReference,
             derivativeParams: derivativeParams,
-            wrapDerivative: wrapDerivative
+            wrapDerivative: wrapDerivative,
+            prefunded: false
         });
     }
 
@@ -153,7 +154,7 @@ contract CollectPayoutTest is Test, Permit2User {
         whenMidHookBreaksInvariant
     {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(AuctionHouse.InvalidHook.selector);
+        bytes memory err = abi.encodeWithSelector(Auctioneer.InvalidHook.selector);
         vm.expectRevert(err);
 
         // Call
@@ -169,7 +170,7 @@ contract CollectPayoutTest is Test, Permit2User {
         givenTokenTakesFeeOnTransfer
     {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(AuctionHouse.InvalidHook.selector);
+        bytes memory err = abi.encodeWithSelector(Auctioneer.InvalidHook.selector);
         vm.expectRevert(err);
 
         // Call
@@ -264,7 +265,7 @@ contract CollectPayoutTest is Test, Permit2User {
     {
         // Expect revert
         bytes memory err =
-            abi.encodeWithSelector(AuctionHouse.UnsupportedToken.selector, address(payoutToken));
+            abi.encodeWithSelector(Auctioneer.UnsupportedToken.selector, address(payoutToken));
         vm.expectRevert(err);
 
         // Call
@@ -320,7 +321,7 @@ contract CollectPayoutTest is Test, Permit2User {
         whenMidHookBreaksInvariant
     {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(AuctionHouse.InvalidHook.selector);
+        bytes memory err = abi.encodeWithSelector(Auctioneer.InvalidHook.selector);
         vm.expectRevert(err);
 
         // Call
@@ -410,7 +411,7 @@ contract CollectPayoutTest is Test, Permit2User {
     {
         // Expect revert
         bytes memory err =
-            abi.encodeWithSelector(AuctionHouse.UnsupportedToken.selector, address(payoutToken));
+            abi.encodeWithSelector(Auctioneer.UnsupportedToken.selector, address(payoutToken));
         vm.expectRevert(err);
 
         // Call

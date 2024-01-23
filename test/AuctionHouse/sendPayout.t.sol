@@ -86,7 +86,8 @@ contract SendPayoutTest is Test, Permit2User {
             allowlist: IAllowlist(address(0)),
             derivativeReference: derivativeReference,
             derivativeParams: derivativeParams,
-            wrapDerivative: wrapDerivative
+            wrapDerivative: wrapDerivative,
+            prefunded: false
         });
     }
 
@@ -155,7 +156,7 @@ contract SendPayoutTest is Test, Permit2User {
     {
         // Expect revert
         bytes memory err =
-            abi.encodeWithSelector(AuctionHouse.UnsupportedToken.selector, address(payoutToken));
+            abi.encodeWithSelector(Auctioneer.UnsupportedToken.selector, address(payoutToken));
         vm.expectRevert(err);
 
         // Call
@@ -229,7 +230,7 @@ contract SendPayoutTest is Test, Permit2User {
     {
         // Expect revert
         bytes memory err =
-            abi.encodeWithSelector(AuctionHouse.UnsupportedToken.selector, address(payoutToken));
+            abi.encodeWithSelector(Auctioneer.UnsupportedToken.selector, address(payoutToken));
         vm.expectRevert(err);
 
         // Call

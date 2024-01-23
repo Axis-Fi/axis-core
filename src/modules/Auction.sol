@@ -145,7 +145,16 @@ abstract contract Auction {
     // TODO NatSpec comments
     // TODO validate function
 
-    function auction(uint96 id_, AuctionParams memory params_) external virtual;
+    /// @notice     Create an auction lot
+    ///
+    /// @param      lotId_      The lot id
+    /// @param      params_     The auction parameters
+    /// @return     prefundingRequired  Whether or not prefunding is required
+    /// @return     capacity            The capacity of the lot
+    function auction(
+        uint96 lotId_,
+        AuctionParams memory params_
+    ) external virtual returns (bool prefundingRequired, uint256 capacity);
 
     function cancelAuction(uint96 id_) external virtual;
 
@@ -171,16 +180,17 @@ abstract contract AuctionModule is Auction, Module {
 
     // ========== AUCTION MANAGEMENT ========== //
 
-    /// @notice     Create an auction lot
+    /// @inheritdoc Auction
     /// @dev        If the start time is zero, the auction will have a start time of the current block timestamp
     ///
     /// @dev        This function reverts if:
     ///             - the caller is not the parent of the module
     ///             - the start time is in the past
     ///             - the duration is less than the minimum
-    ///
-    /// @param      lotId_      The lot id
-    function auction(uint96 lotId_, AuctionParams memory params_) external override onlyParent {
+    function auction(
+        uint96 lotId_,
+        AuctionParams memory params_
+    ) external override onlyParent returns (bool prefundingRequired, uint256 capacity) {
         // Start time must be zero or in the future
         if (params_.start > 0 && params_.start < uint48(block.timestamp)) {
             revert Auction_InvalidStart(params_.start, uint48(block.timestamp));
@@ -199,14 +209,29 @@ abstract contract AuctionModule is Auction, Module {
         lot.capacity = params_.capacity;
 
         // Call internal createAuction function to store implementation-specific data
-        _auction(lotId_, lot, params_.implParams);
+        (prefundingRequired) = _auction(lotId_, lot, params_.implParams);
+
+        // Cannot pre-fund if capacity is in quote token
+        if (prefundingRequired && lot.capacityInQuote) revert Auction_InvalidParams();
 
         // Store lot data
         lotData[lotId_] = lot;
+
+        return (prefundingRequired, lot.capacity);
     }
 
-    /// @dev implementation-specific auction creation logic can be inserted by overriding this function
-    function _auction(uint96 lotId_, Lot memory lot_, bytes memory params_) internal virtual;
+    /// @notice     Implementation-specific auction creation logic
+    /// @dev        Auction modules should override this to perform any additional logic
+    ///
+    /// @param      lotId_              The lot ID
+    /// @param      lot_                The lot data
+    /// @param      params_             Additional auction parameters
+    /// @return     prefundingRequired  Whether or not prefunding is required
+    function _auction(
+        uint96 lotId_,
+        Lot memory lot_,
+        bytes memory params_
+    ) internal virtual returns (bool prefundingRequired);
 
     /// @notice     Cancel an auction lot
     /// @dev        Owner is stored in the Routing information on the AuctionHouse, so we check permissions there

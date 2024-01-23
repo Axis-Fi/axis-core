@@ -1,7 +1,8 @@
 /// SPDX-License-Identifier: AGPL-3.0
 pragma solidity 0.8.19;
 
-import {ERC20} from "lib/solmate/src/tokens/ERC20.sol";
+import {ERC20} from "solmate/tokens/ERC20.sol";
+import {SafeTransferLib} from "solmate/utils/SafeTransferLib.sol";
 
 import {
     fromKeycode,
@@ -27,12 +28,16 @@ import {IAllowlist} from "src/interfaces/IAllowlist.sol";
 ///         - Cancelling auction lots
 ///         - Storing information about how to handle inputs and outputs for auctions ("routing")
 abstract contract Auctioneer is WithModules {
+    using SafeTransferLib for ERC20;
+
     // ========= ERRORS ========= //
 
     error InvalidParams();
     error InvalidLotId(uint96 id_);
     error InvalidModuleType(Veecode reference_);
     error NotAuctionOwner(address caller_);
+    error InvalidHook();
+    error UnsupportedToken(address token_);
 
     // ========= EVENTS ========= //
 
@@ -40,17 +45,28 @@ abstract contract Auctioneer is WithModules {
 
     // ========= DATA STRUCTURES ========== //
 
-    /// @notice Auction routing information for a lot
+    /// @notice     Auction routing information for a lot
+    /// @param      auctionReference    Auction module, represented by its Veecode
+    /// @param      owner               Lot owner
+    /// @param      baseToken           Token provided by seller
+    /// @param      quoteToken          Token to accept as payment
+    /// @param      hooks               (optional) Address to call for any hooks to be executed
+    /// @param      allowlist           (optional) Contract that implements an allowlist for the auction lot
+    /// @param      derivativeReference (optional) Derivative module, represented by its Veecode
+    /// @param      derivativeParams    (optional) abi-encoded data to be used to create payout derivatives on a purchase
+    /// @param      wrapDerivative      (optional) Whether to wrap the derivative in a ERC20 token instead of the native ERC6909 format
+    /// @param      prefunded           Set by the auction module if the auction is prefunded
     struct Routing {
-        Veecode auctionReference; // auction module, represented by its Veecode
-        address owner; // market owner. sends payout tokens, receives quote tokens
-        ERC20 baseToken; // token provided by seller
-        ERC20 quoteToken; // token to accept as payment
-        IHooks hooks; // (optional) address to call for any hooks to be executed on a purchase. Must implement IHooks.
-        IAllowlist allowlist; // (optional) contract that implements an allowlist for the market, based on IAllowlist
-        Veecode derivativeReference; // (optional) derivative module, represented by its Veecode. If not set, no derivative will be created.
-        bytes derivativeParams; // (optional) abi-encoded data to be used to create payout derivatives on a purchase
-        bool wrapDerivative; // (optional) whether to wrap the derivative in a ERC20 token instead of the native ERC6909 format.
+        Veecode auctionReference;
+        address owner;
+        ERC20 baseToken;
+        ERC20 quoteToken;
+        IHooks hooks;
+        IAllowlist allowlist;
+        Veecode derivativeReference;
+        bytes derivativeParams;
+        bool wrapDerivative;
+        bool prefunded;
     }
 
     /// @notice     Auction routing information provided as input parameters
@@ -140,9 +156,11 @@ abstract contract Auctioneer is WithModules {
         lotId = lotCounter++;
 
         // Auction Module
+        bool requiresPrefunding;
+        uint256 lotCapacity;
         {
             // Call module auction function to store implementation-specific data
-            auctionModule.auction(lotId, params_);
+            (requiresPrefunding, lotCapacity) = auctionModule.auction(lotId, params_);
         }
 
         // Validate routing parameters
@@ -240,6 +258,38 @@ abstract contract Auctioneer is WithModules {
             routing.hooks = routing_.hooks;
         }
 
+        // Perform pre-funding, if needed
+        if (requiresPrefunding) {
+            // Store pre-funding information
+            routing.prefunded = true;
+
+            // TODO copied from AuctionHouse. Consider consolidating.
+            // Get the balance of the base token before the transfer
+            uint256 balanceBefore = routing_.baseToken.balanceOf(address(this));
+
+            // Call hook on hooks contract if provided
+            if (address(routing_.hooks) != address(0)) {
+                // The pre-auction create hook should transfer the base token to this contract
+                routing_.hooks.preAuctionCreate(lotId);
+
+                // Check that the hook transferred the expected amount of base tokens
+                if (routing_.baseToken.balanceOf(address(this)) < balanceBefore + lotCapacity) {
+                    revert InvalidHook();
+                }
+            }
+            // Otherwise fallback to a standard ERC20 transfer
+            else {
+                // Transfer the base token from the auction owner
+                // `safeTransferFrom()` will revert upon failure or the lack of allowance or balance
+                routing_.baseToken.safeTransferFrom(msg.sender, address(this), lotCapacity);
+
+                // Check that it is not a fee-on-transfer token
+                if (routing_.baseToken.balanceOf(address(this)) < balanceBefore + lotCapacity) {
+                    revert UnsupportedToken(address(routing_.baseToken));
+                }
+            }
+        }
+
         emit AuctionCreated(lotId, address(routing.baseToken), address(routing.quoteToken));
     }
 
@@ -256,6 +306,8 @@ abstract contract Auctioneer is WithModules {
         // Cancel the auction on the module
         module.cancelAuction(lotId_);
     }
+
+    // TODO claim refund if pre-funded and concluded
 
     // ========== AUCTION INFORMATION ========== //
 

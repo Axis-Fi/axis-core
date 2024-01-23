@@ -360,8 +360,13 @@ abstract contract LocalSealedBidBatchAuction is AuctionModule {
 
     // =========== AUCTION MANAGEMENT ========== //
 
-    // TODO auction creation
-    function _auction(uint96 lotId_, Lot memory lot_, bytes memory params_) internal override {
+    /// @inheritdoc AuctionModule
+    /// @dev        Creates a new auction lot for the LSBBA auction type.
+    function _auction(
+        uint96 lotId_,
+        Lot memory lot_,
+        bytes memory params_
+    ) internal override returns (bool prefundingRequired) {
         // Decode implementation params
         (
             uint256 minimumPrice,
@@ -396,6 +401,9 @@ abstract contract LocalSealedBidBatchAuction is AuctionModule {
 
         // Initialize sorted bid queue
         lotSortedBids[lotId_].initialize();
+
+        // This auction type requires pre-funding
+        return (true);
     }
 
     function _cancelAuction(uint96 lotId_) internal override {

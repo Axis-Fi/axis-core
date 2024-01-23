@@ -11,6 +11,7 @@ import {Permit2User} from "test/lib/permit2/Permit2User.sol";
 
 import {IPermit2} from "src/lib/permit2/interfaces/IPermit2.sol";
 import {AuctionHouse} from "src/AuctionHouse.sol";
+import {Auctioneer} from "src/bases/Auctioneer.sol";
 import {IHooks} from "src/interfaces/IHooks.sol";
 
 contract CollectPaymentTest is Test, Permit2User {
@@ -287,7 +288,7 @@ contract CollectPaymentTest is Test, Permit2User {
     {
         // Expect the error
         bytes memory err =
-            abi.encodeWithSelector(AuctionHouse.UnsupportedToken.selector, address(quoteToken));
+            abi.encodeWithSelector(Auctioneer.UnsupportedToken.selector, address(quoteToken));
         vm.expectRevert(err);
 
         // Call
@@ -359,7 +360,7 @@ contract CollectPaymentTest is Test, Permit2User {
     {
         // Expect the error
         bytes memory err =
-            abi.encodeWithSelector(AuctionHouse.UnsupportedToken.selector, address(quoteToken));
+            abi.encodeWithSelector(Auctioneer.UnsupportedToken.selector, address(quoteToken));
         vm.expectRevert(err);
 
         // Call

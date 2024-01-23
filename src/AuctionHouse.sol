@@ -192,10 +192,6 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
 
     error AmountLessThanMinimum();
 
-    error UnsupportedToken(address token_);
-
-    error InvalidHook();
-
     error InvalidBidder(address bidder_);
 
     // ========== EVENTS ========== //

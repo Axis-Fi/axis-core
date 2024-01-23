@@ -3,7 +3,8 @@ pragma solidity 0.8.19;
 
 import {ERC20} from "solmate/tokens/ERC20.sol";
 
-import {IHooks} from "src/bases/Auctioneer.sol";
+import {IHooks} from "src/interfaces/IHooks.sol";
+import {Auctioneer} from "src/bases/Auctioneer.sol";
 
 import {SafeTransferLib} from "solmate/utils/SafeTransferLib.sol";
 
@@ -37,6 +38,8 @@ contract MockHook is IHooks {
     /// @notice     Use this to determine if the hook was called
     bool public postHookCalled;
     bool public postHookReverts;
+
+    uint256 public preAuctionCreateMultiplier;
 
     constructor(address quoteToken_, address payoutToken_) {
         quoteToken = ERC20(quoteToken_);
@@ -94,7 +97,7 @@ contract MockHook is IHooks {
             }
         }
 
-        uint256 actualPayout = payout_ * midHookMultiplier / 10_000;
+        uint256 actualPayout = (payout_ * midHookMultiplier) / 10_000;
 
         // Has to transfer the payout token to the router
         ERC20(payoutToken).safeTransfer(msg.sender, actualPayout);
@@ -146,5 +149,31 @@ contract MockHook is IHooks {
 
     function setPayoutToken(address payoutToken_) external {
         payoutToken = ERC20(payoutToken_);
+    }
+
+    function setPreAuctionCreateMultiplier(uint256 multiplier_) external {
+        preAuctionCreateMultiplier = multiplier_;
+    }
+
+    function preAuctionCreate(uint96 lotId_) external override {
+        // Get the lot information
+        Auctioneer.Routing memory routing = Auctioneer(msg.sender).getRouting(lotId_);
+
+        // If pre-funding is required
+        if (routing.prefunded) {
+            // Get the capacity
+            uint256 capacity = Auctioneer(msg.sender).remainingCapacity(lotId_);
+
+            // If the multiplier is set, apply that
+            if (preAuctionCreateMultiplier > 0) {
+                capacity = (capacity * preAuctionCreateMultiplier) / 10_000;
+            }
+
+            // Approve transfer
+            routing.baseToken.safeApprove(address(msg.sender), capacity);
+
+            // Transfer the base token to the auctioneer
+            routing.baseToken.safeTransfer(msg.sender, capacity);
+        }
     }
 }
