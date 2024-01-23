@@ -69,7 +69,6 @@ contract MockAtomicAuctionModule is AuctionModule {
         address,
         address,
         uint256,
-        bytes calldata,
         bytes calldata
     ) external virtual override returns (uint256) {
         revert Auction_NotImplemented();

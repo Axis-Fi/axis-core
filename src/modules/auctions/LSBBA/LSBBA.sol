@@ -116,8 +116,7 @@ abstract contract LocalSealedBidBatchAuction is AuctionModule {
         address recipient_,
         address referrer_,
         uint256 amount_,
-        bytes calldata auctionData_,
-        bytes calldata approval_
+        bytes calldata auctionData_
     ) external override onlyInternal auctionIsLive(lotId_) returns (uint256 bidId) {
         // Validate inputs
         // Amount at least minimum bid size for lot

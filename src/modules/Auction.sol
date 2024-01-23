@@ -93,15 +93,13 @@ abstract contract Auction {
     /// @param      referrer_       The referrer of the bid
     /// @param      amount_         The amount of quote tokens to bid
     /// @param      auctionData_    The auction-specific data
-    /// @param      approval_       The user approval data
     function bid(
         uint96 lotId_,
         address bidder_,
         address recipient_,
         address referrer_,
         uint256 amount_,
-        bytes calldata auctionData_,
-        bytes calldata approval_
+        bytes calldata auctionData_
     ) external virtual returns (uint256 bidId);
 
     /// @notice     Cancel a bid

@@ -38,8 +38,7 @@ contract MockAuctionModule is AuctionModule {
         address recipient_,
         address referrer_,
         uint256 amount_,
-        bytes calldata auctionData_,
-        bytes calldata approval_
+        bytes calldata auctionData_
     ) external virtual override returns (uint256) {}
 
     function payoutFor(

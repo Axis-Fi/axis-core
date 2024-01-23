@@ -408,8 +408,7 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
                 params_.recipient,
                 params_.referrer,
                 params_.amount,
-                params_.auctionData,
-                bytes("") // TODO approval param
+                params_.auctionData
             );
         }
 
