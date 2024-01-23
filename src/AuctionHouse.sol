@@ -690,6 +690,7 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
     /// @dev        This function handles the following:
     ///             1. Calls the mid hook on the hooks contract (if provided)
     ///             2. Transfers the payout token from the auction owner
+    ///             2a. If the auction is pre-funded, then the transfer is skipped
     ///
     ///             This function reverts if:
     ///             - Approval has not been granted to transfer the payout token
@@ -709,6 +710,11 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
         uint256 payoutAmount_,
         Routing memory routingParams_
     ) internal {
+        // If pre-funded, then the payout token is already in this contract
+        if (routingParams_.prefunded) {
+            return;
+        }
+
         // Get the balance of the payout token before the transfer
         uint256 balanceBefore = routingParams_.baseToken.balanceOf(address(this));
 

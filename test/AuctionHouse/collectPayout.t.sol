@@ -292,7 +292,7 @@ contract CollectPayoutTest is Test, Permit2User {
     //  [X] given the auction has hooks defined
     //   [X] given the hook breaks the invariant
     //    [X] it reverts
-    //   [X] it succeeds - base token is transferred to the derivativeModule, mid hook is called before transfer
+    //   [X] it succeeds - base token is transferred to the auction house, mid hook is called before transfer
     //  [X] given the auction does not have hooks defined
     //   [X] given the auction owner has insufficient balance of the payout token
     //    [X] it reverts
@@ -300,7 +300,7 @@ contract CollectPayoutTest is Test, Permit2User {
     //    [X] it reverts
     //   [X] given transferring the payout token would result in a lesser amount being received
     //    [X] it reverts
-    //   [X] it succeeds - base token is transferred to the derivativeModule
+    //   [X] it succeeds - base token is transferred to the auction house
 
     modifier givenAuctionHasDerivative() {
         // Install the derivative module
@@ -430,6 +430,53 @@ contract CollectPayoutTest is Test, Permit2User {
         auctionHouse.collectPayout(lotId, paymentAmount, payoutAmount, routingParams);
 
         // Expect payout token balance to be transferred to the auction house
+        assertEq(payoutToken.balanceOf(OWNER), 0, "payout token: owner balance mismatch");
+        assertEq(payoutToken.balanceOf(USER), 0, "payout token: user balance mismatch");
+        assertEq(
+            payoutToken.balanceOf(address(auctionHouse)),
+            payoutAmount,
+            "payout token: auctionHouse balance mismatch"
+        );
+        assertEq(payoutToken.balanceOf(address(hook)), 0, "payout token: hook balance mismatch");
+        assertEq(
+            payoutToken.balanceOf(address(mockDerivativeModule)),
+            0,
+            "payout token: derivativeModule balance mismatch"
+        );
+    }
+
+    // ========== Prefunding flow ========== //
+
+    // [X] given the auction is pre-funded
+    //  [X] it does not transfer the base token to the auction house
+
+    modifier givenAuctionIsPrefunded() {
+        routingParams.prefunded = true;
+        _;
+    }
+
+    modifier givenAuctionHouseHasPayoutTokenBalance(uint256 amount_) {
+        payoutToken.mint(address(auctionHouse), amount_);
+        _;
+    }
+
+    function test_prefunded()
+        public
+        givenAuctionIsPrefunded
+        givenAuctionHouseHasPayoutTokenBalance(payoutAmount)
+    {
+        // Assert previous balance
+        assertEq(
+            payoutToken.balanceOf(address(auctionHouse)),
+            payoutAmount,
+            "payout token: auctionHouse balance mismatch"
+        );
+
+        // Call
+        vm.prank(USER);
+        auctionHouse.collectPayout(lotId, paymentAmount, payoutAmount, routingParams);
+
+        // Check balances
         assertEq(payoutToken.balanceOf(OWNER), 0, "payout token: owner balance mismatch");
         assertEq(payoutToken.balanceOf(USER), 0, "payout token: user balance mismatch");
         assertEq(

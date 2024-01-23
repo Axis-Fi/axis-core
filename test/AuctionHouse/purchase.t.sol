@@ -53,6 +53,8 @@ contract PurchaseTest is Test, Permit2User {
 
     uint96 internal lotId;
 
+    uint256 internal constant LOT_CAPACITY = 10e18;
+
     uint256 internal constant AMOUNT_IN = 1e18;
     uint256 internal AMOUNT_OUT;
 
@@ -93,7 +95,7 @@ contract PurchaseTest is Test, Permit2User {
             start: uint48(block.timestamp),
             duration: uint48(1 days),
             capacityInQuote: false,
-            capacity: 10e18,
+            capacity: LOT_CAPACITY,
             implParams: abi.encode("")
         });
 
@@ -634,5 +636,59 @@ contract PurchaseTest is Test, Permit2User {
             ),
             0
         );
+    }
+
+    // ======== Prefunding flow ======== //
+
+    // [X] given the auction is prefunded
+    //  [X] it succeeds - base token is not transferred from auction owner again
+
+    modifier givenAuctionIsPrefunded() {
+        // Set the auction to be prefunded
+        mockAuctionModule.setRequiredPrefunding(true);
+
+        // Mint base tokens to the owner
+        baseToken.mint(auctionOwner, LOT_CAPACITY);
+
+        // Approve the auction house to transfer the base tokens
+        vm.prank(auctionOwner);
+        baseToken.approve(address(auctionHouse), LOT_CAPACITY);
+
+        // Create a new auction
+        vm.prank(auctionOwner);
+        lotId = auctionHouse.auction(routingParams, auctionParams);
+
+        // Update purchase parameters
+        purchaseParams.lotId = lotId;
+        _;
+    }
+
+    function test_prefunded()
+        external
+        givenAuctionIsPrefunded
+        givenUserHasQuoteTokenBalance(AMOUNT_IN)
+        givenQuoteTokenSpendingIsApproved
+    {
+        // Auction house has base tokens
+        assertEq(
+            baseToken.balanceOf(address(auctionHouse)),
+            LOT_CAPACITY,
+            "pre-purchase: balance mismatch on auction house"
+        );
+
+        // Purchase
+        vm.prank(alice);
+        auctionHouse.purchase(purchaseParams);
+
+        // Check balances of the base token
+        assertEq(baseToken.balanceOf(alice), 0, "balance mismatch on alice");
+        assertEq(baseToken.balanceOf(recipient), AMOUNT_OUT, "balance mismatch on recipient");
+        assertEq(baseToken.balanceOf(address(mockHook)), 0, "balance mismatch on hook");
+        assertEq(
+            baseToken.balanceOf(address(auctionHouse)),
+            LOT_CAPACITY - AMOUNT_OUT,
+            "balance mismatch on auction house"
+        );
+        assertEq(baseToken.balanceOf(auctionOwner), 0, "balance mismatch on auction owner");
     }
 }
