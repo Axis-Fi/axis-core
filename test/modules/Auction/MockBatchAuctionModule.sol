@@ -9,6 +9,7 @@ import {Auction, AuctionModule} from "src/modules/Auction.sol";
 
 contract MockBatchAuctionModule is AuctionModule {
     mapping(uint96 lotId => Bid[]) public bidData;
+    mapping(uint96 lotId => mapping(uint256 => bool)) public bidCancelled;
 
     constructor(address _owner) AuctionModule(_owner) {
         minAuctionDuration = 1 days;
@@ -71,7 +72,29 @@ contract MockBatchAuctionModule is AuctionModule {
         return bidId;
     }
 
-    function cancelBid(uint96 lotId_, uint256 bidId_, address bidder_) external virtual override {}
+    function cancelBid(
+        uint96 lotId_,
+        uint256 bidId_,
+        address bidder_
+    ) external virtual override isLotValid(lotId_) isLotActive(lotId_) {
+        // Check that the bid exists
+        if (bidData[lotId_].length <= bidId_) {
+            revert Auction.Auction_InvalidBidId(lotId_, bidId_);
+        }
+
+        // Check that the bid has not been cancelled
+        if (bidCancelled[lotId_][bidId_] == true) {
+            revert Auction.Auction_InvalidBidId(lotId_, bidId_);
+        }
+
+        // Check that the bidder is the owner of the bid
+        if (bidData[lotId_][bidId_].bidder != bidder_) {
+            revert Auction.Auction_NotBidder();
+        }
+
+        // Cancel the bid
+        bidCancelled[lotId_][bidId_] = true;
+    }
 
     function settle(
         uint256 id_,

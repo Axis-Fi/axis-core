@@ -14,7 +14,7 @@ abstract contract Auction {
 
     error Auction_InvalidLotId(uint96 lotId);
 
-    error Auction_InvalidBidId(uint256 bidId);
+    error Auction_InvalidBidId(uint96 lotId, uint256 bidId);
 
     error Auction_OnlyMarketOwner();
     error Auction_AmountLessThanMinimum();
@@ -246,5 +246,21 @@ abstract contract AuctionModule is Auction, Module {
 
     function remainingCapacity(uint256 id_) external view override returns (uint256) {
         return lotData[id_].capacity;
+    }
+
+    // ========== MODIFIERS ========== //
+
+    modifier isLotValid(uint96 lotId_) {
+        if (lotData[lotId_].start == 0) revert Auction_InvalidLotId(lotId_);
+        _;
+    }
+
+    modifier isLotActive(uint96 lotId_) {
+        Lot memory lot = lotData[lotId_];
+        if (
+            lot.capacity == 0 || lot.conclusion < uint48(block.timestamp)
+                || lot.start > block.timestamp
+        ) revert Auction_MarketNotActive(lotId_);
+        _;
     }
 }

@@ -128,6 +128,7 @@ contract CancelBidTest is Test, Permit2User {
         quoteToken.mint(alice, BID_AMOUNT);
 
         // Approve spending
+        vm.prank(alice);
         quoteToken.approve(address(auctionHouse), BID_AMOUNT);
 
         // Create the bid
@@ -216,7 +217,8 @@ contract CancelBidTest is Test, Permit2User {
     }
 
     function test_givenBidDoesNotExist_reverts() external givenLotIsCreated {
-        bytes memory err = abi.encodeWithSelector(Auction.Auction_InvalidBidId.selector, bidId);
+        bytes memory err =
+            abi.encodeWithSelector(Auction.Auction_InvalidBidId.selector, lotId, bidId);
         vm.expectRevert(err);
 
         // Call the function
@@ -230,7 +232,8 @@ contract CancelBidTest is Test, Permit2User {
         givenBidIsCreated
         givenBidIsCancelled
     {
-        bytes memory err = abi.encodeWithSelector(Auction.Auction_InvalidBidId.selector, bidId);
+        bytes memory err =
+            abi.encodeWithSelector(Auction.Auction_InvalidBidId.selector, lotId, bidId);
         vm.expectRevert(err);
 
         // Call the function

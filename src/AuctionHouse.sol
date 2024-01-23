@@ -426,8 +426,12 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
     }
 
     /// @inheritdoc Router
+    /// @dev        This function reverts if:
+    ///             - the lot ID is invalid
+    ///             - the auction module reverts when cancelling the bid
     function cancelBid(uint96 lotId_, uint256 bidId_) external override isValidLot(lotId_) {
         // Cancel the bid on the auction module
+        // The auction module is responsible for validating the bid and authorizing the caller
         AuctionModule module = _getModuleForId(lotId_);
         module.cancelBid(lotId_, bidId_, msg.sender);
     }
