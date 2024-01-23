@@ -649,11 +649,11 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
 
         // If a Permit2 approval signature is provided, use it to transfer the quote token
         if (permit2Approval_.signature.length != 0) {
-            _permit2Transfer(amount_, quoteToken_, permit2Approval_);
+            _permit2TransferFrom(amount_, quoteToken_, permit2Approval_);
         }
         // Otherwise fallback to a standard ERC20 transfer
         else {
-            _transfer(amount_, quoteToken_);
+            _transferFrom(amount_, quoteToken_);
         }
     }
 
@@ -803,7 +803,13 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
             routingParams_.baseToken.safeApprove(address(module), payoutAmount_);
 
             // Call the module to mint derivative tokens to the recipient
-            module.mint(recipient_, derivativeParams, payoutAmount_, routingParams_.wrapDerivative);
+            module.mint(
+                recipient_,
+                address(routingParams_.baseToken),
+                derivativeParams,
+                payoutAmount_,
+                routingParams_.wrapDerivative
+            );
         }
 
         // Call post hook on hooks contract if provided
@@ -825,7 +831,7 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
     ///
     /// @param      amount_   Amount of tokens to transfer (in native decimals)
     /// @param      token_    Token to transfer
-    function _transfer(uint256 amount_, ERC20 token_) internal {
+    function _transferFrom(uint256 amount_, ERC20 token_) internal {
         uint256 balanceBefore = token_.balanceOf(address(this));
 
         // Transfer the quote token from the user
@@ -852,7 +858,7 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
     /// @param      amount_               Amount of tokens to transfer (in native decimals)
     /// @param      token_                Token to transfer
     /// @param      permit2Approval_      Permit2 approval data
-    function _permit2Transfer(
+    function _permit2TransferFrom(
         uint256 amount_,
         ERC20 token_,
         Permit2Approval memory permit2Approval_
