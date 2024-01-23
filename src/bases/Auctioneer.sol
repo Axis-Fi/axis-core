@@ -89,10 +89,19 @@ abstract contract Auctioneer is WithModules {
     /// @dev        Reverts if the lot ID is invalid
     ///
     /// @param      lotId_  ID of the auction lot
-    modifier isValidLot(uint96 lotId_) {
+    modifier isLotValid(uint96 lotId_) {
         if (lotId_ >= lotCounter) revert InvalidLotId(lotId_);
 
         if (lotRouting[lotId_].owner == address(0)) revert InvalidLotId(lotId_);
+        _;
+    }
+
+    /// @notice     Checks that the caller is the auction owner
+    /// @dev        Reverts if the caller is not the auction owner
+    ///
+    /// @param      lotId_  ID of the auction lot
+    modifier isLotOwner(uint96 lotId_) {
+        if (msg.sender != lotRouting[lotId_].owner) revert NotAuctionOwner(msg.sender);
         _;
     }
 
@@ -241,10 +250,7 @@ abstract contract Auctioneer is WithModules {
     ///             - The respective auction module reverts
     ///
     /// @param      lotId_      ID of the auction lot
-    function cancel(uint96 lotId_) external isValidLot(lotId_) {
-        // Check that caller is the auction owner
-        if (msg.sender != lotRouting[lotId_].owner) revert NotAuctionOwner(msg.sender);
-
+    function cancel(uint96 lotId_) external isLotValid(lotId_) isLotOwner(lotId_) {
         AuctionModule module = _getModuleForId(lotId_);
 
         // Cancel the auction on the module
@@ -259,7 +265,7 @@ abstract contract Auctioneer is WithModules {
     ///
     /// @param      id_     ID of the auction lot
     /// @return     routing Routing information for the auction lot
-    function getRouting(uint96 id_) external view isValidLot(id_) returns (Routing memory) {
+    function getRouting(uint96 id_) external view isLotValid(id_) returns (Routing memory) {
         // Get routing from lot routing
         return lotRouting[id_];
     }

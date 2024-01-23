@@ -250,11 +250,19 @@ abstract contract AuctionModule is Auction, Module {
 
     // ========== MODIFIERS ========== //
 
+    /// @notice     Checks that the lot ID is valid
+    /// @dev        Reverts if the lot ID is invalid
+    ///
+    /// @param      lotId_  The lot identifier
     modifier isLotValid(uint96 lotId_) {
         if (lotData[lotId_].start == 0) revert Auction_InvalidLotId(lotId_);
         _;
     }
 
+    /// @notice     Checks that the lot is active
+    /// @dev        Reverts if the lot is not active
+    ///
+    /// @param      lotId_  The lot identifier
     modifier isLotActive(uint96 lotId_) {
         Lot memory lot = lotData[lotId_];
         if (

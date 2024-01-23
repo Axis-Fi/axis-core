@@ -326,7 +326,7 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
     function purchase(PurchaseParams memory params_)
         external
         override
-        isValidLot(params_.lotId)
+        isLotValid(params_.lotId)
         returns (uint256 payoutAmount)
     {
         // Load routing data for the lot
@@ -386,7 +386,7 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
     function bid(BidParams memory params_)
         external
         override
-        isValidLot(params_.lotId)
+        isLotValid(params_.lotId)
         returns (uint256)
     {
         // Load routing data for the lot
@@ -429,7 +429,7 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
     /// @dev        This function reverts if:
     ///             - the lot ID is invalid
     ///             - the auction module reverts when cancelling the bid
-    function cancelBid(uint96 lotId_, uint256 bidId_) external override isValidLot(lotId_) {
+    function cancelBid(uint96 lotId_, uint256 bidId_) external override isLotValid(lotId_) {
         // Cancel the bid on the auction module
         // The auction module is responsible for validating the bid and authorizing the caller
         AuctionModule module = _getModuleForId(lotId_);
@@ -449,7 +449,7 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
         Auction.Bid[] calldata winningBids_,
         bytes calldata settlementProof_,
         bytes calldata settlementData_
-    ) external override isValidLot(lotId_) {
+    ) external override isLotValid(lotId_) {
         // Load routing data for the lot
         Routing memory routing = lotRouting[lotId_];
 
@@ -510,7 +510,7 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
     }
 
     /// @inheritdoc Router
-    function claimRefund(uint96 lotId_, uint256 bidId_) external override isValidLot(lotId_) {
+    function claimRefund(uint96 lotId_, uint256 bidId_) external override isLotValid(lotId_) {
         //
     }
 
