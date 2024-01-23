@@ -140,6 +140,10 @@ abstract contract Router is FeeManager {
     /// @param      bidId_          Bid ID
     function cancelBid(uint96 lotId_, uint256 bidId_) external virtual;
 
+    /// @notice     Settle a batch auction
+    /// @notice     This function is used for versions with on-chain storage and bids and local settlement
+    function settle(uint96 lotId_) external virtual;
+
     /// @notice     Settle a batch auction with the provided bids
     /// @notice     This function is used for on-chain storage of bids and external settlement
     ///
@@ -432,6 +436,55 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
         module.cancelBid(lotId_, bidId_, msg.sender);
     }
 
+    /// @inheritdoc Router
+    // TODO this is the version of `settle` we need for the LSBBA
+    function settle(uint96 lotId_) external override {
+        // Settle the lot on the auction module and get the winning bids
+        // Reverts if the auction cannot be settled yet
+        // Some common things to check:
+        // 1. Total of amounts out is not greater than capacity
+        // 2. Minimum price is enforced
+        // 3. Minimum bid size is enforced
+        // 4. Minimum capacity sold is enforced
+        AuctionModule module = _getModuleForId(lotId_);
+        (Auction.Bid[] memory winningBids, bytes memory auctionOutput) = module.settle(lotId_);
+
+        // Load routing data for the lot
+        Routing memory routing = lotRouting[lotId_];
+
+        // TODO check this
+        // Payment and payout have already been sourced
+
+        // Calculate fees
+        uint256 totalAmountInLessFees;
+        {
+            (uint256 totalAmountIn, uint256 totalFees) =
+                _allocateFees(winningBids, routing.quoteToken);
+            totalAmountInLessFees = totalAmountIn - totalFees;
+        }
+
+        // Send payment in bulk to auction owner
+        _sendPayment(routing.owner, totalAmountInLessFees, routing.quoteToken, routing.hooks);
+
+        // TODO send last winning bidder partial refund if it is a partial fill.
+
+        // Handle payouts to bidders
+        {
+            uint256 bidCount = winningBids.length;
+            for (uint256 i; i < bidCount; i++) {
+                // Send payout to each bidder
+                _sendPayout(
+                    lotId_,
+                    winningBids[i].bidder,
+                    winningBids[i].minAmountOut,
+                    routing,
+                    auctionOutput
+                );
+            }
+        }
+    }
+
+    // TODO we can probably remove this version of the settle function for now. It won't be used initially.
     /// @inheritdoc Router
     /// @dev        This function reverts if:
     ///             - the lot ID is invalid

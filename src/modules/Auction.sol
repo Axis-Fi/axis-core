@@ -129,6 +129,13 @@ abstract contract Auction {
         address bidder_
     ) external virtual returns (uint256 refundAmount);
 
+    /// @notice     Settle a batch auciton
+    /// @notice     This function is used for on-chain storage of bids and local settlement
+    function settle(uint96 lotId_)
+        external
+        virtual
+        returns (Bid[] memory winningBids_, bytes memory auctionOutput_);
+
     /// @notice     Settle a batch auction with the provided bids
     /// @notice     This function is used for on-chain storage of bids and external settlement
     ///

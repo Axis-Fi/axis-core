@@ -150,6 +150,13 @@ contract MockBatchAuctionModule is AuctionModule {
 
     function maxAmountAccepted(uint256 id_) public view virtual override returns (uint256) {}
 
+    function settle(uint96 lotId_)
+        external
+        virtual
+        override
+        returns (Bid[] memory winningBids_, bytes memory auctionOutput_)
+    {}
+
     function settle(
         uint96 lotId_,
         Bid[] calldata winningBids_,

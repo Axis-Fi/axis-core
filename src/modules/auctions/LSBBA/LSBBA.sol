@@ -140,6 +140,12 @@ abstract contract LocalSealedBidBatchAuction is AuctionModule {
     }
 
     /// @inheritdoc Auction
+    // TODO need to change this to delete the bid so we don't have to decrypt it later
+    // Because of this, we can issue the refund immediately (needs to happen in the AuctionHouse)
+    // However, this will require more refactoring because, we run into a problem of using the array index as the bidId since it will change when we delete the bid
+    // It doesn't cost any more gas to store a uint96 bidId as part of the EncryptedBid.
+    // A better approach may be to create a mapping of lotId => bidId => EncryptedBid. Then, have an array of bidIds in the AuctionData struct that can be iterated over.
+    // This way, we can still lookup the bids by bidId for cancellation, etc.
     function cancelBid(
         uint96 lotId_,
         uint256 bidId_,
@@ -252,36 +258,67 @@ abstract contract LocalSealedBidBatchAuction is AuctionModule {
         );
     }
 
-    /// @notice View function that can be used to obtain the amount out and seed for a given bid by providing the private key
-    /// @dev This function can be used to decrypt bids off-chain if you know the private key
-    function decryptBid(
+    /// @notice View function that can be used to obtain a certain number of the next bids to decrypt off-chain
+    // TODO This assumes that cancelled bids have been removed, but hasn't been refactored based on the comments over `cancelBid`
+    function getNextBidsToDecrypt(
         uint96 lotId_,
-        uint96 bidId_,
-        bytes memory privateKey_
-    ) external view returns (Decrypt memory) {
-        // Load encrypted bid
-        EncryptedBid memory encBid = lotEncryptedBids[lotId_][bidId_];
+        uint256 number_
+    ) external view returns (EncryptedBid[] memory) {
+        // Load next decrypt index
+        uint96 nextDecryptIndex = auctionData[lotId_].nextDecryptIndex;
 
-        // Decrypt the encrypted amount out
-        (bytes memory amountOut, bytes32 seed) = RSAOAEP.decrypt(
-            encBid.encryptedAmountOut,
-            abi.encodePacked(lotId_),
-            privateKey_,
-            auctionData[lotId_].publicKeyModulus
-        );
+        // Load number of bids to decrypt
+        uint256 len = lotEncryptedBids[lotId_].length - nextDecryptIndex;
+        if (number_ < len) len = number_;
 
-        // Cast the decrypted values
-        Decrypt memory decrypt;
-        decrypt.amountOut = abi.decode(amountOut, (uint256));
-        decrypt.seed = uint256(seed);
+        // Create array of encrypted bids
+        EncryptedBid[] memory bids = new EncryptedBid[](len);
 
-        // Return the decrypt
-        return decrypt;
+        // Iterate over bids and add them to the array
+        for (uint256 i; i < len; i++) {
+            bids[i] = lotEncryptedBids[lotId_][nextDecryptIndex + i];
+        }
+
+        // Return array of encrypted bids
+        return bids;
     }
+
+    // Note: we may need to remove this function due to issues with chosen plaintext attacks on RSA implementations
+    // /// @notice View function that can be used to obtain the amount out and seed for a given bid by providing the private key
+    // /// @dev This function can be used to decrypt bids off-chain if you know the private key
+    // function decryptBid(
+    //     uint96 lotId_,
+    //     uint96 bidId_,
+    //     bytes memory privateKey_
+    // ) external view returns (Decrypt memory) {
+    //     // Load encrypted bid
+    //     EncryptedBid memory encBid = lotEncryptedBids[lotId_][bidId_];
+
+    //     // Decrypt the encrypted amount out
+    //     (bytes memory amountOut, bytes32 seed) = RSAOAEP.decrypt(
+    //         encBid.encryptedAmountOut,
+    //         abi.encodePacked(lotId_),
+    //         privateKey_,
+    //         auctionData[lotId_].publicKeyModulus
+    //     );
+
+    //     // Cast the decrypted values
+    //     Decrypt memory decrypt;
+    //     decrypt.amountOut = abi.decode(amountOut, (uint256));
+    //     decrypt.seed = uint256(seed);
+
+    //     // Return the decrypt
+    //     return decrypt;
+    // }
 
     // =========== SETTLEMENT =========== //
 
-    function settle(uint96 lotId_) external onlyInternal returns (Bid[] memory winningBids_) {
+    function settle(uint96 lotId_)
+        external
+        override
+        onlyInternal
+        returns (Bid[] memory winningBids_, bytes memory auctionOutput_)
+    {
         // Check that auction is in the right state for settlement
         if (auctionData[lotId_].status != AuctionStatus.Decrypted) revert Auction_WrongState();
 
@@ -318,7 +355,7 @@ abstract contract LocalSealedBidBatchAuction is AuctionModule {
                 // If the total filled is less than the minimum filled, mark as settled and return no winning bids (so users can claim refunds)
                 if (expended < auctionData[lotId_].minFilled) {
                     auctionData[lotId_].status = AuctionStatus.Settled;
-                    return winningBids_;
+                    return (winningBids_, bytes(""));
                 } else {
                     marginalPrice = price;
                     winningBidIndex = i;
@@ -330,7 +367,7 @@ abstract contract LocalSealedBidBatchAuction is AuctionModule {
         // If not, mark as settled and return no winning bids (so users can claim refunds)
         if (marginalPrice < auctionData[lotId_].minimumPrice) {
             auctionData[lotId_].status = AuctionStatus.Settled;
-            return winningBids_;
+            return (winningBids_, bytes(""));
         }
 
         // Auction can be settled at the marginal price if we reach this point
@@ -341,6 +378,10 @@ abstract contract LocalSealedBidBatchAuction is AuctionModule {
             QueueBid memory qBid = queue.delMin();
 
             // Calculate amount out
+            // TODO handle partial filling of the last winning bid
+            // amountIn, and amountOut will be lower
+            // Need to somehow refund the amountIn that wasn't used to the user
+            // We know it will always be the last bid in the returned array, can maybe do something with that
             uint256 amountOut = (qBid.amountIn * SCALE) / marginalPrice;
 
             // Create winning bid from encrypted bid and calculated amount out
@@ -363,7 +404,7 @@ abstract contract LocalSealedBidBatchAuction is AuctionModule {
         auctionData[lotId_].status = AuctionStatus.Settled;
 
         // Return winning bids
-        return winningBids_;
+        return (winningBids_, bytes(""));
     }
 
     // =========== AUCTION MANAGEMENT ========== //
