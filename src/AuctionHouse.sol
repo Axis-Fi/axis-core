@@ -170,7 +170,7 @@ abstract contract Router is FeeManager {
     ///
     /// @param      lotId_           Lot ID
     /// @param      bidId_           Bid ID
-    function claimRefund(uint96 lotId_, uint256 bidId_) external virtual;
+    function claimBidRefund(uint96 lotId_, uint256 bidId_) external virtual;
 
     // ========== FEE MANAGEMENT ========== //
 
@@ -510,7 +510,7 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
     }
 
     /// @inheritdoc Router
-    function claimRefund(uint96 lotId_, uint256 bidId_) external override isLotValid(lotId_) {
+    function claimBidRefund(uint96 lotId_, uint256 bidId_) external override isLotValid(lotId_) {
         //
     }
 
