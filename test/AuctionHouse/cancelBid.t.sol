@@ -171,7 +171,7 @@ contract CancelBidTest is Test, Permit2User {
     //  [X] it reverts
     // [X] given the caller is not the bid owner
     //  [X] it reverts
-    // [ ] it cancels the bid
+    // [X] it cancels the bid
 
     function test_invalidLotId_reverts() external {
         bytes memory err = abi.encodeWithSelector(Auctioneer.InvalidLotId.selector, lotId);
@@ -257,8 +257,6 @@ contract CancelBidTest is Test, Permit2User {
         auctionHouse.cancelBid(lotId, bidId);
 
         // Assert the bid is cancelled
-        Auction.Bid memory bid = mockAuctionModule.getBid(lotId, bidId);
-        // assertTrue(bid.cancelled);
-        // TODO cancelled status
+        assertTrue(mockAuctionModule.bidCancelled(lotId, bidId));
     }
 }
