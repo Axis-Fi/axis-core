@@ -311,7 +311,7 @@ abstract contract Auctioneer is WithModules {
     /// @dev        This function performs the following:
     ///             - Checks that the lot ID is valid
     ///             - Checks that caller is the auction owner
-    ///             - Calls the auction module to update records and determine the amount to be refunded
+    ///             - Calls the auction module to validate state, update records and determine the amount to be refunded
     ///             - Sends the refund of payout tokens to the owner
     ///
     ///             The function reverts if:
