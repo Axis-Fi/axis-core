@@ -163,6 +163,8 @@ abstract contract Auction {
 
     function cancelAuction(uint96 id_) external virtual;
 
+    function claimAuctionRefund(uint96 lotId_) external virtual returns (uint256 refundAmount);
+
     // ========== AUCTION INFORMATION ========== //
 
     function payoutFor(uint256 id_, uint256 amount_) public view virtual returns (uint256);

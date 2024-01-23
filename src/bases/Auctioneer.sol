@@ -307,6 +307,22 @@ abstract contract Auctioneer is WithModules {
         module.cancelAuction(lotId_);
     }
 
+    /// @notice     Claims a refund for a cancelled auction lot
+    /// @dev        This function performs the following:
+    ///             - Checks that the lot ID is valid
+    ///             - Calls the auction module to update records and determine the amount to be refunded
+    ///             - Sends the refund of payout tokens to the owner
+    ///
+    ///             The function reverts if:
+    ///             - The lot ID is not valid
+    ///             - The auction module reverts
+    ///             - The transfer of payout tokens fails
+    ///
+    /// @param      lotId_      ID of the auction lot
+    function claimAuctionRefund(uint96 lotId_) external isLotValid(lotId_) isLotOwner(lotId_) {
+        // TODO
+    }
+
     // TODO claim refund if pre-funded and concluded
 
     // ========== AUCTION INFORMATION ========== //
