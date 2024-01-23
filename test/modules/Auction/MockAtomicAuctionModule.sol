@@ -7,13 +7,22 @@ import {Module, Veecode, toKeycode, wrapVeecode} from "src/modules/Modules.sol";
 // Auctions
 import {AuctionModule} from "src/modules/Auction.sol";
 
-contract MockAuctionModule is AuctionModule {
+contract MockAtomicAuctionModule is AuctionModule {
+    mapping(uint256 => uint256) public payoutData;
+    bool public purchaseReverts;
+
+    struct Output {
+        uint256 multiplier;
+    }
+
+    mapping(uint256 lotId => bool isCancelled) public cancelled;
+
     constructor(address _owner) AuctionModule(_owner) {
         minAuctionDuration = 1 days;
     }
 
     function VEECODE() public pure virtual override returns (Veecode) {
-        return wrapVeecode(toKeycode("MOCK"), 1);
+        return wrapVeecode(toKeycode("ATOM"), 1);
     }
 
     function TYPE() public pure virtual override returns (Type) {
@@ -23,23 +32,56 @@ contract MockAuctionModule is AuctionModule {
     function _auction(uint96, Lot memory, bytes memory) internal virtual override {}
 
     function _cancelAuction(uint96 id_) internal override {
-        //
+        cancelled[id_] = true;
     }
 
     function purchase(
         uint96 id_,
         uint256 amount_,
-        bytes calldata auctionData_
-    ) external virtual override returns (uint256 payout, bytes memory auctionOutput) {}
+        bytes calldata
+    ) external virtual override returns (uint256 payout, bytes memory auctionOutput) {
+        if (purchaseReverts) revert("error");
+
+        if (cancelled[id_]) revert Auction_MarketNotActive(id_);
+
+        if (payoutData[id_] == 0) {
+            payout = amount_;
+        } else {
+            payout = (payoutData[id_] * amount_) / 1e5;
+        }
+
+        Output memory output = Output({multiplier: 1});
+
+        auctionOutput = abi.encode(output);
+    }
+
+    function setPayoutMultiplier(uint256 id_, uint256 multiplier_) external virtual {
+        payoutData[id_] = multiplier_;
+    }
+
+    function setPurchaseReverts(bool reverts_) external virtual {
+        purchaseReverts = reverts_;
+    }
 
     function bid(
-        uint96 id_,
-        address bidder_,
-        address recipient_,
-        address referrer_,
-        uint256 amount_,
-        bytes calldata auctionData_
-    ) external virtual override returns (uint256) {}
+        uint96,
+        address,
+        address,
+        address,
+        uint256,
+        bytes calldata
+    ) external virtual override returns (uint256) {
+        revert Auction_NotImplemented();
+    }
+
+    function cancelBid(uint96, uint256, address) external virtual override {
+        revert Auction_NotImplemented();
+    }
+
+    function settle(
+        uint256 id_,
+        Bid[] memory bids_
+    ) external virtual returns (uint256[] memory amountsOut) {}
 
     function payoutFor(
         uint256 id_,
@@ -62,19 +104,9 @@ contract MockAuctionModule is AuctionModule {
         bytes calldata settlementData_
     ) external virtual override returns (uint256[] memory amountsOut, bytes memory auctionOutput) {}
 
-    function cancelBid(uint96 lotId_, uint256 bidId_, address bidder_) external virtual override {}
-
     function claimRefund(
         uint96 lotId_,
         uint256 bidId_,
         address bidder_
     ) external virtual override {}
-}
-
-contract MockAuctionModuleV2 is MockAuctionModule {
-    constructor(address _owner) MockAuctionModule(_owner) {}
-
-    function VEECODE() public pure override returns (Veecode) {
-        return wrapVeecode(toKeycode("MOCK"), 2);
-    }
 }

@@ -8,6 +8,7 @@ import {ERC20} from "lib/solmate/src/tokens/ERC20.sol";
 // Mocks
 import {MockERC20} from "lib/solmate/src/test/utils/mocks/MockERC20.sol";
 import {MockAuctionModule} from "test/modules/Auction/MockAuctionModule.sol";
+import {Permit2User} from "test/lib/permit2/Permit2User.sol";
 
 // Auctions
 import {AuctionHouse} from "src/AuctionHouse.sol";
@@ -25,7 +26,7 @@ import {
     Module
 } from "src/modules/Modules.sol";
 
-contract CancelTest is Test {
+contract CancelTest is Test, Permit2User {
     MockERC20 internal baseToken;
     MockERC20 internal quoteToken;
     MockAuctionModule internal mockAuctionModule;
@@ -34,7 +35,7 @@ contract CancelTest is Test {
     Auctioneer.RoutingParams internal routingParams;
     Auction.AuctionParams internal auctionParams;
 
-    uint256 internal lotId;
+    uint96 internal lotId;
 
     address internal auctionOwner = address(0x1);
 
@@ -44,7 +45,7 @@ contract CancelTest is Test {
         baseToken = new MockERC20("Base Token", "BASE", 18);
         quoteToken = new MockERC20("Quote Token", "QUOTE", 18);
 
-        auctionHouse = new AuctionHouse(auctionOwner);
+        auctionHouse = new AuctionHouse(auctionOwner, _PERMIT2_ADDRESS);
         mockAuctionModule = new MockAuctionModule(address(auctionHouse));
 
         auctionHouse.installModule(mockAuctionModule);

@@ -8,6 +8,7 @@ import {ERC20} from "lib/solmate/src/tokens/ERC20.sol";
 // Mocks
 import {MockERC20} from "lib/solmate/src/test/utils/mocks/MockERC20.sol";
 import {MockAuctionModule} from "test/modules/Auction/MockAuctionModule.sol";
+import {Permit2User} from "test/lib/permit2/Permit2User.sol";
 
 // Auctions
 import {AuctionHouse} from "src/AuctionHouse.sol";
@@ -25,7 +26,7 @@ import {
     Module
 } from "src/modules/Modules.sol";
 
-contract CancelTest is Test {
+contract CancelTest is Test, Permit2User {
     MockERC20 internal baseToken;
     MockERC20 internal quoteToken;
     MockAuctionModule internal mockAuctionModule;
@@ -34,7 +35,7 @@ contract CancelTest is Test {
     Auctioneer.RoutingParams internal routingParams;
     Auction.AuctionParams internal auctionParams;
 
-    uint256 internal lotId;
+    uint96 internal lotId;
 
     address internal auctionOwner = address(0x1);
 
@@ -44,7 +45,7 @@ contract CancelTest is Test {
         baseToken = new MockERC20("Base Token", "BASE", 18);
         quoteToken = new MockERC20("Quote Token", "QUOTE", 18);
 
-        auctionHouse = new AuctionHouse(protocol);
+        auctionHouse = new AuctionHouse(protocol, _PERMIT2_ADDRESS);
         mockAuctionModule = new MockAuctionModule(address(auctionHouse));
 
         auctionHouse.installModule(mockAuctionModule);
@@ -86,7 +87,7 @@ contract CancelTest is Test {
         bytes memory err = abi.encodeWithSelector(Module.Module_OnlyParent.selector, address(this));
         vm.expectRevert(err);
 
-        mockAuctionModule.cancel(lotId);
+        mockAuctionModule.cancelAuction(lotId);
     }
 
     function testReverts_whenLotIdInvalid() external {
@@ -94,27 +95,27 @@ contract CancelTest is Test {
         vm.expectRevert(err);
 
         vm.prank(address(auctionHouse));
-        mockAuctionModule.cancel(lotId);
+        mockAuctionModule.cancelAuction(lotId);
     }
 
     function testReverts_whenLotIsInactive() external whenLotIsCreated {
         // Cancel once
         vm.prank(address(auctionHouse));
-        mockAuctionModule.cancel(lotId);
+        mockAuctionModule.cancelAuction(lotId);
 
         // Cancel again
         bytes memory err = abi.encodeWithSelector(Auction.Auction_MarketNotActive.selector, lotId);
         vm.expectRevert(err);
 
         vm.prank(address(auctionHouse));
-        mockAuctionModule.cancel(lotId);
+        mockAuctionModule.cancelAuction(lotId);
     }
 
     function test_success() external whenLotIsCreated {
         assertTrue(mockAuctionModule.isLive(lotId), "before cancellation: isLive mismatch");
 
         vm.prank(address(auctionHouse));
-        mockAuctionModule.cancel(lotId);
+        mockAuctionModule.cancelAuction(lotId);
 
         // Get lot data from the module
         (, uint48 lotConclusion,, uint256 lotCapacity,,) = mockAuctionModule.lotData(lotId);

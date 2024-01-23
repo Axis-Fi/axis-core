@@ -1,18 +1,20 @@
 /// SPDX-License-Identifier: AGPL-3.0
 pragma solidity 0.8.19;
 
-import "src/modules/Modules.sol";
+import {Module} from "src/modules/Modules.sol";
 
 abstract contract Auction {
     /* ========== ERRORS ========== */
 
-    error Auction_MarketNotActive(uint256 lotId);
+    error Auction_MarketNotActive(uint96 lotId);
 
     error Auction_InvalidStart(uint48 start_, uint48 minimum_);
 
     error Auction_InvalidDuration(uint48 duration_, uint48 minimum_);
 
-    error Auction_InvalidLotId(uint256 lotId);
+    error Auction_InvalidLotId(uint96 lotId);
+
+    error Auction_InvalidBidId(uint256 bidId);
 
     error Auction_OnlyMarketOwner();
     error Auction_AmountLessThanMinimum();
@@ -20,6 +22,8 @@ abstract contract Auction {
     error Auction_InvalidParams();
     error Auction_NotAuthorized();
     error Auction_NotImplemented();
+
+    error Auction_NotBidder();
 
     /* ========== EVENTS ========== */
 
@@ -41,13 +45,12 @@ abstract contract Auction {
 
     // TODO pack if we anticipate on-chain auction variants
     struct Bid {
-        uint256 lotId;
         address bidder;
         address recipient;
         address referrer;
         uint256 amount;
         uint256 minAmountOut;
-        bytes32 auctionParam; // optional implementation-specific parameter for the bid
+        bytes auctionParam; // optional implementation-specific parameter for the bid
     }
 
     struct AuctionParams {
@@ -64,7 +67,7 @@ abstract contract Auction {
     uint48 public minAuctionDuration;
 
     // 1% = 1_000 or 1e3. 100% = 100_000 or 1e5.
-    uint48 internal constant ONE_HUNDRED_PERCENT = 1e5;
+    uint48 internal constant _ONE_HUNDRED_PERCENT = 1e5;
 
     /// @notice General information pertaining to auction lots
     mapping(uint256 id => Lot lot) public lotData;
@@ -72,42 +75,79 @@ abstract contract Auction {
     // ========== ATOMIC AUCTIONS ========== //
 
     function purchase(
-        uint256 id_,
+        uint96 id_,
         uint256 amount_,
         bytes calldata auctionData_
     ) external virtual returns (uint256 payout, bytes memory auctionOutput);
 
     // ========== BATCH AUCTIONS ========== //
 
-    // On-chain auction variant
+    /// @notice     Bid on an auction lot
+    /// @dev        The implementing function should handle the following:
+    ///             - Validate the bid parameters
+    ///             - Store the bid data
+    ///
+    /// @param      lotId_          The lot id
+    /// @param      bidder_         The bidder of the purchased tokens
+    /// @param      recipient_      The recipient of the purchased tokens
+    /// @param      referrer_       The referrer of the bid
+    /// @param      amount_         The amount of quote tokens to bid
+    /// @param      auctionData_    The auction-specific data
     function bid(
-        uint256 id_,
+        uint96 lotId_,
+        address bidder_,
+        address recipient_,
+        address referrer_,
         uint256 amount_,
-        uint256 minAmountOut_,
         bytes calldata auctionData_
-    ) external virtual;
+    ) external virtual returns (uint256 bidId);
 
-    function settle(uint256 id_) external virtual returns (uint256[] memory amountsOut);
+    /// @notice     Cancel a bid
+    /// @dev        The implementing function should handle the following:
+    ///             - Validate the bid parameters
+    ///             - Authorize `bidder_`
+    ///             - Update the bid data
+    ///
+    /// @param      lotId_      The lot id
+    /// @param      bidId_      The bid id
+    /// @param      bidder_     The bidder of the purchased tokens
+    function cancelBid(uint96 lotId_, uint256 bidId_, address bidder_) external virtual;
 
-    // Off-chain auction variant
-    // TODO use solady data packing library to make bids smaller on the actual module to store?
+    /// @notice     Claim a refund for a bid
+    /// @dev        The implementing function should handle the following:
+    ///             - Validate the bid parameters
+    ///             - Authorize `bidder_`
+    ///             - Update the bid data
+    ///
+    /// @param      lotId_      The lot id
+    /// @param      bidId_      The bid id
+    /// @param      bidder_     The bidder of the purchased tokens
+    function claimRefund(uint96 lotId_, uint256 bidId_, address bidder_) external virtual;
+
+    /// @notice     Settle a batch auction with the provided bids
+    /// @notice     This function is used for on-chain storage of bids and external settlement
+    ///
+    /// @param      lotId_              Lot id
+    /// @param      winningBids_        Winning bids
+    /// @param      settlementProof_    Proof of settlement validity
+    /// @param      settlementData_     Settlement data
+    /// @return     amountsOut          Amount out for each bid
+    /// @return     auctionOutput       Auction-specific output
     function settle(
-        uint256 id_,
+        uint96 lotId_,
         Bid[] calldata winningBids_,
-        bytes[] calldata bidSignatures_,
-        uint256[] memory amountsIn_,
-        uint256[] calldata amountsOut_,
-        bytes calldata validityProof_
-    ) external virtual returns (bytes memory);
+        bytes calldata settlementProof_,
+        bytes calldata settlementData_
+    ) external virtual returns (uint256[] memory amountsOut, bytes memory auctionOutput);
 
     // ========== AUCTION MANAGEMENT ========== //
 
     // TODO NatSpec comments
     // TODO validate function
 
-    function auction(uint256 id_, AuctionParams memory params_) external virtual;
+    function auction(uint96 id_, AuctionParams memory params_) external virtual;
 
-    function cancel(uint256 id_) external virtual;
+    function cancelAuction(uint96 id_) external virtual;
 
     // ========== AUCTION INFORMATION ========== //
 
@@ -140,7 +180,7 @@ abstract contract AuctionModule is Auction, Module {
     ///             - the duration is less than the minimum
     ///
     /// @param      lotId_      The lot id
-    function auction(uint256 lotId_, AuctionParams memory params_) external override onlyParent {
+    function auction(uint96 lotId_, AuctionParams memory params_) external override onlyParent {
         // Start time must be zero or in the future
         if (params_.start > 0 && params_.start < uint48(block.timestamp)) {
             revert Auction_InvalidStart(params_.start, uint48(block.timestamp));
@@ -166,11 +206,7 @@ abstract contract AuctionModule is Auction, Module {
     }
 
     /// @dev implementation-specific auction creation logic can be inserted by overriding this function
-    function _auction(
-        uint256 id_,
-        Lot memory lot_,
-        bytes memory params_
-    ) internal virtual returns (uint256);
+    function _auction(uint96 lotId_, Lot memory lot_, bytes memory params_) internal virtual;
 
     /// @notice     Cancel an auction lot
     /// @dev        Owner is stored in the Routing information on the AuctionHouse, so we check permissions there
@@ -180,7 +216,7 @@ abstract contract AuctionModule is Auction, Module {
     ///             - the lot is not active
     ///
     /// @param      lotId_      The lot id
-    function cancel(uint256 lotId_) external override onlyParent {
+    function cancelAuction(uint96 lotId_) external override onlyParent {
         Lot storage lot = lotData[lotId_];
 
         // Invalid lot
@@ -193,10 +229,10 @@ abstract contract AuctionModule is Auction, Module {
         lot.capacity = 0;
 
         // Call internal closeAuction function to update any other required parameters
-        _cancel(lotId_);
+        _cancelAuction(lotId_);
     }
 
-    function _cancel(uint256 id_) internal virtual;
+    function _cancelAuction(uint96 id_) internal virtual;
 
     // ========== AUCTION INFORMATION ========== //
 

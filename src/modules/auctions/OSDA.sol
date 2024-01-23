@@ -91,8 +91,8 @@ pragma solidity 0.8.19;
 
 //         // Validate discounts
 //         if (
-//             baseDiscount >= ONE_HUNDRED_PERCENT ||
-//             maxDiscountFromCurrent > ONE_HUNDRED_PERCENT ||
+//             baseDiscount >= _ONE_HUNDRED_PERCENT ||
+//             maxDiscountFromCurrent > _ONE_HUNDRED_PERCENT ||
 //             baseDiscount > maxDiscountFromCurrent
 //         ) revert Auctioneer_InvalidParams();
 
@@ -103,8 +103,8 @@ pragma solidity 0.8.19;
 //         auction.conversionMul = conversionMul;
 //         auction.conversionFactor = conversionFactor;
 //         auction.minPrice = oraclePrice.mulDivUp(
-//             ONE_HUNDRED_PERCENT - maxDiscountFromCurrent,
-//             ONE_HUNDRED_PERCENT
+//             _ONE_HUNDRED_PERCENT - maxDiscountFromCurrent,
+//             _ONE_HUNDRED_PERCENT
 //         );
 //     }
 
@@ -137,8 +137,8 @@ pragma solidity 0.8.19;
 
 //         // Apply base discount
 //         price = price.mulDivUp(
-//             uint256(ONE_HUNDRED_PERCENT - auction.baseDiscount),
-//             uint256(ONE_HUNDRED_PERCENT)
+//             uint256(_ONE_HUNDRED_PERCENT - auction.baseDiscount),
+//             uint256(_ONE_HUNDRED_PERCENT)
 //         );
 
 //         // Calculate initial capacity based on remaining capacity and amount sold/purchased up to this point
@@ -174,7 +174,7 @@ pragma solidity 0.8.19;
 //         uint256 decay;
 //         if (expectedCapacity > core.capacity) {
 //             decay =
-//                 ONE_HUNDRED_PERCENT +
+//                 _ONE_HUNDRED_PERCENT +
 //                 (auction.decaySpeed * (expectedCapacity - core.capacity)) /
 //                 initialCapacity;
 //         } else {
@@ -182,11 +182,11 @@ pragma solidity 0.8.19;
 //             // The decay has a minimum value of 0 since that will reduce the price to 0 as well.
 //             uint256 factor = (auction.decaySpeed * (core.capacity - expectedCapacity)) /
 //                 initialCapacity;
-//             decay = ONE_HUNDRED_PERCENT > factor ? ONE_HUNDRED_PERCENT - factor : 0;
+//             decay = _ONE_HUNDRED_PERCENT > factor ? _ONE_HUNDRED_PERCENT - factor : 0;
 //         }
 
 //         // Apply decay to price (could be negative decay - i.e. a premium to the equilibrium)
-//         price = price.mulDivUp(decay, ONE_HUNDRED_PERCENT);
+//         price = price.mulDivUp(decay, _ONE_HUNDRED_PERCENT);
 
 //         // Compare the current price to the minimum price and return the maximum
 //         return price > auction.minPrice ? price : auction.minPrice;

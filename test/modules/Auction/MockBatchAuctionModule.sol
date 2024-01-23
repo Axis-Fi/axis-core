@@ -5,15 +5,17 @@ pragma solidity 0.8.19;
 import {Module, Veecode, toKeycode, wrapVeecode} from "src/modules/Modules.sol";
 
 // Auctions
-import {AuctionModule} from "src/modules/Auction.sol";
+import {Auction, AuctionModule} from "src/modules/Auction.sol";
 
-contract MockAuctionModule is AuctionModule {
+contract MockBatchAuctionModule is AuctionModule {
+    mapping(uint96 lotId => Bid[]) public bidData;
+
     constructor(address _owner) AuctionModule(_owner) {
         minAuctionDuration = 1 days;
     }
 
     function VEECODE() public pure virtual override returns (Veecode) {
-        return wrapVeecode(toKeycode("MOCK"), 1);
+        return wrapVeecode(toKeycode("BATCH"), 1);
     }
 
     function TYPE() public pure virtual override returns (Type) {
@@ -27,19 +29,54 @@ contract MockAuctionModule is AuctionModule {
     }
 
     function purchase(
-        uint96 id_,
-        uint256 amount_,
-        bytes calldata auctionData_
-    ) external virtual override returns (uint256 payout, bytes memory auctionOutput) {}
+        uint96,
+        uint256,
+        bytes calldata
+    ) external virtual override returns (uint256, bytes memory) {
+        revert Auction_NotImplemented();
+    }
 
     function bid(
-        uint96 id_,
+        uint96 lotId_,
         address bidder_,
         address recipient_,
         address referrer_,
         uint256 amount_,
         bytes calldata auctionData_
-    ) external virtual override returns (uint256) {}
+    ) external virtual override returns (uint256) {
+        // Valid lot
+        if (lotData[lotId_].start == 0) {
+            revert Auction.Auction_InvalidLotId(lotId_);
+        }
+
+        // If auction is cancelled
+        if (isLive(lotId_) == false) {
+            revert Auction.Auction_MarketNotActive(lotId_);
+        }
+
+        // Create a new bid
+        Bid memory newBid = Bid({
+            bidder: bidder_,
+            recipient: recipient_,
+            referrer: referrer_,
+            amount: amount_,
+            minAmountOut: 0,
+            auctionParam: auctionData_
+        });
+
+        uint256 bidId = bidData[lotId_].length;
+
+        bidData[lotId_].push(newBid);
+
+        return bidId;
+    }
+
+    function cancelBid(uint96 lotId_, uint256 bidId_, address bidder_) external virtual override {}
+
+    function settle(
+        uint256 id_,
+        Bid[] memory bids_
+    ) external virtual returns (uint256[] memory amountsOut) {}
 
     function payoutFor(
         uint256 id_,
@@ -62,19 +99,13 @@ contract MockAuctionModule is AuctionModule {
         bytes calldata settlementData_
     ) external virtual override returns (uint256[] memory amountsOut, bytes memory auctionOutput) {}
 
-    function cancelBid(uint96 lotId_, uint256 bidId_, address bidder_) external virtual override {}
+    function getBid(uint96 lotId_, uint256 bidId_) external view returns (Bid memory bid_) {
+        bid_ = bidData[lotId_][bidId_];
+    }
 
     function claimRefund(
         uint96 lotId_,
         uint256 bidId_,
         address bidder_
     ) external virtual override {}
-}
-
-contract MockAuctionModuleV2 is MockAuctionModule {
-    constructor(address _owner) MockAuctionModule(_owner) {}
-
-    function VEECODE() public pure override returns (Veecode) {
-        return wrapVeecode(toKeycode("MOCK"), 2);
-    }
 }

@@ -108,7 +108,7 @@ pragma solidity 0.8.19;
 //         // Validate auction data
 //         if (initialPrice == 0) revert Auctioneer_InvalidParams();
 //         if (initialPrice < minPrice) revert Auctioneer_InitialPriceLessThanMin();
-//         if (targetIntervalDiscount >= ONE_HUNDRED_PERCENT) revert Auctioneer_InvalidParams();
+//         if (targetIntervalDiscount >= _ONE_HUNDRED_PERCENT) revert Auctioneer_InvalidParams();
 
 //         // Set auction data
 //         uint48 duration = core_.conclusion - core_.start;
@@ -226,24 +226,24 @@ pragma solidity 0.8.19;
 
 //             // Calculate the percent delta expected and current capacity
 //             uint256 delta = capacity > expectedCapacity
-//                 ? ((capacity - expectedCapacity) * ONE_HUNDRED_PERCENT) / initialCapacity
-//                 : ((expectedCapacity - capacity) * ONE_HUNDRED_PERCENT) / initialCapacity;
+//                 ? ((capacity - expectedCapacity) * _ONE_HUNDRED_PERCENT) / initialCapacity
+//                 : ((expectedCapacity - capacity) * _ONE_HUNDRED_PERCENT) / initialCapacity;
 
 //             // Do not tune if the delta is within a reasonable range based on the deposit interval
 //             // Market capacity does not decrease continuously, but follows a step function
 //             // based on purchases. If the capacity deviation is less than the amount of capacity in a
 //             // deposit interval, then we should not tune.
-//             if (delta < (style.depositInterval * ONE_HUNDRED_PERCENT) / duration) return;
+//             if (delta < (style.depositInterval * _ONE_HUNDRED_PERCENT) / duration) return;
 
 //             // Apply the controller gain to the delta to determine the amount of change
-//             delta = (delta * tune.gain) / ONE_HUNDRED_PERCENT;
+//             delta = (delta * tune.gain) / _ONE_HUNDRED_PERCENT;
 //             if (capacity > expectedCapacity) {
 //                 // Apply a tune adjustment since the market is undersold
 
 //                 // Create an adjustment to lower the equilibrium price by delta percent over the tune adjustment delay
 //                 Adjustment storage adjustment = adjustments[id_];
 //                 adjustment.active = true;
-//                 adjustment.change = auction.equilibriumPrice.mulDiv(delta, ONE_HUNDRED_PERCENT);
+//                 adjustment.change = auction.equilibriumPrice.mulDiv(delta, _ONE_HUNDRED_PERCENT);
 //                 adjustment.lastAdjustment = currentTime;
 //                 adjustment.timeToAdjusted = tune.tuneAdjustmentDelay;
 //             } else {
@@ -251,8 +251,8 @@ pragma solidity 0.8.19;
 
 //                 // Increase equilibrium price by delta percent
 //                 auctionData[id_].equilibriumPrice = auction.equilibriumPrice.mulDiv(
-//                     ONE_HUNDRED_PERCENT + delta,
-//                     ONE_HUNDRED_PERCENT
+//                     _ONE_HUNDRED_PERCENT + delta,
+//                     _ONE_HUNDRED_PERCENT
 //                 );
 
 //                 // Set current adjustment to inactive (e.g. if we are re-tuning early)
@@ -348,7 +348,7 @@ pragma solidity 0.8.19;
 //         uint256 decay;
 //         if (expectedCapacity > core.capacity) {
 //             decay =
-//                 ONE_HUNDRED_PERCENT +
+//                 _ONE_HUNDRED_PERCENT +
 //                 (auction.decaySpeed * (expectedCapacity - core.capacity)) /
 //                 initialCapacity;
 //         } else {
@@ -356,11 +356,11 @@ pragma solidity 0.8.19;
 //             // The decay has a minimum value of 0 since that will reduce the price to 0 as well.
 //             uint256 factor = (auction.decaySpeed * (core.capacity - expectedCapacity)) /
 //                 initialCapacity;
-//             decay = ONE_HUNDRED_PERCENT > factor ? ONE_HUNDRED_PERCENT - factor : 0;
+//             decay = _ONE_HUNDRED_PERCENT > factor ? _ONE_HUNDRED_PERCENT - factor : 0;
 //         }
 
 //         // Apply decay to price (could be negative decay - i.e. a premium to the equilibrium)
-//         price = price.mulDivUp(decay, ONE_HUNDRED_PERCENT);
+//         price = price.mulDivUp(decay, _ONE_HUNDRED_PERCENT);
 
 //         // Compare the current price to the minimum price and return the maximum
 //         return price > auction.minPrice ? price : auction.minPrice;

@@ -1,16 +1,37 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.19;
 
+import {ClonesWithImmutableArgs} from "src/lib/clones/ClonesWithImmutableArgs.sol";
+import {SafeTransferLib} from "solmate/utils/SafeTransferLib.sol";
+import {ERC20} from "solmate/tokens/ERC20.sol";
+
 // Modules
 import {Module, Veecode, toKeycode, wrapVeecode} from "src/modules/Modules.sol";
 
 // Auctions
 import {DerivativeModule} from "src/modules/Derivative.sol";
 
-contract MockDerivativeModule is DerivativeModule {
-    bool internal validateFails;
+import {MockERC6909} from "solmate/test/utils/mocks/MockERC6909.sol";
+import {MockWrappedDerivative} from "test/lib/mocks/MockWrappedDerivative.sol";
 
-    constructor(address _owner) Module(_owner) {}
+contract MockDerivativeModule is DerivativeModule {
+    using ClonesWithImmutableArgs for address;
+    using SafeTransferLib for ERC20;
+
+    bool internal validateFails;
+    MockERC6909 public derivativeToken;
+    MockWrappedDerivative internal wrappedImplementation;
+
+    error InvalidDerivativeParams();
+
+    struct DerivativeParams {
+        uint48 expiry;
+        uint256 multiplier;
+    }
+
+    constructor(address _owner) Module(_owner) {
+        derivativeToken = new MockERC6909();
+    }
 
     function VEECODE() public pure virtual override returns (Veecode) {
         return wrapVeecode(toKeycode("DERV"), 1);
@@ -21,16 +42,62 @@ contract MockDerivativeModule is DerivativeModule {
     }
 
     function deploy(
+        address underlyingToken_,
         bytes memory params_,
         bool wrapped_
-    ) external virtual override returns (uint256, address) {}
+    ) external virtual override returns (uint256, address) {
+        if (underlyingToken_ == address(0)) revert InvalidDerivativeParams();
+
+        // Check length
+        if (params_.length != 64) revert InvalidDerivativeParams();
+
+        // Decode params
+        DerivativeParams memory decodedParams = abi.decode(params_, (DerivativeParams));
+
+        (uint256 tokenId, address wrappedAddress) =
+            _deployIfNeeded(underlyingToken_, decodedParams, wrapped_);
+        return (tokenId, wrappedAddress);
+    }
 
     function mint(
         address to_,
+        address underlyingToken_,
         bytes memory params_,
         uint256 amount_,
         bool wrapped_
-    ) external virtual override returns (uint256, address, uint256) {}
+    ) external virtual override returns (uint256, address, uint256) {
+        if (params_.length != 64) revert("");
+
+        DerivativeParams memory decodedParams = abi.decode(params_, (DerivativeParams));
+
+        // Deploy if needed
+        (uint256 tokenId, address wrappedAddress) =
+            _deployIfNeeded(underlyingToken_, decodedParams, wrapped_);
+
+        // Check that the wrapped status is correct
+        if (wrappedAddress != address(0) && !wrapped_) revert("");
+
+        // Transfer collateral token to this contract
+        ERC20(underlyingToken_).safeTransferFrom(msg.sender, address(this), amount_);
+
+        uint256 outputAmount =
+            decodedParams.multiplier == 0 ? amount_ : amount_ * decodedParams.multiplier;
+
+        // If wrapped, mint and deposit
+        if (wrapped_) {
+            derivativeToken.mint(address(this), tokenId, outputAmount);
+
+            derivativeToken.approve(wrappedAddress, tokenId, outputAmount);
+
+            MockWrappedDerivative(wrappedAddress).deposit(outputAmount, to_);
+        }
+        // Otherwise mint as normal
+        else {
+            derivativeToken.mint(to_, tokenId, outputAmount);
+        }
+
+        return (tokenId, wrappedAddress, outputAmount);
+    }
 
     function mint(
         address to_,
@@ -76,5 +143,61 @@ contract MockDerivativeModule is DerivativeModule {
 
     function setValidateFails(bool validateFails_) external {
         validateFails = validateFails_;
+    }
+
+    function setWrappedImplementation(MockWrappedDerivative implementation_) external {
+        wrappedImplementation = implementation_;
+    }
+
+    function _computeId(ERC20 base_, uint48 expiry_) internal pure returns (uint256) {
+        return
+            uint256(keccak256(abi.encodePacked(VEECODE(), keccak256(abi.encode(base_, expiry_)))));
+    }
+
+    function _getNameAndSymbol(
+        ERC20 base_,
+        uint48 expiry_
+    ) internal view returns (string memory, string memory) {
+        return (
+            string(abi.encodePacked(base_.name(), "-", expiry_)),
+            string(abi.encodePacked(base_.symbol(), "-", expiry_))
+        );
+    }
+
+    function _deployIfNeeded(
+        address underlyingToken_,
+        DerivativeParams memory params_,
+        bool wrapped_
+    ) internal returns (uint256, address) {
+        address wrappedAddress;
+
+        // Generate the token id
+        uint256 tokenId = _computeId(ERC20(underlyingToken_), params_.expiry);
+
+        // Check if the derivative exists
+        Token storage token = tokenMetadata[tokenId];
+        if (!token.exists) {
+            if (wrapped_) {
+                // If there is no wrapped implementation, abort
+                if (address(wrappedImplementation) == address(0)) revert("");
+
+                // Deploy the wrapped implementation
+                wrappedAddress = address(wrappedImplementation).clone3(
+                    abi.encodePacked(derivativeToken, tokenId), bytes32(tokenId)
+                );
+                token.wrapped = wrappedAddress;
+            }
+
+            // Store derivative data
+            token.exists = true;
+            (token.name, token.symbol) = _getNameAndSymbol(ERC20(underlyingToken_), params_.expiry);
+            token.decimals = ERC20(underlyingToken_).decimals();
+            token.data = abi.encode(params_);
+
+            // Store metadata
+            tokenMetadata[tokenId] = token;
+        }
+
+        return (tokenId, token.wrapped);
     }
 }
