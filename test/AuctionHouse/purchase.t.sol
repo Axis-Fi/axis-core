@@ -90,7 +90,7 @@ contract PurchaseTest is Test, Permit2User {
         mockHook = new MockHook(address(quoteToken), address(baseToken));
 
         auctionParams = Auction.AuctionParams({
-            start: uint48(block.timestamp),
+            start: uint48(block.timestamp) + 1,
             duration: uint48(1 days),
             capacityInQuote: false,
             capacity: 10e18,
@@ -140,6 +140,9 @@ contract PurchaseTest is Test, Permit2User {
             allowlistProof: allowlistProof,
             permit2Data: bytes("")
         });
+
+        // Warp to the start of the auction
+        vm.warp(auctionParams.start);
     }
 
     modifier givenDerivativeModuleIsInstalled() {
@@ -195,6 +198,9 @@ contract PurchaseTest is Test, Permit2User {
     }
 
     modifier givenAuctionIsCancelled() {
+        // Warp to before the auction start
+        vm.warp(auctionParams.start - 1);
+
         vm.prank(auctionOwner);
         auctionHouse.cancel(lotId);
         _;

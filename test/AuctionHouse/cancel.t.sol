@@ -37,9 +37,9 @@ contract CancelTest is Test, Permit2User {
 
     uint96 internal lotId;
 
-    address internal auctionOwner = address(0x1);
+    address internal immutable auctionOwner = address(0x1);
 
-    address internal protocol = address(0x2);
+    address internal immutable protocol = address(0x2);
 
     function setUp() external {
         baseToken = new MockERC20("Base Token", "BASE", 18);
@@ -51,7 +51,7 @@ contract CancelTest is Test, Permit2User {
         auctionHouse.installModule(mockAuctionModule);
 
         auctionParams = Auction.AuctionParams({
-            start: uint48(block.timestamp),
+            start: uint48(block.timestamp + 1), // start in 1 second, so we can cancel
             duration: uint48(1 days),
             capacityInQuote: false,
             capacity: 10e18,
@@ -110,19 +110,31 @@ contract CancelTest is Test, Permit2User {
     }
 
     function testReverts_whenLotIsInactive() external whenLotIsCreated {
+        // Cancel once
         vm.prank(auctionOwner);
         auctionHouse.cancel(lotId);
 
         bytes memory err = abi.encodeWithSelector(Auction.Auction_MarketNotActive.selector, lotId);
         vm.expectRevert(err);
 
+        // Cancel again
+        vm.prank(auctionOwner);
+        auctionHouse.cancel(lotId);
+    }
+
+    function test_givenLotHasStarted_reverts() external whenLotIsCreated {
+        // Warp beyond the start time
+        vm.warp(uint48(block.timestamp + 1));
+
+        bytes memory err = abi.encodeWithSelector(Auction.Auction_MarketActive.selector, lotId);
+        vm.expectRevert(err);
+
+        // Cancel
         vm.prank(auctionOwner);
         auctionHouse.cancel(lotId);
     }
 
     function test_success() external whenLotIsCreated {
-        assertTrue(mockAuctionModule.isLive(lotId), "before cancellation: isLive mismatch");
-
         vm.prank(auctionOwner);
         auctionHouse.cancel(lotId);
 

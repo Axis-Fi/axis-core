@@ -26,7 +26,7 @@ import {
     Module
 } from "src/modules/Modules.sol";
 
-contract CancelTest is Test, Permit2User {
+contract AuctionModuleCancelTest is Test, Permit2User {
     MockERC20 internal baseToken;
     MockERC20 internal quoteToken;
     MockAuctionModule internal mockAuctionModule;
@@ -51,7 +51,7 @@ contract CancelTest is Test, Permit2User {
         auctionHouse.installModule(mockAuctionModule);
 
         auctionParams = Auction.AuctionParams({
-            start: uint48(block.timestamp),
+            start: uint48(block.timestamp) + 1,
             duration: uint48(1 days),
             capacityInQuote: false,
             capacity: 10e18,
@@ -111,9 +111,19 @@ contract CancelTest is Test, Permit2User {
         mockAuctionModule.cancelAuction(lotId);
     }
 
-    function test_success() external whenLotIsCreated {
-        assertTrue(mockAuctionModule.isLive(lotId), "before cancellation: isLive mismatch");
+    function test_givenLotIsActive_reverts() external whenLotIsCreated {
+        // Warp to the start of the auction
+        vm.warp(auctionParams.start);
 
+        bytes memory err = abi.encodeWithSelector(Auction.Auction_MarketActive.selector, lotId);
+        vm.expectRevert(err);
+
+        // Cancel once
+        vm.prank(address(auctionHouse));
+        mockAuctionModule.cancelAuction(lotId);
+    }
+
+    function test_success() external whenLotIsCreated {
         vm.prank(address(auctionHouse));
         mockAuctionModule.cancelAuction(lotId);
 
