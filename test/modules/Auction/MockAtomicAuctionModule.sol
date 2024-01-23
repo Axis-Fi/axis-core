@@ -114,4 +114,11 @@ contract MockAtomicAuctionModule is AuctionModule {
     function claimBidRefund(uint96, uint256, address) external virtual override returns (uint256) {
         revert Auction_NotImplemented();
     }
+
+    function claimAuctionRefund(uint96 lotId_)
+        external
+        virtual
+        override
+        returns (uint256 refundAmount)
+    {}
 }
