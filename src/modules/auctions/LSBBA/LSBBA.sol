@@ -399,6 +399,9 @@ abstract contract LocalSealedBidBatchAuction is AuctionModule {
     }
 
     function _cancelAuction(uint96 lotId_) internal override {
+        // Batch auctions cannot be cancelled once started, otherwise the seller could cancel the auction after bids have been submitted
+        if (lotData[lotId_].start <= block.timestamp) revert Auction_WrongState();
+
         // Auction cannot be cancelled once it has concluded
         if (
             auctionData[lotId_].status != AuctionStatus.Created
