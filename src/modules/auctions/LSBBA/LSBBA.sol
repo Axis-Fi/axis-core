@@ -156,7 +156,7 @@ abstract contract LocalSealedBidBatchAuction is AuctionModule {
     }
 
     /// @inheritdoc Auction
-    function claimRefund(
+    function claimBidRefund(
         uint96 lotId_,
         uint256 bidId_,
         address sender_

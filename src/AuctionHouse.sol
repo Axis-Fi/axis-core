@@ -510,7 +510,7 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
         // Claim the refund on the auction module
         // The auction module is responsible for validating the bid and authorizing the caller
         AuctionModule module = _getModuleForId(lotId_);
-        uint256 refundAmount = module.claimRefund(lotId_, bidId_, msg.sender);
+        uint256 refundAmount = module.claimBidRefund(lotId_, bidId_, msg.sender);
 
         // Transfer the quote token to the bidder
         // The ownership of the bid has already been verified by the auction module

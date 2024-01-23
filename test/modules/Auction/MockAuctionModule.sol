@@ -64,7 +64,7 @@ contract MockAuctionModule is AuctionModule {
 
     function cancelBid(uint96 lotId_, uint256 bidId_, address bidder_) external virtual override {}
 
-    function claimRefund(
+    function claimBidRefund(
         uint96 lotId_,
         uint256 bidId_,
         address bidder_

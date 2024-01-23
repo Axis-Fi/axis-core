@@ -111,7 +111,7 @@ contract MockAtomicAuctionModule is AuctionModule {
         bytes calldata settlementData_
     ) external virtual override returns (uint256[] memory amountsOut, bytes memory auctionOutput) {}
 
-    function claimRefund(uint96, uint256, address) external virtual override returns (uint256) {
+    function claimBidRefund(uint96, uint256, address) external virtual override returns (uint256) {
         revert Auction_NotImplemented();
     }
 }

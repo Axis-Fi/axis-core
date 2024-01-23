@@ -123,7 +123,7 @@ abstract contract Auction {
     /// @param      bidId_          The bid id
     /// @param      bidder_         The bidder of the purchased tokens
     /// @return     refundAmount    The amount of quote tokens refunded
-    function claimRefund(
+    function claimBidRefund(
         uint96 lotId_,
         uint256 bidId_,
         address bidder_

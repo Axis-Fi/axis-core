@@ -97,7 +97,7 @@ contract MockBatchAuctionModule is AuctionModule {
         bidCancelled[lotId_][bidId_] = true;
     }
 
-    function claimRefund(
+    function claimBidRefund(
         uint96 lotId_,
         uint256 bidId_,
         address bidder_
