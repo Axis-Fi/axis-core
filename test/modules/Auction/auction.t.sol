@@ -26,7 +26,7 @@ import {
     Module
 } from "src/modules/Modules.sol";
 
-contract AuctionModuleAuctionTest is Test, Permit2User {
+contract AuctionTest is Test, Permit2User {
     MockERC20 internal baseToken;
     MockERC20 internal quoteToken;
     MockAuctionModule internal mockAuctionModule;

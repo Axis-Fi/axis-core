@@ -8,8 +8,6 @@ abstract contract Auction {
 
     error Auction_MarketNotActive(uint96 lotId);
 
-    error Auction_MarketActive(uint96 lotId);
-
     error Auction_InvalidStart(uint48 start_, uint48 minimum_);
 
     error Auction_InvalidDuration(uint48 duration_, uint48 minimum_);
@@ -215,18 +213,17 @@ abstract contract AuctionModule is Auction, Module {
     /// @dev        This function reverts if:
     ///             - the caller is not the parent of the module
     ///             - the lot id is invalid
-    ///             - the lot has already been cancelled
-    ///             - the lot is active
+    ///             - the lot is not active
     ///
     /// @param      lotId_      The lot id
-    function cancelAuction(uint96 lotId_) external override onlyParent isLotValid(lotId_) {
+    function cancelAuction(uint96 lotId_) external override onlyParent {
         Lot storage lot = lotData[lotId_];
 
-        // Already cancelled
-        if (lot.capacity == 0) revert Auction_MarketNotActive(lotId_);
+        // Invalid lot
+        if (lot.start == 0) revert Auction_InvalidLotId(lotId_);
 
-        // Already started
-        if (lot.start <= block.timestamp) revert Auction_MarketActive(lotId_);
+        // Inactive lot
+        if (lot.capacity == 0) revert Auction_MarketNotActive(lotId_);
 
         lot.conclusion = uint48(block.timestamp);
         lot.capacity = 0;

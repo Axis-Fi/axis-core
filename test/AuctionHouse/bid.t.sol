@@ -74,7 +74,7 @@ contract BidTest is Test, Permit2User {
         auctionHouse.installModule(mockAuctionModule);
 
         auctionParams = Auction.AuctionParams({
-            start: uint48(block.timestamp) + 1,
+            start: uint48(block.timestamp),
             duration: auctionDuration,
             capacityInQuote: false,
             capacity: 10e18,
@@ -131,11 +131,6 @@ contract BidTest is Test, Permit2User {
     modifier givenLotIsCancelled() {
         vm.prank(auctionOwner);
         auctionHouse.cancel(lotId);
-        _;
-    }
-
-    modifier givenLotHasStarted() {
-        vm.warp(auctionParams.start);
         _;
     }
 
@@ -237,12 +232,7 @@ contract BidTest is Test, Permit2User {
         auctionHouse.bid(bidParams);
     }
 
-    function test_whenLotIdIsInvalid_reverts()
-        external
-        givenLotIsCreated
-        givenLotHasStarted
-        whenLotIdIsInvalid
-    {
+    function test_whenLotIdIsInvalid_reverts() external givenLotIsCreated whenLotIdIsInvalid {
         bytes memory err = abi.encodeWithSelector(Auctioneer.InvalidLotId.selector, lotId);
         vm.expectRevert(err);
 
@@ -272,7 +262,6 @@ contract BidTest is Test, Permit2User {
     function test_incorrectAllowlistProof_reverts()
         external
         givenLotIsCreated
-        givenLotHasStarted
         givenLotHasAllowlist
         withIncorrectAllowlistProof
     {
@@ -287,7 +276,6 @@ contract BidTest is Test, Permit2User {
     function test_givenLotHasAllowlist()
         external
         givenLotIsCreated
-        givenLotHasStarted
         givenLotHasAllowlist
         givenUserHasQuoteTokenBalance(BID_AMOUNT)
         givenUserHasApprovedQuoteToken(BID_AMOUNT)
@@ -300,7 +288,6 @@ contract BidTest is Test, Permit2User {
     function test_givenUserHasInsufficientBalance_reverts()
         public
         givenLotIsCreated
-        givenLotHasStarted
         givenUserHasApprovedQuoteToken(BID_AMOUNT)
     {
         vm.expectRevert("TRANSFER_FROM_FAILED");
@@ -313,7 +300,6 @@ contract BidTest is Test, Permit2User {
     function test_whenPermit2ApprovalIsProvided()
         external
         givenLotIsCreated
-        givenLotHasStarted
         givenUserHasQuoteTokenBalance(BID_AMOUNT)
         whenPermit2ApprovalIsProvided
     {
@@ -342,7 +328,6 @@ contract BidTest is Test, Permit2User {
     function test_whenPermit2ApprovalIsNotProvided()
         external
         givenLotIsCreated
-        givenLotHasStarted
         givenUserHasQuoteTokenBalance(BID_AMOUNT)
         givenUserHasApprovedQuoteToken(BID_AMOUNT)
     {
@@ -371,7 +356,6 @@ contract BidTest is Test, Permit2User {
     function test_whenAuctionParamIsProvided()
         external
         givenLotIsCreated
-        givenLotHasStarted
         givenUserHasQuoteTokenBalance(BID_AMOUNT)
         givenUserHasApprovedQuoteToken(BID_AMOUNT)
     {
