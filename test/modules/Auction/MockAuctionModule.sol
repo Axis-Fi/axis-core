@@ -68,7 +68,7 @@ contract MockAuctionModule is AuctionModule {
         uint96 lotId_,
         uint256 bidId_,
         address bidder_
-    ) external virtual override {}
+    ) external virtual override returns (uint256 refundAmount) {}
 }
 
 contract MockAuctionModuleV2 is MockAuctionModule {

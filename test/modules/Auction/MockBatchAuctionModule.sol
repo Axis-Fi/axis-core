@@ -10,6 +10,7 @@ import {Auction, AuctionModule} from "src/modules/Auction.sol";
 contract MockBatchAuctionModule is AuctionModule {
     mapping(uint96 lotId => Bid[]) public bidData;
     mapping(uint96 lotId => mapping(uint256 => bool)) public bidCancelled;
+    mapping(uint96 lotId => mapping(uint256 => bool)) public bidRefunded;
 
     constructor(address _owner) AuctionModule(_owner) {
         minAuctionDuration = 1 days;
@@ -96,6 +97,40 @@ contract MockBatchAuctionModule is AuctionModule {
         bidCancelled[lotId_][bidId_] = true;
     }
 
+    function claimRefund(
+        uint96 lotId_,
+        uint256 bidId_,
+        address bidder_
+    ) external virtual override returns (uint256 refundAmount) {
+        // Check that the bid exists
+        if (bidData[lotId_].length <= bidId_) {
+            revert Auction.Auction_InvalidBidId(lotId_, bidId_);
+        }
+
+        // Check that the bid has been cancelled
+        if (bidCancelled[lotId_][bidId_] == false) {
+            revert Auction.Auction_InvalidParams();
+        }
+
+        // Check that the bidder is the owner of the bid
+        if (bidData[lotId_][bidId_].bidder != bidder_) {
+            revert Auction.Auction_NotBidder();
+        }
+
+        // Check that the bid has not been refunded
+        if (bidRefunded[lotId_][bidId_] == true) {
+            revert Auction.Auction_InvalidParams();
+        }
+
+        // Get the bid amount
+        refundAmount = bidData[lotId_][bidId_].amount;
+
+        // Mark the bid as refunded
+        bidRefunded[lotId_][bidId_] = true;
+
+        return refundAmount;
+    }
+
     function settle(
         uint256 id_,
         Bid[] memory bids_
@@ -125,10 +160,4 @@ contract MockBatchAuctionModule is AuctionModule {
     function getBid(uint96 lotId_, uint256 bidId_) external view returns (Bid memory bid_) {
         bid_ = bidData[lotId_][bidId_];
     }
-
-    function claimRefund(
-        uint96 lotId_,
-        uint256 bidId_,
-        address bidder_
-    ) external virtual override {}
 }

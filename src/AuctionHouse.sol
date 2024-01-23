@@ -507,7 +507,15 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
 
     /// @inheritdoc Router
     function claimBidRefund(uint96 lotId_, uint256 bidId_) external override isLotValid(lotId_) {
-        //
+        // Claim the refund on the auction module
+        // The auction module is responsible for validating the bid and authorizing the caller
+        AuctionModule module = _getModuleForId(lotId_);
+        uint256 refundAmount = module.claimRefund(lotId_, bidId_, msg.sender);
+
+        // Transfer the quote token to the bidder
+        // The ownership of the bid has already been verified by the auction module
+        // TODO consider if another check is required
+        lotRouting[lotId_].quoteToken.safeTransfer(msg.sender, refundAmount);
     }
 
     // // External submission and evaluation

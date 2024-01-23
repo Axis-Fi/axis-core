@@ -160,7 +160,13 @@ abstract contract LocalSealedBidBatchAuction is AuctionModule {
         uint96 lotId_,
         uint256 bidId_,
         address sender_
-    ) external override onlyInternal onlyBidder(sender_, lotId_, bidId_) {
+    )
+        external
+        override
+        onlyInternal
+        onlyBidder(sender_, lotId_, bidId_)
+        returns (uint256 refundAmount)
+    {
         // Validate inputs
         // Auction for must have settled to claim refund
         // User must not have won the auction or claimed a refund already
@@ -176,6 +182,8 @@ abstract contract LocalSealedBidBatchAuction is AuctionModule {
 
         // Set bid status to refunded
         lotEncryptedBids[lotId_][bidId_].status = BidStatus.Refunded;
+
+        return lotEncryptedBids[lotId_][bidId_].amount;
     }
 
     // =========== DECRYPTION =========== //

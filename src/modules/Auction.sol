@@ -119,10 +119,15 @@ abstract contract Auction {
     ///             - Authorize `bidder_`
     ///             - Update the bid data
     ///
-    /// @param      lotId_      The lot id
-    /// @param      bidId_      The bid id
-    /// @param      bidder_     The bidder of the purchased tokens
-    function claimRefund(uint96 lotId_, uint256 bidId_, address bidder_) external virtual;
+    /// @param      lotId_          The lot id
+    /// @param      bidId_          The bid id
+    /// @param      bidder_         The bidder of the purchased tokens
+    /// @return     refundAmount    The amount of quote tokens refunded
+    function claimRefund(
+        uint96 lotId_,
+        uint256 bidId_,
+        address bidder_
+    ) external virtual returns (uint256 refundAmount);
 
     /// @notice     Settle a batch auction with the provided bids
     /// @notice     This function is used for on-chain storage of bids and external settlement
