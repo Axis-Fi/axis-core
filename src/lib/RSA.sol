@@ -191,11 +191,14 @@ library RSAOAEP {
         // 2. f.  Let maskedDB = DB \xor dbMask.
         bytes memory maskedDb = _xor(db, dbMask);
 
-        // 2. g.  Let seedMask = MGF(maskedDB, hLen).
-        bytes32 seedMask = bytes32(_mgf(maskedDb, 32));
+        bytes32 maskedSeed;
+        {
+            // 2. g.  Let seedMask = MGF(maskedDB, hLen).
+            bytes32 seedMask = bytes32(_mgf(maskedDb, 32));
 
-        // 2. h.  Let maskedSeed = seed \xor seedMask.
-        bytes32 maskedSeed = rand ^ seedMask;
+            // 2. h.  Let maskedSeed = seed \xor seedMask.
+            maskedSeed = rand ^ seedMask;
+        }
 
         // 2. i.  Concatenate a single octet with hexadecimal value 0x00,
         //       maskedSeed, and maskedDB to form an encoded message EM of
