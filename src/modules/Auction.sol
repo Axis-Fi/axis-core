@@ -111,23 +111,16 @@ abstract contract Auction {
     /// @param      lotId_      The lot id
     /// @param      bidId_      The bid id
     /// @param      bidder_     The bidder of the purchased tokens
-    function cancelBid(uint96 lotId_, uint256 bidId_, address bidder_) external virtual;
-
-    /// @notice     Claim a refund for a bid
-    /// @dev        The implementing function should handle the following:
-    ///             - Validate the bid parameters
-    ///             - Authorize `bidder_`
-    ///             - Update the bid data
-    ///
-    /// @param      lotId_          The lot id
-    /// @param      bidId_          The bid id
-    /// @param      bidder_         The bidder of the purchased tokens
-    /// @return     refundAmount    The amount of quote tokens refunded
-    function claimBidRefund(
+    /// @return     bidAmount   The amount of quote tokens to refund
+    function cancelBid(
         uint96 lotId_,
         uint256 bidId_,
         address bidder_
-    ) external virtual returns (uint256 refundAmount);
+    ) external virtual returns (uint256 bidAmount);
+
+    // _revertIfCancelled
+    // _revertIfLotActive
+    // _revertIfBidderNotOwner
 
     /// @notice     Settle a batch auciton
     /// @notice     This function is used for on-chain storage of bids and local settlement

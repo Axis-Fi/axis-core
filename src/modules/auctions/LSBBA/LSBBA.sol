@@ -140,6 +140,12 @@ abstract contract LocalSealedBidBatchAuction is AuctionModule {
     }
 
     /// @inheritdoc Auction
+    /// @dev        This function reverts if:
+    ///             - the auction lot does not exist
+    ///             - the auction lot is not live
+    ///             - the bid does not exist
+    ///             - `bidder_` is not the bidder
+    ///             - the bid is already cancelled
     // TODO need to change this to delete the bid so we don't have to decrypt it later
     // Because of this, we can issue the refund immediately (needs to happen in the AuctionHouse)
     // However, this will require more refactoring because, we run into a problem of using the array index as the bidId since it will change when we delete the bid
@@ -150,7 +156,14 @@ abstract contract LocalSealedBidBatchAuction is AuctionModule {
         uint96 lotId_,
         uint256 bidId_,
         address bidder_
-    ) external override onlyInternal auctionIsLive(lotId_) onlyBidder(bidder_, lotId_, bidId_) {
+    )
+        external
+        override
+        onlyInternal
+        auctionIsLive(lotId_)
+        onlyBidder(bidder_, lotId_, bidId_)
+        returns (uint256 refundAmount)
+    {
         // Validate inputs
         // Bid is not already cancelled
         if (lotEncryptedBids[lotId_][bidId_].status != BidStatus.Submitted) {
@@ -159,36 +172,8 @@ abstract contract LocalSealedBidBatchAuction is AuctionModule {
 
         // Set bid status to cancelled
         lotEncryptedBids[lotId_][bidId_].status = BidStatus.Cancelled;
-    }
 
-    /// @inheritdoc Auction
-    function claimBidRefund(
-        uint96 lotId_,
-        uint256 bidId_,
-        address sender_
-    )
-        external
-        override
-        onlyInternal
-        onlyBidder(sender_, lotId_, bidId_)
-        returns (uint256 refundAmount)
-    {
-        // Validate inputs
-        // Auction for must have settled to claim refund
-        // User must not have won the auction or claimed a refund already
-        // TODO should we allow cancel bids to claim earlier?
-        // Might allow legit users to change their bids
-        // But also allows a malicious user to use the same funds to create
-        // multiple bids in an attempt to grief the settlement
-        BidStatus bidStatus = lotEncryptedBids[lotId_][bidId_].status;
-        if (
-            auctionData[lotId_].status != AuctionStatus.Settled || bidStatus == BidStatus.Refunded
-                || bidStatus == BidStatus.Won
-        ) revert Auction_WrongState();
-
-        // Set bid status to refunded
-        lotEncryptedBids[lotId_][bidId_].status = BidStatus.Refunded;
-
+        // Return the amount to be refunded
         return lotEncryptedBids[lotId_][bidId_].amount;
     }
 

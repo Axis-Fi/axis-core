@@ -168,7 +168,7 @@ contract CancelBidTest is Test, Permit2User {
     //  [X] it reverts
     // [X] given the caller is not the bid owner
     //  [X] it reverts
-    // [X] it cancels the bid
+    // [X] it cancels the bid and transfers the quote tokens back to the bidder
 
     function test_invalidLotId_reverts() external {
         bytes memory err = abi.encodeWithSelector(Auctioneer.InvalidLotId.selector, lotId);
@@ -251,11 +251,17 @@ contract CancelBidTest is Test, Permit2User {
     }
 
     function test_itCancelsTheBid() external givenLotIsCreated givenBidIsCreated {
+        // Get alice's balance
+        uint256 aliceBalance = quoteToken.balanceOf(alice);
+
         // Call the function
         vm.prank(alice);
         auctionHouse.cancelBid(lotId, bidId);
 
         // Assert the bid is cancelled
         assertTrue(mockAuctionModule.bidCancelled(lotId, bidId));
+
+        // Expect alice's balance to increase
+        assertEq(quoteToken.balanceOf(alice), aliceBalance + BID_AMOUNT);
     }
 }

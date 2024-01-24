@@ -77,7 +77,14 @@ contract MockBatchAuctionModule is AuctionModule {
         uint96 lotId_,
         uint256 bidId_,
         address bidder_
-    ) external virtual override isLotValid(lotId_) isLotActive(lotId_) {
+    )
+        external
+        virtual
+        override
+        isLotValid(lotId_)
+        isLotActive(lotId_)
+        returns (uint256 refundAmount)
+    {
         // Check that the bid exists
         if (bidData[lotId_].length <= bidId_) {
             revert Auction.Auction_InvalidBidId(lotId_, bidId_);
@@ -95,40 +102,11 @@ contract MockBatchAuctionModule is AuctionModule {
 
         // Cancel the bid
         bidCancelled[lotId_][bidId_] = true;
-    }
-
-    function claimBidRefund(
-        uint96 lotId_,
-        uint256 bidId_,
-        address bidder_
-    ) external virtual override returns (uint256 refundAmount) {
-        // Check that the bid exists
-        if (bidData[lotId_].length <= bidId_) {
-            revert Auction.Auction_InvalidBidId(lotId_, bidId_);
-        }
-
-        // Check that the bid has been cancelled
-        if (bidCancelled[lotId_][bidId_] == false) {
-            revert Auction.Auction_InvalidParams();
-        }
-
-        // Check that the bidder is the owner of the bid
-        if (bidData[lotId_][bidId_].bidder != bidder_) {
-            revert Auction.Auction_NotBidder();
-        }
-
-        // Check that the bid has not been refunded
-        if (bidRefunded[lotId_][bidId_] == true) {
-            revert Auction.Auction_InvalidParams();
-        }
-
-        // Get the bid amount
-        refundAmount = bidData[lotId_][bidId_].amount;
 
         // Mark the bid as refunded
         bidRefunded[lotId_][bidId_] = true;
 
-        return refundAmount;
+        return bidData[lotId_][bidId_].amount;
     }
 
     function settle(

@@ -134,7 +134,8 @@ abstract contract Router is FeeManager {
     /// @notice     Cancel a bid on a lot in a batch auction
     /// @dev        The implementing function must perform the following:
     ///             1. Validate the bid
-    ///             2. Call the auction module to cancel the bid
+    ///             2. Pass the request to the auction module to validate and update data
+    ///             3. Send the refund to the bidder
     ///
     /// @param      lotId_          Lot ID
     /// @param      bidId_          Bid ID
@@ -165,16 +166,6 @@ abstract contract Router is FeeManager {
         bytes calldata settlementProof_,
         bytes calldata settlementData_
     ) external virtual;
-
-    /// @notice     Claims a refund for a failed or cancelled bid
-    /// @dev        The implementing function must perform the following:
-    ///             1. Validate that the `lotId_` is valid
-    ///             2. Pass the request to the auction module to validate and update data
-    ///             3. Send the refund to the bidder
-    ///
-    /// @param      lotId_           Lot ID
-    /// @param      bidId_           Bid ID
-    function claimBidRefund(uint96 lotId_, uint256 bidId_) external virtual;
 
     // ========== FEE MANAGEMENT ========== //
 
@@ -433,7 +424,12 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
         // Cancel the bid on the auction module
         // The auction module is responsible for validating the bid and authorizing the caller
         AuctionModule module = _getModuleForId(lotId_);
-        module.cancelBid(lotId_, bidId_, msg.sender);
+        uint256 refundAmount = module.cancelBid(lotId_, bidId_, msg.sender);
+
+        // Transfer the quote token to the bidder
+        // The ownership of the bid has already been verified by the auction module
+        // TODO consider if another check is required
+        lotRouting[lotId_].quoteToken.safeTransfer(msg.sender, refundAmount);
     }
 
     /// @inheritdoc Router
@@ -556,19 +552,6 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
                 _sendPayout(lotId_, winningBids_[i].bidder, amountsOut[i], routing, auctionOutput);
             }
         }
-    }
-
-    /// @inheritdoc Router
-    function claimBidRefund(uint96 lotId_, uint256 bidId_) external override isLotValid(lotId_) {
-        // Claim the refund on the auction module
-        // The auction module is responsible for validating the bid and authorizing the caller
-        AuctionModule module = _getModuleForId(lotId_);
-        uint256 refundAmount = module.claimBidRefund(lotId_, bidId_, msg.sender);
-
-        // Transfer the quote token to the bidder
-        // The ownership of the bid has already been verified by the auction module
-        // TODO consider if another check is required
-        lotRouting[lotId_].quoteToken.safeTransfer(msg.sender, refundAmount);
     }
 
     // // External submission and evaluation
