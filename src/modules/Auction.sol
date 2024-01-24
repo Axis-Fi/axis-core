@@ -170,8 +170,6 @@ abstract contract Auction {
     /// @param      lotId_              The lot id
     function cancelAuction(uint96 lotId_) external virtual;
 
-    // _revertIf...
-
     // ========== AUCTION INFORMATION ========== //
 
     function payoutFor(uint256 id_, uint256 amount_) public view virtual returns (uint256);
@@ -248,8 +246,11 @@ abstract contract AuctionModule is Auction, Module {
     ) internal virtual returns (bool prefundingRequired);
 
     /// @notice     Cancel an auction lot
-    /// @dev        Owner is stored in the Routing information on the AuctionHouse, so we check permissions there
-    /// @dev        This function reverts if:
+    /// @dev        Assumptions:
+    ///             - The parent will refund the owner the remaining capacity
+    ///             - The parent will verify that the caller is the owner
+    ///
+    ///             This function reverts if:
     ///             - the caller is not the parent of the module
     ///             - the lot id is invalid
     ///             - the lot is not active
@@ -271,6 +272,10 @@ abstract contract AuctionModule is Auction, Module {
         _cancelAuction(lotId_);
     }
 
+    /// @notice     Implementation-specific auction cancellation logic
+    /// @dev        Auction modules should override this to perform any additional logic
+    ///
+    /// @param      lotId_      The lot ID
     function _cancelAuction(uint96 lotId_) internal virtual;
 
     // ========== AUCTION INFORMATION ========== //
