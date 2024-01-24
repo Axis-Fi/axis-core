@@ -57,6 +57,9 @@ contract MockAtomicAuctionModule is AuctionModule {
             payout = (payoutData[id_] * amount_) / 1e5;
         }
 
+        // Reduce capacity
+        lotData[id_].capacity -= payout;
+
         Output memory output = Output({multiplier: 1});
 
         auctionOutput = abi.encode(output);
@@ -117,11 +120,4 @@ contract MockAtomicAuctionModule is AuctionModule {
         bytes calldata settlementProof_,
         bytes calldata settlementData_
     ) external virtual override returns (uint256[] memory amountsOut, bytes memory auctionOutput) {}
-
-    function claimAuctionRefund(uint96 lotId_)
-        external
-        virtual
-        override
-        returns (uint256 refundAmount)
-    {}
 }

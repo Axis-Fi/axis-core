@@ -453,11 +453,4 @@ abstract contract LocalSealedBidBatchAuction is AuctionModule {
         // Set auction status to settled so that bids can be refunded
         auctionData[lotId_].status = AuctionStatus.Settled;
     }
-
-    function claimAuctionRefund(uint96 lotId_)
-        external
-        virtual
-        override
-        returns (uint256 refundAmount)
-    {}
 }

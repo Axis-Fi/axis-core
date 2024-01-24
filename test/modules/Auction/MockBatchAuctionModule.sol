@@ -145,11 +145,4 @@ contract MockBatchAuctionModule is AuctionModule {
     function getBid(uint96 lotId_, uint256 bidId_) external view returns (Bid memory bid_) {
         bid_ = bidData[lotId_][bidId_];
     }
-
-    function claimAuctionRefund(uint96 lotId_)
-        external
-        virtual
-        override
-        returns (uint256 refundAmount)
-    {}
 }

@@ -7,11 +7,11 @@ import {ERC20} from "lib/solmate/src/tokens/ERC20.sol";
 
 // Mocks
 import {MockERC20} from "lib/solmate/src/test/utils/mocks/MockERC20.sol";
-import {MockAuctionModule} from "test/modules/Auction/MockAuctionModule.sol";
+import {MockAtomicAuctionModule} from "test/modules/Auction/MockAtomicAuctionModule.sol";
 import {Permit2User} from "test/lib/permit2/Permit2User.sol";
 
 // Auctions
-import {AuctionHouse} from "src/AuctionHouse.sol";
+import {AuctionHouse, Router} from "src/AuctionHouse.sol";
 import {Auction} from "src/modules/Auction.sol";
 import {IHooks, IAllowlist, Auctioneer} from "src/bases/Auctioneer.sol";
 
@@ -26,10 +26,10 @@ import {
     Module
 } from "src/modules/Modules.sol";
 
-contract CancelTest is Test, Permit2User {
+contract CancelAuctionTest is Test, Permit2User {
     MockERC20 internal baseToken;
     MockERC20 internal quoteToken;
-    MockAuctionModule internal mockAuctionModule;
+    MockAtomicAuctionModule internal mockAuctionModule;
 
     AuctionHouse internal auctionHouse;
     Auctioneer.RoutingParams internal routingParams;
@@ -40,13 +40,18 @@ contract CancelTest is Test, Permit2User {
     address internal auctionOwner = address(0x1);
 
     address internal protocol = address(0x2);
+    address internal alice = address(0x3);
+
+    uint256 internal constant LOT_CAPACITY = 10e18;
+
+    uint256 internal constant PURCHASE_AMOUNT = 1e18;
 
     function setUp() external {
         baseToken = new MockERC20("Base Token", "BASE", 18);
         quoteToken = new MockERC20("Quote Token", "QUOTE", 18);
 
         auctionHouse = new AuctionHouse(auctionOwner, _PERMIT2_ADDRESS);
-        mockAuctionModule = new MockAuctionModule(address(auctionHouse));
+        mockAuctionModule = new MockAtomicAuctionModule(address(auctionHouse));
 
         auctionHouse.installModule(mockAuctionModule);
 
@@ -54,12 +59,12 @@ contract CancelTest is Test, Permit2User {
             start: uint48(block.timestamp),
             duration: uint48(1 days),
             capacityInQuote: false,
-            capacity: 10e18,
+            capacity: LOT_CAPACITY,
             implParams: abi.encode("")
         });
 
         routingParams = Auctioneer.RoutingParams({
-            auctionType: toKeycode("MOCK"),
+            auctionType: toKeycode("ATOM"),
             baseToken: baseToken,
             quoteToken: quoteToken,
             hooks: IHooks(address(0)),
@@ -81,7 +86,9 @@ contract CancelTest is Test, Permit2User {
     // [X] reverts if not the owner
     // [X] reverts if lot is not active
     // [X] reverts if lot id is invalid
-    // [X] sets the lot to inactive on the AuctionModule
+    // [X] reverts if the lot is already cancelled
+    // [X] given the auction is not prefunded
+    //  [X] it sets the lot to inactive on the AuctionModule
 
     function testReverts_whenNotAuctionOwner() external whenLotIsCreated {
         bytes memory err =
@@ -120,6 +127,20 @@ contract CancelTest is Test, Permit2User {
         auctionHouse.cancel(lotId);
     }
 
+    function test_givenCancelled_reverts() external whenLotIsCreated {
+        // Cancel the lot
+        vm.prank(auctionOwner);
+        auctionHouse.cancel(lotId);
+
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(Auction.Auction_MarketNotActive.selector, lotId);
+        vm.expectRevert(err);
+
+        // Call the function
+        vm.prank(auctionOwner);
+        auctionHouse.cancel(lotId);
+    }
+
     function test_success() external whenLotIsCreated {
         assertTrue(mockAuctionModule.isLive(lotId), "before cancellation: isLive mismatch");
 
@@ -132,5 +153,76 @@ contract CancelTest is Test, Permit2User {
         assertEq(lotCapacity, 0);
 
         assertFalse(mockAuctionModule.isLive(lotId), "after cancellation: isLive mismatch");
+    }
+
+    // [X] given the auction is prefunded
+    //  [X] it refunds the prefunded amount in payout tokens to the owner
+    //  [X] given a purchase has been made
+    //   [X] it refunds the remaining prefunded amount in payout tokens to the owner
+
+    modifier givenLotIsPrefunded() {
+        mockAuctionModule.setRequiredPrefunding(true);
+
+        // Mint payout tokens to the owner
+        baseToken.mint(auctionOwner, LOT_CAPACITY);
+
+        // Approve transfer to the auction house
+        vm.prank(auctionOwner);
+        baseToken.approve(address(auctionHouse), LOT_CAPACITY);
+        _;
+    }
+
+    modifier givenPurchase() {
+        // Mint quote tokens to alice
+        quoteToken.mint(alice, PURCHASE_AMOUNT);
+
+        // Approve spending
+        vm.prank(alice);
+        quoteToken.approve(address(auctionHouse), PURCHASE_AMOUNT);
+
+        // Create the purchase
+        Router.PurchaseParams memory purchaseParams = Router.PurchaseParams({
+            recipient: alice,
+            referrer: address(0),
+            lotId: lotId,
+            amount: PURCHASE_AMOUNT,
+            minAmountOut: PURCHASE_AMOUNT,
+            auctionData: bytes(""),
+            allowlistProof: bytes(""),
+            permit2Data: bytes("")
+        });
+
+        vm.prank(alice);
+        auctionHouse.purchase(purchaseParams);
+        _;
+    }
+
+    function test_prefunded() external givenLotIsPrefunded whenLotIsCreated {
+        // Check the owner's balance
+        uint256 ownerBalance = baseToken.balanceOf(auctionOwner);
+
+        // Cancel the lot
+        vm.prank(auctionOwner);
+        auctionHouse.cancel(lotId);
+
+        // Check the owner's balance
+        assertEq(baseToken.balanceOf(auctionOwner), ownerBalance + LOT_CAPACITY);
+    }
+
+    function test_prefunded_givenPurchase()
+        external
+        givenLotIsPrefunded
+        whenLotIsCreated
+        givenPurchase
+    {
+        // Check the owner's balance
+        uint256 ownerBalance = baseToken.balanceOf(auctionOwner);
+
+        // Cancel the lot
+        vm.prank(auctionOwner);
+        auctionHouse.cancel(lotId);
+
+        // Check the owner's balance
+        assertEq(baseToken.balanceOf(auctionOwner), ownerBalance + LOT_CAPACITY - PURCHASE_AMOUNT);
     }
 }

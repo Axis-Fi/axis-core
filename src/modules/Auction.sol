@@ -161,9 +161,16 @@ abstract contract Auction {
         AuctionParams memory params_
     ) external virtual returns (bool prefundingRequired, uint256 capacity);
 
-    function cancelAuction(uint96 id_) external virtual;
+    /// @notice     Cancel an auction lot
+    /// @dev        The implementing function should handle the following:
+    ///             - Validate the lot parameters
+    ///             - Update the lot data
+    ///             - Return the remaining capacity (so that the AuctionHouse can refund the owner)
+    ///
+    /// @param      lotId_              The lot id
+    function cancelAuction(uint96 lotId_) external virtual;
 
-    function claimAuctionRefund(uint96 lotId_) external virtual returns (uint256 refundAmount);
+    // _revertIf...
 
     // ========== AUCTION INFORMATION ========== //
 
@@ -264,7 +271,7 @@ abstract contract AuctionModule is Auction, Module {
         _cancelAuction(lotId_);
     }
 
-    function _cancelAuction(uint96 id_) internal virtual;
+    function _cancelAuction(uint96 lotId_) internal virtual;
 
     // ========== AUCTION INFORMATION ========== //
 
