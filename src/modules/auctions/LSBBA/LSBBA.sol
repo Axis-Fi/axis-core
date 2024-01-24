@@ -99,6 +99,11 @@ abstract contract LocalSealedBidBatchAuction is AuctionModule {
         ) revert Auction_NotLive();
     }
 
+    function _revertIfLotSettled(uint96 lotId_) internal view override {
+        // Auction must not be settled
+        if (auctionData[lotId_].status == AuctionStatus.Settled) revert Auction_NotConcluded();
+    }
+
     /// @inheritdoc AuctionModule
     /// @dev        Checks that the bid is valid
     function _revertIfBidInvalid(uint96 lotId_, uint256 bidId_) internal view override {
@@ -302,10 +307,10 @@ abstract contract LocalSealedBidBatchAuction is AuctionModule {
 
     // =========== SETTLEMENT =========== //
 
-    function settle(uint96 lotId_)
-        external
+    /// @inheritdoc AuctionModule
+    function _settle(uint96 lotId_)
+        internal
         override
-        onlyInternal
         returns (Bid[] memory winningBids_, bytes memory auctionOutput_)
     {
         // Check that auction is in the right state for settlement
@@ -457,13 +462,6 @@ abstract contract LocalSealedBidBatchAuction is AuctionModule {
         // Set auction status to settled so that bids can be refunded
         auctionData[lotId_].status = AuctionStatus.Settled;
     }
-
-    function settle(
-        uint96 lotId_,
-        Bid[] calldata winningBids_,
-        bytes calldata settlementProof_,
-        bytes calldata settlementData_
-    ) external virtual override returns (uint256[] memory amountsOut, bytes memory auctionOutput) {}
 
     function payoutFor(
         uint256 id_,

@@ -34,48 +34,48 @@ abstract contract BatchAuction {
 }
 
 abstract contract OnChainBatchAuctionModule is AuctionModule, BatchAuction {
-    // ========== STATE VARIABLES ========== //
+// // ========== STATE VARIABLES ========== //
 
-    mapping(uint256 lotId => Auction.Bid[] bids) public lotBids;
+// mapping(uint256 lotId => Auction.Bid[] bids) public lotBids;
 
-    /// @inheritdoc AuctionModule
-    function _bid(
-        uint96 lotId_,
-        address bidder_,
-        address recipient_,
-        address referrer_,
-        uint256 amount_,
-        bytes calldata auctionData_
-    ) internal override returns (uint256 bidId) {
-        // TODO
-        // Validate inputs
+// /// @inheritdoc AuctionModule
+// function _bid(
+//     uint96 lotId_,
+//     address bidder_,
+//     address recipient_,
+//     address referrer_,
+//     uint256 amount_,
+//     bytes calldata auctionData_
+// ) internal override returns (uint256 bidId) {
+//     // TODO
+//     // Validate inputs
 
-        // Execute user approval if provided?
+//     // Execute user approval if provided?
 
-        // Call implementation specific bid logic
+//     // Call implementation specific bid logic
 
-        // Store bid data
-    }
+//     // Store bid data
+// }
 
-    /// @inheritdoc Auction
-    function settle(
-        uint96 lotId,
-        Auction.Bid[] memory winningBids_,
-        bytes calldata settlementProof_,
-        bytes calldata settlementData_
-    )
-        external
-        override
-        onlyParent
-        returns (uint256[] memory amountsOut, bytes memory auctionOutput)
-    {
-        // TODO
-        // Validate inputs
+// /// @inheritdoc Auction
+// function settle(
+//     uint96 lotId,
+//     Auction.Bid[] memory winningBids_,
+//     bytes calldata settlementProof_,
+//     bytes calldata settlementData_
+// )
+//     external
+//     override
+//     onlyParent
+//     returns (uint256[] memory amountsOut, bytes memory auctionOutput)
+// {
+//     // TODO
+//     // Validate inputs
 
-        // Call implementation specific settle logic
+//     // Call implementation specific settle logic
 
-        // Store settle data
-    }
+//     // Store settle data
+// }
 }
 
 // abstract contract OffChainBatchAuctionModule is AuctionModule, BatchAuction {

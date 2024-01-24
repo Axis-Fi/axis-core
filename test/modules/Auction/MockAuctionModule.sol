@@ -55,19 +55,11 @@ contract MockAuctionModule is AuctionModule {
 
     function maxAmountAccepted(uint256 id_) public view virtual override returns (uint256) {}
 
-    function settle(uint96 lotId_)
-        external
-        virtual
+    function _settle(uint96 lotId_)
+        internal
         override
         returns (Bid[] memory winningBids_, bytes memory auctionOutput_)
     {}
-
-    function settle(
-        uint96 lotId_,
-        Bid[] calldata winningBids_,
-        bytes calldata settlementProof_,
-        bytes calldata settlementData_
-    ) external virtual override returns (uint256[] memory amountsOut, bytes memory auctionOutput) {}
 
     function _cancelBid(
         uint96 lotId_,
@@ -84,6 +76,8 @@ contract MockAuctionModule is AuctionModule {
     ) internal view virtual override {}
 
     function _revertIfBidCancelled(uint96 lotId_, uint256 bidId_) internal view virtual override {}
+
+    function _revertIfLotSettled(uint96 lotId_) internal view virtual override {}
 }
 
 contract MockAuctionModuleV2 is MockAuctionModule {

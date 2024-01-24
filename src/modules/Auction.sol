@@ -8,6 +8,8 @@ abstract contract Auction {
 
     error Auction_MarketNotActive(uint96 lotId);
 
+    error Auction_MarketActive(uint96 lotId);
+
     error Auction_InvalidStart(uint48 start_, uint48 minimum_);
 
     error Auction_InvalidDuration(uint48 duration_, uint48 minimum_);
@@ -128,28 +130,19 @@ abstract contract Auction {
         address bidder_
     ) external virtual returns (uint256 bidAmount);
 
-    /// @notice     Settle a batch auciton
-    /// @notice     This function is used for on-chain storage of bids and local settlement
+    /// @notice     Settle a batch auction lot with on-chain storage and settlement
+    /// @dev        The implementing function should handle the following:
+    ///             - Validate the lot parameters
+    ///             - Determine the winning bids
+    ///             - Update the lot data
+    ///
+    /// @param      lotId_          The lot id
+    /// @return     winningBids_    The winning bids
+    /// @return     auctionOutput_  The auction-specific output
     function settle(uint96 lotId_)
         external
         virtual
         returns (Bid[] memory winningBids_, bytes memory auctionOutput_);
-
-    /// @notice     Settle a batch auction with the provided bids
-    /// @notice     This function is used for on-chain storage of bids and external settlement
-    ///
-    /// @param      lotId_              Lot id
-    /// @param      winningBids_        Winning bids
-    /// @param      settlementProof_    Proof of settlement validity
-    /// @param      settlementData_     Settlement data
-    /// @return     amountsOut          Amount out for each bid
-    /// @return     auctionOutput       Auction-specific output
-    function settle(
-        uint96 lotId_,
-        Bid[] calldata winningBids_,
-        bytes calldata settlementProof_,
-        bytes calldata settlementData_
-    ) external virtual returns (uint256[] memory amountsOut, bytes memory auctionOutput);
 
     // ========== AUCTION MANAGEMENT ========== //
 
@@ -293,7 +286,7 @@ abstract contract AuctionModule is Auction, Module {
     ///
     ///             This function reverts if:
     ///             - the lot id is invalid
-    ///             - the lot is not active
+    ///             - the lot is inactive
     ///             - the caller is not an internal module
     ///
     ///             Inheriting contracts should override _purchase to implement auction-specific logic, such as:
@@ -336,6 +329,7 @@ abstract contract AuctionModule is Auction, Module {
     ///             This function reverts if:
     ///             - the lot id is invalid
     ///             - the lot is not active
+    ///             - the lot is already settled
     ///             - the caller is not an internal module
     ///
     ///             Inheriting contracts should override _bid to implement auction-specific logic, such as:
@@ -352,6 +346,7 @@ abstract contract AuctionModule is Auction, Module {
         // Standard validation
         _revertIfLotInvalid(lotId_);
         _revertIfLotInactive(lotId_);
+        _revertIfLotSettled(lotId_);
 
         // Call implementation-specific logic
         return _bid(lotId_, bidder_, recipient_, referrer_, amount_, auctionData_);
@@ -386,6 +381,7 @@ abstract contract AuctionModule is Auction, Module {
     ///             This function reverts if:
     ///             - the lot id is invalid
     ///             - the lot is not active
+    ///             - the lot is already settled
     ///             - the bid id is invalid
     ///             - the bid is already cancelled
     ///             - `caller_` is not the bid owner
@@ -402,6 +398,7 @@ abstract contract AuctionModule is Auction, Module {
         // Standard validation
         _revertIfLotInvalid(lotId_);
         _revertIfLotInactive(lotId_);
+        _revertIfLotSettled(lotId_);
         _revertIfBidInvalid(lotId_, bidId_);
         _revertIfNotBidOwner(lotId_, bidId_, caller_);
         _revertIfBidCancelled(lotId_, bidId_);
@@ -422,6 +419,47 @@ abstract contract AuctionModule is Auction, Module {
         uint256 bidId_,
         address caller_
     ) internal virtual returns (uint256 bidAmount);
+
+    /// @inheritdoc Auction
+    /// @dev        Implements a basic settle function that:
+    ///             - Calls implementation-specific validation logic
+    ///             - Calls the auction module
+    ///
+    ///             This function reverts if:
+    ///             - the lot id is invalid
+    ///             - the lot is still active
+    ///             - the lot has already been settled
+    ///             - the caller is not an internal module
+    ///
+    ///             Inheriting contracts should override _settle to implement auction-specific logic, such as:
+    ///             - Validating the auction-specific parameters
+    ///             - Determining the winning bids
+    ///             - Updating the lot data
+    function settle(uint96 lotId_)
+        external
+        override
+        onlyInternal
+        returns (Bid[] memory winningBids_, bytes memory auctionOutput_)
+    {
+        // Standard validation
+        _revertIfLotInvalid(lotId_);
+        _revertIfLotActive(lotId_);
+        _revertIfLotSettled(lotId_);
+
+        // Call implementation-specific logic
+        return _settle(lotId_);
+    }
+
+    /// @notice     Implementation-specific lot settlement logic
+    /// @dev        Auction modules should override this to perform any additional logic
+    ///
+    /// @param      lotId_          The lot ID
+    /// @return     winningBids_    The winning bids
+    /// @return     auctionOutput_  The auction-specific output
+    function _settle(uint96 lotId_)
+        internal
+        virtual
+        returns (Bid[] memory winningBids_, bytes memory auctionOutput_);
 
     // ========== AUCTION INFORMATION ========== //
 
@@ -448,6 +486,30 @@ abstract contract AuctionModule is Auction, Module {
         if (lotData[lotId_].start == 0) revert Auction_InvalidLotId(lotId_);
     }
 
+    /// @notice     Checks that the lot represented by `lotId_` has not started
+    /// @dev        Should revert if the lot has not started
+    function _revertIfBeforeLotStart(uint96 lotId_) internal view virtual {
+        if (lotData[lotId_].start > uint48(block.timestamp)) revert Auction_MarketNotActive(lotId_);
+    }
+
+    /// @notice     Checks that the lot represented by `lotId_` has started
+    /// @dev        Should revert if the lot has started
+    function _revertIfLotStarted(uint96 lotId_) internal view virtual {
+        if (lotData[lotId_].start > uint48(block.timestamp)) revert Auction_MarketActive(lotId_);
+    }
+
+    /// @notice     Checks that the lot represented by `lotId_` has not concluded
+    /// @dev        Should revert if the lot has concluded
+    function _revertIfLotConcluded(uint96 lotId_) internal view virtual {
+        // Beyond the conclusion time
+        if (lotData[lotId_].conclusion < uint48(block.timestamp)) {
+            revert Auction_MarketNotActive(lotId_);
+        }
+
+        // Capacity is sold-out, or cancelled
+        if (lotData[lotId_].capacity == 0) revert Auction_MarketNotActive(lotId_);
+    }
+
     /// @notice     Checks that the lot represented by `lotId_` is active
     /// @dev        Should revert if the lot is not active
     ///             Inheriting contracts can override this to implement custom logic
@@ -456,6 +518,22 @@ abstract contract AuctionModule is Auction, Module {
     function _revertIfLotInactive(uint96 lotId_) internal view virtual {
         if (!isLive(lotId_)) revert Auction_MarketNotActive(lotId_);
     }
+
+    /// @notice     Checks that the lot represented by `lotId_` is active
+    /// @dev        Should revert if the lot is active
+    ///             Inheriting contracts can override this to implement custom logic
+    ///
+    /// @param      lotId_  The lot ID
+    function _revertIfLotActive(uint96 lotId_) internal view virtual {
+        if (isLive(lotId_)) revert Auction_MarketActive(lotId_);
+    }
+
+    /// @notice     Checks that the lot represented by `lotId_` is not settled
+    /// @dev        Should revert if the lot is settled
+    ///             Inheriting contracts must override this to implement custom logic
+    ///
+    /// @param      lotId_  The lot ID
+    function _revertIfLotSettled(uint96 lotId_) internal view virtual;
 
     /// @notice     Checks that the lot and bid combination is valid
     /// @dev        Should revert if the bid is invalid
