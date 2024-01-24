@@ -359,6 +359,8 @@ abstract contract AuctionModule is Auction, Module {
 
     /// @notice     Implementation-specific bid logic
     /// @dev        Auction modules should override this to perform any additional logic
+    ///             The returned `bidId` should be a unique and persistent identifier for the bid,
+    ///             which can be used in subsequent calls (e.g. `cancelBid()` or `settle()`).
     ///
     /// @param      lotId_          The lot ID
     /// @param      bidder_         The bidder of the purchased tokens

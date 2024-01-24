@@ -145,28 +145,6 @@ abstract contract Router is FeeManager {
     /// @notice     This function is used for versions with on-chain storage and bids and local settlement
     function settle(uint96 lotId_) external virtual;
 
-    /// @notice     Settle a batch auction with the provided bids
-    /// @notice     This function is used for on-chain storage of bids and external settlement
-    ///
-    /// @dev        The implementing function must perform the following:
-    ///             1. Validate that the caller is authorized to settle the auction
-    ///             2. Calculate fees
-    ///             3. Pass the bids to the auction module to validate the settlement
-    ///             4. Send payment to the auction owner
-    ///             5. Collect payout from the auction owner
-    ///             6. Send payout to each bidder
-    ///
-    /// @param      lotId_           Lot ID
-    /// @param      winningBids_     Winning bids
-    /// @param      settlementProof_ Proof of settlement validity
-    /// @param      settlementData_  Settlement data
-    function settle(
-        uint96 lotId_,
-        Auction.Bid[] calldata winningBids_,
-        bytes calldata settlementProof_,
-        bytes calldata settlementData_
-    ) external virtual;
-
     // ========== FEE MANAGEMENT ========== //
 
     /// @notice     Sets the fee for the protocol
@@ -433,8 +411,17 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
     }
 
     /// @inheritdoc Router
-    // TODO this is the version of `settle` we need for the LSBBA
-    function settle(uint96 lotId_) external override {
+    /// @dev        This function reverts if:
+    ///             - the lot ID is invalid
+    ///             - the caller is not authorized to settle the auction
+    ///             - the auction module reverts when settling the auction
+    ///             - transferring the quote token to the auction owner fails
+    ///             - collecting the payout from the auction owner fails
+    ///             - sending the payout to each bidder fails
+    function settle(uint96 lotId_) external override isLotValid(lotId_) {
+        // Validation
+        // TODO check the caller is authorised
+
         // Settle the lot on the auction module and get the winning bids
         // Reverts if the auction cannot be settled yet
         // Some common things to check:
@@ -448,9 +435,6 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
         // Load routing data for the lot
         Routing memory routing = lotRouting[lotId_];
 
-        // TODO check this
-        // Payment and payout have already been sourced
-
         // Calculate fees
         uint256 totalAmountInLessFees;
         {
@@ -459,10 +443,27 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
             totalAmountInLessFees = totalAmountIn - totalFees;
         }
 
+        // Assumes that payment has already been collected for each bid
+
         // Send payment in bulk to auction owner
         _sendPayment(routing.owner, totalAmountInLessFees, routing.quoteToken, routing.hooks);
 
         // TODO send last winning bidder partial refund if it is a partial fill.
+
+        // Collect payout in bulk from the auction owner
+        {
+            // Calculate amount out
+            uint256 totalAmountOut;
+            {
+                uint256 bidCount = winningBids.length;
+                for (uint256 i; i < bidCount; i++) {
+                    // Increment total amount out
+                    totalAmountOut += winningBids[i].minAmountOut;
+                }
+            }
+
+            _collectPayout(lotId_, totalAmountInLessFees, totalAmountOut, routing);
+        }
 
         // Handle payouts to bidders
         {
@@ -479,182 +480,6 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
             }
         }
     }
-
-    // TODO we can probably remove this version of the settle function for now. It won't be used initially.
-    /// @inheritdoc Router
-    /// @dev        This function reverts if:
-    ///             - the lot ID is invalid
-    ///             - the caller is not authorized to settle the auction
-    ///             - the auction module reverts when settling the auction
-    ///             - transferring the quote token to the auction owner fails
-    ///             - collecting the payout from the auction owner fails
-    ///             - sending the payout to each bidder fails
-    function settle(
-        uint96 lotId_,
-        Auction.Bid[] calldata winningBids_,
-        bytes calldata settlementProof_,
-        bytes calldata settlementData_
-    ) external override isLotValid(lotId_) {
-        // Load routing data for the lot
-        Routing memory routing = lotRouting[lotId_];
-
-        // Validate that sender is authorized to settle the auction
-        // TODO
-
-        // Send auction inputs to auction module to validate settlement
-        // We do this because the format of the bids and signatures is specific to the auction module
-        // Some common things to check:
-        // 1. Total of amounts out is not greater than capacity
-        // 2. Minimum price is enforced
-        // 3. Minimum bid size is enforced
-        // 4. Minimum capacity sold is enforced
-        uint256[] memory amountsOut;
-        bytes memory auctionOutput;
-        {
-            AuctionModule module = _getModuleForId(lotId_);
-            (amountsOut, auctionOutput) =
-                module.settle(lotId_, winningBids_, settlementProof_, settlementData_);
-        }
-
-        // Calculate fees
-        uint256 totalAmountInLessFees;
-        {
-            (uint256 totalAmountIn, uint256 totalFees) =
-                _allocateFees(winningBids_, routing.quoteToken);
-            totalAmountInLessFees = totalAmountIn - totalFees;
-        }
-
-        // Assumes that payment has already been collected for each bid
-
-        // Send payment in bulk to auction owner
-        _sendPayment(routing.owner, totalAmountInLessFees, routing.quoteToken, routing.hooks);
-
-        // Collect payout in bulk from the auction owner
-        {
-            // Calculate amount out
-            uint256 totalAmountOut;
-            {
-                uint256 bidCount = amountsOut.length;
-                for (uint256 i; i < bidCount; i++) {
-                    // Increment total amount out
-                    totalAmountOut += amountsOut[i];
-                }
-            }
-
-            _collectPayout(lotId_, totalAmountInLessFees, totalAmountOut, routing);
-        }
-
-        // Handle payouts to bidders
-        {
-            uint256 bidCount = winningBids_.length;
-            for (uint256 i; i < bidCount; i++) {
-                // Send payout to each bidder
-                _sendPayout(lotId_, winningBids_[i].bidder, amountsOut[i], routing, auctionOutput);
-            }
-        }
-    }
-
-    // // External submission and evaluation
-    // function settle(uint256 id_, ExternalSettlement memory settlement_) external override {
-    //     // Load routing data for the lot
-    //     Routing memory routing = lotRouting[id_];
-
-    //     // Validate that sender is authorized to settle the auction
-    //     // TODO
-
-    //     // Validate array lengths all match
-    //     uint256 len = settlement_.bids.length;
-    //     if (
-    //         len != settlement_.bidSignatures.length || len != settlement_.amountsIn.length
-    //             || len != settlement_.amountsOut.length || len != settlement_.approvals.length
-    //             || len != settlement_.allowlistProofs.length
-    //     ) revert InvalidParams();
-
-    //     // Bid-level validation and fee calculations
-    //     uint256[] memory amountsInLessFees = new uint256[](len);
-    //     uint256 totalProtocolFee;
-    //     uint256 totalAmountInLessFees;
-    //     uint256 totalAmountOut;
-    //     for (uint256 i; i < len; i++) {
-    //         // If there is an allowlist, validate that the winners are on the allowlist
-    //         if (
-    //             !_isAllowed(
-    //                 routing.allowlist,
-    //                 id_,
-    //                 settlement_.bids[i].bidder,
-    //                 settlement_.allowlistProofs[i]
-    //             )
-    //         ) {
-    //             revert InvalidBidder(settlement_.bids[i].bidder);
-    //         }
-
-    //         // Check that the amounts out are at least the minimum specified by the bidder
-    //         // If a bid is a partial fill, then it's amountIn will be less than the amount specified by the bidder
-    //         // If so, we need to adjust the minAmountOut proportionally for the slippage check
-    //         // We also verify that the amountIn is not more than the bidder specified
-    //         uint256 minAmountOut = settlement_.bids[i].minAmountOut;
-    //         if (settlement_.amountsIn[i] > settlement_.bids[i].amount) {
-    //             revert InvalidParams();
-    //         } else if (settlement_.amountsIn[i] < settlement_.bids[i].amount) {
-    //             minAmountOut =
-    //                 (minAmountOut * settlement_.amountsIn[i]) / settlement_.bids[i].amount; // TODO need to think about scaling and rounding here
-    //         }
-    //         if (settlement_.amountsOut[i] < minAmountOut) revert AmountLessThanMinimum();
-
-    //         // Calculate fees from bid amount
-    //         (uint256 toReferrer, uint256 toProtocol) =
-    //             _calculateFees(settlement_.bids[i].referrer, settlement_.amountsIn[i]);
-    //         amountsInLessFees[i] = settlement_.amountsIn[i] - toReferrer - toProtocol;
-
-    //         // Update referrer fee balances if non-zero and increment the total protocol fee
-    //         if (toReferrer > 0) {
-    //             rewards[settlement_.bids[i].referrer][routing.quoteToken] += toReferrer;
-    //         }
-    //         totalProtocolFee += toProtocol;
-
-    //         // Increment total amount out
-    //         totalAmountInLessFees += amountsInLessFees[i];
-    //         totalAmountOut += settlement_.amountsOut[i];
-    //     }
-
-    //     // Update protocol fee if not zero
-    //     if (totalProtocolFee > 0) rewards[_PROTOCOL][routing.quoteToken] += totalProtocolFee;
-
-    //     // Send auction inputs to auction module to validate settlement
-    //     // We do this because the format of the bids and signatures is specific to the auction module
-    //     // Some common things to check:
-    //     // 1. Total of amounts out is not greater than capacity
-    //     // 2. Minimum price is enforced
-    //     // 3. Minimum bid size is enforced
-    //     // 4. Minimum capacity sold is enforced
-    //     AuctionModule module = _getModuleForId(id_);
-
-    //     // TODO update auction module interface and base function to handle these inputs, and perhaps others
-    //     bytes memory auctionOutput = module.settle(
-    //         id_,
-    //         settlement_.bids,
-    //         settlement_.bidSignatures,
-    //         amountsInLessFees,
-    //         settlement_.amountsOut,
-    //         settlement_.validityProof
-    //     );
-
-    //     // Assumes that payment has already been collected for each bid
-
-    //     // Send payment in bulk to auction owner
-    //     _sendPayment(routing.owner, totalAmountInLessFees, routing.quoteToken, routing.hooks);
-
-    //     // Collect payout in bulk from the auction owner
-    //     _collectPayout(id_, totalAmountInLessFees, totalAmountOut, routing);
-
-    //     // Handle payouts to bidders
-    //     for (uint256 i; i < len; i++) {
-    //         // Send payout to each bidder
-    //         _sendPayout(
-    //             id_, settlement_.bids[i].bidder, settlement_.amountsOut[i], routing, auctionOutput
-    //         );
-    //     }
-    // }
 
     // ========== TOKEN TRANSFERS ========== //
 
