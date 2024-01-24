@@ -41,7 +41,10 @@ abstract contract Auctioneer is WithModules {
 
     // ========= EVENTS ========= //
 
-    event AuctionCreated(uint96 id, address baseToken, address quoteToken);
+    event AuctionCreated(
+        uint96 id, Veecode indexed auctionRef, address baseToken, address quoteToken
+    );
+    event AuctionCancelled(uint96 id, Veecode indexed auctionRef);
 
     // ========= DATA STRUCTURES ========== //
 
@@ -290,7 +293,9 @@ abstract contract Auctioneer is WithModules {
             }
         }
 
-        emit AuctionCreated(lotId, address(routing.baseToken), address(routing.quoteToken));
+        emit AuctionCreated(
+            lotId, auctionRef, address(routing_.baseToken), address(routing_.quoteToken)
+        );
     }
 
     /// @notice     Cancels an auction lot
@@ -322,6 +327,8 @@ abstract contract Auctioneer is WithModules {
             Routing memory routing = lotRouting[lotId_];
             routing.baseToken.safeTransfer(routing.owner, lotRemainingCapacity);
         }
+
+        emit AuctionCancelled(lotId_, lotRouting[lotId_].auctionReference);
     }
 
     // ========== AUCTION INFORMATION ========== //
