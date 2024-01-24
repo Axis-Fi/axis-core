@@ -457,4 +457,37 @@ abstract contract LocalSealedBidBatchAuction is AuctionModule {
         // Set auction status to settled so that bids can be refunded
         auctionData[lotId_].status = AuctionStatus.Settled;
     }
+
+    function settle(
+        uint96 lotId_,
+        Bid[] calldata winningBids_,
+        bytes calldata settlementProof_,
+        bytes calldata settlementData_
+    ) external virtual override returns (uint256[] memory amountsOut, bytes memory auctionOutput) {}
+
+    function payoutFor(
+        uint256 id_,
+        uint256 amount_
+    ) public view virtual override returns (uint256) {}
+
+    function priceFor(
+        uint256 id_,
+        uint256 payout_
+    ) public view virtual override returns (uint256) {}
+
+    function maxPayout(uint256 id_) public view virtual override returns (uint256) {}
+
+    function maxAmountAccepted(uint256 id_) public view virtual override returns (uint256) {}
+
+    // =========== ATOMIC AUCTION STUBS ========== //
+
+    /// @inheritdoc AuctionModule
+    /// @dev        Atomic auctions are not supported by this auction type
+    function _purchase(
+        uint96,
+        uint256,
+        bytes calldata
+    ) internal pure override returns (uint256, bytes memory) {
+        revert Auction_NotImplemented();
+    }
 }

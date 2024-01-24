@@ -74,8 +74,18 @@ abstract contract Auction {
 
     // ========== ATOMIC AUCTIONS ========== //
 
+    /// @notice     Purchase tokens from an auction lot
+    /// @dev        The implementing function should handle the following:
+    ///             - Validate the purchase parameters
+    ///             - Store the purchase data
+    ///
+    /// @param      lotId_             The lot id
+    /// @param      amount_         The amount of quote tokens to purchase
+    /// @param      auctionData_    The auction-specific data
+    /// @return     payout          The amount of payout tokens to receive
+    /// @return     auctionOutput   The auction-specific output
     function purchase(
-        uint96 id_,
+        uint96 lotId_,
         uint256 amount_,
         bytes calldata auctionData_
     ) external virtual returns (uint256 payout, bytes memory auctionOutput);
@@ -198,7 +208,8 @@ abstract contract AuctionModule is Auction, Module {
     function auction(
         uint96 lotId_,
         AuctionParams memory params_
-    ) external override onlyParent returns (bool prefundingRequired, uint256 capacity) { // TODO onlyInternal?
+    ) external override onlyParent returns (bool prefundingRequired, uint256 capacity) {
+        // TODO onlyInternal?
         // Start time must be zero or in the future
         if (params_.start > 0 && params_.start < uint48(block.timestamp)) {
             revert Auction_InvalidStart(params_.start, uint48(block.timestamp));
@@ -252,14 +263,13 @@ abstract contract AuctionModule is Auction, Module {
     ///             - the lot is not active
     ///
     /// @param      lotId_      The lot id
-    function cancelAuction(uint96 lotId_) external override onlyParent { // TODO onlyInternal?
+    function cancelAuction(uint96 lotId_) external override onlyParent {
+        // TODO onlyInternal?
+        // Validation
+        _revertIfLotInvalid(lotId_);
+        _revertIfLotInactive(lotId_);
+
         Lot storage lot = lotData[lotId_];
-
-        // Invalid lot
-        if (lot.start == 0) revert Auction_InvalidLotId(lotId_);
-
-        // Inactive lot
-        if (lot.capacity == 0) revert Auction_MarketNotActive(lotId_);
 
         lot.conclusion = uint48(block.timestamp);
         lot.capacity = 0;
@@ -273,6 +283,48 @@ abstract contract AuctionModule is Auction, Module {
     ///
     /// @param      lotId_      The lot ID
     function _cancelAuction(uint96 lotId_) internal virtual;
+
+    // ========== ATOMIC AUCTIONS ========== //
+
+    /// @inheritdoc Auction
+    /// @dev        Implements a basic purchase function that:
+    ///             - Calls implementation-specific validation logic
+    ///             - Calls the auction module
+    ///
+    ///             This function reverts if:
+    ///             - the lot id is invalid
+    ///             - the lot is not active
+    ///             - the caller is not an internal module
+    ///
+    ///             Inheriting contracts should override _purchase to implement auction-specific logic, such as:
+    ///             - Validating the auction-specific parameters
+    ///             - Storing the purchase data
+    function purchase(
+        uint96 lotId_,
+        uint256 amount_,
+        bytes calldata auctionData_
+    ) external override onlyInternal returns (uint256 payout, bytes memory auctionOutput) {
+        // Standard validation
+        _revertIfLotInvalid(lotId_);
+        _revertIfLotInactive(lotId_);
+
+        // Call implementation-specific logic
+        return _purchase(lotId_, amount_, auctionData_);
+    }
+
+    /// @notice     Implementation-specific purchase logic
+    /// @dev        Auction modules should override this to perform any additional logic
+    ///
+    /// @param      lotId_          The lot ID
+    /// @param      amount_         The amount of quote tokens to purchase
+    /// @param      auctionData_    The auction-specific data
+    /// @return     payout          The amount of payout tokens to receive
+    /// @return     auctionOutput   The auction-specific output
+    function _purchase(
+        uint96 lotId_,
+        uint256 amount_,
+        bytes calldata auctionData_
+    ) internal virtual returns (uint256 payout, bytes memory auctionOutput);
 
     // ========== BATCH AUCTIONS ========== //
 

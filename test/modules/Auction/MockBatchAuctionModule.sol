@@ -30,11 +30,11 @@ contract MockBatchAuctionModule is AuctionModule {
         //
     }
 
-    function purchase(
+    function _purchase(
         uint96,
         uint256,
         bytes calldata
-    ) external virtual override returns (uint256, bytes memory) {
+    ) internal pure override returns (uint256, bytes memory) {
         revert Auction_NotImplemented();
     }
 

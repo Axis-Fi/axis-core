@@ -42,11 +42,11 @@ contract MockAtomicAuctionModule is AuctionModule {
         cancelled[id_] = true;
     }
 
-    function purchase(
+    function _purchase(
         uint96 id_,
         uint256 amount_,
         bytes calldata
-    ) external virtual override returns (uint256 payout, bytes memory auctionOutput) {
+    ) internal override returns (uint256 payout, bytes memory auctionOutput) {
         if (purchaseReverts) revert("error");
 
         if (cancelled[id_]) revert Auction_MarketNotActive(id_);
@@ -80,7 +80,7 @@ contract MockAtomicAuctionModule is AuctionModule {
         address,
         uint256,
         bytes calldata
-    ) internal override returns (uint256) {
+    ) internal pure override returns (uint256) {
         revert Auction_NotImplemented();
     }
 
