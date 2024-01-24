@@ -172,21 +172,21 @@ contract CancelAuctionTest is Test, Permit2User {
         _;
     }
 
-    modifier givenPurchase() {
+    modifier givenPurchase(uint256 amount_) {
         // Mint quote tokens to alice
-        quoteToken.mint(alice, PURCHASE_AMOUNT);
+        quoteToken.mint(alice, amount_);
 
         // Approve spending
         vm.prank(alice);
-        quoteToken.approve(address(auctionHouse), PURCHASE_AMOUNT);
+        quoteToken.approve(address(auctionHouse), amount_);
 
         // Create the purchase
         Router.PurchaseParams memory purchaseParams = Router.PurchaseParams({
             recipient: alice,
             referrer: address(0),
             lotId: lotId,
-            amount: PURCHASE_AMOUNT,
-            minAmountOut: PURCHASE_AMOUNT,
+            amount: amount_,
+            minAmountOut: amount_,
             auctionData: bytes(""),
             allowlistProof: bytes(""),
             permit2Data: bytes("")
@@ -213,7 +213,7 @@ contract CancelAuctionTest is Test, Permit2User {
         external
         givenLotIsPrefunded
         whenLotIsCreated
-        givenPurchase
+        givenPurchase(PURCHASE_AMOUNT)
     {
         // Check the owner's balance
         uint256 ownerBalance = baseToken.balanceOf(auctionOwner);
