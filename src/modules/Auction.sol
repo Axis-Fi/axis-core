@@ -278,7 +278,7 @@ abstract contract AuctionModule is Auction, Module {
     /// @param      lotId_      The lot ID
     function _cancelAuction(uint96 lotId_) internal virtual;
 
-    // ========== BID MANAGEMENT ========== //
+    // ========== BATCH AUCTIONS ========== //
 
     /// @inheritdoc Auction
     /// @dev        Implements a basic bid function that:
@@ -328,6 +328,51 @@ abstract contract AuctionModule is Auction, Module {
         bytes calldata auctionData_
     ) internal virtual returns (uint256 bidId);
 
+    /// @inheritdoc Auction
+    /// @dev        Implements a basic cancelBid function that:
+    ///             - Calls implementation-specific validation logic
+    ///             - Calls the auction module
+    ///
+    ///             This function reverts if:
+    ///             - the lot id is invalid
+    ///             - the lot is not active
+    ///             - the bid id is invalid
+    ///             - the bid is already cancelled
+    ///             - `caller_` is not the bid owner
+    ///             - the caller is not an internal module
+    ///
+    ///             Inheriting contracts should override _cancelBid to implement auction-specific logic, such as:
+    ///             - Validating the auction-specific parameters
+    ///             - Updating the bid data
+    function cancelBid(
+        uint96 lotId_,
+        uint256 bidId_,
+        address caller_
+    ) external override onlyInternal returns (uint256 bidAmount) {
+        // Standard validation
+        _revertIfLotInvalid(lotId_);
+        _revertIfLotInactive(lotId_);
+        _revertIfBidInvalid(lotId_, bidId_);
+        _revertIfNotBidOwner(lotId_, bidId_, caller_);
+        _revertIfBidCancelled(lotId_, bidId_);
+
+        // Call implementation-specific logic
+        return _cancelBid(lotId_, bidId_, caller_);
+    }
+
+    /// @notice     Implementation-specific bid cancellation logic
+    /// @dev        Auction modules should override this to perform any additional logic
+    ///
+    /// @param      lotId_      The lot ID
+    /// @param      bidId_      The bid ID
+    /// @param      caller_     The caller
+    /// @return     bidAmount   The amount of quote tokens to refund
+    function _cancelBid(
+        uint96 lotId_,
+        uint256 bidId_,
+        address caller_
+    ) internal virtual returns (uint256 bidAmount);
+
     // ========== AUCTION INFORMATION ========== //
 
     // TODO does this need to change for batch auctions?
@@ -361,6 +406,35 @@ abstract contract AuctionModule is Auction, Module {
     function _revertIfLotInactive(uint96 lotId_) internal view virtual {
         if (!isLive(lotId_)) revert Auction_MarketNotActive(lotId_);
     }
+
+    /// @notice     Checks that the lot and bid combination is valid
+    /// @dev        Should revert if the bid is invalid
+    ///             Inheriting contracts must override this to implement custom logic
+    ///
+    /// @param      lotId_  The lot ID
+    /// @param      bidId_  The bid ID
+    function _revertIfBidInvalid(uint96 lotId_, uint256 bidId_) internal view virtual;
+
+    /// @notice     Checks that `caller_` is the bid owner
+    /// @dev        Should revert if `caller_` is not the bid owner
+    ///             Inheriting contracts must override this to implement custom logic
+    ///
+    /// @param      lotId_      The lot ID
+    /// @param      bidId_      The bid ID
+    /// @param      caller_     The caller
+    function _revertIfNotBidOwner(
+        uint96 lotId_,
+        uint256 bidId_,
+        address caller_
+    ) internal view virtual;
+
+    /// @notice     Checks that the bid is not cancelled
+    /// @dev        Should revert if the bid is cancelled
+    ///             Inheriting contracts must override this to implement custom logic
+    ///
+    /// @param      lotId_      The lot ID
+    /// @param      bidId_      The bid ID
+    function _revertIfBidCancelled(uint96 lotId_, uint256 bidId_) internal view virtual;
 
     // TODO remove these
 

@@ -63,33 +63,11 @@ contract MockBatchAuctionModule is AuctionModule {
         return bidId;
     }
 
-    function cancelBid(
+    function _cancelBid(
         uint96 lotId_,
         uint256 bidId_,
-        address bidder_
-    )
-        external
-        virtual
-        override
-        isLotValid(lotId_)
-        isLotActive(lotId_)
-        returns (uint256 refundAmount)
-    {
-        // Check that the bid exists
-        if (bidData[lotId_].length <= bidId_) {
-            revert Auction.Auction_InvalidBidId(lotId_, bidId_);
-        }
-
-        // Check that the bid has not been cancelled
-        if (bidCancelled[lotId_][bidId_] == true) {
-            revert Auction.Auction_InvalidBidId(lotId_, bidId_);
-        }
-
-        // Check that the bidder is the owner of the bid
-        if (bidData[lotId_][bidId_].bidder != bidder_) {
-            revert Auction.Auction_NotBidder();
-        }
-
+        address
+    ) internal virtual override returns (uint256 refundAmount) {
         // Cancel the bid
         bidCancelled[lotId_][bidId_] = true;
 
@@ -134,5 +112,30 @@ contract MockBatchAuctionModule is AuctionModule {
 
     function getBid(uint96 lotId_, uint256 bidId_) external view returns (Bid memory bid_) {
         bid_ = bidData[lotId_][bidId_];
+    }
+
+    function _revertIfBidInvalid(uint96 lotId_, uint256 bidId_) internal view virtual override {
+        // Check that the bid exists
+        if (bidData[lotId_].length <= bidId_) {
+            revert Auction.Auction_InvalidBidId(lotId_, bidId_);
+        }
+    }
+
+    function _revertIfNotBidOwner(
+        uint96 lotId_,
+        uint256 bidId_,
+        address caller_
+    ) internal view virtual override {
+        // Check that the bidder is the owner of the bid
+        if (bidData[lotId_][bidId_].bidder != caller_) {
+            revert Auction.Auction_NotBidder();
+        }
+    }
+
+    function _revertIfBidCancelled(uint96 lotId_, uint256 bidId_) internal view virtual override {
+        // Check that the bid has not been cancelled
+        if (bidCancelled[lotId_][bidId_] == true) {
+            revert Auction.Auction_InvalidBidId(lotId_, bidId_);
+        }
     }
 }

@@ -88,23 +88,42 @@ abstract contract LocalSealedBidBatchAuction is AuctionModule {
 
     // ========== MODIFIERS ========== //
 
-    modifier auctionIsLive(uint96 lotId_) {
+    /// @inheritdoc AuctionModule
+    /// @dev        Checks that the lot is active with the data structures used by this particular module
+    function _revertIfLotInactive(uint96 lotId_) internal view override {
         // Check that bids are allowed to be submitted for the lot
         if (
             auctionData[lotId_].status != AuctionStatus.Created
                 || block.timestamp < lotData[lotId_].start
                 || block.timestamp >= lotData[lotId_].conclusion
         ) revert Auction_NotLive();
-        _;
     }
 
-    modifier onlyBidder(address sender_, uint96 lotId_, uint256 bidId_) {
+    /// @inheritdoc AuctionModule
+    /// @dev        Checks that the bid is valid
+    function _revertIfBidInvalid(uint96 lotId_, uint256 bidId_) internal view override {
         // Bid ID must be less than number of bids for lot
         if (bidId_ >= lotEncryptedBids[lotId_].length) revert Auction_BidDoesNotExist();
+    }
 
+    /// @inheritdoc AuctionModule
+    /// @dev        Checks that the sender is the bidder
+    function _revertIfNotBidOwner(
+        uint96 lotId_,
+        uint256 bidId_,
+        address bidder_
+    ) internal view override {
         // Check that sender is the bidder
-        if (sender_ != lotEncryptedBids[lotId_][bidId_].bidder) revert Auction_NotBidder();
-        _;
+        if (bidder_ != lotEncryptedBids[lotId_][bidId_].bidder) revert Auction_NotBidder();
+    }
+
+    /// @inheritdoc AuctionModule
+    /// @dev        Checks that the bid is not already cancelled
+    function _revertIfBidCancelled(uint96 lotId_, uint256 bidId_) internal view override {
+        // Bid must not be cancelled
+        if (lotEncryptedBids[lotId_][bidId_].status == BidStatus.Cancelled) {
+            revert Auction_AlreadyCancelled();
+        }
     }
 
     // =========== BID =========== //
@@ -142,46 +161,18 @@ abstract contract LocalSealedBidBatchAuction is AuctionModule {
     }
 
     /// @inheritdoc AuctionModule
-    /// @dev        Checks that the lot is active with the data structures used by this particular module
-    function _revertIfLotInactive(uint96 lotId_) internal view override {
-        // Check that bids are allowed to be submitted for the lot
-        if (
-            auctionData[lotId_].status != AuctionStatus.Created
-                || block.timestamp < lotData[lotId_].start
-                || block.timestamp >= lotData[lotId_].conclusion
-        ) revert Auction_NotLive();
-    }
-
-    /// @inheritdoc Auction
-    /// @dev        This function reverts if:
-    ///             - the auction lot does not exist
-    ///             - the auction lot is not live
-    ///             - the bid does not exist
-    ///             - `bidder_` is not the bidder
-    ///             - the bid is already cancelled
     // TODO need to change this to delete the bid so we don't have to decrypt it later
     // Because of this, we can issue the refund immediately (needs to happen in the AuctionHouse)
     // However, this will require more refactoring because, we run into a problem of using the array index as the bidId since it will change when we delete the bid
     // It doesn't cost any more gas to store a uint96 bidId as part of the EncryptedBid.
     // A better approach may be to create a mapping of lotId => bidId => EncryptedBid. Then, have an array of bidIds in the AuctionData struct that can be iterated over.
     // This way, we can still lookup the bids by bidId for cancellation, etc.
-    function cancelBid(
+    function _cancelBid(
         uint96 lotId_,
         uint256 bidId_,
-        address bidder_
-    )
-        external
-        override
-        onlyInternal
-        auctionIsLive(lotId_)
-        onlyBidder(bidder_, lotId_, bidId_)
-        returns (uint256 refundAmount)
-    {
+        address
+    ) internal override returns (uint256 refundAmount) {
         // Validate inputs
-        // Bid is not already cancelled
-        if (lotEncryptedBids[lotId_][bidId_].status != BidStatus.Submitted) {
-            revert Auction_AlreadyCancelled();
-        }
 
         // Set bid status to cancelled
         lotEncryptedBids[lotId_][bidId_].status = BidStatus.Cancelled;
