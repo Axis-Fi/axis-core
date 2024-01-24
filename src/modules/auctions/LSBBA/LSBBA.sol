@@ -12,8 +12,7 @@ import {MinPriorityQueue, Bid as QueueBid} from "src/modules/auctions/LSBBA/MinP
 // 1. Bidding - bidders submit encrypted bids
 // 2. Decryption - anyone with the private key can decrypt bids off-chain and submit them on-chain for validation and sorting
 // 3. Settlement - once all bids are decryped, the auction can be settled and proceeds transferred
-// TODO abstract since not everything is implemented here
-abstract contract LocalSealedBidBatchAuction is AuctionModule {
+contract LocalSealedBidBatchAuction is AuctionModule {
     using MinPriorityQueue for MinPriorityQueue.Queue;
 
     // ========== ERRORS ========== //
@@ -63,6 +62,19 @@ abstract contract LocalSealedBidBatchAuction is AuctionModule {
         bytes publicKeyModulus;
     }
 
+    /// @notice         Struct containing parameters for creating a new LSBBA auction
+    ///
+    /// @param          minFillPercent_     The minimum percentage of the lot capacity that must be filled for the auction to settle (scale: `ONE_HUNDRED_PERCENT`)
+    /// @param          minBidPercent_      The minimum percentage of the lot capacity that must be bid for each bid (scale: `ONE_HUNDRED_PERCENT`)
+    /// @param          minimumPrice_       The minimum price that the auction can settle at
+    /// @param          publicKeyModulus_   The public key modulus used to encrypt bids
+    struct AuctionDataParams {
+        uint24 minFillPercent;
+        uint24 minBidPercent;
+        uint256 minimumPrice;
+        bytes publicKeyModulus;
+    }
+
     // ========== STATE VARIABLES ========== //
 
     uint256 internal constant MIN_BID_PERCENT = 1000; // 1%
@@ -76,7 +88,11 @@ abstract contract LocalSealedBidBatchAuction is AuctionModule {
 
     // ========== SETUP ========== //
 
-    constructor(address auctionHouse_) AuctionModule(auctionHouse_) {}
+    constructor(address auctionHouse_) AuctionModule(auctionHouse_) {
+        // Set the minimum auction duration to 1 day
+        // TODO is this a good default?
+        minAuctionDuration = 1 days;
+    }
 
     function VEECODE() public pure override returns (Veecode) {
         return toVeecode("01LSBBA");
@@ -413,12 +429,7 @@ abstract contract LocalSealedBidBatchAuction is AuctionModule {
         bytes memory params_
     ) internal override returns (bool prefundingRequired) {
         // Decode implementation params
-        (
-            uint256 minimumPrice,
-            uint256 minFillPercent,
-            uint256 minBidPercent,
-            bytes memory publicKeyModulus
-        ) = abi.decode(params_, (uint256, uint256, uint256, bytes));
+        AuctionDataParams memory implParams = abi.decode(params_, (AuctionDataParams));
 
         // Validate params
         // Capacity must be in base token for this auction type
@@ -426,23 +437,26 @@ abstract contract LocalSealedBidBatchAuction is AuctionModule {
 
         // minFillPercent must be less than or equal to 100%
         // TODO should there be a minimum?
-        if (minFillPercent > ONE_HUNDRED_PERCENT) revert Auction_InvalidParams();
+        if (implParams.minFillPercent > ONE_HUNDRED_PERCENT) revert Auction_InvalidParams();
 
         // minBidPercent must be greater than or equal to the global min and less than or equal to 100%
         // TODO should we cap this below 100%?
-        if (minBidPercent < MIN_BID_PERCENT || minBidPercent > ONE_HUNDRED_PERCENT) {
+        if (
+            implParams.minBidPercent < MIN_BID_PERCENT
+                || implParams.minBidPercent > ONE_HUNDRED_PERCENT
+        ) {
             revert Auction_InvalidParams();
         }
 
         // publicKeyModulus must be 1024 bits (128 bytes)
-        if (publicKeyModulus.length != 128) revert Auction_InvalidParams();
+        if (implParams.publicKeyModulus.length != 128) revert Auction_InvalidParams();
 
         // Store auction data
         AuctionData storage data = auctionData[lotId_];
-        data.minimumPrice = minimumPrice;
-        data.minFilled = (lot_.capacity * minFillPercent) / ONE_HUNDRED_PERCENT;
-        data.minBidSize = (lot_.capacity * minBidPercent) / ONE_HUNDRED_PERCENT;
-        data.publicKeyModulus = publicKeyModulus;
+        data.minimumPrice = implParams.minimumPrice;
+        data.minFilled = (lot_.capacity * implParams.minFillPercent) / ONE_HUNDRED_PERCENT;
+        data.minBidSize = (lot_.capacity * implParams.minBidPercent) / ONE_HUNDRED_PERCENT;
+        data.publicKeyModulus = implParams.publicKeyModulus;
 
         // Initialize sorted bid queue
         lotSortedBids[lotId_].initialize();
@@ -478,6 +492,10 @@ abstract contract LocalSealedBidBatchAuction is AuctionModule {
     function maxPayout(uint256 id_) public view virtual override returns (uint256) {}
 
     function maxAmountAccepted(uint256 id_) public view virtual override returns (uint256) {}
+
+    function getLotData(uint96 lotId_) public view returns (AuctionData memory) {
+        return auctionData[lotId_];
+    }
 
     // =========== ATOMIC AUCTION STUBS ========== //
 

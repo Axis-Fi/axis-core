@@ -66,6 +66,7 @@ abstract contract Auction {
     // ========= STATE ========== //
 
     /// @notice Minimum auction duration in seconds
+    // TODO should this be set at deployment and/or through a function?
     uint48 public minAuctionDuration;
 
     // 1% = 1_000 or 1e3. 100% = 100_000 or 1e5.
@@ -473,6 +474,13 @@ abstract contract AuctionModule is Auction, Module {
 
     function remainingCapacity(uint256 id_) external view override returns (uint256) {
         return lotData[id_].capacity;
+    }
+
+    /// @notice    Get the lot data for a given lot ID
+    ///
+    /// @param     lotId_  The lot ID
+    function getLot(uint96 lotId_) external view returns (Lot memory) {
+        return lotData[lotId_];
     }
 
     // ========== MODIFIERS ========== //
