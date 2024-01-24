@@ -32,14 +32,14 @@ contract MockAuctionModule is AuctionModule {
         bytes calldata auctionData_
     ) external virtual override returns (uint256 payout, bytes memory auctionOutput) {}
 
-    function bid(
+    function _bid(
         uint96 id_,
         address bidder_,
         address recipient_,
         address referrer_,
         uint256 amount_,
         bytes calldata auctionData_
-    ) external virtual override returns (uint256) {}
+    ) internal override returns (uint256) {}
 
     function payoutFor(
         uint256 id_,

@@ -278,6 +278,56 @@ abstract contract AuctionModule is Auction, Module {
     /// @param      lotId_      The lot ID
     function _cancelAuction(uint96 lotId_) internal virtual;
 
+    // ========== BID MANAGEMENT ========== //
+
+    /// @inheritdoc Auction
+    /// @dev        Implements a basic bid function that:
+    ///             - Calls implementation-specific validation logic
+    ///             - Calls the auction module
+    ///
+    ///             This function reverts if:
+    ///             - the lot id is invalid
+    ///             - the lot is not active
+    ///             - the caller is not an internal module
+    ///
+    ///             Inheriting contracts should override _bid to implement auction-specific logic, such as:
+    ///             - Validating the auction-specific parameters
+    ///             - Storing the bid data
+    function bid(
+        uint96 lotId_,
+        address bidder_,
+        address recipient_,
+        address referrer_,
+        uint256 amount_,
+        bytes calldata auctionData_
+    ) external override onlyInternal returns (uint256 bidId) {
+        // Standard validation
+        _revertIfLotInvalid(lotId_);
+        _revertIfLotInactive(lotId_);
+
+        // Call implementation-specific logic
+        return _bid(lotId_, bidder_, recipient_, referrer_, amount_, auctionData_);
+    }
+
+    /// @notice     Implementation-specific bid logic
+    /// @dev        Auction modules should override this to perform any additional logic
+    ///
+    /// @param      lotId_          The lot ID
+    /// @param      bidder_         The bidder of the purchased tokens
+    /// @param      recipient_      The recipient of the purchased tokens
+    /// @param      referrer_       The referrer of the bid
+    /// @param      amount_         The amount of quote tokens to bid
+    /// @param      auctionData_    The auction-specific data
+    /// @return     bidId           The bid ID
+    function _bid(
+        uint96 lotId_,
+        address bidder_,
+        address recipient_,
+        address referrer_,
+        uint256 amount_,
+        bytes calldata auctionData_
+    ) internal virtual returns (uint256 bidId);
+
     // ========== AUCTION INFORMATION ========== //
 
     // TODO does this need to change for batch auctions?
@@ -293,6 +343,26 @@ abstract contract AuctionModule is Auction, Module {
     }
 
     // ========== MODIFIERS ========== //
+
+    /// @notice     Checks that `lotId_` is valid
+    /// @dev        Should revert if the lot ID is invalid
+    ///             Inheriting contracts can override this to implement custom logic
+    ///
+    /// @param      lotId_  The lot ID
+    function _revertIfLotInvalid(uint96 lotId_) internal view virtual {
+        if (lotData[lotId_].start == 0) revert Auction_InvalidLotId(lotId_);
+    }
+
+    /// @notice     Checks that the lot represented by `lotId_` is active
+    /// @dev        Should revert if the lot is not active
+    ///             Inheriting contracts can override this to implement custom logic
+    ///
+    /// @param      lotId_  The lot ID
+    function _revertIfLotInactive(uint96 lotId_) internal view virtual {
+        if (!isLive(lotId_)) revert Auction_MarketNotActive(lotId_);
+    }
+
+    // TODO remove these
 
     /// @notice     Checks that the lot ID is valid
     /// @dev        Reverts if the lot ID is invalid

@@ -109,15 +109,15 @@ abstract contract LocalSealedBidBatchAuction is AuctionModule {
 
     // =========== BID =========== //
 
-    /// @inheritdoc Auction
-    function bid(
+    /// @inheritdoc AuctionModule
+    function _bid(
         uint96 lotId_,
         address bidder_,
         address recipient_,
         address referrer_,
         uint256 amount_,
         bytes calldata auctionData_
-    ) external override onlyInternal auctionIsLive(lotId_) returns (uint256 bidId) {
+    ) internal override returns (uint256 bidId) {
         // Validate inputs
         // Amount at least minimum bid size for lot
         if (amount_ < auctionData[lotId_].minBidSize) revert Auction_WrongState();
@@ -137,6 +137,19 @@ abstract contract LocalSealedBidBatchAuction is AuctionModule {
 
         // Add bid to lot
         lotEncryptedBids[lotId_].push(userBid);
+
+        return bidId;
+    }
+
+    /// @inheritdoc AuctionModule
+    /// @dev        Checks that the lot is active with the data structures used by this particular module
+    function _revertIfLotInactive(uint96 lotId_) internal view override {
+        // Check that bids are allowed to be submitted for the lot
+        if (
+            auctionData[lotId_].status != AuctionStatus.Created
+                || block.timestamp < lotData[lotId_].start
+                || block.timestamp >= lotData[lotId_].conclusion
+        ) revert Auction_NotLive();
     }
 
     /// @inheritdoc Auction

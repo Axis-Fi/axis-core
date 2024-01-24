@@ -73,14 +73,14 @@ contract MockAtomicAuctionModule is AuctionModule {
         purchaseReverts = reverts_;
     }
 
-    function bid(
+    function _bid(
         uint96,
         address,
         address,
         address,
         uint256,
         bytes calldata
-    ) external virtual override returns (uint256) {
+    ) internal override returns (uint256) {
         revert Auction_NotImplemented();
     }
 

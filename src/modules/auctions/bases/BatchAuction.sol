@@ -38,15 +38,15 @@ abstract contract OnChainBatchAuctionModule is AuctionModule, BatchAuction {
 
     mapping(uint256 lotId => Auction.Bid[] bids) public lotBids;
 
-    /// @inheritdoc Auction
-    function bid(
+    /// @inheritdoc AuctionModule
+    function _bid(
         uint96 lotId_,
         address bidder_,
         address recipient_,
         address referrer_,
         uint256 amount_,
         bytes calldata auctionData_
-    ) external override onlyParent returns (uint256 bidId) {
+    ) internal override returns (uint256 bidId) {
         // TODO
         // Validate inputs
 

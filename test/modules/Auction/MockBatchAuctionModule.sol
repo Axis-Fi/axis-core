@@ -38,24 +38,14 @@ contract MockBatchAuctionModule is AuctionModule {
         revert Auction_NotImplemented();
     }
 
-    function bid(
+    function _bid(
         uint96 lotId_,
         address bidder_,
         address recipient_,
         address referrer_,
         uint256 amount_,
         bytes calldata auctionData_
-    ) external virtual override returns (uint256) {
-        // Valid lot
-        if (lotData[lotId_].start == 0) {
-            revert Auction.Auction_InvalidLotId(lotId_);
-        }
-
-        // If auction is cancelled
-        if (isLive(lotId_) == false) {
-            revert Auction.Auction_MarketNotActive(lotId_);
-        }
-
+    ) internal override returns (uint256) {
         // Create a new bid
         Bid memory newBid = Bid({
             bidder: bidder_,
