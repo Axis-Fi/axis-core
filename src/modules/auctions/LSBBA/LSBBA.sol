@@ -99,9 +99,11 @@ abstract contract LocalSealedBidBatchAuction is AuctionModule {
         ) revert Auction_NotLive();
     }
 
+    /// @inheritdoc AuctionModule
+    /// @dev        Checks that the lot is not yet settled
     function _revertIfLotSettled(uint96 lotId_) internal view override {
         // Auction must not be settled
-        if (auctionData[lotId_].status == AuctionStatus.Settled) revert Auction_NotConcluded();
+        if (auctionData[lotId_].status == AuctionStatus.Settled) revert Auction_WrongState();
     }
 
     /// @inheritdoc AuctionModule
