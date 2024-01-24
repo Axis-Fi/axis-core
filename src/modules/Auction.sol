@@ -118,10 +118,6 @@ abstract contract Auction {
         address bidder_
     ) external virtual returns (uint256 bidAmount);
 
-    // _revertIfCancelled
-    // _revertIfLotActive
-    // _revertIfBidderNotOwner
-
     /// @notice     Settle a batch auciton
     /// @notice     This function is used for on-chain storage of bids and local settlement
     function settle(uint96 lotId_)
@@ -202,7 +198,7 @@ abstract contract AuctionModule is Auction, Module {
     function auction(
         uint96 lotId_,
         AuctionParams memory params_
-    ) external override onlyParent returns (bool prefundingRequired, uint256 capacity) {
+    ) external override onlyParent returns (bool prefundingRequired, uint256 capacity) { // TODO onlyInternal?
         // Start time must be zero or in the future
         if (params_.start > 0 && params_.start < uint48(block.timestamp)) {
             revert Auction_InvalidStart(params_.start, uint48(block.timestamp));
@@ -256,7 +252,7 @@ abstract contract AuctionModule is Auction, Module {
     ///             - the lot is not active
     ///
     /// @param      lotId_      The lot id
-    function cancelAuction(uint96 lotId_) external override onlyParent {
+    function cancelAuction(uint96 lotId_) external override onlyParent { // TODO onlyInternal?
         Lot storage lot = lotData[lotId_];
 
         // Invalid lot
@@ -435,28 +431,4 @@ abstract contract AuctionModule is Auction, Module {
     /// @param      lotId_      The lot ID
     /// @param      bidId_      The bid ID
     function _revertIfBidCancelled(uint96 lotId_, uint256 bidId_) internal view virtual;
-
-    // TODO remove these
-
-    /// @notice     Checks that the lot ID is valid
-    /// @dev        Reverts if the lot ID is invalid
-    ///
-    /// @param      lotId_  The lot identifier
-    modifier isLotValid(uint96 lotId_) {
-        if (lotData[lotId_].start == 0) revert Auction_InvalidLotId(lotId_);
-        _;
-    }
-
-    /// @notice     Checks that the lot is active
-    /// @dev        Reverts if the lot is not active
-    ///
-    /// @param      lotId_  The lot identifier
-    modifier isLotActive(uint96 lotId_) {
-        Lot memory lot = lotData[lotId_];
-        if (
-            lot.capacity == 0 || lot.conclusion < uint48(block.timestamp)
-                || lot.start > block.timestamp
-        ) revert Auction_MarketNotActive(lotId_);
-        _;
-    }
 }
