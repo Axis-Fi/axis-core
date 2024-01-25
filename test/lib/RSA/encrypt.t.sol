@@ -9,10 +9,9 @@ import {console2} from "forge-std/console2.sol";
 import {RSAOAEP} from "src/lib/RSA.sol";
 
 contract RSAOAEPTest is Test {
+    bytes internal constant E = abi.encodePacked(uint32(65_537));
 
-    bytes internal constant E = abi.encodePacked(uint32(65537));
-
-    function setUp() external{}
+    function setUp() external {}
 
     function test_roundTrip(uint256 seed_) external {
         uint256 value = 5 * 10 ** 18;
@@ -32,7 +31,7 @@ contract RSAOAEPTest is Test {
             bytes32(0x183c2b8191ee422acad2b6b29c26d8ba6b2dba73fe839fc4a1b180f5aa7e3723),
             bytes32(0x0376dbb6b9571938f796fdcc3b4687f791a1d14c1a578890cdb2f4413a413ba1)
         );
-        
+
         bytes memory encrypted = RSAOAEP.encrypt(message, label, E, n, seed_);
 
         (bytes memory decrypted, bytes32 returnedSeed) = RSAOAEP.decrypt(encrypted, d, n, label);
@@ -41,5 +40,5 @@ contract RSAOAEPTest is Test {
 
         assertEq(returnedValue, value);
         assertEq(returnedSeed, sha256(abi.encodePacked(seed_)));
-    }    
+    }
 }

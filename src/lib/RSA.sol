@@ -56,24 +56,23 @@ library RSAOAEP {
 
         // 3. b. Separate encoded message into Y (1 byte) | maskedSeed (32 bytes) | maskedDB (cLen - 32 - 1)
         bytes1 y = bytes1(encoded);
-        
+
         bytes memory db;
-        { // Scope these local variables to avoid stack too deep later
+        {
+            // Scope these local variables to avoid stack too deep later
             bytes32 maskedSeed;
-            uint256 words = ((cLen - 33) / 32) + (((cLen - 33) % 32) == 0 ? 0 : 1);
-            bytes memory maskedDb = new bytes(cLen - 33);
+            // uint256 words = ((cLen - 33) / 32) + (((cLen - 33) % 32) == 0 ? 0 : 1);
+            uint256 maskLen = cLen - 33;
+            bytes memory maskedDb = new bytes(maskLen);
 
+            // Load a word from the encoded string starting at the 2nd byte (also have to account for length stored in first slot)
             assembly {
-                // Load a word from the encoded string starting at the 2nd byte (also have to account for length stored in first slot)
                 maskedSeed := mload(add(encoded, 0x21))
+            }
 
-                // Store the remaining bytes into the maskedDb
-                for { let i := 0 } lt(i, words) { i := add(i, 1) } {
-                    mstore(
-                        add(add(maskedDb, 0x20), mul(i, 0x20)),
-                        mload(add(add(encoded, 0x41), mul(i, 0x20)))
-                    )
-                }
+            // Store the remaining bytes into the maskedDb
+            for (uint256 i; i < maskLen; i++) {
+                maskedDb[i] = encoded[i + 33];
             }
 
             // 3. c. Calculate seed mask
@@ -102,12 +101,12 @@ library RSAOAEP {
         bytes32 recoveredHash = bytes32(db);
         bytes1 one;
         uint256 m;
-        
+
         // Iterate over bytes after the label hash until hitting a non-zero byte
         // Skip the first word since it is the recovered hash
         // Identify the start index of the message within the db byte string
         for (uint256 i = 32; i < db.length; i++) {
-            if (db[i] == 0x00) { 
+            if (db[i] == 0x00) {
                 // Padding, continue
                 continue;
             } else if (db[i] == 0x01) {
