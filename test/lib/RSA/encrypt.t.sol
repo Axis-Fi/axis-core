@@ -9,7 +9,7 @@ import {console2} from "forge-std/console2.sol";
 import {RSAOAEP} from "src/lib/RSA.sol";
 
 contract RSAOAEPTest is Test {
-    bytes internal constant E = abi.encodePacked(uint32(65_537));
+    bytes internal constant E = abi.encodePacked(uint24(65_537));
 
     function setUp() external {}
 
