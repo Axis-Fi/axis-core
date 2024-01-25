@@ -202,8 +202,7 @@ abstract contract AuctionModule is Auction, Module {
     function auction(
         uint96 lotId_,
         AuctionParams memory params_
-    ) external override onlyParent returns (bool prefundingRequired, uint256 capacity) {
-        // TODO onlyInternal?
+    ) external override onlyInternal returns (bool prefundingRequired, uint256 capacity) {
         // Start time must be zero or in the future
         if (params_.start > 0 && params_.start < uint48(block.timestamp)) {
             revert Auction_InvalidStart(params_.start, uint48(block.timestamp));
@@ -257,8 +256,7 @@ abstract contract AuctionModule is Auction, Module {
     ///             - the lot is not active
     ///
     /// @param      lotId_      The lot id
-    function cancelAuction(uint96 lotId_) external override onlyParent {
-        // TODO onlyInternal?
+    function cancelAuction(uint96 lotId_) external override onlyInternal {
         // Validation
         _revertIfLotInvalid(lotId_);
         _revertIfLotInactive(lotId_);

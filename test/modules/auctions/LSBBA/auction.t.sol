@@ -5,7 +5,7 @@ pragma solidity 0.8.19;
 import {Test} from "forge-std/Test.sol";
 import {Permit2User} from "test/lib/permit2/Permit2User.sol";
 
-import {Module} from "src/modules/Modules.sol";
+import {Module, Veecode, WithModules} from "src/modules/Modules.sol";
 
 // Auctions
 import {LocalSealedBidBatchAuction} from "src/modules/auctions/LSBBA/LSBBA.sol";
@@ -128,7 +128,7 @@ contract LSBBACreateAuctionTest is Test, Permit2User {
     // [X] when publicKeyModulus is of incorrect length
     //  [X] it reverts
     // [X] when called via execOnModule
-    //  [X] it succeeds
+    //  [X] it reverts
     // [X] it sets the auction parameters
 
     function test_notParent_reverts() external {
@@ -247,14 +247,20 @@ contract LSBBACreateAuctionTest is Test, Permit2User {
     }
 
     function test_execOnModule() external {
+        Veecode moduleVeecode = auctionModule.VEECODE();
+
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(
+            WithModules.ModuleExecutionReverted.selector,
+            abi.encodeWithSelector(Module.Module_OnlyInternal.selector)
+        );
+        vm.expectRevert(err);
+
         // Call
         auctionHouse.execOnModule(
-            auctionModule.VEECODE(),
-            abi.encodeWithSelector(auctionModule.auction.selector, lotId, auctionParams)
+            moduleVeecode,
+            abi.encodeWithSelector(Auction.auction.selector, lotId, auctionParams)
         );
-
-        // Check values
-        assertEq(auctionModule.getLot(lotId).start, auctionParams.start);
     }
 
     function test_success() external {
@@ -283,6 +289,7 @@ contract LSBBACreateAuctionTest is Test, Permit2User {
             lotData.minBidSize, (auctionParams.capacity * auctionDataParams.minBidPercent) / 100_000
         );
         assertEq(lotData.publicKeyModulus, auctionDataParams.publicKeyModulus);
+        assertEq(uint8(lotData.status), uint8(LocalSealedBidBatchAuction.AuctionStatus.Created));
 
         // Check that the sorted bid queue is initialised
         (uint96 nextBidId_,) = auctionModule.lotSortedBids(lotId);
