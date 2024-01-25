@@ -328,7 +328,8 @@ abstract contract AuctionModule is Auction, Module {
     ///
     ///             This function reverts if:
     ///             - the lot id is invalid
-    ///             - the lot is not active
+    ///             - the lot has not started
+    ///             - the lot has concluded
     ///             - the lot is already settled
     ///             - the caller is not an internal module
     ///
@@ -345,7 +346,8 @@ abstract contract AuctionModule is Auction, Module {
     ) external override onlyInternal returns (uint256 bidId) {
         // Standard validation
         _revertIfLotInvalid(lotId_);
-        _revertIfLotInactive(lotId_);
+        _revertIfBeforeLotStart(lotId_);
+        _revertIfLotConcluded(lotId_);
         _revertIfLotSettled(lotId_);
 
         // Call implementation-specific logic

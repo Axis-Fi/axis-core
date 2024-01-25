@@ -164,7 +164,10 @@ contract LocalSealedBidBatchAuction is AuctionModule {
     ) internal override returns (uint256 bidId) {
         // Validate inputs
         // Amount at least minimum bid size for lot
-        if (amount_ < auctionData[lotId_].minBidSize) revert Auction_WrongState();
+        if (amount_ < auctionData[lotId_].minBidSize) revert Auction_AmountLessThanMinimum();
+
+        // Amount greater than capacity
+        if (amount_ > lotData[lotId_].capacity) revert Auction_NotEnoughCapacity();
 
         // Store bid data
         // Auction data should just be the encrypted amount out (no decoding required)
@@ -495,6 +498,10 @@ contract LocalSealedBidBatchAuction is AuctionModule {
 
     function getLotData(uint96 lotId_) public view returns (AuctionData memory) {
         return auctionData[lotId_];
+    }
+
+    function getBidData(uint96 lotId_, uint256 bidId_) public view returns (EncryptedBid memory) {
+        return lotEncryptedBids[lotId_][bidId_];
     }
 
     // =========== ATOMIC AUCTION STUBS ========== //
