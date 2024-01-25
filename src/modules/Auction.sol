@@ -399,7 +399,8 @@ abstract contract AuctionModule is Auction, Module {
     ) external override onlyInternal returns (uint256 bidAmount) {
         // Standard validation
         _revertIfLotInvalid(lotId_);
-        _revertIfLotInactive(lotId_);
+        _revertIfBeforeLotStart(lotId_);
+        _revertIfLotConcluded(lotId_);
         _revertIfLotSettled(lotId_);
         _revertIfBidInvalid(lotId_, bidId_);
         _revertIfNotBidOwner(lotId_, bidId_, caller_);

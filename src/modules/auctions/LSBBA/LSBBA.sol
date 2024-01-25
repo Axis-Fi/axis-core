@@ -117,14 +117,16 @@ contract LocalSealedBidBatchAuction is AuctionModule {
     /// @dev        Checks that the lot is not yet settled
     function _revertIfLotSettled(uint96 lotId_) internal view override {
         // Auction must not be settled
-        if (auctionData[lotId_].status == AuctionStatus.Settled) revert Auction_WrongState();
+        if (auctionData[lotId_].status == AuctionStatus.Settled) {
+            revert Auction_MarketNotActive(lotId_);
+        }
     }
 
     /// @inheritdoc AuctionModule
     /// @dev        Checks that the bid is valid
     function _revertIfBidInvalid(uint96 lotId_, uint256 bidId_) internal view override {
         // Bid ID must be less than number of bids for lot
-        if (bidId_ >= lotEncryptedBids[lotId_].length) revert Auction_BidDoesNotExist();
+        if (bidId_ >= lotEncryptedBids[lotId_].length) revert Auction_InvalidBidId(lotId_, bidId_);
     }
 
     /// @inheritdoc AuctionModule
