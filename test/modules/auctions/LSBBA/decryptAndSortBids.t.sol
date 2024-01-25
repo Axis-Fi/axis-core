@@ -90,13 +90,11 @@ contract LSBBACancelBidTest is Test, Permit2User {
         (bidOne, decryptedBidOne) = _createBid(bidOneAmount, bidOneAmountOut);
         (bidTwo, decryptedBidTwo) = _createBid(bidTwoAmount, bidTwoAmountOut);
         (bidThree, decryptedBidThree) = _createBid(bidThreeAmount, bidThreeAmountOut);
-        decrypts = new LocalSealedBidBatchAuction.Decrypt[](3);
-        decrypts[0] = decryptedBidOne;
-        decrypts[1] = decryptedBidTwo;
-        decrypts[2] = decryptedBidThree;
 
-        // Go to conclusion
-        vm.warp(lotConclusion + 1);
+        // Set up the decrypts array
+        decrypts.push(decryptedBidOne);
+        decrypts.push(decryptedBidTwo);
+        decrypts.push(decryptedBidThree);
     }
 
     function _createBid(
@@ -129,6 +127,14 @@ contract LSBBACancelBidTest is Test, Permit2User {
         );
     }
 
+    function _clearDecrypts() internal {
+        uint256 len = decrypts.length;
+        // Remove all elements
+        for (uint256 i = 0; i < len; i++) {
+            delete decrypts[i];
+        }
+    }
+
     // ===== Modifiers ===== //
 
     modifier whenLotIdIsInvalid() {
@@ -141,6 +147,11 @@ contract LSBBACancelBidTest is Test, Permit2User {
         _;
     }
 
+    modifier whenLotHasConcluded() {
+        vm.warp(lotConclusion + 1);
+        _;
+    }
+
     modifier whenLotDecryptionIsComplete() {
         // Decrypt the bids
         auctionModule.decryptAndSortBids(lotId, decrypts);
@@ -149,30 +160,30 @@ contract LSBBACancelBidTest is Test, Permit2User {
 
     modifier whenDecryptedBidLengthIsGreater() {
         // Decrypt 1 bid
-        decrypts = new LocalSealedBidBatchAuction.Decrypt[](1);
-        decrypts[0] = decryptedBidOne;
+        _clearDecrypts();
+        decrypts.push(decryptedBidOne);
         auctionModule.decryptAndSortBids(lotId, decrypts);
 
         // Prepare to decrypt 3 bids
-        decrypts = new LocalSealedBidBatchAuction.Decrypt[](3);
-        decrypts[0] = decryptedBidTwo;
-        decrypts[1] = decryptedBidThree;
-        decrypts[2] = decryptedBidOne;
+        _clearDecrypts();
+        decrypts.push(decryptedBidTwo);
+        decrypts.push(decryptedBidThree);
+        decrypts.push(decryptedBidOne);
         _;
     }
 
     modifier whenDecryptedBidLengthIsZero() {
         // Empty array
-        decrypts = new LocalSealedBidBatchAuction.Decrypt[](0);
+        _clearDecrypts();
         _;
     }
 
     modifier whenBidsAreOutOfOrder() {
         // Re-arrange the bids
-        decrypts = new LocalSealedBidBatchAuction.Decrypt[](3);
-        decrypts[0] = decryptedBidTwo;
-        decrypts[1] = decryptedBidOne;
-        decrypts[2] = decryptedBidThree;
+        _clearDecrypts();
+        decrypts.push(decryptedBidTwo);
+        decrypts.push(decryptedBidOne);
+        decrypts.push(decryptedBidThree);
         _;
     }
 
@@ -232,7 +243,7 @@ contract LSBBACancelBidTest is Test, Permit2User {
         auctionModule.decryptAndSortBids(lotId, decrypts);
     }
 
-    function test_whenCallerIsAuctionHouse() public {
+    function test_whenCallerIsAuctionHouse() public whenLotHasConcluded {
         // Call
         vm.prank(address(auctionHouse));
         auctionModule.decryptAndSortBids(lotId, decrypts);
@@ -247,7 +258,11 @@ contract LSBBACancelBidTest is Test, Permit2User {
         auctionModule.decryptAndSortBids(lotId, decrypts);
     }
 
-    function test_givenLotDecryptionIsComplete_reverts() public whenLotDecryptionIsComplete {
+    function test_givenLotDecryptionIsComplete_reverts()
+        public
+        whenLotHasConcluded
+        whenLotDecryptionIsComplete
+    {
         // Expect revert
         bytes memory err =
             abi.encodeWithSelector(LocalSealedBidBatchAuction.Auction_WrongState.selector);
@@ -259,6 +274,7 @@ contract LSBBACancelBidTest is Test, Permit2User {
 
     function test_givenLotHasSettled_reverts()
         public
+        whenLotHasConcluded
         whenLotDecryptionIsComplete
         whenLotHasSettled
     {
@@ -273,6 +289,7 @@ contract LSBBACancelBidTest is Test, Permit2User {
 
     function test_whenDecryptedBidLengthIsGreater_reverts()
         public
+        whenLotHasConcluded
         whenDecryptedBidLengthIsGreater
     {
         // Expect revert
@@ -284,7 +301,11 @@ contract LSBBACancelBidTest is Test, Permit2User {
         auctionModule.decryptAndSortBids(lotId, decrypts);
     }
 
-    function test_whenDecryptedBidsLengthIsZero() public whenDecryptedBidLengthIsZero {
+    function test_whenDecryptedBidsLengthIsZero()
+        public
+        whenLotHasConcluded
+        whenDecryptedBidLengthIsZero
+    {
         // Get the index beforehand
         LocalSealedBidBatchAuction.AuctionData memory lotData = auctionModule.getLotData(lotId);
         uint96 nextDecryptIndexBefore = lotData.nextDecryptIndex;
@@ -297,7 +318,7 @@ contract LSBBACancelBidTest is Test, Permit2User {
         assertEq(lotData.nextDecryptIndex, nextDecryptIndexBefore);
     }
 
-    function test_bidsOutOfOrder_reverts() public whenBidsAreOutOfOrder {
+    function test_bidsOutOfOrder_reverts() public whenLotHasConcluded whenBidsAreOutOfOrder {
         // Expect revert
         bytes memory err =
             abi.encodeWithSelector(LocalSealedBidBatchAuction.Auction_InvalidDecrypt.selector);
@@ -307,7 +328,11 @@ contract LSBBACancelBidTest is Test, Permit2User {
         auctionModule.decryptAndSortBids(lotId, decrypts);
     }
 
-    function test_givenBidHasBeenCancelled_reverts() public whenBidHasBeenCancelled(bidOne) {
+    function test_givenBidHasBeenCancelled_reverts()
+        public
+        whenBidHasBeenCancelled(bidOne)
+        whenLotHasConcluded
+    {
         // Expect revert
         bytes memory err =
             abi.encodeWithSelector(LocalSealedBidBatchAuction.Auction_InvalidDecrypt.selector);
@@ -317,11 +342,15 @@ contract LSBBACancelBidTest is Test, Permit2User {
         auctionModule.decryptAndSortBids(lotId, decrypts);
     }
 
-    function test_givenBidHasBeenCancelled() public whenBidHasBeenCancelled(bidOne) {
+    function test_givenBidHasBeenCancelled()
+        public
+        whenBidHasBeenCancelled(bidOne)
+        whenLotHasConcluded
+    {
         // Amend the decrypts array
-        decrypts = new LocalSealedBidBatchAuction.Decrypt[](2);
-        decrypts[0] = decryptedBidTwo;
-        decrypts[1] = decryptedBidThree;
+        _clearDecrypts();
+        decrypts.push(decryptedBidTwo);
+        decrypts.push(decryptedBidThree);
 
         // Call
         auctionModule.decryptAndSortBids(lotId, decrypts);
@@ -362,10 +391,10 @@ contract LSBBACancelBidTest is Test, Permit2User {
         assertEq(auctionModule.getSortedBidCount(lotId), 2);
     }
 
-    function test_partialDecryption() public {
+    function test_partialDecryption() public whenLotHasConcluded {
         // Amend the decrypts array
-        decrypts = new LocalSealedBidBatchAuction.Decrypt[](1);
-        decrypts[0] = decryptedBidOne;
+        _clearDecrypts();
+        decrypts.push(decryptedBidOne);
 
         // Call
         auctionModule.decryptAndSortBids(lotId, decrypts);
@@ -400,18 +429,18 @@ contract LSBBACancelBidTest is Test, Permit2User {
         assertEq(auctionModule.getSortedBidCount(lotId), 1);
     }
 
-    function test_partialDecryptionThenFull() public {
+    function test_partialDecryptionThenFull() public whenLotHasConcluded {
         // Amend the decrypts array
-        decrypts = new LocalSealedBidBatchAuction.Decrypt[](1);
-        decrypts[0] = decryptedBidOne;
+        _clearDecrypts();
+        decrypts.push(decryptedBidOne);
 
         // Call
         auctionModule.decryptAndSortBids(lotId, decrypts);
 
         // Decrypt the rest
-        decrypts = new LocalSealedBidBatchAuction.Decrypt[](2);
-        decrypts[0] = decryptedBidTwo;
-        decrypts[1] = decryptedBidThree;
+        _clearDecrypts();
+        decrypts.push(decryptedBidTwo);
+        decrypts.push(decryptedBidThree);
 
         // Call
         auctionModule.decryptAndSortBids(lotId, decrypts);
@@ -458,7 +487,7 @@ contract LSBBACancelBidTest is Test, Permit2User {
         assertEq(auctionModule.getSortedBidCount(lotId), 3);
     }
 
-    function test_fullDecryption() public {
+    function test_fullDecryption() public whenLotHasConcluded {
         // Call
         auctionModule.decryptAndSortBids(lotId, decrypts);
 
