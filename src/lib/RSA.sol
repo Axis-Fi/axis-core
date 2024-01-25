@@ -27,7 +27,6 @@ library RSAOAEP {
         bytes memory label
     ) internal view returns (bytes memory message, bytes32 seed) {
         // Implements 7.1.2 RSAES-OAEP-DECRYPT as defined in RFC8017: https://www.rfc-editor.org/rfc/rfc8017
-        // Error messages are intentionally vague to prevent oracle attacks
 
         // 1. Input length validation
         // 1. a. If the length of L is greater than the input limitation
@@ -57,36 +56,39 @@ library RSAOAEP {
 
         // 3. b. Separate encoded message into Y (1 byte) | maskedSeed (32 bytes) | maskedDB (cLen - 32 - 1)
         bytes1 y = bytes1(encoded);
-        bytes32 maskedSeed;
-        uint256 words = (cLen - 33) / 32 + ((cLen - 33) % 32 == 0 ? 0 : 1);
-        bytes memory maskedDb = new bytes(cLen - 33);
+        
+        bytes memory db;
+        { // Scope these local variables to avoid stack too deep later
+            bytes32 maskedSeed;
+            uint256 words = ((cLen - 33) / 32) + (((cLen - 33) % 32) == 0 ? 0 : 1);
+            bytes memory maskedDb = new bytes(cLen - 33);
 
-        assembly {
-            // Load a word from the encoded string starting at the 2nd byte (also have to account for length stored in first slot)
-            maskedSeed := mload(add(encoded, 0x21))
+            assembly {
+                // Load a word from the encoded string starting at the 2nd byte (also have to account for length stored in first slot)
+                maskedSeed := mload(add(encoded, 0x21))
 
-            // Store the remaining bytes into the maskedDb
-            for { let i := 0 } lt(i, words) { i := add(i, 1) } {
-                mstore(
-                    add(add(maskedDb, 0x20), mul(i, 0x20)),
-                    mload(add(add(encoded, 0x41), mul(i, 0x20)))
-                )
+                // Store the remaining bytes into the maskedDb
+                for { let i := 0 } lt(i, words) { i := add(i, 1) } {
+                    mstore(
+                        add(add(maskedDb, 0x20), mul(i, 0x20)),
+                        mload(add(add(encoded, 0x41), mul(i, 0x20)))
+                    )
+                }
             }
+
+            // 3. c. Calculate seed mask
+            // 3. d. Calculate seed
+            {
+                bytes32 seedMask = bytes32(_mgf(maskedDb, 32));
+                seed = maskedSeed ^ seedMask;
+            }
+
+            // 3. e. Calculate DB mask
+            bytes memory dbMask = _mgf(abi.encodePacked(seed), cLen - 33);
+
+            // 3. f. Calculate DB
+            db = _xor(maskedDb, dbMask);
         }
-
-        // 3. c. Calculate seed mask
-        // 3. d. Calculate seed
-        {
-            bytes32 seedMask = bytes32(_mgf(maskedDb, 32));
-            seed = maskedSeed ^ seedMask;
-        }
-
-        // 3. e. Calculate DB mask
-        bytes memory dbMask = _mgf(abi.encodePacked(seed), cLen - 33);
-
-        // 3. f. Calculate DB
-        bytes memory db = _xor(maskedDb, dbMask);
-        uint256 dbWords = db.length / 32 + db.length % 32 == 0 ? 0 : 1;
 
         // 3. g. Separate DB into an octet string lHash' of length hLen, a
         //   (possibly empty) padding string PS consisting of octets
@@ -99,57 +101,37 @@ library RSAOAEP {
         //   Y is nonzero, output "decryption error" and stop.
         bytes32 recoveredHash = bytes32(db);
         bytes1 one;
-        assembly {
-            // Iterate over bytes after the label hash until hitting a non-zero byte
-            // Skip the first word since it is the recovered hash
-            // Identify the start index of the message within the db byte string
-            let m := 0
-            for { let w := 1 } lt(w, dbWords) { w := add(w, 1) } {
-                let word := mload(add(db, add(0x20, mul(w, 0x20))))
-                // Iterate over bytes in the word
-                for { let i := 0 } lt(i, 0x20) { i := 0x20 } {
-                    switch byte(i, word)
-                    case 0x00 { continue }
-                    case 0x01 {
-                        one := 0x01
-                        m := add(add(i, 1), mul(sub(w, 1), 0x20))
-                        break
-                    }
-                    default {
-                        // Non-zero entry found before 0x01, revert
-                        let p := mload(0x40)
-                        mstore(p, "decryption error")
-                        revert(p, 0x10)
-                    }
-                }
-
-                // If the 0x01 byte has been found, exit the outer loop
-                switch one
-                case 0x01 { break }
-            }
-
-            // Check that m is not zero, otherwise revert
-            switch m
-            case 0x00 {
-                let p := mload(0x40)
-                mstore(p, "decryption error")
-                revert(p, 0x10)
-            }
-
-            // Copy the message from the db bytes string
-            let len := sub(mload(db), m)
-            let wrds := div(len, 0x20)
-            switch mod(len, 0x20)
-            case 0x00 {}
-            default { wrds := add(wrds, 1) }
-            for { let w := 0 } lt(w, wrds) { w := add(w, 1) } {
-                let c := mload(add(db, add(m, mul(w, 0x20))))
-                let i := add(message, mul(w, 0x20))
-                mstore(i, c)
+        uint256 m;
+        
+        // Iterate over bytes after the label hash until hitting a non-zero byte
+        // Skip the first word since it is the recovered hash
+        // Identify the start index of the message within the db byte string
+        for (uint256 i = 32; i < db.length; i++) {
+            if (db[i] == 0x00) { 
+                // Padding, continue
+                continue;
+            } else if (db[i] == 0x01) {
+                // We found the 0x01 byte, set the one flag and store the index of the next byte
+                one = 0x01;
+                m = i + 1;
+                break;
+            } else {
+                // Non-zero entry found before 0x01, revert
+                revert("decryption error");
             }
         }
 
-        if (one != 0x01 || lhash != recoveredHash || y != 0x00) revert("decryption error");
+        // Check that m was found, otherwise revert
+        if (m == 0) revert("decryption error");
+
+        // Copy the message from the db bytes string
+        uint256 len = db.length - m;
+        message = new bytes(len);
+        for (uint256 i; i < len; i++) {
+            message[i] = db[m + i];
+        }
+
+        if (one != bytes1(0x01) || lhash != recoveredHash || y != bytes1(0x00)) revert("final");
 
         // 4. Return the message and seed used for encryption
     }
@@ -185,7 +167,7 @@ library RSAOAEP {
         // 2. d. Generate random byte string the same length as the hash function
         bytes32 rand = sha256(abi.encodePacked(seed));
 
-        // 2. e.  Let dbMask = MGF(seed, k - hLen - 1).
+        // 2. e.  Let dbMask = MGF(seed, nLen - hLen - 1).
         bytes memory dbMask = _mgf(abi.encodePacked(rand), nLen - 33);
 
         // 2. f.  Let maskedDB = DB \xor dbMask.
@@ -221,7 +203,7 @@ library RSAOAEP {
         return modexp(encoded, e, n);
     }
 
-    function _mgf(bytes memory seed, uint256 maskLen) internal pure returns (bytes memory) {
+    function _mgf(bytes memory seed, uint256 maskLen) public pure returns (bytes memory) {
         // Implements 8.2.1 MGF1 as defined in RFC8017: https://www.rfc-editor.org/rfc/rfc8017
 
         // 1. Check that the mask length is not greater than 2^32 * hash length (32 bytes in this case)
@@ -240,8 +222,8 @@ library RSAOAEP {
         //        string T:
         //           T = T || Hash(mgfSeed || C) .
 
-        uint256 count = maskLen / 32 + (maskLen % 32 == 0 ? 0 : 1);
-        for (uint256 c; c < count; c++) {
+        uint32 count = uint32((maskLen / 32) + ((maskLen % 32) == 0 ? 0 : 1));
+        for (uint32 c; c < count; c++) {
             bytes32 h = sha256(abi.encodePacked(seed, c));
             assembly {
                 let p := add(add(t, 0x20), mul(c, 0x20))
@@ -253,19 +235,19 @@ library RSAOAEP {
         return t;
     }
 
-    function _xor(bytes memory first, bytes memory second) internal pure returns (bytes memory) {
+    function _xor(bytes memory first, bytes memory second) public pure returns (bytes memory) {
         uint256 fLen = first.length;
         uint256 sLen = second.length;
         if (fLen != sLen) revert("xor: different lengths");
 
-        uint256 words = (fLen / 32) + (fLen % 32 == 0 ? 0 : 1);
+        uint256 words = (fLen / 32) + ((fLen % 32) == 0 ? 0 : 1);
         bytes memory result = new bytes(fLen);
 
         // Iterate through words in the byte strings and xor them one at a time, storing the result
         assembly {
             for { let i := 0 } lt(i, words) { i := add(i, 1) } {
-                let f := mload(add(first, mul(i, 0x20)))
-                let s := mload(add(second, mul(i, 0x20)))
+                let f := mload(add(add(first, 0x20), mul(i, 0x20)))
+                let s := mload(add(add(second, 0x20), mul(i, 0x20)))
                 mstore(add(add(result, 0x20), mul(i, 0x20)), xor(f, s))
             }
         }
