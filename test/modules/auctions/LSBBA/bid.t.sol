@@ -116,23 +116,25 @@ contract LSBBABidTest is Test, Permit2User {
 
     // ===== Tests ===== //
 
-    // [ ] when the caller is not the parent
-    //  [ ] it reverts
-    // [ ] when the lot id is invalid
-    //  [ ] it reverts
-    // [ ] when the lot has not started
-    //  [ ] it reverts
-    // [ ] when the lot has concluded
-    //  [ ] it reverts
-    // [ ] when the lot has decrypted
-    //  [ ] it reverts
-    // [ ] when the lot has settled
-    //  [ ] it reverts
-    // [ ] when the amount is smaller than the minimum bid amount
-    //  [ ] it reverts
-    // [ ] when the amount is larger than the capacity
-    //  [ ] it reverts
-    // [ ] it records the encrypted bid
+    // [X] when the caller is not the parent
+    //  [X] it reverts
+    // [X] when the lot id is invalid
+    //  [X] it reverts
+    // [X] when the lot has not started
+    //  [X] it reverts
+    // [X] when the lot has concluded
+    //  [X] it reverts
+    // [X] when the lot has decrypted
+    //  [X] it reverts
+    // [X] when the lot has settled
+    //  [X] it reverts
+    // [X] when the amount is smaller than the minimum bid amount
+    //  [X] it reverts
+    // [X] when the amount is larger than the capacity
+    //  [X] it reverts
+    // [X] when the caller is using execOnModule
+    //  [X] it reverts
+    // [X] it records the encrypted bid
 
     function test_whenCallerIsNotParent_reverts() public {
         // Expect revert
