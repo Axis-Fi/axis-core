@@ -70,7 +70,7 @@ abstract contract Auction {
     uint48 public minAuctionDuration;
 
     // 1% = 1_000 or 1e3. 100% = 100_000 or 1e5.
-    uint48 internal constant _ONE_HUNDRED_PERCENT = 1e5;
+    uint48 internal constant _ONE_HUNDRED_PERCENT = 100_000;
 
     /// @notice General information pertaining to auction lots
     mapping(uint256 id => Lot lot) public lotData;

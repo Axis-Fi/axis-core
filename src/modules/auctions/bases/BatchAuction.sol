@@ -3,7 +3,7 @@ pragma solidity 0.8.19;
 
 // TODO may not need this file. Lot of implementation specifics.
 
-import {Auction, AuctionModule} from "src/modules/Auction.sol";
+import {AuctionModule} from "src/modules/Auction.sol";
 
 // Spec
 // - Allow issuers to create batch auctions to sell a payout token (or a derivative of it) for a quote token

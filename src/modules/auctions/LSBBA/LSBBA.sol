@@ -1,13 +1,10 @@
 /// SPDX-License-Identifier: AGPL-3.0
 pragma solidity 0.8.19;
 
-// import "src/modules/auctions/bases/BatchAuction.sol";
-import {Auction, AuctionModule} from "src/modules/Auction.sol";
-import {Veecode, toVeecode, Module} from "src/modules/Modules.sol";
+import {AuctionModule} from "src/modules/Auction.sol";
+import {Veecode, toVeecode} from "src/modules/Modules.sol";
 import {RSAOAEP} from "src/lib/RSA.sol";
 import {MinPriorityQueue, Bid as QueueBid} from "src/modules/auctions/LSBBA/MinPriorityQueue.sol";
-
-import {console2} from "forge-std/console2.sol";
 
 // A completely on-chain sealed bid batch auction that uses RSA encryption to hide bids until after the auction ends
 // The auction occurs in three phases:
@@ -66,8 +63,8 @@ contract LocalSealedBidBatchAuction is AuctionModule {
 
     /// @notice         Struct containing parameters for creating a new LSBBA auction
     ///
-    /// @param          minFillPercent_     The minimum percentage of the lot capacity that must be filled for the auction to settle (scale: `ONE_HUNDRED_PERCENT`)
-    /// @param          minBidPercent_      The minimum percentage of the lot capacity that must be bid for each bid (scale: `ONE_HUNDRED_PERCENT`)
+    /// @param          minFillPercent_     The minimum percentage of the lot capacity that must be filled for the auction to settle (_SCALE: `_ONE_HUNDRED_PERCENT`)
+    /// @param          minBidPercent_      The minimum percentage of the lot capacity that must be bid for each bid (_SCALE: `_ONE_HUNDRED_PERCENT`)
     /// @param          minimumPrice_       The minimum price that the auction can settle at
     /// @param          publicKeyModulus_   The public key modulus used to encrypt bids
     struct AuctionDataParams {
@@ -79,10 +76,9 @@ contract LocalSealedBidBatchAuction is AuctionModule {
 
     // ========== STATE VARIABLES ========== //
 
-    uint256 internal constant MIN_BID_PERCENT = 1000; // 1%
-    uint256 internal constant ONE_HUNDRED_PERCENT = 100_000;
-    uint256 internal constant PUB_KEY_EXPONENT = 65_537; // TODO can be 3 to save gas, but 65537 is probably more secure
-    uint256 internal constant SCALE = 1e18; // TODO maybe set this per auction if decimals mess us up
+    uint24 internal constant _MIN_BID_PERCENT = 1000; // 1%
+    uint24 internal constant _PUB_KEY_EXPONENT = 65_537; // TODO can be 3 to save gas, but 65537 is probably more secure
+    uint256 internal constant _SCALE = 1e18; // TODO maybe set this per auction if decimals mess us up
 
     mapping(uint96 lotId => AuctionData) public auctionData;
     mapping(uint96 lotId => EncryptedBid[] bids) public lotEncryptedBids;
@@ -269,7 +265,7 @@ contract LocalSealedBidBatchAuction is AuctionModule {
         return RSAOAEP.encrypt(
             abi.encodePacked(decrypt_.amountOut),
             abi.encodePacked(lotId_),
-            abi.encodePacked(PUB_KEY_EXPONENT),
+            abi.encodePacked(_PUB_KEY_EXPONENT),
             auctionData[lotId_].publicKeyModulus,
             decrypt_.seed
         );
@@ -352,13 +348,13 @@ contract LocalSealedBidBatchAuction is AuctionModule {
             QueueBid storage qBid = queue.getBid(i);
 
             // Calculate bid price
-            uint256 price = (qBid.amountIn * SCALE) / qBid.minAmountOut;
+            uint256 price = (qBid.amountIn * _SCALE) / qBid.minAmountOut;
 
             // Increment total amount in
             totalAmountIn += qBid.amountIn;
 
             // Determine total capacity expended at this price
-            uint256 expended = (totalAmountIn * SCALE) / price;
+            uint256 expended = (totalAmountIn * _SCALE) / price;
 
             // If total capacity expended is greater than or equal to the capacity, we have found the marginal price
             if (expended >= capacity) {
@@ -399,7 +395,7 @@ contract LocalSealedBidBatchAuction is AuctionModule {
             // amountIn, and amountOut will be lower
             // Need to somehow refund the amountIn that wasn't used to the user
             // We know it will always be the last bid in the returned array, can maybe do something with that
-            uint256 amountOut = (qBid.amountIn * SCALE) / marginalPrice;
+            uint256 amountOut = (qBid.amountIn * _SCALE) / marginalPrice;
 
             // Create winning bid from encrypted bid and calculated amount out
             EncryptedBid storage encBid = lotEncryptedBids[lotId_][qBid.encId];
@@ -442,13 +438,13 @@ contract LocalSealedBidBatchAuction is AuctionModule {
 
         // minFillPercent must be less than or equal to 100%
         // TODO should there be a minimum?
-        if (implParams.minFillPercent > ONE_HUNDRED_PERCENT) revert Auction_InvalidParams();
+        if (implParams.minFillPercent > _ONE_HUNDRED_PERCENT) revert Auction_InvalidParams();
 
         // minBidPercent must be greater than or equal to the global min and less than or equal to 100%
         // TODO should we cap this below 100%?
         if (
-            implParams.minBidPercent < MIN_BID_PERCENT
-                || implParams.minBidPercent > ONE_HUNDRED_PERCENT
+            implParams.minBidPercent < _MIN_BID_PERCENT
+                || implParams.minBidPercent > _ONE_HUNDRED_PERCENT
         ) {
             revert Auction_InvalidParams();
         }
@@ -459,8 +455,8 @@ contract LocalSealedBidBatchAuction is AuctionModule {
         // Store auction data
         AuctionData storage data = auctionData[lotId_];
         data.minimumPrice = implParams.minimumPrice;
-        data.minFilled = (lot_.capacity * implParams.minFillPercent) / ONE_HUNDRED_PERCENT;
-        data.minBidSize = (lot_.capacity * implParams.minBidPercent) / ONE_HUNDRED_PERCENT;
+        data.minFilled = (lot_.capacity * implParams.minFillPercent) / _ONE_HUNDRED_PERCENT;
+        data.minBidSize = (lot_.capacity * implParams.minBidPercent) / _ONE_HUNDRED_PERCENT;
         data.publicKeyModulus = implParams.publicKeyModulus;
 
         // Initialize sorted bid queue
