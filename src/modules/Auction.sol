@@ -253,21 +253,22 @@ abstract contract AuctionModule is Auction, Module {
     ///             This function reverts if:
     ///             - the caller is not the parent of the module
     ///             - the lot id is invalid
-    ///             - the lot is not active
+    ///             - the lot has concluded
     ///
     /// @param      lotId_      The lot id
     function cancelAuction(uint96 lotId_) external override onlyInternal {
         // Validation
         _revertIfLotInvalid(lotId_);
-        _revertIfLotInactive(lotId_);
+        _revertIfLotConcluded(lotId_);
 
+        // Call internal closeAuction function to update any other required parameters
+        _cancelAuction(lotId_);
+
+        // Update lot
         Lot storage lot = lotData[lotId_];
 
         lot.conclusion = uint48(block.timestamp);
         lot.capacity = 0;
-
-        // Call internal closeAuction function to update any other required parameters
-        _cancelAuction(lotId_);
     }
 
     /// @notice     Implementation-specific auction cancellation logic
@@ -501,7 +502,7 @@ abstract contract AuctionModule is Auction, Module {
     /// @notice     Checks that the lot represented by `lotId_` has started
     /// @dev        Should revert if the lot has started
     function _revertIfLotStarted(uint96 lotId_) internal view virtual {
-        if (lotData[lotId_].start > uint48(block.timestamp)) revert Auction_MarketActive(lotId_);
+        if (lotData[lotId_].start <= uint48(block.timestamp)) revert Auction_MarketActive(lotId_);
     }
 
     /// @notice     Checks that the lot represented by `lotId_` has not concluded

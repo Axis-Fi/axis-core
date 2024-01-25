@@ -7,6 +7,8 @@ import {Veecode, toVeecode, Module} from "src/modules/Modules.sol";
 import {RSAOAEP} from "src/lib/RSA.sol";
 import {MinPriorityQueue, Bid as QueueBid} from "src/modules/auctions/LSBBA/MinPriorityQueue.sol";
 
+import {console2} from "forge-std/console2.sol";
+
 // A completely on-chain sealed bid batch auction that uses RSA encryption to hide bids until after the auction ends
 // The auction occurs in three phases:
 // 1. Bidding - bidders submit encrypted bids
@@ -466,14 +468,12 @@ contract LocalSealedBidBatchAuction is AuctionModule {
     }
 
     function _cancelAuction(uint96 lotId_) internal override {
+        // Validation
         // Batch auctions cannot be cancelled once started, otherwise the seller could cancel the auction after bids have been submitted
-        if (lotData[lotId_].start <= block.timestamp) revert Auction_WrongState();
+        _revertIfLotActive(lotId_);
 
         // Auction cannot be cancelled once it has concluded
-        if (
-            auctionData[lotId_].status != AuctionStatus.Created
-                || block.timestamp < lotData[lotId_].conclusion
-        ) revert Auction_WrongState();
+        _revertIfLotConcluded(lotId_);
 
         // Set auction status to settled so that bids can be refunded
         auctionData[lotId_].status = AuctionStatus.Settled;

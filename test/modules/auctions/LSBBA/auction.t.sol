@@ -258,8 +258,7 @@ contract LSBBACreateAuctionTest is Test, Permit2User {
 
         // Call
         auctionHouse.execOnModule(
-            moduleVeecode,
-            abi.encodeWithSelector(Auction.auction.selector, lotId, auctionParams)
+            moduleVeecode, abi.encodeWithSelector(Auction.auction.selector, lotId, auctionParams)
         );
     }
 
