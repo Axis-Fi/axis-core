@@ -504,9 +504,9 @@ contract LocalSealedBidBatchAuction is AuctionModule {
 
     function getSortedBidData(
         uint96 lotId_,
-        uint256 bidId_
+        uint96 index_
     ) public view returns (QueueBid memory) {
-        return lotSortedBids[lotId_].getBid(bidId_);
+        return lotSortedBids[lotId_].getBid(index_);
     }
 
     function getSortedBidCount(uint96 lotId_) public view returns (uint256) {

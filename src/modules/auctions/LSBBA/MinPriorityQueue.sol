@@ -49,6 +49,7 @@ library MinPriorityQueue {
     function getBid(Queue storage self, uint256 index) public view returns (Bid storage) {
         require(!isEmpty(self), "nothing to return");
         require(index <= self.numBids, "bid does not exist");
+        require(index > 0, "cannot use 0 index");
         return self.bidIdToBidMap[self.bidIdList[index]];
     }
 
@@ -114,9 +115,9 @@ library MinPriorityQueue {
         uint256 relI = bidI.amountIn * bidJ.minAmountOut;
         uint256 relJ = bidJ.amountIn * bidI.minAmountOut;
         if (relI == relJ) {
-            return iId < jId;
+            return iId > jId;
         }
-        return relI > relJ;
+        return relI < relJ;
     }
 
     ///@notice helper function to exchange to bids in the heap
