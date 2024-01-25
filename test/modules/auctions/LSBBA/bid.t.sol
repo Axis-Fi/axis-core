@@ -145,7 +145,7 @@ contract LSBBABidTest is Test, Permit2User {
         auctionModule.bid(lotId, alice, recipient, referrer, bidAmount, auctionData);
     }
 
-    function test_whenLotIdIsInvalid() public whenLotIdIsInvalid givenLotHasStarted {
+    function test_whenLotIdIsInvalid_reverts() public whenLotIdIsInvalid givenLotHasStarted {
         // Expect revert
         bytes memory err = abi.encodeWithSelector(Auction.Auction_InvalidLotId.selector, lotId);
         vm.expectRevert(err);
@@ -155,7 +155,7 @@ contract LSBBABidTest is Test, Permit2User {
         auctionModule.bid(lotId, alice, recipient, referrer, bidAmount, auctionData);
     }
 
-    function test_whenLotHasNotStarted() public {
+    function test_whenLotHasNotStarted_reverts() public {
         // Expect revert
         bytes memory err = abi.encodeWithSelector(Auction.Auction_MarketNotActive.selector, lotId);
         vm.expectRevert(err);
@@ -165,7 +165,7 @@ contract LSBBABidTest is Test, Permit2User {
         auctionModule.bid(lotId, alice, recipient, referrer, bidAmount, auctionData);
     }
 
-    function test_whenLotHasConcluded() public givenLotHasConcluded {
+    function test_whenLotHasConcluded_reverts() public givenLotHasConcluded {
         // Expect revert
         bytes memory err = abi.encodeWithSelector(Auction.Auction_MarketNotActive.selector, lotId);
         vm.expectRevert(err);
@@ -175,7 +175,7 @@ contract LSBBABidTest is Test, Permit2User {
         auctionModule.bid(lotId, alice, recipient, referrer, bidAmount, auctionData);
     }
 
-    function test_whenLotHasDecrypted() public givenLotHasConcluded givenLotHasDecrypted {
+    function test_whenLotHasDecrypted_reverts() public givenLotHasConcluded givenLotHasDecrypted {
         // Expect revert
         bytes memory err = abi.encodeWithSelector(Auction.Auction_MarketNotActive.selector, lotId);
         vm.expectRevert(err);
@@ -185,7 +185,7 @@ contract LSBBABidTest is Test, Permit2User {
         auctionModule.bid(lotId, alice, recipient, referrer, bidAmount, auctionData);
     }
 
-    function test_whenLotHasSettled()
+    function test_whenLotHasSettled_reverts()
         public
         givenLotHasConcluded
         givenLotHasDecrypted
@@ -200,7 +200,7 @@ contract LSBBABidTest is Test, Permit2User {
         auctionModule.bid(lotId, alice, recipient, referrer, bidAmount, auctionData);
     }
 
-    function test_whenAmountIsSmallerThanMinimumBidAmount()
+    function test_whenAmountIsSmallerThanMinimumBidAmount_reverts()
         public
         givenLotHasStarted
         whenAmountIsSmallerThanMinimumBidAmount
@@ -214,7 +214,7 @@ contract LSBBABidTest is Test, Permit2User {
         auctionModule.bid(lotId, alice, recipient, referrer, bidAmount, auctionData);
     }
 
-    function test_whenAmountIsLargerThanCapacity()
+    function test_whenAmountIsLargerThanCapacity_reverts()
         public
         givenLotHasStarted
         whenAmountIsLargerThanCapacity
