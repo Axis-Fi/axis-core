@@ -502,6 +502,17 @@ contract LocalSealedBidBatchAuction is AuctionModule {
         return lotEncryptedBids[lotId_][bidId_];
     }
 
+    function getSortedBidData(
+        uint96 lotId_,
+        uint256 bidId_
+    ) public view returns (QueueBid memory) {
+        return lotSortedBids[lotId_].getBid(bidId_);
+    }
+
+    function getSortedBidCount(uint96 lotId_) public view returns (uint256) {
+        return lotSortedBids[lotId_].numBids;
+    }
+
     // =========== ATOMIC AUCTION STUBS ========== //
 
     /// @inheritdoc AuctionModule
