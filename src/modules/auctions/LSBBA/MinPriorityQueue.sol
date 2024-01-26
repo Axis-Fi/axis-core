@@ -107,6 +107,8 @@ library MinPriorityQueue {
 
     ///@notice helper function to determine ordering. When two bids have the same price, give priority
     ///to the lower bid ID (inserted earlier)
+    // TODO this function works in the opposite way as the original implementation
+    // Maybe need to rename or clarify the logic
     function isGreater(Queue storage self, uint256 i, uint256 j) private view returns (bool) {
         uint96 iId = self.queueIdList[i];
         uint96 jId = self.queueIdList[j];
@@ -115,7 +117,7 @@ library MinPriorityQueue {
         uint256 relI = bidI.amountIn * bidJ.minAmountOut;
         uint256 relJ = bidJ.amountIn * bidI.minAmountOut;
         if (relI == relJ) {
-            return iId > jId;
+            return bidI.bidId > bidJ.bidId;
         }
         return relI < relJ;
     }
