@@ -179,11 +179,12 @@ contract LocalSealedBidBatchAuction is AuctionModule {
         userBid.encryptedAmountOut = auctionData_;
         userBid.status = BidStatus.Submitted;
 
-        // Get next bid ID
+        // Get next bid ID and increment it after assignment
         bidId = auctionData[lotId_].nextBidId++;
 
-        // Store bid in mapping
+        // Store bid in mapping and add bid ID to list of bids to decrypt
         lotEncryptedBids[lotId_][bidId] = userBid;
+        auctionData[lotId_].bidIds.push(bidId);
 
         return bidId;
     }
@@ -200,7 +201,13 @@ contract LocalSealedBidBatchAuction is AuctionModule {
         uint96 bidId_,
         address
     ) internal override returns (uint256 refundAmount) {
-        // Inputs validated in Auction
+        // Validate inputs
+        
+        // Bid must be in Submitted state
+        if (lotEncryptedBids[lotId_][bidId_].status != BidStatus.Submitted) revert Auction_WrongState();
+
+        // Auction must be in Created state
+        if (auctionData[lotId_].status != AuctionStatus.Created) revert Auction_WrongState();
 
         // Set bid status to cancelled
         lotEncryptedBids[lotId_][bidId_].status = BidStatus.Cancelled;
