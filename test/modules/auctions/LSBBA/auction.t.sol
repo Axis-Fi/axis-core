@@ -289,9 +289,5 @@ contract LSBBACreateAuctionTest is Test, Permit2User {
         );
         assertEq(lotData.publicKeyModulus, auctionDataParams.publicKeyModulus);
         assertEq(uint8(lotData.status), uint8(LocalSealedBidBatchAuction.AuctionStatus.Created));
-
-        // Check that the sorted bid queue is initialised
-        (uint96 nextBidId_,) = auctionModule.lotSortedBids(lotId);
-        assertEq(nextBidId_, 1);
     }
 }

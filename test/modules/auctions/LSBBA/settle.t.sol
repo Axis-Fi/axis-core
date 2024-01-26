@@ -351,13 +351,15 @@ contract LSBBASettleTest is Test, Permit2User {
         // Calculate the marginal price
         uint256 marginalPrice = bidTwoAmount * 1e18 / bidTwoAmountOut;
 
+        bidThreeAmountOut = bidThreeAmount * 1e18 / marginalPrice;
+
         // First bid - largest amount out
         assertEq(winningBids[0].amount, bidThreeAmount);
-        assertEq(winningBids[0].minAmountOut, marginalPrice);
+        assertEq(winningBids[0].minAmountOut, bidThreeAmountOut);
 
         // Second bid
         assertEq(winningBids[1].amount, bidTwoAmount);
-        assertEq(winningBids[1].minAmountOut, marginalPrice);
+        assertEq(winningBids[1].minAmountOut, bidTwoAmountOut);
 
         // Expect winning bids
         assertEq(winningBids.length, 2);
@@ -376,13 +378,15 @@ contract LSBBASettleTest is Test, Permit2User {
         // Calculate the marginal price
         uint256 marginalPrice = bidOneAmount * 1e18 / bidOneAmountOut;
 
+        bidTwoAmountOut = bidTwoAmount * 1e18 / marginalPrice;
+
         // First bid - largest amount out
         assertEq(winningBids[0].amount, bidTwoAmount);
-        assertEq(winningBids[0].minAmountOut, marginalPrice);
+        assertEq(winningBids[0].minAmountOut, bidTwoAmountOut);
 
         // Second bid
         assertEq(winningBids[1].amount, bidOneAmount);
-        assertEq(winningBids[1].minAmountOut, marginalPrice);
+        assertEq(winningBids[1].minAmountOut, bidOneAmountOut);
 
         // Expect winning bids
         assertEq(winningBids.length, 2);
