@@ -23,7 +23,7 @@ contract CollectPaymentTest is Test, Permit2User {
     address internal USER;
 
     // Function parameters
-    uint256 internal lotId = 1;
+    uint96 internal lotId = 1;
     uint256 internal amount = 10e18;
     MockFeeOnTransferERC20 internal quoteToken;
     MockHook internal hook;

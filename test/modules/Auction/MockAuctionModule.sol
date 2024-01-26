@@ -39,7 +39,7 @@ contract MockAuctionModule is AuctionModule {
         address referrer_,
         uint256 amount_,
         bytes calldata auctionData_
-    ) internal override returns (uint256) {}
+    ) internal override returns (uint96) {}
 
     function payoutFor(
         uint256 id_,
@@ -63,19 +63,19 @@ contract MockAuctionModule is AuctionModule {
 
     function _cancelBid(
         uint96 lotId_,
-        uint256 bidId_,
+        uint96 bidId_,
         address bidder_
     ) internal virtual override returns (uint256) {}
 
-    function _revertIfBidInvalid(uint96 lotId_, uint256 bidId_) internal view virtual override {}
+    function _revertIfBidInvalid(uint96 lotId_, uint96 bidId_) internal view virtual override {}
 
     function _revertIfNotBidOwner(
         uint96 lotId_,
-        uint256 bidId_,
+        uint96 bidId_,
         address caller_
     ) internal view virtual override {}
 
-    function _revertIfBidCancelled(uint96 lotId_, uint256 bidId_) internal view virtual override {}
+    function _revertIfBidCancelled(uint96 lotId_, uint96 bidId_) internal view virtual override {}
 
     function _revertIfLotSettled(uint96 lotId_) internal view virtual override {}
 }

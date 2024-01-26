@@ -52,7 +52,7 @@ contract MockHook is IHooks {
         midHookMultiplier = 10_000;
     }
 
-    function pre(uint256, uint256) external override {
+    function pre(uint96, uint256) external override {
         if (preHookReverts) {
             revert("revert");
         }
@@ -78,7 +78,7 @@ contract MockHook is IHooks {
         preHookReverts = reverts_;
     }
 
-    function mid(uint256, uint256, uint256 payout_) external override {
+    function mid(uint96, uint256, uint256 payout_) external override {
         if (midHookReverts) {
             revert("revert");
         }
@@ -111,7 +111,7 @@ contract MockHook is IHooks {
         midHookMultiplier = multiplier_;
     }
 
-    function post(uint256, uint256) external override {
+    function post(uint96, uint256) external override {
         if (postHookReverts) {
             revert("revert");
         }

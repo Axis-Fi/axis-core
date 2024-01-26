@@ -38,7 +38,7 @@ pragma solidity 0.8.19;
 //     /* ========== AUCTION FUNCTIONS ========== */
 
 //     function _auction(
-//         uint256 lotId_,
+//         uint96 lotId_,
 //         Lot memory lot_,
 //         bytes memory params_
 //     ) internal override {
@@ -77,7 +77,7 @@ pragma solidity 0.8.19;
 //         auction.emissionsRate = emissionsRate;
 //     }
 
-//     function _purchase(uint256 lotId_, uint256 amount_, bytes memory variableInput_) internal override returns (uint256) {
+//     function _purchase(uint96 lotId_, uint256 amount_, bytes memory variableInput_) internal override returns (uint256) {
 //         // variableInput should be a single uint256
 //         uint256 variableInput = abi.decode(variableInput_, (uint256));
 
@@ -92,7 +92,7 @@ pragma solidity 0.8.19;
 //         return payout;
 //     }
 
-//     function _payoutAndEmissionsFor(uint256 lotId_, uint256 amount_, uint256 variableInput_) internal view override returns (uint256) {
+//     function _payoutAndEmissionsFor(uint96 lotId_, uint256 amount_, uint256 variableInput_) internal view override returns (uint256) {
 //         // Load decay types for lot
 //         priceDecayType = auctionData[lotId_].priceDecayType;
 //         variableDecayType = auctionData[lotId_].variableDecayType;
@@ -111,7 +111,7 @@ pragma solidity 0.8.19;
 
 //     // TODO problem with having a minimum price -> messes up the math and the inverse solution is not closed form
 //     function _payoutForExpExp(
-//         uint256 lotId_,
+//         uint96 lotId_,
 //         uint256 amount_,
 //         uint256 variableInput_
 //     ) internal view returns (uint256, uint48) {

@@ -36,7 +36,7 @@ abstract contract BatchAuction {
 abstract contract OnChainBatchAuctionModule is AuctionModule, BatchAuction {
 // // ========== STATE VARIABLES ========== //
 
-// mapping(uint256 lotId => Auction.Bid[] bids) public lotBids;
+// mapping(uint96 lotId => Auction.Bid[] bids) public lotBids;
 
 // /// @inheritdoc AuctionModule
 // function _bid(
@@ -46,7 +46,7 @@ abstract contract OnChainBatchAuctionModule is AuctionModule, BatchAuction {
 //     address referrer_,
 //     uint256 amount_,
 //     bytes calldata auctionData_
-// ) internal override returns (uint256 bidId) {
+// ) internal override returns (uint96 bidId) {
 //     // TODO
 //     // Validate inputs
 

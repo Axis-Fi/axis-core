@@ -32,7 +32,7 @@ contract LSBBACancelBidTest is Test, Permit2User {
     bytes internal auctionData;
     bytes internal constant PUBLIC_KEY_MODULUS = new bytes(128);
 
-    uint256 internal bidId;
+    uint96 internal bidId;
     uint256 internal bidAmount = 1e18;
     uint256 internal bidSeed = 1e9;
     LocalSealedBidBatchAuction.Decrypt internal decryptedBid;

@@ -36,7 +36,7 @@ contract SendPayoutTest is Test, Permit2User {
     uint48 internal constant DERIVATIVE_EXPIRY = 1 days;
 
     // Function parameters
-    uint256 internal lotId = 1;
+    uint96 internal lotId = 1;
     uint256 internal payoutAmount = 10e18;
     MockFeeOnTransferERC20 internal quoteToken;
     MockFeeOnTransferERC20 internal payoutToken;

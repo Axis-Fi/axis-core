@@ -120,7 +120,7 @@ contract AuctionTest is Test, Permit2User {
     }
 
     function test_success() external {
-        uint256 lotId = auctionHouse.auction(routingParams, auctionParams);
+        uint96 lotId = auctionHouse.auction(routingParams, auctionParams);
 
         // Get lot data from the module
         (
@@ -144,7 +144,7 @@ contract AuctionTest is Test, Permit2User {
         // Update auction params
         auctionParams.start = 0;
 
-        uint256 lotId = auctionHouse.auction(routingParams, auctionParams);
+        uint96 lotId = auctionHouse.auction(routingParams, auctionParams);
 
         // Get lot data from the module
         (uint48 lotStart, uint48 lotConclusion,,,,) = mockAuctionModule.lotData(lotId);
@@ -159,7 +159,7 @@ contract AuctionTest is Test, Permit2User {
         // Update auction params
         auctionParams.duration = duration;
 
-        uint256 lotId = auctionHouse.auction(routingParams, auctionParams);
+        uint96 lotId = auctionHouse.auction(routingParams, auctionParams);
 
         // Get lot data from the module
         (uint48 lotStart, uint48 lotConclusion,,,,) = mockAuctionModule.lotData(lotId);
@@ -172,7 +172,7 @@ contract AuctionTest is Test, Permit2User {
         // Update auction params
         auctionParams.start = start;
 
-        uint256 lotId = auctionHouse.auction(routingParams, auctionParams);
+        uint96 lotId = auctionHouse.auction(routingParams, auctionParams);
 
         // Get lot data from the module
         (uint48 lotStart, uint48 lotConclusion,,,,) = mockAuctionModule.lotData(lotId);

@@ -16,7 +16,7 @@ contract MockAtomicAuctionModule is AuctionModule {
         uint256 multiplier;
     }
 
-    mapping(uint256 lotId => bool isCancelled) public cancelled;
+    mapping(uint96 lotId => bool isCancelled) public cancelled;
 
     constructor(address _owner) AuctionModule(_owner) {
         minAuctionDuration = 1 days;
@@ -80,11 +80,11 @@ contract MockAtomicAuctionModule is AuctionModule {
         address,
         uint256,
         bytes calldata
-    ) internal pure override returns (uint256) {
+    ) internal pure override returns (uint96) {
         revert Auction_NotImplemented();
     }
 
-    function _cancelBid(uint96, uint256, address) internal virtual override returns (uint256) {
+    function _cancelBid(uint96, uint96, address) internal virtual override returns (uint256) {
         revert Auction_NotImplemented();
     }
 
@@ -111,15 +111,15 @@ contract MockAtomicAuctionModule is AuctionModule {
         revert Auction_NotImplemented();
     }
 
-    function _revertIfBidInvalid(uint96 lotId_, uint256 bidId_) internal view virtual override {}
+    function _revertIfBidInvalid(uint96 lotId_, uint96 bidId_) internal view virtual override {}
 
     function _revertIfNotBidOwner(
         uint96 lotId_,
-        uint256 bidId_,
+        uint96 bidId_,
         address caller_
     ) internal view virtual override {}
 
-    function _revertIfBidCancelled(uint96 lotId_, uint256 bidId_) internal view virtual override {}
+    function _revertIfBidCancelled(uint96 lotId_, uint96 bidId_) internal view virtual override {}
 
     function _revertIfLotSettled(uint96 lotId_) internal view virtual override {}
 }

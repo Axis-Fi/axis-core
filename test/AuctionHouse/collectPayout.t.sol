@@ -26,7 +26,7 @@ contract CollectPayoutTest is Test, Permit2User {
     address internal OWNER = address(0x3);
 
     // Function parameters
-    uint256 internal lotId = 1;
+    uint96 internal lotId = 1;
     uint256 internal paymentAmount = 1e18;
     uint256 internal payoutAmount = 10e18;
     MockFeeOnTransferERC20 internal quoteToken;

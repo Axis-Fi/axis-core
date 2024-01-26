@@ -250,7 +250,7 @@ contract LSBBABidTest is Test, Permit2User {
     function test_itRecordsTheEncryptedBid() public givenLotHasStarted {
         // Call
         vm.prank(address(auctionHouse));
-        uint256 bidId = auctionModule.bid(lotId, alice, recipient, referrer, bidAmount, auctionData);
+        uint96 bidId = auctionModule.bid(lotId, alice, recipient, referrer, bidAmount, auctionData);
 
         // Check values
         LocalSealedBidBatchAuction.EncryptedBid memory encryptedBid =

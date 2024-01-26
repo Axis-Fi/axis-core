@@ -16,7 +16,7 @@ abstract contract Auction {
 
     error Auction_InvalidLotId(uint96 lotId);
 
-    error Auction_InvalidBidId(uint96 lotId, uint256 bidId);
+    error Auction_InvalidBidId(uint96 lotId, uint96 bidId);
 
     error Auction_OnlyMarketOwner();
     error Auction_AmountLessThanMinimum();
@@ -113,7 +113,7 @@ abstract contract Auction {
         address referrer_,
         uint256 amount_,
         bytes calldata auctionData_
-    ) external virtual returns (uint256 bidId);
+    ) external virtual returns (uint96 bidId);
 
     /// @notice     Cancel a bid
     /// @dev        The implementing function should handle the following:
@@ -127,7 +127,7 @@ abstract contract Auction {
     /// @return     bidAmount   The amount of quote tokens to refund
     function cancelBid(
         uint96 lotId_,
-        uint256 bidId_,
+        uint96 bidId_,
         address bidder_
     ) external virtual returns (uint256 bidAmount);
 
@@ -343,7 +343,7 @@ abstract contract AuctionModule is Auction, Module {
         address referrer_,
         uint256 amount_,
         bytes calldata auctionData_
-    ) external override onlyInternal returns (uint256 bidId) {
+    ) external override onlyInternal returns (uint96 bidId) {
         // Standard validation
         _revertIfLotInvalid(lotId_);
         _revertIfBeforeLotStart(lotId_);
@@ -373,7 +373,7 @@ abstract contract AuctionModule is Auction, Module {
         address referrer_,
         uint256 amount_,
         bytes calldata auctionData_
-    ) internal virtual returns (uint256 bidId);
+    ) internal virtual returns (uint96 bidId);
 
     /// @inheritdoc Auction
     /// @dev        Implements a basic cancelBid function that:
@@ -394,7 +394,7 @@ abstract contract AuctionModule is Auction, Module {
     ///             - Updating the bid data
     function cancelBid(
         uint96 lotId_,
-        uint256 bidId_,
+        uint96 bidId_,
         address caller_
     ) external override onlyInternal returns (uint256 bidAmount) {
         // Standard validation
@@ -419,7 +419,7 @@ abstract contract AuctionModule is Auction, Module {
     /// @return     bidAmount   The amount of quote tokens to refund
     function _cancelBid(
         uint96 lotId_,
-        uint256 bidId_,
+        uint96 bidId_,
         address caller_
     ) internal virtual returns (uint256 bidAmount);
 
@@ -551,7 +551,7 @@ abstract contract AuctionModule is Auction, Module {
     ///
     /// @param      lotId_  The lot ID
     /// @param      bidId_  The bid ID
-    function _revertIfBidInvalid(uint96 lotId_, uint256 bidId_) internal view virtual;
+    function _revertIfBidInvalid(uint96 lotId_, uint96 bidId_) internal view virtual;
 
     /// @notice     Checks that `caller_` is the bid owner
     /// @dev        Should revert if `caller_` is not the bid owner
@@ -562,7 +562,7 @@ abstract contract AuctionModule is Auction, Module {
     /// @param      caller_     The caller
     function _revertIfNotBidOwner(
         uint96 lotId_,
-        uint256 bidId_,
+        uint96 bidId_,
         address caller_
     ) internal view virtual;
 
@@ -572,5 +572,5 @@ abstract contract AuctionModule is Auction, Module {
     ///
     /// @param      lotId_      The lot ID
     /// @param      bidId_      The bid ID
-    function _revertIfBidCancelled(uint96 lotId_, uint256 bidId_) internal view virtual;
+    function _revertIfBidCancelled(uint96 lotId_, uint96 bidId_) internal view virtual;
 }

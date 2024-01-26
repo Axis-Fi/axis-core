@@ -15,7 +15,7 @@ contract MockAuctionHouse is AuctionHouse {
 
     // Expose the _collectPayment function for testing
     function collectPayment(
-        uint256 lotId_,
+        uint96 lotId_,
         uint256 amount_,
         ERC20 quoteToken_,
         IHooks hooks_,
@@ -42,7 +42,7 @@ contract MockAuctionHouse is AuctionHouse {
     }
 
     function collectPayout(
-        uint256 lotId_,
+        uint96 lotId_,
         uint256 paymentAmount_,
         uint256 payoutAmount_,
         Auctioneer.Routing memory routingParams_
@@ -51,7 +51,7 @@ contract MockAuctionHouse is AuctionHouse {
     }
 
     function sendPayout(
-        uint256 lotId_,
+        uint96 lotId_,
         address recipient_,
         uint256 payoutAmount_,
         Auctioneer.Routing memory routingParams_,
