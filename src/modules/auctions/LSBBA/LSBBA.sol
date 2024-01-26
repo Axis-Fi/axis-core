@@ -55,10 +55,12 @@ contract LocalSealedBidBatchAuction is AuctionModule {
     struct AuctionData {
         AuctionStatus status;
         uint96 nextDecryptIndex;
+        uint96 nextBidId;
         uint256 minimumPrice;
         uint256 minFilled; // minimum amount of capacity that must be filled to settle the auction
         uint256 minBidSize; // minimum amount that can be bid for the lot, determined by the percentage of capacity that must be filled per bid times the min bid price
         bytes publicKeyModulus;
+        uint96[] bidIds;
     }
 
     /// @notice         Struct containing parameters for creating a new LSBBA auction
@@ -81,7 +83,7 @@ contract LocalSealedBidBatchAuction is AuctionModule {
     uint256 internal constant _SCALE = 1e18; // TODO maybe set this per auction if decimals mess us up
 
     mapping(uint96 lotId => AuctionData) public auctionData;
-    mapping(uint96 lotId => EncryptedBid[] bids) public lotEncryptedBids;
+    mapping(uint96 lotId => mapping(uint96 bidId => EncryptedBid bid)) public lotEncryptedBids;
     mapping(uint96 lotId => MinPriorityQueue.Queue) public lotSortedBids; // TODO must create and call `initialize` on it during auction creation
 
     // ========== SETUP ========== //
@@ -124,16 +126,16 @@ contract LocalSealedBidBatchAuction is AuctionModule {
 
     /// @inheritdoc AuctionModule
     /// @dev        Checks that the bid is valid
-    function _revertIfBidInvalid(uint96 lotId_, uint256 bidId_) internal view override {
+    function _revertIfBidInvalid(uint96 lotId_, uint96 bidId_) internal view override {
         // Bid ID must be less than number of bids for lot
-        if (bidId_ >= lotEncryptedBids[lotId_].length) revert Auction_InvalidBidId(lotId_, bidId_);
+        if (bidId_ >= auctionData[lotId_].nextBidId) revert Auction_InvalidBidId(lotId_, bidId_);
     }
 
     /// @inheritdoc AuctionModule
     /// @dev        Checks that the sender is the bidder
     function _revertIfNotBidOwner(
         uint96 lotId_,
-        uint256 bidId_,
+        uint96 bidId_,
         address bidder_
     ) internal view override {
         // Check that sender is the bidder
@@ -142,7 +144,7 @@ contract LocalSealedBidBatchAuction is AuctionModule {
 
     /// @inheritdoc AuctionModule
     /// @dev        Checks that the bid is not already cancelled
-    function _revertIfBidCancelled(uint96 lotId_, uint256 bidId_) internal view override {
+    function _revertIfBidCancelled(uint96 lotId_, uint96 bidId_) internal view override {
         // Bid must not be cancelled
         if (lotEncryptedBids[lotId_][bidId_].status == BidStatus.Cancelled) {
             revert Auction_AlreadyCancelled();
@@ -159,7 +161,7 @@ contract LocalSealedBidBatchAuction is AuctionModule {
         address referrer_,
         uint256 amount_,
         bytes calldata auctionData_
-    ) internal override returns (uint256 bidId) {
+    ) internal override returns (uint96 bidId) {
         // Validate inputs
         // Amount at least minimum bid size for lot
         if (amount_ < auctionData[lotId_].minBidSize) revert Auction_AmountLessThanMinimum();
@@ -177,11 +179,12 @@ contract LocalSealedBidBatchAuction is AuctionModule {
         userBid.encryptedAmountOut = auctionData_;
         userBid.status = BidStatus.Submitted;
 
-        // Bid ID is the next index in the lot's bid array
-        bidId = lotEncryptedBids[lotId_].length;
+        // Get next bid ID and increment it after assignment
+        bidId = auctionData[lotId_].nextBidId++;
 
-        // Add bid to lot
-        lotEncryptedBids[lotId_].push(userBid);
+        // Store bid in mapping and add bid ID to list of bids to decrypt
+        lotEncryptedBids[lotId_][bidId] = userBid;
+        auctionData[lotId_].bidIds.push(bidId);
 
         return bidId;
     }
@@ -195,13 +198,32 @@ contract LocalSealedBidBatchAuction is AuctionModule {
     // This way, we can still lookup the bids by bidId for cancellation, etc.
     function _cancelBid(
         uint96 lotId_,
-        uint256 bidId_,
+        uint96 bidId_,
         address
     ) internal override returns (uint256 refundAmount) {
         // Validate inputs
 
+        // Bid must be in Submitted state
+        if (lotEncryptedBids[lotId_][bidId_].status != BidStatus.Submitted) {
+            revert Auction_WrongState();
+        }
+
+        // Auction must be in Created state
+        if (auctionData[lotId_].status != AuctionStatus.Created) revert Auction_WrongState();
+
         // Set bid status to cancelled
         lotEncryptedBids[lotId_][bidId_].status = BidStatus.Cancelled;
+
+        // Remove bid from list of bids to decrypt
+        uint96[] storage bidIds = auctionData[lotId_].bidIds;
+        uint256 len = bidIds.length;
+        for (uint256 i; i < len; i++) {
+            if (bidIds[i] == bidId_) {
+                bidIds[i] = bidIds[len - 1];
+                bidIds.pop();
+                break;
+            }
+        }
 
         // Return the amount to be refunded
         return lotEncryptedBids[lotId_][bidId_].amount;
@@ -210,6 +232,9 @@ contract LocalSealedBidBatchAuction is AuctionModule {
     // =========== DECRYPTION =========== //
 
     function decryptAndSortBids(uint96 lotId_, Decrypt[] memory decrypts_) external {
+        // Check that lotId is valid
+        _revertIfLotInvalid(lotId_);
+
         // Check that auction is in the right state for decryption
         if (
             auctionData[lotId_].status != AuctionStatus.Created
@@ -221,7 +246,8 @@ contract LocalSealedBidBatchAuction is AuctionModule {
         uint96 len = uint96(decrypts_.length);
 
         // Check that the number of decrypts is less than or equal to the number of bids remaining to be decrypted
-        if (len > lotEncryptedBids[lotId_].length - nextDecryptIndex) {
+        uint96[] storage bidIds = auctionData[lotId_].bidIds;
+        if (len > bidIds.length - nextDecryptIndex) {
             revert Auction_InvalidDecrypt();
         }
 
@@ -231,21 +257,19 @@ contract LocalSealedBidBatchAuction is AuctionModule {
             bytes memory ciphertext = _encrypt(lotId_, decrypts_[i]);
 
             // Load encrypted bid
-            EncryptedBid storage encBid = lotEncryptedBids[lotId_][nextDecryptIndex + i];
+            uint96 bidId = bidIds[nextDecryptIndex + i];
+            EncryptedBid storage encBid = lotEncryptedBids[lotId_][bidId];
 
             // Check that the encrypted bid matches the re-encrypted decrypt by hashing both
             if (keccak256(ciphertext) != keccak256(encBid.encryptedAmountOut)) {
                 revert Auction_InvalidDecrypt();
             }
 
-            // If the bid has been cancelled, it shouldn't be added to the queue
-            // TODO should this just check != Submitted?
-            if (encBid.status == BidStatus.Cancelled) continue;
+            // TODO shouldn't need this check but need to confirm
+            if (encBid.status != BidStatus.Submitted) continue;
 
             // Store the decrypt in the sorted bid queue
-            lotSortedBids[lotId_].insert(
-                nextDecryptIndex + i, encBid.amount, decrypts_[i].amountOut
-            );
+            lotSortedBids[lotId_].insert(bidId, encBid.amount, decrypts_[i].amountOut);
 
             // Set bid status to decrypted
             encBid.status = BidStatus.Decrypted;
@@ -255,7 +279,7 @@ contract LocalSealedBidBatchAuction is AuctionModule {
         auctionData[lotId_].nextDecryptIndex += len;
 
         // If all bids have been decrypted, set auction status to decrypted
-        if (auctionData[lotId_].nextDecryptIndex == lotEncryptedBids[lotId_].length) {
+        if (auctionData[lotId_].nextDecryptIndex == bidIds.length) {
             auctionData[lotId_].status = AuctionStatus.Decrypted;
         }
     }
@@ -274,7 +298,6 @@ contract LocalSealedBidBatchAuction is AuctionModule {
     }
 
     /// @notice View function that can be used to obtain a certain number of the next bids to decrypt off-chain
-    // TODO This assumes that cancelled bids have been removed, but hasn't been refactored based on the comments over `cancelBid`
     function getNextBidsToDecrypt(
         uint96 lotId_,
         uint256 number_
@@ -283,7 +306,8 @@ contract LocalSealedBidBatchAuction is AuctionModule {
         uint96 nextDecryptIndex = auctionData[lotId_].nextDecryptIndex;
 
         // Load number of bids to decrypt
-        uint256 len = lotEncryptedBids[lotId_].length - nextDecryptIndex;
+        uint96[] storage bidIds = auctionData[lotId_].bidIds;
+        uint256 len = bidIds.length - nextDecryptIndex;
         if (number_ < len) len = number_;
 
         // Create array of encrypted bids
@@ -291,7 +315,7 @@ contract LocalSealedBidBatchAuction is AuctionModule {
 
         // Iterate over bids and add them to the array
         for (uint256 i; i < len; i++) {
-            bids[i] = lotEncryptedBids[lotId_][nextDecryptIndex + i];
+            bids[i] = lotEncryptedBids[lotId_][bidIds[nextDecryptIndex + i]];
         }
 
         // Return array of encrypted bids
@@ -400,7 +424,7 @@ contract LocalSealedBidBatchAuction is AuctionModule {
             uint256 amountOut = (qBid.amountIn * _SCALE) / marginalPrice;
 
             // Create winning bid from encrypted bid and calculated amount out
-            EncryptedBid storage encBid = lotEncryptedBids[lotId_][qBid.encId];
+            EncryptedBid storage encBid = lotEncryptedBids[lotId_][qBid.bidId];
             Bid memory winningBid;
             winningBid.bidder = encBid.bidder;
             winningBid.recipient = encBid.recipient;
@@ -498,15 +522,12 @@ contract LocalSealedBidBatchAuction is AuctionModule {
         return auctionData[lotId_];
     }
 
-    function getBidData(uint96 lotId_, uint256 bidId_) public view returns (EncryptedBid memory) {
+    function getBidData(uint96 lotId_, uint96 bidId_) public view returns (EncryptedBid memory) {
         return lotEncryptedBids[lotId_][bidId_];
     }
 
-    function getSortedBidData(
-        uint96 lotId_,
-        uint256 bidId_
-    ) public view returns (QueueBid memory) {
-        return lotSortedBids[lotId_].getBid(bidId_);
+    function getSortedBidData(uint96 lotId_, uint96 index_) public view returns (QueueBid memory) {
+        return lotSortedBids[lotId_].getBid(index_);
     }
 
     function getSortedBidCount(uint96 lotId_) public view returns (uint256) {

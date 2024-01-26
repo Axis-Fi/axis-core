@@ -26,7 +26,7 @@ pragma solidity 0.8.19;
 //     /* ========== STATE ========== */
 
 //     SD59x18 public constant ONE = SD59x18.wrap(1e18);
-//     mapping(uint256 lotId => AuctionData) public auctionData;
+//     mapping(uint96 lotId => AuctionData) public auctionData;
 // }
 
 // contract GradualDutchAuctioneer is AtomicAuctionModule, GDA {

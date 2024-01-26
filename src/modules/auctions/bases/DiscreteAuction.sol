@@ -19,7 +19,7 @@ pragma solidity 0.8.19;
 //     /// @notice Minimum deposit interval for a discrete auction
 //     uint48 public minDepositInterval;
 
-//     mapping(uint256 lotId => StyleData style) public styleData;
+//     mapping(uint96 lotId => StyleData style) public styleData;
 
 //     /* ========== ADMIN FUNCTIONS ========== */
 

@@ -30,9 +30,14 @@ contract LSBBACancelBidTest is Test, Permit2User {
 
     uint96 internal lotId = 1;
     bytes internal auctionData;
-    bytes internal constant PUBLIC_KEY_MODULUS = new bytes(128);
+    bytes internal constant PUBLIC_KEY_MODULUS = abi.encodePacked(
+        bytes32(0xB925394F570C7C765F121826DFC8A1661921923B33408EFF62DCAC0D263952FE),
+        bytes32(0x158C12B2B35525F7568CB8DC7731FBC3739F22D94CB80C5622E788DB4532BD8C),
+        bytes32(0x8643680DA8C00A5E7C967D9D087AA1380AE9A031AC292C971EC75F9BD3296AE1),
+        bytes32(0x1AFCC05BD15602738CBE9BD75B76403AB2C9409F2CC0C189B4551DEE8B576AD3)
+    );
 
-    uint256 internal bidId;
+    uint96 internal bidId;
     uint256 internal bidAmount = 1e18;
     uint256 internal bidSeed = 1e9;
     LocalSealedBidBatchAuction.Decrypt internal decryptedBid;

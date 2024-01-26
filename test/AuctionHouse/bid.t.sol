@@ -305,7 +305,7 @@ contract BidTest is Test, Permit2User {
     {
         // Call the function
         vm.prank(alice);
-        uint256 bidId = auctionHouse.bid(bidParams);
+        uint96 bidId = auctionHouse.bid(bidParams);
 
         // Check the balances
         assertEq(quoteToken.balanceOf(alice), 0, "alice: quote token balance mismatch");
@@ -333,7 +333,7 @@ contract BidTest is Test, Permit2User {
     {
         // Call the function
         vm.prank(alice);
-        uint256 bidId = auctionHouse.bid(bidParams);
+        uint96 bidId = auctionHouse.bid(bidParams);
 
         // Check the balances
         assertEq(quoteToken.balanceOf(alice), 0, "alice: quote token balance mismatch");
@@ -366,7 +366,7 @@ contract BidTest is Test, Permit2User {
 
         // Call the function
         vm.prank(alice);
-        uint256 bidId = auctionHouse.bid(bidParams);
+        uint96 bidId = auctionHouse.bid(bidParams);
 
         // Check the bid
         Auction.Bid memory bid = mockAuctionModule.getBid(lotId, bidId);

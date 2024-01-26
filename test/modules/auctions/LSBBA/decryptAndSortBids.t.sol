@@ -14,7 +14,7 @@ import {Auction} from "src/modules/Auction.sol";
 import {RSAOAEP} from "src/lib/RSA.sol";
 import {Bid as QueueBid} from "src/modules/auctions/LSBBA/MinPriorityQueue.sol";
 
-contract LSBBACancelBidTest is Test, Permit2User {
+contract LSBBADecryptAndSortBidsTest is Test, Permit2User {
     address internal constant _PROTOCOL = address(0x1);
     address internal alice = address(0x2);
     address internal constant recipient = address(0x3);
@@ -31,18 +31,23 @@ contract LSBBACancelBidTest is Test, Permit2User {
 
     uint96 internal lotId = 1;
     bytes internal auctionData;
-    bytes internal constant PUBLIC_KEY_MODULUS = new bytes(128);
+    bytes internal constant PUBLIC_KEY_MODULUS = abi.encodePacked(
+        bytes32(0xB925394F570C7C765F121826DFC8A1661921923B33408EFF62DCAC0D263952FE),
+        bytes32(0x158C12B2B35525F7568CB8DC7731FBC3739F22D94CB80C5622E788DB4532BD8C),
+        bytes32(0x8643680DA8C00A5E7C967D9D087AA1380AE9A031AC292C971EC75F9BD3296AE1),
+        bytes32(0x1AFCC05BD15602738CBE9BD75B76403AB2C9409F2CC0C189B4551DEE8B576AD3)
+    );
 
     uint256 internal bidSeed = 1e9;
-    uint256 internal bidOne;
+    uint96 internal bidOne;
     uint256 internal bidOneAmount = 1e18;
     uint256 internal bidOneAmountOut = 3e18;
     LocalSealedBidBatchAuction.Decrypt internal decryptedBidOne;
-    uint256 internal bidTwo;
+    uint96 internal bidTwo;
     uint256 internal bidTwoAmount = 1e18;
     uint256 internal bidTwoAmountOut = 2e18;
     LocalSealedBidBatchAuction.Decrypt internal decryptedBidTwo;
-    uint256 internal bidThree;
+    uint96 internal bidThree;
     uint256 internal bidThreeAmount = 1e18;
     uint256 internal bidThreeAmountOut = 7e18;
     LocalSealedBidBatchAuction.Decrypt internal decryptedBidThree;
@@ -100,7 +105,7 @@ contract LSBBACancelBidTest is Test, Permit2User {
     function _createBid(
         uint256 bidAmount_,
         uint256 bidAmountOut_
-    ) internal returns (uint256 bidId_, LocalSealedBidBatchAuction.Decrypt memory decryptedBid_) {
+    ) internal returns (uint96 bidId_, LocalSealedBidBatchAuction.Decrypt memory decryptedBid_) {
         // Encrypt the bid amount
         LocalSealedBidBatchAuction.Decrypt memory decryptedBid =
             LocalSealedBidBatchAuction.Decrypt({amountOut: bidAmountOut_, seed: bidSeed});
@@ -131,7 +136,7 @@ contract LSBBACancelBidTest is Test, Permit2User {
         uint256 len = decrypts.length;
         // Remove all elements
         for (uint256 i = 0; i < len; i++) {
-            delete decrypts[i];
+            decrypts.pop();
         }
     }
 
@@ -194,7 +199,7 @@ contract LSBBACancelBidTest is Test, Permit2User {
         _;
     }
 
-    modifier whenBidHasBeenCancelled(uint256 bidId_) {
+    modifier whenBidHasBeenCancelled(uint96 bidId_) {
         vm.prank(address(auctionHouse));
         auctionModule.cancelBid(lotId, bidId_, alice);
         _;
@@ -251,7 +256,8 @@ contract LSBBACancelBidTest is Test, Permit2User {
 
     function test_givenLotHasNotConcluded_reverts() public whenLotHasNotConcluded {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(Auction.Auction_MarketActive.selector, lotId);
+        bytes memory err =
+            abi.encodeWithSelector(LocalSealedBidBatchAuction.Auction_WrongState.selector);
         vm.expectRevert(err);
 
         // Call
@@ -349,8 +355,8 @@ contract LSBBACancelBidTest is Test, Permit2User {
     {
         // Amend the decrypts array
         _clearDecrypts();
+        decrypts.push(decryptedBidThree); // push this first since it swapped with the cancelled one
         decrypts.push(decryptedBidTwo);
-        decrypts.push(decryptedBidThree);
 
         // Call
         auctionModule.decryptAndSortBids(lotId, decrypts);
@@ -376,17 +382,17 @@ contract LSBBACancelBidTest is Test, Permit2User {
         );
 
         // Check sorted bids
-        QueueBid memory sortedBidOne = auctionModule.getSortedBidData(lotId, 0);
-        assertEq(sortedBidOne.bidId, 0);
-        assertEq(sortedBidOne.encId, bidThree);
-        assertEq(sortedBidOne.amountIn, bidThreeAmount);
-        assertEq(sortedBidOne.minAmountOut, bidThreeAmountOut);
+        QueueBid memory sortedBidOne = auctionModule.getSortedBidData(lotId, 1);
+        assertEq(sortedBidOne.queueId, 2);
+        assertEq(sortedBidOne.bidId, bidTwo);
+        assertEq(sortedBidOne.amountIn, bidTwoAmount);
+        assertEq(sortedBidOne.minAmountOut, bidTwoAmountOut);
 
-        QueueBid memory sortedBidTwo = auctionModule.getSortedBidData(lotId, 1);
-        assertEq(sortedBidTwo.bidId, 1);
-        assertEq(sortedBidTwo.encId, bidTwo);
-        assertEq(sortedBidTwo.amountIn, bidTwoAmount);
-        assertEq(sortedBidTwo.minAmountOut, bidTwoAmountOut);
+        QueueBid memory sortedBidTwo = auctionModule.getSortedBidData(lotId, 2);
+        assertEq(sortedBidTwo.queueId, 1);
+        assertEq(sortedBidTwo.bidId, bidThree);
+        assertEq(sortedBidTwo.amountIn, bidThreeAmount);
+        assertEq(sortedBidTwo.minAmountOut, bidThreeAmountOut);
 
         assertEq(auctionModule.getSortedBidCount(lotId), 2);
     }
@@ -402,7 +408,7 @@ contract LSBBACancelBidTest is Test, Permit2User {
         // Check values on auction data
         LocalSealedBidBatchAuction.AuctionData memory lotData = auctionModule.getLotData(lotId);
         assertEq(lotData.nextDecryptIndex, 1);
-        assertEq(uint8(lotData.status), uint8(LocalSealedBidBatchAuction.AuctionStatus.Decrypted));
+        assertEq(uint8(lotData.status), uint8(LocalSealedBidBatchAuction.AuctionStatus.Created));
 
         // Check encrypted bids
         LocalSealedBidBatchAuction.EncryptedBid memory encryptedBid =
@@ -420,9 +426,9 @@ contract LSBBACancelBidTest is Test, Permit2User {
         );
 
         // Check sorted bids
-        QueueBid memory sortedBidOne = auctionModule.getSortedBidData(lotId, 0);
-        assertEq(sortedBidOne.bidId, 0);
-        assertEq(sortedBidOne.encId, bidOne);
+        QueueBid memory sortedBidOne = auctionModule.getSortedBidData(lotId, 1);
+        assertEq(sortedBidOne.queueId, 1);
+        assertEq(sortedBidOne.bidId, bidOne);
         assertEq(sortedBidOne.amountIn, bidOneAmount);
         assertEq(sortedBidOne.minAmountOut, bidOneAmountOut);
 
@@ -466,23 +472,23 @@ contract LSBBACancelBidTest is Test, Permit2User {
         );
 
         // Check sorted bids
-        QueueBid memory sortedBidOne = auctionModule.getSortedBidData(lotId, 0);
-        assertEq(sortedBidOne.bidId, 0);
-        assertEq(sortedBidOne.encId, bidThree);
-        assertEq(sortedBidOne.amountIn, bidThreeAmount);
-        assertEq(sortedBidOne.minAmountOut, bidThreeAmountOut);
+        QueueBid memory sortedBidOne = auctionModule.getSortedBidData(lotId, 1);
+        assertEq(sortedBidOne.queueId, 2);
+        assertEq(sortedBidOne.bidId, bidTwo);
+        assertEq(sortedBidOne.amountIn, bidTwoAmount);
+        assertEq(sortedBidOne.minAmountOut, bidTwoAmountOut);
 
-        QueueBid memory sortedBidTwo = auctionModule.getSortedBidData(lotId, 1);
-        assertEq(sortedBidTwo.bidId, 1);
-        assertEq(sortedBidTwo.encId, bidOne);
+        QueueBid memory sortedBidTwo = auctionModule.getSortedBidData(lotId, 2);
+        assertEq(sortedBidTwo.queueId, 1);
+        assertEq(sortedBidTwo.bidId, bidOne);
         assertEq(sortedBidTwo.amountIn, bidOneAmount);
         assertEq(sortedBidTwo.minAmountOut, bidOneAmountOut);
 
-        QueueBid memory sortedBidThree = auctionModule.getSortedBidData(lotId, 2);
-        assertEq(sortedBidThree.bidId, 2);
-        assertEq(sortedBidThree.encId, bidTwo);
-        assertEq(sortedBidThree.amountIn, bidTwoAmount);
-        assertEq(sortedBidThree.minAmountOut, bidTwoAmountOut);
+        QueueBid memory sortedBidThree = auctionModule.getSortedBidData(lotId, 3);
+        assertEq(sortedBidThree.queueId, 3);
+        assertEq(sortedBidThree.bidId, bidThree);
+        assertEq(sortedBidThree.amountIn, bidThreeAmount);
+        assertEq(sortedBidThree.minAmountOut, bidThreeAmountOut);
 
         assertEq(auctionModule.getSortedBidCount(lotId), 3);
     }
@@ -512,23 +518,23 @@ contract LSBBACancelBidTest is Test, Permit2User {
         );
 
         // Check sorted bids
-        QueueBid memory sortedBidOne = auctionModule.getSortedBidData(lotId, 0);
-        assertEq(sortedBidOne.bidId, 0);
-        assertEq(sortedBidOne.encId, bidThree);
-        assertEq(sortedBidOne.amountIn, bidThreeAmount);
-        assertEq(sortedBidOne.minAmountOut, bidThreeAmountOut);
+        QueueBid memory sortedBidOne = auctionModule.getSortedBidData(lotId, 1);
+        assertEq(sortedBidOne.queueId, 2);
+        assertEq(sortedBidOne.bidId, bidTwo);
+        assertEq(sortedBidOne.amountIn, bidTwoAmount);
+        assertEq(sortedBidOne.minAmountOut, bidTwoAmountOut);
 
-        QueueBid memory sortedBidTwo = auctionModule.getSortedBidData(lotId, 1);
-        assertEq(sortedBidTwo.bidId, 1);
-        assertEq(sortedBidTwo.encId, bidOne);
+        QueueBid memory sortedBidTwo = auctionModule.getSortedBidData(lotId, 2);
+        assertEq(sortedBidTwo.queueId, 1);
+        assertEq(sortedBidTwo.bidId, bidOne);
         assertEq(sortedBidTwo.amountIn, bidOneAmount);
         assertEq(sortedBidTwo.minAmountOut, bidOneAmountOut);
 
-        QueueBid memory sortedBidThree = auctionModule.getSortedBidData(lotId, 2);
-        assertEq(sortedBidThree.bidId, 2);
-        assertEq(sortedBidThree.encId, bidTwo);
-        assertEq(sortedBidThree.amountIn, bidTwoAmount);
-        assertEq(sortedBidThree.minAmountOut, bidTwoAmountOut);
+        QueueBid memory sortedBidThree = auctionModule.getSortedBidData(lotId, 3);
+        assertEq(sortedBidThree.queueId, 3);
+        assertEq(sortedBidThree.bidId, bidThree);
+        assertEq(sortedBidThree.amountIn, bidThreeAmount);
+        assertEq(sortedBidThree.minAmountOut, bidThreeAmountOut);
 
         assertEq(auctionModule.getSortedBidCount(lotId), 3);
     }

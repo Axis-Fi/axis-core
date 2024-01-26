@@ -2,8 +2,8 @@
 pragma solidity ^0.8.0;
 
 struct Bid {
-    uint96 bidId; // ID in queue
-    uint96 encId; // ID of encrypted bid to reference on settlement
+    uint96 queueId; // ID in queue
+    uint96 bidId; // ID of encrypted bid to reference on settlement
     uint256 amountIn;
     uint256 minAmountOut;
 }
@@ -17,16 +17,16 @@ library MinPriorityQueue {
         ///@notice incrementing bid id
         uint96 nextBidId;
         ///@notice array backing priority queue
-        uint96[] bidIdList;
+        uint96[] queueIdList;
         ///@notice total number of bids in queue
         uint96 numBids;
         //@notice map bid ids to bids
-        mapping(uint96 => Bid) bidIdToBidMap;
+        mapping(uint96 => Bid) queueIdToBidMap;
     }
 
     ///@notice initialize must be called before using queue.
     function initialize(Queue storage self) public {
-        self.bidIdList.push(0);
+        self.queueIdList.push(0);
         self.nextBidId = 1;
     }
 
@@ -41,15 +41,16 @@ library MinPriorityQueue {
     ///@notice view min bid
     function getMin(Queue storage self) public view returns (Bid storage) {
         require(!isEmpty(self), "nothing to return");
-        uint96 minId = self.bidIdList[1];
-        return self.bidIdToBidMap[minId];
+        uint96 minId = self.queueIdList[1];
+        return self.queueIdToBidMap[minId];
     }
 
     ///@notice view bid by index
     function getBid(Queue storage self, uint256 index) public view returns (Bid storage) {
         require(!isEmpty(self), "nothing to return");
         require(index <= self.numBids, "bid does not exist");
-        return self.bidIdToBidMap[self.bidIdList[index]];
+        require(index > 0, "cannot use 0 index");
+        return self.queueIdToBidMap[self.queueIdList[index]];
     }
 
     ///@notice move bid up heap
@@ -78,17 +79,17 @@ library MinPriorityQueue {
     ///@notice insert bid in heap
     function insert(
         Queue storage self,
-        uint96 encId,
+        uint96 bidId,
         uint256 amountIn,
         uint256 minAmountOut
     ) public {
-        insert(self, Bid(self.nextBidId++, encId, amountIn, minAmountOut));
+        insert(self, Bid(self.nextBidId++, bidId, amountIn, minAmountOut));
     }
 
     ///@notice insert bid in heap
     function insert(Queue storage self, Bid memory bid) private {
-        self.bidIdList.push(bid.bidId);
-        self.bidIdToBidMap[bid.bidId] = bid;
+        self.queueIdList.push(bid.queueId);
+        self.queueIdToBidMap[bid.queueId] = bid;
         self.numBids += 1;
         swim(self, self.numBids);
     }
@@ -96,33 +97,35 @@ library MinPriorityQueue {
     ///@notice delete min bid from heap and return
     function delMin(Queue storage self) public returns (Bid memory) {
         require(!isEmpty(self), "nothing to delete");
-        Bid memory min = self.bidIdToBidMap[self.bidIdList[1]];
+        Bid memory min = self.queueIdToBidMap[self.queueIdList[1]];
         exchange(self, 1, self.numBids--);
-        self.bidIdList.pop();
-        delete self.bidIdToBidMap[min.bidId];
+        self.queueIdList.pop();
+        delete self.queueIdToBidMap[min.queueId];
         sink(self, 1);
         return min;
     }
 
     ///@notice helper function to determine ordering. When two bids have the same price, give priority
     ///to the lower bid ID (inserted earlier)
+    // TODO this function works in the opposite way as the original implementation
+    // Maybe need to rename or clarify the logic
     function isGreater(Queue storage self, uint256 i, uint256 j) private view returns (bool) {
-        uint96 iId = self.bidIdList[i];
-        uint96 jId = self.bidIdList[j];
-        Bid memory bidI = self.bidIdToBidMap[iId];
-        Bid memory bidJ = self.bidIdToBidMap[jId];
+        uint96 iId = self.queueIdList[i];
+        uint96 jId = self.queueIdList[j];
+        Bid memory bidI = self.queueIdToBidMap[iId];
+        Bid memory bidJ = self.queueIdToBidMap[jId];
         uint256 relI = bidI.amountIn * bidJ.minAmountOut;
         uint256 relJ = bidJ.amountIn * bidI.minAmountOut;
         if (relI == relJ) {
-            return iId < jId;
+            return bidI.bidId > bidJ.bidId;
         }
-        return relI > relJ;
+        return relI < relJ;
     }
 
     ///@notice helper function to exchange to bids in the heap
     function exchange(Queue storage self, uint256 i, uint256 j) private {
-        uint96 tempId = self.bidIdList[i];
-        self.bidIdList[i] = self.bidIdList[j];
-        self.bidIdList[j] = tempId;
+        uint96 tempId = self.queueIdList[i];
+        self.queueIdList[i] = self.queueIdList[j];
+        self.queueIdList[j] = tempId;
     }
 }

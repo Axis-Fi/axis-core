@@ -129,7 +129,7 @@ abstract contract Router is FeeManager {
     ///
     /// @param      params_         Bid parameters
     /// @return     bidId           Bid ID
-    function bid(BidParams memory params_) external virtual returns (uint256 bidId);
+    function bid(BidParams memory params_) external virtual returns (uint96 bidId);
 
     /// @notice     Cancel a bid on a lot in a batch auction
     /// @dev        The implementing function must perform the following:
@@ -139,7 +139,7 @@ abstract contract Router is FeeManager {
     ///
     /// @param      lotId_          Lot ID
     /// @param      bidId_          Bid ID
-    function cancelBid(uint96 lotId_, uint256 bidId_) external virtual;
+    function cancelBid(uint96 lotId_, uint96 bidId_) external virtual;
 
     /// @notice     Settle a batch auction
     /// @notice     This function is used for versions with on-chain storage and bids and local settlement
@@ -261,7 +261,7 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
     /// @return     bool             True if caller is allowed to purchase/bid on the lot
     function _isAllowed(
         IAllowlist allowlist_,
-        uint256 lotId_,
+        uint96 lotId_,
         address caller_,
         bytes memory allowlistProof_
     ) internal view returns (bool) {
@@ -356,7 +356,7 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
         external
         override
         isLotValid(params_.lotId)
-        returns (uint256)
+        returns (uint96)
     {
         // Load routing data for the lot
         Routing memory routing = lotRouting[params_.lotId];
@@ -368,7 +368,7 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
 
         // Record the bid on the auction module
         // The module will determine if the bid is valid - minimum bid size, minimum price, auction status, etc
-        uint256 bidId;
+        uint96 bidId;
         {
             AuctionModule module = _getModuleForId(params_.lotId);
             bidId = module.bid(
@@ -398,7 +398,7 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
     /// @dev        This function reverts if:
     ///             - the lot ID is invalid
     ///             - the auction module reverts when cancelling the bid
-    function cancelBid(uint96 lotId_, uint256 bidId_) external override isLotValid(lotId_) {
+    function cancelBid(uint96 lotId_, uint96 bidId_) external override isLotValid(lotId_) {
         // Cancel the bid on the auction module
         // The auction module is responsible for validating the bid and authorizing the caller
         AuctionModule module = _getModuleForId(lotId_);
@@ -505,7 +505,7 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
     /// @param      hooks_              Hooks contract to call (optional)
     /// @param      permit2Approval_    Permit2 approval data (optional)
     function _collectPayment(
-        uint256 lotId_,
+        uint96 lotId_,
         uint256 amount_,
         ERC20 quoteToken_,
         IHooks hooks_,
@@ -574,7 +574,7 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
     /// @param      payoutAmount_   Amount of payoutToken to collect (in native decimals)
     /// @param      routingParams_  Routing parameters for the lot
     function _collectPayout(
-        uint256 lotId_,
+        uint96 lotId_,
         uint256 paymentAmount_,
         uint256 payoutAmount_,
         Routing memory routingParams_
@@ -634,7 +634,7 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
     /// @param      routingParams_  Routing parameters for the lot
     /// @param      auctionOutput_  Custom data returned by the auction module
     function _sendPayout(
-        uint256 lotId_,
+        uint96 lotId_,
         address recipient_,
         uint256 payoutAmount_,
         Routing memory routingParams_,

@@ -51,7 +51,7 @@ contract CancelBidTest is Test, Permit2User {
 
     // Function parameters (can be modified)
     uint96 internal lotId;
-    uint256 internal bidId;
+    uint96 internal bidId;
 
     function setUp() external {
         // Set block timestamp
