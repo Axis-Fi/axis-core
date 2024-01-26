@@ -12,6 +12,7 @@ struct Bid {
 /// @notice adapted from FrankieIsLost's implementation at https://github.com/FrankieIsLost/smart-batched-auction/blob/master/contracts/libraries/MinPriorityQueue.sol
 /// @author FrankieIsLost
 /// @author Oighty (edits)
+/// Bids in descending order
 library MinPriorityQueue {
     struct Queue {
         ///@notice incrementing bid id

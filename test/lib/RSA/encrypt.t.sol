@@ -13,6 +13,9 @@ contract RSAOAEPTest is Test {
 
     function setUp() external {}
 
+    // TODO more extensive cases
+    // TODO fuzz value to encrypt
+
     function test_roundTrip(uint256 seed_) external {
         uint256 value = 5 * 10 ** 18;
         bytes memory message = abi.encodePacked(value);
