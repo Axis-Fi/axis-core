@@ -138,6 +138,7 @@ contract LocalSealedBidBatchAuction is AuctionModule {
         ) revert Auction_NotLive();
     }
 
+    /// @notice     Reverts if the lot has already been decrypted
     function _revertIfLotDecrypted(uint96 lotId_) internal view {
         // Check that bids are allowed to be submitted for the lot
         if (auctionData[lotId_].status == AuctionStatus.Decrypted) revert Auction_WrongState();
@@ -419,6 +420,16 @@ contract LocalSealedBidBatchAuction is AuctionModule {
     // =========== SETTLEMENT =========== //
 
     /// @inheritdoc AuctionModule
+    /// @dev        This function performs the following:
+    ///             - Validates inputs
+    ///             - Iterates over the bid queue to calculate the marginal clearing price of the auction
+    ///             - Creates an array of winning bids
+    ///             - Sets the auction status to settled
+    ///             - Returns the array of winning bids
+    ///
+    ///             This function reverts if:
+    ///             - The auction is not in the Decrypted state
+    ///             - The auction has already been settled
     function _settle(uint96 lotId_)
         internal
         override
