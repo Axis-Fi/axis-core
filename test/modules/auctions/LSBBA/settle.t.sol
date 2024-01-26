@@ -12,7 +12,7 @@ import {LocalSealedBidBatchAuction} from "src/modules/auctions/LSBBA/LSBBA.sol";
 import {AuctionHouse} from "src/AuctionHouse.sol";
 import {Auction} from "src/modules/Auction.sol";
 import {RSAOAEP} from "src/lib/RSA.sol";
-import {Bid as QueueBid} from "src/modules/auctions/LSBBA/MinPriorityQueue.sol";
+import {Bid as QueueBid} from "src/modules/auctions/LSBBA/MaxPriorityQueue.sol";
 
 contract LSBBASettleTest is Test, Permit2User {
     address internal constant _PROTOCOL = address(0x1);

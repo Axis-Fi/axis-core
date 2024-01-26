@@ -5,18 +5,18 @@ pragma solidity 0.8.19;
 import {Test} from "forge-std/Test.sol";
 import {console2} from "forge-std/console2.sol";
 
-import {MinPriorityQueue, Bid as QueueBid} from "src/modules/auctions/LSBBA/MinPriorityQueue.sol";
+import {MaxPriorityQueue, Bid as QueueBid} from "src/modules/auctions/LSBBA/MaxPriorityQueue.sol";
 
-contract MinPriorityQueueTest is Test {
-    using MinPriorityQueue for MinPriorityQueue.Queue;
+contract MaxPriorityQueueTest is Test {
+    using MaxPriorityQueue for MaxPriorityQueue.Queue;
 
-    MinPriorityQueue.Queue queue;
+    MaxPriorityQueue.Queue queue;
 
     /// @notice    The initial index of the queue
     uint96 internal immutable _INITIAL_INDEX = 1;
 
     function setUp() public {
-        MinPriorityQueue.initialize(queue);
+        MaxPriorityQueue.initialize(queue);
     }
 
     // Sorted by Bid.amountIn / Bid.minAmountOut
@@ -48,8 +48,8 @@ contract MinPriorityQueueTest is Test {
         assertEq(bid.amountIn, 1);
         assertEq(bid.minAmountOut, 1);
 
-        // get min bid
-        bid = queue.getMin();
+        // get max bid
+        bid = queue.getMax();
         assertEq(bid.queueId, 1);
         assertEq(bid.bidId, 0);
         assertEq(bid.amountIn, 1);
@@ -88,8 +88,8 @@ contract MinPriorityQueueTest is Test {
         assertEq(bid.amountIn, 1, "2: amountIn mismatch");
         assertEq(bid.minAmountOut, 1, "2: minAmountOut mismatch");
 
-        // get min bid (bid id = 0)
-        bid = queue.getMin();
+        // get max bid (bid id = 0)
+        bid = queue.getMax();
         assertEq(bid.queueId, 1, "min: queueId mismatch");
         assertEq(bid.bidId, 0);
         assertEq(bid.amountIn, 1);
@@ -142,9 +142,9 @@ contract MinPriorityQueueTest is Test {
         assertEq(bid.amountIn, 1, "index 3: amountIn mismatch");
         assertEq(bid.minAmountOut, 1, "index 3: minAmountOut mismatch");
 
-        // get min bid (bid id = 0)
-        console2.log("getMin()");
-        bid = queue.getMin();
+        // get max bid (bid id = 0)
+        console2.log("getMax()");
+        bid = queue.getMax();
         assertEq(bid.queueId, 1);
         assertEq(bid.bidId, 0);
         assertEq(bid.amountIn, 1);
@@ -210,9 +210,9 @@ contract MinPriorityQueueTest is Test {
         assertEq(bid.amountIn, 1, "index 4: amountIn mismatch");
         assertEq(bid.minAmountOut, 2, "index 4: minAmountOut mismatch");
 
-        // get min bid (bid id = 3)
-        console2.log("getMin()");
-        bid = queue.getMin();
+        // get max bid (bid id = 3)
+        console2.log("getMax()");
+        bid = queue.getMax();
         assertEq(bid.queueId, 4);
         assertEq(bid.bidId, 3);
         assertEq(bid.amountIn, 1);

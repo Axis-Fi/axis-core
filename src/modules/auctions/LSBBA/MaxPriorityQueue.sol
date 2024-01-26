@@ -8,12 +8,12 @@ struct Bid {
     uint256 minAmountOut;
 }
 
-/// @notice a min priority queue implementation, based off https://algs4.cs.princeton.edu/24pq/MinPQ.java.html
-/// @notice adapted from FrankieIsLost's implementation at https://github.com/FrankieIsLost/smart-batched-auction/blob/master/contracts/libraries/MinPriorityQueue.sol
+/// @notice a max priority queue implementation, based off https://algs4.cs.princeton.edu/24pq/MaxPQ.java.html
+/// @notice adapted from FrankieIsLost's implementation at https://github.com/FrankieIsLost/smart-batched-auction/blob/master/contracts/libraries/MaxPriorityQueue.sol
 /// @author FrankieIsLost
 /// @author Oighty (edits)
 /// Bids in descending order
-library MinPriorityQueue {
+library MaxPriorityQueue {
     struct Queue {
         ///@notice incrementing bid id
         uint96 nextBidId;
@@ -39,11 +39,11 @@ library MinPriorityQueue {
         return self.numBids;
     }
 
-    ///@notice view min bid
-    function getMin(Queue storage self) public view returns (Bid storage) {
+    ///@notice view max bid
+    function getMax(Queue storage self) public view returns (Bid storage) {
         require(!isEmpty(self), "nothing to return");
-        uint96 minId = self.queueIdList[1];
-        return self.queueIdToBidMap[minId];
+        uint96 maxId = self.queueIdList[1];
+        return self.queueIdToBidMap[maxId];
     }
 
     ///@notice view bid by index in ascending order
@@ -56,7 +56,7 @@ library MinPriorityQueue {
 
     ///@notice move bid up heap
     function swim(Queue storage self, uint96 k) private {
-        while (k > 1 && isGreater(self, k / 2, k)) {
+        while (k > 1 && isLess(self, k / 2, k)) {
             exchange(self, k, k / 2);
             k = k / 2;
         }
@@ -66,10 +66,10 @@ library MinPriorityQueue {
     function sink(Queue storage self, uint96 k) private {
         while (2 * k <= self.numBids) {
             uint96 j = 2 * k;
-            if (j < self.numBids && isGreater(self, j, j + 1)) {
+            if (j < self.numBids && isLess(self, j, j + 1)) {
                 j++;
             }
-            if (!isGreater(self, k, j)) {
+            if (!isLess(self, k, j)) {
                 break;
             }
             exchange(self, k, j);
@@ -95,22 +95,20 @@ library MinPriorityQueue {
         swim(self, self.numBids);
     }
 
-    ///@notice delete min bid from heap and return
-    function delMin(Queue storage self) public returns (Bid memory) {
+    ///@notice delete max bid from heap and return
+    function delMax(Queue storage self) public returns (Bid memory) {
         require(!isEmpty(self), "nothing to delete");
-        Bid memory min = self.queueIdToBidMap[self.queueIdList[1]];
+        Bid memory max = self.queueIdToBidMap[self.queueIdList[1]];
         exchange(self, 1, self.numBids--);
         self.queueIdList.pop();
-        delete self.queueIdToBidMap[min.queueId];
+        delete self.queueIdToBidMap[max.queueId];
         sink(self, 1);
-        return min;
+        return max;
     }
 
     ///@notice helper function to determine ordering. When two bids have the same price, give priority
     ///to the lower bid ID (inserted earlier)
-    // TODO this function works in the opposite way as the original implementation
-    // Maybe need to rename or clarify the logic
-    function isGreater(Queue storage self, uint256 i, uint256 j) private view returns (bool) {
+    function isLess(Queue storage self, uint256 i, uint256 j) private view returns (bool) {
         uint96 iId = self.queueIdList[i];
         uint96 jId = self.queueIdList[j];
         Bid memory bidI = self.queueIdToBidMap[iId];
@@ -118,7 +116,7 @@ library MinPriorityQueue {
         uint256 relI = bidI.amountIn * bidJ.minAmountOut;
         uint256 relJ = bidJ.amountIn * bidI.minAmountOut;
         if (relI == relJ) {
-            return bidI.bidId > bidJ.bidId;
+            return bidI.bidId < bidJ.bidId;
         }
         return relI < relJ;
     }

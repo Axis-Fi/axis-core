@@ -4,7 +4,7 @@ pragma solidity 0.8.19;
 import {AuctionModule} from "src/modules/Auction.sol";
 import {Veecode, toVeecode} from "src/modules/Modules.sol";
 import {RSAOAEP} from "src/lib/RSA.sol";
-import {MinPriorityQueue, Bid as QueueBid} from "src/modules/auctions/LSBBA/MinPriorityQueue.sol";
+import {MaxPriorityQueue, Bid as QueueBid} from "src/modules/auctions/LSBBA/MaxPriorityQueue.sol";
 
 /// @title      LocalSealedBidBatchAuction
 /// @notice     A completely on-chain sealed bid batch auction that uses RSA encryption to hide bids until after the auction ends
@@ -13,7 +13,7 @@ import {MinPriorityQueue, Bid as QueueBid} from "src/modules/auctions/LSBBA/MinP
 ///             2. Decryption - anyone with the private key can decrypt bids off-chain and submit them on-chain for validation and sorting
 ///             3. Settlement - once all bids are decryped, the auction can be settled and proceeds transferred
 contract LocalSealedBidBatchAuction is AuctionModule {
-    using MinPriorityQueue for MinPriorityQueue.Queue;
+    using MaxPriorityQueue for MaxPriorityQueue.Queue;
 
     // ========== ERRORS ========== //
     error Auction_BidDoesNotExist();
@@ -107,7 +107,7 @@ contract LocalSealedBidBatchAuction is AuctionModule {
 
     mapping(uint96 lotId => AuctionData) public auctionData;
     mapping(uint96 lotId => mapping(uint96 bidId => EncryptedBid bid)) public lotEncryptedBids;
-    mapping(uint96 lotId => MinPriorityQueue.Queue) public lotSortedBids;
+    mapping(uint96 lotId => MaxPriorityQueue.Queue) public lotSortedBids;
 
     // ========== SETUP ========== //
 
@@ -442,7 +442,7 @@ contract LocalSealedBidBatchAuction is AuctionModule {
         uint256 capacity = lotData[lotId_].capacity;
 
         // Iterate over bid queue to calculate the marginal clearing price of the auction
-        MinPriorityQueue.Queue storage queue = lotSortedBids[lotId_];
+        MaxPriorityQueue.Queue storage queue = lotSortedBids[lotId_];
         uint256 marginalPrice;
         uint256 totalAmountIn;
         uint256 winningBidIndex;
@@ -491,7 +491,7 @@ contract LocalSealedBidBatchAuction is AuctionModule {
         winningBids_ = new Bid[](winningBidIndex);
         for (uint256 i; i < winningBidIndex; i++) {
             // Load bid
-            QueueBid memory qBid = queue.delMin();
+            QueueBid memory qBid = queue.delMax();
 
             // Calculate amount out
             // TODO handle partial filling of the last winning bid
