@@ -107,13 +107,13 @@ contract MinPriorityQueueTest is Test {
 
     function test_addSmallerBid() public {
         // Add the first bid
-        queue.insert(0, 1, 1);
+        queue.insert(0, 1, 1); // queueId = 1
 
         // Add a second bid that is larger
-        queue.insert(1, 2, 2);
+        queue.insert(1, 2, 2); // queueId = 2
 
         // Add a third bid that is smaller than the second bid
-        queue.insert(2, 1, 2);
+        queue.insert(2, 1, 2); // queueId = 3
 
         // get first sorted bid (bid id = 0)
         QueueBid memory bid = queue.getBid(_INITIAL_INDEX);
@@ -124,14 +124,14 @@ contract MinPriorityQueueTest is Test {
 
         // get second sorted bid (bid id = 2)
         bid = queue.getBid(_INITIAL_INDEX + 1);
-        assertEq(bid.queueId, 2, "index 2: queueId mismatch");
+        assertEq(bid.queueId, 3, "index 2: queueId mismatch");
         assertEq(bid.bidId, 2, "index 2: bidId mismatch");
         assertEq(bid.amountIn, 1, "index 2: amountIn mismatch");
         assertEq(bid.minAmountOut, 2, "index 2: minAmountOut mismatch");
 
         // get third sorted bid (bid id = 1)
         bid = queue.getBid(_INITIAL_INDEX + 2);
-        assertEq(bid.queueId, 3, "index 3: queueId mismatch");
+        assertEq(bid.queueId, 2, "index 3: queueId mismatch");
         assertEq(bid.bidId, 1, "index 3: bidId mismatch");
         assertEq(bid.amountIn, 2, "index 3: amountIn mismatch");
         assertEq(bid.minAmountOut, 2, "index 3: minAmountOut mismatch");

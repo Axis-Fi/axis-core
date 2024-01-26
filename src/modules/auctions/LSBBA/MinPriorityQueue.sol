@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 struct Bid {
-    uint96 queueId; // ID in queue
+    uint96 queueId; // ID representing order of insertion
     uint96 bidId; // ID of encrypted bid to reference on settlement
     uint256 amountIn;
     uint256 minAmountOut;
@@ -45,7 +45,7 @@ library MinPriorityQueue {
         return self.queueIdToBidMap[minId];
     }
 
-    ///@notice view bid by index
+    ///@notice view bid by index in ascending order
     function getBid(Queue storage self, uint256 index) public view returns (Bid storage) {
         require(!isEmpty(self), "nothing to return");
         require(index <= self.numBids, "bid does not exist");
