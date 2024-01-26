@@ -6,11 +6,12 @@ import {Veecode, toVeecode} from "src/modules/Modules.sol";
 import {RSAOAEP} from "src/lib/RSA.sol";
 import {MinPriorityQueue, Bid as QueueBid} from "src/modules/auctions/LSBBA/MinPriorityQueue.sol";
 
-// A completely on-chain sealed bid batch auction that uses RSA encryption to hide bids until after the auction ends
-// The auction occurs in three phases:
-// 1. Bidding - bidders submit encrypted bids
-// 2. Decryption - anyone with the private key can decrypt bids off-chain and submit them on-chain for validation and sorting
-// 3. Settlement - once all bids are decryped, the auction can be settled and proceeds transferred
+/// @title      LocalSealedBidBatchAuction
+/// @notice     A completely on-chain sealed bid batch auction that uses RSA encryption to hide bids until after the auction ends
+/// @dev        The auction occurs in three phases:
+///             1. Bidding - bidders submit encrypted bids
+///             2. Decryption - anyone with the private key can decrypt bids off-chain and submit them on-chain for validation and sorting
+///             3. Settlement - once all bids are decryped, the auction can be settled and proceeds transferred
 contract LocalSealedBidBatchAuction is AuctionModule {
     using MinPriorityQueue for MinPriorityQueue.Queue;
 
@@ -38,6 +39,14 @@ contract LocalSealedBidBatchAuction is AuctionModule {
         Refunded
     }
 
+    /// @notice        Struct containing encrypted bid data
+    ///
+    /// @param         status              The status of the bid
+    /// @param         bidder              The address of the bidder
+    /// @param         recipient           The address of the recipient
+    /// @param         referrer            The address of the referrer
+    /// @param         amount              The amount of the bid
+    /// @param         encryptedAmountOut  The encrypted amount out
     struct EncryptedBid {
         BidStatus status;
         address bidder;
@@ -47,18 +56,32 @@ contract LocalSealedBidBatchAuction is AuctionModule {
         bytes encryptedAmountOut;
     }
 
+    /// @notice        Struct containing decrypted bid data
+    ///
+    /// @param         amountOut           The amount out
+    /// @param         seed                The seed used to encrypt the amount out
     struct Decrypt {
         uint256 amountOut;
         uint256 seed;
     }
 
+    /// @notice        Struct containing auction data
+    ///
+    /// @param         status              The status of the auction
+    /// @param         nextDecryptIndex    The index of the next bid to decrypt
+    /// @param         nextBidId           The ID of the next bid to be submitted
+    /// @param         minimumPrice        The minimum price that the auction can settle at
+    /// @param         minFilled           The minimum amount of capacity that must be filled to settle the auction
+    /// @param         minBidSize          The minimum amount that can be bid for the lot, determined by the percentage of capacity that must be filled per bid times the min bid price
+    /// @param         publicKeyModulus    The public key modulus used to encrypt bids
+    /// @param         bidIds              The list of bid IDs to decrypt in order of submission, excluding cancelled bids
     struct AuctionData {
         AuctionStatus status;
         uint96 nextDecryptIndex;
         uint96 nextBidId;
         uint256 minimumPrice;
-        uint256 minFilled; // minimum amount of capacity that must be filled to settle the auction
-        uint256 minBidSize; // minimum amount that can be bid for the lot, determined by the percentage of capacity that must be filled per bid times the min bid price
+        uint256 minFilled;
+        uint256 minBidSize;
         bytes publicKeyModulus;
         uint96[] bidIds;
     }
@@ -79,12 +102,12 @@ contract LocalSealedBidBatchAuction is AuctionModule {
     // ========== STATE VARIABLES ========== //
 
     uint24 internal constant _MIN_BID_PERCENT = 1000; // 1%
-    uint24 internal constant _PUB_KEY_EXPONENT = 65_537; // TODO can be 3 to save gas, but 65537 is probably more secure
+    uint24 internal constant _PUB_KEY_EXPONENT = 65_537;
     uint256 internal constant _SCALE = 1e18; // TODO maybe set this per auction if decimals mess us up
 
     mapping(uint96 lotId => AuctionData) public auctionData;
     mapping(uint96 lotId => mapping(uint96 bidId => EncryptedBid bid)) public lotEncryptedBids;
-    mapping(uint96 lotId => MinPriorityQueue.Queue) public lotSortedBids; // TODO must create and call `initialize` on it during auction creation
+    mapping(uint96 lotId => MinPriorityQueue.Queue) public lotSortedBids;
 
     // ========== SETUP ========== //
 
@@ -154,6 +177,15 @@ contract LocalSealedBidBatchAuction is AuctionModule {
     // =========== BID =========== //
 
     /// @inheritdoc AuctionModule
+    /// @dev        This function performs the following:
+    ///             - Validates inputs
+    ///             - Stores the encrypted bid
+    ///             - Adds the bid ID to the list of bids to decrypt (in `AuctionData.bidIds`)
+    ///             - Returns the bid ID
+    ///
+    ///             This function reverts if:
+    ///             - The amount is less than the minimum bid size for the lot
+    ///             - The amount is greater than the capacity
     function _bid(
         uint96 lotId_,
         address bidder_,
@@ -190,12 +222,17 @@ contract LocalSealedBidBatchAuction is AuctionModule {
     }
 
     /// @inheritdoc AuctionModule
-    // TODO need to change this to delete the bid so we don't have to decrypt it later
-    // Because of this, we can issue the refund immediately (needs to happen in the AuctionHouse)
-    // However, this will require more refactoring because, we run into a problem of using the array index as the bidId since it will change when we delete the bid
-    // It doesn't cost any more gas to store a uint96 bidId as part of the EncryptedBid.
-    // A better approach may be to create a mapping of lotId => bidId => EncryptedBid. Then, have an array of bidIds in the AuctionData struct that can be iterated over.
-    // This way, we can still lookup the bids by bidId for cancellation, etc.
+    /// @dev        This function performs the following:
+    ///             - Validates inputs
+    ///             - Marks the bid as cancelled
+    ///             - Removes the bid from the list of bids to decrypt
+    ///             - Returns the amount to be refunded
+    ///
+    ///             The encrypted bid is not deleted from storage, so that the details can be fetched later.
+    ///
+    ///             This function reverts if:
+    ///             - The bid is not in the Submitted state
+    ///             - The auction is not in the Created state
     function _cancelBid(
         uint96 lotId_,
         uint96 bidId_,
@@ -231,6 +268,30 @@ contract LocalSealedBidBatchAuction is AuctionModule {
 
     // =========== DECRYPTION =========== //
 
+    /// @notice         Decrypts a batch of bids and sorts them
+    ///                 This function expects a third-party with access to the lot's private key
+    ///                 to decrypt the bids off-chain (after calling `getNextBidsToDecrypt()`) and
+    ///                 submit them on-chain.
+    /// @dev            Anyone can call this function, provided they have access to the private key to decrypt the bids.
+    ///
+    ///                 This function handles the following:
+    ///                 - Performs validation
+    ///                 - Iterates over the decrypted bids:
+    ///                     - Re-encrypts the decrypted bid to confirm that it matches the stored encrypted bid
+    ///                     - Stores the decrypted bid in the sorted bid queue
+    ///                     - Sets the encrypted bid status to decrypted
+    ///                 - Determines the next decrypt index
+    ///                 - Sets the auction status to decrypted if all bids have been decrypted
+    ///
+    ///                 This function reverts if:
+    ///                 - The lot ID is invalid
+    ///                 - The lot has not concluded
+    ///                 - The lot has already been decrypted in full
+    ///                 - The number of decrypts is greater than the number of bids remaining to be decrypted
+    ///                 - The encrypted bid does not match the re-encrypted decrypt
+    ///
+    /// @param          lotId_          The lot ID of the auction to decrypt bids for
+    /// @param          decrypts_       An array of decrypts containing the amount out and seed for each bid
     function decryptAndSortBids(uint96 lotId_, Decrypt[] memory decrypts_) external {
         // Check that lotId is valid
         _revertIfLotInvalid(lotId_);
@@ -265,7 +326,6 @@ contract LocalSealedBidBatchAuction is AuctionModule {
                 revert Auction_InvalidDecrypt();
             }
 
-            // TODO shouldn't need this check but need to confirm
             if (encBid.status != BidStatus.Submitted) continue;
 
             // Store the decrypt in the sorted bid queue
@@ -284,6 +344,7 @@ contract LocalSealedBidBatchAuction is AuctionModule {
         }
     }
 
+    /// @notice         Re-encrypts a decrypt to confirm that it matches the stored encrypted bid
     function _encrypt(
         uint96 lotId_,
         Decrypt memory decrypt_
@@ -297,7 +358,7 @@ contract LocalSealedBidBatchAuction is AuctionModule {
         );
     }
 
-    /// @notice View function that can be used to obtain a certain number of the next bids to decrypt off-chain
+    /// @notice         View function that can be used to obtain a certain number of the next bids to decrypt off-chain
     function getNextBidsToDecrypt(
         uint96 lotId_,
         uint256 number_
@@ -321,34 +382,6 @@ contract LocalSealedBidBatchAuction is AuctionModule {
         // Return array of encrypted bids
         return bids;
     }
-
-    // Note: we may need to remove this function due to issues with chosen plaintext attacks on RSA implementations
-    // /// @notice View function that can be used to obtain the amount out and seed for a given bid by providing the private key
-    // /// @dev This function can be used to decrypt bids off-chain if you know the private key
-    // function decryptBid(
-    //     uint96 lotId_,
-    //     uint96 bidId_,
-    //     bytes memory privateKey_
-    // ) external view returns (Decrypt memory) {
-    //     // Load encrypted bid
-    //     EncryptedBid memory encBid = lotEncryptedBids[lotId_][bidId_];
-
-    //     // Decrypt the encrypted amount out
-    //     (bytes memory amountOut, bytes32 seed) = RSAOAEP.decrypt(
-    //         encBid.encryptedAmountOut,
-    //         abi.encodePacked(lotId_),
-    //         privateKey_,
-    //         auctionData[lotId_].publicKeyModulus
-    //     );
-
-    //     // Cast the decrypted values
-    //     Decrypt memory decrypt;
-    //     decrypt.amountOut = abi.decode(amountOut, (uint256));
-    //     decrypt.seed = uint256(seed);
-
-    //     // Return the decrypt
-    //     return decrypt;
-    // }
 
     // =========== SETTLEMENT =========== //
 

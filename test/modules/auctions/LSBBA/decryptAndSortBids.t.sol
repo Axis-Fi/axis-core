@@ -38,6 +38,7 @@ contract LSBBADecryptAndSortBidsTest is Test, Permit2User {
         bytes32(0x1AFCC05BD15602738CBE9BD75B76403AB2C9409F2CC0C189B4551DEE8B576AD3)
     );
 
+    // bidThree > bidOne > bidTwo
     uint256 internal bidSeed = 1e9;
     uint96 internal bidOne;
     uint256 internal bidOneAmount = 1e18;
