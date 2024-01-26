@@ -213,12 +213,12 @@ contract LocalSealedBidBatchAuction is AuctionModule {
         lotEncryptedBids[lotId_][bidId_].status = BidStatus.Cancelled;
 
         // Remove bid from list of bids to decrypt
-        AuctionData storage data = auctionData[lotId_];
-        uint256 len = data.bidIds.length;
+        uint96[] storage bidIds = auctionData[lotId_].bidIds;
+        uint256 len = bidIds.length;
         for (uint256 i; i < len; i++) {
-            if (data.bidIds[i] == bidId_) {
-                data.bidIds[i] = data.bidIds[len - 1];
-                data.bidIds.pop();
+            if (bidIds[i] == bidId_) {
+                bidIds[i] = bidIds[len - 1];
+                bidIds.pop();
                 break;
             }
         }
@@ -230,6 +230,9 @@ contract LocalSealedBidBatchAuction is AuctionModule {
     // =========== DECRYPTION =========== //
 
     function decryptAndSortBids(uint96 lotId_, Decrypt[] memory decrypts_) external {
+        // Check that lotId is valid
+        _revertIfLotInvalid(lotId_);
+
         // Check that auction is in the right state for decryption
         if (
             auctionData[lotId_].status != AuctionStatus.Created

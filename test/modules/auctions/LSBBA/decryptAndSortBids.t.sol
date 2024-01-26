@@ -256,7 +256,7 @@ contract LSBBADecryptAndSortBidsTest is Test, Permit2User {
 
     function test_givenLotHasNotConcluded_reverts() public whenLotHasNotConcluded {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(Auction.Auction_MarketActive.selector, lotId);
+        bytes memory err = abi.encodeWithSelector(LocalSealedBidBatchAuction.Auction_WrongState.selector);
         vm.expectRevert(err);
 
         // Call
@@ -354,8 +354,9 @@ contract LSBBADecryptAndSortBidsTest is Test, Permit2User {
     {
         // Amend the decrypts array
         _clearDecrypts();
+        decrypts.push(decryptedBidThree); // push this first since it swapped with the cancelled one
         decrypts.push(decryptedBidTwo);
-        decrypts.push(decryptedBidThree);
+        
 
         // Call
         auctionModule.decryptAndSortBids(lotId, decrypts);
