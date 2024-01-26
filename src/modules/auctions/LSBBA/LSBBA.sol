@@ -202,9 +202,11 @@ contract LocalSealedBidBatchAuction is AuctionModule {
         address
     ) internal override returns (uint256 refundAmount) {
         // Validate inputs
-        
+
         // Bid must be in Submitted state
-        if (lotEncryptedBids[lotId_][bidId_].status != BidStatus.Submitted) revert Auction_WrongState();
+        if (lotEncryptedBids[lotId_][bidId_].status != BidStatus.Submitted) {
+            revert Auction_WrongState();
+        }
 
         // Auction must be in Created state
         if (auctionData[lotId_].status != AuctionStatus.Created) revert Auction_WrongState();
@@ -267,9 +269,7 @@ contract LocalSealedBidBatchAuction is AuctionModule {
             if (encBid.status != BidStatus.Submitted) continue;
 
             // Store the decrypt in the sorted bid queue
-            lotSortedBids[lotId_].insert(
-                bidId, encBid.amount, decrypts_[i].amountOut
-            );
+            lotSortedBids[lotId_].insert(bidId, encBid.amount, decrypts_[i].amountOut);
 
             // Set bid status to decrypted
             encBid.status = BidStatus.Decrypted;
