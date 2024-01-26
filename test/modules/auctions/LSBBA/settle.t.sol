@@ -38,18 +38,19 @@ contract LSBBASettleTest is Test, Permit2User {
         bytes32(0x1AFCC05BD15602738CBE9BD75B76403AB2C9409F2CC0C189B4551DEE8B576AD3)
     );
 
+    // TODO adjust these
     uint256 internal bidSeed = 1e9;
     uint96 internal bidOne;
     uint256 internal bidOneAmount = 2e18;
-    uint256 internal bidOneAmountOut = 2e18;
+    uint256 internal bidOneAmountOut = 2e18; // Price = 1
     LocalSealedBidBatchAuction.Decrypt internal decryptedBidOne;
     uint96 internal bidTwo;
     uint256 internal bidTwoAmount = 3e18;
-    uint256 internal bidTwoAmountOut = 3e18;
+    uint256 internal bidTwoAmountOut = 3e18; // Price = 1
     LocalSealedBidBatchAuction.Decrypt internal decryptedBidTwo;
     uint96 internal bidThree;
     uint256 internal bidThreeAmount = 7e18;
-    uint256 internal bidThreeAmountOut = 7e18;
+    uint256 internal bidThreeAmountOut = 7e18; // Price = 1
     LocalSealedBidBatchAuction.Decrypt internal decryptedBidThree;
     uint96 internal bidFour;
     uint256 internal bidFourAmount = 2e18;
