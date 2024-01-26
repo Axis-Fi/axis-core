@@ -382,17 +382,17 @@ contract LSBBADecryptAndSortBidsTest is Test, Permit2User {
         );
 
         // Check sorted bids
-        QueueBid memory sortedBidOne = auctionModule.getSortedBidData(lotId, 0);
-        assertEq(sortedBidOne.queueId, 0);
-        assertEq(sortedBidOne.bidId, bidThree);
-        assertEq(sortedBidOne.amountIn, bidThreeAmount);
-        assertEq(sortedBidOne.minAmountOut, bidThreeAmountOut);
+        QueueBid memory sortedBidOne = auctionModule.getSortedBidData(lotId, 1);
+        assertEq(sortedBidOne.queueId, 2);
+        assertEq(sortedBidOne.bidId, bidTwo);
+        assertEq(sortedBidOne.amountIn, bidTwoAmount);
+        assertEq(sortedBidOne.minAmountOut, bidTwoAmountOut);
 
-        QueueBid memory sortedBidTwo = auctionModule.getSortedBidData(lotId, 1);
+        QueueBid memory sortedBidTwo = auctionModule.getSortedBidData(lotId, 2);
         assertEq(sortedBidTwo.queueId, 1);
-        assertEq(sortedBidTwo.bidId, bidTwo);
-        assertEq(sortedBidTwo.amountIn, bidTwoAmount);
-        assertEq(sortedBidTwo.minAmountOut, bidTwoAmountOut);
+        assertEq(sortedBidTwo.bidId, bidThree);
+        assertEq(sortedBidTwo.amountIn, bidThreeAmount);
+        assertEq(sortedBidTwo.minAmountOut, bidThreeAmountOut);
 
         assertEq(auctionModule.getSortedBidCount(lotId), 2);
     }
