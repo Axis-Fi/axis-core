@@ -539,4 +539,147 @@ contract LSBBADecryptAndSortBidsTest is Test, Permit2User {
 
         assertEq(auctionModule.getSortedBidCount(lotId), 3);
     }
+
+    // getNextBidsToDecrypt
+    // [X] when the lot id is invalid
+    //  [X] it reverts
+    // [X] when the number of bids to decrypt is greater than the remaining encrypted bids
+    //  [X] it reverts
+    // [X] when the lot has not concluded
+    //  [X] it reverts
+    // [X] when the lot has been decrypted
+    //  [X] it reverts
+    // [X] when the lot has been settled
+    //  [X] it reverts
+    // [X] when the number of bids to decrypt is smaller than the remaining encrypted bids
+    //  [X] it returns the correct number of bids
+    // [X] when the number of bids to decrypt is equal to the remaining encrypted bids
+    //  [X] it returns the correct number of bids
+    // [X] when the number of bids to decrypt is zero
+    //  [X] it returns an empty array
+    // [X] when partial decryption has occurred
+    //  [X] it returns the correct bids
+
+    function test_getNextBidsToDecrypt_whenLotIdIsInvalid_reverts() public whenLotIdIsInvalid {
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(Auction.Auction_InvalidLotId.selector, lotId);
+        vm.expectRevert(err);
+
+        // Call
+        auctionModule.getNextBidsToDecrypt(lotId, 1);
+    }
+
+    function test_getNextBidsToDecrypt_whenNumberOfBidsToDecryptIsGreater_reverts()
+        public
+        whenLotHasConcluded
+    {
+        // Expect revert
+        bytes memory err =
+            abi.encodeWithSelector(LocalSealedBidBatchAuction.Auction_InvalidDecrypt.selector);
+        vm.expectRevert(err);
+
+        // Call
+        auctionModule.getNextBidsToDecrypt(lotId, 4);
+    }
+
+    function test_getNextBidsToDecrypt_whenLotHasNotConcluded_reverts()
+        public
+        whenLotHasNotConcluded
+    {
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(Auction.Auction_MarketActive.selector, lotId);
+        vm.expectRevert(err);
+
+        // Call
+        auctionModule.getNextBidsToDecrypt(lotId, 1);
+    }
+
+    function test_getNextBidsToDecrypt_whenLotDecryptionIsComplete_reverts()
+        public
+        whenLotHasConcluded
+        whenLotDecryptionIsComplete
+    {
+        // Expect revert
+        bytes memory err =
+            abi.encodeWithSelector(LocalSealedBidBatchAuction.Auction_WrongState.selector);
+        vm.expectRevert(err);
+
+        // Call
+        auctionModule.getNextBidsToDecrypt(lotId, 1);
+    }
+
+    function test_getNextBidsToDecrypt_whenLotHasSettled_reverts()
+        public
+        whenLotHasConcluded
+        whenLotDecryptionIsComplete
+        whenLotHasSettled
+    {
+        // Expect revert
+        bytes memory err =
+            abi.encodeWithSelector(LocalSealedBidBatchAuction.Auction_WrongState.selector);
+        vm.expectRevert(err);
+
+        // Call
+        auctionModule.getNextBidsToDecrypt(lotId, 1);
+    }
+
+    function test_getNextBidsToDecrypt_whenNumberOfBidsToDecryptIsSmaller_returnsCorrectBids()
+        public
+        whenLotHasConcluded
+    {
+        // Call
+        LocalSealedBidBatchAuction.EncryptedBid[] memory bids =
+            auctionModule.getNextBidsToDecrypt(lotId, 2);
+
+        // Check the bids
+        assertEq(bids.length, 2);
+        assertEq(bids[0].amount, bidOneAmount);
+        assertEq(bids[1].amount, bidTwoAmount);
+    }
+
+    function test_getNextBidsToDecrypt_whenNumberOfBidsToDecryptIsEqual_returnsCorrectBids()
+        public
+        whenLotHasConcluded
+    {
+        // Call
+        LocalSealedBidBatchAuction.EncryptedBid[] memory bids =
+            auctionModule.getNextBidsToDecrypt(lotId, 3);
+
+        // Check the bids
+        assertEq(bids.length, 3);
+        assertEq(bids[0].amount, bidOneAmount);
+        assertEq(bids[1].amount, bidTwoAmount);
+        assertEq(bids[2].amount, bidThreeAmount);
+    }
+
+    function test_getNextBidsToDecrypt_whenNumberOfBidsToDecryptIsZero_returnsEmptyArray()
+        public
+        whenLotHasConcluded
+    {
+        // Call
+        LocalSealedBidBatchAuction.EncryptedBid[] memory bids =
+            auctionModule.getNextBidsToDecrypt(lotId, 0);
+
+        // Check the bids
+        assertEq(bids.length, 0);
+    }
+
+    function test_getNextBidsToDecrypt_whenPartialDecryptionHasOccurred_returnsCorrectBids()
+        public
+        whenLotHasConcluded
+    {
+        // Decrypt 1 bid
+        _clearDecrypts();
+        decrypts.push(decryptedBidOne);
+        auctionModule.decryptAndSortBids(lotId, decrypts);
+
+        // Call
+        LocalSealedBidBatchAuction.EncryptedBid[] memory bids =
+            auctionModule.getNextBidsToDecrypt(lotId, 2);
+
+        // Check the bids
+        assertEq(bids.length, 2);
+        assertEq(bids[0].amount, bidTwoAmount);
+        assertEq(bids[1].amount, bidThreeAmount);
+    }
 }

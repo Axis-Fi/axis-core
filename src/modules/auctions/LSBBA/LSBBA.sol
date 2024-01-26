@@ -138,12 +138,17 @@ contract LocalSealedBidBatchAuction is AuctionModule {
         ) revert Auction_NotLive();
     }
 
+    function _revertIfLotDecrypted(uint96 lotId_) internal view {
+        // Check that bids are allowed to be submitted for the lot
+        if (auctionData[lotId_].status == AuctionStatus.Decrypted) revert Auction_WrongState();
+    }
+
     /// @inheritdoc AuctionModule
     /// @dev        Checks that the lot is not yet settled
     function _revertIfLotSettled(uint96 lotId_) internal view override {
         // Auction must not be settled
         if (auctionData[lotId_].status == AuctionStatus.Settled) {
-            revert Auction_MarketNotActive(lotId_);
+            revert Auction_WrongState();
         }
     }
 
@@ -359,15 +364,43 @@ contract LocalSealedBidBatchAuction is AuctionModule {
     }
 
     /// @notice         View function that can be used to obtain a certain number of the next bids to decrypt off-chain
+    /// @dev            This function can be called by anyone, and is used by the decryptAndSortBids() function to obtain the next bids to decrypt
+    ///
+    ///                 This function handles the following:
+    ///                 - Validates inputs
+    ///                 - Loads the next decrypt index
+    ///                 - Loads the number of bids to decrypt
+    ///                 - Creates an array of encrypted bids
+    ///                 - Returns the array of encrypted bids
+    ///
+    ///                 This function reverts if:
+    ///                 - The lot ID is invalid
+    ///                 - The lot has not concluded
+    ///                 - The lot has already been decrypted in full
+    ///                 - The number of bids to decrypt is greater than the number of bids remaining to be decrypted
+    ///
+    /// @param          lotId_          The lot ID of the auction to decrypt bids for
+    /// @param          number_         The number of bids to decrypt
+    /// @return         bids            An array of encrypted bids
     function getNextBidsToDecrypt(
         uint96 lotId_,
         uint256 number_
     ) external view returns (EncryptedBid[] memory) {
+        // Validation
+        _revertIfLotInvalid(lotId_);
+        _revertIfLotActive(lotId_);
+        _revertIfLotDecrypted(lotId_);
+        _revertIfLotSettled(lotId_);
+
         // Load next decrypt index
         uint96 nextDecryptIndex = auctionData[lotId_].nextDecryptIndex;
 
         // Load number of bids to decrypt
         uint96[] storage bidIds = auctionData[lotId_].bidIds;
+
+        // Check that the number of bids to decrypt is less than or equal to the number of bids remaining to be decrypted
+        if (number_ > bidIds.length - nextDecryptIndex) revert Auction_InvalidDecrypt();
+
         uint256 len = bidIds.length - nextDecryptIndex;
         if (number_ < len) len = number_;
 
