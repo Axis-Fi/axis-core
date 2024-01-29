@@ -28,6 +28,8 @@ import {
     Module
 } from "src/modules/Modules.sol";
 
+import {console2} from "forge-std/console2.sol";
+
 contract SettleTest is Test, Permit2User {
     MockERC20 internal baseToken;
     MockERC20 internal quoteToken;
@@ -56,19 +58,20 @@ contract SettleTest is Test, Permit2User {
     uint48 internal constant protocolFee = 1000; // 1%
     uint48 internal constant referrerFee = 500; // 0.5%
 
-    uint256 internal constant LOT_CAPACITY = 10e18;
+    uint256 internal _lotCapacity = 10e18;
+    uint256 internal constant SCALE = 1e18;
     uint256 internal bidSeed = 1e9;
 
-    uint256 internal constant bidOneAmount = 4e18;
-    uint256 internal constant bidOneAmountOut = 4e18; // Price = 1
-    uint256 internal constant bidTwoAmount = 6e18;
-    uint256 internal constant bidTwoAmountOut = 6e18; // Price = 1
-    uint256 internal constant bidThreeAmount = 7e18;
-    uint256 internal constant bidThreeAmountOut = 7e18; // Price = 1
-    uint256 internal constant bidFourAmount = 8e18;
-    uint256 internal constant bidFourAmountOut = 2e18; // Price = 4
-    uint256 internal constant bidFiveAmount = 8e18;
-    uint256 internal constant bidFiveAmountOut = 4e18; // Price = 2
+    uint256 internal bidOneAmount = 4e18;
+    uint256 internal bidOneAmountOut = 4e18; // Price = 1
+    uint256 internal bidTwoAmount = 6e18;
+    uint256 internal bidTwoAmountOut = 6e18; // Price = 1
+    uint256 internal bidThreeAmount = 7e18;
+    uint256 internal bidThreeAmountOut = 7e18; // Price = 1
+    uint256 internal bidFourAmount = 8e18;
+    uint256 internal bidFourAmountOut = 2e18; // Price = 4
+    uint256 internal bidFiveAmount = 8e18;
+    uint256 internal bidFiveAmountOut = 4e18; // Price = 2
 
     Auction.AuctionParams internal auctionParams;
     Auctioneer.RoutingParams internal routingParams;
@@ -102,7 +105,7 @@ contract SettleTest is Test, Permit2User {
             start: lotStart,
             duration: auctionDuration,
             capacityInQuote: false,
-            capacity: LOT_CAPACITY,
+            capacity: _lotCapacity,
             implParams: abi.encode(auctionDataParams)
         });
         lotConclusion = auctionParams.start + auctionParams.duration;
@@ -121,9 +124,9 @@ contract SettleTest is Test, Permit2User {
         });
 
         // Set up pre-funding
-        baseToken.mint(auctionOwner, LOT_CAPACITY);
+        baseToken.mint(auctionOwner, _lotCapacity);
         vm.prank(auctionOwner);
-        baseToken.approve(address(auctionHouse), LOT_CAPACITY);
+        baseToken.approve(address(auctionHouse), _lotCapacity);
 
         // Create an auction lot
         vm.prank(auctionOwner);
@@ -175,23 +178,23 @@ contract SettleTest is Test, Permit2User {
     LocalSealedBidBatchAuction.Decrypt[] internal decryptedBids;
     uint256 internal marginalPrice;
 
-    modifier givenTokensHaveDifferentDecimals() {
+    modifier givenTokensHaveDifferentDecimals(uint8 baseTokenDecimals_, uint8 quoteTokenDecimals_) {
         // Set up tokens
         baseToken = new MockERC20("Base Token", "BASE", 17);
         quoteToken = new MockERC20("Quote Token", "QUOTE", 13);
 
         // Update parameters
-        uint256 auctionCapacity = 10e17;
+        _lotCapacity = _lotCapacity * 10 ** baseTokenDecimals_ / SCALE;
 
-        auctionParams.capacity = auctionCapacity;
+        auctionParams.capacity = _lotCapacity;
 
         routingParams.baseToken = baseToken;
         routingParams.quoteToken = quoteToken;
 
         // Set up pre-funding
-        baseToken.mint(auctionOwner, auctionCapacity);
+        baseToken.mint(auctionOwner, _lotCapacity);
         vm.prank(auctionOwner);
-        baseToken.approve(address(auctionHouse), auctionCapacity);
+        baseToken.approve(address(auctionHouse), _lotCapacity);
 
         // Create a new auction
         vm.prank(auctionOwner);
@@ -199,7 +202,10 @@ contract SettleTest is Test, Permit2User {
         _;
     }
 
-    modifier givenLotHasBidsLessThanCapacity() {
+    modifier givenLotHasBidsLessThanCapacity(uint8 baseTokenDecimals_, uint8 quoteTokenDecimals_) {
+        bidOneAmount = bidOneAmount * 10 ** quoteTokenDecimals_ / SCALE;
+        bidOneAmountOut = bidOneAmountOut * 10 ** baseTokenDecimals_ / SCALE;
+
         // Mint quote tokens to the bidders
         quoteToken.mint(bidderOne, bidOneAmount);
 
@@ -213,7 +219,7 @@ contract SettleTest is Test, Permit2User {
             _createBid(bidderOne, bidOneAmount, bidOneAmountOut);
         decryptedBids.push(decryptedBidOne);
 
-        marginalPrice = bidOneAmount * 1e18 / bidOneAmountOut;
+        marginalPrice = bidOneAmount * 10 ** baseTokenDecimals_ / bidOneAmountOut;
         _;
     }
 
@@ -241,7 +247,12 @@ contract SettleTest is Test, Permit2User {
         _;
     }
 
-    modifier givenLotHasPartialFill() {
+    modifier givenLotHasPartialFill(uint8 baseTokenDecimals_, uint8 quoteTokenDecimals_) {
+        bidOneAmount = bidOneAmount * 10 ** quoteTokenDecimals_ / SCALE;
+        bidOneAmountOut = bidOneAmountOut * 10 ** baseTokenDecimals_ / SCALE;
+        bidThreeAmount = bidThreeAmount * 10 ** quoteTokenDecimals_ / SCALE;
+        bidThreeAmountOut = bidThreeAmountOut * 10 ** baseTokenDecimals_ / SCALE;
+
         // Mint quote tokens to the bidders
         quoteToken.mint(bidderOne, bidOneAmount);
         quoteToken.mint(bidderTwo, bidThreeAmount);
@@ -261,11 +272,19 @@ contract SettleTest is Test, Permit2User {
         decryptedBids.push(decryptedBidOne);
         decryptedBids.push(decryptedBidThree);
 
-        marginalPrice = bidThreeAmount * 1e18 / bidThreeAmountOut;
+        marginalPrice = bidThreeAmount * 10 ** baseTokenDecimals_ / bidThreeAmountOut;
         _;
     }
 
-    modifier givenLotHasSufficientBids_differentMarginalPrice() {
+    modifier givenLotHasSufficientBids_differentMarginalPrice(
+        uint8 baseTokenDecimals_,
+        uint8 quoteTokenDecimals_
+    ) {
+        bidFourAmount = bidFourAmount * 10 ** quoteTokenDecimals_ / SCALE;
+        bidFourAmountOut = bidFourAmountOut * 10 ** baseTokenDecimals_ / SCALE;
+        bidFiveAmount = bidFiveAmount * 10 ** quoteTokenDecimals_ / SCALE;
+        bidFiveAmountOut = bidFiveAmountOut * 10 ** baseTokenDecimals_ / SCALE;
+
         // Mint quote tokens to the bidders
         quoteToken.mint(bidderOne, bidFourAmount);
         quoteToken.mint(bidderTwo, bidFiveAmount);
@@ -286,7 +305,7 @@ contract SettleTest is Test, Permit2User {
         decryptedBids.push(decryptedBidTwo);
 
         // bidFour first (price = 4), then bidFive (price = 3)
-        marginalPrice = bidFiveAmount * 1e18 / bidFiveAmountOut;
+        marginalPrice = bidFiveAmount * 10 ** baseTokenDecimals_ / bidFiveAmountOut;
         _;
     }
 
@@ -485,7 +504,7 @@ contract SettleTest is Test, Permit2User {
     function test_partialFill()
         external
         givenLotHasStarted
-        givenLotHasPartialFill
+        givenLotHasPartialFill(18, 18)
         givenLotHasConcluded
         givenLotHasDecrypted
     {
@@ -514,8 +533,75 @@ contract SettleTest is Test, Permit2User {
         );
 
         // Check quote token balances
-        uint256 bidOnePercentageFilled = bidOneAmountOutActual * 1e18 / bidOneAmountOut;
-        uint256 bidOneAmountActual = bidOneAmount * bidOnePercentageFilled / 1e18;
+        uint256 bidOneAmountActual = 3e18; // 3
+        assertEq(
+            quoteToken.balanceOf(bidderOne),
+            bidOneAmount - bidOneAmountActual,
+            "bidderOne: incorrect balance of quote token"
+        ); // Remainder received as quote tokens.
+        assertEq(quoteToken.balanceOf(bidderTwo), 0, "bidderTwo: incorrect balance of quote token");
+
+        // Calculate fees on quote tokens
+        uint256 protocolFeeAmount = (bidOneAmountActual + bidThreeAmount) * protocolFee / 1e5;
+        uint256 referrerFeeAmount = (bidOneAmountActual + bidThreeAmount) * referrerFee / 1e5;
+        uint256 totalFeeAmount = protocolFeeAmount + referrerFeeAmount;
+
+        // Auction owner should have received quote tokens minus fees
+        assertEq(
+            quoteToken.balanceOf(auctionOwner),
+            bidOneAmountActual + bidThreeAmount - totalFeeAmount,
+            "auction owner: incorrect balance of quote token"
+        );
+
+        // Fees stored on auction house
+        assertEq(
+            quoteToken.balanceOf(address(auctionHouse)),
+            totalFeeAmount,
+            "auction house: incorrect balance of quote token"
+        );
+
+        // Fee records updated
+        assertEq(
+            auctionHouse.rewards(protocol, quoteToken), protocolFeeAmount, "incorrect protocol fees"
+        );
+        assertEq(
+            auctionHouse.rewards(referrer, quoteToken), referrerFeeAmount, "incorrect referrer fees"
+        );
+    }
+
+    function test_partialFill_differentDecimals()
+        external
+        givenLotHasStarted
+        givenLotHasPartialFill(17, 13)
+        givenLotHasConcluded
+        givenLotHasDecrypted
+    {
+        // Attempt to settle the lot
+        auctionHouse.settle(lotId);
+
+        // Check base token balances
+        uint256 bidOneAmountOutActual = 3e13;
+        assertEq(
+            baseToken.balanceOf(bidderOne),
+            bidOneAmountOutActual,
+            "bidderOne: incorrect balance of base token"
+        ); // Received partial payout. 10 - 7 = 3
+        assertEq(
+            baseToken.balanceOf(bidderTwo),
+            bidThreeAmountOut,
+            "bidderTwo: incorrect balance of base token"
+        );
+        assertEq(
+            baseToken.balanceOf(auctionOwner), 0, "auction owner: incorrect balance of base token"
+        );
+        assertEq(
+            baseToken.balanceOf(address(auctionHouse)),
+            0,
+            "auctionHouse: incorrect balance of base token"
+        );
+
+        // Check quote token balances
+        uint256 bidOneAmountActual = 3e17; // 3
         assertEq(
             quoteToken.balanceOf(bidderOne),
             bidOneAmount - bidOneAmountActual,
@@ -554,7 +640,7 @@ contract SettleTest is Test, Permit2User {
     function test_marginalPrice()
         external
         givenLotHasStarted
-        givenLotHasSufficientBids_differentMarginalPrice
+        givenLotHasSufficientBids_differentMarginalPrice(18, 18)
         givenLotHasConcluded
         givenLotHasDecrypted
     {
@@ -576,7 +662,73 @@ contract SettleTest is Test, Permit2User {
         );
         assertEq(
             baseToken.balanceOf(auctionOwner),
-            LOT_CAPACITY - bidFourAmountOutActual - bidFiveAmountOutActual, // Returned remaining base tokens
+            _lotCapacity - bidFourAmountOutActual - bidFiveAmountOutActual, // Returned remaining base tokens
+            "auction owner: incorrect balance of base token"
+        );
+        assertEq(
+            baseToken.balanceOf(address(auctionHouse)),
+            0,
+            "auctionHouse: incorrect balance of base token"
+        );
+
+        // Check quote token balances
+        assertEq(quoteToken.balanceOf(bidderOne), 0, "bidderOne: incorrect balance of quote token");
+        assertEq(quoteToken.balanceOf(bidderTwo), 0, "bidderTwo: incorrect balance of quote token");
+
+        // Calculate fees on quote tokens
+        uint256 protocolFeeAmount = (bidFourAmount + bidFiveAmount) * protocolFee / 1e5;
+        uint256 referrerFeeAmount = (bidFourAmount + bidFiveAmount) * referrerFee / 1e5;
+        uint256 totalFeeAmount = protocolFeeAmount + referrerFeeAmount;
+
+        // Auction owner should have received quote tokens minus fees
+        assertEq(
+            quoteToken.balanceOf(auctionOwner),
+            bidFourAmount + bidFiveAmount - totalFeeAmount,
+            "auction owner: incorrect balance of quote token"
+        );
+
+        // Fees stored on auction house
+        assertEq(
+            quoteToken.balanceOf(address(auctionHouse)),
+            totalFeeAmount,
+            "auction house: incorrect balance of quote token"
+        );
+
+        // Fee records updated
+        assertEq(
+            auctionHouse.rewards(protocol, quoteToken), protocolFeeAmount, "incorrect protocol fees"
+        );
+        assertEq(
+            auctionHouse.rewards(referrer, quoteToken), referrerFeeAmount, "incorrect referrer fees"
+        );
+    }
+
+    function test_marginalPrice_differentDecimals()
+        external
+        givenLotHasStarted
+        givenLotHasSufficientBids_differentMarginalPrice(17, 13)
+        givenLotHasConcluded
+        givenLotHasDecrypted
+    {
+        // Attempt to settle the lot
+        auctionHouse.settle(lotId);
+
+        // Check base token balances
+        uint256 bidFourAmountOutActual = bidFourAmount * 1e13 / marginalPrice;
+        uint256 bidFiveAmountOutActual = bidFiveAmountOut; // since it set the marginal price
+        assertEq(
+            baseToken.balanceOf(bidderOne),
+            bidFourAmountOutActual,
+            "bidderOne: incorrect balance of base token"
+        );
+        assertEq(
+            baseToken.balanceOf(bidderTwo),
+            bidFiveAmountOutActual,
+            "bidderTwo: incorrect balance of base token"
+        );
+        assertEq(
+            baseToken.balanceOf(auctionOwner),
+            _lotCapacity - bidFourAmountOutActual - bidFiveAmountOutActual, // Returned remaining base tokens
             "auction owner: incorrect balance of base token"
         );
         assertEq(
@@ -620,7 +772,7 @@ contract SettleTest is Test, Permit2User {
     function test_lessThanCapacity()
         external
         givenLotHasStarted
-        givenLotHasBidsLessThanCapacity
+        givenLotHasBidsLessThanCapacity(18, 18)
         givenLotHasConcluded
         givenLotHasDecrypted
     {
@@ -636,7 +788,7 @@ contract SettleTest is Test, Permit2User {
         assertEq(baseToken.balanceOf(bidderTwo), 0, "bidderTwo: incorrect balance of base token");
         assertEq(
             baseToken.balanceOf(auctionOwner),
-            LOT_CAPACITY - bidOneAmountOut,
+            _lotCapacity - bidOneAmountOut,
             "auction owner: incorrect balance of base token"
         ); // Returned remaining base tokens
         assertEq(
@@ -679,43 +831,25 @@ contract SettleTest is Test, Permit2User {
 
     function test_lessThanCapacity_differentDecimals()
         external
-        givenTokensHaveDifferentDecimals
+        givenTokensHaveDifferentDecimals(17, 13)
         givenLotHasStarted
+        givenLotHasBidsLessThanCapacity(17, 13)
+        givenLotHasConcluded
+        givenLotHasDecrypted
     {
-        uint256 bidAmount = 4e13;
-        uint256 bidAmountOut = 8e17;
-
-        // Mint quote tokens
-        quoteToken.mint(bidderOne, bidAmount);
-
-        // Authorise spending
-        vm.prank(bidderOne);
-        quoteToken.approve(address(auctionHouse), bidAmount);
-
-        // Create the bid
-        (, LocalSealedBidBatchAuction.Decrypt memory decryptedBid) =
-            _createBid(bidderOne, bidAmount, bidAmountOut);
-        decryptedBids.push(decryptedBid);
-
-        // Finish the auction lot
-        vm.warp(lotConclusion + 1);
-
-        // Decrypt bids
-        auctionModule.decryptAndSortBids(lotId, decryptedBids);
-
-        // Attempt to settle
+        // Attempt to settle the lot
         auctionHouse.settle(lotId);
 
         // Check base token balances
         assertEq(
             baseToken.balanceOf(bidderOne),
-            bidAmountOut,
+            bidOneAmountOut,
             "bidderOne: incorrect balance of base token"
         );
         assertEq(baseToken.balanceOf(bidderTwo), 0, "bidderTwo: incorrect balance of base token");
         assertEq(
             baseToken.balanceOf(auctionOwner),
-            10e17 - bidAmountOut,
+            _lotCapacity - bidOneAmountOut,
             "auction owner: incorrect balance of base token"
         ); // Returned remaining base tokens
         assertEq(
@@ -729,14 +863,14 @@ contract SettleTest is Test, Permit2User {
         assertEq(quoteToken.balanceOf(bidderTwo), 0, "bidderTwo: incorrect balance of quote token");
 
         // Calculate fees on quote tokens
-        uint256 protocolFeeAmount = (bidAmountOut + 0) * protocolFee / 1e5;
-        uint256 referrerFeeAmount = (bidAmountOut + 0) * referrerFee / 1e5;
+        uint256 protocolFeeAmount = (bidOneAmount + 0) * protocolFee / 1e5;
+        uint256 referrerFeeAmount = (bidOneAmount + 0) * referrerFee / 1e5;
         uint256 totalFeeAmount = protocolFeeAmount + referrerFeeAmount;
 
         // Auction owner should have received quote tokens minus fees
         assertEq(
             quoteToken.balanceOf(auctionOwner),
-            bidAmountOut + 0 - totalFeeAmount,
+            bidOneAmount + 0 - totalFeeAmount,
             "auction owner: incorrect balance of quote token"
         );
 
@@ -755,6 +889,4 @@ contract SettleTest is Test, Permit2User {
             auctionHouse.rewards(referrer, quoteToken), referrerFeeAmount, "incorrect referrer fees"
         );
     }
-
-    // TODO partial fill, different decimals
 }
