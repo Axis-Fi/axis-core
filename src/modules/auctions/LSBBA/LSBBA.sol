@@ -193,6 +193,8 @@ contract LocalSealedBidBatchAuction is AuctionModule {
     ///             - Adds the bid ID to the list of bids to decrypt (in `AuctionData.bidIds`)
     ///             - Returns the bid ID
     ///
+    ///             Typically, the `_bid()` function would check whether the bid is of a minimum size and less than the capacity. As `Bid.minAmountOut` is encrypted, it is not possible to check this here. Instead, this is checked in `_settle()`.
+    ///
     ///             This function reverts if:
     ///             - The amount is less than the minimum bid size for the lot
     function _bid(
@@ -204,8 +206,8 @@ contract LocalSealedBidBatchAuction is AuctionModule {
         bytes calldata auctionData_
     ) internal override returns (uint96 bidId) {
         // Validate inputs
-        // Amount at least minimum bid size for lot
-        if (amount_ < auctionData[lotId_].minBidSize) revert Auction_AmountLessThanMinimum();
+
+        // Does not check that the bid amount (in terms of the quote token) is less than the minimum bid size (in terms of the base token), because they are different units
 
         // Does not check that the bid amount (in terms of the quote token) is greater than the lot capacity (in terms of the base token), because they are different units
 
