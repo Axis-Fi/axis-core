@@ -42,18 +42,18 @@ contract MockAuctionModule is AuctionModule {
     ) internal override returns (uint96) {}
 
     function payoutFor(
-        uint256 id_,
+        uint96 lotId_,
         uint256 amount_
     ) public view virtual override returns (uint256) {}
 
     function priceFor(
-        uint256 id_,
+        uint96 lotId_,
         uint256 payout_
     ) public view virtual override returns (uint256) {}
 
-    function maxPayout(uint256 id_) public view virtual override returns (uint256) {}
+    function maxPayout(uint96 lotId_) public view virtual override returns (uint256) {}
 
-    function maxAmountAccepted(uint256 id_) public view virtual override returns (uint256) {}
+    function maxAmountAccepted(uint96 lotId_) public view virtual override returns (uint256) {}
 
     function _settle(uint96 lotId_)
         internal

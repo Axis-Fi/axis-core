@@ -65,8 +65,8 @@ contract MockAtomicAuctionModule is AuctionModule {
         auctionOutput = abi.encode(output);
     }
 
-    function setPayoutMultiplier(uint256 id_, uint256 multiplier_) external virtual {
-        payoutData[id_] = multiplier_;
+    function setPayoutMultiplier(uint96 lotId_, uint256 multiplier_) external virtual {
+        payoutData[lotId_] = multiplier_;
     }
 
     function setPurchaseReverts(bool reverts_) external virtual {
@@ -89,23 +89,23 @@ contract MockAtomicAuctionModule is AuctionModule {
     }
 
     function settle(
-        uint256 id_,
+        uint96 lotId_,
         Bid[] memory bids_
     ) external virtual returns (uint256[] memory amountsOut) {}
 
     function payoutFor(
-        uint256 id_,
+        uint96 lotId_,
         uint256 amount_
     ) public view virtual override returns (uint256) {}
 
     function priceFor(
-        uint256 id_,
+        uint96 lotId_,
         uint256 payout_
     ) public view virtual override returns (uint256) {}
 
-    function maxPayout(uint256 id_) public view virtual override returns (uint256) {}
+    function maxPayout(uint96 lotId_) public view virtual override returns (uint256) {}
 
-    function maxAmountAccepted(uint256 id_) public view virtual override returns (uint256) {}
+    function maxAmountAccepted(uint96 lotId_) public view virtual override returns (uint256) {}
 
     function _settle(uint96) internal pure override returns (Bid[] memory, bytes memory) {
         revert Auction_NotImplemented();

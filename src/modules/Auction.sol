@@ -73,7 +73,7 @@ abstract contract Auction {
     uint48 internal constant _ONE_HUNDRED_PERCENT = 100_000;
 
     /// @notice General information pertaining to auction lots
-    mapping(uint256 id => Lot lot) public lotData;
+    mapping(uint96 id => Lot lot) public lotData;
 
     // ========== ATOMIC AUCTIONS ========== //
 
@@ -169,13 +169,13 @@ abstract contract Auction {
 
     // ========== AUCTION INFORMATION ========== //
 
-    function payoutFor(uint256 id_, uint256 amount_) public view virtual returns (uint256);
+    function payoutFor(uint96 lotId_, uint256 amount_) public view virtual returns (uint256);
 
-    function priceFor(uint256 id_, uint256 payout_) public view virtual returns (uint256);
+    function priceFor(uint96 lotId_, uint256 payout_) public view virtual returns (uint256);
 
-    function maxPayout(uint256 id_) public view virtual returns (uint256);
+    function maxPayout(uint96 lotId_) public view virtual returns (uint256);
 
-    function maxAmountAccepted(uint256 id_) public view virtual returns (uint256);
+    function maxAmountAccepted(uint96 lotId_) public view virtual returns (uint256);
 
     /// @notice     Determines if the lot is active
     /// @dev        The implementing function should handle the following:
@@ -184,7 +184,7 @@ abstract contract Auction {
     ///
     /// @param      lotId_  The lot id
     /// @return     bool    Whether or not the lot is active
-    function isLive(uint256 lotId_) public view virtual returns (bool);
+    function isLive(uint96 lotId_) public view virtual returns (bool);
 
     /// @notice     Get the remaining capacity of a lot
     /// @dev        The implementing function should handle the following:
@@ -192,7 +192,7 @@ abstract contract Auction {
     ///
     /// @param      lotId_  The lot id
     /// @return     uint256 The remaining capacity of the lot
-    function remainingCapacity(uint256 lotId_) external view virtual returns (uint256);
+    function remainingCapacity(uint96 lotId_) external view virtual returns (uint256);
 }
 
 abstract contract AuctionModule is Auction, Module {
@@ -486,7 +486,7 @@ abstract contract AuctionModule is Auction, Module {
     ///
     /// @param      lotId_  The lot ID
     /// @return     bool    Whether or not the lot is active
-    function isLive(uint256 lotId_) public view override returns (bool) {
+    function isLive(uint96 lotId_) public view override returns (bool) {
         return (
             lotData[lotId_].capacity != 0 && lotData[lotId_].conclusion > uint48(block.timestamp)
                 && lotData[lotId_].start <= uint48(block.timestamp)
@@ -494,8 +494,8 @@ abstract contract AuctionModule is Auction, Module {
     }
 
     /// @inheritdoc Auction
-    function remainingCapacity(uint256 id_) external view override returns (uint256) {
-        return lotData[id_].capacity;
+    function remainingCapacity(uint96 lotId_) external view override returns (uint256) {
+        return lotData[lotId_].capacity;
     }
 
     /// @notice    Get the lot data for a given lot ID
