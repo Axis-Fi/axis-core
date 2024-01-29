@@ -38,7 +38,6 @@ contract LSBBASettleTest is Test, Permit2User {
         bytes32(0x1AFCC05BD15602738CBE9BD75B76403AB2C9409F2CC0C189B4551DEE8B576AD3)
     );
 
-    // TODO adjust these
     uint256 internal bidSeed = 1e9;
     uint96 internal bidOne;
     uint256 internal bidOneAmount = 2e18;
@@ -56,6 +55,10 @@ contract LSBBASettleTest is Test, Permit2User {
     uint256 internal bidFourAmount = 2e18;
     uint256 internal bidFourAmountOut = 4e18; // Price < 1e18 (minimum price)
     LocalSealedBidBatchAuction.Decrypt internal decryptedBidFour;
+    uint96 internal bidFive;
+    uint256 internal bidFiveAmount = 6e18;
+    uint256 internal bidFiveAmountOut = 5e18; // Price = 1.2
+    LocalSealedBidBatchAuction.Decrypt internal decryptedBidFive;
     LocalSealedBidBatchAuction.Decrypt[] internal decrypts;
 
     function setUp() public {
@@ -171,6 +174,19 @@ contract LSBBASettleTest is Test, Permit2User {
         decrypts.push(decryptedBidOne);
         decrypts.push(decryptedBidTwo);
         decrypts.push(decryptedBidThree);
+        _;
+    }
+
+    modifier whenLotIsOverSubscribedPartialFill() {
+        // 2 + 3 + 6 > 10
+        (bidOne, decryptedBidOne) = _createBid(bidOneAmount, bidOneAmountOut);
+        (bidTwo, decryptedBidTwo) = _createBid(bidTwoAmount, bidTwoAmountOut);
+        (bidFive, decryptedBidFive) = _createBid(bidFiveAmount, bidFiveAmountOut);
+
+        // Set up the decrypts array
+        decrypts.push(decryptedBidOne);
+        decrypts.push(decryptedBidTwo);
+        decrypts.push(decryptedBidFive);
         _;
     }
 
@@ -338,7 +354,7 @@ contract LSBBASettleTest is Test, Permit2User {
         assertEq(winningBids.length, 0);
     }
 
-    function test_whenLotIsOverSubscribed_returnsWinningBids()
+    function test_whenLotIsOverSubscribed()
         public
         whenLotIsOverSubscribed
         whenLotHasConcluded
@@ -363,6 +379,38 @@ contract LSBBASettleTest is Test, Permit2User {
 
         // Expect winning bids
         assertEq(winningBids.length, 2);
+    }
+
+    function test_whenLotIsOverSubscribed_partialFill()
+        public
+        whenLotIsOverSubscribedPartialFill
+        whenLotHasConcluded
+        whenLotDecryptionIsComplete
+    {
+        // Call for settlement
+        vm.prank(address(auctionHouse));
+        (LocalSealedBidBatchAuction.Bid[] memory winningBids,) = auctionModule.settle(lotId);
+
+        // Calculate the marginal price
+        uint256 marginalPrice = bidTwoAmount * 1e18 / bidTwoAmountOut;
+
+        bidThreeAmountOut = bidThreeAmount * 1e18 / marginalPrice;
+        bidFiveAmountOut = bidFiveAmount * 1e18 / marginalPrice;
+
+        // First bid - largest amount out
+        assertEq(winningBids[0].amount, bidFiveAmount, "bid 1: amount mismatch");
+        assertEq(winningBids[0].minAmountOut, bidFiveAmountOut, "bid 1: minAmountOut mismatch");
+
+        // Second bid
+        assertEq(winningBids[1].amount, bidTwoAmount, "bid 2: amount mismatch");
+        assertEq(winningBids[1].minAmountOut, bidTwoAmountOut, "bid 2: minAmountOut mismatch");
+
+        // Third bid - will be a partial fill and recognised by the AuctionHouse
+        assertEq(winningBids[2].amount, bidOneAmount, "bid 3: amount mismatch");
+        assertEq(winningBids[2].minAmountOut, bidOneAmountOut, "bid 3: minAmountOut mismatch");
+
+        // Expect winning bids
+        assertEq(winningBids.length, 3);
     }
 
     function test_whenLotIsFilled()
