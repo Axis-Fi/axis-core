@@ -3,7 +3,7 @@ pragma solidity 0.8.19;
 
 import {AuctionModule} from "src/modules/Auction.sol";
 import {Veecode, toVeecode} from "src/modules/Modules.sol";
-import {RSAOAEP} from "src/lib/RSA.sol";
+import {SimpleECIES as ECIES, Point} from "src/lib/SimpleECIES.sol";
 import {
     MaxPriorityQueue,
     Queue,
@@ -26,6 +26,8 @@ contract LocalSealedBidBatchAuction is AuctionModule {
     error Auction_NotLive();
     error Auction_NotConcluded();
     error Auction_InvalidDecrypt();
+    error Auction_InvalidBid();
+    error Auction_InvalidPrivateKey();
 
     // ========== DATA STRUCTURES ========== //
 
@@ -57,7 +59,8 @@ contract LocalSealedBidBatchAuction is AuctionModule {
         address recipient;
         address referrer;
         uint256 amount;
-        bytes encryptedAmountOut;
+        uint256 encryptedAmountOut;
+        Point encPubKey;
     }
 
     /// @notice        Struct containing decrypted bid data
@@ -86,7 +89,7 @@ contract LocalSealedBidBatchAuction is AuctionModule {
         uint256 minimumPrice;
         uint256 minFilled;
         uint256 minBidSize;
-        bytes publicKeyModulus;
+        Point publicKey;
         uint96[] bidIds;
     }
 
@@ -100,7 +103,7 @@ contract LocalSealedBidBatchAuction is AuctionModule {
         uint24 minFillPercent;
         uint24 minBidPercent;
         uint256 minimumPrice;
-        bytes publicKeyModulus;
+        Point publicKey;
     }
 
     // ========== STATE VARIABLES ========== //
@@ -211,6 +214,11 @@ contract LocalSealedBidBatchAuction is AuctionModule {
 
         // Does not check that the bid amount (in terms of the quote token) is greater than the lot capacity (in terms of the base token), because they are different units
 
+        // Validate that the encPubKey is a valid point on the AltBN128 curve
+        (uint256 encAmountOut, Point memory encPubKey) = abi.decode(auctionData_, (uint256, Point));
+
+        if (!ECIES.isOnBn128(encPubKey)) revert Auction_InvalidBid();
+
         // Store bid data
         // Auction data should just be the encrypted amount out (no decoding required)
         EncryptedBid memory userBid;
@@ -218,7 +226,8 @@ contract LocalSealedBidBatchAuction is AuctionModule {
         userBid.recipient = recipient_;
         userBid.referrer = referrer_;
         userBid.amount = amount_;
-        userBid.encryptedAmountOut = auctionData_;
+        userBid.encryptedAmountOut = encAmountOut;
+        userBid.encPubKey = encPubKey;
         userBid.status = BidStatus.Submitted;
 
         // Get next bid ID and increment it after assignment
@@ -301,8 +310,9 @@ contract LocalSealedBidBatchAuction is AuctionModule {
     ///                 - The encrypted bid does not match the re-encrypted decrypt
     ///
     /// @param          lotId_          The lot ID of the auction to decrypt bids for
-    /// @param          decrypts_       An array of decrypts containing the amount out and seed for each bid
-    function decryptAndSortBids(uint96 lotId_, Decrypt[] memory decrypts_) external {
+    /// @param          privateKey_     The private key for the public key provided by the auction
+    /// @param          num_            The number of bids to decrypt
+    function decryptAndSortBids(uint96 lotId_, bytes32 privateKey_, uint256 num_) external {
         // Check that lotId is valid
         _revertIfLotInvalid(lotId_);
 
@@ -312,41 +322,42 @@ contract LocalSealedBidBatchAuction is AuctionModule {
                 || block.timestamp < lotData[lotId_].conclusion
         ) revert Auction_WrongState();
 
+        // Check that the private key matches the provided public key
+        // We assume that all public keys are derived from the same generator: (1, 2)
+        Point memory calcPubKey = ECIES.calcPubKey(Point(1, 2), privateKey_);
+        Point memory pubKey = auctionData[lotId_].publicKey;
+        if (calcPubKey.x != pubKey.x || calcPubKey.y != pubKey.y) revert Auction_InvalidPrivateKey();
+
         // Load next decrypt index
         uint96 nextDecryptIndex = auctionData[lotId_].nextDecryptIndex;
-        uint96 len = uint96(decrypts_.length);
 
         // Check that the number of decrypts is less than or equal to the number of bids remaining to be decrypted
+        // If so, reduce to the number remaining
         uint96[] storage bidIds = auctionData[lotId_].bidIds;
-        if (len > bidIds.length - nextDecryptIndex) {
-            revert Auction_InvalidDecrypt();
-        }
+        if (num_ > bidIds.length - nextDecryptIndex) num_ = bidIds.length - nextDecryptIndex;
 
         // Iterate over decrypts, validate that they match the stored encrypted bids, then store them in the sorted bid queue
-        for (uint96 i; i < len; i++) {
-            // Re-encrypt the decrypt to confirm that it matches the stored encrypted bid
-            bytes memory ciphertext = _encrypt(lotId_, decrypts_[i]);
-
+        for (uint96 i; i < num_; i++) {
             // Load encrypted bid
             uint96 bidId = bidIds[nextDecryptIndex + i];
             EncryptedBid storage encBid = lotEncryptedBids[lotId_][bidId];
 
-            // Check that the encrypted bid matches the re-encrypted decrypt by hashing both
-            if (keccak256(ciphertext) != keccak256(encBid.encryptedAmountOut)) {
-                revert Auction_InvalidDecrypt();
-            }
-
+            // Validate that the bid is in the Submitted state
+            // TODO may be redundant with the new cancel logic
             if (encBid.status != BidStatus.Submitted) continue;
 
+            // Decrypt the bid
+            uint256 amountOut = _decrypt(lotId_, bidId, privateKey_);
+
             // Store the decrypt in the sorted bid queue
-            lotSortedBids[lotId_].insert(bidId, encBid.amount, decrypts_[i].amountOut);
+            lotSortedBids[lotId_].insert(bidId, encBid.amount, amountOut);
 
             // Set bid status to decrypted
             encBid.status = BidStatus.Decrypted;
         }
 
         // Increment next decrypt index
-        auctionData[lotId_].nextDecryptIndex += len;
+        auctionData[lotId_].nextDecryptIndex += uint96(num_);
 
         // If all bids have been decrypted, set auction status to decrypted
         if (auctionData[lotId_].nextDecryptIndex == bidIds.length) {
@@ -354,18 +365,44 @@ contract LocalSealedBidBatchAuction is AuctionModule {
         }
     }
 
-    /// @notice         Re-encrypts a decrypt to confirm that it matches the stored encrypted bid
-    function _encrypt(
+    // /// @notice         Re-encrypts a decrypt to confirm that it matches the stored encrypted bid
+    // function _encrypt(
+    //     uint96 lotId_,
+    //     Decrypt memory decrypt_
+    // ) internal view returns (bytes memory) {
+    //     return RSAOAEP.encrypt(
+    //         abi.encodePacked(decrypt_.amountOut),
+    //         abi.encodePacked(lotId_),
+    //         abi.encodePacked(_PUB_KEY_EXPONENT),
+    //         auctionData[lotId_].publicKeyModulus,
+    //         decrypt_.seed
+    //     );
+    // }
+
+    function _decrypt(
         uint96 lotId_,
-        Decrypt memory decrypt_
-    ) internal view returns (bytes memory) {
-        return RSAOAEP.encrypt(
-            abi.encodePacked(decrypt_.amountOut),
-            abi.encodePacked(lotId_),
-            abi.encodePacked(_PUB_KEY_EXPONENT),
-            auctionData[lotId_].publicKeyModulus,
-            decrypt_.seed
-        );
+        uint96 bidId_,
+        bytes32 privateKey_
+    ) internal view returns (uint256 amountOut) {
+        // Load encrypted bid
+        EncryptedBid storage encBid = lotEncryptedBids[lotId_][bidId_];
+
+        // Decrypt the message
+        uint256 message = ECIES.decrypt(encBid.encryptedAmountOut, encBid.encPubKey, privateKey_, lotId_);
+
+        // Convert the message into the amount out
+        // We don't need larger than 16 bytes for a message
+        // To avoid attacks that check for leading zero values, we use a 128-bit random number as a seed
+        // We subtract the actual value from the random number to get a subtracted value which is the amount out 
+        // relative to the random number.
+        // After decryption, we can combine them again and get the amount out
+        bytes memory messageBytes = abi.encodePacked(message);
+        (uint128 rand, uint128 subtracted) = abi.decode(messageBytes, (uint128, uint128));
+
+        // We want to allow underflow here
+        unchecked {
+            amountOut = uint256(rand - subtracted);
+        }
     }
 
     /// @notice         View function that can be used to obtain a certain number of the next bids to decrypt off-chain
@@ -557,15 +594,15 @@ contract LocalSealedBidBatchAuction is AuctionModule {
             revert Auction_InvalidParams();
         }
 
-        // publicKeyModulus must be 1024 bits (128 bytes)
-        if (implParams.publicKeyModulus.length != 128) revert Auction_InvalidParams();
+        // publicKey must be a valid point on the AltBN128 curve
+        if (!ECIES.isOnBn128(implParams.publicKey)) revert Auction_InvalidParams();
 
         // Store auction data
         AuctionData storage data = auctionData[lotId_];
         data.minimumPrice = implParams.minimumPrice;
         data.minFilled = (lot_.capacity * implParams.minFillPercent) / _ONE_HUNDRED_PERCENT;
         data.minBidSize = (lot_.capacity * implParams.minBidPercent) / _ONE_HUNDRED_PERCENT;
-        data.publicKeyModulus = implParams.publicKeyModulus;
+        data.publicKey = implParams.publicKey;
 
         // This auction type requires pre-funding
         return (true);
