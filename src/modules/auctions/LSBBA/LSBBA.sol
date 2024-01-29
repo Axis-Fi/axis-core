@@ -107,7 +107,7 @@ contract LocalSealedBidBatchAuction is AuctionModule {
 
     uint24 internal constant _MIN_BID_PERCENT = 1000; // 1%
     uint24 internal constant _PUB_KEY_EXPONENT = 65_537;
-    uint256 internal constant _SCALE = 1e18; // TODO maybe set this per auction if decimals mess us up
+    uint256 internal constant _SCALE = 1e18;
 
     mapping(uint96 lotId => AuctionData) public auctionData;
     mapping(uint96 lotId => mapping(uint96 bidId => EncryptedBid bid)) public lotEncryptedBids;

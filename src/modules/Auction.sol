@@ -147,9 +147,6 @@ abstract contract Auction {
 
     // ========== AUCTION MANAGEMENT ========== //
 
-    // TODO NatSpec comments
-    // TODO validate function
-
     /// @notice     Create an auction lot
     ///
     /// @param      lotId_      The lot id
@@ -180,9 +177,22 @@ abstract contract Auction {
 
     function maxAmountAccepted(uint256 id_) public view virtual returns (uint256);
 
-    function isLive(uint256 id_) public view virtual returns (bool);
+    /// @notice     Determines if the lot is active
+    /// @dev        The implementing function should handle the following:
+    ///             - Return true if the lot is active
+    ///             - Return false if the lot is inactive
+    ///
+    /// @param      lotId_  The lot id
+    /// @return     bool    Whether or not the lot is active
+    function isLive(uint256 lotId_) public view virtual returns (bool);
 
-    function remainingCapacity(uint256 id_) external view virtual returns (uint256);
+    /// @notice     Get the remaining capacity of a lot
+    /// @dev        The implementing function should handle the following:
+    ///             - Return the remaining capacity of the lot
+    ///
+    /// @param      lotId_  The lot id
+    /// @return     uint256 The remaining capacity of the lot
+    function remainingCapacity(uint256 lotId_) external view virtual returns (uint256);
 }
 
 abstract contract AuctionModule is Auction, Module {
@@ -466,14 +476,24 @@ abstract contract AuctionModule is Auction, Module {
 
     // ========== AUCTION INFORMATION ========== //
 
-    // TODO does this need to change for batch auctions?
-    function isLive(uint256 id_) public view override returns (bool) {
+    /// @inheritdoc Auction
+    /// @dev        A lot is active if:
+    ///             - The lot has not concluded
+    ///             - The lot has started
+    ///             - The lot has not sold out or been cancelled (capacity > 0)
+    ///
+    ///            Inheriting contracts should override this to implement auction-specific logic
+    ///
+    /// @param      lotId_  The lot ID
+    /// @return     bool    Whether or not the lot is active
+    function isLive(uint256 lotId_) public view override returns (bool) {
         return (
-            lotData[id_].capacity != 0 && lotData[id_].conclusion > uint48(block.timestamp)
-                && lotData[id_].start <= uint48(block.timestamp)
+            lotData[lotId_].capacity != 0 && lotData[lotId_].conclusion > uint48(block.timestamp)
+                && lotData[lotId_].start <= uint48(block.timestamp)
         );
     }
 
+    /// @inheritdoc Auction
     function remainingCapacity(uint256 id_) external view override returns (uint256) {
         return lotData[id_].capacity;
     }
