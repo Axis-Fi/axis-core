@@ -28,8 +28,6 @@ import {
     Module
 } from "src/modules/Modules.sol";
 
-import {console2} from "forge-std/console2.sol";
-
 contract SettleTest is Test, Permit2User {
     MockERC20 internal baseToken;
     MockERC20 internal quoteToken;
@@ -309,6 +307,8 @@ contract SettleTest is Test, Permit2User {
     //  [X] it reverts
     // [X] given the auction house has insufficient balance of the base token
     //  [X] it reverts
+    // [ ] given that the capacity is not filled
+    //  [ ] it succeeds - transfers remaining base tokens back to the owner
     // [X] given the last bidder has a partial fill
     //  [X] it succeeds - last bidder receives the partial fill and is returned excess quote tokens
     // [X] given the auction bids have different prices
@@ -444,12 +444,11 @@ contract SettleTest is Test, Permit2User {
         );
 
         // Check quote token balances
-        uint256 bidOnePercentageUnfilled =
-            (bidOneAmountOut - bidOneAmountOutActual) * 1e18 / bidOneAmountOut;
-        uint256 bidOneAmountActual = bidOneAmount * bidOnePercentageUnfilled / 1e18;
+        uint256 bidOnePercentageFilled = bidOneAmountOutActual * 1e18 / bidOneAmountOut;
+        uint256 bidOneAmountActual = bidOneAmount * bidOnePercentageFilled / 1e18;
         assertEq(
             quoteToken.balanceOf(bidderOne),
-            bidOneAmountActual,
+            bidOneAmount - bidOneAmountActual,
             "bidderOne: incorrect balance of quote token"
         ); // Remainder received as quote tokens.
         assertEq(quoteToken.balanceOf(bidderTwo), 0, "bidderTwo: incorrect balance of quote token");
@@ -462,7 +461,7 @@ contract SettleTest is Test, Permit2User {
         // Auction owner should have received quote tokens minus fees
         assertEq(
             quoteToken.balanceOf(auctionOwner),
-            bidOneAmount + bidThreeAmount - totalFeeAmount - bidOneAmountActual,
+            bidOneAmountActual + bidThreeAmount - totalFeeAmount,
             "auction owner: incorrect balance of quote token"
         );
 

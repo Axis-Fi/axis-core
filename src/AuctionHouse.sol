@@ -19,8 +19,6 @@ import {Veecode, fromVeecode, WithModules} from "src/modules/Modules.sol";
 import {IHooks} from "src/interfaces/IHooks.sol";
 import {IAllowlist} from "src/interfaces/IAllowlist.sol";
 
-import {console2} from "forge-std/console2.sol";
-
 // TODO define purpose
 abstract contract FeeManager {
 // TODO write fee logic in separate contract to keep it organized
@@ -168,6 +166,8 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
     error AmountLessThanMinimum();
 
     error InvalidBidder(address bidder_);
+
+    error Broken_Invariant();
 
     // ========== EVENTS ========== //
 
@@ -415,7 +415,17 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
     }
 
     /// @inheritdoc Router
-    /// @dev        This function reverts if:
+    /// @dev        This function handles the following:
+    ///             - Settles the auction on the auction module
+    ///             - Calculates the payout amount, taking partial fill into consideration
+    ///             - Calculates the fees taken on the quote token
+    ///             - Collects the payout from the auction owner (if necessary)
+    ///             - Sends the payout to each bidder
+    ///             - Sends the payment to the auction owner
+    ///             - Sends the refund to the bidder if the last bid was a partial fill
+    ///             - Refunds any unused base token to the auction owner
+    ///
+    ///             This function reverts if:
     ///             - the lot ID is invalid
     ///             - the caller is not authorized to settle the auction
     ///             - the auction module reverts when settling the auction
@@ -443,6 +453,42 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
 
         // Load routing data for the lot
         Routing memory routing = lotRouting[lotId_];
+
+        // Calculate the payout amount, handling partial fills
+        uint256[] memory paymentRefunds = new uint256[](winningBids.length);
+        {
+            uint256 bidCount = winningBids.length;
+            uint256 payoutRemaining = remainingCapacity;
+            for (uint256 i; i < bidCount; i++) {
+                uint256 payoutAmount = winningBids[i].minAmountOut;
+
+                // If the bid is the last and is a partial fill, then calculate the amount to send
+                if (i == bidCount - 1 && payoutAmount > payoutRemaining) {
+                    // Amend the bid to the amount remaining
+                    winningBids[i].minAmountOut = payoutRemaining;
+
+                    // Calculate the refund amount in terms of the quote token
+                    uint256 payoutUnfulfilled = 1e18 - payoutRemaining * 1e18 / payoutAmount;
+                    uint256 refundAmount = winningBids[i].amount * payoutUnfulfilled / 1e18;
+                    paymentRefunds[i] = refundAmount;
+
+                    // Check that the refund amount is not greater than the bid amount
+                    if (refundAmount > winningBids[i].amount) {
+                        revert Broken_Invariant();
+                    }
+
+                    // Adjust the payment amount (otherwise fees will be charged)
+                    winningBids[i].amount = winningBids[i].amount - refundAmount;
+
+                    // Decrement the remaining payout
+                    payoutRemaining = 0;
+                    break;
+                } else {
+                    // Decrement the remaining payout
+                    payoutRemaining -= payoutAmount;
+                }
+            }
+        }
 
         // Calculate fees
         uint256 totalAmountInLessFees;
@@ -472,48 +518,33 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
         // Handle payouts to bidders
         {
             uint256 bidCount = winningBids.length;
-            uint256 payoutRemaining = remainingCapacity;
             for (uint256 i; i < bidCount; i++) {
-                console2.log("bidder", winningBids[i].bidder);
-                console2.log("minAmountOut", winningBids[i].minAmountOut);
-                console2.log("balance", routing.baseToken.balanceOf(address(this)));
-                console2.log("payoutRemaining", payoutRemaining);
-
-                uint256 payoutAmount = winningBids[i].minAmountOut;
-
-                // If the bid is the last and is a partial fill, then calculate the amount to send
-                if (i == bidCount - 1 && payoutAmount > payoutRemaining) {
-                    payoutAmount = payoutRemaining;
-                }
-
                 // Send payout to each bidder
-                _sendPayout(lotId_, winningBids[i].bidder, payoutAmount, routing, auctionOutput);
-
-                // Calculate the refund amount for a partial fill
-                if (i == bidCount - 1 && winningBids[i].minAmountOut > payoutRemaining) {
-                    uint256 payoutFulfilled =
-                        1e18 - payoutAmount * 1e18 / winningBids[i].minAmountOut;
-
-                    // Calculate the refund amount in terms of the quote token
-                    console2.log("payoutFulfilled", payoutFulfilled);
-                    console2.log("winningBids[i].amount", winningBids[i].amount);
-                    uint256 refundAmount = winningBids[i].amount * payoutFulfilled / 1e18;
-                    console2.log("refundAmount", refundAmount);
-
-                    // Send refund to last winning bidder
-                    routing.quoteToken.safeTransfer(winningBids[i].bidder, refundAmount);
-
-                    // Reduce the total amount to return
-                    totalAmountInLessFees -= refundAmount;
-                }
-
-                // Decrement payout remaining
-                payoutRemaining -= payoutAmount;
+                _sendPayout(
+                    lotId_,
+                    winningBids[i].bidder,
+                    winningBids[i].minAmountOut,
+                    routing,
+                    auctionOutput
+                );
             }
 
             // Send payment in bulk to auction owner
             _sendPayment(routing.owner, totalAmountInLessFees, routing.quoteToken, routing.hooks);
         }
+
+        // Handle the refund to the bidder is the last bid was a partial fill
+        {
+            uint256 bidCount = winningBids.length;
+            for (uint256 i; i < bidCount; i++) {
+                // Send refund to each bidder
+                if (paymentRefunds[i] > 0) {
+                    routing.quoteToken.safeTransfer(winningBids[i].bidder, paymentRefunds[i]);
+                }
+            }
+        }
+
+        // TODO payout refund
     }
 
     // ========== TOKEN TRANSFERS ========== //
