@@ -116,8 +116,7 @@ contract LocalSealedBidBatchAuction is AuctionModule {
     // ========== SETUP ========== //
 
     constructor(address auctionHouse_) AuctionModule(auctionHouse_) {
-        // Set the minimum auction duration to 1 day
-        // TODO is this a good default?
+        // Set the minimum auction duration to 1 day initially
         minAuctionDuration = 1 days;
     }
 
@@ -499,10 +498,8 @@ contract LocalSealedBidBatchAuction is AuctionModule {
             QueueBid memory qBid = queue.popMax();
 
             // Calculate amount out
-            // TODO handle partial filling of the last winning bid
-            // amountIn, and amountOut will be lower
-            // Need to somehow refund the amountIn that wasn't used to the user
-            // We know it will always be the last bid in the returned array, can maybe do something with that
+            // For partial bids, this will be the amount they would get at full value
+            // The auction house handles reduction of payouts for partial bids
             uint256 amountOut = (qBid.amountIn * _SCALE) / marginalPrice;
 
             // Create winning bid from encrypted bid and calculated amount out
@@ -545,11 +542,9 @@ contract LocalSealedBidBatchAuction is AuctionModule {
         if (lot_.capacityInQuote) revert Auction_InvalidParams();
 
         // minFillPercent must be less than or equal to 100%
-        // TODO should there be a minimum?
         if (implParams.minFillPercent > _ONE_HUNDRED_PERCENT) revert Auction_InvalidParams();
 
         // minBidPercent must be greater than or equal to the global min and less than or equal to 100%
-        // TODO should we cap this below 100%?
         if (
             implParams.minBidPercent < _MIN_BID_PERCENT
                 || implParams.minBidPercent > _ONE_HUNDRED_PERCENT
