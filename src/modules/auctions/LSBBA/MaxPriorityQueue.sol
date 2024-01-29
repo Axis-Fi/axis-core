@@ -30,7 +30,7 @@ library MaxPriorityQueue {
         self.bids[bidId_] = bid;
         uint256 n = self.sortedIds.length;
         self.sortedIds.push(bidId_);
-        while (n > 0 && isLessThan(self, n, n - 1)) {
+        while (n > 0 && _isLessThan(self, n, n - 1)) {
             uint96 temp = self.sortedIds[n];
             self.sortedIds[n] = self.sortedIds[n - 1];
             self.sortedIds[n - 1] = temp;
@@ -73,7 +73,7 @@ library MaxPriorityQueue {
 
     // ========= UTILITIES ========= //
 
-    function isLessThan(
+    function _isLessThan(
         Queue storage self,
         uint256 alpha,
         uint256 beta

@@ -202,7 +202,7 @@ library RSAOAEP {
         return modexp(encoded, e, n);
     }
 
-    function _mgf(bytes memory seed, uint256 maskLen) public pure returns (bytes memory) {
+    function _mgf(bytes memory seed, uint256 maskLen) private pure returns (bytes memory) {
         // Implements 8.2.1 MGF1 as defined in RFC8017: https://www.rfc-editor.org/rfc/rfc8017
 
         // 1. Check that the mask length is not greater than 2^32 * hash length (32 bytes in this case)
@@ -234,7 +234,7 @@ library RSAOAEP {
         return t;
     }
 
-    function _xor(bytes memory first, bytes memory second) public pure returns (bytes memory) {
+    function _xor(bytes memory first, bytes memory second) private pure returns (bytes memory) {
         uint256 fLen = first.length;
         uint256 sLen = second.length;
         if (fLen != sLen) revert("xor: different lengths");

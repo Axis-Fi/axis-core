@@ -55,24 +55,24 @@ library MaxPriorityQueue {
     }
 
     ///@notice move bid up heap
-    function swim(Queue storage self, uint96 k) private {
-        while (k > 1 && isLess(self, k / 2, k)) {
-            exchange(self, k, k / 2);
+    function _swim(Queue storage self, uint96 k) private {
+        while (k > 1 && _isLess(self, k / 2, k)) {
+            _exchange(self, k, k / 2);
             k = k / 2;
         }
     }
 
     ///@notice move bid down heap
-    function sink(Queue storage self, uint96 k) private {
+    function _sink(Queue storage self, uint96 k) private {
         while (2 * k <= self.numBids) {
             uint96 j = 2 * k;
-            if (j < self.numBids && isLess(self, j, j + 1)) {
+            if (j < self.numBids && _isLess(self, j, j + 1)) {
                 j++;
             }
-            if (!isLess(self, k, j)) {
+            if (!_isLess(self, k, j)) {
                 break;
             }
-            exchange(self, k, j);
+            _exchange(self, k, j);
             k = j;
         }
     }
@@ -84,31 +84,31 @@ library MaxPriorityQueue {
         uint256 amountIn,
         uint256 minAmountOut
     ) public {
-        insert(self, Bid(self.nextBidId++, bidId, amountIn, minAmountOut));
+        _insert(self, Bid(self.nextBidId++, bidId, amountIn, minAmountOut));
     }
 
     ///@notice insert bid in heap
-    function insert(Queue storage self, Bid memory bid) private {
+    function _insert(Queue storage self, Bid memory bid) private {
         self.queueIdList.push(bid.queueId);
         self.queueIdToBidMap[bid.queueId] = bid;
         self.numBids += 1;
-        swim(self, self.numBids);
+        _swim(self, self.numBids);
     }
 
     ///@notice delete max bid from heap and return
     function delMax(Queue storage self) public returns (Bid memory) {
         require(!isEmpty(self), "nothing to delete");
         Bid memory max = self.queueIdToBidMap[self.queueIdList[1]];
-        exchange(self, 1, self.numBids--);
+        _exchange(self, 1, self.numBids--);
         self.queueIdList.pop();
         delete self.queueIdToBidMap[max.queueId];
-        sink(self, 1);
+        _sink(self, 1);
         return max;
     }
 
     ///@notice helper function to determine ordering. When two bids have the same price, give priority
     ///to the lower bid ID (inserted earlier)
-    function isLess(Queue storage self, uint256 i, uint256 j) private view returns (bool) {
+    function _isLess(Queue storage self, uint256 i, uint256 j) private view returns (bool) {
         uint96 iId = self.queueIdList[i];
         uint96 jId = self.queueIdList[j];
         Bid memory bidI = self.queueIdToBidMap[iId];
@@ -122,7 +122,7 @@ library MaxPriorityQueue {
     }
 
     ///@notice helper function to exchange to bids in the heap
-    function exchange(Queue storage self, uint256 i, uint256 j) private {
+    function _exchange(Queue storage self, uint256 i, uint256 j) private {
         uint96 tempId = self.queueIdList[i];
         self.queueIdList[i] = self.queueIdList[j];
         self.queueIdList[j] = tempId;
