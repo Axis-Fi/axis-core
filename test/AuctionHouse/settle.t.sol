@@ -172,6 +172,24 @@ contract SettleTest is Test, Permit2User {
     LocalSealedBidBatchAuction.Decrypt[] internal decryptedBids;
     uint256 internal marginalPrice;
 
+    modifier givenLotHasBidsLessThanCapacity() {
+        // Mint quote tokens to the bidders
+        quoteToken.mint(bidderOne, bidOneAmount);
+
+        // Authorise spending
+        vm.prank(bidderOne);
+        quoteToken.approve(address(auctionHouse), bidOneAmount);
+
+        // Create bids
+        // 4 < 10
+        (, LocalSealedBidBatchAuction.Decrypt memory decryptedBidOne) =
+            _createBid(bidderOne, bidOneAmount, bidOneAmountOut);
+        decryptedBids.push(decryptedBidOne);
+
+        marginalPrice = bidOneAmount * 1e18 / bidOneAmountOut;
+        _;
+    }
+
     modifier givenLotHasSufficientBids() {
         // Mint quote tokens to the bidders
         quoteToken.mint(bidderOne, bidOneAmount);
@@ -299,16 +317,16 @@ contract SettleTest is Test, Permit2User {
 
     // [X] when the lot id is invalid
     //  [X] it reverts
-    // [ ] when the caller is not authorized to settle
-    //  [ ] it reverts
+    // [X] when the caller is not authorized to settle
+    //  [X] it reverts
     // [X] when the auction module reverts
     //  [X] it reverts
     // [X] given the auction house has insufficient balance of the quote token
     //  [X] it reverts
     // [X] given the auction house has insufficient balance of the base token
     //  [X] it reverts
-    // [ ] given that the capacity is not filled
-    //  [ ] it succeeds - transfers remaining base tokens back to the owner
+    // [X] given that the capacity is not filled
+    //  [X] it succeeds - transfers remaining base tokens back to the owner
     // [X] given the last bidder has a partial fill
     //  [X] it succeeds - last bidder receives the partial fill and is returned excess quote tokens
     // [X] given the auction bids have different prices
@@ -323,6 +341,15 @@ contract SettleTest is Test, Permit2User {
         vm.expectRevert(err);
 
         // Attempt to settle the lot
+        auctionHouse.settle(lotId);
+    }
+
+    function test_unauthorized() external {
+        // Expect revert
+        vm.expectRevert("UNAUTHORIZED");
+
+        // Attempt to settle the lot
+        vm.prank(bidderOne);
         auctionHouse.settle(lotId);
     }
 
@@ -387,6 +414,14 @@ contract SettleTest is Test, Permit2User {
             bidTwoAmountOut,
             "bidderTwo: incorrect balance of base token"
         );
+        assertEq(
+            baseToken.balanceOf(auctionOwner), 0, "auction owner: incorrect balance of base token"
+        );
+        assertEq(
+            baseToken.balanceOf(address(auctionHouse)),
+            0,
+            "auctionHouse: incorrect balance of base token"
+        );
 
         // Check quote token balances
         assertEq(quoteToken.balanceOf(bidderOne), 0, "bidderOne: incorrect balance of quote token");
@@ -441,6 +476,14 @@ contract SettleTest is Test, Permit2User {
             baseToken.balanceOf(bidderTwo),
             bidThreeAmountOut,
             "bidderTwo: incorrect balance of base token"
+        );
+        assertEq(
+            baseToken.balanceOf(auctionOwner), 0, "auction owner: incorrect balance of base token"
+        );
+        assertEq(
+            baseToken.balanceOf(address(auctionHouse)),
+            0,
+            "auctionHouse: incorrect balance of base token"
         );
 
         // Check quote token balances
@@ -504,6 +547,16 @@ contract SettleTest is Test, Permit2User {
             bidFiveAmountOutActual,
             "bidderTwo: incorrect balance of base token"
         );
+        assertEq(
+            baseToken.balanceOf(auctionOwner),
+            LOT_CAPACITY - bidFourAmountOutActual - bidFiveAmountOutActual, // Returned remaining base tokens
+            "auction owner: incorrect balance of base token"
+        );
+        assertEq(
+            baseToken.balanceOf(address(auctionHouse)),
+            0,
+            "auctionHouse: incorrect balance of base token"
+        );
 
         // Check quote token balances
         assertEq(quoteToken.balanceOf(bidderOne), 0, "bidderOne: incorrect balance of quote token");
@@ -518,6 +571,66 @@ contract SettleTest is Test, Permit2User {
         assertEq(
             quoteToken.balanceOf(auctionOwner),
             bidFourAmount + bidFiveAmount - totalFeeAmount,
+            "auction owner: incorrect balance of quote token"
+        );
+
+        // Fees stored on auction house
+        assertEq(
+            quoteToken.balanceOf(address(auctionHouse)),
+            totalFeeAmount,
+            "auction house: incorrect balance of quote token"
+        );
+
+        // Fee records updated
+        assertEq(
+            auctionHouse.rewards(protocol, quoteToken), protocolFeeAmount, "incorrect protocol fees"
+        );
+        assertEq(
+            auctionHouse.rewards(referrer, quoteToken), referrerFeeAmount, "incorrect referrer fees"
+        );
+    }
+
+    function test_lessThanCapacity()
+        external
+        givenLotHasStarted
+        givenLotHasBidsLessThanCapacity
+        givenLotHasConcluded
+        givenLotHasDecrypted
+    {
+        // Attempt to settle the lot
+        auctionHouse.settle(lotId);
+
+        // Check base token balances
+        assertEq(
+            baseToken.balanceOf(bidderOne),
+            bidOneAmountOut,
+            "bidderOne: incorrect balance of base token"
+        );
+        assertEq(baseToken.balanceOf(bidderTwo), 0, "bidderTwo: incorrect balance of base token");
+        assertEq(
+            baseToken.balanceOf(auctionOwner),
+            LOT_CAPACITY - bidOneAmountOut,
+            "auction owner: incorrect balance of base token"
+        ); // Returned remaining base tokens
+        assertEq(
+            baseToken.balanceOf(address(auctionHouse)),
+            0,
+            "auctionHouse: incorrect balance of base token"
+        );
+
+        // Check quote token balances
+        assertEq(quoteToken.balanceOf(bidderOne), 0, "bidderOne: incorrect balance of quote token");
+        assertEq(quoteToken.balanceOf(bidderTwo), 0, "bidderTwo: incorrect balance of quote token");
+
+        // Calculate fees on quote tokens
+        uint256 protocolFeeAmount = (bidOneAmount + 0) * protocolFee / 1e5;
+        uint256 referrerFeeAmount = (bidOneAmount + 0) * referrerFee / 1e5;
+        uint256 totalFeeAmount = protocolFeeAmount + referrerFeeAmount;
+
+        // Auction owner should have received quote tokens minus fees
+        assertEq(
+            quoteToken.balanceOf(auctionOwner),
+            bidOneAmount + 0 - totalFeeAmount,
             "auction owner: incorrect balance of quote token"
         );
 

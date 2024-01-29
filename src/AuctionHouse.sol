@@ -432,17 +432,12 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
     ///             - transferring the quote token to the auction owner fails
     ///             - collecting the payout from the auction owner fails
     ///             - sending the payout to each bidder fails
-    function settle(uint96 lotId_) external override isLotValid(lotId_) {
+    function settle(uint96 lotId_) external override onlyOwner isLotValid(lotId_) {
         // Validation
-        // TODO check the caller is authorised
+        // No additional validation needed
 
         // Settle the lot on the auction module and get the winning bids
         // Reverts if the auction cannot be settled yet
-        // Some common things to check:
-        // 1. Total of amounts out is not greater than capacity
-        // 2. Minimum price is enforced
-        // 3. Minimum bid size is enforced
-        // 4. Minimum capacity sold is enforced
         AuctionModule module = _getModuleForId(lotId_);
 
         // Store the capacity remaining before settling
@@ -483,10 +478,15 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
                     // Decrement the remaining payout
                     payoutRemaining = 0;
                     break;
-                } else {
-                    // Decrement the remaining payout
-                    payoutRemaining -= payoutAmount;
                 }
+
+                // Make sure the invariant isn't broken
+                if (payoutAmount > payoutRemaining) {
+                    revert Broken_Invariant();
+                }
+
+                // Decrement the remaining payout
+                payoutRemaining -= payoutAmount;
             }
         }
 
@@ -517,6 +517,7 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
 
         // Handle payouts to bidders
         {
+            uint256 payoutRemaining = remainingCapacity;
             uint256 bidCount = winningBids.length;
             for (uint256 i; i < bidCount; i++) {
                 // Send payout to each bidder
@@ -527,8 +528,24 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
                     routing,
                     auctionOutput
                 );
+
+                // Make sure the invariant isn't broken
+                if (winningBids[i].minAmountOut > payoutRemaining) {
+                    revert Broken_Invariant();
+                }
+
+                // Decrement the remaining payout
+                payoutRemaining -= winningBids[i].minAmountOut;
             }
 
+            // Handle the refund to the auction owner for any unused base token capacity
+            if (payoutRemaining > 0) {
+                routing.baseToken.safeTransfer(routing.owner, payoutRemaining);
+            }
+        }
+
+        // Handle payment to the auction owner
+        {
             // Send payment in bulk to auction owner
             _sendPayment(routing.owner, totalAmountInLessFees, routing.quoteToken, routing.hooks);
         }
@@ -543,8 +560,6 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
                 }
             }
         }
-
-        // TODO payout refund
     }
 
     // ========== TOKEN TRANSFERS ========== //
