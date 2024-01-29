@@ -195,7 +195,6 @@ contract LocalSealedBidBatchAuction is AuctionModule {
     ///
     ///             This function reverts if:
     ///             - The amount is less than the minimum bid size for the lot
-    ///             - The amount is greater than the capacity
     function _bid(
         uint96 lotId_,
         address bidder_,
@@ -208,8 +207,7 @@ contract LocalSealedBidBatchAuction is AuctionModule {
         // Amount at least minimum bid size for lot
         if (amount_ < auctionData[lotId_].minBidSize) revert Auction_AmountLessThanMinimum();
 
-        // Amount greater than capacity
-        if (amount_ > lotData[lotId_].capacity) revert Auction_NotEnoughCapacity();
+        // Does not check that the bid amount (in terms of the quote token) is greater than the lot capacity (in terms of the base token), because they are different units
 
         // Store bid data
         // Auction data should just be the encrypted amount out (no decoding required)
@@ -566,9 +564,6 @@ contract LocalSealedBidBatchAuction is AuctionModule {
         data.minFilled = (lot_.capacity * implParams.minFillPercent) / _ONE_HUNDRED_PERCENT;
         data.minBidSize = (lot_.capacity * implParams.minBidPercent) / _ONE_HUNDRED_PERCENT;
         data.publicKeyModulus = implParams.publicKeyModulus;
-
-        // // Initialize sorted bid queue
-        // lotSortedBids[lotId_].initialize();
 
         // This auction type requires pre-funding
         return (true);

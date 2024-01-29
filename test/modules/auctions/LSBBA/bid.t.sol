@@ -214,18 +214,24 @@ contract LSBBABidTest is Test, Permit2User {
         auctionModule.bid(lotId, alice, recipient, referrer, bidAmount, auctionData);
     }
 
-    function test_whenAmountIsLargerThanCapacity_reverts()
+    function test_whenAmountIsLargerThanCapacity()
         public
         givenLotHasStarted
         whenAmountIsLargerThanCapacity
     {
-        // Expect revert
-        bytes memory err = abi.encodeWithSelector(Auction.Auction_NotEnoughCapacity.selector);
-        vm.expectRevert(err);
-
         // Call
         vm.prank(address(auctionHouse));
-        auctionModule.bid(lotId, alice, recipient, referrer, bidAmount, auctionData);
+        uint96 bidId = auctionModule.bid(lotId, alice, recipient, referrer, bidAmount, auctionData);
+
+        // Check values
+        LocalSealedBidBatchAuction.EncryptedBid memory encryptedBid =
+            auctionModule.getBidData(lotId, bidId);
+        assertEq(encryptedBid.bidder, alice);
+        assertEq(encryptedBid.recipient, recipient);
+        assertEq(encryptedBid.referrer, referrer);
+        assertEq(encryptedBid.amount, bidAmount);
+        assertEq(encryptedBid.encryptedAmountOut, auctionData);
+        assertEq(uint8(encryptedBid.status), uint8(LocalSealedBidBatchAuction.BidStatus.Submitted));
     }
 
     function test_execOnModule_reverts() public {
