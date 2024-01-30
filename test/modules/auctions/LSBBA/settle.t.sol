@@ -38,6 +38,8 @@ contract LSBBASettleTest is Test, Permit2User {
         bytes32(0x1AFCC05BD15602738CBE9BD75B76403AB2C9409F2CC0C189B4551DEE8B576AD3)
     );
 
+    uint256 internal constant SCALE = 1e18; // Constants are kept in this scale
+
     uint256 internal bidSeed = 1e9;
     uint96 internal bidOne;
     uint256 internal bidOneAmount = 2e18;
@@ -60,6 +62,11 @@ contract LSBBASettleTest is Test, Permit2User {
     uint256 internal bidFiveAmountOut = 5e18; // Price = 1.2
     LocalSealedBidBatchAuction.Decrypt internal decryptedBidFive;
     LocalSealedBidBatchAuction.Decrypt[] internal decrypts;
+
+    uint8 internal quoteTokenDecimals = 18;
+    uint8 internal baseTokenDecimals = 18;
+
+    Auction.AuctionParams auctionParams;
 
     function setUp() public {
         // Ensure the block timestamp is a sane value
@@ -84,13 +91,13 @@ contract LSBBASettleTest is Test, Permit2User {
         lotDuration = uint48(1 days);
         lotConclusion = lotStart + lotDuration;
 
-        Auction.AuctionParams memory auctionParams = Auction.AuctionParams({
+        auctionParams = Auction.AuctionParams({
             start: lotStart,
             duration: lotDuration,
             capacityInQuote: false,
             capacity: LOT_CAPACITY,
             implParams: abi.encode(auctionDataParams)
-        });
+        }); // TODO add decimals to AuctionParams
 
         // Create the auction
         vm.prank(address(auctionHouse));
@@ -138,6 +145,22 @@ contract LSBBASettleTest is Test, Permit2User {
         }
     }
 
+    /// @notice     Calculates the marginal price, given the amount in and out
+    ///
+    /// @param      bidAmount_      The amount of the bid
+    /// @param      bidAmountOut_   The amount of the bid out
+    /// @return     uint256         The marginal price (18 dp)
+    function _getMarginalPrice(
+        uint256 bidAmount_,
+        uint256 bidAmountOut_
+    ) internal view returns (uint256) {
+        // Adjust all amounts to the scale
+        uint256 bidAmountScaled = bidAmount_ * SCALE / 10 ** quoteTokenDecimals;
+        uint256 bidAmountOutScaled = bidAmountOut_ * SCALE / 10 ** baseTokenDecimals;
+
+        return bidAmountScaled * SCALE / bidAmountOutScaled;
+    }
+
     // ===== Modifiers ===== //
 
     modifier whenLotIdIsInvalid() {
@@ -155,6 +178,35 @@ contract LSBBASettleTest is Test, Permit2User {
         _;
     }
 
+    modifier givenLotHasDecimals(uint8 quoteTokenDecimals_, uint8 baseTokenDecimals_) {
+        quoteTokenDecimals = quoteTokenDecimals_;
+        baseTokenDecimals = baseTokenDecimals_;
+
+        // Adjust bid amounts
+        bidOneAmount = bidOneAmount * 10 ** quoteTokenDecimals_ / SCALE;
+        bidOneAmountOut = bidOneAmountOut * 10 ** baseTokenDecimals_ / SCALE;
+        bidTwoAmount = bidTwoAmount * 10 ** quoteTokenDecimals_ / SCALE;
+        bidTwoAmountOut = bidTwoAmountOut * 10 ** baseTokenDecimals_ / SCALE;
+        bidThreeAmount = bidThreeAmount * 10 ** quoteTokenDecimals_ / SCALE;
+        bidThreeAmountOut = bidThreeAmountOut * 10 ** baseTokenDecimals_ / SCALE;
+        bidFourAmount = bidFourAmount * 10 ** quoteTokenDecimals_ / SCALE;
+        bidFourAmountOut = bidFourAmountOut * 10 ** baseTokenDecimals_ / SCALE;
+        bidFiveAmount = bidFiveAmount * 10 ** quoteTokenDecimals_ / SCALE;
+        bidFiveAmountOut = bidFiveAmountOut * 10 ** baseTokenDecimals_ / SCALE;
+
+        // Update auction params
+
+        lotId = 2;
+
+        // Create a new lot with the decimals set
+        vm.prank(address(auctionHouse));
+        auctionModule.auction(lotId, auctionParams);
+
+        // Warp to the start of the auction
+        vm.warp(lotStart);
+        _;
+    }
+
     modifier whenLotIsBelowMinimumFilled() {
         // 2 < 2.5
         (bidOne, decryptedBidOne) = _createBid(bidOneAmount, bidOneAmountOut);
@@ -166,6 +218,8 @@ contract LSBBASettleTest is Test, Permit2User {
 
     modifier whenLotIsOverSubscribed() {
         // 2 + 3 + 7 > 10
+        // Marginal price 1
+        // Smallest bid (2) will not be filled at all
         (bidOne, decryptedBidOne) = _createBid(bidOneAmount, bidOneAmountOut);
         (bidTwo, decryptedBidTwo) = _createBid(bidTwoAmount, bidTwoAmountOut);
         (bidThree, decryptedBidThree) = _createBid(bidThreeAmount, bidThreeAmountOut);
@@ -179,6 +233,8 @@ contract LSBBASettleTest is Test, Permit2User {
 
     modifier whenLotIsOverSubscribedPartialFill() {
         // 2 + 3 + 6 > 10
+        // Marginal price 1
+        // Smallest bid (2) will be partially filled
         (bidOne, decryptedBidOne) = _createBid(bidOneAmount, bidOneAmountOut);
         (bidTwo, decryptedBidTwo) = _createBid(bidTwoAmount, bidTwoAmountOut);
         (bidFive, decryptedBidFive) = _createBid(bidFiveAmount, bidFiveAmountOut);
@@ -326,7 +382,7 @@ contract LSBBASettleTest is Test, Permit2User {
         auctionModule.settle(lotId);
     }
 
-    function test_whenLotIsBelowMinimumFilled_returnsNoWinningBids()
+    function test_whenLotIsBelowMinimumFilled()
         public
         whenLotIsBelowMinimumFilled
         whenLotHasConcluded
@@ -340,8 +396,68 @@ contract LSBBASettleTest is Test, Permit2User {
         assertEq(winningBids.length, 0);
     }
 
-    function test_whenMarginalPriceBelowMinimum_returnsNoWinningBids()
+    function test_whenLotIsBelowMinimumFilled_quoteTokenDecimalsLarger()
         public
+        givenLotHasDecimals(17, 13)
+        whenLotIsBelowMinimumFilled
+        whenLotHasConcluded
+        whenLotDecryptionIsComplete
+    {
+        // Call for settlement
+        vm.prank(address(auctionHouse));
+        (LocalSealedBidBatchAuction.Bid[] memory winningBids,) = auctionModule.settle(lotId);
+
+        // Expect no winning bids
+        assertEq(winningBids.length, 0);
+    }
+
+    function test_whenLotIsBelowMinimumFilled_quoteTokenDecimalsSmaller()
+        public
+        givenLotHasDecimals(13, 17)
+        whenLotIsBelowMinimumFilled
+        whenLotHasConcluded
+        whenLotDecryptionIsComplete
+    {
+        // Call for settlement
+        vm.prank(address(auctionHouse));
+        (LocalSealedBidBatchAuction.Bid[] memory winningBids,) = auctionModule.settle(lotId);
+
+        // Expect no winning bids
+        assertEq(winningBids.length, 0);
+    }
+
+    function test_whenMarginalPriceBelowMinimum()
+        public
+        whenMarginalPriceBelowMinimum
+        whenLotHasConcluded
+        whenLotDecryptionIsComplete
+    {
+        // Call for settlement
+        vm.prank(address(auctionHouse));
+        (LocalSealedBidBatchAuction.Bid[] memory winningBids,) = auctionModule.settle(lotId);
+
+        // Expect no winning bids
+        assertEq(winningBids.length, 0);
+    }
+
+    function test_whenMarginalPriceBelowMinimum_quoteTokenDecimalsLarger()
+        public
+        givenLotHasDecimals(17, 13)
+        whenMarginalPriceBelowMinimum
+        whenLotHasConcluded
+        whenLotDecryptionIsComplete
+    {
+        // Call for settlement
+        vm.prank(address(auctionHouse));
+        (LocalSealedBidBatchAuction.Bid[] memory winningBids,) = auctionModule.settle(lotId);
+
+        // Expect no winning bids
+        assertEq(winningBids.length, 0);
+    }
+
+    function test_whenMarginalPriceBelowMinimum_quoteTokenDecimalsSmaller()
+        public
+        givenLotHasDecimals(13, 17)
         whenMarginalPriceBelowMinimum
         whenLotHasConcluded
         whenLotDecryptionIsComplete
@@ -365,9 +481,65 @@ contract LSBBASettleTest is Test, Permit2User {
         (LocalSealedBidBatchAuction.Bid[] memory winningBids,) = auctionModule.settle(lotId);
 
         // Calculate the marginal price
-        uint256 marginalPrice = bidTwoAmount * 1e18 / bidTwoAmountOut;
+        uint256 marginalPrice = _getMarginalPrice(bidTwoAmount, bidTwoAmountOut);
 
-        bidThreeAmountOut = bidThreeAmount * 1e18 / marginalPrice;
+        bidThreeAmountOut = bidThreeAmount * SCALE / marginalPrice;
+
+        // First bid - largest amount out
+        assertEq(winningBids[0].amount, bidThreeAmount);
+        assertEq(winningBids[0].minAmountOut, bidThreeAmountOut);
+
+        // Second bid
+        assertEq(winningBids[1].amount, bidTwoAmount);
+        assertEq(winningBids[1].minAmountOut, bidTwoAmountOut);
+
+        // Expect winning bids
+        assertEq(winningBids.length, 2);
+    }
+
+    function test_whenLotIsOverSubscribed_quoteTokenDecimalsLarger()
+        public
+        givenLotHasDecimals(17, 13)
+        whenLotIsOverSubscribed
+        whenLotHasConcluded
+        whenLotDecryptionIsComplete
+    {
+        // Call for settlement
+        vm.prank(address(auctionHouse));
+        (LocalSealedBidBatchAuction.Bid[] memory winningBids,) = auctionModule.settle(lotId);
+
+        // Calculate the marginal price
+        uint256 marginalPrice = _getMarginalPrice(bidTwoAmount, bidTwoAmountOut);
+
+        bidThreeAmountOut = bidThreeAmount * SCALE / marginalPrice;
+
+        // First bid - largest amount out
+        assertEq(winningBids[0].amount, bidThreeAmount);
+        assertEq(winningBids[0].minAmountOut, bidThreeAmountOut);
+
+        // Second bid
+        assertEq(winningBids[1].amount, bidTwoAmount);
+        assertEq(winningBids[1].minAmountOut, bidTwoAmountOut);
+
+        // Expect winning bids
+        assertEq(winningBids.length, 2);
+    }
+
+    function test_whenLotIsOverSubscribed_quoteTokenDecimalsSmaller()
+        public
+        givenLotHasDecimals(13, 17)
+        whenLotIsOverSubscribed
+        whenLotHasConcluded
+        whenLotDecryptionIsComplete
+    {
+        // Call for settlement
+        vm.prank(address(auctionHouse));
+        (LocalSealedBidBatchAuction.Bid[] memory winningBids,) = auctionModule.settle(lotId);
+
+        // Calculate the marginal price
+        uint256 marginalPrice = _getMarginalPrice(bidTwoAmount, bidTwoAmountOut);
+
+        bidThreeAmountOut = bidThreeAmount * SCALE / marginalPrice;
 
         // First bid - largest amount out
         assertEq(winningBids[0].amount, bidThreeAmount);
@@ -392,10 +564,76 @@ contract LSBBASettleTest is Test, Permit2User {
         (LocalSealedBidBatchAuction.Bid[] memory winningBids,) = auctionModule.settle(lotId);
 
         // Calculate the marginal price
-        uint256 marginalPrice = bidTwoAmount * 1e18 / bidTwoAmountOut;
+        uint256 marginalPrice = _getMarginalPrice(bidTwoAmount, bidTwoAmountOut);
 
-        bidThreeAmountOut = bidThreeAmount * 1e18 / marginalPrice;
-        bidFiveAmountOut = bidFiveAmount * 1e18 / marginalPrice;
+        bidThreeAmountOut = bidThreeAmount * SCALE / marginalPrice;
+        bidFiveAmountOut = bidFiveAmount * SCALE / marginalPrice;
+
+        // First bid - largest amount out
+        assertEq(winningBids[0].amount, bidFiveAmount, "bid 1: amount mismatch");
+        assertEq(winningBids[0].minAmountOut, bidFiveAmountOut, "bid 1: minAmountOut mismatch");
+
+        // Second bid
+        assertEq(winningBids[1].amount, bidTwoAmount, "bid 2: amount mismatch");
+        assertEq(winningBids[1].minAmountOut, bidTwoAmountOut, "bid 2: minAmountOut mismatch");
+
+        // Third bid - will be a partial fill and recognised by the AuctionHouse
+        assertEq(winningBids[2].amount, bidOneAmount, "bid 3: amount mismatch");
+        assertEq(winningBids[2].minAmountOut, bidOneAmountOut, "bid 3: minAmountOut mismatch");
+
+        // Expect winning bids
+        assertEq(winningBids.length, 3);
+    }
+
+    function test_whenLotIsOverSubscribed_partialFill_quoteTokenDecimalsLarger()
+        public
+        givenLotHasDecimals(17, 13)
+        whenLotIsOverSubscribedPartialFill
+        whenLotHasConcluded
+        whenLotDecryptionIsComplete
+    {
+        // Call for settlement
+        vm.prank(address(auctionHouse));
+        (LocalSealedBidBatchAuction.Bid[] memory winningBids,) = auctionModule.settle(lotId);
+
+        // Calculate the marginal price
+        uint256 marginalPrice = _getMarginalPrice(bidTwoAmount, bidTwoAmountOut);
+
+        bidThreeAmountOut = bidThreeAmount * SCALE / marginalPrice;
+        bidFiveAmountOut = bidFiveAmount * SCALE / marginalPrice;
+
+        // First bid - largest amount out
+        assertEq(winningBids[0].amount, bidFiveAmount, "bid 1: amount mismatch");
+        assertEq(winningBids[0].minAmountOut, bidFiveAmountOut, "bid 1: minAmountOut mismatch");
+
+        // Second bid
+        assertEq(winningBids[1].amount, bidTwoAmount, "bid 2: amount mismatch");
+        assertEq(winningBids[1].minAmountOut, bidTwoAmountOut, "bid 2: minAmountOut mismatch");
+
+        // Third bid - will be a partial fill and recognised by the AuctionHouse
+        assertEq(winningBids[2].amount, bidOneAmount, "bid 3: amount mismatch");
+        assertEq(winningBids[2].minAmountOut, bidOneAmountOut, "bid 3: minAmountOut mismatch");
+
+        // Expect winning bids
+        assertEq(winningBids.length, 3);
+    }
+
+    function test_whenLotIsOverSubscribed_partialFill_quoteTokenDecimalsSmaller()
+        public
+        givenLotHasDecimals(13, 17)
+        whenLotIsOverSubscribedPartialFill
+        whenLotHasConcluded
+        whenLotDecryptionIsComplete
+    {
+        // Call for settlement
+        vm.prank(address(auctionHouse));
+        (LocalSealedBidBatchAuction.Bid[] memory winningBids,) = auctionModule.settle(lotId);
+
+        // Calculate the marginal price
+        uint256 marginalPrice = _getMarginalPrice(bidTwoAmount, bidTwoAmountOut);
+
+        bidThreeAmountOut = bidThreeAmount * SCALE / marginalPrice;
+        bidFiveAmountOut = bidFiveAmount * SCALE / marginalPrice;
 
         // First bid - largest amount out
         assertEq(winningBids[0].amount, bidFiveAmount, "bid 1: amount mismatch");
@@ -424,9 +662,65 @@ contract LSBBASettleTest is Test, Permit2User {
         (LocalSealedBidBatchAuction.Bid[] memory winningBids,) = auctionModule.settle(lotId);
 
         // Calculate the marginal price
-        uint256 marginalPrice = bidOneAmount * 1e18 / bidOneAmountOut;
+        uint256 marginalPrice = _getMarginalPrice(bidOneAmount, bidOneAmountOut);
 
-        bidTwoAmountOut = bidTwoAmount * 1e18 / marginalPrice;
+        bidTwoAmountOut = bidTwoAmount * SCALE / marginalPrice;
+
+        // First bid - largest amount out
+        assertEq(winningBids[0].amount, bidTwoAmount);
+        assertEq(winningBids[0].minAmountOut, bidTwoAmountOut);
+
+        // Second bid
+        assertEq(winningBids[1].amount, bidOneAmount);
+        assertEq(winningBids[1].minAmountOut, bidOneAmountOut);
+
+        // Expect winning bids
+        assertEq(winningBids.length, 2);
+    }
+
+    function test_whenLotIsFilled_quoteTokenDecimalsLarger()
+        public
+        givenLotHasDecimals(17, 13)
+        whenLotIsFilled
+        whenLotHasConcluded
+        whenLotDecryptionIsComplete
+    {
+        // Call for settlement
+        vm.prank(address(auctionHouse));
+        (LocalSealedBidBatchAuction.Bid[] memory winningBids,) = auctionModule.settle(lotId);
+
+        // Calculate the marginal price
+        uint256 marginalPrice = _getMarginalPrice(bidOneAmount, bidOneAmountOut);
+
+        bidTwoAmountOut = bidTwoAmount * SCALE / marginalPrice;
+
+        // First bid - largest amount out
+        assertEq(winningBids[0].amount, bidTwoAmount);
+        assertEq(winningBids[0].minAmountOut, bidTwoAmountOut);
+
+        // Second bid
+        assertEq(winningBids[1].amount, bidOneAmount);
+        assertEq(winningBids[1].minAmountOut, bidOneAmountOut);
+
+        // Expect winning bids
+        assertEq(winningBids.length, 2);
+    }
+
+    function test_whenLotIsFilled_quoteTokenDecimalsSmaller()
+        public
+        givenLotHasDecimals(13, 17)
+        whenLotIsFilled
+        whenLotHasConcluded
+        whenLotDecryptionIsComplete
+    {
+        // Call for settlement
+        vm.prank(address(auctionHouse));
+        (LocalSealedBidBatchAuction.Bid[] memory winningBids,) = auctionModule.settle(lotId);
+
+        // Calculate the marginal price
+        uint256 marginalPrice = _getMarginalPrice(bidOneAmount, bidOneAmountOut);
+
+        bidTwoAmountOut = bidTwoAmount * SCALE / marginalPrice;
 
         // First bid - largest amount out
         assertEq(winningBids[0].amount, bidTwoAmount);
