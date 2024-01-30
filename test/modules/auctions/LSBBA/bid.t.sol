@@ -33,6 +33,9 @@ contract LSBBABidTest is Test, Permit2User {
     uint256 internal MIN_BID_SIZE;
     uint256 internal bidAmount = 1e18;
 
+    uint8 internal constant _quoteTokenDecimals = 18;
+    uint8 internal constant _baseTokenDecimals = 18;
+
     function setUp() public {
         // Ensure the block timestamp is a sane value
         vm.warp(1_000_000);
@@ -67,7 +70,7 @@ contract LSBBABidTest is Test, Permit2User {
 
         // Create the auction
         vm.prank(address(auctionHouse));
-        auctionModule.auction(lotId, auctionParams);
+        auctionModule.auction(lotId, auctionParams, _quoteTokenDecimals, _baseTokenDecimals);
 
         auctionData = abi.encode(1e9); // Encrypted amount out
     }

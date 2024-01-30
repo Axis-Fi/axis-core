@@ -35,16 +35,36 @@ abstract contract Auction {
     event AuctionClosed(uint256 indexed id);
 
     // ========== DATA STRUCTURES ========== //
-    /// @notice Core data for an auction lot
+
+    /// @notice     Core data for an auction lot
+    ///
+    /// @param      start               The timestamp when the auction starts
+    /// @param      conclusion          The timestamp when the auction ends
+    /// @param      capacityInQuote     Whether or not the capacity is in quote tokens
+    /// @param      capacity            The capacity of the lot
+    /// @param      sold                The amount of base tokens sold
+    /// @param      purchased           The amount of quote tokens purchased
+    /// @param      quoteTokenDecimals  The quote token decimals
+    /// @param      baseTokenDecimals   The base token decimals
     struct Lot {
-        uint48 start; // timestamp when market starts
-        uint48 conclusion; // timestamp when market no longer offered
-        bool capacityInQuote; // capacity limit is in payment token (true) or in payout (false, default)
-        uint256 capacity; // capacity remaining
-        uint256 sold; // payout tokens out
-        uint256 purchased; // quote tokens in
+        uint48 start;
+        uint48 conclusion;
+        bool capacityInQuote;
+        uint256 capacity;
+        uint256 sold;
+        uint256 purchased;
+        uint8 quoteTokenDecimals;
+        uint8 baseTokenDecimals;
     }
 
+    /// @notice     Core data for a bid
+    ///
+    /// @param      bidder          The address of the bidder
+    /// @param      recipient       The address of the recipient
+    /// @param      referrer        The address of the referrer
+    /// @param      amount          The amount of quote tokens bid
+    /// @param      minAmountOut    The minimum amount of base tokens to receive
+    /// @param      auctionParam    The auction-specific parameter for the bid
     // TODO pack if we anticipate on-chain auction variants
     struct Bid {
         address bidder;
@@ -52,24 +72,31 @@ abstract contract Auction {
         address referrer;
         uint256 amount;
         uint256 minAmountOut;
-        bytes auctionParam; // optional implementation-specific parameter for the bid
+        bytes auctionParam;
     }
 
+    /// @notice     Parameters when creating an auction lot
+    ///
+    /// @param      start           The timestamp when the auction starts
+    /// @param      duration        The duration of the auction (in seconds)
+    /// @param      capacityInQuote Whether or not the capacity is in quote tokens
+    /// @param      capacity        The capacity of the lot
+    /// @param      implParams      Abi-encoded implementation-specific parameters
     struct AuctionParams {
         uint48 start;
         uint48 duration;
         bool capacityInQuote;
         uint256 capacity;
-        bytes implParams; // abi-encoded params for specific auction implementations
+        bytes implParams;
     }
 
     // ========= STATE ========== //
 
     /// @notice Minimum auction duration in seconds
-    // TODO should this be set at deployment and/or through a function?
     uint48 public minAuctionDuration;
 
-    // 1% = 1_000 or 1e3. 100% = 100_000 or 1e5.
+    /// @notice Constant for percentages
+    /// @dev    1% = 1_000 or 1e3. 100% = 100_000 or 1e5.
     uint48 internal constant _ONE_HUNDRED_PERCENT = 100_000;
 
     /// @notice General information pertaining to auction lots
@@ -149,13 +176,17 @@ abstract contract Auction {
 
     /// @notice     Create an auction lot
     ///
-    /// @param      lotId_      The lot id
-    /// @param      params_     The auction parameters
-    /// @return     prefundingRequired  Whether or not prefunding is required
-    /// @return     capacity            The capacity of the lot
+    /// @param      lotId_                  The lot id
+    /// @param      params_                 The auction parameters
+    /// @param      quoteTokenDecimals_     The quote token decimals
+    /// @param      baseTokenDecimals_      The base token decimals
+    /// @return     prefundingRequired      Whether or not prefunding is required
+    /// @return     capacity                The capacity of the lot
     function auction(
         uint96 lotId_,
-        AuctionParams memory params_
+        AuctionParams memory params_,
+        uint8 quoteTokenDecimals_,
+        uint8 baseTokenDecimals_
     ) external virtual returns (bool prefundingRequired, uint256 capacity);
 
     /// @notice     Cancel an auction lot
@@ -211,7 +242,9 @@ abstract contract AuctionModule is Auction, Module {
     ///             - the duration is less than the minimum
     function auction(
         uint96 lotId_,
-        AuctionParams memory params_
+        AuctionParams memory params_,
+        uint8 quoteTokenDecimals_,
+        uint8 baseTokenDecimals_
     ) external override onlyInternal returns (bool prefundingRequired, uint256 capacity) {
         // Start time must be zero or in the future
         if (params_.start > 0 && params_.start < uint48(block.timestamp)) {
@@ -229,6 +262,8 @@ abstract contract AuctionModule is Auction, Module {
         lot.conclusion = lot.start + params_.duration;
         lot.capacityInQuote = params_.capacityInQuote;
         lot.capacity = params_.capacity;
+        lot.quoteTokenDecimals = quoteTokenDecimals_;
+        lot.baseTokenDecimals = baseTokenDecimals_;
 
         // Call internal createAuction function to store implementation-specific data
         (prefundingRequired) = _auction(lotId_, lot, params_.implParams);

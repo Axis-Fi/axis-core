@@ -97,11 +97,11 @@ contract LSBBASettleTest is Test, Permit2User {
             capacityInQuote: false,
             capacity: LOT_CAPACITY,
             implParams: abi.encode(auctionDataParams)
-        }); // TODO add decimals to AuctionParams
+        });
 
         // Create the auction
         vm.prank(address(auctionHouse));
-        auctionModule.auction(lotId, auctionParams);
+        auctionModule.auction(lotId, auctionParams, quoteTokenDecimals, baseTokenDecimals);
 
         // Warp to the start of the auction
         vm.warp(lotStart);
@@ -195,12 +195,12 @@ contract LSBBASettleTest is Test, Permit2User {
         bidFiveAmountOut = bidFiveAmountOut * 10 ** baseTokenDecimals_ / SCALE;
 
         // Update auction params
-
+        auctionParams.capacity = LOT_CAPACITY * 10 ** quoteTokenDecimals_ / SCALE;
         lotId = 2;
 
         // Create a new lot with the decimals set
         vm.prank(address(auctionHouse));
-        auctionModule.auction(lotId, auctionParams);
+        auctionModule.auction(lotId, auctionParams, quoteTokenDecimals, baseTokenDecimals);
 
         // Warp to the start of the auction
         vm.warp(lotStart);

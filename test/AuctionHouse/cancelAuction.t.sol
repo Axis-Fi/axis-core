@@ -148,7 +148,7 @@ contract CancelAuctionTest is Test, Permit2User {
         auctionHouse.cancel(lotId);
 
         // Get lot data from the module
-        (, uint48 lotConclusion,, uint256 lotCapacity,,) = mockAuctionModule.lotData(lotId);
+        (, uint48 lotConclusion,, uint256 lotCapacity,,,,) = mockAuctionModule.lotData(lotId);
         assertEq(lotConclusion, uint48(block.timestamp));
         assertEq(lotCapacity, 0);
 
