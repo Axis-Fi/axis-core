@@ -664,9 +664,19 @@ contract LocalSealedBidBatchAuction is AuctionModule {
     }
 
     /// @notice Single view function to return the data needed to lookup private key for an auction and determine the number of bids left to decrypt
-    function getDecryptData(uint96 lotId_) public view returns (AuctionStatus status_, uint96 activeBids_, uint96 nextDecryptIndex_, bytes memory publicKeyModulus_) {
+    function getDecryptData(uint96 lotId_)
+        public
+        view
+        returns (
+            AuctionStatus status_,
+            uint96 activeBids_,
+            uint96 nextDecryptIndex_,
+            bytes memory publicKeyModulus_
+        )
+    {
         AuctionData storage data = auctionData[lotId_];
-        return (data.status, uint96(data.bidIds.length), data.nextDecryptIndex, data.publicKeyModulus);
+        return
+            (data.status, uint96(data.bidIds.length), data.nextDecryptIndex, data.publicKeyModulus);
     }
 
     // =========== ATOMIC AUCTION STUBS ========== //

@@ -129,12 +129,12 @@ contract AuctionTest is Test, Permit2User {
         (
             uint48 lotStart,
             uint48 lotConclusion,
+            uint8 quoteTokenDecimals,
+            uint8 baseTokenDecimals,
             bool lotCapacityInQuote,
             uint256 lotCapacity,
             uint256 sold,
-            uint256 purchased,
-            uint8 quoteTokenDecimals,
-            uint8 baseTokenDecimals
+            uint256 purchased
         ) = mockAuctionModule.lotData(lotId);
 
         assertEq(lotStart, uint48(block.timestamp));

@@ -40,21 +40,21 @@ abstract contract Auction {
     ///
     /// @param      start               The timestamp when the auction starts
     /// @param      conclusion          The timestamp when the auction ends
+    /// @param      quoteTokenDecimals  The quote token decimals
+    /// @param      baseTokenDecimals   The base token decimals
     /// @param      capacityInQuote     Whether or not the capacity is in quote tokens
     /// @param      capacity            The capacity of the lot
     /// @param      sold                The amount of base tokens sold
     /// @param      purchased           The amount of quote tokens purchased
-    /// @param      quoteTokenDecimals  The quote token decimals
-    /// @param      baseTokenDecimals   The base token decimals
     struct Lot {
         uint48 start;
         uint48 conclusion;
+        uint8 quoteTokenDecimals;
+        uint8 baseTokenDecimals;
         bool capacityInQuote;
         uint256 capacity;
         uint256 sold;
         uint256 purchased;
-        uint8 quoteTokenDecimals;
-        uint8 baseTokenDecimals;
     }
 
     /// @notice     Core data for a bid
@@ -65,7 +65,6 @@ abstract contract Auction {
     /// @param      amount          The amount of quote tokens bid
     /// @param      minAmountOut    The minimum amount of base tokens to receive
     /// @param      auctionParam    The auction-specific parameter for the bid
-    // TODO pack if we anticipate on-chain auction variants
     struct Bid {
         address bidder;
         address recipient;
@@ -260,10 +259,10 @@ abstract contract AuctionModule is Auction, Module {
         Lot memory lot;
         lot.start = params_.start == 0 ? uint48(block.timestamp) : params_.start;
         lot.conclusion = lot.start + params_.duration;
-        lot.capacityInQuote = params_.capacityInQuote;
-        lot.capacity = params_.capacity;
         lot.quoteTokenDecimals = quoteTokenDecimals_;
         lot.baseTokenDecimals = baseTokenDecimals_;
+        lot.capacityInQuote = params_.capacityInQuote;
+        lot.capacity = params_.capacity;
 
         // Call internal createAuction function to store implementation-specific data
         (prefundingRequired) = _auction(lotId_, lot, params_.implParams);
