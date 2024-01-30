@@ -74,7 +74,7 @@ contract LocalSealedBidBatchAuction is AuctionModule {
     /// @param         status              The status of the auction
     /// @param         nextDecryptIndex    The index of the next bid to decrypt
     /// @param         nextBidId           The ID of the next bid to be submitted
-    /// @param         minimumPrice        The minimum price that the auction can settle at
+    /// @param         minimumPrice        The minimum price that the auction can settle at (in terms of quote token)
     /// @param         minFilled           The minimum amount of capacity that must be filled to settle the auction
     /// @param         minBidSize          The minimum amount that can be bid for the lot, determined by the percentage of capacity that must be filled per bid times the min bid price
     /// @param         publicKeyModulus    The public key modulus used to encrypt bids
@@ -94,7 +94,7 @@ contract LocalSealedBidBatchAuction is AuctionModule {
     ///
     /// @param          minFillPercent_     The minimum percentage of the lot capacity that must be filled for the auction to settle (_SCALE: `_ONE_HUNDRED_PERCENT`)
     /// @param          minBidPercent_      The minimum percentage of the lot capacity that must be bid for each bid (_SCALE: `_ONE_HUNDRED_PERCENT`)
-    /// @param          minimumPrice_       The minimum price that the auction can settle at
+    /// @param          minimumPrice_       The minimum price that the auction can settle at (in terms of quote token)
     /// @param          publicKeyModulus_   The public key modulus used to encrypt bids
     struct AuctionDataParams {
         uint24 minFillPercent;
@@ -422,6 +422,97 @@ contract LocalSealedBidBatchAuction is AuctionModule {
 
     // =========== SETTLEMENT =========== //
 
+    function _baseTokenToScale(uint256 amount_, Lot storage lot_) internal view returns (uint256) {
+        return amount_ * _SCALE / 10 ** lot_.baseTokenDecimals;
+    }
+
+    function _quoteTokenToScale(
+        uint256 amount_,
+        Lot storage lot_
+    ) internal view returns (uint256) {
+        return amount_ * _SCALE / 10 ** lot_.quoteTokenDecimals;
+    }
+
+    /// @notice     Calculates the marginal clearing price of the auction
+    ///
+    /// @param      lotId_              The lot ID of the auction to calculate the marginal price for
+    /// @return     marginalPriceScaled The marginal clearing price of the auction (in terms of _SCALE)
+    /// @return     numWinningBids      The number of winning bids
+    function _calculateMarginalPrice(uint96 lotId_)
+        internal
+        view
+        returns (uint256 marginalPriceScaled, uint256 numWinningBids)
+    {
+        uint256 capacityScaled; // In terms of _SCALE
+        Lot storage lot = lotData[lotId_];
+        {
+            capacityScaled = _baseTokenToScale(lot.capacity, lot); // Capacity is always in terms of base token for this auction type
+        }
+
+        // Iterate over bid queue to calculate the marginal clearing price of the auction
+        Queue storage queue = lotSortedBids[lotId_];
+        uint256 numBids = queue.getNumBids();
+        uint256 totalAmountInScaled;
+        for (uint256 i = 0; i < numBids; i++) {
+            // Calculate bid price in terms of _SCALE
+            uint256 priceScaled;
+            uint256 expended;
+            {
+                // Load bid
+                QueueBid storage qBid = queue.getBid(uint96(i));
+
+                uint256 amountInScaled;
+                {
+                    amountInScaled = _quoteTokenToScale(qBid.amountIn, lot);
+                    totalAmountInScaled += amountInScaled;
+                }
+
+                // Calculate price
+                {
+                    uint256 minAmountOutScaled = _baseTokenToScale(qBid.minAmountOut, lot);
+                    priceScaled = amountInScaled * _SCALE / minAmountOutScaled;
+                }
+
+                // Determine total capacity expended at this price
+                expended = (totalAmountInScaled * _SCALE) / priceScaled; // In terms of _SCALE
+
+                // If total capacity expended is greater than or equal to the capacity, we have found the marginal price
+                if (expended >= capacityScaled) {
+                    marginalPriceScaled = priceScaled;
+                    numWinningBids = i + 1;
+                    break;
+                }
+            }
+
+            // If we have reached the end of the queue, we have found the marginal price and the maximum capacity that can be filled
+            if (i == numBids - 1) {
+                uint256 minFilledScaled;
+                {
+                    minFilledScaled = _baseTokenToScale(auctionData[lotId_].minFilled, lot); // Capacity is always in terms of base token for this auction type
+                }
+
+                // If the total filled is less than the minimum filled, mark as settled and return no winning bids (so users can claim refunds)
+                if (expended < minFilledScaled) {
+                    marginalPriceScaled = 0;
+                    numWinningBids = 0;
+                } else {
+                    marginalPriceScaled = priceScaled;
+                    numWinningBids = numBids;
+                }
+            }
+        }
+
+        // Scale minimum price to _SCALE
+        uint256 minimumPriceScaled = _quoteTokenToScale(auctionData[lotId_].minimumPrice, lot);
+
+        // Check if the minimum price for the auction was reached
+        if (marginalPriceScaled < minimumPriceScaled) {
+            return (0, 0);
+        }
+
+        return (marginalPriceScaled, numWinningBids);
+    }
+
     /// @inheritdoc AuctionModule
     /// @dev        This function performs the following:
     ///             - Validates inputs
@@ -429,6 +520,8 @@ contract LocalSealedBidBatchAuction is AuctionModule {
     ///             - Creates an array of winning bids
     ///             - Sets the auction status to settled
     ///             - Returns the array of winning bids
+    ///
+    ///             As the decimals of the quote token and base token may be different, the capacity is converted to a common unit (_SCALE) before calculating the marginal clearing price.
     ///
     ///             This function reverts if:
     ///             - The auction is not in the Decrypted state
@@ -441,57 +534,17 @@ contract LocalSealedBidBatchAuction is AuctionModule {
         // Check that auction is in the right state for settlement
         if (auctionData[lotId_].status != AuctionStatus.Decrypted) revert Auction_WrongState();
 
-        // Cache capacity
-        uint256 capacity = lotData[lotId_].capacity;
+        (uint256 marginalPriceScaled, uint256 numWinningBids) = _calculateMarginalPrice(lotId_);
 
-        // Iterate over bid queue to calculate the marginal clearing price of the auction
-        Queue storage queue = lotSortedBids[lotId_];
-        uint256 numBids = queue.getNumBids();
-        uint256 marginalPrice;
-        uint256 totalAmountIn;
-        uint256 numWinningBids;
-        for (uint256 i = 0; i < numBids; i++) {
-            // Load bid
-            QueueBid storage qBid = queue.getBid(uint96(i));
-
-            // Calculate bid price
-            uint256 price = (qBid.amountIn * _SCALE) / qBid.minAmountOut;
-
-            // Increment total amount in
-            totalAmountIn += qBid.amountIn;
-
-            // Determine total capacity expended at this price
-            uint256 expended = (totalAmountIn * _SCALE) / price;
-
-            // If total capacity expended is greater than or equal to the capacity, we have found the marginal price
-            if (expended >= capacity) {
-                marginalPrice = price;
-                numWinningBids = i + 1;
-                break;
-            }
-
-            // If we have reached the end of the queue, we have found the marginal price and the maximum capacity that can be filled
-            if (i == numBids - 1) {
-                // If the total filled is less than the minimum filled, mark as settled and return no winning bids (so users can claim refunds)
-                if (expended < auctionData[lotId_].minFilled) {
-                    auctionData[lotId_].status = AuctionStatus.Settled;
-                    return (winningBids_, bytes(""));
-                } else {
-                    marginalPrice = price;
-                    numWinningBids = numBids;
-                }
-            }
-        }
-
-        // Check if the minimum price for the auction was reached
-        // If not, mark as settled and return no winning bids (so users can claim refunds)
-        if (marginalPrice < auctionData[lotId_].minimumPrice) {
+        // If the marginal price was not resolved, mark as settled and return no winning bids (so users can claim refunds)
+        if (marginalPriceScaled == 0) {
             auctionData[lotId_].status = AuctionStatus.Settled;
             return (winningBids_, bytes(""));
         }
 
         // Auction can be settled at the marginal price if we reach this point
         // Create winning bid array using marginal price to set amounts out
+        Queue storage queue = lotSortedBids[lotId_];
         winningBids_ = new Bid[](numWinningBids);
         for (uint256 i; i < numWinningBids; i++) {
             // Load bid
@@ -500,7 +553,10 @@ contract LocalSealedBidBatchAuction is AuctionModule {
             // Calculate amount out
             // For partial bids, this will be the amount they would get at full value
             // The auction house handles reduction of payouts for partial bids
-            uint256 amountOut = (qBid.amountIn * _SCALE) / marginalPrice;
+            // Scaled to quoteTokenDecimals
+            uint256 amountInScaled = _quoteTokenToScale(qBid.amountIn, lotData[lotId_]);
+            uint256 amountOutScaled = (amountInScaled * _SCALE) / marginalPriceScaled;
+            uint256 amountOut = (amountOutScaled * 10 ** lotData[lotId_].baseTokenDecimals) / _SCALE;
 
             // Create winning bid from encrypted bid and calculated amount out
             EncryptedBid storage encBid = lotEncryptedBids[lotId_][qBid.bidId];

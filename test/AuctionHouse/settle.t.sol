@@ -59,6 +59,7 @@ contract SettleTest is Test, Permit2User {
     uint48 internal constant referrerFee = 500; // 0.5%
 
     uint256 internal constant LOT_CAPACITY = 10e18;
+    uint256 internal constant MINIMUM_PRICE = 5e17; // 0.5e18
     uint256 internal _lotCapacity = LOT_CAPACITY;
     uint256 internal constant SCALE = 1e18;
     uint256 internal constant BID_SEED = 1e9;
@@ -79,6 +80,7 @@ contract SettleTest is Test, Permit2User {
 
     Auction.AuctionParams internal auctionParams;
     Auctioneer.RoutingParams internal routingParams;
+    LocalSealedBidBatchAuction.AuctionDataParams internal auctionDataParams;
 
     function setUp() external {
         // Set block timestamp
@@ -96,11 +98,10 @@ contract SettleTest is Test, Permit2User {
         auctionHouse.setReferrerFee(referrer, referrerFee);
 
         // Auction parameters
-        LocalSealedBidBatchAuction.AuctionDataParams memory auctionDataParams =
-        LocalSealedBidBatchAuction.AuctionDataParams({
+        auctionDataParams = LocalSealedBidBatchAuction.AuctionDataParams({
             minFillPercent: 1000, // 1%
             minBidPercent: 1000, // 1%
-            minimumPrice: 5e17, // 0.5e18
+            minimumPrice: MINIMUM_PRICE,
             publicKeyModulus: PUBLIC_KEY_MODULUS
         });
 
@@ -183,7 +184,7 @@ contract SettleTest is Test, Permit2User {
     /// @param      bidAmount_      The amount of the bid
     /// @param      bidAmountOut_   The amount of the bid out
     /// @return     uint256         The marginal price (18 dp)
-    function _getMarginalPrice(
+    function _getMarginalPriceScaled(
         uint256 bidAmount_,
         uint256 bidAmountOut_
     ) internal view returns (uint256) {
@@ -192,6 +193,14 @@ contract SettleTest is Test, Permit2User {
         uint256 bidAmountOutScaled = bidAmountOut_ * SCALE / 10 ** baseTokenDecimals;
 
         return bidAmountScaled * SCALE / bidAmountOutScaled;
+    }
+
+    function _getAmountOut(
+        uint256 amountIn_,
+        uint256 marginalPrice_
+    ) internal view returns (uint256) {
+        uint256 amountOutScaled = amountIn_ * SCALE / marginalPrice_;
+        return amountOutScaled * 10 ** baseTokenDecimals / 10 ** quoteTokenDecimals;
     }
 
     // ======== Modifiers ======== //
@@ -210,7 +219,10 @@ contract SettleTest is Test, Permit2User {
         // Update parameters
         _lotCapacity = _lotCapacity * 10 ** baseTokenDecimals_ / SCALE;
 
+        auctionDataParams.minimumPrice = MINIMUM_PRICE * 10 ** quoteTokenDecimals_ / SCALE;
+
         auctionParams.capacity = _lotCapacity;
+        auctionParams.implParams = abi.encode(auctionDataParams);
 
         routingParams.baseToken = baseToken;
         routingParams.quoteToken = quoteToken;
@@ -253,7 +265,7 @@ contract SettleTest is Test, Permit2User {
         decryptedBids.push(decryptedBidOne);
 
         // bidOne first (price = 1)
-        marginalPrice = _getMarginalPrice(bidOneAmount, bidOneAmountOut);
+        marginalPrice = _getMarginalPriceScaled(bidOneAmount, bidOneAmountOut);
         _;
     }
 
@@ -278,7 +290,7 @@ contract SettleTest is Test, Permit2User {
         decryptedBids.push(decryptedBidTwo);
 
         // bidOne first (price = 1), then bidTwo (price = 1)
-        marginalPrice = _getMarginalPrice(bidTwoAmount, bidTwoAmountOut);
+        marginalPrice = _getMarginalPriceScaled(bidTwoAmount, bidTwoAmountOut);
         _;
     }
 
@@ -303,7 +315,7 @@ contract SettleTest is Test, Permit2User {
         decryptedBids.push(decryptedBidThree);
 
         // bidOne first (price = 1), then bidThree (price = 1)
-        marginalPrice = _getMarginalPrice(bidThreeAmount, bidThreeAmountOut);
+        marginalPrice = _getMarginalPriceScaled(bidThreeAmount, bidThreeAmountOut);
         _;
     }
 
@@ -328,7 +340,7 @@ contract SettleTest is Test, Permit2User {
         decryptedBids.push(decryptedBidTwo);
 
         // bidFour first (price = 4), then bidFive (price = 3)
-        marginalPrice = _getMarginalPrice(bidFiveAmount, bidFiveAmountOut);
+        marginalPrice = _getMarginalPriceScaled(bidFiveAmount, bidFiveAmountOut);
         _;
     }
 
@@ -400,8 +412,8 @@ contract SettleTest is Test, Permit2User {
     //  [X] it succeeds - last bidder receives the partial fill and is returned excess quote tokens
     // [X] given the auction bids have different prices
     //  [X] it succeeds
-    // [ ] given that the quote token decimals differ from the base token decimals
-    //  [ ] it succeeds
+    // [X] given that the quote token decimals differ from the base token decimals
+    //  [X] it succeeds
     // [X] it succeeds - auction owner receives quote tokens (minus fees), bidders receive base tokens and fees accrued
 
     function test_invalidLotId() external givenLotIdIsInvalid givenLotHasStarted {
@@ -933,7 +945,7 @@ contract SettleTest is Test, Permit2User {
         auctionHouse.settle(lotId);
 
         // Check base token balances
-        uint256 bidFourAmountOutActual = bidFourAmount * SCALE / marginalPrice;
+        uint256 bidFourAmountOutActual = _getAmountOut(bidFourAmount, marginalPrice);
         assertEq(
             baseToken.balanceOf(bidderOne),
             bidFourAmountOutActual,
@@ -999,7 +1011,7 @@ contract SettleTest is Test, Permit2User {
         auctionHouse.settle(lotId);
 
         // Check base token balances
-        uint256 bidFourAmountOutActual = bidFourAmount * SCALE / marginalPrice;
+        uint256 bidFourAmountOutActual = _getAmountOut(bidFourAmount, marginalPrice);
         assertEq(
             baseToken.balanceOf(bidderOne),
             bidFourAmountOutActual,

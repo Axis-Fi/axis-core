@@ -14,6 +14,8 @@ import {Auction} from "src/modules/Auction.sol";
 import {RSAOAEP} from "src/lib/RSA.sol";
 import {Bid as QueueBid} from "src/modules/auctions/LSBBA/MaxPriorityQueue.sol";
 
+import {console2} from "forge-std/console2.sol";
+
 contract LSBBASettleTest is Test, Permit2User {
     address internal constant _PROTOCOL = address(0x1);
     address internal alice = address(0x2);
@@ -24,6 +26,7 @@ contract LSBBASettleTest is Test, Permit2User {
     LocalSealedBidBatchAuction internal auctionModule;
 
     uint256 internal constant LOT_CAPACITY = 10e18;
+    uint256 internal constant MINIMUM_PRICE = 1e18;
 
     uint48 internal lotStart;
     uint48 internal lotDuration;
@@ -67,6 +70,7 @@ contract LSBBASettleTest is Test, Permit2User {
     uint8 internal baseTokenDecimals = 18;
 
     Auction.AuctionParams auctionParams;
+    LocalSealedBidBatchAuction.AuctionDataParams auctionDataParams;
 
     function setUp() public {
         // Ensure the block timestamp is a sane value
@@ -78,11 +82,10 @@ contract LSBBASettleTest is Test, Permit2User {
         auctionHouse.installModule(auctionModule);
 
         // Set auction data parameters
-        LocalSealedBidBatchAuction.AuctionDataParams memory auctionDataParams =
-        LocalSealedBidBatchAuction.AuctionDataParams({
+        auctionDataParams = LocalSealedBidBatchAuction.AuctionDataParams({
             minFillPercent: 25_000, // 25% = 2.5e18
             minBidPercent: 1000,
-            minimumPrice: 1e18,
+            minimumPrice: MINIMUM_PRICE,
             publicKeyModulus: PUBLIC_KEY_MODULUS
         });
 
@@ -150,7 +153,7 @@ contract LSBBASettleTest is Test, Permit2User {
     /// @param      bidAmount_      The amount of the bid
     /// @param      bidAmountOut_   The amount of the bid out
     /// @return     uint256         The marginal price (18 dp)
-    function _getMarginalPrice(
+    function _getMarginalPriceScaled(
         uint256 bidAmount_,
         uint256 bidAmountOut_
     ) internal view returns (uint256) {
@@ -159,6 +162,14 @@ contract LSBBASettleTest is Test, Permit2User {
         uint256 bidAmountOutScaled = bidAmountOut_ * SCALE / 10 ** baseTokenDecimals;
 
         return bidAmountScaled * SCALE / bidAmountOutScaled;
+    }
+
+    function _getAmountOut(
+        uint256 amountIn_,
+        uint256 marginalPrice_
+    ) internal view returns (uint256) {
+        uint256 amountOutScaled = amountIn_ * SCALE / marginalPrice_;
+        return amountOutScaled * 10 ** baseTokenDecimals / 10 ** quoteTokenDecimals;
     }
 
     // ===== Modifiers ===== //
@@ -194,8 +205,12 @@ contract LSBBASettleTest is Test, Permit2User {
         bidFiveAmount = bidFiveAmount * 10 ** quoteTokenDecimals_ / SCALE;
         bidFiveAmountOut = bidFiveAmountOut * 10 ** baseTokenDecimals_ / SCALE;
 
+        // Update auction implementation params
+        auctionDataParams.minimumPrice = MINIMUM_PRICE * 10 ** quoteTokenDecimals_ / SCALE;
+
         // Update auction params
-        auctionParams.capacity = LOT_CAPACITY * 10 ** quoteTokenDecimals_ / SCALE;
+        auctionParams.capacity = LOT_CAPACITY * 10 ** baseTokenDecimals_ / SCALE; // Always base token
+        auctionParams.implParams = abi.encode(auctionDataParams);
         lotId = 2;
 
         // Create a new lot with the decimals set
@@ -304,8 +319,8 @@ contract LSBBASettleTest is Test, Permit2User {
     //   [X] it returns no winning bids
     // [X] given the lot is over-subscribed
     //   [X] it returns winning bids, with the marginal price is the price at which the lot capacity is exhausted
-    // [ ] given the lot is over-subscribed with a partial fill
-    //   [ ] it returns winning bids, with the marginal price is the price at which the lot capacity is exhausted, and a partial fill for the lowest winning bid
+    // [X] given the lot is over-subscribed with a partial fill
+    //   [X] it returns winning bids, with the marginal price is the price at which the lot capacity is exhausted, and a partial fill for the lowest winning bid
     // [X] when the filled amount is greater than the lot minimum
     //   [X] it returns winning bids, with the marginal price is the minimum price
 
@@ -481,9 +496,9 @@ contract LSBBASettleTest is Test, Permit2User {
         (LocalSealedBidBatchAuction.Bid[] memory winningBids,) = auctionModule.settle(lotId);
 
         // Calculate the marginal price
-        uint256 marginalPrice = _getMarginalPrice(bidTwoAmount, bidTwoAmountOut);
+        uint256 marginalPrice = _getMarginalPriceScaled(bidTwoAmount, bidTwoAmountOut);
 
-        bidThreeAmountOut = bidThreeAmount * SCALE / marginalPrice;
+        bidThreeAmountOut = _getAmountOut(bidThreeAmount, marginalPrice);
 
         // First bid - largest amount out
         assertEq(winningBids[0].amount, bidThreeAmount);
@@ -509,9 +524,9 @@ contract LSBBASettleTest is Test, Permit2User {
         (LocalSealedBidBatchAuction.Bid[] memory winningBids,) = auctionModule.settle(lotId);
 
         // Calculate the marginal price
-        uint256 marginalPrice = _getMarginalPrice(bidTwoAmount, bidTwoAmountOut);
+        uint256 marginalPrice = _getMarginalPriceScaled(bidTwoAmount, bidTwoAmountOut);
 
-        bidThreeAmountOut = bidThreeAmount * SCALE / marginalPrice;
+        bidThreeAmountOut = _getAmountOut(bidThreeAmount, marginalPrice);
 
         // First bid - largest amount out
         assertEq(winningBids[0].amount, bidThreeAmount);
@@ -537,9 +552,9 @@ contract LSBBASettleTest is Test, Permit2User {
         (LocalSealedBidBatchAuction.Bid[] memory winningBids,) = auctionModule.settle(lotId);
 
         // Calculate the marginal price
-        uint256 marginalPrice = _getMarginalPrice(bidTwoAmount, bidTwoAmountOut);
+        uint256 marginalPrice = _getMarginalPriceScaled(bidTwoAmount, bidTwoAmountOut);
 
-        bidThreeAmountOut = bidThreeAmount * SCALE / marginalPrice;
+        bidThreeAmountOut = _getAmountOut(bidThreeAmount, marginalPrice);
 
         // First bid - largest amount out
         assertEq(winningBids[0].amount, bidThreeAmount);
@@ -564,10 +579,10 @@ contract LSBBASettleTest is Test, Permit2User {
         (LocalSealedBidBatchAuction.Bid[] memory winningBids,) = auctionModule.settle(lotId);
 
         // Calculate the marginal price
-        uint256 marginalPrice = _getMarginalPrice(bidTwoAmount, bidTwoAmountOut);
+        uint256 marginalPrice = _getMarginalPriceScaled(bidTwoAmount, bidTwoAmountOut);
 
-        bidThreeAmountOut = bidThreeAmount * SCALE / marginalPrice;
-        bidFiveAmountOut = bidFiveAmount * SCALE / marginalPrice;
+        bidThreeAmountOut = _getAmountOut(bidThreeAmount, marginalPrice);
+        bidFiveAmountOut = _getAmountOut(bidFiveAmount, marginalPrice);
 
         // First bid - largest amount out
         assertEq(winningBids[0].amount, bidFiveAmount, "bid 1: amount mismatch");
@@ -597,10 +612,10 @@ contract LSBBASettleTest is Test, Permit2User {
         (LocalSealedBidBatchAuction.Bid[] memory winningBids,) = auctionModule.settle(lotId);
 
         // Calculate the marginal price
-        uint256 marginalPrice = _getMarginalPrice(bidTwoAmount, bidTwoAmountOut);
+        uint256 marginalPrice = _getMarginalPriceScaled(bidTwoAmount, bidTwoAmountOut);
 
-        bidThreeAmountOut = bidThreeAmount * SCALE / marginalPrice;
-        bidFiveAmountOut = bidFiveAmount * SCALE / marginalPrice;
+        bidThreeAmountOut = _getAmountOut(bidThreeAmount, marginalPrice);
+        bidFiveAmountOut = _getAmountOut(bidFiveAmount, marginalPrice);
 
         // First bid - largest amount out
         assertEq(winningBids[0].amount, bidFiveAmount, "bid 1: amount mismatch");
@@ -630,10 +645,10 @@ contract LSBBASettleTest is Test, Permit2User {
         (LocalSealedBidBatchAuction.Bid[] memory winningBids,) = auctionModule.settle(lotId);
 
         // Calculate the marginal price
-        uint256 marginalPrice = _getMarginalPrice(bidTwoAmount, bidTwoAmountOut);
+        uint256 marginalPrice = _getMarginalPriceScaled(bidTwoAmount, bidTwoAmountOut);
 
-        bidThreeAmountOut = bidThreeAmount * SCALE / marginalPrice;
-        bidFiveAmountOut = bidFiveAmount * SCALE / marginalPrice;
+        bidThreeAmountOut = _getAmountOut(bidThreeAmount, marginalPrice);
+        bidFiveAmountOut = _getAmountOut(bidFiveAmount, marginalPrice);
 
         // First bid - largest amount out
         assertEq(winningBids[0].amount, bidFiveAmount, "bid 1: amount mismatch");
@@ -662,9 +677,9 @@ contract LSBBASettleTest is Test, Permit2User {
         (LocalSealedBidBatchAuction.Bid[] memory winningBids,) = auctionModule.settle(lotId);
 
         // Calculate the marginal price
-        uint256 marginalPrice = _getMarginalPrice(bidOneAmount, bidOneAmountOut);
+        uint256 marginalPrice = _getMarginalPriceScaled(bidOneAmount, bidOneAmountOut);
 
-        bidTwoAmountOut = bidTwoAmount * SCALE / marginalPrice;
+        bidTwoAmountOut = _getAmountOut(bidTwoAmount, marginalPrice);
 
         // First bid - largest amount out
         assertEq(winningBids[0].amount, bidTwoAmount);
@@ -690,20 +705,20 @@ contract LSBBASettleTest is Test, Permit2User {
         (LocalSealedBidBatchAuction.Bid[] memory winningBids,) = auctionModule.settle(lotId);
 
         // Calculate the marginal price
-        uint256 marginalPrice = _getMarginalPrice(bidOneAmount, bidOneAmountOut);
+        uint256 marginalPrice = _getMarginalPriceScaled(bidOneAmount, bidOneAmountOut);
 
-        bidTwoAmountOut = bidTwoAmount * SCALE / marginalPrice;
+        bidTwoAmountOut = _getAmountOut(bidTwoAmount, marginalPrice);
 
         // First bid - largest amount out
-        assertEq(winningBids[0].amount, bidTwoAmount);
-        assertEq(winningBids[0].minAmountOut, bidTwoAmountOut);
+        assertEq(winningBids[0].amount, bidTwoAmount, "bid 1: amount mismatch");
+        assertEq(winningBids[0].minAmountOut, bidTwoAmountOut, "bid 1: minAmountOut mismatch");
 
         // Second bid
-        assertEq(winningBids[1].amount, bidOneAmount);
-        assertEq(winningBids[1].minAmountOut, bidOneAmountOut);
+        assertEq(winningBids[1].amount, bidOneAmount, "bid 2: amount mismatch");
+        assertEq(winningBids[1].minAmountOut, bidOneAmountOut, "bid 2: minAmountOut mismatch");
 
         // Expect winning bids
-        assertEq(winningBids.length, 2);
+        assertEq(winningBids.length, 2, "winning bids length mismatch");
     }
 
     function test_whenLotIsFilled_quoteTokenDecimalsSmaller()
@@ -718,9 +733,9 @@ contract LSBBASettleTest is Test, Permit2User {
         (LocalSealedBidBatchAuction.Bid[] memory winningBids,) = auctionModule.settle(lotId);
 
         // Calculate the marginal price
-        uint256 marginalPrice = _getMarginalPrice(bidOneAmount, bidOneAmountOut);
+        uint256 marginalPrice = _getMarginalPriceScaled(bidOneAmount, bidOneAmountOut);
 
-        bidTwoAmountOut = bidTwoAmount * SCALE / marginalPrice;
+        bidTwoAmountOut = _getAmountOut(bidTwoAmount, marginalPrice);
 
         // First bid - largest amount out
         assertEq(winningBids[0].amount, bidTwoAmount);
