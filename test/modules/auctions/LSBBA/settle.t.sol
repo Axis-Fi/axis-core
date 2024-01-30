@@ -164,11 +164,16 @@ contract LSBBASettleTest is Test, Permit2User {
         return bidAmountScaled * SCALE / bidAmountOutScaled;
     }
 
+    /// @notice     Calculates the amount out, given the amount in and the marginal price
+    ///
+    /// @param      amountIn_               The amount in
+    /// @param      marginalPriceScaled_    The marginal price (in terms of SCALE)
+    /// @return     uint256                 The amount out (in native decimals)
     function _getAmountOut(
         uint256 amountIn_,
-        uint256 marginalPrice_
+        uint256 marginalPriceScaled_
     ) internal view returns (uint256) {
-        uint256 amountOutScaled = amountIn_ * SCALE / marginalPrice_;
+        uint256 amountOutScaled = amountIn_ * SCALE / marginalPriceScaled_;
         return amountOutScaled * 10 ** baseTokenDecimals / 10 ** quoteTokenDecimals;
     }
 

@@ -422,10 +422,20 @@ contract LocalSealedBidBatchAuction is AuctionModule {
 
     // =========== SETTLEMENT =========== //
 
+    /// @notice     Scales a base token amount to _SCALE
+    ///
+    /// @param      amount_     The amount to scale
+    /// @param      lot_        The lot data for the auction
+    /// @return     scaled      The scaled amount
     function _baseTokenToScale(uint256 amount_, Lot storage lot_) internal view returns (uint256) {
         return amount_ * _SCALE / 10 ** lot_.baseTokenDecimals;
     }
 
+    /// @notice     Scales a quote token amount to _SCALE
+    ///
+    /// @param      amount_     The amount to scale
+    /// @param      lot_        The lot data for the auction
+    /// @return     scaled      The scaled amount
     function _quoteTokenToScale(
         uint256 amount_,
         Lot storage lot_
@@ -443,11 +453,9 @@ contract LocalSealedBidBatchAuction is AuctionModule {
         view
         returns (uint256 marginalPriceScaled, uint256 numWinningBids)
     {
-        uint256 capacityScaled; // In terms of _SCALE
         Lot storage lot = lotData[lotId_];
-        {
-            capacityScaled = _baseTokenToScale(lot.capacity, lot); // Capacity is always in terms of base token for this auction type
-        }
+        // Capacity is always in terms of base token for this auction type
+        uint256 capacityScaled = _baseTokenToScale(lot.capacity, lot);
 
         // Iterate over bid queue to calculate the marginal clearing price of the auction
         Queue storage queue = lotSortedBids[lotId_];
@@ -456,28 +464,22 @@ contract LocalSealedBidBatchAuction is AuctionModule {
         for (uint256 i = 0; i < numBids; i++) {
             // Calculate bid price in terms of _SCALE
             uint256 priceScaled;
-            uint256 expended;
+            uint256 expendedScaled;
             {
                 // Load bid
                 QueueBid storage qBid = queue.getBid(uint96(i));
 
-                uint256 amountInScaled;
-                {
-                    amountInScaled = _quoteTokenToScale(qBid.amountIn, lot);
-                    totalAmountInScaled += amountInScaled;
-                }
+                uint256 amountInScaled = _quoteTokenToScale(qBid.amountIn, lot);
+                totalAmountInScaled += amountInScaled;
 
                 // Calculate price
-                {
-                    uint256 minAmountOutScaled = _baseTokenToScale(qBid.minAmountOut, lot);
-                    priceScaled = amountInScaled * _SCALE / minAmountOutScaled;
-                }
+                priceScaled = amountInScaled * _SCALE / _baseTokenToScale(qBid.minAmountOut, lot);
 
                 // Determine total capacity expended at this price
-                expended = (totalAmountInScaled * _SCALE) / priceScaled; // In terms of _SCALE
+                expendedScaled = (totalAmountInScaled * _SCALE) / priceScaled; // In terms of _SCALE
 
                 // If total capacity expended is greater than or equal to the capacity, we have found the marginal price
-                if (expended >= capacityScaled) {
+                if (expendedScaled >= capacityScaled) {
                     marginalPriceScaled = priceScaled;
                     numWinningBids = i + 1;
                     break;
@@ -486,13 +488,10 @@ contract LocalSealedBidBatchAuction is AuctionModule {
 
             // If we have reached the end of the queue, we have found the marginal price and the maximum capacity that can be filled
             if (i == numBids - 1) {
-                uint256 minFilledScaled;
-                {
-                    minFilledScaled = _baseTokenToScale(auctionData[lotId_].minFilled, lot); // Capacity is always in terms of base token for this auction type
-                }
+                uint256 minFilledScaled = _baseTokenToScale(auctionData[lotId_].minFilled, lot);
 
                 // If the total filled is less than the minimum filled, mark as settled and return no winning bids (so users can claim refunds)
-                if (expended < minFilledScaled) {
+                if (expendedScaled < minFilledScaled) {
                     marginalPriceScaled = 0;
                     numWinningBids = 0;
                 } else {
