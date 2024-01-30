@@ -248,7 +248,7 @@ contract AuctionTest is Test, Permit2User {
         assertEq(lotPrefunded, false, "prefunded mismatch");
 
         // Auction module also updated
-        (uint48 lotStart,,,,,) = mockAuctionModule.lotData(lotId);
+        (uint48 lotStart,,,,,,,) = mockAuctionModule.lotData(lotId);
         assertEq(lotStart, block.timestamp, "start mismatch");
     }
 

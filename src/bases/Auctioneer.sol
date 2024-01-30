@@ -155,18 +155,9 @@ abstract contract Auctioneer is WithModules {
             revert InvalidModuleType(auctionRef);
         }
 
-        // Increment lot count and get ID
-        lotId = lotCounter++;
-
-        // Auction Module
-        bool requiresPrefunding;
-        uint256 lotCapacity;
-        {
-            // Call module auction function to store implementation-specific data
-            (requiresPrefunding, lotCapacity) = auctionModule.auction(lotId, params_);
-        }
-
         // Validate routing parameters
+        uint8 quoteTokenDecimals;
+        uint8 baseTokenDecimals;
         {
             // Validate routing information
             if (address(routing_.baseToken) == address(0)) {
@@ -177,8 +168,8 @@ abstract contract Auctioneer is WithModules {
             }
 
             // Confirm tokens are within the required decimal range
-            uint8 baseTokenDecimals = routing_.baseToken.decimals();
-            uint8 quoteTokenDecimals = routing_.quoteToken.decimals();
+            baseTokenDecimals = routing_.baseToken.decimals();
+            quoteTokenDecimals = routing_.quoteToken.decimals();
 
             if (baseTokenDecimals < 6 || baseTokenDecimals > 18) {
                 revert InvalidParams();
@@ -186,6 +177,18 @@ abstract contract Auctioneer is WithModules {
             if (quoteTokenDecimals < 6 || quoteTokenDecimals > 18) {
                 revert InvalidParams();
             }
+        }
+
+        // Increment lot count and get ID
+        lotId = lotCounter++;
+
+        // Auction Module
+        bool requiresPrefunding;
+        uint256 lotCapacity;
+        {
+            // Call module auction function to store implementation-specific data
+            (requiresPrefunding, lotCapacity) =
+                auctionModule.auction(lotId, params_, quoteTokenDecimals, baseTokenDecimals);
         }
 
         // Store routing information

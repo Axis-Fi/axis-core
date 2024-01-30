@@ -27,6 +27,9 @@ contract LSBBACancelAuctionTest is Test, Permit2User {
     Auction.AuctionParams internal auctionParams;
     LocalSealedBidBatchAuction.AuctionDataParams internal auctionDataParams;
 
+    uint8 internal constant _quoteTokenDecimals = 18;
+    uint8 internal constant _baseTokenDecimals = 18;
+
     function setUp() public {
         // Ensure the block timestamp is a sane value
         vm.warp(1_000_000);
@@ -59,7 +62,7 @@ contract LSBBACancelAuctionTest is Test, Permit2User {
 
         // Create the auction
         vm.prank(address(auctionHouse));
-        auctionModule.auction(lotId, auctionParams);
+        auctionModule.auction(lotId, auctionParams, _quoteTokenDecimals, _baseTokenDecimals);
     }
 
     // ===== Modifiers ===== //

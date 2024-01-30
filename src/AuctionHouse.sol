@@ -450,7 +450,8 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
         Routing memory routing = lotRouting[lotId_];
 
         // Calculate the payout amount, handling partial fills
-        uint256[] memory paymentRefunds = new uint256[](winningBids.length);
+        uint256 lastBidRefund;
+        address lastBidder;
         {
             uint256 bidCount = winningBids.length;
             uint256 payoutRemaining = remainingCapacity;
@@ -465,7 +466,8 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
                     // Calculate the refund amount in terms of the quote token
                     uint256 payoutUnfulfilled = 1e18 - payoutRemaining * 1e18 / payoutAmount;
                     uint256 refundAmount = winningBids[i].amount * payoutUnfulfilled / 1e18;
-                    paymentRefunds[i] = refundAmount;
+                    lastBidRefund = refundAmount;
+                    lastBidder = winningBids[i].bidder;
 
                     // Check that the refund amount is not greater than the bid amount
                     if (refundAmount > winningBids[i].amount) {
@@ -550,15 +552,9 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
             _sendPayment(routing.owner, totalAmountInLessFees, routing.quoteToken, routing.hooks);
         }
 
-        // Handle the refund to the bidder is the last bid was a partial fill
-        {
-            uint256 bidCount = winningBids.length;
-            for (uint256 i; i < bidCount; i++) {
-                // Send refund to each bidder
-                if (paymentRefunds[i] > 0) {
-                    routing.quoteToken.safeTransfer(winningBids[i].bidder, paymentRefunds[i]);
-                }
-            }
+        // Handle the refund to the bidder if the last bid was a partial fill
+        if (lastBidRefund > 0 && lastBidder != address(0)) {
+            routing.quoteToken.safeTransfer(lastBidder, lastBidRefund);
         }
     }
 
