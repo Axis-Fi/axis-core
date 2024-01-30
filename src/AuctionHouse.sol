@@ -552,7 +552,7 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
             _sendPayment(routing.owner, totalAmountInLessFees, routing.quoteToken, routing.hooks);
         }
 
-        // Handle the refund to the bidder is the last bid was a partial fill
+        // Handle the refund to the bidder if the last bid was a partial fill
         if (lastBidRefund > 0 && lastBidder != address(0)) {
             routing.quoteToken.safeTransfer(lastBidder, lastBidRefund);
         }
