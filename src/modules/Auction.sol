@@ -223,6 +223,15 @@ abstract contract Auction {
     /// @param      lotId_  The lot id
     /// @return     uint256 The remaining capacity of the lot
     function remainingCapacity(uint96 lotId_) external view virtual returns (uint256);
+
+    /// @notice     Get whether or not the capacity is in quote tokens
+    /// @dev        The implementing function should handle the following:
+    ///             - Return true if the capacity is in quote tokens
+    ///             - Return false if the capacity is in base tokens
+    ///
+    /// @param      lotId_  The lot id
+    /// @return     bool    Whether or not the capacity is in quote tokens
+    function capacityInQuote(uint96 lotId_) external view virtual returns (bool);
 }
 
 abstract contract AuctionModule is Auction, Module {
@@ -530,6 +539,11 @@ abstract contract AuctionModule is Auction, Module {
     /// @inheritdoc Auction
     function remainingCapacity(uint96 lotId_) external view override returns (uint256) {
         return lotData[lotId_].capacity;
+    }
+
+    /// @inheritdoc Auction
+    function capacityInQuote(uint96 lotId_) external view override returns (bool) {
+        return lotData[lotId_].capacityInQuote;
     }
 
     /// @notice    Get the lot data for a given lot ID

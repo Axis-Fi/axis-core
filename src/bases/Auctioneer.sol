@@ -265,7 +265,8 @@ abstract contract Auctioneer is WithModules {
         }
 
         // Perform pre-funding, if needed
-        if (requiresPrefunding) {
+        // It does not make sense to pre-fund the auction if the capacity is in quote tokens
+        if (requiresPrefunding == true && params_.capacityInQuote == false) {
             // Store pre-funding information
             routing.prefunded = true;
 
@@ -324,8 +325,11 @@ abstract contract Auctioneer is WithModules {
         // Cancel the auction on the module
         module.cancelAuction(lotId_);
 
-        // If the auction is prefunded, transfer the remaining capacity to the owner
-        if (lotRouting[lotId_].prefunded && lotRemainingCapacity > 0) {
+        // If the auction is prefunded and supported, transfer the remaining capacity to the owner
+        if (
+            lotRouting[lotId_].prefunded == true && module.capacityInQuote(lotId_) == false
+                && lotRemainingCapacity > 0
+        ) {
             // Transfer payout tokens to the owner
             Routing memory routing = lotRouting[lotId_];
             routing.baseToken.safeTransfer(routing.owner, lotRemainingCapacity);
