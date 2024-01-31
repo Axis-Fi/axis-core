@@ -563,8 +563,6 @@ contract LocalSealedBidBatchAuction is AuctionModule {
         AuctionDataParams memory implParams = abi.decode(params_, (AuctionDataParams));
 
         // Validate params
-        // Capacity must be in base token for this auction type
-        if (lot_.capacityInQuote) revert Auction_InvalidParams();
 
         // minFillPercent must be less than or equal to 100%
         if (implParams.minFillPercent > _ONE_HUNDRED_PERCENT) revert Auction_InvalidParams();
@@ -588,7 +586,9 @@ contract LocalSealedBidBatchAuction is AuctionModule {
         data.publicKeyModulus = implParams.publicKeyModulus;
 
         // This auction type requires pre-funding
-        return (true);
+        // This setting requires the capacity to be in the base token,
+        // so we know the capacity values above are in base token units.
+        prefundingRequired = true;
     }
 
     function _cancelAuction(uint96 lotId_) internal override {

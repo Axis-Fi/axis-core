@@ -120,8 +120,6 @@ contract LSBBACreateAuctionTest is Test, Permit2User {
     //  [X] it reverts
     // [X] when the auction parameters are invalid
     //  [X] it reverts
-    // [X] when capacity in quote is enabled
-    //  [X] it reverts
     // [X] when minimum fill percentage is more than 100%
     //  [X] it reverts
     // [X] when minimum bid percentage is less than the minimum
@@ -181,16 +179,6 @@ contract LSBBACreateAuctionTest is Test, Permit2User {
     function test_auctionDataParamsAreInvalid_reverts() external whenAuctionDataParamsAreInvalid {
         // Expected error
         vm.expectRevert();
-
-        // Call
-        vm.prank(address(auctionHouse));
-        auctionModule.auction(lotId, auctionParams, _quoteTokenDecimals, _baseTokenDecimals);
-    }
-
-    function test_capacityInQuoteIsEnabled_reverts() external whenCapacityInQuoteIsEnabled {
-        // Expected error
-        bytes memory err = abi.encodeWithSelector(Auction.Auction_InvalidParams.selector);
-        vm.expectRevert(err);
 
         // Call
         vm.prank(address(auctionHouse));

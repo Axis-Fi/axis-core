@@ -546,7 +546,7 @@ contract AuctionTest is Test, Permit2User {
         whenAuctionCapacityInQuote
     {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(Auction.Auction_InvalidParams.selector);
+        bytes memory err = abi.encodeWithSelector(Auctioneer.InvalidParams.selector);
         vm.expectRevert(err);
 
         auctionHouse.auction(routingParams, auctionParams);

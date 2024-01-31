@@ -276,9 +276,6 @@ abstract contract AuctionModule is Auction, Module {
         // Call internal createAuction function to store implementation-specific data
         (prefundingRequired) = _auction(lotId_, lot, params_.implParams);
 
-        // Cannot pre-fund if capacity is in quote token
-        if (prefundingRequired && lot.capacityInQuote) revert Auction_InvalidParams();
-
         // Store lot data
         lotData[lotId_] = lot;
 

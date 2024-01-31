@@ -266,11 +266,13 @@ abstract contract Auctioneer is WithModules {
 
         // Perform pre-funding, if needed
         // It does not make sense to pre-fund the auction if the capacity is in quote tokens
-        if (requiresPrefunding == true && params_.capacityInQuote == false) {
+        if (requiresPrefunding == true) {
+            // Capacity must be in base token for auctions that require pre-funding
+            if (params_.capacityInQuote) revert InvalidParams();
+
             // Store pre-funding information
             routing.prefunded = true;
 
-            // TODO copied from AuctionHouse. Consider consolidating.
             // Get the balance of the base token before the transfer
             uint256 balanceBefore = routing_.baseToken.balanceOf(address(this));
 
@@ -326,10 +328,7 @@ abstract contract Auctioneer is WithModules {
         module.cancelAuction(lotId_);
 
         // If the auction is prefunded and supported, transfer the remaining capacity to the owner
-        if (
-            lotRouting[lotId_].prefunded == true && module.capacityInQuote(lotId_) == false
-                && lotRemainingCapacity > 0
-        ) {
+        if (lotRouting[lotId_].prefunded == true && lotRemainingCapacity > 0) {
             // Transfer payout tokens to the owner
             Routing memory routing = lotRouting[lotId_];
             routing.baseToken.safeTransfer(routing.owner, lotRemainingCapacity);
