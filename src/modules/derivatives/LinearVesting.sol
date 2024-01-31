@@ -2,6 +2,7 @@
 pragma solidity 0.8.19;
 
 import {ERC20} from "solmate/tokens/ERC20.sol";
+import {ERC6909} from "solmate/tokens/ERC6909.sol";
 import {SafeTransferLib} from "solmate/utils/SafeTransferLib.sol";
 
 import {Derivative, DerivativeModule} from "src/modules/Derivative.sol";
@@ -16,6 +17,7 @@ contract LinearVesting is DerivativeModule {
 
     error BrokenInvariant();
     error InsufficientBalance();
+    error NotPermitted();
 
     // ========== DATA STRUCTURES ========== //
 
@@ -53,13 +55,36 @@ contract LinearVesting is DerivativeModule {
     }
 
     // TODO
-    // [ ] prevent transfer
-    // [ ] prevent transferFrom
-    // [ ] prevent approve
-    // [ ] claim
-    // [ ] claimable
+    // [X] prevent transfer
+    // [X] prevent transferFrom
+    // [X] prevent approve
+    // [X] claim
+    // [X] claimable
     // [ ] wrap
     // [ ] unwrap
+
+    /// @inheritdoc ERC6909
+    /// @dev        Vesting tokens are soulbound/not transferable
+    function transfer(address, uint256, uint256) public virtual override returns (bool) {
+        revert NotPermitted();
+    }
+
+    /// @inheritdoc ERC6909
+    /// @dev        Vesting tokens are soulbound/not transferable
+    function transferFrom(
+        address,
+        address,
+        uint256,
+        uint256
+    ) public virtual override returns (bool) {
+        revert NotPermitted();
+    }
+
+    /// @inheritdoc ERC6909
+    /// @dev        Vesting tokens are soulbound/not transferable
+    function approve(address, uint256, uint256) public virtual override returns (bool) {
+        revert NotPermitted();
+    }
 
     function deploy(
         address underlyingToken_,
