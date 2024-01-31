@@ -51,7 +51,9 @@ contract PurchaseTest is Test, Permit2User {
     uint256 internal aliceKey;
     address internal alice;
 
-    uint256 internal lotId;
+    uint96 internal lotId;
+
+    uint256 internal constant LOT_CAPACITY = 10e18;
 
     uint256 internal constant AMOUNT_IN = 1e18;
     uint256 internal AMOUNT_OUT;
@@ -93,7 +95,7 @@ contract PurchaseTest is Test, Permit2User {
             start: uint48(block.timestamp),
             duration: uint48(1 days),
             capacityInQuote: false,
-            capacity: 10e18,
+            capacity: LOT_CAPACITY,
             implParams: abi.encode("")
         });
 
@@ -116,9 +118,6 @@ contract PurchaseTest is Test, Permit2User {
         vm.prank(auctionOwner);
         lotId = auctionHouse.auction(routingParams, auctionParams);
 
-        approvalNonce = _getRandomUint256();
-        approvalDeadline = uint48(block.timestamp) + 1 days;
-
         // Fees
         referrerFee = 1000;
         protocolFee = 2000;
@@ -136,14 +135,12 @@ contract PurchaseTest is Test, Permit2User {
         purchaseParams = Router.PurchaseParams({
             recipient: recipient,
             referrer: referrer,
-            approvalDeadline: approvalDeadline,
             lotId: lotId,
             amount: AMOUNT_IN,
             minAmountOut: AMOUNT_OUT,
-            approvalNonce: approvalNonce,
             auctionData: bytes(""),
-            approvalSignature: approvalSignature,
-            allowlistProof: allowlistProof
+            allowlistProof: allowlistProof,
+            permit2Data: bytes("")
         });
     }
 
@@ -357,7 +354,7 @@ contract PurchaseTest is Test, Permit2User {
 
     function test_givenCallerNotOnAllowlist() external givenAuctionHasAllowlist {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(AuctionHouse.NotAuthorized.selector);
+        bytes memory err = abi.encodeWithSelector(AuctionHouse.InvalidBidder.selector, alice);
         vm.expectRevert(err);
 
         // Purchase
@@ -392,15 +389,10 @@ contract PurchaseTest is Test, Permit2User {
     // [X] when the permit2 signature is not provided
     //  [X] it succeeds using ERC20 transfer
 
-    function test_whenPermit2Signature()
-        external
-        givenUserHasQuoteTokenBalance(AMOUNT_IN)
-        givenOwnerHasBaseTokenBalance(AMOUNT_OUT)
-        givenBaseTokenSpendingIsApproved
-        givenQuoteTokenPermit2IsApproved
-    {
-        // Set the permit2 signature
-        purchaseParams.approvalSignature = _signPermit(
+    modifier whenPermit2DataIsProvided() {
+        approvalNonce = _getRandomUint256();
+        approvalDeadline = uint48(block.timestamp) + 1 days;
+        approvalSignature = _signPermit(
             address(quoteToken),
             AMOUNT_IN,
             approvalNonce,
@@ -409,6 +401,25 @@ contract PurchaseTest is Test, Permit2User {
             aliceKey
         );
 
+        // Update parameters
+        purchaseParams.permit2Data = abi.encode(
+            Router.Permit2Approval({
+                deadline: approvalDeadline,
+                nonce: approvalNonce,
+                signature: approvalSignature
+            })
+        );
+        _;
+    }
+
+    function test_whenPermit2Signature()
+        external
+        givenUserHasQuoteTokenBalance(AMOUNT_IN)
+        givenOwnerHasBaseTokenBalance(AMOUNT_OUT)
+        givenBaseTokenSpendingIsApproved
+        givenQuoteTokenPermit2IsApproved
+        whenPermit2DataIsProvided
+    {
         // Purchase
         vm.prank(alice);
         auctionHouse.purchase(purchaseParams);
@@ -625,5 +636,59 @@ contract PurchaseTest is Test, Permit2User {
             ),
             0
         );
+    }
+
+    // ======== Prefunding flow ======== //
+
+    // [X] given the auction is prefunded
+    //  [X] it succeeds - base token is not transferred from auction owner again
+
+    modifier givenAuctionIsPrefunded() {
+        // Set the auction to be prefunded
+        mockAuctionModule.setRequiredPrefunding(true);
+
+        // Mint base tokens to the owner
+        baseToken.mint(auctionOwner, LOT_CAPACITY);
+
+        // Approve the auction house to transfer the base tokens
+        vm.prank(auctionOwner);
+        baseToken.approve(address(auctionHouse), LOT_CAPACITY);
+
+        // Create a new auction
+        vm.prank(auctionOwner);
+        lotId = auctionHouse.auction(routingParams, auctionParams);
+
+        // Update purchase parameters
+        purchaseParams.lotId = lotId;
+        _;
+    }
+
+    function test_prefunded()
+        external
+        givenAuctionIsPrefunded
+        givenUserHasQuoteTokenBalance(AMOUNT_IN)
+        givenQuoteTokenSpendingIsApproved
+    {
+        // Auction house has base tokens
+        assertEq(
+            baseToken.balanceOf(address(auctionHouse)),
+            LOT_CAPACITY,
+            "pre-purchase: balance mismatch on auction house"
+        );
+
+        // Purchase
+        vm.prank(alice);
+        auctionHouse.purchase(purchaseParams);
+
+        // Check balances of the base token
+        assertEq(baseToken.balanceOf(alice), 0, "balance mismatch on alice");
+        assertEq(baseToken.balanceOf(recipient), AMOUNT_OUT, "balance mismatch on recipient");
+        assertEq(baseToken.balanceOf(address(mockHook)), 0, "balance mismatch on hook");
+        assertEq(
+            baseToken.balanceOf(address(auctionHouse)),
+            LOT_CAPACITY - AMOUNT_OUT,
+            "balance mismatch on auction house"
+        );
+        assertEq(baseToken.balanceOf(auctionOwner), 0, "balance mismatch on auction owner");
     }
 }

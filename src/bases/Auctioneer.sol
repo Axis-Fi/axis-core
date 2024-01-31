@@ -1,7 +1,8 @@
 /// SPDX-License-Identifier: AGPL-3.0
 pragma solidity 0.8.19;
 
-import {ERC20} from "lib/solmate/src/tokens/ERC20.sol";
+import {ERC20} from "solmate/tokens/ERC20.sol";
+import {SafeTransferLib} from "solmate/utils/SafeTransferLib.sol";
 
 import {
     fromKeycode,
@@ -27,30 +28,48 @@ import {IAllowlist} from "src/interfaces/IAllowlist.sol";
 ///         - Cancelling auction lots
 ///         - Storing information about how to handle inputs and outputs for auctions ("routing")
 abstract contract Auctioneer is WithModules {
+    using SafeTransferLib for ERC20;
+
     // ========= ERRORS ========= //
 
     error InvalidParams();
-    error InvalidLotId(uint256 id_);
+    error InvalidLotId(uint96 id_);
     error InvalidModuleType(Veecode reference_);
     error NotAuctionOwner(address caller_);
+    error InvalidHook();
+    error UnsupportedToken(address token_);
 
     // ========= EVENTS ========= //
 
-    event AuctionCreated(uint256 id, address baseToken, address quoteToken);
+    event AuctionCreated(
+        uint96 id, Veecode indexed auctionRef, address baseToken, address quoteToken
+    );
+    event AuctionCancelled(uint96 id, Veecode indexed auctionRef);
 
     // ========= DATA STRUCTURES ========== //
 
-    /// @notice Auction routing information for a lot
+    /// @notice     Auction routing information for a lot
+    /// @param      auctionReference    Auction module, represented by its Veecode
+    /// @param      owner               Lot owner
+    /// @param      baseToken           Token provided by seller
+    /// @param      quoteToken          Token to accept as payment
+    /// @param      hooks               (optional) Address to call for any hooks to be executed
+    /// @param      allowlist           (optional) Contract that implements an allowlist for the auction lot
+    /// @param      derivativeReference (optional) Derivative module, represented by its Veecode
+    /// @param      derivativeParams    (optional) abi-encoded data to be used to create payout derivatives on a purchase
+    /// @param      wrapDerivative      (optional) Whether to wrap the derivative in a ERC20 token instead of the native ERC6909 format
+    /// @param      prefunded           Set by the auction module if the auction is prefunded
     struct Routing {
-        Veecode auctionReference; // auction module, represented by its Veecode
-        address owner; // market owner. sends payout tokens, receives quote tokens
-        ERC20 baseToken; // token provided by seller
-        ERC20 quoteToken; // token to accept as payment
-        IHooks hooks; // (optional) address to call for any hooks to be executed on a purchase. Must implement IHooks.
-        IAllowlist allowlist; // (optional) contract that implements an allowlist for the market, based on IAllowlist
-        Veecode derivativeReference; // (optional) derivative module, represented by its Veecode. If not set, no derivative will be created.
-        bytes derivativeParams; // (optional) abi-encoded data to be used to create payout derivatives on a purchase
-        bool wrapDerivative; // (optional) whether to wrap the derivative in a ERC20 token instead of the native ERC6909 format.
+        Veecode auctionReference;
+        address owner;
+        ERC20 baseToken;
+        ERC20 quoteToken;
+        IHooks hooks;
+        IAllowlist allowlist;
+        Veecode derivativeReference;
+        bytes derivativeParams;
+        bool wrapDerivative;
+        bool prefunded;
     }
 
     /// @notice     Auction routing information provided as input parameters
@@ -74,10 +93,10 @@ abstract contract Auctioneer is WithModules {
     uint48 internal constant _ONE_HUNDRED_PERCENT = 1e5;
 
     /// @notice     Counter for auction lots
-    uint256 public lotCounter;
+    uint96 public lotCounter;
 
     /// @notice Mapping of lot IDs to their auction type (represented by the Keycode for the auction submodule)
-    mapping(uint256 lotId => Routing) public lotRouting;
+    mapping(uint96 lotId => Routing) public lotRouting;
 
     /// @notice Mapping auction and derivative references to the condenser that is used to pass data between them
     mapping(Veecode auctionRef => mapping(Veecode derivativeRef => Veecode condenserRef)) public
@@ -89,10 +108,19 @@ abstract contract Auctioneer is WithModules {
     /// @dev        Reverts if the lot ID is invalid
     ///
     /// @param      lotId_  ID of the auction lot
-    modifier isValidLot(uint256 lotId_) {
+    modifier isLotValid(uint96 lotId_) {
         if (lotId_ >= lotCounter) revert InvalidLotId(lotId_);
 
         if (lotRouting[lotId_].owner == address(0)) revert InvalidLotId(lotId_);
+        _;
+    }
+
+    /// @notice     Checks that the caller is the auction owner
+    /// @dev        Reverts if the caller is not the auction owner
+    ///
+    /// @param      lotId_  ID of the auction lot
+    modifier isLotOwner(uint96 lotId_) {
+        if (msg.sender != lotRouting[lotId_].owner) revert NotAuctionOwner(msg.sender);
         _;
     }
 
@@ -116,7 +144,7 @@ abstract contract Auctioneer is WithModules {
     function auction(
         RoutingParams calldata routing_,
         Auction.AuctionParams calldata params_
-    ) external returns (uint256 lotId) {
+    ) external returns (uint96 lotId) {
         // Load auction type module, this checks that it is installed.
         // We load it here vs. later to avoid two checks.
         AuctionModule auctionModule = AuctionModule(_getLatestModuleIfActive(routing_.auctionType));
@@ -127,16 +155,9 @@ abstract contract Auctioneer is WithModules {
             revert InvalidModuleType(auctionRef);
         }
 
-        // Increment lot count and get ID
-        lotId = lotCounter++;
-
-        // Auction Module
-        {
-            // Call module auction function to store implementation-specific data
-            auctionModule.auction(lotId, params_);
-        }
-
         // Validate routing parameters
+        uint8 quoteTokenDecimals;
+        uint8 baseTokenDecimals;
         {
             // Validate routing information
             if (address(routing_.baseToken) == address(0)) {
@@ -147,8 +168,8 @@ abstract contract Auctioneer is WithModules {
             }
 
             // Confirm tokens are within the required decimal range
-            uint8 baseTokenDecimals = routing_.baseToken.decimals();
-            uint8 quoteTokenDecimals = routing_.quoteToken.decimals();
+            baseTokenDecimals = routing_.baseToken.decimals();
+            quoteTokenDecimals = routing_.quoteToken.decimals();
 
             if (baseTokenDecimals < 6 || baseTokenDecimals > 18) {
                 revert InvalidParams();
@@ -156,6 +177,18 @@ abstract contract Auctioneer is WithModules {
             if (quoteTokenDecimals < 6 || quoteTokenDecimals > 18) {
                 revert InvalidParams();
             }
+        }
+
+        // Increment lot count and get ID
+        lotId = lotCounter++;
+
+        // Auction Module
+        bool requiresPrefunding;
+        uint256 lotCapacity;
+        {
+            // Call module auction function to store implementation-specific data
+            (requiresPrefunding, lotCapacity) =
+                auctionModule.auction(lotId, params_, quoteTokenDecimals, baseTokenDecimals);
         }
 
         // Store routing information
@@ -231,24 +264,77 @@ abstract contract Auctioneer is WithModules {
             routing.hooks = routing_.hooks;
         }
 
-        emit AuctionCreated(lotId, address(routing.baseToken), address(routing.quoteToken));
+        // Perform pre-funding, if needed
+        // It does not make sense to pre-fund the auction if the capacity is in quote tokens
+        if (requiresPrefunding == true) {
+            // Capacity must be in base token for auctions that require pre-funding
+            if (params_.capacityInQuote) revert InvalidParams();
+
+            // Store pre-funding information
+            routing.prefunded = true;
+
+            // Get the balance of the base token before the transfer
+            uint256 balanceBefore = routing_.baseToken.balanceOf(address(this));
+
+            // Call hook on hooks contract if provided
+            if (address(routing_.hooks) != address(0)) {
+                // The pre-auction create hook should transfer the base token to this contract
+                routing_.hooks.preAuctionCreate(lotId);
+
+                // Check that the hook transferred the expected amount of base tokens
+                if (routing_.baseToken.balanceOf(address(this)) < balanceBefore + lotCapacity) {
+                    revert InvalidHook();
+                }
+            }
+            // Otherwise fallback to a standard ERC20 transfer
+            else {
+                // Transfer the base token from the auction owner
+                // `safeTransferFrom()` will revert upon failure or the lack of allowance or balance
+                routing_.baseToken.safeTransferFrom(msg.sender, address(this), lotCapacity);
+
+                // Check that it is not a fee-on-transfer token
+                if (routing_.baseToken.balanceOf(address(this)) < balanceBefore + lotCapacity) {
+                    revert UnsupportedToken(address(routing_.baseToken));
+                }
+            }
+        }
+
+        emit AuctionCreated(
+            lotId, auctionRef, address(routing_.baseToken), address(routing_.quoteToken)
+        );
     }
 
     /// @notice     Cancels an auction lot
-    /// @dev        The function reverts if:
-    ///             - The caller is not the auction owner
+    /// @dev        This function performs the following:
+    ///             - Checks that the lot ID is valid
+    ///             - Checks that caller is the auction owner
+    ///             - Calls the auction module to validate state, update records and determine the amount to be refunded
+    ///             - If prefunded, sends the refund of payout tokens to the owner
+    ///
+    ///             The function reverts if:
     ///             - The lot ID is invalid
+    ///             - The caller is not the auction owner
     ///             - The respective auction module reverts
+    ///             - The transfer of payout tokens fails
     ///
     /// @param      lotId_      ID of the auction lot
-    function cancel(uint256 lotId_) external isValidLot(lotId_) {
-        // Check that caller is the auction owner
-        if (msg.sender != lotRouting[lotId_].owner) revert NotAuctionOwner(msg.sender);
-
+    function cancel(uint96 lotId_) external isLotValid(lotId_) isLotOwner(lotId_) {
         AuctionModule module = _getModuleForId(lotId_);
 
+        // Get remaining capacity from module
+        uint256 lotRemainingCapacity = module.remainingCapacity(lotId_);
+
         // Cancel the auction on the module
-        module.cancel(lotId_);
+        module.cancelAuction(lotId_);
+
+        // If the auction is prefunded and supported, transfer the remaining capacity to the owner
+        if (lotRouting[lotId_].prefunded == true && lotRemainingCapacity > 0) {
+            // Transfer payout tokens to the owner
+            Routing memory routing = lotRouting[lotId_];
+            routing.baseToken.safeTransfer(routing.owner, lotRemainingCapacity);
+        }
+
+        emit AuctionCancelled(lotId_, lotRouting[lotId_].auctionReference);
     }
 
     // ========== AUCTION INFORMATION ========== //
@@ -259,48 +345,48 @@ abstract contract Auctioneer is WithModules {
     ///
     /// @param      id_     ID of the auction lot
     /// @return     routing Routing information for the auction lot
-    function getRouting(uint256 id_) external view isValidLot(id_) returns (Routing memory) {
+    function getRouting(uint96 id_) external view isLotValid(id_) returns (Routing memory) {
         // Get routing from lot routing
         return lotRouting[id_];
     }
 
     // TODO need to add the fee calculations back in at this level for all of these functions
-    function payoutFor(uint256 id_, uint256 amount_) external view returns (uint256) {
+    function payoutFor(uint96 id_, uint256 amount_) external view returns (uint256) {
         AuctionModule module = _getModuleForId(id_);
 
         // Get payout from module
         return module.payoutFor(id_, amount_);
     }
 
-    function priceFor(uint256 id_, uint256 payout_) external view returns (uint256) {
+    function priceFor(uint96 id_, uint256 payout_) external view returns (uint256) {
         AuctionModule module = _getModuleForId(id_);
 
         // Get price from module
         return module.priceFor(id_, payout_);
     }
 
-    function maxPayout(uint256 id_) external view returns (uint256) {
+    function maxPayout(uint96 id_) external view returns (uint256) {
         AuctionModule module = _getModuleForId(id_);
 
         // Get max payout from module
         return module.maxPayout(id_);
     }
 
-    function maxAmountAccepted(uint256 id_) external view returns (uint256) {
+    function maxAmountAccepted(uint96 id_) external view returns (uint256) {
         AuctionModule module = _getModuleForId(id_);
 
         // Get max amount accepted from module
         return module.maxAmountAccepted(id_);
     }
 
-    function isLive(uint256 id_) external view returns (bool) {
+    function isLive(uint96 id_) external view returns (bool) {
         AuctionModule module = _getModuleForId(id_);
 
         // Get isLive from module
         return module.isLive(id_);
     }
 
-    function ownerOf(uint256 id_) external view returns (address) {
+    function ownerOf(uint96 id_) external view returns (address) {
         // Check that lot ID is valid
         if (id_ >= lotCounter) revert InvalidLotId(id_);
 
@@ -308,7 +394,7 @@ abstract contract Auctioneer is WithModules {
         return lotRouting[id_].owner;
     }
 
-    function remainingCapacity(uint256 id_) external view returns (uint256) {
+    function remainingCapacity(uint96 id_) external view returns (uint256) {
         AuctionModule module = _getModuleForId(id_);
 
         // Get remaining capacity from module
@@ -323,7 +409,7 @@ abstract contract Auctioneer is WithModules {
     ///             - The module for the auction type is not installed
     ///
     /// @param      lotId_      ID of the auction lot
-    function _getModuleForId(uint256 lotId_) internal view returns (AuctionModule) {
+    function _getModuleForId(uint96 lotId_) internal view returns (AuctionModule) {
         // Confirm lot ID is valid
         if (lotId_ >= lotCounter) revert InvalidLotId(lotId_);
 

@@ -35,7 +35,7 @@ contract CancelTest is Test, Permit2User {
     Auctioneer.RoutingParams internal routingParams;
     Auction.AuctionParams internal auctionParams;
 
-    uint256 internal lotId;
+    uint96 internal lotId;
 
     address internal auctionOwner = address(0x1);
 
@@ -87,7 +87,7 @@ contract CancelTest is Test, Permit2User {
         bytes memory err = abi.encodeWithSelector(Module.Module_OnlyParent.selector, address(this));
         vm.expectRevert(err);
 
-        mockAuctionModule.cancel(lotId);
+        mockAuctionModule.cancelAuction(lotId);
     }
 
     function testReverts_whenLotIdInvalid() external {
@@ -95,30 +95,30 @@ contract CancelTest is Test, Permit2User {
         vm.expectRevert(err);
 
         vm.prank(address(auctionHouse));
-        mockAuctionModule.cancel(lotId);
+        mockAuctionModule.cancelAuction(lotId);
     }
 
     function testReverts_whenLotIsInactive() external whenLotIsCreated {
         // Cancel once
         vm.prank(address(auctionHouse));
-        mockAuctionModule.cancel(lotId);
+        mockAuctionModule.cancelAuction(lotId);
 
         // Cancel again
         bytes memory err = abi.encodeWithSelector(Auction.Auction_MarketNotActive.selector, lotId);
         vm.expectRevert(err);
 
         vm.prank(address(auctionHouse));
-        mockAuctionModule.cancel(lotId);
+        mockAuctionModule.cancelAuction(lotId);
     }
 
     function test_success() external whenLotIsCreated {
         assertTrue(mockAuctionModule.isLive(lotId), "before cancellation: isLive mismatch");
 
         vm.prank(address(auctionHouse));
-        mockAuctionModule.cancel(lotId);
+        mockAuctionModule.cancelAuction(lotId);
 
         // Get lot data from the module
-        (, uint48 lotConclusion,, uint256 lotCapacity,,) = mockAuctionModule.lotData(lotId);
+        (, uint48 lotConclusion,,,, uint256 lotCapacity,,) = mockAuctionModule.lotData(lotId);
         assertEq(lotConclusion, uint48(block.timestamp));
         assertEq(lotCapacity, 0);
 

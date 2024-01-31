@@ -17,6 +17,7 @@ import {Auction, AuctionModule} from "src/modules/Auction.sol";
 import {Veecode, fromVeecode, WithModules} from "src/modules/Modules.sol";
 
 import {IHooks} from "src/interfaces/IHooks.sol";
+import {IAllowlist} from "src/interfaces/IAllowlist.sol";
 
 // TODO define purpose
 abstract contract FeeManager {
@@ -28,40 +29,63 @@ abstract contract FeeManager {
 
 // TODO define purpose
 abstract contract Router is FeeManager {
-    // ========== STRUCTS ========== //
+    // ========== DATA STRUCTURES ========== //
+
+    /// @notice     Parameters used for Permit2 approvals
+    struct Permit2Approval {
+        uint48 deadline;
+        uint256 nonce;
+        bytes signature;
+    }
 
     /// @notice     Parameters used by the purchase function
     /// @dev        This reduces the number of variables in scope for the purchase function
     ///
     /// @param      recipient           Address to receive payout
     /// @param      referrer            Address of referrer
-    /// @param      approvalDeadline    Deadline for approval signature
     /// @param      lotId               Lot ID
     /// @param      amount              Amount of quoteToken to purchase with (in native decimals)
     /// @param      minAmountOut        Minimum amount of baseToken to receive
-    /// @param      approvalNonce       Nonce for permit approval signature
     /// @param      auctionData         Custom data used by the auction module
-    /// @param      approvalSignature   Permit approval signature for the quoteToken
     /// @param      allowlistProof      Proof of allowlist inclusion
+    /// @param      permit2Data_        Permit2 approval for the quoteToken
     struct PurchaseParams {
         address recipient;
         address referrer;
-        uint48 approvalDeadline;
-        uint256 lotId;
+        uint96 lotId;
         uint256 amount;
         uint256 minAmountOut;
-        uint256 approvalNonce;
         bytes auctionData;
-        bytes approvalSignature;
         bytes allowlistProof;
+        bytes permit2Data;
+    }
+
+    /// @notice     Parameters used by the bid function
+    /// @dev        This reduces the number of variables in scope for the bid function
+    ///
+    /// @param      lotId               Lot ID
+    /// @param      recipient           Address to receive payout
+    /// @param      referrer            Address of referrer
+    /// @param      amount              Amount of quoteToken to purchase with (in native decimals)
+    /// @param      auctionData         Custom data used by the auction module
+    /// @param      allowlistProof      Proof of allowlist inclusion
+    /// @param      permit2Data_        Permit2 approval for the quoteToken (abi-encoded Permit2Approval struct)
+    struct BidParams {
+        uint96 lotId;
+        address recipient;
+        address referrer;
+        uint256 amount;
+        bytes auctionData;
+        bytes allowlistProof;
+        bytes permit2Data;
     }
 
     // ========== STATE VARIABLES ========== //
 
-    /// @notice Fee paid to a front end operator in basis points (3 decimals). Set by the referrer, must be less than or equal to 5% (5e3).
-    /// @dev There are some situations where the fees may round down to zero if quantity of baseToken
-    ///      is < 1e5 wei (can happen with big price differences on small decimal tokens). This is purely
-    ///      a theoretical edge case, as the bond amount would not be practical.
+    /// @notice     Fee paid to a front end operator in basis points (3 decimals). Set by the referrer, must be less than or equal to 5% (5e3).
+    /// @dev        There are some situations where the fees may round down to zero if quantity of baseToken
+    ///             is < 1e5 wei (can happen with big price differences on small decimal tokens). This is purely
+    ///             a theoretical edge case, as the bond amount would not be practical.
     mapping(address => uint48) public referrerFees;
 
     // TODO allow charging fees based on the auction type and/or derivative type
@@ -88,7 +112,7 @@ abstract contract Router is FeeManager {
 
     // ========== ATOMIC AUCTIONS ========== //
 
-    /// @notice     Purchase a lot from an auction
+    /// @notice     Purchase a lot from an atomic auction
     /// @notice     Permit2 is utilised to simplify token transfers
     ///
     /// @param      params_         Purchase parameters
@@ -97,36 +121,37 @@ abstract contract Router is FeeManager {
 
     // ========== BATCH AUCTIONS ========== //
 
-    // On-chain auction variant
-    function bid(
-        address recipient_,
-        address referrer_,
-        uint256 id_,
-        uint256 amount_,
-        uint256 minAmountOut_,
-        bytes calldata auctionData_,
-        bytes calldata approval_
-    ) external virtual;
+    /// @notice     Bid on a lot in a batch auction
+    /// @dev        The implementing function must perform the following:
+    ///             1. Validate the bid
+    ///             2. Store the bid
+    ///             3. Transfer the amount of quote token from the bidder
+    ///
+    /// @param      params_         Bid parameters
+    /// @return     bidId           Bid ID
+    function bid(BidParams memory params_) external virtual returns (uint96 bidId);
 
-    function settle(uint256 id_) external virtual returns (uint256[] memory amountsOut);
+    /// @notice     Cancel a bid on a lot in a batch auction
+    /// @dev        The implementing function must perform the following:
+    ///             1. Validate the bid
+    ///             2. Pass the request to the auction module to validate and update data
+    ///             3. Send the refund to the bidder
+    ///
+    /// @param      lotId_          Lot ID
+    /// @param      bidId_          Bid ID
+    function cancelBid(uint96 lotId_, uint96 bidId_) external virtual;
 
-    // Off-chain auction variant
-    function settle(
-        uint256 id_,
-        Auction.Bid[] memory bids_
-    ) external virtual returns (uint256[] memory amountsOut);
+    /// @notice     Settle a batch auction
+    /// @notice     This function is used for versions with on-chain storage and bids and local settlement
+    function settle(uint96 lotId_) external virtual;
 
     // ========== FEE MANAGEMENT ========== //
 
-    function setProtocolFee(uint48 protocolFee_) external {
-        // TOOD make this permissioned
-        protocolFee = protocolFee_;
-    }
+    /// @notice     Sets the fee for the protocol
+    function setProtocolFee(uint48 protocolFee_) external virtual;
 
-    function setReferrerFee(address referrer_, uint48 referrerFee_) external {
-        // TOOD make this permissioned
-        referrerFees[referrer_] = referrerFee_;
-    }
+    /// @notice     Sets the fee for a referrer
+    function setReferrerFee(address referrer_, uint48 referrerFee_) external virtual;
 }
 
 /// @title      AuctionHouse
@@ -140,11 +165,9 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
 
     error AmountLessThanMinimum();
 
-    error NotAuthorized();
+    error InvalidBidder(address bidder_);
 
-    error UnsupportedToken(address token_);
-
-    error InvalidHook();
+    error Broken_Invariant();
 
     // ========== EVENTS ========== //
 
@@ -160,23 +183,60 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
         _PERMIT2 = IPermit2(permit2_);
     }
 
-    // ========== DIRECT EXECUTION ========== //
-
-    // ========== AUCTION FUNCTIONS ========== //
+    // ========== FEE FUNCTIONS ========== //
 
     function _allocateFees(
         address referrer_,
         ERC20 quoteToken_,
         uint256 amount_
     ) internal returns (uint256 totalFees) {
+        // Calculate fees for purchase
+        (uint256 toReferrer, uint256 toProtocol) = _calculateFees(referrer_, amount_);
+
+        // Update fee balances if non-zero
+        if (toReferrer > 0) rewards[referrer_][quoteToken_] += toReferrer;
+        if (toProtocol > 0) rewards[_PROTOCOL][quoteToken_] += toProtocol;
+
+        return toReferrer + toProtocol;
+    }
+
+    function _allocateFees(
+        Auction.Bid[] memory bids_,
+        ERC20 quoteToken_
+    ) internal returns (uint256 totalAmountIn, uint256 totalFees) {
+        // Calculate fees for purchase
+        uint256 bidCount = bids_.length;
+        uint256 totalProtocolFees;
+        for (uint256 i; i < bidCount; i++) {
+            // Calculate fees from bid amount
+            (uint256 toReferrer, uint256 toProtocol) =
+                _calculateFees(bids_[i].referrer, bids_[i].amount);
+
+            // Update referrer fee balances if non-zero and increment the total protocol fee
+            if (toReferrer > 0) {
+                rewards[bids_[i].referrer][quoteToken_] += toReferrer;
+            }
+            totalProtocolFees += toProtocol;
+            totalFees += toReferrer + toProtocol;
+
+            // Increment total amount in
+            totalAmountIn += bids_[i].amount;
+        }
+
+        // Update protocol fee if not zero
+        if (totalProtocolFees > 0) rewards[_PROTOCOL][quoteToken_] += totalProtocolFees;
+    }
+
+    function _calculateFees(
+        address referrer_,
+        uint256 amount_
+    ) internal view returns (uint256 toReferrer, uint256 toProtocol) {
         // TODO should protocol and/or referrer be able to charge different fees based on the type of auction being used?
 
         // Calculate fees for purchase
         // 1. Calculate referrer fee
         // 2. Calculate protocol fee as the total expected fee amount minus the referrer fee
         //    to avoid issues with rounding from separate fee calculations
-        uint256 toReferrer;
-        uint256 toProtocol;
         if (referrer_ == address(0)) {
             // There is no referrer
             toProtocol = (amount_ * protocolFee) / FEE_DECIMALS;
@@ -184,9 +244,6 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
             uint256 referrerFee = referrerFees[referrer_]; // reduce to single SLOAD
             if (referrerFee == 0) {
                 // There is a referrer, but they have not set a fee
-                // If protocol fee is zero, return zero
-                // Otherwise, calcualte protocol fee
-                if (protocolFee == 0) return 0;
                 toProtocol = (amount_ * protocolFee) / FEE_DECIMALS;
             } else {
                 // There is a referrer and they have set a fee
@@ -194,12 +251,29 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
                 toProtocol = ((amount_ * (protocolFee + referrerFee)) / FEE_DECIMALS) - toReferrer;
             }
         }
+    }
 
-        // Update fee balances if non-zero
-        if (toReferrer > 0) rewards[referrer_][quoteToken_] += toReferrer;
-        if (toProtocol > 0) rewards[_PROTOCOL][quoteToken_] += toProtocol;
+    // ========== AUCTION FUNCTIONS ========== //
 
-        return toReferrer + toProtocol;
+    /// @notice     Determines if `caller_` is allowed to purchase/bid on a lot.
+    ///             If no allowlist is defined, this function will return true.
+    ///
+    /// @param      allowlist_       Allowlist contract
+    /// @param      lotId_           Lot ID
+    /// @param      caller_          Address of caller
+    /// @param      allowlistProof_  Proof of allowlist inclusion
+    /// @return     bool             True if caller is allowed to purchase/bid on the lot
+    function _isAllowed(
+        IAllowlist allowlist_,
+        uint96 lotId_,
+        address caller_,
+        bytes memory allowlistProof_
+    ) internal view returns (bool) {
+        if (address(allowlist_) == address(0)) {
+            return true;
+        } else {
+            return allowlist_.isAllowed(lotId_, caller_, allowlistProof_);
+        }
     }
 
     // ========== ATOMIC AUCTIONS ========== //
@@ -225,17 +299,15 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
     function purchase(PurchaseParams memory params_)
         external
         override
-        isValidLot(params_.lotId)
+        isLotValid(params_.lotId)
         returns (uint256 payoutAmount)
     {
         // Load routing data for the lot
         Routing memory routing = lotRouting[params_.lotId];
 
         // Check if the purchaser is on the allowlist
-        if (address(routing.allowlist) != address(0)) {
-            if (!routing.allowlist.isAllowed(params_.lotId, msg.sender, params_.allowlistProof)) {
-                revert NotAuthorized();
-            }
+        if (!_isAllowed(routing.allowlist, params_.lotId, msg.sender, params_.allowlistProof)) {
+            revert InvalidBidder(msg.sender);
         }
 
         uint256 totalFees = _allocateFees(params_.referrer, routing.quoteToken, params_.amount);
@@ -254,15 +326,14 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
         if (payoutAmount < params_.minAmountOut) revert AmountLessThanMinimum();
 
         // Collect payment from the purchaser
-        _collectPayment(
-            params_.lotId,
-            params_.amount,
-            routing.quoteToken,
-            routing.hooks,
-            params_.approvalDeadline,
-            params_.approvalNonce,
-            params_.approvalSignature
-        );
+        {
+            Permit2Approval memory permit2Approval = params_.permit2Data.length == 0
+                ? Permit2Approval({nonce: 0, deadline: 0, signature: bytes("")})
+                : abi.decode(params_.permit2Data, (Permit2Approval));
+            _collectPayment(
+                params_.lotId, params_.amount, routing.quoteToken, routing.hooks, permit2Approval
+            );
+        }
 
         // Send payment to auction owner
         _sendPayment(routing.owner, amountLessFees, routing.quoteToken, routing.hooks);
@@ -279,28 +350,212 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
 
     // ========== BATCH AUCTIONS ========== //
 
-    function bid(
-        address recipient_,
-        address referrer_,
-        uint256 id_,
-        uint256 amount_,
-        uint256 minAmountOut_,
-        bytes calldata auctionData_,
-        bytes calldata approval_
-    ) external override {
-        // TODO
+    /// @inheritdoc Router
+    /// @dev        This function reverts if:
+    ///             - lotId is invalid
+    ///             - the bidder is not on the optional allowlist
+    ///             - the auction module reverts when creating a bid
+    ///             - the quote token transfer fails
+    function bid(BidParams memory params_)
+        external
+        override
+        isLotValid(params_.lotId)
+        returns (uint96)
+    {
+        // Load routing data for the lot
+        Routing memory routing = lotRouting[params_.lotId];
+
+        // Determine if the bidder is authorized to bid
+        if (!_isAllowed(routing.allowlist, params_.lotId, msg.sender, params_.allowlistProof)) {
+            revert InvalidBidder(msg.sender);
+        }
+
+        // Record the bid on the auction module
+        // The module will determine if the bid is valid - minimum bid size, minimum price, auction status, etc
+        uint96 bidId;
+        {
+            AuctionModule module = _getModuleForId(params_.lotId);
+            bidId = module.bid(
+                params_.lotId,
+                msg.sender,
+                params_.recipient,
+                params_.referrer,
+                params_.amount,
+                params_.auctionData
+            );
+        }
+
+        // Transfer the quote token from the bidder
+        {
+            Permit2Approval memory permit2Approval = params_.permit2Data.length == 0
+                ? Permit2Approval({nonce: 0, deadline: 0, signature: bytes("")})
+                : abi.decode(params_.permit2Data, (Permit2Approval));
+            _collectPayment(
+                params_.lotId, params_.amount, routing.quoteToken, routing.hooks, permit2Approval
+            );
+        }
+
+        return bidId;
     }
 
-    function settle(uint256 id_) external override returns (uint256[] memory amountsOut) {
-        // TODO
+    /// @inheritdoc Router
+    /// @dev        This function reverts if:
+    ///             - the lot ID is invalid
+    ///             - the auction module reverts when cancelling the bid
+    function cancelBid(uint96 lotId_, uint96 bidId_) external override isLotValid(lotId_) {
+        // Cancel the bid on the auction module
+        // The auction module is responsible for validating the bid and authorizing the caller
+        AuctionModule module = _getModuleForId(lotId_);
+        uint256 refundAmount = module.cancelBid(lotId_, bidId_, msg.sender);
+
+        // Transfer the quote token to the bidder
+        // The ownership of the bid has already been verified by the auction module
+        // TODO consider if another check is required
+        lotRouting[lotId_].quoteToken.safeTransfer(msg.sender, refundAmount);
     }
 
-    // Off-chain auction variant
-    function settle(
-        uint256 id_,
-        Auction.Bid[] memory bids_
-    ) external override returns (uint256[] memory amountsOut) {
-        // TODO
+    /// @inheritdoc Router
+    /// @dev        This function handles the following:
+    ///             - Settles the auction on the auction module
+    ///             - Calculates the payout amount, taking partial fill into consideration
+    ///             - Calculates the fees taken on the quote token
+    ///             - Collects the payout from the auction owner (if necessary)
+    ///             - Sends the payout to each bidder
+    ///             - Sends the payment to the auction owner
+    ///             - Sends the refund to the bidder if the last bid was a partial fill
+    ///             - Refunds any unused base token to the auction owner
+    ///
+    ///             This function reverts if:
+    ///             - the lot ID is invalid
+    ///             - the caller is not authorized to settle the auction
+    ///             - the auction module reverts when settling the auction
+    ///             - transferring the quote token to the auction owner fails
+    ///             - collecting the payout from the auction owner fails
+    ///             - sending the payout to each bidder fails
+    function settle(uint96 lotId_) external override onlyOwner isLotValid(lotId_) {
+        // Validation
+        // No additional validation needed
+
+        // Settle the lot on the auction module and get the winning bids
+        // Reverts if the auction cannot be settled yet
+        AuctionModule module = _getModuleForId(lotId_);
+
+        // Store the capacity remaining before settling
+        uint256 remainingCapacity = module.remainingCapacity(lotId_);
+
+        // Settle the auction
+        (Auction.Bid[] memory winningBids, bytes memory auctionOutput) = module.settle(lotId_);
+
+        // Load routing data for the lot
+        Routing memory routing = lotRouting[lotId_];
+
+        // Calculate the payout amount, handling partial fills
+        uint256 lastBidRefund;
+        address lastBidder;
+        {
+            uint256 bidCount = winningBids.length;
+            uint256 payoutRemaining = remainingCapacity;
+            for (uint256 i; i < bidCount; i++) {
+                uint256 payoutAmount = winningBids[i].minAmountOut;
+
+                // If the bid is the last and is a partial fill, then calculate the amount to send
+                if (i == bidCount - 1 && payoutAmount > payoutRemaining) {
+                    // Amend the bid to the amount remaining
+                    winningBids[i].minAmountOut = payoutRemaining;
+
+                    // Calculate the refund amount in terms of the quote token
+                    uint256 payoutUnfulfilled = 1e18 - payoutRemaining * 1e18 / payoutAmount;
+                    uint256 refundAmount = winningBids[i].amount * payoutUnfulfilled / 1e18;
+                    lastBidRefund = refundAmount;
+                    lastBidder = winningBids[i].bidder;
+
+                    // Check that the refund amount is not greater than the bid amount
+                    if (refundAmount > winningBids[i].amount) {
+                        revert Broken_Invariant();
+                    }
+
+                    // Adjust the payment amount (otherwise fees will be charged)
+                    winningBids[i].amount = winningBids[i].amount - refundAmount;
+
+                    // Decrement the remaining payout
+                    payoutRemaining = 0;
+                    break;
+                }
+
+                // Make sure the invariant isn't broken
+                if (payoutAmount > payoutRemaining) {
+                    revert Broken_Invariant();
+                }
+
+                // Decrement the remaining payout
+                payoutRemaining -= payoutAmount;
+            }
+        }
+
+        // Calculate fees
+        uint256 totalAmountInLessFees;
+        {
+            (uint256 totalAmountIn, uint256 totalFees) =
+                _allocateFees(winningBids, routing.quoteToken);
+            totalAmountInLessFees = totalAmountIn - totalFees;
+        }
+
+        // Assumes that payment has already been collected for each bid
+
+        // Collect payout in bulk from the auction owner
+        {
+            // Calculate amount out
+            uint256 totalAmountOut;
+            {
+                uint256 bidCount = winningBids.length;
+                for (uint256 i; i < bidCount; i++) {
+                    // Increment total amount out
+                    totalAmountOut += winningBids[i].minAmountOut;
+                }
+            }
+
+            _collectPayout(lotId_, totalAmountInLessFees, totalAmountOut, routing);
+        }
+
+        // Handle payouts to bidders
+        {
+            uint256 payoutRemaining = remainingCapacity;
+            uint256 bidCount = winningBids.length;
+            for (uint256 i; i < bidCount; i++) {
+                // Send payout to each bidder
+                _sendPayout(
+                    lotId_,
+                    winningBids[i].bidder,
+                    winningBids[i].minAmountOut,
+                    routing,
+                    auctionOutput
+                );
+
+                // Make sure the invariant isn't broken
+                if (winningBids[i].minAmountOut > payoutRemaining) {
+                    revert Broken_Invariant();
+                }
+
+                // Decrement the remaining payout
+                payoutRemaining -= winningBids[i].minAmountOut;
+            }
+
+            // Handle the refund to the auction owner for any unused base token capacity
+            if (payoutRemaining > 0) {
+                routing.baseToken.safeTransfer(routing.owner, payoutRemaining);
+            }
+        }
+
+        // Handle payment to the auction owner
+        {
+            // Send payment in bulk to auction owner
+            _sendPayment(routing.owner, totalAmountInLessFees, routing.quoteToken, routing.hooks);
+        }
+
+        // Handle the refund to the bidder if the last bid was a partial fill
+        if (lastBidRefund > 0 && lastBidder != address(0)) {
+            routing.quoteToken.safeTransfer(lastBidder, lastBidRefund);
+        }
     }
 
     // ========== TOKEN TRANSFERS ========== //
@@ -325,17 +580,13 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
     /// @param      amount_             Amount of quoteToken to collect (in native decimals)
     /// @param      quoteToken_         Quote token to collect
     /// @param      hooks_              Hooks contract to call (optional)
-    /// @param      approvalDeadline_   Deadline for Permit2 approval signature
-    /// @param      approvalNonce_      Nonce for Permit2 approval signature
-    /// @param      approvalSignature_  Permit2 approval signature for the quoteToken
+    /// @param      permit2Approval_    Permit2 approval data (optional)
     function _collectPayment(
-        uint256 lotId_,
+        uint96 lotId_,
         uint256 amount_,
         ERC20 quoteToken_,
         IHooks hooks_,
-        uint48 approvalDeadline_,
-        uint256 approvalNonce_,
-        bytes memory approvalSignature_
+        Permit2Approval memory permit2Approval_
     ) internal {
         // Call pre hook on hooks contract if provided
         if (address(hooks_) != address(0)) {
@@ -343,10 +594,8 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
         }
 
         // If a Permit2 approval signature is provided, use it to transfer the quote token
-        if (approvalSignature_.length != 0) {
-            _permit2TransferFrom(
-                amount_, quoteToken_, approvalDeadline_, approvalNonce_, approvalSignature_
-            );
+        if (permit2Approval_.signature.length != 0) {
+            _permit2TransferFrom(amount_, quoteToken_, permit2Approval_);
         }
         // Otherwise fallback to a standard ERC20 transfer
         else {
@@ -387,6 +636,7 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
     /// @dev        This function handles the following:
     ///             1. Calls the mid hook on the hooks contract (if provided)
     ///             2. Transfers the payout token from the auction owner
+    ///             2a. If the auction is pre-funded, then the transfer is skipped
     ///
     ///             This function reverts if:
     ///             - Approval has not been granted to transfer the payout token
@@ -401,11 +651,16 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
     /// @param      payoutAmount_   Amount of payoutToken to collect (in native decimals)
     /// @param      routingParams_  Routing parameters for the lot
     function _collectPayout(
-        uint256 lotId_,
+        uint96 lotId_,
         uint256 paymentAmount_,
         uint256 payoutAmount_,
         Routing memory routingParams_
     ) internal {
+        // If pre-funded, then the payout token is already in this contract
+        if (routingParams_.prefunded) {
+            return;
+        }
+
         // Get the balance of the payout token before the transfer
         uint256 balanceBefore = routingParams_.baseToken.balanceOf(address(this));
 
@@ -456,7 +711,7 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
     /// @param      routingParams_  Routing parameters for the lot
     /// @param      auctionOutput_  Custom data returned by the auction module
     function _sendPayout(
-        uint256 lotId_,
+        uint96 lotId_,
         address recipient_,
         uint256 payoutAmount_,
         Routing memory routingParams_,
@@ -554,15 +809,11 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
     ///
     /// @param      amount_               Amount of tokens to transfer (in native decimals)
     /// @param      token_                Token to transfer
-    /// @param      approvalDeadline_     Deadline for Permit2 approval signature
-    /// @param      approvalNonce_        Nonce for Permit2 approval signature
-    /// @param      approvalSignature_    Permit2 approval signature for the token
+    /// @param      permit2Approval_      Permit2 approval data
     function _permit2TransferFrom(
         uint256 amount_,
         ERC20 token_,
-        uint48 approvalDeadline_,
-        uint256 approvalNonce_,
-        bytes memory approvalSignature_
+        Permit2Approval memory permit2Approval_
     ) internal {
         uint256 balanceBefore = token_.balanceOf(address(this));
 
@@ -570,17 +821,29 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
         _PERMIT2.permitTransferFrom(
             IPermit2.PermitTransferFrom(
                 IPermit2.TokenPermissions(address(token_), amount_),
-                approvalNonce_,
-                approvalDeadline_
+                permit2Approval_.nonce,
+                permit2Approval_.deadline
             ),
             IPermit2.SignatureTransferDetails({to: address(this), requestedAmount: amount_}),
             msg.sender, // Spender of the tokens
-            approvalSignature_
+            permit2Approval_.signature
         );
 
         // Check that it is not a fee-on-transfer token
         if (token_.balanceOf(address(this)) < balanceBefore + amount_) {
             revert UnsupportedToken(address(token_));
         }
+    }
+
+    // ========== FEE MANAGEMENT ========== //
+
+    /// @inheritdoc Router
+    function setProtocolFee(uint48 protocolFee_) external override onlyOwner {
+        protocolFee = protocolFee_;
+    }
+
+    /// @inheritdoc Router
+    function setReferrerFee(address referrer_, uint48 referrerFee_) external override onlyOwner {
+        referrerFees[referrer_] = referrerFee_;
     }
 }

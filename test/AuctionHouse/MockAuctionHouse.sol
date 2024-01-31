@@ -15,7 +15,7 @@ contract MockAuctionHouse is AuctionHouse {
 
     // Expose the _collectPayment function for testing
     function collectPayment(
-        uint256 lotId_,
+        uint96 lotId_,
         uint256 amount_,
         ERC20 quoteToken_,
         IHooks hooks_,
@@ -23,15 +23,13 @@ contract MockAuctionHouse is AuctionHouse {
         uint256 approvalNonce_,
         bytes memory approvalSignature_
     ) external {
-        return _collectPayment(
-            lotId_,
-            amount_,
-            quoteToken_,
-            hooks_,
-            approvalDeadline_,
-            approvalNonce_,
-            approvalSignature_
-        );
+        Permit2Approval memory approval = Permit2Approval({
+            deadline: approvalDeadline_,
+            nonce: approvalNonce_,
+            signature: approvalSignature_
+        });
+
+        return _collectPayment(lotId_, amount_, quoteToken_, hooks_, approval);
     }
 
     function sendPayment(
@@ -44,7 +42,7 @@ contract MockAuctionHouse is AuctionHouse {
     }
 
     function collectPayout(
-        uint256 lotId_,
+        uint96 lotId_,
         uint256 paymentAmount_,
         uint256 payoutAmount_,
         Auctioneer.Routing memory routingParams_
@@ -53,7 +51,7 @@ contract MockAuctionHouse is AuctionHouse {
     }
 
     function sendPayout(
-        uint256 lotId_,
+        uint96 lotId_,
         address recipient_,
         uint256 payoutAmount_,
         Auctioneer.Routing memory routingParams_,

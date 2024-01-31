@@ -1,7 +1,7 @@
 /// SPDX-License-Identifier: AGPL-3.0
 pragma solidity 0.8.19;
 
-import {WithModules, Veecode} from "src/modules/Modules.sol";
+import {WithModules} from "src/modules/Modules.sol";
 
 abstract contract Derivatizer is WithModules {
 // ========== DERIVATIVE MANAGEMENT ========== //

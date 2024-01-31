@@ -36,7 +36,7 @@ contract SendPayoutTest is Test, Permit2User {
     uint48 internal constant DERIVATIVE_EXPIRY = 1 days;
 
     // Function parameters
-    uint256 internal lotId = 1;
+    uint96 internal lotId = 1;
     uint256 internal payoutAmount = 10e18;
     MockFeeOnTransferERC20 internal quoteToken;
     MockFeeOnTransferERC20 internal payoutToken;
@@ -86,7 +86,8 @@ contract SendPayoutTest is Test, Permit2User {
             allowlist: IAllowlist(address(0)),
             derivativeReference: derivativeReference,
             derivativeParams: derivativeParams,
-            wrapDerivative: wrapDerivative
+            wrapDerivative: wrapDerivative,
+            prefunded: false
         });
     }
 
@@ -155,7 +156,7 @@ contract SendPayoutTest is Test, Permit2User {
     {
         // Expect revert
         bytes memory err =
-            abi.encodeWithSelector(AuctionHouse.UnsupportedToken.selector, address(payoutToken));
+            abi.encodeWithSelector(Auctioneer.UnsupportedToken.selector, address(payoutToken));
         vm.expectRevert(err);
 
         // Call
@@ -229,7 +230,7 @@ contract SendPayoutTest is Test, Permit2User {
     {
         // Expect revert
         bytes memory err =
-            abi.encodeWithSelector(AuctionHouse.UnsupportedToken.selector, address(payoutToken));
+            abi.encodeWithSelector(Auctioneer.UnsupportedToken.selector, address(payoutToken));
         vm.expectRevert(err);
 
         // Call
