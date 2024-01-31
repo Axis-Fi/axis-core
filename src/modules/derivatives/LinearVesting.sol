@@ -219,8 +219,7 @@ contract LinearVesting is DerivativeModule {
     ///             - Mints the derivative token to the recipient
     ///
     ///             This function reverts if:
-    ///             - `tokenId_` does not exist or is not yet deployed
-    ///             - The wrapped status is inconsistent
+    ///             - `tokenId_` does not exist
     ///             - The amount to mint is 0
     ///
     /// @param      to_                 The address of the recipient of the derivative token
@@ -244,14 +243,13 @@ contract LinearVesting is DerivativeModule {
         // Validate that the token id exists
         if (token.exists == false) revert InvalidParams();
 
-        // TODO deploy if needed?
-
-        // Check that the wrapped status is correct
-        if (token.wrapped != address(0) && wrapped_ == false) revert InvalidParams();
-
-        VestingData memory data = abi.decode(token.data, (VestingData));
+        // If the token exists, it is already deployed. However, ensure the wrapped status is consistent.
+        if (wrapped_) {
+            _deployWrapIfNeeded(tokenId_, token);
+        }
 
         // Transfer collateral token to this contract
+        VestingData memory data = abi.decode(token.data, (VestingData));
         data.baseToken.safeTransferFrom(msg.sender, address(this), amount_);
 
         // If wrapped, mint
@@ -449,21 +447,9 @@ contract LinearVesting is DerivativeModule {
         ERC20 underlyingToken = ERC20(underlyingToken_);
         tokenId_ = _computeId(underlyingToken, params_.start, params_.expiry);
 
-        // Check if the derivative exists
+        // Record the token metadata, if needed
         Token storage token = tokenMetadata[tokenId_];
-        if (token.exists) {
-            if (wrapped_) {
-                // Cannot deploy if there isn't a clonable implementation
-                if (address(erc20Implementation) == address(0)) revert InvalidParams();
-
-                // Deploy the wrapped implementation
-                (string memory name, string memory symbol) =
-                    _computeNameAndSymbol(underlyingToken, params_.start, params_.expiry);
-                token.wrapped = address(erc20Implementation).clone3(
-                    abi.encodePacked(name, symbol, underlyingToken.decimals()), bytes32(tokenId_)
-                );
-            }
-
+        if (token.exists == false) {
             // Store derivative data
             token.exists = true;
             token.data = abi.encode(
@@ -474,10 +460,38 @@ contract LinearVesting is DerivativeModule {
                 })
             ); // Store this so that the tokenId can be used as a lookup
                 // TODO are the other metadata fields needed?
+
+            tokenMetadata[tokenId_] = token;
         }
 
-        // can an already-deployed token be subsequently wrapped?
+        // Create a wrapped derivative, if needed
+        if (wrapped_) {
+            _deployWrapIfNeeded(tokenId_, token);
+        }
 
         return (tokenId_, token.wrapped);
+    }
+
+    function _deployWrapIfNeeded(
+        uint256 tokenId_,
+        Token storage token_
+    ) internal returns (address wrappedAddress) {
+        // Create a wrapped derivative, if needed
+        if (token_.wrapped == address(0)) {
+            // Cannot deploy if there isn't a clonable implementation
+            if (address(erc20Implementation) == address(0)) revert InvalidParams();
+
+            // Get the parameters
+            VestingData memory data = abi.decode(token_.data, (VestingData));
+
+            // Deploy the wrapped implementation
+            (string memory name, string memory symbol) =
+                _computeNameAndSymbol(data.baseToken, data.start, data.expiry);
+            token_.wrapped = address(erc20Implementation).clone3(
+                abi.encodePacked(name, symbol, data.baseToken.decimals()), bytes32(tokenId_)
+            );
+        }
+
+        return token_.wrapped;
     }
 }
