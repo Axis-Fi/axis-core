@@ -267,9 +267,11 @@ contract LinearVesting is DerivativeModule {
         return (tokenId_, token.wrapped, amount_);
     }
 
+    // TODO redeemMax
+
     /// @inheritdoc Derivative
     function redeem(uint256 tokenId_, uint256 amount_, bool wrapped_) external virtual override {
-        // TODO check Sablier. Is amount needed?
+        // TODO check Sablier. Is amount needed? https://github.com/sablier-labs/v2-core/blob/release/src/interfaces/ISablierV2LockupLinear.sol
         // Get the redeemable amount
         uint256 redeemableAmount = redeemable(msg.sender, tokenId_);
 
