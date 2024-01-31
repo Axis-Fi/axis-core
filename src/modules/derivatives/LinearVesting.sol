@@ -76,8 +76,10 @@ contract LinearVesting is DerivativeModule {
     // [X] claimable
     // [ ] wrap
     // [ ] unwrap
-    // [ ] deploy
-    // [ ] mint
+    // [X] deploy
+    // [X] mint
+
+    // ========== TRANSFER ========== //
 
     /// @inheritdoc ERC6909
     /// @dev        Vesting tokens are soulbound/not transferable
@@ -101,6 +103,8 @@ contract LinearVesting is DerivativeModule {
     function approve(address, uint256, uint256) public virtual override returns (bool) {
         revert NotPermitted();
     }
+
+    // ========== DERIVATIVE MANAGEMENT ========== //
 
     /// @inheritdoc Derivative
     /// @dev        This function performs the following:
@@ -340,19 +344,40 @@ contract LinearVesting is DerivativeModule {
         revert Derivative.Derivative_NotImplemented();
     }
 
-    function reclaim(uint256 tokenId_) external virtual override {}
+    /// @inheritdoc Derivative
+    function reclaim(uint256 tokenId_) external virtual override {
+        // TODO
+    }
 
+    /// @inheritdoc Derivative
     function transform(
         uint256 tokenId_,
         address from_,
         uint256 amount_,
         bool wrapped_
-    ) external virtual override {}
+    ) external virtual override {
+        // TODO needed?
+    }
 
-    function wrap(uint256 tokenId_, uint256 amount_) external virtual override {}
+    /// @inheritdoc Derivative
+    function wrap(uint256 tokenId_, uint256 amount_) external virtual override {
+        // TODO
+    }
 
-    function unwrap(uint256 tokenId_, uint256 amount_) external virtual override {}
+    /// @inheritdoc Derivative
+    function unwrap(uint256 tokenId_, uint256 amount_) external virtual override {
+        // TODO
+    }
 
+    /// @notice     Validates the parameters for a derivative token
+    /// @dev        This function performs the following checks:
+    ///             - The start and expiry times are not 0
+    ///             - The start time is before the expiry time
+    ///             - The expiry time is in the future
+    ///             - The base token is not the zero address
+    ///
+    /// @param      data_   The parameters for the derivative token
+    /// @return     bool    True if the parameters are valid, otherwise false
     function _validate(VestingData memory data_) internal view returns (bool) {
         // Revert if start or expiry are 0
         if (data_.start == 0 || data_.expiry == 0) return false;
@@ -418,6 +443,13 @@ contract LinearVesting is DerivativeModule {
         return _computeId(data.baseToken, data.start, data.expiry);
     }
 
+    /// @notice     Computes the name and symbol of a derivative token
+    ///
+    /// @param      base_       The address of the underlying token
+    /// @param      start_      The timestamp at which the vesting begins
+    /// @param      expiry_     The timestamp at which the vesting ends
+    /// @return     string      The name of the derivative token
+    /// @return     string      The symbol of the derivative token
     function _computeNameAndSymbol(
         ERC20 base_,
         uint48 start_,
