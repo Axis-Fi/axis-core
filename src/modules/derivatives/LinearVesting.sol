@@ -472,6 +472,12 @@ contract LinearVesting is DerivativeModule {
         return (tokenId_, token.wrapped);
     }
 
+    /// @notice     Deploys the wrapped derivative token if it does not already exist
+    /// @dev        If the wrapped derivative token does not exist, it will be deployed
+    ///
+    /// @param      tokenId_            The ID of the derivative token
+    /// @param      token_              The metadata for the derivative token
+    /// @return     wrappedAddress      The address of the wrapped derivative token
     function _deployWrapIfNeeded(
         uint256 tokenId_,
         Token storage token_
