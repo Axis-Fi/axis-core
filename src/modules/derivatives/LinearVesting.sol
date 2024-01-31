@@ -46,7 +46,7 @@ contract LinearVesting is DerivativeModule {
 
     // ========== STATE VARIABLES ========== //
 
-    ERC20 internal erc20Implementation;
+    ERC20 internal erc20Implementation; // TODO see CliffVesting for implementation on this
 
     /// @notice     Stores the vesting data for a particular token id
     mapping(uint256 tokenId => VestingData) public vestingData;
@@ -259,6 +259,7 @@ contract LinearVesting is DerivativeModule {
         // If wrapped, mint
         if (wrapped_) {
             // TODO
+            // mint derivative token to ERC20, burn existing derivative token
         } else {
             _mint(to_, tokenId_, amount_);
         }
@@ -268,6 +269,7 @@ contract LinearVesting is DerivativeModule {
 
     /// @inheritdoc Derivative
     function redeem(uint256 tokenId_, uint256 amount_, bool wrapped_) external virtual override {
+        // TODO check Sablier. Is amount needed?
         // Get the redeemable amount
         uint256 redeemableAmount = redeemable(msg.sender, tokenId_);
 
@@ -283,7 +285,7 @@ contract LinearVesting is DerivativeModule {
         // Burn the derivative token
         if (wrapped_) {
             // TODO burn wrapped token
-            // What does wrapped_ signify here?
+            // What does wrapped_ signify here? Redeeming wrapped or unwrapped tokens
         } else {
             _burn(msg.sender, tokenId_, amount_);
         }
@@ -350,13 +352,14 @@ contract LinearVesting is DerivativeModule {
     }
 
     /// @inheritdoc Derivative
+    /// @dev        Not implemented
     function transform(
-        uint256 tokenId_,
-        address from_,
-        uint256 amount_,
-        bool wrapped_
+        uint256,
+        address,
+        uint256,
+        bool
     ) external virtual override {
-        // TODO needed?
+        revert Derivative.Derivative_NotImplemented();
     }
 
     /// @inheritdoc Derivative
