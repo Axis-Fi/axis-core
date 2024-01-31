@@ -5,6 +5,12 @@ import {ERC6909} from "lib/solmate/src/tokens/ERC6909.sol";
 import {Module, Keycode} from "src/modules/Modules.sol";
 
 abstract contract Derivative {
+    // ========== ERRORS ========== //
+
+    error Derivative_NotImplemented();
+
+    // ========== EVENTS ========== //
+
     // ========== DATA STRUCTURES ========== //
 
     // TODO are some of the properties not redundant? exists, decimals, name, symbol. Can be fetched from the ERC20.
