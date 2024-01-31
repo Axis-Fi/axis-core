@@ -4,12 +4,14 @@ pragma solidity 0.8.19;
 import {ERC20} from "solmate/tokens/ERC20.sol";
 import {ERC6909} from "solmate/tokens/ERC6909.sol";
 import {SafeTransferLib} from "solmate/utils/SafeTransferLib.sol";
+import {ClonesWithImmutableArgs} from "src/lib/clones/ClonesWithImmutableArgs.sol";
 
 import {Derivative, DerivativeModule} from "src/modules/Derivative.sol";
 import {Module, Veecode, toKeycode, wrapVeecode} from "src/modules/Modules.sol";
 
 contract LinearVesting is DerivativeModule {
     using SafeTransferLib for ERC20;
+    using ClonesWithImmutableArgs for address;
 
     // ========== EVENTS ========== //
 
@@ -18,6 +20,7 @@ contract LinearVesting is DerivativeModule {
     error BrokenInvariant();
     error InsufficientBalance();
     error NotPermitted();
+    error InvalidParams();
 
     // ========== DATA STRUCTURES ========== //
 
@@ -32,7 +35,18 @@ contract LinearVesting is DerivativeModule {
         ERC20 baseToken;
     }
 
+    /// @notice     Stores the parameters for a particular derivative
+    ///
+    /// @param      start       The timestamp at which the vesting begins
+    /// @param      expiry      The timestamp at which the vesting ends
+    struct VestingParams {
+        uint48 start;
+        uint48 expiry;
+    }
+
     // ========== STATE VARIABLES ========== //
+
+    ERC20 internal erc20Implementation;
 
     /// @notice     Stores the vesting data for a particular token id
     mapping(uint256 tokenId => VestingData) public vestingData;
@@ -62,6 +76,8 @@ contract LinearVesting is DerivativeModule {
     // [X] claimable
     // [ ] wrap
     // [ ] unwrap
+    // [ ] deploy
+    // [ ] mint
 
     /// @inheritdoc ERC6909
     /// @dev        Vesting tokens are soulbound/not transferable
@@ -86,12 +102,66 @@ contract LinearVesting is DerivativeModule {
         revert NotPermitted();
     }
 
+    /// @inheritdoc Derivative
+    /// @dev        This function performs the following:
+    ///             - Validates the parameters
+    ///             - Deploys the derivative token if it does not already exist
+    ///
+    ///             This function reverts if:
+    ///             - The parameters are in an invalid format
+    ///             - The parameters fail validation
+    ///
+    /// @param      underlyingToken_    The address of the underlying token
+    /// @param      params_             The abi-encoded `VestingParams` for the derivative token
+    /// @param      wrapped_            Whether or not to wrap the derivative token
+    /// @return     tokenId_            The ID of the derivative token
+    /// @return     wrappedAddress_     The address of the wrapped derivative token (if applicable)
     function deploy(
         address underlyingToken_,
         bytes memory params_,
         bool wrapped_
-    ) external virtual override returns (uint256 tokenId_, address wrappedAddress_) {}
+    ) external virtual override returns (uint256 tokenId_, address wrappedAddress_) {
+        // Decode parameters
+        VestingParams memory params = abi.decode(params_, (VestingParams));
 
+        // Validate parameters
+        {
+            // Re-encode the parameters
+            VestingData memory data = VestingData({
+                start: params.start,
+                expiry: params.expiry,
+                baseToken: ERC20(underlyingToken_)
+            });
+
+            if (_validate(data) == false) revert InvalidParams();
+        }
+
+        // If necessary, deploy and store the data
+        (uint256 tokenId, address wrappedAddress) =
+            _deployIfNeeded(underlyingToken_, params, wrapped_);
+
+        return (tokenId, wrappedAddress);
+    }
+
+    /// @inheritdoc Derivative
+    /// @dev        This function performs the following:
+    ///             - Validates the parameters
+    ///             - Deploys the derivative token if it does not already exist
+    ///             - Mints the derivative token to the recipient
+    ///
+    ///             This function reverts if:
+    ///             - The parameters are in an invalid format
+    ///             - The parameters fail validation
+    ///             - `amount_` is 0
+    ///
+    /// @param      to_                 The address of the recipient of the derivative token
+    /// @param      underlyingToken_    The address of the underlying token
+    /// @param      params_             The abi-encoded `VestingParams` for the derivative token
+    /// @param      amount_             The amount of the derivative token to mint
+    /// @param      wrapped_            Whether or not to wrap the derivative token
+    /// @return     tokenId_            The ID of the derivative token
+    /// @return     wrappedAddress_     The address of the wrapped derivative token (if applicable)
+    /// @return     amountCreated_      The amount of the derivative token that was minted
     function mint(
         address to_,
         address underlyingToken_,
@@ -103,14 +173,96 @@ contract LinearVesting is DerivativeModule {
         virtual
         override
         returns (uint256 tokenId_, address wrappedAddress_, uint256 amountCreated_)
-    {}
+    {
+        // Can't mint 0
+        if (amount_ == 0) revert InvalidParams();
 
+        // Decode parameters
+        VestingParams memory params = abi.decode(params_, (VestingParams));
+
+        // Validate parameters
+        {
+            // Re-encode the parameters
+            VestingData memory data = VestingData({
+                start: params.start,
+                expiry: params.expiry,
+                baseToken: ERC20(underlyingToken_)
+            });
+
+            if (_validate(data) == false) revert InvalidParams();
+        }
+
+        // If necessary, deploy and store the data
+        (uint256 tokenId, address wrappedAddress) =
+            _deployIfNeeded(underlyingToken_, params, wrapped_);
+
+        // Check that the wrapped status is correct
+        if (wrappedAddress != address(0) && wrapped_ == false) revert InvalidParams();
+
+        // Transfer collateral token to this contract
+        ERC20(underlyingToken_).safeTransferFrom(msg.sender, address(this), amount_);
+
+        // If wrapped, mint
+        if (wrapped_) {
+            // TODO
+        }
+        // Otherwise mint as normal
+        else {
+            _mint(to_, tokenId, amount_);
+        }
+
+        return (tokenId, wrappedAddress, amount_);
+    }
+
+    /// @inheritdoc Derivative
+    /// @dev        This function performs the following:
+    ///             - Mints the derivative token to the recipient
+    ///
+    ///             This function reverts if:
+    ///             - `tokenId_` does not exist or is not yet deployed
+    ///             - The wrapped status is inconsistent
+    ///             - The amount to mint is 0
+    ///
+    /// @param      to_                 The address of the recipient of the derivative token
+    /// @param      tokenId_            The ID of the derivative token
+    /// @param      amount_             The amount of the derivative token to mint
+    /// @param      wrapped_            Whether or not to wrap the derivative token
+    /// @return     uint256             The ID of the derivative token
+    /// @return     adress              The address of the wrapped derivative token (if applicable)
+    /// @return     uint256             The amount of the derivative token that was minted
     function mint(
         address to_,
         uint256 tokenId_,
         uint256 amount_,
         bool wrapped_
-    ) external virtual override returns (uint256, address, uint256) {}
+    ) external virtual override returns (uint256, address, uint256) {
+        // Can't mint 0
+        if (amount_ == 0) revert InvalidParams();
+
+        Token storage token = tokenMetadata[tokenId_];
+
+        // Validate that the token id exists
+        if (token.exists == false) revert InvalidParams();
+
+        // TODO deploy if needed?
+
+        // Check that the wrapped status is correct
+        if (token.wrapped != address(0) && wrapped_ == false) revert InvalidParams();
+
+        VestingData memory data = abi.decode(token.data, (VestingData));
+
+        // Transfer collateral token to this contract
+        data.baseToken.safeTransferFrom(msg.sender, address(this), amount_);
+
+        // If wrapped, mint
+        if (wrapped_) {
+            // TODO
+        } else {
+            _mint(to_, tokenId_, amount_);
+        }
+
+        return (tokenId_, token.wrapped, amount_);
+    }
 
     /// @inheritdoc Derivative
     function redeem(uint256 tokenId_, uint256 amount_, bool wrapped_) external virtual override {
@@ -203,7 +355,32 @@ contract LinearVesting is DerivativeModule {
 
     function unwrap(uint256 tokenId_, uint256 amount_) external virtual override {}
 
-    function validate(bytes memory params_) external view virtual override returns (bool) {}
+    function _validate(VestingData memory data_) internal view returns (bool) {
+        // Revert if start or expiry are 0
+        if (data_.start == 0 || data_.expiry == 0) return false;
+
+        // Revert if start and expiry are the same (as it would result in a divide by 0 error)
+        if (data_.start == data_.expiry) return false;
+
+        // Check that the start time is before the end time
+        if (data_.start >= data_.expiry) return false;
+
+        // Check that the expiry time is in the future
+        if (data_.expiry < block.timestamp) return false;
+
+        // Check that the base token is not the zero address
+        if (address(data_.baseToken) == address(0)) return false;
+
+        return true;
+    }
+
+    /// @inheritdoc Derivative
+    function validate(bytes memory params_) public view virtual override returns (bool) {
+        // Decode the parameters
+        VestingData memory data = abi.decode(params_, (VestingData));
+
+        return _validate(data);
+    }
 
     /// @inheritdoc Derivative
     /// @dev        Not implemented
@@ -241,5 +418,66 @@ contract LinearVesting is DerivativeModule {
 
         // Compute the ID
         return _computeId(data.baseToken, data.start, data.expiry);
+    }
+
+    function _computeNameAndSymbol(
+        ERC20 base_,
+        uint48 start_,
+        uint48 expiry_
+    ) internal view returns (string memory, string memory) {
+        return (
+            string(abi.encodePacked(base_.name(), "-", start_, "-", expiry_)),
+            string(abi.encodePacked(base_.symbol(), "-", start_, "-", expiry_))
+        );
+    }
+
+    /// @notice     Deploys the derivative token if it does not already exist
+    /// @dev        If the derivative token does not exist, it will be deployed using a token id
+    ///             computed from the parameters.
+    ///
+    /// @param      underlyingToken_    The address of the underlying token
+    /// @param      params_             The parameters for the derivative token
+    /// @param      wrapped_            Whether or not to wrap the derivative token
+    /// @return     tokenId_            The ID of the derivative token
+    /// @return     wrappedAddress_     The address of the wrapped derivative token
+    function _deployIfNeeded(
+        address underlyingToken_,
+        VestingParams memory params_,
+        bool wrapped_
+    ) internal returns (uint256 tokenId_, address wrappedAddress_) {
+        // Compute the token ID
+        ERC20 underlyingToken = ERC20(underlyingToken_);
+        tokenId_ = _computeId(underlyingToken, params_.start, params_.expiry);
+
+        // Check if the derivative exists
+        Token storage token = tokenMetadata[tokenId_];
+        if (token.exists) {
+            if (wrapped_) {
+                // Cannot deploy if there isn't a clonable implementation
+                if (address(erc20Implementation) == address(0)) revert InvalidParams();
+
+                // Deploy the wrapped implementation
+                (string memory name, string memory symbol) =
+                    _computeNameAndSymbol(underlyingToken, params_.start, params_.expiry);
+                token.wrapped = address(erc20Implementation).clone3(
+                    abi.encodePacked(name, symbol, underlyingToken.decimals()), bytes32(tokenId_)
+                );
+            }
+
+            // Store derivative data
+            token.exists = true;
+            token.data = abi.encode(
+                VestingData({
+                    start: params_.start,
+                    expiry: params_.expiry,
+                    baseToken: underlyingToken
+                })
+            ); // Store this so that the tokenId can be used as a lookup
+                // TODO are the other metadata fields needed?
+        }
+
+        // can an already-deployed token be subsequently wrapped?
+
+        return (tokenId_, token.wrapped);
     }
 }
