@@ -483,6 +483,17 @@ contract LocalSealedBidBatchAuction is AuctionModule {
         return (marginalPrice, numWinningBids);
     }
 
+    /// @inheritdoc AuctionModule
+    /// @dev        This function performs the following:
+    ///             - Validates inputs
+    ///             - Iterates over the bid queue to calculate the marginal clearing price of the auction
+    ///             - Creates an array of winning bids
+    ///             - Sets the auction status to settled
+    ///             - Returns the array of winning bids
+    ///
+    ///             This function reverts if:
+    ///             - The auction is not in the Decrypted state
+    ///             - The auction has already been settled
     function _settle(uint96 lotId_)
         internal
         override
