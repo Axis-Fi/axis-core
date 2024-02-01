@@ -924,9 +924,9 @@ contract LinearVestingTest is Test, Permit2User {
             linearVesting.mint(_alice, underlyingTokenAddress, vestingParamsBytes, AMOUNT, true);
 
         // Check values
-        assertTrue(tokenId > 0);
-        assertTrue(wrappedAddress == address(0));
-        assertEq(amountCreated, AMOUNT);
+        assertTrue(tokenId > 0, "tokenId mismatch");
+        assertTrue(wrappedAddress == address(0), "wrappedAddress mismatch");
+        assertEq(amountCreated, AMOUNT, "amountCreated mismatch");
     }
 
     function test_mint_params_notWrapped_tokenDeployed()
@@ -940,9 +940,9 @@ contract LinearVestingTest is Test, Permit2User {
             linearVesting.mint(_alice, underlyingTokenAddress, vestingParamsBytes, AMOUNT, true);
 
         // Check values
-        assertTrue(tokenId > 0);
-        assertTrue(wrappedAddress == address(0));
-        assertEq(amountCreated, AMOUNT);
+        assertTrue(tokenId > 0, "tokenId mismatch");
+        assertTrue(wrappedAddress == address(0), "wrappedAddress mismatch");
+        assertEq(amountCreated, AMOUNT, "amountCreated mismatch");
     }
 
     function test_mint_params_wrapped_wrappedTokenIsNotDeployed()
@@ -956,9 +956,9 @@ contract LinearVestingTest is Test, Permit2User {
             linearVesting.mint(_alice, underlyingTokenAddress, vestingParamsBytes, AMOUNT, true);
 
         // Check values
-        assertTrue(tokenId > 0);
-        assertTrue(wrappedAddress != address(0));
-        assertEq(amountCreated, AMOUNT);
+        assertTrue(tokenId > 0, "tokenId mismatch");
+        assertTrue(wrappedAddress != address(0), "wrappedAddress mismatch");
+        assertEq(amountCreated, AMOUNT, "amountCreated mismatch");
     }
 
     function test_mint_params_wrapped_wrappedTokenIsDeployed()
@@ -972,9 +972,9 @@ contract LinearVestingTest is Test, Permit2User {
             linearVesting.mint(_alice, underlyingTokenAddress, vestingParamsBytes, AMOUNT, true);
 
         // Check values
-        assertEq(tokenId, derivativeTokenId);
-        assertEq(wrappedAddress, derivativeWrappedAddress);
-        assertEq(amountCreated, AMOUNT);
+        assertEq(tokenId, derivativeTokenId, "tokenId mismatch");
+        assertEq(wrappedAddress, derivativeWrappedAddress, "wrappedAddress mismatch");
+        assertEq(amountCreated, AMOUNT, "amountCreated mismatch");
     }
 
     function test_mint_params_notParent()
@@ -988,9 +988,9 @@ contract LinearVestingTest is Test, Permit2User {
             linearVesting.mint(_alice, underlyingTokenAddress, vestingParamsBytes, AMOUNT, true);
 
         // Check values
-        assertEq(tokenId, derivativeTokenId);
-        assertEq(wrappedAddress, derivativeWrappedAddress);
-        assertEq(amountCreated, AMOUNT);
+        assertEq(tokenId, derivativeTokenId, "tokenId mismatch");
+        assertEq(wrappedAddress, derivativeWrappedAddress, "wrappedAddress mismatch");
+        assertEq(amountCreated, AMOUNT, "amountCreated mismatch");
     }
 
     function test_mint_params_notParent_insufficientBalance_reverts()
