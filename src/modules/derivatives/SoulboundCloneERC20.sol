@@ -1,23 +1,40 @@
 /// SPDX-License-Identifier: AGPL-3.0
 pragma solidity 0.8.19;
 
-import {Owned} from "solmate/auth/Owned.sol";
 import {CloneERC20} from "src/lib/clones/CloneERC20.sol";
 
 /// @title      SoulboundCloneERC20
 /// @notice     A cloneable ERC20 token with the following additional features:
 ///             - Only the owner can mint/burn tokens
-///             - Transfers are disabled
-contract SoulboundCloneERC20 is CloneERC20, Owned {
-    error NotPermitted();
-
+///             - Transfers and approvals are disabled
+/// @dev        This contract can be cloned using the ClonesWithImmutableArgs.clone3(). The arguments required are:
+///             - name (string)
+///             - symbol (string)
+///             - decimals (uint8)
+///             - owner (address)
+contract SoulboundCloneERC20 is CloneERC20 {
     // ========== EVENTS ========== //
+
+    // ========== ERRORS ========== //
+
+    error NotPermitted();
 
     // ========== STATE VARIABLES ========== //
 
     // ========== CONSTRUCTOR ========== //
 
-    constructor() Owned(msg.sender) {}
+    // Constructor not supported when cloning
+
+    // ========== OWNERSHIP ========== //
+
+    function owner() public pure returns (address) {
+        return _getArgAddress(0x41);
+    }
+
+    modifier onlyOwner() {
+        if (msg.sender != owner()) revert NotPermitted();
+        _;
+    }
 
     // ========== GATED FUNCTIONS ========== //
 
@@ -43,5 +60,7 @@ contract SoulboundCloneERC20 is CloneERC20, Owned {
         revert NotPermitted();
     }
 
-    // TODO approval disabled?
+    function approve(address, uint256) public pure override returns (bool) {
+        revert NotPermitted();
+    }
 }
