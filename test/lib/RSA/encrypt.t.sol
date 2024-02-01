@@ -46,7 +46,6 @@ contract RSAOAEPTest is Test {
 }
 
 contract RSAOAEP_FFITest is Test {
-
     bytes internal constant E = abi.encodePacked(uint24(65_537));
     string internal executable;
 
@@ -54,7 +53,12 @@ contract RSAOAEP_FFITest is Test {
         executable = vm.envString("RSA_FFI_EXECUTABLE");
     }
 
-    function _encrypt(bytes memory message_, uint96 label_, bytes memory n_, bytes32 seed_) internal returns (bytes memory) {
+    function _encrypt(
+        bytes memory message_,
+        uint96 label_,
+        bytes memory n_,
+        bytes32 seed_
+    ) internal returns (bytes memory) {
         // Construct the input strings
         string memory message = vm.toString(message_);
         string memory label = vm.toString(label_);
@@ -66,7 +70,8 @@ contract RSAOAEP_FFITest is Test {
         string[] memory inputs = new string[](3);
         inputs[0] = "bash";
         inputs[1] = "-c";
-        inputs[2] = string.concat(executable, " encrypt ", message, " ", label, " ", e, " ", n, " ", seed);
+        inputs[2] =
+            string.concat(executable, " encrypt ", message, " ", label, " ", e, " ", n, " ", seed);
 
         // Execute the FFI
         bytes memory cipherText = vm.ffi(inputs);
@@ -77,8 +82,13 @@ contract RSAOAEP_FFITest is Test {
         return cipherText;
     }
 
-    function _decrypt(bytes memory cipherText_, uint96 label_, bytes memory d_, bytes memory n_) internal returns (uint256, bytes32) {
-            // Construct the input strings
+    function _decrypt(
+        bytes memory cipherText_,
+        uint96 label_,
+        bytes memory d_,
+        bytes memory n_
+    ) internal returns (uint256, bytes32) {
+        // Construct the input strings
         string memory cipherText = vm.toString(cipherText_);
         string memory label = vm.toString(label_);
         string memory e = vm.toString(E);
@@ -89,7 +99,8 @@ contract RSAOAEP_FFITest is Test {
         string[] memory inputs = new string[](3);
         inputs[0] = "bash";
         inputs[1] = "-c";
-        inputs[2] = string.concat(executable, " decrypt ", cipherText, " ", label, " ", e, " ", d, " ", n);
+        inputs[2] =
+            string.concat(executable, " decrypt ", cipherText, " ", label, " ", e, " ", d, " ", n);
 
         // Execute the FFI
         bytes memory result = vm.ffi(inputs);
@@ -121,7 +132,8 @@ contract RSAOAEP_FFITest is Test {
         // );
 
         // Get local encrypted value
-        bytes memory localEncrypted = RSAOAEP.encrypt(message, abi.encodePacked(uint2str(uint256(lotId))), E, n, seed_);
+        bytes memory localEncrypted =
+            RSAOAEP.encrypt(message, abi.encodePacked(uint2str(uint256(lotId))), E, n, seed_);
 
         // Get reference encrypted value
         bytes memory refEncrypted = _encrypt(message, lotId, n, seed_);
@@ -131,7 +143,7 @@ contract RSAOAEP_FFITest is Test {
     }
 
     function testFuzz_decrypt1024(uint256 value_, bytes32 seed_) public {
-                // Setup encryption parameters
+        // Setup encryption parameters
         bytes memory message = abi.encodePacked(value_);
         uint96 lotId = 1;
 
@@ -156,13 +168,12 @@ contract RSAOAEP_FFITest is Test {
         (uint256 refValue, bytes32 refSeed) = _decrypt(cipherText, lotId, d, n);
 
         // Get the decrypted value from the local implementation
-        (bytes memory decrypted, bytes32 localSeed) = RSAOAEP.decrypt(cipherText, abi.encodePacked(uint2str(uint256(lotId))), d, n);
+        (bytes memory decrypted, bytes32 localSeed) =
+            RSAOAEP.decrypt(cipherText, abi.encodePacked(uint2str(uint256(lotId))), d, n);
         uint256 localValue = abi.decode(decrypted, (uint256));
 
         // Compare the decrypted values
         assertEq(refValue, localValue);
         assertEq(refSeed, localSeed);
-
     }
-
 }
