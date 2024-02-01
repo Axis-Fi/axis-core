@@ -8,12 +8,29 @@ import {ClonesWithImmutableArgs} from "src/lib/clones/ClonesWithImmutableArgs.so
 
 import {Derivative, DerivativeModule} from "src/modules/Derivative.sol";
 import {Module, Veecode, toKeycode, wrapVeecode} from "src/modules/Modules.sol";
+import {SoulboundCloneERC20} from "src/modules/derivatives/SoulboundCloneERC20.sol";
 
 contract LinearVesting is DerivativeModule {
     using SafeTransferLib for ERC20;
     using ClonesWithImmutableArgs for address;
 
     // ========== EVENTS ========== //
+
+    event DerivativeCreated(
+        uint256 indexed tokenId_, uint48 start_, uint48 expiry_, address baseToken_
+    );
+
+    event WrappedDerivativeCreated(uint256 indexed tokenId_, address wrappedToken_);
+
+    event Wrapped(
+        uint256 indexed tokenId_, address indexed owner_, uint256 amount_, address wrappedToken_
+    );
+
+    event Unwrapped(
+        uint256 indexed tokenId_, address indexed owner_, uint256 amount_, address wrappedToken_
+    );
+
+    event Redeemed(uint256 indexed tokenId_, address indexed owner_, uint256 amount_);
 
     // ========== ERRORS ========== //
 
@@ -46,7 +63,7 @@ contract LinearVesting is DerivativeModule {
 
     // ========== STATE VARIABLES ========== //
 
-    ERC20 internal erc20Implementation; // TODO see CliffVesting for implementation on this
+    address internal _clone;
 
     /// @notice     Stores the vesting data for a particular token id
     mapping(uint256 tokenId => VestingData) public vestingData;
@@ -78,6 +95,18 @@ contract LinearVesting is DerivativeModule {
     // [ ] unwrap
     // [X] deploy
     // [X] mint
+
+    // ========== MODIFIERS ========== //
+
+    modifier onlyValidTokenId(uint256 tokenId_) {
+        if (tokenMetadata[tokenId_].exists == false) revert InvalidParams();
+        _;
+    }
+
+    modifier onlyDeployedWrapped(uint256 tokenId_) {
+        if (tokenMetadata[tokenId_].wrapped == address(0)) revert InvalidParams();
+        _;
+    }
 
     // ========== TRANSFER ========== //
 
@@ -238,14 +267,11 @@ contract LinearVesting is DerivativeModule {
         uint256 tokenId_,
         uint256 amount_,
         bool wrapped_
-    ) external virtual override returns (uint256, address, uint256) {
+    ) external virtual override onlyValidTokenId(tokenId_) returns (uint256, address, uint256) {
         // Can't mint 0
         if (amount_ == 0) revert InvalidParams();
 
         Token storage token = tokenMetadata[tokenId_];
-
-        // Validate that the token id exists
-        if (token.exists == false) revert InvalidParams();
 
         // If the token exists, it is already deployed. However, ensure the wrapped status is consistent.
         if (wrapped_) {
@@ -270,7 +296,11 @@ contract LinearVesting is DerivativeModule {
     // TODO redeemMax
 
     /// @inheritdoc Derivative
-    function redeem(uint256 tokenId_, uint256 amount_, bool wrapped_) external virtual override {
+    function redeem(
+        uint256 tokenId_,
+        uint256 amount_,
+        bool wrapped_
+    ) external virtual override onlyValidTokenId(tokenId_) {
         // TODO check Sablier. Is amount needed? https://github.com/sablier-labs/v2-core/blob/release/src/interfaces/ISablierV2LockupLinear.sol
         // Get the redeemable amount
         uint256 redeemableAmount = redeemable(msg.sender, tokenId_);
@@ -285,15 +315,23 @@ contract LinearVesting is DerivativeModule {
         claimed[msg.sender][tokenId_] += amount_;
 
         // Burn the derivative token
-        if (wrapped_) {
-            // TODO burn wrapped token
-            // What does wrapped_ signify here? Redeeming wrapped or unwrapped tokens
-        } else {
+        if (wrapped_ == false) {
             _burn(msg.sender, tokenId_, amount_);
+        }
+        // Burn the wrapped derivative token
+        else {
+            Token storage tokenData = tokenMetadata[tokenId_];
+            if (tokenData.wrapped == address(0)) revert InvalidParams();
+
+            SoulboundCloneERC20 wrappedToken = SoulboundCloneERC20(tokenData.wrapped);
+            wrappedToken.burn(msg.sender, amount_);
         }
 
         // Transfer the underlying token to the owner
         vestingData[tokenId_].baseToken.safeTransfer(msg.sender, amount_);
+
+        // Emit event
+        emit Redeemed(tokenId_, msg.sender, amount_);
     }
 
     /// @notice     Returns the amount of vested tokens that can be redeemed for the underlying base token
@@ -309,9 +347,14 @@ contract LinearVesting is DerivativeModule {
     /// @param      owner_      The address of the owner of the derivative token
     /// @param      tokenId_    The ID of the derivative token
     /// @return     uint256     The amount of tokens that can be redeemed
-    function redeemable(address owner_, uint256 tokenId_) public view returns (uint256) {
+    function redeemable(
+        address owner_,
+        uint256 tokenId_
+    ) public view onlyValidTokenId(tokenId_) returns (uint256) {
         // Get the vesting data
         VestingData storage data = vestingData[tokenId_];
+
+        // TODO needs wrapped_
 
         // If before the start time, 0
         if (block.timestamp < data.start) return 0;
@@ -360,13 +403,47 @@ contract LinearVesting is DerivativeModule {
     }
 
     /// @inheritdoc Derivative
-    function wrap(uint256 tokenId_, uint256 amount_) external virtual override {
-        // TODO
+    /// @dev        This function will revert if:
+    ///             - The derivative token with `tokenId_` has not been deployed
+    ///             - `amount_` is 0
+    function wrap(
+        uint256 tokenId_,
+        uint256 amount_
+    ) external virtual override onlyValidTokenId(tokenId_) {
+        if (amount_ == 0) revert InvalidParams();
+
+        // Burn the derivative token
+        _burn(msg.sender, tokenId_, amount_);
+
+        // Ensure the wrapped derivative is deployed
+        Token storage token = tokenMetadata[tokenId_];
+        _deployWrapIfNeeded(tokenId_, token);
+
+        // Mint the wrapped derivative
+        SoulboundCloneERC20(token.wrapped).mint(msg.sender, amount_);
+
+        emit Wrapped(tokenId_, msg.sender, amount_, token.wrapped);
     }
 
     /// @inheritdoc Derivative
-    function unwrap(uint256 tokenId_, uint256 amount_) external virtual override {
-        // TODO
+    /// @dev        This function will revert if:
+    ///             - The derivative token with `tokenId_` has not been deployed
+    ///             - A wrapped derivative for `tokenId_` has not been deployed
+    ///             - `amount_` is 0
+    function unwrap(
+        uint256 tokenId_,
+        uint256 amount_
+    ) external virtual override onlyValidTokenId(tokenId_) onlyDeployedWrapped(tokenId_) {
+        if (amount_ == 0) revert InvalidParams();
+
+        // Burn the wrapped derivative token
+        Token storage token = tokenMetadata[tokenId_];
+        SoulboundCloneERC20(token.wrapped).burn(msg.sender, amount_);
+
+        // Mint the derivative token
+        _mint(msg.sender, tokenId_, amount_);
+
+        emit Unwrapped(tokenId_, msg.sender, amount_, token.wrapped);
     }
 
     /// @notice     Validates the parameters for a derivative token
@@ -412,10 +489,9 @@ contract LinearVesting is DerivativeModule {
     }
 
     /// @inheritdoc Derivative
-    function convertsTo(
-        bytes memory data,
-        uint256 amount
-    ) external view virtual override returns (uint256) {}
+    function convertsTo(bytes memory, uint256) external view virtual override returns (uint256) {
+        revert Derivative_NotImplemented();
+    }
 
     /// @notice     Computes the ID of a derivative token
     /// @dev        The ID is computed as the hash of the parameters and hashed again with the module identifier.
@@ -494,6 +570,12 @@ contract LinearVesting is DerivativeModule {
                 // TODO are the other metadata fields needed?
 
             tokenMetadata[tokenId_] = token;
+
+            // Add as a lot derivative
+            // TODO needs lotId
+
+            // Emit event
+            emit DerivativeCreated(tokenId_, params_.start, params_.expiry, underlyingToken_);
         }
 
         // Create a wrapped derivative, if needed
@@ -517,7 +599,7 @@ contract LinearVesting is DerivativeModule {
         // Create a wrapped derivative, if needed
         if (token_.wrapped == address(0)) {
             // Cannot deploy if there isn't a clonable implementation
-            if (address(erc20Implementation) == address(0)) revert InvalidParams();
+            if (address(_clone) == address(0)) revert InvalidParams();
 
             // Get the parameters
             VestingData memory data = abi.decode(token_.data, (VestingData));
@@ -525,9 +607,13 @@ contract LinearVesting is DerivativeModule {
             // Deploy the wrapped implementation
             (string memory name, string memory symbol) =
                 _computeNameAndSymbol(data.baseToken, data.start, data.expiry);
-            token_.wrapped = address(erc20Implementation).clone3(
-                abi.encodePacked(name, symbol, data.baseToken.decimals()), bytes32(tokenId_)
+            bytes memory wrappedTokenData = abi.encodePacked(
+                bytes32(bytes(name)), bytes32(bytes(symbol)), uint8(data.baseToken.decimals())
             );
+            token_.wrapped = address(_clone).clone3(wrappedTokenData, bytes32(tokenId_));
+
+            // Emit event
+            emit WrappedDerivativeCreated(tokenId_, token_.wrapped);
         }
 
         return token_.wrapped;

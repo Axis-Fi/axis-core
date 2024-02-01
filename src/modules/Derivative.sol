@@ -25,9 +25,9 @@ abstract contract Derivative {
     }
 
     // ========== STATE VARIABLES ========== //
-    mapping(Keycode dType => address) public wrappedImplementations;
+    mapping(Keycode dType => address) public wrappedImplementations; // TODO is this needed? Each derivative will have its own implementation(s), not share across modules
     mapping(uint256 tokenId => Token metadata) public tokenMetadata;
-    mapping(uint96 lotId => uint256[] tokenIds) public lotDerivatives;
+    mapping(uint96 lotId => uint256[] tokenIds) public lotDerivatives; // TODO lotId is not passed to any of the functions, so how will this be set?
 
     // ========== DERIVATIVE MANAGEMENT ========== //
 
