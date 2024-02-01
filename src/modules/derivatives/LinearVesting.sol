@@ -154,17 +154,8 @@ contract LinearVesting is DerivativeModule {
         VestingParams memory params = abi.decode(params_, (VestingParams));
 
         // Validate parameters
-        {
-            // Re-encode the parameters
-            VestingData memory data = VestingData({
-                start: params.start,
-                expiry: params.expiry,
-                end: params.end,
-                baseToken: ERC20(underlyingToken_)
-            });
-
-            if (_validate(data) == false) revert InvalidParams();
-        }
+        if (_validate(params) == false) revert InvalidParams();
+        if (underlyingToken_ == address(0)) revert InvalidParams();
 
         // If necessary, deploy and store the data
         (uint256 tokenId, address wrappedAddress) =
@@ -211,17 +202,8 @@ contract LinearVesting is DerivativeModule {
         VestingParams memory params = abi.decode(params_, (VestingParams));
 
         // Validate parameters
-        {
-            // Re-encode the parameters
-            VestingData memory data = VestingData({
-                start: params.start,
-                expiry: params.expiry,
-                end: params.end,
-                baseToken: ERC20(underlyingToken_)
-            });
-
-            if (_validate(data) == false) revert InvalidParams();
-        }
+        if (_validate(params) == false) revert InvalidParams();
+        if (underlyingToken_ == address(0)) revert InvalidParams();
 
         // If necessary, deploy and store the data
         (uint256 tokenId, address wrappedAddress) =
@@ -407,6 +389,8 @@ contract LinearVesting is DerivativeModule {
             revert BrokenInvariant();
         }
 
+        // TODO what happens after the end timestamp?
+
         // Deduct already claimed tokens
         vested -= claimedBalance;
 
@@ -503,7 +487,7 @@ contract LinearVesting is DerivativeModule {
     ///
     /// @param      data_   The parameters for the derivative token
     /// @return     bool    True if the parameters are valid, otherwise false
-    function _validate(VestingData memory data_) internal view returns (bool) {
+    function _validate(VestingParams memory data_) internal view returns (bool) {
         // Revert if any of the timestamps are 0
         if (data_.start == 0 || data_.expiry == 0 || data_.end == 0) return false;
 
@@ -516,22 +500,24 @@ contract LinearVesting is DerivativeModule {
         // Check that the expiry time is before the end time
         if (data_.expiry >= data_.end) return false;
 
+        // Check that the start time is in the future
+        if (data_.start < block.timestamp) return false;
+
         // Check that the expiry time is in the future
         if (data_.expiry < block.timestamp) return false;
 
         // Check that the end time is in the future
         if (data_.end < block.timestamp) return false;
 
-        // Check that the base token is not the zero address
-        if (address(data_.baseToken) == address(0)) return false;
-
         return true;
     }
 
     /// @inheritdoc Derivative
+    ///
+    /// @param      params_     The abi-encoded `VestingParams` for the derivative token
     function validate(bytes memory params_) public view virtual override returns (bool) {
         // Decode the parameters
-        VestingData memory data = abi.decode(params_, (VestingData));
+        VestingParams memory data = abi.decode(params_, (VestingParams));
 
         return _validate(data);
     }

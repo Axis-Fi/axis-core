@@ -134,6 +134,7 @@ abstract contract Derivative {
     function unwrap(uint256 tokenId_, uint256 amount_) external virtual;
 
     /// @notice     Validate derivative params for the specific implementation
+    ///             The parameters should be the same as what is passed into `deploy()` or `mint()`
     ///
     /// @param      params_     The params to validate
     /// @return     bool        Whether or not the params are valid
