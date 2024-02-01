@@ -655,7 +655,10 @@ contract LinearVesting is DerivativeModule {
             (string memory name, string memory symbol) =
                 _computeNameAndSymbol(data.baseToken, data.start, data.expiry);
             bytes memory wrappedTokenData = abi.encodePacked(
-                bytes32(bytes(name)), bytes32(bytes(symbol)), uint8(data.baseToken.decimals())
+                bytes32(bytes(name)),
+                bytes32(bytes(symbol)),
+                uint8(data.baseToken.decimals()),
+                address(this)
             );
             token_.wrapped = address(_clone).clone3(wrappedTokenData, bytes32(tokenId_));
 
