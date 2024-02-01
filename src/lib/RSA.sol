@@ -22,9 +22,9 @@ library RSAOAEP {
 
     function decrypt(
         bytes memory cipherText,
+        bytes memory label,
         bytes memory d,
-        bytes memory n,
-        bytes memory label
+        bytes memory n
     ) internal view returns (bytes memory message, bytes32 seed) {
         // Implements 7.1.2 RSAES-OAEP-DECRYPT as defined in RFC8017: https://www.rfc-editor.org/rfc/rfc8017
 

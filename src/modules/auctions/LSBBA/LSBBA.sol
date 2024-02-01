@@ -4,6 +4,7 @@ pragma solidity 0.8.19;
 import {AuctionModule} from "src/modules/Auction.sol";
 import {Veecode, toVeecode} from "src/modules/Modules.sol";
 import {RSAOAEP} from "src/lib/RSA.sol";
+import {uint2str} from "src/lib/Uint2Str.sol";
 import {
     MaxPriorityQueue,
     Queue,
@@ -359,7 +360,7 @@ contract LocalSealedBidBatchAuction is AuctionModule {
     ) internal view returns (bytes memory) {
         return RSAOAEP.encrypt(
             abi.encodePacked(decrypt_.amountOut),
-            abi.encodePacked(lotId_),
+            abi.encodePacked(uint2str(uint256(lotId_))),
             abi.encodePacked(_PUB_KEY_EXPONENT),
             auctionData[lotId_].publicKeyModulus,
             decrypt_.seed
@@ -659,5 +660,32 @@ contract LocalSealedBidBatchAuction is AuctionModule {
         bytes calldata
     ) internal pure override returns (uint256, bytes memory) {
         revert Auction_NotImplemented();
+    }
+
+    // ========== UTILS ========== //
+
+    // Some fancy math to convert a uint into a string, courtesy of Provable Things.
+    // Updated to work with solc 0.8.0.
+    // https://github.com/provable-things/ethereum-api/blob/master/provableAPI_0.6.sol
+    function _uint2str(uint96 _i) internal pure returns (string memory) {
+        if (_i == 0) {
+            return "0";
+        }
+        uint256 j = _i;
+        uint256 len;
+        while (j != 0) {
+            len++;
+            j /= 10;
+        }
+        bytes memory bstr = new bytes(len);
+        uint256 k = len;
+        while (_i != 0) {
+            k = k - 1;
+            uint8 temp = (48 + uint8(_i - (_i / 10) * 10));
+            bytes1 b1 = bytes1(temp);
+            bstr[k] = b1;
+            _i /= 10;
+        }
+        return string(bstr);
     }
 }
