@@ -14,6 +14,7 @@ import {AuctionHouse, Router} from "src/AuctionHouse.sol";
 import {Auction, AuctionModule} from "src/modules/Auction.sol";
 import {IHooks, IAllowlist, Auctioneer} from "src/bases/Auctioneer.sol";
 import {RSAOAEP} from "src/lib/RSA.sol";
+import {uint2str} from "src/lib/Uint2Str.sol";
 import {LocalSealedBidBatchAuction} from "src/modules/auctions/LSBBA/LSBBA.sol";
 
 // Modules
@@ -172,7 +173,7 @@ contract SettleTest is Test, Permit2User {
     {
         return RSAOAEP.encrypt(
             abi.encodePacked(decrypt_.amountOut),
-            abi.encodePacked(lotId),
+            abi.encodePacked(uint2str(lotId)),
             abi.encodePacked(uint24(65_537)),
             PUBLIC_KEY_MODULUS,
             decrypt_.seed
