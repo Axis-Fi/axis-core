@@ -44,21 +44,25 @@ contract LinearVesting is DerivativeModule {
     /// @notice     Stores the parameters for a particular derivative
     ///
     /// @param      start       The timestamp at which the vesting begins
-    /// @param      expiry      The timestamp at which the vesting ends
+    /// @param      expiry      The timestamp at which the vesting expires
+    /// @param      end         The timestamp at which the vesting redemption ends
     /// @param      baseToken   The address of the token to vest
     struct VestingData {
         uint48 start;
         uint48 expiry;
+        uint48 end;
         ERC20 baseToken;
     }
 
     /// @notice     Stores the parameters for a particular derivative
     ///
     /// @param      start       The timestamp at which the vesting begins
-    /// @param      expiry      The timestamp at which the vesting ends
+    /// @param      expiry      The timestamp at which the vesting expires
+    /// @param      end         The timestamp at which the vesting redemption ends
     struct VestingParams {
         uint48 start;
         uint48 expiry;
+        uint48 end;
     }
 
     // ========== STATE VARIABLES ========== //
@@ -155,6 +159,7 @@ contract LinearVesting is DerivativeModule {
             VestingData memory data = VestingData({
                 start: params.start,
                 expiry: params.expiry,
+                end: params.end,
                 baseToken: ERC20(underlyingToken_)
             });
 
@@ -211,6 +216,7 @@ contract LinearVesting is DerivativeModule {
             VestingData memory data = VestingData({
                 start: params.start,
                 expiry: params.expiry,
+                end: params.end,
                 baseToken: ERC20(underlyingToken_)
             });
 
@@ -421,8 +427,21 @@ contract LinearVesting is DerivativeModule {
     }
 
     /// @inheritdoc Derivative
-    function reclaim(uint256 tokenId_) external virtual override onlyInternal {
-        // TODO at what point is the derivative considered unredeemable?
+    function reclaim(uint256 tokenId_)
+        external
+        virtual
+        override
+        onlyInternal
+        onlyValidTokenId(tokenId_)
+    {
+        VestingData storage data = vestingData[tokenId_];
+        // Can only be reclaimed after the end date
+        if (block.timestamp < data.end) revert InvalidParams();
+
+        // Transfer underlying tokens to the parent
+        data.baseToken.safeTransfer(PARENT, data.baseToken.balanceOf(address(this)));
+
+        // TODO burn?
     }
 
     /// @inheritdoc Derivative
@@ -485,17 +504,23 @@ contract LinearVesting is DerivativeModule {
     /// @param      data_   The parameters for the derivative token
     /// @return     bool    True if the parameters are valid, otherwise false
     function _validate(VestingData memory data_) internal view returns (bool) {
-        // Revert if start or expiry are 0
-        if (data_.start == 0 || data_.expiry == 0) return false;
+        // Revert if any of the timestamps are 0
+        if (data_.start == 0 || data_.expiry == 0 || data_.end == 0) return false;
 
         // Revert if start and expiry are the same (as it would result in a divide by 0 error)
         if (data_.start == data_.expiry) return false;
 
-        // Check that the start time is before the end time
+        // Check that the start time is before the expiry time
         if (data_.start >= data_.expiry) return false;
+
+        // Check that the expiry time is before the end time
+        if (data_.expiry >= data_.end) return false;
 
         // Check that the expiry time is in the future
         if (data_.expiry < block.timestamp) return false;
+
+        // Check that the end time is in the future
+        if (data_.end < block.timestamp) return false;
 
         // Check that the base token is not the zero address
         if (address(data_.baseToken) == address(0)) return false;
@@ -593,6 +618,7 @@ contract LinearVesting is DerivativeModule {
                 VestingData({
                     start: params_.start,
                     expiry: params_.expiry,
+                    end: params_.end,
                     baseToken: underlyingToken
                 })
             ); // Store this so that the tokenId can be used as a lookup
