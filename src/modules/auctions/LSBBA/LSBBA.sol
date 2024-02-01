@@ -66,7 +66,7 @@ contract LocalSealedBidBatchAuction is AuctionModule {
     /// @param         seed                The seed used to encrypt the amount out
     struct Decrypt {
         uint256 amountOut;
-        uint256 seed;
+        bytes32 seed;
     }
 
     /// @notice        Struct containing auction data

@@ -140,7 +140,7 @@ library RSAOAEP {
         bytes memory label,
         bytes memory e,
         bytes memory n,
-        uint256 seed
+        bytes32 seed
     ) internal view returns (bytes memory) {
         // Implements 7.1.1. RSAES-OAEP-ENCRYPT as defined in RFC8017: https://www.rfc-editor.org/rfc/rfc8017
 
@@ -164,10 +164,10 @@ library RSAOAEP {
         bytes memory db = abi.encodePacked(labelHash, padding, bytes1(0x01), message);
 
         // 2. d. Generate random byte string the same length as the hash function
-        bytes32 rand = sha256(abi.encodePacked(seed));
+        // We require this to be provided as an input to the function since we cannot get randomness in the EVM
 
         // 2. e.  Let dbMask = MGF(seed, nLen - hLen - 1).
-        bytes memory dbMask = _mgf(abi.encodePacked(rand), nLen - 33);
+        bytes memory dbMask = _mgf(abi.encodePacked(seed), nLen - 33);
 
         // 2. f.  Let maskedDB = DB \xor dbMask.
         bytes memory maskedDb = _xor(db, dbMask);
@@ -178,7 +178,7 @@ library RSAOAEP {
             bytes32 seedMask = bytes32(_mgf(maskedDb, 32));
 
             // 2. h.  Let maskedSeed = seed \xor seedMask.
-            maskedSeed = rand ^ seedMask;
+            maskedSeed = seed ^ seedMask;
         }
 
         // 2. i.  Concatenate a single octet with hexadecimal value 0x00,

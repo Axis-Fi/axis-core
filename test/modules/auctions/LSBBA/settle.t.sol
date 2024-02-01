@@ -43,7 +43,7 @@ contract LSBBASettleTest is Test, Permit2User {
 
     uint256 internal constant SCALE = 1e18; // Constants are kept in this scale
 
-    uint256 internal bidSeed = 1e9;
+    bytes32 internal bidSeed = bytes32(uint256(1e9));
     uint96 internal bidOne;
     uint256 internal bidOneAmount = 2e18;
     uint256 internal bidOneAmountOut = 2e18; // Price = 1

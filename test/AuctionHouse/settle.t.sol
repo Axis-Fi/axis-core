@@ -62,7 +62,7 @@ contract SettleTest is Test, Permit2User {
     uint256 internal constant MINIMUM_PRICE = 5e17; // 0.5e18
     uint256 internal _lotCapacity = LOT_CAPACITY;
     uint256 internal constant SCALE = 1e18;
-    uint256 internal constant BID_SEED = 1e9;
+    bytes32 internal constant BID_SEED = bytes32(uint256(1e9));
 
     uint256 internal bidOneAmount = 4e18;
     uint256 internal bidOneAmountOut = 4e18; // Price = 1
