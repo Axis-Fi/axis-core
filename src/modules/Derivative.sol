@@ -82,11 +82,25 @@ abstract contract Derivative {
         bool wrapped_
     ) external virtual returns (uint256, address, uint256);
 
+    function redeemMax(uint256 tokenId_, bool wrapped_) external virtual;
+
     /// @notice Redeem derivative tokens for underlying collateral
     /// @param tokenId_ The ID of the derivative token to redeem
     /// @param amount_ The amount of derivative tokens to redeem
     /// @param wrapped_ Whether (true) or not (false) to redeem wrapped ERC20 derivative tokens
     function redeem(uint256 tokenId_, uint256 amount_, bool wrapped_) external virtual;
+
+    /// @notice     Determines the amount of redeemable tokens for a given derivative token
+    ///
+    /// @param      owner_      The owner of the derivative token
+    /// @param      tokenId_    The ID of the derivative token
+    /// @param      wrapped_    Whether (true) or not (false) to redeem wrapped ERC20 derivative tokens
+    /// @return     amount_     The amount of redeemable tokens
+    function redeemable(
+        address owner_,
+        uint256 tokenId_,
+        bool wrapped_
+    ) external view virtual returns (uint256);
 
     /// @notice Exercise a conversion of the derivative token per the specific implementation logic
     /// @dev Used for options or other derivatives with convertible options, e.g. Rage vesting.
@@ -106,14 +120,23 @@ abstract contract Derivative {
         bool wrapped_
     ) external virtual;
 
-    // Wrap an existing derivative into an ERC20 token for composability
-    // Deploys the ERC20 wrapper if it does not already exist
+    /// @notice     Wrap an existing derivative into an ERC20 token for composability
+    ///             Deploys the ERC20 wrapper if it does not already exist
+    ///
+    /// @param      tokenId_    The ID of the derivative token to wrap
+    /// @param      amount_     The amount of derivative tokens to wrap
     function wrap(uint256 tokenId_, uint256 amount_) external virtual;
 
-    // Unwrap an ERC20 derivative token into the underlying ERC6909 derivative
+    /// @notice     Unwrap an ERC20 derivative token into the underlying ERC6909 derivative
+    ///
+    /// @param      tokenId_    The ID of the derivative token to unwrap
+    /// @param      amount_     The amount of derivative tokens to unwrap
     function unwrap(uint256 tokenId_, uint256 amount_) external virtual;
 
-    // Validate derivative params for the specific implementation
+    /// @notice     Validate derivative params for the specific implementation
+    ///
+    /// @param      params_     The params to validate
+    /// @return     bool        Whether or not the params are valid
     function validate(bytes memory params_) external view virtual returns (bool);
 
     // ========== DERIVATIVE INFORMATION ========== //

@@ -73,7 +73,10 @@ contract LinearVesting is DerivativeModule {
 
     // ========== MODULE SETUP ========== //
 
-    constructor(address parent_) Module(parent_) {}
+    constructor(address parent_, address clone_) Module(parent_) {
+        if (clone_ == address(0)) revert InvalidParams();
+        _clone = clone_;
+    }
 
     /// @inheritdoc Module
     function TYPE() public pure override returns (Type) {
@@ -84,17 +87,6 @@ contract LinearVesting is DerivativeModule {
     function VEECODE() public pure override returns (Veecode) {
         return wrapVeecode(toKeycode("LIV"), 1);
     }
-
-    // TODO
-    // [X] prevent transfer
-    // [X] prevent transferFrom
-    // [X] prevent approve
-    // [X] claim
-    // [X] claimable
-    // [ ] wrap
-    // [ ] unwrap
-    // [X] deploy
-    // [X] mint
 
     // ========== MODIFIERS ========== //
 
@@ -229,19 +221,21 @@ contract LinearVesting is DerivativeModule {
         (uint256 tokenId, address wrappedAddress) =
             _deployIfNeeded(underlyingToken_, params, wrapped_);
 
-        // Check that the wrapped status is correct
-        if (wrappedAddress != address(0) && wrapped_ == false) revert InvalidParams();
-
         // Transfer collateral token to this contract
         ERC20(underlyingToken_).safeTransferFrom(msg.sender, address(this), amount_);
 
-        // If wrapped, mint
-        if (wrapped_) {
-            // TODO
-        }
-        // Otherwise mint as normal
-        else {
+        // If not wrapped, mint as normal
+        if (wrapped_ == false) {
             _mint(to_, tokenId, amount_);
+        }
+        // Otherwise mint the wrapped derivative token
+        else {
+            if (wrappedAddress == address(0)) revert InvalidParams();
+
+            // TODO the total supply of tokenId will not be increased - is that a problem? we would have to mint the derivative token to the ERC20 contract in order to achieve that
+
+            SoulboundCloneERC20 wrappedToken = SoulboundCloneERC20(wrappedAddress);
+            wrappedToken.mint(to_, amount_);
         }
 
         return (tokenId, wrappedAddress, amount_);
@@ -282,35 +276,30 @@ contract LinearVesting is DerivativeModule {
         VestingData memory data = abi.decode(token.data, (VestingData));
         data.baseToken.safeTransferFrom(msg.sender, address(this), amount_);
 
-        // If wrapped, mint
-        if (wrapped_) {
-            // TODO
-            // mint derivative token to ERC20, burn existing derivative token
-        } else {
+        // If not wrapped, mint as normal
+        if (wrapped_ == false) {
             _mint(to_, tokenId_, amount_);
+        }
+        // Otherwise mint the wrapped derivative token
+        else {
+            if (token.wrapped == address(0)) revert InvalidParams();
+
+            // TODO the total supply of tokenId will not be increased - is that a problem? we would have to mint the derivative token to the ERC20 contract in order to achieve that
+
+            SoulboundCloneERC20 wrappedToken = SoulboundCloneERC20(token.wrapped);
+            wrappedToken.mint(to_, amount_);
         }
 
         return (tokenId_, token.wrapped, amount_);
     }
 
-    // TODO redeemMax
-
-    /// @inheritdoc Derivative
-    function redeem(
-        uint256 tokenId_,
-        uint256 amount_,
-        bool wrapped_
-    ) external virtual override onlyValidTokenId(tokenId_) {
-        // TODO check Sablier. Is amount needed? https://github.com/sablier-labs/v2-core/blob/release/src/interfaces/ISablierV2LockupLinear.sol
-        // Get the redeemable amount
-        uint256 redeemableAmount = redeemable(msg.sender, tokenId_);
-
-        // If the redeemable amount is 0, revert
-        if (redeemableAmount == 0) revert InsufficientBalance();
-
-        // If the redeemable amount is less than the requested amount, revert
-        if (redeemableAmount < amount_) revert InsufficientBalance();
-
+    /// @notice     Redeems the derivative token for the underlying base token
+    /// @dev        This function assumes that validation has already been performed
+    ///
+    /// @param      tokenId_    The ID of the derivative token
+    /// @param      amount_     The amount of the derivative token to redeem
+    /// @param      wrapped_    Whether or not to redeem wrapped derivative tokens
+    function _redeem(uint256 tokenId_, uint256 amount_, bool wrapped_) internal {
         // Update claimed amount
         claimed[msg.sender][tokenId_] += amount_;
 
@@ -334,6 +323,40 @@ contract LinearVesting is DerivativeModule {
         emit Redeemed(tokenId_, msg.sender, amount_);
     }
 
+    /// @inheritdoc Derivative
+    function redeemMax(
+        uint256 tokenId_,
+        bool wrapped_
+    ) external virtual override onlyValidTokenId(tokenId_) {
+        // Determine the redeemable amount
+        uint256 redeemableAmount = redeemable(msg.sender, tokenId_, wrapped_);
+
+        // If the redeemable amount is 0, revert
+        if (redeemableAmount == 0) revert InsufficientBalance();
+
+        // Redeem the tokens
+        _redeem(tokenId_, redeemableAmount, wrapped_);
+    }
+
+    /// @inheritdoc Derivative
+    function redeem(
+        uint256 tokenId_,
+        uint256 amount_,
+        bool wrapped_
+    ) external virtual override onlyValidTokenId(tokenId_) {
+        // Get the redeemable amount
+        uint256 redeemableAmount = redeemable(msg.sender, tokenId_, wrapped_);
+
+        // If the redeemable amount is 0, revert
+        if (redeemableAmount == 0) revert InsufficientBalance();
+
+        // If the redeemable amount is less than the requested amount, revert
+        if (redeemableAmount < amount_) revert InsufficientBalance();
+
+        // Redeem the tokens
+        _redeem(tokenId_, amount_, wrapped_);
+    }
+
     /// @notice     Returns the amount of vested tokens that can be redeemed for the underlying base token
     /// @dev        The redeemable amount is computed as:
     ///             - The amount of tokens that have vested
@@ -349,8 +372,9 @@ contract LinearVesting is DerivativeModule {
     /// @return     uint256     The amount of tokens that can be redeemed
     function redeemable(
         address owner_,
-        uint256 tokenId_
-    ) public view onlyValidTokenId(tokenId_) returns (uint256) {
+        uint256 tokenId_,
+        bool wrapped_
+    ) public view virtual override onlyValidTokenId(tokenId_) returns (uint256) {
         // Get the vesting data
         VestingData storage data = vestingData[tokenId_];
 
@@ -392,8 +416,8 @@ contract LinearVesting is DerivativeModule {
     }
 
     /// @inheritdoc Derivative
-    function reclaim(uint256 tokenId_) external virtual override {
-        // TODO
+    function reclaim(uint256 tokenId_) external virtual override onlyInternal {
+        // TODO at what point is the derivative considered unredeemable?
     }
 
     /// @inheritdoc Derivative

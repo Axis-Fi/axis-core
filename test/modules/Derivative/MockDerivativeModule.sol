@@ -200,4 +200,12 @@ contract MockDerivativeModule is DerivativeModule {
 
         return (tokenId, token.wrapped);
     }
+
+    function redeemMax(uint256 tokenId_, bool wrapped_) external virtual override {}
+
+    function redeemable(
+        address owner_,
+        uint256 tokenId_,
+        bool wrapped_
+    ) external view virtual override returns (uint256) {}
 }
