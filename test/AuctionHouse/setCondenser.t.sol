@@ -8,7 +8,7 @@ import {ERC20} from "lib/solmate/src/tokens/ERC20.sol";
 // Mocks
 import {MockERC20} from "lib/solmate/src/test/utils/mocks/MockERC20.sol";
 import {MockAuctionModule} from "test/modules/Auction/MockAuctionModule.sol";
-import {MockDerivativeModule} from "test/modules/Derivative/MockDerivativeModule.sol";
+import {MockDerivativeModule} from "test/modules/derivatives/mocks/MockDerivativeModule.sol";
 import {MockCondenserModule} from "test/modules/Condenser/MockCondenserModule.sol";
 import {Permit2User} from "test/lib/permit2/Permit2User.sol";
 

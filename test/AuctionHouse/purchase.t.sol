@@ -10,7 +10,7 @@ import {IPermit2} from "src/lib/permit2/interfaces/IPermit2.sol";
 import {MockERC20} from "solmate/test/utils/mocks/MockERC20.sol";
 import {MockAtomicAuctionModule} from "test/modules/Auction/MockAtomicAuctionModule.sol";
 import {MockBatchAuctionModule} from "test/modules/Auction/MockBatchAuctionModule.sol";
-import {MockDerivativeModule} from "test/modules/Derivative/MockDerivativeModule.sol";
+import {MockDerivativeModule} from "test/modules/derivatives/mocks/MockDerivativeModule.sol";
 import {MockCondenserModule} from "test/modules/Condenser/MockCondenserModule.sol";
 import {MockAllowlist} from "test/modules/Auction/MockAllowlist.sol";
 import {MockHook} from "test/modules/Auction/MockHook.sol";

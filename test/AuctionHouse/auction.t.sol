@@ -9,7 +9,7 @@ import {ERC20} from "lib/solmate/src/tokens/ERC20.sol";
 import {MockERC20} from "lib/solmate/src/test/utils/mocks/MockERC20.sol";
 import {MockFeeOnTransferERC20} from "test/lib/mocks/MockFeeOnTransferERC20.sol";
 import {MockAtomicAuctionModule} from "test/modules/Auction/MockAtomicAuctionModule.sol";
-import {MockDerivativeModule} from "test/modules/Derivative/MockDerivativeModule.sol";
+import {MockDerivativeModule} from "test/modules/derivatives/mocks/MockDerivativeModule.sol";
 import {MockCondenserModule} from "test/modules/Condenser/MockCondenserModule.sol";
 import {MockAllowlist} from "test/modules/Auction/MockAllowlist.sol";
 import {MockHook} from "test/modules/Auction/MockHook.sol";
