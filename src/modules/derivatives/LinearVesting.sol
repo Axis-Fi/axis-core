@@ -232,8 +232,6 @@ contract LinearVesting is DerivativeModule {
         else {
             if (wrappedAddress == address(0)) revert InvalidParams();
 
-            // TODO the total supply of tokenId will not be increased - is that a problem? we would have to mint the derivative token to the ERC20 contract in order to achieve that
-
             SoulboundCloneERC20 wrappedToken = SoulboundCloneERC20(wrappedAddress);
             wrappedToken.mint(to_, amount_);
         }
@@ -283,8 +281,6 @@ contract LinearVesting is DerivativeModule {
         // Otherwise mint the wrapped derivative token
         else {
             if (token.wrapped == address(0)) revert InvalidParams();
-
-            // TODO the total supply of tokenId will not be increased - is that a problem? we would have to mint the derivative token to the ERC20 contract in order to achieve that
 
             SoulboundCloneERC20 wrappedToken = SoulboundCloneERC20(token.wrapped);
             wrappedToken.mint(to_, amount_);
@@ -378,17 +374,19 @@ contract LinearVesting is DerivativeModule {
         // Get the vesting data
         VestingData storage data = vestingData[tokenId_];
 
-        // TODO needs wrapped_
-
         // If before the start time, 0
         if (block.timestamp < data.start) return 0;
 
-        // TODO what if there is a wrapped balance?
-        uint256 ownerBalance = balanceOf[owner_][tokenId_];
+        // Total = wrapped + derivative + claimed
+        Token storage token = tokenMetadata[tokenId_];
+        uint256 wrappedBalance =
+            token.wrapped == address(0) ? 0 : SoulboundCloneERC20(token.wrapped).balanceOf(owner_);
+        uint256 derivativeBalance = balanceOf[owner_][tokenId_];
         uint256 claimedBalance = claimed[owner_][tokenId_];
-        uint256 totalAmount = ownerBalance + claimedBalance;
-        uint256 vested;
+        uint256 totalAmount = derivativeBalance + wrappedBalance + claimedBalance;
 
+        // Determine the amount that has been vested
+        uint256 vested;
         // If after the end time, all tokens are redeemable
         if (block.timestamp >= data.expiry) {
             vested = totalAmount;
@@ -406,7 +404,14 @@ contract LinearVesting is DerivativeModule {
         // Deduct already claimed tokens
         vested -= claimedBalance;
 
-        return vested;
+        // The redeemable amount is dependent on whether or not the wrapped derivative is being redeemed
+        // The vested amount could be split across wrapped and unwrapped tokens
+        // Therefore, return the minimum of the two
+        if (wrapped_) {
+            return wrappedBalance < vested ? wrappedBalance : vested;
+        } else {
+            return derivativeBalance < vested ? derivativeBalance : vested;
+        }
     }
 
     /// @inheritdoc Derivative
