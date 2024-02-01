@@ -63,7 +63,7 @@ contract RSAOAEP_FFITest is Test {
         string[] memory inputs = new string[](3);
         inputs[0] = "bash";
         inputs[1] = "-c";
-        inputs[2] = string.concat(executable, " encrypt 1024 ", message, " ", label, " ", e, " ", n, " ", seed);
+        inputs[2] = string.concat(executable, " encrypt ", message, " ", label, " ", e, " ", n, " ", seed);
 
         // Execute the FFI
         bytes memory cipherText = vm.ffi(inputs);
@@ -85,7 +85,7 @@ contract RSAOAEP_FFITest is Test {
         string[] memory inputs = new string[](3);
         inputs[0] = "bash";
         inputs[1] = "-c";
-        inputs[2] = string.concat(executable, " decrypt 1024 ", cipherText, " ", label, " ", d, " ", n);
+        inputs[2] = string.concat(executable, " decrypt ", cipherText, " ", label, " ", d, " ", n);
 
         // Execute the FFI
         bytes memory result = vm.ffi(inputs);
