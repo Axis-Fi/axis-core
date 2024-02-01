@@ -4,7 +4,7 @@ pragma solidity ^0.8;
 // Some fancy math to convert a uint into a string, courtesy of Provable Things.
 // Updated to work with solc 0.8.0.
 // https://github.com/provable-things/ethereum-api/blob/master/provableAPI_0.6.sol
-function _uint2str(uint256 _i) pure returns (string memory) {
+function uint2str(uint256 _i) pure returns (string memory) {
     if (_i == 0) {
         return "0";
     }
