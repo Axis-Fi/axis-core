@@ -355,12 +355,7 @@ contract LinearVesting is DerivativeModule {
 
     /// @inheritdoc Derivative
     /// @dev        Not implemented
-    function transform(
-        uint256,
-        address,
-        uint256,
-        bool
-    ) external virtual override {
+    function transform(uint256, address, uint256, bool) external virtual override {
         revert Derivative.Derivative_NotImplemented();
     }
 
