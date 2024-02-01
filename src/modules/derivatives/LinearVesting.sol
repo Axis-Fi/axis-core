@@ -174,6 +174,7 @@ contract LinearVesting is DerivativeModule {
     ///             - The parameters are in an invalid format
     ///             - The parameters fail validation
     ///             - `amount_` is 0
+    ///             - `to_` is the zero address
     ///
     /// @param      to_                 The address of the recipient of the derivative token
     /// @param      underlyingToken_    The address of the underlying token
@@ -197,6 +198,8 @@ contract LinearVesting is DerivativeModule {
     {
         // Can't mint 0
         if (amount_ == 0) revert InvalidParams();
+        // Can't mint to 0
+        if (to_ == address(0)) revert InvalidParams();
 
         // Decode parameters
         VestingParams memory params = abi.decode(params_, (VestingParams));
@@ -234,6 +237,7 @@ contract LinearVesting is DerivativeModule {
     ///             This function reverts if:
     ///             - `tokenId_` does not exist
     ///             - The amount to mint is 0
+    ///             - `to_` is the zero address
     ///
     /// @param      to_                 The address of the recipient of the derivative token
     /// @param      tokenId_            The ID of the derivative token
@@ -250,6 +254,8 @@ contract LinearVesting is DerivativeModule {
     ) external virtual override onlyValidTokenId(tokenId_) returns (uint256, address, uint256) {
         // Can't mint 0
         if (amount_ == 0) revert InvalidParams();
+        // Can't mint to 0
+        if (to_ == address(0)) revert InvalidParams();
 
         Token storage token = tokenMetadata[tokenId_];
 

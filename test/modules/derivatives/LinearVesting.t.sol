@@ -173,6 +173,17 @@ contract LinearVestingTest is Test, Permit2User {
 
     modifier givenParentHasUnderlyingTokenBalance(uint256 balance_) {
         underlyingToken.mint(address(auctionHouse), balance_);
+
+        vm.prank(address(auctionHouse));
+        underlyingToken.approve(address(linearVesting), balance_);
+        _;
+    }
+
+    modifier givenCallerHasUnderlyingTokenBalance(address caller_, uint256 balance_) {
+        underlyingToken.mint(caller_, balance_);
+
+        vm.prank(address(caller_));
+        underlyingToken.approve(address(linearVesting), balance_);
         _;
     }
 
@@ -215,8 +226,8 @@ contract LinearVestingTest is Test, Permit2User {
     //  [X] it deploys the token and wrapped token
     // [X] when the caller is not the parent
     //  [X] it succeeds
-    // [ ] when the parameters change
-    //  [ ] it returns a different token id
+    // [X] when the parameters change
+    //  [X] it returns a different token id
 
     function test_deploy_incorrectParams_reverts() public givenVestingParamsAreInvalid {
         // Expect revert
@@ -628,57 +639,371 @@ contract LinearVestingTest is Test, Permit2User {
     }
 
     // computeId
-    // [ ] when the params are in the incorrect format
-    //  [ ] it reverts
-    // [ ] when the params are changed
-    //  [ ] it returns a different id
-    // [ ] it deterministically computes the token id
+    // [X] when the params are in the incorrect format
+    //  [X] it reverts
+    // [X] when the params are changed
+    //  [X] it returns a different id
+    // [X] it deterministically computes the token id
+
+    function test_computeId_incorrectParams_reverts() public givenVestingParamsAreInvalid {
+        // Expect revert
+        vm.expectRevert();
+
+        // Call
+        linearVesting.computeId(vestingParamsBytes);
+    }
+
+    function test_computeId_paramsChanged()
+        public
+        givenDerivativeIsDeployed
+        whenVestingParamsAreChanged
+    {
+        // Call
+        uint256 tokenId = linearVesting.computeId(vestingParamsBytes);
+
+        // Check values
+        assertFalse(tokenId == derivativeTokenId);
+    }
+
+    function test_computeId() public givenDerivativeIsDeployed {
+        // Call
+        uint256 tokenId = linearVesting.computeId(vestingParamsBytes);
+
+        // Check values
+        assertEq(tokenId, derivativeTokenId);
+    }
 
     // mint with params
-    // [ ] when the vesting params are in the incorrect format
-    //  [ ] it reverts
-    // [ ] when the underlying token is 0
-    //  [ ] it reverts
-    // [ ] when the start timestamp is 0
-    //  [ ] it reverts
-    // [ ] when the expiry timestamp is 0
-    //  [ ] it reverts
-    // [ ] when the end timestamp is 0
-    //  [ ] it reverts
-    // [ ] when the start and expiry timestamps are the same
-    //  [ ] it reverts
-    // [ ] when the expiry and end timestamps are the same
-    //  [ ] it reverts
-    // [ ] when the start and end timestamps are the same
-    //  [ ] it reverts
-    // [ ] when the start timestamp is after the expiry timestamp
-    //  [ ] it reverts
-    // [ ] when the expiry timestamp is after the end timestamp
-    //  [ ] it reverts
-    // [ ] when the start timestamp is after the end timestamp
-    //  [ ] it reverts
-    // [ ] when the start timestamp is before the current timestamp
-    //  [ ] it reverts
-    // [ ] when the expiry timestamp is before the current timestamp
-    //  [ ] it reverts
-    // [ ] when the end timestamp is before the current timestamp
-    //  [ ] it reverts
-    // [ ] when the mint amount is 0
-    //  [ ] it reverts
-    // [ ] when the recipient is 0
-    //  [ ] it reverts
-    // [ ] given the caller has an insufficient balance of the underlying token
-    //  [ ] it reverts
-    // [ ] when wrapped is false
-    //  [ ] given the token is not deployed
-    //   [ ] it deploys the token and mints the derivative token
-    //  [ ] it mints the derivative token
-    // [ ] when wrapped is true
-    //  [ ] given the wrapped token is not deployed
-    //   [ ] it deploys the wrapped token and mints the wrapped token
-    //  [ ] it mints the wrapped token
-    // [ ] when the caller is not the parent
-    //  [ ] it succeeds
+    // [X] when the vesting params are in the incorrect format
+    //  [X] it reverts
+    // [X] when the underlying token is 0
+    //  [X] it reverts
+    // [X] when the start timestamp is 0
+    //  [X] it reverts
+    // [X] when the expiry timestamp is 0
+    //  [X] it reverts
+    // [X] when the end timestamp is 0
+    //  [X] it reverts
+    // [X] when the start and expiry timestamps are the same
+    //  [X] it reverts
+    // [X] when the expiry and end timestamps are the same
+    //  [X] it reverts
+    // [X] when the start and end timestamps are the same
+    //  [X] it reverts
+    // [X] when the start timestamp is after the expiry timestamp
+    //  [X] it reverts
+    // [X] when the expiry timestamp is after the end timestamp
+    //  X ] it reverts
+    // [X] when the start timestamp is after the end timestamp
+    //  [X] it reverts
+    // [X] when the start timestamp is before the current timestamp
+    //  [X] it reverts
+    // [X] when the expiry timestamp is before the current timestamp
+    //  [X] it reverts
+    // [X] when the end timestamp is before the current timestamp
+    //  [X] it reverts
+    // [X] when the mint amount is 0
+    //  [X] it reverts
+    // [X] when the recipient is 0
+    //  [X] it reverts
+    // [X] given the caller has an insufficient balance of the underlying token
+    //  [X] it reverts
+    // [X] when wrapped is false
+    //  [X] given the token is not deployed
+    //   [X] it deploys the token and mints the derivative token
+    //  [X] it mints the derivative token
+    // [X] when wrapped is true
+    //  [X] given the wrapped token is not deployed
+    //   [X] it deploys the wrapped token and mints the wrapped token
+    //  [X] it mints the wrapped token
+    // [X] when the caller is not the parent
+    //  [X] it succeeds
+
+    function test_mint_params_incorrectParams_reverts() public givenVestingParamsAreInvalid {
+        // Expect revert
+        vm.expectRevert();
+
+        // Call
+        vm.prank(address(auctionHouse));
+        linearVesting.mint(_alice, underlyingTokenAddress, vestingParamsBytes, AMOUNT, false);
+    }
+
+    function test_mint_params_underlyingTokenIsZero_reverts() public whenUnderlyingTokenIsZero {
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(LinearVesting.InvalidParams.selector);
+        vm.expectRevert(err);
+
+        // Call
+        vm.prank(address(auctionHouse));
+        linearVesting.mint(_alice, underlyingTokenAddress, vestingParamsBytes, AMOUNT, false);
+    }
+
+    function test_mint_params_startTimestampIsZero_reverts() public whenStartTimestampIsZero {
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(LinearVesting.InvalidParams.selector);
+        vm.expectRevert(err);
+
+        // Call
+        vm.prank(address(auctionHouse));
+        linearVesting.mint(_alice, underlyingTokenAddress, vestingParamsBytes, AMOUNT, false);
+    }
+
+    function test_mint_params_expiryTimestampIsZero_reverts() public whenExpiryTimestampIsZero {
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(LinearVesting.InvalidParams.selector);
+        vm.expectRevert(err);
+
+        // Call
+        vm.prank(address(auctionHouse));
+        linearVesting.mint(_alice, underlyingTokenAddress, vestingParamsBytes, AMOUNT, false);
+    }
+
+    function test_mint_params_endTimestampIsZero_reverts() public whenEndTimestampIsZero {
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(LinearVesting.InvalidParams.selector);
+        vm.expectRevert(err);
+
+        // Call
+        vm.prank(address(auctionHouse));
+        linearVesting.mint(_alice, underlyingTokenAddress, vestingParamsBytes, AMOUNT, false);
+    }
+
+    function test_mint_params_startAndExpiryTimestampsAreTheSame_reverts()
+        public
+        whenStartAndExpiryTimestampsAreTheSame
+    {
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(LinearVesting.InvalidParams.selector);
+        vm.expectRevert(err);
+
+        // Call
+        vm.prank(address(auctionHouse));
+        linearVesting.mint(_alice, underlyingTokenAddress, vestingParamsBytes, AMOUNT, false);
+    }
+
+    function test_mint_params_expiryAndEndTimestampsAreTheSame_reverts()
+        public
+        whenExpiryAndEndTimestampsAreTheSame
+    {
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(LinearVesting.InvalidParams.selector);
+        vm.expectRevert(err);
+
+        // Call
+        vm.prank(address(auctionHouse));
+        linearVesting.mint(_alice, underlyingTokenAddress, vestingParamsBytes, AMOUNT, false);
+    }
+
+    function test_mint_params_startAndEndTimestampsAreTheSame_reverts()
+        public
+        whenStartAndEndTimestampsAreTheSame
+    {
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(LinearVesting.InvalidParams.selector);
+        vm.expectRevert(err);
+
+        // Call
+        vm.prank(address(auctionHouse));
+        linearVesting.mint(_alice, underlyingTokenAddress, vestingParamsBytes, AMOUNT, false);
+    }
+
+    function test_mint_params_startTimestampIsAfterExpiryTimestamp_reverts()
+        public
+        whenStartTimestampIsAfterExpiryTimestamp
+    {
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(LinearVesting.InvalidParams.selector);
+        vm.expectRevert(err);
+
+        // Call
+        vm.prank(address(auctionHouse));
+        linearVesting.mint(_alice, underlyingTokenAddress, vestingParamsBytes, AMOUNT, false);
+    }
+
+    function test_mint_params_expiryTimestampIsAfterEndTimestamp_reverts()
+        public
+        whenExpiryTimestampIsAfterEndTimestamp
+    {
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(LinearVesting.InvalidParams.selector);
+        vm.expectRevert(err);
+
+        // Call
+        vm.prank(address(auctionHouse));
+        linearVesting.mint(_alice, underlyingTokenAddress, vestingParamsBytes, AMOUNT, false);
+    }
+
+    function test_mint_params_startTimestampIsAfterEndTimestamp_reverts()
+        public
+        whenStartTimestampIsAfterEndTimestamp
+    {
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(LinearVesting.InvalidParams.selector);
+        vm.expectRevert(err);
+
+        // Call
+        vm.prank(address(auctionHouse));
+        linearVesting.mint(_alice, underlyingTokenAddress, vestingParamsBytes, AMOUNT, false);
+    }
+
+    function test_mint_params_startTimestampIsBeforeCurrentTimestamp_reverts()
+        public
+        whenStartTimestampIsBeforeCurrentTimestamp
+    {
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(LinearVesting.InvalidParams.selector);
+        vm.expectRevert(err);
+
+        // Call
+        vm.prank(address(auctionHouse));
+        linearVesting.mint(_alice, underlyingTokenAddress, vestingParamsBytes, AMOUNT, false);
+    }
+
+    function test_mint_params_expiryTimestampIsBeforeCurrentTimestamp_reverts()
+        public
+        whenExpiryTimestampIsBeforeCurrentTimestamp
+    {
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(LinearVesting.InvalidParams.selector);
+        vm.expectRevert(err);
+
+        // Call
+        vm.prank(address(auctionHouse));
+        linearVesting.mint(_alice, underlyingTokenAddress, vestingParamsBytes, AMOUNT, false);
+    }
+
+    function test_mint_params_endTimestampIsBeforeCurrentTimestamp_reverts()
+        public
+        whenEndTimestampIsBeforeCurrentTimestamp
+    {
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(LinearVesting.InvalidParams.selector);
+        vm.expectRevert(err);
+
+        // Call
+        vm.prank(address(auctionHouse));
+        linearVesting.mint(_alice, underlyingTokenAddress, vestingParamsBytes, AMOUNT, false);
+    }
+
+    function test_mint_params_mintAmountIsZero_reverts() public {
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(LinearVesting.InvalidParams.selector);
+        vm.expectRevert(err);
+
+        // Call
+        vm.prank(address(auctionHouse));
+        linearVesting.mint(_alice, underlyingTokenAddress, vestingParamsBytes, 0, false);
+    }
+
+    function test_mint_params_recipientIsZero_reverts() public {
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(LinearVesting.InvalidParams.selector);
+        vm.expectRevert(err);
+
+        // Call
+        vm.prank(address(auctionHouse));
+        linearVesting.mint(address(0), underlyingTokenAddress, vestingParamsBytes, AMOUNT, false);
+    }
+
+    function test_mint_params_insufficentBalance_reverts() public {
+        // Expect revert
+        vm.expectRevert("TRANSFER_FROM_FAILED");
+
+        // Call
+        vm.prank(address(auctionHouse));
+        linearVesting.mint(_alice, underlyingTokenAddress, vestingParamsBytes, AMOUNT, false);
+    }
+
+    function test_mint_params_notWrapped_tokenNotDeployed()
+        public
+        givenParentHasUnderlyingTokenBalance(AMOUNT)
+    {
+        // Call
+        vm.prank(address(auctionHouse));
+        (uint256 tokenId, address wrappedAddress, uint256 amountCreated) =
+            linearVesting.mint(_alice, underlyingTokenAddress, vestingParamsBytes, AMOUNT, true);
+
+        // Check values
+        assertTrue(tokenId > 0);
+        assertTrue(wrappedAddress == address(0));
+        assertEq(amountCreated, AMOUNT);
+    }
+
+    function test_mint_params_notWrapped_tokenDeployed()
+        public
+        givenParentHasUnderlyingTokenBalance(AMOUNT)
+        givenDerivativeIsDeployed
+    {
+        // Call
+        vm.prank(address(auctionHouse));
+        (uint256 tokenId, address wrappedAddress, uint256 amountCreated) =
+            linearVesting.mint(_alice, underlyingTokenAddress, vestingParamsBytes, AMOUNT, true);
+
+        // Check values
+        assertTrue(tokenId > 0);
+        assertTrue(wrappedAddress == address(0));
+        assertEq(amountCreated, AMOUNT);
+    }
+
+    function test_mint_params_wrapped_wrappedTokenIsNotDeployed()
+        public
+        givenParentHasUnderlyingTokenBalance(AMOUNT)
+        givenDerivativeIsDeployed
+    {
+        // Call
+        vm.prank(address(auctionHouse));
+        (uint256 tokenId, address wrappedAddress, uint256 amountCreated) =
+            linearVesting.mint(_alice, underlyingTokenAddress, vestingParamsBytes, AMOUNT, true);
+
+        // Check values
+        assertTrue(tokenId > 0);
+        assertTrue(wrappedAddress != address(0));
+        assertEq(amountCreated, AMOUNT);
+    }
+
+    function test_mint_params_wrapped_wrappedTokenIsDeployed()
+        public
+        givenParentHasUnderlyingTokenBalance(AMOUNT)
+        givenWrappedDerivativeIsDeployed
+    {
+        // Call
+        vm.prank(address(auctionHouse));
+        (uint256 tokenId, address wrappedAddress, uint256 amountCreated) =
+            linearVesting.mint(_alice, underlyingTokenAddress, vestingParamsBytes, AMOUNT, true);
+
+        // Check values
+        assertEq(tokenId, derivativeTokenId);
+        assertEq(wrappedAddress, derivativeWrappedAddress);
+        assertEq(amountCreated, AMOUNT);
+    }
+
+    function test_mint_params_notParent()
+        public
+        givenCallerHasUnderlyingTokenBalance(_alice, AMOUNT)
+        givenWrappedDerivativeIsDeployed
+    {
+        // Call
+        vm.prank(_alice);
+        (uint256 tokenId, address wrappedAddress, uint256 amountCreated) =
+            linearVesting.mint(_alice, underlyingTokenAddress, vestingParamsBytes, AMOUNT, true);
+
+        // Check values
+        assertEq(tokenId, derivativeTokenId);
+        assertEq(wrappedAddress, derivativeWrappedAddress);
+        assertEq(amountCreated, AMOUNT);
+    }
+
+    function test_mint_params_notParent_insufficientBalance_reverts()
+        public
+        givenWrappedDerivativeIsDeployed
+    {
+        // Expect revert
+        vm.expectRevert("TRANSFER_FROM_FAILED");
+
+        // Call
+        vm.prank(_alice);
+        linearVesting.mint(_alice, underlyingTokenAddress, vestingParamsBytes, AMOUNT, false);
+    }
 
     // mint with token id
     // [ ] when the token id does not exist
