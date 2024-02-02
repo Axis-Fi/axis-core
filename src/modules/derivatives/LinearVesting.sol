@@ -63,6 +63,8 @@ contract LinearVesting is DerivativeModule {
         uint48 expiry;
     }
 
+    uint256 internal immutable _VESTING_PARAMS_LEN = 64;
+
     // ========== STATE VARIABLES ========== //
 
     /// @notice     Stores the clonable implementation of the wrapped derivative token
@@ -501,6 +503,8 @@ contract LinearVesting is DerivativeModule {
     ///
     /// @param      params_     The abi-encoded `VestingParams` for the derivative token
     function validate(bytes memory params_) public view virtual override returns (bool) {
+        if (params_.length != _VESTING_PARAMS_LEN) revert();
+
         // Decode the parameters
         VestingParams memory data = abi.decode(params_, (VestingParams));
 
