@@ -70,11 +70,9 @@ contract LinearVesting is DerivativeModule {
     /// @notice     Stores the clonable implementation of the wrapped derivative token
     address internal immutable _IMPLEMENTATION;
 
-    /// @notice     Stores the vesting data for a particular token id
-    mapping(uint256 tokenId => VestingData) public vestingData;
-
     /// @notice     Stores the amount of tokens that have been claimed for a particular token id and owner
-    mapping(address owner => mapping(uint256 tokenId => uint256 claimed)) internal claimed;
+    mapping(address owner => mapping(uint256 tokenId => mapping(bool wrapped => uint256))) internal
+        claimed;
 
     // ========== MODULE SETUP ========== //
 
@@ -292,7 +290,9 @@ contract LinearVesting is DerivativeModule {
     /// @param      wrapped_    Whether or not to redeem wrapped derivative tokens
     function _redeem(uint256 tokenId_, uint256 amount_, bool wrapped_) internal {
         // Update claimed amount
-        claimed[msg.sender][tokenId_] += amount_;
+        claimed[msg.sender][tokenId_][wrapped_] += amount_;
+
+        Token storage tokenData = tokenMetadata[tokenId_];
 
         // Burn the derivative token
         if (wrapped_ == false) {
@@ -300,7 +300,6 @@ contract LinearVesting is DerivativeModule {
         }
         // Burn the wrapped derivative token
         else {
-            Token storage tokenData = tokenMetadata[tokenId_];
             if (tokenData.wrapped == address(0)) revert InvalidParams();
 
             SoulboundCloneERC20 wrappedToken = SoulboundCloneERC20(tokenData.wrapped);
@@ -308,7 +307,8 @@ contract LinearVesting is DerivativeModule {
         }
 
         // Transfer the underlying token to the owner
-        vestingData[tokenId_].baseToken.safeTransfer(msg.sender, amount_);
+        VestingData memory vestingData = abi.decode(tokenData.data, (VestingData));
+        vestingData.baseToken.safeTransfer(msg.sender, amount_);
 
         // Emit event
         emit Redeemed(tokenId_, msg.sender, amount_);
@@ -339,7 +339,7 @@ contract LinearVesting is DerivativeModule {
         uint256 redeemableAmount = redeemable(msg.sender, tokenId_, wrapped_);
 
         // If the redeemable amount is 0, revert
-        if (redeemableAmount == 0) revert InsufficientBalance();
+        // if (redeemableAmount == 0) revert InsufficientBalance();
 
         // If the redeemable amount is less than the requested amount, revert
         if (redeemableAmount < amount_) revert InsufficientBalance();
@@ -367,20 +367,26 @@ contract LinearVesting is DerivativeModule {
         bool wrapped_
     ) public view virtual override onlyValidTokenId(tokenId_) returns (uint256) {
         // Get the vesting data
-        VestingData storage data = vestingData[tokenId_];
+        Token storage token = tokenMetadata[tokenId_];
+        VestingData memory data = abi.decode(token.data, (VestingData));
 
         // If before the start time, 0
-        if (block.timestamp < data.start) return 0;
+        if (block.timestamp <= data.start) return 0;
 
-        // Total = wrapped + derivative + claimed
-        Token storage token = tokenMetadata[tokenId_];
-        uint256 wrappedBalance =
-            token.wrapped == address(0) ? 0 : SoulboundCloneERC20(token.wrapped).balanceOf(owner_);
-        uint256 derivativeBalance = balanceOf[owner_][tokenId_];
-        uint256 claimedBalance = claimed[owner_][tokenId_];
-        uint256 totalAmount = derivativeBalance + wrappedBalance + claimedBalance;
+        // Handle the case where the wrapped derivative is not deployed
+        if (wrapped_ == true && token.wrapped == address(0)) return 0;
 
-        // Determine the amount that has been vested
+        // Get balances
+        uint256 derivativeBalance;
+        if (wrapped_) {
+            derivativeBalance = SoulboundCloneERC20(token.wrapped).balanceOf(owner_);
+        } else {
+            derivativeBalance = balanceOf[owner_][tokenId_];
+        }
+        uint256 claimedBalance = claimed[owner_][tokenId_][wrapped_];
+        uint256 totalAmount = derivativeBalance + claimedBalance;
+
+        // Determine the amount that has been vested until date, excluding what has already been claimed
         uint256 vested;
         // If after the expiry time, all tokens are redeemable
         if (block.timestamp >= data.expiry) {
@@ -399,14 +405,7 @@ contract LinearVesting is DerivativeModule {
         // Deduct already claimed tokens
         vested -= claimedBalance;
 
-        // The redeemable amount is dependent on whether or not the wrapped derivative is being redeemed
-        // The vested amount could be split across wrapped and unwrapped tokens
-        // Therefore, return the minimum of the two
-        if (wrapped_) {
-            return wrappedBalance < vested ? wrappedBalance : vested;
-        } else {
-            return derivativeBalance < vested ? derivativeBalance : vested;
-        }
+        return vested;
     }
 
     /// @inheritdoc Derivative
@@ -447,6 +446,8 @@ contract LinearVesting is DerivativeModule {
         // Mint the wrapped derivative
         SoulboundCloneERC20(token.wrapped).mint(msg.sender, amount_);
 
+        // TODO adjust claimed
+
         emit Wrapped(tokenId_, msg.sender, amount_, token.wrapped);
     }
 
@@ -468,6 +469,8 @@ contract LinearVesting is DerivativeModule {
         // Mint the derivative token
         _mint(msg.sender, tokenId_, amount_);
 
+        // TODO adjust claimed
+
         emit Unwrapped(tokenId_, msg.sender, amount_, token.wrapped);
     }
 
@@ -476,7 +479,9 @@ contract LinearVesting is DerivativeModule {
     ///             - The start and expiry times are not 0
     ///             - The start time is before the expiry time
     ///             - The expiry time is in the future
-    ///             - The base token is not the zero address
+    ///
+    ///             The start time does not have to be before the current block timestamp,
+    ///             as it is possible to deploy and mint derivative tokens after the start time.
     ///
     /// @param      data_   The parameters for the derivative token
     /// @return     bool    True if the parameters are valid, otherwise false
@@ -489,9 +494,6 @@ contract LinearVesting is DerivativeModule {
 
         // Check that the start time is before the expiry time
         if (data_.start >= data_.expiry) return false;
-
-        // Check that the start time is in the future
-        if (data_.start < block.timestamp) return false;
 
         // Check that the expiry time is in the future
         if (data_.expiry < block.timestamp) return false;
@@ -597,11 +599,9 @@ contract LinearVesting is DerivativeModule {
                     baseToken: underlyingToken
                 })
             ); // Store this so that the tokenId can be used as a lookup
-                // TODO are the other metadata fields needed?
 
             tokenMetadata[tokenId_] = token;
 
-            // Add as a lot derivative
             // TODO needs lotId
 
             // Emit event
