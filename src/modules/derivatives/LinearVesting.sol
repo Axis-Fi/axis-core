@@ -45,12 +45,10 @@ contract LinearVesting is DerivativeModule {
     ///
     /// @param      start       The timestamp at which the vesting begins
     /// @param      expiry      The timestamp at which the vesting expires
-    /// @param      end         The timestamp at which the vesting redemption ends
     /// @param      baseToken   The address of the token to vest
     struct VestingData {
         uint48 start;
         uint48 expiry;
-        uint48 end;
         ERC20 baseToken;
     }
 
@@ -58,11 +56,9 @@ contract LinearVesting is DerivativeModule {
     ///
     /// @param      start       The timestamp at which the vesting begins
     /// @param      expiry      The timestamp at which the vesting expires
-    /// @param      end         The timestamp at which the vesting redemption ends
     struct VestingParams {
         uint48 start;
         uint48 expiry;
-        uint48 end;
     }
 
     // ========== STATE VARIABLES ========== //
@@ -353,7 +349,7 @@ contract LinearVesting is DerivativeModule {
     ///               - x: number of vestable tokens
     ///               - t: current timestamp
     ///               - s: start timestamp
-    ///               - T: end timestamp
+    ///               - T: expiry timestamp
     ///               - Vested = x * (t - s) / (T - s)
     ///             - Minus the amount of tokens that have already been redeemed
     ///
@@ -381,11 +377,11 @@ contract LinearVesting is DerivativeModule {
 
         // Determine the amount that has been vested
         uint256 vested;
-        // If after the end time, all tokens are redeemable
+        // If after the expiry time, all tokens are redeemable
         if (block.timestamp >= data.expiry) {
             vested = totalAmount;
         }
-        // If before the end time, calculate what has vested already
+        // If before the expiry time, calculate what has vested already
         else {
             vested = (totalAmount * (block.timestamp - data.start)) / (data.expiry - data.start);
         }
@@ -394,8 +390,6 @@ contract LinearVesting is DerivativeModule {
         if (vested < claimedBalance) {
             revert BrokenInvariant();
         }
-
-        // TODO what happens after the end timestamp?
 
         // Deduct already claimed tokens
         vested -= claimedBalance;
@@ -483,7 +477,7 @@ contract LinearVesting is DerivativeModule {
     /// @return     bool    True if the parameters are valid, otherwise false
     function _validate(VestingParams memory data_) internal view returns (bool) {
         // Revert if any of the timestamps are 0
-        if (data_.start == 0 || data_.expiry == 0 || data_.end == 0) return false;
+        if (data_.start == 0 || data_.expiry == 0) return false;
 
         // Revert if start and expiry are the same (as it would result in a divide by 0 error)
         if (data_.start == data_.expiry) return false;
@@ -491,17 +485,11 @@ contract LinearVesting is DerivativeModule {
         // Check that the start time is before the expiry time
         if (data_.start >= data_.expiry) return false;
 
-        // Check that the expiry time is before the end time
-        if (data_.expiry >= data_.end) return false;
-
         // Check that the start time is in the future
         if (data_.start < block.timestamp) return false;
 
         // Check that the expiry time is in the future
         if (data_.expiry < block.timestamp) return false;
-
-        // Check that the end time is in the future
-        if (data_.end < block.timestamp) return false;
 
         return true;
     }
@@ -532,7 +520,7 @@ contract LinearVesting is DerivativeModule {
     ///
     /// @param      base_       The address of the underlying token
     /// @param      start_      The timestamp at which the vesting begins
-    /// @param      expiry_     The timestamp at which the vesting ends
+    /// @param      expiry_     The timestamp at which the vesting expires
     /// @return     uint256     The ID of the derivative token
     function _computeId(
         ERC20 base_,
@@ -557,7 +545,7 @@ contract LinearVesting is DerivativeModule {
     ///
     /// @param      base_       The address of the underlying token
     /// @param      start_      The timestamp at which the vesting begins
-    /// @param      expiry_     The timestamp at which the vesting ends
+    /// @param      expiry_     The timestamp at which the vesting expires
     /// @return     string      The name of the derivative token
     /// @return     string      The symbol of the derivative token
     function _computeNameAndSymbol(
@@ -598,7 +586,6 @@ contract LinearVesting is DerivativeModule {
                 VestingData({
                     start: params_.start,
                     expiry: params_.expiry,
-                    end: params_.end,
                     baseToken: underlyingToken
                 })
             ); // Store this so that the tokenId can be used as a lookup

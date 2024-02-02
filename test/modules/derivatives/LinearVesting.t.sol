@@ -29,7 +29,6 @@ contract LinearVestingTest is Test, Permit2User {
     bytes internal vestingParamsBytes;
     uint48 internal constant vestingStart = 1_000_100;
     uint48 internal constant vestingExpiry = 1_000_200;
-    uint48 internal constant vestingEnd = 1_000_300;
 
     uint256 internal constant AMOUNT = 1e18;
 
@@ -49,11 +48,7 @@ contract LinearVestingTest is Test, Permit2User {
         linearVesting = new LinearVesting(address(auctionHouse), _clone);
         auctionHouse.installModule(linearVesting);
 
-        vestingParams = LinearVesting.VestingParams({
-            start: vestingStart,
-            expiry: vestingExpiry,
-            end: vestingEnd
-        });
+        vestingParams = LinearVesting.VestingParams({start: vestingStart, expiry: vestingExpiry});
         vestingParamsBytes = abi.encode(vestingParams);
     }
 
@@ -81,44 +76,14 @@ contract LinearVestingTest is Test, Permit2User {
         _;
     }
 
-    modifier whenEndTimestampIsZero() {
-        vestingParams.end = 0;
-        vestingParamsBytes = abi.encode(vestingParams);
-        _;
-    }
-
     modifier whenStartAndExpiryTimestampsAreTheSame() {
         vestingParams.expiry = vestingParams.start;
         vestingParamsBytes = abi.encode(vestingParams);
         _;
     }
 
-    modifier whenExpiryAndEndTimestampsAreTheSame() {
-        vestingParams.end = vestingParams.expiry;
-        vestingParamsBytes = abi.encode(vestingParams);
-        _;
-    }
-
-    modifier whenStartAndEndTimestampsAreTheSame() {
-        vestingParams.end = vestingParams.start;
-        vestingParamsBytes = abi.encode(vestingParams);
-        _;
-    }
-
     modifier whenStartTimestampIsAfterExpiryTimestamp() {
         vestingParams.start = vestingParams.expiry + 1;
-        vestingParamsBytes = abi.encode(vestingParams);
-        _;
-    }
-
-    modifier whenExpiryTimestampIsAfterEndTimestamp() {
-        vestingParams.expiry = vestingParams.end + 1;
-        vestingParamsBytes = abi.encode(vestingParams);
-        _;
-    }
-
-    modifier whenStartTimestampIsAfterEndTimestamp() {
-        vestingParams.start = vestingParams.end + 1;
         vestingParamsBytes = abi.encode(vestingParams);
         _;
     }
@@ -131,12 +96,6 @@ contract LinearVestingTest is Test, Permit2User {
 
     modifier whenExpiryTimestampIsBeforeCurrentTimestamp() {
         vestingParams.expiry = uint48(block.timestamp) - 1;
-        vestingParamsBytes = abi.encode(vestingParams);
-        _;
-    }
-
-    modifier whenEndTimestampIsBeforeCurrentTimestamp() {
-        vestingParams.end = uint48(block.timestamp) - 1;
         vestingParamsBytes = abi.encode(vestingParams);
         _;
     }
@@ -198,25 +157,13 @@ contract LinearVestingTest is Test, Permit2User {
     //  [X] it reverts
     // [X] when the expiry timestamp is 0
     //  [X] it reverts
-    // [X] when the end timestamp is 0
-    //  [X] it reverts
     // [X] when the start and expiry timestamps are the same
     //  [X] it reverts
-    // [X] when the expiry and end timestamps are the same
-    //  [X] it reverts
-    // [X] when the start and end timestamps are the same
-    //  [X] it reverts
     // [X] when the start timestamp is after the expiry timestamp
-    //  [X] it reverts
-    // [X] when the expiry timestamp is after the end timestamp
-    //  [X] it reverts
-    // [X] when the start timestamp is after the end timestamp
     //  [X] it reverts
     // [X] when the start timestamp is before the current timestamp
     //  [X] it reverts
     // [X] when the expiry timestamp is before the current timestamp
-    //  [X] it reverts
-    // [X] when the end timestamp is before the current timestamp
     //  [X] it reverts
     // [X] given the token is already deployed
     //  [X] given the wrapped token is already deployed
@@ -264,15 +211,6 @@ contract LinearVestingTest is Test, Permit2User {
         linearVesting.deploy(underlyingTokenAddress, vestingParamsBytes, false);
     }
 
-    function test_deploy_endTimestampIsZero_reverts() public whenEndTimestampIsZero {
-        // Expect revert
-        bytes memory err = abi.encodeWithSelector(LinearVesting.InvalidParams.selector);
-        vm.expectRevert(err);
-
-        // Call
-        linearVesting.deploy(underlyingTokenAddress, vestingParamsBytes, false);
-    }
-
     function test_deploy_startAndExpiryTimestampsAreTheSame_reverts()
         public
         whenStartAndExpiryTimestampsAreTheSame
@@ -285,57 +223,9 @@ contract LinearVestingTest is Test, Permit2User {
         linearVesting.deploy(underlyingTokenAddress, vestingParamsBytes, false);
     }
 
-    function test_deploy_expiryAndEndTimestampsAreTheSame_reverts()
-        public
-        whenExpiryAndEndTimestampsAreTheSame
-    {
-        // Expect revert
-        bytes memory err = abi.encodeWithSelector(LinearVesting.InvalidParams.selector);
-        vm.expectRevert(err);
-
-        // Call
-        linearVesting.deploy(underlyingTokenAddress, vestingParamsBytes, false);
-    }
-
-    function test_deploy_startAndEndTimestampsAreTheSame_reverts()
-        public
-        whenStartAndEndTimestampsAreTheSame
-    {
-        // Expect revert
-        bytes memory err = abi.encodeWithSelector(LinearVesting.InvalidParams.selector);
-        vm.expectRevert(err);
-
-        // Call
-        linearVesting.deploy(underlyingTokenAddress, vestingParamsBytes, false);
-    }
-
     function test_deploy_startTimestampIsAfterExpiryTimestamp_reverts()
         public
         whenStartTimestampIsAfterExpiryTimestamp
-    {
-        // Expect revert
-        bytes memory err = abi.encodeWithSelector(LinearVesting.InvalidParams.selector);
-        vm.expectRevert(err);
-
-        // Call
-        linearVesting.deploy(underlyingTokenAddress, vestingParamsBytes, false);
-    }
-
-    function test_deploy_expiryTimestampIsAfterEndTimestamp_reverts()
-        public
-        whenExpiryTimestampIsAfterEndTimestamp
-    {
-        // Expect revert
-        bytes memory err = abi.encodeWithSelector(LinearVesting.InvalidParams.selector);
-        vm.expectRevert(err);
-
-        // Call
-        linearVesting.deploy(underlyingTokenAddress, vestingParamsBytes, false);
-    }
-
-    function test_deploy_startTimestampIsAfterEndTimestamp_reverts()
-        public
-        whenStartTimestampIsAfterEndTimestamp
     {
         // Expect revert
         bytes memory err = abi.encodeWithSelector(LinearVesting.InvalidParams.selector);
@@ -360,18 +250,6 @@ contract LinearVestingTest is Test, Permit2User {
     function test_deploy_expiryTimestampIsBeforeCurrentTimestamp_reverts()
         public
         whenExpiryTimestampIsBeforeCurrentTimestamp
-    {
-        // Expect revert
-        bytes memory err = abi.encodeWithSelector(LinearVesting.InvalidParams.selector);
-        vm.expectRevert(err);
-
-        // Call
-        linearVesting.deploy(underlyingTokenAddress, vestingParamsBytes, false);
-    }
-
-    function test_deploy_endTimestampIsBeforeCurrentTimestamp_reverts()
-        public
-        whenEndTimestampIsBeforeCurrentTimestamp
     {
         // Expect revert
         bytes memory err = abi.encodeWithSelector(LinearVesting.InvalidParams.selector);
@@ -477,25 +355,13 @@ contract LinearVestingTest is Test, Permit2User {
     //  [X] it returns false
     // [X] when the expiry timestamp is 0
     //  [X] it returns false
-    // [X] when the end timestamp is 0
-    //  [X] it returns false
     // [X] when the start and expiry timestamps are the same
     //  [X] it returns false
-    // [X] when the expiry and end timestamps are the same
-    //  [X] it returns false
-    // [X] when the start and end timestamps are the same
-    //  [X] it returns false
     // [X] when the start timestamp is after the expiry timestamp
-    //  [X] it returns false
-    // [X] when the expiry timestamp is after the end timestamp
-    //  [X] it returns false
-    // [X] when the start timestamp is after the end timestamp
     //  [X] it returns false
     // [X] when the start timestamp is before the current timestamp
     //  [X] it returns false
     // [X] when the expiry timestamp is before the current timestamp
-    //  [X] it returns false
-    // [X] when the end timestamp is before the current timestamp
     //  [X] it returns false
     // [X] it returns true
 
@@ -523,14 +389,6 @@ contract LinearVestingTest is Test, Permit2User {
         assertFalse(isValid);
     }
 
-    function test_validate_endTimestampIsZero() public whenEndTimestampIsZero {
-        // Call
-        bool isValid = linearVesting.validate(vestingParamsBytes);
-
-        // Check values
-        assertFalse(isValid);
-    }
-
     function test_validate_startAndExpiryTimestampsAreTheSame()
         public
         whenStartAndExpiryTimestampsAreTheSame
@@ -542,53 +400,9 @@ contract LinearVestingTest is Test, Permit2User {
         assertFalse(isValid);
     }
 
-    function test_validate_expiryAndEndTimestampsAreTheSame()
-        public
-        whenExpiryAndEndTimestampsAreTheSame
-    {
-        // Call
-        bool isValid = linearVesting.validate(vestingParamsBytes);
-
-        // Check values
-        assertFalse(isValid);
-    }
-
-    function test_validate_startAndEndTimestampsAreTheSame()
-        public
-        whenStartAndEndTimestampsAreTheSame
-    {
-        // Call
-        bool isValid = linearVesting.validate(vestingParamsBytes);
-
-        // Check values
-        assertFalse(isValid);
-    }
-
     function test_validate_startTimestampIsAfterExpiryTimestamp()
         public
         whenStartTimestampIsAfterExpiryTimestamp
-    {
-        // Call
-        bool isValid = linearVesting.validate(vestingParamsBytes);
-
-        // Check values
-        assertFalse(isValid);
-    }
-
-    function test_validate_expiryTimestampIsAfterEndTimestamp()
-        public
-        whenExpiryTimestampIsAfterEndTimestamp
-    {
-        // Call
-        bool isValid = linearVesting.validate(vestingParamsBytes);
-
-        // Check values
-        assertFalse(isValid);
-    }
-
-    function test_validate_startTimestampIsAfterEndTimestamp()
-        public
-        whenStartTimestampIsAfterEndTimestamp
     {
         // Call
         bool isValid = linearVesting.validate(vestingParamsBytes);
@@ -611,17 +425,6 @@ contract LinearVestingTest is Test, Permit2User {
     function test_validate_expiryTimestampIsBeforeCurrentTimestamp()
         public
         whenExpiryTimestampIsBeforeCurrentTimestamp
-    {
-        // Call
-        bool isValid = linearVesting.validate(vestingParamsBytes);
-
-        // Check values
-        assertFalse(isValid);
-    }
-
-    function test_validate_endTimestampIsBeforeCurrentTimestamp()
-        public
-        whenEndTimestampIsBeforeCurrentTimestamp
     {
         // Call
         bool isValid = linearVesting.validate(vestingParamsBytes);
@@ -682,25 +485,13 @@ contract LinearVestingTest is Test, Permit2User {
     //  [X] it reverts
     // [X] when the expiry timestamp is 0
     //  [X] it reverts
-    // [X] when the end timestamp is 0
-    //  [X] it reverts
     // [X] when the start and expiry timestamps are the same
     //  [X] it reverts
-    // [X] when the expiry and end timestamps are the same
-    //  [X] it reverts
-    // [X] when the start and end timestamps are the same
-    //  [X] it reverts
     // [X] when the start timestamp is after the expiry timestamp
-    //  [X] it reverts
-    // [X] when the expiry timestamp is after the end timestamp
-    //  X ] it reverts
-    // [X] when the start timestamp is after the end timestamp
     //  [X] it reverts
     // [X] when the start timestamp is before the current timestamp
     //  [X] it reverts
     // [X] when the expiry timestamp is before the current timestamp
-    //  [X] it reverts
-    // [X] when the end timestamp is before the current timestamp
     //  [X] it reverts
     // [X] when the mint amount is 0
     //  [X] it reverts
@@ -758,16 +549,6 @@ contract LinearVestingTest is Test, Permit2User {
         linearVesting.mint(_alice, underlyingTokenAddress, vestingParamsBytes, AMOUNT, false);
     }
 
-    function test_mint_params_endTimestampIsZero_reverts() public whenEndTimestampIsZero {
-        // Expect revert
-        bytes memory err = abi.encodeWithSelector(LinearVesting.InvalidParams.selector);
-        vm.expectRevert(err);
-
-        // Call
-        vm.prank(address(auctionHouse));
-        linearVesting.mint(_alice, underlyingTokenAddress, vestingParamsBytes, AMOUNT, false);
-    }
-
     function test_mint_params_startAndExpiryTimestampsAreTheSame_reverts()
         public
         whenStartAndExpiryTimestampsAreTheSame
@@ -781,61 +562,9 @@ contract LinearVestingTest is Test, Permit2User {
         linearVesting.mint(_alice, underlyingTokenAddress, vestingParamsBytes, AMOUNT, false);
     }
 
-    function test_mint_params_expiryAndEndTimestampsAreTheSame_reverts()
-        public
-        whenExpiryAndEndTimestampsAreTheSame
-    {
-        // Expect revert
-        bytes memory err = abi.encodeWithSelector(LinearVesting.InvalidParams.selector);
-        vm.expectRevert(err);
-
-        // Call
-        vm.prank(address(auctionHouse));
-        linearVesting.mint(_alice, underlyingTokenAddress, vestingParamsBytes, AMOUNT, false);
-    }
-
-    function test_mint_params_startAndEndTimestampsAreTheSame_reverts()
-        public
-        whenStartAndEndTimestampsAreTheSame
-    {
-        // Expect revert
-        bytes memory err = abi.encodeWithSelector(LinearVesting.InvalidParams.selector);
-        vm.expectRevert(err);
-
-        // Call
-        vm.prank(address(auctionHouse));
-        linearVesting.mint(_alice, underlyingTokenAddress, vestingParamsBytes, AMOUNT, false);
-    }
-
     function test_mint_params_startTimestampIsAfterExpiryTimestamp_reverts()
         public
         whenStartTimestampIsAfterExpiryTimestamp
-    {
-        // Expect revert
-        bytes memory err = abi.encodeWithSelector(LinearVesting.InvalidParams.selector);
-        vm.expectRevert(err);
-
-        // Call
-        vm.prank(address(auctionHouse));
-        linearVesting.mint(_alice, underlyingTokenAddress, vestingParamsBytes, AMOUNT, false);
-    }
-
-    function test_mint_params_expiryTimestampIsAfterEndTimestamp_reverts()
-        public
-        whenExpiryTimestampIsAfterEndTimestamp
-    {
-        // Expect revert
-        bytes memory err = abi.encodeWithSelector(LinearVesting.InvalidParams.selector);
-        vm.expectRevert(err);
-
-        // Call
-        vm.prank(address(auctionHouse));
-        linearVesting.mint(_alice, underlyingTokenAddress, vestingParamsBytes, AMOUNT, false);
-    }
-
-    function test_mint_params_startTimestampIsAfterEndTimestamp_reverts()
-        public
-        whenStartTimestampIsAfterEndTimestamp
     {
         // Expect revert
         bytes memory err = abi.encodeWithSelector(LinearVesting.InvalidParams.selector);
@@ -862,19 +591,6 @@ contract LinearVestingTest is Test, Permit2User {
     function test_mint_params_expiryTimestampIsBeforeCurrentTimestamp_reverts()
         public
         whenExpiryTimestampIsBeforeCurrentTimestamp
-    {
-        // Expect revert
-        bytes memory err = abi.encodeWithSelector(LinearVesting.InvalidParams.selector);
-        vm.expectRevert(err);
-
-        // Call
-        vm.prank(address(auctionHouse));
-        linearVesting.mint(_alice, underlyingTokenAddress, vestingParamsBytes, AMOUNT, false);
-    }
-
-    function test_mint_params_endTimestampIsBeforeCurrentTimestamp_reverts()
-        public
-        whenEndTimestampIsBeforeCurrentTimestamp
     {
         // Expect revert
         bytes memory err = abi.encodeWithSelector(LinearVesting.InvalidParams.selector);
