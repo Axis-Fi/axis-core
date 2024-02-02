@@ -153,8 +153,19 @@ abstract contract Derivative {
         uint256 amount
     ) external view virtual returns (uint256);
 
-    // Compute unique token ID for params on the submodule
+    /// @notice     Compute a unique token ID, given the parameters for the derivative
+    ///
+    /// @param      params_     The parameters for the derivative
+    /// @return     tokenId_    The unique token ID
     function computeId(bytes memory params_) external pure virtual returns (uint256);
+
+    /// @notice     Get the metadata for a derivative token
+    ///
+    /// @param      tokenId     The ID of the derivative token
+    /// @return     Token       The metadata for the derivative token
+    function getTokenMetadata(uint256 tokenId) external view virtual returns (Token memory) {
+        return tokenMetadata[tokenId];
+    }
 }
 
 abstract contract DerivativeModule is Derivative, ERC6909, Module {}

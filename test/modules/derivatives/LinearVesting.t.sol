@@ -10,6 +10,7 @@ import {StringHelper} from "test/lib/String.sol";
 import {MockERC20} from "solmate/test/utils/mocks/MockERC20.sol";
 
 import {AuctionHouse} from "src/AuctionHouse.sol";
+import {Derivative} from "src/modules/Derivative.sol";
 import {LinearVesting} from "src/modules/derivatives/LinearVesting.sol";
 import {SoulboundCloneERC20} from "src/modules/derivatives/SoulboundCloneERC20.sol";
 
@@ -33,6 +34,8 @@ contract LinearVestingTest is Test, Permit2User {
     uint48 internal constant vestingExpiry = 1_705_055_144; // 2024-01-12
 
     uint256 internal constant AMOUNT = 1e18;
+
+    uint256 internal constant VESTING_DATA_LEN = 96;
 
     uint256 internal derivativeTokenId;
     address internal derivativeWrappedAddress;
@@ -279,7 +282,7 @@ contract LinearVestingTest is Test, Permit2User {
         linearVesting.deploy(underlyingTokenAddress, vestingParamsBytes, false);
     }
 
-    function test_deploy_derivativeDeployed_wrappedDerivativeDeployed()
+    function test_deploy_wrapped_derivativeDeployed_wrappedDerivativeDeployed()
         public
         givenWrappedDerivativeIsDeployed
     {
@@ -290,9 +293,25 @@ contract LinearVestingTest is Test, Permit2User {
         // Check values
         assertEq(tokenId, derivativeTokenId);
         assertEq(wrappedAddress, derivativeWrappedAddress);
+
+        // Check token metadata
+        Derivative.Token memory tokenMetadata = linearVesting.getTokenMetadata(tokenId);
+        assertEq(tokenMetadata.exists, true);
+        assertEq(tokenMetadata.wrapped, wrappedAddress);
+        assertEq(tokenMetadata.decimals, 0);
+        assertEq(tokenMetadata.name, "");
+        assertEq(tokenMetadata.symbol, "");
+        assertEq(tokenMetadata.data.length, VESTING_DATA_LEN);
+
+        // Check implementation data
+        LinearVesting.VestingData memory vestingData =
+            abi.decode(tokenMetadata.data, (LinearVesting.VestingData));
+        assertEq(vestingData.start, vestingParams.start);
+        assertEq(vestingData.expiry, vestingParams.expiry);
+        assertEq(address(vestingData.baseToken), underlyingTokenAddress);
     }
 
-    function test_deploy_derivativeDeployed_wrappedDerivativeNotDeployed()
+    function test_deploy_wrapped_derivativeDeployed_wrappedDerivativeNotDeployed()
         public
         givenDerivativeIsDeployed
     {
@@ -303,9 +322,25 @@ contract LinearVestingTest is Test, Permit2User {
         // Check values
         assertEq(tokenId, derivativeTokenId);
         assertTrue(wrappedAddress != address(0));
+
+        // Check token metadata
+        Derivative.Token memory tokenMetadata = linearVesting.getTokenMetadata(tokenId);
+        assertEq(tokenMetadata.exists, true);
+        assertEq(tokenMetadata.wrapped, wrappedAddress);
+        assertEq(tokenMetadata.decimals, 0);
+        assertEq(tokenMetadata.name, "");
+        assertEq(tokenMetadata.symbol, "");
+        assertEq(tokenMetadata.data.length, VESTING_DATA_LEN);
+
+        // Check implementation data
+        LinearVesting.VestingData memory vestingData =
+            abi.decode(tokenMetadata.data, (LinearVesting.VestingData));
+        assertEq(vestingData.start, vestingParams.start);
+        assertEq(vestingData.expiry, vestingParams.expiry);
+        assertEq(address(vestingData.baseToken), underlyingTokenAddress);
     }
 
-    function test_deploy() public {
+    function test_deploy_wrapped() public {
         // Call
         (uint256 tokenId, address wrappedAddress) =
             linearVesting.deploy(underlyingTokenAddress, vestingParamsBytes, true);
@@ -329,6 +364,48 @@ contract LinearVestingTest is Test, Permit2User {
         assertEq(wrappedDerivative.expiry(), vestingParams.expiry);
         assertEq(wrappedDerivative.teller(), address(linearVesting));
         assertEq(wrappedDerivative.owner(), address(linearVesting));
+
+        // Check token metadata
+        Derivative.Token memory tokenMetadata = linearVesting.getTokenMetadata(tokenId);
+        assertEq(tokenMetadata.exists, true);
+        assertEq(tokenMetadata.wrapped, wrappedAddress);
+        assertEq(tokenMetadata.decimals, 0);
+        assertEq(tokenMetadata.name, "");
+        assertEq(tokenMetadata.symbol, "");
+        assertEq(tokenMetadata.data.length, VESTING_DATA_LEN);
+
+        // Check implementation data
+        LinearVesting.VestingData memory vestingData =
+            abi.decode(tokenMetadata.data, (LinearVesting.VestingData));
+        assertEq(vestingData.start, vestingParams.start);
+        assertEq(vestingData.expiry, vestingParams.expiry);
+        assertEq(address(vestingData.baseToken), underlyingTokenAddress);
+    }
+
+    function test_deploy_notWrapped() public {
+        // Call
+        (uint256 tokenId, address wrappedAddress) =
+            linearVesting.deploy(underlyingTokenAddress, vestingParamsBytes, false);
+
+        // Check values
+        assertTrue(tokenId > 0);
+        assertTrue(wrappedAddress == address(0));
+
+        // Check token metadata
+        Derivative.Token memory tokenMetadata = linearVesting.getTokenMetadata(tokenId);
+        assertEq(tokenMetadata.exists, true);
+        assertEq(tokenMetadata.wrapped, address(0));
+        assertEq(tokenMetadata.decimals, 0);
+        assertEq(tokenMetadata.name, "");
+        assertEq(tokenMetadata.symbol, "");
+        assertEq(tokenMetadata.data.length, VESTING_DATA_LEN);
+
+        // Check implementation data
+        LinearVesting.VestingData memory vestingData =
+            abi.decode(tokenMetadata.data, (LinearVesting.VestingData));
+        assertEq(vestingData.start, vestingParams.start);
+        assertEq(vestingData.expiry, vestingParams.expiry);
+        assertEq(address(vestingData.baseToken), underlyingTokenAddress);
     }
 
     function test_deploy_notParent() public {
