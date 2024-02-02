@@ -63,7 +63,8 @@ contract LinearVesting is DerivativeModule {
 
     // ========== STATE VARIABLES ========== //
 
-    address internal _clone;
+    /// @notice     Stores the clonable implementation of the wrapped derivative token
+    address internal immutable _IMPLEMENTATION;
 
     /// @notice     Stores the vesting data for a particular token id
     mapping(uint256 tokenId => VestingData) public vestingData;
@@ -73,9 +74,9 @@ contract LinearVesting is DerivativeModule {
 
     // ========== MODULE SETUP ========== //
 
-    constructor(address parent_, address clone_) Module(parent_) {
-        if (clone_ == address(0)) revert InvalidParams();
-        _clone = clone_;
+    constructor(address parent_) Module(parent_) {
+        // Deploy the clone implementation
+        _IMPLEMENTATION = address(new SoulboundCloneERC20());
     }
 
     /// @inheritdoc Module
@@ -621,7 +622,7 @@ contract LinearVesting is DerivativeModule {
         // Create a wrapped derivative, if needed
         if (token_.wrapped == address(0)) {
             // Cannot deploy if there isn't a clonable implementation
-            if (address(_clone) == address(0)) revert InvalidParams();
+            if (_IMPLEMENTATION == address(0)) revert InvalidParams();
 
             // Get the parameters
             VestingData memory data = abi.decode(token_.data, (VestingData));
@@ -635,7 +636,7 @@ contract LinearVesting is DerivativeModule {
                 uint8(data.baseToken.decimals()),
                 address(this)
             );
-            token_.wrapped = address(_clone).clone3(wrappedTokenData, bytes32(tokenId_));
+            token_.wrapped = _IMPLEMENTATION.clone3(wrappedTokenData, bytes32(tokenId_));
 
             // Emit event
             emit WrappedDerivativeCreated(tokenId_, token_.wrapped);

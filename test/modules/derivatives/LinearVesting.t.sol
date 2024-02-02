@@ -8,13 +8,10 @@ import {console2} from "forge-std/console2.sol";
 import {Permit2User} from "test/lib/permit2/Permit2User.sol";
 import {MockERC20} from "solmate/test/utils/mocks/MockERC20.sol";
 
-import {SoulboundCloneERC20} from "src/modules/derivatives/SoulboundCloneERC20.sol";
 import {AuctionHouse} from "src/AuctionHouse.sol";
 import {LinearVesting} from "src/modules/derivatives/LinearVesting.sol";
 
 contract LinearVestingTest is Test, Permit2User {
-    address internal _clone;
-
     address internal constant _owner = address(0x1);
     address internal constant _protocol = address(0x2);
     address internal constant _alice = address(0x3);
@@ -39,13 +36,11 @@ contract LinearVestingTest is Test, Permit2User {
         // Wrap to reasonable timestamp
         vm.warp(1_000_000);
 
-        _clone = address(new SoulboundCloneERC20());
-
         underlyingToken = new MockERC20("Underlying", "UNDERLYING", 18);
         underlyingTokenAddress = address(underlyingToken);
 
         auctionHouse = new AuctionHouse(_protocol, _PERMIT2_ADDRESS);
-        linearVesting = new LinearVesting(address(auctionHouse), _clone);
+        linearVesting = new LinearVesting(address(auctionHouse));
         auctionHouse.installModule(linearVesting);
 
         vestingParams = LinearVesting.VestingParams({start: vestingStart, expiry: vestingExpiry});
