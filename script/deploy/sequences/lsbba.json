@@ -1,0 +1,14 @@
+{
+    "sequence": [
+        {
+            "name": "AuctionHouse",
+            "args": {},
+            "salt": 0
+        },
+        {
+            "name": "LocalSealedBidBatchAuction",
+            "args": {},
+            "salt": 0
+        }
+    ]
+}
