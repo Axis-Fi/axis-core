@@ -12,6 +12,7 @@ import {LocalSealedBidBatchAuction} from "src/modules/auctions/LSBBA/LSBBA.sol";
 import {AuctionHouse} from "src/AuctionHouse.sol";
 import {Auction} from "src/modules/Auction.sol";
 import {RSAOAEP} from "src/lib/RSA.sol";
+import {uint2str} from "src/lib/Uint2Str.sol";
 
 contract LSBBACancelBidTest is Test, Permit2User {
     address internal constant _PROTOCOL = address(0x1);
@@ -39,7 +40,7 @@ contract LSBBACancelBidTest is Test, Permit2User {
 
     uint96 internal bidId;
     uint256 internal bidAmount = 1e18;
-    uint256 internal bidSeed = 1e9;
+    bytes32 internal bidSeed = bytes32(uint256(1e9));
     LocalSealedBidBatchAuction.Decrypt internal decryptedBid;
 
     uint8 internal constant _quoteTokenDecimals = 18;
@@ -99,7 +100,7 @@ contract LSBBACancelBidTest is Test, Permit2User {
     {
         return RSAOAEP.encrypt(
             abi.encodePacked(decrypt_.amountOut),
-            abi.encodePacked(lotId),
+            abi.encodePacked(uint2str(lotId)),
             abi.encodePacked(uint24(65_537)),
             PUBLIC_KEY_MODULUS,
             decrypt_.seed

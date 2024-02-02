@@ -1,6 +1,7 @@
 # Compiler files
 cache/
 out/
+rsa-cli/target/
 
 # Ignores development broadcast logs
 !/broadcast

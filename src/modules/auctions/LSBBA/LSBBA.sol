@@ -4,6 +4,7 @@ pragma solidity 0.8.19;
 import {AuctionModule} from "src/modules/Auction.sol";
 import {Veecode, toVeecode} from "src/modules/Modules.sol";
 import {RSAOAEP} from "src/lib/RSA.sol";
+import {uint2str} from "src/lib/Uint2Str.sol";
 import {
     MaxPriorityQueue,
     Queue,
@@ -66,7 +67,7 @@ contract LocalSealedBidBatchAuction is AuctionModule {
     /// @param         seed                The seed used to encrypt the amount out
     struct Decrypt {
         uint256 amountOut;
-        uint256 seed;
+        bytes32 seed;
     }
 
     /// @notice        Struct containing auction data
@@ -359,7 +360,7 @@ contract LocalSealedBidBatchAuction is AuctionModule {
     ) internal view returns (bytes memory) {
         return RSAOAEP.encrypt(
             abi.encodePacked(decrypt_.amountOut),
-            abi.encodePacked(lotId_),
+            abi.encodePacked(uint2str(uint256(lotId_))),
             abi.encodePacked(_PUB_KEY_EXPONENT),
             auctionData[lotId_].publicKeyModulus,
             decrypt_.seed

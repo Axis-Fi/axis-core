@@ -14,6 +14,7 @@ import {AuctionHouse, Router} from "src/AuctionHouse.sol";
 import {Auction, AuctionModule} from "src/modules/Auction.sol";
 import {IHooks, IAllowlist, Auctioneer} from "src/bases/Auctioneer.sol";
 import {RSAOAEP} from "src/lib/RSA.sol";
+import {uint2str} from "src/lib/Uint2Str.sol";
 import {LocalSealedBidBatchAuction} from "src/modules/auctions/LSBBA/LSBBA.sol";
 
 // Modules
@@ -62,7 +63,7 @@ contract SettleTest is Test, Permit2User {
     uint256 internal constant MINIMUM_PRICE = 5e17; // 0.5e18
     uint256 internal _lotCapacity = LOT_CAPACITY;
     uint256 internal constant SCALE = 1e18;
-    uint256 internal constant BID_SEED = 1e9;
+    bytes32 internal constant BID_SEED = bytes32(uint256(1e9));
 
     uint256 internal bidOneAmount = 4e18;
     uint256 internal bidOneAmountOut = 4e18; // Price = 1
@@ -172,7 +173,7 @@ contract SettleTest is Test, Permit2User {
     {
         return RSAOAEP.encrypt(
             abi.encodePacked(decrypt_.amountOut),
-            abi.encodePacked(lotId),
+            abi.encodePacked(uint2str(lotId)),
             abi.encodePacked(uint24(65_537)),
             PUBLIC_KEY_MODULUS,
             decrypt_.seed
