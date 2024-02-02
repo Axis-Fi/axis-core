@@ -16,6 +16,23 @@ contract RSAOAEPTest is Test {
 
     function setUp() external {}
 
+    function testFuzz_encrypt_gas(uint256 value_, bytes32 seed_) external view {
+        bytes memory message = abi.encodePacked(value_);
+        bytes memory label = abi.encodePacked(uint2str(uint256(1)));
+
+        bytes memory n = abi.encodePacked(
+            bytes32(0xB925394F570C7C765F121826DFC8A1661921923B33408EFF62DCAC0D263952FE),
+            bytes32(0x158C12B2B35525F7568CB8DC7731FBC3739F22D94CB80C5622E788DB4532BD8C),
+            bytes32(0x8643680DA8C00A5E7C967D9D087AA1380AE9A031AC292C971EC75F9BD3296AE1),
+            bytes32(0x1AFCC05BD15602738CBE9BD75B76403AB2C9409F2CC0C189B4551DEE8B576AD3)
+        );
+
+        uint256 startGas = gasleft();
+        RSAOAEP.encrypt(message, label, E, n, seed_);
+        uint256 endGas = gasleft();
+        console2.log("Gas used: ", startGas - endGas);
+    }
+
     function testFuzz_roundTrip(uint256 value_, bytes32 seed_) external {
         bytes memory message = abi.encodePacked(value_);
         bytes memory label = abi.encodePacked(uint2str(uint256(1)));
