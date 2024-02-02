@@ -806,22 +806,125 @@ contract LinearVestingTest is Test, Permit2User {
     }
 
     // mint with token id
-    // [ ] when the token id does not exist
-    //  [ ] it reverts
-    // [ ] when the mint amount is 0
-    //  [ ] it reverts
-    // [ ] when the recipient is 0
-    //  [ ] it reverts
-    // [ ] given the caller has an insufficient balance of the underlying token
-    //  [ ] it reverts
-    // [ ] when wrapped is false
-    //  [ ] it mints the derivative token
-    // [ ] when wrapped is true
-    //  [ ] given the wrapped token is not deployed
-    //   [ ] it deploys the wrapped token and mints the wrapped token
-    //  [ ] it mints the wrapped token
-    // [ ] when the caller is not the parent
-    //  [ ] it succeeds
+    // [X] when the token id does not exist
+    //  [X] it reverts
+    // [X] when the mint amount is 0
+    //  [X] it reverts
+    // [X] when the recipient is 0
+    //  [X] it reverts
+    // [X] given the caller has an insufficient balance of the underlying token
+    //  [X] it reverts
+    // [X] when wrapped is false
+    //  [X] it mints the derivative token
+    // [X] when wrapped is true
+    //  [X] given the wrapped token is not deployed
+    //   [X] it deploys the wrapped token and mints the wrapped token
+    //  [X] it mints the wrapped token
+    // [X] when the caller is not the parent
+    //  [X] it succeeds
+
+    function test_mint_tokenId_whenTokenIdDoesNotExist_reverts() public {
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(LinearVesting.InvalidParams.selector);
+        vm.expectRevert(err);
+
+        // Call
+        vm.prank(address(auctionHouse));
+        linearVesting.mint(_alice, derivativeTokenId, AMOUNT, false);
+    }
+
+    function test_mint_tokenId_whenMintAmountIsZero_reverts() public givenDerivativeIsDeployed {
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(LinearVesting.InvalidParams.selector);
+        vm.expectRevert(err);
+
+        // Call
+        vm.prank(address(auctionHouse));
+        linearVesting.mint(_alice, derivativeTokenId, 0, false);
+    }
+
+    function test_mint_tokenId_whenRecipientIsZero_reverts() public givenDerivativeIsDeployed {
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(LinearVesting.InvalidParams.selector);
+        vm.expectRevert(err);
+
+        // Call
+        vm.prank(address(auctionHouse));
+        linearVesting.mint(address(0), derivativeTokenId, AMOUNT, false);
+    }
+
+    function test_mint_tokenId_insufficentBalance_reverts() public givenDerivativeIsDeployed {
+        // Expect revert
+        vm.expectRevert("TRANSFER_FROM_FAILED");
+
+        // Call
+        vm.prank(address(auctionHouse));
+        linearVesting.mint(_alice, derivativeTokenId, AMOUNT, false);
+    }
+
+    function test_mint_tokenId_notWrapped()
+        public
+        givenParentHasUnderlyingTokenBalance(AMOUNT)
+        givenDerivativeIsDeployed
+    {
+        // Call
+        vm.prank(address(auctionHouse));
+        (uint256 tokenId, address wrappedAddress, uint256 amountCreated) =
+            linearVesting.mint(_alice, derivativeTokenId, AMOUNT, false);
+
+        // Check values
+        assertEq(tokenId, derivativeTokenId);
+        assertTrue(wrappedAddress == address(0));
+        assertEq(amountCreated, AMOUNT);
+    }
+
+    function test_mint_tokenId_wrapped_wrappedTokenIsNotDeployed()
+        public
+        givenParentHasUnderlyingTokenBalance(AMOUNT)
+        givenDerivativeIsDeployed
+    {
+        // Call
+        vm.prank(address(auctionHouse));
+        (uint256 tokenId, address wrappedAddress, uint256 amountCreated) =
+            linearVesting.mint(_alice, derivativeTokenId, AMOUNT, true);
+
+        // Check values
+        assertEq(tokenId, derivativeTokenId);
+        assertTrue(wrappedAddress != address(0));
+        assertEq(amountCreated, AMOUNT);
+    }
+
+    function test_mint_tokenId_wrapped_wrappedTokenIsDeployed()
+        public
+        givenParentHasUnderlyingTokenBalance(AMOUNT)
+        givenWrappedDerivativeIsDeployed
+    {
+        // Call
+        vm.prank(address(auctionHouse));
+        (uint256 tokenId, address wrappedAddress, uint256 amountCreated) =
+            linearVesting.mint(_alice, derivativeTokenId, AMOUNT, true);
+
+        // Check values
+        assertEq(tokenId, derivativeTokenId);
+        assertEq(wrappedAddress, derivativeWrappedAddress);
+        assertEq(amountCreated, AMOUNT);
+    }
+
+    function test_mint_tokenId_notParent()
+        public
+        givenCallerHasUnderlyingTokenBalance(_alice, AMOUNT)
+        givenWrappedDerivativeIsDeployed
+    {
+        // Call
+        vm.prank(_alice);
+        (uint256 tokenId, address wrappedAddress, uint256 amountCreated) =
+            linearVesting.mint(_alice, derivativeTokenId, AMOUNT, true);
+
+        // Check values
+        assertEq(tokenId, derivativeTokenId);
+        assertEq(wrappedAddress, derivativeWrappedAddress);
+        assertEq(amountCreated, AMOUNT);
+    }
 
     // redeem
     // [ ] when the token id does not exist
