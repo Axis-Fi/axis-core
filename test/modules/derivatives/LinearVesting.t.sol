@@ -1072,13 +1072,7 @@ contract LinearVestingTest is Test, Permit2User {
     //  [ ] it returns the owner's redeemable amount
 
     // reclaim
-    // [ ] when the token id does not exist
-    //  [ ] it reverts
-    // [ ] when the caller is not the parent
-    //  [ ] it reverts
-    // [ ] when the token redemption period has not ended
-    //  [ ] it reverts
-    // [ ] it transfers the base token balance to the parent
+    // [ ] it reverts
 
     // wrap
     // [ ] when the token id does not exist

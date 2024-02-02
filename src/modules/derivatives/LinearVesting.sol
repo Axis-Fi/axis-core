@@ -417,21 +417,9 @@ contract LinearVesting is DerivativeModule {
     }
 
     /// @inheritdoc Derivative
-    function reclaim(uint256 tokenId_)
-        external
-        virtual
-        override
-        onlyInternal
-        onlyValidTokenId(tokenId_)
-    {
-        VestingData storage data = vestingData[tokenId_];
-        // Can only be reclaimed after the end date
-        if (block.timestamp < data.end) revert InvalidParams();
-
-        // Transfer underlying tokens to the parent
-        data.baseToken.safeTransfer(PARENT, data.baseToken.balanceOf(address(this)));
-
-        // TODO burn?
+    /// @dev        Not implemented
+    function reclaim(uint256) external virtual override {
+        revert Derivative.Derivative_NotImplemented();
     }
 
     /// @inheritdoc Derivative
