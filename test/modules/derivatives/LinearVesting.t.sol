@@ -6,6 +6,7 @@ import {Test} from "forge-std/Test.sol";
 import {console2} from "forge-std/console2.sol";
 
 import {Permit2User} from "test/lib/permit2/Permit2User.sol";
+import {StringHelper} from "test/lib/String.sol";
 import {MockERC20} from "solmate/test/utils/mocks/MockERC20.sol";
 
 import {AuctionHouse} from "src/AuctionHouse.sol";
@@ -13,6 +14,8 @@ import {LinearVesting} from "src/modules/derivatives/LinearVesting.sol";
 import {SoulboundCloneERC20} from "src/modules/derivatives/SoulboundCloneERC20.sol";
 
 contract LinearVestingTest is Test, Permit2User {
+    using StringHelper for string;
+
     address internal constant _owner = address(0x1);
     address internal constant _protocol = address(0x2);
     address internal constant _alice = address(0x3);
@@ -33,6 +36,10 @@ contract LinearVestingTest is Test, Permit2User {
 
     uint256 internal derivativeTokenId;
     address internal derivativeWrappedAddress;
+    string internal wrappedDerivativeTokenName;
+    string internal wrappedDerivativeTokenSymbol;
+    uint256 internal wrappedDerivativeTokenNameLength;
+    uint256 internal wrappedDerivativeTokenSymbolLength;
 
     function setUp() public {
         // Wrap to reasonable timestamp
@@ -47,6 +54,11 @@ contract LinearVestingTest is Test, Permit2User {
 
         vestingParams = LinearVesting.VestingParams({start: vestingStart, expiry: vestingExpiry});
         vestingParamsBytes = abi.encode(vestingParams);
+
+        wrappedDerivativeTokenName = "Underlying 2024-01-12";
+        wrappedDerivativeTokenSymbol = "UNDERLYING 2024-01-12";
+        wrappedDerivativeTokenNameLength = bytes(wrappedDerivativeTokenName).length;
+        wrappedDerivativeTokenSymbolLength = bytes(wrappedDerivativeTokenSymbol).length;
     }
 
     // ========== MODIFIERS ========== //
@@ -100,6 +112,11 @@ contract LinearVestingTest is Test, Permit2User {
     modifier whenVestingParamsAreChanged() {
         vestingParams.expiry = 1_705_227_944; // 2024-01-14
         vestingParamsBytes = abi.encode(vestingParams);
+
+        wrappedDerivativeTokenName = "Underlying 2024-01-14";
+        wrappedDerivativeTokenSymbol = "UNDERLYING 2024-01-14";
+        wrappedDerivativeTokenNameLength = bytes(wrappedDerivativeTokenName).length;
+        wrappedDerivativeTokenSymbolLength = bytes(wrappedDerivativeTokenSymbol).length;
         _;
     }
 
@@ -107,6 +124,11 @@ contract LinearVestingTest is Test, Permit2User {
         underlyingTokenDecimals = 17;
         underlyingToken = new MockERC20("Underlying2", "UNDERLYING2", underlyingTokenDecimals);
         underlyingTokenAddress = address(underlyingToken);
+
+        wrappedDerivativeTokenName = "Underlying2 2024-01-12";
+        wrappedDerivativeTokenSymbol = "UNDERLYING2 2024-01-12";
+        wrappedDerivativeTokenNameLength = bytes(wrappedDerivativeTokenName).length;
+        wrappedDerivativeTokenSymbolLength = bytes(wrappedDerivativeTokenSymbol).length;
         _;
     }
 
@@ -294,9 +316,19 @@ contract LinearVestingTest is Test, Permit2User {
 
         // Check wrapped token
         SoulboundCloneERC20 wrappedDerivative = SoulboundCloneERC20(wrappedAddress);
-        assertEq(wrappedDerivative.name(), "Underlying 2024-01-12");
-        assertEq(wrappedDerivative.symbol(), "UNDERLYING 2024-01-12");
+        assertEq(
+            wrappedDerivative.name().trim(0, wrappedDerivativeTokenNameLength),
+            wrappedDerivativeTokenName
+        );
+        assertEq(
+            wrappedDerivative.symbol().trim(0, wrappedDerivativeTokenSymbolLength),
+            wrappedDerivativeTokenSymbol
+        );
         assertEq(wrappedDerivative.decimals(), 18);
+        assertEq(address(wrappedDerivative.underlying()), underlyingTokenAddress);
+        assertEq(wrappedDerivative.expiry(), vestingParams.expiry);
+        assertEq(wrappedDerivative.teller(), address(linearVesting));
+        assertEq(wrappedDerivative.owner(), address(linearVesting));
     }
 
     function test_deploy_notParent() public {
@@ -308,6 +340,22 @@ contract LinearVestingTest is Test, Permit2User {
         // Check values
         assertTrue(tokenId > 0);
         assertTrue(wrappedAddress != address(0));
+
+        // Check wrapped token
+        SoulboundCloneERC20 wrappedDerivative = SoulboundCloneERC20(wrappedAddress);
+        assertEq(
+            wrappedDerivative.name().trim(0, wrappedDerivativeTokenNameLength),
+            wrappedDerivativeTokenName
+        );
+        assertEq(
+            wrappedDerivative.symbol().trim(0, wrappedDerivativeTokenSymbolLength),
+            wrappedDerivativeTokenSymbol
+        );
+        assertEq(wrappedDerivative.decimals(), 18);
+        assertEq(address(wrappedDerivative.underlying()), underlyingTokenAddress);
+        assertEq(wrappedDerivative.expiry(), vestingParams.expiry);
+        assertEq(wrappedDerivative.teller(), address(linearVesting));
+        assertEq(wrappedDerivative.owner(), address(linearVesting));
     }
 
     function test_deploy_notParent_derivativeDeployed_wrappedDerivativeDeployed()
@@ -339,9 +387,19 @@ contract LinearVestingTest is Test, Permit2User {
 
         // Check wrapped token
         SoulboundCloneERC20 wrappedDerivative = SoulboundCloneERC20(wrappedAddress);
-        assertEq(wrappedDerivative.name(), "Underlying 2024-01-14");
-        assertEq(wrappedDerivative.symbol(), "UNDERLYING 2024-01-14");
+        assertEq(
+            wrappedDerivative.name().trim(0, wrappedDerivativeTokenNameLength),
+            wrappedDerivativeTokenName
+        );
+        assertEq(
+            wrappedDerivative.symbol().trim(0, wrappedDerivativeTokenSymbolLength),
+            wrappedDerivativeTokenSymbol
+        );
         assertEq(wrappedDerivative.decimals(), 18);
+        assertEq(address(wrappedDerivative.underlying()), underlyingTokenAddress);
+        assertEq(wrappedDerivative.expiry(), vestingParams.expiry);
+        assertEq(wrappedDerivative.teller(), address(linearVesting));
+        assertEq(wrappedDerivative.owner(), address(linearVesting));
     }
 
     function test_deploy_differentUnderlyingToken()
@@ -359,9 +417,19 @@ contract LinearVestingTest is Test, Permit2User {
 
         // Check wrapped token
         SoulboundCloneERC20 wrappedDerivative = SoulboundCloneERC20(wrappedAddress);
-        assertEq(wrappedDerivative.name(), "Underlying2 2024-01-12");
-        assertEq(wrappedDerivative.symbol(), "UNDERLYING2 2024-01-12");
+        assertEq(
+            wrappedDerivative.name().trim(0, wrappedDerivativeTokenNameLength),
+            wrappedDerivativeTokenName
+        );
+        assertEq(
+            wrappedDerivative.symbol().trim(0, wrappedDerivativeTokenSymbolLength),
+            wrappedDerivativeTokenSymbol
+        );
         assertEq(wrappedDerivative.decimals(), 17);
+        assertEq(address(wrappedDerivative.underlying()), underlyingTokenAddress);
+        assertEq(wrappedDerivative.expiry(), vestingParams.expiry);
+        assertEq(wrappedDerivative.teller(), address(linearVesting));
+        assertEq(wrappedDerivative.owner(), address(linearVesting));
     }
 
     // validate
@@ -653,7 +721,7 @@ contract LinearVestingTest is Test, Permit2User {
         // Call
         vm.prank(address(auctionHouse));
         (uint256 tokenId, address wrappedAddress, uint256 amountCreated) =
-            linearVesting.mint(_alice, underlyingTokenAddress, vestingParamsBytes, AMOUNT, true);
+            linearVesting.mint(_alice, underlyingTokenAddress, vestingParamsBytes, AMOUNT, false);
 
         // Check values
         assertTrue(tokenId > 0, "tokenId mismatch");
@@ -669,7 +737,7 @@ contract LinearVestingTest is Test, Permit2User {
         // Call
         vm.prank(address(auctionHouse));
         (uint256 tokenId, address wrappedAddress, uint256 amountCreated) =
-            linearVesting.mint(_alice, underlyingTokenAddress, vestingParamsBytes, AMOUNT, true);
+            linearVesting.mint(_alice, underlyingTokenAddress, vestingParamsBytes, AMOUNT, false);
 
         // Check values
         assertTrue(tokenId > 0, "tokenId mismatch");

@@ -2,6 +2,7 @@
 pragma solidity 0.8.19;
 
 import {CloneERC20} from "src/lib/clones/CloneERC20.sol";
+import {ERC20} from "solmate/tokens/ERC20.sol";
 
 /// @title      SoulboundCloneERC20
 /// @notice     A cloneable ERC20 token with the following additional features:
@@ -11,7 +12,10 @@ import {CloneERC20} from "src/lib/clones/CloneERC20.sol";
 ///             - name (string)
 ///             - symbol (string)
 ///             - decimals (uint8)
+///             - expiry (uint64)
 ///             - owner (address)
+///             - underlying token (address)
+///             - teller (address)
 contract SoulboundCloneERC20 is CloneERC20 {
     // ========== EVENTS ========== //
 
@@ -26,10 +30,6 @@ contract SoulboundCloneERC20 is CloneERC20 {
     // Constructor not supported when cloning
 
     // ========== OWNERSHIP ========== //
-
-    function owner() public pure returns (address) {
-        return _getArgAddress(0x41);
-    }
 
     modifier onlyOwner() {
         if (msg.sender != owner()) revert NotPermitted();
@@ -62,5 +62,35 @@ contract SoulboundCloneERC20 is CloneERC20 {
 
     function approve(address, uint256) public pure override returns (bool) {
         revert NotPermitted();
+    }
+
+    // ========== VIEW FUNCTIONS ========== //
+
+    /// @notice     The timestamp at which the derivative can be redeemed for the underlying
+    ///
+    /// @return     The expiry timestamp
+    function expiry() external pure returns (uint48) {
+        return uint48(_getArgUint64(0x41)); // decimals offset (64) + 1 byte
+    }
+
+    /// @notice     The address of the owner of the derivative
+    ///
+    /// @return     The address of the owner
+    function owner() public pure returns (address) {
+        return _getArgAddress(0x49); // expiry offset + 8 bytes
+    }
+
+    /// @notice     The token to be redeemed when the derivative is vested
+    ///
+    /// @return     The address of the underlying token
+    function underlying() external pure returns (ERC20) {
+        return ERC20(_getArgAddress(0x5D)); // owner offset + 20 bytes
+    }
+
+    /// @notice     The contract that created this token
+    ///
+    /// @return     The address of the teller
+    function teller() external pure returns (address) {
+        return _getArgAddress(0x71); // underlying offset + 20 bytes
     }
 }
