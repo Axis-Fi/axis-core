@@ -135,9 +135,13 @@ abstract contract Derivative {
     /// @notice     Validate derivative params for the specific implementation
     ///             The parameters should be the same as what is passed into `deploy()` or `mint()`
     ///
-    /// @param      params_     The params to validate
-    /// @return     bool        Whether or not the params are valid
-    function validate(bytes memory params_) external view virtual returns (bool);
+    /// @param      underlyingToken_    The address of the underlying token
+    /// @param      params_             The params to validate
+    /// @return     bool                Whether or not the params are valid
+    function validate(
+        address underlyingToken_,
+        bytes memory params_
+    ) external view virtual returns (bool);
 
     // ========== DERIVATIVE INFORMATION ========== //
 
@@ -155,9 +159,13 @@ abstract contract Derivative {
 
     /// @notice     Compute a unique token ID, given the parameters for the derivative
     ///
-    /// @param      params_     The parameters for the derivative
-    /// @return     tokenId_    The unique token ID
-    function computeId(bytes memory params_) external pure virtual returns (uint256);
+    /// @param      underlyingToken_    The address of the underlying token
+    /// @param      params_             The parameters for the derivative
+    /// @return     tokenId_            The unique token ID
+    function computeId(
+        address underlyingToken_,
+        bytes memory params_
+    ) external pure virtual returns (uint256);
 
     /// @notice     Get the metadata for a derivative token
     ///

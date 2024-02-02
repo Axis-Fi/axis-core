@@ -133,9 +133,12 @@ contract MockDerivativeModule is DerivativeModule {
         uint256 amount
     ) external view virtual override returns (uint256) {}
 
-    function computeId(bytes memory params_) external pure virtual override returns (uint256) {}
+    function computeId(
+        address underlyingToken_,
+        bytes memory params_
+    ) external pure virtual override returns (uint256) {}
 
-    function validate(bytes memory) external view virtual override returns (bool) {
+    function validate(address, bytes memory) external view virtual override returns (bool) {
         if (validateFails) revert("validation error");
 
         return true;

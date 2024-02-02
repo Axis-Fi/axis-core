@@ -576,15 +576,16 @@ contract LinearVestingTest is Test, Permit2User {
 
     function test_validate_incorrectParams_reverts() public givenVestingParamsAreInvalid {
         // Expect revert
-        vm.expectRevert();
+        bytes memory err = abi.encodeWithSelector(LinearVesting.InvalidParams.selector);
+        vm.expectRevert(err);
 
         // Call
-        linearVesting.validate(vestingParamsBytes);
+        linearVesting.validate(underlyingTokenAddress, vestingParamsBytes);
     }
 
     function test_validate_startTimestampIsZero() public whenStartTimestampIsZero {
         // Call
-        bool isValid = linearVesting.validate(vestingParamsBytes);
+        bool isValid = linearVesting.validate(underlyingTokenAddress, vestingParamsBytes);
 
         // Check values
         assertFalse(isValid);
@@ -592,7 +593,7 @@ contract LinearVestingTest is Test, Permit2User {
 
     function test_validate_expiryTimestampIsZero() public whenExpiryTimestampIsZero {
         // Call
-        bool isValid = linearVesting.validate(vestingParamsBytes);
+        bool isValid = linearVesting.validate(underlyingTokenAddress, vestingParamsBytes);
 
         // Check values
         assertFalse(isValid);
@@ -603,7 +604,7 @@ contract LinearVestingTest is Test, Permit2User {
         whenStartAndExpiryTimestampsAreTheSame
     {
         // Call
-        bool isValid = linearVesting.validate(vestingParamsBytes);
+        bool isValid = linearVesting.validate(underlyingTokenAddress, vestingParamsBytes);
 
         // Check values
         assertFalse(isValid);
@@ -614,7 +615,7 @@ contract LinearVestingTest is Test, Permit2User {
         whenStartTimestampIsAfterExpiryTimestamp
     {
         // Call
-        bool isValid = linearVesting.validate(vestingParamsBytes);
+        bool isValid = linearVesting.validate(underlyingTokenAddress, vestingParamsBytes);
 
         // Check values
         assertFalse(isValid);
@@ -625,7 +626,7 @@ contract LinearVestingTest is Test, Permit2User {
         whenStartTimestampIsBeforeCurrentTimestamp
     {
         // Call
-        bool isValid = linearVesting.validate(vestingParamsBytes);
+        bool isValid = linearVesting.validate(underlyingTokenAddress, vestingParamsBytes);
 
         // Check values
         assertTrue(isValid);
@@ -636,7 +637,7 @@ contract LinearVestingTest is Test, Permit2User {
         whenExpiryTimestampIsBeforeCurrentTimestamp
     {
         // Call
-        bool isValid = linearVesting.validate(vestingParamsBytes);
+        bool isValid = linearVesting.validate(underlyingTokenAddress, vestingParamsBytes);
 
         // Check values
         assertFalse(isValid);
@@ -644,7 +645,7 @@ contract LinearVestingTest is Test, Permit2User {
 
     function test_validate() public {
         // Call
-        bool isValid = linearVesting.validate(vestingParamsBytes);
+        bool isValid = linearVesting.validate(underlyingTokenAddress, vestingParamsBytes);
 
         // Check values
         assertTrue(isValid);
@@ -659,10 +660,11 @@ contract LinearVestingTest is Test, Permit2User {
 
     function test_computeId_incorrectParams_reverts() public givenVestingParamsAreInvalid {
         // Expect revert
-        vm.expectRevert();
+        bytes memory err = abi.encodeWithSelector(LinearVesting.InvalidParams.selector);
+        vm.expectRevert(err);
 
         // Call
-        linearVesting.computeId(vestingParamsBytes);
+        linearVesting.computeId(underlyingTokenAddress, vestingParamsBytes);
     }
 
     function test_computeId_paramsChanged()
@@ -671,7 +673,7 @@ contract LinearVestingTest is Test, Permit2User {
         whenVestingParamsAreChanged
     {
         // Call
-        uint256 tokenId = linearVesting.computeId(vestingParamsBytes);
+        uint256 tokenId = linearVesting.computeId(underlyingTokenAddress, vestingParamsBytes);
 
         // Check values
         assertFalse(tokenId == derivativeTokenId);
@@ -679,7 +681,7 @@ contract LinearVestingTest is Test, Permit2User {
 
     function test_computeId() public givenDerivativeIsDeployed {
         // Call
-        uint256 tokenId = linearVesting.computeId(vestingParamsBytes);
+        uint256 tokenId = linearVesting.computeId(underlyingTokenAddress, vestingParamsBytes);
 
         // Check values
         assertEq(tokenId, derivativeTokenId);
@@ -1097,9 +1099,9 @@ contract LinearVestingTest is Test, Permit2User {
     //  [X] it returns the redeemable amount up to the derivative token balance
     // [X] given tokens have been redeemed
     //  [X] it returns the remaining redeemable amount
-    // [ ] when the derivative is minted after start timestamp
-    //  [ ] given tokens have been redeemed
-    //   [ ] it returns the remaining redeemable amount
+    // [X] when the derivative is minted after start timestamp
+    //  [X] given tokens have been redeemed
+    //   [X] it returns the remaining redeemable amount
     //  [X] it returns the expected balance
 
     // TODO redeem, wrap derivative
@@ -1465,9 +1467,6 @@ contract LinearVestingTest is Test, Permit2User {
         assertEq(redeemableAmount, expectedRedeemableWrapped, "redeemable mismatch"); // Not affected by the other balance
     }
 
-    // reclaim
-    // [ ] it reverts
-
     // wrap
     // [ ] when the token id does not exist
     //  [ ] it reverts
@@ -1490,6 +1489,9 @@ contract LinearVestingTest is Test, Permit2User {
     // [ ] when the caller has insufficient balance of the wrapped token
     //  [ ] it reverts
     // [ ] it burns the wrapped token and mints the derivative token
+
+    // reclaim
+    // [ ] it reverts
 
     // transfer
     // [ ] it reverts
