@@ -10,6 +10,7 @@ import {MockERC20} from "solmate/test/utils/mocks/MockERC20.sol";
 
 import {AuctionHouse} from "src/AuctionHouse.sol";
 import {LinearVesting} from "src/modules/derivatives/LinearVesting.sol";
+import {SoulboundCloneERC20} from "src/modules/derivatives/SoulboundCloneERC20.sol";
 
 contract LinearVestingTest is Test, Permit2User {
     address internal constant _owner = address(0x1);
@@ -18,14 +19,15 @@ contract LinearVestingTest is Test, Permit2User {
 
     MockERC20 internal underlyingToken;
     address internal underlyingTokenAddress;
+    uint8 internal underlyingTokenDecimals = 18;
 
     AuctionHouse internal auctionHouse;
     LinearVesting internal linearVesting;
 
     LinearVesting.VestingParams internal vestingParams;
     bytes internal vestingParamsBytes;
-    uint48 internal constant vestingStart = 1_000_100;
-    uint48 internal constant vestingExpiry = 1_000_200;
+    uint48 internal constant vestingStart = 1_704_882_344; // 2024-01-10
+    uint48 internal constant vestingExpiry = 1_705_055_144; // 2024-01-12
 
     uint256 internal constant AMOUNT = 1e18;
 
@@ -36,7 +38,7 @@ contract LinearVestingTest is Test, Permit2User {
         // Wrap to reasonable timestamp
         vm.warp(1_000_000);
 
-        underlyingToken = new MockERC20("Underlying", "UNDERLYING", 18);
+        underlyingToken = new MockERC20("Underlying", "UNDERLYING", underlyingTokenDecimals);
         underlyingTokenAddress = address(underlyingToken);
 
         auctionHouse = new AuctionHouse(_protocol, _PERMIT2_ADDRESS);
@@ -96,13 +98,14 @@ contract LinearVestingTest is Test, Permit2User {
     }
 
     modifier whenVestingParamsAreChanged() {
-        vestingParams.start = vestingParams.start + 1;
+        vestingParams.expiry = 1_705_227_944; // 2024-01-14
         vestingParamsBytes = abi.encode(vestingParams);
         _;
     }
 
     modifier whenUnderlyingTokenIsChanged() {
-        underlyingToken = new MockERC20("Underlying", "UNDERLYING", 18);
+        underlyingTokenDecimals = 17;
+        underlyingToken = new MockERC20("Underlying2", "UNDERLYING2", underlyingTokenDecimals);
         underlyingTokenAddress = address(underlyingToken);
         _;
     }
@@ -288,6 +291,12 @@ contract LinearVestingTest is Test, Permit2User {
         // Check values
         assertTrue(tokenId > 0);
         assertTrue(wrappedAddress != address(0));
+
+        // Check wrapped token
+        SoulboundCloneERC20 wrappedDerivative = SoulboundCloneERC20(wrappedAddress);
+        assertEq(wrappedDerivative.name(), "Underlying 2024-01-12");
+        assertEq(wrappedDerivative.symbol(), "UNDERLYING 2024-01-12");
+        assertEq(wrappedDerivative.decimals(), 18);
     }
 
     function test_deploy_notParent() public {
@@ -327,6 +336,12 @@ contract LinearVestingTest is Test, Permit2User {
         // Check values
         assertFalse(tokenId == derivativeTokenId);
         assertFalse(wrappedAddress == derivativeWrappedAddress);
+
+        // Check wrapped token
+        SoulboundCloneERC20 wrappedDerivative = SoulboundCloneERC20(wrappedAddress);
+        assertEq(wrappedDerivative.name(), "Underlying 2024-01-14");
+        assertEq(wrappedDerivative.symbol(), "UNDERLYING 2024-01-14");
+        assertEq(wrappedDerivative.decimals(), 18);
     }
 
     function test_deploy_differentUnderlyingToken()
@@ -341,6 +356,12 @@ contract LinearVestingTest is Test, Permit2User {
         // Check values
         assertFalse(tokenId == derivativeTokenId);
         assertFalse(wrappedAddress == derivativeWrappedAddress);
+
+        // Check wrapped token
+        SoulboundCloneERC20 wrappedDerivative = SoulboundCloneERC20(wrappedAddress);
+        assertEq(wrappedDerivative.name(), "Underlying2 2024-01-12");
+        assertEq(wrappedDerivative.symbol(), "UNDERLYING2 2024-01-12");
+        assertEq(wrappedDerivative.decimals(), 17);
     }
 
     // validate
@@ -781,6 +802,10 @@ contract LinearVestingTest is Test, Permit2User {
     //  [ ] it returns the remaining redeemable amount
     // [ ] when the owner is not the caller
     //  [ ] it returns the owner's redeemable amount
+    // [ ] when the derivative is minted after start timestamp
+    //  [ ] given tokens have been redeemed
+    //   [ ] it returns the remaining redeemable amount
+    //  [ ] it returns the full balance
 
     // reclaim
     // [ ] it reverts

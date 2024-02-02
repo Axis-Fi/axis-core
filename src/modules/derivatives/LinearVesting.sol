@@ -5,6 +5,7 @@ import {ERC20} from "solmate/tokens/ERC20.sol";
 import {ERC6909} from "solmate/tokens/ERC6909.sol";
 import {SafeTransferLib} from "solmate/utils/SafeTransferLib.sol";
 import {ClonesWithImmutableArgs} from "src/lib/clones/ClonesWithImmutableArgs.sol";
+import {Timestamp} from "src/lib/Timestamp.sol";
 
 import {Derivative, DerivativeModule} from "src/modules/Derivative.sol";
 import {Module, Veecode, toKeycode, wrapVeecode} from "src/modules/Modules.sol";
@@ -13,6 +14,7 @@ import {SoulboundCloneERC20} from "src/modules/derivatives/SoulboundCloneERC20.s
 contract LinearVesting is DerivativeModule {
     using SafeTransferLib for ERC20;
     using ClonesWithImmutableArgs for address;
+    using Timestamp for uint48;
 
     // ========== EVENTS ========== //
 
@@ -545,18 +547,19 @@ contract LinearVesting is DerivativeModule {
     /// @notice     Computes the name and symbol of a derivative token
     ///
     /// @param      base_       The address of the underlying token
-    /// @param      start_      The timestamp at which the vesting begins
     /// @param      expiry_     The timestamp at which the vesting expires
     /// @return     string      The name of the derivative token
     /// @return     string      The symbol of the derivative token
     function _computeNameAndSymbol(
         ERC20 base_,
-        uint48 start_,
         uint48 expiry_
     ) internal view returns (string memory, string memory) {
+        // Get the date components
+        (string memory year, string memory month, string memory day) = expiry_.toPaddedString();
+
         return (
-            string(abi.encodePacked(base_.name(), "-", start_, "-", expiry_)),
-            string(abi.encodePacked(base_.symbol(), "-", start_, "-", expiry_))
+            string(abi.encodePacked(base_.name(), " ", year, "-", month, "-", day)),
+            string(abi.encodePacked(base_.symbol(), " ", year, "-", month, "-", day))
         );
     }
 
@@ -629,7 +632,7 @@ contract LinearVesting is DerivativeModule {
 
             // Deploy the wrapped implementation
             (string memory name, string memory symbol) =
-                _computeNameAndSymbol(data.baseToken, data.start, data.expiry);
+                _computeNameAndSymbol(data.baseToken, data.expiry);
             bytes memory wrappedTokenData = abi.encodePacked(
                 bytes32(bytes(name)),
                 bytes32(bytes(symbol)),
