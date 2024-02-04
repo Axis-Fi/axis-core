@@ -346,9 +346,7 @@ contract LinearVestingTest is Test, Permit2User {
         Derivative.Token memory tokenMetadata = linearVesting.getTokenMetadata(tokenId);
         assertEq(tokenMetadata.exists, true);
         assertEq(tokenMetadata.wrapped, wrappedAddress);
-        assertEq(tokenMetadata.decimals, 0);
-        assertEq(tokenMetadata.name, "");
-        assertEq(tokenMetadata.symbol, "");
+        assertEq(tokenMetadata.underlyingToken, underlyingTokenAddress);
         assertEq(tokenMetadata.data.length, VESTING_DATA_LEN);
 
         // Check implementation data
@@ -375,9 +373,7 @@ contract LinearVestingTest is Test, Permit2User {
         Derivative.Token memory tokenMetadata = linearVesting.getTokenMetadata(tokenId);
         assertEq(tokenMetadata.exists, true);
         assertEq(tokenMetadata.wrapped, wrappedAddress);
-        assertEq(tokenMetadata.decimals, 0);
-        assertEq(tokenMetadata.name, "");
-        assertEq(tokenMetadata.symbol, "");
+        assertEq(tokenMetadata.underlyingToken, underlyingTokenAddress);
         assertEq(tokenMetadata.data.length, VESTING_DATA_LEN);
 
         // Check implementation data
@@ -416,9 +412,7 @@ contract LinearVestingTest is Test, Permit2User {
         Derivative.Token memory tokenMetadata = linearVesting.getTokenMetadata(tokenId);
         assertEq(tokenMetadata.exists, true);
         assertEq(tokenMetadata.wrapped, wrappedAddress);
-        assertEq(tokenMetadata.decimals, 0);
-        assertEq(tokenMetadata.name, "");
-        assertEq(tokenMetadata.symbol, "");
+        assertEq(tokenMetadata.underlyingToken, underlyingTokenAddress);
         assertEq(tokenMetadata.data.length, VESTING_DATA_LEN);
 
         // Check implementation data
@@ -442,9 +436,7 @@ contract LinearVestingTest is Test, Permit2User {
         Derivative.Token memory tokenMetadata = linearVesting.getTokenMetadata(tokenId);
         assertEq(tokenMetadata.exists, true);
         assertEq(tokenMetadata.wrapped, address(0));
-        assertEq(tokenMetadata.decimals, 0);
-        assertEq(tokenMetadata.name, "");
-        assertEq(tokenMetadata.symbol, "");
+        assertEq(tokenMetadata.underlyingToken, underlyingTokenAddress);
         assertEq(tokenMetadata.data.length, VESTING_DATA_LEN);
 
         // Check implementation data
@@ -1485,6 +1477,158 @@ contract LinearVestingTest is Test, Permit2User {
     // [ ] when the caller has insufficient balance of the wrapped token
     //  [ ] it reverts
     // [ ] it burns the wrapped token and mints the derivative token
+
+    // name
+    // [X] when the token id is invalid
+    //  [X] it reverts
+    // [X] it returns the name
+
+    function test_name_givenTokenIdDoesNotExist_reverts() public {
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(LinearVesting.InvalidParams.selector);
+        vm.expectRevert(err);
+
+        // Call
+        linearVesting.name(derivativeTokenId);
+    }
+
+    function test_name() public givenDerivativeIsDeployed {
+        // Call
+        string memory name = linearVesting.name(derivativeTokenId);
+
+        // Check values
+        assertEq(name, wrappedDerivativeTokenName);
+    }
+
+    // symbol
+    // [X] when the token id is invalid
+    //  [X] it reverts
+    // [X] it returns the symbol
+
+    function test_symbol_givenTokenIdDoesNotExist_reverts() public {
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(LinearVesting.InvalidParams.selector);
+        vm.expectRevert(err);
+
+        // Call
+        linearVesting.symbol(derivativeTokenId);
+    }
+
+    function test_symbol() public givenDerivativeIsDeployed {
+        // Call
+        string memory symbol = linearVesting.symbol(derivativeTokenId);
+
+        // Check values
+        assertEq(symbol, wrappedDerivativeTokenSymbol);
+    }
+
+    // decimals
+    // [X] when the token id is invalid
+    //  [X] it reverts
+    // [ X] it returns the decimals of the underlying base token
+
+    function test_decimals_givenTokenIdDoesNotExist_reverts() public {
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(LinearVesting.InvalidParams.selector);
+        vm.expectRevert(err);
+
+        // Call
+        linearVesting.decimals(derivativeTokenId);
+    }
+
+    function test_decimals() public givenDerivativeIsDeployed {
+        // Call
+        uint8 decimals = linearVesting.decimals(derivativeTokenId);
+
+        // Check values
+        assertEq(decimals, underlyingTokenDecimals);
+    }
+
+    // balanceOf
+    // [X] when the token id is invalid
+    //  [X] it returns 0
+    // [X] it returns the balance of the unwrapped derivative token
+
+    function test_balanceOf_givenTokenIdDoesNotExist() public {
+        // Call
+        uint256 balance = linearVesting.balanceOf(_alice, derivativeTokenId);
+
+        // Check values
+        assertEq(balance, 0);
+    }
+
+    function test_balanceOf(uint256 amount_) public givenWrappedDerivativeIsDeployed {
+        uint256 amount = bound(amount_, 0, AMOUNT);
+
+        // Mint
+        if (amount > 0) {
+            _mintDerivativeTokens(_alice, amount);
+        }
+
+        // Call
+        uint256 balance = linearVesting.balanceOf(_alice, derivativeTokenId);
+
+        // Check values
+        assertEq(balance, amount);
+    }
+
+    function test_balanceOf_wrapped(uint256 amount_) public givenWrappedDerivativeIsDeployed {
+        uint256 amount = bound(amount_, 0, AMOUNT);
+
+        // Mint
+        if (amount > 0) {
+            _mintWrappedDerivativeTokens(_alice, amount);
+        }
+
+        // Call
+        uint256 balance = linearVesting.balanceOf(_alice, derivativeTokenId);
+
+        // Check values
+        assertEq(balance, 0);
+    }
+
+    // totalSupply
+    // [X] when the token id is invalid
+    //  [X] it returns 0
+    // [X] it returns the total supply of the unwrapped derivative token
+
+    function test_totalSupply_givenTokenIdDoesNotExist() public {
+        // Call
+        uint256 balance = linearVesting.totalSupply(derivativeTokenId);
+
+        // Check values
+        assertEq(balance, 0);
+    }
+
+    function test_totalSupply(uint256 amount_) public givenWrappedDerivativeIsDeployed {
+        uint256 amount = bound(amount_, 0, AMOUNT);
+
+        // Mint
+        if (amount > 0) {
+            _mintDerivativeTokens(_alice, amount);
+        }
+
+        // Call
+        uint256 totalSupply = linearVesting.totalSupply(derivativeTokenId);
+
+        // Check values
+        assertEq(totalSupply, amount);
+    }
+
+    function test_totalSupply_wrapped(uint256 amount_) public givenWrappedDerivativeIsDeployed {
+        uint256 amount = bound(amount_, 0, AMOUNT);
+
+        // Mint
+        if (amount > 0) {
+            _mintWrappedDerivativeTokens(_alice, amount);
+        }
+
+        // Call
+        uint256 totalSupply = linearVesting.totalSupply(derivativeTokenId);
+
+        // Check values
+        assertEq(totalSupply, 0);
+    }
 
     // reclaim
     // [ ] it reverts

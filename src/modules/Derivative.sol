@@ -2,6 +2,7 @@
 pragma solidity 0.8.19;
 
 import {ERC6909} from "lib/solmate/src/tokens/ERC6909.sol";
+import {ERC6909Metadata} from "src/lib/ERC6909Metadata.sol";
 import {Module, Keycode} from "src/modules/Modules.sol";
 
 abstract contract Derivative {
@@ -13,20 +14,22 @@ abstract contract Derivative {
 
     // ========== DATA STRUCTURES ========== //
 
-    // TODO remove name/symbol/decimals
+    /// @notice     Metadata for a derivative token
+    ///
+    /// @param      exists          True if the token has been deployed
+    /// @param      wrapped         True if an ERC20-wrapped derivative has been deployed
+    /// @param      underlyingToken The address of the underlying token
+    /// @param      data            Implementation-specific data
     struct Token {
         bool exists;
         address wrapped;
-        uint8 decimals; // same as underlying token
-        string name; //
-        string symbol;
         address underlyingToken;
-        // TODO clarify what kind of data could be contained here
         bytes data;
     }
 
     // ========== STATE VARIABLES ========== //
 
+    /// @notice     The metadata for each derivative token
     mapping(uint256 tokenId => Token metadata) public tokenMetadata;
 
     // ========== DERIVATIVE MANAGEMENT ========== //
@@ -67,14 +70,15 @@ abstract contract Derivative {
         virtual
         returns (uint256 tokenId_, address wrappedAddress_, uint256 amountCreated_);
 
-    /// @notice Mint new derivative tokens for a specific token Id
-    /// @param to_ The address to mint the derivative tokens to
-    /// @param tokenId_ The ID of the derivative token
-    /// @param amount_ The amount of derivative tokens to create
-    /// @param wrapped_ Whether (true) or not (false) the derivative should be wrapped in an ERC20 token for composability
-    /// @return tokenId_ The ID of the derivative token
-    /// @return wrappedAddress_ The address of the ERC20 wrapped derivative token, if wrapped_ is true, otherwise, it's the zero address.
-    /// @return amountCreated_ The amount of derivative tokens created
+    /// @notice     Mint new derivative tokens for a specific token ID
+    ///
+    /// @param      to_                 The address to mint the derivative tokens to
+    /// @param      tokenId_            The ID of the derivative token
+    /// @param      amount_             The amount of derivative tokens to create
+    /// @param      wrapped_            Whether (true) or not (false) the derivative should be wrapped in an ERC20 token for composability
+    /// @return     tokenId_            The ID of the derivative token
+    /// @return     wrappedAddress_     The address of the ERC20 wrapped derivative token, if wrapped_ is true, otherwise, it's the zero address.
+    /// @return     amountCreated_      The amount of derivative tokens created
     function mint(
         address to_,
         uint256 tokenId_,
@@ -84,10 +88,11 @@ abstract contract Derivative {
 
     function redeemMax(uint256 tokenId_, bool wrapped_) external virtual;
 
-    /// @notice Redeem derivative tokens for underlying collateral
-    /// @param tokenId_ The ID of the derivative token to redeem
-    /// @param amount_ The amount of derivative tokens to redeem
-    /// @param wrapped_ Whether (true) or not (false) to redeem wrapped ERC20 derivative tokens
+    /// @notice     Redeem derivative tokens for underlying collateral
+    ///
+    /// @param      tokenId_    The ID of the derivative token to redeem
+    /// @param      amount_     The amount of derivative tokens to redeem
+    /// @param      wrapped_    Whether (true) or not (false) to redeem wrapped ERC20 derivative tokens
     function redeem(uint256 tokenId_, uint256 amount_, bool wrapped_) external virtual;
 
     /// @notice     Determines the amount of redeemable tokens for a given derivative token
@@ -102,17 +107,27 @@ abstract contract Derivative {
         bool wrapped_
     ) external view virtual returns (uint256);
 
-    /// @notice Exercise a conversion of the derivative token per the specific implementation logic
-    /// @dev Used for options or other derivatives with convertible options, e.g. Rage vesting.
+    /// @notice     Exercise a conversion of the derivative token per the specific implementation logic
+    /// @dev        Used for options or other derivatives with convertible options, e.g. Rage vesting.
+    ///
+    /// @param      tokenId_    The ID of the derivative token to exercise
+    /// @param      amount      The amount of derivative tokens to exercise
+    /// @param      wrapped_    Whether (true) or not (false) to exercise wrapped ERC20 derivative tokens
     function exercise(uint256 tokenId_, uint256 amount, bool wrapped_) external virtual;
 
-    /// @notice Reclaim posted collateral for a derivative token which can no longer be exercised
-    /// @notice Access controlled: only callable by the derivative issuer via the auction house.
-    /// @dev
+    /// @notice     Reclaim posted collateral for a derivative token which can no longer be exercised
+    /// @notice     Access controlled: only callable by the derivative issuer via the auction house.
+    ///
+    /// @param      tokenId_    The ID of the derivative token to reclaim
     function reclaim(uint256 tokenId_) external virtual;
 
-    /// @notice Transforms an existing derivative issued by this contract into something else. Derivative is burned and collateral sent to the auction house.
-    /// @notice Access controlled: only callable by the auction house.
+    /// @notice     Transforms an existing derivative issued by this contract into something else. Derivative is burned and collateral sent to the auction house.
+    /// @notice     Access controlled: only callable by the auction house.
+    ///
+    /// @param      tokenId_    The ID of the derivative token to transform
+    /// @param      from_       The address of the owner of the derivative token
+    /// @param      amount_     The amount of derivative tokens to transform
+    /// @param      wrapped_    Whether (true) or not (false) to transform wrapped ERC20 derivative tokens
     function transform(
         uint256 tokenId_,
         address from_,
@@ -177,4 +192,4 @@ abstract contract Derivative {
     }
 }
 
-abstract contract DerivativeModule is Derivative, ERC6909, Module {}
+abstract contract DerivativeModule is Derivative, ERC6909, ERC6909Metadata, Module {}

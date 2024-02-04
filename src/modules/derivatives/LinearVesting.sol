@@ -6,6 +6,7 @@ import {ERC6909} from "solmate/tokens/ERC6909.sol";
 import {SafeTransferLib} from "solmate/utils/SafeTransferLib.sol";
 import {ClonesWithImmutableArgs} from "src/lib/clones/ClonesWithImmutableArgs.sol";
 import {Timestamp} from "src/lib/Timestamp.sol";
+import {ERC6909Metadata} from "src/lib/ERC6909Metadata.sol";
 
 import {Derivative, DerivativeModule} from "src/modules/Derivative.sol";
 import {Module, Veecode, toKeycode, wrapVeecode} from "src/modules/Modules.sol";
@@ -99,7 +100,9 @@ contract LinearVesting is DerivativeModule {
     }
 
     modifier onlyDeployedWrapped(uint256 tokenId_) {
-        if (tokenMetadata[tokenId_].wrapped == address(0)) revert InvalidParams();
+        if (tokenMetadata[tokenId_].wrapped == address(0)) {
+            revert InvalidParams();
+        }
         _;
     }
 
@@ -153,7 +156,9 @@ contract LinearVesting is DerivativeModule {
         VestingParams memory params = _decodeVestingParams(params_);
 
         // Validate parameters
-        if (_validate(underlyingToken_, params) == false) revert InvalidParams();
+        if (_validate(underlyingToken_, params) == false) {
+            revert InvalidParams();
+        }
 
         // If necessary, deploy and store the data
         (uint256 tokenId, address wrappedAddress) =
@@ -203,7 +208,9 @@ contract LinearVesting is DerivativeModule {
         VestingParams memory params = _decodeVestingParams(params_);
 
         // Validate parameters
-        if (_validate(underlyingToken_, params) == false) revert InvalidParams();
+        if (_validate(underlyingToken_, params) == false) {
+            revert InvalidParams();
+        }
         if (underlyingToken_ == address(0)) revert InvalidParams();
 
         // If necessary, deploy and store the data
@@ -618,6 +625,7 @@ contract LinearVesting is DerivativeModule {
         if (token.exists == false) {
             // Store derivative data
             token.exists = true;
+            token.underlyingToken = underlyingToken_;
             token.data = abi.encode(
                 VestingData({
                     start: params_.start,
@@ -659,11 +667,11 @@ contract LinearVesting is DerivativeModule {
             VestingData memory data = abi.decode(token_.data, (VestingData));
 
             // Deploy the wrapped implementation
-            (string memory name, string memory symbol) =
+            (string memory name_, string memory symbol_) =
                 _computeNameAndSymbol(data.baseToken, data.expiry);
             bytes memory wrappedTokenData = abi.encodePacked(
-                bytes32(bytes(name)), // Name
-                bytes32(bytes(symbol)), // Smybol
+                bytes32(bytes(name_)), // Name
+                bytes32(bytes(symbol_)), // Smybol
                 uint8(data.baseToken.decimals()), // Decimals
                 uint64(data.expiry), // Expiry timestamp
                 address(this), // Owner
@@ -676,5 +684,60 @@ contract LinearVesting is DerivativeModule {
         }
 
         return token_.wrapped;
+    }
+
+    // ========== ERC6909 METADATA ========== //
+
+    /// @inheritdoc ERC6909Metadata
+    /// @dev        This function reverts if:
+    ///             - The token ID does not exist
+    function name(uint256 tokenId_)
+        public
+        view
+        virtual
+        override
+        onlyValidTokenId(tokenId_)
+        returns (string memory)
+    {
+        Token storage token = tokenMetadata[tokenId_];
+        VestingData memory data = abi.decode(token.data, (VestingData));
+
+        (string memory name_,) = _computeNameAndSymbol(data.baseToken, data.expiry);
+        return name_;
+    }
+
+    /// @inheritdoc ERC6909Metadata
+    /// @dev        This function reverts if:
+    ///             - The token ID does not exist
+    function symbol(uint256 tokenId_)
+        public
+        view
+        virtual
+        override
+        onlyValidTokenId(tokenId_)
+        returns (string memory)
+    {
+        Token storage token = tokenMetadata[tokenId_];
+        VestingData memory data = abi.decode(token.data, (VestingData));
+
+        (, string memory symbol_) = _computeNameAndSymbol(data.baseToken, data.expiry);
+        return symbol_;
+    }
+
+    /// @inheritdoc ERC6909Metadata
+    /// @dev        This function reverts if:
+    ///             - The token ID does not exist
+    function decimals(uint256 tokenId_)
+        public
+        view
+        virtual
+        override
+        onlyValidTokenId(tokenId_)
+        returns (uint8)
+    {
+        Token storage token = tokenMetadata[tokenId_];
+        VestingData memory data = abi.decode(token.data, (VestingData));
+
+        return data.baseToken.decimals();
     }
 }

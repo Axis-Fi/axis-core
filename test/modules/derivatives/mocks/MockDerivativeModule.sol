@@ -193,8 +193,7 @@ contract MockDerivativeModule is DerivativeModule {
 
             // Store derivative data
             token.exists = true;
-            (token.name, token.symbol) = _getNameAndSymbol(ERC20(underlyingToken_), params_.expiry);
-            token.decimals = ERC20(underlyingToken_).decimals();
+            token.underlyingToken = underlyingToken_;
             token.data = abi.encode(params_);
 
             // Store metadata
@@ -211,4 +210,10 @@ contract MockDerivativeModule is DerivativeModule {
         uint256 tokenId_,
         bool wrapped_
     ) external view virtual override returns (uint256) {}
+
+    function name(uint256 tokenId_) public view virtual override returns (string memory) {}
+
+    function symbol(uint256 tokenId_) public view virtual override returns (string memory) {}
+
+    function decimals(uint256 tokenId_) public view virtual override returns (uint8) {}
 }
