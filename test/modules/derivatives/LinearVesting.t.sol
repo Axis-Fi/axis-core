@@ -410,7 +410,6 @@ contract LinearVestingTest is Test, Permit2User {
         assertEq(wrappedDerivative.decimals(), 18);
         assertEq(address(wrappedDerivative.underlying()), underlyingTokenAddress);
         assertEq(wrappedDerivative.expiry(), vestingExpiry);
-        assertEq(wrappedDerivative.teller(), address(linearVesting));
         assertEq(wrappedDerivative.owner(), address(linearVesting));
 
         // Check token metadata
@@ -479,7 +478,6 @@ contract LinearVestingTest is Test, Permit2User {
         assertEq(wrappedDerivative.decimals(), 18);
         assertEq(address(wrappedDerivative.underlying()), underlyingTokenAddress);
         assertEq(wrappedDerivative.expiry(), vestingParams.expiry);
-        assertEq(wrappedDerivative.teller(), address(linearVesting));
         assertEq(wrappedDerivative.owner(), address(linearVesting));
     }
 
@@ -523,7 +521,6 @@ contract LinearVestingTest is Test, Permit2User {
         assertEq(wrappedDerivative.decimals(), 18);
         assertEq(address(wrappedDerivative.underlying()), underlyingTokenAddress);
         assertEq(wrappedDerivative.expiry(), vestingParams.expiry);
-        assertEq(wrappedDerivative.teller(), address(linearVesting));
         assertEq(wrappedDerivative.owner(), address(linearVesting));
     }
 
@@ -553,7 +550,6 @@ contract LinearVestingTest is Test, Permit2User {
         assertEq(wrappedDerivative.decimals(), 17);
         assertEq(address(wrappedDerivative.underlying()), underlyingTokenAddress);
         assertEq(wrappedDerivative.expiry(), vestingParams.expiry);
-        assertEq(wrappedDerivative.teller(), address(linearVesting));
         assertEq(wrappedDerivative.owner(), address(linearVesting));
     }
 

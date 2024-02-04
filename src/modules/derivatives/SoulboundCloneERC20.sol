@@ -86,11 +86,4 @@ contract SoulboundCloneERC20 is CloneERC20 {
     function underlying() external pure returns (ERC20) {
         return ERC20(_getArgAddress(0x5D)); // owner offset + 20 bytes
     }
-
-    /// @notice     The contract that created this token
-    ///
-    /// @return     The address of the teller
-    function teller() external pure returns (address) {
-        return _getArgAddress(0x71); // underlying offset + 20 bytes
-    }
 }

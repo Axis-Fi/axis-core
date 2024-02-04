@@ -29,7 +29,6 @@ contract SoulboundCloneERC20Test is Test {
     address internal alice = address(0x1);
     address internal bob = address(0x2);
     address internal owner = address(0x3);
-    address internal teller = address(0x4);
 
     function setUp() public {
         _IMPLEMENTATION = new SoulboundCloneERC20();
@@ -47,8 +46,7 @@ contract SoulboundCloneERC20Test is Test {
             uint8(tokenDecimals),
             uint64(tokenExpiry),
             owner,
-            address(underlyingToken),
-            teller
+            address(underlyingToken)
         );
         address clonedContract = address(_IMPLEMENTATION).clone3(tokenData, bytes32(tokenSalt));
         clonedImplementation = SoulboundCloneERC20(clonedContract);
@@ -83,7 +81,6 @@ contract SoulboundCloneERC20Test is Test {
             address(underlyingToken),
             "underlying mismatch"
         );
-        assertEq(clonedImplementation.teller(), teller, "teller mismatch");
 
         // Ensure it is deterministic
         assertEq(

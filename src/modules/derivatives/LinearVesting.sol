@@ -667,8 +667,7 @@ contract LinearVesting is DerivativeModule {
                 uint8(data.baseToken.decimals()), // Decimals
                 uint64(data.expiry), // Expiry timestamp
                 address(this), // Owner
-                address(data.baseToken), // Underlying
-                address(this) // Teller
+                address(data.baseToken) // Underlying
             );
             token_.wrapped = _IMPLEMENTATION.clone3(wrappedTokenData, bytes32(tokenId_));
 
