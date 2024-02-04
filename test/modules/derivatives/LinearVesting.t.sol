@@ -1370,9 +1370,12 @@ contract LinearVestingTest is Test, Permit2User {
     //  [X] given tokens have been redeemed
     //   [X] it returns the remaining redeemable amount
     //  [X] it returns the expected balance
-
-    // TODO redeem, wrap derivative
-    // TODO wrap derivative, redeem, unwrap
+    // [X] given wrapped derivative tokens have been redeemed
+    //  [X] given wrapped derivative tokens have been unwrapped
+    //   [X] it returns the remaining wrapped and unwrapped redeemable amount
+    // [X] given unwrapped derivative tokens have been redeemed
+    //  [X] given unwrapped derivative tokens have been wrapped
+    //   [X] it returns the remaining wrapped and unwrapped redeemable amount
 
     function test_redeemable_givenTokenIdDoesNotExist_reverts() public {
         // Expect revert
@@ -1748,6 +1751,108 @@ contract LinearVestingTest is Test, Permit2User {
 
         // Check values
         assertEq(redeemableAmount, expectedRedeemableWrapped, "redeemable mismatch"); // Not affected by the other balance
+    }
+
+    function test_redeemable_wrapped_givenWrappedRedeemed_givenUnwrapped()
+        public
+        givenWrappedDerivativeIsDeployed
+        givenAliceHasDerivativeTokens(AMOUNT)
+        givenAliceHasWrappedDerivativeTokens(AMOUNT)
+    {
+        // Warp to before expiry
+        uint48 elapsed = 50_000;
+        vm.warp(vestingParams.start + elapsed);
+
+        uint256 vestedUnwrapped = elapsed * AMOUNT / vestingDuration;
+        uint256 vestedWrapped = elapsed * AMOUNT / vestingDuration;
+
+        // Redeem wrapped tokens - partial amount
+        uint256 redeemAmountWrapped = vestedWrapped / 2;
+        vm.prank(_alice);
+        linearVesting.redeem(derivativeTokenId, redeemAmountWrapped, true);
+
+        // Unwrap the remaining wrapped tokens
+        uint256 wrappedToUnwrap = AMOUNT - redeemAmountWrapped;
+        vm.prank(_alice);
+        linearVesting.unwrap(derivativeTokenId, wrappedToUnwrap);
+
+        // Check the unwrapped redeemable amount
+        uint256 redeemableUnwrapped = linearVesting.redeemable(_alice, derivativeTokenId, false);
+        assertEq(
+            redeemableUnwrapped, vestedUnwrapped + wrappedToUnwrap, "unwrapped: redeemable mismatch"
+        );
+
+        // Check the wrapped redeemable amount
+        uint256 redeemableWrapped = linearVesting.redeemable(_alice, derivativeTokenId, true);
+        assertEq(redeemableWrapped, 0, "wrapped: redeemable mismatch");
+
+        // Warp to another time
+        elapsed = 60_000;
+        vm.warp(vestingParams.start + elapsed);
+
+        vestedUnwrapped = elapsed * AMOUNT / vestingDuration;
+        vestedWrapped = elapsed * wrappedToUnwrap / vestingDuration;
+
+        // Check the unwrapped redeemable amount
+        redeemableUnwrapped = linearVesting.redeemable(_alice, derivativeTokenId, false);
+        assertEq(
+            redeemableUnwrapped, vestedUnwrapped + vestedWrapped, "unwrapped: redeemable mismatch"
+        );
+
+        // Check the wrapped redeemable amount
+        redeemableWrapped = linearVesting.redeemable(_alice, derivativeTokenId, true);
+        assertEq(redeemableWrapped, 0, "wrapped: redeemable mismatch");
+    }
+
+    function test_redeemable_unwrapped_givenUnwrappedRedeemed_givenWrapped()
+        public
+        givenWrappedDerivativeIsDeployed
+        givenAliceHasDerivativeTokens(AMOUNT)
+        givenAliceHasWrappedDerivativeTokens(AMOUNT)
+    {
+        // Warp to before expiry
+        uint48 elapsed = 50_000;
+        vm.warp(vestingParams.start + elapsed);
+
+        uint256 vestedUnwrapped = elapsed * AMOUNT / vestingDuration;
+        uint256 vestedWrapped = elapsed * AMOUNT / vestingDuration;
+
+        // Redeem unwrapped tokens - partial amount
+        uint256 redeemAmountUnwrapped = vestedUnwrapped / 2;
+        vm.prank(_alice);
+        linearVesting.redeem(derivativeTokenId, redeemAmountUnwrapped, false);
+
+        // Wrap the remaining unwrapped tokens
+        uint256 unwrappedToWrap = AMOUNT - redeemAmountUnwrapped;
+        vm.prank(_alice);
+        linearVesting.wrap(derivativeTokenId, unwrappedToWrap);
+
+        // Check the unwrapped redeemable amount
+        uint256 redeemableUnwrapped = linearVesting.redeemable(_alice, derivativeTokenId, false);
+        assertEq(redeemableUnwrapped, 0, "unwrapped: redeemable mismatch after wrap");
+
+        // Check the wrapped redeemable amount
+        uint256 redeemableWrapped = linearVesting.redeemable(_alice, derivativeTokenId, true);
+        assertEq(
+            redeemableWrapped,
+            vestedWrapped + unwrappedToWrap,
+            "wrapped: redeemable mismatch after wrap"
+        );
+
+        // Warp to another time
+        elapsed = 60_000;
+        vm.warp(vestingParams.start + elapsed);
+
+        vestedUnwrapped = elapsed * unwrappedToWrap / vestingDuration;
+        vestedWrapped = elapsed * AMOUNT / vestingDuration;
+
+        // Check the unwrapped redeemable amount
+        redeemableUnwrapped = linearVesting.redeemable(_alice, derivativeTokenId, false);
+        assertEq(redeemableUnwrapped, 0, "unwrapped: redeemable mismatch");
+
+        // Check the wrapped redeemable amount
+        redeemableWrapped = linearVesting.redeemable(_alice, derivativeTokenId, true);
+        assertEq(redeemableWrapped, vestedUnwrapped + vestedWrapped, "wrapped: redeemable mismatch");
     }
 
     // wrap
