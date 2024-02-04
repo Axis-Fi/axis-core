@@ -695,7 +695,7 @@ contract LinearVestingTest is Test, Permit2User {
     // [X] when the mint amount is 0
     //  [X] it reverts
     // [X] when the recipient is 0
-    //  [X] it reverts
+    //  [X] it succeeds
     // [X] given the caller has an insufficient balance of the underlying token
     //  [X] it reverts
     // [X] when wrapped is false
@@ -788,6 +788,7 @@ contract LinearVestingTest is Test, Permit2User {
         assertTrue(tokenId > 0, "tokenId mismatch");
         assertTrue(wrappedAddress == address(0), "wrappedAddress mismatch");
         assertEq(amountCreated, AMOUNT, "amountCreated mismatch");
+        assertEq(linearVesting.balanceOf(_alice, tokenId), AMOUNT, "balanceOf mismatch");
     }
 
     function test_mint_params_expiryTimestampIsBeforeCurrentTimestamp_reverts()
@@ -813,14 +814,19 @@ contract LinearVestingTest is Test, Permit2User {
         linearVesting.mint(_alice, underlyingTokenAddress, vestingParamsBytes, 0, false);
     }
 
-    function test_mint_params_recipientIsZero_reverts() public {
-        // Expect revert
-        bytes memory err = abi.encodeWithSelector(LinearVesting.InvalidParams.selector);
-        vm.expectRevert(err);
-
+    function test_mint_params_recipientIsZero()
+        public
+        givenParentHasUnderlyingTokenBalance(AMOUNT)
+    {
         // Call
         vm.prank(address(auctionHouse));
-        linearVesting.mint(address(0), underlyingTokenAddress, vestingParamsBytes, AMOUNT, false);
+        (uint256 tokenId,,) = linearVesting.mint(
+            address(0), underlyingTokenAddress, vestingParamsBytes, AMOUNT, false
+        );
+
+        // Check values
+        assertTrue(tokenId > 0, "tokenId mismatch");
+        assertEq(linearVesting.balanceOf(address(0), tokenId), AMOUNT, "balanceOf mismatch");
     }
 
     function test_mint_params_insufficentBalance_reverts() public {
@@ -845,6 +851,7 @@ contract LinearVestingTest is Test, Permit2User {
         assertTrue(tokenId > 0, "tokenId mismatch");
         assertTrue(wrappedAddress == address(0), "wrappedAddress mismatch");
         assertEq(amountCreated, AMOUNT, "amountCreated mismatch");
+        assertEq(linearVesting.balanceOf(_alice, tokenId), AMOUNT, "balanceOf mismatch");
     }
 
     function test_mint_params_notWrapped_tokenDeployed()
@@ -861,6 +868,7 @@ contract LinearVestingTest is Test, Permit2User {
         assertTrue(tokenId > 0, "tokenId mismatch");
         assertTrue(wrappedAddress == address(0), "wrappedAddress mismatch");
         assertEq(amountCreated, AMOUNT, "amountCreated mismatch");
+        assertEq(linearVesting.balanceOf(_alice, tokenId), AMOUNT, "balanceOf mismatch");
     }
 
     function test_mint_params_wrapped_wrappedTokenIsNotDeployed()
@@ -877,6 +885,10 @@ contract LinearVestingTest is Test, Permit2User {
         assertTrue(tokenId > 0, "tokenId mismatch");
         assertTrue(wrappedAddress != address(0), "wrappedAddress mismatch");
         assertEq(amountCreated, AMOUNT, "amountCreated mismatch");
+        assertEq(linearVesting.balanceOf(_alice, tokenId), 0, "balanceOf mismatch");
+        assertEq(
+            SoulboundCloneERC20(wrappedAddress).balanceOf(_alice), AMOUNT, "balanceOf mismatch"
+        );
     }
 
     function test_mint_params_wrapped_wrappedTokenIsDeployed()
@@ -893,6 +905,10 @@ contract LinearVestingTest is Test, Permit2User {
         assertEq(tokenId, derivativeTokenId, "tokenId mismatch");
         assertEq(wrappedAddress, derivativeWrappedAddress, "wrappedAddress mismatch");
         assertEq(amountCreated, AMOUNT, "amountCreated mismatch");
+        assertEq(linearVesting.balanceOf(_alice, tokenId), 0, "balanceOf mismatch");
+        assertEq(
+            SoulboundCloneERC20(wrappedAddress).balanceOf(_alice), AMOUNT, "balanceOf mismatch"
+        );
     }
 
     function test_mint_params_notParent()
@@ -909,6 +925,10 @@ contract LinearVestingTest is Test, Permit2User {
         assertEq(tokenId, derivativeTokenId, "tokenId mismatch");
         assertEq(wrappedAddress, derivativeWrappedAddress, "wrappedAddress mismatch");
         assertEq(amountCreated, AMOUNT, "amountCreated mismatch");
+        assertEq(linearVesting.balanceOf(_alice, tokenId), 0, "balanceOf mismatch");
+        assertEq(
+            SoulboundCloneERC20(wrappedAddress).balanceOf(_alice), AMOUNT, "balanceOf mismatch"
+        );
     }
 
     function test_mint_params_notParent_insufficientBalance_reverts()
@@ -929,7 +949,7 @@ contract LinearVestingTest is Test, Permit2User {
     // [X] when the mint amount is 0
     //  [X] it reverts
     // [X] when the recipient is 0
-    //  [X] it reverts
+    //  [X] it succeeds
     // [X] given the caller has an insufficient balance of the underlying token
     //  [X] it reverts
     // [X] when wrapped is false
@@ -961,14 +981,17 @@ contract LinearVestingTest is Test, Permit2User {
         linearVesting.mint(_alice, derivativeTokenId, 0, false);
     }
 
-    function test_mint_tokenId_whenRecipientIsZero_reverts() public givenDerivativeIsDeployed {
-        // Expect revert
-        bytes memory err = abi.encodeWithSelector(LinearVesting.InvalidParams.selector);
-        vm.expectRevert(err);
-
+    function test_mint_tokenId_whenRecipientIsZero()
+        public
+        givenDerivativeIsDeployed
+        givenParentHasUnderlyingTokenBalance(AMOUNT)
+    {
         // Call
         vm.prank(address(auctionHouse));
-        linearVesting.mint(address(0), derivativeTokenId, AMOUNT, false);
+        (uint256 tokenId,,) = linearVesting.mint(address(0), derivativeTokenId, AMOUNT, false);
+
+        // Check values
+        assertEq(linearVesting.balanceOf(address(0), tokenId), AMOUNT);
     }
 
     function test_mint_tokenId_insufficentBalance_reverts() public givenDerivativeIsDeployed {
@@ -994,6 +1017,7 @@ contract LinearVestingTest is Test, Permit2User {
         assertEq(tokenId, derivativeTokenId);
         assertTrue(wrappedAddress == address(0));
         assertEq(amountCreated, AMOUNT);
+        assertEq(linearVesting.balanceOf(_alice, tokenId), AMOUNT, "balanceOf mismatch");
     }
 
     function test_mint_tokenId_wrapped_wrappedTokenIsNotDeployed()
@@ -1010,6 +1034,10 @@ contract LinearVestingTest is Test, Permit2User {
         assertEq(tokenId, derivativeTokenId);
         assertTrue(wrappedAddress != address(0));
         assertEq(amountCreated, AMOUNT);
+        assertEq(linearVesting.balanceOf(_alice, tokenId), 0, "balanceOf mismatch");
+        assertEq(
+            SoulboundCloneERC20(wrappedAddress).balanceOf(_alice), AMOUNT, "balanceOf mismatch"
+        );
     }
 
     function test_mint_tokenId_wrapped_wrappedTokenIsDeployed()
@@ -1026,6 +1054,10 @@ contract LinearVestingTest is Test, Permit2User {
         assertEq(tokenId, derivativeTokenId);
         assertEq(wrappedAddress, derivativeWrappedAddress);
         assertEq(amountCreated, AMOUNT);
+        assertEq(linearVesting.balanceOf(_alice, tokenId), 0, "balanceOf mismatch");
+        assertEq(
+            SoulboundCloneERC20(wrappedAddress).balanceOf(_alice), AMOUNT, "balanceOf mismatch"
+        );
     }
 
     function test_mint_tokenId_notParent()
@@ -1042,6 +1074,10 @@ contract LinearVestingTest is Test, Permit2User {
         assertEq(tokenId, derivativeTokenId);
         assertEq(wrappedAddress, derivativeWrappedAddress);
         assertEq(amountCreated, AMOUNT);
+        assertEq(linearVesting.balanceOf(_alice, tokenId), 0, "balanceOf mismatch");
+        assertEq(
+            SoulboundCloneERC20(wrappedAddress).balanceOf(_alice), AMOUNT, "balanceOf mismatch"
+        );
     }
 
     // redeem
