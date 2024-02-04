@@ -1492,27 +1492,217 @@ contract LinearVestingTest is Test, Permit2User {
     }
 
     // wrap
-    // [ ] when the token id does not exist
-    //  [ ] it reverts
-    // [ ] when the amount is 0
-    //  [ ] it reverts
-    // [ ] when the caller has insufficient balance of the derivative token
-    //  [ ] it reverts
-    // [ ] given the wrapped token has not been deployed
-    //  [ ] it deploys the wrapped token, burns the derivative token and mints the wrapped token
-    // [ ] given the wrapped token has been deployed
-    //  [ ] it burns the derivative token and mints the wrapped token
+    // [X] when the token id does not exist
+    //  [X] it reverts
+    // [X] when the amount is 0
+    //  [X] it reverts
+    // [X] when the caller has insufficient balance of the derivative token
+    //  [X] it reverts
+    // [X] given the wrapped token has not been deployed
+    //  [X] it deploys the wrapped token, burns the derivative token and mints the wrapped token
+    // [X] given the wrapped token has been deployed
+    //  [X] it burns the derivative token and mints the wrapped token
+
+    function test_wrap_givenTokenIdDoesNotExist_reverts() public {
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(LinearVesting.InvalidParams.selector);
+        vm.expectRevert(err);
+
+        // Call
+        vm.prank(_alice);
+        linearVesting.wrap(derivativeTokenId, AMOUNT);
+    }
+
+    function test_wrap_givenAmountIsZero_reverts()
+        public
+        givenDerivativeIsDeployed
+        givenAliceHasDerivativeTokens(AMOUNT)
+    {
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(LinearVesting.InvalidParams.selector);
+        vm.expectRevert(err);
+
+        // Call
+        vm.prank(_alice);
+        linearVesting.wrap(derivativeTokenId, 0);
+    }
+
+    function test_wrap_givenInsufficientBalance_reverts() public givenDerivativeIsDeployed {
+        // Expect revert (underflow)
+        vm.expectRevert();
+
+        // Call
+        vm.prank(_alice);
+        linearVesting.wrap(derivativeTokenId, AMOUNT);
+    }
+
+    function test_wrap_givenWrappedTokenNotDeployed(uint256 wrapAmount_)
+        public
+        givenDerivativeIsDeployed
+        givenAliceHasDerivativeTokens(AMOUNT)
+    {
+        uint256 wrapAmount = bound(wrapAmount_, 1, AMOUNT);
+
+        // Call
+        vm.prank(_alice);
+        linearVesting.wrap(derivativeTokenId, wrapAmount);
+
+        // Get the token metadata
+        Derivative.Token memory tokenMetadata = linearVesting.getTokenMetadata(derivativeTokenId);
+
+        // Check values
+        assertEq(
+            linearVesting.balanceOf(_alice, derivativeTokenId),
+            AMOUNT - wrapAmount,
+            "derivative: balanceOf mismatch"
+        );
+        assertEq(
+            SoulboundCloneERC20(tokenMetadata.wrapped).balanceOf(_alice),
+            wrapAmount,
+            "wrapped derivative: balanceOf mismatch"
+        );
+
+        // Check total supply
+        assertEq(
+            linearVesting.totalSupply(derivativeTokenId),
+            AMOUNT - wrapAmount,
+            "derivative: totalSupply mismatch"
+        );
+        assertEq(
+            SoulboundCloneERC20(tokenMetadata.wrapped).totalSupply(),
+            wrapAmount,
+            "wrapped derivative: totalSupply mismatch"
+        );
+    }
+
+    function test_wrap_givenWrappedTokenDeployed(uint256 wrapAmount_)
+        public
+        givenWrappedDerivativeIsDeployed
+        givenAliceHasDerivativeTokens(AMOUNT)
+    {
+        uint256 wrapAmount = bound(wrapAmount_, 1, AMOUNT);
+
+        // Call
+        vm.prank(_alice);
+        linearVesting.wrap(derivativeTokenId, wrapAmount);
+
+        // Check values
+        assertEq(
+            linearVesting.balanceOf(_alice, derivativeTokenId),
+            AMOUNT - wrapAmount,
+            "derivative: balanceOf mismatch"
+        );
+        assertEq(
+            SoulboundCloneERC20(derivativeWrappedAddress).balanceOf(_alice),
+            wrapAmount,
+            "wrapped derivative: balanceOf mismatch"
+        );
+
+        // Check total supply
+        assertEq(
+            linearVesting.totalSupply(derivativeTokenId),
+            AMOUNT - wrapAmount,
+            "derivative: totalSupply mismatch"
+        );
+        assertEq(
+            SoulboundCloneERC20(derivativeWrappedAddress).totalSupply(),
+            wrapAmount,
+            "wrapped derivative: totalSupply mismatch"
+        );
+    }
 
     // unwrap
-    // [ ] when the token id does not exist
-    //  [ ] it reverts
-    // [ ] when the amount is 0
-    //  [ ] it reverts
-    // [ ] given the wrapped token has not been deployed
-    //  [ ] it reverts
-    // [ ] when the caller has insufficient balance of the wrapped token
-    //  [ ] it reverts
-    // [ ] it burns the wrapped token and mints the derivative token
+    // [X] when the token id does not exist
+    //  [X] it reverts
+    // [X] when the amount is 0
+    //  [X] it reverts
+    // [X] given the wrapped token has not been deployed
+    //  [X] it reverts
+    // [X] when the caller has insufficient balance of the wrapped token
+    //  [X] it reverts
+    // [X] it burns the wrapped token and mints the derivative token
+
+    function test_unwrap_givenTokenIdDoesNotExist_reverts() public {
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(LinearVesting.InvalidParams.selector);
+        vm.expectRevert(err);
+
+        // Call
+        vm.prank(_alice);
+        linearVesting.unwrap(derivativeTokenId, AMOUNT);
+    }
+
+    function test_unwrap_givenAmountIsZero_reverts()
+        public
+        givenWrappedDerivativeIsDeployed
+        givenAliceHasWrappedDerivativeTokens(AMOUNT)
+    {
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(LinearVesting.InvalidParams.selector);
+        vm.expectRevert(err);
+
+        // Call
+        vm.prank(_alice);
+        linearVesting.unwrap(derivativeTokenId, 0);
+    }
+
+    function test_unwrap_givenWrappedTokenNotDeployed() public {
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(LinearVesting.InvalidParams.selector);
+        vm.expectRevert(err);
+
+        // Call
+        vm.prank(_alice);
+        linearVesting.unwrap(derivativeTokenId, AMOUNT);
+    }
+
+    function test_unwrap_givenInsufficientBalance_reverts()
+        public
+        givenWrappedDerivativeIsDeployed
+    {
+        // Expect revert (underflow)
+        vm.expectRevert();
+
+        // Call
+        vm.prank(_alice);
+        linearVesting.unwrap(derivativeTokenId, AMOUNT);
+    }
+
+    function test_unwrap(uint256 unwrapAmount_)
+        public
+        givenWrappedDerivativeIsDeployed
+        givenAliceHasWrappedDerivativeTokens(AMOUNT)
+    {
+        uint256 unwrapAmount = bound(unwrapAmount_, 1, AMOUNT);
+
+        // Call
+        vm.prank(_alice);
+        linearVesting.unwrap(derivativeTokenId, unwrapAmount);
+
+        // Check values
+        assertEq(
+            linearVesting.balanceOf(_alice, derivativeTokenId),
+            unwrapAmount,
+            "derivative: balanceOf mismatch"
+        );
+        assertEq(
+            SoulboundCloneERC20(derivativeWrappedAddress).balanceOf(_alice),
+            AMOUNT - unwrapAmount,
+            "wrapped derivative: balanceOf mismatch"
+        );
+
+        // Check total supply
+        assertEq(
+            linearVesting.totalSupply(derivativeTokenId),
+            unwrapAmount,
+            "derivative: totalSupply mismatch"
+        );
+        assertEq(
+            SoulboundCloneERC20(derivativeWrappedAddress).totalSupply(),
+            AMOUNT - unwrapAmount,
+            "wrapped derivative: totalSupply mismatch"
+        );
+    }
 
     // name
     // [X] when the token id is invalid
@@ -1667,26 +1857,101 @@ contract LinearVestingTest is Test, Permit2User {
     }
 
     // reclaim
-    // [ ] it reverts
+    // [X] it reverts
+
+    function test_reclaim_reverts() public {
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(Derivative.Derivative_NotImplemented.selector);
+        vm.expectRevert(err);
+
+        // Call
+        linearVesting.reclaim(derivativeTokenId);
+    }
 
     // transfer
-    // [ ] it reverts
+    // [X] it reverts
+
+    function test_transfer_reverts() public {
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(LinearVesting.NotPermitted.selector);
+        vm.expectRevert(err);
+
+        // Call
+        vm.prank(_alice);
+        linearVesting.transfer(address(0x4), derivativeTokenId, AMOUNT);
+    }
 
     // transferFrom
-    // [ ] it reverts
+    // [X] it reverts
+
+    function test_transferFrom_reverts() public {
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(LinearVesting.NotPermitted.selector);
+        vm.expectRevert(err);
+
+        // Call
+        vm.prank(_alice);
+        linearVesting.transferFrom(_alice, address(0x4), derivativeTokenId, AMOUNT);
+    }
 
     // approve
-    // [ ] it reverts
+    // [X] it reverts
+
+    function test_approve_reverts() public {
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(LinearVesting.NotPermitted.selector);
+        vm.expectRevert(err);
+
+        // Call
+        vm.prank(_alice);
+        linearVesting.approve(address(0x4), derivativeTokenId, AMOUNT);
+    }
 
     // exerciseCost
-    // [ ] it reverts
+    // [X] it reverts
+
+    function test_exerciseCost_reverts() public {
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(Derivative.Derivative_NotImplemented.selector);
+        vm.expectRevert(err);
+
+        // Call
+        linearVesting.exerciseCost(bytes(""), derivativeTokenId);
+    }
 
     // convertsTo
-    // [ ] it reverts
+    // [X] it reverts
+
+    function test_convertsTo_reverts() public {
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(Derivative.Derivative_NotImplemented.selector);
+        vm.expectRevert(err);
+
+        // Call
+        linearVesting.convertsTo(bytes(""), derivativeTokenId);
+    }
 
     // transform
-    // [ ] it reverts
+    // [X] it reverts
+
+    function test_transform_reverts() public {
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(Derivative.Derivative_NotImplemented.selector);
+        vm.expectRevert(err);
+
+        // Call
+        linearVesting.transform(derivativeTokenId, _alice, AMOUNT, false);
+    }
 
     // exercise
-    // [ ] it reverts
+    // [X] it reverts
+
+    function test_exercise_reverts() public {
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(Derivative.Derivative_NotImplemented.selector);
+        vm.expectRevert(err);
+
+        // Call
+        linearVesting.exercise(derivativeTokenId, AMOUNT, false);
+    }
 }
