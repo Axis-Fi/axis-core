@@ -3,6 +3,7 @@ pragma solidity 0.8.19;
 
 import {ERC20} from "lib/solmate/src/tokens/ERC20.sol";
 import {SafeTransferLib} from "lib/solmate/src/utils/SafeTransferLib.sol";
+import {Owned} from "lib/solmate/src/auth/Owned.sol";
 
 import {IPermit2} from "src/lib/permit2/interfaces/IPermit2.sol";
 
@@ -14,17 +15,119 @@ import {DerivativeModule} from "src/modules/Derivative.sol";
 
 import {Auction, AuctionModule} from "src/modules/Auction.sol";
 
-import {Veecode, fromVeecode, WithModules} from "src/modules/Modules.sol";
+import {Veecode, fromVeecode, Keycode, unwrapVeecode, WithModules} from "src/modules/Modules.sol";
 
 import {IHooks} from "src/interfaces/IHooks.sol";
 import {IAllowlist} from "src/interfaces/IAllowlist.sol";
 
 // TODO define purpose
-abstract contract FeeManager {
-// TODO write fee logic in separate contract to keep it organized
-// Router can inherit
+abstract contract FeeManager is Owned {
 
-// TODO disbursing fees
+    // ========== ERRORS ========== //
+    error InvalidFee();
+
+    // ========== DATA STRUCTURES ========== //
+
+    /// @notice     Collection of fees charged for a specific auction type in basis points (3 decimals).
+    /// @notice     Protocol and referrer fees are taken in the quoteToken and accumulate in the contract. These are set by the protocol.
+    /// @notice     Curator fees are taken in the payoutToken and are sent when the auction is settled / purchase is made. Curators can set these up to the configured maximum.
+    /// @dev        There are some situations where the fees may round down to zero if quantity of baseToken
+    ///             is < 1e5 wei (can happen with big price differences on small decimal tokens). This is purely
+    ///             a theoretical edge case, as the amount would not be practical.
+    struct Fees {
+        uint48 protocol;
+        uint48 referrer;
+        uint48 maxCuratorFee;
+        mapping(address => uint48) curator;
+    }
+
+    enum FeeType {
+        Protocol,
+        Referrer,
+        MaxCurator
+    }
+
+    // ========== STATE VARIABLES ========== //
+
+    // Fees are in basis points (3 decimals). 1% equals 1000.
+    uint48 internal constant _FEE_DECIMALS = 1e5; 
+
+    // Address the protocol receives fees at
+    address internal _PROTOCOL;
+
+    /// @notice Fees charged for each auction type
+    /// @dev See Fees struct for more details
+    mapping(Keycode => Fees) public fees;
+
+    /// @notice Fees earned by an address, by token
+    mapping(address => mapping(ERC20 => uint256)) public rewards;
+
+    // ========== FEE CALCULATIONS ========== //
+
+    function _calculateQuoteFees(
+        Keycode auctionType_,
+        bool hasReferrer_,
+        uint256 amount_
+    ) internal view returns (uint256 toReferrer, uint256 toProtocol) {
+        // Load protocol fee for the auction type
+        uint48 protocolFee = fees[auctionType_].protocol;
+        
+        if (hasReferrer_) {
+            // Load referrer fee for the auction type
+            uint48 referrerFee = fees[auctionType_].referrer;
+            
+            // In this case we need to:
+            // 1. Calculate referrer fee
+            // 2. Calculate protocol fee as the total expected fee amount minus the referrer fee
+            //    to avoid issues with rounding from separate fee calculations
+            toReferrer = (amount_ * referrerFee) / _FEE_DECIMALS;
+            toProtocol = ((amount_ * (protocolFee + referrerFee)) / _FEE_DECIMALS) - toReferrer;
+        } else {
+            // There is no referrer
+            toProtocol = (amount_ * protocolFee) / _FEE_DECIMALS;
+        }
+    }
+
+    function _calculatePayoutFees(
+        Keycode auctionType_,
+        address curator_,
+        uint256 payout_
+    ) internal view returns (uint256 toCurator) {
+        // Load curator fee for the auction type
+        uint48 curatorFee = fees[auctionType_].curator[curator_];
+
+        // Calculate curator fee
+        toCurator = (payout_ * curatorFee) / _FEE_DECIMALS;
+    }
+
+    // ========== FEE MANAGEMENT ========== //
+
+    /// @notice     Sets the protocol fee, referrer fee, or max curator fee for a specific auction type
+    /// @notice     Access controlled: only owner
+    function setFee(Keycode auctionType_, FeeType type_, uint48 fee_) external onlyOwner {
+        // Check that the fee is a valid percentage
+        if (fee_ > _FEE_DECIMALS) revert InvalidFee();
+
+        // Set fee based on type
+        // TODO should we have hard-coded maximums for these fees?
+        // Or a combination of protocol and referrer fee since they are both in the quoteToken?
+        if (type_ == FeeType.Protocol) {
+            fees[auctionType_].protocol = fee_;
+        } else if (type_ == FeeType.Referrer) {
+            fees[auctionType_].referrer = fee_;
+        } else if (type_ == FeeType.MaxCurator) {
+            fees[auctionType_].maxCuratorFee = fee_;
+        }
+    }
+
+    /// @notice     Sets the fee for a curator (the sender) for a specific auction type
+    function setCuratorFee(Keycode auctionType_, uint48 fee_) external {
+        // Check that the fee is less than the maximum
+        if (fee_ > fees[auctionType_].maxCuratorFee) revert InvalidFee();
+
+        // Set the fee for the sender
+        fees[auctionType_].curator[msg.sender] = fee_;
+    }
 }
 
 // TODO define purpose
@@ -80,30 +183,6 @@ abstract contract Router is FeeManager {
         bytes permit2Data;
     }
 
-    // ========== STATE VARIABLES ========== //
-
-    /// @notice     Fee paid to a front end operator in basis points (3 decimals). Set by the referrer, must be less than or equal to 5% (5e3).
-    /// @dev        There are some situations where the fees may round down to zero if quantity of baseToken
-    ///             is < 1e5 wei (can happen with big price differences on small decimal tokens). This is purely
-    ///             a theoretical edge case, as the bond amount would not be practical.
-    mapping(address => uint48) public referrerFees;
-
-    // TODO allow charging fees based on the auction type and/or derivative type
-    /// @notice Fee paid to protocol in basis points (3 decimal places).
-    uint48 public protocolFee;
-
-    /// @notice 'Create' function fee discount in basis points (3 decimal places). Amount standard fee is reduced by for partners who just want to use the 'create' function to issue bond tokens.
-    uint48 public createFeeDiscount;
-
-    uint48 public constant FEE_DECIMALS = 1e5; // one percent equals 1000.
-
-    /// @notice Fees earned by an address, by token
-    mapping(address => mapping(ERC20 => uint256)) public rewards;
-
-    // Address the protocol receives fees at
-    // TODO make this updatable
-    address internal immutable _PROTOCOL;
-
     // ========== CONSTRUCTOR ========== //
 
     constructor(address protocol_) {
@@ -145,18 +224,12 @@ abstract contract Router is FeeManager {
     /// @notice     This function is used for versions with on-chain storage and bids and local settlement
     function settle(uint96 lotId_) external virtual;
 
-    // ========== FEE MANAGEMENT ========== //
-
-    /// @notice     Sets the fee for the protocol
-    function setProtocolFee(uint48 protocolFee_) external virtual;
-
-    /// @notice     Sets the fee for a referrer
-    function setReferrerFee(address referrer_, uint48 referrerFee_) external virtual;
+    
 }
 
 /// @title      AuctionHouse
 /// @notice     As its name implies, the AuctionHouse is where auctions take place and the core of the protocol.
-contract AuctionHouse is Derivatizer, Auctioneer, Router {
+contract AuctionHouse is Auctioneer, Router {
     using SafeTransferLib for ERC20;
 
     /// Implement the router functionality here since it combines all of the base functionality
@@ -186,12 +259,17 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
     // ========== FEE FUNCTIONS ========== //
 
     function _allocateFees(
+        Keycode auctionType_,
         address referrer_,
+        address owner_,
         ERC20 quoteToken_,
         uint256 amount_
     ) internal returns (uint256 totalFees) {
+        // Check if there is a referrer
+        bool hasReferrer = referrer_ != address(0) && referrer_ != owner_;
+
         // Calculate fees for purchase
-        (uint256 toReferrer, uint256 toProtocol) = _calculateFees(referrer_, amount_);
+        (uint256 toReferrer, uint256 toProtocol) = _calculateQuoteFees(auctionType_, hasReferrer, amount_);
 
         // Update fee balances if non-zero
         if (toReferrer > 0) rewards[referrer_][quoteToken_] += toReferrer;
@@ -201,16 +279,21 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
     }
 
     function _allocateFees(
+        Keycode auctionType_,
         Auction.Bid[] memory bids_,
+        address owner_,
         ERC20 quoteToken_
     ) internal returns (uint256 totalAmountIn, uint256 totalFees) {
         // Calculate fees for purchase
         uint256 bidCount = bids_.length;
         uint256 totalProtocolFees;
         for (uint256 i; i < bidCount; i++) {
+            // Determine if bid has a referrer
+            bool hasReferrer = bids_[i].referrer != address(0) && bids_[i].referrer != owner_;
+
             // Calculate fees from bid amount
             (uint256 toReferrer, uint256 toProtocol) =
-                _calculateFees(bids_[i].referrer, bids_[i].amount);
+                _calculateQuoteFees(auctionType_, hasReferrer, bids_[i].amount);
 
             // Update referrer fee balances if non-zero and increment the total protocol fee
             if (toReferrer > 0) {
@@ -225,32 +308,6 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
 
         // Update protocol fee if not zero
         if (totalProtocolFees > 0) rewards[_PROTOCOL][quoteToken_] += totalProtocolFees;
-    }
-
-    function _calculateFees(
-        address referrer_,
-        uint256 amount_
-    ) internal view returns (uint256 toReferrer, uint256 toProtocol) {
-        // TODO should protocol and/or referrer be able to charge different fees based on the type of auction being used?
-
-        // Calculate fees for purchase
-        // 1. Calculate referrer fee
-        // 2. Calculate protocol fee as the total expected fee amount minus the referrer fee
-        //    to avoid issues with rounding from separate fee calculations
-        if (referrer_ == address(0)) {
-            // There is no referrer
-            toProtocol = (amount_ * protocolFee) / FEE_DECIMALS;
-        } else {
-            uint256 referrerFee = referrerFees[referrer_]; // reduce to single SLOAD
-            if (referrerFee == 0) {
-                // There is a referrer, but they have not set a fee
-                toProtocol = (amount_ * protocolFee) / FEE_DECIMALS;
-            } else {
-                // There is a referrer and they have set a fee
-                toReferrer = (amount_ * referrerFee) / FEE_DECIMALS;
-                toProtocol = ((amount_ * (protocolFee + referrerFee)) / FEE_DECIMALS) - toReferrer;
-            }
-        }
     }
 
     // ========== AUCTION FUNCTIONS ========== //
@@ -310,8 +367,15 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
             revert InvalidBidder(msg.sender);
         }
 
-        uint256 totalFees = _allocateFees(params_.referrer, routing.quoteToken, params_.amount);
-        uint256 amountLessFees = params_.amount - totalFees;
+        // Calculate quote fees for purchase
+        uint256 amountLessFees;
+        {
+            // Unwrap keycode from veecode
+            (Keycode auctionType, ) = unwrapVeecode(routing.auctionReference);
+
+            uint256 totalFees = _allocateFees(auctionType, params_.referrer, routing.owner, routing.quoteToken, params_.amount);
+            amountLessFees = params_.amount - totalFees;
+        }
 
         // Send purchase to auction house and get payout plus any extra output
         bytes memory auctionOutput;
@@ -427,12 +491,11 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
     ///
     ///             This function reverts if:
     ///             - the lot ID is invalid
-    ///             - the caller is not authorized to settle the auction
     ///             - the auction module reverts when settling the auction
     ///             - transferring the quote token to the auction owner fails
     ///             - collecting the payout from the auction owner fails
     ///             - sending the payout to each bidder fails
-    function settle(uint96 lotId_) external override onlyOwner isLotValid(lotId_) {
+    function settle(uint96 lotId_) external override isLotValid(lotId_) {
         // Validation
         // No additional validation needed
 
@@ -495,8 +558,9 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
         // Calculate fees
         uint256 totalAmountInLessFees;
         {
+            (Keycode auctionType, ) = unwrapVeecode(routing.auctionReference);
             (uint256 totalAmountIn, uint256 totalFees) =
-                _allocateFees(winningBids, routing.quoteToken);
+                _allocateFees(auctionType, winningBids, routing.owner, routing.quoteToken);
             totalAmountInLessFees = totalAmountIn - totalFees;
         }
 
@@ -513,6 +577,10 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
                     totalAmountOut += winningBids[i].minAmountOut;
                 }
             }
+
+            // TODO calculate curator fee
+            // It might be easiest to require the owner to pay additional tokens for the curator fee instead of taking it from the payout
+            // Need to think through this a bit more.
 
             _collectPayout(lotId_, totalAmountInLessFees, totalAmountOut, routing);
         }
@@ -833,17 +901,5 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
         if (token_.balanceOf(address(this)) < balanceBefore + amount_) {
             revert UnsupportedToken(address(token_));
         }
-    }
-
-    // ========== FEE MANAGEMENT ========== //
-
-    /// @inheritdoc Router
-    function setProtocolFee(uint48 protocolFee_) external override onlyOwner {
-        protocolFee = protocolFee_;
-    }
-
-    /// @inheritdoc Router
-    function setReferrerFee(address referrer_, uint48 referrerFee_) external override onlyOwner {
-        referrerFees[referrer_] = referrerFee_;
     }
 }
