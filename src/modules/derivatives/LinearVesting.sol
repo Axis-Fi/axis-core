@@ -177,6 +177,7 @@ contract LinearVesting is DerivativeModule {
     ///             - The parameters are in an invalid format
     ///             - The parameters fail validation
     ///             - `amount_` is 0
+    ///             - Vesting for the derivative token with `tokenId_` has completed
     ///
     /// @param      to_                 The address of the recipient of the derivative token
     /// @param      underlyingToken_    The address of the underlying token
@@ -208,7 +209,12 @@ contract LinearVesting is DerivativeModule {
         if (_validate(underlyingToken_, params) == false) {
             revert InvalidParams();
         }
+
+        // Underlying token is required
         if (underlyingToken_ == address(0)) revert InvalidParams();
+
+        // Ensure the expiry is in the future
+        if (params.expiry < block.timestamp) revert InvalidParams();
 
         // If necessary, deploy and store the data
         (uint256 tokenId, address wrappedAddress) =
@@ -239,6 +245,7 @@ contract LinearVesting is DerivativeModule {
     ///             This function reverts if:
     ///             - `tokenId_` does not exist
     ///             - The amount to mint is 0
+    ///             - Vesting for the derivative token with `tokenId_` has completed
     ///
     /// @param      to_                 The address of the recipient of the derivative token
     /// @param      tokenId_            The ID of the derivative token
@@ -257,6 +264,10 @@ contract LinearVesting is DerivativeModule {
         if (amount_ == 0) revert InvalidParams();
 
         Token storage token = tokenMetadata[tokenId_];
+        VestingData memory data = abi.decode(token.data, (VestingData));
+
+        // Ensure the expiry is in the future
+        if (data.expiry < block.timestamp) revert InvalidParams();
 
         // If the token exists, it is already deployed. However, ensure the wrapped status is consistent.
         if (wrapped_) {
@@ -264,7 +275,6 @@ contract LinearVesting is DerivativeModule {
         }
 
         // Transfer collateral token to this contract
-        VestingData memory data = abi.decode(token.data, (VestingData));
         data.baseToken.safeTransferFrom(msg.sender, address(this), amount_);
 
         // If not wrapped, mint as normal
@@ -330,11 +340,17 @@ contract LinearVesting is DerivativeModule {
     }
 
     /// @inheritdoc Derivative
+    /// @dev        This function reverts if:
+    ///             - `amount_` is 0
+    ///             - The redeemable amount is less than `amount_`
+    ///             - The derivative token with `tokenId_` has not been deployed
     function redeem(
         uint256 tokenId_,
         uint256 amount_,
         bool wrapped_
     ) external virtual override onlyValidTokenId(tokenId_) {
+        if (amount_ == 0) revert InvalidParams();
+
         // Get the redeemable amount
         uint256 redeemableAmount = redeemable(msg.sender, tokenId_, wrapped_);
 

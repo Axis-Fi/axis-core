@@ -804,6 +804,20 @@ contract LinearVestingTest is Test, Permit2User {
         linearVesting.mint(_alice, underlyingTokenAddress, vestingParamsBytes, AMOUNT, false);
     }
 
+    function test_mint_params_afterExpiry_reverts()
+        public
+        givenDerivativeIsDeployed
+        givenAfterVestingExpiry
+    {
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(LinearVesting.InvalidParams.selector);
+        vm.expectRevert(err);
+
+        // Call
+        vm.prank(address(auctionHouse));
+        linearVesting.mint(_alice, underlyingTokenAddress, vestingParamsBytes, AMOUNT, false);
+    }
+
     function test_mint_params_mintAmountIsZero_reverts() public {
         // Expect revert
         bytes memory err = abi.encodeWithSelector(LinearVesting.InvalidParams.selector);
@@ -971,6 +985,20 @@ contract LinearVestingTest is Test, Permit2User {
         linearVesting.mint(_alice, derivativeTokenId, AMOUNT, false);
     }
 
+    function test_mint_tokenId_afterExpiry_reverts()
+        public
+        givenDerivativeIsDeployed
+        givenAfterVestingExpiry
+    {
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(LinearVesting.InvalidParams.selector);
+        vm.expectRevert(err);
+
+        // Call
+        vm.prank(address(auctionHouse));
+        linearVesting.mint(_alice, derivativeTokenId, AMOUNT, false);
+    }
+
     function test_mint_tokenId_whenMintAmountIsZero_reverts() public givenDerivativeIsDeployed {
         // Expect revert
         bytes memory err = abi.encodeWithSelector(LinearVesting.InvalidParams.selector);
@@ -1081,32 +1109,247 @@ contract LinearVestingTest is Test, Permit2User {
     }
 
     // redeem
-    // [ ] when the token id does not exist
-    //  [ ] it reverts
-    // [ ] when the redeem amount is 0
-    //  [ ] it reverts
-    // [ ] given the redeemable amount is 0
-    //  [ ] it reverts
-    // [ ] when the redeem amount is more than the redeemable amount
-    //  [ ] it reverts
-    // [ ] when wrapped is true
-    //  [ ] given the wrapped token is not deployed
-    //   [ ] it reverts
-    //  [ ] it burns the wrapped token and transfers the underlying
-    // [ ] when wrapped is false
-    //  [ ] it burns the derivative token and transfers the underlying
+    // [X] when the token id does not exist
+    //  [X] it reverts
+    // [X] when the redeem amount is 0
+    //  [X] it reverts
+    // [X] given the redeemable amount is 0
+    //  [X] it reverts
+    // [X] when the redeem amount is more than the redeemable amount
+    //  [X] it reverts
+    // [X] when wrapped is true
+    //  [X] given the wrapped token is not deployed
+    //   [X] it reverts
+    //  [X] it burns the wrapped token and transfers the underlying
+    // [X] when wrapped is false
+    //  [X] it burns the derivative token and transfers the underlying
+
+    function test_redeem_givenTokenIdDoesNotExist_reverts() public {
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(LinearVesting.InvalidParams.selector);
+        vm.expectRevert(err);
+
+        // Call
+        vm.prank(_alice);
+        linearVesting.redeem(derivativeTokenId, AMOUNT, false);
+    }
+
+    function test_redeem_givenRedeemAmountIsZero_reverts() public givenDerivativeIsDeployed {
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(LinearVesting.InvalidParams.selector);
+        vm.expectRevert(err);
+
+        // Call
+        vm.prank(_alice);
+        linearVesting.redeem(derivativeTokenId, 0, false);
+    }
+
+    function test_redeem_givenAmountGreaterThanRedeemable_reverts(uint48 elapsed_)
+        public
+        givenDerivativeIsDeployed
+        givenAliceHasDerivativeTokens(AMOUNT)
+    {
+        // Warp to mid-way, so not all tokens are vested
+        uint48 elapsed = uint48(bound(elapsed_, 1, vestingDuration - 1));
+        vm.warp(vestingStart + elapsed);
+
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(LinearVesting.InsufficientBalance.selector);
+        vm.expectRevert(err);
+
+        // Call
+        vm.prank(_alice);
+        linearVesting.redeem(derivativeTokenId, AMOUNT, false);
+    }
+
+    function test_redeem_insufficientBalance_reverts()
+        public
+        givenDerivativeIsDeployed
+        givenAliceHasDerivativeTokens(AMOUNT)
+    {
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(LinearVesting.InsufficientBalance.selector);
+        vm.expectRevert(err);
+
+        // Call
+        linearVesting.redeem(derivativeTokenId, AMOUNT, false);
+    }
+
+    function test_redeem_wrapped_givenWrappedTokenNotDeployed()
+        public
+        givenDerivativeIsDeployed
+        givenAliceHasDerivativeTokens(AMOUNT)
+    {
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(LinearVesting.InsufficientBalance.selector);
+        vm.expectRevert(err);
+
+        // Call
+        vm.prank(_alice);
+        linearVesting.redeem(derivativeTokenId, AMOUNT, true);
+    }
+
+    function test_redeem_wrapped(uint256 amount_)
+        public
+        givenWrappedDerivativeIsDeployed
+        givenAliceHasWrappedDerivativeTokens(AMOUNT)
+        givenAfterVestingExpiry
+    {
+        uint256 amount = bound(amount_, 1, AMOUNT);
+
+        // Call
+        vm.prank(_alice);
+        linearVesting.redeem(derivativeTokenId, amount, true);
+
+        // Check values
+        assertEq(linearVesting.balanceOf(_alice, derivativeTokenId), 0);
+        assertEq(SoulboundCloneERC20(derivativeWrappedAddress).balanceOf(_alice), AMOUNT - amount);
+        assertEq(SoulboundCloneERC20(underlyingTokenAddress).balanceOf(_alice), amount);
+    }
+
+    function test_redeem_notWrapped(uint256 amount_)
+        public
+        givenWrappedDerivativeIsDeployed
+        givenAliceHasDerivativeTokens(AMOUNT)
+        givenAfterVestingExpiry
+    {
+        uint256 amount = bound(amount_, 1, AMOUNT);
+
+        // Call
+        vm.prank(_alice);
+        linearVesting.redeem(derivativeTokenId, amount, false);
+
+        // Check values
+        assertEq(linearVesting.balanceOf(_alice, derivativeTokenId), AMOUNT - amount);
+        assertEq(SoulboundCloneERC20(derivativeWrappedAddress).balanceOf(_alice), 0);
+        assertEq(SoulboundCloneERC20(underlyingTokenAddress).balanceOf(_alice), amount);
+    }
 
     // redeem max
-    // [ ] when the token id does not exist
-    //  [ ] it reverts
-    // [ ] given the redeemable amount is 0
-    //  [ ] it reverts
-    // [ ] when wrapped is true
-    //  [ ] given the wrapped token is not deployed
-    //   [ ] it reverts
-    //  [ ] it burns the wrapped token and transfers the underlying
-    // [ ] when wrapped is false
-    //  [ ] it burns the derivative token and transfers the underlying
+    // [X] when the token id does not exist
+    //  [X] it reverts
+    // [X] given the redeemable amount is 0
+    //  [X] it reverts
+    // [X] when wrapped is true
+    //  [X] given the wrapped token is not deployed
+    //   [X] it reverts
+    //  [X] it burns the wrapped token and transfers the underlying
+    // [X] when wrapped is false
+    //  [X] it burns the derivative token and transfers the underlying
+
+    function test_redeemMax_givenTokenIdDoesNotExist_reverts() public {
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(LinearVesting.InvalidParams.selector);
+        vm.expectRevert(err);
+
+        // Call
+        vm.prank(_alice);
+        linearVesting.redeemMax(derivativeTokenId, false);
+    }
+
+    function test_redeemMax_givenRedeemableAmountIsZero_reverts()
+        public
+        givenDerivativeIsDeployed
+    {
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(LinearVesting.InsufficientBalance.selector);
+        vm.expectRevert(err);
+
+        // Call
+        vm.prank(_alice);
+        linearVesting.redeemMax(derivativeTokenId, false);
+    }
+
+    function test_redeemMax_wrapped_givenWrappedTokenNotDeployed()
+        public
+        givenDerivativeIsDeployed
+        givenAliceHasDerivativeTokens(AMOUNT)
+    {
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(LinearVesting.InsufficientBalance.selector);
+        vm.expectRevert(err);
+
+        // Call
+        vm.prank(_alice);
+        linearVesting.redeemMax(derivativeTokenId, true);
+    }
+
+    function test_redeemMax_wrapped(uint48 elapsed_)
+        public
+        givenWrappedDerivativeIsDeployed
+        givenAliceHasWrappedDerivativeTokens(AMOUNT)
+    {
+        // Warp during vesting
+        uint48 elapsed = uint48(bound(elapsed_, 1, vestingDuration - 1));
+        vm.warp(vestingStart + elapsed);
+
+        uint256 redeemableAmount = elapsed * AMOUNT / vestingDuration;
+
+        // Call
+        vm.prank(_alice);
+        linearVesting.redeemMax(derivativeTokenId, true);
+
+        // Check values
+        assertEq(linearVesting.balanceOf(_alice, derivativeTokenId), 0);
+        assertEq(
+            SoulboundCloneERC20(derivativeWrappedAddress).balanceOf(_alice),
+            AMOUNT - redeemableAmount
+        );
+        assertEq(SoulboundCloneERC20(underlyingTokenAddress).balanceOf(_alice), redeemableAmount);
+    }
+
+    function test_redeemMax_wrapped_givenVestingExpiry()
+        public
+        givenWrappedDerivativeIsDeployed
+        givenAliceHasWrappedDerivativeTokens(AMOUNT)
+        givenAfterVestingExpiry
+    {
+        // Call
+        vm.prank(_alice);
+        linearVesting.redeemMax(derivativeTokenId, true);
+
+        // Check values
+        assertEq(linearVesting.balanceOf(_alice, derivativeTokenId), 0);
+        assertEq(SoulboundCloneERC20(derivativeWrappedAddress).balanceOf(_alice), 0);
+        assertEq(SoulboundCloneERC20(underlyingTokenAddress).balanceOf(_alice), AMOUNT);
+    }
+
+    function test_redeemMax_notWrapped(uint48 elapsed_)
+        public
+        givenWrappedDerivativeIsDeployed
+        givenAliceHasDerivativeTokens(AMOUNT)
+    {
+        // Warp during vesting
+        uint48 elapsed = uint48(bound(elapsed_, 1, vestingDuration - 1));
+        vm.warp(vestingStart + elapsed);
+
+        uint256 redeemableAmount = elapsed * AMOUNT / vestingDuration;
+
+        // Call
+        vm.prank(_alice);
+        linearVesting.redeemMax(derivativeTokenId, false);
+
+        // Check values
+        assertEq(linearVesting.balanceOf(_alice, derivativeTokenId), AMOUNT - redeemableAmount);
+        assertEq(SoulboundCloneERC20(derivativeWrappedAddress).balanceOf(_alice), 0);
+        assertEq(SoulboundCloneERC20(underlyingTokenAddress).balanceOf(_alice), redeemableAmount);
+    }
+
+    function test_redeemMax_notWrapped_givenVestingExpiry()
+        public
+        givenWrappedDerivativeIsDeployed
+        givenAliceHasDerivativeTokens(AMOUNT)
+        givenAfterVestingExpiry
+    {
+        // Call
+        vm.prank(_alice);
+        linearVesting.redeemMax(derivativeTokenId, false);
+
+        // Check values
+        assertEq(linearVesting.balanceOf(_alice, derivativeTokenId), 0);
+        assertEq(SoulboundCloneERC20(derivativeWrappedAddress).balanceOf(_alice), 0);
+        assertEq(SoulboundCloneERC20(underlyingTokenAddress).balanceOf(_alice), AMOUNT);
+    }
 
     // redeemable
     // [X] when the token id does not exist
@@ -1289,14 +1532,18 @@ contract LinearVestingTest is Test, Permit2User {
         // Redeem wrapped tokens
         uint256 redeemableWrapped = elapsed * wrappedAmount / vestingDuration;
         uint256 redeemAmountWrapped = redeemableWrapped * wrappedRedeemPercentage / 100;
-        vm.prank(_alice);
-        linearVesting.redeem(derivativeTokenId, redeemAmountWrapped, true);
+        if (redeemAmountWrapped > 0) {
+            vm.prank(_alice);
+            linearVesting.redeem(derivativeTokenId, redeemAmountWrapped, true);
+        }
 
         // Redeem unwrapped tokens
         uint256 redeemableUnwrapped = elapsed * unwrappedAmount / vestingDuration;
         uint256 redeemAmountUnwrapped = redeemableUnwrapped * unwrappedRedeemPercentage / 100;
-        vm.prank(_alice);
-        linearVesting.redeem(derivativeTokenId, redeemAmountUnwrapped, false);
+        if (redeemAmountUnwrapped > 0) {
+            vm.prank(_alice);
+            linearVesting.redeem(derivativeTokenId, redeemAmountUnwrapped, false);
+        }
 
         // Call
         uint256 redeemableAmount = linearVesting.redeemable(_alice, derivativeTokenId, false);
@@ -1331,14 +1578,18 @@ contract LinearVestingTest is Test, Permit2User {
         // Redeem wrapped tokens
         uint256 redeemableWrapped = elapsed * wrappedAmount / vestingDuration;
         uint256 redeemAmountWrapped = redeemableWrapped * wrappedRedeemPercentage / 100;
-        vm.prank(_alice);
-        linearVesting.redeem(derivativeTokenId, redeemAmountWrapped, true);
+        if (redeemAmountWrapped > 0) {
+            vm.prank(_alice);
+            linearVesting.redeem(derivativeTokenId, redeemAmountWrapped, true);
+        }
 
         // Redeem unwrapped tokens
         uint256 redeemableUnwrapped = elapsed * unwrappedAmount / vestingDuration;
         uint256 redeemAmountUnwrapped = redeemableUnwrapped * unwrappedRedeemPercentage / 100;
-        vm.prank(_alice);
-        linearVesting.redeem(derivativeTokenId, redeemAmountUnwrapped, false);
+        if (redeemAmountUnwrapped > 0) {
+            vm.prank(_alice);
+            linearVesting.redeem(derivativeTokenId, redeemAmountUnwrapped, false);
+        }
 
         // Call
         uint256 redeemableAmount = linearVesting.redeemable(_alice, derivativeTokenId, true);
@@ -1413,14 +1664,18 @@ contract LinearVestingTest is Test, Permit2User {
         // Redeem wrapped tokens
         uint256 redeemableWrapped = elapsed * wrappedAmount / vestingDuration;
         uint256 redeemAmountWrapped = redeemableWrapped * wrappedRedeemPercentage / 100;
-        vm.prank(_alice);
-        linearVesting.redeem(derivativeTokenId, redeemAmountWrapped, true);
+        if (redeemAmountWrapped > 0) {
+            vm.prank(_alice);
+            linearVesting.redeem(derivativeTokenId, redeemAmountWrapped, true);
+        }
 
         // Redeem unwrapped tokens
         uint256 redeemableUnwrapped = elapsed * unwrappedAmount / vestingDuration;
         uint256 redeemAmountUnwrapped = redeemableUnwrapped * unwrappedRedeemPercentage / 100;
-        vm.prank(_alice);
-        linearVesting.redeem(derivativeTokenId, redeemAmountUnwrapped, false);
+        if (redeemAmountUnwrapped > 0) {
+            vm.prank(_alice);
+            linearVesting.redeem(derivativeTokenId, redeemAmountUnwrapped, false);
+        }
 
         // Mint more tokens
         _mintDerivativeTokens(_alice, AMOUNT);
@@ -1464,14 +1719,18 @@ contract LinearVestingTest is Test, Permit2User {
         // Redeem wrapped tokens
         uint256 redeemableWrapped = elapsed * wrappedAmount / vestingDuration;
         uint256 redeemAmountWrapped = redeemableWrapped * wrappedRedeemPercentage / 100;
-        vm.prank(_alice);
-        linearVesting.redeem(derivativeTokenId, redeemAmountWrapped, true);
+        if (redeemAmountWrapped > 0) {
+            vm.prank(_alice);
+            linearVesting.redeem(derivativeTokenId, redeemAmountWrapped, true);
+        }
 
         // Redeem unwrapped tokens
         uint256 redeemableUnwrapped = elapsed * unwrappedAmount / vestingDuration;
         uint256 redeemAmountUnwrapped = redeemableUnwrapped * unwrappedRedeemPercentage / 100;
-        vm.prank(_alice);
-        linearVesting.redeem(derivativeTokenId, redeemAmountUnwrapped, false);
+        if (redeemAmountUnwrapped > 0) {
+            vm.prank(_alice);
+            linearVesting.redeem(derivativeTokenId, redeemAmountUnwrapped, false);
+        }
 
         // Mint wrapped tokens
         _mintWrappedDerivativeTokens(_alice, AMOUNT);
