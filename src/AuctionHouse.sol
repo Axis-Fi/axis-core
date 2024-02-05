@@ -522,10 +522,10 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
             uint256 payoutRemaining = remainingCapacity;
             uint256 bidCount = winningBids.length;
             for (uint256 i; i < bidCount; i++) {
-                // Send payout to each bidder
+                // Send payout to each bid's recipient
                 _sendPayout(
                     lotId_,
-                    winningBids[i].bidder,
+                    winningBids[i].recipient,
                     winningBids[i].minAmountOut,
                     routing,
                     auctionOutput
