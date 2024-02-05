@@ -359,7 +359,10 @@ abstract contract Auctioneer is WithModules {
         // Check that the curator has not already approved the auction
         if (routing.curated) revert InvalidState();
 
-        // TODO check that the auction has not ended or been cancelled
+        // Check that the auction has not ended or been cancelled
+        AuctionModule module = _getModuleForId(lotId_);
+        (, uint48 conclusion, , , , uint256 capacity, ,) = module.lotData(lotId_);
+        if (uint48(block.timestamp) >= conclusion || capacity == 0) revert InvalidState();
 
         // Set the curator as approved
         routing.curated = true;
@@ -381,40 +384,29 @@ abstract contract Auctioneer is WithModules {
         return lotRouting[id_];
     }
 
-    // TODO need to add the fee calculations back in at this level for all of these functions
-    function payoutFor(uint96 id_, uint256 amount_) external view returns (uint256) {
-        AuctionModule module = _getModuleForId(id_);
+    
+    function payoutFor(uint96 id_, uint256 amount_) external view virtual returns (uint256);
 
-        // Get payout from module
-        return module.payoutFor(id_, amount_);
-    }
+    function priceFor(uint96 id_, uint256 payout_) external view virtual returns (uint256);
 
-    function priceFor(uint96 id_, uint256 payout_) external view returns (uint256) {
-        AuctionModule module = _getModuleForId(id_);
+    function maxPayout(uint96 id_) external view virtual returns (uint256);
 
-        // Get price from module
-        return module.priceFor(id_, payout_);
-    }
+    function maxAmountAccepted(uint96 id_) external view virtual returns (uint256);
 
-    function maxPayout(uint96 id_) external view returns (uint256) {
-        AuctionModule module = _getModuleForId(id_);
-
-        // Get max payout from module
-        return module.maxPayout(id_);
-    }
-
-    function maxAmountAccepted(uint96 id_) external view returns (uint256) {
-        AuctionModule module = _getModuleForId(id_);
-
-        // Get max amount accepted from module
-        return module.maxAmountAccepted(id_);
-    }
-
+    /// @notice    Returns whether the auction is currently accepting bids or purchases
+    /// @dev       Auctions that have been created, but not yet started will return false
     function isLive(uint96 id_) external view returns (bool) {
         AuctionModule module = _getModuleForId(id_);
 
         // Get isLive from module
         return module.isLive(id_);
+    }
+
+    function hasEnded(uint96 id_) external view returns (bool) {
+        AuctionModule module = _getModuleForId(id_);
+
+        // Get hasEnded from module
+        return module.hasEnded(id_);
     }
 
     function ownerOf(uint96 id_) external view returns (address) {

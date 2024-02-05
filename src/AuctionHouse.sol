@@ -88,6 +88,23 @@ abstract contract FeeManager is Owned {
         }
     }
 
+    /// @notice Estimates fees for a `priceFor` or `maxAmountAccepted` call
+    function _calculateFeeEstimate(
+        Keycode auctionType_,
+        bool hasReferrer_,
+        uint256 price_
+    ) internal view returns (uint256 feeEstimate) {
+        // In this case we have to invert the fee calculation 
+        // We provide a conservative estimate by assuming there is a referrer and rounding up
+        uint48 fee = fees[auctionType_].protocol;
+        if (hasReferrer_) fee += fees[auctionType_].referrer;
+ 
+        uint256 numer = price_ * _FEE_DECIMALS;
+        uint256 denom = _FEE_DECIMALS - fee;
+        
+        return (numer / denom) + ((numer % denom == 0) ? 0 : 1); // round up if necessary
+    }
+
     function _calculatePayoutFees(
         Keycode auctionType_,
         address curator_,
@@ -586,6 +603,55 @@ contract AuctionHouse is Auctioneer, Router {
         if (lastBidRefund > 0 && lastBidder != address(0)) {
             routing.quoteToken.safeTransfer(lastBidder, lastBidRefund);
         }
+    }
+
+    // ========== AUCTION INFORMATION ========== //
+
+    
+    function payoutFor(uint96 id_, uint256 amount_) external view override returns (uint256) {
+        AuctionModule module = _getModuleForId(id_);
+
+        // Calculate fees
+        (Keycode auctionType, ) = unwrapVeecode(lotRouting[id_].auctionReference);
+        (uint256 protocolFee, uint256 referrerFee) = _calculateQuoteFees(auctionType, true, amount_); // we assume there is a referrer to give a conservative amount
+
+        // Get payout from module
+        return module.payoutFor(id_, amount_ - protocolFee - referrerFee);
+    }
+
+    function priceFor(uint96 id_, uint256 payout_) external view override returns (uint256) {
+        AuctionModule module = _getModuleForId(id_);
+
+        // Get price from module (in quote token units)
+        uint256 price = module.priceFor(id_, payout_); 
+
+        // Calculate fee estimate assuming there is a referrer
+        (Keycode auctionType, ) = unwrapVeecode(lotRouting[id_].auctionReference);
+        uint256 fee = _calculateFeeEstimate(auctionType, true, price);
+
+        return price + fee;
+    }
+
+    function maxPayout(uint96 id_) external view override returns (uint256) {
+        AuctionModule module = _getModuleForId(id_);
+
+        // No fees need to be considered here since an amount is not provided
+
+        // Get max payout from module
+        return module.maxPayout(id_);
+    }
+
+    function maxAmountAccepted(uint96 id_) external view override returns (uint256) {
+        AuctionModule module = _getModuleForId(id_);
+
+        // Get max amount accepted from module
+        uint256 maxAmount = module.maxAmountAccepted(id_);
+
+        // Calculate fee estimate assuming there is a referrer
+        (Keycode auctionType, ) = unwrapVeecode(lotRouting[id_].auctionReference);
+        uint256 fee = _calculateFeeEstimate(auctionType, true, maxAmount);
+
+        return maxAmount + fee;
     }
 
     // ========== TOKEN TRANSFERS ========== //
