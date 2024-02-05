@@ -16,6 +16,7 @@ import {LinearVesting} from "src/modules/derivatives/LinearVesting.sol";
 import {MockAtomicAuctionModule} from "test/modules/Auction/MockAtomicAuctionModule.sol";
 import {LocalSealedBidBatchAuction} from "src/modules/auctions/LSBBA/LSBBA.sol";
 import {RSAOAEP} from "src/lib/RSA.sol";
+import {uint2str} from "src/lib/Uint2Str.sol";
 
 import {toKeycode, unwrapVeecode, Keycode, fromKeycode} from "src/modules/Modules.sol";
 
@@ -42,7 +43,7 @@ contract LinearVestingIntegrationTest is Test, Permit2User {
     uint256 internal constant LOT_CAPACITY = 10e18;
     uint256 internal constant BID_AMOUNT = 1e18;
     uint256 internal constant BID_AMOUNT_OUT = 1e18;
-    uint256 internal constant BID_SEED = 1e9;
+    bytes32 internal constant BID_SEED = bytes32(uint256(1e9));
 
     uint96 internal lotId;
     uint96 internal bidId;
@@ -181,7 +182,7 @@ contract LinearVestingIntegrationTest is Test, Permit2User {
     {
         return RSAOAEP.encrypt(
             abi.encodePacked(decrypt_.amountOut),
-            abi.encodePacked(lotId),
+            abi.encodePacked(uint2str(lotId)),
             abi.encodePacked(uint24(65_537)),
             PUBLIC_KEY_MODULUS,
             decrypt_.seed
