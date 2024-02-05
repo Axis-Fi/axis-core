@@ -383,9 +383,7 @@ contract LinearVestingIntegrationTest is Test, Permit2User {
         );
 
         // Derivative token is not yet redeemable
-        assertEq(
-            linearVesting.redeemable(_recipient, derivativeTokenId, false), 0, "redeemable mismatch"
-        );
+        assertEq(linearVesting.redeemable(_recipient, derivativeTokenId), 0, "redeemable mismatch");
 
         // Derivative token cannot be transferred
         bytes memory err = abi.encodeWithSelector(LinearVesting.NotPermitted.selector);
@@ -487,9 +485,7 @@ contract LinearVestingIntegrationTest is Test, Permit2User {
         );
 
         // Derivative token is not yet redeemable
-        assertEq(
-            linearVesting.redeemable(_recipient, derivativeTokenId, false), 0, "redeemable mismatch"
-        );
+        assertEq(linearVesting.redeemable(_recipient, derivativeTokenId), 0, "redeemable mismatch");
 
         // Derivative token cannot be transferred
         bytes memory err = abi.encodeWithSelector(LinearVesting.NotPermitted.selector);

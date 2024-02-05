@@ -106,17 +106,16 @@ contract MockDerivativeModule is DerivativeModule {
         bool wrapped_
     ) external virtual override returns (uint256, address, uint256) {}
 
-    function redeem(uint256 tokenId_, uint256 amount_, bool wrapped_) external virtual override {}
+    function redeem(uint256 tokenId_, uint256 amount_) external virtual override {}
 
-    function exercise(uint256 tokenId_, uint256 amount, bool wrapped_) external virtual override {}
+    function exercise(uint256 tokenId_, uint256 amount) external virtual override {}
 
     function reclaim(uint256 tokenId_) external virtual override {}
 
     function transform(
         uint256 tokenId_,
         address from_,
-        uint256 amount_,
-        bool wrapped_
+        uint256 amount_
     ) external virtual override {}
 
     function wrap(uint256 tokenId_, uint256 amount_) external virtual override {}
@@ -203,12 +202,11 @@ contract MockDerivativeModule is DerivativeModule {
         return (tokenId, token.wrapped);
     }
 
-    function redeemMax(uint256 tokenId_, bool wrapped_) external virtual override {}
+    function redeemMax(uint256 tokenId_) external virtual override {}
 
     function redeemable(
         address owner_,
-        uint256 tokenId_,
-        bool wrapped_
+        uint256 tokenId_
     ) external view virtual override returns (uint256) {}
 
     function name(uint256 tokenId_) public view virtual override returns (string memory) {}

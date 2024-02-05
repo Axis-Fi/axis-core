@@ -86,34 +86,30 @@ abstract contract Derivative {
         bool wrapped_
     ) external virtual returns (uint256, address, uint256);
 
-    function redeemMax(uint256 tokenId_, bool wrapped_) external virtual;
+    /// @notice     Redeem all available derivative tokens for underlying collateral
+    ///
+    /// @param      tokenId_    The ID of the derivative token to redeem
+    function redeemMax(uint256 tokenId_) external virtual;
 
     /// @notice     Redeem derivative tokens for underlying collateral
     ///
     /// @param      tokenId_    The ID of the derivative token to redeem
     /// @param      amount_     The amount of derivative tokens to redeem
-    /// @param      wrapped_    Whether (true) or not (false) to redeem wrapped ERC20 derivative tokens
-    function redeem(uint256 tokenId_, uint256 amount_, bool wrapped_) external virtual;
+    function redeem(uint256 tokenId_, uint256 amount_) external virtual;
 
     /// @notice     Determines the amount of redeemable tokens for a given derivative token
     ///
     /// @param      owner_      The owner of the derivative token
     /// @param      tokenId_    The ID of the derivative token
-    /// @param      wrapped_    Whether (true) or not (false) to redeem wrapped ERC20 derivative tokens
     /// @return     amount_     The amount of redeemable tokens
-    function redeemable(
-        address owner_,
-        uint256 tokenId_,
-        bool wrapped_
-    ) external view virtual returns (uint256);
+    function redeemable(address owner_, uint256 tokenId_) external view virtual returns (uint256);
 
     /// @notice     Exercise a conversion of the derivative token per the specific implementation logic
     /// @dev        Used for options or other derivatives with convertible options, e.g. Rage vesting.
     ///
     /// @param      tokenId_    The ID of the derivative token to exercise
     /// @param      amount      The amount of derivative tokens to exercise
-    /// @param      wrapped_    Whether (true) or not (false) to exercise wrapped ERC20 derivative tokens
-    function exercise(uint256 tokenId_, uint256 amount, bool wrapped_) external virtual;
+    function exercise(uint256 tokenId_, uint256 amount) external virtual;
 
     /// @notice     Reclaim posted collateral for a derivative token which can no longer be exercised
     /// @notice     Access controlled: only callable by the derivative issuer via the auction house.
@@ -127,13 +123,7 @@ abstract contract Derivative {
     /// @param      tokenId_    The ID of the derivative token to transform
     /// @param      from_       The address of the owner of the derivative token
     /// @param      amount_     The amount of derivative tokens to transform
-    /// @param      wrapped_    Whether (true) or not (false) to transform wrapped ERC20 derivative tokens
-    function transform(
-        uint256 tokenId_,
-        address from_,
-        uint256 amount_,
-        bool wrapped_
-    ) external virtual;
+    function transform(uint256 tokenId_, address from_, uint256 amount_) external virtual;
 
     /// @notice     Wrap an existing derivative into an ERC20 token for composability
     ///             Deploys the ERC20 wrapper if it does not already exist

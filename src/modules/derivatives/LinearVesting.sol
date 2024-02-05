@@ -7,6 +7,7 @@ import {SafeTransferLib} from "solmate/utils/SafeTransferLib.sol";
 import {ClonesWithImmutableArgs} from "src/lib/clones/ClonesWithImmutableArgs.sol";
 import {Timestamp} from "src/lib/Timestamp.sol";
 import {ERC6909Metadata} from "src/lib/ERC6909Metadata.sol";
+import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 
 import {Derivative, DerivativeModule} from "src/modules/Derivative.sol";
 import {Module, Veecode, toKeycode, wrapVeecode} from "src/modules/Modules.sol";
@@ -16,6 +17,7 @@ contract LinearVesting is DerivativeModule {
     using SafeTransferLib for ERC20;
     using ClonesWithImmutableArgs for address;
     using Timestamp for uint48;
+    using FixedPointMathLib for uint256;
 
     // ========== EVENTS ========== //
 
@@ -72,8 +74,7 @@ contract LinearVesting is DerivativeModule {
     address internal immutable _IMPLEMENTATION;
 
     /// @notice     Stores the amount of tokens that have been claimed for a particular token id and owner
-    mapping(address owner => mapping(uint256 tokenId => mapping(bool wrapped => uint256))) internal
-        claimed;
+    mapping(address owner_ => mapping(uint256 tokenId_ => uint256 claimedAmount_)) internal claimed;
 
     // ========== MODULE SETUP ========== //
 
@@ -297,23 +298,31 @@ contract LinearVesting is DerivativeModule {
     ///
     /// @param      tokenId_    The ID of the derivative token
     /// @param      amount_     The amount of the derivative token to redeem
-    /// @param      wrapped_    Whether or not to redeem wrapped derivative tokens
-    function _redeem(uint256 tokenId_, uint256 amount_, bool wrapped_) internal {
-        // Update claimed amount
-        claimed[msg.sender][tokenId_][wrapped_] += amount_;
-
+    function _redeem(uint256 tokenId_, uint256 amount_) internal {
         Token storage tokenData = tokenMetadata[tokenId_];
 
-        // Burn the derivative token
-        if (wrapped_ == false) {
-            _burn(msg.sender, tokenId_, amount_);
-        }
-        // Burn the wrapped derivative token
-        else {
-            if (tokenData.wrapped == address(0)) revert InvalidParams();
+        // Get the balances of the tokens
+        uint256 derivativeBalance = balanceOf[msg.sender][tokenId_];
+        uint256 wrappedBalance = tokenData.wrapped == address(0)
+            ? 0
+            : SoulboundCloneERC20(tokenData.wrapped).balanceOf(msg.sender);
 
-            SoulboundCloneERC20 wrappedToken = SoulboundCloneERC20(tokenData.wrapped);
-            wrappedToken.burn(msg.sender, amount_);
+        uint256 derivativeToBurn = amount_ > derivativeBalance ? derivativeBalance : amount_;
+        uint256 wrappedToBurn = amount_ - derivativeToBurn;
+        if (wrappedToBurn > wrappedBalance) {
+            revert InsufficientBalance();
+        }
+
+        // Update claimed amount
+        claimed[msg.sender][tokenId_] += amount_;
+
+        // Burn the unwrapped tokens
+        if (derivativeToBurn > 0) {
+            _burn(msg.sender, tokenId_, derivativeToBurn);
+        }
+        // Burn the wrapped tokens - will be 0 if not wrapped
+        if (wrappedToBurn > 0) {
+            SoulboundCloneERC20(tokenData.wrapped).burn(msg.sender, wrappedToBurn);
         }
 
         // Transfer the underlying token to the owner
@@ -325,18 +334,15 @@ contract LinearVesting is DerivativeModule {
     }
 
     /// @inheritdoc Derivative
-    function redeemMax(
-        uint256 tokenId_,
-        bool wrapped_
-    ) external virtual override onlyValidTokenId(tokenId_) {
+    function redeemMax(uint256 tokenId_) external virtual override onlyValidTokenId(tokenId_) {
         // Determine the redeemable amount
-        uint256 redeemableAmount = redeemable(msg.sender, tokenId_, wrapped_);
+        uint256 redeemableAmount = redeemable(msg.sender, tokenId_);
 
         // If the redeemable amount is 0, revert
         if (redeemableAmount == 0) revert InsufficientBalance();
 
         // Redeem the tokens
-        _redeem(tokenId_, redeemableAmount, wrapped_);
+        _redeem(tokenId_, redeemableAmount);
     }
 
     /// @inheritdoc Derivative
@@ -346,19 +352,18 @@ contract LinearVesting is DerivativeModule {
     ///             - The derivative token with `tokenId_` has not been deployed
     function redeem(
         uint256 tokenId_,
-        uint256 amount_,
-        bool wrapped_
+        uint256 amount_
     ) external virtual override onlyValidTokenId(tokenId_) {
         if (amount_ == 0) revert InvalidParams();
 
         // Get the redeemable amount
-        uint256 redeemableAmount = redeemable(msg.sender, tokenId_, wrapped_);
+        uint256 redeemableAmount = redeemable(msg.sender, tokenId_);
 
         // If the redeemable amount is less than the requested amount, revert
         if (redeemableAmount < amount_) revert InsufficientBalance();
 
         // Redeem the tokens
-        _redeem(tokenId_, amount_, wrapped_);
+        _redeem(tokenId_, amount_);
     }
 
     /// @notice     Returns the amount of vested tokens that can be redeemed for the underlying base token
@@ -376,8 +381,7 @@ contract LinearVesting is DerivativeModule {
     /// @return     uint256     The amount of tokens that can be redeemed
     function redeemable(
         address owner_,
-        uint256 tokenId_,
-        bool wrapped_
+        uint256 tokenId_
     ) public view virtual override onlyValidTokenId(tokenId_) returns (uint256) {
         // Get the vesting data
         Token storage token = tokenMetadata[tokenId_];
@@ -386,18 +390,12 @@ contract LinearVesting is DerivativeModule {
         // If before the start time, 0
         if (block.timestamp <= data.start) return 0;
 
-        // Handle the case where the wrapped derivative is not deployed
-        if (wrapped_ == true && token.wrapped == address(0)) return 0;
-
         // Get balances
-        uint256 derivativeBalance;
-        if (wrapped_) {
-            derivativeBalance = SoulboundCloneERC20(token.wrapped).balanceOf(owner_);
-        } else {
-            derivativeBalance = balanceOf[owner_][tokenId_];
-        }
-        uint256 claimedBalance = claimed[owner_][tokenId_][wrapped_];
-        uint256 totalAmount = derivativeBalance + claimedBalance;
+        uint256 derivativeBalance = balanceOf[owner_][tokenId_];
+        uint256 wrappedBalance =
+            token.wrapped == address(0) ? 0 : SoulboundCloneERC20(token.wrapped).balanceOf(owner_);
+        uint256 claimedBalance = claimed[owner_][tokenId_];
+        uint256 totalAmount = derivativeBalance + wrappedBalance + claimedBalance;
 
         // Determine the amount that has been vested until date, excluding what has already been claimed
         uint256 vested;
@@ -407,7 +405,7 @@ contract LinearVesting is DerivativeModule {
         }
         // If before the expiry time, calculate what has vested already
         else {
-            vested = (totalAmount * (block.timestamp - data.start)) / (data.expiry - data.start);
+            vested = totalAmount.mulDivDown(block.timestamp - data.start, data.expiry - data.start);
         }
 
         // Check invariant: cannot have claimed more than vested
@@ -423,7 +421,7 @@ contract LinearVesting is DerivativeModule {
 
     /// @inheritdoc Derivative
     /// @dev        Not implemented
-    function exercise(uint256, uint256, bool) external virtual override {
+    function exercise(uint256, uint256) external virtual override {
         revert Derivative.Derivative_NotImplemented();
     }
 
@@ -435,7 +433,7 @@ contract LinearVesting is DerivativeModule {
 
     /// @inheritdoc Derivative
     /// @dev        Not implemented
-    function transform(uint256, address, uint256, bool) external virtual override {
+    function transform(uint256, address, uint256) external virtual override {
         revert Derivative.Derivative_NotImplemented();
     }
 
@@ -449,6 +447,8 @@ contract LinearVesting is DerivativeModule {
     ) external virtual override onlyValidTokenId(tokenId_) {
         if (amount_ == 0) revert InvalidParams();
 
+        if (balanceOf[msg.sender][tokenId_] < amount_) revert InsufficientBalance();
+
         // Burn the derivative token
         _burn(msg.sender, tokenId_, amount_);
 
@@ -458,8 +458,6 @@ contract LinearVesting is DerivativeModule {
 
         // Mint the wrapped derivative
         SoulboundCloneERC20(token.wrapped).mint(msg.sender, amount_);
-
-        // TODO adjust claimed
 
         emit Wrapped(tokenId_, msg.sender, amount_, token.wrapped);
     }
@@ -475,14 +473,16 @@ contract LinearVesting is DerivativeModule {
     ) external virtual override onlyValidTokenId(tokenId_) onlyDeployedWrapped(tokenId_) {
         if (amount_ == 0) revert InvalidParams();
 
-        // Burn the wrapped derivative token
         Token storage token = tokenMetadata[tokenId_];
-        SoulboundCloneERC20(token.wrapped).burn(msg.sender, amount_);
+        SoulboundCloneERC20 wrappedToken = SoulboundCloneERC20(token.wrapped);
+
+        if (wrappedToken.balanceOf(msg.sender) < amount_) revert InsufficientBalance();
+
+        // Burn the wrapped derivative token
+        wrappedToken.burn(msg.sender, amount_);
 
         // Mint the derivative token
         _mint(msg.sender, tokenId_, amount_);
-
-        // TODO adjust claimed
 
         emit Unwrapped(tokenId_, msg.sender, amount_, token.wrapped);
     }
