@@ -12,6 +12,7 @@ import {LocalSealedBidBatchAuction} from "src/modules/auctions/LSBBA/LSBBA.sol";
 import {AuctionHouse} from "src/AuctionHouse.sol";
 import {Auction} from "src/modules/Auction.sol";
 import {RSAOAEP} from "src/lib/RSA.sol";
+import {uint2str} from "src/lib/Uint2Str.sol";
 import {Bid as QueueBid} from "src/modules/auctions/LSBBA/MaxPriorityQueue.sol";
 
 contract LSBBADecryptAndSortBidsTest is Test, Permit2User {
@@ -39,7 +40,7 @@ contract LSBBADecryptAndSortBidsTest is Test, Permit2User {
     );
 
     // bidTwo > bidOne > bidThree
-    uint256 internal bidSeed = 1e9;
+    bytes32 internal bidSeed = bytes32(uint256(1e9));
     uint96 internal bidOne;
     uint256 internal bidOneAmount = 1e18;
     uint256 internal bidOneAmountOut = 3e18; // Price = 1/3
@@ -129,7 +130,7 @@ contract LSBBADecryptAndSortBidsTest is Test, Permit2User {
     {
         return RSAOAEP.encrypt(
             abi.encodePacked(decrypt_.amountOut),
-            abi.encodePacked(lotId),
+            abi.encodePacked(uint2str(lotId)),
             abi.encodePacked(uint24(65_537)),
             PUBLIC_KEY_MODULUS,
             decrypt_.seed

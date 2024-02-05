@@ -14,6 +14,7 @@ import {AuctionHouse, Router} from "src/AuctionHouse.sol";
 import {Auction, AuctionModule} from "src/modules/Auction.sol";
 import {IHooks, IAllowlist, Auctioneer} from "src/bases/Auctioneer.sol";
 import {RSAOAEP} from "src/lib/RSA.sol";
+import {uint2str} from "src/lib/Uint2Str.sol";
 import {LocalSealedBidBatchAuction} from "src/modules/auctions/LSBBA/LSBBA.sol";
 
 // Modules
@@ -51,9 +52,10 @@ contract SettleTest is Test, Permit2User {
     address internal immutable protocol = address(0x2);
     address internal immutable referrer = address(0x4);
     address internal immutable auctionOwner = address(0x5);
-    address internal immutable recipient = address(0x6);
     address internal immutable bidderOne = address(0x7);
     address internal immutable bidderTwo = address(0x8);
+    address internal immutable recipientOne = address(0x9);
+    address internal immutable recipientTwo = address(0x10);
 
     uint48 internal constant protocolFee = 1000; // 1%
     uint48 internal constant referrerFee = 500; // 0.5%
@@ -62,7 +64,7 @@ contract SettleTest is Test, Permit2User {
     uint256 internal constant MINIMUM_PRICE = 5e17; // 0.5e18
     uint256 internal _lotCapacity = LOT_CAPACITY;
     uint256 internal constant SCALE = 1e18;
-    uint256 internal constant BID_SEED = 1e9;
+    bytes32 internal constant BID_SEED = bytes32(uint256(1e9));
 
     uint256 internal bidOneAmount = 4e18;
     uint256 internal bidOneAmountOut = 4e18; // Price = 1
@@ -140,6 +142,7 @@ contract SettleTest is Test, Permit2User {
 
     function _createBid(
         address bidder_,
+        address recipient_,
         uint256 bidAmount_,
         uint256 bidAmountOut_
     ) internal returns (uint96 bidId_, LocalSealedBidBatchAuction.Decrypt memory decryptedBid) {
@@ -150,7 +153,7 @@ contract SettleTest is Test, Permit2User {
 
         Router.BidParams memory bidParams = Router.BidParams({
             lotId: lotId,
-            recipient: recipient,
+            recipient: recipient_,
             referrer: referrer,
             amount: bidAmount_,
             auctionData: auctionData_,
@@ -172,7 +175,7 @@ contract SettleTest is Test, Permit2User {
     {
         return RSAOAEP.encrypt(
             abi.encodePacked(decrypt_.amountOut),
-            abi.encodePacked(lotId),
+            abi.encodePacked(uint2str(lotId)),
             abi.encodePacked(uint24(65_537)),
             PUBLIC_KEY_MODULUS,
             decrypt_.seed
@@ -261,7 +264,7 @@ contract SettleTest is Test, Permit2User {
         // Create bids
         // 4 < 10
         (, LocalSealedBidBatchAuction.Decrypt memory decryptedBidOne) =
-            _createBid(bidderOne, bidOneAmount, bidOneAmountOut);
+            _createBid(bidderOne, recipientOne, bidOneAmount, bidOneAmountOut);
         decryptedBids.push(decryptedBidOne);
 
         // bidOne first (price = 1)
@@ -283,9 +286,9 @@ contract SettleTest is Test, Permit2User {
         // Create bids
         // 4 + 6 = 10
         (, LocalSealedBidBatchAuction.Decrypt memory decryptedBidOne) =
-            _createBid(bidderOne, bidOneAmount, bidOneAmountOut);
+            _createBid(bidderOne, recipientOne, bidOneAmount, bidOneAmountOut);
         (, LocalSealedBidBatchAuction.Decrypt memory decryptedBidTwo) =
-            _createBid(bidderTwo, bidTwoAmount, bidTwoAmountOut);
+            _createBid(bidderTwo, recipientTwo, bidTwoAmount, bidTwoAmountOut);
         decryptedBids.push(decryptedBidOne);
         decryptedBids.push(decryptedBidTwo);
 
@@ -308,9 +311,9 @@ contract SettleTest is Test, Permit2User {
         // Create bids
         // 4 + 7 = 11 (over-subscribed)
         (, LocalSealedBidBatchAuction.Decrypt memory decryptedBidOne) =
-            _createBid(bidderOne, bidOneAmount, bidOneAmountOut);
+            _createBid(bidderOne, recipientOne, bidOneAmount, bidOneAmountOut);
         (, LocalSealedBidBatchAuction.Decrypt memory decryptedBidThree) =
-            _createBid(bidderTwo, bidThreeAmount, bidThreeAmountOut);
+            _createBid(bidderTwo, recipientTwo, bidThreeAmount, bidThreeAmountOut);
         decryptedBids.push(decryptedBidOne);
         decryptedBids.push(decryptedBidThree);
 
@@ -333,9 +336,9 @@ contract SettleTest is Test, Permit2User {
         // Create bids
         // 4 + 2 = 6
         (, LocalSealedBidBatchAuction.Decrypt memory decryptedBidOne) =
-            _createBid(bidderOne, bidFourAmount, bidFourAmountOut);
+            _createBid(bidderOne, recipientOne, bidFourAmount, bidFourAmountOut);
         (, LocalSealedBidBatchAuction.Decrypt memory decryptedBidTwo) =
-            _createBid(bidderTwo, bidFiveAmount, bidFiveAmountOut);
+            _createBid(bidderTwo, recipientTwo, bidFiveAmount, bidFiveAmountOut);
         decryptedBids.push(decryptedBidOne);
         decryptedBids.push(decryptedBidTwo);
 
@@ -485,15 +488,17 @@ contract SettleTest is Test, Permit2User {
         auctionHouse.settle(lotId);
 
         // Check base token balances
+        assertEq(baseToken.balanceOf(bidderOne), 0, "bidderOne: incorrect balance of base token");
         assertEq(
-            baseToken.balanceOf(bidderOne),
+            baseToken.balanceOf(recipientOne),
             bidOneAmountOut,
-            "bidderOne: incorrect balance of base token"
+            "recipientOne: incorrect balance of base token"
         );
+        assertEq(baseToken.balanceOf(bidderTwo), 0, "bidderTwo: incorrect balance of base token");
         assertEq(
-            baseToken.balanceOf(bidderTwo),
+            baseToken.balanceOf(recipientTwo),
             bidTwoAmountOut,
-            "bidderTwo: incorrect balance of base token"
+            "recipientTwo: incorrect balance of base token"
         );
         assertEq(
             baseToken.balanceOf(auctionOwner), 0, "auction owner: incorrect balance of base token"
@@ -548,15 +553,17 @@ contract SettleTest is Test, Permit2User {
         auctionHouse.settle(lotId);
 
         // Check base token balances
+        assertEq(baseToken.balanceOf(bidderOne), 0, "bidderOne: incorrect balance of base token");
         assertEq(
-            baseToken.balanceOf(bidderOne),
+            baseToken.balanceOf(recipientOne),
             bidOneAmountOut,
-            "bidderOne: incorrect balance of base token"
+            "recipientOne: incorrect balance of base token"
         );
+        assertEq(baseToken.balanceOf(bidderTwo), 0, "bidderTwo: incorrect balance of base token");
         assertEq(
-            baseToken.balanceOf(bidderTwo),
+            baseToken.balanceOf(recipientTwo),
             bidTwoAmountOut,
-            "bidderTwo: incorrect balance of base token"
+            "recipientTwo: incorrect balance of base token"
         );
         assertEq(
             baseToken.balanceOf(auctionOwner), 0, "auction owner: incorrect balance of base token"
@@ -611,13 +618,15 @@ contract SettleTest is Test, Permit2User {
         auctionHouse.settle(lotId);
 
         // Check base token balances
+        assertEq(baseToken.balanceOf(bidderOne), 0, "bidderOne: incorrect balance of base token");
         assertEq(
-            baseToken.balanceOf(bidderOne),
+            baseToken.balanceOf(recipientOne),
             bidOneAmountOut,
             "bidderOne: incorrect balance of base token"
         );
+        assertEq(baseToken.balanceOf(bidderTwo), 0, "bidderTwo: incorrect balance of base token");
         assertEq(
-            baseToken.balanceOf(bidderTwo),
+            baseToken.balanceOf(recipientTwo),
             bidTwoAmountOut,
             "bidderTwo: incorrect balance of base token"
         );
@@ -674,15 +683,17 @@ contract SettleTest is Test, Permit2User {
 
         // Check base token balances
         uint256 bidOneAmountOutActual = 3e18;
+        assertEq(baseToken.balanceOf(bidderOne), 0, "bidderOne: incorrect balance of base token"); // Received partial payout. 10 - 7 = 3
         assertEq(
-            baseToken.balanceOf(bidderOne),
+            baseToken.balanceOf(recipientOne),
             bidOneAmountOutActual,
-            "bidderOne: incorrect balance of base token"
+            "recipientOne: incorrect balance of base token"
         ); // Received partial payout. 10 - 7 = 3
+        assertEq(baseToken.balanceOf(bidderTwo), 0, "bidderTwo: incorrect balance of base token");
         assertEq(
-            baseToken.balanceOf(bidderTwo),
+            baseToken.balanceOf(recipientTwo),
             bidThreeAmountOut,
-            "bidderTwo: incorrect balance of base token"
+            "recipientTwo: incorrect balance of base token"
         );
         assertEq(
             baseToken.balanceOf(auctionOwner), 0, "auction owner: incorrect balance of base token"
@@ -743,15 +754,17 @@ contract SettleTest is Test, Permit2User {
 
         // Check base token balances
         uint256 bidOneAmountOutActual = 3 * 10 ** baseTokenDecimals;
+        assertEq(baseToken.balanceOf(bidderOne), 0, "bidderOne: incorrect balance of base token"); // Received partial payout. 10 - 7 = 3
         assertEq(
-            baseToken.balanceOf(bidderOne),
+            baseToken.balanceOf(recipientOne),
             bidOneAmountOutActual,
-            "bidderOne: incorrect balance of base token"
+            "recipientOne: incorrect balance of base token"
         ); // Received partial payout. 10 - 7 = 3
+        assertEq(baseToken.balanceOf(bidderTwo), 0, "bidderTwo: incorrect balance of base token");
         assertEq(
-            baseToken.balanceOf(bidderTwo),
+            baseToken.balanceOf(recipientTwo),
             bidThreeAmountOut,
-            "bidderTwo: incorrect balance of base token"
+            "recipientTwo: incorrect balance of base token"
         );
         assertEq(
             baseToken.balanceOf(auctionOwner), 0, "auction owner: incorrect balance of base token"
@@ -812,15 +825,17 @@ contract SettleTest is Test, Permit2User {
 
         // Check base token balances
         uint256 bidOneAmountOutActual = 3 * 10 ** baseTokenDecimals;
+        assertEq(baseToken.balanceOf(bidderOne), 0, "bidderOne: incorrect balance of base token"); // Received partial payout. 10 - 7 = 3
         assertEq(
-            baseToken.balanceOf(bidderOne),
+            baseToken.balanceOf(recipientOne),
             bidOneAmountOutActual,
-            "bidderOne: incorrect balance of base token"
+            "recipientOne: incorrect balance of base token"
         ); // Received partial payout. 10 - 7 = 3
+        assertEq(baseToken.balanceOf(bidderTwo), 0, "bidderTwo: incorrect balance of base token");
         assertEq(
-            baseToken.balanceOf(bidderTwo),
+            baseToken.balanceOf(recipientTwo),
             bidThreeAmountOut,
-            "bidderTwo: incorrect balance of base token"
+            "recipientTwo: incorrect balance of base token"
         );
         assertEq(
             baseToken.balanceOf(auctionOwner), 0, "auction owner: incorrect balance of base token"
@@ -880,15 +895,17 @@ contract SettleTest is Test, Permit2User {
 
         // Check base token balances
         uint256 bidFourAmountOutActual = bidFourAmount * SCALE / marginalPrice;
+        assertEq(baseToken.balanceOf(bidderOne), 0, "bidderOne: incorrect balance of base token");
         assertEq(
-            baseToken.balanceOf(bidderOne),
+            baseToken.balanceOf(recipientOne),
             bidFourAmountOutActual,
-            "bidderOne: incorrect balance of base token"
+            "recipientOne: incorrect balance of base token"
         );
+        assertEq(baseToken.balanceOf(bidderTwo), 0, "bidderTwo: incorrect balance of base token");
         assertEq(
-            baseToken.balanceOf(bidderTwo),
+            baseToken.balanceOf(recipientTwo),
             bidFiveAmountOut,
-            "bidderTwo: incorrect balance of base token"
+            "recipientTwo: incorrect balance of base token"
         );
         assertEq(
             baseToken.balanceOf(auctionOwner),
@@ -946,15 +963,17 @@ contract SettleTest is Test, Permit2User {
 
         // Check base token balances
         uint256 bidFourAmountOutActual = _getAmountOut(bidFourAmount, marginalPrice);
+        assertEq(baseToken.balanceOf(bidderOne), 0, "bidderOne: incorrect balance of base token");
         assertEq(
-            baseToken.balanceOf(bidderOne),
+            baseToken.balanceOf(recipientOne),
             bidFourAmountOutActual,
-            "bidderOne: incorrect balance of base token"
+            "recipientOne: incorrect balance of base token"
         );
+        assertEq(baseToken.balanceOf(bidderTwo), 0, "bidderTwo: incorrect balance of base token");
         assertEq(
-            baseToken.balanceOf(bidderTwo),
+            baseToken.balanceOf(recipientTwo),
             bidFiveAmountOut,
-            "bidderTwo: incorrect balance of base token"
+            "recipientTwo: incorrect balance of base token"
         );
         assertEq(
             baseToken.balanceOf(auctionOwner),
@@ -1012,15 +1031,17 @@ contract SettleTest is Test, Permit2User {
 
         // Check base token balances
         uint256 bidFourAmountOutActual = _getAmountOut(bidFourAmount, marginalPrice);
+        assertEq(baseToken.balanceOf(bidderOne), 0, "bidderOne: incorrect balance of base token");
         assertEq(
-            baseToken.balanceOf(bidderOne),
+            baseToken.balanceOf(recipientOne),
             bidFourAmountOutActual,
-            "bidderOne: incorrect balance of base token"
+            "recipientOne: incorrect balance of base token"
         );
+        assertEq(baseToken.balanceOf(bidderTwo), 0, "bidderTwo: incorrect balance of base token");
         assertEq(
-            baseToken.balanceOf(bidderTwo),
+            baseToken.balanceOf(recipientTwo),
             bidFiveAmountOut,
-            "bidderTwo: incorrect balance of base token"
+            "recipientTwo: incorrect balance of base token"
         );
         assertEq(
             baseToken.balanceOf(auctionOwner),
@@ -1076,12 +1097,16 @@ contract SettleTest is Test, Permit2User {
         auctionHouse.settle(lotId);
 
         // Check base token balances
+        assertEq(baseToken.balanceOf(bidderOne), 0, "bidderOne: incorrect balance of base token");
         assertEq(
-            baseToken.balanceOf(bidderOne),
+            baseToken.balanceOf(recipientOne),
             bidOneAmountOut,
-            "bidderOne: incorrect balance of base token"
+            "recipientOne: incorrect balance of base token"
         );
         assertEq(baseToken.balanceOf(bidderTwo), 0, "bidderTwo: incorrect balance of base token");
+        assertEq(
+            baseToken.balanceOf(recipientTwo), 0, "recipientTwo: incorrect balance of base token"
+        );
         assertEq(
             baseToken.balanceOf(auctionOwner),
             _lotCapacity - bidOneAmountOut,
@@ -1137,12 +1162,16 @@ contract SettleTest is Test, Permit2User {
         auctionHouse.settle(lotId);
 
         // Check base token balances
+        assertEq(baseToken.balanceOf(bidderOne), 0, "bidderOne: incorrect balance of base token");
         assertEq(
-            baseToken.balanceOf(bidderOne),
+            baseToken.balanceOf(recipientOne),
             bidOneAmountOut,
-            "bidderOne: incorrect balance of base token"
+            "recipientOne: incorrect balance of base token"
         );
         assertEq(baseToken.balanceOf(bidderTwo), 0, "bidderTwo: incorrect balance of base token");
+        assertEq(
+            baseToken.balanceOf(recipientTwo), 0, "recipientTwo: incorrect balance of base token"
+        );
         assertEq(
             baseToken.balanceOf(auctionOwner),
             _lotCapacity - bidOneAmountOut,
@@ -1198,12 +1227,16 @@ contract SettleTest is Test, Permit2User {
         auctionHouse.settle(lotId);
 
         // Check base token balances
+        assertEq(baseToken.balanceOf(bidderOne), 0, "bidderOne: incorrect balance of base token");
         assertEq(
-            baseToken.balanceOf(bidderOne),
+            baseToken.balanceOf(recipientOne),
             bidOneAmountOut,
-            "bidderOne: incorrect balance of base token"
+            "recipientOne: incorrect balance of base token"
         );
         assertEq(baseToken.balanceOf(bidderTwo), 0, "bidderTwo: incorrect balance of base token");
+        assertEq(
+            baseToken.balanceOf(recipientTwo), 0, "recipientTwo: incorrect balance of base token"
+        );
         assertEq(
             baseToken.balanceOf(auctionOwner),
             _lotCapacity - bidOneAmountOut,

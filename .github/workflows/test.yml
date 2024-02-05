@@ -30,6 +30,9 @@ jobs:
       - name: Install Node dependencies
         run: pnpm install
 
+      - name: Build local rsa-cli for use int testing
+        run: cd rsa-cli && cargo build && cd ..
+
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
         with:
