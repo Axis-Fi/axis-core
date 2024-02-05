@@ -36,6 +36,8 @@ abstract contract Auctioneer is WithModules {
     error InvalidLotId(uint96 id_);
     error InvalidModuleType(Veecode reference_);
     error NotAuctionOwner(address caller_);
+    error NotCurator(address caller_);
+    error InvalidState();
     error InvalidHook();
     error UnsupportedToken(address token_);
 
@@ -45,6 +47,7 @@ abstract contract Auctioneer is WithModules {
         uint96 id, Veecode indexed auctionRef, address baseToken, address quoteToken
     );
     event AuctionCancelled(uint96 id, Veecode indexed auctionRef);
+    event Curated(uint96 indexed id, address indexed curator);
 
     // ========= DATA STRUCTURES ========== //
 
@@ -53,6 +56,8 @@ abstract contract Auctioneer is WithModules {
     /// @param      owner               Lot owner
     /// @param      baseToken           Token provided by seller
     /// @param      quoteToken          Token to accept as payment
+    /// @param      curator             (optional) Address of the proposed curator
+    /// @param      curated             (optional) Whether the curator has approved the auction
     /// @param      hooks               (optional) Address to call for any hooks to be executed
     /// @param      allowlist           (optional) Contract that implements an allowlist for the auction lot
     /// @param      derivativeReference (optional) Derivative module, represented by its Veecode
@@ -64,6 +69,8 @@ abstract contract Auctioneer is WithModules {
         address owner;
         ERC20 baseToken;
         ERC20 quoteToken;
+        address curator;
+        bool curated;
         IHooks hooks;
         IAllowlist allowlist;
         Veecode derivativeReference;
@@ -78,6 +85,7 @@ abstract contract Auctioneer is WithModules {
         Keycode auctionType;
         ERC20 baseToken;
         ERC20 quoteToken;
+        address curator;
         IHooks hooks;
         IAllowlist allowlist;
         bytes allowlistParams;
@@ -335,6 +343,29 @@ abstract contract Auctioneer is WithModules {
         }
 
         emit AuctionCancelled(lotId_, lotRouting[lotId_].auctionReference);
+    }
+
+
+    // ========== CURATION ========== //
+
+    /// @notice    Accept curation request for a lot.
+    /// @notice    Access controlled. Must be proposed curator for lot.
+    function curate(uint96 lotId_) external isLotValid(lotId_) {
+        Routing storage routing = lotRouting[lotId_];
+
+        // Check that the caller is the proposed curator
+        if (msg.sender != routing.curator) revert NotCurator(msg.sender);
+
+        // Check that the curator has not already approved the auction
+        if (routing.curated) revert InvalidState();
+
+        // TODO check that the auction has not ended or been cancelled
+
+        // Set the curator as approved
+        routing.curated = true;
+
+        // Emit event that the lot is curated by the proposed curator
+        emit Curated(lotId_, msg.sender);
     }
 
     // ========== AUCTION INFORMATION ========== //

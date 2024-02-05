@@ -254,61 +254,7 @@ contract AuctionHouse is Auctioneer, Router {
 
     constructor(address protocol_, address permit2_) Router(protocol_) WithModules(msg.sender) {
         _PERMIT2 = IPermit2(permit2_);
-    }
-
-    // ========== FEE FUNCTIONS ========== //
-
-    function _allocateFees(
-        Keycode auctionType_,
-        address referrer_,
-        address owner_,
-        ERC20 quoteToken_,
-        uint256 amount_
-    ) internal returns (uint256 totalFees) {
-        // Check if there is a referrer
-        bool hasReferrer = referrer_ != address(0) && referrer_ != owner_;
-
-        // Calculate fees for purchase
-        (uint256 toReferrer, uint256 toProtocol) = _calculateQuoteFees(auctionType_, hasReferrer, amount_);
-
-        // Update fee balances if non-zero
-        if (toReferrer > 0) rewards[referrer_][quoteToken_] += toReferrer;
-        if (toProtocol > 0) rewards[_PROTOCOL][quoteToken_] += toProtocol;
-
-        return toReferrer + toProtocol;
-    }
-
-    function _allocateFees(
-        Keycode auctionType_,
-        Auction.Bid[] memory bids_,
-        address owner_,
-        ERC20 quoteToken_
-    ) internal returns (uint256 totalAmountIn, uint256 totalFees) {
-        // Calculate fees for purchase
-        uint256 bidCount = bids_.length;
-        uint256 totalProtocolFees;
-        for (uint256 i; i < bidCount; i++) {
-            // Determine if bid has a referrer
-            bool hasReferrer = bids_[i].referrer != address(0) && bids_[i].referrer != owner_;
-
-            // Calculate fees from bid amount
-            (uint256 toReferrer, uint256 toProtocol) =
-                _calculateQuoteFees(auctionType_, hasReferrer, bids_[i].amount);
-
-            // Update referrer fee balances if non-zero and increment the total protocol fee
-            if (toReferrer > 0) {
-                rewards[bids_[i].referrer][quoteToken_] += toReferrer;
-            }
-            totalProtocolFees += toProtocol;
-            totalFees += toReferrer + toProtocol;
-
-            // Increment total amount in
-            totalAmountIn += bids_[i].amount;
-        }
-
-        // Update protocol fee if not zero
-        if (totalProtocolFees > 0) rewards[_PROTOCOL][quoteToken_] += totalProtocolFees;
-    }
+    } 
 
     // ========== AUCTION FUNCTIONS ========== //
 
@@ -373,8 +319,8 @@ contract AuctionHouse is Auctioneer, Router {
             // Unwrap keycode from veecode
             (Keycode auctionType, ) = unwrapVeecode(routing.auctionReference);
 
-            uint256 totalFees = _allocateFees(auctionType, params_.referrer, routing.owner, routing.quoteToken, params_.amount);
-            amountLessFees = params_.amount - totalFees;
+            uint256 totalQuoteFees = _allocateQuoteFees(auctionType, params_.referrer, routing.owner, routing.quoteToken, params_.amount);
+            amountLessFees = params_.amount - totalQuoteFees;
         }
 
         // Send purchase to auction house and get payout plus any extra output
@@ -402,11 +348,21 @@ contract AuctionHouse is Auctioneer, Router {
         // Send payment to auction owner
         _sendPayment(routing.owner, amountLessFees, routing.quoteToken, routing.hooks);
 
+        // Calculate the curator fee (if applicable)
+        uint256 curatorFee;
+        {
+            (Keycode auctionType, ) = unwrapVeecode(routing.auctionReference);
+            if (routing.curated) curatorFee = _calculatePayoutFees(auctionType, routing.curator, payoutAmount);
+        }
+        
         // Collect payout from auction owner
-        _collectPayout(params_.lotId, amountLessFees, payoutAmount, routing);
+        _collectPayout(params_.lotId, amountLessFees, payoutAmount + curatorFee, routing);
 
         // Send payout to recipient
         _sendPayout(params_.lotId, params_.recipient, payoutAmount, routing, auctionOutput);
+
+        // Send curator fee to curator
+        if (curatorFee > 0) _sendPayout(params_.lotId, routing.curator, curatorFee, routing, auctionOutput);
 
         // Emit event
         emit Purchase(params_.lotId, msg.sender, params_.referrer, params_.amount, payoutAmount);
@@ -560,7 +516,7 @@ contract AuctionHouse is Auctioneer, Router {
         {
             (Keycode auctionType, ) = unwrapVeecode(routing.auctionReference);
             (uint256 totalAmountIn, uint256 totalFees) =
-                _allocateFees(auctionType, winningBids, routing.owner, routing.quoteToken);
+                _allocateQuoteFees(auctionType, winningBids, routing.owner, routing.quoteToken);
             totalAmountInLessFees = totalAmountIn - totalFees;
         }
 
@@ -578,11 +534,17 @@ contract AuctionHouse is Auctioneer, Router {
                 }
             }
 
-            // TODO calculate curator fee
-            // It might be easiest to require the owner to pay additional tokens for the curator fee instead of taking it from the payout
-            // Need to think through this a bit more.
+            // Calculate curator fee (if applicable)
+            uint256 curatorFee;
+            {
+                (Keycode auctionType, ) = unwrapVeecode(routing.auctionReference);
+                if (routing.curated) curatorFee = _calculatePayoutFees(auctionType, routing.curator, totalAmountOut);
+            }
 
-            _collectPayout(lotId_, totalAmountInLessFees, totalAmountOut, routing);
+            _collectPayout(lotId_, totalAmountInLessFees, totalAmountOut + curatorFee, routing);
+
+            // Send curator fee to curator (if applicable)
+            if (curatorFee > 0) _sendPayout(lotId_, routing.curator, curatorFee, routing, auctionOutput);
         }
 
         // Handle payouts to bidders
@@ -901,5 +863,59 @@ contract AuctionHouse is Auctioneer, Router {
         if (token_.balanceOf(address(this)) < balanceBefore + amount_) {
             revert UnsupportedToken(address(token_));
         }
+    }
+
+    // ========== FEE FUNCTIONS ========== //
+
+    function _allocateQuoteFees(
+        Keycode auctionType_,
+        address referrer_,
+        address owner_,
+        ERC20 quoteToken_,
+        uint256 amount_
+    ) internal returns (uint256 totalFees) {
+        // Check if there is a referrer
+        bool hasReferrer = referrer_ != address(0) && referrer_ != owner_;
+
+        // Calculate fees for purchase
+        (uint256 toReferrer, uint256 toProtocol) = _calculateQuoteFees(auctionType_, hasReferrer, amount_);
+
+        // Update fee balances if non-zero
+        if (toReferrer > 0) rewards[referrer_][quoteToken_] += toReferrer;
+        if (toProtocol > 0) rewards[_PROTOCOL][quoteToken_] += toProtocol;
+
+        return toReferrer + toProtocol;
+    }
+
+    function _allocateQuoteFees(
+        Keycode auctionType_,
+        Auction.Bid[] memory bids_,
+        address owner_,
+        ERC20 quoteToken_
+    ) internal returns (uint256 totalAmountIn, uint256 totalFees) {
+        // Calculate fees for purchase
+        uint256 bidCount = bids_.length;
+        uint256 totalProtocolFees;
+        for (uint256 i; i < bidCount; i++) {
+            // Determine if bid has a referrer
+            bool hasReferrer = bids_[i].referrer != address(0) && bids_[i].referrer != owner_;
+
+            // Calculate fees from bid amount
+            (uint256 toReferrer, uint256 toProtocol) =
+                _calculateQuoteFees(auctionType_, hasReferrer, bids_[i].amount);
+
+            // Update referrer fee balances if non-zero and increment the total protocol fee
+            if (toReferrer > 0) {
+                rewards[bids_[i].referrer][quoteToken_] += toReferrer;
+            }
+            totalProtocolFees += toProtocol;
+            totalFees += toReferrer + toProtocol;
+
+            // Increment total amount in
+            totalAmountIn += bids_[i].amount;
+        }
+
+        // Update protocol fee if not zero
+        if (totalProtocolFees > 0) rewards[_PROTOCOL][quoteToken_] += totalProtocolFees;
     }
 }
