@@ -11,7 +11,6 @@ pragma solidity 0.8.19;
 // // Auction modules
 // import {LocalSealedBidBatchAuction} from "src/modules/auctions/LSBBA/LSBBA.sol";
 
-
 // // TODO would it be better to create a system to generate scripts from the sequences instead of having to add them manually to this master script?
 // // See the RBS sim bash scripts for how I did this before
 // // Is this desirable? Writing scripts in Solidity is supposed to be a good thing
@@ -54,7 +53,6 @@ pragma solidity 0.8.19;
 
 //         // Setup contract -> selector mappings
 //         // TODO can we automatically infer the selector from the contract name?
-
 
 //         // Load environment addresses
 //         env = vm.readFile("./src/scripts/env.json");
@@ -113,7 +111,6 @@ pragma solidity 0.8.19;
 //     function envAddress(string memory key_) internal view returns (address) {
 //         return env.readAddress(string.concat(".current.", chain, ".", key_));
 //     }
-
 
 //     function deploy(string calldata chain_, string calldata deployFilePath_) external {
 //         // Setup
@@ -182,9 +179,5 @@ pragma solidity 0.8.19;
 //         }
 //         vm.writeLine(file, "}");
 //     }
-
-
-
-
 
 // }

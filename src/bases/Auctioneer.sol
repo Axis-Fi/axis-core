@@ -42,9 +42,9 @@ abstract contract Auctioneer is WithModules {
     // ========= EVENTS ========= //
 
     event AuctionCreated(
-        uint96 id, Veecode indexed auctionRef, address baseToken, address quoteToken
+        uint96 indexed id, Veecode indexed auctionRef, address baseToken, address quoteToken
     );
-    event AuctionCancelled(uint96 id, Veecode indexed auctionRef);
+    event AuctionCancelled(uint96 indexed id, Veecode indexed auctionRef);
 
     // ========= DATA STRUCTURES ========== //
 
