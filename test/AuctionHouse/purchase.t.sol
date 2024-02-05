@@ -412,6 +412,12 @@ contract PurchaseTest is Test, Permit2User {
         _;
     }
 
+    modifier whenPermit2ApprovalIsInvalid() {
+        // Update bid parameters
+        purchaseParams.permit2Data = abi.encode("");
+        _;
+    }
+
     function test_whenPermit2Signature()
         external
         givenUserHasQuoteTokenBalance(AMOUNT_IN)
@@ -457,6 +463,23 @@ contract PurchaseTest is Test, Permit2User {
         assertEq(quoteToken.balanceOf(auctionOwner), amountInLessFee);
 
         // Ignore the rest
+    }
+
+    function test_whenPermit2ApprovalInvalid()
+        external
+        givenUserHasQuoteTokenBalance(AMOUNT_IN)
+        givenOwnerHasBaseTokenBalance(AMOUNT_OUT)
+        givenQuoteTokenSpendingIsApproved
+        givenBaseTokenSpendingIsApproved
+        whenPermit2ApprovalIsInvalid
+    {
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(Auction.Auction_InvalidParams.selector);
+        vm.expectRevert(err);
+
+        // Purchase
+        vm.prank(alice);
+        auctionHouse.purchase(purchaseParams);
     }
 
     // [X] given the auction has hooks defined

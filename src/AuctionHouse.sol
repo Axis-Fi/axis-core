@@ -31,6 +31,8 @@ abstract contract FeeManager {
 abstract contract Router is FeeManager {
     // ========== DATA STRUCTURES ========== //
 
+    uint256 internal constant _PERMIT2_PARAMS_LEN = 256;
+
     /// @notice     Parameters used for Permit2 approvals
     struct Permit2Approval {
         uint48 deadline;
@@ -327,9 +329,7 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
 
         // Collect payment from the purchaser
         {
-            Permit2Approval memory permit2Approval = params_.permit2Data.length == 0
-                ? Permit2Approval({nonce: 0, deadline: 0, signature: bytes("")})
-                : abi.decode(params_.permit2Data, (Permit2Approval));
+            Permit2Approval memory permit2Approval = _decodePermit2Approval(params_.permit2Data);
             _collectPayment(
                 params_.lotId, params_.amount, routing.quoteToken, routing.hooks, permit2Approval
             );
@@ -387,9 +387,7 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
 
         // Transfer the quote token from the bidder
         {
-            Permit2Approval memory permit2Approval = params_.permit2Data.length == 0
-                ? Permit2Approval({nonce: 0, deadline: 0, signature: bytes("")})
-                : abi.decode(params_.permit2Data, (Permit2Approval));
+            Permit2Approval memory permit2Approval = _decodePermit2Approval(params_.permit2Data);
             _collectPayment(
                 params_.lotId, params_.amount, routing.quoteToken, routing.hooks, permit2Approval
             );
@@ -833,6 +831,22 @@ contract AuctionHouse is Derivatizer, Auctioneer, Router {
         if (token_.balanceOf(address(this)) < balanceBefore + amount_) {
             revert UnsupportedToken(address(token_));
         }
+    }
+
+    function _decodePermit2Approval(bytes memory data_)
+        internal
+        pure
+        returns (Permit2Approval memory)
+    {
+        // If the length is 0, then approval is not provided
+        if (data_.length == 0) {
+            return Permit2Approval({nonce: 0, deadline: 0, signature: bytes("")});
+        }
+
+        // If the length is non-standard, it is invalid
+        if (data_.length != _PERMIT2_PARAMS_LEN) revert Auction.Auction_InvalidParams();
+
+        return abi.decode(data_, (Permit2Approval));
     }
 
     // ========== FEE MANAGEMENT ========== //

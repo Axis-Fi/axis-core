@@ -203,6 +203,14 @@ contract BidTest is Test, Permit2User {
         _;
     }
 
+    modifier whenPermit2ApprovalIsInvalid() {
+        permit2Data = abi.encode("");
+
+        // Update bid parameters
+        bidParams.permit2Data = permit2Data;
+        _;
+    }
+
     // bid
     // [X] given the auction is atomic
     //  [X] it reverts
@@ -351,6 +359,22 @@ contract BidTest is Test, Permit2User {
         assertEq(bid.amount, BID_AMOUNT, "amount mismatch");
         assertEq(bid.minAmountOut, 0, "minAmountOut mismatch");
         assertEq(bid.auctionParam, auctionData, "auctionParam mismatch");
+    }
+
+    function test_whenPermit2ApprovalIsInvalid()
+        external
+        givenLotIsCreated
+        givenUserHasQuoteTokenBalance(BID_AMOUNT)
+        givenUserHasApprovedQuoteToken(BID_AMOUNT)
+        whenPermit2ApprovalIsInvalid
+    {
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(Auction.Auction_InvalidParams.selector);
+        vm.expectRevert(err);
+
+        // Call
+        vm.prank(alice);
+        auctionHouse.bid(bidParams);
     }
 
     function test_whenAuctionParamIsProvided()
