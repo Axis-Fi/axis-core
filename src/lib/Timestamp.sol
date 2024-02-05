@@ -1,6 +1,8 @@
 /// SPDX-License-Identifier: AGPL-3.0
 pragma solidity 0.8.19;
 
+import {uint2str} from "src/lib/Uint2Str.sol";
+
 library Timestamp {
     function toPaddedString(uint48 timestamp)
         public
@@ -32,37 +34,12 @@ library Timestamp {
             day = uint256(_day);
         }
 
-        string memory yearStr = _uint2str(year % 10_000);
+        string memory yearStr = uint2str(year % 10_000);
         string memory monthStr =
-            month < 10 ? string(abi.encodePacked("0", _uint2str(month))) : _uint2str(month);
+            month < 10 ? string(abi.encodePacked("0", uint2str(month))) : uint2str(month);
         string memory dayStr =
-            day < 10 ? string(abi.encodePacked("0", _uint2str(day))) : _uint2str(day);
+            day < 10 ? string(abi.encodePacked("0", uint2str(day))) : uint2str(day);
 
         return (yearStr, monthStr, dayStr);
-    }
-
-    // Some fancy math to convert a uint into a string, courtesy of Provable Things.
-    // Updated to work with solc 0.8.0.
-    // https://github.com/provable-things/ethereum-api/blob/master/provableAPI_0.6.sol
-    function _uint2str(uint256 _i) internal pure returns (string memory) {
-        if (_i == 0) {
-            return "0";
-        }
-        uint256 j = _i;
-        uint256 len;
-        while (j != 0) {
-            len++;
-            j /= 10;
-        }
-        bytes memory bstr = new bytes(len);
-        uint256 k = len;
-        while (_i != 0) {
-            k = k - 1;
-            uint8 temp = (48 + uint8(_i - (_i / 10) * 10));
-            bytes1 b1 = bytes1(temp);
-            bstr[k] = b1;
-            _i /= 10;
-        }
-        return string(bstr);
     }
 }
