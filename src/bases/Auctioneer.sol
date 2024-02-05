@@ -345,32 +345,6 @@ abstract contract Auctioneer is WithModules {
         emit AuctionCancelled(lotId_, lotRouting[lotId_].auctionReference);
     }
 
-
-    // ========== CURATION ========== //
-
-    /// @notice    Accept curation request for a lot.
-    /// @notice    Access controlled. Must be proposed curator for lot.
-    function curate(uint96 lotId_) external isLotValid(lotId_) {
-        Routing storage routing = lotRouting[lotId_];
-
-        // Check that the caller is the proposed curator
-        if (msg.sender != routing.curator) revert NotCurator(msg.sender);
-
-        // Check that the curator has not already approved the auction
-        if (routing.curated) revert InvalidState();
-
-        // Check that the auction has not ended or been cancelled
-        AuctionModule module = _getModuleForId(lotId_);
-        (, uint48 conclusion, , , , uint256 capacity, ,) = module.lotData(lotId_);
-        if (uint48(block.timestamp) >= conclusion || capacity == 0) revert InvalidState();
-
-        // Set the curator as approved
-        routing.curated = true;
-
-        // Emit event that the lot is curated by the proposed curator
-        emit Curated(lotId_, msg.sender);
-    }
-
     // ========== AUCTION INFORMATION ========== //
 
     /// @notice     Gets the routing information for a given lot ID
