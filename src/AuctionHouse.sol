@@ -10,7 +10,6 @@ import {IPermit2} from "src/lib/permit2/interfaces/IPermit2.sol";
 import {Auctioneer} from "src/bases/Auctioneer.sol";
 import {CondenserModule} from "src/modules/Condenser.sol";
 
-import {Derivatizer} from "src/bases/Derivatizer.sol";
 import {DerivativeModule} from "src/modules/Derivative.sol";
 
 import {Auction, AuctionModule} from "src/modules/Auction.sol";
@@ -60,7 +59,7 @@ abstract contract FeeManager is Owned {
     uint48 internal constant _FEE_DECIMALS = 1e5;
 
     /// @notice     Address the protocol receives fees at
-    address internal _PROTOCOL;
+    address internal _protocol;
 
     /// @notice     Fees charged for each auction type
     /// @dev        See Fees struct for more details
@@ -226,7 +225,7 @@ abstract contract Router is FeeManager {
     // ========== CONSTRUCTOR ========== //
 
     constructor(address protocol_) {
-        _PROTOCOL = protocol_;
+        _protocol = protocol_;
     }
 
     // ========== ATOMIC AUCTIONS ========== //
@@ -1033,7 +1032,7 @@ contract AuctionHouse is Auctioneer, Router {
 
         // Update fee balances if non-zero
         if (toReferrer > 0) rewards[referrer_][quoteToken_] += toReferrer;
-        if (toProtocol > 0) rewards[_PROTOCOL][quoteToken_] += toProtocol;
+        if (toProtocol > 0) rewards[_protocol][quoteToken_] += toProtocol;
 
         return toReferrer + toProtocol;
     }
@@ -1067,6 +1066,6 @@ contract AuctionHouse is Auctioneer, Router {
         }
 
         // Update protocol fee if not zero
-        if (totalProtocolFees > 0) rewards[_PROTOCOL][quoteToken_] += totalProtocolFees;
+        if (totalProtocolFees > 0) rewards[_protocol][quoteToken_] += totalProtocolFees;
     }
 }
