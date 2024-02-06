@@ -226,4 +226,10 @@ contract CancelAuctionTest is Test, Permit2User {
         // Check the owner's balance
         assertEq(baseToken.balanceOf(auctionOwner), ownerBalance + LOT_CAPACITY - PURCHASE_AMOUNT);
     }
+
+    // [ ] given the auction is prefunded
+    //  [ ] given a curator is set
+    //   [ ] given a curator has not yet approved
+    //    [ ] nothing happens
+    //   [ ] it refunds the prefunded amount in payout tokens to the owner
 }

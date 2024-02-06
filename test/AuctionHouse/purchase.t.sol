@@ -639,6 +639,23 @@ contract PurchaseTest is Test, Permit2User {
         );
     }
 
+    // [ ] given there is no protocol fee set for the auction type
+    //  [ ] no protocol fee is accrued
+    // [ ] the protocol fee is accrued
+
+    // [ ] given there is no referrer fee set for the auction type
+    //  [ ] no referrer fee is accrued
+    // [ ] the referrer fee is accrued
+
+    // [ ] given there is no curator set
+    //  [ ] no payout token is transferred to the curator
+    // [ ] given there is a curator set
+    //  [ ] given the curator has not approved curation
+    //   [ ] no payout token is transferred to the curator
+    //  [ ] given the payout token is a derivative
+    //   [ ] derivative is minted and transferred to the curator
+    //  [ ] payout token is transferred to the curator
+
     // ======== Prefunding flow ======== //
 
     // [X] given the auction is prefunded
