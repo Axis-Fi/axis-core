@@ -56,8 +56,6 @@ abstract contract Auctioneer is WithModules {
     /// @param      owner               Lot owner
     /// @param      baseToken           Token provided by seller
     /// @param      quoteToken          Token to accept as payment
-    /// @param      curator             (optional) Address of the proposed curator
-    /// @param      curated             (optional) Whether the curator has approved the auction
     /// @param      hooks               (optional) Address to call for any hooks to be executed
     /// @param      allowlist           (optional) Contract that implements an allowlist for the auction lot
     /// @param      derivativeReference (optional) Derivative module, represented by its Veecode
@@ -69,14 +67,23 @@ abstract contract Auctioneer is WithModules {
         address owner;
         ERC20 baseToken;
         ERC20 quoteToken;
-        address curator;
-        bool curated;
         IHooks hooks;
         IAllowlist allowlist;
         Veecode derivativeReference;
         bytes derivativeParams;
         bool wrapDerivative;
         bool prefunded;
+    }
+
+    /// @notice     Curation information for a lot
+    /// @dev        This is split into a separate struct, otherwise the Routing struct would be too large
+    ///             and would throw a "stack too deep" error.
+    ///
+    /// @param      curator     Address of the proposed curator
+    /// @param      curated     Whether the curator has approved the auction
+    struct Curation {
+        address curator;
+        bool curated;
     }
 
     /// @notice     Auction routing information provided as input parameters
@@ -105,6 +112,8 @@ abstract contract Auctioneer is WithModules {
 
     /// @notice Mapping of lot IDs to their auction type (represented by the Keycode for the auction submodule)
     mapping(uint96 lotId => Routing) public lotRouting;
+
+    mapping(uint96 lotId => Curation) public lotCuration;
 
     /// @notice Mapping auction and derivative references to the condenser that is used to pass data between them
     mapping(Veecode auctionRef => mapping(Veecode derivativeRef => Veecode condenserRef)) public
@@ -201,10 +210,19 @@ abstract contract Auctioneer is WithModules {
 
         // Store routing information
         Routing storage routing = lotRouting[lotId];
-        routing.auctionReference = auctionRef;
-        routing.owner = msg.sender;
-        routing.baseToken = routing_.baseToken;
-        routing.quoteToken = routing_.quoteToken;
+        {
+            routing.auctionReference = auctionRef;
+            routing.owner = msg.sender;
+            routing.baseToken = routing_.baseToken;
+            routing.quoteToken = routing_.quoteToken;
+        }
+
+        // Store curation information
+        {
+            Curation storage curation = lotCuration[lotId];
+            curation.curator = routing_.curator;
+            curation.curated = false;
+        }
 
         // Derivative
         if (fromKeycode(routing_.derivativeType) != bytes5("")) {

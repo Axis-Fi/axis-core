@@ -82,8 +82,6 @@ contract SendPayoutTest is Test, Permit2User {
             owner: OWNER,
             baseToken: payoutToken,
             quoteToken: quoteToken,
-            curator: address(0),
-            curated: false,
             hooks: hook,
             allowlist: IAllowlist(address(0)),
             derivativeReference: derivativeReference,

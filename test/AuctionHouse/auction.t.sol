@@ -45,6 +45,7 @@ contract AuctionTest is Test, Permit2User {
     Auction.AuctionParams internal auctionParams;
 
     address internal immutable protocol = address(0x2);
+    address internal immutable curator = address(0x3);
 
     uint256 internal constant LOT_CAPACITY = 10e18;
 
@@ -71,7 +72,7 @@ contract AuctionTest is Test, Permit2User {
             auctionType: toKeycode("ATOM"),
             baseToken: baseToken,
             quoteToken: quoteToken,
-            curator: address(0),
+            curator: curator,
             hooks: IHooks(address(0)),
             allowlist: IAllowlist(address(0)),
             allowlistParams: abi.encode(""),
@@ -226,8 +227,6 @@ contract AuctionTest is Test, Permit2User {
             address lotOwner,
             ERC20 lotBaseToken,
             ERC20 lotQuoteToken,
-            address lotCurator,
-            bool lotCurated,
             IHooks lotHooks,
             IAllowlist lotAllowlist,
             Veecode lotDerivativeType,
@@ -243,14 +242,17 @@ contract AuctionTest is Test, Permit2User {
         assertEq(lotOwner, address(this), "owner mismatch");
         assertEq(address(lotBaseToken), address(baseToken), "base token mismatch");
         assertEq(address(lotQuoteToken), address(quoteToken), "quote token mismatch");
-        assertEq(lotCurator, address(0), "curator mismatch");
-        assertEq(lotCurated, false, "curated mismatch");
         assertEq(address(lotHooks), address(0), "hooks mismatch");
         assertEq(address(lotAllowlist), address(0), "allowlist mismatch");
         assertEq(fromVeecode(lotDerivativeType), "", "derivative type mismatch");
         assertEq(lotDerivativeParams, "", "derivative params mismatch");
         assertEq(lotWrapDerivative, false, "wrap derivative mismatch");
         assertEq(lotPrefunded, false, "prefunded mismatch");
+
+        // Curation updated
+        (address lotCurator, bool lotCurated) = auctionHouse.lotCuration(lotId);
+        assertEq(lotCurator, curator, "curator mismatch");
+        assertEq(lotCurated, false, "curated mismatch");
 
         // Auction module also updated
         (uint48 lotStart,,,,,,,) = mockAuctionModule.lotData(lotId);
@@ -265,7 +267,7 @@ contract AuctionTest is Test, Permit2User {
         uint96 lotId = auctionHouse.auction(routingParams, auctionParams);
 
         // Assert values
-        (,, ERC20 lotBaseToken, ERC20 lotQuoteToken,,,,,,,,) = auctionHouse.lotRouting(lotId);
+        (,, ERC20 lotBaseToken, ERC20 lotQuoteToken,,,,,,) = auctionHouse.lotRouting(lotId);
         assertEq(address(lotBaseToken), address(baseToken), "base token mismatch");
         assertEq(address(lotQuoteToken), address(baseToken), "quote token mismatch");
     }
@@ -343,7 +345,7 @@ contract AuctionTest is Test, Permit2User {
         uint96 lotId = auctionHouse.auction(routingParams, auctionParams);
 
         // Assert values
-        (,,,,,,,, Veecode lotDerivativeType,,,) = auctionHouse.lotRouting(lotId);
+        (,,,,,, Veecode lotDerivativeType,,,) = auctionHouse.lotRouting(lotId);
         assertEq(
             fromVeecode(lotDerivativeType),
             fromVeecode(mockDerivativeModule.VEECODE()),
@@ -364,7 +366,7 @@ contract AuctionTest is Test, Permit2User {
         uint96 lotId = auctionHouse.auction(routingParams, auctionParams);
 
         // Assert values
-        (,,,,,,,, Veecode lotDerivativeType, bytes memory lotDerivativeParams,,) =
+        (,,,,,, Veecode lotDerivativeType, bytes memory lotDerivativeParams,,) =
             auctionHouse.lotRouting(lotId);
         assertEq(
             fromVeecode(lotDerivativeType),
@@ -432,7 +434,7 @@ contract AuctionTest is Test, Permit2User {
         uint96 lotId = auctionHouse.auction(routingParams, auctionParams);
 
         // Assert values
-        (,,,,,,, IAllowlist lotAllowlist,,,,) = auctionHouse.lotRouting(lotId);
+        (,,,,, IAllowlist lotAllowlist,,,,) = auctionHouse.lotRouting(lotId);
 
         assertEq(address(lotAllowlist), address(mockAllowlist), "allowlist mismatch");
 
@@ -490,7 +492,7 @@ contract AuctionTest is Test, Permit2User {
         uint96 lotId = auctionHouse.auction(routingParams, auctionParams);
 
         // Assert values
-        (,,,,,, IHooks lotHooks,,,,,) = auctionHouse.lotRouting(lotId);
+        (,,,, IHooks lotHooks,,,,,) = auctionHouse.lotRouting(lotId);
 
         assertEq(address(lotHooks), address(mockHook), "hooks mismatch");
     }
@@ -598,7 +600,7 @@ contract AuctionTest is Test, Permit2User {
         uint96 lotId = auctionHouse.auction(routingParams, auctionParams);
 
         // Check the prefunding status
-        (,,,,,,,,,,, bool lotPrefunded) = auctionHouse.lotRouting(lotId);
+        (,,,,,,,,, bool lotPrefunded) = auctionHouse.lotRouting(lotId);
         assertEq(lotPrefunded, true, "prefunded mismatch");
 
         // Check balances
@@ -661,7 +663,7 @@ contract AuctionTest is Test, Permit2User {
         uint96 lotId = auctionHouse.auction(routingParams, auctionParams);
 
         // Check the prefunding status
-        (,,,,,,,,,,, bool lotPrefunded) = auctionHouse.lotRouting(lotId);
+        (,,,,,,,,, bool lotPrefunded) = auctionHouse.lotRouting(lotId);
         assertEq(lotPrefunded, true, "prefunded mismatch");
 
         // Check balances

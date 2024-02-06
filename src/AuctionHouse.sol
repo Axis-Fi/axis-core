@@ -374,11 +374,12 @@ contract AuctionHouse is Auctioneer, Router {
         _sendPayment(routing.owner, amountLessFees, routing.quoteToken, routing.hooks);
 
         // Calculate the curator fee (if applicable)
+        Curation storage curation = lotCuration[params_.lotId];
         uint256 curatorFee;
         {
             (Keycode auctionType,) = unwrapVeecode(routing.auctionReference);
-            if (routing.curated) {
-                curatorFee = _calculatePayoutFees(auctionType, routing.curator, payoutAmount);
+            if (curation.curated) {
+                curatorFee = _calculatePayoutFees(auctionType, curation.curator, payoutAmount);
             }
         }
 
@@ -390,7 +391,7 @@ contract AuctionHouse is Auctioneer, Router {
 
         // Send curator fee to curator
         if (curatorFee > 0) {
-            _sendPayout(params_.lotId, routing.curator, curatorFee, routing, auctionOutput);
+            _sendPayout(params_.lotId, curation.curator, curatorFee, routing, auctionOutput);
         }
 
         // Emit event
@@ -564,11 +565,12 @@ contract AuctionHouse is Auctioneer, Router {
             }
 
             // Calculate curator fee (if applicable)
+            Curation storage curation = lotCuration[lotId_];
             uint256 curatorFee;
             {
                 (Keycode auctionType,) = unwrapVeecode(routing.auctionReference);
-                if (routing.curated) {
-                    curatorFee = _calculatePayoutFees(auctionType, routing.curator, totalAmountOut);
+                if (curation.curated) {
+                    curatorFee = _calculatePayoutFees(auctionType, curation.curator, totalAmountOut);
                 }
             }
 
@@ -576,7 +578,7 @@ contract AuctionHouse is Auctioneer, Router {
 
             // Send curator fee to curator (if applicable)
             if (curatorFee > 0) {
-                _sendPayout(lotId_, routing.curator, curatorFee, routing, auctionOutput);
+                _sendPayout(lotId_, curation.curator, curatorFee, routing, auctionOutput);
             }
         }
 
@@ -627,12 +629,13 @@ contract AuctionHouse is Auctioneer, Router {
     /// @notice    Access controlled. Must be proposed curator for lot.
     function curate(uint96 lotId_) external isLotValid(lotId_) {
         Routing storage routing = lotRouting[lotId_];
+        Curation storage curation = lotCuration[lotId_];
 
         // Check that the caller is the proposed curator
-        if (msg.sender != routing.curator) revert NotCurator(msg.sender);
+        if (msg.sender != curation.curator) revert NotCurator(msg.sender);
 
         // Check that the curator has not already approved the auction
-        if (routing.curated) revert InvalidState();
+        if (curation.curated) revert InvalidState();
 
         // Check that the auction has not ended or been cancelled
         AuctionModule module = _getModuleForId(lotId_);
@@ -640,7 +643,7 @@ contract AuctionHouse is Auctioneer, Router {
         if (uint48(block.timestamp) >= conclusion || capacity == 0) revert InvalidState();
 
         // Set the curator as approved
-        routing.curated = true;
+        curation.curated = true;
 
         // If the auction is pre-funded, transfer the fee amount from the owner
         if (routing.prefunded) {
