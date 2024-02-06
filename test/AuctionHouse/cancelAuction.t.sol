@@ -304,7 +304,67 @@ contract CancelAuctionTest is Test, Permit2User {
         auctionHouse.cancel(lotId);
 
         // Check the owner's balance
-        assertEq(baseToken.balanceOf(auctionOwner), LOT_CAPACITY + curatorMaxPotentialFee, "base token: auction owner balance mismatch"); // Capacity and max curator fee is returned
+        assertEq(
+            baseToken.balanceOf(auctionOwner),
+            LOT_CAPACITY + curatorMaxPotentialFee,
+            "base token: auction owner balance mismatch"
+        ); // Capacity and max curator fee is returned
+    }
+
+    function test_prefunded_givenPurchase_givenCuratorHasApproved()
+        external
+        givenLotIsPrefunded
+        givenCuratorIsSet
+        whenLotIsCreated
+        givenPurchase(PURCHASE_AMOUNT)
+        givenAuctionOwnerHasCuratorFeeBalance
+        givenCuratorHasApproved
+    {
+        // Balance before
+        assertEq(baseToken.balanceOf(auctionOwner), 0);
+
+        // No curator fee, since the purchase was before curator approval
+        uint256 curatorFee = 0;
+
+        // Cancel the lot
+        vm.prank(auctionOwner);
+        auctionHouse.cancel(lotId);
+
+        // Check the owner's balance
+        assertEq(
+            baseToken.balanceOf(auctionOwner),
+            LOT_CAPACITY - PURCHASE_AMOUNT + curatorMaxPotentialFee - curatorFee,
+            "base token: auction owner balance mismatch"
+        );
+    }
+
+    function test_prefunded_givenPurchase_givenCuratorHasApproved_givenPurchase()
+        external
+        givenLotIsPrefunded
+        givenCuratorIsSet
+        whenLotIsCreated
+        givenPurchase(PURCHASE_AMOUNT)
+        givenAuctionOwnerHasCuratorFeeBalance
+        givenCuratorHasApproved
+        givenPurchase(PURCHASE_AMOUNT * 2)
+    {
+        // Balance before
+        assertEq(baseToken.balanceOf(auctionOwner), 0);
+
+        // No curator fee, since the purchase was before curator approval
+        uint256 curatorFee = CURATOR_FEE * (PURCHASE_AMOUNT * 2) / 1e5;
+
+        // Cancel the lot
+        vm.prank(auctionOwner);
+        auctionHouse.cancel(lotId);
+
+        // Check the owner's balance
+        assertEq(
+            baseToken.balanceOf(auctionOwner),
+            LOT_CAPACITY - PURCHASE_AMOUNT - (PURCHASE_AMOUNT * 2) + curatorMaxPotentialFee
+                - curatorFee,
+            "base token: auction owner balance mismatch"
+        );
     }
 
     function test_prefunded_givenCuratorHasApproved_givenPurchase()
