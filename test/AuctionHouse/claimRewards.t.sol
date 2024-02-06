@@ -9,11 +9,6 @@ import {IPermit2} from "src/lib/permit2/interfaces/IPermit2.sol";
 // Mocks
 import {MockERC20} from "solmate/test/utils/mocks/MockERC20.sol";
 import {MockAtomicAuctionModule} from "test/modules/Auction/MockAtomicAuctionModule.sol";
-import {MockBatchAuctionModule} from "test/modules/Auction/MockBatchAuctionModule.sol";
-import {MockDerivativeModule} from "test/modules/Derivative/MockDerivativeModule.sol";
-import {MockCondenserModule} from "test/modules/Condenser/MockCondenserModule.sol";
-import {MockAllowlist} from "test/modules/Auction/MockAllowlist.sol";
-import {MockHook} from "test/modules/Auction/MockHook.sol";
 import {Permit2User} from "test/lib/permit2/Permit2User.sol";
 
 // Auctions
@@ -36,10 +31,6 @@ contract ClaimRewardsTest is Test, Permit2User {
     MockERC20 internal baseToken;
     MockERC20 internal quoteToken;
     MockAtomicAuctionModule internal mockAuctionModule;
-    MockDerivativeModule internal mockDerivativeModule;
-    MockCondenserModule internal mockCondenserModule;
-    MockAllowlist internal mockAllowlist;
-    MockHook internal mockHook;
 
     AuctionHouse internal auctionHouse;
 
@@ -60,8 +51,6 @@ contract ClaimRewardsTest is Test, Permit2User {
     uint256 internal AMOUNT_OUT;
     uint256 internal curatorActualFee;
     uint256 internal curatorMaxPotentialFee;
-
-    uint48 internal constant DERIVATIVE_EXPIRY = 1 days;
 
     uint48 internal constant CURATOR_MAX_FEE = 100;
     uint48 internal constant CURATOR_FEE = 90;
@@ -94,10 +83,6 @@ contract ClaimRewardsTest is Test, Permit2User {
 
         auctionHouse = new AuctionHouse(protocol, _PERMIT2_ADDRESS);
         mockAuctionModule = new MockAtomicAuctionModule(address(auctionHouse));
-        mockDerivativeModule = new MockDerivativeModule(address(auctionHouse));
-        mockCondenserModule = new MockCondenserModule(address(auctionHouse));
-        mockAllowlist = new MockAllowlist();
-        mockHook = new MockHook(address(quoteToken), address(baseToken));
 
         auctionParams = Auction.AuctionParams({
             start: uint48(block.timestamp),
