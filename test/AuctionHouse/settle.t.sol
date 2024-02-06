@@ -427,15 +427,6 @@ contract SettleTest is Test, Permit2User {
         auctionHouse.settle(lotId);
     }
 
-    function test_unauthorized() external {
-        // Expect revert
-        vm.expectRevert("UNAUTHORIZED");
-
-        // Attempt to settle the lot
-        vm.prank(bidderOne);
-        auctionHouse.settle(lotId);
-    }
-
     function test_auctionModuleReverts_reverts() external givenAuctionModuleReverts {
         // Expect revert
         bytes memory err =
@@ -535,6 +526,38 @@ contract SettleTest is Test, Permit2User {
         );
         assertEq(
             auctionHouse.rewards(referrer, quoteToken), referrerFeeAmount, "incorrect referrer fees"
+        );
+    }
+
+    function test_notPermissioned()
+        external
+        givenLotHasStarted
+        givenLotHasSufficientBids
+        givenLotHasConcluded
+        givenLotHasDecrypted
+    {
+        // Attempt to settle the lot
+        vm.prank(bidderOne);
+        auctionHouse.settle(lotId);
+
+        // Check base token balances
+        assertEq(
+            baseToken.balanceOf(bidderOne),
+            bidOneAmountOut,
+            "bidderOne: incorrect balance of base token"
+        );
+        assertEq(
+            baseToken.balanceOf(bidderTwo),
+            bidTwoAmountOut,
+            "bidderTwo: incorrect balance of base token"
+        );
+        assertEq(
+            baseToken.balanceOf(auctionOwner), 0, "auction owner: incorrect balance of base token"
+        );
+        assertEq(
+            baseToken.balanceOf(address(auctionHouse)),
+            0,
+            "auctionHouse: incorrect balance of base token"
         );
     }
 
