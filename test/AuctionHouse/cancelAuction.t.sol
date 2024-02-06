@@ -11,7 +11,7 @@ import {MockAtomicAuctionModule} from "test/modules/Auction/MockAtomicAuctionMod
 import {Permit2User} from "test/lib/permit2/Permit2User.sol";
 
 // Auctions
-import {AuctionHouse, Router} from "src/AuctionHouse.sol";
+import {AuctionHouse, Router, FeeManager} from "src/AuctionHouse.sol";
 import {Auction} from "src/modules/Auction.sol";
 import {IHooks, IAllowlist, Auctioneer} from "src/bases/Auctioneer.sol";
 
@@ -41,10 +41,15 @@ contract CancelAuctionTest is Test, Permit2User {
 
     address internal protocol = address(0x2);
     address internal alice = address(0x3);
+    address internal curator = address(0x4);
 
+    uint48 internal constant CURATOR_FEE = 100;
     uint256 internal constant LOT_CAPACITY = 10e18;
+    uint256 internal curatorMaxFee;
 
     uint256 internal constant PURCHASE_AMOUNT = 1e18;
+
+    Keycode internal auctionType = toKeycode("ATOM");
 
     function setUp() external {
         baseToken = new MockERC20("Base Token", "BASE", 18);
@@ -64,7 +69,7 @@ contract CancelAuctionTest is Test, Permit2User {
         });
 
         routingParams = Auctioneer.RoutingParams({
-            auctionType: toKeycode("ATOM"),
+            auctionType: auctionType,
             baseToken: baseToken,
             quoteToken: quoteToken,
             curator: address(0),
@@ -75,6 +80,9 @@ contract CancelAuctionTest is Test, Permit2User {
             derivativeType: toKeycode(""),
             derivativeParams: abi.encode("")
         });
+
+        // Set the max curator fee
+        auctionHouse.setFee(auctionType, FeeManager.FeeType.MaxCurator, CURATOR_FEE);
     }
 
     modifier whenLotIsCreated() {
@@ -227,9 +235,94 @@ contract CancelAuctionTest is Test, Permit2User {
         assertEq(baseToken.balanceOf(auctionOwner), ownerBalance + LOT_CAPACITY - PURCHASE_AMOUNT);
     }
 
-    // [ ] given the auction is prefunded
-    //  [ ] given a curator is set
-    //   [ ] given a curator has not yet approved
-    //    [ ] nothing happens
-    //   [ ] it refunds the prefunded amount in payout tokens to the owner
+    // [X] given the auction is prefunded
+    //  [X] given a curator is set
+    //   [X] given a curator has not yet approved
+    //    [X] nothing happens
+    //   [X] given there have been purchases
+    //    [X] it refunds the remaining prefunded amount in payout tokens to the owner
+    //   [X] it refunds the prefunded amount in payout tokens to the owner
+
+    modifier givenCuratorIsSet() {
+        routingParams.curator = curator;
+        _;
+    }
+
+    modifier givenCuratorHasApproved() {
+        // Set the curator fee
+        vm.prank(curator);
+        auctionHouse.setCuratorFee(auctionType, CURATOR_FEE);
+
+        vm.prank(curator);
+        auctionHouse.curate(lotId);
+        _;
+    }
+
+    modifier givenAuctionOwnerHasCuratorFeeBalance() {
+        curatorMaxFee = CURATOR_FEE * LOT_CAPACITY / 1e5;
+
+        // Mint
+        baseToken.mint(auctionOwner, curatorMaxFee);
+
+        // Approve spending
+        vm.prank(auctionOwner);
+        baseToken.approve(address(auctionHouse), curatorMaxFee);
+        _;
+    }
+
+    function test_prefunded_givenCuratorIsSet()
+        external
+        givenLotIsPrefunded
+        givenCuratorIsSet
+        whenLotIsCreated
+    {
+        // Balance before
+        assertEq(baseToken.balanceOf(auctionOwner), 0);
+
+        // Cancel the lot
+        vm.prank(auctionOwner);
+        auctionHouse.cancel(lotId);
+
+        // Check the owner's balance
+        assertEq(baseToken.balanceOf(auctionOwner), LOT_CAPACITY);
+    }
+
+    function test_prefunded_givenCuratorHasApproved()
+        external
+        givenLotIsPrefunded
+        givenCuratorIsSet
+        whenLotIsCreated
+        givenAuctionOwnerHasCuratorFeeBalance
+        givenCuratorHasApproved
+    {
+        // Balance before
+        assertEq(baseToken.balanceOf(auctionOwner), 0);
+
+        // Cancel the lot
+        vm.prank(auctionOwner);
+        auctionHouse.cancel(lotId);
+
+        // Check the owner's balance
+        assertEq(baseToken.balanceOf(auctionOwner), LOT_CAPACITY + curatorMaxFee); // Capacity and max curator fee is returned
+    }
+
+    function test_prefunded_givenCuratorHasApproved_givenPurchase()
+        external
+        givenLotIsPrefunded
+        givenCuratorIsSet
+        whenLotIsCreated
+        givenAuctionOwnerHasCuratorFeeBalance
+        givenCuratorHasApproved
+        givenPurchase(PURCHASE_AMOUNT)
+    {
+        // Balance before
+        assertEq(baseToken.balanceOf(auctionOwner), 0);
+
+        // Cancel the lot
+        vm.prank(auctionOwner);
+        auctionHouse.cancel(lotId);
+
+        // Check the owner's balance
+        assertEq(baseToken.balanceOf(auctionOwner), LOT_CAPACITY - PURCHASE_AMOUNT + curatorMaxFee);
+    }
 }
