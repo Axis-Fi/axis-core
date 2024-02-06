@@ -536,7 +536,7 @@ contract AuctionHouse is Auctioneer, Router {
         (Auction.Bid[] memory winningBids, bytes memory auctionOutput) = module.settle(lotId_);
 
         // Load routing data for the lot
-        Routing memory routing = lotRouting[lotId_];
+        Routing storage routing = lotRouting[lotId_];
 
         // Calculate the payout amount, handling partial fills
         uint256 lastBidRefund;
@@ -618,12 +618,20 @@ contract AuctionHouse is Auctioneer, Router {
 
             // Send curator fee to curator (if applicable)
             if (curatorFee > 0) {
+                if (routing.prefunding > 0) {
+                    if (routing.prefunding < curatorFee) revert Broken_Invariant();
+
+                    // Update the remaining prefunding
+                    routing.prefunding -= curatorFee;
+                }
+
                 _sendPayout(lotId_, curation.curator, curatorFee, routing, auctionOutput);
             }
         }
 
         // Handle payouts to bidders
         {
+            uint256 prefundingRemaining = routing.prefunding;
             uint256 payoutRemaining = remainingCapacity;
             uint256 bidCount = winningBids.length;
             for (uint256 i; i < bidCount; i++) {
@@ -643,11 +651,27 @@ contract AuctionHouse is Auctioneer, Router {
 
                 // Decrement the remaining payout
                 payoutRemaining -= winningBids[i].minAmountOut;
+
+                // Update prefunding
+                if (routing.prefunding > 0) {
+                    if (prefundingRemaining < winningBids[i].minAmountOut) {
+                        revert Broken_Invariant();
+                    }
+
+                    // Update the remaining prefunding
+                    prefundingRemaining -= winningBids[i].minAmountOut;
+                }
             }
 
             // Handle the refund to the auction owner for any unused base token capacity
-            if (payoutRemaining > 0) {
-                routing.baseToken.safeTransfer(routing.owner, payoutRemaining);
+            if (prefundingRemaining > 0) {
+                routing.prefunding = 0;
+
+                routing.baseToken.safeTransfer(routing.owner, prefundingRemaining);
+            }
+            // If the prefunding was previously set, zero it
+            else if (routing.prefunding > 0) {
+                routing.prefunding = 0;
             }
         }
 

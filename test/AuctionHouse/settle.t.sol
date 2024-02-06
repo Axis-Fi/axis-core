@@ -544,6 +544,10 @@ contract SettleTest is Test, Permit2User {
         assertEq(
             auctionHouse.rewards(referrer, quoteToken), referrerFeeAmount, "incorrect referrer fees"
         );
+
+        // Check prefunding amount
+        (,,,,,,,,, uint256 lotPrefunding) = auctionHouse.lotRouting(lotId);
+        assertEq(lotPrefunding, 0, "mismatch on prefunding");
     }
 
     function test_notPermissioned()
@@ -578,6 +582,10 @@ contract SettleTest is Test, Permit2User {
             0,
             "auctionHouse: incorrect balance of base token"
         );
+
+        // Check prefunding amount
+        (,,,,,,,,, uint256 lotPrefunding) = auctionHouse.lotRouting(lotId);
+        assertEq(lotPrefunding, 0, "mismatch on prefunding");
     }
 
     function test_success_quoteTokenDecimalsLarger()
@@ -643,6 +651,10 @@ contract SettleTest is Test, Permit2User {
         assertEq(
             auctionHouse.rewards(referrer, quoteToken), referrerFeeAmount, "incorrect referrer fees"
         );
+
+        // Check prefunding amount
+        (,,,,,,,,, uint256 lotPrefunding) = auctionHouse.lotRouting(lotId);
+        assertEq(lotPrefunding, 0, "mismatch on prefunding");
     }
 
     function test_success_quoteTokenDecimalsSmaller()
@@ -708,6 +720,10 @@ contract SettleTest is Test, Permit2User {
         assertEq(
             auctionHouse.rewards(referrer, quoteToken), referrerFeeAmount, "incorrect referrer fees"
         );
+
+        // Check prefunding amount
+        (,,,,,,,,, uint256 lotPrefunding) = auctionHouse.lotRouting(lotId);
+        assertEq(lotPrefunding, 0, "mismatch on prefunding");
     }
 
     function test_partialFill()
@@ -778,6 +794,10 @@ contract SettleTest is Test, Permit2User {
         assertEq(
             auctionHouse.rewards(referrer, quoteToken), referrerFeeAmount, "incorrect referrer fees"
         );
+
+        // Check prefunding amount
+        (,,,,,,,,, uint256 lotPrefunding) = auctionHouse.lotRouting(lotId);
+        assertEq(lotPrefunding, 0, "mismatch on prefunding");
     }
 
     function test_partialFill_quoteTokenDecimalsLarger()
@@ -849,6 +869,10 @@ contract SettleTest is Test, Permit2User {
         assertEq(
             auctionHouse.rewards(referrer, quoteToken), referrerFeeAmount, "incorrect referrer fees"
         );
+
+        // Check prefunding amount
+        (,,,,,,,,, uint256 lotPrefunding) = auctionHouse.lotRouting(lotId);
+        assertEq(lotPrefunding, 0, "mismatch on prefunding");
     }
 
     function test_partialFill_quoteTokenDecimalsSmaller()
@@ -920,6 +944,10 @@ contract SettleTest is Test, Permit2User {
         assertEq(
             auctionHouse.rewards(referrer, quoteToken), referrerFeeAmount, "incorrect referrer fees"
         );
+
+        // Check prefunding amount
+        (,,,,,,,,, uint256 lotPrefunding) = auctionHouse.lotRouting(lotId);
+        assertEq(lotPrefunding, 0, "mismatch on prefunding");
     }
 
     function test_marginalPrice()
@@ -987,6 +1015,10 @@ contract SettleTest is Test, Permit2User {
         assertEq(
             auctionHouse.rewards(referrer, quoteToken), referrerFeeAmount, "incorrect referrer fees"
         );
+
+        // Check prefunding amount
+        (,,,,,,,,, uint256 lotPrefunding) = auctionHouse.lotRouting(lotId);
+        assertEq(lotPrefunding, 0, "mismatch on prefunding");
     }
 
     function test_marginalPrice_quoteTokenDecimalsLarger()
@@ -1055,6 +1087,10 @@ contract SettleTest is Test, Permit2User {
         assertEq(
             auctionHouse.rewards(referrer, quoteToken), referrerFeeAmount, "incorrect referrer fees"
         );
+
+        // Check prefunding amount
+        (,,,,,,,,, uint256 lotPrefunding) = auctionHouse.lotRouting(lotId);
+        assertEq(lotPrefunding, 0, "mismatch on prefunding");
     }
 
     function test_marginalPrice_quoteTokenDecimalsSmaller()
@@ -1123,6 +1159,10 @@ contract SettleTest is Test, Permit2User {
         assertEq(
             auctionHouse.rewards(referrer, quoteToken), referrerFeeAmount, "incorrect referrer fees"
         );
+
+        // Check prefunding amount
+        (,,,,,,,,, uint256 lotPrefunding) = auctionHouse.lotRouting(lotId);
+        assertEq(lotPrefunding, 0, "mismatch on prefunding");
     }
 
     function test_lessThanCapacity()
@@ -1187,6 +1227,10 @@ contract SettleTest is Test, Permit2User {
         assertEq(
             auctionHouse.rewards(referrer, quoteToken), referrerFeeAmount, "incorrect referrer fees"
         );
+
+        // Check prefunding amount
+        (,,,,,,,,, uint256 lotPrefunding) = auctionHouse.lotRouting(lotId);
+        assertEq(lotPrefunding, 0, "mismatch on prefunding");
     }
 
     function test_lessThanCapacity_quoteTokenDecimalsLarger()
@@ -1252,6 +1296,10 @@ contract SettleTest is Test, Permit2User {
         assertEq(
             auctionHouse.rewards(referrer, quoteToken), referrerFeeAmount, "incorrect referrer fees"
         );
+
+        // Check prefunding amount
+        (,,,,,,,,, uint256 lotPrefunding) = auctionHouse.lotRouting(lotId);
+        assertEq(lotPrefunding, 0, "mismatch on prefunding");
     }
 
     function test_lessThanCapacity_quoteTokenDecimalsSmaller()
@@ -1317,6 +1365,10 @@ contract SettleTest is Test, Permit2User {
         assertEq(
             auctionHouse.rewards(referrer, quoteToken), referrerFeeAmount, "incorrect referrer fees"
         );
+
+        // Check prefunding amount
+        (,,,,,,,,, uint256 lotPrefunding) = auctionHouse.lotRouting(lotId);
+        assertEq(lotPrefunding, 0, "mismatch on prefunding");
     }
 
     // [X] given there is no protocol fee set for the auction type
@@ -1528,7 +1580,7 @@ contract SettleTest is Test, Permit2User {
         auctionHouse.settle(lotId);
 
         // Calculate fees for curator
-        uint256 curatorFeeAmount = (bidOneAmount + bidTwoAmount) * CURATOR_FEE / 1e5;
+        uint256 curatorFeeAmount = (bidOneAmountOut + bidTwoAmountOut) * CURATOR_FEE / 1e5;
 
         // Curator should have received base tokens
         assertEq(
@@ -1547,5 +1599,9 @@ contract SettleTest is Test, Permit2User {
         // Fee record not set
         assertEq(auctionHouse.rewards(curator, quoteToken), 0, "incorrect curator fees");
         assertEq(auctionHouse.rewards(curator, baseToken), 0, "incorrect curator fees");
+
+        // Check prefunding amount
+        (,,,,,,,,, uint256 lotPrefunding) = auctionHouse.lotRouting(lotId);
+        assertEq(lotPrefunding, 0, "mismatch on prefunding");
     }
 }
