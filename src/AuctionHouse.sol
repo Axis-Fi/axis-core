@@ -351,7 +351,7 @@ contract AuctionHouse is Auctioneer, Router {
         returns (uint256 payoutAmount)
     {
         // Load routing data for the lot
-        Routing memory routing = lotRouting[params_.lotId];
+        Routing storage routing = lotRouting[params_.lotId];
 
         // Check if the purchaser is on the allowlist
         if (!_isAllowed(routing.allowlist, params_.lotId, msg.sender, params_.allowlistProof)) {
@@ -409,10 +409,28 @@ contract AuctionHouse is Auctioneer, Router {
         _collectPayout(params_.lotId, amountLessFees, payoutAmount + curatorFee, routing);
 
         // Send payout to recipient
-        _sendPayout(params_.lotId, params_.recipient, payoutAmount, routing, auctionOutput);
+        {
+            // Decrease the prefunding amount
+            if (routing.prefunding > 0) {
+                // Check invariant
+                if (routing.prefunding < payoutAmount) revert("invariant");
+
+                routing.prefunding -= payoutAmount;
+            }
+
+            _sendPayout(params_.lotId, params_.recipient, payoutAmount, routing, auctionOutput);
+        }
 
         // Send curator fee to curator
         if (curatorFee > 0) {
+            // Decrease the prefunding amount
+            if (routing.prefunding > 0) {
+                // Check invariant
+                if (routing.prefunding < curatorFee) revert("invariant");
+
+                routing.prefunding -= curatorFee;
+            }
+
             _sendPayout(params_.lotId, curation.curator, curatorFee, routing, auctionOutput);
         }
 
