@@ -681,12 +681,15 @@ contract AuctionHouse is Auctioneer, Router {
         curation.curated = true;
 
         // If the auction is pre-funded, transfer the fee amount from the owner
-        if (routing.prefunded) {
+        if (routing.prefunding > 0) {
             // Calculate the fee amount based on the remaining capacity (must be in base token if auction is pre-funded)
             uint256 fee = _calculatePayoutFees(auctionType, msg.sender, capacity);
 
             // Don't need to check for fee on transfer here because it was checked on auction creation
             routing.baseToken.safeTransferFrom(routing.owner, address(this), fee);
+
+            // Increment the prefunding
+            routing.prefunding += fee;
         }
 
         // Emit event that the lot is curated by the proposed curator
@@ -844,7 +847,7 @@ contract AuctionHouse is Auctioneer, Router {
         Routing memory routingParams_
     ) internal {
         // If pre-funded, then the payout token is already in this contract
-        if (routingParams_.prefunded) {
+        if (routingParams_.prefunding > 0) {
             return;
         }
 

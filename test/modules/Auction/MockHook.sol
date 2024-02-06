@@ -160,7 +160,7 @@ contract MockHook is IHooks {
         Auctioneer.Routing memory routing = Auctioneer(msg.sender).getRouting(lotId_);
 
         // If pre-funding is required
-        if (routing.prefunded) {
+        if (routing.prefunding > 0) {
             // Get the capacity
             uint256 capacity = Auctioneer(msg.sender).remainingCapacity(lotId_);
 

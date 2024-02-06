@@ -65,7 +65,7 @@ contract CollectPayoutTest is Test, Permit2User {
             derivativeReference: derivativeReference,
             derivativeParams: derivativeParams,
             wrapDerivative: wrapDerivative,
-            prefunded: false
+            prefunding: 0
         });
     }
 
@@ -450,8 +450,8 @@ contract CollectPayoutTest is Test, Permit2User {
     // [X] given the auction is pre-funded
     //  [X] it does not transfer the base token to the auction house
 
-    modifier givenAuctionIsPrefunded() {
-        routingParams.prefunded = true;
+    modifier givenAuctionIsPrefunded(uint256 amount_) {
+        routingParams.prefunding = amount_;
         _;
     }
 
@@ -462,7 +462,7 @@ contract CollectPayoutTest is Test, Permit2User {
 
     function test_prefunded()
         public
-        givenAuctionIsPrefunded
+        givenAuctionIsPrefunded(payoutAmount)
         givenAuctionHouseHasPayoutTokenBalance(payoutAmount)
     {
         // Assert previous balance

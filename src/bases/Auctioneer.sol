@@ -61,7 +61,7 @@ abstract contract Auctioneer is WithModules {
     /// @param      derivativeReference (optional) Derivative module, represented by its Veecode
     /// @param      derivativeParams    (optional) abi-encoded data to be used to create payout derivatives on a purchase
     /// @param      wrapDerivative      (optional) Whether to wrap the derivative in a ERC20 token instead of the native ERC6909 format
-    /// @param      prefunded           Set by the auction module if the auction is prefunded
+    /// @param      prefunding          The amount of base tokens in prefunding remaining
     struct Routing {
         Veecode auctionReference;
         address owner;
@@ -72,7 +72,7 @@ abstract contract Auctioneer is WithModules {
         Veecode derivativeReference;
         bytes derivativeParams;
         bool wrapDerivative;
-        bool prefunded;
+        uint256 prefunding;
     }
 
     /// @notice     Curation information for a lot
@@ -297,7 +297,7 @@ abstract contract Auctioneer is WithModules {
             if (params_.capacityInQuote) revert InvalidParams();
 
             // Store pre-funding information
-            routing.prefunded = true;
+            routing.prefunding = lotCapacity;
 
             // Get the balance of the base token before the transfer
             uint256 balanceBefore = routing_.baseToken.balanceOf(address(this));
@@ -348,19 +348,20 @@ abstract contract Auctioneer is WithModules {
         AuctionModule module = _getModuleForId(lotId_);
 
         // Get remaining capacity from module
-        uint256 lotRemainingCapacity = module.remainingCapacity(lotId_);
+        uint256 lotPrefunding = lotRouting[lotId_].prefunding;
 
         // Cancel the auction on the module
         module.cancelAuction(lotId_);
 
         // If the auction is prefunded and supported, transfer the remaining capacity to the owner
-        if (lotRouting[lotId_].prefunded == true && lotRemainingCapacity > 0) {
+        if (lotPrefunding > 0) {
             // Transfer payout tokens to the owner
             Routing memory routing = lotRouting[lotId_];
-            routing.baseToken.safeTransfer(routing.owner, lotRemainingCapacity);
-        }
+            routing.baseToken.safeTransfer(routing.owner, lotPrefunding);
 
-        // TODO prefunded and curator has approved: return unused fees in base token
+            // Set to 0
+            lotRouting[lotId_].prefunding = 0;
+        }
 
         emit AuctionCancelled(lotId_, lotRouting[lotId_].auctionReference);
     }

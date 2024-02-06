@@ -232,7 +232,7 @@ contract AuctionTest is Test, Permit2User {
             Veecode lotDerivativeType,
             bytes memory lotDerivativeParams,
             bool lotWrapDerivative,
-            bool lotPrefunded
+            uint256 lotPrefunding
         ) = auctionHouse.lotRouting(lotId);
         assertEq(
             fromVeecode(lotAuctionType),
@@ -247,7 +247,7 @@ contract AuctionTest is Test, Permit2User {
         assertEq(fromVeecode(lotDerivativeType), "", "derivative type mismatch");
         assertEq(lotDerivativeParams, "", "derivative params mismatch");
         assertEq(lotWrapDerivative, false, "wrap derivative mismatch");
-        assertEq(lotPrefunded, false, "prefunded mismatch");
+        assertEq(lotPrefunding, 0, "prefunding mismatch");
 
         // Curation updated
         (address lotCurator, bool lotCurated) = auctionHouse.lotCuration(lotId);
@@ -600,8 +600,8 @@ contract AuctionTest is Test, Permit2User {
         uint96 lotId = auctionHouse.auction(routingParams, auctionParams);
 
         // Check the prefunding status
-        (,,,,,,,,, bool lotPrefunded) = auctionHouse.lotRouting(lotId);
-        assertEq(lotPrefunded, true, "prefunded mismatch");
+        (,,,,,,,,, uint256 lotPrefunding) = auctionHouse.lotRouting(lotId);
+        assertEq(lotPrefunding, LOT_CAPACITY, "prefunding mismatch");
 
         // Check balances
         assertEq(baseToken.balanceOf(address(mockHook)), 0, "hook balance mismatch");
@@ -663,8 +663,8 @@ contract AuctionTest is Test, Permit2User {
         uint96 lotId = auctionHouse.auction(routingParams, auctionParams);
 
         // Check the prefunding status
-        (,,,,,,,,, bool lotPrefunded) = auctionHouse.lotRouting(lotId);
-        assertEq(lotPrefunded, true, "prefunded mismatch");
+        (,,,,,,,,, uint256 lotPrefunding) = auctionHouse.lotRouting(lotId);
+        assertEq(lotPrefunding, LOT_CAPACITY, "prefunding mismatch");
 
         // Check balances
         assertEq(baseToken.balanceOf(address(this)), 0, "owner balance mismatch");
