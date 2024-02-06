@@ -23,6 +23,8 @@ import {IAllowlist} from "src/interfaces/IAllowlist.sol";
 /// @title      FeeManager
 /// @notice     Defines fees for auctions and manages the collection and distribution of fees
 abstract contract FeeManager is Owned {
+    using SafeTransferLib for ERC20;
+
     // ========== ERRORS ========== //
     error InvalidFee();
 
@@ -151,6 +153,19 @@ abstract contract FeeManager is Owned {
 
         // Set the fee for the sender
         fees[auctionType_].curator[msg.sender] = fee_;
+    }
+
+    /// @notice     Claims the rewards for a specific token and the sender
+    ///
+    /// @param      token_  Token to claim rewards for
+    function claimRewards(address token_) external {
+        ERC20 token = ERC20(token_);
+        uint256 amount = rewards[msg.sender][token];
+        rewards[msg.sender][token] = 0;
+
+        // TODO how will a recipient know which tokens to claim for?
+
+        token.safeTransfer(msg.sender, amount);
     }
 }
 
