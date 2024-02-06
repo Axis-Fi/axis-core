@@ -8,7 +8,6 @@ import {Keycode, unwrapVeecode} from "src/modules/Modules.sol";
 
 /// @notice Contract that provides view functions for Auctions
 contract Catalogue {
-
     address public auctionHouse;
 
     constructor(address auctionHouse_) {
@@ -23,7 +22,8 @@ contract Catalogue {
 
         // Calculate fees
         (Keycode auctionType,) = unwrapVeecode(routing.auctionReference);
-        (uint256 protocolFee, uint256 referrerFee) = FeeManager(auctionHouse).calculateQuoteFees(auctionType, true, amount_); // we assume there is a referrer to give a conservative amount
+        (uint256 protocolFee, uint256 referrerFee) =
+            FeeManager(auctionHouse).calculateQuoteFees(auctionType, true, amount_); // we assume there is a referrer to give a conservative amount
 
         // Get payout from module
         return module.payoutFor(lotId_, amount_ - protocolFee - referrerFee);
@@ -88,5 +88,4 @@ contract Catalogue {
         // Get remaining capacity from module
         return module.remainingCapacity(lotId_);
     }
-
 }

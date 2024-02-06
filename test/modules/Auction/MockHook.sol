@@ -164,7 +164,7 @@ contract MockHook is IHooks {
         // If pre-funding is required
         if (routing.prefunding > 0) {
             // Get the capacity
-            (Keycode auctionType, ) = unwrapVeecode(routing.auctionReference);
+            (Keycode auctionType,) = unwrapVeecode(routing.auctionReference);
             Auction module = Auctioneer(msg.sender).getModuleForId(lotId_);
             uint256 capacity = module.remainingCapacity(lotId_);
 
