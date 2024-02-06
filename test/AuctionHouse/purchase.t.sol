@@ -17,7 +17,7 @@ import {MockHook} from "test/modules/Auction/MockHook.sol";
 import {Permit2User} from "test/lib/permit2/Permit2User.sol";
 
 // Auctions
-import {AuctionHouse, Router} from "src/AuctionHouse.sol";
+import {AuctionHouse, Router, FeeManager} from "src/AuctionHouse.sol";
 import {Auction} from "src/modules/Auction.sol";
 import {IHooks, IAllowlist, Auctioneer} from "src/bases/Auctioneer.sol";
 
@@ -103,6 +103,7 @@ contract PurchaseTest is Test, Permit2User {
             auctionType: toKeycode("ATOM"),
             baseToken: baseToken,
             quoteToken: quoteToken,
+            curator: address(0),
             hooks: IHooks(address(0)),
             allowlist: IAllowlist(address(0)),
             allowlistParams: abi.encode(""),
@@ -121,8 +122,8 @@ contract PurchaseTest is Test, Permit2User {
         // Fees
         referrerFee = 1000;
         protocolFee = 2000;
-        auctionHouse.setProtocolFee(protocolFee);
-        auctionHouse.setReferrerFee(referrer, referrerFee);
+        auctionHouse.setFee(toKeycode("ATOM"), FeeManager.FeeType.Protocol, protocolFee);
+        auctionHouse.setFee(toKeycode("ATOM"), FeeManager.FeeType.Referrer, referrerFee);
 
         amountInReferrerFee = (AMOUNT_IN * referrerFee) / 1e5;
         amountInProtocolFee = (AMOUNT_IN * protocolFee) / 1e5;

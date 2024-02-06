@@ -10,7 +10,7 @@ import {MockERC20} from "lib/solmate/src/test/utils/mocks/MockERC20.sol";
 import {Permit2User} from "test/lib/permit2/Permit2User.sol";
 
 // Auctions
-import {AuctionHouse, Router} from "src/AuctionHouse.sol";
+import {AuctionHouse, Router, FeeManager} from "src/AuctionHouse.sol";
 import {Auction, AuctionModule} from "src/modules/Auction.sol";
 import {IHooks, IAllowlist, Auctioneer} from "src/bases/Auctioneer.sol";
 import {RSAOAEP} from "src/lib/RSA.sol";
@@ -93,10 +93,11 @@ contract SettleTest is Test, Permit2User {
         auctionHouse = new AuctionHouse(protocol, _PERMIT2_ADDRESS);
         auctionModule = new LocalSealedBidBatchAuction(address(auctionHouse));
         auctionHouse.installModule(auctionModule);
+        (Keycode moduleKeycode,) = unwrapVeecode(auctionModule.VEECODE());
 
         // Set fees
-        auctionHouse.setProtocolFee(protocolFee);
-        auctionHouse.setReferrerFee(referrer, referrerFee);
+        auctionHouse.setFee(moduleKeycode, FeeManager.FeeType.Protocol, protocolFee);
+        auctionHouse.setFee(moduleKeycode, FeeManager.FeeType.Referrer, referrerFee);
 
         // Auction parameters
         auctionDataParams = LocalSealedBidBatchAuction.AuctionDataParams({
@@ -116,11 +117,11 @@ contract SettleTest is Test, Permit2User {
         });
         lotConclusion = auctionParams.start + auctionParams.duration;
 
-        (Keycode moduleKeycode,) = unwrapVeecode(auctionModule.VEECODE());
         routingParams = Auctioneer.RoutingParams({
             auctionType: moduleKeycode,
             baseToken: baseToken,
             quoteToken: quoteToken,
+            curator: address(0),
             hooks: IHooks(address(0)),
             allowlist: IAllowlist(address(0)),
             allowlistParams: abi.encode(""),

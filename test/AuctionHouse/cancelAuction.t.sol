@@ -67,6 +67,7 @@ contract CancelAuctionTest is Test, Permit2User {
             auctionType: toKeycode("ATOM"),
             baseToken: baseToken,
             quoteToken: quoteToken,
+            curator: address(0),
             hooks: IHooks(address(0)),
             allowlist: IAllowlist(address(0)),
             allowlistParams: abi.encode(""),
