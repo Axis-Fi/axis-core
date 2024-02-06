@@ -20,9 +20,9 @@ import {Veecode, fromVeecode, Keycode, unwrapVeecode, WithModules} from "src/mod
 import {IHooks} from "src/interfaces/IHooks.sol";
 import {IAllowlist} from "src/interfaces/IAllowlist.sol";
 
-// TODO define purpose
+/// @title      FeeManager
+/// @notice     Defines fees for auctions and manages the collection and distribution of fees
 abstract contract FeeManager is Owned {
-
     // ========== ERRORS ========== //
     error InvalidFee();
 
@@ -34,6 +34,11 @@ abstract contract FeeManager is Owned {
     /// @dev        There are some situations where the fees may round down to zero if quantity of baseToken
     ///             is < 1e5 wei (can happen with big price differences on small decimal tokens). This is purely
     ///             a theoretical edge case, as the amount would not be practical.
+    ///
+    /// @param      protocol        Fee charged by the protocol
+    /// @param      referrer        Fee charged by the referrer
+    /// @param      maxCuratorFee   Maximum fee that a curator can charge
+    /// @param      curator         Fee charged by a specific curator
     struct Fees {
         uint48 protocol;
         uint48 referrer;
@@ -49,21 +54,22 @@ abstract contract FeeManager is Owned {
 
     // ========== STATE VARIABLES ========== //
 
-    // Fees are in basis points (3 decimals). 1% equals 1000.
-    uint48 internal constant _FEE_DECIMALS = 1e5; 
+    /// @notice     Fees are in basis points (3 decimals). 1% equals 1000.
+    uint48 internal constant _FEE_DECIMALS = 1e5;
 
-    // Address the protocol receives fees at
+    /// @notice     Address the protocol receives fees at
     address internal _PROTOCOL;
 
-    /// @notice Fees charged for each auction type
-    /// @dev See Fees struct for more details
+    /// @notice     Fees charged for each auction type
+    /// @dev        See Fees struct for more details
     mapping(Keycode => Fees) public fees;
 
-    /// @notice Fees earned by an address, by token
+    /// @notice     Fees earned by an address, by token
     mapping(address => mapping(ERC20 => uint256)) public rewards;
 
     // ========== FEE CALCULATIONS ========== //
 
+    /// @notice     Calculates and allocates fees that are collected in the quote token
     function _calculateQuoteFees(
         Keycode auctionType_,
         bool hasReferrer_,
@@ -71,11 +77,11 @@ abstract contract FeeManager is Owned {
     ) internal view returns (uint256 toReferrer, uint256 toProtocol) {
         // Load protocol fee for the auction type
         uint48 protocolFee = fees[auctionType_].protocol;
-        
+
         if (hasReferrer_) {
             // Load referrer fee for the auction type
             uint48 referrerFee = fees[auctionType_].referrer;
-            
+
             // In this case we need to:
             // 1. Calculate referrer fee
             // 2. Calculate protocol fee as the total expected fee amount minus the referrer fee
@@ -94,17 +100,18 @@ abstract contract FeeManager is Owned {
         bool hasReferrer_,
         uint256 price_
     ) internal view returns (uint256 feeEstimate) {
-        // In this case we have to invert the fee calculation 
+        // In this case we have to invert the fee calculation
         // We provide a conservative estimate by assuming there is a referrer and rounding up
         uint48 fee = fees[auctionType_].protocol;
         if (hasReferrer_) fee += fees[auctionType_].referrer;
- 
+
         uint256 numer = price_ * _FEE_DECIMALS;
         uint256 denom = _FEE_DECIMALS - fee;
-        
+
         return (numer / denom) + ((numer % denom == 0) ? 0 : 1); // round up if necessary
     }
 
+    /// @notice     Calculates and allocates fees that are collected in the payout token
     function _calculatePayoutFees(
         Keycode auctionType_,
         address curator_,
@@ -147,7 +154,8 @@ abstract contract FeeManager is Owned {
     }
 }
 
-// TODO define purpose
+/// @title      Router
+/// @notice     An interface to define the routing of transactions to the appropriate auction module
 abstract contract Router is FeeManager {
     // ========== DATA STRUCTURES ========== //
 
@@ -240,8 +248,6 @@ abstract contract Router is FeeManager {
     /// @notice     Settle a batch auction
     /// @notice     This function is used for versions with on-chain storage and bids and local settlement
     function settle(uint96 lotId_) external virtual;
-
-    
 }
 
 /// @title      AuctionHouse
@@ -271,7 +277,7 @@ contract AuctionHouse is Auctioneer, Router {
 
     constructor(address protocol_, address permit2_) Router(protocol_) WithModules(msg.sender) {
         _PERMIT2 = IPermit2(permit2_);
-    } 
+    }
 
     // ========== AUCTION FUNCTIONS ========== //
 
@@ -334,9 +340,11 @@ contract AuctionHouse is Auctioneer, Router {
         uint256 amountLessFees;
         {
             // Unwrap keycode from veecode
-            (Keycode auctionType, ) = unwrapVeecode(routing.auctionReference);
+            (Keycode auctionType,) = unwrapVeecode(routing.auctionReference);
 
-            uint256 totalQuoteFees = _allocateQuoteFees(auctionType, params_.referrer, routing.owner, routing.quoteToken, params_.amount);
+            uint256 totalQuoteFees = _allocateQuoteFees(
+                auctionType, params_.referrer, routing.owner, routing.quoteToken, params_.amount
+            );
             amountLessFees = params_.amount - totalQuoteFees;
         }
 
@@ -368,10 +376,12 @@ contract AuctionHouse is Auctioneer, Router {
         // Calculate the curator fee (if applicable)
         uint256 curatorFee;
         {
-            (Keycode auctionType, ) = unwrapVeecode(routing.auctionReference);
-            if (routing.curated) curatorFee = _calculatePayoutFees(auctionType, routing.curator, payoutAmount);
+            (Keycode auctionType,) = unwrapVeecode(routing.auctionReference);
+            if (routing.curated) {
+                curatorFee = _calculatePayoutFees(auctionType, routing.curator, payoutAmount);
+            }
         }
-        
+
         // Collect payout from auction owner
         _collectPayout(params_.lotId, amountLessFees, payoutAmount + curatorFee, routing);
 
@@ -379,7 +389,9 @@ contract AuctionHouse is Auctioneer, Router {
         _sendPayout(params_.lotId, params_.recipient, payoutAmount, routing, auctionOutput);
 
         // Send curator fee to curator
-        if (curatorFee > 0) _sendPayout(params_.lotId, routing.curator, curatorFee, routing, auctionOutput);
+        if (curatorFee > 0) {
+            _sendPayout(params_.lotId, routing.curator, curatorFee, routing, auctionOutput);
+        }
 
         // Emit event
         emit Purchase(params_.lotId, msg.sender, params_.referrer, params_.amount, payoutAmount);
@@ -531,7 +543,7 @@ contract AuctionHouse is Auctioneer, Router {
         // Calculate fees
         uint256 totalAmountInLessFees;
         {
-            (Keycode auctionType, ) = unwrapVeecode(routing.auctionReference);
+            (Keycode auctionType,) = unwrapVeecode(routing.auctionReference);
             (uint256 totalAmountIn, uint256 totalFees) =
                 _allocateQuoteFees(auctionType, winningBids, routing.owner, routing.quoteToken);
             totalAmountInLessFees = totalAmountIn - totalFees;
@@ -554,14 +566,18 @@ contract AuctionHouse is Auctioneer, Router {
             // Calculate curator fee (if applicable)
             uint256 curatorFee;
             {
-                (Keycode auctionType, ) = unwrapVeecode(routing.auctionReference);
-                if (routing.curated) curatorFee = _calculatePayoutFees(auctionType, routing.curator, totalAmountOut);
+                (Keycode auctionType,) = unwrapVeecode(routing.auctionReference);
+                if (routing.curated) {
+                    curatorFee = _calculatePayoutFees(auctionType, routing.curator, totalAmountOut);
+                }
             }
 
             _collectPayout(lotId_, totalAmountInLessFees, totalAmountOut + curatorFee, routing);
 
             // Send curator fee to curator (if applicable)
-            if (curatorFee > 0) _sendPayout(lotId_, routing.curator, curatorFee, routing, auctionOutput);
+            if (curatorFee > 0) {
+                _sendPayout(lotId_, routing.curator, curatorFee, routing, auctionOutput);
+            }
         }
 
         // Handle payouts to bidders
@@ -620,7 +636,7 @@ contract AuctionHouse is Auctioneer, Router {
 
         // Check that the auction has not ended or been cancelled
         AuctionModule module = _getModuleForId(lotId_);
-        (, uint48 conclusion, , , , uint256 capacity, , ) = module.lotData(lotId_);
+        (, uint48 conclusion,,,, uint256 capacity,,) = module.lotData(lotId_);
         if (uint48(block.timestamp) >= conclusion || capacity == 0) revert InvalidState();
 
         // Set the curator as approved
@@ -629,9 +645,9 @@ contract AuctionHouse is Auctioneer, Router {
         // If the auction is pre-funded, transfer the fee amount from the owner
         if (routing.prefunded) {
             // Calculate the fee amount based on the remaining capacity (must be in base token if auction is pre-funded)
-            (Keycode auctionType, ) = unwrapVeecode(routing.auctionReference);
+            (Keycode auctionType,) = unwrapVeecode(routing.auctionReference);
             uint256 fee = _calculatePayoutFees(auctionType, msg.sender, capacity);
-            
+
             // Don't need to check for fee on transfer here because it was checked on auction creation
             routing.baseToken.safeTransferFrom(routing.owner, address(this), fee);
         }
@@ -642,31 +658,33 @@ contract AuctionHouse is Auctioneer, Router {
 
     // ========== AUCTION INFORMATION ========== //
 
-    
+    /// @inheritdoc Auctioneer
     function payoutFor(uint96 id_, uint256 amount_) external view override returns (uint256) {
         AuctionModule module = _getModuleForId(id_);
 
         // Calculate fees
-        (Keycode auctionType, ) = unwrapVeecode(lotRouting[id_].auctionReference);
+        (Keycode auctionType,) = unwrapVeecode(lotRouting[id_].auctionReference);
         (uint256 protocolFee, uint256 referrerFee) = _calculateQuoteFees(auctionType, true, amount_); // we assume there is a referrer to give a conservative amount
 
         // Get payout from module
         return module.payoutFor(id_, amount_ - protocolFee - referrerFee);
     }
 
+    /// @inheritdoc Auctioneer
     function priceFor(uint96 id_, uint256 payout_) external view override returns (uint256) {
         AuctionModule module = _getModuleForId(id_);
 
         // Get price from module (in quote token units)
-        uint256 price = module.priceFor(id_, payout_); 
+        uint256 price = module.priceFor(id_, payout_);
 
         // Calculate fee estimate assuming there is a referrer
-        (Keycode auctionType, ) = unwrapVeecode(lotRouting[id_].auctionReference);
+        (Keycode auctionType,) = unwrapVeecode(lotRouting[id_].auctionReference);
         uint256 fee = _calculateFeeEstimate(auctionType, true, price);
 
         return price + fee;
     }
 
+    /// @inheritdoc Auctioneer
     function maxPayout(uint96 id_) external view override returns (uint256) {
         AuctionModule module = _getModuleForId(id_);
 
@@ -676,6 +694,7 @@ contract AuctionHouse is Auctioneer, Router {
         return module.maxPayout(id_);
     }
 
+    /// @inheritdoc Auctioneer
     function maxAmountAccepted(uint96 id_) external view override returns (uint256) {
         AuctionModule module = _getModuleForId(id_);
 
@@ -683,7 +702,7 @@ contract AuctionHouse is Auctioneer, Router {
         uint256 maxAmount = module.maxAmountAccepted(id_);
 
         // Calculate fee estimate assuming there is a referrer
-        (Keycode auctionType, ) = unwrapVeecode(lotRouting[id_].auctionReference);
+        (Keycode auctionType,) = unwrapVeecode(lotRouting[id_].auctionReference);
         uint256 fee = _calculateFeeEstimate(auctionType, true, maxAmount);
 
         return maxAmount + fee;
@@ -979,7 +998,8 @@ contract AuctionHouse is Auctioneer, Router {
         bool hasReferrer = referrer_ != address(0) && referrer_ != owner_;
 
         // Calculate fees for purchase
-        (uint256 toReferrer, uint256 toProtocol) = _calculateQuoteFees(auctionType_, hasReferrer, amount_);
+        (uint256 toReferrer, uint256 toProtocol) =
+            _calculateQuoteFees(auctionType_, hasReferrer, amount_);
 
         // Update fee balances if non-zero
         if (toReferrer > 0) rewards[referrer_][quoteToken_] += toReferrer;

@@ -358,7 +358,6 @@ abstract contract Auctioneer is WithModules {
         return lotRouting[id_];
     }
 
-    
     function payoutFor(uint96 id_, uint256 amount_) external view virtual returns (uint256);
 
     function priceFor(uint96 id_, uint256 payout_) external view virtual returns (uint256);
