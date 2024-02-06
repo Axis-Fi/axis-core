@@ -360,6 +360,8 @@ abstract contract Auctioneer is WithModules {
             routing.baseToken.safeTransfer(routing.owner, lotRemainingCapacity);
         }
 
+        // TODO prefunded and curator has approved: return unused fees in base token
+
         emit AuctionCancelled(lotId_, lotRouting[lotId_].auctionReference);
     }
 
