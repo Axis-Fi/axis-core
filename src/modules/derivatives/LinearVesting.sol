@@ -21,9 +21,7 @@ contract LinearVesting is DerivativeModule {
 
     // ========== EVENTS ========== //
 
-    event DerivativeCreated(
-        uint256 indexed tokenId_, uint48 expiry_, address baseToken_
-    );
+    event DerivativeCreated(uint256 indexed tokenId_, uint48 expiry_, address baseToken_);
 
     event WrappedDerivativeCreated(uint256 indexed tokenId_, address wrappedToken_);
 
@@ -62,7 +60,7 @@ contract LinearVesting is DerivativeModule {
         uint48 expiry;
     }
 
-    uint256 internal immutable _VESTING_PARAMS_LEN = 64;
+    uint256 internal immutable _VESTING_PARAMS_LEN = 32;
 
     // ========== STATE VARIABLES ========== //
 
@@ -70,7 +68,7 @@ contract LinearVesting is DerivativeModule {
     address internal immutable _IMPLEMENTATION;
 
     /// @notice     Stores the timestamp that the user last received or claimed tokens at
-    mapping(address owner_ => mapping(uint256 tokenId_ => uint48)) internal receivedAt;
+    mapping(address owner_ => mapping(uint256 tokenId_ => uint48 timestamp_)) public receivedAt;
 
     // ========== MODULE SETUP ========== //
 
@@ -221,7 +219,7 @@ contract LinearVesting is DerivativeModule {
         // This updates the receivedAt timestamp so the vesting speed is consistent for the new tokens.
         // We can use redeemable to check if the user has any tokens because they start vesting immediately on receipt.
         // If they do have tokens, but claimed in the same transaction before the mint call, the receivedAt timestamp
-        // will already be correct. Nonetheless, we need to update receivedAt if there are no redeemable since 
+        // will already be correct. Nonetheless, we need to update receivedAt if there are no redeemable since
         // this handles the case where the user is receiving tokens for the first time.
         uint256 redeemableAmount = redeemable(to_, tokenId);
         if (redeemableAmount > 0) {
@@ -242,8 +240,7 @@ contract LinearVesting is DerivativeModule {
             wrappedToken.mint(to_, amount_);
         }
         // Otherwise mint the normal derivative token
-        else 
-        {
+        else {
             _mint(to_, tokenId_, amount_);
         }
 
@@ -290,7 +287,7 @@ contract LinearVesting is DerivativeModule {
         // This updates the receivedAt timestamp so the vesting speed is consistent for the new tokens.
         // We can use redeemable to check if the user has any tokens because they start vesting immediately on receipt.
         // If they do have tokens, but claimed in the same transaction before the mint call, the receivedAt timestamp
-        // will already be correct. Nonetheless, we need to update receivedAt if there are no redeemable since 
+        // will already be correct. Nonetheless, we need to update receivedAt if there are no redeemable since
         // this handles the case where the user is receiving tokens for the first time.
         uint256 redeemableAmount = redeemable(to_, tokenId_);
         if (redeemableAmount > 0) {
@@ -311,8 +308,7 @@ contract LinearVesting is DerivativeModule {
             wrappedToken.mint(to_, amount_);
         }
         // Otherwise mint the normal derivative token
-        else 
-        {
+        else {
             _mint(to_, tokenId_, amount_);
         }
 
@@ -432,7 +428,9 @@ contract LinearVesting is DerivativeModule {
         }
         // If before the expiry time, calculate what has vested already
         else {
-            vested = totalAmount.mulDivDown(block.timestamp - ownerReceivedAt, data.expiry - ownerReceivedAt);
+            vested = totalAmount.mulDivDown(
+                block.timestamp - ownerReceivedAt, data.expiry - ownerReceivedAt
+            );
         }
 
         return vested;
@@ -569,13 +567,9 @@ contract LinearVesting is DerivativeModule {
     /// @param      base_       The address of the underlying token
     /// @param      expiry_     The timestamp at which the vesting expires
     /// @return     uint256     The ID of the derivative token
-    function _computeId(
-        ERC20 base_,
-        uint48 expiry_
-    ) internal pure returns (uint256) {
-        return uint256(
-            keccak256(abi.encodePacked(VEECODE(), keccak256(abi.encode(base_, expiry_))))
-        );
+    function _computeId(ERC20 base_, uint48 expiry_) internal pure returns (uint256) {
+        return
+            uint256(keccak256(abi.encodePacked(VEECODE(), keccak256(abi.encode(base_, expiry_)))));
     }
 
     /// @inheritdoc Derivative
@@ -636,12 +630,8 @@ contract LinearVesting is DerivativeModule {
             // Store derivative data
             token.exists = true;
             token.underlyingToken = underlyingToken_;
-            token.data = abi.encode(
-                VestingData({
-                    expiry: params_.expiry,
-                    baseToken: underlyingToken
-                })
-            ); // Store this so that the tokenId can be used as a lookup
+            token.data =
+                abi.encode(VestingData({expiry: params_.expiry, baseToken: underlyingToken})); // Store this so that the tokenId can be used as a lookup
 
             tokenMetadata[tokenId_] = token;
 

@@ -63,7 +63,7 @@ contract LinearVestingIntegrationTest is Test, Permit2User {
     bytes internal vestingParamsBytes;
     uint48 internal constant vestingStart = 1_704_882_344; // 2024-01-10
     uint48 internal constant vestingExpiry = 1_705_055_144; // 2024-01-12
-    uint48 internal constant vestingDuration = vestingExpiry - vestingStart;
+    uint48 internal constant vestingDuration = 2 days;
 
     // uint256 internal derivativeTokenId;
     // address internal derivativeWrappedAddress;
@@ -74,7 +74,7 @@ contract LinearVestingIntegrationTest is Test, Permit2User {
 
     function setUp() public {
         // Wrap to reasonable timestamp
-        vm.warp(1_000_000);
+        vm.warp(1_704_882_344);
 
         quoteToken = new MockERC20("Quote Token", "QUOTE", 18);
 
@@ -96,7 +96,7 @@ contract LinearVestingIntegrationTest is Test, Permit2User {
         auctionHouse.installModule(linearVesting);
 
         // Derivative parameters
-        vestingParams = LinearVesting.VestingParams({start: vestingStart, expiry: vestingExpiry});
+        vestingParams = LinearVesting.VestingParams({expiry: vestingExpiry});
         vestingParamsBytes = abi.encode(vestingParams);
 
         // wrappedDerivativeTokenName = "Underlying 2024-01-12";
@@ -106,7 +106,7 @@ contract LinearVestingIntegrationTest is Test, Permit2User {
 
         // Auction parameters
         auctionParams = Auction.AuctionParams({
-            start: uint48(block.timestamp) + 1,
+            start: uint48(block.timestamp),
             duration: uint48(1 days),
             capacityInQuote: false,
             capacity: LOT_CAPACITY,

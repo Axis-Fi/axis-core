@@ -31,9 +31,8 @@ contract LinearVestingTest is Test, Permit2User {
 
     LinearVesting.VestingParams internal vestingParams;
     bytes internal vestingParamsBytes;
-    uint48 internal constant vestingStart = 1_704_882_344; // 2024-01-10
     uint48 internal constant vestingExpiry = 1_705_055_144; // 2024-01-12
-    uint48 internal constant vestingDuration = vestingExpiry - vestingStart;
+    uint48 internal constant vestingDuration = 2 days;
 
     uint256 internal constant AMOUNT = 1e18;
 
@@ -48,7 +47,7 @@ contract LinearVestingTest is Test, Permit2User {
 
     function setUp() public {
         // Wrap to reasonable timestamp
-        vm.warp(1_000_000);
+        vm.warp(1_704_882_344);
 
         underlyingToken = new MockERC20("Underlying", "UNDERLYING", underlyingTokenDecimals);
         underlyingTokenAddress = address(underlyingToken);
@@ -57,7 +56,7 @@ contract LinearVestingTest is Test, Permit2User {
         linearVesting = new LinearVesting(address(auctionHouse));
         auctionHouse.installModule(linearVesting);
 
-        vestingParams = LinearVesting.VestingParams({start: vestingStart, expiry: vestingExpiry});
+        vestingParams = LinearVesting.VestingParams({expiry: vestingExpiry});
         vestingParamsBytes = abi.encode(vestingParams);
 
         wrappedDerivativeTokenName = "Underlying 2024-01-12";
@@ -75,36 +74,6 @@ contract LinearVestingTest is Test, Permit2User {
 
     modifier whenUnderlyingTokenIsZero() {
         underlyingTokenAddress = address(0);
-        _;
-    }
-
-    modifier whenStartTimestampIsZero() {
-        vestingParams.start = 0;
-        vestingParamsBytes = abi.encode(vestingParams);
-        _;
-    }
-
-    modifier whenExpiryTimestampIsZero() {
-        vestingParams.expiry = 0;
-        vestingParamsBytes = abi.encode(vestingParams);
-        _;
-    }
-
-    modifier whenStartAndExpiryTimestampsAreTheSame() {
-        vestingParams.expiry = vestingParams.start;
-        vestingParamsBytes = abi.encode(vestingParams);
-        _;
-    }
-
-    modifier whenStartTimestampIsAfterExpiryTimestamp() {
-        vestingParams.start = vestingParams.expiry + 1;
-        vestingParamsBytes = abi.encode(vestingParams);
-        _;
-    }
-
-    modifier whenStartTimestampIsBeforeCurrentTimestamp() {
-        vestingParams.start = uint48(block.timestamp) - 1;
-        vestingParamsBytes = abi.encode(vestingParams);
         _;
     }
 
@@ -168,11 +137,6 @@ contract LinearVestingTest is Test, Permit2User {
 
         vm.prank(address(caller_));
         underlyingToken.approve(address(linearVesting), balance_);
-        _;
-    }
-
-    modifier givenBeforeVestingStart() {
-        vm.warp(vestingStart - 1);
         _;
     }
 
@@ -264,61 +228,6 @@ contract LinearVestingTest is Test, Permit2User {
         linearVesting.deploy(underlyingTokenAddress, vestingParamsBytes, false);
     }
 
-    function test_deploy_startTimestampIsZero_reverts() public whenStartTimestampIsZero {
-        // Expect revert
-        bytes memory err = abi.encodeWithSelector(LinearVesting.InvalidParams.selector);
-        vm.expectRevert(err);
-
-        // Call
-        linearVesting.deploy(underlyingTokenAddress, vestingParamsBytes, false);
-    }
-
-    function test_deploy_expiryTimestampIsZero_reverts() public whenExpiryTimestampIsZero {
-        // Expect revert
-        bytes memory err = abi.encodeWithSelector(LinearVesting.InvalidParams.selector);
-        vm.expectRevert(err);
-
-        // Call
-        linearVesting.deploy(underlyingTokenAddress, vestingParamsBytes, false);
-    }
-
-    function test_deploy_startAndExpiryTimestampsAreTheSame_reverts()
-        public
-        whenStartAndExpiryTimestampsAreTheSame
-    {
-        // Expect revert
-        bytes memory err = abi.encodeWithSelector(LinearVesting.InvalidParams.selector);
-        vm.expectRevert(err);
-
-        // Call
-        linearVesting.deploy(underlyingTokenAddress, vestingParamsBytes, false);
-    }
-
-    function test_deploy_startTimestampIsAfterExpiryTimestamp_reverts()
-        public
-        whenStartTimestampIsAfterExpiryTimestamp
-    {
-        // Expect revert
-        bytes memory err = abi.encodeWithSelector(LinearVesting.InvalidParams.selector);
-        vm.expectRevert(err);
-
-        // Call
-        linearVesting.deploy(underlyingTokenAddress, vestingParamsBytes, false);
-    }
-
-    function test_deploy_startTimestampIsBeforeCurrentTimestamp()
-        public
-        whenStartTimestampIsBeforeCurrentTimestamp
-    {
-        // Call
-        (uint256 tokenId, address wrappedAddress) =
-            linearVesting.deploy(underlyingTokenAddress, vestingParamsBytes, true);
-
-        // Check values
-        assertTrue(tokenId > 0, "tokenId mismatch");
-        assertTrue(wrappedAddress != address(0), "wrappedAddress mismatch");
-    }
-
     function test_deploy_expiryTimestampIsBeforeCurrentTimestamp_reverts()
         public
         whenExpiryTimestampIsBeforeCurrentTimestamp
@@ -353,7 +262,6 @@ contract LinearVestingTest is Test, Permit2User {
         // Check implementation data
         LinearVesting.VestingData memory vestingData =
             abi.decode(tokenMetadata.data, (LinearVesting.VestingData));
-        assertEq(vestingData.start, vestingStart);
         assertEq(vestingData.expiry, vestingExpiry);
         assertEq(address(vestingData.baseToken), underlyingTokenAddress);
     }
@@ -380,7 +288,6 @@ contract LinearVestingTest is Test, Permit2User {
         // Check implementation data
         LinearVesting.VestingData memory vestingData =
             abi.decode(tokenMetadata.data, (LinearVesting.VestingData));
-        assertEq(vestingData.start, vestingStart);
         assertEq(vestingData.expiry, vestingExpiry);
         assertEq(address(vestingData.baseToken), underlyingTokenAddress);
     }
@@ -419,7 +326,6 @@ contract LinearVestingTest is Test, Permit2User {
         // Check implementation data
         LinearVesting.VestingData memory vestingData =
             abi.decode(tokenMetadata.data, (LinearVesting.VestingData));
-        assertEq(vestingData.start, vestingStart);
         assertEq(vestingData.expiry, vestingExpiry);
         assertEq(address(vestingData.baseToken), underlyingTokenAddress);
     }
@@ -443,7 +349,6 @@ contract LinearVestingTest is Test, Permit2User {
         // Check implementation data
         LinearVesting.VestingData memory vestingData =
             abi.decode(tokenMetadata.data, (LinearVesting.VestingData));
-        assertEq(vestingData.start, vestingStart);
         assertEq(vestingData.expiry, vestingExpiry);
         assertEq(address(vestingData.baseToken), underlyingTokenAddress);
     }
@@ -572,55 +477,6 @@ contract LinearVestingTest is Test, Permit2User {
         linearVesting.validate(underlyingTokenAddress, vestingParamsBytes);
     }
 
-    function test_validate_startTimestampIsZero() public whenStartTimestampIsZero {
-        // Call
-        bool isValid = linearVesting.validate(underlyingTokenAddress, vestingParamsBytes);
-
-        // Check values
-        assertFalse(isValid);
-    }
-
-    function test_validate_expiryTimestampIsZero() public whenExpiryTimestampIsZero {
-        // Call
-        bool isValid = linearVesting.validate(underlyingTokenAddress, vestingParamsBytes);
-
-        // Check values
-        assertFalse(isValid);
-    }
-
-    function test_validate_startAndExpiryTimestampsAreTheSame()
-        public
-        whenStartAndExpiryTimestampsAreTheSame
-    {
-        // Call
-        bool isValid = linearVesting.validate(underlyingTokenAddress, vestingParamsBytes);
-
-        // Check values
-        assertFalse(isValid);
-    }
-
-    function test_validate_startTimestampIsAfterExpiryTimestamp()
-        public
-        whenStartTimestampIsAfterExpiryTimestamp
-    {
-        // Call
-        bool isValid = linearVesting.validate(underlyingTokenAddress, vestingParamsBytes);
-
-        // Check values
-        assertFalse(isValid);
-    }
-
-    function test_validate_startTimestampIsBeforeCurrentTimestamp()
-        public
-        whenStartTimestampIsBeforeCurrentTimestamp
-    {
-        // Call
-        bool isValid = linearVesting.validate(underlyingTokenAddress, vestingParamsBytes);
-
-        // Check values
-        assertTrue(isValid);
-    }
-
     function test_validate_expiryTimestampIsBeforeCurrentTimestamp()
         public
         whenExpiryTimestampIsBeforeCurrentTimestamp
@@ -727,69 +583,6 @@ contract LinearVestingTest is Test, Permit2User {
         // Call
         vm.prank(address(auctionHouse));
         linearVesting.mint(_alice, underlyingTokenAddress, vestingParamsBytes, AMOUNT, false);
-    }
-
-    function test_mint_params_startTimestampIsZero_reverts() public whenStartTimestampIsZero {
-        // Expect revert
-        bytes memory err = abi.encodeWithSelector(LinearVesting.InvalidParams.selector);
-        vm.expectRevert(err);
-
-        // Call
-        vm.prank(address(auctionHouse));
-        linearVesting.mint(_alice, underlyingTokenAddress, vestingParamsBytes, AMOUNT, false);
-    }
-
-    function test_mint_params_expiryTimestampIsZero_reverts() public whenExpiryTimestampIsZero {
-        // Expect revert
-        bytes memory err = abi.encodeWithSelector(LinearVesting.InvalidParams.selector);
-        vm.expectRevert(err);
-
-        // Call
-        vm.prank(address(auctionHouse));
-        linearVesting.mint(_alice, underlyingTokenAddress, vestingParamsBytes, AMOUNT, false);
-    }
-
-    function test_mint_params_startAndExpiryTimestampsAreTheSame_reverts()
-        public
-        whenStartAndExpiryTimestampsAreTheSame
-    {
-        // Expect revert
-        bytes memory err = abi.encodeWithSelector(LinearVesting.InvalidParams.selector);
-        vm.expectRevert(err);
-
-        // Call
-        vm.prank(address(auctionHouse));
-        linearVesting.mint(_alice, underlyingTokenAddress, vestingParamsBytes, AMOUNT, false);
-    }
-
-    function test_mint_params_startTimestampIsAfterExpiryTimestamp_reverts()
-        public
-        whenStartTimestampIsAfterExpiryTimestamp
-    {
-        // Expect revert
-        bytes memory err = abi.encodeWithSelector(LinearVesting.InvalidParams.selector);
-        vm.expectRevert(err);
-
-        // Call
-        vm.prank(address(auctionHouse));
-        linearVesting.mint(_alice, underlyingTokenAddress, vestingParamsBytes, AMOUNT, false);
-    }
-
-    function test_mint_params_startTimestampIsBeforeCurrentTimestamp()
-        public
-        whenStartTimestampIsBeforeCurrentTimestamp
-        givenParentHasUnderlyingTokenBalance(AMOUNT)
-    {
-        // Call
-        vm.prank(address(auctionHouse));
-        (uint256 tokenId, address wrappedAddress, uint256 amountCreated) =
-            linearVesting.mint(_alice, underlyingTokenAddress, vestingParamsBytes, AMOUNT, false);
-
-        // Check values
-        assertTrue(tokenId > 0, "tokenId mismatch");
-        assertTrue(wrappedAddress == address(0), "wrappedAddress mismatch");
-        assertEq(amountCreated, AMOUNT, "amountCreated mismatch");
-        assertEq(linearVesting.balanceOf(_alice, tokenId), AMOUNT, "balanceOf mismatch");
     }
 
     function test_mint_params_expiryTimestampIsBeforeCurrentTimestamp_reverts()
@@ -1152,7 +945,7 @@ contract LinearVestingTest is Test, Permit2User {
     {
         // Warp to mid-way, so not all tokens are vested
         uint48 elapsed = uint48(bound(elapsed_, 1, vestingDuration - 1));
-        vm.warp(vestingStart + elapsed);
+        vm.warp(block.timestamp + elapsed);
 
         // Expect revert
         bytes memory err = abi.encodeWithSelector(LinearVesting.InsufficientBalance.selector);
@@ -1337,7 +1130,7 @@ contract LinearVestingTest is Test, Permit2User {
 
         // Warp during vesting
         uint48 elapsed = uint48(bound(elapsed_, 1, vestingDuration - 1));
-        vm.warp(vestingStart + elapsed);
+        vm.warp(block.timestamp + elapsed);
 
         uint256 redeemable = (AMOUNT + AMOUNT) * elapsed / vestingDuration;
         uint256 expectedBalanceUnwrapped;
@@ -1375,8 +1168,6 @@ contract LinearVestingTest is Test, Permit2User {
     // redeemable
     // [X] when the token id does not exist
     //  [X] it reverts
-    // [X] given the block timestamp is before the start timestamp
-    //  [X] it returns 0
     // [X] given the block timestamp is after the expiry timestamp
     //  [X] it returns the full balance
     // [X] when wrapped is true
@@ -1405,19 +1196,6 @@ contract LinearVestingTest is Test, Permit2User {
 
         // Call
         linearVesting.redeemable(_alice, derivativeTokenId);
-    }
-
-    function test_redeemable_givenBeforeStart_returnsZero()
-        public
-        givenDerivativeIsDeployed
-        givenAliceHasDerivativeTokens(AMOUNT)
-        givenBeforeVestingStart
-    {
-        // Call
-        uint256 redeemableAmount = linearVesting.redeemable(_alice, derivativeTokenId);
-
-        // Check values
-        assertEq(redeemableAmount, 0);
     }
 
     function test_redeemable_givenAfterExpiry()
@@ -1457,7 +1235,7 @@ contract LinearVestingTest is Test, Permit2User {
 
         // Warp to before expiry
         uint48 elapsed = 100_000;
-        vm.warp(vestingParams.start + elapsed);
+        vm.warp(block.timestamp + elapsed);
 
         // Includes wrapped and unwrapped balances
         uint256 expectedRedeemable = elapsed * (AMOUNT + amount) / vestingDuration;
@@ -1486,7 +1264,7 @@ contract LinearVestingTest is Test, Permit2User {
 
         // Warp to before expiry
         uint48 elapsed = 50_000;
-        vm.warp(vestingParams.start + elapsed);
+        vm.warp(block.timestamp + elapsed);
 
         // Calculate redeemable amount
         uint256 redeemable = elapsed * (wrappedAmount + unwrappedAmount) / vestingDuration;
@@ -1510,7 +1288,7 @@ contract LinearVestingTest is Test, Permit2User {
 
         // Warp to before expiry
         uint48 elapsed = 50_000;
-        vm.warp(vestingParams.start + elapsed);
+        vm.warp(block.timestamp + elapsed);
 
         // Calculate the vested amount
         uint256 vestedAmount = elapsed * (AMOUNT + AMOUNT) / vestingDuration;
@@ -1556,7 +1334,7 @@ contract LinearVestingTest is Test, Permit2User {
 
         // Warp to another time
         elapsed = 60_000;
-        vm.warp(vestingParams.start + elapsed);
+        vm.warp(block.timestamp + elapsed);
 
         // Calculate the vested amount
         vestedAmount = elapsed * (AMOUNT + AMOUNT) / vestingDuration;
@@ -1609,7 +1387,7 @@ contract LinearVestingTest is Test, Permit2User {
 
         // Warp to before expiry
         uint48 elapsed = 50_000;
-        vm.warp(vestingParams.start + elapsed);
+        vm.warp(block.timestamp + elapsed);
 
         // Mint tokens
         _mintDerivativeTokens(_alice, amount);
@@ -1632,7 +1410,7 @@ contract LinearVestingTest is Test, Permit2User {
 
         // Warp to before expiry
         uint48 elapsed = 50_000;
-        vm.warp(vestingParams.start + elapsed);
+        vm.warp(block.timestamp + elapsed);
 
         // Mint tokens
         _mintWrappedDerivativeTokens(_alice, amount);
@@ -1663,7 +1441,7 @@ contract LinearVestingTest is Test, Permit2User {
 
         // Warp to before expiry
         uint48 elapsed = 50_000;
-        vm.warp(vestingParams.start + elapsed);
+        vm.warp(block.timestamp + elapsed);
 
         // Redeem wrapped tokens
         uint256 redeemable = elapsed * (wrappedAmount + unwrappedAmount) / vestingDuration;
@@ -1678,7 +1456,7 @@ contract LinearVestingTest is Test, Permit2User {
 
         // Warp to another time
         elapsed = 60_000;
-        vm.warp(vestingParams.start + elapsed);
+        vm.warp(block.timestamp + elapsed);
 
         // Calculate the vested amount
         uint256 vestedAmount =
@@ -1701,7 +1479,7 @@ contract LinearVestingTest is Test, Permit2User {
     {
         // Warp to before expiry
         uint48 elapsed = 50_000;
-        vm.warp(vestingParams.start + elapsed);
+        vm.warp(block.timestamp + elapsed);
 
         uint256 vested = (AMOUNT + AMOUNT).mulDivDown(elapsed, vestingDuration);
 
@@ -1724,7 +1502,7 @@ contract LinearVestingTest is Test, Permit2User {
 
         // Warp to another time
         elapsed = 60_000;
-        vm.warp(vestingParams.start + elapsed);
+        vm.warp(block.timestamp + elapsed);
 
         vested = (AMOUNT + AMOUNT).mulDivDown(elapsed, vestingDuration);
         expectedRedeemableAmount = vested - redeemAmount;
@@ -1742,7 +1520,7 @@ contract LinearVestingTest is Test, Permit2User {
     {
         // Warp to before expiry
         uint48 elapsed = 50_000;
-        vm.warp(vestingParams.start + elapsed);
+        vm.warp(block.timestamp + elapsed);
 
         uint256 vested = (AMOUNT + AMOUNT).mulDivDown(elapsed, vestingDuration);
 
@@ -1764,7 +1542,7 @@ contract LinearVestingTest is Test, Permit2User {
 
         // Warp to another time
         elapsed = 60_000;
-        vm.warp(vestingParams.start + elapsed);
+        vm.warp(block.timestamp + elapsed);
 
         vested = (AMOUNT + AMOUNT).mulDivDown(elapsed, vestingDuration);
         expectedRedeemableAmount = vested - redeemAmount;
