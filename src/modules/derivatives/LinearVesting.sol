@@ -60,6 +60,11 @@ contract LinearVesting is DerivativeModule {
         uint48 expiry;
     }
 
+    struct UserVesting {
+        uint48 receivedAt;
+        uint256 claimed;
+    }
+
     uint256 internal immutable _VESTING_PARAMS_LEN = 32;
 
     // ========== STATE VARIABLES ========== //
@@ -68,7 +73,7 @@ contract LinearVesting is DerivativeModule {
     address internal immutable _IMPLEMENTATION;
 
     /// @notice     Stores the timestamp that the user last received or claimed tokens at
-    mapping(address owner_ => mapping(uint256 tokenId_ => uint48 timestamp_)) public receivedAt;
+    mapping(address owner_ => mapping(uint256 tokenId_ => UserVesting)) public userVesting;
 
     // ========== MODULE SETUP ========== //
 
@@ -212,39 +217,34 @@ contract LinearVesting is DerivativeModule {
         if (params.expiry < block.timestamp) revert InvalidParams();
 
         // If necessary, deploy and store the data
-        (uint256 tokenId, address wrappedAddress) =
-            _deployIfNeeded(underlyingToken_, params, wrapped_);
+        (tokenId_, wrappedAddress_) = _deployIfNeeded(underlyingToken_, params, wrapped_);
 
         // If the user has any tokens already, redeem the vested amount.
-        // This updates the receivedAt timestamp so the vesting speed is consistent for the new tokens.
-        // We can use redeemable to check if the user has any tokens because they start vesting immediately on receipt.
-        // If they do have tokens, but claimed in the same transaction before the mint call, the receivedAt timestamp
-        // will already be correct. Nonetheless, we need to update receivedAt if there are no redeemable since
-        // this handles the case where the user is receiving tokens for the first time.
-        uint256 redeemableAmount = redeemable(to_, tokenId);
+        // We claim any outstanding before reseting the user's receivedAt and claimed values so the amounts are correct.
+        uint256 redeemableAmount = redeemable(to_, tokenId_);
         if (redeemableAmount > 0) {
-            _redeem(tokenId, to_, redeemableAmount);
-        } else {
-            // User doesn't have any redeemable tokens, so update the receivedAt timestamp
-            receivedAt[to_][tokenId] = uint48(block.timestamp);
+            _redeem(tokenId_, to_, redeemableAmount);
         }
+
+        // Reset claimed and receivedAt timestamp to the current time
+        userVesting[to_][tokenId_].receivedAt = uint48(block.timestamp);
+        userVesting[to_][tokenId_].claimed = 0;
 
         // Transfer collateral token to this contract
         ERC20(underlyingToken_).safeTransferFrom(msg.sender, address(this), amount_);
 
         // If wrapped, mint the wrapped derivative token
         if (wrapped_) {
-            if (wrappedAddress == address(0)) revert InvalidParams();
+            if (wrappedAddress_ == address(0)) revert InvalidParams();
 
-            SoulboundCloneERC20 wrappedToken = SoulboundCloneERC20(wrappedAddress);
+            SoulboundCloneERC20 wrappedToken = SoulboundCloneERC20(wrappedAddress_);
             wrappedToken.mint(to_, amount_);
-        }
-        // Otherwise mint the normal derivative token
-        else {
+        } else {
+            // Otherwise mint the normal derivative token
             _mint(to_, tokenId_, amount_);
         }
 
-        return (tokenId, wrappedAddress, amount_);
+        return (tokenId_, wrappedAddress_, amount_);
     }
 
     /// @inheritdoc Derivative
@@ -284,18 +284,15 @@ contract LinearVesting is DerivativeModule {
         }
 
         // If the user has any tokens already, redeem the vested amount.
-        // This updates the receivedAt timestamp so the vesting speed is consistent for the new tokens.
-        // We can use redeemable to check if the user has any tokens because they start vesting immediately on receipt.
-        // If they do have tokens, but claimed in the same transaction before the mint call, the receivedAt timestamp
-        // will already be correct. Nonetheless, we need to update receivedAt if there are no redeemable since
-        // this handles the case where the user is receiving tokens for the first time.
+        // We claim any outstanding before reseting the user's receivedAt and claimed values so the amounts are correct.
         uint256 redeemableAmount = redeemable(to_, tokenId_);
         if (redeemableAmount > 0) {
             _redeem(tokenId_, to_, redeemableAmount);
-        } else {
-            // User doesn't have any redeemable tokens, so update the receivedAt timestamp
-            receivedAt[to_][tokenId_] = uint48(block.timestamp);
         }
+
+        // Reset claimed and receivedAt timestamp to the current time
+        userVesting[to_][tokenId_].receivedAt = uint48(block.timestamp);
+        userVesting[to_][tokenId_].claimed = 0;
 
         // Transfer collateral token to this contract
         data.baseToken.safeTransferFrom(msg.sender, address(this), amount_);
@@ -306,9 +303,8 @@ contract LinearVesting is DerivativeModule {
 
             SoulboundCloneERC20 wrappedToken = SoulboundCloneERC20(token.wrapped);
             wrappedToken.mint(to_, amount_);
-        }
-        // Otherwise mint the normal derivative token
-        else {
+        } else {
+            // Otherwise mint the normal derivative token
             _mint(to_, tokenId_, amount_);
         }
 
@@ -336,8 +332,8 @@ contract LinearVesting is DerivativeModule {
             revert InsufficientBalance();
         }
 
-        // Update the received at timestamp amount
-        receivedAt[user_][tokenId_] = uint48(block.timestamp);
+        // Update the user's claimed amount
+        userVesting[user_][tokenId_].claimed += amount_;
 
         // Burn the unwrapped tokens
         if (derivativeToBurn > 0) {
@@ -411,14 +407,15 @@ contract LinearVesting is DerivativeModule {
         VestingData memory data = abi.decode(token.data, (VestingData));
 
         // If the owner has not received any tokens, the redeemable amount is 0
-        uint48 ownerReceivedAt = receivedAt[owner_][tokenId_];
+        uint48 ownerReceivedAt = userVesting[owner_][tokenId_].receivedAt;
         if (ownerReceivedAt == 0) return 0;
 
         // Get balances
         uint256 derivativeBalance = balanceOf[owner_][tokenId_];
         uint256 wrappedBalance =
             token.wrapped == address(0) ? 0 : SoulboundCloneERC20(token.wrapped).balanceOf(owner_);
-        uint256 totalAmount = derivativeBalance + wrappedBalance;
+        uint256 claimedBalance = userVesting[owner_][tokenId_].claimed;
+        uint256 totalAmount = derivativeBalance + wrappedBalance + claimedBalance;
 
         // Determine the amount that has been vested until date, excluding what has already been claimed
         uint256 vested;
@@ -432,6 +429,14 @@ contract LinearVesting is DerivativeModule {
                 block.timestamp - ownerReceivedAt, data.expiry - ownerReceivedAt
             );
         }
+
+        // Check invariant: cannot have claimed more than vested
+        if (vested < claimedBalance) {
+            revert BrokenInvariant();
+        }
+
+        // Deduct already claimed tokens
+        vested -= claimedBalance;
 
         return vested;
     }
