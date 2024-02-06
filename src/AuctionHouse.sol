@@ -166,6 +166,14 @@ abstract contract FeeManager is Owned {
 
         token.safeTransfer(msg.sender, amount);
     }
+
+    /// @notice     Sets the protocol address
+    /// @dev        Access controlled: only owner
+    ///
+    /// @param      protocol_  Address of the protocol
+    function setProtocol(address protocol_) external onlyOwner {
+        _protocol = protocol_;
+    }
 }
 
 /// @title      Router
