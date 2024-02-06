@@ -627,6 +627,14 @@ contract AuctionHouse is Auctioneer, Router {
 
     /// @notice    Accept curation request for a lot.
     /// @notice    Access controlled. Must be proposed curator for lot.
+    /// @dev       This function reverts if:
+    ///            - the lot ID is invalid
+    ///            - the caller is not the proposed curator
+    ///            - the auction has ended or been cancelled
+    ///            - the curator fee is not set
+    ///            - the auction is prefunded and the fee cannot be collected
+    ///
+    /// @param     lotId_       Lot ID
     function curate(uint96 lotId_) external isLotValid(lotId_) {
         Routing storage routing = lotRouting[lotId_];
         Curation storage curation = lotCuration[lotId_];
@@ -642,13 +650,17 @@ contract AuctionHouse is Auctioneer, Router {
         (, uint48 conclusion,,,, uint256 capacity,,) = module.lotData(lotId_);
         if (uint48(block.timestamp) >= conclusion || capacity == 0) revert InvalidState();
 
+        (Keycode auctionType,) = unwrapVeecode(routing.auctionReference);
+
+        // Check that the curator fee is set
+        if (fees[auctionType].curator[msg.sender] == 0) revert InvalidFee();
+
         // Set the curator as approved
         curation.curated = true;
 
         // If the auction is pre-funded, transfer the fee amount from the owner
         if (routing.prefunded) {
             // Calculate the fee amount based on the remaining capacity (must be in base token if auction is pre-funded)
-            (Keycode auctionType,) = unwrapVeecode(routing.auctionReference);
             uint256 fee = _calculatePayoutFees(auctionType, msg.sender, capacity);
 
             // Don't need to check for fee on transfer here because it was checked on auction creation
