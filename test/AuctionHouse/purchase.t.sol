@@ -58,12 +58,13 @@ contract PurchaseTest is Test, Permit2User {
 
     uint256 internal constant AMOUNT_IN = 1e18;
     uint256 internal AMOUNT_OUT;
-    uint256 internal curatorFee;
-    uint256 internal curatorMaxFee;
+    uint256 internal curatorActualFee;
+    uint256 internal curatorMaxPotentialFee;
 
     uint48 internal constant DERIVATIVE_EXPIRY = 1 days;
 
     uint48 internal constant CURATOR_MAX_FEE = 100;
+    uint48 internal constant CURATOR_FEE = 90;
 
     uint48 internal referrerFee;
     uint48 internal protocolFee;
@@ -132,7 +133,7 @@ contract PurchaseTest is Test, Permit2User {
         auctionHouse.setFee(auctionType, FeeManager.FeeType.Protocol, protocolFee);
         auctionHouse.setFee(auctionType, FeeManager.FeeType.Referrer, referrerFee);
         auctionHouse.setFee(auctionType, FeeManager.FeeType.MaxCurator, CURATOR_MAX_FEE);
-        curatorMaxFee = CURATOR_MAX_FEE * LOT_CAPACITY / 1e5;
+        curatorMaxPotentialFee = CURATOR_FEE * LOT_CAPACITY / 1e5;
 
         amountInReferrerFee = (AMOUNT_IN * referrerFee) / 1e5;
         amountInProtocolFee = (AMOUNT_IN * protocolFee) / 1e5;
@@ -982,8 +983,8 @@ contract PurchaseTest is Test, Permit2User {
     modifier givenCuratorHasApproved() {
         // Set the curator fee
         vm.prank(curator);
-        auctionHouse.setCuratorFee(auctionType, CURATOR_MAX_FEE);
-        curatorFee = CURATOR_MAX_FEE * AMOUNT_OUT / 1e5;
+        auctionHouse.setCuratorFee(auctionType, CURATOR_FEE);
+        curatorActualFee = CURATOR_FEE * AMOUNT_OUT / 1e5;
 
         vm.prank(curator);
         auctionHouse.curate(lotId);
@@ -1140,9 +1141,9 @@ contract PurchaseTest is Test, Permit2User {
         givenCuratorIsSet
         givenCuratorHasApproved
         givenUserHasQuoteTokenBalance(AMOUNT_IN)
-        givenOwnerHasBaseTokenBalance(AMOUNT_OUT + curatorFee)
+        givenOwnerHasBaseTokenBalance(AMOUNT_OUT + curatorActualFee)
         givenQuoteTokenSpendingIsApproved
-        givenBaseTokenSpendingIsApproved(AMOUNT_OUT + curatorFee)
+        givenBaseTokenSpendingIsApproved(AMOUNT_OUT + curatorActualFee)
     {
         // Purchase
         vm.prank(alice);
@@ -1182,7 +1183,7 @@ contract PurchaseTest is Test, Permit2User {
         );
         assertEq(
             baseToken.balanceOf(address(curator)),
-            curatorFee,
+            curatorActualFee,
             "base token: balance mismatch on curator"
         );
 
@@ -1217,9 +1218,9 @@ contract PurchaseTest is Test, Permit2User {
         givenCuratorIsSet
         givenCuratorHasApproved
         givenUserHasQuoteTokenBalance(AMOUNT_IN)
-        givenOwnerHasBaseTokenBalance(AMOUNT_OUT + curatorFee)
+        givenOwnerHasBaseTokenBalance(AMOUNT_OUT + curatorActualFee)
         givenQuoteTokenSpendingIsApproved
-        givenBaseTokenSpendingIsApproved(AMOUNT_OUT + curatorFee)
+        givenBaseTokenSpendingIsApproved(AMOUNT_OUT + curatorActualFee)
     {
         // Purchase
         vm.prank(alice);
@@ -1263,7 +1264,7 @@ contract PurchaseTest is Test, Permit2User {
         );
         assertEq(
             baseToken.balanceOf(address(mockDerivativeModule)),
-            AMOUNT_OUT + curatorFee,
+            AMOUNT_OUT + curatorActualFee,
             "base token: balance mismatch on derivative module"
         );
 
@@ -1297,7 +1298,7 @@ contract PurchaseTest is Test, Permit2User {
         );
         assertEq(
             mockDerivativeModule.derivativeToken().balanceOf(curator, derivativeTokenId),
-            curatorFee,
+            curatorActualFee,
             "derivative token: balance mismatch on curator"
         );
         assertEq(
@@ -1338,7 +1339,7 @@ contract PurchaseTest is Test, Permit2User {
 
     modifier givenCuratedAuctionIsPrefunded() {
         routingParams.curator = curator;
-        curatorFee = CURATOR_MAX_FEE * AMOUNT_OUT / 1e5;
+        curatorActualFee = CURATOR_FEE * AMOUNT_OUT / 1e5;
 
         // Set the auction to be prefunded
         mockAuctionModule.setRequiredPrefunding(true);
@@ -1391,8 +1392,8 @@ contract PurchaseTest is Test, Permit2User {
     function test_prefunded_givenCuratorHasApproved()
         external
         givenCuratedAuctionIsPrefunded
-        givenOwnerHasBaseTokenBalance(curatorMaxFee)
-        givenBaseTokenSpendingIsApproved(curatorMaxFee)
+        givenOwnerHasBaseTokenBalance(curatorMaxPotentialFee)
+        givenBaseTokenSpendingIsApproved(curatorMaxPotentialFee)
         givenCuratorHasApproved
         givenUserHasQuoteTokenBalance(AMOUNT_IN)
         givenQuoteTokenSpendingIsApproved
@@ -1400,7 +1401,7 @@ contract PurchaseTest is Test, Permit2User {
         // Auction house has base tokens
         assertEq(
             baseToken.balanceOf(address(auctionHouse)),
-            LOT_CAPACITY + curatorMaxFee,
+            LOT_CAPACITY + curatorMaxPotentialFee,
             "pre-purchase: balance mismatch on auction house"
         );
 
@@ -1414,10 +1415,10 @@ contract PurchaseTest is Test, Permit2User {
         assertEq(baseToken.balanceOf(address(mockHook)), 0, "balance mismatch on hook");
         assertEq(
             baseToken.balanceOf(address(auctionHouse)),
-            LOT_CAPACITY + curatorMaxFee - AMOUNT_OUT - curatorFee,
+            LOT_CAPACITY + curatorMaxPotentialFee - AMOUNT_OUT - curatorActualFee,
             "balance mismatch on auction house"
         );
         assertEq(baseToken.balanceOf(auctionOwner), 0, "balance mismatch on auction owner");
-        assertEq(baseToken.balanceOf(curator), curatorFee, "balance mismatch on curator");
+        assertEq(baseToken.balanceOf(curator), curatorActualFee, "balance mismatch on curator");
     }
 }

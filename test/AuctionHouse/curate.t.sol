@@ -44,7 +44,8 @@ contract CurateTest is Test, Permit2User {
     address internal immutable owner = address(0x4);
 
     uint256 internal constant LOT_CAPACITY = 10e18;
-    uint48 internal constant CURATOR_FEE = 100;
+    uint48 internal constant CURATOR_MAX_FEE = 100;
+    uint48 internal constant CURATOR_FEE = 90;
 
     uint96 internal lotId;
 
@@ -81,7 +82,7 @@ contract CurateTest is Test, Permit2User {
         });
 
         // Set the max curator fee
-        auctionHouse.setFee(toKeycode("ATOM"), FeeManager.FeeType.MaxCurator, CURATOR_FEE);
+        auctionHouse.setFee(toKeycode("ATOM"), FeeManager.FeeType.MaxCurator, CURATOR_MAX_FEE);
     }
 
     // ===== Modifiers ===== //
@@ -255,14 +256,14 @@ contract CurateTest is Test, Permit2User {
         givenCuratorFeeIsSet
     {
         // Calculate the curator fee
-        uint256 curatorFee = (LOT_CAPACITY * CURATOR_FEE) / 1e5;
+        uint256 curatorMaxFee = (LOT_CAPACITY * CURATOR_FEE) / 1e5;
 
         // Mint the base token to the owner
-        baseToken.mint(owner, curatorFee);
+        baseToken.mint(owner, curatorMaxFee);
 
         // Approve spending of the payout tokens
         vm.prank(owner);
-        baseToken.approve(address(auctionHouse), curatorFee);
+        baseToken.approve(address(auctionHouse), curatorMaxFee);
 
         // Curate
         vm.prank(curator);
@@ -274,8 +275,12 @@ contract CurateTest is Test, Permit2User {
         assertTrue(lotCurated);
 
         // Maximum curator fee is transferred to the auction house
-        assertEq(baseToken.balanceOf(owner), 0);
-        assertEq(baseToken.balanceOf(address(auctionHouse)), LOT_CAPACITY + curatorFee);
-        assertEq(baseToken.balanceOf(curator), 0);
+        assertEq(baseToken.balanceOf(owner), 0, "base token: owner balance mismatch");
+        assertEq(
+            baseToken.balanceOf(address(auctionHouse)),
+            LOT_CAPACITY + curatorMaxFee,
+            "base token: auction house balance mismatch"
+        );
+        assertEq(baseToken.balanceOf(curator), 0, "base token: curator balance mismatch");
     }
 }

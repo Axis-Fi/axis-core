@@ -60,6 +60,7 @@ contract BidTest is Test, Permit2User {
     uint48 internal PROTOCOL_FEE = 100;
     uint48 internal REFERRER_FEE = 105;
     uint48 internal CURATOR_FEE = 110;
+    uint48 internal CURATOR_MAX_FEE = 120;
 
     bytes internal auctionData;
     bytes internal allowlistProof;
@@ -112,7 +113,7 @@ contract BidTest is Test, Permit2User {
         });
 
         // Set the maximum curator fee
-        auctionHouse.setFee(auctionType, FeeManager.FeeType.MaxCurator, CURATOR_FEE);
+        auctionHouse.setFee(auctionType, FeeManager.FeeType.MaxCurator, CURATOR_MAX_FEE);
     }
 
     modifier givenLotIsCreated() {

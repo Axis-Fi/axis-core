@@ -43,9 +43,10 @@ contract CancelAuctionTest is Test, Permit2User {
     address internal alice = address(0x3);
     address internal curator = address(0x4);
 
-    uint48 internal constant CURATOR_FEE = 100;
+    uint48 internal constant CURATOR_MAX_FEE = 100;
+    uint48 internal constant CURATOR_FEE = 90;
     uint256 internal constant LOT_CAPACITY = 10e18;
-    uint256 internal curatorMaxFee;
+    uint256 internal curatorMaxPotentialFee;
 
     uint256 internal constant PURCHASE_AMOUNT = 1e18;
 
@@ -82,7 +83,7 @@ contract CancelAuctionTest is Test, Permit2User {
         });
 
         // Set the max curator fee
-        auctionHouse.setFee(auctionType, FeeManager.FeeType.MaxCurator, CURATOR_FEE);
+        auctionHouse.setFee(auctionType, FeeManager.FeeType.MaxCurator, CURATOR_MAX_FEE);
     }
 
     modifier whenLotIsCreated() {
@@ -259,14 +260,14 @@ contract CancelAuctionTest is Test, Permit2User {
     }
 
     modifier givenAuctionOwnerHasCuratorFeeBalance() {
-        curatorMaxFee = CURATOR_FEE * LOT_CAPACITY / 1e5;
+        curatorMaxPotentialFee = CURATOR_FEE * LOT_CAPACITY / 1e5;
 
         // Mint
-        baseToken.mint(auctionOwner, curatorMaxFee);
+        baseToken.mint(auctionOwner, curatorMaxPotentialFee);
 
         // Approve spending
         vm.prank(auctionOwner);
-        baseToken.approve(address(auctionHouse), curatorMaxFee);
+        baseToken.approve(address(auctionHouse), curatorMaxPotentialFee);
         _;
     }
 
@@ -303,7 +304,7 @@ contract CancelAuctionTest is Test, Permit2User {
         auctionHouse.cancel(lotId);
 
         // Check the owner's balance
-        assertEq(baseToken.balanceOf(auctionOwner), LOT_CAPACITY + curatorMaxFee); // Capacity and max curator fee is returned
+        assertEq(baseToken.balanceOf(auctionOwner), LOT_CAPACITY + curatorMaxPotentialFee, "base token: auction owner balance mismatch"); // Capacity and max curator fee is returned
     }
 
     function test_prefunded_givenCuratorHasApproved_givenPurchase()
@@ -318,11 +319,17 @@ contract CancelAuctionTest is Test, Permit2User {
         // Balance before
         assertEq(baseToken.balanceOf(auctionOwner), 0);
 
+        uint256 curatorFee = CURATOR_FEE * PURCHASE_AMOUNT / 1e5;
+
         // Cancel the lot
         vm.prank(auctionOwner);
         auctionHouse.cancel(lotId);
 
         // Check the owner's balance
-        assertEq(baseToken.balanceOf(auctionOwner), LOT_CAPACITY - PURCHASE_AMOUNT + curatorMaxFee);
+        assertEq(
+            baseToken.balanceOf(auctionOwner),
+            LOT_CAPACITY - PURCHASE_AMOUNT + curatorMaxPotentialFee - curatorFee,
+            "base token: auction owner balance mismatch"
+        );
     }
 }
