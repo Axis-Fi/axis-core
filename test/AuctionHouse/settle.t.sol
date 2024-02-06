@@ -558,15 +558,17 @@ contract SettleTest is Test, Permit2User {
         auctionHouse.settle(lotId);
 
         // Check base token balances
+        assertEq(baseToken.balanceOf(bidderOne), 0, "biddertOne: incorrect balance of base token");
         assertEq(
-            baseToken.balanceOf(bidderOne),
+            baseToken.balanceOf(recipientOne),
             bidOneAmountOut,
-            "bidderOne: incorrect balance of base token"
+            "recipientOne: incorrect balance of base token"
         );
+        assertEq(baseToken.balanceOf(bidderTwo), 0, "bidderTwo: incorrect balance of base token");
         assertEq(
-            baseToken.balanceOf(bidderTwo),
+            baseToken.balanceOf(recipientTwo),
             bidTwoAmountOut,
-            "bidderTwo: incorrect balance of base token"
+            "recipientTwo: incorrect balance of base token"
         );
         assertEq(
             baseToken.balanceOf(auctionOwner), 0, "auction owner: incorrect balance of base token"
