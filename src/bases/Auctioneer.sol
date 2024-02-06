@@ -119,28 +119,6 @@ abstract contract Auctioneer is WithModules {
     mapping(Veecode auctionRef => mapping(Veecode derivativeRef => Veecode condenserRef)) public
         condensers;
 
-    // ========= MODIFIERS ========= //
-
-    /// @notice     Checks that the lot ID is valid
-    /// @dev        Reverts if the lot ID is invalid
-    ///
-    /// @param      lotId_  ID of the auction lot
-    modifier isLotValid(uint96 lotId_) {
-        if (lotId_ >= lotCounter) revert InvalidLotId(lotId_);
-
-        if (lotRouting[lotId_].owner == address(0)) revert InvalidLotId(lotId_);
-        _;
-    }
-
-    /// @notice     Checks that the caller is the auction owner
-    /// @dev        Reverts if the caller is not the auction owner
-    ///
-    /// @param      lotId_  ID of the auction lot
-    modifier isLotOwner(uint96 lotId_) {
-        if (msg.sender != lotRouting[lotId_].owner) revert NotAuctionOwner(msg.sender);
-        _;
-    }
-
     // ========== AUCTION MANAGEMENT ========== //
 
     /// @notice     Creates a new auction lot
@@ -344,7 +322,11 @@ abstract contract Auctioneer is WithModules {
     ///             - The transfer of payout tokens fails
     ///
     /// @param      lotId_      ID of the auction lot
-    function cancel(uint96 lotId_) external isLotValid(lotId_) isLotOwner(lotId_) {
+    function cancel(uint96 lotId_) external {
+        // Validation
+        _isLotValid(lotId_);
+        if (msg.sender != lotRouting[lotId_].owner) revert NotAuctionOwner(msg.sender);
+
         AuctionModule module = _getModuleForId(lotId_);
 
         // Get remaining capacity from module
@@ -374,7 +356,9 @@ abstract contract Auctioneer is WithModules {
     ///
     /// @param      id_     ID of the auction lot
     /// @return     routing Routing information for the auction lot
-    function getRouting(uint96 id_) external view isLotValid(id_) returns (Routing memory) {
+    function getRouting(uint96 id_) external view returns (Routing memory) {
+        _isLotValid(id_);
+
         // Get routing from lot routing
         return lotRouting[id_];
     }
@@ -492,5 +476,17 @@ abstract contract Auctioneer is WithModules {
         }
 
         condensers[auctionRef_][derivativeRef_] = condenserRef_;
+    }
+
+    // ========= VALIDATION FUNCTIONS ========= //
+
+    /// @notice     Checks that the lot ID is valid
+    /// @dev        Reverts if the lot ID is invalid
+    ///
+    /// @param      lotId_  ID of the auction lot
+    function _isLotValid(uint96 lotId_) internal view {
+        if (lotId_ >= lotCounter) revert InvalidLotId(lotId_);
+
+        if (lotRouting[lotId_].owner == address(0)) revert InvalidLotId(lotId_);
     }
 }

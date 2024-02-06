@@ -118,11 +118,8 @@ abstract contract FeeManager is Owned {
         address curator_,
         uint256 payout_
     ) internal view returns (uint256 toCurator) {
-        // Load curator fee for the auction type
-        uint48 curatorFee = fees[auctionType_].curator[curator_];
-
         // Calculate curator fee
-        toCurator = (payout_ * curatorFee) / _FEE_DECIMALS;
+        toCurator = (payout_ * fees[auctionType_].curator[curator_]) / _FEE_DECIMALS;
     }
 
     // ========== FEE MANAGEMENT ========== //
@@ -161,8 +158,6 @@ abstract contract FeeManager is Owned {
         ERC20 token = ERC20(token_);
         uint256 amount = rewards[msg.sender][token];
         rewards[msg.sender][token] = 0;
-
-        // TODO how will a recipient know which tokens to claim for?
 
         token.safeTransfer(msg.sender, amount);
     }
@@ -347,9 +342,10 @@ contract AuctionHouse is Auctioneer, Router {
     function purchase(PurchaseParams memory params_)
         external
         override
-        isLotValid(params_.lotId)
         returns (uint256 payoutAmount)
     {
+        _isLotValid(params_.lotId);
+
         // Load routing data for the lot
         Routing storage routing = lotRouting[params_.lotId];
 
@@ -364,10 +360,10 @@ contract AuctionHouse is Auctioneer, Router {
             // Unwrap keycode from veecode
             (Keycode auctionType,) = unwrapVeecode(routing.auctionReference);
 
-            uint256 totalQuoteFees = _allocateQuoteFees(
-                auctionType, params_.referrer, routing.owner, routing.quoteToken, params_.amount
-            );
-            amountLessFees = params_.amount - totalQuoteFees;
+            amountLessFees = params_.amount
+                - _allocateQuoteFees(
+                    auctionType, params_.referrer, routing.owner, routing.quoteToken, params_.amount
+                );
         }
 
         // Send purchase to auction house and get payout plus any extra output
@@ -413,7 +409,7 @@ contract AuctionHouse is Auctioneer, Router {
             // Decrease the prefunding amount
             if (routing.prefunding > 0) {
                 // Check invariant
-                if (routing.prefunding < payoutAmount) revert("invariant");
+                if (routing.prefunding < payoutAmount) revert Broken_Invariant();
 
                 routing.prefunding -= payoutAmount;
             }
@@ -426,7 +422,7 @@ contract AuctionHouse is Auctioneer, Router {
             // Decrease the prefunding amount
             if (routing.prefunding > 0) {
                 // Check invariant
-                if (routing.prefunding < curatorFee) revert("invariant");
+                if (routing.prefunding < curatorFee) revert Broken_Invariant();
 
                 routing.prefunding -= curatorFee;
             }
@@ -446,12 +442,9 @@ contract AuctionHouse is Auctioneer, Router {
     ///             - the bidder is not on the optional allowlist
     ///             - the auction module reverts when creating a bid
     ///             - the quote token transfer fails
-    function bid(BidParams memory params_)
-        external
-        override
-        isLotValid(params_.lotId)
-        returns (uint96)
-    {
+    function bid(BidParams memory params_) external override returns (uint96) {
+        _isLotValid(params_.lotId);
+
         // Load routing data for the lot
         Routing memory routing = lotRouting[params_.lotId];
 
@@ -492,7 +485,9 @@ contract AuctionHouse is Auctioneer, Router {
     /// @dev        This function reverts if:
     ///             - the lot ID is invalid
     ///             - the auction module reverts when cancelling the bid
-    function cancelBid(uint96 lotId_, uint96 bidId_) external override isLotValid(lotId_) {
+    function cancelBid(uint96 lotId_, uint96 bidId_) external override {
+        _isLotValid(lotId_);
+
         // Cancel the bid on the auction module
         // The auction module is responsible for validating the bid and authorizing the caller
         AuctionModule module = _getModuleForId(lotId_);
@@ -500,7 +495,6 @@ contract AuctionHouse is Auctioneer, Router {
 
         // Transfer the quote token to the bidder
         // The ownership of the bid has already been verified by the auction module
-        // TODO consider if another check is required
         lotRouting[lotId_].quoteToken.safeTransfer(msg.sender, refundAmount);
     }
 
@@ -521,9 +515,9 @@ contract AuctionHouse is Auctioneer, Router {
     ///             - transferring the quote token to the auction owner fails
     ///             - collecting the payout from the auction owner fails
     ///             - sending the payout to each bidder fails
-    function settle(uint96 lotId_) external override isLotValid(lotId_) {
+    function settle(uint96 lotId_) external override {
         // Validation
-        // No additional validation needed
+        _isLotValid(lotId_);
 
         // Settle the lot on the auction module and get the winning bids
         // Reverts if the auction cannot be settled yet
@@ -699,7 +693,9 @@ contract AuctionHouse is Auctioneer, Router {
     ///            - the auction is prefunded and the fee cannot be collected
     ///
     /// @param     lotId_       Lot ID
-    function curate(uint96 lotId_) external isLotValid(lotId_) {
+    function curate(uint96 lotId_) external {
+        _isLotValid(lotId_);
+
         Routing storage routing = lotRouting[lotId_];
         Curation storage curation = lotCuration[lotId_];
 
@@ -759,11 +755,11 @@ contract AuctionHouse is Auctioneer, Router {
         // Get price from module (in quote token units)
         uint256 price = module.priceFor(id_, payout_);
 
-        // Calculate fee estimate assuming there is a referrer
+        // Calculate fee estimate assuming there is a referrer and add to price
         (Keycode auctionType,) = unwrapVeecode(lotRouting[id_].auctionReference);
-        uint256 fee = _calculateFeeEstimate(auctionType, true, price);
+        price += _calculateFeeEstimate(auctionType, true, price);
 
-        return price + fee;
+        return price;
     }
 
     /// @inheritdoc Auctioneer
@@ -783,11 +779,11 @@ contract AuctionHouse is Auctioneer, Router {
         // Get max amount accepted from module
         uint256 maxAmount = module.maxAmountAccepted(id_);
 
-        // Calculate fee estimate assuming there is a referrer
+        // Calculate fee estimate assuming there is a referrer and add to max amount
         (Keycode auctionType,) = unwrapVeecode(lotRouting[id_].auctionReference);
-        uint256 fee = _calculateFeeEstimate(auctionType, true, maxAmount);
+        maxAmount += _calculateFeeEstimate(auctionType, true, maxAmount);
 
-        return maxAmount + fee;
+        return maxAmount;
     }
 
     // ========== TOKEN TRANSFERS ========== //
