@@ -4,7 +4,9 @@ pragma solidity 0.8.19;
 import {ERC20} from "solmate/tokens/ERC20.sol";
 
 import {IHooks} from "src/interfaces/IHooks.sol";
+import {Auction} from "src/modules/Auction.sol";
 import {Auctioneer} from "src/bases/Auctioneer.sol";
+import {Keycode, unwrapVeecode} from "src/modules/Modules.sol";
 
 import {SafeTransferLib} from "solmate/utils/SafeTransferLib.sol";
 
@@ -162,7 +164,9 @@ contract MockHook is IHooks {
         // If pre-funding is required
         if (routing.prefunding > 0) {
             // Get the capacity
-            uint256 capacity = Auctioneer(msg.sender).remainingCapacity(lotId_);
+            (Keycode auctionType, ) = unwrapVeecode(routing.auctionReference);
+            Auction module = Auctioneer(msg.sender).getModuleForId(lotId_);
+            uint256 capacity = module.remainingCapacity(lotId_);
 
             // If the multiplier is set, apply that
             if (preAuctionCreateMultiplier > 0) {

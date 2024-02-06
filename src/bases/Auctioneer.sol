@@ -327,7 +327,7 @@ abstract contract Auctioneer is WithModules {
         _isLotValid(lotId_);
         if (msg.sender != lotRouting[lotId_].owner) revert NotAuctionOwner(msg.sender);
 
-        AuctionModule module = _getModuleForId(lotId_);
+        AuctionModule module = getModuleForId(lotId_);
 
         // Get remaining capacity from module
         uint256 lotPrefunding = lotRouting[lotId_].prefunding;
@@ -363,43 +363,12 @@ abstract contract Auctioneer is WithModules {
         return lotRouting[id_];
     }
 
-    function payoutFor(uint96 id_, uint256 amount_) external view virtual returns (uint256);
-
-    function priceFor(uint96 id_, uint256 payout_) external view virtual returns (uint256);
-
-    function maxPayout(uint96 id_) external view virtual returns (uint256);
-
-    function maxAmountAccepted(uint96 id_) external view virtual returns (uint256);
-
-    /// @notice    Returns whether the auction is currently accepting bids or purchases
-    /// @dev       Auctions that have been created, but not yet started will return false
-    function isLive(uint96 id_) external view returns (bool) {
-        AuctionModule module = _getModuleForId(id_);
-
-        // Get isLive from module
-        return module.isLive(id_);
-    }
-
-    function hasEnded(uint96 id_) external view returns (bool) {
-        AuctionModule module = _getModuleForId(id_);
-
-        // Get hasEnded from module
-        return module.hasEnded(id_);
-    }
-
     function ownerOf(uint96 id_) external view returns (address) {
         // Check that lot ID is valid
         if (id_ >= lotCounter) revert InvalidLotId(id_);
 
         // Get owner from lot routing
         return lotRouting[id_].owner;
-    }
-
-    function remainingCapacity(uint96 id_) external view returns (uint256) {
-        AuctionModule module = _getModuleForId(id_);
-
-        // Get remaining capacity from module
-        return module.remainingCapacity(id_);
     }
 
     // ========== INTERNAL HELPER FUNCTIONS ========== //
@@ -410,7 +379,7 @@ abstract contract Auctioneer is WithModules {
     ///             - The module for the auction type is not installed
     ///
     /// @param      lotId_      ID of the auction lot
-    function _getModuleForId(uint96 lotId_) internal view returns (AuctionModule) {
+    function getModuleForId(uint96 lotId_) public view returns (AuctionModule) {
         // Confirm lot ID is valid
         if (lotId_ >= lotCounter) revert InvalidLotId(lotId_);
 

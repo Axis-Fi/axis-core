@@ -14,6 +14,7 @@ import {Permit2User} from "test/lib/permit2/Permit2User.sol";
 import {AuctionHouse, Router, FeeManager} from "src/AuctionHouse.sol";
 import {Auction} from "src/modules/Auction.sol";
 import {IHooks, IAllowlist, Auctioneer} from "src/bases/Auctioneer.sol";
+import {Catalogue} from "src/Catalogue.sol";
 
 // Modules
 import {
@@ -32,6 +33,7 @@ contract CancelAuctionTest is Test, Permit2User {
     MockAtomicAuctionModule internal mockAuctionModule;
 
     AuctionHouse internal auctionHouse;
+    Catalogue internal catalogue;
     Auctioneer.RoutingParams internal routingParams;
     Auction.AuctionParams internal auctionParams;
 
@@ -60,6 +62,8 @@ contract CancelAuctionTest is Test, Permit2User {
         mockAuctionModule = new MockAtomicAuctionModule(address(auctionHouse));
 
         auctionHouse.installModule(mockAuctionModule);
+
+        catalogue = new Catalogue(address(auctionHouse));
 
         auctionParams = Auction.AuctionParams({
             start: uint48(block.timestamp),
@@ -260,7 +264,7 @@ contract CancelAuctionTest is Test, Permit2User {
     }
 
     modifier givenAuctionOwnerHasCuratorFeeBalance() {
-        uint256 lotCapacity = auctionHouse.remainingCapacity(lotId);
+        uint256 lotCapacity = catalogue.remainingCapacity(lotId);
 
         curatorMaxPotentialFee = CURATOR_FEE * lotCapacity / 1e5;
 
