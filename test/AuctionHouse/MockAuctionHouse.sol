@@ -20,17 +20,9 @@ contract MockAuctionHouse is AuctionHouse {
         uint256 amount_,
         ERC20 quoteToken_,
         IHooks hooks_,
-        uint48 approvalDeadline_,
-        uint256 approvalNonce_,
-        bytes memory approvalSignature_
+        Transfer.Permit2Approval memory approval_
     ) external {
-        Transfer.Permit2Approval memory approval = Transfer.Permit2Approval({
-            deadline: approvalDeadline_,
-            nonce: approvalNonce_,
-            signature: approvalSignature_
-        });
-
-        return _collectPayment(lotId_, amount_, quoteToken_, hooks_, approval);
+        return _collectPayment(lotId_, amount_, quoteToken_, hooks_, approval_);
     }
 
     function sendPayment(
