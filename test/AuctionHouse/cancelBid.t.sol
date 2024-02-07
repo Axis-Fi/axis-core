@@ -77,6 +77,7 @@ contract CancelBidTest is Test, Permit2User {
             auctionType: toKeycode("BATCH"),
             baseToken: baseToken,
             quoteToken: quoteToken,
+            curator: address(0),
             hooks: IHooks(address(0)),
             allowlist: IAllowlist(address(0)),
             allowlistParams: abi.encode(""),

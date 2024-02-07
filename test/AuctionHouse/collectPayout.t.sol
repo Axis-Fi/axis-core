@@ -2,6 +2,7 @@
 pragma solidity 0.8.19;
 
 import {Test} from "forge-std/Test.sol";
+import {Transfer} from "src/lib/Transfer.sol";
 
 import {MockHook} from "test/modules/Auction/MockHook.sol";
 import {MockAuctionHouse} from "test/AuctionHouse/MockAuctionHouse.sol";
@@ -65,7 +66,7 @@ contract CollectPayoutTest is Test, Permit2User {
             derivativeReference: derivativeReference,
             derivativeParams: derivativeParams,
             wrapDerivative: wrapDerivative,
-            prefunded: false
+            prefunding: 0
         });
     }
 
@@ -265,7 +266,7 @@ contract CollectPayoutTest is Test, Permit2User {
     {
         // Expect revert
         bytes memory err =
-            abi.encodeWithSelector(Auctioneer.UnsupportedToken.selector, address(payoutToken));
+            abi.encodeWithSelector(Transfer.UnsupportedToken.selector, address(payoutToken));
         vm.expectRevert(err);
 
         // Call
@@ -411,7 +412,7 @@ contract CollectPayoutTest is Test, Permit2User {
     {
         // Expect revert
         bytes memory err =
-            abi.encodeWithSelector(Auctioneer.UnsupportedToken.selector, address(payoutToken));
+            abi.encodeWithSelector(Transfer.UnsupportedToken.selector, address(payoutToken));
         vm.expectRevert(err);
 
         // Call
@@ -450,8 +451,8 @@ contract CollectPayoutTest is Test, Permit2User {
     // [X] given the auction is pre-funded
     //  [X] it does not transfer the base token to the auction house
 
-    modifier givenAuctionIsPrefunded() {
-        routingParams.prefunded = true;
+    modifier givenAuctionIsPrefunded(uint256 amount_) {
+        routingParams.prefunding = amount_;
         _;
     }
 
@@ -462,7 +463,7 @@ contract CollectPayoutTest is Test, Permit2User {
 
     function test_prefunded()
         public
-        givenAuctionIsPrefunded
+        givenAuctionIsPrefunded(payoutAmount)
         givenAuctionHouseHasPayoutTokenBalance(payoutAmount)
     {
         // Assert previous balance

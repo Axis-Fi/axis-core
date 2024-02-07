@@ -4,7 +4,9 @@ pragma solidity 0.8.19;
 import {ERC20} from "solmate/tokens/ERC20.sol";
 
 import {IHooks} from "src/interfaces/IHooks.sol";
+import {Auction} from "src/modules/Auction.sol";
 import {Auctioneer} from "src/bases/Auctioneer.sol";
+import {Keycode, unwrapVeecode} from "src/modules/Modules.sol";
 
 import {SafeTransferLib} from "solmate/utils/SafeTransferLib.sol";
 
@@ -157,12 +159,14 @@ contract MockHook is IHooks {
 
     function preAuctionCreate(uint96 lotId_) external override {
         // Get the lot information
-        Auctioneer.Routing memory routing = Auctioneer(msg.sender).getRouting(lotId_);
+        (,, ERC20 lotBaseToken,,,,,,, uint256 lotPrefunding) =
+            Auctioneer(msg.sender).lotRouting(lotId_);
 
         // If pre-funding is required
-        if (routing.prefunded) {
+        if (lotPrefunding > 0) {
             // Get the capacity
-            uint256 capacity = Auctioneer(msg.sender).remainingCapacity(lotId_);
+            Auction module = Auctioneer(msg.sender).getModuleForId(lotId_);
+            uint256 capacity = module.remainingCapacity(lotId_);
 
             // If the multiplier is set, apply that
             if (preAuctionCreateMultiplier > 0) {
@@ -170,10 +174,10 @@ contract MockHook is IHooks {
             }
 
             // Approve transfer
-            routing.baseToken.safeApprove(address(msg.sender), capacity);
+            lotBaseToken.safeApprove(address(msg.sender), capacity);
 
             // Transfer the base token to the auctioneer
-            routing.baseToken.safeTransfer(msg.sender, capacity);
+            lotBaseToken.safeTransfer(msg.sender, capacity);
         }
     }
 }

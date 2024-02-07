@@ -2,6 +2,7 @@
 pragma solidity 0.8.19;
 
 import {Test} from "forge-std/Test.sol";
+import {Transfer} from "src/lib/Transfer.sol";
 
 import {MockHook} from "test/modules/Auction/MockHook.sol";
 import {MockAuctionHouse} from "test/AuctionHouse/MockAuctionHouse.sol";
@@ -87,7 +88,7 @@ contract SendPayoutTest is Test, Permit2User {
             derivativeReference: derivativeReference,
             derivativeParams: derivativeParams,
             wrapDerivative: wrapDerivative,
-            prefunded: false
+            prefunding: 0
         });
     }
 
@@ -156,7 +157,7 @@ contract SendPayoutTest is Test, Permit2User {
     {
         // Expect revert
         bytes memory err =
-            abi.encodeWithSelector(Auctioneer.UnsupportedToken.selector, address(payoutToken));
+            abi.encodeWithSelector(Transfer.UnsupportedToken.selector, address(payoutToken));
         vm.expectRevert(err);
 
         // Call
@@ -230,7 +231,7 @@ contract SendPayoutTest is Test, Permit2User {
     {
         // Expect revert
         bytes memory err =
-            abi.encodeWithSelector(Auctioneer.UnsupportedToken.selector, address(payoutToken));
+            abi.encodeWithSelector(Transfer.UnsupportedToken.selector, address(payoutToken));
         vm.expectRevert(err);
 
         // Call
