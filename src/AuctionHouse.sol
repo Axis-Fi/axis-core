@@ -304,8 +304,7 @@ contract AuctionHouse is Auctioneer, Router {
         // The module will determine if the bid is valid - minimum bid size, minimum price, auction status, etc
         uint96 bidId;
         {
-            AuctionModule module = getModuleForId(params_.lotId);
-            bidId = module.bid(
+            bidId = getModuleForId(params_.lotId).bid(
                 params_.lotId,
                 msg.sender,
                 params_.recipient,
@@ -337,8 +336,7 @@ contract AuctionHouse is Auctioneer, Router {
 
         // Cancel the bid on the auction module
         // The auction module is responsible for validating the bid and authorizing the caller
-        AuctionModule module = getModuleForId(lotId_);
-        uint256 refundAmount = module.cancelBid(lotId_, bidId_, msg.sender);
+        uint256 refundAmount = getModuleForId(lotId_).cancelBid(lotId_, bidId_, msg.sender);
 
         // Transfer the quote token to the bidder
         // The ownership of the bid has already been verified by the auction module
@@ -476,31 +474,27 @@ contract AuctionHouse is Auctioneer, Router {
             uint256 payoutRemaining = remainingCapacity;
             uint256 bidCount = winningBids.length;
             for (uint256 i; i < bidCount; i++) {
+                uint256 currentBidOut = winningBids[i].minAmountOut;
+
                 // Send payout to each bid's recipient
-                _sendPayout(
-                    lotId_,
-                    winningBids[i].recipient,
-                    winningBids[i].minAmountOut,
-                    routing,
-                    auctionOutput
-                );
+                _sendPayout(lotId_, winningBids[i].recipient, currentBidOut, routing, auctionOutput);
 
                 // Make sure the invariant isn't broken
-                if (winningBids[i].minAmountOut > payoutRemaining) {
+                if (currentBidOut > payoutRemaining) {
                     revert Broken_Invariant();
                 }
 
                 // Decrement the remaining payout
-                payoutRemaining -= winningBids[i].minAmountOut;
+                payoutRemaining -= currentBidOut;
 
                 // Update prefunding
                 if (routing.prefunding > 0) {
-                    if (prefundingRemaining < winningBids[i].minAmountOut) {
+                    if (prefundingRemaining < currentBidOut) {
                         revert Broken_Invariant();
                     }
 
                     // Update the remaining prefunding
-                    prefundingRemaining -= winningBids[i].minAmountOut;
+                    prefundingRemaining -= currentBidOut;
                 }
             }
 
@@ -553,8 +547,7 @@ contract AuctionHouse is Auctioneer, Router {
         if (curation.curated) revert InvalidState();
 
         // Check that the auction has not ended or been cancelled
-        AuctionModule module = getModuleForId(lotId_);
-        (, uint48 conclusion,,,, uint256 capacity,,) = module.lotData(lotId_);
+        (, uint48 conclusion,,,, uint256 capacity,,) = getModuleForId(lotId_).lotData(lotId_);
         if (uint48(block.timestamp) >= conclusion || capacity == 0) revert InvalidState();
 
         (Keycode auctionType,) = unwrapVeecode(routing.auctionReference);
@@ -685,7 +678,8 @@ contract AuctionHouse is Auctioneer, Router {
         }
 
         // Get the balance of the payout token before the transfer
-        uint256 balanceBefore = routingParams_.baseToken.balanceOf(address(this));
+        ERC20 baseToken = routingParams_.baseToken;
+        uint256 balanceBefore = baseToken.balanceOf(address(this));
 
         // Call mid hook on hooks contract if provided
         if (address(routingParams_.hooks) != address(0)) {
@@ -693,7 +687,7 @@ contract AuctionHouse is Auctioneer, Router {
             routingParams_.hooks.mid(lotId_, paymentAmount_, payoutAmount_);
 
             // Check that the mid hook transferred the expected amount of payout tokens
-            if (routingParams_.baseToken.balanceOf(address(this)) < balanceBefore + payoutAmount_) {
+            if (baseToken.balanceOf(address(this)) < balanceBefore + payoutAmount_) {
                 revert InvalidHook();
             }
         }
@@ -701,13 +695,11 @@ contract AuctionHouse is Auctioneer, Router {
         else {
             // Transfer the payout token from the auction owner
             // `safeTransferFrom()` will revert upon failure or the lack of allowance or balance
-            routingParams_.baseToken.safeTransferFrom(
-                routingParams_.owner, address(this), payoutAmount_
-            );
+            baseToken.safeTransferFrom(routingParams_.owner, address(this), payoutAmount_);
 
             // Check that it is not a fee-on-transfer token
-            if (routingParams_.baseToken.balanceOf(address(this)) < balanceBefore + payoutAmount_) {
-                revert UnsupportedToken(address(routingParams_.baseToken));
+            if (baseToken.balanceOf(address(this)) < balanceBefore + payoutAmount_) {
+                revert UnsupportedToken(address(baseToken));
             }
         }
     }
@@ -740,32 +732,33 @@ contract AuctionHouse is Auctioneer, Router {
         Routing memory routingParams_,
         bytes memory auctionOutput_
     ) internal {
+        Veecode derivativeReference = routingParams_.derivativeReference;
+        ERC20 baseToken = routingParams_.baseToken;
+
         // If no derivative, then the payout is sent directly to the recipient
-        if (fromVeecode(routingParams_.derivativeReference) == bytes7("")) {
+        if (fromVeecode(derivativeReference) == bytes7("")) {
             // Get the pre-transfer balance
-            uint256 balanceBefore = routingParams_.baseToken.balanceOf(recipient_);
+            uint256 balanceBefore = baseToken.balanceOf(recipient_);
 
             // Send payout token to recipient
-            routingParams_.baseToken.safeTransfer(recipient_, payoutAmount_);
+            baseToken.safeTransfer(recipient_, payoutAmount_);
 
             // Check that the recipient received the expected amount of payout tokens
-            if (routingParams_.baseToken.balanceOf(recipient_) < balanceBefore + payoutAmount_) {
-                revert UnsupportedToken(address(routingParams_.baseToken));
+            if (baseToken.balanceOf(recipient_) < balanceBefore + payoutAmount_) {
+                revert UnsupportedToken(address(baseToken));
             }
         }
         // Otherwise, send parameters and payout to the derivative to mint to recipient
         else {
             // Get the module for the derivative type
             // We assume that the module type has been checked when the lot was created
-            DerivativeModule module =
-                DerivativeModule(_getModuleIfInstalled(routingParams_.derivativeReference));
+            DerivativeModule module = DerivativeModule(_getModuleIfInstalled(derivativeReference));
 
             bytes memory derivativeParams = routingParams_.derivativeParams;
 
             // Lookup condensor module from combination of auction and derivative types
             // If condenser specified, condense auction output and derivative params before sending to derivative module
-            Veecode condenserRef =
-                condensers[routingParams_.auctionReference][routingParams_.derivativeReference];
+            Veecode condenserRef = condensers[routingParams_.auctionReference][derivativeReference];
             if (fromVeecode(condenserRef) != bytes7("")) {
                 // Get condenser module
                 CondenserModule condenser = CondenserModule(_getModuleIfInstalled(condenserRef));
@@ -775,12 +768,12 @@ contract AuctionHouse is Auctioneer, Router {
             }
 
             // Approve the module to transfer payout tokens when minting
-            routingParams_.baseToken.safeApprove(address(module), payoutAmount_);
+            baseToken.safeApprove(address(module), payoutAmount_);
 
             // Call the module to mint derivative tokens to the recipient
             module.mint(
                 recipient_,
-                address(routingParams_.baseToken),
+                address(baseToken),
                 derivativeParams,
                 payoutAmount_,
                 routingParams_.wrapDerivative
