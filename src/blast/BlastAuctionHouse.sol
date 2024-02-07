@@ -29,22 +29,16 @@ contract BlastAuctionHouse is AuctionHouse {
     IBlast internal constant _BLAST = IBlast(0x4300000000000000000000000000000000000002);
 
     /// @notice    Address of the WETH contract on Blast
-    IERC20Rebasing internal _weth;
+    IERC20Rebasing internal constant _weth =
+        IERC20Rebasing(0x4200000000000000000000000000000000000023);
 
     /// @notice    Address of the USDB contract on Blast
-    IERC20Rebasing internal _usdb;
+    IERC20Rebasing internal constant _usdb =
+        IERC20Rebasing(0x4200000000000000000000000000000000000022);
 
     // ========== CONSTRUCTOR ========== //
 
-    constructor(
-        address owner_,
-        address permit2_,
-        address weth_,
-        address usdb_
-    ) AuctionHouse(owner_, permit2_) {
-        _weth = IERC20Rebasing(weth_);
-        _usdb = IERC20Rebasing(usdb_);
-
+    constructor(address owner_, address permit2_) AuctionHouse(owner_, permit2_) {
         // Set the yield mode to claimable for the WETH and USDB tokens
         _weth.configure(YieldMode.CLAIMABLE);
         _usdb.configure(YieldMode.CLAIMABLE);
