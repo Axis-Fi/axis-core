@@ -12,6 +12,7 @@ import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 import {IHooks, IAllowlist, Auctioneer} from "src/bases/Auctioneer.sol";
 import {AuctionHouse, Router} from "src/AuctionHouse.sol";
 import {Auction} from "src/modules/Auction.sol";
+import {Catalogue} from "src/Catalogue.sol";
 import {LinearVesting} from "src/modules/derivatives/LinearVesting.sol";
 import {MockAtomicAuctionModule} from "test/modules/Auction/MockAtomicAuctionModule.sol";
 import {LocalSealedBidBatchAuction} from "src/modules/auctions/LSBBA/LSBBA.sol";
@@ -36,6 +37,7 @@ contract LinearVestingIntegrationTest is Test, Permit2User {
     uint8 internal underlyingTokenDecimals = 18;
 
     AuctionHouse internal auctionHouse;
+    Catalogue internal catalogue;
     LinearVesting internal linearVesting;
     MockAtomicAuctionModule internal mockAtomicAuctionModule;
     LocalSealedBidBatchAuction internal localSealedBidBatchAuctionModule;
@@ -83,6 +85,8 @@ contract LinearVestingIntegrationTest is Test, Permit2User {
 
         auctionHouse = new AuctionHouse(_protocol, _PERMIT2_ADDRESS);
 
+        catalogue = new Catalogue(address(auctionHouse));
+
         // Mock atomic auction module
         mockAtomicAuctionModule = new MockAtomicAuctionModule(address(auctionHouse));
         auctionHouse.installModule(mockAtomicAuctionModule);
@@ -117,6 +121,7 @@ contract LinearVestingIntegrationTest is Test, Permit2User {
             auctionType: toKeycode("ATOM"),
             baseToken: underlyingToken,
             quoteToken: quoteToken,
+            curator: address(0),
             hooks: IHooks(address(0)),
             allowlist: IAllowlist(address(0)),
             allowlistParams: abi.encode(""),
@@ -279,7 +284,7 @@ contract LinearVestingIntegrationTest is Test, Permit2User {
         givenOwnerHasBaseTokenBalance(LOT_CAPACITY)
         givenAuctionIsAtomic
     {
-        Auctioneer.Routing memory routingData = auctionHouse.getRouting(lotId);
+        Auctioneer.Routing memory routingData = catalogue.getRouting(lotId);
         (Keycode auctionType,) = unwrapVeecode(routingData.auctionReference);
         assertEq(fromKeycode(auctionType), "ATOM", "auction type mismatch");
 
@@ -288,7 +293,7 @@ contract LinearVestingIntegrationTest is Test, Permit2User {
         assertEq(address(routingData.quoteToken), address(quoteToken), "quote token mismatch");
         assertEq(address(routingData.baseToken), underlyingTokenAddress, "base token mismatch");
         assertEq(routingData.derivativeParams, vestingParamsBytes, "derivative params mismatch");
-        assertEq(routingData.prefunded, false, "prefunded mismatch");
+        assertEq(routingData.prefunding, 0, "prefunding mismatch");
 
         // Base tokens have not been transferred
         assertEq(underlyingToken.balanceOf(address(auctionHouse)), 0, "base token balance mismatch");
@@ -300,7 +305,7 @@ contract LinearVestingIntegrationTest is Test, Permit2User {
         givenOwnerHasBaseTokenBalance(LOT_CAPACITY)
         givenAuctionIsBatch
     {
-        Auctioneer.Routing memory routingData = auctionHouse.getRouting(lotId);
+        Auctioneer.Routing memory routingData = catalogue.getRouting(lotId);
         (Keycode auctionType,) = unwrapVeecode(routingData.auctionReference);
         assertEq(fromKeycode(auctionType), "LSBBA", "auction type mismatch");
 
@@ -309,7 +314,7 @@ contract LinearVestingIntegrationTest is Test, Permit2User {
         assertEq(address(routingData.quoteToken), address(quoteToken), "quote token mismatch");
         assertEq(address(routingData.baseToken), underlyingTokenAddress, "base token mismatch");
         assertEq(routingData.derivativeParams, vestingParamsBytes, "derivative params mismatch");
-        assertEq(routingData.prefunded, true, "prefunded mismatch"); // Due to LSBBA
+        assertEq(routingData.prefunding, LOT_CAPACITY, "prefunding mismatch"); // Due to LSBBA
 
         // Base tokens have been transferred
         assertEq(
