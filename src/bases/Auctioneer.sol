@@ -8,7 +8,7 @@ import {
     fromKeycode,
     Keycode,
     fromVeecode,
-    unwrapVeecode,
+    keycodeFromVeecode,
     Veecode,
     Module,
     WithModules
@@ -103,19 +103,16 @@ abstract contract Auctioneer is WithModules {
 
     // ========= STATE ========== //
 
-    /// @notice     Constant representing 100%
-    /// @dev        1% = 1_000 or 1e3. 100% = 100_000 or 1e5
-    uint48 internal constant _ONE_HUNDRED_PERCENT = 1e5;
-
     /// @notice     Counter for auction lots
     uint96 public lotCounter;
 
-    /// @notice Mapping of lot IDs to their auction type (represented by the Keycode for the auction submodule)
+    /// @notice     Mapping of lot IDs to their auction type (represented by the Keycode for the auction submodule)
     mapping(uint96 lotId => Routing) public lotRouting;
 
+    /// @notice     Mapping of lot IDs to their curation information
     mapping(uint96 lotId => Curation) public lotCuration;
 
-    /// @notice Mapping auction and derivative references to the condenser that is used to pass data between them
+    /// @notice     Mapping auction and derivative references to the condenser that is used to pass data between them
     mapping(Veecode auctionRef => mapping(Veecode derivativeRef => Veecode condenserRef)) public
         condensers;
 
@@ -229,17 +226,16 @@ abstract contract Auctioneer is WithModules {
 
             // Check that the module for the condenser type is valid
             if (fromVeecode(condenserRef) != bytes7(0)) {
-                CondenserModule condenserModule =
-                    CondenserModule(_getModuleIfInstalled(condenserRef));
-
-                if (condenserModule.TYPE() != Module.Type.Condenser) {
+                if (
+                    CondenserModule(_getModuleIfInstalled(condenserRef)).TYPE()
+                        != Module.Type.Condenser
+                ) {
                     revert InvalidModuleType(condenserRef);
                 }
 
                 // Check module status
-                (Keycode moduleKeycode,) = unwrapVeecode(condenserRef);
-                ModStatus memory status = getModuleStatus[moduleKeycode];
-                if (status.sunset == true) {
+                Keycode moduleKeycode = keycodeFromVeecode(condenserRef);
+                if (getModuleStatus[moduleKeycode].sunset == true) {
                     revert ModuleIsSunset(moduleKeycode);
                 }
             }

@@ -4,7 +4,7 @@ pragma solidity 0.8.19;
 import {Auction} from "src/modules/Auction.sol";
 import {Auctioneer} from "src/bases/Auctioneer.sol";
 import {FeeManager} from "src/bases/FeeManager.sol";
-import {Keycode, unwrapVeecode} from "src/modules/Modules.sol";
+import {keycodeFromVeecode} from "src/modules/Modules.sol";
 
 /// @notice Contract that provides view functions for Auctions
 contract Catalogue {
@@ -21,9 +21,9 @@ contract Catalogue {
         Auctioneer.Routing memory routing = Auctioneer(auctionHouse).getRouting(lotId_);
 
         // Calculate fees
-        (Keycode auctionType,) = unwrapVeecode(routing.auctionReference);
-        (uint256 protocolFee, uint256 referrerFee) =
-            FeeManager(auctionHouse).calculateQuoteFees(auctionType, true, amount_); // we assume there is a referrer to give a conservative amount
+        (uint256 protocolFee, uint256 referrerFee) = FeeManager(auctionHouse).calculateQuoteFees(
+            keycodeFromVeecode(routing.auctionReference), true, amount_
+        ); // we assume there is a referrer to give a conservative amount
 
         // Get payout from module
         return module.payoutFor(lotId_, amount_ - protocolFee - referrerFee);
@@ -37,8 +37,9 @@ contract Catalogue {
         uint256 price = module.priceFor(lotId_, payout_);
 
         // Calculate fee estimate assuming there is a referrer and add to price
-        (Keycode auctionType,) = unwrapVeecode(routing.auctionReference);
-        price += FeeManager(auctionHouse).calculateFeeEstimate(auctionType, true, price);
+        price += FeeManager(auctionHouse).calculateFeeEstimate(
+            keycodeFromVeecode(routing.auctionReference), true, price
+        );
 
         return price;
     }
@@ -60,8 +61,9 @@ contract Catalogue {
         uint256 maxAmount = module.maxAmountAccepted(lotId_);
 
         // Calculate fee estimate assuming there is a referrer and add to max amount
-        (Keycode auctionType,) = unwrapVeecode(routing.auctionReference);
-        maxAmount += FeeManager(auctionHouse).calculateFeeEstimate(auctionType, true, maxAmount);
+        maxAmount += FeeManager(auctionHouse).calculateFeeEstimate(
+            keycodeFromVeecode(routing.auctionReference), true, maxAmount
+        );
 
         return maxAmount;
     }

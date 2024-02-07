@@ -13,7 +13,9 @@ import {CondenserModule} from "src/modules/Condenser.sol";
 import {DerivativeModule} from "src/modules/Derivative.sol";
 import {Auction, AuctionModule} from "src/modules/Auction.sol";
 
-import {Veecode, fromVeecode, Keycode, unwrapVeecode, WithModules} from "src/modules/Modules.sol";
+import {
+    Veecode, fromVeecode, Keycode, keycodeFromVeecode, WithModules
+} from "src/modules/Modules.sol";
 
 import {IHooks} from "src/interfaces/IHooks.sol";
 import {IAllowlist} from "src/interfaces/IAllowlist.sol";
@@ -205,11 +207,13 @@ contract AuctionHouse is Auctioneer, Router {
         uint256 amountLessFees;
         {
             // Unwrap keycode from veecode
-            (Keycode auctionType,) = unwrapVeecode(routing.auctionReference);
-
             amountLessFees = params_.amount
                 - _allocateQuoteFees(
-                    auctionType, params_.referrer, routing.owner, routing.quoteToken, params_.amount
+                    keycodeFromVeecode(routing.auctionReference),
+                    params_.referrer,
+                    routing.owner,
+                    routing.quoteToken,
+                    params_.amount
                 );
         }
 
@@ -242,9 +246,10 @@ contract AuctionHouse is Auctioneer, Router {
         Curation storage curation = lotCuration[params_.lotId];
         uint256 curatorFee;
         {
-            (Keycode auctionType,) = unwrapVeecode(routing.auctionReference);
             if (curation.curated) {
-                curatorFee = _calculatePayoutFees(auctionType, curation.curator, payoutAmount);
+                curatorFee = _calculatePayoutFees(
+                    keycodeFromVeecode(routing.auctionReference), curation.curator, payoutAmount
+                );
             }
         }
 
@@ -423,9 +428,12 @@ contract AuctionHouse is Auctioneer, Router {
         // Calculate fees
         uint256 totalAmountInLessFees;
         {
-            (Keycode auctionType,) = unwrapVeecode(routing.auctionReference);
-            (uint256 totalAmountIn, uint256 totalFees) =
-                _allocateQuoteFees(auctionType, winningBids, routing.owner, routing.quoteToken);
+            (uint256 totalAmountIn, uint256 totalFees) = _allocateQuoteFees(
+                keycodeFromVeecode(routing.auctionReference),
+                winningBids,
+                routing.owner,
+                routing.quoteToken
+            );
             totalAmountInLessFees = totalAmountIn - totalFees;
         }
 
@@ -447,9 +455,12 @@ contract AuctionHouse is Auctioneer, Router {
             Curation storage curation = lotCuration[lotId_];
             uint256 curatorFee;
             {
-                (Keycode auctionType,) = unwrapVeecode(routing.auctionReference);
                 if (curation.curated) {
-                    curatorFee = _calculatePayoutFees(auctionType, curation.curator, totalAmountOut);
+                    curatorFee = _calculatePayoutFees(
+                        keycodeFromVeecode(routing.auctionReference),
+                        curation.curator,
+                        totalAmountOut
+                    );
                 }
             }
 
@@ -550,7 +561,7 @@ contract AuctionHouse is Auctioneer, Router {
         (, uint48 conclusion,,,, uint256 capacity,,) = getModuleForId(lotId_).lotData(lotId_);
         if (uint48(block.timestamp) >= conclusion || capacity == 0) revert InvalidState();
 
-        (Keycode auctionType,) = unwrapVeecode(routing.auctionReference);
+        Keycode auctionType = keycodeFromVeecode(routing.auctionReference);
 
         // Check that the curator fee is set
         if (fees[auctionType].curator[msg.sender] == 0) revert InvalidFee();
