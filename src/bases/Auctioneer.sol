@@ -312,27 +312,26 @@ abstract contract Auctioneer is WithModules {
     function cancel(uint96 lotId_) external {
         // Validation
         _isLotValid(lotId_);
-        if (msg.sender != lotRouting[lotId_].owner) revert NotAuctionOwner(msg.sender);
+
+        Routing storage routing = lotRouting[lotId_];
+
+        if (msg.sender != routing.owner) revert NotAuctionOwner(msg.sender);
 
         AuctionModule module = getModuleForId(lotId_);
-
-        // Get remaining capacity from module
-        uint256 lotPrefunding = lotRouting[lotId_].prefunding;
 
         // Cancel the auction on the module
         module.cancelAuction(lotId_);
 
         // If the auction is prefunded and supported, transfer the remaining capacity to the owner
-        if (lotPrefunding > 0) {
+        if (routing.prefunding > 0) {
             // Transfer payout tokens to the owner
-            Routing memory routing = lotRouting[lotId_];
-            Transfer.transfer(routing.baseToken, routing.owner, lotPrefunding, false);
+            Transfer.transfer(routing.baseToken, routing.owner, routing.prefunding, false);
 
             // Set to 0
             lotRouting[lotId_].prefunding = 0;
         }
 
-        emit AuctionCancelled(lotId_, lotRouting[lotId_].auctionReference);
+        emit AuctionCancelled(lotId_, routing.auctionReference);
     }
 
     // ========== AUCTION INFORMATION ========== //
@@ -348,14 +347,6 @@ abstract contract Auctioneer is WithModules {
 
         // Get routing from lot routing
         return lotRouting[id_];
-    }
-
-    function ownerOf(uint96 id_) external view returns (address) {
-        // Check that lot ID is valid
-        if (id_ >= lotCounter) revert InvalidLotId(id_);
-
-        // Get owner from lot routing
-        return lotRouting[id_].owner;
     }
 
     // ========== INTERNAL HELPER FUNCTIONS ========== //
@@ -404,29 +395,18 @@ abstract contract Auctioneer is WithModules {
         }
 
         // Check that the auction type is valid
-        {
-            AuctionModule auctionModule = AuctionModule(_getModuleIfInstalled(auctionRef_));
-
-            if (auctionModule.TYPE() != Module.Type.Auction) {
-                revert InvalidModuleType(auctionRef_);
-            }
+        if (AuctionModule(_getModuleIfInstalled(auctionRef_)).TYPE() != Module.Type.Auction) {
+            revert InvalidModuleType(auctionRef_);
         }
 
         // Check that the derivative type is valid
-        {
-            DerivativeModule derivativeModule =
-                DerivativeModule(_getModuleIfInstalled(derivativeRef_));
-
-            if (derivativeModule.TYPE() != Module.Type.Derivative) {
-                revert InvalidModuleType(derivativeRef_);
-            }
+        if (DerivativeModule(_getModuleIfInstalled(derivativeRef_)).TYPE() != Module.Type.Derivative) {
+            revert InvalidModuleType(derivativeRef_);
         }
 
         // Check that the condenser type is valid
         if (fromVeecode(condenserRef_) != bytes7(0)) {
-            CondenserModule condenserModule = CondenserModule(_getModuleIfInstalled(condenserRef_));
-
-            if (condenserModule.TYPE() != Module.Type.Condenser) {
+            if (CondenserModule(_getModuleIfInstalled(condenserRef_)).TYPE() != Module.Type.Condenser) {
                 revert InvalidModuleType(condenserRef_);
             }
         }
