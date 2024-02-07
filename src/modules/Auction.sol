@@ -207,14 +207,23 @@ abstract contract Auction {
 
     function maxAmountAccepted(uint96 lotId_) public view virtual returns (uint256);
 
-    /// @notice     Determines if the lot is active
+    /// @notice     Returns whether the auction is currently accepting bids or purchases
     /// @dev        The implementing function should handle the following:
-    ///             - Return true if the lot is active
-    ///             - Return false if the lot is inactive
+    ///             - Return true if the lot is accepting bids/purchases
+    ///             - Return false if the lot has ended, been cancelled, or not started yet
     ///
     /// @param      lotId_  The lot id
     /// @return     bool    Whether or not the lot is active
     function isLive(uint96 lotId_) public view virtual returns (bool);
+
+    /// @notice     Returns whether the auction has ended
+    /// @dev        The implementing function should handle the following:
+    ///             - Return true if the lot is not accepting bids/purchases and will not at any point
+    ///             - Return false if the lot hasn't started or is actively accepting bids/purchases
+    ///
+    /// @param      lotId_  The lot id
+    /// @return     bool    Whether or not the lot is active
+    function hasEnded(uint96 lotId_) public view virtual returns (bool);
 
     /// @notice     Get the remaining capacity of a lot
     /// @dev        The implementing function should handle the following:
@@ -522,8 +531,6 @@ abstract contract AuctionModule is Auction, Module {
     ///             - The lot has started
     ///             - The lot has not sold out or been cancelled (capacity > 0)
     ///
-    ///            Inheriting contracts should override this to implement auction-specific logic
-    ///
     /// @param      lotId_  The lot ID
     /// @return     bool    Whether or not the lot is active
     function isLive(uint96 lotId_) public view override returns (bool) {
@@ -531,6 +538,11 @@ abstract contract AuctionModule is Auction, Module {
             lotData[lotId_].capacity != 0 && lotData[lotId_].conclusion > uint48(block.timestamp)
                 && lotData[lotId_].start <= uint48(block.timestamp)
         );
+    }
+
+    /// @inheritdoc Auction
+    function hasEnded(uint96 lotId_) public view override returns (bool) {
+        return lotData[lotId_].conclusion < uint48(block.timestamp) || lotData[lotId_].capacity == 0;
     }
 
     /// @inheritdoc Auction

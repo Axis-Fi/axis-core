@@ -1,3 +1,3 @@
-src/test/**/*.sol
-src/scripts/**/*.sol
 lib/**
+src/modules/Modules.sol
+src/lib/**
