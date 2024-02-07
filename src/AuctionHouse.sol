@@ -263,8 +263,9 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
             if (routing.prefunding > 0) {
                 // Check invariant
                 if (routing.prefunding < payoutAmount) revert Broken_Invariant();
-
-                routing.prefunding -= payoutAmount;
+                unchecked {
+                    routing.prefunding -= payoutAmount;
+                }
             }
 
             _sendPayout(params_.lotId, params_.recipient, payoutAmount, routing, auctionOutput);
@@ -276,8 +277,9 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
             if (routing.prefunding > 0) {
                 // Check invariant
                 if (routing.prefunding < curatorFee) revert Broken_Invariant();
-
-                routing.prefunding -= curatorFee;
+                unchecked {
+                    routing.prefunding -= curatorFee;
+                }
             }
 
             _sendPayout(params_.lotId, curation.curator, curatorFee, routing, auctionOutput);
@@ -419,7 +421,9 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
                     }
 
                     // Adjust the payment amount (otherwise fees will be charged)
-                    winningBids[i].amount = winningBids[i].amount - refundAmount;
+                    unchecked {
+                        winningBids[i].amount -= refundAmount;
+                    }
 
                     // Decrement the remaining payout
                     payoutRemaining = 0;
@@ -432,7 +436,9 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
                 }
 
                 // Decrement the remaining payout
-                payoutRemaining -= payoutAmount;
+                unchecked {
+                    payoutRemaining -= payoutAmount;
+                }
             }
         }
 
@@ -483,7 +489,9 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
                     if (routing.prefunding < curatorFee) revert Broken_Invariant();
 
                     // Update the remaining prefunding
-                    routing.prefunding -= curatorFee;
+                    unchecked {
+                        routing.prefunding -= curatorFee;
+                    }
                 }
 
                 _sendPayout(lotId_, curation.curator, curatorFee, routing, auctionOutput);
@@ -516,7 +524,9 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
                     }
 
                     // Update the remaining prefunding
-                    prefundingRemaining -= currentBidOut;
+                    unchecked {
+                        prefundingRemaining -= currentBidOut;
+                    }
                 }
             }
 
