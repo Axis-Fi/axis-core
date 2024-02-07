@@ -33,10 +33,11 @@ abstract contract Auctioneer is WithModules {
     error InvalidParams();
     error InvalidLotId(uint96 id_);
     error InvalidModuleType(Veecode reference_);
-    error NotAuctionOwner(address caller_);
-    error NotCurator(address caller_);
     error InvalidState();
     error InvalidHook();
+
+    /// @notice     Used when the caller is not permitted to perform that action
+    error NotPermitted(address caller_);
 
     // ========= EVENTS ========= //
 
@@ -316,7 +317,7 @@ abstract contract Auctioneer is WithModules {
         Routing storage routing = lotRouting[lotId_];
 
         // Check ownership
-        if (msg.sender != routing.owner) revert NotAuctionOwner(msg.sender);
+        if (msg.sender != routing.owner) revert NotPermitted(msg.sender);
 
         // Cancel the auction on the module
         getModuleForId(lotId_).cancelAuction(lotId_);

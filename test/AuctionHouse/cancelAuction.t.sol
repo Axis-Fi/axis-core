@@ -105,8 +105,7 @@ contract CancelAuctionTest is Test, Permit2User {
     //  [X] it sets the lot to inactive on the AuctionModule
 
     function testReverts_whenNotAuctionOwner() external whenLotIsCreated {
-        bytes memory err =
-            abi.encodeWithSelector(Auctioneer.NotAuctionOwner.selector, address(this));
+        bytes memory err = abi.encodeWithSelector(Auctioneer.NotPermitted.selector, address(this));
         vm.expectRevert(err);
 
         auctionHouse.cancel(lotId);
@@ -115,7 +114,7 @@ contract CancelAuctionTest is Test, Permit2User {
     function testReverts_whenUnauthorized(address user_) external whenLotIsCreated {
         vm.assume(user_ != auctionOwner);
 
-        bytes memory err = abi.encodeWithSelector(Auctioneer.NotAuctionOwner.selector, user_);
+        bytes memory err = abi.encodeWithSelector(Auctioneer.NotPermitted.selector, user_);
         vm.expectRevert(err);
 
         vm.prank(user_);

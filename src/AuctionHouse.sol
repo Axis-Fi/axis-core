@@ -543,7 +543,7 @@ contract AuctionHouse is Auctioneer, Router {
         Curation storage curation = lotCuration[lotId_];
 
         // Check that the caller is the proposed curator
-        if (msg.sender != curation.curator) revert NotCurator(msg.sender);
+        if (msg.sender != curation.curator) revert NotPermitted(msg.sender);
 
         // Check that the curator has not already approved the auction
         if (curation.curated) revert InvalidState();
