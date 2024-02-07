@@ -2,6 +2,7 @@
 pragma solidity 0.8.19;
 
 import {Test} from "forge-std/Test.sol";
+import {Transfer} from "src/lib/Transfer.sol";
 
 import {MockHook} from "test/modules/Auction/MockHook.sol";
 import {MockAuctionHouse} from "test/AuctionHouse/MockAuctionHouse.sol";
@@ -288,7 +289,7 @@ contract CollectPaymentTest is Test, Permit2User {
     {
         // Expect the error
         bytes memory err =
-            abi.encodeWithSelector(Auctioneer.UnsupportedToken.selector, address(quoteToken));
+            abi.encodeWithSelector(Transfer.UnsupportedToken.selector, address(quoteToken));
         vm.expectRevert(err);
 
         // Call
@@ -360,7 +361,7 @@ contract CollectPaymentTest is Test, Permit2User {
     {
         // Expect the error
         bytes memory err =
-            abi.encodeWithSelector(Auctioneer.UnsupportedToken.selector, address(quoteToken));
+            abi.encodeWithSelector(Transfer.UnsupportedToken.selector, address(quoteToken));
         vm.expectRevert(err);
 
         // Call

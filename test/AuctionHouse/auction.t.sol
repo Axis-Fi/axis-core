@@ -4,6 +4,7 @@ pragma solidity 0.8.19;
 // Libraries
 import {Test} from "forge-std/Test.sol";
 import {ERC20} from "lib/solmate/src/tokens/ERC20.sol";
+import {Transfer} from "src/lib/Transfer.sol";
 
 // Mocks
 import {MockERC20} from "lib/solmate/src/test/utils/mocks/MockERC20.sol";
@@ -646,7 +647,7 @@ contract AuctionTest is Test, Permit2User {
     {
         // Expect revert
         bytes memory err =
-            abi.encodeWithSelector(Auctioneer.UnsupportedToken.selector, address(baseToken));
+            abi.encodeWithSelector(Transfer.UnsupportedToken.selector, address(baseToken));
         vm.expectRevert(err);
 
         auctionHouse.auction(routingParams, auctionParams);

@@ -2,7 +2,7 @@
 pragma solidity 0.8.19;
 
 import {ERC20} from "solmate/tokens/ERC20.sol";
-import {SafeTransferLib} from "solmate/utils/SafeTransferLib.sol";
+import {Transfer} from "src/lib/Transfer.sol";
 
 import {
     fromKeycode,
@@ -28,8 +28,6 @@ import {IAllowlist} from "src/interfaces/IAllowlist.sol";
 ///         - Cancelling auction lots
 ///         - Storing information about how to handle inputs and outputs for auctions ("routing")
 abstract contract Auctioneer is WithModules {
-    using SafeTransferLib for ERC20;
-
     // ========= ERRORS ========= //
 
     error InvalidParams();
@@ -39,7 +37,6 @@ abstract contract Auctioneer is WithModules {
     error NotCurator(address caller_);
     error InvalidState();
     error InvalidHook();
-    error UnsupportedToken(address token_);
 
     // ========= EVENTS ========= //
 
@@ -273,11 +270,10 @@ abstract contract Auctioneer is WithModules {
             // Store pre-funding information
             routing.prefunding = lotCapacity;
 
-            // Get the balance of the base token before the transfer
-            uint256 balanceBefore = routing_.baseToken.balanceOf(address(this));
-
             // Call hook on hooks contract if provided
             if (address(routing_.hooks) != address(0)) {
+                uint256 balanceBefore = routing_.baseToken.balanceOf(address(this));
+
                 // The pre-auction create hook should transfer the base token to this contract
                 routing_.hooks.preAuctionCreate(lotId);
 
@@ -288,14 +284,9 @@ abstract contract Auctioneer is WithModules {
             }
             // Otherwise fallback to a standard ERC20 transfer
             else {
-                // Transfer the base token from the auction owner
-                // `safeTransferFrom()` will revert upon failure or the lack of allowance or balance
-                routing_.baseToken.safeTransferFrom(msg.sender, address(this), lotCapacity);
-
-                // Check that it is not a fee-on-transfer token
-                if (routing_.baseToken.balanceOf(address(this)) < balanceBefore + lotCapacity) {
-                    revert UnsupportedToken(address(routing_.baseToken));
-                }
+                Transfer.transferFrom(
+                    routing_.baseToken, msg.sender, address(this), lotCapacity, true
+                );
             }
         }
 
@@ -335,7 +326,7 @@ abstract contract Auctioneer is WithModules {
         if (lotPrefunding > 0) {
             // Transfer payout tokens to the owner
             Routing memory routing = lotRouting[lotId_];
-            routing.baseToken.safeTransfer(routing.owner, lotPrefunding);
+            Transfer.transfer(routing.baseToken, routing.owner, lotPrefunding, false);
 
             // Set to 0
             lotRouting[lotId_].prefunding = 0;
