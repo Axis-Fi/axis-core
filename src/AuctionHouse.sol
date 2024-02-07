@@ -622,11 +622,13 @@ contract AuctionHouse is Auctioneer, Router {
 
         // If a Permit2 approval signature is provided, use it to transfer the quote token
         if (permit2Approval_.signature.length != 0) {
-            _permit2TransferFrom(amount_, quoteToken_, permit2Approval_);
+            _permit2TransferFrom(
+                quoteToken_, msg.sender, address(this), amount_, permit2Approval_, true
+            );
         }
         // Otherwise fallback to a standard ERC20 transfer
         else {
-            _transferFrom(amount_, quoteToken_);
+            _transferFrom(quoteToken_, msg.sender, address(this), amount_, true);
         }
     }
 
@@ -650,13 +652,9 @@ contract AuctionHouse is Auctioneer, Router {
         ERC20 quoteToken_,
         IHooks hooks_
     ) internal {
-        if (address(hooks_) != address(0)) {
-            // Send quote token to hooks contract
-            quoteToken_.safeTransfer(address(hooks_), amount_);
-        } else {
-            // Send quote token to auction owner
-            quoteToken_.safeTransfer(lotOwner_, amount_);
-        }
+        quoteToken_.safeTransfer(
+            address(hooks_) == address(0) ? lotOwner_ : address(hooks_), amount_
+        );
     }
 
     /// @notice     Collects the payout token from the auction owner
@@ -690,10 +688,11 @@ contract AuctionHouse is Auctioneer, Router {
 
         // Get the balance of the payout token before the transfer
         ERC20 baseToken = routingParams_.baseToken;
-        uint256 balanceBefore = baseToken.balanceOf(address(this));
 
         // Call mid hook on hooks contract if provided
         if (address(routingParams_.hooks) != address(0)) {
+            uint256 balanceBefore = baseToken.balanceOf(address(this));
+
             // The mid hook is expected to transfer the payout token to this contract
             routingParams_.hooks.mid(lotId_, paymentAmount_, payoutAmount_);
 
@@ -704,14 +703,7 @@ contract AuctionHouse is Auctioneer, Router {
         }
         // Otherwise fallback to a standard ERC20 transfer
         else {
-            // Transfer the payout token from the auction owner
-            // `safeTransferFrom()` will revert upon failure or the lack of allowance or balance
-            baseToken.safeTransferFrom(routingParams_.owner, address(this), payoutAmount_);
-
-            // Check that it is not a fee-on-transfer token
-            if (baseToken.balanceOf(address(this)) < balanceBefore + payoutAmount_) {
-                revert UnsupportedToken(address(baseToken));
-            }
+            _transferFrom(baseToken, routingParams_.owner, address(this), payoutAmount_, true);
         }
     }
 
@@ -748,16 +740,7 @@ contract AuctionHouse is Auctioneer, Router {
 
         // If no derivative, then the payout is sent directly to the recipient
         if (fromVeecode(derivativeReference) == bytes7("")) {
-            // Get the pre-transfer balance
-            uint256 balanceBefore = baseToken.balanceOf(recipient_);
-
-            // Send payout token to recipient
-            baseToken.safeTransfer(recipient_, payoutAmount_);
-
-            // Check that the recipient received the expected amount of payout tokens
-            if (baseToken.balanceOf(recipient_) < balanceBefore + payoutAmount_) {
-                revert UnsupportedToken(address(baseToken));
-            }
+            _transfer(baseToken, recipient_, payoutAmount_, true);
         }
         // Otherwise, send parameters and payout to the derivative to mint to recipient
         else {
@@ -808,17 +791,65 @@ contract AuctionHouse is Auctioneer, Router {
     ///             - The token transfer fails
     ///             - The transferred amount is less than the requested amount
     ///
-    /// @param      amount_   Amount of tokens to transfer (in native decimals)
-    /// @param      token_    Token to transfer
-    function _transferFrom(uint256 amount_, ERC20 token_) internal {
-        uint256 balanceBefore = token_.balanceOf(address(this));
+    /// @param      token_              Token to transfer
+    /// @param      recipient_          Address of the recipient
+    /// @param      amount_             Amount of tokens to transfer (in native decimals)
+    /// @param      validateBalance_    Whether to validate the balance of the recipient
+    function _transfer(
+        ERC20 token_,
+        address recipient_,
+        uint256 amount_,
+        bool validateBalance_
+    ) internal {
+        uint256 balanceBefore;
+        if (validateBalance_ == true) {
+            balanceBefore = token_.balanceOf(recipient_);
+        }
 
         // Transfer the quote token from the user
         // `safeTransferFrom()` will revert upon failure or the lack of allowance or balance
-        token_.safeTransferFrom(msg.sender, address(this), amount_);
+        token_.safeTransfer(recipient_, amount_);
 
         // Check that it is not a fee-on-transfer token
-        if (token_.balanceOf(address(this)) < balanceBefore + amount_) {
+        if (validateBalance_ == true && token_.balanceOf(recipient_) < balanceBefore + amount_) {
+            revert UnsupportedToken(address(token_));
+        }
+    }
+
+    /// @notice     Performs an ERC20 transferFrom of `token_` from the sender
+    /// @dev        This function handles the following:
+    ///             1. Checks that the user has granted approval to transfer the token
+    ///             2. Transfers the token from the user
+    ///             3. Checks that the transferred amount was received
+    ///
+    ///             This function reverts if:
+    ///             - Approval has not been granted to this contract to transfer the token
+    ///             - The token transfer fails
+    ///             - The transferred amount is less than the requested amount
+    ///
+    /// @param      token_              Token to transfer
+    /// @param      sender_             Address of the sender
+    /// @param      recipient_          Address of the recipient
+    /// @param      amount_             Amount of tokens to transfer (in native decimals)
+    /// @param      validateBalance_    Whether to validate the balance of the recipient
+    function _transferFrom(
+        ERC20 token_,
+        address sender_,
+        address recipient_,
+        uint256 amount_,
+        bool validateBalance_
+    ) internal {
+        uint256 balanceBefore;
+        if (validateBalance_ == true) {
+            balanceBefore = token_.balanceOf(recipient_);
+        }
+
+        // Transfer the quote token from the user
+        // `safeTransferFrom()` will revert upon failure or the lack of allowance or balance
+        token_.safeTransferFrom(sender_, recipient_, amount_);
+
+        // Check that it is not a fee-on-transfer token
+        if (validateBalance_ == true && token_.balanceOf(recipient_) < balanceBefore + amount_) {
             revert UnsupportedToken(address(token_));
         }
     }
@@ -834,15 +865,24 @@ contract AuctionHouse is Auctioneer, Router {
     ///             - The Permit2 transfer (or signature validation) fails
     ///             - The transferred amount is less than the requested amount
     ///
-    /// @param      amount_               Amount of tokens to transfer (in native decimals)
     /// @param      token_                Token to transfer
+    /// @param      sender_               Address of the sender
+    /// @param      recipient_            Address of the recipient
+    /// @param      amount_               Amount of tokens to transfer (in native decimals)
     /// @param      permit2Approval_      Permit2 approval data
+    /// @param      validateBalance_      Whether to validate the balance of the recipient
     function _permit2TransferFrom(
-        uint256 amount_,
         ERC20 token_,
-        Permit2Approval memory permit2Approval_
+        address sender_,
+        address recipient_,
+        uint256 amount_,
+        Permit2Approval memory permit2Approval_,
+        bool validateBalance_
     ) internal {
-        uint256 balanceBefore = token_.balanceOf(address(this));
+        uint256 balanceBefore;
+        if (validateBalance_ == true) {
+            balanceBefore = token_.balanceOf(recipient_);
+        }
 
         // Use PERMIT2 to transfer the token from the user
         _PERMIT2.permitTransferFrom(
@@ -851,13 +891,13 @@ contract AuctionHouse is Auctioneer, Router {
                 permit2Approval_.nonce,
                 permit2Approval_.deadline
             ),
-            IPermit2.SignatureTransferDetails({to: address(this), requestedAmount: amount_}),
-            msg.sender, // Spender of the tokens
+            IPermit2.SignatureTransferDetails({to: recipient_, requestedAmount: amount_}),
+            sender_, // Spender of the tokens
             permit2Approval_.signature
         );
 
         // Check that it is not a fee-on-transfer token
-        if (token_.balanceOf(address(this)) < balanceBefore + amount_) {
+        if (validateBalance_ == true && token_.balanceOf(recipient_) < balanceBefore + amount_) {
             revert UnsupportedToken(address(token_));
         }
     }
