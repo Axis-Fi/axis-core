@@ -123,8 +123,7 @@ contract SetCondenserTest is Test, Permit2User {
         whenDerivativeModuleIsInstalled
         whenCondenserModuleIsInstalled
     {
-        bytes memory err =
-            abi.encodeWithSelector(Auctioneer.InvalidParams.selector);
+        bytes memory err = abi.encodeWithSelector(Auctioneer.InvalidParams.selector);
         vm.expectRevert(err);
 
         auctionHouse.setCondenser(derivativeVeecode, derivativeVeecode, condenserVeecode);
@@ -144,8 +143,7 @@ contract SetCondenserTest is Test, Permit2User {
         whenDerivativeModuleIsInstalled
         whenCondenserModuleIsInstalled
     {
-        bytes memory err =
-            abi.encodeWithSelector(Auctioneer.InvalidParams.selector);
+        bytes memory err = abi.encodeWithSelector(Auctioneer.InvalidParams.selector);
         vm.expectRevert(err);
 
         auctionHouse.setCondenser(auctionVeecode, auctionVeecode, condenserVeecode);
@@ -169,8 +167,7 @@ contract SetCondenserTest is Test, Permit2User {
         whenDerivativeModuleIsInstalled
         whenCondenserModuleIsInstalled
     {
-        bytes memory err =
-            abi.encodeWithSelector(Auctioneer.InvalidParams.selector);
+        bytes memory err = abi.encodeWithSelector(Auctioneer.InvalidParams.selector);
         vm.expectRevert(err);
 
         auctionHouse.setCondenser(auctionVeecode, derivativeVeecode, derivativeVeecode);

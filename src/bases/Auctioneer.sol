@@ -358,10 +358,16 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
     ) external onlyOwner {
         // Check that the auction type, derivative type, and condenser types are valid
         if (
-            (AuctionModule(_getModuleIfInstalled(auctionRef_)).TYPE() != Module.Type.Auction) ||
-            (DerivativeModule(_getModuleIfInstalled(derivativeRef_)).TYPE() != Module.Type.Derivative) ||
-            (fromVeecode(condenserRef_) != bytes7(0)
-                && CondenserModule(_getModuleIfInstalled(condenserRef_)).TYPE() != Module.Type.Condenser)
+            (AuctionModule(_getModuleIfInstalled(auctionRef_)).TYPE() != Module.Type.Auction)
+                || (
+                    DerivativeModule(_getModuleIfInstalled(derivativeRef_)).TYPE()
+                        != Module.Type.Derivative
+                )
+                || (
+                    fromVeecode(condenserRef_) != bytes7(0)
+                        && CondenserModule(_getModuleIfInstalled(condenserRef_)).TYPE()
+                            != Module.Type.Condenser
+                )
         ) revert InvalidParams();
 
         condensers[auctionRef_][derivativeRef_] = condenserRef_;
