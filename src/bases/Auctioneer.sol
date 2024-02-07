@@ -370,6 +370,7 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
                 )
         ) revert InvalidParams();
 
+        // Set the condenser reference
         condensers[auctionRef_][derivativeRef_] = condenserRef_;
     }
 

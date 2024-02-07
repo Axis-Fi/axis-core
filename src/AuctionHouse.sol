@@ -102,7 +102,7 @@ abstract contract Router {
 }
 
 /// @title      AuctionHouse
-/// @notice     As its name implies, the AuctionHouse is where auctions take place and the core of the protocol.
+/// @notice     As its name implies, the AuctionHouse is where auctions are created, bid on, and settled. The core protocol logic is implemented here.
 contract AuctionHouse is Auctioneer, Router, FeeManager {
     /// Implement the router functionality here since it combines all of the base functionality
 
