@@ -33,7 +33,6 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
 
     error InvalidParams();
     error InvalidLotId(uint96 id_);
-    error InvalidModuleType(Veecode reference_);
     error InvalidState();
     error InvalidHook();
 
@@ -143,9 +142,7 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
         Veecode auctionRef = auctionModule.VEECODE();
 
         // Check that the module for the auction type is valid
-        if (auctionModule.TYPE() != Module.Type.Auction) {
-            revert InvalidModuleType(auctionRef);
-        }
+        if (auctionModule.TYPE() != Module.Type.Auction) revert InvalidParams();
 
         // Validate routing parameters
 
@@ -161,9 +158,7 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
         if (
             baseTokenDecimals < 6 || baseTokenDecimals > 18 || quoteTokenDecimals < 6
                 || quoteTokenDecimals > 18
-        ) {
-            revert InvalidParams();
-        }
+        ) revert InvalidParams();
 
         // Increment lot count and get ID
         lotId = lotCounter++;
@@ -195,7 +190,7 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
 
             // Check that the module for the derivative type is valid
             if (derivativeModule.TYPE() != Module.Type.Derivative) {
-                revert InvalidModuleType(derivativeRef);
+                revert InvalidParams();
             }
 
             // Call module validate function to validate implementation-specific data
@@ -218,9 +213,7 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
                 if (
                     CondenserModule(_getModuleIfInstalled(condenserRef)).TYPE()
                         != Module.Type.Condenser
-                ) {
-                    revert InvalidModuleType(condenserRef);
-                }
+                ) revert InvalidParams();
 
                 // Check module status
                 Keycode moduleKeycode = keycodeFromVeecode(condenserRef);
@@ -363,32 +356,13 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
         Veecode derivativeRef_,
         Veecode condenserRef_
     ) external onlyOwner {
-        // Check that auction and derivative keycodes are not empty
-        if (fromVeecode(auctionRef_) == bytes7(0) || fromVeecode(derivativeRef_) == bytes7(0)) {
-            revert InvalidParams();
-        }
-
-        // Check that the auction type is valid
-        if (AuctionModule(_getModuleIfInstalled(auctionRef_)).TYPE() != Module.Type.Auction) {
-            revert InvalidModuleType(auctionRef_);
-        }
-
-        // Check that the derivative type is valid
+        // Check that the auction type, derivative type, and condenser types are valid
         if (
-            DerivativeModule(_getModuleIfInstalled(derivativeRef_)).TYPE() != Module.Type.Derivative
-        ) {
-            revert InvalidModuleType(derivativeRef_);
-        }
-
-        // Check that the condenser type is valid
-        if (fromVeecode(condenserRef_) != bytes7(0)) {
-            if (
-                CondenserModule(_getModuleIfInstalled(condenserRef_)).TYPE()
-                    != Module.Type.Condenser
-            ) {
-                revert InvalidModuleType(condenserRef_);
-            }
-        }
+            (AuctionModule(_getModuleIfInstalled(auctionRef_)).TYPE() != Module.Type.Auction) ||
+            (DerivativeModule(_getModuleIfInstalled(derivativeRef_)).TYPE() != Module.Type.Derivative) ||
+            (fromVeecode(condenserRef_) != bytes7(0)
+                && CondenserModule(_getModuleIfInstalled(condenserRef_)).TYPE() != Module.Type.Condenser)
+        ) revert InvalidParams();
 
         condensers[auctionRef_][derivativeRef_] = condenserRef_;
     }

@@ -139,7 +139,7 @@ contract AuctionTest is Test, Permit2User {
         routingParams.auctionType = toKeycode("DERV");
 
         bytes memory err = abi.encodeWithSelector(
-            Auctioneer.InvalidModuleType.selector, mockDerivativeModule.VEECODE()
+            Auctioneer.InvalidParams.selector
         );
         vm.expectRevert(err);
 
@@ -299,7 +299,7 @@ contract AuctionTest is Test, Permit2User {
 
         // Expect revert
         bytes memory err = abi.encodeWithSelector(
-            Auctioneer.InvalidModuleType.selector, mockAuctionModule.VEECODE()
+            Auctioneer.InvalidParams.selector
         );
         vm.expectRevert(err);
 
