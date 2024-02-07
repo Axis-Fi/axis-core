@@ -36,19 +36,19 @@ contract BlastAuctionHouse is AuctionHouse {
     IBlast internal constant _BLAST = IBlast(0x4300000000000000000000000000000000000002);
 
     /// @notice    Address of the WETH contract on Blast
-    IERC20Rebasing internal constant _weth =
+    IERC20Rebasing internal constant _WETH =
         IERC20Rebasing(0x4200000000000000000000000000000000000023);
 
     /// @notice    Address of the USDB contract on Blast
-    IERC20Rebasing internal constant _usdb =
+    IERC20Rebasing internal constant _USDB =
         IERC20Rebasing(0x4200000000000000000000000000000000000022);
 
     // ========== CONSTRUCTOR ========== //
 
     constructor(address owner_, address permit2_) AuctionHouse(owner_, permit2_) {
         // Set the yield mode to claimable for the WETH and USDB tokens
-        _weth.configure(YieldMode.CLAIMABLE);
-        _usdb.configure(YieldMode.CLAIMABLE);
+        _WETH.configure(YieldMode.CLAIMABLE);
+        _USDB.configure(YieldMode.CLAIMABLE);
 
         // Set gas fees to claimable
         _BLAST.configureClaimableGas();
@@ -58,8 +58,8 @@ contract BlastAuctionHouse is AuctionHouse {
 
     function claimYieldAndGas() external {
         // Claim the yield for the WETH and USDB tokens and send to protocol
-        _weth.claim(_protocol, _weth.getClaimableAmount(address(this)));
-        _usdb.claim(_protocol, _usdb.getClaimableAmount(address(this)));
+        _WETH.claim(_protocol, _WETH.getClaimableAmount(address(this)));
+        _USDB.claim(_protocol, _USDB.getClaimableAmount(address(this)));
 
         // Claim the gas consumed by this contract, send to protocol
         _BLAST.claimMaxGas(address(this), _protocol);
