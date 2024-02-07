@@ -2,9 +2,7 @@
 pragma solidity 0.8.19;
 
 import {ERC20} from "lib/solmate/src/tokens/ERC20.sol";
-import {SafeTransferLib} from "lib/solmate/src/utils/SafeTransferLib.sol";
-
-import {IPermit2} from "src/lib/permit2/interfaces/IPermit2.sol";
+import {Transfer} from "src/lib/Transfer.sol";
 
 import {Auctioneer} from "src/bases/Auctioneer.sol";
 import {FeeManager} from "src/bases/FeeManager.sol";
@@ -24,13 +22,6 @@ import {IAllowlist} from "src/interfaces/IAllowlist.sol";
 /// @notice     An interface to define the routing of transactions to the appropriate auction module
 abstract contract Router is FeeManager {
     // ========== DATA STRUCTURES ========== //
-
-    /// @notice     Parameters used for Permit2 approvals
-    struct Permit2Approval {
-        uint48 deadline;
-        uint256 nonce;
-        bytes signature;
-    }
 
     /// @notice     Parameters used by the purchase function
     /// @dev        This reduces the number of variables in scope for the purchase function
@@ -119,8 +110,6 @@ abstract contract Router is FeeManager {
 /// @title      AuctionHouse
 /// @notice     As its name implies, the AuctionHouse is where auctions take place and the core of the protocol.
 contract AuctionHouse is Auctioneer, Router {
-    using SafeTransferLib for ERC20;
-
     /// Implement the router functionality here since it combines all of the base functionality
 
     // ========== ERRORS ========== //
@@ -137,12 +126,12 @@ contract AuctionHouse is Auctioneer, Router {
 
     // ========== STATE VARIABLES ========== //
 
-    IPermit2 internal immutable _PERMIT2;
+    address internal immutable _PERMIT2;
 
     // ========== CONSTRUCTOR ========== //
 
     constructor(address protocol_, address permit2_) Router(protocol_) WithModules(msg.sender) {
-        _PERMIT2 = IPermit2(permit2_);
+        _PERMIT2 = permit2_;
     }
 
     // ========== AUCTION FUNCTIONS ========== //
@@ -231,11 +220,12 @@ contract AuctionHouse is Auctioneer, Router {
 
         // Collect payment from the purchaser
         {
-            Permit2Approval memory permit2Approval = params_.permit2Data.length == 0
-                ? Permit2Approval({nonce: 0, deadline: 0, signature: bytes("")})
-                : abi.decode(params_.permit2Data, (Permit2Approval));
             _collectPayment(
-                params_.lotId, params_.amount, routing.quoteToken, routing.hooks, permit2Approval
+                params_.lotId,
+                params_.amount,
+                routing.quoteToken,
+                routing.hooks,
+                Transfer.decodePermit2Approval(params_.permit2Data)
             );
         }
 
@@ -321,11 +311,12 @@ contract AuctionHouse is Auctioneer, Router {
 
         // Transfer the quote token from the bidder
         {
-            Permit2Approval memory permit2Approval = params_.permit2Data.length == 0
-                ? Permit2Approval({nonce: 0, deadline: 0, signature: bytes("")})
-                : abi.decode(params_.permit2Data, (Permit2Approval));
             _collectPayment(
-                params_.lotId, params_.amount, routing.quoteToken, routing.hooks, permit2Approval
+                params_.lotId,
+                params_.amount,
+                routing.quoteToken,
+                routing.hooks,
+                Transfer.decodePermit2Approval(params_.permit2Data)
             );
         }
 
@@ -345,7 +336,7 @@ contract AuctionHouse is Auctioneer, Router {
 
         // Transfer the quote token to the bidder
         // The ownership of the bid has already been verified by the auction module
-        lotRouting[lotId_].quoteToken.safeTransfer(msg.sender, refundAmount);
+        Transfer.transfer(lotRouting[lotId_].quoteToken, msg.sender, refundAmount, false);
     }
 
     /// @inheritdoc Router
@@ -513,7 +504,7 @@ contract AuctionHouse is Auctioneer, Router {
             if (prefundingRemaining > 0) {
                 routing.prefunding = 0;
 
-                routing.baseToken.safeTransfer(routing.owner, prefundingRemaining);
+                Transfer.transfer(routing.baseToken, routing.owner, prefundingRemaining, false);
             }
             // If the prefunding was previously set, zero it
             else if (routing.prefunding > 0) {
@@ -529,7 +520,7 @@ contract AuctionHouse is Auctioneer, Router {
 
         // Handle the refund to the bidder if the last bid was a partial fill
         if (lastBidRefund > 0 && lastBidder != address(0)) {
-            routing.quoteToken.safeTransfer(lastBidder, lastBidRefund);
+            Transfer.transfer(routing.quoteToken, lastBidder, lastBidRefund, false);
         }
     }
 
@@ -575,7 +566,7 @@ contract AuctionHouse is Auctioneer, Router {
             uint256 fee = _calculatePayoutFees(auctionType, msg.sender, capacity);
 
             // Don't need to check for fee on transfer here because it was checked on auction creation
-            routing.baseToken.safeTransferFrom(routing.owner, address(this), fee);
+            Transfer.transferFrom(routing.baseToken, routing.owner, address(this), fee, false);
 
             // Increment the prefunding
             routing.prefunding += fee;
@@ -613,23 +604,16 @@ contract AuctionHouse is Auctioneer, Router {
         uint256 amount_,
         ERC20 quoteToken_,
         IHooks hooks_,
-        Permit2Approval memory permit2Approval_
+        Transfer.Permit2Approval memory permit2Approval_
     ) internal {
         // Call pre hook on hooks contract if provided
         if (address(hooks_) != address(0)) {
             hooks_.pre(lotId_, amount_);
         }
 
-        // If a Permit2 approval signature is provided, use it to transfer the quote token
-        if (permit2Approval_.signature.length != 0) {
-            _permit2TransferFrom(
-                quoteToken_, msg.sender, address(this), amount_, permit2Approval_, true
-            );
-        }
-        // Otherwise fallback to a standard ERC20 transfer
-        else {
-            _transferFrom(quoteToken_, msg.sender, address(this), amount_, true);
-        }
+        Transfer.permit2OrTransferFrom(
+            quoteToken_, _PERMIT2, msg.sender, address(this), amount_, permit2Approval_, true
+        );
     }
 
     /// @notice     Sends payment of the quote token to the auction owner
@@ -652,8 +636,8 @@ contract AuctionHouse is Auctioneer, Router {
         ERC20 quoteToken_,
         IHooks hooks_
     ) internal {
-        quoteToken_.safeTransfer(
-            address(hooks_) == address(0) ? lotOwner_ : address(hooks_), amount_
+        Transfer.transfer(
+            quoteToken_, address(hooks_) == address(0) ? lotOwner_ : address(hooks_), amount_, false
         );
     }
 
@@ -703,7 +687,9 @@ contract AuctionHouse is Auctioneer, Router {
         }
         // Otherwise fallback to a standard ERC20 transfer
         else {
-            _transferFrom(baseToken, routingParams_.owner, address(this), payoutAmount_, true);
+            Transfer.transferFrom(
+                baseToken, routingParams_.owner, address(this), payoutAmount_, true
+            );
         }
     }
 
@@ -740,7 +726,7 @@ contract AuctionHouse is Auctioneer, Router {
 
         // If no derivative, then the payout is sent directly to the recipient
         if (fromVeecode(derivativeReference) == bytes7("")) {
-            _transfer(baseToken, recipient_, payoutAmount_, true);
+            Transfer.transfer(baseToken, recipient_, payoutAmount_, true);
         }
         // Otherwise, send parameters and payout to the derivative to mint to recipient
         else {
@@ -762,7 +748,7 @@ contract AuctionHouse is Auctioneer, Router {
             }
 
             // Approve the module to transfer payout tokens when minting
-            baseToken.safeApprove(address(module), payoutAmount_);
+            Transfer.approve(baseToken, address(module), payoutAmount_);
 
             // Call the module to mint derivative tokens to the recipient
             module.mint(
@@ -777,128 +763,6 @@ contract AuctionHouse is Auctioneer, Router {
         // Call post hook on hooks contract if provided
         if (address(routingParams_.hooks) != address(0)) {
             routingParams_.hooks.post(lotId_, payoutAmount_);
-        }
-    }
-
-    /// @notice     Performs an ERC20 transfer of `token_` from the caller
-    /// @dev        This function handles the following:
-    ///             1. Checks that the user has granted approval to transfer the token
-    ///             2. Transfers the token from the user
-    ///             3. Checks that the transferred amount was received
-    ///
-    ///             This function reverts if:
-    ///             - Approval has not been granted to this contract to transfer the token
-    ///             - The token transfer fails
-    ///             - The transferred amount is less than the requested amount
-    ///
-    /// @param      token_              Token to transfer
-    /// @param      recipient_          Address of the recipient
-    /// @param      amount_             Amount of tokens to transfer (in native decimals)
-    /// @param      validateBalance_    Whether to validate the balance of the recipient
-    function _transfer(
-        ERC20 token_,
-        address recipient_,
-        uint256 amount_,
-        bool validateBalance_
-    ) internal {
-        uint256 balanceBefore;
-        if (validateBalance_ == true) {
-            balanceBefore = token_.balanceOf(recipient_);
-        }
-
-        // Transfer the quote token from the user
-        // `safeTransferFrom()` will revert upon failure or the lack of allowance or balance
-        token_.safeTransfer(recipient_, amount_);
-
-        // Check that it is not a fee-on-transfer token
-        if (validateBalance_ == true && token_.balanceOf(recipient_) < balanceBefore + amount_) {
-            revert UnsupportedToken(address(token_));
-        }
-    }
-
-    /// @notice     Performs an ERC20 transferFrom of `token_` from the sender
-    /// @dev        This function handles the following:
-    ///             1. Checks that the user has granted approval to transfer the token
-    ///             2. Transfers the token from the user
-    ///             3. Checks that the transferred amount was received
-    ///
-    ///             This function reverts if:
-    ///             - Approval has not been granted to this contract to transfer the token
-    ///             - The token transfer fails
-    ///             - The transferred amount is less than the requested amount
-    ///
-    /// @param      token_              Token to transfer
-    /// @param      sender_             Address of the sender
-    /// @param      recipient_          Address of the recipient
-    /// @param      amount_             Amount of tokens to transfer (in native decimals)
-    /// @param      validateBalance_    Whether to validate the balance of the recipient
-    function _transferFrom(
-        ERC20 token_,
-        address sender_,
-        address recipient_,
-        uint256 amount_,
-        bool validateBalance_
-    ) internal {
-        uint256 balanceBefore;
-        if (validateBalance_ == true) {
-            balanceBefore = token_.balanceOf(recipient_);
-        }
-
-        // Transfer the quote token from the user
-        // `safeTransferFrom()` will revert upon failure or the lack of allowance or balance
-        token_.safeTransferFrom(sender_, recipient_, amount_);
-
-        // Check that it is not a fee-on-transfer token
-        if (validateBalance_ == true && token_.balanceOf(recipient_) < balanceBefore + amount_) {
-            revert UnsupportedToken(address(token_));
-        }
-    }
-
-    /// @notice     Performs a Permit2 transfer of `token_` from the caller
-    /// @dev        This function handles the following:
-    ///             1. Checks that the user has granted approval to transfer the token
-    ///             2. Uses Permit2 to transfer the token from the user
-    ///             3. Checks that the transferred amount was received
-    ///
-    ///             This function reverts if:
-    ///             - Approval has not been granted to Permit2 to transfer the token
-    ///             - The Permit2 transfer (or signature validation) fails
-    ///             - The transferred amount is less than the requested amount
-    ///
-    /// @param      token_                Token to transfer
-    /// @param      sender_               Address of the sender
-    /// @param      recipient_            Address of the recipient
-    /// @param      amount_               Amount of tokens to transfer (in native decimals)
-    /// @param      permit2Approval_      Permit2 approval data
-    /// @param      validateBalance_      Whether to validate the balance of the recipient
-    function _permit2TransferFrom(
-        ERC20 token_,
-        address sender_,
-        address recipient_,
-        uint256 amount_,
-        Permit2Approval memory permit2Approval_,
-        bool validateBalance_
-    ) internal {
-        uint256 balanceBefore;
-        if (validateBalance_ == true) {
-            balanceBefore = token_.balanceOf(recipient_);
-        }
-
-        // Use PERMIT2 to transfer the token from the user
-        _PERMIT2.permitTransferFrom(
-            IPermit2.PermitTransferFrom(
-                IPermit2.TokenPermissions(address(token_), amount_),
-                permit2Approval_.nonce,
-                permit2Approval_.deadline
-            ),
-            IPermit2.SignatureTransferDetails({to: recipient_, requestedAmount: amount_}),
-            sender_, // Spender of the tokens
-            permit2Approval_.signature
-        );
-
-        // Check that it is not a fee-on-transfer token
-        if (validateBalance_ == true && token_.balanceOf(recipient_) < balanceBefore + amount_) {
-            revert UnsupportedToken(address(token_));
         }
     }
 

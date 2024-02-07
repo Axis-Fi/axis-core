@@ -5,6 +5,7 @@ pragma solidity 0.8.19;
 import {Test} from "forge-std/Test.sol";
 import {ERC20} from "solmate/tokens/ERC20.sol";
 import {IPermit2} from "src/lib/permit2/interfaces/IPermit2.sol";
+import {Transfer} from "src/lib/Transfer.sol";
 
 // Mocks
 import {MockERC20} from "solmate/test/utils/mocks/MockERC20.sol";
@@ -414,7 +415,7 @@ contract PurchaseTest is Test, Permit2User {
 
         // Update parameters
         purchaseParams.permit2Data = abi.encode(
-            Router.Permit2Approval({
+            Transfer.Permit2Approval({
                 deadline: approvalDeadline,
                 nonce: approvalNonce,
                 signature: approvalSignature

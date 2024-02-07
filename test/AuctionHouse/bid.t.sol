@@ -4,6 +4,7 @@ pragma solidity 0.8.19;
 // Libraries
 import {Test} from "forge-std/Test.sol";
 import {ERC20} from "lib/solmate/src/tokens/ERC20.sol";
+import {Transfer} from "src/lib/Transfer.sol";
 
 // Mocks
 import {MockERC20} from "lib/solmate/src/test/utils/mocks/MockERC20.sol";
@@ -208,7 +209,7 @@ contract BidTest is Test, Permit2User {
         );
 
         permit2Data = abi.encode(
-            Router.Permit2Approval({deadline: deadline, nonce: nonce, signature: signature})
+            Transfer.Permit2Approval({deadline: deadline, nonce: nonce, signature: signature})
         );
 
         // Update bid parameters

@@ -2,6 +2,7 @@
 pragma solidity 0.8.19;
 
 import {ERC20} from "solmate/tokens/ERC20.sol";
+import {Transfer} from "src/lib/Transfer.sol";
 
 import {AuctionHouse} from "src/AuctionHouse.sol";
 import {IHooks} from "src/interfaces/IHooks.sol";
@@ -23,7 +24,7 @@ contract MockAuctionHouse is AuctionHouse {
         uint256 approvalNonce_,
         bytes memory approvalSignature_
     ) external {
-        Permit2Approval memory approval = Permit2Approval({
+        Transfer.Permit2Approval memory approval = Transfer.Permit2Approval({
             deadline: approvalDeadline_,
             nonce: approvalNonce_,
             signature: approvalSignature_
