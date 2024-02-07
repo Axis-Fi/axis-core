@@ -2,7 +2,7 @@
 pragma solidity 0.8.19;
 
 import {ERC20} from "solmate/tokens/ERC20.sol";
-import {SafeTransferLib} from "solmate/utils/SafeTransferLib.sol";
+import {Transfer} from "src/lib/Transfer.sol";
 import {Owned} from "solmate/auth/Owned.sol";
 import {ReentrancyGuard} from "solmate/utils/ReentrancyGuard.sol";
 
@@ -11,8 +11,6 @@ import {Keycode} from "src/modules/Modules.sol";
 /// @title      FeeManager
 /// @notice     Defines fees for auctions and manages the collection and distribution of fees
 abstract contract FeeManager is ReentrancyGuard {
-    using SafeTransferLib for ERC20;
-
     // ========== ERRORS ========== //
 
     error InvalidFee();
@@ -126,7 +124,7 @@ abstract contract FeeManager is ReentrancyGuard {
         uint256 amount = rewards[msg.sender][token];
         rewards[msg.sender][token] = 0;
 
-        token.safeTransfer(msg.sender, amount);
+        Transfer.transfer(token, msg.sender, amount, false);
     }
 
     /// @notice     Sets the protocol address
