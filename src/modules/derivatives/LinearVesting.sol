@@ -41,6 +41,7 @@ contract LinearVesting is DerivativeModule {
     error InsufficientBalance();
     error NotPermitted();
     error InvalidParams();
+    error UnsupportedToken(address token_);
 
     // ========== DATA STRUCTURES ========== //
 
@@ -167,6 +168,61 @@ contract LinearVesting is DerivativeModule {
         return (tokenId, wrappedAddress);
     }
 
+    /// @notice     Mints the derivative token to the recipient, assuming that the derivative token has already been deployed
+    ///
+    /// @param      to_         The address of the recipient of the derivative token
+    /// @param      tokenId_    The ID of the derivative token
+    /// @param      amount_     The amount of the derivative token to mint
+    /// @param      token_      The metadata for the derivative token
+    /// @param      wrapped_    Whether or not to wrap the derivative token
+    function _mintDeployed(
+        address to_,
+        uint256 tokenId_,
+        uint256 amount_,
+        Token storage token_,
+        bool wrapped_
+    ) internal {
+        // If the token exists, it is already deployed. However, ensure the wrapped status is consistent.
+        if (wrapped_) {
+            _deployWrapIfNeeded(tokenId_, token_);
+        }
+
+        // If the user has any tokens already, redeem the vested amount.
+        // We claim any outstanding before reseting the user's receivedAt and claimed values so the amounts are correct.
+        uint256 redeemableAmount = redeemable(to_, tokenId_);
+        if (redeemableAmount > 0) {
+            _redeem(tokenId_, to_, redeemableAmount);
+        }
+
+        // Reset claimed and receivedAt timestamp to the current time
+        userVesting[to_][tokenId_].receivedAt = uint48(block.timestamp);
+        userVesting[to_][tokenId_].claimed = 0;
+
+        // Transfer collateral token to this contract
+        {
+            VestingData memory data = abi.decode(token_.data, (VestingData));
+
+            uint256 balanceBefore = data.baseToken.balanceOf(address(this));
+            data.baseToken.safeTransferFrom(msg.sender, address(this), amount_);
+
+            // Ensure the correct amount was transferred
+            if (data.baseToken.balanceOf(address(this)) < balanceBefore + amount_) {
+                revert UnsupportedToken(address(data.baseToken));
+            }
+        }
+
+        // If wrapped, mint the wrapped derivative token
+        if (wrapped_) {
+            if (token_.wrapped == address(0)) revert InvalidParams();
+
+            SoulboundCloneERC20 wrappedToken = SoulboundCloneERC20(token_.wrapped);
+            wrappedToken.mint(to_, amount_);
+        } else {
+            // Otherwise mint the normal derivative token
+            _mint(to_, tokenId_, amount_);
+        }
+    }
+
     /// @inheritdoc Derivative
     /// @dev        This function performs the following:
     ///             - Validates the parameters
@@ -217,34 +273,14 @@ contract LinearVesting is DerivativeModule {
         if (params.expiry < block.timestamp) revert InvalidParams();
 
         // If necessary, deploy and store the data
-        (tokenId_, wrappedAddress_) = _deployIfNeeded(underlyingToken_, params, wrapped_);
+        (tokenId_,) = _deployIfNeeded(underlyingToken_, params, wrapped_);
 
-        // If the user has any tokens already, redeem the vested amount.
-        // We claim any outstanding before reseting the user's receivedAt and claimed values so the amounts are correct.
-        uint256 redeemableAmount = redeemable(to_, tokenId_);
-        if (redeemableAmount > 0) {
-            _redeem(tokenId_, to_, redeemableAmount);
-        }
+        // Mint the derivative token
+        Token storage token = tokenMetadata[tokenId_];
 
-        // Reset claimed and receivedAt timestamp to the current time
-        userVesting[to_][tokenId_].receivedAt = uint48(block.timestamp);
-        userVesting[to_][tokenId_].claimed = 0;
+        _mintDeployed(to_, tokenId_, amount_, token, wrapped_);
 
-        // Transfer collateral token to this contract
-        ERC20(underlyingToken_).safeTransferFrom(msg.sender, address(this), amount_);
-
-        // If wrapped, mint the wrapped derivative token
-        if (wrapped_) {
-            if (wrappedAddress_ == address(0)) revert InvalidParams();
-
-            SoulboundCloneERC20 wrappedToken = SoulboundCloneERC20(wrappedAddress_);
-            wrappedToken.mint(to_, amount_);
-        } else {
-            // Otherwise mint the normal derivative token
-            _mint(to_, tokenId_, amount_);
-        }
-
-        return (tokenId_, wrappedAddress_, amount_);
+        return (tokenId_, token.wrapped, amount_);
     }
 
     /// @inheritdoc Derivative
@@ -278,35 +314,7 @@ contract LinearVesting is DerivativeModule {
         // Ensure the expiry is in the future
         if (data.expiry < block.timestamp) revert InvalidParams();
 
-        // If the token exists, it is already deployed. However, ensure the wrapped status is consistent.
-        if (wrapped_) {
-            _deployWrapIfNeeded(tokenId_, token);
-        }
-
-        // If the user has any tokens already, redeem the vested amount.
-        // We claim any outstanding before reseting the user's receivedAt and claimed values so the amounts are correct.
-        uint256 redeemableAmount = redeemable(to_, tokenId_);
-        if (redeemableAmount > 0) {
-            _redeem(tokenId_, to_, redeemableAmount);
-        }
-
-        // Reset claimed and receivedAt timestamp to the current time
-        userVesting[to_][tokenId_].receivedAt = uint48(block.timestamp);
-        userVesting[to_][tokenId_].claimed = 0;
-
-        // Transfer collateral token to this contract
-        data.baseToken.safeTransferFrom(msg.sender, address(this), amount_);
-
-        // If wrapped, mint the wrapped derivative token
-        if (wrapped_) {
-            if (token.wrapped == address(0)) revert InvalidParams();
-
-            SoulboundCloneERC20 wrappedToken = SoulboundCloneERC20(token.wrapped);
-            wrappedToken.mint(to_, amount_);
-        } else {
-            // Otherwise mint the normal derivative token
-            _mint(to_, tokenId_, amount_);
-        }
+        _mintDeployed(to_, tokenId_, amount_, token, wrapped_);
 
         return (tokenId_, token.wrapped, amount_);
     }

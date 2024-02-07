@@ -15,7 +15,6 @@ import {ERC20} from "solmate/tokens/ERC20.sol";
 ///             - expiry (uint64)
 ///             - owner (address)
 ///             - underlying token (address)
-///             - teller (address)
 contract SoulboundCloneERC20 is CloneERC20 {
     // ========== EVENTS ========== //
 

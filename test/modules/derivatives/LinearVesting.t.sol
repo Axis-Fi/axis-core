@@ -6,7 +6,7 @@ import {Test} from "forge-std/Test.sol";
 
 import {Permit2User} from "test/lib/permit2/Permit2User.sol";
 import {StringHelper} from "test/lib/String.sol";
-import {MockERC20} from "solmate/test/utils/mocks/MockERC20.sol";
+import {MockFeeOnTransferERC20} from "test/lib/mocks/MockFeeOnTransferERC20.sol";
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 
 import {AuctionHouse} from "src/AuctionHouse.sol";
@@ -22,7 +22,7 @@ contract LinearVestingTest is Test, Permit2User {
     address internal constant _protocol = address(0x2);
     address internal constant _alice = address(0x3);
 
-    MockERC20 internal underlyingToken;
+    MockFeeOnTransferERC20 internal underlyingToken;
     address internal underlyingTokenAddress;
     uint8 internal underlyingTokenDecimals = 18;
 
@@ -49,7 +49,8 @@ contract LinearVestingTest is Test, Permit2User {
         // Wrap to reasonable timestamp
         vm.warp(1_704_882_344);
 
-        underlyingToken = new MockERC20("Underlying", "UNDERLYING", underlyingTokenDecimals);
+        underlyingToken =
+            new MockFeeOnTransferERC20("Underlying", "UNDERLYING", underlyingTokenDecimals);
         underlyingTokenAddress = address(underlyingToken);
 
         auctionHouse = new AuctionHouse(_protocol, _PERMIT2_ADDRESS);
@@ -96,7 +97,8 @@ contract LinearVestingTest is Test, Permit2User {
 
     modifier whenUnderlyingTokenIsChanged() {
         underlyingTokenDecimals = 17;
-        underlyingToken = new MockERC20("Underlying2", "UNDERLYING2", underlyingTokenDecimals);
+        underlyingToken =
+            new MockFeeOnTransferERC20("Underlying2", "UNDERLYING2", underlyingTokenDecimals);
         underlyingTokenAddress = address(underlyingToken);
 
         wrappedDerivativeTokenName = "Underlying2 2024-01-12";
@@ -178,6 +180,11 @@ contract LinearVestingTest is Test, Permit2User {
 
     modifier givenAliceHasWrappedDerivativeTokens(uint256 amount_) {
         _mintWrappedDerivativeTokens(_alice, amount_);
+        _;
+    }
+
+    modifier givenUnderlyingTokenIsFeeOnTransfer() {
+        underlyingToken.setTransferFee(100);
         _;
     }
 
@@ -525,6 +532,8 @@ contract LinearVestingTest is Test, Permit2User {
     //  [X] it succeeds
     // [X] given the caller has an insufficient balance of the underlying token
     //  [X] it reverts
+    // [X] given the underlying token is fee-on-transfer
+    //  [X] it reverts
     // [X] when wrapped is false
     //  [X] given the token is not deployed
     //   [X] it deploys the token and mints the derivative token
@@ -610,6 +619,22 @@ contract LinearVestingTest is Test, Permit2User {
     function test_mint_params_insufficentBalance_reverts() public {
         // Expect revert
         vm.expectRevert("TRANSFER_FROM_FAILED");
+
+        // Call
+        vm.prank(address(auctionHouse));
+        linearVesting.mint(_alice, underlyingTokenAddress, vestingParamsBytes, AMOUNT, false);
+    }
+
+    function test_mint_params_feeOnTransfer_reverts()
+        public
+        givenParentHasUnderlyingTokenBalance(AMOUNT)
+        givenUnderlyingTokenIsFeeOnTransfer
+        givenDerivativeIsDeployed
+    {
+        // Expect revert
+        bytes memory err =
+            abi.encodeWithSelector(LinearVesting.UnsupportedToken.selector, underlyingTokenAddress);
+        vm.expectRevert(err);
 
         // Call
         vm.prank(address(auctionHouse));
@@ -730,6 +755,8 @@ contract LinearVestingTest is Test, Permit2User {
     //  [X] it succeeds
     // [X] given the caller has an insufficient balance of the underlying token
     //  [X] it reverts
+    // [X] given the underlying token is fee-on-transfer
+    //  [X] it reverts
     // [X] when wrapped is false
     //  [X] it mints the derivative token
     // [X] when wrapped is true
@@ -789,6 +816,22 @@ contract LinearVestingTest is Test, Permit2User {
     function test_mint_tokenId_insufficentBalance_reverts() public givenDerivativeIsDeployed {
         // Expect revert
         vm.expectRevert("TRANSFER_FROM_FAILED");
+
+        // Call
+        vm.prank(address(auctionHouse));
+        linearVesting.mint(_alice, derivativeTokenId, AMOUNT, false);
+    }
+
+    function test_mint_tokenId_feeOnTransfer_reverts()
+        public
+        givenParentHasUnderlyingTokenBalance(AMOUNT)
+        givenUnderlyingTokenIsFeeOnTransfer
+        givenDerivativeIsDeployed
+    {
+        // Expect revert
+        bytes memory err =
+            abi.encodeWithSelector(LinearVesting.UnsupportedToken.selector, underlyingTokenAddress);
+        vm.expectRevert(err);
 
         // Call
         vm.prank(address(auctionHouse));
