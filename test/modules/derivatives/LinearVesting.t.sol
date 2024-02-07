@@ -188,16 +188,6 @@ contract LinearVestingTest is Test, Permit2User {
     //  [X] it reverts
     // [X] when the underlying token is 0
     //  [X] it reverts
-    // [X] when the start timestamp is 0
-    //  [X] it reverts
-    // [X] when the expiry timestamp is 0
-    //  [X] it reverts
-    // [X] when the start and expiry timestamps are the same
-    //  [X] it reverts
-    // [X] when the start timestamp is after the expiry timestamp
-    //  [X] it reverts
-    // [X] when the start timestamp is before the current timestamp
-    //  [X] it succeeds
     // [X] when the expiry timestamp is before the current timestamp
     //  [X] it reverts
     // [X] given the token is already deployed
@@ -454,16 +444,6 @@ contract LinearVestingTest is Test, Permit2User {
     // validate
     // [X] when the vesting params are in the incorrect format
     //  [X] it returns false
-    // [X] when the start timestamp is 0
-    //  [X] it returns false
-    // [X] when the expiry timestamp is 0
-    //  [X] it returns false
-    // [X] when the start and expiry timestamps are the same
-    //  [X] it returns false
-    // [X] when the start timestamp is after the expiry timestamp
-    //  [X] it returns false
-    // [X] when the start timestamp is before the current timestamp
-    //  [X] it returns false
     // [X] when the expiry timestamp is before the current timestamp
     //  [X] it returns false
     // [X] it returns true
@@ -536,16 +516,6 @@ contract LinearVestingTest is Test, Permit2User {
     // [X] when the vesting params are in the incorrect format
     //  [X] it reverts
     // [X] when the underlying token is 0
-    //  [X] it reverts
-    // [X] when the start timestamp is 0
-    //  [X] it reverts
-    // [X] when the expiry timestamp is 0
-    //  [X] it reverts
-    // [X] when the start and expiry timestamps are the same
-    //  [X] it reverts
-    // [X] when the start timestamp is after the expiry timestamp
-    //  [X] it reverts
-    // [X] when the start timestamp is before the current timestamp
     //  [X] it reverts
     // [X] when the expiry timestamp is before the current timestamp
     //  [X] it reverts
