@@ -324,11 +324,13 @@ abstract contract Auctioneer is WithModules {
 
         // If the auction is prefunded and supported, transfer the remaining capacity to the owner
         if (routing.prefunding > 0) {
-            // Transfer payout tokens to the owner
-            Transfer.transfer(routing.baseToken, routing.owner, routing.prefunding, false);
+            uint256 prefunding = routing.prefunding;
 
-            // Set to 0
+            // Set to 0 before transfer to avoid re-entrancy
             lotRouting[lotId_].prefunding = 0;
+
+            // Transfer payout tokens to the owner
+            Transfer.transfer(routing.baseToken, routing.owner, prefunding, false);
         }
 
         emit AuctionCancelled(lotId_, routing.auctionReference);
