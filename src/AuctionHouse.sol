@@ -384,6 +384,7 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
         // Calculate the payout amount, handling partial fills
         uint256 lastBidRefund;
         address lastBidder;
+        uint256 totalAmountOut = remainingCapacity;
         {
             uint256 bidCount = winningBids.length;
             uint256 payoutRemaining = remainingCapacity;
@@ -426,6 +427,11 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
                     payoutRemaining -= payoutAmount;
                 }
             }
+
+            // If payout remaining is not zero, reduce the total amount out
+            if (payoutRemaining > 0) {
+                totalAmountOut -= payoutRemaining;
+            }
         }
 
         // Calculate fees
@@ -444,16 +450,6 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
 
         // Collect payout in bulk from the auction owner
         {
-            // Calculate amount out
-            uint256 totalAmountOut;
-            {
-                uint256 bidCount = winningBids.length;
-                for (uint256 i; i < bidCount; i++) {
-                    // Increment total amount out
-                    totalAmountOut += winningBids[i].minAmountOut;
-                }
-            }
-
             // Calculate curator fee (if applicable)
             Curation storage curation = lotCuration[lotId_];
             uint256 curatorFee;
