@@ -166,7 +166,7 @@ contract CurateTest is Test, Permit2User {
         givenLotIsCreated
     {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(Auctioneer.NotCurator.selector, curator);
+        bytes memory err = abi.encodeWithSelector(Auctioneer.NotPermitted.selector, curator);
         vm.expectRevert(err);
 
         // Call
@@ -180,7 +180,7 @@ contract CurateTest is Test, Permit2User {
         givenLotIsCreated
     {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(Auctioneer.NotCurator.selector, owner);
+        bytes memory err = abi.encodeWithSelector(Auctioneer.NotPermitted.selector, owner);
         vm.expectRevert(err);
 
         // Call

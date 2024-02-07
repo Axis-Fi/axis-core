@@ -5,6 +5,7 @@ pragma solidity 0.8.19;
 import {Test} from "forge-std/Test.sol";
 import {ERC20} from "solmate/tokens/ERC20.sol";
 import {IPermit2} from "src/lib/permit2/interfaces/IPermit2.sol";
+import {Transfer} from "src/lib/Transfer.sol";
 
 // Mocks
 import {MockERC20} from "solmate/test/utils/mocks/MockERC20.sol";
@@ -414,7 +415,7 @@ contract PurchaseTest is Test, Permit2User {
 
         // Update parameters
         purchaseParams.permit2Data = abi.encode(
-            Router.Permit2Approval({
+            Transfer.Permit2Approval({
                 deadline: approvalDeadline,
                 nonce: approvalNonce,
                 signature: approvalSignature
@@ -518,6 +519,10 @@ contract PurchaseTest is Test, Permit2User {
         assertEq(auctionHouse.rewards(address(mockHook), baseToken), 0);
         assertEq(auctionHouse.rewards(address(auctionHouse), baseToken), 0);
         assertEq(auctionHouse.rewards(auctionOwner, baseToken), 0);
+
+        // Check prefunding amount
+        (,,,,,,,,, uint256 lotPrefunding) = auctionHouse.lotRouting(lotId);
+        assertEq(lotPrefunding, 0, "mismatch on prefunding");
     }
 
     function test_noHooks()
@@ -562,6 +567,10 @@ contract PurchaseTest is Test, Permit2User {
         assertEq(auctionHouse.rewards(address(mockHook), baseToken), 0);
         assertEq(auctionHouse.rewards(address(auctionHouse), baseToken), 0);
         assertEq(auctionHouse.rewards(auctionOwner, baseToken), 0);
+
+        // Check prefunding amount
+        (,,,,,,,,, uint256 lotPrefunding) = auctionHouse.lotRouting(lotId);
+        assertEq(lotPrefunding, 0, "mismatch on prefunding");
     }
 
     // ======== Derivative flow ======== //
@@ -1210,6 +1219,10 @@ contract PurchaseTest is Test, Permit2User {
         assertEq(
             auctionHouse.rewards(curator, baseToken), 0, "base token: curator rewards mismatch"
         );
+
+        // Check prefunding amount
+        (,,,,,,,,, uint256 lotPrefunding) = auctionHouse.lotRouting(lotId);
+        assertEq(lotPrefunding, 0, "mismatch on prefunding");
     }
 
     function test_derivative_givenCuratorHasApproved()
@@ -1387,6 +1400,10 @@ contract PurchaseTest is Test, Permit2User {
             "balance mismatch on auction house"
         );
         assertEq(baseToken.balanceOf(auctionOwner), 0, "balance mismatch on auction owner");
+
+        // Check prefunding amount
+        (,,,,,,,,, uint256 lotPrefunding) = auctionHouse.lotRouting(lotId);
+        assertEq(lotPrefunding, LOT_CAPACITY - AMOUNT_OUT, "mismatch on prefunding");
     }
 
     function test_prefunded_givenCuratorHasApproved()
@@ -1420,5 +1437,13 @@ contract PurchaseTest is Test, Permit2User {
         );
         assertEq(baseToken.balanceOf(auctionOwner), 0, "balance mismatch on auction owner");
         assertEq(baseToken.balanceOf(curator), curatorActualFee, "balance mismatch on curator");
+
+        // Check prefunding amount
+        (,,,,,,,,, uint256 lotPrefunding) = auctionHouse.lotRouting(lotId);
+        assertEq(
+            lotPrefunding,
+            LOT_CAPACITY + curatorMaxPotentialFee - AMOUNT_OUT - curatorActualFee,
+            "mismatch on prefunding"
+        );
     }
 }

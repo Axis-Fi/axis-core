@@ -59,6 +59,11 @@ function unwrapVeecode(Veecode veecode_) pure returns (Keycode, uint8) {
     return (keycode, version);
 }
 
+function keycodeFromVeecode(Veecode veecode_) pure returns (Keycode) {
+    (Keycode keycode,) = unwrapVeecode(veecode_);
+    return keycode;
+}
+
 // solhint-disable-next-line func-visibility
 function ensureContract(address target_) view {
     if (target_.code.length == 0) revert TargetNotAContract(target_);

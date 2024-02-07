@@ -14,6 +14,7 @@ import {Permit2User} from "test/lib/permit2/Permit2User.sol";
 import {AuctionHouse, Router, FeeManager} from "src/AuctionHouse.sol";
 import {Auction} from "src/modules/Auction.sol";
 import {IHooks, IAllowlist, Auctioneer} from "src/bases/Auctioneer.sol";
+import {Catalogue} from "src/Catalogue.sol";
 
 // Modules
 import {
@@ -32,6 +33,7 @@ contract CancelAuctionTest is Test, Permit2User {
     MockAtomicAuctionModule internal mockAuctionModule;
 
     AuctionHouse internal auctionHouse;
+    Catalogue internal catalogue;
     Auctioneer.RoutingParams internal routingParams;
     Auction.AuctionParams internal auctionParams;
 
@@ -60,6 +62,8 @@ contract CancelAuctionTest is Test, Permit2User {
         mockAuctionModule = new MockAtomicAuctionModule(address(auctionHouse));
 
         auctionHouse.installModule(mockAuctionModule);
+
+        catalogue = new Catalogue(address(auctionHouse));
 
         auctionParams = Auction.AuctionParams({
             start: uint48(block.timestamp),
@@ -101,8 +105,7 @@ contract CancelAuctionTest is Test, Permit2User {
     //  [X] it sets the lot to inactive on the AuctionModule
 
     function testReverts_whenNotAuctionOwner() external whenLotIsCreated {
-        bytes memory err =
-            abi.encodeWithSelector(Auctioneer.NotAuctionOwner.selector, address(this));
+        bytes memory err = abi.encodeWithSelector(Auctioneer.NotPermitted.selector, address(this));
         vm.expectRevert(err);
 
         auctionHouse.cancel(lotId);
@@ -111,7 +114,7 @@ contract CancelAuctionTest is Test, Permit2User {
     function testReverts_whenUnauthorized(address user_) external whenLotIsCreated {
         vm.assume(user_ != auctionOwner);
 
-        bytes memory err = abi.encodeWithSelector(Auctioneer.NotAuctionOwner.selector, user_);
+        bytes memory err = abi.encodeWithSelector(Auctioneer.NotPermitted.selector, user_);
         vm.expectRevert(err);
 
         vm.prank(user_);
@@ -260,7 +263,9 @@ contract CancelAuctionTest is Test, Permit2User {
     }
 
     modifier givenAuctionOwnerHasCuratorFeeBalance() {
-        curatorMaxPotentialFee = CURATOR_FEE * LOT_CAPACITY / 1e5;
+        uint256 lotCapacity = catalogue.remainingCapacity(lotId);
+
+        curatorMaxPotentialFee = CURATOR_FEE * lotCapacity / 1e5;
 
         // Mint
         baseToken.mint(auctionOwner, curatorMaxPotentialFee);
@@ -278,14 +283,32 @@ contract CancelAuctionTest is Test, Permit2User {
         whenLotIsCreated
     {
         // Balance before
-        assertEq(baseToken.balanceOf(auctionOwner), 0);
+        uint256 auctionOwnerBalanceBefore = baseToken.balanceOf(auctionOwner);
+        assertEq(
+            auctionOwnerBalanceBefore,
+            curatorMaxPotentialFee,
+            "base token: balance mismatch for auction owner before"
+        ); // Curator fee not moved
 
         // Cancel the lot
         vm.prank(auctionOwner);
         auctionHouse.cancel(lotId);
 
-        // Check the owner's balance
-        assertEq(baseToken.balanceOf(auctionOwner), LOT_CAPACITY);
+        // Check the base token balances
+        assertEq(
+            baseToken.balanceOf(auctionOwner),
+            curatorMaxPotentialFee + LOT_CAPACITY,
+            "base token: balance mismatch for auction owner"
+        );
+        assertEq(
+            baseToken.balanceOf(address(auctionHouse)),
+            0,
+            "base token: balance mismatch for auction house"
+        );
+
+        // Check prefunding amount
+        (,,,,,,,,, uint256 lotPrefunding) = auctionHouse.lotRouting(lotId);
+        assertEq(lotPrefunding, 0, "mismatch on prefunding");
     }
 
     function test_prefunded_givenCuratorHasApproved()
@@ -297,7 +320,10 @@ contract CancelAuctionTest is Test, Permit2User {
         givenCuratorHasApproved
     {
         // Balance before
-        assertEq(baseToken.balanceOf(auctionOwner), 0);
+        uint256 auctionOwnerBalanceBefore = baseToken.balanceOf(auctionOwner);
+        assertEq(
+            auctionOwnerBalanceBefore, 0, "base token: balance mismatch for auction owner before"
+        );
 
         // Cancel the lot
         vm.prank(auctionOwner);
@@ -309,6 +335,15 @@ contract CancelAuctionTest is Test, Permit2User {
             LOT_CAPACITY + curatorMaxPotentialFee,
             "base token: auction owner balance mismatch"
         ); // Capacity and max curator fee is returned
+        assertEq(
+            baseToken.balanceOf(address(auctionHouse)),
+            0,
+            "base token: balance mismatch for auction house"
+        );
+
+        // Check prefunding amount
+        (,,,,,,,,, uint256 lotPrefunding) = auctionHouse.lotRouting(lotId);
+        assertEq(lotPrefunding, 0, "mismatch on prefunding");
     }
 
     function test_prefunded_givenPurchase_givenCuratorHasApproved()
@@ -321,7 +356,10 @@ contract CancelAuctionTest is Test, Permit2User {
         givenCuratorHasApproved
     {
         // Balance before
-        assertEq(baseToken.balanceOf(auctionOwner), 0);
+        uint256 auctionOwnerBalanceBefore = baseToken.balanceOf(auctionOwner);
+        assertEq(
+            auctionOwnerBalanceBefore, 0, "base token: balance mismatch for auction owner before"
+        );
 
         // No curator fee, since the purchase was before curator approval
         uint256 curatorFee = 0;
@@ -336,6 +374,15 @@ contract CancelAuctionTest is Test, Permit2User {
             LOT_CAPACITY - PURCHASE_AMOUNT + curatorMaxPotentialFee - curatorFee,
             "base token: auction owner balance mismatch"
         );
+        assertEq(
+            baseToken.balanceOf(address(auctionHouse)),
+            0,
+            "base token: balance mismatch for auction house"
+        );
+
+        // Check prefunding amount
+        (,,,,,,,,, uint256 lotPrefunding) = auctionHouse.lotRouting(lotId);
+        assertEq(lotPrefunding, 0, "mismatch on prefunding");
     }
 
     function test_prefunded_givenPurchase_givenCuratorHasApproved_givenPurchase()
@@ -349,7 +396,10 @@ contract CancelAuctionTest is Test, Permit2User {
         givenPurchase(PURCHASE_AMOUNT * 2)
     {
         // Balance before
-        assertEq(baseToken.balanceOf(auctionOwner), 0);
+        uint256 auctionOwnerBalanceBefore = baseToken.balanceOf(auctionOwner);
+        assertEq(
+            auctionOwnerBalanceBefore, 0, "base token: balance mismatch for auction owner before"
+        );
 
         // No curator fee, since the purchase was before curator approval
         uint256 curatorFee = CURATOR_FEE * (PURCHASE_AMOUNT * 2) / 1e5;
@@ -365,6 +415,15 @@ contract CancelAuctionTest is Test, Permit2User {
                 - curatorFee,
             "base token: auction owner balance mismatch"
         );
+        assertEq(
+            baseToken.balanceOf(address(auctionHouse)),
+            0,
+            "base token: balance mismatch for auction house"
+        );
+
+        // Check prefunding amount
+        (,,,,,,,,, uint256 lotPrefunding) = auctionHouse.lotRouting(lotId);
+        assertEq(lotPrefunding, 0, "mismatch on prefunding");
     }
 
     function test_prefunded_givenCuratorHasApproved_givenPurchase()
@@ -377,7 +436,10 @@ contract CancelAuctionTest is Test, Permit2User {
         givenPurchase(PURCHASE_AMOUNT)
     {
         // Balance before
-        assertEq(baseToken.balanceOf(auctionOwner), 0);
+        uint256 auctionOwnerBalanceBefore = baseToken.balanceOf(auctionOwner);
+        assertEq(
+            auctionOwnerBalanceBefore, 0, "base token: balance mismatch for auction owner before"
+        );
 
         uint256 curatorFee = CURATOR_FEE * PURCHASE_AMOUNT / 1e5;
 
@@ -391,5 +453,14 @@ contract CancelAuctionTest is Test, Permit2User {
             LOT_CAPACITY - PURCHASE_AMOUNT + curatorMaxPotentialFee - curatorFee,
             "base token: auction owner balance mismatch"
         );
+        assertEq(
+            baseToken.balanceOf(address(auctionHouse)),
+            0,
+            "base token: balance mismatch for auction house"
+        );
+
+        // Check prefunding amount
+        (,,,,,,,,, uint256 lotPrefunding) = auctionHouse.lotRouting(lotId);
+        assertEq(lotPrefunding, 0, "mismatch on prefunding");
     }
 }
