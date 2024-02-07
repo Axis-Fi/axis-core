@@ -95,23 +95,6 @@ abstract contract FeeManager is Owned, ReentrancyGuard {
         toCurator = (payout_ * fees[auctionType_].curator[curator_]) / _FEE_DECIMALS;
     }
 
-    /// @notice Estimates fees for a `priceFor` or `maxAmountAccepted` calls
-    function calculateFeeEstimate(
-        Keycode auctionType_,
-        bool hasReferrer_,
-        uint256 price_
-    ) external view returns (uint256 feeEstimate) {
-        // In this case we have to invert the fee calculation
-        // We provide a conservative estimate by assuming there is a referrer and rounding up
-        uint48 fee = fees[auctionType_].protocol;
-        if (hasReferrer_) fee += fees[auctionType_].referrer;
-
-        uint256 numer = price_ * _FEE_DECIMALS;
-        uint256 denom = _FEE_DECIMALS - fee;
-
-        return (numer / denom) + ((numer % denom == 0) ? 0 : 1); // round up if necessary
-    }
-
     // ========== FEE MANAGEMENT ========== //
 
     /// @notice     Sets the protocol fee, referrer fee, or max curator fee for a specific auction type

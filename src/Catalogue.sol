@@ -4,14 +4,19 @@ pragma solidity 0.8.19;
 import {Auction} from "src/modules/Auction.sol";
 import {Auctioneer} from "src/bases/Auctioneer.sol";
 import {FeeManager} from "src/bases/FeeManager.sol";
-import {Veecode, keycodeFromVeecode} from "src/modules/Modules.sol";
+import {Veecode, keycodeFromVeecode, Keycode} from "src/modules/Modules.sol";
 import {ERC20} from "solmate/tokens/ERC20.sol";
 import {IHooks} from "src/interfaces/IHooks.sol";
 import {IAllowlist} from "src/interfaces/IAllowlist.sol";
 
 /// @notice Contract that provides view functions for Auctions
 contract Catalogue {
+    // ========== STATE VARIABLES ========== //
+    /// @notice Address of the AuctionHouse contract
     address public auctionHouse;
+
+    /// @notice     Fees are in basis points (3 decimals). 1% equals 1000.
+    uint48 internal constant _FEE_DECIMALS = 1e5;
 
     constructor(address auctionHouse_) {
         auctionHouse = auctionHouse_;
@@ -74,9 +79,7 @@ contract Catalogue {
         uint256 price = module.priceFor(lotId_, payout_);
 
         // Calculate fee estimate assuming there is a referrer and add to price
-        price += FeeManager(auctionHouse).calculateFeeEstimate(
-            keycodeFromVeecode(routing.auctionReference), true, price
-        );
+        price += _calculateFeeEstimate(keycodeFromVeecode(routing.auctionReference), true, price);
 
         return price;
     }
@@ -98,9 +101,8 @@ contract Catalogue {
         uint256 maxAmount = module.maxAmountAccepted(lotId_);
 
         // Calculate fee estimate assuming there is a referrer and add to max amount
-        maxAmount += FeeManager(auctionHouse).calculateFeeEstimate(
-            keycodeFromVeecode(routing.auctionReference), true, maxAmount
-        );
+        maxAmount +=
+            _calculateFeeEstimate(keycodeFromVeecode(routing.auctionReference), true, maxAmount);
 
         return maxAmount;
     }
@@ -126,5 +128,24 @@ contract Catalogue {
 
         // Get remaining capacity from module
         return module.remainingCapacity(lotId_);
+    }
+
+    // ========== INTERNAL UTILITY FUNCTIONS ========== //
+
+    /// @notice Estimates fees for a `priceFor` or `maxAmountAccepted` calls
+    function _calculateFeeEstimate(
+        Keycode auctionType_,
+        bool hasReferrer_,
+        uint256 price_
+    ) internal view returns (uint256 feeEstimate) {
+        // In this case we have to invert the fee calculation
+        // We provide a conservative estimate by assuming there is a referrer and rounding up
+        (uint48 fee, uint48 referrerFee,) = FeeManager(auctionHouse).fees(auctionType_);
+        if (hasReferrer_) fee += referrerFee;
+
+        uint256 numer = price_ * _FEE_DECIMALS;
+        uint256 denom = _FEE_DECIMALS - fee;
+
+        return (numer / denom) + ((numer % denom == 0) ? 0 : 1); // round up if necessary
     }
 }
