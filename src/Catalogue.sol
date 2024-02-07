@@ -42,7 +42,7 @@ contract Catalogue {
             bytes memory derivativeParams,
             bool wrapDerivative,
             uint256 prefunding
-        ) = Auctioneer(msg.sender).lotRouting(lotId_);
+        ) = Auctioneer(auctionHouse).lotRouting(lotId_);
 
         return Auctioneer.Routing({
             auctionReference: auctionReference,
