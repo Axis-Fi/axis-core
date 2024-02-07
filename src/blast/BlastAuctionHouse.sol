@@ -2,13 +2,20 @@
 pragma solidity 0.8.19;
 
 import {AuctionHouse} from "src/AuctionHouse.sol";
-import {BlastGas, IBlast} from "src/blast/modules/BlastGas.sol";
-import {Veecode, wrapVeecode} from "src/modules/Modules.sol";
+import {Veecode} from "src/modules/Modules.sol";
 
 enum YieldMode {
     AUTOMATIC,
     VOID,
     CLAIMABLE
+}
+
+interface IBlast {
+    function configureClaimableGas() external;
+    function claimMaxGas(
+        address contractAddress,
+        address recipientOfGas
+    ) external returns (uint256);
 }
 
 interface IERC20Rebasing {
@@ -49,26 +56,17 @@ contract BlastAuctionHouse is AuctionHouse {
 
     // ========== CLAIM FUNCTIONS ========== //
 
-    function claimYieldAndGas() external onlyOwner {
+    function claimYieldAndGas() external {
         // Claim the yield for the WETH and USDB tokens and send to protocol
-        uint256 wethClaimable = _weth.getClaimableAmount(address(this));
-        uint256 usdbClaimable = _usdb.getClaimableAmount(address(this));
-
-        if (wethClaimable > 0) _weth.claim(_protocol, wethClaimable);
-        if (usdbClaimable > 0) _usdb.claim(_protocol, usdbClaimable);
+        _weth.claim(_protocol, _weth.getClaimableAmount(address(this)));
+        _usdb.claim(_protocol, _usdb.getClaimableAmount(address(this)));
 
         // Claim the gas consumed by this contract, send to protocol
         _BLAST.claimMaxGas(address(this), _protocol);
+    }
 
-        // Iterate through modules and claim gas for each
-        uint256 len = modules.length;
-        for (uint256 i = 0; i < len; i++) {
-            ModStatus memory status = getModuleStatus[modules[i]];
-            if (status.sunset) continue;
-
-            Veecode veecode = wrapVeecode(modules[i], status.latestVersion);
-
-            BlastGas(address(getModuleForVeecode[veecode])).claimGas(_protocol);
-        }
+    function claimModuleGas(Veecode reference_) external {
+        // Claim the gas consumed by the module, send to protocol
+        _BLAST.claimMaxGas(address(_getModuleIfInstalled(reference_)), _protocol);
     }
 }

@@ -7,11 +7,8 @@ import {BlastGas} from "src/blast/modules/BlastGas.sol";
 contract BlastLSBBA is LocalSealedBidBatchAuction, BlastGas {
     // ========== CONSTRUCTOR ========== //
 
-    constructor(address auctionHouse_) LocalSealedBidBatchAuction(auctionHouse_) BlastGas() {}
-
-    // ========== GAS CLAIM FUNCTIONS ========== //
-
-    function claimGas(address to_) external override onlyParent {
-        _claimGas(to_);
-    }
+    constructor(address auctionHouse_)
+        LocalSealedBidBatchAuction(auctionHouse_)
+        BlastGas(auctionHouse_)
+    {}
 }
