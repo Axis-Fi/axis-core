@@ -6,7 +6,7 @@ import {Transfer} from "src/lib/Transfer.sol";
 
 import {MockHook} from "test/modules/Auction/MockHook.sol";
 import {MockAuctionHouse} from "test/AuctionHouse/MockAuctionHouse.sol";
-import {MockDerivativeModule} from "test/modules/Derivative/MockDerivativeModule.sol";
+import {MockDerivativeModule} from "test/modules/derivatives/mocks/MockDerivativeModule.sol";
 import {MockFeeOnTransferERC20} from "test/lib/mocks/MockFeeOnTransferERC20.sol";
 import {Permit2User} from "test/lib/permit2/Permit2User.sol";
 

@@ -106,17 +106,16 @@ contract MockDerivativeModule is DerivativeModule {
         bool wrapped_
     ) external virtual override returns (uint256, address, uint256) {}
 
-    function redeem(uint256 tokenId_, uint256 amount_, bool wrapped_) external virtual override {}
+    function redeem(uint256 tokenId_, uint256 amount_) external virtual override {}
 
-    function exercise(uint256 tokenId_, uint256 amount, bool wrapped_) external virtual override {}
+    function exercise(uint256 tokenId_, uint256 amount) external virtual override {}
 
     function reclaim(uint256 tokenId_) external virtual override {}
 
     function transform(
         uint256 tokenId_,
         address from_,
-        uint256 amount_,
-        bool wrapped_
+        uint256 amount_
     ) external virtual override {}
 
     function wrap(uint256 tokenId_, uint256 amount_) external virtual override {}
@@ -133,9 +132,12 @@ contract MockDerivativeModule is DerivativeModule {
         uint256 amount
     ) external view virtual override returns (uint256) {}
 
-    function computeId(bytes memory params_) external pure virtual override returns (uint256) {}
+    function computeId(
+        address underlyingToken_,
+        bytes memory params_
+    ) external pure virtual override returns (uint256) {}
 
-    function validate(bytes memory) external view virtual override returns (bool) {
+    function validate(address, bytes memory) external view virtual override returns (bool) {
         if (validateFails) revert("validation error");
 
         return true;
@@ -190,8 +192,7 @@ contract MockDerivativeModule is DerivativeModule {
 
             // Store derivative data
             token.exists = true;
-            (token.name, token.symbol) = _getNameAndSymbol(ERC20(underlyingToken_), params_.expiry);
-            token.decimals = ERC20(underlyingToken_).decimals();
+            token.underlyingToken = underlyingToken_;
             token.data = abi.encode(params_);
 
             // Store metadata
@@ -200,4 +201,17 @@ contract MockDerivativeModule is DerivativeModule {
 
         return (tokenId, token.wrapped);
     }
+
+    function redeemMax(uint256 tokenId_) external virtual override {}
+
+    function redeemable(
+        address owner_,
+        uint256 tokenId_
+    ) external view virtual override returns (uint256) {}
+
+    function name(uint256 tokenId_) public view virtual override returns (string memory) {}
+
+    function symbol(uint256 tokenId_) public view virtual override returns (string memory) {}
+
+    function decimals(uint256 tokenId_) public view virtual override returns (uint8) {}
 }

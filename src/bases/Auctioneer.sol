@@ -212,7 +212,9 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
             }
 
             // Call module validate function to validate implementation-specific data
-            if (!derivativeModule.validate(routing_.derivativeParams)) revert InvalidParams();
+            if (!derivativeModule.validate(address(routing.baseToken), routing_.derivativeParams)) {
+                revert InvalidParams();
+            }
 
             // Store derivative information
             routing.derivativeReference = derivativeRef;
