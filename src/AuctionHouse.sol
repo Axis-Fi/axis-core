@@ -204,18 +204,14 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
         }
 
         // Calculate quote fees for purchase
-        uint256 amountLessFees;
-        {
-            // Unwrap keycode from veecode
-            amountLessFees = params_.amount
-                - _allocateQuoteFees(
-                    keycodeFromVeecode(routing.auctionReference),
-                    params_.referrer,
-                    routing.owner,
-                    routing.quoteToken,
-                    params_.amount
-                );
-        }
+        uint256 amountLessFees = params_.amount
+            - _allocateQuoteFees(
+                keycodeFromVeecode(routing.auctionReference),
+                params_.referrer,
+                routing.owner,
+                routing.quoteToken,
+                params_.amount
+            );
 
         // Send purchase to auction house and get payout plus any extra output
         bytes memory auctionOutput;
@@ -230,15 +226,13 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
         if (payoutAmount < params_.minAmountOut) revert AmountLessThanMinimum();
 
         // Collect payment from the purchaser
-        {
-            _collectPayment(
-                params_.lotId,
-                params_.amount,
-                routing.quoteToken,
-                routing.hooks,
-                Transfer.decodePermit2Approval(params_.permit2Data)
-            );
-        }
+        _collectPayment(
+            params_.lotId,
+            params_.amount,
+            routing.quoteToken,
+            routing.hooks,
+            Transfer.decodePermit2Approval(params_.permit2Data)
+        );
 
         // Send payment to auction owner
         _sendPayment(routing.owner, amountLessFees, routing.quoteToken, routing.hooks);
@@ -246,30 +240,27 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
         // Calculate the curator fee (if applicable)
         Curation storage curation = lotCuration[params_.lotId];
         uint256 curatorFee;
-        {
-            if (curation.curated) {
-                curatorFee = _calculatePayoutFees(
-                    keycodeFromVeecode(routing.auctionReference), curation.curator, payoutAmount
-                );
-            }
+        if (curation.curated) {
+            curatorFee = _calculatePayoutFees(
+                keycodeFromVeecode(routing.auctionReference), curation.curator, payoutAmount
+            );
         }
 
         // Collect payout from auction owner
         _collectPayout(params_.lotId, amountLessFees, payoutAmount + curatorFee, routing);
 
         // Send payout to recipient
-        {
-            // Decrease the prefunding amount
-            if (routing.prefunding > 0) {
-                // Check invariant
-                if (routing.prefunding < payoutAmount) revert Broken_Invariant();
-                unchecked {
-                    routing.prefunding -= payoutAmount;
-                }
-            }
 
-            _sendPayout(params_.lotId, params_.recipient, payoutAmount, routing, auctionOutput);
+        // Decrease the prefunding amount (if applicable)
+        if (routing.prefunding > 0) {
+            // Check invariant
+            if (routing.prefunding < payoutAmount) revert Broken_Invariant();
+            unchecked {
+                routing.prefunding -= payoutAmount;
+            }
         }
+
+        _sendPayout(params_.lotId, params_.recipient, payoutAmount, routing, auctionOutput);
 
         // Send curator fee to curator
         if (curatorFee > 0) {
@@ -311,28 +302,23 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
 
         // Record the bid on the auction module
         // The module will determine if the bid is valid - minimum bid size, minimum price, auction status, etc
-        uint96 bidId;
-        {
-            bidId = getModuleForId(params_.lotId).bid(
-                params_.lotId,
-                msg.sender,
-                params_.recipient,
-                params_.referrer,
-                params_.amount,
-                params_.auctionData
-            );
-        }
+        uint96 bidId = getModuleForId(params_.lotId).bid(
+            params_.lotId,
+            msg.sender,
+            params_.recipient,
+            params_.referrer,
+            params_.amount,
+            params_.auctionData
+        );
 
         // Transfer the quote token from the bidder
-        {
-            _collectPayment(
-                params_.lotId,
-                params_.amount,
-                routing.quoteToken,
-                routing.hooks,
-                Transfer.decodePermit2Approval(params_.permit2Data)
-            );
-        }
+        _collectPayment(
+            params_.lotId,
+            params_.amount,
+            routing.quoteToken,
+            routing.hooks,
+            Transfer.decodePermit2Approval(params_.permit2Data)
+        );
 
         // Emit event
         emit Bid(params_.lotId, bidId, msg.sender, params_.amount);
@@ -542,11 +528,8 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
             }
         }
 
-        // Handle payment to the auction owner
-        {
-            // Send payment in bulk to auction owner
-            _sendPayment(routing.owner, totalAmountInLessFees, routing.quoteToken, routing.hooks);
-        }
+        // Send payment in bulk to auction owner
+        _sendPayment(routing.owner, totalAmountInLessFees, routing.quoteToken, routing.hooks);
 
         // Handle the refund to the bidder if the last bid was a partial fill
         if (lastBidRefund > 0 && lastBidder != address(0)) {

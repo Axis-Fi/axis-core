@@ -148,49 +148,36 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
         }
 
         // Validate routing parameters
-        uint8 quoteTokenDecimals;
-        uint8 baseTokenDecimals;
+
+        if (address(routing_.baseToken) == address(0) || address(routing_.quoteToken) == address(0))
         {
-            // Validate routing information
-            if (address(routing_.baseToken) == address(0)) {
-                revert InvalidParams();
-            }
-            if (address(routing_.quoteToken) == address(0)) {
-                revert InvalidParams();
-            }
+            revert InvalidParams();
+        }
 
-            // Confirm tokens are within the required decimal range
-            baseTokenDecimals = routing_.baseToken.decimals();
-            quoteTokenDecimals = routing_.quoteToken.decimals();
+        // Confirm tokens are within the required decimal range
+        uint8 baseTokenDecimals = routing_.baseToken.decimals();
+        uint8 quoteTokenDecimals = routing_.quoteToken.decimals();
 
-            if (baseTokenDecimals < 6 || baseTokenDecimals > 18) {
-                revert InvalidParams();
-            }
-            if (quoteTokenDecimals < 6 || quoteTokenDecimals > 18) {
-                revert InvalidParams();
-            }
+        if (
+            baseTokenDecimals < 6 || baseTokenDecimals > 18 || quoteTokenDecimals < 6
+                || quoteTokenDecimals > 18
+        ) {
+            revert InvalidParams();
         }
 
         // Increment lot count and get ID
         lotId = lotCounter++;
 
-        // Auction Module
-        bool requiresPrefunding;
-        uint256 lotCapacity;
-        {
-            // Call module auction function to store implementation-specific data
-            (requiresPrefunding, lotCapacity) =
-                auctionModule.auction(lotId, params_, quoteTokenDecimals, baseTokenDecimals);
-        }
+        // Call module auction function to store implementation-specific data
+        (bool requiresPrefunding, uint256 lotCapacity) =
+            auctionModule.auction(lotId, params_, quoteTokenDecimals, baseTokenDecimals);
 
         // Store routing information
         Routing storage routing = lotRouting[lotId];
-        {
-            routing.auctionReference = auctionRef;
-            routing.owner = msg.sender;
-            routing.baseToken = routing_.baseToken;
-            routing.quoteToken = routing_.quoteToken;
-        }
+        routing.auctionReference = auctionRef;
+        routing.owner = msg.sender;
+        routing.baseToken = routing_.baseToken;
+        routing.quoteToken = routing_.quoteToken;
 
         // Store curation information
         {
@@ -377,11 +364,7 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
         Veecode condenserRef_
     ) external onlyOwner {
         // Check that auction and derivative keycodes are not empty
-        if (fromVeecode(auctionRef_) == bytes7(0)) {
-            revert InvalidParams();
-        }
-
-        if (fromVeecode(derivativeRef_) == bytes7(0)) {
+        if (fromVeecode(auctionRef_) == bytes7(0) || fromVeecode(derivativeRef_) == bytes7(0)) {
             revert InvalidParams();
         }
 
