@@ -122,7 +122,19 @@ contract AuctionHouse is Auctioneer, Router {
 
     // ========== EVENTS ========== //
 
-    event Purchase(uint256 id, address buyer, address referrer, uint256 amount, uint256 payout);
+    event Purchase(
+        uint96 indexed lotId_,
+        address indexed buyer,
+        address referrer,
+        uint256 amount,
+        uint256 payout
+    );
+
+    event Bid(uint96 indexed lotId_, uint96 indexed bidId_, address indexed bidder, uint256 amount);
+
+    event CancelBid(uint96 indexed lotId_, uint96 indexed bidId_, address indexed bidder);
+
+    event Settle(uint96 indexed lotId_);
 
     // ========== STATE VARIABLES ========== //
 
@@ -323,6 +335,9 @@ contract AuctionHouse is Auctioneer, Router {
             );
         }
 
+        // Emit event
+        emit Bid(params_.lotId, bidId, msg.sender, params_.amount);
+
         return bidId;
     }
 
@@ -341,6 +356,9 @@ contract AuctionHouse is Auctioneer, Router {
         // Transfer the quote token to the bidder
         // The ownership of the bid has already been verified by the auction module
         Transfer.transfer(lotRouting[lotId_].quoteToken, msg.sender, refundAmount, false);
+
+        // Emit event
+        emit CancelBid(lotId_, bidId_, msg.sender);
     }
 
     /// @inheritdoc Router
@@ -527,6 +545,9 @@ contract AuctionHouse is Auctioneer, Router {
         if (lastBidRefund > 0 && lastBidder != address(0)) {
             Transfer.transfer(routing.quoteToken, lastBidder, lastBidRefund, false);
         }
+
+        // Emit event
+        emit Settle(lotId_);
     }
 
     // ========== CURATION ========== //
