@@ -10,7 +10,7 @@ import {Keycode} from "src/modules/Modules.sol";
 
 /// @title      FeeManager
 /// @notice     Defines fees for auctions and manages the collection and distribution of fees
-abstract contract FeeManager is Owned, ReentrancyGuard {
+abstract contract FeeManager is ReentrancyGuard {
     using SafeTransferLib for ERC20;
 
     // ========== ERRORS ========== //
@@ -58,6 +58,12 @@ abstract contract FeeManager is Owned, ReentrancyGuard {
     /// @notice     Fees earned by an address, by token
     mapping(address => mapping(ERC20 => uint256)) public rewards;
 
+    // ========== CONSTRUCTOR ========== //
+
+    constructor(address protocol_) {
+        _protocol = protocol_;
+    }
+
     // ========== FEE CALCULATIONS ========== //
 
     /// @notice     Calculates and allocates fees that are collected in the quote token
@@ -99,21 +105,7 @@ abstract contract FeeManager is Owned, ReentrancyGuard {
 
     /// @notice     Sets the protocol fee, referrer fee, or max curator fee for a specific auction type
     /// @notice     Access controlled: only owner
-    function setFee(Keycode auctionType_, FeeType type_, uint48 fee_) external onlyOwner {
-        // Check that the fee is a valid percentage
-        if (fee_ > _FEE_DECIMALS) revert InvalidFee();
-
-        // Set fee based on type
-        // TODO should we have hard-coded maximums for these fees?
-        // Or a combination of protocol and referrer fee since they are both in the quoteToken?
-        if (type_ == FeeType.Protocol) {
-            fees[auctionType_].protocol = fee_;
-        } else if (type_ == FeeType.Referrer) {
-            fees[auctionType_].referrer = fee_;
-        } else if (type_ == FeeType.MaxCurator) {
-            fees[auctionType_].maxCuratorFee = fee_;
-        }
-    }
+    function setFee(Keycode auctionType_, FeeType type_, uint48 fee_) external virtual;
 
     /// @notice     Sets the fee for a curator (the sender) for a specific auction type
     function setCuratorFee(Keycode auctionType_, uint48 fee_) external {
@@ -141,7 +133,5 @@ abstract contract FeeManager is Owned, ReentrancyGuard {
     /// @dev        Access controlled: only owner
     ///
     /// @param      protocol_  Address of the protocol
-    function setProtocol(address protocol_) external onlyOwner {
-        _protocol = protocol_;
-    }
+    function setProtocol(address protocol_) external virtual;
 }

@@ -20,7 +20,7 @@ import {IAllowlist} from "src/interfaces/IAllowlist.sol";
 
 /// @title      Router
 /// @notice     An interface to define the routing of transactions to the appropriate auction module
-abstract contract Router is FeeManager {
+abstract contract Router {
     // ========== DATA STRUCTURES ========== //
 
     /// @notice     Parameters used by the purchase function
@@ -65,12 +65,6 @@ abstract contract Router is FeeManager {
         bytes permit2Data;
     }
 
-    // ========== CONSTRUCTOR ========== //
-
-    constructor(address protocol_) {
-        _protocol = protocol_;
-    }
-
     // ========== ATOMIC AUCTIONS ========== //
 
     /// @notice     Purchase a lot from an atomic auction
@@ -109,7 +103,7 @@ abstract contract Router is FeeManager {
 
 /// @title      AuctionHouse
 /// @notice     As its name implies, the AuctionHouse is where auctions take place and the core of the protocol.
-contract AuctionHouse is Auctioneer, Router {
+contract AuctionHouse is Auctioneer, Router, FeeManager {
     /// Implement the router functionality here since it combines all of the base functionality
 
     // ========== ERRORS ========== //
@@ -142,7 +136,10 @@ contract AuctionHouse is Auctioneer, Router {
 
     // ========== CONSTRUCTOR ========== //
 
-    constructor(address protocol_, address permit2_) Router(protocol_) WithModules(msg.sender) {
+    constructor(
+        address protocol_,
+        address permit2_
+    ) FeeManager(protocol_) WithModules(msg.sender) {
         _PERMIT2 = permit2_;
     }
 
@@ -601,6 +598,30 @@ contract AuctionHouse is Auctioneer, Router {
 
         // Emit event that the lot is curated by the proposed curator
         emit Curated(lotId_, msg.sender);
+    }
+
+    // ========== ADMIN FUNCTIONS ========== //
+
+    /// @inheritdoc FeeManager
+    function setFee(Keycode auctionType_, FeeType type_, uint48 fee_) external override onlyOwner {
+        // Check that the fee is a valid percentage
+        if (fee_ > _FEE_DECIMALS) revert InvalidFee();
+
+        // Set fee based on type
+        // TODO should we have hard-coded maximums for these fees?
+        // Or a combination of protocol and referrer fee since they are both in the quoteToken?
+        if (type_ == FeeType.Protocol) {
+            fees[auctionType_].protocol = fee_;
+        } else if (type_ == FeeType.Referrer) {
+            fees[auctionType_].referrer = fee_;
+        } else if (type_ == FeeType.MaxCurator) {
+            fees[auctionType_].maxCuratorFee = fee_;
+        }
+    }
+
+    /// @inheritdoc FeeManager
+    function setProtocol(address protocol_) external override onlyOwner {
+        _protocol = protocol_;
     }
 
     // ========== TOKEN TRANSFERS ========== //
