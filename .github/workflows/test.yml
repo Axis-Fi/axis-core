@@ -58,5 +58,5 @@ jobs:
       - name: Contract Sizes
         run: |
           forge --version
-          forge build --sizes
+          pnpm run size
         id: sizes
