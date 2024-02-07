@@ -3,6 +3,7 @@ pragma solidity 0.8.19;
 
 import {ERC20} from "solmate/tokens/ERC20.sol";
 import {Transfer} from "src/lib/Transfer.sol";
+import {ReentrancyGuard} from "solmate/utils/ReentrancyGuard.sol";
 
 import {
     fromKeycode,
@@ -27,7 +28,7 @@ import {IAllowlist} from "src/interfaces/IAllowlist.sol";
 ///         - Creating new auction lots
 ///         - Cancelling auction lots
 ///         - Storing information about how to handle inputs and outputs for auctions ("routing")
-abstract contract Auctioneer is WithModules {
+abstract contract Auctioneer is WithModules, ReentrancyGuard {
     // ========= ERRORS ========= //
 
     error InvalidParams();
@@ -127,6 +128,7 @@ abstract contract Auctioneer is WithModules {
     ///             - Registration for the optional allowlist fails
     ///             - The optional specified hooks contract is not a contract
     ///             - The condenser module is not installed or is sunset
+    ///             - re-entrancy is detected
     ///
     /// @param      routing_    Routing information for the auction lot
     /// @param      params_     Auction parameters for the auction lot
@@ -134,7 +136,7 @@ abstract contract Auctioneer is WithModules {
     function auction(
         RoutingParams calldata routing_,
         Auction.AuctionParams calldata params_
-    ) external returns (uint96 lotId) {
+    ) external nonReentrant returns (uint96 lotId) {
         // Load auction type module, this checks that it is installed.
         // We load it here vs. later to avoid two checks.
         AuctionModule auctionModule = AuctionModule(_getLatestModuleIfActive(routing_.auctionType));
@@ -308,9 +310,10 @@ abstract contract Auctioneer is WithModules {
     ///             - The caller is not the auction owner
     ///             - The respective auction module reverts
     ///             - The transfer of payout tokens fails
+    ///             - re-entrancy is detected
     ///
     /// @param      lotId_      ID of the auction lot
-    function cancel(uint96 lotId_) external {
+    function cancel(uint96 lotId_) external nonReentrant {
         // Validation
         _isLotValid(lotId_);
 

@@ -177,9 +177,11 @@ contract AuctionHouse is Auctioneer, Router {
     ///             - The auction owner does not have sufficient balance of the payout token
     ///             - Any of the callbacks fail
     ///             - Any of the token transfers fail
+    ///             - re-entrancy is detected
     function purchase(PurchaseParams memory params_)
         external
         override
+        nonReentrant
         returns (uint256 payoutAmount)
     {
         _isLotValid(params_.lotId);
@@ -284,7 +286,8 @@ contract AuctionHouse is Auctioneer, Router {
     ///             - the bidder is not on the optional allowlist
     ///             - the auction module reverts when creating a bid
     ///             - the quote token transfer fails
-    function bid(BidParams memory params_) external override returns (uint96) {
+    ///             - re-entrancy is detected
+    function bid(BidParams memory params_) external override nonReentrant returns (uint96) {
         _isLotValid(params_.lotId);
 
         // Load routing data for the lot
@@ -327,7 +330,8 @@ contract AuctionHouse is Auctioneer, Router {
     /// @dev        This function reverts if:
     ///             - the lot ID is invalid
     ///             - the auction module reverts when cancelling the bid
-    function cancelBid(uint96 lotId_, uint96 bidId_) external override {
+    ///             - re-entrancy is detected
+    function cancelBid(uint96 lotId_, uint96 bidId_) external override nonReentrant {
         _isLotValid(lotId_);
 
         // Cancel the bid on the auction module
@@ -356,7 +360,8 @@ contract AuctionHouse is Auctioneer, Router {
     ///             - transferring the quote token to the auction owner fails
     ///             - collecting the payout from the auction owner fails
     ///             - sending the payout to each bidder fails
-    function settle(uint96 lotId_) external override {
+    ///             - re-entrancy is detected
+    function settle(uint96 lotId_) external override nonReentrant {
         // Validation
         _isLotValid(lotId_);
 
@@ -526,17 +531,18 @@ contract AuctionHouse is Auctioneer, Router {
 
     // ========== CURATION ========== //
 
-    /// @notice    Accept curation request for a lot.
-    /// @notice    Access controlled. Must be proposed curator for lot.
-    /// @dev       This function reverts if:
-    ///            - the lot ID is invalid
-    ///            - the caller is not the proposed curator
-    ///            - the auction has ended or been cancelled
-    ///            - the curator fee is not set
-    ///            - the auction is prefunded and the fee cannot be collected
+    /// @notice     Accept curation request for a lot.
+    /// @notice     Access controlled. Must be proposed curator for lot.
+    /// @dev        This function reverts if:
+    ///             - the lot ID is invalid
+    ///             - the caller is not the proposed curator
+    ///             - the auction has ended or been cancelled
+    ///             - the curator fee is not set
+    ///             - the auction is prefunded and the fee cannot be collected
+    ///             - re-entrancy is detected
     ///
     /// @param     lotId_       Lot ID
-    function curate(uint96 lotId_) external {
+    function curate(uint96 lotId_) external nonReentrant {
         _isLotValid(lotId_);
 
         Routing storage routing = lotRouting[lotId_];

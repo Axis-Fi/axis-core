@@ -1,18 +1,20 @@
 /// SPDX-License-Identifier: APGL-3.0
 pragma solidity 0.8.19;
 
-import {ERC20} from "lib/solmate/src/tokens/ERC20.sol";
-import {SafeTransferLib} from "lib/solmate/src/utils/SafeTransferLib.sol";
-import {Owned} from "lib/solmate/src/auth/Owned.sol";
+import {ERC20} from "solmate/tokens/ERC20.sol";
+import {SafeTransferLib} from "solmate/utils/SafeTransferLib.sol";
+import {Owned} from "solmate/auth/Owned.sol";
+import {ReentrancyGuard} from "solmate/utils/ReentrancyGuard.sol";
 
 import {Keycode} from "src/modules/Modules.sol";
 
 /// @title      FeeManager
 /// @notice     Defines fees for auctions and manages the collection and distribution of fees
-abstract contract FeeManager is Owned {
+abstract contract FeeManager is Owned, ReentrancyGuard {
     using SafeTransferLib for ERC20;
 
     // ========== ERRORS ========== //
+
     error InvalidFee();
 
     // ========== DATA STRUCTURES ========== //
@@ -140,9 +142,11 @@ abstract contract FeeManager is Owned {
     }
 
     /// @notice     Claims the rewards for a specific token and the sender
+    /// @dev        This function reverts if:
+    ///             - re-entrancy is detected
     ///
     /// @param      token_  Token to claim rewards for
-    function claimRewards(address token_) external {
+    function claimRewards(address token_) external nonReentrant {
         ERC20 token = ERC20(token_);
         uint256 amount = rewards[msg.sender][token];
         rewards[msg.sender][token] = 0;
