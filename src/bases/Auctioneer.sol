@@ -315,12 +315,11 @@ abstract contract Auctioneer is WithModules {
 
         Routing storage routing = lotRouting[lotId_];
 
+        // Check ownership
         if (msg.sender != routing.owner) revert NotAuctionOwner(msg.sender);
 
-        AuctionModule module = getModuleForId(lotId_);
-
         // Cancel the auction on the module
-        module.cancelAuction(lotId_);
+        getModuleForId(lotId_).cancelAuction(lotId_);
 
         // If the auction is prefunded and supported, transfer the remaining capacity to the owner
         if (routing.prefunding > 0) {
@@ -334,21 +333,6 @@ abstract contract Auctioneer is WithModules {
         emit AuctionCancelled(lotId_, routing.auctionReference);
     }
 
-    // ========== AUCTION INFORMATION ========== //
-
-    /// @notice     Gets the routing information for a given lot ID
-    /// @dev        The function reverts if:
-    ///             - The lot ID is invalid
-    ///
-    /// @param      id_     ID of the auction lot
-    /// @return     routing Routing information for the auction lot
-    function getRouting(uint96 id_) external view returns (Routing memory) {
-        _isLotValid(id_);
-
-        // Get routing from lot routing
-        return lotRouting[id_];
-    }
-
     // ========== INTERNAL HELPER FUNCTIONS ========== //
 
     /// @notice     Gets the module for a given lot ID
@@ -358,8 +342,7 @@ abstract contract Auctioneer is WithModules {
     ///
     /// @param      lotId_      ID of the auction lot
     function getModuleForId(uint96 lotId_) public view returns (AuctionModule) {
-        // Confirm lot ID is valid
-        if (lotId_ >= lotCounter) revert InvalidLotId(lotId_);
+        _isLotValid(lotId_);
 
         // Load module, will revert if not installed
         return AuctionModule(_getModuleIfInstalled(lotRouting[lotId_].auctionReference));
@@ -400,13 +383,18 @@ abstract contract Auctioneer is WithModules {
         }
 
         // Check that the derivative type is valid
-        if (DerivativeModule(_getModuleIfInstalled(derivativeRef_)).TYPE() != Module.Type.Derivative) {
+        if (
+            DerivativeModule(_getModuleIfInstalled(derivativeRef_)).TYPE() != Module.Type.Derivative
+        ) {
             revert InvalidModuleType(derivativeRef_);
         }
 
         // Check that the condenser type is valid
         if (fromVeecode(condenserRef_) != bytes7(0)) {
-            if (CondenserModule(_getModuleIfInstalled(condenserRef_)).TYPE() != Module.Type.Condenser) {
+            if (
+                CondenserModule(_getModuleIfInstalled(condenserRef_)).TYPE()
+                    != Module.Type.Condenser
+            ) {
                 revert InvalidModuleType(condenserRef_);
             }
         }

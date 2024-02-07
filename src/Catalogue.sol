@@ -4,7 +4,10 @@ pragma solidity 0.8.19;
 import {Auction} from "src/modules/Auction.sol";
 import {Auctioneer} from "src/bases/Auctioneer.sol";
 import {FeeManager} from "src/bases/FeeManager.sol";
-import {keycodeFromVeecode} from "src/modules/Modules.sol";
+import {Veecode, keycodeFromVeecode} from "src/modules/Modules.sol";
+import {ERC20} from "solmate/tokens/ERC20.sol";
+import {IHooks} from "src/interfaces/IHooks.sol";
+import {IAllowlist} from "src/interfaces/IAllowlist.sol";
 
 /// @notice Contract that provides view functions for Auctions
 contract Catalogue {
@@ -16,9 +19,43 @@ contract Catalogue {
 
     // ========== AUCTION INFORMATION ========== //
 
+    /// @notice     Gets the routing information for a given lot ID
+    /// @dev        The function reverts if:
+    ///             - The lot ID is invalid
+    ///
+    /// @param      lotId_  ID of the auction lot
+    /// @return     routing Routing information for the auction lot
+    function getRouting(uint96 lotId_) public view returns (Auctioneer.Routing memory) {
+        (
+            Veecode auctionReference,
+            address owner,
+            ERC20 baseToken,
+            ERC20 quoteToken,
+            IHooks hooks,
+            IAllowlist allowlist,
+            Veecode derivativeReference,
+            bytes memory derivativeParams,
+            bool wrapDerivative,
+            uint256 prefunding
+        ) = Auctioneer(msg.sender).lotRouting(lotId_);
+
+        return Auctioneer.Routing({
+            auctionReference: auctionReference,
+            owner: owner,
+            baseToken: baseToken,
+            quoteToken: quoteToken,
+            hooks: hooks,
+            allowlist: allowlist,
+            derivativeReference: derivativeReference,
+            derivativeParams: derivativeParams,
+            wrapDerivative: wrapDerivative,
+            prefunding: prefunding
+        });
+    }
+
     function payoutFor(uint96 lotId_, uint256 amount_) external view returns (uint256) {
         Auction module = Auctioneer(auctionHouse).getModuleForId(lotId_);
-        Auctioneer.Routing memory routing = Auctioneer(auctionHouse).getRouting(lotId_);
+        Auctioneer.Routing memory routing = getRouting(lotId_);
 
         // Calculate fees
         (uint256 protocolFee, uint256 referrerFee) = FeeManager(auctionHouse).calculateQuoteFees(
@@ -31,7 +68,7 @@ contract Catalogue {
 
     function priceFor(uint96 lotId_, uint256 payout_) external view returns (uint256) {
         Auction module = Auctioneer(auctionHouse).getModuleForId(lotId_);
-        Auctioneer.Routing memory routing = Auctioneer(auctionHouse).getRouting(lotId_);
+        Auctioneer.Routing memory routing = getRouting(lotId_);
 
         // Get price from module (in quote token units)
         uint256 price = module.priceFor(lotId_, payout_);
@@ -55,7 +92,7 @@ contract Catalogue {
 
     function maxAmountAccepted(uint96 lotId_) external view returns (uint256) {
         Auction module = Auctioneer(auctionHouse).getModuleForId(lotId_);
-        Auctioneer.Routing memory routing = Auctioneer(auctionHouse).getRouting(lotId_);
+        Auctioneer.Routing memory routing = getRouting(lotId_);
 
         // Get max amount accepted from module
         uint256 maxAmount = module.maxAmountAccepted(lotId_);

@@ -159,12 +159,12 @@ contract MockHook is IHooks {
 
     function preAuctionCreate(uint96 lotId_) external override {
         // Get the lot information
-        Auctioneer.Routing memory routing = Auctioneer(msg.sender).getRouting(lotId_);
+        (,, ERC20 lotBaseToken,,,,,,, uint256 lotPrefunding) =
+            Auctioneer(msg.sender).lotRouting(lotId_);
 
         // If pre-funding is required
-        if (routing.prefunding > 0) {
+        if (lotPrefunding > 0) {
             // Get the capacity
-            (Keycode auctionType,) = unwrapVeecode(routing.auctionReference);
             Auction module = Auctioneer(msg.sender).getModuleForId(lotId_);
             uint256 capacity = module.remainingCapacity(lotId_);
 
@@ -174,10 +174,10 @@ contract MockHook is IHooks {
             }
 
             // Approve transfer
-            routing.baseToken.safeApprove(address(msg.sender), capacity);
+            lotBaseToken.safeApprove(address(msg.sender), capacity);
 
             // Transfer the base token to the auctioneer
-            routing.baseToken.safeTransfer(msg.sender, capacity);
+            lotBaseToken.safeTransfer(msg.sender, capacity);
         }
     }
 }
