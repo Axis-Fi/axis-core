@@ -383,22 +383,23 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
         uint256 lastBidRefund;
         address lastBidder;
         uint256 totalAmountOut = remainingCapacity;
+        uint256 totalAmountInLessFees;
         {
             uint256 bidCount = winningBids.length;
             uint256 payoutRemaining = remainingCapacity;
+            uint256 totalProtocolFees;
             for (uint256 i; i < bidCount; i++) {
-                uint256 payoutAmount = winningBids[i].minAmountOut;
-
                 // If the bid is the last and is a partial fill, then calculate the amount to send
-                if (i == bidCount - 1 && payoutAmount > payoutRemaining) {
-                    // Amend the bid to the amount remaining
-                    winningBids[i].minAmountOut = payoutRemaining;
-
+                if (i == bidCount - 1 && winningBids[i].minAmountOut > payoutRemaining) {
                     // Calculate the refund amount in terms of the quote token
-                    uint256 payoutUnfulfilled = 1e18 - payoutRemaining * 1e18 / payoutAmount;
+                    uint256 payoutUnfulfilled =
+                        1e18 - payoutRemaining * 1e18 / winningBids[i].minAmountOut;
                     uint256 refundAmount = winningBids[i].amount * payoutUnfulfilled / 1e18;
                     lastBidRefund = refundAmount;
                     lastBidder = winningBids[i].bidder;
+
+                    // Amend the bid to the amount remaining
+                    winningBids[i].minAmountOut = payoutRemaining;
 
                     // Check that the refund amount is not greater than the bid amount
                     if (refundAmount > winningBids[i].amount) {
@@ -412,36 +413,43 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
 
                     // Decrement the remaining payout
                     payoutRemaining = 0;
-                    break;
+                } else {
+                    // Make sure the invariant isn't broken
+                    if (winningBids[i].minAmountOut > payoutRemaining) {
+                        revert Broken_Invariant();
+                    }
+
+                    // Decrement the remaining payout
+                    unchecked {
+                        payoutRemaining -= winningBids[i].minAmountOut;
+                    }
                 }
 
-                // Make sure the invariant isn't broken
-                if (payoutAmount > payoutRemaining) {
-                    revert Broken_Invariant();
-                }
+                // Calculate fees for bid
+                (uint256 toReferrer, uint256 toProtocol) = calculateQuoteFees(
+                    keycodeFromVeecode(routing.auctionReference),
+                    winningBids[i].referrer != address(0)
+                        && winningBids[i].referrer != routing.owner,
+                    winningBids[i].amount
+                );
 
-                // Decrement the remaining payout
-                unchecked {
-                    payoutRemaining -= payoutAmount;
+                // Update referrer fee balances if non-zero and increment the total protocol fee
+                if (toReferrer > 0) {
+                    rewards[winningBids[i].referrer][routing.quoteToken] += toReferrer;
                 }
+                totalProtocolFees += toProtocol;
+
+                // Increment total amount in
+                totalAmountInLessFees += (winningBids[i].amount - toReferrer - toProtocol);
             }
 
             // If payout remaining is not zero, reduce the total amount out
             if (payoutRemaining > 0) {
                 totalAmountOut -= payoutRemaining;
             }
-        }
 
-        // Calculate fees
-        uint256 totalAmountInLessFees;
-        {
-            (uint256 totalAmountIn, uint256 totalFees) = _allocateQuoteFees(
-                keycodeFromVeecode(routing.auctionReference),
-                winningBids,
-                routing.owner,
-                routing.quoteToken
-            );
-            totalAmountInLessFees = totalAmountIn - totalFees;
+            // Update protocol fee if not zero
+            if (totalProtocolFees > 0) rewards[_protocol][routing.quoteToken] += totalProtocolFees;
         }
 
         // Assumes that payment has already been collected for each bid
@@ -822,37 +830,5 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
         if (toProtocol > 0) rewards[_protocol][quoteToken_] += toProtocol;
 
         return toReferrer + toProtocol;
-    }
-
-    function _allocateQuoteFees(
-        Keycode auctionType_,
-        Auction.Bid[] memory bids_,
-        address owner_,
-        ERC20 quoteToken_
-    ) internal returns (uint256 totalAmountIn, uint256 totalFees) {
-        // Calculate fees for purchase
-        uint256 bidCount = bids_.length;
-        uint256 totalProtocolFees;
-        for (uint256 i; i < bidCount; i++) {
-            // Determine if bid has a referrer
-            bool hasReferrer = bids_[i].referrer != address(0) && bids_[i].referrer != owner_;
-
-            // Calculate fees from bid amount
-            (uint256 toReferrer, uint256 toProtocol) =
-                calculateQuoteFees(auctionType_, hasReferrer, bids_[i].amount);
-
-            // Update referrer fee balances if non-zero and increment the total protocol fee
-            if (toReferrer > 0) {
-                rewards[bids_[i].referrer][quoteToken_] += toReferrer;
-            }
-            totalProtocolFees += toProtocol;
-            totalFees += toReferrer + toProtocol;
-
-            // Increment total amount in
-            totalAmountIn += bids_[i].amount;
-        }
-
-        // Update protocol fee if not zero
-        if (totalProtocolFees > 0) rewards[_protocol][quoteToken_] += totalProtocolFees;
     }
 }
