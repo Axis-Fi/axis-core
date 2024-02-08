@@ -415,6 +415,12 @@ contract LSBBASettleTest is Test, Permit2User {
 
         // Expect no winning bids
         assertEq(winningBids.length, 0);
+
+        // Lot is updated
+        Auction.Lot memory lot = auctionModule.getLot(lotId);
+        assertEq(lot.capacity, 0); // Set to 0 to prevent further bids
+        assertEq(lot.sold, 0); // Base tokens sold
+        assertEq(lot.purchased, 0); // Quote tokens purchased
     }
 
     function test_whenLotIsBelowMinimumFilled_quoteTokenDecimalsLarger()
@@ -430,6 +436,12 @@ contract LSBBASettleTest is Test, Permit2User {
 
         // Expect no winning bids
         assertEq(winningBids.length, 0);
+
+        // Lot is updated
+        Auction.Lot memory lot = auctionModule.getLot(lotId);
+        assertEq(lot.capacity, 0); // Set to 0 to prevent further bids
+        assertEq(lot.sold, 0); // Base tokens sold
+        assertEq(lot.purchased, 0); // Quote tokens purchased
     }
 
     function test_whenLotIsBelowMinimumFilled_quoteTokenDecimalsSmaller()
@@ -445,6 +457,12 @@ contract LSBBASettleTest is Test, Permit2User {
 
         // Expect no winning bids
         assertEq(winningBids.length, 0);
+
+        // Lot is updated
+        Auction.Lot memory lot = auctionModule.getLot(lotId);
+        assertEq(lot.capacity, 0); // Set to 0 to prevent further bids
+        assertEq(lot.sold, 0); // Base tokens sold
+        assertEq(lot.purchased, 0); // Quote tokens purchased
     }
 
     function test_whenMarginalPriceBelowMinimum()
@@ -459,6 +477,12 @@ contract LSBBASettleTest is Test, Permit2User {
 
         // Expect no winning bids
         assertEq(winningBids.length, 0);
+
+        // Lot is updated
+        Auction.Lot memory lot = auctionModule.getLot(lotId);
+        assertEq(lot.capacity, 0); // Set to 0 to prevent further bids
+        assertEq(lot.sold, 0); // Base tokens sold
+        assertEq(lot.purchased, 0); // Quote tokens purchased
     }
 
     function test_whenMarginalPriceBelowMinimum_quoteTokenDecimalsLarger()
@@ -474,6 +498,12 @@ contract LSBBASettleTest is Test, Permit2User {
 
         // Expect no winning bids
         assertEq(winningBids.length, 0);
+
+        // Lot is updated
+        Auction.Lot memory lot = auctionModule.getLot(lotId);
+        assertEq(lot.capacity, 0); // Set to 0 to prevent further bids
+        assertEq(lot.sold, 0); // Base tokens sold
+        assertEq(lot.purchased, 0); // Quote tokens purchased
     }
 
     function test_whenMarginalPriceBelowMinimum_quoteTokenDecimalsSmaller()
@@ -489,6 +519,12 @@ contract LSBBASettleTest is Test, Permit2User {
 
         // Expect no winning bids
         assertEq(winningBids.length, 0);
+
+        // Lot is updated
+        Auction.Lot memory lot = auctionModule.getLot(lotId);
+        assertEq(lot.capacity, 0); // Set to 0 to prevent further bids
+        assertEq(lot.sold, 0); // Base tokens sold
+        assertEq(lot.purchased, 0); // Quote tokens purchased
     }
 
     function test_whenLotIsOverSubscribed()
@@ -516,6 +552,12 @@ contract LSBBASettleTest is Test, Permit2User {
 
         // Expect winning bids
         assertEq(winningBids.length, 2);
+
+        // Lot is updated
+        Auction.Lot memory lot = auctionModule.getLot(lotId);
+        assertEq(lot.capacity, 0); // Set to 0 to prevent further bids
+        assertEq(lot.sold, bidThreeAmountOut + bidTwoAmountOut); // Base tokens sold
+        assertEq(lot.purchased, bidThreeAmount + bidTwoAmount); // Quote tokens purchased
     }
 
     function test_whenLotIsOverSubscribed_quoteTokenDecimalsLarger()
@@ -544,6 +586,12 @@ contract LSBBASettleTest is Test, Permit2User {
 
         // Expect winning bids
         assertEq(winningBids.length, 2);
+
+        // Lot is updated
+        Auction.Lot memory lot = auctionModule.getLot(lotId);
+        assertEq(lot.capacity, 0); // Set to 0 to prevent further bids
+        assertEq(lot.sold, bidThreeAmountOut + bidTwoAmountOut); // Base tokens sold
+        assertEq(lot.purchased, bidThreeAmount + bidTwoAmount); // Quote tokens purchased
     }
 
     function test_whenLotIsOverSubscribed_quoteTokenDecimalsSmaller()
@@ -572,6 +620,12 @@ contract LSBBASettleTest is Test, Permit2User {
 
         // Expect winning bids
         assertEq(winningBids.length, 2);
+
+        // Lot is updated
+        Auction.Lot memory lot = auctionModule.getLot(lotId);
+        assertEq(lot.capacity, 0); // Set to 0 to prevent further bids
+        assertEq(lot.sold, bidThreeAmountOut + bidTwoAmountOut); // Base tokens sold
+        assertEq(lot.purchased, bidThreeAmount + bidTwoAmount); // Quote tokens purchased
     }
 
     function test_whenLotIsOverSubscribed_partialFill()
@@ -604,6 +658,12 @@ contract LSBBASettleTest is Test, Permit2User {
 
         // Expect winning bids
         assertEq(winningBids.length, 3);
+
+        // Lot is updated
+        Auction.Lot memory lot = auctionModule.getLot(lotId);
+        assertEq(lot.capacity, 0); // Set to 0 to prevent further bids
+        assertEq(lot.sold, bidFiveAmountOut + bidTwoAmountOut + bidOneAmountOut); // Base tokens sold
+        assertEq(lot.purchased, bidFiveAmount + bidTwoAmount + bidOneAmount); // Quote tokens purchased
     }
 
     function test_whenLotIsOverSubscribed_partialFill_quoteTokenDecimalsLarger()
@@ -637,6 +697,12 @@ contract LSBBASettleTest is Test, Permit2User {
 
         // Expect winning bids
         assertEq(winningBids.length, 3);
+
+        // Lot is updated
+        Auction.Lot memory lot = auctionModule.getLot(lotId);
+        assertEq(lot.capacity, 0); // Set to 0 to prevent further bids
+        assertEq(lot.sold, bidFiveAmountOut + bidTwoAmountOut + bidOneAmountOut); // Base tokens sold
+        assertEq(lot.purchased, bidFiveAmount + bidTwoAmount + bidOneAmount); // Quote tokens purchased
     }
 
     function test_whenLotIsOverSubscribed_partialFill_quoteTokenDecimalsSmaller()
@@ -670,6 +736,12 @@ contract LSBBASettleTest is Test, Permit2User {
 
         // Expect winning bids
         assertEq(winningBids.length, 3);
+
+        // Lot is updated
+        Auction.Lot memory lot = auctionModule.getLot(lotId);
+        assertEq(lot.capacity, 0); // Set to 0 to prevent further bids
+        assertEq(lot.sold, bidFiveAmountOut + bidTwoAmountOut + bidOneAmountOut); // Base tokens sold
+        assertEq(lot.purchased, bidFiveAmount + bidTwoAmount + bidOneAmount); // Quote tokens purchased
     }
 
     function test_whenLotIsFilled()
@@ -697,6 +769,12 @@ contract LSBBASettleTest is Test, Permit2User {
 
         // Expect winning bids
         assertEq(winningBids.length, 2);
+
+        // Lot is updated
+        Auction.Lot memory lot = auctionModule.getLot(lotId);
+        assertEq(lot.capacity, 0); // Set to 0 to prevent further bids
+        assertEq(lot.sold, bidTwoAmountOut + bidOneAmountOut); // Base tokens sold
+        assertEq(lot.purchased, bidTwoAmount + bidOneAmount); // Quote tokens purchased
     }
 
     function test_whenLotIsFilled_quoteTokenDecimalsLarger()
@@ -725,6 +803,12 @@ contract LSBBASettleTest is Test, Permit2User {
 
         // Expect winning bids
         assertEq(winningBids.length, 2, "winning bids length mismatch");
+
+        // Lot is updated
+        Auction.Lot memory lot = auctionModule.getLot(lotId);
+        assertEq(lot.capacity, 0); // Set to 0 to prevent further bids
+        assertEq(lot.sold, bidTwoAmountOut + bidOneAmountOut); // Base tokens sold
+        assertEq(lot.purchased, bidTwoAmount + bidOneAmount); // Quote tokens purchased
     }
 
     function test_whenLotIsFilled_quoteTokenDecimalsSmaller()
@@ -753,5 +837,11 @@ contract LSBBASettleTest is Test, Permit2User {
 
         // Expect winning bids
         assertEq(winningBids.length, 2);
+
+        // Lot is updated
+        Auction.Lot memory lot = auctionModule.getLot(lotId);
+        assertEq(lot.capacity, 0); // Set to 0 to prevent further bids
+        assertEq(lot.sold, bidTwoAmountOut + bidOneAmountOut); // Base tokens sold
+        assertEq(lot.purchased, bidTwoAmount + bidOneAmount); // Quote tokens purchased
     }
 }
