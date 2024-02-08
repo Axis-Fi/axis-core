@@ -398,6 +398,12 @@ contract LSBBADecryptAndSortBidsTest is Test, Permit2User {
         assertEq(sortedBidTwo.minAmountOut, bidThreeAmountOut);
 
         assertEq(auctionModule.getSortedBidCount(lotId), 2);
+
+        // Lot not changed
+        Auction.Lot memory lot = auctionModule.getLot(lotId);
+        assertEq(lot.capacity, LOT_CAPACITY);
+        assertEq(lot.sold, 0);
+        assertEq(lot.purchased, 0);
     }
 
     function test_partialDecryption() public whenLotHasConcluded {
@@ -435,6 +441,12 @@ contract LSBBADecryptAndSortBidsTest is Test, Permit2User {
         assertEq(sortedBidOne.minAmountOut, bidOneAmountOut);
 
         assertEq(auctionModule.getSortedBidCount(lotId), 1);
+
+        // Lot not changed
+        Auction.Lot memory lot = auctionModule.getLot(lotId);
+        assertEq(lot.capacity, LOT_CAPACITY);
+        assertEq(lot.sold, 0);
+        assertEq(lot.purchased, 0);
     }
 
     function test_partialDecryptionThenFull() public whenLotHasConcluded {
@@ -490,6 +502,12 @@ contract LSBBADecryptAndSortBidsTest is Test, Permit2User {
         assertEq(sortedBidThree.minAmountOut, bidThreeAmountOut);
 
         assertEq(auctionModule.getSortedBidCount(lotId), 3);
+
+        // Lot not changed
+        Auction.Lot memory lot = auctionModule.getLot(lotId);
+        assertEq(lot.capacity, LOT_CAPACITY);
+        assertEq(lot.sold, 0);
+        assertEq(lot.purchased, 0);
     }
 
     function test_fullDecryption() public whenLotHasConcluded {
@@ -533,6 +551,12 @@ contract LSBBADecryptAndSortBidsTest is Test, Permit2User {
         assertEq(sortedBidThree.minAmountOut, bidThreeAmountOut);
 
         assertEq(auctionModule.getSortedBidCount(lotId), 3);
+
+        // Lot not changed
+        Auction.Lot memory lot = auctionModule.getLot(lotId);
+        assertEq(lot.capacity, LOT_CAPACITY);
+        assertEq(lot.sold, 0);
+        assertEq(lot.purchased, 0);
     }
 
     // getNextBidsToDecrypt
