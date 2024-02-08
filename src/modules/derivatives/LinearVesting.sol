@@ -21,19 +21,19 @@ contract LinearVesting is DerivativeModule {
 
     // ========== EVENTS ========== //
 
-    event DerivativeCreated(uint256 indexed tokenId_, uint48 expiry_, address baseToken_);
+    event DerivativeCreated(uint256 indexed tokenId, uint48 expiry, address baseToken);
 
-    event WrappedDerivativeCreated(uint256 indexed tokenId_, address wrappedToken_);
+    event WrappedDerivativeCreated(uint256 indexed tokenId, address wrappedToken);
 
     event Wrapped(
-        uint256 indexed tokenId_, address indexed owner_, uint256 amount_, address wrappedToken_
+        uint256 indexed tokenId, address indexed owner, uint256 amount, address wrappedToken
     );
 
     event Unwrapped(
-        uint256 indexed tokenId_, address indexed owner_, uint256 amount_, address wrappedToken_
+        uint256 indexed tokenId, address indexed owner, uint256 amount, address wrappedToken
     );
 
-    event Redeemed(uint256 indexed tokenId_, address indexed owner_, uint256 amount_);
+    event Redeemed(uint256 indexed tokenId, address indexed owner, uint256 amount);
 
     // ========== ERRORS ========== //
 

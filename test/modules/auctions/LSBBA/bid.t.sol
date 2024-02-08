@@ -221,6 +221,12 @@ contract LSBBABidTest is Test, Permit2User {
         assertEq(encryptedBid.amount, bidAmount);
         assertEq(encryptedBid.encryptedAmountOut, auctionData);
         assertEq(uint8(encryptedBid.status), uint8(LocalSealedBidBatchAuction.BidStatus.Submitted));
+
+        // Lot not changed
+        Auction.Lot memory lot = auctionModule.getLot(lotId);
+        assertEq(lot.capacity, LOT_CAPACITY);
+        assertEq(lot.sold, 0);
+        assertEq(lot.purchased, 0);
     }
 
     function test_whenAmountIsLargerThanCapacity()
@@ -241,6 +247,12 @@ contract LSBBABidTest is Test, Permit2User {
         assertEq(encryptedBid.amount, bidAmount);
         assertEq(encryptedBid.encryptedAmountOut, auctionData);
         assertEq(uint8(encryptedBid.status), uint8(LocalSealedBidBatchAuction.BidStatus.Submitted));
+
+        // Lot not changed
+        Auction.Lot memory lot = auctionModule.getLot(lotId);
+        assertEq(lot.capacity, LOT_CAPACITY);
+        assertEq(lot.sold, 0);
+        assertEq(lot.purchased, 0);
     }
 
     function test_execOnModule_reverts() public {
@@ -276,5 +288,11 @@ contract LSBBABidTest is Test, Permit2User {
         assertEq(encryptedBid.amount, bidAmount);
         assertEq(encryptedBid.encryptedAmountOut, auctionData);
         assertEq(uint8(encryptedBid.status), uint8(LocalSealedBidBatchAuction.BidStatus.Submitted));
+
+        // Lot not changed
+        Auction.Lot memory lot = auctionModule.getLot(lotId);
+        assertEq(lot.capacity, LOT_CAPACITY);
+        assertEq(lot.sold, 0);
+        assertEq(lot.purchased, 0);
     }
 }

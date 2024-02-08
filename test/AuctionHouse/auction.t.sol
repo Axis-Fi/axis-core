@@ -138,9 +138,7 @@ contract AuctionTest is Test, Permit2User {
         // Set the auction type to a derivative module
         routingParams.auctionType = toKeycode("DERV");
 
-        bytes memory err = abi.encodeWithSelector(
-            Auctioneer.InvalidModuleType.selector, mockDerivativeModule.VEECODE()
-        );
+        bytes memory err = abi.encodeWithSelector(Auctioneer.InvalidParams.selector);
         vm.expectRevert(err);
 
         auctionHouse.auction(routingParams, auctionParams);
@@ -298,9 +296,7 @@ contract AuctionTest is Test, Permit2User {
         routingParams.derivativeType = toKeycode("ATOM");
 
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(
-            Auctioneer.InvalidModuleType.selector, mockAuctionModule.VEECODE()
-        );
+        bytes memory err = abi.encodeWithSelector(Auctioneer.InvalidParams.selector);
         vm.expectRevert(err);
 
         auctionHouse.auction(routingParams, auctionParams);

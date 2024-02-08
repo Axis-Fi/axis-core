@@ -28,6 +28,12 @@ contract LocalSealedBidBatchAuction is AuctionModule {
     error Auction_NotConcluded();
     error Auction_InvalidDecrypt();
 
+    // ========== EVENTS ========== //
+
+    event BidDecrypted(
+        uint96 indexed lotId, uint96 indexed bidId, uint256 amountIn, uint256 amountOut
+    );
+
     // ========== DATA STRUCTURES ========== //
 
     enum AuctionStatus {
@@ -342,6 +348,9 @@ contract LocalSealedBidBatchAuction is AuctionModule {
 
             // Set bid status to decrypted
             encBid.status = BidStatus.Decrypted;
+
+            // Emit event
+            emit BidDecrypted(lotId_, bidId, encBid.amount, decrypts_[i].amountOut);
         }
 
         // Increment next decrypt index
@@ -510,6 +519,7 @@ contract LocalSealedBidBatchAuction is AuctionModule {
         // If not, mark as settled and return no winning bids (so users can claim refunds)
         if (marginalPrice == 0) {
             auctionData[lotId_].status = AuctionStatus.Settled;
+            lotData[lotId_].capacity = 0;
             return (winningBids_, bytes(""));
         }
 
@@ -518,6 +528,8 @@ contract LocalSealedBidBatchAuction is AuctionModule {
         Queue storage queue = lotSortedBids[lotId_];
         uint256 baseScale = 10 ** lotData[lotId_].baseTokenDecimals;
         winningBids_ = new Bid[](numWinningBids);
+        uint256 totalAmountIn;
+        uint256 totalAmountOut;
         for (uint256 i; i < numWinningBids; i++) {
             // Load bid
             QueueBid memory qBid = queue.popMax();
@@ -537,6 +549,10 @@ contract LocalSealedBidBatchAuction is AuctionModule {
             winningBid.amount = encBid.amount;
             winningBid.minAmountOut = amountOut;
 
+            // Increment total amount in and total amount out
+            totalAmountIn += encBid.amount;
+            totalAmountOut += amountOut;
+
             // Set bid status to won
             encBid.status = BidStatus.Won;
 
@@ -546,6 +562,11 @@ contract LocalSealedBidBatchAuction is AuctionModule {
 
         // Set auction status to settled
         auctionData[lotId_].status = AuctionStatus.Settled;
+
+        // Update lot data
+        lotData[lotId_].capacity = 0;
+        lotData[lotId_].purchased = totalAmountIn;
+        lotData[lotId_].sold = totalAmountOut;
 
         // Return winning bids
         return (winningBids_, bytes(""));

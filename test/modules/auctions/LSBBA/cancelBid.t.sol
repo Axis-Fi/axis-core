@@ -294,5 +294,11 @@ contract LSBBACancelBidTest is Test, Permit2User {
 
         // Check return value
         assertEq(returnedBidAmount, bidAmount);
+
+        // Lot not changed
+        Auction.Lot memory lot = auctionModule.getLot(lotId);
+        assertEq(lot.capacity, LOT_CAPACITY);
+        assertEq(lot.sold, 0);
+        assertEq(lot.purchased, 0);
     }
 }
