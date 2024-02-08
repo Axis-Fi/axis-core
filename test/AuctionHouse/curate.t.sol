@@ -61,7 +61,7 @@ contract CurateTest is Test, Permit2User {
         mockHook = new MockHook(address(quoteToken), address(baseToken));
 
         auctionParams = Auction.AuctionParams({
-            start: uint48(block.timestamp),
+            start: uint48(block.timestamp) + 1,
             duration: uint48(1 days),
             capacityInQuote: false,
             capacity: LOT_CAPACITY,
@@ -98,6 +98,11 @@ contract CurateTest is Test, Permit2User {
         // Approve spending of the payout tokens
         vm.prank(owner);
         baseToken.approve(address(auctionHouse), LOT_CAPACITY);
+        _;
+    }
+
+    modifier givenLotHasStarted() {
+        vm.warp(auctionParams.start + 1);
         _;
     }
 
@@ -148,6 +153,8 @@ contract CurateTest is Test, Permit2User {
     //  [X] it reverts
     // [X] given the lot is prefunded
     //  [X] it succeeds - the payout token is transferred to the auction house
+    // [X] given the lot has not started
+    //  [X] it succeeds
     // [X] it succeeds
 
     function test_whenLotIdIsInvalid() public {
@@ -164,6 +171,7 @@ contract CurateTest is Test, Permit2User {
         public
         givenCuratorIsZero
         givenLotIsCreated
+        givenLotHasStarted
     {
         // Expect revert
         bytes memory err = abi.encodeWithSelector(Auctioneer.NotPermitted.selector, curator);
@@ -178,6 +186,7 @@ contract CurateTest is Test, Permit2User {
         public
         givenCuratorIsZero
         givenLotIsCreated
+        givenLotHasStarted
     {
         // Expect revert
         bytes memory err = abi.encodeWithSelector(Auctioneer.NotPermitted.selector, owner);
@@ -188,7 +197,12 @@ contract CurateTest is Test, Permit2User {
         auctionHouse.curate(lotId);
     }
 
-    function test_alreadyCurated() public givenLotIsCreated givenCuratorFeeIsSet {
+    function test_alreadyCurated()
+        public
+        givenLotIsCreated
+        givenCuratorFeeIsSet
+        givenLotHasStarted
+    {
         // Curate
         vm.prank(curator);
         auctionHouse.curate(lotId);
@@ -222,7 +236,7 @@ contract CurateTest is Test, Permit2User {
         auctionHouse.curate(lotId);
     }
 
-    function test_givenCuratorFeeNotSet() public givenLotIsCreated {
+    function test_givenCuratorFeeNotSet() public givenLotIsCreated givenLotHasStarted {
         // Expect revert
         bytes memory err = abi.encodeWithSelector(FeeManager.InvalidFee.selector);
         vm.expectRevert(err);
@@ -232,7 +246,23 @@ contract CurateTest is Test, Permit2User {
         auctionHouse.curate(lotId);
     }
 
-    function test_notPrefunded() public givenLotIsCreated givenCuratorFeeIsSet {
+    function test_beforeStart() public givenLotIsCreated givenCuratorFeeIsSet {
+        // Curate
+        vm.prank(curator);
+        auctionHouse.curate(lotId);
+
+        // Verify
+        (address lotCurator, bool lotCurated) = auctionHouse.lotCuration(lotId);
+        assertEq(lotCurator, curator);
+        assertTrue(lotCurated);
+
+        // No curator fee is transferred to the auction house
+        assertEq(baseToken.balanceOf(owner), 0);
+        assertEq(baseToken.balanceOf(address(auctionHouse)), 0);
+        assertEq(baseToken.balanceOf(curator), 0);
+    }
+
+    function test_afterStart() public givenLotIsCreated givenCuratorFeeIsSet givenLotHasStarted {
         // Curate
         vm.prank(curator);
         auctionHouse.curate(lotId);
@@ -254,6 +284,7 @@ contract CurateTest is Test, Permit2User {
         givenLotIsPrefunded
         givenLotIsCreated
         givenCuratorFeeIsSet
+        givenLotHasStarted
     {
         // Calculate the curator fee
         uint256 curatorMaxFee = (LOT_CAPACITY * CURATOR_FEE) / 1e5;

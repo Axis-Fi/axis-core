@@ -433,16 +433,12 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
         }
 
         // Calculate fees
-        uint256 totalAmountInLessFees;
-        {
-            (uint256 totalAmountIn, uint256 totalFees) = _allocateQuoteFees(
-                keycodeFromVeecode(routing.auctionReference),
-                winningBids,
-                routing.owner,
-                routing.quoteToken
-            );
-            totalAmountInLessFees = totalAmountIn - totalFees;
-        }
+        (,, uint256 totalAmountInLessFees) = _allocateQuoteFees(
+            keycodeFromVeecode(routing.auctionReference),
+            winningBids,
+            routing.owner,
+            routing.quoteToken
+        );
 
         // Assumes that payment has already been collected for each bid
 
@@ -490,12 +486,14 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
                 _sendPayout(lotId_, winningBids[i].recipient, currentBidOut, routing, auctionOutput);
 
                 // Make sure the invariant isn't broken
-                if (currentBidOut > payoutRemaining) {
+                if (payoutRemaining < currentBidOut) {
                     revert Broken_Invariant();
                 }
 
                 // Decrement the remaining payout
-                payoutRemaining -= currentBidOut;
+                unchecked {
+                    payoutRemaining -= currentBidOut;
+                }
 
                 // Update prefunding
                 if (routing.prefunding > 0) {
@@ -552,6 +550,7 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
 
         Routing storage routing = lotRouting[lotId_];
         Curation storage curation = lotCuration[lotId_];
+        Keycode auctionType = keycodeFromVeecode(routing.auctionReference);
 
         // Check that the caller is the proposed curator
         if (msg.sender != curation.curator) revert NotPermitted(msg.sender);
@@ -560,10 +559,8 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
         if (curation.curated) revert InvalidState();
 
         // Check that the auction has not ended or been cancelled
-        (, uint48 conclusion,,,, uint256 capacity,,) = getModuleForId(lotId_).lotData(lotId_);
-        if (uint48(block.timestamp) >= conclusion || capacity == 0) revert InvalidState();
-
-        Keycode auctionType = keycodeFromVeecode(routing.auctionReference);
+        AuctionModule module = getModuleForId(lotId_);
+        if (module.hasEnded(lotId_) == true) revert InvalidState();
 
         // Check that the curator fee is set
         if (fees[auctionType].curator[msg.sender] == 0) revert InvalidFee();
@@ -574,7 +571,8 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
         // If the auction is pre-funded, transfer the fee amount from the owner
         if (routing.prefunding > 0) {
             // Calculate the fee amount based on the remaining capacity (must be in base token if auction is pre-funded)
-            uint256 fee = _calculatePayoutFees(auctionType, msg.sender, capacity);
+            uint256 fee =
+                _calculatePayoutFees(auctionType, msg.sender, module.remainingCapacity(lotId_));
 
             // Increment the prefunding
             routing.prefunding += fee;
@@ -810,12 +808,10 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
         ERC20 quoteToken_,
         uint256 amount_
     ) internal returns (uint256 totalFees) {
-        // Check if there is a referrer
-        bool hasReferrer = referrer_ != address(0) && referrer_ != owner_;
-
         // Calculate fees for purchase
-        (uint256 toReferrer, uint256 toProtocol) =
-            calculateQuoteFees(auctionType_, hasReferrer, amount_);
+        (uint256 toReferrer, uint256 toProtocol) = calculateQuoteFees(
+            auctionType_, referrer_ != address(0) && referrer_ != owner_, amount_
+        );
 
         // Update fee balances if non-zero
         if (toReferrer > 0) rewards[referrer_][quoteToken_] += toReferrer;
@@ -829,30 +825,33 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
         Auction.Bid[] memory bids_,
         address owner_,
         ERC20 quoteToken_
-    ) internal returns (uint256 totalAmountIn, uint256 totalFees) {
+    ) internal returns (uint256 totalAmountIn, uint256 totalFees, uint256 totalAmountInLessFees) {
         // Calculate fees for purchase
         uint256 bidCount = bids_.length;
         uint256 totalProtocolFees;
         for (uint256 i; i < bidCount; i++) {
-            // Determine if bid has a referrer
-            bool hasReferrer = bids_[i].referrer != address(0) && bids_[i].referrer != owner_;
+            address bidReferrer = bids_[i].referrer;
+            uint256 bidAmount = bids_[i].amount;
 
             // Calculate fees from bid amount
-            (uint256 toReferrer, uint256 toProtocol) =
-                calculateQuoteFees(auctionType_, hasReferrer, bids_[i].amount);
+            (uint256 toReferrer, uint256 toProtocol) = calculateQuoteFees(
+                auctionType_, bidReferrer != address(0) && bidReferrer != owner_, bidAmount
+            );
 
             // Update referrer fee balances if non-zero and increment the total protocol fee
             if (toReferrer > 0) {
-                rewards[bids_[i].referrer][quoteToken_] += toReferrer;
+                rewards[bidReferrer][quoteToken_] += toReferrer;
             }
             totalProtocolFees += toProtocol;
             totalFees += toReferrer + toProtocol;
 
             // Increment total amount in
-            totalAmountIn += bids_[i].amount;
+            totalAmountIn += bidAmount;
         }
 
         // Update protocol fee if not zero
         if (totalProtocolFees > 0) rewards[_protocol][quoteToken_] += totalProtocolFees;
+
+        totalAmountInLessFees = totalAmountIn - totalFees;
     }
 }
