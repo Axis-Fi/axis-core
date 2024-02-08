@@ -576,11 +576,11 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
             // Calculate the fee amount based on the remaining capacity (must be in base token if auction is pre-funded)
             uint256 fee = _calculatePayoutFees(auctionType, msg.sender, capacity);
 
-            // Don't need to check for fee on transfer here because it was checked on auction creation
-            Transfer.transferFrom(routing.baseToken, routing.owner, address(this), fee, false);
-
             // Increment the prefunding
             routing.prefunding += fee;
+
+            // Don't need to check for fee on transfer here because it was checked on auction creation
+            Transfer.transferFrom(routing.baseToken, routing.owner, address(this), fee, false);
         }
 
         // Emit event that the lot is curated by the proposed curator
