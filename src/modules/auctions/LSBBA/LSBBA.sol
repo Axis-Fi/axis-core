@@ -28,6 +28,12 @@ contract LocalSealedBidBatchAuction is AuctionModule {
     error Auction_NotConcluded();
     error Auction_InvalidDecrypt();
 
+    // ========== EVENTS ========== //
+
+    event BidDecrypted(
+        uint96 indexed lotId, uint96 indexed bidId, uint256 amountIn, uint256 amountOut
+    );
+
     // ========== DATA STRUCTURES ========== //
 
     enum AuctionStatus {
@@ -342,6 +348,9 @@ contract LocalSealedBidBatchAuction is AuctionModule {
 
             // Set bid status to decrypted
             encBid.status = BidStatus.Decrypted;
+
+            // Emit event
+            emit BidDecrypted(lotId_, bidId, encBid.amount, decrypts_[i].amountOut);
         }
 
         // Increment next decrypt index
