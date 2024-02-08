@@ -117,18 +117,18 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
     // ========== EVENTS ========== //
 
     event Purchase(
-        uint96 indexed lotId_,
+        uint96 indexed lotId,
         address indexed buyer,
         address referrer,
         uint256 amount,
         uint256 payout
     );
 
-    event Bid(uint96 indexed lotId_, uint96 indexed bidId_, address indexed bidder, uint256 amount);
+    event Bid(uint96 indexed lotId, uint96 indexed bidId, address indexed bidder, uint256 amount);
 
-    event CancelBid(uint96 indexed lotId_, uint96 indexed bidId_, address indexed bidder);
+    event CancelBid(uint96 indexed lotId, uint96 indexed bidId, address indexed bidder);
 
-    event Settle(uint96 indexed lotId_);
+    event Settle(uint96 indexed lotId);
 
     // ========== STATE VARIABLES ========== //
 

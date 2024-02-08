@@ -4,7 +4,7 @@ pragma solidity 0.8.19;
 import {Module} from "src/modules/Modules.sol";
 
 abstract contract Auction {
-    /* ========== ERRORS ========== */
+    // ========== ERRORS ========== //
 
     error Auction_MarketNotActive(uint96 lotId);
 
@@ -27,12 +27,7 @@ abstract contract Auction {
 
     error Auction_NotBidder();
 
-    /* ========== EVENTS ========== */
-
-    event AuctionCreated(
-        uint256 indexed id, address indexed payoutToken, address indexed quoteToken
-    );
-    event AuctionClosed(uint256 indexed id);
+    // ========== EVENTS ========== //
 
     // ========== DATA STRUCTURES ========== //
 

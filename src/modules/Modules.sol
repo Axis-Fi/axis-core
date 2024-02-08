@@ -112,11 +112,9 @@ abstract contract WithModules is Owned {
 
     // ========= EVENTS ========= //
 
-    event ModuleInstalled(
-        Keycode indexed keycode_, uint8 indexed version_, address indexed address_
-    );
+    event ModuleInstalled(Keycode indexed keycode, uint8 indexed version, address indexed location);
 
-    event ModuleSunset(Keycode indexed keycode_);
+    event ModuleSunset(Keycode indexed keycode);
 
     // ========= CONSTRUCTOR ========= //
 

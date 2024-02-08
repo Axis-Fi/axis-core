@@ -42,10 +42,10 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
     // ========= EVENTS ========= //
 
     event AuctionCreated(
-        uint96 indexed id, Veecode indexed auctionRef, address baseToken, address quoteToken
+        uint96 indexed lotId, Veecode indexed auctionRef, address baseToken, address quoteToken
     );
-    event AuctionCancelled(uint96 indexed id, Veecode indexed auctionRef);
-    event Curated(uint96 indexed id, address indexed curator);
+    event AuctionCancelled(uint96 indexed lotId, Veecode indexed auctionRef);
+    event Curated(uint96 indexed lotId, address indexed curator);
 
     // ========= DATA STRUCTURES ========== //
 
