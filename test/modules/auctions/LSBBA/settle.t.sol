@@ -345,7 +345,7 @@ contract LSBBASettleTest is Test, Permit2User {
     // [X] when the filled amount is greater than the lot minimum
     //   [X] it returns winning bids, with the marginal price is the minimum price
     // [ ] given that the auction has more bid amount than capacity
-    //  [ ] it succeeds
+    //  [ ] it marks the winning bids as won
 
     function test_whenLotIdIsInvalid_reverts() public whenLotIdIsInvalid {
         // Expect revert
