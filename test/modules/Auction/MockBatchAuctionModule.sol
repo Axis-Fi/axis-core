@@ -14,6 +14,8 @@ contract MockBatchAuctionModule is AuctionModule {
     mapping(uint96 lotId => mapping(uint256 => bool)) public bidCancelled;
     mapping(uint96 lotId => mapping(uint256 => bool)) public bidRefunded;
 
+    mapping(uint96 => bool) public settled;
+
     constructor(address _owner) AuctionModule(_owner) {
         minAuctionDuration = 1 days;
     }
@@ -65,7 +67,7 @@ contract MockBatchAuctionModule is AuctionModule {
         return bidId;
     }
 
-    function _cancelBid(
+    function _refundBid(
         uint96 lotId_,
         uint96 bidId_,
         address
@@ -136,12 +138,28 @@ contract MockBatchAuctionModule is AuctionModule {
         }
     }
 
-    function _revertIfBidCancelled(uint96 lotId_, uint96 bidId_) internal view virtual override {
+    function _revertIfBidRefunded(uint96 lotId_, uint96 bidId_) internal view virtual override {
         // Check that the bid has not been cancelled
         if (bidCancelled[lotId_][bidId_] == true) {
             revert Auction.Auction_InvalidBidId(lotId_, bidId_);
         }
     }
 
-    function _revertIfLotSettled(uint96 lotId_) internal view virtual override {}
+    function _revertIfLotSettled(uint96 lotId_) internal view virtual override {
+        // Check that the lot has not been settled
+        if (settled[lotId_] == true) {
+            revert Auction.Auction_MarketNotActive(lotId_);
+        }
+    }
+
+    function _revertIfLotNotSettled(uint96 lotId_) internal view virtual override {
+        // Check that the lot has been settled
+        if (settled[lotId_] == false) {
+            revert Auction.Auction_MarketNotActive(lotId_);
+        }
+    }
+
+    function setIsSettled(uint96 lotId_, bool isSettled_) external {
+        settled[lotId_] = isSettled_;
+    }
 }

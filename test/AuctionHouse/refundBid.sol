@@ -29,7 +29,7 @@ import {
     Module
 } from "src/modules/Modules.sol";
 
-contract CancelBidTest is Test, Permit2User {
+contract RefundBidTest is Test, Permit2User {
     MockERC20 internal baseToken;
     MockERC20 internal quoteToken;
     MockBatchAuctionModule internal mockAuctionModule;
@@ -148,18 +148,16 @@ contract CancelBidTest is Test, Permit2User {
         _;
     }
 
-    modifier givenBidIsCancelled() {
+    modifier givenBidIsRefunded() {
         vm.prank(alice);
-        auctionHouse.cancelBid(lotId, bidId);
+        auctionHouse.refundBid(lotId, bidId);
         _;
     }
 
-    // cancelBid
+    // refundBid
     // [X] given the auction lot does not exist
     //  [X] it reverts
     // [X] given the auction lot is an atomic auction
-    //  [X] it reverts
-    // [X] given the auction lot is cancelled
     //  [X] it reverts
     // [X] given the auction lot is concluded
     //  [X] it reverts
@@ -177,7 +175,7 @@ contract CancelBidTest is Test, Permit2User {
 
         // Call the function
         vm.prank(alice);
-        auctionHouse.cancelBid(lotId, bidId);
+        auctionHouse.refundBid(lotId, bidId);
     }
 
     function test_invalidAuctionType_reverts() external givenLotIsAtomicAuction {
@@ -186,21 +184,7 @@ contract CancelBidTest is Test, Permit2User {
 
         // Call the function
         vm.prank(alice);
-        auctionHouse.cancelBid(lotId, bidId);
-    }
-
-    function test_lotCancelled_reverts()
-        external
-        givenLotIsCreated
-        givenBidIsCreated
-        givenLotIsCancelled
-    {
-        bytes memory err = abi.encodeWithSelector(Auction.Auction_MarketNotActive.selector, lotId);
-        vm.expectRevert(err);
-
-        // Call the function
-        vm.prank(alice);
-        auctionHouse.cancelBid(lotId, bidId);
+        auctionHouse.refundBid(lotId, bidId);
     }
 
     function test_lotConcluded_reverts()
@@ -214,7 +198,7 @@ contract CancelBidTest is Test, Permit2User {
 
         // Call the function
         vm.prank(alice);
-        auctionHouse.cancelBid(lotId, bidId);
+        auctionHouse.refundBid(lotId, bidId);
     }
 
     function test_givenBidDoesNotExist_reverts() external givenLotIsCreated {
@@ -224,14 +208,14 @@ contract CancelBidTest is Test, Permit2User {
 
         // Call the function
         vm.prank(alice);
-        auctionHouse.cancelBid(lotId, bidId);
+        auctionHouse.refundBid(lotId, bidId);
     }
 
-    function test_givenBidCancelled_reverts()
+    function test_givenBidRefunded_reverts()
         external
         givenLotIsCreated
         givenBidIsCreated
-        givenBidIsCancelled
+        givenBidIsRefunded
     {
         bytes memory err =
             abi.encodeWithSelector(Auction.Auction_InvalidBidId.selector, lotId, bidId);
@@ -239,7 +223,7 @@ contract CancelBidTest is Test, Permit2User {
 
         // Call the function
         vm.prank(alice);
-        auctionHouse.cancelBid(lotId, bidId);
+        auctionHouse.refundBid(lotId, bidId);
     }
 
     function test_givenCallerIsNotBidOwner_reverts() external givenLotIsCreated givenBidIsCreated {
@@ -248,16 +232,16 @@ contract CancelBidTest is Test, Permit2User {
 
         // Call the function
         vm.prank(auctionOwner);
-        auctionHouse.cancelBid(lotId, bidId);
+        auctionHouse.refundBid(lotId, bidId);
     }
 
-    function test_itCancelsTheBid() external givenLotIsCreated givenBidIsCreated {
+    function test_itRefundsTheBid() external givenLotIsCreated givenBidIsCreated {
         // Get alice's balance
         uint256 aliceBalance = quoteToken.balanceOf(alice);
 
         // Call the function
         vm.prank(alice);
-        auctionHouse.cancelBid(lotId, bidId);
+        auctionHouse.refundBid(lotId, bidId);
 
         // Assert the bid is cancelled
         assertTrue(mockAuctionModule.bidCancelled(lotId, bidId));

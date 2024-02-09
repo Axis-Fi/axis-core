@@ -44,7 +44,6 @@ contract LocalSealedBidBatchAuction is AuctionModule {
 
     enum BidStatus {
         Submitted,
-        Cancelled,
         Decrypted,
         Won,
         Refunded
@@ -163,6 +162,15 @@ contract LocalSealedBidBatchAuction is AuctionModule {
     }
 
     /// @inheritdoc AuctionModule
+    /// @dev        Checks that the lot is settled
+    function _revertIfLotNotSettled(uint96 lotId_) internal view override {
+        // Auction must be settled
+        if (auctionData[lotId_].status != AuctionStatus.Settled) {
+            revert Auction_WrongState();
+        }
+    }
+
+    /// @inheritdoc AuctionModule
     /// @dev        Checks that the bid is valid
     function _revertIfBidInvalid(uint96 lotId_, uint96 bidId_) internal view override {
         // Bid ID must be less than number of bids for lot
@@ -181,10 +189,10 @@ contract LocalSealedBidBatchAuction is AuctionModule {
     }
 
     /// @inheritdoc AuctionModule
-    /// @dev        Checks that the bid is not already cancelled
-    function _revertIfBidCancelled(uint96 lotId_, uint96 bidId_) internal view override {
+    /// @dev        Checks that the bid is not already refunded
+    function _revertIfBidRefunded(uint96 lotId_, uint96 bidId_) internal view override {
         // Bid must not be cancelled
-        if (lotEncryptedBids[lotId_][bidId_].status == BidStatus.Cancelled) {
+        if (lotEncryptedBids[lotId_][bidId_].status == BidStatus.Refunded) {
             revert Auction_AlreadyCancelled();
         }
     }
@@ -248,12 +256,14 @@ contract LocalSealedBidBatchAuction is AuctionModule {
     ///             This function reverts if:
     ///             - The bid is not in the Submitted state
     ///             - The auction is not in the Created state
-    function _cancelBid(
+    function _refundBid(
         uint96 lotId_,
         uint96 bidId_,
         address
     ) internal override returns (uint256 refundAmount) {
         // Validate inputs
+        // Must not be canclled
+        if (lotData[lotId_].capacity == 0) revert Auction_WrongState();
 
         // Bid must be in Submitted state
         if (lotEncryptedBids[lotId_][bidId_].status != BidStatus.Submitted) {
@@ -264,7 +274,7 @@ contract LocalSealedBidBatchAuction is AuctionModule {
         if (auctionData[lotId_].status != AuctionStatus.Created) revert Auction_WrongState();
 
         // Set bid status to cancelled
-        lotEncryptedBids[lotId_][bidId_].status = BidStatus.Cancelled;
+        lotEncryptedBids[lotId_][bidId_].status = BidStatus.Refunded;
 
         // Remove bid from list of bids to decrypt
         uint96[] storage bidIds = auctionData[lotId_].bidIds;
@@ -445,6 +455,7 @@ contract LocalSealedBidBatchAuction is AuctionModule {
         // Capacity is always in base token units for this auction type
         uint256 capacity = lotData[lotId_].capacity;
         uint256 baseScale = 10 ** lotData[lotId_].baseTokenDecimals;
+        uint256 minBidSize = auctionData[lotId_].minBidSize;
 
         // Iterate over bid queue to calculate the marginal clearing price of the auction
         Queue storage queue = lotSortedBids[lotId_];
@@ -453,6 +464,11 @@ contract LocalSealedBidBatchAuction is AuctionModule {
         for (uint256 i = 0; i < numBids; i++) {
             // Load bid
             QueueBid storage qBid = queue.getBid(uint96(i));
+
+            // Make sure the bid size is sufficient
+            if (qBid.minAmountOut < minBidSize) {
+                continue;
+            }
 
             // Calculate bid price (in quote token units)
             // quote scale * base scale / base scale = quote scale
@@ -639,6 +655,9 @@ contract LocalSealedBidBatchAuction is AuctionModule {
 
     function maxAmountAccepted(uint96 lotId_) public view virtual override returns (uint256) {}
 
+    /// @notice     Returns the auction data for a given lot
+    ///
+    /// @param      lotId_          The lot ID of the auction to return data for
     function getLotData(uint96 lotId_) public view returns (AuctionData memory) {
         return auctionData[lotId_];
     }

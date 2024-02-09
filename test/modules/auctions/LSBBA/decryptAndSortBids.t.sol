@@ -204,9 +204,9 @@ contract LSBBADecryptAndSortBidsTest is Test, Permit2User {
         _;
     }
 
-    modifier whenBidHasBeenCancelled(uint96 bidId_) {
+    modifier whenBidHasBeenRefunded(uint96 bidId_) {
         vm.prank(address(auctionHouse));
-        auctionModule.cancelBid(lotId, bidId_, alice);
+        auctionModule.refundBid(lotId, bidId_, alice);
         _;
     }
 
@@ -341,7 +341,7 @@ contract LSBBADecryptAndSortBidsTest is Test, Permit2User {
 
     function test_givenBidHasBeenCancelled_reverts()
         public
-        whenBidHasBeenCancelled(bidOne)
+        whenBidHasBeenRefunded(bidOne)
         whenLotHasConcluded
     {
         // Expect revert
@@ -355,7 +355,7 @@ contract LSBBADecryptAndSortBidsTest is Test, Permit2User {
 
     function test_givenBidHasBeenCancelled()
         public
-        whenBidHasBeenCancelled(bidOne)
+        whenBidHasBeenRefunded(bidOne)
         whenLotHasConcluded
     {
         // Amend the decrypts array
@@ -374,7 +374,7 @@ contract LSBBADecryptAndSortBidsTest is Test, Permit2User {
         // Check encrypted bids
         LocalSealedBidBatchAuction.EncryptedBid memory encryptedBid =
             auctionModule.getBidData(lotId, bidOne);
-        assertEq(uint8(encryptedBid.status), uint8(LocalSealedBidBatchAuction.BidStatus.Cancelled));
+        assertEq(uint8(encryptedBid.status), uint8(LocalSealedBidBatchAuction.BidStatus.Refunded));
         LocalSealedBidBatchAuction.EncryptedBid memory encryptedBidTwo =
             auctionModule.getBidData(lotId, bidTwo);
         assertEq(

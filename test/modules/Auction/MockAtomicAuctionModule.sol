@@ -84,7 +84,7 @@ contract MockAtomicAuctionModule is AuctionModule {
         revert Auction_NotImplemented();
     }
 
-    function _cancelBid(uint96, uint96, address) internal virtual override returns (uint256) {
+    function _refundBid(uint96, uint96, address) internal virtual override returns (uint256) {
         revert Auction_NotImplemented();
     }
 
@@ -119,7 +119,9 @@ contract MockAtomicAuctionModule is AuctionModule {
         address caller_
     ) internal view virtual override {}
 
-    function _revertIfBidCancelled(uint96 lotId_, uint96 bidId_) internal view virtual override {}
+    function _revertIfBidRefunded(uint96 lotId_, uint96 bidId_) internal view virtual override {}
 
     function _revertIfLotSettled(uint96 lotId_) internal view virtual override {}
+
+    function _revertIfLotNotSettled(uint96 lotId_) internal view virtual override {}
 }
