@@ -305,6 +305,21 @@ contract LSBBASettleTest is Test, Permit2User {
         _;
     }
 
+    modifier whenHasBidBelowMinimum() {
+        // Above minimum price
+        // Not over capacity
+        (bidOne, decryptedBidOne) = _createBid(bidOneAmount, bidOneAmountOut);
+        (bidTwo, decryptedBidTwo) = _createBid(bidTwoAmount, bidTwoAmountOut);
+        // < minimum
+        (bidThree, decryptedBidThree) = _createBid(1e16, 1e16);
+
+        // Set up the decrypts array
+        decrypts.push(decryptedBidOne);
+        decrypts.push(decryptedBidTwo);
+        decrypts.push(decryptedBidThree);
+        _;
+    }
+
     // ===== Tests ===== //
 
     // [X] when the lot id is invalid
@@ -525,6 +540,29 @@ contract LSBBASettleTest is Test, Permit2User {
         assertEq(lot.capacity, 0); // Set to 0 to prevent further bids
         assertEq(lot.sold, 0); // Base tokens sold
         assertEq(lot.purchased, 0); // Quote tokens purchased
+    }
+
+    function test_whenBidSizeIsBelowMinimum()
+        public
+        whenHasBidBelowMinimum
+        whenLotHasConcluded
+        whenLotDecryptionIsComplete
+    {
+        // Call for settlement
+        vm.prank(address(auctionHouse));
+        (LocalSealedBidBatchAuction.Bid[] memory winningBids,) = auctionModule.settle(lotId);
+
+        // First bid - largest amount out
+        assertEq(winningBids[0].amount, bidTwoAmount);
+        assertEq(winningBids[0].minAmountOut, bidTwoAmountOut);
+
+        // Second bid
+        assertEq(winningBids[1].amount, bidOneAmount);
+        assertEq(winningBids[1].minAmountOut, bidOneAmountOut);
+
+        // Third bid does not meet minimum
+
+        assertEq(winningBids.length, 2);
     }
 
     function test_whenLotIsOverSubscribed()
