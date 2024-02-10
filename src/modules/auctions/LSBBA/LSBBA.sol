@@ -338,6 +338,7 @@ contract LocalSealedBidBatchAuction is AuctionModule {
         }
 
         // Iterate over decrypts, validate that they match the stored encrypted bids, then store them in the sorted bid queue
+        uint256 minBidSize = auctionData[lotId_].minBidSize;
         for (uint96 i; i < len; i++) {
             // Re-encrypt the decrypt to confirm that it matches the stored encrypted bid
             bytes memory ciphertext = _encrypt(lotId_, decrypts_[i]);
@@ -354,7 +355,10 @@ contract LocalSealedBidBatchAuction is AuctionModule {
             if (encBid.status != BidStatus.Submitted) continue;
 
             // Store the decrypt in the sorted bid queue
-            lotSortedBids[lotId_].insert(bidId, encBid.amount, decrypts_[i].amountOut);
+            // Only if the amount out is greater than the minimum bid size
+            if (decrypts_[i].amountOut > minBidSize) {
+                lotSortedBids[lotId_].insert(bidId, encBid.amount, decrypts_[i].amountOut);
+            }
 
             // Set bid status to decrypted
             encBid.status = BidStatus.Decrypted;
