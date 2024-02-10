@@ -40,6 +40,7 @@ contract LSBBARefundBidTest is Test, Permit2User {
 
     uint96 internal bidId;
     uint256 internal bidAmount = 1e18;
+    uint256 internal bidAmountOut = 1e18;
     bytes32 internal bidSeed = bytes32(uint256(1e9));
     LocalSealedBidBatchAuction.Decrypt[] internal decrypts;
 
@@ -86,7 +87,7 @@ contract LSBBARefundBidTest is Test, Permit2User {
 
         // Encrypt the bid amount
         LocalSealedBidBatchAuction.Decrypt memory decryptedBid =
-            LocalSealedBidBatchAuction.Decrypt({amountOut: bidAmount, seed: bidSeed});
+            LocalSealedBidBatchAuction.Decrypt({amountOut: bidAmountOut, seed: bidSeed});
         auctionData = _encrypt(decryptedBid);
         decrypts.push(decryptedBid);
 
@@ -276,7 +277,7 @@ contract LSBBARefundBidTest is Test, Permit2User {
         assertEq(uint8(encryptedBid.status), uint8(LocalSealedBidBatchAuction.BidStatus.Refunded));
 
         // Check return value
-        assertEq(returnedBidAmount, bidAmount);
+        assertEq(returnedBidAmount, bidAmountOut);
 
         // Lot not changed
         Auction.Lot memory lot = auctionModule.getLot(lotId);
@@ -333,20 +334,24 @@ contract LSBBARefundBidTest is Test, Permit2User {
         // Check values
         LocalSealedBidBatchAuction.EncryptedBid memory encryptedBid =
             auctionModule.getBidData(lotId, bidId);
-        assertEq(encryptedBid.bidder, alice);
-        assertEq(encryptedBid.recipient, recipient);
-        assertEq(encryptedBid.referrer, referrer);
-        assertEq(encryptedBid.amount, bidAmount);
-        assertEq(encryptedBid.encryptedAmountOut, auctionData);
-        assertEq(uint8(encryptedBid.status), uint8(LocalSealedBidBatchAuction.BidStatus.Refunded));
+        assertEq(encryptedBid.bidder, alice, "bidder mismatch");
+        assertEq(encryptedBid.recipient, recipient, "recipient mismatch");
+        assertEq(encryptedBid.referrer, referrer, "referrer mismatch");
+        assertEq(encryptedBid.amount, 1, "amount mismatch");
+        assertEq(encryptedBid.encryptedAmountOut, auctionData, "encryptedAmountOut mismatch");
+        assertEq(
+            uint8(encryptedBid.status),
+            uint8(LocalSealedBidBatchAuction.BidStatus.Refunded),
+            "status mismatch"
+        );
 
         // Check return value
-        assertEq(returnedBidAmount, bidAmount);
+        assertEq(returnedBidAmount, 1, "returnedBidAmount mismatch");
 
         // Lot not changed
         Auction.Lot memory lot = auctionModule.getLot(lotId);
-        assertEq(lot.capacity, LOT_CAPACITY);
-        assertEq(lot.sold, 0);
-        assertEq(lot.purchased, 0);
+        assertEq(lot.capacity, 0, "lot capacity mismatch"); // Set to 0 after settlement
+        assertEq(lot.sold, bidAmountOut, "lot sold mismatch");
+        assertEq(lot.purchased, bidAmount, "lot purchased mismatch");
     }
 }

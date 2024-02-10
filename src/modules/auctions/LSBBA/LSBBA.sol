@@ -268,9 +268,6 @@ contract LocalSealedBidBatchAuction is AuctionModule {
             revert Auction_WrongState();
         }
 
-        // Auction must be in Created state
-        if (auctionData[lotId_].status != AuctionStatus.Created) revert Auction_WrongState();
-
         // Set bid status to cancelled
         lotEncryptedBids[lotId_][bidId_].status = BidStatus.Refunded;
 
