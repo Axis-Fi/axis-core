@@ -195,6 +195,18 @@ contract LSBBASettleTest is Test, Permit2User {
         _;
     }
 
+    modifier givenBidIsRefunded(uint96 bidId_) {
+        // Refund the bid
+        vm.prank(address(auctionHouse));
+        auctionModule.refundBid(lotId, bidId_, alice);
+
+        // Remove from the decrypts array
+        _clearDecrypts();
+        decrypts.push(decryptedBidOne);
+        decrypts.push(decryptedBidThree);
+        _;
+    }
+
     modifier givenLotHasDecimals(uint8 quoteTokenDecimals_, uint8 baseTokenDecimals_) {
         quoteTokenDecimals = quoteTokenDecimals_;
         baseTokenDecimals = baseTokenDecimals_;
@@ -240,7 +252,7 @@ contract LSBBASettleTest is Test, Permit2User {
     modifier whenLotIsOverSubscribed() {
         // 2 + 3 + 7 > 10
         // Marginal price 1
-        // Smallest bid (2) will not be filled at all
+        // Smallest bid (bidOne) will not be filled at all
         (bidOne, decryptedBidOne) = _createBid(bidOneAmount, bidOneAmountOut);
         (bidTwo, decryptedBidTwo) = _createBid(bidTwoAmount, bidTwoAmountOut);
         (bidThree, decryptedBidThree) = _createBid(bidThreeAmount, bidThreeAmountOut);
@@ -255,7 +267,7 @@ contract LSBBASettleTest is Test, Permit2User {
     modifier whenLotIsOverSubscribedPartialFill() {
         // 2 + 3 + 6 > 10
         // Marginal price 1
-        // Smallest bid (2) will be partially filled
+        // Smallest bid (bidOne) will be partially filled
         (bidOne, decryptedBidOne) = _createBid(bidOneAmount, bidOneAmountOut);
         (bidTwo, decryptedBidTwo) = _createBid(bidTwoAmount, bidTwoAmountOut);
         (bidFive, decryptedBidFive) = _createBid(bidFiveAmount, bidFiveAmountOut);
@@ -302,6 +314,21 @@ contract LSBBASettleTest is Test, Permit2User {
         // Call for settlement
         vm.prank(address(auctionHouse));
         auctionModule.settle(lotId);
+        _;
+    }
+
+    modifier whenHasBidBelowMinimum() {
+        // Above minimum price
+        // Not over capacity
+        (bidOne, decryptedBidOne) = _createBid(bidOneAmount, bidOneAmountOut);
+        (bidTwo, decryptedBidTwo) = _createBid(bidTwoAmount, bidTwoAmountOut);
+        // < minimum of 1e17
+        (bidThree, decryptedBidThree) = _createBid(1e15, 1e16);
+
+        // Set up the decrypts array
+        decrypts.push(decryptedBidOne);
+        decrypts.push(decryptedBidTwo);
+        decrypts.push(decryptedBidThree);
         _;
     }
 
@@ -416,6 +443,15 @@ contract LSBBASettleTest is Test, Permit2User {
         // Expect no winning bids
         assertEq(winningBids.length, 0);
 
+        // Check bid status
+        LocalSealedBidBatchAuction.EncryptedBid memory bidDataOne =
+            auctionModule.getBidData(lotId, bidOne);
+        assertEq(
+            uint8(bidDataOne.status),
+            uint8(LocalSealedBidBatchAuction.BidStatus.Decrypted),
+            "bidOne: status mismatch"
+        );
+
         // Lot is updated
         Auction.Lot memory lot = auctionModule.getLot(lotId);
         assertEq(lot.capacity, 0); // Set to 0 to prevent further bids
@@ -436,6 +472,15 @@ contract LSBBASettleTest is Test, Permit2User {
 
         // Expect no winning bids
         assertEq(winningBids.length, 0);
+
+        // Check bid status
+        LocalSealedBidBatchAuction.EncryptedBid memory bidDataOne =
+            auctionModule.getBidData(lotId, bidOne);
+        assertEq(
+            uint8(bidDataOne.status),
+            uint8(LocalSealedBidBatchAuction.BidStatus.Decrypted),
+            "bidOne: status mismatch"
+        );
 
         // Lot is updated
         Auction.Lot memory lot = auctionModule.getLot(lotId);
@@ -458,6 +503,15 @@ contract LSBBASettleTest is Test, Permit2User {
         // Expect no winning bids
         assertEq(winningBids.length, 0);
 
+        // Check bid status
+        LocalSealedBidBatchAuction.EncryptedBid memory bidDataOne =
+            auctionModule.getBidData(lotId, bidOne);
+        assertEq(
+            uint8(bidDataOne.status),
+            uint8(LocalSealedBidBatchAuction.BidStatus.Decrypted),
+            "bidOne: status mismatch"
+        );
+
         // Lot is updated
         Auction.Lot memory lot = auctionModule.getLot(lotId);
         assertEq(lot.capacity, 0); // Set to 0 to prevent further bids
@@ -477,6 +531,23 @@ contract LSBBASettleTest is Test, Permit2User {
 
         // Expect no winning bids
         assertEq(winningBids.length, 0);
+
+        // Check bid status
+        LocalSealedBidBatchAuction.EncryptedBid memory bidDataOne =
+            auctionModule.getBidData(lotId, bidOne);
+        assertEq(
+            uint8(bidDataOne.status),
+            uint8(LocalSealedBidBatchAuction.BidStatus.Decrypted),
+            "bidOne: status mismatch"
+        );
+
+        LocalSealedBidBatchAuction.EncryptedBid memory bidDataFour =
+            auctionModule.getBidData(lotId, bidFour);
+        assertEq(
+            uint8(bidDataFour.status),
+            uint8(LocalSealedBidBatchAuction.BidStatus.Decrypted),
+            "bidFour: status mismatch"
+        );
 
         // Lot is updated
         Auction.Lot memory lot = auctionModule.getLot(lotId);
@@ -499,6 +570,23 @@ contract LSBBASettleTest is Test, Permit2User {
         // Expect no winning bids
         assertEq(winningBids.length, 0);
 
+        // Check bid status
+        LocalSealedBidBatchAuction.EncryptedBid memory bidDataOne =
+            auctionModule.getBidData(lotId, bidOne);
+        assertEq(
+            uint8(bidDataOne.status),
+            uint8(LocalSealedBidBatchAuction.BidStatus.Decrypted),
+            "bidOne: status mismatch"
+        );
+
+        LocalSealedBidBatchAuction.EncryptedBid memory bidDataFour =
+            auctionModule.getBidData(lotId, bidFour);
+        assertEq(
+            uint8(bidDataFour.status),
+            uint8(LocalSealedBidBatchAuction.BidStatus.Decrypted),
+            "bidFour: status mismatch"
+        );
+
         // Lot is updated
         Auction.Lot memory lot = auctionModule.getLot(lotId);
         assertEq(lot.capacity, 0); // Set to 0 to prevent further bids
@@ -520,11 +608,76 @@ contract LSBBASettleTest is Test, Permit2User {
         // Expect no winning bids
         assertEq(winningBids.length, 0);
 
+        // Check bid status
+        LocalSealedBidBatchAuction.EncryptedBid memory bidDataOne =
+            auctionModule.getBidData(lotId, bidOne);
+        assertEq(
+            uint8(bidDataOne.status),
+            uint8(LocalSealedBidBatchAuction.BidStatus.Decrypted),
+            "bidOne: status mismatch"
+        );
+
+        LocalSealedBidBatchAuction.EncryptedBid memory bidDataFour =
+            auctionModule.getBidData(lotId, bidFour);
+        assertEq(
+            uint8(bidDataFour.status),
+            uint8(LocalSealedBidBatchAuction.BidStatus.Decrypted),
+            "bidFour: status mismatch"
+        );
+
         // Lot is updated
         Auction.Lot memory lot = auctionModule.getLot(lotId);
         assertEq(lot.capacity, 0); // Set to 0 to prevent further bids
         assertEq(lot.sold, 0); // Base tokens sold
         assertEq(lot.purchased, 0); // Quote tokens purchased
+    }
+
+    function test_whenBidSizeIsBelowMinimum()
+        public
+        whenHasBidBelowMinimum
+        whenLotHasConcluded
+        whenLotDecryptionIsComplete
+    {
+        // Call for settlement
+        vm.prank(address(auctionHouse));
+        (LocalSealedBidBatchAuction.Bid[] memory winningBids,) = auctionModule.settle(lotId);
+
+        // First bid - largest amount out
+        assertEq(winningBids[0].amount, bidTwoAmount, "bidTwo: amount mismatch");
+        assertEq(winningBids[0].minAmountOut, bidTwoAmountOut, "bidTwo: minAmountOut mismatch");
+
+        // Second bid
+        assertEq(winningBids[1].amount, bidOneAmount, "bidOne: amount mismatch");
+        assertEq(winningBids[1].minAmountOut, bidOneAmountOut, "bidOne: minAmountOut mismatch");
+
+        // Third bid does not meet minimum
+
+        assertEq(winningBids.length, 2, "winningBids: length mismatch");
+
+        // Check bid status
+        LocalSealedBidBatchAuction.EncryptedBid memory bidDataOne =
+            auctionModule.getBidData(lotId, bidOne);
+        assertEq(
+            uint8(bidDataOne.status),
+            uint8(LocalSealedBidBatchAuction.BidStatus.Won),
+            "bidOne: status mismatch"
+        );
+
+        LocalSealedBidBatchAuction.EncryptedBid memory bidDataTwo =
+            auctionModule.getBidData(lotId, bidTwo);
+        assertEq(
+            uint8(bidDataTwo.status),
+            uint8(LocalSealedBidBatchAuction.BidStatus.Won),
+            "bidTwo: status mismatch"
+        );
+
+        LocalSealedBidBatchAuction.EncryptedBid memory bidDataThree =
+            auctionModule.getBidData(lotId, bidThree);
+        assertEq(
+            uint8(bidDataThree.status),
+            uint8(LocalSealedBidBatchAuction.BidStatus.Decrypted),
+            "bidThree: status mismatch"
+        );
     }
 
     function test_whenLotIsOverSubscribed()
@@ -552,6 +705,31 @@ contract LSBBASettleTest is Test, Permit2User {
 
         // Expect winning bids
         assertEq(winningBids.length, 2);
+
+        // Check bid status
+        LocalSealedBidBatchAuction.EncryptedBid memory bidDataOne =
+            auctionModule.getBidData(lotId, bidOne);
+        assertEq(
+            uint8(bidDataOne.status),
+            uint8(LocalSealedBidBatchAuction.BidStatus.Decrypted),
+            "bidOne: status mismatch"
+        );
+
+        LocalSealedBidBatchAuction.EncryptedBid memory bidDataTwo =
+            auctionModule.getBidData(lotId, bidTwo);
+        assertEq(
+            uint8(bidDataTwo.status),
+            uint8(LocalSealedBidBatchAuction.BidStatus.Won),
+            "bidTwo: status mismatch"
+        );
+
+        LocalSealedBidBatchAuction.EncryptedBid memory bidDataThree =
+            auctionModule.getBidData(lotId, bidThree);
+        assertEq(
+            uint8(bidDataThree.status),
+            uint8(LocalSealedBidBatchAuction.BidStatus.Won),
+            "bidThree: status mismatch"
+        );
 
         // Lot is updated
         Auction.Lot memory lot = auctionModule.getLot(lotId);
@@ -587,6 +765,31 @@ contract LSBBASettleTest is Test, Permit2User {
         // Expect winning bids
         assertEq(winningBids.length, 2);
 
+        // Check bid status
+        LocalSealedBidBatchAuction.EncryptedBid memory bidDataOne =
+            auctionModule.getBidData(lotId, bidOne);
+        assertEq(
+            uint8(bidDataOne.status),
+            uint8(LocalSealedBidBatchAuction.BidStatus.Decrypted),
+            "bidOne: status mismatch"
+        );
+
+        LocalSealedBidBatchAuction.EncryptedBid memory bidDataTwo =
+            auctionModule.getBidData(lotId, bidTwo);
+        assertEq(
+            uint8(bidDataTwo.status),
+            uint8(LocalSealedBidBatchAuction.BidStatus.Won),
+            "bidTwo: status mismatch"
+        );
+
+        LocalSealedBidBatchAuction.EncryptedBid memory bidDataThree =
+            auctionModule.getBidData(lotId, bidThree);
+        assertEq(
+            uint8(bidDataThree.status),
+            uint8(LocalSealedBidBatchAuction.BidStatus.Won),
+            "bidThree: status mismatch"
+        );
+
         // Lot is updated
         Auction.Lot memory lot = auctionModule.getLot(lotId);
         assertEq(lot.capacity, 0); // Set to 0 to prevent further bids
@@ -621,11 +824,57 @@ contract LSBBASettleTest is Test, Permit2User {
         // Expect winning bids
         assertEq(winningBids.length, 2);
 
+        // Check bid status
+        LocalSealedBidBatchAuction.EncryptedBid memory bidDataOne =
+            auctionModule.getBidData(lotId, bidOne);
+        assertEq(
+            uint8(bidDataOne.status),
+            uint8(LocalSealedBidBatchAuction.BidStatus.Decrypted),
+            "bidOne: status mismatch"
+        );
+
+        LocalSealedBidBatchAuction.EncryptedBid memory bidDataTwo =
+            auctionModule.getBidData(lotId, bidTwo);
+        assertEq(
+            uint8(bidDataTwo.status),
+            uint8(LocalSealedBidBatchAuction.BidStatus.Won),
+            "bidTwo: status mismatch"
+        );
+
+        LocalSealedBidBatchAuction.EncryptedBid memory bidDataThree =
+            auctionModule.getBidData(lotId, bidThree);
+        assertEq(
+            uint8(bidDataThree.status),
+            uint8(LocalSealedBidBatchAuction.BidStatus.Won),
+            "bidThree: status mismatch"
+        );
+
         // Lot is updated
         Auction.Lot memory lot = auctionModule.getLot(lotId);
         assertEq(lot.capacity, 0); // Set to 0 to prevent further bids
         assertEq(lot.sold, bidThreeAmountOut + bidTwoAmountOut); // Base tokens sold
         assertEq(lot.purchased, bidThreeAmount + bidTwoAmount); // Quote tokens purchased
+    }
+
+    function test_whenLotIsOverSubscribed_thenRefund()
+        public
+        whenLotIsOverSubscribed
+        whenLotHasConcluded
+        whenLotDecryptionIsComplete
+    {
+        // Call for settlement
+        vm.prank(address(auctionHouse));
+        (LocalSealedBidBatchAuction.Bid[] memory winningBids,) = auctionModule.settle(lotId);
+
+        // Expect winning bids
+        assertEq(winningBids.length, 2);
+
+        // Try to refund the failed bid
+        vm.prank(address(auctionHouse));
+        uint256 bidOneRefundAmount = auctionModule.refundBid(lotId, bidOne, alice);
+
+        // Expect refund
+        assertEq(bidOneRefundAmount, bidOneAmount);
     }
 
     function test_whenLotIsOverSubscribed_partialFill()
@@ -659,11 +908,59 @@ contract LSBBASettleTest is Test, Permit2User {
         // Expect winning bids
         assertEq(winningBids.length, 3);
 
+        // Check bid status
+        LocalSealedBidBatchAuction.EncryptedBid memory bidDataOne =
+            auctionModule.getBidData(lotId, bidOne);
+        assertEq(
+            uint8(bidDataOne.status),
+            uint8(LocalSealedBidBatchAuction.BidStatus.Won),
+            "bidOne: status mismatch"
+        );
+
+        LocalSealedBidBatchAuction.EncryptedBid memory bidDataTwo =
+            auctionModule.getBidData(lotId, bidTwo);
+        assertEq(
+            uint8(bidDataTwo.status),
+            uint8(LocalSealedBidBatchAuction.BidStatus.Won),
+            "bidTwo: status mismatch"
+        );
+
+        LocalSealedBidBatchAuction.EncryptedBid memory bidDataFive =
+            auctionModule.getBidData(lotId, bidFive);
+        assertEq(
+            uint8(bidDataFive.status),
+            uint8(LocalSealedBidBatchAuction.BidStatus.Won),
+            "bidFive: status mismatch"
+        );
+
         // Lot is updated
         Auction.Lot memory lot = auctionModule.getLot(lotId);
         assertEq(lot.capacity, 0); // Set to 0 to prevent further bids
         assertEq(lot.sold, bidFiveAmountOut + bidTwoAmountOut + bidOneAmountOut); // Base tokens sold
         assertEq(lot.purchased, bidFiveAmount + bidTwoAmount + bidOneAmount); // Quote tokens purchased
+    }
+
+    function test_whenLotIsOverSubscribed_partialFill_thenRefund_reverts()
+        public
+        whenLotIsOverSubscribedPartialFill
+        whenLotHasConcluded
+        whenLotDecryptionIsComplete
+    {
+        // Call for settlement
+        vm.prank(address(auctionHouse));
+        (LocalSealedBidBatchAuction.Bid[] memory winningBids,) = auctionModule.settle(lotId);
+
+        // Expect winning bids
+        assertEq(winningBids.length, 3);
+
+        // Expect error
+        bytes memory err =
+            abi.encodeWithSelector(LocalSealedBidBatchAuction.Bid_WrongState.selector);
+        vm.expectRevert(err);
+
+        // Try to refund the partially-filled bid
+        vm.prank(address(auctionHouse));
+        auctionModule.refundBid(lotId, bidOne, alice);
     }
 
     function test_whenLotIsOverSubscribed_partialFill_quoteTokenDecimalsLarger()
@@ -697,6 +994,31 @@ contract LSBBASettleTest is Test, Permit2User {
 
         // Expect winning bids
         assertEq(winningBids.length, 3);
+
+        // Check bid status
+        LocalSealedBidBatchAuction.EncryptedBid memory bidDataOne =
+            auctionModule.getBidData(lotId, bidOne);
+        assertEq(
+            uint8(bidDataOne.status),
+            uint8(LocalSealedBidBatchAuction.BidStatus.Won),
+            "bidOne: status mismatch"
+        );
+
+        LocalSealedBidBatchAuction.EncryptedBid memory bidDataTwo =
+            auctionModule.getBidData(lotId, bidTwo);
+        assertEq(
+            uint8(bidDataTwo.status),
+            uint8(LocalSealedBidBatchAuction.BidStatus.Won),
+            "bidTwo: status mismatch"
+        );
+
+        LocalSealedBidBatchAuction.EncryptedBid memory bidDataFive =
+            auctionModule.getBidData(lotId, bidFive);
+        assertEq(
+            uint8(bidDataFive.status),
+            uint8(LocalSealedBidBatchAuction.BidStatus.Won),
+            "bidFive: status mismatch"
+        );
 
         // Lot is updated
         Auction.Lot memory lot = auctionModule.getLot(lotId);
@@ -737,6 +1059,31 @@ contract LSBBASettleTest is Test, Permit2User {
         // Expect winning bids
         assertEq(winningBids.length, 3);
 
+        // Check bid status
+        LocalSealedBidBatchAuction.EncryptedBid memory bidDataOne =
+            auctionModule.getBidData(lotId, bidOne);
+        assertEq(
+            uint8(bidDataOne.status),
+            uint8(LocalSealedBidBatchAuction.BidStatus.Won),
+            "bidOne: status mismatch"
+        );
+
+        LocalSealedBidBatchAuction.EncryptedBid memory bidDataTwo =
+            auctionModule.getBidData(lotId, bidTwo);
+        assertEq(
+            uint8(bidDataTwo.status),
+            uint8(LocalSealedBidBatchAuction.BidStatus.Won),
+            "bidTwo: status mismatch"
+        );
+
+        LocalSealedBidBatchAuction.EncryptedBid memory bidDataFive =
+            auctionModule.getBidData(lotId, bidFive);
+        assertEq(
+            uint8(bidDataFive.status),
+            uint8(LocalSealedBidBatchAuction.BidStatus.Won),
+            "bidFive: status mismatch"
+        );
+
         // Lot is updated
         Auction.Lot memory lot = auctionModule.getLot(lotId);
         assertEq(lot.capacity, 0); // Set to 0 to prevent further bids
@@ -769,6 +1116,15 @@ contract LSBBASettleTest is Test, Permit2User {
 
         // Expect winning bids
         assertEq(winningBids.length, 2);
+
+        // Check bid status
+        LocalSealedBidBatchAuction.EncryptedBid memory bidDataOne =
+            auctionModule.getBidData(lotId, bidOne);
+        assertEq(uint8(bidDataOne.status), uint8(LocalSealedBidBatchAuction.BidStatus.Won));
+
+        LocalSealedBidBatchAuction.EncryptedBid memory bidDataTwo =
+            auctionModule.getBidData(lotId, bidTwo);
+        assertEq(uint8(bidDataTwo.status), uint8(LocalSealedBidBatchAuction.BidStatus.Won));
 
         // Lot is updated
         Auction.Lot memory lot = auctionModule.getLot(lotId);
@@ -804,6 +1160,15 @@ contract LSBBASettleTest is Test, Permit2User {
         // Expect winning bids
         assertEq(winningBids.length, 2, "winning bids length mismatch");
 
+        // Check bid status
+        LocalSealedBidBatchAuction.EncryptedBid memory bidDataOne =
+            auctionModule.getBidData(lotId, bidOne);
+        assertEq(uint8(bidDataOne.status), uint8(LocalSealedBidBatchAuction.BidStatus.Won));
+
+        LocalSealedBidBatchAuction.EncryptedBid memory bidDataTwo =
+            auctionModule.getBidData(lotId, bidTwo);
+        assertEq(uint8(bidDataTwo.status), uint8(LocalSealedBidBatchAuction.BidStatus.Won));
+
         // Lot is updated
         Auction.Lot memory lot = auctionModule.getLot(lotId);
         assertEq(lot.capacity, 0); // Set to 0 to prevent further bids
@@ -838,10 +1203,78 @@ contract LSBBASettleTest is Test, Permit2User {
         // Expect winning bids
         assertEq(winningBids.length, 2);
 
+        // Check bid status
+        LocalSealedBidBatchAuction.EncryptedBid memory bidDataOne =
+            auctionModule.getBidData(lotId, bidOne);
+        assertEq(uint8(bidDataOne.status), uint8(LocalSealedBidBatchAuction.BidStatus.Won));
+
+        LocalSealedBidBatchAuction.EncryptedBid memory bidDataTwo =
+            auctionModule.getBidData(lotId, bidTwo);
+        assertEq(uint8(bidDataTwo.status), uint8(LocalSealedBidBatchAuction.BidStatus.Won));
+
         // Lot is updated
         Auction.Lot memory lot = auctionModule.getLot(lotId);
         assertEq(lot.capacity, 0); // Set to 0 to prevent further bids
         assertEq(lot.sold, bidTwoAmountOut + bidOneAmountOut); // Base tokens sold
         assertEq(lot.purchased, bidTwoAmount + bidOneAmount); // Quote tokens purchased
+    }
+
+    function test_whenLotIsOverSubscribed_whenBidIsRefunded()
+        public
+        whenLotIsOverSubscribed
+        givenBidIsRefunded(bidTwo)
+        whenLotHasConcluded
+        whenLotDecryptionIsComplete
+    {
+        // Call for settlement
+        vm.prank(address(auctionHouse));
+        (LocalSealedBidBatchAuction.Bid[] memory winningBids,) = auctionModule.settle(lotId);
+
+        // Calculate the marginal price
+        uint256 marginalPrice = _getMarginalPriceScaled(bidOneAmount, bidOneAmountOut);
+
+        bidThreeAmountOut = _getAmountOut(bidThreeAmount, marginalPrice);
+
+        // First bid - largest amount out
+        assertEq(winningBids[0].amount, bidThreeAmount);
+        assertEq(winningBids[0].minAmountOut, bidThreeAmountOut);
+
+        // Second bid
+        assertEq(winningBids[1].amount, bidOneAmount);
+        assertEq(winningBids[1].minAmountOut, bidOneAmountOut);
+
+        // Expect winning bids
+        assertEq(winningBids.length, 2);
+
+        // Check bid status
+        LocalSealedBidBatchAuction.EncryptedBid memory bidDataOne =
+            auctionModule.getBidData(lotId, bidOne);
+        assertEq(
+            uint8(bidDataOne.status),
+            uint8(LocalSealedBidBatchAuction.BidStatus.Won),
+            "bidOne: status mismatch"
+        );
+
+        LocalSealedBidBatchAuction.EncryptedBid memory bidDataTwo =
+            auctionModule.getBidData(lotId, bidTwo);
+        assertEq(
+            uint8(bidDataTwo.status),
+            uint8(LocalSealedBidBatchAuction.BidStatus.Refunded),
+            "bidTwo: status mismatch"
+        );
+
+        LocalSealedBidBatchAuction.EncryptedBid memory bidDataThree =
+            auctionModule.getBidData(lotId, bidThree);
+        assertEq(
+            uint8(bidDataThree.status),
+            uint8(LocalSealedBidBatchAuction.BidStatus.Won),
+            "bidThree: status mismatch"
+        );
+
+        // Lot is updated
+        Auction.Lot memory lot = auctionModule.getLot(lotId);
+        assertEq(lot.capacity, 0); // Set to 0 to prevent further bids
+        assertEq(lot.sold, bidThreeAmountOut + bidOneAmountOut); // Base tokens sold
+        assertEq(lot.purchased, bidThreeAmount + bidOneAmount); // Quote tokens purchased
     }
 }

@@ -25,6 +25,13 @@ contract LSBBACreateAuctionTest is Test, Permit2User {
 
     uint8 internal constant _quoteTokenDecimals = 18;
     uint8 internal constant _baseTokenDecimals = 18;
+    uint8 internal quoteTokenDecimals = _quoteTokenDecimals;
+    uint8 internal baseTokenDecimals = _baseTokenDecimals;
+
+    uint256 internal constant LOT_CAPACITY = 10e18;
+    uint256 internal constant MINIMUM_PRICE = 1e18;
+    uint256 internal lotCapacity = LOT_CAPACITY;
+    uint256 internal minimumPrice = MINIMUM_PRICE;
 
     function setUp() public {
         // Ensure the block timestamp is a sane value
@@ -39,7 +46,7 @@ contract LSBBACreateAuctionTest is Test, Permit2User {
         auctionDataParams = LocalSealedBidBatchAuction.AuctionDataParams({
             minFillPercent: 1000,
             minBidPercent: 1000,
-            minimumPrice: 1e18,
+            minimumPrice: MINIMUM_PRICE,
             publicKeyModulus: new bytes(128)
         });
 
@@ -48,12 +55,23 @@ contract LSBBACreateAuctionTest is Test, Permit2User {
             start: uint48(block.timestamp),
             duration: uint48(1 days),
             capacityInQuote: false,
-            capacity: 10e18,
+            capacity: LOT_CAPACITY,
             implParams: abi.encode(auctionDataParams)
         });
     }
 
     // ===== Modifiers ===== //
+
+    modifier givenLotHasDecimals(uint8 quoteTokenDecimals_, uint8 baseTokenDecimals_) {
+        quoteTokenDecimals = quoteTokenDecimals_;
+        baseTokenDecimals = baseTokenDecimals_;
+
+        auctionParams.capacity = LOT_CAPACITY * 10 ** baseTokenDecimals / 10 ** _baseTokenDecimals; // In terms of base token
+        auctionDataParams.minimumPrice =
+            MINIMUM_PRICE * 10 ** quoteTokenDecimals / 10 ** _quoteTokenDecimals; // In terms of quote token
+        auctionParams.implParams = abi.encode(auctionDataParams);
+        _;
+    }
 
     modifier whenStartTimeIsInPast() {
         auctionParams.start = uint48(block.timestamp - 1);
@@ -138,7 +156,7 @@ contract LSBBACreateAuctionTest is Test, Permit2User {
         vm.expectRevert(err);
 
         // Call
-        auctionModule.auction(lotId, auctionParams, _quoteTokenDecimals, _baseTokenDecimals);
+        auctionModule.auction(lotId, auctionParams, quoteTokenDecimals, baseTokenDecimals);
     }
 
     function test_startsInPast_reverts() external whenStartTimeIsInPast {
@@ -150,13 +168,13 @@ contract LSBBACreateAuctionTest is Test, Permit2User {
 
         // Call
         vm.prank(address(auctionHouse));
-        auctionModule.auction(lotId, auctionParams, _quoteTokenDecimals, _baseTokenDecimals);
+        auctionModule.auction(lotId, auctionParams, quoteTokenDecimals, baseTokenDecimals);
     }
 
     function test_noStartTime() external whenStartTimeIsZero {
         // Call
         vm.prank(address(auctionHouse));
-        auctionModule.auction(lotId, auctionParams, _quoteTokenDecimals, _baseTokenDecimals);
+        auctionModule.auction(lotId, auctionParams, quoteTokenDecimals, baseTokenDecimals);
 
         // Check values
         assertEq(auctionModule.getLot(lotId).start, uint48(block.timestamp));
@@ -173,7 +191,7 @@ contract LSBBACreateAuctionTest is Test, Permit2User {
 
         // Call
         vm.prank(address(auctionHouse));
-        auctionModule.auction(lotId, auctionParams, _quoteTokenDecimals, _baseTokenDecimals);
+        auctionModule.auction(lotId, auctionParams, quoteTokenDecimals, baseTokenDecimals);
     }
 
     function test_auctionDataParamsAreInvalid_reverts() external whenAuctionDataParamsAreInvalid {
@@ -182,7 +200,7 @@ contract LSBBACreateAuctionTest is Test, Permit2User {
 
         // Call
         vm.prank(address(auctionHouse));
-        auctionModule.auction(lotId, auctionParams, _quoteTokenDecimals, _baseTokenDecimals);
+        auctionModule.auction(lotId, auctionParams, quoteTokenDecimals, baseTokenDecimals);
     }
 
     function test_minimumFillPercentageIsMoreThanMax_reverts()
@@ -195,7 +213,7 @@ contract LSBBACreateAuctionTest is Test, Permit2User {
 
         // Call
         vm.prank(address(auctionHouse));
-        auctionModule.auction(lotId, auctionParams, _quoteTokenDecimals, _baseTokenDecimals);
+        auctionModule.auction(lotId, auctionParams, quoteTokenDecimals, baseTokenDecimals);
     }
 
     function test_minimumBidPercentageIsLessThanMin_reverts()
@@ -208,7 +226,7 @@ contract LSBBACreateAuctionTest is Test, Permit2User {
 
         // Call
         vm.prank(address(auctionHouse));
-        auctionModule.auction(lotId, auctionParams, _quoteTokenDecimals, _baseTokenDecimals);
+        auctionModule.auction(lotId, auctionParams, quoteTokenDecimals, baseTokenDecimals);
     }
 
     function test_minimumBidPercentageIsMoreThanMax_reverts()
@@ -221,7 +239,7 @@ contract LSBBACreateAuctionTest is Test, Permit2User {
 
         // Call
         vm.prank(address(auctionHouse));
-        auctionModule.auction(lotId, auctionParams, _quoteTokenDecimals, _baseTokenDecimals);
+        auctionModule.auction(lotId, auctionParams, quoteTokenDecimals, baseTokenDecimals);
     }
 
     function test_publicKeyModulusIsOfIncorrectLength_reverts()
@@ -234,7 +252,7 @@ contract LSBBACreateAuctionTest is Test, Permit2User {
 
         // Call
         vm.prank(address(auctionHouse));
-        auctionModule.auction(lotId, auctionParams, _quoteTokenDecimals, _baseTokenDecimals);
+        auctionModule.auction(lotId, auctionParams, quoteTokenDecimals, baseTokenDecimals);
     }
 
     function test_execOnModule() external {
@@ -254,8 +272,8 @@ contract LSBBACreateAuctionTest is Test, Permit2User {
                 Auction.auction.selector,
                 lotId,
                 auctionParams,
-                _quoteTokenDecimals,
-                _baseTokenDecimals
+                quoteTokenDecimals,
+                baseTokenDecimals
             )
         );
     }
@@ -264,7 +282,67 @@ contract LSBBACreateAuctionTest is Test, Permit2User {
         // Call
         vm.prank(address(auctionHouse));
         (bool prefundingRequired_, uint256 capacity_) =
-            auctionModule.auction(lotId, auctionParams, _quoteTokenDecimals, _baseTokenDecimals);
+            auctionModule.auction(lotId, auctionParams, quoteTokenDecimals, baseTokenDecimals);
+
+        // Check return values
+        assertEq(prefundingRequired_, true); // Always true for LSBBA
+        assertEq(capacity_, auctionParams.capacity);
+
+        // Check lot data
+        Auction.Lot memory lot = auctionModule.getLot(lotId);
+        assertEq(lot.start, auctionParams.start);
+        assertEq(lot.conclusion, auctionParams.start + auctionParams.duration);
+        assertEq(lot.capacityInQuote, auctionParams.capacityInQuote);
+        assertEq(lot.capacity, auctionParams.capacity);
+
+        // Check auction-specific data
+        LocalSealedBidBatchAuction.AuctionData memory lotData = auctionModule.getLotData(lotId);
+        assertEq(lotData.minimumPrice, auctionDataParams.minimumPrice);
+        assertEq(
+            lotData.minFilled, (auctionParams.capacity * auctionDataParams.minFillPercent) / 100_000
+        );
+        assertEq(
+            lotData.minBidSize, (auctionParams.capacity * auctionDataParams.minBidPercent) / 100_000
+        );
+        assertEq(lotData.publicKeyModulus, auctionDataParams.publicKeyModulus);
+        assertEq(uint8(lotData.status), uint8(LocalSealedBidBatchAuction.AuctionStatus.Created));
+    }
+
+    function test_success_quoteTokenDecimalsLarger() external givenLotHasDecimals(17, 13) {
+        // Call
+        vm.prank(address(auctionHouse));
+        (bool prefundingRequired_, uint256 capacity_) =
+            auctionModule.auction(lotId, auctionParams, quoteTokenDecimals, baseTokenDecimals);
+
+        // Check return values
+        assertEq(prefundingRequired_, true); // Always true for LSBBA
+        assertEq(capacity_, auctionParams.capacity);
+
+        // Check lot data
+        Auction.Lot memory lot = auctionModule.getLot(lotId);
+        assertEq(lot.start, auctionParams.start);
+        assertEq(lot.conclusion, auctionParams.start + auctionParams.duration);
+        assertEq(lot.capacityInQuote, auctionParams.capacityInQuote);
+        assertEq(lot.capacity, auctionParams.capacity);
+
+        // Check auction-specific data
+        LocalSealedBidBatchAuction.AuctionData memory lotData = auctionModule.getLotData(lotId);
+        assertEq(lotData.minimumPrice, auctionDataParams.minimumPrice);
+        assertEq(
+            lotData.minFilled, (auctionParams.capacity * auctionDataParams.minFillPercent) / 100_000
+        );
+        assertEq(
+            lotData.minBidSize, (auctionParams.capacity * auctionDataParams.minBidPercent) / 100_000
+        );
+        assertEq(lotData.publicKeyModulus, auctionDataParams.publicKeyModulus);
+        assertEq(uint8(lotData.status), uint8(LocalSealedBidBatchAuction.AuctionStatus.Created));
+    }
+
+    function test_success_baseTokenDecimalsLarger() external givenLotHasDecimals(13, 17) {
+        // Call
+        vm.prank(address(auctionHouse));
+        (bool prefundingRequired_, uint256 capacity_) =
+            auctionModule.auction(lotId, auctionParams, quoteTokenDecimals, baseTokenDecimals);
 
         // Check return values
         assertEq(prefundingRequired_, true); // Always true for LSBBA

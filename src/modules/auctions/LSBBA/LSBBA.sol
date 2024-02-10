@@ -21,12 +21,14 @@ contract LocalSealedBidBatchAuction is AuctionModule {
     using MaxPriorityQueue for Queue;
 
     // ========== ERRORS ========== //
+
     error Auction_BidDoesNotExist();
     error Auction_AlreadyCancelled();
     error Auction_WrongState();
     error Auction_NotLive();
     error Auction_NotConcluded();
     error Auction_InvalidDecrypt();
+    error Bid_WrongState();
 
     // ========== EVENTS ========== //
 
@@ -44,7 +46,6 @@ contract LocalSealedBidBatchAuction is AuctionModule {
 
     enum BidStatus {
         Submitted,
-        Cancelled,
         Decrypted,
         Won,
         Refunded
@@ -163,6 +164,15 @@ contract LocalSealedBidBatchAuction is AuctionModule {
     }
 
     /// @inheritdoc AuctionModule
+    /// @dev        Checks that the lot is settled
+    function _revertIfLotNotSettled(uint96 lotId_) internal view override {
+        // Auction must be settled
+        if (auctionData[lotId_].status != AuctionStatus.Settled) {
+            revert Auction_WrongState();
+        }
+    }
+
+    /// @inheritdoc AuctionModule
     /// @dev        Checks that the bid is valid
     function _revertIfBidInvalid(uint96 lotId_, uint96 bidId_) internal view override {
         // Bid ID must be less than number of bids for lot
@@ -181,10 +191,10 @@ contract LocalSealedBidBatchAuction is AuctionModule {
     }
 
     /// @inheritdoc AuctionModule
-    /// @dev        Checks that the bid is not already cancelled
-    function _revertIfBidCancelled(uint96 lotId_, uint96 bidId_) internal view override {
+    /// @dev        Checks that the bid is not already refunded
+    function _revertIfBidRefunded(uint96 lotId_, uint96 bidId_) internal view override {
         // Bid must not be cancelled
-        if (lotEncryptedBids[lotId_][bidId_].status == BidStatus.Cancelled) {
+        if (lotEncryptedBids[lotId_][bidId_].status == BidStatus.Refunded) {
             revert Auction_AlreadyCancelled();
         }
     }
@@ -239,16 +249,15 @@ contract LocalSealedBidBatchAuction is AuctionModule {
     /// @inheritdoc AuctionModule
     /// @dev        This function performs the following:
     ///             - Validates inputs
-    ///             - Marks the bid as cancelled
+    ///             - Marks the bid as refunded
     ///             - Removes the bid from the list of bids to decrypt
     ///             - Returns the amount to be refunded
     ///
     ///             The encrypted bid is not deleted from storage, so that the details can be fetched later.
     ///
     ///             This function reverts if:
-    ///             - The bid is not in the Submitted state
-    ///             - The auction is not in the Created state
-    function _cancelBid(
+    ///             - The bid is not in the Decrypted or Submitted state
+    function _refundBid(
         uint96 lotId_,
         uint96 bidId_,
         address
@@ -256,15 +265,13 @@ contract LocalSealedBidBatchAuction is AuctionModule {
         // Validate inputs
 
         // Bid must be in Submitted state
-        if (lotEncryptedBids[lotId_][bidId_].status != BidStatus.Submitted) {
-            revert Auction_WrongState();
+        BidStatus bidStatus = lotEncryptedBids[lotId_][bidId_].status;
+        if (bidStatus != BidStatus.Decrypted && bidStatus != BidStatus.Submitted) {
+            revert Bid_WrongState();
         }
 
-        // Auction must be in Created state
-        if (auctionData[lotId_].status != AuctionStatus.Created) revert Auction_WrongState();
-
         // Set bid status to cancelled
-        lotEncryptedBids[lotId_][bidId_].status = BidStatus.Cancelled;
+        lotEncryptedBids[lotId_][bidId_].status = BidStatus.Refunded;
 
         // Remove bid from list of bids to decrypt
         uint96[] storage bidIds = auctionData[lotId_].bidIds;
@@ -293,7 +300,7 @@ contract LocalSealedBidBatchAuction is AuctionModule {
     ///                 - Performs validation
     ///                 - Iterates over the decrypted bids:
     ///                     - Re-encrypts the decrypted bid to confirm that it matches the stored encrypted bid
-    ///                     - Stores the decrypted bid in the sorted bid queue
+    ///                     - If the bid meets the minimum bid size, stores the decrypted bid in the sorted bid queue and updates the status.
     ///                     - Sets the encrypted bid status to decrypted
     ///                 - Determines the next decrypt index
     ///                 - Sets the auction status to decrypted if all bids have been decrypted
@@ -328,6 +335,7 @@ contract LocalSealedBidBatchAuction is AuctionModule {
         }
 
         // Iterate over decrypts, validate that they match the stored encrypted bids, then store them in the sorted bid queue
+        uint256 minBidSize = auctionData[lotId_].minBidSize;
         for (uint96 i; i < len; i++) {
             // Re-encrypt the decrypt to confirm that it matches the stored encrypted bid
             bytes memory ciphertext = _encrypt(lotId_, decrypts_[i]);
@@ -343,8 +351,11 @@ contract LocalSealedBidBatchAuction is AuctionModule {
 
             if (encBid.status != BidStatus.Submitted) continue;
 
-            // Store the decrypt in the sorted bid queue
-            lotSortedBids[lotId_].insert(bidId, encBid.amount, decrypts_[i].amountOut);
+            // Only store the decrypt if the amount out is greater than or equal to the minimum bid size
+            if (decrypts_[i].amountOut >= minBidSize) {
+                // Store the decrypt in the sorted bid queue
+                lotSortedBids[lotId_].insert(bidId, encBid.amount, decrypts_[i].amountOut);
+            }
 
             // Set bid status to decrypted
             encBid.status = BidStatus.Decrypted;
@@ -639,6 +650,9 @@ contract LocalSealedBidBatchAuction is AuctionModule {
 
     function maxAmountAccepted(uint96 lotId_) public view virtual override returns (uint256) {}
 
+    /// @notice     Returns the auction data for a given lot
+    ///
+    /// @param      lotId_          The lot ID of the auction to return data for
     function getLotData(uint96 lotId_) public view returns (AuctionData memory) {
         return auctionData[lotId_];
     }

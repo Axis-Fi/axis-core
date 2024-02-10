@@ -61,7 +61,7 @@ contract MockAuctionModule is AuctionModule {
         returns (Bid[] memory winningBids_, bytes memory auctionOutput_)
     {}
 
-    function _cancelBid(
+    function _refundBid(
         uint96 lotId_,
         uint96 bidId_,
         address bidder_
@@ -75,9 +75,11 @@ contract MockAuctionModule is AuctionModule {
         address caller_
     ) internal view virtual override {}
 
-    function _revertIfBidCancelled(uint96 lotId_, uint96 bidId_) internal view virtual override {}
+    function _revertIfBidRefunded(uint96 lotId_, uint96 bidId_) internal view virtual override {}
 
     function _revertIfLotSettled(uint96 lotId_) internal view virtual override {}
+
+    function _revertIfLotNotSettled(uint96 lotId_) internal view virtual override {}
 }
 
 contract MockAuctionModuleV2 is MockAuctionModule {

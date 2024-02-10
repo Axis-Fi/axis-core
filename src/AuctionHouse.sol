@@ -86,7 +86,7 @@ abstract contract Router {
     /// @return     bidId           Bid ID
     function bid(BidParams memory params_) external virtual returns (uint96 bidId);
 
-    /// @notice     Cancel a bid on a lot in a batch auction
+    /// @notice     Refund a bid on a lot in a batch auction
     /// @dev        The implementing function must perform the following:
     ///             1. Validate the bid
     ///             2. Pass the request to the auction module to validate and update data
@@ -94,18 +94,25 @@ abstract contract Router {
     ///
     /// @param      lotId_          Lot ID
     /// @param      bidId_          Bid ID
-    function cancelBid(uint96 lotId_, uint96 bidId_) external virtual;
+    function refundBid(uint96 lotId_, uint96 bidId_) external virtual;
 
     /// @notice     Settle a batch auction
     /// @notice     This function is used for versions with on-chain storage and bids and local settlement
+    /// @dev        The implementing function must perform the following:
+    ///             1. Validate the lot
+    ///             2. Pass the request to the auction module to calculate winning bids
+    ///             3. Collect the payout from the auction owner (if not pre-funded)
+    ///             4. Send the payout to each bidder
+    ///             5. Send the payment to the auction owner
+    ///             6. Allocate protocol, referrer and curator fees
+    ///
+    /// @param      lotId_          Lot ID
     function settle(uint96 lotId_) external virtual;
 }
 
 /// @title      AuctionHouse
 /// @notice     As its name implies, the AuctionHouse is where auctions are created, bid on, and settled. The core protocol logic is implemented here.
 contract AuctionHouse is Auctioneer, Router, FeeManager {
-    /// Implement the router functionality here since it combines all of the base functionality
-
     // ========== ERRORS ========== //
 
     error AmountLessThanMinimum();
@@ -126,7 +133,7 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
 
     event Bid(uint96 indexed lotId, uint96 indexed bidId, address indexed bidder, uint256 amount);
 
-    event CancelBid(uint96 indexed lotId, uint96 indexed bidId, address indexed bidder);
+    event RefundBid(uint96 indexed lotId, uint96 indexed bidId, address indexed bidder);
 
     event Settle(uint96 indexed lotId);
 
@@ -329,19 +336,19 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
     ///             - the lot ID is invalid
     ///             - the auction module reverts when cancelling the bid
     ///             - re-entrancy is detected
-    function cancelBid(uint96 lotId_, uint96 bidId_) external override nonReentrant {
+    function refundBid(uint96 lotId_, uint96 bidId_) external override nonReentrant {
         _isLotValid(lotId_);
 
-        // Cancel the bid on the auction module
+        // Refund the bid on the auction module
         // The auction module is responsible for validating the bid and authorizing the caller
-        uint256 refundAmount = getModuleForId(lotId_).cancelBid(lotId_, bidId_, msg.sender);
+        uint256 refundAmount = getModuleForId(lotId_).refundBid(lotId_, bidId_, msg.sender);
 
         // Transfer the quote token to the bidder
         // The ownership of the bid has already been verified by the auction module
         Transfer.transfer(lotRouting[lotId_].quoteToken, msg.sender, refundAmount, false);
 
         // Emit event
-        emit CancelBid(lotId_, bidId_, msg.sender);
+        emit RefundBid(lotId_, bidId_, msg.sender);
     }
 
     /// @inheritdoc Router
