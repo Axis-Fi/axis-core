@@ -21,12 +21,14 @@ contract LocalSealedBidBatchAuction is AuctionModule {
     using MaxPriorityQueue for Queue;
 
     // ========== ERRORS ========== //
+
     error Auction_BidDoesNotExist();
     error Auction_AlreadyCancelled();
     error Auction_WrongState();
     error Auction_NotLive();
     error Auction_NotConcluded();
     error Auction_InvalidDecrypt();
+    error Bid_WrongState();
 
     // ========== EVENTS ========== //
 
@@ -247,15 +249,14 @@ contract LocalSealedBidBatchAuction is AuctionModule {
     /// @inheritdoc AuctionModule
     /// @dev        This function performs the following:
     ///             - Validates inputs
-    ///             - Marks the bid as cancelled
+    ///             - Marks the bid as refunded
     ///             - Removes the bid from the list of bids to decrypt
     ///             - Returns the amount to be refunded
     ///
     ///             The encrypted bid is not deleted from storage, so that the details can be fetched later.
     ///
     ///             This function reverts if:
-    ///             - The bid is not in the Submitted state
-    ///             - The auction is not in the Created state
+    ///             - The bid is not in the Decrypted or Submitted state
     function _refundBid(
         uint96 lotId_,
         uint96 bidId_,
@@ -264,8 +265,9 @@ contract LocalSealedBidBatchAuction is AuctionModule {
         // Validate inputs
 
         // Bid must be in Submitted state
-        if (lotEncryptedBids[lotId_][bidId_].status != BidStatus.Submitted) {
-            revert Auction_WrongState();
+        BidStatus bidStatus = lotEncryptedBids[lotId_][bidId_].status;
+        if (bidStatus != BidStatus.Decrypted && bidStatus != BidStatus.Submitted) {
+            revert Bid_WrongState();
         }
 
         // Set bid status to cancelled
@@ -349,14 +351,11 @@ contract LocalSealedBidBatchAuction is AuctionModule {
 
             if (encBid.status != BidStatus.Submitted) continue;
 
-            // If the amount out is smaller than the minimum bid size, skip
-            // This will enable it to be refunded
-            if (decrypts_[i].amountOut < minBidSize) {
-                continue;
+            // Only store the decrypt if the amount out is greater than or equal to the minimum bid size
+            if (decrypts_[i].amountOut >= minBidSize) {
+                // Store the decrypt in the sorted bid queue
+                lotSortedBids[lotId_].insert(bidId, encBid.amount, decrypts_[i].amountOut);
             }
-
-            // Store the decrypt in the sorted bid queue
-            lotSortedBids[lotId_].insert(bidId, encBid.amount, decrypts_[i].amountOut);
 
             // Set bid status to decrypted
             encBid.status = BidStatus.Decrypted;

@@ -312,7 +312,7 @@ contract LSBBARefundBidTest is Test, Permit2User {
     {
         // Expect revert
         bytes memory err =
-            abi.encodeWithSelector(LocalSealedBidBatchAuction.Auction_WrongState.selector);
+            abi.encodeWithSelector(LocalSealedBidBatchAuction.Bid_WrongState.selector);
         vm.expectRevert(err);
 
         // Call

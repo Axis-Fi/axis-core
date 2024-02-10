@@ -394,8 +394,8 @@ contract LSBBADecryptAndSortBidsTest is Test, Permit2User {
         LocalSealedBidBatchAuction.EncryptedBid memory encryptedBidFour =
             auctionModule.getBidData(lotId, bidFour);
         assertEq(
-            uint8(encryptedBidFour.status), uint8(LocalSealedBidBatchAuction.BidStatus.Submitted)
-        ); // Status not changed
+            uint8(encryptedBidFour.status), uint8(LocalSealedBidBatchAuction.BidStatus.Decrypted)
+        );
 
         // Check sorted bids
         QueueBid memory sortedBidOne = auctionModule.getSortedBidData(lotId, 0);

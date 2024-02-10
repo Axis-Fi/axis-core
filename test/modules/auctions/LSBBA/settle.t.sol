@@ -675,7 +675,7 @@ contract LSBBASettleTest is Test, Permit2User {
             auctionModule.getBidData(lotId, bidThree);
         assertEq(
             uint8(bidDataThree.status),
-            uint8(LocalSealedBidBatchAuction.BidStatus.Submitted),
+            uint8(LocalSealedBidBatchAuction.BidStatus.Decrypted),
             "bidThree: status mismatch"
         );
     }
@@ -856,6 +856,27 @@ contract LSBBASettleTest is Test, Permit2User {
         assertEq(lot.purchased, bidThreeAmount + bidTwoAmount); // Quote tokens purchased
     }
 
+    function test_whenLotIsOverSubscribed_thenRefund()
+        public
+        whenLotIsOverSubscribed
+        whenLotHasConcluded
+        whenLotDecryptionIsComplete
+    {
+        // Call for settlement
+        vm.prank(address(auctionHouse));
+        (LocalSealedBidBatchAuction.Bid[] memory winningBids,) = auctionModule.settle(lotId);
+
+        // Expect winning bids
+        assertEq(winningBids.length, 2);
+
+        // Try to refund the failed bid
+        vm.prank(address(auctionHouse));
+        uint256 bidOneRefundAmount = auctionModule.refundBid(lotId, bidOne, alice);
+
+        // Expect refund
+        assertEq(bidOneRefundAmount, bidOneAmount);
+    }
+
     function test_whenLotIsOverSubscribed_partialFill()
         public
         whenLotIsOverSubscribedPartialFill
@@ -917,6 +938,29 @@ contract LSBBASettleTest is Test, Permit2User {
         assertEq(lot.capacity, 0); // Set to 0 to prevent further bids
         assertEq(lot.sold, bidFiveAmountOut + bidTwoAmountOut + bidOneAmountOut); // Base tokens sold
         assertEq(lot.purchased, bidFiveAmount + bidTwoAmount + bidOneAmount); // Quote tokens purchased
+    }
+
+    function test_whenLotIsOverSubscribed_partialFill_thenRefund_reverts()
+        public
+        whenLotIsOverSubscribedPartialFill
+        whenLotHasConcluded
+        whenLotDecryptionIsComplete
+    {
+        // Call for settlement
+        vm.prank(address(auctionHouse));
+        (LocalSealedBidBatchAuction.Bid[] memory winningBids,) = auctionModule.settle(lotId);
+
+        // Expect winning bids
+        assertEq(winningBids.length, 3);
+
+        // Expect error
+        bytes memory err =
+            abi.encodeWithSelector(LocalSealedBidBatchAuction.Bid_WrongState.selector);
+        vm.expectRevert(err);
+
+        // Try to refund the partially-filled bid
+        vm.prank(address(auctionHouse));
+        auctionModule.refundBid(lotId, bidOne, alice);
     }
 
     function test_whenLotIsOverSubscribed_partialFill_quoteTokenDecimalsLarger()
