@@ -1,24 +1,18 @@
-## Foundry
+## Axis
 
-**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
+**Axis is a modular auction protocol.** It supports abstract atomic or batch auction formats, which can be added to the central auction house as modules. Additionally, it allows creating and auctioning derivatives of the base asset in addition to spot tokens. 
 
-Foundry consists of:
+The initial version of Axis only supports ERC20 tokens.
 
--   **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
--   **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
--   **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
--   **Chisel**: Fast, utilitarian, and verbose solidity REPL.
 
-## Documentation
+## Developer Guide
 
-https://book.getfoundry.sh/
-
-## Usage
+Axis is built in Solidity using Foundry as the development and test environment. The following commands are available for development:
 
 ### Build
 
 ```shell
-$ pnpm run build
+$ forge build
 ```
 
 ### Test
@@ -29,38 +23,27 @@ $ forge test
 
 ### Format
 
-```shell
-$ forge fmt
-```
-
-### Gas Snapshots
+Combines `forge fmt` and `solhint`
 
 ```shell
-$ forge snapshot
+$ pnpm run lint
 ```
+### Scripts
 
-### Anvil
+Scripts are written in Solidity using Foundry and are divided into `deploy` and `ops` scripts. Specific scripts are written for individual actions and can be found in the `scripts` directory along with shell scripts to run them.
 
-```shell
-$ anvil
-```
+## Blast Deployment
 
-### Deploy
+The initial deployment of Axis will be on the Blast L2 network.
 
-```shell
-$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
-```
+### Blast Sepolia Testnet
 
-### Cast
+**Core Contracts**
+BlastAuctionHouse: [0x00000000AD4dd7bC9077e3894225840fE1bfd6eC](https://testnet.blastscan.io/address/0x00000000AD4dd7bC9077e3894225840fE1bfd6eC)
+Catalogue: [0x101b502D216d27cb342e9686A2B34A1cD19B2F75](https://testnet.blastscan.io/address/0x101b502D216d27cb342e9686A2B34A1cD19B2F75)
 
-```shell
-$ cast <subcommand>
-```
+**Auction Modules**
+BlastLSBBA: [0xc20918b09dE9708d2A7997dfFc3c5ACB34d4a15b](https://testnet.blastscan.io/address/0xc20918b09dE9708d2A7997dfFc3c5ACB34d4a15b)
 
-### Help
-
-```shell
-$ forge --help
-$ anvil --help
-$ cast --help
-```
+**Derivative Modules**
+BlastLinearVesting: [0x0e4996960731Fec8E7C9DBbD51383fC71174DD88](https://testnet.blastscan.io/address/0x0e4996960731Fec8E7C9DBbD51383fC71174DD88)
