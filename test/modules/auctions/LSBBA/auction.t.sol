@@ -66,8 +66,10 @@ contract LSBBACreateAuctionTest is Test, Permit2User {
         quoteTokenDecimals = quoteTokenDecimals_;
         baseTokenDecimals = baseTokenDecimals_;
 
+        auctionParams.capacity = LOT_CAPACITY * 10 ** baseTokenDecimals / 10 ** _baseTokenDecimals; // In terms of base token
         auctionDataParams.minimumPrice =
-            minimumPrice * 10 ** quoteTokenDecimals / 10 ** _quoteTokenDecimals; // In terms of quote token
+            MINIMUM_PRICE * 10 ** quoteTokenDecimals / 10 ** _quoteTokenDecimals; // In terms of quote token
+        auctionParams.implParams = abi.encode(auctionDataParams);
         _;
     }
 
