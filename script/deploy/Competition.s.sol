@@ -4,8 +4,8 @@ pragma solidity 0.8.19;
 // Scripting libraries
 import {Script, console2} from "forge-std/Script.sol";
 
-// Test contracts
-import {Permit2Clone} from "test/lib/permit2/Permit2Clone.sol";
+// Interfaces
+import {IPermit2} from "src/lib/permit2/interfaces/IPermit2.sol";
 
 // System contracts
 import {AuctionHouse} from "src/AuctionHouse.sol";
@@ -18,16 +18,14 @@ contract CompetitionDeploy is Script {
     Catalogue public catalogue;
     LocalSealedBidBatchAuction public lsbba;
     LinearVesting public linearVesting;
-    Permit2Clone public permit2Clone;
+    address public constant PERMIT2 = 0x000000000022D473030F116dDEE9F6B43aC78BA3;
 
     function deploy() public {
         vm.startBroadcast();
 
-        // Only needed on Blast testnet, since there isn't a Permit2 deployed
-        permit2Clone = new Permit2Clone();
-        console2.log("Permit2Clone deployed at: ", address(permit2Clone));
+        // Assume permit2 is already deployed at canonical address
 
-        auctionHouse = new AuctionHouse(msg.sender, address(permit2Clone));
+        auctionHouse = new AuctionHouse(msg.sender, PERMIT2);
         console2.log("AuctionHouse deployed at: ", address(auctionHouse));
 
         catalogue = new Catalogue(address(auctionHouse));
