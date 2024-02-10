@@ -300,11 +300,7 @@ contract LSBBACreateAuctionTest is Test, Permit2User {
             lotData.minFilled, (auctionParams.capacity * auctionDataParams.minFillPercent) / 100_000
         );
         assertEq(
-            lotData.minBidSize,
-            (
-                auctionDataParams.minimumPrice * auctionParams.capacity
-                    * auctionDataParams.minBidPercent
-            ) / (10 ** quoteTokenDecimals) / 100_000
+            lotData.minBidSize, (auctionParams.capacity * auctionDataParams.minBidPercent) / 100_000
         );
         assertEq(lotData.publicKeyModulus, auctionDataParams.publicKeyModulus);
         assertEq(uint8(lotData.status), uint8(LocalSealedBidBatchAuction.AuctionStatus.Created));
@@ -334,11 +330,7 @@ contract LSBBACreateAuctionTest is Test, Permit2User {
             lotData.minFilled, (auctionParams.capacity * auctionDataParams.minFillPercent) / 100_000
         );
         assertEq(
-            lotData.minBidSize,
-            (
-                auctionDataParams.minimumPrice * auctionParams.capacity
-                    * auctionDataParams.minBidPercent
-            ) / (10 ** quoteTokenDecimals) / 100_000
+            lotData.minBidSize, (auctionParams.capacity * auctionDataParams.minBidPercent) / 100_000
         );
         assertEq(lotData.publicKeyModulus, auctionDataParams.publicKeyModulus);
         assertEq(uint8(lotData.status), uint8(LocalSealedBidBatchAuction.AuctionStatus.Created));
@@ -368,11 +360,7 @@ contract LSBBACreateAuctionTest is Test, Permit2User {
             lotData.minFilled, (auctionParams.capacity * auctionDataParams.minFillPercent) / 100_000
         );
         assertEq(
-            lotData.minBidSize,
-            (
-                auctionDataParams.minimumPrice * auctionParams.capacity
-                    * auctionDataParams.minBidPercent
-            ) / (10 ** quoteTokenDecimals) / 100_000
+            lotData.minBidSize, (auctionParams.capacity * auctionDataParams.minBidPercent) / 100_000
         );
         assertEq(lotData.publicKeyModulus, auctionDataParams.publicKeyModulus);
         assertEq(uint8(lotData.status), uint8(LocalSealedBidBatchAuction.AuctionStatus.Created));
