@@ -455,7 +455,6 @@ contract LocalSealedBidBatchAuction is AuctionModule {
         // Capacity is always in base token units for this auction type
         uint256 capacity = lotData[lotId_].capacity;
         uint256 baseScale = 10 ** lotData[lotId_].baseTokenDecimals;
-        uint256 minBidSize = auctionData[lotId_].minBidSize;
 
         // Iterate over bid queue to calculate the marginal clearing price of the auction
         Queue storage queue = lotSortedBids[lotId_];
@@ -464,11 +463,6 @@ contract LocalSealedBidBatchAuction is AuctionModule {
         for (uint256 i = 0; i < numBids; i++) {
             // Load bid
             QueueBid storage qBid = queue.getBid(uint96(i));
-
-            // Make sure the bid size is sufficient
-            if (qBid.minAmountOut < minBidSize) {
-                continue;
-            }
 
             // Calculate bid price (in quote token units)
             // quote scale * base scale / base scale = quote scale

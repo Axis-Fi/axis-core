@@ -310,8 +310,8 @@ contract LSBBASettleTest is Test, Permit2User {
         // Not over capacity
         (bidOne, decryptedBidOne) = _createBid(bidOneAmount, bidOneAmountOut);
         (bidTwo, decryptedBidTwo) = _createBid(bidTwoAmount, bidTwoAmountOut);
-        // < minimum
-        (bidThree, decryptedBidThree) = _createBid(1e16, 1e16);
+        // < minimum of 1e17
+        (bidThree, decryptedBidThree) = _createBid(1e15, 1e16);
 
         // Set up the decrypts array
         decrypts.push(decryptedBidOne);
@@ -344,8 +344,6 @@ contract LSBBASettleTest is Test, Permit2User {
     //   [X] it returns winning bids, with the marginal price is the price at which the lot capacity is exhausted, and a partial fill for the lowest winning bid
     // [X] when the filled amount is greater than the lot minimum
     //   [X] it returns winning bids, with the marginal price is the minimum price
-    // [ ] given that the auction has more bid amount than capacity
-    //  [ ] it marks the winning bids as won
 
     function test_whenLotIdIsInvalid_reverts() public whenLotIdIsInvalid {
         // Expect revert
