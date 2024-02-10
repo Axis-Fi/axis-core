@@ -53,7 +53,7 @@ contract LinearVestingTest is Test, Permit2User {
             new MockFeeOnTransferERC20("Underlying", "UNDERLYING", underlyingTokenDecimals);
         underlyingTokenAddress = address(underlyingToken);
 
-        auctionHouse = new AuctionHouse(_protocol, _PERMIT2_ADDRESS);
+        auctionHouse = new AuctionHouse(address(this), _protocol, _PERMIT2_ADDRESS);
         linearVesting = new LinearVesting(address(auctionHouse));
         auctionHouse.installModule(linearVesting);
 

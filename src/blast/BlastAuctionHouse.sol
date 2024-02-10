@@ -45,7 +45,11 @@ contract BlastAuctionHouse is AuctionHouse {
 
     // ========== CONSTRUCTOR ========== //
 
-    constructor(address owner_, address permit2_) AuctionHouse(owner_, permit2_) {
+    constructor(
+        address owner_,
+        address protocol_,
+        address permit2_
+    ) AuctionHouse(owner_, protocol_, permit2_) {
         // Set the yield mode to claimable for the WETH and USDB tokens
         _WETH.configure(YieldMode.CLAIMABLE);
         _USDB.configure(YieldMode.CLAIMABLE);

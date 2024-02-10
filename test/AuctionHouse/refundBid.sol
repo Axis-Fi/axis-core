@@ -60,7 +60,7 @@ contract RefundBidTest is Test, Permit2User {
         baseToken = new MockERC20("Base Token", "BASE", 18);
         quoteToken = new MockERC20("Quote Token", "QUOTE", 18);
 
-        auctionHouse = new AuctionHouse(auctionOwner, _PERMIT2_ADDRESS);
+        auctionHouse = new AuctionHouse(address(this), auctionOwner, _PERMIT2_ADDRESS);
         mockAuctionModule = new MockBatchAuctionModule(address(auctionHouse));
 
         auctionHouse.installModule(mockAuctionModule);

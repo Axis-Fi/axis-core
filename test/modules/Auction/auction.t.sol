@@ -47,7 +47,7 @@ contract AuctionTest is Test, Permit2User {
         baseToken = new MockERC20("Base Token", "BASE", _baseTokenDecimals);
         quoteToken = new MockERC20("Quote Token", "QUOTE", _quoteTokenDecimals);
 
-        auctionHouse = new AuctionHouse(protocol, _PERMIT2_ADDRESS);
+        auctionHouse = new AuctionHouse(address(this), protocol, _PERMIT2_ADDRESS);
         mockAuctionModule = new MockAuctionModule(address(auctionHouse));
 
         auctionHouse.installModule(mockAuctionModule);

@@ -144,9 +144,10 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
     // ========== CONSTRUCTOR ========== //
 
     constructor(
+        address owner_,
         address protocol_,
         address permit2_
-    ) FeeManager(protocol_) WithModules(msg.sender) {
+    ) FeeManager(protocol_) WithModules(owner_) {
         _PERMIT2 = permit2_;
     }
 

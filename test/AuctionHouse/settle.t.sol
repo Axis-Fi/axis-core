@@ -96,7 +96,7 @@ contract SettleTest is Test, Permit2User {
         baseToken = new MockERC20("Base Token", "BASE", baseTokenDecimals);
         quoteToken = new MockERC20("Quote Token", "QUOTE", quoteTokenDecimals);
 
-        auctionHouse = new AuctionHouse(protocol, _PERMIT2_ADDRESS);
+        auctionHouse = new AuctionHouse(address(this), protocol, _PERMIT2_ADDRESS);
         auctionModule = new LocalSealedBidBatchAuction(address(auctionHouse));
         auctionHouse.installModule(auctionModule);
         (Keycode moduleKeycode,) = unwrapVeecode(auctionModule.VEECODE());

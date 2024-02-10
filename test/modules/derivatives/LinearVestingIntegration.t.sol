@@ -83,7 +83,7 @@ contract LinearVestingIntegrationTest is Test, Permit2User {
         underlyingToken = new MockERC20("Underlying", "UNDERLYING", underlyingTokenDecimals);
         underlyingTokenAddress = address(underlyingToken);
 
-        auctionHouse = new AuctionHouse(_protocol, _PERMIT2_ADDRESS);
+        auctionHouse = new AuctionHouse(address(this), _protocol, _PERMIT2_ADDRESS);
 
         catalogue = new Catalogue(address(auctionHouse));
 

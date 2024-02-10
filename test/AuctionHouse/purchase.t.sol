@@ -93,7 +93,7 @@ contract PurchaseTest is Test, Permit2User {
         baseToken = new MockERC20("Base Token", "BASE", 18);
         quoteToken = new MockERC20("Quote Token", "QUOTE", 18);
 
-        auctionHouse = new AuctionHouse(protocol, _PERMIT2_ADDRESS);
+        auctionHouse = new AuctionHouse(address(this), protocol, _PERMIT2_ADDRESS);
         mockAuctionModule = new MockAtomicAuctionModule(address(auctionHouse));
         mockDerivativeModule = new MockDerivativeModule(address(auctionHouse));
         mockCondenserModule = new MockCondenserModule(address(auctionHouse));

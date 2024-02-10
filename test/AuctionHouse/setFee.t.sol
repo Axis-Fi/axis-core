@@ -42,7 +42,7 @@ contract SetFeeTest is Test, Permit2User {
     uint48 internal constant MAX_FEE = 1e5;
 
     function setUp() external {
-        auctionHouse = new AuctionHouse(protocol, _PERMIT2_ADDRESS);
+        auctionHouse = new AuctionHouse(address(this), protocol, _PERMIT2_ADDRESS);
         mockAuctionModule = new MockAtomicAuctionModule(address(auctionHouse));
         auctionHouse.installModule(mockAuctionModule);
     }

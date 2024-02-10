@@ -38,7 +38,7 @@ contract LSBBACreateAuctionTest is Test, Permit2User {
         vm.warp(1_000_000);
 
         // Set up and install the auction module
-        auctionHouse = new AuctionHouse(_PROTOCOL, _PERMIT2_ADDRESS);
+        auctionHouse = new AuctionHouse(address(this), _PROTOCOL, _PERMIT2_ADDRESS);
         auctionModule = new LocalSealedBidBatchAuction(address(auctionHouse));
         auctionHouse.installModule(auctionModule);
 

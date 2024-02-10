@@ -12,7 +12,10 @@ import {Auctioneer} from "src/bases/Auctioneer.sol";
 /// @notice     Mock AuctionHouse contract for testing
 /// @dev        It currently exposes some internal functions so that they can be tested in isolation
 contract MockAuctionHouse is AuctionHouse {
-    constructor(address protocol_, address permit2_) AuctionHouse(protocol_, permit2_) {}
+    constructor(
+        address protocol_,
+        address permit2_
+    ) AuctionHouse(msg.sender, protocol_, permit2_) {}
 
     // Expose the _collectPayment function for testing
     function collectPayment(
