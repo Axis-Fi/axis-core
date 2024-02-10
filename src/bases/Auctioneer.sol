@@ -86,6 +86,16 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
 
     /// @notice     Auction routing information provided as input parameters
     /// @dev        After validation, this information is stored in the Routing struct
+    ///
+    /// @param      auctionType     Auction type, represented by the Keycode for the auction submodule
+    /// @param      baseToken       Token provided by seller
+    /// @param      quoteToken      Token to accept as payment
+    /// @param      curator         (optional) Address of the proposed curator
+    /// @param      hooks           (optional) Address to call for any hooks to be executed
+    /// @param      allowlist       (optional) Contract that implements an allowlist for the auction lot
+    /// @param      allowlistParams (optional) abi-encoded data to be used to register the auction on the allowlist
+    /// @param      derivativeType  (optional) Derivative type, represented by the Keycode for the derivative submodule
+    /// @param      derivativeParams (optional) abi-encoded data to be used to create payout derivatives on a purchase. The format of this is dependent on the derivative module.
     struct RoutingParams {
         Keycode auctionType;
         ERC20 baseToken;
@@ -94,9 +104,8 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
         IHooks hooks;
         IAllowlist allowlist;
         bytes allowlistParams;
-        bytes payoutData;
-        Keycode derivativeType; // (optional) derivative type, represented by the Keycode for the derivative submodule. If not set, no derivative will be created.
-        bytes derivativeParams; // (optional) data to be used to create payout derivatives on a purchase
+        Keycode derivativeType;
+        bytes derivativeParams;
     }
 
     // ========= STATE ========== //

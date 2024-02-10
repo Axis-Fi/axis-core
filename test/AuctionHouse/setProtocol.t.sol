@@ -101,7 +101,6 @@ contract SetProtocolTest is Test, Permit2User {
             hooks: IHooks(address(0)),
             allowlist: IAllowlist(address(0)),
             allowlistParams: abi.encode(""),
-            payoutData: abi.encode(""),
             derivativeType: toKeycode(""),
             derivativeParams: abi.encode("")
         });
