@@ -262,8 +262,6 @@ contract LocalSealedBidBatchAuction is AuctionModule {
         address
     ) internal override returns (uint256 refundAmount) {
         // Validate inputs
-        // Must not be canclled
-        if (lotData[lotId_].capacity == 0) revert Auction_WrongState();
 
         // Bid must be in Submitted state
         if (lotEncryptedBids[lotId_][bidId_].status != BidStatus.Submitted) {
@@ -303,7 +301,7 @@ contract LocalSealedBidBatchAuction is AuctionModule {
     ///                 - Performs validation
     ///                 - Iterates over the decrypted bids:
     ///                     - Re-encrypts the decrypted bid to confirm that it matches the stored encrypted bid
-    ///                     - Stores the decrypted bid in the sorted bid queue
+    ///                     - If the bid meets the minimum bid size, stores the decrypted bid in the sorted bid queue and updates the status.
     ///                     - Sets the encrypted bid status to decrypted
     ///                 - Determines the next decrypt index
     ///                 - Sets the auction status to decrypted if all bids have been decrypted
@@ -354,11 +352,14 @@ contract LocalSealedBidBatchAuction is AuctionModule {
 
             if (encBid.status != BidStatus.Submitted) continue;
 
-            // Store the decrypt in the sorted bid queue
-            // Only if the amount out is greater than the minimum bid size
-            if (decrypts_[i].amountOut > minBidSize) {
-                lotSortedBids[lotId_].insert(bidId, encBid.amount, decrypts_[i].amountOut);
+            // If the amount out is smaller than the minimum bid size, skip
+            // This will enable it to be refunded
+            if (decrypts_[i].amountOut < minBidSize) {
+                continue;
             }
+
+            // Store the decrypt in the sorted bid queue
+            lotSortedBids[lotId_].insert(bidId, encBid.amount, decrypts_[i].amountOut);
 
             // Set bid status to decrypted
             encBid.status = BidStatus.Decrypted;

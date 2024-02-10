@@ -53,6 +53,10 @@ contract LSBBADecryptAndSortBidsTest is Test, Permit2User {
     uint256 internal bidThreeAmount = 1e18;
     uint256 internal bidThreeAmountOut = 7e18; // Price = 1/7
     LocalSealedBidBatchAuction.Decrypt internal decryptedBidThree;
+    uint96 internal bidFour;
+    uint256 internal bidFourAmount = 1e18;
+    uint256 internal bidFourAmountOut = 1e16; // < minimum bid size
+    LocalSealedBidBatchAuction.Decrypt internal decryptedBidFour;
     LocalSealedBidBatchAuction.Decrypt[] internal decrypts;
 
     uint8 internal constant _quoteTokenDecimals = 18;
@@ -339,7 +343,7 @@ contract LSBBADecryptAndSortBidsTest is Test, Permit2User {
         auctionModule.decryptAndSortBids(lotId, decrypts);
     }
 
-    function test_givenBidHasBeenCancelled_reverts()
+    function test_givenBidHasBeenRefunded_reverts()
         public
         whenBidHasBeenRefunded(bidOne)
         whenLotHasConcluded
@@ -353,7 +357,72 @@ contract LSBBADecryptAndSortBidsTest is Test, Permit2User {
         auctionModule.decryptAndSortBids(lotId, decrypts);
     }
 
-    function test_givenBidHasBeenCancelled()
+    modifier whenBidIsLessThanMinBidSize() {
+        // Add a fourth bid, < min bid size
+        (bidFour, decryptedBidFour) = _createBid(bidFourAmount, bidFourAmountOut);
+        decrypts.push(decryptedBidFour);
+        _;
+    }
+
+    function test_whenBidIsLessThanMinBidSize()
+        public
+        whenBidIsLessThanMinBidSize
+        whenLotHasConcluded
+    {
+        // Call
+        auctionModule.decryptAndSortBids(lotId, decrypts);
+
+        // Check values on auction data
+        LocalSealedBidBatchAuction.AuctionData memory lotData = auctionModule.getLotData(lotId);
+        assertEq(lotData.nextDecryptIndex, 4);
+        assertEq(uint8(lotData.status), uint8(LocalSealedBidBatchAuction.AuctionStatus.Decrypted));
+
+        // Check encrypted bids
+        LocalSealedBidBatchAuction.EncryptedBid memory encryptedBid =
+            auctionModule.getBidData(lotId, bidOne);
+        assertEq(uint8(encryptedBid.status), uint8(LocalSealedBidBatchAuction.BidStatus.Decrypted));
+        LocalSealedBidBatchAuction.EncryptedBid memory encryptedBidTwo =
+            auctionModule.getBidData(lotId, bidTwo);
+        assertEq(
+            uint8(encryptedBidTwo.status), uint8(LocalSealedBidBatchAuction.BidStatus.Decrypted)
+        );
+        LocalSealedBidBatchAuction.EncryptedBid memory encryptedBidThree =
+            auctionModule.getBidData(lotId, bidThree);
+        assertEq(
+            uint8(encryptedBidThree.status), uint8(LocalSealedBidBatchAuction.BidStatus.Decrypted)
+        );
+        LocalSealedBidBatchAuction.EncryptedBid memory encryptedBidFour =
+            auctionModule.getBidData(lotId, bidFour);
+        assertEq(
+            uint8(encryptedBidFour.status), uint8(LocalSealedBidBatchAuction.BidStatus.Submitted)
+        ); // Status not changed
+
+        // Check sorted bids
+        QueueBid memory sortedBidOne = auctionModule.getSortedBidData(lotId, 0);
+        assertEq(sortedBidOne.bidId, bidTwo);
+        assertEq(sortedBidOne.amountIn, bidTwoAmount);
+        assertEq(sortedBidOne.minAmountOut, bidTwoAmountOut);
+
+        QueueBid memory sortedBidTwo = auctionModule.getSortedBidData(lotId, 1);
+        assertEq(sortedBidTwo.bidId, bidOne);
+        assertEq(sortedBidTwo.amountIn, bidOneAmount);
+        assertEq(sortedBidTwo.minAmountOut, bidOneAmountOut);
+
+        QueueBid memory sortedBidThree = auctionModule.getSortedBidData(lotId, 2);
+        assertEq(sortedBidThree.bidId, bidThree);
+        assertEq(sortedBidThree.amountIn, bidThreeAmount);
+        assertEq(sortedBidThree.minAmountOut, bidThreeAmountOut);
+
+        assertEq(auctionModule.getSortedBidCount(lotId), 3); // Bid not added
+
+        // Lot not changed
+        Auction.Lot memory lot = auctionModule.getLot(lotId);
+        assertEq(lot.capacity, LOT_CAPACITY);
+        assertEq(lot.sold, 0);
+        assertEq(lot.purchased, 0);
+    }
+
+    function test_givenBidHasBeenRefunded()
         public
         whenBidHasBeenRefunded(bidOne)
         whenLotHasConcluded

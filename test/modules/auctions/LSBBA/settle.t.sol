@@ -663,7 +663,7 @@ contract LSBBASettleTest is Test, Permit2User {
             auctionModule.getBidData(lotId, bidThree);
         assertEq(
             uint8(bidDataThree.status),
-            uint8(LocalSealedBidBatchAuction.BidStatus.Decrypted),
+            uint8(LocalSealedBidBatchAuction.BidStatus.Submitted),
             "bidThree: status mismatch"
         );
     }

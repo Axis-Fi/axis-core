@@ -434,14 +434,6 @@ abstract contract AuctionModule is Auction, Module {
     ///             - Calls implementation-specific validation logic
     ///             - Calls the auction module
     ///
-    ///             - the lot id is invalid
-    ///             - the lot is not active
-    ///             - the lot is already settled
-    ///             - the bid id is invalid
-    ///             - the bid is already cancelled
-    ///             - `caller_` is not the bid owner
-    ///             - the caller is not an internal module
-    ///
     ///             This function reverts if:
     ///             - the lot id is invalid
     ///             - the lot is not settled
@@ -450,6 +442,8 @@ abstract contract AuctionModule is Auction, Module {
     ///             - the bid is cancelled
     ///             - the bid is already refunded
     ///             - the caller is not an internal module
+    ///
+    ///             Inheriting contracts should check for lot cancellation, if needed.
     ///
     ///             Inheriting contracts should override _refundBid to implement auction-specific logic, such as:
     ///             - Validating the auction-specific parameters
