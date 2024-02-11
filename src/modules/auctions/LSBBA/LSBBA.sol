@@ -469,8 +469,8 @@ contract LocalSealedBidBatchAuction is AuctionModule {
             QueueBid storage qBid = queue.getBid(uint96(i));
 
             // A bid can be considered if:
-            // - the bid price is greater than the minimum
-            // - the previous capacity utilised and the current bid summed together are more than the capacity
+            // - the bid price is greater than or equal to the minimum
+            // - previous bids did not fill the capacity
             //
             // There is no need to check if the bid is the minimum bid size, as this was checked during decryption
 
@@ -481,7 +481,7 @@ contract LocalSealedBidBatchAuction is AuctionModule {
             // If the price is below the minimum price, the previous price is the marginal price
             if (price < minimumPrice) {
                 marginalPrice = lastPrice;
-                numWinningBids = i == 0 ? 0 : i;
+                numWinningBids = i;
                 break;
             }
 
