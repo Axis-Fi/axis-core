@@ -65,6 +65,10 @@ contract LSBBASettleTest is Test, Permit2User {
     uint256 internal bidFiveAmount = 6e18;
     uint256 internal bidFiveAmountOut = 5e18; // Price = 1.2
     LocalSealedBidBatchAuction.Decrypt internal decryptedBidFive;
+    uint96 internal bidSix;
+    uint256 internal bidSixAmount = 1e15;
+    uint256 internal bidSixAmountOut = 1e16; // Bid size below minimum
+    LocalSealedBidBatchAuction.Decrypt internal decryptedBidSix;
     LocalSealedBidBatchAuction.Decrypt[] internal decrypts;
 
     uint8 internal quoteTokenDecimals = 18;
@@ -222,6 +226,8 @@ contract LSBBASettleTest is Test, Permit2User {
         bidFourAmountOut = bidFourAmountOut * 10 ** baseTokenDecimals_ / SCALE;
         bidFiveAmount = bidFiveAmount * 10 ** quoteTokenDecimals_ / SCALE;
         bidFiveAmountOut = bidFiveAmountOut * 10 ** baseTokenDecimals_ / SCALE;
+        bidSixAmount = bidSixAmount * 10 ** quoteTokenDecimals_ / SCALE;
+        bidSixAmountOut = bidSixAmountOut * 10 ** baseTokenDecimals_ / SCALE;
 
         // Update auction implementation params
         auctionDataParams.minimumPrice = MINIMUM_PRICE * 10 ** quoteTokenDecimals_ / SCALE;
@@ -317,18 +323,18 @@ contract LSBBASettleTest is Test, Permit2User {
         _;
     }
 
-    modifier whenHasBidBelowMinimum() {
+    modifier whenBidSizeIsBelowMinimum() {
         // Above minimum price
         // Not over capacity
         (bidOne, decryptedBidOne) = _createBid(bidOneAmount, bidOneAmountOut);
         (bidTwo, decryptedBidTwo) = _createBid(bidTwoAmount, bidTwoAmountOut);
         // < minimum of 1e17
-        (bidThree, decryptedBidThree) = _createBid(1e15, 1e16);
+        (bidSix, decryptedBidSix) = _createBid(bidSixAmount, bidSixAmountOut);
 
         // Set up the decrypts array
         decrypts.push(decryptedBidOne);
         decrypts.push(decryptedBidTwo);
-        decrypts.push(decryptedBidThree);
+        decrypts.push(decryptedBidSix);
         _;
     }
 
@@ -634,7 +640,7 @@ contract LSBBASettleTest is Test, Permit2User {
 
     function test_whenBidSizeIsBelowMinimum()
         public
-        whenHasBidBelowMinimum
+        whenBidSizeIsBelowMinimum
         whenLotHasConcluded
         whenLotDecryptionIsComplete
     {
@@ -671,10 +677,10 @@ contract LSBBASettleTest is Test, Permit2User {
             "bidTwo: status mismatch"
         );
 
-        LocalSealedBidBatchAuction.EncryptedBid memory bidDataThree =
-            auctionModule.getBidData(lotId, bidThree);
+        LocalSealedBidBatchAuction.EncryptedBid memory bidDataSix =
+            auctionModule.getBidData(lotId, bidSix);
         assertEq(
-            uint8(bidDataThree.status),
+            uint8(bidDataSix.status),
             uint8(LocalSealedBidBatchAuction.BidStatus.Decrypted),
             "bidThree: status mismatch"
         );
