@@ -65,6 +65,10 @@ contract LSBBASettleTest is Test, Permit2User {
     uint256 internal bidFiveAmount = 6e18;
     uint256 internal bidFiveAmountOut = 5e18; // Price = 1.2
     LocalSealedBidBatchAuction.Decrypt internal decryptedBidFive;
+    uint96 internal bidSix;
+    uint256 internal bidSixAmount = 1e15;
+    uint256 internal bidSixAmountOut = 1e16; // Bid size below minimum
+    LocalSealedBidBatchAuction.Decrypt internal decryptedBidSix;
     LocalSealedBidBatchAuction.Decrypt[] internal decrypts;
 
     uint8 internal quoteTokenDecimals = 18;
@@ -222,6 +226,8 @@ contract LSBBASettleTest is Test, Permit2User {
         bidFourAmountOut = bidFourAmountOut * 10 ** baseTokenDecimals_ / SCALE;
         bidFiveAmount = bidFiveAmount * 10 ** quoteTokenDecimals_ / SCALE;
         bidFiveAmountOut = bidFiveAmountOut * 10 ** baseTokenDecimals_ / SCALE;
+        bidSixAmount = bidSixAmount * 10 ** quoteTokenDecimals_ / SCALE;
+        bidSixAmountOut = bidSixAmountOut * 10 ** baseTokenDecimals_ / SCALE;
 
         // Update auction implementation params
         auctionDataParams.minimumPrice = MINIMUM_PRICE * 10 ** quoteTokenDecimals_ / SCALE;
@@ -291,7 +297,7 @@ contract LSBBASettleTest is Test, Permit2User {
         _;
     }
 
-    modifier whenLotIsFilled() {
+    modifier whenLotIsUnderCapacityOverMinimum() {
         // 2 + 3 > 2.5
         // Above minimum price
         // Not over capacity
@@ -317,18 +323,56 @@ contract LSBBASettleTest is Test, Permit2User {
         _;
     }
 
-    modifier whenHasBidBelowMinimum() {
+    modifier whenBidSizeIsBelowMinimum() {
         // Above minimum price
         // Not over capacity
         (bidOne, decryptedBidOne) = _createBid(bidOneAmount, bidOneAmountOut);
         (bidTwo, decryptedBidTwo) = _createBid(bidTwoAmount, bidTwoAmountOut);
         // < minimum of 1e17
-        (bidThree, decryptedBidThree) = _createBid(1e15, 1e16);
+        (bidSix, decryptedBidSix) = _createBid(bidSixAmount, bidSixAmountOut);
+
+        // Set up the decrypts array
+        decrypts.push(decryptedBidOne);
+        decrypts.push(decryptedBidTwo);
+        decrypts.push(decryptedBidSix);
+        _;
+    }
+
+    modifier whenLotIsUnderCapacityWithBidsBelowMinimumPrice() {
+        // 2 + 3 + 4 > 2.5
+        (bidOne, decryptedBidOne) = _createBid(bidOneAmount, bidOneAmountOut);
+        (bidTwo, decryptedBidTwo) = _createBid(bidTwoAmount, bidTwoAmountOut);
+        (bidFour, decryptedBidFour) = _createBid(bidFourAmount, bidFourAmountOut); // Below minimum price
+
+        // Set up the decrypts array
+        decrypts.push(decryptedBidOne);
+        decrypts.push(decryptedBidTwo);
+        decrypts.push(decryptedBidFour);
+        _;
+    }
+
+    modifier whenLotIsOverSubscribedWithBidsBelowMinimumPrice() {
+        // 2 + 3 + 7 + 4 > 10
+        // Marginal price 1
+        // Smallest bid (bidOne) will not be filled at all
+        (bidOne, decryptedBidOne) = _createBid(bidOneAmount, bidOneAmountOut);
+        (bidTwo, decryptedBidTwo) = _createBid(bidTwoAmount, bidTwoAmountOut);
+        (bidThree, decryptedBidThree) = _createBid(bidThreeAmount, bidThreeAmountOut);
+        (bidFour, decryptedBidFour) = _createBid(bidFourAmount, bidFourAmountOut); // Below minimum price
 
         // Set up the decrypts array
         decrypts.push(decryptedBidOne);
         decrypts.push(decryptedBidTwo);
         decrypts.push(decryptedBidThree);
+        decrypts.push(decryptedBidFour);
+        _;
+    }
+
+    modifier whenLotWithAllBidsBelowMinimumPrice() {
+        (bidFour, decryptedBidFour) = _createBid(bidFourAmount, bidFourAmountOut); // Below minimum price
+
+        // Set up the decrypts array
+        decrypts.push(decryptedBidFour);
         _;
     }
 
@@ -402,7 +446,11 @@ contract LSBBASettleTest is Test, Permit2User {
         auctionModule.settle(lotId);
     }
 
-    function test_notDecrypted_reverts() public whenLotIsFilled whenLotHasConcluded {
+    function test_notDecrypted_reverts()
+        public
+        whenLotIsUnderCapacityOverMinimum
+        whenLotHasConcluded
+    {
         // Expect revert
         bytes memory err =
             abi.encodeWithSelector(LocalSealedBidBatchAuction.Auction_WrongState.selector);
@@ -415,7 +463,7 @@ contract LSBBASettleTest is Test, Permit2User {
 
     function test_whenLotHasSettled_reverts()
         public
-        whenLotIsFilled
+        whenLotIsUnderCapacityOverMinimum
         whenLotHasConcluded
         whenLotDecryptionIsComplete
         whenLotHasSettled
@@ -634,7 +682,7 @@ contract LSBBASettleTest is Test, Permit2User {
 
     function test_whenBidSizeIsBelowMinimum()
         public
-        whenHasBidBelowMinimum
+        whenBidSizeIsBelowMinimum
         whenLotHasConcluded
         whenLotDecryptionIsComplete
     {
@@ -671,10 +719,10 @@ contract LSBBASettleTest is Test, Permit2User {
             "bidTwo: status mismatch"
         );
 
-        LocalSealedBidBatchAuction.EncryptedBid memory bidDataThree =
-            auctionModule.getBidData(lotId, bidThree);
+        LocalSealedBidBatchAuction.EncryptedBid memory bidDataSix =
+            auctionModule.getBidData(lotId, bidSix);
         assertEq(
-            uint8(bidDataThree.status),
+            uint8(bidDataSix.status),
             uint8(LocalSealedBidBatchAuction.BidStatus.Decrypted),
             "bidThree: status mismatch"
         );
@@ -875,6 +923,206 @@ contract LSBBASettleTest is Test, Permit2User {
 
         // Expect refund
         assertEq(bidOneRefundAmount, bidOneAmount);
+    }
+
+    function test_whenLotIsOverSubscribedWithBidsBelowMinimumPrice()
+        public
+        whenLotIsOverSubscribedWithBidsBelowMinimumPrice
+        whenLotHasConcluded
+        whenLotDecryptionIsComplete
+    {
+        // Call for settlement
+        vm.prank(address(auctionHouse));
+        (LocalSealedBidBatchAuction.Bid[] memory winningBids,) = auctionModule.settle(lotId);
+
+        // Calculate the marginal price
+        uint256 marginalPrice = _getMarginalPriceScaled(bidTwoAmount, bidTwoAmountOut);
+
+        bidThreeAmountOut = _getAmountOut(bidThreeAmount, marginalPrice);
+
+        // First bid - largest amount out
+        assertEq(winningBids[0].amount, bidThreeAmount);
+        assertEq(winningBids[0].minAmountOut, bidThreeAmountOut);
+
+        // Second bid
+        assertEq(winningBids[1].amount, bidTwoAmount);
+        assertEq(winningBids[1].minAmountOut, bidTwoAmountOut);
+
+        // Expect winning bids
+        assertEq(winningBids.length, 2);
+
+        // Check bid status
+        LocalSealedBidBatchAuction.EncryptedBid memory bidDataOne =
+            auctionModule.getBidData(lotId, bidOne);
+        assertEq(
+            uint8(bidDataOne.status),
+            uint8(LocalSealedBidBatchAuction.BidStatus.Decrypted),
+            "bidOne: status mismatch"
+        );
+
+        LocalSealedBidBatchAuction.EncryptedBid memory bidDataTwo =
+            auctionModule.getBidData(lotId, bidTwo);
+        assertEq(
+            uint8(bidDataTwo.status),
+            uint8(LocalSealedBidBatchAuction.BidStatus.Won),
+            "bidTwo: status mismatch"
+        );
+
+        LocalSealedBidBatchAuction.EncryptedBid memory bidDataThree =
+            auctionModule.getBidData(lotId, bidThree);
+        assertEq(
+            uint8(bidDataThree.status),
+            uint8(LocalSealedBidBatchAuction.BidStatus.Won),
+            "bidThree: status mismatch"
+        );
+
+        LocalSealedBidBatchAuction.EncryptedBid memory bidDataFour =
+            auctionModule.getBidData(lotId, bidFour);
+        assertEq(
+            uint8(bidDataFour.status),
+            uint8(LocalSealedBidBatchAuction.BidStatus.Decrypted),
+            "bidFour: status mismatch"
+        );
+
+        // Lot is updated
+        Auction.Lot memory lot = auctionModule.getLot(lotId);
+        assertEq(lot.capacity, 0); // Set to 0 to prevent further bids
+        assertEq(lot.sold, bidThreeAmountOut + bidTwoAmountOut); // Base tokens sold
+        assertEq(lot.purchased, bidThreeAmount + bidTwoAmount); // Quote tokens purchased
+    }
+
+    function test_whenLotIsOverSubscribedWithBidsBelowMinimumPrice_quoteTokenDecimalsLarger()
+        public
+        givenLotHasDecimals(17, 13)
+        whenLotIsOverSubscribedWithBidsBelowMinimumPrice
+        whenLotHasConcluded
+        whenLotDecryptionIsComplete
+    {
+        // Call for settlement
+        vm.prank(address(auctionHouse));
+        (LocalSealedBidBatchAuction.Bid[] memory winningBids,) = auctionModule.settle(lotId);
+
+        // Calculate the marginal price
+        uint256 marginalPrice = _getMarginalPriceScaled(bidTwoAmount, bidTwoAmountOut);
+
+        bidThreeAmountOut = _getAmountOut(bidThreeAmount, marginalPrice);
+
+        // First bid - largest amount out
+        assertEq(winningBids[0].amount, bidThreeAmount);
+        assertEq(winningBids[0].minAmountOut, bidThreeAmountOut);
+
+        // Second bid
+        assertEq(winningBids[1].amount, bidTwoAmount);
+        assertEq(winningBids[1].minAmountOut, bidTwoAmountOut);
+
+        // Expect winning bids
+        assertEq(winningBids.length, 2);
+
+        // Check bid status
+        LocalSealedBidBatchAuction.EncryptedBid memory bidDataOne =
+            auctionModule.getBidData(lotId, bidOne);
+        assertEq(
+            uint8(bidDataOne.status),
+            uint8(LocalSealedBidBatchAuction.BidStatus.Decrypted),
+            "bidOne: status mismatch"
+        );
+
+        LocalSealedBidBatchAuction.EncryptedBid memory bidDataTwo =
+            auctionModule.getBidData(lotId, bidTwo);
+        assertEq(
+            uint8(bidDataTwo.status),
+            uint8(LocalSealedBidBatchAuction.BidStatus.Won),
+            "bidTwo: status mismatch"
+        );
+
+        LocalSealedBidBatchAuction.EncryptedBid memory bidDataThree =
+            auctionModule.getBidData(lotId, bidThree);
+        assertEq(
+            uint8(bidDataThree.status),
+            uint8(LocalSealedBidBatchAuction.BidStatus.Won),
+            "bidThree: status mismatch"
+        );
+
+        LocalSealedBidBatchAuction.EncryptedBid memory bidDataFour =
+            auctionModule.getBidData(lotId, bidFour);
+        assertEq(
+            uint8(bidDataFour.status),
+            uint8(LocalSealedBidBatchAuction.BidStatus.Decrypted),
+            "bidFour: status mismatch"
+        );
+
+        // Lot is updated
+        Auction.Lot memory lot = auctionModule.getLot(lotId);
+        assertEq(lot.capacity, 0); // Set to 0 to prevent further bids
+        assertEq(lot.sold, bidThreeAmountOut + bidTwoAmountOut); // Base tokens sold
+        assertEq(lot.purchased, bidThreeAmount + bidTwoAmount); // Quote tokens purchased
+    }
+
+    function test_whenLotIsOverSubscribedWithBidsBelowMinimumPrice_quoteTokenDecimalsSmaller()
+        public
+        givenLotHasDecimals(13, 17)
+        whenLotIsOverSubscribedWithBidsBelowMinimumPrice
+        whenLotHasConcluded
+        whenLotDecryptionIsComplete
+    {
+        // Call for settlement
+        vm.prank(address(auctionHouse));
+        (LocalSealedBidBatchAuction.Bid[] memory winningBids,) = auctionModule.settle(lotId);
+
+        // Calculate the marginal price
+        uint256 marginalPrice = _getMarginalPriceScaled(bidTwoAmount, bidTwoAmountOut);
+
+        bidThreeAmountOut = _getAmountOut(bidThreeAmount, marginalPrice);
+
+        // First bid - largest amount out
+        assertEq(winningBids[0].amount, bidThreeAmount);
+        assertEq(winningBids[0].minAmountOut, bidThreeAmountOut);
+
+        // Second bid
+        assertEq(winningBids[1].amount, bidTwoAmount);
+        assertEq(winningBids[1].minAmountOut, bidTwoAmountOut);
+
+        // Expect winning bids
+        assertEq(winningBids.length, 2);
+
+        // Check bid status
+        LocalSealedBidBatchAuction.EncryptedBid memory bidDataOne =
+            auctionModule.getBidData(lotId, bidOne);
+        assertEq(
+            uint8(bidDataOne.status),
+            uint8(LocalSealedBidBatchAuction.BidStatus.Decrypted),
+            "bidOne: status mismatch"
+        );
+
+        LocalSealedBidBatchAuction.EncryptedBid memory bidDataTwo =
+            auctionModule.getBidData(lotId, bidTwo);
+        assertEq(
+            uint8(bidDataTwo.status),
+            uint8(LocalSealedBidBatchAuction.BidStatus.Won),
+            "bidTwo: status mismatch"
+        );
+
+        LocalSealedBidBatchAuction.EncryptedBid memory bidDataThree =
+            auctionModule.getBidData(lotId, bidThree);
+        assertEq(
+            uint8(bidDataThree.status),
+            uint8(LocalSealedBidBatchAuction.BidStatus.Won),
+            "bidThree: status mismatch"
+        );
+
+        LocalSealedBidBatchAuction.EncryptedBid memory bidDataFour =
+            auctionModule.getBidData(lotId, bidFour);
+        assertEq(
+            uint8(bidDataFour.status),
+            uint8(LocalSealedBidBatchAuction.BidStatus.Decrypted),
+            "bidFour: status mismatch"
+        );
+
+        // Lot is updated
+        Auction.Lot memory lot = auctionModule.getLot(lotId);
+        assertEq(lot.capacity, 0); // Set to 0 to prevent further bids
+        assertEq(lot.sold, bidThreeAmountOut + bidTwoAmountOut); // Base tokens sold
+        assertEq(lot.purchased, bidThreeAmount + bidTwoAmount); // Quote tokens purchased
     }
 
     function test_whenLotIsOverSubscribed_partialFill()
@@ -1091,9 +1339,9 @@ contract LSBBASettleTest is Test, Permit2User {
         assertEq(lot.purchased, bidFiveAmount + bidTwoAmount + bidOneAmount); // Quote tokens purchased
     }
 
-    function test_whenLotIsFilled()
+    function test_whenLotIsUnderCapacityOverMinimum()
         public
-        whenLotIsFilled
+        whenLotIsUnderCapacityOverMinimum
         whenLotHasConcluded
         whenLotDecryptionIsComplete
     {
@@ -1133,10 +1381,10 @@ contract LSBBASettleTest is Test, Permit2User {
         assertEq(lot.purchased, bidTwoAmount + bidOneAmount); // Quote tokens purchased
     }
 
-    function test_whenLotIsFilled_quoteTokenDecimalsLarger()
+    function test_whenLotIsUnderCapacityOverMinimum_quoteTokenDecimalsLarger()
         public
         givenLotHasDecimals(17, 13)
-        whenLotIsFilled
+        whenLotIsUnderCapacityOverMinimum
         whenLotHasConcluded
         whenLotDecryptionIsComplete
     {
@@ -1176,10 +1424,10 @@ contract LSBBASettleTest is Test, Permit2User {
         assertEq(lot.purchased, bidTwoAmount + bidOneAmount); // Quote tokens purchased
     }
 
-    function test_whenLotIsFilled_quoteTokenDecimalsSmaller()
+    function test_whenLotIsUnderCapacityOverMinimum_quoteTokenDecimalsSmaller()
         public
         givenLotHasDecimals(13, 17)
-        whenLotIsFilled
+        whenLotIsUnderCapacityOverMinimum
         whenLotHasConcluded
         whenLotDecryptionIsComplete
     {
@@ -1211,6 +1459,223 @@ contract LSBBASettleTest is Test, Permit2User {
         LocalSealedBidBatchAuction.EncryptedBid memory bidDataTwo =
             auctionModule.getBidData(lotId, bidTwo);
         assertEq(uint8(bidDataTwo.status), uint8(LocalSealedBidBatchAuction.BidStatus.Won));
+
+        // Lot is updated
+        Auction.Lot memory lot = auctionModule.getLot(lotId);
+        assertEq(lot.capacity, 0); // Set to 0 to prevent further bids
+        assertEq(lot.sold, bidTwoAmountOut + bidOneAmountOut); // Base tokens sold
+        assertEq(lot.purchased, bidTwoAmount + bidOneAmount); // Quote tokens purchased
+    }
+
+    function test_whenLotWithAllBidsBelowMinimumPrice()
+        public
+        whenLotWithAllBidsBelowMinimumPrice
+        whenLotHasConcluded
+        whenLotDecryptionIsComplete
+    {
+        // Call for settlement
+        vm.prank(address(auctionHouse));
+        (LocalSealedBidBatchAuction.Bid[] memory winningBids,) = auctionModule.settle(lotId);
+
+        // Expect winning bids
+        assertEq(winningBids.length, 0);
+
+        // Check bid status
+        LocalSealedBidBatchAuction.EncryptedBid memory bidDataFour =
+            auctionModule.getBidData(lotId, bidFour);
+        assertEq(uint8(bidDataFour.status), uint8(LocalSealedBidBatchAuction.BidStatus.Decrypted));
+
+        // Lot is updated
+        Auction.Lot memory lot = auctionModule.getLot(lotId);
+        assertEq(lot.capacity, 0); // Set to 0 to prevent further bids
+        assertEq(lot.sold, 0); // Base tokens sold
+        assertEq(lot.purchased, 0); // Quote tokens purchased
+    }
+
+    function test_whenLotWithAllBidsBelowMinimumPrice_quoteTokenDecimalsLarger()
+        public
+        givenLotHasDecimals(17, 13)
+        whenLotWithAllBidsBelowMinimumPrice
+        whenLotHasConcluded
+        whenLotDecryptionIsComplete
+    {
+        // Call for settlement
+        vm.prank(address(auctionHouse));
+        (LocalSealedBidBatchAuction.Bid[] memory winningBids,) = auctionModule.settle(lotId);
+
+        // Expect winning bids
+        assertEq(winningBids.length, 0);
+
+        // Check bid status
+        LocalSealedBidBatchAuction.EncryptedBid memory bidDataFour =
+            auctionModule.getBidData(lotId, bidFour);
+        assertEq(uint8(bidDataFour.status), uint8(LocalSealedBidBatchAuction.BidStatus.Decrypted));
+
+        // Lot is updated
+        Auction.Lot memory lot = auctionModule.getLot(lotId);
+        assertEq(lot.capacity, 0); // Set to 0 to prevent further bids
+        assertEq(lot.sold, 0); // Base tokens sold
+        assertEq(lot.purchased, 0); // Quote tokens purchased
+    }
+
+    function test_whenLotWithAllBidsBelowMinimumPrice_quoteTokenDecimalsSmaller()
+        public
+        givenLotHasDecimals(13, 17)
+        whenLotWithAllBidsBelowMinimumPrice
+        whenLotHasConcluded
+        whenLotDecryptionIsComplete
+    {
+        // Call for settlement
+        vm.prank(address(auctionHouse));
+        (LocalSealedBidBatchAuction.Bid[] memory winningBids,) = auctionModule.settle(lotId);
+
+        // Expect winning bids
+        assertEq(winningBids.length, 0);
+
+        // Check bid status
+        LocalSealedBidBatchAuction.EncryptedBid memory bidDataFour =
+            auctionModule.getBidData(lotId, bidFour);
+        assertEq(uint8(bidDataFour.status), uint8(LocalSealedBidBatchAuction.BidStatus.Decrypted));
+
+        // Lot is updated
+        Auction.Lot memory lot = auctionModule.getLot(lotId);
+        assertEq(lot.capacity, 0); // Set to 0 to prevent further bids
+        assertEq(lot.sold, 0); // Base tokens sold
+        assertEq(lot.purchased, 0); // Quote tokens purchased
+    }
+
+    function test_whenLotIsUnderCapacity_whenBidIsLessThanMinimumPrice()
+        public
+        whenLotIsUnderCapacityWithBidsBelowMinimumPrice
+        whenLotHasConcluded
+        whenLotDecryptionIsComplete
+    {
+        // Call for settlement
+        vm.prank(address(auctionHouse));
+        (LocalSealedBidBatchAuction.Bid[] memory winningBids,) = auctionModule.settle(lotId);
+
+        // Calculate the marginal price
+        uint256 marginalPrice = _getMarginalPriceScaled(bidOneAmount, bidOneAmountOut);
+
+        bidTwoAmountOut = _getAmountOut(bidTwoAmount, marginalPrice);
+
+        // First bid - largest amount out
+        assertEq(winningBids[0].amount, bidTwoAmount);
+        assertEq(winningBids[0].minAmountOut, bidTwoAmountOut);
+
+        // Second bid
+        assertEq(winningBids[1].amount, bidOneAmount);
+        assertEq(winningBids[1].minAmountOut, bidOneAmountOut);
+
+        // Expect winning bids
+        assertEq(winningBids.length, 2);
+
+        // Check bid status
+        LocalSealedBidBatchAuction.EncryptedBid memory bidDataOne =
+            auctionModule.getBidData(lotId, bidOne);
+        assertEq(uint8(bidDataOne.status), uint8(LocalSealedBidBatchAuction.BidStatus.Won));
+
+        LocalSealedBidBatchAuction.EncryptedBid memory bidDataTwo =
+            auctionModule.getBidData(lotId, bidTwo);
+        assertEq(uint8(bidDataTwo.status), uint8(LocalSealedBidBatchAuction.BidStatus.Won));
+
+        LocalSealedBidBatchAuction.EncryptedBid memory bidDataFour =
+            auctionModule.getBidData(lotId, bidFour);
+        assertEq(uint8(bidDataFour.status), uint8(LocalSealedBidBatchAuction.BidStatus.Decrypted));
+
+        // Lot is updated
+        Auction.Lot memory lot = auctionModule.getLot(lotId);
+        assertEq(lot.capacity, 0); // Set to 0 to prevent further bids
+        assertEq(lot.sold, bidTwoAmountOut + bidOneAmountOut); // Base tokens sold
+        assertEq(lot.purchased, bidTwoAmount + bidOneAmount); // Quote tokens purchased
+    }
+
+    function test_whenLotIsUnderCapacity_whenBidIsLessThanMinimumPrice_quoteTokenDecimalsLarger()
+        public
+        givenLotHasDecimals(17, 13)
+        whenLotIsUnderCapacityWithBidsBelowMinimumPrice
+        whenLotHasConcluded
+        whenLotDecryptionIsComplete
+    {
+        // Call for settlement
+        vm.prank(address(auctionHouse));
+        (LocalSealedBidBatchAuction.Bid[] memory winningBids,) = auctionModule.settle(lotId);
+
+        // Calculate the marginal price
+        uint256 marginalPrice = _getMarginalPriceScaled(bidOneAmount, bidOneAmountOut);
+
+        bidTwoAmountOut = _getAmountOut(bidTwoAmount, marginalPrice);
+
+        // First bid - largest amount out
+        assertEq(winningBids[0].amount, bidTwoAmount);
+        assertEq(winningBids[0].minAmountOut, bidTwoAmountOut);
+
+        // Second bid
+        assertEq(winningBids[1].amount, bidOneAmount);
+        assertEq(winningBids[1].minAmountOut, bidOneAmountOut);
+
+        // Expect winning bids
+        assertEq(winningBids.length, 2);
+
+        // Check bid status
+        LocalSealedBidBatchAuction.EncryptedBid memory bidDataOne =
+            auctionModule.getBidData(lotId, bidOne);
+        assertEq(uint8(bidDataOne.status), uint8(LocalSealedBidBatchAuction.BidStatus.Won));
+
+        LocalSealedBidBatchAuction.EncryptedBid memory bidDataTwo =
+            auctionModule.getBidData(lotId, bidTwo);
+        assertEq(uint8(bidDataTwo.status), uint8(LocalSealedBidBatchAuction.BidStatus.Won));
+
+        LocalSealedBidBatchAuction.EncryptedBid memory bidDataFour =
+            auctionModule.getBidData(lotId, bidFour);
+        assertEq(uint8(bidDataFour.status), uint8(LocalSealedBidBatchAuction.BidStatus.Decrypted));
+
+        // Lot is updated
+        Auction.Lot memory lot = auctionModule.getLot(lotId);
+        assertEq(lot.capacity, 0); // Set to 0 to prevent further bids
+        assertEq(lot.sold, bidTwoAmountOut + bidOneAmountOut); // Base tokens sold
+        assertEq(lot.purchased, bidTwoAmount + bidOneAmount); // Quote tokens purchased
+    }
+
+    function test_whenLotIsUnderCapacity_whenBidIsLessThanMinimumPrice_quoteTokenDecimalsSmaller()
+        public
+        givenLotHasDecimals(13, 17)
+        whenLotIsUnderCapacityWithBidsBelowMinimumPrice
+        whenLotHasConcluded
+        whenLotDecryptionIsComplete
+    {
+        // Call for settlement
+        vm.prank(address(auctionHouse));
+        (LocalSealedBidBatchAuction.Bid[] memory winningBids,) = auctionModule.settle(lotId);
+
+        // Calculate the marginal price
+        uint256 marginalPrice = _getMarginalPriceScaled(bidOneAmount, bidOneAmountOut);
+
+        bidTwoAmountOut = _getAmountOut(bidTwoAmount, marginalPrice);
+
+        // First bid - largest amount out
+        assertEq(winningBids[0].amount, bidTwoAmount);
+        assertEq(winningBids[0].minAmountOut, bidTwoAmountOut);
+
+        // Second bid
+        assertEq(winningBids[1].amount, bidOneAmount);
+        assertEq(winningBids[1].minAmountOut, bidOneAmountOut);
+
+        // Expect winning bids
+        assertEq(winningBids.length, 2);
+
+        // Check bid status
+        LocalSealedBidBatchAuction.EncryptedBid memory bidDataOne =
+            auctionModule.getBidData(lotId, bidOne);
+        assertEq(uint8(bidDataOne.status), uint8(LocalSealedBidBatchAuction.BidStatus.Won));
+
+        LocalSealedBidBatchAuction.EncryptedBid memory bidDataTwo =
+            auctionModule.getBidData(lotId, bidTwo);
+        assertEq(uint8(bidDataTwo.status), uint8(LocalSealedBidBatchAuction.BidStatus.Won));
+
+        LocalSealedBidBatchAuction.EncryptedBid memory bidDataFour =
+            auctionModule.getBidData(lotId, bidFour);
+        assertEq(uint8(bidDataFour.status), uint8(LocalSealedBidBatchAuction.BidStatus.Decrypted));
 
         // Lot is updated
         Auction.Lot memory lot = auctionModule.getLot(lotId);
