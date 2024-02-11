@@ -260,10 +260,10 @@ contract LSBBADecryptAndSortBidsTest is Test, Permit2User {
     //  [X] it reverts
     // [X] when a cancelled bid is passed in
     //  [X] it reverts
-    // [ ] given a bid has a zero amount in
-    //  [ ] it does not consider the bid
-    // [ ] given a bid has a zero amount out
-    //  [ ] it does not consider the bid
+    // [X] given a bid has a zero amount in
+    //  [X] it does not consider the bid
+    // [X] given a bid has a zero amount out
+    //  [X] it does not consider the bid
     // [X] given an encrypted bid has been cancelled
     //  [X] it does not consider the cancelled bid
     // [X] when encrypted bids remain after decryption
