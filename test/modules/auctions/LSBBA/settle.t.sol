@@ -297,7 +297,7 @@ contract LSBBASettleTest is Test, Permit2User {
         _;
     }
 
-    modifier whenLotIsFilled() {
+    modifier whenLotIsUnderCapacityOverMinimum() {
         // 2 + 3 > 2.5
         // Above minimum price
         // Not over capacity
@@ -408,7 +408,11 @@ contract LSBBASettleTest is Test, Permit2User {
         auctionModule.settle(lotId);
     }
 
-    function test_notDecrypted_reverts() public whenLotIsFilled whenLotHasConcluded {
+    function test_notDecrypted_reverts()
+        public
+        whenLotIsUnderCapacityOverMinimum
+        whenLotHasConcluded
+    {
         // Expect revert
         bytes memory err =
             abi.encodeWithSelector(LocalSealedBidBatchAuction.Auction_WrongState.selector);
@@ -421,7 +425,7 @@ contract LSBBASettleTest is Test, Permit2User {
 
     function test_whenLotHasSettled_reverts()
         public
-        whenLotIsFilled
+        whenLotIsUnderCapacityOverMinimum
         whenLotHasConcluded
         whenLotDecryptionIsComplete
         whenLotHasSettled
@@ -1097,9 +1101,9 @@ contract LSBBASettleTest is Test, Permit2User {
         assertEq(lot.purchased, bidFiveAmount + bidTwoAmount + bidOneAmount); // Quote tokens purchased
     }
 
-    function test_whenLotIsFilled()
+    function test_whenLotIsUnderCapacityOverMinimum()
         public
-        whenLotIsFilled
+        whenLotIsUnderCapacityOverMinimum
         whenLotHasConcluded
         whenLotDecryptionIsComplete
     {
@@ -1139,10 +1143,10 @@ contract LSBBASettleTest is Test, Permit2User {
         assertEq(lot.purchased, bidTwoAmount + bidOneAmount); // Quote tokens purchased
     }
 
-    function test_whenLotIsFilled_quoteTokenDecimalsLarger()
+    function test_whenLotIsUnderCapacityOverMinimum_quoteTokenDecimalsLarger()
         public
         givenLotHasDecimals(17, 13)
-        whenLotIsFilled
+        whenLotIsUnderCapacityOverMinimum
         whenLotHasConcluded
         whenLotDecryptionIsComplete
     {
@@ -1182,10 +1186,10 @@ contract LSBBASettleTest is Test, Permit2User {
         assertEq(lot.purchased, bidTwoAmount + bidOneAmount); // Quote tokens purchased
     }
 
-    function test_whenLotIsFilled_quoteTokenDecimalsSmaller()
+    function test_whenLotIsUnderCapacityOverMinimum_quoteTokenDecimalsSmaller()
         public
         givenLotHasDecimals(13, 17)
-        whenLotIsFilled
+        whenLotIsUnderCapacityOverMinimum
         whenLotHasConcluded
         whenLotDecryptionIsComplete
     {
