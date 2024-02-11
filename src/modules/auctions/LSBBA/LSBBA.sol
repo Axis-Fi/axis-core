@@ -290,7 +290,7 @@ contract LocalSealedBidBatchAuction is AuctionModule {
 
     // =========== DECRYPTION =========== //
 
-    /// @notice         Decrypts a batch of bids and sorts them
+    /// @notice         Decrypts a batch of bids and sorts them by price in descending order
     ///                 This function expects a third-party with access to the lot's private key
     ///                 to decrypt the bids off-chain (after calling `getNextBidsToDecrypt()`) and
     ///                 submit them on-chain.
@@ -456,28 +456,47 @@ contract LocalSealedBidBatchAuction is AuctionModule {
         // Capacity is always in base token units for this auction type
         uint256 capacity = lotData[lotId_].capacity;
         uint256 baseScale = 10 ** lotData[lotId_].baseTokenDecimals;
+        uint256 minimumPrice = auctionData[lotId_].minimumPrice;
 
-        // Iterate over bid queue to calculate the marginal clearing price of the auction
+        // Iterate over bid queue (sorted in descending price) to calculate the marginal clearing price of the auction
         Queue storage queue = lotSortedBids[lotId_];
         uint256 numBids = queue.getNumBids();
         uint256 totalAmountIn;
+        uint256 lastPrice;
+        uint256 capacityExpended;
         for (uint256 i = 0; i < numBids; i++) {
             // Load bid
             QueueBid storage qBid = queue.getBid(uint96(i));
 
+            // A bid can be considered if:
+            // - the bid price is greater than the minimum
+            // - the previous capacity utilised and the current bid summed together are more than the capacity
+            //
+            // There is no need to check if the bid is the minimum bid size, as this was checked during decryption
+
             // Calculate bid price (in quote token units)
             // quote scale * base scale / base scale = quote scale
             uint256 price = (qBid.amountIn * baseScale) / qBid.minAmountOut;
+
+            // If the price is below the minimum price, the previous price is the marginal price
+            if (price < minimumPrice) {
+                marginalPrice = lastPrice;
+                numWinningBids = i == 0 ? 0 : i;
+                break;
+            }
+
+            // The current price will now be considered, so we can set this
+            lastPrice = price;
 
             // Increment total amount in
             totalAmountIn += qBid.amountIn;
 
             // Determine total capacity expended at this price (in base token units)
             // quote scale * base scale / quote scale = base scale
-            uint256 expended = (totalAmountIn * baseScale) / price;
+            capacityExpended = (totalAmountIn * baseScale) / price;
 
             // If total capacity expended is greater than or equal to the capacity, we have found the marginal price
-            if (expended >= capacity) {
+            if (capacityExpended >= capacity) {
                 marginalPrice = price;
                 numWinningBids = i + 1;
                 break;
@@ -485,14 +504,14 @@ contract LocalSealedBidBatchAuction is AuctionModule {
 
             // If we have reached the end of the queue, we have found the marginal price and the maximum capacity that can be filled
             if (i == numBids - 1) {
-                // If the total filled is less than the minimum filled, mark as settled and return no winning bids (so users can claim refunds)
-                if (expended < auctionData[lotId_].minFilled) {
-                    return (0, 0);
-                } else {
-                    marginalPrice = price;
-                    numWinningBids = numBids;
-                }
+                marginalPrice = price;
+                numWinningBids = numBids;
             }
+        }
+
+        // If the total filled is less than the minimum filled, mark as settled and return no winning bids (so users can claim refunds)
+        if (capacityExpended < auctionData[lotId_].minFilled) {
+            return (0, 0);
         }
 
         // Check if the minimum price for the auction was reached
