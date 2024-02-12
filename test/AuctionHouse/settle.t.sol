@@ -110,7 +110,7 @@ contract SettleTest is Test, Permit2User {
         // Auction parameters
         auctionDataParams = LocalSealedBidBatchAuction.AuctionDataParams({
             minFillPercent: 1000, // 1%
-            minBidPercent: 1000, // 1%
+            minBidPercent: 10, // 0.01%
             minimumPrice: MINIMUM_PRICE,
             publicKeyModulus: PUBLIC_KEY_MODULUS
         });
@@ -172,8 +172,10 @@ contract SettleTest is Test, Permit2User {
         });
 
         // Create a bid
+        // uint256 gasBefore = gasleft();
         vm.prank(bidder_);
         uint96 bidId = auctionHouse.bid(bidParams);
+        // console2.log("Gas used to create bid: ", gasBefore - gasleft());
 
         return (bidId, decryptedBid);
     }
@@ -1602,5 +1604,56 @@ contract SettleTest is Test, Permit2User {
         // Check prefunding amount
         (,,,,,,,,, uint256 lotPrefunding) = auctionHouse.lotRouting(lotId);
         assertEq(lotPrefunding, 0, "mismatch on prefunding");
+    }
+
+    function test_settleBidLimit() public {
+        // Warp to the start of the auction
+        vm.warp(lotStart);
+
+        uint256 minAmount = (LOT_CAPACITY * 250 * MINIMUM_PRICE) / (1e5 * 1e18);
+        uint256 minAmountOut = minAmount * 1e18 / MINIMUM_PRICE;
+
+        console2.log("Minimum amount", minAmount);
+        console2.log("Minimum amount out", minAmountOut);
+        console2.log("Start base token balance", baseToken.balanceOf(bidderOne));
+
+        // Mint tokens to bidder and approve auction house
+        quoteToken.mint(bidderOne, minAmount * 10000);
+        vm.prank(bidderOne);
+        quoteToken.approve(address(auctionHouse), minAmount * 10000);
+
+        // Submit a large number of small bids to the auction
+        // uint256 gasBefore = gasleft();
+        for (uint256 i = 0; i < 10000; i++) {
+            (, LocalSealedBidBatchAuction.Decrypt memory decrypt) = _createBid(bidderOne, bidderOne, minAmount, minAmountOut);
+            // minAmountOut -= 1e9; // slowly increase price
+            decryptedBids.push(decrypt);
+        }
+        // uint256 gasUsed = gasBefore - gasleft();
+        // console2.log("Gas used by bids", gasUsed);
+        // console2.log("Gas per bid", gasUsed / 10000);
+
+        // Warp past conclusion
+        vm.warp(lotConclusion + 1);
+
+        // Decrypt the bids (do in increments of 100 bids)
+        uint256 gasBefore = gasleft();
+        for (uint256 i = 0; i < 100; i++) {
+            LocalSealedBidBatchAuction.Decrypt[] memory batch = new LocalSealedBidBatchAuction.Decrypt[](100);
+            for (uint256 j = 0; j < 100; j++) {
+                batch[j] = decryptedBids[i * 100 + j];
+            }
+            auctionModule.decryptAndSortBids(lotId, batch);
+        }
+        uint256 gasUsed = gasBefore - gasleft();
+        console2.log("Gas used by decryption", gasUsed);
+        console2.log("Gas per decrypt call", gasUsed / 100);
+
+        // Attempt to settle the lot
+        gasBefore = gasleft();
+        auctionHouse.settle(lotId);
+        console2.log("Gas used by settlement", gasBefore - gasleft());
+
+        console2.log("End base token balance", baseToken.balanceOf(bidderOne));
     }
 }
