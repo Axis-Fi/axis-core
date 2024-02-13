@@ -85,6 +85,7 @@ contract PurchaseTest is Test, Permit2User {
     uint48 internal approvalDeadline;
     uint256 internal derivativeTokenId;
     bytes internal allowlistProof;
+    bytes internal INFO_HASH = abi.encode("");
 
     function setUp() external {
         aliceKey = _getRandomUint256();
@@ -117,8 +118,7 @@ contract PurchaseTest is Test, Permit2User {
             allowlist: IAllowlist(address(0)),
             allowlistParams: abi.encode(""),
             derivativeType: toKeycode(""),
-            derivativeParams: abi.encode(""),
-            infoHash: abi.encode("")
+            derivativeParams: abi.encode("")
         });
 
         // Install the auction module
@@ -126,7 +126,7 @@ contract PurchaseTest is Test, Permit2User {
 
         // Create an auction
         vm.prank(auctionOwner);
-        lotId = auctionHouse.auction(routingParams, auctionParams);
+        lotId = auctionHouse.auction(routingParams, auctionParams, INFO_HASH);
 
         // Fees
         referrerFee = 1000;
@@ -186,7 +186,7 @@ contract PurchaseTest is Test, Permit2User {
 
         // Create the batch auction
         vm.prank(auctionOwner);
-        lotId = auctionHouse.auction(routingParams, auctionParams);
+        lotId = auctionHouse.auction(routingParams, auctionParams, INFO_HASH);
 
         // Update purchase parameters
         purchaseParams.lotId = lotId;
@@ -236,7 +236,7 @@ contract PurchaseTest is Test, Permit2User {
         routingParams.hooks = IHooks(address(mockHook));
 
         // Create a new auction with the hooks
-        lotId = auctionHouse.auction(routingParams, auctionParams);
+        lotId = auctionHouse.auction(routingParams, auctionParams, INFO_HASH);
 
         // Update the purchase params
         purchaseParams.lotId = lotId;
@@ -342,7 +342,7 @@ contract PurchaseTest is Test, Permit2User {
         routingParams.allowlist = mockAllowlist;
 
         vm.prank(auctionOwner);
-        lotId = auctionHouse.auction(routingParams, auctionParams);
+        lotId = auctionHouse.auction(routingParams, auctionParams, INFO_HASH);
 
         // Update the purchase params
         purchaseParams.lotId = lotId;
@@ -591,7 +591,7 @@ contract PurchaseTest is Test, Permit2User {
         routingParams.derivativeParams = abi.encode(deployParams);
 
         vm.prank(auctionOwner);
-        lotId = auctionHouse.auction(routingParams, auctionParams);
+        lotId = auctionHouse.auction(routingParams, auctionParams, INFO_HASH);
 
         // Set purchase parameters
         purchaseParams.lotId = lotId;
@@ -982,7 +982,7 @@ contract PurchaseTest is Test, Permit2User {
 
         // Create a new auction
         vm.prank(auctionOwner);
-        lotId = auctionHouse.auction(routingParams, auctionParams);
+        lotId = auctionHouse.auction(routingParams, auctionParams, INFO_HASH);
 
         // Set purchase parameters
         purchaseParams.lotId = lotId;
@@ -1343,7 +1343,7 @@ contract PurchaseTest is Test, Permit2User {
 
         // Create a new auction
         vm.prank(auctionOwner);
-        lotId = auctionHouse.auction(routingParams, auctionParams);
+        lotId = auctionHouse.auction(routingParams, auctionParams, INFO_HASH);
 
         // Update purchase parameters
         purchaseParams.lotId = lotId;
@@ -1366,7 +1366,7 @@ contract PurchaseTest is Test, Permit2User {
 
         // Create a new auction
         vm.prank(auctionOwner);
-        lotId = auctionHouse.auction(routingParams, auctionParams);
+        lotId = auctionHouse.auction(routingParams, auctionParams, INFO_HASH);
 
         // Update purchase parameters
         purchaseParams.lotId = lotId;

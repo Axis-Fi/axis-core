@@ -40,6 +40,7 @@ contract CancelTest is Test, Permit2User {
     address internal auctionOwner = address(0x1);
 
     address internal protocol = address(0x2);
+    bytes internal INFO_HASH = abi.encode("");
 
     function setUp() external {
         baseToken = new MockERC20("Base Token", "BASE", 18);
@@ -67,14 +68,13 @@ contract CancelTest is Test, Permit2User {
             allowlist: IAllowlist(address(0)),
             allowlistParams: abi.encode(""),
             derivativeType: toKeycode(""),
-            derivativeParams: abi.encode(""),
-            infoHash: abi.encode("")
+            derivativeParams: abi.encode("")
         });
     }
 
     modifier whenLotIsCreated() {
         vm.prank(auctionOwner);
-        lotId = auctionHouse.auction(routingParams, auctionParams);
+        lotId = auctionHouse.auction(routingParams, auctionParams, INFO_HASH);
         _;
     }
 

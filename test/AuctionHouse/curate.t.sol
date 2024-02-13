@@ -48,6 +48,7 @@ contract CurateTest is Test, Permit2User {
     uint48 internal constant CURATOR_FEE = 90;
 
     uint96 internal lotId;
+    bytes internal INFO_HASH = abi.encode("");
 
     function setUp() external {
         baseToken = new MockERC20("Base Token", "BASE", 18);
@@ -77,8 +78,7 @@ contract CurateTest is Test, Permit2User {
             allowlist: IAllowlist(address(0)),
             allowlistParams: abi.encode(""),
             derivativeType: toKeycode(""),
-            derivativeParams: abi.encode(""),
-            infoHash: abi.encode("")
+            derivativeParams: abi.encode("")
         });
 
         // Set the max curator fee
@@ -131,7 +131,7 @@ contract CurateTest is Test, Permit2User {
 
     modifier givenLotIsCreated() {
         vm.prank(owner);
-        lotId = auctionHouse.auction(routingParams, auctionParams);
+        lotId = auctionHouse.auction(routingParams, auctionParams, INFO_HASH);
         _;
     }
 

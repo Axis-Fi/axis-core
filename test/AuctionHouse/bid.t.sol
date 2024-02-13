@@ -67,6 +67,8 @@ contract BidTest is Test, Permit2User {
     bytes internal allowlistProof;
     bytes internal permit2Data;
 
+    bytes internal INFO_HASH = abi.encode("");
+
     function setUp() external {
         // Set block timestamp
         vm.warp(1_000_000);
@@ -99,8 +101,7 @@ contract BidTest is Test, Permit2User {
             allowlist: IAllowlist(address(0)),
             allowlistParams: abi.encode(""),
             derivativeType: toKeycode(""),
-            derivativeParams: abi.encode(""),
-            infoHash: abi.encode("")
+            derivativeParams: abi.encode("")
         });
 
         bidParams = Router.BidParams({
@@ -119,7 +120,7 @@ contract BidTest is Test, Permit2User {
 
     modifier givenLotIsCreated() {
         vm.prank(auctionOwner);
-        lotId = auctionHouse.auction(routingParams, auctionParams);
+        lotId = auctionHouse.auction(routingParams, auctionParams, INFO_HASH);
         _;
     }
 
@@ -135,7 +136,7 @@ contract BidTest is Test, Permit2User {
         auctionType = moduleKeycode;
 
         vm.prank(auctionOwner);
-        lotId = auctionHouse.auction(routingParams, auctionParams);
+        lotId = auctionHouse.auction(routingParams, auctionParams, INFO_HASH);
 
         // Update bid parameters
         bidParams.lotId = lotId;
@@ -167,7 +168,7 @@ contract BidTest is Test, Permit2User {
 
         // Register a new auction with an allowlist
         vm.prank(auctionOwner);
-        lotId = auctionHouse.auction(routingParams, auctionParams);
+        lotId = auctionHouse.auction(routingParams, auctionParams, INFO_HASH);
 
         // Add the sender to the allowlist
         allowlist.setAllowedWithProof(alice, allowlistProof, true);

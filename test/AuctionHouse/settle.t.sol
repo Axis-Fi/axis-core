@@ -83,6 +83,7 @@ contract SettleTest is Test, Permit2User {
 
     uint8 internal quoteTokenDecimals = 18;
     uint8 internal baseTokenDecimals = 18;
+    bytes internal INFO_HASH = abi.encode("");
 
     Keycode internal auctionType;
     Auction.AuctionParams internal auctionParams;
@@ -134,8 +135,7 @@ contract SettleTest is Test, Permit2User {
             allowlist: IAllowlist(address(0)),
             allowlistParams: abi.encode(""),
             derivativeType: toKeycode(""),
-            derivativeParams: abi.encode(""),
-            infoHash: abi.encode("")
+            derivativeParams: abi.encode("")
         });
 
         // Set up pre-funding
@@ -145,7 +145,7 @@ contract SettleTest is Test, Permit2User {
 
         // Create an auction lot
         vm.prank(auctionOwner);
-        lotId = auctionHouse.auction(routingParams, auctionParams);
+        lotId = auctionHouse.auction(routingParams, auctionParams, INFO_HASH);
 
         // Update curator fee amount
         curatorMaxFee = _lotCapacity * CURATOR_MAX_FEE / 1e5;
@@ -260,7 +260,7 @@ contract SettleTest is Test, Permit2User {
 
         // Create a new auction
         vm.prank(auctionOwner);
-        lotId = auctionHouse.auction(routingParams, auctionParams);
+        lotId = auctionHouse.auction(routingParams, auctionParams, INFO_HASH);
 
         // Update curator fee amount
         curatorMaxFee = _lotCapacity * CURATOR_MAX_FEE / 1e5;

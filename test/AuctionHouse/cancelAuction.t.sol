@@ -54,6 +54,8 @@ contract CancelAuctionTest is Test, Permit2User {
 
     Keycode internal auctionType = toKeycode("ATOM");
 
+    bytes internal INFO_HASH = abi.encode("");
+
     function setUp() external {
         baseToken = new MockERC20("Base Token", "BASE", 18);
         quoteToken = new MockERC20("Quote Token", "QUOTE", 18);
@@ -82,8 +84,7 @@ contract CancelAuctionTest is Test, Permit2User {
             allowlist: IAllowlist(address(0)),
             allowlistParams: abi.encode(""),
             derivativeType: toKeycode(""),
-            derivativeParams: abi.encode(""),
-            infoHash: abi.encode("")
+            derivativeParams: abi.encode("")
         });
 
         // Set the max curator fee
@@ -92,7 +93,7 @@ contract CancelAuctionTest is Test, Permit2User {
 
     modifier whenLotIsCreated() {
         vm.prank(auctionOwner);
-        lotId = auctionHouse.auction(routingParams, auctionParams);
+        lotId = auctionHouse.auction(routingParams, auctionParams, INFO_HASH);
         _;
     }
 

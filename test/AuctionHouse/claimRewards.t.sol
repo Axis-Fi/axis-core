@@ -74,6 +74,8 @@ contract ClaimRewardsTest is Test, Permit2User {
     uint256 internal derivativeTokenId;
     bytes internal allowlistProof;
 
+    bytes internal INFO_HASH = abi.encode("");
+
     function setUp() external {
         aliceKey = _getRandomUint256();
         alice = vm.addr(aliceKey);
@@ -101,8 +103,7 @@ contract ClaimRewardsTest is Test, Permit2User {
             allowlist: IAllowlist(address(0)),
             allowlistParams: abi.encode(""),
             derivativeType: toKeycode(""),
-            derivativeParams: abi.encode(""),
-            infoHash: abi.encode("")
+            derivativeParams: abi.encode("")
         });
 
         // Install the auction module
@@ -110,7 +111,7 @@ contract ClaimRewardsTest is Test, Permit2User {
 
         // Create an auction
         vm.prank(auctionOwner);
-        lotId = auctionHouse.auction(routingParams, auctionParams);
+        lotId = auctionHouse.auction(routingParams, auctionParams, INFO_HASH);
 
         // Fees
         referrerFee = 1000;

@@ -107,7 +107,6 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
     /// @param      allowlistParams (optional) abi-encoded data to be used to register the auction on the allowlist
     /// @param      derivativeType  (optional) Derivative type, represented by the Keycode for the derivative submodule
     /// @param      derivativeParams (optional) abi-encoded data to be used to create payout derivatives on a purchase. The format of this is dependent on the derivative module.
-    /// @param      infoHash        (optional) IPFS hash of the auction information, emitted in the AuctionCreated event
     struct RoutingParams {
         Keycode auctionType;
         ERC20 baseToken;
@@ -118,7 +117,6 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
         bytes allowlistParams;
         Keycode derivativeType;
         bytes derivativeParams;
-        bytes infoHash;
     }
 
     // ========= STATE ========== //
@@ -153,15 +151,16 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
     ///
     /// @param      routing_    Routing information for the auction lot
     /// @param      params_     Auction parameters for the auction lot
+    /// @param      infoHash_   IPFS hash of the auction information
     /// @return     lotId       ID of the auction lot
     function auction(
         RoutingParams calldata routing_,
-        Auction.AuctionParams calldata params_
+        Auction.AuctionParams calldata params_,
+        bytes calldata infoHash_
     ) external nonReentrant returns (uint96 lotId) {
         // Load auction type module, this checks that it is installed.
         // We load it here vs. later to avoid two checks.
         AuctionModule auctionModule = AuctionModule(_getLatestModuleIfActive(routing_.auctionType));
-        Veecode auctionRef = auctionModule.VEECODE();
 
         // Check that the module for the auction type is valid
         if (auctionModule.TYPE() != Module.Type.Auction) revert InvalidParams();
@@ -191,7 +190,7 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
 
         // Store routing information
         Routing storage routing = lotRouting[lotId];
-        routing.auctionReference = auctionRef;
+        routing.auctionReference = auctionModule.VEECODE();
         routing.owner = msg.sender;
         routing.baseToken = routing_.baseToken;
         routing.quoteToken = routing_.quoteToken;
@@ -228,7 +227,7 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
         // Condenser
         {
             // Get condenser reference
-            Veecode condenserRef = condensers[auctionRef][routing.derivativeReference];
+            Veecode condenserRef = condensers[routing.auctionReference][routing.derivativeReference];
 
             // Check that the module for the condenser type is valid
             if (fromVeecode(condenserRef) != bytes7(0)) {
@@ -299,10 +298,10 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
 
         emit AuctionCreated(
             lotId,
-            auctionRef,
+            routing.auctionReference,
             address(routing_.baseToken),
             address(routing_.quoteToken),
-            routing_.infoHash
+            infoHash_
         );
     }
 

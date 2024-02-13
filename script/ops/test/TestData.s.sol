@@ -71,7 +71,9 @@ contract TestData is Script {
         auctionParams.capacity = 100e18; // 100 base tokens
         auctionParams.implParams = implParams;
 
-        uint96 lotId = auctionHouse.auction(routingParams, auctionParams);
+        bytes memory infoHash = abi.encode("");
+
+        uint96 lotId = auctionHouse.auction(routingParams, auctionParams, infoHash);
 
         vm.stopBroadcast();
 

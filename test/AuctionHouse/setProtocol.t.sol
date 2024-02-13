@@ -64,6 +64,7 @@ contract SetProtocolTest is Test, Permit2User {
     uint256 internal amountInProtocolFee;
 
     Keycode internal auctionType = toKeycode("ATOM");
+    bytes internal INFO_HASH = abi.encode("");
 
     // Function parameters (can be modified)
     Auctioneer.RoutingParams internal routingParams;
@@ -102,8 +103,7 @@ contract SetProtocolTest is Test, Permit2User {
             allowlist: IAllowlist(address(0)),
             allowlistParams: abi.encode(""),
             derivativeType: toKeycode(""),
-            derivativeParams: abi.encode(""),
-            infoHash: abi.encode("")
+            derivativeParams: abi.encode("")
         });
 
         // Install the auction module
@@ -111,7 +111,7 @@ contract SetProtocolTest is Test, Permit2User {
 
         // Create an auction
         vm.prank(auctionOwner);
-        lotId = auctionHouse.auction(routingParams, auctionParams);
+        lotId = auctionHouse.auction(routingParams, auctionParams, INFO_HASH);
 
         // Fees
         referrerFee = 1000;
