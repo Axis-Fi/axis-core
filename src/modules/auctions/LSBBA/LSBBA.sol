@@ -355,7 +355,7 @@ contract LocalSealedBidBatchAuction is AuctionModule {
             EncryptedBid storage encBid = lotEncryptedBids[lotId_][bidId];
 
             // Decrypt the bid
-            uint256 amountOut = _decrypt(lotId_, bidId, privateKey_);
+            uint256 amountOut = _decrypt(lotId_, encBid.encryptedAmountOut, encBid.encPubKey, privateKey_);
 
             // Validate that the bid is in the Submitted state
             // TODO may be redundant with the new cancel logic
@@ -399,18 +399,17 @@ contract LocalSealedBidBatchAuction is AuctionModule {
 
     function _decrypt(
         uint96 lotId_,
-        uint96 bidId_,
+        uint256 encryptedAmountOut_,
+        Point memory encPubKey_,
         bytes32 privateKey_
     ) internal view returns (uint256 amountOut) {
-        // Load encrypted bid
-        EncryptedBid storage encBid = lotEncryptedBids[lotId_][bidId_];
-
         // Decrypt the message
-        uint256 message = ECIES.decrypt(encBid.encryptedAmountOut, encBid.encPubKey, privateKey_, lotId_);
+        uint256 message = ECIES.decrypt(encryptedAmountOut_, encPubKey_, privateKey_, lotId_);
 
         // Convert the message into the amount out
         // We don't need larger than 16 bytes for a message
-        // To avoid attacks that check for leading zero values, we use a 128-bit random number as a seed
+        // To avoid attacks that check for leading zero values, encrypted bids should use a 128-bit random number
+        // as a seed to randomize the message. The seed should be the first 16 bytes.
         // We subtract the actual value from the random number to get a subtracted value which is the amount out 
         // relative to the random number.
         // After decryption, we can combine them again and get the amount out
