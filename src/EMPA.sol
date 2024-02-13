@@ -3,7 +3,9 @@ pragma solidity 0.8.19;
 
 import {ERC20} from "lib/solmate/src/tokens/ERC20.sol";
 import {Transfer} from "src/lib/Transfer.sol";
-import {MaxPriorityQueue, Queue} from "src/lib/MaxPriorityQueue.sol";
+import {MaxPriorityQueue, Queue, Bid as QueueBid} from "src/lib/MaxPriorityQueue.sol";
+import {RSAOAEP} from "src/lib/RSA.sol";
+import {uint2str} from "src/lib/Uint2Str.sol";
 
 import {Auctioneer} from "src/bases/Auctioneer.sol";
 import {FeeManager} from "src/bases/FeeManager.sol";
@@ -12,7 +14,7 @@ import {CondenserModule} from "src/modules/Condenser.sol";
 import {DerivativeModule} from "src/modules/Derivative.sol";
 
 import {
-    Veecode, fromVeecode, Keycode, keycodeFromVeecode, WithModules, Module
+    Veecode, fromVeecode, Keycode, fromKeycode, keycodeFromVeecode, WithModules, Module
 } from "src/modules/Modules.sol";
 
 import {IHooks} from "src/interfaces/IHooks.sol";
@@ -149,22 +151,24 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
     /// @param      quoteToken          Token to accept as payment
     /// @param      curator             ID of the proposed curator
     /// @param      curated             Whether the curator has approved the auction
+    /// @param      curatorFee          Amount of payout tokens the curator will receive if the auction is completely filled
     /// @param      hooks               (optional) Address to call for any hooks to be executed
     /// @param      allowlist           (optional) Contract that implements an allowlist for the auction lot
     /// @param      derivativeReference (optional) Derivative module, represented by its Veecode
     /// @param      wrapDerivative      (optional) Whether to wrap the derivative in a ERC20 token instead of the native ERC6909 format
     /// @param      derivativeParams    (optional) abi-encoded data to be used to create payout derivatives on a purchase
     struct Routing {
+        address owner;
         ERC20 baseToken;
-        uint64 ownerId;
         ERC20 quoteToken;
-        uint64 curatorId;
+        address curator;
+        uint96 curatorFee;
         bool curated;
         IHooks hooks;
         IAllowlist allowlist;
         Veecode derivativeReference;
         bool wrapDerivative;
-        bytes derivativeParams;
+        bytes derivativeParams; // Slots 5+
     }
 
     /// @notice     Auction routing information provided as input parameters
@@ -177,6 +181,7 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
     /// @param      allowlist       (optional) Contract that implements an allowlist for the auction lot
     /// @param      allowlistParams (optional) abi-encoded data to be used to register the auction on the allowlist
     /// @param      derivativeType  (optional) Derivative type, represented by the Keycode for the derivative submodule
+    /// @param      wrapDerivative  (optional) Whether to wrap the derivative in a ERC20 token instead of the native ERC6909 format
     /// @param      derivativeParams (optional) abi-encoded data to be used to create payout derivatives on a purchase. The format of this is dependent on the derivative module.
     struct RoutingParams {
         ERC20 baseToken;
@@ -186,6 +191,7 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
         IAllowlist allowlist;
         bytes allowlistParams;
         Keycode derivativeType;
+        bool wrapDerivative;
         bytes derivativeParams;
     }
 
@@ -204,18 +210,17 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
 
     /// @notice        Struct containing encrypted bid data
     ///
-    /// @param         status              The status of the bid
     /// @param         bidder              The address of the bidder
-    /// @param         recipient           The address of the recipient
-    /// @param         referrer            The address of the referrer
     /// @param         amount              The amount of the bid
     /// @param         minAmountOut        The minimum amount out (not set until the bid is decrypted)
+    /// @param         referrer            The address of the referrer
+    /// @param         status              The status of the bid
     struct Bid {
-        BidStatus status;
-        uint64 bidderId;
-        uint64 referrerId;
-        uint96 amount;
+        address bidder; // 20 +
+        uint96 amount; // 12
         uint96 minAmountOut;
+        address referrer;
+        BidStatus status; 
     }
 
     /// @notice        Struct containing decrypted bid data
@@ -223,7 +228,7 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
     /// @param         amountOut           The amount out
     /// @param         seed                The seed used to encrypt the amount out
     struct Decrypt {
-        uint96 amountOut;
+        uint256 amountOut;
         bytes32 seed;
     }
 
@@ -234,17 +239,17 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
     /// @param         nextBidId           The ID of the next bid to be submitted
     /// @param         minimumPrice        The minimum price that the auction can settle at (in terms of quote token)
     /// @param         minFilled           The minimum amount of capacity that must be filled to settle the auction
-    /// @param         minBidSize          The minimum amount that can be bid for the lot, determined by the percentage of capacity that must be filled per bid times the min bid price
+    /// @param         minBidSize          The minimum amount of tokens that must be expected for each bid
     /// @param         publicKeyModulus    The public key modulus used to encrypt bids
     /// @param         bidIds              The list of bid IDs to decrypt in order of submission, excluding cancelled bids
     struct BidData {
-        uint64 nextBidId;
-        uint64 nextDecryptIndex;
-        uint96 marginalPrice;
-        bytes publicKeyModulus;
+        uint64 nextBidId; // 8 +
+        uint64 nextDecryptIndex; // 8 +
+        uint96 marginalPrice; // 12 = 28 - end of slot 1
+        bytes publicKeyModulus; // 5 slots (length + 4 slots)
         uint64[] bidIds;
         mapping(uint64 bidId => Bid) bids;
-        mapping(uint64 bidId => bytes) encryptedBids;
+        mapping(uint64 bidId => bytes) encryptedBids; // each encrypted amount is 5 slots (length + 4 slots) due to using 1024-bit RSA encryption
         Queue decryptedBids;
     }
 
@@ -309,7 +314,7 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
     mapping(address user => uint64) public userIds;
 
     /// @notice     General information pertaining to auction lots
-    mapping(uint96 id => Lot lot) public lotData;
+    mapping(uint96 lotId => Lot lot) public lotData;
 
     /// @notice     Lot routing information
     mapping(uint96 lotId => Routing) public lotRouting;
@@ -386,12 +391,23 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
 
         // Start time must be zero or in the future
         if (params_.start > 0 && params_.start < uint48(block.timestamp)) {
-            revert Auction_InvalidStart(params_.start, uint48(block.timestamp));
+            revert InvalidParams();
         }
 
         // Duration must be at least min duration
         if (params_.duration < minAuctionDuration) {
-            revert Auction_InvalidDuration(params_.duration, minAuctionDuration);
+            revert InvalidParams();
+        }
+
+        // minFillPercent must be less than or equal to 100%
+        if (params_.minFillPercent > _ONE_HUNDRED_PERCENT) revert InvalidParams();
+
+        // minBidPercent must be greater than or equal to the global min and less than or equal to 100%
+        if (
+            params_.minBidPercent < _MIN_BID_PERCENT
+                || params_.minBidPercent > _ONE_HUNDRED_PERCENT
+        ) {
+            revert Auction_InvalidParams();
         }
 
         // Create core market data
@@ -402,43 +418,29 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
             lot.quoteTokenDecimals = quoteTokenDecimals;
             lot.baseTokenDecimals = baseTokenDecimals;
             lot.capacity = params_.capacity;
+            lot.minimumPrice = params_.minimumPrice;
+            lot.minFilled = (params_.capacity * params_.minFillPercent) / _ONE_HUNDRED_PERCENT;
+            lot.minBidSize = (params_.capacity * params_.minBidPercent ) / _ONE_HUNDRED_PERCENT;
         }
 
-        // Validate params
-
-        // minFillPercent must be less than or equal to 100%
-        if (params_.minFillPercent > _ONE_HUNDRED_PERCENT) revert Auction_InvalidParams();
-
-        // minBidPercent must be greater than or equal to the global min and less than or equal to 100%
-        if (
-            params_.minBidPercent < _MIN_BID_PERCENT
-                || params_.minBidPercent > _ONE_HUNDRED_PERCENT
-        ) {
-            revert Auction_InvalidParams();
-        }
+        // Initialize bid data
 
         // publicKeyModulus must be 1024 bits (128 bytes)
         if (params_.publicKeyModulus.length != 128) revert Auction_InvalidParams();
 
-        // Store auction data
-        AuctionData storage data = auctionData[lotId];
-        data.minimumPrice = params_.minimumPrice;
-        data.minFilled = (params_.capacity * params_.minFillPercent) / _ONE_HUNDRED_PERCENT;
-        data.minBidSize = (params_.capacity * params_.minBidPercent * params_.minimumPrice ) / (_ONE_HUNDRED_PERCENT * 10**baseTokenDecimals);
+        BidData storage data = bidData[lotId];
         data.publicKeyModulus = params_.publicKeyModulus;
-
+        data.nextBidId = 1;
+        data.decryptedBids = Queue.initialize();
 
         // Get user IDs for owner and curator
         Routing storage routing = lotRouting[lotId];
         {
-            uint64 ownerId = _getUserId(msg.sender);
-            uint64 curatorId = routing_.curator != address(0) ? _getUserId(routing_.curator) : 0;
-
             // Store routing information
+            routing.owner = routing_.owner;
             routing.baseToken = routing_.baseToken;
-            routing.ownerId = ownerId;
             routing.quoteToken = routing_.quoteToken;
-            if (curatorId != 0) routing.curatorId = curatorId;
+            if (routing_.curator != address(0)) routing.curator = routing_.curator;
         }
 
         // Derivative
@@ -460,6 +462,7 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
 
             // Store derivative information
             routing.derivativeReference = derivativeRef;
+            routing.wrapDerivative = routing_.wrapDerivative;
             routing.derivativeParams = routing_.derivativeParams;
         }
 
@@ -545,36 +548,25 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
     /// @param      lotId_      ID of the auction lot
     function cancel(uint96 lotId_) external nonReentrant {
         // Validation
-        _isLotValid(lotId_);
+        _revertIfLotInvalid(lotId_);
+        _revertIfLotStarted(lotId_);
 
         Routing storage routing = lotRouting[lotId_];
 
         // Check ownership
         if (msg.sender != routing.owner) revert NotPermitted(msg.sender);
 
-        // Validation
-        _revertIfLotInvalid(lotId_);
-        _revertIfLotConcluded(lotId_);
-
-        // Call internal closeAuction function to update any other required parameters
-        _cancelAuction(lotId_);
-
-        // Update lot
+        // Cache capacity and curator fee for refund
         Lot storage lot = lotData[lotId_];
 
+        uint256 refund = lot.capacity + lot.curatorFee;
         lot.conclusion = uint48(block.timestamp);
         lot.capacity = 0;
+        lot.curatorFee = 0;
+        lot.status = AuctionStatus.Settled;
 
-        // If the auction is prefunded and supported, transfer the remaining capacity to the owner
-        if (routing.prefunding > 0) {
-            uint256 prefunding = routing.prefunding;
-
-            // Set to 0 before transfer to avoid re-entrancy
-            lotRouting[lotId_].prefunding = 0;
-
-            // Transfer payout tokens to the owner
-            Transfer.transfer(routing.baseToken, routing.owner, prefunding, false);
-        }
+        // Refund base tokens to the owner
+        Transfer.transfer(routing.baseToken, msg.sender, refund, false);
 
         emit AuctionCancelled(lotId_, routing.auctionReference);
     }
@@ -600,16 +592,30 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
         }
     }
 
-    // ========== BATCH AUCTIONS ========== //
+    // ========== BIDDING ========== //
 
     /// @inheritdoc Router
+    ///
+    /// @param      lotId               Lot ID
+    /// @param      referrer            Address of referrer
+    /// @param      amount              Amount of quoteToken to purchase with (in native decimals)
+    /// @param      auctionData         Custom data used by the auction module
+    /// @param      allowlistProof      Proof of allowlist inclusion
+    /// @param      permit2Data_        Permit2 approval for the quoteToken (abi-encoded Permit2Approval struct)
     /// @dev        This function reverts if:
     ///             - lotId is invalid
     ///             - the bidder is not on the optional allowlist
     ///             - the auction module reverts when creating a bid
     ///             - the quote token transfer fails
     ///             - re-entrancy is detected
-    function bid(BidParams memory params_) external override nonReentrant returns (uint96) {
+    function bid(
+        uint96 lotId_,
+        address referrer_,
+        uint96 amount_,
+        bytes encryptedAmountOut_,
+        bytes allowlistProof_,
+        bytes permit2Data_
+    ) external override nonReentrant returns (uint64) {
         _isLotValid(params_.lotId);
 
         // Load routing data for the lot
@@ -620,15 +626,32 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
             revert InvalidBidder(msg.sender);
         }
 
-        // Record the bid on the auction module
-        // The module will determine if the bid is valid - minimum bid size, minimum price, auction status, etc
-        uint96 bidId = getModuleForId(params_.lotId).bid(
-            params_.lotId,
-            msg.sender,
-            params_.referrer,
-            params_.amount,
-            params_.auctionData
-        );
+        // Standard validation
+        _revertIfLotInvalid(lotId_);
+        _revertIfBeforeLotStart(lotId_);
+        _revertIfLotConcluded(lotId_);
+        _revertIfLotSettled(lotId_);
+
+        // Check that the amount is greater than the minimum bid size
+        if (amount_ < lotData[lotId_].minBidSize) revert AmountLessThanMinimum();
+
+        // Check that the encrypted amount out is a valid length
+        if (encryptedAmountOut_.length != 128) revert InvalidParams();
+
+        // Store bid data
+        BidData storage data = bidData[lotId_];
+        uint64 bidId = data.nextBidId++;
+        Bid storage userBid = data.bids[bidId];
+        userBid.bidder = bidder_;
+        userBid.amount = amount_;
+        userBid.referrer = referrer_;
+        userBid.status = BidStatus.Submitted;
+
+        // Store encrypted amount out
+        data.encryptedBids[bidId] = encryptedAmountOut_;
+
+        // Push bid ID to list of bids to decrypt
+        data.bidIds.push(bidId);
 
         // Transfer the quote token from the bidder
         _collectPayment(
@@ -651,15 +674,37 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
     ///             - the auction module reverts when cancelling the bid
     ///             - re-entrancy is detected
     function refundBid(uint96 lotId_, uint96 bidId_) external override nonReentrant {
-        _isLotValid(lotId_);
+        // Standard validation
+        _revertIfLotInvalid(lotId_);
+        _revertIfBeforeLotStart(lotId_);
+        _revertIfBidInvalid(lotId_, bidId_);
+        _revertIfNotBidOwner(lotId_, bidId_, bidder_);
+        _revertIfBidRefunded(lotId_, bidId_);
+        _revertIfLotConcluded(lotId_);
 
-        // Refund the bid on the auction module
-        // The auction module is responsible for validating the bid and authorizing the caller
-        uint256 refundAmount = getModuleForId(lotId_).refundBid(lotId_, bidId_, msg.sender);
+        // Bid must be in Submitted state
+        BidData storage data = bidData[lotId_];
+
+        // TODO probably covered by the above
+        if (data.bids[bidId_].status != BidStatus.Submitted) revert Bid_WrongState();
+
+        // Set bid status to refunded
+        data.bids[bidId_].status = BidStatus.Refunded;
+
+        // Remove bid from list of bids to decrypt
+        uint64[] storage bidIds = data.bidIds;
+        uint256 len = bidIds.length;
+        for (uint256 i; i < len; i++) {
+            if (bidIds[i] == bidId_) {
+                bidIds[i] = bidIds[len - 1];
+                bidIds.pop();
+                break;
+            }
+        }
 
         // Transfer the quote token to the bidder
         // The ownership of the bid has already been verified by the auction module
-        Transfer.transfer(lotRouting[lotId_].quoteToken, msg.sender, refundAmount, false);
+        Transfer.transfer(lotRouting[lotId_].quoteToken, msg.sender, data.bids[bidId_].amount, false);
 
         // Emit event
         emit RefundBid(lotId_, bidId_, msg.sender);
@@ -835,6 +880,160 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
 
         // Emit event
         emit Claim(lotId_, bidId_);
+    }
+
+    // =========== DECRYPTION =========== //
+
+    /// @notice         Decrypts a batch of bids and sorts them by price in descending order
+    ///                 This function expects a third-party with access to the lot's private key
+    ///                 to decrypt the bids off-chain (after calling `getNextBidsToDecrypt()`) and
+    ///                 submit them on-chain.
+    /// @dev            Anyone can call this function, provided they have access to the private key to decrypt the bids.
+    ///
+    ///                 This function handles the following:
+    ///                 - Performs validation
+    ///                 - Iterates over the decrypted bids:
+    ///                     - Re-encrypts the decrypted bid to confirm that it matches the stored encrypted bid
+    ///                     - If the bid meets the minimum bid size, stores the decrypted bid in the sorted bid queue and updates the status.
+    ///                     - Sets the encrypted bid status to decrypted
+    ///                 - Determines the next decrypt index
+    ///                 - Sets the auction status to decrypted if all bids have been decrypted
+    ///
+    ///                 This function reverts if:
+    ///                 - The lot ID is invalid
+    ///                 - The lot has not concluded
+    ///                 - The lot has already been decrypted in full
+    ///                 - The number of decrypts is greater than the number of bids remaining to be decrypted
+    ///                 - The encrypted bid does not match the re-encrypted decrypt
+    ///
+    /// @param          lotId_          The lot ID of the auction to decrypt bids for
+    /// @param          decrypts_       An array of decrypts containing the amount out and seed for each bid
+    function decryptAndSortBids(uint96 lotId_, Decrypt[] memory decrypts_) external {
+        // Check that lotId is valid
+        _revertIfLotInvalid(lotId_);
+
+        // Check that auction is in the right state for decryption
+        if (
+            lotData[lotId_].status != AuctionStatus.Created
+                || block.timestamp < lotData[lotId_].conclusion
+        ) revert Auction_WrongState();
+
+        // Load next decrypt index
+        uint64 nextDecryptIndex = bidData[lotId_].nextDecryptIndex;
+        uint64 len = uint64(decrypts_.length);
+
+        // Check that the number of decrypts is less than or equal to the number of bids remaining to be decrypted
+        uint64[] storage bidIds = bidData[lotId_].bidIds;
+        if (len > bidIds.length - nextDecryptIndex) {
+            revert Auction_InvalidDecrypt();
+        }
+
+        // Iterate over decrypts, validate that they match the stored encrypted bids, then store them in the sorted bid queue
+        uint96 minBidSize = lotData[lotId_].minBidSize;
+        for (uint64 i; i < len; i++) {
+            // Re-encrypt the decrypt to confirm that it matches the stored encrypted bid
+            bytes memory ciphertext = _encrypt(lotId_, decrypts_[i]);
+
+            // Load bid
+            uint64 bidId = bidIds[nextDecryptIndex + i];
+            Bid storage _bid = bidData[lotId_].bids[bidId];
+
+            // Check that the bid is in the submitted state, otherwise revert
+            if (_bid.status != BidStatus.Submitted) revert Bid_WrongState();
+
+            // Load encrypted bid amount out
+            bytes memory encryptedAmountOut = bidData[lotId_].encryptedBids[bidId];
+
+            // Check that the encrypted bid matches the re-encrypted decrypt by hashing both
+            if (keccak256(ciphertext) != keccak256(encryptedAmountOut)) revert Auction_InvalidDecrypt();
+
+            // Only store the decrypt if the amount out is greater than or equal to the minimum bid size
+            if (decrypts_[i].amountOut >= minBidSize) {
+                // Store the decrypt in the sorted bid queue
+                bidData[lotId_].decryptedBids.insert(bidId, encBid.amount, decrypts_[i].amountOut);
+            }
+
+            // Set bid status to decrypted
+            _bid.status = BidStatus.Decrypted;
+
+            // Emit event
+            emit BidDecrypted(lotId_, bidId, _bid.amount, decrypts_[i].amountOut);
+        }
+
+        // Increment next decrypt index
+        bidData[lotId_].nextDecryptIndex += len;
+
+        // If all bids have been decrypted, set auction status to decrypted
+        if (bidData[lotId_].nextDecryptIndex == bidIds.length) {
+            bidData[lotId_].status = AuctionStatus.Decrypted;
+        }
+    }
+
+    /// @notice         Re-encrypts a decrypt to confirm that it matches the stored encrypted bid
+    function _encrypt(
+        uint96 lotId_,
+        Decrypt memory decrypt_
+    ) internal view returns (bytes memory) {
+        return RSAOAEP.encrypt(
+            abi.encodePacked(decrypt_.amountOut),
+            abi.encodePacked(uint2str(uint256(lotId_))),
+            abi.encodePacked(_PUB_KEY_EXPONENT),
+            auctionData[lotId_].publicKeyModulus,
+            decrypt_.seed
+        );
+    }
+
+    /// @notice         View function that can be used to obtain a certain number of the next bids to decrypt off-chain
+    /// @dev            This function can be called by anyone, and is used by the decryptAndSortBids() function to obtain the next bids to decrypt
+    ///
+    ///                 This function handles the following:
+    ///                 - Validates inputs
+    ///                 - Loads the next decrypt index
+    ///                 - Loads the number of bids to decrypt
+    ///                 - Creates an array of encrypted bids
+    ///                 - Returns the array of encrypted bids
+    ///
+    ///                 This function reverts if:
+    ///                 - The lot ID is invalid
+    ///                 - The lot has not concluded
+    ///                 - The lot has already been decrypted in full
+    ///                 - The number of bids to decrypt is greater than the number of bids remaining to be decrypted
+    ///
+    /// @param          lotId_          The lot ID of the auction to decrypt bids for
+    /// @param          number_         The number of bids to decrypt
+    /// @return         bids            An array of encrypted bids
+    function getNextBidsToDecrypt(
+        uint96 lotId_,
+        uint256 number_
+    ) external view returns (EncryptedBid[] memory) {
+        // Validation
+        _revertIfLotInvalid(lotId_);
+        _revertIfLotActive(lotId_);
+        _revertIfLotDecrypted(lotId_);
+        _revertIfLotSettled(lotId_);
+
+        // Load next decrypt index
+        uint96 nextDecryptIndex = auctionData[lotId_].nextDecryptIndex;
+
+        // Load number of bids to decrypt
+        uint96[] storage bidIds = auctionData[lotId_].bidIds;
+
+        // Check that the number of bids to decrypt is less than or equal to the number of bids remaining to be decrypted
+        if (number_ > bidIds.length - nextDecryptIndex) revert Auction_InvalidDecrypt();
+
+        uint256 len = bidIds.length - nextDecryptIndex;
+        if (number_ < len) len = number_;
+
+        // Create array of encrypted bids
+        EncryptedBid[] memory bids = new EncryptedBid[](len);
+
+        // Iterate over bids and add them to the array
+        for (uint256 i; i < len; i++) {
+            bids[i] = lotEncryptedBids[lotId_][bidIds[nextDecryptIndex + i]];
+        }
+
+        // Return array of encrypted bids
+        return bids;
     }
 
     // ========== CURATION ========== //
@@ -1139,5 +1338,152 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
         if (totalProtocolFees > 0) rewards[_protocol][quoteToken_] += totalProtocolFees;
 
         totalAmountInLessFees = totalAmountIn - totalFees;
+    }
+
+    // ========== MODIFIERS ========== //
+
+    /// @notice     Checks that `lotId_` is valid
+    /// @dev        Should revert if the lot ID is invalid
+    ///             Inheriting contracts can override this to implement custom logic
+    ///
+    /// @param      lotId_  The lot ID
+    function _revertIfLotInvalid(uint96 lotId_) internal view virtual {
+        if (lotData[lotId_].start == 0) revert Auction_InvalidLotId(lotId_);
+    }
+
+    /// @notice     Checks that the lot represented by `lotId_` has not started
+    /// @dev        Should revert if the lot has not started
+    function _revertIfBeforeLotStart(uint96 lotId_) internal view virtual {
+        if (lotData[lotId_].start > uint48(block.timestamp)) revert Auction_MarketNotActive(lotId_);
+    }
+
+    /// @notice     Checks that the lot represented by `lotId_` has started
+    /// @dev        Should revert if the lot has started
+    function _revertIfLotStarted(uint96 lotId_) internal view virtual {
+        if (lotData[lotId_].start <= uint48(block.timestamp)) revert Auction_MarketActive(lotId_);
+    }
+
+    /// @notice     Checks that the lot represented by `lotId_` has not concluded
+    /// @dev        Should revert if the lot has concluded
+    function _revertIfLotConcluded(uint96 lotId_) internal view virtual {
+        // Beyond the conclusion time
+        if (lotData[lotId_].conclusion < uint48(block.timestamp)) {
+            revert Auction_MarketNotActive(lotId_);
+        }
+
+        // Capacity is sold-out, or cancelled
+        if (lotData[lotId_].capacity == 0) revert Auction_MarketNotActive(lotId_);
+    }
+
+    /// @notice     Checks that the lot represented by `lotId_` is active
+    /// @dev        Should revert if the lot is active
+    ///             Inheriting contracts can override this to implement custom logic
+    ///
+    /// @param      lotId_  The lot ID
+    function _revertIfLotActive(uint96 lotId_) internal view virtual {
+        if (isLive(lotId_)) revert Auction_MarketActive(lotId_);
+    }
+
+    
+    function _revertIfLotNotSettled(uint96 lotId_) internal view virtual;
+
+    /// @notice     Checks that the lot and bid combination is valid
+    /// @dev        Should revert if the bid is invalid
+    ///             Inheriting contracts must override this to implement custom logic
+    ///
+    /// @param      lotId_  The lot ID
+    /// @param      bidId_  The bid ID
+    function _revertIfBidInvalid(uint96 lotId_, uint96 bidId_) internal view virtual;
+
+    /// @notice     Checks that `caller_` is the bid owner
+    /// @dev        Should revert if `caller_` is not the bid owner
+    ///             Inheriting contracts must override this to implement custom logic
+    ///
+    /// @param      lotId_      The lot ID
+    /// @param      bidId_      The bid ID
+    /// @param      caller_     The caller
+    function _revertIfNotBidOwner(
+        uint96 lotId_,
+        uint96 bidId_,
+        address caller_
+    ) internal view virtual;
+
+    /// @notice     Checks that the bid is not refunded
+    /// @dev        Should revert if the bid is refunded
+    ///             Inheriting contracts must override this to implement custom logic
+    ///
+    /// @param      lotId_      The lot ID
+    /// @param      bidId_      The bid ID
+    function _revertIfBidRefunded(uint96 lotId_, uint96 bidId_) internal view virtual;
+
+    /// @notice     Checks that the lot represented by `lotId_` is active
+    /// @dev        Should revert if the lot is not active
+    ///             Inheriting contracts can override this to implement custom logic
+    ///
+    /// @param      lotId_  The lot ID
+    function _revertIfLotInactive(uint96 lotId_) internal view override {
+        // Check that bids are allowed to be submitted for the lot
+        if (
+            auctionData[lotId_].status != AuctionStatus.Created
+                || block.timestamp < lotData[lotId_].start
+                || block.timestamp >= lotData[lotId_].conclusion
+        ) revert Auction_NotLive();
+    }
+
+    /// @notice     Reverts if the lot has already been decrypted
+    function _revertIfLotDecrypted(uint96 lotId_) internal view {
+        // Check that bids are allowed to be submitted for the lot
+        if (auctionData[lotId_].status == AuctionStatus.Decrypted) revert Auction_WrongState();
+    }
+
+    /// @notice     Checks that the lot represented by `lotId_` is not settled
+    /// @dev        Should revert if the lot is settled
+    ///             Inheriting contracts must override this to implement custom logic
+    ///
+    /// @param      lotId_  The lot ID
+    function _revertIfLotSettled(uint96 lotId_) internal view override {
+        // Auction must not be settled
+        if (auctionData[lotId_].status == AuctionStatus.Settled) {
+            revert Auction_WrongState();
+        }
+    }
+
+    /// @notice     Checks that the lot represented by `lotId_` is settled
+    /// @dev        Should revert if the lot is not settled
+    ///             Inheriting contracts must override this to implement custom logic
+    ///
+    /// @param      lotId_  The lot ID
+    function _revertIfLotNotSettled(uint96 lotId_) internal view override {
+        // Auction must be settled
+        if (auctionData[lotId_].status != AuctionStatus.Settled) {
+            revert Auction_WrongState();
+        }
+    }
+
+    /// @inheritdoc AuctionModule
+    /// @dev        Checks that the bid is valid
+    function _revertIfBidInvalid(uint96 lotId_, uint96 bidId_) internal view override {
+        // Bid ID must be less than number of bids for lot
+        if (bidId_ >= auctionData[lotId_].nextBidId) revert Auction_InvalidBidId(lotId_, bidId_);
+    }
+
+    /// @inheritdoc AuctionModule
+    /// @dev        Checks that the sender is the bidder
+    function _revertIfNotBidOwner(
+        uint96 lotId_,
+        uint96 bidId_,
+        address bidder_
+    ) internal view override {
+        // Check that sender is the bidder
+        if (bidder_ != lotEncryptedBids[lotId_][bidId_].bidder) revert Auction_NotBidder();
+    }
+
+    /// @inheritdoc AuctionModule
+    /// @dev        Checks that the bid is not already refunded
+    function _revertIfBidRefunded(uint96 lotId_, uint96 bidId_) internal view override {
+        // Bid must not be cancelled
+        if (lotEncryptedBids[lotId_][bidId_].status == BidStatus.Refunded) {
+            revert Auction_AlreadyCancelled();
+        }
     }
 }
