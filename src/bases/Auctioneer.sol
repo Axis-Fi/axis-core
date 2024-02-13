@@ -41,8 +41,19 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
 
     // ========= EVENTS ========= //
 
+    /// @notice         Emitted when a new auction lot is created
+    ///
+    /// @param          lotId       ID of the auction lot
+    /// @param          auctionRef  Auction module, represented by its Veecode
+    /// @param          baseToken   Token provided by seller
+    /// @param          quoteToken  Token to accept as payment
+    /// @param          infoHash    IPFS hash of the auction information
     event AuctionCreated(
-        uint96 indexed lotId, Veecode indexed auctionRef, address baseToken, address quoteToken
+        uint96 indexed lotId,
+        Veecode indexed auctionRef,
+        address baseToken,
+        address quoteToken,
+        bytes infoHash
     );
     event AuctionCancelled(uint96 indexed lotId, Veecode indexed auctionRef);
     event Curated(uint96 indexed lotId, address indexed curator);
@@ -96,6 +107,7 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
     /// @param      allowlistParams (optional) abi-encoded data to be used to register the auction on the allowlist
     /// @param      derivativeType  (optional) Derivative type, represented by the Keycode for the derivative submodule
     /// @param      derivativeParams (optional) abi-encoded data to be used to create payout derivatives on a purchase. The format of this is dependent on the derivative module.
+    /// @param      infoHash        (optional) IPFS hash of the auction information, emitted in the AuctionCreated event
     struct RoutingParams {
         Keycode auctionType;
         ERC20 baseToken;
@@ -106,6 +118,7 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
         bytes allowlistParams;
         Keycode derivativeType;
         bytes derivativeParams;
+        bytes infoHash;
     }
 
     // ========= STATE ========== //
@@ -285,7 +298,11 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
         }
 
         emit AuctionCreated(
-            lotId, auctionRef, address(routing_.baseToken), address(routing_.quoteToken)
+            lotId,
+            auctionRef,
+            address(routing_.baseToken),
+            address(routing_.quoteToken),
+            routing_.infoHash
         );
     }
 

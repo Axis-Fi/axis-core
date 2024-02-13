@@ -126,7 +126,8 @@ contract LinearVestingIntegrationTest is Test, Permit2User {
             allowlist: IAllowlist(address(0)),
             allowlistParams: abi.encode(""),
             derivativeType: toKeycode("LIV"),
-            derivativeParams: abi.encode(vestingParams)
+            derivativeParams: abi.encode(vestingParams),
+            infoHash: abi.encode("")
         });
     }
 

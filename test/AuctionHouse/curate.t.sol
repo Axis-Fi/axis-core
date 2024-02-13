@@ -77,7 +77,8 @@ contract CurateTest is Test, Permit2User {
             allowlist: IAllowlist(address(0)),
             allowlistParams: abi.encode(""),
             derivativeType: toKeycode(""),
-            derivativeParams: abi.encode("")
+            derivativeParams: abi.encode(""),
+            infoHash: abi.encode("")
         });
 
         // Set the max curator fee

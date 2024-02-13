@@ -50,6 +50,16 @@ contract AuctionTest is Test, Permit2User {
 
     uint256 internal constant LOT_CAPACITY = 10e18;
 
+    bytes internal constant INFO_HASH = "info hash";
+
+    event AuctionCreated(
+        uint96 indexed lotId,
+        Veecode indexed auctionRef,
+        address baseToken,
+        address quoteToken,
+        bytes infoHash
+    );
+
     function setUp() external {
         baseToken = new MockFeeOnTransferERC20("Base Token", "BASE", 18);
         quoteToken = new MockERC20("Quote Token", "QUOTE", 18);
@@ -78,7 +88,8 @@ contract AuctionTest is Test, Permit2User {
             allowlist: IAllowlist(address(0)),
             allowlistParams: abi.encode(""),
             derivativeType: toKeycode(""),
-            derivativeParams: abi.encode("")
+            derivativeParams: abi.encode(""),
+            infoHash: INFO_HASH
         });
     }
 
@@ -216,6 +227,16 @@ contract AuctionTest is Test, Permit2User {
     }
 
     function test_success() external whenAuctionModuleIsInstalled {
+        // Expect event to be emitted
+        vm.expectEmit(address(auctionHouse));
+        emit AuctionCreated(
+            0,
+            wrapVeecode(routingParams.auctionType, 1),
+            address(baseToken),
+            address(quoteToken),
+            INFO_HASH
+        );
+
         // Create the auction
         uint96 lotId = auctionHouse.auction(routingParams, auctionParams);
 
