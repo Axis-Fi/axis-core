@@ -20,6 +20,7 @@ contract LocalSealedBidBatchAuction is AuctionModule {
     using MaxPriorityQueue for Queue;
 
     // ========== ERRORS ========== //
+
     error Auction_BidDoesNotExist();
     error Auction_AlreadyCancelled();
     error Auction_WrongState();
@@ -28,6 +29,13 @@ contract LocalSealedBidBatchAuction is AuctionModule {
     error Auction_InvalidDecrypt();
     error Auction_InvalidBid();
     error Auction_InvalidPrivateKey();
+    error Bid_WrongState();
+
+    // ========== EVENTS ========== //
+
+    event BidDecrypted(
+        uint96 indexed lotId, uint96 indexed bidId, uint256 amountIn, uint256 amountOut
+    );
 
     // ========== DATA STRUCTURES ========== //
 
@@ -39,7 +47,6 @@ contract LocalSealedBidBatchAuction is AuctionModule {
 
     enum BidStatus {
         Submitted,
-        Cancelled,
         Decrypted,
         Won,
         Refunded
@@ -69,7 +76,7 @@ contract LocalSealedBidBatchAuction is AuctionModule {
     /// @param         seed                The seed used to encrypt the amount out
     struct Decrypt {
         uint256 amountOut;
-        uint256 seed;
+        bytes32 seed;
     }
 
     /// @notice        Struct containing auction data
@@ -77,7 +84,7 @@ contract LocalSealedBidBatchAuction is AuctionModule {
     /// @param         status              The status of the auction
     /// @param         nextDecryptIndex    The index of the next bid to decrypt
     /// @param         nextBidId           The ID of the next bid to be submitted
-    /// @param         minimumPrice        The minimum price that the auction can settle at
+    /// @param         minimumPrice        The minimum price that the auction can settle at (in terms of quote token)
     /// @param         minFilled           The minimum amount of capacity that must be filled to settle the auction
     /// @param         minBidSize          The minimum amount that can be bid for the lot, determined by the percentage of capacity that must be filled per bid times the min bid price
     /// @param         publicKeyModulus    The public key modulus used to encrypt bids
@@ -95,9 +102,9 @@ contract LocalSealedBidBatchAuction is AuctionModule {
 
     /// @notice         Struct containing parameters for creating a new LSBBA auction
     ///
-    /// @param          minFillPercent_     The minimum percentage of the lot capacity that must be filled for the auction to settle (_SCALE: `_ONE_HUNDRED_PERCENT`)
-    /// @param          minBidPercent_      The minimum percentage of the lot capacity that must be bid for each bid (_SCALE: `_ONE_HUNDRED_PERCENT`)
-    /// @param          minimumPrice_       The minimum price that the auction can settle at
+    /// @param          minFillPercent_     The minimum percentage of the lot capacity that must be filled for the auction to settle (scale: `_ONE_HUNDRED_PERCENT`)
+    /// @param          minBidPercent_      The minimum percentage of the lot capacity that must be bid for each bid (scale: `_ONE_HUNDRED_PERCENT`)
+    /// @param          minimumPrice_       The minimum price that the auction can settle at (in terms of quote token)
     /// @param          publicKeyModulus_   The public key modulus used to encrypt bids
     struct AuctionDataParams {
         uint24 minFillPercent;
@@ -110,7 +117,6 @@ contract LocalSealedBidBatchAuction is AuctionModule {
 
     uint24 internal constant _MIN_BID_PERCENT = 1000; // 1%
     uint24 internal constant _PUB_KEY_EXPONENT = 65_537;
-    uint256 internal constant _SCALE = 1e18;
 
     mapping(uint96 lotId => AuctionData) public auctionData;
     mapping(uint96 lotId => mapping(uint96 bidId => EncryptedBid bid)) public lotEncryptedBids;
@@ -119,8 +125,7 @@ contract LocalSealedBidBatchAuction is AuctionModule {
     // ========== SETUP ========== //
 
     constructor(address auctionHouse_) AuctionModule(auctionHouse_) {
-        // Set the minimum auction duration to 1 day
-        // TODO is this a good default?
+        // Set the minimum auction duration to 1 day initially
         minAuctionDuration = 1 days;
     }
 
@@ -161,6 +166,15 @@ contract LocalSealedBidBatchAuction is AuctionModule {
     }
 
     /// @inheritdoc AuctionModule
+    /// @dev        Checks that the lot is settled
+    function _revertIfLotNotSettled(uint96 lotId_) internal view override {
+        // Auction must be settled
+        if (auctionData[lotId_].status != AuctionStatus.Settled) {
+            revert Auction_WrongState();
+        }
+    }
+
+    /// @inheritdoc AuctionModule
     /// @dev        Checks that the bid is valid
     function _revertIfBidInvalid(uint96 lotId_, uint96 bidId_) internal view override {
         // Bid ID must be less than number of bids for lot
@@ -179,10 +193,10 @@ contract LocalSealedBidBatchAuction is AuctionModule {
     }
 
     /// @inheritdoc AuctionModule
-    /// @dev        Checks that the bid is not already cancelled
-    function _revertIfBidCancelled(uint96 lotId_, uint96 bidId_) internal view override {
+    /// @dev        Checks that the bid is not already refunded
+    function _revertIfBidRefunded(uint96 lotId_, uint96 bidId_) internal view override {
         // Bid must not be cancelled
-        if (lotEncryptedBids[lotId_][bidId_].status == BidStatus.Cancelled) {
+        if (lotEncryptedBids[lotId_][bidId_].status == BidStatus.Refunded) {
             revert Auction_AlreadyCancelled();
         }
     }
@@ -243,16 +257,15 @@ contract LocalSealedBidBatchAuction is AuctionModule {
     /// @inheritdoc AuctionModule
     /// @dev        This function performs the following:
     ///             - Validates inputs
-    ///             - Marks the bid as cancelled
+    ///             - Marks the bid as refunded
     ///             - Removes the bid from the list of bids to decrypt
     ///             - Returns the amount to be refunded
     ///
     ///             The encrypted bid is not deleted from storage, so that the details can be fetched later.
     ///
     ///             This function reverts if:
-    ///             - The bid is not in the Submitted state
-    ///             - The auction is not in the Created state
-    function _cancelBid(
+    ///             - The bid is not in the Decrypted or Submitted state
+    function _refundBid(
         uint96 lotId_,
         uint96 bidId_,
         address
@@ -260,15 +273,13 @@ contract LocalSealedBidBatchAuction is AuctionModule {
         // Validate inputs
 
         // Bid must be in Submitted state
-        if (lotEncryptedBids[lotId_][bidId_].status != BidStatus.Submitted) {
-            revert Auction_WrongState();
+        BidStatus bidStatus = lotEncryptedBids[lotId_][bidId_].status;
+        if (bidStatus != BidStatus.Decrypted && bidStatus != BidStatus.Submitted) {
+            revert Bid_WrongState();
         }
 
-        // Auction must be in Created state
-        if (auctionData[lotId_].status != AuctionStatus.Created) revert Auction_WrongState();
-
         // Set bid status to cancelled
-        lotEncryptedBids[lotId_][bidId_].status = BidStatus.Cancelled;
+        lotEncryptedBids[lotId_][bidId_].status = BidStatus.Refunded;
 
         // Remove bid from list of bids to decrypt
         uint96[] storage bidIds = auctionData[lotId_].bidIds;
@@ -287,7 +298,7 @@ contract LocalSealedBidBatchAuction is AuctionModule {
 
     // =========== DECRYPTION =========== //
 
-    /// @notice         Decrypts a batch of bids and sorts them
+    /// @notice         Decrypts a batch of bids and sorts them by price in descending order
     ///                 This function expects a third-party with access to the lot's private key
     ///                 to decrypt the bids off-chain (after calling `getNextBidsToDecrypt()`) and
     ///                 submit them on-chain.
@@ -297,7 +308,7 @@ contract LocalSealedBidBatchAuction is AuctionModule {
     ///                 - Performs validation
     ///                 - Iterates over the decrypted bids:
     ///                     - Re-encrypts the decrypted bid to confirm that it matches the stored encrypted bid
-    ///                     - Stores the decrypted bid in the sorted bid queue
+    ///                     - If the bid meets the minimum bid size, stores the decrypted bid in the sorted bid queue and updates the status.
     ///                     - Sets the encrypted bid status to decrypted
     ///                 - Determines the next decrypt index
     ///                 - Sets the auction status to decrypted if all bids have been decrypted
@@ -337,23 +348,30 @@ contract LocalSealedBidBatchAuction is AuctionModule {
         if (num_ > bidIds.length - nextDecryptIndex) num_ = bidIds.length - nextDecryptIndex;
 
         // Iterate over decrypts, validate that they match the stored encrypted bids, then store them in the sorted bid queue
+        uint256 minBidSize = auctionData[lotId_].minBidSize;
         for (uint96 i; i < num_; i++) {
             // Load encrypted bid
             uint96 bidId = bidIds[nextDecryptIndex + i];
             EncryptedBid storage encBid = lotEncryptedBids[lotId_][bidId];
 
+            // Decrypt the bid
+            uint256 amountOut = _decrypt(lotId_, bidId, privateKey_);
+
             // Validate that the bid is in the Submitted state
             // TODO may be redundant with the new cancel logic
             if (encBid.status != BidStatus.Submitted) continue;
 
-            // Decrypt the bid
-            uint256 amountOut = _decrypt(lotId_, bidId, privateKey_);
-
-            // Store the decrypt in the sorted bid queue
-            lotSortedBids[lotId_].insert(bidId, encBid.amount, amountOut);
+            // Only store the decrypt if the amount out is greater than or equal to the minimum bid size
+            if (amountOut >= minBidSize) {
+                // Store the decrypt in the sorted bid queue
+                lotSortedBids[lotId_].insert(bidId, encBid.amount, amountOut);
+            }
 
             // Set bid status to decrypted
             encBid.status = BidStatus.Decrypted;
+
+            // Emit event
+            emit BidDecrypted(lotId_, bidId, encBid.amount, amountOut);
         }
 
         // Increment next decrypt index
@@ -460,6 +478,87 @@ contract LocalSealedBidBatchAuction is AuctionModule {
 
     // =========== SETTLEMENT =========== //
 
+    /// @notice     Calculates the marginal clearing price of the auction
+    ///
+    /// @param      lotId_              The lot ID of the auction to calculate the marginal price for
+    /// @return     marginalPrice       The marginal clearing price of the auction (in quote token units)
+    /// @return     numWinningBids      The number of winning bids
+    function _calculateMarginalPrice(uint96 lotId_)
+        internal
+        view
+        returns (uint256 marginalPrice, uint256 numWinningBids)
+    {
+        // Cache capacity and scaling values
+        // Capacity is always in base token units for this auction type
+        uint256 capacity = lotData[lotId_].capacity;
+        uint256 baseScale = 10 ** lotData[lotId_].baseTokenDecimals;
+        uint256 minimumPrice = auctionData[lotId_].minimumPrice;
+
+        // Iterate over bid queue (sorted in descending price) to calculate the marginal clearing price of the auction
+        Queue storage queue = lotSortedBids[lotId_];
+        uint256 numBids = queue.getNumBids();
+        uint256 totalAmountIn;
+        uint256 lastPrice;
+        uint256 capacityExpended;
+        for (uint256 i = 0; i < numBids; i++) {
+            // Load bid
+            QueueBid storage qBid = queue.getBid(uint96(i));
+
+            // A bid can be considered if:
+            // - the bid price is greater than or equal to the minimum
+            // - previous bids did not fill the capacity
+            //
+            // There is no need to check if the bid is the minimum bid size, as this was checked during decryption
+
+            // Calculate bid price (in quote token units)
+            // quote scale * base scale / base scale = quote scale
+            uint256 price = (qBid.amountIn * baseScale) / qBid.minAmountOut;
+
+            // If the price is below the minimum price, the previous price is the marginal price
+            if (price < minimumPrice) {
+                marginalPrice = lastPrice;
+                numWinningBids = i;
+                break;
+            }
+
+            // The current price will now be considered, so we can set this
+            lastPrice = price;
+
+            // Increment total amount in
+            totalAmountIn += qBid.amountIn;
+
+            // Determine total capacity expended at this price (in base token units)
+            // quote scale * base scale / quote scale = base scale
+            capacityExpended = (totalAmountIn * baseScale) / price;
+
+            // If total capacity expended is greater than or equal to the capacity, we have found the marginal price
+            if (capacityExpended >= capacity) {
+                marginalPrice = price;
+                numWinningBids = i + 1;
+                break;
+            }
+
+            // If we have reached the end of the queue, we have found the marginal price and the maximum capacity that can be filled
+            if (i == numBids - 1) {
+                marginalPrice = price;
+                numWinningBids = numBids;
+            }
+        }
+
+        // If the total filled is less than the minimum filled, mark as settled and return no winning bids (so users can claim refunds)
+        if (capacityExpended < auctionData[lotId_].minFilled) {
+            return (0, 0);
+        }
+
+        // Check if the minimum price for the auction was reached
+        // If not, mark as settled and return no winning bids (so users can claim refunds)
+        if (marginalPrice < auctionData[lotId_].minimumPrice) {
+            return (0, 0);
+        }
+
+        return (marginalPrice, numWinningBids);
+    }
+
     /// @inheritdoc AuctionModule
     /// @dev        This function performs the following:
     ///             - Validates inputs
@@ -474,73 +573,38 @@ contract LocalSealedBidBatchAuction is AuctionModule {
     function _settle(uint96 lotId_)
         internal
         override
-        returns (Bid[] memory winningBids_, bytes memory auctionOutput_)
+        returns (Bid[] memory winningBids_, bytes memory)
     {
         // Check that auction is in the right state for settlement
         if (auctionData[lotId_].status != AuctionStatus.Decrypted) revert Auction_WrongState();
 
-        // Cache capacity
-        uint256 capacity = lotData[lotId_].capacity;
+        // Calculate marginal price and number of winning bids
+        (uint256 marginalPrice, uint256 numWinningBids) = _calculateMarginalPrice(lotId_);
 
-        // Iterate over bid queue to calculate the marginal clearing price of the auction
-        Queue storage queue = lotSortedBids[lotId_];
-        uint256 numBids = queue.getNumBids();
-        uint256 marginalPrice;
-        uint256 totalAmountIn;
-        uint256 numWinningBids;
-        for (uint256 i = 0; i < numBids; i++) {
-            // Load bid
-            QueueBid storage qBid = queue.getBid(uint96(i));
-
-            // Calculate bid price
-            uint256 price = (qBid.amountIn * _SCALE) / qBid.minAmountOut;
-
-            // Increment total amount in
-            totalAmountIn += qBid.amountIn;
-
-            // Determine total capacity expended at this price
-            uint256 expended = (totalAmountIn * _SCALE) / price;
-
-            // If total capacity expended is greater than or equal to the capacity, we have found the marginal price
-            if (expended >= capacity) {
-                marginalPrice = price;
-                numWinningBids = i + 1;
-                break;
-            }
-
-            // If we have reached the end of the queue, we have found the marginal price and the maximum capacity that can be filled
-            if (i == numBids - 1) {
-                // If the total filled is less than the minimum filled, mark as settled and return no winning bids (so users can claim refunds)
-                if (expended < auctionData[lotId_].minFilled) {
-                    auctionData[lotId_].status = AuctionStatus.Settled;
-                    return (winningBids_, bytes(""));
-                } else {
-                    marginalPrice = price;
-                    numWinningBids = numBids;
-                }
-            }
-        }
-
-        // Check if the minimum price for the auction was reached
+        // Check if a valid price was reached
         // If not, mark as settled and return no winning bids (so users can claim refunds)
-        if (marginalPrice < auctionData[lotId_].minimumPrice) {
+        if (marginalPrice == 0) {
             auctionData[lotId_].status = AuctionStatus.Settled;
+            lotData[lotId_].capacity = 0;
             return (winningBids_, bytes(""));
         }
 
         // Auction can be settled at the marginal price if we reach this point
         // Create winning bid array using marginal price to set amounts out
+        Queue storage queue = lotSortedBids[lotId_];
+        uint256 baseScale = 10 ** lotData[lotId_].baseTokenDecimals;
         winningBids_ = new Bid[](numWinningBids);
+        uint256 totalAmountIn;
+        uint256 totalAmountOut;
         for (uint256 i; i < numWinningBids; i++) {
             // Load bid
             QueueBid memory qBid = queue.popMax();
 
-            // Calculate amount out
-            // TODO handle partial filling of the last winning bid
-            // amountIn, and amountOut will be lower
-            // Need to somehow refund the amountIn that wasn't used to the user
-            // We know it will always be the last bid in the returned array, can maybe do something with that
-            uint256 amountOut = (qBid.amountIn * _SCALE) / marginalPrice;
+            // Calculate amount out (in base token units)
+            // quote scale * base scale / quote scale = base scale
+            // For partial bids, this will be the amount they would get at full value
+            // The auction house handles reduction of payouts for partial bids
+            uint256 amountOut = (qBid.amountIn * baseScale) / marginalPrice;
 
             // Create winning bid from encrypted bid and calculated amount out
             EncryptedBid storage encBid = lotEncryptedBids[lotId_][qBid.bidId];
@@ -551,6 +615,10 @@ contract LocalSealedBidBatchAuction is AuctionModule {
             winningBid.amount = encBid.amount;
             winningBid.minAmountOut = amountOut;
 
+            // Increment total amount in and total amount out
+            totalAmountIn += encBid.amount;
+            totalAmountOut += amountOut;
+
             // Set bid status to won
             encBid.status = BidStatus.Won;
 
@@ -560,6 +628,11 @@ contract LocalSealedBidBatchAuction is AuctionModule {
 
         // Set auction status to settled
         auctionData[lotId_].status = AuctionStatus.Settled;
+
+        // Update lot data
+        lotData[lotId_].capacity = 0;
+        lotData[lotId_].purchased = totalAmountIn;
+        lotData[lotId_].sold = totalAmountOut;
 
         // Return winning bids
         return (winningBids_, bytes(""));
@@ -578,15 +651,11 @@ contract LocalSealedBidBatchAuction is AuctionModule {
         AuctionDataParams memory implParams = abi.decode(params_, (AuctionDataParams));
 
         // Validate params
-        // Capacity must be in base token for this auction type
-        if (lot_.capacityInQuote) revert Auction_InvalidParams();
 
         // minFillPercent must be less than or equal to 100%
-        // TODO should there be a minimum?
         if (implParams.minFillPercent > _ONE_HUNDRED_PERCENT) revert Auction_InvalidParams();
 
         // minBidPercent must be greater than or equal to the global min and less than or equal to 100%
-        // TODO should we cap this below 100%?
         if (
             implParams.minBidPercent < _MIN_BID_PERCENT
                 || implParams.minBidPercent > _ONE_HUNDRED_PERCENT
@@ -605,7 +674,9 @@ contract LocalSealedBidBatchAuction is AuctionModule {
         data.publicKey = implParams.publicKey;
 
         // This auction type requires pre-funding
-        return (true);
+        // This setting requires the capacity to be in the base token,
+        // so we know the capacity values above are in base token units.
+        prefundingRequired = true;
     }
 
     function _cancelAuction(uint96 lotId_) internal override {
@@ -634,6 +705,9 @@ contract LocalSealedBidBatchAuction is AuctionModule {
 
     function maxAmountAccepted(uint96 lotId_) public view virtual override returns (uint256) {}
 
+    /// @notice     Returns the auction data for a given lot
+    ///
+    /// @param      lotId_          The lot ID of the auction to return data for
     function getLotData(uint96 lotId_) public view returns (AuctionData memory) {
         return auctionData[lotId_];
     }

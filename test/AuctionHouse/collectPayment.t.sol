@@ -2,6 +2,7 @@
 pragma solidity 0.8.19;
 
 import {Test} from "forge-std/Test.sol";
+import {Transfer} from "src/lib/Transfer.sol";
 
 import {MockHook} from "test/modules/Auction/MockHook.sol";
 import {MockAuctionHouse} from "test/AuctionHouse/MockAuctionHouse.sol";
@@ -110,7 +111,15 @@ contract CollectPaymentTest is Test, Permit2User {
         // Consume the nonce
         vm.prank(USER);
         auctionHouse.collectPayment(
-            lotId, amount, quoteToken, hook, approvalDeadline, approvalNonce, approvalSignature
+            lotId,
+            amount,
+            quoteToken,
+            hook,
+            Transfer.Permit2Approval({
+                deadline: approvalDeadline,
+                nonce: approvalNonce,
+                signature: approvalSignature
+            })
         );
         _;
     }
@@ -173,7 +182,15 @@ contract CollectPaymentTest is Test, Permit2User {
         // Call
         vm.prank(USER);
         auctionHouse.collectPayment(
-            lotId, amount, quoteToken, hook, approvalDeadline, approvalNonce, approvalSignature
+            lotId,
+            amount,
+            quoteToken,
+            hook,
+            Transfer.Permit2Approval({
+                deadline: approvalDeadline,
+                nonce: approvalNonce,
+                signature: approvalSignature
+            })
         );
     }
 
@@ -191,7 +208,15 @@ contract CollectPaymentTest is Test, Permit2User {
         // Call
         vm.prank(USER);
         auctionHouse.collectPayment(
-            lotId, amount, quoteToken, hook, approvalDeadline, approvalNonce, approvalSignature
+            lotId,
+            amount,
+            quoteToken,
+            hook,
+            Transfer.Permit2Approval({
+                deadline: approvalDeadline,
+                nonce: approvalNonce,
+                signature: approvalSignature
+            })
         );
     }
 
@@ -208,7 +233,15 @@ contract CollectPaymentTest is Test, Permit2User {
         // Call
         vm.prank(USER);
         auctionHouse.collectPayment(
-            lotId, amount, quoteToken, hook, approvalDeadline, approvalNonce, approvalSignature
+            lotId,
+            amount,
+            quoteToken,
+            hook,
+            Transfer.Permit2Approval({
+                deadline: approvalDeadline,
+                nonce: approvalNonce,
+                signature: approvalSignature
+            })
         );
     }
 
@@ -226,7 +259,15 @@ contract CollectPaymentTest is Test, Permit2User {
         // Call
         vm.prank(USER);
         auctionHouse.collectPayment(
-            lotId, amount, quoteToken, hook, approvalDeadline, approvalNonce, approvalSignature
+            lotId,
+            amount,
+            quoteToken,
+            hook,
+            Transfer.Permit2Approval({
+                deadline: approvalDeadline,
+                nonce: approvalNonce,
+                signature: approvalSignature
+            })
         );
     }
 
@@ -243,7 +284,15 @@ contract CollectPaymentTest is Test, Permit2User {
         // Call
         vm.prank(USER);
         auctionHouse.collectPayment(
-            lotId, amount, quoteToken, hook, approvalDeadline, approvalNonce, approvalSignature
+            lotId,
+            amount,
+            quoteToken,
+            hook,
+            Transfer.Permit2Approval({
+                deadline: approvalDeadline,
+                nonce: approvalNonce,
+                signature: approvalSignature
+            })
         );
     }
 
@@ -260,7 +309,15 @@ contract CollectPaymentTest is Test, Permit2User {
         // Call
         vm.prank(USER);
         auctionHouse.collectPayment(
-            lotId, amount, quoteToken, hook, approvalDeadline, approvalNonce, approvalSignature
+            lotId,
+            amount,
+            quoteToken,
+            hook,
+            Transfer.Permit2Approval({
+                deadline: approvalDeadline,
+                nonce: approvalNonce,
+                signature: approvalSignature
+            })
         );
     }
 
@@ -275,7 +332,15 @@ contract CollectPaymentTest is Test, Permit2User {
         // Call
         vm.prank(USER);
         auctionHouse.collectPayment(
-            lotId, amount, quoteToken, hook, approvalDeadline, approvalNonce, approvalSignature
+            lotId,
+            amount,
+            quoteToken,
+            hook,
+            Transfer.Permit2Approval({
+                deadline: approvalDeadline,
+                nonce: approvalNonce,
+                signature: approvalSignature
+            })
         );
     }
 
@@ -288,13 +353,21 @@ contract CollectPaymentTest is Test, Permit2User {
     {
         // Expect the error
         bytes memory err =
-            abi.encodeWithSelector(Auctioneer.UnsupportedToken.selector, address(quoteToken));
+            abi.encodeWithSelector(Transfer.UnsupportedToken.selector, address(quoteToken));
         vm.expectRevert(err);
 
         // Call
         vm.prank(USER);
         auctionHouse.collectPayment(
-            lotId, amount, quoteToken, hook, approvalDeadline, approvalNonce, approvalSignature
+            lotId,
+            amount,
+            quoteToken,
+            hook,
+            Transfer.Permit2Approval({
+                deadline: approvalDeadline,
+                nonce: approvalNonce,
+                signature: approvalSignature
+            })
         );
     }
 
@@ -307,7 +380,15 @@ contract CollectPaymentTest is Test, Permit2User {
         // Call
         vm.prank(USER);
         auctionHouse.collectPayment(
-            lotId, amount, quoteToken, hook, approvalDeadline, approvalNonce, approvalSignature
+            lotId,
+            amount,
+            quoteToken,
+            hook,
+            Transfer.Permit2Approval({
+                deadline: approvalDeadline,
+                nonce: approvalNonce,
+                signature: approvalSignature
+            })
         );
 
         // Expect the user to have no balance
@@ -337,7 +418,15 @@ contract CollectPaymentTest is Test, Permit2User {
         // Call
         vm.prank(USER);
         auctionHouse.collectPayment(
-            lotId, amount, quoteToken, hook, approvalDeadline, approvalNonce, approvalSignature
+            lotId,
+            amount,
+            quoteToken,
+            hook,
+            Transfer.Permit2Approval({
+                deadline: approvalDeadline,
+                nonce: approvalNonce,
+                signature: approvalSignature
+            })
         );
     }
 
@@ -348,7 +437,15 @@ contract CollectPaymentTest is Test, Permit2User {
         // Call
         vm.prank(USER);
         auctionHouse.collectPayment(
-            lotId, amount, quoteToken, hook, approvalDeadline, approvalNonce, approvalSignature
+            lotId,
+            amount,
+            quoteToken,
+            hook,
+            Transfer.Permit2Approval({
+                deadline: approvalDeadline,
+                nonce: approvalNonce,
+                signature: approvalSignature
+            })
         );
     }
 
@@ -360,13 +457,21 @@ contract CollectPaymentTest is Test, Permit2User {
     {
         // Expect the error
         bytes memory err =
-            abi.encodeWithSelector(Auctioneer.UnsupportedToken.selector, address(quoteToken));
+            abi.encodeWithSelector(Transfer.UnsupportedToken.selector, address(quoteToken));
         vm.expectRevert(err);
 
         // Call
         vm.prank(USER);
         auctionHouse.collectPayment(
-            lotId, amount, quoteToken, hook, approvalDeadline, approvalNonce, approvalSignature
+            lotId,
+            amount,
+            quoteToken,
+            hook,
+            Transfer.Permit2Approval({
+                deadline: approvalDeadline,
+                nonce: approvalNonce,
+                signature: approvalSignature
+            })
         );
     }
 
@@ -374,7 +479,15 @@ contract CollectPaymentTest is Test, Permit2User {
         // Call
         vm.prank(USER);
         auctionHouse.collectPayment(
-            lotId, amount, quoteToken, hook, approvalDeadline, approvalNonce, approvalSignature
+            lotId,
+            amount,
+            quoteToken,
+            hook,
+            Transfer.Permit2Approval({
+                deadline: approvalDeadline,
+                nonce: approvalNonce,
+                signature: approvalSignature
+            })
         );
 
         // Expect the user to have no balance
@@ -420,7 +533,15 @@ contract CollectPaymentTest is Test, Permit2User {
         // Call
         vm.prank(USER);
         auctionHouse.collectPayment(
-            lotId, amount, quoteToken, hook, approvalDeadline, approvalNonce, approvalSignature
+            lotId,
+            amount,
+            quoteToken,
+            hook,
+            Transfer.Permit2Approval({
+                deadline: approvalDeadline,
+                nonce: approvalNonce,
+                signature: approvalSignature
+            })
         );
     }
 
@@ -433,7 +554,15 @@ contract CollectPaymentTest is Test, Permit2User {
         // Call
         vm.prank(USER);
         auctionHouse.collectPayment(
-            lotId, amount, quoteToken, hook, approvalDeadline, approvalNonce, approvalSignature
+            lotId,
+            amount,
+            quoteToken,
+            hook,
+            Transfer.Permit2Approval({
+                deadline: approvalDeadline,
+                nonce: approvalNonce,
+                signature: approvalSignature
+            })
         );
 
         // Expect the pre hook to have recorded the balance of USER before the transfer
@@ -456,7 +585,15 @@ contract CollectPaymentTest is Test, Permit2User {
         // Call
         vm.prank(USER);
         auctionHouse.collectPayment(
-            lotId, amount, quoteToken, hook, approvalDeadline, approvalNonce, approvalSignature
+            lotId,
+            amount,
+            quoteToken,
+            hook,
+            Transfer.Permit2Approval({
+                deadline: approvalDeadline,
+                nonce: approvalNonce,
+                signature: approvalSignature
+            })
         );
 
         // Expect the pre hook to have recorded the balance of USER before the transfer

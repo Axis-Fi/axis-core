@@ -4,7 +4,7 @@ pragma solidity 0.8.19;
 import {Module} from "src/modules/Modules.sol";
 
 abstract contract Auction {
-    /* ========== ERRORS ========== */
+    // ========== ERRORS ========== //
 
     error Auction_MarketNotActive(uint96 lotId);
 
@@ -27,49 +27,70 @@ abstract contract Auction {
 
     error Auction_NotBidder();
 
-    /* ========== EVENTS ========== */
-
-    event AuctionCreated(
-        uint256 indexed id, address indexed payoutToken, address indexed quoteToken
-    );
-    event AuctionClosed(uint256 indexed id);
+    // ========== EVENTS ========== //
 
     // ========== DATA STRUCTURES ========== //
-    /// @notice Core data for an auction lot
+
+    /// @notice     Core data for an auction lot
+    ///
+    /// @param      start               The timestamp when the auction starts
+    /// @param      conclusion          The timestamp when the auction ends
+    /// @param      quoteTokenDecimals  The quote token decimals
+    /// @param      baseTokenDecimals   The base token decimals
+    /// @param      capacityInQuote     Whether or not the capacity is in quote tokens
+    /// @param      capacity            The capacity of the lot
+    /// @param      sold                The amount of base tokens sold
+    /// @param      purchased           The amount of quote tokens purchased
     struct Lot {
-        uint48 start; // timestamp when market starts
-        uint48 conclusion; // timestamp when market no longer offered
-        bool capacityInQuote; // capacity limit is in payment token (true) or in payout (false, default)
-        uint256 capacity; // capacity remaining
-        uint256 sold; // payout tokens out
-        uint256 purchased; // quote tokens in
+        uint48 start;
+        uint48 conclusion;
+        uint8 quoteTokenDecimals;
+        uint8 baseTokenDecimals;
+        bool capacityInQuote;
+        uint256 capacity;
+        uint256 sold;
+        uint256 purchased;
     }
 
-    // TODO pack if we anticipate on-chain auction variants
+    /// @notice     Core data for a bid
+    ///
+    /// @param      bidder          The address of the bidder
+    /// @param      recipient       The address of the recipient
+    /// @param      referrer        The address of the referrer
+    /// @param      amount          The amount of quote tokens bid
+    /// @param      minAmountOut    The minimum amount of base tokens to receive
+    /// @param      auctionParam    The auction-specific parameter for the bid
     struct Bid {
         address bidder;
         address recipient;
         address referrer;
         uint256 amount;
         uint256 minAmountOut;
-        bytes auctionParam; // optional implementation-specific parameter for the bid
+        bytes auctionParam;
     }
 
+    /// @notice     Parameters when creating an auction lot
+    ///
+    /// @param      start           The timestamp when the auction starts
+    /// @param      duration        The duration of the auction (in seconds)
+    /// @param      capacityInQuote Whether or not the capacity is in quote tokens
+    /// @param      capacity        The capacity of the lot
+    /// @param      implParams      Abi-encoded implementation-specific parameters
     struct AuctionParams {
         uint48 start;
         uint48 duration;
         bool capacityInQuote;
         uint256 capacity;
-        bytes implParams; // abi-encoded params for specific auction implementations
+        bytes implParams;
     }
 
     // ========= STATE ========== //
 
     /// @notice Minimum auction duration in seconds
-    // TODO should this be set at deployment and/or through a function?
     uint48 public minAuctionDuration;
 
-    // 1% = 1_000 or 1e3. 100% = 100_000 or 1e5.
+    /// @notice Constant for percentages
+    /// @dev    1% = 1_000 or 1e3. 100% = 100_000 or 1e5.
     uint48 internal constant _ONE_HUNDRED_PERCENT = 100_000;
 
     /// @notice General information pertaining to auction lots
@@ -115,7 +136,7 @@ abstract contract Auction {
         bytes calldata auctionData_
     ) external virtual returns (uint96 bidId);
 
-    /// @notice     Cancel a bid
+    /// @notice     Refund a bid
     /// @dev        The implementing function should handle the following:
     ///             - Validate the bid parameters
     ///             - Authorize `bidder_`
@@ -125,7 +146,7 @@ abstract contract Auction {
     /// @param      bidId_      The bid id
     /// @param      bidder_     The bidder of the purchased tokens
     /// @return     bidAmount   The amount of quote tokens to refund
-    function cancelBid(
+    function refundBid(
         uint96 lotId_,
         uint96 bidId_,
         address bidder_
@@ -149,13 +170,17 @@ abstract contract Auction {
 
     /// @notice     Create an auction lot
     ///
-    /// @param      lotId_      The lot id
-    /// @param      params_     The auction parameters
-    /// @return     prefundingRequired  Whether or not prefunding is required
-    /// @return     capacity            The capacity of the lot
+    /// @param      lotId_                  The lot id
+    /// @param      params_                 The auction parameters
+    /// @param      quoteTokenDecimals_     The quote token decimals
+    /// @param      baseTokenDecimals_      The base token decimals
+    /// @return     prefundingRequired      Whether or not prefunding is required
+    /// @return     capacity                The capacity of the lot
     function auction(
         uint96 lotId_,
-        AuctionParams memory params_
+        AuctionParams memory params_,
+        uint8 quoteTokenDecimals_,
+        uint8 baseTokenDecimals_
     ) external virtual returns (bool prefundingRequired, uint256 capacity);
 
     /// @notice     Cancel an auction lot
@@ -177,14 +202,23 @@ abstract contract Auction {
 
     function maxAmountAccepted(uint96 lotId_) public view virtual returns (uint256);
 
-    /// @notice     Determines if the lot is active
+    /// @notice     Returns whether the auction is currently accepting bids or purchases
     /// @dev        The implementing function should handle the following:
-    ///             - Return true if the lot is active
-    ///             - Return false if the lot is inactive
+    ///             - Return true if the lot is accepting bids/purchases
+    ///             - Return false if the lot has ended, been cancelled, or not started yet
     ///
     /// @param      lotId_  The lot id
     /// @return     bool    Whether or not the lot is active
     function isLive(uint96 lotId_) public view virtual returns (bool);
+
+    /// @notice     Returns whether the auction has ended
+    /// @dev        The implementing function should handle the following:
+    ///             - Return true if the lot is not accepting bids/purchases and will not at any point
+    ///             - Return false if the lot hasn't started or is actively accepting bids/purchases
+    ///
+    /// @param      lotId_  The lot id
+    /// @return     bool    Whether or not the lot is active
+    function hasEnded(uint96 lotId_) public view virtual returns (bool);
 
     /// @notice     Get the remaining capacity of a lot
     /// @dev        The implementing function should handle the following:
@@ -193,6 +227,15 @@ abstract contract Auction {
     /// @param      lotId_  The lot id
     /// @return     uint256 The remaining capacity of the lot
     function remainingCapacity(uint96 lotId_) external view virtual returns (uint256);
+
+    /// @notice     Get whether or not the capacity is in quote tokens
+    /// @dev        The implementing function should handle the following:
+    ///             - Return true if the capacity is in quote tokens
+    ///             - Return false if the capacity is in base tokens
+    ///
+    /// @param      lotId_  The lot id
+    /// @return     bool    Whether or not the capacity is in quote tokens
+    function capacityInQuote(uint96 lotId_) external view virtual returns (bool);
 }
 
 abstract contract AuctionModule is Auction, Module {
@@ -211,7 +254,9 @@ abstract contract AuctionModule is Auction, Module {
     ///             - the duration is less than the minimum
     function auction(
         uint96 lotId_,
-        AuctionParams memory params_
+        AuctionParams memory params_,
+        uint8 quoteTokenDecimals_,
+        uint8 baseTokenDecimals_
     ) external override onlyInternal returns (bool prefundingRequired, uint256 capacity) {
         // Start time must be zero or in the future
         if (params_.start > 0 && params_.start < uint48(block.timestamp)) {
@@ -227,14 +272,13 @@ abstract contract AuctionModule is Auction, Module {
         Lot memory lot;
         lot.start = params_.start == 0 ? uint48(block.timestamp) : params_.start;
         lot.conclusion = lot.start + params_.duration;
+        lot.quoteTokenDecimals = quoteTokenDecimals_;
+        lot.baseTokenDecimals = baseTokenDecimals_;
         lot.capacityInQuote = params_.capacityInQuote;
         lot.capacity = params_.capacity;
 
         // Call internal createAuction function to store implementation-specific data
         (prefundingRequired) = _auction(lotId_, lot, params_.implParams);
-
-        // Cannot pre-fund if capacity is in quote token
-        if (prefundingRequired && lot.capacityInQuote) revert Auction_InvalidParams();
 
         // Store lot data
         lotData[lotId_] = lot;
@@ -386,51 +430,56 @@ abstract contract AuctionModule is Auction, Module {
     ) internal virtual returns (uint96 bidId);
 
     /// @inheritdoc Auction
-    /// @dev        Implements a basic cancelBid function that:
+    /// @dev        Implements a basic refundBid function that:
     ///             - Calls implementation-specific validation logic
     ///             - Calls the auction module
     ///
     ///             This function reverts if:
     ///             - the lot id is invalid
-    ///             - the lot is not active
-    ///             - the lot is already settled
+    ///             - the lot is not settled
     ///             - the bid id is invalid
-    ///             - the bid is already cancelled
-    ///             - `caller_` is not the bid owner
+    ///             - `bidder_` is not the bid owner
+    ///             - the bid is cancelled
+    ///             - the bid is already refunded
     ///             - the caller is not an internal module
     ///
-    ///             Inheriting contracts should override _cancelBid to implement auction-specific logic, such as:
+    ///             Inheriting contracts should check for lot cancellation, if needed.
+    ///
+    ///             Inheriting contracts should override _refundBid to implement auction-specific logic, such as:
     ///             - Validating the auction-specific parameters
     ///             - Updating the bid data
-    function cancelBid(
+    function refundBid(
         uint96 lotId_,
         uint96 bidId_,
-        address caller_
+        address bidder_
     ) external override onlyInternal returns (uint256 bidAmount) {
         // Standard validation
         _revertIfLotInvalid(lotId_);
         _revertIfBeforeLotStart(lotId_);
-        _revertIfLotConcluded(lotId_);
-        _revertIfLotSettled(lotId_);
         _revertIfBidInvalid(lotId_, bidId_);
-        _revertIfNotBidOwner(lotId_, bidId_, caller_);
-        _revertIfBidCancelled(lotId_, bidId_);
+        _revertIfNotBidOwner(lotId_, bidId_, bidder_);
+        _revertIfBidRefunded(lotId_, bidId_);
+
+        // If concluded, it must be settled
+        if (lotData[lotId_].conclusion < uint48(block.timestamp)) {
+            _revertIfLotNotSettled(lotId_);
+        }
 
         // Call implementation-specific logic
-        return _cancelBid(lotId_, bidId_, caller_);
+        return _refundBid(lotId_, bidId_, bidder_);
     }
 
-    /// @notice     Implementation-specific bid cancellation logic
+    /// @notice     Implementation-specific bid refund logic
     /// @dev        Auction modules should override this to perform any additional logic
     ///
     /// @param      lotId_      The lot ID
     /// @param      bidId_      The bid ID
-    /// @param      caller_     The caller
+    /// @param      bidder_     The bidder
     /// @return     bidAmount   The amount of quote tokens to refund
-    function _cancelBid(
+    function _refundBid(
         uint96 lotId_,
         uint96 bidId_,
-        address caller_
+        address bidder_
     ) internal virtual returns (uint256 bidAmount);
 
     /// @inheritdoc Auction
@@ -482,8 +531,6 @@ abstract contract AuctionModule is Auction, Module {
     ///             - The lot has started
     ///             - The lot has not sold out or been cancelled (capacity > 0)
     ///
-    ///            Inheriting contracts should override this to implement auction-specific logic
-    ///
     /// @param      lotId_  The lot ID
     /// @return     bool    Whether or not the lot is active
     function isLive(uint96 lotId_) public view override returns (bool) {
@@ -494,8 +541,18 @@ abstract contract AuctionModule is Auction, Module {
     }
 
     /// @inheritdoc Auction
+    function hasEnded(uint96 lotId_) public view override returns (bool) {
+        return lotData[lotId_].conclusion < uint48(block.timestamp) || lotData[lotId_].capacity == 0;
+    }
+
+    /// @inheritdoc Auction
     function remainingCapacity(uint96 lotId_) external view override returns (uint256) {
         return lotData[lotId_].capacity;
+    }
+
+    /// @inheritdoc Auction
+    function capacityInQuote(uint96 lotId_) external view override returns (bool) {
+        return lotData[lotId_].capacityInQuote;
     }
 
     /// @notice    Get the lot data for a given lot ID
@@ -565,6 +622,13 @@ abstract contract AuctionModule is Auction, Module {
     /// @param      lotId_  The lot ID
     function _revertIfLotSettled(uint96 lotId_) internal view virtual;
 
+    /// @notice     Checks that the lot represented by `lotId_` is settled
+    /// @dev        Should revert if the lot is not settled
+    ///             Inheriting contracts must override this to implement custom logic
+    ///
+    /// @param      lotId_  The lot ID
+    function _revertIfLotNotSettled(uint96 lotId_) internal view virtual;
+
     /// @notice     Checks that the lot and bid combination is valid
     /// @dev        Should revert if the bid is invalid
     ///             Inheriting contracts must override this to implement custom logic
@@ -586,11 +650,11 @@ abstract contract AuctionModule is Auction, Module {
         address caller_
     ) internal view virtual;
 
-    /// @notice     Checks that the bid is not cancelled
-    /// @dev        Should revert if the bid is cancelled
+    /// @notice     Checks that the bid is not refunded
+    /// @dev        Should revert if the bid is refunded
     ///             Inheriting contracts must override this to implement custom logic
     ///
     /// @param      lotId_      The lot ID
     /// @param      bidId_      The bid ID
-    function _revertIfBidCancelled(uint96 lotId_, uint96 bidId_) internal view virtual;
+    function _revertIfBidRefunded(uint96 lotId_, uint96 bidId_) internal view virtual;
 }

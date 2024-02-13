@@ -8,13 +8,14 @@ import {ERC20} from "lib/solmate/src/tokens/ERC20.sol";
 // Mocks
 import {MockERC20} from "lib/solmate/src/test/utils/mocks/MockERC20.sol";
 import {MockAuctionModule} from "test/modules/Auction/MockAuctionModule.sol";
-import {MockDerivativeModule} from "test/modules/Derivative/MockDerivativeModule.sol";
+import {MockDerivativeModule} from "test/modules/derivatives/mocks/MockDerivativeModule.sol";
 import {MockCondenserModule} from "test/modules/Condenser/MockCondenserModule.sol";
 import {Permit2User} from "test/lib/permit2/Permit2User.sol";
 
 // Auctions
 import {AuctionHouse} from "src/AuctionHouse.sol";
 import {Auctioneer} from "src/bases/Auctioneer.sol";
+import {InvalidVeecode} from "src/modules/Modules.sol";
 
 // Modules
 import {
@@ -49,7 +50,7 @@ contract SetCondenserTest is Test, Permit2User {
         baseToken = new MockERC20("Base Token", "BASE", 18);
         quoteToken = new MockERC20("Quote Token", "QUOTE", 18);
 
-        auctionHouse = new AuctionHouse(protocol, _PERMIT2_ADDRESS);
+        auctionHouse = new AuctionHouse(address(this), protocol, _PERMIT2_ADDRESS);
         mockAuctionModule = new MockAuctionModule(address(auctionHouse));
         mockDerivativeModule = new MockDerivativeModule(address(auctionHouse));
         mockCondenserModule = new MockCondenserModule(address(auctionHouse));
@@ -95,14 +96,14 @@ contract SetCondenserTest is Test, Permit2User {
     }
 
     function testReverts_whenAuctionVeecodeIsEmpty() external {
-        bytes memory err = abi.encodeWithSelector(Auctioneer.InvalidParams.selector);
+        bytes memory err = abi.encodeWithSelector(InvalidVeecode.selector, blankVeecode);
         vm.expectRevert(err);
 
         auctionHouse.setCondenser(blankVeecode, derivativeVeecode, condenserVeecode);
     }
 
-    function testReverts_whenDerivativeVeecodeIsEmpty() external {
-        bytes memory err = abi.encodeWithSelector(Auctioneer.InvalidParams.selector);
+    function testReverts_whenDerivativeVeecodeIsEmpty() external whenAuctionModuleIsInstalled {
+        bytes memory err = abi.encodeWithSelector(InvalidVeecode.selector, blankVeecode);
         vm.expectRevert(err);
 
         auctionHouse.setCondenser(auctionVeecode, blankVeecode, condenserVeecode);
@@ -122,8 +123,7 @@ contract SetCondenserTest is Test, Permit2User {
         whenDerivativeModuleIsInstalled
         whenCondenserModuleIsInstalled
     {
-        bytes memory err =
-            abi.encodeWithSelector(Auctioneer.InvalidModuleType.selector, derivativeVeecode);
+        bytes memory err = abi.encodeWithSelector(Auctioneer.InvalidParams.selector);
         vm.expectRevert(err);
 
         auctionHouse.setCondenser(derivativeVeecode, derivativeVeecode, condenserVeecode);
@@ -143,8 +143,7 @@ contract SetCondenserTest is Test, Permit2User {
         whenDerivativeModuleIsInstalled
         whenCondenserModuleIsInstalled
     {
-        bytes memory err =
-            abi.encodeWithSelector(Auctioneer.InvalidModuleType.selector, auctionVeecode);
+        bytes memory err = abi.encodeWithSelector(Auctioneer.InvalidParams.selector);
         vm.expectRevert(err);
 
         auctionHouse.setCondenser(auctionVeecode, auctionVeecode, condenserVeecode);
@@ -168,8 +167,7 @@ contract SetCondenserTest is Test, Permit2User {
         whenDerivativeModuleIsInstalled
         whenCondenserModuleIsInstalled
     {
-        bytes memory err =
-            abi.encodeWithSelector(Auctioneer.InvalidModuleType.selector, derivativeVeecode);
+        bytes memory err = abi.encodeWithSelector(Auctioneer.InvalidParams.selector);
         vm.expectRevert(err);
 
         auctionHouse.setCondenser(auctionVeecode, derivativeVeecode, derivativeVeecode);

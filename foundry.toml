@@ -2,6 +2,11 @@
 src = "src"
 out = "out"
 # libs = ["lib"]
+fs_permissions = [{access = "write", path = "./bytecode/"}]
+ffi = true
+
+[fuzz]
+runs = 1024
 
 remappings = [
   "ds-test/=lib/forge-std/lib/ds-test/src/",

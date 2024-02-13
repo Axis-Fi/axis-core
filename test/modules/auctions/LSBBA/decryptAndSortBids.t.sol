@@ -12,6 +12,7 @@ import {LocalSealedBidBatchAuction} from "src/modules/auctions/LSBBA/LSBBA.sol";
 import {AuctionHouse} from "src/AuctionHouse.sol";
 import {Auction} from "src/modules/Auction.sol";
 import {RSAOAEP} from "src/lib/RSA.sol";
+import {uint2str} from "src/lib/Uint2Str.sol";
 import {Bid as QueueBid} from "src/modules/auctions/LSBBA/MaxPriorityQueue.sol";
 
 contract LSBBADecryptAndSortBidsTest is Test, Permit2User {
@@ -39,7 +40,7 @@ contract LSBBADecryptAndSortBidsTest is Test, Permit2User {
     );
 
     // bidTwo > bidOne > bidThree
-    uint256 internal bidSeed = 1e9;
+    bytes32 internal bidSeed = bytes32(uint256(1e9));
     uint96 internal bidOne;
     uint256 internal bidOneAmount = 1e18;
     uint256 internal bidOneAmountOut = 3e18; // Price = 1/3
@@ -52,14 +53,21 @@ contract LSBBADecryptAndSortBidsTest is Test, Permit2User {
     uint256 internal bidThreeAmount = 1e18;
     uint256 internal bidThreeAmountOut = 7e18; // Price = 1/7
     LocalSealedBidBatchAuction.Decrypt internal decryptedBidThree;
+    uint96 internal bidFour;
+    uint256 internal bidFourAmount = 1e18;
+    uint256 internal bidFourAmountOut = 1e16; // < minimum bid size
+    LocalSealedBidBatchAuction.Decrypt internal decryptedBidFour;
     LocalSealedBidBatchAuction.Decrypt[] internal decrypts;
+
+    uint8 internal constant _quoteTokenDecimals = 18;
+    uint8 internal constant _baseTokenDecimals = 18;
 
     function setUp() public {
         // Ensure the block timestamp is a sane value
         vm.warp(1_000_000);
 
         // Set up and install the auction module
-        auctionHouse = new AuctionHouse(_PROTOCOL, _PERMIT2_ADDRESS);
+        auctionHouse = new AuctionHouse(address(this), _PROTOCOL, _PERMIT2_ADDRESS);
         auctionModule = new LocalSealedBidBatchAuction(address(auctionHouse));
         auctionHouse.installModule(auctionModule);
 
@@ -87,7 +95,7 @@ contract LSBBADecryptAndSortBidsTest is Test, Permit2User {
 
         // Create the auction
         vm.prank(address(auctionHouse));
-        auctionModule.auction(lotId, auctionParams);
+        auctionModule.auction(lotId, auctionParams, _quoteTokenDecimals, _baseTokenDecimals);
 
         // Warp to the start of the auction
         vm.warp(lotStart);
@@ -126,7 +134,7 @@ contract LSBBADecryptAndSortBidsTest is Test, Permit2User {
     {
         return RSAOAEP.encrypt(
             abi.encodePacked(decrypt_.amountOut),
-            abi.encodePacked(lotId),
+            abi.encodePacked(uint2str(lotId)),
             abi.encodePacked(uint24(65_537)),
             PUBLIC_KEY_MODULUS,
             decrypt_.seed
@@ -200,15 +208,33 @@ contract LSBBADecryptAndSortBidsTest is Test, Permit2User {
         _;
     }
 
-    modifier whenBidHasBeenCancelled(uint96 bidId_) {
+    modifier whenBidHasBeenRefunded(uint96 bidId_) {
         vm.prank(address(auctionHouse));
-        auctionModule.cancelBid(lotId, bidId_, alice);
+        auctionModule.refundBid(lotId, bidId_, alice);
         _;
     }
 
     modifier whenDecryptedBidDoesNotMatch() {
         // Change a decrypted bid
         decryptedBidOne.amountOut = decryptedBidOne.amountOut + 1;
+        _;
+    }
+
+    modifier whenBidAmountInIsZero() {
+        // Create a bid with 0 amount
+        (, LocalSealedBidBatchAuction.Decrypt memory bidEmpty) = _createBid(0, bidOneAmountOut);
+
+        // Prepare to decrypt bids
+        decrypts.push(bidEmpty);
+        _;
+    }
+
+    modifier whenBidAmountOutIsZero() {
+        // Create a bid with 0 amount
+        (, LocalSealedBidBatchAuction.Decrypt memory bidEmpty) = _createBid(bidOneAmount, 0);
+
+        // Prepare to decrypt bids
+        decrypts.push(bidEmpty);
         _;
     }
 
@@ -234,6 +260,10 @@ contract LSBBADecryptAndSortBidsTest is Test, Permit2User {
     //  [X] it reverts
     // [X] when a cancelled bid is passed in
     //  [X] it reverts
+    // [X] given a bid has a zero amount in
+    //  [X] it does not consider the bid
+    // [X] given a bid has a zero amount out
+    //  [X] it does not consider the bid
     // [X] given an encrypted bid has been cancelled
     //  [X] it does not consider the cancelled bid
     // [X] when encrypted bids remain after decryption
@@ -335,9 +365,9 @@ contract LSBBADecryptAndSortBidsTest is Test, Permit2User {
         auctionModule.decryptAndSortBids(lotId, decrypts);
     }
 
-    function test_givenBidHasBeenCancelled_reverts()
+    function test_givenBidHasBeenRefunded_reverts()
         public
-        whenBidHasBeenCancelled(bidOne)
+        whenBidHasBeenRefunded(bidOne)
         whenLotHasConcluded
     {
         // Expect revert
@@ -349,9 +379,74 @@ contract LSBBADecryptAndSortBidsTest is Test, Permit2User {
         auctionModule.decryptAndSortBids(lotId, decrypts);
     }
 
-    function test_givenBidHasBeenCancelled()
+    modifier whenBidIsLessThanMinBidSize() {
+        // Add a fourth bid, < min bid size
+        (bidFour, decryptedBidFour) = _createBid(bidFourAmount, bidFourAmountOut);
+        decrypts.push(decryptedBidFour);
+        _;
+    }
+
+    function test_whenBidIsLessThanMinBidSize()
         public
-        whenBidHasBeenCancelled(bidOne)
+        whenBidIsLessThanMinBidSize
+        whenLotHasConcluded
+    {
+        // Call
+        auctionModule.decryptAndSortBids(lotId, decrypts);
+
+        // Check values on auction data
+        LocalSealedBidBatchAuction.AuctionData memory lotData = auctionModule.getLotData(lotId);
+        assertEq(lotData.nextDecryptIndex, 4);
+        assertEq(uint8(lotData.status), uint8(LocalSealedBidBatchAuction.AuctionStatus.Decrypted));
+
+        // Check encrypted bids
+        LocalSealedBidBatchAuction.EncryptedBid memory encryptedBid =
+            auctionModule.getBidData(lotId, bidOne);
+        assertEq(uint8(encryptedBid.status), uint8(LocalSealedBidBatchAuction.BidStatus.Decrypted));
+        LocalSealedBidBatchAuction.EncryptedBid memory encryptedBidTwo =
+            auctionModule.getBidData(lotId, bidTwo);
+        assertEq(
+            uint8(encryptedBidTwo.status), uint8(LocalSealedBidBatchAuction.BidStatus.Decrypted)
+        );
+        LocalSealedBidBatchAuction.EncryptedBid memory encryptedBidThree =
+            auctionModule.getBidData(lotId, bidThree);
+        assertEq(
+            uint8(encryptedBidThree.status), uint8(LocalSealedBidBatchAuction.BidStatus.Decrypted)
+        );
+        LocalSealedBidBatchAuction.EncryptedBid memory encryptedBidFour =
+            auctionModule.getBidData(lotId, bidFour);
+        assertEq(
+            uint8(encryptedBidFour.status), uint8(LocalSealedBidBatchAuction.BidStatus.Decrypted)
+        );
+
+        // Check sorted bids
+        QueueBid memory sortedBidOne = auctionModule.getSortedBidData(lotId, 0);
+        assertEq(sortedBidOne.bidId, bidTwo);
+        assertEq(sortedBidOne.amountIn, bidTwoAmount);
+        assertEq(sortedBidOne.minAmountOut, bidTwoAmountOut);
+
+        QueueBid memory sortedBidTwo = auctionModule.getSortedBidData(lotId, 1);
+        assertEq(sortedBidTwo.bidId, bidOne);
+        assertEq(sortedBidTwo.amountIn, bidOneAmount);
+        assertEq(sortedBidTwo.minAmountOut, bidOneAmountOut);
+
+        QueueBid memory sortedBidThree = auctionModule.getSortedBidData(lotId, 2);
+        assertEq(sortedBidThree.bidId, bidThree);
+        assertEq(sortedBidThree.amountIn, bidThreeAmount);
+        assertEq(sortedBidThree.minAmountOut, bidThreeAmountOut);
+
+        assertEq(auctionModule.getSortedBidCount(lotId), 3); // Bid not added
+
+        // Lot not changed
+        Auction.Lot memory lot = auctionModule.getLot(lotId);
+        assertEq(lot.capacity, LOT_CAPACITY);
+        assertEq(lot.sold, 0);
+        assertEq(lot.purchased, 0);
+    }
+
+    function test_givenBidHasBeenRefunded()
+        public
+        whenBidHasBeenRefunded(bidOne)
         whenLotHasConcluded
     {
         // Amend the decrypts array
@@ -370,7 +465,7 @@ contract LSBBADecryptAndSortBidsTest is Test, Permit2User {
         // Check encrypted bids
         LocalSealedBidBatchAuction.EncryptedBid memory encryptedBid =
             auctionModule.getBidData(lotId, bidOne);
-        assertEq(uint8(encryptedBid.status), uint8(LocalSealedBidBatchAuction.BidStatus.Cancelled));
+        assertEq(uint8(encryptedBid.status), uint8(LocalSealedBidBatchAuction.BidStatus.Refunded));
         LocalSealedBidBatchAuction.EncryptedBid memory encryptedBidTwo =
             auctionModule.getBidData(lotId, bidTwo);
         assertEq(
@@ -394,6 +489,12 @@ contract LSBBADecryptAndSortBidsTest is Test, Permit2User {
         assertEq(sortedBidTwo.minAmountOut, bidThreeAmountOut);
 
         assertEq(auctionModule.getSortedBidCount(lotId), 2);
+
+        // Lot not changed
+        Auction.Lot memory lot = auctionModule.getLot(lotId);
+        assertEq(lot.capacity, LOT_CAPACITY);
+        assertEq(lot.sold, 0);
+        assertEq(lot.purchased, 0);
     }
 
     function test_partialDecryption() public whenLotHasConcluded {
@@ -431,6 +532,12 @@ contract LSBBADecryptAndSortBidsTest is Test, Permit2User {
         assertEq(sortedBidOne.minAmountOut, bidOneAmountOut);
 
         assertEq(auctionModule.getSortedBidCount(lotId), 1);
+
+        // Lot not changed
+        Auction.Lot memory lot = auctionModule.getLot(lotId);
+        assertEq(lot.capacity, LOT_CAPACITY);
+        assertEq(lot.sold, 0);
+        assertEq(lot.purchased, 0);
     }
 
     function test_partialDecryptionThenFull() public whenLotHasConcluded {
@@ -486,6 +593,12 @@ contract LSBBADecryptAndSortBidsTest is Test, Permit2User {
         assertEq(sortedBidThree.minAmountOut, bidThreeAmountOut);
 
         assertEq(auctionModule.getSortedBidCount(lotId), 3);
+
+        // Lot not changed
+        Auction.Lot memory lot = auctionModule.getLot(lotId);
+        assertEq(lot.capacity, LOT_CAPACITY);
+        assertEq(lot.sold, 0);
+        assertEq(lot.purchased, 0);
     }
 
     function test_fullDecryption() public whenLotHasConcluded {
@@ -529,6 +642,42 @@ contract LSBBADecryptAndSortBidsTest is Test, Permit2User {
         assertEq(sortedBidThree.minAmountOut, bidThreeAmountOut);
 
         assertEq(auctionModule.getSortedBidCount(lotId), 3);
+
+        // Lot not changed
+        Auction.Lot memory lot = auctionModule.getLot(lotId);
+        assertEq(lot.capacity, LOT_CAPACITY);
+        assertEq(lot.sold, 0);
+        assertEq(lot.purchased, 0);
+    }
+
+    function test_fullDecryption_withBidAmountInIsZero()
+        public
+        whenBidAmountInIsZero
+        whenLotHasConcluded
+    {
+        // Call
+        auctionModule.decryptAndSortBids(lotId, decrypts);
+
+        // Check values on auction data
+        LocalSealedBidBatchAuction.AuctionData memory lotData = auctionModule.getLotData(lotId);
+        assertEq(uint8(lotData.status), uint8(LocalSealedBidBatchAuction.AuctionStatus.Decrypted));
+
+        assertEq(auctionModule.getSortedBidCount(lotId), 4); // fourth bid is added, will be disregarded in settle() due to the marginal price
+    }
+
+    function test_fullDecryption_withBidAmountOutIsZero()
+        public
+        whenBidAmountOutIsZero
+        whenLotHasConcluded
+    {
+        // Call
+        auctionModule.decryptAndSortBids(lotId, decrypts);
+
+        // Check values on auction data
+        LocalSealedBidBatchAuction.AuctionData memory lotData = auctionModule.getLotData(lotId);
+        assertEq(uint8(lotData.status), uint8(LocalSealedBidBatchAuction.AuctionStatus.Decrypted));
+
+        assertEq(auctionModule.getSortedBidCount(lotId), 3); // fourth bid not added
     }
 
     // getNextBidsToDecrypt

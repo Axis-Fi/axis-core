@@ -50,6 +50,9 @@ function unwrapVeecode(Veecode veecode_) pure returns (Keycode, uint8) {
     bytes7 unwrapped = Veecode.unwrap(veecode_);
 
     // Get the version from the first 2 bytes
+    if (unwrapped[0] < 0x30 || unwrapped[0] > 0x39 || unwrapped[1] < 0x30 || unwrapped[1] > 0x39) {
+        revert InvalidVeecode(veecode_);
+    }
     uint8 version = (uint8(unwrapped[0]) - 0x30) * 10;
     version += uint8(unwrapped[1]) - 0x30;
 
@@ -57,6 +60,11 @@ function unwrapVeecode(Veecode veecode_) pure returns (Keycode, uint8) {
     Keycode keycode = Keycode.wrap(bytes5(unwrapped << 16));
 
     return (keycode, version);
+}
+
+function keycodeFromVeecode(Veecode veecode_) pure returns (Keycode) {
+    (Keycode keycode,) = unwrapVeecode(veecode_);
+    return keycode;
 }
 
 // solhint-disable-next-line func-visibility
@@ -104,11 +112,9 @@ abstract contract WithModules is Owned {
 
     // ========= EVENTS ========= //
 
-    event ModuleInstalled(
-        Keycode indexed keycode_, uint8 indexed version_, address indexed address_
-    );
+    event ModuleInstalled(Keycode indexed keycode, uint8 indexed version, address indexed location);
 
-    event ModuleSunset(Keycode indexed keycode_);
+    event ModuleSunset(Keycode indexed keycode);
 
     // ========= CONSTRUCTOR ========= //
 

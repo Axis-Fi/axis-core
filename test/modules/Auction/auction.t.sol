@@ -37,14 +37,17 @@ contract AuctionTest is Test, Permit2User {
 
     address internal protocol = address(0x2);
 
+    uint8 internal constant _quoteTokenDecimals = 18;
+    uint8 internal constant _baseTokenDecimals = 18;
+
     function setUp() external {
         // Ensure the block timestamp is a sane value
         vm.warp(1_000_000);
 
-        baseToken = new MockERC20("Base Token", "BASE", 18);
-        quoteToken = new MockERC20("Quote Token", "QUOTE", 18);
+        baseToken = new MockERC20("Base Token", "BASE", _baseTokenDecimals);
+        quoteToken = new MockERC20("Quote Token", "QUOTE", _quoteTokenDecimals);
 
-        auctionHouse = new AuctionHouse(protocol, _PERMIT2_ADDRESS);
+        auctionHouse = new AuctionHouse(address(this), protocol, _PERMIT2_ADDRESS);
         mockAuctionModule = new MockAuctionModule(address(auctionHouse));
 
         auctionHouse.installModule(mockAuctionModule);
@@ -61,10 +64,10 @@ contract AuctionTest is Test, Permit2User {
             auctionType: toKeycode("MOCK"),
             baseToken: baseToken,
             quoteToken: quoteToken,
+            curator: address(0),
             hooks: IHooks(address(0)),
             allowlist: IAllowlist(address(0)),
             allowlistParams: abi.encode(""),
-            payoutData: abi.encode(""),
             derivativeType: toKeycode(""),
             derivativeParams: abi.encode("")
         });
@@ -116,7 +119,7 @@ contract AuctionTest is Test, Permit2User {
         bytes memory err = abi.encodeWithSelector(Module.Module_OnlyParent.selector, address(this));
         vm.expectRevert(err);
 
-        mockAuctionModule.auction(0, auctionParams);
+        mockAuctionModule.auction(0, auctionParams, _quoteTokenDecimals, _baseTokenDecimals);
     }
 
     function test_success() external {
@@ -126,6 +129,8 @@ contract AuctionTest is Test, Permit2User {
         (
             uint48 lotStart,
             uint48 lotConclusion,
+            uint8 quoteTokenDecimals,
+            uint8 baseTokenDecimals,
             bool lotCapacityInQuote,
             uint256 lotCapacity,
             uint256 sold,
@@ -138,6 +143,8 @@ contract AuctionTest is Test, Permit2User {
         assertEq(lotCapacity, auctionParams.capacity);
         assertEq(sold, 0);
         assertEq(purchased, 0);
+        assertEq(quoteTokenDecimals, quoteToken.decimals());
+        assertEq(baseTokenDecimals, baseToken.decimals());
     }
 
     function test_whenStartTimeIsZero() external {
@@ -147,7 +154,7 @@ contract AuctionTest is Test, Permit2User {
         uint96 lotId = auctionHouse.auction(routingParams, auctionParams);
 
         // Get lot data from the module
-        (uint48 lotStart, uint48 lotConclusion,,,,) = mockAuctionModule.lotData(lotId);
+        (uint48 lotStart, uint48 lotConclusion,,,,,,) = mockAuctionModule.lotData(lotId);
 
         assertEq(lotStart, uint48(block.timestamp)); // Sets to current timestamp
         assertEq(lotConclusion, lotStart + auctionParams.duration);
@@ -162,7 +169,7 @@ contract AuctionTest is Test, Permit2User {
         uint96 lotId = auctionHouse.auction(routingParams, auctionParams);
 
         // Get lot data from the module
-        (uint48 lotStart, uint48 lotConclusion,,,,) = mockAuctionModule.lotData(lotId);
+        (uint48 lotStart, uint48 lotConclusion,,,,,,) = mockAuctionModule.lotData(lotId);
         assertEq(lotConclusion, lotStart + auctionParams.duration);
     }
 
@@ -175,7 +182,7 @@ contract AuctionTest is Test, Permit2User {
         uint96 lotId = auctionHouse.auction(routingParams, auctionParams);
 
         // Get lot data from the module
-        (uint48 lotStart, uint48 lotConclusion,,,,) = mockAuctionModule.lotData(lotId);
+        (uint48 lotStart, uint48 lotConclusion,,,,,,) = mockAuctionModule.lotData(lotId);
         assertEq(lotStart, auctionParams.start);
         assertEq(lotConclusion, lotStart + auctionParams.duration);
     }

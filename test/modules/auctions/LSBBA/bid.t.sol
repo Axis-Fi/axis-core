@@ -33,12 +33,15 @@ contract LSBBABidTest is Test, Permit2User {
     uint256 internal MIN_BID_SIZE;
     uint256 internal bidAmount = 1e18;
 
+    uint8 internal constant _quoteTokenDecimals = 18;
+    uint8 internal constant _baseTokenDecimals = 18;
+
     function setUp() public {
         // Ensure the block timestamp is a sane value
         vm.warp(1_000_000);
 
         // Set up and install the auction module
-        auctionHouse = new AuctionHouse(_PROTOCOL, _PERMIT2_ADDRESS);
+        auctionHouse = new AuctionHouse(address(this), _PROTOCOL, _PERMIT2_ADDRESS);
         auctionModule = new LocalSealedBidBatchAuction(address(auctionHouse));
         auctionHouse.installModule(auctionModule);
 
@@ -67,7 +70,7 @@ contract LSBBABidTest is Test, Permit2User {
 
         // Create the auction
         vm.prank(address(auctionHouse));
-        auctionModule.auction(lotId, auctionParams);
+        auctionModule.auction(lotId, auctionParams, _quoteTokenDecimals, _baseTokenDecimals);
 
         auctionData = abi.encode(1e9); // Encrypted amount out
     }
@@ -218,6 +221,12 @@ contract LSBBABidTest is Test, Permit2User {
         assertEq(encryptedBid.amount, bidAmount);
         assertEq(encryptedBid.encryptedAmountOut, auctionData);
         assertEq(uint8(encryptedBid.status), uint8(LocalSealedBidBatchAuction.BidStatus.Submitted));
+
+        // Lot not changed
+        Auction.Lot memory lot = auctionModule.getLot(lotId);
+        assertEq(lot.capacity, LOT_CAPACITY);
+        assertEq(lot.sold, 0);
+        assertEq(lot.purchased, 0);
     }
 
     function test_whenAmountIsLargerThanCapacity()
@@ -238,6 +247,12 @@ contract LSBBABidTest is Test, Permit2User {
         assertEq(encryptedBid.amount, bidAmount);
         assertEq(encryptedBid.encryptedAmountOut, auctionData);
         assertEq(uint8(encryptedBid.status), uint8(LocalSealedBidBatchAuction.BidStatus.Submitted));
+
+        // Lot not changed
+        Auction.Lot memory lot = auctionModule.getLot(lotId);
+        assertEq(lot.capacity, LOT_CAPACITY);
+        assertEq(lot.sold, 0);
+        assertEq(lot.purchased, 0);
     }
 
     function test_execOnModule_reverts() public {
@@ -273,5 +288,11 @@ contract LSBBABidTest is Test, Permit2User {
         assertEq(encryptedBid.amount, bidAmount);
         assertEq(encryptedBid.encryptedAmountOut, auctionData);
         assertEq(uint8(encryptedBid.status), uint8(LocalSealedBidBatchAuction.BidStatus.Submitted));
+
+        // Lot not changed
+        Auction.Lot memory lot = auctionModule.getLot(lotId);
+        assertEq(lot.capacity, LOT_CAPACITY);
+        assertEq(lot.sold, 0);
+        assertEq(lot.purchased, 0);
     }
 }

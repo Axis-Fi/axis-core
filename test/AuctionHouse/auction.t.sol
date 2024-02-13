@@ -4,12 +4,13 @@ pragma solidity 0.8.19;
 // Libraries
 import {Test} from "forge-std/Test.sol";
 import {ERC20} from "lib/solmate/src/tokens/ERC20.sol";
+import {Transfer} from "src/lib/Transfer.sol";
 
 // Mocks
 import {MockERC20} from "lib/solmate/src/test/utils/mocks/MockERC20.sol";
 import {MockFeeOnTransferERC20} from "test/lib/mocks/MockFeeOnTransferERC20.sol";
 import {MockAtomicAuctionModule} from "test/modules/Auction/MockAtomicAuctionModule.sol";
-import {MockDerivativeModule} from "test/modules/Derivative/MockDerivativeModule.sol";
+import {MockDerivativeModule} from "test/modules/derivatives/mocks/MockDerivativeModule.sol";
 import {MockCondenserModule} from "test/modules/Condenser/MockCondenserModule.sol";
 import {MockAllowlist} from "test/modules/Auction/MockAllowlist.sol";
 import {MockHook} from "test/modules/Auction/MockHook.sol";
@@ -45,6 +46,7 @@ contract AuctionTest is Test, Permit2User {
     Auction.AuctionParams internal auctionParams;
 
     address internal immutable protocol = address(0x2);
+    address internal immutable curator = address(0x3);
 
     uint256 internal constant LOT_CAPACITY = 10e18;
 
@@ -52,7 +54,7 @@ contract AuctionTest is Test, Permit2User {
         baseToken = new MockFeeOnTransferERC20("Base Token", "BASE", 18);
         quoteToken = new MockERC20("Quote Token", "QUOTE", 18);
 
-        auctionHouse = new AuctionHouse(protocol, _PERMIT2_ADDRESS);
+        auctionHouse = new AuctionHouse(address(this), protocol, _PERMIT2_ADDRESS);
         mockAuctionModule = new MockAtomicAuctionModule(address(auctionHouse));
         mockDerivativeModule = new MockDerivativeModule(address(auctionHouse));
         mockCondenserModule = new MockCondenserModule(address(auctionHouse));
@@ -71,10 +73,10 @@ contract AuctionTest is Test, Permit2User {
             auctionType: toKeycode("ATOM"),
             baseToken: baseToken,
             quoteToken: quoteToken,
+            curator: curator,
             hooks: IHooks(address(0)),
             allowlist: IAllowlist(address(0)),
             allowlistParams: abi.encode(""),
-            payoutData: abi.encode(""),
             derivativeType: toKeycode(""),
             derivativeParams: abi.encode("")
         });
@@ -135,9 +137,7 @@ contract AuctionTest is Test, Permit2User {
         // Set the auction type to a derivative module
         routingParams.auctionType = toKeycode("DERV");
 
-        bytes memory err = abi.encodeWithSelector(
-            Auctioneer.InvalidModuleType.selector, mockDerivativeModule.VEECODE()
-        );
+        bytes memory err = abi.encodeWithSelector(Auctioneer.InvalidParams.selector);
         vm.expectRevert(err);
 
         auctionHouse.auction(routingParams, auctionParams);
@@ -230,7 +230,7 @@ contract AuctionTest is Test, Permit2User {
             Veecode lotDerivativeType,
             bytes memory lotDerivativeParams,
             bool lotWrapDerivative,
-            bool lotPrefunded
+            uint256 lotPrefunding
         ) = auctionHouse.lotRouting(lotId);
         assertEq(
             fromVeecode(lotAuctionType),
@@ -245,10 +245,15 @@ contract AuctionTest is Test, Permit2User {
         assertEq(fromVeecode(lotDerivativeType), "", "derivative type mismatch");
         assertEq(lotDerivativeParams, "", "derivative params mismatch");
         assertEq(lotWrapDerivative, false, "wrap derivative mismatch");
-        assertEq(lotPrefunded, false, "prefunded mismatch");
+        assertEq(lotPrefunding, 0, "prefunding mismatch");
+
+        // Curation updated
+        (address lotCurator, bool lotCurated) = auctionHouse.lotCuration(lotId);
+        assertEq(lotCurator, curator, "curator mismatch");
+        assertEq(lotCurated, false, "curated mismatch");
 
         // Auction module also updated
-        (uint48 lotStart,,,,,) = mockAuctionModule.lotData(lotId);
+        (uint48 lotStart,,,,,,,) = mockAuctionModule.lotData(lotId);
         assertEq(lotStart, block.timestamp, "start mismatch");
     }
 
@@ -290,9 +295,7 @@ contract AuctionTest is Test, Permit2User {
         routingParams.derivativeType = toKeycode("ATOM");
 
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(
-            Auctioneer.InvalidModuleType.selector, mockAuctionModule.VEECODE()
-        );
+        bytes memory err = abi.encodeWithSelector(Auctioneer.InvalidParams.selector);
         vm.expectRevert(err);
 
         auctionHouse.auction(routingParams, auctionParams);
@@ -546,7 +549,7 @@ contract AuctionTest is Test, Permit2User {
         whenAuctionCapacityInQuote
     {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(Auction.Auction_InvalidParams.selector);
+        bytes memory err = abi.encodeWithSelector(Auctioneer.InvalidParams.selector);
         vm.expectRevert(err);
 
         auctionHouse.auction(routingParams, auctionParams);
@@ -593,8 +596,8 @@ contract AuctionTest is Test, Permit2User {
         uint96 lotId = auctionHouse.auction(routingParams, auctionParams);
 
         // Check the prefunding status
-        (,,,,,,,,, bool lotPrefunded) = auctionHouse.lotRouting(lotId);
-        assertEq(lotPrefunded, true, "prefunded mismatch");
+        (,,,,,,,,, uint256 lotPrefunding) = auctionHouse.lotRouting(lotId);
+        assertEq(lotPrefunding, LOT_CAPACITY, "prefunding mismatch");
 
         // Check balances
         assertEq(baseToken.balanceOf(address(mockHook)), 0, "hook balance mismatch");
@@ -639,7 +642,7 @@ contract AuctionTest is Test, Permit2User {
     {
         // Expect revert
         bytes memory err =
-            abi.encodeWithSelector(Auctioneer.UnsupportedToken.selector, address(baseToken));
+            abi.encodeWithSelector(Transfer.UnsupportedToken.selector, address(baseToken));
         vm.expectRevert(err);
 
         auctionHouse.auction(routingParams, auctionParams);
@@ -656,8 +659,8 @@ contract AuctionTest is Test, Permit2User {
         uint96 lotId = auctionHouse.auction(routingParams, auctionParams);
 
         // Check the prefunding status
-        (,,,,,,,,, bool lotPrefunded) = auctionHouse.lotRouting(lotId);
-        assertEq(lotPrefunded, true, "prefunded mismatch");
+        (,,,,,,,,, uint256 lotPrefunding) = auctionHouse.lotRouting(lotId);
+        assertEq(lotPrefunding, LOT_CAPACITY, "prefunding mismatch");
 
         // Check balances
         assertEq(baseToken.balanceOf(address(this)), 0, "owner balance mismatch");

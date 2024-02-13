@@ -164,9 +164,7 @@ classDiagram
   class Derivative {
     <<abstract>>
     struct Token
-    +mapping[Keycode dType => address] wrappedImplementations
     +mapping[uint256 tokenId => Token] tokenMetadata
-    +mapping[uint256 lotId => uint256[]] lotDerivatives
     +deploy(bytes data, bool wrap) (uint256, address)
     +mint(bytes data, uint256 amount, bool wrapped) bytes
     +mint(uint256 tokenId, uint256 amount, bool wrapped) bytes

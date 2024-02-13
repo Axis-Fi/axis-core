@@ -12,8 +12,9 @@ import {LocalSealedBidBatchAuction} from "src/modules/auctions/LSBBA/LSBBA.sol";
 import {AuctionHouse} from "src/AuctionHouse.sol";
 import {Auction} from "src/modules/Auction.sol";
 import {RSAOAEP} from "src/lib/RSA.sol";
+import {uint2str} from "src/lib/Uint2Str.sol";
 
-contract LSBBACancelBidTest is Test, Permit2User {
+contract LSBBARefundBidTest is Test, Permit2User {
     address internal constant _PROTOCOL = address(0x1);
     address internal alice = address(0x2);
     address internal constant recipient = address(0x3);
@@ -39,15 +40,19 @@ contract LSBBACancelBidTest is Test, Permit2User {
 
     uint96 internal bidId;
     uint256 internal bidAmount = 1e18;
-    uint256 internal bidSeed = 1e9;
-    LocalSealedBidBatchAuction.Decrypt internal decryptedBid;
+    uint256 internal bidAmountOut = 1e18;
+    bytes32 internal bidSeed = bytes32(uint256(1e9));
+    LocalSealedBidBatchAuction.Decrypt[] internal decrypts;
+
+    uint8 internal constant _quoteTokenDecimals = 18;
+    uint8 internal constant _baseTokenDecimals = 18;
 
     function setUp() public {
         // Ensure the block timestamp is a sane value
         vm.warp(1_000_000);
 
         // Set up and install the auction module
-        auctionHouse = new AuctionHouse(_PROTOCOL, _PERMIT2_ADDRESS);
+        auctionHouse = new AuctionHouse(address(this), _PROTOCOL, _PERMIT2_ADDRESS);
         auctionModule = new LocalSealedBidBatchAuction(address(auctionHouse));
         auctionHouse.installModule(auctionModule);
 
@@ -75,14 +80,16 @@ contract LSBBACancelBidTest is Test, Permit2User {
 
         // Create the auction
         vm.prank(address(auctionHouse));
-        auctionModule.auction(lotId, auctionParams);
+        auctionModule.auction(lotId, auctionParams, _quoteTokenDecimals, _baseTokenDecimals);
 
         // Warp to the start of the auction
         vm.warp(lotStart);
 
         // Encrypt the bid amount
-        decryptedBid = LocalSealedBidBatchAuction.Decrypt({amountOut: bidAmount, seed: bidSeed});
+        LocalSealedBidBatchAuction.Decrypt memory decryptedBid =
+            LocalSealedBidBatchAuction.Decrypt({amountOut: bidAmountOut, seed: bidSeed});
         auctionData = _encrypt(decryptedBid);
+        decrypts.push(decryptedBid);
 
         // Create a bid
         vm.prank(address(auctionHouse));
@@ -96,7 +103,7 @@ contract LSBBACancelBidTest is Test, Permit2User {
     {
         return RSAOAEP.encrypt(
             abi.encodePacked(decrypt_.amountOut),
-            abi.encodePacked(lotId),
+            abi.encodePacked(uint2str(lotId)),
             abi.encodePacked(uint24(65_537)),
             PUBLIC_KEY_MODULUS,
             decrypt_.seed
@@ -127,10 +134,6 @@ contract LSBBACancelBidTest is Test, Permit2User {
 
     modifier givenLotHasDecrypted() {
         // Decrypt the bids
-        LocalSealedBidBatchAuction.Decrypt[] memory decrypts =
-            new LocalSealedBidBatchAuction.Decrypt[](1);
-        decrypts[0] = decryptedBid;
-
         auctionModule.decryptAndSortBids(lotId, decrypts);
         _;
     }
@@ -144,7 +147,7 @@ contract LSBBACancelBidTest is Test, Permit2User {
 
     modifier givenBidHasBeenCancelled() {
         vm.prank(address(auctionHouse));
-        auctionModule.cancelBid(lotId, bidId, alice);
+        auctionModule.refundBid(lotId, bidId, alice);
         _;
     }
 
@@ -158,11 +161,9 @@ contract LSBBACancelBidTest is Test, Permit2User {
     //  [X] it reverts
     // [X] when the caller is not the bidder
     //  [X] it reverts
-    // [X] when the lot has concluded
+    // [X] when the lot has concluded but not decrypted
     //  [X] it reverts
-    // [X] when the lot has decrypted
-    //  [X] it reverts
-    // [X] when the lot has settled
+    // [X] when the lot has decrypted but not settled
     //  [X] it reverts
     // [X] when the bid has already been cancelled
     //  [X] it reverts
@@ -176,7 +177,7 @@ contract LSBBACancelBidTest is Test, Permit2User {
         vm.expectRevert(err);
 
         // Call
-        auctionModule.cancelBid(lotId, bidId, alice);
+        auctionModule.refundBid(lotId, bidId, alice);
     }
 
     function test_whenLotIdIsInvalid_reverts() public whenLotIdIsInvalid {
@@ -186,7 +187,7 @@ contract LSBBACancelBidTest is Test, Permit2User {
 
         // Call
         vm.prank(address(auctionHouse));
-        auctionModule.cancelBid(lotId, bidId, alice);
+        auctionModule.refundBid(lotId, bidId, alice);
     }
 
     function test_whenBidIdIsInvalid_reverts() public whenBidIdIsInvalid {
@@ -197,7 +198,7 @@ contract LSBBACancelBidTest is Test, Permit2User {
 
         // Call
         vm.prank(address(auctionHouse));
-        auctionModule.cancelBid(lotId, bidId, alice);
+        auctionModule.refundBid(lotId, bidId, alice);
     }
 
     function test_whenCallerIsNotBidder_reverts() public whenCallerIsNotBidder {
@@ -207,42 +208,29 @@ contract LSBBACancelBidTest is Test, Permit2User {
 
         // Call
         vm.prank(address(auctionHouse));
-        auctionModule.cancelBid(lotId, bidId, alice);
+        auctionModule.refundBid(lotId, bidId, alice);
     }
 
     function test_givenLotHasConcluded_reverts() public givenLotHasConcluded {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(Auction.Auction_MarketNotActive.selector, lotId);
+        bytes memory err =
+            abi.encodeWithSelector(LocalSealedBidBatchAuction.Auction_WrongState.selector);
         vm.expectRevert(err);
 
         // Call
         vm.prank(address(auctionHouse));
-        auctionModule.cancelBid(lotId, bidId, alice);
+        auctionModule.refundBid(lotId, bidId, alice);
     }
 
     function test_givenLotHasDecrypted_reverts() public givenLotHasConcluded givenLotHasDecrypted {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(Auction.Auction_MarketNotActive.selector, lotId);
+        bytes memory err =
+            abi.encodeWithSelector(LocalSealedBidBatchAuction.Auction_WrongState.selector);
         vm.expectRevert(err);
 
         // Call
         vm.prank(address(auctionHouse));
-        auctionModule.cancelBid(lotId, bidId, alice);
-    }
-
-    function test_givenLotHasSettled_reverts()
-        public
-        givenLotHasConcluded
-        givenLotHasDecrypted
-        givenLotHasSettled
-    {
-        // Expect revert
-        bytes memory err = abi.encodeWithSelector(Auction.Auction_MarketNotActive.selector, lotId);
-        vm.expectRevert(err);
-
-        // Call
-        vm.prank(address(auctionHouse));
-        auctionModule.cancelBid(lotId, bidId, alice);
+        auctionModule.refundBid(lotId, bidId, alice);
     }
 
     function test_givenBidHasBeenCancelled_reverts() public givenBidHasBeenCancelled {
@@ -253,7 +241,7 @@ contract LSBBACancelBidTest is Test, Permit2User {
 
         // Call
         vm.prank(address(auctionHouse));
-        auctionModule.cancelBid(lotId, bidId, alice);
+        auctionModule.refundBid(lotId, bidId, alice);
     }
 
     function test_whenCallerIsUsingExecOnModule_reverts() public {
@@ -269,14 +257,14 @@ contract LSBBACancelBidTest is Test, Permit2User {
         // Call
         auctionHouse.execOnModule(
             moduleVeecode,
-            abi.encodeWithSelector(auctionModule.cancelBid.selector, lotId, bidId, alice)
+            abi.encodeWithSelector(auctionModule.refundBid.selector, lotId, bidId, alice)
         );
     }
 
     function test_itUpdatesTheBidDetails() public {
         // Call
         vm.prank(address(auctionHouse));
-        uint256 returnedBidAmount = auctionModule.cancelBid(lotId, bidId, alice);
+        uint256 returnedBidAmount = auctionModule.refundBid(lotId, bidId, alice);
 
         // Check values
         LocalSealedBidBatchAuction.EncryptedBid memory encryptedBid =
@@ -286,9 +274,84 @@ contract LSBBACancelBidTest is Test, Permit2User {
         assertEq(encryptedBid.referrer, referrer);
         assertEq(encryptedBid.amount, bidAmount);
         assertEq(encryptedBid.encryptedAmountOut, auctionData);
-        assertEq(uint8(encryptedBid.status), uint8(LocalSealedBidBatchAuction.BidStatus.Cancelled));
+        assertEq(uint8(encryptedBid.status), uint8(LocalSealedBidBatchAuction.BidStatus.Refunded));
 
         // Check return value
-        assertEq(returnedBidAmount, bidAmount);
+        assertEq(returnedBidAmount, bidAmountOut);
+
+        // Lot not changed
+        Auction.Lot memory lot = auctionModule.getLot(lotId);
+        assertEq(lot.capacity, LOT_CAPACITY);
+        assertEq(lot.sold, 0);
+        assertEq(lot.purchased, 0);
+    }
+
+    // [X] given the lot has settled
+    //  [X] given the bid is a winning bid
+    //   [X] it reverts
+    //  [X] it returns the bid amount and updates the bid details
+
+    modifier givenBidIsLosing() {
+        // Encrypt the bid amount
+        LocalSealedBidBatchAuction.Decrypt memory decryptedBid =
+            LocalSealedBidBatchAuction.Decrypt({amountOut: 1, seed: bidSeed});
+        auctionData = _encrypt(decryptedBid);
+        decrypts.push(decryptedBid);
+
+        // Create a bid
+        vm.prank(address(auctionHouse));
+        bidId = auctionModule.bid(lotId, alice, recipient, referrer, 1, auctionData);
+        _;
+    }
+
+    function test_givenBidIsWon_reverts()
+        public
+        givenLotHasConcluded
+        givenLotHasDecrypted
+        givenLotHasSettled
+    {
+        // Expect revert
+        bytes memory err =
+            abi.encodeWithSelector(LocalSealedBidBatchAuction.Bid_WrongState.selector);
+        vm.expectRevert(err);
+
+        // Call
+        vm.prank(address(auctionHouse));
+        auctionModule.refundBid(lotId, bidId, alice);
+    }
+
+    function test_givenSettled()
+        public
+        givenBidIsLosing
+        givenLotHasConcluded
+        givenLotHasDecrypted
+        givenLotHasSettled
+    {
+        // Call
+        vm.prank(address(auctionHouse));
+        uint256 returnedBidAmount = auctionModule.refundBid(lotId, bidId, alice);
+
+        // Check values
+        LocalSealedBidBatchAuction.EncryptedBid memory encryptedBid =
+            auctionModule.getBidData(lotId, bidId);
+        assertEq(encryptedBid.bidder, alice, "bidder mismatch");
+        assertEq(encryptedBid.recipient, recipient, "recipient mismatch");
+        assertEq(encryptedBid.referrer, referrer, "referrer mismatch");
+        assertEq(encryptedBid.amount, 1, "amount mismatch");
+        assertEq(encryptedBid.encryptedAmountOut, auctionData, "encryptedAmountOut mismatch");
+        assertEq(
+            uint8(encryptedBid.status),
+            uint8(LocalSealedBidBatchAuction.BidStatus.Refunded),
+            "status mismatch"
+        );
+
+        // Check return value
+        assertEq(returnedBidAmount, 1, "returnedBidAmount mismatch");
+
+        // Lot not changed
+        Auction.Lot memory lot = auctionModule.getLot(lotId);
+        assertEq(lot.capacity, 0, "lot capacity mismatch"); // Set to 0 after settlement
+        assertEq(lot.sold, bidAmountOut, "lot sold mismatch");
+        assertEq(lot.purchased, bidAmount, "lot purchased mismatch");
     }
 }
