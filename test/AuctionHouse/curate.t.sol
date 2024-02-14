@@ -48,7 +48,7 @@ contract CurateTest is Test, Permit2User {
     uint48 internal constant CURATOR_FEE = 90;
 
     uint96 internal lotId;
-    bytes internal INFO_HASH = abi.encode("");
+    string internal INFO_HASH = "";
 
     function setUp() external {
         baseToken = new MockERC20("Base Token", "BASE", 18);

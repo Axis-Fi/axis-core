@@ -40,7 +40,7 @@ contract CancelTest is Test, Permit2User {
     address internal auctionOwner = address(0x1);
 
     address internal protocol = address(0x2);
-    bytes internal INFO_HASH = abi.encode("");
+    string internal INFO_HASH = "";
 
     function setUp() external {
         baseToken = new MockERC20("Base Token", "BASE", 18);

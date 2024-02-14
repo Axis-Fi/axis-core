@@ -50,9 +50,9 @@ contract AuctionTest is Test, Permit2User {
 
     uint256 internal constant LOT_CAPACITY = 10e18;
 
-    bytes internal constant INFO_HASH = "info hash";
+    string internal constant INFO_HASH = "info hash";
 
-    event AuctionCreated(uint96 indexed lotId, Veecode indexed auctionRef, bytes infoHash);
+    event AuctionCreated(uint96 indexed lotId, Veecode indexed auctionRef, string infoHash);
 
     function setUp() external {
         baseToken = new MockFeeOnTransferERC20("Base Token", "BASE", 18);

@@ -67,7 +67,7 @@ contract BidTest is Test, Permit2User {
     bytes internal allowlistProof;
     bytes internal permit2Data;
 
-    bytes internal INFO_HASH = abi.encode("");
+    string internal INFO_HASH = "";
 
     function setUp() external {
         // Set block timestamp

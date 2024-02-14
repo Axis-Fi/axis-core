@@ -64,7 +64,7 @@ contract SetProtocolTest is Test, Permit2User {
     uint256 internal amountInProtocolFee;
 
     Keycode internal auctionType = toKeycode("ATOM");
-    bytes internal INFO_HASH = abi.encode("");
+    string internal INFO_HASH = "";
 
     // Function parameters (can be modified)
     Auctioneer.RoutingParams internal routingParams;

@@ -36,7 +36,7 @@ contract AuctionTest is Test, Permit2User {
     Auction.AuctionParams internal auctionParams;
 
     address internal protocol = address(0x2);
-    bytes internal INFO_HASH = abi.encode("");
+    string internal INFO_HASH = "";
 
     uint8 internal constant _quoteTokenDecimals = 18;
     uint8 internal constant _baseTokenDecimals = 18;

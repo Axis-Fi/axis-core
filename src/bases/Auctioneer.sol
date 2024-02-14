@@ -46,7 +46,7 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
     /// @param          lotId       ID of the auction lot
     /// @param          auctionRef  Auction module, represented by its Veecode
     /// @param          infoHash    IPFS hash of the auction information
-    event AuctionCreated(uint96 indexed lotId, Veecode indexed auctionRef, bytes infoHash);
+    event AuctionCreated(uint96 indexed lotId, Veecode indexed auctionRef, string infoHash);
     event AuctionCancelled(uint96 indexed lotId, Veecode indexed auctionRef);
     event Curated(uint96 indexed lotId, address indexed curator);
 
@@ -148,7 +148,7 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
     function auction(
         RoutingParams calldata routing_,
         Auction.AuctionParams calldata params_,
-        bytes calldata infoHash_
+        string calldata infoHash_
     ) external nonReentrant returns (uint96 lotId) {
         // Load auction type module, this checks that it is installed.
         // We load it here vs. later to avoid two checks.

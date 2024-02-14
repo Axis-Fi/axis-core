@@ -66,7 +66,7 @@ contract LinearVestingIntegrationTest is Test, Permit2User {
     uint48 internal constant vestingStart = 1_704_882_344; // 2024-01-10
     uint48 internal constant vestingExpiry = 1_705_055_144; // 2024-01-12
     uint48 internal constant vestingDuration = 2 days;
-    bytes internal INFO_HASH = abi.encode("");
+    string internal INFO_HASH = "";
 
     // uint256 internal derivativeTokenId;
     // address internal derivativeWrappedAddress;

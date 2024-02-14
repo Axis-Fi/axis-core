@@ -74,7 +74,7 @@ contract ClaimRewardsTest is Test, Permit2User {
     uint256 internal derivativeTokenId;
     bytes internal allowlistProof;
 
-    bytes internal INFO_HASH = abi.encode("");
+    string internal INFO_HASH = "";
 
     function setUp() external {
         aliceKey = _getRandomUint256();

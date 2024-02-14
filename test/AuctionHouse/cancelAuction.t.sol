@@ -54,7 +54,7 @@ contract CancelAuctionTest is Test, Permit2User {
 
     Keycode internal auctionType = toKeycode("ATOM");
 
-    bytes internal INFO_HASH = abi.encode("");
+    string internal INFO_HASH = "";
 
     function setUp() external {
         baseToken = new MockERC20("Base Token", "BASE", 18);

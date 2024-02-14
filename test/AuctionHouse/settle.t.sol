@@ -83,7 +83,7 @@ contract SettleTest is Test, Permit2User {
 
     uint8 internal quoteTokenDecimals = 18;
     uint8 internal baseTokenDecimals = 18;
-    bytes internal INFO_HASH = abi.encode("");
+    string internal INFO_HASH = "";
 
     Keycode internal auctionType;
     Auction.AuctionParams internal auctionParams;

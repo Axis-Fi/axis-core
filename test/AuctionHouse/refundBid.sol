@@ -48,7 +48,7 @@ contract RefundBidTest is Test, Permit2User {
 
     Auctioneer.RoutingParams internal routingParams;
     Auction.AuctionParams internal auctionParams;
-    bytes internal INFO_HASH = abi.encode("");
+    string internal INFO_HASH = "";
 
     // Function parameters (can be modified)
     uint96 internal lotId;

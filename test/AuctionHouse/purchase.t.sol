@@ -85,7 +85,7 @@ contract PurchaseTest is Test, Permit2User {
     uint48 internal approvalDeadline;
     uint256 internal derivativeTokenId;
     bytes internal allowlistProof;
-    bytes internal INFO_HASH = abi.encode("");
+    string internal INFO_HASH = "";
 
     function setUp() external {
         aliceKey = _getRandomUint256();
