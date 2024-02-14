@@ -52,13 +52,7 @@ contract AuctionTest is Test, Permit2User {
 
     bytes internal constant INFO_HASH = "info hash";
 
-    event AuctionCreated(
-        uint96 indexed lotId,
-        Veecode indexed auctionRef,
-        address baseToken,
-        address quoteToken,
-        bytes infoHash
-    );
+    event AuctionCreated(uint96 indexed lotId, Veecode indexed auctionRef, bytes infoHash);
 
     function setUp() external {
         baseToken = new MockFeeOnTransferERC20("Base Token", "BASE", 18);
@@ -228,13 +222,7 @@ contract AuctionTest is Test, Permit2User {
     function test_success() external whenAuctionModuleIsInstalled {
         // Expect event to be emitted
         vm.expectEmit(address(auctionHouse));
-        emit AuctionCreated(
-            0,
-            wrapVeecode(routingParams.auctionType, 1),
-            address(baseToken),
-            address(quoteToken),
-            INFO_HASH
-        );
+        emit AuctionCreated(0, wrapVeecode(routingParams.auctionType, 1), INFO_HASH);
 
         // Create the auction
         uint96 lotId = auctionHouse.auction(routingParams, auctionParams, INFO_HASH);

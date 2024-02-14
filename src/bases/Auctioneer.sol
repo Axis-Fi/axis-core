@@ -45,16 +45,8 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
     ///
     /// @param          lotId       ID of the auction lot
     /// @param          auctionRef  Auction module, represented by its Veecode
-    /// @param          baseToken   Token provided by seller
-    /// @param          quoteToken  Token to accept as payment
     /// @param          infoHash    IPFS hash of the auction information
-    event AuctionCreated(
-        uint96 indexed lotId,
-        Veecode indexed auctionRef,
-        address baseToken,
-        address quoteToken,
-        bytes infoHash
-    );
+    event AuctionCreated(uint96 indexed lotId, Veecode indexed auctionRef, bytes infoHash);
     event AuctionCancelled(uint96 indexed lotId, Veecode indexed auctionRef);
     event Curated(uint96 indexed lotId, address indexed curator);
 
@@ -172,21 +164,25 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
             revert InvalidParams();
         }
 
-        // Confirm tokens are within the required decimal range
-        uint8 baseTokenDecimals = routing_.baseToken.decimals();
-        uint8 quoteTokenDecimals = routing_.quoteToken.decimals();
+        bool requiresPrefunding;
+        uint256 lotCapacity;
+        {
+            // Confirm tokens are within the required decimal range
+            uint8 baseTokenDecimals = routing_.baseToken.decimals();
+            uint8 quoteTokenDecimals = routing_.quoteToken.decimals();
 
-        if (
-            baseTokenDecimals < 6 || baseTokenDecimals > 18 || quoteTokenDecimals < 6
-                || quoteTokenDecimals > 18
-        ) revert InvalidParams();
+            if (
+                baseTokenDecimals < 6 || baseTokenDecimals > 18 || quoteTokenDecimals < 6
+                    || quoteTokenDecimals > 18
+            ) revert InvalidParams();
 
-        // Increment lot count and get ID
-        lotId = lotCounter++;
+            // Increment lot count and get ID
+            lotId = lotCounter++;
 
-        // Call module auction function to store implementation-specific data
-        (bool requiresPrefunding, uint256 lotCapacity) =
-            auctionModule.auction(lotId, params_, quoteTokenDecimals, baseTokenDecimals);
+            // Call module auction function to store implementation-specific data
+            (requiresPrefunding, lotCapacity) =
+                auctionModule.auction(lotId, params_, quoteTokenDecimals, baseTokenDecimals);
+        }
 
         // Store routing information
         Routing storage routing = lotRouting[lotId];
@@ -296,13 +292,7 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
             }
         }
 
-        emit AuctionCreated(
-            lotId,
-            routing.auctionReference,
-            address(routing_.baseToken),
-            address(routing_.quoteToken),
-            infoHash_
-        );
+        emit AuctionCreated(lotId, routing.auctionReference, infoHash_);
     }
 
     /// @notice     Cancels an auction lot
