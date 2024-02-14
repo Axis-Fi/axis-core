@@ -23,8 +23,10 @@ contract TestData is Script {
         vm.startBroadcast();
 
         // Deploy mock tokens
-        quoteToken = new MockERC20("Quote Token", "QTK", 18);
-        baseToken = new MockERC20("Base Token", "BTK", 18);
+        quoteToken = new MockERC20("DAI Stablecoin", "DAI", 18);
+        console2.log("Quote token deployed at address: ", address(quoteToken));
+        baseToken = new MockERC20("Axis Token", "AXIS", 18);
+        console2.log("Base token deployed at address: ", address(baseToken));
 
         // Mint quote tokens to buyer
         quoteToken.mint(buyer, 1e25);
