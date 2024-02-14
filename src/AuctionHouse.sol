@@ -384,9 +384,6 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
         // Settle the auction
         (Auction.Bid[] memory winningBids, bytes memory auctionOutput) = module.settle(lotId_);
 
-        // Load routing data for the lot
-        Routing storage routing = lotRouting[lotId_];
-
         // Calculate the payout amount, handling partial fills
         uint256 lastBidRefund;
         address lastBidder;
@@ -439,6 +436,9 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
                 totalAmountOut -= payoutRemaining;
             }
         }
+
+        // Load routing data for the lot
+        Routing storage routing = lotRouting[lotId_];
 
         // Calculate fees
         (,, uint256 totalAmountInLessFees) = _allocateQuoteFees(

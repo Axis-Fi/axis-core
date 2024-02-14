@@ -74,6 +74,8 @@ contract ClaimRewardsTest is Test, Permit2User {
     uint256 internal derivativeTokenId;
     bytes internal allowlistProof;
 
+    string internal INFO_HASH = "";
+
     function setUp() external {
         aliceKey = _getRandomUint256();
         alice = vm.addr(aliceKey);
@@ -109,7 +111,7 @@ contract ClaimRewardsTest is Test, Permit2User {
 
         // Create an auction
         vm.prank(auctionOwner);
-        lotId = auctionHouse.auction(routingParams, auctionParams);
+        lotId = auctionHouse.auction(routingParams, auctionParams, INFO_HASH);
 
         // Fees
         referrerFee = 1000;

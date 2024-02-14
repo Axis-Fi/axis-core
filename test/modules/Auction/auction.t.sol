@@ -36,6 +36,7 @@ contract AuctionTest is Test, Permit2User {
     Auction.AuctionParams internal auctionParams;
 
     address internal protocol = address(0x2);
+    string internal INFO_HASH = "";
 
     uint8 internal constant _quoteTokenDecimals = 18;
     uint8 internal constant _baseTokenDecimals = 18;
@@ -94,7 +95,7 @@ contract AuctionTest is Test, Permit2User {
         );
         vm.expectRevert(err);
 
-        auctionHouse.auction(routingParams, auctionParams);
+        auctionHouse.auction(routingParams, auctionParams, INFO_HASH);
     }
 
     function testReverts_whenDurationIsLessThanMinimum(uint48 duration_) external {
@@ -111,7 +112,7 @@ contract AuctionTest is Test, Permit2User {
         );
         vm.expectRevert(err);
 
-        auctionHouse.auction(routingParams, auctionParams);
+        auctionHouse.auction(routingParams, auctionParams, INFO_HASH);
     }
 
     function testReverts_whenCallerIsNotParent() external {
@@ -123,7 +124,7 @@ contract AuctionTest is Test, Permit2User {
     }
 
     function test_success() external {
-        uint96 lotId = auctionHouse.auction(routingParams, auctionParams);
+        uint96 lotId = auctionHouse.auction(routingParams, auctionParams, INFO_HASH);
 
         // Get lot data from the module
         (
@@ -151,7 +152,7 @@ contract AuctionTest is Test, Permit2User {
         // Update auction params
         auctionParams.start = 0;
 
-        uint96 lotId = auctionHouse.auction(routingParams, auctionParams);
+        uint96 lotId = auctionHouse.auction(routingParams, auctionParams, INFO_HASH);
 
         // Get lot data from the module
         (uint48 lotStart, uint48 lotConclusion,,,,,,) = mockAuctionModule.lotData(lotId);
@@ -166,7 +167,7 @@ contract AuctionTest is Test, Permit2User {
         // Update auction params
         auctionParams.duration = duration;
 
-        uint96 lotId = auctionHouse.auction(routingParams, auctionParams);
+        uint96 lotId = auctionHouse.auction(routingParams, auctionParams, INFO_HASH);
 
         // Get lot data from the module
         (uint48 lotStart, uint48 lotConclusion,,,,,,) = mockAuctionModule.lotData(lotId);
@@ -179,7 +180,7 @@ contract AuctionTest is Test, Permit2User {
         // Update auction params
         auctionParams.start = start;
 
-        uint96 lotId = auctionHouse.auction(routingParams, auctionParams);
+        uint96 lotId = auctionHouse.auction(routingParams, auctionParams, INFO_HASH);
 
         // Get lot data from the module
         (uint48 lotStart, uint48 lotConclusion,,,,,,) = mockAuctionModule.lotData(lotId);

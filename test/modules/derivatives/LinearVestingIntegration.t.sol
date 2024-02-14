@@ -66,6 +66,7 @@ contract LinearVestingIntegrationTest is Test, Permit2User {
     uint48 internal constant vestingStart = 1_704_882_344; // 2024-01-10
     uint48 internal constant vestingExpiry = 1_705_055_144; // 2024-01-12
     uint48 internal constant vestingDuration = 2 days;
+    string internal INFO_HASH = "";
 
     // uint256 internal derivativeTokenId;
     // address internal derivativeWrappedAddress;
@@ -138,7 +139,7 @@ contract LinearVestingIntegrationTest is Test, Permit2User {
 
         // Create auction
         vm.prank(_owner);
-        lotId = auctionHouse.auction(routingParams, auctionParams);
+        lotId = auctionHouse.auction(routingParams, auctionParams, INFO_HASH);
         _;
     }
 
@@ -156,7 +157,7 @@ contract LinearVestingIntegrationTest is Test, Permit2User {
 
         // Create auction
         vm.prank(_owner);
-        lotId = auctionHouse.auction(routingParams, auctionParams);
+        lotId = auctionHouse.auction(routingParams, auctionParams, INFO_HASH);
         _;
     }
 

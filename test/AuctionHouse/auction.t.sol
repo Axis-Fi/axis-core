@@ -50,6 +50,10 @@ contract AuctionTest is Test, Permit2User {
 
     uint256 internal constant LOT_CAPACITY = 10e18;
 
+    string internal constant INFO_HASH = "info hash";
+
+    event AuctionCreated(uint96 indexed lotId, Veecode indexed auctionRef, string infoHash);
+
     function setUp() external {
         baseToken = new MockFeeOnTransferERC20("Base Token", "BASE", 18);
         quoteToken = new MockERC20("Quote Token", "QUOTE", 18);
@@ -126,7 +130,7 @@ contract AuctionTest is Test, Permit2User {
             abi.encodeWithSelector(WithModules.ModuleNotInstalled.selector, toKeycode("ATOM"), 0);
         vm.expectRevert(err);
 
-        auctionHouse.auction(routingParams, auctionParams);
+        auctionHouse.auction(routingParams, auctionParams, INFO_HASH);
     }
 
     function testReverts_whenModuleTypeIncorrect()
@@ -140,7 +144,7 @@ contract AuctionTest is Test, Permit2User {
         bytes memory err = abi.encodeWithSelector(Auctioneer.InvalidParams.selector);
         vm.expectRevert(err);
 
-        auctionHouse.auction(routingParams, auctionParams);
+        auctionHouse.auction(routingParams, auctionParams, INFO_HASH);
     }
 
     function testReverts_whenModuleIsSunset() external whenAuctionModuleIsInstalled {
@@ -152,7 +156,7 @@ contract AuctionTest is Test, Permit2User {
             abi.encodeWithSelector(WithModules.ModuleIsSunset.selector, toKeycode("ATOM"));
         vm.expectRevert(err);
 
-        auctionHouse.auction(routingParams, auctionParams);
+        auctionHouse.auction(routingParams, auctionParams, INFO_HASH);
     }
 
     function testReverts_whenBaseTokenDecimalsAreOutOfBounds(uint8 decimals_)
@@ -172,7 +176,7 @@ contract AuctionTest is Test, Permit2User {
         bytes memory err = abi.encodeWithSelector(Auctioneer.InvalidParams.selector);
         vm.expectRevert(err);
 
-        auctionHouse.auction(routingParams, auctionParams);
+        auctionHouse.auction(routingParams, auctionParams, INFO_HASH);
     }
 
     function testReverts_whenQuoteTokenDecimalsAreOutOfBounds(uint8 decimals_)
@@ -192,7 +196,7 @@ contract AuctionTest is Test, Permit2User {
         bytes memory err = abi.encodeWithSelector(Auctioneer.InvalidParams.selector);
         vm.expectRevert(err);
 
-        auctionHouse.auction(routingParams, auctionParams);
+        auctionHouse.auction(routingParams, auctionParams, INFO_HASH);
     }
 
     function testReverts_whenBaseTokenIsZero() external whenAuctionModuleIsInstalled {
@@ -202,7 +206,7 @@ contract AuctionTest is Test, Permit2User {
         bytes memory err = abi.encodeWithSelector(Auctioneer.InvalidParams.selector);
         vm.expectRevert(err);
 
-        auctionHouse.auction(routingParams, auctionParams);
+        auctionHouse.auction(routingParams, auctionParams, INFO_HASH);
     }
 
     function testReverts_whenQuoteTokenIsZero() external whenAuctionModuleIsInstalled {
@@ -212,12 +216,16 @@ contract AuctionTest is Test, Permit2User {
         bytes memory err = abi.encodeWithSelector(Auctioneer.InvalidParams.selector);
         vm.expectRevert(err);
 
-        auctionHouse.auction(routingParams, auctionParams);
+        auctionHouse.auction(routingParams, auctionParams, INFO_HASH);
     }
 
     function test_success() external whenAuctionModuleIsInstalled {
+        // Expect event to be emitted
+        vm.expectEmit(address(auctionHouse));
+        emit AuctionCreated(0, wrapVeecode(routingParams.auctionType, 1), INFO_HASH);
+
         // Create the auction
-        uint96 lotId = auctionHouse.auction(routingParams, auctionParams);
+        uint96 lotId = auctionHouse.auction(routingParams, auctionParams, INFO_HASH);
 
         // Assert values
         (
@@ -262,7 +270,7 @@ contract AuctionTest is Test, Permit2User {
         routingParams.quoteToken = baseToken;
 
         // Create the auction
-        uint96 lotId = auctionHouse.auction(routingParams, auctionParams);
+        uint96 lotId = auctionHouse.auction(routingParams, auctionParams, INFO_HASH);
 
         // Assert values
         (,, ERC20 lotBaseToken, ERC20 lotQuoteToken,,,,,,) = auctionHouse.lotRouting(lotId);
@@ -287,7 +295,7 @@ contract AuctionTest is Test, Permit2User {
             abi.encodeWithSelector(WithModules.ModuleNotInstalled.selector, toKeycode("DERV"), 0);
         vm.expectRevert(err);
 
-        auctionHouse.auction(routingParams, auctionParams);
+        auctionHouse.auction(routingParams, auctionParams, INFO_HASH);
     }
 
     function testReverts_whenDerivativeTypeIncorrect() external whenAuctionModuleIsInstalled {
@@ -298,7 +306,7 @@ contract AuctionTest is Test, Permit2User {
         bytes memory err = abi.encodeWithSelector(Auctioneer.InvalidParams.selector);
         vm.expectRevert(err);
 
-        auctionHouse.auction(routingParams, auctionParams);
+        auctionHouse.auction(routingParams, auctionParams, INFO_HASH);
     }
 
     function testReverts_whenDerivativeTypeIsSunset()
@@ -315,7 +323,7 @@ contract AuctionTest is Test, Permit2User {
             abi.encodeWithSelector(WithModules.ModuleIsSunset.selector, toKeycode("DERV"));
         vm.expectRevert(err);
 
-        auctionHouse.auction(routingParams, auctionParams);
+        auctionHouse.auction(routingParams, auctionParams, INFO_HASH);
     }
 
     function testReverts_whenDerivativeValidationFails()
@@ -328,7 +336,7 @@ contract AuctionTest is Test, Permit2User {
         mockDerivativeModule.setValidateFails(true);
         vm.expectRevert("validation error");
 
-        auctionHouse.auction(routingParams, auctionParams);
+        auctionHouse.auction(routingParams, auctionParams, INFO_HASH);
     }
 
     function test_whenDerivativeIsSet()
@@ -338,7 +346,7 @@ contract AuctionTest is Test, Permit2User {
         whenDerivativeTypeIsSet
     {
         // Create the auction
-        uint96 lotId = auctionHouse.auction(routingParams, auctionParams);
+        uint96 lotId = auctionHouse.auction(routingParams, auctionParams, INFO_HASH);
 
         // Assert values
         (,,,,,, Veecode lotDerivativeType,,,) = auctionHouse.lotRouting(lotId);
@@ -359,7 +367,7 @@ contract AuctionTest is Test, Permit2User {
         routingParams.derivativeParams = abi.encode("derivative params");
 
         // Create the auction
-        uint96 lotId = auctionHouse.auction(routingParams, auctionParams);
+        uint96 lotId = auctionHouse.auction(routingParams, auctionParams, INFO_HASH);
 
         // Assert values
         (,,,,,, Veecode lotDerivativeType, bytes memory lotDerivativeParams,,) =
@@ -393,7 +401,7 @@ contract AuctionTest is Test, Permit2User {
             abi.encodeWithSelector(WithModules.ModuleIsSunset.selector, toKeycode("COND"));
         vm.expectRevert(err);
 
-        auctionHouse.auction(routingParams, auctionParams);
+        auctionHouse.auction(routingParams, auctionParams, INFO_HASH);
     }
 
     function test_whenCondenserIsSet()
@@ -405,7 +413,7 @@ contract AuctionTest is Test, Permit2User {
         whenCondenserIsMapped
     {
         // Create the auction
-        auctionHouse.auction(routingParams, auctionParams);
+        auctionHouse.auction(routingParams, auctionParams, INFO_HASH);
 
         // Won't revert
     }
@@ -427,7 +435,7 @@ contract AuctionTest is Test, Permit2User {
         whenAllowlistIsSet
     {
         // Create the auction
-        uint96 lotId = auctionHouse.auction(routingParams, auctionParams);
+        uint96 lotId = auctionHouse.auction(routingParams, auctionParams, INFO_HASH);
 
         // Assert values
         (,,,,, IAllowlist lotAllowlist,,,,) = auctionHouse.lotRouting(lotId);
@@ -448,7 +456,7 @@ contract AuctionTest is Test, Permit2User {
         bytes memory err = abi.encodeWithSelector(Auctioneer.InvalidParams.selector);
         vm.expectRevert(err);
 
-        auctionHouse.auction(routingParams, auctionParams);
+        auctionHouse.auction(routingParams, auctionParams, INFO_HASH);
     }
 
     function testReverts_whenAllowlistValidationFails() external whenAuctionModuleIsInstalled {
@@ -459,7 +467,7 @@ contract AuctionTest is Test, Permit2User {
         mockAllowlist.setRegisterReverts(true);
         vm.expectRevert("MockAllowlist: register reverted");
 
-        auctionHouse.auction(routingParams, auctionParams);
+        auctionHouse.auction(routingParams, auctionParams, INFO_HASH);
     }
 
     // [X] hooks
@@ -480,12 +488,12 @@ contract AuctionTest is Test, Permit2User {
         bytes memory err = abi.encodeWithSelector(Auctioneer.InvalidParams.selector);
         vm.expectRevert(err);
 
-        auctionHouse.auction(routingParams, auctionParams);
+        auctionHouse.auction(routingParams, auctionParams, INFO_HASH);
     }
 
     function test_success_hooksIsSet() external whenAuctionModuleIsInstalled whenHooksIsSet {
         // Create the auction
-        uint96 lotId = auctionHouse.auction(routingParams, auctionParams);
+        uint96 lotId = auctionHouse.auction(routingParams, auctionParams, INFO_HASH);
 
         // Assert values
         (,,,, IHooks lotHooks,,,,,) = auctionHouse.lotRouting(lotId);
@@ -552,7 +560,7 @@ contract AuctionTest is Test, Permit2User {
         bytes memory err = abi.encodeWithSelector(Auctioneer.InvalidParams.selector);
         vm.expectRevert(err);
 
-        auctionHouse.auction(routingParams, auctionParams);
+        auctionHouse.auction(routingParams, auctionParams, INFO_HASH);
     }
 
     function test_prefunding_withHooks_invariantBreaks_reverts()
@@ -567,7 +575,7 @@ contract AuctionTest is Test, Permit2User {
         bytes memory err = abi.encodeWithSelector(Auctioneer.InvalidHook.selector);
         vm.expectRevert(err);
 
-        auctionHouse.auction(routingParams, auctionParams);
+        auctionHouse.auction(routingParams, auctionParams, INFO_HASH);
     }
 
     function test_prefunding_withHooks_feeOnTransfer_reverts()
@@ -582,7 +590,7 @@ contract AuctionTest is Test, Permit2User {
         bytes memory err = abi.encodeWithSelector(Auctioneer.InvalidHook.selector);
         vm.expectRevert(err);
 
-        auctionHouse.auction(routingParams, auctionParams);
+        auctionHouse.auction(routingParams, auctionParams, INFO_HASH);
     }
 
     function test_prefunding_withHooks()
@@ -593,7 +601,7 @@ contract AuctionTest is Test, Permit2User {
         givenHookHasBaseTokenBalance(LOT_CAPACITY)
     {
         // Create the auction
-        uint96 lotId = auctionHouse.auction(routingParams, auctionParams);
+        uint96 lotId = auctionHouse.auction(routingParams, auctionParams, INFO_HASH);
 
         // Check the prefunding status
         (,,,,,,,,, uint256 lotPrefunding) = auctionHouse.lotRouting(lotId);
@@ -617,7 +625,7 @@ contract AuctionTest is Test, Permit2User {
         // Expect revert
         vm.expectRevert("TRANSFER_FROM_FAILED");
 
-        auctionHouse.auction(routingParams, auctionParams);
+        auctionHouse.auction(routingParams, auctionParams, INFO_HASH);
     }
 
     function test_prefunding_insufficientAllowance_reverts()
@@ -629,7 +637,7 @@ contract AuctionTest is Test, Permit2User {
         // Expect revert
         vm.expectRevert("TRANSFER_FROM_FAILED");
 
-        auctionHouse.auction(routingParams, auctionParams);
+        auctionHouse.auction(routingParams, auctionParams, INFO_HASH);
     }
 
     function test_prefunding_feeOnTransfer_reverts()
@@ -645,7 +653,7 @@ contract AuctionTest is Test, Permit2User {
             abi.encodeWithSelector(Transfer.UnsupportedToken.selector, address(baseToken));
         vm.expectRevert(err);
 
-        auctionHouse.auction(routingParams, auctionParams);
+        auctionHouse.auction(routingParams, auctionParams, INFO_HASH);
     }
 
     function test_prefunding()
@@ -656,7 +664,7 @@ contract AuctionTest is Test, Permit2User {
         givenOwnerHasBaseTokenAllowance(LOT_CAPACITY)
     {
         // Create the auction
-        uint96 lotId = auctionHouse.auction(routingParams, auctionParams);
+        uint96 lotId = auctionHouse.auction(routingParams, auctionParams, INFO_HASH);
 
         // Check the prefunding status
         (,,,,,,,,, uint256 lotPrefunding) = auctionHouse.lotRouting(lotId);

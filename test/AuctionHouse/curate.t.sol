@@ -48,6 +48,7 @@ contract CurateTest is Test, Permit2User {
     uint48 internal constant CURATOR_FEE = 90;
 
     uint96 internal lotId;
+    string internal INFO_HASH = "";
 
     function setUp() external {
         baseToken = new MockERC20("Base Token", "BASE", 18);
@@ -130,7 +131,7 @@ contract CurateTest is Test, Permit2User {
 
     modifier givenLotIsCreated() {
         vm.prank(owner);
-        lotId = auctionHouse.auction(routingParams, auctionParams);
+        lotId = auctionHouse.auction(routingParams, auctionParams, INFO_HASH);
         _;
     }
 

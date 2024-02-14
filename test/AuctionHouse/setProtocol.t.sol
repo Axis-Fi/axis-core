@@ -64,6 +64,7 @@ contract SetProtocolTest is Test, Permit2User {
     uint256 internal amountInProtocolFee;
 
     Keycode internal auctionType = toKeycode("ATOM");
+    string internal INFO_HASH = "";
 
     // Function parameters (can be modified)
     Auctioneer.RoutingParams internal routingParams;
@@ -110,7 +111,7 @@ contract SetProtocolTest is Test, Permit2User {
 
         // Create an auction
         vm.prank(auctionOwner);
-        lotId = auctionHouse.auction(routingParams, auctionParams);
+        lotId = auctionHouse.auction(routingParams, auctionParams, INFO_HASH);
 
         // Fees
         referrerFee = 1000;
