@@ -39,11 +39,11 @@ The initial deployment of Axis will be on the Blast L2 network.
 ### Blast Sepolia Testnet
 
 **Core Contracts**
-BlastAuctionHouse: [0x00000000AD4dd7bC9077e3894225840fE1bfd6eC](https://testnet.blastscan.io/address/0x00000000AD4dd7bC9077e3894225840fE1bfd6eC)
-Catalogue: [0x101b502D216d27cb342e9686A2B34A1cD19B2F75](https://testnet.blastscan.io/address/0x101b502D216d27cb342e9686A2B34A1cD19B2F75)
+BlastAuctionHouse: [0x00000000cB3c2A36dEF5Be4d3A674280eFC33498](https://testnet.blastscan.io/address/0x00000000cB3c2A36dEF5Be4d3A674280eFC33498)
+Catalogue: [0x0A0BA689D2D72D3f376293c534AF299B3C6Dac85](https://testnet.blastscan.io/address/0x0A0BA689D2D72D3f376293c534AF299B3C6Dac85)
 
 **Auction Modules**
-BlastLSBBA: [0xc20918b09dE9708d2A7997dfFc3c5ACB34d4a15b](https://testnet.blastscan.io/address/0xc20918b09dE9708d2A7997dfFc3c5ACB34d4a15b)
+BlastLSBBA: [0xcE56d3E3E145b44597B61E99c64cb82FB209Da04](https://testnet.blastscan.io/address/0xcE56d3E3E145b44597B61E99c64cb82FB209Da04)
 
 **Derivative Modules**
-BlastLinearVesting: [0x0e4996960731Fec8E7C9DBbD51383fC71174DD88](https://testnet.blastscan.io/address/0x0e4996960731Fec8E7C9DBbD51383fC71174DD88)
+BlastLinearVesting: [0x32A7b69B9F42F0CD6306Bd897ae2664AF0eFBAbd](https://testnet.blastscan.io/address/0x32A7b69B9F42F0CD6306Bd897ae2664AF0eFBAbd)
