@@ -246,6 +246,8 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
 
     // ========== ERRORS ========== //
 
+    // TODO consolidate errors
+
     error AmountLessThanMinimum();
     error InvalidBidder(address bidder_);
     error Broken_Invariant();
@@ -823,7 +825,7 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
         _revertIfBeforeLotStart(lotId_);
         _revertIfBidInvalid(lotId_, bidId_);
         _revertIfNotBidOwner(lotId_, bidId_, msg.sender);
-        _revertIfBidRefunded(lotId_, bidId_);
+        _revertIfBidClaimed(lotId_, bidId_);
         _revertIfLotConcluded(lotId_);
 
         // Bid must be in Submitted state
@@ -832,8 +834,8 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
         // TODO probably covered by the above
         if (_bid.status != BidStatus.Submitted) revert Bid_WrongState();
 
-        // Set bid status to refunded
-        _bid.status = BidStatus.Refunded;
+        // Set bid status to claimed
+        _bid.status = BidStatus.Claimed;
 
         // Remove bid from list of bids to decrypt
         uint64[] storage bidIds = bidData[lotId_].bidIds;
@@ -1026,19 +1028,39 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
 
     function claim(uint96 lotId_, uint64 bidId_) external override nonReentrant {
         // Validation
-        _revertIfLotInvalid(lotId_);
-        // TODO
-        // hasn't claimed yet
-        // hasn't been refunded
+        // lot is valid
+        // bid hasn't been claimed yet
         // lot has been settled
+        _revertIfLotInvalid(lotId_);
+        _revertIfLotNotSettled(lotId_);
+        _revertIfBidClaimed(lotId_, bidId_);
 
-        // Logic
+        // Set bid status to claimed
+        bids[lotId_][bidId_].status = BidStatus.Claimed;
+
         // Get the bid and compare to settled auction price
+        Bid storage _bid = bids[lotId_][bidId_];
+        uint256 bidPrice =
+            (uint256(_bid.amount) * 10 ** lotData[lotId_].baseTokenDecimals) / _bid.minAmountOut;
+        uint256 marginalPrice = bidData[lotId_].marginalPrice;
+
+        // If the bid price is greater than or equal the settled price, then payout expected amount
+        // We don't have to worry about partial fills here because the bid which is partially filled is handled during settlement
+        // Else the bid price is less than the settled price, so refund the bid amount
         uint256 quoteAmount;
         uint256 payoutAmount;
-        // If the bid price is greater than the settled price, then payout expected amount
-        // If the bid price is equal to the settled price, then check if bid is partially filled, then payout and refund as applicable
-        // If the bid price is less than the settled price, then refund the bid amount
+        if (bidPrice >= marginalPrice) {
+            // Calculate payout using marginal price
+            payoutAmount =
+                (uint256(_bid.amount) * 10 ** lotData[lotId_].baseTokenDecimals) / marginalPrice;
+
+            // Transfer payout to the bidder
+            _sendPayout(lotId_, _bid.bidder, payoutAmount, lotRouting[lotId_]);
+        } else {
+            // Refund the bid amount to the bidder
+            quoteAmount = _bid.amount;
+            Transfer.transfer(lotRouting[lotId_].quoteToken, _bid.bidder, quoteAmount, false);
+        }
 
         // Emit event
         emit Claimed(lotId_, bidId_, quoteAmount, payoutAmount);
@@ -1089,6 +1111,10 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
     /// @param          lotId_          The lot ID of the auction to decrypt bids for
     /// @param          num_            The number of bids to decrypt. Reduced to the number remaining if greater.
     function decryptAndSortBids(uint96 lotId_, uint64 num_) external {
+        // TODO check that the private key has been provided before trying to decrypt.
+        // Perhaps create an internal function that does this logic that can also be called when
+        // the private key is initially provided, then do the additional checks and call here as well.
+
         // Check that lotId is valid
         _revertIfLotInvalid(lotId_);
 
@@ -1116,18 +1142,22 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
             uint64 bidId = bidIds[nextDecryptIndex + i];
 
             // Decrypt the bid
-            uint256 amountOut = _decrypt(lotId_, bidId, privateKey);
+            uint256 result = _decrypt(lotId_, bidId, privateKey);
+            // We skip the bid if the decrypted amount out overflows the uint96 type
+            // No valid bid should expect more than 7.9 * 10^28 (79 trillion tokens if 18 decimals)
+            if (result > type(uint96).max) continue;
+            uint96 amountOut = uint96(result);
 
             // Only store the decrypt if the amount out is greater than or equal to the minimum bid size
-            // We also skip if the amount out overflows the uint96 type
             Bid storage _bid = bids[lotId_][bidId];
-            if (amountOut >= minBidSize && amountOut <= type(uint96).max) {
+            if (amountOut >= minBidSize) {
                 // Store the decrypt in the sorted bid queue
                 decryptedBids[lotId_].insert(bidId, _bid.amount, uint96(amountOut));
             }
 
-            // Set bid status to decrypted
+            // Set bid status to decrypted and the min amount out
             _bid.status = BidStatus.Decrypted;
+            _bid.minAmountOut = amountOut;
 
             // Emit event
             emit BidDecrypted(lotId_, bidId, _bid.amount, amountOut);
@@ -1479,15 +1509,15 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
         if (caller_ != bids[lotId_][bidId_].bidder) revert Auction_NotBidder();
     }
 
-    /// @notice     Checks that the bid is not refunded
-    /// @dev        Should revert if the bid is refunded
+    /// @notice     Checks that the bid is not refunded/claimed already
+    /// @dev        Should revert if the bid is claimed
     ///             Inheriting contracts must override this to implement custom logic
     ///
     /// @param      lotId_      The lot ID
     /// @param      bidId_      The bid ID
-    function _revertIfBidRefunded(uint96 lotId_, uint64 bidId_) internal view {
+    function _revertIfBidClaimed(uint96 lotId_, uint64 bidId_) internal view {
         // Bid must not be cancelled
-        if (bids[lotId_][bidId_].status == BidStatus.Refunded) {
+        if (bids[lotId_][bidId_].status == BidStatus.Claimed) {
             revert Auction_AlreadyCancelled();
         }
     }
