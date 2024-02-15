@@ -1619,14 +1619,15 @@ contract SettleTest is Test, Permit2User {
         console2.log("Start base token balance", baseToken.balanceOf(bidderOne));
 
         // Mint tokens to bidder and approve auction house
-        quoteToken.mint(bidderOne, minAmount * 10000);
+        quoteToken.mint(bidderOne, minAmount * 10_000);
         vm.prank(bidderOne);
-        quoteToken.approve(address(auctionHouse), minAmount * 10000);
+        quoteToken.approve(address(auctionHouse), minAmount * 10_000);
 
         // Submit a large number of small bids to the auction
         // uint256 gasBefore = gasleft();
-        for (uint256 i = 0; i < 10000; i++) {
-            (, LocalSealedBidBatchAuction.Decrypt memory decrypt) = _createBid(bidderOne, bidderOne, minAmount, minAmountOut);
+        for (uint256 i = 0; i < 10_000; i++) {
+            (, LocalSealedBidBatchAuction.Decrypt memory decrypt) =
+                _createBid(bidderOne, bidderOne, minAmount, minAmountOut);
             // minAmountOut -= 1e9; // slowly increase price
             decryptedBids.push(decrypt);
         }
@@ -1640,7 +1641,8 @@ contract SettleTest is Test, Permit2User {
         // Decrypt the bids (do in increments of 100 bids)
         uint256 gasBefore = gasleft();
         for (uint256 i = 0; i < 100; i++) {
-            LocalSealedBidBatchAuction.Decrypt[] memory batch = new LocalSealedBidBatchAuction.Decrypt[](100);
+            LocalSealedBidBatchAuction.Decrypt[] memory batch =
+                new LocalSealedBidBatchAuction.Decrypt[](100);
             for (uint256 j = 0; j < 100; j++) {
                 batch[j] = decryptedBids[i * 100 + j];
             }

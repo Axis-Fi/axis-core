@@ -21,8 +21,6 @@ struct Queue {
 /// @author Oighty (edits)
 /// Bids in descending order
 library MaxPriorityQueue {
-
-
     ///@notice initialize must be called before using queue.
     function initialize(Queue storage self) public {
         self.bidIdList.push(0);
