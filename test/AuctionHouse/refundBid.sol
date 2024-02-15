@@ -48,6 +48,7 @@ contract RefundBidTest is Test, Permit2User {
 
     Auctioneer.RoutingParams internal routingParams;
     Auction.AuctionParams internal auctionParams;
+    string internal INFO_HASH = "";
 
     // Function parameters (can be modified)
     uint96 internal lotId;
@@ -88,7 +89,7 @@ contract RefundBidTest is Test, Permit2User {
 
     modifier givenLotIsCreated() {
         vm.prank(auctionOwner);
-        lotId = auctionHouse.auction(routingParams, auctionParams);
+        lotId = auctionHouse.auction(routingParams, auctionParams, INFO_HASH);
         _;
     }
 
@@ -103,7 +104,7 @@ contract RefundBidTest is Test, Permit2User {
         routingParams.auctionType = moduleKeycode;
 
         vm.prank(auctionOwner);
-        lotId = auctionHouse.auction(routingParams, auctionParams);
+        lotId = auctionHouse.auction(routingParams, auctionParams, INFO_HASH);
         _;
     }
 

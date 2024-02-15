@@ -23,8 +23,10 @@ contract TestData is Script {
         vm.startBroadcast();
 
         // Deploy mock tokens
-        quoteToken = new MockERC20("Quote Token", "QTK", 18);
-        baseToken = new MockERC20("Base Token", "BTK", 18);
+        quoteToken = new MockERC20("Stormlight Orbs", "SLO", 18);
+        console2.log("Quote token deployed at address: ", address(quoteToken));
+        baseToken = new MockERC20("Atium Beads", "ATUM", 18);
+        console2.log("Base token deployed at address: ", address(baseToken));
 
         // Mint quote tokens to buyer
         quoteToken.mint(buyer, 1e25);
@@ -33,6 +35,12 @@ contract TestData is Script {
         baseToken.mint(seller, 1e24);
 
         vm.stopBroadcast();
+    }
+
+    function mintTestTokens(address token, address receiver) public {
+        // Mint tokens to address
+        vm.broadcast();
+        MockERC20(token).mint(receiver, 1e24);
     }
 
     function createAuction(bytes memory publicKey, address buyer) public returns (uint96) {
@@ -71,7 +79,9 @@ contract TestData is Script {
         auctionParams.capacity = 100e18; // 100 base tokens
         auctionParams.implParams = implParams;
 
-        uint96 lotId = auctionHouse.auction(routingParams, auctionParams);
+        string memory infoHash = "";
+
+        uint96 lotId = auctionHouse.auction(routingParams, auctionParams, infoHash);
 
         vm.stopBroadcast();
 

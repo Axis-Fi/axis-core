@@ -83,6 +83,7 @@ contract SettleTest is Test, Permit2User {
 
     uint8 internal quoteTokenDecimals = 18;
     uint8 internal baseTokenDecimals = 18;
+    string internal INFO_HASH = "";
 
     Keycode internal auctionType;
     Auction.AuctionParams internal auctionParams;
@@ -144,7 +145,7 @@ contract SettleTest is Test, Permit2User {
 
         // Create an auction lot
         vm.prank(auctionOwner);
-        lotId = auctionHouse.auction(routingParams, auctionParams);
+        lotId = auctionHouse.auction(routingParams, auctionParams, INFO_HASH);
 
         // Update curator fee amount
         curatorMaxFee = _lotCapacity * CURATOR_MAX_FEE / 1e5;
@@ -261,7 +262,7 @@ contract SettleTest is Test, Permit2User {
 
         // Create a new auction
         vm.prank(auctionOwner);
-        lotId = auctionHouse.auction(routingParams, auctionParams);
+        lotId = auctionHouse.auction(routingParams, auctionParams, INFO_HASH);
 
         // Update curator fee amount
         curatorMaxFee = _lotCapacity * CURATOR_MAX_FEE / 1e5;

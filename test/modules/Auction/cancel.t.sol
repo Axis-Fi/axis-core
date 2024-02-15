@@ -40,6 +40,7 @@ contract CancelTest is Test, Permit2User {
     address internal auctionOwner = address(0x1);
 
     address internal protocol = address(0x2);
+    string internal INFO_HASH = "";
 
     function setUp() external {
         baseToken = new MockERC20("Base Token", "BASE", 18);
@@ -73,7 +74,7 @@ contract CancelTest is Test, Permit2User {
 
     modifier whenLotIsCreated() {
         vm.prank(auctionOwner);
-        lotId = auctionHouse.auction(routingParams, auctionParams);
+        lotId = auctionHouse.auction(routingParams, auctionParams, INFO_HASH);
         _;
     }
 

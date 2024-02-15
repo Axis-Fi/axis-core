@@ -54,6 +54,8 @@ contract CancelAuctionTest is Test, Permit2User {
 
     Keycode internal auctionType = toKeycode("ATOM");
 
+    string internal INFO_HASH = "";
+
     function setUp() external {
         baseToken = new MockERC20("Base Token", "BASE", 18);
         quoteToken = new MockERC20("Quote Token", "QUOTE", 18);
@@ -91,7 +93,7 @@ contract CancelAuctionTest is Test, Permit2User {
 
     modifier whenLotIsCreated() {
         vm.prank(auctionOwner);
-        lotId = auctionHouse.auction(routingParams, auctionParams);
+        lotId = auctionHouse.auction(routingParams, auctionParams, INFO_HASH);
         _;
     }
 
