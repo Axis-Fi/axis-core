@@ -36,7 +36,7 @@ abstract contract Router {
     // /// @param      referrer            Address of referrer
     // /// @param      amount              Amount of quoteToken to purchase with (in native decimals)
     // /// @param      encryptedAmountOut  Encrypted amount out
-    // /// @param      encPubKey           Public key of the shared secret (used to encrypt the amount out)
+    // /// @param      bidPubKey           Public key of the shared secret (used to encrypt the amount out)
     // /// @param      auctionData         Custom data used by the auction module
     // /// @param      allowlistProof      Proof of allowlist inclusion
     // /// @param      permit2Data_        Permit2 approval for the quoteToken (abi-encoded Permit2Approval struct)
@@ -45,7 +45,7 @@ abstract contract Router {
     //     address referrer;
     //     uint256 amount;
     //     uint256 encryptedAmountOut;
-    //     Point encPubKey;
+    //     Point bidPubKey;
     //     bytes allowlistProof;
     //     bytes permit2Data;
     // }
@@ -62,16 +62,48 @@ abstract contract Router {
     /// @param      referrer_            Address of referrer
     /// @param      amount_              Amount of quoteToken to purchase with (in native decimals)
     /// @param      encryptedAmountOut_  Encrypted amount out. The amount out should be no larger than the max uint96 value. We also use a random seed to obscure leading zero bytes. See _decrypt for more details.
-    /// @param      encPubKey_           Public key of the shared secret (used to encrypt the amount out)
+    /// @param      bidPubKey_           Public key of the shared secret (used to encrypt the amount out)
     /// @param      allowlistProof_      Proof of allowlist inclusion
-    /// @param      permit2Data_        Permit2 approval for the quoteToken (abi-encoded Permit2Approval struct)
-    /// @return     bidId           Bid ID
+    /// @param      permit2Data_         Permit2 approval for the quoteToken (abi-encoded Permit2Approval struct)
+    /// @return     bidId                Bid ID
+    ///
+    ///  The contract expects the encryptedAmountOut and bidPubKey to be generated in a specific way:
+    ///
+    ///  Formatting the amount to encrypt:
+    ///  1. The amount is expected to be a uint96 padded to 16 bytes (128 bits). 
+    ///  2. A random 128-bit seed should be generated to mask the actual value of the amount.
+    ///  3. The value to encrypt should be subtracted from the seed.
+    ///  4. The seed and the subtracted result should be concatenated to form the message for encryption.
+    ///  We do this to avoid leading zero bytes in the plaintext, which would make it easier for an attacker to decrypt.
+    ///                                    
+    ///  Pseudo-code using Solidity types:
+    ///  uint96 amountOut = {AMOUNT_OUT_TO_BID};
+    ///  uint128 seed = RNG(); // some source of randomness
+    ///  uint256 message = uint256(abi.encodePacked(seed, seed - uint128(amountOut)));
+    ///
+    ///  Then, the message should be encrypted as follows (off-chain):
+    ///  1. Generate a value to serve as the bid private key
+    ///  2. Calculate the bid public key using the bid private key
+    ///  3. Calculate a shared secret public key using the bid public key and the auction public key
+    ///  4. Calculate the salt to use to derive the symmetric key by taking the keccak256 hash of the lot ID, bidder address, and amountIn (the amount of the bid)
+    ///  5. Calculate the symmetric key by taking the keccak256 hash of the x coordinate of shared secret public key and the salt
+    ///  6. Encrypt the message by XORing the message with the symmetric key
+    ///
+    ///  Pseudo-code using Solidity types:
+    ///  uint256 bidPrivateKey = RNG(); // some source of randomness, derived specifically for this bid
+    ///  Point memory bidPubKey = ecMul(Point(1,2), bidPrivateKey); // scalar multiplication of (1, 2) point by the scalar bidPrivateKey
+    ///  Point memory sharedSecretPubKey = ecMul(auctionPublicKey, bidPrivateKey); // scalar multiplication of the auctionPublicKey point by the scalar bidPrivateKey
+    ///  bytes32 salt = keccak256(abi.encodePacked(lotId, bidder, amountIn));
+    ///  uint256 symmetricKey = keccak256(abi.encodePacked(sharedSecretPubKey.x, salt));
+    ///  uint256 encryptedAmountOut = message ^ symmetricKey;
+    ///
+    ///  Submit the encryptedAmountOut and the bidPubKey as part of the bid transaction.
     function bid(
         uint96 lotId_,
         address referrer_,
         uint96 amount_,
         uint256 encryptedAmountOut_,
-        Point calldata encPubKey_,
+        Point calldata bidPubKey_,
         bytes calldata allowlistProof_,
         bytes calldata permit2Data_
     ) external virtual returns (uint64 bidId);
@@ -388,29 +420,21 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
         BidStatus status; // slot 3
     }
 
+    /// @notice        Struct containing data for an encrypted bid
+    ///
+    /// @param         encryptedAmountOut  The encrypted amount out, the bid amount is encrypted with a symmetric key that can be derived from the bidPubKey using the private key for the provided auction public key on the alt_bn128 curve
+    /// @param         bidPubKey           The alt_bn128 public key used to encrypt the amount out (see bid() for more details)
     struct EncryptedBid {
         uint256 encryptedAmountOut;
-        Point encPubKey;
+        Point bidPubKey;
     }
 
-    /// @notice        Struct containing decrypted bid data
+    /// @notice        Struct containing auction-level bid data
     ///
-    /// @param         amountOut           The amount out
-    /// @param         seed                The seed used to encrypt the amount out
-    struct Decrypt {
-        uint256 amountOut;
-        bytes32 seed;
-    }
-
-    /// @notice        Struct containing auction data
-    ///
-    /// @param         status              The status of the auction
-    /// @param         nextDecryptIndex    The index of the next bid to decrypt
     /// @param         nextBidId           The ID of the next bid to be submitted
-    /// @param         minimumPrice        The minimum price that the auction can settle at (in terms of quote token)
-    /// @param         minFilled           The minimum amount of capacity that must be filled to settle the auction
-    /// @param         minBidSize          The minimum amount of tokens that must be expected for each bid
-    /// @param         publicKeyModulus    The public key modulus used to encrypt bids
+    /// @param         nextDecryptIndex    The index of the next bid to decrypt
+    /// @param         marginalPrice       The marginal price of the auction (determined at settlement, blank before)
+    /// @param         publicKey           The public key used to encrypt bids (a point on the alt_bn128 curve from the generator point (1,2))
     /// @param         privateKey          The private key used to decrypt bids (not provided until after the auction ends)
     /// @param         bidIds              The list of bid IDs to decrypt in order of submission, excluding cancelled bids
     struct BidData {
@@ -424,11 +448,15 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
 
     /// @notice     Core data for an auction lot
     ///
-    /// @param      start               The timestamp when the auction starts
-    /// @param      conclusion          The timestamp when the auction ends
+    /// @param      minimumPrice        The minimum price that the auction can settle at (in terms of quote token)
+    /// @param      capacity            The capacity of the lot
     /// @param      quoteTokenDecimals  The quote token decimals
     /// @param      baseTokenDecimals   The base token decimals
-    /// @param      capacity            The capacity of the lot
+    /// @param      start               The timestamp when the auction starts
+    /// @param      conclusion          The timestamp when the auction ends
+    /// @param      status              The status of the auction
+    /// @param      minFilled           The minimum amount of capacity that must be filled to settle the auction
+    /// @param      minBidSize          The minimum amount of tokens that must be expected for each bid (in base tokens)
     struct Lot {
         uint96 minimumPrice; // 12 +
         uint96 capacity; // 12 +
@@ -760,7 +788,7 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
         address referrer_,
         uint96 amount_,
         uint256 encryptedAmountOut_,
-        Point calldata encPubKey_,
+        Point calldata bidPubKey_,
         bytes calldata allowlistProof_,
         bytes calldata permit2Data_
     ) external override nonReentrant returns (uint64) {
@@ -778,11 +806,11 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
             revert InvalidBidder(msg.sender);
         }
 
-        // Check that the amount is greater than the minimum bid size
-        if (amount_ < lotData[lotId_].minBidSize) revert AmountLessThanMinimum();
+        // Check that the amount is greater than the minimum quote token bid size implied by the minimum price and minimum base token bid size
+        if (amount_ < ((lotData[lotId_].minBidSize * lotData[lotId_].minimumPrice) / 10 ** lotData[lotId_].baseTokenDecimals)) revert AmountLessThanMinimum();
 
         // Check that the public key for the shared secret is a valid point on the alt_bn128 curve
-        if (!ECIES.isOnBn128(encPubKey_)) revert InvalidBid();
+        if (!ECIES.isOnBn128(bidPubKey_)) revert InvalidBid();
 
         // Store bid data
         uint64 bidId = bidData[lotId_].nextBidId++;
@@ -794,7 +822,7 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
 
         // Store encrypted amount out
         encryptedBids[lotId_][bidId] =
-            EncryptedBid({encryptedAmountOut: encryptedAmountOut_, encPubKey: encPubKey_});
+            EncryptedBid({encryptedAmountOut: encryptedAmountOut_, bidPubKey: bidPubKey_});
 
         // Push bid ID to list of bids to decrypt
         bidData[lotId_].bidIds.push(bidId);
@@ -1135,7 +1163,7 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
             num_ = uint64(bidIds.length) - nextDecryptIndex;
         }
 
-        // Iterate over decrypts, validate that they match the stored encrypted bids, then store them in the sorted bid queue
+        // Iterate over the provided number of bids, decrypt them, and then store them in the sorted bid queue
         uint96 minBidSize = lotData[lotId_].minBidSize;
         for (uint64 i; i < num_; i++) {
             // Load encrypted bid
@@ -1185,7 +1213,7 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
         Bid storage _bid = bids[lotId_][bidId_];
         uint256 message = ECIES.decrypt(
             encryptedBid.encryptedAmountOut,
-            encryptedBid.encPubKey,
+            encryptedBid.bidPubKey,
             privateKey_,
             keccak256(abi.encodePacked(lotId_, _bid.bidder, _bid.amount))
         );
