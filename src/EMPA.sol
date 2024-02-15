@@ -2,13 +2,11 @@
 pragma solidity 0.8.19;
 
 import {ERC20} from "lib/solmate/src/tokens/ERC20.sol";
+import {ReentrancyGuard} from "lib/solmate/src/utils/ReentrancyGuard.sol";
+import {Owned} from "lib/solmate/src/auth/Owned.sol";
 import {Transfer} from "src/lib/Transfer.sol";
 import {MaxPriorityQueue, Queue, Bid as QueueBid} from "src/lib/MaxPriorityQueue.sol";
 import {ECIES, Point} from "src/lib/ECIES.sol";
-import {uint2str} from "src/lib/Uint2Str.sol";
-
-import {Auctioneer} from "src/bases/Auctioneer.sol";
-import {FeeManager} from "src/bases/FeeManager.sol";
 
 import {CondenserModule} from "src/modules/Condenser.sol";
 import {DerivativeModule} from "src/modules/Derivative.sol";
@@ -76,7 +74,7 @@ abstract contract Router {
         Point calldata encPubKey_,
         bytes calldata allowlistProof_,
         bytes calldata permit2Data_
-    ) external virtual returns (uint96 bidId);
+    ) external virtual returns (uint64 bidId);
 
     /// @notice     Refund a bid on a lot in a batch auction
     /// @dev        The implementing function must perform the following:
@@ -86,7 +84,7 @@ abstract contract Router {
     ///
     /// @param      lotId_          Lot ID
     /// @param      bidId_          Bid ID
-    function refundBid(uint96 lotId_, uint96 bidId_) external virtual;
+    function refundBid(uint96 lotId_, uint64 bidId_) external virtual;
 
     /// @notice     Settle a batch auction
     /// @notice     This function is used for versions with on-chain storage and bids and local settlement
@@ -101,7 +99,145 @@ abstract contract Router {
     /// @param      lotId_          Lot ID
     function settle(uint96 lotId_) external virtual;
 
-    function claim(uint96 lotId_, uint96 bidId_) external virtual;
+    function claim(uint96 lotId_, uint64 bidId_) external virtual;
+}
+
+/// @title      FeeManager
+/// @notice     Defines fees for auctions and manages the collection and distribution of fees
+abstract contract FeeManager is Owned, ReentrancyGuard {
+    // ========== ERRORS ========== //
+
+    error InvalidFee();
+
+    // ========== DATA STRUCTURES ========== //
+
+    /// @notice     Collection of fees charged for a specific auction type in basis points (3 decimals).
+    /// @notice     Protocol and referrer fees are taken in the quoteToken and accumulate in the contract. These are set by the protocol.
+    /// @notice     Curator fees are taken in the payoutToken and are sent when the auction is settled / purchase is made. Curators can set these up to the configured maximum.
+    /// @dev        There are some situations where the fees may round down to zero if quantity of baseToken
+    ///             is < 1e5 wei (can happen with big price differences on small decimal tokens). This is purely
+    ///             a theoretical edge case, as the amount would not be practical.
+    ///
+    /// @param      protocol        Fee charged by the protocol
+    /// @param      referrer        Fee charged by the referrer
+    /// @param      maxCuratorFee   Maximum fee that a curator can charge
+    /// @param      curator         Fee charged by a specific curator
+    struct Fees {
+        uint24 protocol;
+        uint24 referrer;
+        uint24 maxCuratorFee;
+        mapping(address => uint24) curator;
+    }
+
+    enum FeeType {
+        Protocol,
+        Referrer,
+        MaxCurator
+    }
+
+    // ========== STATE VARIABLES ========== //
+
+    /// @notice     Fees are in basis points (3 decimals). 1% equals 1000.
+    uint24 internal constant _FEE_DECIMALS = 1e5;
+
+    /// @notice     Address the protocol receives fees at
+    address internal _protocol;
+
+    /// @notice     Fees charged for each auction type
+    /// @dev        See Fees struct for more details
+    Fees public fees;
+
+    /// @notice     Fees earned by an address, by token
+    mapping(address => mapping(ERC20 => uint256)) public rewards;
+
+    // ========== CONSTRUCTOR ========== //
+
+    constructor(address protocol_) {
+        _protocol = protocol_;
+    }
+
+    // ========== FEE CALCULATIONS ========== //
+
+    /// @notice     Calculates and allocates fees that are collected in the quote token
+    function calculateQuoteFees(
+        bool hasReferrer_,
+        uint256 amount_
+    ) public view returns (uint256 toReferrer, uint256 toProtocol) {
+        // Load protocol and referrer fees for the auction type
+        uint24 protocolFee = fees.protocol;
+        uint24 referrerFee = fees.referrer;
+
+        if (hasReferrer_) {
+            // In this case we need to:
+            // 1. Calculate referrer fee
+            // 2. Calculate protocol fee as the total expected fee amount minus the referrer fee
+            //    to avoid issues with rounding from separate fee calculations
+            toReferrer = (amount_ * referrerFee) / _FEE_DECIMALS;
+            toProtocol = ((amount_ * (protocolFee + referrerFee)) / _FEE_DECIMALS) - toReferrer;
+        } else {
+            // There is no referrer
+            toProtocol = (amount_ * (protocolFee + referrerFee)) / _FEE_DECIMALS;
+        }
+    }
+
+    /// @notice     Calculates and allocates fees that are collected in the payout token
+    function _calculatePayoutFees(
+        address curator_,
+        uint256 payout_
+    ) internal view returns (uint256 toCurator) {
+        // Calculate curator fee
+        toCurator = (payout_ * fees.curator[curator_]) / _FEE_DECIMALS;
+    }
+
+    // ========== FEE MANAGEMENT ========== //
+
+    /// @notice     Sets the protocol fee, referrer fee, or max curator fee for a specific auction type
+    /// @notice     Access controlled: only owner
+    function setFee(FeeType type_, uint24 fee_) external onlyOwner {
+        // Check that the fee is a valid percentage
+        if (fee_ > _FEE_DECIMALS) revert InvalidFee();
+
+        // Set fee based on type
+        // TODO should we have hard-coded maximums for these fees?
+        // Or a combination of protocol and referrer fee since they are both in the quoteToken?
+        if (type_ == FeeType.Protocol) {
+            fees.protocol = fee_;
+        } else if (type_ == FeeType.Referrer) {
+            fees.referrer = fee_;
+        } else if (type_ == FeeType.MaxCurator) {
+            fees.maxCuratorFee = fee_;
+        }
+    }
+
+    /// @notice     Sets the fee for a curator (the sender) for a specific auction type
+    function setCuratorFee(uint24 fee_) external {
+        // Check that the fee is less than the maximum
+        if (fee_ > fees.maxCuratorFee) revert InvalidFee();
+
+        // Set the fee for the sender
+        fees.curator[msg.sender] = fee_;
+    }
+
+    /// @notice     Claims the rewards for a specific token and the sender
+    /// @dev        This function reverts if:
+    ///             - re-entrancy is detected
+    ///
+    /// @param      token_  Token to claim rewards for
+    function claimRewards(address token_) external nonReentrant {
+        ERC20 token = ERC20(token_);
+        uint256 amount = rewards[msg.sender][token];
+        rewards[msg.sender][token] = 0;
+
+        Transfer.transfer(token, msg.sender, amount, false);
+    }
+
+    /// @notice     Sets the protocol address
+    /// @dev        Access controlled: only owner
+    ///
+    /// @param      protocol_  Address of the protocol
+    function setProtocol(address protocol_) external onlyOwner {
+        _protocol = protocol_;
+    }
 }
 
 /// @title      Encrypted Marginal Price Auction (EMPA)
@@ -117,6 +253,8 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
     error InvalidLotId(uint96 id_);
     error InvalidState();
     error InvalidHook();
+    error InvalidBid();
+    error InvalidPrivateKey();
 
     /// @notice     Used when the caller is not permitted to perform that action
     error NotPermitted(address caller_);
@@ -152,15 +290,16 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
 
     // ========= EVENTS ========= //
 
-    event AuctionCreated(
-        uint96 indexed lotId, Veecode indexed auctionRef, address baseToken, address quoteToken
-    );
-    event AuctionCancelled(uint96 indexed lotId, Veecode indexed auctionRef);
+    event AuctionCreated(uint96 indexed lotId, string ipfsHash);
+    event AuctionCancelled(uint96 indexed lotId);
     event BidSubmitted(
         uint96 indexed lotId, uint96 indexed bidId, address indexed bidder, uint256 amount
     );
     event BidDecrypted(
         uint96 indexed lotId, uint96 indexed bidId, uint256 amountIn, uint256 amountOut
+    );
+    event Claimed(
+        uint96 indexed lotId, uint64 indexed bidId, uint256 quoteAmount, uint256 payoutAmount
     );
     event Curated(uint96 indexed lotId, address indexed curator);
     event RefundBid(uint96 indexed lotId, uint96 indexed bidId, address indexed bidder); // replace or merge with claim?
@@ -182,17 +321,17 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
     /// @param      wrapDerivative      (optional) Whether to wrap the derivative in a ERC20 token instead of the native ERC6909 format
     /// @param      derivativeParams    (optional) abi-encoded data to be used to create payout derivatives on a purchase
     struct Routing {
-        address owner;
-        ERC20 baseToken;
-        ERC20 quoteToken;
-        address curator;
-        uint96 curatorFee;
-        bool curated;
-        IHooks hooks;
-        IAllowlist allowlist;
-        Veecode derivativeReference;
-        bool wrapDerivative;
-        bytes derivativeParams; // Slots 5+
+        address owner; // 20 = slot 1
+        ERC20 baseToken; // 20 = slot 2
+        ERC20 quoteToken; // 20 = slot 3
+        address curator; // 20 +
+        uint96 curatorFee; // 12 = 32 - end of slot 4
+        bool curated; // 1 +
+        IHooks hooks; // 20 = 32 - end of slot 5
+        IAllowlist allowlist; // 20 +
+        Veecode derivativeReference; // 7 +
+        bool wrapDerivative; // 1 = 28 - end of slot 6
+        bytes derivativeParams; // slots 7+
     }
 
     /// @notice     Auction routing information provided as input parameters
@@ -279,9 +418,6 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
         Point publicKey; // 2 slots
         bytes32 privateKey; // 1 slot
         uint64[] bidIds;
-        mapping(uint64 bidId => Bid) bids;
-        mapping(uint64 bidId => EncryptedBid) encryptedBids; // each encrypted amount is 5 slots (length + 4 slots) due to using 1024-bit RSA encryption
-        Queue decryptedBids;
     }
 
     /// @notice     Core data for an auction lot
@@ -318,8 +454,8 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
         uint48 duration;
         uint24 minFillPercent;
         uint24 minBidPercent;
-        uint256 capacity;
-        uint256 minimumPrice;
+        uint96 capacity;
+        uint96 minimumPrice;
         Point publicKey;
     }
 
@@ -329,7 +465,6 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
     /// @dev    1% = 1_000 or 1e3. 100% = 100_000 or 1e5.
     uint24 internal constant _ONE_HUNDRED_PERCENT = 100_000;
     uint24 internal constant _MIN_BID_PERCENT = 10; // 0.01%
-    Point internal constant _ZERO_KEY = Point(0, 0); // TODO calculate the public key for the private key 0
 
     uint64 internal _nextUserId;
 
@@ -350,8 +485,17 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
     /// @notice     Lot routing information
     mapping(uint96 lotId => Routing) public lotRouting;
 
-    /// @notice     Bid data for a lot
+    /// @notice     Auction-level bid data for a lot
     mapping(uint96 lotId => BidData) public bidData;
+
+    /// @notice     Data for specific bids on a lot
+    mapping(uint96 lotId => mapping(uint64 bidId => Bid)) public bids;
+
+    /// @notice     Data for encryption information for a specific bid
+    mapping(uint96 lotId => mapping(uint64 bidId => EncryptedBid)) public encryptedBids; // each encrypted amount is 5 slots (length + 4 slots) due to using 1024-bit RSA encryption
+
+    /// @notice     Queue of decrypted bids for a lot (populated on decryption)
+    mapping(uint96 lotId => Queue) public decryptedBids;
 
     /// @notice     Mapping derivative references to the condenser that is used to pass data between them
     mapping(Veecode derivativeRef => Veecode condenserRef) public condensers;
@@ -398,7 +542,8 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
     /// @return     lotId       ID of the auction lot
     function auction(
         RoutingParams calldata routing_,
-        AuctionParams calldata params_
+        AuctionParams calldata params_,
+        string calldata ipfsHash
     ) external nonReentrant returns (uint96 lotId) {
         // Validate routing parameters
 
@@ -458,20 +603,21 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
         if (!ECIES.isOnBn128(params_.publicKey)) revert Auction_InvalidParams();
 
         // Check that the public key is not the point whose private key is zero
-        if (params_.publicKey.x == _ZERO_KEY.x && params_.publicKey.y == _ZERO_KEY.y) {
+        // TODO calculate actual X and Y coordinates for a zero private key
+        if (params_.publicKey.x == 0 && params_.publicKey.y == 0) {
             revert InvalidParams();
         }
 
         BidData storage data = bidData[lotId];
         data.publicKey = params_.publicKey;
         data.nextBidId = 1;
-        data.decryptedBids = Queue.initialize();
+        decryptedBids[lotId].initialize();
 
         // Get user IDs for owner and curator
         Routing storage routing = lotRouting[lotId];
         {
             // Store routing information
-            routing.owner = routing_.owner;
+            routing.owner = msg.sender;
             routing.baseToken = routing_.baseToken;
             routing.quoteToken = routing_.quoteToken;
             if (routing_.curator != address(0)) routing.curator = routing_.curator;
@@ -498,26 +644,6 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
             routing.derivativeReference = derivativeRef;
             routing.wrapDerivative = routing_.wrapDerivative;
             routing.derivativeParams = routing_.derivativeParams;
-        }
-
-        // Condenser
-        {
-            // Get condenser reference
-            Veecode condenserRef = condensers[routing.derivativeReference];
-
-            // Check that the module for the condenser type is valid
-            if (fromVeecode(condenserRef) != bytes7(0)) {
-                if (
-                    CondenserModule(_getModuleIfInstalled(condenserRef)).TYPE()
-                        != Module.Type.Condenser
-                ) revert InvalidParams();
-
-                // Check module status
-                Keycode moduleKeycode = keycodeFromVeecode(condenserRef);
-                if (getModuleStatus[moduleKeycode].sunset == true) {
-                    revert ModuleIsSunset(moduleKeycode);
-                }
-            }
         }
 
         // If allowlist is being used, validate the allowlist data and register the auction on the allowlist
@@ -560,7 +686,7 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
             );
         }
 
-        emit AuctionCreated(lotId, address(routing_.baseToken), address(routing_.quoteToken));
+        emit AuctionCreated(lotId, ipfsHash);
     }
 
     /// @notice     Cancels an auction lot
@@ -591,16 +717,16 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
         // Cache capacity and curator fee for refund
         Lot storage lot = lotData[lotId_];
 
-        uint256 refund = lot.capacity + lot.curatorFee;
+        uint256 refund = lot.capacity + routing.curatorFee;
         lot.conclusion = uint48(block.timestamp);
         lot.capacity = 0;
-        lot.curatorFee = 0;
+        routing.curatorFee = 0;
         lot.status = AuctionStatus.Settled;
 
         // Refund base tokens to the owner
         Transfer.transfer(routing.baseToken, msg.sender, refund, false);
 
-        emit AuctionCancelled(lotId_, routing.auctionReference);
+        emit AuctionCancelled(lotId_);
     }
 
     /// @notice     Determines if `caller_` is allowed to purchase/bid on a lot.
@@ -636,7 +762,11 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
         bytes calldata allowlistProof_,
         bytes calldata permit2Data_
     ) external override nonReentrant returns (uint64) {
-        _isLotValid(lotId_);
+        // Lot ID must be valid and the lot must be active
+        _revertIfLotInvalid(lotId_);
+        _revertIfBeforeLotStart(lotId_);
+        _revertIfLotConcluded(lotId_);
+        _revertIfLotSettled(lotId_);
 
         // Load routing data for the lot
         Routing memory routing = lotRouting[lotId_];
@@ -646,33 +776,26 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
             revert InvalidBidder(msg.sender);
         }
 
-        // Standard validation
-        _revertIfLotInvalid(lotId_);
-        _revertIfBeforeLotStart(lotId_);
-        _revertIfLotConcluded(lotId_);
-        _revertIfLotSettled(lotId_);
-
         // Check that the amount is greater than the minimum bid size
         if (amount_ < lotData[lotId_].minBidSize) revert AmountLessThanMinimum();
 
         // Check that the public key for the shared secret is a valid point on the alt_bn128 curve
-        if (!ECIES.isOnBn128(encPubKey_)) revert Auction_InvalidBid();
+        if (!ECIES.isOnBn128(encPubKey_)) revert InvalidBid();
 
         // Store bid data
-        BidData storage data = bidData[lotId_];
-        uint64 bidId = data.nextBidId++;
-        Bid storage userBid = data.bids[bidId];
-        userBid.bidder = bidder_;
+        uint64 bidId = bidData[lotId_].nextBidId++;
+        Bid storage userBid = bids[lotId_][bidId];
+        userBid.bidder = msg.sender;
         userBid.amount = amount_;
         userBid.referrer = referrer_;
         userBid.status = BidStatus.Submitted;
 
         // Store encrypted amount out
-        data.encryptedBids[bidId] =
+        encryptedBids[lotId_][bidId] =
             EncryptedBid({encryptedAmountOut: encryptedAmountOut_, encPubKey: encPubKey_});
 
         // Push bid ID to list of bids to decrypt
-        data.bidIds.push(bidId);
+        bidData[lotId_].bidIds.push(bidId);
 
         // Transfer the quote token from the bidder
         _collectPayment(
@@ -684,7 +807,7 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
         );
 
         // Emit event
-        emit Bid(lotId_, bidId, msg.sender, amount_);
+        emit BidSubmitted(lotId_, bidId, msg.sender, amount_);
 
         return bidId;
     }
@@ -694,26 +817,26 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
     ///             - the lot ID is invalid
     ///             - the auction module reverts when cancelling the bid
     ///             - re-entrancy is detected
-    function refundBid(uint96 lotId_, uint96 bidId_) external override nonReentrant {
+    function refundBid(uint96 lotId_, uint64 bidId_) external override nonReentrant {
         // Standard validation
         _revertIfLotInvalid(lotId_);
         _revertIfBeforeLotStart(lotId_);
         _revertIfBidInvalid(lotId_, bidId_);
-        _revertIfNotBidOwner(lotId_, bidId_, bidder_);
+        _revertIfNotBidOwner(lotId_, bidId_, msg.sender);
         _revertIfBidRefunded(lotId_, bidId_);
         _revertIfLotConcluded(lotId_);
 
         // Bid must be in Submitted state
-        BidData storage data = bidData[lotId_];
+        Bid storage _bid = bids[lotId_][bidId_];
 
         // TODO probably covered by the above
-        if (data.bids[bidId_].status != BidStatus.Submitted) revert Bid_WrongState();
+        if (_bid.status != BidStatus.Submitted) revert Bid_WrongState();
 
         // Set bid status to refunded
-        data.bids[bidId_].status = BidStatus.Refunded;
+        _bid.status = BidStatus.Refunded;
 
         // Remove bid from list of bids to decrypt
-        uint64[] storage bidIds = data.bidIds;
+        uint64[] storage bidIds = bidData[lotId_].bidIds;
         uint256 len = bidIds.length;
         for (uint256 i; i < len; i++) {
             if (bidIds[i] == bidId_) {
@@ -725,9 +848,7 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
 
         // Transfer the quote token to the bidder
         // The ownership of the bid has already been verified by the auction module
-        Transfer.transfer(
-            lotRouting[lotId_].quoteToken, msg.sender, data.bids[bidId_].amount, false
-        );
+        Transfer.transfer(lotRouting[lotId_].quoteToken, msg.sender, _bid.amount, false);
 
         // Emit event
         emit RefundBid(lotId_, bidId_, msg.sender);
@@ -753,150 +874,159 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
     ///             - re-entrancy is detected
     function settle(uint96 lotId_) external override nonReentrant {
         // Validation
-        _isLotValid(lotId_);
+        // Lot ID must be valid. Lot must be concluded, but not settled
+        _revertIfLotInvalid(lotId_);
+        _revertIfBeforeLotStart(lotId_);
+        _revertIfLotActive(lotId_);
+        _revertIfLotSettled(lotId_);
 
         // Settle the auction
         // Check that auction is in the right state for settlement
-        if (auctionData[lotId_].status != AuctionStatus.Decrypted) revert Auction_WrongState();
+        if (lotData[lotId_].status != AuctionStatus.Decrypted) revert Auction_WrongState();
 
         // Calculate marginal price and number of winning bids
         // Cache capacity and scaling values
         // Capacity is always in base token units for this auction type
         uint256 capacity = lotData[lotId_].capacity;
         uint256 baseScale = 10 ** lotData[lotId_].baseTokenDecimals;
-        uint256 minimumPrice = auctionData[lotId_].minimumPrice;
+        uint256 minimumPrice = lotData[lotId_].minimumPrice;
 
         // Iterate over bid queue (sorted in descending price) to calculate the marginal clearing price of the auction
-        Queue storage queue = lotSortedBids[lotId_];
-        uint256 numBids = queue.getNumBids();
+        uint256 marginalPrice;
         uint256 totalAmountIn;
-        uint256 lastPrice;
         uint256 capacityExpended;
         uint64 partialFillBidId;
-        for (uint256 i = 0; i < numBids; i++) {
-            // Load bid info (in quote token units)
-            uint64 bidId = queue.getMaxId();
-            QueueBid memory qBid = queue.delMax();
+        {
+            Queue storage queue = decryptedBids[lotId_];
+            uint256 numBids = queue.getNumBids();
+            uint256 lastPrice;
+            for (uint256 i = 0; i < numBids; i++) {
+                // Load bid info (in quote token units)
+                uint64 bidId = queue.getMaxId();
+                QueueBid memory qBid = queue.delMax();
 
-            // A bid can be considered if:
-            // - the bid price is greater than or equal to the minimum
-            // - previous bids did not fill the capacity
-            //
-            // There is no need to check if the bid is the minimum bid size, as this was checked during decryption
+                // A bid can be considered if:
+                // - the bid price is greater than or equal to the minimum
+                // - previous bids did not fill the capacity
+                //
+                // There is no need to check if the bid is the minimum bid size, as this was checked during decryption
 
-            // If the price is below the minimum price, the previous price is the marginal price
-            if (price < minimumPrice) {
-                marginalPrice = lastPrice;
-                numWinningBids = i;
-                break;
-            }
+                // Calculate the price of the bid
+                uint256 price = (uint256(qBid.amountIn) * baseScale) / uint256(qBid.minAmountOut);
 
-            // The current price will now be considered, so we can set this
-            lastPrice = price;
-
-            // Increment total amount in
-            totalAmountIn += qBid.amountIn;
-
-            // Determine total capacity expended at this price (in base token units)
-            // quote scale * base scale / quote scale = base scale
-            capacityExpended = (totalAmountIn * baseScale) / price;
-
-            // If total capacity expended is greater than or equal to the capacity, we have found the marginal price
-            if (capacityExpended >= capacity) {
-                marginalPrice = price;
-                numWinningBids = i + 1;
-                if (capacityExpended > capacity) {
-                    partialFillBidId = bidId;
+                // If the price is below the minimum price, the previous price is the marginal price
+                if (price < minimumPrice) {
+                    marginalPrice = lastPrice;
+                    break;
                 }
-                break;
-            }
 
-            // If we have reached the end of the queue, we have found the marginal price and the maximum capacity that can be filled
-            if (i == numBids - 1) {
-                marginalPrice = price;
-                numWinningBids = numBids;
+                // The current price will now be considered, so we can set this
+                lastPrice = price;
+
+                // Increment total amount in
+                totalAmountIn += qBid.amountIn;
+
+                // Determine total capacity expended at this price (in base token units)
+                // quote scale * base scale / quote scale = base scale
+                capacityExpended = (totalAmountIn * baseScale) / price;
+
+                // If total capacity expended is greater than or equal to the capacity, we have found the marginal price
+                if (capacityExpended >= capacity) {
+                    marginalPrice = price;
+                    if (capacityExpended > capacity) {
+                        partialFillBidId = bidId;
+                    }
+                    break;
+                }
+
+                // If we have reached the end of the queue, we have found the marginal price and the maximum capacity that can be filled
+                if (i == numBids - 1) {
+                    marginalPrice = price;
+                }
             }
         }
 
         // Delete the rest of the decrypted bids queue for a gas refund
-        delete queue;
+        // TODO determine how to do this for the data structure
+        // delete queue;
 
         // Determine if the auction can be filled, if so settle the auction, otherwise refund the seller
         // We set the status as settled either way to denote this function has been executed
         lotData[lotId_].status = AuctionStatus.Settled;
         // Auction cannot be settled if the total filled is less than the minimum filled
         // or if the marginal price is less than the minimum price
-        if (
-            capacityExpended >= lotData[lotId_].minFilled
-                && marginalPrice >= lotData[lotId_].minimumPrice
-        ) {
+        if (capacityExpended >= lotData[lotId_].minFilled && marginalPrice >= minimumPrice) {
             // Auction can be settled at the marginal price if we reach this point
-            bidData[lotId_].marginalPrice = marginalPrice;
+            // TODO think about if it's possible for this to happen
+            if (marginalPrice > type(uint96).max) revert("price overflow");
+            bidData[lotId_].marginalPrice = uint96(marginalPrice);
+
+            Routing storage routing = lotRouting[lotId_];
 
             // If there is a partially filled bid, send proceeds and refund to that bidder now
-            if (partifillBidId != 0) {
-                // Load bid data
-                Bid storage _bid = bidData[lotId_].bids[partialFillBidId];
+            if (partialFillBidId != 0) {
+                // Load routing and bid data
+                Bid storage _bid = bids[lotId_][partialFillBidId];
 
                 // Calculate the payout and refund amounts
-                uint256 fullFill = (_bid.amountIn * baseScale) / marginalPrice;
+                uint256 fullFill = (uint256(_bid.amount) * baseScale) / marginalPrice;
                 uint256 payout = fullFill - (capacityExpended - capacity);
-                uint256 refundAmount = (_bid.amountIn * payout) / fullFill;
+                uint256 refundAmount = (uint256(_bid.amount) * payout) / fullFill;
 
                 // Set bid as claimed
                 _bid.status = BidStatus.Claimed;
 
                 // Allocate quote and protocol fees for bid
-                _allocateQuoteFees(lotId_, routing.quoteToken, _bid.amountIn - refundAmount);
+                _allocateQuoteFees(
+                    _bid.referrer, routing.owner, routing.quoteToken, _bid.amount - refundAmount
+                );
 
                 // Send refund and payout to the bidder
-                address bidder = _getUserId(_bid.bidderId);
-                Transfer.transfer(routing.quoteToken, bidder, refundAmount, false);
-                _sendPayout(lotId_, bidder, payout, routing, auctionOutput);
+                Transfer.transfer(routing.quoteToken, _bid.bidder, refundAmount, false);
+                _sendPayout(lotId_, _bid.bidder, payout, routing);
             }
 
             // Calculate the referrer and protocol fees for the amount in
             // Fees are not allocated until the user claims their payout so that we don't have to iterate through them here
             // If a referrer is not set, that portion of the fee defaults to the protocol
-            uint256 totalAmountInLessFees =
-                totalAmountIn - _calculateQuoteFees(totalAmountIn, routing.quoteToken);
+            uint256 totalAmountInLessFees;
+            {
+                (, uint256 toProtocol) = calculateQuoteFees(false, totalAmountIn);
+                totalAmountInLessFees = totalAmountIn - toProtocol;
+            }
 
             // Send payment in bulk to auction owner
-            _sendPayment(
-                _getUserId(routing.ownerId),
-                totalAmountInLessFees,
-                routing.quoteToken,
-                routing.hooks
-            );
+            _sendPayment(routing.owner, totalAmountInLessFees, routing.quoteToken, routing.hooks);
 
             // If capacity expended is less than the total capacity, refund the remaining capacity to the seller
             if (capacityExpended < capacity) {
-                address owner = _getUserId(routing.ownerId);
-                Transfer.transfer(routing.baseToken, owner, capacity - capacityExpended, false);
+                Transfer.transfer(
+                    routing.baseToken, routing.owner, capacity - capacityExpended, false
+                );
             }
 
             // Calculate and send curator fee to curator (if applicable)
-            address curator = _getUserId(routing.curatorId);
             uint256 curatorFee = _calculatePayoutFees(
-                curator, capacityExpended > capacity ? capacity : capacityExpended
+                routing.curator, capacityExpended > capacity ? capacity : capacityExpended
             );
-            if (curatorFee > 0) _sendPayout(lotId_, curator, curatorFee, routing, auctionOutput);
+            if (curatorFee > 0) _sendPayout(lotId_, routing.curator, curatorFee, routing);
         } else {
             // Auction cannot be settled if we reach this point
             // Marginal price is not set for the auction so the system knows all bids should be refunded
 
             // Refund the capacity to the seller, no fees are taken
-            address owner = _getUserId(lotRouting[lotId_].ownerId);
-            Transfer.transfer(lotRouting[lotId_].baseToken, owner, capacity, false);
+            Transfer.transfer(
+                lotRouting[lotId_].baseToken, lotRouting[lotId_].owner, capacity, false
+            );
         }
 
         // Emit event
         emit Settle(lotId_);
     }
 
-    function claim(uint96 lotId_, uint96 bidId_) external override nonReentrant {
+    function claim(uint96 lotId_, uint64 bidId_) external override nonReentrant {
         // Validation
-        _isLotValid(lotId_);
+        _revertIfLotInvalid(lotId_);
         // TODO
         // hasn't claimed yet
         // hasn't been refunded
@@ -904,12 +1034,14 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
 
         // Logic
         // Get the bid and compare to settled auction price
+        uint256 quoteAmount;
+        uint256 payoutAmount;
         // If the bid price is greater than the settled price, then payout expected amount
         // If the bid price is equal to the settled price, then check if bid is partially filled, then payout and refund as applicable
         // If the bid price is less than the settled price, then refund the bid amount
 
         // Emit event
-        emit Claim(lotId_, bidId_);
+        emit Claimed(lotId_, bidId_, quoteAmount, payoutAmount);
     }
 
     // =========== DECRYPTION =========== //
@@ -924,9 +1056,7 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
         // We assume that all public keys are derived from the same generator: (1, 2)
         Point memory calcPubKey = ECIES.calcPubKey(Point(1, 2), privateKey_);
         Point memory pubKey = bidData[lotId_].publicKey;
-        if (calcPubKey.x != pubKey.x || calcPubKey.y != pubKey.y) {
-            revert Auction_InvalidPrivateKey();
-        }
+        if (calcPubKey.x != pubKey.x || calcPubKey.y != pubKey.y) revert InvalidPrivateKey();
 
         // Store the private key
         bidData[lotId_].privateKey = privateKey_;
@@ -958,7 +1088,7 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
     ///
     /// @param          lotId_          The lot ID of the auction to decrypt bids for
     /// @param          num_            The number of bids to decrypt. Reduced to the number remaining if greater.
-    function decryptAndSortBids(uint96 lotId_, uint256 num_) external {
+    function decryptAndSortBids(uint96 lotId_, uint64 num_) external {
         // Check that lotId is valid
         _revertIfLotInvalid(lotId_);
 
@@ -968,29 +1098,32 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
                 || block.timestamp < lotData[lotId_].conclusion
         ) revert Auction_WrongState();
 
-        // Load next decrypt index
+        // Load next decrypt index and private key
         uint64 nextDecryptIndex = bidData[lotId_].nextDecryptIndex;
+        bytes32 privateKey = bidData[lotId_].privateKey;
 
         // Check that the number of decrypts is less than or equal to the number of bids remaining to be decrypted
         // If so, reduce to the number remaining
-        uint96[] storage bidIds = auctionData[lotId_].bidIds;
-        if (num_ > bidIds.length - nextDecryptIndex) num_ = bidIds.length - nextDecryptIndex;
+        uint64[] storage bidIds = bidData[lotId_].bidIds;
+        if (num_ > bidIds.length - nextDecryptIndex) {
+            num_ = uint64(bidIds.length) - nextDecryptIndex;
+        }
 
         // Iterate over decrypts, validate that they match the stored encrypted bids, then store them in the sorted bid queue
         uint96 minBidSize = lotData[lotId_].minBidSize;
         for (uint64 i; i < num_; i++) {
             // Load encrypted bid
-            uint96 bidId = bidIds[nextDecryptIndex + i];
+            uint64 bidId = bidIds[nextDecryptIndex + i];
 
             // Decrypt the bid
-            uint256 amountOut = _decrypt(lotId_, bidId_, privateKey_);
+            uint256 amountOut = _decrypt(lotId_, bidId, privateKey);
 
             // Only store the decrypt if the amount out is greater than or equal to the minimum bid size
             // We also skip if the amount out overflows the uint96 type
-            Bid storage _bid = bidData[lotId_].bids[bidId];
+            Bid storage _bid = bids[lotId_][bidId];
             if (amountOut >= minBidSize && amountOut <= type(uint96).max) {
                 // Store the decrypt in the sorted bid queue
-                bidData[lotId_].decryptedBids.insert(bidId, _bid.amount, uint96(amountOut));
+                decryptedBids[lotId_].insert(bidId, _bid.amount, uint96(amountOut));
             }
 
             // Set bid status to decrypted
@@ -1005,21 +1138,21 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
 
         // If all bids have been decrypted, set auction status to decrypted
         if (bidData[lotId_].nextDecryptIndex == bidIds.length) {
-            bidData[lotId_].status = AuctionStatus.Decrypted;
+            lotData[lotId_].status = AuctionStatus.Decrypted;
         }
     }
 
     function _decrypt(
         uint96 lotId_,
-        uint96 bidId_,
+        uint64 bidId_,
         bytes32 privateKey_
     ) internal view returns (uint256 amountOut) {
         // Load the encrypted bid data
-        EncryptedBid memory encryptedBid = bidData[lotId_].encryptedBids[bidId_];
+        EncryptedBid memory encryptedBid = encryptedBids[lotId_][bidId_];
 
         // Decrypt the message
         // We expect a salt calculated as the keccak256 hash of lot id, bidder, and amount to provide some (not total) uniqueness to the encryption, even if the same shared secret is used
-        Bid storage _bid = bidData[lotId_].bids[bidId_];
+        Bid storage _bid = bids[lotId_][bidId_];
         uint256 message = ECIES.decrypt(
             encryptedBid.encryptedAmountOut,
             encryptedBid.encPubKey,
@@ -1057,67 +1190,36 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
     ///
     /// @param     lotId_       Lot ID
     function curate(uint96 lotId_) external nonReentrant {
-        _isLotValid(lotId_);
+        // Validation
+        // Lot ID must be valid and the lot must not have concluded yet
+        _revertIfLotInvalid(lotId_);
+        _revertIfLotConcluded(lotId_);
 
         Routing storage routing = lotRouting[lotId_];
-        Curation storage curation = lotCuration[lotId_];
-        Keycode auctionType = keycodeFromVeecode(routing.auctionReference);
 
         // Check that the caller is the proposed curator
-        if (msg.sender != curation.curator) revert NotPermitted(msg.sender);
+        if (msg.sender != routing.curator) revert NotPermitted(msg.sender);
 
         // Check that the curator has not already approved the auction
-        if (curation.curated) revert InvalidState();
-
-        // Check that the auction has not ended or been cancelled
-        AuctionModule module = getModuleForId(lotId_);
-        if (module.hasEnded(lotId_) == true) revert InvalidState();
+        if (routing.curated) revert InvalidState();
 
         // Check that the curator fee is set
-        if (fees[auctionType].curator[msg.sender] == 0) revert InvalidFee();
+        if (fees.curator[msg.sender] == 0) revert InvalidFee();
 
         // Set the curator as approved
-        curation.curated = true;
+        routing.curated = true;
 
-        // If the auction is pre-funded, transfer the fee amount from the owner
-        if (routing.prefunding > 0) {
-            // Calculate the fee amount based on the remaining capacity (must be in base token if auction is pre-funded)
-            uint256 fee =
-                _calculatePayoutFees(auctionType, msg.sender, module.remainingCapacity(lotId_));
+        // Auction must be prefunded, so we transfer the curator fee to the contract from the owner
+        // Calculate the fee amount based on the remaining capacity (must be in base token if auction is pre-funded)
+        uint256 fee = _calculatePayoutFees(msg.sender, lotData[lotId_].capacity);
 
-            // Increment the prefunding
-            routing.prefunding += fee;
+        // TODO make sure that curator fee isn't included in capacity elsewhere
 
-            // Don't need to check for fee on transfer here because it was checked on auction creation
-            Transfer.transferFrom(routing.baseToken, routing.owner, address(this), fee, false);
-        }
+        // Don't need to check for fee on transfer here because it was checked on auction creation
+        Transfer.transferFrom(routing.baseToken, routing.owner, address(this), fee, false);
 
         // Emit event that the lot is curated by the proposed curator
         emit Curated(lotId_, msg.sender);
-    }
-
-    // ========== ADMIN FUNCTIONS ========== //
-
-    /// @inheritdoc FeeManager
-    function setFee(Keycode auctionType_, FeeType type_, uint48 fee_) external override onlyOwner {
-        // Check that the fee is a valid percentage
-        if (fee_ > _FEE_DECIMALS) revert InvalidFee();
-
-        // Set fee based on type
-        // TODO should we have hard-coded maximums for these fees?
-        // Or a combination of protocol and referrer fee since they are both in the quoteToken?
-        if (type_ == FeeType.Protocol) {
-            fees[auctionType_].protocol = fee_;
-        } else if (type_ == FeeType.Referrer) {
-            fees[auctionType_].referrer = fee_;
-        } else if (type_ == FeeType.MaxCurator) {
-            fees[auctionType_].maxCuratorFee = fee_;
-        }
-    }
-
-    /// @inheritdoc FeeManager
-    function setProtocol(address protocol_) external override onlyOwner {
-        _protocol = protocol_;
     }
 
     // ========== TOKEN TRANSFERS ========== //
@@ -1185,58 +1287,6 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
         );
     }
 
-    /// @notice     Collects the payout token from the auction owner
-    /// @dev        This function handles the following:
-    ///             1. Calls the mid hook on the hooks contract (if provided)
-    ///             2. Transfers the payout token from the auction owner
-    ///             2a. If the auction is pre-funded, then the transfer is skipped
-    ///
-    ///             This function reverts if:
-    ///             - Approval has not been granted to transfer the payout token
-    ///             - The auction owner does not have sufficient balance of the payout token
-    ///             - The payout token transfer fails
-    ///             - Transferring the payout token would result in a lesser amount being received
-    ///             - The mid-hook reverts
-    ///             - The mid-hook invariant is violated
-    ///
-    /// @param      lotId_          Lot ID
-    /// @param      paymentAmount_  Amount of quoteToken collected (in native decimals)
-    /// @param      payoutAmount_   Amount of payoutToken to collect (in native decimals)
-    /// @param      routingParams_  Routing parameters for the lot
-    function _collectPayout(
-        uint96 lotId_,
-        uint256 paymentAmount_,
-        uint256 payoutAmount_,
-        Routing memory routingParams_
-    ) internal {
-        // If pre-funded, then the payout token is already in this contract
-        if (routingParams_.prefunding > 0) {
-            return;
-        }
-
-        // Get the balance of the payout token before the transfer
-        ERC20 baseToken = routingParams_.baseToken;
-
-        // Call mid hook on hooks contract if provided
-        if (address(routingParams_.hooks) != address(0)) {
-            uint256 balanceBefore = baseToken.balanceOf(address(this));
-
-            // The mid hook is expected to transfer the payout token to this contract
-            routingParams_.hooks.mid(lotId_, paymentAmount_, payoutAmount_);
-
-            // Check that the mid hook transferred the expected amount of payout tokens
-            if (baseToken.balanceOf(address(this)) < balanceBefore + payoutAmount_) {
-                revert InvalidHook();
-            }
-        }
-        // Otherwise fallback to a standard ERC20 transfer
-        else {
-            Transfer.transferFrom(
-                baseToken, routingParams_.owner, address(this), payoutAmount_, true
-            );
-        }
-    }
-
     /// @notice     Sends the payout token to the recipient
     /// @dev        This function handles the following:
     ///             1. Sends the payout token from the router to the recipient
@@ -1257,13 +1307,11 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
     /// @param      recipient_      Address to receive payout
     /// @param      payoutAmount_   Amount of payoutToken to send (in native decimals)
     /// @param      routingParams_  Routing parameters for the lot
-    /// @param      auctionOutput_  Custom data returned by the auction module
     function _sendPayout(
         uint96 lotId_,
         address recipient_,
         uint256 payoutAmount_,
-        Routing memory routingParams_,
-        bytes memory auctionOutput_
+        Routing memory routingParams_
     ) internal {
         Veecode derivativeReference = routingParams_.derivativeReference;
         ERC20 baseToken = routingParams_.baseToken;
@@ -1278,19 +1326,6 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
             // We assume that the module type has been checked when the lot was created
             DerivativeModule module = DerivativeModule(_getModuleIfInstalled(derivativeReference));
 
-            bytes memory derivativeParams = routingParams_.derivativeParams;
-
-            // Lookup condensor module from combination of auction and derivative types
-            // If condenser specified, condense auction output and derivative params before sending to derivative module
-            Veecode condenserRef = condensers[routingParams_.auctionReference][derivativeReference];
-            if (fromVeecode(condenserRef) != bytes7("")) {
-                // Get condenser module
-                CondenserModule condenser = CondenserModule(_getModuleIfInstalled(condenserRef));
-
-                // Condense auction output and derivative params
-                derivativeParams = condenser.condense(auctionOutput_, derivativeParams);
-            }
-
             // Approve the module to transfer payout tokens when minting
             Transfer.approve(baseToken, address(module), payoutAmount_);
 
@@ -1298,7 +1333,7 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
             module.mint(
                 recipient_,
                 address(baseToken),
-                derivativeParams,
+                routingParams_.derivativeParams,
                 payoutAmount_,
                 routingParams_.wrapDerivative
             );
@@ -1313,38 +1348,20 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
     // ========== FEE FUNCTIONS ========== //
 
     function _allocateQuoteFees(
-        Keycode auctionType_,
-        Bid[] memory bids_,
+        address referrer_,
         address owner_,
-        ERC20 quoteToken_
-    ) internal returns (uint256 totalAmountIn, uint256 totalFees, uint256 totalAmountInLessFees) {
+        ERC20 quoteToken_,
+        uint256 amount_
+    ) internal returns (uint256 totalFees) {
         // Calculate fees for purchase
-        uint256 bidCount = bids_.length;
-        uint256 totalProtocolFees;
-        for (uint256 i; i < bidCount; i++) {
-            address bidReferrer = bids_[i].referrer;
-            uint256 bidAmount = bids_[i].amount;
+        (uint256 toReferrer, uint256 toProtocol) =
+            calculateQuoteFees(referrer_ != address(0) && referrer_ != owner_, amount_);
 
-            // Calculate fees from bid amount
-            (uint256 toReferrer, uint256 toProtocol) = calculateQuoteFees(
-                auctionType_, bidReferrer != address(0) && bidReferrer != owner_, bidAmount
-            );
+        // Update fee balances if non-zero
+        if (toReferrer > 0) rewards[referrer_][quoteToken_] += toReferrer;
+        if (toProtocol > 0) rewards[_protocol][quoteToken_] += toProtocol;
 
-            // Update referrer fee balances if non-zero and increment the total protocol fee
-            if (toReferrer > 0) {
-                rewards[bidReferrer][quoteToken_] += toReferrer;
-            }
-            totalProtocolFees += toProtocol;
-            totalFees += toReferrer + toProtocol;
-
-            // Increment total amount in
-            totalAmountIn += bidAmount;
-        }
-
-        // Update protocol fee if not zero
-        if (totalProtocolFees > 0) rewards[_protocol][quoteToken_] += totalProtocolFees;
-
-        totalAmountInLessFees = totalAmountIn - totalFees;
+        return toReferrer + toProtocol;
     }
 
     // ========== MODIFIERS ========== //
@@ -1355,7 +1372,7 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
     ///
     /// @param      lotId_  The lot ID
     function _revertIfLotInvalid(uint96 lotId_) internal view virtual {
-        if (lotData[lotId_].start == 0) revert Auction_InvalidLotId(lotId_);
+        if (lotId_ >= lotCounter) revert Auction_InvalidLotId(lotId_);
     }
 
     /// @notice     Checks that the lot represented by `lotId_` has not started
@@ -1388,49 +1405,22 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
     ///
     /// @param      lotId_  The lot ID
     function _revertIfLotActive(uint96 lotId_) internal view virtual {
-        if (isLive(lotId_)) revert Auction_MarketActive(lotId_);
+        if (
+            lotData[lotId_].status == AuctionStatus.Created
+                && lotData[lotId_].start <= block.timestamp
+                && lotData[lotId_].conclusion > block.timestamp
+        ) revert Auction_MarketActive(lotId_);
     }
-
-    function _revertIfLotNotSettled(uint96 lotId_) internal view virtual;
-
-    /// @notice     Checks that the lot and bid combination is valid
-    /// @dev        Should revert if the bid is invalid
-    ///             Inheriting contracts must override this to implement custom logic
-    ///
-    /// @param      lotId_  The lot ID
-    /// @param      bidId_  The bid ID
-    function _revertIfBidInvalid(uint96 lotId_, uint96 bidId_) internal view virtual;
-
-    /// @notice     Checks that `caller_` is the bid owner
-    /// @dev        Should revert if `caller_` is not the bid owner
-    ///             Inheriting contracts must override this to implement custom logic
-    ///
-    /// @param      lotId_      The lot ID
-    /// @param      bidId_      The bid ID
-    /// @param      caller_     The caller
-    function _revertIfNotBidOwner(
-        uint96 lotId_,
-        uint96 bidId_,
-        address caller_
-    ) internal view virtual;
-
-    /// @notice     Checks that the bid is not refunded
-    /// @dev        Should revert if the bid is refunded
-    ///             Inheriting contracts must override this to implement custom logic
-    ///
-    /// @param      lotId_      The lot ID
-    /// @param      bidId_      The bid ID
-    function _revertIfBidRefunded(uint96 lotId_, uint96 bidId_) internal view virtual;
 
     /// @notice     Checks that the lot represented by `lotId_` is active
     /// @dev        Should revert if the lot is not active
     ///             Inheriting contracts can override this to implement custom logic
     ///
     /// @param      lotId_  The lot ID
-    function _revertIfLotInactive(uint96 lotId_) internal view override {
+    function _revertIfLotInactive(uint96 lotId_) internal view {
         // Check that bids are allowed to be submitted for the lot
         if (
-            auctionData[lotId_].status != AuctionStatus.Created
+            lotData[lotId_].status != AuctionStatus.Created
                 || block.timestamp < lotData[lotId_].start
                 || block.timestamp >= lotData[lotId_].conclusion
         ) revert Auction_NotLive();
@@ -1439,7 +1429,7 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
     /// @notice     Reverts if the lot has already been decrypted
     function _revertIfLotDecrypted(uint96 lotId_) internal view {
         // Check that bids are allowed to be submitted for the lot
-        if (auctionData[lotId_].status == AuctionStatus.Decrypted) revert Auction_WrongState();
+        if (lotData[lotId_].status == AuctionStatus.Decrypted) revert Auction_WrongState();
     }
 
     /// @notice     Checks that the lot represented by `lotId_` is not settled
@@ -1447,9 +1437,9 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
     ///             Inheriting contracts must override this to implement custom logic
     ///
     /// @param      lotId_  The lot ID
-    function _revertIfLotSettled(uint96 lotId_) internal view override {
+    function _revertIfLotSettled(uint96 lotId_) internal view {
         // Auction must not be settled
-        if (auctionData[lotId_].status == AuctionStatus.Settled) {
+        if (lotData[lotId_].status == AuctionStatus.Settled) {
             revert Auction_WrongState();
         }
     }
@@ -1459,33 +1449,45 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
     ///             Inheriting contracts must override this to implement custom logic
     ///
     /// @param      lotId_  The lot ID
-    function _revertIfLotNotSettled(uint96 lotId_) internal view override {
+    function _revertIfLotNotSettled(uint96 lotId_) internal view {
         // Auction must be settled
-        if (auctionData[lotId_].status != AuctionStatus.Settled) {
+        if (lotData[lotId_].status != AuctionStatus.Settled) {
             revert Auction_WrongState();
         }
     }
 
-    /// @dev        Checks that the bid is valid
-    function _revertIfBidInvalid(uint96 lotId_, uint96 bidId_) internal view override {
+    /// @notice     Checks that the lot and bid combination is valid
+    /// @dev        Should revert if the bid is invalid
+    ///             Inheriting contracts must override this to implement custom logic
+    ///
+    /// @param      lotId_  The lot ID
+    /// @param      bidId_  The bid ID
+    function _revertIfBidInvalid(uint96 lotId_, uint96 bidId_) internal view {
         // Bid ID must be less than number of bids for lot
-        if (bidId_ >= auctionData[lotId_].nextBidId) revert Auction_InvalidBidId(lotId_, bidId_);
+        if (bidId_ >= bidData[lotId_].nextBidId) revert Auction_InvalidBidId(lotId_, bidId_);
     }
 
-    /// @dev        Checks that the sender is the bidder
-    function _revertIfNotBidOwner(
-        uint96 lotId_,
-        uint96 bidId_,
-        address bidder_
-    ) internal view override {
+    /// @notice     Checks that `caller_` is the bid owner
+    /// @dev        Should revert if `caller_` is not the bid owner
+    ///             Inheriting contracts must override this to implement custom logic
+    ///
+    /// @param      lotId_      The lot ID
+    /// @param      bidId_      The bid ID
+    /// @param      caller_     The caller
+    function _revertIfNotBidOwner(uint96 lotId_, uint64 bidId_, address caller_) internal view {
         // Check that sender is the bidder
-        if (bidder_ != lotEncryptedBids[lotId_][bidId_].bidder) revert Auction_NotBidder();
+        if (caller_ != bids[lotId_][bidId_].bidder) revert Auction_NotBidder();
     }
 
-    /// @dev        Checks that the bid is not already refunded
-    function _revertIfBidRefunded(uint96 lotId_, uint96 bidId_) internal view override {
+    /// @notice     Checks that the bid is not refunded
+    /// @dev        Should revert if the bid is refunded
+    ///             Inheriting contracts must override this to implement custom logic
+    ///
+    /// @param      lotId_      The lot ID
+    /// @param      bidId_      The bid ID
+    function _revertIfBidRefunded(uint96 lotId_, uint64 bidId_) internal view {
         // Bid must not be cancelled
-        if (lotEncryptedBids[lotId_][bidId_].status == BidStatus.Refunded) {
+        if (bids[lotId_][bidId_].status == BidStatus.Refunded) {
             revert Auction_AlreadyCancelled();
         }
     }
