@@ -8,7 +8,6 @@ import {Transfer} from "src/lib/Transfer.sol";
 import {MaxPriorityQueue, Queue, Bid as QueueBid} from "src/lib/MaxPriorityQueue.sol";
 import {ECIES, Point} from "src/lib/ECIES.sol";
 
-import {CondenserModule} from "src/modules/Condenser.sol";
 import {DerivativeModule} from "src/modules/Derivative.sol";
 
 import {
@@ -16,7 +15,6 @@ import {
     fromVeecode,
     Keycode,
     fromKeycode,
-    keycodeFromVeecode,
     WithModules,
     Module
 } from "src/modules/Modules.sol";
@@ -27,29 +25,6 @@ import {IAllowlist} from "src/interfaces/IAllowlist.sol";
 /// @title      Router
 /// @notice     An interface to define the routing of transactions to the appropriate auction module
 abstract contract Router {
-    // ========== DATA STRUCTURES ========== //
-
-    // /// @notice     Parameters used by the bid function
-    // /// @dev        This reduces the number of variables in scope for the bid function
-    // ///
-    // /// @param      lotId               Lot ID
-    // /// @param      referrer            Address of referrer
-    // /// @param      amount              Amount of quoteToken to purchase with (in native decimals)
-    // /// @param      encryptedAmountOut  Encrypted amount out
-    // /// @param      bidPubKey           Public key of the shared secret (used to encrypt the amount out)
-    // /// @param      auctionData         Custom data used by the auction module
-    // /// @param      allowlistProof      Proof of allowlist inclusion
-    // /// @param      permit2Data_        Permit2 approval for the quoteToken (abi-encoded Permit2Approval struct)
-    // struct BidParams {
-    //     uint96 lotId;
-    //     address referrer;
-    //     uint256 amount;
-    //     uint256 encryptedAmountOut;
-    //     Point bidPubKey;
-    //     bytes allowlistProof;
-    //     bytes permit2Data;
-    // }
-
     // ========== BATCH AUCTIONS ========== //
 
     /// @notice     Bid on a lot in a batch auction
@@ -70,12 +45,12 @@ abstract contract Router {
     ///  The contract expects the encryptedAmountOut and bidPubKey to be generated in a specific way:
     ///
     ///  Formatting the amount to encrypt:
-    ///  1. The amount is expected to be a uint96 padded to 16 bytes (128 bits). 
+    ///  1. The amount is expected to be a uint96 padded to 16 bytes (128 bits).
     ///  2. A random 128-bit seed should be generated to mask the actual value of the amount.
     ///  3. The value to encrypt should be subtracted from the seed.
     ///  4. The seed and the subtracted result should be concatenated to form the message for encryption.
     ///  We do this to avoid leading zero bytes in the plaintext, which would make it easier for an attacker to decrypt.
-    ///                                    
+    ///
     ///  Pseudo-code using Solidity types:
     ///  uint96 amountOut = {AMOUNT_OUT_TO_BID};
     ///  uint128 seed = RNG(); // some source of randomness
@@ -807,7 +782,13 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
         }
 
         // Check that the amount is greater than the minimum quote token bid size implied by the minimum price and minimum base token bid size
-        if (amount_ < ((lotData[lotId_].minBidSize * lotData[lotId_].minimumPrice) / 10 ** lotData[lotId_].baseTokenDecimals)) revert AmountLessThanMinimum();
+        if (
+            amount_
+                < (
+                    (lotData[lotId_].minBidSize * lotData[lotId_].minimumPrice)
+                        / 10 ** lotData[lotId_].baseTokenDecimals
+                )
+        ) revert AmountLessThanMinimum();
 
         // Check that the public key for the shared secret is a valid point on the alt_bn128 curve
         if (!ECIES.isOnBn128(bidPubKey_)) revert InvalidBid();

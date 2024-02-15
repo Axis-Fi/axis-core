@@ -13,7 +13,7 @@ struct Point {
 ///         As a result of the relative weakness of the symmetric encryption and key derivation function, we rely on the security of the elliptic curve to hide the shared secret.
 ///         Recent advances in attacks on the alt_bn128 curve have reduced the expected security of the curve to ~98 bits.
 ///         Therefore, this implementation should not be used to secure value directly. It can be used to secure data which, if compromised, would not be catastrophic.
-///         Inspired by: 
+///         Inspired by:
 ///         - https://cryptobook.nakov.com/asymmetric-key-ciphers/ecies-public-key-encryption
 ///         - https://billatnapier.medium.com/how-do-i-implement-symmetric-key-encryption-in-ethereum-14afffff6e42
 ///         - https://github.com/PhilippSchindler/EthDKG/blob/master/contracts/ETHDKG.sol
