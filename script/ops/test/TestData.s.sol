@@ -23,9 +23,9 @@ contract TestData is Script {
         vm.startBroadcast();
 
         // Deploy mock tokens
-        quoteToken = new MockERC20("DAI Stablecoin", "DAI", 18);
+        quoteToken = new MockERC20("Stormlight Orbs", "SLO", 18);
         console2.log("Quote token deployed at address: ", address(quoteToken));
-        baseToken = new MockERC20("Axis Token", "AXIS", 18);
+        baseToken = new MockERC20("Atium Beads", "ATUM", 18);
         console2.log("Base token deployed at address: ", address(baseToken));
 
         // Mint quote tokens to buyer
@@ -35,6 +35,12 @@ contract TestData is Script {
         baseToken.mint(seller, 1e24);
 
         vm.stopBroadcast();
+    }
+
+    function mintTestTokens(address token, address receiver) public {
+        // Mint tokens to address
+        vm.broadcast();
+        MockERC20(token).mint(receiver, 1e24);
     }
 
     function createAuction(bytes memory publicKey, address buyer) public returns (uint96) {
