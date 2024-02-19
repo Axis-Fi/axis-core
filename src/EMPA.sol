@@ -54,7 +54,11 @@ abstract contract Router {
     ///  Pseudo-code using Solidity types:
     ///  uint96 amountOut = {AMOUNT_OUT_TO_BID};
     ///  uint128 seed = RNG(); // some source of randomness
-    ///  uint256 message = uint256(abi.encodePacked(seed, seed - uint128(amountOut)));
+    ///  uint128 subtracted;
+    ///  unchecked { subtracted = seed - uint128(amountOut); }
+    ///  uint256 message = uint256(abi.encodePacked(seed, subtracted));
+    ///
+    ///  Note that the `subtracted` value relies on underflow to wrap around to a large number, which is why we use unchecked.
     ///
     ///  Then, the message should be encrypted as follows (off-chain):
     ///  1. Generate a value to serve as the bid private key
@@ -1077,11 +1081,19 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
 
     // =========== DECRYPTION =========== //
 
+    /// @notice         Submits the private key for the auction lot
+    ///                 It does not require gating, as only the auction owner will possess the matching private key
+    ///
+    /// @dev            This function reverts if:
+    ///                 - The lot ID is invalid
+    ///                 - The lot is not active
+    ///                 - The lot has not concluded
     function submitPrivateKey(uint96 lotId_, bytes32 privateKey_) external {
         // Validation
         _revertIfLotInvalid(lotId_);
         _revertIfLotActive(lotId_);
         _revertIfBeforeLotStart(lotId_);
+        // TODO lot has not concluded
 
         // Check that the private key is valid for the public key
         // We assume that all public keys are derived from the same generator: (1, 2)
