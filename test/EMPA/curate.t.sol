@@ -191,6 +191,7 @@ contract EmpaCurateTest is EmpaTest {
         EncryptedMarginalPriceAuction.Routing memory lotRouting = _getLotRouting(_lotId);
         assertEq(lotRouting.curator, _CURATOR);
         assertTrue(lotRouting.curated);
+        assertEq(lotRouting.curatorFee, _curatorMaxPotentialFee);
 
         // Maximum curator fee is transferred to the auction house
         assertEq(
@@ -222,6 +223,7 @@ contract EmpaCurateTest is EmpaTest {
         EncryptedMarginalPriceAuction.Routing memory lotRouting = _getLotRouting(_lotId);
         assertEq(lotRouting.curator, _CURATOR);
         assertTrue(lotRouting.curated);
+        assertEq(lotRouting.curatorFee, _curatorMaxPotentialFee);
 
         // Maximum curator fee is transferred to the auction house
         assertEq(
