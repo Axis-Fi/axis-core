@@ -257,49 +257,24 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
 
     // ========== ERRORS ========== //
 
-    // TODO consolidate errors
-
     error AmountLessThanMinimum();
-    error InvalidBidder(address bidder_);
     error Broken_Invariant();
     error InvalidParams();
-    error InvalidLotId(uint96 id_);
-    error InvalidState();
     error InvalidHook();
-    error InvalidBid();
-    error InvalidPrivateKey();
+
+    error Auction_InvalidId(uint96 id_);
+    error Auction_MarketActive(uint96 lotId);
+    error Auction_MarketNotActive(uint96 lotId);
+    error Auction_WrongState();
+
+    error Bid_InvalidId(uint96 lotId, uint96 bidId);
+    error Bid_AlreadyClaimed();
+    error Bid_InvalidPublicKey();
+    error Bid_InvalidPrivateKey();
+    error Bid_WrongState();
 
     /// @notice     Used when the caller is not permitted to perform that action
     error NotPermitted(address caller_);
-
-    error Auction_BidDoesNotExist();
-    error Auction_AlreadyCancelled();
-    error Auction_WrongState();
-    error Auction_NotLive();
-    error Auction_NotConcluded();
-    error Auction_InvalidDecrypt();
-    error Bid_WrongState();
-
-    error Auction_MarketNotActive(uint96 lotId);
-
-    error Auction_MarketActive(uint96 lotId);
-
-    error Auction_InvalidStart(uint48 start_, uint48 minimum_);
-
-    error Auction_InvalidDuration(uint48 duration_, uint48 minimum_);
-
-    error Auction_InvalidLotId(uint96 lotId);
-
-    error Auction_InvalidBidId(uint96 lotId, uint96 bidId);
-
-    error Auction_OnlyMarketOwner();
-    error Auction_AmountLessThanMinimum();
-    error Auction_NotEnoughCapacity();
-    error Auction_InvalidParams();
-    error Auction_NotAuthorized();
-    error Auction_NotImplemented();
-
-    error Auction_NotBidder();
 
     // ========= EVENTS ========= //
 
@@ -590,7 +565,7 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
         if (
             params_.minBidPercent < _MIN_BID_PERCENT || params_.minBidPercent > _ONE_HUNDRED_PERCENT
         ) {
-            revert Auction_InvalidParams();
+            revert InvalidParams();
         }
 
         // Create core market data
@@ -609,7 +584,7 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
         // Initialize bid data
 
         // publicKey must be a valid point on the alt_bn128 curve
-        if (!ECIES.isOnBn128(params_.publicKey)) revert Auction_InvalidParams();
+        if (!ECIES.isOnBn128(params_.publicKey)) revert InvalidParams();
 
         // Check that the public key is not the point whose private key is zero
         // TODO calculate actual X and Y coordinates for a zero private key
@@ -693,6 +668,8 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
             Transfer.transferFrom(
                 routing_.baseToken, msg.sender, address(this), params_.capacity, true
             );
+
+            // TODO check for fee on transfer
         }
 
         emit AuctionCreated(lotId, ipfsHash);
@@ -782,7 +759,7 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
 
         // Determine if the bidder is authorized to bid
         if (!_isAllowed(routing.allowlist, lotId_, msg.sender, allowlistProof_)) {
-            revert InvalidBidder(msg.sender);
+            revert NotPermitted(msg.sender);
         }
 
         // Check that the amount is greater than the minimum quote token bid size implied by the minimum price and minimum base token bid size
@@ -795,7 +772,7 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
         ) revert AmountLessThanMinimum();
 
         // Check that the public key for the shared secret is a valid point on the alt_bn128 curve
-        if (!ECIES.isOnBn128(bidPubKey_)) revert InvalidBid();
+        if (!ECIES.isOnBn128(bidPubKey_)) revert Bid_InvalidPublicKey();
 
         // Store bid data
         uint64 bidId = bidData[lotId_].nextBidId++;
@@ -1099,7 +1076,7 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
         // We assume that all public keys are derived from the same generator: (1, 2)
         Point memory calcPubKey = ECIES.calcPubKey(Point(1, 2), privateKey_);
         Point memory pubKey = bidData[lotId_].publicKey;
-        if (calcPubKey.x != pubKey.x || calcPubKey.y != pubKey.y) revert InvalidPrivateKey();
+        if (calcPubKey.x != pubKey.x || calcPubKey.y != pubKey.y) revert Bid_InvalidPrivateKey();
 
         // Store the private key
         bidData[lotId_].privateKey = privateKey_;
@@ -1252,7 +1229,7 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
         if (msg.sender != routing.curator) revert NotPermitted(msg.sender);
 
         // Check that the curator has not already approved the auction
-        if (routing.curated) revert InvalidState();
+        if (routing.curated) revert Auction_WrongState();
 
         // Check that the curator fee is set
         if (fees.curator[msg.sender] == 0) revert InvalidFee();
@@ -1423,7 +1400,7 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
     ///
     /// @param      lotId_  The lot ID
     function _revertIfLotInvalid(uint96 lotId_) internal view virtual {
-        if (lotId_ >= lotCounter) revert Auction_InvalidLotId(lotId_);
+        if (lotId_ >= lotCounter) revert Auction_InvalidId(lotId_);
     }
 
     /// @notice     Checks that the lot represented by `lotId_` has not started
@@ -1474,7 +1451,7 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
             lotData[lotId_].status != AuctionStatus.Created
                 || block.timestamp < lotData[lotId_].start
                 || block.timestamp >= lotData[lotId_].conclusion
-        ) revert Auction_NotLive();
+        ) revert Auction_MarketNotActive(lotId_);
     }
 
     /// @notice     Reverts if the lot has already been decrypted
@@ -1515,7 +1492,7 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
     /// @param      bidId_  The bid ID
     function _revertIfBidInvalid(uint96 lotId_, uint96 bidId_) internal view {
         // Bid ID must be less than number of bids for lot
-        if (bidId_ >= bidData[lotId_].nextBidId) revert Auction_InvalidBidId(lotId_, bidId_);
+        if (bidId_ >= bidData[lotId_].nextBidId) revert Bid_InvalidId(lotId_, bidId_);
     }
 
     /// @notice     Checks that `caller_` is the bid owner
@@ -1527,7 +1504,7 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
     /// @param      caller_     The caller
     function _revertIfNotBidOwner(uint96 lotId_, uint64 bidId_, address caller_) internal view {
         // Check that sender is the bidder
-        if (caller_ != bids[lotId_][bidId_].bidder) revert Auction_NotBidder();
+        if (caller_ != bids[lotId_][bidId_].bidder) revert NotPermitted(caller_);
     }
 
     /// @notice     Checks that the bid is not refunded/claimed already
@@ -1539,7 +1516,7 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
     function _revertIfBidClaimed(uint96 lotId_, uint64 bidId_) internal view {
         // Bid must not be cancelled
         if (bids[lotId_][bidId_].status == BidStatus.Claimed) {
-            revert Auction_AlreadyCancelled();
+            revert Bid_AlreadyClaimed();
         }
     }
 }
