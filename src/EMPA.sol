@@ -673,21 +673,23 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
     /// @dev        This function performs the following:
     ///             - Checks that the lot ID is valid
     ///             - Checks that caller is the auction owner
-    ///             - Calls the auction module to validate state, update records and determine the amount to be refunded
-    ///             - If prefunded, sends the refund of payout tokens to the owner
+    ///             - Updates records
+    ///             - Refunds any remaining base tokens to the owner
     ///
     ///             The function reverts if:
     ///             - The lot ID is invalid
     ///             - The caller is not the auction owner
-    ///             - The respective auction module reverts
     ///             - The transfer of payout tokens fails
     ///             - re-entrancy is detected
+    ///             - The auction lot has started
+    ///             - The auction lot has concluded
     ///
     /// @param      lotId_      ID of the auction lot
     function cancel(uint96 lotId_) external nonReentrant {
         // Validation
         _revertIfLotInvalid(lotId_);
-        _revertIfLotStarted(lotId_);
+        _revertIfLotActive(lotId_);
+        _revertIfLotConcluded(lotId_);
 
         Routing storage routing = lotRouting[lotId_];
 

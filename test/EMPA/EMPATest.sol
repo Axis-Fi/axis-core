@@ -17,7 +17,7 @@ import {MockEMPAHook} from "test/EMPA/mocks/MockEMPAHook.sol";
 // Auctions
 import {IHooks} from "src/interfaces/IHooks.sol";
 import {IAllowlist} from "src/interfaces/IAllowlist.sol";
-import {EncryptedMarginalPriceAuction} from "src/EMPA.sol";
+import {EncryptedMarginalPriceAuction, FeeManager} from "src/EMPA.sol";
 
 // Modules
 import {toKeycode, Veecode} from "src/modules/Modules.sol";
@@ -34,6 +34,9 @@ abstract contract EmpaTest is Test, Permit2User {
     address internal _auctionOwner = address(0x1);
     address internal immutable _PROTOCOL = address(0x2);
     address internal immutable _CURATOR = address(0x3);
+
+    uint24 internal constant _CURATOR_MAX_FEE = 100;
+    uint24 internal constant _CURATOR_FEE = 90;
 
     // Input to parameters
     uint48 internal _startTime;
@@ -88,6 +91,9 @@ abstract contract EmpaTest is Test, Permit2User {
             wrapDerivative: false,
             derivativeParams: abi.encode("")
         });
+
+        // Set the max curator fee
+        _auctionHouse.setFee(FeeManager.FeeType.MaxCurator, _CURATOR_MAX_FEE);
     }
 
     // ===== Modifiers ===== //
@@ -144,9 +150,9 @@ abstract contract EmpaTest is Test, Permit2User {
         _;
     }
 
-    modifier givenAuctionIsCreated() {
+    modifier givenLotIsCreated() {
         vm.prank(_auctionOwner);
-        _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
+        _lotId = _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
         _;
     }
 
@@ -160,6 +166,21 @@ abstract contract EmpaTest is Test, Permit2User {
     modifier givenOwnerHasBaseTokenBalance(uint256 amount_) {
         // Mint the amount to the owner
         _baseToken.mint(_auctionOwner, amount_);
+        _;
+    }
+
+    modifier givenCuratorIsSet() {
+        _routingParams.curator = _CURATOR;
+        _;
+    }
+
+    modifier givenCuratorHasApproved() {
+        // Set the curator fee
+        vm.prank(_CURATOR);
+        _auctionHouse.setCuratorFee(_CURATOR_FEE);
+
+        vm.prank(_CURATOR);
+        _auctionHouse.curate(_lotId);
         _;
     }
 
