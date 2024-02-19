@@ -4,7 +4,6 @@ pragma solidity 0.8.19;
 // Libraries
 import {Test} from "forge-std/Test.sol";
 import {ERC20} from "lib/solmate/src/tokens/ERC20.sol";
-import {Transfer} from "src/lib/Transfer.sol";
 import {Point, ECIES} from "src/lib/ECIES.sol";
 
 // Mocks
@@ -12,8 +11,8 @@ import {MockERC20} from "lib/solmate/src/test/utils/mocks/MockERC20.sol";
 import {MockFeeOnTransferERC20} from "test/lib/mocks/MockFeeOnTransferERC20.sol";
 import {MockDerivativeModule} from "test/modules/derivatives/mocks/MockDerivativeModule.sol";
 import {MockAllowlist} from "test/modules/Auction/MockAllowlist.sol";
-import {MockHook} from "test/modules/Auction/MockHook.sol";
 import {Permit2User} from "test/lib/permit2/Permit2User.sol";
+import {MockEMPAHook} from "test/EMPA/mocks/MockEMPAHook.sol";
 
 // Auctions
 import {IHooks} from "src/interfaces/IHooks.sol";
@@ -21,75 +20,67 @@ import {IAllowlist} from "src/interfaces/IAllowlist.sol";
 import {EncryptedMarginalPriceAuction} from "src/EMPA.sol";
 
 // Modules
-import {
-    Keycode,
-    toKeycode,
-    Veecode,
-    wrapVeecode,
-    fromVeecode,
-    WithModules,
-    Module
-} from "src/modules/Modules.sol";
+import {toKeycode, Veecode} from "src/modules/Modules.sol";
 
-abstract contract EMPATest is Test, Permit2User {
-    MockFeeOnTransferERC20 internal baseToken;
-    MockERC20 internal quoteToken;
-    MockDerivativeModule internal mockDerivativeModule;
-    MockAllowlist internal mockAllowlist;
-    MockHook internal mockHook;
+abstract contract EmpaTest is Test, Permit2User {
+    MockFeeOnTransferERC20 internal _baseToken;
+    MockERC20 internal _quoteToken;
+    MockDerivativeModule internal _mockDerivativeModule;
+    MockAllowlist internal _mockAllowlist;
+    MockEMPAHook internal _mockHook;
 
-    EncryptedMarginalPriceAuction internal auctionHouse;
+    EncryptedMarginalPriceAuction internal _auctionHouse;
 
-    address internal auctionOwner = address(0x1);
-    address internal immutable protocol = address(0x2);
-    address internal immutable curator = address(0x3);
+    address internal _auctionOwner = address(0x1);
+    address internal immutable _PROTOCOL = address(0x2);
+    address internal immutable _CURATOR = address(0x3);
 
     // Input to parameters
-    uint48 internal startTime;
-    uint48 internal duration = 1 days;
-    uint24 internal constant MIN_FILL_PERCENT = 1000;
-    uint24 internal constant MIN_BID_PERCENT = 100;
-    uint96 internal constant LOT_CAPACITY = 10e18;
-    uint96 internal constant MIN_PRICE = 2e18;
-    uint256 internal auctionPrivateKey;
-    Point internal auctionPublicKey;
-
-    string internal constant INFO_HASH = "info hash";
+    uint48 internal _startTime;
+    uint48 internal _duration = 1 days;
+    uint24 internal constant _MIN_FILL_PERCENT = 1000;
+    uint24 internal constant _MIN_BID_PERCENT = 100;
+    uint96 internal constant _LOT_CAPACITY = 10e18;
+    uint96 internal constant _MIN_PRICE = 2e18;
+    uint256 internal _auctionPrivateKey;
+    Point internal _auctionPublicKey;
+    string internal constant _INFO_HASH = "info hash";
 
     // Parameters
-    EncryptedMarginalPriceAuction.RoutingParams internal routingParams;
-    EncryptedMarginalPriceAuction.AuctionParams internal auctionParams;
+    EncryptedMarginalPriceAuction.RoutingParams internal _routingParams;
+    EncryptedMarginalPriceAuction.AuctionParams internal _auctionParams;
 
     // Outputs
-    uint96 internal lotId = type(uint96).max; // Set to max to ensure it's not a valid lot id
+    uint96 internal _lotId = type(uint96).max; // Set to max to ensure it's not a valid lot id
 
     function setUp() external {
-        baseToken = new MockFeeOnTransferERC20("Base Token", "BASE", 18);
-        quoteToken = new MockERC20("Quote Token", "QUOTE", 18);
+        _baseToken = new MockFeeOnTransferERC20("Base Token", "BASE", 18);
+        _quoteToken = new MockERC20("Quote Token", "QUOTE", 18);
 
-        auctionHouse = new EncryptedMarginalPriceAuction(address(this), protocol, _PERMIT2_ADDRESS);
-        mockDerivativeModule = new MockDerivativeModule(address(auctionHouse));
-        mockAllowlist = new MockAllowlist();
-        mockHook = new MockHook(address(quoteToken), address(baseToken));
+        _auctionHouse =
+            new EncryptedMarginalPriceAuction(address(this), _PROTOCOL, _PERMIT2_ADDRESS);
+        _mockDerivativeModule = new MockDerivativeModule(address(_auctionHouse));
+        _mockAllowlist = new MockAllowlist();
+        _mockHook = new MockEMPAHook(address(_quoteToken), address(_baseToken));
 
-        auctionPrivateKey = 112_233_445_566;
-        auctionPublicKey = ECIES.calcPubKey(Point(1, 2), bytes32(auctionPrivateKey));
-        startTime = uint48(block.timestamp) + 1;
+        _auctionPrivateKey = 112_233_445_566;
+        _auctionPublicKey = ECIES.calcPubKey(Point(1, 2), bytes32(_auctionPrivateKey));
+        _startTime = uint48(block.timestamp) + 1;
 
-        auctionParams = EncryptedMarginalPriceAuction.AuctionParams({
-            start: startTime,
-            duration: duration,
-            minFillPercent: MIN_FILL_PERCENT,
-            minBidPercent: MIN_BID_PERCENT,
-            capacity: LOT_CAPACITY,
-            minimumPrice: MIN_PRICE,
-            publicKey: auctionPublicKey
+        _auctionParams = EncryptedMarginalPriceAuction.AuctionParams({
+            start: _startTime,
+            duration: _duration,
+            minFillPercent: _MIN_FILL_PERCENT,
+            minBidPercent: _MIN_BID_PERCENT,
+            capacity: _LOT_CAPACITY,
+            minimumPrice: _MIN_PRICE,
+            publicKey: _auctionPublicKey
         });
 
-        routingParams = EncryptedMarginalPriceAuction.RoutingParams({
-            baseToken: baseToken,
-            quoteToken: quoteToken,
-            curator: curator,
+        _routingParams = EncryptedMarginalPriceAuction.RoutingParams({
+            baseToken: _baseToken,
+            quoteToken: _quoteToken,
+            curator: _CURATOR,
             hooks: IHooks(address(0)),
             allowlist: IAllowlist(address(0)),
             allowlistParams: abi.encode(""),
@@ -102,10 +93,10 @@ abstract contract EMPATest is Test, Permit2User {
     // ===== Modifiers ===== //
 
     function _setBaseTokenDecimals(uint8 decimals_) internal {
-        baseToken = new MockFeeOnTransferERC20("Base Token", "BASE", decimals_);
+        _baseToken = new MockFeeOnTransferERC20("Base Token", "BASE", decimals_);
 
         // Update routing params
-        routingParams.baseToken = baseToken;
+        _routingParams.baseToken = _baseToken;
     }
 
     modifier givenBaseTokenHasDecimals(uint8 decimals_) {
@@ -114,10 +105,10 @@ abstract contract EMPATest is Test, Permit2User {
     }
 
     function _setQuoteTokenDecimals(uint8 decimals_) internal {
-        quoteToken = new MockFeeOnTransferERC20("Quote Token", "QUOTE", decimals_);
+        _quoteToken = new MockFeeOnTransferERC20("Quote Token", "QUOTE", decimals_);
 
         // Update routing params
-        routingParams.quoteToken = quoteToken;
+        _routingParams.quoteToken = _quoteToken;
     }
 
     modifier givenQuoteTokenHasDecimals(uint8 decimals_) {
@@ -127,42 +118,48 @@ abstract contract EMPATest is Test, Permit2User {
 
     modifier whenAllowlistIsSet() {
         // Update routing params
-        routingParams.allowlist = mockAllowlist;
+        _routingParams.allowlist = _mockAllowlist;
         _;
     }
 
     modifier whenHooksIsSet() {
         // Update routing params
-        routingParams.hooks = mockHook;
+        _routingParams.hooks = _mockHook;
+        _;
+    }
+
+    modifier givenHookHasBaseTokenBalance(uint256 amount_) {
+        // Mint the amount to the hook
+        _baseToken.mint(address(_mockHook), amount_);
         _;
     }
 
     modifier whenDerivativeModuleIsInstalled() {
-        auctionHouse.installModule(mockDerivativeModule);
+        _auctionHouse.installModule(_mockDerivativeModule);
         _;
     }
 
     modifier whenDerivativeTypeIsSet() {
-        routingParams.derivativeType = toKeycode("DERV");
+        _routingParams.derivativeType = toKeycode("DERV");
         _;
     }
 
     modifier givenAuctionIsCreated() {
-        vm.prank(auctionOwner);
-        auctionHouse.auction(routingParams, auctionParams, INFO_HASH);
+        vm.prank(_auctionOwner);
+        _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
         _;
     }
 
     modifier givenOwnerHasBaseTokenAllowance(uint256 amount_) {
         // Approve the auction house
-        vm.prank(auctionOwner);
-        baseToken.approve(address(auctionHouse), amount_);
+        vm.prank(_auctionOwner);
+        _baseToken.approve(address(_auctionHouse), amount_);
         _;
     }
 
     modifier givenOwnerHasBaseTokenBalance(uint256 amount_) {
         // Mint the amount to the owner
-        baseToken.mint(auctionOwner, amount_);
+        _baseToken.mint(_auctionOwner, amount_);
         _;
     }
 
@@ -185,7 +182,7 @@ abstract contract EMPATest is Test, Permit2User {
             Veecode derivativeRef_,
             bool wrapDerivative_,
             bytes memory derivativeParams_
-        ) = auctionHouse.lotRouting(lotId_);
+        ) = _auctionHouse.lotRouting(lotId_);
 
         return EncryptedMarginalPriceAuction.Routing({
             owner: owner_,
@@ -202,7 +199,7 @@ abstract contract EMPATest is Test, Permit2User {
         });
     }
 
-    function _getLotData(uint96 lot_id)
+    function _getLotData(uint96 lotId_)
         internal
         view
         returns (EncryptedMarginalPriceAuction.Lot memory)
@@ -217,7 +214,7 @@ abstract contract EMPATest is Test, Permit2User {
             EncryptedMarginalPriceAuction.AuctionStatus status_,
             uint96 minFilled_,
             uint96 minBidSize_
-        ) = auctionHouse.lotData(lot_id);
+        ) = _auctionHouse.lotData(lotId_);
 
         return EncryptedMarginalPriceAuction.Lot({
             minimumPrice: minimumPrice_,
