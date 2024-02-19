@@ -481,9 +481,6 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
     /// @notice     Queue of decrypted bids for a lot (populated on decryption)
     mapping(uint96 lotId => Queue) public decryptedBids;
 
-    /// @notice     Mapping derivative references to the condenser that is used to pass data between them
-    mapping(Veecode derivativeRef => Veecode condenserRef) public condensers;
-
     // ========== CONSTRUCTOR ========== //
 
     constructor(
@@ -510,15 +507,12 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
 
     /// @notice     Creates a new auction lot
     /// @dev        The function reverts if:
-    ///             - The module for the auction type is not installed
-    ///             - The auction type is sunset
     ///             - The base token or quote token decimals are not within the required range
     ///             - Validation for the auction parameters fails
     ///             - The module for the optional specified derivative type is not installed
     ///             - Validation for the optional specified derivative type fails
     ///             - Registration for the optional allowlist fails
     ///             - The optional specified hooks contract is not a contract
-    ///             - The condenser module is not installed or is sunset
     ///             - re-entrancy is detected
     ///
     /// @param      routing_    Routing information for the auction lot
