@@ -8,8 +8,6 @@ import {EmpaTest} from "test/EMPA/EMPATest.sol";
 import {EncryptedMarginalPriceAuction} from "src/EMPA.sol";
 
 contract EmpaCancelAuctionTest is EmpaTest {
-    uint96 internal _curatorMaxPotentialFee;
-
     // cancel
     // [X] reverts if not the owner
     // [X] reverts if lot is not active
@@ -145,21 +143,7 @@ contract EmpaCancelAuctionTest is EmpaTest {
     //  [X] given a curator is set
     //   [X] given a curator has not yet approved
     //    [X] nothing happens
-    //   [X] given there have been purchases
-    //    [X] it refunds the remaining prefunded amount in payout tokens to the owner
     //   [X] it refunds the prefunded amount in payout tokens to the owner
-
-    modifier givenAuctionOwnerHasCuratorFeeBalance() {
-        _curatorMaxPotentialFee = _CURATOR_FEE * _LOT_CAPACITY / 1e5;
-
-        // Mint
-        _baseToken.mint(_auctionOwner, _curatorMaxPotentialFee);
-
-        // Approve spending
-        vm.prank(_auctionOwner);
-        _baseToken.approve(address(_auctionHouse), _curatorMaxPotentialFee);
-        _;
-    }
 
     function test_prefunded_givenCuratorIsSet()
         external
@@ -167,6 +151,9 @@ contract EmpaCancelAuctionTest is EmpaTest {
         givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenCuratorIsSet
         givenLotIsCreated
+        givenOwnerHasBaseTokenBalance(_curatorMaxPotentialFee)
+        givenOwnerHasBaseTokenAllowance(_curatorMaxPotentialFee)
+        givenCuratorFeeIsSet
     {
         // Balance before
         uint256 auctionOwnerBalanceBefore = _baseToken.balanceOf(_auctionOwner);
@@ -199,7 +186,9 @@ contract EmpaCancelAuctionTest is EmpaTest {
         givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenCuratorIsSet
         givenLotIsCreated
-        givenAuctionOwnerHasCuratorFeeBalance
+        givenOwnerHasBaseTokenBalance(_curatorMaxPotentialFee)
+        givenOwnerHasBaseTokenAllowance(_curatorMaxPotentialFee)
+        givenCuratorFeeIsSet
         givenCuratorHasApproved
     {
         // Balance before

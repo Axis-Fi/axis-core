@@ -35,8 +35,8 @@ abstract contract EmpaTest is Test, Permit2User {
     address internal immutable _PROTOCOL = address(0x2);
     address internal immutable _CURATOR = address(0x3);
 
-    uint24 internal constant _CURATOR_MAX_FEE = 100;
-    uint24 internal constant _CURATOR_FEE = 90;
+    uint24 internal constant _CURATOR_MAX_FEE_PERCENT = 100;
+    uint24 internal constant _CURATOR_FEE_PERCENT = 90;
 
     // Input to parameters
     uint48 internal _startTime;
@@ -48,6 +48,7 @@ abstract contract EmpaTest is Test, Permit2User {
     uint256 internal _auctionPrivateKey;
     Point internal _auctionPublicKey;
     string internal constant _INFO_HASH = "info hash";
+    uint96 internal _curatorMaxPotentialFee = _CURATOR_FEE_PERCENT * _LOT_CAPACITY / 1e5;
 
     // Parameters
     EncryptedMarginalPriceAuction.RoutingParams internal _routingParams;
@@ -93,7 +94,7 @@ abstract contract EmpaTest is Test, Permit2User {
         });
 
         // Set the max curator fee
-        _auctionHouse.setFee(FeeManager.FeeType.MaxCurator, _CURATOR_MAX_FEE);
+        _auctionHouse.setFee(FeeManager.FeeType.MaxCurator, _CURATOR_MAX_FEE_PERCENT);
     }
 
     // ===== Modifiers ===== //
@@ -174,11 +175,13 @@ abstract contract EmpaTest is Test, Permit2User {
         _;
     }
 
-    modifier givenCuratorHasApproved() {
-        // Set the curator fee
+    modifier givenCuratorFeeIsSet() {
         vm.prank(_CURATOR);
-        _auctionHouse.setCuratorFee(_CURATOR_FEE);
+        _auctionHouse.setCuratorFee(_CURATOR_FEE_PERCENT);
+        _;
+    }
 
+    modifier givenCuratorHasApproved() {
         vm.prank(_CURATOR);
         _auctionHouse.curate(_lotId);
         _;
