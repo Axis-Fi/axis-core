@@ -18,6 +18,7 @@ contract EmpaSubmitPrivateKeyTest is EmpaTest {
     // [X] when the private key does not match the public key
     //  [X] it reverts
     // [X] it stores the private key
+    // TODO add test cases for num of decrypts > 0
 
     function test_invalidLotId_reverts() external {
         bytes memory err =
