@@ -46,8 +46,9 @@ contract EmpaDecryptBidsTest is EmpaTest {
         givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenLotIsCreated
     {
-        bytes memory err =
-            abi.encodeWithSelector(EncryptedMarginalPriceAuction.Auction_WrongState.selector);
+        bytes memory err = abi.encodeWithSelector(
+            EncryptedMarginalPriceAuction.Auction_MarketNotActive.selector, _lotId
+        );
         vm.expectRevert(err);
 
         // Call the function
@@ -61,8 +62,9 @@ contract EmpaDecryptBidsTest is EmpaTest {
         givenLotIsCreated
         givenLotHasStarted
     {
-        bytes memory err =
-            abi.encodeWithSelector(EncryptedMarginalPriceAuction.Auction_WrongState.selector);
+        bytes memory err = abi.encodeWithSelector(
+            EncryptedMarginalPriceAuction.Auction_MarketActive.selector, _lotId
+        );
         vm.expectRevert(err);
 
         // Call the function
