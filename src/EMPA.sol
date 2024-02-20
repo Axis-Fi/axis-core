@@ -263,7 +263,7 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
     error InvalidHook();
 
     error Auction_InvalidId(uint96 id_);
-    error Auction_MarketActive(uint96 lotId);
+    error Auction_MarketActive(uint96 lotId); // TODO consider removing these two
     error Auction_MarketNotActive(uint96 lotId);
     error Auction_WrongState();
 
@@ -1108,22 +1108,21 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
     /// @param          lotId_          The lot ID of the auction to decrypt bids for
     /// @param          num_            The number of bids to decrypt. Reduced to the number remaining if greater.
     function decryptAndSortBids(uint96 lotId_, uint64 num_) external {
-        // TODO check that the private key has been provided before trying to decrypt.
-        // Perhaps create an internal function that does this logic that can also be called when
-        // the private key is initially provided, then do the additional checks and call here as well.
-
         // Check that lotId is valid
         _revertIfLotInvalid(lotId_);
+        _revertIfBeforeLotStart(lotId_);
+        _revertIfLotActive(lotId_);
 
-        // Check that auction is in the right state for decryption
-        if (
-            lotData[lotId_].status != AuctionStatus.Created
-                || block.timestamp < lotData[lotId_].conclusion
-        ) revert Auction_WrongState();
+        // Revert if already decrypted
+        if (lotData[lotId_].status != AuctionStatus.Created) revert Auction_WrongState();
+
+        // Revert if the private key has not been provided
+        BidData storage lotBidData = bidData[lotId_];
+        if (lotBidData.privateKey == 0) revert Auction_WrongState();
 
         // Load next decrypt index and private key
-        uint64 nextDecryptIndex = bidData[lotId_].nextDecryptIndex;
-        bytes32 privateKey = bidData[lotId_].privateKey;
+        uint64 nextDecryptIndex = lotBidData.nextDecryptIndex;
+        bytes32 privateKey = lotBidData.privateKey;
 
         // Check that the number of decrypts is less than or equal to the number of bids remaining to be decrypted
         // If so, reduce to the number remaining
@@ -1149,7 +1148,7 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
             Bid storage _bid = bids[lotId_][bidId];
             if (amountOut >= minBidSize) {
                 // Store the decrypt in the sorted bid queue
-                decryptedBids[lotId_].insert(bidId, _bid.amount, uint96(amountOut));
+                decryptedBids[lotId_].insert(bidId, _bid.amount, amountOut);
             }
 
             // Set bid status to decrypted and the min amount out

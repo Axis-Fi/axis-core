@@ -64,6 +64,7 @@ abstract contract EmpaTest is Test, Permit2User {
     Point internal _auctionPublicKey;
     string internal constant _INFO_HASH = "info hash";
     uint96 internal _curatorMaxPotentialFee = _CURATOR_FEE_PERCENT * _LOT_CAPACITY / 1e5;
+    uint96 internal _minBidSize = _LOT_CAPACITY * _MIN_BID_PERCENT / 1e5;
 
     // Parameters
     EncryptedMarginalPriceAuction.RoutingParams internal _routingParams;
@@ -227,7 +228,36 @@ abstract contract EmpaTest is Test, Permit2User {
         _;
     }
 
+    function _createBid(uint96 amountIn_, uint96 amountOut_) internal {
+        // Mint quote tokens to the bidder
+        _quoteToken.mint(_bidder, amountIn_);
+
+        // Approve spending
+        vm.prank(_bidder);
+        _quoteToken.approve(address(_auctionHouse), amountIn_);
+
+        // Prepare amount out
+        _encryptedBidAmountOut = _encryptBid(_lotId, _bidder, amountIn_, amountOut_);
+
+        // Bid
+        vm.prank(_bidder);
+        _bidId = _auctionHouse.bid(
+            _lotId,
+            _REFERRER,
+            amountIn_,
+            _encryptedBidAmountOut,
+            _bidPublicKey,
+            bytes(""),
+            bytes("")
+        );
+    }
+
     modifier givenBidIsCreated(uint96 amountIn_, uint96 amountOut_) {
+        _createBid(amountIn_, amountOut_);
+        _;
+    }
+
+    modifier givenLargeBidIsCreated(uint96 amountIn_, uint128 amountOut_) {
         // Mint quote tokens to the bidder
         _quoteToken.mint(_bidder, amountIn_);
 
@@ -263,8 +293,12 @@ abstract contract EmpaTest is Test, Permit2User {
         _;
     }
 
-    modifier givenPrivateKeyIsSubmitted() {
+    function _submitPrivateKey() internal {
         _auctionHouse.submitPrivateKey(_lotId, bytes32(_auctionPrivateKey));
+    }
+
+    modifier givenPrivateKeyIsSubmitted() {
+        _submitPrivateKey();
         _;
     }
 
@@ -281,8 +315,12 @@ abstract contract EmpaTest is Test, Permit2User {
         _;
     }
 
-    modifier givenLotHasConcluded() {
+    function _concludeLot() internal {
         vm.warp(_startTime + _duration + 1);
+    }
+
+    modifier givenLotHasConcluded() {
+        _concludeLot();
         _;
     }
 
@@ -347,13 +385,7 @@ abstract contract EmpaTest is Test, Permit2User {
 
     // ===== Helper Functions ===== //
 
-    function _encryptBid(
-        uint96 lotId_,
-        address bidder_,
-        uint96 amountIn_,
-        uint96 amountOut_
-    ) internal view returns (uint256) {
-        // Format the amount out
+    function _formatBid(uint128 amountOut_) internal pure returns (uint256) {
         uint256 formattedAmountOut;
         {
             uint128 subtracted;
@@ -362,7 +394,18 @@ abstract contract EmpaTest is Test, Permit2User {
             }
             formattedAmountOut = uint256(bytes32(abi.encodePacked(_BID_SEED, subtracted)));
         }
-        console2.log("formattedAmountOut", formattedAmountOut);
+
+        return formattedAmountOut;
+    }
+
+    function _encryptBid(
+        uint96 lotId_,
+        address bidder_,
+        uint96 amountIn_,
+        uint128 amountOut_
+    ) internal view returns (uint256) {
+        // Format the amount out
+        uint256 formattedAmountOut = _formatBid(amountOut_);
 
         Point memory sharedSecretKey = ECIES.calcPubKey(_bidPublicKey, bytes32(_auctionPrivateKey));
         bytes32 salt = keccak256(abi.encodePacked(lotId_, bidder_, amountIn_));
