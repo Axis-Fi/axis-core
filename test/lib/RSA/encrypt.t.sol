@@ -64,7 +64,7 @@ contract RSAOAEPTest is Test {
 
 contract RSAOAEP_FFITest is Test {
     bytes internal constant E = abi.encodePacked(uint24(65_537));
-    string internal constant executable = "./rsa-cli/target/debug/rsa-cli";
+    string internal constant executable = "./crates/rsa-cli/target/debug/rsa-cli";
 
     function setUp() external {}
 

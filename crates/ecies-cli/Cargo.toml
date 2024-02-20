@@ -1,0 +1,15 @@
+[package]
+name = "ecies-cli"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.73"
+authors = ["Axis"]
+
+[dependencies]
+ark-bn254 = "0.4.0"
+ark-ec = "0.4.0"
+ark-ff = "0.4.0"
+clap = { version = "^4.2.5", features = ["derive"] }
+ethers = "^2.0"
+num-bigint = "0.4"
+rand = "0.8.5"
