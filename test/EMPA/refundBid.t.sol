@@ -5,7 +5,7 @@ import {EmpaTest} from "test/EMPA/EMPATest.sol";
 
 import {EncryptedMarginalPriceAuction} from "src/EMPA.sol";
 
-contract EmpaSetFeeTest is EmpaTest {
+contract EmpaRefundBidTest is EmpaTest {
     uint96 internal constant _BID_AMOUNT = 1e18;
     uint96 internal constant _BID_AMOUNT_OUT = 2e18;
 

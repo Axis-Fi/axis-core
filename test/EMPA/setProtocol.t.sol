@@ -3,7 +3,7 @@ pragma solidity 0.8.19;
 
 import {EmpaTest} from "test/EMPA/EMPATest.sol";
 
-contract EmpaSetFeeTest is EmpaTest {
+contract EmpaSetProtocolTest is EmpaTest {
     address internal immutable _NEW_PROTOCOL = address(0x7);
 
     uint24 internal constant _PROTOCOL_FEE_PERCENT = 100;
