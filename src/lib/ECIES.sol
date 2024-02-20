@@ -17,6 +17,7 @@ struct Point {
 ///         - https://cryptobook.nakov.com/asymmetric-key-ciphers/ecies-public-key-encryption
 ///         - https://billatnapier.medium.com/how-do-i-implement-symmetric-key-encryption-in-ethereum-14afffff6e42
 ///         - https://github.com/PhilippSchindler/EthDKG/blob/master/contracts/ETHDKG.sol
+///         This library assumes the curve used is y^2 = x^3 + 3, which has generator point (1, 2).
 /// @author Oighty
 library ECIES {
     uint256 constant GROUP_ORDER =
@@ -85,7 +86,7 @@ library ECIES {
     /// @notice Checks whether a point is on the alt_bn128 curve.
     /// @param  p - The point to check (consists of x and y coordinates).
     function isOnBn128(Point memory p) public pure returns (bool) {
-        // check if the provided point is on the bn128 curve (y**2 = x**3 + 3)
+        // check if the provided point is on the bn128 curve y**2 = x**3 + 3, which has generator point (1, 2)
         return _fieldmul(p.y, p.y) == _fieldadd(_fieldmul(p.x, _fieldmul(p.x, p.x)), 3);
     }
 

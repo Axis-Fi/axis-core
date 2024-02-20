@@ -577,13 +577,14 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
 
         // Initialize bid data
 
-        // publicKey must be a valid point on the alt_bn128 curve
-        // TODO check that the public key is created from the (1,2) generator point?
+        // publicKey must be a valid point on the alt_bn128 curve with generator point (1, 2)
         if (!ECIES.isOnBn128(params_.publicKey)) revert InvalidParams();
 
-        // Check that the public key is not the point whose private key is zero
-        // TODO calculate actual X and Y coordinates for a zero private key
-        if (params_.publicKey.x == 0 && params_.publicKey.y == 0) {
+        // Check that the public key is not the generator point (i.e. private key is zero) or the point at infinity
+        if (
+            (params_.publicKey.x == 1 && params_.publicKey.y == 2)
+                || (params_.publicKey.x == 0 && params_.publicKey.y == 0)
+        ) {
             revert InvalidParams();
         }
 
@@ -1066,15 +1067,16 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
 
     // =========== DECRYPTION =========== //
 
-    /// @notice         Submits the private key for the auction lot
-    ///                 It does not require gating, as only the auction owner will possess the matching private key
+    /// @notice         Submits the private key for the auction lot and decrypts an initial number of bids
+    ///                 It does not require gating. If the owner wishes to limit who can call, they can simply not reveal the key to anyone else.
+    ///                 On the other hand, if a key management service is used, then anyone can call it once the key is revealed.
     ///
     /// @dev            This function reverts if:
     ///                 - The lot ID is invalid
     ///                 - The lot is not active
     ///                 - The lot has not concluded
     ///                 - The private key has already been submitted
-    function submitPrivateKey(uint96 lotId_, bytes32 privateKey_) external {
+    function submitPrivateKey(uint96 lotId_, bytes32 privateKey_, uint64 num_) external {
         // Validation
         _revertIfLotInvalid(lotId_);
         _revertIfLotActive(lotId_);
@@ -1091,6 +1093,9 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
 
         // Store the private key
         bidData[lotId_].privateKey = privateKey_;
+
+        // Decrypt and sort bids
+        _decryptAndSortBids(lotId_, num_);
     }
 
     /// @notice         Decrypts a batch of bids and sorts them by price in descending order
@@ -1123,14 +1128,18 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
         _revertIfBeforeLotStart(lotId_);
         _revertIfLotActive(lotId_);
 
-        // Revert if already decrypted
-        if (lotData[lotId_].status != AuctionStatus.Created) revert Auction_WrongState();
+        // Revert if already decrypted or if the private key has not been provided
+        if (lotData[lotId_].status != AuctionStatus.Created || bidData[lotId_].privateKey == 0) {
+            revert Auction_WrongState();
+        }
 
-        // Revert if the private key has not been provided
-        BidData storage lotBidData = bidData[lotId_];
-        if (lotBidData.privateKey == 0) revert Auction_WrongState();
+        // Decrypt and sort bids
+        _decryptAndSortBids(lotId_, num_);
+    }
 
+    function _decryptAndSortBids(uint96 lotId_, uint64 num_) internal {
         // Load next decrypt index and private key
+        BidData storage lotBidData = bidData[lotId_];
         uint64 nextDecryptIndex = lotBidData.nextDecryptIndex;
         bytes32 privateKey = lotBidData.privateKey;
 
