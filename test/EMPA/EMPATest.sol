@@ -294,7 +294,7 @@ abstract contract EmpaTest is Test, Permit2User {
     }
 
     function _submitPrivateKey() internal {
-        _auctionHouse.submitPrivateKey(_lotId, bytes32(_auctionPrivateKey));
+        _auctionHouse.submitPrivateKey(_lotId, bytes32(_auctionPrivateKey), 0);
     }
 
     modifier givenPrivateKeyIsSubmitted() {
