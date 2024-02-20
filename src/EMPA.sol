@@ -762,7 +762,7 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
         if (
             amount_
                 < (
-                    (lotData[lotId_].minBidSize * lotData[lotId_].minimumPrice)
+                    (uint256(lotData[lotId_].minBidSize) * uint256(lotData[lotId_].minimumPrice))
                         / 10 ** lotData[lotId_].baseTokenDecimals
                 )
         ) revert AmountLessThanMinimum();
@@ -878,6 +878,8 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
         uint96 capacity = lotData[lotId_].capacity;
         uint96 baseScale = uint96(10 ** lotData[lotId_].baseTokenDecimals); // We know this is true, since baseTokenDecimals is 6-18
         uint96 minimumPrice = lotData[lotId_].minimumPrice;
+
+        // TODO review uint96/uint256 types for overflow
 
         // Iterate over bid queue (sorted in descending price) to calculate the marginal clearing price of the auction
         uint96 marginalPrice;
@@ -1192,7 +1194,13 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
         // relative to the random number.
         // After decryption, we can combine them again and get the amount out
         bytes memory messageBytes = abi.encodePacked(message);
-        (uint128 rand, uint128 subtracted) = abi.decode(messageBytes, (uint128, uint128));
+
+        uint128 rand;
+        uint128 subtracted;
+        assembly {
+            rand := mload(add(messageBytes, 16))
+            subtracted := mload(add(messageBytes, 32))
+        }
 
         // We want to allow underflow here
         unchecked {

@@ -5,6 +5,7 @@ pragma solidity 0.8.19;
 import {Test} from "forge-std/Test.sol";
 import {ERC20} from "lib/solmate/src/tokens/ERC20.sol";
 import {Point, ECIES} from "src/lib/ECIES.sol";
+import {Transfer} from "src/lib/Transfer.sol";
 
 // Mocks
 import {MockERC20} from "lib/solmate/src/test/utils/mocks/MockERC20.sol";
@@ -22,6 +23,8 @@ import {EncryptedMarginalPriceAuction, FeeManager} from "src/EMPA.sol";
 // Modules
 import {toKeycode, Veecode} from "src/modules/Modules.sol";
 
+import {console2} from "forge-std/console2.sol";
+
 abstract contract EmpaTest is Test, Permit2User {
     MockFeeOnTransferERC20 internal _baseToken;
     MockERC20 internal _quoteToken;
@@ -34,9 +37,11 @@ abstract contract EmpaTest is Test, Permit2User {
     address internal _auctionOwner = address(0x1);
     address internal immutable _PROTOCOL = address(0x2);
     address internal immutable _CURATOR = address(0x3);
-    address internal immutable _BIDDER = address(0x4);
     address internal immutable _RECIPIENT = address(0x5);
     address internal immutable _REFERRER = address(0x6);
+
+    address internal _bidder = address(0x4);
+    uint256 internal _bidderKey;
 
     uint24 internal constant _CURATOR_MAX_FEE_PERCENT = 100;
     uint24 internal constant _CURATOR_FEE_PERCENT = 90;
@@ -44,6 +49,9 @@ abstract contract EmpaTest is Test, Permit2User {
     uint128 internal constant _BID_SEED = 123_456;
     uint256 internal constant _BID_PRIVATE_KEY = 112_233_445_566_778;
     Point internal _bidPublicKey;
+
+    uint24 internal constant _PROTOCOL_FEE = 100;
+    uint24 internal constant _REFERRER_FEE = 105;
 
     // Input to parameters
     uint48 internal _startTime;
@@ -60,11 +68,18 @@ abstract contract EmpaTest is Test, Permit2User {
     // Parameters
     EncryptedMarginalPriceAuction.RoutingParams internal _routingParams;
     EncryptedMarginalPriceAuction.AuctionParams internal _auctionParams;
+    bytes internal _allowlistProof;
+    bytes internal _permit2Data;
+    uint256 internal _encryptedBidAmountOut;
 
     // Outputs
     uint96 internal _lotId = type(uint96).max; // Set to max to ensure it's not a valid lot id
+    uint64 internal _bidId = type(uint64).max; // Set to max to ensure it's not a valid bid id
 
     function setUp() external {
+        // Set block timestamp
+        vm.warp(1_000_000);
+
         _baseToken = new MockFeeOnTransferERC20("Base Token", "BASE", 18);
         _quoteToken = new MockERC20("Quote Token", "QUOTE", 18);
 
@@ -105,6 +120,8 @@ abstract contract EmpaTest is Test, Permit2User {
 
         // Bids
         _bidPublicKey = ECIES.calcPubKey(Point(1, 2), bytes32(_BID_PRIVATE_KEY));
+        _bidderKey = _getRandomUint256();
+        _bidder = vm.addr(_bidderKey);
     }
 
     // ===== Modifiers ===== //
@@ -180,6 +197,19 @@ abstract contract EmpaTest is Test, Permit2User {
         _;
     }
 
+    modifier givenBidderHasQuoteTokenBalance(uint256 amount_) {
+        // Mint the amount to the bidder
+        _quoteToken.mint(_bidder, amount_);
+        _;
+    }
+
+    modifier givenBidderHasQuoteTokenAllowance(uint256 amount_) {
+        // Approve the auction house
+        vm.prank(_bidder);
+        _quoteToken.approve(address(_auctionHouse), amount_);
+        _;
+    }
+
     modifier givenCuratorIsSet() {
         _routingParams.curator = _CURATOR;
         _;
@@ -199,20 +229,31 @@ abstract contract EmpaTest is Test, Permit2User {
 
     modifier givenBidIsCreated(uint96 amountIn_, uint96 amountOut_) {
         // Mint quote tokens to the bidder
-        _quoteToken.mint(_BIDDER, amountIn_);
+        _quoteToken.mint(_bidder, amountIn_);
 
         // Approve spending
-        vm.prank(_BIDDER);
+        vm.prank(_bidder);
         _quoteToken.approve(address(_auctionHouse), amountIn_);
 
         // Prepare amount out
-        uint256 encryptedAmountOut = _encryptBid(_lotId, _BIDDER, amountIn_, amountOut_);
+        _encryptedBidAmountOut = _encryptBid(_lotId, _bidder, amountIn_, amountOut_);
 
         // Bid
-        vm.prank(_BIDDER);
+        vm.prank(_bidder);
         _auctionHouse.bid(
-            _lotId, _REFERRER, amountIn_, encryptedAmountOut, _bidPublicKey, bytes(""), bytes("")
+            _lotId,
+            _REFERRER,
+            amountIn_,
+            _encryptedBidAmountOut,
+            _bidPublicKey,
+            bytes(""),
+            bytes("")
         );
+        _;
+    }
+
+    modifier whenBidAmountOutIsEncrypted(uint96 amountIn_, uint96 amountOut_) {
+        _encryptedBidAmountOut = _encryptBid(_lotId, _bidder, amountIn_, amountOut_);
         _;
     }
 
@@ -225,7 +266,7 @@ abstract contract EmpaTest is Test, Permit2User {
         // Get the number of bids
         EncryptedMarginalPriceAuction.BidData memory bidData = _getBidData(_lotId);
 
-        _auctionHouse.decryptAndSortBids(_lotId, bidData.nextBidId);
+        _auctionHouse.decryptAndSortBids(_lotId, bidData.nextBidId - 1);
         _;
     }
 
@@ -250,6 +291,54 @@ abstract contract EmpaTest is Test, Permit2User {
         _;
     }
 
+    modifier whenLotIdIsInvalid() {
+        _lotId = 255;
+        _;
+    }
+
+    modifier givenLotHasAllowlist() {
+        _routingParams.allowlist = _mockAllowlist;
+        _;
+    }
+
+    modifier givenBidderIsOnAllowlist(address bidder_, bytes memory proof_) {
+        _mockAllowlist.setAllowedWithProof(bidder_, proof_, true);
+        _;
+    }
+
+    modifier whenAllowlistProofIsIncorrect() {
+        _allowlistProof = abi.encodePacked("incorrect proof");
+        _;
+    }
+
+    modifier whenPermit2ApprovalIsProvided(uint96 amountIn_) {
+        // Approve the Permit2 contract to spend the quote token
+        vm.prank(_bidder);
+        _quoteToken.approve(_PERMIT2_ADDRESS, type(uint256).max);
+
+        // Set up the Permit2 approval
+        uint48 deadline = uint48(block.timestamp);
+        uint256 nonce = _getRandomUint256();
+        bytes memory signature = _signPermit(
+            address(_quoteToken), amountIn_, nonce, deadline, address(_auctionHouse), _bidderKey
+        );
+
+        Transfer.Permit2Approval memory _permit2Approval =
+            Transfer.Permit2Approval({deadline: deadline, nonce: nonce, signature: signature});
+        _permit2Data = abi.encode(_permit2Approval);
+        _;
+    }
+
+    modifier givenProtocolFeeIsSet(uint24 fee_) {
+        _auctionHouse.setFee(FeeManager.FeeType.Protocol, fee_);
+        _;
+    }
+
+    modifier givenReferrerFeeIsSet(uint24 fee_) {
+        _auctionHouse.setFee(FeeManager.FeeType.Referrer, fee_);
+        _;
+    }
+
     // ===== Helper Functions ===== //
 
     function _encryptBid(
@@ -265,8 +354,9 @@ abstract contract EmpaTest is Test, Permit2User {
             unchecked {
                 subtracted = _BID_SEED - amountOut_;
             }
-            formattedAmountOut = uint256(keccak256(abi.encodePacked(_BID_SEED, subtracted)));
+            formattedAmountOut = uint256(bytes32(abi.encodePacked(_BID_SEED, subtracted)));
         }
+        console2.log("formattedAmountOut", formattedAmountOut);
 
         Point memory sharedSecretKey = ECIES.calcPubKey(_bidPublicKey, bytes32(_auctionPrivateKey));
         bytes32 salt = keccak256(abi.encodePacked(lotId_, bidder_, amountIn_));
@@ -359,6 +449,27 @@ abstract contract EmpaTest is Test, Permit2User {
             publicKey: publicKey,
             privateKey: privateKey,
             bidIds: new uint64[](0)
+        });
+    }
+
+    function _getBid(
+        uint96 lotId_,
+        uint64 bidId_
+    ) internal view returns (EncryptedMarginalPriceAuction.Bid memory) {
+        (
+            address bidder,
+            uint96 amountIn,
+            uint96 minAmountOut,
+            address referrer,
+            EncryptedMarginalPriceAuction.BidStatus status
+        ) = _auctionHouse.bids(lotId_, bidId_);
+
+        return EncryptedMarginalPriceAuction.Bid({
+            bidder: bidder,
+            amount: amountIn,
+            minAmountOut: minAmountOut,
+            referrer: referrer,
+            status: status
         });
     }
 }

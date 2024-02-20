@@ -3,10 +3,8 @@ pragma solidity 0.8.19;
 
 import {EmpaTest} from "test/EMPA/EMPATest.sol";
 
-import {FeeManager} from "src/EMPA.sol";
-
 contract EmpaSetFeeTest is EmpaTest {
-    address internal immutable newProtocol = address(0x7);
+    address internal immutable _NEW_PROTOCOL = address(0x7);
 
     uint24 internal constant _PROTOCOL_FEE_PERCENT = 100;
 
@@ -17,11 +15,6 @@ contract EmpaSetFeeTest is EmpaTest {
 
     modifier givenProtocolAddressIsSet(address protocol_) {
         _auctionHouse.setProtocol(protocol_);
-        _;
-    }
-
-    modifier givenProtocolFeeIsSet(uint24 fee_) {
-        _auctionHouse.setFee(FeeManager.FeeType.Protocol, fee_);
         _;
     }
 
@@ -36,34 +29,36 @@ contract EmpaSetFeeTest is EmpaTest {
         vm.expectRevert("UNAUTHORIZED");
 
         // Call
-        vm.prank(_BIDDER);
-        _auctionHouse.setProtocol(newProtocol);
+        vm.prank(_bidder);
+        _auctionHouse.setProtocol(_NEW_PROTOCOL);
     }
 
     function test_whenAddressIsNew()
         public
         givenProtocolFeeIsSet(_PROTOCOL_FEE_PERCENT)
-        givenProtocolAddressIsSet(newProtocol)
+        givenProtocolAddressIsSet(_NEW_PROTOCOL)
         givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
         givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenLotIsCreated
         givenLotHasStarted
         givenBidIsCreated(_AMOUNT_IN, 1e18)
+        givenLotHasConcluded
+        givenPrivateKeyIsSubmitted
         givenLotIsDecrypted
         givenLotIsSettled
     {
         // Previous balance
-        uint256 previousBalance = _quoteToken.balanceOf(newProtocol);
+        uint256 previousBalance = _quoteToken.balanceOf(_NEW_PROTOCOL);
 
         // Claim rewards
         // As the protocol address is private, we cannot check that it was changed. But we can check that rewards were accrued.
-        vm.prank(newProtocol);
+        vm.prank(_NEW_PROTOCOL);
         _auctionHouse.claimRewards(address(_quoteToken));
 
         // Check new balance
-        assertEq(_quoteToken.balanceOf(newProtocol), previousBalance + _amountInProtocolFee);
+        assertEq(_quoteToken.balanceOf(_NEW_PROTOCOL), previousBalance + _amountInProtocolFee);
 
         // Check rewards
-        assertEq(_auctionHouse.rewards(newProtocol, _quoteToken), 0);
+        assertEq(_auctionHouse.rewards(_NEW_PROTOCOL, _quoteToken), 0);
     }
 }
