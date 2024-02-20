@@ -1,0 +1,112 @@
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity 0.8.19;
+
+// Libraries
+import {EmpaTest} from "test/EMPA/EMPATest.sol";
+
+import {EncryptedMarginalPriceAuction} from "src/EMPA.sol";
+
+contract EmpaSubmitPrivateKeyTest is EmpaTest {
+    // [X] when the lot id is invalid
+    //  [X] it reverts
+    // [X] given the lot has not started
+    //  [X] it reverts
+    // [X] given the lot has started
+    //  [X] it reverts
+    // [X] given a private key has already been submitted
+    //  [X] it reverts
+    // [X] when the private key does not match the public key
+    //  [X] it reverts
+    // [X] it stores the private key
+
+    function test_invalidLotId_reverts() external {
+        bytes memory err =
+            abi.encodeWithSelector(EncryptedMarginalPriceAuction.Auction_InvalidId.selector, _lotId);
+        vm.expectRevert(err);
+
+        // Call the function
+        vm.prank(_bidder);
+        _auctionHouse.submitPrivateKey(_lotId, bytes32(_auctionPrivateKey));
+    }
+
+    function test_lotNotStarted_reverts()
+        external
+        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenLotIsCreated
+    {
+        bytes memory err = abi.encodeWithSelector(
+            EncryptedMarginalPriceAuction.Auction_MarketNotActive.selector, _lotId
+        );
+        vm.expectRevert(err);
+
+        // Call the function
+        _auctionHouse.submitPrivateKey(_lotId, bytes32(_auctionPrivateKey));
+    }
+
+    function test_lotStarted_reverts()
+        external
+        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenLotIsCreated
+        givenLotHasStarted
+    {
+        bytes memory err = abi.encodeWithSelector(
+            EncryptedMarginalPriceAuction.Auction_MarketActive.selector, _lotId
+        );
+        vm.expectRevert(err);
+
+        // Call the function
+        _auctionHouse.submitPrivateKey(_lotId, bytes32(_auctionPrivateKey));
+    }
+
+    function test_privateKeyAlreadySubmitted_reverts()
+        external
+        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenLotIsCreated
+        givenLotHasConcluded
+    {
+        // Submit the private key
+        _auctionHouse.submitPrivateKey(_lotId, bytes32(_auctionPrivateKey));
+
+        bytes memory err = abi.encodeWithSelector(
+            EncryptedMarginalPriceAuction.Auction_WrongState.selector
+        );
+        vm.expectRevert(err);
+
+        // Call the function
+        _auctionHouse.submitPrivateKey(_lotId, bytes32(_auctionPrivateKey));
+    }
+
+    function test_privateKeyDoesNotMatchPublicKey_reverts()
+        external
+        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenLotIsCreated
+        givenLotHasConcluded
+    {
+        bytes memory err = abi.encodeWithSelector(
+            EncryptedMarginalPriceAuction.Bid_InvalidPrivateKey.selector
+        );
+        vm.expectRevert(err);
+
+        // Call the function
+        _auctionHouse.submitPrivateKey(_lotId, bytes32(uint256(1)));
+    }
+
+    function test_storesPrivateKey()
+        external
+        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenLotIsCreated
+        givenLotHasConcluded
+    {
+        // Call the function
+        _auctionHouse.submitPrivateKey(_lotId, bytes32(_auctionPrivateKey));
+
+        // Assert the state
+        EncryptedMarginalPriceAuction.BidData memory bidData = _getBidData(_lotId);
+        assertEq(bidData.privateKey, bytes32(_auctionPrivateKey));
+    }
+}

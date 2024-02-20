@@ -1063,12 +1063,15 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
     ///                 - The lot ID is invalid
     ///                 - The lot is not active
     ///                 - The lot has not concluded
+    ///                 - The private key has already been submitted
     function submitPrivateKey(uint96 lotId_, bytes32 privateKey_) external {
         // Validation
         _revertIfLotInvalid(lotId_);
         _revertIfLotActive(lotId_);
         _revertIfBeforeLotStart(lotId_);
-        // TODO lot has not concluded
+
+        // Revert if the private key has already been verified and set
+        if (bidData[lotId_].privateKey != 0) revert Auction_WrongState();
 
         // Check that the private key is valid for the public key
         // We assume that all public keys are derived from the same generator: (1, 2)
@@ -1078,8 +1081,6 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
 
         // Store the private key
         bidData[lotId_].privateKey = privateKey_;
-
-        // TODO event or status change?
     }
 
     /// @notice         Decrypts a batch of bids and sorts them by price in descending order
