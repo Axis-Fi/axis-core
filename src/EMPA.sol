@@ -58,7 +58,7 @@ abstract contract Router {
     ///  unchecked { subtracted = seed - uint128(amountOut); }
     ///  uint256 message = uint256(abi.encodePacked(seed, subtracted));
     ///
-    ///  Note that the `subtracted` value relies on underflow to wrap around to a large number, which is why we use unchecked.
+    ///  Note that the `subtracted` value is allowed to underflow, which is why we use unchecked.
     ///
     ///  Then, the message should be encrypted as follows (off-chain):
     ///  1. Generate a value to serve as the bid private key
@@ -578,6 +578,7 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
         // Initialize bid data
 
         // publicKey must be a valid point on the alt_bn128 curve
+        // TODO check that the public key is created from the (1,2) generator point?
         if (!ECIES.isOnBn128(params_.publicKey)) revert InvalidParams();
 
         // Check that the public key is not the point whose private key is zero
@@ -937,8 +938,17 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
         }
 
         // Delete the rest of the decrypted bids queue for a gas refund
-        // TODO determine how to do this for the data structure
-        // delete queue;
+        // TODO make sure this iteration doesn't cause out of gas issues, but it shouldn't due to the storage refunds
+        {
+            Queue storage queue = decryptedBids[lotId_];
+            uint256 remainingBids = queue.getNumBids();
+            for (uint256 i = remainingBids - 1; i >= 0; i--) {
+                uint64 bidId = queue.bidIdList[i];
+                delete queue.idToBidMap[bidId];
+                queue.bidIdList.pop();
+            }
+            delete queue.numBids;
+        }
 
         // Determine if the auction can be filled, if so settle the auction, otherwise refund the seller
         // We set the status as settled either way to denote this function has been executed
