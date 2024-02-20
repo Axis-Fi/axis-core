@@ -240,7 +240,7 @@ abstract contract EmpaTest is Test, Permit2User {
 
         // Bid
         vm.prank(_bidder);
-        _auctionHouse.bid(
+        _bidId = _auctionHouse.bid(
             _lotId,
             _REFERRER,
             amountIn_,
@@ -249,6 +249,12 @@ abstract contract EmpaTest is Test, Permit2User {
             bytes(""),
             bytes("")
         );
+        _;
+    }
+
+    modifier givenBidIsRefunded(uint64 bidId_) {
+        vm.prank(_bidder);
+        _auctionHouse.refundBid(_lotId, bidId_);
         _;
     }
 

@@ -820,8 +820,8 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
         // TODO probably covered by the above
         if (_bid.status != BidStatus.Submitted) revert Bid_WrongState();
 
-        // Set bid status to claimed
-        _bid.status = BidStatus.Claimed;
+        // Set bid status to refunded
+        _bid.status = BidStatus.Refunded;
 
         // Remove bid from list of bids to decrypt
         uint64[] storage bidIds = bidData[lotId_].bidIds;
