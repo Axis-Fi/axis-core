@@ -234,6 +234,22 @@ abstract contract EmpaTest is Test, Permit2User {
         _;
     }
 
+    modifier givenLotHasConcluded() {
+        vm.warp(_startTime + _duration + 1);
+        _;
+    }
+
+    modifier givenLotHasStarted() {
+        vm.warp(_auctionParams.start + 1);
+        _;
+    }
+
+    modifier givenLotHasBeenCancelled() {
+        vm.prank(_auctionOwner);
+        _auctionHouse.cancel(_lotId);
+        _;
+    }
+
     // ===== Helper Functions ===== //
 
     function _encryptBid(

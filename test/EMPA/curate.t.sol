@@ -12,22 +12,6 @@ contract EmpaCurateTest is EmpaTest {
         _;
     }
 
-    modifier givenLotHasStarted() {
-        vm.warp(_auctionParams.start + 1);
-        _;
-    }
-
-    modifier givenLotHasConcluded() {
-        vm.warp(_auctionParams.start + _auctionParams.duration + 1);
-        _;
-    }
-
-    modifier givenLotHasBeenCancelled() {
-        vm.prank(_auctionOwner);
-        _auctionHouse.cancel(_lotId);
-        _;
-    }
-
     // ===== Tests ===== //
 
     // [X] when the lot id is invalid
