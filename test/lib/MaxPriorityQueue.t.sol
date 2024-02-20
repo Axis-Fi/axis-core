@@ -4,7 +4,7 @@ pragma solidity 0.8.19;
 import {Test} from "forge-std/Test.sol";
 import {MaxPriorityQueue, Queue, Bid} from "src/lib/MaxPriorityQueue.sol";
 
-contract MaxPriorityQueueTest is Test {
+contract EmpaMaxPriorityQueueTest is Test {
     using MaxPriorityQueue for Queue;
 
     Queue internal queue;
@@ -136,5 +136,26 @@ contract MaxPriorityQueueTest is Test {
         assertEq(maxBid.amountIn, 1, "index 1: amountIn mismatch");
 
         assertEq(queue.isEmpty(), true, "isEmpty mismatch");
+    }
+
+    function test_largeNumber() external {
+        queue.initialize();
+
+        queue.insert(0, 1e18, 1e18);
+        queue.insert(1, 2e18, 1e18);
+
+        // Check values
+        assertEq(queue.getNumBids(), 2, "numBids mismatch");
+
+        // Check order of values
+        uint64 maxId = queue.getMaxId();
+        assertEq(maxId, 1, "index 0: maxId mismatch");
+        Bid memory maxBid = queue.delMax();
+        assertEq(maxBid.amountIn, 2e18, "index 0: amountIn mismatch");
+
+        maxId = queue.getMaxId();
+        assertEq(maxId, 0, "index 1: maxId mismatch");
+        maxBid = queue.delMax();
+        assertEq(maxBid.amountIn, 1e18, "index 1: amountIn mismatch");
     }
 }

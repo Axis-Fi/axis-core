@@ -106,8 +106,8 @@ library MaxPriorityQueue {
         uint64 jId = self.bidIdList[j];
         Bid memory bidI = self.idToBidMap[iId];
         Bid memory bidJ = self.idToBidMap[jId];
-        uint256 relI = bidI.amountIn * bidJ.minAmountOut;
-        uint256 relJ = bidJ.amountIn * bidI.minAmountOut;
+        uint256 relI = uint256(bidI.amountIn) * uint256(bidJ.minAmountOut);
+        uint256 relJ = uint256(bidJ.amountIn) * uint256(bidI.minAmountOut);
         if (relI == relJ) {
             return iId < jId;
         }
