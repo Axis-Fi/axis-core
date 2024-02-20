@@ -34,9 +34,16 @@ abstract contract EmpaTest is Test, Permit2User {
     address internal _auctionOwner = address(0x1);
     address internal immutable _PROTOCOL = address(0x2);
     address internal immutable _CURATOR = address(0x3);
+    address internal immutable _BIDDER = address(0x4);
+    address internal immutable _RECIPIENT = address(0x5);
+    address internal immutable _REFERRER = address(0x6);
 
     uint24 internal constant _CURATOR_MAX_FEE_PERCENT = 100;
     uint24 internal constant _CURATOR_FEE_PERCENT = 90;
+
+    uint128 internal constant _BID_SEED = 123_456;
+    uint256 internal constant _BID_PRIVATE_KEY = 112_233_445_566_778;
+    Point internal _bidPublicKey;
 
     // Input to parameters
     uint48 internal _startTime;
@@ -95,6 +102,9 @@ abstract contract EmpaTest is Test, Permit2User {
 
         // Set the max curator fee
         _auctionHouse.setFee(FeeManager.FeeType.MaxCurator, _CURATOR_MAX_FEE_PERCENT);
+
+        // Bids
+        _bidPublicKey = ECIES.calcPubKey(Point(1, 2), bytes32(_BID_PRIVATE_KEY));
     }
 
     // ===== Modifiers ===== //
@@ -187,7 +197,67 @@ abstract contract EmpaTest is Test, Permit2User {
         _;
     }
 
+    modifier givenBidIsCreated(uint96 amountIn_, uint96 amountOut_) {
+        // Mint quote tokens to the bidder
+        _quoteToken.mint(_BIDDER, amountIn_);
+
+        // Approve spending
+        vm.prank(_BIDDER);
+        _quoteToken.approve(address(_auctionHouse), amountIn_);
+
+        // Prepare amount out
+        uint256 encryptedAmountOut = _encryptBid(_lotId, _BIDDER, amountIn_, amountOut_);
+
+        // Bid
+        vm.prank(_BIDDER);
+        _auctionHouse.bid(
+            _lotId, _REFERRER, amountIn_, encryptedAmountOut, _bidPublicKey, bytes(""), bytes("")
+        );
+        _;
+    }
+
+    modifier givenPrivateKeyIsSubmitted() {
+        _auctionHouse.submitPrivateKey(_lotId, bytes32(_auctionPrivateKey));
+        _;
+    }
+
+    modifier givenLotIsDecrypted() {
+        // Get the number of bids
+        EncryptedMarginalPriceAuction.BidData memory bidData = _getBidData(_lotId);
+
+        _auctionHouse.decryptAndSortBids(_lotId, bidData.nextBidId);
+        _;
+    }
+
+    modifier givenLotIsSettled() {
+        _auctionHouse.settle(_lotId);
+        _;
+    }
+
     // ===== Helper Functions ===== //
+
+    function _encryptBid(
+        uint96 lotId_,
+        address bidder_,
+        uint96 amountIn_,
+        uint96 amountOut_
+    ) internal view returns (uint256) {
+        // Format the amount out
+        uint256 formattedAmountOut;
+        {
+            uint128 subtracted;
+            unchecked {
+                subtracted = _BID_SEED - amountOut_;
+            }
+            formattedAmountOut = uint256(keccak256(abi.encodePacked(_BID_SEED, subtracted)));
+        }
+
+        Point memory sharedSecretKey = ECIES.calcPubKey(_bidPublicKey, bytes32(_auctionPrivateKey));
+        bytes32 salt = keccak256(abi.encodePacked(lotId_, bidder_, amountIn_));
+        uint256 symmetricKey = uint256(keccak256(abi.encodePacked(sharedSecretKey.x, salt)));
+
+        return formattedAmountOut ^ symmetricKey;
+    }
 
     function _getLotRouting(uint96 lotId_)
         internal
@@ -250,6 +320,29 @@ abstract contract EmpaTest is Test, Permit2User {
             status: status_,
             minFilled: minFilled_,
             minBidSize: minBidSize_
+        });
+    }
+
+    function _getBidData(uint96 lotId_)
+        internal
+        view
+        returns (EncryptedMarginalPriceAuction.BidData memory)
+    {
+        (
+            uint64 nextBidId,
+            uint64 nextDecryptIndex,
+            uint96 marginalPrice,
+            Point memory publicKey,
+            bytes32 privateKey
+        ) = _auctionHouse.bidData(lotId_);
+
+        return EncryptedMarginalPriceAuction.BidData({
+            nextBidId: nextBidId,
+            nextDecryptIndex: nextDecryptIndex,
+            marginalPrice: marginalPrice,
+            publicKey: publicKey,
+            privateKey: privateKey,
+            bidIds: new uint64[](0)
         });
     }
 }
