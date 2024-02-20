@@ -70,9 +70,8 @@ contract EmpaSubmitPrivateKeyTest is EmpaTest {
         // Submit the private key
         _auctionHouse.submitPrivateKey(_lotId, bytes32(_auctionPrivateKey));
 
-        bytes memory err = abi.encodeWithSelector(
-            EncryptedMarginalPriceAuction.Auction_WrongState.selector
-        );
+        bytes memory err =
+            abi.encodeWithSelector(EncryptedMarginalPriceAuction.Auction_WrongState.selector);
         vm.expectRevert(err);
 
         // Call the function
@@ -86,9 +85,8 @@ contract EmpaSubmitPrivateKeyTest is EmpaTest {
         givenLotIsCreated
         givenLotHasConcluded
     {
-        bytes memory err = abi.encodeWithSelector(
-            EncryptedMarginalPriceAuction.Bid_InvalidPrivateKey.selector
-        );
+        bytes memory err =
+            abi.encodeWithSelector(EncryptedMarginalPriceAuction.Bid_InvalidPrivateKey.selector);
         vm.expectRevert(err);
 
         // Call the function
