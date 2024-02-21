@@ -130,8 +130,14 @@ abstract contract EmpaTest is Test, Permit2User {
     function _setBaseTokenDecimals(uint8 decimals_) internal {
         _baseToken = new MockFeeOnTransferERC20("Base Token", "BASE", decimals_);
 
+        uint256 lotCapacity = _LOT_CAPACITY * 10 ** decimals_ / 1e18;
+        if (lotCapacity > type(uint96).max) revert("overflow");
+
         // Update routing params
         _routingParams.baseToken = _baseToken;
+
+        // Update auction params
+        _auctionParams.capacity = uint96(lotCapacity);
     }
 
     modifier givenBaseTokenHasDecimals(uint8 decimals_) {
