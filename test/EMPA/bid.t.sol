@@ -574,4 +574,6 @@ contract EmpaBidTest is EmpaTest {
         assertEq(_quoteToken.balanceOf(_CURATOR), 0, "curator: quote token balance mismatch");
         assertEq(_baseToken.balanceOf(_CURATOR), 0, "curator: base token balance mismatch");
     }
+
+    // TODO handle decimals
 }

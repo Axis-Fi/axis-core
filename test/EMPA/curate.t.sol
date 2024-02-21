@@ -220,4 +220,6 @@ contract EmpaCurateTest is EmpaTest {
         );
         assertEq(_baseToken.balanceOf(_CURATOR), 0, "base token: curator balance mismatch");
     }
+
+    // TODO handle decimals
 }

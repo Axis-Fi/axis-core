@@ -309,4 +309,6 @@ contract EmpaDecryptBidsTest is EmpaTest {
         EncryptedMarginalPriceAuction.Lot memory lot = _getLotData(_lotId);
         assertEq(uint8(lot.status), uint8(EncryptedMarginalPriceAuction.AuctionStatus.Decrypted));
     }
+
+    // TODO handle decimals
 }

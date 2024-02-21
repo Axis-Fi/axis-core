@@ -461,4 +461,6 @@ contract EmpaAuctionTest is EmpaTest {
             "auction house balance mismatch"
         );
     }
+
+    // TODO handle decimals
 }
