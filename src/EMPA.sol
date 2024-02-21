@@ -7,6 +7,7 @@ import {Owned} from "lib/solmate/src/auth/Owned.sol";
 import {Transfer} from "src/lib/Transfer.sol";
 import {MaxPriorityQueue, Queue, Bid as QueueBid} from "src/lib/MaxPriorityQueue.sol";
 import {ECIES, Point} from "src/lib/ECIES.sol";
+import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 
 import {DerivativeModule} from "src/modules/Derivative.sol";
 
@@ -261,6 +262,7 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
     error Broken_Invariant();
     error InvalidParams();
     error InvalidHook();
+    error Overflow();
 
     error Auction_InvalidId(uint96 id_);
     error Auction_MarketActive(uint96 lotId); // TODO consider removing these two
@@ -844,6 +846,14 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
         emit RefundBid(lotId_, bidId_, msg.sender);
     }
 
+    /// @notice     Applies mulDivUp to uint96 values, and checks that the result is within the uint96 range
+    function _mulDivUp(uint96 mul1_, uint96 mul2_, uint96 div_) internal pure returns (uint96) {
+        uint256 product = FixedPointMathLib.mulDivUp(mul1_, mul2_, div_);
+        if (product > type(uint96).max) revert Overflow();
+
+        return uint96(product);
+    }
+
     /// @inheritdoc Router
     /// @dev        This function handles the following:
     ///             - Settles the auction on the auction module
@@ -904,7 +914,7 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
                 // There is no need to check if the bid is the minimum bid size, as this was checked during decryption
 
                 // Calculate the price of the bid
-                uint96 price = (qBid.amountIn * baseScale) / qBid.minAmountOut;
+                uint96 price = _mulDivUp(qBid.amountIn, baseScale, qBid.minAmountOut);
 
                 // If the price is below the minimum price, the previous price is the marginal price
                 if (price < minimumPrice) {
@@ -920,7 +930,7 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
 
                 // Determine total capacity expended at this price (in base token units)
                 // quote scale * base scale / quote scale = base scale
-                capacityExpended = (totalAmountIn * baseScale) / price;
+                capacityExpended = _mulDivUp(totalAmountIn, baseScale, price);
 
                 // If total capacity expended is greater than or equal to the capacity, we have found the marginal price
                 if (capacityExpended >= capacity) {
@@ -943,12 +953,14 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
         {
             Queue storage queue = decryptedBids[lotId_];
             uint256 remainingBids = queue.getNumBids();
-            for (uint256 i = remainingBids - 1; i >= 0; i--) {
-                uint64 bidId = queue.bidIdList[i];
-                delete queue.idToBidMap[bidId];
-                queue.bidIdList.pop();
+            if (remainingBids > 0) {
+                for (uint256 i = remainingBids - 1; i >= 0; i--) {
+                    uint64 bidId = queue.bidIdList[i];
+                    delete queue.idToBidMap[bidId];
+                    queue.bidIdList.pop();
+                }
+                delete queue.numBids;
             }
-            delete queue.numBids;
         }
 
         // Determine if the auction can be filled, if so settle the auction, otherwise refund the seller

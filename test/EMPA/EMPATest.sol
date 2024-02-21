@@ -56,8 +56,8 @@ abstract contract EmpaTest is Test, Permit2User {
     // Input to parameters
     uint48 internal _startTime;
     uint48 internal _duration = 1 days;
-    uint24 internal constant _MIN_FILL_PERCENT = 1000;
-    uint24 internal constant _MIN_BID_PERCENT = 100;
+    uint24 internal constant _MIN_FILL_PERCENT = 25_000; // 25% = 2.5e18
+    uint24 internal constant _MIN_BID_PERCENT = 1000; // 1% = 0.1e18
     uint96 internal constant _LOT_CAPACITY = 10e18;
     uint96 internal constant _MIN_PRICE = 2e18;
     uint256 internal _auctionPrivateKey;
@@ -132,6 +132,10 @@ abstract contract EmpaTest is Test, Permit2User {
 
         uint256 lotCapacity = _LOT_CAPACITY * 10 ** decimals_ / 1e18;
         if (lotCapacity > type(uint96).max) revert("overflow");
+
+        // Update dependent variables
+        _minBidSize = uint96(lotCapacity * _MIN_BID_PERCENT / 1e5);
+        _curatorMaxPotentialFee = uint96(lotCapacity * _CURATOR_FEE_PERCENT / 1e5);
 
         // Update routing params
         _routingParams.baseToken = _baseToken;
