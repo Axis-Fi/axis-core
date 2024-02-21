@@ -213,4 +213,6 @@ contract EmpaCancelAuctionTest is EmpaTest {
             "base token: balance mismatch for auction house"
         );
     }
+
+    // TODO handle decimals
 }

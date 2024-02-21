@@ -18,7 +18,7 @@ contract EmpaSubmitPrivateKeyTest is EmpaTest {
     // [X] when the private key does not match the public key
     //  [X] it reverts
     // [X] it stores the private key
-    // TODO add test cases for num of decrypts > 0
+    // [X] add test cases for num of decrypts > 0
 
     function test_invalidLotId_reverts() external {
         bytes memory err =
@@ -107,5 +107,26 @@ contract EmpaSubmitPrivateKeyTest is EmpaTest {
         // Assert the state
         EncryptedMarginalPriceAuction.BidData memory bidData = _getBidData(_lotId);
         assertEq(bidData.privateKey, bytes32(_auctionPrivateKey));
+    }
+
+    function test_decryptsBids()
+        external
+        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenLotIsCreated
+        givenLotHasStarted
+        givenBidIsCreated(1e18, 2e18)
+        givenLotHasConcluded
+    {
+        // Call the function
+        _auctionHouse.submitPrivateKey(_lotId, bytes32(_auctionPrivateKey), 1);
+
+        // Check the next decrypt index has been updated
+        EncryptedMarginalPriceAuction.BidData memory bidData = _getBidData(_lotId);
+        assertEq(bidData.nextDecryptIndex, 1);
+
+        // Check the lot record
+        EncryptedMarginalPriceAuction.Lot memory lot = _getLotData(_lotId);
+        assertEq(uint8(lot.status), uint8(EncryptedMarginalPriceAuction.AuctionStatus.Decrypted));
     }
 }

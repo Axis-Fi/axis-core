@@ -7,6 +7,7 @@ import {Owned} from "lib/solmate/src/auth/Owned.sol";
 import {Transfer} from "src/lib/Transfer.sol";
 import {MaxPriorityQueue, Queue, Bid as QueueBid} from "src/lib/MaxPriorityQueue.sol";
 import {ECIES, Point} from "src/lib/ECIES.sol";
+import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 
 import {DerivativeModule} from "src/modules/Derivative.sol";
 
@@ -261,6 +262,7 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
     error Broken_Invariant();
     error InvalidParams();
     error InvalidHook();
+    error Overflow();
 
     error Auction_InvalidId(uint96 id_);
     error Auction_MarketActive(uint96 lotId); // TODO consider removing these two
@@ -844,6 +846,14 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
         emit RefundBid(lotId_, bidId_, msg.sender);
     }
 
+    /// @notice     Applies mulDivUp to uint96 values, and checks that the result is within the uint96 range
+    function _mulDivUp(uint96 mul1_, uint96 mul2_, uint96 div_) internal pure returns (uint96) {
+        uint256 product = FixedPointMathLib.mulDivUp(mul1_, mul2_, div_);
+        if (product > type(uint96).max) revert Overflow();
+
+        return uint96(product);
+    }
+
     /// @inheritdoc Router
     /// @dev        This function handles the following:
     ///             - Settles the auction on the auction module
@@ -857,9 +867,8 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
     ///
     ///             This function reverts if:
     ///             - the lot ID is invalid
-    ///             - the auction module reverts when settling the auction
+    ///             - the lot state is invalid
     ///             - transferring the quote token to the auction owner fails
-    ///             - collecting the payout from the auction owner fails
     ///             - sending the payout to each bidder fails
     ///             - re-entrancy is detected
     function settle(uint96 lotId_) external override nonReentrant {
@@ -880,8 +889,6 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
         uint96 capacity = lotData[lotId_].capacity;
         uint96 baseScale = uint96(10 ** lotData[lotId_].baseTokenDecimals); // We know this is true, since baseTokenDecimals is 6-18
         uint96 minimumPrice = lotData[lotId_].minimumPrice;
-
-        // TODO review uint96/uint256 types for overflow
 
         // Iterate over bid queue (sorted in descending price) to calculate the marginal clearing price of the auction
         uint96 marginalPrice;
@@ -904,7 +911,7 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
                 // There is no need to check if the bid is the minimum bid size, as this was checked during decryption
 
                 // Calculate the price of the bid
-                uint96 price = (qBid.amountIn * baseScale) / qBid.minAmountOut;
+                uint96 price = _mulDivUp(qBid.amountIn, baseScale, qBid.minAmountOut);
 
                 // If the price is below the minimum price, the previous price is the marginal price
                 if (price < minimumPrice) {
@@ -920,7 +927,7 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
 
                 // Determine total capacity expended at this price (in base token units)
                 // quote scale * base scale / quote scale = base scale
-                capacityExpended = (totalAmountIn * baseScale) / price;
+                capacityExpended = _mulDivUp(totalAmountIn, baseScale, price);
 
                 // If total capacity expended is greater than or equal to the capacity, we have found the marginal price
                 if (capacityExpended >= capacity) {
@@ -943,12 +950,19 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
         {
             Queue storage queue = decryptedBids[lotId_];
             uint256 remainingBids = queue.getNumBids();
-            for (uint256 i = remainingBids - 1; i >= 0; i--) {
-                uint64 bidId = queue.bidIdList[i];
-                delete queue.idToBidMap[bidId];
-                queue.bidIdList.pop();
+            if (remainingBids > 0) {
+                for (uint256 i = remainingBids - 1; i >= 0; i--) {
+                    uint64 bidId = queue.bidIdList[i];
+                    delete queue.idToBidMap[bidId];
+                    queue.bidIdList.pop();
+
+                    // Otherwise an underflow will occur
+                    if (i == 0) {
+                        break;
+                    }
+                }
+                delete queue.numBids;
             }
-            delete queue.numBids;
         }
 
         // Determine if the auction can be filled, if so settle the auction, otherwise refund the seller
@@ -958,8 +972,6 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
         // or if the marginal price is less than the minimum price
         if (capacityExpended >= lotData[lotId_].minFilled && marginalPrice >= minimumPrice) {
             // Auction can be settled at the marginal price if we reach this point
-            // TODO think about if it's possible for this to happen
-            if (marginalPrice > type(uint96).max) revert("price overflow");
             bidData[lotId_].marginalPrice = marginalPrice;
 
             Routing storage routing = lotRouting[lotId_];
@@ -970,9 +982,13 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
                 Bid storage _bid = bids[lotId_][partialFillBidId];
 
                 // Calculate the payout and refund amounts
-                uint96 fullFill = (_bid.amount * baseScale) / marginalPrice;
-                uint96 payout = fullFill - (capacityExpended - capacity);
-                uint96 refundAmount = (_bid.amount * payout) / fullFill;
+                uint96 fullFill = _mulDivUp(_bid.amount, baseScale, marginalPrice);
+                uint96 overflow = capacityExpended - capacity;
+                uint96 payout = fullFill - overflow;
+                uint96 refundAmount = _mulDivUp(_bid.amount, overflow, fullFill);
+
+                // Reduce the total amount in by the refund amount
+                totalAmountIn -= refundAmount;
 
                 // Set bid as claimed
                 _bid.status = BidStatus.Claimed;
