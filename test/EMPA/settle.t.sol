@@ -423,8 +423,8 @@ contract EmpaSettleTest is EmpaTest {
         external
         givenQuoteTokenHasDecimals(17)
         givenBaseTokenHasDecimals(13)
-        givenOwnerHasBaseTokenBalance(_auctionParams.capacity)
-        givenOwnerHasBaseTokenAllowance(_auctionParams.capacity)
+        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenLotIsCreated
         givenLotHasStarted
         givenBidsAreAboveMinimumAndBelowCapacity
@@ -480,8 +480,8 @@ contract EmpaSettleTest is EmpaTest {
         external
         givenQuoteTokenHasDecimals(13)
         givenBaseTokenHasDecimals(17)
-        givenOwnerHasBaseTokenBalance(_auctionParams.capacity)
-        givenOwnerHasBaseTokenAllowance(_auctionParams.capacity)
+        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenLotIsCreated
         givenLotHasStarted
         givenBidsAreAboveMinimumAndBelowCapacity
@@ -592,8 +592,8 @@ contract EmpaSettleTest is EmpaTest {
         external
         givenQuoteTokenHasDecimals(17)
         givenBaseTokenHasDecimals(13)
-        givenOwnerHasBaseTokenBalance(_auctionParams.capacity)
-        givenOwnerHasBaseTokenAllowance(_auctionParams.capacity)
+        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenLotIsCreated
         givenLotHasStarted
         givenSomeBidsAreBelowMinimumPrice
@@ -650,8 +650,8 @@ contract EmpaSettleTest is EmpaTest {
         external
         givenQuoteTokenHasDecimals(13)
         givenBaseTokenHasDecimals(17)
-        givenOwnerHasBaseTokenBalance(_auctionParams.capacity)
-        givenOwnerHasBaseTokenAllowance(_auctionParams.capacity)
+        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenLotIsCreated
         givenLotHasStarted
         givenSomeBidsAreBelowMinimumPrice
@@ -774,8 +774,8 @@ contract EmpaSettleTest is EmpaTest {
         external
         givenQuoteTokenHasDecimals(17)
         givenBaseTokenHasDecimals(13)
-        givenOwnerHasBaseTokenBalance(_auctionParams.capacity)
-        givenOwnerHasBaseTokenAllowance(_auctionParams.capacity)
+        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenLotIsCreated
         givenLotHasStarted
         givenBidsAreOverSubscribed
@@ -846,8 +846,8 @@ contract EmpaSettleTest is EmpaTest {
         external
         givenQuoteTokenHasDecimals(13)
         givenBaseTokenHasDecimals(17)
-        givenOwnerHasBaseTokenBalance(_auctionParams.capacity)
-        givenOwnerHasBaseTokenAllowance(_auctionParams.capacity)
+        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenLotIsCreated
         givenLotHasStarted
         givenBidsAreOverSubscribed
@@ -984,8 +984,8 @@ contract EmpaSettleTest is EmpaTest {
         external
         givenQuoteTokenHasDecimals(17)
         givenBaseTokenHasDecimals(13)
-        givenOwnerHasBaseTokenBalance(_auctionParams.capacity)
-        givenOwnerHasBaseTokenAllowance(_auctionParams.capacity)
+        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenLotIsCreated
         givenLotHasStarted
         givenBidsAreOverSubscribedRespectsOrdering
@@ -1052,8 +1052,8 @@ contract EmpaSettleTest is EmpaTest {
         external
         givenQuoteTokenHasDecimals(13)
         givenBaseTokenHasDecimals(17)
-        givenOwnerHasBaseTokenBalance(_auctionParams.capacity)
-        givenOwnerHasBaseTokenAllowance(_auctionParams.capacity)
+        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenLotIsCreated
         givenLotHasStarted
         givenBidsAreOverSubscribedRespectsOrdering
@@ -1180,8 +1180,8 @@ contract EmpaSettleTest is EmpaTest {
         external
         givenQuoteTokenHasDecimals(17)
         givenBaseTokenHasDecimals(13)
-        givenOwnerHasBaseTokenBalance(_auctionParams.capacity)
-        givenOwnerHasBaseTokenAllowance(_auctionParams.capacity)
+        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenLotIsCreated
         givenLotHasStarted
         givenBidsAreOverSubscribedOnFirstBid
@@ -1242,8 +1242,8 @@ contract EmpaSettleTest is EmpaTest {
         external
         givenQuoteTokenHasDecimals(13)
         givenBaseTokenHasDecimals(17)
-        givenOwnerHasBaseTokenBalance(_auctionParams.capacity)
-        givenOwnerHasBaseTokenAllowance(_auctionParams.capacity)
+        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenLotIsCreated
         givenLotHasStarted
         givenBidsAreOverSubscribedOnFirstBid

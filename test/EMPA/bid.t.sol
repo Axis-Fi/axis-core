@@ -575,5 +575,98 @@ contract EmpaBidTest is EmpaTest {
         assertEq(_baseToken.balanceOf(_CURATOR), 0, "curator: base token balance mismatch");
     }
 
-    // TODO handle decimals
+    // [X] given the quote token decimals are larger
+    //  [X] it handles it
+    // [X] given the base token decimals are larger
+    //  [X] it handles it
+
+    function test_whenPermit2ApprovalIsNotProvided_quoteTokenDecimalsLarger()
+        external
+        givenQuoteTokenHasDecimals(17)
+        givenBaseTokenHasDecimals(13)
+        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenLotIsCreated
+        givenLotHasStarted
+        givenBidderHasQuoteTokenBalance(_BID_AMOUNT)
+        givenBidderHasQuoteTokenAllowance(_BID_AMOUNT)
+        whenBidAmountOutIsEncrypted(_BID_AMOUNT, 1e18)
+    {
+        // Call the function
+        vm.prank(_bidder);
+        _bidId = _auctionHouse.bid(
+            _lotId,
+            _REFERRER,
+            _scaleQuoteTokenAmount(_BID_AMOUNT),
+            _encryptedBidAmountOut,
+            _bidPublicKey,
+            _allowlistProof,
+            _permit2Data
+        );
+
+        // Check the balances
+        assertEq(_quoteToken.balanceOf(_bidder), 0, "_bidder: quote token balance mismatch");
+        assertEq(
+            _quoteToken.balanceOf(address(_auctionHouse)),
+            _scaleQuoteTokenAmount(_BID_AMOUNT),
+            "auction house: quote token balance mismatch"
+        );
+
+        // Check the bid
+        EncryptedMarginalPriceAuction.Bid memory bid = _getBid(_lotId, _bidId);
+        assertEq(bid.bidder, _bidder, "bidder mismatch");
+        assertEq(bid.referrer, _REFERRER, "_REFERRER mismatch");
+        assertEq(bid.amount, _scaleQuoteTokenAmount(_BID_AMOUNT), "amount mismatch");
+        assertEq(bid.minAmountOut, 0, "minAmountOut mismatch");
+        assertEq(
+            uint8(bid.status),
+            uint8(EncryptedMarginalPriceAuction.BidStatus.Submitted),
+            "bidStatus mismatch"
+        );
+    }
+
+    function test_whenPermit2ApprovalIsNotProvided_quoteTokenDecimalsSmaller()
+        external
+        givenQuoteTokenHasDecimals(13)
+        givenBaseTokenHasDecimals(17)
+        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenLotIsCreated
+        givenLotHasStarted
+        givenBidderHasQuoteTokenBalance(_BID_AMOUNT)
+        givenBidderHasQuoteTokenAllowance(_BID_AMOUNT)
+        whenBidAmountOutIsEncrypted(_BID_AMOUNT, 1e18)
+    {
+        // Call the function
+        vm.prank(_bidder);
+        _bidId = _auctionHouse.bid(
+            _lotId,
+            _REFERRER,
+            _scaleQuoteTokenAmount(_BID_AMOUNT),
+            _encryptedBidAmountOut,
+            _bidPublicKey,
+            _allowlistProof,
+            _permit2Data
+        );
+
+        // Check the balances
+        assertEq(_quoteToken.balanceOf(_bidder), 0, "_bidder: quote token balance mismatch");
+        assertEq(
+            _quoteToken.balanceOf(address(_auctionHouse)),
+            _scaleQuoteTokenAmount(_BID_AMOUNT),
+            "auction house: quote token balance mismatch"
+        );
+
+        // Check the bid
+        EncryptedMarginalPriceAuction.Bid memory bid = _getBid(_lotId, _bidId);
+        assertEq(bid.bidder, _bidder, "bidder mismatch");
+        assertEq(bid.referrer, _REFERRER, "_REFERRER mismatch");
+        assertEq(bid.amount, _scaleQuoteTokenAmount(_BID_AMOUNT), "amount mismatch");
+        assertEq(bid.minAmountOut, 0, "minAmountOut mismatch");
+        assertEq(
+            uint8(bid.status),
+            uint8(EncryptedMarginalPriceAuction.BidStatus.Submitted),
+            "bidStatus mismatch"
+        );
+    }
 }

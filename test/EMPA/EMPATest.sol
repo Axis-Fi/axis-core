@@ -138,10 +138,10 @@ abstract contract EmpaTest is Test, Permit2User {
     function _setBaseTokenDecimals(uint8 decimals_) internal {
         _baseToken = new MockFeeOnTransferERC20("Base Token", "BASE", decimals_);
 
-        uint256 lotCapacity = _LOT_CAPACITY * 10 ** decimals_ / 1e18;
+        uint256 lotCapacity = _LOT_CAPACITY * 10 ** decimals_ / _BASE_SCALE;
         if (lotCapacity > type(uint96).max) revert("overflow");
 
-        uint256 minPrice = _MIN_PRICE * 10 ** decimals_ / 1e18;
+        uint256 minPrice = _MIN_PRICE * 10 ** decimals_ / _BASE_SCALE;
         if (minPrice > type(uint96).max) revert("overflow");
 
         // Update dependent variables
@@ -207,30 +207,37 @@ abstract contract EmpaTest is Test, Permit2User {
         _;
     }
 
-    modifier givenOwnerHasBaseTokenAllowance(uint256 amount_) {
+    modifier givenOwnerHasBaseTokenAllowance(uint96 amount_) {
+        uint96 amountScaled = _scaleBaseTokenAmount(amount_);
+
         // Approve the auction house
         vm.prank(_auctionOwner);
-        _baseToken.approve(address(_auctionHouse), amount_);
+        _baseToken.approve(address(_auctionHouse), amountScaled);
         _;
     }
 
-    modifier givenOwnerHasBaseTokenBalance(uint256 amount_) {
-        console2.log("base token balance", amount_);
+    modifier givenOwnerHasBaseTokenBalance(uint96 amount_) {
+        uint96 amountScaled = _scaleBaseTokenAmount(amount_);
+
         // Mint the amount to the owner
-        _baseToken.mint(_auctionOwner, amount_);
+        _baseToken.mint(_auctionOwner, amountScaled);
         _;
     }
 
-    modifier givenBidderHasQuoteTokenBalance(uint256 amount_) {
+    modifier givenBidderHasQuoteTokenBalance(uint96 amount_) {
+        uint96 amountScale = _scaleQuoteTokenAmount(amount_);
+
         // Mint the amount to the bidder
-        _quoteToken.mint(_bidder, amount_);
+        _quoteToken.mint(_bidder, amountScale);
         _;
     }
 
-    modifier givenBidderHasQuoteTokenAllowance(uint256 amount_) {
+    modifier givenBidderHasQuoteTokenAllowance(uint96 amount_) {
+        uint96 amountScale = _scaleQuoteTokenAmount(amount_);
+
         // Approve the auction house
         vm.prank(_bidder);
-        _quoteToken.approve(address(_auctionHouse), amount_);
+        _quoteToken.approve(address(_auctionHouse), amountScale);
         _;
     }
 
@@ -295,7 +302,7 @@ abstract contract EmpaTest is Test, Permit2User {
         _quoteToken.approve(address(_auctionHouse), amountInScaled);
 
         // Prepare amount out
-        _encryptedBidAmountOut = _encryptBid(_lotId, _bidder, amountInScaled, amountOut_);
+        _encryptedBidAmountOut = _encryptBid(_lotId, _bidder, amountInScaled, amountOutScaled);
 
         // Bid
         vm.prank(_bidder);
@@ -318,7 +325,10 @@ abstract contract EmpaTest is Test, Permit2User {
     }
 
     modifier whenBidAmountOutIsEncrypted(uint96 amountIn_, uint96 amountOut_) {
-        _encryptedBidAmountOut = _encryptBid(_lotId, _bidder, amountIn_, amountOut_);
+        uint96 amountInScaled = _scaleQuoteTokenAmount(amountIn_);
+        uint96 amountOutScaled = _scaleBaseTokenAmount(amountOut_);
+
+        _encryptedBidAmountOut = _encryptBid(_lotId, _bidder, amountInScaled, amountOutScaled);
         _;
     }
 
