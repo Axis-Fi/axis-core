@@ -7,15 +7,15 @@
 // Dependencies
 
 use ark_bn254::{Fq as BaseField, Fr as ScalarField, G1Affine as G1};
-use ark_ec::{AffineRepr, CurveGroup, Group};
-use ark_ff::{BigInteger, Field, UniformRand};
+use ark_ec::AffineRepr;
+use ark_ff::{BigInteger, UniformRand};
 use clap::{error::Result, Parser, Subcommand};
 use ethers::{
     types::{Bytes, U256},
     utils::hex,
 };
 use num_bigint::BigUint;
-use rand::{thread_rng, Rng};
+use rand::thread_rng;
 
 // Helper function to convert bytes to a hex-encoded string
 fn bytes_to_string(bytes: &[u8]) -> String {
@@ -52,6 +52,8 @@ enum Commands {
         bid_public_key_y: Bytes,
         #[arg(value_name = "private_key")]
         private_key: Bytes,
+        #[arg(value_name = "salt")]
+        salt: Bytes,
     },
 }
 
@@ -65,25 +67,13 @@ fn main() -> Result<()> {
             salt,
         } => {
             // Parse values from byte strings
-            let message = U256::from_big_endian(&message).as_u128();
+            let message = U256::from_big_endian(&message); // parse this to make sure it's not too big
             let x = BaseField::from(BigUint::from_bytes_be(&public_key_x));
             let y = BaseField::from(BigUint::from_bytes_be(&public_key_y));
 
             // Construct public key from coordinates
             // Will revert if the point is not on the curve
             let public_key = G1::new(x, y).into_group();
-
-            // Format the message for encryption
-            // 1. Generate a random seed to mask the message
-            let message_seed: u128 = thread_rng().gen();
-            // 2. Mask the message with the seed, allowing for underflows
-            let masked_message = message_seed.wrapping_sub(message);
-            // 3. Concatenate the seed and the masked message to create the message to encrypt
-            let plaintext = [
-                message_seed.to_be_bytes().to_vec(),
-                masked_message.to_be_bytes().to_vec(),
-            ]
-            .concat();
 
             // Encrypt the message
             //  1. Generate a value to serve as the bid private key
@@ -98,12 +88,14 @@ fn main() -> Result<()> {
 
             //  4. Calculate the symmetric key by taking the keccak256 hash of the x coordinate of shared secret public key and the salt
             let shared_secret = shared_secret_public_key.x.0.to_bytes_be();
-            let symmetric_key = ethers::utils::keccak256(&[shared_secret, salt.to_vec()].concat());
+            let symmetric_key = ethers::utils::keccak256([shared_secret, salt.to_vec()].concat());
 
             //  5. Encrypt the message by XORing the message with the symmetric key
-            let ciphertext = plaintext
+            let mut message_bytes = [0u8; 32];
+            message.to_big_endian(&mut message_bytes);
+            let ciphertext = message_bytes
                 .iter()
-                .zip(symmetric_key.iter().cycle())
+                .zip(symmetric_key.iter())
                 .map(|(a, b)| a ^ b)
                 .collect::<Vec<u8>>();
 
@@ -111,7 +103,11 @@ fn main() -> Result<()> {
             let output = bytes_to_string(
                 &[
                     ciphertext,
-                    vec![0x40],
+                    vec![
+                        0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+                        0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+                        0x0, 0x40,
+                    ],
                     bid_public_key.x.0.to_bytes_be(),
                     bid_public_key.y.0.to_bytes_be(),
                 ]
@@ -126,32 +122,63 @@ fn main() -> Result<()> {
             bid_public_key_x,
             bid_public_key_y,
             private_key,
+            salt,
         } => {
-            // // Parse BigUints from Bytes
-            // let public_exponent = BigUint::from_bytes_be(&public_exponent);
-            // let private_exponent = BigUint::from_bytes_be(&private_exponent);
-            // let modulus = BigUint::from_bytes_be(&modulus);
+            // Parse values from byte strings
+            let ciphertext = U256::from_big_endian(&ciphertext);
+            let x = BaseField::from(BigUint::from_bytes_be(&bid_public_key_x));
+            let y = BaseField::from(BigUint::from_bytes_be(&bid_public_key_y));
+            let private_key = ScalarField::from(BigUint::from_bytes_be(&private_key));
 
-            // // Derive private key from components, we don't have the primes, but it will find them
-            // let private_key =
-            //     RsaPrivateKey::from_components(modulus, public_exponent, private_exponent, vec![])
-            //         .unwrap();
+            // Construct bid public key from coordinates
+            // Will revert if the point is not on the curve
+            let bid_public_key = G1::new(x, y).into_group();
 
-            // // Configure padding
-            // let padding = Oaep::new_with_label::<Sha256, String>(label);
+            // Calculate the shared secret public key using the bid public key and the private key
+            let shared_secret_public_key = bid_public_key * private_key;
 
-            // // Decrypt the message and recover the seed
-            // let (message, seed) = private_key
-            //     .decrypt_seed(padding, ciphertext.to_vec().as_slice())
-            //     .unwrap();
+            // Calculate the symmetric key by taking the keccak256 hash of the x coordinate of shared secret public key and the salt
+            let shared_secret = shared_secret_public_key.x.0.to_bytes_be();
+            let symmetric_key = ethers::utils::keccak256([shared_secret, salt.to_vec()].concat());
 
-            // // Convert the message and seed to a hex-encoded string (abi-encoded since they are both one slot)
-            // let output = bytes_to_string([message, seed].concat().as_slice());
+            // Decrypt the message by XORing the ciphertext with the symmetric key
+            let mut ciphertext_bytes = [0u8; 32];
+            ciphertext.to_big_endian(&mut ciphertext_bytes);
 
-            // // Print output to command line
-            // println!("{}", output);
+            let message = ciphertext_bytes
+                .iter()
+                .zip(symmetric_key.iter())
+                .map(|(a, b)| a ^ b)
+                .collect::<Vec<u8>>();
+
+            // Convert the message to a hex-encoded string (abi-encoded since it is one slot)
+            let output = bytes_to_string(&message);
+
+            // Print output to command line
+            println!("{}", output);
         }
     }
 
     Ok(())
 }
+
+// // Parse values from byte strings
+// let message = U256::from_big_endian(&message).as_u128();
+// let x = BaseField::from(BigUint::from_bytes_be(&public_key_x));
+// let y = BaseField::from(BigUint::from_bytes_be(&public_key_y));
+
+// // Construct public key from coordinates
+// // Will revert if the point is not on the curve
+// let public_key = G1::new(x, y).into_group();
+
+// // Format the message for encryption
+// // 1. Generate a random seed to mask the message
+// let message_seed: u128 = thread_rng().gen();
+// // 2. Mask the message with the seed, allowing for underflows
+// let masked_message = message_seed.wrapping_sub(message);
+// // 3. Concatenate the seed and the masked message to create the message to encrypt
+// let plaintext = [
+//     message_seed.to_be_bytes().to_vec(),
+//     masked_message.to_be_bytes().to_vec(),
+// ]
+// .concat();
