@@ -96,8 +96,7 @@ contract EmpaDecryptBidsTest is EmpaTest {
         givenLotHasConcluded
         givenPrivateKeyIsSubmitted
     {
-        // Call the function
-        _auctionHouse.decryptAndSortBids(_lotId, 0);
+        // No need to call decrypt, as it is called by submitPrivateKey
 
         // Call the function again
         bytes memory err =
@@ -188,8 +187,7 @@ contract EmpaDecryptBidsTest is EmpaTest {
         givenLotHasConcluded
         givenPrivateKeyIsSubmitted
     {
-        // Call the function
-        _auctionHouse.decryptAndSortBids(_lotId, 0);
+        // No need to call decrypt, as it is called by submitPrivateKey
 
         // Check the lot record
         EncryptedMarginalPriceAuction.Lot memory lot = _getLotData(_lotId);
