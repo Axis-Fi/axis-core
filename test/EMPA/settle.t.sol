@@ -18,6 +18,10 @@ contract EmpaSettleTest is EmpaTest {
     uint96 internal constant _BID_SIZE_NINE_AMOUNT_OUT = 9e18;
     uint96 internal constant _BID_PRICE_THREE_AMOUNT = 6e18;
     uint96 internal constant _BID_PRICE_THREE_AMOUNT_OUT = 2e18;
+    uint96 internal constant _BID_PRICE_TWO_SIZE_TEN_AMOUNT = 20e18;
+    uint96 internal constant _BID_PRICE_TWO_SIZE_TEN_AMOUNT_OUT = 10e18;
+    uint96 internal constant _BID_PRICE_TWO_SIZE_ELEVEN_AMOUNT = 22e18;
+    uint96 internal constant _BID_PRICE_TWO_SIZE_ELEVEN_AMOUNT_OUT = 11e18;
 
     uint96 internal _marginalPrice;
 
@@ -25,22 +29,6 @@ contract EmpaSettleTest is EmpaTest {
     uint96 internal _bidAmountOutTotal;
 
     // ============ Modifiers ============ //
-
-    function _adjustQuoteTokenDecimals(uint96 amount_) internal view returns (uint96) {
-        uint256 adjustedAmount = amount_ * 10 ** (_quoteToken.decimals()) / 1e18;
-
-        if (adjustedAmount > type(uint96).max) revert("overflow");
-
-        return uint96(adjustedAmount);
-    }
-
-    function _adjustBaseTokenDecimals(uint96 amount_) internal view returns (uint96) {
-        uint256 adjustedAmount = amount_ * 10 ** (_baseToken.decimals()) / 1e18;
-
-        if (adjustedAmount > type(uint96).max) revert("overflow");
-
-        return uint96(adjustedAmount);
-    }
 
     modifier givenBidsAreBelowMinimumFilled() {
         // Capacity: 1 + 1 < 2.5 minimum
@@ -54,8 +42,9 @@ contract EmpaSettleTest is EmpaTest {
         // Bid one: 0 out
         // Bid two: 0 out
 
-        _bidAmountInTotal = _BID_PRICE_TWO_AMOUNT + _BID_PRICE_TWO_AMOUNT;
-        _bidAmountOutTotal = _BID_PRICE_TWO_AMOUNT_OUT + _BID_PRICE_TWO_AMOUNT_OUT;
+        _bidAmountInTotal = _scaleQuoteTokenAmount(_BID_PRICE_TWO_AMOUNT + _BID_PRICE_TWO_AMOUNT);
+        _bidAmountOutTotal =
+            _scaleBaseTokenAmount(_BID_PRICE_TWO_AMOUNT_OUT + _BID_PRICE_TWO_AMOUNT_OUT);
         _;
     }
 
@@ -72,9 +61,12 @@ contract EmpaSettleTest is EmpaTest {
         // Bid one: 0 out
         // Bid two: 0 out
 
-        _bidAmountInTotal = _BID_PRICE_ONE_AMOUNT + _BID_PRICE_ONE_AMOUNT + _BID_PRICE_ONE_AMOUNT;
-        _bidAmountOutTotal =
-            _BID_PRICE_ONE_AMOUNT_OUT + _BID_PRICE_ONE_AMOUNT_OUT + _BID_PRICE_ONE_AMOUNT_OUT;
+        _bidAmountInTotal = _scaleQuoteTokenAmount(
+            _BID_PRICE_ONE_AMOUNT + _BID_PRICE_ONE_AMOUNT + _BID_PRICE_ONE_AMOUNT
+        );
+        _bidAmountOutTotal = _scaleBaseTokenAmount(
+            _BID_PRICE_ONE_AMOUNT_OUT + _BID_PRICE_ONE_AMOUNT_OUT + _BID_PRICE_ONE_AMOUNT_OUT
+        );
         _;
     }
 
@@ -86,7 +78,7 @@ contract EmpaSettleTest is EmpaTest {
         _createBid(_BID_PRICE_TWO_AMOUNT, _BID_PRICE_TWO_AMOUNT_OUT);
 
         // Marginal price: 2 >= 2 (due to capacity not being reached and the last bid having a price of 2)
-        _marginalPrice = 2e18;
+        _marginalPrice = _scaleQuoteTokenAmount(2 * _BASE_SCALE);
 
         // Output
         // Bid one: 2 / 2 = 1 out
@@ -94,10 +86,14 @@ contract EmpaSettleTest is EmpaTest {
         // Bid three: 2 / 2 = 1 out
         // Bid four: 2 / 2 = 1 out
 
-        _bidAmountInTotal = _BID_PRICE_TWO_AMOUNT + _BID_PRICE_TWO_AMOUNT + _BID_PRICE_TWO_AMOUNT
-            + _BID_PRICE_TWO_AMOUNT;
-        _bidAmountOutTotal = _BID_PRICE_TWO_AMOUNT_OUT + _BID_PRICE_TWO_AMOUNT_OUT
-            + _BID_PRICE_TWO_AMOUNT_OUT + _BID_PRICE_TWO_AMOUNT_OUT;
+        _bidAmountInTotal = _scaleQuoteTokenAmount(
+            _BID_PRICE_TWO_AMOUNT + _BID_PRICE_TWO_AMOUNT + _BID_PRICE_TWO_AMOUNT
+                + _BID_PRICE_TWO_AMOUNT
+        );
+        _bidAmountOutTotal = _scaleBaseTokenAmount(
+            _BID_PRICE_TWO_AMOUNT_OUT + _BID_PRICE_TWO_AMOUNT_OUT + _BID_PRICE_TWO_AMOUNT_OUT
+                + _BID_PRICE_TWO_AMOUNT_OUT
+        );
         _;
     }
 
@@ -108,48 +104,53 @@ contract EmpaSettleTest is EmpaTest {
         _createBid(_BID_PRICE_TWO_SIZE_TWO_AMOUNT, _BID_PRICE_TWO_SIZE_TWO_AMOUNT_OUT);
 
         // Marginal price: 2 >= 2 (due to capacity being reached on bid 2)
-        _marginalPrice = 2e18;
+        _marginalPrice = _scaleQuoteTokenAmount(2 * _BASE_SCALE);
 
         // Output
         // Bid one: 19 / 2 = 9.5 out
         // Bid two: 10 - 9.5 = 0.5 out (partial fill)
 
-        _bidAmountInTotal = _BID_SIZE_NINE_AMOUNT + _BID_PRICE_TWO_SIZE_TWO_AMOUNT;
-        _bidAmountOutTotal = _BID_SIZE_NINE_AMOUNT_OUT + _BID_PRICE_TWO_SIZE_TWO_AMOUNT_OUT;
+        _bidAmountInTotal =
+            _scaleQuoteTokenAmount(_BID_SIZE_NINE_AMOUNT + _BID_PRICE_TWO_SIZE_TWO_AMOUNT);
+        _bidAmountOutTotal =
+            _scaleBaseTokenAmount(_BID_SIZE_NINE_AMOUNT_OUT + _BID_PRICE_TWO_SIZE_TWO_AMOUNT_OUT);
         _;
     }
 
     modifier givenBidsAreOverSubscribedRespectsOrdering() {
         // Capacity: 10 + 2 > 10 capacity
         // Capacity reached on bid 1 (which is processed second)
-        _createBid(20e18, 10e18);
+        _createBid(_BID_PRICE_TWO_SIZE_TEN_AMOUNT, _BID_PRICE_TWO_SIZE_TEN_AMOUNT_OUT);
         _createBid(_BID_PRICE_TWO_SIZE_TWO_AMOUNT, _BID_PRICE_TWO_SIZE_TWO_AMOUNT_OUT);
 
         // Marginal price: 2 >= 2 (due to capacity being reached on bid 1)
-        _marginalPrice = 2e18;
+        _marginalPrice = _scaleQuoteTokenAmount(2 * _BASE_SCALE);
 
         // Output
         // Bid two: 4 / 2 = 2 out
         // Bid one: 10 - 2 = 8 out (partial fill)
 
-        _bidAmountInTotal = 20e18 + _BID_PRICE_TWO_SIZE_TWO_AMOUNT;
-        _bidAmountOutTotal = 10e18 + _BID_PRICE_TWO_SIZE_TWO_AMOUNT_OUT;
+        _bidAmountInTotal =
+            _scaleQuoteTokenAmount(_BID_PRICE_TWO_SIZE_TEN_AMOUNT + _BID_PRICE_TWO_SIZE_TWO_AMOUNT);
+        _bidAmountOutTotal = _scaleBaseTokenAmount(
+            _BID_PRICE_TWO_SIZE_TEN_AMOUNT_OUT + _BID_PRICE_TWO_SIZE_TWO_AMOUNT_OUT
+        );
         _;
     }
 
     modifier givenBidsAreOverSubscribedOnFirstBid() {
         // Capacity: 11 > 10 capacity
         // Capacity reached on bid 1
-        _createBid(22e18, 11e18);
+        _createBid(_BID_PRICE_TWO_SIZE_ELEVEN_AMOUNT, _BID_PRICE_TWO_SIZE_ELEVEN_AMOUNT_OUT);
 
         // Marginal price: 2 >= 2 (due to capacity being reached on bid 1)
-        _marginalPrice = 2e18;
+        _marginalPrice = _scaleQuoteTokenAmount(2 * _BASE_SCALE);
 
         // Output
         // Bid one: 10 out (partial fill)
 
-        _bidAmountInTotal = 22e18;
-        _bidAmountOutTotal = 11e18;
+        _bidAmountInTotal = _scaleQuoteTokenAmount(_BID_PRICE_TWO_SIZE_ELEVEN_AMOUNT);
+        _bidAmountOutTotal = _scaleBaseTokenAmount(_BID_PRICE_TWO_SIZE_ELEVEN_AMOUNT_OUT);
         _;
     }
 
@@ -161,7 +162,7 @@ contract EmpaSettleTest is EmpaTest {
         _createBid(_BID_PRICE_ONE_AMOUNT, _BID_PRICE_ONE_AMOUNT_OUT);
 
         // Marginal price: 3 >= 2 (due to capacity not being reached and the last bid above the minimum having a price of 3)
-        _marginalPrice = 3e18;
+        _marginalPrice = _scaleQuoteTokenAmount(3 * _BASE_SCALE);
 
         // Output
         // Bid one: 6 / 3 = 2 out
@@ -169,10 +170,14 @@ contract EmpaSettleTest is EmpaTest {
         // Bid three: 0 out
         // Bid four: 0 out
 
-        _bidAmountInTotal = _BID_PRICE_THREE_AMOUNT + _BID_PRICE_THREE_AMOUNT
-            + _BID_PRICE_ONE_AMOUNT + _BID_PRICE_ONE_AMOUNT;
-        _bidAmountOutTotal = _BID_PRICE_THREE_AMOUNT_OUT + _BID_PRICE_THREE_AMOUNT_OUT
-            + _BID_PRICE_ONE_AMOUNT_OUT + _BID_PRICE_ONE_AMOUNT_OUT;
+        _bidAmountInTotal = _scaleQuoteTokenAmount(
+            _BID_PRICE_THREE_AMOUNT + _BID_PRICE_THREE_AMOUNT + _BID_PRICE_ONE_AMOUNT
+                + _BID_PRICE_ONE_AMOUNT
+        );
+        _bidAmountOutTotal = _scaleBaseTokenAmount(
+            _BID_PRICE_THREE_AMOUNT_OUT + _BID_PRICE_THREE_AMOUNT_OUT + _BID_PRICE_ONE_AMOUNT_OUT
+                + _BID_PRICE_ONE_AMOUNT_OUT
+        );
         _;
     }
 
@@ -589,7 +594,7 @@ contract EmpaSettleTest is EmpaTest {
         );
         assertEq(
             _quoteToken.balanceOf(_bidder),
-            20e18 - bidOneAmountInActual,
+            _BID_PRICE_TWO_SIZE_TEN_AMOUNT - bidOneAmountInActual,
             "quote token: bidder balance"
         );
         assertEq(_quoteToken.balanceOf(_REFERRER), 0, "quote token: referrer balance");
@@ -624,7 +629,11 @@ contract EmpaSettleTest is EmpaTest {
         assertEq(uint8(bid.status), uint8(EncryptedMarginalPriceAuction.BidStatus.Claimed));
 
         uint96 bidOneAmountOutActual = _LOT_CAPACITY;
-        uint96 bidOneAmountInActual = _mulDivUp(bidOneAmountOutActual, 22e18, 11e18);
+        uint96 bidOneAmountInActual = _mulDivUp(
+            bidOneAmountOutActual,
+            _BID_PRICE_TWO_SIZE_ELEVEN_AMOUNT,
+            _BID_PRICE_TWO_SIZE_ELEVEN_AMOUNT_OUT
+        );
 
         // Check base token balances
         assertEq(
@@ -645,7 +654,7 @@ contract EmpaSettleTest is EmpaTest {
         );
         assertEq(
             _quoteToken.balanceOf(_bidder),
-            22e18 - bidOneAmountInActual,
+            _BID_PRICE_TWO_SIZE_ELEVEN_AMOUNT - bidOneAmountInActual,
             "quote token: bidder balance"
         );
         assertEq(_quoteToken.balanceOf(_REFERRER), 0, "quote token: referrer balance");
