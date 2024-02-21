@@ -958,6 +958,11 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
                     uint64 bidId = queue.bidIdList[i];
                     delete queue.idToBidMap[bidId];
                     queue.bidIdList.pop();
+
+                    // Otherwise an underflow will occur
+                    if (i == 0) {
+                        break;
+                    }
                 }
                 delete queue.numBids;
             }
