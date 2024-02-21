@@ -20,27 +20,31 @@ struct Point {
 ///         This library assumes the curve used is y^2 = x^3 + 3, which has generator point (1, 2).
 /// @author Oighty
 library ECIES {
-    uint256 constant GROUP_ORDER =
+    uint256 public constant GROUP_ORDER =
         21_888_242_871_839_275_222_246_405_745_257_275_088_548_364_400_416_034_343_698_204_186_575_808_495_617;
-    uint256 constant FIELD_MODULUS =
+    uint256 public constant FIELD_MODULUS =
         21_888_242_871_839_275_222_246_405_745_257_275_088_696_311_157_297_823_662_689_037_894_645_226_208_583;
 
     /// @notice We use a hash function to derive a symmetric key from the shared secret and a provided salt.
     /// @dev This is not as secure as modern key derivation functions, since hash-based keys are susceptible to dictionary attacks.
     ///      However, it is simple and cheap to implement, and is sufficient for our purposes.
     ///      The salt prevents duplication even if a shared secret is reused.
-    function deriveSymmetricKey(uint256 sharedSecret_, bytes32 s1_) public pure returns (uint256) {
+    function deriveSymmetricKey(uint256 sharedSecret_, uint256 s1_) public pure returns (uint256) {
         return uint256(keccak256(abi.encodePacked(sharedSecret_, s1_)));
     }
 
     /// @notice Recover the shared secret as the x-coordinate of the EC point computed as the multiplication of the ciphertext public key and the private key.
     function recoverSharedSecret(
         Point memory ciphertextPubKey_,
-        bytes32 privateKey_
+        uint256 privateKey_
     ) public view returns (uint256) {
+        // Validate public key is on the curve
         if (!isOnBn128(ciphertextPubKey_)) revert("Invalid public key.");
 
-        Point memory p = _ecMul(ciphertextPubKey_, uint256(privateKey_));
+        // Validate private key is less than the group order and not zero
+        if (privateKey_ >= GROUP_ORDER || privateKey_ == 0) revert("Invalid private key.");
+
+        Point memory p = _ecMul(ciphertextPubKey_, privateKey_);
 
         return p.x;
     }
@@ -51,27 +55,66 @@ library ECIES {
     /// @param ciphertextPubKey_ - The ciphertext public key provided by the sender.
     /// @param privateKey_ - The private key of the recipient.
     /// @param salt_ - A salt used to derive the symmetric key from the shared secret. Ensures that the symmetric key is unique even if the shared secret is reused.
+    /// @return message_ - The decrypted message.
     function decrypt(
         uint256 ciphertext_,
         Point memory ciphertextPubKey_,
-        bytes32 privateKey_,
-        bytes32 salt_
-    ) public view returns (uint256) {
+        uint256 privateKey_,
+        uint256 salt_
+    ) public view returns (uint256 message_) {
+        // Calculate the shared secret
+        // Validates the ciphertext public key is on the curve and the private key is valid
         uint256 sharedSecret = recoverSharedSecret(ciphertextPubKey_, privateKey_);
 
+        // Derive the symmetric key from the shared secret and the salt
         uint256 symmetricKey = deriveSymmetricKey(sharedSecret, salt_);
 
-        return ciphertext_ ^ symmetricKey;
+        // Decrypt the message using XOR encryption
+        message_ = ciphertext_ ^ symmetricKey;
+    }
+
+    /// @notice Encrypt a message using the provided recipient public key and the sender private key. Note: sending the private key to an RPC can leak it. This should be used locally.
+    /// @param message_ - The message to encrypt.
+    /// @param recipientPubKey_ - The public key of the recipient.
+    /// @param privateKey_ - The private key to use to encrypt the message.
+    /// @param salt_ - A salt used to derive the symmetric key from the shared secret. Ensures that the symmetric key is unique even if the shared secret is reused.
+    /// @return ciphertext_ - The encrypted message.
+    /// @return messagePubKey_ - The public key of the message that the receipient can use to decrypt it.
+    function encrypt(
+        uint256 message_,
+        Point memory recipientPubKey_,
+        uint256 privateKey_,
+        uint256 salt_
+    ) public view returns (uint256 ciphertext_, Point memory messagePubKey_) {
+        // Create the message public key using the provided private key
+        // Validates the private key is valid
+        messagePubKey_ = calcPubKey(Point(1, 2), privateKey_);
+
+        // Calculate the shared secret
+        // Validates the recipient public key is on the curve
+        uint256 sharedSecret = recoverSharedSecret(recipientPubKey_, privateKey_);
+
+        // Derive the symmetric key from the shared secret and the salt
+        uint256 symmetricKey = deriveSymmetricKey(sharedSecret, salt_);
+
+        // Encrypt the message using XOR encryption
+        ciphertext_ = message_ ^ symmetricKey;
     }
 
     /// @notice Calculate the point on the generator curve that corresponds to the provided private key. This is used as the public key.
-    /// @param generator_ - The generator point of the alt_bn128 curve.
+    /// @param generator_ - The point on the the alt_bn128 curve. to use as the generator.
     /// @param privateKey_ - The private key to calculate the public key for.
     function calcPubKey(
         Point memory generator_,
-        bytes32 privateKey_
+        uint256 privateKey_
     ) public view returns (Point memory) {
-        return _ecMul(generator_, uint256(privateKey_));
+        // Validate generator is on the curve
+        if (!isOnBn128(generator_)) revert("Invalid generator point.");
+
+        // Validate private key is less than the group order and not zero
+        if (privateKey_ >= GROUP_ORDER || privateKey_ == 0) revert("Invalid private key.");
+
+        return _ecMul(generator_, privateKey_);
     }
 
     function _ecMul(Point memory p, uint256 scalar) private view returns (Point memory p2) {
