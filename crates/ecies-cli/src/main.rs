@@ -81,21 +81,14 @@ fn main() -> Result<()> {
 
             //  Calculate the bid public key using the bid private key
             let bid_public_key = (G1::generator() * bid_private_key).into_affine();
-            // println!("bid_public_key: {:?}", bid_public_key);
 
             //  Calculate a shared secret public key using the bid public key and the auction public key
             let shared_secret_public_key = (public_key * bid_private_key).into_affine();
 
             //  Calculate the symmetric key by taking the keccak256 hash of the x coordinate of shared secret public key and the salt
-            // println!("shared_secret: {}", shared_secret_public_key.x);
-            // println!("shared_secert_conversion: {}", BigUint::from(shared_secret_public_key.x));
-            // println!("shared_secret_bytes: {:?}", BigUint::from(shared_secret_public_key.x).to_bytes_be());
-            // println!("shared_secret_U256: {}", U256::from_big_endian(&BigUint::from(shared_secret_public_key.x).to_bytes_be()));
-
             let mut shared_secret_bytes = [0u8; 32];
             U256::from_big_endian(&BigUint::from(shared_secret_public_key.x).to_bytes_be())
                 .to_big_endian(&mut shared_secret_bytes);
-            // println!("shared_secret_32_bytes: {:?}", shared_secret_bytes);
             let mut salt_bytes = [0u8; 32];
             salt.to_big_endian(&mut salt_bytes);
             let symmetric_key = ethers::utils::keccak256(
@@ -115,11 +108,6 @@ fn main() -> Result<()> {
             let mut x_bytes = [0u8; 32];
             U256::from_big_endian(&BigUint::from(bid_public_key.x).to_bytes_be())
                 .to_big_endian(&mut x_bytes);
-            // println!("x: {}", bid_public_key.x);
-            // println!("x_conversion: {}", BigUint::from(bid_public_key.x));
-            // println!("x_bytes: {:?}", BigUint::from(bid_public_key.x).to_bytes_be());
-            // println!("x_U256: {}", U256::from_big_endian(&BigUint::from(bid_public_key.x).to_bytes_be()));
-            // println!("x_32_bytes: {:?}", x_bytes);
 
             let mut y_bytes = [0u8; 32];
             U256::from_big_endian(&BigUint::from(bid_public_key.y).to_bytes_be())
