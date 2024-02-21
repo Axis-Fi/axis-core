@@ -99,7 +99,7 @@ abstract contract EmpaTest is Test, Permit2User {
         _mockHook = new MockEMPAHook(address(_quoteToken), address(_baseToken));
 
         _auctionPrivateKey = 112_233_445_566;
-        _auctionPublicKey = ECIES.calcPubKey(Point(1, 2), bytes32(_auctionPrivateKey));
+        _auctionPublicKey = ECIES.calcPubKey(Point(1, 2), _auctionPrivateKey);
         _startTime = uint48(block.timestamp) + 1;
 
         _auctionParams = EncryptedMarginalPriceAuction.AuctionParams({
@@ -128,7 +128,7 @@ abstract contract EmpaTest is Test, Permit2User {
         _auctionHouse.setFee(FeeManager.FeeType.MaxCurator, _CURATOR_MAX_FEE_PERCENT);
 
         // Bids
-        _bidPublicKey = ECIES.calcPubKey(Point(1, 2), bytes32(_BID_PRIVATE_KEY));
+        _bidPublicKey = ECIES.calcPubKey(Point(1, 2), _BID_PRIVATE_KEY);
         _bidderKey = _getRandomUint256();
         _bidder = vm.addr(_bidderKey);
     }
@@ -333,7 +333,7 @@ abstract contract EmpaTest is Test, Permit2User {
     }
 
     function _submitPrivateKey() internal {
-        _auctionHouse.submitPrivateKey(_lotId, bytes32(_auctionPrivateKey), 0);
+        _auctionHouse.submitPrivateKey(_lotId, _auctionPrivateKey, 0);
     }
 
     modifier givenPrivateKeyIsSubmitted() {
@@ -446,8 +446,8 @@ abstract contract EmpaTest is Test, Permit2User {
         // Format the amount out
         uint256 formattedAmountOut = _formatBid(amountOut_);
 
-        Point memory sharedSecretKey = ECIES.calcPubKey(_bidPublicKey, bytes32(_auctionPrivateKey));
-        bytes32 salt = keccak256(abi.encodePacked(lotId_, bidder_, amountIn_));
+        Point memory sharedSecretKey = ECIES.calcPubKey(_bidPublicKey, _auctionPrivateKey);
+        uint256 salt = uint256(keccak256(abi.encodePacked(lotId_, bidder_, amountIn_)));
         uint256 symmetricKey = uint256(keccak256(abi.encodePacked(sharedSecretKey.x, salt)));
 
         return formattedAmountOut ^ symmetricKey;
@@ -527,7 +527,7 @@ abstract contract EmpaTest is Test, Permit2User {
             uint64 nextDecryptIndex,
             uint96 marginalPrice,
             Point memory publicKey,
-            bytes32 privateKey
+            uint256 privateKey
         ) = _auctionHouse.bidData(lotId_);
 
         return EncryptedMarginalPriceAuction.BidData({
