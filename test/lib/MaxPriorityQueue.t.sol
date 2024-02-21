@@ -130,10 +130,61 @@ contract EmpaMaxPriorityQueueTest is Test {
         Bid memory maxBid = queue.delMax();
         assertEq(maxBid.amountIn, 3, "index 0: amountIn mismatch");
 
+        // Unexpected behaviour when duplicate bid id is added
+        maxId = queue.getMaxId();
+        assertEq(maxId, 0, "index 1: maxId mismatch");
+        maxBid = queue.delMax();
+        assertEq(maxBid.amountIn, 0, "index 1: amountIn mismatch");
+
+        assertEq(queue.isEmpty(), true, "isEmpty mismatch");
+    }
+
+    function test_zeroAmountIn() external {
+        queue.initialize();
+
+        queue.insert(0, 0, 1);
+        queue.insert(1, 1, 1);
+
+        // Check values
+        assertEq(queue.getNumBids(), 2, "numBids mismatch");
+
+        // Check order of values
+        uint64 maxId = queue.getMaxId();
+        assertEq(maxId, 1, "index 0: maxId mismatch");
+        Bid memory maxBid = queue.delMax();
+        assertEq(maxBid.amountIn, 1, "index 0: amountIn mismatch");
+        assertEq(maxBid.minAmountOut, 1, "index 0: minAmountOut mismatch");
+
+        maxId = queue.getMaxId();
+        assertEq(maxId, 0, "index 1: maxId mismatch");
+        maxBid = queue.delMax();
+        assertEq(maxBid.amountIn, 0, "index 1: amountIn mismatch");
+        assertEq(maxBid.minAmountOut, 1, "index 1: minAmountOut mismatch");
+
+        assertEq(queue.isEmpty(), true, "isEmpty mismatch");
+    }
+
+    function test_zeroAmountOut() external {
+        queue.initialize();
+
+        queue.insert(0, 1, 0);
+        queue.insert(1, 1, 1);
+
+        // Check values
+        assertEq(queue.getNumBids(), 2, "numBids mismatch");
+
+        // Check order of values
+        uint64 maxId = queue.getMaxId();
+        assertEq(maxId, 1, "index 0: maxId mismatch");
+        Bid memory maxBid = queue.delMax();
+        assertEq(maxBid.amountIn, 1, "index 0: amountIn mismatch");
+        assertEq(maxBid.minAmountOut, 1, "index 0: minAmountOut mismatch");
+
         maxId = queue.getMaxId();
         assertEq(maxId, 0, "index 1: maxId mismatch");
         maxBid = queue.delMax();
         assertEq(maxBid.amountIn, 1, "index 1: amountIn mismatch");
+        assertEq(maxBid.minAmountOut, 0, "index 1: minAmountOut mismatch");
 
         assertEq(queue.isEmpty(), true, "isEmpty mismatch");
     }

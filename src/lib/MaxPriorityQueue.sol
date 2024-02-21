@@ -20,6 +20,7 @@ struct Queue {
 /// @author FrankieIsLost
 /// @author Oighty (edits)
 /// Bids in descending order
+/// @dev    Note that the queue assumes that the bid ids are unique. Behaviour will be unexpected if this is not the case.
 library MaxPriorityQueue {
     ///@notice initialize must be called before using queue.
     function initialize(Queue storage self) public {
