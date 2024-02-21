@@ -867,9 +867,8 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
     ///
     ///             This function reverts if:
     ///             - the lot ID is invalid
-    ///             - the auction module reverts when settling the auction
+    ///             - the lot state is invalid
     ///             - transferring the quote token to the auction owner fails
-    ///             - collecting the payout from the auction owner fails
     ///             - sending the payout to each bidder fails
     ///             - re-entrancy is detected
     function settle(uint96 lotId_) external override nonReentrant {
@@ -890,8 +889,6 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
         uint96 capacity = lotData[lotId_].capacity;
         uint96 baseScale = uint96(10 ** lotData[lotId_].baseTokenDecimals); // We know this is true, since baseTokenDecimals is 6-18
         uint96 minimumPrice = lotData[lotId_].minimumPrice;
-
-        // TODO review uint96/uint256 types for overflow
 
         // Iterate over bid queue (sorted in descending price) to calculate the marginal clearing price of the auction
         uint96 marginalPrice;

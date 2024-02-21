@@ -14,8 +14,6 @@ contract EmpaSettleTest is EmpaTest {
     uint96 internal constant _BID_PRICE_TWO_AMOUNT_OUT = 1e18;
     uint96 internal constant _BID_PRICE_TWO_SIZE_TWO_AMOUNT = 4e18;
     uint96 internal constant _BID_PRICE_TWO_SIZE_TWO_AMOUNT_OUT = 2e18;
-    uint96 internal constant _BID_SIZE_BELOW_MINIMUM_AMOUNT = 1e15;
-    uint96 internal constant _BID_SIZE_BELOW_MINIMUM_AMOUNT_OUT = 1e16;
     uint96 internal constant _BID_SIZE_NINE_AMOUNT = 19e18;
     uint96 internal constant _BID_SIZE_NINE_AMOUNT_OUT = 9e18;
     uint96 internal constant _BID_PRICE_THREE_AMOUNT = 6e18;
@@ -269,12 +267,6 @@ contract EmpaSettleTest is EmpaTest {
     //  [X] it returns winning bids, excluding those below the minimum price
     // [X] given the lot is over-subscribed with a partial fill
     //  [X] it returns winning bids, with the marginal price is the price at which the lot capacity is exhausted, and a partial fill for the lowest winning bid, last bidder receives the partial fill and is returned excess quote tokens
-    // [ ] given the bid is below the minimum size
-    //  [ ] it ignores
-    // [ ] given the auction house has insufficient balance of the quote token
-    //  [ ] it reverts
-    // [ ] given the auction house has insufficient balance of the base token
-    //  [ ] it reverts
     // [ ] given that the quote token decimals are larger than the base token decimals
     //  [ ] it succeeds
     // [ ] given that the quote token decimals are smaller than the base token decimals
