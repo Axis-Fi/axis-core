@@ -86,6 +86,52 @@ contract EmpaMaxPriorityQueueTest is Test {
         assertEq(queue.isEmpty(), true);
     }
 
+    function test_addBidSamePrice() external {
+        queue.initialize();
+
+        queue.insert(0, 2, 1);
+        queue.insert(1, 4, 2);
+
+        // Check values
+        assertEq(queue.getNumBids(), 2);
+
+        // Check order of values
+        uint64 maxId = queue.getMaxId();
+        assertEq(maxId, 1);
+        Bid memory maxBid = queue.delMax();
+        assertEq(maxBid.amountIn, 4);
+
+        maxId = queue.getMaxId();
+        assertEq(maxId, 0);
+        maxBid = queue.delMax();
+        assertEq(maxBid.amountIn, 2);
+
+        assertEq(queue.isEmpty(), true);
+    }
+
+    function test_addBidSamePrice_reverse() external {
+        queue.initialize();
+
+        queue.insert(0, 4, 2);
+        queue.insert(1, 2, 1);
+
+        // Check values
+        assertEq(queue.getNumBids(), 2);
+
+        // Check order of values
+        uint64 maxId = queue.getMaxId();
+        assertEq(maxId, 1);
+        Bid memory maxBid = queue.delMax();
+        assertEq(maxBid.amountIn, 2);
+
+        maxId = queue.getMaxId();
+        assertEq(maxId, 0);
+        maxBid = queue.delMax();
+        assertEq(maxBid.amountIn, 4);
+
+        assertEq(queue.isEmpty(), true);
+    }
+
     function test_addBidInMiddle() external {
         queue.initialize();
 

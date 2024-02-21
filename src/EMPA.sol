@@ -975,8 +975,6 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
         // or if the marginal price is less than the minimum price
         if (capacityExpended >= lotData[lotId_].minFilled && marginalPrice >= minimumPrice) {
             // Auction can be settled at the marginal price if we reach this point
-            // TODO think about if it's possible for this to happen
-            if (marginalPrice > type(uint96).max) revert("price overflow");
             bidData[lotId_].marginalPrice = marginalPrice;
 
             Routing storage routing = lotRouting[lotId_];
@@ -987,9 +985,13 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
                 Bid storage _bid = bids[lotId_][partialFillBidId];
 
                 // Calculate the payout and refund amounts
-                uint96 fullFill = (_bid.amount * baseScale) / marginalPrice;
-                uint96 payout = fullFill - (capacityExpended - capacity);
-                uint96 refundAmount = (_bid.amount * payout) / fullFill;
+                uint96 fullFill = _mulDivUp(_bid.amount, baseScale, marginalPrice);
+                uint96 overflow = capacityExpended - capacity;
+                uint96 payout = fullFill - overflow;
+                uint96 refundAmount = _mulDivUp(_bid.amount, overflow, fullFill);
+
+                // Reduce the total amount in by the refund amount
+                totalAmountIn -= refundAmount;
 
                 // Set bid as claimed
                 _bid.status = BidStatus.Claimed;

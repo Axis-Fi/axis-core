@@ -23,8 +23,6 @@ import {EncryptedMarginalPriceAuction, FeeManager} from "src/EMPA.sol";
 // Modules
 import {toKeycode, Veecode} from "src/modules/Modules.sol";
 
-import {console2} from "forge-std/console2.sol";
-
 abstract contract EmpaTest is Test, Permit2User {
     MockFeeOnTransferERC20 internal _baseToken;
     MockERC20 internal _quoteToken;
