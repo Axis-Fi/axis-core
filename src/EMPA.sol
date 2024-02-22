@@ -7,7 +7,7 @@ import {Owned} from "lib/solmate/src/auth/Owned.sol";
 import {Transfer} from "src/lib/Transfer.sol";
 import {MaxPriorityQueue, Queue, Bid as QueueBid} from "src/lib/MaxPriorityQueue.sol";
 import {ECIES, Point} from "src/lib/ECIES.sol";
-import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
+import {FixedMath} from "src/lib/FixedMath.sol";
 
 import {DerivativeModule} from "src/modules/Derivative.sol";
 
@@ -191,11 +191,11 @@ abstract contract FeeManager is Owned, ReentrancyGuard {
             // 1. Calculate referrer fee
             // 2. Calculate protocol fee as the total expected fee amount minus the referrer fee
             //    to avoid issues with rounding from separate fee calculations
-            toReferrer = (amount_ * referrerFee) / _FEE_DECIMALS;
-            toProtocol = ((amount_ * (protocolFee + referrerFee)) / _FEE_DECIMALS) - toReferrer;
+            toReferrer = FixedMath.mulDivUp(amount_, referrerFee, _FEE_DECIMALS);
+            toProtocol = FixedMath.mulDivUp(amount_, protocolFee + referrerFee, _FEE_DECIMALS) - toReferrer;
         } else {
             // There is no referrer
-            toProtocol = (amount_ * (protocolFee + referrerFee)) / _FEE_DECIMALS;
+            toProtocol = FixedMath.mulDivUp(amount_, protocolFee + referrerFee, _FEE_DECIMALS);
         }
     }
 
@@ -205,7 +205,7 @@ abstract contract FeeManager is Owned, ReentrancyGuard {
         uint96 payout_
     ) internal view returns (uint96 toCurator) {
         // Calculate curator fee
-        toCurator = (payout_ * fees.curator[curator_]) / _FEE_DECIMALS;
+        toCurator = FixedMath.mulDivUp(payout_, fees.curator[curator_], _FEE_DECIMALS);
     }
 
     // ========== FEE MANAGEMENT ========== //
@@ -269,7 +269,6 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
     error Broken_Invariant();
     error InvalidParams();
     error InvalidHook();
-    error Overflow();
 
     error Auction_InvalidId(uint96 id_);
     error Auction_MarketActive(uint96 lotId); // TODO consider removing these two
@@ -580,8 +579,10 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
             lot.baseTokenDecimals = baseTokenDecimals;
             lot.capacity = params_.capacity;
             lot.minimumPrice = params_.minimumPrice;
-            lot.minFilled = (params_.capacity * params_.minFillPercent) / _ONE_HUNDRED_PERCENT;
-            lot.minBidSize = (params_.capacity * params_.minBidPercent) / _ONE_HUNDRED_PERCENT;
+            lot.minFilled =
+                FixedMath.mulDivUp(params_.capacity, params_.minFillPercent, _ONE_HUNDRED_PERCENT);
+            lot.minBidSize =
+                FixedMath.mulDivUp(params_.capacity, params_.minBidPercent, _ONE_HUNDRED_PERCENT);
         }
 
         // Initialize bid data
@@ -853,28 +854,6 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
         emit RefundBid(lotId_, bidId_, msg.sender);
     }
 
-    /// @notice     Applies mulDivUp to uint96 values, and checks that the result is within the uint96 range
-    /// @dev        This function returns the maximum value of uint96 if the product is greater than the maximum value of a uint96
-    function _mulDivUpNoOverflow(
-        uint96 mul1_,
-        uint96 mul2_,
-        uint96 div_
-    ) internal pure returns (uint96) {
-        uint256 product = FixedPointMathLib.mulDivUp(mul1_, mul2_, div_);
-        if (product > type(uint96).max) return type(uint96).max;
-
-        return uint96(product);
-    }
-
-    /// @notice     Applies mulDivUp to uint96 values, and checks that the result is within the uint96 range
-    /// @dev        This function reverts if the product is greater than the maximum value of a uint96
-    function _mulDivUp(uint96 mul1_, uint96 mul2_, uint96 div_) internal pure returns (uint96) {
-        uint96 product = _mulDivUpNoOverflow(mul1_, mul2_, div_);
-        if (product == type(uint96).max) revert Overflow();
-
-        return product;
-    }
-
     /// @inheritdoc Router
     /// @dev        This function handles the following:
     ///             - Settles the auction on the auction module
@@ -933,7 +912,7 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
 
                 // Calculate the price of the bid
                 // We know this will not overflow, as it was checked during decryption
-                uint96 price = _mulDivUp(qBid.amountIn, baseScale, qBid.minAmountOut);
+                uint96 price = FixedMath.mulDivUp(qBid.amountIn, baseScale, qBid.minAmountOut);
 
                 // If the price is below the minimum price, the previous price is the marginal price
                 if (price < minimumPrice) {
@@ -949,7 +928,7 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
 
                 // Determine total capacity expended at this price (in base token units)
                 // quote scale * base scale / quote scale = base scale
-                capacityExpended = _mulDivUp(totalAmountIn, baseScale, price);
+                capacityExpended = FixedMath.mulDivUp(totalAmountIn, baseScale, price);
 
                 // If total capacity expended is greater than or equal to the capacity, we have found the marginal price
                 if (capacityExpended >= capacity) {
@@ -1004,10 +983,10 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
                 Bid storage _bid = bids[lotId_][partialFillBidId];
 
                 // Calculate the payout and refund amounts
-                uint96 fullFill = _mulDivUp(_bid.amount, baseScale, marginalPrice);
+                uint96 fullFill = FixedMath.mulDivUp(_bid.amount, baseScale, marginalPrice);
                 uint96 overflow = capacityExpended - capacity;
                 uint96 payout = fullFill - overflow;
-                uint96 refundAmount = _mulDivUp(_bid.amount, overflow, fullFill);
+                uint96 refundAmount = FixedMath.mulDivUp(_bid.amount, overflow, fullFill);
 
                 // Reduce the total amount in by the refund amount
                 totalAmountIn -= refundAmount;
@@ -1099,7 +1078,7 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
         }
 
         // Calculate the bid price
-        uint96 bidPrice = _mulDivUp(
+        uint96 bidPrice = FixedMath.mulDivUp(
             _bid.amount, uint96(10) ** lotData[lotId_].baseTokenDecimals, _bid.minAmountOut
         );
         uint96 marginalPrice = bidData[lotId_].marginalPrice;
@@ -1116,7 +1095,7 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
             );
 
             // Calculate payout using marginal price
-            payoutAmount = _mulDivUp(
+            payoutAmount = FixedMath.mulDivUp(
                 _bid.amount, uint96(10) ** lotData[lotId_].baseTokenDecimals, marginalPrice
             );
 
@@ -1203,7 +1182,6 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
         // Load next decrypt index and private key
         BidData storage lotBidData = bidData[lotId_];
         uint64 nextDecryptIndex = lotBidData.nextDecryptIndex;
-        uint256 privateKey = lotBidData.privateKey;
 
         // Check that the number of decrypts is less than or equal to the number of bids remaining to be decrypted
         // If so, reduce to the number remaining
@@ -1221,7 +1199,7 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
             // Decrypt the bid
             uint96 amountOut;
             {
-                uint256 result = _decrypt(lotId_, bidId, privateKey);
+                uint256 result = _decrypt(lotId_, bidId, lotBidData.privateKey);
                 // We skip the bid if the decrypted amount out overflows the uint96 type
                 // No valid bid should expect more than 7.9 * 10^28 (79 trillion tokens if 18 decimals)
                 if (result > type(uint96).max) continue;
@@ -1233,7 +1211,7 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
             if (amountOut > 0 && amountOut >= minBidSize) {
                 // Only store the decrypt if the price does not overflow
                 if (
-                    _mulDivUpNoOverflow(
+                    FixedMath.mulDivUpNoOverflow(
                         _bid.amount, uint96(10) ** lotData[lotId_].baseTokenDecimals, amountOut
                     ) < type(uint96).max
                 ) {
