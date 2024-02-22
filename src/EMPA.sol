@@ -1059,6 +1059,8 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
             (uint256(_bid.amount) * 10 ** lotData[lotId_].baseTokenDecimals) / _bid.minAmountOut;
         uint256 marginalPrice = bidData[lotId_].marginalPrice;
 
+        // TODO allocate quote token fees
+
         // If the bid price is greater than or equal the settled price, then payout expected amount
         // We don't have to worry about partial fills here because the bid which is partially filled is handled during settlement
         // Else the bid price is less than the settled price, so refund the bid amount
@@ -1418,16 +1420,16 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
         address owner_,
         ERC20 quoteToken_,
         uint96 amount_
-    ) internal returns (uint256 totalFees) {
+    ) internal returns (uint96 toReferrer, uint96 toProtocol) {
         // Calculate fees for purchase
-        (uint96 toReferrer, uint96 toProtocol) =
+        (toReferrer, toProtocol) =
             calculateQuoteFees(referrer_ != address(0) && referrer_ != owner_, amount_);
 
         // Update fee balances if non-zero
         if (toReferrer > 0) rewards[referrer_][quoteToken_] += toReferrer;
         if (toProtocol > 0) rewards[_protocol][quoteToken_] += toProtocol;
 
-        return toReferrer + toProtocol;
+        return (toReferrer, toProtocol);
     }
 
     // ========== MODIFIERS ========== //
