@@ -927,11 +927,12 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
                 lastPrice = price;
 
                 // Increment total amount in
-                totalAmountIn += qBid.amountIn;
+                totalAmountIn += qBid.amountIn; // TODO check if overflow is possible
 
                 // Determine total capacity expended at this price (in base token units)
                 // quote scale * base scale / quote scale = base scale
                 // This value can overflow if there are enough large bids. It is capped at the max uint96 value to protect against this.
+                // TODO use uint256 but check for uint96?
                 capacityExpended = FixedMath.mulDivUpNoOverflow(totalAmountIn, baseScale, price);
 
                 // If total capacity expended is greater than or equal to the capacity, we have found the marginal price
