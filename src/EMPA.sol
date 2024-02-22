@@ -1065,33 +1065,45 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
     /// @inheritdoc Router
     function claim(uint96 lotId_, uint64 bidId_) external override nonReentrant {
         // Validation
-        // lot is valid
-        // bid hasn't been claimed yet
-        // lot has been settled
         _revertIfLotInvalid(lotId_);
         _revertIfLotNotSettled(lotId_);
+        _revertIfBidInvalid(lotId_, bidId_);
         _revertIfBidClaimed(lotId_, bidId_);
+
+        // Get the bid and compare to settled auction price
+        Bid storage _bid = bids[lotId_][bidId_];
+        BidStatus status = _bid.status;
 
         // Set bid status to claimed
         bids[lotId_][bidId_].status = BidStatus.Claimed;
 
-        // Get the bid and compare to settled auction price
-        Bid storage _bid = bids[lotId_][bidId_];
-        uint256 bidPrice =
-            (uint256(_bid.amount) * 10 ** lotData[lotId_].baseTokenDecimals) / _bid.minAmountOut;
-        uint256 marginalPrice = bidData[lotId_].marginalPrice;
+        // If the bid was not decrypted, refund the bid amount
+        if (status == BidStatus.Submitted) {
+            Transfer.transfer(lotRouting[lotId_].quoteToken, _bid.bidder, _bid.amount, false);
+            return;
+        }
 
-        // TODO allocate quote token fees
+        // Calculate the bid price
+        uint96 bidPrice = _mulDivUp(
+            _bid.amount, uint96(10) ** lotData[lotId_].baseTokenDecimals, _bid.minAmountOut
+        );
+        uint96 marginalPrice = bidData[lotId_].marginalPrice;
 
         // If the bid price is greater than or equal the settled price, then payout expected amount
         // We don't have to worry about partial fills here because the bid which is partially filled is handled during settlement
         // Else the bid price is less than the settled price, so refund the bid amount
-        uint256 quoteAmount;
-        uint256 payoutAmount;
-        if (bidPrice >= marginalPrice) {
+        uint96 quoteAmount;
+        uint96 payoutAmount;
+        if (marginalPrice > 0 && bidPrice >= marginalPrice) {
+            // Allocate quote token fees
+            _allocateQuoteFees(
+                _bid.referrer, lotRouting[lotId_].owner, lotRouting[lotId_].quoteToken, _bid.amount
+            );
+
             // Calculate payout using marginal price
-            payoutAmount =
-                (uint256(_bid.amount) * 10 ** lotData[lotId_].baseTokenDecimals) / marginalPrice;
+            payoutAmount = _mulDivUp(
+                _bid.amount, uint96(10) ** lotData[lotId_].baseTokenDecimals, marginalPrice
+            );
 
             // Transfer payout to the bidder
             _sendPayout(lotId_, _bid.bidder, payoutAmount, lotRouting[lotId_]);
@@ -1552,9 +1564,12 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
     ///
     /// @param      lotId_  The lot ID
     /// @param      bidId_  The bid ID
-    function _revertIfBidInvalid(uint96 lotId_, uint96 bidId_) internal view {
+    function _revertIfBidInvalid(uint96 lotId_, uint64 bidId_) internal view {
         // Bid ID must be less than number of bids for lot
         if (bidId_ >= bidData[lotId_].nextBidId) revert Bid_InvalidId(lotId_, bidId_);
+
+        // Bid should have a bidder
+        if (bids[lotId_][bidId_].bidder == address(0)) revert Bid_InvalidId(lotId_, bidId_);
     }
 
     /// @notice     Checks that `caller_` is the bid owner

@@ -6,7 +6,8 @@ import {EmpaTest} from "test/EMPA/EMPATest.sol";
 contract EmpaSetProtocolTest is EmpaTest {
     address internal immutable _NEW_PROTOCOL = address(0x7);
 
-    uint96 internal constant _AMOUNT_IN = 1e18;
+    uint96 internal constant _AMOUNT_IN = 8e18;
+    uint96 internal constant _AMOUNT_OUT = 4e18;
     uint96 internal _amountInProtocolFee = _AMOUNT_IN * _PROTOCOL_FEE_PERCENT / 1e5;
 
     // ===== Modifiers ===== //
@@ -39,7 +40,7 @@ contract EmpaSetProtocolTest is EmpaTest {
         givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenLotIsCreated
         givenLotHasStarted
-        givenBidIsCreated(_AMOUNT_IN, 1e18)
+        givenBidIsCreated(_AMOUNT_IN, _AMOUNT_OUT)
         givenLotHasConcluded
         givenPrivateKeyIsSubmitted
         givenLotIsDecrypted
@@ -58,9 +59,13 @@ contract EmpaSetProtocolTest is EmpaTest {
         _auctionHouse.claimRewards(address(_quoteToken));
 
         // Check new balance
-        assertEq(_quoteToken.balanceOf(_NEW_PROTOCOL), previousBalance + _amountInProtocolFee);
+        assertEq(
+            _quoteToken.balanceOf(_NEW_PROTOCOL),
+            previousBalance + _amountInProtocolFee,
+            "quote token balance"
+        );
 
         // Check rewards
-        assertEq(_auctionHouse.rewards(_NEW_PROTOCOL, _quoteToken), 0);
+        assertEq(_auctionHouse.rewards(_NEW_PROTOCOL, _quoteToken), 0, "protocol fee");
     }
 }
