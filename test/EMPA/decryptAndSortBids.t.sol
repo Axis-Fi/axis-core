@@ -310,7 +310,7 @@ contract EmpaDecryptBidsTest is EmpaTest {
         assertEq(uint8(lot.status), uint8(EncryptedMarginalPriceAuction.AuctionStatus.Decrypted));
     }
 
-    function test_whenMarginalPriceOutOfBounds()
+    function test_whenMarginalPriceOverflows()
         external
         givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
         givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
@@ -325,15 +325,27 @@ contract EmpaDecryptBidsTest is EmpaTest {
 
         // Check the next decrypt index has been updated
         EncryptedMarginalPriceAuction.BidData memory bidData = _getBidData(_lotId);
-        assertEq(bidData.nextDecryptIndex, 1);
+        assertEq(bidData.nextDecryptIndex, 1, "nextDecryptIndex mismatch");
 
         // Check the bids
         EncryptedMarginalPriceAuction.Bid memory bid = _getBid(_lotId, 1);
-        assertEq(uint8(bid.status), uint8(EncryptedMarginalPriceAuction.BidStatus.Submitted));
+        assertEq(
+            uint8(bid.status),
+            uint8(EncryptedMarginalPriceAuction.BidStatus.Decrypted),
+            "bid status mismatch"
+        );
+
+        // Check the decrypted bids queue
+        (uint64 numBids) = _auctionHouse.decryptedBids(_lotId);
+        assertEq(numBids, 0);
 
         // Check the lot record
         EncryptedMarginalPriceAuction.Lot memory lot = _getLotData(_lotId);
-        assertEq(uint8(lot.status), uint8(EncryptedMarginalPriceAuction.AuctionStatus.Decrypted));
+        assertEq(
+            uint8(lot.status),
+            uint8(EncryptedMarginalPriceAuction.AuctionStatus.Decrypted),
+            "lot status mismatch"
+        );
     }
 
     // TODO handle decimals
