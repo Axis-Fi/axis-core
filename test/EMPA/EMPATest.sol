@@ -176,6 +176,16 @@ abstract contract EmpaTest is Test, Permit2User {
         _;
     }
 
+    modifier givenLotCapacity(uint96 capacity_) {
+        _auctionParams.capacity = capacity_;
+        _;
+    }
+
+    modifier givenMinimumPrice(uint96 price_) {
+        _auctionParams.minimumPrice = price_;
+        _;
+    }
+
     modifier whenAllowlistIsSet() {
         // Update routing params
         _routingParams.allowlist = _mockAllowlist;

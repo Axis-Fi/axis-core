@@ -405,6 +405,55 @@ contract EmpaSettleTest is EmpaTest {
         _;
     }
 
+    modifier givenBidsCauseCapacityOverflow() {
+        uint96 bidOneAmount = 1e18;
+        uint96 bidOneAmountOut = type(uint96).max - 100;
+        uint96 bidTwoAmount = 1e18;
+        uint96 bidTwoAmountOut = type(uint96).max - 100;
+
+        // Capacity
+        _createBid(bidOneAmount, bidOneAmountOut);
+        _createBid(bidTwoAmount, bidTwoAmountOut); // Will result in an overflow
+
+        // Marginal price
+        _marginalPrice = _mulDivUp(bidTwoAmount, _BASE_SCALE, bidTwoAmountOut);
+
+        // Output
+        // Bid one: bidOneAmountOut out
+        // Bid two: 90 out
+
+        uint96 bidOneAmountOutActual = bidOneAmountOut;
+        uint96 bidOneAmountInActual = bidOneAmount;
+        uint96 bidTwoAmountOutActual = _LOT_CAPACITY_OVERFLOW - bidOneAmountOutActual;
+        uint96 bidTwoAmountInActual =
+            _mulDivUp(bidTwoAmountOutActual, bidTwoAmount, bidTwoAmountOut);
+
+        uint96 bidAmountInSuccess = bidOneAmountInActual + bidTwoAmountInActual;
+        uint96 bidAmountInFail = bidTwoAmount - bidTwoAmountInActual;
+        uint96 bidAmountOutSuccess = bidOneAmountOutActual + bidTwoAmountOutActual;
+
+        // Fees
+        _expectedReferrerFee = _calculateReferrerFee(bidAmountInSuccess);
+        _expectedProtocolFee = _calculateProtocolFee(bidAmountInSuccess);
+        _expectedReferrerFeeAcrrued = _calculateReferrerFee(bidTwoAmountInActual); // Accrued on partial fill
+        _expectedProtocolFeeAcrrued = _calculateProtocolFee(bidTwoAmountInActual); // Accrued on partial fill
+
+        uint96 prefundedCuratorFee = _calculatePrefundedCuratorFee();
+        uint96 curatorFee = _calculateCuratorFee(bidAmountOutSuccess);
+        uint96 curatorFeeToRefund = prefundedCuratorFee - curatorFee;
+
+        _expectedAuctionHouseBaseTokenBalance = bidOneAmountOutActual; // To be claimed by the bidder
+        _expectedAuctionOwnerBaseTokenBalance = curatorFeeToRefund; // No unused capacity
+        _expectedBidderBaseTokenBalance = bidTwoAmountOutActual; // Partial fill transferred
+        _expectedCuratorBaseTokenBalance = curatorFee;
+
+        _expectedAuctionHouseQuoteTokenBalance = _expectedReferrerFee + _expectedProtocolFee; // Accrued fees
+        _expectedAuctionOwnerQuoteTokenBalance = bidOneAmountInActual + bidTwoAmountInActual
+            - _expectedReferrerFee - _expectedProtocolFee; // Actual payout minus fees
+        _expectedBidderQuoteTokenBalance = bidAmountInFail; // Partial fill returned
+        _;
+    }
+
     // ============ Tests ============ //
 
     function _assertBaseTokenBalances() internal {
@@ -540,35 +589,6 @@ contract EmpaSettleTest is EmpaTest {
 
         // Call function
         _auctionHouse.settle(_lotId);
-    }
-
-    function test_marginalPriceOverflow()
-        external
-        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
-        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
-        givenCuratorIsSet
-        givenCuratorFeeIsSet
-        givenLotIsCreated
-        givenLotHasStarted
-        givenBidPriceCausesOverflow
-        givenLotHasConcluded
-        givenPrivateKeyIsSubmitted
-        givenLotIsDecrypted
-    {
-        // Call function
-        _auctionHouse.settle(_lotId);
-
-        // Validate bid data
-        EncryptedMarginalPriceAuction.BidData memory bidData = _getBidData(_lotId);
-        assertEq(bidData.marginalPrice, _marginalPrice);
-
-        // Validate lot data
-        EncryptedMarginalPriceAuction.Lot memory lot = _getLotData(_lotId);
-        assertEq(uint8(lot.status), uint8(EncryptedMarginalPriceAuction.AuctionStatus.Settled));
-
-        _assertBaseTokenBalances();
-        _assertQuoteTokenBalances();
-        _assertAccruedFees();
     }
 
     // [X] when the filled amount is less than the lot minimum
@@ -1237,4 +1257,71 @@ contract EmpaSettleTest is EmpaTest {
     //   [X] the protocol and referrer fee are accrued, both fees deducted from payment
     // [X] given there is a curator set
     //  [X] payout token is transferred to the curator
+
+    // [X] given that a bid's price results in a uint96 overflow
+    //  [X] the settle function does not revert
+    // [ ] given the expended capacity results in a uint96 overflow
+    //  [ ] the settle function does not revert
+
+    function test_marginalPriceOverflow()
+        external
+        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenCuratorIsSet
+        givenCuratorFeeIsSet
+        givenLotIsCreated
+        givenLotHasStarted
+        givenBidPriceCausesOverflow
+        givenLotHasConcluded
+        givenPrivateKeyIsSubmitted
+        givenLotIsDecrypted
+    {
+        // Call function
+        _auctionHouse.settle(_lotId);
+
+        // Validate bid data
+        EncryptedMarginalPriceAuction.BidData memory bidData = _getBidData(_lotId);
+        assertEq(bidData.marginalPrice, _marginalPrice);
+
+        // Validate lot data
+        EncryptedMarginalPriceAuction.Lot memory lot = _getLotData(_lotId);
+        assertEq(uint8(lot.status), uint8(EncryptedMarginalPriceAuction.AuctionStatus.Settled));
+
+        _assertBaseTokenBalances();
+        _assertQuoteTokenBalances();
+        _assertAccruedFees();
+    }
+
+    uint96 internal constant _LOT_CAPACITY_OVERFLOW = type(uint96).max - 10;
+
+    function test_capacityOverflow()
+        external
+        givenLotCapacity(_LOT_CAPACITY_OVERFLOW)
+        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY_OVERFLOW)
+        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY_OVERFLOW)
+        givenCuratorIsSet
+        givenCuratorFeeIsSet
+        givenMinimumPrice(1)
+        givenLotIsCreated
+        givenLotHasStarted
+        givenBidsCauseCapacityOverflow
+        givenLotHasConcluded
+        givenPrivateKeyIsSubmitted
+        givenLotIsDecrypted
+    {
+        // Call function
+        _auctionHouse.settle(_lotId);
+
+        // Validate bid data
+        EncryptedMarginalPriceAuction.BidData memory bidData = _getBidData(_lotId);
+        assertEq(bidData.marginalPrice, _marginalPrice);
+
+        // Validate lot data
+        EncryptedMarginalPriceAuction.Lot memory lot = _getLotData(_lotId);
+        assertEq(uint8(lot.status), uint8(EncryptedMarginalPriceAuction.AuctionStatus.Settled));
+
+        _assertBaseTokenBalances();
+        _assertQuoteTokenBalances();
+        _assertAccruedFees();
+    }
 }
