@@ -23,6 +23,8 @@ import {
 import {IHooks} from "src/interfaces/IHooks.sol";
 import {IAllowlist} from "src/interfaces/IAllowlist.sol";
 
+import {console2} from "forge-std/console2.sol";
+
 /// @title      Router
 /// @notice     An interface to define the routing of transactions to the appropriate auction module
 abstract contract Router {
@@ -929,7 +931,8 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
 
                 // Determine total capacity expended at this price (in base token units)
                 // quote scale * base scale / quote scale = base scale
-                capacityExpended = FixedMath.mulDivUp(totalAmountIn, baseScale, price);
+                // This value can overflow if there are enough large bids. It is capped at the max uint96 value to protect against this.
+                capacityExpended = FixedMath.mulDivUpNoOverflow(totalAmountIn, baseScale, price);
 
                 // If total capacity expended is greater than or equal to the capacity, we have found the marginal price
                 if (capacityExpended >= capacity) {
@@ -975,6 +978,7 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
         if (capacityExpended >= lotData[lotId_].minFilled && marginalPrice >= minimumPrice) {
             // Auction can be settled at the marginal price if we reach this point
             bidData[lotId_].marginalPrice = marginalPrice;
+            console2.log("marginalPrice", marginalPrice);
 
             Routing storage routing = lotRouting[lotId_];
 
@@ -983,11 +987,21 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
                 // Load routing and bid data
                 Bid storage _bid = bids[lotId_][partialFillBidId];
 
+                console2.log("capacityExpended", capacityExpended);
+                console2.log("capacity", capacity);
+                console2.log("bid.amount", _bid.amount);
+
+                // Check if the capacityExpended is overflowing
+
                 // Calculate the payout and refund amounts
                 uint96 fullFill = FixedMath.mulDivUp(_bid.amount, baseScale, marginalPrice);
-                uint96 overflow = capacityExpended - capacity;
+                console2.log("fullFill", fullFill);
+                uint96 overflow = capacityExpended - capacity; // TODO unable to get the actual overflow, since information is lost with capacityExceeded being capped
+                console2.log("overflow", overflow);
                 uint96 payout = fullFill - overflow;
+                console2.log("payout", payout);
                 uint96 refundAmount = FixedMath.mulDivUp(_bid.amount, overflow, fullFill);
+                console2.log("refundAmount", refundAmount);
 
                 // Reduce the total amount in by the refund amount
                 totalAmountIn -= refundAmount;

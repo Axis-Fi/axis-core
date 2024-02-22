@@ -7,6 +7,8 @@ import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 
 import {EncryptedMarginalPriceAuction, FeeManager} from "src/EMPA.sol";
 
+import {console2} from "forge-std/console2.sol";
+
 contract EmpaSettleTest is EmpaTest {
     uint96 internal constant _BID_PRICE_ONE_AMOUNT = 1e18;
     uint96 internal constant _BID_PRICE_ONE_AMOUNT_OUT = 1e18;
@@ -419,32 +421,39 @@ contract EmpaSettleTest is EmpaTest {
         _marginalPrice = _mulDivUp(bidTwoAmount, _BASE_SCALE, bidTwoAmountOut);
 
         // Output
-        // Bid one: bidOneAmountOut out
-        // Bid two: 90 out
+        // Bid one: 90 out (partial fill)
+        // Bid two: bidTwoAmountOut out
 
-        uint96 bidOneAmountOutActual = bidOneAmountOut;
-        uint96 bidOneAmountInActual = bidOneAmount;
-        uint96 bidTwoAmountOutActual = _LOT_CAPACITY_OVERFLOW - bidOneAmountOutActual;
-        uint96 bidTwoAmountInActual =
-            _mulDivUp(bidTwoAmountOutActual, bidTwoAmount, bidTwoAmountOut);
+        uint96 bidTwoAmountOutActual = bidTwoAmountOut;
+        uint96 bidTwoAmountInActual = bidTwoAmount;
+        console2.log("bidTwoAmountOutActual", bidTwoAmountOutActual);
+        console2.log("capacity", _LOT_CAPACITY_OVERFLOW);
+        uint96 bidOneAmountOutActual = _LOT_CAPACITY_OVERFLOW - bidTwoAmountOutActual;
+        console2.log("bidOneAmountOutActual", bidOneAmountOutActual);
+        uint96 bidOneAmountInActual =
+            _mulDivUp(bidOneAmountOutActual, bidOneAmount, bidOneAmountOut);
+        console2.log("bidOneAmountInActual", bidOneAmountInActual);
 
         uint96 bidAmountInSuccess = bidOneAmountInActual + bidTwoAmountInActual;
-        uint96 bidAmountInFail = bidTwoAmount - bidTwoAmountInActual;
+        console2.log("bidAmountInSuccess", bidAmountInSuccess);
+        uint96 bidAmountInFail = bidOneAmount - bidOneAmountInActual;
+        console2.log("bidAmountInFail", bidAmountInFail);
         uint96 bidAmountOutSuccess = bidOneAmountOutActual + bidTwoAmountOutActual;
+        console2.log("bidAmountOutSuccess", bidAmountOutSuccess);
 
         // Fees
         _expectedReferrerFee = _calculateReferrerFee(bidAmountInSuccess);
         _expectedProtocolFee = _calculateProtocolFee(bidAmountInSuccess);
-        _expectedReferrerFeeAcrrued = _calculateReferrerFee(bidTwoAmountInActual); // Accrued on partial fill
-        _expectedProtocolFeeAcrrued = _calculateProtocolFee(bidTwoAmountInActual); // Accrued on partial fill
+        _expectedReferrerFeeAcrrued = _calculateReferrerFee(bidOneAmountInActual); // Accrued on partial fill
+        _expectedProtocolFeeAcrrued = _calculateProtocolFee(bidOneAmountInActual); // Accrued on partial fill
 
         uint96 prefundedCuratorFee = _calculatePrefundedCuratorFee();
         uint96 curatorFee = _calculateCuratorFee(bidAmountOutSuccess);
         uint96 curatorFeeToRefund = prefundedCuratorFee - curatorFee;
 
-        _expectedAuctionHouseBaseTokenBalance = bidOneAmountOutActual; // To be claimed by the bidder
+        _expectedAuctionHouseBaseTokenBalance = bidTwoAmountOutActual; // To be claimed by the bidder
         _expectedAuctionOwnerBaseTokenBalance = curatorFeeToRefund; // No unused capacity
-        _expectedBidderBaseTokenBalance = bidTwoAmountOutActual; // Partial fill transferred
+        _expectedBidderBaseTokenBalance = bidOneAmountOutActual; // Partial fill transferred
         _expectedCuratorBaseTokenBalance = curatorFee;
 
         _expectedAuctionHouseQuoteTokenBalance = _expectedReferrerFee + _expectedProtocolFee; // Accrued fees
