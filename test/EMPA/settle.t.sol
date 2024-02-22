@@ -5,7 +5,7 @@ pragma solidity 0.8.19;
 import {EmpaTest} from "test/EMPA/EMPATest.sol";
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 
-import {EncryptedMarginalPriceAuction} from "src/EMPA.sol";
+import {EncryptedMarginalPriceAuction, FeeManager} from "src/EMPA.sol";
 
 contract EmpaSettleTest is EmpaTest {
     uint96 internal constant _BID_PRICE_ONE_AMOUNT = 1e18;
@@ -25,8 +25,15 @@ contract EmpaSettleTest is EmpaTest {
 
     uint96 internal _marginalPrice;
 
-    uint96 internal _bidAmountInTotal;
-    uint96 internal _bidAmountOutTotal;
+    uint96 internal _expectedReferrerFee;
+    uint96 internal _expectedProtocolFee;
+    uint96 internal _expectedAuctionHouseBaseTokenBalance;
+    uint96 internal _expectedAuctionOwnerBaseTokenBalance;
+    uint96 internal _expectedBidderBaseTokenBalance;
+    uint96 internal _expectedCuratorBaseTokenBalance;
+    uint96 internal _expectedAuctionHouseQuoteTokenBalance;
+    uint96 internal _expectedAuctionOwnerQuoteTokenBalance;
+    uint96 internal _expectedBidderQuoteTokenBalance;
 
     // ============ Modifiers ============ //
 
@@ -42,9 +49,17 @@ contract EmpaSettleTest is EmpaTest {
         // Bid one: 0 out
         // Bid two: 0 out
 
-        _bidAmountInTotal = _scaleQuoteTokenAmount(_BID_PRICE_TWO_AMOUNT + _BID_PRICE_TWO_AMOUNT);
-        _bidAmountOutTotal =
-            _scaleBaseTokenAmount(_BID_PRICE_TWO_AMOUNT_OUT + _BID_PRICE_TWO_AMOUNT_OUT);
+        // No fees collected
+
+        _expectedAuctionHouseBaseTokenBalance = 0; // No bids filled
+        _expectedAuctionOwnerBaseTokenBalance = _scaleBaseTokenAmount(_LOT_CAPACITY); // Unused capacity is returned
+        _expectedBidderBaseTokenBalance = 0;
+        _expectedCuratorBaseTokenBalance = 0;
+
+        _expectedAuctionHouseQuoteTokenBalance =
+            _scaleQuoteTokenAmount(_BID_PRICE_TWO_AMOUNT + _BID_PRICE_TWO_AMOUNT); // To be claimed by the bidders
+        _expectedAuctionOwnerQuoteTokenBalance = 0; // No payments
+        _expectedBidderQuoteTokenBalance = 0;
         _;
     }
 
@@ -61,13 +76,31 @@ contract EmpaSettleTest is EmpaTest {
         // Bid one: 0 out
         // Bid two: 0 out
 
-        _bidAmountInTotal = _scaleQuoteTokenAmount(
+        // No fees collected
+
+        _expectedAuctionHouseBaseTokenBalance = 0; // No bids filled
+        _expectedAuctionOwnerBaseTokenBalance = _scaleBaseTokenAmount(_LOT_CAPACITY); // Unused capacity is returned
+        _expectedBidderBaseTokenBalance = 0;
+        _expectedCuratorBaseTokenBalance = 0;
+
+        _expectedAuctionHouseQuoteTokenBalance = _scaleQuoteTokenAmount(
             _BID_PRICE_ONE_AMOUNT + _BID_PRICE_ONE_AMOUNT + _BID_PRICE_ONE_AMOUNT
-        );
-        _bidAmountOutTotal = _scaleBaseTokenAmount(
-            _BID_PRICE_ONE_AMOUNT_OUT + _BID_PRICE_ONE_AMOUNT_OUT + _BID_PRICE_ONE_AMOUNT_OUT
-        );
+        ); // To be claimed by the bidders
+        _expectedAuctionOwnerQuoteTokenBalance = 0; // No payments
+        _expectedBidderQuoteTokenBalance = 0;
         _;
+    }
+
+    function _calculateReferrerFee(uint96 amountIn) internal view returns (uint96) {
+        (, uint24 referrerFee,) = _auctionHouse.fees();
+
+        return _mulDivUp(referrerFee, amountIn, 1e5);
+    }
+
+    function _calculateProtocolFee(uint96 amountIn) internal view returns (uint96) {
+        (uint24 protocolFee,,) = _auctionHouse.fees();
+
+        return _mulDivUp(protocolFee, amountIn, 1e5);
     }
 
     modifier givenBidsAreAboveMinimumAndBelowCapacity() {
@@ -86,14 +119,29 @@ contract EmpaSettleTest is EmpaTest {
         // Bid three: 2 / 2 = 1 out
         // Bid four: 2 / 2 = 1 out
 
-        _bidAmountInTotal = _scaleQuoteTokenAmount(
+        uint96 bidAmountInTotal = _scaleQuoteTokenAmount(
             _BID_PRICE_TWO_AMOUNT + _BID_PRICE_TWO_AMOUNT + _BID_PRICE_TWO_AMOUNT
                 + _BID_PRICE_TWO_AMOUNT
         );
-        _bidAmountOutTotal = _scaleBaseTokenAmount(
+        uint96 bidAmountOutTotal = _scaleBaseTokenAmount(
             _BID_PRICE_TWO_AMOUNT_OUT + _BID_PRICE_TWO_AMOUNT_OUT + _BID_PRICE_TWO_AMOUNT_OUT
                 + _BID_PRICE_TWO_AMOUNT_OUT
         );
+
+        // Fees
+        _expectedReferrerFee = _calculateReferrerFee(bidAmountInTotal);
+        _expectedProtocolFee = _calculateProtocolFee(bidAmountInTotal);
+
+        _expectedAuctionHouseBaseTokenBalance = bidAmountOutTotal; // All bids filled
+        _expectedAuctionOwnerBaseTokenBalance =
+            _scaleBaseTokenAmount(_LOT_CAPACITY) - bidAmountOutTotal; // Unused capacity
+        _expectedBidderBaseTokenBalance = 0; // To be claimed
+        _expectedCuratorBaseTokenBalance = 0; // No curator fee set
+
+        _expectedAuctionHouseQuoteTokenBalance = _expectedReferrerFee + _expectedProtocolFee; // All bids filled, nothing to be claimed
+        _expectedAuctionOwnerQuoteTokenBalance =
+            bidAmountInTotal - _expectedReferrerFee - _expectedProtocolFee; // Full payout
+        _expectedBidderQuoteTokenBalance = 0;
         _;
     }
 
@@ -110,10 +158,36 @@ contract EmpaSettleTest is EmpaTest {
         // Bid one: 19 / 2 = 9.5 out
         // Bid two: 10 - 9.5 = 0.5 out (partial fill)
 
-        _bidAmountInTotal =
-            _scaleQuoteTokenAmount(_BID_SIZE_NINE_AMOUNT + _BID_PRICE_TWO_SIZE_TWO_AMOUNT);
-        _bidAmountOutTotal =
-            _scaleBaseTokenAmount(_BID_SIZE_NINE_AMOUNT_OUT + _BID_PRICE_TWO_SIZE_TWO_AMOUNT_OUT);
+        uint96 bidOneAmountOutActual = _mulDivUp(
+            _scaleBaseTokenAmount(_BID_SIZE_NINE_AMOUNT),
+            uint96(10 ** _quoteToken.decimals()),
+            _marginalPrice
+        ); // 9.5
+        uint96 bidOneAmountInActual = _scaleQuoteTokenAmount(_BID_SIZE_NINE_AMOUNT); // 19
+        uint96 bidTwoAmountOutActual = _auctionParams.capacity - bidOneAmountOutActual; // 0.5
+        uint96 bidTwoAmountInActual = _mulDivUp(
+            bidTwoAmountOutActual,
+            _scaleQuoteTokenAmount(_BID_PRICE_TWO_SIZE_TWO_AMOUNT),
+            _scaleBaseTokenAmount(_BID_PRICE_TWO_SIZE_TWO_AMOUNT_OUT)
+        ); // 0.5 * 4 / 2 = 1
+
+        uint96 bidAmountInSuccess = bidOneAmountInActual + bidTwoAmountInActual;
+        uint96 bidAmountInFail =
+            _scaleQuoteTokenAmount(_BID_PRICE_TWO_SIZE_TWO_AMOUNT) - bidTwoAmountInActual;
+
+        // Fees
+        _expectedReferrerFee = _calculateReferrerFee(bidAmountInSuccess);
+        _expectedProtocolFee = _calculateProtocolFee(bidAmountInSuccess);
+
+        _expectedAuctionHouseBaseTokenBalance = bidOneAmountOutActual; // To be claimed by the bidder
+        _expectedAuctionOwnerBaseTokenBalance = 0; // No unused capacity
+        _expectedBidderBaseTokenBalance = bidTwoAmountOutActual; // Partial fill transferred
+        _expectedCuratorBaseTokenBalance = 0; // No curator fee set
+
+        _expectedAuctionHouseQuoteTokenBalance = _expectedReferrerFee + _expectedProtocolFee; // Accrued fees
+        _expectedAuctionOwnerQuoteTokenBalance = bidOneAmountInActual + bidTwoAmountInActual
+            - _expectedReferrerFee - _expectedProtocolFee; // Actual payout minus fees
+        _expectedBidderQuoteTokenBalance = bidAmountInFail; // Partial fill returned
         _;
     }
 
@@ -130,11 +204,32 @@ contract EmpaSettleTest is EmpaTest {
         // Bid two: 4 / 2 = 2 out
         // Bid one: 10 - 2 = 8 out (partial fill)
 
-        _bidAmountInTotal =
-            _scaleQuoteTokenAmount(_BID_PRICE_TWO_SIZE_TEN_AMOUNT + _BID_PRICE_TWO_SIZE_TWO_AMOUNT);
-        _bidAmountOutTotal = _scaleBaseTokenAmount(
-            _BID_PRICE_TWO_SIZE_TEN_AMOUNT_OUT + _BID_PRICE_TWO_SIZE_TWO_AMOUNT_OUT
-        );
+        uint96 bidTwoAmountOutActual = _scaleBaseTokenAmount(_BID_PRICE_TWO_SIZE_TWO_AMOUNT_OUT); // 2
+        uint96 bidTwoAmountInActual = _scaleQuoteTokenAmount(_BID_PRICE_TWO_SIZE_TWO_AMOUNT); // 4
+        uint96 bidOneAmountOutActual = _auctionParams.capacity - bidTwoAmountOutActual; // 8
+        uint96 bidOneAmountInActual = _mulDivUp(
+            bidOneAmountOutActual,
+            _scaleQuoteTokenAmount(_BID_PRICE_TWO_SIZE_TEN_AMOUNT),
+            _scaleBaseTokenAmount(_BID_PRICE_TWO_SIZE_TEN_AMOUNT_OUT)
+        ); // 8 * 20 / 10 = 16
+
+        uint96 bidAmountInSuccess = bidOneAmountInActual + bidTwoAmountInActual;
+        uint96 bidAmountInFail =
+            _scaleQuoteTokenAmount(_BID_PRICE_TWO_SIZE_TEN_AMOUNT) - bidOneAmountInActual;
+
+        // Fees
+        _expectedReferrerFee = _calculateReferrerFee(bidAmountInSuccess);
+        _expectedProtocolFee = _calculateProtocolFee(bidAmountInSuccess);
+
+        _expectedAuctionHouseBaseTokenBalance = bidTwoAmountOutActual; // To be claimed by the bidder
+        _expectedAuctionOwnerBaseTokenBalance = 0; // No unused capacity
+        _expectedBidderBaseTokenBalance = bidOneAmountOutActual; // Partial fill transferred
+        _expectedCuratorBaseTokenBalance = 0; // No curator fee set
+
+        _expectedAuctionHouseQuoteTokenBalance = _expectedReferrerFee + _expectedProtocolFee; // Accrued fees
+        _expectedAuctionOwnerQuoteTokenBalance = bidOneAmountInActual + bidTwoAmountInActual
+            - _expectedReferrerFee - _expectedProtocolFee; // Actual payout minus fees
+        _expectedBidderQuoteTokenBalance = bidAmountInFail; // Partial fill returned
         _;
     }
 
@@ -149,8 +244,30 @@ contract EmpaSettleTest is EmpaTest {
         // Output
         // Bid one: 10 out (partial fill)
 
-        _bidAmountInTotal = _scaleQuoteTokenAmount(_BID_PRICE_TWO_SIZE_ELEVEN_AMOUNT);
-        _bidAmountOutTotal = _scaleBaseTokenAmount(_BID_PRICE_TWO_SIZE_ELEVEN_AMOUNT_OUT);
+        uint96 bidOneAmountOutActual = _auctionParams.capacity;
+        uint96 bidOneAmountInActual = _mulDivUp(
+            bidOneAmountOutActual,
+            _scaleQuoteTokenAmount(_BID_PRICE_TWO_SIZE_ELEVEN_AMOUNT),
+            _scaleBaseTokenAmount(_BID_PRICE_TWO_SIZE_ELEVEN_AMOUNT_OUT)
+        );
+
+        uint96 bidAmountInSuccess = bidOneAmountInActual;
+        uint96 bidAmountInFail =
+            _scaleQuoteTokenAmount(_BID_PRICE_TWO_SIZE_ELEVEN_AMOUNT) - bidOneAmountInActual;
+
+        // Fees
+        _expectedReferrerFee = _calculateReferrerFee(bidAmountInSuccess);
+        _expectedProtocolFee = _calculateProtocolFee(bidAmountInSuccess);
+
+        _expectedAuctionHouseBaseTokenBalance = 0; // Partial fill transferred
+        _expectedAuctionOwnerBaseTokenBalance = 0; // No unused capacity
+        _expectedBidderBaseTokenBalance = bidOneAmountOutActual; // Partial fill transferred
+        _expectedCuratorBaseTokenBalance = 0; // No curator fee set
+
+        _expectedAuctionHouseQuoteTokenBalance = _expectedReferrerFee + _expectedProtocolFee; // Accrued fees
+        _expectedAuctionOwnerQuoteTokenBalance =
+            bidOneAmountInActual - _expectedReferrerFee - _expectedProtocolFee; // Actual payout minus fees
+        _expectedBidderQuoteTokenBalance = bidAmountInFail; // Partial fill returned
         _;
     }
 
@@ -170,14 +287,28 @@ contract EmpaSettleTest is EmpaTest {
         // Bid three: 0 out
         // Bid four: 0 out
 
-        _bidAmountInTotal = _scaleQuoteTokenAmount(
-            _BID_PRICE_THREE_AMOUNT + _BID_PRICE_THREE_AMOUNT + _BID_PRICE_ONE_AMOUNT
-                + _BID_PRICE_ONE_AMOUNT
-        );
-        _bidAmountOutTotal = _scaleBaseTokenAmount(
-            _BID_PRICE_THREE_AMOUNT_OUT + _BID_PRICE_THREE_AMOUNT_OUT + _BID_PRICE_ONE_AMOUNT_OUT
-                + _BID_PRICE_ONE_AMOUNT_OUT
-        );
+        uint96 bidAmountInSuccess =
+            _scaleQuoteTokenAmount(_BID_PRICE_THREE_AMOUNT + _BID_PRICE_THREE_AMOUNT);
+        uint96 bidAmountInFail =
+            _scaleQuoteTokenAmount(_BID_PRICE_ONE_AMOUNT + _BID_PRICE_ONE_AMOUNT);
+        uint96 bidAmountOutSuccess =
+            _scaleBaseTokenAmount(_BID_PRICE_THREE_AMOUNT_OUT + _BID_PRICE_THREE_AMOUNT_OUT);
+
+        // Fees
+        _expectedReferrerFee = _calculateReferrerFee(bidAmountInSuccess);
+        _expectedProtocolFee = _calculateProtocolFee(bidAmountInSuccess);
+
+        _expectedAuctionHouseBaseTokenBalance = bidAmountOutSuccess; // To be claimed by bidders
+        _expectedAuctionOwnerBaseTokenBalance =
+            _scaleBaseTokenAmount(_LOT_CAPACITY) - bidAmountOutSuccess; // Unused capacity
+        _expectedBidderBaseTokenBalance = 0; // To be claimed
+        _expectedCuratorBaseTokenBalance = 0; // No curator fee set
+
+        _expectedAuctionHouseQuoteTokenBalance =
+            bidAmountInFail + _expectedReferrerFee + _expectedProtocolFee; // Accrued fees and failed bids to be refunded
+        _expectedAuctionOwnerQuoteTokenBalance =
+            bidAmountInSuccess - _expectedReferrerFee - _expectedProtocolFee; // Full payout
+        _expectedBidderQuoteTokenBalance = 0;
         _;
     }
 
@@ -302,25 +433,56 @@ contract EmpaSettleTest is EmpaTest {
 
         // Check base token balances
         assertEq(
-            _baseToken.balanceOf(address(_auctionHouse)), 0, "base token: auction house balance"
+            _baseToken.balanceOf(address(_auctionHouse)),
+            _expectedAuctionHouseBaseTokenBalance,
+            "base token: auction house balance"
         );
-        assertEq(_baseToken.balanceOf(_auctionOwner), _LOT_CAPACITY, "base token: owner balance"); // Unused capacity
-        assertEq(_baseToken.balanceOf(_bidder), 0, "base token: bidder balance");
+        assertEq(
+            _baseToken.balanceOf(_auctionOwner),
+            _expectedAuctionOwnerBaseTokenBalance,
+            "base token: owner balance"
+        );
+        assertEq(
+            _baseToken.balanceOf(_bidder),
+            _expectedBidderBaseTokenBalance,
+            "base token: bidder balance"
+        );
         assertEq(_baseToken.balanceOf(_REFERRER), 0, "base token: referrer balance");
-        assertEq(_baseToken.balanceOf(_CURATOR), 0, "base token: curator balance");
+        assertEq(
+            _baseToken.balanceOf(_CURATOR),
+            _expectedCuratorBaseTokenBalance,
+            "base token: curator balance"
+        );
         assertEq(_baseToken.balanceOf(_PROTOCOL), 0, "base token: protocol balance");
 
         // Check quote token balances
         assertEq(
             _quoteToken.balanceOf(address(_auctionHouse)),
-            _bidAmountInTotal,
+            _expectedAuctionHouseQuoteTokenBalance,
             "quote token: auction house balance"
         );
-        assertEq(_quoteToken.balanceOf(_auctionOwner), 0, "quote token: owner balance");
-        assertEq(_quoteToken.balanceOf(_bidder), 0, "quote token: bidder balance");
+        assertEq(
+            _quoteToken.balanceOf(_auctionOwner),
+            _expectedAuctionOwnerQuoteTokenBalance,
+            "quote token: owner balance"
+        );
+        assertEq(
+            _quoteToken.balanceOf(_bidder),
+            _expectedBidderQuoteTokenBalance,
+            "quote token: bidder balance"
+        );
         assertEq(_quoteToken.balanceOf(_REFERRER), 0, "quote token: referrer balance");
         assertEq(_quoteToken.balanceOf(_CURATOR), 0, "quote token: curator balance");
         assertEq(_quoteToken.balanceOf(_PROTOCOL), 0, "quote token: protocol balance");
+
+        // Check accrued quote token fees
+        assertEq(
+            _auctionHouse.rewards(_REFERRER, _quoteToken), _expectedReferrerFee, "referrer fee"
+        );
+        assertEq(_auctionHouse.rewards(_CURATOR, _quoteToken), 0, "curator fee");
+        assertEq(
+            _auctionHouse.rewards(_PROTOCOL, _quoteToken), _expectedProtocolFee, "protocol fee"
+        );
     }
 
     function test_marginalPriceLessThanMinimum()
@@ -347,25 +509,56 @@ contract EmpaSettleTest is EmpaTest {
 
         // Check base token balances
         assertEq(
-            _baseToken.balanceOf(address(_auctionHouse)), 0, "base token: auction house balance"
+            _baseToken.balanceOf(address(_auctionHouse)),
+            _expectedAuctionHouseBaseTokenBalance,
+            "base token: auction house balance"
         );
-        assertEq(_baseToken.balanceOf(_auctionOwner), _LOT_CAPACITY, "base token: owner balance"); // Unused capacity
-        assertEq(_baseToken.balanceOf(_bidder), 0, "base token: bidder balance");
+        assertEq(
+            _baseToken.balanceOf(_auctionOwner),
+            _expectedAuctionOwnerBaseTokenBalance,
+            "base token: owner balance"
+        );
+        assertEq(
+            _baseToken.balanceOf(_bidder),
+            _expectedBidderBaseTokenBalance,
+            "base token: bidder balance"
+        );
         assertEq(_baseToken.balanceOf(_REFERRER), 0, "base token: referrer balance");
-        assertEq(_baseToken.balanceOf(_CURATOR), 0, "base token: curator balance");
+        assertEq(
+            _baseToken.balanceOf(_CURATOR),
+            _expectedCuratorBaseTokenBalance,
+            "base token: curator balance"
+        );
         assertEq(_baseToken.balanceOf(_PROTOCOL), 0, "base token: protocol balance");
 
         // Check quote token balances
         assertEq(
             _quoteToken.balanceOf(address(_auctionHouse)),
-            _bidAmountInTotal,
+            _expectedAuctionHouseQuoteTokenBalance,
             "quote token: auction house balance"
         );
-        assertEq(_quoteToken.balanceOf(_auctionOwner), 0, "quote token: owner balance");
-        assertEq(_quoteToken.balanceOf(_bidder), 0, "quote token: bidder balance");
+        assertEq(
+            _quoteToken.balanceOf(_auctionOwner),
+            _expectedAuctionOwnerQuoteTokenBalance,
+            "quote token: owner balance"
+        );
+        assertEq(
+            _quoteToken.balanceOf(_bidder),
+            _expectedBidderQuoteTokenBalance,
+            "quote token: bidder balance"
+        );
         assertEq(_quoteToken.balanceOf(_REFERRER), 0, "quote token: referrer balance");
         assertEq(_quoteToken.balanceOf(_CURATOR), 0, "quote token: curator balance");
         assertEq(_quoteToken.balanceOf(_PROTOCOL), 0, "quote token: protocol balance");
+
+        // Check accrued quote token fees
+        assertEq(
+            _auctionHouse.rewards(_REFERRER, _quoteToken), _expectedReferrerFee, "referrer fee"
+        );
+        assertEq(_auctionHouse.rewards(_CURATOR, _quoteToken), 0, "curator fee");
+        assertEq(
+            _auctionHouse.rewards(_PROTOCOL, _quoteToken), _expectedProtocolFee, "protocol fee"
+        );
     }
 
     function test_filledCapacityGreaterThanMinimum()
@@ -393,30 +586,55 @@ contract EmpaSettleTest is EmpaTest {
         // Check base token balances
         assertEq(
             _baseToken.balanceOf(address(_auctionHouse)),
-            _bidAmountOutTotal,
+            _expectedAuctionHouseBaseTokenBalance,
             "base token: auction house balance"
-        ); // To be claimed by the bidder
+        );
         assertEq(
             _baseToken.balanceOf(_auctionOwner),
-            _LOT_CAPACITY - _bidAmountOutTotal,
+            _expectedAuctionOwnerBaseTokenBalance,
             "base token: owner balance"
-        ); // Unused capacity
-        assertEq(_baseToken.balanceOf(_bidder), 0, "base token: bidder balance");
+        );
+        assertEq(
+            _baseToken.balanceOf(_bidder),
+            _expectedBidderBaseTokenBalance,
+            "base token: bidder balance"
+        );
         assertEq(_baseToken.balanceOf(_REFERRER), 0, "base token: referrer balance");
-        assertEq(_baseToken.balanceOf(_CURATOR), 0, "base token: curator balance");
+        assertEq(
+            _baseToken.balanceOf(_CURATOR),
+            _expectedCuratorBaseTokenBalance,
+            "base token: curator balance"
+        );
         assertEq(_baseToken.balanceOf(_PROTOCOL), 0, "base token: protocol balance");
 
         // Check quote token balances
         assertEq(
-            _quoteToken.balanceOf(address(_auctionHouse)), 0, "quote token: auction house balance"
+            _quoteToken.balanceOf(address(_auctionHouse)),
+            _expectedAuctionHouseQuoteTokenBalance,
+            "quote token: auction house balance"
         );
         assertEq(
-            _quoteToken.balanceOf(_auctionOwner), _bidAmountInTotal, "quote token: owner balance"
+            _quoteToken.balanceOf(_auctionOwner),
+            _expectedAuctionOwnerQuoteTokenBalance,
+            "quote token: owner balance"
         );
-        assertEq(_quoteToken.balanceOf(_bidder), 0, "quote token: bidder balance");
+        assertEq(
+            _quoteToken.balanceOf(_bidder),
+            _expectedBidderQuoteTokenBalance,
+            "quote token: bidder balance"
+        );
         assertEq(_quoteToken.balanceOf(_REFERRER), 0, "quote token: referrer balance");
         assertEq(_quoteToken.balanceOf(_CURATOR), 0, "quote token: curator balance");
         assertEq(_quoteToken.balanceOf(_PROTOCOL), 0, "quote token: protocol balance");
+
+        // Check accrued quote token fees
+        assertEq(
+            _auctionHouse.rewards(_REFERRER, _quoteToken), _expectedReferrerFee, "referrer fee"
+        );
+        assertEq(_auctionHouse.rewards(_CURATOR, _quoteToken), 0, "curator fee");
+        assertEq(
+            _auctionHouse.rewards(_PROTOCOL, _quoteToken), _expectedProtocolFee, "protocol fee"
+        );
     }
 
     function test_filledCapacityGreaterThanMinimum_quoteTokenDecimalsLarger()
@@ -450,30 +668,55 @@ contract EmpaSettleTest is EmpaTest {
         // Check base token balances
         assertEq(
             _baseToken.balanceOf(address(_auctionHouse)),
-            _bidAmountOutTotal,
+            _expectedAuctionHouseBaseTokenBalance,
             "base token: auction house balance"
-        ); // To be claimed by the bidder
+        );
         assertEq(
             _baseToken.balanceOf(_auctionOwner),
-            _auctionParams.capacity - _bidAmountOutTotal,
+            _expectedAuctionOwnerBaseTokenBalance,
             "base token: owner balance"
-        ); // Unused capacity
-        assertEq(_baseToken.balanceOf(_bidder), 0, "base token: bidder balance");
+        );
+        assertEq(
+            _baseToken.balanceOf(_bidder),
+            _expectedBidderBaseTokenBalance,
+            "base token: bidder balance"
+        );
         assertEq(_baseToken.balanceOf(_REFERRER), 0, "base token: referrer balance");
-        assertEq(_baseToken.balanceOf(_CURATOR), 0, "base token: curator balance");
+        assertEq(
+            _baseToken.balanceOf(_CURATOR),
+            _expectedCuratorBaseTokenBalance,
+            "base token: curator balance"
+        );
         assertEq(_baseToken.balanceOf(_PROTOCOL), 0, "base token: protocol balance");
 
         // Check quote token balances
         assertEq(
-            _quoteToken.balanceOf(address(_auctionHouse)), 0, "quote token: auction house balance"
+            _quoteToken.balanceOf(address(_auctionHouse)),
+            _expectedAuctionHouseQuoteTokenBalance,
+            "quote token: auction house balance"
         );
         assertEq(
-            _quoteToken.balanceOf(_auctionOwner), _bidAmountInTotal, "quote token: owner balance"
+            _quoteToken.balanceOf(_auctionOwner),
+            _expectedAuctionOwnerQuoteTokenBalance,
+            "quote token: owner balance"
         );
-        assertEq(_quoteToken.balanceOf(_bidder), 0, "quote token: bidder balance");
+        assertEq(
+            _quoteToken.balanceOf(_bidder),
+            _expectedBidderQuoteTokenBalance,
+            "quote token: bidder balance"
+        );
         assertEq(_quoteToken.balanceOf(_REFERRER), 0, "quote token: referrer balance");
         assertEq(_quoteToken.balanceOf(_CURATOR), 0, "quote token: curator balance");
         assertEq(_quoteToken.balanceOf(_PROTOCOL), 0, "quote token: protocol balance");
+
+        // Check accrued quote token fees
+        assertEq(
+            _auctionHouse.rewards(_REFERRER, _quoteToken), _expectedReferrerFee, "referrer fee"
+        );
+        assertEq(_auctionHouse.rewards(_CURATOR, _quoteToken), 0, "curator fee");
+        assertEq(
+            _auctionHouse.rewards(_PROTOCOL, _quoteToken), _expectedProtocolFee, "protocol fee"
+        );
     }
 
     function test_filledCapacityGreaterThanMinimum_quoteTokenDecimalsSmaller()
@@ -507,30 +750,55 @@ contract EmpaSettleTest is EmpaTest {
         // Check base token balances
         assertEq(
             _baseToken.balanceOf(address(_auctionHouse)),
-            _bidAmountOutTotal,
+            _expectedAuctionHouseBaseTokenBalance,
             "base token: auction house balance"
-        ); // To be claimed by the bidder
+        );
         assertEq(
             _baseToken.balanceOf(_auctionOwner),
-            _auctionParams.capacity - _bidAmountOutTotal,
+            _expectedAuctionOwnerBaseTokenBalance,
             "base token: owner balance"
-        ); // Unused capacity
-        assertEq(_baseToken.balanceOf(_bidder), 0, "base token: bidder balance");
+        );
+        assertEq(
+            _baseToken.balanceOf(_bidder),
+            _expectedBidderBaseTokenBalance,
+            "base token: bidder balance"
+        );
         assertEq(_baseToken.balanceOf(_REFERRER), 0, "base token: referrer balance");
-        assertEq(_baseToken.balanceOf(_CURATOR), 0, "base token: curator balance");
+        assertEq(
+            _baseToken.balanceOf(_CURATOR),
+            _expectedCuratorBaseTokenBalance,
+            "base token: curator balance"
+        );
         assertEq(_baseToken.balanceOf(_PROTOCOL), 0, "base token: protocol balance");
 
         // Check quote token balances
         assertEq(
-            _quoteToken.balanceOf(address(_auctionHouse)), 0, "quote token: auction house balance"
+            _quoteToken.balanceOf(address(_auctionHouse)),
+            _expectedAuctionHouseQuoteTokenBalance,
+            "quote token: auction house balance"
         );
         assertEq(
-            _quoteToken.balanceOf(_auctionOwner), _bidAmountInTotal, "quote token: owner balance"
+            _quoteToken.balanceOf(_auctionOwner),
+            _expectedAuctionOwnerQuoteTokenBalance,
+            "quote token: owner balance"
         );
-        assertEq(_quoteToken.balanceOf(_bidder), 0, "quote token: bidder balance");
+        assertEq(
+            _quoteToken.balanceOf(_bidder),
+            _expectedBidderQuoteTokenBalance,
+            "quote token: bidder balance"
+        );
         assertEq(_quoteToken.balanceOf(_REFERRER), 0, "quote token: referrer balance");
         assertEq(_quoteToken.balanceOf(_CURATOR), 0, "quote token: curator balance");
         assertEq(_quoteToken.balanceOf(_PROTOCOL), 0, "quote token: protocol balance");
+
+        // Check accrued quote token fees
+        assertEq(
+            _auctionHouse.rewards(_REFERRER, _quoteToken), _expectedReferrerFee, "referrer fee"
+        );
+        assertEq(_auctionHouse.rewards(_CURATOR, _quoteToken), 0, "curator fee");
+        assertEq(
+            _auctionHouse.rewards(_PROTOCOL, _quoteToken), _expectedProtocolFee, "protocol fee"
+        );
     }
 
     function test_someBidsBelowMinimumPrice()
@@ -558,34 +826,55 @@ contract EmpaSettleTest is EmpaTest {
         // Check base token balances
         assertEq(
             _baseToken.balanceOf(address(_auctionHouse)),
-            _BID_PRICE_THREE_AMOUNT_OUT + _BID_PRICE_THREE_AMOUNT_OUT,
+            _expectedAuctionHouseBaseTokenBalance,
             "base token: auction house balance"
         ); // To be claimed by the bidder
         assertEq(
             _baseToken.balanceOf(_auctionOwner),
-            _LOT_CAPACITY - _BID_PRICE_THREE_AMOUNT_OUT - _BID_PRICE_THREE_AMOUNT_OUT,
+            _expectedAuctionOwnerBaseTokenBalance,
             "base token: owner balance"
         ); // Unused capacity
-        assertEq(_baseToken.balanceOf(_bidder), 0, "base token: bidder balance");
+        assertEq(
+            _baseToken.balanceOf(_bidder),
+            _expectedBidderBaseTokenBalance,
+            "base token: bidder balance"
+        );
         assertEq(_baseToken.balanceOf(_REFERRER), 0, "base token: referrer balance");
-        assertEq(_baseToken.balanceOf(_CURATOR), 0, "base token: curator balance");
+        assertEq(
+            _baseToken.balanceOf(_CURATOR),
+            _expectedCuratorBaseTokenBalance,
+            "base token: curator balance"
+        );
         assertEq(_baseToken.balanceOf(_PROTOCOL), 0, "base token: protocol balance");
 
         // Check quote token balances
         assertEq(
             _quoteToken.balanceOf(address(_auctionHouse)),
-            _BID_PRICE_ONE_AMOUNT + _BID_PRICE_ONE_AMOUNT,
+            _expectedAuctionHouseQuoteTokenBalance,
             "quote token: auction house balance"
         );
         assertEq(
             _quoteToken.balanceOf(_auctionOwner),
-            _BID_PRICE_THREE_AMOUNT + _BID_PRICE_THREE_AMOUNT,
+            _expectedAuctionOwnerQuoteTokenBalance,
             "quote token: owner balance"
         );
-        assertEq(_quoteToken.balanceOf(_bidder), 0, "quote token: bidder balance");
+        assertEq(
+            _quoteToken.balanceOf(_bidder),
+            _expectedBidderQuoteTokenBalance,
+            "quote token: bidder balance"
+        );
         assertEq(_quoteToken.balanceOf(_REFERRER), 0, "quote token: referrer balance");
         assertEq(_quoteToken.balanceOf(_CURATOR), 0, "quote token: curator balance");
         assertEq(_quoteToken.balanceOf(_PROTOCOL), 0, "quote token: protocol balance");
+
+        // Check accrued quote token fees
+        assertEq(
+            _auctionHouse.rewards(_REFERRER, _quoteToken), _expectedReferrerFee, "referrer fee"
+        );
+        assertEq(_auctionHouse.rewards(_CURATOR, _quoteToken), 0, "curator fee");
+        assertEq(
+            _auctionHouse.rewards(_PROTOCOL, _quoteToken), _expectedProtocolFee, "protocol fee"
+        );
     }
 
     function test_someBidsBelowMinimumPrice_quoteTokenDecimalsLarger()
@@ -615,35 +904,55 @@ contract EmpaSettleTest is EmpaTest {
         // Check base token balances
         assertEq(
             _baseToken.balanceOf(address(_auctionHouse)),
-            _scaleBaseTokenAmount(_BID_PRICE_THREE_AMOUNT_OUT + _BID_PRICE_THREE_AMOUNT_OUT),
+            _expectedAuctionHouseBaseTokenBalance,
             "base token: auction house balance"
         ); // To be claimed by the bidder
         assertEq(
             _baseToken.balanceOf(_auctionOwner),
-            _auctionParams.capacity
-                - _scaleBaseTokenAmount(_BID_PRICE_THREE_AMOUNT_OUT + _BID_PRICE_THREE_AMOUNT_OUT),
+            _expectedAuctionOwnerBaseTokenBalance,
             "base token: owner balance"
         ); // Unused capacity
-        assertEq(_baseToken.balanceOf(_bidder), 0, "base token: bidder balance");
+        assertEq(
+            _baseToken.balanceOf(_bidder),
+            _expectedBidderBaseTokenBalance,
+            "base token: bidder balance"
+        );
         assertEq(_baseToken.balanceOf(_REFERRER), 0, "base token: referrer balance");
-        assertEq(_baseToken.balanceOf(_CURATOR), 0, "base token: curator balance");
+        assertEq(
+            _baseToken.balanceOf(_CURATOR),
+            _expectedCuratorBaseTokenBalance,
+            "base token: curator balance"
+        );
         assertEq(_baseToken.balanceOf(_PROTOCOL), 0, "base token: protocol balance");
 
         // Check quote token balances
         assertEq(
             _quoteToken.balanceOf(address(_auctionHouse)),
-            _scaleQuoteTokenAmount(_BID_PRICE_ONE_AMOUNT + _BID_PRICE_ONE_AMOUNT),
+            _expectedAuctionHouseQuoteTokenBalance,
             "quote token: auction house balance"
         );
         assertEq(
             _quoteToken.balanceOf(_auctionOwner),
-            _scaleQuoteTokenAmount(_BID_PRICE_THREE_AMOUNT + _BID_PRICE_THREE_AMOUNT),
+            _expectedAuctionOwnerQuoteTokenBalance,
             "quote token: owner balance"
         );
-        assertEq(_quoteToken.balanceOf(_bidder), 0, "quote token: bidder balance");
+        assertEq(
+            _quoteToken.balanceOf(_bidder),
+            _expectedBidderQuoteTokenBalance,
+            "quote token: bidder balance"
+        );
         assertEq(_quoteToken.balanceOf(_REFERRER), 0, "quote token: referrer balance");
         assertEq(_quoteToken.balanceOf(_CURATOR), 0, "quote token: curator balance");
         assertEq(_quoteToken.balanceOf(_PROTOCOL), 0, "quote token: protocol balance");
+
+        // Check accrued quote token fees
+        assertEq(
+            _auctionHouse.rewards(_REFERRER, _quoteToken), _expectedReferrerFee, "referrer fee"
+        );
+        assertEq(_auctionHouse.rewards(_CURATOR, _quoteToken), 0, "curator fee");
+        assertEq(
+            _auctionHouse.rewards(_PROTOCOL, _quoteToken), _expectedProtocolFee, "protocol fee"
+        );
     }
 
     function test_someBidsBelowMinimumPrice_quoteTokenDecimalsSmaller()
@@ -673,39 +982,795 @@ contract EmpaSettleTest is EmpaTest {
         // Check base token balances
         assertEq(
             _baseToken.balanceOf(address(_auctionHouse)),
-            _scaleBaseTokenAmount(_BID_PRICE_THREE_AMOUNT_OUT + _BID_PRICE_THREE_AMOUNT_OUT),
+            _expectedAuctionHouseBaseTokenBalance,
             "base token: auction house balance"
         ); // To be claimed by the bidder
         assertEq(
             _baseToken.balanceOf(_auctionOwner),
-            _auctionParams.capacity
-                - _scaleBaseTokenAmount(_BID_PRICE_THREE_AMOUNT_OUT + _BID_PRICE_THREE_AMOUNT_OUT),
+            _expectedAuctionOwnerBaseTokenBalance,
             "base token: owner balance"
         ); // Unused capacity
-        assertEq(_baseToken.balanceOf(_bidder), 0, "base token: bidder balance");
+        assertEq(
+            _baseToken.balanceOf(_bidder),
+            _expectedBidderBaseTokenBalance,
+            "base token: bidder balance"
+        );
         assertEq(_baseToken.balanceOf(_REFERRER), 0, "base token: referrer balance");
-        assertEq(_baseToken.balanceOf(_CURATOR), 0, "base token: curator balance");
+        assertEq(
+            _baseToken.balanceOf(_CURATOR),
+            _expectedCuratorBaseTokenBalance,
+            "base token: curator balance"
+        );
         assertEq(_baseToken.balanceOf(_PROTOCOL), 0, "base token: protocol balance");
 
         // Check quote token balances
         assertEq(
             _quoteToken.balanceOf(address(_auctionHouse)),
-            _scaleQuoteTokenAmount(_BID_PRICE_ONE_AMOUNT + _BID_PRICE_ONE_AMOUNT),
+            _expectedAuctionHouseQuoteTokenBalance,
             "quote token: auction house balance"
         );
         assertEq(
             _quoteToken.balanceOf(_auctionOwner),
-            _scaleQuoteTokenAmount(_BID_PRICE_THREE_AMOUNT + _BID_PRICE_THREE_AMOUNT),
+            _expectedAuctionOwnerQuoteTokenBalance,
             "quote token: owner balance"
         );
-        assertEq(_quoteToken.balanceOf(_bidder), 0, "quote token: bidder balance");
+        assertEq(
+            _quoteToken.balanceOf(_bidder),
+            _expectedBidderQuoteTokenBalance,
+            "quote token: bidder balance"
+        );
         assertEq(_quoteToken.balanceOf(_REFERRER), 0, "quote token: referrer balance");
         assertEq(_quoteToken.balanceOf(_CURATOR), 0, "quote token: curator balance");
         assertEq(_quoteToken.balanceOf(_PROTOCOL), 0, "quote token: protocol balance");
+
+        // Check accrued quote token fees
+        assertEq(
+            _auctionHouse.rewards(_REFERRER, _quoteToken), _expectedReferrerFee, "referrer fee"
+        );
+        assertEq(_auctionHouse.rewards(_CURATOR, _quoteToken), 0, "curator fee");
+        assertEq(
+            _auctionHouse.rewards(_PROTOCOL, _quoteToken), _expectedProtocolFee, "protocol fee"
+        );
     }
 
     function test_partialFill()
         external
+        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenLotIsCreated
+        givenLotHasStarted
+        givenBidsAreOverSubscribed
+        givenLotHasConcluded
+        givenPrivateKeyIsSubmitted
+        givenLotIsDecrypted
+    {
+        // Call function
+        _auctionHouse.settle(_lotId);
+
+        // Validate bid data
+        EncryptedMarginalPriceAuction.BidData memory bidData = _getBidData(_lotId);
+        assertEq(bidData.marginalPrice, _marginalPrice, "marginal price");
+
+        // Validate lot data
+        EncryptedMarginalPriceAuction.Lot memory lot = _getLotData(_lotId);
+        assertEq(uint8(lot.status), uint8(EncryptedMarginalPriceAuction.AuctionStatus.Settled));
+
+        // Validate status of partial fill bid
+        EncryptedMarginalPriceAuction.Bid memory bid = _getBid(_lotId, 2);
+        assertEq(uint8(bid.status), uint8(EncryptedMarginalPriceAuction.BidStatus.Claimed));
+
+        // Check base token balances
+        assertEq(
+            _baseToken.balanceOf(address(_auctionHouse)),
+            _expectedAuctionHouseBaseTokenBalance,
+            "base token: auction house balance"
+        );
+        assertEq(
+            _baseToken.balanceOf(_auctionOwner),
+            _expectedAuctionOwnerBaseTokenBalance,
+            "base token: owner balance"
+        );
+        assertEq(
+            _baseToken.balanceOf(_bidder),
+            _expectedBidderBaseTokenBalance,
+            "base token: bidder balance"
+        );
+        assertEq(_baseToken.balanceOf(_REFERRER), 0, "base token: referrer balance");
+        assertEq(
+            _baseToken.balanceOf(_CURATOR),
+            _expectedCuratorBaseTokenBalance,
+            "base token: curator balance"
+        );
+        assertEq(_baseToken.balanceOf(_PROTOCOL), 0, "base token: protocol balance");
+
+        // Check quote token balances
+        assertEq(
+            _quoteToken.balanceOf(address(_auctionHouse)),
+            _expectedAuctionHouseQuoteTokenBalance,
+            "quote token: auction house balance"
+        );
+        assertEq(
+            _quoteToken.balanceOf(_auctionOwner),
+            _expectedAuctionOwnerQuoteTokenBalance,
+            "quote token: owner balance"
+        );
+        assertEq(
+            _quoteToken.balanceOf(_bidder),
+            _expectedBidderQuoteTokenBalance,
+            "quote token: bidder balance"
+        );
+        assertEq(_quoteToken.balanceOf(_REFERRER), 0, "quote token: referrer balance");
+        assertEq(_quoteToken.balanceOf(_CURATOR), 0, "quote token: curator balance");
+        assertEq(_quoteToken.balanceOf(_PROTOCOL), 0, "quote token: protocol balance");
+
+        // Check accrued quote token fees
+        assertEq(
+            _auctionHouse.rewards(_REFERRER, _quoteToken), _expectedReferrerFee, "referrer fee"
+        );
+        assertEq(_auctionHouse.rewards(_CURATOR, _quoteToken), 0, "curator fee");
+        assertEq(
+            _auctionHouse.rewards(_PROTOCOL, _quoteToken), _expectedProtocolFee, "protocol fee"
+        );
+    }
+
+    function test_partialFill_quoteTokenDecimalsLarger()
+        external
+        givenQuoteTokenHasDecimals(17)
+        givenBaseTokenHasDecimals(13)
+        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenLotIsCreated
+        givenLotHasStarted
+        givenBidsAreOverSubscribed
+        givenLotHasConcluded
+        givenPrivateKeyIsSubmitted
+        givenLotIsDecrypted
+    {
+        // Call function
+        _auctionHouse.settle(_lotId);
+
+        // Validate bid data
+        EncryptedMarginalPriceAuction.BidData memory bidData = _getBidData(_lotId);
+        assertEq(bidData.marginalPrice, _marginalPrice, "marginal price");
+
+        // Validate lot data
+        EncryptedMarginalPriceAuction.Lot memory lot = _getLotData(_lotId);
+        assertEq(uint8(lot.status), uint8(EncryptedMarginalPriceAuction.AuctionStatus.Settled));
+
+        // Validate status of partial fill bid
+        EncryptedMarginalPriceAuction.Bid memory bid = _getBid(_lotId, 2);
+        assertEq(uint8(bid.status), uint8(EncryptedMarginalPriceAuction.BidStatus.Claimed));
+
+        // Check base token balances
+        assertEq(
+            _baseToken.balanceOf(address(_auctionHouse)),
+            _expectedAuctionHouseBaseTokenBalance,
+            "base token: auction house balance"
+        );
+        assertEq(
+            _baseToken.balanceOf(_auctionOwner),
+            _expectedAuctionOwnerBaseTokenBalance,
+            "base token: owner balance"
+        );
+        assertEq(
+            _baseToken.balanceOf(_bidder),
+            _expectedBidderBaseTokenBalance,
+            "base token: bidder balance"
+        );
+        assertEq(_baseToken.balanceOf(_REFERRER), 0, "base token: referrer balance");
+        assertEq(
+            _baseToken.balanceOf(_CURATOR),
+            _expectedCuratorBaseTokenBalance,
+            "base token: curator balance"
+        );
+        assertEq(_baseToken.balanceOf(_PROTOCOL), 0, "base token: protocol balance");
+
+        // Check quote token balances
+        assertEq(
+            _quoteToken.balanceOf(address(_auctionHouse)),
+            _expectedAuctionHouseQuoteTokenBalance,
+            "quote token: auction house balance"
+        );
+        assertEq(
+            _quoteToken.balanceOf(_auctionOwner),
+            _expectedAuctionOwnerQuoteTokenBalance,
+            "quote token: owner balance"
+        );
+        assertEq(
+            _quoteToken.balanceOf(_bidder),
+            _expectedBidderQuoteTokenBalance,
+            "quote token: bidder balance"
+        );
+        assertEq(_quoteToken.balanceOf(_REFERRER), 0, "quote token: referrer balance");
+        assertEq(_quoteToken.balanceOf(_CURATOR), 0, "quote token: curator balance");
+        assertEq(_quoteToken.balanceOf(_PROTOCOL), 0, "quote token: protocol balance");
+
+        // Check accrued quote token fees
+        assertEq(
+            _auctionHouse.rewards(_REFERRER, _quoteToken), _expectedReferrerFee, "referrer fee"
+        );
+        assertEq(_auctionHouse.rewards(_CURATOR, _quoteToken), 0, "curator fee");
+        assertEq(
+            _auctionHouse.rewards(_PROTOCOL, _quoteToken), _expectedProtocolFee, "protocol fee"
+        );
+    }
+
+    function test_partialFill_quoteTokenDecimalsSmaller()
+        external
+        givenQuoteTokenHasDecimals(13)
+        givenBaseTokenHasDecimals(17)
+        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenLotIsCreated
+        givenLotHasStarted
+        givenBidsAreOverSubscribed
+        givenLotHasConcluded
+        givenPrivateKeyIsSubmitted
+        givenLotIsDecrypted
+    {
+        // Call function
+        _auctionHouse.settle(_lotId);
+
+        // Validate bid data
+        EncryptedMarginalPriceAuction.BidData memory bidData = _getBidData(_lotId);
+        assertEq(bidData.marginalPrice, _marginalPrice, "marginal price");
+
+        // Validate lot data
+        EncryptedMarginalPriceAuction.Lot memory lot = _getLotData(_lotId);
+        assertEq(uint8(lot.status), uint8(EncryptedMarginalPriceAuction.AuctionStatus.Settled));
+
+        // Validate status of partial fill bid
+        EncryptedMarginalPriceAuction.Bid memory bid = _getBid(_lotId, 2);
+        assertEq(uint8(bid.status), uint8(EncryptedMarginalPriceAuction.BidStatus.Claimed));
+
+        // Check base token balances
+        assertEq(
+            _baseToken.balanceOf(address(_auctionHouse)),
+            _expectedAuctionHouseBaseTokenBalance,
+            "base token: auction house balance"
+        );
+        assertEq(
+            _baseToken.balanceOf(_auctionOwner),
+            _expectedAuctionOwnerBaseTokenBalance,
+            "base token: owner balance"
+        );
+        assertEq(
+            _baseToken.balanceOf(_bidder),
+            _expectedBidderBaseTokenBalance,
+            "base token: bidder balance"
+        );
+        assertEq(_baseToken.balanceOf(_REFERRER), 0, "base token: referrer balance");
+        assertEq(
+            _baseToken.balanceOf(_CURATOR),
+            _expectedCuratorBaseTokenBalance,
+            "base token: curator balance"
+        );
+        assertEq(_baseToken.balanceOf(_PROTOCOL), 0, "base token: protocol balance");
+
+        // Check quote token balances
+        assertEq(
+            _quoteToken.balanceOf(address(_auctionHouse)),
+            _expectedAuctionHouseQuoteTokenBalance,
+            "quote token: auction house balance"
+        );
+        assertEq(
+            _quoteToken.balanceOf(_auctionOwner),
+            _expectedAuctionOwnerQuoteTokenBalance,
+            "quote token: owner balance"
+        );
+        assertEq(
+            _quoteToken.balanceOf(_bidder),
+            _expectedBidderQuoteTokenBalance,
+            "quote token: bidder balance"
+        );
+        assertEq(_quoteToken.balanceOf(_REFERRER), 0, "quote token: referrer balance");
+        assertEq(_quoteToken.balanceOf(_CURATOR), 0, "quote token: curator balance");
+        assertEq(_quoteToken.balanceOf(_PROTOCOL), 0, "quote token: protocol balance");
+
+        // Check accrued quote token fees
+        assertEq(
+            _auctionHouse.rewards(_REFERRER, _quoteToken), _expectedReferrerFee, "referrer fee"
+        );
+        assertEq(_auctionHouse.rewards(_CURATOR, _quoteToken), 0, "curator fee");
+        assertEq(
+            _auctionHouse.rewards(_PROTOCOL, _quoteToken), _expectedProtocolFee, "protocol fee"
+        );
+    }
+
+    function test_partialFill_ordering()
+        external
+        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenLotIsCreated
+        givenLotHasStarted
+        givenBidsAreOverSubscribedRespectsOrdering
+        givenLotHasConcluded
+        givenPrivateKeyIsSubmitted
+        givenLotIsDecrypted
+    {
+        // Call function
+        _auctionHouse.settle(_lotId);
+
+        // Validate bid data
+        EncryptedMarginalPriceAuction.BidData memory bidData = _getBidData(_lotId);
+        assertEq(bidData.marginalPrice, _marginalPrice, "marginal price");
+
+        // Validate lot data
+        EncryptedMarginalPriceAuction.Lot memory lot = _getLotData(_lotId);
+        assertEq(uint8(lot.status), uint8(EncryptedMarginalPriceAuction.AuctionStatus.Settled));
+
+        // Validate status of partial fill bid
+        EncryptedMarginalPriceAuction.Bid memory bid = _getBid(_lotId, 1); // Bid one is processed second due to insertion order
+        assertEq(uint8(bid.status), uint8(EncryptedMarginalPriceAuction.BidStatus.Claimed));
+
+        // Check base token balances
+        assertEq(
+            _baseToken.balanceOf(address(_auctionHouse)),
+            _expectedAuctionHouseBaseTokenBalance,
+            "base token: auction house balance"
+        );
+        assertEq(
+            _baseToken.balanceOf(_auctionOwner),
+            _expectedAuctionOwnerBaseTokenBalance,
+            "base token: owner balance"
+        );
+        assertEq(
+            _baseToken.balanceOf(_bidder),
+            _expectedBidderBaseTokenBalance,
+            "base token: bidder balance"
+        );
+        assertEq(_baseToken.balanceOf(_REFERRER), 0, "base token: referrer balance");
+        assertEq(
+            _baseToken.balanceOf(_CURATOR),
+            _expectedCuratorBaseTokenBalance,
+            "base token: curator balance"
+        );
+        assertEq(_baseToken.balanceOf(_PROTOCOL), 0, "base token: protocol balance");
+
+        // Check quote token balances
+        assertEq(
+            _quoteToken.balanceOf(address(_auctionHouse)),
+            _expectedAuctionHouseQuoteTokenBalance,
+            "quote token: auction house balance"
+        );
+        assertEq(
+            _quoteToken.balanceOf(_auctionOwner),
+            _expectedAuctionOwnerQuoteTokenBalance,
+            "quote token: owner balance"
+        );
+        assertEq(
+            _quoteToken.balanceOf(_bidder),
+            _expectedBidderQuoteTokenBalance,
+            "quote token: bidder balance"
+        );
+        assertEq(_quoteToken.balanceOf(_REFERRER), 0, "quote token: referrer balance");
+        assertEq(_quoteToken.balanceOf(_CURATOR), 0, "quote token: curator balance");
+        assertEq(_quoteToken.balanceOf(_PROTOCOL), 0, "quote token: protocol balance");
+
+        // Check accrued quote token fees
+        assertEq(
+            _auctionHouse.rewards(_REFERRER, _quoteToken), _expectedReferrerFee, "referrer fee"
+        );
+        assertEq(_auctionHouse.rewards(_CURATOR, _quoteToken), 0, "curator fee");
+        assertEq(
+            _auctionHouse.rewards(_PROTOCOL, _quoteToken), _expectedProtocolFee, "protocol fee"
+        );
+    }
+
+    function test_partialFill_ordering_quoteTokenDecimalsLarger()
+        external
+        givenQuoteTokenHasDecimals(17)
+        givenBaseTokenHasDecimals(13)
+        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenLotIsCreated
+        givenLotHasStarted
+        givenBidsAreOverSubscribedRespectsOrdering
+        givenLotHasConcluded
+        givenPrivateKeyIsSubmitted
+        givenLotIsDecrypted
+    {
+        // Call function
+        _auctionHouse.settle(_lotId);
+
+        // Validate bid data
+        EncryptedMarginalPriceAuction.BidData memory bidData = _getBidData(_lotId);
+        assertEq(bidData.marginalPrice, _marginalPrice, "marginal price");
+
+        // Validate lot data
+        EncryptedMarginalPriceAuction.Lot memory lot = _getLotData(_lotId);
+        assertEq(uint8(lot.status), uint8(EncryptedMarginalPriceAuction.AuctionStatus.Settled));
+
+        // Validate status of partial fill bid
+        EncryptedMarginalPriceAuction.Bid memory bid = _getBid(_lotId, 1); // Bid one is processed second due to insertion order
+        assertEq(uint8(bid.status), uint8(EncryptedMarginalPriceAuction.BidStatus.Claimed));
+
+        // Check base token balances
+        assertEq(
+            _baseToken.balanceOf(address(_auctionHouse)),
+            _expectedAuctionHouseBaseTokenBalance,
+            "base token: auction house balance"
+        );
+        assertEq(
+            _baseToken.balanceOf(_auctionOwner),
+            _expectedAuctionOwnerBaseTokenBalance,
+            "base token: owner balance"
+        );
+        assertEq(
+            _baseToken.balanceOf(_bidder),
+            _expectedBidderBaseTokenBalance,
+            "base token: bidder balance"
+        );
+        assertEq(_baseToken.balanceOf(_REFERRER), 0, "base token: referrer balance");
+        assertEq(
+            _baseToken.balanceOf(_CURATOR),
+            _expectedCuratorBaseTokenBalance,
+            "base token: curator balance"
+        );
+        assertEq(_baseToken.balanceOf(_PROTOCOL), 0, "base token: protocol balance");
+
+        // Check quote token balances
+        assertEq(
+            _quoteToken.balanceOf(address(_auctionHouse)),
+            _expectedAuctionHouseQuoteTokenBalance,
+            "quote token: auction house balance"
+        );
+        assertEq(
+            _quoteToken.balanceOf(_auctionOwner),
+            _expectedAuctionOwnerQuoteTokenBalance,
+            "quote token: owner balance"
+        );
+        assertEq(
+            _quoteToken.balanceOf(_bidder),
+            _expectedBidderQuoteTokenBalance,
+            "quote token: bidder balance"
+        );
+        assertEq(_quoteToken.balanceOf(_REFERRER), 0, "quote token: referrer balance");
+        assertEq(_quoteToken.balanceOf(_CURATOR), 0, "quote token: curator balance");
+        assertEq(_quoteToken.balanceOf(_PROTOCOL), 0, "quote token: protocol balance");
+
+        // Check accrued quote token fees
+        assertEq(
+            _auctionHouse.rewards(_REFERRER, _quoteToken), _expectedReferrerFee, "referrer fee"
+        );
+        assertEq(_auctionHouse.rewards(_CURATOR, _quoteToken), 0, "curator fee");
+        assertEq(
+            _auctionHouse.rewards(_PROTOCOL, _quoteToken), _expectedProtocolFee, "protocol fee"
+        );
+    }
+
+    function test_partialFill_ordering_quoteTokenDecimalsSmaller()
+        external
+        givenQuoteTokenHasDecimals(13)
+        givenBaseTokenHasDecimals(17)
+        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenLotIsCreated
+        givenLotHasStarted
+        givenBidsAreOverSubscribedRespectsOrdering
+        givenLotHasConcluded
+        givenPrivateKeyIsSubmitted
+        givenLotIsDecrypted
+    {
+        // Call function
+        _auctionHouse.settle(_lotId);
+
+        // Validate bid data
+        EncryptedMarginalPriceAuction.BidData memory bidData = _getBidData(_lotId);
+        assertEq(bidData.marginalPrice, _marginalPrice, "marginal price");
+
+        // Validate lot data
+        EncryptedMarginalPriceAuction.Lot memory lot = _getLotData(_lotId);
+        assertEq(uint8(lot.status), uint8(EncryptedMarginalPriceAuction.AuctionStatus.Settled));
+
+        // Validate status of partial fill bid
+        EncryptedMarginalPriceAuction.Bid memory bid = _getBid(_lotId, 1); // Bid one is processed second due to insertion order
+        assertEq(uint8(bid.status), uint8(EncryptedMarginalPriceAuction.BidStatus.Claimed));
+
+        // Check base token balances
+        assertEq(
+            _baseToken.balanceOf(address(_auctionHouse)),
+            _expectedAuctionHouseBaseTokenBalance,
+            "base token: auction house balance"
+        );
+        assertEq(
+            _baseToken.balanceOf(_auctionOwner),
+            _expectedAuctionOwnerBaseTokenBalance,
+            "base token: owner balance"
+        );
+        assertEq(
+            _baseToken.balanceOf(_bidder),
+            _expectedBidderBaseTokenBalance,
+            "base token: bidder balance"
+        );
+        assertEq(_baseToken.balanceOf(_REFERRER), 0, "base token: referrer balance");
+        assertEq(
+            _baseToken.balanceOf(_CURATOR),
+            _expectedCuratorBaseTokenBalance,
+            "base token: curator balance"
+        );
+        assertEq(_baseToken.balanceOf(_PROTOCOL), 0, "base token: protocol balance");
+
+        // Check quote token balances
+        assertEq(
+            _quoteToken.balanceOf(address(_auctionHouse)),
+            _expectedAuctionHouseQuoteTokenBalance,
+            "quote token: auction house balance"
+        );
+        assertEq(
+            _quoteToken.balanceOf(_auctionOwner),
+            _expectedAuctionOwnerQuoteTokenBalance,
+            "quote token: owner balance"
+        );
+        assertEq(
+            _quoteToken.balanceOf(_bidder),
+            _expectedBidderQuoteTokenBalance,
+            "quote token: bidder balance"
+        );
+        assertEq(_quoteToken.balanceOf(_REFERRER), 0, "quote token: referrer balance");
+        assertEq(_quoteToken.balanceOf(_CURATOR), 0, "quote token: curator balance");
+        assertEq(_quoteToken.balanceOf(_PROTOCOL), 0, "quote token: protocol balance");
+
+        // Check accrued quote token fees
+        assertEq(
+            _auctionHouse.rewards(_REFERRER, _quoteToken), _expectedReferrerFee, "referrer fee"
+        );
+        assertEq(_auctionHouse.rewards(_CURATOR, _quoteToken), 0, "curator fee");
+        assertEq(
+            _auctionHouse.rewards(_PROTOCOL, _quoteToken), _expectedProtocolFee, "protocol fee"
+        );
+    }
+
+    function test_singleBid_partialFill()
+        external
+        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenLotIsCreated
+        givenLotHasStarted
+        givenBidsAreOverSubscribedOnFirstBid
+        givenLotHasConcluded
+        givenPrivateKeyIsSubmitted
+        givenLotIsDecrypted
+    {
+        // Call function
+        _auctionHouse.settle(_lotId);
+
+        // Validate bid data
+        EncryptedMarginalPriceAuction.BidData memory bidData = _getBidData(_lotId);
+        assertEq(bidData.marginalPrice, _marginalPrice, "marginal price");
+
+        // Validate lot data
+        EncryptedMarginalPriceAuction.Lot memory lot = _getLotData(_lotId);
+        assertEq(uint8(lot.status), uint8(EncryptedMarginalPriceAuction.AuctionStatus.Settled));
+
+        // Validate status of partial fill bid
+        EncryptedMarginalPriceAuction.Bid memory bid = _getBid(_lotId, 1);
+        assertEq(uint8(bid.status), uint8(EncryptedMarginalPriceAuction.BidStatus.Claimed));
+
+        // Check base token balances
+        assertEq(
+            _baseToken.balanceOf(address(_auctionHouse)),
+            _expectedAuctionHouseBaseTokenBalance,
+            "base token: auction house balance"
+        );
+        assertEq(
+            _baseToken.balanceOf(_auctionOwner),
+            _expectedAuctionOwnerBaseTokenBalance,
+            "base token: owner balance"
+        );
+        assertEq(
+            _baseToken.balanceOf(_bidder),
+            _expectedBidderBaseTokenBalance,
+            "base token: bidder balance"
+        );
+        assertEq(_baseToken.balanceOf(_REFERRER), 0, "base token: referrer balance");
+        assertEq(
+            _baseToken.balanceOf(_CURATOR),
+            _expectedCuratorBaseTokenBalance,
+            "base token: curator balance"
+        );
+        assertEq(_baseToken.balanceOf(_PROTOCOL), 0, "base token: protocol balance");
+
+        // Check quote token balances
+        assertEq(
+            _quoteToken.balanceOf(address(_auctionHouse)),
+            _expectedAuctionHouseQuoteTokenBalance,
+            "quote token: auction house balance"
+        );
+        assertEq(
+            _quoteToken.balanceOf(_auctionOwner),
+            _expectedAuctionOwnerQuoteTokenBalance,
+            "quote token: owner balance"
+        );
+        assertEq(
+            _quoteToken.balanceOf(_bidder),
+            _expectedBidderQuoteTokenBalance,
+            "quote token: bidder balance"
+        );
+        assertEq(_quoteToken.balanceOf(_REFERRER), 0, "quote token: referrer balance");
+        assertEq(_quoteToken.balanceOf(_CURATOR), 0, "quote token: curator balance");
+        assertEq(_quoteToken.balanceOf(_PROTOCOL), 0, "quote token: protocol balance");
+
+        // Check accrued quote token fees
+        assertEq(
+            _auctionHouse.rewards(_REFERRER, _quoteToken), _expectedReferrerFee, "referrer fee"
+        );
+        assertEq(_auctionHouse.rewards(_CURATOR, _quoteToken), 0, "curator fee");
+        assertEq(
+            _auctionHouse.rewards(_PROTOCOL, _quoteToken), _expectedProtocolFee, "protocol fee"
+        );
+    }
+
+    function test_singleBid_partialFill_quoteTokenDecimalsLarger()
+        external
+        givenQuoteTokenHasDecimals(17)
+        givenBaseTokenHasDecimals(13)
+        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenLotIsCreated
+        givenLotHasStarted
+        givenBidsAreOverSubscribedOnFirstBid
+        givenLotHasConcluded
+        givenPrivateKeyIsSubmitted
+        givenLotIsDecrypted
+    {
+        // Call function
+        _auctionHouse.settle(_lotId);
+
+        // Validate bid data
+        EncryptedMarginalPriceAuction.BidData memory bidData = _getBidData(_lotId);
+        assertEq(bidData.marginalPrice, _marginalPrice, "marginal price");
+
+        // Validate lot data
+        EncryptedMarginalPriceAuction.Lot memory lot = _getLotData(_lotId);
+        assertEq(uint8(lot.status), uint8(EncryptedMarginalPriceAuction.AuctionStatus.Settled));
+
+        // Validate status of partial fill bid
+        EncryptedMarginalPriceAuction.Bid memory bid = _getBid(_lotId, 1);
+        assertEq(uint8(bid.status), uint8(EncryptedMarginalPriceAuction.BidStatus.Claimed));
+
+        // Check base token balances
+        assertEq(
+            _baseToken.balanceOf(address(_auctionHouse)),
+            _expectedAuctionHouseBaseTokenBalance,
+            "base token: auction house balance"
+        );
+        assertEq(
+            _baseToken.balanceOf(_auctionOwner),
+            _expectedAuctionOwnerBaseTokenBalance,
+            "base token: owner balance"
+        );
+        assertEq(
+            _baseToken.balanceOf(_bidder),
+            _expectedBidderBaseTokenBalance,
+            "base token: bidder balance"
+        );
+        assertEq(_baseToken.balanceOf(_REFERRER), 0, "base token: referrer balance");
+        assertEq(
+            _baseToken.balanceOf(_CURATOR),
+            _expectedCuratorBaseTokenBalance,
+            "base token: curator balance"
+        );
+        assertEq(_baseToken.balanceOf(_PROTOCOL), 0, "base token: protocol balance");
+
+        // Check quote token balances
+        assertEq(
+            _quoteToken.balanceOf(address(_auctionHouse)),
+            _expectedAuctionHouseQuoteTokenBalance,
+            "quote token: auction house balance"
+        );
+        assertEq(
+            _quoteToken.balanceOf(_auctionOwner),
+            _expectedAuctionOwnerQuoteTokenBalance,
+            "quote token: owner balance"
+        );
+        assertEq(
+            _quoteToken.balanceOf(_bidder),
+            _expectedBidderQuoteTokenBalance,
+            "quote token: bidder balance"
+        );
+        assertEq(_quoteToken.balanceOf(_REFERRER), 0, "quote token: referrer balance");
+        assertEq(_quoteToken.balanceOf(_CURATOR), 0, "quote token: curator balance");
+        assertEq(_quoteToken.balanceOf(_PROTOCOL), 0, "quote token: protocol balance");
+
+        // Check accrued quote token fees
+        assertEq(
+            _auctionHouse.rewards(_REFERRER, _quoteToken), _expectedReferrerFee, "referrer fee"
+        );
+        assertEq(_auctionHouse.rewards(_CURATOR, _quoteToken), 0, "curator fee");
+        assertEq(
+            _auctionHouse.rewards(_PROTOCOL, _quoteToken), _expectedProtocolFee, "protocol fee"
+        );
+    }
+
+    function test_singleBid_partialFill_quoteTokenDecimalsSmaller()
+        external
+        givenQuoteTokenHasDecimals(13)
+        givenBaseTokenHasDecimals(17)
+        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenLotIsCreated
+        givenLotHasStarted
+        givenBidsAreOverSubscribedOnFirstBid
+        givenLotHasConcluded
+        givenPrivateKeyIsSubmitted
+        givenLotIsDecrypted
+    {
+        // Call function
+        _auctionHouse.settle(_lotId);
+
+        // Validate bid data
+        EncryptedMarginalPriceAuction.BidData memory bidData = _getBidData(_lotId);
+        assertEq(bidData.marginalPrice, _marginalPrice, "marginal price");
+
+        // Validate lot data
+        EncryptedMarginalPriceAuction.Lot memory lot = _getLotData(_lotId);
+        assertEq(uint8(lot.status), uint8(EncryptedMarginalPriceAuction.AuctionStatus.Settled));
+
+        // Validate status of partial fill bid
+        EncryptedMarginalPriceAuction.Bid memory bid = _getBid(_lotId, 1);
+        assertEq(uint8(bid.status), uint8(EncryptedMarginalPriceAuction.BidStatus.Claimed));
+
+        // Check base token balances
+        assertEq(
+            _baseToken.balanceOf(address(_auctionHouse)),
+            _expectedAuctionHouseBaseTokenBalance,
+            "base token: auction house balance"
+        );
+        assertEq(
+            _baseToken.balanceOf(_auctionOwner),
+            _expectedAuctionOwnerBaseTokenBalance,
+            "base token: owner balance"
+        );
+        assertEq(
+            _baseToken.balanceOf(_bidder),
+            _expectedBidderBaseTokenBalance,
+            "base token: bidder balance"
+        );
+        assertEq(_baseToken.balanceOf(_REFERRER), 0, "base token: referrer balance");
+        assertEq(
+            _baseToken.balanceOf(_CURATOR),
+            _expectedCuratorBaseTokenBalance,
+            "base token: curator balance"
+        );
+        assertEq(_baseToken.balanceOf(_PROTOCOL), 0, "base token: protocol balance");
+
+        // Check quote token balances
+        assertEq(
+            _quoteToken.balanceOf(address(_auctionHouse)),
+            _expectedAuctionHouseQuoteTokenBalance,
+            "quote token: auction house balance"
+        );
+        assertEq(
+            _quoteToken.balanceOf(_auctionOwner),
+            _expectedAuctionOwnerQuoteTokenBalance,
+            "quote token: owner balance"
+        );
+        assertEq(
+            _quoteToken.balanceOf(_bidder),
+            _expectedBidderQuoteTokenBalance,
+            "quote token: bidder balance"
+        );
+        assertEq(_quoteToken.balanceOf(_REFERRER), 0, "quote token: referrer balance");
+        assertEq(_quoteToken.balanceOf(_CURATOR), 0, "quote token: curator balance");
+        assertEq(_quoteToken.balanceOf(_PROTOCOL), 0, "quote token: protocol balance");
+
+        // Check accrued quote token fees
+        assertEq(
+            _auctionHouse.rewards(_REFERRER, _quoteToken), _expectedReferrerFee, "referrer fee"
+        );
+        assertEq(_auctionHouse.rewards(_CURATOR, _quoteToken), 0, "curator fee");
+        assertEq(
+            _auctionHouse.rewards(_PROTOCOL, _quoteToken), _expectedProtocolFee, "protocol fee"
+        );
+    }
+
+    // [X] given that the referrer fee is set
+    //  [X] the referrer fee is accrued, referrer fee is deducted from payment
+
+    function test_partialFill_referrerFeeIsSet()
+        external
+        givenReferrerFeeIsSet(_REFERRER_FEE_PERCENT)
         givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
         givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenLotIsCreated
@@ -739,6 +1804,9 @@ contract EmpaSettleTest is EmpaTest {
             _BID_PRICE_TWO_SIZE_TWO_AMOUNT_OUT
         ); // 0.5 * 4 / 2 = 1
 
+        uint96 referrerFeeActual =
+            _mulDivUp(bidOneAmountInActual + bidTwoAmountInActual, _REFERRER_FEE_PERCENT, 1e5);
+
         // Check base token balances
         assertEq(
             _baseToken.balanceOf(address(_auctionHouse)),
@@ -753,11 +1821,13 @@ contract EmpaSettleTest is EmpaTest {
 
         // Check quote token balances
         assertEq(
-            _quoteToken.balanceOf(address(_auctionHouse)), 0, "quote token: auction house balance"
+            _quoteToken.balanceOf(address(_auctionHouse)),
+            referrerFeeActual,
+            "quote token: auction house balance"
         );
         assertEq(
             _quoteToken.balanceOf(_auctionOwner),
-            bidOneAmountInActual + bidTwoAmountInActual,
+            bidOneAmountInActual + bidTwoAmountInActual - referrerFeeActual,
             "quote token: owner balance"
         );
         assertEq(
@@ -769,539 +1839,6 @@ contract EmpaSettleTest is EmpaTest {
         assertEq(_quoteToken.balanceOf(_CURATOR), 0, "quote token: curator balance");
         assertEq(_quoteToken.balanceOf(_PROTOCOL), 0, "quote token: protocol balance");
     }
-
-    function test_partialFill_quoteTokenDecimalsLarger()
-        external
-        givenQuoteTokenHasDecimals(17)
-        givenBaseTokenHasDecimals(13)
-        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
-        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
-        givenLotIsCreated
-        givenLotHasStarted
-        givenBidsAreOverSubscribed
-        givenLotHasConcluded
-        givenPrivateKeyIsSubmitted
-        givenLotIsDecrypted
-    {
-        // Call function
-        _auctionHouse.settle(_lotId);
-
-        // Validate bid data
-        EncryptedMarginalPriceAuction.BidData memory bidData = _getBidData(_lotId);
-        assertEq(bidData.marginalPrice, _marginalPrice, "marginal price");
-
-        // Validate lot data
-        EncryptedMarginalPriceAuction.Lot memory lot = _getLotData(_lotId);
-        assertEq(uint8(lot.status), uint8(EncryptedMarginalPriceAuction.AuctionStatus.Settled));
-
-        // Validate status of partial fill bid
-        EncryptedMarginalPriceAuction.Bid memory bid = _getBid(_lotId, 2);
-        assertEq(uint8(bid.status), uint8(EncryptedMarginalPriceAuction.BidStatus.Claimed));
-
-        uint96 bidOneAmountOutActual = _mulDivUp(
-            _scaleBaseTokenAmount(_BID_SIZE_NINE_AMOUNT),
-            uint96(10 ** _quoteToken.decimals()),
-            _marginalPrice
-        ); // 9.5
-        uint96 bidOneAmountInActual = _scaleQuoteTokenAmount(_BID_SIZE_NINE_AMOUNT); // 19
-        uint96 bidTwoAmountOutActual = _auctionParams.capacity - bidOneAmountOutActual; // 0.5
-        uint96 bidTwoAmountInActual = _mulDivUp(
-            bidTwoAmountOutActual,
-            _scaleQuoteTokenAmount(_BID_PRICE_TWO_SIZE_TWO_AMOUNT),
-            _scaleBaseTokenAmount(_BID_PRICE_TWO_SIZE_TWO_AMOUNT_OUT)
-        ); // 0.5 * 4 / 2 = 1
-
-        // Check base token balances
-        assertEq(
-            _baseToken.balanceOf(address(_auctionHouse)),
-            bidOneAmountOutActual,
-            "base token: auction house balance"
-        ); // To be claimed by the bidder
-        assertEq(_baseToken.balanceOf(_auctionOwner), 0, "base token: owner balance"); // No unused capacity
-        assertEq(_baseToken.balanceOf(_bidder), bidTwoAmountOutActual, "base token: bidder balance");
-        assertEq(_baseToken.balanceOf(_REFERRER), 0, "base token: referrer balance");
-        assertEq(_baseToken.balanceOf(_CURATOR), 0, "base token: curator balance");
-        assertEq(_baseToken.balanceOf(_PROTOCOL), 0, "base token: protocol balance");
-
-        // Check quote token balances
-        assertEq(
-            _quoteToken.balanceOf(address(_auctionHouse)), 0, "quote token: auction house balance"
-        );
-        assertEq(
-            _quoteToken.balanceOf(_auctionOwner),
-            bidOneAmountInActual + bidTwoAmountInActual,
-            "quote token: owner balance"
-        );
-        assertEq(
-            _quoteToken.balanceOf(_bidder),
-            _scaleQuoteTokenAmount(_BID_PRICE_TWO_SIZE_TWO_AMOUNT) - bidTwoAmountInActual,
-            "quote token: bidder balance"
-        );
-        assertEq(_quoteToken.balanceOf(_REFERRER), 0, "quote token: referrer balance");
-        assertEq(_quoteToken.balanceOf(_CURATOR), 0, "quote token: curator balance");
-        assertEq(_quoteToken.balanceOf(_PROTOCOL), 0, "quote token: protocol balance");
-    }
-
-    function test_partialFill_quoteTokenDecimalsSmaller()
-        external
-        givenQuoteTokenHasDecimals(13)
-        givenBaseTokenHasDecimals(17)
-        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
-        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
-        givenLotIsCreated
-        givenLotHasStarted
-        givenBidsAreOverSubscribed
-        givenLotHasConcluded
-        givenPrivateKeyIsSubmitted
-        givenLotIsDecrypted
-    {
-        // Call function
-        _auctionHouse.settle(_lotId);
-
-        // Validate bid data
-        EncryptedMarginalPriceAuction.BidData memory bidData = _getBidData(_lotId);
-        assertEq(bidData.marginalPrice, _marginalPrice, "marginal price");
-
-        // Validate lot data
-        EncryptedMarginalPriceAuction.Lot memory lot = _getLotData(_lotId);
-        assertEq(uint8(lot.status), uint8(EncryptedMarginalPriceAuction.AuctionStatus.Settled));
-
-        // Validate status of partial fill bid
-        EncryptedMarginalPriceAuction.Bid memory bid = _getBid(_lotId, 2);
-        assertEq(uint8(bid.status), uint8(EncryptedMarginalPriceAuction.BidStatus.Claimed));
-
-        uint96 bidOneAmountOutActual = _mulDivUp(
-            _scaleBaseTokenAmount(_BID_SIZE_NINE_AMOUNT),
-            uint96(10 ** _quoteToken.decimals()),
-            _marginalPrice
-        ); // 9.5
-        uint96 bidOneAmountInActual = _scaleQuoteTokenAmount(_BID_SIZE_NINE_AMOUNT); // 19
-        uint96 bidTwoAmountOutActual = _auctionParams.capacity - bidOneAmountOutActual; // 0.5
-        uint96 bidTwoAmountInActual = _mulDivUp(
-            bidTwoAmountOutActual,
-            _scaleQuoteTokenAmount(_BID_PRICE_TWO_SIZE_TWO_AMOUNT),
-            _scaleBaseTokenAmount(_BID_PRICE_TWO_SIZE_TWO_AMOUNT_OUT)
-        ); // 0.5 * 4 / 2 = 1
-
-        // Check base token balances
-        assertEq(
-            _baseToken.balanceOf(address(_auctionHouse)),
-            bidOneAmountOutActual,
-            "base token: auction house balance"
-        ); // To be claimed by the bidder
-        assertEq(_baseToken.balanceOf(_auctionOwner), 0, "base token: owner balance"); // No unused capacity
-        assertEq(_baseToken.balanceOf(_bidder), bidTwoAmountOutActual, "base token: bidder balance");
-        assertEq(_baseToken.balanceOf(_REFERRER), 0, "base token: referrer balance");
-        assertEq(_baseToken.balanceOf(_CURATOR), 0, "base token: curator balance");
-        assertEq(_baseToken.balanceOf(_PROTOCOL), 0, "base token: protocol balance");
-
-        // Check quote token balances
-        assertEq(
-            _quoteToken.balanceOf(address(_auctionHouse)), 0, "quote token: auction house balance"
-        );
-        assertEq(
-            _quoteToken.balanceOf(_auctionOwner),
-            bidOneAmountInActual + bidTwoAmountInActual,
-            "quote token: owner balance"
-        );
-        assertEq(
-            _quoteToken.balanceOf(_bidder),
-            _scaleQuoteTokenAmount(_BID_PRICE_TWO_SIZE_TWO_AMOUNT) - bidTwoAmountInActual,
-            "quote token: bidder balance"
-        );
-        assertEq(_quoteToken.balanceOf(_REFERRER), 0, "quote token: referrer balance");
-        assertEq(_quoteToken.balanceOf(_CURATOR), 0, "quote token: curator balance");
-        assertEq(_quoteToken.balanceOf(_PROTOCOL), 0, "quote token: protocol balance");
-    }
-
-    function test_partialFill_ordering()
-        external
-        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
-        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
-        givenLotIsCreated
-        givenLotHasStarted
-        givenBidsAreOverSubscribedRespectsOrdering
-        givenLotHasConcluded
-        givenPrivateKeyIsSubmitted
-        givenLotIsDecrypted
-    {
-        // Call function
-        _auctionHouse.settle(_lotId);
-
-        // Validate bid data
-        EncryptedMarginalPriceAuction.BidData memory bidData = _getBidData(_lotId);
-        assertEq(bidData.marginalPrice, _marginalPrice, "marginal price");
-
-        // Validate lot data
-        EncryptedMarginalPriceAuction.Lot memory lot = _getLotData(_lotId);
-        assertEq(uint8(lot.status), uint8(EncryptedMarginalPriceAuction.AuctionStatus.Settled));
-
-        // Validate status of partial fill bid
-        EncryptedMarginalPriceAuction.Bid memory bid = _getBid(_lotId, 1); // Bid one is processed second due to insertion order
-        assertEq(uint8(bid.status), uint8(EncryptedMarginalPriceAuction.BidStatus.Claimed));
-
-        uint96 bidTwoAmountOutActual = _BID_PRICE_TWO_SIZE_TWO_AMOUNT_OUT; // 2
-        uint96 bidTwoAmountInActual = _BID_PRICE_TWO_SIZE_TWO_AMOUNT; // 4
-        uint96 bidOneAmountOutActual = _LOT_CAPACITY - bidTwoAmountOutActual; // 8
-        uint96 bidOneAmountInActual = _mulDivUp(
-            bidOneAmountOutActual,
-            _BID_PRICE_TWO_SIZE_TEN_AMOUNT,
-            _BID_PRICE_TWO_SIZE_TEN_AMOUNT_OUT
-        ); // 8 * 20 / 10 = 16
-
-        // Check base token balances
-        assertEq(
-            _baseToken.balanceOf(address(_auctionHouse)),
-            bidTwoAmountOutActual,
-            "base token: auction house balance"
-        ); // To be claimed by the bidder
-        assertEq(_baseToken.balanceOf(_auctionOwner), 0, "base token: owner balance"); // No unused capacity
-        assertEq(_baseToken.balanceOf(_bidder), bidOneAmountOutActual, "base token: bidder balance");
-        assertEq(_baseToken.balanceOf(_REFERRER), 0, "base token: referrer balance");
-        assertEq(_baseToken.balanceOf(_CURATOR), 0, "base token: curator balance");
-        assertEq(_baseToken.balanceOf(_PROTOCOL), 0, "base token: protocol balance");
-
-        // Check quote token balances
-        assertEq(
-            _quoteToken.balanceOf(address(_auctionHouse)), 0, "quote token: auction house balance"
-        );
-        assertEq(
-            _quoteToken.balanceOf(_auctionOwner),
-            bidOneAmountInActual + bidTwoAmountInActual,
-            "quote token: owner balance"
-        );
-        assertEq(
-            _quoteToken.balanceOf(_bidder),
-            _BID_PRICE_TWO_SIZE_TEN_AMOUNT - bidOneAmountInActual,
-            "quote token: bidder balance"
-        );
-        assertEq(_quoteToken.balanceOf(_REFERRER), 0, "quote token: referrer balance");
-        assertEq(_quoteToken.balanceOf(_CURATOR), 0, "quote token: curator balance");
-        assertEq(_quoteToken.balanceOf(_PROTOCOL), 0, "quote token: protocol balance");
-    }
-
-    function test_partialFill_ordering_quoteTokenDecimalsLarger()
-        external
-        givenQuoteTokenHasDecimals(17)
-        givenBaseTokenHasDecimals(13)
-        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
-        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
-        givenLotIsCreated
-        givenLotHasStarted
-        givenBidsAreOverSubscribedRespectsOrdering
-        givenLotHasConcluded
-        givenPrivateKeyIsSubmitted
-        givenLotIsDecrypted
-    {
-        // Call function
-        _auctionHouse.settle(_lotId);
-
-        // Validate bid data
-        EncryptedMarginalPriceAuction.BidData memory bidData = _getBidData(_lotId);
-        assertEq(bidData.marginalPrice, _marginalPrice, "marginal price");
-
-        // Validate lot data
-        EncryptedMarginalPriceAuction.Lot memory lot = _getLotData(_lotId);
-        assertEq(uint8(lot.status), uint8(EncryptedMarginalPriceAuction.AuctionStatus.Settled));
-
-        // Validate status of partial fill bid
-        EncryptedMarginalPriceAuction.Bid memory bid = _getBid(_lotId, 1); // Bid one is processed second due to insertion order
-        assertEq(uint8(bid.status), uint8(EncryptedMarginalPriceAuction.BidStatus.Claimed));
-
-        uint96 bidTwoAmountOutActual = _scaleBaseTokenAmount(_BID_PRICE_TWO_SIZE_TWO_AMOUNT_OUT); // 2
-        uint96 bidTwoAmountInActual = _scaleQuoteTokenAmount(_BID_PRICE_TWO_SIZE_TWO_AMOUNT); // 4
-        uint96 bidOneAmountOutActual = _auctionParams.capacity - bidTwoAmountOutActual; // 8
-        uint96 bidOneAmountInActual = _mulDivUp(
-            bidOneAmountOutActual,
-            _scaleQuoteTokenAmount(_BID_PRICE_TWO_SIZE_TEN_AMOUNT),
-            _scaleBaseTokenAmount(_BID_PRICE_TWO_SIZE_TEN_AMOUNT_OUT)
-        ); // 8 * 20 / 10 = 16
-
-        // Check base token balances
-        assertEq(
-            _baseToken.balanceOf(address(_auctionHouse)),
-            bidTwoAmountOutActual,
-            "base token: auction house balance"
-        ); // To be claimed by the bidder
-        assertEq(_baseToken.balanceOf(_auctionOwner), 0, "base token: owner balance"); // No unused capacity
-        assertEq(_baseToken.balanceOf(_bidder), bidOneAmountOutActual, "base token: bidder balance");
-        assertEq(_baseToken.balanceOf(_REFERRER), 0, "base token: referrer balance");
-        assertEq(_baseToken.balanceOf(_CURATOR), 0, "base token: curator balance");
-        assertEq(_baseToken.balanceOf(_PROTOCOL), 0, "base token: protocol balance");
-
-        // Check quote token balances
-        assertEq(
-            _quoteToken.balanceOf(address(_auctionHouse)), 0, "quote token: auction house balance"
-        );
-        assertEq(
-            _quoteToken.balanceOf(_auctionOwner),
-            bidOneAmountInActual + bidTwoAmountInActual,
-            "quote token: owner balance"
-        );
-        assertEq(
-            _quoteToken.balanceOf(_bidder),
-            _scaleQuoteTokenAmount(_BID_PRICE_TWO_SIZE_TEN_AMOUNT) - bidOneAmountInActual,
-            "quote token: bidder balance"
-        );
-        assertEq(_quoteToken.balanceOf(_REFERRER), 0, "quote token: referrer balance");
-        assertEq(_quoteToken.balanceOf(_CURATOR), 0, "quote token: curator balance");
-        assertEq(_quoteToken.balanceOf(_PROTOCOL), 0, "quote token: protocol balance");
-    }
-
-    function test_partialFill_ordering_quoteTokenDecimalsSmaller()
-        external
-        givenQuoteTokenHasDecimals(13)
-        givenBaseTokenHasDecimals(17)
-        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
-        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
-        givenLotIsCreated
-        givenLotHasStarted
-        givenBidsAreOverSubscribedRespectsOrdering
-        givenLotHasConcluded
-        givenPrivateKeyIsSubmitted
-        givenLotIsDecrypted
-    {
-        // Call function
-        _auctionHouse.settle(_lotId);
-
-        // Validate bid data
-        EncryptedMarginalPriceAuction.BidData memory bidData = _getBidData(_lotId);
-        assertEq(bidData.marginalPrice, _marginalPrice, "marginal price");
-
-        // Validate lot data
-        EncryptedMarginalPriceAuction.Lot memory lot = _getLotData(_lotId);
-        assertEq(uint8(lot.status), uint8(EncryptedMarginalPriceAuction.AuctionStatus.Settled));
-
-        // Validate status of partial fill bid
-        EncryptedMarginalPriceAuction.Bid memory bid = _getBid(_lotId, 1); // Bid one is processed second due to insertion order
-        assertEq(uint8(bid.status), uint8(EncryptedMarginalPriceAuction.BidStatus.Claimed));
-
-        uint96 bidTwoAmountOutActual = _scaleBaseTokenAmount(_BID_PRICE_TWO_SIZE_TWO_AMOUNT_OUT); // 2
-        uint96 bidTwoAmountInActual = _scaleQuoteTokenAmount(_BID_PRICE_TWO_SIZE_TWO_AMOUNT); // 4
-        uint96 bidOneAmountOutActual = _auctionParams.capacity - bidTwoAmountOutActual; // 8
-        uint96 bidOneAmountInActual = _mulDivUp(
-            bidOneAmountOutActual,
-            _scaleQuoteTokenAmount(_BID_PRICE_TWO_SIZE_TEN_AMOUNT),
-            _scaleBaseTokenAmount(_BID_PRICE_TWO_SIZE_TEN_AMOUNT_OUT)
-        ); // 8 * 20 / 10 = 16
-
-        // Check base token balances
-        assertEq(
-            _baseToken.balanceOf(address(_auctionHouse)),
-            bidTwoAmountOutActual,
-            "base token: auction house balance"
-        ); // To be claimed by the bidder
-        assertEq(_baseToken.balanceOf(_auctionOwner), 0, "base token: owner balance"); // No unused capacity
-        assertEq(_baseToken.balanceOf(_bidder), bidOneAmountOutActual, "base token: bidder balance");
-        assertEq(_baseToken.balanceOf(_REFERRER), 0, "base token: referrer balance");
-        assertEq(_baseToken.balanceOf(_CURATOR), 0, "base token: curator balance");
-        assertEq(_baseToken.balanceOf(_PROTOCOL), 0, "base token: protocol balance");
-
-        // Check quote token balances
-        assertEq(
-            _quoteToken.balanceOf(address(_auctionHouse)), 0, "quote token: auction house balance"
-        );
-        assertEq(
-            _quoteToken.balanceOf(_auctionOwner),
-            bidOneAmountInActual + bidTwoAmountInActual,
-            "quote token: owner balance"
-        );
-        assertEq(
-            _quoteToken.balanceOf(_bidder),
-            _scaleQuoteTokenAmount(_BID_PRICE_TWO_SIZE_TEN_AMOUNT) - bidOneAmountInActual,
-            "quote token: bidder balance"
-        );
-        assertEq(_quoteToken.balanceOf(_REFERRER), 0, "quote token: referrer balance");
-        assertEq(_quoteToken.balanceOf(_CURATOR), 0, "quote token: curator balance");
-        assertEq(_quoteToken.balanceOf(_PROTOCOL), 0, "quote token: protocol balance");
-    }
-
-    function test_singleBid_partialFill()
-        external
-        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
-        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
-        givenLotIsCreated
-        givenLotHasStarted
-        givenBidsAreOverSubscribedOnFirstBid
-        givenLotHasConcluded
-        givenPrivateKeyIsSubmitted
-        givenLotIsDecrypted
-    {
-        // Call function
-        _auctionHouse.settle(_lotId);
-
-        // Validate bid data
-        EncryptedMarginalPriceAuction.BidData memory bidData = _getBidData(_lotId);
-        assertEq(bidData.marginalPrice, _marginalPrice, "marginal price");
-
-        // Validate lot data
-        EncryptedMarginalPriceAuction.Lot memory lot = _getLotData(_lotId);
-        assertEq(uint8(lot.status), uint8(EncryptedMarginalPriceAuction.AuctionStatus.Settled));
-
-        // Validate status of partial fill bid
-        EncryptedMarginalPriceAuction.Bid memory bid = _getBid(_lotId, 1);
-        assertEq(uint8(bid.status), uint8(EncryptedMarginalPriceAuction.BidStatus.Claimed));
-
-        uint96 bidOneAmountOutActual = _LOT_CAPACITY;
-        uint96 bidOneAmountInActual = _mulDivUp(
-            bidOneAmountOutActual,
-            _BID_PRICE_TWO_SIZE_ELEVEN_AMOUNT,
-            _BID_PRICE_TWO_SIZE_ELEVEN_AMOUNT_OUT
-        );
-
-        // Check base token balances
-        assertEq(
-            _baseToken.balanceOf(address(_auctionHouse)), 0, "base token: auction house balance"
-        ); // Nothing to be claimed
-        assertEq(_baseToken.balanceOf(_auctionOwner), 0, "base token: owner balance"); // No unused capacity
-        assertEq(_baseToken.balanceOf(_bidder), bidOneAmountOutActual, "base token: bidder balance");
-        assertEq(_baseToken.balanceOf(_REFERRER), 0, "base token: referrer balance");
-        assertEq(_baseToken.balanceOf(_CURATOR), 0, "base token: curator balance");
-        assertEq(_baseToken.balanceOf(_PROTOCOL), 0, "base token: protocol balance");
-
-        // Check quote token balances
-        assertEq(
-            _quoteToken.balanceOf(address(_auctionHouse)), 0, "quote token: auction house balance"
-        );
-        assertEq(
-            _quoteToken.balanceOf(_auctionOwner), bidOneAmountInActual, "quote token: owner balance"
-        );
-        assertEq(
-            _quoteToken.balanceOf(_bidder),
-            _BID_PRICE_TWO_SIZE_ELEVEN_AMOUNT - bidOneAmountInActual,
-            "quote token: bidder balance"
-        );
-        assertEq(_quoteToken.balanceOf(_REFERRER), 0, "quote token: referrer balance");
-        assertEq(_quoteToken.balanceOf(_CURATOR), 0, "quote token: curator balance");
-        assertEq(_quoteToken.balanceOf(_PROTOCOL), 0, "quote token: protocol balance");
-    }
-
-    function test_singleBid_partialFill_quoteTokenDecimalsLarger()
-        external
-        givenQuoteTokenHasDecimals(17)
-        givenBaseTokenHasDecimals(13)
-        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
-        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
-        givenLotIsCreated
-        givenLotHasStarted
-        givenBidsAreOverSubscribedOnFirstBid
-        givenLotHasConcluded
-        givenPrivateKeyIsSubmitted
-        givenLotIsDecrypted
-    {
-        // Call function
-        _auctionHouse.settle(_lotId);
-
-        // Validate bid data
-        EncryptedMarginalPriceAuction.BidData memory bidData = _getBidData(_lotId);
-        assertEq(bidData.marginalPrice, _marginalPrice, "marginal price");
-
-        // Validate lot data
-        EncryptedMarginalPriceAuction.Lot memory lot = _getLotData(_lotId);
-        assertEq(uint8(lot.status), uint8(EncryptedMarginalPriceAuction.AuctionStatus.Settled));
-
-        // Validate status of partial fill bid
-        EncryptedMarginalPriceAuction.Bid memory bid = _getBid(_lotId, 1);
-        assertEq(uint8(bid.status), uint8(EncryptedMarginalPriceAuction.BidStatus.Claimed));
-
-        uint96 bidOneAmountOutActual = _auctionParams.capacity;
-        uint96 bidOneAmountInActual = _mulDivUp(
-            bidOneAmountOutActual,
-            _scaleQuoteTokenAmount(_BID_PRICE_TWO_SIZE_ELEVEN_AMOUNT),
-            _scaleBaseTokenAmount(_BID_PRICE_TWO_SIZE_ELEVEN_AMOUNT_OUT)
-        );
-
-        // Check base token balances
-        assertEq(
-            _baseToken.balanceOf(address(_auctionHouse)), 0, "base token: auction house balance"
-        ); // Nothing to be claimed
-        assertEq(_baseToken.balanceOf(_auctionOwner), 0, "base token: owner balance"); // No unused capacity
-        assertEq(_baseToken.balanceOf(_bidder), bidOneAmountOutActual, "base token: bidder balance");
-        assertEq(_baseToken.balanceOf(_REFERRER), 0, "base token: referrer balance");
-        assertEq(_baseToken.balanceOf(_CURATOR), 0, "base token: curator balance");
-        assertEq(_baseToken.balanceOf(_PROTOCOL), 0, "base token: protocol balance");
-
-        // Check quote token balances
-        assertEq(
-            _quoteToken.balanceOf(address(_auctionHouse)), 0, "quote token: auction house balance"
-        );
-        assertEq(
-            _quoteToken.balanceOf(_auctionOwner), bidOneAmountInActual, "quote token: owner balance"
-        );
-        assertEq(
-            _quoteToken.balanceOf(_bidder),
-            _scaleQuoteTokenAmount(_BID_PRICE_TWO_SIZE_ELEVEN_AMOUNT) - bidOneAmountInActual,
-            "quote token: bidder balance"
-        );
-        assertEq(_quoteToken.balanceOf(_REFERRER), 0, "quote token: referrer balance");
-        assertEq(_quoteToken.balanceOf(_CURATOR), 0, "quote token: curator balance");
-        assertEq(_quoteToken.balanceOf(_PROTOCOL), 0, "quote token: protocol balance");
-    }
-
-    function test_singleBid_partialFill_quoteTokenDecimalsSmaller()
-        external
-        givenQuoteTokenHasDecimals(13)
-        givenBaseTokenHasDecimals(17)
-        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
-        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
-        givenLotIsCreated
-        givenLotHasStarted
-        givenBidsAreOverSubscribedOnFirstBid
-        givenLotHasConcluded
-        givenPrivateKeyIsSubmitted
-        givenLotIsDecrypted
-    {
-        // Call function
-        _auctionHouse.settle(_lotId);
-
-        // Validate bid data
-        EncryptedMarginalPriceAuction.BidData memory bidData = _getBidData(_lotId);
-        assertEq(bidData.marginalPrice, _marginalPrice, "marginal price");
-
-        // Validate lot data
-        EncryptedMarginalPriceAuction.Lot memory lot = _getLotData(_lotId);
-        assertEq(uint8(lot.status), uint8(EncryptedMarginalPriceAuction.AuctionStatus.Settled));
-
-        // Validate status of partial fill bid
-        EncryptedMarginalPriceAuction.Bid memory bid = _getBid(_lotId, 1);
-        assertEq(uint8(bid.status), uint8(EncryptedMarginalPriceAuction.BidStatus.Claimed));
-
-        uint96 bidOneAmountOutActual = _auctionParams.capacity;
-        uint96 bidOneAmountInActual = _mulDivUp(
-            bidOneAmountOutActual,
-            _scaleQuoteTokenAmount(_BID_PRICE_TWO_SIZE_ELEVEN_AMOUNT),
-            _scaleBaseTokenAmount(_BID_PRICE_TWO_SIZE_ELEVEN_AMOUNT_OUT)
-        );
-
-        // Check base token balances
-        assertEq(
-            _baseToken.balanceOf(address(_auctionHouse)), 0, "base token: auction house balance"
-        ); // Nothing to be claimed
-        assertEq(_baseToken.balanceOf(_auctionOwner), 0, "base token: owner balance"); // No unused capacity
-        assertEq(_baseToken.balanceOf(_bidder), bidOneAmountOutActual, "base token: bidder balance");
-        assertEq(_baseToken.balanceOf(_REFERRER), 0, "base token: referrer balance");
-        assertEq(_baseToken.balanceOf(_CURATOR), 0, "base token: curator balance");
-        assertEq(_baseToken.balanceOf(_PROTOCOL), 0, "base token: protocol balance");
-
-        // Check quote token balances
-        assertEq(
-            _quoteToken.balanceOf(address(_auctionHouse)), 0, "quote token: auction house balance"
-        );
-        assertEq(
-            _quoteToken.balanceOf(_auctionOwner), bidOneAmountInActual, "quote token: owner balance"
-        );
-        assertEq(
-            _quoteToken.balanceOf(_bidder),
-            _scaleQuoteTokenAmount(_BID_PRICE_TWO_SIZE_ELEVEN_AMOUNT) - bidOneAmountInActual,
-            "quote token: bidder balance"
-        );
-        assertEq(_quoteToken.balanceOf(_REFERRER), 0, "quote token: referrer balance");
-        assertEq(_quoteToken.balanceOf(_CURATOR), 0, "quote token: curator balance");
-        assertEq(_quoteToken.balanceOf(_PROTOCOL), 0, "quote token: protocol balance");
-    }
-
-    // [ ] given that the referrer fee is set
-    //  [ ] the referrer fee is accrued, referrer fee is deducted from payment
 
     // [ ] given that the protocol fee is set
     //  [ ] the protocol fee is accrued, protocol fee is deducted from payment
