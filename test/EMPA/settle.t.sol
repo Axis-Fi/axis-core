@@ -34,6 +34,8 @@ contract EmpaSettleTest is EmpaTest {
     uint96 internal _expectedAuctionHouseQuoteTokenBalance;
     uint96 internal _expectedAuctionOwnerQuoteTokenBalance;
     uint96 internal _expectedBidderQuoteTokenBalance;
+    uint96 internal _expectedReferrerFeeAcrrued;
+    uint96 internal _expectedProtocolFeeAcrrued;
 
     // ============ Modifiers ============ //
 
@@ -178,6 +180,8 @@ contract EmpaSettleTest is EmpaTest {
         // Fees
         _expectedReferrerFee = _calculateReferrerFee(bidAmountInSuccess);
         _expectedProtocolFee = _calculateProtocolFee(bidAmountInSuccess);
+        _expectedReferrerFeeAcrrued = _calculateReferrerFee(bidTwoAmountInActual); // Accrued on partial fill
+        _expectedProtocolFeeAcrrued = _calculateProtocolFee(bidTwoAmountInActual); // Accrued on partial fill
 
         _expectedAuctionHouseBaseTokenBalance = bidOneAmountOutActual; // To be claimed by the bidder
         _expectedAuctionOwnerBaseTokenBalance = 0; // No unused capacity
@@ -220,6 +224,8 @@ contract EmpaSettleTest is EmpaTest {
         // Fees
         _expectedReferrerFee = _calculateReferrerFee(bidAmountInSuccess);
         _expectedProtocolFee = _calculateProtocolFee(bidAmountInSuccess);
+        _expectedReferrerFeeAcrrued = _calculateReferrerFee(bidOneAmountInActual); // Accrued on partial fill
+        _expectedProtocolFeeAcrrued = _calculateProtocolFee(bidOneAmountInActual); // Accrued on partial fill
 
         _expectedAuctionHouseBaseTokenBalance = bidTwoAmountOutActual; // To be claimed by the bidder
         _expectedAuctionOwnerBaseTokenBalance = 0; // No unused capacity
@@ -258,6 +264,8 @@ contract EmpaSettleTest is EmpaTest {
         // Fees
         _expectedReferrerFee = _calculateReferrerFee(bidAmountInSuccess);
         _expectedProtocolFee = _calculateProtocolFee(bidAmountInSuccess);
+        _expectedReferrerFeeAcrrued = _calculateReferrerFee(bidOneAmountInActual); // Accrued on partial fill
+        _expectedProtocolFeeAcrrued = _calculateProtocolFee(bidOneAmountInActual); // Accrued on partial fill
 
         _expectedAuctionHouseBaseTokenBalance = 0; // Partial fill transferred
         _expectedAuctionOwnerBaseTokenBalance = 0; // No unused capacity
@@ -372,11 +380,15 @@ contract EmpaSettleTest is EmpaTest {
     function _assertAccruedFees() internal {
         // Check accrued quote token fees
         assertEq(
-            _auctionHouse.rewards(_REFERRER, _quoteToken), _expectedReferrerFee, "referrer fee"
+            _auctionHouse.rewards(_REFERRER, _quoteToken),
+            _expectedReferrerFeeAcrrued,
+            "referrer fee"
         );
-        assertEq(_auctionHouse.rewards(_CURATOR, _quoteToken), 0, "curator fee");
+        assertEq(_auctionHouse.rewards(_CURATOR, _quoteToken), 0, "curator fee"); // Always 0
         assertEq(
-            _auctionHouse.rewards(_PROTOCOL, _quoteToken), _expectedProtocolFee, "protocol fee"
+            _auctionHouse.rewards(_PROTOCOL, _quoteToken),
+            _expectedProtocolFeeAcrrued,
+            "protocol fee"
         );
     }
 
@@ -470,6 +482,8 @@ contract EmpaSettleTest is EmpaTest {
 
     function test_bidsLessThanMinimumFilled()
         external
+        givenReferrerFeeIsSet(_REFERRER_FEE_PERCENT)
+        givenProtocolFeeIsSet(_PROTOCOL_FEE_PERCENT)
         givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
         givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenLotIsCreated
@@ -497,6 +511,8 @@ contract EmpaSettleTest is EmpaTest {
 
     function test_marginalPriceLessThanMinimum()
         external
+        givenReferrerFeeIsSet(_REFERRER_FEE_PERCENT)
+        givenProtocolFeeIsSet(_PROTOCOL_FEE_PERCENT)
         givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
         givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenLotIsCreated
@@ -524,6 +540,8 @@ contract EmpaSettleTest is EmpaTest {
 
     function test_filledCapacityGreaterThanMinimum()
         external
+        givenReferrerFeeIsSet(_REFERRER_FEE_PERCENT)
+        givenProtocolFeeIsSet(_PROTOCOL_FEE_PERCENT)
         givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
         givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenLotIsCreated
@@ -551,6 +569,8 @@ contract EmpaSettleTest is EmpaTest {
 
     function test_filledCapacityGreaterThanMinimum_quoteTokenDecimalsLarger()
         external
+        givenReferrerFeeIsSet(_REFERRER_FEE_PERCENT)
+        givenProtocolFeeIsSet(_PROTOCOL_FEE_PERCENT)
         givenQuoteTokenHasDecimals(17)
         givenBaseTokenHasDecimals(13)
         givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
@@ -584,6 +604,8 @@ contract EmpaSettleTest is EmpaTest {
 
     function test_filledCapacityGreaterThanMinimum_quoteTokenDecimalsSmaller()
         external
+        givenReferrerFeeIsSet(_REFERRER_FEE_PERCENT)
+        givenProtocolFeeIsSet(_PROTOCOL_FEE_PERCENT)
         givenQuoteTokenHasDecimals(13)
         givenBaseTokenHasDecimals(17)
         givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
@@ -617,6 +639,8 @@ contract EmpaSettleTest is EmpaTest {
 
     function test_someBidsBelowMinimumPrice()
         external
+        givenReferrerFeeIsSet(_REFERRER_FEE_PERCENT)
+        givenProtocolFeeIsSet(_PROTOCOL_FEE_PERCENT)
         givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
         givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenLotIsCreated
@@ -644,6 +668,8 @@ contract EmpaSettleTest is EmpaTest {
 
     function test_someBidsBelowMinimumPrice_quoteTokenDecimalsLarger()
         external
+        givenReferrerFeeIsSet(_REFERRER_FEE_PERCENT)
+        givenProtocolFeeIsSet(_PROTOCOL_FEE_PERCENT)
         givenQuoteTokenHasDecimals(17)
         givenBaseTokenHasDecimals(13)
         givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
@@ -673,6 +699,8 @@ contract EmpaSettleTest is EmpaTest {
 
     function test_someBidsBelowMinimumPrice_quoteTokenDecimalsSmaller()
         external
+        givenReferrerFeeIsSet(_REFERRER_FEE_PERCENT)
+        givenProtocolFeeIsSet(_PROTOCOL_FEE_PERCENT)
         givenQuoteTokenHasDecimals(13)
         givenBaseTokenHasDecimals(17)
         givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
@@ -702,6 +730,8 @@ contract EmpaSettleTest is EmpaTest {
 
     function test_partialFill()
         external
+        givenReferrerFeeIsSet(_REFERRER_FEE_PERCENT)
+        givenProtocolFeeIsSet(_PROTOCOL_FEE_PERCENT)
         givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
         givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenLotIsCreated
@@ -733,6 +763,8 @@ contract EmpaSettleTest is EmpaTest {
 
     function test_partialFill_quoteTokenDecimalsLarger()
         external
+        givenReferrerFeeIsSet(_REFERRER_FEE_PERCENT)
+        givenProtocolFeeIsSet(_PROTOCOL_FEE_PERCENT)
         givenQuoteTokenHasDecimals(17)
         givenBaseTokenHasDecimals(13)
         givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
@@ -766,6 +798,8 @@ contract EmpaSettleTest is EmpaTest {
 
     function test_partialFill_quoteTokenDecimalsSmaller()
         external
+        givenReferrerFeeIsSet(_REFERRER_FEE_PERCENT)
+        givenProtocolFeeIsSet(_PROTOCOL_FEE_PERCENT)
         givenQuoteTokenHasDecimals(13)
         givenBaseTokenHasDecimals(17)
         givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
@@ -799,6 +833,8 @@ contract EmpaSettleTest is EmpaTest {
 
     function test_partialFill_ordering()
         external
+        givenReferrerFeeIsSet(_REFERRER_FEE_PERCENT)
+        givenProtocolFeeIsSet(_PROTOCOL_FEE_PERCENT)
         givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
         givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenLotIsCreated
@@ -830,6 +866,8 @@ contract EmpaSettleTest is EmpaTest {
 
     function test_partialFill_ordering_quoteTokenDecimalsLarger()
         external
+        givenReferrerFeeIsSet(_REFERRER_FEE_PERCENT)
+        givenProtocolFeeIsSet(_PROTOCOL_FEE_PERCENT)
         givenQuoteTokenHasDecimals(17)
         givenBaseTokenHasDecimals(13)
         givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
@@ -863,6 +901,8 @@ contract EmpaSettleTest is EmpaTest {
 
     function test_partialFill_ordering_quoteTokenDecimalsSmaller()
         external
+        givenReferrerFeeIsSet(_REFERRER_FEE_PERCENT)
+        givenProtocolFeeIsSet(_PROTOCOL_FEE_PERCENT)
         givenQuoteTokenHasDecimals(13)
         givenBaseTokenHasDecimals(17)
         givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
@@ -896,6 +936,8 @@ contract EmpaSettleTest is EmpaTest {
 
     function test_singleBid_partialFill()
         external
+        givenReferrerFeeIsSet(_REFERRER_FEE_PERCENT)
+        givenProtocolFeeIsSet(_PROTOCOL_FEE_PERCENT)
         givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
         givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenLotIsCreated
@@ -927,6 +969,8 @@ contract EmpaSettleTest is EmpaTest {
 
     function test_singleBid_partialFill_quoteTokenDecimalsLarger()
         external
+        givenReferrerFeeIsSet(_REFERRER_FEE_PERCENT)
+        givenProtocolFeeIsSet(_PROTOCOL_FEE_PERCENT)
         givenQuoteTokenHasDecimals(17)
         givenBaseTokenHasDecimals(13)
         givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
@@ -960,6 +1004,8 @@ contract EmpaSettleTest is EmpaTest {
 
     function test_singleBid_partialFill_quoteTokenDecimalsSmaller()
         external
+        givenReferrerFeeIsSet(_REFERRER_FEE_PERCENT)
+        givenProtocolFeeIsSet(_PROTOCOL_FEE_PERCENT)
         givenQuoteTokenHasDecimals(13)
         givenBaseTokenHasDecimals(17)
         givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
@@ -1066,13 +1112,11 @@ contract EmpaSettleTest is EmpaTest {
         assertEq(_quoteToken.balanceOf(_PROTOCOL), 0, "quote token: protocol balance");
     }
 
-    // [ ] given that the protocol fee is set
-    //  [ ] the protocol fee is accrued, protocol fee is deducted from payment
-    //  [ ] given that the referrer fee is set
-    //   [ ] the protocol and referrer fee are accrued, both fees deducted from payment
+    // [X] given that the protocol fee is set
+    //  [X] the protocol fee is accrued, protocol fee is deducted from payment
+    //  [X] given that the referrer fee is set
+    //   [X] the protocol and referrer fee are accrued, both fees deducted from payment
 
     // [ ] given there is a curator set
-    //  [ ] given the payout token is a derivative
-    //   [ ] derivative is minted and transferred to the curator
     //  [ ] payout token is transferred to the curator
 }

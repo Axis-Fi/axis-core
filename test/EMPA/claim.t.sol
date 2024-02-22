@@ -30,6 +30,9 @@ contract EmpaClaimTest is EmpaTest {
     //  [X] it sends the payout to the bidder
     // [X] it sends the payout to the bidder
 
+    // TODO handle decimals
+    // TODO handle fee accrual
+
     function test_invalidLotId_reverts() external {
         bytes memory err =
             abi.encodeWithSelector(EncryptedMarginalPriceAuction.Auction_InvalidId.selector, _lotId);
@@ -239,6 +242,4 @@ contract EmpaClaimTest is EmpaTest {
         EncryptedMarginalPriceAuction.Bid memory bid = _getBid(_lotId, _bidId);
         assertEq(uint8(bid.status), uint8(EncryptedMarginalPriceAuction.BidStatus.Claimed));
     }
-
-    // TODO handle decimals
 }
