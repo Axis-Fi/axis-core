@@ -45,6 +45,10 @@ contract EmpaSetProtocolTest is EmpaTest {
         givenLotIsDecrypted
         givenLotIsSettled
     {
+        // Have the bidder claim the bid proceeds (which allocates the fees)
+        vm.prank(_bidder);
+        _auctionHouse.claim(_lotId, 1);
+
         // Previous balance
         uint256 previousBalance = _quoteToken.balanceOf(_NEW_PROTOCOL);
 
