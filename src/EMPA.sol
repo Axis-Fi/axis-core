@@ -461,8 +461,6 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
     uint24 internal constant _ONE_HUNDRED_PERCENT = 100_000;
     uint24 internal constant _MIN_BID_PERCENT = 10; // 0.01%
 
-    uint64 internal _nextUserId;
-
     address internal immutable _PERMIT2;
 
     /// @notice Minimum auction duration in seconds
@@ -500,18 +498,6 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
         address permit2_
     ) FeeManager(protocol_) WithModules(owner_) {
         _PERMIT2 = permit2_;
-        _nextUserId = 1;
-    }
-
-    // ========== USER MANAGEMENT ========== //
-
-    function _getUserId(address user) internal returns (uint64) {
-        uint64 id = userIds[user];
-        if (id == 0) {
-            id = _nextUserId++;
-            userIds[user] = id;
-        }
-        return id;
     }
 
     // ========== AUCTION MANAGEMENT ========== //
