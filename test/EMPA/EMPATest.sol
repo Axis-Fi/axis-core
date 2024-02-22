@@ -141,9 +141,6 @@ abstract contract EmpaTest is Test, Permit2User {
         uint256 lotCapacity = _LOT_CAPACITY * 10 ** decimals_ / _BASE_SCALE;
         if (lotCapacity > type(uint96).max) revert("overflow");
 
-        uint256 minPrice = _MIN_PRICE * 10 ** decimals_ / _BASE_SCALE;
-        if (minPrice > type(uint96).max) revert("overflow");
-
         // Update dependent variables
         _minBidSize = uint96(lotCapacity * _MIN_BID_PERCENT / 1e5);
         _curatorMaxPotentialFee = uint96(lotCapacity * _CURATOR_FEE_PERCENT / 1e5);
@@ -153,7 +150,6 @@ abstract contract EmpaTest is Test, Permit2User {
 
         // Update auction params
         _auctionParams.capacity = uint96(lotCapacity);
-        _auctionParams.minimumPrice = uint96(minPrice);
     }
 
     modifier givenBaseTokenHasDecimals(uint8 decimals_) {
@@ -164,8 +160,14 @@ abstract contract EmpaTest is Test, Permit2User {
     function _setQuoteTokenDecimals(uint8 decimals_) internal {
         _quoteToken = new MockFeeOnTransferERC20("Quote Token", "QUOTE", decimals_);
 
+        uint256 minPrice = _MIN_PRICE * 10 ** decimals_ / _BASE_SCALE;
+        if (minPrice > type(uint96).max) revert("overflow");
+
         // Update routing params
         _routingParams.quoteToken = _quoteToken;
+
+        // Update auction params
+        _auctionParams.minimumPrice = uint96(minPrice);
     }
 
     modifier givenQuoteTokenHasDecimals(uint8 decimals_) {
