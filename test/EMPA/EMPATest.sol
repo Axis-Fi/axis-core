@@ -6,6 +6,7 @@ import {Test} from "forge-std/Test.sol";
 import {ERC20} from "lib/solmate/src/tokens/ERC20.sol";
 import {Point, ECIES} from "src/lib/ECIES.sol";
 import {Transfer} from "src/lib/Transfer.sol";
+import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 
 // Mocks
 import {MockERC20} from "lib/solmate/src/test/utils/mocks/MockERC20.sol";
@@ -143,7 +144,6 @@ abstract contract EmpaTest is Test, Permit2User {
 
         // Update dependent variables
         _minBidSize = uint96(lotCapacity * _MIN_BID_PERCENT / 1e5);
-        _curatorMaxPotentialFee = uint96(lotCapacity * _CURATOR_FEE_PERCENT / 1e5);
 
         // Update routing params
         _routingParams.baseToken = _baseToken;
@@ -563,19 +563,18 @@ abstract contract EmpaTest is Test, Permit2User {
         });
     }
 
+    function _mulDivUp(uint96 mul1_, uint96 mul2_, uint96 div_) internal pure returns (uint96) {
+        uint256 product = FixedPointMathLib.mulDivUp(mul1_, mul2_, div_);
+        if (product > type(uint96).max) revert("overflow");
+
+        return uint96(product);
+    }
+
     function _scaleQuoteTokenAmount(uint96 amount_) internal view returns (uint96) {
-        uint256 adjustedAmount = amount_ * 10 ** (_quoteToken.decimals()) / _BASE_SCALE;
-
-        if (adjustedAmount > type(uint96).max) revert("overflow");
-
-        return uint96(adjustedAmount);
+        return _mulDivUp(amount_, uint96(10 ** (_quoteToken.decimals())), _BASE_SCALE);
     }
 
     function _scaleBaseTokenAmount(uint96 amount_) internal view returns (uint96) {
-        uint256 adjustedAmount = amount_ * 10 ** (_baseToken.decimals()) / _BASE_SCALE;
-
-        if (adjustedAmount > type(uint96).max) revert("overflow");
-
-        return uint96(adjustedAmount);
+        return _mulDivUp(amount_, uint96(10 ** (_baseToken.decimals())), _BASE_SCALE);
     }
 }

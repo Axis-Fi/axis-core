@@ -53,10 +53,15 @@ contract EmpaSettleTest is EmpaTest {
 
         // No fees collected
 
+        uint96 prefundedCuratorFee = _calculatePrefundedCuratorFee();
+        uint96 curatorFee = _calculateCuratorFee(0); // No successful bids
+        uint96 curatorFeeToRefund = prefundedCuratorFee - curatorFee;
+
         _expectedAuctionHouseBaseTokenBalance = 0; // No bids filled
-        _expectedAuctionOwnerBaseTokenBalance = _scaleBaseTokenAmount(_LOT_CAPACITY); // Unused capacity is returned
+        _expectedAuctionOwnerBaseTokenBalance =
+            _scaleBaseTokenAmount(_LOT_CAPACITY) + curatorFeeToRefund; // Unused capacity and curator fee is returned
         _expectedBidderBaseTokenBalance = 0;
-        _expectedCuratorBaseTokenBalance = 0;
+        _expectedCuratorBaseTokenBalance = curatorFee;
 
         _expectedAuctionHouseQuoteTokenBalance =
             _scaleQuoteTokenAmount(_BID_PRICE_TWO_AMOUNT + _BID_PRICE_TWO_AMOUNT); // To be claimed by the bidders
@@ -80,10 +85,15 @@ contract EmpaSettleTest is EmpaTest {
 
         // No fees collected
 
+        uint96 prefundedCuratorFee = _calculatePrefundedCuratorFee();
+        uint96 curatorFee = _calculateCuratorFee(0); // No successful bids
+        uint96 curatorFeeToRefund = prefundedCuratorFee - curatorFee;
+
         _expectedAuctionHouseBaseTokenBalance = 0; // No bids filled
-        _expectedAuctionOwnerBaseTokenBalance = _scaleBaseTokenAmount(_LOT_CAPACITY); // Unused capacity is returned
+        _expectedAuctionOwnerBaseTokenBalance =
+            _scaleBaseTokenAmount(_LOT_CAPACITY) + curatorFeeToRefund; // Unused capacity and curator fee is returned
         _expectedBidderBaseTokenBalance = 0;
-        _expectedCuratorBaseTokenBalance = 0;
+        _expectedCuratorBaseTokenBalance = curatorFee;
 
         _expectedAuctionHouseQuoteTokenBalance = _scaleQuoteTokenAmount(
             _BID_PRICE_ONE_AMOUNT + _BID_PRICE_ONE_AMOUNT + _BID_PRICE_ONE_AMOUNT
@@ -91,6 +101,16 @@ contract EmpaSettleTest is EmpaTest {
         _expectedAuctionOwnerQuoteTokenBalance = 0; // No payments
         _expectedBidderQuoteTokenBalance = 0;
         _;
+    }
+
+    function _calculatePrefundedCuratorFee() internal view returns (uint96) {
+        // Check for curator approval
+        EncryptedMarginalPriceAuction.Routing memory lotRouting = _getLotRouting(_lotId);
+        if (lotRouting.curated == false) {
+            return 0;
+        }
+
+        return _scaleBaseTokenAmount(_curatorMaxPotentialFee);
     }
 
     function _calculateReferrerFee(uint96 amountIn) internal view returns (uint96) {
@@ -103,6 +123,16 @@ contract EmpaSettleTest is EmpaTest {
         (uint24 protocolFee,,) = _auctionHouse.fees();
 
         return _mulDivUp(protocolFee, amountIn, 1e5);
+    }
+
+    function _calculateCuratorFee(uint96 amountIn) internal view returns (uint96) {
+        // Check for curator approval
+        EncryptedMarginalPriceAuction.Routing memory lotRouting = _getLotRouting(_lotId);
+        if (lotRouting.curated == false) {
+            return 0;
+        }
+
+        return _mulDivUp(amountIn, _CURATOR_FEE_PERCENT, 1e5);
     }
 
     modifier givenBidsAreAboveMinimumAndBelowCapacity() {
@@ -134,11 +164,15 @@ contract EmpaSettleTest is EmpaTest {
         _expectedReferrerFee = _calculateReferrerFee(bidAmountInTotal);
         _expectedProtocolFee = _calculateProtocolFee(bidAmountInTotal);
 
+        uint96 prefundedCuratorFee = _calculatePrefundedCuratorFee();
+        uint96 curatorFee = _calculateCuratorFee(bidAmountOutTotal);
+        uint96 curatorFeeToRefund = prefundedCuratorFee - curatorFee;
+
         _expectedAuctionHouseBaseTokenBalance = bidAmountOutTotal; // All bids filled
         _expectedAuctionOwnerBaseTokenBalance =
-            _scaleBaseTokenAmount(_LOT_CAPACITY) - bidAmountOutTotal; // Unused capacity
+            _scaleBaseTokenAmount(_LOT_CAPACITY) - bidAmountOutTotal + curatorFeeToRefund; // Unused capacity
         _expectedBidderBaseTokenBalance = 0; // To be claimed
-        _expectedCuratorBaseTokenBalance = 0; // No curator fee set
+        _expectedCuratorBaseTokenBalance = curatorFee;
 
         _expectedAuctionHouseQuoteTokenBalance = _expectedReferrerFee + _expectedProtocolFee; // All bids filled, nothing to be claimed
         _expectedAuctionOwnerQuoteTokenBalance =
@@ -176,6 +210,7 @@ contract EmpaSettleTest is EmpaTest {
         uint96 bidAmountInSuccess = bidOneAmountInActual + bidTwoAmountInActual;
         uint96 bidAmountInFail =
             _scaleQuoteTokenAmount(_BID_PRICE_TWO_SIZE_TWO_AMOUNT) - bidTwoAmountInActual;
+        uint96 bidAmountOutSuccess = bidOneAmountOutActual + bidTwoAmountOutActual;
 
         // Fees
         _expectedReferrerFee = _calculateReferrerFee(bidAmountInSuccess);
@@ -183,10 +218,14 @@ contract EmpaSettleTest is EmpaTest {
         _expectedReferrerFeeAcrrued = _calculateReferrerFee(bidTwoAmountInActual); // Accrued on partial fill
         _expectedProtocolFeeAcrrued = _calculateProtocolFee(bidTwoAmountInActual); // Accrued on partial fill
 
+        uint96 prefundedCuratorFee = _calculatePrefundedCuratorFee();
+        uint96 curatorFee = _calculateCuratorFee(bidAmountOutSuccess);
+        uint96 curatorFeeToRefund = prefundedCuratorFee - curatorFee;
+
         _expectedAuctionHouseBaseTokenBalance = bidOneAmountOutActual; // To be claimed by the bidder
-        _expectedAuctionOwnerBaseTokenBalance = 0; // No unused capacity
+        _expectedAuctionOwnerBaseTokenBalance = curatorFeeToRefund; // No unused capacity
         _expectedBidderBaseTokenBalance = bidTwoAmountOutActual; // Partial fill transferred
-        _expectedCuratorBaseTokenBalance = 0; // No curator fee set
+        _expectedCuratorBaseTokenBalance = curatorFee;
 
         _expectedAuctionHouseQuoteTokenBalance = _expectedReferrerFee + _expectedProtocolFee; // Accrued fees
         _expectedAuctionOwnerQuoteTokenBalance = bidOneAmountInActual + bidTwoAmountInActual
@@ -220,6 +259,7 @@ contract EmpaSettleTest is EmpaTest {
         uint96 bidAmountInSuccess = bidOneAmountInActual + bidTwoAmountInActual;
         uint96 bidAmountInFail =
             _scaleQuoteTokenAmount(_BID_PRICE_TWO_SIZE_TEN_AMOUNT) - bidOneAmountInActual;
+        uint96 bidAmountOutSuccess = bidOneAmountOutActual + bidTwoAmountOutActual;
 
         // Fees
         _expectedReferrerFee = _calculateReferrerFee(bidAmountInSuccess);
@@ -227,10 +267,14 @@ contract EmpaSettleTest is EmpaTest {
         _expectedReferrerFeeAcrrued = _calculateReferrerFee(bidOneAmountInActual); // Accrued on partial fill
         _expectedProtocolFeeAcrrued = _calculateProtocolFee(bidOneAmountInActual); // Accrued on partial fill
 
+        uint96 prefundedCuratorFee = _calculatePrefundedCuratorFee();
+        uint96 curatorFee = _calculateCuratorFee(bidAmountOutSuccess);
+        uint96 curatorFeeToRefund = prefundedCuratorFee - curatorFee;
+
         _expectedAuctionHouseBaseTokenBalance = bidTwoAmountOutActual; // To be claimed by the bidder
-        _expectedAuctionOwnerBaseTokenBalance = 0; // No unused capacity
+        _expectedAuctionOwnerBaseTokenBalance = curatorFeeToRefund; // No unused capacity
         _expectedBidderBaseTokenBalance = bidOneAmountOutActual; // Partial fill transferred
-        _expectedCuratorBaseTokenBalance = 0; // No curator fee set
+        _expectedCuratorBaseTokenBalance = curatorFee;
 
         _expectedAuctionHouseQuoteTokenBalance = _expectedReferrerFee + _expectedProtocolFee; // Accrued fees
         _expectedAuctionOwnerQuoteTokenBalance = bidOneAmountInActual + bidTwoAmountInActual
@@ -260,6 +304,7 @@ contract EmpaSettleTest is EmpaTest {
         uint96 bidAmountInSuccess = bidOneAmountInActual;
         uint96 bidAmountInFail =
             _scaleQuoteTokenAmount(_BID_PRICE_TWO_SIZE_ELEVEN_AMOUNT) - bidOneAmountInActual;
+        uint96 bidAmountOutSuccess = bidOneAmountOutActual;
 
         // Fees
         _expectedReferrerFee = _calculateReferrerFee(bidAmountInSuccess);
@@ -267,10 +312,14 @@ contract EmpaSettleTest is EmpaTest {
         _expectedReferrerFeeAcrrued = _calculateReferrerFee(bidOneAmountInActual); // Accrued on partial fill
         _expectedProtocolFeeAcrrued = _calculateProtocolFee(bidOneAmountInActual); // Accrued on partial fill
 
+        uint96 prefundedCuratorFee = _calculatePrefundedCuratorFee();
+        uint96 curatorFee = _calculateCuratorFee(bidAmountOutSuccess);
+        uint96 curatorFeeToRefund = prefundedCuratorFee - curatorFee;
+
         _expectedAuctionHouseBaseTokenBalance = 0; // Partial fill transferred
-        _expectedAuctionOwnerBaseTokenBalance = 0; // No unused capacity
+        _expectedAuctionOwnerBaseTokenBalance = curatorFeeToRefund; // No unused capacity
         _expectedBidderBaseTokenBalance = bidOneAmountOutActual; // Partial fill transferred
-        _expectedCuratorBaseTokenBalance = 0; // No curator fee set
+        _expectedCuratorBaseTokenBalance = curatorFee;
 
         _expectedAuctionHouseQuoteTokenBalance = _expectedReferrerFee + _expectedProtocolFee; // Accrued fees
         _expectedAuctionOwnerQuoteTokenBalance =
@@ -306,11 +355,15 @@ contract EmpaSettleTest is EmpaTest {
         _expectedReferrerFee = _calculateReferrerFee(bidAmountInSuccess);
         _expectedProtocolFee = _calculateProtocolFee(bidAmountInSuccess);
 
+        uint96 prefundedCuratorFee = _calculatePrefundedCuratorFee();
+        uint96 curatorFee = _calculateCuratorFee(bidAmountOutSuccess);
+        uint96 curatorFeeToRefund = prefundedCuratorFee - curatorFee;
+
         _expectedAuctionHouseBaseTokenBalance = bidAmountOutSuccess; // To be claimed by bidders
         _expectedAuctionOwnerBaseTokenBalance =
-            _scaleBaseTokenAmount(_LOT_CAPACITY) - bidAmountOutSuccess; // Unused capacity
+            _scaleBaseTokenAmount(_LOT_CAPACITY) - bidAmountOutSuccess + curatorFeeToRefund; // Unused capacity and curator fees
         _expectedBidderBaseTokenBalance = 0; // To be claimed
-        _expectedCuratorBaseTokenBalance = 0; // No curator fee set
+        _expectedCuratorBaseTokenBalance = curatorFee;
 
         _expectedAuctionHouseQuoteTokenBalance =
             bidAmountInFail + _expectedReferrerFee + _expectedProtocolFee; // Accrued fees and failed bids to be refunded
@@ -318,13 +371,6 @@ contract EmpaSettleTest is EmpaTest {
             bidAmountInSuccess - _expectedReferrerFee - _expectedProtocolFee; // Full payout
         _expectedBidderQuoteTokenBalance = 0;
         _;
-    }
-
-    function _mulDivUp(uint96 mul1_, uint96 mul2_, uint96 div_) internal pure returns (uint96) {
-        uint256 product = FixedPointMathLib.mulDivUp(mul1_, mul2_, div_);
-        if (product > type(uint96).max) revert("overflow");
-
-        return uint96(product);
     }
 
     // ============ Tests ============ //
@@ -486,7 +532,12 @@ contract EmpaSettleTest is EmpaTest {
         givenProtocolFeeIsSet(_PROTOCOL_FEE_PERCENT)
         givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
         givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenCuratorIsSet
+        givenCuratorFeeIsSet
         givenLotIsCreated
+        givenOwnerHasBaseTokenBalance(_curatorMaxPotentialFee)
+        givenOwnerHasBaseTokenAllowance(_curatorMaxPotentialFee)
+        givenCuratorHasApproved
         givenLotHasStarted
         givenBidsAreBelowMinimumFilled
         givenLotHasConcluded
@@ -515,7 +566,12 @@ contract EmpaSettleTest is EmpaTest {
         givenProtocolFeeIsSet(_PROTOCOL_FEE_PERCENT)
         givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
         givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenCuratorIsSet
+        givenCuratorFeeIsSet
         givenLotIsCreated
+        givenOwnerHasBaseTokenBalance(_curatorMaxPotentialFee)
+        givenOwnerHasBaseTokenAllowance(_curatorMaxPotentialFee)
+        givenCuratorHasApproved
         givenLotHasStarted
         givenAllBidsAreBelowMinimumPrice
         givenLotHasConcluded
@@ -544,7 +600,12 @@ contract EmpaSettleTest is EmpaTest {
         givenProtocolFeeIsSet(_PROTOCOL_FEE_PERCENT)
         givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
         givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenCuratorIsSet
+        givenCuratorFeeIsSet
         givenLotIsCreated
+        givenOwnerHasBaseTokenBalance(_curatorMaxPotentialFee)
+        givenOwnerHasBaseTokenAllowance(_curatorMaxPotentialFee)
+        givenCuratorHasApproved
         givenLotHasStarted
         givenBidsAreAboveMinimumAndBelowCapacity
         givenLotHasConcluded
@@ -575,7 +636,12 @@ contract EmpaSettleTest is EmpaTest {
         givenBaseTokenHasDecimals(13)
         givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
         givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenCuratorIsSet
+        givenCuratorFeeIsSet
         givenLotIsCreated
+        givenOwnerHasBaseTokenBalance(_curatorMaxPotentialFee)
+        givenOwnerHasBaseTokenAllowance(_curatorMaxPotentialFee)
+        givenCuratorHasApproved
         givenLotHasStarted
         givenBidsAreAboveMinimumAndBelowCapacity
         givenLotHasConcluded
@@ -610,7 +676,12 @@ contract EmpaSettleTest is EmpaTest {
         givenBaseTokenHasDecimals(17)
         givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
         givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenCuratorIsSet
+        givenCuratorFeeIsSet
         givenLotIsCreated
+        givenOwnerHasBaseTokenBalance(_curatorMaxPotentialFee)
+        givenOwnerHasBaseTokenAllowance(_curatorMaxPotentialFee)
+        givenCuratorHasApproved
         givenLotHasStarted
         givenBidsAreAboveMinimumAndBelowCapacity
         givenLotHasConcluded
@@ -643,7 +714,12 @@ contract EmpaSettleTest is EmpaTest {
         givenProtocolFeeIsSet(_PROTOCOL_FEE_PERCENT)
         givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
         givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenCuratorIsSet
+        givenCuratorFeeIsSet
         givenLotIsCreated
+        givenOwnerHasBaseTokenBalance(_curatorMaxPotentialFee)
+        givenOwnerHasBaseTokenAllowance(_curatorMaxPotentialFee)
+        givenCuratorHasApproved
         givenLotHasStarted
         givenSomeBidsAreBelowMinimumPrice
         givenLotHasConcluded
@@ -674,7 +750,12 @@ contract EmpaSettleTest is EmpaTest {
         givenBaseTokenHasDecimals(13)
         givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
         givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenCuratorIsSet
+        givenCuratorFeeIsSet
         givenLotIsCreated
+        givenOwnerHasBaseTokenBalance(_curatorMaxPotentialFee)
+        givenOwnerHasBaseTokenAllowance(_curatorMaxPotentialFee)
+        givenCuratorHasApproved
         givenLotHasStarted
         givenSomeBidsAreBelowMinimumPrice
         givenLotHasConcluded
@@ -705,7 +786,12 @@ contract EmpaSettleTest is EmpaTest {
         givenBaseTokenHasDecimals(17)
         givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
         givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenCuratorIsSet
+        givenCuratorFeeIsSet
         givenLotIsCreated
+        givenOwnerHasBaseTokenBalance(_curatorMaxPotentialFee)
+        givenOwnerHasBaseTokenAllowance(_curatorMaxPotentialFee)
+        givenCuratorHasApproved
         givenLotHasStarted
         givenSomeBidsAreBelowMinimumPrice
         givenLotHasConcluded
@@ -734,7 +820,12 @@ contract EmpaSettleTest is EmpaTest {
         givenProtocolFeeIsSet(_PROTOCOL_FEE_PERCENT)
         givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
         givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenCuratorIsSet
+        givenCuratorFeeIsSet
         givenLotIsCreated
+        givenOwnerHasBaseTokenBalance(_curatorMaxPotentialFee)
+        givenOwnerHasBaseTokenAllowance(_curatorMaxPotentialFee)
+        givenCuratorHasApproved
         givenLotHasStarted
         givenBidsAreOverSubscribed
         givenLotHasConcluded
@@ -769,7 +860,12 @@ contract EmpaSettleTest is EmpaTest {
         givenBaseTokenHasDecimals(13)
         givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
         givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenCuratorIsSet
+        givenCuratorFeeIsSet
         givenLotIsCreated
+        givenOwnerHasBaseTokenBalance(_curatorMaxPotentialFee)
+        givenOwnerHasBaseTokenAllowance(_curatorMaxPotentialFee)
+        givenCuratorHasApproved
         givenLotHasStarted
         givenBidsAreOverSubscribed
         givenLotHasConcluded
@@ -804,7 +900,12 @@ contract EmpaSettleTest is EmpaTest {
         givenBaseTokenHasDecimals(17)
         givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
         givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenCuratorIsSet
+        givenCuratorFeeIsSet
         givenLotIsCreated
+        givenOwnerHasBaseTokenBalance(_curatorMaxPotentialFee)
+        givenOwnerHasBaseTokenAllowance(_curatorMaxPotentialFee)
+        givenCuratorHasApproved
         givenLotHasStarted
         givenBidsAreOverSubscribed
         givenLotHasConcluded
@@ -837,7 +938,12 @@ contract EmpaSettleTest is EmpaTest {
         givenProtocolFeeIsSet(_PROTOCOL_FEE_PERCENT)
         givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
         givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenCuratorIsSet
+        givenCuratorFeeIsSet
         givenLotIsCreated
+        givenOwnerHasBaseTokenBalance(_curatorMaxPotentialFee)
+        givenOwnerHasBaseTokenAllowance(_curatorMaxPotentialFee)
+        givenCuratorHasApproved
         givenLotHasStarted
         givenBidsAreOverSubscribedRespectsOrdering
         givenLotHasConcluded
@@ -872,7 +978,12 @@ contract EmpaSettleTest is EmpaTest {
         givenBaseTokenHasDecimals(13)
         givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
         givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenCuratorIsSet
+        givenCuratorFeeIsSet
         givenLotIsCreated
+        givenOwnerHasBaseTokenBalance(_curatorMaxPotentialFee)
+        givenOwnerHasBaseTokenAllowance(_curatorMaxPotentialFee)
+        givenCuratorHasApproved
         givenLotHasStarted
         givenBidsAreOverSubscribedRespectsOrdering
         givenLotHasConcluded
@@ -907,7 +1018,12 @@ contract EmpaSettleTest is EmpaTest {
         givenBaseTokenHasDecimals(17)
         givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
         givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenCuratorIsSet
+        givenCuratorFeeIsSet
         givenLotIsCreated
+        givenOwnerHasBaseTokenBalance(_curatorMaxPotentialFee)
+        givenOwnerHasBaseTokenAllowance(_curatorMaxPotentialFee)
+        givenCuratorHasApproved
         givenLotHasStarted
         givenBidsAreOverSubscribedRespectsOrdering
         givenLotHasConcluded
@@ -940,7 +1056,12 @@ contract EmpaSettleTest is EmpaTest {
         givenProtocolFeeIsSet(_PROTOCOL_FEE_PERCENT)
         givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
         givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenCuratorIsSet
+        givenCuratorFeeIsSet
         givenLotIsCreated
+        givenOwnerHasBaseTokenBalance(_curatorMaxPotentialFee)
+        givenOwnerHasBaseTokenAllowance(_curatorMaxPotentialFee)
+        givenCuratorHasApproved
         givenLotHasStarted
         givenBidsAreOverSubscribedOnFirstBid
         givenLotHasConcluded
@@ -975,7 +1096,12 @@ contract EmpaSettleTest is EmpaTest {
         givenBaseTokenHasDecimals(13)
         givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
         givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenCuratorIsSet
+        givenCuratorFeeIsSet
         givenLotIsCreated
+        givenOwnerHasBaseTokenBalance(_curatorMaxPotentialFee)
+        givenOwnerHasBaseTokenAllowance(_curatorMaxPotentialFee)
+        givenCuratorHasApproved
         givenLotHasStarted
         givenBidsAreOverSubscribedOnFirstBid
         givenLotHasConcluded
@@ -1010,7 +1136,12 @@ contract EmpaSettleTest is EmpaTest {
         givenBaseTokenHasDecimals(17)
         givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
         givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenCuratorIsSet
+        givenCuratorFeeIsSet
         givenLotIsCreated
+        givenOwnerHasBaseTokenBalance(_curatorMaxPotentialFee)
+        givenOwnerHasBaseTokenAllowance(_curatorMaxPotentialFee)
+        givenCuratorHasApproved
         givenLotHasStarted
         givenBidsAreOverSubscribedOnFirstBid
         givenLotHasConcluded
@@ -1039,84 +1170,10 @@ contract EmpaSettleTest is EmpaTest {
 
     // [X] given that the referrer fee is set
     //  [X] the referrer fee is accrued, referrer fee is deducted from payment
-
-    function test_partialFill_referrerFeeIsSet()
-        external
-        givenReferrerFeeIsSet(_REFERRER_FEE_PERCENT)
-        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
-        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
-        givenLotIsCreated
-        givenLotHasStarted
-        givenBidsAreOverSubscribed
-        givenLotHasConcluded
-        givenPrivateKeyIsSubmitted
-        givenLotIsDecrypted
-    {
-        // Call function
-        _auctionHouse.settle(_lotId);
-
-        // Validate bid data
-        EncryptedMarginalPriceAuction.BidData memory bidData = _getBidData(_lotId);
-        assertEq(bidData.marginalPrice, _marginalPrice, "marginal price");
-
-        // Validate lot data
-        EncryptedMarginalPriceAuction.Lot memory lot = _getLotData(_lotId);
-        assertEq(uint8(lot.status), uint8(EncryptedMarginalPriceAuction.AuctionStatus.Settled));
-
-        // Validate status of partial fill bid
-        EncryptedMarginalPriceAuction.Bid memory bid = _getBid(_lotId, 2);
-        assertEq(uint8(bid.status), uint8(EncryptedMarginalPriceAuction.BidStatus.Claimed));
-
-        uint96 bidOneAmountOutActual = _mulDivUp(_BID_SIZE_NINE_AMOUNT, 1e18, _marginalPrice); // 9.5
-        uint96 bidOneAmountInActual = _BID_SIZE_NINE_AMOUNT; // 19
-        uint96 bidTwoAmountOutActual = _LOT_CAPACITY - bidOneAmountOutActual; // 0.5
-        uint96 bidTwoAmountInActual = _mulDivUp(
-            bidTwoAmountOutActual,
-            _BID_PRICE_TWO_SIZE_TWO_AMOUNT,
-            _BID_PRICE_TWO_SIZE_TWO_AMOUNT_OUT
-        ); // 0.5 * 4 / 2 = 1
-
-        uint96 referrerFeeActual =
-            _mulDivUp(bidOneAmountInActual + bidTwoAmountInActual, _REFERRER_FEE_PERCENT, 1e5);
-
-        // Check base token balances
-        assertEq(
-            _baseToken.balanceOf(address(_auctionHouse)),
-            bidOneAmountOutActual,
-            "base token: auction house balance"
-        ); // To be claimed by the bidder
-        assertEq(_baseToken.balanceOf(_auctionOwner), 0, "base token: owner balance"); // No unused capacity
-        assertEq(_baseToken.balanceOf(_bidder), bidTwoAmountOutActual, "base token: bidder balance");
-        assertEq(_baseToken.balanceOf(_REFERRER), 0, "base token: referrer balance");
-        assertEq(_baseToken.balanceOf(_CURATOR), 0, "base token: curator balance");
-        assertEq(_baseToken.balanceOf(_PROTOCOL), 0, "base token: protocol balance");
-
-        // Check quote token balances
-        assertEq(
-            _quoteToken.balanceOf(address(_auctionHouse)),
-            referrerFeeActual,
-            "quote token: auction house balance"
-        );
-        assertEq(
-            _quoteToken.balanceOf(_auctionOwner),
-            bidOneAmountInActual + bidTwoAmountInActual - referrerFeeActual,
-            "quote token: owner balance"
-        );
-        assertEq(
-            _quoteToken.balanceOf(_bidder),
-            _BID_PRICE_TWO_SIZE_TWO_AMOUNT - bidTwoAmountInActual,
-            "quote token: bidder balance"
-        );
-        assertEq(_quoteToken.balanceOf(_REFERRER), 0, "quote token: referrer balance");
-        assertEq(_quoteToken.balanceOf(_CURATOR), 0, "quote token: curator balance");
-        assertEq(_quoteToken.balanceOf(_PROTOCOL), 0, "quote token: protocol balance");
-    }
-
     // [X] given that the protocol fee is set
     //  [X] the protocol fee is accrued, protocol fee is deducted from payment
     //  [X] given that the referrer fee is set
     //   [X] the protocol and referrer fee are accrued, both fees deducted from payment
-
-    // [ ] given there is a curator set
-    //  [ ] payout token is transferred to the curator
+    // [X] given there is a curator set
+    //  [X] payout token is transferred to the curator
 }
