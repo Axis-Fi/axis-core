@@ -192,7 +192,8 @@ abstract contract FeeManager is Owned, ReentrancyGuard {
             // 2. Calculate protocol fee as the total expected fee amount minus the referrer fee
             //    to avoid issues with rounding from separate fee calculations
             toReferrer = FixedMath.mulDivUp(amount_, referrerFee, _FEE_DECIMALS);
-            toProtocol = FixedMath.mulDivUp(amount_, protocolFee + referrerFee, _FEE_DECIMALS) - toReferrer;
+            toProtocol =
+                FixedMath.mulDivUp(amount_, protocolFee + referrerFee, _FEE_DECIMALS) - toReferrer;
         } else {
             // There is no referrer
             toProtocol = FixedMath.mulDivUp(amount_, protocolFee + referrerFee, _FEE_DECIMALS);
