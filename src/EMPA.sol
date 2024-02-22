@@ -1034,13 +1034,27 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
                 routing.curator, capacityExpended > capacity ? capacity : capacityExpended
             );
             if (curatorFee > 0) _sendPayout(lotId_, routing.curator, curatorFee, routing);
+
+            // Refund the remaining curator fees to the owner
+            // TODO can be combined with the above transfer
+            if (routing.curated == true && curatorFee < routing.curatorFee) {
+                Transfer.transfer(
+                    routing.baseToken, routing.owner, routing.curatorFee - curatorFee, false
+                );
+            }
         } else {
             // Auction cannot be settled if we reach this point
             // Marginal price is not set for the auction so the system knows all bids should be refunded
 
+            uint96 refundAmount = capacity;
+
+            if (lotRouting[lotId_].curated == true) {
+                refundAmount += lotRouting[lotId_].curatorFee;
+            }
+
             // Refund the capacity to the seller, no fees are taken
             Transfer.transfer(
-                lotRouting[lotId_].baseToken, lotRouting[lotId_].owner, capacity, false
+                lotRouting[lotId_].baseToken, lotRouting[lotId_].owner, refundAmount, false
             );
         }
 
