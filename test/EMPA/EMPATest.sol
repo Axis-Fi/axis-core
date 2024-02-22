@@ -74,6 +74,7 @@ abstract contract EmpaTest is Test, Permit2User {
     uint96 internal _curatorMaxPotentialFee = _CURATOR_FEE_PERCENT * _LOT_CAPACITY / 1e5;
     /// @dev    Needs to be updated if the base token scale is changed
     uint96 internal _minBidSize = _LOT_CAPACITY * _MIN_BID_PERCENT / 1e5;
+    uint96 internal constant _MIN_BID_SIZE = _LOT_CAPACITY * _MIN_BID_PERCENT / 1e5;
 
     // Parameters
     EncryptedMarginalPriceAuction.RoutingParams internal _routingParams;
