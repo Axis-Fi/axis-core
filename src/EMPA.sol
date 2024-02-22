@@ -91,26 +91,33 @@ abstract contract Router {
     /// @notice     Refund a bid on a lot in a batch auction
     /// @dev        The implementing function must perform the following:
     ///             1. Validate the bid
-    ///             2. Pass the request to the auction module to validate and update data
-    ///             3. Send the refund to the bidder
+    ///             2. Send the refund to the bidder
     ///
     /// @param      lotId_          Lot ID
     /// @param      bidId_          Bid ID
     function refundBid(uint96 lotId_, uint64 bidId_) external virtual;
 
     /// @notice     Settle a batch auction
-    /// @notice     This function is used for versions with on-chain storage and bids and local settlement
     /// @dev        The implementing function must perform the following:
     ///             1. Validate the lot
-    ///             2. Pass the request to the auction module to calculate winning bids
-    ///             3. Collect the payout from the auction owner (if not pre-funded)
-    ///             4. Send the payout to each bidder
-    ///             5. Send the payment to the auction owner
-    ///             6. Allocate protocol, referrer and curator fees
+    ///             2. Calculate the marginal price
+    ///             3. Calculate the winning bids
+    ///             4. If the last bid is not fully filled, refund the remaining amount
+    ///             5. Send payment to the auction owner
+    ///             6. Refund any unused capacity to the auction owner
+    ///             7. Distribute curator fees
     ///
     /// @param      lotId_          Lot ID
     function settle(uint96 lotId_) external virtual;
 
+    /// @notice     Claim the proceeds or refund from a settled batch auction
+    /// @dev        The implementing function must perform the following:
+    ///             1. Validate the lot and bid
+    ///             2. If the bid price is less than the marginal price, it refunds the bid amount to the bidder
+    ///             3. If the bid price is greater than or equal to the marginal price, it sends the payout to the bidder and allocates fees
+    ///
+    /// @param      lotId_          Lot ID
+    /// @param      bidId_          Bid ID
     function claim(uint96 lotId_, uint64 bidId_) external virtual;
 }
 
@@ -1041,6 +1048,7 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
         emit Settle(lotId_);
     }
 
+    /// @inheritdoc Router
     function claim(uint96 lotId_, uint64 bidId_) external override nonReentrant {
         // Validation
         // lot is valid
