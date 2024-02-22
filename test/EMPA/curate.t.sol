@@ -189,6 +189,72 @@ contract EmpaCurateTest is EmpaTest {
         assertEq(_baseToken.balanceOf(_CURATOR), 0, "base token: curator balance mismatch");
     }
 
+    function test_beforeStart_quoteTokenDecimalsLarger()
+        public
+        givenQuoteTokenHasDecimals(17)
+        givenBaseTokenHasDecimals(13)
+        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenLotIsCreated
+        givenCuratorFeeIsSet
+        givenOwnerHasBaseTokenBalance(_curatorMaxPotentialFee)
+        givenOwnerHasBaseTokenAllowance(_curatorMaxPotentialFee)
+    {
+        // Curate
+        vm.prank(_CURATOR);
+        _auctionHouse.curate(_lotId);
+
+        // Verify
+        EncryptedMarginalPriceAuction.Routing memory lotRouting = _getLotRouting(_lotId);
+        assertEq(lotRouting.curator, _CURATOR);
+        assertTrue(lotRouting.curated);
+        assertEq(lotRouting.curatorFee, _scaleBaseTokenAmount(_curatorMaxPotentialFee));
+
+        // Maximum curator fee is transferred to the auction house
+        assertEq(
+            _baseToken.balanceOf(_auctionOwner), 0, "base token: _auctionOwner balance mismatch"
+        );
+        assertEq(
+            _baseToken.balanceOf(address(_auctionHouse)),
+            _scaleBaseTokenAmount(_LOT_CAPACITY) + _scaleBaseTokenAmount(_curatorMaxPotentialFee),
+            "base token: auction house balance mismatch"
+        );
+        assertEq(_baseToken.balanceOf(_CURATOR), 0, "base token: curator balance mismatch");
+    }
+
+    function test_beforeStart_quoteTokenDecimalsSmaller()
+        public
+        givenQuoteTokenHasDecimals(13)
+        givenBaseTokenHasDecimals(17)
+        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenLotIsCreated
+        givenCuratorFeeIsSet
+        givenOwnerHasBaseTokenBalance(_curatorMaxPotentialFee)
+        givenOwnerHasBaseTokenAllowance(_curatorMaxPotentialFee)
+    {
+        // Curate
+        vm.prank(_CURATOR);
+        _auctionHouse.curate(_lotId);
+
+        // Verify
+        EncryptedMarginalPriceAuction.Routing memory lotRouting = _getLotRouting(_lotId);
+        assertEq(lotRouting.curator, _CURATOR);
+        assertTrue(lotRouting.curated);
+        assertEq(lotRouting.curatorFee, _scaleBaseTokenAmount(_curatorMaxPotentialFee));
+
+        // Maximum curator fee is transferred to the auction house
+        assertEq(
+            _baseToken.balanceOf(_auctionOwner), 0, "base token: _auctionOwner balance mismatch"
+        );
+        assertEq(
+            _baseToken.balanceOf(address(_auctionHouse)),
+            _scaleBaseTokenAmount(_LOT_CAPACITY) + _scaleBaseTokenAmount(_curatorMaxPotentialFee),
+            "base token: auction house balance mismatch"
+        );
+        assertEq(_baseToken.balanceOf(_CURATOR), 0, "base token: curator balance mismatch");
+    }
+
     function test_afterStart()
         public
         givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
@@ -221,5 +287,71 @@ contract EmpaCurateTest is EmpaTest {
         assertEq(_baseToken.balanceOf(_CURATOR), 0, "base token: curator balance mismatch");
     }
 
-    // TODO handle decimals
+    function test_afterStart_quoteTokenDecimalsLarger()
+        public
+        givenQuoteTokenHasDecimals(17)
+        givenBaseTokenHasDecimals(13)
+        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenLotIsCreated
+        givenCuratorFeeIsSet
+        givenLotHasStarted
+        givenOwnerHasBaseTokenBalance(_curatorMaxPotentialFee)
+        givenOwnerHasBaseTokenAllowance(_curatorMaxPotentialFee)
+    {
+        // Curate
+        vm.prank(_CURATOR);
+        _auctionHouse.curate(_lotId);
+
+        // Verify
+        EncryptedMarginalPriceAuction.Routing memory lotRouting = _getLotRouting(_lotId);
+        assertEq(lotRouting.curator, _CURATOR);
+        assertTrue(lotRouting.curated);
+        assertEq(lotRouting.curatorFee, _scaleBaseTokenAmount(_curatorMaxPotentialFee));
+
+        // Maximum curator fee is transferred to the auction house
+        assertEq(
+            _baseToken.balanceOf(_auctionOwner), 0, "base token: _auctionOwner balance mismatch"
+        );
+        assertEq(
+            _baseToken.balanceOf(address(_auctionHouse)),
+            _scaleBaseTokenAmount(_LOT_CAPACITY) + _scaleBaseTokenAmount(_curatorMaxPotentialFee),
+            "base token: auction house balance mismatch"
+        );
+        assertEq(_baseToken.balanceOf(_CURATOR), 0, "base token: curator balance mismatch");
+    }
+
+    function test_afterStart_quoteTokenDecimalsSmaller()
+        public
+        givenQuoteTokenHasDecimals(13)
+        givenBaseTokenHasDecimals(17)
+        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenLotIsCreated
+        givenCuratorFeeIsSet
+        givenLotHasStarted
+        givenOwnerHasBaseTokenBalance(_curatorMaxPotentialFee)
+        givenOwnerHasBaseTokenAllowance(_curatorMaxPotentialFee)
+    {
+        // Curate
+        vm.prank(_CURATOR);
+        _auctionHouse.curate(_lotId);
+
+        // Verify
+        EncryptedMarginalPriceAuction.Routing memory lotRouting = _getLotRouting(_lotId);
+        assertEq(lotRouting.curator, _CURATOR);
+        assertTrue(lotRouting.curated);
+        assertEq(lotRouting.curatorFee, _scaleBaseTokenAmount(_curatorMaxPotentialFee));
+
+        // Maximum curator fee is transferred to the auction house
+        assertEq(
+            _baseToken.balanceOf(_auctionOwner), 0, "base token: _auctionOwner balance mismatch"
+        );
+        assertEq(
+            _baseToken.balanceOf(address(_auctionHouse)),
+            _scaleBaseTokenAmount(_LOT_CAPACITY) + _scaleBaseTokenAmount(_curatorMaxPotentialFee),
+            "base token: auction house balance mismatch"
+        );
+        assertEq(_baseToken.balanceOf(_CURATOR), 0, "base token: curator balance mismatch");
+    }
 }
