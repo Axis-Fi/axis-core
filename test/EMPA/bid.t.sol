@@ -593,7 +593,7 @@ contract EmpaBidTest is EmpaTest {
         whenBidAmountOutIsEncrypted(_BID_AMOUNT, 1e18)
     {
         // Call the function
-        vm.prank(_bidder);
+        vm.startPrank(_bidder);
         _bidId = _auctionHouse.bid(
             _lotId,
             _REFERRER,
@@ -603,6 +603,7 @@ contract EmpaBidTest is EmpaTest {
             _allowlistProof,
             _permit2Data
         );
+        vm.stopPrank();
 
         // Check the balances
         assertEq(_quoteToken.balanceOf(_bidder), 0, "_bidder: quote token balance mismatch");
@@ -638,7 +639,7 @@ contract EmpaBidTest is EmpaTest {
         whenBidAmountOutIsEncrypted(_BID_AMOUNT, 1e18)
     {
         // Call the function
-        vm.prank(_bidder);
+        vm.startPrank(_bidder);
         _bidId = _auctionHouse.bid(
             _lotId,
             _REFERRER,
@@ -648,6 +649,7 @@ contract EmpaBidTest is EmpaTest {
             _allowlistProof,
             _permit2Data
         );
+        vm.stopPrank();
 
         // Check the balances
         assertEq(_quoteToken.balanceOf(_bidder), 0, "_bidder: quote token balance mismatch");

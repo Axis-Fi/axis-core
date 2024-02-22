@@ -621,7 +621,7 @@ contract EmpaSettleTest is EmpaTest {
         assertEq(
             _baseToken.balanceOf(_auctionOwner),
             _auctionParams.capacity
-                - _scaleBaseTokenAmount(_BID_PRICE_THREE_AMOUNT_OUT - _BID_PRICE_THREE_AMOUNT_OUT),
+                - _scaleBaseTokenAmount(_BID_PRICE_THREE_AMOUNT_OUT + _BID_PRICE_THREE_AMOUNT_OUT),
             "base token: owner balance"
         ); // Unused capacity
         assertEq(_baseToken.balanceOf(_bidder), 0, "base token: bidder balance");
@@ -679,7 +679,7 @@ contract EmpaSettleTest is EmpaTest {
         assertEq(
             _baseToken.balanceOf(_auctionOwner),
             _auctionParams.capacity
-                - _scaleBaseTokenAmount(_BID_PRICE_THREE_AMOUNT_OUT - _BID_PRICE_THREE_AMOUNT_OUT),
+                - _scaleBaseTokenAmount(_BID_PRICE_THREE_AMOUNT_OUT + _BID_PRICE_THREE_AMOUNT_OUT),
             "base token: owner balance"
         ); // Unused capacity
         assertEq(_baseToken.balanceOf(_bidder), 0, "base token: bidder balance");
@@ -834,7 +834,7 @@ contract EmpaSettleTest is EmpaTest {
         );
         assertEq(
             _quoteToken.balanceOf(_bidder),
-            _scaleBaseTokenAmount(_BID_PRICE_TWO_SIZE_TWO_AMOUNT) - bidTwoAmountInActual,
+            _scaleQuoteTokenAmount(_BID_PRICE_TWO_SIZE_TWO_AMOUNT) - bidTwoAmountInActual,
             "quote token: bidder balance"
         );
         assertEq(_quoteToken.balanceOf(_REFERRER), 0, "quote token: referrer balance");
@@ -906,7 +906,7 @@ contract EmpaSettleTest is EmpaTest {
         );
         assertEq(
             _quoteToken.balanceOf(_bidder),
-            _scaleBaseTokenAmount(_BID_PRICE_TWO_SIZE_TWO_AMOUNT) - bidTwoAmountInActual,
+            _scaleQuoteTokenAmount(_BID_PRICE_TWO_SIZE_TWO_AMOUNT) - bidTwoAmountInActual,
             "quote token: bidder balance"
         );
         assertEq(_quoteToken.balanceOf(_REFERRER), 0, "quote token: referrer balance");
