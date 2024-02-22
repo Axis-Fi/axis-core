@@ -50,7 +50,7 @@ abstract contract Router {
     ///  Formatting the amount to encrypt:
     ///  1. The amount is expected to be a uint96 padded to 16 bytes (128 bits).
     ///  2. A random 128-bit seed should be generated to mask the actual value of the amount.
-    ///  3. The value to encrypt should be subtracted from the seed.
+    ///  3. The seed should be subtracted from the value to encrypt.
     ///  4. The seed and the subtracted result should be concatenated to form the message for encryption.
     ///  We do this to avoid leading zero bytes in the plaintext, which would make it easier for an attacker to decrypt.
     ///
@@ -182,8 +182,8 @@ abstract contract FeeManager is Owned, ReentrancyGuard {
     /// @notice     Calculates and allocates fees that are collected in the quote token
     function calculateQuoteFees(
         bool hasReferrer_,
-        uint96 amount_
-    ) public view returns (uint96 toReferrer, uint96 toProtocol) {
+        uint256 amount_
+    ) public view returns (uint256 toReferrer, uint256 toProtocol) {
         // Load protocol and referrer fees for the auction type
         uint24 protocolFee = fees.protocol;
         uint24 referrerFee = fees.referrer;
@@ -193,22 +193,21 @@ abstract contract FeeManager is Owned, ReentrancyGuard {
             // 1. Calculate referrer fee
             // 2. Calculate protocol fee as the total expected fee amount minus the referrer fee
             //    to avoid issues with rounding from separate fee calculations
-            toReferrer = FixedMath.mulDivUp(amount_, referrerFee, _FEE_DECIMALS);
-            toProtocol =
-                FixedMath.mulDivUp(amount_, protocolFee + referrerFee, _FEE_DECIMALS) - toReferrer;
+            toReferrer = (amount_ * referrerFee) / _FEE_DECIMALS;
+            toProtocol = (amount_ * (protocolFee + referrerFee)) / _FEE_DECIMALS - toReferrer;
         } else {
             // There is no referrer
-            toProtocol = FixedMath.mulDivUp(amount_, protocolFee + referrerFee, _FEE_DECIMALS);
+            toProtocol = (amount_ * (protocolFee + referrerFee)) / _FEE_DECIMALS;
         }
     }
 
     /// @notice     Calculates and allocates fees that are collected in the payout token
     function _calculatePayoutFees(
         address curator_,
-        uint96 payout_
-    ) internal view returns (uint96 toCurator) {
+        uint256 payout_
+    ) internal view returns (uint256 toCurator) {
         // Calculate curator fee
-        toCurator = FixedMath.mulDivUp(payout_, fees.curator[curator_], _FEE_DECIMALS);
+        toCurator = (payout_ * fees.curator[curator_]) / _FEE_DECIMALS;
     }
 
     // ========== FEE MANAGEMENT ========== //
@@ -366,8 +365,8 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
     enum BidStatus {
         Submitted,
         Decrypted,
-        Claimed,
-        Refunded
+        Claimed // Claimed status will also be set if the bid is cancelled/refunded
+
     }
 
     /// @notice        Struct containing encrypted bid data
@@ -818,11 +817,8 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
         // Bid must be in Submitted state
         Bid storage _bid = bids[lotId_][bidId_];
 
-        // TODO probably covered by the above
-        if (_bid.status != BidStatus.Submitted) revert Bid_WrongState();
-
-        // Set bid status to refunded
-        _bid.status = BidStatus.Refunded;
+        // Set bid status to claimed
+        _bid.status = BidStatus.Claimed;
 
         // Remove bid from list of bids to decrypt
         uint64[] storage bidIds = bidData[lotId_].bidIds;
@@ -875,19 +871,19 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
         // Calculate marginal price and number of winning bids
         // Cache capacity and scaling values
         // Capacity is always in base token units for this auction type
-        uint96 capacity = lotData[lotId_].capacity;
-        uint96 baseScale = uint96(10 ** lotData[lotId_].baseTokenDecimals); // We know this is true, since baseTokenDecimals is 6-18
-        uint96 minimumPrice = lotData[lotId_].minimumPrice;
+        uint256 capacity = lotData[lotId_].capacity;
+        uint256 baseScale = 10 ** lotData[lotId_].baseTokenDecimals;
+        uint256 minimumPrice = lotData[lotId_].minimumPrice;
 
         // Iterate over bid queue (sorted in descending price) to calculate the marginal clearing price of the auction
-        uint96 marginalPrice;
-        uint96 totalAmountIn;
-        uint96 capacityExpended;
+        uint256 marginalPrice;
+        uint256 totalAmountIn;
+        uint256 capacityExpended;
         uint64 partialFillBidId;
         {
             Queue storage queue = decryptedBids[lotId_];
             uint256 numBids = queue.getNumBids();
-            uint96 lastPrice;
+            uint256 lastPrice;
             for (uint256 i = 0; i < numBids; i++) {
                 // Load bid info (in quote token units)
                 uint64 bidId = queue.getMaxId();
@@ -900,8 +896,7 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
                 // There is no need to check if the bid is the minimum bid size, as this was checked during decryption
 
                 // Calculate the price of the bid
-                // We know this will not overflow, as it was checked during decryption
-                uint96 price = FixedMath.mulDivUp(qBid.amountIn, baseScale, qBid.minAmountOut);
+                uint256 price = (uint256(qBid.amountIn) * baseScale) / uint256(qBid.minAmountOut);
 
                 // If the price is below the minimum price, the previous price is the marginal price
                 if (price < minimumPrice) {
@@ -913,13 +908,11 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
                 lastPrice = price;
 
                 // Increment total amount in
-                totalAmountIn += qBid.amountIn; // TODO check if overflow is possible
+                totalAmountIn += qBid.amountIn;
 
                 // Determine total capacity expended at this price (in base token units)
                 // quote scale * base scale / quote scale = base scale
-                // This value can overflow if there are enough large bids. It is capped at the max uint96 value to protect against this.
-                // TODO use uint256 but check for uint96?
-                capacityExpended = FixedMath.mulDivUpNoOverflow(totalAmountIn, baseScale, price);
+                capacityExpended = (totalAmountIn * baseScale) / price;
 
                 // If total capacity expended is greater than or equal to the capacity, we have found the marginal price
                 if (capacityExpended >= capacity) {
@@ -964,7 +957,8 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
         // or if the marginal price is less than the minimum price
         if (capacityExpended >= lotData[lotId_].minFilled && marginalPrice >= minimumPrice) {
             // Auction can be settled at the marginal price if we reach this point
-            bidData[lotId_].marginalPrice = marginalPrice;
+            // TODO determine if this can overflow
+            bidData[lotId_].marginalPrice = uint96(marginalPrice);
             console2.log("marginalPrice", marginalPrice);
 
             Routing storage routing = lotRouting[lotId_];
@@ -981,13 +975,13 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
                 // Check if the capacityExpended is overflowing
 
                 // Calculate the payout and refund amounts
-                uint96 fullFill = FixedMath.mulDivUp(_bid.amount, baseScale, marginalPrice);
+                uint256 fullFill = (uint256(_bid.amount) * baseScale) / marginalPrice;
                 console2.log("fullFill", fullFill);
-                uint96 overflow = capacityExpended - capacity; // TODO unable to get the actual overflow, since information is lost with capacityExceeded being capped
+                uint256 overflow = capacityExpended - capacity;
                 console2.log("overflow", overflow);
-                uint96 payout = fullFill - overflow;
+                uint256 payout = fullFill - overflow;
                 console2.log("payout", payout);
-                uint96 refundAmount = FixedMath.mulDivUp(_bid.amount, overflow, fullFill);
+                uint256 refundAmount = (uint256(_bid.amount) * overflow) / fullFill;
                 console2.log("refundAmount", refundAmount);
 
                 // Reduce the total amount in by the refund amount
@@ -998,7 +992,10 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
 
                 // Allocate quote and protocol fees for bid
                 _allocateQuoteFees(
-                    _bid.referrer, routing.owner, routing.quoteToken, _bid.amount - refundAmount
+                    _bid.referrer,
+                    routing.owner,
+                    routing.quoteToken,
+                    uint256(_bid.amount) - refundAmount
                 );
 
                 // Send refund and payout to the bidder
@@ -1009,9 +1006,9 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
             // Calculate the referrer and protocol fees for the amount in
             // Fees are not allocated until the user claims their payout so that we don't have to iterate through them here
             // If a referrer is not set, that portion of the fee defaults to the protocol
-            uint96 totalAmountInLessFees;
+            uint256 totalAmountInLessFees;
             {
-                (, uint96 toProtocol) = calculateQuoteFees(false, totalAmountIn);
+                (, uint256 toProtocol) = calculateQuoteFees(false, totalAmountIn);
                 totalAmountInLessFees = totalAmountIn - toProtocol;
             }
 
@@ -1027,7 +1024,7 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
 
             if (routing.curated == true) {
                 // Calculate and send curator fee to curator (if applicable)
-                uint96 curatorFee = _calculatePayoutFees(
+                uint256 curatorFee = _calculatePayoutFees(
                     routing.curator, capacityExpended > capacity ? capacity : capacityExpended
                 );
 
@@ -1045,7 +1042,7 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
             // Auction cannot be settled if we reach this point
             // Marginal price is not set for the auction so the system knows all bids should be refunded
 
-            uint96 refundAmount = capacity;
+            uint256 refundAmount = capacity;
 
             if (lotRouting[lotId_].curated == true) {
                 refundAmount += lotRouting[lotId_].curatorFee;
@@ -1077,12 +1074,14 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
         bids[lotId_][bidId_].status = BidStatus.Claimed;
 
         // If the bid was not decrypted, refund the bid amount
+        // TODO this shouldn't happen. Need to change this. All bids should be decrypted.
         if (status == BidStatus.Submitted) {
             Transfer.transfer(lotRouting[lotId_].quoteToken, _bid.bidder, _bid.amount, false);
             return;
         }
 
         // Calculate the bid price
+        // TODO skipped bids will have minAmountOut = 0, bidPrice should be 0 in this case
         uint96 bidPrice = FixedMath.mulDivUp(
             _bid.amount, uint96(10) ** lotData[lotId_].baseTokenDecimals, _bid.minAmountOut
         );
@@ -1211,23 +1210,24 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
                 amountOut = uint96(result);
             }
 
-            // Only store the decrypt if the amount out is greater than or equal to the minimum bid size
+            // Set bid status to decrypted
             Bid storage _bid = bids[lotId_][bidId];
+            _bid.status = BidStatus.Decrypted;
+
+            // Only store the decrypt if the amount out is greater than or equal to the minimum bid size
             if (amountOut > 0 && amountOut >= minBidSize) {
                 // Only store the decrypt if the price does not overflow
                 if (
-                    FixedMath.mulDivUpNoOverflow(
-                        _bid.amount, uint96(10) ** lotData[lotId_].baseTokenDecimals, amountOut
+                    (
+                        (uint256(_bid.amount) * 10 ** lotData[lotId_].baseTokenDecimals)
+                            / uint256(amountOut)
                     ) < type(uint96).max
                 ) {
-                    // Store the decrypt in the sorted bid queue
+                    // Store the decrypt in the sorted bid queue and set the min amount out on the bid
                     decryptedBids[lotId_].insert(bidId, _bid.amount, amountOut);
+                    _bid.minAmountOut = amountOut;
                 }
             }
-
-            // Set bid status to decrypted and the min amount out
-            _bid.status = BidStatus.Decrypted;
-            _bid.minAmountOut = amountOut;
 
             // Emit event
             emit BidDecrypted(lotId_, bidId, _bid.amount, amountOut);
@@ -1264,21 +1264,15 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
         // We don't need larger than 16 bytes for a message
         // To avoid attacks that check for leading zero values, encrypted bids should use a 128-bit random number
         // as a seed to randomize the message. The seed should be the first 16 bytes.
-        // We subtract the actual value from the random number to get a subtracted value which is the amount out
-        // relative to the random number.
-        // After decryption, we can combine them again and get the amount out
-        bytes memory messageBytes = abi.encodePacked(message);
-
-        uint128 rand;
-        uint128 subtracted;
-        assembly {
-            rand := mload(add(messageBytes, 16))
-            subtracted := mload(add(messageBytes, 32))
-        }
+        // During encryption, we subtract the seed from the amount out to get a masked value.
+        // After decryption, we can combine them again (adding the seed to the masked value) and get the amount out
+        // This works due to the overflow/underflow properties of modular arithmetic
+        uint128 maskedValue = uint128(message);
+        uint128 seed = uint128(message >> 128);
 
         // We want to allow underflow here
         unchecked {
-            amountOut = uint256(rand - subtracted);
+            amountOut = uint256(maskedValue + seed);
         }
     }
 
@@ -1317,8 +1311,8 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
 
         // Auction must be prefunded, so we transfer the curator fee to the contract from the owner
         // Calculate the fee amount based on the remaining capacity (must be in base token if auction is pre-funded)
-        uint96 fee = _calculatePayoutFees(msg.sender, lotData[lotId_].capacity);
-        routing.curatorFee = fee;
+        uint256 fee = _calculatePayoutFees(msg.sender, uint256(lotData[lotId_].capacity));
+        routing.curatorFee = uint96(fee); // TODO confirm this can't overflow
 
         // Don't need to check for fee on transfer here because it was checked on auction creation
         Transfer.transferFrom(routing.baseToken, routing.owner, address(this), fee, false);
@@ -1456,8 +1450,8 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
         address referrer_,
         address owner_,
         ERC20 quoteToken_,
-        uint96 amount_
-    ) internal returns (uint96 toReferrer, uint96 toProtocol) {
+        uint256 amount_
+    ) internal returns (uint256 toReferrer, uint256 toProtocol) {
         // Calculate fees for purchase
         (toReferrer, toProtocol) =
             calculateQuoteFees(referrer_ != address(0) && referrer_ != owner_, amount_);
