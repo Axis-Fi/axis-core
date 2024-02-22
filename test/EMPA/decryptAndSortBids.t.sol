@@ -310,5 +310,31 @@ contract EmpaDecryptBidsTest is EmpaTest {
         assertEq(uint8(lot.status), uint8(EncryptedMarginalPriceAuction.AuctionStatus.Decrypted));
     }
 
+    function test_whenMarginalPriceOutOfBounds()
+        external
+        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenLotIsCreated
+        givenLotHasStarted
+        givenBidIsCreated(type(uint96).max, 1e17)
+        givenLotHasConcluded
+        givenPrivateKeyIsSubmitted
+    {
+        // Call the function
+        _auctionHouse.decryptAndSortBids(_lotId, 1);
+
+        // Check the next decrypt index has been updated
+        EncryptedMarginalPriceAuction.BidData memory bidData = _getBidData(_lotId);
+        assertEq(bidData.nextDecryptIndex, 1);
+
+        // Check the bids
+        EncryptedMarginalPriceAuction.Bid memory bid = _getBid(_lotId, 1);
+        assertEq(uint8(bid.status), uint8(EncryptedMarginalPriceAuction.BidStatus.Submitted));
+
+        // Check the lot record
+        EncryptedMarginalPriceAuction.Lot memory lot = _getLotData(_lotId);
+        assertEq(uint8(lot.status), uint8(EncryptedMarginalPriceAuction.AuctionStatus.Decrypted));
+    }
+
     // TODO handle decimals
 }

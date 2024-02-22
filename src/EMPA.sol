@@ -854,11 +854,25 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
     }
 
     /// @notice     Applies mulDivUp to uint96 values, and checks that the result is within the uint96 range
-    function _mulDivUp(uint96 mul1_, uint96 mul2_, uint96 div_) internal pure returns (uint96) {
+    /// @dev        This function returns the maximum value of uint96 if the product is greater than the maximum value of a uint96
+    function _mulDivUpNoOverflow(
+        uint96 mul1_,
+        uint96 mul2_,
+        uint96 div_
+    ) internal pure returns (uint96) {
         uint256 product = FixedPointMathLib.mulDivUp(mul1_, mul2_, div_);
-        if (product > type(uint96).max) revert Overflow();
+        if (product > type(uint96).max) return type(uint96).max;
 
         return uint96(product);
+    }
+
+    /// @notice     Applies mulDivUp to uint96 values, and checks that the result is within the uint96 range
+    /// @dev        This function reverts if the product is greater than the maximum value of a uint96
+    function _mulDivUp(uint96 mul1_, uint96 mul2_, uint96 div_) internal pure returns (uint96) {
+        uint96 product = _mulDivUpNoOverflow(mul1_, mul2_, div_);
+        if (product == type(uint96).max) revert Overflow();
+
+        return product;
     }
 
     /// @inheritdoc Router
@@ -918,6 +932,7 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
                 // There is no need to check if the bid is the minimum bid size, as this was checked during decryption
 
                 // Calculate the price of the bid
+                // We know this will not overflow, as it was checked during decryption
                 uint96 price = _mulDivUp(qBid.amountIn, baseScale, qBid.minAmountOut);
 
                 // If the price is below the minimum price, the previous price is the marginal price
@@ -1151,17 +1166,13 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
     }
 
     /// @notice         Decrypts a batch of bids and sorts them by price in descending order
-    ///                 This function expects a third-party with access to the lot's private key
-    ///                 to decrypt the bids off-chain (after calling `getNextBidsToDecrypt()`) and
-    ///                 submit them on-chain.
-    /// @dev            Anyone can call this function, provided they have access to the private key to decrypt the bids.
-    ///
-    ///                 This function handles the following:
-    ///                 - Performs validation
-    ///                 - Iterates over the decrypted bids:
-    ///                     - Re-encrypts the decrypted bid to confirm that it matches the stored encrypted bid
-    ///                     - If the bid meets the minimum bid size, stores the decrypted bid in the sorted bid queue and updates the status.
-    ///                     - Sets the encrypted bid status to decrypted
+    /// @dev            This function handles the following:
+    ///                 - Performs state validation
+    ///                 - Iterates over the encrypted bids:
+    ///                     - Decrypts the bid
+    ///                     - Ignores if the bid is incorrectly encrypted
+    ///                     - Does not add to the sorted bid queue if the decrypted amount out is less than the minimum bid size or overflows
+    ///                     - Otherwise, adds to the sorted bid queue for use during settlement
     ///                 - Determines the next decrypt index
     ///                 - Sets the auction status to decrypted if all bids have been decrypted
     ///
@@ -1169,8 +1180,7 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
     ///                 - The lot ID is invalid
     ///                 - The lot has not concluded
     ///                 - The lot has already been decrypted in full
-    ///                 - The number of decrypts is greater than the number of bids remaining to be decrypted
-    ///                 - The encrypted bid does not match the re-encrypted decrypt
+    ///                 - The private key has not been provided
     ///
     /// @param          lotId_          The lot ID of the auction to decrypt bids for
     /// @param          num_            The number of bids to decrypt. Reduced to the number remaining if greater.
@@ -1209,17 +1219,27 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
             uint64 bidId = bidIds[nextDecryptIndex + i];
 
             // Decrypt the bid
-            uint256 result = _decrypt(lotId_, bidId, privateKey);
-            // We skip the bid if the decrypted amount out overflows the uint96 type
-            // No valid bid should expect more than 7.9 * 10^28 (79 trillion tokens if 18 decimals)
-            if (result > type(uint96).max) continue;
-            uint96 amountOut = uint96(result);
+            uint96 amountOut;
+            {
+                uint256 result = _decrypt(lotId_, bidId, privateKey);
+                // We skip the bid if the decrypted amount out overflows the uint96 type
+                // No valid bid should expect more than 7.9 * 10^28 (79 trillion tokens if 18 decimals)
+                if (result > type(uint96).max) continue;
+                amountOut = uint96(result);
+            }
 
             // Only store the decrypt if the amount out is greater than or equal to the minimum bid size
             Bid storage _bid = bids[lotId_][bidId];
-            if (amountOut >= minBidSize) {
-                // Store the decrypt in the sorted bid queue
-                decryptedBids[lotId_].insert(bidId, _bid.amount, amountOut);
+            if (amountOut > 0 && amountOut >= minBidSize) {
+                // Only store the decrypt if the price does not overflow
+                if (
+                    _mulDivUpNoOverflow(
+                        _bid.amount, uint96(10) ** lotData[lotId_].baseTokenDecimals, amountOut
+                    ) < type(uint96).max
+                ) {
+                    // Store the decrypt in the sorted bid queue
+                    decryptedBids[lotId_].insert(bidId, _bid.amount, amountOut);
+                }
             }
 
             // Set bid status to decrypted and the min amount out
