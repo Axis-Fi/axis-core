@@ -789,6 +789,37 @@ contract EmpaSettleTest is EmpaTest {
         _assertAccruedFees();
     }
 
+    function test_filledCapacityGreaterThanMinimum_givenCuratorNotApproved()
+        external
+        givenReferrerFeeIsSet(_REFERRER_FEE_PERCENT)
+        givenProtocolFeeIsSet(_PROTOCOL_FEE_PERCENT)
+        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenCuratorIsSet
+        givenCuratorFeeIsSet
+        givenLotIsCreated
+        givenLotHasStarted
+        givenBidsAreAboveMinimumAndBelowCapacity
+        givenLotHasConcluded
+        givenPrivateKeyIsSubmitted
+        givenLotIsDecrypted
+    {
+        // Call function
+        _auctionHouse.settle(_lotId);
+
+        // Validate bid data
+        EncryptedMarginalPriceAuction.BidData memory bidData = _getBidData(_lotId);
+        assertEq(bidData.marginalPrice, _marginalPrice);
+
+        // Validate lot data
+        EncryptedMarginalPriceAuction.Lot memory lot = _getLotData(_lotId);
+        assertEq(uint8(lot.status), uint8(EncryptedMarginalPriceAuction.AuctionStatus.Settled));
+
+        _assertBaseTokenBalances();
+        _assertQuoteTokenBalances();
+        _assertAccruedFees();
+    }
+
     function test_someBidsBelowMinimumPrice()
         external
         givenReferrerFeeIsSet(_REFERRER_FEE_PERCENT)

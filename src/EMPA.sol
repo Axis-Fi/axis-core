@@ -1024,18 +1024,21 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
                 );
             }
 
-            // Calculate and send curator fee to curator (if applicable)
-            uint96 curatorFee = _calculatePayoutFees(
-                routing.curator, capacityExpended > capacity ? capacity : capacityExpended
-            );
-            if (curatorFee > 0) _sendPayout(lotId_, routing.curator, curatorFee, routing);
-
-            // Refund the remaining curator fees to the owner
-            // TODO can be combined with the above transfer
-            if (routing.curated == true && curatorFee < routing.curatorFee) {
-                Transfer.transfer(
-                    routing.baseToken, routing.owner, routing.curatorFee - curatorFee, false
+            if (routing.curated == true) {
+                // Calculate and send curator fee to curator (if applicable)
+                uint96 curatorFee = _calculatePayoutFees(
+                    routing.curator, capacityExpended > capacity ? capacity : capacityExpended
                 );
+
+                if (curatorFee > 0) _sendPayout(lotId_, routing.curator, curatorFee, routing);
+
+                // Refund the remaining curator fees to the owner
+                // TODO can be combined with the above transfer
+                if (curatorFee < routing.curatorFee) {
+                    Transfer.transfer(
+                        routing.baseToken, routing.owner, routing.curatorFee - curatorFee, false
+                    );
+                }
             }
         } else {
             // Auction cannot be settled if we reach this point
