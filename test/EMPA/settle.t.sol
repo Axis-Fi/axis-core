@@ -22,6 +22,8 @@ contract EmpaSettleTest is EmpaTest {
     uint96 internal constant _BID_PRICE_TWO_SIZE_TEN_AMOUNT_OUT = 10e18;
     uint96 internal constant _BID_PRICE_TWO_SIZE_ELEVEN_AMOUNT = 22e18;
     uint96 internal constant _BID_PRICE_TWO_SIZE_ELEVEN_AMOUNT_OUT = 11e18;
+    uint96 internal constant _BID_PRICE_OVERFLOW_AMOUNT = type(uint96).max;
+    uint96 internal constant _BID_PRICE_OVERFLOW_AMOUNT_OUT = 1e17;
 
     uint96 internal _marginalPrice;
 
@@ -373,6 +375,36 @@ contract EmpaSettleTest is EmpaTest {
         _;
     }
 
+    modifier givenBidPriceCausesOverflow() {
+        // Capacity: 1 < 2.5 minimum (but it won't get that far before overflowing)
+        _createBid(_BID_PRICE_OVERFLOW_AMOUNT, _BID_PRICE_OVERFLOW_AMOUNT_OUT);
+
+        // Marginal price: overflow
+
+        // Output
+        // Bid one: 0 out, refund
+
+        // Fees
+        _expectedReferrerFee = _calculateReferrerFee(0);
+        _expectedProtocolFee = _calculateProtocolFee(0);
+
+        uint96 prefundedCuratorFee = _calculatePrefundedCuratorFee();
+        uint96 curatorFee = _calculateCuratorFee(0); // No successful bids
+        uint96 curatorFeeToRefund = prefundedCuratorFee - curatorFee;
+
+        _expectedAuctionHouseBaseTokenBalance = 0; // No bids filled
+        _expectedAuctionOwnerBaseTokenBalance =
+            _scaleBaseTokenAmount(_LOT_CAPACITY) + curatorFeeToRefund; // Unused capacity
+        _expectedBidderBaseTokenBalance = 0;
+        _expectedCuratorBaseTokenBalance = curatorFee;
+
+        _expectedAuctionHouseQuoteTokenBalance =
+            _expectedReferrerFee + _expectedProtocolFee + _BID_PRICE_OVERFLOW_AMOUNT; // Accrued fees and failed bids to be refunded
+        _expectedAuctionOwnerQuoteTokenBalance = 0; // No payments
+        _expectedBidderQuoteTokenBalance = 0;
+        _;
+    }
+
     // ============ Tests ============ //
 
     function _assertBaseTokenBalances() internal {
@@ -446,8 +478,8 @@ contract EmpaSettleTest is EmpaTest {
     //   [X] it reverts
     // [X] when the lot has been settled already
     //   [X] it reverts
-    // [ ] when the marginal price overflows
-    //  [ ] it reverts
+    // [X] when the marginal price overflows
+    //  [X] it reverts
 
     function test_invalidLotId_reverts() external {
         // Expect revert
@@ -508,6 +540,35 @@ contract EmpaSettleTest is EmpaTest {
 
         // Call function
         _auctionHouse.settle(_lotId);
+    }
+
+    function test_marginalPriceOverflow()
+        external
+        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenCuratorIsSet
+        givenCuratorFeeIsSet
+        givenLotIsCreated
+        givenLotHasStarted
+        givenBidPriceCausesOverflow
+        givenLotHasConcluded
+        givenPrivateKeyIsSubmitted
+        givenLotIsDecrypted
+    {
+        // Call function
+        _auctionHouse.settle(_lotId);
+
+        // Validate bid data
+        EncryptedMarginalPriceAuction.BidData memory bidData = _getBidData(_lotId);
+        assertEq(bidData.marginalPrice, _marginalPrice);
+
+        // Validate lot data
+        EncryptedMarginalPriceAuction.Lot memory lot = _getLotData(_lotId);
+        assertEq(uint8(lot.status), uint8(EncryptedMarginalPriceAuction.AuctionStatus.Settled));
+
+        _assertBaseTokenBalances();
+        _assertQuoteTokenBalances();
+        _assertAccruedFees();
     }
 
     // [X] when the filled amount is less than the lot minimum
