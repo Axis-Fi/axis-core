@@ -32,8 +32,10 @@ contract EmpaClaimTest is EmpaTest {
     // [X] given the caller is not the bidder
     //  [X] it sends the payout to the bidder
     // [X] it sends the payout to the bidder
-
-    // TODO handle decimals
+    // [X] given the quote token decimals are larger
+    //  [X] it correctly handles the claim
+    // [X] given the quote token decimals are smaller
+    //  [X] it correctly handles the claim
 
     function _assertAccruedFees(uint96 bidAmountIn_) internal {
         (uint24 protocolFeePercent, uint24 referrerFeePercent,) = _auctionHouse.fees();
@@ -136,6 +138,56 @@ contract EmpaClaimTest is EmpaTest {
         external
         givenReferrerFeeIsSet(_REFERRER_FEE_PERCENT)
         givenProtocolFeeIsSet(_PROTOCOL_FEE_PERCENT)
+        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenLotIsCreated
+        givenLotHasStarted
+        givenBidIsCreated(_BID_AMOUNT, _BID_AMOUNT_OUT)
+        givenLotHasConcluded
+        givenPrivateKeyIsSubmitted
+        givenLotIsDecrypted
+        givenLotIsSettled
+    {
+        bytes memory err =
+            abi.encodeWithSelector(EncryptedMarginalPriceAuction.Bid_InvalidId.selector, _lotId, 0);
+        vm.expectRevert(err);
+
+        // Call the function
+        vm.prank(_bidder);
+        _auctionHouse.claim(_lotId, 0);
+    }
+
+    function test_invalidBidId_hasBids_quoteTokenDecimalsLarger_reverts()
+        external
+        givenReferrerFeeIsSet(_REFERRER_FEE_PERCENT)
+        givenProtocolFeeIsSet(_PROTOCOL_FEE_PERCENT)
+        givenQuoteTokenHasDecimals(17)
+        givenBaseTokenHasDecimals(13)
+        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenLotIsCreated
+        givenLotHasStarted
+        givenBidIsCreated(_BID_AMOUNT, _BID_AMOUNT_OUT)
+        givenLotHasConcluded
+        givenPrivateKeyIsSubmitted
+        givenLotIsDecrypted
+        givenLotIsSettled
+    {
+        bytes memory err =
+            abi.encodeWithSelector(EncryptedMarginalPriceAuction.Bid_InvalidId.selector, _lotId, 0);
+        vm.expectRevert(err);
+
+        // Call the function
+        vm.prank(_bidder);
+        _auctionHouse.claim(_lotId, 0);
+    }
+
+    function test_invalidBidId_hasBids_quoteTokenDecimalsSmaller_reverts()
+        external
+        givenReferrerFeeIsSet(_REFERRER_FEE_PERCENT)
+        givenProtocolFeeIsSet(_PROTOCOL_FEE_PERCENT)
+        givenQuoteTokenHasDecimals(13)
+        givenBaseTokenHasDecimals(17)
         givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
         givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenLotIsCreated
@@ -267,6 +319,70 @@ contract EmpaClaimTest is EmpaTest {
         _assertAccruedFees(0);
     }
 
+    function test_givenBidNotSuccessful_quoteTokenDecimalsLarger()
+        external
+        givenReferrerFeeIsSet(_REFERRER_FEE_PERCENT)
+        givenProtocolFeeIsSet(_PROTOCOL_FEE_PERCENT)
+        givenQuoteTokenHasDecimals(17)
+        givenBaseTokenHasDecimals(13)
+        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenLotIsCreated
+        givenLotHasStarted
+        givenBidIsCreated(_BID_AMOUNT, _BID_AMOUNT_OUT)
+        givenLotHasConcluded
+        givenPrivateKeyIsSubmitted
+        givenLotIsDecrypted
+        givenLotIsSettled
+    {
+        // Call the function
+        vm.prank(_bidder);
+        _auctionHouse.claim(_lotId, _bidId);
+
+        // Validate balances
+        assertEq(_quoteToken.balanceOf(_bidder), _scaleQuoteTokenAmount(_BID_AMOUNT));
+        assertEq(_baseToken.balanceOf(_bidder), 0);
+
+        // Validate bid status
+        EncryptedMarginalPriceAuction.Bid memory bid = _getBid(_lotId, _bidId);
+        assertEq(uint8(bid.status), uint8(EncryptedMarginalPriceAuction.BidStatus.Claimed));
+
+        // Validate accrued fees
+        _assertAccruedFees(0);
+    }
+
+    function test_givenBidNotSuccessful_quoteTokenDecimalsSmaller()
+        external
+        givenReferrerFeeIsSet(_REFERRER_FEE_PERCENT)
+        givenProtocolFeeIsSet(_PROTOCOL_FEE_PERCENT)
+        givenQuoteTokenHasDecimals(13)
+        givenBaseTokenHasDecimals(17)
+        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenLotIsCreated
+        givenLotHasStarted
+        givenBidIsCreated(_BID_AMOUNT, _BID_AMOUNT_OUT)
+        givenLotHasConcluded
+        givenPrivateKeyIsSubmitted
+        givenLotIsDecrypted
+        givenLotIsSettled
+    {
+        // Call the function
+        vm.prank(_bidder);
+        _auctionHouse.claim(_lotId, _bidId);
+
+        // Validate balances
+        assertEq(_quoteToken.balanceOf(_bidder), _scaleQuoteTokenAmount(_BID_AMOUNT));
+        assertEq(_baseToken.balanceOf(_bidder), 0);
+
+        // Validate bid status
+        EncryptedMarginalPriceAuction.Bid memory bid = _getBid(_lotId, _bidId);
+        assertEq(uint8(bid.status), uint8(EncryptedMarginalPriceAuction.BidStatus.Claimed));
+
+        // Validate accrued fees
+        _assertAccruedFees(0);
+    }
+
     function test_givenBidSuccessful_givenCallerIsNotBidder()
         external
         givenReferrerFeeIsSet(_REFERRER_FEE_PERCENT)
@@ -328,5 +444,81 @@ contract EmpaClaimTest is EmpaTest {
 
         // Validate accrued fees
         _assertAccruedFees(_BID_SUCCESS_AMOUNT);
+    }
+
+    function test_givenBidSuccessful_quoteTokenDecimalsLarger()
+        external
+        givenReferrerFeeIsSet(_REFERRER_FEE_PERCENT)
+        givenProtocolFeeIsSet(_PROTOCOL_FEE_PERCENT)
+        givenQuoteTokenHasDecimals(17)
+        givenBaseTokenHasDecimals(13)
+        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenLotIsCreated
+        givenLotHasStarted
+        givenBidIsCreated(_BID_SUCCESS_AMOUNT, _BID_SUCCESS_AMOUNT_OUT)
+        givenLotHasConcluded
+        givenPrivateKeyIsSubmitted
+        givenLotIsDecrypted
+        givenLotIsSettled
+    {
+        // Call the function
+        vm.prank(_bidder);
+        _auctionHouse.claim(_lotId, _bidId);
+
+        // Validate balances
+        assertEq(_quoteToken.balanceOf(_bidder), 0, "quote token balance");
+        assertEq(
+            _baseToken.balanceOf(_bidder),
+            _scaleBaseTokenAmount(_BID_SUCCESS_AMOUNT_OUT),
+            "base token balance"
+        );
+
+        // Validate bid status
+        EncryptedMarginalPriceAuction.Bid memory bid = _getBid(_lotId, _bidId);
+        assertEq(
+            uint8(bid.status), uint8(EncryptedMarginalPriceAuction.BidStatus.Claimed), "bid status"
+        );
+
+        // Validate accrued fees
+        _assertAccruedFees(_scaleQuoteTokenAmount(_BID_SUCCESS_AMOUNT));
+    }
+
+    function test_givenBidSuccessful_quoteTokenDecimalsSmaller()
+        external
+        givenReferrerFeeIsSet(_REFERRER_FEE_PERCENT)
+        givenProtocolFeeIsSet(_PROTOCOL_FEE_PERCENT)
+        givenQuoteTokenHasDecimals(13)
+        givenBaseTokenHasDecimals(17)
+        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenLotIsCreated
+        givenLotHasStarted
+        givenBidIsCreated(_BID_SUCCESS_AMOUNT, _BID_SUCCESS_AMOUNT_OUT)
+        givenLotHasConcluded
+        givenPrivateKeyIsSubmitted
+        givenLotIsDecrypted
+        givenLotIsSettled
+    {
+        // Call the function
+        vm.prank(_bidder);
+        _auctionHouse.claim(_lotId, _bidId);
+
+        // Validate balances
+        assertEq(_quoteToken.balanceOf(_bidder), 0, "quote token balance");
+        assertEq(
+            _baseToken.balanceOf(_bidder),
+            _scaleBaseTokenAmount(_BID_SUCCESS_AMOUNT_OUT),
+            "base token balance"
+        );
+
+        // Validate bid status
+        EncryptedMarginalPriceAuction.Bid memory bid = _getBid(_lotId, _bidId);
+        assertEq(
+            uint8(bid.status), uint8(EncryptedMarginalPriceAuction.BidStatus.Claimed), "bid status"
+        );
+
+        // Validate accrued fees
+        _assertAccruedFees(_scaleQuoteTokenAmount(_BID_SUCCESS_AMOUNT));
     }
 }
