@@ -27,7 +27,7 @@ contract EmpaSubmitPrivateKeyTest is EmpaTest {
 
         // Call the function
         vm.prank(_bidder);
-        _auctionHouse.submitPrivateKey(_lotId, bytes32(_auctionPrivateKey), 0);
+        _auctionHouse.submitPrivateKey(_lotId, _auctionPrivateKey, 0);
     }
 
     function test_lotNotStarted_reverts()
@@ -42,7 +42,7 @@ contract EmpaSubmitPrivateKeyTest is EmpaTest {
         vm.expectRevert(err);
 
         // Call the function
-        _auctionHouse.submitPrivateKey(_lotId, bytes32(_auctionPrivateKey), 0);
+        _auctionHouse.submitPrivateKey(_lotId, _auctionPrivateKey, 0);
     }
 
     function test_lotStarted_reverts()
@@ -58,7 +58,7 @@ contract EmpaSubmitPrivateKeyTest is EmpaTest {
         vm.expectRevert(err);
 
         // Call the function
-        _auctionHouse.submitPrivateKey(_lotId, bytes32(_auctionPrivateKey), 0);
+        _auctionHouse.submitPrivateKey(_lotId, _auctionPrivateKey, 0);
     }
 
     function test_privateKeyAlreadySubmitted_reverts()
@@ -69,14 +69,14 @@ contract EmpaSubmitPrivateKeyTest is EmpaTest {
         givenLotHasConcluded
     {
         // Submit the private key
-        _auctionHouse.submitPrivateKey(_lotId, bytes32(_auctionPrivateKey), 0);
+        _auctionHouse.submitPrivateKey(_lotId, _auctionPrivateKey, 0);
 
         bytes memory err =
             abi.encodeWithSelector(EncryptedMarginalPriceAuction.Auction_WrongState.selector);
         vm.expectRevert(err);
 
         // Call the function
-        _auctionHouse.submitPrivateKey(_lotId, bytes32(_auctionPrivateKey), 0);
+        _auctionHouse.submitPrivateKey(_lotId, _auctionPrivateKey, 0);
     }
 
     function test_privateKeyDoesNotMatchPublicKey_reverts()
@@ -91,7 +91,7 @@ contract EmpaSubmitPrivateKeyTest is EmpaTest {
         vm.expectRevert(err);
 
         // Call the function
-        _auctionHouse.submitPrivateKey(_lotId, bytes32(uint256(1)), 0);
+        _auctionHouse.submitPrivateKey(_lotId, uint256(1), 0);
     }
 
     function test_storesPrivateKey()
@@ -102,11 +102,11 @@ contract EmpaSubmitPrivateKeyTest is EmpaTest {
         givenLotHasConcluded
     {
         // Call the function
-        _auctionHouse.submitPrivateKey(_lotId, bytes32(_auctionPrivateKey), 0);
+        _auctionHouse.submitPrivateKey(_lotId, _auctionPrivateKey, 0);
 
         // Assert the state
         EncryptedMarginalPriceAuction.BidData memory bidData = _getBidData(_lotId);
-        assertEq(bidData.privateKey, bytes32(_auctionPrivateKey));
+        assertEq(bidData.privateKey, _auctionPrivateKey);
     }
 
     function test_decryptsBids()
@@ -119,7 +119,7 @@ contract EmpaSubmitPrivateKeyTest is EmpaTest {
         givenLotHasConcluded
     {
         // Call the function
-        _auctionHouse.submitPrivateKey(_lotId, bytes32(_auctionPrivateKey), 1);
+        _auctionHouse.submitPrivateKey(_lotId, _auctionPrivateKey, 1);
 
         // Check the next decrypt index has been updated
         EncryptedMarginalPriceAuction.BidData memory bidData = _getBidData(_lotId);

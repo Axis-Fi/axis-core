@@ -73,8 +73,8 @@ abstract contract Router {
     ///  uint256 bidPrivateKey = RNG(); // some source of randomness, derived specifically for this bid
     ///  Point memory bidPubKey = ecMul(Point(1,2), bidPrivateKey); // scalar multiplication of (1, 2) point by the scalar bidPrivateKey
     ///  Point memory sharedSecretPubKey = ecMul(auctionPublicKey, bidPrivateKey); // scalar multiplication of the auctionPublicKey point by the scalar bidPrivateKey
-    ///  bytes32 salt = keccak256(abi.encodePacked(lotId, bidder, amountIn));
-    ///  uint256 symmetricKey = keccak256(abi.encodePacked(sharedSecretPubKey.x, salt));
+    ///  uint256 salt = uint256(keccak256(abi.encodePacked(lotId, bidder, amountIn)));
+    ///  uint256 symmetricKey = uint256(keccak256(abi.encodePacked(sharedSecretPubKey.x, salt)));
     ///  uint256 encryptedAmountOut = message ^ symmetricKey;
     ///
     ///  Submit the encryptedAmountOut and the bidPubKey as part of the bid transaction.
@@ -398,7 +398,7 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
         uint64 nextDecryptIndex; // 8 +
         uint96 marginalPrice; // 12 = 28 - end of slot 1
         Point publicKey; // 2 slots
-        bytes32 privateKey; // 1 slot
+        uint256 privateKey; // 1 slot
         uint64[] bidIds;
     }
 
@@ -1094,7 +1094,7 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
     ///                 - The lot is not active
     ///                 - The lot has not concluded
     ///                 - The private key has already been submitted
-    function submitPrivateKey(uint96 lotId_, bytes32 privateKey_, uint64 num_) external {
+    function submitPrivateKey(uint96 lotId_, uint256 privateKey_, uint64 num_) external {
         // Validation
         _revertIfLotInvalid(lotId_);
         _revertIfLotActive(lotId_);
@@ -1159,7 +1159,7 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
         // Load next decrypt index and private key
         BidData storage lotBidData = bidData[lotId_];
         uint64 nextDecryptIndex = lotBidData.nextDecryptIndex;
-        bytes32 privateKey = lotBidData.privateKey;
+        uint256 privateKey = lotBidData.privateKey;
 
         // Check that the number of decrypts is less than or equal to the number of bids remaining to be decrypted
         // If so, reduce to the number remaining
@@ -1208,7 +1208,7 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
     function _decrypt(
         uint96 lotId_,
         uint64 bidId_,
-        bytes32 privateKey_
+        uint256 privateKey_
     ) internal view returns (uint256 amountOut) {
         // Load the encrypted bid data
         EncryptedBid memory encryptedBid = encryptedBids[lotId_][bidId_];
@@ -1220,7 +1220,7 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
             encryptedBid.encryptedAmountOut,
             encryptedBid.bidPubKey,
             privateKey_,
-            keccak256(abi.encodePacked(lotId_, _bid.bidder, _bid.amount))
+            uint256(keccak256(abi.encodePacked(lotId_, _bid.bidder, _bid.amount)))
         );
 
         // Convert the message into the amount out
