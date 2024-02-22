@@ -272,7 +272,7 @@ contract EmpaBidTest is EmpaTest {
 
     function test_givenProtocolFeeIsSet()
         external
-        givenProtocolFeeIsSet(_PROTOCOL_FEE)
+        givenProtocolFeeIsSet(_PROTOCOL_FEE_PERCENT)
         givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
         givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenLotIsCreated
@@ -379,7 +379,7 @@ contract EmpaBidTest is EmpaTest {
 
     function test_givenReferrerFeeIsSet()
         external
-        givenReferrerFeeIsSet(_REFERRER_FEE)
+        givenReferrerFeeIsSet(_REFERRER_FEE_PERCENT)
         givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
         givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenLotIsCreated

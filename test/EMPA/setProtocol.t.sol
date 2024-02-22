@@ -6,8 +6,6 @@ import {EmpaTest} from "test/EMPA/EMPATest.sol";
 contract EmpaSetProtocolTest is EmpaTest {
     address internal immutable _NEW_PROTOCOL = address(0x7);
 
-    uint24 internal constant _PROTOCOL_FEE_PERCENT = 100;
-
     uint96 internal constant _AMOUNT_IN = 1e18;
     uint96 internal _amountInProtocolFee = _AMOUNT_IN * _PROTOCOL_FEE_PERCENT / 1e5;
 

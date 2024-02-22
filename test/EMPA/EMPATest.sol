@@ -52,8 +52,8 @@ abstract contract EmpaTest is Test, Permit2User {
     uint256 internal constant _BID_PRIVATE_KEY = 112_233_445_566_778;
     Point internal _bidPublicKey;
 
-    uint24 internal constant _PROTOCOL_FEE = 100;
-    uint24 internal constant _REFERRER_FEE = 105;
+    uint24 internal constant _PROTOCOL_FEE_PERCENT = 100;
+    uint24 internal constant _REFERRER_FEE_PERCENT = 105;
 
     // Input to parameters
     uint48 internal _startTime;
