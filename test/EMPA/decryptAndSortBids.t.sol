@@ -123,7 +123,7 @@ contract EmpaDecryptBidsTest is EmpaTest {
         // Check the bid record
         EncryptedMarginalPriceAuction.Bid memory bid = _getBid(_lotId, 1);
         assertEq(bid.amount, 1e18);
-        assertEq(bid.minAmountOut, _minBidSize - 1);
+        assertEq(bid.minAmountOut, 0); // shouldn't be set if the bid is skipped
         assertEq(uint8(bid.status), uint8(EncryptedMarginalPriceAuction.BidStatus.Decrypted));
 
         // Check the decrypted bids queue
@@ -153,9 +153,7 @@ contract EmpaDecryptBidsTest is EmpaTest {
         // Check the bid record
         EncryptedMarginalPriceAuction.Bid memory bid = _getBid(_lotId, 1);
         assertEq(bid.amount, _scaleQuoteTokenAmount(1e18), "bid amount mismatch");
-        assertEq(
-            bid.minAmountOut, _scaleBaseTokenAmount(_MIN_BID_SIZE / 2), "bid minAmountOut mismatch"
-        );
+        assertEq(bid.minAmountOut, 0, "bid minAmountOut mismatch");
         assertEq(
             uint8(bid.status),
             uint8(EncryptedMarginalPriceAuction.BidStatus.Decrypted),
@@ -193,9 +191,7 @@ contract EmpaDecryptBidsTest is EmpaTest {
         // Check the bid record
         EncryptedMarginalPriceAuction.Bid memory bid = _getBid(_lotId, 1);
         assertEq(bid.amount, _scaleQuoteTokenAmount(1e18), "bid amount mismatch");
-        assertEq(
-            bid.minAmountOut, _scaleBaseTokenAmount(_MIN_BID_SIZE / 2), "bid minAmountOut mismatch"
-        );
+        assertEq(bid.minAmountOut, 0, "bid minAmountOut mismatch");
         assertEq(
             uint8(bid.status),
             uint8(EncryptedMarginalPriceAuction.BidStatus.Decrypted),

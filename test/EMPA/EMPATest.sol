@@ -49,7 +49,7 @@ abstract contract EmpaTest is Test, Permit2User {
     uint24 internal constant _CURATOR_MAX_FEE_PERCENT = 100;
     uint24 internal constant _CURATOR_FEE_PERCENT = 90;
 
-    uint128 internal constant _BID_SEED = 123_456;
+    uint128 internal constant _BID_SEED = 12_345_678_901_234_567_890_123_456_789_012_345_678;
     uint256 internal constant _BID_PRIVATE_KEY = 112_233_445_566_778;
     Point internal _bidPublicKey;
 
@@ -442,7 +442,7 @@ abstract contract EmpaTest is Test, Permit2User {
         {
             uint128 subtracted;
             unchecked {
-                subtracted = _BID_SEED - amountOut_;
+                subtracted = amountOut_ - _BID_SEED;
             }
             formattedAmountOut = uint256(bytes32(abi.encodePacked(_BID_SEED, subtracted)));
         }

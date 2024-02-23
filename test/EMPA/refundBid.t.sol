@@ -78,7 +78,7 @@ contract EmpaRefundBidTest is EmpaTest {
         givenBidIsRefunded(_bidId)
     {
         bytes memory err =
-            abi.encodeWithSelector(EncryptedMarginalPriceAuction.Bid_WrongState.selector);
+            abi.encodeWithSelector(EncryptedMarginalPriceAuction.Bid_AlreadyClaimed.selector);
         vm.expectRevert(err);
 
         // Call the function
@@ -124,7 +124,7 @@ contract EmpaRefundBidTest is EmpaTest {
 
         // Assert the bid is cancelled
         EncryptedMarginalPriceAuction.Bid memory bid = _getBid(_lotId, _bidId);
-        assertEq(uint8(bid.status), uint8(EncryptedMarginalPriceAuction.BidStatus.Refunded));
+        assertEq(uint8(bid.status), uint8(EncryptedMarginalPriceAuction.BidStatus.Claimed));
     }
 
     // TODO handle decimals
