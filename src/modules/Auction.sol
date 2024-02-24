@@ -78,7 +78,7 @@ abstract contract Auction {
     struct Settlement {
         uint256 totalIn;
         uint256 totalOut;
-        uint64 pfBidId;
+        address pfBidder;
         uint256 pfRefund;
         uint256 pfPayout;
         bytes auctionOutput;
@@ -156,7 +156,7 @@ abstract contract Auction {
         uint96 lotId_,
         uint64 bidId_,
         address bidder_
-    ) external virtual returns (address referrer, uint96 payout, uint96 refund);
+    ) external virtual returns (address referrer, uint256 paid, uint256 payout);
 
     /// @notice     Settle a batch auction lot with on-chain storage and settlement
     /// @dev        The implementing function should handle the following:
@@ -487,7 +487,7 @@ abstract contract AuctionModule is Auction, Module {
         uint96 lotId_,
         uint64 bidId_,
         address bidder_
-    ) external override onlyInternal returns (address referrer, uint96 payout, uint96 refund) {
+    ) external override onlyInternal returns (address referrer, uint256 paid, uint256 payout) {
         // Standard validation
         _revertIfLotInvalid(lotId_);
         _revertIfBidInvalid(lotId_, bidId_);
@@ -502,7 +502,7 @@ abstract contract AuctionModule is Auction, Module {
     function _claimBid(
         uint96 lotId_,
         uint96 bidId_
-    ) internal virtual returns (address referrer, uint96 payout, uint96 refund);
+    ) internal virtual returns (address referrer, uint256 paid, uint256 payout);
 
     /// @inheritdoc Auction
     /// @dev        Implements a basic settle function that:
@@ -531,7 +531,15 @@ abstract contract AuctionModule is Auction, Module {
         _revertIfLotSettled(lotId_);
 
         // Call implementation-specific logic
-        return _settle(lotId_);
+        settlement = _settle(lotId_);
+
+        // Set lot capacity to zero
+        lotData[lotId_].capacity = 0;
+
+        // Store sold and purchased amounts
+        // TODO do we need to store these? Are they used for anything?
+        lotData[lotId_].purchased = uint96(settlement.totalIn);
+        lotData[lotId_].sold = uint96(settlement.totalOut);
     }
 
     /// @notice     Implementation-specific lot settlement logic

@@ -13,9 +13,11 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
     using MaxPriorityQueue for Queue;
 
     // ========== ERRORS ========== //
+    // TODO
 
 
     // ========== EVENTS ========== //
+    // TODO
 
     // ========== DATA STRUCTURES ========== //
 
@@ -71,6 +73,13 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         uint64[] bidIds;
     }
 
+    struct AuctionDataParams {
+        uint96 minPrice;
+        uint24 minFillPercent;
+        uint24 minBidPercent;
+        Point publicKey;
+    }
+
 
     // ========== STATE VARIABLES ========== //
 
@@ -115,6 +124,9 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
 
         // Validate params
 
+        // minPrice must not be zero
+        if (implParams.minPrice == 0) revert Auction_InvalidParams();
+
         // minFillPercent must be less than or equal to 100%
         if (implParams.minFillPercent > _ONE_HUNDRED_PERCENT) revert Auction_InvalidParams();
 
@@ -127,20 +139,17 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         }
 
         // publicKey must be a valid point for the encryption library
-        if (!ECIES.isValid(params_.publicKey)) revert InvalidParams();
+        if (!ECIES.isValid(params_.publicKey)) revert Auction_InvalidParams();
 
-        // Check that the public key is not the generator point (i.e. private key is zero) or the point at infinity
-        if (
-            (params_.publicKey.x == 1 && params_.publicKey.y == 2)
-                || (params_.publicKey.x == 0 && params_.publicKey.y == 0)
-        ) {
-            revert InvalidParams();
-        }
-
-        AuctionData storage data = auctionData[lotId];
+        // Set auction data
+        AuctionData storage data = auctionData[lotId_];
+        data.minPrice = implParams.minPrice;
+        data.minFilled = uint96((uint256(lot_.capacity) * implParams.minFillPercent) / _ONE_HUNDRED_PERCENT);
+        data.minBidSize = uint96((uint256(lot_.capacity) * implParams.minBidPercent) / _ONE_HUNDRED_PERCENT);
         data.publicKey = params_.publicKey;
         data.nextBidId = 1;
-        decryptedBids[lotId].initialize();
+
+        decryptedBids[lotId_].initialize();
 
         // This auction type requires pre-funding
         // This setting requires the capacity to be in the base token,
@@ -157,7 +166,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         _revertIfLotConcluded(lotId_);
 
         // Set auction status to settled so that bids can be refunded
-        auctionData[lotId_].status = AuctionStatus.Settled;
+        auctionData[lotId_].status = Auction.Status.Settled;
     }
 
     // ========== BID ========== //
@@ -185,13 +194,13 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
 
         // Amount must be at least the minimum bid size at the minimum price
         uint256 minAmount = (uint256(lotData[lotId_].minBidSize) * uint256(lotData[lotId_].minimumPrice))/ (10 ** lotData[lotId_].baseTokenDecimals);
-        if (amount_ < minAmount) revert Bid_InvalidAmount();
+        if (amount_ < minAmount) revert Auction_InvalidAmount();
 
         // Check that the bid public key is a valid point for the encryption library
-        if (!ECIES.isValid(bidPubKey_)) revert Bid_InvalidPublicKey();
+        if (!ECIES.isValid(bidPubKey)) revert Auction_InvalidPublicKey();
 
         // Store bid data
-        bidId = bidData[lotId_].nextBidId++;
+        bidId = auctionData[lotId_].nextBidId++;
         Bid storage userBid = bids[lotId_][bidId];
         userBid.bidder = bidder_;
         userBid.amount = amount_;
@@ -202,7 +211,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         encryptedBids[lotId_][bidId] = EncryptedBid(encryptedAmountOut, bidPubKey);
 
         // Push bid ID to list of bids to decrypt
-        bidData[lotId_].bidIds.push(bidId);
+        auctionData[lotId_].bidIds.push(bidId);
 
         return bidId;
     }
@@ -227,7 +236,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         bids[lotId_][bidId_] = BidStatus.Claimed;
 
         // Remove bid from list of bids to decrypt
-        uint64[] storage bidIds = bidData[lotId_].bidIds;
+        uint64[] storage bidIds = auctionData[lotId_].bidIds;
         uint256 len = bidIds.length;
         for (uint256 i; i < len; i++) {
             if (bidIds[i] == bidId_) {
@@ -241,7 +250,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         return bids[lotId_][bidId_].amount;
     }
 
-    function _claimBid(uint96 lotId_, uint64 bidId_) internal override returns (address referrer, uint256 payout, uint256 refund) {
+    function _claimBid(uint96 lotId_, uint64 bidId_) internal override returns (address referrer, uint256 paid, uint256 payout) {
         // Load bid data
         Bid storage bidData = bids[lotId_][bidId_];
 
@@ -261,10 +270,11 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         // We handle the only potential marginal fill during settlement. All other bids are either completely filled or refunded.
         if (price >= bidData.marginalPrice) {
             // Payout is calculated using the marginal price of the auction
-            payout = (uint256(bidData.amount) * baseScale) / bidData.marginalPrice;
+            paid = uint256(bidData.amount);
+            payout = (paid * baseScale) / bidData.marginalPrice;
         } else {
-            // Bidder is refunded and receives no payout
-            refund = uint256(bidData.amount);
+            // Bidder is refunded the paid amount and receives no payout
+            paid = uint256(bidData.amount);
         }
 
     }
@@ -287,16 +297,16 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         _revertIfBeforeLotStart(lotId_);
 
         // Revert if the private key has already been verified and set
-        if (bidData[lotId_].privateKey != 0) revert Auction_WrongState();
+        if (auctionData[lotId_].privateKey != 0) revert Auction_WrongState();
 
         // Check that the private key is valid for the public key
         // We assume that all public keys are derived from the same generator: (1, 2)
         Point memory calcPubKey = ECIES.calcPubKey(Point(1, 2), privateKey_);
-        Point memory pubKey = bidData[lotId_].publicKey;
-        if (calcPubKey.x != pubKey.x || calcPubKey.y != pubKey.y) revert Bid_InvalidPrivateKey();
+        Point memory pubKey = auctionData[lotId_].publicKey;
+        if (calcPubKey.x != pubKey.x || calcPubKey.y != pubKey.y) revert Auction_InvalidPrivateKey();
 
         // Store the private key
-        bidData[lotId_].privateKey = privateKey_;
+        auctionData[lotId_].privateKey = privateKey_;
 
         // Decrypt and sort bids
         _decryptAndSortBids(lotId_, num_);
@@ -328,7 +338,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         _revertIfLotActive(lotId_);
 
         // Revert if already decrypted or if the private key has not been provided
-        if (lotData[lotId_].status != AuctionStatus.Created || bidData[lotId_].privateKey == 0) {
+        if (lotData[lotId_].status != Auction.Status.Created || auctionData[lotId_].privateKey == 0) {
             revert Auction_WrongState();
         }
 
@@ -338,12 +348,12 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
 
     function _decryptAndSortBids(uint96 lotId_, uint64 num_) internal {
         // Load next decrypt index and private key
-        BidData storage lotBidData = bidData[lotId_];
+        AuctionData storage lotBidData = auctionData[lotId_];
         uint64 nextDecryptIndex = lotBidData.nextDecryptIndex;
 
         // Check that the number of decrypts is less than or equal to the number of bids remaining to be decrypted
         // If so, reduce to the number remaining
-        uint64[] storage bidIds = bidData[lotId_].bidIds;
+        uint64[] storage bidIds = auctionData[lotId_].bidIds;
         if (num_ > bidIds.length - nextDecryptIndex) {
             num_ = uint64(bidIds.length) - nextDecryptIndex;
         }
@@ -388,11 +398,11 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         }
 
         // Increment next decrypt index
-        bidData[lotId_].nextDecryptIndex += num_;
+        auctionData[lotId_].nextDecryptIndex += num_;
 
         // If all bids have been decrypted, set auction status to decrypted
-        if (bidData[lotId_].nextDecryptIndex == bidIds.length) {
-            lotData[lotId_].status = AuctionStatus.Decrypted;
+        if (auctionData[lotId_].nextDecryptIndex == bidIds.length) {
+            lotData[lotId_].status = Auction.Status.Decrypted;
         }
     }
 
@@ -432,10 +442,10 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
 
     // ========== SETTLEMENT ========== //
     
-    function _settle(lotId_) internal override returns (Settlement memory settlement_) {
+    function _settle(uint96 lotId_) internal override returns (Settlement memory settlement_) {
         // Settle the auction
         // Check that auction is in the right state for settlement
-        if (lotData[lotId_].status != AuctionStatus.Decrypted) revert Auction_WrongState();
+        if (lotData[lotId_].status != Auction.Status.Decrypted) revert Auction_WrongState();
 
         // Calculate marginal price and number of winning bids
         // Cache capacity and scaling values
@@ -521,13 +531,13 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
 
         // Determine if the auction can be filled, if so settle the auction, otherwise refund the seller
         // We set the status as settled either way to denote this function has been executed
-        lotData[lotId_].status = AuctionStatus.Settled;
+        lotData[lotId_].status = Auction.Status.Settled;
         // Auction cannot be settled if the total filled is less than the minimum filled
         // or if the marginal price is less than the minimum price
         if (capacityExpended >= lotData[lotId_].minFilled && marginalPrice >= minimumPrice) {
             // Auction can be settled at the marginal price if we reach this point
             // TODO determine if this can overflow
-            bidData[lotId_].marginalPrice = uint96(marginalPrice);
+            auctionData[lotId_].marginalPrice = uint96(marginalPrice);
 
             // If there is a partially filled bid, set refund and payout for the bid and mark as claimed
             if (partialFillBidId != 0) {
@@ -555,15 +565,19 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
             // Set settlement data
             settlement_.totalIn = totalAmountIn;
             settlement_.totalOut = capacityExpended > capacity ? capacity : capacityExpended;
-
-            // TODO test that we can calculate the same marginal price from the totalIn and totalOut as is calculated in this function so we reduce the data we send back
         } else {
             // Auction cannot be settled if we reach this point
             // Marginal price is set as the max uint96 for the auction so the system knows all bids should be refunded
-            bidData[lotId_].marginalPrice = type(uint96).max;
+            auctionData[lotId_].marginalPrice = type(uint96).max;
 
             // totalIn and totalOut are not set since the auction does not clear
         }
+
+        // Set auction status to settled
+        lotData[lotId_].status = Status.Settled;
     }
+
+    // ========== VALIDATION ========== //
+    // TODO
 
 }
