@@ -112,7 +112,7 @@ abstract contract Auction {
         uint96 lotId_,
         uint96 amount_,
         bytes calldata auctionData_
-    ) external virtual returns (uint96 payout, bytes memory auctionOutput);
+    ) external virtual returns (uint256 payout, bytes memory auctionOutput);
 
     // ========== BATCH AUCTIONS ========== //
 
@@ -129,7 +129,6 @@ abstract contract Auction {
     function bid(
         uint96 lotId_,
         address bidder_,
-        address recipient_,
         address referrer_,
         uint96 amount_,
         bytes calldata auctionData_
@@ -149,7 +148,7 @@ abstract contract Auction {
         uint96 lotId_,
         uint64 bidId_,
         address bidder_
-    ) external virtual returns (uint96 refund);
+    ) external virtual returns (uint256 refund);
 
 
     function claimBid(
@@ -186,7 +185,7 @@ abstract contract Auction {
         AuctionParams memory params_,
         uint8 quoteTokenDecimals_,
         uint8 baseTokenDecimals_
-    ) external virtual returns (bool prefundingRequired, uint96 capacity);
+    ) external virtual returns (bool prefundingRequired, uint256 capacity);
 
     /// @notice     Cancel an auction lot
     /// @dev        The implementing function should handle the following:
@@ -262,7 +261,7 @@ abstract contract AuctionModule is Auction, Module {
         AuctionParams memory params_,
         uint8 quoteTokenDecimals_,
         uint8 baseTokenDecimals_
-    ) external override onlyInternal returns (bool prefundingRequired, uint96 capacity) {
+    ) external override onlyInternal returns (bool prefundingRequired, uint256 capacity) {
         // Start time must be zero or in the future
         if (params_.start > 0 && params_.start < uint48(block.timestamp)) {
             revert Auction_InvalidStart(params_.start, uint48(block.timestamp));
@@ -288,7 +287,7 @@ abstract contract AuctionModule is Auction, Module {
         // Store lot data
         lotData[lotId_] = lot;
 
-        return (prefundingRequired, lot.capacity);
+        return (prefundingRequired, uint256(lot.capacity));
     }
 
     /// @notice     Implementation-specific auction creation logic
@@ -355,7 +354,7 @@ abstract contract AuctionModule is Auction, Module {
         uint96 lotId_,
         uint96 amount_,
         bytes calldata auctionData_
-    ) external override onlyInternal returns (uint96 payout, bytes memory auctionOutput) {
+    ) external override onlyInternal returns (uint256 payout, bytes memory auctionOutput) {
         // Standard validation
         _revertIfLotInvalid(lotId_);
         _revertIfLotInactive(lotId_);
@@ -398,7 +397,6 @@ abstract contract AuctionModule is Auction, Module {
     function bid(
         uint96 lotId_,
         address bidder_,
-        address recipient_,
         address referrer_,
         uint96 amount_,
         bytes calldata auctionData_
@@ -410,7 +408,7 @@ abstract contract AuctionModule is Auction, Module {
         _revertIfLotSettled(lotId_);
 
         // Call implementation-specific logic
-        return _bid(lotId_, bidder_, recipient_, referrer_, amount_, auctionData_);
+        return _bid(lotId_, bidder_, referrer_, amount_, auctionData_);
     }
 
     /// @notice     Implementation-specific bid logic
@@ -420,7 +418,6 @@ abstract contract AuctionModule is Auction, Module {
     ///
     /// @param      lotId_          The lot ID
     /// @param      bidder_         The bidder of the purchased tokens
-    /// @param      recipient_      The recipient of the purchased tokens
     /// @param      referrer_       The referrer of the bid
     /// @param      amount_         The amount of quote tokens to bid
     /// @param      auctionData_    The auction-specific data
@@ -428,7 +425,6 @@ abstract contract AuctionModule is Auction, Module {
     function _bid(
         uint96 lotId_,
         address bidder_,
-        address recipient_,
         address referrer_,
         uint96 amount_,
         bytes calldata auctionData_
@@ -457,7 +453,7 @@ abstract contract AuctionModule is Auction, Module {
         uint96 lotId_,
         uint64 bidId_,
         address bidder_
-    ) external override onlyInternal returns (uint96 refund) {
+    ) external override onlyInternal returns (uint256 refund) {
         // Standard validation
         _revertIfLotInvalid(lotId_);
         _revertIfBeforeLotStart(lotId_);
@@ -479,9 +475,9 @@ abstract contract AuctionModule is Auction, Module {
     /// @return     refund   The amount of quote tokens to refund
     function _refundBid(
         uint96 lotId_,
-        uint96 bidId_,
+        uint64 bidId_,
         address bidder_
-    ) internal virtual returns (uint96 refund);
+    ) internal virtual returns (uint256 refund);
 
     function claimBid(
         uint96 lotId_,
@@ -501,7 +497,7 @@ abstract contract AuctionModule is Auction, Module {
 
     function _claimBid(
         uint96 lotId_,
-        uint96 bidId_
+        uint64 bidId_
     ) internal virtual returns (address referrer, uint256 paid, uint256 payout);
 
     /// @inheritdoc Auction
@@ -664,7 +660,7 @@ abstract contract AuctionModule is Auction, Module {
     ///
     /// @param      lotId_  The lot ID
     /// @param      bidId_  The bid ID
-    function _revertIfBidInvalid(uint96 lotId_, uint96 bidId_) internal view virtual;
+    function _revertIfBidInvalid(uint96 lotId_, uint64 bidId_) internal view virtual;
 
     /// @notice     Checks that `caller_` is the bid owner
     /// @dev        Should revert if `caller_` is not the bid owner
@@ -675,7 +671,7 @@ abstract contract AuctionModule is Auction, Module {
     /// @param      caller_     The caller
     function _revertIfNotBidOwner(
         uint96 lotId_,
-        uint96 bidId_,
+        uint64 bidId_,
         address caller_
     ) internal view virtual;
 
@@ -685,5 +681,5 @@ abstract contract AuctionModule is Auction, Module {
     ///
     /// @param      lotId_      The lot ID
     /// @param      bidId_      The bid ID
-    function _revertIfBidClaimed(uint96 lotId_, uint96 bidId_) internal view virtual;
+    function _revertIfBidClaimed(uint96 lotId_, uint64 bidId_) internal view virtual;
 }
