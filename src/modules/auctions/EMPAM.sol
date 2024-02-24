@@ -552,11 +552,11 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
                 // Calculate the payout and refund amounts
                 uint256 fullFill = (uint256(bidData.amount) * baseScale) / marginalPrice;
                 uint256 excess = capacityExpended - capacity;
-                settlement_.pfPayout = fullFill - overflow;
+                settlement_.pfPayout = fullFill - excess;
                 settlement_.pfRefund = (uint256(bidData.amount) * excess) / fullFill;
 
                 // Reduce the total amount in by the refund amount
-                totalAmountIn -= refundAmount;
+                totalAmountIn -= settlement_.pfRefund;
 
                 // Set bid as claimed
                 bidData.status = BidStatus.Claimed;
@@ -572,9 +572,6 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
 
             // totalIn and totalOut are not set since the auction does not clear
         }
-
-        // Set auction status to settled
-        lotData[lotId_].status = Status.Settled;
     }
 
     // ========== VALIDATION ========== //
