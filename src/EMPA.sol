@@ -869,19 +869,20 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
         // Calculate marginal price and number of winning bids
         // Cache capacity and scaling values
         // Capacity is always in base token units for this auction type
+        // The values are cast to uint256 to avoid overflow when multiplying uint96 values
         uint256 capacity = lotData[lotId_].capacity;
         uint256 baseScale = 10 ** lotData[lotId_].baseTokenDecimals;
         uint256 minimumPrice = lotData[lotId_].minimumPrice;
 
         // Iterate over bid queue (sorted in descending price) to calculate the marginal clearing price of the auction
-        uint256 marginalPrice;
+        uint96 marginalPrice;
         uint256 totalAmountIn;
         uint256 capacityExpended;
         uint64 partialFillBidId;
         {
             Queue storage queue = decryptedBids[lotId_];
             uint256 numBids = queue.getNumBids();
-            uint256 lastPrice;
+            uint96 lastPrice;
             for (uint256 i = 0; i < numBids; i++) {
                 // Load bid info (in quote token units)
                 uint64 bidId = queue.getMaxId();
@@ -893,8 +894,9 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
                 //
                 // There is no need to check if the bid is the minimum bid size, as this was checked during decryption
 
-                // Calculate the price of the bid
-                uint256 price = (uint256(qBid.amountIn) * baseScale) / uint256(qBid.minAmountOut);
+                // Calculate the price of the bid as uint256 to avoid an intermediate overflow
+                // We know this will not overflow when casting, as it was checked during decryption
+                uint96 price = uint96((uint256(qBid.amountIn) * baseScale) / uint256(qBid.minAmountOut));
 
                 // If the price is below the minimum price, the previous price is the marginal price
                 if (price < minimumPrice) {
@@ -955,8 +957,7 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
         // or if the marginal price is less than the minimum price
         if (capacityExpended >= lotData[lotId_].minFilled && marginalPrice >= minimumPrice) {
             // Auction can be settled at the marginal price if we reach this point
-            // TODO determine if this can overflow
-            bidData[lotId_].marginalPrice = uint96(marginalPrice);
+            bidData[lotId_].marginalPrice = marginalPrice;
 
             Routing storage routing = lotRouting[lotId_];
 
@@ -968,7 +969,7 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
                 // Check if the capacityExpended is overflowing
 
                 // Calculate the payout and refund amounts
-                uint256 fullFill = (uint256(_bid.amount) * baseScale) / marginalPrice;
+                uint256 fullFill = (uint256(_bid.amount) * baseScale) / uint256(marginalPrice);
                 uint256 overflow = capacityExpended - capacity;
                 uint256 payout = fullFill - overflow;
                 uint256 refundAmount = (uint256(_bid.amount) * overflow) / fullFill;
