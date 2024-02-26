@@ -435,6 +435,12 @@ abstract contract EmpaTest is Test, Permit2User {
         _;
     }
 
+    modifier givenBidIsClaimed(uint64 bidId_) {
+        vm.prank(_bidder);
+        _auctionHouse.claim(_lotId, bidId_);
+        _;
+    }
+
     // ===== Helper Functions ===== //
 
     function _formatBid(uint128 amountOut_) internal pure returns (uint256) {
