@@ -743,7 +743,7 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
         _revertIfLotSettled(lotId_);
 
         // Load routing data for the lot
-        Routing memory routing = lotRouting[lotId_];
+        Routing storage routing = lotRouting[lotId_];
 
         // Determine if the bidder is authorized to bid
         if (!_isAllowed(routing.allowlist, lotId_, msg.sender, allowlistProof_)) {
@@ -1117,7 +1117,7 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
         // Check that the private key is valid for the public key
         // We assume that all public keys are derived from the same generator: (1, 2)
         Point memory calcPubKey = ECIES.calcPubKey(Point(1, 2), privateKey_);
-        Point memory pubKey = bidData[lotId_].publicKey;
+        Point storage pubKey = bidData[lotId_].publicKey;
         if (calcPubKey.x != pubKey.x || calcPubKey.y != pubKey.y) revert Bid_InvalidPrivateKey();
 
         // Store the private key
@@ -1228,7 +1228,7 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
         uint256 privateKey_
     ) internal view returns (uint256 amountOut) {
         // Load the encrypted bid data
-        EncryptedBid memory encryptedBid = encryptedBids[lotId_][bidId_];
+        EncryptedBid storage encryptedBid = encryptedBids[lotId_][bidId_];
 
         // Decrypt the message
         // We expect a salt calculated as the keccak256 hash of lot id, bidder, and amount to provide some (not total) uniqueness to the encryption, even if the same shared secret is used
