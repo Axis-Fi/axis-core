@@ -581,6 +581,13 @@ abstract contract EmpaTest is Test, Permit2User {
         return uint96(product);
     }
 
+    function _mulDivDown(uint96 mul1_, uint96 mul2_, uint96 div_) internal pure returns (uint96) {
+        uint256 product = FixedPointMathLib.mulDivDown(mul1_, mul2_, div_);
+        if (product > type(uint96).max) revert("overflow");
+
+        return uint96(product);
+    }
+
     function _scaleQuoteTokenAmount(uint96 amount_) internal view returns (uint96) {
         return _mulDivUp(amount_, uint96(10 ** (_quoteToken.decimals())), _BASE_SCALE);
     }
