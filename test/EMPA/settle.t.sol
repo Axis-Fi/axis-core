@@ -7,8 +7,6 @@ import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 
 import {EncryptedMarginalPriceAuction, FeeManager} from "src/EMPA.sol";
 
-import {console2} from "forge-std/console2.sol";
-
 contract EmpaSettleTest is EmpaTest {
     uint96 internal constant _BID_PRICE_ONE_AMOUNT = 1e18;
     uint96 internal constant _BID_PRICE_ONE_AMOUNT_OUT = 1e18;
@@ -408,38 +406,35 @@ contract EmpaSettleTest is EmpaTest {
     }
 
     modifier givenBidsCauseCapacityOverflow() {
-        uint96 bidOneAmount = 1e18;
-        uint96 bidOneAmountOut = type(uint96).max - 100;
-        uint96 bidTwoAmount = 1e18;
-        uint96 bidTwoAmountOut = type(uint96).max - 100;
+        uint96 bidOneAmount = 1e22;
+        uint96 bidOneAmountOut = type(uint96).max - 1e24;
+        uint96 bidTwoAmount = 1e22;
+        uint96 bidTwoAmountOut = type(uint96).max - 1e24;
 
         // Capacity
         _createBid(bidOneAmount, bidOneAmountOut);
-        _createBid(bidTwoAmount, bidTwoAmountOut); // Will result in an overflow
+        _createBid(bidTwoAmount, bidTwoAmountOut);
 
-        // Marginal price
-        _marginalPrice = _mulDivUp(bidTwoAmount, _BASE_SCALE, bidTwoAmountOut);
+        // Marginal price = 12621933
+        _marginalPrice = _mulDivDown(bidTwoAmount, _BASE_SCALE, bidTwoAmountOut);
+
+        // These calculations mimic how the capacity usage is calculated in the settle function
+        uint256 baseTokensRequired = FixedPointMathLib.mulDivDown(bidOneAmount + bidTwoAmount, _BASE_SCALE, _marginalPrice);
+        uint256 bidOneAmountOutFull = FixedPointMathLib.mulDivDown(bidOneAmount, _BASE_SCALE, _marginalPrice);
+        uint256 bidOneAmountOutOverflow = baseTokensRequired - _LOT_CAPACITY_OVERFLOW;
 
         // Output
         // Bid one: 90 out (partial fill)
         // Bid two: bidTwoAmountOut out
 
-        uint96 bidTwoAmountOutActual = bidTwoAmountOut;
         uint96 bidTwoAmountInActual = bidTwoAmount;
-        console2.log("bidTwoAmountOutActual", bidTwoAmountOutActual);
-        console2.log("capacity", _LOT_CAPACITY_OVERFLOW);
-        uint96 bidOneAmountOutActual = _LOT_CAPACITY_OVERFLOW - bidTwoAmountOutActual;
-        console2.log("bidOneAmountOutActual", bidOneAmountOutActual);
-        uint96 bidOneAmountInActual =
-            _mulDivUp(bidOneAmountOutActual, bidOneAmount, bidOneAmountOut);
-        console2.log("bidOneAmountInActual", bidOneAmountInActual);
+        uint96 bidTwoAmountOutActual = uint96(FixedPointMathLib.mulDivDown(bidTwoAmount, _BASE_SCALE, _marginalPrice));
+        uint96 bidOneAmountOutActual = uint96(bidOneAmountOutFull - bidOneAmountOutOverflow);
+        uint96 bidOneAmountInActual = uint96(FixedPointMathLib.mulDivUp(bidOneAmount, bidOneAmountOutActual, bidOneAmountOutFull));
 
         uint96 bidAmountInSuccess = bidOneAmountInActual + bidTwoAmountInActual;
-        console2.log("bidAmountInSuccess", bidAmountInSuccess);
         uint96 bidAmountInFail = bidOneAmount - bidOneAmountInActual;
-        console2.log("bidAmountInFail", bidAmountInFail);
         uint96 bidAmountOutSuccess = bidOneAmountOutActual + bidTwoAmountOutActual;
-        console2.log("bidAmountOutSuccess", bidAmountOutSuccess);
 
         // Fees
         _expectedReferrerFee = _calculateReferrerFee(bidAmountInSuccess);

@@ -23,8 +23,6 @@ import {
 import {IHooks} from "src/interfaces/IHooks.sol";
 import {IAllowlist} from "src/interfaces/IAllowlist.sol";
 
-import {console2} from "forge-std/console2.sol";
-
 /// @title      Router
 /// @notice     An interface to define the routing of transactions to the appropriate auction module
 abstract contract Router {
@@ -959,7 +957,6 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
             // Auction can be settled at the marginal price if we reach this point
             // TODO determine if this can overflow
             bidData[lotId_].marginalPrice = uint96(marginalPrice);
-            console2.log("marginalPrice", marginalPrice);
 
             Routing storage routing = lotRouting[lotId_];
 
@@ -968,21 +965,13 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
                 // Load routing and bid data
                 Bid storage _bid = bids[lotId_][partialFillBidId];
 
-                console2.log("capacityExpended", capacityExpended);
-                console2.log("capacity", capacity);
-                console2.log("bid.amount", _bid.amount);
-
                 // Check if the capacityExpended is overflowing
 
                 // Calculate the payout and refund amounts
                 uint256 fullFill = (uint256(_bid.amount) * baseScale) / marginalPrice;
-                console2.log("fullFill", fullFill);
                 uint256 overflow = capacityExpended - capacity;
-                console2.log("overflow", overflow);
                 uint256 payout = fullFill - overflow;
-                console2.log("payout", payout);
                 uint256 refundAmount = (uint256(_bid.amount) * overflow) / fullFill;
-                console2.log("refundAmount", refundAmount);
 
                 // Reduce the total amount in by the refund amount
                 totalAmountIn -= refundAmount;
