@@ -463,9 +463,6 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
     /// @notice     Counter for auction lots
     uint96 public lotCounter;
 
-    // We use this to store addresses once and reference them using a shorter identifier
-    mapping(address user => uint64) public userIds;
-
     /// @notice     General information pertaining to auction lots
     mapping(uint96 lotId => Lot lot) public lotData;
 
@@ -570,8 +567,6 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
             );
         }
 
-        // Initialize bid data
-
         // publicKey must be a valid point on the alt_bn128 curve with generator point (1, 2)
         if (!ECIES.isOnBn128(params_.publicKey)) revert InvalidParams();
 
@@ -583,6 +578,7 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
             revert InvalidParams();
         }
 
+        // Initialize bid data
         BidData storage data = bidData[lotId];
         data.publicKey = params_.publicKey;
         data.nextBidId = 1;
@@ -1065,10 +1061,11 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
 
         // Calculate the bid price
         // All bids are decrypted before settlement, but invalid ones have minAmountOut set to 0
+        uint256 bidAmount = _bid.amount;
         uint256 baseScale = uint256(10) ** lotData[lotId_].baseTokenDecimals;
         uint256 bidPrice = _bid.minAmountOut == 0
             ? 0
-            : FixedPointMathLib.mulDivDown(_bid.amount, baseScale, _bid.minAmountOut);
+            : FixedPointMathLib.mulDivDown(bidAmount, baseScale, _bid.minAmountOut);
         uint256 marginalPrice = bidData[lotId_].marginalPrice;
 
         // If the bid price is greater than or equal the settled price, then payout expected amount
@@ -1079,17 +1076,17 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
         if (marginalPrice > 0 && bidPrice >= marginalPrice) {
             // Allocate quote token fees
             _allocateQuoteFees(
-                _bid.referrer, lotRouting[lotId_].owner, lotRouting[lotId_].quoteToken, _bid.amount
+                _bid.referrer, lotRouting[lotId_].owner, lotRouting[lotId_].quoteToken, bidAmount
             );
 
             // Calculate payout using marginal price
-            payoutAmount = FixedPointMathLib.mulDivDown(_bid.amount, baseScale, marginalPrice);
+            payoutAmount = FixedPointMathLib.mulDivDown(bidAmount, baseScale, marginalPrice);
 
             // Transfer payout to the bidder
             _sendPayout(lotId_, _bid.bidder, payoutAmount, lotRouting[lotId_]);
         } else {
             // Refund the bid amount to the bidder
-            quoteAmount = _bid.amount;
+            quoteAmount = bidAmount;
             Transfer.transfer(lotRouting[lotId_].quoteToken, _bid.bidder, quoteAmount, false);
         }
 
@@ -1464,12 +1461,6 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
         if (lotData[lotId_].start > uint48(block.timestamp)) revert Auction_WrongState(lotId_);
     }
 
-    /// @notice     Checks that the lot represented by `lotId_` has started
-    /// @dev        Should revert if the lot has started
-    function _revertIfLotStarted(uint96 lotId_) internal view virtual {
-        if (lotData[lotId_].start <= uint48(block.timestamp)) revert Auction_WrongState(lotId_);
-    }
-
     /// @notice     Checks that the lot represented by `lotId_` has not concluded
     /// @dev        Should revert if the lot has concluded
     function _revertIfLotConcluded(uint96 lotId_) internal view virtual {
@@ -1493,26 +1484,6 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
                 && lotData[lotId_].start <= block.timestamp
                 && lotData[lotId_].conclusion > block.timestamp
         ) revert Auction_WrongState(lotId_);
-    }
-
-    /// @notice     Checks that the lot represented by `lotId_` is active
-    /// @dev        Should revert if the lot is not active
-    ///             Inheriting contracts can override this to implement custom logic
-    ///
-    /// @param      lotId_  The lot ID
-    function _revertIfLotInactive(uint96 lotId_) internal view {
-        // Check that bids are allowed to be submitted for the lot
-        if (
-            lotData[lotId_].status != AuctionStatus.Created
-                || block.timestamp < lotData[lotId_].start
-                || block.timestamp >= lotData[lotId_].conclusion
-        ) revert Auction_WrongState(lotId_);
-    }
-
-    /// @notice     Reverts if the lot has already been decrypted
-    function _revertIfLotDecrypted(uint96 lotId_) internal view {
-        // Check that bids are allowed to be submitted for the lot
-        if (lotData[lotId_].status == AuctionStatus.Decrypted) revert Auction_WrongState(lotId_);
     }
 
     /// @notice     Checks that the lot represented by `lotId_` is not settled
