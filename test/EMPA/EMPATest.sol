@@ -9,7 +9,6 @@ import {Transfer} from "src/lib/Transfer.sol";
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 
 // Mocks
-import {MockERC20} from "lib/solmate/src/test/utils/mocks/MockERC20.sol";
 import {MockFeeOnTransferERC20} from "test/lib/mocks/MockFeeOnTransferERC20.sol";
 import {MockDerivativeModule} from "test/modules/derivatives/mocks/MockDerivativeModule.sol";
 import {MockAllowlist} from "test/modules/Auction/MockAllowlist.sol";
@@ -24,13 +23,11 @@ import {EncryptedMarginalPriceAuction, FeeManager} from "src/EMPA.sol";
 // Modules
 import {toKeycode, Veecode} from "src/modules/Modules.sol";
 
-import {console2} from "forge-std/console2.sol";
-
 abstract contract EmpaTest is Test, Permit2User {
     uint96 internal constant _BASE_SCALE = 1e18;
 
     MockFeeOnTransferERC20 internal _baseToken;
-    MockERC20 internal _quoteToken;
+    MockFeeOnTransferERC20 internal _quoteToken;
     MockDerivativeModule internal _mockDerivativeModule;
     MockAllowlist internal _mockAllowlist;
     MockEMPAHook internal _mockHook;
@@ -92,7 +89,7 @@ abstract contract EmpaTest is Test, Permit2User {
         vm.warp(1_000_000);
 
         _baseToken = new MockFeeOnTransferERC20("Base Token", "BASE", 18);
-        _quoteToken = new MockERC20("Quote Token", "QUOTE", 18);
+        _quoteToken = new MockFeeOnTransferERC20("Quote Token", "QUOTE", 18);
 
         _auctionHouse =
             new EncryptedMarginalPriceAuction(address(this), _PROTOCOL, _PERMIT2_ADDRESS);
@@ -198,9 +195,11 @@ abstract contract EmpaTest is Test, Permit2User {
         _;
     }
 
-    modifier givenHookHasBaseTokenBalance(uint256 amount_) {
+    modifier givenHookHasBaseTokenBalance(uint96 amount_) {
+        uint96 amountScaled = _scaleBaseTokenAmount(amount_);
+
         // Mint the amount to the hook
-        _baseToken.mint(address(_mockHook), amount_);
+        _baseToken.mint(address(_mockHook), amountScaled);
         _;
     }
 
@@ -354,11 +353,13 @@ abstract contract EmpaTest is Test, Permit2User {
         _;
     }
 
-    modifier givenLotIsDecrypted() {
-        // Get the number of bids
+    function _decryptLot() internal {
         EncryptedMarginalPriceAuction.BidData memory bidData = _getBidData(_lotId);
-
         _auctionHouse.decryptAndSortBids(_lotId, bidData.nextBidId - 1);
+    }
+
+    modifier givenLotIsDecrypted() {
+        _decryptLot();
         _;
     }
 
@@ -432,6 +433,12 @@ abstract contract EmpaTest is Test, Permit2User {
 
     modifier givenReferrerFeeIsSet(uint24 fee_) {
         _auctionHouse.setFee(FeeManager.FeeType.Referrer, fee_);
+        _;
+    }
+
+    modifier givenBidIsClaimed(uint64 bidId_) {
+        vm.prank(_bidder);
+        _auctionHouse.claim(_lotId, bidId_);
         _;
     }
 
@@ -576,6 +583,13 @@ abstract contract EmpaTest is Test, Permit2User {
 
     function _mulDivUp(uint96 mul1_, uint96 mul2_, uint96 div_) internal pure returns (uint96) {
         uint256 product = FixedPointMathLib.mulDivUp(mul1_, mul2_, div_);
+        if (product > type(uint96).max) revert("overflow");
+
+        return uint96(product);
+    }
+
+    function _mulDivDown(uint96 mul1_, uint96 mul2_, uint96 div_) internal pure returns (uint96) {
+        uint256 product = FixedPointMathLib.mulDivDown(mul1_, mul2_, div_);
         if (product > type(uint96).max) revert("overflow");
 
         return uint96(product);
