@@ -1007,10 +1007,9 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
             _sendPayment(routing.owner, totalAmountInLessFees, routing.quoteToken, routing.hooks);
 
             // If capacity expended is less than the total capacity, refund the remaining capacity to the seller
+            uint256 baseTokenToRefund;
             if (capacityExpended < capacity) {
-                Transfer.transfer(
-                    routing.baseToken, routing.owner, capacity - capacityExpended, false
-                );
+                baseTokenToRefund = capacity - capacityExpended;
             }
 
             if (routing.curated == true) {
@@ -1021,13 +1020,14 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
 
                 if (curatorFee > 0) _sendPayout(lotId_, routing.curator, curatorFee, routing);
 
-                // Refund the remaining curator fees to the owner
-                // TODO can be combined with the above transfer
                 if (curatorFee < routing.curatorFee) {
-                    Transfer.transfer(
-                        routing.baseToken, routing.owner, routing.curatorFee - curatorFee, false
-                    );
+                    baseTokenToRefund += routing.curatorFee - curatorFee;
                 }
+            }
+
+            // Refund any remaining base tokens to the seller
+            if (baseTokenToRefund > 0) {
+                Transfer.transfer(routing.baseToken, routing.owner, baseTokenToRefund, false);
             }
         } else {
             // Auction cannot be settled if we reach this point

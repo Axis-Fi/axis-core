@@ -1300,8 +1300,8 @@ contract EmpaSettleTest is EmpaTest {
 
     // [X] given that a bid's price results in a uint96 overflow
     //  [X] the settle function does not revert
-    // [ ] given the expended capacity results in a uint96 overflow
-    //  [ ] the settle function does not revert
+    // [X] given the expended capacity results in a uint96 overflow
+    //  [X] the settle function does not revert
 
     function test_marginalPriceOverflow()
         external
