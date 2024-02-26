@@ -12,8 +12,8 @@ contract MockBatchAuctionModule is AuctionModule {
         Submitted,
         Decrypted,
         Claimed // Bid status will also be set to claimed if the bid is cancelled/refunded
-    }
 
+    }
 
     /// @notice        Core data for a bid
     ///
@@ -29,7 +29,6 @@ contract MockBatchAuctionModule is AuctionModule {
         address referrer; // 20 = 32 - end of slot 2
         BidStatus status; // 1 - slot 3
     }
-
 
     uint64[] public bidIds;
     uint64 public nextBidId;
@@ -70,7 +69,7 @@ contract MockBatchAuctionModule is AuctionModule {
         address bidder_,
         address referrer_,
         uint96 amount_,
-        bytes calldata 
+        bytes calldata
     ) internal override returns (uint64) {
         // Create a new bid
         Bid memory newBid = Bid({
@@ -119,15 +118,9 @@ contract MockBatchAuctionModule is AuctionModule {
         // TODO implement?
     }
 
-    function settle(
-        uint96 lotId_
-    ) external override returns (Settlement memory, bytes memory) {}
+    function settle(uint96 lotId_) external override returns (Settlement memory, bytes memory) {}
 
-    function _settle(uint96 lotId_)
-        internal
-        override
-        returns (Settlement memory, bytes memory)
-    {}
+    function _settle(uint96 lotId_) internal override returns (Settlement memory, bytes memory) {}
 
     function getBid(uint96 lotId_, uint64 bidId_) external view returns (Bid memory bid_) {
         bid_ = bidData[lotId_][bidId_];

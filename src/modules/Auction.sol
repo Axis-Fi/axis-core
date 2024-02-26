@@ -49,8 +49,8 @@ abstract contract Auction {
     /// @param      purchased           The amount of quote tokens purchased
     // TODO pack slots
     struct Lot {
-        uint48 start; // 6 + 
-        uint48 conclusion; // 
+        uint48 start; // 6 +
+        uint48 conclusion; //
         uint8 quoteTokenDecimals;
         uint8 baseTokenDecimals;
         bool capacityInQuote;
@@ -151,12 +151,14 @@ abstract contract Auction {
         address bidder_
     ) external virtual returns (uint256 refund);
 
-
     function claimBid(
         uint96 lotId_,
         uint64 bidId_,
         address bidder_
-    ) external virtual returns (address referrer, uint256 paid, uint256 payout, bytes memory auctionOutput);
+    )
+        external
+        virtual
+        returns (address referrer, uint256 paid, uint256 payout, bytes memory auctionOutput);
 
     /// @notice     Settle a batch auction lot with on-chain storage and settlement
     /// @dev        The implementing function should handle the following:
@@ -484,7 +486,12 @@ abstract contract AuctionModule is Auction, Module {
         uint96 lotId_,
         uint64 bidId_,
         address bidder_
-    ) external override onlyInternal returns (address referrer, uint256 paid, uint256 payout, bytes memory auctionOutput) {
+    )
+        external
+        override
+        onlyInternal
+        returns (address referrer, uint256 paid, uint256 payout, bytes memory auctionOutput)
+    {
         // Standard validation
         _revertIfLotInvalid(lotId_);
         _revertIfBidInvalid(lotId_, bidId_);
@@ -499,7 +506,10 @@ abstract contract AuctionModule is Auction, Module {
     function _claimBid(
         uint96 lotId_,
         uint64 bidId_
-    ) internal virtual returns (address referrer, uint256 paid, uint256 payout, bytes memory auctionOutput);
+    )
+        internal
+        virtual
+        returns (address referrer, uint256 paid, uint256 payout, bytes memory auctionOutput);
 
     /// @inheritdoc Auction
     /// @dev        Implements a basic settle function that:
@@ -521,7 +531,8 @@ abstract contract AuctionModule is Auction, Module {
         virtual
         override
         onlyInternal
-        returns (Settlement memory settlement, bytes memory auctionOutput) {
+        returns (Settlement memory settlement, bytes memory auctionOutput)
+    {
         // Standard validation
         _revertIfLotInvalid(lotId_);
         _revertIfBeforeLotStart(lotId_);

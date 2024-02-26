@@ -3,6 +3,7 @@ pragma solidity 0.8.19;
 
 import {ERC20} from "lib/solmate/src/tokens/ERC20.sol";
 import {Transfer} from "src/lib/Transfer.sol";
+import {FixedPointMathLib as Math} from "lib/solmate/src/utils/FixedPointMathLib.sol";
 
 import {Auctioneer} from "src/bases/Auctioneer.sol";
 import {FeeManager} from "src/bases/FeeManager.sol";
@@ -254,9 +255,11 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
 
         // Calculate the curator fee (if applicable)
         Curation storage curation = lotCuration[params_.lotId];
-        uint256 curatorFee = curation.curated ? _calculatePayoutFees(
-            keycodeFromVeecode(routing.auctionReference), curation.curator, payoutAmount
-        ) : 0;
+        uint256 curatorFee = curation.curated
+            ? _calculatePayoutFees(
+                keycodeFromVeecode(routing.auctionReference), curation.curator, payoutAmount
+            )
+            : 0;
 
         // Collect payout from auction owner
         _collectPayout(params_.lotId, amountLessFees, payoutAmount + curatorFee, routing);
@@ -315,11 +318,7 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
         // Record the bid on the auction module
         // The module will determine if the bid is valid - minimum bid size, minimum price, auction status, etc
         bidId = getModuleForId(params_.lotId).bid(
-            params_.lotId,
-            msg.sender,
-            params_.referrer,
-            params_.amount,
-            params_.auctionData
+            params_.lotId, msg.sender, params_.referrer, params_.amount, params_.auctionData
         );
 
         // Transfer the quote token from the bidder
@@ -367,7 +366,8 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
 
         // Claim the bid on the auction module
         // The auction module is responsible for validating the bid and authorizing the caller
-        (address referrer, uint256 paid, uint256 payout, bytes memory auctionOutput) = getModuleForId(lotId_).claimBid(lotId_, bidId_, msg.sender);
+        (address referrer, uint256 paid, uint256 payout, bytes memory auctionOutput) =
+            getModuleForId(lotId_).claimBid(lotId_, bidId_, msg.sender);
 
         // Load routing data for the lot
         Routing storage routing = lotRouting[lotId_];
@@ -376,7 +376,13 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
         // Otherwise, it was not and the bidder is refunded the paid amount.
         if (payout > 0) {
             // Allocate quote and protocol fees for bid
-            _allocateQuoteFees(keycodeFromVeecode(routing.auctionReference), referrer, routing.owner, routing.quoteToken, paid);
+            _allocateQuoteFees(
+                keycodeFromVeecode(routing.auctionReference),
+                referrer,
+                routing.owner,
+                routing.quoteToken,
+                paid
+            );
 
             // Reduce prefunding by the payout amount
             unchecked {
@@ -410,6 +416,11 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
     ///             - sending the payout to each bidder fails
     ///             - re-entrancy is detected
     function settle(uint96 lotId_) external override nonReentrant {
+        // TODO this implementation is pretty opinionated about only having one partial fill.
+        // The initial EMPAM works this way, but other batch auctions may not.
+        // It may be better to allow arbitrary partial fills and handle them in the claimBid function instead of here.
+        // However, this may change the desired behavior.
+
         // Validation
         _isLotValid(lotId_);
 
@@ -434,15 +445,17 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
             // If a referrer is not set, that portion of the fee defaults to the protocol
             uint256 totalInLessFees;
             {
-                (, uint256 toProtocol) = calculateQuoteFees(keycodeFromVeecode(routing.auctionReference), false, settlement.totalIn);
+                (, uint256 toProtocol) = calculateQuoteFees(
+                    keycodeFromVeecode(routing.auctionReference), false, settlement.totalIn
+                );
                 totalInLessFees = settlement.totalIn - toProtocol;
             }
 
             // Check if there was a partial fill and handle the payout + refund
             if (settlement.pfBidder != address(0)) {
                 // Reconstruct bid amount from the settlement price and the amount out
-                // TODO roundup
-                uint256 filledAmount = (settlement.pfPayout * settlement.totalIn) / settlement.totalOut;
+                uint256 filledAmount =
+                    Math.mulDivDown(settlement.pfPayout, settlement.totalIn, settlement.totalOut);
 
                 // Allocate quote and protocol fees for bid
                 _allocateQuoteFees(
@@ -459,8 +472,12 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
                 }
 
                 // Send refund and payout to the bidder
-                Transfer.transfer(routing.quoteToken, settlement.pfBidder, settlement.pfRefund, false);
-                _sendPayout(lotId_, settlement.pfBidder, settlement.pfPayout, routing, auctionOutput);
+                Transfer.transfer(
+                    routing.quoteToken, settlement.pfBidder, settlement.pfRefund, false
+                );
+                _sendPayout(
+                    lotId_, settlement.pfBidder, settlement.pfPayout, routing, auctionOutput
+                );
             }
 
             // Send payment in bulk to auction owner
@@ -468,19 +485,21 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
 
             // Load curator data and calculate fee
             Curation storage curation = lotCuration[lotId_];
-            uint256 curatorFee = curation.curated ? _calculatePayoutFees(
-                keycodeFromVeecode(routing.auctionReference), curation.curator, capacity
-            ) : 0; 
+            uint256 curatorFee = curation.curated
+                ? _calculatePayoutFees(
+                    keycodeFromVeecode(routing.auctionReference), curation.curator, capacity
+                )
+                : 0;
 
             // If capacity expended is less than the total capacity, refund the remaining capacity to the seller and proportionally reduce the curator fee
             if (settlement.totalOut < capacity) {
                 uint256 capacityRefund = capacity - settlement.totalOut;
 
                 if (curatorFee > 0) {
-                    uint256 feeRefund = (curatorFee * capacityRefund) / capacity;
+                    uint256 feeRefund = Math.mulDivDown(curatorFee, capacityRefund, capacity);
                     capacityRefund += feeRefund;
                     curatorFee -= feeRefund;
-                } 
+                }
 
                 // Reduce the prefunding amount by the refund
                 unchecked {
@@ -488,9 +507,7 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
                 }
 
                 // Transfer the remaining capacity to the seller
-                Transfer.transfer(
-                    routing.baseToken, routing.owner, capacityRefund, false
-                );
+                Transfer.transfer(routing.baseToken, routing.owner, capacityRefund, false);
             }
 
             // Reduce prefunding by curator fee and send, if applicable
@@ -503,10 +520,12 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
         } else {
             // Auction did not settle, refund the capacity to the seller
             Curation storage curation = lotCuration[lotId_];
-            uint256 curatorFee = curation.curated ? _calculatePayoutFees(
-                keycodeFromVeecode(routing.auctionReference), curation.curator, capacity
-            ) : 0;
-            
+            uint256 curatorFee = curation.curated
+                ? _calculatePayoutFees(
+                    keycodeFromVeecode(routing.auctionReference), curation.curator, capacity
+                )
+                : 0;
+
             uint256 refundAmount = capacity + curatorFee; // can add curator fee without checking since it will be zero if not curated
 
             // Reduce the prefunding amount
@@ -585,7 +604,6 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
         if (fee_ > _FEE_DECIMALS) revert InvalidFee();
 
         // Set fee based on type
-        // TODO should we have hard-coded maximums for these fees?
         // Or a combination of protocol and referrer fee since they are both in the quoteToken?
         if (type_ == FeeType.Protocol) {
             fees[auctionType_].protocol = fee_;
