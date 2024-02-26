@@ -660,11 +660,10 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
         }
         // Otherwise fallback to a standard ERC20 transfer
         else {
+            // Also checks for fee-on-transfer
             Transfer.transferFrom(
                 routing_.baseToken, msg.sender, address(this), params_.capacity, true
             );
-
-            // TODO check for fee on transfer
         }
 
         emit AuctionCreated(lotId, ipfsHash);

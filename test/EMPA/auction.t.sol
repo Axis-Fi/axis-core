@@ -27,8 +27,6 @@ contract EmpaAuctionTest is EmpaTest {
     // [X] reverts when quote token is 0
     // [X] creates the auction lot
 
-    // TODO quote token fee on transfer?
-
     function testReverts_whenBaseTokenDecimalsAreOutOfBounds(uint8 decimals_) external {
         uint8 decimals = uint8(bound(decimals_, 0, 25));
         vm.assume(decimals < 6 || decimals > 18);

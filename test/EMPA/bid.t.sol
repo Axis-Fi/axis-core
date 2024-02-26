@@ -2,6 +2,7 @@
 pragma solidity 0.8.19;
 
 import {EmpaTest} from "test/EMPA/EMPATest.sol";
+import {Transfer} from "src/lib/Transfer.sol";
 
 import {EncryptedMarginalPriceAuction} from "src/EMPA.sol";
 
@@ -15,6 +16,8 @@ contract EmpaBidTest is EmpaTest {
     //  [X] it reverts
     // [X] given the auction is concluded
     //  [X] it reverts
+    // [X] given the quote token is fee-on-transfer
+    //  [X] it reverts
     // [X] given the auction has an allowlist
     //  [X] reverts if the sender is not on the allowlist
     //  [X] it succeeds
@@ -25,6 +28,12 @@ contract EmpaBidTest is EmpaTest {
     // [X] when Permit2 approval is not provided
     //  [X] it transfers the tokens from the sender
     // [X] it records the bid
+
+    modifier givenQuoteTokenTakesFeeOnTransfer() {
+        // Set the fee on transfer
+        _quoteToken.setTransferFee(1000);
+        _;
+    }
 
     function test_whenLotIdIsInvalid_reverts()
         external
@@ -180,6 +189,35 @@ contract EmpaBidTest is EmpaTest {
         );
     }
 
+    function test_whenPermit2ApprovalIsProvided_givenQuoteTokenFeeOnTransfer_reverts()
+        external
+        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenLotIsCreated
+        givenLotHasStarted
+        givenBidderHasQuoteTokenBalance(_BID_AMOUNT)
+        givenQuoteTokenTakesFeeOnTransfer
+        whenPermit2ApprovalIsProvided(_BID_AMOUNT)
+        whenBidAmountOutIsEncrypted(_BID_AMOUNT, 1e18)
+    {
+        // Expect revert
+        bytes memory err =
+            abi.encodeWithSelector(Transfer.UnsupportedToken.selector, address(_quoteToken));
+        vm.expectRevert(err);
+
+        // Call the function
+        vm.prank(_bidder);
+        _bidId = _auctionHouse.bid(
+            _lotId,
+            _REFERRER,
+            _BID_AMOUNT,
+            _encryptedBidAmountOut,
+            _bidPublicKey,
+            _allowlistProof,
+            _permit2Data
+        );
+    }
+
     function test_whenPermit2ApprovalIsProvided()
         external
         givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
@@ -220,6 +258,35 @@ contract EmpaBidTest is EmpaTest {
             uint8(bid.status),
             uint8(EncryptedMarginalPriceAuction.BidStatus.Submitted),
             "bidStatus mismatch"
+        );
+    }
+
+    function test_whenPermit2ApprovalIsNotProvided_givenQuoteTokenFeeOnTransfer_reverts()
+        external
+        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenLotIsCreated
+        givenLotHasStarted
+        givenBidderHasQuoteTokenBalance(_BID_AMOUNT)
+        givenBidderHasQuoteTokenAllowance(_BID_AMOUNT)
+        givenQuoteTokenTakesFeeOnTransfer
+        whenBidAmountOutIsEncrypted(_BID_AMOUNT, 1e18)
+    {
+        // Expect revert
+        bytes memory err =
+            abi.encodeWithSelector(Transfer.UnsupportedToken.selector, address(_quoteToken));
+        vm.expectRevert(err);
+
+        // Call the function
+        vm.prank(_bidder);
+        _bidId = _auctionHouse.bid(
+            _lotId,
+            _REFERRER,
+            _BID_AMOUNT,
+            _encryptedBidAmountOut,
+            _bidPublicKey,
+            _allowlistProof,
+            _permit2Data
         );
     }
 

@@ -30,7 +30,7 @@ abstract contract EmpaTest is Test, Permit2User {
     uint96 internal constant _BASE_SCALE = 1e18;
 
     MockFeeOnTransferERC20 internal _baseToken;
-    MockERC20 internal _quoteToken;
+    MockFeeOnTransferERC20 internal _quoteToken;
     MockDerivativeModule internal _mockDerivativeModule;
     MockAllowlist internal _mockAllowlist;
     MockEMPAHook internal _mockHook;
@@ -92,7 +92,7 @@ abstract contract EmpaTest is Test, Permit2User {
         vm.warp(1_000_000);
 
         _baseToken = new MockFeeOnTransferERC20("Base Token", "BASE", 18);
-        _quoteToken = new MockERC20("Quote Token", "QUOTE", 18);
+        _quoteToken = new MockFeeOnTransferERC20("Quote Token", "QUOTE", 18);
 
         _auctionHouse =
             new EncryptedMarginalPriceAuction(address(this), _PROTOCOL, _PERMIT2_ADDRESS);
