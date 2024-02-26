@@ -76,5 +76,6 @@ contract EmpaClaimRewardsTest is EmpaTest {
         _auctionHouse.claimRewards(address(_quoteToken));
 
         assertEq(_quoteToken.balanceOf(_PROTOCOL), balanceBefore + expectedFee);
+        assertEq(_auctionHouse.rewards(_PROTOCOL, _quoteToken), 0);
     }
 }
