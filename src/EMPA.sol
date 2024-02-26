@@ -818,11 +818,15 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
         // Remove bid from list of bids to decrypt
         uint64[] storage bidIds = bidData[lotId_].bidIds;
         uint256 len = bidIds.length;
-        for (uint256 i; i < len; i++) {
+        for (uint256 i; i < len;) {
             if (bidIds[i] == bidId_) {
                 bidIds[i] = bidIds[len - 1];
                 bidIds.pop();
                 break;
+            }
+
+            unchecked {
+                i++;
             }
         }
 
@@ -881,7 +885,7 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
             Queue storage queue = decryptedBids[lotId_];
             uint256 numBids = queue.getNumBids();
             uint96 lastPrice;
-            for (uint256 i = 0; i < numBids; i++) {
+            for (uint256 i = 0; i < numBids;) {
                 // Load bid info (in quote token units)
                 uint64 bidId = queue.getMaxId();
                 QueueBid memory qBid = queue.delMax();
@@ -925,6 +929,10 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
                 // If we have reached the end of the queue, we have found the marginal price and the maximum capacity that can be filled
                 if (i == numBids - 1) {
                     marginalPrice = price;
+                }
+
+                unchecked {
+                    i++;
                 }
             }
         }
@@ -1007,7 +1015,9 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
             // If capacity expended is less than the total capacity, refund the remaining capacity to the seller
             uint256 baseTokenToRefund;
             if (capacityExpended < capacity) {
-                baseTokenToRefund = capacity - capacityExpended;
+                unchecked {
+                    baseTokenToRefund = capacity - capacityExpended;
+                }
             }
 
             if (routing.curated == true) {
@@ -1176,7 +1186,7 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
         // Iterate over the provided number of bids, decrypt them, and then store them in the sorted bid queue
         // All submitted bids will be marked as decrypted, but only those with valid values will have the minAmountOut set and be stored in the sorted bid queue
         uint96 minBidSize = lotData[lotId_].minBidSize;
-        for (uint64 i; i < num_; i++) {
+        for (uint64 i; i < num_;) {
             // Load encrypted bid
             uint64 bidId = bidIds[nextDecryptIndex + i];
 
@@ -1212,6 +1222,10 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
 
             // Emit event
             emit BidDecrypted(lotId_, bidId, bidAmount, amountOut);
+
+            unchecked {
+                i++;
+            }
         }
 
         // Increment next decrypt index
