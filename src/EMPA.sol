@@ -860,15 +860,16 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
 
         // Settle the auction
         // Check that auction is in the right state for settlement
-        if (lotData[lotId_].status != AuctionStatus.Decrypted) revert Auction_WrongState(lotId_);
+        Lot storage lot = lotData[lotId_];
+        if (lot.status != AuctionStatus.Decrypted) revert Auction_WrongState(lotId_);
 
         // Calculate marginal price and number of winning bids
         // Cache capacity and scaling values
         // Capacity is always in base token units for this auction type
         // The values are cast to uint256 to avoid overflow when multiplying uint96 values
-        uint256 capacity = lotData[lotId_].capacity;
-        uint256 baseScale = 10 ** lotData[lotId_].baseTokenDecimals;
-        uint256 minimumPrice = lotData[lotId_].minimumPrice;
+        uint256 capacity = lot.capacity;
+        uint256 baseScale = 10 ** lot.baseTokenDecimals;
+        uint256 minimumPrice = lot.minimumPrice;
 
         // Iterate over bid queue (sorted in descending price) to calculate the marginal clearing price of the auction
         uint96 marginalPrice;
@@ -892,8 +893,8 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
 
                 // Calculate the price of the bid as uint256 to avoid an intermediate overflow
                 // We know this will not overflow when casting, as it was checked during decryption
-                uint96 price =
-                    uint96((uint256(qBid.amountIn) * baseScale) / uint256(qBid.minAmountOut));
+                uint256 amountIn = uint256(qBid.amountIn);
+                uint96 price = uint96((amountIn * baseScale) / uint256(qBid.minAmountOut));
 
                 // If the price is below the minimum price, the previous price is the marginal price
                 if (price < minimumPrice) {
@@ -905,7 +906,7 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
                 lastPrice = price;
 
                 // Increment total amount in
-                totalAmountIn += qBid.amountIn;
+                totalAmountIn += amountIn;
 
                 // Determine total capacity expended at this price (in base token units)
                 // quote scale * base scale / quote scale = base scale
@@ -948,10 +949,10 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
 
         // Determine if the auction can be filled, if so settle the auction, otherwise refund the seller
         // We set the status as settled either way to denote this function has been executed
-        lotData[lotId_].status = AuctionStatus.Settled;
+        lot.status = AuctionStatus.Settled;
         // Auction cannot be settled if the total filled is less than the minimum filled
         // or if the marginal price is less than the minimum price
-        if (capacityExpended >= lotData[lotId_].minFilled && marginalPrice >= minimumPrice) {
+        if (capacityExpended >= lot.minFilled && marginalPrice >= minimumPrice) {
             // Auction can be settled at the marginal price if we reach this point
             bidData[lotId_].marginalPrice = marginalPrice;
 
@@ -1014,11 +1015,9 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
                     routing.curator, capacityExpended > capacity ? capacity : capacityExpended
                 );
 
-                if (curatorFee > 0) _sendPayout(lotId_, routing.curator, curatorFee, routing);
+                baseTokenToRefund += routing.curatorFee - curatorFee;
 
-                if (curatorFee < routing.curatorFee) {
-                    baseTokenToRefund += routing.curatorFee - curatorFee;
-                }
+                if (curatorFee > 0) _sendPayout(lotId_, routing.curator, curatorFee, routing);
             }
 
             // Refund any remaining base tokens to the seller
@@ -1194,23 +1193,24 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
             // Set bid status to decrypted
             Bid storage _bid = bids[lotId_][bidId];
             _bid.status = BidStatus.Decrypted;
+            uint96 bidAmount = _bid.amount;
 
             // Only store the decrypt if the amount out is greater than or equal to the minimum bid size
             if (amountOut > 0 && amountOut >= minBidSize) {
                 // Only store the decrypt if the price does not overflow
                 if (
                     FixedPointMathLib.mulDivDown(
-                        _bid.amount, 10 ** lotData[lotId_].baseTokenDecimals, amountOut
+                        bidAmount, 10 ** lotData[lotId_].baseTokenDecimals, amountOut
                     ) < type(uint96).max
                 ) {
                     // Store the decrypt in the sorted bid queue and set the min amount out on the bid
-                    decryptedBids[lotId_].insert(bidId, _bid.amount, amountOut);
+                    decryptedBids[lotId_].insert(bidId, bidAmount, amountOut);
                     _bid.minAmountOut = amountOut;
                 }
             }
 
             // Emit event
-            emit BidDecrypted(lotId_, bidId, _bid.amount, amountOut);
+            emit BidDecrypted(lotId_, bidId, bidAmount, amountOut);
         }
 
         // Increment next decrypt index
