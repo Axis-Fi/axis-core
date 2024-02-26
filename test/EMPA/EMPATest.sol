@@ -353,11 +353,13 @@ abstract contract EmpaTest is Test, Permit2User {
         _;
     }
 
-    modifier givenLotIsDecrypted() {
-        // Get the number of bids
+    function _decryptLot() internal {
         EncryptedMarginalPriceAuction.BidData memory bidData = _getBidData(_lotId);
-
         _auctionHouse.decryptAndSortBids(_lotId, bidData.nextBidId - 1);
+    }
+
+    modifier givenLotIsDecrypted() {
+        _decryptLot();
         _;
     }
 

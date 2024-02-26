@@ -934,7 +934,6 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
         }
 
         // Delete the rest of the decrypted bids queue for a gas refund
-        // TODO make sure this iteration doesn't cause out of gas issues, but it shouldn't due to the storage refunds
         {
             Queue storage queue = decryptedBids[lotId_];
             uint256 remainingBids = queue.getNumBids();

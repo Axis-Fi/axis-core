@@ -7,6 +7,8 @@ import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 
 import {EncryptedMarginalPriceAuction} from "src/EMPA.sol";
 
+import {console2} from "forge-std/console2.sol";
+
 contract EmpaSettleTest is EmpaTest {
     uint96 internal constant _BID_PRICE_ONE_AMOUNT = 1e18;
     uint96 internal constant _BID_PRICE_ONE_AMOUNT_OUT = 1e18;
@@ -460,6 +462,22 @@ contract EmpaSettleTest is EmpaTest {
         _expectedAuctionOwnerQuoteTokenBalance = bidOneAmountInActual + bidTwoAmountInActual
             - _expectedReferrerFee - _expectedProtocolFee; // Actual payout minus fees
         _expectedBidderQuoteTokenBalance = bidAmountInFail; // Partial fill returned
+        _;
+    }
+
+    modifier givenLargeNumberOfUnfilledBids() {
+        // Create 10 bids that will fill capacity
+        for (uint256 i; i < 10; i++) {
+            _createBid(2e18, 1e18);
+        }
+
+        // Create more bids that will not be filled
+        for (uint256 i; i < 1500; i++) {
+            _createBid(2e18, 1e18);
+        }
+
+        // Marginal price: 2
+        _marginalPrice = _scaleQuoteTokenAmount(2 * _BASE_SCALE);
         _;
     }
 
@@ -935,6 +953,36 @@ contract EmpaSettleTest is EmpaTest {
         _assertBaseTokenBalances();
         _assertQuoteTokenBalances();
         _assertAccruedFees();
+    }
+
+    function test_someBidsBelowMinimumPrice_gasUsage()
+        external
+        givenReferrerFeeIsSet(_REFERRER_FEE_PERCENT)
+        givenProtocolFeeIsSet(_PROTOCOL_FEE_PERCENT)
+        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenCuratorIsSet
+        givenCuratorFeeIsSet
+        givenLotIsCreated
+        givenLotHasStarted
+        givenLargeNumberOfUnfilledBids
+        givenLotHasConcluded
+        givenPrivateKeyIsSubmitted
+        givenLotIsDecrypted
+    {
+        // Call function
+        uint256 gasBefore = gasleft();
+        _auctionHouse.settle(_lotId);
+        uint256 gasAfter = gasleft();
+        console2.log("gas used", gasBefore - gasAfter);
+
+        // Validate bid data
+        EncryptedMarginalPriceAuction.BidData memory bidData = _getBidData(_lotId);
+        assertEq(bidData.marginalPrice, _marginalPrice, "marginal price");
+
+        // Validate lot data
+        EncryptedMarginalPriceAuction.Lot memory lot = _getLotData(_lotId);
+        assertEq(uint8(lot.status), uint8(EncryptedMarginalPriceAuction.AuctionStatus.Settled));
     }
 
     function test_partialFill()
