@@ -5,7 +5,7 @@ pragma solidity 0.8.19;
 import {EmpaTest} from "test/EMPA/EMPATest.sol";
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 
-import {EncryptedMarginalPriceAuction, FeeManager} from "src/EMPA.sol";
+import {EncryptedMarginalPriceAuction} from "src/EMPA.sol";
 
 contract EmpaSettleTest is EmpaTest {
     uint96 internal constant _BID_PRICE_ONE_AMOUNT = 1e18;

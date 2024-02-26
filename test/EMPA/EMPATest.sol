@@ -9,7 +9,6 @@ import {Transfer} from "src/lib/Transfer.sol";
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 
 // Mocks
-import {MockERC20} from "lib/solmate/src/test/utils/mocks/MockERC20.sol";
 import {MockFeeOnTransferERC20} from "test/lib/mocks/MockFeeOnTransferERC20.sol";
 import {MockDerivativeModule} from "test/modules/derivatives/mocks/MockDerivativeModule.sol";
 import {MockAllowlist} from "test/modules/Auction/MockAllowlist.sol";
@@ -23,8 +22,6 @@ import {EncryptedMarginalPriceAuction, FeeManager} from "src/EMPA.sol";
 
 // Modules
 import {toKeycode, Veecode} from "src/modules/Modules.sol";
-
-import {console2} from "forge-std/console2.sol";
 
 abstract contract EmpaTest is Test, Permit2User {
     uint96 internal constant _BASE_SCALE = 1e18;
