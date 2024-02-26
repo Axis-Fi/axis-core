@@ -1,14 +1,15 @@
 /// SPDX-License-Identifier: AGPL-3.0
 pragma solidity 0.8.19;
 
-import {ERC20} from "lib/solmate/src/tokens/ERC20.sol";
-import {ReentrancyGuard} from "lib/solmate/src/utils/ReentrancyGuard.sol";
-import {Owned} from "lib/solmate/src/auth/Owned.sol";
+import {ERC20} from "solmate/tokens/ERC20.sol";
+import {ReentrancyGuard} from "solmate/utils/ReentrancyGuard.sol";
+import {Owned} from "solmate/auth/Owned.sol";
+import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
+
 import {Transfer} from "src/lib/Transfer.sol";
 import {MaxPriorityQueue, Queue, Bid as QueueBid} from "src/lib/MaxPriorityQueue.sol";
 import {ECIES, Point} from "src/lib/ECIES.sol";
 import {FixedMath} from "src/lib/FixedMath.sol";
-import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 
 import {DerivativeModule} from "src/modules/Derivative.sol";
 
