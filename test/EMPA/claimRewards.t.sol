@@ -22,7 +22,8 @@ contract EmpaClaimRewardsTest is EmpaTest {
         assertEq(_quoteToken.balanceOf(_bidder), balanceBefore);
     }
 
-    function test_untrackedToken() external
+    function test_untrackedToken()
+        external
         givenReferrerFeeIsSet(_REFERRER_FEE_PERCENT)
         givenProtocolFeeIsSet(_PROTOCOL_FEE_PERCENT)
         givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
@@ -48,7 +49,8 @@ contract EmpaClaimRewardsTest is EmpaTest {
         assertEq(_baseToken.balanceOf(_bidder), balanceBefore);
     }
 
-    function test_protocol() external
+    function test_protocol()
+        external
         givenReferrerFeeIsSet(_REFERRER_FEE_PERCENT)
         givenProtocolFeeIsSet(_PROTOCOL_FEE_PERCENT)
         givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
