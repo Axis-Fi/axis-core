@@ -257,7 +257,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         return uint256(bids[lotId_][bidId_].amount);
     }
 
-    function _claimBid(uint96 lotId_, uint64 bidId_) internal override returns (address referrer, uint256 paid, uint256 payout, bytes memory auctionOutput) {
+    function _claimBid(uint96 lotId_, uint64 bidId_) internal override returns (address referrer, uint256 paid, uint256 payout, bytes memory) {
         // Load bid data
         Bid storage bidData = bids[lotId_][bidId_];
 
@@ -450,7 +450,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
 
     // ========== SETTLEMENT ========== //
     
-    function _settle(uint96 lotId_) internal override returns (Settlement memory settlement_, bytes memory auctionOutput_) {
+    function _settle(uint96 lotId_) internal override returns (Settlement memory settlement_, bytes memory) {
         // Settle the auction
         // Check that auction is in the right state for settlement
         if (auctionData[lotId_].status != Auction.Status.Decrypted) revert Auction_WrongState(lotId_);

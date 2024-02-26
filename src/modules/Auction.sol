@@ -518,6 +518,7 @@ abstract contract AuctionModule is Auction, Module {
     ///             - Updating the lot data
     function settle(uint96 lotId_)
         external
+        virtual
         override
         onlyInternal
         returns (Settlement memory settlement, bytes memory auctionOutput) {
