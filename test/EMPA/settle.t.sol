@@ -419,8 +419,10 @@ contract EmpaSettleTest is EmpaTest {
         _marginalPrice = _mulDivDown(bidTwoAmount, _BASE_SCALE, bidTwoAmountOut);
 
         // These calculations mimic how the capacity usage is calculated in the settle function
-        uint256 baseTokensRequired = FixedPointMathLib.mulDivDown(bidOneAmount + bidTwoAmount, _BASE_SCALE, _marginalPrice);
-        uint256 bidOneAmountOutFull = FixedPointMathLib.mulDivDown(bidOneAmount, _BASE_SCALE, _marginalPrice);
+        uint256 baseTokensRequired =
+            FixedPointMathLib.mulDivDown(bidOneAmount + bidTwoAmount, _BASE_SCALE, _marginalPrice);
+        uint256 bidOneAmountOutFull =
+            FixedPointMathLib.mulDivDown(bidOneAmount, _BASE_SCALE, _marginalPrice);
         uint256 bidOneAmountOutOverflow = baseTokensRequired - _LOT_CAPACITY_OVERFLOW;
 
         // Output
@@ -428,9 +430,12 @@ contract EmpaSettleTest is EmpaTest {
         // Bid two: bidTwoAmountOut out
 
         uint96 bidTwoAmountInActual = bidTwoAmount;
-        uint96 bidTwoAmountOutActual = uint96(FixedPointMathLib.mulDivDown(bidTwoAmount, _BASE_SCALE, _marginalPrice));
+        uint96 bidTwoAmountOutActual =
+            uint96(FixedPointMathLib.mulDivDown(bidTwoAmount, _BASE_SCALE, _marginalPrice));
         uint96 bidOneAmountOutActual = uint96(bidOneAmountOutFull - bidOneAmountOutOverflow);
-        uint96 bidOneAmountInActual = uint96(FixedPointMathLib.mulDivUp(bidOneAmount, bidOneAmountOutActual, bidOneAmountOutFull));
+        uint96 bidOneAmountInActual = uint96(
+            FixedPointMathLib.mulDivUp(bidOneAmount, bidOneAmountOutActual, bidOneAmountOutFull)
+        );
 
         uint96 bidAmountInSuccess = bidOneAmountInActual + bidTwoAmountInActual;
         uint96 bidAmountInFail = bidOneAmount - bidOneAmountInActual;

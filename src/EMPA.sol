@@ -896,7 +896,8 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
 
                 // Calculate the price of the bid as uint256 to avoid an intermediate overflow
                 // We know this will not overflow when casting, as it was checked during decryption
-                uint96 price = uint96((uint256(qBid.amountIn) * baseScale) / uint256(qBid.minAmountOut));
+                uint96 price =
+                    uint96((uint256(qBid.amountIn) * baseScale) / uint256(qBid.minAmountOut));
 
                 // If the price is below the minimum price, the previous price is the marginal price
                 if (price < minimumPrice) {
@@ -1058,30 +1059,23 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
 
         // Get the bid and compare to settled auction price
         Bid storage _bid = bids[lotId_][bidId_];
-        BidStatus status = _bid.status;
 
         // Set bid status to claimed
         bids[lotId_][bidId_].status = BidStatus.Claimed;
 
-        // If the bid was not decrypted, refund the bid amount
-        // TODO this shouldn't happen. Need to change this. All bids should be decrypted.
-        if (status == BidStatus.Submitted) {
-            Transfer.transfer(lotRouting[lotId_].quoteToken, _bid.bidder, _bid.amount, false);
-            return;
-        }
-
         // Calculate the bid price
-        // TODO skipped bids will have minAmountOut = 0, bidPrice should be 0 in this case
-        uint96 bidPrice = FixedMath.mulDivUp(
-            _bid.amount, uint96(10) ** lotData[lotId_].baseTokenDecimals, _bid.minAmountOut
-        );
-        uint96 marginalPrice = bidData[lotId_].marginalPrice;
+        // All bids are decrypted before settlement, but invalid ones have minAmountOut set to 0
+        uint256 baseScale = uint256(10) ** lotData[lotId_].baseTokenDecimals;
+        uint256 bidPrice = _bid.minAmountOut == 0
+            ? 0
+            : uint256(_bid.amount) * baseScale / uint256(_bid.minAmountOut);
+        uint256 marginalPrice = bidData[lotId_].marginalPrice;
 
         // If the bid price is greater than or equal the settled price, then payout expected amount
         // We don't have to worry about partial fills here because the bid which is partially filled is handled during settlement
         // Else the bid price is less than the settled price, so refund the bid amount
-        uint96 quoteAmount;
-        uint96 payoutAmount;
+        uint256 quoteAmount;
+        uint256 payoutAmount;
         if (marginalPrice > 0 && bidPrice >= marginalPrice) {
             // Allocate quote token fees
             _allocateQuoteFees(
@@ -1089,9 +1083,7 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
             );
 
             // Calculate payout using marginal price
-            payoutAmount = FixedMath.mulDivUp(
-                _bid.amount, uint96(10) ** lotData[lotId_].baseTokenDecimals, marginalPrice
-            );
+            payoutAmount = uint256(_bid.amount) * baseScale / marginalPrice;
 
             // Transfer payout to the bidder
             _sendPayout(lotId_, _bid.bidder, payoutAmount, lotRouting[lotId_]);
@@ -1185,6 +1177,7 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
         }
 
         // Iterate over the provided number of bids, decrypt them, and then store them in the sorted bid queue
+        // All submitted bids will be marked as decrypted, but only those with valid values will have the minAmountOut set and be stored in the sorted bid queue
         uint96 minBidSize = lotData[lotId_].minBidSize;
         for (uint64 i; i < num_; i++) {
             // Load encrypted bid
@@ -1194,10 +1187,11 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
             uint96 amountOut;
             {
                 uint256 result = _decrypt(lotId_, bidId, lotBidData.privateKey);
-                // We skip the bid if the decrypted amount out overflows the uint96 type
-                // No valid bid should expect more than 7.9 * 10^28 (79 trillion tokens if 18 decimals)
-                if (result > type(uint96).max) continue;
-                amountOut = uint96(result);
+
+                // Only set the amount out if it is less than or equal to the maximum value of a uint96
+                if (result <= type(uint96).max) {
+                    amountOut = uint96(result);
+                }
             }
 
             // Set bid status to decrypted
