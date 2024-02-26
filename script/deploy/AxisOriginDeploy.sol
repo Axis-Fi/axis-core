@@ -2,21 +2,18 @@
 pragma solidity 0.8.19;
 
 // Scripting libraries
-import {Script, console2} from "forge-std/Script.sol";
-
-// Interfaces
-import {IPermit2} from "src/lib/permit2/interfaces/IPermit2.sol";
+import {Script, console2} from "lib/forge-std/src/Script.sol";
 
 // System contracts
 import {BlastAuctionHouse} from "src/blast/BlastAuctionHouse.sol";
 import {Catalogue} from "src/Catalogue.sol";
-import {BlastLSBBA} from "src/blast/modules/auctions/BlastLSBBA.sol";
+import {BlastEMPAM} from "src/blast/modules/auctions/BlastEMPAM.sol";
 import {BlastLinearVesting} from "src/blast/modules/derivatives/BlastLinearVesting.sol";
 
-contract CompetitionDeploy is Script {
+contract AxisOriginDeploy is Script {
     BlastAuctionHouse public auctionHouse;
     Catalogue public catalogue;
-    BlastLSBBA public lsbba;
+    BlastEMPAM public empam;
     BlastLinearVesting public linearVesting;
     address public constant PERMIT2 = 0x000000000022D473030F116dDEE9F6B43aC78BA3;
 
@@ -47,11 +44,11 @@ contract CompetitionDeploy is Script {
         catalogue = new Catalogue(address(auctionHouse));
         console2.log("Catalogue deployed at: ", address(catalogue));
 
-        lsbba = new BlastLSBBA(address(auctionHouse));
-        console2.log("BlastLSBBA deployed at: ", address(lsbba));
+        empam = new BlastEMPAM(address(auctionHouse));
+        console2.log("BlastEMPAM deployed at: ", address(empam));
 
-        auctionHouse.installModule(lsbba);
-        console2.log("BlastLSBBA installed at AuctionHouse");
+        auctionHouse.installModule(empam);
+        console2.log("BlastEMPAM installed at AuctionHouse");
 
         linearVesting = new BlastLinearVesting(address(auctionHouse));
         console2.log("BlastLinearVesting deployed at: ", address(linearVesting));

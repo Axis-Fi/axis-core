@@ -8,11 +8,34 @@ import {Module, Veecode, toKeycode, wrapVeecode} from "src/modules/Modules.sol";
 import {Auction, AuctionModule} from "src/modules/Auction.sol";
 
 contract MockBatchAuctionModule is AuctionModule {
-    uint96[] public bidIds;
-    uint96 public nextBidId;
-    mapping(uint96 lotId => mapping(uint96 => Bid)) public bidData;
-    mapping(uint96 lotId => mapping(uint256 => bool)) public bidCancelled;
-    mapping(uint96 lotId => mapping(uint256 => bool)) public bidRefunded;
+    enum BidStatus {
+        Submitted,
+        Decrypted,
+        Claimed // Bid status will also be set to claimed if the bid is cancelled/refunded
+    }
+
+
+    /// @notice        Core data for a bid
+    ///
+    /// @param         status              The status of the bid
+    /// @param         bidder              The address of the bidder
+    /// @param         amount              The amount of the bid
+    /// @param         minAmountOut        The minimum amount out (not set until the bid is decrypted)
+    /// @param         referrer            The address of the referrer
+    struct Bid {
+        address bidder; // 20 +
+        uint96 amount; // 12 = 32 - end of slot 1
+        uint96 minAmountOut; // 12 +
+        address referrer; // 20 = 32 - end of slot 2
+        BidStatus status; // 1 - slot 3
+    }
+
+
+    uint64[] public bidIds;
+    uint64 public nextBidId;
+    mapping(uint96 lotId => mapping(uint64 => Bid)) public bidData;
+    mapping(uint96 lotId => mapping(uint64 => bool)) public bidCancelled;
+    mapping(uint96 lotId => mapping(uint64 => bool)) public bidRefunded;
 
     mapping(uint96 => bool) public settled;
 
@@ -36,7 +59,7 @@ contract MockBatchAuctionModule is AuctionModule {
 
     function _purchase(
         uint96,
-        uint256,
+        uint96,
         bytes calldata
     ) internal pure override returns (uint256, bytes memory) {
         revert Auction_NotImplemented();
@@ -45,22 +68,20 @@ contract MockBatchAuctionModule is AuctionModule {
     function _bid(
         uint96 lotId_,
         address bidder_,
-        address recipient_,
         address referrer_,
-        uint256 amount_,
-        bytes calldata auctionData_
-    ) internal override returns (uint96) {
+        uint96 amount_,
+        bytes calldata 
+    ) internal override returns (uint64) {
         // Create a new bid
         Bid memory newBid = Bid({
             bidder: bidder_,
-            recipient: recipient_,
             referrer: referrer_,
             amount: amount_,
             minAmountOut: 0,
-            auctionParam: auctionData_
+            status: BidStatus.Submitted
         });
 
-        uint96 bidId = nextBidId++;
+        uint64 bidId = nextBidId++;
 
         bidData[lotId_][bidId] = newBid;
 
@@ -69,7 +90,7 @@ contract MockBatchAuctionModule is AuctionModule {
 
     function _refundBid(
         uint96 lotId_,
-        uint96 bidId_,
+        uint64 bidId_,
         address
     ) internal virtual override returns (uint256 refundAmount) {
         // Cancel the bid
@@ -91,36 +112,29 @@ contract MockBatchAuctionModule is AuctionModule {
         return bidData[lotId_][bidId_].amount;
     }
 
+    function _claimBid(
+        uint96 lotId_,
+        uint64 bidId_,
+        address bidder_
+    ) internal virtual override returns (address, uint256, uint256, bytes memory) {
+        // TODO implement?
+    }
+
     function settle(
-        uint96 lotId_,
-        Bid[] memory bids_
-    ) external virtual returns (uint256[] memory amountsOut) {}
-
-    function payoutFor(
-        uint96 lotId_,
-        uint256 amount_
-    ) public view virtual override returns (uint256) {}
-
-    function priceFor(
-        uint96 lotId_,
-        uint256 payout_
-    ) public view virtual override returns (uint256) {}
-
-    function maxPayout(uint96 lotId_) public view virtual override returns (uint256) {}
-
-    function maxAmountAccepted(uint96 lotId_) public view virtual override returns (uint256) {}
+        uint96 lotId_
+    ) external override returns (Settlement memory, bytes memory) {}
 
     function _settle(uint96 lotId_)
         internal
         override
-        returns (Bid[] memory winningBids_, bytes memory auctionOutput_)
+        returns (Settlement memory, bytes memory)
     {}
 
-    function getBid(uint96 lotId_, uint96 bidId_) external view returns (Bid memory bid_) {
+    function getBid(uint96 lotId_, uint64 bidId_) external view returns (Bid memory bid_) {
         bid_ = bidData[lotId_][bidId_];
     }
 
-    function _revertIfBidInvalid(uint96 lotId_, uint96 bidId_) internal view virtual override {
+    function _revertIfBidInvalid(uint96 lotId_, uint64 bidId_) internal view virtual override {
         // Check that the bid exists
         if (nextBidId <= bidId_) {
             revert Auction.Auction_InvalidBidId(lotId_, bidId_);
@@ -129,7 +143,7 @@ contract MockBatchAuctionModule is AuctionModule {
 
     function _revertIfNotBidOwner(
         uint96 lotId_,
-        uint96 bidId_,
+        uint64 bidId_,
         address caller_
     ) internal view virtual override {
         // Check that the bidder is the owner of the bid
@@ -138,7 +152,7 @@ contract MockBatchAuctionModule is AuctionModule {
         }
     }
 
-    function _revertIfBidRefunded(uint96 lotId_, uint96 bidId_) internal view virtual override {
+    function _revertIfBidClaimed(uint96 lotId_, uint64 bidId_) internal view virtual override {
         // Check that the bid has not been cancelled
         if (bidCancelled[lotId_][bidId_] == true) {
             revert Auction.Auction_InvalidBidId(lotId_, bidId_);

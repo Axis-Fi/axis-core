@@ -79,6 +79,7 @@ abstract contract Auction {
         uint256 totalIn;
         uint256 totalOut;
         address pfBidder;
+        address pfReferrer;
         uint256 pfRefund;
         uint256 pfPayout;
         bytes auctionOutput;
@@ -155,7 +156,7 @@ abstract contract Auction {
         uint96 lotId_,
         uint64 bidId_,
         address bidder_
-    ) external virtual returns (address referrer, uint256 paid, uint256 payout);
+    ) external virtual returns (address referrer, uint256 paid, uint256 payout, bytes memory auctionOutput);
 
     /// @notice     Settle a batch auction lot with on-chain storage and settlement
     /// @dev        The implementing function should handle the following:
@@ -168,7 +169,7 @@ abstract contract Auction {
     function settle(uint96 lotId_)
         external
         virtual
-        returns (Settlement memory settlement);
+        returns (Settlement memory settlement, bytes memory auctionOutput);
 
     // ========== AUCTION MANAGEMENT ========== //
 
@@ -198,13 +199,13 @@ abstract contract Auction {
 
     // ========== AUCTION INFORMATION ========== //
 
-    function payoutFor(uint96 lotId_, uint96 amount_) public view virtual returns (uint96) {}
+    function payoutFor(uint96 lotId_, uint96 amount_) public view virtual returns (uint256) {}
 
-    function priceFor(uint96 lotId_, uint96 payout_) public view virtual returns (uint96) {}
+    function priceFor(uint96 lotId_, uint96 payout_) public view virtual returns (uint256) {}
 
-    function maxPayout(uint96 lotId_) public view virtual returns (uint96) {}
+    function maxPayout(uint96 lotId_) public view virtual returns (uint256) {}
 
-    function maxAmountAccepted(uint96 lotId_) public view virtual returns (uint96) {}
+    function maxAmountAccepted(uint96 lotId_) public view virtual returns (uint256) {}
 
     /// @notice     Returns whether the auction is currently accepting bids or purchases
     /// @dev        The implementing function should handle the following:
@@ -375,7 +376,7 @@ abstract contract AuctionModule is Auction, Module {
         uint96 lotId_,
         uint96 amount_,
         bytes calldata auctionData_
-    ) internal virtual returns (uint96 payout, bytes memory auctionOutput);
+    ) internal virtual returns (uint256 payout, bytes memory auctionOutput);
 
     // ========== BATCH AUCTIONS ========== //
 
@@ -483,7 +484,7 @@ abstract contract AuctionModule is Auction, Module {
         uint96 lotId_,
         uint64 bidId_,
         address bidder_
-    ) external override onlyInternal returns (address referrer, uint256 paid, uint256 payout) {
+    ) external override onlyInternal returns (address referrer, uint256 paid, uint256 payout, bytes memory auctionOutput) {
         // Standard validation
         _revertIfLotInvalid(lotId_);
         _revertIfBidInvalid(lotId_, bidId_);
@@ -498,7 +499,7 @@ abstract contract AuctionModule is Auction, Module {
     function _claimBid(
         uint96 lotId_,
         uint64 bidId_
-    ) internal virtual returns (address referrer, uint256 paid, uint256 payout);
+    ) internal virtual returns (address referrer, uint256 paid, uint256 payout, bytes memory auctionOutput);
 
     /// @inheritdoc Auction
     /// @dev        Implements a basic settle function that:
@@ -519,7 +520,7 @@ abstract contract AuctionModule is Auction, Module {
         external
         override
         onlyInternal
-        returns (Settlement memory settlement) {
+        returns (Settlement memory settlement, bytes memory auctionOutput) {
         // Standard validation
         _revertIfLotInvalid(lotId_);
         _revertIfBeforeLotStart(lotId_);
@@ -527,7 +528,7 @@ abstract contract AuctionModule is Auction, Module {
         _revertIfLotSettled(lotId_);
 
         // Call implementation-specific logic
-        settlement = _settle(lotId_);
+        (settlement, auctionOutput) = _settle(lotId_);
 
         // Set lot capacity to zero
         lotData[lotId_].capacity = 0;
@@ -546,7 +547,7 @@ abstract contract AuctionModule is Auction, Module {
     function _settle(uint96 lotId_)
         internal
         virtual
-        returns (Settlement memory settlement);
+        returns (Settlement memory settlement, bytes memory auctionOutput);
 
     // ========== AUCTION INFORMATION ========== //
 

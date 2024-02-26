@@ -13,7 +13,6 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
     using MaxPriorityQueue for Queue;
 
     // ========== ERRORS ========== //
-    error Auction_AmountLessThanMinimum();
     error Auction_InvalidKey();
     error Auction_WrongState(uint96 lotId);
     error Bid_InvalidId(uint96 lotId, uint64 bidId);
@@ -258,7 +257,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         return uint256(bids[lotId_][bidId_].amount);
     }
 
-    function _claimBid(uint96 lotId_, uint64 bidId_) internal override returns (address referrer, uint256 paid, uint256 payout) {
+    function _claimBid(uint96 lotId_, uint64 bidId_) internal override returns (address referrer, uint256 paid, uint256 payout, bytes memory auctionOutput) {
         // Load bid data
         Bid storage bidData = bids[lotId_][bidId_];
 
@@ -451,7 +450,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
 
     // ========== SETTLEMENT ========== //
     
-    function _settle(uint96 lotId_) internal override returns (Settlement memory settlement_) {
+    function _settle(uint96 lotId_) internal override returns (Settlement memory settlement_, bytes memory auctionOutput_) {
         // Settle the auction
         // Check that auction is in the right state for settlement
         if (auctionData[lotId_].status != Auction.Status.Decrypted) revert Auction_WrongState(lotId_);
@@ -461,17 +460,17 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         // Capacity is always in base token units for this auction type
         uint256 capacity = lotData[lotId_].capacity;
         uint256 baseScale = 10 ** lotData[lotId_].baseTokenDecimals;
-        uint256 minimumPrice = auctionData[lotId_].minPrice;
+        uint96 minimumPrice = auctionData[lotId_].minPrice;
 
         // Iterate over bid queue (sorted in descending price) to calculate the marginal clearing price of the auction
-        uint256 marginalPrice;
+        uint96 marginalPrice;
         uint256 totalAmountIn;
         uint256 capacityExpended;
         uint64 partialFillBidId;
         {
             Queue storage queue = decryptedBids[lotId_];
             uint256 numBids = queue.getNumBids();
-            uint256 lastPrice;
+            uint96 lastPrice;
             for (uint256 i = 0; i < numBids; i++) {
                 // Load bid info (in quote token units)
                 uint64 bidId = queue.getMaxId();
@@ -484,7 +483,9 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
                 // There is no need to check if the bid is the minimum bid size, as this was checked during decryption
 
                 // Calculate the price of the bid
-                uint256 price = (uint256(qBid.amountIn) * baseScale) / uint256(qBid.minAmountOut);
+                // Cannot overflow on cast back to uint96. It was checked during decryption.
+                // TODO roundup
+                uint96 price = uint96((uint256(qBid.amountIn) * baseScale) / uint256(qBid.minAmountOut));
 
                 // If the price is below the minimum price, the previous price is the marginal price
                 if (price < minimumPrice) {
@@ -545,8 +546,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         // or if the marginal price is less than the minimum price
         if (capacityExpended >= auctionData[lotId_].minFilled && marginalPrice >= minimumPrice) {
             // Auction can be settled at the marginal price if we reach this point
-            // TODO determine if this can overflow
-            auctionData[lotId_].marginalPrice = uint96(marginalPrice);
+            auctionData[lotId_].marginalPrice = marginalPrice;
 
             // If there is a partially filled bid, set refund and payout for the bid and mark as claimed
             if (partialFillBidId != 0) {
@@ -555,11 +555,13 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
 
                 // Set the bidder on for the partially filled bid
                 settlement_.pfBidder = bidData.bidder;
+                settlement_.pfReferrer = bidData.referrer;
 
                 // Calculate the payout and refund amounts
                 uint256 fullFill = (uint256(bidData.amount) * baseScale) / marginalPrice;
                 uint256 excess = capacityExpended - capacity;
                 settlement_.pfPayout = fullFill - excess;
+                // TODO round up
                 settlement_.pfRefund = (uint256(bidData.amount) * excess) / fullFill;
 
                 // Reduce the total amount in by the refund amount
@@ -660,6 +662,12 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         if (bids[lotId_][bidId_].status == BidStatus.Claimed) {
             revert Bid_WrongState(lotId_, bidId_);
         }
+    }
+
+    // ========== NOT IMPLEMENTED ========== //
+
+    function _purchase(uint96, uint96, bytes calldata) internal pure override returns (uint256, bytes memory) {
+        revert Auction_NotImplemented();
     }
 
 }
