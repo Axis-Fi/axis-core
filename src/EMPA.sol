@@ -1302,7 +1302,8 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
         // Auction must be prefunded, so we transfer the curator fee to the contract from the owner
         // Calculate the fee amount based on the remaining capacity (must be in base token if auction is pre-funded)
         uint256 fee = _calculatePayoutFees(msg.sender, uint256(lotData[lotId_].capacity));
-        routing.curatorFee = uint96(fee); // TODO confirm this can't overflow
+        // Given that capacity is a uint96 and the fee percentage is bounded by _FEE_DECIMALS, this cannot overflow
+        routing.curatorFee = uint96(fee);
 
         // Don't need to check for fee on transfer here because it was checked on auction creation
         Transfer.transferFrom(routing.baseToken, routing.owner, address(this), fee, false);
