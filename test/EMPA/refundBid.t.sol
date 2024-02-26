@@ -127,5 +127,53 @@ contract EmpaRefundBidTest is EmpaTest {
         assertEq(uint8(bid.status), uint8(EncryptedMarginalPriceAuction.BidStatus.Claimed));
     }
 
-    // TODO handle decimals
+    function test_itRefundsTheBid_quoteTokenDecimalsLarger()
+        external
+        givenQuoteTokenHasDecimals(17)
+        givenBaseTokenHasDecimals(13)
+        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenLotIsCreated
+        givenLotHasStarted
+        givenBidIsCreated(_BID_AMOUNT, _BID_AMOUNT_OUT)
+    {
+        // Get _bidder's balance
+        uint256 aliceBalance = _quoteToken.balanceOf(_bidder);
+
+        // Call the function
+        vm.prank(_bidder);
+        _auctionHouse.refundBid(_lotId, _bidId);
+
+        // Expect _bidder's balance to increase
+        assertEq(_quoteToken.balanceOf(_bidder), aliceBalance + _scaleQuoteTokenAmount(_BID_AMOUNT));
+
+        // Assert the bid is cancelled
+        EncryptedMarginalPriceAuction.Bid memory bid = _getBid(_lotId, _bidId);
+        assertEq(uint8(bid.status), uint8(EncryptedMarginalPriceAuction.BidStatus.Claimed));
+    }
+
+    function test_itRefundsTheBid_quoteTokenDecimalsSmaller()
+        external
+        givenQuoteTokenHasDecimals(13)
+        givenBaseTokenHasDecimals(17)
+        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenLotIsCreated
+        givenLotHasStarted
+        givenBidIsCreated(_BID_AMOUNT, _BID_AMOUNT_OUT)
+    {
+        // Get _bidder's balance
+        uint256 aliceBalance = _quoteToken.balanceOf(_bidder);
+
+        // Call the function
+        vm.prank(_bidder);
+        _auctionHouse.refundBid(_lotId, _bidId);
+
+        // Expect _bidder's balance to increase
+        assertEq(_quoteToken.balanceOf(_bidder), aliceBalance + _scaleQuoteTokenAmount(_BID_AMOUNT));
+
+        // Assert the bid is cancelled
+        EncryptedMarginalPriceAuction.Bid memory bid = _getBid(_lotId, _bidId);
+        assertEq(uint8(bid.status), uint8(EncryptedMarginalPriceAuction.BidStatus.Claimed));
+    }
 }

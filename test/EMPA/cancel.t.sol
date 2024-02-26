@@ -135,8 +135,63 @@ contract EmpaCancelAuctionTest is EmpaTest {
         assertEq(lotData.capacity, 0);
         assertEq(uint8(lotData.status), uint8(EncryptedMarginalPriceAuction.AuctionStatus.Settled));
 
-        // Check the owner's balance
+        // Check balances
         assertEq(_baseToken.balanceOf(_auctionOwner), ownerBalance + _LOT_CAPACITY);
+        assertEq(_baseToken.balanceOf(address(_auctionHouse)), 0);
+    }
+
+    function test_prefunded_quoteTokenDecimalsLarger()
+        external
+        givenQuoteTokenHasDecimals(17)
+        givenBaseTokenHasDecimals(13)
+        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenLotIsCreated
+    {
+        // Check the owner's balance
+        uint256 ownerBalance = _baseToken.balanceOf(_auctionOwner);
+
+        vm.prank(_auctionOwner);
+        _auctionHouse.cancel(_lotId);
+
+        // Get lot data from the module
+        EncryptedMarginalPriceAuction.Lot memory lotData = _getLotData(_lotId);
+        assertEq(lotData.conclusion, uint48(block.timestamp));
+        assertEq(lotData.capacity, 0);
+        assertEq(uint8(lotData.status), uint8(EncryptedMarginalPriceAuction.AuctionStatus.Settled));
+
+        // Check balances
+        assertEq(
+            _baseToken.balanceOf(_auctionOwner), ownerBalance + _scaleBaseTokenAmount(_LOT_CAPACITY)
+        );
+        assertEq(_baseToken.balanceOf(address(_auctionHouse)), 0);
+    }
+
+    function test_prefunded_quoteTokenDecimalsSmaller()
+        external
+        givenQuoteTokenHasDecimals(13)
+        givenBaseTokenHasDecimals(17)
+        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenLotIsCreated
+    {
+        // Check the owner's balance
+        uint256 ownerBalance = _baseToken.balanceOf(_auctionOwner);
+
+        vm.prank(_auctionOwner);
+        _auctionHouse.cancel(_lotId);
+
+        // Get lot data from the module
+        EncryptedMarginalPriceAuction.Lot memory lotData = _getLotData(_lotId);
+        assertEq(lotData.conclusion, uint48(block.timestamp));
+        assertEq(lotData.capacity, 0);
+        assertEq(uint8(lotData.status), uint8(EncryptedMarginalPriceAuction.AuctionStatus.Settled));
+
+        // Check balances
+        assertEq(
+            _baseToken.balanceOf(_auctionOwner), ownerBalance + _scaleBaseTokenAmount(_LOT_CAPACITY)
+        );
+        assertEq(_baseToken.balanceOf(address(_auctionHouse)), 0);
     }
 
     // [X] given the auction is prefunded
@@ -214,5 +269,75 @@ contract EmpaCancelAuctionTest is EmpaTest {
         );
     }
 
-    // TODO handle decimals
+    function test_prefunded_givenCuratorHasApproved_quoteTokenDecimalsLarger()
+        external
+        givenQuoteTokenHasDecimals(17)
+        givenBaseTokenHasDecimals(13)
+        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenCuratorIsSet
+        givenLotIsCreated
+        givenOwnerHasBaseTokenBalance(_curatorMaxPotentialFee)
+        givenOwnerHasBaseTokenAllowance(_curatorMaxPotentialFee)
+        givenCuratorFeeIsSet
+        givenCuratorHasApproved
+    {
+        // Balance before
+        uint256 auctionOwnerBalanceBefore = _baseToken.balanceOf(_auctionOwner);
+        assertEq(
+            auctionOwnerBalanceBefore, 0, "base token: balance mismatch for auction owner before"
+        );
+
+        // Cancel the lot
+        vm.prank(_auctionOwner);
+        _auctionHouse.cancel(_lotId);
+
+        // Check the owner's balance
+        assertEq(
+            _baseToken.balanceOf(_auctionOwner),
+            _scaleBaseTokenAmount(_LOT_CAPACITY) + _scaleBaseTokenAmount(_curatorMaxPotentialFee),
+            "base token: auction owner balance mismatch"
+        ); // Capacity and max curator fee is returned
+        assertEq(
+            _baseToken.balanceOf(address(_auctionHouse)),
+            0,
+            "base token: balance mismatch for auction house"
+        );
+    }
+
+    function test_prefunded_givenCuratorHasApproved_quoteTokenDecimalsSmaller()
+        external
+        givenQuoteTokenHasDecimals(13)
+        givenBaseTokenHasDecimals(17)
+        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenCuratorIsSet
+        givenLotIsCreated
+        givenOwnerHasBaseTokenBalance(_curatorMaxPotentialFee)
+        givenOwnerHasBaseTokenAllowance(_curatorMaxPotentialFee)
+        givenCuratorFeeIsSet
+        givenCuratorHasApproved
+    {
+        // Balance before
+        uint256 auctionOwnerBalanceBefore = _baseToken.balanceOf(_auctionOwner);
+        assertEq(
+            auctionOwnerBalanceBefore, 0, "base token: balance mismatch for auction owner before"
+        );
+
+        // Cancel the lot
+        vm.prank(_auctionOwner);
+        _auctionHouse.cancel(_lotId);
+
+        // Check the owner's balance
+        assertEq(
+            _baseToken.balanceOf(_auctionOwner),
+            _scaleBaseTokenAmount(_LOT_CAPACITY) + _scaleBaseTokenAmount(_curatorMaxPotentialFee),
+            "base token: auction owner balance mismatch"
+        ); // Capacity and max curator fee is returned
+        assertEq(
+            _baseToken.balanceOf(address(_auctionHouse)),
+            0,
+            "base token: balance mismatch for auction house"
+        );
+    }
 }

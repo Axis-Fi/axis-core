@@ -195,9 +195,11 @@ abstract contract EmpaTest is Test, Permit2User {
         _;
     }
 
-    modifier givenHookHasBaseTokenBalance(uint256 amount_) {
+    modifier givenHookHasBaseTokenBalance(uint96 amount_) {
+        uint96 amountScaled = _scaleBaseTokenAmount(amount_);
+
         // Mint the amount to the hook
-        _baseToken.mint(address(_mockHook), amount_);
+        _baseToken.mint(address(_mockHook), amountScaled);
         _;
     }
 
