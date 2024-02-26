@@ -77,8 +77,9 @@ contract EmpaRefundBidTest is EmpaTest {
         givenBidIsCreated(_BID_AMOUNT, _BID_AMOUNT_OUT)
         givenBidIsRefunded(_bidId)
     {
-        bytes memory err =
-            abi.encodeWithSelector(EncryptedMarginalPriceAuction.Bid_AlreadyClaimed.selector);
+        bytes memory err = abi.encodeWithSelector(
+            EncryptedMarginalPriceAuction.Bid_WrongState.selector, _lotId, _bidId
+        );
         vm.expectRevert(err);
 
         // Call the function

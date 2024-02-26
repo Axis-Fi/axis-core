@@ -225,8 +225,9 @@ contract EmpaClaimTest is EmpaTest {
         // Claim the bid
         _auctionHouse.claim(_lotId, _bidId);
 
-        bytes memory err =
-            abi.encodeWithSelector(EncryptedMarginalPriceAuction.Bid_AlreadyClaimed.selector);
+        bytes memory err = abi.encodeWithSelector(
+            EncryptedMarginalPriceAuction.Bid_WrongState.selector, _lotId, _bidId
+        );
         vm.expectRevert(err);
 
         // Call the function

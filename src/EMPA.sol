@@ -267,7 +267,6 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
     // ========== ERRORS ========== //
 
     error AmountLessThanMinimum();
-    error Broken_Invariant();
     error InvalidParams();
     error InvalidHook();
 
@@ -275,10 +274,9 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
     error Auction_WrongState(uint96 lotId);
 
     error Bid_InvalidId(uint96 lotId, uint96 bidId);
-    error Bid_AlreadyClaimed();
     error Bid_InvalidPublicKey();
     error Bid_InvalidPrivateKey();
-    error Bid_WrongState();
+    error Bid_WrongState(uint96 lotId, uint96 bidId);
 
     /// @notice     Used when the caller is not permitted to perform that action
     error NotPermitted(address caller_);
@@ -1576,7 +1574,7 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
     function _revertIfBidClaimed(uint96 lotId_, uint64 bidId_) internal view {
         // Bid must not be cancelled
         if (bids[lotId_][bidId_].status == BidStatus.Claimed) {
-            revert Bid_AlreadyClaimed();
+            revert Bid_WrongState(lotId_, bidId_);
         }
     }
 }
