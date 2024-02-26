@@ -15,7 +15,10 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
     // ========== ERRORS ========== //
     error Auction_AmountLessThanMinimum();
     error Auction_InvalidKey();
-    error Auction_WrongState();
+    error Auction_WrongState(uint96 lotId);
+    error Bid_InvalidId(uint96 lotId, uint64 bidId);
+    error Bid_WrongState(uint96 lotId, uint64 bidId);
+    error NotPermitted(address caller);
 
 
     // ========== EVENTS ========== //
@@ -303,7 +306,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         _revertIfBeforeLotStart(lotId_);
 
         // Revert if the private key has already been verified and set
-        if (auctionData[lotId_].privateKey != 0) revert Auction_WrongState();
+        if (auctionData[lotId_].privateKey != 0) revert Auction_WrongState(lotId_);
 
         // Check that the private key is valid for the public key
         // We assume that all public keys are derived from the same generator: (1, 2)
@@ -345,7 +348,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
 
         // Revert if already decrypted or if the private key has not been provided
         if (auctionData[lotId_].status != Auction.Status.Created || auctionData[lotId_].privateKey == 0) {
-            revert Auction_WrongState();
+            revert Auction_WrongState(lotId_);
         }
 
         // Decrypt and sort bids
@@ -451,7 +454,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
     function _settle(uint96 lotId_) internal override returns (Settlement memory settlement_) {
         // Settle the auction
         // Check that auction is in the right state for settlement
-        if (auctionData[lotId_].status != Auction.Status.Decrypted) revert Auction_WrongState();
+        if (auctionData[lotId_].status != Auction.Status.Decrypted) revert Auction_WrongState(lotId_);
 
         // Calculate marginal price and number of winning bids
         // Cache capacity and scaling values
@@ -578,7 +581,85 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         }
     }
 
+    // ========== AUCTION INFORMATION ========== //
+
+
     // ========== VALIDATION ========== //
-    // TODO
+
+    /// @notice     Checks that the lot represented by `lotId_` is active
+    /// @dev        Should revert if the lot is active
+    ///             Inheriting contracts can override this to implement custom logic
+    ///
+    /// @param      lotId_  The lot ID
+    function _revertIfLotActive(uint96 lotId_) internal view override {
+        if (
+            auctionData[lotId_].status == Auction.Status.Created
+                && lotData[lotId_].start <= block.timestamp
+                && lotData[lotId_].conclusion > block.timestamp
+        ) revert Auction_WrongState(lotId_);
+    }
+
+    /// @notice     Checks that the lot represented by `lotId_` is not settled
+    /// @dev        Should revert if the lot is settled
+    ///             Inheriting contracts must override this to implement custom logic
+    ///
+    /// @param      lotId_  The lot ID
+    function _revertIfLotSettled(uint96 lotId_) internal view override {
+        // Auction must not be settled
+        if (auctionData[lotId_].status == Auction.Status.Settled) {
+            revert Auction_WrongState(lotId_);
+        }
+    }
+
+    /// @notice     Checks that the lot represented by `lotId_` is settled
+    /// @dev        Should revert if the lot is not settled
+    ///             Inheriting contracts must override this to implement custom logic
+    ///
+    /// @param      lotId_  The lot ID
+    function _revertIfLotNotSettled(uint96 lotId_) internal view override {
+        // Auction must be settled
+        if (auctionData[lotId_].status != Auction.Status.Settled) {
+            revert Auction_WrongState(lotId_);
+        }
+    }
+
+    /// @notice     Checks that the lot and bid combination is valid
+    /// @dev        Should revert if the bid is invalid
+    ///             Inheriting contracts must override this to implement custom logic
+    ///
+    /// @param      lotId_  The lot ID
+    /// @param      bidId_  The bid ID
+    function _revertIfBidInvalid(uint96 lotId_, uint64 bidId_) internal view override {
+        // Bid ID must be less than number of bids for lot
+        if (bidId_ >= auctionData[lotId_].nextBidId) revert Bid_InvalidId(lotId_, bidId_);
+
+        // Bid should have a bidder
+        if (bids[lotId_][bidId_].bidder == address(0)) revert Bid_InvalidId(lotId_, bidId_);
+    }
+
+    /// @notice     Checks that `caller_` is the bid owner
+    /// @dev        Should revert if `caller_` is not the bid owner
+    ///             Inheriting contracts must override this to implement custom logic
+    ///
+    /// @param      lotId_      The lot ID
+    /// @param      bidId_      The bid ID
+    /// @param      caller_     The caller
+    function _revertIfNotBidOwner(uint96 lotId_, uint64 bidId_, address caller_) internal view override {
+        // Check that sender is the bidder
+        if (caller_ != bids[lotId_][bidId_].bidder) revert NotPermitted(caller_);
+    }
+
+    /// @notice     Checks that the bid is not refunded/claimed already
+    /// @dev        Should revert if the bid is claimed
+    ///             Inheriting contracts must override this to implement custom logic
+    ///
+    /// @param      lotId_      The lot ID
+    /// @param      bidId_      The bid ID
+    function _revertIfBidClaimed(uint96 lotId_, uint64 bidId_) internal view override {
+        // Bid must not be refunded or claimed (same status)
+        if (bids[lotId_][bidId_].status == BidStatus.Claimed) {
+            revert Bid_WrongState(lotId_, bidId_);
+        }
+    }
 
 }

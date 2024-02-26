@@ -198,13 +198,13 @@ abstract contract Auction {
 
     // ========== AUCTION INFORMATION ========== //
 
-    function payoutFor(uint96 lotId_, uint96 amount_) public view virtual returns (uint96);
+    function payoutFor(uint96 lotId_, uint96 amount_) public view virtual returns (uint96) {}
 
-    function priceFor(uint96 lotId_, uint96 payout_) public view virtual returns (uint96);
+    function priceFor(uint96 lotId_, uint96 payout_) public view virtual returns (uint96) {}
 
-    function maxPayout(uint96 lotId_) public view virtual returns (uint96);
+    function maxPayout(uint96 lotId_) public view virtual returns (uint96) {}
 
-    function maxAmountAccepted(uint96 lotId_) public view virtual returns (uint96);
+    function maxAmountAccepted(uint96 lotId_) public view virtual returns (uint96) {}
 
     /// @notice     Returns whether the auction is currently accepting bids or purchases
     /// @dev        The implementing function should handle the following:
