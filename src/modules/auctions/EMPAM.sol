@@ -64,17 +64,17 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
     /// @param         publicKey           The public key used to encrypt bids (a point on the alt_bn128 curve from the generator point (1,2))
     /// @param         privateKey          The private key used to decrypt bids (not provided until after the auction ends)
     /// @param         bidIds              The list of bid IDs to decrypt in order of submission, excluding cancelled bids
-    struct AuctionData { // TODO pack slots
-        Auction.Status status; // 1 +
+    struct AuctionData {
         uint64 nextBidId; // 8 +
+        uint96 marginalPrice; // 12 +
+        uint96 minPrice; // 12 = 32 - end of slot 1
         uint64 nextDecryptIndex; // 8 +
-        uint96 marginalPrice; // 12 = 29 - end of slot 1
-        uint96 minPrice;
-        uint96 minFilled;
-        uint96 minBidSize;
-        Point publicKey; // 2 slots - end of slot 3
-        uint256 privateKey; // 1 slot - end of slot 4
-        uint64[] bidIds;
+        uint96 minFilled; // 12 +
+        uint96 minBidSize; // 12 = 32 - end of slot 2
+        Auction.Status status; // 1 - slot 3
+        Point publicKey; // 64 - slots 4 and 5
+        uint256 privateKey; // 32 - slot 6
+        uint64[] bidIds; // slots 7+
     }
 
     struct AuctionDataParams {
@@ -148,6 +148,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         // Set auction data
         AuctionData storage data = auctionData[lotId_];
         data.minPrice = implParams.minPrice;
+        // These calculations won't overflow if capacity doesn't overflow uint96 because the minFillPercent and minBidPercent are both less than or equal to 100%
         data.minFilled = uint96((uint256(lot_.capacity) * implParams.minFillPercent) / _ONE_HUNDRED_PERCENT);
         data.minBidSize = uint96((uint256(lot_.capacity) * implParams.minBidPercent) / _ONE_HUNDRED_PERCENT);
         data.publicKey = implParams.publicKey;
@@ -352,9 +353,10 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
     }
 
     function _decryptAndSortBids(uint96 lotId_, uint64 num_) internal {
-        // Load next decrypt index and private key
+        // Load next decrypt index and min bid size
         AuctionData storage lotBidData = auctionData[lotId_];
         uint64 nextDecryptIndex = lotBidData.nextDecryptIndex;
+        uint96 minBidSize = auctionData[lotId_].minBidSize;
 
         // Check that the number of decrypts is less than or equal to the number of bids remaining to be decrypted
         // If so, reduce to the number remaining
@@ -364,7 +366,6 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         }
 
         // Iterate over the provided number of bids, decrypt them, and then store them in the sorted bid queue
-        uint96 minBidSize = auctionData[lotId_].minBidSize;
         for (uint64 i; i < num_; i++) {
             // Load encrypted bid
             uint64 bidId = bidIds[nextDecryptIndex + i];

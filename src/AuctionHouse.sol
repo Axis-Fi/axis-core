@@ -433,7 +433,7 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
 
                 // Allocate quote and protocol fees for bid
                 _allocateQuoteFees(
-                    _bid.referrer,
+                    settlement.pfReferrer,
                     routing.owner,
                     routing.quoteToken,
                     filledAmount
@@ -441,7 +441,7 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
 
                 // Send refund and payout to the bidder
                 Transfer.transfer(routing.quoteToken, settlement.pfBidder, settlement.pfRefund, false);
-                _sendPayout(lotId_, settlment.pfBidder, settlement.pfPayout, routing);
+                _sendPayout(lotId_, settlement.pfBidder, settlement.pfPayout, routing);
             }
 
             // Send payment in bulk to auction owner
