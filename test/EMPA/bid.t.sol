@@ -70,7 +70,7 @@ contract EmpaBidTest is EmpaTest {
         whenBidAmountOutIsEncrypted(_BID_AMOUNT, 1e18)
     {
         bytes memory err = abi.encodeWithSelector(
-            EncryptedMarginalPriceAuction.Auction_MarketNotActive.selector, _lotId
+            EncryptedMarginalPriceAuction.Auction_WrongState.selector, _lotId
         );
         vm.expectRevert(err);
 
@@ -96,7 +96,7 @@ contract EmpaBidTest is EmpaTest {
         whenBidAmountOutIsEncrypted(_BID_AMOUNT, 1e18)
     {
         bytes memory err = abi.encodeWithSelector(
-            EncryptedMarginalPriceAuction.Auction_MarketNotActive.selector, _lotId
+            EncryptedMarginalPriceAuction.Auction_WrongState.selector, _lotId
         );
         vm.expectRevert(err);
 

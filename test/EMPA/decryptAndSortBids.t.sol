@@ -47,7 +47,7 @@ contract EmpaDecryptBidsTest is EmpaTest {
         givenLotIsCreated
     {
         bytes memory err = abi.encodeWithSelector(
-            EncryptedMarginalPriceAuction.Auction_MarketNotActive.selector, _lotId
+            EncryptedMarginalPriceAuction.Auction_WrongState.selector, _lotId
         );
         vm.expectRevert(err);
 
@@ -63,7 +63,7 @@ contract EmpaDecryptBidsTest is EmpaTest {
         givenLotHasStarted
     {
         bytes memory err = abi.encodeWithSelector(
-            EncryptedMarginalPriceAuction.Auction_MarketActive.selector, _lotId
+            EncryptedMarginalPriceAuction.Auction_WrongState.selector, _lotId
         );
         vm.expectRevert(err);
 
@@ -79,8 +79,9 @@ contract EmpaDecryptBidsTest is EmpaTest {
         givenLotHasStarted
         givenLotHasConcluded
     {
-        bytes memory err =
-            abi.encodeWithSelector(EncryptedMarginalPriceAuction.Auction_WrongState.selector);
+        bytes memory err = abi.encodeWithSelector(
+            EncryptedMarginalPriceAuction.Auction_WrongState.selector, _lotId
+        );
         vm.expectRevert(err);
 
         // Call the function
@@ -99,8 +100,9 @@ contract EmpaDecryptBidsTest is EmpaTest {
         // No need to call decrypt, as it is called by submitPrivateKey
 
         // Call the function again
-        bytes memory err =
-            abi.encodeWithSelector(EncryptedMarginalPriceAuction.Auction_WrongState.selector);
+        bytes memory err = abi.encodeWithSelector(
+            EncryptedMarginalPriceAuction.Auction_WrongState.selector, _lotId
+        );
         vm.expectRevert(err);
 
         // Call the function

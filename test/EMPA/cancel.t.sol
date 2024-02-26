@@ -65,7 +65,7 @@ contract EmpaCancelAuctionTest is EmpaTest {
         vm.warp(_startTime);
 
         bytes memory err = abi.encodeWithSelector(
-            EncryptedMarginalPriceAuction.Auction_MarketActive.selector, _lotId
+            EncryptedMarginalPriceAuction.Auction_WrongState.selector, _lotId
         );
         vm.expectRevert(err);
 
@@ -83,7 +83,7 @@ contract EmpaCancelAuctionTest is EmpaTest {
         vm.warp(_startTime + _duration + 1);
 
         bytes memory err = abi.encodeWithSelector(
-            EncryptedMarginalPriceAuction.Auction_MarketNotActive.selector, _lotId
+            EncryptedMarginalPriceAuction.Auction_WrongState.selector, _lotId
         );
         vm.expectRevert(err);
 
@@ -103,7 +103,7 @@ contract EmpaCancelAuctionTest is EmpaTest {
 
         // Expect revert
         bytes memory err = abi.encodeWithSelector(
-            EncryptedMarginalPriceAuction.Auction_MarketNotActive.selector, _lotId
+            EncryptedMarginalPriceAuction.Auction_WrongState.selector, _lotId
         );
         vm.expectRevert(err);
 

@@ -42,7 +42,7 @@ contract EmpaRefundBidTest is EmpaTest {
         givenLotHasConcluded
     {
         bytes memory err = abi.encodeWithSelector(
-            EncryptedMarginalPriceAuction.Auction_MarketNotActive.selector, _lotId
+            EncryptedMarginalPriceAuction.Auction_WrongState.selector, _lotId
         );
         vm.expectRevert(err);
 

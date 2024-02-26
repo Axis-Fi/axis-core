@@ -271,10 +271,8 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
     error InvalidParams();
     error InvalidHook();
 
-    error Auction_InvalidId(uint96 id_);
-    error Auction_MarketActive(uint96 lotId); // TODO consider removing these two
-    error Auction_MarketNotActive(uint96 lotId);
-    error Auction_WrongState();
+    error Auction_InvalidId(uint96 lotId);
+    error Auction_WrongState(uint96 lotId);
 
     error Bid_InvalidId(uint96 lotId, uint96 bidId);
     error Bid_AlreadyClaimed();
@@ -868,7 +866,7 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
 
         // Settle the auction
         // Check that auction is in the right state for settlement
-        if (lotData[lotId_].status != AuctionStatus.Decrypted) revert Auction_WrongState();
+        if (lotData[lotId_].status != AuctionStatus.Decrypted) revert Auction_WrongState(lotId_);
 
         // Calculate marginal price and number of winning bids
         // Cache capacity and scaling values
@@ -1120,7 +1118,7 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
         _revertIfBeforeLotStart(lotId_);
 
         // Revert if the private key has already been verified and set
-        if (bidData[lotId_].privateKey != 0) revert Auction_WrongState();
+        if (bidData[lotId_].privateKey != 0) revert Auction_WrongState(lotId_);
 
         // Check that the private key is valid for the public key
         // We assume that all public keys are derived from the same generator: (1, 2)
@@ -1162,7 +1160,7 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
 
         // Revert if already decrypted or if the private key has not been provided
         if (lotData[lotId_].status != AuctionStatus.Created || bidData[lotId_].privateKey == 0) {
-            revert Auction_WrongState();
+            revert Auction_WrongState(lotId_);
         }
 
         // Decrypt and sort bids
@@ -1289,7 +1287,7 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
         if (msg.sender != routing.curator) revert NotPermitted(msg.sender);
 
         // Check that the curator has not already approved the auction
-        if (routing.curated) revert Auction_WrongState();
+        if (routing.curated) revert Auction_WrongState(lotId_);
 
         // Check that the curator fee is set
         if (fees.curator[msg.sender] == 0) revert InvalidFee();
@@ -1466,13 +1464,13 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
     /// @notice     Checks that the lot represented by `lotId_` has not started
     /// @dev        Should revert if the lot has not started
     function _revertIfBeforeLotStart(uint96 lotId_) internal view virtual {
-        if (lotData[lotId_].start > uint48(block.timestamp)) revert Auction_MarketNotActive(lotId_);
+        if (lotData[lotId_].start > uint48(block.timestamp)) revert Auction_WrongState(lotId_);
     }
 
     /// @notice     Checks that the lot represented by `lotId_` has started
     /// @dev        Should revert if the lot has started
     function _revertIfLotStarted(uint96 lotId_) internal view virtual {
-        if (lotData[lotId_].start <= uint48(block.timestamp)) revert Auction_MarketActive(lotId_);
+        if (lotData[lotId_].start <= uint48(block.timestamp)) revert Auction_WrongState(lotId_);
     }
 
     /// @notice     Checks that the lot represented by `lotId_` has not concluded
@@ -1480,11 +1478,11 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
     function _revertIfLotConcluded(uint96 lotId_) internal view virtual {
         // Beyond the conclusion time
         if (lotData[lotId_].conclusion < uint48(block.timestamp)) {
-            revert Auction_MarketNotActive(lotId_);
+            revert Auction_WrongState(lotId_);
         }
 
         // Capacity is sold-out, or cancelled
-        if (lotData[lotId_].capacity == 0) revert Auction_MarketNotActive(lotId_);
+        if (lotData[lotId_].capacity == 0) revert Auction_WrongState(lotId_);
     }
 
     /// @notice     Checks that the lot represented by `lotId_` is active
@@ -1497,7 +1495,7 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
             lotData[lotId_].status == AuctionStatus.Created
                 && lotData[lotId_].start <= block.timestamp
                 && lotData[lotId_].conclusion > block.timestamp
-        ) revert Auction_MarketActive(lotId_);
+        ) revert Auction_WrongState(lotId_);
     }
 
     /// @notice     Checks that the lot represented by `lotId_` is active
@@ -1511,13 +1509,13 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
             lotData[lotId_].status != AuctionStatus.Created
                 || block.timestamp < lotData[lotId_].start
                 || block.timestamp >= lotData[lotId_].conclusion
-        ) revert Auction_MarketNotActive(lotId_);
+        ) revert Auction_WrongState(lotId_);
     }
 
     /// @notice     Reverts if the lot has already been decrypted
     function _revertIfLotDecrypted(uint96 lotId_) internal view {
         // Check that bids are allowed to be submitted for the lot
-        if (lotData[lotId_].status == AuctionStatus.Decrypted) revert Auction_WrongState();
+        if (lotData[lotId_].status == AuctionStatus.Decrypted) revert Auction_WrongState(lotId_);
     }
 
     /// @notice     Checks that the lot represented by `lotId_` is not settled
@@ -1528,7 +1526,7 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
     function _revertIfLotSettled(uint96 lotId_) internal view {
         // Auction must not be settled
         if (lotData[lotId_].status == AuctionStatus.Settled) {
-            revert Auction_WrongState();
+            revert Auction_WrongState(lotId_);
         }
     }
 
@@ -1540,7 +1538,7 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
     function _revertIfLotNotSettled(uint96 lotId_) internal view {
         // Auction must be settled
         if (lotData[lotId_].status != AuctionStatus.Settled) {
-            revert Auction_WrongState();
+            revert Auction_WrongState(lotId_);
         }
     }
 
