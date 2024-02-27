@@ -5,7 +5,7 @@ pragma solidity 0.8.19;
 import {MockBatchAuctionModule} from "test/modules/Auction/MockBatchAuctionModule.sol";
 
 // Auctions
-import {AuctionHouse, FeeManager} from "src/AuctionHouse.sol";
+import {AuctionHouse} from "src/AuctionHouse.sol";
 import {Auction} from "src/modules/Auction.sol";
 import {Auctioneer} from "src/bases/Auctioneer.sol";
 
@@ -209,13 +209,6 @@ contract BidTest is AuctionHouseTest {
     //  [X] the protocol fee is not accrued
     // [X] the protocol fee is not accrued
 
-    modifier givenProtocolFeeIsSet() {
-        _auctionHouse.setFee(
-            _auctionModuleKeycode, FeeManager.FeeType.Protocol, _PROTOCOL_FEE_PERCENT
-        );
-        _;
-    }
-
     function test_givenProtocolFeeIsSet()
         external
         whenAuctionTypeIsBatch
@@ -294,13 +287,6 @@ contract BidTest is AuctionHouseTest {
     // [X] given there is no referrer fee set for the auction type
     //  [X] the referrer fee is not accrued
     // [X] the referrer fee is not accrued
-
-    modifier givenReferrerFeeIsSet() {
-        _auctionHouse.setFee(
-            _auctionModuleKeycode, FeeManager.FeeType.Referrer, _REFERRER_FEE_PERCENT
-        );
-        _;
-    }
 
     function test_givenReferrerFeeIsSet()
         external

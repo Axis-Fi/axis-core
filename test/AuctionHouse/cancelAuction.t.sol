@@ -122,19 +122,6 @@ contract CancelAuctionTest is AuctionHouseTest {
         _;
     }
 
-    modifier givenPurchase(uint96 amount_) {
-        // Mint quote tokens to _bidder
-        _quoteToken.mint(_bidder, amount_);
-
-        // Approve spending
-        vm.prank(_bidder);
-        _quoteToken.approve(address(_auctionHouse), amount_);
-
-        // Create the purchase
-        _createPurchase(amount_, _purchaseAuctionData);
-        _;
-    }
-
     function test_prefunded()
         external
         givenLotIsPrefunded
@@ -161,7 +148,9 @@ contract CancelAuctionTest is AuctionHouseTest {
         whenAtomicAuctionModuleIsInstalled
         givenLotIsCreated
         givenLotHasStarted
-        givenPurchase(_PURCHASE_AMOUNT)
+        givenUserHasQuoteTokenBalance(_PURCHASE_AMOUNT)
+        givenUserHasApprovedQuoteToken(_PURCHASE_AMOUNT)
+        givenPurchase(_PURCHASE_AMOUNT, _PURCHASE_AMOUNT, _purchaseAuctionData)
     {
         // Check the owner's balance
         uint256 ownerBalance = _baseToken.balanceOf(_auctionOwner);
@@ -285,7 +274,9 @@ contract CancelAuctionTest is AuctionHouseTest {
         whenAtomicAuctionModuleIsInstalled
         givenLotIsCreated
         givenLotHasStarted
-        givenPurchase(_PURCHASE_AMOUNT)
+        givenUserHasQuoteTokenBalance(_PURCHASE_AMOUNT)
+        givenUserHasApprovedQuoteToken(_PURCHASE_AMOUNT)
+        givenPurchase(_PURCHASE_AMOUNT, _PURCHASE_AMOUNT, _purchaseAuctionData)
         givenCuratorMaxFeeIsSet
         givenAuctionOwnerHasCuratorFeeBalance
         givenCuratorHasApproved
@@ -328,11 +319,15 @@ contract CancelAuctionTest is AuctionHouseTest {
         whenAtomicAuctionModuleIsInstalled
         givenLotIsCreated
         givenLotHasStarted
-        givenPurchase(_PURCHASE_AMOUNT)
+        givenUserHasQuoteTokenBalance(_PURCHASE_AMOUNT)
+        givenUserHasApprovedQuoteToken(_PURCHASE_AMOUNT)
+        givenPurchase(_PURCHASE_AMOUNT, _PURCHASE_AMOUNT, _purchaseAuctionData)
         givenCuratorMaxFeeIsSet
         givenAuctionOwnerHasCuratorFeeBalance
         givenCuratorHasApproved
-        givenPurchase(_PURCHASE_AMOUNT * 2)
+        givenUserHasQuoteTokenBalance(_PURCHASE_AMOUNT * 2)
+        givenUserHasApprovedQuoteToken(_PURCHASE_AMOUNT * 2)
+        givenPurchase(_PURCHASE_AMOUNT * 2, _PURCHASE_AMOUNT * 2, _purchaseAuctionData)
     {
         // Balance before
         uint256 auctionOwnerBalanceBefore = _baseToken.balanceOf(_auctionOwner);
@@ -376,7 +371,9 @@ contract CancelAuctionTest is AuctionHouseTest {
         givenAuctionOwnerHasCuratorFeeBalance
         givenCuratorMaxFeeIsSet
         givenCuratorHasApproved
-        givenPurchase(_PURCHASE_AMOUNT)
+        givenUserHasQuoteTokenBalance(_PURCHASE_AMOUNT)
+        givenUserHasApprovedQuoteToken(_PURCHASE_AMOUNT)
+        givenPurchase(_PURCHASE_AMOUNT, _PURCHASE_AMOUNT, _purchaseAuctionData)
     {
         // Balance before
         uint256 auctionOwnerBalanceBefore = _baseToken.balanceOf(_auctionOwner);

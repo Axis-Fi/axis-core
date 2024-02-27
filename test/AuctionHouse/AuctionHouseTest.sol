@@ -233,6 +233,17 @@ abstract contract AuctionHouseTest is Test, Permit2User {
         _;
     }
 
+    modifier givenOwnerHasBaseTokenBalance(uint256 amount_) {
+        _baseToken.mint(_auctionOwner, amount_);
+        _;
+    }
+
+    modifier givenOwnerHasBaseTokenAllowance(uint256 amount_) {
+        vm.prank(_auctionOwner);
+        _baseToken.approve(address(_auctionHouse), amount_);
+        _;
+    }
+
     function _createBid(uint96 amount_, bytes memory auctionData_) internal returns (uint64) {
         Router.BidParams memory bidParams = Router.BidParams({
             lotId: _lotId,
@@ -251,6 +262,7 @@ abstract contract AuctionHouseTest is Test, Permit2User {
 
     function _createPurchase(
         uint96 amount_,
+        uint96 minAmountOut_,
         bytes memory auctionData_
     ) internal returns (uint256) {
         Router.PurchaseParams memory purchaseParams = Router.PurchaseParams({
@@ -258,7 +270,7 @@ abstract contract AuctionHouseTest is Test, Permit2User {
             referrer: _REFERRER,
             lotId: _lotId,
             amount: amount_,
-            minAmountOut: amount_,
+            minAmountOut: minAmountOut_,
             auctionData: auctionData_,
             allowlistProof: _allowlistProof,
             permit2Data: _permit2Data
@@ -268,6 +280,12 @@ abstract contract AuctionHouseTest is Test, Permit2User {
         uint256 payout = _auctionHouse.purchase(purchaseParams);
 
         return payout;
+    }
+
+    modifier givenPurchase(uint96 amount_, uint96 minAmountOut_, bytes memory auctionData_) {
+        // Purchase
+        _createPurchase(amount_, minAmountOut_, auctionData_);
+        _;
     }
 
     modifier givenCuratorIsSet() {
@@ -289,6 +307,20 @@ abstract contract AuctionHouseTest is Test, Permit2User {
 
         vm.prank(_CURATOR);
         _auctionHouse.curate(_lotId);
+        _;
+    }
+
+    modifier givenProtocolFeeIsSet() {
+        _auctionHouse.setFee(
+            _auctionModuleKeycode, FeeManager.FeeType.Protocol, _PROTOCOL_FEE_PERCENT
+        );
+        _;
+    }
+
+    modifier givenReferrerFeeIsSet() {
+        _auctionHouse.setFee(
+            _auctionModuleKeycode, FeeManager.FeeType.Referrer, _REFERRER_FEE_PERCENT
+        );
         _;
     }
 
