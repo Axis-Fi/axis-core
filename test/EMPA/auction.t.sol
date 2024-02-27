@@ -46,7 +46,7 @@ contract EmpaAuctionTest is EmpaTest {
         uint8 decimals = uint8(bound(decimals_, 0, 25));
         vm.assume(decimals < 6 || decimals > 18);
 
-        _setBaseTokenDecimals(decimals);
+        _setQuoteTokenDecimals(decimals);
 
         // Expect revert
         bytes memory err =
