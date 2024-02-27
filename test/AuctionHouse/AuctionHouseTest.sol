@@ -300,11 +300,14 @@ abstract contract AuctionHouseTest is Test, Permit2User {
         _;
     }
 
-    modifier givenCuratorHasApproved() {
+    modifier givenCuratorFeeIsSet() {
         // Set the curator fee
         vm.prank(_CURATOR);
         _auctionHouse.setCuratorFee(_auctionModuleKeycode, _CURATOR_FEE_PERCENT);
+        _;
+    }
 
+    modifier givenCuratorHasApproved() {
         vm.prank(_CURATOR);
         _auctionHouse.curate(_lotId);
         _;

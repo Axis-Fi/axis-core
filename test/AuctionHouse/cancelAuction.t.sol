@@ -237,6 +237,7 @@ contract CancelAuctionTest is AuctionHouseTest {
         givenLotHasStarted
         givenAuctionOwnerHasCuratorFeeBalance
         givenCuratorMaxFeeIsSet
+        givenCuratorFeeIsSet
         givenCuratorHasApproved
     {
         // Balance before
@@ -279,6 +280,7 @@ contract CancelAuctionTest is AuctionHouseTest {
         givenPurchase(_PURCHASE_AMOUNT, _PURCHASE_AMOUNT, _purchaseAuctionData)
         givenCuratorMaxFeeIsSet
         givenAuctionOwnerHasCuratorFeeBalance
+        givenCuratorFeeIsSet
         givenCuratorHasApproved
     {
         // Balance before
@@ -324,6 +326,7 @@ contract CancelAuctionTest is AuctionHouseTest {
         givenPurchase(_PURCHASE_AMOUNT, _PURCHASE_AMOUNT, _purchaseAuctionData)
         givenCuratorMaxFeeIsSet
         givenAuctionOwnerHasCuratorFeeBalance
+        givenCuratorFeeIsSet
         givenCuratorHasApproved
         givenUserHasQuoteTokenBalance(_PURCHASE_AMOUNT * 2)
         givenUserHasApprovedQuoteToken(_PURCHASE_AMOUNT * 2)
@@ -370,6 +373,7 @@ contract CancelAuctionTest is AuctionHouseTest {
         givenLotHasStarted
         givenAuctionOwnerHasCuratorFeeBalance
         givenCuratorMaxFeeIsSet
+        givenCuratorFeeIsSet
         givenCuratorHasApproved
         givenUserHasQuoteTokenBalance(_PURCHASE_AMOUNT)
         givenUserHasApprovedQuoteToken(_PURCHASE_AMOUNT)

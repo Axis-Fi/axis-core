@@ -415,6 +415,7 @@ contract BidTest is AuctionHouseTest {
         givenLotIsCreated
         givenLotHasStarted
         givenCuratorMaxFeeIsSet
+        givenCuratorFeeIsSet
         givenCuratorHasApproved
         givenUserHasQuoteTokenBalance(_BID_AMOUNT)
         givenUserHasApprovedQuoteToken(_BID_AMOUNT)
