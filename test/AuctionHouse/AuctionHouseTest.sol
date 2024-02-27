@@ -68,6 +68,7 @@ abstract contract AuctionHouseTest is Test, Permit2User {
     /// @dev    Needs to be updated if the base token scale is changed
     uint96 internal constant _LOT_CAPACITY = 10e18;
     string internal constant _INFO_HASH = "info hash";
+    bytes internal _derivativeParams = abi.encode("");
 
     // Parameters
     Auctioneer.RoutingParams internal _routingParams;
@@ -120,7 +121,7 @@ abstract contract AuctionHouseTest is Test, Permit2User {
             allowlist: IAllowlist(address(0)),
             allowlistParams: abi.encode(""),
             derivativeType: toKeycode(""),
-            derivativeParams: abi.encode("")
+            derivativeParams: _derivativeParams
         });
 
         // Bidder
@@ -251,6 +252,12 @@ abstract contract AuctionHouseTest is Test, Permit2User {
 
     modifier givenHookHasBaseTokenBalance(uint256 amount_) {
         _baseToken.mint(address(_hook), amount_);
+        _;
+    }
+
+    modifier givenHookHasBaseTokenAllowance(uint256 amount_) {
+        vm.prank(address(_hook));
+        _baseToken.approve(address(_auctionHouse), amount_);
         _;
     }
 

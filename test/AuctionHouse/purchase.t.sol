@@ -19,9 +19,8 @@ contract PurchaseTest is AuctionHouseTest {
     uint96 internal _amountOut = _amountInLessFee;
 
     bytes internal _purchaseAuctionData = abi.encode("");
-    bytes internal _derivativeParams = abi.encode("");
 
-    uint96 internal _curatorFeeActual;
+    uint96 internal _curatorFeeActual = _amountOut * _CURATOR_FEE_PERCENT / 1e5;
 
     uint48 internal constant _DERIVATIVE_EXPIRY = 1 days;
     uint256 internal _derivativeTokenId = type(uint256).max;
@@ -40,6 +39,7 @@ contract PurchaseTest is AuctionHouseTest {
         MockDerivativeModule.DerivativeParams memory deployParams =
             MockDerivativeModule.DerivativeParams({expiry: _DERIVATIVE_EXPIRY, multiplier: 0});
         _derivativeParams = abi.encode(deployParams);
+        _routingParams.derivativeParams = _derivativeParams;
         _;
     }
 
@@ -172,6 +172,8 @@ contract PurchaseTest is AuctionHouseTest {
         whenAllowlistProofIsCorrect
         givenLotIsCreated
         givenLotHasStarted
+        givenProtocolFeeIsSet
+        givenReferrerFeeIsSet
         givenUserHasQuoteTokenBalance(_AMOUNT_IN)
         givenUserHasApprovedQuoteToken(_AMOUNT_IN)
         givenOwnerHasBaseTokenBalance(_amountOut)
@@ -199,6 +201,8 @@ contract PurchaseTest is AuctionHouseTest {
         whenAtomicAuctionModuleIsInstalled
         givenLotIsCreated
         givenLotHasStarted
+        givenProtocolFeeIsSet
+        givenReferrerFeeIsSet
         givenUserHasQuoteTokenBalance(_AMOUNT_IN)
         givenOwnerHasBaseTokenBalance(_amountOut)
         givenOwnerHasBaseTokenAllowance(_amountOut)
@@ -208,7 +212,6 @@ contract PurchaseTest is AuctionHouseTest {
         _createPurchase(_AMOUNT_IN, _amountOut, _purchaseAuctionData);
 
         // Check balances
-        assertEq(_quoteToken.balanceOf(_bidder), 0);
         assertEq(_quoteToken.balanceOf(_bidder), 0);
         assertEq(_quoteToken.balanceOf(address(_hook)), 0);
         assertEq(
@@ -226,6 +229,8 @@ contract PurchaseTest is AuctionHouseTest {
         whenAtomicAuctionModuleIsInstalled
         givenLotIsCreated
         givenLotHasStarted
+        givenProtocolFeeIsSet
+        givenReferrerFeeIsSet
         givenUserHasQuoteTokenBalance(_AMOUNT_IN)
         givenUserHasApprovedQuoteToken(_AMOUNT_IN)
         givenOwnerHasBaseTokenBalance(_amountOut)
@@ -235,7 +240,6 @@ contract PurchaseTest is AuctionHouseTest {
         _createPurchase(_AMOUNT_IN, _amountOut, _purchaseAuctionData);
 
         // Check balances
-        assertEq(_quoteToken.balanceOf(_bidder), 0);
         assertEq(_quoteToken.balanceOf(_bidder), 0);
         assertEq(_quoteToken.balanceOf(address(_hook)), 0);
         assertEq(
@@ -259,10 +263,12 @@ contract PurchaseTest is AuctionHouseTest {
         givenAuctionHasHook
         givenLotIsCreated
         givenLotHasStarted
+        givenProtocolFeeIsSet
+        givenReferrerFeeIsSet
         givenUserHasQuoteTokenBalance(_AMOUNT_IN)
         givenUserHasApprovedQuoteToken(_AMOUNT_IN)
         givenHookHasBaseTokenBalance(_amountOut)
-        givenOwnerHasBaseTokenAllowance(_amountOut)
+        givenHookHasBaseTokenAllowance(_amountOut)
     {
         // Purchase
         _createPurchase(_AMOUNT_IN, _amountOut, _purchaseAuctionData);
@@ -307,6 +313,8 @@ contract PurchaseTest is AuctionHouseTest {
         whenAtomicAuctionModuleIsInstalled
         givenLotIsCreated
         givenLotHasStarted
+        givenProtocolFeeIsSet
+        givenReferrerFeeIsSet
         givenUserHasQuoteTokenBalance(_AMOUNT_IN)
         givenUserHasApprovedQuoteToken(_AMOUNT_IN)
         givenOwnerHasBaseTokenBalance(_amountOut)
@@ -317,7 +325,6 @@ contract PurchaseTest is AuctionHouseTest {
 
         // Check balances
         assertEq(_quoteToken.balanceOf(_bidder), 0);
-        assertEq(_quoteToken.balanceOf(_bidder), 0);
         assertEq(_quoteToken.balanceOf(address(_hook)), 0);
         assertEq(
             _quoteToken.balanceOf(address(_auctionHouse)),
@@ -325,7 +332,6 @@ contract PurchaseTest is AuctionHouseTest {
         );
         assertEq(_quoteToken.balanceOf(_auctionOwner), _amountInLessFee);
 
-        assertEq(_baseToken.balanceOf(_bidder), 0);
         assertEq(_baseToken.balanceOf(_bidder), _amountOut);
         assertEq(_baseToken.balanceOf(address(_hook)), 0);
         assertEq(_baseToken.balanceOf(address(_auctionHouse)), 0);
@@ -333,14 +339,12 @@ contract PurchaseTest is AuctionHouseTest {
 
         // Check accrued fees
         assertEq(_auctionHouse.rewards(_bidder, _quoteToken), 0);
-        assertEq(_auctionHouse.rewards(_bidder, _quoteToken), 0);
         assertEq(_auctionHouse.rewards(_REFERRER, _quoteToken), _amountInReferrerFee);
         assertEq(_auctionHouse.rewards(_PROTOCOL, _quoteToken), _amountInProtocolFee);
         assertEq(_auctionHouse.rewards(address(_hook), _quoteToken), 0);
         assertEq(_auctionHouse.rewards(address(_auctionHouse), _quoteToken), 0);
         assertEq(_auctionHouse.rewards(_auctionOwner, _quoteToken), 0);
 
-        assertEq(_auctionHouse.rewards(_bidder, _baseToken), 0);
         assertEq(_auctionHouse.rewards(_bidder, _baseToken), 0);
         assertEq(_auctionHouse.rewards(_REFERRER, _baseToken), 0);
         assertEq(_auctionHouse.rewards(_PROTOCOL, _baseToken), 0);
@@ -379,43 +383,70 @@ contract PurchaseTest is AuctionHouseTest {
         _createPurchase(_AMOUNT_IN, _amountOut, _purchaseAuctionData);
 
         // Check balances of the quote token
-        assertEq(_quoteToken.balanceOf(_bidder), 0);
-        assertEq(_quoteToken.balanceOf(address(_hook)), 0);
+        assertEq(_quoteToken.balanceOf(_bidder), 0, "quote token: balance mismatch on _bidder");
+        assertEq(_quoteToken.balanceOf(address(_hook)), 0, "quote token: balance mismatch on hook");
         assertEq(
             _quoteToken.balanceOf(address(_auctionHouse)),
-            _amountInProtocolFee + _amountInReferrerFee
+            _amountInProtocolFee + _amountInReferrerFee,
+            "quote token: balance mismatch on auction house"
         );
-        assertEq(_quoteToken.balanceOf(_auctionOwner), _amountInLessFee);
-        assertEq(_quoteToken.balanceOf(address(_derivativeModule)), 0);
+        assertEq(
+            _quoteToken.balanceOf(_auctionOwner),
+            _amountInLessFee,
+            "quote token: balance mismatch on auction owner"
+        );
+        assertEq(
+            _quoteToken.balanceOf(address(_derivativeModule)),
+            0,
+            "quote token: balance mismatch on derivative module"
+        );
 
         // Check balances of the base token
-        assertEq(_baseToken.balanceOf(_bidder), 0);
-        assertEq(_baseToken.balanceOf(address(_hook)), 0);
-        assertEq(_baseToken.balanceOf(address(_auctionHouse)), 0);
-        assertEq(_baseToken.balanceOf(_auctionOwner), 0);
-        assertEq(_baseToken.balanceOf(address(_derivativeModule)), _amountOut);
+        assertEq(_baseToken.balanceOf(_bidder), 0, "base token: balance mismatch on _bidder");
+        assertEq(_baseToken.balanceOf(address(_hook)), 0, "base token: balance mismatch on hook");
+        assertEq(
+            _baseToken.balanceOf(address(_auctionHouse)),
+            0,
+            "base token: balance mismatch on auction house"
+        );
+        assertEq(
+            _baseToken.balanceOf(_auctionOwner), 0, "base token: balance mismatch on auction owner"
+        );
+        assertEq(
+            _baseToken.balanceOf(address(_derivativeModule)),
+            _amountOut,
+            "base token: balance mismatch on derivative module"
+        );
 
         // Check balances of the derivative token
         assertEq(
-            _derivativeModule.derivativeToken().balanceOf(_bidder, _derivativeTokenId), _amountOut
+            _derivativeModule.derivativeToken().balanceOf(_bidder, _derivativeTokenId),
+            _amountOut,
+            "derivative token: balance mismatch on _bidder"
         );
         assertEq(
-            _derivativeModule.derivativeToken().balanceOf(address(_hook), _derivativeTokenId), 0
+            _derivativeModule.derivativeToken().balanceOf(address(_hook), _derivativeTokenId),
+            0,
+            "derivative token: balance mismatch on hook"
         );
         assertEq(
             _derivativeModule.derivativeToken().balanceOf(
                 address(_auctionHouse), _derivativeTokenId
             ),
-            0
+            0,
+            "derivative token: balance mismatch on auction house"
         );
         assertEq(
-            _derivativeModule.derivativeToken().balanceOf(_auctionOwner, _derivativeTokenId), 0
+            _derivativeModule.derivativeToken().balanceOf(_auctionOwner, _derivativeTokenId),
+            0,
+            "derivative token: balance mismatch on auction owner"
         );
         assertEq(
             _derivativeModule.derivativeToken().balanceOf(
                 address(_derivativeModule), _derivativeTokenId
             ),
-            0
+            0,
+            "derivative token: balance mismatch on derivative module"
         );
     }
 
@@ -434,11 +465,12 @@ contract PurchaseTest is AuctionHouseTest {
 
     function test_givenProtocolFeeIsNotSet()
         external
-        givenProtocolFeeIsNotSet
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
         givenLotIsCreated
         givenLotHasStarted
+        givenProtocolFeeIsNotSet
+        givenReferrerFeeIsSet
         givenUserHasQuoteTokenBalance(_AMOUNT_IN)
         givenUserHasApprovedQuoteToken(_AMOUNT_IN)
         givenOwnerHasBaseTokenBalance(_amountOut)
@@ -460,7 +492,8 @@ contract PurchaseTest is AuctionHouseTest {
             _amountInLessFee,
             "quote token: balance mismatch on auction owner"
         );
-        assertEq(_baseToken.balanceOf(_CURATOR), 0, "quote token: balance mismatch on curator");
+        assertEq(_quoteToken.balanceOf(_CURATOR), 0, "quote token: balance mismatch on curator");
+
         assertEq(
             _baseToken.balanceOf(_bidder), _amountOut, "base token: balance mismatch on _bidder"
         );
@@ -512,6 +545,7 @@ contract PurchaseTest is AuctionHouseTest {
         whenAtomicAuctionModuleIsInstalled
         givenLotIsCreated
         givenProtocolFeeIsSet
+        givenReferrerFeeIsSet
         givenLotHasStarted
         givenUserHasQuoteTokenBalance(_AMOUNT_IN)
         givenUserHasApprovedQuoteToken(_AMOUNT_IN)
@@ -537,6 +571,7 @@ contract PurchaseTest is AuctionHouseTest {
         assertEq(
             _quoteToken.balanceOf(address(_CURATOR)), 0, "quote token: balance mismatch on curator"
         );
+
         assertEq(
             _baseToken.balanceOf(_bidder), _amountOut, "base token: balance mismatch on _bidder"
         );
@@ -597,10 +632,11 @@ contract PurchaseTest is AuctionHouseTest {
 
     function test_givenReferrerFeeIsNotSet()
         external
-        givenReferrerFeeIsNotSet
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
         givenLotIsCreated
+        givenReferrerFeeIsNotSet
+        givenProtocolFeeIsSet
         givenLotHasStarted
         givenUserHasQuoteTokenBalance(_AMOUNT_IN)
         givenUserHasApprovedQuoteToken(_AMOUNT_IN)
@@ -611,7 +647,6 @@ contract PurchaseTest is AuctionHouseTest {
         _createPurchase(_AMOUNT_IN, _amountOut, _purchaseAuctionData);
 
         // Check balances
-        assertEq(_quoteToken.balanceOf(_bidder), 0, "quote token: balance mismatch on _bidder");
         assertEq(_quoteToken.balanceOf(_bidder), 0, "quote token: balance mismatch on _bidder");
         assertEq(_quoteToken.balanceOf(address(_hook)), 0, "quote token: balance mismatch on hook");
         assertEq(
@@ -627,7 +662,7 @@ contract PurchaseTest is AuctionHouseTest {
         assertEq(
             _quoteToken.balanceOf(address(_CURATOR)), 0, "quote token: balance mismatch on curator"
         );
-        assertEq(_baseToken.balanceOf(_bidder), 0, "base token: balance mismatch on _bidder");
+
         assertEq(
             _baseToken.balanceOf(_bidder), _amountOut, "base token: balance mismatch on _bidder"
         );
@@ -679,6 +714,7 @@ contract PurchaseTest is AuctionHouseTest {
         whenAtomicAuctionModuleIsInstalled
         givenLotIsCreated
         givenReferrerFeeIsSet
+        givenProtocolFeeIsSet
         givenLotHasStarted
         givenUserHasQuoteTokenBalance(_AMOUNT_IN)
         givenUserHasApprovedQuoteToken(_AMOUNT_IN)
@@ -689,7 +725,6 @@ contract PurchaseTest is AuctionHouseTest {
         _createPurchase(_AMOUNT_IN, _amountOut, _purchaseAuctionData);
 
         // Check balances
-        assertEq(_quoteToken.balanceOf(_bidder), 0, "quote token: balance mismatch on _bidder");
         assertEq(_quoteToken.balanceOf(_bidder), 0, "quote token: balance mismatch on _bidder");
         assertEq(_quoteToken.balanceOf(address(_hook)), 0, "quote token: balance mismatch on hook");
         assertEq(
@@ -705,7 +740,7 @@ contract PurchaseTest is AuctionHouseTest {
         assertEq(
             _quoteToken.balanceOf(address(_CURATOR)), 0, "quote token: balance mismatch on curator"
         );
-        assertEq(_baseToken.balanceOf(_bidder), 0, "base token: balance mismatch on _bidder");
+
         assertEq(
             _baseToken.balanceOf(_bidder), _amountOut, "base token: balance mismatch on _bidder"
         );
@@ -778,7 +813,6 @@ contract PurchaseTest is AuctionHouseTest {
 
         // Check balances
         assertEq(_quoteToken.balanceOf(_bidder), 0, "quote token: balance mismatch on _bidder");
-        assertEq(_quoteToken.balanceOf(_bidder), 0, "quote token: balance mismatch on _bidder");
         assertEq(_quoteToken.balanceOf(address(_hook)), 0, "quote token: balance mismatch on hook");
         assertEq(
             _quoteToken.balanceOf(address(_auctionHouse)),
@@ -793,7 +827,7 @@ contract PurchaseTest is AuctionHouseTest {
         assertEq(
             _quoteToken.balanceOf(address(_CURATOR)), 0, "quote token: balance mismatch on curator"
         );
-        assertEq(_baseToken.balanceOf(_bidder), 0, "base token: balance mismatch on _bidder");
+
         assertEq(
             _baseToken.balanceOf(_bidder), _amountOut, "base token: balance mismatch on _bidder"
         );
@@ -858,7 +892,6 @@ contract PurchaseTest is AuctionHouseTest {
 
         // Check balances
         assertEq(_quoteToken.balanceOf(_bidder), 0, "quote token: balance mismatch on _bidder");
-        assertEq(_quoteToken.balanceOf(_bidder), 0, "quote token: balance mismatch on _bidder");
         assertEq(_quoteToken.balanceOf(address(_hook)), 0, "quote token: balance mismatch on hook");
         assertEq(
             _quoteToken.balanceOf(address(_auctionHouse)),
@@ -873,7 +906,7 @@ contract PurchaseTest is AuctionHouseTest {
         assertEq(
             _quoteToken.balanceOf(address(_CURATOR)), 0, "quote token: balance mismatch on curator"
         );
-        assertEq(_baseToken.balanceOf(_bidder), 0, "base token: balance mismatch on _bidder");
+
         assertEq(
             _baseToken.balanceOf(_bidder), _amountOut, "base token: balance mismatch on _bidder"
         );
@@ -941,7 +974,6 @@ contract PurchaseTest is AuctionHouseTest {
 
         // Check balances
         assertEq(_quoteToken.balanceOf(_bidder), 0, "quote token: balance mismatch on _bidder");
-        assertEq(_quoteToken.balanceOf(_bidder), 0, "quote token: balance mismatch on _bidder");
         assertEq(_quoteToken.balanceOf(address(_hook)), 0, "quote token: balance mismatch on hook");
         assertEq(
             _quoteToken.balanceOf(address(_auctionHouse)),
@@ -956,7 +988,7 @@ contract PurchaseTest is AuctionHouseTest {
         assertEq(
             _quoteToken.balanceOf(address(_CURATOR)), 0, "quote token: balance mismatch on curator"
         );
-        assertEq(_baseToken.balanceOf(_bidder), 0, "base token: balance mismatch on _bidder");
+
         assertEq(
             _baseToken.balanceOf(_bidder), _amountOut, "base token: balance mismatch on _bidder"
         );
@@ -1034,7 +1066,6 @@ contract PurchaseTest is AuctionHouseTest {
 
         // Check balances of quote token
         assertEq(_quoteToken.balanceOf(_bidder), 0, "quote token: balance mismatch on _bidder");
-        assertEq(_quoteToken.balanceOf(_bidder), 0, "quote token: balance mismatch on _bidder");
         assertEq(_quoteToken.balanceOf(address(_hook)), 0, "quote token: balance mismatch on hook");
         assertEq(
             _quoteToken.balanceOf(address(_auctionHouse)),
@@ -1052,7 +1083,6 @@ contract PurchaseTest is AuctionHouseTest {
         assertEq(_quoteToken.balanceOf(address(_derivativeModule)), 0);
 
         // Check balances of base token
-        assertEq(_baseToken.balanceOf(_bidder), 0, "base token: balance mismatch on _bidder");
         assertEq(_baseToken.balanceOf(_bidder), 0, "base token: balance mismatch on _bidder");
         assertEq(_baseToken.balanceOf(address(_hook)), 0, "base token: balance mismatch on hook");
         assertEq(
@@ -1073,11 +1103,6 @@ contract PurchaseTest is AuctionHouseTest {
         );
 
         // Check balances of derivative token
-        assertEq(
-            _derivativeModule.derivativeToken().balanceOf(_bidder, _derivativeTokenId),
-            0,
-            "derivative token: balance mismatch on _bidder"
-        );
         assertEq(
             _derivativeModule.derivativeToken().balanceOf(_bidder, _derivativeTokenId),
             _amountOut,
@@ -1152,7 +1177,6 @@ contract PurchaseTest is AuctionHouseTest {
         _createPurchase(_AMOUNT_IN, _amountOut, _purchaseAuctionData);
 
         // Check balances of the base token
-        assertEq(_baseToken.balanceOf(_bidder), 0, "balance mismatch on _bidder");
         assertEq(_baseToken.balanceOf(_bidder), _amountOut, "balance mismatch on _bidder");
         assertEq(_baseToken.balanceOf(address(_hook)), 0, "balance mismatch on hook");
         assertEq(
@@ -1181,6 +1205,8 @@ contract PurchaseTest is AuctionHouseTest {
         givenReferrerFeeIsSet
         givenOwnerHasBaseTokenBalance(_curatorMaxPotentialFee)
         givenOwnerHasBaseTokenAllowance(_curatorMaxPotentialFee)
+        givenCuratorMaxFeeIsSet
+        givenCuratorFeeIsSet
         givenCuratorHasApproved
         givenUserHasQuoteTokenBalance(_AMOUNT_IN)
         givenUserHasApprovedQuoteToken(_AMOUNT_IN)
@@ -1196,7 +1222,6 @@ contract PurchaseTest is AuctionHouseTest {
         _createPurchase(_AMOUNT_IN, _amountOut, _purchaseAuctionData);
 
         // Check balances of the base token
-        assertEq(_baseToken.balanceOf(_bidder), 0, "balance mismatch on _bidder");
         assertEq(_baseToken.balanceOf(_bidder), _amountOut, "balance mismatch on _bidder");
         assertEq(_baseToken.balanceOf(address(_hook)), 0, "balance mismatch on hook");
         assertEq(
