@@ -11,6 +11,7 @@ import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 // Mocks
 import {MockFeeOnTransferERC20} from "test/lib/mocks/MockFeeOnTransferERC20.sol";
 import {MockDerivativeModule} from "test/modules/derivatives/mocks/MockDerivativeModule.sol";
+import {MockCondenserModule} from "test/modules/Condenser/MockCondenserModule.sol";
 import {MockAllowlist} from "test/modules/Auction/MockAllowlist.sol";
 import {Permit2User} from "test/lib/permit2/Permit2User.sol";
 import {MockHook} from "test/modules/Auction/MockHook.sol";
@@ -33,6 +34,9 @@ abstract contract EmpaAuctionHouseTest is Test, Permit2User {
     MockFeeOnTransferERC20 internal _baseToken;
     MockFeeOnTransferERC20 internal _quoteToken;
     MockDerivativeModule internal _mockDerivativeModule;
+    Keycode internal _derivativeModuleKeycode;
+    MockCondenserModule internal _mockCondenserModule;
+    Keycode internal _condenserModuleKeycode;
     MockAllowlist internal _mockAllowlist;
     MockHook internal _mockHook;
 
@@ -99,9 +103,17 @@ abstract contract EmpaAuctionHouseTest is Test, Permit2User {
         _quoteToken = new MockFeeOnTransferERC20("Quote Token", "QUOTE", 18);
 
         _auctionHouse = new AuctionHouse(address(this), _PROTOCOL, _PERMIT2_ADDRESS);
+
         _auctionModule = new EncryptedMarginalPriceAuctionModule(address(_auctionHouse));
         _auctionModuleKeycode = keycodeFromVeecode(_auctionModule.VEECODE());
+        _auctionHouse.installModule(_auctionModule);
+
         _mockDerivativeModule = new MockDerivativeModule(address(_auctionHouse));
+        _derivativeModuleKeycode = keycodeFromVeecode(_mockDerivativeModule.VEECODE());
+
+        _mockCondenserModule = new MockCondenserModule(address(_auctionHouse));
+        _condenserModuleKeycode = keycodeFromVeecode(_mockCondenserModule.VEECODE());
+
         _mockAllowlist = new MockAllowlist();
         _mockHook = new MockHook(address(_quoteToken), address(_baseToken));
 
@@ -220,6 +232,11 @@ abstract contract EmpaAuctionHouseTest is Test, Permit2User {
         _;
     }
 
+    modifier givenAuctionModuleIsSunset() {
+        _auctionHouse.sunsetModule(_auctionModuleKeycode);
+        _;
+    }
+
     modifier whenDerivativeModuleIsInstalled() {
         _auctionHouse.installModule(_mockDerivativeModule);
         _;
@@ -227,6 +244,18 @@ abstract contract EmpaAuctionHouseTest is Test, Permit2User {
 
     modifier whenDerivativeTypeIsSet() {
         _routingParams.derivativeType = toKeycode("DERV");
+        _;
+    }
+
+    modifier whenCondenserModuleIsInstalled() {
+        _auctionHouse.installModule(_mockCondenserModule);
+        _;
+    }
+
+    modifier whenCondenserIsMapped() {
+        _auctionHouse.setCondenser(
+            _auctionModuleKeycode, _derivativeModuleKeycode, _condenserModuleKeycode
+        );
         _;
     }
 
@@ -520,6 +549,12 @@ abstract contract EmpaAuctionHouseTest is Test, Permit2User {
             wrapDerivative: wrapDerivative_,
             prefunding: prefunding_
         });
+    }
+
+    function _getLotCuration(uint96 lotId_) internal view returns (Auctioneer.Curation memory) {
+        (address curator_, bool curated_) = _auctionHouse.lotCuration(lotId_);
+
+        return Auctioneer.Curation({curator: curator_, curated: curated_});
     }
 
     function _getLotData(uint96 lotId_) internal view returns (Auction.Lot memory) {
