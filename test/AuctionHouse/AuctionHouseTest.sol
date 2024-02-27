@@ -272,9 +272,14 @@ abstract contract AuctionHouseTest is Test, Permit2User {
         });
 
         vm.prank(_bidder);
-        uint64 bidId = _auctionHouse.bid(bidParams);
+        _bidId = _auctionHouse.bid(bidParams);
 
-        return bidId;
+        return _bidId;
+    }
+
+    modifier givenBid(uint96 amount_, bytes memory auctionData_) {
+        _createBid(amount_, auctionData_);
+        _;
     }
 
     function _createPurchase(
