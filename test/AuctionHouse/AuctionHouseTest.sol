@@ -4,9 +4,11 @@ pragma solidity 0.8.19;
 // Libraries
 import {Test} from "forge-std/Test.sol";
 import {ERC20} from "solmate/tokens/ERC20.sol";
+import {Transfer} from "src/lib/Transfer.sol";
 
 // Mocks
 import {MockAtomicAuctionModule} from "test/modules/Auction/MockAtomicAuctionModule.sol";
+import {MockBatchAuctionModule} from "test/modules/Auction/MockBatchAuctionModule.sol";
 import {MockDerivativeModule} from "test/modules/derivatives/mocks/MockDerivativeModule.sol";
 import {MockCondenserModule} from "test/modules/Condenser/MockCondenserModule.sol";
 import {MockAllowlist} from "test/modules/Auction/MockAllowlist.sol";
@@ -15,7 +17,7 @@ import {Permit2User} from "test/lib/permit2/Permit2User.sol";
 import {MockFeeOnTransferERC20} from "test/lib/mocks/MockFeeOnTransferERC20.sol";
 
 // Auctions
-import {AuctionHouse, Router, FeeManager} from "src/AuctionHouse.sol";
+import {AuctionHouse, Router} from "src/AuctionHouse.sol";
 import {Auction, AuctionModule} from "src/modules/Auction.sol";
 import {IHooks, IAllowlist, Auctioneer} from "src/bases/Auctioneer.sol";
 
@@ -27,9 +29,12 @@ abstract contract AuctionHouseTest is Test, Permit2User {
 
     AuctionHouse internal _auctionHouse;
     AuctionModule internal _auctionModule;
+    Keycode internal _auctionModuleKeycode;
 
     MockAtomicAuctionModule internal _atomicAuctionModule;
     Keycode internal _atomicAuctionModuleKeycode;
+    MockBatchAuctionModule internal _batchAuctionModule;
+    Keycode internal _batchAuctionModuleKeycode;
     MockDerivativeModule internal _derivativeModule;
     Keycode internal _derivativeModuleKeycode;
     MockCondenserModule internal _condenserModule;
@@ -80,6 +85,8 @@ abstract contract AuctionHouseTest is Test, Permit2User {
 
         _atomicAuctionModule = new MockAtomicAuctionModule(address(_auctionHouse));
         _atomicAuctionModuleKeycode = keycodeFromVeecode(_atomicAuctionModule.VEECODE());
+        _batchAuctionModule = new MockBatchAuctionModule(address(_auctionHouse));
+        _batchAuctionModuleKeycode = keycodeFromVeecode(_batchAuctionModule.VEECODE());
         _derivativeModule = new MockDerivativeModule(address(_auctionHouse));
         _derivativeModuleKeycode = keycodeFromVeecode(_derivativeModule.VEECODE());
         _condenserModule = new MockCondenserModule(address(_auctionHouse));
@@ -121,11 +128,25 @@ abstract contract AuctionHouseTest is Test, Permit2User {
         _routingParams.auctionType = _atomicAuctionModuleKeycode;
 
         _auctionModule = _atomicAuctionModule;
+        _auctionModuleKeycode = _atomicAuctionModuleKeycode;
+        _;
+    }
+
+    modifier whenAuctionTypeIsBatch() {
+        _routingParams.auctionType = _batchAuctionModuleKeycode;
+
+        _auctionModule = _batchAuctionModule;
+        _auctionModuleKeycode = _batchAuctionModuleKeycode;
         _;
     }
 
     modifier whenAtomicAuctionModuleIsInstalled() {
         _auctionHouse.installModule(_atomicAuctionModule);
+        _;
+    }
+
+    modifier whenBatchAuctionModuleIsInstalled() {
+        _auctionHouse.installModule(_batchAuctionModule);
         _;
     }
 
@@ -137,6 +158,89 @@ abstract contract AuctionHouseTest is Test, Permit2User {
     modifier whenDerivativeModuleIsInstalled() {
         _auctionHouse.installModule(_derivativeModule);
         _;
+    }
+
+    modifier givenLotIsCreated() {
+        vm.prank(_auctionOwner);
+        _lotId = _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
+        _;
+    }
+
+    modifier givenLotHasStarted() {
+        vm.warp(_startTime);
+        _;
+    }
+
+    modifier givenLotIsCancelled() {
+        vm.prank(_auctionOwner);
+        _auctionHouse.cancel(_lotId);
+        _;
+    }
+
+    modifier givenLotIsConcluded() {
+        vm.warp(_startTime + _duration + 1);
+        _;
+    }
+
+    modifier givenLotHasAllowlist() {
+        _routingParams.allowlist = _allowlist;
+        _;
+    }
+
+    modifier whenAllowlistProofIsCorrect() {
+        // Add the sender to the allowlist
+        _allowlist.setAllowedWithProof(_bidder, _allowlistProof, true);
+        _;
+    }
+
+    modifier whenAllowlistProofIsIncorrect() {
+        _allowlistProof = abi.encode("incorrect proof");
+        _;
+    }
+
+    modifier whenPermit2ApprovalIsProvided(uint256 amount_) {
+        // Approve the Permit2 contract to spend the quote token
+        vm.prank(_bidder);
+        _quoteToken.approve(_PERMIT2_ADDRESS, type(uint256).max);
+
+        // Set up the Permit2 approval
+        uint48 deadline = uint48(block.timestamp);
+        uint256 nonce = _getRandomUint256();
+        bytes memory signature = _signPermit(
+            address(_quoteToken), amount_, nonce, deadline, address(_auctionHouse), _bidderKey
+        );
+
+        _permit2Data = abi.encode(
+            Transfer.Permit2Approval({deadline: deadline, nonce: nonce, signature: signature})
+        );
+        _;
+    }
+
+    modifier givenUserHasQuoteTokenBalance(uint256 amount_) {
+        _quoteToken.mint(_bidder, amount_);
+        _;
+    }
+
+    modifier givenUserHasApprovedQuoteToken(uint256 amount_) {
+        vm.prank(_bidder);
+        _quoteToken.approve(address(_auctionHouse), amount_);
+        _;
+    }
+
+    function _createBid(uint96 amount_, bytes memory auctionData_) internal returns (uint64) {
+        Router.BidParams memory bidParams = Router.BidParams({
+            lotId: _lotId,
+            referrer: _REFERRER,
+            amount: amount_,
+            auctionData: auctionData_,
+            allowlistProof: _allowlistProof,
+            permit2Data: _permit2Data
+        });
+
+        vm.prank(_bidder);
+        uint64 bidId = _auctionHouse.bid(bidParams);
+
+        return bidId;
     }
 
     // ===== Helpers ===== //
