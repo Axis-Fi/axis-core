@@ -244,6 +244,16 @@ abstract contract AuctionHouseTest is Test, Permit2User {
         _;
     }
 
+    modifier givenAuctionHasHook() {
+        _routingParams.hooks = _hook;
+        _;
+    }
+
+    modifier givenHookHasBaseTokenBalance(uint256 amount_) {
+        _baseToken.mint(address(_hook), amount_);
+        _;
+    }
+
     function _createBid(uint96 amount_, bytes memory auctionData_) internal returns (uint64) {
         Router.BidParams memory bidParams = Router.BidParams({
             lotId: _lotId,

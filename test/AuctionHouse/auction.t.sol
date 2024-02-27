@@ -497,12 +497,6 @@ contract AuctionTest is AuctionHouseTest {
         _;
     }
 
-    modifier givenHookHasBaseTokenBalance(uint256 amount_) {
-        // Mint the amount to the hook
-        _baseToken.mint(address(_hook), amount_);
-        _;
-    }
-
     modifier givenPreAuctionCreateHookBreaksInvariant() {
         _hook.setPreAuctionCreateMultiplier(9000);
         _;
