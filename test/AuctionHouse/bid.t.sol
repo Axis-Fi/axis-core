@@ -384,28 +384,6 @@ contract BidTest is AuctionHouseTest {
     //   [X] no payout token is transferred to the curator
     //  [X] no payout token is transferred to the curator
 
-    modifier givenCuratorIsSet() {
-        _routingParams.curator = _CURATOR;
-        _;
-    }
-
-    modifier givenCuratorMaxFeeIsSet() {
-        _auctionHouse.setFee(
-            _auctionModuleKeycode, FeeManager.FeeType.MaxCurator, _CURATOR_MAX_FEE_PERCENT
-        );
-        _;
-    }
-
-    modifier givenCuratorHasApproved() {
-        // Set the curator fee
-        vm.prank(_CURATOR);
-        _auctionHouse.setCuratorFee(_auctionModuleKeycode, _CURATOR_FEE_PERCENT);
-
-        vm.prank(_CURATOR);
-        _auctionHouse.curate(_lotId);
-        _;
-    }
-
     function test_givenCuratorIsNotSet()
         external
         whenAuctionTypeIsBatch

@@ -19,7 +19,9 @@ import {MockFeeOnTransferERC20} from "test/lib/mocks/MockFeeOnTransferERC20.sol"
 // Auctions
 import {AuctionHouse, Router} from "src/AuctionHouse.sol";
 import {Auction, AuctionModule} from "src/modules/Auction.sol";
+import {FeeManager} from "src/bases/FeeManager.sol";
 import {IHooks, IAllowlist, Auctioneer} from "src/bases/Auctioneer.sol";
+import {Catalogue} from "src/Catalogue.sol";
 
 import {Veecode, toKeycode, keycodeFromVeecode, Keycode} from "src/modules/Modules.sol";
 
@@ -30,6 +32,7 @@ abstract contract AuctionHouseTest is Test, Permit2User {
     AuctionHouse internal _auctionHouse;
     AuctionModule internal _auctionModule;
     Keycode internal _auctionModuleKeycode;
+    Catalogue internal _catalogue;
 
     MockAtomicAuctionModule internal _atomicAuctionModule;
     Keycode internal _atomicAuctionModuleKeycode;
@@ -57,6 +60,8 @@ abstract contract AuctionHouseTest is Test, Permit2User {
     uint24 internal constant _PROTOCOL_FEE_PERCENT = 100;
     uint24 internal constant _REFERRER_FEE_PERCENT = 105;
 
+    uint96 internal _curatorMaxPotentialFee = _CURATOR_FEE_PERCENT * _LOT_CAPACITY / 1e5;
+
     // Input to parameters
     uint48 internal _startTime;
     uint48 internal _duration = 1 days;
@@ -82,6 +87,7 @@ abstract contract AuctionHouseTest is Test, Permit2User {
         _quoteToken = new MockFeeOnTransferERC20("Quote Token", "QUOTE", 18);
 
         _auctionHouse = new AuctionHouse(address(this), _PROTOCOL, _PERMIT2_ADDRESS);
+        _catalogue = new Catalogue(address(_auctionHouse));
 
         _atomicAuctionModule = new MockAtomicAuctionModule(address(_auctionHouse));
         _atomicAuctionModuleKeycode = keycodeFromVeecode(_atomicAuctionModule.VEECODE());
@@ -241,6 +247,49 @@ abstract contract AuctionHouseTest is Test, Permit2User {
         uint64 bidId = _auctionHouse.bid(bidParams);
 
         return bidId;
+    }
+
+    function _createPurchase(
+        uint96 amount_,
+        bytes memory auctionData_
+    ) internal returns (uint256) {
+        Router.PurchaseParams memory purchaseParams = Router.PurchaseParams({
+            recipient: _bidder,
+            referrer: _REFERRER,
+            lotId: _lotId,
+            amount: amount_,
+            minAmountOut: amount_,
+            auctionData: auctionData_,
+            allowlistProof: _allowlistProof,
+            permit2Data: _permit2Data
+        });
+
+        vm.prank(_bidder);
+        uint256 payout = _auctionHouse.purchase(purchaseParams);
+
+        return payout;
+    }
+
+    modifier givenCuratorIsSet() {
+        _routingParams.curator = _CURATOR;
+        _;
+    }
+
+    modifier givenCuratorMaxFeeIsSet() {
+        _auctionHouse.setFee(
+            _auctionModuleKeycode, FeeManager.FeeType.MaxCurator, _CURATOR_MAX_FEE_PERCENT
+        );
+        _;
+    }
+
+    modifier givenCuratorHasApproved() {
+        // Set the curator fee
+        vm.prank(_CURATOR);
+        _auctionHouse.setCuratorFee(_auctionModuleKeycode, _CURATOR_FEE_PERCENT);
+
+        vm.prank(_CURATOR);
+        _auctionHouse.curate(_lotId);
+        _;
     }
 
     // ===== Helpers ===== //
