@@ -1,0 +1,201 @@
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity 0.8.19;
+
+// Libraries
+import {Test} from "forge-std/Test.sol";
+import {ERC20} from "solmate/tokens/ERC20.sol";
+
+// Mocks
+import {MockAtomicAuctionModule} from "test/modules/Auction/MockAtomicAuctionModule.sol";
+import {MockDerivativeModule} from "test/modules/derivatives/mocks/MockDerivativeModule.sol";
+import {MockCondenserModule} from "test/modules/Condenser/MockCondenserModule.sol";
+import {MockAllowlist} from "test/modules/Auction/MockAllowlist.sol";
+import {MockHook} from "test/modules/Auction/MockHook.sol";
+import {Permit2User} from "test/lib/permit2/Permit2User.sol";
+import {MockFeeOnTransferERC20} from "test/lib/mocks/MockFeeOnTransferERC20.sol";
+
+// Auctions
+import {AuctionHouse, Router, FeeManager} from "src/AuctionHouse.sol";
+import {Auction, AuctionModule} from "src/modules/Auction.sol";
+import {IHooks, IAllowlist, Auctioneer} from "src/bases/Auctioneer.sol";
+
+import {Veecode, toKeycode, keycodeFromVeecode, Keycode} from "src/modules/Modules.sol";
+
+abstract contract AuctionHouseTest is Test, Permit2User {
+    MockFeeOnTransferERC20 internal _baseToken;
+    MockFeeOnTransferERC20 internal _quoteToken;
+
+    AuctionHouse internal _auctionHouse;
+    AuctionModule internal _auctionModule;
+
+    MockAtomicAuctionModule internal _atomicAuctionModule;
+    Keycode internal _atomicAuctionModuleKeycode;
+    MockDerivativeModule internal _derivativeModule;
+    Keycode internal _derivativeModuleKeycode;
+    MockCondenserModule internal _condenserModule;
+    Keycode internal _condenserModuleKeycode;
+    MockAllowlist internal _allowlist;
+    MockHook internal _hook;
+
+    address internal _auctionOwner = address(0x1);
+    address internal immutable _PROTOCOL = address(0x2);
+    address internal immutable _CURATOR = address(0x3);
+    address internal immutable _RECIPIENT = address(0x5);
+    address internal immutable _REFERRER = address(0x6);
+
+    address internal _bidder = address(0x4);
+    uint256 internal _bidderKey;
+
+    uint24 internal constant _CURATOR_MAX_FEE_PERCENT = 100;
+    uint24 internal constant _CURATOR_FEE_PERCENT = 90;
+
+    uint24 internal constant _PROTOCOL_FEE_PERCENT = 100;
+    uint24 internal constant _REFERRER_FEE_PERCENT = 105;
+
+    // Input to parameters
+    uint48 internal _startTime;
+    uint48 internal _duration = 1 days;
+    /// @dev    Needs to be updated if the base token scale is changed
+    uint96 internal constant _LOT_CAPACITY = 10e18;
+    string internal constant _INFO_HASH = "info hash";
+
+    // Parameters
+    Auctioneer.RoutingParams internal _routingParams;
+    Auction.AuctionParams internal _auctionParams;
+    bytes internal _allowlistProof;
+    bytes internal _permit2Data;
+
+    // Outputs
+    uint96 internal _lotId = type(uint96).max; // Set to max to ensure it's not a valid lot id
+    uint64 internal _bidId = type(uint64).max; // Set to max to ensure it's not a valid bid id
+
+    function setUp() public {
+        // Set block timestamp
+        vm.warp(1_000_000);
+
+        _baseToken = new MockFeeOnTransferERC20("Base Token", "BASE", 18);
+        _quoteToken = new MockFeeOnTransferERC20("Quote Token", "QUOTE", 18);
+
+        _auctionHouse = new AuctionHouse(address(this), _PROTOCOL, _PERMIT2_ADDRESS);
+
+        _atomicAuctionModule = new MockAtomicAuctionModule(address(_auctionHouse));
+        _atomicAuctionModuleKeycode = keycodeFromVeecode(_atomicAuctionModule.VEECODE());
+        _derivativeModule = new MockDerivativeModule(address(_auctionHouse));
+        _derivativeModuleKeycode = keycodeFromVeecode(_derivativeModule.VEECODE());
+        _condenserModule = new MockCondenserModule(address(_auctionHouse));
+        _condenserModuleKeycode = keycodeFromVeecode(_condenserModule.VEECODE());
+
+        _allowlist = new MockAllowlist();
+        _hook = new MockHook(address(_quoteToken), address(_baseToken));
+
+        _startTime = uint48(block.timestamp) + 1;
+
+        _auctionParams = Auction.AuctionParams({
+            start: _startTime,
+            duration: _duration,
+            capacityInQuote: false,
+            capacity: _LOT_CAPACITY,
+            implParams: abi.encode("")
+        });
+
+        _routingParams = Auctioneer.RoutingParams({
+            auctionType: toKeycode(""),
+            baseToken: _baseToken,
+            quoteToken: _quoteToken,
+            curator: _CURATOR,
+            hooks: IHooks(address(0)),
+            allowlist: IAllowlist(address(0)),
+            allowlistParams: abi.encode(""),
+            derivativeType: toKeycode(""),
+            derivativeParams: abi.encode("")
+        });
+
+        // Bidder
+        _bidderKey = _getRandomUint256();
+        _bidder = vm.addr(_bidderKey);
+    }
+
+    // ===== Modifiers ===== //
+
+    modifier whenAuctionTypeIsAtomic() {
+        _routingParams.auctionType = _atomicAuctionModuleKeycode;
+
+        _auctionModule = _atomicAuctionModule;
+        _;
+    }
+
+    modifier whenAtomicAuctionModuleIsInstalled() {
+        _auctionHouse.installModule(_atomicAuctionModule);
+        _;
+    }
+
+    modifier whenDerivativeTypeIsSet() {
+        _routingParams.derivativeType = _derivativeModuleKeycode;
+        _;
+    }
+
+    modifier whenDerivativeModuleIsInstalled() {
+        _auctionHouse.installModule(_derivativeModule);
+        _;
+    }
+
+    // ===== Helpers ===== //
+
+    function _getLotRouting(uint96 lotId_) internal view returns (Auctioneer.Routing memory) {
+        (
+            Veecode auctionReference_,
+            address owner_,
+            ERC20 baseToken_,
+            ERC20 quoteToken_,
+            IHooks hooks_,
+            IAllowlist allowlist_,
+            Veecode derivativeReference_,
+            bytes memory derivativeParams_,
+            bool wrapDerivative_,
+            uint256 prefunding_
+        ) = _auctionHouse.lotRouting(lotId_);
+
+        return Auctioneer.Routing({
+            auctionReference: auctionReference_,
+            owner: owner_,
+            baseToken: baseToken_,
+            quoteToken: quoteToken_,
+            hooks: hooks_,
+            allowlist: allowlist_,
+            derivativeReference: derivativeReference_,
+            derivativeParams: derivativeParams_,
+            wrapDerivative: wrapDerivative_,
+            prefunding: prefunding_
+        });
+    }
+
+    function _getLotCuration(uint96 lotId_) internal view returns (Auctioneer.Curation memory) {
+        (address curator_, bool curated_) = _auctionHouse.lotCuration(lotId_);
+
+        return Auctioneer.Curation({curator: curator_, curated: curated_});
+    }
+
+    function _getLotData(uint96 lotId_) internal view returns (Auction.Lot memory) {
+        (
+            uint48 start_,
+            uint48 conclusion_,
+            uint8 quoteTokenDecimals_,
+            uint8 baseTokenDecimals_,
+            bool capacityInQuote_,
+            uint96 capacity_,
+            uint96 sold_,
+            uint96 purchased_
+        ) = _auctionModule.lotData(lotId_);
+
+        return Auction.Lot({
+            start: start_,
+            conclusion: conclusion_,
+            quoteTokenDecimals: quoteTokenDecimals_,
+            baseTokenDecimals: baseTokenDecimals_,
+            capacityInQuote: capacityInQuote_,
+            capacity: capacity_,
+            sold: sold_,
+            purchased: purchased_
+        });
+    }
+}
