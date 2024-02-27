@@ -1,13 +1,14 @@
 /// SPDX-License-Identifier: AGPL-3.0
 pragma solidity 0.8.19;
 
-import {ERC20} from "lib/solmate/src/tokens/ERC20.sol";
-import {ReentrancyGuard} from "lib/solmate/src/utils/ReentrancyGuard.sol";
-import {Owned} from "lib/solmate/src/auth/Owned.sol";
+import {ERC20} from "solmate/tokens/ERC20.sol";
+import {ReentrancyGuard} from "solmate/utils/ReentrancyGuard.sol";
+import {Owned} from "solmate/auth/Owned.sol";
+import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
+
 import {Transfer} from "src/lib/Transfer.sol";
 import {MaxPriorityQueue, Queue, Bid as QueueBid} from "src/lib/MaxPriorityQueue.sol";
 import {ECIES, Point} from "src/lib/ECIES.sol";
-import {FixedMath} from "src/lib/FixedMath.sol";
 
 import {DerivativeModule} from "src/modules/Derivative.sol";
 
@@ -22,8 +23,6 @@ import {
 
 import {IHooks} from "src/interfaces/IHooks.sol";
 import {IAllowlist} from "src/interfaces/IAllowlist.sol";
-
-import {console2} from "forge-std/console2.sol";
 
 /// @title      Router
 /// @notice     An interface to define the routing of transactions to the appropriate auction module
@@ -268,20 +267,16 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
     // ========== ERRORS ========== //
 
     error AmountLessThanMinimum();
-    error Broken_Invariant();
     error InvalidParams();
     error InvalidHook();
 
-    error Auction_InvalidId(uint96 id_);
-    error Auction_MarketActive(uint96 lotId); // TODO consider removing these two
-    error Auction_MarketNotActive(uint96 lotId);
-    error Auction_WrongState();
+    error Auction_InvalidId(uint96 lotId);
+    error Auction_WrongState(uint96 lotId);
 
     error Bid_InvalidId(uint96 lotId, uint96 bidId);
-    error Bid_AlreadyClaimed();
     error Bid_InvalidPublicKey();
     error Bid_InvalidPrivateKey();
-    error Bid_WrongState();
+    error Bid_WrongState(uint96 lotId, uint96 bidId);
 
     /// @notice     Used when the caller is not permitted to perform that action
     error NotPermitted(address caller_);
@@ -468,9 +463,6 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
     /// @notice     Counter for auction lots
     uint96 public lotCounter;
 
-    // We use this to store addresses once and reference them using a shorter identifier
-    mapping(address user => uint64) public userIds;
-
     /// @notice     General information pertaining to auction lots
     mapping(uint96 lotId => Lot lot) public lotData;
 
@@ -567,13 +559,14 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
             lot.baseTokenDecimals = baseTokenDecimals;
             lot.capacity = params_.capacity;
             lot.minimumPrice = params_.minimumPrice;
+            // This cannot overflow as the maximum value of minFillPercent is 100% and capacity is uint96
+            // TODO consider whether this should round up or down
             lot.minFilled =
-                FixedMath.mulDivUp(params_.capacity, params_.minFillPercent, _ONE_HUNDRED_PERCENT);
+                uint96(uint256(params_.capacity) * params_.minFillPercent / _ONE_HUNDRED_PERCENT);
+            // This cannot overflow as the maximum value of minBidPercent is 100% and capacity is uint96
             lot.minBidSize =
-                FixedMath.mulDivUp(params_.capacity, params_.minBidPercent, _ONE_HUNDRED_PERCENT);
+                uint96(uint256(params_.capacity) * params_.minBidPercent / _ONE_HUNDRED_PERCENT);
         }
-
-        // Initialize bid data
 
         // publicKey must be a valid point on the alt_bn128 curve with generator point (1, 2)
         if (!ECIES.isOnBn128(params_.publicKey)) revert InvalidParams();
@@ -586,6 +579,7 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
             revert InvalidParams();
         }
 
+        // Initialize bid data
         BidData storage data = bidData[lotId];
         data.publicKey = params_.publicKey;
         data.nextBidId = 1;
@@ -659,11 +653,10 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
         }
         // Otherwise fallback to a standard ERC20 transfer
         else {
+            // Also checks for fee-on-transfer
             Transfer.transferFrom(
                 routing_.baseToken, msg.sender, address(this), params_.capacity, true
             );
-
-            // TODO check for fee on transfer
         }
 
         emit AuctionCreated(lotId, ipfsHash);
@@ -751,7 +744,7 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
         _revertIfLotSettled(lotId_);
 
         // Load routing data for the lot
-        Routing memory routing = lotRouting[lotId_];
+        Routing storage routing = lotRouting[lotId_];
 
         // Determine if the bidder is authorized to bid
         if (!_isAllowed(routing.allowlist, lotId_, msg.sender, allowlistProof_)) {
@@ -759,13 +752,14 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
         }
 
         // Check that the amount is greater than the minimum quote token bid size implied by the minimum price and minimum base token bid size
-        if (
-            amount_
-                < (
-                    (uint256(lotData[lotId_].minBidSize) * uint256(lotData[lotId_].minimumPrice))
-                        / 10 ** lotData[lotId_].baseTokenDecimals
-                )
-        ) revert AmountLessThanMinimum();
+        {
+            Lot storage lot = lotData[lotId_];
+            if (
+                amount_ < uint256(lot.minBidSize) * lot.minimumPrice / (10 ** lot.baseTokenDecimals)
+            ) {
+                revert AmountLessThanMinimum();
+            }
+        }
 
         // Check that the public key for the shared secret is a valid point on the alt_bn128 curve
         if (!ECIES.isOnBn128(bidPubKey_)) revert Bid_InvalidPublicKey();
@@ -823,11 +817,15 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
         // Remove bid from list of bids to decrypt
         uint64[] storage bidIds = bidData[lotId_].bidIds;
         uint256 len = bidIds.length;
-        for (uint256 i; i < len; i++) {
+        for (uint256 i; i < len;) {
             if (bidIds[i] == bidId_) {
                 bidIds[i] = bidIds[len - 1];
                 bidIds.pop();
                 break;
+            }
+
+            unchecked {
+                i++;
             }
         }
 
@@ -866,25 +864,27 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
 
         // Settle the auction
         // Check that auction is in the right state for settlement
-        if (lotData[lotId_].status != AuctionStatus.Decrypted) revert Auction_WrongState();
+        Lot storage lot = lotData[lotId_];
+        if (lot.status != AuctionStatus.Decrypted) revert Auction_WrongState(lotId_);
 
         // Calculate marginal price and number of winning bids
         // Cache capacity and scaling values
         // Capacity is always in base token units for this auction type
-        uint256 capacity = lotData[lotId_].capacity;
-        uint256 baseScale = 10 ** lotData[lotId_].baseTokenDecimals;
-        uint256 minimumPrice = lotData[lotId_].minimumPrice;
+        // The values are cast to uint256 to avoid overflow when multiplying uint96 values
+        uint256 capacity = lot.capacity;
+        uint256 baseScale = 10 ** lot.baseTokenDecimals;
+        uint256 minimumPrice = lot.minimumPrice;
 
         // Iterate over bid queue (sorted in descending price) to calculate the marginal clearing price of the auction
-        uint256 marginalPrice;
+        uint96 marginalPrice;
         uint256 totalAmountIn;
         uint256 capacityExpended;
         uint64 partialFillBidId;
         {
             Queue storage queue = decryptedBids[lotId_];
             uint256 numBids = queue.getNumBids();
-            uint256 lastPrice;
-            for (uint256 i = 0; i < numBids; i++) {
+            uint96 lastPrice;
+            for (uint256 i = 0; i < numBids;) {
                 // Load bid info (in quote token units)
                 uint64 bidId = queue.getMaxId();
                 QueueBid memory qBid = queue.delMax();
@@ -895,8 +895,11 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
                 //
                 // There is no need to check if the bid is the minimum bid size, as this was checked during decryption
 
-                // Calculate the price of the bid
-                uint256 price = (uint256(qBid.amountIn) * baseScale) / uint256(qBid.minAmountOut);
+                // Calculate the price of the bid as uint256 to avoid an intermediate overflow
+                // We know this will not overflow when casting, as it was checked during decryption
+                uint256 amountIn = uint256(qBid.amountIn);
+                // TODO we may want this to round up instead. Check roundtrip values.
+                uint96 price = uint96((amountIn * baseScale) / uint256(qBid.minAmountOut));
 
                 // If the price is below the minimum price, the previous price is the marginal price
                 if (price < minimumPrice) {
@@ -908,11 +911,11 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
                 lastPrice = price;
 
                 // Increment total amount in
-                totalAmountIn += qBid.amountIn;
+                totalAmountIn += amountIn;
 
                 // Determine total capacity expended at this price (in base token units)
                 // quote scale * base scale / quote scale = base scale
-                capacityExpended = (totalAmountIn * baseScale) / price;
+                capacityExpended = totalAmountIn * baseScale / price;
 
                 // If total capacity expended is greater than or equal to the capacity, we have found the marginal price
                 if (capacityExpended >= capacity) {
@@ -927,11 +930,14 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
                 if (i == numBids - 1) {
                     marginalPrice = price;
                 }
+
+                unchecked {
+                    i++;
+                }
             }
         }
 
         // Delete the rest of the decrypted bids queue for a gas refund
-        // TODO make sure this iteration doesn't cause out of gas issues, but it shouldn't due to the storage refunds
         {
             Queue storage queue = decryptedBids[lotId_];
             uint256 remainingBids = queue.getNumBids();
@@ -952,14 +958,12 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
 
         // Determine if the auction can be filled, if so settle the auction, otherwise refund the seller
         // We set the status as settled either way to denote this function has been executed
-        lotData[lotId_].status = AuctionStatus.Settled;
+        lot.status = AuctionStatus.Settled;
         // Auction cannot be settled if the total filled is less than the minimum filled
         // or if the marginal price is less than the minimum price
-        if (capacityExpended >= lotData[lotId_].minFilled && marginalPrice >= minimumPrice) {
+        if (capacityExpended >= lot.minFilled && marginalPrice >= minimumPrice) {
             // Auction can be settled at the marginal price if we reach this point
-            // TODO determine if this can overflow
-            bidData[lotId_].marginalPrice = uint96(marginalPrice);
-            console2.log("marginalPrice", marginalPrice);
+            bidData[lotId_].marginalPrice = marginalPrice;
 
             Routing storage routing = lotRouting[lotId_];
 
@@ -968,21 +972,15 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
                 // Load routing and bid data
                 Bid storage _bid = bids[lotId_][partialFillBidId];
 
-                console2.log("capacityExpended", capacityExpended);
-                console2.log("capacity", capacity);
-                console2.log("bid.amount", _bid.amount);
-
                 // Check if the capacityExpended is overflowing
 
                 // Calculate the payout and refund amounts
-                uint256 fullFill = (uint256(_bid.amount) * baseScale) / marginalPrice;
-                console2.log("fullFill", fullFill);
+                // TODO check roundtrip accuracy, may need to be rounded up
+                uint256 fullFill =
+                    FixedPointMathLib.mulDivDown(_bid.amount, baseScale, marginalPrice);
                 uint256 overflow = capacityExpended - capacity;
-                console2.log("overflow", overflow);
                 uint256 payout = fullFill - overflow;
-                console2.log("payout", payout);
-                uint256 refundAmount = (uint256(_bid.amount) * overflow) / fullFill;
-                console2.log("refundAmount", refundAmount);
+                uint256 refundAmount = FixedPointMathLib.mulDivDown(_bid.amount, overflow, fullFill);
 
                 // Reduce the total amount in by the refund amount
                 totalAmountIn -= refundAmount;
@@ -1016,10 +1014,11 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
             _sendPayment(routing.owner, totalAmountInLessFees, routing.quoteToken, routing.hooks);
 
             // If capacity expended is less than the total capacity, refund the remaining capacity to the seller
+            uint256 baseTokenToRefund;
             if (capacityExpended < capacity) {
-                Transfer.transfer(
-                    routing.baseToken, routing.owner, capacity - capacityExpended, false
-                );
+                unchecked {
+                    baseTokenToRefund = capacity - capacityExpended;
+                }
             }
 
             if (routing.curated == true) {
@@ -1028,15 +1027,14 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
                     routing.curator, capacityExpended > capacity ? capacity : capacityExpended
                 );
 
-                if (curatorFee > 0) _sendPayout(lotId_, routing.curator, curatorFee, routing);
+                baseTokenToRefund += routing.curatorFee - curatorFee;
 
-                // Refund the remaining curator fees to the owner
-                // TODO can be combined with the above transfer
-                if (curatorFee < routing.curatorFee) {
-                    Transfer.transfer(
-                        routing.baseToken, routing.owner, routing.curatorFee - curatorFee, false
-                    );
-                }
+                if (curatorFee > 0) _sendPayout(lotId_, routing.curator, curatorFee, routing);
+            }
+
+            // Refund any remaining base tokens to the seller
+            if (baseTokenToRefund > 0) {
+                Transfer.transfer(routing.baseToken, routing.owner, baseTokenToRefund, false);
             }
         } else {
             // Auction cannot be settled if we reach this point
@@ -1068,46 +1066,39 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
 
         // Get the bid and compare to settled auction price
         Bid storage _bid = bids[lotId_][bidId_];
-        BidStatus status = _bid.status;
 
         // Set bid status to claimed
         bids[lotId_][bidId_].status = BidStatus.Claimed;
 
-        // If the bid was not decrypted, refund the bid amount
-        // TODO this shouldn't happen. Need to change this. All bids should be decrypted.
-        if (status == BidStatus.Submitted) {
-            Transfer.transfer(lotRouting[lotId_].quoteToken, _bid.bidder, _bid.amount, false);
-            return;
-        }
-
         // Calculate the bid price
-        // TODO skipped bids will have minAmountOut = 0, bidPrice should be 0 in this case
-        uint96 bidPrice = FixedMath.mulDivUp(
-            _bid.amount, uint96(10) ** lotData[lotId_].baseTokenDecimals, _bid.minAmountOut
-        );
-        uint96 marginalPrice = bidData[lotId_].marginalPrice;
+        // All bids are decrypted before settlement, but invalid ones have minAmountOut set to 0
+        uint256 bidAmount = _bid.amount;
+        uint256 baseScale = uint256(10) ** lotData[lotId_].baseTokenDecimals;
+        // TODO may want this price to round up
+        uint256 bidPrice = _bid.minAmountOut == 0
+            ? 0
+            : FixedPointMathLib.mulDivDown(bidAmount, baseScale, _bid.minAmountOut);
+        uint256 marginalPrice = bidData[lotId_].marginalPrice;
 
         // If the bid price is greater than or equal the settled price, then payout expected amount
         // We don't have to worry about partial fills here because the bid which is partially filled is handled during settlement
         // Else the bid price is less than the settled price, so refund the bid amount
-        uint96 quoteAmount;
-        uint96 payoutAmount;
+        uint256 quoteAmount;
+        uint256 payoutAmount;
         if (marginalPrice > 0 && bidPrice >= marginalPrice) {
             // Allocate quote token fees
             _allocateQuoteFees(
-                _bid.referrer, lotRouting[lotId_].owner, lotRouting[lotId_].quoteToken, _bid.amount
+                _bid.referrer, lotRouting[lotId_].owner, lotRouting[lotId_].quoteToken, bidAmount
             );
 
             // Calculate payout using marginal price
-            payoutAmount = FixedMath.mulDivUp(
-                _bid.amount, uint96(10) ** lotData[lotId_].baseTokenDecimals, marginalPrice
-            );
+            payoutAmount = FixedPointMathLib.mulDivDown(bidAmount, baseScale, marginalPrice);
 
             // Transfer payout to the bidder
             _sendPayout(lotId_, _bid.bidder, payoutAmount, lotRouting[lotId_]);
         } else {
             // Refund the bid amount to the bidder
-            quoteAmount = _bid.amount;
+            quoteAmount = bidAmount;
             Transfer.transfer(lotRouting[lotId_].quoteToken, _bid.bidder, quoteAmount, false);
         }
 
@@ -1133,12 +1124,12 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
         _revertIfBeforeLotStart(lotId_);
 
         // Revert if the private key has already been verified and set
-        if (bidData[lotId_].privateKey != 0) revert Auction_WrongState();
+        if (bidData[lotId_].privateKey != 0) revert Auction_WrongState(lotId_);
 
         // Check that the private key is valid for the public key
         // We assume that all public keys are derived from the same generator: (1, 2)
         Point memory calcPubKey = ECIES.calcPubKey(Point(1, 2), privateKey_);
-        Point memory pubKey = bidData[lotId_].publicKey;
+        Point storage pubKey = bidData[lotId_].publicKey;
         if (calcPubKey.x != pubKey.x || calcPubKey.y != pubKey.y) revert Bid_InvalidPrivateKey();
 
         // Store the private key
@@ -1175,7 +1166,7 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
 
         // Revert if already decrypted or if the private key has not been provided
         if (lotData[lotId_].status != AuctionStatus.Created || bidData[lotId_].privateKey == 0) {
-            revert Auction_WrongState();
+            revert Auction_WrongState(lotId_);
         }
 
         // Decrypt and sort bids
@@ -1195,8 +1186,9 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
         }
 
         // Iterate over the provided number of bids, decrypt them, and then store them in the sorted bid queue
+        // All submitted bids will be marked as decrypted, but only those with valid values will have the minAmountOut set and be stored in the sorted bid queue
         uint96 minBidSize = lotData[lotId_].minBidSize;
-        for (uint64 i; i < num_; i++) {
+        for (uint64 i; i < num_;) {
             // Load encrypted bid
             uint64 bidId = bidIds[nextDecryptIndex + i];
 
@@ -1204,33 +1196,38 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
             uint96 amountOut;
             {
                 uint256 result = _decrypt(lotId_, bidId, lotBidData.privateKey);
-                // We skip the bid if the decrypted amount out overflows the uint96 type
-                // No valid bid should expect more than 7.9 * 10^28 (79 trillion tokens if 18 decimals)
-                if (result > type(uint96).max) continue;
-                amountOut = uint96(result);
+
+                // Only set the amount out if it is less than or equal to the maximum value of a uint96
+                if (result <= type(uint96).max) {
+                    amountOut = uint96(result);
+                }
             }
 
             // Set bid status to decrypted
             Bid storage _bid = bids[lotId_][bidId];
             _bid.status = BidStatus.Decrypted;
+            uint96 bidAmount = _bid.amount;
 
             // Only store the decrypt if the amount out is greater than or equal to the minimum bid size
             if (amountOut > 0 && amountOut >= minBidSize) {
                 // Only store the decrypt if the price does not overflow
                 if (
-                    (
-                        (uint256(_bid.amount) * 10 ** lotData[lotId_].baseTokenDecimals)
-                            / uint256(amountOut)
+                    FixedPointMathLib.mulDivDown(
+                        bidAmount, 10 ** lotData[lotId_].baseTokenDecimals, amountOut
                     ) < type(uint96).max
                 ) {
                     // Store the decrypt in the sorted bid queue and set the min amount out on the bid
-                    decryptedBids[lotId_].insert(bidId, _bid.amount, amountOut);
+                    decryptedBids[lotId_].insert(bidId, bidAmount, amountOut);
                     _bid.minAmountOut = amountOut;
                 }
             }
 
             // Emit event
-            emit BidDecrypted(lotId_, bidId, _bid.amount, amountOut);
+            emit BidDecrypted(lotId_, bidId, bidAmount, amountOut);
+
+            unchecked {
+                i++;
+            }
         }
 
         // Increment next decrypt index
@@ -1248,7 +1245,7 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
         uint256 privateKey_
     ) internal view returns (uint256 amountOut) {
         // Load the encrypted bid data
-        EncryptedBid memory encryptedBid = encryptedBids[lotId_][bidId_];
+        EncryptedBid storage encryptedBid = encryptedBids[lotId_][bidId_];
 
         // Decrypt the message
         // We expect a salt calculated as the keccak256 hash of lot id, bidder, and amount to provide some (not total) uniqueness to the encryption, even if the same shared secret is used
@@ -1301,7 +1298,7 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
         if (msg.sender != routing.curator) revert NotPermitted(msg.sender);
 
         // Check that the curator has not already approved the auction
-        if (routing.curated) revert Auction_WrongState();
+        if (routing.curated) revert Auction_WrongState(lotId_);
 
         // Check that the curator fee is set
         if (fees.curator[msg.sender] == 0) revert InvalidFee();
@@ -1312,7 +1309,8 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
         // Auction must be prefunded, so we transfer the curator fee to the contract from the owner
         // Calculate the fee amount based on the remaining capacity (must be in base token if auction is pre-funded)
         uint256 fee = _calculatePayoutFees(msg.sender, uint256(lotData[lotId_].capacity));
-        routing.curatorFee = uint96(fee); // TODO confirm this can't overflow
+        // Given that capacity is a uint96 and the fee percentage is bounded by _FEE_DECIMALS, this cannot overflow
+        routing.curatorFee = uint96(fee);
 
         // Don't need to check for fee on transfer here because it was checked on auction creation
         Transfer.transferFrom(routing.baseToken, routing.owner, address(this), fee, false);
@@ -1477,13 +1475,7 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
     /// @notice     Checks that the lot represented by `lotId_` has not started
     /// @dev        Should revert if the lot has not started
     function _revertIfBeforeLotStart(uint96 lotId_) internal view virtual {
-        if (lotData[lotId_].start > uint48(block.timestamp)) revert Auction_MarketNotActive(lotId_);
-    }
-
-    /// @notice     Checks that the lot represented by `lotId_` has started
-    /// @dev        Should revert if the lot has started
-    function _revertIfLotStarted(uint96 lotId_) internal view virtual {
-        if (lotData[lotId_].start <= uint48(block.timestamp)) revert Auction_MarketActive(lotId_);
+        if (lotData[lotId_].start > uint48(block.timestamp)) revert Auction_WrongState(lotId_);
     }
 
     /// @notice     Checks that the lot represented by `lotId_` has not concluded
@@ -1491,11 +1483,11 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
     function _revertIfLotConcluded(uint96 lotId_) internal view virtual {
         // Beyond the conclusion time
         if (lotData[lotId_].conclusion < uint48(block.timestamp)) {
-            revert Auction_MarketNotActive(lotId_);
+            revert Auction_WrongState(lotId_);
         }
 
         // Capacity is sold-out, or cancelled
-        if (lotData[lotId_].capacity == 0) revert Auction_MarketNotActive(lotId_);
+        if (lotData[lotId_].capacity == 0) revert Auction_WrongState(lotId_);
     }
 
     /// @notice     Checks that the lot represented by `lotId_` is active
@@ -1508,27 +1500,7 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
             lotData[lotId_].status == AuctionStatus.Created
                 && lotData[lotId_].start <= block.timestamp
                 && lotData[lotId_].conclusion > block.timestamp
-        ) revert Auction_MarketActive(lotId_);
-    }
-
-    /// @notice     Checks that the lot represented by `lotId_` is active
-    /// @dev        Should revert if the lot is not active
-    ///             Inheriting contracts can override this to implement custom logic
-    ///
-    /// @param      lotId_  The lot ID
-    function _revertIfLotInactive(uint96 lotId_) internal view {
-        // Check that bids are allowed to be submitted for the lot
-        if (
-            lotData[lotId_].status != AuctionStatus.Created
-                || block.timestamp < lotData[lotId_].start
-                || block.timestamp >= lotData[lotId_].conclusion
-        ) revert Auction_MarketNotActive(lotId_);
-    }
-
-    /// @notice     Reverts if the lot has already been decrypted
-    function _revertIfLotDecrypted(uint96 lotId_) internal view {
-        // Check that bids are allowed to be submitted for the lot
-        if (lotData[lotId_].status == AuctionStatus.Decrypted) revert Auction_WrongState();
+        ) revert Auction_WrongState(lotId_);
     }
 
     /// @notice     Checks that the lot represented by `lotId_` is not settled
@@ -1539,7 +1511,7 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
     function _revertIfLotSettled(uint96 lotId_) internal view {
         // Auction must not be settled
         if (lotData[lotId_].status == AuctionStatus.Settled) {
-            revert Auction_WrongState();
+            revert Auction_WrongState(lotId_);
         }
     }
 
@@ -1551,7 +1523,7 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
     function _revertIfLotNotSettled(uint96 lotId_) internal view {
         // Auction must be settled
         if (lotData[lotId_].status != AuctionStatus.Settled) {
-            revert Auction_WrongState();
+            revert Auction_WrongState(lotId_);
         }
     }
 
@@ -1590,7 +1562,7 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
     function _revertIfBidClaimed(uint96 lotId_, uint64 bidId_) internal view {
         // Bid must not be cancelled
         if (bids[lotId_][bidId_].status == BidStatus.Claimed) {
-            revert Bid_AlreadyClaimed();
+            revert Bid_WrongState(lotId_, bidId_);
         }
     }
 }

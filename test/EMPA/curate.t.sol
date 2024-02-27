@@ -97,8 +97,9 @@ contract EmpaCurateTest is EmpaTest {
         _auctionHouse.curate(_lotId);
 
         // Expect revert
-        bytes memory err =
-            abi.encodeWithSelector(EncryptedMarginalPriceAuction.Auction_WrongState.selector);
+        bytes memory err = abi.encodeWithSelector(
+            EncryptedMarginalPriceAuction.Auction_WrongState.selector, _lotId
+        );
         vm.expectRevert(err);
 
         // Curate again
@@ -115,7 +116,7 @@ contract EmpaCurateTest is EmpaTest {
     {
         // Expect revert
         bytes memory err = abi.encodeWithSelector(
-            EncryptedMarginalPriceAuction.Auction_MarketNotActive.selector, _lotId
+            EncryptedMarginalPriceAuction.Auction_WrongState.selector, _lotId
         );
         vm.expectRevert(err);
 
@@ -133,7 +134,7 @@ contract EmpaCurateTest is EmpaTest {
     {
         // Expect revert
         bytes memory err = abi.encodeWithSelector(
-            EncryptedMarginalPriceAuction.Auction_MarketNotActive.selector, _lotId
+            EncryptedMarginalPriceAuction.Auction_WrongState.selector, _lotId
         );
         vm.expectRevert(err);
 

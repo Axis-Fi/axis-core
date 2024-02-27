@@ -58,7 +58,7 @@ contract Catalogue {
         });
     }
 
-    function payoutFor(uint96 lotId_, uint256 amount_) external view returns (uint256) {
+    function payoutFor(uint96 lotId_, uint96 amount_) external view returns (uint256) {
         Auction module = Auctioneer(auctionHouse).getModuleForId(lotId_);
         Auctioneer.Routing memory routing = getRouting(lotId_);
 
@@ -68,10 +68,10 @@ contract Catalogue {
         ); // we assume there is a referrer to give a conservative amount
 
         // Get payout from module
-        return module.payoutFor(lotId_, amount_ - protocolFee - referrerFee);
+        return module.payoutFor(lotId_, amount_ - uint96(protocolFee) - uint96(referrerFee));
     }
 
-    function priceFor(uint96 lotId_, uint256 payout_) external view returns (uint256) {
+    function priceFor(uint96 lotId_, uint96 payout_) external view returns (uint256) {
         Auction module = Auctioneer(auctionHouse).getModuleForId(lotId_);
         Auctioneer.Routing memory routing = getRouting(lotId_);
 

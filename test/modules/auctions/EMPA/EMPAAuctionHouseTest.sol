@@ -11,28 +11,38 @@ import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 // Mocks
 import {MockFeeOnTransferERC20} from "test/lib/mocks/MockFeeOnTransferERC20.sol";
 import {MockDerivativeModule} from "test/modules/derivatives/mocks/MockDerivativeModule.sol";
+import {MockCondenserModule} from "test/modules/Condenser/MockCondenserModule.sol";
 import {MockAllowlist} from "test/modules/Auction/MockAllowlist.sol";
 import {Permit2User} from "test/lib/permit2/Permit2User.sol";
-import {MockEMPAHook} from "test/EMPA/mocks/MockEMPAHook.sol";
+import {MockHook} from "test/modules/Auction/MockHook.sol";
 
 // Auctions
 import {IHooks} from "src/interfaces/IHooks.sol";
 import {IAllowlist} from "src/interfaces/IAllowlist.sol";
-import {EncryptedMarginalPriceAuction, FeeManager} from "src/EMPA.sol";
+import {Auctioneer} from "src/bases/Auctioneer.sol";
+import {Auction} from "src/modules/Auction.sol";
+import {FeeManager} from "src/bases/FeeManager.sol";
+import {AuctionHouse, Router} from "src/AuctionHouse.sol";
 
 // Modules
-import {toKeycode, Veecode} from "src/modules/Modules.sol";
+import {Keycode, toKeycode, Veecode, keycodeFromVeecode} from "src/modules/Modules.sol";
+import {EncryptedMarginalPriceAuctionModule} from "src/modules/auctions/EMPAM.sol";
 
-abstract contract EmpaTest is Test, Permit2User {
+abstract contract EmpaAuctionHouseTest is Test, Permit2User {
     uint96 internal constant _BASE_SCALE = 1e18;
 
     MockFeeOnTransferERC20 internal _baseToken;
     MockFeeOnTransferERC20 internal _quoteToken;
     MockDerivativeModule internal _mockDerivativeModule;
+    Keycode internal _derivativeModuleKeycode;
+    MockCondenserModule internal _mockCondenserModule;
+    Keycode internal _condenserModuleKeycode;
     MockAllowlist internal _mockAllowlist;
-    MockEMPAHook internal _mockHook;
+    MockHook internal _mockHook;
 
-    EncryptedMarginalPriceAuction internal _auctionHouse;
+    AuctionHouse internal _auctionHouse;
+    EncryptedMarginalPriceAuctionModule internal _auctionModule;
+    Keycode internal _auctionModuleKeycode;
 
     address internal _auctionOwner = address(0x1);
     address internal immutable _PROTOCOL = address(0x2);
@@ -74,8 +84,9 @@ abstract contract EmpaTest is Test, Permit2User {
     uint96 internal constant _MIN_BID_SIZE = _LOT_CAPACITY * _MIN_BID_PERCENT / 1e5;
 
     // Parameters
-    EncryptedMarginalPriceAuction.RoutingParams internal _routingParams;
-    EncryptedMarginalPriceAuction.AuctionParams internal _auctionParams;
+    Auctioneer.RoutingParams internal _routingParams;
+    Auction.AuctionParams internal _auctionParams;
+    EncryptedMarginalPriceAuctionModule.AuctionDataParams internal _auctionDataParams;
     bytes internal _allowlistProof;
     bytes internal _permit2Data;
     uint256 internal _encryptedBidAmountOut;
@@ -91,27 +102,42 @@ abstract contract EmpaTest is Test, Permit2User {
         _baseToken = new MockFeeOnTransferERC20("Base Token", "BASE", 18);
         _quoteToken = new MockFeeOnTransferERC20("Quote Token", "QUOTE", 18);
 
-        _auctionHouse =
-            new EncryptedMarginalPriceAuction(address(this), _PROTOCOL, _PERMIT2_ADDRESS);
+        _auctionHouse = new AuctionHouse(address(this), _PROTOCOL, _PERMIT2_ADDRESS);
+
+        _auctionModule = new EncryptedMarginalPriceAuctionModule(address(_auctionHouse));
+        _auctionModuleKeycode = keycodeFromVeecode(_auctionModule.VEECODE());
+        _auctionHouse.installModule(_auctionModule);
+
         _mockDerivativeModule = new MockDerivativeModule(address(_auctionHouse));
+        _derivativeModuleKeycode = keycodeFromVeecode(_mockDerivativeModule.VEECODE());
+
+        _mockCondenserModule = new MockCondenserModule(address(_auctionHouse));
+        _condenserModuleKeycode = keycodeFromVeecode(_mockCondenserModule.VEECODE());
+
         _mockAllowlist = new MockAllowlist();
-        _mockHook = new MockEMPAHook(address(_quoteToken), address(_baseToken));
+        _mockHook = new MockHook(address(_quoteToken), address(_baseToken));
 
         _auctionPrivateKey = 112_233_445_566;
         _auctionPublicKey = ECIES.calcPubKey(Point(1, 2), _auctionPrivateKey);
         _startTime = uint48(block.timestamp) + 1;
 
-        _auctionParams = EncryptedMarginalPriceAuction.AuctionParams({
-            start: _startTime,
-            duration: _duration,
+        _auctionDataParams = EncryptedMarginalPriceAuctionModule.AuctionDataParams({
+            minPrice: _MIN_PRICE,
             minFillPercent: _MIN_FILL_PERCENT,
             minBidPercent: _MIN_BID_PERCENT,
-            capacity: _LOT_CAPACITY,
-            minimumPrice: _MIN_PRICE,
             publicKey: _auctionPublicKey
         });
 
-        _routingParams = EncryptedMarginalPriceAuction.RoutingParams({
+        _auctionParams = Auction.AuctionParams({
+            start: _startTime,
+            duration: _duration,
+            capacityInQuote: false,
+            capacity: _LOT_CAPACITY,
+            implParams: abi.encode(_auctionDataParams)
+        });
+
+        _routingParams = Auctioneer.RoutingParams({
+            auctionType: _auctionModuleKeycode,
             baseToken: _baseToken,
             quoteToken: _quoteToken,
             curator: _CURATOR,
@@ -119,12 +145,13 @@ abstract contract EmpaTest is Test, Permit2User {
             allowlist: IAllowlist(address(0)),
             allowlistParams: abi.encode(""),
             derivativeType: toKeycode(""),
-            wrapDerivative: false,
             derivativeParams: abi.encode("")
         });
 
         // Set the max curator fee
-        _auctionHouse.setFee(FeeManager.FeeType.MaxCurator, _CURATOR_MAX_FEE_PERCENT);
+        _auctionHouse.setFee(
+            _auctionModuleKeycode, FeeManager.FeeType.MaxCurator, _CURATOR_MAX_FEE_PERCENT
+        );
 
         // Bids
         _bidPublicKey = ECIES.calcPubKey(Point(1, 2), _BID_PRIVATE_KEY);
@@ -165,7 +192,8 @@ abstract contract EmpaTest is Test, Permit2User {
         _routingParams.quoteToken = _quoteToken;
 
         // Update auction params
-        _auctionParams.minimumPrice = uint96(minPrice);
+        _auctionDataParams.minPrice = uint96(minPrice);
+        _auctionParams.implParams = abi.encode(_auctionDataParams);
     }
 
     modifier givenQuoteTokenHasDecimals(uint8 decimals_) {
@@ -179,7 +207,8 @@ abstract contract EmpaTest is Test, Permit2User {
     }
 
     modifier givenMinimumPrice(uint96 price_) {
-        _auctionParams.minimumPrice = price_;
+        _auctionDataParams.minPrice = price_;
+        _auctionParams.implParams = abi.encode(_auctionDataParams);
         _;
     }
 
@@ -203,6 +232,11 @@ abstract contract EmpaTest is Test, Permit2User {
         _;
     }
 
+    modifier givenAuctionModuleIsSunset() {
+        _auctionHouse.sunsetModule(_auctionModuleKeycode);
+        _;
+    }
+
     modifier whenDerivativeModuleIsInstalled() {
         _auctionHouse.installModule(_mockDerivativeModule);
         _;
@@ -210,6 +244,20 @@ abstract contract EmpaTest is Test, Permit2User {
 
     modifier whenDerivativeTypeIsSet() {
         _routingParams.derivativeType = toKeycode("DERV");
+        _;
+    }
+
+    modifier whenCondenserModuleIsInstalled() {
+        _auctionHouse.installModule(_mockCondenserModule);
+        _;
+    }
+
+    modifier whenCondenserIsMapped() {
+        _auctionHouse.setCondenser(
+            _auctionModule.VEECODE(),
+            _mockDerivativeModule.VEECODE(),
+            _mockCondenserModule.VEECODE()
+        );
         _;
     }
 
@@ -260,7 +308,7 @@ abstract contract EmpaTest is Test, Permit2User {
 
     modifier givenCuratorFeeIsSet() {
         vm.prank(_CURATOR);
-        _auctionHouse.setCuratorFee(_CURATOR_FEE_PERCENT);
+        _auctionHouse.setCuratorFee(_auctionModuleKeycode, _CURATOR_FEE_PERCENT);
         _;
     }
 
@@ -284,17 +332,19 @@ abstract contract EmpaTest is Test, Permit2User {
         // Prepare amount out
         _encryptedBidAmountOut = _encryptBid(_lotId, _bidder, amountInScaled, amountOutScaled);
 
+        // Prepare bid struct
+        Router.BidParams memory bid = Router.BidParams({
+            lotId: _lotId,
+            referrer: _REFERRER,
+            amount: amountInScaled,
+            auctionData: abi.encode(_encryptedBidAmountOut, _bidPublicKey),
+            allowlistProof: _allowlistProof,
+            permit2Data: _permit2Data
+        });
+
         // Bid
         vm.prank(_bidder);
-        _bidId = _auctionHouse.bid(
-            _lotId,
-            _REFERRER,
-            amountInScaled,
-            _encryptedBidAmountOut,
-            _bidPublicKey,
-            bytes(""),
-            bytes("")
-        );
+        _bidId = _auctionHouse.bid(bid);
     }
 
     modifier givenBidIsCreated(uint96 amountIn_, uint96 amountOut_) {
@@ -316,17 +366,19 @@ abstract contract EmpaTest is Test, Permit2User {
         // Prepare amount out
         _encryptedBidAmountOut = _encryptBid(_lotId, _bidder, amountInScaled, amountOutScaled);
 
+        // Prepare bid struct
+        Router.BidParams memory bid = Router.BidParams({
+            lotId: _lotId,
+            referrer: _REFERRER,
+            amount: amountInScaled,
+            auctionData: abi.encode(_encryptedBidAmountOut, _bidPublicKey),
+            allowlistProof: _allowlistProof,
+            permit2Data: _permit2Data
+        });
+
         // Bid
         vm.prank(_bidder);
-        _bidId = _auctionHouse.bid(
-            _lotId,
-            _REFERRER,
-            amountInScaled,
-            _encryptedBidAmountOut,
-            _bidPublicKey,
-            bytes(""),
-            bytes("")
-        );
+        _bidId = _auctionHouse.bid(bid);
         _;
     }
 
@@ -345,7 +397,7 @@ abstract contract EmpaTest is Test, Permit2User {
     }
 
     function _submitPrivateKey() internal {
-        _auctionHouse.submitPrivateKey(_lotId, _auctionPrivateKey, 0);
+        _auctionModule.submitPrivateKey(_lotId, _auctionPrivateKey, 0);
     }
 
     modifier givenPrivateKeyIsSubmitted() {
@@ -354,8 +406,8 @@ abstract contract EmpaTest is Test, Permit2User {
     }
 
     function _decryptLot() internal {
-        EncryptedMarginalPriceAuction.BidData memory bidData = _getBidData(_lotId);
-        _auctionHouse.decryptAndSortBids(_lotId, bidData.nextBidId - 1);
+        EncryptedMarginalPriceAuctionModule.AuctionData memory bidData = _getBidData(_lotId);
+        _auctionModule.decryptAndSortBids(_lotId, bidData.nextBidId - 1);
     }
 
     modifier givenLotIsDecrypted() {
@@ -427,18 +479,18 @@ abstract contract EmpaTest is Test, Permit2User {
     }
 
     modifier givenProtocolFeeIsSet(uint24 fee_) {
-        _auctionHouse.setFee(FeeManager.FeeType.Protocol, fee_);
+        _auctionHouse.setFee(_auctionModuleKeycode, FeeManager.FeeType.Protocol, fee_);
         _;
     }
 
     modifier givenReferrerFeeIsSet(uint24 fee_) {
-        _auctionHouse.setFee(FeeManager.FeeType.Referrer, fee_);
+        _auctionHouse.setFee(_auctionModuleKeycode, FeeManager.FeeType.Referrer, fee_);
         _;
     }
 
     modifier givenBidIsClaimed(uint64 bidId_) {
         vm.prank(_bidder);
-        _auctionHouse.claim(_lotId, bidId_);
+        _auctionHouse.claimBid(_lotId, bidId_);
         _;
     }
 
@@ -473,87 +525,89 @@ abstract contract EmpaTest is Test, Permit2User {
         return formattedAmountOut ^ symmetricKey;
     }
 
-    function _getLotRouting(uint96 lotId_)
-        internal
-        view
-        returns (EncryptedMarginalPriceAuction.Routing memory)
-    {
+    function _getLotRouting(uint96 lotId_) internal view returns (Auctioneer.Routing memory) {
         (
+            Veecode auctionReference_,
             address owner_,
             ERC20 baseToken_,
             ERC20 quoteToken_,
-            address curator_,
-            uint96 curatorFee_,
-            bool curated_,
             IHooks hooks_,
             IAllowlist allowlist_,
-            Veecode derivativeRef_,
+            Veecode derivativeReference_,
+            bytes memory derivativeParams_,
             bool wrapDerivative_,
-            bytes memory derivativeParams_
+            uint256 prefunding_
         ) = _auctionHouse.lotRouting(lotId_);
 
-        return EncryptedMarginalPriceAuction.Routing({
+        return Auctioneer.Routing({
+            auctionReference: auctionReference_,
             owner: owner_,
             baseToken: baseToken_,
             quoteToken: quoteToken_,
-            curator: curator_,
-            curatorFee: curatorFee_,
-            curated: curated_,
             hooks: hooks_,
             allowlist: allowlist_,
-            derivativeReference: derivativeRef_,
+            derivativeReference: derivativeReference_,
+            derivativeParams: derivativeParams_,
             wrapDerivative: wrapDerivative_,
-            derivativeParams: derivativeParams_
+            prefunding: prefunding_
         });
     }
 
-    function _getLotData(uint96 lotId_)
-        internal
-        view
-        returns (EncryptedMarginalPriceAuction.Lot memory)
-    {
+    function _getLotCuration(uint96 lotId_) internal view returns (Auctioneer.Curation memory) {
+        (address curator_, bool curated_) = _auctionHouse.lotCuration(lotId_);
+
+        return Auctioneer.Curation({curator: curator_, curated: curated_});
+    }
+
+    function _getLotData(uint96 lotId_) internal view returns (Auction.Lot memory) {
         (
-            uint96 minimumPrice_,
-            uint96 capacity_,
-            uint8 quoteTokenDecimals_,
-            uint8 baseTokenDecimals_,
             uint48 start_,
             uint48 conclusion_,
-            EncryptedMarginalPriceAuction.AuctionStatus status_,
-            uint96 minFilled_,
-            uint96 minBidSize_
-        ) = _auctionHouse.lotData(lotId_);
+            uint8 quoteTokenDecimals_,
+            uint8 baseTokenDecimals_,
+            bool capacityInQuote_,
+            uint96 capacity_,
+            uint96 sold_,
+            uint96 purchased_
+        ) = _auctionModule.lotData(lotId_);
 
-        return EncryptedMarginalPriceAuction.Lot({
-            minimumPrice: minimumPrice_,
-            capacity: capacity_,
-            quoteTokenDecimals: quoteTokenDecimals_,
-            baseTokenDecimals: baseTokenDecimals_,
+        return Auction.Lot({
             start: start_,
             conclusion: conclusion_,
-            status: status_,
-            minFilled: minFilled_,
-            minBidSize: minBidSize_
+            quoteTokenDecimals: quoteTokenDecimals_,
+            baseTokenDecimals: baseTokenDecimals_,
+            capacityInQuote: capacityInQuote_,
+            capacity: capacity_,
+            sold: sold_,
+            purchased: purchased_
         });
     }
 
     function _getBidData(uint96 lotId_)
         internal
         view
-        returns (EncryptedMarginalPriceAuction.BidData memory)
+        returns (EncryptedMarginalPriceAuctionModule.AuctionData memory)
     {
         (
             uint64 nextBidId,
-            uint64 nextDecryptIndex,
             uint96 marginalPrice,
+            uint96 minPrice,
+            uint64 nextDecryptIndex,
+            uint96 minFilled,
+            uint96 minBidSize,
+            Auction.Status status,
             Point memory publicKey,
             uint256 privateKey
-        ) = _auctionHouse.bidData(lotId_);
+        ) = _auctionModule.auctionData(lotId_);
 
-        return EncryptedMarginalPriceAuction.BidData({
+        return EncryptedMarginalPriceAuctionModule.AuctionData({
             nextBidId: nextBidId,
-            nextDecryptIndex: nextDecryptIndex,
             marginalPrice: marginalPrice,
+            minPrice: minPrice,
+            nextDecryptIndex: nextDecryptIndex,
+            minFilled: minFilled,
+            minBidSize: minBidSize,
+            status: status,
             publicKey: publicKey,
             privateKey: privateKey,
             bidIds: new uint64[](0)
@@ -563,16 +617,16 @@ abstract contract EmpaTest is Test, Permit2User {
     function _getBid(
         uint96 lotId_,
         uint64 bidId_
-    ) internal view returns (EncryptedMarginalPriceAuction.Bid memory) {
+    ) internal view returns (EncryptedMarginalPriceAuctionModule.Bid memory) {
         (
             address bidder,
             uint96 amountIn,
             uint96 minAmountOut,
             address referrer,
-            EncryptedMarginalPriceAuction.BidStatus status
-        ) = _auctionHouse.bids(lotId_, bidId_);
+            EncryptedMarginalPriceAuctionModule.BidStatus status
+        ) = _auctionModule.bids(lotId_, bidId_);
 
-        return EncryptedMarginalPriceAuction.Bid({
+        return EncryptedMarginalPriceAuctionModule.Bid({
             bidder: bidder,
             amount: amountIn,
             minAmountOut: minAmountOut,

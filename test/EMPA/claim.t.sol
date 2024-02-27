@@ -67,8 +67,9 @@ contract EmpaClaimTest is EmpaTest {
         givenLotHasStarted
         givenBidIsCreated(_BID_AMOUNT, _BID_AMOUNT_OUT)
     {
-        bytes memory err =
-            abi.encodeWithSelector(EncryptedMarginalPriceAuction.Auction_WrongState.selector);
+        bytes memory err = abi.encodeWithSelector(
+            EncryptedMarginalPriceAuction.Auction_WrongState.selector, _lotId
+        );
         vm.expectRevert(err);
 
         // Call the function
@@ -85,8 +86,9 @@ contract EmpaClaimTest is EmpaTest {
         givenBidIsCreated(_BID_AMOUNT, _BID_AMOUNT_OUT)
         givenLotHasConcluded
     {
-        bytes memory err =
-            abi.encodeWithSelector(EncryptedMarginalPriceAuction.Auction_WrongState.selector);
+        bytes memory err = abi.encodeWithSelector(
+            EncryptedMarginalPriceAuction.Auction_WrongState.selector, _lotId
+        );
         vm.expectRevert(err);
 
         // Call the function
@@ -105,8 +107,9 @@ contract EmpaClaimTest is EmpaTest {
         givenPrivateKeyIsSubmitted
         givenLotIsDecrypted
     {
-        bytes memory err =
-            abi.encodeWithSelector(EncryptedMarginalPriceAuction.Auction_WrongState.selector);
+        bytes memory err = abi.encodeWithSelector(
+            EncryptedMarginalPriceAuction.Auction_WrongState.selector, _lotId
+        );
         vm.expectRevert(err);
 
         // Call the function
@@ -222,8 +225,9 @@ contract EmpaClaimTest is EmpaTest {
         // Claim the bid
         _auctionHouse.claim(_lotId, _bidId);
 
-        bytes memory err =
-            abi.encodeWithSelector(EncryptedMarginalPriceAuction.Bid_AlreadyClaimed.selector);
+        bytes memory err = abi.encodeWithSelector(
+            EncryptedMarginalPriceAuction.Bid_WrongState.selector, _lotId, _bidId
+        );
         vm.expectRevert(err);
 
         // Call the function

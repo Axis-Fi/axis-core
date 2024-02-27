@@ -43,22 +43,22 @@ contract MockAtomicAuctionModule is AuctionModule {
     }
 
     function _purchase(
-        uint96 id_,
-        uint256 amount_,
+        uint96 lotId_,
+        uint96 amount_,
         bytes calldata
     ) internal override returns (uint256 payout, bytes memory auctionOutput) {
         if (purchaseReverts) revert("error");
 
-        if (cancelled[id_]) revert Auction_MarketNotActive(id_);
+        if (cancelled[lotId_]) revert Auction_MarketNotActive(lotId_);
 
-        if (payoutData[id_] == 0) {
+        if (payoutData[lotId_] == 0) {
             payout = amount_;
         } else {
-            payout = (payoutData[id_] * amount_) / 1e5;
+            payout = (payoutData[lotId_] * amount_) / 1e5;
         }
 
         // Reduce capacity
-        lotData[id_].capacity -= payout;
+        lotData[lotId_].capacity -= uint96(payout);
 
         Output memory output = Output({multiplier: 1});
 
@@ -77,49 +77,38 @@ contract MockAtomicAuctionModule is AuctionModule {
         uint96,
         address,
         address,
-        address,
-        uint256,
+        uint96,
         bytes calldata
-    ) internal pure override returns (uint96) {
+    ) internal pure override returns (uint64) {
         revert Auction_NotImplemented();
     }
 
-    function _refundBid(uint96, uint96, address) internal virtual override returns (uint256) {
+    function _refundBid(uint96, uint64, address) internal virtual override returns (uint256) {
         revert Auction_NotImplemented();
     }
 
-    function settle(
-        uint96 lotId_,
-        Bid[] memory bids_
-    ) external virtual returns (uint256[] memory amountsOut) {}
-
-    function payoutFor(
-        uint96 lotId_,
-        uint256 amount_
-    ) public view virtual override returns (uint256) {}
-
-    function priceFor(
-        uint96 lotId_,
-        uint256 payout_
-    ) public view virtual override returns (uint256) {}
-
-    function maxPayout(uint96 lotId_) public view virtual override returns (uint256) {}
-
-    function maxAmountAccepted(uint96 lotId_) public view virtual override returns (uint256) {}
-
-    function _settle(uint96) internal pure override returns (Bid[] memory, bytes memory) {
+    function _claimBid(
+        uint96,
+        uint64
+    ) internal virtual override returns (address, uint256, uint256, bytes memory) {
         revert Auction_NotImplemented();
     }
 
-    function _revertIfBidInvalid(uint96 lotId_, uint96 bidId_) internal view virtual override {}
+    function settle(uint96 lotId_) external override returns (Settlement memory, bytes memory) {}
+
+    function _settle(uint96) internal pure override returns (Settlement memory, bytes memory) {
+        revert Auction_NotImplemented();
+    }
+
+    function _revertIfBidInvalid(uint96 lotId_, uint64 bidId_) internal view virtual override {}
 
     function _revertIfNotBidOwner(
         uint96 lotId_,
-        uint96 bidId_,
+        uint64 bidId_,
         address caller_
     ) internal view virtual override {}
 
-    function _revertIfBidRefunded(uint96 lotId_, uint96 bidId_) internal view virtual override {}
+    function _revertIfBidClaimed(uint96 lotId_, uint64 bidId_) internal view virtual override {}
 
     function _revertIfLotSettled(uint96 lotId_) internal view virtual override {}
 

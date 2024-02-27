@@ -44,9 +44,6 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: ${{ runner.os }}-cargo-
 
-      - name: Build local rsa-cli for use int testing
-        run: cd crates/rsa-cli && cargo build && cd ../..
-
       - name: Build local ecies-cli for use int testing
         run: cd crates/ecies-cli && cargo build && cd ../..
 

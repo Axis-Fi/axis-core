@@ -27,8 +27,6 @@ contract EmpaAuctionTest is EmpaTest {
     // [X] reverts when quote token is 0
     // [X] creates the auction lot
 
-    // TODO quote token fee on transfer?
-
     function testReverts_whenBaseTokenDecimalsAreOutOfBounds(uint8 decimals_) external {
         uint8 decimals = uint8(bound(decimals_, 0, 25));
         vm.assume(decimals < 6 || decimals > 18);
@@ -48,7 +46,7 @@ contract EmpaAuctionTest is EmpaTest {
         uint8 decimals = uint8(bound(decimals_, 0, 25));
         vm.assume(decimals < 6 || decimals > 18);
 
-        _setBaseTokenDecimals(decimals);
+        _setQuoteTokenDecimals(decimals);
 
         // Expect revert
         bytes memory err =
@@ -347,6 +345,40 @@ contract EmpaAuctionTest is EmpaTest {
         _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
     }
 
+    function test_prefunding_withHooks_feeOnTransfer_quoteTokenDecimalsLarger_reverts()
+        external
+        givenQuoteTokenHasDecimals(17)
+        givenBaseTokenHasDecimals(13)
+        whenHooksIsSet
+        givenHookHasBaseTokenBalance(_LOT_CAPACITY)
+        givenBaseTokenTakesFeeOnTransfer
+    {
+        // Expect revert
+        bytes memory err =
+            abi.encodeWithSelector(EncryptedMarginalPriceAuction.InvalidHook.selector);
+        vm.expectRevert(err);
+
+        vm.prank(_auctionOwner);
+        _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
+    }
+
+    function test_prefunding_withHooks_feeOnTransfer_quoteTokenDecimalsSmaller_reverts()
+        external
+        givenQuoteTokenHasDecimals(13)
+        givenBaseTokenHasDecimals(17)
+        whenHooksIsSet
+        givenHookHasBaseTokenBalance(_LOT_CAPACITY)
+        givenBaseTokenTakesFeeOnTransfer
+    {
+        // Expect revert
+        bytes memory err =
+            abi.encodeWithSelector(EncryptedMarginalPriceAuction.InvalidHook.selector);
+        vm.expectRevert(err);
+
+        vm.prank(_auctionOwner);
+        _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
+    }
+
     function test_prefunding_withHooks()
         external
         whenHooksIsSet
@@ -365,6 +397,54 @@ contract EmpaAuctionTest is EmpaTest {
         assertEq(
             _baseToken.balanceOf(address(_auctionHouse)),
             _LOT_CAPACITY,
+            "auction house balance mismatch"
+        );
+    }
+
+    function test_prefunding_withHooks_quoteTokenDecimalsLarger()
+        external
+        givenQuoteTokenHasDecimals(17)
+        givenBaseTokenHasDecimals(13)
+        whenHooksIsSet
+        givenHookHasBaseTokenBalance(_LOT_CAPACITY)
+    {
+        // Create the auction
+        vm.prank(_auctionOwner);
+        _lotId = _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
+
+        // Check that the hook is set
+        EncryptedMarginalPriceAuction.Routing memory lotRouting = _getLotRouting(_lotId);
+        assertEq(address(lotRouting.hooks), address(_mockHook), "hooks mismatch");
+
+        // Check balances
+        assertEq(_baseToken.balanceOf(address(_mockHook)), 0, "hook balance mismatch");
+        assertEq(
+            _baseToken.balanceOf(address(_auctionHouse)),
+            _scaleBaseTokenAmount(_LOT_CAPACITY),
+            "auction house balance mismatch"
+        );
+    }
+
+    function test_prefunding_withHooks_quoteTokenDecimalsSmaller()
+        external
+        givenQuoteTokenHasDecimals(13)
+        givenBaseTokenHasDecimals(17)
+        whenHooksIsSet
+        givenHookHasBaseTokenBalance(_LOT_CAPACITY)
+    {
+        // Create the auction
+        vm.prank(_auctionOwner);
+        _lotId = _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
+
+        // Check that the hook is set
+        EncryptedMarginalPriceAuction.Routing memory lotRouting = _getLotRouting(_lotId);
+        assertEq(address(lotRouting.hooks), address(_mockHook), "hooks mismatch");
+
+        // Check balances
+        assertEq(_baseToken.balanceOf(address(_mockHook)), 0, "hook balance mismatch");
+        assertEq(
+            _baseToken.balanceOf(address(_auctionHouse)),
+            _scaleBaseTokenAmount(_LOT_CAPACITY),
             "auction house balance mismatch"
         );
     }
@@ -393,6 +473,40 @@ contract EmpaAuctionTest is EmpaTest {
 
     function test_prefunding_feeOnTransfer_reverts()
         external
+        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenBaseTokenTakesFeeOnTransfer
+    {
+        // Expect revert
+        bytes memory err =
+            abi.encodeWithSelector(Transfer.UnsupportedToken.selector, address(_baseToken));
+        vm.expectRevert(err);
+
+        vm.prank(_auctionOwner);
+        _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
+    }
+
+    function test_prefunding_feeOnTransfer_quoteTokenDecimalsLarger_reverts()
+        external
+        givenQuoteTokenHasDecimals(17)
+        givenBaseTokenHasDecimals(13)
+        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenBaseTokenTakesFeeOnTransfer
+    {
+        // Expect revert
+        bytes memory err =
+            abi.encodeWithSelector(Transfer.UnsupportedToken.selector, address(_baseToken));
+        vm.expectRevert(err);
+
+        vm.prank(_auctionOwner);
+        _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
+    }
+
+    function test_prefunding_feeOnTransfer_quoteTokenDecimalsSmaller_reverts()
+        external
+        givenQuoteTokenHasDecimals(13)
+        givenBaseTokenHasDecimals(17)
         givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
         givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenBaseTokenTakesFeeOnTransfer
@@ -462,5 +576,131 @@ contract EmpaAuctionTest is EmpaTest {
         );
     }
 
-    // TODO handle decimals
+    function test_prefunding_quoteTokenDecimalsLarger()
+        external
+        givenQuoteTokenHasDecimals(17)
+        givenBaseTokenHasDecimals(13)
+        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+    {
+        // Expect event to be emitted
+        vm.expectEmit(address(_auctionHouse));
+        emit AuctionCreated(0, _INFO_HASH);
+
+        // Create the auction
+        vm.prank(_auctionOwner);
+        _lotId = _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
+
+        // Assert values
+        EncryptedMarginalPriceAuction.Routing memory lotRouting = _getLotRouting(_lotId);
+        assertEq(lotRouting.owner, _auctionOwner, "owner mismatch");
+        assertEq(address(lotRouting.baseToken), address(_baseToken), "base token mismatch");
+        assertEq(address(lotRouting.quoteToken), address(_quoteToken), "quote token mismatch");
+        assertEq(lotRouting.curator, _CURATOR, "curator mismatch");
+        assertEq(lotRouting.curated, false, "curated mismatch");
+        assertEq(lotRouting.curatorFee, 0, "curator fee mismatch");
+        assertEq(address(lotRouting.hooks), address(0), "hooks mismatch");
+        assertEq(address(lotRouting.allowlist), address(0), "allowlist mismatch");
+        assertEq(fromVeecode(lotRouting.derivativeReference), "", "derivative type mismatch");
+        assertEq(lotRouting.wrapDerivative, false, "wrap derivative mismatch");
+        assertEq(lotRouting.derivativeParams, "", "derivative params mismatch");
+
+        // Auction module also updated
+        EncryptedMarginalPriceAuction.Lot memory lotData = _getLotData(_lotId);
+        assertEq(lotData.minimumPrice, _scaleQuoteTokenAmount(_MIN_PRICE), "minimum price mismatch");
+        assertEq(lotData.capacity, _scaleBaseTokenAmount(_LOT_CAPACITY), "capacity mismatch");
+        assertEq(
+            lotData.quoteTokenDecimals, _quoteToken.decimals(), "quote token decimals mismatch"
+        );
+        assertEq(lotData.baseTokenDecimals, _baseToken.decimals(), "base token decimals mismatch");
+        assertEq(lotData.start, _startTime, "start mismatch");
+        assertEq(lotData.conclusion, _startTime + _duration, "conclusion mismatch");
+        assertEq(
+            uint8(lotData.status),
+            uint8(EncryptedMarginalPriceAuction.AuctionStatus.Created),
+            "status mismatch"
+        );
+        assertEq(
+            lotData.minFilled,
+            _scaleBaseTokenAmount(_LOT_CAPACITY) * _MIN_FILL_PERCENT / 1e5,
+            "min filled mismatch"
+        );
+        assertEq(
+            lotData.minBidSize,
+            _scaleBaseTokenAmount(_LOT_CAPACITY) * _MIN_BID_PERCENT / 1e5,
+            "min bid size mismatch"
+        );
+
+        // Check balances
+        assertEq(_baseToken.balanceOf(address(this)), 0, "owner balance mismatch");
+        assertEq(
+            _baseToken.balanceOf(address(_auctionHouse)),
+            _scaleBaseTokenAmount(_LOT_CAPACITY),
+            "auction house balance mismatch"
+        );
+    }
+
+    function test_prefunding_quoteTokenDecimalsSmaller()
+        external
+        givenQuoteTokenHasDecimals(13)
+        givenBaseTokenHasDecimals(17)
+        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+    {
+        // Expect event to be emitted
+        vm.expectEmit(address(_auctionHouse));
+        emit AuctionCreated(0, _INFO_HASH);
+
+        // Create the auction
+        vm.prank(_auctionOwner);
+        _lotId = _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
+
+        // Assert values
+        EncryptedMarginalPriceAuction.Routing memory lotRouting = _getLotRouting(_lotId);
+        assertEq(lotRouting.owner, _auctionOwner, "owner mismatch");
+        assertEq(address(lotRouting.baseToken), address(_baseToken), "base token mismatch");
+        assertEq(address(lotRouting.quoteToken), address(_quoteToken), "quote token mismatch");
+        assertEq(lotRouting.curator, _CURATOR, "curator mismatch");
+        assertEq(lotRouting.curated, false, "curated mismatch");
+        assertEq(lotRouting.curatorFee, 0, "curator fee mismatch");
+        assertEq(address(lotRouting.hooks), address(0), "hooks mismatch");
+        assertEq(address(lotRouting.allowlist), address(0), "allowlist mismatch");
+        assertEq(fromVeecode(lotRouting.derivativeReference), "", "derivative type mismatch");
+        assertEq(lotRouting.wrapDerivative, false, "wrap derivative mismatch");
+        assertEq(lotRouting.derivativeParams, "", "derivative params mismatch");
+
+        // Auction module also updated
+        EncryptedMarginalPriceAuction.Lot memory lotData = _getLotData(_lotId);
+        assertEq(lotData.minimumPrice, _scaleQuoteTokenAmount(_MIN_PRICE), "minimum price mismatch");
+        assertEq(lotData.capacity, _scaleBaseTokenAmount(_LOT_CAPACITY), "capacity mismatch");
+        assertEq(
+            lotData.quoteTokenDecimals, _quoteToken.decimals(), "quote token decimals mismatch"
+        );
+        assertEq(lotData.baseTokenDecimals, _baseToken.decimals(), "base token decimals mismatch");
+        assertEq(lotData.start, _startTime, "start mismatch");
+        assertEq(lotData.conclusion, _startTime + _duration, "conclusion mismatch");
+        assertEq(
+            uint8(lotData.status),
+            uint8(EncryptedMarginalPriceAuction.AuctionStatus.Created),
+            "status mismatch"
+        );
+        assertEq(
+            lotData.minFilled,
+            _scaleBaseTokenAmount(_LOT_CAPACITY) * _MIN_FILL_PERCENT / 1e5,
+            "min filled mismatch"
+        );
+        assertEq(
+            lotData.minBidSize,
+            _scaleBaseTokenAmount(_LOT_CAPACITY) * _MIN_BID_PERCENT / 1e5,
+            "min bid size mismatch"
+        );
+
+        // Check balances
+        assertEq(_baseToken.balanceOf(address(this)), 0, "owner balance mismatch");
+        assertEq(
+            _baseToken.balanceOf(address(_auctionHouse)),
+            _scaleBaseTokenAmount(_LOT_CAPACITY),
+            "auction house balance mismatch"
+        );
+    }
 }

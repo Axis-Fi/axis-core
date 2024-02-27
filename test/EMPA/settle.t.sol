@@ -5,7 +5,7 @@ pragma solidity 0.8.19;
 import {EmpaTest} from "test/EMPA/EMPATest.sol";
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 
-import {EncryptedMarginalPriceAuction, FeeManager} from "src/EMPA.sol";
+import {EncryptedMarginalPriceAuction} from "src/EMPA.sol";
 
 import {console2} from "forge-std/console2.sol";
 
@@ -408,38 +408,40 @@ contract EmpaSettleTest is EmpaTest {
     }
 
     modifier givenBidsCauseCapacityOverflow() {
-        uint96 bidOneAmount = 1e18;
-        uint96 bidOneAmountOut = type(uint96).max - 100;
-        uint96 bidTwoAmount = 1e18;
-        uint96 bidTwoAmountOut = type(uint96).max - 100;
+        uint96 bidOneAmount = 1e22;
+        uint96 bidOneAmountOut = type(uint96).max - 1e24;
+        uint96 bidTwoAmount = 1e22;
+        uint96 bidTwoAmountOut = type(uint96).max - 1e24;
 
         // Capacity
         _createBid(bidOneAmount, bidOneAmountOut);
-        _createBid(bidTwoAmount, bidTwoAmountOut); // Will result in an overflow
+        _createBid(bidTwoAmount, bidTwoAmountOut);
 
-        // Marginal price
-        _marginalPrice = _mulDivUp(bidTwoAmount, _BASE_SCALE, bidTwoAmountOut);
+        // Marginal price = 12621933
+        _marginalPrice = _mulDivDown(bidTwoAmount, _BASE_SCALE, bidTwoAmountOut);
+
+        // These calculations mimic how the capacity usage is calculated in the settle function
+        uint256 baseTokensRequired =
+            FixedPointMathLib.mulDivDown(bidOneAmount + bidTwoAmount, _BASE_SCALE, _marginalPrice);
+        uint256 bidOneAmountOutFull =
+            FixedPointMathLib.mulDivDown(bidOneAmount, _BASE_SCALE, _marginalPrice);
+        uint256 bidOneAmountOutOverflow = baseTokensRequired - _LOT_CAPACITY_OVERFLOW;
 
         // Output
         // Bid one: 90 out (partial fill)
         // Bid two: bidTwoAmountOut out
 
-        uint96 bidTwoAmountOutActual = bidTwoAmountOut;
         uint96 bidTwoAmountInActual = bidTwoAmount;
-        console2.log("bidTwoAmountOutActual", bidTwoAmountOutActual);
-        console2.log("capacity", _LOT_CAPACITY_OVERFLOW);
-        uint96 bidOneAmountOutActual = _LOT_CAPACITY_OVERFLOW - bidTwoAmountOutActual;
-        console2.log("bidOneAmountOutActual", bidOneAmountOutActual);
-        uint96 bidOneAmountInActual =
-            _mulDivUp(bidOneAmountOutActual, bidOneAmount, bidOneAmountOut);
-        console2.log("bidOneAmountInActual", bidOneAmountInActual);
+        uint96 bidTwoAmountOutActual =
+            uint96(FixedPointMathLib.mulDivDown(bidTwoAmount, _BASE_SCALE, _marginalPrice));
+        uint96 bidOneAmountOutActual = uint96(bidOneAmountOutFull - bidOneAmountOutOverflow);
+        uint96 bidOneAmountInActual = uint96(
+            FixedPointMathLib.mulDivUp(bidOneAmount, bidOneAmountOutActual, bidOneAmountOutFull)
+        );
 
         uint96 bidAmountInSuccess = bidOneAmountInActual + bidTwoAmountInActual;
-        console2.log("bidAmountInSuccess", bidAmountInSuccess);
         uint96 bidAmountInFail = bidOneAmount - bidOneAmountInActual;
-        console2.log("bidAmountInFail", bidAmountInFail);
         uint96 bidAmountOutSuccess = bidOneAmountOutActual + bidTwoAmountOutActual;
-        console2.log("bidAmountOutSuccess", bidAmountOutSuccess);
 
         // Fees
         _expectedReferrerFee = _calculateReferrerFee(bidAmountInSuccess);
@@ -460,6 +462,22 @@ contract EmpaSettleTest is EmpaTest {
         _expectedAuctionOwnerQuoteTokenBalance = bidOneAmountInActual + bidTwoAmountInActual
             - _expectedReferrerFee - _expectedProtocolFee; // Actual payout minus fees
         _expectedBidderQuoteTokenBalance = bidAmountInFail; // Partial fill returned
+        _;
+    }
+
+    modifier givenLargeNumberOfUnfilledBids() {
+        // Create 10 bids that will fill capacity
+        for (uint256 i; i < 10; i++) {
+            _createBid(2e18, 1e18);
+        }
+
+        // Create more bids that will not be filled
+        for (uint256 i; i < 1500; i++) {
+            _createBid(2e18, 1e18);
+        }
+
+        // Marginal price: 2
+        _marginalPrice = _scaleQuoteTokenAmount(2 * _BASE_SCALE);
         _;
     }
 
@@ -558,7 +576,7 @@ contract EmpaSettleTest is EmpaTest {
     {
         // Expect revert
         bytes memory err = abi.encodeWithSelector(
-            EncryptedMarginalPriceAuction.Auction_MarketActive.selector, _lotId
+            EncryptedMarginalPriceAuction.Auction_WrongState.selector, _lotId
         );
         vm.expectRevert(err);
 
@@ -574,8 +592,9 @@ contract EmpaSettleTest is EmpaTest {
         givenLotHasConcluded
     {
         // Expect revert
-        bytes memory err =
-            abi.encodeWithSelector(EncryptedMarginalPriceAuction.Auction_WrongState.selector);
+        bytes memory err = abi.encodeWithSelector(
+            EncryptedMarginalPriceAuction.Auction_WrongState.selector, _lotId
+        );
         vm.expectRevert(err);
 
         // Call function
@@ -592,8 +611,9 @@ contract EmpaSettleTest is EmpaTest {
         givenLotIsSettled
     {
         // Expect revert
-        bytes memory err =
-            abi.encodeWithSelector(EncryptedMarginalPriceAuction.Auction_WrongState.selector);
+        bytes memory err = abi.encodeWithSelector(
+            EncryptedMarginalPriceAuction.Auction_WrongState.selector, _lotId
+        );
         vm.expectRevert(err);
 
         // Call function
@@ -829,6 +849,72 @@ contract EmpaSettleTest is EmpaTest {
         _assertAccruedFees();
     }
 
+    function test_filledCapacityGreaterThanMinimum_givenNoProtocolFee()
+        external
+        givenReferrerFeeIsSet(_REFERRER_FEE_PERCENT)
+        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenCuratorIsSet
+        givenCuratorFeeIsSet
+        givenLotIsCreated
+        givenOwnerHasBaseTokenBalance(_curatorMaxPotentialFee)
+        givenOwnerHasBaseTokenAllowance(_curatorMaxPotentialFee)
+        givenCuratorHasApproved
+        givenLotHasStarted
+        givenBidsAreAboveMinimumAndBelowCapacity
+        givenLotHasConcluded
+        givenPrivateKeyIsSubmitted
+        givenLotIsDecrypted
+    {
+        // Call function
+        _auctionHouse.settle(_lotId);
+
+        // Validate bid data
+        EncryptedMarginalPriceAuction.BidData memory bidData = _getBidData(_lotId);
+        assertEq(bidData.marginalPrice, _marginalPrice);
+
+        // Validate lot data
+        EncryptedMarginalPriceAuction.Lot memory lot = _getLotData(_lotId);
+        assertEq(uint8(lot.status), uint8(EncryptedMarginalPriceAuction.AuctionStatus.Settled));
+
+        _assertBaseTokenBalances();
+        _assertQuoteTokenBalances();
+        _assertAccruedFees();
+    }
+
+    function test_filledCapacityGreaterThanMinimum_givenNoReferrerFee()
+        external
+        givenProtocolFeeIsSet(_PROTOCOL_FEE_PERCENT)
+        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenCuratorIsSet
+        givenCuratorFeeIsSet
+        givenLotIsCreated
+        givenOwnerHasBaseTokenBalance(_curatorMaxPotentialFee)
+        givenOwnerHasBaseTokenAllowance(_curatorMaxPotentialFee)
+        givenCuratorHasApproved
+        givenLotHasStarted
+        givenBidsAreAboveMinimumAndBelowCapacity
+        givenLotHasConcluded
+        givenPrivateKeyIsSubmitted
+        givenLotIsDecrypted
+    {
+        // Call function
+        _auctionHouse.settle(_lotId);
+
+        // Validate bid data
+        EncryptedMarginalPriceAuction.BidData memory bidData = _getBidData(_lotId);
+        assertEq(bidData.marginalPrice, _marginalPrice);
+
+        // Validate lot data
+        EncryptedMarginalPriceAuction.Lot memory lot = _getLotData(_lotId);
+        assertEq(uint8(lot.status), uint8(EncryptedMarginalPriceAuction.AuctionStatus.Settled));
+
+        _assertBaseTokenBalances();
+        _assertQuoteTokenBalances();
+        _assertAccruedFees();
+    }
+
     function test_someBidsBelowMinimumPrice()
         external
         givenReferrerFeeIsSet(_REFERRER_FEE_PERCENT)
@@ -933,6 +1019,36 @@ contract EmpaSettleTest is EmpaTest {
         _assertBaseTokenBalances();
         _assertQuoteTokenBalances();
         _assertAccruedFees();
+    }
+
+    function test_someBidsBelowMinimumPrice_gasUsage()
+        external
+        givenReferrerFeeIsSet(_REFERRER_FEE_PERCENT)
+        givenProtocolFeeIsSet(_PROTOCOL_FEE_PERCENT)
+        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenCuratorIsSet
+        givenCuratorFeeIsSet
+        givenLotIsCreated
+        givenLotHasStarted
+        givenLargeNumberOfUnfilledBids
+        givenLotHasConcluded
+        givenPrivateKeyIsSubmitted
+        givenLotIsDecrypted
+    {
+        // Call function
+        uint256 gasBefore = gasleft();
+        _auctionHouse.settle(_lotId);
+        uint256 gasAfter = gasleft();
+        console2.log("gas used", gasBefore - gasAfter);
+
+        // Validate bid data
+        EncryptedMarginalPriceAuction.BidData memory bidData = _getBidData(_lotId);
+        assertEq(bidData.marginalPrice, _marginalPrice, "marginal price");
+
+        // Validate lot data
+        EncryptedMarginalPriceAuction.Lot memory lot = _getLotData(_lotId);
+        assertEq(uint8(lot.status), uint8(EncryptedMarginalPriceAuction.AuctionStatus.Settled));
     }
 
     function test_partialFill()
@@ -1300,8 +1416,8 @@ contract EmpaSettleTest is EmpaTest {
 
     // [X] given that a bid's price results in a uint96 overflow
     //  [X] the settle function does not revert
-    // [ ] given the expended capacity results in a uint96 overflow
-    //  [ ] the settle function does not revert
+    // [X] given the expended capacity results in a uint96 overflow
+    //  [X] the settle function does not revert
 
     function test_marginalPriceOverflow()
         external

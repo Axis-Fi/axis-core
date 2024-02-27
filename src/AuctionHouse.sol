@@ -3,6 +3,7 @@ pragma solidity 0.8.19;
 
 import {ERC20} from "lib/solmate/src/tokens/ERC20.sol";
 import {Transfer} from "src/lib/Transfer.sol";
+import {FixedPointMathLib as Math} from "lib/solmate/src/utils/FixedPointMathLib.sol";
 
 import {Auctioneer} from "src/bases/Auctioneer.sol";
 import {FeeManager} from "src/bases/FeeManager.sol";
@@ -38,8 +39,8 @@ abstract contract Router {
         address recipient;
         address referrer;
         uint96 lotId;
-        uint256 amount;
-        uint256 minAmountOut;
+        uint96 amount;
+        uint96 minAmountOut;
         bytes auctionData;
         bytes allowlistProof;
         bytes permit2Data;
@@ -57,9 +58,8 @@ abstract contract Router {
     /// @param      permit2Data_        Permit2 approval for the quoteToken (abi-encoded Permit2Approval struct)
     struct BidParams {
         uint96 lotId;
-        address recipient;
         address referrer;
-        uint256 amount;
+        uint96 amount;
         bytes auctionData;
         bytes allowlistProof;
         bytes permit2Data;
@@ -84,7 +84,7 @@ abstract contract Router {
     ///
     /// @param      params_         Bid parameters
     /// @return     bidId           Bid ID
-    function bid(BidParams memory params_) external virtual returns (uint96 bidId);
+    function bid(BidParams memory params_) external virtual returns (uint64 bidId);
 
     /// @notice     Refund a bid on a lot in a batch auction
     /// @dev        The implementing function must perform the following:
@@ -94,7 +94,17 @@ abstract contract Router {
     ///
     /// @param      lotId_          Lot ID
     /// @param      bidId_          Bid ID
-    function refundBid(uint96 lotId_, uint96 bidId_) external virtual;
+    function refundBid(uint96 lotId_, uint64 bidId_) external virtual;
+
+    /// @notice     Claim bid payout and/or refund after a batch auction has settled
+    /// @dev        The implementing function must perform the following:
+    ///             1. Validate the lot ID
+    ///             2. Pass the request to the auction module to validate and update bid data
+    ///             3. Send the refund and/or payout to the bidder
+    ///
+    /// @param      lotId_          Lot ID
+    /// @param      bidId_          Bid ID
+    function claimBid(uint96 lotId_, uint64 bidId_) external virtual;
 
     /// @notice     Settle a batch auction
     /// @notice     This function is used for versions with on-chain storage and bids and local settlement
@@ -224,7 +234,7 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
         // Send purchase to auction house and get payout plus any extra output
         bytes memory auctionOutput;
         (payoutAmount, auctionOutput) = getModuleForId(params_.lotId).purchase(
-            params_.lotId, amountLessFees, params_.auctionData
+            params_.lotId, uint96(amountLessFees), params_.auctionData
         );
 
         // Check that payout is at least minimum amount out
@@ -245,12 +255,11 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
 
         // Calculate the curator fee (if applicable)
         Curation storage curation = lotCuration[params_.lotId];
-        uint256 curatorFee;
-        if (curation.curated) {
-            curatorFee = _calculatePayoutFees(
+        uint256 curatorFee = curation.curated
+            ? _calculatePayoutFees(
                 keycodeFromVeecode(routing.auctionReference), curation.curator, payoutAmount
-            );
-        }
+            )
+            : 0;
 
         // Collect payout from auction owner
         _collectPayout(params_.lotId, amountLessFees, payoutAmount + curatorFee, routing);
@@ -295,7 +304,7 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
     ///             - the auction module reverts when creating a bid
     ///             - the quote token transfer fails
     ///             - re-entrancy is detected
-    function bid(BidParams memory params_) external override nonReentrant returns (uint96) {
+    function bid(BidParams memory params_) external override nonReentrant returns (uint64 bidId) {
         _isLotValid(params_.lotId);
 
         // Load routing data for the lot
@@ -308,13 +317,8 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
 
         // Record the bid on the auction module
         // The module will determine if the bid is valid - minimum bid size, minimum price, auction status, etc
-        uint96 bidId = getModuleForId(params_.lotId).bid(
-            params_.lotId,
-            msg.sender,
-            params_.recipient,
-            params_.referrer,
-            params_.amount,
-            params_.auctionData
+        bidId = getModuleForId(params_.lotId).bid(
+            params_.lotId, msg.sender, params_.referrer, params_.amount, params_.auctionData
         );
 
         // Transfer the quote token from the bidder
@@ -337,7 +341,7 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
     ///             - the lot ID is invalid
     ///             - the auction module reverts when cancelling the bid
     ///             - re-entrancy is detected
-    function refundBid(uint96 lotId_, uint96 bidId_) external override nonReentrant {
+    function refundBid(uint96 lotId_, uint64 bidId_) external override nonReentrant {
         _isLotValid(lotId_);
 
         // Refund the bid on the auction module
@@ -352,12 +356,18 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
         emit RefundBid(lotId_, bidId_, msg.sender);
     }
 
-    function claimBid(uint96 lotId_, uint96 bidId_) external override nonReentrant {
+    /// @inheritdoc Router
+    /// @dev        This function reverts if:
+    ///             - the lot ID is invalid
+    ///             - the auction module reverts when claiming the bid
+    ///             - re-entrancy is detected
+    function claimBid(uint96 lotId_, uint64 bidId_) external override nonReentrant {
         _isLotValid(lotId_);
 
         // Claim the bid on the auction module
         // The auction module is responsible for validating the bid and authorizing the caller
-        (address referrer, uint96 paid, uint96 payout) = getModuleForId(lotId_).claimBid(lotId_, bidId_, msg.sender);
+        (address referrer, uint256 paid, uint256 payout, bytes memory auctionOutput) =
+            getModuleForId(lotId_).claimBid(lotId_, bidId_, msg.sender);
 
         // Load routing data for the lot
         Routing storage routing = lotRouting[lotId_];
@@ -366,10 +376,21 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
         // Otherwise, it was not and the bidder is refunded the paid amount.
         if (payout > 0) {
             // Allocate quote and protocol fees for bid
-            _allocateQuoteFees(referrer, routing.owner, routing.quoteToken, paid);
+            _allocateQuoteFees(
+                keycodeFromVeecode(routing.auctionReference),
+                referrer,
+                routing.owner,
+                routing.quoteToken,
+                paid
+            );
+
+            // Reduce prefunding by the payout amount
+            unchecked {
+                routing.prefunding -= payout;
+            }
 
             // Send the payout to the bidder
-            _sendPayout(lotId_, msg.sender, payout, routing);
+            _sendPayout(lotId_, msg.sender, payout, routing, auctionOutput);
         } else {
             // Refund the paid amount to the bidder
             Transfer.transfer(routing.quoteToken, msg.sender, paid, false);
@@ -395,7 +416,10 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
     ///             - sending the payout to each bidder fails
     ///             - re-entrancy is detected
     function settle(uint96 lotId_) external override nonReentrant {
-        // TODO: account for prefunding? Is prefunding value necessary since all batch auctions need to be prefunded?
+        // TODO this implementation is pretty opinionated about only having one partial fill.
+        // The initial EMPAM works this way, but other batch auctions may not.
+        // It may be better to allow arbitrary partial fills and handle them in the claimBid function instead of here.
+        // However, this may change the desired behavior.
 
         // Validation
         _isLotValid(lotId_);
@@ -408,7 +432,7 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
         uint256 capacity = module.remainingCapacity(lotId_);
 
         // Settle the auction
-        Auction.Settlement memory settlement = module.settle(lotId_);
+        (Auction.Settlement memory settlement, bytes memory auctionOutput) = module.settle(lotId_);
 
         // Load routing data for the lot
         Routing storage routing = lotRouting[lotId_];
@@ -421,56 +445,93 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
             // If a referrer is not set, that portion of the fee defaults to the protocol
             uint256 totalInLessFees;
             {
-                (, uint256 toProtocol) = calculateQuoteFees(false, settlement.totalIn);
+                (, uint256 toProtocol) = calculateQuoteFees(
+                    keycodeFromVeecode(routing.auctionReference), false, settlement.totalIn
+                );
                 totalInLessFees = settlement.totalIn - toProtocol;
             }
 
             // Check if there was a partial fill and handle the payout + refund
             if (settlement.pfBidder != address(0)) {
                 // Reconstruct bid amount from the settlement price and the amount out
-                // TODO rounding?
-                uint256 filledAmount = (settlement.pfPayout * settlement.totalIn) / settlement.totalOut;
+                uint256 filledAmount =
+                    Math.mulDivDown(settlement.pfPayout, settlement.totalIn, settlement.totalOut);
 
                 // Allocate quote and protocol fees for bid
                 _allocateQuoteFees(
-                    _bid.referrer,
+                    keycodeFromVeecode(routing.auctionReference),
+                    settlement.pfReferrer,
                     routing.owner,
                     routing.quoteToken,
                     filledAmount
                 );
 
+                // Reduce prefunding by the payout amount
+                unchecked {
+                    routing.prefunding -= settlement.pfPayout;
+                }
+
                 // Send refund and payout to the bidder
-                Transfer.transfer(routing.quoteToken, settlement.pfBidder, settlement.pfRefund, false);
-                _sendPayout(lotId_, settlment.pfBidder, settlement.pfPayout, routing);
+                Transfer.transfer(
+                    routing.quoteToken, settlement.pfBidder, settlement.pfRefund, false
+                );
+                _sendPayout(
+                    lotId_, settlement.pfBidder, settlement.pfPayout, routing, auctionOutput
+                );
             }
 
             // Send payment in bulk to auction owner
             _sendPayment(routing.owner, totalInLessFees, routing.quoteToken, routing.hooks);
 
-            // Load curator fee
-            uint256 curatorFee = lotRouting[lotId_].curatorFee;
+            // Load curator data and calculate fee
+            Curation storage curation = lotCuration[lotId_];
+            uint256 curatorFee = curation.curated
+                ? _calculatePayoutFees(
+                    keycodeFromVeecode(routing.auctionReference), curation.curator, capacity
+                )
+                : 0;
 
             // If capacity expended is less than the total capacity, refund the remaining capacity to the seller and proportionally reduce the curator fee
             if (settlement.totalOut < capacity) {
                 uint256 capacityRefund = capacity - settlement.totalOut;
 
                 if (curatorFee > 0) {
-                    uint256 feeRefund = (curatorFee * capacityRefund) / capacity;
+                    uint256 feeRefund = Math.mulDivDown(curatorFee, capacityRefund, capacity);
                     capacityRefund += feeRefund;
                     curatorFee -= feeRefund;
-                } 
+                }
+
+                // Reduce the prefunding amount by the refund
+                unchecked {
+                    routing.prefunding -= capacityRefund;
+                }
 
                 // Transfer the remaining capacity to the seller
-                Transfer.transfer(
-                    routing.baseToken, routing.owner, capacityRefund, false
-                );
+                Transfer.transfer(routing.baseToken, routing.owner, capacityRefund, false);
             }
 
-            // Send curator fee, if applicable
-            if (curatorFee > 0) _sendPayout(lotId_, routing.curator, curatorFee, routing);
+            // Reduce prefunding by curator fee and send, if applicable
+            if (curatorFee > 0) {
+                unchecked {
+                    routing.prefunding -= curatorFee;
+                }
+                _sendPayout(lotId_, curation.curator, curatorFee, routing, auctionOutput);
+            }
         } else {
             // Auction did not settle, refund the capacity to the seller
-            uint256 refundAmount = capacity + lotRouting[lotId_].curatorFee; // can add curator fee without checking since it will be zero if not curated
+            Curation storage curation = lotCuration[lotId_];
+            uint256 curatorFee = curation.curated
+                ? _calculatePayoutFees(
+                    keycodeFromVeecode(routing.auctionReference), curation.curator, capacity
+                )
+                : 0;
+
+            uint256 refundAmount = capacity + curatorFee; // can add curator fee without checking since it will be zero if not curated
+
+            // Reduce the prefunding amount
+            unchecked {
+                routing.prefunding -= refundAmount;
+            }
 
             // Refund the capacity to the seller, no fees are taken
             Transfer.transfer(
@@ -543,7 +604,6 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
         if (fee_ > _FEE_DECIMALS) revert InvalidFee();
 
         // Set fee based on type
-        // TODO should we have hard-coded maximums for these fees?
         // Or a combination of protocol and referrer fee since they are both in the quoteToken?
         if (type_ == FeeType.Protocol) {
             fees[auctionType_].protocol = fee_;

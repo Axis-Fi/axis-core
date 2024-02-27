@@ -1,101 +1,16 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.19;
 
-// Libraries
-import {Test} from "forge-std/Test.sol";
-import {ERC20} from "lib/solmate/src/tokens/ERC20.sol";
-
-// Mocks
-import {MockERC20} from "lib/solmate/src/test/utils/mocks/MockERC20.sol";
-import {MockAtomicAuctionModule} from "test/modules/Auction/MockAtomicAuctionModule.sol";
-import {Permit2User} from "test/lib/permit2/Permit2User.sol";
-
 // Auctions
-import {AuctionHouse, Router, FeeManager} from "src/AuctionHouse.sol";
 import {Auction} from "src/modules/Auction.sol";
-import {IHooks, IAllowlist, Auctioneer} from "src/bases/Auctioneer.sol";
-import {Catalogue} from "src/Catalogue.sol";
+import {Auctioneer} from "src/bases/Auctioneer.sol";
 
-// Modules
-import {
-    Keycode,
-    toKeycode,
-    Veecode,
-    wrapVeecode,
-    fromVeecode,
-    WithModules,
-    Module
-} from "src/modules/Modules.sol";
+import {AuctionHouseTest} from "test/AuctionHouse/AuctionHouseTest.sol";
 
-contract CancelAuctionTest is Test, Permit2User {
-    MockERC20 internal baseToken;
-    MockERC20 internal quoteToken;
-    MockAtomicAuctionModule internal mockAuctionModule;
+contract CancelAuctionTest is AuctionHouseTest {
+    uint96 internal constant _PURCHASE_AMOUNT = 1e18;
 
-    AuctionHouse internal auctionHouse;
-    Catalogue internal catalogue;
-    Auctioneer.RoutingParams internal routingParams;
-    Auction.AuctionParams internal auctionParams;
-
-    uint96 internal lotId;
-
-    address internal auctionOwner = address(0x1);
-
-    address internal protocol = address(0x2);
-    address internal alice = address(0x3);
-    address internal curator = address(0x4);
-
-    uint48 internal constant CURATOR_MAX_FEE = 100;
-    uint48 internal constant CURATOR_FEE = 90;
-    uint256 internal constant LOT_CAPACITY = 10e18;
-    uint256 internal curatorMaxPotentialFee;
-
-    uint256 internal constant PURCHASE_AMOUNT = 1e18;
-
-    Keycode internal auctionType = toKeycode("ATOM");
-
-    string internal INFO_HASH = "";
-
-    function setUp() external {
-        baseToken = new MockERC20("Base Token", "BASE", 18);
-        quoteToken = new MockERC20("Quote Token", "QUOTE", 18);
-
-        auctionHouse = new AuctionHouse(address(this), auctionOwner, _PERMIT2_ADDRESS);
-        mockAuctionModule = new MockAtomicAuctionModule(address(auctionHouse));
-
-        auctionHouse.installModule(mockAuctionModule);
-
-        catalogue = new Catalogue(address(auctionHouse));
-
-        auctionParams = Auction.AuctionParams({
-            start: uint48(block.timestamp),
-            duration: uint48(1 days),
-            capacityInQuote: false,
-            capacity: LOT_CAPACITY,
-            implParams: abi.encode("")
-        });
-
-        routingParams = Auctioneer.RoutingParams({
-            auctionType: auctionType,
-            baseToken: baseToken,
-            quoteToken: quoteToken,
-            curator: address(0),
-            hooks: IHooks(address(0)),
-            allowlist: IAllowlist(address(0)),
-            allowlistParams: abi.encode(""),
-            derivativeType: toKeycode(""),
-            derivativeParams: abi.encode("")
-        });
-
-        // Set the max curator fee
-        auctionHouse.setFee(auctionType, FeeManager.FeeType.MaxCurator, CURATOR_MAX_FEE);
-    }
-
-    modifier whenLotIsCreated() {
-        vm.prank(auctionOwner);
-        lotId = auctionHouse.auction(routingParams, auctionParams, INFO_HASH);
-        _;
-    }
+    bytes internal _purchaseAuctionData = abi.encode("");
 
     // cancel
     // [X] reverts if not the owner
@@ -105,68 +20,89 @@ contract CancelAuctionTest is Test, Permit2User {
     // [X] given the auction is not prefunded
     //  [X] it sets the lot to inactive on the AuctionModule
 
-    function testReverts_whenNotAuctionOwner() external whenLotIsCreated {
+    function testReverts_whenNotAuctionOwner()
+        external
+        whenAuctionTypeIsAtomic
+        whenAtomicAuctionModuleIsInstalled
+        givenLotIsCreated
+    {
         bytes memory err = abi.encodeWithSelector(Auctioneer.NotPermitted.selector, address(this));
         vm.expectRevert(err);
 
-        auctionHouse.cancel(lotId);
+        _auctionHouse.cancel(_lotId);
     }
 
-    function testReverts_whenUnauthorized(address user_) external whenLotIsCreated {
-        vm.assume(user_ != auctionOwner);
+    function testReverts_whenUnauthorized(address user_)
+        external
+        whenAuctionTypeIsAtomic
+        whenAtomicAuctionModuleIsInstalled
+        givenLotIsCreated
+    {
+        vm.assume(user_ != _auctionOwner);
 
         bytes memory err = abi.encodeWithSelector(Auctioneer.NotPermitted.selector, user_);
         vm.expectRevert(err);
 
         vm.prank(user_);
-        auctionHouse.cancel(lotId);
+        _auctionHouse.cancel(_lotId);
     }
 
     function testReverts_whenLotIdInvalid() external {
-        bytes memory err = abi.encodeWithSelector(Auctioneer.InvalidLotId.selector, lotId);
+        bytes memory err = abi.encodeWithSelector(Auctioneer.InvalidLotId.selector, _lotId);
         vm.expectRevert(err);
 
-        vm.prank(auctionOwner);
-        auctionHouse.cancel(lotId);
+        vm.prank(_auctionOwner);
+        _auctionHouse.cancel(_lotId);
     }
 
-    function testReverts_whenLotIsInactive() external whenLotIsCreated {
-        vm.prank(auctionOwner);
-        auctionHouse.cancel(lotId);
-
-        bytes memory err = abi.encodeWithSelector(Auction.Auction_MarketNotActive.selector, lotId);
+    function testReverts_whenLotIsInactive()
+        external
+        whenAuctionTypeIsAtomic
+        whenAtomicAuctionModuleIsInstalled
+        givenLotIsCreated
+        givenLotIsConcluded
+    {
+        bytes memory err = abi.encodeWithSelector(Auction.Auction_MarketNotActive.selector, _lotId);
         vm.expectRevert(err);
 
-        vm.prank(auctionOwner);
-        auctionHouse.cancel(lotId);
+        vm.prank(_auctionOwner);
+        _auctionHouse.cancel(_lotId);
     }
 
-    function test_givenCancelled_reverts() external whenLotIsCreated {
-        // Cancel the lot
-        vm.prank(auctionOwner);
-        auctionHouse.cancel(lotId);
-
+    function test_givenCancelled_reverts()
+        external
+        whenAuctionTypeIsAtomic
+        whenAtomicAuctionModuleIsInstalled
+        givenLotIsCreated
+        givenLotIsCancelled
+    {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(Auction.Auction_MarketNotActive.selector, lotId);
+        bytes memory err = abi.encodeWithSelector(Auction.Auction_MarketNotActive.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function
-        vm.prank(auctionOwner);
-        auctionHouse.cancel(lotId);
+        vm.prank(_auctionOwner);
+        _auctionHouse.cancel(_lotId);
     }
 
-    function test_success() external whenLotIsCreated {
-        assertTrue(mockAuctionModule.isLive(lotId), "before cancellation: isLive mismatch");
+    function test_success()
+        external
+        whenAuctionTypeIsAtomic
+        whenAtomicAuctionModuleIsInstalled
+        givenLotIsCreated
+        givenLotHasStarted
+    {
+        assertTrue(_atomicAuctionModule.isLive(_lotId), "before cancellation: isLive mismatch");
 
-        vm.prank(auctionOwner);
-        auctionHouse.cancel(lotId);
+        vm.prank(_auctionOwner);
+        _auctionHouse.cancel(_lotId);
 
         // Get lot data from the module
-        (, uint48 lotConclusion,,,, uint256 lotCapacity,,) = mockAuctionModule.lotData(lotId);
+        (, uint48 lotConclusion,,,, uint256 lotCapacity,,) = _atomicAuctionModule.lotData(_lotId);
         assertEq(lotConclusion, uint48(block.timestamp));
         assertEq(lotCapacity, 0);
 
-        assertFalse(mockAuctionModule.isLive(lotId), "after cancellation: isLive mismatch");
+        assertFalse(_atomicAuctionModule.isLive(_lotId), "after cancellation: isLive mismatch");
     }
 
     // [X] given the auction is prefunded
@@ -175,69 +111,58 @@ contract CancelAuctionTest is Test, Permit2User {
     //   [X] it refunds the remaining prefunded amount in payout tokens to the owner
 
     modifier givenLotIsPrefunded() {
-        mockAuctionModule.setRequiredPrefunding(true);
+        _atomicAuctionModule.setRequiredPrefunding(true);
 
         // Mint payout tokens to the owner
-        baseToken.mint(auctionOwner, LOT_CAPACITY);
+        _baseToken.mint(_auctionOwner, _LOT_CAPACITY);
 
         // Approve transfer to the auction house
-        vm.prank(auctionOwner);
-        baseToken.approve(address(auctionHouse), LOT_CAPACITY);
+        vm.prank(_auctionOwner);
+        _baseToken.approve(address(_auctionHouse), _LOT_CAPACITY);
         _;
     }
 
-    modifier givenPurchase(uint256 amount_) {
-        // Mint quote tokens to alice
-        quoteToken.mint(alice, amount_);
-
-        // Approve spending
-        vm.prank(alice);
-        quoteToken.approve(address(auctionHouse), amount_);
-
-        // Create the purchase
-        Router.PurchaseParams memory purchaseParams = Router.PurchaseParams({
-            recipient: alice,
-            referrer: address(0),
-            lotId: lotId,
-            amount: amount_,
-            minAmountOut: amount_,
-            auctionData: bytes(""),
-            allowlistProof: bytes(""),
-            permit2Data: bytes("")
-        });
-
-        vm.prank(alice);
-        auctionHouse.purchase(purchaseParams);
-        _;
-    }
-
-    function test_prefunded() external givenLotIsPrefunded whenLotIsCreated {
+    function test_prefunded()
+        external
+        givenLotIsPrefunded
+        whenAuctionTypeIsAtomic
+        whenAtomicAuctionModuleIsInstalled
+        givenLotIsCreated
+        givenLotHasStarted
+    {
         // Check the owner's balance
-        uint256 ownerBalance = baseToken.balanceOf(auctionOwner);
+        uint256 ownerBalance = _baseToken.balanceOf(_auctionOwner);
 
         // Cancel the lot
-        vm.prank(auctionOwner);
-        auctionHouse.cancel(lotId);
+        vm.prank(_auctionOwner);
+        _auctionHouse.cancel(_lotId);
 
         // Check the owner's balance
-        assertEq(baseToken.balanceOf(auctionOwner), ownerBalance + LOT_CAPACITY);
+        assertEq(_baseToken.balanceOf(_auctionOwner), ownerBalance + _LOT_CAPACITY);
     }
 
     function test_prefunded_givenPurchase()
         external
         givenLotIsPrefunded
-        whenLotIsCreated
-        givenPurchase(PURCHASE_AMOUNT)
+        whenAuctionTypeIsAtomic
+        whenAtomicAuctionModuleIsInstalled
+        givenLotIsCreated
+        givenLotHasStarted
+        givenUserHasQuoteTokenBalance(_PURCHASE_AMOUNT)
+        givenUserHasApprovedQuoteToken(_PURCHASE_AMOUNT)
+        givenPurchase(_PURCHASE_AMOUNT, _PURCHASE_AMOUNT, _purchaseAuctionData)
     {
         // Check the owner's balance
-        uint256 ownerBalance = baseToken.balanceOf(auctionOwner);
+        uint256 ownerBalance = _baseToken.balanceOf(_auctionOwner);
 
         // Cancel the lot
-        vm.prank(auctionOwner);
-        auctionHouse.cancel(lotId);
+        vm.prank(_auctionOwner);
+        _auctionHouse.cancel(_lotId);
 
         // Check the owner's balance
-        assertEq(baseToken.balanceOf(auctionOwner), ownerBalance + LOT_CAPACITY - PURCHASE_AMOUNT);
+        assertEq(
+            _baseToken.balanceOf(_auctionOwner), ownerBalance + _LOT_CAPACITY - _PURCHASE_AMOUNT
+        );
     }
 
     // [X] given the auction is prefunded
@@ -248,32 +173,17 @@ contract CancelAuctionTest is Test, Permit2User {
     //    [X] it refunds the remaining prefunded amount in payout tokens to the owner
     //   [X] it refunds the prefunded amount in payout tokens to the owner
 
-    modifier givenCuratorIsSet() {
-        routingParams.curator = curator;
-        _;
-    }
-
-    modifier givenCuratorHasApproved() {
-        // Set the curator fee
-        vm.prank(curator);
-        auctionHouse.setCuratorFee(auctionType, CURATOR_FEE);
-
-        vm.prank(curator);
-        auctionHouse.curate(lotId);
-        _;
-    }
-
     modifier givenAuctionOwnerHasCuratorFeeBalance() {
-        uint256 lotCapacity = catalogue.remainingCapacity(lotId);
+        uint256 lotCapacity = _catalogue.remainingCapacity(_lotId);
 
-        curatorMaxPotentialFee = CURATOR_FEE * lotCapacity / 1e5;
+        _curatorMaxPotentialFee = uint96(lotCapacity) * _CURATOR_FEE_PERCENT / 1e5;
 
         // Mint
-        baseToken.mint(auctionOwner, curatorMaxPotentialFee);
+        _baseToken.mint(_auctionOwner, _curatorMaxPotentialFee);
 
         // Approve spending
-        vm.prank(auctionOwner);
-        baseToken.approve(address(auctionHouse), curatorMaxPotentialFee);
+        vm.prank(_auctionOwner);
+        _baseToken.approve(address(_auctionHouse), _curatorMaxPotentialFee);
         _;
     }
 
@@ -281,34 +191,39 @@ contract CancelAuctionTest is Test, Permit2User {
         external
         givenLotIsPrefunded
         givenCuratorIsSet
-        whenLotIsCreated
+        whenAuctionTypeIsAtomic
+        whenAtomicAuctionModuleIsInstalled
+        givenLotIsCreated
+        givenLotHasStarted
+        givenAuctionOwnerHasCuratorFeeBalance
+        givenCuratorMaxFeeIsSet
     {
         // Balance before
-        uint256 auctionOwnerBalanceBefore = baseToken.balanceOf(auctionOwner);
+        uint256 auctionOwnerBalanceBefore = _baseToken.balanceOf(_auctionOwner);
         assertEq(
             auctionOwnerBalanceBefore,
-            curatorMaxPotentialFee,
+            _curatorMaxPotentialFee,
             "base token: balance mismatch for auction owner before"
         ); // Curator fee not moved
 
         // Cancel the lot
-        vm.prank(auctionOwner);
-        auctionHouse.cancel(lotId);
+        vm.prank(_auctionOwner);
+        _auctionHouse.cancel(_lotId);
 
         // Check the base token balances
         assertEq(
-            baseToken.balanceOf(auctionOwner),
-            curatorMaxPotentialFee + LOT_CAPACITY,
+            _baseToken.balanceOf(_auctionOwner),
+            _curatorMaxPotentialFee + _LOT_CAPACITY,
             "base token: balance mismatch for auction owner"
         );
         assertEq(
-            baseToken.balanceOf(address(auctionHouse)),
+            _baseToken.balanceOf(address(_auctionHouse)),
             0,
             "base token: balance mismatch for auction house"
         );
 
         // Check prefunding amount
-        (,,,,,,,,, uint256 lotPrefunding) = auctionHouse.lotRouting(lotId);
+        (,,,,,,,,, uint256 lotPrefunding) = _auctionHouse.lotRouting(_lotId);
         assertEq(lotPrefunding, 0, "mismatch on prefunding");
     }
 
@@ -316,34 +231,39 @@ contract CancelAuctionTest is Test, Permit2User {
         external
         givenLotIsPrefunded
         givenCuratorIsSet
-        whenLotIsCreated
+        whenAuctionTypeIsAtomic
+        whenAtomicAuctionModuleIsInstalled
+        givenLotIsCreated
+        givenLotHasStarted
         givenAuctionOwnerHasCuratorFeeBalance
+        givenCuratorMaxFeeIsSet
+        givenCuratorFeeIsSet
         givenCuratorHasApproved
     {
         // Balance before
-        uint256 auctionOwnerBalanceBefore = baseToken.balanceOf(auctionOwner);
+        uint256 auctionOwnerBalanceBefore = _baseToken.balanceOf(_auctionOwner);
         assertEq(
             auctionOwnerBalanceBefore, 0, "base token: balance mismatch for auction owner before"
         );
 
         // Cancel the lot
-        vm.prank(auctionOwner);
-        auctionHouse.cancel(lotId);
+        vm.prank(_auctionOwner);
+        _auctionHouse.cancel(_lotId);
 
         // Check the owner's balance
         assertEq(
-            baseToken.balanceOf(auctionOwner),
-            LOT_CAPACITY + curatorMaxPotentialFee,
+            _baseToken.balanceOf(_auctionOwner),
+            _LOT_CAPACITY + _curatorMaxPotentialFee,
             "base token: auction owner balance mismatch"
         ); // Capacity and max curator fee is returned
         assertEq(
-            baseToken.balanceOf(address(auctionHouse)),
+            _baseToken.balanceOf(address(_auctionHouse)),
             0,
             "base token: balance mismatch for auction house"
         );
 
         // Check prefunding amount
-        (,,,,,,,,, uint256 lotPrefunding) = auctionHouse.lotRouting(lotId);
+        (,,,,,,,,, uint256 lotPrefunding) = _auctionHouse.lotRouting(_lotId);
         assertEq(lotPrefunding, 0, "mismatch on prefunding");
     }
 
@@ -351,13 +271,20 @@ contract CancelAuctionTest is Test, Permit2User {
         external
         givenLotIsPrefunded
         givenCuratorIsSet
-        whenLotIsCreated
-        givenPurchase(PURCHASE_AMOUNT)
+        whenAuctionTypeIsAtomic
+        whenAtomicAuctionModuleIsInstalled
+        givenLotIsCreated
+        givenLotHasStarted
+        givenUserHasQuoteTokenBalance(_PURCHASE_AMOUNT)
+        givenUserHasApprovedQuoteToken(_PURCHASE_AMOUNT)
+        givenPurchase(_PURCHASE_AMOUNT, _PURCHASE_AMOUNT, _purchaseAuctionData)
+        givenCuratorMaxFeeIsSet
         givenAuctionOwnerHasCuratorFeeBalance
+        givenCuratorFeeIsSet
         givenCuratorHasApproved
     {
         // Balance before
-        uint256 auctionOwnerBalanceBefore = baseToken.balanceOf(auctionOwner);
+        uint256 auctionOwnerBalanceBefore = _baseToken.balanceOf(_auctionOwner);
         assertEq(
             auctionOwnerBalanceBefore, 0, "base token: balance mismatch for auction owner before"
         );
@@ -366,23 +293,23 @@ contract CancelAuctionTest is Test, Permit2User {
         uint256 curatorFee = 0;
 
         // Cancel the lot
-        vm.prank(auctionOwner);
-        auctionHouse.cancel(lotId);
+        vm.prank(_auctionOwner);
+        _auctionHouse.cancel(_lotId);
 
         // Check the owner's balance
         assertEq(
-            baseToken.balanceOf(auctionOwner),
-            LOT_CAPACITY - PURCHASE_AMOUNT + curatorMaxPotentialFee - curatorFee,
+            _baseToken.balanceOf(_auctionOwner),
+            _LOT_CAPACITY - _PURCHASE_AMOUNT + _curatorMaxPotentialFee - curatorFee,
             "base token: auction owner balance mismatch"
         );
         assertEq(
-            baseToken.balanceOf(address(auctionHouse)),
+            _baseToken.balanceOf(address(_auctionHouse)),
             0,
             "base token: balance mismatch for auction house"
         );
 
         // Check prefunding amount
-        (,,,,,,,,, uint256 lotPrefunding) = auctionHouse.lotRouting(lotId);
+        (,,,,,,,,, uint256 lotPrefunding) = _auctionHouse.lotRouting(_lotId);
         assertEq(lotPrefunding, 0, "mismatch on prefunding");
     }
 
@@ -390,40 +317,49 @@ contract CancelAuctionTest is Test, Permit2User {
         external
         givenLotIsPrefunded
         givenCuratorIsSet
-        whenLotIsCreated
-        givenPurchase(PURCHASE_AMOUNT)
+        whenAuctionTypeIsAtomic
+        whenAtomicAuctionModuleIsInstalled
+        givenLotIsCreated
+        givenLotHasStarted
+        givenUserHasQuoteTokenBalance(_PURCHASE_AMOUNT)
+        givenUserHasApprovedQuoteToken(_PURCHASE_AMOUNT)
+        givenPurchase(_PURCHASE_AMOUNT, _PURCHASE_AMOUNT, _purchaseAuctionData)
+        givenCuratorMaxFeeIsSet
         givenAuctionOwnerHasCuratorFeeBalance
+        givenCuratorFeeIsSet
         givenCuratorHasApproved
-        givenPurchase(PURCHASE_AMOUNT * 2)
+        givenUserHasQuoteTokenBalance(_PURCHASE_AMOUNT * 2)
+        givenUserHasApprovedQuoteToken(_PURCHASE_AMOUNT * 2)
+        givenPurchase(_PURCHASE_AMOUNT * 2, _PURCHASE_AMOUNT * 2, _purchaseAuctionData)
     {
         // Balance before
-        uint256 auctionOwnerBalanceBefore = baseToken.balanceOf(auctionOwner);
+        uint256 auctionOwnerBalanceBefore = _baseToken.balanceOf(_auctionOwner);
         assertEq(
             auctionOwnerBalanceBefore, 0, "base token: balance mismatch for auction owner before"
         );
 
         // No curator fee, since the purchase was before curator approval
-        uint256 curatorFee = CURATOR_FEE * (PURCHASE_AMOUNT * 2) / 1e5;
+        uint256 curatorFee = _CURATOR_FEE_PERCENT * (_PURCHASE_AMOUNT * 2) / 1e5;
 
         // Cancel the lot
-        vm.prank(auctionOwner);
-        auctionHouse.cancel(lotId);
+        vm.prank(_auctionOwner);
+        _auctionHouse.cancel(_lotId);
 
         // Check the owner's balance
         assertEq(
-            baseToken.balanceOf(auctionOwner),
-            LOT_CAPACITY - PURCHASE_AMOUNT - (PURCHASE_AMOUNT * 2) + curatorMaxPotentialFee
+            _baseToken.balanceOf(_auctionOwner),
+            _LOT_CAPACITY - _PURCHASE_AMOUNT - (_PURCHASE_AMOUNT * 2) + _curatorMaxPotentialFee
                 - curatorFee,
             "base token: auction owner balance mismatch"
         );
         assertEq(
-            baseToken.balanceOf(address(auctionHouse)),
+            _baseToken.balanceOf(address(_auctionHouse)),
             0,
             "base token: balance mismatch for auction house"
         );
 
         // Check prefunding amount
-        (,,,,,,,,, uint256 lotPrefunding) = auctionHouse.lotRouting(lotId);
+        (,,,,,,,,, uint256 lotPrefunding) = _auctionHouse.lotRouting(_lotId);
         assertEq(lotPrefunding, 0, "mismatch on prefunding");
     }
 
@@ -431,37 +367,44 @@ contract CancelAuctionTest is Test, Permit2User {
         external
         givenLotIsPrefunded
         givenCuratorIsSet
-        whenLotIsCreated
+        whenAuctionTypeIsAtomic
+        whenAtomicAuctionModuleIsInstalled
+        givenLotIsCreated
+        givenLotHasStarted
         givenAuctionOwnerHasCuratorFeeBalance
+        givenCuratorMaxFeeIsSet
+        givenCuratorFeeIsSet
         givenCuratorHasApproved
-        givenPurchase(PURCHASE_AMOUNT)
+        givenUserHasQuoteTokenBalance(_PURCHASE_AMOUNT)
+        givenUserHasApprovedQuoteToken(_PURCHASE_AMOUNT)
+        givenPurchase(_PURCHASE_AMOUNT, _PURCHASE_AMOUNT, _purchaseAuctionData)
     {
         // Balance before
-        uint256 auctionOwnerBalanceBefore = baseToken.balanceOf(auctionOwner);
+        uint256 auctionOwnerBalanceBefore = _baseToken.balanceOf(_auctionOwner);
         assertEq(
             auctionOwnerBalanceBefore, 0, "base token: balance mismatch for auction owner before"
         );
 
-        uint256 curatorFee = CURATOR_FEE * PURCHASE_AMOUNT / 1e5;
+        uint256 curatorFee = _CURATOR_FEE_PERCENT * _PURCHASE_AMOUNT / 1e5;
 
         // Cancel the lot
-        vm.prank(auctionOwner);
-        auctionHouse.cancel(lotId);
+        vm.prank(_auctionOwner);
+        _auctionHouse.cancel(_lotId);
 
         // Check the owner's balance
         assertEq(
-            baseToken.balanceOf(auctionOwner),
-            LOT_CAPACITY - PURCHASE_AMOUNT + curatorMaxPotentialFee - curatorFee,
+            _baseToken.balanceOf(_auctionOwner),
+            _LOT_CAPACITY - _PURCHASE_AMOUNT + _curatorMaxPotentialFee - curatorFee,
             "base token: auction owner balance mismatch"
         );
         assertEq(
-            baseToken.balanceOf(address(auctionHouse)),
+            _baseToken.balanceOf(address(_auctionHouse)),
             0,
             "base token: balance mismatch for auction house"
         );
 
         // Check prefunding amount
-        (,,,,,,,,, uint256 lotPrefunding) = auctionHouse.lotRouting(lotId);
+        (,,,,,,,,, uint256 lotPrefunding) = _auctionHouse.lotRouting(_lotId);
         assertEq(lotPrefunding, 0, "mismatch on prefunding");
     }
 }
