@@ -254,7 +254,9 @@ abstract contract EmpaAuctionHouseTest is Test, Permit2User {
 
     modifier whenCondenserIsMapped() {
         _auctionHouse.setCondenser(
-            _auctionModuleKeycode, _derivativeModuleKeycode, _condenserModuleKeycode
+            _auctionModule.VEECODE(),
+            _mockDerivativeModule.VEECODE(),
+            _mockCondenserModule.VEECODE()
         );
         _;
     }
