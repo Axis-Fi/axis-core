@@ -179,7 +179,9 @@ contract SendPayoutTest is Test, Permit2User {
         // Check balances
         assertEq(_payoutToken.balanceOf(_USER), 0, "user balance mismatch");
         assertEq(_payoutToken.balanceOf(_OWNER), 0, "owner balance mismatch");
-        assertEq(_payoutToken.balanceOf(address(_auctionHouse)), 0, "_auctionHouse balance mismatch");
+        assertEq(
+            _payoutToken.balanceOf(address(_auctionHouse)), 0, "_auctionHouse balance mismatch"
+        );
         assertEq(_payoutToken.balanceOf(address(_hook)), 0, "_hook balance mismatch");
         assertEq(_payoutToken.balanceOf(_RECIPIENT), _payoutAmount, "recipient balance mismatch");
         assertEq(
@@ -193,14 +195,18 @@ contract SendPayoutTest is Test, Permit2User {
         assertEq(_hook.midHookCalled(), false, "mid _hook mismatch");
         assertEq(_hook.postHookCalled(), true, "post _hook mismatch");
         assertEq(_hook.postHookBalances(_payoutToken, _USER), 0, "post _hook user balance mismatch");
-        assertEq(_hook.postHookBalances(_payoutToken, _OWNER), 0, "post _hook owner balance mismatch");
+        assertEq(
+            _hook.postHookBalances(_payoutToken, _OWNER), 0, "post _hook owner balance mismatch"
+        );
         assertEq(
             _hook.postHookBalances(_payoutToken, address(_auctionHouse)),
             0,
             "post _hook _auctionHouse balance mismatch"
         );
         assertEq(
-            _hook.postHookBalances(_payoutToken, address(_hook)), 0, "post _hook _hook balance mismatch"
+            _hook.postHookBalances(_payoutToken, address(_hook)),
+            0,
+            "post _hook _hook balance mismatch"
         );
         assertEq(
             _hook.postHookBalances(_payoutToken, _RECIPIENT),
@@ -253,7 +259,9 @@ contract SendPayoutTest is Test, Permit2User {
         // Check balances
         assertEq(_payoutToken.balanceOf(_USER), 0, "user balance mismatch");
         assertEq(_payoutToken.balanceOf(_OWNER), 0, "owner balance mismatch");
-        assertEq(_payoutToken.balanceOf(address(_auctionHouse)), 0, "_auctionHouse balance mismatch");
+        assertEq(
+            _payoutToken.balanceOf(address(_auctionHouse)), 0, "_auctionHouse balance mismatch"
+        );
         assertEq(_payoutToken.balanceOf(address(_hook)), 0, "_hook balance mismatch");
         assertEq(_payoutToken.balanceOf(_RECIPIENT), _payoutAmount, "recipient balance mismatch");
         assertEq(
@@ -433,7 +441,9 @@ contract SendPayoutTest is Test, Permit2User {
 
         // Check balances of the wrapped derivative token
         assertEq(
-            _wrappedDerivative.balanceOf(_USER), 0, "wrapped derivative token: user balance mismatch"
+            _wrappedDerivative.balanceOf(_USER),
+            0,
+            "wrapped derivative token: user balance mismatch"
         );
         assertEq(
             _wrappedDerivative.balanceOf(_OWNER),
@@ -593,7 +603,9 @@ contract SendPayoutTest is Test, Permit2User {
         // Check balances of payout token
         assertEq(_payoutToken.balanceOf(_USER), 0, "user balance mismatch");
         assertEq(_payoutToken.balanceOf(_OWNER), 0, "owner balance mismatch");
-        assertEq(_payoutToken.balanceOf(address(_auctionHouse)), 0, "_auctionHouse balance mismatch");
+        assertEq(
+            _payoutToken.balanceOf(address(_auctionHouse)), 0, "_auctionHouse balance mismatch"
+        );
         assertEq(_payoutToken.balanceOf(address(_hook)), 0, "_hook balance mismatch");
         assertEq(_payoutToken.balanceOf(_RECIPIENT), 0, "recipient balance mismatch");
         assertEq(
