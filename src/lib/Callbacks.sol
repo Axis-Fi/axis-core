@@ -4,21 +4,27 @@ pragma solidity ^0.8.19;
 import {ICallbacks} from "src/interfaces/ICallbacks.sol";
 
 /// @notice Library for handling callbacks
-/// @dev This library heavily leverages concepts from UniswapV4's Hooks library (https://github.com/Uniswap/v4-core/blob/main/src/libraries/Hooks.sol) 
-/// and is offered under the same MIT license.
+/// @dev This library is based on the design of UniswapV4's Hooks library (https://github.com/Uniswap/v4-core/blob/main/src/libraries/Hooks.sol) 
+/// and is published under the same MIT license.
+/// We use the term callbacks because it is more appropriate for the type of extensibility we are providing to the Axis auction system.
+/// The system decides whether to invoke specific hooks by inspecting the leading bits (first byte)
+/// of the address that the callbacks contract is deployed to.
+/// For example, a callbacks contract deployed to address: 0x9000000000000000000000000000000000000000
+/// has leading bits '1001' which would cause the 'onCreate' and 'onPurchase' callbacks to be used.
+/// There are 8 flags
 library Callbacks {
     using Callbacks for ICallbacks;
 
-    bytes1 internal constant ON_CREATE_FLAG = bytes1(uint8(1 << 7));
-    bytes1 internal constant ON_CANCEL_FLAG = bytes1(uint8(1 << 6));
-    bytes1 internal constant ON_CURATE_FLAG = bytes1(uint8(1 << 5));
-    bytes1 internal constant ON_PURCHASE_FLAG = bytes1(uint8(1 << 4));
-    bytes1 internal constant ON_BID_FLAG = bytes1(uint8(1 << 3));
-    bytes1 internal constant ON_SETTLE_FLAG = bytes1(uint8(1 << 2));
-    bytes1 internal constant RECEIVE_QUOTE_TOKENS_FLAG = bytes1(uint8(1 << 1));
-    bytes1 internal constant SEND_BASE_TOKENS_FLAG = bytes1(uint8(1));
+    uint256 internal constant ON_CREATE_FLAG = 1 << 159;
+    uint256 internal constant ON_CANCEL_FLAG = 1 << 158;
+    uint256 internal constant ON_CURATE_FLAG = 1 << 157;
+    uint256 internal constant ON_PURCHASE_FLAG = 1 << 156;
+    uint256 internal constant ON_BID_FLAG = 1 << 155;
+    uint256 internal constant ON_SETTLE_FLAG = 1 << 154;
+    uint256 internal constant RECEIVE_QUOTE_TOKENS_FLAG = 1 << 153;
+    uint256 internal constant SEND_BASE_TOKENS_FLAG = 1 << 152;
     
-    struct Config {
+    struct Permissions {
         bool onCreate;
         bool onCancel;
         bool onCurate;
@@ -29,31 +35,46 @@ library Callbacks {
         bool receiveQuoteTokens;
     }
 
+    /// @notice Thrown if the address will not lead to the specified callbacks being called
+    /// @param callbacks The address of the callbacks contract
+    error CallbacksAddressNotValid(address callbacks);
+
     /// @notice Callback did not return its selector
     error InvalidCallbackResponse();
 
     /// @notice thrown when a callback fails
     error FailedCallback();
 
-    /// @notice Ensures that the callbacks contract includes at least one of the required flags and more if sending/receiving tokens
-    /// @param callbacks The callbacks to verify
-    function isValidConfig(ICallbacks callbacks) internal view returns (bool) {
-        
-        bytes1 config = callbacks.CONFIG();
+    /// @notice Utility function intended to be used in hook constructors to ensure
+    /// the deployed hooks address causes the intended hooks to be called
+    /// @param permissions The hooks that are intended to be called
+    /// @dev permissions param is memory as the function will be called from constructors
+    function validateCallbacksPermissions(ICallbacks self, Permissions memory permissions) internal pure {
+        if (
+            permissions.onCreate != self.hasPermission(ON_CREATE_FLAG)
+                || permissions.onCancel != self.hasPermission(ON_CANCEL_FLAG)
+                || permissions.onCurate != self.hasPermission(ON_CURATE_FLAG)
+                || permissions.onPurchase != self.hasPermission(ON_PURCHASE_FLAG)
+                || permissions.onBid != self.hasPermission(ON_BID_FLAG)
+                || permissions.onSettle != self.hasPermission(ON_SETTLE_FLAG)
+                || permissions.receiveQuoteTokens != self.hasPermission(RECEIVE_QUOTE_TOKENS_FLAG)
+                || permissions.sendBaseTokens != self.hasPermission(SEND_BASE_TOKENS_FLAG)
+                
+        ) {
+            revert CallbacksAddressNotValid(address(self));
+        }
+    }
 
-        // Ensure that atleast one of the callback functions is implemented or the contract is set to receive quote tokens (which can be done without implementing anything else)
-        if (config >> 1 == 0) {
+    /// @notice Ensures that the callbacks contract includes at least one of the required flags and more if sending/receiving tokens
+    /// @param callbacks The callbacks contract to verify
+    function isValidCallbacksAddress(ICallbacks callbacks) internal pure returns (bool) {
+        // Ensure that if the contract is expected to send base tokens, then it implements atleast onCreate and onCurate OR onPurchase (atomic auctions may not be prefunded).
+        if (callbacks.hasPermission(SEND_BASE_TOKENS_FLAG) && (!callbacks.hasPermission(ON_CREATE_FLAG) || !callbacks.hasPermission(ON_CURATE_FLAG)) && !callbacks.hasPermission(ON_PURCHASE_FLAG)) {
             return false;
         }
 
-        // Ensure that if the contract is expected to send base tokens, then it implements atleast onCreate and onCurate OR onPurchase (atomic auctions may not be prefunded).
-        if (config & SEND_BASE_TOKENS_FLAG != 0) {
-            if ((config & ON_CREATE_FLAG == 0 || config & ON_CURATE_FLAG == 0) && config & ON_PURCHASE_FLAG == 0) {
-                return false;
-            }
-        }
-
-        return true;
+        // Ensure that, if not the zero address, atleast one of the callback functions is implemented or the contract is set to receive quote tokens (which can be done without implementing anything else)
+        return address(callbacks) == address(0) || uint160(address(callbacks)) >= 1 << 153;
     }
 
     /// @notice performs a call using the given calldata on the given callback
@@ -137,9 +158,8 @@ library Callbacks {
         }
     }
 
-    function hasPermission(ICallbacks self, bytes1 flag) internal view returns (bool) {
-        // TODO extra external call since we aren't storing the config in the first byte of the address, maybe reconsider
-        return self.CONFIG() & flag != 0;
+    function hasPermission(ICallbacks self, uint256 flag) internal pure returns (bool) {
+        return uint256(uint160(address(self))) & flag != 0;
     }
 
     /// @notice bubble up revert if present. Else throw FailedCallback error
