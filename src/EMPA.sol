@@ -9,7 +9,6 @@ import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 import {Transfer} from "src/lib/Transfer.sol";
 import {MaxPriorityQueue, Queue, Bid as QueueBid} from "src/lib/MaxPriorityQueue.sol";
 import {ECIES, Point} from "src/lib/ECIES.sol";
-import {FixedMath} from "src/lib/FixedMath.sol";
 
 import {DerivativeModule} from "src/modules/Derivative.sol";
 
@@ -560,12 +559,13 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
             lot.baseTokenDecimals = baseTokenDecimals;
             lot.capacity = params_.capacity;
             lot.minimumPrice = params_.minimumPrice;
-            lot.minFilled = FixedMath.mulDivDown96(
-                params_.capacity, params_.minFillPercent, _ONE_HUNDRED_PERCENT
-            );
-            lot.minBidSize = FixedMath.mulDivDown96(
-                params_.capacity, params_.minBidPercent, _ONE_HUNDRED_PERCENT
-            );
+            // This cannot overflow as the maximum value of minFillPercent is 100% and capacity is uint96
+            // TODO consider whether this should round up or down
+            lot.minFilled =
+                uint96(uint256(params_.capacity) * params_.minFillPercent / _ONE_HUNDRED_PERCENT);
+            // This cannot overflow as the maximum value of minBidPercent is 100% and capacity is uint96
+            lot.minBidSize =
+                uint96(uint256(params_.capacity) * params_.minBidPercent / _ONE_HUNDRED_PERCENT);
         }
 
         // publicKey must be a valid point on the alt_bn128 curve with generator point (1, 2)
@@ -755,11 +755,10 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
         {
             Lot storage lot = lotData[lotId_];
             if (
-                amount_
-                    < FixedMath.mulDivDown96(
-                        lot.minBidSize, lot.minimumPrice, 10 ** lot.baseTokenDecimals
-                    )
-            ) revert AmountLessThanMinimum();
+                amount_ < uint256(lot.minBidSize) * lot.minimumPrice / (10 ** lot.baseTokenDecimals)
+            ) {
+                revert AmountLessThanMinimum();
+            }
         }
 
         // Check that the public key for the shared secret is a valid point on the alt_bn128 curve
@@ -899,6 +898,7 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
                 // Calculate the price of the bid as uint256 to avoid an intermediate overflow
                 // We know this will not overflow when casting, as it was checked during decryption
                 uint256 amountIn = uint256(qBid.amountIn);
+                // TODO we may want this to round up instead. Check roundtrip values.
                 uint96 price = uint96((amountIn * baseScale) / uint256(qBid.minAmountOut));
 
                 // If the price is below the minimum price, the previous price is the marginal price
@@ -915,7 +915,7 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
 
                 // Determine total capacity expended at this price (in base token units)
                 // quote scale * base scale / quote scale = base scale
-                capacityExpended = FixedPointMathLib.mulDivDown(totalAmountIn, baseScale, price);
+                capacityExpended = totalAmountIn * baseScale / price;
 
                 // If total capacity expended is greater than or equal to the capacity, we have found the marginal price
                 if (capacityExpended >= capacity) {
@@ -975,6 +975,7 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
                 // Check if the capacityExpended is overflowing
 
                 // Calculate the payout and refund amounts
+                // TODO check roundtrip accuracy, may need to be rounded up
                 uint256 fullFill =
                     FixedPointMathLib.mulDivDown(_bid.amount, baseScale, marginalPrice);
                 uint256 overflow = capacityExpended - capacity;
@@ -1073,6 +1074,7 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
         // All bids are decrypted before settlement, but invalid ones have minAmountOut set to 0
         uint256 bidAmount = _bid.amount;
         uint256 baseScale = uint256(10) ** lotData[lotId_].baseTokenDecimals;
+        // TODO may want this price to round up
         uint256 bidPrice = _bid.minAmountOut == 0
             ? 0
             : FixedPointMathLib.mulDivDown(bidAmount, baseScale, _bid.minAmountOut);
