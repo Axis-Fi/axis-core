@@ -188,7 +188,7 @@ abstract contract Auction {
         AuctionParams memory params_,
         uint8 quoteTokenDecimals_,
         uint8 baseTokenDecimals_
-    ) external virtual returns (bool prefundingRequired, uint256 capacity);
+    ) external virtual returns (bool prefundingRequired, uint96 capacity);
 
     /// @notice     Cancel an auction lot
     /// @dev        The implementing function should handle the following:
@@ -264,7 +264,7 @@ abstract contract AuctionModule is Auction, Module {
         AuctionParams memory params_,
         uint8 quoteTokenDecimals_,
         uint8 baseTokenDecimals_
-    ) external override onlyInternal returns (bool prefundingRequired, uint256 capacity) {
+    ) external override onlyInternal returns (bool prefundingRequired, uint96 capacity) {
         // Start time must be zero or in the future
         if (params_.start > 0 && params_.start < uint48(block.timestamp)) {
             revert Auction_InvalidStart(params_.start, uint48(block.timestamp));
@@ -290,7 +290,7 @@ abstract contract AuctionModule is Auction, Module {
         // Store lot data
         lotData[lotId_] = lot;
 
-        return (prefundingRequired, uint256(lot.capacity));
+        return (prefundingRequired, lot.capacity);
     }
 
     /// @notice     Implementation-specific auction creation logic

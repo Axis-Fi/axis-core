@@ -1,9 +1,9 @@
 /// SPDX-License-Identifier: AGPL-3.0
 pragma solidity 0.8.19;
 
-import {ERC20} from "solmate/tokens/ERC20.sol";
+import {ERC20} from "lib/solmate/src/tokens/ERC20.sol";
 import {Transfer} from "src/lib/Transfer.sol";
-import {ReentrancyGuard} from "solmate/utils/ReentrancyGuard.sol";
+import {ReentrancyGuard} from "lib/solmate/src/utils/ReentrancyGuard.sol";
 
 import {
     fromKeycode,
@@ -20,8 +20,8 @@ import {Auction, AuctionModule} from "src/modules/Auction.sol";
 import {DerivativeModule} from "src/modules/Derivative.sol";
 import {CondenserModule} from "src/modules/Condenser.sol";
 
-import {IHooks} from "src/interfaces/IHooks.sol";
-import {IAllowlist} from "src/interfaces/IAllowlist.sol";
+import {ICallbacks} from "src/interfaces/ICallbacks.sol";
+import {Callbacks} from "src/lib/Callbacks.sol";
 
 /// @title  Auctioneer
 /// @notice The Auctioneer handles the following:
@@ -29,6 +29,8 @@ import {IAllowlist} from "src/interfaces/IAllowlist.sol";
 ///         - Cancelling auction lots
 ///         - Storing information about how to handle inputs and outputs for auctions ("routing")
 abstract contract Auctioneer is WithModules, ReentrancyGuard {
+    using Callbacks for ICallbacks;
+
     // ========= ERRORS ========= //
 
     error InvalidParams();
@@ -57,8 +59,7 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
     /// @param      owner               Lot owner
     /// @param      baseToken           Token provided by seller
     /// @param      quoteToken          Token to accept as payment
-    /// @param      hooks               (optional) Address to call for any hooks to be executed
-    /// @param      allowlist           (optional) Contract that implements an allowlist for the auction lot
+    /// @param      callbacks           (optional) Callbacks implementation for extended functionality
     /// @param      derivativeReference (optional) Derivative module, represented by its Veecode
     /// @param      derivativeParams    (optional) abi-encoded data to be used to create payout derivatives on a purchase
     /// @param      wrapDerivative      (optional) Whether to wrap the derivative in a ERC20 token instead of the native ERC6909 format
@@ -68,12 +69,11 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
         address owner;
         ERC20 baseToken;
         ERC20 quoteToken;
-        IHooks hooks;
-        IAllowlist allowlist;
+        ICallbacks callbacks;
         Veecode derivativeReference;
         bytes derivativeParams;
         bool wrapDerivative;
-        uint256 prefunding;
+        uint96 prefunding;
     }
 
     /// @notice     Curation information for a lot
@@ -82,6 +82,7 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
     ///
     /// @param      curator     Address of the proposed curator
     /// @param      curated     Whether the curator has approved the auction
+    // TODO can probably move into the Routing struct after consolidating hooks + allowlist into callbacks
     struct Curation {
         address curator;
         bool curated;
@@ -94,9 +95,8 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
     /// @param      baseToken       Token provided by seller
     /// @param      quoteToken      Token to accept as payment
     /// @param      curator         (optional) Address of the proposed curator
-    /// @param      hooks           (optional) Address to call for any hooks to be executed
-    /// @param      allowlist       (optional) Contract that implements an allowlist for the auction lot
-    /// @param      allowlistParams (optional) abi-encoded data to be used to register the auction on the allowlist
+    /// @param      callbacks       (optional) Callbacks implementation for extended functionality
+    /// @param      callbackData    (optional) abi-encoded data to be sent to the onCreate callback function
     /// @param      derivativeType  (optional) Derivative type, represented by the Keycode for the derivative submodule
     /// @param      derivativeParams (optional) abi-encoded data to be used to create payout derivatives on a purchase. The format of this is dependent on the derivative module.
     struct RoutingParams {
@@ -104,9 +104,8 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
         ERC20 baseToken;
         ERC20 quoteToken;
         address curator;
-        IHooks hooks;
-        IAllowlist allowlist;
-        bytes allowlistParams;
+        ICallbacks callbacks;
+        bytes callbackData;
         Keycode derivativeType;
         bytes derivativeParams;
     }
@@ -159,13 +158,14 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
 
         // Validate routing parameters
 
+        // Tokens must not be the zero address
         if (address(routing_.baseToken) == address(0) || address(routing_.quoteToken) == address(0))
         {
             revert InvalidParams();
         }
 
         bool requiresPrefunding;
-        uint256 lotCapacity;
+        uint96 lotCapacity;
         {
             // Confirm tokens are within the required decimal range
             uint8 baseTokenDecimals = routing_.baseToken.decimals();
@@ -240,28 +240,12 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
             }
         }
 
-        // If allowlist is being used, validate the allowlist data and register the auction on the allowlist
-        if (address(routing_.allowlist) != address(0)) {
-            // Check that it is a contract
-            // It is assumed that the user will do validation of the allowlist
-            if (address(routing_.allowlist).code.length == 0) revert InvalidParams();
-
-            // Register with the allowlist
-            routing_.allowlist.register(lotId, routing_.allowlistParams);
-
-            // Store allowlist information
-            routing.allowlist = routing_.allowlist;
-        }
-
-        // If hooks are being used, validate the hooks data
-        if (address(routing_.hooks) != address(0)) {
-            // Check that it is a contract
-            // It is assumed that the user will do validation of the hooks
-            if (address(routing_.hooks).code.length == 0) revert InvalidParams();
-
-            // Store hooks information
-            routing.hooks = routing_.hooks;
-        }
+        // Validate callbacks address and store if provided
+        // This does not check whether the callbacks contract is implemented properly
+        // Certain functions may revert later. TODO need to think about security with this, specifically in regards to auctions that can't be settled. That specific callback might need to be prevented from reverting.
+        if (!Callbacks.isValidCallbacksAddress(routing_.callbacks)) revert InvalidParams();
+        // The zero address passes the isValidCallbackAddress check since we allow auctions to not use a callbacks contract
+        if (address(routing_.callbacks) != address(0)) routing.callbacks = routing_.callbacks;
 
         // Perform pre-funding, if needed
         // It does not make sense to pre-fund the auction if the capacity is in quote tokens
@@ -273,11 +257,11 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
             routing.prefunding = lotCapacity;
 
             // Call hook on hooks contract if provided
-            if (address(routing_.hooks) != address(0)) {
+            if (routing_.callbacks.hasPermission(Callbacks.SEND_BASE_TOKENS_FLAG)) {
                 uint256 balanceBefore = routing_.baseToken.balanceOf(address(this));
 
                 // The pre-auction create hook should transfer the base token to this contract
-                routing_.hooks.preAuctionCreate(lotId);
+                Callbacks.onCreate(routing_.callbacks, lotId, msg.sender, address(routing_.baseToken), address(routing_.quoteToken), lotCapacity, true, routing_.callbackData);
 
                 // Check that the hook transferred the expected amount of base tokens
                 if (routing_.baseToken.balanceOf(address(this)) < balanceBefore + lotCapacity) {
@@ -290,6 +274,9 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
                     routing_.baseToken, msg.sender, address(this), lotCapacity, true
                 );
             }
+        } else {
+            // Call onCreate callback with no prefunding
+            Callbacks.onCreate(routing_.callbacks, lotId, msg.sender, address(routing_.baseToken), address(routing_.quoteToken), lotCapacity, false, routing_.callbackData);
         }
 
         emit AuctionCreated(lotId, routing.auctionReference, infoHash_);
@@ -310,7 +297,7 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
     ///             - re-entrancy is detected
     ///
     /// @param      lotId_      ID of the auction lot
-    function cancel(uint96 lotId_) external nonReentrant {
+    function cancel(uint96 lotId_, bytes calldata callbackData_) external nonReentrant {
         // Validation
         _isLotValid(lotId_);
 
@@ -324,13 +311,23 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
 
         // If the auction is prefunded and supported, transfer the remaining capacity to the owner
         if (routing.prefunding > 0) {
-            uint256 prefunding = routing.prefunding;
+            uint96 prefunding = routing.prefunding;
 
             // Set to 0 before transfer to avoid re-entrancy
             lotRouting[lotId_].prefunding = 0;
 
-            // Transfer payout tokens to the owner
-            Transfer.transfer(routing.baseToken, routing.owner, prefunding, false);
+            // Check if the callback is configured to send (so in this case, receive) base tokens
+            if (routing.callbacks.hasPermission(Callbacks.SEND_BASE_TOKENS_FLAG)) {
+                // Transfer the base tokens to the callbacks contract
+                Transfer.transfer(routing.baseToken, address(routing.callbacks), prefunding, false);
+
+                // Call the callback to transfer the base token to the owner
+                Callbacks.onCancel(routing.callbacks, lotId_, prefunding, true, callbackData_);
+            }
+            // Else, transfer the base tokens directly to the owner
+            else {
+                Transfer.transfer(routing.baseToken, routing.owner, prefunding, false);
+            }
         }
 
         emit AuctionCancelled(lotId_, routing.auctionReference);
