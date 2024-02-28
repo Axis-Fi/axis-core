@@ -149,7 +149,7 @@ contract CancelAuctionTest is AuctionHouseTest {
         givenLotIsCreated
         givenLotHasStarted
         givenUserHasQuoteTokenBalance(_PURCHASE_AMOUNT)
-        givenUserHasApprovedQuoteToken(_PURCHASE_AMOUNT)
+        givenUserHasQuoteTokenAllowance(_PURCHASE_AMOUNT)
         givenPurchase(_PURCHASE_AMOUNT, _PURCHASE_AMOUNT, _purchaseAuctionData)
     {
         // Check the owner's balance
@@ -276,7 +276,7 @@ contract CancelAuctionTest is AuctionHouseTest {
         givenLotIsCreated
         givenLotHasStarted
         givenUserHasQuoteTokenBalance(_PURCHASE_AMOUNT)
-        givenUserHasApprovedQuoteToken(_PURCHASE_AMOUNT)
+        givenUserHasQuoteTokenAllowance(_PURCHASE_AMOUNT)
         givenPurchase(_PURCHASE_AMOUNT, _PURCHASE_AMOUNT, _purchaseAuctionData)
         givenCuratorMaxFeeIsSet
         givenCuratorFeeIsSet
@@ -322,14 +322,14 @@ contract CancelAuctionTest is AuctionHouseTest {
         givenLotIsCreated
         givenLotHasStarted
         givenUserHasQuoteTokenBalance(_PURCHASE_AMOUNT)
-        givenUserHasApprovedQuoteToken(_PURCHASE_AMOUNT)
+        givenUserHasQuoteTokenAllowance(_PURCHASE_AMOUNT)
         givenPurchase(_PURCHASE_AMOUNT, _PURCHASE_AMOUNT, _purchaseAuctionData)
         givenCuratorMaxFeeIsSet
         givenCuratorFeeIsSet
         givenAuctionOwnerHasCuratorFeeBalance
         givenCuratorHasApproved
         givenUserHasQuoteTokenBalance(_PURCHASE_AMOUNT * 2)
-        givenUserHasApprovedQuoteToken(_PURCHASE_AMOUNT * 2)
+        givenUserHasQuoteTokenAllowance(_PURCHASE_AMOUNT * 2)
         givenPurchase(_PURCHASE_AMOUNT * 2, _PURCHASE_AMOUNT * 2, _purchaseAuctionData)
     {
         // Balance before
@@ -376,7 +376,7 @@ contract CancelAuctionTest is AuctionHouseTest {
         givenCuratorFeeIsSet
         givenCuratorHasApproved
         givenUserHasQuoteTokenBalance(_PURCHASE_AMOUNT)
-        givenUserHasApprovedQuoteToken(_PURCHASE_AMOUNT)
+        givenUserHasQuoteTokenAllowance(_PURCHASE_AMOUNT)
         givenPurchase(_PURCHASE_AMOUNT, _PURCHASE_AMOUNT, _purchaseAuctionData)
     {
         // Balance before

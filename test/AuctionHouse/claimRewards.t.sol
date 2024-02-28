@@ -32,7 +32,7 @@ contract ClaimRewardsTest is AuctionHouseTest {
         givenOwnerHasBaseTokenBalance(_amountOut)
         givenOwnerHasBaseTokenAllowance(_amountOut)
         givenUserHasQuoteTokenBalance(_AMOUNT_IN)
-        givenUserHasApprovedQuoteToken(_AMOUNT_IN)
+        givenUserHasQuoteTokenAllowance(_AMOUNT_IN)
         givenPurchase(_AMOUNT_IN, _amountInLessFee, _purchaseAuctionData)
     {
         // Previous balance
@@ -60,7 +60,7 @@ contract ClaimRewardsTest is AuctionHouseTest {
         givenOwnerHasBaseTokenBalance(_amountOut)
         givenOwnerHasBaseTokenAllowance(_amountOut)
         givenUserHasQuoteTokenBalance(_AMOUNT_IN)
-        givenUserHasApprovedQuoteToken(_AMOUNT_IN)
+        givenUserHasQuoteTokenAllowance(_AMOUNT_IN)
         givenPurchase(_AMOUNT_IN, _amountInLessFee, _purchaseAuctionData)
     {
         // Previous balance
@@ -88,7 +88,7 @@ contract ClaimRewardsTest is AuctionHouseTest {
         givenOwnerHasBaseTokenBalance(_amountOut)
         givenOwnerHasBaseTokenAllowance(_amountOut)
         givenUserHasQuoteTokenBalance(_AMOUNT_IN)
-        givenUserHasApprovedQuoteToken(_AMOUNT_IN)
+        givenUserHasQuoteTokenAllowance(_AMOUNT_IN)
         givenPurchase(_AMOUNT_IN, _amountInLessFee, _purchaseAuctionData)
     {
         // Previous balance
@@ -116,7 +116,7 @@ contract ClaimRewardsTest is AuctionHouseTest {
         givenOwnerHasBaseTokenBalance(_amountOut)
         givenOwnerHasBaseTokenAllowance(_amountOut)
         givenUserHasQuoteTokenBalance(_AMOUNT_IN)
-        givenUserHasApprovedQuoteToken(_AMOUNT_IN)
+        givenUserHasQuoteTokenAllowance(_AMOUNT_IN)
         givenPurchase(_AMOUNT_IN, _amountInLessFee, _purchaseAuctionData)
     {
         // Previous balance

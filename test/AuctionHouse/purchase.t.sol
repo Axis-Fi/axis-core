@@ -175,7 +175,7 @@ contract PurchaseTest is AuctionHouseTest {
         givenProtocolFeeIsSet
         givenReferrerFeeIsSet
         givenUserHasQuoteTokenBalance(_AMOUNT_IN)
-        givenUserHasApprovedQuoteToken(_AMOUNT_IN)
+        givenUserHasQuoteTokenAllowance(_AMOUNT_IN)
         givenOwnerHasBaseTokenBalance(_amountOut)
         givenOwnerHasBaseTokenAllowance(_amountOut)
     {
@@ -232,7 +232,7 @@ contract PurchaseTest is AuctionHouseTest {
         givenProtocolFeeIsSet
         givenReferrerFeeIsSet
         givenUserHasQuoteTokenBalance(_AMOUNT_IN)
-        givenUserHasApprovedQuoteToken(_AMOUNT_IN)
+        givenUserHasQuoteTokenAllowance(_AMOUNT_IN)
         givenOwnerHasBaseTokenBalance(_amountOut)
         givenOwnerHasBaseTokenAllowance(_amountOut)
     {
@@ -266,7 +266,7 @@ contract PurchaseTest is AuctionHouseTest {
         givenProtocolFeeIsSet
         givenReferrerFeeIsSet
         givenUserHasQuoteTokenBalance(_AMOUNT_IN)
-        givenUserHasApprovedQuoteToken(_AMOUNT_IN)
+        givenUserHasQuoteTokenAllowance(_AMOUNT_IN)
         givenHookHasBaseTokenBalance(_amountOut)
         givenHookHasBaseTokenAllowance(_amountOut)
     {
@@ -316,7 +316,7 @@ contract PurchaseTest is AuctionHouseTest {
         givenProtocolFeeIsSet
         givenReferrerFeeIsSet
         givenUserHasQuoteTokenBalance(_AMOUNT_IN)
-        givenUserHasApprovedQuoteToken(_AMOUNT_IN)
+        givenUserHasQuoteTokenAllowance(_AMOUNT_IN)
         givenOwnerHasBaseTokenBalance(_amountOut)
         givenOwnerHasBaseTokenAllowance(_amountOut)
     {
@@ -375,7 +375,7 @@ contract PurchaseTest is AuctionHouseTest {
         givenProtocolFeeIsSet
         givenReferrerFeeIsSet
         givenUserHasQuoteTokenBalance(_AMOUNT_IN)
-        givenUserHasApprovedQuoteToken(_AMOUNT_IN)
+        givenUserHasQuoteTokenAllowance(_AMOUNT_IN)
         givenOwnerHasBaseTokenBalance(_amountOut)
         givenOwnerHasBaseTokenAllowance(_amountOut)
     {
@@ -472,7 +472,7 @@ contract PurchaseTest is AuctionHouseTest {
         givenProtocolFeeIsNotSet
         givenReferrerFeeIsSet
         givenUserHasQuoteTokenBalance(_AMOUNT_IN)
-        givenUserHasApprovedQuoteToken(_AMOUNT_IN)
+        givenUserHasQuoteTokenAllowance(_AMOUNT_IN)
         givenOwnerHasBaseTokenBalance(_amountOut)
         givenOwnerHasBaseTokenAllowance(_amountOut)
     {
@@ -548,7 +548,7 @@ contract PurchaseTest is AuctionHouseTest {
         givenReferrerFeeIsSet
         givenLotHasStarted
         givenUserHasQuoteTokenBalance(_AMOUNT_IN)
-        givenUserHasApprovedQuoteToken(_AMOUNT_IN)
+        givenUserHasQuoteTokenAllowance(_AMOUNT_IN)
         givenOwnerHasBaseTokenBalance(_amountOut)
         givenOwnerHasBaseTokenAllowance(_amountOut)
     {
@@ -639,7 +639,7 @@ contract PurchaseTest is AuctionHouseTest {
         givenProtocolFeeIsSet
         givenLotHasStarted
         givenUserHasQuoteTokenBalance(_AMOUNT_IN)
-        givenUserHasApprovedQuoteToken(_AMOUNT_IN)
+        givenUserHasQuoteTokenAllowance(_AMOUNT_IN)
         givenOwnerHasBaseTokenBalance(_amountOut)
         givenOwnerHasBaseTokenAllowance(_amountOut)
     {
@@ -717,7 +717,7 @@ contract PurchaseTest is AuctionHouseTest {
         givenProtocolFeeIsSet
         givenLotHasStarted
         givenUserHasQuoteTokenBalance(_AMOUNT_IN)
-        givenUserHasApprovedQuoteToken(_AMOUNT_IN)
+        givenUserHasQuoteTokenAllowance(_AMOUNT_IN)
         givenOwnerHasBaseTokenBalance(_amountOut)
         givenOwnerHasBaseTokenAllowance(_amountOut)
     {
@@ -804,7 +804,7 @@ contract PurchaseTest is AuctionHouseTest {
         givenProtocolFeeIsSet
         givenReferrerFeeIsSet
         givenUserHasQuoteTokenBalance(_AMOUNT_IN)
-        givenUserHasApprovedQuoteToken(_AMOUNT_IN)
+        givenUserHasQuoteTokenAllowance(_AMOUNT_IN)
         givenOwnerHasBaseTokenBalance(_amountOut)
         givenOwnerHasBaseTokenAllowance(_amountOut)
     {
@@ -883,7 +883,7 @@ contract PurchaseTest is AuctionHouseTest {
         givenProtocolFeeIsSet
         givenReferrerFeeIsSet
         givenUserHasQuoteTokenBalance(_AMOUNT_IN)
-        givenUserHasApprovedQuoteToken(_AMOUNT_IN)
+        givenUserHasQuoteTokenAllowance(_AMOUNT_IN)
         givenOwnerHasBaseTokenBalance(_amountOut)
         givenOwnerHasBaseTokenAllowance(_amountOut)
     {
@@ -967,7 +967,7 @@ contract PurchaseTest is AuctionHouseTest {
         givenCuratorFeeIsSet
         givenCuratorHasApproved
         givenUserHasQuoteTokenBalance(_AMOUNT_IN)
-        givenUserHasApprovedQuoteToken(_AMOUNT_IN)
+        givenUserHasQuoteTokenAllowance(_AMOUNT_IN)
     {
         // Purchase
         _createPurchase(_AMOUNT_IN, _amountOut, _purchaseAuctionData);
@@ -1059,7 +1059,7 @@ contract PurchaseTest is AuctionHouseTest {
         givenCuratorFeeIsSet
         givenCuratorHasApproved
         givenUserHasQuoteTokenBalance(_AMOUNT_IN)
-        givenUserHasApprovedQuoteToken(_AMOUNT_IN)
+        givenUserHasQuoteTokenAllowance(_AMOUNT_IN)
     {
         // Purchase
         _createPurchase(_AMOUNT_IN, _amountOut, _purchaseAuctionData);
@@ -1164,7 +1164,7 @@ contract PurchaseTest is AuctionHouseTest {
         givenReferrerFeeIsSet
         givenLotHasStarted
         givenUserHasQuoteTokenBalance(_AMOUNT_IN)
-        givenUserHasApprovedQuoteToken(_AMOUNT_IN)
+        givenUserHasQuoteTokenAllowance(_AMOUNT_IN)
     {
         // Auction house has base tokens
         assertEq(
@@ -1209,7 +1209,7 @@ contract PurchaseTest is AuctionHouseTest {
         givenOwnerHasBaseTokenAllowance(_curatorMaxPotentialFee)
         givenCuratorHasApproved
         givenUserHasQuoteTokenBalance(_AMOUNT_IN)
-        givenUserHasApprovedQuoteToken(_AMOUNT_IN)
+        givenUserHasQuoteTokenAllowance(_AMOUNT_IN)
     {
         // Auction house has base tokens
         assertEq(

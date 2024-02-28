@@ -232,7 +232,7 @@ abstract contract AuctionHouseTest is Test, Permit2User {
         _;
     }
 
-    modifier givenUserHasApprovedQuoteToken(uint256 amount_) {
+    modifier givenUserHasQuoteTokenAllowance(uint256 amount_) {
         vm.prank(_bidder);
         _quoteToken.approve(address(_auctionHouse), amount_);
         _;
