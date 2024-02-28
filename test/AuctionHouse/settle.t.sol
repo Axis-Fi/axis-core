@@ -432,28 +432,6 @@ contract SettleTest is AuctionHouseTest {
         _assertAccruedFees();
     }
 
-    function test_partialFill_notCurated()
-        public
-        whenAuctionTypeIsBatch
-        whenBatchAuctionModuleIsInstalled
-        givenLotIsPrefunded
-        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
-        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
-        givenLotIsCreated
-        givenProtocolFeeIsSet
-        givenReferrerFeeIsSet
-        givenLotHasPartialFill
-        givenAuctionHouseHasQuoteTokenBalance(_BID_AMOUNT_TOTAL)
-    {
-        // Call function
-        _auctionHouse.settle(_lotId);
-
-        // Check balances
-        _assertBaseTokenBalances();
-        _assertQuoteTokenBalances();
-        _assertAccruedFees();
-    }
-
     function test_partialFill_curated()
         public
         whenAuctionTypeIsBatch
@@ -468,6 +446,28 @@ contract SettleTest is AuctionHouseTest {
         givenOwnerHasBaseTokenBalance(_curatorMaxPotentialFee)
         givenOwnerHasBaseTokenAllowance(_curatorMaxPotentialFee)
         givenCuratorHasApproved
+        givenProtocolFeeIsSet
+        givenReferrerFeeIsSet
+        givenLotHasPartialFill
+        givenAuctionHouseHasQuoteTokenBalance(_BID_AMOUNT_TOTAL)
+    {
+        // Call function
+        _auctionHouse.settle(_lotId);
+
+        // Check balances
+        _assertBaseTokenBalances();
+        _assertQuoteTokenBalances();
+        _assertAccruedFees();
+    }
+
+    function test_partialFill_notCurated()
+        public
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenLotIsPrefunded
+        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenLotIsCreated
         givenProtocolFeeIsSet
         givenReferrerFeeIsSet
         givenLotHasPartialFill
@@ -535,28 +535,6 @@ contract SettleTest is AuctionHouseTest {
         _assertAccruedFees();
     }
 
-    function test_capacityFilled_notCurated()
-        public
-        whenAuctionTypeIsBatch
-        whenBatchAuctionModuleIsInstalled
-        givenLotIsPrefunded
-        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
-        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
-        givenLotIsCreated
-        givenProtocolFeeIsSet
-        givenReferrerFeeIsSet
-        givenLotCapacityIsFilled
-        givenAuctionHouseHasQuoteTokenBalance(_BID_AMOUNT_TOTAL)
-    {
-        // Call function
-        _auctionHouse.settle(_lotId);
-
-        // Check balances
-        _assertBaseTokenBalances();
-        _assertQuoteTokenBalances();
-        _assertAccruedFees();
-    }
-
     function test_capacityFilled_curated()
         public
         whenAuctionTypeIsBatch
@@ -571,6 +549,28 @@ contract SettleTest is AuctionHouseTest {
         givenOwnerHasBaseTokenBalance(_curatorMaxPotentialFee)
         givenOwnerHasBaseTokenAllowance(_curatorMaxPotentialFee)
         givenCuratorHasApproved
+        givenProtocolFeeIsSet
+        givenReferrerFeeIsSet
+        givenLotCapacityIsFilled
+        givenAuctionHouseHasQuoteTokenBalance(_BID_AMOUNT_TOTAL)
+    {
+        // Call function
+        _auctionHouse.settle(_lotId);
+
+        // Check balances
+        _assertBaseTokenBalances();
+        _assertQuoteTokenBalances();
+        _assertAccruedFees();
+    }
+
+    function test_capacityFilled_notCurated()
+        public
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenLotIsPrefunded
+        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenLotIsCreated
         givenProtocolFeeIsSet
         givenReferrerFeeIsSet
         givenLotCapacityIsFilled
