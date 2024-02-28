@@ -235,9 +235,9 @@ contract CancelAuctionTest is AuctionHouseTest {
         whenAtomicAuctionModuleIsInstalled
         givenLotIsCreated
         givenLotHasStarted
-        givenAuctionOwnerHasCuratorFeeBalance
         givenCuratorMaxFeeIsSet
         givenCuratorFeeIsSet
+        givenAuctionOwnerHasCuratorFeeBalance
         givenCuratorHasApproved
     {
         // Balance before
@@ -279,8 +279,8 @@ contract CancelAuctionTest is AuctionHouseTest {
         givenUserHasApprovedQuoteToken(_PURCHASE_AMOUNT)
         givenPurchase(_PURCHASE_AMOUNT, _PURCHASE_AMOUNT, _purchaseAuctionData)
         givenCuratorMaxFeeIsSet
-        givenAuctionOwnerHasCuratorFeeBalance
         givenCuratorFeeIsSet
+        givenAuctionOwnerHasCuratorFeeBalance
         givenCuratorHasApproved
     {
         // Balance before
@@ -325,8 +325,8 @@ contract CancelAuctionTest is AuctionHouseTest {
         givenUserHasApprovedQuoteToken(_PURCHASE_AMOUNT)
         givenPurchase(_PURCHASE_AMOUNT, _PURCHASE_AMOUNT, _purchaseAuctionData)
         givenCuratorMaxFeeIsSet
-        givenAuctionOwnerHasCuratorFeeBalance
         givenCuratorFeeIsSet
+        givenAuctionOwnerHasCuratorFeeBalance
         givenCuratorHasApproved
         givenUserHasQuoteTokenBalance(_PURCHASE_AMOUNT * 2)
         givenUserHasApprovedQuoteToken(_PURCHASE_AMOUNT * 2)

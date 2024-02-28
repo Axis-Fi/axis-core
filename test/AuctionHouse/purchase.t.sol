@@ -1203,10 +1203,10 @@ contract PurchaseTest is AuctionHouseTest {
         givenLotHasStarted
         givenProtocolFeeIsSet
         givenReferrerFeeIsSet
-        givenOwnerHasBaseTokenBalance(_curatorMaxPotentialFee)
-        givenOwnerHasBaseTokenAllowance(_curatorMaxPotentialFee)
         givenCuratorMaxFeeIsSet
         givenCuratorFeeIsSet
+        givenOwnerHasBaseTokenBalance(_curatorMaxPotentialFee)
+        givenOwnerHasBaseTokenAllowance(_curatorMaxPotentialFee)
         givenCuratorHasApproved
         givenUserHasQuoteTokenBalance(_AMOUNT_IN)
         givenUserHasApprovedQuoteToken(_AMOUNT_IN)

@@ -56,11 +56,15 @@ abstract contract AuctionHouseTest is Test, Permit2User {
 
     uint24 internal constant _CURATOR_MAX_FEE_PERCENT = 100;
     uint24 internal constant _CURATOR_FEE_PERCENT = 90;
+    uint24 internal _curatorFeePercentActual;
 
     uint24 internal constant _PROTOCOL_FEE_PERCENT = 100;
     uint24 internal constant _REFERRER_FEE_PERCENT = 105;
+    uint24 internal _protocolFeePercentActual;
+    uint24 internal _referrerFeePercentActual;
 
-    uint96 internal _curatorMaxPotentialFee = _CURATOR_FEE_PERCENT * _LOT_CAPACITY / 1e5;
+    uint96 internal _curatorMaxPotentialFee;
+    bool internal _curatorApproved;
 
     // Input to parameters
     uint48 internal _startTime;
@@ -326,12 +330,15 @@ abstract contract AuctionHouseTest is Test, Permit2User {
         // Set the curator fee
         vm.prank(_CURATOR);
         _auctionHouse.setCuratorFee(_auctionModuleKeycode, _CURATOR_FEE_PERCENT);
+        _curatorFeePercentActual = _CURATOR_FEE_PERCENT;
+        _curatorMaxPotentialFee = _curatorFeePercentActual * _LOT_CAPACITY / 1e5;
         _;
     }
 
     modifier givenCuratorHasApproved() {
         vm.prank(_CURATOR);
         _auctionHouse.curate(_lotId);
+        _curatorApproved = true;
         _;
     }
 
@@ -339,6 +346,7 @@ abstract contract AuctionHouseTest is Test, Permit2User {
         _auctionHouse.setFee(
             _auctionModuleKeycode, FeeManager.FeeType.Protocol, _PROTOCOL_FEE_PERCENT
         );
+        _protocolFeePercentActual = _PROTOCOL_FEE_PERCENT;
         _;
     }
 
@@ -346,6 +354,7 @@ abstract contract AuctionHouseTest is Test, Permit2User {
         _auctionHouse.setFee(
             _auctionModuleKeycode, FeeManager.FeeType.Referrer, _REFERRER_FEE_PERCENT
         );
+        _referrerFeePercentActual = _REFERRER_FEE_PERCENT;
         _;
     }
 
