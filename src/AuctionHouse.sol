@@ -440,16 +440,7 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
         // Check if the auction settled
         // If so, calculate fees, handle partial bid, transfer proceeds + (possible) refund to seller, and curator fee
         if (settlement.totalIn > 0 && settlement.totalOut > 0) {
-            // Calculate the referrer and protocol fees for the amount in
-            // Fees are not allocated until the user claims their payout so that we don't have to iterate through them here
-            // If a referrer is not set, that portion of the fee defaults to the protocol
-            uint256 totalInLessFees;
-            {
-                (, uint256 toProtocol) = calculateQuoteFees(
-                    keycodeFromVeecode(routing.auctionReference), false, settlement.totalIn
-                );
-                totalInLessFees = settlement.totalIn - toProtocol;
-            }
+            uint256 totalIn = settlement.totalIn;
 
             // Check if there was a partial fill and handle the payout + refund
             if (settlement.pfBidder != address(0)) {
@@ -471,6 +462,12 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
                     routing.prefunding -= settlement.pfPayout;
                 }
 
+                // Reduce the total amount in by the refund amount
+                // This is so that fees are not charged on the refunded amount
+                unchecked {
+                    totalIn -= settlement.pfRefund;
+                }
+
                 // Send refund and payout to the bidder
                 Transfer.transfer(
                     routing.quoteToken, settlement.pfBidder, settlement.pfRefund, false
@@ -478,6 +475,16 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
                 _sendPayout(
                     lotId_, settlement.pfBidder, settlement.pfPayout, routing, auctionOutput
                 );
+            }
+
+            // Calculate the referrer and protocol fees for the amount in
+            // Fees are not allocated until the user claims their payout so that we don't have to iterate through them here
+            // If a referrer is not set, that portion of the fee defaults to the protocol
+            uint256 totalInLessFees;
+            {
+                (, uint256 toProtocol) =
+                    calculateQuoteFees(keycodeFromVeecode(routing.auctionReference), false, totalIn);
+                totalInLessFees = totalIn - toProtocol;
             }
 
             // Send payment in bulk to auction owner
