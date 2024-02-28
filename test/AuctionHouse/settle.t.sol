@@ -330,9 +330,7 @@ contract SettleTest is AuctionHouseTest {
     //  [X] it reverts
     // [X] when the auction module reverts
     //  [X] it reverts
-    // [ ] when the auction does not settle
-    //  [ ] when prefunding is disabled
-    //   [ ] it does nothing
+    // [X] when the auction does not settle
     //  [X] when curated is true
     //   [X] it transfers the capacity and curator fee to the owner
     //  [X] it transfer the capacity to the owner
@@ -351,6 +349,17 @@ contract SettleTest is AuctionHouseTest {
     // [X] when curated is true
     //  [X] it transfers the curator fee to the curator
     // [X] it transfers the payment (minus protocol and referrer fees) to the owner
+    // [X] when prefunding is disabled
+    //  [X] when the auction is not settled
+    //   [X] it does not transfer any base tokens to the auction house
+    //  [X] when there is a partial fill
+    //   [X] when curated is true
+    //    [X] it transfers the capacity and curator fee to the auction house
+    //   [X] it transfers the capacity to the auction house
+    //  [X] when capacity is not filled
+    //   [X] when curated is true
+    //    [X] it transfers the used capacity and curator fee to the auction house
+    //   [X] it transfers the used capacity to the auction house
 
     function test_whenLotIdIsInvalid_reverts() public {
         // Expect revert
@@ -378,6 +387,8 @@ contract SettleTest is AuctionHouseTest {
         // Call function
         _auctionHouse.settle(_lotId);
     }
+
+    // ======== prefunded ======== //
 
     function test_notSettled_curated()
         public
@@ -654,6 +665,146 @@ contract SettleTest is AuctionHouseTest {
         givenOwnerHasBaseTokenAllowance(_curatorMaxPotentialFee)
         givenCuratorHasApproved
         givenLotCapacityIsFilled
+        givenAuctionHouseHasQuoteTokenBalance(_BID_AMOUNT_TOTAL)
+    {
+        // Call function
+        _auctionHouse.settle(_lotId);
+
+        // Check balances
+        _assertBaseTokenBalances();
+        _assertQuoteTokenBalances();
+        _assertAccruedFees();
+    }
+
+    // ======== not prefunded ======== //
+
+    function test_notPrefunded_notSettled_curated()
+        public
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenCuratorIsSet
+        givenLotIsCreated
+        givenCuratorMaxFeeIsSet
+        givenCuratorFeeIsSet
+        givenCuratorHasApproved
+        givenProtocolFeeIsSet
+        givenReferrerFeeIsSet
+        givenLotDoesNotSettle
+        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY + _curatorMaxPotentialFee)
+        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY + _curatorMaxPotentialFee)
+        givenAuctionHouseHasQuoteTokenBalance(_BID_AMOUNT_TOTAL)
+    {
+        // Call function
+        _auctionHouse.settle(_lotId);
+
+        // Check balances
+        _assertBaseTokenBalances();
+        _assertQuoteTokenBalances();
+        _assertAccruedFees();
+    }
+
+    function test_notPrefunded_notSettled_notCurated()
+        public
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenLotIsCreated
+        givenProtocolFeeIsSet
+        givenReferrerFeeIsSet
+        givenLotDoesNotSettle
+        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenAuctionHouseHasQuoteTokenBalance(_BID_AMOUNT_TOTAL)
+    {
+        // Call function
+        _auctionHouse.settle(_lotId);
+
+        // Check balances
+        _assertBaseTokenBalances();
+        _assertQuoteTokenBalances();
+        _assertAccruedFees();
+    }
+
+    function test_notPrefunded_partialFill_curated()
+        public
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenCuratorIsSet
+        givenLotIsCreated
+        givenCuratorMaxFeeIsSet
+        givenCuratorFeeIsSet
+        givenCuratorHasApproved
+        givenProtocolFeeIsSet
+        givenReferrerFeeIsSet
+        givenLotHasPartialFill
+        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY + _curatorMaxPotentialFee)
+        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY + _curatorMaxPotentialFee)
+        givenAuctionHouseHasQuoteTokenBalance(_BID_AMOUNT_TOTAL)
+    {
+        // Call function
+        _auctionHouse.settle(_lotId);
+
+        // Check balances
+        _assertBaseTokenBalances();
+        _assertQuoteTokenBalances();
+        _assertAccruedFees();
+    }
+
+    function test_notPrefunded_partialFill_notCurated()
+        public
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenLotIsCreated
+        givenProtocolFeeIsSet
+        givenReferrerFeeIsSet
+        givenLotHasPartialFill
+        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenAuctionHouseHasQuoteTokenBalance(_BID_AMOUNT_TOTAL)
+    {
+        // Call function
+        _auctionHouse.settle(_lotId);
+
+        // Check balances
+        _assertBaseTokenBalances();
+        _assertQuoteTokenBalances();
+        _assertAccruedFees();
+    }
+
+    function test_notPrefunded_underCapacity_curated()
+        public
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenCuratorIsSet
+        givenLotIsCreated
+        givenCuratorMaxFeeIsSet
+        givenCuratorFeeIsSet
+        givenCuratorHasApproved
+        givenProtocolFeeIsSet
+        givenReferrerFeeIsSet
+        givenLotIsUnderCapacity
+        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY + _curatorMaxPotentialFee)
+        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY + _curatorMaxPotentialFee)
+        givenAuctionHouseHasQuoteTokenBalance(_BID_AMOUNT_TOTAL)
+    {
+        // Call function
+        _auctionHouse.settle(_lotId);
+
+        // Check balances
+        _assertBaseTokenBalances();
+        _assertQuoteTokenBalances();
+        _assertAccruedFees();
+    }
+
+    function test_notPrefunded_underCapacity_notCurated()
+        public
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenLotIsCreated
+        givenProtocolFeeIsSet
+        givenReferrerFeeIsSet
+        givenLotIsUnderCapacity
+        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenAuctionHouseHasQuoteTokenBalance(_BID_AMOUNT_TOTAL)
     {
         // Call function
