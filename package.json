@@ -8,8 +8,8 @@
     "yarn": "use-pnpm"
   },
   "scripts": {
-    "build:rsa-cli": "cd rsa-cli && cargo build && cd ..",
-    "build": "forge build && pnpm run build:rsa-cli",
+    "build:ecies-cli": "cd crates/ecies-cli && cargo build && cd ../..",
+    "build": "forge build && pnpm run build:ecies-cli",
     "fmt": "forge fmt",
     "fmt:check": "forge fmt --check",
     "solhint": "solhint --fix --config ./.solhint.json 'src/**/*.sol'",
