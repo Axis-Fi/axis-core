@@ -1,1665 +1,669 @@
-// // SPDX-License-Identifier: UNLICENSED
-// pragma solidity 0.8.19;
-
-// // Libraries
-// import {Test} from "forge-std/Test.sol";
-// import {ERC20} from "lib/solmate/src/tokens/ERC20.sol";
-
-// // Mocks
-// import {MockERC20} from "lib/solmate/src/test/utils/mocks/MockERC20.sol";
-// import {Permit2User} from "test/lib/permit2/Permit2User.sol";
-
-// // Auctions
-// import {AuctionHouse, Router, FeeManager} from "src/AuctionHouse.sol";
-// import {Auction, AuctionModule} from "src/modules/Auction.sol";
-// import {IHooks, IAllowlist, Auctioneer} from "src/bases/Auctioneer.sol";
-// import {RSAOAEP} from "src/lib/RSA.sol";
-// import {uint2str} from "src/lib/Uint2Str.sol";
-// import {LocalSealedBidBatchAuction} from "src/modules/auctions/LSBBA/LSBBA.sol";
-
-// // Modules
-// import {
-//     Keycode,
-//     toKeycode,
-//     Veecode,
-//     wrapVeecode,
-//     unwrapVeecode,
-//     fromVeecode,
-//     WithModules,
-//     Module
-// } from "src/modules/Modules.sol";
-
-// import {console2} from "forge-std/console2.sol";
-
-// contract SettleTest is Test, Permit2User {
-//     MockERC20 internal baseToken;
-//     MockERC20 internal quoteToken;
-
-//     AuctionHouse internal auctionHouse;
-//     LocalSealedBidBatchAuction internal auctionModule;
-
-//     uint96 internal lotId;
-//     uint48 internal lotStart;
-//     uint48 internal auctionDuration = 1 days;
-//     uint48 internal lotConclusion;
-//     bytes internal constant PUBLIC_KEY_MODULUS = abi.encodePacked(
-//         bytes32(0xB925394F570C7C765F121826DFC8A1661921923B33408EFF62DCAC0D263952FE),
-//         bytes32(0x158C12B2B35525F7568CB8DC7731FBC3739F22D94CB80C5622E788DB4532BD8C),
-//         bytes32(0x8643680DA8C00A5E7C967D9D087AA1380AE9A031AC292C971EC75F9BD3296AE1),
-//         bytes32(0x1AFCC05BD15602738CBE9BD75B76403AB2C9409F2CC0C189B4551DEE8B576AD3)
-//     );
-
-//     address internal immutable protocol = address(0x2);
-//     address internal immutable referrer = address(0x4);
-//     address internal immutable auctionOwner = address(0x5);
-//     address internal immutable bidderOne = address(0x7);
-//     address internal immutable bidderTwo = address(0x8);
-//     address internal immutable recipientOne = address(0x9);
-//     address internal immutable recipientTwo = address(0x10);
-//     address internal immutable curator = address(0x11);
-
-//     uint48 internal constant protocolFee = 1000; // 1%
-//     uint48 internal constant referrerFee = 500; // 0.5%
-//     uint48 internal constant CURATOR_MAX_FEE = 100;
-//     uint48 internal constant CURATOR_FEE = 90;
-//     uint256 internal curatorMaxFee;
-
-//     uint256 internal constant LOT_CAPACITY = 10e18;
-//     uint256 internal constant MINIMUM_PRICE = 5e17; // 0.5e18
-//     uint256 internal _lotCapacity = LOT_CAPACITY;
-//     uint256 internal constant SCALE = 1e18;
-//     bytes32 internal constant BID_SEED = bytes32(uint256(1e9));
-
-//     uint256 internal bidOneAmount = 4e18;
-//     uint256 internal bidOneAmountOut = 4e18; // Price = 1
-//     uint256 internal bidTwoAmount = 6e18;
-//     uint256 internal bidTwoAmountOut = 6e18; // Price = 1
-//     uint256 internal bidThreeAmount = 7e18;
-//     uint256 internal bidThreeAmountOut = 7e18; // Price = 1
-//     uint256 internal bidFourAmount = 8e18;
-//     uint256 internal bidFourAmountOut = 2e18; // Price = 4
-//     uint256 internal bidFiveAmount = 8e18;
-//     uint256 internal bidFiveAmountOut = 4e18; // Price = 2
-
-//     uint8 internal quoteTokenDecimals = 18;
-//     uint8 internal baseTokenDecimals = 18;
-//     string internal INFO_HASH = "";
-
-//     Keycode internal auctionType;
-//     Auction.AuctionParams internal auctionParams;
-//     Auctioneer.RoutingParams internal routingParams;
-//     LocalSealedBidBatchAuction.AuctionDataParams internal auctionDataParams;
-
-//     function setUp() external {
-//         // Set block timestamp
-//         vm.warp(1_000_000);
-
-//         baseToken = new MockERC20("Base Token", "BASE", baseTokenDecimals);
-//         quoteToken = new MockERC20("Quote Token", "QUOTE", quoteTokenDecimals);
-
-//         auctionHouse = new AuctionHouse(address(this), protocol, _PERMIT2_ADDRESS);
-//         auctionModule = new LocalSealedBidBatchAuction(address(auctionHouse));
-//         auctionHouse.installModule(auctionModule);
-//         (Keycode moduleKeycode,) = unwrapVeecode(auctionModule.VEECODE());
-//         auctionType = moduleKeycode;
-
-//         // Set fees
-//         auctionHouse.setFee(auctionType, FeeManager.FeeType.Protocol, protocolFee);
-//         auctionHouse.setFee(auctionType, FeeManager.FeeType.Referrer, referrerFee);
-//         auctionHouse.setFee(auctionType, FeeManager.FeeType.MaxCurator, CURATOR_MAX_FEE);
-
-//         // Auction parameters
-//         auctionDataParams = LocalSealedBidBatchAuction.AuctionDataParams({
-//             minFillPercent: 1000, // 1%
-//             minBidPercent: 1000, // 1%
-//             minimumPrice: MINIMUM_PRICE,
-//             publicKeyModulus: PUBLIC_KEY_MODULUS
-//         });
-
-//         lotStart = uint48(block.timestamp) + 1;
-//         auctionParams = Auction.AuctionParams({
-//             start: lotStart,
-//             duration: auctionDuration,
-//             capacityInQuote: false,
-//             capacity: _lotCapacity,
-//             implParams: abi.encode(auctionDataParams)
-//         });
-//         lotConclusion = auctionParams.start + auctionParams.duration;
-
-//         routingParams = Auctioneer.RoutingParams({
-//             auctionType: auctionType,
-//             baseToken: baseToken,
-//             quoteToken: quoteToken,
-//             curator: curator,
-//             hooks: IHooks(address(0)),
-//             allowlist: IAllowlist(address(0)),
-//             allowlistParams: abi.encode(""),
-//             derivativeType: toKeycode(""),
-//             derivativeParams: abi.encode("")
-//         });
-
-//         // Set up pre-funding
-//         baseToken.mint(auctionOwner, _lotCapacity);
-//         vm.prank(auctionOwner);
-//         baseToken.approve(address(auctionHouse), _lotCapacity);
-
-//         // Create an auction lot
-//         vm.prank(auctionOwner);
-//         lotId = auctionHouse.auction(routingParams, auctionParams, INFO_HASH);
-
-//         // Update curator fee amount
-//         curatorMaxFee = _lotCapacity * CURATOR_MAX_FEE / 1e5;
-//     }
-
-//     function _createBid(
-//         address bidder_,
-//         address recipient_,
-//         uint256 bidAmount_,
-//         uint256 bidAmountOut_
-//     ) internal returns (uint96 bidId_, LocalSealedBidBatchAuction.Decrypt memory decryptedBid) {
-//         // Encrypt the bid amount
-//         decryptedBid =
-//             LocalSealedBidBatchAuction.Decrypt({amountOut: bidAmountOut_, seed: BID_SEED});
-//         bytes memory auctionData_ = _encrypt(decryptedBid);
-
-//         Router.BidParams memory bidParams = Router.BidParams({
-//             lotId: lotId,
-//             recipient: recipient_,
-//             referrer: referrer,
-//             amount: bidAmount_,
-//             auctionData: auctionData_,
-//             allowlistProof: bytes(""),
-//             permit2Data: bytes("")
-//         });
-
-//         // Create a bid
-//         // uint256 gasBefore = gasleft();
-//         vm.prank(bidder_);
-//         uint96 bidId = auctionHouse.bid(bidParams);
-//         // console2.log("Gas used to create bid: ", gasBefore - gasleft());
-
-//         return (bidId, decryptedBid);
-//     }
-
-//     function _encrypt(LocalSealedBidBatchAuction.Decrypt memory decrypt_)
-//         internal
-//         view
-//         returns (bytes memory)
-//     {
-//         return RSAOAEP.encrypt(
-//             abi.encodePacked(decrypt_.amountOut),
-//             abi.encodePacked(uint2str(lotId)),
-//             abi.encodePacked(uint24(65_537)),
-//             PUBLIC_KEY_MODULUS,
-//             decrypt_.seed
-//         );
-//     }
-
-//     /// @notice     Calculates the marginal price, given the amount in and out
-//     ///
-//     /// @param      bidAmount_      The amount of the bid
-//     /// @param      bidAmountOut_   The amount of the bid out
-//     /// @return     uint256         The marginal price (18 dp)
-//     function _getMarginalPriceScaled(
-//         uint256 bidAmount_,
-//         uint256 bidAmountOut_
-//     ) internal view returns (uint256) {
-//         // Adjust all amounts to the scale
-//         uint256 bidAmountScaled = bidAmount_ * SCALE / 10 ** quoteTokenDecimals;
-//         uint256 bidAmountOutScaled = bidAmountOut_ * SCALE / 10 ** baseTokenDecimals;
-
-//         return bidAmountScaled * SCALE / bidAmountOutScaled;
-//     }
-
-//     function _getAmountOut(
-//         uint256 amountIn_,
-//         uint256 marginalPrice_
-//     ) internal view returns (uint256) {
-//         uint256 amountOutScaled = amountIn_ * SCALE / marginalPrice_;
-//         return amountOutScaled * 10 ** baseTokenDecimals / 10 ** quoteTokenDecimals;
-//     }
-
-//     // ======== Modifiers ======== //
-
-//     LocalSealedBidBatchAuction.Decrypt[] internal decryptedBids;
-//     uint256 internal marginalPrice;
-
-//     modifier givenLotHasDecimals(uint8 baseTokenDecimals_, uint8 quoteTokenDecimals_) {
-//         // Set up tokens
-//         baseToken = new MockERC20("Base Token", "BASE", baseTokenDecimals_);
-//         quoteToken = new MockERC20("Quote Token", "QUOTE", quoteTokenDecimals_);
-
-//         quoteTokenDecimals = quoteTokenDecimals_;
-//         baseTokenDecimals = baseTokenDecimals_;
-
-//         // Update parameters
-//         _lotCapacity = _lotCapacity * 10 ** baseTokenDecimals_ / SCALE;
-
-//         auctionDataParams.minimumPrice = MINIMUM_PRICE * 10 ** quoteTokenDecimals_ / SCALE;
-
-//         auctionParams.capacity = _lotCapacity;
-//         auctionParams.implParams = abi.encode(auctionDataParams);
-
-//         routingParams.baseToken = baseToken;
-//         routingParams.quoteToken = quoteToken;
-
-//         // Update bid scale
-//         bidOneAmount = bidOneAmount * 10 ** quoteTokenDecimals_ / SCALE;
-//         bidOneAmountOut = bidOneAmountOut * 10 ** baseTokenDecimals_ / SCALE;
-//         bidTwoAmount = bidTwoAmount * 10 ** quoteTokenDecimals_ / SCALE;
-//         bidTwoAmountOut = bidTwoAmountOut * 10 ** baseTokenDecimals_ / SCALE;
-//         bidThreeAmount = bidThreeAmount * 10 ** quoteTokenDecimals_ / SCALE;
-//         bidThreeAmountOut = bidThreeAmountOut * 10 ** baseTokenDecimals_ / SCALE;
-//         bidFourAmount = bidFourAmount * 10 ** quoteTokenDecimals_ / SCALE;
-//         bidFourAmountOut = bidFourAmountOut * 10 ** baseTokenDecimals_ / SCALE;
-//         bidFiveAmount = bidFiveAmount * 10 ** quoteTokenDecimals_ / SCALE;
-//         bidFiveAmountOut = bidFiveAmountOut * 10 ** baseTokenDecimals_ / SCALE;
-
-//         // Set up pre-funding
-//         baseToken.mint(auctionOwner, _lotCapacity);
-//         vm.prank(auctionOwner);
-//         baseToken.approve(address(auctionHouse), _lotCapacity);
-
-//         // Create a new auction
-//         vm.prank(auctionOwner);
-//         lotId = auctionHouse.auction(routingParams, auctionParams, INFO_HASH);
-
-//         // Update curator fee amount
-//         curatorMaxFee = _lotCapacity * CURATOR_MAX_FEE / 1e5;
-//         _;
-//     }
-
-//     modifier givenLotHasBidsLessThanCapacity() {
-//         // Mint quote tokens to the bidders
-//         quoteToken.mint(bidderOne, bidOneAmount);
-
-//         // Authorise spending
-//         vm.prank(bidderOne);
-//         quoteToken.approve(address(auctionHouse), bidOneAmount);
-
-//         // Create bids
-//         // 4 < 10
-//         (, LocalSealedBidBatchAuction.Decrypt memory decryptedBidOne) =
-//             _createBid(bidderOne, recipientOne, bidOneAmount, bidOneAmountOut);
-//         decryptedBids.push(decryptedBidOne);
-
-//         // bidOne first (price = 1)
-//         marginalPrice = _getMarginalPriceScaled(bidOneAmount, bidOneAmountOut);
-//         _;
-//     }
-
-//     modifier givenLotHasSufficientBids() {
-//         // Mint quote tokens to the bidders
-//         quoteToken.mint(bidderOne, bidOneAmount);
-//         quoteToken.mint(bidderTwo, bidTwoAmount);
-
-//         // Authorise spending
-//         vm.prank(bidderOne);
-//         quoteToken.approve(address(auctionHouse), bidOneAmount);
-//         vm.prank(bidderTwo);
-//         quoteToken.approve(address(auctionHouse), bidTwoAmount);
-
-//         // Create bids
-//         // 4 + 6 = 10
-//         (, LocalSealedBidBatchAuction.Decrypt memory decryptedBidOne) =
-//             _createBid(bidderOne, recipientOne, bidOneAmount, bidOneAmountOut);
-//         (, LocalSealedBidBatchAuction.Decrypt memory decryptedBidTwo) =
-//             _createBid(bidderTwo, recipientTwo, bidTwoAmount, bidTwoAmountOut);
-//         decryptedBids.push(decryptedBidOne);
-//         decryptedBids.push(decryptedBidTwo);
-
-//         // bidOne first (price = 1), then bidTwo (price = 1)
-//         marginalPrice = _getMarginalPriceScaled(bidTwoAmount, bidTwoAmountOut);
-//         _;
-//     }
-
-//     modifier givenLotHasPartialFill() {
-//         // Mint quote tokens to the bidders
-//         quoteToken.mint(bidderOne, bidOneAmount);
-//         quoteToken.mint(bidderTwo, bidThreeAmount);
-
-//         // Authorise spending
-//         vm.prank(bidderOne);
-//         quoteToken.approve(address(auctionHouse), bidOneAmount);
-//         vm.prank(bidderTwo);
-//         quoteToken.approve(address(auctionHouse), bidThreeAmount);
-
-//         // Create bids
-//         // 4 + 7 = 11 (over-subscribed)
-//         (, LocalSealedBidBatchAuction.Decrypt memory decryptedBidOne) =
-//             _createBid(bidderOne, recipientOne, bidOneAmount, bidOneAmountOut);
-//         (, LocalSealedBidBatchAuction.Decrypt memory decryptedBidThree) =
-//             _createBid(bidderTwo, recipientTwo, bidThreeAmount, bidThreeAmountOut);
-//         decryptedBids.push(decryptedBidOne);
-//         decryptedBids.push(decryptedBidThree);
-
-//         // bidOne first (price = 1), then bidThree (price = 1)
-//         marginalPrice = _getMarginalPriceScaled(bidThreeAmount, bidThreeAmountOut);
-//         _;
-//     }
-
-//     modifier givenLotHasSufficientBids_differentMarginalPrice() {
-//         // Mint quote tokens to the bidders
-//         quoteToken.mint(bidderOne, bidFourAmount);
-//         quoteToken.mint(bidderTwo, bidFiveAmount);
-
-//         // Authorise spending
-//         vm.prank(bidderOne);
-//         quoteToken.approve(address(auctionHouse), bidFourAmount);
-//         vm.prank(bidderTwo);
-//         quoteToken.approve(address(auctionHouse), bidFiveAmount);
-
-//         // Create bids
-//         // 4 + 2 = 6
-//         (, LocalSealedBidBatchAuction.Decrypt memory decryptedBidOne) =
-//             _createBid(bidderOne, recipientOne, bidFourAmount, bidFourAmountOut);
-//         (, LocalSealedBidBatchAuction.Decrypt memory decryptedBidTwo) =
-//             _createBid(bidderTwo, recipientTwo, bidFiveAmount, bidFiveAmountOut);
-//         decryptedBids.push(decryptedBidOne);
-//         decryptedBids.push(decryptedBidTwo);
-
-//         // bidFour first (price = 4), then bidFive (price = 3)
-//         marginalPrice = _getMarginalPriceScaled(bidFiveAmount, bidFiveAmountOut);
-//         _;
-//     }
-
-//     modifier givenLotIdIsInvalid() {
-//         lotId = 255;
-//         _;
-//     }
-
-//     modifier givenLotHasStarted() {
-//         // Warp to the start of the auction
-//         vm.warp(lotStart);
-//         _;
-//     }
-
-//     modifier givenAuctionModuleReverts() {
-//         // Cancel the auction
-//         vm.prank(auctionOwner);
-//         auctionHouse.cancel(lotId);
-//         _;
-//     }
-
-//     modifier givenLotHasConcluded() {
-//         // Warp to the end of the auction
-//         vm.warp(lotConclusion + 1);
-//         _;
-//     }
-
-//     modifier givenLotHasDecrypted() {
-//         // Decrypt the bids
-//         auctionModule.decryptAndSortBids(lotId, decryptedBids);
-//         _;
-//     }
-
-//     modifier givenAuctionHouseHasInsufficientQuoteTokenBalance() {
-//         // Approve spending
-//         vm.prank(address(auctionHouse));
-//         quoteToken.approve(address(this), quoteToken.balanceOf(address(auctionHouse)));
-
-//         // Burn quote tokens
-//         quoteToken.burn(address(auctionHouse), quoteToken.balanceOf(address(auctionHouse)));
-//         _;
-//     }
-
-//     modifier givenAuctionHouseHasInsufficientBaseTokenBalance() {
-//         // Approve spending
-//         vm.prank(address(auctionHouse));
-//         baseToken.approve(address(this), baseToken.balanceOf(address(auctionHouse)));
-
-//         // Burn base tokens
-//         baseToken.burn(address(auctionHouse), baseToken.balanceOf(address(auctionHouse)));
-//         _;
-//     }
-
-//     // ======== Tests ======== //
-
-//     // [X] when the lot id is invalid
-//     //  [X] it reverts
-//     // [X] when the caller is not authorized to settle
-//     //  [X] it reverts
-//     // [X] when the auction module reverts
-//     //  [X] it reverts
-//     // [X] given the auction house has insufficient balance of the quote token
-//     //  [X] it reverts
-//     // [X] given the auction house has insufficient balance of the base token
-//     //  [X] it reverts
-//     // [X] given that the capacity is not filled
-//     //  [X] it succeeds - transfers remaining base tokens back to the owner
-//     // [X] given the last bidder has a partial fill
-//     //  [X] it succeeds - last bidder receives the partial fill and is returned excess quote tokens
-//     // [X] given the auction bids have different prices
-//     //  [X] it succeeds
-//     // [X] given that the quote token decimals differ from the base token decimals
-//     //  [X] it succeeds
-//     // [X] it succeeds - auction owner receives quote tokens (minus fees), bidders receive base tokens and fees accrued
-
-//     function test_invalidLotId() external givenLotIdIsInvalid givenLotHasStarted {
-//         // Expect revert
-//         bytes memory err = abi.encodeWithSelector(Auctioneer.InvalidLotId.selector, lotId);
-//         vm.expectRevert(err);
-
-//         // Attempt to settle the lot
-//         auctionHouse.settle(lotId);
-//     }
-
-//     function test_auctionModuleReverts_reverts() external givenAuctionModuleReverts {
-//         // Expect revert
-//         bytes memory err =
-//             abi.encodeWithSelector(LocalSealedBidBatchAuction.Auction_WrongState.selector);
-//         vm.expectRevert(err);
-
-//         // Attempt to settle the lot
-//         auctionHouse.settle(lotId);
-//     }
-
-//     function test_insufficientQuoteToken_reverts()
-//         external
-//         givenLotHasStarted
-//         givenLotHasSufficientBids
-//         givenLotHasConcluded
-//         givenLotHasDecrypted
-//         givenAuctionHouseHasInsufficientQuoteTokenBalance
-//     {
-//         // Expect revert
-//         vm.expectRevert("TRANSFER_FAILED");
-
-//         // Attempt to settle the lot
-//         auctionHouse.settle(lotId);
-//     }
-
-//     function test_insufficientBaseTokenBalance_reverts()
-//         external
-//         givenLotHasStarted
-//         givenLotHasSufficientBids
-//         givenLotHasConcluded
-//         givenLotHasDecrypted
-//         givenAuctionHouseHasInsufficientBaseTokenBalance
-//     {
-//         // Expect revert
-//         vm.expectRevert("TRANSFER_FAILED");
-
-//         // Attempt to settle the lot
-//         auctionHouse.settle(lotId);
-//     }
-
-//     function test_success()
-//         external
-//         givenLotHasStarted
-//         givenLotHasSufficientBids
-//         givenLotHasConcluded
-//         givenLotHasDecrypted
-//     {
-//         // Attempt to settle the lot
-//         auctionHouse.settle(lotId);
-
-//         // Check base token balances
-//         assertEq(baseToken.balanceOf(bidderOne), 0, "bidderOne: incorrect balance of base token");
-//         assertEq(
-//             baseToken.balanceOf(recipientOne),
-//             bidOneAmountOut,
-//             "recipientOne: incorrect balance of base token"
-//         );
-//         assertEq(baseToken.balanceOf(bidderTwo), 0, "bidderTwo: incorrect balance of base token");
-//         assertEq(
-//             baseToken.balanceOf(recipientTwo),
-//             bidTwoAmountOut,
-//             "recipientTwo: incorrect balance of base token"
-//         );
-//         assertEq(
-//             baseToken.balanceOf(auctionOwner), 0, "auction owner: incorrect balance of base token"
-//         );
-//         assertEq(
-//             baseToken.balanceOf(address(auctionHouse)),
-//             0,
-//             "auctionHouse: incorrect balance of base token"
-//         );
-
-//         // Check quote token balances
-//         assertEq(quoteToken.balanceOf(bidderOne), 0, "bidderOne: incorrect balance of quote token");
-//         assertEq(quoteToken.balanceOf(bidderTwo), 0, "bidderTwo: incorrect balance of quote token");
-
-//         // Calculate fees on quote tokens
-//         uint256 protocolFeeAmount = (bidOneAmount + bidTwoAmount) * protocolFee / 1e5;
-//         uint256 referrerFeeAmount = (bidOneAmount + bidTwoAmount) * referrerFee / 1e5;
-//         uint256 totalFeeAmount = protocolFeeAmount + referrerFeeAmount;
-
-//         // Auction owner should have received quote tokens minus fees
-//         assertEq(
-//             quoteToken.balanceOf(auctionOwner),
-//             bidOneAmount + bidTwoAmount - totalFeeAmount,
-//             "auction owner: incorrect balance of quote token"
-//         );
-
-//         // Fees stored on auction house
-//         assertEq(
-//             quoteToken.balanceOf(address(auctionHouse)),
-//             totalFeeAmount,
-//             "auction house: incorrect balance of quote token"
-//         );
-
-//         // Fee records updated
-//         assertEq(
-//             auctionHouse.rewards(protocol, quoteToken), protocolFeeAmount, "incorrect protocol fees"
-//         );
-//         assertEq(
-//             auctionHouse.rewards(referrer, quoteToken), referrerFeeAmount, "incorrect referrer fees"
-//         );
-
-//         // Check prefunding amount
-//         (,,,,,,,,, uint256 lotPrefunding) = auctionHouse.lotRouting(lotId);
-//         assertEq(lotPrefunding, 0, "mismatch on prefunding");
-//     }
-
-//     function test_notPermissioned()
-//         external
-//         givenLotHasStarted
-//         givenLotHasSufficientBids
-//         givenLotHasConcluded
-//         givenLotHasDecrypted
-//     {
-//         // Attempt to settle the lot
-//         vm.prank(bidderOne);
-//         auctionHouse.settle(lotId);
-
-//         // Check base token balances
-//         assertEq(baseToken.balanceOf(bidderOne), 0, "biddertOne: incorrect balance of base token");
-//         assertEq(
-//             baseToken.balanceOf(recipientOne),
-//             bidOneAmountOut,
-//             "recipientOne: incorrect balance of base token"
-//         );
-//         assertEq(baseToken.balanceOf(bidderTwo), 0, "bidderTwo: incorrect balance of base token");
-//         assertEq(
-//             baseToken.balanceOf(recipientTwo),
-//             bidTwoAmountOut,
-//             "recipientTwo: incorrect balance of base token"
-//         );
-//         assertEq(
-//             baseToken.balanceOf(auctionOwner), 0, "auction owner: incorrect balance of base token"
-//         );
-//         assertEq(
-//             baseToken.balanceOf(address(auctionHouse)),
-//             0,
-//             "auctionHouse: incorrect balance of base token"
-//         );
-
-//         // Check prefunding amount
-//         (,,,,,,,,, uint256 lotPrefunding) = auctionHouse.lotRouting(lotId);
-//         assertEq(lotPrefunding, 0, "mismatch on prefunding");
-//     }
-
-//     function test_success_quoteTokenDecimalsLarger()
-//         external
-//         givenLotHasDecimals(17, 13)
-//         givenLotHasStarted
-//         givenLotHasSufficientBids
-//         givenLotHasConcluded
-//         givenLotHasDecrypted
-//     {
-//         // Attempt to settle the lot
-//         auctionHouse.settle(lotId);
-
-//         // Check base token balances
-//         assertEq(baseToken.balanceOf(bidderOne), 0, "bidderOne: incorrect balance of base token");
-//         assertEq(
-//             baseToken.balanceOf(recipientOne),
-//             bidOneAmountOut,
-//             "recipientOne: incorrect balance of base token"
-//         );
-//         assertEq(baseToken.balanceOf(bidderTwo), 0, "bidderTwo: incorrect balance of base token");
-//         assertEq(
-//             baseToken.balanceOf(recipientTwo),
-//             bidTwoAmountOut,
-//             "recipientTwo: incorrect balance of base token"
-//         );
-//         assertEq(
-//             baseToken.balanceOf(auctionOwner), 0, "auction owner: incorrect balance of base token"
-//         );
-//         assertEq(
-//             baseToken.balanceOf(address(auctionHouse)),
-//             0,
-//             "auctionHouse: incorrect balance of base token"
-//         );
-
-//         // Check quote token balances
-//         assertEq(quoteToken.balanceOf(bidderOne), 0, "bidderOne: incorrect balance of quote token");
-//         assertEq(quoteToken.balanceOf(bidderTwo), 0, "bidderTwo: incorrect balance of quote token");
-
-//         // Calculate fees on quote tokens
-//         uint256 protocolFeeAmount = (bidOneAmount + bidTwoAmount) * protocolFee / 1e5;
-//         uint256 referrerFeeAmount = (bidOneAmount + bidTwoAmount) * referrerFee / 1e5;
-//         uint256 totalFeeAmount = protocolFeeAmount + referrerFeeAmount;
-
-//         // Auction owner should have received quote tokens minus fees
-//         assertEq(
-//             quoteToken.balanceOf(auctionOwner),
-//             bidOneAmount + bidTwoAmount - totalFeeAmount,
-//             "auction owner: incorrect balance of quote token"
-//         );
-
-//         // Fees stored on auction house
-//         assertEq(
-//             quoteToken.balanceOf(address(auctionHouse)),
-//             totalFeeAmount,
-//             "auction house: incorrect balance of quote token"
-//         );
-
-//         // Fee records updated
-//         assertEq(
-//             auctionHouse.rewards(protocol, quoteToken), protocolFeeAmount, "incorrect protocol fees"
-//         );
-//         assertEq(
-//             auctionHouse.rewards(referrer, quoteToken), referrerFeeAmount, "incorrect referrer fees"
-//         );
-
-//         // Check prefunding amount
-//         (,,,,,,,,, uint256 lotPrefunding) = auctionHouse.lotRouting(lotId);
-//         assertEq(lotPrefunding, 0, "mismatch on prefunding");
-//     }
-
-//     function test_success_quoteTokenDecimalsSmaller()
-//         external
-//         givenLotHasDecimals(13, 17)
-//         givenLotHasStarted
-//         givenLotHasSufficientBids
-//         givenLotHasConcluded
-//         givenLotHasDecrypted
-//     {
-//         // Attempt to settle the lot
-//         auctionHouse.settle(lotId);
-
-//         // Check base token balances
-//         assertEq(baseToken.balanceOf(bidderOne), 0, "bidderOne: incorrect balance of base token");
-//         assertEq(
-//             baseToken.balanceOf(recipientOne),
-//             bidOneAmountOut,
-//             "bidderOne: incorrect balance of base token"
-//         );
-//         assertEq(baseToken.balanceOf(bidderTwo), 0, "bidderTwo: incorrect balance of base token");
-//         assertEq(
-//             baseToken.balanceOf(recipientTwo),
-//             bidTwoAmountOut,
-//             "bidderTwo: incorrect balance of base token"
-//         );
-//         assertEq(
-//             baseToken.balanceOf(auctionOwner), 0, "auction owner: incorrect balance of base token"
-//         );
-//         assertEq(
-//             baseToken.balanceOf(address(auctionHouse)),
-//             0,
-//             "auctionHouse: incorrect balance of base token"
-//         );
-
-//         // Check quote token balances
-//         assertEq(quoteToken.balanceOf(bidderOne), 0, "bidderOne: incorrect balance of quote token");
-//         assertEq(quoteToken.balanceOf(bidderTwo), 0, "bidderTwo: incorrect balance of quote token");
-
-//         // Calculate fees on quote tokens
-//         uint256 protocolFeeAmount = (bidOneAmount + bidTwoAmount) * protocolFee / 1e5;
-//         uint256 referrerFeeAmount = (bidOneAmount + bidTwoAmount) * referrerFee / 1e5;
-//         uint256 totalFeeAmount = protocolFeeAmount + referrerFeeAmount;
-
-//         // Auction owner should have received quote tokens minus fees
-//         assertEq(
-//             quoteToken.balanceOf(auctionOwner),
-//             bidOneAmount + bidTwoAmount - totalFeeAmount,
-//             "auction owner: incorrect balance of quote token"
-//         );
-
-//         // Fees stored on auction house
-//         assertEq(
-//             quoteToken.balanceOf(address(auctionHouse)),
-//             totalFeeAmount,
-//             "auction house: incorrect balance of quote token"
-//         );
-
-//         // Fee records updated
-//         assertEq(
-//             auctionHouse.rewards(protocol, quoteToken), protocolFeeAmount, "incorrect protocol fees"
-//         );
-//         assertEq(
-//             auctionHouse.rewards(referrer, quoteToken), referrerFeeAmount, "incorrect referrer fees"
-//         );
-
-//         // Check prefunding amount
-//         (,,,,,,,,, uint256 lotPrefunding) = auctionHouse.lotRouting(lotId);
-//         assertEq(lotPrefunding, 0, "mismatch on prefunding");
-//     }
-
-//     function test_partialFill()
-//         external
-//         givenLotHasStarted
-//         givenLotHasPartialFill
-//         givenLotHasConcluded
-//         givenLotHasDecrypted
-//     {
-//         // Attempt to settle the lot
-//         auctionHouse.settle(lotId);
-
-//         // Check base token balances
-//         uint256 bidOneAmountOutActual = 3e18;
-//         assertEq(baseToken.balanceOf(bidderOne), 0, "bidderOne: incorrect balance of base token"); // Received partial payout. 10 - 7 = 3
-//         assertEq(
-//             baseToken.balanceOf(recipientOne),
-//             bidOneAmountOutActual,
-//             "recipientOne: incorrect balance of base token"
-//         ); // Received partial payout. 10 - 7 = 3
-//         assertEq(baseToken.balanceOf(bidderTwo), 0, "bidderTwo: incorrect balance of base token");
-//         assertEq(
-//             baseToken.balanceOf(recipientTwo),
-//             bidThreeAmountOut,
-//             "recipientTwo: incorrect balance of base token"
-//         );
-//         assertEq(
-//             baseToken.balanceOf(auctionOwner), 0, "auction owner: incorrect balance of base token"
-//         );
-//         assertEq(
-//             baseToken.balanceOf(address(auctionHouse)),
-//             0,
-//             "auctionHouse: incorrect balance of base token"
-//         );
-
-//         // Check quote token balances
-//         uint256 bidOneAmountActual = 3e18; // 3
-//         assertEq(
-//             quoteToken.balanceOf(bidderOne),
-//             bidOneAmount - bidOneAmountActual,
-//             "bidderOne: incorrect balance of quote token"
-//         ); // Remainder received as quote tokens.
-//         assertEq(quoteToken.balanceOf(bidderTwo), 0, "bidderTwo: incorrect balance of quote token");
-
-//         // Calculate fees on quote tokens
-//         uint256 protocolFeeAmount = (bidOneAmountActual + bidThreeAmount) * protocolFee / 1e5;
-//         uint256 referrerFeeAmount = (bidOneAmountActual + bidThreeAmount) * referrerFee / 1e5;
-//         uint256 totalFeeAmount = protocolFeeAmount + referrerFeeAmount;
-
-//         // Auction owner should have received quote tokens minus fees
-//         assertEq(
-//             quoteToken.balanceOf(auctionOwner),
-//             bidOneAmountActual + bidThreeAmount - totalFeeAmount,
-//             "auction owner: incorrect balance of quote token"
-//         );
-
-//         // Fees stored on auction house
-//         assertEq(
-//             quoteToken.balanceOf(address(auctionHouse)),
-//             totalFeeAmount,
-//             "auction house: incorrect balance of quote token"
-//         );
-
-//         // Fee records updated
-//         assertEq(
-//             auctionHouse.rewards(protocol, quoteToken), protocolFeeAmount, "incorrect protocol fees"
-//         );
-//         assertEq(
-//             auctionHouse.rewards(referrer, quoteToken), referrerFeeAmount, "incorrect referrer fees"
-//         );
-
-//         // Check prefunding amount
-//         (,,,,,,,,, uint256 lotPrefunding) = auctionHouse.lotRouting(lotId);
-//         assertEq(lotPrefunding, 0, "mismatch on prefunding");
-//     }
-
-//     function test_partialFill_quoteTokenDecimalsLarger()
-//         external
-//         givenLotHasDecimals(17, 13)
-//         givenLotHasStarted
-//         givenLotHasPartialFill
-//         givenLotHasConcluded
-//         givenLotHasDecrypted
-//     {
-//         // Attempt to settle the lot
-//         auctionHouse.settle(lotId);
-
-//         // Check base token balances
-//         uint256 bidOneAmountOutActual = 3 * 10 ** baseTokenDecimals;
-//         assertEq(baseToken.balanceOf(bidderOne), 0, "bidderOne: incorrect balance of base token"); // Received partial payout. 10 - 7 = 3
-//         assertEq(
-//             baseToken.balanceOf(recipientOne),
-//             bidOneAmountOutActual,
-//             "recipientOne: incorrect balance of base token"
-//         ); // Received partial payout. 10 - 7 = 3
-//         assertEq(baseToken.balanceOf(bidderTwo), 0, "bidderTwo: incorrect balance of base token");
-//         assertEq(
-//             baseToken.balanceOf(recipientTwo),
-//             bidThreeAmountOut,
-//             "recipientTwo: incorrect balance of base token"
-//         );
-//         assertEq(
-//             baseToken.balanceOf(auctionOwner), 0, "auction owner: incorrect balance of base token"
-//         );
-//         assertEq(
-//             baseToken.balanceOf(address(auctionHouse)),
-//             0,
-//             "auctionHouse: incorrect balance of base token"
-//         );
-
-//         // Check quote token balances
-//         uint256 bidOneAmountActual = 3 * 10 ** quoteTokenDecimals; // 3
-//         assertEq(
-//             quoteToken.balanceOf(bidderOne),
-//             bidOneAmount - bidOneAmountActual,
-//             "bidderOne: incorrect balance of quote token"
-//         ); // Remainder received as quote tokens.
-//         assertEq(quoteToken.balanceOf(bidderTwo), 0, "bidderTwo: incorrect balance of quote token");
-
-//         // Calculate fees on quote tokens
-//         uint256 protocolFeeAmount = (bidOneAmountActual + bidThreeAmount) * protocolFee / 1e5;
-//         uint256 referrerFeeAmount = (bidOneAmountActual + bidThreeAmount) * referrerFee / 1e5;
-//         uint256 totalFeeAmount = protocolFeeAmount + referrerFeeAmount;
-
-//         // Auction owner should have received quote tokens minus fees
-//         assertEq(
-//             quoteToken.balanceOf(auctionOwner),
-//             bidOneAmountActual + bidThreeAmount - totalFeeAmount,
-//             "auction owner: incorrect balance of quote token"
-//         );
-
-//         // Fees stored on auction house
-//         assertEq(
-//             quoteToken.balanceOf(address(auctionHouse)),
-//             totalFeeAmount,
-//             "auction house: incorrect balance of quote token"
-//         );
-
-//         // Fee records updated
-//         assertEq(
-//             auctionHouse.rewards(protocol, quoteToken), protocolFeeAmount, "incorrect protocol fees"
-//         );
-//         assertEq(
-//             auctionHouse.rewards(referrer, quoteToken), referrerFeeAmount, "incorrect referrer fees"
-//         );
-
-//         // Check prefunding amount
-//         (,,,,,,,,, uint256 lotPrefunding) = auctionHouse.lotRouting(lotId);
-//         assertEq(lotPrefunding, 0, "mismatch on prefunding");
-//     }
-
-//     function test_partialFill_quoteTokenDecimalsSmaller()
-//         external
-//         givenLotHasDecimals(13, 17)
-//         givenLotHasStarted
-//         givenLotHasPartialFill
-//         givenLotHasConcluded
-//         givenLotHasDecrypted
-//     {
-//         // Attempt to settle the lot
-//         auctionHouse.settle(lotId);
-
-//         // Check base token balances
-//         uint256 bidOneAmountOutActual = 3 * 10 ** baseTokenDecimals;
-//         assertEq(baseToken.balanceOf(bidderOne), 0, "bidderOne: incorrect balance of base token"); // Received partial payout. 10 - 7 = 3
-//         assertEq(
-//             baseToken.balanceOf(recipientOne),
-//             bidOneAmountOutActual,
-//             "recipientOne: incorrect balance of base token"
-//         ); // Received partial payout. 10 - 7 = 3
-//         assertEq(baseToken.balanceOf(bidderTwo), 0, "bidderTwo: incorrect balance of base token");
-//         assertEq(
-//             baseToken.balanceOf(recipientTwo),
-//             bidThreeAmountOut,
-//             "recipientTwo: incorrect balance of base token"
-//         );
-//         assertEq(
-//             baseToken.balanceOf(auctionOwner), 0, "auction owner: incorrect balance of base token"
-//         );
-//         assertEq(
-//             baseToken.balanceOf(address(auctionHouse)),
-//             0,
-//             "auctionHouse: incorrect balance of base token"
-//         );
-
-//         // Check quote token balances
-//         uint256 bidOneAmountActual = 3 * 10 ** quoteTokenDecimals; // 3
-//         assertEq(
-//             quoteToken.balanceOf(bidderOne),
-//             bidOneAmount - bidOneAmountActual,
-//             "bidderOne: incorrect balance of quote token"
-//         ); // Remainder received as quote tokens.
-//         assertEq(quoteToken.balanceOf(bidderTwo), 0, "bidderTwo: incorrect balance of quote token");
-
-//         // Calculate fees on quote tokens
-//         uint256 protocolFeeAmount = (bidOneAmountActual + bidThreeAmount) * protocolFee / 1e5;
-//         uint256 referrerFeeAmount = (bidOneAmountActual + bidThreeAmount) * referrerFee / 1e5;
-//         uint256 totalFeeAmount = protocolFeeAmount + referrerFeeAmount;
-
-//         // Auction owner should have received quote tokens minus fees
-//         assertEq(
-//             quoteToken.balanceOf(auctionOwner),
-//             bidOneAmountActual + bidThreeAmount - totalFeeAmount,
-//             "auction owner: incorrect balance of quote token"
-//         );
-
-//         // Fees stored on auction house
-//         assertEq(
-//             quoteToken.balanceOf(address(auctionHouse)),
-//             totalFeeAmount,
-//             "auction house: incorrect balance of quote token"
-//         );
-
-//         // Fee records updated
-//         assertEq(
-//             auctionHouse.rewards(protocol, quoteToken), protocolFeeAmount, "incorrect protocol fees"
-//         );
-//         assertEq(
-//             auctionHouse.rewards(referrer, quoteToken), referrerFeeAmount, "incorrect referrer fees"
-//         );
-
-//         // Check prefunding amount
-//         (,,,,,,,,, uint256 lotPrefunding) = auctionHouse.lotRouting(lotId);
-//         assertEq(lotPrefunding, 0, "mismatch on prefunding");
-//     }
-
-//     function test_marginalPrice()
-//         external
-//         givenLotHasStarted
-//         givenLotHasSufficientBids_differentMarginalPrice
-//         givenLotHasConcluded
-//         givenLotHasDecrypted
-//     {
-//         // Attempt to settle the lot
-//         auctionHouse.settle(lotId);
-
-//         // Check base token balances
-//         uint256 bidFourAmountOutActual = bidFourAmount * SCALE / marginalPrice;
-//         assertEq(baseToken.balanceOf(bidderOne), 0, "bidderOne: incorrect balance of base token");
-//         assertEq(
-//             baseToken.balanceOf(recipientOne),
-//             bidFourAmountOutActual,
-//             "recipientOne: incorrect balance of base token"
-//         );
-//         assertEq(baseToken.balanceOf(bidderTwo), 0, "bidderTwo: incorrect balance of base token");
-//         assertEq(
-//             baseToken.balanceOf(recipientTwo),
-//             bidFiveAmountOut,
-//             "recipientTwo: incorrect balance of base token"
-//         );
-//         assertEq(
-//             baseToken.balanceOf(auctionOwner),
-//             _lotCapacity - bidFourAmountOutActual - bidFiveAmountOut, // Returned remaining base tokens
-//             "auction owner: incorrect balance of base token"
-//         );
-//         assertEq(
-//             baseToken.balanceOf(address(auctionHouse)),
-//             0,
-//             "auctionHouse: incorrect balance of base token"
-//         );
-
-//         // Check quote token balances
-//         assertEq(quoteToken.balanceOf(bidderOne), 0, "bidderOne: incorrect balance of quote token");
-//         assertEq(quoteToken.balanceOf(bidderTwo), 0, "bidderTwo: incorrect balance of quote token");
-
-//         // Calculate fees on quote tokens
-//         uint256 protocolFeeAmount = (bidFourAmount + bidFiveAmount) * protocolFee / 1e5;
-//         uint256 referrerFeeAmount = (bidFourAmount + bidFiveAmount) * referrerFee / 1e5;
-//         uint256 totalFeeAmount = protocolFeeAmount + referrerFeeAmount;
-
-//         // Auction owner should have received quote tokens minus fees
-//         assertEq(
-//             quoteToken.balanceOf(auctionOwner),
-//             bidFourAmount + bidFiveAmount - totalFeeAmount,
-//             "auction owner: incorrect balance of quote token"
-//         );
-
-//         // Fees stored on auction house
-//         assertEq(
-//             quoteToken.balanceOf(address(auctionHouse)),
-//             totalFeeAmount,
-//             "auction house: incorrect balance of quote token"
-//         );
-
-//         // Fee records updated
-//         assertEq(
-//             auctionHouse.rewards(protocol, quoteToken), protocolFeeAmount, "incorrect protocol fees"
-//         );
-//         assertEq(
-//             auctionHouse.rewards(referrer, quoteToken), referrerFeeAmount, "incorrect referrer fees"
-//         );
-
-//         // Check prefunding amount
-//         (,,,,,,,,, uint256 lotPrefunding) = auctionHouse.lotRouting(lotId);
-//         assertEq(lotPrefunding, 0, "mismatch on prefunding");
-//     }
-
-//     function test_marginalPrice_quoteTokenDecimalsLarger()
-//         external
-//         givenLotHasDecimals(17, 13)
-//         givenLotHasStarted
-//         givenLotHasSufficientBids_differentMarginalPrice
-//         givenLotHasConcluded
-//         givenLotHasDecrypted
-//     {
-//         // Attempt to settle the lot
-//         auctionHouse.settle(lotId);
-
-//         // Check base token balances
-//         uint256 bidFourAmountOutActual = _getAmountOut(bidFourAmount, marginalPrice);
-//         assertEq(baseToken.balanceOf(bidderOne), 0, "bidderOne: incorrect balance of base token");
-//         assertEq(
-//             baseToken.balanceOf(recipientOne),
-//             bidFourAmountOutActual,
-//             "recipientOne: incorrect balance of base token"
-//         );
-//         assertEq(baseToken.balanceOf(bidderTwo), 0, "bidderTwo: incorrect balance of base token");
-//         assertEq(
-//             baseToken.balanceOf(recipientTwo),
-//             bidFiveAmountOut,
-//             "recipientTwo: incorrect balance of base token"
-//         );
-//         assertEq(
-//             baseToken.balanceOf(auctionOwner),
-//             _lotCapacity - bidFourAmountOutActual - bidFiveAmountOut, // Returned remaining base tokens
-//             "auction owner: incorrect balance of base token"
-//         );
-//         assertEq(
-//             baseToken.balanceOf(address(auctionHouse)),
-//             0,
-//             "auctionHouse: incorrect balance of base token"
-//         );
-
-//         // Check quote token balances
-//         assertEq(quoteToken.balanceOf(bidderOne), 0, "bidderOne: incorrect balance of quote token");
-//         assertEq(quoteToken.balanceOf(bidderTwo), 0, "bidderTwo: incorrect balance of quote token");
-
-//         // Calculate fees on quote tokens
-//         uint256 protocolFeeAmount = (bidFourAmount + bidFiveAmount) * protocolFee / 1e5;
-//         uint256 referrerFeeAmount = (bidFourAmount + bidFiveAmount) * referrerFee / 1e5;
-//         uint256 totalFeeAmount = protocolFeeAmount + referrerFeeAmount;
-
-//         // Auction owner should have received quote tokens minus fees
-//         assertEq(
-//             quoteToken.balanceOf(auctionOwner),
-//             bidFourAmount + bidFiveAmount - totalFeeAmount,
-//             "auction owner: incorrect balance of quote token"
-//         );
-
-//         // Fees stored on auction house
-//         assertEq(
-//             quoteToken.balanceOf(address(auctionHouse)),
-//             totalFeeAmount,
-//             "auction house: incorrect balance of quote token"
-//         );
-
-//         // Fee records updated
-//         assertEq(
-//             auctionHouse.rewards(protocol, quoteToken), protocolFeeAmount, "incorrect protocol fees"
-//         );
-//         assertEq(
-//             auctionHouse.rewards(referrer, quoteToken), referrerFeeAmount, "incorrect referrer fees"
-//         );
-
-//         // Check prefunding amount
-//         (,,,,,,,,, uint256 lotPrefunding) = auctionHouse.lotRouting(lotId);
-//         assertEq(lotPrefunding, 0, "mismatch on prefunding");
-//     }
-
-//     function test_marginalPrice_quoteTokenDecimalsSmaller()
-//         external
-//         givenLotHasDecimals(13, 17)
-//         givenLotHasStarted
-//         givenLotHasSufficientBids_differentMarginalPrice
-//         givenLotHasConcluded
-//         givenLotHasDecrypted
-//     {
-//         // Attempt to settle the lot
-//         auctionHouse.settle(lotId);
-
-//         // Check base token balances
-//         uint256 bidFourAmountOutActual = _getAmountOut(bidFourAmount, marginalPrice);
-//         assertEq(baseToken.balanceOf(bidderOne), 0, "bidderOne: incorrect balance of base token");
-//         assertEq(
-//             baseToken.balanceOf(recipientOne),
-//             bidFourAmountOutActual,
-//             "recipientOne: incorrect balance of base token"
-//         );
-//         assertEq(baseToken.balanceOf(bidderTwo), 0, "bidderTwo: incorrect balance of base token");
-//         assertEq(
-//             baseToken.balanceOf(recipientTwo),
-//             bidFiveAmountOut,
-//             "recipientTwo: incorrect balance of base token"
-//         );
-//         assertEq(
-//             baseToken.balanceOf(auctionOwner),
-//             _lotCapacity - bidFourAmountOutActual - bidFiveAmountOut, // Returned remaining base tokens
-//             "auction owner: incorrect balance of base token"
-//         );
-//         assertEq(
-//             baseToken.balanceOf(address(auctionHouse)),
-//             0,
-//             "auctionHouse: incorrect balance of base token"
-//         );
-
-//         // Check quote token balances
-//         assertEq(quoteToken.balanceOf(bidderOne), 0, "bidderOne: incorrect balance of quote token");
-//         assertEq(quoteToken.balanceOf(bidderTwo), 0, "bidderTwo: incorrect balance of quote token");
-
-//         // Calculate fees on quote tokens
-//         uint256 protocolFeeAmount = (bidFourAmount + bidFiveAmount) * protocolFee / 1e5;
-//         uint256 referrerFeeAmount = (bidFourAmount + bidFiveAmount) * referrerFee / 1e5;
-//         uint256 totalFeeAmount = protocolFeeAmount + referrerFeeAmount;
-
-//         // Auction owner should have received quote tokens minus fees
-//         assertEq(
-//             quoteToken.balanceOf(auctionOwner),
-//             bidFourAmount + bidFiveAmount - totalFeeAmount,
-//             "auction owner: incorrect balance of quote token"
-//         );
-
-//         // Fees stored on auction house
-//         assertEq(
-//             quoteToken.balanceOf(address(auctionHouse)),
-//             totalFeeAmount,
-//             "auction house: incorrect balance of quote token"
-//         );
-
-//         // Fee records updated
-//         assertEq(
-//             auctionHouse.rewards(protocol, quoteToken), protocolFeeAmount, "incorrect protocol fees"
-//         );
-//         assertEq(
-//             auctionHouse.rewards(referrer, quoteToken), referrerFeeAmount, "incorrect referrer fees"
-//         );
-
-//         // Check prefunding amount
-//         (,,,,,,,,, uint256 lotPrefunding) = auctionHouse.lotRouting(lotId);
-//         assertEq(lotPrefunding, 0, "mismatch on prefunding");
-//     }
-
-//     function test_lessThanCapacity()
-//         external
-//         givenLotHasStarted
-//         givenLotHasBidsLessThanCapacity
-//         givenLotHasConcluded
-//         givenLotHasDecrypted
-//     {
-//         // Attempt to settle the lot
-//         auctionHouse.settle(lotId);
-
-//         // Check base token balances
-//         assertEq(baseToken.balanceOf(bidderOne), 0, "bidderOne: incorrect balance of base token");
-//         assertEq(
-//             baseToken.balanceOf(recipientOne),
-//             bidOneAmountOut,
-//             "recipientOne: incorrect balance of base token"
-//         );
-//         assertEq(baseToken.balanceOf(bidderTwo), 0, "bidderTwo: incorrect balance of base token");
-//         assertEq(
-//             baseToken.balanceOf(recipientTwo), 0, "recipientTwo: incorrect balance of base token"
-//         );
-//         assertEq(
-//             baseToken.balanceOf(auctionOwner),
-//             _lotCapacity - bidOneAmountOut,
-//             "auction owner: incorrect balance of base token"
-//         ); // Returned remaining base tokens
-//         assertEq(
-//             baseToken.balanceOf(address(auctionHouse)),
-//             0,
-//             "auctionHouse: incorrect balance of base token"
-//         );
-
-//         // Check quote token balances
-//         assertEq(quoteToken.balanceOf(bidderOne), 0, "bidderOne: incorrect balance of quote token");
-//         assertEq(quoteToken.balanceOf(bidderTwo), 0, "bidderTwo: incorrect balance of quote token");
-
-//         // Calculate fees on quote tokens
-//         uint256 protocolFeeAmount = (bidOneAmount + 0) * protocolFee / 1e5;
-//         uint256 referrerFeeAmount = (bidOneAmount + 0) * referrerFee / 1e5;
-//         uint256 totalFeeAmount = protocolFeeAmount + referrerFeeAmount;
-
-//         // Auction owner should have received quote tokens minus fees
-//         assertEq(
-//             quoteToken.balanceOf(auctionOwner),
-//             bidOneAmount + 0 - totalFeeAmount,
-//             "auction owner: incorrect balance of quote token"
-//         );
-
-//         // Fees stored on auction house
-//         assertEq(
-//             quoteToken.balanceOf(address(auctionHouse)),
-//             totalFeeAmount,
-//             "auction house: incorrect balance of quote token"
-//         );
-
-//         // Fee records updated
-//         assertEq(
-//             auctionHouse.rewards(protocol, quoteToken), protocolFeeAmount, "incorrect protocol fees"
-//         );
-//         assertEq(
-//             auctionHouse.rewards(referrer, quoteToken), referrerFeeAmount, "incorrect referrer fees"
-//         );
-
-//         // Check prefunding amount
-//         (,,,,,,,,, uint256 lotPrefunding) = auctionHouse.lotRouting(lotId);
-//         assertEq(lotPrefunding, 0, "mismatch on prefunding");
-//     }
-
-//     function test_lessThanCapacity_quoteTokenDecimalsLarger()
-//         external
-//         givenLotHasDecimals(17, 13)
-//         givenLotHasStarted
-//         givenLotHasBidsLessThanCapacity
-//         givenLotHasConcluded
-//         givenLotHasDecrypted
-//     {
-//         // Attempt to settle the lot
-//         auctionHouse.settle(lotId);
-
-//         // Check base token balances
-//         assertEq(baseToken.balanceOf(bidderOne), 0, "bidderOne: incorrect balance of base token");
-//         assertEq(
-//             baseToken.balanceOf(recipientOne),
-//             bidOneAmountOut,
-//             "recipientOne: incorrect balance of base token"
-//         );
-//         assertEq(baseToken.balanceOf(bidderTwo), 0, "bidderTwo: incorrect balance of base token");
-//         assertEq(
-//             baseToken.balanceOf(recipientTwo), 0, "recipientTwo: incorrect balance of base token"
-//         );
-//         assertEq(
-//             baseToken.balanceOf(auctionOwner),
-//             _lotCapacity - bidOneAmountOut,
-//             "auction owner: incorrect balance of base token"
-//         ); // Returned remaining base tokens
-//         assertEq(
-//             baseToken.balanceOf(address(auctionHouse)),
-//             0,
-//             "auctionHouse: incorrect balance of base token"
-//         );
-
-//         // Check quote token balances
-//         assertEq(quoteToken.balanceOf(bidderOne), 0, "bidderOne: incorrect balance of quote token");
-//         assertEq(quoteToken.balanceOf(bidderTwo), 0, "bidderTwo: incorrect balance of quote token");
-
-//         // Calculate fees on quote tokens
-//         uint256 protocolFeeAmount = (bidOneAmount + 0) * protocolFee / 1e5;
-//         uint256 referrerFeeAmount = (bidOneAmount + 0) * referrerFee / 1e5;
-//         uint256 totalFeeAmount = protocolFeeAmount + referrerFeeAmount;
-
-//         // Auction owner should have received quote tokens minus fees
-//         assertEq(
-//             quoteToken.balanceOf(auctionOwner),
-//             bidOneAmount + 0 - totalFeeAmount,
-//             "auction owner: incorrect balance of quote token"
-//         );
-
-//         // Fees stored on auction house
-//         assertEq(
-//             quoteToken.balanceOf(address(auctionHouse)),
-//             totalFeeAmount,
-//             "auction house: incorrect balance of quote token"
-//         );
-
-//         // Fee records updated
-//         assertEq(
-//             auctionHouse.rewards(protocol, quoteToken), protocolFeeAmount, "incorrect protocol fees"
-//         );
-//         assertEq(
-//             auctionHouse.rewards(referrer, quoteToken), referrerFeeAmount, "incorrect referrer fees"
-//         );
-
-//         // Check prefunding amount
-//         (,,,,,,,,, uint256 lotPrefunding) = auctionHouse.lotRouting(lotId);
-//         assertEq(lotPrefunding, 0, "mismatch on prefunding");
-//     }
-
-//     function test_lessThanCapacity_quoteTokenDecimalsSmaller()
-//         external
-//         givenLotHasDecimals(13, 17)
-//         givenLotHasStarted
-//         givenLotHasBidsLessThanCapacity
-//         givenLotHasConcluded
-//         givenLotHasDecrypted
-//     {
-//         // Attempt to settle the lot
-//         auctionHouse.settle(lotId);
-
-//         // Check base token balances
-//         assertEq(baseToken.balanceOf(bidderOne), 0, "bidderOne: incorrect balance of base token");
-//         assertEq(
-//             baseToken.balanceOf(recipientOne),
-//             bidOneAmountOut,
-//             "recipientOne: incorrect balance of base token"
-//         );
-//         assertEq(baseToken.balanceOf(bidderTwo), 0, "bidderTwo: incorrect balance of base token");
-//         assertEq(
-//             baseToken.balanceOf(recipientTwo), 0, "recipientTwo: incorrect balance of base token"
-//         );
-//         assertEq(
-//             baseToken.balanceOf(auctionOwner),
-//             _lotCapacity - bidOneAmountOut,
-//             "auction owner: incorrect balance of base token"
-//         ); // Returned remaining base tokens
-//         assertEq(
-//             baseToken.balanceOf(address(auctionHouse)),
-//             0,
-//             "auctionHouse: incorrect balance of base token"
-//         );
-
-//         // Check quote token balances
-//         assertEq(quoteToken.balanceOf(bidderOne), 0, "bidderOne: incorrect balance of quote token");
-//         assertEq(quoteToken.balanceOf(bidderTwo), 0, "bidderTwo: incorrect balance of quote token");
-
-//         // Calculate fees on quote tokens
-//         uint256 protocolFeeAmount = (bidOneAmount + 0) * protocolFee / 1e5;
-//         uint256 referrerFeeAmount = (bidOneAmount + 0) * referrerFee / 1e5;
-//         uint256 totalFeeAmount = protocolFeeAmount + referrerFeeAmount;
-
-//         // Auction owner should have received quote tokens minus fees
-//         assertEq(
-//             quoteToken.balanceOf(auctionOwner),
-//             bidOneAmount + 0 - totalFeeAmount,
-//             "auction owner: incorrect balance of quote token"
-//         );
-
-//         // Fees stored on auction house
-//         assertEq(
-//             quoteToken.balanceOf(address(auctionHouse)),
-//             totalFeeAmount,
-//             "auction house: incorrect balance of quote token"
-//         );
-
-//         // Fee records updated
-//         assertEq(
-//             auctionHouse.rewards(protocol, quoteToken), protocolFeeAmount, "incorrect protocol fees"
-//         );
-//         assertEq(
-//             auctionHouse.rewards(referrer, quoteToken), referrerFeeAmount, "incorrect referrer fees"
-//         );
-
-//         // Check prefunding amount
-//         (,,,,,,,,, uint256 lotPrefunding) = auctionHouse.lotRouting(lotId);
-//         assertEq(lotPrefunding, 0, "mismatch on prefunding");
-//     }
-
-//     // [X] given there is no protocol fee set for the auction type
-//     //  [X] no protocol fee is accrued
-//     // [X] the protocol fee is accrued
-
-//     modifier givenProtocolFeeIsNotSet() {
-//         auctionHouse.setFee(auctionType, FeeManager.FeeType.Protocol, 0);
-//         _;
-//     }
-
-//     function test_givenProtocolFeeIsNotSet()
-//         external
-//         givenProtocolFeeIsNotSet
-//         givenLotHasStarted
-//         givenLotHasSufficientBids
-//         givenLotHasConcluded
-//         givenLotHasDecrypted
-//     {
-//         // Attempt to settle the lot
-//         auctionHouse.settle(lotId);
-
-//         // Calculate fees on quote tokens
-//         uint256 protocolFeeAmount = (bidOneAmount + bidTwoAmount) * 0 / 1e5;
-//         uint256 referrerFeeAmount = (bidOneAmount + bidTwoAmount) * referrerFee / 1e5;
-//         uint256 totalFeeAmount = protocolFeeAmount + referrerFeeAmount;
-
-//         // Auction owner should have received quote tokens minus fees
-//         assertEq(
-//             quoteToken.balanceOf(auctionOwner),
-//             bidOneAmount + bidTwoAmount - totalFeeAmount,
-//             "auction owner: incorrect balance of quote token"
-//         );
-
-//         // Fees stored on auction house
-//         assertEq(
-//             quoteToken.balanceOf(address(auctionHouse)),
-//             totalFeeAmount,
-//             "auction house: incorrect balance of quote token"
-//         );
-
-//         // Fee records updated
-//         assertEq(
-//             auctionHouse.rewards(protocol, quoteToken), protocolFeeAmount, "incorrect protocol fees"
-//         );
-//         assertEq(
-//             auctionHouse.rewards(referrer, quoteToken), referrerFeeAmount, "incorrect referrer fees"
-//         );
-//     }
-
-//     function test_givenProtocolFeeIsSet()
-//         external
-//         givenLotHasStarted
-//         givenLotHasSufficientBids
-//         givenLotHasConcluded
-//         givenLotHasDecrypted
-//     {
-//         // Attempt to settle the lot
-//         auctionHouse.settle(lotId);
-
-//         // Calculate fees on quote tokens
-//         uint256 protocolFeeAmount = (bidOneAmount + bidTwoAmount) * protocolFee / 1e5;
-//         uint256 referrerFeeAmount = (bidOneAmount + bidTwoAmount) * referrerFee / 1e5;
-//         uint256 totalFeeAmount = protocolFeeAmount + referrerFeeAmount;
-
-//         // Auction owner should have received quote tokens minus fees
-//         assertEq(
-//             quoteToken.balanceOf(auctionOwner),
-//             bidOneAmount + bidTwoAmount - totalFeeAmount,
-//             "auction owner: incorrect balance of quote token"
-//         );
-
-//         // Fees stored on auction house
-//         assertEq(
-//             quoteToken.balanceOf(address(auctionHouse)),
-//             totalFeeAmount,
-//             "auction house: incorrect balance of quote token"
-//         );
-
-//         // Fee records updated
-//         assertEq(
-//             auctionHouse.rewards(protocol, quoteToken), protocolFeeAmount, "incorrect protocol fees"
-//         );
-//         assertEq(
-//             auctionHouse.rewards(referrer, quoteToken), referrerFeeAmount, "incorrect referrer fees"
-//         );
-//     }
-
-//     // [X] given there is no referrer fee set for the auction type
-//     //  [X] no referrer fee is accrued
-//     // [X] the referrer fee is accrued
-
-//     modifier givenReferrerFeeIsNotSet() {
-//         auctionHouse.setFee(auctionType, FeeManager.FeeType.Referrer, 0);
-//         _;
-//     }
-
-//     function test_givenReferrerFeeIsNotSet()
-//         external
-//         givenReferrerFeeIsNotSet
-//         givenLotHasStarted
-//         givenLotHasSufficientBids
-//         givenLotHasConcluded
-//         givenLotHasDecrypted
-//     {
-//         // Attempt to settle the lot
-//         auctionHouse.settle(lotId);
-
-//         // Calculate fees on quote tokens
-//         uint256 protocolFeeAmount = (bidOneAmount + bidTwoAmount) * protocolFee / 1e5;
-//         uint256 referrerFeeAmount = (bidOneAmount + bidTwoAmount) * 0 / 1e5;
-//         uint256 totalFeeAmount = protocolFeeAmount + referrerFeeAmount;
-
-//         // Auction owner should have received quote tokens minus fees
-//         assertEq(
-//             quoteToken.balanceOf(auctionOwner),
-//             bidOneAmount + bidTwoAmount - totalFeeAmount,
-//             "auction owner: incorrect balance of quote token"
-//         );
-
-//         // Fees stored on auction house
-//         assertEq(
-//             quoteToken.balanceOf(address(auctionHouse)),
-//             totalFeeAmount,
-//             "auction house: incorrect balance of quote token"
-//         );
-
-//         // Fee records updated
-//         assertEq(
-//             auctionHouse.rewards(protocol, quoteToken), protocolFeeAmount, "incorrect protocol fees"
-//         );
-//         assertEq(
-//             auctionHouse.rewards(referrer, quoteToken), referrerFeeAmount, "incorrect referrer fees"
-//         );
-//     }
-
-//     function test_givenReferrerFeeIsSet()
-//         external
-//         givenLotHasStarted
-//         givenLotHasSufficientBids
-//         givenLotHasConcluded
-//         givenLotHasDecrypted
-//     {
-//         // Attempt to settle the lot
-//         auctionHouse.settle(lotId);
-
-//         // Calculate fees on quote tokens
-//         uint256 protocolFeeAmount = (bidOneAmount + bidTwoAmount) * protocolFee / 1e5;
-//         uint256 referrerFeeAmount = (bidOneAmount + bidTwoAmount) * referrerFee / 1e5;
-//         uint256 totalFeeAmount = protocolFeeAmount + referrerFeeAmount;
-
-//         // Auction owner should have received quote tokens minus fees
-//         assertEq(
-//             quoteToken.balanceOf(auctionOwner),
-//             bidOneAmount + bidTwoAmount - totalFeeAmount,
-//             "auction owner: incorrect balance of quote token"
-//         );
-
-//         // Fees stored on auction house
-//         assertEq(
-//             quoteToken.balanceOf(address(auctionHouse)),
-//             totalFeeAmount,
-//             "auction house: incorrect balance of quote token"
-//         );
-
-//         // Fee records updated
-//         assertEq(
-//             auctionHouse.rewards(protocol, quoteToken), protocolFeeAmount, "incorrect protocol fees"
-//         );
-//         assertEq(
-//             auctionHouse.rewards(referrer, quoteToken), referrerFeeAmount, "incorrect referrer fees"
-//         );
-//     }
-
-//     // [ ] given there is a curator set
-//     //  [ ] given the payout token is a derivative
-//     //   [ ] derivative is minted and transferred to the curator
-//     //  [X] payout token is transferred to the curator
-
-//     modifier givenOwnerHasBaseTokenBalance(uint256 amount_) {
-//         baseToken.mint(auctionOwner, amount_);
-
-//         // Approve spending
-//         vm.prank(auctionOwner);
-//         baseToken.approve(address(auctionHouse), amount_);
-//         _;
-//     }
-
-//     modifier givenCuratorHasApproved() {
-//         // Set the curator fee
-//         vm.prank(curator);
-//         auctionHouse.setCuratorFee(auctionType, CURATOR_FEE);
-
-//         vm.prank(curator);
-//         auctionHouse.curate(lotId);
-//         _;
-//     }
-
-//     function test_givenCuratorHasApproved()
-//         external
-//         givenOwnerHasBaseTokenBalance(curatorMaxFee)
-//         givenCuratorHasApproved
-//         givenLotHasStarted
-//         givenLotHasSufficientBids
-//         givenLotHasConcluded
-//         givenLotHasDecrypted
-//     {
-//         // Attempt to settle the lot
-//         auctionHouse.settle(lotId);
-
-//         // Calculate fees for curator
-//         uint256 curatorFeeAmount = (bidOneAmountOut + bidTwoAmountOut) * CURATOR_FEE / 1e5;
-
-//         // Curator should have received base tokens
-//         assertEq(
-//             baseToken.balanceOf(curator),
-//             curatorFeeAmount,
-//             "curator: incorrect balance of base token"
-//         );
-
-//         // Fees not stored on auction house
-//         assertEq(
-//             baseToken.balanceOf(address(auctionHouse)),
-//             0,
-//             "auction house: incorrect balance of base token"
-//         );
-
-//         // Fee record not set
-//         assertEq(auctionHouse.rewards(curator, quoteToken), 0, "incorrect curator fees");
-//         assertEq(auctionHouse.rewards(curator, baseToken), 0, "incorrect curator fees");
-
-//         // Check prefunding amount
-//         (,,,,,,,,, uint256 lotPrefunding) = auctionHouse.lotRouting(lotId);
-//         assertEq(lotPrefunding, 0, "mismatch on prefunding");
-//     }
-
-//     // Requires changing the minBidPercent in the LSBBA contract to 10 (0.01%)
-//     // function test_settleBidLimit() public {
-//     //     // Warp to the start of the auction
-//     //     vm.warp(lotStart);
-
-//     //     uint256 minAmount = (LOT_CAPACITY * 250 * MINIMUM_PRICE) / (1e5 * 1e18);
-//     //     uint256 minAmountOut = minAmount * 1e18 / MINIMUM_PRICE;
-
-//     //     console2.log("Minimum amount", minAmount);
-//     //     console2.log("Minimum amount out", minAmountOut);
-//     //     console2.log("Start base token balance", baseToken.balanceOf(bidderOne));
-
-//     //     // Mint tokens to bidder and approve auction house
-//     //     quoteToken.mint(bidderOne, minAmount * 10_000);
-//     //     vm.prank(bidderOne);
-//     //     quoteToken.approve(address(auctionHouse), minAmount * 10_000);
-
-//     //     // Submit a large number of small bids to the auction
-//     //     // uint256 gasBefore = gasleft();
-//     //     for (uint256 i = 0; i < 10_000; i++) {
-//     //         (, LocalSealedBidBatchAuction.Decrypt memory decrypt) =
-//     //             _createBid(bidderOne, bidderOne, minAmount, minAmountOut);
-//     //         // minAmountOut -= 1e9; // slowly increase price
-//     //         decryptedBids.push(decrypt);
-//     //     }
-//     //     // uint256 gasUsed = gasBefore - gasleft();
-//     //     // console2.log("Gas used by bids", gasUsed);
-//     //     // console2.log("Gas per bid", gasUsed / 10000);
-
-//     //     // Warp past conclusion
-//     //     vm.warp(lotConclusion + 1);
-
-//     //     // Decrypt the bids (do in increments of 100 bids)
-//     //     uint256 gasBefore = gasleft();
-//     //     for (uint256 i = 0; i < 100; i++) {
-//     //         LocalSealedBidBatchAuction.Decrypt[] memory batch =
-//     //             new LocalSealedBidBatchAuction.Decrypt[](100);
-//     //         for (uint256 j = 0; j < 100; j++) {
-//     //             batch[j] = decryptedBids[i * 100 + j];
-//     //         }
-//     //         auctionModule.decryptAndSortBids(lotId, batch);
-//     //     }
-//     //     uint256 gasUsed = gasBefore - gasleft();
-//     //     console2.log("Gas used by decryption", gasUsed);
-//     //     console2.log("Gas per decrypt call", gasUsed / 100);
-
-//     //     // Attempt to settle the lot
-//     //     gasBefore = gasleft();
-//     //     auctionHouse.settle(lotId);
-//     //     console2.log("Gas used by settlement", gasBefore - gasleft());
-
-//     //     console2.log("End base token balance", baseToken.balanceOf(bidderOne));
-//     // }
-// }
-
-// TODO create mock settlement?
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity 0.8.19;
+
+import {Auction, AuctionModule} from "src/modules/Auction.sol";
+import {Auctioneer} from "src/bases/Auctioneer.sol";
+
+import {AuctionHouseTest} from "test/AuctionHouse/AuctionHouseTest.sol";
+
+contract SettleTest is AuctionHouseTest {
+    uint256 internal constant _BID_AMOUNT_TOTAL = 20e18;
+
+    uint256 internal _expectedOwnerQuoteTokenBalance;
+    uint256 internal _expectedBidderQuoteTokenBalance;
+    uint256 internal _expectedAuctionHouseQuoteTokenBalance;
+
+    uint256 internal _expectedOwnerBaseTokenBalance;
+    uint256 internal _expectedBidderBaseTokenBalance;
+    uint256 internal _expectedAuctionHouseBaseTokenBalance;
+    uint256 internal _expectedCuratorBaseTokenBalance;
+
+    uint256 internal _expectedProtocolFeesAllocated;
+    uint256 internal _expectedReferrerFeesAllocated;
+
+    // ======== Modifiers ======== //
+
+    function _assertBaseTokenBalances() internal {
+        // Check base token balances
+        assertEq(
+            _baseToken.balanceOf(address(_auctionHouse)),
+            _expectedAuctionHouseBaseTokenBalance,
+            "base token: auction house balance"
+        );
+        assertEq(
+            _baseToken.balanceOf(_auctionOwner),
+            _expectedOwnerBaseTokenBalance,
+            "base token: owner balance"
+        );
+        assertEq(
+            _baseToken.balanceOf(_bidder),
+            _expectedBidderBaseTokenBalance,
+            "base token: bidder balance"
+        );
+        assertEq(_baseToken.balanceOf(_REFERRER), 0, "base token: referrer balance");
+        assertEq(
+            _baseToken.balanceOf(_CURATOR),
+            _expectedCuratorBaseTokenBalance,
+            "base token: curator balance"
+        );
+        assertEq(_baseToken.balanceOf(_PROTOCOL), 0, "base token: protocol balance");
+    }
+
+    function _assertQuoteTokenBalances() internal {
+        // Check quote token balances
+        assertEq(
+            _quoteToken.balanceOf(address(_auctionHouse)),
+            _expectedAuctionHouseQuoteTokenBalance,
+            "quote token: auction house balance"
+        );
+        assertEq(
+            _quoteToken.balanceOf(_auctionOwner),
+            _expectedOwnerQuoteTokenBalance,
+            "quote token: owner balance"
+        );
+        assertEq(
+            _quoteToken.balanceOf(_bidder),
+            _expectedBidderQuoteTokenBalance,
+            "quote token: bidder balance"
+        );
+        assertEq(_quoteToken.balanceOf(_REFERRER), 0, "quote token: referrer balance");
+        assertEq(_quoteToken.balanceOf(_CURATOR), 0, "quote token: curator balance");
+        assertEq(_quoteToken.balanceOf(_PROTOCOL), 0, "quote token: protocol balance");
+    }
+
+    function _assertAccruedFees() internal {
+        // Check accrued quote token fees
+        assertEq(
+            _auctionHouse.rewards(_REFERRER, _quoteToken),
+            _expectedReferrerFeesAllocated,
+            "referrer fee"
+        );
+        assertEq(_auctionHouse.rewards(_CURATOR, _quoteToken), 0, "curator fee"); // Always 0
+        assertEq(
+            _auctionHouse.rewards(_PROTOCOL, _quoteToken),
+            _expectedProtocolFeesAllocated,
+            "protocol fee"
+        );
+    }
+
+    function _mockSettlement(
+        Auction.Settlement memory settlement_,
+        bytes memory auctionOutput_
+    ) internal {
+        vm.mockCall(
+            address(_auctionModule),
+            abi.encodeWithSelector(AuctionModule.settle.selector, _lotId),
+            abi.encode(settlement_, auctionOutput_)
+        );
+    }
+
+    modifier givenAuctionModuleReverts() {
+        vm.mockCallRevert(
+            address(_auctionModule),
+            abi.encodeWithSelector(AuctionModule.settle.selector, _lotId),
+            "revert"
+        );
+        _;
+    }
+
+    modifier givenLotIsPrefunded() {
+        _batchAuctionModule.setRequiredPrefunding(true);
+        _;
+    }
+
+    modifier givenLotHasPartialFill() {
+        uint256 totalIn = _BID_AMOUNT_TOTAL;
+        uint256 totalOut = _LOT_CAPACITY;
+
+        // Total bid was 4e18, since 2e18 of quote token = 1e18 of base token
+        uint256 pfRefundAmount = 2e18;
+        uint256 pfPayoutAmount = 1e18;
+        uint256 pfFilledAmount = 4e18 - pfRefundAmount;
+        uint256 totalInFilled = totalIn - pfRefundAmount;
+
+        Auction.Settlement memory settlement = Auction.Settlement({
+            totalIn: totalIn,
+            totalOut: totalOut,
+            pfBidder: _bidder,
+            pfReferrer: _REFERRER,
+            pfRefund: pfRefundAmount,
+            pfPayout: pfPayoutAmount,
+            auctionOutput: ""
+        });
+        _mockSettlement(settlement, "");
+
+        // Calculate fees
+        uint256 totalProtocolFees = (totalInFilled * _protocolFeePercentActual) / 1e5;
+        uint256 totalReferrerFees = (totalInFilled * _referrerFeePercentActual) / 1e5;
+        uint256 totalCuratorFees =
+            _curatorApproved ? (totalOut * _curatorFeePercentActual) / 1e5 : 0;
+        uint256 prefundedCuratorFees = _curatorApproved ? _curatorMaxPotentialFee : 0;
+        _expectedProtocolFeesAllocated = (pfFilledAmount * _protocolFeePercentActual) / 1e5;
+        _expectedReferrerFeesAllocated = (pfFilledAmount * _referrerFeePercentActual) / 1e5;
+
+        // Set up expected values
+        // Quote token
+        _expectedOwnerQuoteTokenBalance =
+            totalIn - totalProtocolFees - totalReferrerFees - pfRefundAmount;
+        _expectedBidderQuoteTokenBalance = pfRefundAmount;
+        _expectedAuctionHouseQuoteTokenBalance = totalProtocolFees + totalReferrerFees;
+        assertEq(
+            _expectedOwnerQuoteTokenBalance + _expectedBidderQuoteTokenBalance
+                + _expectedAuctionHouseQuoteTokenBalance,
+            totalIn,
+            "total quote token balance mismatch"
+        );
+
+        // Base token
+        _expectedOwnerBaseTokenBalance = 0;
+        _expectedBidderBaseTokenBalance = pfPayoutAmount;
+        _expectedAuctionHouseBaseTokenBalance =
+            _LOT_CAPACITY + prefundedCuratorFees - pfPayoutAmount - totalCuratorFees;
+        _expectedCuratorBaseTokenBalance = totalCuratorFees;
+        assertEq(
+            _expectedOwnerBaseTokenBalance + _expectedBidderBaseTokenBalance
+                + _expectedAuctionHouseBaseTokenBalance + _expectedCuratorBaseTokenBalance,
+            _LOT_CAPACITY + prefundedCuratorFees,
+            "total base token balance mismatch"
+        );
+        _;
+    }
+
+    modifier givenLotIsUnderCapacity() {
+        uint256 totalIn = _BID_AMOUNT_TOTAL;
+        uint256 totalOut = 5e18; // 50% filled
+
+        Auction.Settlement memory settlement = Auction.Settlement({
+            totalIn: totalIn,
+            totalOut: totalOut,
+            pfBidder: address(0),
+            pfReferrer: address(0),
+            pfRefund: 0,
+            pfPayout: 0,
+            auctionOutput: ""
+        });
+        _mockSettlement(settlement, "");
+
+        // Calculate fees
+        uint256 totalProtocolFees = (totalIn * _protocolFeePercentActual) / 1e5;
+        uint256 totalReferrerFees = (totalIn * _referrerFeePercentActual) / 1e5;
+        uint256 totalCuratorFees =
+            _curatorApproved ? (totalOut * _curatorFeePercentActual) / 1e5 : 0;
+        uint256 prefundedCuratorFees = _curatorApproved ? _curatorMaxPotentialFee : 0;
+        _expectedProtocolFeesAllocated = 0; // Will be allocated at claim time
+        _expectedReferrerFeesAllocated = 0; // Will be allocated at claim time
+
+        // Set up expected values
+        // Quote token
+        _expectedOwnerQuoteTokenBalance = totalIn - totalProtocolFees - totalReferrerFees;
+        _expectedBidderQuoteTokenBalance = 0;
+        _expectedAuctionHouseQuoteTokenBalance = totalProtocolFees + totalReferrerFees;
+        assertEq(
+            _expectedOwnerQuoteTokenBalance + _expectedBidderQuoteTokenBalance
+                + _expectedAuctionHouseQuoteTokenBalance,
+            totalIn,
+            "total quote token balance mismatch"
+        );
+
+        // Base token
+        _expectedOwnerBaseTokenBalance =
+            _LOT_CAPACITY + prefundedCuratorFees - totalOut - totalCuratorFees; // Capacity and unused curator fees returned to owner
+        _expectedBidderBaseTokenBalance = 0; // To be claimed by bidder
+        _expectedAuctionHouseBaseTokenBalance = totalOut; // To be claimed by bidders
+        _expectedCuratorBaseTokenBalance = totalCuratorFees;
+        assertEq(
+            _expectedOwnerBaseTokenBalance + _expectedBidderBaseTokenBalance
+                + _expectedAuctionHouseBaseTokenBalance + _expectedCuratorBaseTokenBalance,
+            _LOT_CAPACITY + prefundedCuratorFees,
+            "total base token balance mismatch"
+        );
+        _;
+    }
+
+    modifier givenLotCapacityIsFilled() {
+        uint256 totalIn = _BID_AMOUNT_TOTAL;
+        uint256 totalOut = _LOT_CAPACITY;
+
+        Auction.Settlement memory settlement = Auction.Settlement({
+            totalIn: totalIn,
+            totalOut: totalOut,
+            pfBidder: address(0),
+            pfReferrer: address(0),
+            pfRefund: 0,
+            pfPayout: 0,
+            auctionOutput: ""
+        });
+        _mockSettlement(settlement, "");
+
+        // Calculate fees
+        uint256 totalProtocolFees = (totalIn * _protocolFeePercentActual) / 1e5;
+        uint256 totalReferrerFees = (totalIn * _referrerFeePercentActual) / 1e5;
+        uint256 totalCuratorFees =
+            _curatorApproved ? (totalOut * _curatorFeePercentActual) / 1e5 : 0;
+        uint256 prefundedCuratorFees = _curatorApproved ? _curatorMaxPotentialFee : 0;
+        _expectedProtocolFeesAllocated = 0; // Will be allocated at claim time
+        _expectedReferrerFeesAllocated = 0; // Will be allocated at claim time
+
+        // Set up expected values
+        // Quote token
+        _expectedOwnerQuoteTokenBalance = totalIn - totalProtocolFees - totalReferrerFees;
+        _expectedBidderQuoteTokenBalance = 0;
+        _expectedAuctionHouseQuoteTokenBalance = totalProtocolFees + totalReferrerFees;
+        assertEq(
+            _expectedOwnerQuoteTokenBalance + _expectedBidderQuoteTokenBalance
+                + _expectedAuctionHouseQuoteTokenBalance,
+            totalIn,
+            "total quote token balance mismatch"
+        );
+
+        // Base token
+        _expectedOwnerBaseTokenBalance = 0; // Unused curator fees returned to owner
+        _expectedBidderBaseTokenBalance = 0; // To be claimed by bidder
+        _expectedAuctionHouseBaseTokenBalance = _LOT_CAPACITY; // To be claimed by bidders
+        _expectedCuratorBaseTokenBalance = totalCuratorFees;
+        assertEq(
+            _expectedOwnerBaseTokenBalance + _expectedBidderBaseTokenBalance
+                + _expectedAuctionHouseBaseTokenBalance + _expectedCuratorBaseTokenBalance,
+            _LOT_CAPACITY + prefundedCuratorFees,
+            "total base token balance mismatch"
+        );
+        _;
+    }
+
+    modifier givenLotDoesNotSettle() {
+        uint256 totalIn = 0;
+        uint256 totalOut = 0;
+
+        Auction.Settlement memory settlement = Auction.Settlement({
+            totalIn: totalIn,
+            totalOut: totalOut,
+            pfBidder: address(0),
+            pfReferrer: address(0),
+            pfRefund: 0,
+            pfPayout: 0,
+            auctionOutput: ""
+        });
+        _mockSettlement(settlement, "");
+
+        // Calculate fees
+        uint256 totalProtocolFees = 0;
+        uint256 totalReferrerFees = 0;
+        uint256 totalCuratorFees = 0;
+        uint256 prefundedCuratorFees = _curatorApproved ? _curatorMaxPotentialFee : 0;
+        _expectedProtocolFeesAllocated = 0;
+        _expectedReferrerFeesAllocated = 0;
+
+        // Set up expected values
+        // Quote token
+        _expectedOwnerQuoteTokenBalance = 0; // Did not settle, no payment
+        _expectedBidderQuoteTokenBalance = 0; // To be claimed
+        _expectedAuctionHouseQuoteTokenBalance = _BID_AMOUNT_TOTAL; // To be claimed by bidders
+        assertEq(
+            _expectedOwnerQuoteTokenBalance + _expectedBidderQuoteTokenBalance
+                + _expectedAuctionHouseQuoteTokenBalance,
+            _BID_AMOUNT_TOTAL,
+            "total quote token balance mismatch"
+        );
+
+        // Base token
+        _expectedOwnerBaseTokenBalance = _LOT_CAPACITY + prefundedCuratorFees;
+        _expectedBidderBaseTokenBalance = 0;
+        _expectedAuctionHouseBaseTokenBalance = 0; // Refunded to owner
+        _expectedCuratorBaseTokenBalance = 0;
+        assertEq(
+            _expectedOwnerBaseTokenBalance + _expectedBidderBaseTokenBalance
+                + _expectedAuctionHouseBaseTokenBalance + _expectedCuratorBaseTokenBalance,
+            _LOT_CAPACITY + prefundedCuratorFees,
+            "total base token balance mismatch"
+        );
+        _;
+    }
+
+    modifier givenAuctionHouseHasQuoteTokenBalance(uint256 amount_) {
+        _quoteToken.mint(address(_auctionHouse), amount_);
+        _;
+    }
+
+    // ======== Tests ======== //
+
+    // [X] when the lot id is invalid
+    //  [X] it reverts
+    // [X] when the auction module reverts
+    //  [X] it reverts
+    // [ ] when the auction does not settle
+    //  [ ] when prefunding is disabled
+    //   [ ] it does nothing
+    //  [X] when curated is true
+    //   [X] it transfers the capacity and curator fee to the owner
+    //  [X] it transfer the capacity to the owner
+    // [X] when there is a partial fill
+    //  [X] it allocates fees, updates prefunding, transfers the partial payment and refund to the bidder, transfers the payment to the owner, and allocates fees to the curator
+    // [X] when capacity is not filled
+    //  [X] when curated is true
+    //   [X] it transfers the remaining capacity back to the owner, and pays the curator fee based on the utilised capacity
+    //  [X] it transfers the remaining capacity back to the owner
+    // [X] when protocol fees are not set
+    //  [X] it transfers the entire payment - referrer fees to the owner
+    // [X] when referrer fees are not set
+    //  [X] it transfers the entire payment - protocol fees to the owner
+    // [X] when protocol and referrer fees are not set
+    //  [X] it transfers the entire payment to the owner
+    // [X] when curated is true
+    //  [X] it transfers the curator fee to the curator
+    // [X] it transfers the payment (minus protocol and referrer fees) to the owner
+
+    function test_whenLotIdIsInvalid_reverts() public {
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(Auctioneer.InvalidLotId.selector, _lotId);
+        vm.expectRevert(err);
+
+        // Call function
+        _auctionHouse.settle(_lotId);
+    }
+
+    function test_whenAuctionModuleReverts()
+        public
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenCuratorIsSet
+        givenLotIsPrefunded
+        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenLotIsCreated
+        givenAuctionModuleReverts
+    {
+        // Expect revert
+        vm.expectRevert("revert");
+
+        // Call function
+        _auctionHouse.settle(_lotId);
+    }
+
+    function test_notSettled_curated()
+        public
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenCuratorIsSet
+        givenLotIsPrefunded
+        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenLotIsCreated
+        givenCuratorMaxFeeIsSet
+        givenCuratorFeeIsSet
+        givenOwnerHasBaseTokenBalance(_curatorMaxPotentialFee)
+        givenOwnerHasBaseTokenAllowance(_curatorMaxPotentialFee)
+        givenCuratorHasApproved
+        givenProtocolFeeIsSet
+        givenReferrerFeeIsSet
+        givenLotDoesNotSettle
+        givenAuctionHouseHasQuoteTokenBalance(_BID_AMOUNT_TOTAL)
+    {
+        // Call function
+        _auctionHouse.settle(_lotId);
+
+        // Check balances
+        _assertBaseTokenBalances();
+        _assertQuoteTokenBalances();
+        _assertAccruedFees();
+    }
+
+    function test_notSettled_notCurated()
+        public
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenCuratorIsSet
+        givenLotIsPrefunded
+        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenLotIsCreated
+        givenCuratorMaxFeeIsSet
+        givenCuratorFeeIsSet
+        givenProtocolFeeIsSet
+        givenReferrerFeeIsSet
+        givenLotDoesNotSettle
+        givenAuctionHouseHasQuoteTokenBalance(_BID_AMOUNT_TOTAL)
+    {
+        // Call function
+        _auctionHouse.settle(_lotId);
+
+        // Check balances
+        _assertBaseTokenBalances();
+        _assertQuoteTokenBalances();
+        _assertAccruedFees();
+    }
+
+    function test_partialFill_notCurated()
+        public
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenLotIsPrefunded
+        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenLotIsCreated
+        givenProtocolFeeIsSet
+        givenReferrerFeeIsSet
+        givenLotHasPartialFill
+        givenAuctionHouseHasQuoteTokenBalance(_BID_AMOUNT_TOTAL)
+    {
+        // Call function
+        _auctionHouse.settle(_lotId);
+
+        // Check balances
+        _assertBaseTokenBalances();
+        _assertQuoteTokenBalances();
+        _assertAccruedFees();
+    }
+
+    function test_partialFill_curated()
+        public
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenCuratorIsSet
+        givenLotIsPrefunded
+        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenLotIsCreated
+        givenCuratorMaxFeeIsSet
+        givenCuratorFeeIsSet
+        givenOwnerHasBaseTokenBalance(_curatorMaxPotentialFee)
+        givenOwnerHasBaseTokenAllowance(_curatorMaxPotentialFee)
+        givenCuratorHasApproved
+        givenProtocolFeeIsSet
+        givenReferrerFeeIsSet
+        givenLotHasPartialFill
+        givenAuctionHouseHasQuoteTokenBalance(_BID_AMOUNT_TOTAL)
+    {
+        // Call function
+        _auctionHouse.settle(_lotId);
+
+        // Check balances
+        _assertBaseTokenBalances();
+        _assertQuoteTokenBalances();
+        _assertAccruedFees();
+    }
+
+    function test_underCapacity_curated()
+        public
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenCuratorIsSet
+        givenLotIsPrefunded
+        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenLotIsCreated
+        givenCuratorMaxFeeIsSet
+        givenCuratorFeeIsSet
+        givenOwnerHasBaseTokenBalance(_curatorMaxPotentialFee)
+        givenOwnerHasBaseTokenAllowance(_curatorMaxPotentialFee)
+        givenCuratorHasApproved
+        givenProtocolFeeIsSet
+        givenReferrerFeeIsSet
+        givenLotIsUnderCapacity
+        givenAuctionHouseHasQuoteTokenBalance(_BID_AMOUNT_TOTAL)
+    {
+        // Call function
+        _auctionHouse.settle(_lotId);
+
+        // Check balances
+        _assertBaseTokenBalances();
+        _assertQuoteTokenBalances();
+        _assertAccruedFees();
+    }
+
+    function test_underCapacity_notCurated()
+        public
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenCuratorIsSet
+        givenLotIsPrefunded
+        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenLotIsCreated
+        givenCuratorMaxFeeIsSet
+        givenCuratorFeeIsSet
+        givenProtocolFeeIsSet
+        givenReferrerFeeIsSet
+        givenLotIsUnderCapacity
+        givenAuctionHouseHasQuoteTokenBalance(_BID_AMOUNT_TOTAL)
+    {
+        // Call function
+        _auctionHouse.settle(_lotId);
+
+        // Check balances
+        _assertBaseTokenBalances();
+        _assertQuoteTokenBalances();
+        _assertAccruedFees();
+    }
+
+    function test_capacityFilled_notCurated()
+        public
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenLotIsPrefunded
+        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenLotIsCreated
+        givenProtocolFeeIsSet
+        givenReferrerFeeIsSet
+        givenLotCapacityIsFilled
+        givenAuctionHouseHasQuoteTokenBalance(_BID_AMOUNT_TOTAL)
+    {
+        // Call function
+        _auctionHouse.settle(_lotId);
+
+        // Check balances
+        _assertBaseTokenBalances();
+        _assertQuoteTokenBalances();
+        _assertAccruedFees();
+    }
+
+    function test_capacityFilled_curated()
+        public
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenCuratorIsSet
+        givenLotIsPrefunded
+        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenLotIsCreated
+        givenCuratorMaxFeeIsSet
+        givenCuratorFeeIsSet
+        givenOwnerHasBaseTokenBalance(_curatorMaxPotentialFee)
+        givenOwnerHasBaseTokenAllowance(_curatorMaxPotentialFee)
+        givenCuratorHasApproved
+        givenProtocolFeeIsSet
+        givenReferrerFeeIsSet
+        givenLotCapacityIsFilled
+        givenAuctionHouseHasQuoteTokenBalance(_BID_AMOUNT_TOTAL)
+    {
+        // Call function
+        _auctionHouse.settle(_lotId);
+
+        // Check balances
+        _assertBaseTokenBalances();
+        _assertQuoteTokenBalances();
+        _assertAccruedFees();
+    }
+
+    function test_capacityFilled_protocolFeeNotSet()
+        public
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenCuratorIsSet
+        givenLotIsPrefunded
+        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenLotIsCreated
+        givenCuratorMaxFeeIsSet
+        givenCuratorFeeIsSet
+        givenOwnerHasBaseTokenBalance(_curatorMaxPotentialFee)
+        givenOwnerHasBaseTokenAllowance(_curatorMaxPotentialFee)
+        givenCuratorHasApproved
+        givenReferrerFeeIsSet
+        givenLotCapacityIsFilled
+        givenAuctionHouseHasQuoteTokenBalance(_BID_AMOUNT_TOTAL)
+    {
+        // Call function
+        _auctionHouse.settle(_lotId);
+
+        // Check balances
+        _assertBaseTokenBalances();
+        _assertQuoteTokenBalances();
+        _assertAccruedFees();
+    }
+
+    function test_capacityFilled_referrerFeeNotSet()
+        public
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenCuratorIsSet
+        givenLotIsPrefunded
+        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenLotIsCreated
+        givenCuratorMaxFeeIsSet
+        givenCuratorFeeIsSet
+        givenOwnerHasBaseTokenBalance(_curatorMaxPotentialFee)
+        givenOwnerHasBaseTokenAllowance(_curatorMaxPotentialFee)
+        givenCuratorHasApproved
+        givenProtocolFeeIsSet
+        givenLotCapacityIsFilled
+        givenAuctionHouseHasQuoteTokenBalance(_BID_AMOUNT_TOTAL)
+    {
+        // Call function
+        _auctionHouse.settle(_lotId);
+
+        // Check balances
+        _assertBaseTokenBalances();
+        _assertQuoteTokenBalances();
+        _assertAccruedFees();
+    }
+
+    function test_capacityFilled_protocolFeeNotSet_referrerFeeNotSet()
+        public
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenCuratorIsSet
+        givenLotIsPrefunded
+        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenLotIsCreated
+        givenCuratorMaxFeeIsSet
+        givenCuratorFeeIsSet
+        givenOwnerHasBaseTokenBalance(_curatorMaxPotentialFee)
+        givenOwnerHasBaseTokenAllowance(_curatorMaxPotentialFee)
+        givenCuratorHasApproved
+        givenLotCapacityIsFilled
+        givenAuctionHouseHasQuoteTokenBalance(_BID_AMOUNT_TOTAL)
+    {
+        // Call function
+        _auctionHouse.settle(_lotId);
+
+        // Check balances
+        _assertBaseTokenBalances();
+        _assertQuoteTokenBalances();
+        _assertAccruedFees();
+    }
+
+    // TODO decimals
+}

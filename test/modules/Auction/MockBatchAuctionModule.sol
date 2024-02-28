@@ -37,6 +37,7 @@ contract MockBatchAuctionModule is AuctionModule {
     mapping(uint96 lotId => mapping(uint64 => bool)) public bidRefunded;
 
     mapping(uint96 => bool) public settled;
+    bool public requiresPrefunding;
 
     constructor(address _owner) AuctionModule(_owner) {
         minAuctionDuration = 1 days;
@@ -50,7 +51,13 @@ contract MockBatchAuctionModule is AuctionModule {
         return Type.Auction;
     }
 
-    function _auction(uint96, Lot memory, bytes memory) internal virtual override returns (bool) {}
+    function setRequiredPrefunding(bool prefunding_) external virtual {
+        requiresPrefunding = prefunding_;
+    }
+
+    function _auction(uint96, Lot memory, bytes memory) internal virtual override returns (bool) {
+        return requiresPrefunding;
+    }
 
     function _cancelAuction(uint96 id_) internal override {
         //
