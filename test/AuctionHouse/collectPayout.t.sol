@@ -470,12 +470,13 @@ contract CollectPayoutTest is Test, Permit2User {
     function test_prefunded()
         public
         givenAuctionIsPrefunded(_payoutAmount)
-        givenAuctionHouseHasPayoutTokenBalance(_payoutAmount)
+        givenOwnerHasBalance(_payoutAmount)
+        givenOwnerHasApprovedRouter
     {
         // Assert previous balance
         assertEq(
             _payoutToken.balanceOf(address(_auctionHouse)),
-            _payoutAmount,
+            0,
             "payout token: _auctionHouse balance mismatch"
         );
 

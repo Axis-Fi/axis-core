@@ -261,10 +261,12 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
             )
             : 0;
 
-        // Collect payout from auction owner
-        _collectPayout(params_.lotId, amountLessFees, payoutAmount + curatorFee, routing);
+        // Collect payout from auction owner, if needed
+        if (routing.prefunding == 0) {
+            routing.prefunding = payoutAmount + curatorFee;
 
-        // Send payout to recipient
+            _collectPayout(params_.lotId, amountLessFees, payoutAmount + curatorFee, routing);
+        }
 
         // Decrease the prefunding amount (if applicable)
         if (routing.prefunding > 0) {
@@ -275,6 +277,7 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
             }
         }
 
+        // Send payout to recipient
         _sendPayout(params_.lotId, params_.recipient, payoutAmount, routing, auctionOutput);
 
         // Send curator fee to curator
@@ -442,11 +445,25 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
         if (settlement.totalIn > 0 && settlement.totalOut > 0) {
             uint256 totalIn = settlement.totalIn;
 
+            // Load curator data and calculate fee (excluding any refunds of capacity)
+            Curation storage curation = lotCuration[lotId_];
+            uint256 curatorFee = curation.curated
+                ? _calculatePayoutFees(
+                    keycodeFromVeecode(routing.auctionReference), curation.curator, capacity
+                )
+                : 0;
+
+            // Collect the payout from the auction owner
+            if (routing.prefunding == 0) {
+                routing.prefunding = capacity + curatorFee;
+                _collectPayout(lotId_, settlement.totalIn, capacity + curatorFee, routing);
+            }
+
             // Check if there was a partial fill and handle the payout + refund
             if (settlement.pfBidder != address(0)) {
                 // Reconstruct bid amount from the settlement price and the amount out
                 uint256 filledAmount =
-                    Math.mulDivDown(settlement.pfPayout, settlement.totalIn, settlement.totalOut);
+                    Math.mulDivDown(settlement.pfPayout, totalIn, settlement.totalOut);
 
                 // Allocate quote and protocol fees for bid
                 _allocateQuoteFees(
@@ -490,14 +507,6 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
             // Send payment in bulk to auction owner
             _sendPayment(routing.owner, totalInLessFees, routing.quoteToken, routing.hooks);
 
-            // Load curator data and calculate fee
-            Curation storage curation = lotCuration[lotId_];
-            uint256 curatorFee = curation.curated
-                ? _calculatePayoutFees(
-                    keycodeFromVeecode(routing.auctionReference), curation.curator, capacity
-                )
-                : 0;
-
             // If capacity expended is less than the total capacity, refund the remaining capacity to the seller and proportionally reduce the curator fee
             if (settlement.totalOut < capacity) {
                 uint256 capacityRefund = capacity - settlement.totalOut;
@@ -525,25 +534,27 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
                 _sendPayout(lotId_, curation.curator, curatorFee, routing, auctionOutput);
             }
         } else {
-            // Auction did not settle, refund the capacity to the seller
-            Curation storage curation = lotCuration[lotId_];
-            uint256 curatorFee = curation.curated
-                ? _calculatePayoutFees(
-                    keycodeFromVeecode(routing.auctionReference), curation.curator, capacity
-                )
-                : 0;
+            if (routing.prefunding > 0) {
+                // Auction did not settle, refund the capacity to the seller
+                Curation storage curation = lotCuration[lotId_];
+                uint256 curatorFee = curation.curated
+                    ? _calculatePayoutFees(
+                        keycodeFromVeecode(routing.auctionReference), curation.curator, capacity
+                    )
+                    : 0;
 
-            uint256 refundAmount = capacity + curatorFee; // can add curator fee without checking since it will be zero if not curated
+                uint256 refundAmount = capacity + curatorFee; // can add curator fee without checking since it will be zero if not curated
 
-            // Reduce the prefunding amount
-            unchecked {
-                routing.prefunding -= refundAmount;
+                // Reduce the prefunding amount
+                unchecked {
+                    routing.prefunding -= refundAmount;
+                }
+
+                // Refund the capacity to the seller, no fees are taken
+                Transfer.transfer(
+                    lotRouting[lotId_].baseToken, lotRouting[lotId_].owner, refundAmount, false
+                );
             }
-
-            // Refund the capacity to the seller, no fees are taken
-            Transfer.transfer(
-                lotRouting[lotId_].baseToken, lotRouting[lotId_].owner, refundAmount, false
-            );
         }
 
         // Emit event
@@ -695,7 +706,6 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
     /// @dev        This function handles the following:
     ///             1. Calls the mid hook on the hooks contract (if provided)
     ///             2. Transfers the payout token from the auction owner
-    ///             2a. If the auction is pre-funded, then the transfer is skipped
     ///
     ///             This function reverts if:
     ///             - Approval has not been granted to transfer the payout token
@@ -715,11 +725,6 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
         uint256 payoutAmount_,
         Routing memory routingParams_
     ) internal {
-        // If pre-funded, then the payout token is already in this contract
-        if (routingParams_.prefunding > 0) {
-            return;
-        }
-
         // Get the balance of the payout token before the transfer
         ERC20 baseToken = routingParams_.baseToken;
 
