@@ -51,10 +51,15 @@ contract MockAtomicAuctionModule is AuctionModule {
 
         if (cancelled[lotId_]) revert Auction_MarketNotActive(lotId_);
 
+        // Handle decimals
+        uint256 quoteTokenScale = 10 ** lotData[lotId_].quoteTokenDecimals;
+        uint256 baseTokenScale = 10 ** lotData[lotId_].baseTokenDecimals;
+        uint256 adjustedAmount = amount_ * baseTokenScale / quoteTokenScale;
+
         if (payoutData[lotId_] == 0) {
-            payout = amount_;
+            payout = adjustedAmount;
         } else {
-            payout = (payoutData[lotId_] * amount_) / 1e5;
+            payout = (payoutData[lotId_] * adjustedAmount) / 1e5;
         }
 
         // Reduce capacity

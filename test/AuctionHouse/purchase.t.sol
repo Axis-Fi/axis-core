@@ -4,13 +4,10 @@ pragma solidity 0.8.19;
 import {Auctioneer} from "src/bases/Auctioneer.sol";
 import {Auction} from "src/modules/Auction.sol";
 import {AuctionHouse} from "src/AuctionHouse.sol";
-import {FeeManager} from "src/bases/FeeManager.sol";
 
 import {MockDerivativeModule} from "test/modules/derivatives/mocks/MockDerivativeModule.sol";
 
 import {AuctionHouseTest} from "test/AuctionHouse/AuctionHouseTest.sol";
-
-import {console2} from "forge-std/console2.sol";
 
 contract PurchaseTest is AuctionHouseTest {
     uint96 internal constant _AMOUNT_IN = 2e18;
@@ -55,11 +52,13 @@ contract PurchaseTest is AuctionHouseTest {
     modifier whenPayoutMultiplierIsSet(uint96 multiplier_) {
         _atomicAuctionModule.setPayoutMultiplier(_lotId, multiplier_);
 
-        uint96 amountInLessFees =
-            _AMOUNT_IN - _expectedProtocolFeesAllocated - _expectedReferrerFeesAllocated;
+        uint96 amountInLessFees = _scaleQuoteTokenAmount(_AMOUNT_IN)
+            - _expectedProtocolFeesAllocated - _expectedReferrerFeesAllocated;
+        amountInLessFees =
+            uint96(uint256(amountInLessFees) * _BASE_SCALE / 10 ** _quoteToken.decimals());
 
         // Set the amount out
-        _amountOut = (amountInLessFees * multiplier_) / 1e5;
+        _amountOut = _scaleBaseTokenAmount((amountInLessFees * multiplier_) / 1e5);
         _curatorFeeActual = (_amountOut * _curatorFeePercentActual) / 1e5;
         _;
     }
@@ -94,6 +93,8 @@ contract PurchaseTest is AuctionHouseTest {
         bool hasDerivativeToken = _derivativeTokenId != type(uint256).max;
         bool hasHook = address(_routingParams.hooks) != address(0);
         bool isPrefunding = _atomicAuctionModule.requiresPrefunding();
+        uint96 scaledLotCapacity = _scaleBaseTokenAmount(_LOT_CAPACITY);
+        uint96 scaledCuratorMaxPotentialFee = _scaleBaseTokenAmount(_curatorMaxPotentialFee);
 
         uint96 amountInLessFees =
             amountIn_ - _expectedProtocolFeesAllocated - _expectedReferrerFeesAllocated;
@@ -114,16 +115,17 @@ contract PurchaseTest is AuctionHouseTest {
         // Base token
         _expectedOwnerBaseTokenBalance = 0;
         _expectedBidderBaseTokenBalance = hasDerivativeToken ? 0 : _amountOut;
-        _expectedAuctionHouseBaseTokenBalance =
-            isPrefunding ? _LOT_CAPACITY + _curatorMaxPotentialFee - _amountOut - curatorFee : 0;
+        _expectedAuctionHouseBaseTokenBalance = isPrefunding
+            ? scaledLotCapacity + scaledCuratorMaxPotentialFee - _amountOut - curatorFee
+            : 0;
         _expectedCuratorBaseTokenBalance = hasDerivativeToken ? 0 : curatorFee;
         _expectedDerivativeModuleBaseTokenBalance = hasDerivativeToken ? _amountOut + curatorFee : 0;
         assertEq(
             _expectedOwnerBaseTokenBalance + _expectedBidderBaseTokenBalance
                 + _expectedAuctionHouseBaseTokenBalance + _expectedCuratorBaseTokenBalance
                 + _expectedDerivativeModuleBaseTokenBalance,
-            (isPrefunding ? _LOT_CAPACITY : amountOut_)
-                + (isPrefunding ? _curatorMaxPotentialFee : curatorFee),
+            (isPrefunding ? scaledLotCapacity : amountOut_)
+                + (isPrefunding ? scaledCuratorMaxPotentialFee : curatorFee),
             "base token: total balance mismatch"
         );
 
@@ -133,9 +135,9 @@ contract PurchaseTest is AuctionHouseTest {
 
         // Prefunding
         if (isPrefunding) {
-            _expectedPrefunding = _LOT_CAPACITY - _amountOut;
+            _expectedPrefunding = scaledLotCapacity - _amountOut;
             if (_curatorApproved) {
-                _expectedPrefunding += _curatorMaxPotentialFee;
+                _expectedPrefunding += scaledCuratorMaxPotentialFee;
                 _expectedPrefunding -= curatorFee;
             }
         }
@@ -434,6 +436,64 @@ contract PurchaseTest is AuctionHouseTest {
         _assertPrefunding();
     }
 
+    function test_whenPermit2Signature_quoteTokenDecimalsLarger()
+        external
+        whenAuctionTypeIsAtomic
+        whenAtomicAuctionModuleIsInstalled
+        givenQuoteTokenHasDecimals(17)
+        givenBaseTokenHasDecimals(13)
+        givenLotIsCreated
+        givenLotHasStarted
+        givenProtocolFeeIsSet
+        givenReferrerFeeIsSet
+        givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_AMOUNT_IN))
+        givenFeesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN))
+        whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
+        givenBalancesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut)
+        givenOwnerHasBaseTokenBalance(_amountOut)
+        givenOwnerHasBaseTokenAllowance(_amountOut)
+        whenPermit2ApprovalIsProvided(_scaleQuoteTokenAmount(_AMOUNT_IN))
+    {
+        // Purchase
+        _createPurchase(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut, _purchaseAuctionData);
+
+        // Check state
+        _assertQuoteTokenBalances();
+        _assertBaseTokenBalances();
+        _assertDerivativeTokenBalances();
+        _assertAccruedFees();
+        _assertPrefunding();
+    }
+
+    function test_whenPermit2Signature_quoteTokenDecimalsSmaller()
+        external
+        whenAuctionTypeIsAtomic
+        whenAtomicAuctionModuleIsInstalled
+        givenQuoteTokenHasDecimals(13)
+        givenBaseTokenHasDecimals(17)
+        givenLotIsCreated
+        givenLotHasStarted
+        givenProtocolFeeIsSet
+        givenReferrerFeeIsSet
+        givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_AMOUNT_IN))
+        givenFeesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN))
+        whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
+        givenBalancesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut)
+        givenOwnerHasBaseTokenBalance(_amountOut)
+        givenOwnerHasBaseTokenAllowance(_amountOut)
+        whenPermit2ApprovalIsProvided(_scaleQuoteTokenAmount(_AMOUNT_IN))
+    {
+        // Purchase
+        _createPurchase(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut, _purchaseAuctionData);
+
+        // Check state
+        _assertQuoteTokenBalances();
+        _assertBaseTokenBalances();
+        _assertDerivativeTokenBalances();
+        _assertAccruedFees();
+        _assertPrefunding();
+    }
+
     function test_whenNoPermit2Signature()
         external
         whenAuctionTypeIsAtomic
@@ -452,6 +512,64 @@ contract PurchaseTest is AuctionHouseTest {
     {
         // Purchase
         _createPurchase(_AMOUNT_IN, _amountOut, _purchaseAuctionData);
+
+        // Check state
+        _assertQuoteTokenBalances();
+        _assertBaseTokenBalances();
+        _assertDerivativeTokenBalances();
+        _assertAccruedFees();
+        _assertPrefunding();
+    }
+
+    function test_whenNoPermit2Signature_quoteTokenDecimalsLarger()
+        external
+        whenAuctionTypeIsAtomic
+        whenAtomicAuctionModuleIsInstalled
+        givenQuoteTokenHasDecimals(17)
+        givenBaseTokenHasDecimals(13)
+        givenLotIsCreated
+        givenLotHasStarted
+        givenProtocolFeeIsSet
+        givenReferrerFeeIsSet
+        givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_AMOUNT_IN))
+        givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_AMOUNT_IN))
+        givenFeesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN))
+        whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
+        givenBalancesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut)
+        givenOwnerHasBaseTokenBalance(_amountOut)
+        givenOwnerHasBaseTokenAllowance(_amountOut)
+    {
+        // Purchase
+        _createPurchase(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut, _purchaseAuctionData);
+
+        // Check state
+        _assertQuoteTokenBalances();
+        _assertBaseTokenBalances();
+        _assertDerivativeTokenBalances();
+        _assertAccruedFees();
+        _assertPrefunding();
+    }
+
+    function test_whenNoPermit2Signature_quoteTokenDecimalsSmaller()
+        external
+        whenAuctionTypeIsAtomic
+        whenAtomicAuctionModuleIsInstalled
+        givenQuoteTokenHasDecimals(13)
+        givenBaseTokenHasDecimals(17)
+        givenLotIsCreated
+        givenLotHasStarted
+        givenProtocolFeeIsSet
+        givenReferrerFeeIsSet
+        givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_AMOUNT_IN))
+        givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_AMOUNT_IN))
+        givenFeesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN))
+        whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
+        givenBalancesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut)
+        givenOwnerHasBaseTokenBalance(_amountOut)
+        givenOwnerHasBaseTokenAllowance(_amountOut)
+    {
+        // Purchase
+        _createPurchase(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut, _purchaseAuctionData);
 
         // Check state
         _assertQuoteTokenBalances();
@@ -494,6 +612,66 @@ contract PurchaseTest is AuctionHouseTest {
         _assertPrefunding();
     }
 
+    function test_hooks_quoteTokenDecimalsLarger()
+        public
+        whenAuctionTypeIsAtomic
+        whenAtomicAuctionModuleIsInstalled
+        givenQuoteTokenHasDecimals(17)
+        givenBaseTokenHasDecimals(13)
+        givenAuctionHasHook
+        givenLotIsCreated
+        givenLotHasStarted
+        givenProtocolFeeIsSet
+        givenReferrerFeeIsSet
+        givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_AMOUNT_IN))
+        givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_AMOUNT_IN))
+        givenFeesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN))
+        whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
+        givenBalancesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut)
+        givenHookHasBaseTokenBalance(_amountOut)
+        givenHookHasBaseTokenAllowance(_amountOut)
+    {
+        // Purchase
+        _createPurchase(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut, _purchaseAuctionData);
+
+        // Check state
+        _assertQuoteTokenBalances();
+        _assertBaseTokenBalances();
+        _assertDerivativeTokenBalances();
+        _assertAccruedFees();
+        _assertPrefunding();
+    }
+
+    function test_hooks_quoteTokenDecimalsSmaller()
+        public
+        whenAuctionTypeIsAtomic
+        whenAtomicAuctionModuleIsInstalled
+        givenQuoteTokenHasDecimals(13)
+        givenBaseTokenHasDecimals(17)
+        givenAuctionHasHook
+        givenLotIsCreated
+        givenLotHasStarted
+        givenProtocolFeeIsSet
+        givenReferrerFeeIsSet
+        givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_AMOUNT_IN))
+        givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_AMOUNT_IN))
+        givenFeesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN))
+        whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
+        givenBalancesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut)
+        givenHookHasBaseTokenBalance(_amountOut)
+        givenHookHasBaseTokenAllowance(_amountOut)
+    {
+        // Purchase
+        _createPurchase(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut, _purchaseAuctionData);
+
+        // Check state
+        _assertQuoteTokenBalances();
+        _assertBaseTokenBalances();
+        _assertDerivativeTokenBalances();
+        _assertAccruedFees();
+        _assertPrefunding();
+    }
+
     function test_noHooks()
         public
         whenAuctionTypeIsAtomic
@@ -521,6 +699,64 @@ contract PurchaseTest is AuctionHouseTest {
         _assertPrefunding();
     }
 
+    function test_noHooks_quoteTokenDecimalsLarger()
+        public
+        whenAuctionTypeIsAtomic
+        whenAtomicAuctionModuleIsInstalled
+        givenQuoteTokenHasDecimals(17)
+        givenBaseTokenHasDecimals(13)
+        givenLotIsCreated
+        givenLotHasStarted
+        givenProtocolFeeIsSet
+        givenReferrerFeeIsSet
+        givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_AMOUNT_IN))
+        givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_AMOUNT_IN))
+        givenFeesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN))
+        whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
+        givenBalancesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut)
+        givenOwnerHasBaseTokenBalance(_amountOut)
+        givenOwnerHasBaseTokenAllowance(_amountOut)
+    {
+        // Purchase
+        _createPurchase(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut, _purchaseAuctionData);
+
+        // Check state
+        _assertQuoteTokenBalances();
+        _assertBaseTokenBalances();
+        _assertDerivativeTokenBalances();
+        _assertAccruedFees();
+        _assertPrefunding();
+    }
+
+    function test_noHooks_quoteTokenDecimalsSmaller()
+        public
+        whenAuctionTypeIsAtomic
+        whenAtomicAuctionModuleIsInstalled
+        givenQuoteTokenHasDecimals(13)
+        givenBaseTokenHasDecimals(17)
+        givenLotIsCreated
+        givenLotHasStarted
+        givenProtocolFeeIsSet
+        givenReferrerFeeIsSet
+        givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_AMOUNT_IN))
+        givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_AMOUNT_IN))
+        givenFeesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN))
+        whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
+        givenBalancesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut)
+        givenOwnerHasBaseTokenBalance(_amountOut)
+        givenOwnerHasBaseTokenAllowance(_amountOut)
+    {
+        // Purchase
+        _createPurchase(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut, _purchaseAuctionData);
+
+        // Check state
+        _assertQuoteTokenBalances();
+        _assertBaseTokenBalances();
+        _assertDerivativeTokenBalances();
+        _assertAccruedFees();
+        _assertPrefunding();
+    }
+
     // ======== Derivative flow ======== //
 
     // [X] given the auction has a derivative defined
@@ -528,12 +764,12 @@ contract PurchaseTest is AuctionHouseTest {
 
     function test_derivative()
         public
+        whenAuctionTypeIsAtomic
+        whenAtomicAuctionModuleIsInstalled
         whenDerivativeTypeIsSet
         whenDerivativeModuleIsInstalled
         givenDerivativeParamsAreSet
         givenDerivativeIsDeployed
-        whenAuctionTypeIsAtomic
-        whenAtomicAuctionModuleIsInstalled
         givenLotIsCreated
         givenLotHasStarted
         givenProtocolFeeIsSet
@@ -548,6 +784,72 @@ contract PurchaseTest is AuctionHouseTest {
     {
         // Call
         _createPurchase(_AMOUNT_IN, _amountOut, _purchaseAuctionData);
+
+        // Check state
+        _assertQuoteTokenBalances();
+        _assertBaseTokenBalances();
+        _assertDerivativeTokenBalances();
+        _assertAccruedFees();
+        _assertPrefunding();
+    }
+
+    function test_derivative_quoteTokenDecimalsLarger()
+        public
+        whenAuctionTypeIsAtomic
+        whenAtomicAuctionModuleIsInstalled
+        givenQuoteTokenHasDecimals(17)
+        givenBaseTokenHasDecimals(13)
+        whenDerivativeTypeIsSet
+        whenDerivativeModuleIsInstalled
+        givenDerivativeParamsAreSet
+        givenDerivativeIsDeployed
+        givenLotIsCreated
+        givenLotHasStarted
+        givenProtocolFeeIsSet
+        givenReferrerFeeIsSet
+        givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_AMOUNT_IN))
+        givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_AMOUNT_IN))
+        givenFeesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN))
+        whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
+        givenBalancesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut)
+        givenOwnerHasBaseTokenBalance(_amountOut)
+        givenOwnerHasBaseTokenAllowance(_amountOut)
+    {
+        // Call
+        _createPurchase(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut, _purchaseAuctionData);
+
+        // Check state
+        _assertQuoteTokenBalances();
+        _assertBaseTokenBalances();
+        _assertDerivativeTokenBalances();
+        _assertAccruedFees();
+        _assertPrefunding();
+    }
+
+    function test_derivative_quoteTokenDecimalsSmaller()
+        public
+        whenAuctionTypeIsAtomic
+        whenAtomicAuctionModuleIsInstalled
+        givenQuoteTokenHasDecimals(13)
+        givenBaseTokenHasDecimals(17)
+        whenDerivativeTypeIsSet
+        whenDerivativeModuleIsInstalled
+        givenDerivativeParamsAreSet
+        givenDerivativeIsDeployed
+        givenLotIsCreated
+        givenLotHasStarted
+        givenProtocolFeeIsSet
+        givenReferrerFeeIsSet
+        givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_AMOUNT_IN))
+        givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_AMOUNT_IN))
+        givenFeesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN))
+        whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
+        givenBalancesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut)
+        givenOwnerHasBaseTokenBalance(_amountOut)
+        givenOwnerHasBaseTokenAllowance(_amountOut)
+    {
+        // Call
+        _createPurchase(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut, _purchaseAuctionData);
 
         // Check state
         _assertQuoteTokenBalances();
@@ -587,6 +889,62 @@ contract PurchaseTest is AuctionHouseTest {
         _assertPrefunding();
     }
 
+    function test_givenProtocolFeeIsNotSet_quoteTokenDecimalsLarger()
+        external
+        whenAuctionTypeIsAtomic
+        whenAtomicAuctionModuleIsInstalled
+        givenQuoteTokenHasDecimals(17)
+        givenBaseTokenHasDecimals(13)
+        givenLotIsCreated
+        givenLotHasStarted
+        givenReferrerFeeIsSet
+        givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_AMOUNT_IN))
+        givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_AMOUNT_IN))
+        givenFeesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN))
+        whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
+        givenBalancesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut)
+        givenOwnerHasBaseTokenBalance(_amountOut)
+        givenOwnerHasBaseTokenAllowance(_amountOut)
+    {
+        // Purchase
+        _createPurchase(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut, _purchaseAuctionData);
+
+        // Check state
+        _assertQuoteTokenBalances();
+        _assertBaseTokenBalances();
+        _assertDerivativeTokenBalances();
+        _assertAccruedFees();
+        _assertPrefunding();
+    }
+
+    function test_givenProtocolFeeIsNotSet_quoteTokenDecimalsSmaller()
+        external
+        whenAuctionTypeIsAtomic
+        whenAtomicAuctionModuleIsInstalled
+        givenQuoteTokenHasDecimals(13)
+        givenBaseTokenHasDecimals(17)
+        givenLotIsCreated
+        givenLotHasStarted
+        givenReferrerFeeIsSet
+        givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_AMOUNT_IN))
+        givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_AMOUNT_IN))
+        givenFeesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN))
+        whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
+        givenBalancesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut)
+        givenOwnerHasBaseTokenBalance(_amountOut)
+        givenOwnerHasBaseTokenAllowance(_amountOut)
+    {
+        // Purchase
+        _createPurchase(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut, _purchaseAuctionData);
+
+        // Check state
+        _assertQuoteTokenBalances();
+        _assertBaseTokenBalances();
+        _assertDerivativeTokenBalances();
+        _assertAccruedFees();
+        _assertPrefunding();
+    }
+
     function test_givenProtocolFeeIsSet()
         external
         whenAuctionTypeIsAtomic
@@ -605,6 +963,64 @@ contract PurchaseTest is AuctionHouseTest {
     {
         // Purchase
         _createPurchase(_AMOUNT_IN, _amountOut, _purchaseAuctionData);
+
+        // Check state
+        _assertQuoteTokenBalances();
+        _assertBaseTokenBalances();
+        _assertDerivativeTokenBalances();
+        _assertAccruedFees();
+        _assertPrefunding();
+    }
+
+    function test_givenProtocolFeeIsSet_quoteTokenDecimalsLarger()
+        external
+        whenAuctionTypeIsAtomic
+        whenAtomicAuctionModuleIsInstalled
+        givenQuoteTokenHasDecimals(17)
+        givenBaseTokenHasDecimals(13)
+        givenLotIsCreated
+        givenProtocolFeeIsSet
+        givenReferrerFeeIsSet
+        givenLotHasStarted
+        givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_AMOUNT_IN))
+        givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_AMOUNT_IN))
+        givenFeesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN))
+        whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
+        givenBalancesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut)
+        givenOwnerHasBaseTokenBalance(_amountOut)
+        givenOwnerHasBaseTokenAllowance(_amountOut)
+    {
+        // Purchase
+        _createPurchase(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut, _purchaseAuctionData);
+
+        // Check state
+        _assertQuoteTokenBalances();
+        _assertBaseTokenBalances();
+        _assertDerivativeTokenBalances();
+        _assertAccruedFees();
+        _assertPrefunding();
+    }
+
+    function test_givenProtocolFeeIsSet_quoteTokenDecimalsSmaller()
+        external
+        whenAuctionTypeIsAtomic
+        whenAtomicAuctionModuleIsInstalled
+        givenQuoteTokenHasDecimals(13)
+        givenBaseTokenHasDecimals(17)
+        givenLotIsCreated
+        givenProtocolFeeIsSet
+        givenReferrerFeeIsSet
+        givenLotHasStarted
+        givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_AMOUNT_IN))
+        givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_AMOUNT_IN))
+        givenFeesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN))
+        whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
+        givenBalancesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut)
+        givenOwnerHasBaseTokenBalance(_amountOut)
+        givenOwnerHasBaseTokenAllowance(_amountOut)
+    {
+        // Purchase
+        _createPurchase(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut, _purchaseAuctionData);
 
         // Check state
         _assertQuoteTokenBalances();
@@ -644,6 +1060,62 @@ contract PurchaseTest is AuctionHouseTest {
         _assertPrefunding();
     }
 
+    function test_givenReferrerFeeIsNotSet_quoteTokenDecimalsLarger()
+        external
+        whenAuctionTypeIsAtomic
+        whenAtomicAuctionModuleIsInstalled
+        givenQuoteTokenHasDecimals(17)
+        givenBaseTokenHasDecimals(13)
+        givenLotIsCreated
+        givenProtocolFeeIsSet
+        givenLotHasStarted
+        givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_AMOUNT_IN))
+        givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_AMOUNT_IN))
+        givenFeesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN))
+        whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
+        givenBalancesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut)
+        givenOwnerHasBaseTokenBalance(_amountOut)
+        givenOwnerHasBaseTokenAllowance(_amountOut)
+    {
+        // Purchase
+        _createPurchase(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut, _purchaseAuctionData);
+
+        // Check state
+        _assertQuoteTokenBalances();
+        _assertBaseTokenBalances();
+        _assertDerivativeTokenBalances();
+        _assertAccruedFees();
+        _assertPrefunding();
+    }
+
+    function test_givenReferrerFeeIsNotSet_quoteTokenDecimalsSmaller()
+        external
+        whenAuctionTypeIsAtomic
+        whenAtomicAuctionModuleIsInstalled
+        givenQuoteTokenHasDecimals(13)
+        givenBaseTokenHasDecimals(17)
+        givenLotIsCreated
+        givenProtocolFeeIsSet
+        givenLotHasStarted
+        givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_AMOUNT_IN))
+        givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_AMOUNT_IN))
+        givenFeesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN))
+        whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
+        givenBalancesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut)
+        givenOwnerHasBaseTokenBalance(_amountOut)
+        givenOwnerHasBaseTokenAllowance(_amountOut)
+    {
+        // Purchase
+        _createPurchase(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut, _purchaseAuctionData);
+
+        // Check state
+        _assertQuoteTokenBalances();
+        _assertBaseTokenBalances();
+        _assertDerivativeTokenBalances();
+        _assertAccruedFees();
+        _assertPrefunding();
+    }
+
     function test_givenReferrerFeeIsSet()
         external
         whenAuctionTypeIsAtomic
@@ -662,6 +1134,64 @@ contract PurchaseTest is AuctionHouseTest {
     {
         // Purchase
         _createPurchase(_AMOUNT_IN, _amountOut, _purchaseAuctionData);
+
+        // Check state
+        _assertQuoteTokenBalances();
+        _assertBaseTokenBalances();
+        _assertDerivativeTokenBalances();
+        _assertAccruedFees();
+        _assertPrefunding();
+    }
+
+    function test_givenReferrerFeeIsSet_quoteTokenDecimalsLarger()
+        external
+        whenAuctionTypeIsAtomic
+        whenAtomicAuctionModuleIsInstalled
+        givenQuoteTokenHasDecimals(17)
+        givenBaseTokenHasDecimals(13)
+        givenLotIsCreated
+        givenReferrerFeeIsSet
+        givenProtocolFeeIsSet
+        givenLotHasStarted
+        givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_AMOUNT_IN))
+        givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_AMOUNT_IN))
+        givenFeesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN))
+        whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
+        givenBalancesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut)
+        givenOwnerHasBaseTokenBalance(_amountOut)
+        givenOwnerHasBaseTokenAllowance(_amountOut)
+    {
+        // Purchase
+        _createPurchase(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut, _purchaseAuctionData);
+
+        // Check state
+        _assertQuoteTokenBalances();
+        _assertBaseTokenBalances();
+        _assertDerivativeTokenBalances();
+        _assertAccruedFees();
+        _assertPrefunding();
+    }
+
+    function test_givenReferrerFeeIsSet_quoteTokenDecimalsSmaller()
+        external
+        whenAuctionTypeIsAtomic
+        whenAtomicAuctionModuleIsInstalled
+        givenQuoteTokenHasDecimals(13)
+        givenBaseTokenHasDecimals(17)
+        givenLotIsCreated
+        givenReferrerFeeIsSet
+        givenProtocolFeeIsSet
+        givenLotHasStarted
+        givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_AMOUNT_IN))
+        givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_AMOUNT_IN))
+        givenFeesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN))
+        whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
+        givenBalancesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut)
+        givenOwnerHasBaseTokenBalance(_amountOut)
+        givenOwnerHasBaseTokenAllowance(_amountOut)
+    {
+        // Purchase
+        _createPurchase(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut, _purchaseAuctionData);
 
         // Check state
         _assertQuoteTokenBalances();
@@ -766,14 +1296,80 @@ contract PurchaseTest is AuctionHouseTest {
         _assertPrefunding();
     }
 
+    function test_givenCuratorHasApproved_quoteTokenDecimalsLarger()
+        external
+        whenAuctionTypeIsAtomic
+        whenAtomicAuctionModuleIsInstalled
+        givenCuratorIsSet
+        givenQuoteTokenHasDecimals(17)
+        givenBaseTokenHasDecimals(13)
+        givenLotIsCreated
+        givenLotHasStarted
+        givenProtocolFeeIsSet
+        givenReferrerFeeIsSet
+        givenCuratorMaxFeeIsSet
+        givenCuratorFeeIsSet
+        givenCuratorHasApproved
+        givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_AMOUNT_IN))
+        givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_AMOUNT_IN))
+        givenFeesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN))
+        whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
+        givenOwnerHasBaseTokenBalance(_amountOut + _curatorFeeActual)
+        givenOwnerHasBaseTokenAllowance(_amountOut + _curatorFeeActual)
+        givenBalancesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut)
+    {
+        // Purchase
+        _createPurchase(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut, _purchaseAuctionData);
+
+        // Check state
+        _assertQuoteTokenBalances();
+        _assertBaseTokenBalances();
+        _assertDerivativeTokenBalances();
+        _assertAccruedFees();
+        _assertPrefunding();
+    }
+
+    function test_givenCuratorHasApproved_quoteTokenDecimalsSmaller()
+        external
+        whenAuctionTypeIsAtomic
+        whenAtomicAuctionModuleIsInstalled
+        givenCuratorIsSet
+        givenQuoteTokenHasDecimals(13)
+        givenBaseTokenHasDecimals(17)
+        givenLotIsCreated
+        givenLotHasStarted
+        givenProtocolFeeIsSet
+        givenReferrerFeeIsSet
+        givenCuratorMaxFeeIsSet
+        givenCuratorFeeIsSet
+        givenCuratorHasApproved
+        givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_AMOUNT_IN))
+        givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_AMOUNT_IN))
+        givenFeesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN))
+        whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
+        givenOwnerHasBaseTokenBalance(_amountOut + _curatorFeeActual)
+        givenOwnerHasBaseTokenAllowance(_amountOut + _curatorFeeActual)
+        givenBalancesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut)
+    {
+        // Purchase
+        _createPurchase(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut, _purchaseAuctionData);
+
+        // Check state
+        _assertQuoteTokenBalances();
+        _assertBaseTokenBalances();
+        _assertDerivativeTokenBalances();
+        _assertAccruedFees();
+        _assertPrefunding();
+    }
+
     function test_derivative_givenCuratorHasApproved()
         external
+        whenAuctionTypeIsAtomic
+        whenAtomicAuctionModuleIsInstalled
         whenDerivativeTypeIsSet
         whenDerivativeModuleIsInstalled
         givenDerivativeParamsAreSet
         givenDerivativeIsDeployed
-        whenAuctionTypeIsAtomic
-        whenAtomicAuctionModuleIsInstalled
         givenCuratorIsSet
         givenLotIsCreated
         givenLotHasStarted
@@ -792,6 +1388,80 @@ contract PurchaseTest is AuctionHouseTest {
     {
         // Purchase
         _createPurchase(_AMOUNT_IN, _amountOut, _purchaseAuctionData);
+
+        // Check state
+        _assertQuoteTokenBalances();
+        _assertBaseTokenBalances();
+        _assertDerivativeTokenBalances();
+        _assertAccruedFees();
+        _assertPrefunding();
+    }
+
+    function test_derivative_givenCuratorHasApproved_quoteTokenDecimalsLarger()
+        external
+        whenAuctionTypeIsAtomic
+        whenAtomicAuctionModuleIsInstalled
+        givenQuoteTokenHasDecimals(17)
+        givenBaseTokenHasDecimals(13)
+        whenDerivativeTypeIsSet
+        whenDerivativeModuleIsInstalled
+        givenDerivativeParamsAreSet
+        givenDerivativeIsDeployed
+        givenCuratorIsSet
+        givenLotIsCreated
+        givenLotHasStarted
+        givenProtocolFeeIsSet
+        givenReferrerFeeIsSet
+        givenCuratorMaxFeeIsSet
+        givenCuratorFeeIsSet
+        givenCuratorHasApproved
+        givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_AMOUNT_IN))
+        givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_AMOUNT_IN))
+        givenFeesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN))
+        whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
+        givenOwnerHasBaseTokenBalance(_amountOut + _curatorFeeActual)
+        givenOwnerHasBaseTokenAllowance(_amountOut + _curatorFeeActual)
+        givenBalancesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut)
+    {
+        // Purchase
+        _createPurchase(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut, _purchaseAuctionData);
+
+        // Check state
+        _assertQuoteTokenBalances();
+        _assertBaseTokenBalances();
+        _assertDerivativeTokenBalances();
+        _assertAccruedFees();
+        _assertPrefunding();
+    }
+
+    function test_derivative_givenCuratorHasApproved_quoteTokenDecimalsSmaller()
+        external
+        whenAuctionTypeIsAtomic
+        whenAtomicAuctionModuleIsInstalled
+        givenQuoteTokenHasDecimals(13)
+        givenBaseTokenHasDecimals(17)
+        whenDerivativeTypeIsSet
+        whenDerivativeModuleIsInstalled
+        givenDerivativeParamsAreSet
+        givenDerivativeIsDeployed
+        givenCuratorIsSet
+        givenLotIsCreated
+        givenLotHasStarted
+        givenProtocolFeeIsSet
+        givenReferrerFeeIsSet
+        givenCuratorMaxFeeIsSet
+        givenCuratorFeeIsSet
+        givenCuratorHasApproved
+        givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_AMOUNT_IN))
+        givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_AMOUNT_IN))
+        givenFeesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN))
+        whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
+        givenOwnerHasBaseTokenBalance(_amountOut + _curatorFeeActual)
+        givenOwnerHasBaseTokenAllowance(_amountOut + _curatorFeeActual)
+        givenBalancesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut)
+    {
+        // Purchase
+        _createPurchase(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut, _purchaseAuctionData);
 
         // Check state
         _assertQuoteTokenBalances();
@@ -837,6 +1507,68 @@ contract PurchaseTest is AuctionHouseTest {
         _assertPrefunding();
     }
 
+    function test_prefunded_quoteTokenDecimalsLarger()
+        external
+        whenAuctionTypeIsAtomic
+        whenAtomicAuctionModuleIsInstalled
+        givenAtomicAuctionRequiresPrefunding
+        givenCuratorIsSet
+        givenQuoteTokenHasDecimals(17)
+        givenBaseTokenHasDecimals(13)
+        givenOwnerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenOwnerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenLotIsCreated
+        givenProtocolFeeIsSet
+        givenReferrerFeeIsSet
+        givenLotHasStarted
+        givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_AMOUNT_IN))
+        givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_AMOUNT_IN))
+        givenFeesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN))
+        whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
+        givenBalancesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut)
+    {
+        // Purchase
+        _createPurchase(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut, _purchaseAuctionData);
+
+        // Check state
+        _assertQuoteTokenBalances();
+        _assertBaseTokenBalances();
+        _assertDerivativeTokenBalances();
+        _assertAccruedFees();
+        _assertPrefunding();
+    }
+
+    function test_prefunded_quoteTokenDecimalsSmaller()
+        external
+        whenAuctionTypeIsAtomic
+        whenAtomicAuctionModuleIsInstalled
+        givenAtomicAuctionRequiresPrefunding
+        givenCuratorIsSet
+        givenQuoteTokenHasDecimals(13)
+        givenBaseTokenHasDecimals(17)
+        givenOwnerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenOwnerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenLotIsCreated
+        givenProtocolFeeIsSet
+        givenReferrerFeeIsSet
+        givenLotHasStarted
+        givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_AMOUNT_IN))
+        givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_AMOUNT_IN))
+        givenFeesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN))
+        whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
+        givenBalancesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut)
+    {
+        // Purchase
+        _createPurchase(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut, _purchaseAuctionData);
+
+        // Check state
+        _assertQuoteTokenBalances();
+        _assertBaseTokenBalances();
+        _assertDerivativeTokenBalances();
+        _assertAccruedFees();
+        _assertPrefunding();
+    }
+
     function test_prefunded_givenCuratorHasApproved()
         external
         whenAuctionTypeIsAtomic
@@ -851,17 +1583,89 @@ contract PurchaseTest is AuctionHouseTest {
         givenReferrerFeeIsSet
         givenCuratorMaxFeeIsSet
         givenCuratorFeeIsSet
+        givenFeesAreCalculated(_AMOUNT_IN)
+        whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
         givenOwnerHasBaseTokenBalance(_curatorMaxPotentialFee)
         givenOwnerHasBaseTokenAllowance(_curatorMaxPotentialFee)
         givenCuratorHasApproved
         givenUserHasQuoteTokenBalance(_AMOUNT_IN)
         givenUserHasQuoteTokenAllowance(_AMOUNT_IN)
-        givenFeesAreCalculated(_AMOUNT_IN)
-        whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
         givenBalancesAreCalculated(_AMOUNT_IN, _amountOut)
     {
         // Purchase
         _createPurchase(_AMOUNT_IN, _amountOut, _purchaseAuctionData);
+
+        // Check state
+        _assertQuoteTokenBalances();
+        _assertBaseTokenBalances();
+        _assertDerivativeTokenBalances();
+        _assertAccruedFees();
+        _assertPrefunding();
+    }
+
+    function test_prefunded_givenCuratorHasApproved_quoteTokenDecimalsLarger()
+        external
+        whenAuctionTypeIsAtomic
+        whenAtomicAuctionModuleIsInstalled
+        givenAtomicAuctionRequiresPrefunding
+        givenCuratorIsSet
+        givenQuoteTokenHasDecimals(17)
+        givenBaseTokenHasDecimals(13)
+        givenOwnerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenOwnerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenLotIsCreated
+        givenLotHasStarted
+        givenProtocolFeeIsSet
+        givenReferrerFeeIsSet
+        givenCuratorMaxFeeIsSet
+        givenCuratorFeeIsSet
+        givenFeesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN))
+        whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
+        givenOwnerHasBaseTokenBalance(_scaleBaseTokenAmount(_curatorMaxPotentialFee))
+        givenOwnerHasBaseTokenAllowance(_scaleBaseTokenAmount(_curatorMaxPotentialFee))
+        givenCuratorHasApproved
+        givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_AMOUNT_IN))
+        givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_AMOUNT_IN))
+        givenBalancesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut)
+    {
+        // Purchase
+        _createPurchase(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut, _purchaseAuctionData);
+
+        // Check state
+        _assertQuoteTokenBalances();
+        _assertBaseTokenBalances();
+        _assertDerivativeTokenBalances();
+        _assertAccruedFees();
+        _assertPrefunding();
+    }
+
+    function test_prefunded_givenCuratorHasApproved_quoteTokenDecimalsSmaller()
+        external
+        whenAuctionTypeIsAtomic
+        whenAtomicAuctionModuleIsInstalled
+        givenAtomicAuctionRequiresPrefunding
+        givenCuratorIsSet
+        givenQuoteTokenHasDecimals(13)
+        givenBaseTokenHasDecimals(17)
+        givenOwnerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenOwnerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenLotIsCreated
+        givenLotHasStarted
+        givenProtocolFeeIsSet
+        givenReferrerFeeIsSet
+        givenCuratorMaxFeeIsSet
+        givenCuratorFeeIsSet
+        givenFeesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN))
+        whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
+        givenOwnerHasBaseTokenBalance(_scaleBaseTokenAmount(_curatorMaxPotentialFee))
+        givenOwnerHasBaseTokenAllowance(_scaleBaseTokenAmount(_curatorMaxPotentialFee))
+        givenCuratorHasApproved
+        givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_AMOUNT_IN))
+        givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_AMOUNT_IN))
+        givenBalancesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut)
+    {
+        // Purchase
+        _createPurchase(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut, _purchaseAuctionData);
 
         // Check state
         _assertQuoteTokenBalances();

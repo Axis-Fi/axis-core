@@ -172,6 +172,9 @@ abstract contract AuctionHouseTest is Test, Permit2User {
 
         // Update auction params
         _auctionParams.capacity = uint96(lotCapacity);
+
+        // Update the hook
+        _hook.setPayoutToken(address(_baseToken));
     }
 
     modifier givenBaseTokenHasDecimals(uint8 decimals_) {
@@ -184,6 +187,9 @@ abstract contract AuctionHouseTest is Test, Permit2User {
 
         // Update routing params
         _routingParams.quoteToken = _quoteToken;
+
+        // Update the hook
+        _hook.setQuoteToken(address(_quoteToken));
     }
 
     modifier givenQuoteTokenHasDecimals(uint8 decimals_) {
