@@ -151,9 +151,13 @@ abstract contract EmpaModuleTest is Test, Permit2User {
         _;
     }
 
-    modifier givenLotHasBeenCancelled() {
+    function _cancelAuctionLot() internal {
         vm.prank(address(_auctionHouse));
         _module.cancelAuction(_lotId);
+    }
+
+    modifier givenLotIsCancelled() {
+        _cancelAuctionLot();
         _;
     }
 

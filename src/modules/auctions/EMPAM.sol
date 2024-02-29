@@ -194,6 +194,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
     /// @dev        This function assumes the following:
     ///             - The lot ID has been validated
     ///             - The caller has been authorized
+    ///             - The auction has not concluded
     ///
     ///             This function reverts if:
     ///             - The auction is active or has not concluded
@@ -201,9 +202,6 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         // Validation
         // Batch auctions cannot be cancelled once started, otherwise the seller could cancel the auction after bids have been submitted
         _revertIfLotActive(lotId_);
-
-        // Auction cannot be cancelled once it has concluded
-        _revertIfLotConcluded(lotId_);
 
         // Set auction status to settled so that bids can be refunded
         auctionData[lotId_].status = Auction.Status.Settled;
