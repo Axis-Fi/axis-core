@@ -351,11 +351,12 @@ abstract contract AuctionHouseTest is Test, Permit2User {
     function _createPurchase(
         uint96 amount_,
         uint96 minAmountOut_,
-        bytes memory auctionData_
+        bytes memory auctionData_,
+        address referrer_
     ) internal returns (uint256) {
         Router.PurchaseParams memory purchaseParams = Router.PurchaseParams({
             recipient: _bidder,
-            referrer: _REFERRER,
+            referrer: referrer_,
             lotId: _lotId,
             amount: amount_,
             minAmountOut: minAmountOut_,
@@ -368,6 +369,14 @@ abstract contract AuctionHouseTest is Test, Permit2User {
         uint256 payout = _auctionHouse.purchase(purchaseParams);
 
         return payout;
+    }
+
+    function _createPurchase(
+        uint96 amount_,
+        uint96 minAmountOut_,
+        bytes memory auctionData_
+    ) internal returns (uint256) {
+        return _createPurchase(amount_, minAmountOut_, auctionData_, _REFERRER);
     }
 
     modifier givenPurchase(uint96 amount_, uint96 minAmountOut_, bytes memory auctionData_) {

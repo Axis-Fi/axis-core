@@ -81,9 +81,15 @@ contract PurchaseTest is AuctionHouseTest {
     }
 
     modifier givenFeesAreCalculated(uint96 amountIn_) {
-        // TODO when no referrer
         _expectedReferrerFeesAllocated = (amountIn_ * _referrerFeePercentActual) / 1e5;
         _expectedProtocolFeesAllocated = (amountIn_ * _protocolFeePercentActual) / 1e5;
+        _;
+    }
+
+    modifier givenFeesAreCalculatedNoReferrer(uint96 amountIn_) {
+        _expectedReferrerFeesAllocated = 0;
+        _expectedProtocolFeesAllocated =
+            (amountIn_ * (_protocolFeePercentActual + _referrerFeePercentActual)) / 1e5;
         _;
     }
 
@@ -1192,6 +1198,35 @@ contract PurchaseTest is AuctionHouseTest {
     {
         // Purchase
         _createPurchase(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut, _purchaseAuctionData);
+
+        // Check state
+        _assertQuoteTokenBalances();
+        _assertBaseTokenBalances();
+        _assertDerivativeTokenBalances();
+        _assertAccruedFees();
+        _assertPrefunding();
+    }
+
+    function test_givenReferrerIsNotSet()
+        external
+        whenAuctionTypeIsAtomic
+        whenAtomicAuctionModuleIsInstalled
+        givenLotIsCreated
+        givenReferrerFeeIsSet
+        givenProtocolFeeIsSet
+        givenLotHasStarted
+        givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_AMOUNT_IN))
+        givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_AMOUNT_IN))
+        givenFeesAreCalculatedNoReferrer(_scaleQuoteTokenAmount(_AMOUNT_IN))
+        whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
+        givenBalancesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut)
+        givenOwnerHasBaseTokenBalance(_amountOut)
+        givenOwnerHasBaseTokenAllowance(_amountOut)
+    {
+        // Purchase
+        _createPurchase(
+            _scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut, _purchaseAuctionData, address(0)
+        );
 
         // Check state
         _assertQuoteTokenBalances();
