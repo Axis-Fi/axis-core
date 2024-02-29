@@ -117,6 +117,16 @@ contract EmpaModuleAuctionTest is EmpaModuleTest {
         assertEq(lotData.conclusion, uint48(block.timestamp + _auctionParams.duration));
     }
 
+    function test_incorrectAuctionDataParams_reverts() public {
+        _auctionParams.implParams = abi.encode("");
+
+        // Expect revert
+        vm.expectRevert();
+
+        // Call the function
+        _createAuctionLot();
+    }
+
     function test_success() public {
         // Call the function
         _createAuctionLot();

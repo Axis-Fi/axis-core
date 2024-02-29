@@ -190,10 +190,17 @@ abstract contract EmpaModuleTest is Test, Permit2User {
         return formattedAmountOut ^ symmetricKey;
     }
 
-    function _createBid(uint96 amountIn_, uint96 amountOut_) internal returns (uint64 bidId) {
+    function _createBidData(
+        uint96 amountIn_,
+        uint96 amountOut_
+    ) internal view returns (bytes memory) {
         uint256 encryptedAmountOut = _encryptBid(_lotId, _BIDDER, amountIn_, amountOut_);
 
-        bytes memory bidData = abi.encode(encryptedAmountOut, _bidPublicKey);
+        return abi.encode(encryptedAmountOut, _bidPublicKey);
+    }
+
+    function _createBid(uint96 amountIn_, uint96 amountOut_) internal returns (uint64 bidId) {
+        bytes memory bidData = _createBidData(amountIn_, amountOut_);
 
         vm.prank(address(_auctionHouse));
         return _module.bid(_lotId, _BIDDER, _REFERRER, amountIn_, bidData);
@@ -236,6 +243,7 @@ abstract contract EmpaModuleTest is Test, Permit2User {
     }
 
     modifier givenLotIsSettled() {
+        vm.prank(address(_auctionHouse));
         _module.settle(_lotId);
         _;
     }
@@ -326,6 +334,40 @@ abstract contract EmpaModuleTest is Test, Permit2User {
             capacity: capacity_,
             sold: sold_,
             purchased: purchased_
+        });
+    }
+
+    function _getBid(
+        uint96 lotId_,
+        uint64 bidId_
+    ) internal view returns (EncryptedMarginalPriceAuctionModule.Bid memory) {
+        (
+            address bidder_,
+            uint96 amount_,
+            uint96 minAmountOut_,
+            address referrer_,
+            EncryptedMarginalPriceAuctionModule.BidStatus status_
+        ) = _module.bids(lotId_, bidId_);
+
+        return EncryptedMarginalPriceAuctionModule.Bid({
+            bidder: bidder_,
+            amount: amount_,
+            minAmountOut: minAmountOut_,
+            referrer: referrer_,
+            status: status_
+        });
+    }
+
+    function _getEncryptedBid(
+        uint96 lotId_,
+        uint64 bidId_
+    ) internal view returns (EncryptedMarginalPriceAuctionModule.EncryptedBid memory) {
+        (uint256 encryptedAmountOut_, Point memory publicKey_) =
+            _module.encryptedBids(lotId_, bidId_);
+
+        return EncryptedMarginalPriceAuctionModule.EncryptedBid({
+            encryptedAmountOut: encryptedAmountOut_,
+            bidPubKey: publicKey_
         });
     }
 }
