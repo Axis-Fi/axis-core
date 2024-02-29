@@ -10,28 +10,57 @@ import {MockDerivativeModule} from "test/modules/derivatives/mocks/MockDerivativ
 
 import {AuctionHouseTest} from "test/AuctionHouse/AuctionHouseTest.sol";
 
+import {console2} from "forge-std/console2.sol";
+
 contract PurchaseTest is AuctionHouseTest {
-    uint96 internal constant _AMOUNT_IN = 1e18;
-    uint96 internal _amountInReferrerFee = (_AMOUNT_IN * _REFERRER_FEE_PERCENT) / 1e5;
-    uint96 internal _amountInProtocolFee = (_AMOUNT_IN * _PROTOCOL_FEE_PERCENT) / 1e5;
-    uint96 internal _amountInLessFee = _AMOUNT_IN - _amountInReferrerFee - _amountInProtocolFee;
-    // 1:1 exchange rate
-    uint96 internal _amountOut = _amountInLessFee;
+    uint96 internal constant _AMOUNT_IN = 2e18;
+    uint96 internal constant _PAYOUT_MULTIPLIER = 50_000; // 50%
+
+    /// @dev Set by whenPayoutMultiplierIsSet
+    uint96 internal _amountOut;
+    /// @dev Set by whenPayoutMultiplierIsSet
+    uint96 internal _curatorFeeActual;
 
     bytes internal _purchaseAuctionData = abi.encode("");
 
-    uint96 internal _curatorFeeActual = _amountOut * _CURATOR_FEE_PERCENT / 1e5;
-
     uint48 internal constant _DERIVATIVE_EXPIRY = 1 days;
     uint256 internal _derivativeTokenId = type(uint256).max;
+
+    uint96 internal _expectedOwnerQuoteTokenBalance;
+    uint96 internal _expectedBidderQuoteTokenBalance;
+    uint96 internal _expectedAuctionHouseQuoteTokenBalance;
+    uint96 internal _expectedHookQuoteTokenBalance;
+
+    uint96 internal _expectedOwnerBaseTokenBalance;
+    uint96 internal _expectedBidderBaseTokenBalance;
+    uint96 internal _expectedAuctionHouseBaseTokenBalance;
+    uint96 internal _expectedCuratorBaseTokenBalance;
+    uint96 internal _expectedDerivativeModuleBaseTokenBalance;
+
+    uint96 internal _expectedBidderDerivativeTokenBalance;
+    uint96 internal _expectedCuratorDerivativeTokenBalance;
+
+    uint96 internal _expectedProtocolFeesAllocated;
+    uint96 internal _expectedReferrerFeesAllocated;
+
+    uint96 internal _expectedPrefunding;
+
+    // ======== Modifiers ======== //
 
     modifier whenPurchaseReverts() {
         _atomicAuctionModule.setPurchaseReverts(true);
         _;
     }
 
-    modifier whenPayoutMultiplierIsSet(uint256 multiplier_) {
+    modifier whenPayoutMultiplierIsSet(uint96 multiplier_) {
         _atomicAuctionModule.setPayoutMultiplier(_lotId, multiplier_);
+
+        uint96 amountInLessFees =
+            _AMOUNT_IN - _expectedProtocolFeesAllocated - _expectedReferrerFeesAllocated;
+
+        // Set the amount out
+        _amountOut = (amountInLessFees * multiplier_) / 1e5;
+        _curatorFeeActual = (_amountOut * _curatorFeePercentActual) / 1e5;
         _;
     }
 
@@ -51,6 +80,182 @@ contract PurchaseTest is AuctionHouseTest {
         _derivativeTokenId = tokenId;
         _;
     }
+
+    modifier givenFeesAreCalculated(uint96 amountIn_) {
+        // TODO when no referrer
+        _expectedReferrerFeesAllocated = (amountIn_ * _referrerFeePercentActual) / 1e5;
+        _expectedProtocolFeesAllocated = (amountIn_ * _protocolFeePercentActual) / 1e5;
+        _;
+    }
+
+    modifier givenBalancesAreCalculated(uint96 amountIn_, uint96 amountOut_) {
+        // Determine curator fee
+        uint96 curatorFee = _curatorApproved ? (amountOut_ * _curatorFeePercentActual) / 1e5 : 0;
+        bool hasDerivativeToken = _derivativeTokenId != type(uint256).max;
+        bool hasHook = address(_routingParams.hooks) != address(0);
+        bool isPrefunding = _atomicAuctionModule.requiresPrefunding();
+
+        uint96 amountInLessFees =
+            amountIn_ - _expectedProtocolFeesAllocated - _expectedReferrerFeesAllocated;
+
+        // Quote token
+        _expectedOwnerQuoteTokenBalance = hasHook ? 0 : amountInLessFees;
+        _expectedBidderQuoteTokenBalance = 0;
+        _expectedAuctionHouseQuoteTokenBalance =
+            _expectedProtocolFeesAllocated + _expectedReferrerFeesAllocated;
+        _expectedHookQuoteTokenBalance = hasHook ? amountInLessFees : 0;
+        assertEq(
+            _expectedOwnerQuoteTokenBalance + _expectedBidderQuoteTokenBalance
+                + _expectedAuctionHouseQuoteTokenBalance + _expectedHookQuoteTokenBalance,
+            amountIn_,
+            "quote token: total balance mismatch"
+        );
+
+        // Base token
+        _expectedOwnerBaseTokenBalance = 0;
+        _expectedBidderBaseTokenBalance = hasDerivativeToken ? 0 : _amountOut;
+        _expectedAuctionHouseBaseTokenBalance =
+            isPrefunding ? _LOT_CAPACITY + _curatorMaxPotentialFee - _amountOut - curatorFee : 0;
+        _expectedCuratorBaseTokenBalance = hasDerivativeToken ? 0 : curatorFee;
+        _expectedDerivativeModuleBaseTokenBalance = hasDerivativeToken ? _amountOut + curatorFee : 0;
+        assertEq(
+            _expectedOwnerBaseTokenBalance + _expectedBidderBaseTokenBalance
+                + _expectedAuctionHouseBaseTokenBalance + _expectedCuratorBaseTokenBalance
+                + _expectedDerivativeModuleBaseTokenBalance,
+            (isPrefunding ? _LOT_CAPACITY : amountOut_)
+                + (isPrefunding ? _curatorMaxPotentialFee : curatorFee),
+            "base token: total balance mismatch"
+        );
+
+        // Derivative token
+        _expectedBidderDerivativeTokenBalance = hasDerivativeToken ? _amountOut : 0;
+        _expectedCuratorDerivativeTokenBalance = hasDerivativeToken ? curatorFee : 0;
+
+        // Prefunding
+        if (isPrefunding) {
+            _expectedPrefunding = _LOT_CAPACITY - _amountOut;
+            if (_curatorApproved) {
+                _expectedPrefunding += _curatorMaxPotentialFee;
+                _expectedPrefunding -= curatorFee;
+            }
+        }
+        _;
+    }
+
+    // ======== Helper Functions ======== //
+
+    function _assertBaseTokenBalances() internal {
+        // Check base token balances
+        assertEq(
+            _baseToken.balanceOf(address(_auctionHouse)),
+            _expectedAuctionHouseBaseTokenBalance,
+            "base token: auction house balance"
+        );
+        assertEq(
+            _baseToken.balanceOf(_auctionOwner),
+            _expectedOwnerBaseTokenBalance,
+            "base token: owner balance"
+        );
+        assertEq(
+            _baseToken.balanceOf(_bidder),
+            _expectedBidderBaseTokenBalance,
+            "base token: bidder balance"
+        );
+        assertEq(_baseToken.balanceOf(_REFERRER), 0, "base token: referrer balance");
+        assertEq(
+            _baseToken.balanceOf(_CURATOR),
+            _expectedCuratorBaseTokenBalance,
+            "base token: curator balance"
+        );
+        assertEq(_baseToken.balanceOf(_PROTOCOL), 0, "base token: protocol balance");
+        assertEq(_baseToken.balanceOf(address(_hook)), 0, "base token: hook balance");
+    }
+
+    function _assertQuoteTokenBalances() internal {
+        // Check quote token balances
+        assertEq(
+            _quoteToken.balanceOf(address(_auctionHouse)),
+            _expectedAuctionHouseQuoteTokenBalance,
+            "quote token: auction house balance"
+        );
+        assertEq(
+            _quoteToken.balanceOf(_auctionOwner),
+            _expectedOwnerQuoteTokenBalance,
+            "quote token: owner balance"
+        );
+        assertEq(
+            _quoteToken.balanceOf(_bidder),
+            _expectedBidderQuoteTokenBalance,
+            "quote token: bidder balance"
+        );
+        assertEq(_quoteToken.balanceOf(_REFERRER), 0, "quote token: referrer balance");
+        assertEq(_quoteToken.balanceOf(_CURATOR), 0, "quote token: curator balance");
+        assertEq(_quoteToken.balanceOf(_PROTOCOL), 0, "quote token: protocol balance");
+        assertEq(
+            _quoteToken.balanceOf(address(_hook)),
+            _expectedHookQuoteTokenBalance,
+            "quote token: hook balance"
+        );
+    }
+
+    function _assertDerivativeTokenBalances() internal {
+        // Check derivative token balances
+        assertEq(
+            _derivativeModule.derivativeToken().balanceOf(_bidder, _derivativeTokenId),
+            _expectedBidderDerivativeTokenBalance,
+            "derivative token: bidder balance"
+        );
+        assertEq(
+            _derivativeModule.derivativeToken().balanceOf(_CURATOR, _derivativeTokenId),
+            _expectedCuratorDerivativeTokenBalance,
+            "derivative token: curator balance"
+        );
+        assertEq(
+            _derivativeModule.derivativeToken().balanceOf(address(_hook), _derivativeTokenId),
+            0,
+            "derivative token: hook balance"
+        );
+        assertEq(
+            _derivativeModule.derivativeToken().balanceOf(
+                address(_auctionHouse), _derivativeTokenId
+            ),
+            0,
+            "derivative token: auction house balance"
+        );
+        assertEq(
+            _derivativeModule.derivativeToken().balanceOf(_auctionOwner, _derivativeTokenId),
+            0,
+            "derivative token: owner balance"
+        );
+        assertEq(
+            _derivativeModule.derivativeToken().balanceOf(_PROTOCOL, _derivativeTokenId),
+            0,
+            "derivative token: protocol balance"
+        );
+    }
+
+    function _assertAccruedFees() internal {
+        // Check accrued quote token fees
+        assertEq(
+            _auctionHouse.rewards(_REFERRER, _quoteToken),
+            _expectedReferrerFeesAllocated,
+            "referrer fee"
+        );
+        assertEq(_auctionHouse.rewards(_CURATOR, _quoteToken), 0, "curator fee"); // Always 0
+        assertEq(
+            _auctionHouse.rewards(_PROTOCOL, _quoteToken),
+            _expectedProtocolFeesAllocated,
+            "protocol fee"
+        );
+    }
+
+    function _assertPrefunding() internal {
+        // Check prefunding amount
+        Auctioneer.Routing memory routing = _getLotRouting(_lotId);
+        assertEq(routing.prefunding, _expectedPrefunding, "mismatch on prefunding");
+    }
+
+    // ======== Tests ======== //
 
     // parameter checks
     // [X] when the lot id is invalid
@@ -129,15 +334,18 @@ contract PurchaseTest is AuctionHouseTest {
         givenLotIsCreated
         givenLotHasStarted
         givenUserHasQuoteTokenBalance(_AMOUNT_IN)
-        givenOwnerHasBaseTokenBalance(_amountOut)
+        givenUserHasQuoteTokenAllowance(_AMOUNT_IN)
+        givenFeesAreCalculated(_AMOUNT_IN)
         whenPayoutMultiplierIsSet(90_000)
+        givenOwnerHasBaseTokenBalance(_amountOut)
+        givenOwnerHasBaseTokenAllowance(_amountOut)
     {
         // Expect revert
         bytes memory err = abi.encodeWithSelector(AuctionHouse.AmountLessThanMinimum.selector);
         vm.expectRevert(err);
 
         // Purchase
-        _createPurchase(_AMOUNT_IN, _amountOut, _purchaseAuctionData);
+        _createPurchase(_AMOUNT_IN, _AMOUNT_IN, _purchaseAuctionData);
     }
 
     // allowlist
@@ -147,7 +355,7 @@ contract PurchaseTest is AuctionHouseTest {
     //  [X] when the caller is on the allowlist
     //   [X] it succeeds
 
-    function test_givenCallerNotOnAllowlist()
+    function test_givenCallerNotOnAllowlist_reverts()
         external
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
@@ -176,17 +384,21 @@ contract PurchaseTest is AuctionHouseTest {
         givenReferrerFeeIsSet
         givenUserHasQuoteTokenBalance(_AMOUNT_IN)
         givenUserHasQuoteTokenAllowance(_AMOUNT_IN)
+        givenFeesAreCalculated(_AMOUNT_IN)
+        whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
+        givenBalancesAreCalculated(_AMOUNT_IN, _amountOut)
         givenOwnerHasBaseTokenBalance(_amountOut)
         givenOwnerHasBaseTokenAllowance(_amountOut)
     {
         // Purchase
         _createPurchase(_AMOUNT_IN, _amountOut, _purchaseAuctionData);
 
-        // Caller has no quote tokens
-        assertEq(_quoteToken.balanceOf(_bidder), 0);
-
-        // Recipient has base tokens
-        assertEq(_baseToken.balanceOf(_bidder), _amountInLessFee);
+        // Check state
+        _assertQuoteTokenBalances();
+        _assertBaseTokenBalances();
+        _assertDerivativeTokenBalances();
+        _assertAccruedFees();
+        _assertPrefunding();
     }
 
     // transfer quote token to auction house
@@ -204,6 +416,9 @@ contract PurchaseTest is AuctionHouseTest {
         givenProtocolFeeIsSet
         givenReferrerFeeIsSet
         givenUserHasQuoteTokenBalance(_AMOUNT_IN)
+        givenFeesAreCalculated(_AMOUNT_IN)
+        whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
+        givenBalancesAreCalculated(_AMOUNT_IN, _amountOut)
         givenOwnerHasBaseTokenBalance(_amountOut)
         givenOwnerHasBaseTokenAllowance(_amountOut)
         whenPermit2ApprovalIsProvided(_AMOUNT_IN)
@@ -211,16 +426,12 @@ contract PurchaseTest is AuctionHouseTest {
         // Purchase
         _createPurchase(_AMOUNT_IN, _amountOut, _purchaseAuctionData);
 
-        // Check balances
-        assertEq(_quoteToken.balanceOf(_bidder), 0);
-        assertEq(_quoteToken.balanceOf(address(_hook)), 0);
-        assertEq(
-            _quoteToken.balanceOf(address(_auctionHouse)),
-            _amountInProtocolFee + _amountInReferrerFee
-        );
-        assertEq(_quoteToken.balanceOf(_auctionOwner), _amountInLessFee);
-
-        // Ignore the rest
+        // Check state
+        _assertQuoteTokenBalances();
+        _assertBaseTokenBalances();
+        _assertDerivativeTokenBalances();
+        _assertAccruedFees();
+        _assertPrefunding();
     }
 
     function test_whenNoPermit2Signature()
@@ -233,22 +444,21 @@ contract PurchaseTest is AuctionHouseTest {
         givenReferrerFeeIsSet
         givenUserHasQuoteTokenBalance(_AMOUNT_IN)
         givenUserHasQuoteTokenAllowance(_AMOUNT_IN)
+        givenFeesAreCalculated(_AMOUNT_IN)
+        whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
+        givenBalancesAreCalculated(_AMOUNT_IN, _amountOut)
         givenOwnerHasBaseTokenBalance(_amountOut)
         givenOwnerHasBaseTokenAllowance(_amountOut)
     {
         // Purchase
         _createPurchase(_AMOUNT_IN, _amountOut, _purchaseAuctionData);
 
-        // Check balances
-        assertEq(_quoteToken.balanceOf(_bidder), 0);
-        assertEq(_quoteToken.balanceOf(address(_hook)), 0);
-        assertEq(
-            _quoteToken.balanceOf(address(_auctionHouse)),
-            _amountInProtocolFee + _amountInReferrerFee
-        );
-        assertEq(_quoteToken.balanceOf(_auctionOwner), _amountInLessFee);
-
-        // Ignore the rest
+        // Check state
+        _assertQuoteTokenBalances();
+        _assertBaseTokenBalances();
+        _assertDerivativeTokenBalances();
+        _assertAccruedFees();
+        _assertPrefunding();
     }
 
     // [X] given the auction has hooks defined
@@ -267,44 +477,21 @@ contract PurchaseTest is AuctionHouseTest {
         givenReferrerFeeIsSet
         givenUserHasQuoteTokenBalance(_AMOUNT_IN)
         givenUserHasQuoteTokenAllowance(_AMOUNT_IN)
+        givenFeesAreCalculated(_AMOUNT_IN)
+        whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
+        givenBalancesAreCalculated(_AMOUNT_IN, _amountOut)
         givenHookHasBaseTokenBalance(_amountOut)
         givenHookHasBaseTokenAllowance(_amountOut)
     {
         // Purchase
         _createPurchase(_AMOUNT_IN, _amountOut, _purchaseAuctionData);
 
-        // Check balances
-        assertEq(_quoteToken.balanceOf(_bidder), 0);
-        assertEq(_quoteToken.balanceOf(address(_hook)), _amountInLessFee);
-        assertEq(
-            _quoteToken.balanceOf(address(_auctionHouse)),
-            _amountInProtocolFee + _amountInReferrerFee
-        );
-        assertEq(_quoteToken.balanceOf(_auctionOwner), 0);
-
-        assertEq(_baseToken.balanceOf(_bidder), _amountOut);
-        assertEq(_baseToken.balanceOf(address(_hook)), 0);
-        assertEq(_baseToken.balanceOf(address(_auctionHouse)), 0);
-        assertEq(_baseToken.balanceOf(_auctionOwner), 0);
-
-        // Check accrued fees
-        assertEq(_auctionHouse.rewards(_bidder, _quoteToken), 0);
-        assertEq(_auctionHouse.rewards(_REFERRER, _quoteToken), _amountInReferrerFee);
-        assertEq(_auctionHouse.rewards(_PROTOCOL, _quoteToken), _amountInProtocolFee);
-        assertEq(_auctionHouse.rewards(address(_hook), _quoteToken), 0);
-        assertEq(_auctionHouse.rewards(address(_auctionHouse), _quoteToken), 0);
-        assertEq(_auctionHouse.rewards(_auctionOwner, _quoteToken), 0);
-
-        assertEq(_auctionHouse.rewards(_bidder, _baseToken), 0);
-        assertEq(_auctionHouse.rewards(_REFERRER, _baseToken), 0);
-        assertEq(_auctionHouse.rewards(_PROTOCOL, _baseToken), 0);
-        assertEq(_auctionHouse.rewards(address(_hook), _baseToken), 0);
-        assertEq(_auctionHouse.rewards(address(_auctionHouse), _baseToken), 0);
-        assertEq(_auctionHouse.rewards(_auctionOwner, _baseToken), 0);
-
-        // Check prefunding amount
-        (,,,,,,,,, uint256 lotPrefunding) = _auctionHouse.lotRouting(_lotId);
-        assertEq(lotPrefunding, 0, "mismatch on prefunding");
+        // Check state
+        _assertQuoteTokenBalances();
+        _assertBaseTokenBalances();
+        _assertDerivativeTokenBalances();
+        _assertAccruedFees();
+        _assertPrefunding();
     }
 
     function test_noHooks()
@@ -317,44 +504,21 @@ contract PurchaseTest is AuctionHouseTest {
         givenReferrerFeeIsSet
         givenUserHasQuoteTokenBalance(_AMOUNT_IN)
         givenUserHasQuoteTokenAllowance(_AMOUNT_IN)
+        givenFeesAreCalculated(_AMOUNT_IN)
+        whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
+        givenBalancesAreCalculated(_AMOUNT_IN, _amountOut)
         givenOwnerHasBaseTokenBalance(_amountOut)
         givenOwnerHasBaseTokenAllowance(_amountOut)
     {
         // Purchase
         _createPurchase(_AMOUNT_IN, _amountOut, _purchaseAuctionData);
 
-        // Check balances
-        assertEq(_quoteToken.balanceOf(_bidder), 0);
-        assertEq(_quoteToken.balanceOf(address(_hook)), 0);
-        assertEq(
-            _quoteToken.balanceOf(address(_auctionHouse)),
-            _amountInProtocolFee + _amountInReferrerFee
-        );
-        assertEq(_quoteToken.balanceOf(_auctionOwner), _amountInLessFee);
-
-        assertEq(_baseToken.balanceOf(_bidder), _amountOut);
-        assertEq(_baseToken.balanceOf(address(_hook)), 0);
-        assertEq(_baseToken.balanceOf(address(_auctionHouse)), 0);
-        assertEq(_baseToken.balanceOf(_auctionOwner), 0);
-
-        // Check accrued fees
-        assertEq(_auctionHouse.rewards(_bidder, _quoteToken), 0);
-        assertEq(_auctionHouse.rewards(_REFERRER, _quoteToken), _amountInReferrerFee);
-        assertEq(_auctionHouse.rewards(_PROTOCOL, _quoteToken), _amountInProtocolFee);
-        assertEq(_auctionHouse.rewards(address(_hook), _quoteToken), 0);
-        assertEq(_auctionHouse.rewards(address(_auctionHouse), _quoteToken), 0);
-        assertEq(_auctionHouse.rewards(_auctionOwner, _quoteToken), 0);
-
-        assertEq(_auctionHouse.rewards(_bidder, _baseToken), 0);
-        assertEq(_auctionHouse.rewards(_REFERRER, _baseToken), 0);
-        assertEq(_auctionHouse.rewards(_PROTOCOL, _baseToken), 0);
-        assertEq(_auctionHouse.rewards(address(_hook), _baseToken), 0);
-        assertEq(_auctionHouse.rewards(address(_auctionHouse), _baseToken), 0);
-        assertEq(_auctionHouse.rewards(_auctionOwner, _baseToken), 0);
-
-        // Check prefunding amount
-        (,,,,,,,,, uint256 lotPrefunding) = _auctionHouse.lotRouting(_lotId);
-        assertEq(lotPrefunding, 0, "mismatch on prefunding");
+        // Check state
+        _assertQuoteTokenBalances();
+        _assertBaseTokenBalances();
+        _assertDerivativeTokenBalances();
+        _assertAccruedFees();
+        _assertPrefunding();
     }
 
     // ======== Derivative flow ======== //
@@ -376,92 +540,26 @@ contract PurchaseTest is AuctionHouseTest {
         givenReferrerFeeIsSet
         givenUserHasQuoteTokenBalance(_AMOUNT_IN)
         givenUserHasQuoteTokenAllowance(_AMOUNT_IN)
+        givenFeesAreCalculated(_AMOUNT_IN)
+        whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
+        givenBalancesAreCalculated(_AMOUNT_IN, _amountOut)
         givenOwnerHasBaseTokenBalance(_amountOut)
         givenOwnerHasBaseTokenAllowance(_amountOut)
     {
         // Call
         _createPurchase(_AMOUNT_IN, _amountOut, _purchaseAuctionData);
 
-        // Check balances of the quote token
-        assertEq(_quoteToken.balanceOf(_bidder), 0, "quote token: balance mismatch on _bidder");
-        assertEq(_quoteToken.balanceOf(address(_hook)), 0, "quote token: balance mismatch on hook");
-        assertEq(
-            _quoteToken.balanceOf(address(_auctionHouse)),
-            _amountInProtocolFee + _amountInReferrerFee,
-            "quote token: balance mismatch on auction house"
-        );
-        assertEq(
-            _quoteToken.balanceOf(_auctionOwner),
-            _amountInLessFee,
-            "quote token: balance mismatch on auction owner"
-        );
-        assertEq(
-            _quoteToken.balanceOf(address(_derivativeModule)),
-            0,
-            "quote token: balance mismatch on derivative module"
-        );
-
-        // Check balances of the base token
-        assertEq(_baseToken.balanceOf(_bidder), 0, "base token: balance mismatch on _bidder");
-        assertEq(_baseToken.balanceOf(address(_hook)), 0, "base token: balance mismatch on hook");
-        assertEq(
-            _baseToken.balanceOf(address(_auctionHouse)),
-            0,
-            "base token: balance mismatch on auction house"
-        );
-        assertEq(
-            _baseToken.balanceOf(_auctionOwner), 0, "base token: balance mismatch on auction owner"
-        );
-        assertEq(
-            _baseToken.balanceOf(address(_derivativeModule)),
-            _amountOut,
-            "base token: balance mismatch on derivative module"
-        );
-
-        // Check balances of the derivative token
-        assertEq(
-            _derivativeModule.derivativeToken().balanceOf(_bidder, _derivativeTokenId),
-            _amountOut,
-            "derivative token: balance mismatch on _bidder"
-        );
-        assertEq(
-            _derivativeModule.derivativeToken().balanceOf(address(_hook), _derivativeTokenId),
-            0,
-            "derivative token: balance mismatch on hook"
-        );
-        assertEq(
-            _derivativeModule.derivativeToken().balanceOf(
-                address(_auctionHouse), _derivativeTokenId
-            ),
-            0,
-            "derivative token: balance mismatch on auction house"
-        );
-        assertEq(
-            _derivativeModule.derivativeToken().balanceOf(_auctionOwner, _derivativeTokenId),
-            0,
-            "derivative token: balance mismatch on auction owner"
-        );
-        assertEq(
-            _derivativeModule.derivativeToken().balanceOf(
-                address(_derivativeModule), _derivativeTokenId
-            ),
-            0,
-            "derivative token: balance mismatch on derivative module"
-        );
+        // Check state
+        _assertQuoteTokenBalances();
+        _assertBaseTokenBalances();
+        _assertDerivativeTokenBalances();
+        _assertAccruedFees();
+        _assertPrefunding();
     }
 
     // [X] given there is no _PROTOCOL fee set for the auction type
     //  [X] no _PROTOCOL fee is accrued
     // [X] the _PROTOCOL fee is accrued
-
-    modifier givenProtocolFeeIsNotSet() {
-        _auctionHouse.setFee(_auctionModuleKeycode, FeeManager.FeeType.Protocol, 0);
-
-        _amountInProtocolFee = 0;
-        _amountInLessFee = _AMOUNT_IN - _amountInReferrerFee;
-        _amountOut = _amountInLessFee;
-        _;
-    }
 
     function test_givenProtocolFeeIsNotSet()
         external
@@ -469,74 +567,24 @@ contract PurchaseTest is AuctionHouseTest {
         whenAtomicAuctionModuleIsInstalled
         givenLotIsCreated
         givenLotHasStarted
-        givenProtocolFeeIsNotSet
         givenReferrerFeeIsSet
         givenUserHasQuoteTokenBalance(_AMOUNT_IN)
         givenUserHasQuoteTokenAllowance(_AMOUNT_IN)
+        givenFeesAreCalculated(_AMOUNT_IN)
+        whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
+        givenBalancesAreCalculated(_AMOUNT_IN, _amountOut)
         givenOwnerHasBaseTokenBalance(_amountOut)
         givenOwnerHasBaseTokenAllowance(_amountOut)
     {
         // Purchase
         _createPurchase(_AMOUNT_IN, _amountOut, _purchaseAuctionData);
 
-        // Check balances
-        assertEq(_quoteToken.balanceOf(_bidder), 0, "quote token: balance mismatch on _bidder");
-        assertEq(_quoteToken.balanceOf(address(_hook)), 0, "quote token: balance mismatch on hook");
-        assertEq(
-            _quoteToken.balanceOf(address(_auctionHouse)),
-            _amountInReferrerFee,
-            "quote token: balance mismatch on auction house"
-        );
-        assertEq(
-            _quoteToken.balanceOf(_auctionOwner),
-            _amountInLessFee,
-            "quote token: balance mismatch on auction owner"
-        );
-        assertEq(_quoteToken.balanceOf(_CURATOR), 0, "quote token: balance mismatch on curator");
-
-        assertEq(
-            _baseToken.balanceOf(_bidder), _amountOut, "base token: balance mismatch on _bidder"
-        );
-        assertEq(_baseToken.balanceOf(address(_hook)), 0, "base token: balance mismatch on hook");
-        assertEq(
-            _baseToken.balanceOf(address(_auctionHouse)),
-            0,
-            "base token: balance mismatch on auction house"
-        );
-        assertEq(
-            _baseToken.balanceOf(_auctionOwner), 0, "base token: balance mismatch on auction owner"
-        );
-        assertEq(
-            _baseToken.balanceOf(address(_CURATOR)), 0, "base token: balance mismatch on curator"
-        );
-
-        // Check rewards
-        assertEq(
-            _auctionHouse.rewards(_PROTOCOL, _quoteToken),
-            0,
-            "quote token: _PROTOCOL rewards mismatch"
-        );
-        assertEq(
-            _auctionHouse.rewards(_REFERRER, _quoteToken),
-            _amountInReferrerFee,
-            "quote token: _REFERRER rewards mismatch"
-        );
-        assertEq(
-            _auctionHouse.rewards(_CURATOR, _quoteToken), 0, "quote token: curator rewards mismatch"
-        );
-        assertEq(
-            _auctionHouse.rewards(_PROTOCOL, _baseToken),
-            0,
-            "base token: _PROTOCOL rewards mismatch"
-        );
-        assertEq(
-            _auctionHouse.rewards(_REFERRER, _baseToken),
-            0,
-            "base token: _REFERRER rewards mismatch"
-        );
-        assertEq(
-            _auctionHouse.rewards(_CURATOR, _baseToken), 0, "base token: curator rewards mismatch"
-        );
+        // Check state
+        _assertQuoteTokenBalances();
+        _assertBaseTokenBalances();
+        _assertDerivativeTokenBalances();
+        _assertAccruedFees();
+        _assertPrefunding();
     }
 
     function test_givenProtocolFeeIsSet()
@@ -549,163 +597,51 @@ contract PurchaseTest is AuctionHouseTest {
         givenLotHasStarted
         givenUserHasQuoteTokenBalance(_AMOUNT_IN)
         givenUserHasQuoteTokenAllowance(_AMOUNT_IN)
+        givenFeesAreCalculated(_AMOUNT_IN)
+        whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
+        givenBalancesAreCalculated(_AMOUNT_IN, _amountOut)
         givenOwnerHasBaseTokenBalance(_amountOut)
         givenOwnerHasBaseTokenAllowance(_amountOut)
     {
         // Purchase
         _createPurchase(_AMOUNT_IN, _amountOut, _purchaseAuctionData);
 
-        // Check balances
-        assertEq(_quoteToken.balanceOf(_bidder), 0, "quote token: balance mismatch on _bidder");
-        assertEq(_quoteToken.balanceOf(address(_hook)), 0, "quote token: balance mismatch on hook");
-        assertEq(
-            _quoteToken.balanceOf(address(_auctionHouse)),
-            _amountInReferrerFee + _amountInProtocolFee,
-            "quote token: balance mismatch on auction house"
-        );
-        assertEq(
-            _quoteToken.balanceOf(_auctionOwner),
-            _amountInLessFee,
-            "quote token: balance mismatch on auction owner"
-        );
-        assertEq(
-            _quoteToken.balanceOf(address(_CURATOR)), 0, "quote token: balance mismatch on curator"
-        );
-
-        assertEq(
-            _baseToken.balanceOf(_bidder), _amountOut, "base token: balance mismatch on _bidder"
-        );
-        assertEq(_baseToken.balanceOf(address(_hook)), 0, "base token: balance mismatch on hook");
-        assertEq(
-            _baseToken.balanceOf(address(_auctionHouse)),
-            0,
-            "base token: balance mismatch on auction house"
-        );
-        assertEq(
-            _baseToken.balanceOf(_auctionOwner), 0, "base token: balance mismatch on auction owner"
-        );
-        assertEq(
-            _baseToken.balanceOf(address(_CURATOR)), 0, "base token: balance mismatch on curator"
-        );
-
-        // Check rewards
-        assertEq(
-            _auctionHouse.rewards(_PROTOCOL, _quoteToken),
-            _amountInProtocolFee,
-            "quote token: _PROTOCOL rewards mismatch"
-        );
-        assertEq(
-            _auctionHouse.rewards(_REFERRER, _quoteToken),
-            _amountInReferrerFee,
-            "quote token: _REFERRER rewards mismatch"
-        );
-        assertEq(
-            _auctionHouse.rewards(_CURATOR, _quoteToken), 0, "quote token: curator rewards mismatch"
-        );
-        assertEq(
-            _auctionHouse.rewards(_PROTOCOL, _baseToken),
-            0,
-            "base token: _PROTOCOL rewards mismatch"
-        );
-        assertEq(
-            _auctionHouse.rewards(_REFERRER, _baseToken),
-            0,
-            "base token: _REFERRER rewards mismatch"
-        );
-        assertEq(
-            _auctionHouse.rewards(_CURATOR, _baseToken), 0, "base token: curator rewards mismatch"
-        );
+        // Check state
+        _assertQuoteTokenBalances();
+        _assertBaseTokenBalances();
+        _assertDerivativeTokenBalances();
+        _assertAccruedFees();
+        _assertPrefunding();
     }
 
     // [X] given there is no _REFERRER fee set for the auction type
     //  [X] no _REFERRER fee is accrued
     // [X] the _REFERRER fee is accrued
 
-    modifier givenReferrerFeeIsNotSet() {
-        _auctionHouse.setFee(_auctionModuleKeycode, FeeManager.FeeType.Referrer, 0);
-
-        _amountInReferrerFee = 0;
-        _amountInLessFee = _AMOUNT_IN - _amountInProtocolFee;
-        _amountOut = _amountInLessFee;
-        _;
-    }
-
     function test_givenReferrerFeeIsNotSet()
         external
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
         givenLotIsCreated
-        givenReferrerFeeIsNotSet
         givenProtocolFeeIsSet
         givenLotHasStarted
         givenUserHasQuoteTokenBalance(_AMOUNT_IN)
         givenUserHasQuoteTokenAllowance(_AMOUNT_IN)
+        givenFeesAreCalculated(_AMOUNT_IN)
+        whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
+        givenBalancesAreCalculated(_AMOUNT_IN, _amountOut)
         givenOwnerHasBaseTokenBalance(_amountOut)
         givenOwnerHasBaseTokenAllowance(_amountOut)
     {
         // Purchase
         _createPurchase(_AMOUNT_IN, _amountOut, _purchaseAuctionData);
 
-        // Check balances
-        assertEq(_quoteToken.balanceOf(_bidder), 0, "quote token: balance mismatch on _bidder");
-        assertEq(_quoteToken.balanceOf(address(_hook)), 0, "quote token: balance mismatch on hook");
-        assertEq(
-            _quoteToken.balanceOf(address(_auctionHouse)),
-            _amountInProtocolFee,
-            "quote token: balance mismatch on auction house"
-        );
-        assertEq(
-            _quoteToken.balanceOf(_auctionOwner),
-            _amountInLessFee,
-            "quote token: balance mismatch on auction owner"
-        );
-        assertEq(
-            _quoteToken.balanceOf(address(_CURATOR)), 0, "quote token: balance mismatch on curator"
-        );
-
-        assertEq(
-            _baseToken.balanceOf(_bidder), _amountOut, "base token: balance mismatch on _bidder"
-        );
-        assertEq(_baseToken.balanceOf(address(_hook)), 0, "base token: balance mismatch on hook");
-        assertEq(
-            _baseToken.balanceOf(address(_auctionHouse)),
-            0,
-            "base token: balance mismatch on auction house"
-        );
-        assertEq(
-            _baseToken.balanceOf(_auctionOwner), 0, "base token: balance mismatch on auction owner"
-        );
-        assertEq(
-            _baseToken.balanceOf(address(_CURATOR)), 0, "base token: balance mismatch on curator"
-        );
-
-        // Check rewards
-        assertEq(
-            _auctionHouse.rewards(_PROTOCOL, _quoteToken),
-            _amountInProtocolFee,
-            "quote token: _PROTOCOL rewards mismatch"
-        );
-        assertEq(
-            _auctionHouse.rewards(_REFERRER, _quoteToken),
-            0,
-            "quote token: _REFERRER rewards mismatch"
-        );
-        assertEq(
-            _auctionHouse.rewards(_CURATOR, _quoteToken), 0, "quote token: curator rewards mismatch"
-        );
-        assertEq(
-            _auctionHouse.rewards(_PROTOCOL, _baseToken),
-            0,
-            "base token: _PROTOCOL rewards mismatch"
-        );
-        assertEq(
-            _auctionHouse.rewards(_REFERRER, _baseToken),
-            0,
-            "base token: _REFERRER rewards mismatch"
-        );
-        assertEq(
-            _auctionHouse.rewards(_CURATOR, _baseToken), 0, "base token: curator rewards mismatch"
-        );
+        // Check state
+        _assertQuoteTokenBalances();
+        _assertBaseTokenBalances();
+        _assertDerivativeTokenBalances();
+        _assertAccruedFees();
+        _assertPrefunding();
     }
 
     function test_givenReferrerFeeIsSet()
@@ -718,72 +654,21 @@ contract PurchaseTest is AuctionHouseTest {
         givenLotHasStarted
         givenUserHasQuoteTokenBalance(_AMOUNT_IN)
         givenUserHasQuoteTokenAllowance(_AMOUNT_IN)
+        givenFeesAreCalculated(_AMOUNT_IN)
+        whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
+        givenBalancesAreCalculated(_AMOUNT_IN, _amountOut)
         givenOwnerHasBaseTokenBalance(_amountOut)
         givenOwnerHasBaseTokenAllowance(_amountOut)
     {
         // Purchase
         _createPurchase(_AMOUNT_IN, _amountOut, _purchaseAuctionData);
 
-        // Check balances
-        assertEq(_quoteToken.balanceOf(_bidder), 0, "quote token: balance mismatch on _bidder");
-        assertEq(_quoteToken.balanceOf(address(_hook)), 0, "quote token: balance mismatch on hook");
-        assertEq(
-            _quoteToken.balanceOf(address(_auctionHouse)),
-            _amountInReferrerFee + _amountInProtocolFee,
-            "quote token: balance mismatch on auction house"
-        );
-        assertEq(
-            _quoteToken.balanceOf(_auctionOwner),
-            _amountInLessFee,
-            "quote token: balance mismatch on auction owner"
-        );
-        assertEq(
-            _quoteToken.balanceOf(address(_CURATOR)), 0, "quote token: balance mismatch on curator"
-        );
-
-        assertEq(
-            _baseToken.balanceOf(_bidder), _amountOut, "base token: balance mismatch on _bidder"
-        );
-        assertEq(_baseToken.balanceOf(address(_hook)), 0, "base token: balance mismatch on hook");
-        assertEq(
-            _baseToken.balanceOf(address(_auctionHouse)),
-            0,
-            "base token: balance mismatch on auction house"
-        );
-        assertEq(
-            _baseToken.balanceOf(_auctionOwner), 0, "base token: balance mismatch on auction owner"
-        );
-        assertEq(
-            _baseToken.balanceOf(address(_CURATOR)), 0, "base token: balance mismatch on curator"
-        );
-
-        // Check rewards
-        assertEq(
-            _auctionHouse.rewards(_PROTOCOL, _quoteToken),
-            _amountInProtocolFee,
-            "quote token: _PROTOCOL rewards mismatch"
-        );
-        assertEq(
-            _auctionHouse.rewards(_REFERRER, _quoteToken),
-            _amountInReferrerFee,
-            "quote token: _REFERRER rewards mismatch"
-        );
-        assertEq(
-            _auctionHouse.rewards(_CURATOR, _quoteToken), 0, "quote token: curator rewards mismatch"
-        );
-        assertEq(
-            _auctionHouse.rewards(_PROTOCOL, _baseToken),
-            0,
-            "base token: _PROTOCOL rewards mismatch"
-        );
-        assertEq(
-            _auctionHouse.rewards(_REFERRER, _baseToken),
-            0,
-            "base token: _REFERRER rewards mismatch"
-        );
-        assertEq(
-            _auctionHouse.rewards(_CURATOR, _baseToken), 0, "base token: curator rewards mismatch"
-        );
+        // Check state
+        _assertQuoteTokenBalances();
+        _assertBaseTokenBalances();
+        _assertDerivativeTokenBalances();
+        _assertAccruedFees();
+        _assertPrefunding();
     }
 
     // [X] given there is no curator set
@@ -805,72 +690,21 @@ contract PurchaseTest is AuctionHouseTest {
         givenReferrerFeeIsSet
         givenUserHasQuoteTokenBalance(_AMOUNT_IN)
         givenUserHasQuoteTokenAllowance(_AMOUNT_IN)
+        givenFeesAreCalculated(_AMOUNT_IN)
+        whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
         givenOwnerHasBaseTokenBalance(_amountOut)
         givenOwnerHasBaseTokenAllowance(_amountOut)
+        givenBalancesAreCalculated(_AMOUNT_IN, _amountOut)
     {
         // Purchase
         _createPurchase(_AMOUNT_IN, _amountOut, _purchaseAuctionData);
 
-        // Check balances
-        assertEq(_quoteToken.balanceOf(_bidder), 0, "quote token: balance mismatch on _bidder");
-        assertEq(_quoteToken.balanceOf(address(_hook)), 0, "quote token: balance mismatch on hook");
-        assertEq(
-            _quoteToken.balanceOf(address(_auctionHouse)),
-            _amountInReferrerFee + _amountInProtocolFee,
-            "quote token: balance mismatch on auction house"
-        );
-        assertEq(
-            _quoteToken.balanceOf(_auctionOwner),
-            _amountInLessFee,
-            "quote token: balance mismatch on auction owner"
-        );
-        assertEq(
-            _quoteToken.balanceOf(address(_CURATOR)), 0, "quote token: balance mismatch on curator"
-        );
-
-        assertEq(
-            _baseToken.balanceOf(_bidder), _amountOut, "base token: balance mismatch on _bidder"
-        );
-        assertEq(_baseToken.balanceOf(address(_hook)), 0, "base token: balance mismatch on hook");
-        assertEq(
-            _baseToken.balanceOf(address(_auctionHouse)),
-            0,
-            "base token: balance mismatch on auction house"
-        );
-        assertEq(
-            _baseToken.balanceOf(_auctionOwner), 0, "base token: balance mismatch on auction owner"
-        );
-        assertEq(
-            _baseToken.balanceOf(address(_CURATOR)), 0, "base token: balance mismatch on curator"
-        );
-
-        // Check rewards
-        assertEq(
-            _auctionHouse.rewards(_PROTOCOL, _quoteToken),
-            _amountInProtocolFee,
-            "quote token: _PROTOCOL rewards mismatch"
-        );
-        assertEq(
-            _auctionHouse.rewards(_REFERRER, _quoteToken),
-            _amountInReferrerFee,
-            "quote token: _REFERRER rewards mismatch"
-        );
-        assertEq(
-            _auctionHouse.rewards(_CURATOR, _quoteToken), 0, "quote token: curator rewards mismatch"
-        );
-        assertEq(
-            _auctionHouse.rewards(_PROTOCOL, _baseToken),
-            0,
-            "base token: _PROTOCOL rewards mismatch"
-        );
-        assertEq(
-            _auctionHouse.rewards(_REFERRER, _baseToken),
-            0,
-            "base token: _REFERRER rewards mismatch"
-        );
-        assertEq(
-            _auctionHouse.rewards(_CURATOR, _baseToken), 0, "base token: curator rewards mismatch"
-        );
+        // Check state
+        _assertQuoteTokenBalances();
+        _assertBaseTokenBalances();
+        _assertDerivativeTokenBalances();
+        _assertAccruedFees();
+        _assertPrefunding();
     }
 
     function test_givenCuratorIsSet()
@@ -884,72 +718,21 @@ contract PurchaseTest is AuctionHouseTest {
         givenReferrerFeeIsSet
         givenUserHasQuoteTokenBalance(_AMOUNT_IN)
         givenUserHasQuoteTokenAllowance(_AMOUNT_IN)
+        givenFeesAreCalculated(_AMOUNT_IN)
+        whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
         givenOwnerHasBaseTokenBalance(_amountOut)
         givenOwnerHasBaseTokenAllowance(_amountOut)
+        givenBalancesAreCalculated(_AMOUNT_IN, _amountOut)
     {
         // Purchase
         _createPurchase(_AMOUNT_IN, _amountOut, _purchaseAuctionData);
 
-        // Check balances
-        assertEq(_quoteToken.balanceOf(_bidder), 0, "quote token: balance mismatch on _bidder");
-        assertEq(_quoteToken.balanceOf(address(_hook)), 0, "quote token: balance mismatch on hook");
-        assertEq(
-            _quoteToken.balanceOf(address(_auctionHouse)),
-            _amountInReferrerFee + _amountInProtocolFee,
-            "quote token: balance mismatch on auction house"
-        );
-        assertEq(
-            _quoteToken.balanceOf(_auctionOwner),
-            _amountInLessFee,
-            "quote token: balance mismatch on auction owner"
-        );
-        assertEq(
-            _quoteToken.balanceOf(address(_CURATOR)), 0, "quote token: balance mismatch on curator"
-        );
-
-        assertEq(
-            _baseToken.balanceOf(_bidder), _amountOut, "base token: balance mismatch on _bidder"
-        );
-        assertEq(_baseToken.balanceOf(address(_hook)), 0, "base token: balance mismatch on hook");
-        assertEq(
-            _baseToken.balanceOf(address(_auctionHouse)),
-            0,
-            "base token: balance mismatch on auction house"
-        );
-        assertEq(
-            _baseToken.balanceOf(_auctionOwner), 0, "base token: balance mismatch on auction owner"
-        );
-        assertEq(
-            _baseToken.balanceOf(address(_CURATOR)), 0, "base token: balance mismatch on curator"
-        );
-
-        // Check rewards
-        assertEq(
-            _auctionHouse.rewards(_PROTOCOL, _quoteToken),
-            _amountInProtocolFee,
-            "quote token: _PROTOCOL rewards mismatch"
-        );
-        assertEq(
-            _auctionHouse.rewards(_REFERRER, _quoteToken),
-            _amountInReferrerFee,
-            "quote token: _REFERRER rewards mismatch"
-        );
-        assertEq(
-            _auctionHouse.rewards(_CURATOR, _quoteToken), 0, "quote token: curator rewards mismatch"
-        );
-        assertEq(
-            _auctionHouse.rewards(_PROTOCOL, _baseToken),
-            0,
-            "base token: _PROTOCOL rewards mismatch"
-        );
-        assertEq(
-            _auctionHouse.rewards(_REFERRER, _baseToken),
-            0,
-            "base token: _REFERRER rewards mismatch"
-        );
-        assertEq(
-            _auctionHouse.rewards(_CURATOR, _baseToken), 0, "base token: curator rewards mismatch"
-        );
+        // Check state
+        _assertQuoteTokenBalances();
+        _assertBaseTokenBalances();
+        _assertDerivativeTokenBalances();
+        _assertAccruedFees();
+        _assertPrefunding();
     }
 
     function test_givenCuratorHasApproved()
@@ -961,83 +744,26 @@ contract PurchaseTest is AuctionHouseTest {
         givenLotHasStarted
         givenProtocolFeeIsSet
         givenReferrerFeeIsSet
-        givenOwnerHasBaseTokenBalance(_amountOut + _curatorFeeActual)
-        givenOwnerHasBaseTokenAllowance(_amountOut + _curatorFeeActual)
         givenCuratorMaxFeeIsSet
         givenCuratorFeeIsSet
         givenCuratorHasApproved
         givenUserHasQuoteTokenBalance(_AMOUNT_IN)
         givenUserHasQuoteTokenAllowance(_AMOUNT_IN)
+        givenFeesAreCalculated(_AMOUNT_IN)
+        whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
+        givenOwnerHasBaseTokenBalance(_amountOut + _curatorFeeActual)
+        givenOwnerHasBaseTokenAllowance(_amountOut + _curatorFeeActual)
+        givenBalancesAreCalculated(_AMOUNT_IN, _amountOut)
     {
         // Purchase
         _createPurchase(_AMOUNT_IN, _amountOut, _purchaseAuctionData);
 
-        // Check balances
-        assertEq(_quoteToken.balanceOf(_bidder), 0, "quote token: balance mismatch on _bidder");
-        assertEq(_quoteToken.balanceOf(address(_hook)), 0, "quote token: balance mismatch on hook");
-        assertEq(
-            _quoteToken.balanceOf(address(_auctionHouse)),
-            _amountInReferrerFee + _amountInProtocolFee,
-            "quote token: balance mismatch on auction house"
-        );
-        assertEq(
-            _quoteToken.balanceOf(_auctionOwner),
-            _amountInLessFee,
-            "quote token: balance mismatch on auction owner"
-        );
-        assertEq(
-            _quoteToken.balanceOf(address(_CURATOR)), 0, "quote token: balance mismatch on curator"
-        );
-
-        assertEq(
-            _baseToken.balanceOf(_bidder), _amountOut, "base token: balance mismatch on _bidder"
-        );
-        assertEq(_baseToken.balanceOf(address(_hook)), 0, "base token: balance mismatch on hook");
-        assertEq(
-            _baseToken.balanceOf(address(_auctionHouse)),
-            0,
-            "base token: balance mismatch on auction house"
-        );
-        assertEq(
-            _baseToken.balanceOf(_auctionOwner), 0, "base token: balance mismatch on auction owner"
-        );
-        assertEq(
-            _baseToken.balanceOf(address(_CURATOR)),
-            _curatorFeeActual,
-            "base token: balance mismatch on curator"
-        );
-
-        // Check rewards
-        assertEq(
-            _auctionHouse.rewards(_PROTOCOL, _quoteToken),
-            _amountInProtocolFee,
-            "quote token: _PROTOCOL rewards mismatch"
-        );
-        assertEq(
-            _auctionHouse.rewards(_REFERRER, _quoteToken),
-            _amountInReferrerFee,
-            "quote token: _REFERRER rewards mismatch"
-        );
-        assertEq(
-            _auctionHouse.rewards(_CURATOR, _quoteToken), 0, "quote token: curator rewards mismatch"
-        );
-        assertEq(
-            _auctionHouse.rewards(_PROTOCOL, _baseToken),
-            0,
-            "base token: _PROTOCOL rewards mismatch"
-        );
-        assertEq(
-            _auctionHouse.rewards(_REFERRER, _baseToken),
-            0,
-            "base token: _REFERRER rewards mismatch"
-        );
-        assertEq(
-            _auctionHouse.rewards(_CURATOR, _baseToken), 0, "base token: curator rewards mismatch"
-        );
-
-        // Check prefunding amount
-        (,,,,,,,,, uint256 lotPrefunding) = _auctionHouse.lotRouting(_lotId);
-        assertEq(lotPrefunding, 0, "mismatch on prefunding");
+        // Check state
+        _assertQuoteTokenBalances();
+        _assertBaseTokenBalances();
+        _assertDerivativeTokenBalances();
+        _assertAccruedFees();
+        _assertPrefunding();
     }
 
     function test_derivative_givenCuratorHasApproved()
@@ -1053,90 +779,26 @@ contract PurchaseTest is AuctionHouseTest {
         givenLotHasStarted
         givenProtocolFeeIsSet
         givenReferrerFeeIsSet
-        givenOwnerHasBaseTokenBalance(_amountOut + _curatorFeeActual)
-        givenOwnerHasBaseTokenAllowance(_amountOut + _curatorFeeActual)
         givenCuratorMaxFeeIsSet
         givenCuratorFeeIsSet
         givenCuratorHasApproved
         givenUserHasQuoteTokenBalance(_AMOUNT_IN)
         givenUserHasQuoteTokenAllowance(_AMOUNT_IN)
+        givenFeesAreCalculated(_AMOUNT_IN)
+        whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
+        givenOwnerHasBaseTokenBalance(_amountOut + _curatorFeeActual)
+        givenOwnerHasBaseTokenAllowance(_amountOut + _curatorFeeActual)
+        givenBalancesAreCalculated(_AMOUNT_IN, _amountOut)
     {
         // Purchase
         _createPurchase(_AMOUNT_IN, _amountOut, _purchaseAuctionData);
 
-        // Check balances of quote token
-        assertEq(_quoteToken.balanceOf(_bidder), 0, "quote token: balance mismatch on _bidder");
-        assertEq(_quoteToken.balanceOf(address(_hook)), 0, "quote token: balance mismatch on hook");
-        assertEq(
-            _quoteToken.balanceOf(address(_auctionHouse)),
-            _amountInReferrerFee + _amountInProtocolFee,
-            "quote token: balance mismatch on auction house"
-        );
-        assertEq(
-            _quoteToken.balanceOf(_auctionOwner),
-            _amountInLessFee,
-            "quote token: balance mismatch on auction owner"
-        );
-        assertEq(
-            _quoteToken.balanceOf(address(_CURATOR)), 0, "quote token: balance mismatch on curator"
-        );
-        assertEq(_quoteToken.balanceOf(address(_derivativeModule)), 0);
-
-        // Check balances of base token
-        assertEq(_baseToken.balanceOf(_bidder), 0, "base token: balance mismatch on _bidder");
-        assertEq(_baseToken.balanceOf(address(_hook)), 0, "base token: balance mismatch on hook");
-        assertEq(
-            _baseToken.balanceOf(address(_auctionHouse)),
-            0,
-            "base token: balance mismatch on auction house"
-        );
-        assertEq(
-            _baseToken.balanceOf(_auctionOwner), 0, "base token: balance mismatch on auction owner"
-        );
-        assertEq(
-            _baseToken.balanceOf(address(_CURATOR)), 0, "base token: balance mismatch on curator"
-        );
-        assertEq(
-            _baseToken.balanceOf(address(_derivativeModule)),
-            _amountOut + _curatorFeeActual,
-            "base token: balance mismatch on derivative module"
-        );
-
-        // Check balances of derivative token
-        assertEq(
-            _derivativeModule.derivativeToken().balanceOf(_bidder, _derivativeTokenId),
-            _amountOut,
-            "derivative token: balance mismatch on _bidder"
-        );
-        assertEq(
-            _derivativeModule.derivativeToken().balanceOf(address(_hook), _derivativeTokenId),
-            0,
-            "derivative token: balance mismatch on hook"
-        );
-        assertEq(
-            _derivativeModule.derivativeToken().balanceOf(
-                address(_auctionHouse), _derivativeTokenId
-            ),
-            0,
-            "derivative token: balance mismatch on auction house"
-        );
-        assertEq(
-            _derivativeModule.derivativeToken().balanceOf(_auctionOwner, _derivativeTokenId),
-            0,
-            "derivative token: balance mismatch on auction owner"
-        );
-        assertEq(
-            _derivativeModule.derivativeToken().balanceOf(_CURATOR, _derivativeTokenId),
-            _curatorFeeActual,
-            "derivative token: balance mismatch on curator"
-        );
-        assertEq(
-            _derivativeModule.derivativeToken().balanceOf(
-                address(_derivativeModule), _derivativeTokenId
-            ),
-            0,
-            "derivative token: balance mismatch on derivative module"
-        );
+        // Check state
+        _assertQuoteTokenBalances();
+        _assertBaseTokenBalances();
+        _assertDerivativeTokenBalances();
+        _assertAccruedFees();
+        _assertPrefunding();
     }
 
     // ======== Prefunding flow ======== //
@@ -1146,16 +808,11 @@ contract PurchaseTest is AuctionHouseTest {
     //   [X] it succeeds - base token is not transferred from auction owner again
     //  [X] it succeeds - base token is not transferred from auction owner again
 
-    modifier whenLotIsPrefunded() {
-        _atomicAuctionModule.setRequiredPrefunding(true);
-        _;
-    }
-
     function test_prefunded()
         external
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
-        whenLotIsPrefunded
+        givenAtomicAuctionRequiresPrefunding
         givenCuratorIsSet
         givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
         givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
@@ -1165,37 +822,26 @@ contract PurchaseTest is AuctionHouseTest {
         givenLotHasStarted
         givenUserHasQuoteTokenBalance(_AMOUNT_IN)
         givenUserHasQuoteTokenAllowance(_AMOUNT_IN)
+        givenFeesAreCalculated(_AMOUNT_IN)
+        whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
+        givenBalancesAreCalculated(_AMOUNT_IN, _amountOut)
     {
-        // Auction house has base tokens
-        assertEq(
-            _baseToken.balanceOf(address(_auctionHouse)),
-            _LOT_CAPACITY,
-            "pre-purchase: balance mismatch on auction house"
-        );
-
         // Purchase
         _createPurchase(_AMOUNT_IN, _amountOut, _purchaseAuctionData);
 
-        // Check balances of the base token
-        assertEq(_baseToken.balanceOf(_bidder), _amountOut, "balance mismatch on _bidder");
-        assertEq(_baseToken.balanceOf(address(_hook)), 0, "balance mismatch on hook");
-        assertEq(
-            _baseToken.balanceOf(address(_auctionHouse)),
-            _LOT_CAPACITY - _amountOut,
-            "balance mismatch on auction house"
-        );
-        assertEq(_baseToken.balanceOf(_auctionOwner), 0, "balance mismatch on auction owner");
-
-        // Check prefunding amount
-        (,,,,,,,,, uint256 lotPrefunding) = _auctionHouse.lotRouting(_lotId);
-        assertEq(lotPrefunding, _LOT_CAPACITY - _amountOut, "mismatch on prefunding");
+        // Check state
+        _assertQuoteTokenBalances();
+        _assertBaseTokenBalances();
+        _assertDerivativeTokenBalances();
+        _assertAccruedFees();
+        _assertPrefunding();
     }
 
     function test_prefunded_givenCuratorHasApproved()
         external
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
-        whenLotIsPrefunded
+        givenAtomicAuctionRequiresPrefunding
         givenCuratorIsSet
         givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
         givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
@@ -1210,34 +856,18 @@ contract PurchaseTest is AuctionHouseTest {
         givenCuratorHasApproved
         givenUserHasQuoteTokenBalance(_AMOUNT_IN)
         givenUserHasQuoteTokenAllowance(_AMOUNT_IN)
+        givenFeesAreCalculated(_AMOUNT_IN)
+        whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
+        givenBalancesAreCalculated(_AMOUNT_IN, _amountOut)
     {
-        // Auction house has base tokens
-        assertEq(
-            _baseToken.balanceOf(address(_auctionHouse)),
-            _LOT_CAPACITY + _curatorMaxPotentialFee,
-            "pre-purchase: balance mismatch on auction house"
-        );
-
         // Purchase
         _createPurchase(_AMOUNT_IN, _amountOut, _purchaseAuctionData);
 
-        // Check balances of the base token
-        assertEq(_baseToken.balanceOf(_bidder), _amountOut, "balance mismatch on _bidder");
-        assertEq(_baseToken.balanceOf(address(_hook)), 0, "balance mismatch on hook");
-        assertEq(
-            _baseToken.balanceOf(address(_auctionHouse)),
-            _LOT_CAPACITY + _curatorMaxPotentialFee - _amountOut - _curatorFeeActual,
-            "balance mismatch on auction house"
-        );
-        assertEq(_baseToken.balanceOf(_auctionOwner), 0, "balance mismatch on auction owner");
-        assertEq(_baseToken.balanceOf(_CURATOR), _curatorFeeActual, "balance mismatch on curator");
-
-        // Check prefunding amount
-        (,,,,,,,,, uint256 lotPrefunding) = _auctionHouse.lotRouting(_lotId);
-        assertEq(
-            lotPrefunding,
-            _LOT_CAPACITY + _curatorMaxPotentialFee - _amountOut - _curatorFeeActual,
-            "mismatch on prefunding"
-        );
+        // Check state
+        _assertQuoteTokenBalances();
+        _assertBaseTokenBalances();
+        _assertDerivativeTokenBalances();
+        _assertAccruedFees();
+        _assertPrefunding();
     }
 }
