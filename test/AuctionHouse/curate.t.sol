@@ -14,12 +14,6 @@ contract CurateTest is AuctionHouseTest {
         _;
     }
 
-    modifier givenLotIsPrefunded() {
-        // Set the lot to be prefunded
-        _atomicAuctionModule.setRequiredPrefunding(true);
-        _;
-    }
-
     // ===== Tests ===== //
 
     // [X] when the lot id is invalid
@@ -52,7 +46,7 @@ contract CurateTest is AuctionHouseTest {
         _auctionHouse.curate(_lotId);
     }
 
-    function test_givenNoCuratorIsSet_whenCalledByCurator()
+    function test_givenNoCuratorIsSet_whenCalledByCurator_reverts()
         public
         givenCuratorIsZero
         whenAuctionTypeIsAtomic
@@ -70,7 +64,7 @@ contract CurateTest is AuctionHouseTest {
         _auctionHouse.curate(_lotId);
     }
 
-    function test_givenNoCuratorIsSet_whenCalledByOwner()
+    function test_givenNoCuratorIsSet_whenCalledByOwner_reverts()
         public
         givenCuratorIsZero
         whenAuctionTypeIsAtomic
@@ -87,7 +81,7 @@ contract CurateTest is AuctionHouseTest {
         _auctionHouse.curate(_lotId);
     }
 
-    function test_alreadyCurated()
+    function test_alreadyCurated_reverts()
         public
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
@@ -106,7 +100,7 @@ contract CurateTest is AuctionHouseTest {
         _auctionHouse.curate(_lotId);
     }
 
-    function test_givenLotHasConcluded()
+    function test_givenLotHasConcluded_reverts()
         public
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
@@ -123,7 +117,7 @@ contract CurateTest is AuctionHouseTest {
         _auctionHouse.curate(_lotId);
     }
 
-    function test_givenLotHasBeenCancelled()
+    function test_givenLotHasBeenCancelled_reverts()
         public
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
@@ -140,7 +134,7 @@ contract CurateTest is AuctionHouseTest {
         _auctionHouse.curate(_lotId);
     }
 
-    function test_givenCuratorFeeNotSet()
+    function test_givenCuratorFeeNotSet_reverts()
         public
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
@@ -204,13 +198,13 @@ contract CurateTest is AuctionHouseTest {
         assertEq(_baseToken.balanceOf(_CURATOR), 0);
     }
 
-    function test_givenLotIsPrefunded()
+    function test_givenAtomicAuctionRequiresPrefunding()
         public
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
         givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
         givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
-        givenLotIsPrefunded
+        givenAtomicAuctionRequiresPrefunding
         givenLotIsCreated
         givenCuratorMaxFeeIsSet
         givenCuratorFeeIsSet
@@ -234,6 +228,80 @@ contract CurateTest is AuctionHouseTest {
         assertEq(
             _baseToken.balanceOf(address(_auctionHouse)),
             _LOT_CAPACITY + _curatorMaxPotentialFee,
+            "base token: auction house balance mismatch"
+        );
+        assertEq(_baseToken.balanceOf(_CURATOR), 0, "base token: _CURATOR balance mismatch");
+    }
+
+    function test_givenAtomicAuctionRequiresPrefunding_quoteTokenDecimalsLarger()
+        public
+        whenAuctionTypeIsAtomic
+        whenAtomicAuctionModuleIsInstalled
+        givenQuoteTokenHasDecimals(17)
+        givenBaseTokenHasDecimals(13)
+        givenOwnerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenOwnerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenAtomicAuctionRequiresPrefunding
+        givenLotIsCreated
+        givenCuratorMaxFeeIsSet
+        givenCuratorFeeIsSet
+        givenLotHasStarted
+        givenOwnerHasBaseTokenBalance(_scaleBaseTokenAmount(_curatorMaxPotentialFee))
+        givenOwnerHasBaseTokenAllowance(_scaleBaseTokenAmount(_curatorMaxPotentialFee))
+    {
+        // Curate
+        vm.prank(_CURATOR);
+        _auctionHouse.curate(_lotId);
+
+        // Verify
+        (address lotCurator, bool lotCurated) = _auctionHouse.lotCuration(_lotId);
+        assertEq(lotCurator, _CURATOR);
+        assertTrue(lotCurated);
+
+        // Maximum _CURATOR fee is transferred to the auction house
+        assertEq(
+            _baseToken.balanceOf(_auctionOwner), 0, "base token: _auctionOwner balance mismatch"
+        );
+        assertEq(
+            _baseToken.balanceOf(address(_auctionHouse)),
+            _scaleBaseTokenAmount(_LOT_CAPACITY) + _scaleBaseTokenAmount(_curatorMaxPotentialFee),
+            "base token: auction house balance mismatch"
+        );
+        assertEq(_baseToken.balanceOf(_CURATOR), 0, "base token: _CURATOR balance mismatch");
+    }
+
+    function test_givenAtomicAuctionRequiresPrefunding_quoteTokenDecimalsSmaller()
+        public
+        whenAuctionTypeIsAtomic
+        whenAtomicAuctionModuleIsInstalled
+        givenQuoteTokenHasDecimals(13)
+        givenBaseTokenHasDecimals(17)
+        givenOwnerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenOwnerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenAtomicAuctionRequiresPrefunding
+        givenLotIsCreated
+        givenCuratorMaxFeeIsSet
+        givenCuratorFeeIsSet
+        givenLotHasStarted
+        givenOwnerHasBaseTokenBalance(_scaleBaseTokenAmount(_curatorMaxPotentialFee))
+        givenOwnerHasBaseTokenAllowance(_scaleBaseTokenAmount(_curatorMaxPotentialFee))
+    {
+        // Curate
+        vm.prank(_CURATOR);
+        _auctionHouse.curate(_lotId);
+
+        // Verify
+        (address lotCurator, bool lotCurated) = _auctionHouse.lotCuration(_lotId);
+        assertEq(lotCurator, _CURATOR);
+        assertTrue(lotCurated);
+
+        // Maximum _CURATOR fee is transferred to the auction house
+        assertEq(
+            _baseToken.balanceOf(_auctionOwner), 0, "base token: _auctionOwner balance mismatch"
+        );
+        assertEq(
+            _baseToken.balanceOf(address(_auctionHouse)),
+            _scaleBaseTokenAmount(_LOT_CAPACITY) + _scaleBaseTokenAmount(_curatorMaxPotentialFee),
             "base token: auction house balance mismatch"
         );
         assertEq(_baseToken.balanceOf(_CURATOR), 0, "base token: _CURATOR balance mismatch");

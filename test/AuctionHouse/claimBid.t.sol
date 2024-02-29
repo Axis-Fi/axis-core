@@ -123,7 +123,10 @@ contract ClaimBidTest is AuctionHouseTest {
             uint256(amountIn_) * _protocolFeePercentActual / 1e5 + (hasReferrer ? 0 : referrerFee);
     }
 
-    modifier givenPayoutIsNotSet(address referrer_, uint256 amountIn_, address sender_) {
+    /// @dev    Assumes that any amounts are scaled to the current decimal scale
+    modifier givenPayoutIsNotSet(address referrer_, uint96 amountIn_, address sender_) {
+        uint96 scaledLotCapacity = _scaleBaseTokenAmount(_LOT_CAPACITY);
+
         _mockClaimBid(referrer_, amountIn_, 0, sender_);
 
         // Calculate fees
@@ -131,52 +134,55 @@ contract ClaimBidTest is AuctionHouseTest {
 
         // Set expected balances
         _expectedAuctionHouseQuoteTokenBalance = _expectedReferrerFee + _expectedProtocolFee;
-        _expectedBidderQuoteTokenBalance = _BID_AMOUNT;
+        _expectedBidderQuoteTokenBalance = amountIn_;
         assertEq(
             _expectedAuctionHouseQuoteTokenBalance + _expectedBidderQuoteTokenBalance,
-            _BID_AMOUNT,
+            amountIn_,
             "quote token balances"
         );
 
-        _expectedAuctionHouseBaseTokenBalance = _LOT_CAPACITY;
+        _expectedAuctionHouseBaseTokenBalance = scaledLotCapacity;
         _expectedBidderBaseTokenBalance = 0;
         _expectedCuratorBaseTokenBalance = 0;
         assertEq(
             _expectedAuctionHouseBaseTokenBalance + _expectedBidderBaseTokenBalance
                 + _expectedCuratorBaseTokenBalance,
-            _LOT_CAPACITY,
+            scaledLotCapacity,
             "base token balances"
         );
         _;
     }
 
+    /// @dev    Assumes that any amounts are scaled to the current decimal scale
     modifier givenPayoutIsSet(
         address referrer_,
-        uint256 amountIn_,
-        uint256 payout_,
+        uint96 amountIn_,
+        uint96 payout_,
         address sender_
     ) {
+        uint96 scaledLotCapacity = _scaleBaseTokenAmount(_LOT_CAPACITY);
+
         _mockClaimBid(referrer_, amountIn_, payout_, sender_);
 
         // Calculate fees
         _calculateFees(referrer_, amountIn_);
 
         // Set expected balances
-        _expectedAuctionHouseQuoteTokenBalance = _BID_AMOUNT;
+        _expectedAuctionHouseQuoteTokenBalance = amountIn_;
         _expectedBidderQuoteTokenBalance = 0;
         assertEq(
             _expectedAuctionHouseQuoteTokenBalance + _expectedBidderQuoteTokenBalance,
-            _BID_AMOUNT,
+            amountIn_,
             "quote token balances"
         );
 
-        _expectedAuctionHouseBaseTokenBalance = _LOT_CAPACITY - payout_;
+        _expectedAuctionHouseBaseTokenBalance = scaledLotCapacity - payout_;
         _expectedBidderBaseTokenBalance = payout_;
         _expectedCuratorBaseTokenBalance = 0;
         assertEq(
             _expectedAuctionHouseBaseTokenBalance + _expectedBidderBaseTokenBalance
                 + _expectedCuratorBaseTokenBalance,
-            _LOT_CAPACITY,
+            scaledLotCapacity,
             "base token balances"
         );
         _;
@@ -242,6 +248,64 @@ contract ClaimBidTest is AuctionHouseTest {
         _assertBaseTokenBalances();
     }
 
+    function test_givenNoPayout_quoteTokenDecimalsLarger()
+        external
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenCuratorIsSet
+        givenLotIsPrefunded
+        givenQuoteTokenHasDecimals(17)
+        givenBaseTokenHasDecimals(13)
+        givenOwnerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenOwnerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenLotIsCreated
+        givenLotHasStarted
+        givenReferrerFeeIsSet
+        givenProtocolFeeIsSet
+        givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenBid(_scaleQuoteTokenAmount(_BID_AMOUNT), "")
+        givenPayoutIsNotSet(_REFERRER, _scaleQuoteTokenAmount(_BID_AMOUNT), _bidder)
+    {
+        // Call the function
+        vm.prank(_bidder);
+        _auctionHouse.claimBid(_lotId, _bidId);
+
+        // Check the accrued fees
+        _assertAccruedFees();
+        _assertQuoteTokenBalances();
+        _assertBaseTokenBalances();
+    }
+
+    function test_givenNoPayout_quoteTokenDecimalsSmaller()
+        external
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenCuratorIsSet
+        givenLotIsPrefunded
+        givenQuoteTokenHasDecimals(13)
+        givenBaseTokenHasDecimals(17)
+        givenOwnerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenOwnerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenLotIsCreated
+        givenLotHasStarted
+        givenReferrerFeeIsSet
+        givenProtocolFeeIsSet
+        givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenBid(_scaleQuoteTokenAmount(_BID_AMOUNT), "")
+        givenPayoutIsNotSet(_REFERRER, _scaleQuoteTokenAmount(_BID_AMOUNT), _bidder)
+    {
+        // Call the function
+        vm.prank(_bidder);
+        _auctionHouse.claimBid(_lotId, _bidId);
+
+        // Check the accrued fees
+        _assertAccruedFees();
+        _assertQuoteTokenBalances();
+        _assertBaseTokenBalances();
+    }
+
     function test_givenPayout()
         external
         whenAuctionTypeIsBatch
@@ -258,6 +322,74 @@ contract ClaimBidTest is AuctionHouseTest {
         givenUserHasQuoteTokenAllowance(_BID_AMOUNT)
         givenBid(_BID_AMOUNT, "")
         givenPayoutIsSet(_REFERRER, _BID_AMOUNT, _BID_AMOUNT_OUT, _bidder)
+    {
+        // Call the function
+        vm.prank(_bidder);
+        _auctionHouse.claimBid(_lotId, _bidId);
+
+        // Check the accrued fees
+        _assertAccruedFees();
+        _assertQuoteTokenBalances();
+        _assertBaseTokenBalances();
+    }
+
+    function test_givenPayout_quoteTokenDecimalsLarger()
+        external
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenCuratorIsSet
+        givenLotIsPrefunded
+        givenQuoteTokenHasDecimals(17)
+        givenBaseTokenHasDecimals(13)
+        givenOwnerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenOwnerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenLotIsCreated
+        givenLotHasStarted
+        givenReferrerFeeIsSet
+        givenProtocolFeeIsSet
+        givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenBid(_scaleQuoteTokenAmount(_BID_AMOUNT), "")
+        givenPayoutIsSet(
+            _REFERRER,
+            _scaleQuoteTokenAmount(_BID_AMOUNT),
+            _scaleBaseTokenAmount(_BID_AMOUNT_OUT),
+            _bidder
+        )
+    {
+        // Call the function
+        vm.prank(_bidder);
+        _auctionHouse.claimBid(_lotId, _bidId);
+
+        // Check the accrued fees
+        _assertAccruedFees();
+        _assertQuoteTokenBalances();
+        _assertBaseTokenBalances();
+    }
+
+    function test_givenPayout_quoteTokenDecimalsSmaller()
+        external
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenCuratorIsSet
+        givenLotIsPrefunded
+        givenQuoteTokenHasDecimals(13)
+        givenBaseTokenHasDecimals(17)
+        givenOwnerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenOwnerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenLotIsCreated
+        givenLotHasStarted
+        givenReferrerFeeIsSet
+        givenProtocolFeeIsSet
+        givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenBid(_scaleQuoteTokenAmount(_BID_AMOUNT), "")
+        givenPayoutIsSet(
+            _REFERRER,
+            _scaleQuoteTokenAmount(_BID_AMOUNT),
+            _scaleBaseTokenAmount(_BID_AMOUNT_OUT),
+            _bidder
+        )
     {
         // Call the function
         vm.prank(_bidder);
@@ -296,6 +428,74 @@ contract ClaimBidTest is AuctionHouseTest {
         _assertBaseTokenBalances();
     }
 
+    function test_givenPayout_noReferrer_quoteTokenDecimalsLarger()
+        external
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenCuratorIsSet
+        givenLotIsPrefunded
+        givenQuoteTokenHasDecimals(17)
+        givenBaseTokenHasDecimals(13)
+        givenOwnerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenOwnerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenLotIsCreated
+        givenLotHasStarted
+        givenReferrerFeeIsSet
+        givenProtocolFeeIsSet
+        givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenBid(_scaleQuoteTokenAmount(_BID_AMOUNT), "")
+        givenPayoutIsSet(
+            address(0),
+            _scaleQuoteTokenAmount(_BID_AMOUNT),
+            _scaleBaseTokenAmount(_BID_AMOUNT_OUT),
+            _bidder
+        )
+    {
+        // Call the function
+        vm.prank(_bidder);
+        _auctionHouse.claimBid(_lotId, _bidId);
+
+        // Check the accrued fees
+        _assertAccruedFees();
+        _assertQuoteTokenBalances();
+        _assertBaseTokenBalances();
+    }
+
+    function test_givenPayout_noReferrer_quoteTokenDecimalsSmaller()
+        external
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenCuratorIsSet
+        givenLotIsPrefunded
+        givenQuoteTokenHasDecimals(13)
+        givenBaseTokenHasDecimals(17)
+        givenOwnerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenOwnerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenLotIsCreated
+        givenLotHasStarted
+        givenReferrerFeeIsSet
+        givenProtocolFeeIsSet
+        givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenBid(_scaleQuoteTokenAmount(_BID_AMOUNT), "")
+        givenPayoutIsSet(
+            address(0),
+            _scaleQuoteTokenAmount(_BID_AMOUNT),
+            _scaleBaseTokenAmount(_BID_AMOUNT_OUT),
+            _bidder
+        )
+    {
+        // Call the function
+        vm.prank(_bidder);
+        _auctionHouse.claimBid(_lotId, _bidId);
+
+        // Check the accrued fees
+        _assertAccruedFees();
+        _assertQuoteTokenBalances();
+        _assertBaseTokenBalances();
+    }
+
     function test_givenPayout_noProtocolFee()
         external
         whenAuctionTypeIsBatch
@@ -311,6 +511,72 @@ contract ClaimBidTest is AuctionHouseTest {
         givenUserHasQuoteTokenAllowance(_BID_AMOUNT)
         givenBid(_BID_AMOUNT, "")
         givenPayoutIsSet(_REFERRER, _BID_AMOUNT, _BID_AMOUNT_OUT, _bidder)
+    {
+        // Call the function
+        vm.prank(_bidder);
+        _auctionHouse.claimBid(_lotId, _bidId);
+
+        // Check the accrued fees
+        _assertAccruedFees();
+        _assertQuoteTokenBalances();
+        _assertBaseTokenBalances();
+    }
+
+    function test_givenPayout_noProtocolFee_quoteTokenDecimalsLarger()
+        external
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenCuratorIsSet
+        givenLotIsPrefunded
+        givenQuoteTokenHasDecimals(17)
+        givenBaseTokenHasDecimals(13)
+        givenOwnerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenOwnerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenLotIsCreated
+        givenLotHasStarted
+        givenReferrerFeeIsSet
+        givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenBid(_scaleQuoteTokenAmount(_BID_AMOUNT), "")
+        givenPayoutIsSet(
+            _REFERRER,
+            _scaleQuoteTokenAmount(_BID_AMOUNT),
+            _scaleBaseTokenAmount(_BID_AMOUNT_OUT),
+            _bidder
+        )
+    {
+        // Call the function
+        vm.prank(_bidder);
+        _auctionHouse.claimBid(_lotId, _bidId);
+
+        // Check the accrued fees
+        _assertAccruedFees();
+        _assertQuoteTokenBalances();
+        _assertBaseTokenBalances();
+    }
+
+    function test_givenPayout_noProtocolFee_quoteTokenDecimalsSmaller()
+        external
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenCuratorIsSet
+        givenLotIsPrefunded
+        givenQuoteTokenHasDecimals(13)
+        givenBaseTokenHasDecimals(17)
+        givenOwnerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenOwnerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenLotIsCreated
+        givenLotHasStarted
+        givenReferrerFeeIsSet
+        givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenBid(_scaleQuoteTokenAmount(_BID_AMOUNT), "")
+        givenPayoutIsSet(
+            _REFERRER,
+            _scaleQuoteTokenAmount(_BID_AMOUNT),
+            _scaleBaseTokenAmount(_BID_AMOUNT_OUT),
+            _bidder
+        )
     {
         // Call the function
         vm.prank(_bidder);
@@ -348,6 +614,72 @@ contract ClaimBidTest is AuctionHouseTest {
         _assertBaseTokenBalances();
     }
 
+    function test_givenPayout_noReferrerFee_quoteTokenDecimalsLarger()
+        external
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenCuratorIsSet
+        givenLotIsPrefunded
+        givenQuoteTokenHasDecimals(17)
+        givenBaseTokenHasDecimals(13)
+        givenOwnerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenOwnerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenLotIsCreated
+        givenLotHasStarted
+        givenProtocolFeeIsSet
+        givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenBid(_scaleQuoteTokenAmount(_BID_AMOUNT), "")
+        givenPayoutIsSet(
+            address(0),
+            _scaleQuoteTokenAmount(_BID_AMOUNT),
+            _scaleBaseTokenAmount(_BID_AMOUNT_OUT),
+            _bidder
+        )
+    {
+        // Call the function
+        vm.prank(_bidder);
+        _auctionHouse.claimBid(_lotId, _bidId);
+
+        // Check the accrued fees
+        _assertAccruedFees();
+        _assertQuoteTokenBalances();
+        _assertBaseTokenBalances();
+    }
+
+    function test_givenPayout_noReferrerFee_quoteTokenDecimalsSmaller()
+        external
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenCuratorIsSet
+        givenLotIsPrefunded
+        givenQuoteTokenHasDecimals(13)
+        givenBaseTokenHasDecimals(17)
+        givenOwnerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenOwnerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenLotIsCreated
+        givenLotHasStarted
+        givenProtocolFeeIsSet
+        givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenBid(_scaleQuoteTokenAmount(_BID_AMOUNT), "")
+        givenPayoutIsSet(
+            address(0),
+            _scaleQuoteTokenAmount(_BID_AMOUNT),
+            _scaleBaseTokenAmount(_BID_AMOUNT_OUT),
+            _bidder
+        )
+    {
+        // Call the function
+        vm.prank(_bidder);
+        _auctionHouse.claimBid(_lotId, _bidId);
+
+        // Check the accrued fees
+        _assertAccruedFees();
+        _assertQuoteTokenBalances();
+        _assertBaseTokenBalances();
+    }
+
     function test_givenPayout_noReferrerFee_noProtocolFee()
         external
         whenAuctionTypeIsBatch
@@ -362,6 +694,70 @@ contract ClaimBidTest is AuctionHouseTest {
         givenUserHasQuoteTokenAllowance(_BID_AMOUNT)
         givenBid(_BID_AMOUNT, "")
         givenPayoutIsSet(address(0), _BID_AMOUNT, _BID_AMOUNT_OUT, _bidder)
+    {
+        // Call the function
+        vm.prank(_bidder);
+        _auctionHouse.claimBid(_lotId, _bidId);
+
+        // Check the accrued fees
+        _assertAccruedFees();
+        _assertQuoteTokenBalances();
+        _assertBaseTokenBalances();
+    }
+
+    function test_givenPayout_noReferrerFee_noProtocolFee_quoteTokenDecimalsLarger()
+        external
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenCuratorIsSet
+        givenLotIsPrefunded
+        givenQuoteTokenHasDecimals(17)
+        givenBaseTokenHasDecimals(13)
+        givenOwnerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenOwnerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenLotIsCreated
+        givenLotHasStarted
+        givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenBid(_scaleQuoteTokenAmount(_BID_AMOUNT), "")
+        givenPayoutIsSet(
+            address(0),
+            _scaleQuoteTokenAmount(_BID_AMOUNT),
+            _scaleBaseTokenAmount(_BID_AMOUNT_OUT),
+            _bidder
+        )
+    {
+        // Call the function
+        vm.prank(_bidder);
+        _auctionHouse.claimBid(_lotId, _bidId);
+
+        // Check the accrued fees
+        _assertAccruedFees();
+        _assertQuoteTokenBalances();
+        _assertBaseTokenBalances();
+    }
+
+    function test_givenPayout_noReferrerFee_noProtocolFee_quoteTokenDecimalsSmaller()
+        external
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenCuratorIsSet
+        givenLotIsPrefunded
+        givenQuoteTokenHasDecimals(13)
+        givenBaseTokenHasDecimals(17)
+        givenOwnerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenOwnerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenLotIsCreated
+        givenLotHasStarted
+        givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenBid(_scaleQuoteTokenAmount(_BID_AMOUNT), "")
+        givenPayoutIsSet(
+            address(0),
+            _scaleQuoteTokenAmount(_BID_AMOUNT),
+            _scaleBaseTokenAmount(_BID_AMOUNT_OUT),
+            _bidder
+        )
     {
         // Call the function
         vm.prank(_bidder);

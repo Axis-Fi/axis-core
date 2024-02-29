@@ -487,11 +487,6 @@ contract AuctionTest is AuctionHouseTest {
     //   [X] reverts when the auction owner does not have enough allowance
     //   [X] it succeeds
 
-    modifier givenAuctionRequiresPrefunding() {
-        _atomicAuctionModule.setRequiredPrefunding(true);
-        _;
-    }
-
     modifier whenAuctionCapacityInQuote() {
         _auctionParams.capacityInQuote = true;
         _;
@@ -512,7 +507,7 @@ contract AuctionTest is AuctionHouseTest {
         external
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
-        givenAuctionRequiresPrefunding
+        givenAtomicAuctionRequiresPrefunding
         whenAuctionCapacityInQuote
     {
         // Expect revert
@@ -528,7 +523,7 @@ contract AuctionTest is AuctionHouseTest {
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
         whenHooksIsSet
-        givenAuctionRequiresPrefunding
+        givenAtomicAuctionRequiresPrefunding
         givenHookHasBaseTokenBalance(_LOT_CAPACITY)
         givenPreAuctionCreateHookBreaksInvariant
     {
@@ -545,7 +540,7 @@ contract AuctionTest is AuctionHouseTest {
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
         whenHooksIsSet
-        givenAuctionRequiresPrefunding
+        givenAtomicAuctionRequiresPrefunding
         givenHookHasBaseTokenBalance(_LOT_CAPACITY)
         givenBaseTokenTakesFeeOnTransfer
     {
@@ -562,7 +557,7 @@ contract AuctionTest is AuctionHouseTest {
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
         whenHooksIsSet
-        givenAuctionRequiresPrefunding
+        givenAtomicAuctionRequiresPrefunding
         givenHookHasBaseTokenBalance(_LOT_CAPACITY)
     {
         // Create the auction
@@ -582,11 +577,65 @@ contract AuctionTest is AuctionHouseTest {
         );
     }
 
+    function test_prefunding_withHooks_quoteTokenDecimalsLarger()
+        external
+        whenAuctionTypeIsAtomic
+        whenAtomicAuctionModuleIsInstalled
+        whenHooksIsSet
+        givenAtomicAuctionRequiresPrefunding
+        givenQuoteTokenHasDecimals(17)
+        givenBaseTokenHasDecimals(13)
+        givenHookHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+    {
+        // Create the auction
+        vm.prank(_auctionOwner);
+        _lotId = _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
+
+        // Check the prefunding status
+        Auctioneer.Routing memory routing = _getLotRouting(_lotId);
+        assertEq(routing.prefunding, _scaleBaseTokenAmount(_LOT_CAPACITY), "prefunding mismatch");
+
+        // Check balances
+        assertEq(_baseToken.balanceOf(address(_hook)), 0, "hook balance mismatch");
+        assertEq(
+            _baseToken.balanceOf(address(_auctionHouse)),
+            _scaleBaseTokenAmount(_LOT_CAPACITY),
+            "auction house balance mismatch"
+        );
+    }
+
+    function test_prefunding_withHooks_quoteTokenDecimalsSmaller()
+        external
+        whenAuctionTypeIsAtomic
+        whenAtomicAuctionModuleIsInstalled
+        whenHooksIsSet
+        givenAtomicAuctionRequiresPrefunding
+        givenQuoteTokenHasDecimals(13)
+        givenBaseTokenHasDecimals(17)
+        givenHookHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+    {
+        // Create the auction
+        vm.prank(_auctionOwner);
+        _lotId = _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
+
+        // Check the prefunding status
+        Auctioneer.Routing memory routing = _getLotRouting(_lotId);
+        assertEq(routing.prefunding, _scaleBaseTokenAmount(_LOT_CAPACITY), "prefunding mismatch");
+
+        // Check balances
+        assertEq(_baseToken.balanceOf(address(_hook)), 0, "hook balance mismatch");
+        assertEq(
+            _baseToken.balanceOf(address(_auctionHouse)),
+            _scaleBaseTokenAmount(_LOT_CAPACITY),
+            "auction house balance mismatch"
+        );
+    }
+
     function test_prefunding_insufficientBalance_reverts()
         external
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
-        givenAuctionRequiresPrefunding
+        givenAtomicAuctionRequiresPrefunding
         givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
     {
         // Expect revert
@@ -600,7 +649,7 @@ contract AuctionTest is AuctionHouseTest {
         external
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
-        givenAuctionRequiresPrefunding
+        givenAtomicAuctionRequiresPrefunding
         givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
     {
         // Expect revert
@@ -614,7 +663,7 @@ contract AuctionTest is AuctionHouseTest {
         external
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
-        givenAuctionRequiresPrefunding
+        givenAtomicAuctionRequiresPrefunding
         givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
         givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenBaseTokenTakesFeeOnTransfer
@@ -632,7 +681,7 @@ contract AuctionTest is AuctionHouseTest {
         external
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
-        givenAuctionRequiresPrefunding
+        givenAtomicAuctionRequiresPrefunding
         givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
         givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
     {
@@ -649,6 +698,60 @@ contract AuctionTest is AuctionHouseTest {
         assertEq(
             _baseToken.balanceOf(address(_auctionHouse)),
             _LOT_CAPACITY,
+            "auction house balance mismatch"
+        );
+    }
+
+    function test_prefunding_quoteTokenDecimalsLarger()
+        external
+        whenAuctionTypeIsAtomic
+        whenAtomicAuctionModuleIsInstalled
+        givenAtomicAuctionRequiresPrefunding
+        givenQuoteTokenHasDecimals(17)
+        givenBaseTokenHasDecimals(13)
+        givenOwnerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenOwnerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+    {
+        // Create the auction
+        vm.prank(_auctionOwner);
+        _lotId = _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
+
+        // Check the prefunding status
+        Auctioneer.Routing memory routing = _getLotRouting(_lotId);
+        assertEq(routing.prefunding, _scaleBaseTokenAmount(_LOT_CAPACITY), "prefunding mismatch");
+
+        // Check balances
+        assertEq(_baseToken.balanceOf(address(this)), 0, "owner balance mismatch");
+        assertEq(
+            _baseToken.balanceOf(address(_auctionHouse)),
+            _scaleBaseTokenAmount(_LOT_CAPACITY),
+            "auction house balance mismatch"
+        );
+    }
+
+    function test_prefunding_quoteTokenDecimalsSmaller()
+        external
+        whenAuctionTypeIsAtomic
+        whenAtomicAuctionModuleIsInstalled
+        givenAtomicAuctionRequiresPrefunding
+        givenQuoteTokenHasDecimals(13)
+        givenBaseTokenHasDecimals(17)
+        givenOwnerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenOwnerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+    {
+        // Create the auction
+        vm.prank(_auctionOwner);
+        _lotId = _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
+
+        // Check the prefunding status
+        Auctioneer.Routing memory routing = _getLotRouting(_lotId);
+        assertEq(routing.prefunding, _scaleBaseTokenAmount(_LOT_CAPACITY), "prefunding mismatch");
+
+        // Check balances
+        assertEq(_baseToken.balanceOf(address(this)), 0, "owner balance mismatch");
+        assertEq(
+            _baseToken.balanceOf(address(_auctionHouse)),
+            _scaleBaseTokenAmount(_LOT_CAPACITY),
             "auction house balance mismatch"
         );
     }

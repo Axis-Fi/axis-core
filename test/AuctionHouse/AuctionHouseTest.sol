@@ -5,6 +5,7 @@ pragma solidity 0.8.19;
 import {Test} from "forge-std/Test.sol";
 import {ERC20} from "solmate/tokens/ERC20.sol";
 import {Transfer} from "src/lib/Transfer.sol";
+import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 
 // Mocks
 import {MockAtomicAuctionModule} from "test/modules/Auction/MockAtomicAuctionModule.sol";
@@ -44,6 +45,8 @@ abstract contract AuctionHouseTest is Test, Permit2User {
     Keycode internal _condenserModuleKeycode;
     MockAllowlist internal _allowlist;
     MockHook internal _hook;
+
+    uint96 internal constant _BASE_SCALE = 1e18;
 
     address internal _auctionOwner = address(0x1);
     address internal immutable _PROTOCOL = address(0x2);
@@ -133,7 +136,60 @@ abstract contract AuctionHouseTest is Test, Permit2User {
         _bidder = vm.addr(_bidderKey);
     }
 
+    // ===== Helper Functions ===== //
+
+    function _mulDivUp(uint96 mul1_, uint96 mul2_, uint96 div_) internal pure returns (uint96) {
+        uint256 product = FixedPointMathLib.mulDivUp(mul1_, mul2_, div_);
+        if (product > type(uint96).max) revert("overflow");
+
+        return uint96(product);
+    }
+
+    function _mulDivDown(uint96 mul1_, uint96 mul2_, uint96 div_) internal pure returns (uint96) {
+        uint256 product = FixedPointMathLib.mulDivDown(mul1_, mul2_, div_);
+        if (product > type(uint96).max) revert("overflow");
+
+        return uint96(product);
+    }
+
+    function _scaleQuoteTokenAmount(uint96 amount_) internal view returns (uint96) {
+        return _mulDivUp(amount_, uint96(10 ** (_quoteToken.decimals())), _BASE_SCALE);
+    }
+
+    function _scaleBaseTokenAmount(uint96 amount_) internal view returns (uint96) {
+        return _mulDivUp(amount_, uint96(10 ** (_baseToken.decimals())), _BASE_SCALE);
+    }
+
     // ===== Modifiers ===== //
+
+    function _setBaseTokenDecimals(uint8 decimals_) internal {
+        _baseToken = new MockFeeOnTransferERC20("Base Token", "BASE", decimals_);
+
+        uint96 lotCapacity = _scaleBaseTokenAmount(_LOT_CAPACITY);
+
+        // Update routing params
+        _routingParams.baseToken = _baseToken;
+
+        // Update auction params
+        _auctionParams.capacity = uint96(lotCapacity);
+    }
+
+    modifier givenBaseTokenHasDecimals(uint8 decimals_) {
+        _setBaseTokenDecimals(decimals_);
+        _;
+    }
+
+    function _setQuoteTokenDecimals(uint8 decimals_) internal {
+        _quoteToken = new MockFeeOnTransferERC20("Quote Token", "QUOTE", decimals_);
+
+        // Update routing params
+        _routingParams.quoteToken = _quoteToken;
+    }
+
+    modifier givenQuoteTokenHasDecimals(uint8 decimals_) {
+        _setQuoteTokenDecimals(decimals_);
+        _;
+    }
 
     modifier whenAuctionTypeIsAtomic() {
         _routingParams.auctionType = _atomicAuctionModuleKeycode;
@@ -355,6 +411,11 @@ abstract contract AuctionHouseTest is Test, Permit2User {
             _auctionModuleKeycode, FeeManager.FeeType.Referrer, _REFERRER_FEE_PERCENT
         );
         _referrerFeePercentActual = _REFERRER_FEE_PERCENT;
+        _;
+    }
+
+    modifier givenAtomicAuctionRequiresPrefunding() {
+        _atomicAuctionModule.setRequiredPrefunding(true);
         _;
     }
 
