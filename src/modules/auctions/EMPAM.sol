@@ -96,7 +96,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
     /// @notice     Auction-specific data for a lot
     mapping(uint96 lotId => AuctionData) public auctionData;
 
-    /// @notice General information about bids on a lot
+    /// @notice     General information about bids on a lot
     mapping(uint96 lotId => mapping(uint64 bidId => Bid)) public bids;
 
     /// @notice     Data for encryption information for a specific bid
@@ -124,6 +124,17 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
 
     // ========== AUCTION ========== //
 
+    /// @inheritdoc AuctionModule
+    /// @dev        This function assumes:
+    ///             - The lot ID has been validated
+    ///             - The start and duration of the lot have been validated
+    ///
+    ///             This function reverts if:
+    ///             - The parameters cannot be decoded into the correct format
+    ///             - The minimum price is zero
+    ///             - The minimum fill percent is greater than 100%
+    ///             - The minimum bid percent is less than the minimum or greater than 100%
+    ///             - The public key is not valid
     function _auction(
         uint96 lotId_,
         Lot memory lot_,
@@ -179,6 +190,13 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         prefundingRequired = true;
     }
 
+    /// @inheritdoc AuctionModule
+    /// @dev        This function assumes the following:
+    ///             - The lot ID has been validated
+    ///             - The caller has been authorized
+    ///
+    ///             This function reverts if:
+    ///             - The auction is active or has not concluded
     function _cancelAuction(uint96 lotId_) internal override {
         // Validation
         // Batch auctions cannot be cancelled once started, otherwise the seller could cancel the auction after bids have been submitted
@@ -200,8 +218,15 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
     ///             - Adds the bid ID to the list of bids to decrypt (in `AuctionData.bidIds`)
     ///             - Returns the bid ID
     ///
+    ///             This function assumes:
+    ///             - The lot ID has been validated
+    ///             - The caller has been authorized
+    ///             - The auction is active
+    ///
     ///             This function reverts if:
+    ///             - The parameters cannot be decoded into the correct format
     ///             - The amount is less than the minimum bid size for the lot
+    ///             - The bid public key is not valid
     function _bid(
         uint96 lotId_,
         address bidder_,
@@ -252,8 +277,12 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
     ///
     ///             The encrypted bid is not deleted from storage, so that the details can be fetched later.
     ///
-    ///             This function reverts if:
-    ///             - The bid is not in the Decrypted or Submitted state
+    ///             This function assumes:
+    ///             - The lot ID has been validated
+    ///             - The bid ID has been validated
+    ///             - The caller has been authorized
+    ///             - The auction is active
+    ///             - The bid has already been refunded
     function _refundBid(
         uint96 lotId_,
         uint64 bidId_,
@@ -278,6 +307,17 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
     }
 
     /// @inheritdoc AuctionModule
+    /// @dev        This function performs the following:
+    ///             - Validates inputs
+    ///             - Marks the bid as claimed
+    ///             - Calculates the paid and payout amounts
+    ///
+    ///             This function assumes:
+    ///             - The lot ID has been validated
+    ///             - The bid ID has been validated
+    ///             - The caller has been authorized
+    ///             - The auction is not settled
+    ///             - The bid has not already been claimed
     function _claimBid(
         uint96 lotId_,
         uint64 bidId_
@@ -314,6 +354,8 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
             // Bidder is refunded the paid amount and receives no payout
             paid = uint256(bidData.amount);
         }
+
+        return (referrer, paid, payout, auctionOutput_);
     }
 
     // ========== DECRYPTION ========== //
@@ -484,6 +526,23 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
 
     // ========== SETTLEMENT ========== //
 
+    /// @inheritdoc AuctionModule
+    /// @dev        This function performs the following:
+    ///             - Validates inputs
+    ///             - Iterates over the decrypted bids to calculate the marginal price and number of winning bids
+    ///             - If applicable, calculates the payout and refund for a partially filled bid
+    ///             - Sets the auction status to settled
+    ///             - Deletes the remaining decrypted bids for a gas refund
+    ///
+    ///             This function assumes:
+    ///             - The lot ID has been validated
+    ///             - The auction has concluded
+    ///             - The auction is not settled
+    ///
+    ///             This function reverts if:
+    ///             - The auction has not been decrypted
+    ///
+    ///             The function has been written to avoid any reverts that would cause the settlement process to brick.
     function _settle(uint96 lotId_)
         internal
         override
@@ -622,6 +681,8 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
 
             // totalIn and totalOut are not set since the auction does not clear
         }
+
+        return (settlement_, auctionOutput_);
     }
 
     // ========== AUCTION INFORMATION ========== //

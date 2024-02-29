@@ -482,6 +482,22 @@ abstract contract AuctionModule is Auction, Module {
         address bidder_
     ) internal virtual returns (uint256 refund);
 
+    /// @inheritdoc Auction
+    /// @dev        Implements a basic claimBid function that:
+    ///             - Calls implementation-specific validation logic
+    ///             - Calls the auction module
+    ///
+    ///             This function reverts if:
+    ///             - the lot id is invalid
+    ///             - the bid id is invalid
+    ///             - `bidder_` is not the bid owner
+    ///             - the bid is claimed
+    ///             - the lot is not settled
+    ///             - the caller is not an internal module
+    ///
+    ///             Inheriting contracts should override _claimBid to implement auction-specific logic, such as:
+    ///             - Validating the auction-specific parameters
+    ///             - Updating the bid data
     function claimBid(
         uint96 lotId_,
         uint64 bidId_,
@@ -503,6 +519,15 @@ abstract contract AuctionModule is Auction, Module {
         return _claimBid(lotId_, bidId_);
     }
 
+    /// @notice     Implementation-specific bid claim logic
+    /// @dev        Auction modules should override this to perform any additional logic
+    ///
+    /// @param      lotId_          The lot ID
+    /// @param      bidId_          The bid ID
+    /// @return     referrer        The referrer of the bid
+    /// @return     paid            The amount of quote tokens paid
+    /// @return     payout          The amount of payout tokens to receive
+    /// @return     auctionOutput   The auction-specific output
     function _claimBid(
         uint96 lotId_,
         uint64 bidId_
