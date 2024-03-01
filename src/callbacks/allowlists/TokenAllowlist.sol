@@ -30,6 +30,17 @@ contract TokenAllowlist is BaseCallback {
 
     // ========== CONSTRUCTOR ========== //
 
+    // PERMISSIONS
+    // onCreate: true
+    // onCancel: false
+    // onCurate: false
+    // onPurchase: true
+    // onBid: true
+    // onClaimProceeds: false
+    // receiveQuoteTokens: false
+    // sendBaseTokens: false
+    // Contract prefix should be: 10011000 = 0x98
+
     constructor(
         address auctionHouse_,
         Callbacks.Permissions memory permissions_,

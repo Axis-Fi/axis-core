@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.19;
 
-import {MerkleAllowlist} from "src/callbacks/MerkleAllowlist.sol";
+import {MerkleAllowlist} from "src/callbacks/allowlists/MerkleAllowlist.sol";
 import {Callbacks} from "src/lib/Callbacks.sol";
 
 contract CappedMerkleAllowlist is MerkleAllowlist {
@@ -14,6 +14,17 @@ contract CappedMerkleAllowlist is MerkleAllowlist {
     mapping(uint96 => mapping(address => uint96)) public lotBuyerSpent;
 
     // ========== CONSTRUCTOR ========== //
+
+    // PERMISSIONS
+    // onCreate: true
+    // onCancel: false
+    // onCurate: false
+    // onPurchase: true
+    // onBid: true
+    // onClaimProceeds: false
+    // receiveQuoteTokens: false
+    // sendBaseTokens: false
+    // Contract prefix should be: 10011000 = 0x98
 
     constructor(
         address auctionHouse_,
