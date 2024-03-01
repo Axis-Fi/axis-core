@@ -16,7 +16,7 @@ import {
     Veecode, fromVeecode, Keycode, keycodeFromVeecode, WithModules
 } from "src/modules/Modules.sol";
 
-import {ICallbacks} from "src/interfaces/ICallbacks.sol";
+import {ICallback} from "src/interfaces/ICallback.sol";
 import {Callbacks} from "src/lib/Callbacks.sol";
 
 /// @title      Router
@@ -673,7 +673,7 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
         address lotOwner_,
         uint256 amount_,
         ERC20 quoteToken_,
-        ICallbacks callbacks_
+        ICallback callbacks_
     ) internal {
         // Determine where the send the payment
         address to = callbacks_.hasPermission(Callbacks.RECEIVES_QUOTE_TOKENS_FLAG)

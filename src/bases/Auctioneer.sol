@@ -20,7 +20,7 @@ import {Auction, AuctionModule} from "src/modules/Auction.sol";
 import {DerivativeModule} from "src/modules/Derivative.sol";
 import {CondenserModule} from "src/modules/Condenser.sol";
 
-import {ICallbacks} from "src/interfaces/ICallbacks.sol";
+import {ICallback} from "src/interfaces/ICallback.sol";
 import {Callbacks} from "src/lib/Callbacks.sol";
 
 /// @title  Auctioneer
@@ -29,7 +29,7 @@ import {Callbacks} from "src/lib/Callbacks.sol";
 ///         - Cancelling auction lots
 ///         - Storing information about how to handle inputs and outputs for auctions ("routing")
 abstract contract Auctioneer is WithModules, ReentrancyGuard {
-    using Callbacks for ICallbacks;
+    using Callbacks for ICallback;
 
     // ========= ERRORS ========= //
 
@@ -69,7 +69,7 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
         address owner;
         ERC20 baseToken;
         ERC20 quoteToken;
-        ICallbacks callbacks;
+        ICallback callbacks;
         Veecode derivativeReference;
         bytes derivativeParams;
         bool wrapDerivative;
@@ -104,7 +104,7 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
         ERC20 baseToken;
         ERC20 quoteToken;
         address curator;
-        ICallbacks callbacks;
+        ICallback callbacks;
         bytes callbackData;
         Keycode derivativeType;
         bytes derivativeParams;

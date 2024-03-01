@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity >=0.8.0;
 
-/// @title  ICallbacks
+/// @title  ICallback
 /// @notice Interface for callback contracts use in the Axis system
-interface ICallbacks {
+interface ICallback {
 
     /// @notice Callback configuration. Used by AuctionHouse to know which functions are implemented on this contract.
     /// @dev 8-bit map of which callbacks are implemented on this contract.
@@ -22,7 +22,7 @@ interface ICallbacks {
     // General functions that can be used by all auctions
 
     /// @notice Called when an auction is created. Reverts if validation fails.
-    /// @dev Should register the lot ID on the Callbacks contract and validate seller is allowed to use the Callbacks contract
+    /// @dev Should register the lot ID on the Callback contract and validate seller is allowed to use the Callback contract
     /// @dev If the Callback is configured to send tokens and the auction is to be prefunded, then the AuctionHouse will expect the capacity of base tokens to be sent back.
     function onCreate(uint96 lotId, address seller, address baseToken, address quoteToken, uint96 capacity, bool preFund, bytes calldata callbackData) external returns (bytes4);
 
@@ -46,7 +46,9 @@ interface ICallbacks {
     /// @notice Called when a buyer bids on a batch auction. Reverts if validation fails.
     function onBid(uint96 lotid, uint64 bidId, address buyer, uint96 amount, bytes calldata callbackData) external returns (bytes4);
 
-    /// @notice Called when a batch auction is settled.
+    // TODO add a onRefundBid callback?
+
+    /// @notice Called when the seller claims their proceeds from the auction.
     /// @dev If the Callback is configured to receive tokens, then the proceeds and/or refund will be sent prior to the call.
-    function onSettle(uint96 lotId, uint96 proceeds, uint96 refund, bytes calldata callbackData, bytes memory auctionOutput) external returns (bytes4);
+    function onClaimProceeds(uint96 lotId, uint96 proceeds, uint96 refund, bytes calldata callbackData, bytes memory auctionOutput) external returns (bytes4);
 }

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
-import {ICallbacks} from "src/interfaces/ICallbacks.sol";
+import {ICallback} from "src/interfaces/ICallback.sol";
 
 /// @notice Library for handling callbacks
 /// @dev This library is based on the design of UniswapV4's Hooks library (https://github.com/Uniswap/v4-core/blob/main/src/libraries/Hooks.sol) 
@@ -13,14 +13,14 @@ import {ICallbacks} from "src/interfaces/ICallbacks.sol";
 /// has leading bits '1001' which would cause the 'onCreate' and 'onPurchase' callbacks to be used.
 /// There are 8 flags
 library Callbacks {
-    using Callbacks for ICallbacks;
+    using Callbacks for ICallback;
 
     uint256 internal constant ON_CREATE_FLAG = 1 << 159;
     uint256 internal constant ON_CANCEL_FLAG = 1 << 158;
     uint256 internal constant ON_CURATE_FLAG = 1 << 157;
     uint256 internal constant ON_PURCHASE_FLAG = 1 << 156;
     uint256 internal constant ON_BID_FLAG = 1 << 155;
-    uint256 internal constant ON_SETTLE_FLAG = 1 << 154;
+    uint256 internal constant ON_CLAIM_PROCEEDS_FLAG = 1 << 154;
     uint256 internal constant RECEIVE_QUOTE_TOKENS_FLAG = 1 << 153;
     uint256 internal constant SEND_BASE_TOKENS_FLAG = 1 << 152;
     
@@ -30,7 +30,7 @@ library Callbacks {
         bool onCurate;
         bool onPurchase;
         bool onBid;
-        bool onSettle;
+        bool onClaimProceeds;
         bool sendBaseTokens;
         bool receiveQuoteTokens;
     }
@@ -49,14 +49,14 @@ library Callbacks {
     /// the deployed hooks address causes the intended hooks to be called
     /// @param permissions The hooks that are intended to be called
     /// @dev permissions param is memory as the function will be called from constructors
-    function validateCallbacksPermissions(ICallbacks self, Permissions memory permissions) internal pure {
+    function validateCallbacksPermissions(ICallback self, Permissions memory permissions) internal pure {
         if (
             permissions.onCreate != self.hasPermission(ON_CREATE_FLAG)
                 || permissions.onCancel != self.hasPermission(ON_CANCEL_FLAG)
                 || permissions.onCurate != self.hasPermission(ON_CURATE_FLAG)
                 || permissions.onPurchase != self.hasPermission(ON_PURCHASE_FLAG)
                 || permissions.onBid != self.hasPermission(ON_BID_FLAG)
-                || permissions.onSettle != self.hasPermission(ON_SETTLE_FLAG)
+                || permissions.onClaimProceeds != self.hasPermission(ON_CLAIM_PROCEEDS_FLAG)
                 || permissions.receiveQuoteTokens != self.hasPermission(RECEIVE_QUOTE_TOKENS_FLAG)
                 || permissions.sendBaseTokens != self.hasPermission(SEND_BASE_TOKENS_FLAG)
                 
@@ -67,7 +67,7 @@ library Callbacks {
 
     /// @notice Ensures that the callbacks contract includes at least one of the required flags and more if sending/receiving tokens
     /// @param callbacks The callbacks contract to verify
-    function isValidCallbacksAddress(ICallbacks callbacks) internal pure returns (bool) {
+    function isValidCallbacksAddress(ICallback callbacks) internal pure returns (bool) {
         // Ensure that if the contract is expected to send base tokens, then it implements atleast onCreate and onCurate OR onPurchase (atomic auctions may not be prefunded).
         if (callbacks.hasPermission(SEND_BASE_TOKENS_FLAG) && (!callbacks.hasPermission(ON_CREATE_FLAG) || !callbacks.hasPermission(ON_CURATE_FLAG)) && !callbacks.hasPermission(ON_PURCHASE_FLAG)) {
             return false;
@@ -78,7 +78,7 @@ library Callbacks {
     }
 
     /// @notice performs a call using the given calldata on the given callback
-    function callback(ICallbacks self, bytes memory data) internal {
+    function callback(ICallback self, bytes memory data) internal {
         bytes4 expectedSelector;
         assembly {
             expectedSelector := mload(add(data, 0x20))
@@ -95,70 +95,70 @@ library Callbacks {
     }
 
     /// @notice calls onCreate callback if permissioned and validates return value
-    function onCreate(ICallbacks self, uint96 lotId, address seller, address baseToken, address quoteToken, uint96 capacity, bool preFund, bytes calldata callbackData)
+    function onCreate(ICallback self, uint96 lotId, address seller, address baseToken, address quoteToken, uint96 capacity, bool preFund, bytes calldata callbackData)
         internal
     {
         if (self.hasPermission(ON_CREATE_FLAG)) {
             self.callback(
-                abi.encodeWithSelector(ICallbacks.onCreate.selector, lotId, seller, baseToken, quoteToken, capacity, preFund, callbackData)
+                abi.encodeWithSelector(ICallback.onCreate.selector, lotId, seller, baseToken, quoteToken, capacity, preFund, callbackData)
             );
         }
     }
 
     /// @notice calls onCancel callback if permissioned and validates return value
-    function onCancel(ICallbacks self, uint96 lotId, uint96 refund, bool preFunded, bytes calldata callbackData) internal {
+    function onCancel(ICallback self, uint96 lotId, uint96 refund, bool preFunded, bytes calldata callbackData) internal {
         if (self.hasPermission(ON_CANCEL_FLAG)) {
             self.callback(
-                abi.encodeWithSelector(ICallbacks.onCancel.selector, lotId, refund, preFunded, callbackData)
+                abi.encodeWithSelector(ICallback.onCancel.selector, lotId, refund, preFunded, callbackData)
             );
 
         }
     }
 
     /// @notice calls onCurate callback if permissioned and validates return value
-    function onCurate(ICallbacks self, uint96 lotId, uint96 curatorFee, bool preFund, bytes calldata callbackData) internal {
+    function onCurate(ICallback self, uint96 lotId, uint96 curatorFee, bool preFund, bytes calldata callbackData) internal {
         if (self.hasPermission(ON_CURATE_FLAG)) {
             self.callback(
-                abi.encodeWithSelector(ICallbacks.onCurate.selector, lotId, curatorFee, preFund, callbackData)
+                abi.encodeWithSelector(ICallback.onCurate.selector, lotId, curatorFee, preFund, callbackData)
             );
         }
     }
 
     /// @notice calls onPurchase callback if permissioned and validates return value
-    function onPurchase(ICallbacks self, uint96 lotId, address buyer, uint96 amount, uint96 payout, bool preFunded, bytes calldata callbackData)
+    function onPurchase(ICallback self, uint96 lotId, address buyer, uint96 amount, uint96 payout, bool preFunded, bytes calldata callbackData)
         internal
     {
         if (self.hasPermission(ON_PURCHASE_FLAG)) {
             self.callback(
-                abi.encodeWithSelector(ICallbacks.onPurchase.selector, lotId, buyer, amount, payout, preFunded, callbackData)
+                abi.encodeWithSelector(ICallback.onPurchase.selector, lotId, buyer, amount, payout, preFunded, callbackData)
             );
 
         }
     }
 
     /// @notice calls onBid callback if permissioned and validates return value
-    function onBid(ICallbacks self, uint96 lotId, uint64 bidId, address buyer, uint96 amount, bytes calldata callbackData)
+    function onBid(ICallback self, uint96 lotId, uint64 bidId, address buyer, uint96 amount, bytes calldata callbackData)
         internal
     {
         if (self.hasPermission(ON_BID_FLAG)) {
             self.callback(
-                abi.encodeWithSelector(ICallbacks.onBid.selector, lotId, bidId, buyer, amount, callbackData)
+                abi.encodeWithSelector(ICallback.onBid.selector, lotId, bidId, buyer, amount, callbackData)
             );
         }
     }
 
-    /// @notice calls onSettle callback if permissioned and validates return value
-    function onSettle(ICallbacks self, uint96 lotId, uint96 proceeds, uint96 refund, bytes calldata callbackData, bytes memory auctionOutput)
+    /// @notice calls onClaimProceeds callback if permissioned and validates return value
+    function onClaimProceeds(ICallback self, uint96 lotId, uint96 proceeds, uint96 refund, bytes calldata callbackData, bytes memory auctionOutput)
         internal
     {
-        if (self.hasPermission(ON_SETTLE_FLAG)) {
+        if (self.hasPermission(ON_CLAIM_PROCEEDS_FLAG)) {
             self.callback(
-                abi.encodeWithSelector(ICallbacks.onSettle.selector, lotId, proceeds, refund, callbackData, auctionOutput)
+                abi.encodeWithSelector(ICallback.onClaimProceeds.selector, lotId, proceeds, refund, callbackData, auctionOutput)
             );
         }
     }
 
-    function hasPermission(ICallbacks self, uint256 flag) internal pure returns (bool) {
+    function hasPermission(ICallback self, uint256 flag) internal pure returns (bool) {
         return uint256(uint160(address(self))) & flag != 0;
     }
 
