@@ -46,8 +46,6 @@ interface ICallback {
     /// @notice Called when a buyer bids on a batch auction. Reverts if validation fails.
     function onBid(uint96 lotid, uint64 bidId, address buyer, uint96 amount, bytes calldata callbackData) external returns (bytes4);
 
-    // TODO add a onRefundBid callback?
-
     /// @notice Called when the seller claims their proceeds from the auction.
     /// @dev If the Callback is configured to receive tokens, then the proceeds and/or refund will be sent prior to the call.
     function onClaimProceeds(uint96 lotId, uint96 proceeds, uint96 refund, bytes calldata callbackData, bytes memory auctionOutput) external returns (bytes4);

@@ -20,7 +20,7 @@ import {ICallback} from "src/interfaces/ICallback.sol";
 import {Callbacks} from "src/lib/Callbacks.sol";
 
 /// @title      Router
-/// @notice     An interface to define the routing of transactions to the appropriate auction module
+/// @notice     An interface to define the AuctionHouse's buyer-facing functions
 abstract contract Router {
     // ========== DATA STRUCTURES ========== //
 
