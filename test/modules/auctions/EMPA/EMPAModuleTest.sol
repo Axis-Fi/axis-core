@@ -41,7 +41,8 @@ abstract contract EmpaModuleTest is Test, Permit2User {
     uint48 internal _start;
     Auction.AuctionParams internal _auctionParams;
     EncryptedMarginalPriceAuctionModule.AuctionDataParams internal _auctionDataParams;
-    uint96 internal _lotId = 2;
+    uint96 internal _lotId = type(uint96).max;
+    uint64 internal _bidId = type(uint64).max;
     uint8 internal _quoteTokenDecimals = 18;
     uint8 internal _baseTokenDecimals = 18;
 
@@ -207,7 +208,7 @@ abstract contract EmpaModuleTest is Test, Permit2User {
     }
 
     modifier givenBidIsCreated(uint96 amountIn_, uint96 amountOut_) {
-        _createBid(amountIn_, amountOut_);
+        _bidId = _createBid(amountIn_, amountOut_);
         _;
     }
 
@@ -218,7 +219,7 @@ abstract contract EmpaModuleTest is Test, Permit2User {
     }
 
     modifier givenBidIsClaimed(uint64 bidId_) {
-        vm.prank(_BIDDER);
+        vm.prank(address(_auctionHouse));
         _module.claimBid(_lotId, bidId_, _BIDDER);
         _;
     }
@@ -242,14 +243,22 @@ abstract contract EmpaModuleTest is Test, Permit2User {
         _;
     }
 
-    modifier givenLotIsSettled() {
+    function _settleLot() internal {
         vm.prank(address(_auctionHouse));
         _module.settle(_lotId);
+    }
+
+    modifier givenLotIsSettled() {
+        _settleLot();
         _;
     }
 
-    modifier givenLotHasConcluded() {
+    function _concludeLot() internal {
         vm.warp(_start + _DURATION + 1);
+    }
+
+    modifier givenLotHasConcluded() {
+        _concludeLot();
         _;
     }
 
