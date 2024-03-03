@@ -20,14 +20,14 @@ contract CancelAuctionTest is AuctionHouseTest {
     }
 
     // cancel
-    // [X] reverts if not the owner
+    // [X] reverts if not the seller
     // [X] reverts if lot is not active
     // [X] reverts if lot id is invalid
     // [X] reverts if the lot is already cancelled
     // [X] given the auction is not prefunded
     //  [X] it sets the lot to inactive on the AuctionModule
 
-    function testReverts_whenNotAuctionOwner()
+    function testReverts_whenNotSeller()
         external
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
@@ -45,7 +45,7 @@ contract CancelAuctionTest is AuctionHouseTest {
         whenAtomicAuctionModuleIsInstalled
         givenLotIsCreated
     {
-        vm.assume(user_ != _auctionOwner);
+        vm.assume(user_ != _SELLER);
 
         bytes memory err = abi.encodeWithSelector(Auctioneer.NotPermitted.selector, user_);
         vm.expectRevert(err);
@@ -58,7 +58,7 @@ contract CancelAuctionTest is AuctionHouseTest {
         bytes memory err = abi.encodeWithSelector(Auctioneer.InvalidLotId.selector, _lotId);
         vm.expectRevert(err);
 
-        vm.prank(_auctionOwner);
+        vm.prank(_SELLER);
         _auctionHouse.cancel(_lotId);
     }
 
@@ -72,7 +72,7 @@ contract CancelAuctionTest is AuctionHouseTest {
         bytes memory err = abi.encodeWithSelector(Auction.Auction_MarketNotActive.selector, _lotId);
         vm.expectRevert(err);
 
-        vm.prank(_auctionOwner);
+        vm.prank(_SELLER);
         _auctionHouse.cancel(_lotId);
     }
 
@@ -88,7 +88,7 @@ contract CancelAuctionTest is AuctionHouseTest {
         vm.expectRevert(err);
 
         // Call the function
-        vm.prank(_auctionOwner);
+        vm.prank(_SELLER);
         _auctionHouse.cancel(_lotId);
     }
 
@@ -101,7 +101,7 @@ contract CancelAuctionTest is AuctionHouseTest {
     {
         assertTrue(_atomicAuctionModule.isLive(_lotId), "before cancellation: isLive mismatch");
 
-        vm.prank(_auctionOwner);
+        vm.prank(_SELLER);
         _auctionHouse.cancel(_lotId);
 
         // Get lot data from the module
@@ -113,18 +113,18 @@ contract CancelAuctionTest is AuctionHouseTest {
     }
 
     // [X] given the auction is prefunded
-    //  [X] it refunds the prefunded amount in payout tokens to the owner
+    //  [X] it refunds the prefunded amount in payout tokens to the seller
     //  [X] given a purchase has been made
-    //   [X] it refunds the remaining prefunded amount in payout tokens to the owner
+    //   [X] it refunds the remaining prefunded amount in payout tokens to the seller
 
     modifier givenLotIsPrefunded() {
         _atomicAuctionModule.setRequiredPrefunding(true);
 
-        // Mint payout tokens to the owner
-        _baseToken.mint(_auctionOwner, _LOT_CAPACITY);
+        // Mint payout tokens to the seller
+        _baseToken.mint(_SELLER, _LOT_CAPACITY);
 
         // Approve transfer to the auction house
-        vm.prank(_auctionOwner);
+        vm.prank(_SELLER);
         _baseToken.approve(address(_auctionHouse), _LOT_CAPACITY);
         _;
     }
@@ -137,18 +137,18 @@ contract CancelAuctionTest is AuctionHouseTest {
         givenLotIsCreated
         givenLotHasStarted
     {
-        // Check the owner's balance
-        uint256 ownerBalance = _baseToken.balanceOf(_auctionOwner);
+        // Check the seller's balance
+        uint256 sellerBalance = _baseToken.balanceOf(_SELLER);
 
         // Cancel the lot
-        vm.prank(_auctionOwner);
+        vm.prank(_SELLER);
         _auctionHouse.cancel(_lotId);
 
-        // Check the owner's balance
+        // Check the seller's balance
         assertEq(
-            _baseToken.balanceOf(_auctionOwner),
-            ownerBalance + _LOT_CAPACITY,
-            "base token: auction owner balance mismatch"
+            _baseToken.balanceOf(_SELLER),
+            sellerBalance + _LOT_CAPACITY,
+            "base token: seller balance mismatch"
         );
     }
 
@@ -164,18 +164,18 @@ contract CancelAuctionTest is AuctionHouseTest {
         givenPayoutMultiplier(_PAYOUT_MULTIPLIER)
         givenPurchase(_PURCHASE_AMOUNT, _PURCHASE_AMOUNT_OUT, _purchaseAuctionData)
     {
-        // Check the owner's balance
-        uint256 ownerBalance = _baseToken.balanceOf(_auctionOwner);
+        // Check the seller's balance
+        uint256 sellerBalance = _baseToken.balanceOf(_SELLER);
 
         // Cancel the lot
-        vm.prank(_auctionOwner);
+        vm.prank(_SELLER);
         _auctionHouse.cancel(_lotId);
 
-        // Check the owner's balance
+        // Check the seller's balance
         assertEq(
-            _baseToken.balanceOf(_auctionOwner),
-            ownerBalance + _LOT_CAPACITY - _PURCHASE_AMOUNT_OUT,
-            "base token: auction owner balance mismatch"
+            _baseToken.balanceOf(_SELLER),
+            sellerBalance + _LOT_CAPACITY - _PURCHASE_AMOUNT_OUT,
+            "base token: seller balance mismatch"
         );
     }
 
@@ -184,19 +184,19 @@ contract CancelAuctionTest is AuctionHouseTest {
     //   [X] given a curator has not yet approved
     //    [X] nothing happens
     //   [X] given there have been purchases
-    //    [X] it refunds the remaining prefunded amount in payout tokens to the owner
-    //   [X] it refunds the prefunded amount in payout tokens to the owner
+    //    [X] it refunds the remaining prefunded amount in payout tokens to the seller
+    //   [X] it refunds the prefunded amount in payout tokens to the seller
 
-    modifier givenAuctionOwnerHasCuratorFeeBalance() {
+    modifier givenSellerHasCuratorFeeBalance() {
         uint256 lotCapacity = _catalogue.remainingCapacity(_lotId);
 
         _curatorMaxPotentialFee = uint96(lotCapacity) * _CURATOR_FEE_PERCENT / 1e5;
 
         // Mint
-        _baseToken.mint(_auctionOwner, _curatorMaxPotentialFee);
+        _baseToken.mint(_SELLER, _curatorMaxPotentialFee);
 
         // Approve spending
-        vm.prank(_auctionOwner);
+        vm.prank(_SELLER);
         _baseToken.approve(address(_auctionHouse), _curatorMaxPotentialFee);
         _;
     }
@@ -209,26 +209,26 @@ contract CancelAuctionTest is AuctionHouseTest {
         whenAtomicAuctionModuleIsInstalled
         givenLotIsCreated
         givenLotHasStarted
-        givenAuctionOwnerHasCuratorFeeBalance
+        givenSellerHasCuratorFeeBalance
         givenCuratorMaxFeeIsSet
     {
         // Balance before
-        uint256 auctionOwnerBalanceBefore = _baseToken.balanceOf(_auctionOwner);
+        uint256 sellerBalanceBefore = _baseToken.balanceOf(_SELLER);
         assertEq(
-            auctionOwnerBalanceBefore,
+            sellerBalanceBefore,
             _curatorMaxPotentialFee,
-            "base token: balance mismatch for auction owner before"
+            "base token: balance mismatch for seller before"
         ); // Curator fee not moved
 
         // Cancel the lot
-        vm.prank(_auctionOwner);
+        vm.prank(_SELLER);
         _auctionHouse.cancel(_lotId);
 
         // Check the base token balances
         assertEq(
-            _baseToken.balanceOf(_auctionOwner),
+            _baseToken.balanceOf(_SELLER),
             _curatorMaxPotentialFee + _LOT_CAPACITY,
-            "base token: balance mismatch for auction owner"
+            "base token: balance mismatch for seller"
         );
         assertEq(
             _baseToken.balanceOf(address(_auctionHouse)),
@@ -251,24 +251,22 @@ contract CancelAuctionTest is AuctionHouseTest {
         givenLotHasStarted
         givenCuratorMaxFeeIsSet
         givenCuratorFeeIsSet
-        givenAuctionOwnerHasCuratorFeeBalance
+        givenSellerHasCuratorFeeBalance
         givenCuratorHasApproved
     {
         // Balance before
-        uint256 auctionOwnerBalanceBefore = _baseToken.balanceOf(_auctionOwner);
-        assertEq(
-            auctionOwnerBalanceBefore, 0, "base token: balance mismatch for auction owner before"
-        );
+        uint256 sellerBalanceBefore = _baseToken.balanceOf(_SELLER);
+        assertEq(sellerBalanceBefore, 0, "base token: balance mismatch for seller before");
 
         // Cancel the lot
-        vm.prank(_auctionOwner);
+        vm.prank(_SELLER);
         _auctionHouse.cancel(_lotId);
 
-        // Check the owner's balance
+        // Check the seller's balance
         assertEq(
-            _baseToken.balanceOf(_auctionOwner),
+            _baseToken.balanceOf(_SELLER),
             _LOT_CAPACITY + _curatorMaxPotentialFee,
-            "base token: auction owner balance mismatch"
+            "base token: seller balance mismatch"
         ); // Capacity and max curator fee is returned
         assertEq(
             _baseToken.balanceOf(address(_auctionHouse)),
@@ -295,27 +293,25 @@ contract CancelAuctionTest is AuctionHouseTest {
         givenPurchase(_PURCHASE_AMOUNT, _PURCHASE_AMOUNT_OUT, _purchaseAuctionData)
         givenCuratorMaxFeeIsSet
         givenCuratorFeeIsSet
-        givenAuctionOwnerHasCuratorFeeBalance
+        givenSellerHasCuratorFeeBalance
         givenCuratorHasApproved
     {
         // Balance before
-        uint256 auctionOwnerBalanceBefore = _baseToken.balanceOf(_auctionOwner);
-        assertEq(
-            auctionOwnerBalanceBefore, 0, "base token: balance mismatch for auction owner before"
-        );
+        uint256 sellerBalanceBefore = _baseToken.balanceOf(_SELLER);
+        assertEq(sellerBalanceBefore, 0, "base token: balance mismatch for seller before");
 
         // No curator fee, since the purchase was before curator approval
         uint256 curatorFee = 0;
 
         // Cancel the lot
-        vm.prank(_auctionOwner);
+        vm.prank(_SELLER);
         _auctionHouse.cancel(_lotId);
 
-        // Check the owner's balance
+        // Check the seller's balance
         assertEq(
-            _baseToken.balanceOf(_auctionOwner),
+            _baseToken.balanceOf(_SELLER),
             _LOT_CAPACITY - _PURCHASE_AMOUNT_OUT + _curatorMaxPotentialFee - curatorFee,
-            "base token: auction owner balance mismatch"
+            "base token: seller balance mismatch"
         );
         assertEq(
             _baseToken.balanceOf(address(_auctionHouse)),
@@ -342,31 +338,29 @@ contract CancelAuctionTest is AuctionHouseTest {
         givenPurchase(_PURCHASE_AMOUNT, _PURCHASE_AMOUNT_OUT, _purchaseAuctionData)
         givenCuratorMaxFeeIsSet
         givenCuratorFeeIsSet
-        givenAuctionOwnerHasCuratorFeeBalance
+        givenSellerHasCuratorFeeBalance
         givenCuratorHasApproved
         givenUserHasQuoteTokenBalance(_PURCHASE_AMOUNT * 2)
         givenUserHasQuoteTokenAllowance(_PURCHASE_AMOUNT * 2)
         givenPurchase(_PURCHASE_AMOUNT * 2, _PURCHASE_AMOUNT_OUT * 2, _purchaseAuctionData)
     {
         // Balance before
-        uint256 auctionOwnerBalanceBefore = _baseToken.balanceOf(_auctionOwner);
-        assertEq(
-            auctionOwnerBalanceBefore, 0, "base token: balance mismatch for auction owner before"
-        );
+        uint256 sellerBalanceBefore = _baseToken.balanceOf(_SELLER);
+        assertEq(sellerBalanceBefore, 0, "base token: balance mismatch for seller before");
 
         // No curator fee, since the purchase was before curator approval
         uint256 curatorFee = _CURATOR_FEE_PERCENT * (_PURCHASE_AMOUNT_OUT * 2) / 1e5;
 
         // Cancel the lot
-        vm.prank(_auctionOwner);
+        vm.prank(_SELLER);
         _auctionHouse.cancel(_lotId);
 
-        // Check the owner's balance
+        // Check the seller's balance
         assertEq(
-            _baseToken.balanceOf(_auctionOwner),
+            _baseToken.balanceOf(_SELLER),
             _LOT_CAPACITY - _PURCHASE_AMOUNT_OUT - (_PURCHASE_AMOUNT_OUT * 2)
                 + _curatorMaxPotentialFee - curatorFee,
-            "base token: auction owner balance mismatch"
+            "base token: seller balance mismatch"
         );
         assertEq(
             _baseToken.balanceOf(address(_auctionHouse)),
@@ -387,7 +381,7 @@ contract CancelAuctionTest is AuctionHouseTest {
         whenAtomicAuctionModuleIsInstalled
         givenLotIsCreated
         givenLotHasStarted
-        givenAuctionOwnerHasCuratorFeeBalance
+        givenSellerHasCuratorFeeBalance
         givenCuratorMaxFeeIsSet
         givenCuratorFeeIsSet
         givenCuratorHasApproved
@@ -397,22 +391,20 @@ contract CancelAuctionTest is AuctionHouseTest {
         givenPurchase(_PURCHASE_AMOUNT, _PURCHASE_AMOUNT_OUT, _purchaseAuctionData)
     {
         // Balance before
-        uint256 auctionOwnerBalanceBefore = _baseToken.balanceOf(_auctionOwner);
-        assertEq(
-            auctionOwnerBalanceBefore, 0, "base token: balance mismatch for auction owner before"
-        );
+        uint256 sellerBalanceBefore = _baseToken.balanceOf(_SELLER);
+        assertEq(sellerBalanceBefore, 0, "base token: balance mismatch for seller before");
 
         uint256 curatorFee = _CURATOR_FEE_PERCENT * _PURCHASE_AMOUNT_OUT / 1e5;
 
         // Cancel the lot
-        vm.prank(_auctionOwner);
+        vm.prank(_SELLER);
         _auctionHouse.cancel(_lotId);
 
-        // Check the owner's balance
+        // Check the seller's balance
         assertEq(
-            _baseToken.balanceOf(_auctionOwner),
+            _baseToken.balanceOf(_SELLER),
             _LOT_CAPACITY - _PURCHASE_AMOUNT_OUT + _curatorMaxPotentialFee - curatorFee,
-            "base token: auction owner balance mismatch"
+            "base token: seller balance mismatch"
         );
         assertEq(
             _baseToken.balanceOf(address(_auctionHouse)),

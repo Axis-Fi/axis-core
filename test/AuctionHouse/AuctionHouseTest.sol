@@ -48,11 +48,11 @@ abstract contract AuctionHouseTest is Test, Permit2User {
 
     uint96 internal constant _BASE_SCALE = 1e18;
 
-    address internal _auctionOwner = address(0x1);
-    address internal immutable _PROTOCOL = address(0x2);
-    address internal immutable _CURATOR = address(0x3);
-    address internal immutable _RECIPIENT = address(0x5);
-    address internal immutable _REFERRER = address(0x6);
+    address internal constant _SELLER = address(0x1);
+    address internal constant _PROTOCOL = address(0x2);
+    address internal constant _CURATOR = address(0x3);
+    address internal constant _RECIPIENT = address(0x5);
+    address internal constant _REFERRER = address(0x6);
 
     address internal _bidder = address(0x4);
     uint256 internal _bidderKey;
@@ -234,7 +234,7 @@ abstract contract AuctionHouseTest is Test, Permit2User {
     }
 
     modifier givenLotIsCreated() {
-        vm.prank(_auctionOwner);
+        vm.prank(_SELLER);
         _lotId = _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
         _;
     }
@@ -245,7 +245,7 @@ abstract contract AuctionHouseTest is Test, Permit2User {
     }
 
     modifier givenLotIsCancelled() {
-        vm.prank(_auctionOwner);
+        vm.prank(_SELLER);
         _auctionHouse.cancel(_lotId);
         _;
     }
@@ -300,13 +300,13 @@ abstract contract AuctionHouseTest is Test, Permit2User {
         _;
     }
 
-    modifier givenOwnerHasBaseTokenBalance(uint256 amount_) {
-        _baseToken.mint(_auctionOwner, amount_);
+    modifier givenSellerHasBaseTokenBalance(uint256 amount_) {
+        _baseToken.mint(_SELLER, amount_);
         _;
     }
 
-    modifier givenOwnerHasBaseTokenAllowance(uint256 amount_) {
-        vm.prank(_auctionOwner);
+    modifier givenSellerHasBaseTokenAllowance(uint256 amount_) {
+        vm.prank(_SELLER);
         _baseToken.approve(address(_auctionHouse), amount_);
         _;
     }
@@ -439,7 +439,7 @@ abstract contract AuctionHouseTest is Test, Permit2User {
     function _getLotRouting(uint96 lotId_) internal view returns (Auctioneer.Routing memory) {
         (
             Veecode auctionReference_,
-            address owner_,
+            address seller_,
             ERC20 baseToken_,
             ERC20 quoteToken_,
             IHooks hooks_,
@@ -452,7 +452,7 @@ abstract contract AuctionHouseTest is Test, Permit2User {
 
         return Auctioneer.Routing({
             auctionReference: auctionReference_,
-            owner: owner_,
+            seller: seller_,
             baseToken: baseToken_,
             quoteToken: quoteToken_,
             hooks: hooks_,

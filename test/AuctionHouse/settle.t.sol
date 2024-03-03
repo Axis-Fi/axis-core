@@ -9,11 +9,11 @@ import {AuctionHouseTest} from "test/AuctionHouse/AuctionHouseTest.sol";
 contract SettleTest is AuctionHouseTest {
     uint96 internal constant _BID_AMOUNT_TOTAL = 20e18;
 
-    uint256 internal _expectedOwnerQuoteTokenBalance;
+    uint256 internal _expectedSellerQuoteTokenBalance;
     uint256 internal _expectedBidderQuoteTokenBalance;
     uint256 internal _expectedAuctionHouseQuoteTokenBalance;
 
-    uint256 internal _expectedOwnerBaseTokenBalance;
+    uint256 internal _expectedSellerBaseTokenBalance;
     uint256 internal _expectedBidderBaseTokenBalance;
     uint256 internal _expectedAuctionHouseBaseTokenBalance;
     uint256 internal _expectedCuratorBaseTokenBalance;
@@ -31,9 +31,9 @@ contract SettleTest is AuctionHouseTest {
             "base token: auction house balance"
         );
         assertEq(
-            _baseToken.balanceOf(_auctionOwner),
-            _expectedOwnerBaseTokenBalance,
-            "base token: owner balance"
+            _baseToken.balanceOf(_SELLER),
+            _expectedSellerBaseTokenBalance,
+            "base token: seller balance"
         );
         assertEq(
             _baseToken.balanceOf(_bidder),
@@ -57,9 +57,9 @@ contract SettleTest is AuctionHouseTest {
             "quote token: auction house balance"
         );
         assertEq(
-            _quoteToken.balanceOf(_auctionOwner),
-            _expectedOwnerQuoteTokenBalance,
-            "quote token: owner balance"
+            _quoteToken.balanceOf(_SELLER),
+            _expectedSellerQuoteTokenBalance,
+            "quote token: seller balance"
         );
         assertEq(
             _quoteToken.balanceOf(_bidder),
@@ -145,25 +145,25 @@ contract SettleTest is AuctionHouseTest {
 
         // Set up expected values
         // Quote token
-        _expectedOwnerQuoteTokenBalance =
+        _expectedSellerQuoteTokenBalance =
             totalIn - totalProtocolFees - totalReferrerFees - pfRefundAmount;
         _expectedBidderQuoteTokenBalance = pfRefundAmount;
         _expectedAuctionHouseQuoteTokenBalance = totalProtocolFees + totalReferrerFees;
         assertEq(
-            _expectedOwnerQuoteTokenBalance + _expectedBidderQuoteTokenBalance
+            _expectedSellerQuoteTokenBalance + _expectedBidderQuoteTokenBalance
                 + _expectedAuctionHouseQuoteTokenBalance,
             totalIn,
             "total quote token balance mismatch"
         );
 
         // Base token
-        _expectedOwnerBaseTokenBalance = 0;
+        _expectedSellerBaseTokenBalance = 0;
         _expectedBidderBaseTokenBalance = pfPayoutAmount;
         _expectedAuctionHouseBaseTokenBalance =
             scaledLotCapacity + prefundedCuratorFees - pfPayoutAmount - totalCuratorFees;
         _expectedCuratorBaseTokenBalance = totalCuratorFees;
         assertEq(
-            _expectedOwnerBaseTokenBalance + _expectedBidderBaseTokenBalance
+            _expectedSellerBaseTokenBalance + _expectedBidderBaseTokenBalance
                 + _expectedAuctionHouseBaseTokenBalance + _expectedCuratorBaseTokenBalance,
             scaledLotCapacity + prefundedCuratorFees,
             "total base token balance mismatch"
@@ -199,24 +199,24 @@ contract SettleTest is AuctionHouseTest {
 
         // Set up expected values
         // Quote token
-        _expectedOwnerQuoteTokenBalance = totalIn - totalProtocolFees - totalReferrerFees;
+        _expectedSellerQuoteTokenBalance = totalIn - totalProtocolFees - totalReferrerFees;
         _expectedBidderQuoteTokenBalance = 0;
         _expectedAuctionHouseQuoteTokenBalance = totalProtocolFees + totalReferrerFees;
         assertEq(
-            _expectedOwnerQuoteTokenBalance + _expectedBidderQuoteTokenBalance
+            _expectedSellerQuoteTokenBalance + _expectedBidderQuoteTokenBalance
                 + _expectedAuctionHouseQuoteTokenBalance,
             totalIn,
             "total quote token balance mismatch"
         );
 
         // Base token
-        _expectedOwnerBaseTokenBalance =
-            scaledLotCapacity + prefundedCuratorFees - totalOut - totalCuratorFees; // Capacity and unused curator fees returned to owner
+        _expectedSellerBaseTokenBalance =
+            scaledLotCapacity + prefundedCuratorFees - totalOut - totalCuratorFees; // Capacity and unused curator fees returned to seller
         _expectedBidderBaseTokenBalance = 0; // To be claimed by bidder
         _expectedAuctionHouseBaseTokenBalance = totalOut; // To be claimed by bidders
         _expectedCuratorBaseTokenBalance = totalCuratorFees;
         assertEq(
-            _expectedOwnerBaseTokenBalance + _expectedBidderBaseTokenBalance
+            _expectedSellerBaseTokenBalance + _expectedBidderBaseTokenBalance
                 + _expectedAuctionHouseBaseTokenBalance + _expectedCuratorBaseTokenBalance,
             scaledLotCapacity + prefundedCuratorFees,
             "total base token balance mismatch"
@@ -252,23 +252,23 @@ contract SettleTest is AuctionHouseTest {
 
         // Set up expected values
         // Quote token
-        _expectedOwnerQuoteTokenBalance = totalIn - totalProtocolFees - totalReferrerFees;
+        _expectedSellerQuoteTokenBalance = totalIn - totalProtocolFees - totalReferrerFees;
         _expectedBidderQuoteTokenBalance = 0;
         _expectedAuctionHouseQuoteTokenBalance = totalProtocolFees + totalReferrerFees;
         assertEq(
-            _expectedOwnerQuoteTokenBalance + _expectedBidderQuoteTokenBalance
+            _expectedSellerQuoteTokenBalance + _expectedBidderQuoteTokenBalance
                 + _expectedAuctionHouseQuoteTokenBalance,
             totalIn,
             "total quote token balance mismatch"
         );
 
         // Base token
-        _expectedOwnerBaseTokenBalance = 0; // Unused curator fees returned to owner
+        _expectedSellerBaseTokenBalance = 0; // Unused curator fees returned to seller
         _expectedBidderBaseTokenBalance = 0; // To be claimed by bidder
         _expectedAuctionHouseBaseTokenBalance = scaledLotCapacity; // To be claimed by bidders
         _expectedCuratorBaseTokenBalance = totalCuratorFees;
         assertEq(
-            _expectedOwnerBaseTokenBalance + _expectedBidderBaseTokenBalance
+            _expectedSellerBaseTokenBalance + _expectedBidderBaseTokenBalance
                 + _expectedAuctionHouseBaseTokenBalance + _expectedCuratorBaseTokenBalance,
             scaledLotCapacity + prefundedCuratorFees,
             "total base token balance mismatch"
@@ -303,23 +303,23 @@ contract SettleTest is AuctionHouseTest {
 
         // Set up expected values
         // Quote token
-        _expectedOwnerQuoteTokenBalance = 0; // Did not settle, no payment
+        _expectedSellerQuoteTokenBalance = 0; // Did not settle, no payment
         _expectedBidderQuoteTokenBalance = 0; // To be claimed
         _expectedAuctionHouseQuoteTokenBalance = _scaleQuoteTokenAmount(_BID_AMOUNT_TOTAL); // To be claimed by bidders
         assertEq(
-            _expectedOwnerQuoteTokenBalance + _expectedBidderQuoteTokenBalance
+            _expectedSellerQuoteTokenBalance + _expectedBidderQuoteTokenBalance
                 + _expectedAuctionHouseQuoteTokenBalance,
             _scaleQuoteTokenAmount(_BID_AMOUNT_TOTAL),
             "total quote token balance mismatch"
         );
 
         // Base token
-        _expectedOwnerBaseTokenBalance = scaledLotCapacity + prefundedCuratorFees;
+        _expectedSellerBaseTokenBalance = scaledLotCapacity + prefundedCuratorFees;
         _expectedBidderBaseTokenBalance = 0;
-        _expectedAuctionHouseBaseTokenBalance = 0; // Refunded to owner
+        _expectedAuctionHouseBaseTokenBalance = 0; // Refunded to seller
         _expectedCuratorBaseTokenBalance = 0;
         assertEq(
-            _expectedOwnerBaseTokenBalance + _expectedBidderBaseTokenBalance
+            _expectedSellerBaseTokenBalance + _expectedBidderBaseTokenBalance
                 + _expectedAuctionHouseBaseTokenBalance + _expectedCuratorBaseTokenBalance,
             scaledLotCapacity + prefundedCuratorFees,
             "total base token balance mismatch"
@@ -340,23 +340,23 @@ contract SettleTest is AuctionHouseTest {
     //  [X] it reverts
     // [X] when the auction does not settle
     //  [X] when curated is true
-    //   [X] it transfers the capacity and curator fee to the owner
-    //  [X] it transfer the capacity to the owner
+    //   [X] it transfers the capacity and curator fee to the seller
+    //  [X] it transfer the capacity to the seller
     // [X] when there is a partial fill
-    //  [X] it allocates fees, updates prefunding, transfers the partial payment and refund to the bidder, transfers the payment to the owner, and allocates fees to the curator
+    //  [X] it allocates fees, updates prefunding, transfers the partial payment and refund to the bidder, transfers the payment to the seller, and allocates fees to the curator
     // [X] when capacity is not filled
     //  [X] when curated is true
-    //   [X] it transfers the remaining capacity back to the owner, and pays the curator fee based on the utilised capacity
-    //  [X] it transfers the remaining capacity back to the owner
+    //   [X] it transfers the remaining capacity back to the seller, and pays the curator fee based on the utilised capacity
+    //  [X] it transfers the remaining capacity back to the seller
     // [X] when protocol fees are not set
-    //  [X] it transfers the entire payment - referrer fees to the owner
+    //  [X] it transfers the entire payment - referrer fees to the seller
     // [X] when referrer fees are not set
-    //  [X] it transfers the entire payment - protocol fees to the owner
+    //  [X] it transfers the entire payment - protocol fees to the seller
     // [X] when protocol and referrer fees are not set
-    //  [X] it transfers the entire payment to the owner
+    //  [X] it transfers the entire payment to the seller
     // [X] when curated is true
     //  [X] it transfers the curator fee to the curator
-    // [X] it transfers the payment (minus protocol and referrer fees) to the owner
+    // [X] it transfers the payment (minus protocol and referrer fees) to the seller
     // [X] when prefunding is disabled
     //  [X] when the auction is not settled
     //   [X] it does not transfer any base tokens to the auction house
@@ -389,8 +389,8 @@ contract SettleTest is AuctionHouseTest {
         whenBatchAuctionModuleIsInstalled
         givenCuratorIsSet
         givenLotIsPrefunded
-        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
-        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenLotIsCreated
         givenAuctionModuleReverts
     {
@@ -409,13 +409,13 @@ contract SettleTest is AuctionHouseTest {
         whenBatchAuctionModuleIsInstalled
         givenCuratorIsSet
         givenLotIsPrefunded
-        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
-        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenLotIsCreated
         givenCuratorMaxFeeIsSet
         givenCuratorFeeIsSet
-        givenOwnerHasBaseTokenBalance(_curatorMaxPotentialFee)
-        givenOwnerHasBaseTokenAllowance(_curatorMaxPotentialFee)
+        givenSellerHasBaseTokenBalance(_curatorMaxPotentialFee)
+        givenSellerHasBaseTokenAllowance(_curatorMaxPotentialFee)
         givenCuratorHasApproved
         givenProtocolFeeIsSet
         givenReferrerFeeIsSet
@@ -439,13 +439,13 @@ contract SettleTest is AuctionHouseTest {
         givenQuoteTokenHasDecimals(17)
         givenBaseTokenHasDecimals(13)
         givenLotIsPrefunded
-        givenOwnerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
-        givenOwnerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenLotIsCreated
         givenCuratorMaxFeeIsSet
         givenCuratorFeeIsSet
-        givenOwnerHasBaseTokenBalance(_scaleBaseTokenAmount(_curatorMaxPotentialFee))
-        givenOwnerHasBaseTokenAllowance(_scaleBaseTokenAmount(_curatorMaxPotentialFee))
+        givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_curatorMaxPotentialFee))
+        givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_curatorMaxPotentialFee))
         givenCuratorHasApproved
         givenProtocolFeeIsSet
         givenReferrerFeeIsSet
@@ -469,13 +469,13 @@ contract SettleTest is AuctionHouseTest {
         givenQuoteTokenHasDecimals(13)
         givenBaseTokenHasDecimals(17)
         givenLotIsPrefunded
-        givenOwnerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
-        givenOwnerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenLotIsCreated
         givenCuratorMaxFeeIsSet
         givenCuratorFeeIsSet
-        givenOwnerHasBaseTokenBalance(_scaleBaseTokenAmount(_curatorMaxPotentialFee))
-        givenOwnerHasBaseTokenAllowance(_scaleBaseTokenAmount(_curatorMaxPotentialFee))
+        givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_curatorMaxPotentialFee))
+        givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_curatorMaxPotentialFee))
         givenCuratorHasApproved
         givenProtocolFeeIsSet
         givenReferrerFeeIsSet
@@ -497,8 +497,8 @@ contract SettleTest is AuctionHouseTest {
         whenBatchAuctionModuleIsInstalled
         givenCuratorIsSet
         givenLotIsPrefunded
-        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
-        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenLotIsCreated
         givenCuratorMaxFeeIsSet
         givenCuratorFeeIsSet
@@ -524,8 +524,8 @@ contract SettleTest is AuctionHouseTest {
         givenQuoteTokenHasDecimals(17)
         givenBaseTokenHasDecimals(13)
         givenLotIsPrefunded
-        givenOwnerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
-        givenOwnerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenLotIsCreated
         givenCuratorMaxFeeIsSet
         givenCuratorFeeIsSet
@@ -551,8 +551,8 @@ contract SettleTest is AuctionHouseTest {
         givenQuoteTokenHasDecimals(13)
         givenBaseTokenHasDecimals(17)
         givenLotIsPrefunded
-        givenOwnerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
-        givenOwnerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenLotIsCreated
         givenCuratorMaxFeeIsSet
         givenCuratorFeeIsSet
@@ -576,13 +576,13 @@ contract SettleTest is AuctionHouseTest {
         whenBatchAuctionModuleIsInstalled
         givenCuratorIsSet
         givenLotIsPrefunded
-        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
-        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenLotIsCreated
         givenCuratorMaxFeeIsSet
         givenCuratorFeeIsSet
-        givenOwnerHasBaseTokenBalance(_curatorMaxPotentialFee)
-        givenOwnerHasBaseTokenAllowance(_curatorMaxPotentialFee)
+        givenSellerHasBaseTokenBalance(_curatorMaxPotentialFee)
+        givenSellerHasBaseTokenAllowance(_curatorMaxPotentialFee)
         givenCuratorHasApproved
         givenProtocolFeeIsSet
         givenReferrerFeeIsSet
@@ -606,13 +606,13 @@ contract SettleTest is AuctionHouseTest {
         givenQuoteTokenHasDecimals(17)
         givenBaseTokenHasDecimals(13)
         givenLotIsPrefunded
-        givenOwnerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
-        givenOwnerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenLotIsCreated
         givenCuratorMaxFeeIsSet
         givenCuratorFeeIsSet
-        givenOwnerHasBaseTokenBalance(_scaleBaseTokenAmount(_curatorMaxPotentialFee))
-        givenOwnerHasBaseTokenAllowance(_scaleBaseTokenAmount(_curatorMaxPotentialFee))
+        givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_curatorMaxPotentialFee))
+        givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_curatorMaxPotentialFee))
         givenCuratorHasApproved
         givenProtocolFeeIsSet
         givenReferrerFeeIsSet
@@ -636,13 +636,13 @@ contract SettleTest is AuctionHouseTest {
         givenQuoteTokenHasDecimals(13)
         givenBaseTokenHasDecimals(17)
         givenLotIsPrefunded
-        givenOwnerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
-        givenOwnerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenLotIsCreated
         givenCuratorMaxFeeIsSet
         givenCuratorFeeIsSet
-        givenOwnerHasBaseTokenBalance(_scaleBaseTokenAmount(_curatorMaxPotentialFee))
-        givenOwnerHasBaseTokenAllowance(_scaleBaseTokenAmount(_curatorMaxPotentialFee))
+        givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_curatorMaxPotentialFee))
+        givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_curatorMaxPotentialFee))
         givenCuratorHasApproved
         givenProtocolFeeIsSet
         givenReferrerFeeIsSet
@@ -663,8 +663,8 @@ contract SettleTest is AuctionHouseTest {
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
         givenLotIsPrefunded
-        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
-        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenLotIsCreated
         givenProtocolFeeIsSet
         givenReferrerFeeIsSet
@@ -687,8 +687,8 @@ contract SettleTest is AuctionHouseTest {
         givenQuoteTokenHasDecimals(17)
         givenBaseTokenHasDecimals(13)
         givenLotIsPrefunded
-        givenOwnerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
-        givenOwnerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenLotIsCreated
         givenProtocolFeeIsSet
         givenReferrerFeeIsSet
@@ -711,8 +711,8 @@ contract SettleTest is AuctionHouseTest {
         givenQuoteTokenHasDecimals(13)
         givenBaseTokenHasDecimals(17)
         givenLotIsPrefunded
-        givenOwnerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
-        givenOwnerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenLotIsCreated
         givenProtocolFeeIsSet
         givenReferrerFeeIsSet
@@ -734,13 +734,13 @@ contract SettleTest is AuctionHouseTest {
         whenBatchAuctionModuleIsInstalled
         givenCuratorIsSet
         givenLotIsPrefunded
-        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
-        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenLotIsCreated
         givenCuratorMaxFeeIsSet
         givenCuratorFeeIsSet
-        givenOwnerHasBaseTokenBalance(_curatorMaxPotentialFee)
-        givenOwnerHasBaseTokenAllowance(_curatorMaxPotentialFee)
+        givenSellerHasBaseTokenBalance(_curatorMaxPotentialFee)
+        givenSellerHasBaseTokenAllowance(_curatorMaxPotentialFee)
         givenCuratorHasApproved
         givenProtocolFeeIsSet
         givenReferrerFeeIsSet
@@ -764,13 +764,13 @@ contract SettleTest is AuctionHouseTest {
         givenQuoteTokenHasDecimals(17)
         givenBaseTokenHasDecimals(13)
         givenLotIsPrefunded
-        givenOwnerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
-        givenOwnerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenLotIsCreated
         givenCuratorMaxFeeIsSet
         givenCuratorFeeIsSet
-        givenOwnerHasBaseTokenBalance(_scaleBaseTokenAmount(_curatorMaxPotentialFee))
-        givenOwnerHasBaseTokenAllowance(_scaleBaseTokenAmount(_curatorMaxPotentialFee))
+        givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_curatorMaxPotentialFee))
+        givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_curatorMaxPotentialFee))
         givenCuratorHasApproved
         givenProtocolFeeIsSet
         givenReferrerFeeIsSet
@@ -794,13 +794,13 @@ contract SettleTest is AuctionHouseTest {
         givenQuoteTokenHasDecimals(13)
         givenBaseTokenHasDecimals(17)
         givenLotIsPrefunded
-        givenOwnerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
-        givenOwnerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenLotIsCreated
         givenCuratorMaxFeeIsSet
         givenCuratorFeeIsSet
-        givenOwnerHasBaseTokenBalance(_scaleBaseTokenAmount(_curatorMaxPotentialFee))
-        givenOwnerHasBaseTokenAllowance(_scaleBaseTokenAmount(_curatorMaxPotentialFee))
+        givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_curatorMaxPotentialFee))
+        givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_curatorMaxPotentialFee))
         givenCuratorHasApproved
         givenProtocolFeeIsSet
         givenReferrerFeeIsSet
@@ -822,8 +822,8 @@ contract SettleTest is AuctionHouseTest {
         whenBatchAuctionModuleIsInstalled
         givenCuratorIsSet
         givenLotIsPrefunded
-        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
-        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenLotIsCreated
         givenCuratorMaxFeeIsSet
         givenCuratorFeeIsSet
@@ -849,8 +849,8 @@ contract SettleTest is AuctionHouseTest {
         givenQuoteTokenHasDecimals(17)
         givenBaseTokenHasDecimals(13)
         givenLotIsPrefunded
-        givenOwnerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
-        givenOwnerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenLotIsCreated
         givenCuratorMaxFeeIsSet
         givenCuratorFeeIsSet
@@ -876,8 +876,8 @@ contract SettleTest is AuctionHouseTest {
         givenQuoteTokenHasDecimals(13)
         givenBaseTokenHasDecimals(17)
         givenLotIsPrefunded
-        givenOwnerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
-        givenOwnerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenLotIsCreated
         givenCuratorMaxFeeIsSet
         givenCuratorFeeIsSet
@@ -901,13 +901,13 @@ contract SettleTest is AuctionHouseTest {
         whenBatchAuctionModuleIsInstalled
         givenCuratorIsSet
         givenLotIsPrefunded
-        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
-        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenLotIsCreated
         givenCuratorMaxFeeIsSet
         givenCuratorFeeIsSet
-        givenOwnerHasBaseTokenBalance(_curatorMaxPotentialFee)
-        givenOwnerHasBaseTokenAllowance(_curatorMaxPotentialFee)
+        givenSellerHasBaseTokenBalance(_curatorMaxPotentialFee)
+        givenSellerHasBaseTokenAllowance(_curatorMaxPotentialFee)
         givenCuratorHasApproved
         givenProtocolFeeIsSet
         givenReferrerFeeIsSet
@@ -931,13 +931,13 @@ contract SettleTest is AuctionHouseTest {
         givenQuoteTokenHasDecimals(17)
         givenBaseTokenHasDecimals(13)
         givenLotIsPrefunded
-        givenOwnerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
-        givenOwnerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenLotIsCreated
         givenCuratorMaxFeeIsSet
         givenCuratorFeeIsSet
-        givenOwnerHasBaseTokenBalance(_scaleBaseTokenAmount(_curatorMaxPotentialFee))
-        givenOwnerHasBaseTokenAllowance(_scaleBaseTokenAmount(_curatorMaxPotentialFee))
+        givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_curatorMaxPotentialFee))
+        givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_curatorMaxPotentialFee))
         givenCuratorHasApproved
         givenProtocolFeeIsSet
         givenReferrerFeeIsSet
@@ -961,13 +961,13 @@ contract SettleTest is AuctionHouseTest {
         givenQuoteTokenHasDecimals(13)
         givenBaseTokenHasDecimals(17)
         givenLotIsPrefunded
-        givenOwnerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
-        givenOwnerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenLotIsCreated
         givenCuratorMaxFeeIsSet
         givenCuratorFeeIsSet
-        givenOwnerHasBaseTokenBalance(_scaleBaseTokenAmount(_curatorMaxPotentialFee))
-        givenOwnerHasBaseTokenAllowance(_scaleBaseTokenAmount(_curatorMaxPotentialFee))
+        givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_curatorMaxPotentialFee))
+        givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_curatorMaxPotentialFee))
         givenCuratorHasApproved
         givenProtocolFeeIsSet
         givenReferrerFeeIsSet
@@ -988,8 +988,8 @@ contract SettleTest is AuctionHouseTest {
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
         givenLotIsPrefunded
-        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
-        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenLotIsCreated
         givenProtocolFeeIsSet
         givenReferrerFeeIsSet
@@ -1012,8 +1012,8 @@ contract SettleTest is AuctionHouseTest {
         givenQuoteTokenHasDecimals(17)
         givenBaseTokenHasDecimals(13)
         givenLotIsPrefunded
-        givenOwnerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
-        givenOwnerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenLotIsCreated
         givenProtocolFeeIsSet
         givenReferrerFeeIsSet
@@ -1036,8 +1036,8 @@ contract SettleTest is AuctionHouseTest {
         givenQuoteTokenHasDecimals(13)
         givenBaseTokenHasDecimals(17)
         givenLotIsPrefunded
-        givenOwnerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
-        givenOwnerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenLotIsCreated
         givenProtocolFeeIsSet
         givenReferrerFeeIsSet
@@ -1059,13 +1059,13 @@ contract SettleTest is AuctionHouseTest {
         whenBatchAuctionModuleIsInstalled
         givenCuratorIsSet
         givenLotIsPrefunded
-        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
-        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenLotIsCreated
         givenCuratorMaxFeeIsSet
         givenCuratorFeeIsSet
-        givenOwnerHasBaseTokenBalance(_curatorMaxPotentialFee)
-        givenOwnerHasBaseTokenAllowance(_curatorMaxPotentialFee)
+        givenSellerHasBaseTokenBalance(_curatorMaxPotentialFee)
+        givenSellerHasBaseTokenAllowance(_curatorMaxPotentialFee)
         givenCuratorHasApproved
         givenReferrerFeeIsSet
         givenLotCapacityIsFilled
@@ -1088,13 +1088,13 @@ contract SettleTest is AuctionHouseTest {
         givenQuoteTokenHasDecimals(17)
         givenBaseTokenHasDecimals(13)
         givenLotIsPrefunded
-        givenOwnerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
-        givenOwnerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenLotIsCreated
         givenCuratorMaxFeeIsSet
         givenCuratorFeeIsSet
-        givenOwnerHasBaseTokenBalance(_scaleBaseTokenAmount(_curatorMaxPotentialFee))
-        givenOwnerHasBaseTokenAllowance(_scaleBaseTokenAmount(_curatorMaxPotentialFee))
+        givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_curatorMaxPotentialFee))
+        givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_curatorMaxPotentialFee))
         givenCuratorHasApproved
         givenReferrerFeeIsSet
         givenLotCapacityIsFilled
@@ -1117,13 +1117,13 @@ contract SettleTest is AuctionHouseTest {
         givenQuoteTokenHasDecimals(13)
         givenBaseTokenHasDecimals(17)
         givenLotIsPrefunded
-        givenOwnerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
-        givenOwnerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenLotIsCreated
         givenCuratorMaxFeeIsSet
         givenCuratorFeeIsSet
-        givenOwnerHasBaseTokenBalance(_scaleBaseTokenAmount(_curatorMaxPotentialFee))
-        givenOwnerHasBaseTokenAllowance(_scaleBaseTokenAmount(_curatorMaxPotentialFee))
+        givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_curatorMaxPotentialFee))
+        givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_curatorMaxPotentialFee))
         givenCuratorHasApproved
         givenReferrerFeeIsSet
         givenLotCapacityIsFilled
@@ -1144,13 +1144,13 @@ contract SettleTest is AuctionHouseTest {
         whenBatchAuctionModuleIsInstalled
         givenCuratorIsSet
         givenLotIsPrefunded
-        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
-        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenLotIsCreated
         givenCuratorMaxFeeIsSet
         givenCuratorFeeIsSet
-        givenOwnerHasBaseTokenBalance(_curatorMaxPotentialFee)
-        givenOwnerHasBaseTokenAllowance(_curatorMaxPotentialFee)
+        givenSellerHasBaseTokenBalance(_curatorMaxPotentialFee)
+        givenSellerHasBaseTokenAllowance(_curatorMaxPotentialFee)
         givenCuratorHasApproved
         givenProtocolFeeIsSet
         givenLotCapacityIsFilled
@@ -1173,13 +1173,13 @@ contract SettleTest is AuctionHouseTest {
         givenQuoteTokenHasDecimals(17)
         givenBaseTokenHasDecimals(13)
         givenLotIsPrefunded
-        givenOwnerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
-        givenOwnerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenLotIsCreated
         givenCuratorMaxFeeIsSet
         givenCuratorFeeIsSet
-        givenOwnerHasBaseTokenBalance(_scaleBaseTokenAmount(_curatorMaxPotentialFee))
-        givenOwnerHasBaseTokenAllowance(_scaleBaseTokenAmount(_curatorMaxPotentialFee))
+        givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_curatorMaxPotentialFee))
+        givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_curatorMaxPotentialFee))
         givenCuratorHasApproved
         givenProtocolFeeIsSet
         givenLotCapacityIsFilled
@@ -1202,13 +1202,13 @@ contract SettleTest is AuctionHouseTest {
         givenQuoteTokenHasDecimals(13)
         givenBaseTokenHasDecimals(17)
         givenLotIsPrefunded
-        givenOwnerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
-        givenOwnerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenLotIsCreated
         givenCuratorMaxFeeIsSet
         givenCuratorFeeIsSet
-        givenOwnerHasBaseTokenBalance(_scaleBaseTokenAmount(_curatorMaxPotentialFee))
-        givenOwnerHasBaseTokenAllowance(_scaleBaseTokenAmount(_curatorMaxPotentialFee))
+        givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_curatorMaxPotentialFee))
+        givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_curatorMaxPotentialFee))
         givenCuratorHasApproved
         givenProtocolFeeIsSet
         givenLotCapacityIsFilled
@@ -1229,13 +1229,13 @@ contract SettleTest is AuctionHouseTest {
         whenBatchAuctionModuleIsInstalled
         givenCuratorIsSet
         givenLotIsPrefunded
-        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
-        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenLotIsCreated
         givenCuratorMaxFeeIsSet
         givenCuratorFeeIsSet
-        givenOwnerHasBaseTokenBalance(_curatorMaxPotentialFee)
-        givenOwnerHasBaseTokenAllowance(_curatorMaxPotentialFee)
+        givenSellerHasBaseTokenBalance(_curatorMaxPotentialFee)
+        givenSellerHasBaseTokenAllowance(_curatorMaxPotentialFee)
         givenCuratorHasApproved
         givenLotCapacityIsFilled
         givenAuctionHouseHasQuoteTokenBalance(_BID_AMOUNT_TOTAL)
@@ -1257,13 +1257,13 @@ contract SettleTest is AuctionHouseTest {
         givenQuoteTokenHasDecimals(17)
         givenBaseTokenHasDecimals(13)
         givenLotIsPrefunded
-        givenOwnerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
-        givenOwnerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenLotIsCreated
         givenCuratorMaxFeeIsSet
         givenCuratorFeeIsSet
-        givenOwnerHasBaseTokenBalance(_scaleBaseTokenAmount(_curatorMaxPotentialFee))
-        givenOwnerHasBaseTokenAllowance(_scaleBaseTokenAmount(_curatorMaxPotentialFee))
+        givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_curatorMaxPotentialFee))
+        givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_curatorMaxPotentialFee))
         givenCuratorHasApproved
         givenLotCapacityIsFilled
         givenAuctionHouseHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT_TOTAL))
@@ -1285,13 +1285,13 @@ contract SettleTest is AuctionHouseTest {
         givenQuoteTokenHasDecimals(13)
         givenBaseTokenHasDecimals(17)
         givenLotIsPrefunded
-        givenOwnerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
-        givenOwnerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenLotIsCreated
         givenCuratorMaxFeeIsSet
         givenCuratorFeeIsSet
-        givenOwnerHasBaseTokenBalance(_scaleBaseTokenAmount(_curatorMaxPotentialFee))
-        givenOwnerHasBaseTokenAllowance(_scaleBaseTokenAmount(_curatorMaxPotentialFee))
+        givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_curatorMaxPotentialFee))
+        givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_curatorMaxPotentialFee))
         givenCuratorHasApproved
         givenLotCapacityIsFilled
         givenAuctionHouseHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT_TOTAL))
@@ -1319,8 +1319,8 @@ contract SettleTest is AuctionHouseTest {
         givenProtocolFeeIsSet
         givenReferrerFeeIsSet
         givenLotDoesNotSettle
-        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY + _curatorMaxPotentialFee)
-        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY + _curatorMaxPotentialFee)
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY + _curatorMaxPotentialFee)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY + _curatorMaxPotentialFee)
         givenAuctionHouseHasQuoteTokenBalance(_BID_AMOUNT_TOTAL)
     {
         // Call function
@@ -1346,8 +1346,8 @@ contract SettleTest is AuctionHouseTest {
         givenProtocolFeeIsSet
         givenReferrerFeeIsSet
         givenLotDoesNotSettle
-        givenOwnerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY + _curatorMaxPotentialFee))
-        givenOwnerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY + _curatorMaxPotentialFee))
+        givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY + _curatorMaxPotentialFee))
+        givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY + _curatorMaxPotentialFee))
         givenAuctionHouseHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT_TOTAL))
     {
         // Call function
@@ -1373,8 +1373,8 @@ contract SettleTest is AuctionHouseTest {
         givenProtocolFeeIsSet
         givenReferrerFeeIsSet
         givenLotDoesNotSettle
-        givenOwnerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY + _curatorMaxPotentialFee))
-        givenOwnerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY + _curatorMaxPotentialFee))
+        givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY + _curatorMaxPotentialFee))
+        givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY + _curatorMaxPotentialFee))
         givenAuctionHouseHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT_TOTAL))
     {
         // Call function
@@ -1394,8 +1394,8 @@ contract SettleTest is AuctionHouseTest {
         givenProtocolFeeIsSet
         givenReferrerFeeIsSet
         givenLotDoesNotSettle
-        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
-        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenAuctionHouseHasQuoteTokenBalance(_BID_AMOUNT_TOTAL)
     {
         // Call function
@@ -1417,8 +1417,8 @@ contract SettleTest is AuctionHouseTest {
         givenProtocolFeeIsSet
         givenReferrerFeeIsSet
         givenLotDoesNotSettle
-        givenOwnerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
-        givenOwnerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenAuctionHouseHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT_TOTAL))
     {
         // Call function
@@ -1440,8 +1440,8 @@ contract SettleTest is AuctionHouseTest {
         givenProtocolFeeIsSet
         givenReferrerFeeIsSet
         givenLotDoesNotSettle
-        givenOwnerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
-        givenOwnerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenAuctionHouseHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT_TOTAL))
     {
         // Call function
@@ -1465,8 +1465,8 @@ contract SettleTest is AuctionHouseTest {
         givenProtocolFeeIsSet
         givenReferrerFeeIsSet
         givenLotHasPartialFill
-        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY + _curatorMaxPotentialFee)
-        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY + _curatorMaxPotentialFee)
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY + _curatorMaxPotentialFee)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY + _curatorMaxPotentialFee)
         givenAuctionHouseHasQuoteTokenBalance(_BID_AMOUNT_TOTAL)
     {
         // Call function
@@ -1492,8 +1492,8 @@ contract SettleTest is AuctionHouseTest {
         givenProtocolFeeIsSet
         givenReferrerFeeIsSet
         givenLotHasPartialFill
-        givenOwnerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY + _curatorMaxPotentialFee))
-        givenOwnerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY + _curatorMaxPotentialFee))
+        givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY + _curatorMaxPotentialFee))
+        givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY + _curatorMaxPotentialFee))
         givenAuctionHouseHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT_TOTAL))
     {
         // Call function
@@ -1519,8 +1519,8 @@ contract SettleTest is AuctionHouseTest {
         givenProtocolFeeIsSet
         givenReferrerFeeIsSet
         givenLotHasPartialFill
-        givenOwnerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY + _curatorMaxPotentialFee))
-        givenOwnerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY + _curatorMaxPotentialFee))
+        givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY + _curatorMaxPotentialFee))
+        givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY + _curatorMaxPotentialFee))
         givenAuctionHouseHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT_TOTAL))
     {
         // Call function
@@ -1540,8 +1540,8 @@ contract SettleTest is AuctionHouseTest {
         givenProtocolFeeIsSet
         givenReferrerFeeIsSet
         givenLotHasPartialFill
-        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
-        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenAuctionHouseHasQuoteTokenBalance(_BID_AMOUNT_TOTAL)
     {
         // Call function
@@ -1563,8 +1563,8 @@ contract SettleTest is AuctionHouseTest {
         givenProtocolFeeIsSet
         givenReferrerFeeIsSet
         givenLotHasPartialFill
-        givenOwnerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
-        givenOwnerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenAuctionHouseHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT_TOTAL))
     {
         // Call function
@@ -1586,8 +1586,8 @@ contract SettleTest is AuctionHouseTest {
         givenProtocolFeeIsSet
         givenReferrerFeeIsSet
         givenLotHasPartialFill
-        givenOwnerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
-        givenOwnerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenAuctionHouseHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT_TOTAL))
     {
         // Call function
@@ -1611,8 +1611,8 @@ contract SettleTest is AuctionHouseTest {
         givenProtocolFeeIsSet
         givenReferrerFeeIsSet
         givenLotIsUnderCapacity
-        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY + _curatorMaxPotentialFee)
-        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY + _curatorMaxPotentialFee)
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY + _curatorMaxPotentialFee)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY + _curatorMaxPotentialFee)
         givenAuctionHouseHasQuoteTokenBalance(_BID_AMOUNT_TOTAL)
     {
         // Call function
@@ -1638,8 +1638,8 @@ contract SettleTest is AuctionHouseTest {
         givenProtocolFeeIsSet
         givenReferrerFeeIsSet
         givenLotIsUnderCapacity
-        givenOwnerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY + _curatorMaxPotentialFee))
-        givenOwnerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY + _curatorMaxPotentialFee))
+        givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY + _curatorMaxPotentialFee))
+        givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY + _curatorMaxPotentialFee))
         givenAuctionHouseHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT_TOTAL))
     {
         // Call function
@@ -1665,8 +1665,8 @@ contract SettleTest is AuctionHouseTest {
         givenProtocolFeeIsSet
         givenReferrerFeeIsSet
         givenLotIsUnderCapacity
-        givenOwnerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY + _curatorMaxPotentialFee))
-        givenOwnerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY + _curatorMaxPotentialFee))
+        givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY + _curatorMaxPotentialFee))
+        givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY + _curatorMaxPotentialFee))
         givenAuctionHouseHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT_TOTAL))
     {
         // Call function
@@ -1686,8 +1686,8 @@ contract SettleTest is AuctionHouseTest {
         givenProtocolFeeIsSet
         givenReferrerFeeIsSet
         givenLotIsUnderCapacity
-        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
-        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenAuctionHouseHasQuoteTokenBalance(_BID_AMOUNT_TOTAL)
     {
         // Call function
@@ -1709,8 +1709,8 @@ contract SettleTest is AuctionHouseTest {
         givenProtocolFeeIsSet
         givenReferrerFeeIsSet
         givenLotIsUnderCapacity
-        givenOwnerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
-        givenOwnerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenAuctionHouseHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT_TOTAL))
     {
         // Call function
@@ -1732,8 +1732,8 @@ contract SettleTest is AuctionHouseTest {
         givenProtocolFeeIsSet
         givenReferrerFeeIsSet
         givenLotIsUnderCapacity
-        givenOwnerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
-        givenOwnerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenAuctionHouseHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT_TOTAL))
     {
         // Call function

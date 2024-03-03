@@ -14,7 +14,7 @@ contract SendPaymentTest is Test, Permit2User {
     address internal constant _PROTOCOL = address(0x1);
 
     address internal constant _USER = address(0x2);
-    address internal constant _OWNER = address(0x3);
+    address internal constant _SELLER = address(0x3);
 
     // Function parameters
     uint256 internal _paymentAmount = 1e18;
@@ -34,7 +34,7 @@ contract SendPaymentTest is Test, Permit2User {
     // [X] given the auction has hooks defined
     //  [X] it transfers the payment amount to the _hook
     // [X] given the auction does not have hooks defined
-    //  [X] it transfers the payment amount to the owner
+    //  [X] it transfers the payment amount to the seller
 
     modifier givenAuctionHasHook() {
         _hook = new MockHook(address(_quoteToken), address(0));
@@ -42,7 +42,7 @@ contract SendPaymentTest is Test, Permit2User {
         // Set the addresses to track
         address[] memory addresses = new address[](4);
         addresses[0] = address(_USER);
-        addresses[1] = address(_OWNER);
+        addresses[1] = address(_SELLER);
         addresses[2] = address(_auctionHouse);
         addresses[3] = address(_hook);
 
@@ -62,11 +62,11 @@ contract SendPaymentTest is Test, Permit2User {
     {
         // Call
         vm.prank(_USER);
-        _auctionHouse.sendPayment(_OWNER, _paymentAmount, _quoteToken, _hook);
+        _auctionHouse.sendPayment(_SELLER, _paymentAmount, _quoteToken, _hook);
 
         // Check balances
         assertEq(_quoteToken.balanceOf(_USER), 0, "user balance mismatch");
-        assertEq(_quoteToken.balanceOf(_OWNER), 0, "owner balance mismatch");
+        assertEq(_quoteToken.balanceOf(_SELLER), 0, "seller balance mismatch");
         assertEq(_quoteToken.balanceOf(address(_auctionHouse)), 0, "_auctionHouse balance mismatch");
         assertEq(_quoteToken.balanceOf(address(_hook)), _paymentAmount, "_hook balance mismatch");
 
@@ -79,11 +79,11 @@ contract SendPaymentTest is Test, Permit2User {
     function test_givenAuctionHasNoHook() public givenRouterHasBalance(_paymentAmount) {
         // Call
         vm.prank(_USER);
-        _auctionHouse.sendPayment(_OWNER, _paymentAmount, _quoteToken, _hook);
+        _auctionHouse.sendPayment(_SELLER, _paymentAmount, _quoteToken, _hook);
 
         // Check balances
         assertEq(_quoteToken.balanceOf(_USER), 0, "user balance mismatch");
-        assertEq(_quoteToken.balanceOf(_OWNER), _paymentAmount, "owner balance mismatch");
+        assertEq(_quoteToken.balanceOf(_SELLER), _paymentAmount, "seller balance mismatch");
         assertEq(_quoteToken.balanceOf(address(_auctionHouse)), 0, "_auctionHouse balance mismatch");
     }
 }

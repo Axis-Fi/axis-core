@@ -209,8 +209,8 @@ contract ClaimBidTest is AuctionHouseTest {
         whenBatchAuctionModuleIsInstalled
         givenCuratorIsSet
         givenLotIsPrefunded
-        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
-        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenLotIsCreated
         givenLotHasStarted
         givenUserHasQuoteTokenBalance(_BID_AMOUNT)
@@ -231,8 +231,8 @@ contract ClaimBidTest is AuctionHouseTest {
         whenBatchAuctionModuleIsInstalled
         givenCuratorIsSet
         givenLotIsPrefunded
-        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
-        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenLotIsCreated
         givenLotHasStarted
         givenReferrerFeeIsSet
@@ -260,8 +260,8 @@ contract ClaimBidTest is AuctionHouseTest {
         givenLotIsPrefunded
         givenQuoteTokenHasDecimals(17)
         givenBaseTokenHasDecimals(13)
-        givenOwnerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
-        givenOwnerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenLotIsCreated
         givenLotHasStarted
         givenReferrerFeeIsSet
@@ -289,8 +289,8 @@ contract ClaimBidTest is AuctionHouseTest {
         givenLotIsPrefunded
         givenQuoteTokenHasDecimals(13)
         givenBaseTokenHasDecimals(17)
-        givenOwnerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
-        givenOwnerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenLotIsCreated
         givenLotHasStarted
         givenReferrerFeeIsSet
@@ -316,8 +316,8 @@ contract ClaimBidTest is AuctionHouseTest {
         whenBatchAuctionModuleIsInstalled
         givenCuratorIsSet
         givenLotIsPrefunded
-        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
-        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenLotIsCreated
         givenLotHasStarted
         givenReferrerFeeIsSet
@@ -345,8 +345,8 @@ contract ClaimBidTest is AuctionHouseTest {
         givenLotIsPrefunded
         givenQuoteTokenHasDecimals(17)
         givenBaseTokenHasDecimals(13)
-        givenOwnerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
-        givenOwnerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenLotIsCreated
         givenLotHasStarted
         givenReferrerFeeIsSet
@@ -379,8 +379,8 @@ contract ClaimBidTest is AuctionHouseTest {
         givenLotIsPrefunded
         givenQuoteTokenHasDecimals(13)
         givenBaseTokenHasDecimals(17)
-        givenOwnerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
-        givenOwnerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenLotIsCreated
         givenLotHasStarted
         givenReferrerFeeIsSet
@@ -411,8 +411,8 @@ contract ClaimBidTest is AuctionHouseTest {
         whenBatchAuctionModuleIsInstalled
         givenCuratorIsSet
         givenLotIsPrefunded
-        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
-        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenLotIsCreated
         givenLotHasStarted
         givenReferrerFeeIsSet
@@ -440,8 +440,8 @@ contract ClaimBidTest is AuctionHouseTest {
         givenLotIsPrefunded
         givenQuoteTokenHasDecimals(17)
         givenBaseTokenHasDecimals(13)
-        givenOwnerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
-        givenOwnerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenLotIsCreated
         givenLotHasStarted
         givenReferrerFeeIsSet
@@ -474,8 +474,8 @@ contract ClaimBidTest is AuctionHouseTest {
         givenLotIsPrefunded
         givenQuoteTokenHasDecimals(13)
         givenBaseTokenHasDecimals(17)
-        givenOwnerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
-        givenOwnerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenLotIsCreated
         givenLotHasStarted
         givenReferrerFeeIsSet
@@ -506,8 +506,8 @@ contract ClaimBidTest is AuctionHouseTest {
         whenBatchAuctionModuleIsInstalled
         givenCuratorIsSet
         givenLotIsPrefunded
-        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
-        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenLotIsCreated
         givenLotHasStarted
         givenReferrerFeeIsSet
@@ -534,8 +534,8 @@ contract ClaimBidTest is AuctionHouseTest {
         givenLotIsPrefunded
         givenQuoteTokenHasDecimals(17)
         givenBaseTokenHasDecimals(13)
-        givenOwnerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
-        givenOwnerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenLotIsCreated
         givenLotHasStarted
         givenReferrerFeeIsSet
@@ -567,8 +567,8 @@ contract ClaimBidTest is AuctionHouseTest {
         givenLotIsPrefunded
         givenQuoteTokenHasDecimals(13)
         givenBaseTokenHasDecimals(17)
-        givenOwnerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
-        givenOwnerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenLotIsCreated
         givenLotHasStarted
         givenReferrerFeeIsSet
@@ -598,8 +598,8 @@ contract ClaimBidTest is AuctionHouseTest {
         whenBatchAuctionModuleIsInstalled
         givenCuratorIsSet
         givenLotIsPrefunded
-        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
-        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenLotIsCreated
         givenLotHasStarted
         givenProtocolFeeIsSet
@@ -626,8 +626,8 @@ contract ClaimBidTest is AuctionHouseTest {
         givenLotIsPrefunded
         givenQuoteTokenHasDecimals(17)
         givenBaseTokenHasDecimals(13)
-        givenOwnerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
-        givenOwnerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenLotIsCreated
         givenLotHasStarted
         givenProtocolFeeIsSet
@@ -659,8 +659,8 @@ contract ClaimBidTest is AuctionHouseTest {
         givenLotIsPrefunded
         givenQuoteTokenHasDecimals(13)
         givenBaseTokenHasDecimals(17)
-        givenOwnerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
-        givenOwnerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenLotIsCreated
         givenLotHasStarted
         givenProtocolFeeIsSet
@@ -690,8 +690,8 @@ contract ClaimBidTest is AuctionHouseTest {
         whenBatchAuctionModuleIsInstalled
         givenCuratorIsSet
         givenLotIsPrefunded
-        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
-        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenLotIsCreated
         givenLotHasStarted
         givenUserHasQuoteTokenBalance(_BID_AMOUNT)
@@ -717,8 +717,8 @@ contract ClaimBidTest is AuctionHouseTest {
         givenLotIsPrefunded
         givenQuoteTokenHasDecimals(17)
         givenBaseTokenHasDecimals(13)
-        givenOwnerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
-        givenOwnerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenLotIsCreated
         givenLotHasStarted
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
@@ -749,8 +749,8 @@ contract ClaimBidTest is AuctionHouseTest {
         givenLotIsPrefunded
         givenQuoteTokenHasDecimals(13)
         givenBaseTokenHasDecimals(17)
-        givenOwnerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
-        givenOwnerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenLotIsCreated
         givenLotHasStarted
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))

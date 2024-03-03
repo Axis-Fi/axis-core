@@ -111,9 +111,9 @@ abstract contract Router {
     /// @dev        The implementing function must perform the following:
     ///             1. Validate the lot
     ///             2. Pass the request to the auction module to calculate winning bids
-    ///             3. Collect the payout from the auction owner (if not pre-funded)
+    ///             3. Collect the payout from the seller (if not pre-funded)
     ///             4. Send the payout to each bidder
-    ///             5. Send the payment to the auction owner
+    ///             5. Send the payment to the seller
     ///             6. Allocate protocol, referrer and curator fees
     ///
     /// @param      lotId_          Lot ID
@@ -192,8 +192,8 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
     ///             2. Sends the purchase amount to the auction module
     ///             3. Records the purchase on the auction module
     ///             4. Transfers the quote token from the caller
-    ///             5. Transfers the quote token to the auction owner
-    ///             5. Transfers the base token from the auction owner or executes the callback
+    ///             5. Transfers the quote token to the seller
+    ///             5. Transfers the base token from the seller or executes the callback
     ///             6. Transfers the base token to the recipient
     ///
     ///             This function reverts if:
@@ -201,7 +201,7 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
     ///             - The respective auction module reverts
     ///             - `payout` is less than `minAmountOut_`
     ///             - The caller does not have sufficient balance of the quote token
-    ///             - The auction owner does not have sufficient balance of the payout token
+    ///             - The seller does not have sufficient balance of the payout token
     ///             - Any of the callbacks fail
     ///             - Any of the token transfers fail
     ///             - re-entrancy is detected
@@ -226,7 +226,7 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
             - _allocateQuoteFees(
                 keycodeFromVeecode(routing.auctionReference),
                 params_.referrer,
-                routing.owner,
+                routing.seller,
                 routing.quoteToken,
                 params_.amount
             );
@@ -250,8 +250,8 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
             Transfer.decodePermit2Approval(params_.permit2Data)
         );
 
-        // Send payment to auction owner
-        _sendPayment(routing.owner, amountLessFees, routing.quoteToken, routing.hooks);
+        // Send payment to seller
+        _sendPayment(routing.seller, amountLessFees, routing.quoteToken, routing.hooks);
 
         // Calculate the curator fee (if applicable)
         Curation storage curation = lotCuration[params_.lotId];
@@ -261,7 +261,7 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
             )
             : 0;
 
-        // Collect payout from auction owner, if needed
+        // Collect payout from seller, if needed
         if (routing.prefunding == 0) {
             routing.prefunding = payoutAmount + curatorFee;
 
@@ -382,7 +382,7 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
             _allocateQuoteFees(
                 keycodeFromVeecode(routing.auctionReference),
                 referrer,
-                routing.owner,
+                routing.seller,
                 routing.quoteToken,
                 paid
             );
@@ -405,17 +405,17 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
     ///             - Settles the auction on the auction module
     ///             - Calculates the payout amount, taking partial fill into consideration
     ///             - Calculates the fees taken on the quote token
-    ///             - Collects the payout from the auction owner (if necessary)
+    ///             - Collects the payout from the seller (if necessary)
     ///             - Sends the payout to each bidder
-    ///             - Sends the payment to the auction owner
+    ///             - Sends the payment to the seller
     ///             - Sends the refund to the bidder if the last bid was a partial fill
-    ///             - Refunds any unused base token to the auction owner
+    ///             - Refunds any unused base token to the seller
     ///
     ///             This function reverts if:
     ///             - the lot ID is invalid
     ///             - the auction module reverts when settling the auction
-    ///             - transferring the quote token to the auction owner fails
-    ///             - collecting the payout from the auction owner fails
+    ///             - transferring the quote token to the seller fails
+    ///             - collecting the payout from the seller fails
     ///             - sending the payout to each bidder fails
     ///             - re-entrancy is detected
     function settle(uint96 lotId_) external override nonReentrant {
@@ -453,7 +453,7 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
                 )
                 : 0;
 
-            // Collect the payout from the auction owner
+            // Collect the payout from the seller
             if (routing.prefunding == 0) {
                 routing.prefunding = capacity + curatorFee;
                 _collectPayout(lotId_, settlement.totalIn, capacity + curatorFee, routing);
@@ -469,7 +469,7 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
                 _allocateQuoteFees(
                     keycodeFromVeecode(routing.auctionReference),
                     settlement.pfReferrer,
-                    routing.owner,
+                    routing.seller,
                     routing.quoteToken,
                     filledAmount
                 );
@@ -504,8 +504,8 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
                 totalInLessFees = totalIn - toProtocol;
             }
 
-            // Send payment in bulk to auction owner
-            _sendPayment(routing.owner, totalInLessFees, routing.quoteToken, routing.hooks);
+            // Send payment in bulk to seller
+            _sendPayment(routing.seller, totalInLessFees, routing.quoteToken, routing.hooks);
 
             // If capacity expended is less than the total capacity, refund the remaining capacity to the seller and proportionally reduce the curator fee
             if (settlement.totalOut < capacity) {
@@ -523,7 +523,7 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
                 }
 
                 // Transfer the remaining capacity to the seller
-                Transfer.transfer(routing.baseToken, routing.owner, capacityRefund, false);
+                Transfer.transfer(routing.baseToken, routing.seller, capacityRefund, false);
             }
 
             // Reduce prefunding by curator fee and send, if applicable
@@ -552,7 +552,7 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
 
                 // Refund the capacity to the seller, no fees are taken
                 Transfer.transfer(
-                    lotRouting[lotId_].baseToken, lotRouting[lotId_].owner, refundAmount, false
+                    lotRouting[lotId_].baseToken, lotRouting[lotId_].seller, refundAmount, false
                 );
             }
         }
@@ -597,7 +597,7 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
         // Set the curator as approved
         curation.curated = true;
 
-        // If the auction is pre-funded, transfer the fee amount from the owner
+        // If the auction is pre-funded, transfer the fee amount from the seller
         if (routing.prefunding > 0) {
             // Calculate the fee amount based on the remaining capacity (must be in base token if auction is pre-funded)
             uint256 fee =
@@ -607,7 +607,7 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
             routing.prefunding += fee;
 
             // Don't need to check for fee on transfer here because it was checked on auction creation
-            Transfer.transferFrom(routing.baseToken, routing.owner, address(this), fee, false);
+            Transfer.transferFrom(routing.baseToken, routing.seller, address(this), fee, false);
         }
 
         // Emit event that the lot is curated by the proposed curator
@@ -677,9 +677,9 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
         );
     }
 
-    /// @notice     Sends payment of the quote token to the auction owner
+    /// @notice     Sends payment of the quote token to the seller
     /// @dev        This function handles the following:
-    ///             1. Sends the payment amount to the auction owner or hook (if provided)
+    ///             1. Sends the payment amount to the seller or hook (if provided)
     ///             This function assumes:
     ///             - The quote token has already been transferred to this contract
     ///             - The quote token is supported (e.g. not fee-on-transfer)
@@ -702,14 +702,14 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
         );
     }
 
-    /// @notice     Collects the payout token from the auction owner
+    /// @notice     Collects the payout token from the seller
     /// @dev        This function handles the following:
     ///             1. Calls the mid hook on the hooks contract (if provided)
-    ///             2. Transfers the payout token from the auction owner
+    ///             2. Transfers the payout token from the seller
     ///
     ///             This function reverts if:
     ///             - Approval has not been granted to transfer the payout token
-    ///             - The auction owner does not have sufficient balance of the payout token
+    ///             - The seller does not have sufficient balance of the payout token
     ///             - The payout token transfer fails
     ///             - Transferring the payout token would result in a lesser amount being received
     ///             - The mid-hook reverts
@@ -743,7 +743,7 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
         // Otherwise fallback to a standard ERC20 transfer
         else {
             Transfer.transferFrom(
-                baseToken, routingParams_.owner, address(this), payoutAmount_, true
+                baseToken, routingParams_.seller, address(this), payoutAmount_, true
             );
         }
     }
@@ -826,13 +826,13 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
     function _allocateQuoteFees(
         Keycode auctionType_,
         address referrer_,
-        address owner_,
+        address seller_,
         ERC20 quoteToken_,
         uint256 amount_
     ) internal returns (uint256 totalFees) {
         // Calculate fees for purchase
         (uint256 toReferrer, uint256 toProtocol) = calculateQuoteFees(
-            auctionType_, referrer_ != address(0) && referrer_ != owner_, amount_
+            auctionType_, referrer_ != address(0) && referrer_ != seller_, amount_
         );
 
         // Update fee balances if non-zero

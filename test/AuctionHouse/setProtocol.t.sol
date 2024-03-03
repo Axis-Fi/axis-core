@@ -48,8 +48,8 @@ contract SetProtocolTest is AuctionHouseTest {
         givenProtocolAddressIsSet(_NEW_PROTOCOL)
         givenUserHasQuoteTokenBalance(_AMOUNT_IN)
         givenUserHasQuoteTokenAllowance(_AMOUNT_IN)
-        givenOwnerHasBaseTokenBalance(_amountOut)
-        givenOwnerHasBaseTokenAllowance(_amountOut)
+        givenSellerHasBaseTokenBalance(_amountOut)
+        givenSellerHasBaseTokenAllowance(_amountOut)
         givenPurchase(_AMOUNT_IN, _amountOut, _auctionDataParams)
     {
         // Previous balance

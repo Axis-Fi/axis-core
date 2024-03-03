@@ -8,20 +8,20 @@ import {EncryptedMarginalPriceAuctionModule} from "src/modules/auctions/EMPAM.so
 import {EmpaModuleTest} from "test/modules/auctions/EMPA/EMPAModuleTest.sol";
 
 contract EmpaModuleClaimBidsTest is EmpaModuleTest {
-    // [ ] when the lot id is invalid
-    //  [ ] it reverts
-    // [ ] when any bid id is invalid
-    //  [ ] it reverts
-    // [ ] given any bid has already been claimed
-    //  [ ] it reverts
-    // [ ] given the lot is not settled
-    //  [ ] it reverts
-    // [ ] when the caller is not the parent
-    //  [ ] it reverts
-    // [ ] given the minAmountOut is 0
-    //  [ ] it refunds the bid
-    // [ ] when the bidder is not the the bid owner
-    //  [ ] it succeeds
-    // [ ] it refunds the exact bid amount
-    // [ ] it sends the payout
+// [ ] when the lot id is invalid
+//  [ ] it reverts
+// [ ] when any bid id is invalid
+//  [ ] it reverts
+// [ ] given any bid has already been claimed
+//  [ ] it reverts
+// [ ] given the lot is not settled
+//  [ ] it reverts
+// [ ] when the caller is not the parent
+//  [ ] it reverts
+// [ ] given the minAmountOut is 0
+//  [ ] it refunds the bid
+// [ ] when the bidder is not the the bid owner
+//  [ ] it succeeds
+// [ ] it refunds the exact bid amount
+// [ ] it sends the payout
 }

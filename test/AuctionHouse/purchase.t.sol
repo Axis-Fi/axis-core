@@ -23,12 +23,12 @@ contract PurchaseTest is AuctionHouseTest {
     uint48 internal constant _DERIVATIVE_EXPIRY = 1 days;
     uint256 internal _derivativeTokenId = type(uint256).max;
 
-    uint96 internal _expectedOwnerQuoteTokenBalance;
+    uint96 internal _expectedSellerQuoteTokenBalance;
     uint96 internal _expectedBidderQuoteTokenBalance;
     uint96 internal _expectedAuctionHouseQuoteTokenBalance;
     uint96 internal _expectedHookQuoteTokenBalance;
 
-    uint96 internal _expectedOwnerBaseTokenBalance;
+    uint96 internal _expectedSellerBaseTokenBalance;
     uint96 internal _expectedBidderBaseTokenBalance;
     uint96 internal _expectedAuctionHouseBaseTokenBalance;
     uint96 internal _expectedCuratorBaseTokenBalance;
@@ -106,20 +106,20 @@ contract PurchaseTest is AuctionHouseTest {
             amountIn_ - _expectedProtocolFeesAllocated - _expectedReferrerFeesAllocated;
 
         // Quote token
-        _expectedOwnerQuoteTokenBalance = hasHook ? 0 : amountInLessFees;
+        _expectedSellerQuoteTokenBalance = hasHook ? 0 : amountInLessFees;
         _expectedBidderQuoteTokenBalance = 0;
         _expectedAuctionHouseQuoteTokenBalance =
             _expectedProtocolFeesAllocated + _expectedReferrerFeesAllocated;
         _expectedHookQuoteTokenBalance = hasHook ? amountInLessFees : 0;
         assertEq(
-            _expectedOwnerQuoteTokenBalance + _expectedBidderQuoteTokenBalance
+            _expectedSellerQuoteTokenBalance + _expectedBidderQuoteTokenBalance
                 + _expectedAuctionHouseQuoteTokenBalance + _expectedHookQuoteTokenBalance,
             amountIn_,
             "quote token: total balance mismatch"
         );
 
         // Base token
-        _expectedOwnerBaseTokenBalance = 0;
+        _expectedSellerBaseTokenBalance = 0;
         _expectedBidderBaseTokenBalance = hasDerivativeToken ? 0 : _amountOut;
         _expectedAuctionHouseBaseTokenBalance = isPrefunding
             ? scaledLotCapacity + scaledCuratorMaxPotentialFee - _amountOut - curatorFee
@@ -127,7 +127,7 @@ contract PurchaseTest is AuctionHouseTest {
         _expectedCuratorBaseTokenBalance = hasDerivativeToken ? 0 : curatorFee;
         _expectedDerivativeModuleBaseTokenBalance = hasDerivativeToken ? _amountOut + curatorFee : 0;
         assertEq(
-            _expectedOwnerBaseTokenBalance + _expectedBidderBaseTokenBalance
+            _expectedSellerBaseTokenBalance + _expectedBidderBaseTokenBalance
                 + _expectedAuctionHouseBaseTokenBalance + _expectedCuratorBaseTokenBalance
                 + _expectedDerivativeModuleBaseTokenBalance,
             (isPrefunding ? scaledLotCapacity : amountOut_)
@@ -160,9 +160,9 @@ contract PurchaseTest is AuctionHouseTest {
             "base token: auction house balance"
         );
         assertEq(
-            _baseToken.balanceOf(_auctionOwner),
-            _expectedOwnerBaseTokenBalance,
-            "base token: owner balance"
+            _baseToken.balanceOf(_SELLER),
+            _expectedSellerBaseTokenBalance,
+            "base token: seller balance"
         );
         assertEq(
             _baseToken.balanceOf(_bidder),
@@ -187,9 +187,9 @@ contract PurchaseTest is AuctionHouseTest {
             "quote token: auction house balance"
         );
         assertEq(
-            _quoteToken.balanceOf(_auctionOwner),
-            _expectedOwnerQuoteTokenBalance,
-            "quote token: owner balance"
+            _quoteToken.balanceOf(_SELLER),
+            _expectedSellerQuoteTokenBalance,
+            "quote token: seller balance"
         );
         assertEq(
             _quoteToken.balanceOf(_bidder),
@@ -231,9 +231,9 @@ contract PurchaseTest is AuctionHouseTest {
             "derivative token: auction house balance"
         );
         assertEq(
-            _derivativeModule.derivativeToken().balanceOf(_auctionOwner, _derivativeTokenId),
+            _derivativeModule.derivativeToken().balanceOf(_SELLER, _derivativeTokenId),
             0,
-            "derivative token: owner balance"
+            "derivative token: seller balance"
         );
         assertEq(
             _derivativeModule.derivativeToken().balanceOf(_PROTOCOL, _derivativeTokenId),
@@ -291,7 +291,7 @@ contract PurchaseTest is AuctionHouseTest {
         givenLotIsCreated
         givenLotHasStarted
         givenUserHasQuoteTokenBalance(_AMOUNT_IN)
-        givenOwnerHasBaseTokenBalance(_amountOut)
+        givenSellerHasBaseTokenBalance(_amountOut)
     {
         // Expect revert
         bytes memory err = abi.encodeWithSelector(Auction.Auction_NotImplemented.selector);
@@ -308,7 +308,7 @@ contract PurchaseTest is AuctionHouseTest {
         givenLotIsCreated
         givenLotIsCancelled
         givenUserHasQuoteTokenBalance(_AMOUNT_IN)
-        givenOwnerHasBaseTokenBalance(_amountOut)
+        givenSellerHasBaseTokenBalance(_amountOut)
     {
         // Expect revert
         bytes memory err = abi.encodeWithSelector(Auction.Auction_MarketNotActive.selector, _lotId);
@@ -325,7 +325,7 @@ contract PurchaseTest is AuctionHouseTest {
         givenLotIsCreated
         givenLotHasStarted
         givenUserHasQuoteTokenBalance(_AMOUNT_IN)
-        givenOwnerHasBaseTokenBalance(_amountOut)
+        givenSellerHasBaseTokenBalance(_amountOut)
         whenPurchaseReverts
     {
         // Expect revert
@@ -345,8 +345,8 @@ contract PurchaseTest is AuctionHouseTest {
         givenUserHasQuoteTokenAllowance(_AMOUNT_IN)
         givenFeesAreCalculated(_AMOUNT_IN)
         whenPayoutMultiplierIsSet(90_000)
-        givenOwnerHasBaseTokenBalance(_amountOut)
-        givenOwnerHasBaseTokenAllowance(_amountOut)
+        givenSellerHasBaseTokenBalance(_amountOut)
+        givenSellerHasBaseTokenAllowance(_amountOut)
     {
         // Expect revert
         bytes memory err = abi.encodeWithSelector(AuctionHouse.AmountLessThanMinimum.selector);
@@ -395,8 +395,8 @@ contract PurchaseTest is AuctionHouseTest {
         givenFeesAreCalculated(_AMOUNT_IN)
         whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
         givenBalancesAreCalculated(_AMOUNT_IN, _amountOut)
-        givenOwnerHasBaseTokenBalance(_amountOut)
-        givenOwnerHasBaseTokenAllowance(_amountOut)
+        givenSellerHasBaseTokenBalance(_amountOut)
+        givenSellerHasBaseTokenAllowance(_amountOut)
     {
         // Purchase
         _createPurchase(_AMOUNT_IN, _amountOut, _purchaseAuctionData);
@@ -427,8 +427,8 @@ contract PurchaseTest is AuctionHouseTest {
         givenFeesAreCalculated(_AMOUNT_IN)
         whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
         givenBalancesAreCalculated(_AMOUNT_IN, _amountOut)
-        givenOwnerHasBaseTokenBalance(_amountOut)
-        givenOwnerHasBaseTokenAllowance(_amountOut)
+        givenSellerHasBaseTokenBalance(_amountOut)
+        givenSellerHasBaseTokenAllowance(_amountOut)
         whenPermit2ApprovalIsProvided(_AMOUNT_IN)
     {
         // Purchase
@@ -456,8 +456,8 @@ contract PurchaseTest is AuctionHouseTest {
         givenFeesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN))
         whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
         givenBalancesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut)
-        givenOwnerHasBaseTokenBalance(_amountOut)
-        givenOwnerHasBaseTokenAllowance(_amountOut)
+        givenSellerHasBaseTokenBalance(_amountOut)
+        givenSellerHasBaseTokenAllowance(_amountOut)
         whenPermit2ApprovalIsProvided(_scaleQuoteTokenAmount(_AMOUNT_IN))
     {
         // Purchase
@@ -485,8 +485,8 @@ contract PurchaseTest is AuctionHouseTest {
         givenFeesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN))
         whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
         givenBalancesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut)
-        givenOwnerHasBaseTokenBalance(_amountOut)
-        givenOwnerHasBaseTokenAllowance(_amountOut)
+        givenSellerHasBaseTokenBalance(_amountOut)
+        givenSellerHasBaseTokenAllowance(_amountOut)
         whenPermit2ApprovalIsProvided(_scaleQuoteTokenAmount(_AMOUNT_IN))
     {
         // Purchase
@@ -513,8 +513,8 @@ contract PurchaseTest is AuctionHouseTest {
         givenFeesAreCalculated(_AMOUNT_IN)
         whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
         givenBalancesAreCalculated(_AMOUNT_IN, _amountOut)
-        givenOwnerHasBaseTokenBalance(_amountOut)
-        givenOwnerHasBaseTokenAllowance(_amountOut)
+        givenSellerHasBaseTokenBalance(_amountOut)
+        givenSellerHasBaseTokenAllowance(_amountOut)
     {
         // Purchase
         _createPurchase(_AMOUNT_IN, _amountOut, _purchaseAuctionData);
@@ -542,8 +542,8 @@ contract PurchaseTest is AuctionHouseTest {
         givenFeesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN))
         whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
         givenBalancesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut)
-        givenOwnerHasBaseTokenBalance(_amountOut)
-        givenOwnerHasBaseTokenAllowance(_amountOut)
+        givenSellerHasBaseTokenBalance(_amountOut)
+        givenSellerHasBaseTokenAllowance(_amountOut)
     {
         // Purchase
         _createPurchase(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut, _purchaseAuctionData);
@@ -571,8 +571,8 @@ contract PurchaseTest is AuctionHouseTest {
         givenFeesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN))
         whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
         givenBalancesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut)
-        givenOwnerHasBaseTokenBalance(_amountOut)
-        givenOwnerHasBaseTokenAllowance(_amountOut)
+        givenSellerHasBaseTokenBalance(_amountOut)
+        givenSellerHasBaseTokenAllowance(_amountOut)
     {
         // Purchase
         _createPurchase(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut, _purchaseAuctionData);
@@ -588,7 +588,7 @@ contract PurchaseTest is AuctionHouseTest {
     // [X] given the auction has hooks defined
     //  [X] it succeeds - quote token transferred to hook, payout token (minus fees) transferred to _bidder
     // [X] given the auction does not have hooks defined
-    //  [X] it succeeds - quote token transferred to auction owner, payout token (minus fees) transferred to _bidder
+    //  [X] it succeeds - quote token transferred to seller, payout token (minus fees) transferred to _bidder
 
     function test_hooks()
         public
@@ -691,8 +691,8 @@ contract PurchaseTest is AuctionHouseTest {
         givenFeesAreCalculated(_AMOUNT_IN)
         whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
         givenBalancesAreCalculated(_AMOUNT_IN, _amountOut)
-        givenOwnerHasBaseTokenBalance(_amountOut)
-        givenOwnerHasBaseTokenAllowance(_amountOut)
+        givenSellerHasBaseTokenBalance(_amountOut)
+        givenSellerHasBaseTokenAllowance(_amountOut)
     {
         // Purchase
         _createPurchase(_AMOUNT_IN, _amountOut, _purchaseAuctionData);
@@ -720,8 +720,8 @@ contract PurchaseTest is AuctionHouseTest {
         givenFeesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN))
         whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
         givenBalancesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut)
-        givenOwnerHasBaseTokenBalance(_amountOut)
-        givenOwnerHasBaseTokenAllowance(_amountOut)
+        givenSellerHasBaseTokenBalance(_amountOut)
+        givenSellerHasBaseTokenAllowance(_amountOut)
     {
         // Purchase
         _createPurchase(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut, _purchaseAuctionData);
@@ -749,8 +749,8 @@ contract PurchaseTest is AuctionHouseTest {
         givenFeesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN))
         whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
         givenBalancesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut)
-        givenOwnerHasBaseTokenBalance(_amountOut)
-        givenOwnerHasBaseTokenAllowance(_amountOut)
+        givenSellerHasBaseTokenBalance(_amountOut)
+        givenSellerHasBaseTokenAllowance(_amountOut)
     {
         // Purchase
         _createPurchase(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut, _purchaseAuctionData);
@@ -785,8 +785,8 @@ contract PurchaseTest is AuctionHouseTest {
         givenFeesAreCalculated(_AMOUNT_IN)
         whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
         givenBalancesAreCalculated(_AMOUNT_IN, _amountOut)
-        givenOwnerHasBaseTokenBalance(_amountOut)
-        givenOwnerHasBaseTokenAllowance(_amountOut)
+        givenSellerHasBaseTokenBalance(_amountOut)
+        givenSellerHasBaseTokenAllowance(_amountOut)
     {
         // Call
         _createPurchase(_AMOUNT_IN, _amountOut, _purchaseAuctionData);
@@ -818,8 +818,8 @@ contract PurchaseTest is AuctionHouseTest {
         givenFeesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN))
         whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
         givenBalancesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut)
-        givenOwnerHasBaseTokenBalance(_amountOut)
-        givenOwnerHasBaseTokenAllowance(_amountOut)
+        givenSellerHasBaseTokenBalance(_amountOut)
+        givenSellerHasBaseTokenAllowance(_amountOut)
     {
         // Call
         _createPurchase(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut, _purchaseAuctionData);
@@ -851,8 +851,8 @@ contract PurchaseTest is AuctionHouseTest {
         givenFeesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN))
         whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
         givenBalancesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut)
-        givenOwnerHasBaseTokenBalance(_amountOut)
-        givenOwnerHasBaseTokenAllowance(_amountOut)
+        givenSellerHasBaseTokenBalance(_amountOut)
+        givenSellerHasBaseTokenAllowance(_amountOut)
     {
         // Call
         _createPurchase(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut, _purchaseAuctionData);
@@ -883,8 +883,8 @@ contract PurchaseTest is AuctionHouseTest {
         givenFeesAreCalculated(_AMOUNT_IN)
         whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
         givenBalancesAreCalculated(_AMOUNT_IN, _amountOut)
-        givenOwnerHasBaseTokenBalance(_amountOut)
-        givenOwnerHasBaseTokenAllowance(_amountOut)
+        givenSellerHasBaseTokenBalance(_amountOut)
+        givenSellerHasBaseTokenAllowance(_amountOut)
     {
         // Purchase
         _createPurchase(_AMOUNT_IN, _amountOut, _purchaseAuctionData);
@@ -911,8 +911,8 @@ contract PurchaseTest is AuctionHouseTest {
         givenFeesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN))
         whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
         givenBalancesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut)
-        givenOwnerHasBaseTokenBalance(_amountOut)
-        givenOwnerHasBaseTokenAllowance(_amountOut)
+        givenSellerHasBaseTokenBalance(_amountOut)
+        givenSellerHasBaseTokenAllowance(_amountOut)
     {
         // Purchase
         _createPurchase(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut, _purchaseAuctionData);
@@ -939,8 +939,8 @@ contract PurchaseTest is AuctionHouseTest {
         givenFeesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN))
         whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
         givenBalancesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut)
-        givenOwnerHasBaseTokenBalance(_amountOut)
-        givenOwnerHasBaseTokenAllowance(_amountOut)
+        givenSellerHasBaseTokenBalance(_amountOut)
+        givenSellerHasBaseTokenAllowance(_amountOut)
     {
         // Purchase
         _createPurchase(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut, _purchaseAuctionData);
@@ -966,8 +966,8 @@ contract PurchaseTest is AuctionHouseTest {
         givenFeesAreCalculated(_AMOUNT_IN)
         whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
         givenBalancesAreCalculated(_AMOUNT_IN, _amountOut)
-        givenOwnerHasBaseTokenBalance(_amountOut)
-        givenOwnerHasBaseTokenAllowance(_amountOut)
+        givenSellerHasBaseTokenBalance(_amountOut)
+        givenSellerHasBaseTokenAllowance(_amountOut)
     {
         // Purchase
         _createPurchase(_AMOUNT_IN, _amountOut, _purchaseAuctionData);
@@ -995,8 +995,8 @@ contract PurchaseTest is AuctionHouseTest {
         givenFeesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN))
         whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
         givenBalancesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut)
-        givenOwnerHasBaseTokenBalance(_amountOut)
-        givenOwnerHasBaseTokenAllowance(_amountOut)
+        givenSellerHasBaseTokenBalance(_amountOut)
+        givenSellerHasBaseTokenAllowance(_amountOut)
     {
         // Purchase
         _createPurchase(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut, _purchaseAuctionData);
@@ -1024,8 +1024,8 @@ contract PurchaseTest is AuctionHouseTest {
         givenFeesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN))
         whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
         givenBalancesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut)
-        givenOwnerHasBaseTokenBalance(_amountOut)
-        givenOwnerHasBaseTokenAllowance(_amountOut)
+        givenSellerHasBaseTokenBalance(_amountOut)
+        givenSellerHasBaseTokenAllowance(_amountOut)
     {
         // Purchase
         _createPurchase(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut, _purchaseAuctionData);
@@ -1056,8 +1056,8 @@ contract PurchaseTest is AuctionHouseTest {
         givenFeesAreCalculated(_AMOUNT_IN)
         whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
         givenBalancesAreCalculated(_AMOUNT_IN, _amountOut)
-        givenOwnerHasBaseTokenBalance(_amountOut)
-        givenOwnerHasBaseTokenAllowance(_amountOut)
+        givenSellerHasBaseTokenBalance(_amountOut)
+        givenSellerHasBaseTokenAllowance(_amountOut)
     {
         // Purchase
         _createPurchase(_AMOUNT_IN, _amountOut, _purchaseAuctionData);
@@ -1084,8 +1084,8 @@ contract PurchaseTest is AuctionHouseTest {
         givenFeesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN))
         whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
         givenBalancesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut)
-        givenOwnerHasBaseTokenBalance(_amountOut)
-        givenOwnerHasBaseTokenAllowance(_amountOut)
+        givenSellerHasBaseTokenBalance(_amountOut)
+        givenSellerHasBaseTokenAllowance(_amountOut)
     {
         // Purchase
         _createPurchase(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut, _purchaseAuctionData);
@@ -1112,8 +1112,8 @@ contract PurchaseTest is AuctionHouseTest {
         givenFeesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN))
         whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
         givenBalancesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut)
-        givenOwnerHasBaseTokenBalance(_amountOut)
-        givenOwnerHasBaseTokenAllowance(_amountOut)
+        givenSellerHasBaseTokenBalance(_amountOut)
+        givenSellerHasBaseTokenAllowance(_amountOut)
     {
         // Purchase
         _createPurchase(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut, _purchaseAuctionData);
@@ -1139,8 +1139,8 @@ contract PurchaseTest is AuctionHouseTest {
         givenFeesAreCalculated(_AMOUNT_IN)
         whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
         givenBalancesAreCalculated(_AMOUNT_IN, _amountOut)
-        givenOwnerHasBaseTokenBalance(_amountOut)
-        givenOwnerHasBaseTokenAllowance(_amountOut)
+        givenSellerHasBaseTokenBalance(_amountOut)
+        givenSellerHasBaseTokenAllowance(_amountOut)
     {
         // Purchase
         _createPurchase(_AMOUNT_IN, _amountOut, _purchaseAuctionData);
@@ -1168,8 +1168,8 @@ contract PurchaseTest is AuctionHouseTest {
         givenFeesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN))
         whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
         givenBalancesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut)
-        givenOwnerHasBaseTokenBalance(_amountOut)
-        givenOwnerHasBaseTokenAllowance(_amountOut)
+        givenSellerHasBaseTokenBalance(_amountOut)
+        givenSellerHasBaseTokenAllowance(_amountOut)
     {
         // Purchase
         _createPurchase(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut, _purchaseAuctionData);
@@ -1197,8 +1197,8 @@ contract PurchaseTest is AuctionHouseTest {
         givenFeesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN))
         whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
         givenBalancesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut)
-        givenOwnerHasBaseTokenBalance(_amountOut)
-        givenOwnerHasBaseTokenAllowance(_amountOut)
+        givenSellerHasBaseTokenBalance(_amountOut)
+        givenSellerHasBaseTokenAllowance(_amountOut)
     {
         // Purchase
         _createPurchase(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut, _purchaseAuctionData);
@@ -1224,8 +1224,8 @@ contract PurchaseTest is AuctionHouseTest {
         givenFeesAreCalculatedNoReferrer(_scaleQuoteTokenAmount(_AMOUNT_IN))
         whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
         givenBalancesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut)
-        givenOwnerHasBaseTokenBalance(_amountOut)
-        givenOwnerHasBaseTokenAllowance(_amountOut)
+        givenSellerHasBaseTokenBalance(_amountOut)
+        givenSellerHasBaseTokenAllowance(_amountOut)
     {
         // Purchase
         _createPurchase(
@@ -1263,8 +1263,8 @@ contract PurchaseTest is AuctionHouseTest {
         givenUserHasQuoteTokenAllowance(_AMOUNT_IN)
         givenFeesAreCalculated(_AMOUNT_IN)
         whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
-        givenOwnerHasBaseTokenBalance(_amountOut)
-        givenOwnerHasBaseTokenAllowance(_amountOut)
+        givenSellerHasBaseTokenBalance(_amountOut)
+        givenSellerHasBaseTokenAllowance(_amountOut)
         givenBalancesAreCalculated(_AMOUNT_IN, _amountOut)
     {
         // Purchase
@@ -1291,8 +1291,8 @@ contract PurchaseTest is AuctionHouseTest {
         givenUserHasQuoteTokenAllowance(_AMOUNT_IN)
         givenFeesAreCalculated(_AMOUNT_IN)
         whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
-        givenOwnerHasBaseTokenBalance(_amountOut)
-        givenOwnerHasBaseTokenAllowance(_amountOut)
+        givenSellerHasBaseTokenBalance(_amountOut)
+        givenSellerHasBaseTokenAllowance(_amountOut)
         givenBalancesAreCalculated(_AMOUNT_IN, _amountOut)
     {
         // Purchase
@@ -1322,8 +1322,8 @@ contract PurchaseTest is AuctionHouseTest {
         givenUserHasQuoteTokenAllowance(_AMOUNT_IN)
         givenFeesAreCalculated(_AMOUNT_IN)
         whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
-        givenOwnerHasBaseTokenBalance(_amountOut + _curatorFeeActual)
-        givenOwnerHasBaseTokenAllowance(_amountOut + _curatorFeeActual)
+        givenSellerHasBaseTokenBalance(_amountOut + _curatorFeeActual)
+        givenSellerHasBaseTokenAllowance(_amountOut + _curatorFeeActual)
         givenBalancesAreCalculated(_AMOUNT_IN, _amountOut)
     {
         // Purchase
@@ -1355,8 +1355,8 @@ contract PurchaseTest is AuctionHouseTest {
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_AMOUNT_IN))
         givenFeesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN))
         whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
-        givenOwnerHasBaseTokenBalance(_amountOut + _curatorFeeActual)
-        givenOwnerHasBaseTokenAllowance(_amountOut + _curatorFeeActual)
+        givenSellerHasBaseTokenBalance(_amountOut + _curatorFeeActual)
+        givenSellerHasBaseTokenAllowance(_amountOut + _curatorFeeActual)
         givenBalancesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut)
     {
         // Purchase
@@ -1388,8 +1388,8 @@ contract PurchaseTest is AuctionHouseTest {
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_AMOUNT_IN))
         givenFeesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN))
         whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
-        givenOwnerHasBaseTokenBalance(_amountOut + _curatorFeeActual)
-        givenOwnerHasBaseTokenAllowance(_amountOut + _curatorFeeActual)
+        givenSellerHasBaseTokenBalance(_amountOut + _curatorFeeActual)
+        givenSellerHasBaseTokenAllowance(_amountOut + _curatorFeeActual)
         givenBalancesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut)
     {
         // Purchase
@@ -1423,8 +1423,8 @@ contract PurchaseTest is AuctionHouseTest {
         givenUserHasQuoteTokenAllowance(_AMOUNT_IN)
         givenFeesAreCalculated(_AMOUNT_IN)
         whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
-        givenOwnerHasBaseTokenBalance(_amountOut + _curatorFeeActual)
-        givenOwnerHasBaseTokenAllowance(_amountOut + _curatorFeeActual)
+        givenSellerHasBaseTokenBalance(_amountOut + _curatorFeeActual)
+        givenSellerHasBaseTokenAllowance(_amountOut + _curatorFeeActual)
         givenBalancesAreCalculated(_AMOUNT_IN, _amountOut)
     {
         // Purchase
@@ -1460,8 +1460,8 @@ contract PurchaseTest is AuctionHouseTest {
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_AMOUNT_IN))
         givenFeesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN))
         whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
-        givenOwnerHasBaseTokenBalance(_amountOut + _curatorFeeActual)
-        givenOwnerHasBaseTokenAllowance(_amountOut + _curatorFeeActual)
+        givenSellerHasBaseTokenBalance(_amountOut + _curatorFeeActual)
+        givenSellerHasBaseTokenAllowance(_amountOut + _curatorFeeActual)
         givenBalancesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut)
     {
         // Purchase
@@ -1497,8 +1497,8 @@ contract PurchaseTest is AuctionHouseTest {
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_AMOUNT_IN))
         givenFeesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN))
         whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
-        givenOwnerHasBaseTokenBalance(_amountOut + _curatorFeeActual)
-        givenOwnerHasBaseTokenAllowance(_amountOut + _curatorFeeActual)
+        givenSellerHasBaseTokenBalance(_amountOut + _curatorFeeActual)
+        givenSellerHasBaseTokenAllowance(_amountOut + _curatorFeeActual)
         givenBalancesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut)
     {
         // Purchase
@@ -1516,8 +1516,8 @@ contract PurchaseTest is AuctionHouseTest {
 
     // [X] given the auction is prefunded
     //  [X] given the curator has approved
-    //   [X] it succeeds - base token is not transferred from auction owner again
-    //  [X] it succeeds - base token is not transferred from auction owner again
+    //   [X] it succeeds - base token is not transferred from seller again
+    //  [X] it succeeds - base token is not transferred from seller again
 
     function test_prefunded()
         external
@@ -1525,8 +1525,8 @@ contract PurchaseTest is AuctionHouseTest {
         whenAtomicAuctionModuleIsInstalled
         givenAtomicAuctionRequiresPrefunding
         givenCuratorIsSet
-        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
-        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenLotIsCreated
         givenProtocolFeeIsSet
         givenReferrerFeeIsSet
@@ -1556,8 +1556,8 @@ contract PurchaseTest is AuctionHouseTest {
         givenCuratorIsSet
         givenQuoteTokenHasDecimals(17)
         givenBaseTokenHasDecimals(13)
-        givenOwnerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
-        givenOwnerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenLotIsCreated
         givenProtocolFeeIsSet
         givenReferrerFeeIsSet
@@ -1587,8 +1587,8 @@ contract PurchaseTest is AuctionHouseTest {
         givenCuratorIsSet
         givenQuoteTokenHasDecimals(13)
         givenBaseTokenHasDecimals(17)
-        givenOwnerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
-        givenOwnerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenLotIsCreated
         givenProtocolFeeIsSet
         givenReferrerFeeIsSet
@@ -1616,8 +1616,8 @@ contract PurchaseTest is AuctionHouseTest {
         whenAtomicAuctionModuleIsInstalled
         givenAtomicAuctionRequiresPrefunding
         givenCuratorIsSet
-        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
-        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenLotIsCreated
         givenLotHasStarted
         givenProtocolFeeIsSet
@@ -1626,8 +1626,8 @@ contract PurchaseTest is AuctionHouseTest {
         givenCuratorFeeIsSet
         givenFeesAreCalculated(_AMOUNT_IN)
         whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
-        givenOwnerHasBaseTokenBalance(_curatorMaxPotentialFee)
-        givenOwnerHasBaseTokenAllowance(_curatorMaxPotentialFee)
+        givenSellerHasBaseTokenBalance(_curatorMaxPotentialFee)
+        givenSellerHasBaseTokenAllowance(_curatorMaxPotentialFee)
         givenCuratorHasApproved
         givenUserHasQuoteTokenBalance(_AMOUNT_IN)
         givenUserHasQuoteTokenAllowance(_AMOUNT_IN)
@@ -1652,8 +1652,8 @@ contract PurchaseTest is AuctionHouseTest {
         givenCuratorIsSet
         givenQuoteTokenHasDecimals(17)
         givenBaseTokenHasDecimals(13)
-        givenOwnerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
-        givenOwnerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenLotIsCreated
         givenLotHasStarted
         givenProtocolFeeIsSet
@@ -1662,8 +1662,8 @@ contract PurchaseTest is AuctionHouseTest {
         givenCuratorFeeIsSet
         givenFeesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN))
         whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
-        givenOwnerHasBaseTokenBalance(_scaleBaseTokenAmount(_curatorMaxPotentialFee))
-        givenOwnerHasBaseTokenAllowance(_scaleBaseTokenAmount(_curatorMaxPotentialFee))
+        givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_curatorMaxPotentialFee))
+        givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_curatorMaxPotentialFee))
         givenCuratorHasApproved
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_AMOUNT_IN))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_AMOUNT_IN))
@@ -1688,8 +1688,8 @@ contract PurchaseTest is AuctionHouseTest {
         givenCuratorIsSet
         givenQuoteTokenHasDecimals(13)
         givenBaseTokenHasDecimals(17)
-        givenOwnerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
-        givenOwnerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenLotIsCreated
         givenLotHasStarted
         givenProtocolFeeIsSet
@@ -1698,8 +1698,8 @@ contract PurchaseTest is AuctionHouseTest {
         givenCuratorFeeIsSet
         givenFeesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN))
         whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
-        givenOwnerHasBaseTokenBalance(_scaleBaseTokenAmount(_curatorMaxPotentialFee))
-        givenOwnerHasBaseTokenAllowance(_scaleBaseTokenAmount(_curatorMaxPotentialFee))
+        givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_curatorMaxPotentialFee))
+        givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_curatorMaxPotentialFee))
         givenCuratorHasApproved
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_AMOUNT_IN))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_AMOUNT_IN))

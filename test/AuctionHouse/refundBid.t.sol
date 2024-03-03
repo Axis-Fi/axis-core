@@ -124,7 +124,7 @@ contract RefundBidTest is AuctionHouseTest {
         vm.expectRevert(err);
 
         // Call the function
-        vm.prank(_auctionOwner);
+        vm.prank(_SELLER);
         _auctionHouse.refundBid(_lotId, _bidId);
     }
 

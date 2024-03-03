@@ -65,7 +65,7 @@ contract CurateTest is AuctionHouseTest {
         _auctionHouse.curate(_lotId);
     }
 
-    function test_givenNoCuratorIsSet_whenCalledByOwner_reverts()
+    function test_givenNoCuratorIsSet_whenCalledBySeller_reverts()
         public
         givenCuratorIsZero
         whenAuctionTypeIsAtomic
@@ -74,11 +74,11 @@ contract CurateTest is AuctionHouseTest {
         givenLotHasStarted
     {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(Auctioneer.NotPermitted.selector, _auctionOwner);
+        bytes memory err = abi.encodeWithSelector(Auctioneer.NotPermitted.selector, _SELLER);
         vm.expectRevert(err);
 
         // Call
-        vm.prank(_auctionOwner);
+        vm.prank(_SELLER);
         _auctionHouse.curate(_lotId);
     }
 
@@ -170,7 +170,7 @@ contract CurateTest is AuctionHouseTest {
         assertTrue(lotCurated);
 
         // No _CURATOR fee is transferred to the auction house
-        assertEq(_baseToken.balanceOf(_auctionOwner), 0);
+        assertEq(_baseToken.balanceOf(_SELLER), 0);
         assertEq(_baseToken.balanceOf(address(_auctionHouse)), 0);
         assertEq(_baseToken.balanceOf(_CURATOR), 0);
     }
@@ -194,7 +194,7 @@ contract CurateTest is AuctionHouseTest {
         assertTrue(lotCurated);
 
         // No _CURATOR fee is transferred to the auction house
-        assertEq(_baseToken.balanceOf(_auctionOwner), 0);
+        assertEq(_baseToken.balanceOf(_SELLER), 0);
         assertEq(_baseToken.balanceOf(address(_auctionHouse)), 0);
         assertEq(_baseToken.balanceOf(_CURATOR), 0);
     }
@@ -203,15 +203,15 @@ contract CurateTest is AuctionHouseTest {
         public
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
-        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
-        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenAtomicAuctionRequiresPrefunding
         givenLotIsCreated
         givenCuratorMaxFeeIsSet
         givenCuratorFeeIsSet
         givenLotHasStarted
-        givenOwnerHasBaseTokenBalance(_curatorMaxPotentialFee)
-        givenOwnerHasBaseTokenAllowance(_curatorMaxPotentialFee)
+        givenSellerHasBaseTokenBalance(_curatorMaxPotentialFee)
+        givenSellerHasBaseTokenAllowance(_curatorMaxPotentialFee)
     {
         // Curate
         vm.prank(_CURATOR);
@@ -223,9 +223,7 @@ contract CurateTest is AuctionHouseTest {
         assertTrue(lotCurated);
 
         // Maximum _CURATOR fee is transferred to the auction house
-        assertEq(
-            _baseToken.balanceOf(_auctionOwner), 0, "base token: _auctionOwner balance mismatch"
-        );
+        assertEq(_baseToken.balanceOf(_SELLER), 0, "base token: _SELLER balance mismatch");
         assertEq(
             _baseToken.balanceOf(address(_auctionHouse)),
             _LOT_CAPACITY + _curatorMaxPotentialFee,
@@ -240,15 +238,15 @@ contract CurateTest is AuctionHouseTest {
         whenAtomicAuctionModuleIsInstalled
         givenQuoteTokenHasDecimals(17)
         givenBaseTokenHasDecimals(13)
-        givenOwnerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
-        givenOwnerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenAtomicAuctionRequiresPrefunding
         givenLotIsCreated
         givenCuratorMaxFeeIsSet
         givenCuratorFeeIsSet
         givenLotHasStarted
-        givenOwnerHasBaseTokenBalance(_scaleBaseTokenAmount(_curatorMaxPotentialFee))
-        givenOwnerHasBaseTokenAllowance(_scaleBaseTokenAmount(_curatorMaxPotentialFee))
+        givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_curatorMaxPotentialFee))
+        givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_curatorMaxPotentialFee))
     {
         // Curate
         vm.prank(_CURATOR);
@@ -260,9 +258,7 @@ contract CurateTest is AuctionHouseTest {
         assertTrue(lotCurated);
 
         // Maximum _CURATOR fee is transferred to the auction house
-        assertEq(
-            _baseToken.balanceOf(_auctionOwner), 0, "base token: _auctionOwner balance mismatch"
-        );
+        assertEq(_baseToken.balanceOf(_SELLER), 0, "base token: _SELLER balance mismatch");
         assertEq(
             _baseToken.balanceOf(address(_auctionHouse)),
             _scaleBaseTokenAmount(_LOT_CAPACITY) + _scaleBaseTokenAmount(_curatorMaxPotentialFee),
@@ -277,15 +273,15 @@ contract CurateTest is AuctionHouseTest {
         whenAtomicAuctionModuleIsInstalled
         givenQuoteTokenHasDecimals(13)
         givenBaseTokenHasDecimals(17)
-        givenOwnerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
-        givenOwnerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenAtomicAuctionRequiresPrefunding
         givenLotIsCreated
         givenCuratorMaxFeeIsSet
         givenCuratorFeeIsSet
         givenLotHasStarted
-        givenOwnerHasBaseTokenBalance(_scaleBaseTokenAmount(_curatorMaxPotentialFee))
-        givenOwnerHasBaseTokenAllowance(_scaleBaseTokenAmount(_curatorMaxPotentialFee))
+        givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_curatorMaxPotentialFee))
+        givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_curatorMaxPotentialFee))
     {
         // Curate
         vm.prank(_CURATOR);
@@ -297,9 +293,7 @@ contract CurateTest is AuctionHouseTest {
         assertTrue(lotCurated);
 
         // Maximum _CURATOR fee is transferred to the auction house
-        assertEq(
-            _baseToken.balanceOf(_auctionOwner), 0, "base token: _auctionOwner balance mismatch"
-        );
+        assertEq(_baseToken.balanceOf(_SELLER), 0, "base token: _SELLER balance mismatch");
         assertEq(
             _baseToken.balanceOf(address(_auctionHouse)),
             _scaleBaseTokenAmount(_LOT_CAPACITY) + _scaleBaseTokenAmount(_curatorMaxPotentialFee),

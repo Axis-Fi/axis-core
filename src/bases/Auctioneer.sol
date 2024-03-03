@@ -54,7 +54,7 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
 
     /// @notice     Auction routing information for a lot
     /// @param      auctionReference    Auction module, represented by its Veecode
-    /// @param      owner               Lot owner
+    /// @param      seller              Lot seller
     /// @param      baseToken           Token provided by seller
     /// @param      quoteToken          Token to accept as payment
     /// @param      hooks               (optional) Address to call for any hooks to be executed
@@ -65,7 +65,7 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
     /// @param      prefunding          The amount of base tokens in prefunding remaining
     struct Routing {
         Veecode auctionReference;
-        address owner;
+        address seller;
         ERC20 baseToken;
         ERC20 quoteToken;
         IHooks hooks;
@@ -187,7 +187,7 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
         // Store routing information
         Routing storage routing = lotRouting[lotId];
         routing.auctionReference = auctionModule.VEECODE();
-        routing.owner = msg.sender;
+        routing.seller = msg.sender;
         routing.baseToken = routing_.baseToken;
         routing.quoteToken = routing_.quoteToken;
 
@@ -298,13 +298,13 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
     /// @notice     Cancels an auction lot
     /// @dev        This function performs the following:
     ///             - Checks that the lot ID is valid
-    ///             - Checks that caller is the auction owner
+    ///             - Checks that caller is the seller
     ///             - Calls the auction module to validate state, update records and determine the amount to be refunded
-    ///             - If prefunded, sends the refund of payout tokens to the owner
+    ///             - If prefunded, sends the refund of payout tokens to the seller
     ///
     ///             The function reverts if:
     ///             - The lot ID is invalid
-    ///             - The caller is not the auction owner
+    ///             - The caller is not the seller
     ///             - The respective auction module reverts
     ///             - The transfer of payout tokens fails
     ///             - re-entrancy is detected
@@ -317,20 +317,20 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
         Routing storage routing = lotRouting[lotId_];
 
         // Check ownership
-        if (msg.sender != routing.owner) revert NotPermitted(msg.sender);
+        if (msg.sender != routing.seller) revert NotPermitted(msg.sender);
 
         // Cancel the auction on the module
         getModuleForId(lotId_).cancelAuction(lotId_);
 
-        // If the auction is prefunded and supported, transfer the remaining capacity to the owner
+        // If the auction is prefunded and supported, transfer the remaining capacity to the seller
         if (routing.prefunding > 0) {
             uint256 prefunding = routing.prefunding;
 
             // Set to 0 before transfer to avoid re-entrancy
             lotRouting[lotId_].prefunding = 0;
 
-            // Transfer payout tokens to the owner
-            Transfer.transfer(routing.baseToken, routing.owner, prefunding, false);
+            // Transfer payout tokens to the seller
+            Transfer.transfer(routing.baseToken, routing.seller, prefunding, false);
         }
 
         emit AuctionCancelled(lotId_, routing.auctionReference);
@@ -398,6 +398,6 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
     function _isLotValid(uint96 lotId_) internal view {
         if (lotId_ >= lotCounter) revert InvalidLotId(lotId_);
 
-        if (lotRouting[lotId_].owner == address(0)) revert InvalidLotId(lotId_);
+        if (lotRouting[lotId_].seller == address(0)) revert InvalidLotId(lotId_);
     }
 }

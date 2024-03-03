@@ -29,8 +29,8 @@ contract ClaimRewardsTest is AuctionHouseTest {
         givenReferrerFeeIsSet
         givenLotIsCreated
         givenLotHasStarted
-        givenOwnerHasBaseTokenBalance(_amountOut)
-        givenOwnerHasBaseTokenAllowance(_amountOut)
+        givenSellerHasBaseTokenBalance(_amountOut)
+        givenSellerHasBaseTokenAllowance(_amountOut)
         givenUserHasQuoteTokenBalance(_AMOUNT_IN)
         givenUserHasQuoteTokenAllowance(_AMOUNT_IN)
         givenPurchase(_AMOUNT_IN, _amountInLessFee, _purchaseAuctionData)
@@ -57,8 +57,8 @@ contract ClaimRewardsTest is AuctionHouseTest {
         givenReferrerFeeIsSet
         givenLotIsCreated
         givenLotHasStarted
-        givenOwnerHasBaseTokenBalance(_amountOut)
-        givenOwnerHasBaseTokenAllowance(_amountOut)
+        givenSellerHasBaseTokenBalance(_amountOut)
+        givenSellerHasBaseTokenAllowance(_amountOut)
         givenUserHasQuoteTokenBalance(_AMOUNT_IN)
         givenUserHasQuoteTokenAllowance(_AMOUNT_IN)
         givenPurchase(_AMOUNT_IN, _amountInLessFee, _purchaseAuctionData)
@@ -85,8 +85,8 @@ contract ClaimRewardsTest is AuctionHouseTest {
         givenReferrerFeeIsSet
         givenLotIsCreated
         givenLotHasStarted
-        givenOwnerHasBaseTokenBalance(_amountOut)
-        givenOwnerHasBaseTokenAllowance(_amountOut)
+        givenSellerHasBaseTokenBalance(_amountOut)
+        givenSellerHasBaseTokenAllowance(_amountOut)
         givenUserHasQuoteTokenBalance(_AMOUNT_IN)
         givenUserHasQuoteTokenAllowance(_AMOUNT_IN)
         givenPurchase(_AMOUNT_IN, _amountInLessFee, _purchaseAuctionData)
@@ -113,8 +113,8 @@ contract ClaimRewardsTest is AuctionHouseTest {
         givenReferrerFeeIsSet
         givenLotIsCreated
         givenLotHasStarted
-        givenOwnerHasBaseTokenBalance(_amountOut)
-        givenOwnerHasBaseTokenAllowance(_amountOut)
+        givenSellerHasBaseTokenBalance(_amountOut)
+        givenSellerHasBaseTokenAllowance(_amountOut)
         givenUserHasQuoteTokenBalance(_AMOUNT_IN)
         givenUserHasQuoteTokenAllowance(_AMOUNT_IN)
         givenPurchase(_AMOUNT_IN, _amountInLessFee, _purchaseAuctionData)

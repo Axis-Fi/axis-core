@@ -33,7 +33,7 @@ contract Catalogue {
     function getRouting(uint96 lotId_) public view returns (Auctioneer.Routing memory) {
         (
             Veecode auctionReference,
-            address owner,
+            address seller,
             ERC20 baseToken,
             ERC20 quoteToken,
             IHooks hooks,
@@ -46,7 +46,7 @@ contract Catalogue {
 
         return Auctioneer.Routing({
             auctionReference: auctionReference,
-            owner: owner,
+            seller: seller,
             baseToken: baseToken,
             quoteToken: quoteToken,
             hooks: hooks,

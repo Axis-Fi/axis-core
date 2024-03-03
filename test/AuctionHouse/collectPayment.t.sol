@@ -71,7 +71,7 @@ contract CollectPaymentTest is Test, Permit2User {
     //   [X] given the received _amount is not equal to the transferred _amount
     //    [X] it reverts
     //   [X] given the received _amount is the same as the transferred _amount
-    //    [X] quote tokens are transferred from the caller to the auction owner
+    //    [X] quote tokens are transferred from the caller to the seller
 
     modifier givenPermit2Approved() {
         // Approve the Permit2 contract to spend the quote token
@@ -409,7 +409,7 @@ contract CollectPaymentTest is Test, Permit2User {
     //   [X] given the received _amount is not equal to the transferred _amount
     //    [X] it reverts
     //   [X] given the received _amount is the same as the transferred _amount
-    //    [X] quote tokens are transferred from the caller to the auction owner
+    //    [X] quote tokens are transferred from the caller to the seller
 
     function test_transfer_whenUserHasInsufficientBalance_reverts() public {
         // Expect the error

@@ -47,7 +47,7 @@ contract AuctionTest is AuctionHouseTest {
         );
         vm.expectRevert(err);
 
-        vm.prank(_auctionOwner);
+        vm.prank(_SELLER);
         _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
     }
 
@@ -63,7 +63,7 @@ contract AuctionTest is AuctionHouseTest {
         bytes memory err = abi.encodeWithSelector(Auctioneer.InvalidParams.selector);
         vm.expectRevert(err);
 
-        vm.prank(_auctionOwner);
+        vm.prank(_SELLER);
         _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
     }
 
@@ -80,7 +80,7 @@ contract AuctionTest is AuctionHouseTest {
             abi.encodeWithSelector(WithModules.ModuleIsSunset.selector, _atomicAuctionModuleKeycode);
         vm.expectRevert(err);
 
-        vm.prank(_auctionOwner);
+        vm.prank(_SELLER);
         _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
     }
 
@@ -102,7 +102,7 @@ contract AuctionTest is AuctionHouseTest {
         bytes memory err = abi.encodeWithSelector(Auctioneer.InvalidParams.selector);
         vm.expectRevert(err);
 
-        vm.prank(_auctionOwner);
+        vm.prank(_SELLER);
         _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
     }
 
@@ -124,7 +124,7 @@ contract AuctionTest is AuctionHouseTest {
         bytes memory err = abi.encodeWithSelector(Auctioneer.InvalidParams.selector);
         vm.expectRevert(err);
 
-        vm.prank(_auctionOwner);
+        vm.prank(_SELLER);
         _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
     }
 
@@ -139,7 +139,7 @@ contract AuctionTest is AuctionHouseTest {
         bytes memory err = abi.encodeWithSelector(Auctioneer.InvalidParams.selector);
         vm.expectRevert(err);
 
-        vm.prank(_auctionOwner);
+        vm.prank(_SELLER);
         _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
     }
 
@@ -154,7 +154,7 @@ contract AuctionTest is AuctionHouseTest {
         bytes memory err = abi.encodeWithSelector(Auctioneer.InvalidParams.selector);
         vm.expectRevert(err);
 
-        vm.prank(_auctionOwner);
+        vm.prank(_SELLER);
         _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
     }
 
@@ -164,7 +164,7 @@ contract AuctionTest is AuctionHouseTest {
         emit AuctionCreated(0, wrapVeecode(_routingParams.auctionType, 1), _INFO_HASH);
 
         // Create the auction
-        vm.prank(_auctionOwner);
+        vm.prank(_SELLER);
         _lotId = _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
 
         // Assert values
@@ -174,7 +174,7 @@ contract AuctionTest is AuctionHouseTest {
             fromVeecode(wrapVeecode(_routingParams.auctionType, 1)),
             "auction type mismatch"
         );
-        assertEq(routing.owner, _auctionOwner, "owner mismatch");
+        assertEq(routing.seller, _SELLER, "seller mismatch");
         assertEq(address(routing.baseToken), address(_baseToken), "base token mismatch");
         assertEq(address(routing.quoteToken), address(_quoteToken), "quote token mismatch");
         assertEq(address(routing.hooks), address(0), "hooks mismatch");
@@ -203,7 +203,7 @@ contract AuctionTest is AuctionHouseTest {
         _routingParams.quoteToken = _baseToken;
 
         // Create the auction
-        vm.prank(_auctionOwner);
+        vm.prank(_SELLER);
         _lotId = _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
 
         // Assert values
@@ -231,7 +231,7 @@ contract AuctionTest is AuctionHouseTest {
         );
         vm.expectRevert(err);
 
-        vm.prank(_auctionOwner);
+        vm.prank(_SELLER);
         _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
     }
 
@@ -247,7 +247,7 @@ contract AuctionTest is AuctionHouseTest {
         bytes memory err = abi.encodeWithSelector(Auctioneer.InvalidParams.selector);
         vm.expectRevert(err);
 
-        vm.prank(_auctionOwner);
+        vm.prank(_SELLER);
         _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
     }
 
@@ -266,7 +266,7 @@ contract AuctionTest is AuctionHouseTest {
             abi.encodeWithSelector(WithModules.ModuleIsSunset.selector, _derivativeModuleKeycode);
         vm.expectRevert(err);
 
-        vm.prank(_auctionOwner);
+        vm.prank(_SELLER);
         _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
     }
 
@@ -281,7 +281,7 @@ contract AuctionTest is AuctionHouseTest {
         _derivativeModule.setValidateFails(true);
         vm.expectRevert("validation error");
 
-        vm.prank(_auctionOwner);
+        vm.prank(_SELLER);
         _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
     }
 
@@ -293,7 +293,7 @@ contract AuctionTest is AuctionHouseTest {
         whenDerivativeModuleIsInstalled
     {
         // Create the auction
-        vm.prank(_auctionOwner);
+        vm.prank(_SELLER);
         _lotId = _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
 
         // Assert values
@@ -316,7 +316,7 @@ contract AuctionTest is AuctionHouseTest {
         _routingParams.derivativeParams = abi.encode("derivative params");
 
         // Create the auction
-        vm.prank(_auctionOwner);
+        vm.prank(_SELLER);
         _lotId = _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
 
         // Assert values
@@ -353,7 +353,7 @@ contract AuctionTest is AuctionHouseTest {
             abi.encodeWithSelector(WithModules.ModuleIsSunset.selector, _condenserModuleKeycode);
         vm.expectRevert(err);
 
-        vm.prank(_auctionOwner);
+        vm.prank(_SELLER);
         _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
     }
 
@@ -367,7 +367,7 @@ contract AuctionTest is AuctionHouseTest {
         whenCondenserIsMapped
     {
         // Create the auction
-        vm.prank(_auctionOwner);
+        vm.prank(_SELLER);
         _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
 
         // Won't revert
@@ -391,7 +391,7 @@ contract AuctionTest is AuctionHouseTest {
         whenAllowlistIsSet
     {
         // Create the auction
-        vm.prank(_auctionOwner);
+        vm.prank(_SELLER);
         _lotId = _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
 
         // Assert values
@@ -416,7 +416,7 @@ contract AuctionTest is AuctionHouseTest {
         bytes memory err = abi.encodeWithSelector(Auctioneer.InvalidParams.selector);
         vm.expectRevert(err);
 
-        vm.prank(_auctionOwner);
+        vm.prank(_SELLER);
         _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
     }
 
@@ -432,7 +432,7 @@ contract AuctionTest is AuctionHouseTest {
         _allowlist.setRegisterReverts(true);
         vm.expectRevert("MockAllowlist: register reverted");
 
-        vm.prank(_auctionOwner);
+        vm.prank(_SELLER);
         _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
     }
 
@@ -458,7 +458,7 @@ contract AuctionTest is AuctionHouseTest {
         bytes memory err = abi.encodeWithSelector(Auctioneer.InvalidParams.selector);
         vm.expectRevert(err);
 
-        vm.prank(_auctionOwner);
+        vm.prank(_SELLER);
         _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
     }
 
@@ -469,7 +469,7 @@ contract AuctionTest is AuctionHouseTest {
         whenHooksIsSet
     {
         // Create the auction
-        vm.prank(_auctionOwner);
+        vm.prank(_SELLER);
         _lotId = _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
 
         // Assert values
@@ -483,8 +483,8 @@ contract AuctionTest is AuctionHouseTest {
     //   [X] reverts when the hook does not transfer enough payout tokens
     //   [X] it succeeds
     //  [X] when the auction does not have hooks
-    //   [X] reverts when the auction owner does not have enough balance
-    //   [X] reverts when the auction owner does not have enough allowance
+    //   [X] reverts when the seller does not have enough balance
+    //   [X] reverts when the seller does not have enough allowance
     //   [X] it succeeds
 
     modifier whenAuctionCapacityInQuote() {
@@ -514,7 +514,7 @@ contract AuctionTest is AuctionHouseTest {
         bytes memory err = abi.encodeWithSelector(Auctioneer.InvalidParams.selector);
         vm.expectRevert(err);
 
-        vm.prank(_auctionOwner);
+        vm.prank(_SELLER);
         _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
     }
 
@@ -531,7 +531,7 @@ contract AuctionTest is AuctionHouseTest {
         bytes memory err = abi.encodeWithSelector(Auctioneer.InvalidHook.selector);
         vm.expectRevert(err);
 
-        vm.prank(_auctionOwner);
+        vm.prank(_SELLER);
         _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
     }
 
@@ -548,7 +548,7 @@ contract AuctionTest is AuctionHouseTest {
         bytes memory err = abi.encodeWithSelector(Auctioneer.InvalidHook.selector);
         vm.expectRevert(err);
 
-        vm.prank(_auctionOwner);
+        vm.prank(_SELLER);
         _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
     }
 
@@ -561,7 +561,7 @@ contract AuctionTest is AuctionHouseTest {
         givenHookHasBaseTokenBalance(_LOT_CAPACITY)
     {
         // Create the auction
-        vm.prank(_auctionOwner);
+        vm.prank(_SELLER);
         _lotId = _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
 
         // Check the prefunding status
@@ -588,7 +588,7 @@ contract AuctionTest is AuctionHouseTest {
         givenHookHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
     {
         // Create the auction
-        vm.prank(_auctionOwner);
+        vm.prank(_SELLER);
         _lotId = _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
 
         // Check the prefunding status
@@ -615,7 +615,7 @@ contract AuctionTest is AuctionHouseTest {
         givenHookHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
     {
         // Create the auction
-        vm.prank(_auctionOwner);
+        vm.prank(_SELLER);
         _lotId = _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
 
         // Check the prefunding status
@@ -636,12 +636,12 @@ contract AuctionTest is AuctionHouseTest {
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
         givenAtomicAuctionRequiresPrefunding
-        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
     {
         // Expect revert
         vm.expectRevert("TRANSFER_FROM_FAILED");
 
-        vm.prank(_auctionOwner);
+        vm.prank(_SELLER);
         _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
     }
 
@@ -650,12 +650,12 @@ contract AuctionTest is AuctionHouseTest {
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
         givenAtomicAuctionRequiresPrefunding
-        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
     {
         // Expect revert
         vm.expectRevert("TRANSFER_FROM_FAILED");
 
-        vm.prank(_auctionOwner);
+        vm.prank(_SELLER);
         _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
     }
 
@@ -664,8 +664,8 @@ contract AuctionTest is AuctionHouseTest {
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
         givenAtomicAuctionRequiresPrefunding
-        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
-        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenBaseTokenTakesFeeOnTransfer
     {
         // Expect revert
@@ -673,7 +673,7 @@ contract AuctionTest is AuctionHouseTest {
             abi.encodeWithSelector(Transfer.UnsupportedToken.selector, address(_baseToken));
         vm.expectRevert(err);
 
-        vm.prank(_auctionOwner);
+        vm.prank(_SELLER);
         _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
     }
 
@@ -682,11 +682,11 @@ contract AuctionTest is AuctionHouseTest {
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
         givenAtomicAuctionRequiresPrefunding
-        givenOwnerHasBaseTokenBalance(_LOT_CAPACITY)
-        givenOwnerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
     {
         // Create the auction
-        vm.prank(_auctionOwner);
+        vm.prank(_SELLER);
         _lotId = _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
 
         // Check the prefunding status
@@ -694,7 +694,7 @@ contract AuctionTest is AuctionHouseTest {
         assertEq(routing.prefunding, _LOT_CAPACITY, "prefunding mismatch");
 
         // Check balances
-        assertEq(_baseToken.balanceOf(address(this)), 0, "owner balance mismatch");
+        assertEq(_baseToken.balanceOf(address(this)), 0, "seller balance mismatch");
         assertEq(
             _baseToken.balanceOf(address(_auctionHouse)),
             _LOT_CAPACITY,
@@ -709,11 +709,11 @@ contract AuctionTest is AuctionHouseTest {
         givenAtomicAuctionRequiresPrefunding
         givenQuoteTokenHasDecimals(17)
         givenBaseTokenHasDecimals(13)
-        givenOwnerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
-        givenOwnerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
     {
         // Create the auction
-        vm.prank(_auctionOwner);
+        vm.prank(_SELLER);
         _lotId = _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
 
         // Check the prefunding status
@@ -721,7 +721,7 @@ contract AuctionTest is AuctionHouseTest {
         assertEq(routing.prefunding, _scaleBaseTokenAmount(_LOT_CAPACITY), "prefunding mismatch");
 
         // Check balances
-        assertEq(_baseToken.balanceOf(address(this)), 0, "owner balance mismatch");
+        assertEq(_baseToken.balanceOf(address(this)), 0, "seller balance mismatch");
         assertEq(
             _baseToken.balanceOf(address(_auctionHouse)),
             _scaleBaseTokenAmount(_LOT_CAPACITY),
@@ -736,11 +736,11 @@ contract AuctionTest is AuctionHouseTest {
         givenAtomicAuctionRequiresPrefunding
         givenQuoteTokenHasDecimals(13)
         givenBaseTokenHasDecimals(17)
-        givenOwnerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
-        givenOwnerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
     {
         // Create the auction
-        vm.prank(_auctionOwner);
+        vm.prank(_SELLER);
         _lotId = _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
 
         // Check the prefunding status
@@ -748,7 +748,7 @@ contract AuctionTest is AuctionHouseTest {
         assertEq(routing.prefunding, _scaleBaseTokenAmount(_LOT_CAPACITY), "prefunding mismatch");
 
         // Check balances
-        assertEq(_baseToken.balanceOf(address(this)), 0, "owner balance mismatch");
+        assertEq(_baseToken.balanceOf(address(this)), 0, "seller balance mismatch");
         assertEq(
             _baseToken.balanceOf(address(_auctionHouse)),
             _scaleBaseTokenAmount(_LOT_CAPACITY),

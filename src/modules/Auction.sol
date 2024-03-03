@@ -194,7 +194,7 @@ abstract contract Auction {
     /// @dev        The implementing function should handle the following:
     ///             - Validate the lot parameters
     ///             - Update the lot data
-    ///             - Return the remaining capacity (so that the AuctionHouse can refund the owner)
+    ///             - Return the remaining capacity (so that the AuctionHouse can refund the seller)
     ///
     /// @param      lotId_              The lot id
     function cancelAuction(uint96 lotId_) external virtual;
@@ -308,8 +308,8 @@ abstract contract AuctionModule is Auction, Module {
 
     /// @notice     Cancel an auction lot
     /// @dev        Assumptions:
-    ///             - The parent will refund the owner the remaining capacity
-    ///             - The parent will verify that the caller is the owner
+    ///             - The parent will refund the seller the remaining capacity
+    ///             - The parent will verify that the caller is the seller
     ///
     ///             This function reverts if:
     ///             - the caller is not the parent of the module

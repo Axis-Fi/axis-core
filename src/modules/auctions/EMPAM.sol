@@ -359,7 +359,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
     // ========== DECRYPTION ========== //
 
     /// @notice         Submits the private key for the auction lot and decrypts an initial number of bids
-    ///                 It does not require gating. If the owner wishes to limit who can call, they can simply not reveal the key to anyone else.
+    ///                 It does not require gating. If the seller wishes to limit who can call, they can simply not reveal the key to anyone else.
     ///                 On the other hand, if a key management service is used, then anyone can call it once the key is revealed.
     ///
     /// @dev            This function reverts if:

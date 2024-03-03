@@ -37,7 +37,7 @@ contract CancelTest is Test, Permit2User {
 
     uint96 internal lotId;
 
-    address internal auctionOwner = address(0x1);
+    address internal constant _SELLER = address(0x1);
 
     address internal protocol = address(0x2);
     string internal INFO_HASH = "";
@@ -73,7 +73,7 @@ contract CancelTest is Test, Permit2User {
     }
 
     modifier whenLotIsCreated() {
-        vm.prank(auctionOwner);
+        vm.prank(_SELLER);
         lotId = auctionHouse.auction(routingParams, auctionParams, INFO_HASH);
         _;
     }
