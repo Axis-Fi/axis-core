@@ -17,7 +17,6 @@ interface ITokenBalance {
 contract TokenAllowlist is BaseCallback {
 
     // ========== ERRORS ========== //
-    error Callback_InvalidParams();
 
     // ========== STATE VARIABLES ========== //
 

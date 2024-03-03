@@ -9,6 +9,7 @@ import {Callbacks} from "src/lib/Callbacks.sol";
 abstract contract BaseCallback is ICallback, Owned {
     // ========== ERRORS ========== //
 
+    error Callback_InvalidParams();
     error Callback_NotAuthorized(); 
     error Callback_NotImplemented();
 
