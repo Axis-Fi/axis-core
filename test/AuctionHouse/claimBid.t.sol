@@ -29,6 +29,10 @@ contract ClaimBidTest is AuctionHouseTest {
     // [X] when the referrer is set
     //  [X] it sends the payout to the bidder, and allocates fees to the referrer and protocol
     // [X] it sends the payout to the bidder, and allocates referrer and protocol fees to the protocol
+    // [ ] when the protocol fee is changed before claim
+    //  [ ] it allocates the cached fee
+    // [ ] when the referrer fee is changed before the claim
+    //  [ ] it allocates the cached fee
 
     // ============ Helper Functions ============
 

@@ -35,6 +35,7 @@ contract CurateTest is AuctionHouseTest {
     // [X] given the lot has not started
     //  [X] it succeeds
     // [X] it succeeds
+    // [ ] it caches the curator fee
 
     function test_whenLotIdIsInvalid() public {
         // Expect revert

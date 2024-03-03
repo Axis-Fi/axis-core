@@ -867,6 +867,8 @@ contract PurchaseTest is AuctionHouseTest {
 
     // [X] given there is no _PROTOCOL fee set for the auction type
     //  [X] no _PROTOCOL fee is accrued
+    // [ ] given the protocol fee has been changed
+    //  [ ] it uses the original protocol fee
     // [X] the _PROTOCOL fee is accrued
 
     function test_givenProtocolFeeIsNotSet()
@@ -1038,6 +1040,8 @@ contract PurchaseTest is AuctionHouseTest {
 
     // [X] given there is no _REFERRER fee set for the auction type
     //  [X] no _REFERRER fee is accrued
+    // [ ] given the referrer fee has been changed
+    //  [ ] it uses the original referrer fee
     // [X] the _REFERRER fee is accrued
 
     function test_givenReferrerFeeIsNotSet()
@@ -1244,6 +1248,8 @@ contract PurchaseTest is AuctionHouseTest {
     //  [X] given the payout token is a derivative
     //   [X] derivative is minted and transferred to the curator
     //  [X] payout token is transferred to the curator
+    //  [ ] given the curator fee has been changed
+    //   [ ] it uses the original curator fee
 
     function test_givenCuratorIsNotSet()
         external
