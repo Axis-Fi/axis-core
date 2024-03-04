@@ -383,8 +383,8 @@ contract SettleTest is AuctionHouseTest {
     //   [X] when curated is true
     //    [X] it transfers the used capacity and curator fee to the auction house
     //   [X] it transfers the used capacity to the auction house
-    // [ ] when the curator fee is changed before settlement
-    //  [ ] it sends the curator payout using the original curator fee
+    // [X] when the curator fee is changed before settlement
+    //  [X] it sends the curator payout using the original curator fee
     // [X] it caches the protocol and referrer fees
 
     // TODO modify tests to assert that the seller payout and unused capacity is not sent to the seller
