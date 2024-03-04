@@ -147,7 +147,7 @@ abstract contract EmpaModuleTest is Test, Permit2User {
 
     function _updateMinBidSize() internal {
         // Calculate the minimum bid size
-        _minBidSize = _auctionParams.capacity * _MIN_BID_PERCENT / 1e5;
+        _minBidSize = _mulDivDown(_auctionParams.capacity, _MIN_BID_PERCENT, 1e5);
     }
 
     function _updateMinBidAmount() internal {

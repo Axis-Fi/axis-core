@@ -9,6 +9,8 @@ import {EncryptedMarginalPriceAuctionModule} from "src/modules/auctions/EMPAM.so
 
 import {EmpaModuleTest} from "test/modules/auctions/EMPA/EMPAModuleTest.sol";
 
+import {console2} from "forge-std/console2.sol";
+
 contract EmpaModuleSettleTest is EmpaModuleTest {
     uint96 internal constant _BID_PRICE_BELOW_ONE_AMOUNT = 1e18;
     uint96 internal constant _BID_PRICE_BELOW_ONE_AMOUNT_OUT = 2e18;
@@ -69,16 +71,16 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
     // [X] given the lot capacity is exactly met
     //  [X] it handles different token decimals
     //  [X] it returns the amounts in and out, and no partial fill
-    // [ ] given the lot has a single bid and is over-subscribed
-    //  [ ] it handles different token decimals
-    //  [ ] it returns the amounts in and out, with the marginal price is the price at which the lot capacity is exhausted, and a partial fill for the single bid
-    // [ ] given the lot is over-subscribed with a partial fill
-    //  [ ] it handles different token decimals
-    //  [ ] it respects the ordering of the bids
-    //  [ ] it returns the amounts in and out, with the marginal price is the price at which the lot capacity is exhausted, and a partial fill for the lowest winning bid
+    // [X] given the lot has a single bid and is over-subscribed
+    //  [X] it handles different token decimals
+    //  [X] it returns the amounts in and out, with the marginal price is the price at which the lot capacity is exhausted, and a partial fill for the single bid
+    // [X] given the lot is over-subscribed with a partial fill
+    //  [X] it handles different token decimals
+    //  [X] it respects the ordering of the bids
+    //  [X] it returns the amounts in and out, with the marginal price is the price at which the lot capacity is exhausted, and a partial fill for the lowest winning bid
 
-    // [ ] given the expended capacity results in a uint96 overflow
-    //  [ ] the settle function does not revert
+    // [X] given the expended capacity results in a uint96 overflow
+    //  [X] the settle function does not revert
 
     function _settle()
         internal
@@ -280,7 +282,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         _;
     }
 
-    modifier givenBidsAreOverSubscribed() {
+    modifier givenLotIsOverSubscribed() {
         // Capacity: 9 + 2 > 10 capacity
         // Capacity reached on bid 2
         _createBid(
@@ -292,16 +294,16 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
             _scaleBaseTokenAmount(_BID_PRICE_TWO_SIZE_TWO_AMOUNT_OUT)
         );
 
-        // Marginal price: 1 >= 1 (due to capacity being reached on bid 2)
-        _expectedMarginalPrice = _scaleQuoteTokenAmount(1 * _BASE_SCALE);
+        // Marginal price: 2 >= 1 (due to capacity being reached on bid 2)
+        _expectedMarginalPrice = _scaleQuoteTokenAmount(2 * _BASE_SCALE);
 
         // Output
         // Bid one: 19 / 2 = 9.5 out
         // Bid two: 10 - 9.5 = 0.5 out (partial fill)
 
         uint96 bidOneAmountOutActual = _mulDivUp(
-            _scaleBaseTokenAmount(_BID_SIZE_NINE_AMOUNT), // TODO incorrect?
-            uint96(10 ** _quoteTokenDecimals),
+            _scaleQuoteTokenAmount(_BID_SIZE_NINE_AMOUNT),
+            uint96(10 ** _baseTokenDecimals),
             _expectedMarginalPrice
         ); // 9.5
         uint96 bidOneAmountInActual = _scaleQuoteTokenAmount(_BID_SIZE_NINE_AMOUNT); // 19
@@ -328,7 +330,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         _;
     }
 
-    modifier givenBidsAreOverSubscribedRespectsOrdering() {
+    modifier givenLotIsOverSubscribedRespectsOrdering() {
         // Capacity: 10 + 2 > 10 capacity
         // Capacity reached on bid 1 (which is processed second)
         _createBid(
@@ -372,7 +374,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         _;
     }
 
-    modifier givenBidsAreOverSubscribedOnFirstBid() {
+    modifier givenLotIsOverSubscribedOnFirstBid() {
         // Capacity: 11 > 10 capacity
         // Capacity reached on bid 1
         _createBid(
@@ -463,7 +465,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         _createBid(_scaleQuoteTokenAmount(bidTwoAmount), _scaleBaseTokenAmount(bidTwoAmountOut));
 
         // Marginal price = 12621933
-        _expectedMarginalPrice = _mulDivDown(bidTwoAmount, _BASE_SCALE, bidTwoAmountOut);
+        _expectedMarginalPrice = _mulDivUp(bidTwoAmount, _BASE_SCALE, bidTwoAmountOut);
 
         // These calculations mimic how the capacity usage is calculated in the settle function
         uint256 baseTokensRequired = FixedPointMathLib.mulDivDown(
@@ -479,7 +481,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
 
         uint96 bidTwoAmountInActual = bidTwoAmount;
         uint96 bidTwoAmountOutActual =
-            uint96(FixedPointMathLib.mulDivDown(bidTwoAmount, _BASE_SCALE, _expectedMarginalPrice));
+            _mulDivDown(bidTwoAmount, _BASE_SCALE, _expectedMarginalPrice);
         uint96 bidOneAmountOutActual = uint96(bidOneAmountOutFull - bidOneAmountOutOverflow);
         uint96 bidOneAmountInActual = uint96(
             FixedPointMathLib.mulDivUp(bidOneAmount, bidOneAmountOutActual, bidOneAmountOutFull)
@@ -487,10 +489,9 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
 
         uint96 bidAmountInSuccess = bidOneAmountInActual + bidTwoAmountInActual;
         uint96 bidAmountInFail = bidOneAmount - bidOneAmountInActual;
-        uint96 bidAmountOutSuccess = bidOneAmountOutActual + bidTwoAmountOutActual;
 
         _expectedTotalIn = bidAmountInSuccess;
-        _expectedTotalOut = bidAmountOutSuccess;
+        _expectedTotalOut = _LOT_CAPACITY_OVERFLOW;
 
         // Partial fill
         _expectedPartialFillBidder = _BIDDER;
@@ -978,6 +979,146 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
     {
         // Call function
         (Auction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
+
+        // Assert settlement
+        _assertSettlement(settlement, auctionOutput);
+    }
+
+    function test_givenLotIsOverSubscribedOnFirstBid()
+        external
+        givenLotIsCreated
+        givenLotHasStarted
+        givenLotIsOverSubscribedOnFirstBid
+        givenLotHasConcluded
+        givenPrivateKeyIsSubmitted
+        givenLotIsDecrypted
+    {
+        // Call function
+        (Auction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
+
+        // Assert settlement
+        _assertSettlement(settlement, auctionOutput);
+    }
+
+    function test_givenLotIsOverSubscribedOnFirstBid_quoteTokenDecimalsLarger()
+        external
+        givenQuoteTokenDecimals(17)
+        givenBaseTokenDecimals(13)
+        givenLotIsCreated
+        givenLotHasStarted
+        givenLotIsOverSubscribedOnFirstBid
+        givenLotHasConcluded
+        givenPrivateKeyIsSubmitted
+        givenLotIsDecrypted
+    {
+        // Call function
+        (Auction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
+
+        // Assert settlement
+        _assertSettlement(settlement, auctionOutput);
+    }
+
+    function test_givenLotIsOverSubscribedOnFirstBid_quoteTokenDecimalsSmaller()
+        external
+        givenQuoteTokenDecimals(13)
+        givenBaseTokenDecimals(17)
+        givenLotIsCreated
+        givenLotHasStarted
+        givenLotIsOverSubscribedOnFirstBid
+        givenLotHasConcluded
+        givenPrivateKeyIsSubmitted
+        givenLotIsDecrypted
+    {
+        // Call function
+        (Auction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
+
+        // Assert settlement
+        _assertSettlement(settlement, auctionOutput);
+    }
+
+    function test_givenLotIsOverSubscribed()
+        external
+        givenLotIsCreated
+        givenLotHasStarted
+        givenLotIsOverSubscribed
+        givenLotHasConcluded
+        givenPrivateKeyIsSubmitted
+        givenLotIsDecrypted
+    {
+        // Call function
+        (Auction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
+
+        // Assert settlement
+        _assertSettlement(settlement, auctionOutput);
+    }
+
+    function test_givenLotIsOverSubscribed_quoteTokenDecimalsLarger()
+        external
+        givenQuoteTokenDecimals(17)
+        givenBaseTokenDecimals(13)
+        givenLotIsCreated
+        givenLotHasStarted
+        givenLotIsOverSubscribed
+        givenLotHasConcluded
+        givenPrivateKeyIsSubmitted
+        givenLotIsDecrypted
+    {
+        // Call function
+        (Auction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
+
+        // Assert settlement
+        _assertSettlement(settlement, auctionOutput);
+    }
+
+    function test_givenLotIsOverSubscribed_quoteTokenDecimalsSmaller()
+        external
+        givenQuoteTokenDecimals(13)
+        givenBaseTokenDecimals(17)
+        givenLotIsCreated
+        givenLotHasStarted
+        givenLotIsOverSubscribed
+        givenLotHasConcluded
+        givenPrivateKeyIsSubmitted
+        givenLotIsDecrypted
+    {
+        console2.log("before settle");
+        // Call function
+        (Auction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
+
+        // Assert settlement
+        _assertSettlement(settlement, auctionOutput);
+    }
+
+    function test_givenLotIsOverSubscribed_respectsOrdering()
+        external
+        givenLotIsCreated
+        givenLotHasStarted
+        givenLotIsOverSubscribedRespectsOrdering
+        givenLotHasConcluded
+        givenPrivateKeyIsSubmitted
+        givenLotIsDecrypted
+    {
+        // Call function
+        (Auction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
+
+        // Assert settlement
+        _assertSettlement(settlement, auctionOutput);
+    }
+
+    function test_givenBidsCauseCapacityOverflow()
+        external
+        givenMinimumPrice(1)
+        givenLotCapacity(_LOT_CAPACITY_OVERFLOW)
+        givenLotIsCreated
+        givenLotHasStarted
+        givenBidsCauseCapacityOverflow
+        givenLotHasConcluded
+        givenPrivateKeyIsSubmitted
+        givenLotIsDecrypted
+    {
+        // Call function
+        (Auction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
+        console2.log("after settle");
 
         // Assert settlement
         _assertSettlement(settlement, auctionOutput);
