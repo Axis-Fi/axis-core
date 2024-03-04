@@ -592,10 +592,12 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
         if (module.hasEnded(lotId_) == true) revert InvalidState();
 
         // Check that the curator fee is set
-        if (fees[auctionType].curator[msg.sender] == 0) revert InvalidFee();
+        uint48 curatorFee = fees[auctionType].curator[msg.sender];
+        if (curatorFee == 0) revert InvalidFee();
 
         // Set the curator as approved
         curation.curated = true;
+        curation.curatorFee = curatorFee;
 
         // If the auction is pre-funded, transfer the fee amount from the seller
         if (routing.prefunding > 0) {

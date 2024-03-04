@@ -465,9 +465,9 @@ abstract contract AuctionHouseTest is Test, Permit2User {
     }
 
     function _getLotCuration(uint96 lotId_) internal view returns (Auctioneer.Curation memory) {
-        (address curator_, bool curated_) = _auctionHouse.lotCuration(lotId_);
+        (address curator_, bool curated_, uint48 curatorFee_) = _auctionHouse.lotCuration(lotId_);
 
-        return Auctioneer.Curation({curator: curator_, curated: curated_});
+        return Auctioneer.Curation({curator: curator_, curated: curated_, curatorFee: curatorFee_});
     }
 
     function _getLotData(uint96 lotId_) internal view returns (Auction.Lot memory) {

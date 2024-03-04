@@ -35,7 +35,7 @@ contract CurateTest is AuctionHouseTest {
     // [X] given the lot has not started
     //  [X] it succeeds
     // [X] it succeeds
-    // [ ] it caches the curator fee
+    // [X] it caches the curator fee
 
     function test_whenLotIdIsInvalid() public {
         // Expect revert
@@ -165,9 +165,10 @@ contract CurateTest is AuctionHouseTest {
         _auctionHouse.curate(_lotId);
 
         // Verify
-        (address lotCurator, bool lotCurated) = _auctionHouse.lotCuration(_lotId);
-        assertEq(lotCurator, _CURATOR);
-        assertTrue(lotCurated);
+        Auctioneer.Curation memory curation = _getLotCuration(_lotId);
+        assertEq(curation.curator, _CURATOR);
+        assertEq(curation.curated, true);
+        assertEq(curation.curatorFee, _curatorFeePercentActual);
 
         // No _CURATOR fee is transferred to the auction house
         assertEq(_baseToken.balanceOf(_SELLER), 0);
@@ -189,9 +190,10 @@ contract CurateTest is AuctionHouseTest {
         _auctionHouse.curate(_lotId);
 
         // Verify
-        (address lotCurator, bool lotCurated) = _auctionHouse.lotCuration(_lotId);
-        assertEq(lotCurator, _CURATOR);
-        assertTrue(lotCurated);
+        Auctioneer.Curation memory curation = _getLotCuration(_lotId);
+        assertEq(curation.curator, _CURATOR);
+        assertEq(curation.curated, true);
+        assertEq(curation.curatorFee, _curatorFeePercentActual);
 
         // No _CURATOR fee is transferred to the auction house
         assertEq(_baseToken.balanceOf(_SELLER), 0);
@@ -218,9 +220,10 @@ contract CurateTest is AuctionHouseTest {
         _auctionHouse.curate(_lotId);
 
         // Verify
-        (address lotCurator, bool lotCurated) = _auctionHouse.lotCuration(_lotId);
-        assertEq(lotCurator, _CURATOR);
-        assertTrue(lotCurated);
+        Auctioneer.Curation memory curation = _getLotCuration(_lotId);
+        assertEq(curation.curator, _CURATOR);
+        assertEq(curation.curated, true);
+        assertEq(curation.curatorFee, _curatorFeePercentActual);
 
         // Maximum _CURATOR fee is transferred to the auction house
         assertEq(_baseToken.balanceOf(_SELLER), 0, "base token: _SELLER balance mismatch");
@@ -253,9 +256,10 @@ contract CurateTest is AuctionHouseTest {
         _auctionHouse.curate(_lotId);
 
         // Verify
-        (address lotCurator, bool lotCurated) = _auctionHouse.lotCuration(_lotId);
-        assertEq(lotCurator, _CURATOR);
-        assertTrue(lotCurated);
+        Auctioneer.Curation memory curation = _getLotCuration(_lotId);
+        assertEq(curation.curator, _CURATOR);
+        assertEq(curation.curated, true);
+        assertEq(curation.curatorFee, _curatorFeePercentActual);
 
         // Maximum _CURATOR fee is transferred to the auction house
         assertEq(_baseToken.balanceOf(_SELLER), 0, "base token: _SELLER balance mismatch");
@@ -288,9 +292,10 @@ contract CurateTest is AuctionHouseTest {
         _auctionHouse.curate(_lotId);
 
         // Verify
-        (address lotCurator, bool lotCurated) = _auctionHouse.lotCuration(_lotId);
-        assertEq(lotCurator, _CURATOR);
-        assertTrue(lotCurated);
+        Auctioneer.Curation memory curation = _getLotCuration(_lotId);
+        assertEq(curation.curator, _CURATOR);
+        assertEq(curation.curated, true);
+        assertEq(curation.curatorFee, _curatorFeePercentActual);
 
         // Maximum _CURATOR fee is transferred to the auction house
         assertEq(_baseToken.balanceOf(_SELLER), 0, "base token: _SELLER balance mismatch");

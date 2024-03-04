@@ -82,9 +82,11 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
     ///
     /// @param      curator     Address of the proposed curator
     /// @param      curated     Whether the curator has approved the auction
+    /// @param      curatorFee  The fee charged by the curator
     struct Curation {
         address curator;
         bool curated;
+        uint48 curatorFee;
     }
 
     /// @notice     Auction routing information provided as input parameters
