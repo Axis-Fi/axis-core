@@ -206,6 +206,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         );
 
         // Marginal price: 1 >= 1 (due to capacity being reached on bid 2)
+        // Bid 2 sets the marginal price, but the marginal price results in bid 1 exceeding the capacity
         _expectedMarginalPrice = _scaleQuoteTokenAmount(1 * _BASE_SCALE);
 
         // Output
