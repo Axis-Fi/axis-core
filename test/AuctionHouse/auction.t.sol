@@ -185,7 +185,7 @@ contract AuctionTest is AuctionHouseTest {
         assertEq(routing.prefunding, 0, "prefunding mismatch");
 
         // Curation updated
-        Auctioneer.Curation memory curation = _getLotCuration(_lotId);
+        Auctioneer.FeeData memory curation = _getLotFees(_lotId);
         assertEq(curation.curator, _CURATOR, "curator mismatch");
         assertEq(curation.curated, false, "curated mismatch");
 

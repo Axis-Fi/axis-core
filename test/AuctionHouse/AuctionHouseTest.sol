@@ -471,10 +471,22 @@ abstract contract AuctionHouseTest is Test, Permit2User {
         });
     }
 
-    function _getLotCuration(uint96 lotId_) internal view returns (Auctioneer.Curation memory) {
-        (address curator_, bool curated_, uint48 curatorFee_) = _auctionHouse.lotCuration(lotId_);
+    function _getLotFees(uint96 lotId_) internal view returns (Auctioneer.FeeData memory) {
+        (
+            address curator_,
+            bool curated_,
+            uint48 curatorFee_,
+            uint48 protocolFee_,
+            uint48 referrerFee_
+        ) = _auctionHouse.lotFees(lotId_);
 
-        return Auctioneer.Curation({curator: curator_, curated: curated_, curatorFee: curatorFee_});
+        return Auctioneer.FeeData({
+            curator: curator_,
+            curated: curated_,
+            curatorFee: curatorFee_,
+            protocolFee: protocolFee_,
+            referrerFee: referrerFee_
+        });
     }
 
     function _getLotData(uint96 lotId_) internal view returns (Auction.Lot memory) {

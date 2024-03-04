@@ -165,7 +165,7 @@ contract CurateTest is AuctionHouseTest {
         _auctionHouse.curate(_lotId);
 
         // Verify
-        Auctioneer.Curation memory curation = _getLotCuration(_lotId);
+        Auctioneer.FeeData memory curation = _getLotFees(_lotId);
         assertEq(curation.curator, _CURATOR);
         assertEq(curation.curated, true);
         assertEq(curation.curatorFee, _curatorFeePercentActual);
@@ -190,7 +190,7 @@ contract CurateTest is AuctionHouseTest {
         _auctionHouse.curate(_lotId);
 
         // Verify
-        Auctioneer.Curation memory curation = _getLotCuration(_lotId);
+        Auctioneer.FeeData memory curation = _getLotFees(_lotId);
         assertEq(curation.curator, _CURATOR);
         assertEq(curation.curated, true);
         assertEq(curation.curatorFee, _curatorFeePercentActual);
@@ -220,7 +220,7 @@ contract CurateTest is AuctionHouseTest {
         _auctionHouse.curate(_lotId);
 
         // Verify
-        Auctioneer.Curation memory curation = _getLotCuration(_lotId);
+        Auctioneer.FeeData memory curation = _getLotFees(_lotId);
         assertEq(curation.curator, _CURATOR);
         assertEq(curation.curated, true);
         assertEq(curation.curatorFee, _curatorFeePercentActual);
@@ -256,7 +256,7 @@ contract CurateTest is AuctionHouseTest {
         _auctionHouse.curate(_lotId);
 
         // Verify
-        Auctioneer.Curation memory curation = _getLotCuration(_lotId);
+        Auctioneer.FeeData memory curation = _getLotFees(_lotId);
         assertEq(curation.curator, _CURATOR);
         assertEq(curation.curated, true);
         assertEq(curation.curatorFee, _curatorFeePercentActual);
@@ -292,7 +292,7 @@ contract CurateTest is AuctionHouseTest {
         _auctionHouse.curate(_lotId);
 
         // Verify
-        Auctioneer.Curation memory curation = _getLotCuration(_lotId);
+        Auctioneer.FeeData memory curation = _getLotFees(_lotId);
         assertEq(curation.curator, _CURATOR);
         assertEq(curation.curated, true);
         assertEq(curation.curatorFee, _curatorFeePercentActual);

@@ -53,6 +53,7 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
     // ========= DATA STRUCTURES ========== //
 
     /// @notice     Auction routing information for a lot
+    ///
     /// @param      auctionReference    Auction module, represented by its Veecode
     /// @param      seller              Lot seller
     /// @param      baseToken           Token provided by seller
@@ -76,17 +77,27 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
         uint256 prefunding;
     }
 
-    /// @notice     Curation information for a lot
+    /// @notice     Fee information for a lot
     /// @dev        This is split into a separate struct, otherwise the Routing struct would be too large
     ///             and would throw a "stack too deep" error.
+    ///
+    ///             The curator information is stored when curation is approved by the curator.
+    ///             The protocol and referrer fees are set at the time of lot settlement.
+    ///             The fees are cached in order to prevent:
+    ///             - Reducing the amount of base tokens available for payout to the winning bidders
+    ///             - Reducing the amount of quote tokens available for payment to the seller
     ///
     /// @param      curator     Address of the proposed curator
     /// @param      curated     Whether the curator has approved the auction
     /// @param      curatorFee  The fee charged by the curator
-    struct Curation {
+    /// @param      protocolFee The fee charged by the protocol
+    /// @param      referrerFee The fee charged by the referrer
+    struct FeeData {
         address curator;
         bool curated;
         uint48 curatorFee;
+        uint48 protocolFee;
+        uint48 referrerFee;
     }
 
     /// @notice     Auction routing information provided as input parameters
@@ -121,8 +132,8 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
     /// @notice     Mapping of lot IDs to their auction type (represented by the Keycode for the auction submodule)
     mapping(uint96 lotId => Routing) public lotRouting;
 
-    /// @notice     Mapping of lot IDs to their curation information
-    mapping(uint96 lotId => Curation) public lotCuration;
+    /// @notice     Mapping of lot IDs to their fee information
+    mapping(uint96 lotId => FeeData) public lotFees;
 
     /// @notice     Mapping auction and derivative references to the condenser that is used to pass data between them
     mapping(Veecode auctionRef => mapping(Veecode derivativeRef => Veecode condenserRef)) public
@@ -195,9 +206,9 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
 
         // Store curation information
         {
-            Curation storage curation = lotCuration[lotId];
-            curation.curator = routing_.curator;
-            curation.curated = false;
+            FeeData storage fees = lotFees[lotId];
+            fees.curator = routing_.curator;
+            fees.curated = false;
         }
 
         // Derivative

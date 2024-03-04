@@ -21,6 +21,8 @@ contract SettleTest is AuctionHouseTest {
     uint256 internal _expectedProtocolFeesAllocated;
     uint256 internal _expectedReferrerFeesAllocated;
 
+    bool internal _lotSettles;
+
     // ======== Modifiers ======== //
 
     function _assertBaseTokenBalances() internal {
@@ -72,6 +74,11 @@ contract SettleTest is AuctionHouseTest {
     }
 
     function _assertAccruedFees() internal {
+        // Check that the protocol and referrer fees have been cached
+        Auctioneer.FeeData memory feeData = _getLotFees(_lotId);
+        assertEq(feeData.protocolFee, _lotSettles ? _protocolFeePercentActual : 0, "protocol fee");
+        assertEq(feeData.referrerFee, _lotSettles ? _referrerFeePercentActual : 0, "referrer fee");
+
         // Check accrued quote token fees
         assertEq(
             _auctionHouse.rewards(_REFERRER, _quoteToken),
@@ -168,6 +175,8 @@ contract SettleTest is AuctionHouseTest {
             scaledLotCapacity + prefundedCuratorFees,
             "total base token balance mismatch"
         );
+
+        _lotSettles = true;
         _;
     }
 
@@ -221,6 +230,8 @@ contract SettleTest is AuctionHouseTest {
             scaledLotCapacity + prefundedCuratorFees,
             "total base token balance mismatch"
         );
+
+        _lotSettles = true;
         _;
     }
 
@@ -273,6 +284,8 @@ contract SettleTest is AuctionHouseTest {
             scaledLotCapacity + prefundedCuratorFees,
             "total base token balance mismatch"
         );
+
+        _lotSettles = true;
         _;
     }
 
@@ -324,6 +337,8 @@ contract SettleTest is AuctionHouseTest {
             scaledLotCapacity + prefundedCuratorFees,
             "total base token balance mismatch"
         );
+
+        _lotSettles = false;
         _;
     }
 
@@ -370,7 +385,7 @@ contract SettleTest is AuctionHouseTest {
     //   [X] it transfers the used capacity to the auction house
     // [ ] when the curator fee is changed before settlement
     //  [ ] it sends the curator payout using the original curator fee
-    // [ ] it caches the protocol and referrer fees
+    // [X] it caches the protocol and referrer fees
 
     // TODO modify tests to assert that the seller payout and unused capacity is not sent to the seller
 
@@ -653,6 +668,38 @@ contract SettleTest is AuctionHouseTest {
         _auctionHouse.settle(_lotId);
 
         // Check balances
+        _assertBaseTokenBalances();
+        _assertQuoteTokenBalances();
+        _assertAccruedFees();
+    }
+
+    function test_partialFill_curated_givenCuratorFeeIsChanged()
+        public
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenCuratorIsSet
+        givenLotIsPrefunded
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenLotIsCreated
+        givenCuratorMaxFeeIsSet
+        givenCuratorFeeIsSet
+        givenSellerHasBaseTokenBalance(_curatorMaxPotentialFee)
+        givenSellerHasBaseTokenAllowance(_curatorMaxPotentialFee)
+        givenCuratorHasApproved
+        givenProtocolFeeIsSet
+        givenReferrerFeeIsSet
+        givenLotHasPartialFill
+        givenAuctionHouseHasQuoteTokenBalance(_BID_AMOUNT_TOTAL)
+    {
+        // Change curator fee
+        _setCuratorFee(80);
+
+        // Call function
+        _auctionHouse.settle(_lotId);
+
+        // Check balances
+        // Assertions are not updated with the curator fee, so the test will fail if the new curator fee is used by the AuctionHouse
         _assertBaseTokenBalances();
         _assertQuoteTokenBalances();
         _assertAccruedFees();

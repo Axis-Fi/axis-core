@@ -62,13 +62,17 @@ contract Catalogue {
         Auction module = Auctioneer(auctionHouse).getModuleForId(lotId_);
         Auctioneer.Routing memory routing = getRouting(lotId_);
 
+        // Get protocol fee from FeeManager
+        // TODO depending on whether this is a purchase or a bid, we should use different fee sources
+        (uint48 protocolFee, uint48 referrerFee,) =
+            FeeManager(auctionHouse).fees(keycodeFromVeecode(routing.auctionReference));
+
         // Calculate fees
-        (uint256 protocolFee, uint256 referrerFee) = FeeManager(auctionHouse).calculateQuoteFees(
-            keycodeFromVeecode(routing.auctionReference), true, amount_
-        ); // we assume there is a referrer to give a conservative amount
+        (uint256 toProtocol, uint256 toReferrer) =
+            FeeManager(auctionHouse).calculateQuoteFees(protocolFee, referrerFee, true, amount_); // we assume there is a referrer to give a conservative amount
 
         // Get payout from module
-        return module.payoutFor(lotId_, amount_ - uint96(protocolFee) - uint96(referrerFee));
+        return module.payoutFor(lotId_, amount_ - uint96(toProtocol) - uint96(toReferrer));
     }
 
     function priceFor(uint96 lotId_, uint96 payout_) external view returns (uint256) {
