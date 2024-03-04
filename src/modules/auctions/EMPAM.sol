@@ -440,6 +440,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         }
 
         // Iterate over the provided number of bids, decrypt them, and then store them in the sorted bid queue
+        // All submitted bids will be marked as decrypted, but only those with valid values will have the minAmountOut set and be stored in the sorted bid queue
         for (uint64 i; i < num_; i++) {
             // Load encrypted bid
             uint64 bidId = bidIds[nextDecryptIndex + i];
@@ -448,10 +449,11 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
             uint96 amountOut;
             {
                 uint256 result = _decrypt(lotId_, bidId, lotBidData.privateKey);
-                // We skip the bid if the decrypted amount out overflows the uint96 type
-                // No valid bid should expect more than 7.9 * 10^28 (79 trillion tokens if 18 decimals)
-                if (result > type(uint96).max) continue;
-                amountOut = uint96(result);
+
+                // Only set the amount out if it is less than or equal to the maximum value of a uint96
+                if (result <= type(uint96).max) {
+                    amountOut = uint96(result);
+                }
             }
 
             // Set bid status to decrypted
