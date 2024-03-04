@@ -179,16 +179,26 @@ abstract contract EmpaModuleTest is Test, Permit2User {
         uint96 lotId_,
         address bidder_,
         uint96 amountIn_,
-        uint128 amountOut_
+        uint128 amountOut_,
+        uint256 auctionPrivateKey_
     ) internal view returns (uint256) {
         // Format the amount out
         uint256 formattedAmountOut = _formatBid(amountOut_);
 
-        Point memory sharedSecretKey = ECIES.calcPubKey(_bidPublicKey, _AUCTION_PRIVATE_KEY); // TODO is the use of the private key here correct?
+        Point memory sharedSecretKey = ECIES.calcPubKey(_bidPublicKey, auctionPrivateKey_); // TODO is the use of the private key here correct?
         uint256 salt = uint256(keccak256(abi.encodePacked(lotId_, bidder_, amountIn_)));
         uint256 symmetricKey = uint256(keccak256(abi.encodePacked(sharedSecretKey.x, salt)));
 
         return formattedAmountOut ^ symmetricKey;
+    }
+
+    function _encryptBid(
+        uint96 lotId_,
+        address bidder_,
+        uint96 amountIn_,
+        uint128 amountOut_
+    ) internal view returns (uint256) {
+        return _encryptBid(lotId_, bidder_, amountIn_, amountOut_, _AUCTION_PRIVATE_KEY); // TODO is the use of the private key here correct?
     }
 
     function _createBidData(
