@@ -17,5 +17,5 @@ contract ClaimProceedsTest is AuctionHouseTest {
 //   [ ] it sends the proceeds, unused capacity and unused curator fees to the seller
 //  [ ] it sends the proceeds and unused capacity to the seller
 // [ ] given the auction has hooks enabled
-//  [ ] it calls the settle callback
+//  [ ] it calls the onClaimProceeds callback
 }

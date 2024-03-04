@@ -867,8 +867,6 @@ contract PurchaseTest is AuctionHouseTest {
 
     // [X] given there is no _PROTOCOL fee set for the auction type
     //  [X] no _PROTOCOL fee is accrued
-    // [ ] given the protocol fee has been changed
-    //  [ ] it uses the original protocol fee
     // [X] the _PROTOCOL fee is accrued
 
     function test_givenProtocolFeeIsNotSet()
@@ -1040,8 +1038,6 @@ contract PurchaseTest is AuctionHouseTest {
 
     // [X] given there is no _REFERRER fee set for the auction type
     //  [X] no _REFERRER fee is accrued
-    // [ ] given the referrer fee has been changed
-    //  [ ] it uses the original referrer fee
     // [X] the _REFERRER fee is accrued
 
     function test_givenReferrerFeeIsNotSet()
@@ -1248,8 +1244,8 @@ contract PurchaseTest is AuctionHouseTest {
     //  [X] given the payout token is a derivative
     //   [X] derivative is minted and transferred to the curator
     //  [X] payout token is transferred to the curator
-    //  [ ] given the curator fee has been changed
-    //   [ ] it uses the original curator fee
+    //  [X] given the curator fee has been changed
+    //   [X] it uses the original curator fee
 
     function test_givenCuratorIsNotSet()
         external
@@ -1396,6 +1392,41 @@ contract PurchaseTest is AuctionHouseTest {
         _createPurchase(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut, _purchaseAuctionData);
 
         // Check state
+        _assertQuoteTokenBalances();
+        _assertBaseTokenBalances();
+        _assertDerivativeTokenBalances();
+        _assertAccruedFees();
+        _assertPrefunding();
+    }
+
+    function test_givenCuratorHasApproved_givenCuratorFeeIsChanged()
+        external
+        whenAuctionTypeIsAtomic
+        whenAtomicAuctionModuleIsInstalled
+        givenCuratorIsSet
+        givenLotIsCreated
+        givenLotHasStarted
+        givenProtocolFeeIsSet
+        givenReferrerFeeIsSet
+        givenCuratorMaxFeeIsSet
+        givenCuratorFeeIsSet
+        givenCuratorHasApproved
+        givenUserHasQuoteTokenBalance(_AMOUNT_IN)
+        givenUserHasQuoteTokenAllowance(_AMOUNT_IN)
+        givenFeesAreCalculated(_AMOUNT_IN)
+        whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
+        givenSellerHasBaseTokenBalance(_amountOut + _curatorFeeActual)
+        givenSellerHasBaseTokenAllowance(_amountOut + _curatorFeeActual)
+        givenBalancesAreCalculated(_AMOUNT_IN, _amountOut)
+    {
+        // Change the curator fee
+        _setCuratorFee(95);
+
+        // Purchase
+        _createPurchase(_AMOUNT_IN, _amountOut, _purchaseAuctionData);
+
+        // Check state
+        // Assertions are not updated with the curator fee, so the test will fail if the new curator fee is used by the AuctionHouse
         _assertQuoteTokenBalances();
         _assertBaseTokenBalances();
         _assertDerivativeTokenBalances();
@@ -1709,6 +1740,44 @@ contract PurchaseTest is AuctionHouseTest {
         _createPurchase(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut, _purchaseAuctionData);
 
         // Check state
+        _assertQuoteTokenBalances();
+        _assertBaseTokenBalances();
+        _assertDerivativeTokenBalances();
+        _assertAccruedFees();
+        _assertPrefunding();
+    }
+
+    function test_prefunded_givenCuratorHasApproved_givenCuratorFeeIsChanged()
+        external
+        whenAuctionTypeIsAtomic
+        whenAtomicAuctionModuleIsInstalled
+        givenAtomicAuctionRequiresPrefunding
+        givenCuratorIsSet
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenLotIsCreated
+        givenLotHasStarted
+        givenProtocolFeeIsSet
+        givenReferrerFeeIsSet
+        givenCuratorMaxFeeIsSet
+        givenCuratorFeeIsSet
+        givenFeesAreCalculated(_AMOUNT_IN)
+        whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
+        givenSellerHasBaseTokenBalance(_curatorMaxPotentialFee)
+        givenSellerHasBaseTokenAllowance(_curatorMaxPotentialFee)
+        givenCuratorHasApproved
+        givenUserHasQuoteTokenBalance(_AMOUNT_IN)
+        givenUserHasQuoteTokenAllowance(_AMOUNT_IN)
+        givenBalancesAreCalculated(_AMOUNT_IN, _amountOut)
+    {
+        // Change the curator fee
+        _setCuratorFee(95);
+
+        // Purchase
+        _createPurchase(_AMOUNT_IN, _amountOut, _purchaseAuctionData);
+
+        // Check state
+        // Assertions are not updated with the curator fee, so the test will fail if the new curator fee is used by the AuctionHouse
         _assertQuoteTokenBalances();
         _assertBaseTokenBalances();
         _assertDerivativeTokenBalances();

@@ -397,12 +397,15 @@ abstract contract AuctionHouseTest is Test, Permit2User {
         _;
     }
 
-    modifier givenCuratorFeeIsSet() {
-        // Set the curator fee
+    function _setCuratorFee(uint24 fee_) internal {
         vm.prank(_CURATOR);
-        _auctionHouse.setCuratorFee(_auctionModuleKeycode, _CURATOR_FEE_PERCENT);
-        _curatorFeePercentActual = _CURATOR_FEE_PERCENT;
+        _auctionHouse.setCuratorFee(_auctionModuleKeycode, fee_);
+        _curatorFeePercentActual = fee_;
         _curatorMaxPotentialFee = _curatorFeePercentActual * _LOT_CAPACITY / 1e5;
+    }
+
+    modifier givenCuratorFeeIsSet() {
+        _setCuratorFee(_CURATOR_FEE_PERCENT);
         _;
     }
 
@@ -413,19 +416,23 @@ abstract contract AuctionHouseTest is Test, Permit2User {
         _;
     }
 
+    function _setProtocolFee(uint24 fee_) internal {
+        _auctionHouse.setFee(_auctionModuleKeycode, FeeManager.FeeType.Protocol, fee_);
+        _protocolFeePercentActual = fee_;
+    }
+
     modifier givenProtocolFeeIsSet() {
-        _auctionHouse.setFee(
-            _auctionModuleKeycode, FeeManager.FeeType.Protocol, _PROTOCOL_FEE_PERCENT
-        );
-        _protocolFeePercentActual = _PROTOCOL_FEE_PERCENT;
+        _setProtocolFee(_PROTOCOL_FEE_PERCENT);
         _;
     }
 
+    function _setReferrerFee(uint24 fee_) internal {
+        _auctionHouse.setFee(_auctionModuleKeycode, FeeManager.FeeType.Referrer, fee_);
+        _referrerFeePercentActual = fee_;
+    }
+
     modifier givenReferrerFeeIsSet() {
-        _auctionHouse.setFee(
-            _auctionModuleKeycode, FeeManager.FeeType.Referrer, _REFERRER_FEE_PERCENT
-        );
-        _referrerFeePercentActual = _REFERRER_FEE_PERCENT;
+        _setReferrerFee(_REFERRER_FEE_PERCENT);
         _;
     }
 

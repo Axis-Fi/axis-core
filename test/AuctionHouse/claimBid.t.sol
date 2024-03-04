@@ -29,10 +29,10 @@ contract ClaimBidTest is AuctionHouseTest {
     // [X] when the referrer is set
     //  [X] it sends the payout to the bidder, and allocates fees to the referrer and protocol
     // [X] it sends the payout to the bidder, and allocates referrer and protocol fees to the protocol
-    // [ ] when the protocol fee is changed before claim
-    //  [ ] it allocates the cached fee
-    // [ ] when the referrer fee is changed before the claim
-    //  [ ] it allocates the cached fee
+    // [X] when the protocol fee is changed before claim
+    //  [X] it uses the cached fee
+    // [X] when the referrer fee is changed before the claim
+    //  [X] it uses the cached fee
 
     // ============ Helper Functions ============
 
@@ -310,6 +310,68 @@ contract ClaimBidTest is AuctionHouseTest {
         _assertBaseTokenBalances();
     }
 
+    function test_givenNoPayout_givenReferrerFeeIsChanged()
+        external
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenCuratorIsSet
+        givenLotIsPrefunded
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenLotIsCreated
+        givenLotHasStarted
+        givenReferrerFeeIsSet
+        givenProtocolFeeIsSet
+        givenUserHasQuoteTokenBalance(_BID_AMOUNT)
+        givenUserHasQuoteTokenAllowance(_BID_AMOUNT)
+        givenBid(_BID_AMOUNT, "")
+        givenPayoutIsNotSet(_REFERRER, _BID_AMOUNT, _bidder)
+    {
+        // Change the referrer fee
+        _setReferrerFee(90);
+
+        // Call the function
+        vm.prank(_bidder);
+        _auctionHouse.claimBid(_lotId, _bidId);
+
+        // Check the accrued fees
+        // Assertions are not updated with the new fee, so the test will fail if the new fee is used by the AuctionHouse
+        _assertAccruedFees();
+        _assertQuoteTokenBalances();
+        _assertBaseTokenBalances();
+    }
+
+    function test_givenNoPayout_givenProtocolFeeIsChanged()
+        external
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenCuratorIsSet
+        givenLotIsPrefunded
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenLotIsCreated
+        givenLotHasStarted
+        givenReferrerFeeIsSet
+        givenProtocolFeeIsSet
+        givenUserHasQuoteTokenBalance(_BID_AMOUNT)
+        givenUserHasQuoteTokenAllowance(_BID_AMOUNT)
+        givenBid(_BID_AMOUNT, "")
+        givenPayoutIsNotSet(_REFERRER, _BID_AMOUNT, _bidder)
+    {
+        // Change the protocol fee
+        _setProtocolFee(90);
+
+        // Call the function
+        vm.prank(_bidder);
+        _auctionHouse.claimBid(_lotId, _bidId);
+
+        // Check the accrued fees
+        // Assertions are not updated with the new fee, so the test will fail if the new fee is used by the AuctionHouse
+        _assertAccruedFees();
+        _assertQuoteTokenBalances();
+        _assertBaseTokenBalances();
+    }
+
     function test_givenPayout()
         external
         whenAuctionTypeIsBatch
@@ -400,6 +462,68 @@ contract ClaimBidTest is AuctionHouseTest {
         _auctionHouse.claimBid(_lotId, _bidId);
 
         // Check the accrued fees
+        _assertAccruedFees();
+        _assertQuoteTokenBalances();
+        _assertBaseTokenBalances();
+    }
+
+    function test_givenPayout_givenReferrerFeeIsChanged()
+        external
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenCuratorIsSet
+        givenLotIsPrefunded
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenLotIsCreated
+        givenLotHasStarted
+        givenReferrerFeeIsSet
+        givenProtocolFeeIsSet
+        givenUserHasQuoteTokenBalance(_BID_AMOUNT)
+        givenUserHasQuoteTokenAllowance(_BID_AMOUNT)
+        givenBid(_BID_AMOUNT, "")
+        givenPayoutIsSet(_REFERRER, _BID_AMOUNT, _BID_AMOUNT_OUT, _bidder)
+    {
+        // Change the referrer fee
+        _setReferrerFee(90);
+
+        // Call the function
+        vm.prank(_bidder);
+        _auctionHouse.claimBid(_lotId, _bidId);
+
+        // Check the accrued fees
+        // Assertions are not updated with the new fee, so the test will fail if the new fee is used by the AuctionHouse
+        _assertAccruedFees();
+        _assertQuoteTokenBalances();
+        _assertBaseTokenBalances();
+    }
+
+    function test_givenPayout_givenProtocolFeeIsChanged()
+        external
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenCuratorIsSet
+        givenLotIsPrefunded
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenLotIsCreated
+        givenLotHasStarted
+        givenReferrerFeeIsSet
+        givenProtocolFeeIsSet
+        givenUserHasQuoteTokenBalance(_BID_AMOUNT)
+        givenUserHasQuoteTokenAllowance(_BID_AMOUNT)
+        givenBid(_BID_AMOUNT, "")
+        givenPayoutIsSet(_REFERRER, _BID_AMOUNT, _BID_AMOUNT_OUT, _bidder)
+    {
+        // Change the protocol fee
+        _setProtocolFee(90);
+
+        // Call the function
+        vm.prank(_bidder);
+        _auctionHouse.claimBid(_lotId, _bidId);
+
+        // Check the accrued fees
+        // Assertions are not updated with the new fee, so the test will fail if the new fee is used by the AuctionHouse
         _assertAccruedFees();
         _assertQuoteTokenBalances();
         _assertBaseTokenBalances();
