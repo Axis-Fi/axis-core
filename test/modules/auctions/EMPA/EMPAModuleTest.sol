@@ -26,6 +26,10 @@ abstract contract EmpaModuleTest is Test, Permit2User {
     uint96 internal constant _MIN_PRICE = 1e18;
     uint24 internal constant _MIN_FILL_PERCENT = 25_000; // 25%
     uint24 internal constant _MIN_BID_PERCENT = 1000; // 1%
+    /// @dev Re-calculated by _updateMinBidSize()
+    uint96 internal _minBidSize;
+    /// @dev Re-calculated by _updateMinBidAmount()
+    uint96 internal _minBidAmount;
 
     uint256 internal constant _AUCTION_PRIVATE_KEY = 112_233_445_566;
     Point internal _auctionPublicKey;
@@ -71,6 +75,9 @@ abstract contract EmpaModuleTest is Test, Permit2User {
             capacity: _LOT_CAPACITY,
             implParams: abi.encode(_auctionDataParams)
         });
+
+        _updateMinBidSize();
+        _updateMinBidAmount();
     }
 
     // ======== Modifiers ======== //
@@ -81,6 +88,8 @@ abstract contract EmpaModuleTest is Test, Permit2User {
         _auctionDataParams.minPrice = _scaleQuoteTokenAmount(_MIN_PRICE);
 
         _auctionParams.implParams = abi.encode(_auctionDataParams);
+
+        _updateMinBidAmount();
     }
 
     modifier givenQuoteTokenDecimals(uint8 decimals_) {
@@ -92,6 +101,9 @@ abstract contract EmpaModuleTest is Test, Permit2User {
         _baseTokenDecimals = decimals_;
 
         _auctionParams.capacity = _scaleBaseTokenAmount(_LOT_CAPACITY);
+
+        _updateMinBidSize();
+        _updateMinBidAmount();
     }
 
     modifier givenBaseTokenDecimals(uint8 decimals_) {
@@ -101,6 +113,9 @@ abstract contract EmpaModuleTest is Test, Permit2User {
 
     modifier givenLotCapacity(uint96 capacity_) {
         _auctionParams.capacity = capacity_;
+
+        _updateMinBidSize();
+        _updateMinBidAmount();
         _;
     }
 
@@ -108,6 +123,8 @@ abstract contract EmpaModuleTest is Test, Permit2User {
         _auctionDataParams.minPrice = price_;
 
         _auctionParams.implParams = abi.encode(_auctionDataParams);
+
+        _updateMinBidAmount();
         _;
     }
 
@@ -128,10 +145,24 @@ abstract contract EmpaModuleTest is Test, Permit2User {
         _;
     }
 
+    function _updateMinBidSize() internal {
+        // Calculate the minimum bid size
+        _minBidSize = _auctionParams.capacity * _MIN_BID_PERCENT / 1e5;
+    }
+
+    function _updateMinBidAmount() internal {
+        // Calculate the minimum bid amount
+        _minBidAmount =
+            _mulDivDown(_minBidSize, _auctionDataParams.minPrice, uint96(10 ** _baseTokenDecimals));
+    }
+
     modifier givenMinimumBidPercentage(uint24 percentage_) {
         _auctionDataParams.minBidPercent = percentage_;
 
         _auctionParams.implParams = abi.encode(_auctionDataParams);
+
+        _updateMinBidSize();
+        _updateMinBidAmount();
         _;
     }
 
@@ -223,7 +254,7 @@ abstract contract EmpaModuleTest is Test, Permit2User {
     }
 
     modifier givenBidIsRefunded(uint64 bidId_) {
-        vm.prank(_BIDDER);
+        vm.prank(address(_auctionHouse));
         _module.refundBid(_lotId, bidId_, _BIDDER);
         _;
     }

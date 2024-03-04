@@ -16,7 +16,6 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
     // ========== ERRORS ========== //
     error Auction_InvalidKey();
     error Auction_WrongState(uint96 lotId);
-    error Bid_InvalidId(uint96 lotId, uint64 bidId);
     error Bid_WrongState(uint96 lotId, uint64 bidId);
     error NotPermitted(address caller);
 
@@ -734,10 +733,10 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
     /// @param      bidId_  The bid ID
     function _revertIfBidInvalid(uint96 lotId_, uint64 bidId_) internal view override {
         // Bid ID must be less than number of bids for lot
-        if (bidId_ >= auctionData[lotId_].nextBidId) revert Bid_InvalidId(lotId_, bidId_);
+        if (bidId_ >= auctionData[lotId_].nextBidId) revert Auction_InvalidBidId(lotId_, bidId_);
 
         // Bid should have a bidder
-        if (bids[lotId_][bidId_].bidder == address(0)) revert Bid_InvalidId(lotId_, bidId_);
+        if (bids[lotId_][bidId_].bidder == address(0)) revert Auction_InvalidBidId(lotId_, bidId_);
     }
 
     /// @notice     Checks that `caller_` is the bid owner

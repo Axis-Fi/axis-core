@@ -49,7 +49,7 @@ contract EmpaModuleClaimBidTest is EmpaModuleTest {
 
     function test_invalidBidId_reverts() external givenLotIsCreated {
         bytes memory err = abi.encodeWithSelector(
-            EncryptedMarginalPriceAuctionModule.Bid_InvalidId.selector, _lotId, _bidId
+            Auction.Auction_InvalidBidId.selector, _lotId, _bidId
         );
         vm.expectRevert(err);
 
