@@ -86,6 +86,7 @@ abstract contract AuctionHouseTest is Test, Permit2User {
     // Outputs
     uint96 internal _lotId = type(uint96).max; // Set to max to ensure it's not a valid lot id
     uint64 internal _bidId = type(uint64).max; // Set to max to ensure it's not a valid bid id
+    uint64[] internal _bidIds;
 
     function setUp() public {
         // Set block timestamp
@@ -352,7 +353,16 @@ abstract contract AuctionHouseTest is Test, Permit2User {
     }
 
     modifier givenBid(uint96 amount_, bytes memory auctionData_) {
-        _createBid(amount_, auctionData_);
+        uint64 bidId = _createBid(amount_, auctionData_);
+
+        _bidIds.push(bidId);
+        _;
+    }
+
+    modifier givenBidCreated(address bidder_, uint96 amount_, bytes memory auctionData_) {
+        uint64 bidId = _createBid(bidder_, amount_, auctionData_);
+
+        _bidIds.push(bidId);
         _;
     }
 
@@ -446,6 +456,17 @@ abstract contract AuctionHouseTest is Test, Permit2User {
 
     modifier givenAtomicAuctionRequiresPrefunding() {
         _atomicAuctionModule.setRequiredPrefunding(true);
+        _;
+    }
+
+    modifier givenBatchAuctionRequiresPrefunding() {
+        _batchAuctionModule.setRequiredPrefunding(true);
+        _;
+    }
+
+    modifier givenLotProceedsAreClaimed() {
+        vm.prank(_SELLER);
+        _auctionHouse.claimProceeds(_lotId);
         _;
     }
 

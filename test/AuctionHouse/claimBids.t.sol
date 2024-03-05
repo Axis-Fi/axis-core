@@ -12,7 +12,6 @@ contract ClaimBidsTest is AuctionHouseTest {
 
     address internal constant _BIDDER_TWO = address(0x20);
 
-    uint64[] internal _bidIds;
     Auction.BidClaim[] internal _bidClaims;
 
     uint256 internal _expectedBidderQuoteTokenBalance;
@@ -257,13 +256,6 @@ contract ClaimBidsTest is AuctionHouseTest {
     modifier givenBidderTwoHasQuoteTokenAllowance(uint256 amount_) {
         vm.prank(_BIDDER_TWO);
         _quoteToken.approve(address(_auctionHouse), amount_);
-        _;
-    }
-
-    modifier givenBidCreated(address bidder_, uint96 amount_, bytes memory auctionData_) {
-        uint64 bidId = _createBid(bidder_, amount_, auctionData_);
-
-        _bidIds.push(bidId);
         _;
     }
 
