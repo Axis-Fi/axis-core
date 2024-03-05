@@ -327,7 +327,11 @@ abstract contract AuctionHouseTest is Test, Permit2User {
         _;
     }
 
-    function _createBid(uint96 amount_, bytes memory auctionData_) internal returns (uint64) {
+    function _createBid(
+        address bidder_,
+        uint96 amount_,
+        bytes memory auctionData_
+    ) internal returns (uint64) {
         Router.BidParams memory bidParams = Router.BidParams({
             lotId: _lotId,
             referrer: _REFERRER,
@@ -337,10 +341,14 @@ abstract contract AuctionHouseTest is Test, Permit2User {
             permit2Data: _permit2Data
         });
 
-        vm.prank(_bidder);
+        vm.prank(bidder_);
         _bidId = _auctionHouse.bid(bidParams);
 
         return _bidId;
+    }
+
+    function _createBid(uint96 amount_, bytes memory auctionData_) internal returns (uint64) {
+        return _createBid(_bidder, amount_, auctionData_);
     }
 
     modifier givenBid(uint96 amount_, bytes memory auctionData_) {

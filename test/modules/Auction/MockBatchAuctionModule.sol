@@ -36,6 +36,8 @@ contract MockBatchAuctionModule is AuctionModule {
     mapping(uint96 lotId => mapping(uint64 => bool)) public bidCancelled;
     mapping(uint96 lotId => mapping(uint64 => bool)) public bidRefunded;
 
+    mapping(uint96 lotId => Settlement) public lotSettlements;
+
     mapping(uint96 => bool) public settled;
     bool public requiresPrefunding;
 
@@ -125,7 +127,13 @@ contract MockBatchAuctionModule is AuctionModule {
         // TODO implement?
     }
 
-    function settle(uint96 lotId_) external override returns (Settlement memory, bytes memory) {}
+    function setLotSettlement(uint96 lotId_, Settlement calldata settlement_) external {
+        lotSettlements[lotId_] = settlement_;
+    }
+
+    function settle(uint96 lotId_) external override returns (Settlement memory, bytes memory) {
+        return (lotSettlements[lotId_], "");
+    }
 
     function _settle(uint96 lotId_) internal override returns (Settlement memory, bytes memory) {}
 

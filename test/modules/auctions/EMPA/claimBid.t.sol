@@ -79,7 +79,11 @@ contract EmpaModuleClaimBidTest is EmpaModuleTest {
 
         // Check the bid status
         EncryptedMarginalPriceAuctionModule.Bid memory bid = _getBid(_lotId, _bidId);
-        assertEq(uint8(bid.status), uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed), "status");
+        assertEq(
+            uint8(bid.status),
+            uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed),
+            "status"
+        );
     }
 
     function test_bidAlreadyClaimed_reverts()

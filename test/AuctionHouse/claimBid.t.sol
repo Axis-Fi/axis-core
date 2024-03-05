@@ -6,6 +6,8 @@ import {Auctioneer} from "src/bases/Auctioneer.sol";
 
 import {AuctionHouseTest} from "test/AuctionHouse/AuctionHouseTest.sol";
 
+import {console2} from "forge-std/console2.sol";
+
 contract ClaimBidTest is AuctionHouseTest {
     uint96 internal constant _BID_AMOUNT = 1e18;
     uint96 internal constant _BID_AMOUNT_OUT = 2e18;
@@ -128,15 +130,20 @@ contract ClaimBidTest is AuctionHouseTest {
         _;
     }
 
-    function _calculateFees(address referrer_, uint256 amountIn_) internal {
+    function _calculateFees(
+        address referrer_,
+        uint256 amountIn_
+    ) internal view returns (uint256 toReferrer, uint256 toProtocol) {
         bool hasReferrer = referrer_ != address(0);
 
         uint256 referrerFee = uint256(amountIn_) * _referrerFeePercentActual / 1e5;
 
         // If the referrer is not set, the referrer fee is allocated to the protocol
-        _expectedReferrerFee = hasReferrer ? referrerFee : 0;
-        _expectedProtocolFee =
+        toReferrer = hasReferrer ? referrerFee : 0;
+        toProtocol =
             uint256(amountIn_) * _protocolFeePercentActual / 1e5 + (hasReferrer ? 0 : referrerFee);
+
+        return (toReferrer, toProtocol);
     }
 
     /// @dev    Assumes that any amounts are scaled to the current decimal scale
@@ -146,26 +153,17 @@ contract ClaimBidTest is AuctionHouseTest {
         _mockClaimBid(referrer_, amountIn_, 0, sender_);
 
         // Calculate fees
-        _calculateFees(referrer_, 0);
+        (uint256 toReferrer, uint256 toProtocol) = _calculateFees(referrer_, 0);
+        _expectedReferrerFee += toReferrer;
+        _expectedProtocolFee += toProtocol;
 
         // Set expected balances
-        _expectedAuctionHouseQuoteTokenBalance = _expectedReferrerFee + _expectedProtocolFee;
-        _expectedBidderQuoteTokenBalance = amountIn_;
-        assertEq(
-            _expectedAuctionHouseQuoteTokenBalance + _expectedBidderQuoteTokenBalance,
-            amountIn_,
-            "quote token balances"
-        );
+        _expectedAuctionHouseQuoteTokenBalance += 0; // No fees are collected
+        _expectedBidderQuoteTokenBalance = amountIn_; // Returned to the bidder
 
-        _expectedAuctionHouseBaseTokenBalance = scaledLotCapacity;
+        _expectedAuctionHouseBaseTokenBalance = 0; // Returned to the seller during settlement
         _expectedBidderBaseTokenBalance = 0;
         _expectedCuratorBaseTokenBalance = 0;
-        assertEq(
-            _expectedAuctionHouseBaseTokenBalance + _expectedBidderBaseTokenBalance
-                + _expectedCuratorBaseTokenBalance,
-            scaledLotCapacity,
-            "base token balances"
-        );
         _;
     }
 
@@ -181,26 +179,42 @@ contract ClaimBidTest is AuctionHouseTest {
         _mockClaimBid(referrer_, amountIn_, payout_, sender_);
 
         // Calculate fees
-        _calculateFees(referrer_, amountIn_);
+        (uint256 toReferrer, uint256 toProtocol) = _calculateFees(referrer_, amountIn_);
+        _expectedReferrerFee += toReferrer;
+        _expectedProtocolFee += toProtocol;
 
         // Set expected balances
-        _expectedAuctionHouseQuoteTokenBalance = amountIn_;
-        _expectedBidderQuoteTokenBalance = 0;
-        assertEq(
-            _expectedAuctionHouseQuoteTokenBalance + _expectedBidderQuoteTokenBalance,
-            amountIn_,
-            "quote token balances"
-        );
+        _expectedAuctionHouseQuoteTokenBalance += toReferrer + toProtocol; // Payment sent to the seller during settlement
+        _expectedBidderQuoteTokenBalance += 0;
 
-        _expectedAuctionHouseBaseTokenBalance = scaledLotCapacity - payout_;
+        _expectedAuctionHouseBaseTokenBalance = 0; // Returned to the seller during settlement
         _expectedBidderBaseTokenBalance = payout_;
         _expectedCuratorBaseTokenBalance = 0;
-        assertEq(
-            _expectedAuctionHouseBaseTokenBalance + _expectedBidderBaseTokenBalance
-                + _expectedCuratorBaseTokenBalance,
-            scaledLotCapacity,
-            "base token balances"
+        _;
+    }
+
+    modifier givenLotSettlementIsSuccessful() {
+        // Set the settlement data
+        _batchAuctionModule.setLotSettlement(
+            _lotId,
+            Auction.Settlement({
+                totalIn: _scaleQuoteTokenAmount(_BID_AMOUNT),
+                totalOut: _scaleBaseTokenAmount(_BID_AMOUNT_OUT),
+                pfBidder: address(0),
+                pfReferrer: address(0),
+                pfRefund: 0,
+                pfPayout: 0,
+                auctionOutput: ""
+            })
         );
+
+        _auctionHouse.settle(_lotId);
+        _;
+    }
+
+    modifier givenLotSettlementIsNotSuccessful() {
+        // Payout tokens will be returned to the seller
+        _auctionHouse.settle(_lotId);
         _;
     }
 
@@ -253,6 +267,8 @@ contract ClaimBidTest is AuctionHouseTest {
         givenUserHasQuoteTokenAllowance(_BID_AMOUNT)
         givenBid(_BID_AMOUNT, "")
         givenPayoutIsNotSet(_REFERRER, _BID_AMOUNT, _bidder)
+        givenLotIsConcluded
+        givenLotSettlementIsNotSuccessful
     {
         // Call the function
         vm.prank(_bidder);
@@ -282,6 +298,8 @@ contract ClaimBidTest is AuctionHouseTest {
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenBid(_scaleQuoteTokenAmount(_BID_AMOUNT), "")
         givenPayoutIsNotSet(_REFERRER, _scaleQuoteTokenAmount(_BID_AMOUNT), _bidder)
+        givenLotIsConcluded
+        givenLotSettlementIsNotSuccessful
     {
         // Call the function
         vm.prank(_bidder);
@@ -311,6 +329,8 @@ contract ClaimBidTest is AuctionHouseTest {
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenBid(_scaleQuoteTokenAmount(_BID_AMOUNT), "")
         givenPayoutIsNotSet(_REFERRER, _scaleQuoteTokenAmount(_BID_AMOUNT), _bidder)
+        givenLotIsConcluded
+        givenLotSettlementIsNotSuccessful
     {
         // Call the function
         vm.prank(_bidder);
@@ -338,6 +358,8 @@ contract ClaimBidTest is AuctionHouseTest {
         givenUserHasQuoteTokenAllowance(_BID_AMOUNT)
         givenBid(_BID_AMOUNT, "")
         givenPayoutIsNotSet(_REFERRER, _BID_AMOUNT, _bidder)
+        givenLotIsConcluded
+        givenLotSettlementIsNotSuccessful
     {
         // Change the referrer fee
         _setReferrerFee(90);
@@ -369,6 +391,8 @@ contract ClaimBidTest is AuctionHouseTest {
         givenUserHasQuoteTokenAllowance(_BID_AMOUNT)
         givenBid(_BID_AMOUNT, "")
         givenPayoutIsNotSet(_REFERRER, _BID_AMOUNT, _bidder)
+        givenLotIsConcluded
+        givenLotSettlementIsNotSuccessful
     {
         // Change the protocol fee
         _setProtocolFee(90);
@@ -400,6 +424,8 @@ contract ClaimBidTest is AuctionHouseTest {
         givenUserHasQuoteTokenAllowance(_BID_AMOUNT)
         givenBid(_BID_AMOUNT, "")
         givenPayoutIsNotSet(_REFERRER, _BID_AMOUNT, address(this))
+        givenLotIsConcluded
+        givenLotSettlementIsNotSuccessful
     {
         // Call the function
         vm.prank(address(this));
@@ -427,6 +453,8 @@ contract ClaimBidTest is AuctionHouseTest {
         givenUserHasQuoteTokenAllowance(_BID_AMOUNT)
         givenBid(_BID_AMOUNT, "")
         givenPayoutIsSet(_REFERRER, _BID_AMOUNT, _BID_AMOUNT_OUT, _bidder)
+        givenLotIsConcluded
+        givenLotSettlementIsSuccessful
     {
         // Call the function
         vm.prank(_bidder);
@@ -461,6 +489,8 @@ contract ClaimBidTest is AuctionHouseTest {
             _scaleBaseTokenAmount(_BID_AMOUNT_OUT),
             _bidder
         )
+        givenLotIsConcluded
+        givenLotSettlementIsSuccessful
     {
         // Call the function
         vm.prank(_bidder);
@@ -495,6 +525,8 @@ contract ClaimBidTest is AuctionHouseTest {
             _scaleBaseTokenAmount(_BID_AMOUNT_OUT),
             _bidder
         )
+        givenLotIsConcluded
+        givenLotSettlementIsSuccessful
     {
         // Call the function
         vm.prank(_bidder);
@@ -522,6 +554,8 @@ contract ClaimBidTest is AuctionHouseTest {
         givenUserHasQuoteTokenAllowance(_BID_AMOUNT)
         givenBid(_BID_AMOUNT, "")
         givenPayoutIsSet(_REFERRER, _BID_AMOUNT, _BID_AMOUNT_OUT, _bidder)
+        givenLotIsConcluded
+        givenLotSettlementIsSuccessful
     {
         // Change the referrer fee
         _setReferrerFee(90);
@@ -553,6 +587,8 @@ contract ClaimBidTest is AuctionHouseTest {
         givenUserHasQuoteTokenAllowance(_BID_AMOUNT)
         givenBid(_BID_AMOUNT, "")
         givenPayoutIsSet(_REFERRER, _BID_AMOUNT, _BID_AMOUNT_OUT, _bidder)
+        givenLotIsConcluded
+        givenLotSettlementIsSuccessful
     {
         // Change the protocol fee
         _setProtocolFee(90);
@@ -584,6 +620,8 @@ contract ClaimBidTest is AuctionHouseTest {
         givenUserHasQuoteTokenAllowance(_BID_AMOUNT)
         givenBid(_BID_AMOUNT, "")
         givenPayoutIsSet(_REFERRER, _BID_AMOUNT, _BID_AMOUNT_OUT, address(this))
+        givenLotIsConcluded
+        givenLotSettlementIsSuccessful
     {
         // Call the function
         vm.prank(address(this));
@@ -611,6 +649,8 @@ contract ClaimBidTest is AuctionHouseTest {
         givenUserHasQuoteTokenAllowance(_BID_AMOUNT)
         givenBid(_BID_AMOUNT, "")
         givenPayoutIsSet(address(0), _BID_AMOUNT, _BID_AMOUNT_OUT, _bidder)
+        givenLotIsConcluded
+        givenLotSettlementIsSuccessful
     {
         // Call the function
         vm.prank(_bidder);
@@ -645,6 +685,8 @@ contract ClaimBidTest is AuctionHouseTest {
             _scaleBaseTokenAmount(_BID_AMOUNT_OUT),
             _bidder
         )
+        givenLotIsConcluded
+        givenLotSettlementIsSuccessful
     {
         // Call the function
         vm.prank(_bidder);
@@ -679,6 +721,8 @@ contract ClaimBidTest is AuctionHouseTest {
             _scaleBaseTokenAmount(_BID_AMOUNT_OUT),
             _bidder
         )
+        givenLotIsConcluded
+        givenLotSettlementIsSuccessful
     {
         // Call the function
         vm.prank(_bidder);
@@ -705,6 +749,8 @@ contract ClaimBidTest is AuctionHouseTest {
         givenUserHasQuoteTokenAllowance(_BID_AMOUNT)
         givenBid(_BID_AMOUNT, "")
         givenPayoutIsSet(_REFERRER, _BID_AMOUNT, _BID_AMOUNT_OUT, _bidder)
+        givenLotIsConcluded
+        givenLotSettlementIsSuccessful
     {
         // Call the function
         vm.prank(_bidder);
@@ -738,6 +784,8 @@ contract ClaimBidTest is AuctionHouseTest {
             _scaleBaseTokenAmount(_BID_AMOUNT_OUT),
             _bidder
         )
+        givenLotIsConcluded
+        givenLotSettlementIsSuccessful
     {
         // Call the function
         vm.prank(_bidder);
@@ -771,6 +819,8 @@ contract ClaimBidTest is AuctionHouseTest {
             _scaleBaseTokenAmount(_BID_AMOUNT_OUT),
             _bidder
         )
+        givenLotIsConcluded
+        givenLotSettlementIsSuccessful
     {
         // Call the function
         vm.prank(_bidder);
@@ -797,6 +847,8 @@ contract ClaimBidTest is AuctionHouseTest {
         givenUserHasQuoteTokenAllowance(_BID_AMOUNT)
         givenBid(_BID_AMOUNT, "")
         givenPayoutIsSet(address(0), _BID_AMOUNT, _BID_AMOUNT_OUT, _bidder)
+        givenLotIsConcluded
+        givenLotSettlementIsSuccessful
     {
         // Call the function
         vm.prank(_bidder);
@@ -830,6 +882,8 @@ contract ClaimBidTest is AuctionHouseTest {
             _scaleBaseTokenAmount(_BID_AMOUNT_OUT),
             _bidder
         )
+        givenLotIsConcluded
+        givenLotSettlementIsSuccessful
     {
         // Call the function
         vm.prank(_bidder);
@@ -863,6 +917,8 @@ contract ClaimBidTest is AuctionHouseTest {
             _scaleBaseTokenAmount(_BID_AMOUNT_OUT),
             _bidder
         )
+        givenLotIsConcluded
+        givenLotSettlementIsSuccessful
     {
         // Call the function
         vm.prank(_bidder);
@@ -888,6 +944,8 @@ contract ClaimBidTest is AuctionHouseTest {
         givenUserHasQuoteTokenAllowance(_BID_AMOUNT)
         givenBid(_BID_AMOUNT, "")
         givenPayoutIsSet(address(0), _BID_AMOUNT, _BID_AMOUNT_OUT, _bidder)
+        givenLotIsConcluded
+        givenLotSettlementIsSuccessful
     {
         // Call the function
         vm.prank(_bidder);
@@ -920,6 +978,8 @@ contract ClaimBidTest is AuctionHouseTest {
             _scaleBaseTokenAmount(_BID_AMOUNT_OUT),
             _bidder
         )
+        givenLotIsConcluded
+        givenLotSettlementIsSuccessful
     {
         // Call the function
         vm.prank(_bidder);
@@ -952,6 +1012,8 @@ contract ClaimBidTest is AuctionHouseTest {
             _scaleBaseTokenAmount(_BID_AMOUNT_OUT),
             _bidder
         )
+        givenLotIsConcluded
+        givenLotSettlementIsSuccessful
     {
         // Call the function
         vm.prank(_bidder);
