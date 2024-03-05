@@ -34,7 +34,9 @@ abstract contract Auction {
     enum Status {
         Created,
         Decrypted,
-        Settled
+        Settled,
+        Claimed // TODO check if this breaks tests
+
     }
 
     /// @notice     Core data for an auction lot

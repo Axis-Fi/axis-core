@@ -521,6 +521,7 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
             // Collect the payout from the seller
             if (routing.prefunding == 0) {
                 routing.prefunding = capacity + curatorFeePayout;
+                // TODO transfer only what's needed
                 _collectPayout(lotId_, settlement.totalIn, capacity + curatorFeePayout, routing);
             }
 
@@ -571,7 +572,7 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
             }
 
             // Send payment in bulk to seller
-            _sendPayment(routing.seller, totalInLessFees, routing.quoteToken, routing.hooks);
+            // _sendPayment(routing.seller, totalInLessFees, routing.quoteToken, routing.hooks);
 
             // If capacity expended is less than the total capacity, refund the remaining capacity to the seller and proportionally reduce the curator fee
             if (settlement.totalOut < capacity) {
@@ -589,7 +590,7 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
                 }
 
                 // Transfer the remaining capacity to the seller
-                Transfer.transfer(routing.baseToken, routing.seller, capacityRefund, false);
+                // Transfer.transfer(routing.baseToken, routing.seller, capacityRefund, false);
             }
 
             // Reduce prefunding by curator fee and send, if applicable
@@ -600,28 +601,49 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
                 _sendPayout(lotId_, feeData.curator, curatorFeePayout, routing, auctionOutput);
             }
         } else {
-            if (routing.prefunding > 0) {
-                // Auction did not settle, refund the capacity to the seller
-                FeeData storage feeData = lotFees[lotId_];
-                uint256 curatorFeePayout =
-                    _calculatePayoutFees(feeData.curated, feeData.curatorFee, capacity);
+            // if (routing.prefunding > 0) {
+            //     // Auction did not settle, refund the capacity to the seller
+            //     FeeData storage feeData = lotFees[lotId_];
+            //     uint256 curatorFeePayout =
+            //         _calculatePayoutFees(feeData.curated, feeData.curatorFee, capacity);
 
-                uint256 refundAmount = capacity + curatorFeePayout; // can add curator fee without checking since it will be zero if not curated
+            //     uint256 refundAmount = capacity + curatorFeePayout; // can add curator fee without checking since it will be zero if not curated
 
-                // Reduce the prefunding amount
-                unchecked {
-                    routing.prefunding -= refundAmount;
-                }
+            //     // Reduce the prefunding amount
+            //     unchecked {
+            //         routing.prefunding -= refundAmount;
+            //     }
 
-                // Refund the capacity to the seller, no fees are taken
-                Transfer.transfer(
-                    lotRouting[lotId_].baseToken, lotRouting[lotId_].seller, refundAmount, false
-                );
-            }
+            //     // Refund the capacity to the seller, no fees are taken
+            //     Transfer.transfer(
+            //         lotRouting[lotId_].baseToken, lotRouting[lotId_].seller, refundAmount, false
+            //     );
+            // }
         }
 
         // Emit event
         emit Settle(lotId_);
+    }
+
+    /// @notice     Claims the proceeds of a settled auction
+    /// @dev        This function handles the following:
+    ///             1. Validates the lot
+    ///             2. Sends the proceeds to the seller
+    ///             3. If the auction lot is pre-funded, any unused capacity and curator fees are refunded to the seller
+    ///             4. Calls the onClaimProceeds callback on the hooks contract (if provided)
+    ///
+    ///             This function reverts if:
+    ///             - the lot ID is invalid
+    ///             - the lot is not settled
+    ///             - the proceeds have already been claimed
+    function claimProceeds(uint96 lotId_) external nonReentrant {
+        // Validation
+        _isLotValid(lotId_);
+
+        // Call auction module to validate and update data
+
+        // Load routing data for the lot
+        Routing storage routing = lotRouting[lotId_];
     }
 
     // ========== CURATION ========== //
