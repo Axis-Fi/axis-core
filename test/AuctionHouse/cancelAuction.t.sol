@@ -21,11 +21,12 @@ contract CancelAuctionTest is AuctionHouseTest {
 
     // cancel
     // [X] reverts if not the seller
-    // [X] reverts if lot is not active
     // [X] reverts if lot id is invalid
     // [X] reverts if the lot is already cancelled
     // [X] given the auction is not prefunded
     //  [X] it sets the lot to inactive on the AuctionModule
+    // [X] given the lot has not started
+    //  [X] it succeeds
 
     function testReverts_whenNotSeller()
         external
@@ -62,7 +63,7 @@ contract CancelAuctionTest is AuctionHouseTest {
         _auctionHouse.cancel(_lotId);
     }
 
-    function testReverts_whenLotIsInactive()
+    function testReverts_whenLotIsConcluded()
         external
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
@@ -90,6 +91,24 @@ contract CancelAuctionTest is AuctionHouseTest {
         // Call the function
         vm.prank(_SELLER);
         _auctionHouse.cancel(_lotId);
+    }
+
+    function test_whenBeforeStart()
+        external
+        whenAuctionTypeIsAtomic
+        whenAtomicAuctionModuleIsInstalled
+        givenLotIsCreated
+    {
+        // Cancel the lot
+        vm.prank(_SELLER);
+        _auctionHouse.cancel(_lotId);
+
+        // Get lot data from the module
+        (, uint48 lotConclusion,,,, uint256 lotCapacity,,) = _atomicAuctionModule.lotData(_lotId);
+        assertEq(lotConclusion, uint48(block.timestamp));
+        assertEq(lotCapacity, 0);
+
+        assertFalse(_atomicAuctionModule.isLive(_lotId), "after cancellation: isLive mismatch");
     }
 
     function test_success()
