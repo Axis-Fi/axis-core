@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.19;
 
+import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
+
 import {Module} from "src/modules/Modules.sol";
 import {Auction} from "src/modules/Auction.sol";
 import {EncryptedMarginalPriceAuctionModule} from "src/modules/auctions/EMPAM.sol";
@@ -357,6 +359,12 @@ contract EmpaModuleClaimBidTest is EmpaModuleTest {
         _decryptLot();
         _settleLot();
 
+        // Calculate the expected amounts
+        uint256 marginalPrice =
+            FixedPointMathLib.mulDivUp(uint256(bidAmountIn), _BASE_SCALE, _BID_AMOUNT_OUT);
+        uint256 expectedAmountOut =
+            FixedPointMathLib.mulDivDown(bidAmountIn, _BASE_SCALE, marginalPrice);
+
         // Call the function
         vm.prank(address(_auctionHouse));
         (Auction.BidClaim memory bidClaim,) = _module.claimBid(_lotId, _bidId, _BIDDER);
@@ -365,7 +373,7 @@ contract EmpaModuleClaimBidTest is EmpaModuleTest {
         assertEq(bidClaim.bidder, _BIDDER);
         assertEq(bidClaim.referrer, _REFERRER);
         assertEq(bidClaim.paid, bidAmountIn, "paid");
-        assertEq(bidClaim.payout, _BID_AMOUNT_OUT, "payout");
+        assertEq(bidClaim.payout, expectedAmountOut, "payout");
 
         // Check the bid status
         EncryptedMarginalPriceAuctionModule.Bid memory bid = _getBid(_lotId, _bidId);
@@ -396,6 +404,12 @@ contract EmpaModuleClaimBidTest is EmpaModuleTest {
         _decryptLot();
         _settleLot();
 
+        // Calculate the expected amounts
+        uint256 marginalPrice =
+            FixedPointMathLib.mulDivUp(uint256(bidAmountIn), _BASE_SCALE, bidAmountOut);
+        uint256 expectedAmountOut =
+            FixedPointMathLib.mulDivDown(bidAmountIn, _BASE_SCALE, marginalPrice);
+
         // Call the function
         vm.prank(address(_auctionHouse));
         (Auction.BidClaim memory bidClaim,) = _module.claimBid(_lotId, _bidId, _BIDDER);
@@ -404,7 +418,7 @@ contract EmpaModuleClaimBidTest is EmpaModuleTest {
         assertEq(bidClaim.bidder, _BIDDER);
         assertEq(bidClaim.referrer, _REFERRER);
         assertEq(bidClaim.paid, bidAmountIn, "paid");
-        assertEq(bidClaim.payout, bidAmountOut, "payout");
+        assertEq(bidClaim.payout, expectedAmountOut, "payout");
 
         // Check the bid status
         EncryptedMarginalPriceAuctionModule.Bid memory bid = _getBid(_lotId, _bidId);
