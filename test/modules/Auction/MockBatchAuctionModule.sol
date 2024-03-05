@@ -127,6 +127,11 @@ contract MockBatchAuctionModule is AuctionModule {
         // TODO implement?
     }
 
+    function _claimBids(
+        uint96 lotId_,
+        uint64[] calldata bidIds_
+    ) internal virtual override returns (BidClaim[] memory bidClaims, bytes memory auctionOutput) {}
+
     function setLotSettlement(uint96 lotId_, Settlement calldata settlement_) external {
         lotSettlements[lotId_] = settlement_;
     }

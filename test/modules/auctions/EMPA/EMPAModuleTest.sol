@@ -47,6 +47,8 @@ abstract contract EmpaModuleTest is Test, Permit2User {
     EncryptedMarginalPriceAuctionModule.AuctionDataParams internal _auctionDataParams;
     uint96 internal _lotId = type(uint96).max;
     uint64 internal _bidId = type(uint64).max;
+    uint64[] internal _bidIds;
+
     uint8 internal _quoteTokenDecimals = 18;
     uint8 internal _baseTokenDecimals = 18;
 
@@ -233,19 +235,38 @@ abstract contract EmpaModuleTest is Test, Permit2User {
     }
 
     function _createBidData(
+        address bidder_,
         uint96 amountIn_,
         uint96 amountOut_
     ) internal view returns (bytes memory) {
-        uint256 encryptedAmountOut = _encryptBid(_lotId, _BIDDER, amountIn_, amountOut_);
+        uint256 encryptedAmountOut = _encryptBid(_lotId, bidder_, amountIn_, amountOut_);
 
         return abi.encode(encryptedAmountOut, _bidPublicKey);
     }
 
-    function _createBid(uint96 amountIn_, uint96 amountOut_) internal returns (uint64 bidId) {
-        bytes memory bidData = _createBidData(amountIn_, amountOut_);
+    function _createBidData(
+        uint96 amountIn_,
+        uint96 amountOut_
+    ) internal view returns (bytes memory) {
+        return _createBidData(_BIDDER, amountIn_, amountOut_);
+    }
+
+    function _createBid(
+        address bidder_,
+        uint96 amountIn_,
+        uint96 amountOut_
+    ) internal returns (uint64 bidId) {
+        bytes memory bidData = _createBidData(bidder_, amountIn_, amountOut_);
 
         vm.prank(address(_auctionHouse));
-        return _module.bid(_lotId, _BIDDER, _REFERRER, amountIn_, bidData);
+        bidId = _module.bid(_lotId, bidder_, _REFERRER, amountIn_, bidData);
+        _bidIds.push(bidId);
+
+        return bidId;
+    }
+
+    function _createBid(uint96 amountIn_, uint96 amountOut_) internal returns (uint64 bidId) {
+        return _createBid(_BIDDER, amountIn_, amountOut_);
     }
 
     modifier givenBidIsCreated(uint96 amountIn_, uint96 amountOut_) {

@@ -99,6 +99,11 @@ contract MockAtomicAuctionModule is AuctionModule {
         revert Auction_NotImplemented();
     }
 
+    function _claimBids(
+        uint96 lotId_,
+        uint64[] calldata bidIds_
+    ) internal virtual override returns (BidClaim[] memory bidClaims, bytes memory auctionOutput) {}
+
     function settle(uint96 lotId_) external override returns (Settlement memory, bytes memory) {}
 
     function _settle(uint96) internal pure override returns (Settlement memory, bytes memory) {

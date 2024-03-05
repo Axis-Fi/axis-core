@@ -352,6 +352,33 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         return (bidClaim, auctionOutput_);
     }
 
+    /// @inheritdoc AuctionModule
+    /// @dev        This function performs the following:
+    ///             - Validates inputs
+    ///             - Marks the bid as claimed
+    ///             - Calculates the paid and payout amounts
+    ///
+    ///             This function assumes:
+    ///             - The lot ID has been validated
+    ///             - The caller has been authorized
+    ///             - The auction is not settled
+    function _claimBids(
+        uint96 lotId_,
+        uint64[] calldata bidIds_
+    ) internal override returns (BidClaim[] memory bidClaims, bytes memory auctionOutput_) {
+        uint256 len = bidIds_.length;
+        bidClaims = new BidClaim[](len);
+        for (uint256 i; i < len; i++) {
+            // Validate
+            _revertIfBidInvalid(lotId_, bidIds_[i]);
+            _revertIfBidClaimed(lotId_, bidIds_[i]);
+
+            (bidClaims[i],) = _claimBid(lotId_, bidIds_[i]);
+        }
+
+        return (bidClaims, auctionOutput_);
+    }
+
     // ========== DECRYPTION ========== //
 
     /// @notice         Submits the private key for the auction lot and decrypts an initial number of bids

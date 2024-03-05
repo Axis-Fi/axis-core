@@ -173,7 +173,21 @@ abstract contract Auction {
         uint96 lotId_,
         uint64 bidId_,
         address caller_
-    ) external virtual returns (BidClaim memory bidClaim, bytes memory auctionOutput);
+    ) external virtual returns (BidClaim memory bidClaim, bytes memory auctionOutput); // TODO consider whether to remove the module-level claimBid function, and have AuctionHouse call claimBids instead
+
+    /// @notice     Claim multiple bids
+    /// @dev        The implementing function should handle the following:
+    ///             - Validate the bid parameters
+    ///             - Update the bid data
+    ///
+    /// @param      lotId_          The lot id
+    /// @param      bidIds_         The bid ids
+    /// @return     bidClaims       The bid claim data
+    /// @return     auctionOutput   The auction-specific output
+    function claimBids(
+        uint96 lotId_,
+        uint64[] calldata bidIds_
+    ) external virtual returns (BidClaim[] memory bidClaims, bytes memory auctionOutput);
 
     /// @notice     Settle a batch auction lot with on-chain storage and settlement
     /// @dev        The implementing function should handle the following:
@@ -543,6 +557,49 @@ abstract contract AuctionModule is Auction, Module {
         uint96 lotId_,
         uint64 bidId_
     ) internal virtual returns (BidClaim memory bidClaim, bytes memory auctionOutput);
+
+    /// @inheritdoc Auction
+    /// @dev        Implements a basic claimBids function that:
+    ///             - Calls implementation-specific validation logic
+    ///             - Calls the auction module
+    ///
+    ///             This function reverts if:
+    ///             - the lot id is invalid
+    ///             - the lot is not settled
+    ///             - the caller is not an internal module
+    ///
+    ///             Inheriting contracts should override _claimBids to implement auction-specific logic, such as:
+    ///             - Validating the auction-specific parameters
+    ///             - Validating the validity and status of each bid
+    ///             - Updating the bid data
+    function claimBids(
+        uint96 lotId_,
+        uint64[] calldata bidIds_
+    )
+        external
+        override
+        onlyInternal
+        returns (BidClaim[] memory bidClaims, bytes memory auctionOutput)
+    {
+        // Standard validation
+        _revertIfLotInvalid(lotId_);
+        _revertIfLotNotSettled(lotId_);
+
+        // Call implementation-specific logic
+        return _claimBids(lotId_, bidIds_);
+    }
+
+    /// @notice     Implementation-specific bid claim logic
+    /// @dev        Auction modules should override this to perform any additional logic
+    ///
+    /// @param      lotId_          The lot ID
+    /// @param      bidIds_         The bid IDs
+    /// @return     bidClaims       The bid claim data
+    /// @return     auctionOutput   The auction-specific output
+    function _claimBids(
+        uint96 lotId_,
+        uint64[] calldata bidIds_
+    ) internal virtual returns (BidClaim[] memory bidClaims, bytes memory auctionOutput);
 
     /// @inheritdoc Auction
     /// @dev        Implements a basic settle function that:

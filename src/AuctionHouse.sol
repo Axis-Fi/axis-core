@@ -106,6 +106,16 @@ abstract contract Router {
     /// @param      bidId_          Bid ID
     function claimBid(uint96 lotId_, uint64 bidId_) external virtual;
 
+    /// @notice     Claim bid payouts and/or refunds after a batch auction has settled
+    /// @dev        The implementing function must perform the following:
+    ///             1. Validate the lot ID
+    ///             2. Pass the request to the auction module to validate and update bid data
+    ///             3. Send the refund and/or payout to the bidder
+    ///
+    /// @param      lotId_          Lot ID
+    /// @param      bidIds_         Bid IDs
+    function claimBids(uint96 lotId_, uint64[] calldata bidIds_) external virtual;
+
     /// @notice     Settle a batch auction
     /// @notice     This function is used for versions with on-chain storage and bids and local settlement
     /// @dev        The implementing function must perform the following:
@@ -402,6 +412,52 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
         } else {
             // Refund the paid amount to the bidder
             Transfer.transfer(routing.quoteToken, bidClaim.bidder, bidClaim.paid, false);
+        }
+    }
+
+    /// @inheritdoc Router
+    function claimBids(uint96 lotId_, uint64[] calldata bidIds_) external override nonReentrant {
+        _isLotValid(lotId_);
+
+        // Claim the bids on the auction module
+        // The auction module is responsible for validating the bid and authorizing the caller
+        (Auction.BidClaim[] memory bidClaims, bytes memory auctionOutput) =
+            getModuleForId(lotId_).claimBids(lotId_, bidIds_);
+
+        // Load routing data for the lot
+        Routing storage routing = lotRouting[lotId_];
+
+        // Load fee data
+        FeeData storage feeData = lotFees[lotId_];
+
+        // Iterate through the bid claims and handle each one
+        for (uint256 i = 0; i < bidClaims.length; i++) {
+            Auction.BidClaim memory bidClaim = bidClaims[i];
+
+            // If payout is greater than zero, then the bid was filled.
+            // Otherwise, it was not and the bidder is refunded the paid amount.
+            if (bidClaim.payout > 0) {
+                // Allocate quote and protocol fees for bid
+                _allocateQuoteFees(
+                    feeData.protocolFee,
+                    feeData.referrerFee,
+                    bidClaim.referrer,
+                    routing.seller,
+                    routing.quoteToken,
+                    bidClaim.paid
+                );
+
+                // Reduce prefunding by the payout amount
+                unchecked {
+                    routing.prefunding -= bidClaim.payout;
+                }
+
+                // Send the payout to the bidder
+                _sendPayout(lotId_, bidClaim.bidder, bidClaim.payout, routing, auctionOutput);
+            } else {
+                // Refund the paid amount to the bidder
+                Transfer.transfer(routing.quoteToken, bidClaim.bidder, bidClaim.paid, false);
+            }
         }
     }
 
