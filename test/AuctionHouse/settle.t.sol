@@ -205,6 +205,8 @@ contract SettleTest is AuctionHouseTest {
         _expectedProtocolFeesAllocated = 0; // Will be allocated at claim time
         _expectedReferrerFeesAllocated = 0; // Will be allocated at claim time
 
+        bool isPrefunded = _batchAuctionModule.requiresPrefunding();
+
         // Set up expected values
         // Quote token
         _expectedSellerQuoteTokenBalance = 0; // To be claimed by seller
@@ -218,10 +220,11 @@ contract SettleTest is AuctionHouseTest {
         );
 
         // Base token
-        _expectedSellerBaseTokenBalance = 0; // To be claimed by seller
+        _expectedSellerBaseTokenBalance =
+            isPrefunded ? 0 : scaledLotCapacity + prefundedCuratorFees - totalOut - totalCuratorFees; // To be claimed by seller
         _expectedBidderBaseTokenBalance = 0; // To be claimed by bidder
         _expectedAuctionHouseBaseTokenBalance =
-            scaledLotCapacity + prefundedCuratorFees - totalCuratorFees;
+            isPrefunded ? scaledLotCapacity + prefundedCuratorFees - totalCuratorFees : totalOut;
         _expectedCuratorBaseTokenBalance = totalCuratorFees;
         assertEq(
             _expectedSellerBaseTokenBalance + _expectedBidderBaseTokenBalance
@@ -259,6 +262,8 @@ contract SettleTest is AuctionHouseTest {
             _curatorApproved ? _scaleBaseTokenAmount(_curatorMaxPotentialFee) : 0;
         _expectedProtocolFeesAllocated = 0; // Will be allocated at claim time
         _expectedReferrerFeesAllocated = 0; // Will be allocated at claim time
+
+        bool isPrefunded = _batchAuctionModule.requiresPrefunding();
 
         // Set up expected values
         // Quote token
@@ -314,6 +319,8 @@ contract SettleTest is AuctionHouseTest {
         _expectedProtocolFeesAllocated = 0;
         _expectedReferrerFeesAllocated = 0;
 
+        bool isPrefunded = _batchAuctionModule.requiresPrefunding();
+
         // Set up expected values
         // Quote token
         _expectedSellerQuoteTokenBalance = 0; // To be claimed by seller
@@ -327,9 +334,10 @@ contract SettleTest is AuctionHouseTest {
         );
 
         // Base token
-        _expectedSellerBaseTokenBalance = 0;
+        _expectedSellerBaseTokenBalance = isPrefunded ? 0 : scaledLotCapacity + prefundedCuratorFees;
         _expectedBidderBaseTokenBalance = 0;
-        _expectedAuctionHouseBaseTokenBalance = scaledLotCapacity + prefundedCuratorFees; // To be claimed by seller
+        _expectedAuctionHouseBaseTokenBalance =
+            isPrefunded ? scaledLotCapacity + prefundedCuratorFees : 0; // To be claimed by seller
         _expectedCuratorBaseTokenBalance = 0;
         assertEq(
             _expectedSellerBaseTokenBalance + _expectedBidderBaseTokenBalance
