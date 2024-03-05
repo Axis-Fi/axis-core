@@ -19,7 +19,7 @@ contract EmpaModuleClaimBidTest is EmpaModuleTest {
     // [X] when the bid id is invalid
     //  [X] it reverts
     // [X] when the bidder is not the the bid owner
-    //  [X] it reverts
+    //  [X] it returns the payout and updates the bid status
     // [X] given the bid has already been claimed
     //  [X] it reverts
     // [X] given the lot is not settled
@@ -57,24 +57,29 @@ contract EmpaModuleClaimBidTest is EmpaModuleTest {
         _module.claimBid(_lotId, _bidId, _BIDDER);
     }
 
-    function test_bidderIsNotOwner_reverts()
+    function test_bidderIsNotOwner()
         external
         givenLotIsCreated
         givenLotHasStarted
-        givenBidIsCreated(_BID_AMOUNT, _BID_AMOUNT_OUT)
+        givenBidIsCreated(_BID_AMOUNT_UNSUCCESSFUL, _BID_AMOUNT_OUT_UNSUCCESSFUL)
         givenLotHasConcluded
         givenPrivateKeyIsSubmitted
         givenLotIsDecrypted
         givenLotIsSettled
     {
-        bytes memory err = abi.encodeWithSelector(
-            EncryptedMarginalPriceAuctionModule.NotPermitted.selector, address(this)
-        );
-        vm.expectRevert(err);
-
         // Call the function
         vm.prank(address(_auctionHouse));
-        _module.claimBid(_lotId, _bidId, address(this));
+        (Auction.BidClaim memory bidClaim,) = _module.claimBid(_lotId, _bidId, address(this));
+
+        // Check the result
+        assertEq(bidClaim.bidder, _BIDDER, "bidder");
+        assertEq(bidClaim.referrer, _REFERRER, "referrer");
+        assertEq(bidClaim.paid, _BID_AMOUNT_UNSUCCESSFUL, "paid");
+        assertEq(bidClaim.payout, 0, "payout");
+
+        // Check the bid status
+        EncryptedMarginalPriceAuctionModule.Bid memory bid = _getBid(_lotId, _bidId);
+        assertEq(uint8(bid.status), uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed), "status");
     }
 
     function test_bidAlreadyClaimed_reverts()
@@ -146,13 +151,13 @@ contract EmpaModuleClaimBidTest is EmpaModuleTest {
     {
         // Call the function
         vm.prank(address(_auctionHouse));
-        (address referrer_, uint256 paid_, uint256 payout_,) =
-            _module.claimBid(_lotId, _bidId, _BIDDER);
+        (Auction.BidClaim memory bidClaim,) = _module.claimBid(_lotId, _bidId, _BIDDER);
 
         // Check the result
-        assertEq(referrer_, _REFERRER);
-        assertEq(paid_, _BID_AMOUNT_UNSUCCESSFUL);
-        assertEq(payout_, 0);
+        assertEq(bidClaim.bidder, _BIDDER);
+        assertEq(bidClaim.referrer, _REFERRER);
+        assertEq(bidClaim.paid, _BID_AMOUNT_UNSUCCESSFUL);
+        assertEq(bidClaim.payout, 0);
 
         // Check the bid status
         EncryptedMarginalPriceAuctionModule.Bid memory bid = _getBid(_lotId, _bidId);
@@ -179,13 +184,13 @@ contract EmpaModuleClaimBidTest is EmpaModuleTest {
 
         // Call the function
         vm.prank(address(_auctionHouse));
-        (address referrer_, uint256 paid_, uint256 payout_,) =
-            _module.claimBid(_lotId, _bidId, _BIDDER);
+        (Auction.BidClaim memory bidClaim,) = _module.claimBid(_lotId, _bidId, _BIDDER);
 
         // Check the result
-        assertEq(referrer_, _REFERRER);
-        assertEq(paid_, bidAmountIn);
-        assertEq(payout_, 0);
+        assertEq(bidClaim.bidder, _BIDDER);
+        assertEq(bidClaim.referrer, _REFERRER);
+        assertEq(bidClaim.paid, bidAmountIn);
+        assertEq(bidClaim.payout, 0);
 
         // Check the bid status
         EncryptedMarginalPriceAuctionModule.Bid memory bid = _getBid(_lotId, _bidId);
@@ -209,13 +214,13 @@ contract EmpaModuleClaimBidTest is EmpaModuleTest {
     {
         // Call the function
         vm.prank(address(_auctionHouse));
-        (address referrer_, uint256 paid_, uint256 payout_,) =
-            _module.claimBid(_lotId, _bidId, _BIDDER);
+        (Auction.BidClaim memory bidClaim,) = _module.claimBid(_lotId, _bidId, _BIDDER);
 
         // Check the result
-        assertEq(referrer_, _REFERRER);
-        assertEq(paid_, _scaleQuoteTokenAmount(_BID_AMOUNT_UNSUCCESSFUL));
-        assertEq(payout_, 0);
+        assertEq(bidClaim.bidder, _BIDDER);
+        assertEq(bidClaim.referrer, _REFERRER);
+        assertEq(bidClaim.paid, _scaleQuoteTokenAmount(_BID_AMOUNT_UNSUCCESSFUL));
+        assertEq(bidClaim.payout, 0);
 
         // Check the bid status
         EncryptedMarginalPriceAuctionModule.Bid memory bid = _getBid(_lotId, _bidId);
@@ -239,13 +244,13 @@ contract EmpaModuleClaimBidTest is EmpaModuleTest {
     {
         // Call the function
         vm.prank(address(_auctionHouse));
-        (address referrer_, uint256 paid_, uint256 payout_,) =
-            _module.claimBid(_lotId, _bidId, _BIDDER);
+        (Auction.BidClaim memory bidClaim,) = _module.claimBid(_lotId, _bidId, _BIDDER);
 
         // Check the result
-        assertEq(referrer_, _REFERRER);
-        assertEq(paid_, _scaleQuoteTokenAmount(_BID_AMOUNT_UNSUCCESSFUL));
-        assertEq(payout_, 0);
+        assertEq(bidClaim.bidder, _BIDDER);
+        assertEq(bidClaim.referrer, _REFERRER);
+        assertEq(bidClaim.paid, _scaleQuoteTokenAmount(_BID_AMOUNT_UNSUCCESSFUL));
+        assertEq(bidClaim.payout, 0);
 
         // Check the bid status
         EncryptedMarginalPriceAuctionModule.Bid memory bid = _getBid(_lotId, _bidId);
@@ -264,13 +269,13 @@ contract EmpaModuleClaimBidTest is EmpaModuleTest {
     {
         // Call the function
         vm.prank(address(_auctionHouse));
-        (address referrer_, uint256 paid_, uint256 payout_,) =
-            _module.claimBid(_lotId, _bidId, _BIDDER);
+        (Auction.BidClaim memory bidClaim,) = _module.claimBid(_lotId, _bidId, _BIDDER);
 
         // Check the result
-        assertEq(referrer_, _REFERRER);
-        assertEq(paid_, _BID_AMOUNT);
-        assertEq(payout_, _BID_AMOUNT_OUT);
+        assertEq(bidClaim.bidder, _BIDDER);
+        assertEq(bidClaim.referrer, _REFERRER);
+        assertEq(bidClaim.paid, _BID_AMOUNT);
+        assertEq(bidClaim.payout, _BID_AMOUNT_OUT);
 
         // Check the bid status
         EncryptedMarginalPriceAuctionModule.Bid memory bid = _getBid(_lotId, _bidId);
@@ -291,13 +296,13 @@ contract EmpaModuleClaimBidTest is EmpaModuleTest {
     {
         // Call the function
         vm.prank(address(_auctionHouse));
-        (address referrer_, uint256 paid_, uint256 payout_,) =
-            _module.claimBid(_lotId, _bidId, _BIDDER);
+        (Auction.BidClaim memory bidClaim,) = _module.claimBid(_lotId, _bidId, _BIDDER);
 
         // Check the result
-        assertEq(referrer_, _REFERRER);
-        assertEq(paid_, _scaleQuoteTokenAmount(_BID_AMOUNT));
-        assertEq(payout_, _scaleBaseTokenAmount(_BID_AMOUNT_OUT));
+        assertEq(bidClaim.bidder, _BIDDER);
+        assertEq(bidClaim.referrer, _REFERRER);
+        assertEq(bidClaim.paid, _scaleQuoteTokenAmount(_BID_AMOUNT));
+        assertEq(bidClaim.payout, _scaleBaseTokenAmount(_BID_AMOUNT_OUT));
 
         // Check the bid status
         EncryptedMarginalPriceAuctionModule.Bid memory bid = _getBid(_lotId, _bidId);
@@ -318,13 +323,13 @@ contract EmpaModuleClaimBidTest is EmpaModuleTest {
     {
         // Call the function
         vm.prank(address(_auctionHouse));
-        (address referrer_, uint256 paid_, uint256 payout_,) =
-            _module.claimBid(_lotId, _bidId, _BIDDER);
+        (Auction.BidClaim memory bidClaim,) = _module.claimBid(_lotId, _bidId, _BIDDER);
 
         // Check the result
-        assertEq(referrer_, _REFERRER);
-        assertEq(paid_, _scaleQuoteTokenAmount(_BID_AMOUNT));
-        assertEq(payout_, _scaleBaseTokenAmount(_BID_AMOUNT_OUT));
+        assertEq(bidClaim.bidder, _BIDDER);
+        assertEq(bidClaim.referrer, _REFERRER);
+        assertEq(bidClaim.paid, _scaleQuoteTokenAmount(_BID_AMOUNT));
+        assertEq(bidClaim.payout, _scaleBaseTokenAmount(_BID_AMOUNT_OUT));
 
         // Check the bid status
         EncryptedMarginalPriceAuctionModule.Bid memory bid = _getBid(_lotId, _bidId);
@@ -350,13 +355,13 @@ contract EmpaModuleClaimBidTest is EmpaModuleTest {
 
         // Call the function
         vm.prank(address(_auctionHouse));
-        (address referrer_, uint256 paid_, uint256 payout_,) =
-            _module.claimBid(_lotId, _bidId, _BIDDER);
+        (Auction.BidClaim memory bidClaim,) = _module.claimBid(_lotId, _bidId, _BIDDER);
 
         // Check the result
-        assertEq(referrer_, _REFERRER);
-        assertEq(paid_, bidAmountIn, "paid");
-        assertEq(payout_, _BID_AMOUNT_OUT, "payout");
+        assertEq(bidClaim.bidder, _BIDDER);
+        assertEq(bidClaim.referrer, _REFERRER);
+        assertEq(bidClaim.paid, bidAmountIn, "paid");
+        assertEq(bidClaim.payout, _BID_AMOUNT_OUT, "payout");
 
         // Check the bid status
         EncryptedMarginalPriceAuctionModule.Bid memory bid = _getBid(_lotId, _bidId);
@@ -389,13 +394,13 @@ contract EmpaModuleClaimBidTest is EmpaModuleTest {
 
         // Call the function
         vm.prank(address(_auctionHouse));
-        (address referrer_, uint256 paid_, uint256 payout_,) =
-            _module.claimBid(_lotId, _bidId, _BIDDER);
+        (Auction.BidClaim memory bidClaim,) = _module.claimBid(_lotId, _bidId, _BIDDER);
 
         // Check the result
-        assertEq(referrer_, _REFERRER);
-        assertEq(paid_, bidAmountIn, "paid");
-        assertEq(payout_, bidAmountOut, "payout");
+        assertEq(bidClaim.bidder, _BIDDER);
+        assertEq(bidClaim.referrer, _REFERRER);
+        assertEq(bidClaim.paid, bidAmountIn, "paid");
+        assertEq(bidClaim.payout, bidAmountOut, "payout");
 
         // Check the bid status
         EncryptedMarginalPriceAuctionModule.Bid memory bid = _getBid(_lotId, _bidId);

@@ -51,7 +51,7 @@ contract MockAuctionModule is AuctionModule {
     function _claimBid(
         uint96 lotId_,
         uint64 bidId_
-    ) internal virtual override returns (address, uint256, uint256, bytes memory) {}
+    ) internal virtual override returns (BidClaim memory, bytes memory) {}
 
     function _revertIfBidInvalid(uint96 lotId_, uint64 bidId_) internal view virtual override {}
 

@@ -121,7 +121,7 @@ contract MockBatchAuctionModule is AuctionModule {
     function _claimBid(
         uint96 lotId_,
         uint64 bidId_
-    ) internal virtual override returns (address, uint256, uint256, bytes memory) {
+    ) internal virtual override returns (BidClaim memory, bytes memory) {
         // TODO implement?
     }
 

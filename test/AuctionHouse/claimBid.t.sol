@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.19;
 
-import {AuctionModule} from "src/modules/Auction.sol";
+import {Auction, AuctionModule} from "src/modules/Auction.sol";
 import {Auctioneer} from "src/bases/Auctioneer.sol";
 
 import {AuctionHouseTest} from "test/AuctionHouse/AuctionHouseTest.sol";
@@ -25,6 +25,8 @@ contract ClaimBidTest is AuctionHouseTest {
     // [X] when the auction module reverts
     //  [X] it reverts
     // [X] when the payout is not set
+    //  [X] when the caller is not the bidder
+    //   [X] it refunds the bid amount to the bidder
     //  [X] it returns the bid amount to the bidder
     // [X] when the referrer is set
     //  [X] it sends the payout to the bidder, and allocates fees to the referrer and protocol
@@ -33,6 +35,8 @@ contract ClaimBidTest is AuctionHouseTest {
     //  [X] it uses the cached fee
     // [X] when the referrer fee is changed before the claim
     //  [X] it uses the cached fee
+    // [X] when the caller is not the bidder
+    //  [X] it transfers the payout to the bidder
 
     // ============ Helper Functions ============
 
@@ -102,7 +106,15 @@ contract ClaimBidTest is AuctionHouseTest {
         vm.mockCall(
             address(_auctionModule),
             abi.encodeWithSelector(AuctionModule.claimBid.selector, _lotId, _bidId, sender_),
-            abi.encode(referrer_, paid_, payout_, "")
+            abi.encode(
+                Auction.BidClaim({
+                    bidder: _bidder,
+                    referrer: referrer_,
+                    paid: paid_,
+                    payout: payout_
+                }),
+                ""
+            )
         );
     }
 
@@ -372,6 +384,33 @@ contract ClaimBidTest is AuctionHouseTest {
         _assertBaseTokenBalances();
     }
 
+    function test_givenNoPayout_whenCallerIsNotBidder()
+        external
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenCuratorIsSet
+        givenLotIsPrefunded
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenLotIsCreated
+        givenLotHasStarted
+        givenReferrerFeeIsSet
+        givenProtocolFeeIsSet
+        givenUserHasQuoteTokenBalance(_BID_AMOUNT)
+        givenUserHasQuoteTokenAllowance(_BID_AMOUNT)
+        givenBid(_BID_AMOUNT, "")
+        givenPayoutIsNotSet(_REFERRER, _BID_AMOUNT, address(this))
+    {
+        // Call the function
+        vm.prank(address(this));
+        _auctionHouse.claimBid(_lotId, _bidId);
+
+        // Check the accrued fees
+        _assertAccruedFees();
+        _assertQuoteTokenBalances();
+        _assertBaseTokenBalances();
+    }
+
     function test_givenPayout()
         external
         whenAuctionTypeIsBatch
@@ -524,6 +563,33 @@ contract ClaimBidTest is AuctionHouseTest {
 
         // Check the accrued fees
         // Assertions are not updated with the new fee, so the test will fail if the new fee is used by the AuctionHouse
+        _assertAccruedFees();
+        _assertQuoteTokenBalances();
+        _assertBaseTokenBalances();
+    }
+
+    function test_givenPayout_whenCallerIsNotBidder()
+        external
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenCuratorIsSet
+        givenLotIsPrefunded
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenLotIsCreated
+        givenLotHasStarted
+        givenReferrerFeeIsSet
+        givenProtocolFeeIsSet
+        givenUserHasQuoteTokenBalance(_BID_AMOUNT)
+        givenUserHasQuoteTokenAllowance(_BID_AMOUNT)
+        givenBid(_BID_AMOUNT, "")
+        givenPayoutIsSet(_REFERRER, _BID_AMOUNT, _BID_AMOUNT_OUT, address(this))
+    {
+        // Call the function
+        vm.prank(address(this));
+        _auctionHouse.claimBid(_lotId, _bidId);
+
+        // Check the accrued fees
         _assertAccruedFees();
         _assertQuoteTokenBalances();
         _assertBaseTokenBalances();

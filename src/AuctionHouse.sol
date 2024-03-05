@@ -370,7 +370,7 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
 
         // Claim the bid on the auction module
         // The auction module is responsible for validating the bid and authorizing the caller
-        (address referrer, uint256 paid, uint256 payout, bytes memory auctionOutput) =
+        (Auction.BidClaim memory bidClaim, bytes memory auctionOutput) =
             getModuleForId(lotId_).claimBid(lotId_, bidId_, msg.sender);
 
         // Load routing data for the lot
@@ -378,7 +378,7 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
 
         // If payout is greater than zero, then the bid was filled.
         // Otherwise, it was not and the bidder is refunded the paid amount.
-        if (payout > 0) {
+        if (bidClaim.payout > 0) {
             // Load fee data
             FeeData storage feeData = lotFees[lotId_];
 
@@ -386,22 +386,22 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
             _allocateQuoteFees(
                 feeData.protocolFee,
                 feeData.referrerFee,
-                referrer,
+                bidClaim.referrer,
                 routing.seller,
                 routing.quoteToken,
-                paid
+                bidClaim.paid
             );
 
             // Reduce prefunding by the payout amount
             unchecked {
-                routing.prefunding -= payout;
+                routing.prefunding -= bidClaim.payout;
             }
 
             // Send the payout to the bidder
-            _sendPayout(lotId_, msg.sender, payout, routing, auctionOutput);
+            _sendPayout(lotId_, bidClaim.bidder, bidClaim.payout, routing, auctionOutput);
         } else {
             // Refund the paid amount to the bidder
-            Transfer.transfer(routing.quoteToken, msg.sender, paid, false);
+            Transfer.transfer(routing.quoteToken, bidClaim.bidder, bidClaim.paid, false);
         }
     }
 

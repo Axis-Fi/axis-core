@@ -318,19 +318,16 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
     function _claimBid(
         uint96 lotId_,
         uint64 bidId_
-    )
-        internal
-        override
-        returns (address referrer, uint256 paid, uint256 payout, bytes memory auctionOutput_)
-    {
+    ) internal override returns (BidClaim memory bidClaim, bytes memory auctionOutput_) {
         // Load bid data
         Bid storage bidData = bids[lotId_][bidId_];
 
         // Set the bid status to claimed
         bidData.status = BidStatus.Claimed;
 
-        // Load the referrer
-        referrer = bidData.referrer;
+        // Load the referrer and bidder
+        bidClaim.bidder = bidData.bidder;
+        bidClaim.referrer = bidData.referrer;
 
         // Calculate the bid price
         uint256 baseScale = 10 ** lotData[lotId_].baseTokenDecimals;
@@ -345,14 +342,14 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         uint256 marginalPrice = uint256(auctionData[lotId_].marginalPrice);
         if (price >= marginalPrice) {
             // Payout is calculated using the marginal price of the auction
-            paid = uint256(bidData.amount);
-            payout = (paid * baseScale) / marginalPrice;
+            bidClaim.paid = uint256(bidData.amount);
+            bidClaim.payout = (bidClaim.paid * baseScale) / marginalPrice;
         } else {
             // Bidder is refunded the paid amount and receives no payout
-            paid = uint256(bidData.amount);
+            bidClaim.paid = uint256(bidData.amount);
         }
 
-        return (referrer, paid, payout, auctionOutput_);
+        return (bidClaim, auctionOutput_);
     }
 
     // ========== DECRYPTION ========== //
