@@ -202,8 +202,8 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         // Batch auctions cannot be cancelled once started, otherwise the seller could cancel the auction after bids have been submitted
         _revertIfLotActive(lotId_);
 
-        // Set auction status to settled so that bids can be refunded
-        auctionData[lotId_].status = Auction.Status.Settled;
+        // Set auction status to claimed so that bids can be refunded
+        auctionData[lotId_].status = Auction.Status.Claimed;
     }
 
     // ========== BID ========== //
