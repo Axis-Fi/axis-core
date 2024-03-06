@@ -23,6 +23,12 @@ contract EmpaModuleDecryptBidsTest is EmpaModuleTest {
     //  [X] it reverts
     // [X] given the bids are already decrypted
     //  [X] it reverts
+    // [X] given the lot has been cancelled
+    //  [X] it reverts
+    // [X] given the lot has been settled
+    //  [X] it reverts
+    // [X] given the lot proceeds have been claimed
+    //  [X] it reverts
     // [X] when the number of bids to decrypt is larger than the number of bids
     //  [X] it succeeds
     // [X] given a bid cannot be decrypted
@@ -96,6 +102,50 @@ contract EmpaModuleDecryptBidsTest is EmpaModuleTest {
         bytes memory err = abi.encodeWithSelector(
             EncryptedMarginalPriceAuctionModule.Auction_WrongState.selector, _lotId
         );
+        vm.expectRevert(err);
+
+        // Call the function
+        _module.decryptAndSortBids(_lotId, 0);
+    }
+
+    function test_givenLotIsSettled_reverts()
+        external
+        givenLotIsCreated
+        givenLotHasConcluded
+        givenPrivateKeyIsSubmitted
+        givenLotIsSettled
+    {
+        // Call the function
+        bytes memory err = abi.encodeWithSelector(
+            EncryptedMarginalPriceAuctionModule.Auction_WrongState.selector, _lotId
+        );
+        vm.expectRevert(err);
+
+        // Call the function
+        _module.decryptAndSortBids(_lotId, 0);
+    }
+
+    function test_givenLotProceedsAreClaimed_reverts()
+        external
+        givenLotIsCreated
+        givenLotHasConcluded
+        givenPrivateKeyIsSubmitted
+        givenLotIsSettled
+        givenLotProceedsAreClaimed
+    {
+        // Call the function
+        bytes memory err = abi.encodeWithSelector(
+            EncryptedMarginalPriceAuctionModule.Auction_WrongState.selector, _lotId
+        );
+        vm.expectRevert(err);
+
+        // Call the function
+        _module.decryptAndSortBids(_lotId, 0);
+    }
+
+    function test_givenLotIsCancelled_reverts() external givenLotIsCreated givenLotIsCancelled {
+        // Call the function
+        bytes memory err = abi.encodeWithSelector(Auction.Auction_MarketNotActive.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function

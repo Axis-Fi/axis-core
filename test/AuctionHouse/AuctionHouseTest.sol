@@ -256,6 +256,12 @@ abstract contract AuctionHouseTest is Test, Permit2User {
         _;
     }
 
+    modifier givenLotIsSettled() {
+        vm.prank(_SELLER);
+        _auctionHouse.settle(_lotId);
+        _;
+    }
+
     modifier givenLotHasAllowlist() {
         _routingParams.allowlist = _allowlist;
         _;

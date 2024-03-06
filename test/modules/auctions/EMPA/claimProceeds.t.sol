@@ -113,11 +113,17 @@ contract EmpaModuleClaimProceedsTest is EmpaModuleTest {
 
     // [X] when the lot id is invalid
     //  [X] it reverts
-    // [X] when the lot is not settled
+    // [X] when the lot is decrypted
+    //  [X] it reverts
+    // [X] given the auction is cancelled
+    //  [X] it reverts
+    // [X] given the auction is concluded
+    //  [X] it reverts
+    // [X] given the auction proceeds have been claimed
     //  [X] it reverts
     // [X] when the lot settlement is a partial fill
     //  [X] it updates the auction status to claimed, and returns the required information
-    // [ ] it updates the auction status to claimed, and returns the required information
+    // [X] it updates the auction status to claimed, and returns the required information
 
     function test_whenLotIdIsInvalid_reverts() public {
         // Expect revert
@@ -129,12 +135,58 @@ contract EmpaModuleClaimProceedsTest is EmpaModuleTest {
         _module.claimProceeds(_lotId);
     }
 
+    function test_givenLotConcluded_reverts()
+        external
+        givenLotIsCreated
+        givenLotHasStarted
+        givenLotHasConcluded
+    {
+        bytes memory err = abi.encodeWithSelector(
+            EncryptedMarginalPriceAuctionModule.Auction_WrongState.selector, _lotId
+        );
+        vm.expectRevert(err);
+
+        // Call the function
+        vm.prank(address(_auctionHouse));
+        _module.claimProceeds(_lotId);
+    }
+
     function test_givenLotNotSettled_reverts()
         external
         givenLotIsCreated
         givenLotHasStarted
         givenLotHasConcluded
         givenPrivateKeyIsSubmitted
+    {
+        bytes memory err = abi.encodeWithSelector(
+            EncryptedMarginalPriceAuctionModule.Auction_WrongState.selector, _lotId
+        );
+        vm.expectRevert(err);
+
+        // Call the function
+        vm.prank(address(_auctionHouse));
+        _module.claimProceeds(_lotId);
+    }
+
+    function test_givenLotCancelled_reverts() external givenLotIsCreated givenLotIsCancelled {
+        bytes memory err = abi.encodeWithSelector(
+            EncryptedMarginalPriceAuctionModule.Auction_WrongState.selector, _lotId
+        );
+        vm.expectRevert(err);
+
+        // Call the function
+        vm.prank(address(_auctionHouse));
+        _module.claimProceeds(_lotId);
+    }
+
+    function test_givenLotProceedsClaimed_reverts()
+        external
+        givenLotIsCreated
+        givenLotHasStarted
+        givenLotHasConcluded
+        givenPrivateKeyIsSubmitted
+        givenLotIsSettled
+        givenLotProceedsAreClaimed
     {
         bytes memory err = abi.encodeWithSelector(
             EncryptedMarginalPriceAuctionModule.Auction_WrongState.selector, _lotId

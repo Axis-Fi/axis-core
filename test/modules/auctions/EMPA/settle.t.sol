@@ -50,6 +50,10 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
     //   [X] it reverts
     // [X] when the lot has been settled already
     //   [X] it reverts
+    // [X] given the lot has been cancelled
+    //  [X] it reverts
+    // [X] when the lot proceeds have been claimed
+    //  [X] it reverts
     // [X] when the caller is not the parent
     //   [X] it reverts
 
@@ -592,6 +596,36 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         givenPrivateKeyIsSubmitted
         givenLotIsDecrypted
         givenLotIsSettled
+    {
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(
+            EncryptedMarginalPriceAuctionModule.Auction_WrongState.selector, _lotId
+        );
+        vm.expectRevert(err);
+
+        // Call function
+        _settle();
+    }
+
+    function test_lotCancelled_reverts() external givenLotIsCreated givenLotIsCancelled {
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(Auction.Auction_MarketNotActive.selector, _lotId);
+        vm.expectRevert(err);
+
+        // Call function
+        _settle();
+    }
+
+    function test_lotProceedsAreClaimed_reverts()
+        external
+        givenLotIsCreated
+        givenLotHasStarted
+        givenBidIsCreated(_BID_PRICE_TWO_SIZE_TWO_AMOUNT, _BID_PRICE_TWO_SIZE_TWO_AMOUNT_OUT)
+        givenLotHasConcluded
+        givenPrivateKeyIsSubmitted
+        givenLotIsDecrypted
+        givenLotIsSettled
+        givenLotProceedsAreClaimed
     {
         // Expect revert
         bytes memory err = abi.encodeWithSelector(

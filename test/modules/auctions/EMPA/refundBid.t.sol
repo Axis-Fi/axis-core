@@ -18,6 +18,14 @@ contract EmpaModuleRefundBidTest is EmpaModuleTest {
     //  [X] it reverts
     // [X] given the lot is concluded
     //  [X] it reverts
+    // [X] given the lot has been cancelled
+    //  [X] it reverts
+    // [X] given the lot is decrypted
+    //  [X] it reverts
+    // [X] given the lot is settled
+    //  [X] it reverts
+    // [X] given the lot proceeds have been claimed
+    //  [X] it reverts
     // [X] when the caller is not the parent
     //  [X] it reverts
     // [X] it refunds the bid amount and updates the bid status
@@ -85,6 +93,73 @@ contract EmpaModuleRefundBidTest is EmpaModuleTest {
         givenLotHasStarted
         givenBidIsCreated(2e18, 1e18)
         givenLotHasConcluded
+    {
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(Auction.Auction_MarketNotActive.selector, _lotId);
+        vm.expectRevert(err);
+
+        // Call the function
+        vm.prank(address(_auctionHouse));
+        _module.refundBid(_lotId, _bidId, _BIDDER);
+    }
+
+    function test_lotIsCancelled_reverts() external givenLotIsCreated givenLotIsCancelled {
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(Auction.Auction_MarketNotActive.selector, _lotId);
+        vm.expectRevert(err);
+
+        // Call the function
+        vm.prank(address(_auctionHouse));
+        _module.refundBid(_lotId, _bidId, _BIDDER);
+    }
+
+    function test_lotIsDecrypted_reverts()
+        external
+        givenLotIsCreated
+        givenLotHasStarted
+        givenBidIsCreated(2e18, 1e18)
+        givenLotHasConcluded
+        givenPrivateKeyIsSubmitted
+        givenLotIsDecrypted
+    {
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(Auction.Auction_MarketNotActive.selector, _lotId);
+        vm.expectRevert(err);
+
+        // Call the function
+        vm.prank(address(_auctionHouse));
+        _module.refundBid(_lotId, _bidId, _BIDDER);
+    }
+
+    function test_lotIsSettled_reverts()
+        external
+        givenLotIsCreated
+        givenLotHasStarted
+        givenBidIsCreated(2e18, 1e18)
+        givenLotHasConcluded
+        givenPrivateKeyIsSubmitted
+        givenLotIsDecrypted
+        givenLotIsSettled
+    {
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(Auction.Auction_MarketNotActive.selector, _lotId);
+        vm.expectRevert(err);
+
+        // Call the function
+        vm.prank(address(_auctionHouse));
+        _module.refundBid(_lotId, _bidId, _BIDDER);
+    }
+
+    function test_lotProceedsClaimed_reverts()
+        external
+        givenLotIsCreated
+        givenLotHasStarted
+        givenBidIsCreated(2e18, 1e18)
+        givenLotHasConcluded
+        givenPrivateKeyIsSubmitted
+        givenLotIsDecrypted
+        givenLotIsSettled
+        givenLotProceedsAreClaimed
     {
         // Expect revert
         bytes memory err = abi.encodeWithSelector(Auction.Auction_MarketNotActive.selector, _lotId);

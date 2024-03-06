@@ -35,8 +35,7 @@ abstract contract Auction {
         Created,
         Decrypted,
         Settled,
-        Claimed // TODO check if this breaks tests
-
+        Claimed
     }
 
     /// @notice     Core data for an auction lot
@@ -49,7 +48,7 @@ abstract contract Auction {
     /// @param      capacity            The capacity of the lot
     /// @param      sold                The amount of base tokens sold
     /// @param      purchased           The amount of quote tokens purchased
-    /// @param      partialPayout       The amount of partial payout tokens
+    /// @param      partialPayout       The amount of partial payout (in base tokens)
     // TODO pack slots
     struct Lot {
         uint48 start; // 6 +
@@ -679,6 +678,7 @@ abstract contract AuctionModule is Auction, Module {
     ///             - the lot id is invalid
     ///             - the lot is not settled
     ///             - the lot proceeds have already been claimed
+    ///             - the lot is cancelled
     ///             - the caller is not an internal module
     ///
     ///             Inheriting contracts should override _claimProceeds to implement auction-specific logic, such as:

@@ -329,6 +329,12 @@ abstract contract EmpaModuleTest is Test, Permit2User {
         _;
     }
 
+    modifier givenLotProceedsAreClaimed() {
+        vm.prank(address(_auctionHouse));
+        _module.claimProceeds(_lotId);
+        _;
+    }
+
     // ======== Internal Functions ======== //
 
     function _mulDivUp(uint96 mul1_, uint96 mul2_, uint96 div_) internal pure returns (uint96) {

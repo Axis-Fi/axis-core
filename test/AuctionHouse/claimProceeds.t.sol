@@ -118,10 +118,6 @@ contract ClaimProceedsTest is AuctionHouseTest {
 
     // [X] when the lot id is invalid
     //  [X] it reverts
-    // [X] when the auction is not settled
-    //  [X] it reverts
-    // [X] given the proceeds have already been claimed
-    //  [X] it reverts
     // [ ] given it is not a batch auction
     //  [ ] it reverts
     // [X] given the auction is not pre-funded
