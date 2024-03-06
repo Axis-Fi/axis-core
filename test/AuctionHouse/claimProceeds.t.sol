@@ -118,8 +118,8 @@ contract ClaimProceedsTest is AuctionHouseTest {
 
     // [X] when the lot id is invalid
     //  [X] it reverts
-    // [ ] given it is not a batch auction
-    //  [ ] it reverts
+    // [X] given it is not a batch auction
+    //  [X] it reverts
     // [X] given the auction is not pre-funded
     //  [X] given the lot did not settle
     //   [X] it sends the proceeds to the seller and marks the lot as claimed
@@ -150,6 +150,22 @@ contract ClaimProceedsTest is AuctionHouseTest {
     function test_invalidLotId_reverts() external {
         // Expect revert
         bytes memory err = abi.encodeWithSelector(Auctioneer.InvalidLotId.selector, _lotId);
+        vm.expectRevert(err);
+
+        // Call function
+        vm.prank(_SELLER);
+        _auctionHouse.claimProceeds(_lotId);
+    }
+
+    function test_notBatchAuction_reverts()
+        external
+        whenAuctionTypeIsAtomic
+        whenAtomicAuctionModuleIsInstalled
+        givenLotIsCreated
+        givenLotIsConcluded
+    {
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(Auction.Auction_NotImplemented.selector);
         vm.expectRevert(err);
 
         // Call function
