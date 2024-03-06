@@ -390,8 +390,6 @@ contract SettleTest is AuctionHouseTest {
     //  [X] it sends the curator payout using the original curator fee
     // [X] it caches the protocol and referrer fees
 
-    // TODO modify tests to assert that the seller payout and unused capacity is not sent to the seller
-
     function test_whenLotIdIsInvalid_reverts() public {
         // Expect revert
         bytes memory err = abi.encodeWithSelector(Auctioneer.InvalidLotId.selector, _lotId);

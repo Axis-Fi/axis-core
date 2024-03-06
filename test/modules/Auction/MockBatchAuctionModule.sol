@@ -134,6 +134,11 @@ contract MockBatchAuctionModule is AuctionModule {
 
     function setLotSettlement(uint96 lotId_, Settlement calldata settlement_) external {
         lotSettlements[lotId_] = settlement_;
+
+        // Also update sold and purchased
+        Lot storage lot = lotData[lotId_];
+        lot.sold = uint96(settlement_.totalOut);
+        lot.purchased = uint96(settlement_.totalIn);
     }
 
     function settle(uint96 lotId_) external override returns (Settlement memory, bytes memory) {

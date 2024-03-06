@@ -7,8 +7,11 @@ import {Auctioneer} from "src/bases/Auctioneer.sol";
 import {AuctionHouseTest} from "test/AuctionHouse/AuctionHouseTest.sol";
 
 contract ClaimProceedsTest is AuctionHouseTest {
-    uint96 internal constant _BID_AMOUNT = 1e18;
+    uint96 internal constant _BID_AMOUNT = 2e18;
     uint96 internal constant _BID_AMOUNT_OUT = 2e18;
+
+    uint96 internal constant _BID_AMOUNT_PARTIAL_REFUND = 15e17;
+    uint96 internal constant _BID_AMOUNT_OUT_PARTIAL_PAYOUT = 1e18;
 
     // ============ Modifiers ============ //
 
@@ -50,6 +53,26 @@ contract ClaimProceedsTest is AuctionHouseTest {
         _;
     }
 
+    modifier givenLotSettlementIsPartialFill() {
+        // Set the settlement data
+        _batchAuctionModule.setLotSettlement(
+            _lotId,
+            Auction.Settlement({
+                totalIn: _scaleQuoteTokenAmount(_BID_AMOUNT * 6)
+                    - _scaleQuoteTokenAmount(_BID_AMOUNT_PARTIAL_REFUND),
+                totalOut: _scaleBaseTokenAmount(_LOT_CAPACITY),
+                pfBidder: _bidder,
+                pfReferrer: _REFERRER,
+                pfRefund: _scaleQuoteTokenAmount(_BID_AMOUNT_PARTIAL_REFUND),
+                pfPayout: _scaleBaseTokenAmount(_BID_AMOUNT_OUT_PARTIAL_PAYOUT),
+                auctionOutput: ""
+            })
+        );
+
+        _auctionHouse.settle(_lotId);
+        _;
+    }
+
     modifier givenLotSettlementIsNotSuccessful() {
         // Payout tokens will be returned to the seller
         _auctionHouse.settle(_lotId);
@@ -68,11 +91,23 @@ contract ClaimProceedsTest is AuctionHouseTest {
     //  [ ] it reverts
     // [X] given the auction is not pre-funded
     //  [X] given the lot did not settle
-    //   [X] it marks the lot as claimed
+    //   [X] it sends the proceeds to the seller and marks the lot as claimed
+    //  [X] given there is unused capacity
+    //   [X] given the auction has curation enabled
+    //    [X] it sends the proceeds and unused capacity and unused curator fees to the seller, and marks the lot as claimed
+    //   [X] it sends the proceeds and unused capacity to the seller, and marks the lot as claimed
+    //  [X] given the lot has a partial fill
+    //   [X] given the auction has curation enabled
+    //    [X] it sends the proceeds and unused capacity and unused curator fees to the seller, and marks the lot as claimed
+    //   [X] it sends the proceeds and unused capacity to the seller, and marks the lot as claimed
     //  [X] it sends the proceeds to the seller and marks the lot as claimed
     // [X] given the auction is pre-funded
     //  [X] given the lot did not settle
     //   [X] it sends the unused capacity to the seller, and marks the lot as claimed
+    //  [X] given the lot has a partial fill
+    //   [X] given the auction has curation enabled
+    //    [X] it sends the proceeds and unused capacity and unused curator fees to the seller, and marks the lot as claimed
+    //   [X] it sends the proceeds and unused capacity to the seller, and marks the lot as claimed
     //  [X] given there is unused capacity
     //   [X] given the auction has curation enabled
     //    [X] it sends the proceeds and unused capacity and unused curator fees to the seller, and marks the lot as claimed
@@ -83,7 +118,7 @@ contract ClaimProceedsTest is AuctionHouseTest {
 
     function test_invalidLotId_reverts() external {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(Auction.Auction_InvalidLotId.selector, _lotId);
+        bytes memory err = abi.encodeWithSelector(Auctioneer.InvalidLotId.selector, _lotId);
         vm.expectRevert(err);
 
         // Call function
@@ -214,6 +249,239 @@ contract ClaimProceedsTest is AuctionHouseTest {
             "base token: auction house"
         ); // To be claimed by bidder
         assertEq(_baseToken.balanceOf(_CURATOR), 0, "base token: curator");
+
+        // Assert lot state
+        // TODO update state?
+    }
+
+    function test_lotSettlementIsFullCapacity()
+        external
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenLotIsCreated
+        givenLotHasStarted
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
+        givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
+        givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
+        givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
+        givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
+        givenLotIsConcluded
+        givenLotSettlementIsFullCapacity
+    {
+        // Call function
+        vm.prank(_SELLER);
+        _auctionHouse.claimProceeds(_lotId);
+
+        // Calculate the curator fees
+        uint96 curatorFeeActual = 0;
+
+        // Assert quote token balances
+        assertEq(
+            _quoteToken.balanceOf(_SELLER),
+            _scaleQuoteTokenAmount(_BID_AMOUNT * 5),
+            "quote token: seller"
+        );
+        assertEq(_quoteToken.balanceOf(address(_auctionHouse)), 0, "quote token: auction house");
+
+        // Assert base token balances
+        assertEq(_baseToken.balanceOf(_SELLER), 0, "base token: seller"); // Nothing returned
+        assertEq(
+            _baseToken.balanceOf(address(_auctionHouse)),
+            _scaleBaseTokenAmount(_BID_AMOUNT_OUT * 5),
+            "base token: auction house"
+        ); // To be claimed by bidder
+        assertEq(_baseToken.balanceOf(_CURATOR), curatorFeeActual, "base token: curator");
+
+        // Assert lot state
+        // TODO update state?
+    }
+
+    function test_lotSettlementIsPartialFill()
+        external
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenLotIsCreated
+        givenLotHasStarted
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
+        givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
+        givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
+        givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
+        givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
+        givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
+        givenLotIsConcluded
+        givenLotSettlementIsPartialFill
+    {
+        // Call function
+        vm.prank(_SELLER);
+        _auctionHouse.claimProceeds(_lotId);
+
+        // Calculate the curator fees
+        uint96 curatorFeeActual = 0;
+
+        // Assert quote token balances
+        assertEq(
+            _quoteToken.balanceOf(_SELLER),
+            _scaleQuoteTokenAmount(_BID_AMOUNT * 6 - _BID_AMOUNT_PARTIAL_REFUND),
+            "quote token: seller"
+        );
+        assertEq(_quoteToken.balanceOf(address(_auctionHouse)), 0, "quote token: auction house");
+
+        // Assert base token balances
+        assertEq(_baseToken.balanceOf(_SELLER), 0, "base token: seller"); // Nothing returned
+        assertEq(
+            _baseToken.balanceOf(address(_auctionHouse)),
+            _scaleBaseTokenAmount(_LOT_CAPACITY - _BID_AMOUNT_OUT_PARTIAL_PAYOUT),
+            "base token: auction house"
+        ); // To be claimed by bidder
+        assertEq(_baseToken.balanceOf(_CURATOR), curatorFeeActual, "base token: curator");
+
+        // Assert lot state
+        // TODO update state?
+    }
+
+    function test_givenCurated_lotSettlementIsFullCapacity()
+        external
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenCuratorIsSet
+        givenLotIsCreated
+        givenLotHasStarted
+        givenCuratorMaxFeeIsSet
+        givenCuratorFeeIsSet
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY + _curatorMaxPotentialFee)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY + _curatorMaxPotentialFee)
+        givenCuratorHasApproved
+        givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
+        givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
+        givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
+        givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
+        givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
+        givenLotIsConcluded
+        givenLotSettlementIsFullCapacity
+    {
+        // Call function
+        vm.prank(_SELLER);
+        _auctionHouse.claimProceeds(_lotId);
+
+        // Calculate the curator fees
+        uint96 curatorFeeActual = _BID_AMOUNT_OUT * 5 * _curatorFeePercentActual / 1e5;
+
+        // Assert quote token balances
+        assertEq(
+            _quoteToken.balanceOf(_SELLER),
+            _scaleQuoteTokenAmount(_BID_AMOUNT * 5),
+            "quote token: seller"
+        );
+        assertEq(_quoteToken.balanceOf(address(_auctionHouse)), 0, "quote token: auction house");
+
+        // Assert base token balances
+        assertEq(_baseToken.balanceOf(_SELLER), 0, "base token: seller"); // Nothing returned
+        assertEq(
+            _baseToken.balanceOf(address(_auctionHouse)),
+            _scaleBaseTokenAmount(_BID_AMOUNT_OUT * 5 + _curatorMaxPotentialFee - curatorFeeActual),
+            "base token: auction house"
+        ); // To be claimed by bidder
+        assertEq(_baseToken.balanceOf(_CURATOR), curatorFeeActual, "base token: curator");
+
+        // Assert lot state
+        // TODO update state?
+    }
+
+    function test_givenCurated_lotSettlementIsPartialFill()
+        external
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenCuratorIsSet
+        givenLotIsCreated
+        givenLotHasStarted
+        givenCuratorMaxFeeIsSet
+        givenCuratorFeeIsSet
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY + _curatorMaxPotentialFee)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY + _curatorMaxPotentialFee)
+        givenCuratorHasApproved
+        givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
+        givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
+        givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
+        givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
+        givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
+        givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
+        givenLotIsConcluded
+        givenLotSettlementIsPartialFill
+    {
+        // Call function
+        vm.prank(_SELLER);
+        _auctionHouse.claimProceeds(_lotId);
+
+        // Calculate the curator fees
+        uint96 curatorFeeActual = _LOT_CAPACITY * _curatorFeePercentActual / 1e5;
+
+        // Assert quote token balances
+        assertEq(
+            _quoteToken.balanceOf(_SELLER),
+            _scaleQuoteTokenAmount(_BID_AMOUNT * 6 - _BID_AMOUNT_PARTIAL_REFUND),
+            "quote token: seller"
+        );
+        assertEq(_quoteToken.balanceOf(address(_auctionHouse)), 0, "quote token: auction house");
+
+        // Assert base token balances
+        assertEq(_baseToken.balanceOf(_SELLER), 0, "base token: seller"); // Nothing returned
+        assertEq(
+            _baseToken.balanceOf(address(_auctionHouse)),
+            _scaleBaseTokenAmount(
+                _LOT_CAPACITY + _curatorMaxPotentialFee - curatorFeeActual
+                    - _BID_AMOUNT_OUT_PARTIAL_PAYOUT
+            ),
+            "base token: auction house"
+        ); // To be claimed by bidder, minus partial payment
+        assertEq(_baseToken.balanceOf(_CURATOR), curatorFeeActual, "base token: curator");
 
         // Assert lot state
         // TODO update state?
@@ -358,7 +626,7 @@ contract ClaimProceedsTest is AuctionHouseTest {
         // TODO update state?
     }
 
-    function test_givenPrefunded_givenCurated_fullCapacity_lotSettlementSuccessful()
+    function test_givenPrefunded_givenCurated_lotSettlementIsFullCapacity()
         external
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
@@ -413,6 +681,128 @@ contract ClaimProceedsTest is AuctionHouseTest {
             _scaleBaseTokenAmount(_BID_AMOUNT_OUT * 5),
             "base token: auction house"
         ); // To be claimed by bidder
+        assertEq(_baseToken.balanceOf(_CURATOR), curatorFeeActual, "base token: curator");
+
+        // Assert lot state
+        // TODO update state?
+    }
+
+    function test_givenPrefunded_givenCurated_lotSettlementIsPartialFill()
+        external
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenBatchAuctionRequiresPrefunding
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenCuratorIsSet
+        givenLotIsCreated
+        givenLotHasStarted
+        givenCuratorMaxFeeIsSet
+        givenCuratorFeeIsSet
+        givenSellerHasBaseTokenBalance(_curatorMaxPotentialFee)
+        givenSellerHasBaseTokenAllowance(_curatorMaxPotentialFee)
+        givenCuratorHasApproved
+        givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
+        givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
+        givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
+        givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
+        givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
+        givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
+        givenLotIsConcluded
+        givenLotSettlementIsPartialFill
+    {
+        // Call function
+        vm.prank(_SELLER);
+        _auctionHouse.claimProceeds(_lotId);
+
+        // Calculate the curator fees
+        uint96 curatorFeeActual = _LOT_CAPACITY * _curatorFeePercentActual / 1e5;
+
+        // Assert quote token balances
+        assertEq(
+            _quoteToken.balanceOf(_SELLER),
+            _scaleQuoteTokenAmount(_BID_AMOUNT * 6 - _BID_AMOUNT_PARTIAL_REFUND),
+            "quote token: seller"
+        );
+        assertEq(_quoteToken.balanceOf(address(_auctionHouse)), 0, "quote token: auction house");
+
+        // Assert base token balances
+        assertEq(_baseToken.balanceOf(_SELLER), 0, "base token: seller"); // Nothing returned
+        assertEq(
+            _baseToken.balanceOf(address(_auctionHouse)),
+            _scaleBaseTokenAmount(_LOT_CAPACITY - _BID_AMOUNT_OUT_PARTIAL_PAYOUT),
+            "base token: auction house"
+        ); // To be claimed by bidder, minus partial payment
+        assertEq(_baseToken.balanceOf(_CURATOR), curatorFeeActual, "base token: curator");
+
+        // Assert lot state
+        // TODO update state?
+    }
+
+    function test_givenPrefunded_lotSettlementIsPartialFill()
+        external
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenBatchAuctionRequiresPrefunding
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenLotIsCreated
+        givenLotHasStarted
+        givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
+        givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
+        givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
+        givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
+        givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
+        givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
+        givenLotIsConcluded
+        givenLotSettlementIsPartialFill
+    {
+        // Call function
+        vm.prank(_SELLER);
+        _auctionHouse.claimProceeds(_lotId);
+
+        // Calculate the curator fees
+        uint96 curatorFeeActual = 0;
+
+        // Assert quote token balances
+        assertEq(
+            _quoteToken.balanceOf(_SELLER),
+            _scaleQuoteTokenAmount(_BID_AMOUNT * 6 - _BID_AMOUNT_PARTIAL_REFUND),
+            "quote token: seller"
+        );
+        assertEq(_quoteToken.balanceOf(address(_auctionHouse)), 0, "quote token: auction house");
+
+        // Assert base token balances
+        assertEq(_baseToken.balanceOf(_SELLER), 0, "base token: seller"); // Nothing returned
+        assertEq(
+            _baseToken.balanceOf(address(_auctionHouse)),
+            _scaleBaseTokenAmount(_LOT_CAPACITY - _BID_AMOUNT_OUT_PARTIAL_PAYOUT),
+            "base token: auction house"
+        ); // To be claimed by bidder, minus partial payment
         assertEq(_baseToken.balanceOf(_CURATOR), curatorFeeActual, "base token: curator");
 
         // Assert lot state

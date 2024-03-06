@@ -105,6 +105,15 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         assertEq(auctionOutput_, _expectedAuctionOutput, "auctionOutput");
     }
 
+    function _assertLot() internal {
+        // Check that the lot has been updated
+        Auction.Lot memory lotData = _getAuctionLot(_lotId);
+
+        assertEq(lotData.sold, _expectedTotalOut, "lot sold");
+        assertEq(lotData.purchased, _expectedTotalIn, "lot purchased");
+        assertEq(lotData.capacity, 0, "lot capacity");
+    }
+
     modifier givenBidsAreBelowMinimumFilled() {
         // Capacity: 1 + 1 < 2.5 minimum
         _createBid(
@@ -629,6 +638,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
 
         // Assert settlement
         _assertSettlement(settlement, auctionOutput);
+        _assertLot();
     }
 
     function test_bidsLessThanMinimumFilled_quoteTokenDecimalsLarger()
@@ -652,6 +662,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
 
         // Assert settlement
         _assertSettlement(settlement, auctionOutput);
+        _assertLot();
     }
 
     function test_bidsLessThanMinimumFilled_quoteTokenDecimalsSmaller()
@@ -675,6 +686,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
 
         // Assert settlement
         _assertSettlement(settlement, auctionOutput);
+        _assertLot();
     }
 
     function test_marginalPriceLessThanMinimumPrice()
@@ -696,6 +708,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
 
         // Assert settlement
         _assertSettlement(settlement, auctionOutput);
+        _assertLot();
     }
 
     function test_marginalPriceLessThanMinimumPrice_quoteTokenDecimalsLarger()
@@ -719,6 +732,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
 
         // Assert settlement
         _assertSettlement(settlement, auctionOutput);
+        _assertLot();
     }
 
     function test_marginalPriceLessThanMinimumPrice_quoteTokenDecimalsSmaller()
@@ -742,6 +756,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
 
         // Assert settlement
         _assertSettlement(settlement, auctionOutput);
+        _assertLot();
     }
 
     function test_bidsAboveMinimumAndBelowCapacity()
@@ -763,6 +778,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
 
         // Assert settlement
         _assertSettlement(settlement, auctionOutput);
+        _assertLot();
     }
 
     function test_bidsAboveMinimumAndBelowCapacity_quoteTokenDecimalsLarger()
@@ -786,6 +802,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
 
         // Assert settlement
         _assertSettlement(settlement, auctionOutput);
+        _assertLot();
     }
 
     function test_bidsAboveMinimumAndBelowCapacity_quoteTokenDecimalsSmaller()
@@ -809,6 +826,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
 
         // Assert settlement
         _assertSettlement(settlement, auctionOutput);
+        _assertLot();
     }
 
     function test_someBidsBelowMinimumPrice()
@@ -830,6 +848,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
 
         // Assert settlement
         _assertSettlement(settlement, auctionOutput);
+        _assertLot();
     }
 
     function test_someBidsBelowMinimumPrice_quoteTokenDecimalsLarger()
@@ -853,6 +872,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
 
         // Assert settlement
         _assertSettlement(settlement, auctionOutput);
+        _assertLot();
     }
 
     function test_someBidsBelowMinimumPrice_quoteTokenDecimalsSmaller()
@@ -876,6 +896,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
 
         // Assert settlement
         _assertSettlement(settlement, auctionOutput);
+        _assertLot();
     }
 
     function test_overSubscribedByPreviousBid()
@@ -893,6 +914,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
 
         // Assert settlement
         _assertSettlement(settlement, auctionOutput);
+        _assertLot();
     }
 
     function test_overSubscribedByPreviousBid_quoteTokenDecimalsLarger()
@@ -912,6 +934,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
 
         // Assert settlement
         _assertSettlement(settlement, auctionOutput);
+        _assertLot();
     }
 
     function test_overSubscribedByPreviousBid_quoteTokenDecimalsSmaller()
@@ -931,6 +954,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
 
         // Assert settlement
         _assertSettlement(settlement, auctionOutput);
+        _assertLot();
     }
 
     function test_lotCapacityIsMet()
@@ -947,6 +971,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
 
         // Assert settlement
         _assertSettlement(settlement, auctionOutput);
+        _assertLot();
     }
 
     function test_lotCapacityIsMet_quoteTokenDecimalsLarger()
@@ -965,6 +990,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
 
         // Assert settlement
         _assertSettlement(settlement, auctionOutput);
+        _assertLot();
     }
 
     function test_lotCapacityIsMet_quoteTokenDecimalsSmaller()
@@ -983,6 +1009,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
 
         // Assert settlement
         _assertSettlement(settlement, auctionOutput);
+        _assertLot();
     }
 
     function test_givenLotIsOverSubscribedOnFirstBid()
@@ -999,6 +1026,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
 
         // Assert settlement
         _assertSettlement(settlement, auctionOutput);
+        _assertLot();
     }
 
     function test_givenLotIsOverSubscribedOnFirstBid_quoteTokenDecimalsLarger()
@@ -1017,6 +1045,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
 
         // Assert settlement
         _assertSettlement(settlement, auctionOutput);
+        _assertLot();
     }
 
     function test_givenLotIsOverSubscribedOnFirstBid_quoteTokenDecimalsSmaller()
@@ -1035,6 +1064,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
 
         // Assert settlement
         _assertSettlement(settlement, auctionOutput);
+        _assertLot();
     }
 
     function test_givenLotIsOverSubscribed()
@@ -1051,6 +1081,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
 
         // Assert settlement
         _assertSettlement(settlement, auctionOutput);
+        _assertLot();
     }
 
     function test_givenLotIsOverSubscribed_quoteTokenDecimalsLarger()
@@ -1069,6 +1100,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
 
         // Assert settlement
         _assertSettlement(settlement, auctionOutput);
+        _assertLot();
     }
 
     function test_givenLotIsOverSubscribed_quoteTokenDecimalsSmaller()
@@ -1088,6 +1120,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
 
         // Assert settlement
         _assertSettlement(settlement, auctionOutput);
+        _assertLot();
     }
 
     function test_givenLotIsOverSubscribed_respectsOrdering()
@@ -1104,6 +1137,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
 
         // Assert settlement
         _assertSettlement(settlement, auctionOutput);
+        _assertLot();
     }
 
     function test_givenBidsCauseCapacityOverflow()
@@ -1123,5 +1157,6 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
 
         // Assert settlement
         _assertSettlement(settlement, auctionOutput);
+        _assertLot();
     }
 }
