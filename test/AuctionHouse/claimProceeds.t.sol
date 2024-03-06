@@ -171,7 +171,7 @@ contract ClaimProceedsTest is AuctionHouseTest {
         givenLotIsConcluded
     {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(Auctioneer.InvalidState.selector);
+        bytes memory err = abi.encodeWithSelector(Auction.Auction_InvalidParams.selector);
         vm.expectRevert(err);
 
         // Call function
@@ -195,7 +195,7 @@ contract ClaimProceedsTest is AuctionHouseTest {
         givenLotProceedsAreClaimed
     {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(Auctioneer.InvalidState.selector);
+        bytes memory err = abi.encodeWithSelector(Auction.Auction_InvalidParams.selector);
         vm.expectRevert(err);
 
         // Call function

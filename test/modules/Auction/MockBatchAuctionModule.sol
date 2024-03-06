@@ -141,26 +141,23 @@ contract MockBatchAuctionModule is AuctionModule {
         Lot storage lot = lotData[lotId_];
         lot.sold = uint96(settlement_.totalOut);
         lot.purchased = uint96(settlement_.totalIn);
+        lot.partialPayout = uint96(settlement_.pfPayout);
     }
 
-    function settle(uint96 lotId_) external override returns (Settlement memory, bytes memory) {
+    function _settle(uint96 lotId_) internal override returns (Settlement memory, bytes memory) {
         // Update status
         lotStatus[lotId_] = Auction.Status.Settled;
 
         return (lotSettlements[lotId_], "");
     }
 
-    function _settle(uint96 lotId_) internal override returns (Settlement memory, bytes memory) {}
-
-    function claimProceeds(uint96 lotId_) external override returns (uint256, uint256, uint256) {
+    function _claimProceeds(uint96 lotId_) internal override returns (uint256, uint256, uint256) {
         // Update status
         lotStatus[lotId_] = Auction.Status.Claimed;
 
         Lot storage lot = lotData[lotId_];
-        return (lot.sold, lot.purchased, 0); // TODO partial fill
+        return (lot.sold, lot.purchased, lot.partialPayout);
     }
-
-    function _claimProceeds(uint96 lotId_) internal override returns (uint256, uint256, uint256) {}
 
     function getBid(uint96 lotId_, uint64 bidId_) external view returns (Bid memory bid_) {
         bid_ = bidData[lotId_][bidId_];
@@ -201,14 +198,14 @@ contract MockBatchAuctionModule is AuctionModule {
     function _revertIfLotNotSettled(uint96 lotId_) internal view virtual override {
         // Check that the lot has been settled
         if (lotStatus[lotId_] != Auction.Status.Settled) {
-            revert Auction.Auction_MarketNotActive(lotId_);
+            revert Auction.Auction_InvalidParams();
         }
     }
 
     function _revertIfLotProceedsClaimed(uint96 lotId_) internal view virtual override {
         // Check that the lot has not been claimed
         if (lotStatus[lotId_] == Auction.Status.Claimed) {
-            revert Auction.Auction_MarketNotActive(lotId_);
+            revert Auction.Auction_InvalidParams();
         }
     }
 }
