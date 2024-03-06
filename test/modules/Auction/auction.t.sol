@@ -127,25 +127,15 @@ contract AuctionTest is Test, Permit2User {
         uint96 lotId = auctionHouse.auction(routingParams, auctionParams, INFO_HASH);
 
         // Get lot data from the module
-        (
-            uint48 lotStart,
-            uint48 lotConclusion,
-            uint8 quoteTokenDecimals,
-            uint8 baseTokenDecimals,
-            bool lotCapacityInQuote,
-            uint256 lotCapacity,
-            uint256 sold,
-            uint256 purchased
-        ) = mockAuctionModule.lotData(lotId);
-
-        assertEq(lotStart, uint48(block.timestamp));
-        assertEq(lotConclusion, lotStart + auctionParams.duration);
-        assertEq(lotCapacityInQuote, auctionParams.capacityInQuote);
-        assertEq(lotCapacity, auctionParams.capacity);
-        assertEq(sold, 0);
-        assertEq(purchased, 0);
-        assertEq(quoteTokenDecimals, quoteToken.decimals());
-        assertEq(baseTokenDecimals, baseToken.decimals());
+        Auction.Lot memory lot = mockAuctionModule.getLot(lotId);
+        assertEq(lot.start, uint48(block.timestamp));
+        assertEq(lot.conclusion, lot.start + auctionParams.duration);
+        assertEq(lot.capacityInQuote, auctionParams.capacityInQuote);
+        assertEq(lot.capacity, auctionParams.capacity);
+        assertEq(lot.sold, 0);
+        assertEq(lot.purchased, 0);
+        assertEq(lot.quoteTokenDecimals, quoteToken.decimals());
+        assertEq(lot.baseTokenDecimals, baseToken.decimals());
     }
 
     function test_whenStartTimeIsZero() external {
@@ -155,10 +145,9 @@ contract AuctionTest is Test, Permit2User {
         uint96 lotId = auctionHouse.auction(routingParams, auctionParams, INFO_HASH);
 
         // Get lot data from the module
-        (uint48 lotStart, uint48 lotConclusion,,,,,,) = mockAuctionModule.lotData(lotId);
-
-        assertEq(lotStart, uint48(block.timestamp)); // Sets to current timestamp
-        assertEq(lotConclusion, lotStart + auctionParams.duration);
+        Auction.Lot memory lot = mockAuctionModule.getLot(lotId);
+        assertEq(lot.start, uint48(block.timestamp)); // Sets to current timestamp
+        assertEq(lot.conclusion, lot.start + auctionParams.duration);
     }
 
     function test_success_withCustomDuration(uint48 duration_) external {
@@ -170,8 +159,8 @@ contract AuctionTest is Test, Permit2User {
         uint96 lotId = auctionHouse.auction(routingParams, auctionParams, INFO_HASH);
 
         // Get lot data from the module
-        (uint48 lotStart, uint48 lotConclusion,,,,,,) = mockAuctionModule.lotData(lotId);
-        assertEq(lotConclusion, lotStart + auctionParams.duration);
+        Auction.Lot memory lot = mockAuctionModule.getLot(lotId);
+        assertEq(lot.conclusion, lot.start + auctionParams.duration);
     }
 
     function test_success_withFutureStartTime(uint48 timestamp_) external {
@@ -183,8 +172,8 @@ contract AuctionTest is Test, Permit2User {
         uint96 lotId = auctionHouse.auction(routingParams, auctionParams, INFO_HASH);
 
         // Get lot data from the module
-        (uint48 lotStart, uint48 lotConclusion,,,,,,) = mockAuctionModule.lotData(lotId);
-        assertEq(lotStart, auctionParams.start);
-        assertEq(lotConclusion, lotStart + auctionParams.duration);
+        Auction.Lot memory lot = mockAuctionModule.getLot(lotId);
+        assertEq(lot.start, auctionParams.start);
+        assertEq(lot.conclusion, lot.start + auctionParams.duration);
     }
 }

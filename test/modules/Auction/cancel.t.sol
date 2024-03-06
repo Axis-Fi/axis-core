@@ -119,9 +119,9 @@ contract CancelTest is Test, Permit2User {
         mockAuctionModule.cancelAuction(lotId);
 
         // Get lot data from the module
-        (, uint48 lotConclusion,,,, uint256 lotCapacity,,) = mockAuctionModule.lotData(lotId);
-        assertEq(lotConclusion, uint48(block.timestamp));
-        assertEq(lotCapacity, 0);
+        Auction.Lot memory lot = mockAuctionModule.getLot(lotId);
+        assertEq(lot.conclusion, uint48(block.timestamp));
+        assertEq(lot.capacity, 0);
 
         assertFalse(mockAuctionModule.isLive(lotId), "after cancellation: isLive mismatch");
     }
