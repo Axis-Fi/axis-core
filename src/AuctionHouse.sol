@@ -561,36 +561,12 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
                 );
             }
 
-            // Calculate the referrer and protocol fees for the amount in
-            // Fees are not allocated until the user claims their payout so that we don't have to iterate through them here
-            // If a referrer is not set, that portion of the fee defaults to the protocol
-            uint256 totalInLessFees;
-            {
-                (, uint256 toProtocol) =
-                    calculateQuoteFees(feeData.protocolFee, feeData.referrerFee, false, totalIn);
-                totalInLessFees = totalIn - toProtocol;
-            }
-
-            // Send payment in bulk to seller
-            // _sendPayment(routing.seller, totalInLessFees, routing.quoteToken, routing.hooks);
-
-            // If capacity expended is less than the total capacity, refund the remaining capacity to the seller and proportionally reduce the curator fee
-            if (settlement.totalOut < capacity) {
+            // If the lot is under capacity, adjust the curator payout
+            if (settlement.totalOut < capacity && curatorFeePayout > 0) {
                 uint256 capacityRefund = capacity - settlement.totalOut;
 
-                if (curatorFeePayout > 0) {
-                    uint256 feeRefund = Math.mulDivDown(curatorFeePayout, capacityRefund, capacity);
-                    capacityRefund += feeRefund;
-                    curatorFeePayout -= feeRefund;
-                }
-
-                // Reduce the prefunding amount by the refund
-                unchecked {
-                    routing.prefunding -= capacityRefund;
-                }
-
-                // Transfer the remaining capacity to the seller
-                // Transfer.transfer(routing.baseToken, routing.seller, capacityRefund, false);
+                uint256 feeRefund = Math.mulDivDown(curatorFeePayout, capacityRefund, capacity);
+                curatorFeePayout -= feeRefund;
             }
 
             // Reduce prefunding by curator fee and send, if applicable
@@ -600,25 +576,6 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
                 }
                 _sendPayout(lotId_, feeData.curator, curatorFeePayout, routing, auctionOutput);
             }
-        } else {
-            // if (routing.prefunding > 0) {
-            //     // Auction did not settle, refund the capacity to the seller
-            //     FeeData storage feeData = lotFees[lotId_];
-            //     uint256 curatorFeePayout =
-            //         _calculatePayoutFees(feeData.curated, feeData.curatorFee, capacity);
-
-            //     uint256 refundAmount = capacity + curatorFeePayout; // can add curator fee without checking since it will be zero if not curated
-
-            //     // Reduce the prefunding amount
-            //     unchecked {
-            //         routing.prefunding -= refundAmount;
-            //     }
-
-            //     // Refund the capacity to the seller, no fees are taken
-            //     Transfer.transfer(
-            //         lotRouting[lotId_].baseToken, lotRouting[lotId_].seller, refundAmount, false
-            //     );
-            // }
         }
 
         // Emit event
@@ -641,9 +598,31 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
         _isLotValid(lotId_);
 
         // Call auction module to validate and update data
+        AuctionModule module = getModuleForId(lotId_);
+        (uint256 purchased_, uint256 sold_, uint256 payoutSent_) = module.claimProceeds(lotId_);
 
-        // Load routing data for the lot
+        // Load data for the lot
         Routing storage routing = lotRouting[lotId_];
+        FeeData storage feeData = lotFees[lotId_];
+
+        // Calculate the referrer and protocol fees for the amount in
+        // Fees are not allocated until the user claims their payout so that we don't have to iterate through them here
+        // If a referrer is not set, that portion of the fee defaults to the protocol
+        uint256 totalInLessFees;
+        {
+            (, uint256 toProtocol) =
+                calculateQuoteFees(feeData.protocolFee, feeData.referrerFee, false, purchased_);
+            totalInLessFees = purchased_ - toProtocol;
+        }
+
+        // Send payment in bulk to the seller
+        _sendPayment(routing.seller, totalInLessFees, routing.quoteToken, routing.hooks);
+
+        // Refund any unused capacity and curator fees to the seller
+        // By this stage, a partial payout (if applicable) and curator fees have been paid, leaving only the payout amount (`totalOut`) remaining.
+        uint256 prefundingRefund = routing.prefunding + payoutSent_ - sold_;
+        routing.prefunding -= prefundingRefund;
+        Transfer.transfer(routing.baseToken, routing.seller, prefundingRefund, false);
     }
 
     // ========== CURATION ========== //

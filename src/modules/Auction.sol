@@ -204,6 +204,20 @@ abstract contract Auction {
         virtual
         returns (Settlement memory settlement, bytes memory auctionOutput);
 
+    /// @notice     Claim the seller proceeds from a settled auction lot
+    /// @dev        The implementing function should handle the following:
+    ///             - Validate the lot parameters
+    ///             - Update the lot data
+    ///
+    /// @param      lotId_          The lot id
+    /// @return     purchased       The amount of quote tokens purchased
+    /// @return     sold            The amount of base tokens sold
+    /// @return     payoutSent      The amount of base tokens that have already been paid out
+    function claimProceeds(uint96 lotId_)
+        external
+        virtual
+        returns (uint256 purchased, uint256 sold, uint256 payoutSent);
+
     // ========== AUCTION MANAGEMENT ========== //
 
     /// @notice     Create an auction lot
@@ -605,8 +619,8 @@ abstract contract AuctionModule is Auction, Module {
 
     /// @inheritdoc Auction
     /// @dev        Implements a basic settle function that:
-    ///             - Calls implementation-specific validation logic
-    ///             - Calls the auction module
+    ///             - Calls common validation logic
+    ///             - Calls the implementation-specific function for the auction module
     ///
     ///             This function reverts if:
     ///             - the lot id is invalid
@@ -638,13 +652,13 @@ abstract contract AuctionModule is Auction, Module {
         lotData[lotId_].capacity = 0;
 
         // Store sold and purchased amounts
-        // TODO do we need to store these? Are they used for anything?
         lotData[lotId_].purchased = uint96(settlement.totalIn);
         lotData[lotId_].sold = uint96(settlement.totalOut);
     }
 
     /// @notice     Implementation-specific lot settlement logic
-    /// @dev        Auction modules should override this to perform any additional logic
+    /// @dev        Auction modules should override this to perform any additional logic,
+    ///             such as determining the winning bids and updating the lot data
     ///
     /// @param      lotId_          The lot ID
     /// @return     settlement      The settlement data
@@ -652,6 +666,48 @@ abstract contract AuctionModule is Auction, Module {
         internal
         virtual
         returns (Settlement memory settlement, bytes memory auctionOutput);
+
+    /// @inheritdoc Auction
+    /// @dev        Implements a basic claimProceeds function that:
+    ///             - Calls common validation logic
+    ///             - Calls the implementation-specific function for the auction module
+    ///
+    ///             This function reverts if:
+    ///             - the lot id is invalid
+    ///             - the lot is not settled
+    ///             - the lot proceeds have already been claimed
+    ///             - the caller is not an internal module
+    ///
+    ///             Inheriting contracts should override _claimProceeds to implement auction-specific logic, such as:
+    ///             - Validating the auction-specific parameters
+    ///             - Updating the lot data
+    function claimProceeds(uint96 lotId_)
+        external
+        virtual
+        override
+        onlyInternal
+        returns (uint256 purchased, uint256 sold, uint256 payoutSent)
+    {
+        // Standard validation
+        _revertIfLotInvalid(lotId_);
+        _revertIfLotNotSettled(lotId_);
+
+        // Call implementation-specific logic
+        return _claimProceeds(lotId_);
+    }
+
+    /// @notice     Implementation-specific claim proceeds logic
+    /// @dev        Auction modules should override this to perform any additional logic,
+    ///             such as updating the lot data
+    ///
+    /// @param      lotId_          The lot ID
+    /// @return     purchased       The amount of quote tokens purchased
+    /// @return     sold            The amount of base tokens sold
+    /// @return     payoutSent      The amount of base tokens that have already been paid out
+    function _claimProceeds(uint96 lotId_)
+        internal
+        virtual
+        returns (uint256 purchased, uint256 sold, uint256 payoutSent);
 
     // ========== AUCTION INFORMATION ========== //
 
@@ -758,6 +814,13 @@ abstract contract AuctionModule is Auction, Module {
     ///
     /// @param      lotId_  The lot ID
     function _revertIfLotNotSettled(uint96 lotId_) internal view virtual;
+
+    /// @notice     Checks if the lot represented by `lotId_` has had its proceeds claimed
+    /// @dev        Should revert if the lot proceeds have been claimed
+    ///             Inheriting contracts must override this to implement custom logic
+    ///
+    /// @param      lotId_  The lot ID
+    function _revertIfLotProceedsClaimed(uint96 lotId_) internal view virtual;
 
     /// @notice     Checks that the lot and bid combination is valid
     /// @dev        Should revert if the bid is invalid
