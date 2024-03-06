@@ -139,8 +139,8 @@ contract MockBatchAuctionModule is AuctionModule {
 
         // Also update sold and purchased
         Lot storage lot = lotData[lotId_];
-        lot.sold = uint96(settlement_.totalOut);
         lot.purchased = uint96(settlement_.totalIn);
+        lot.sold = uint96(settlement_.totalOut);
         lot.partialPayout = uint96(settlement_.pfPayout);
     }
 
@@ -156,7 +156,7 @@ contract MockBatchAuctionModule is AuctionModule {
         lotStatus[lotId_] = Auction.Status.Claimed;
 
         Lot storage lot = lotData[lotId_];
-        return (lot.sold, lot.purchased, lot.partialPayout);
+        return (lot.purchased, lot.sold, lot.partialPayout);
     }
 
     function getBid(uint96 lotId_, uint64 bidId_) external view returns (Bid memory bid_) {
