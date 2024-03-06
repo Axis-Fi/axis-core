@@ -117,17 +117,26 @@ abstract contract Router {
     function claimBids(uint96 lotId_, uint64[] calldata bidIds_) external virtual;
 
     /// @notice     Settle a batch auction
-    /// @notice     This function is used for versions with on-chain storage and bids and local settlement
+    /// @notice     This function is used for versions with on-chain storage of bids and settlement
     /// @dev        The implementing function must perform the following:
     ///             1. Validate the lot
     ///             2. Pass the request to the auction module to calculate winning bids
     ///             3. Collect the payout from the seller (if not pre-funded)
-    ///             4. Send the payout to each bidder
-    ///             5. Send the payment to the seller
-    ///             6. Allocate protocol, referrer and curator fees
+    ///             4. If there is a partial fill, sends the refund and payout to the bidder
+    ///             5. Send the fees to the curator
     ///
     /// @param      lotId_          Lot ID
     function settle(uint96 lotId_) external virtual;
+
+    /// @notice     Claim the proceeds of a settled auction
+    /// @dev        The implementing function must perform the following:
+    ///             1. Validate the lot
+    ///             2. Pass the request to the auction module to get the proceeds data
+    ///             3. Send the proceeds (quote tokens) to the seller
+    ///             4. Refund any unused base tokens to the seller
+    ///
+    /// @param      lotId_          Lot ID
+    function claimProceeds(uint96 lotId_) external virtual;
 }
 
 /// @title      AuctionHouse
@@ -468,17 +477,13 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
     ///             - Caches the fees for the lot
     ///             - Calculates the fees taken on the quote token
     ///             - Collects the payout from the seller (if necessary)
-    ///             - Sends the payout to each bidder
-    ///             - Sends the payment to the seller
-    ///             - Sends the refund to the bidder if the last bid was a partial fill
-    ///             - Refunds any unused base token to the seller
+    ///             - Sends the refund and payout to the bidder (if there is a partial fill)
+    ///             - Sends the payout to the curator (if curation is approved)
     ///
     ///             This function reverts if:
     ///             - the lot ID is invalid
     ///             - the auction module reverts when settling the auction
-    ///             - transferring the quote token to the seller fails
     ///             - collecting the payout from the seller fails
-    ///             - sending the payout to each bidder fails
     ///             - re-entrancy is detected
     function settle(uint96 lotId_) external override nonReentrant {
         // TODO this implementation is pretty opinionated about only having one partial fill.
@@ -582,7 +587,7 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
         emit Settle(lotId_);
     }
 
-    /// @notice     Claims the proceeds of a settled auction
+    /// @inheritdoc Router
     /// @dev        This function handles the following:
     ///             1. Validates the lot
     ///             2. Sends the proceeds to the seller
@@ -593,7 +598,7 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
     ///             - the lot ID is invalid
     ///             - the lot is not settled
     ///             - the proceeds have already been claimed
-    function claimProceeds(uint96 lotId_) external nonReentrant {
+    function claimProceeds(uint96 lotId_) external override nonReentrant {
         // Validation
         _isLotValid(lotId_);
 
@@ -614,6 +619,8 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
                 calculateQuoteFees(feeData.protocolFee, feeData.referrerFee, false, purchased_);
             totalInLessFees = purchased_ - toProtocol;
         }
+
+        // TODO implement hooks
 
         // Send payment in bulk to the seller
         _sendPayment(routing.seller, totalInLessFees, routing.quoteToken, routing.hooks);
