@@ -13,6 +13,37 @@ contract ClaimProceedsTest is AuctionHouseTest {
     uint96 internal constant _BID_AMOUNT_PARTIAL_REFUND = 15e17;
     uint96 internal constant _BID_AMOUNT_OUT_PARTIAL_PAYOUT = 1e18;
 
+    function _assertQuoteTokenBalances(
+        uint256 sellerBalance,
+        uint256 auctionHouseBalance
+    ) internal {
+        assertEq(_quoteToken.balanceOf(_SELLER), sellerBalance, "quote token: seller");
+        assertEq(
+            _quoteToken.balanceOf(address(_auctionHouse)),
+            auctionHouseBalance,
+            "quote token: auction house"
+        );
+    }
+
+    function _assertBaseTokenBalances(
+        uint256 sellerBalance,
+        uint256 auctionHouseBalance,
+        uint256 curatorBalance
+    ) internal {
+        assertEq(_baseToken.balanceOf(_SELLER), sellerBalance, "base token: seller");
+        assertEq(
+            _baseToken.balanceOf(address(_auctionHouse)),
+            auctionHouseBalance,
+            "base token: auction house"
+        );
+        assertEq(_baseToken.balanceOf(_CURATOR), curatorBalance, "base token: curator");
+    }
+
+    function _assertLotRouting(uint256 prefunding) internal {
+        Auctioneer.Routing memory lotRouting = _getLotRouting(_lotId);
+        assertEq(lotRouting.prefunding, prefunding, "prefunding");
+    }
+
     // ============ Modifiers ============ //
 
     modifier givenLotSettlementIsSuccessful() {
@@ -190,22 +221,16 @@ contract ClaimProceedsTest is AuctionHouseTest {
         vm.prank(_SELLER);
         _auctionHouse.claimProceeds(_lotId);
 
-        // Assert quote token balances
-        assertEq(_quoteToken.balanceOf(_SELLER), 0, "quote token: seller");
-        assertEq(
-            _quoteToken.balanceOf(address(_auctionHouse)),
-            _scaleQuoteTokenAmount(_BID_AMOUNT),
-            "quote token: auction house"
-        ); // To be claimed by bidder
+        uint256 quoteTokenIn = 0;
+        uint256 claimablePayout = 0;
+        uint256 claimableRefund = _scaleQuoteTokenAmount(_BID_AMOUNT);
+        uint96 curatorFeeActual = 0;
+        uint256 unusedCapacity = _scaleBaseTokenAmount(_LOT_CAPACITY);
 
-        // Assert base token balances
-        assertEq(
-            _baseToken.balanceOf(_SELLER),
-            _scaleBaseTokenAmount(_LOT_CAPACITY),
-            "base token: seller"
-        );
-        assertEq(_baseToken.balanceOf(address(_auctionHouse)), 0, "base token: auction house");
-        assertEq(_baseToken.balanceOf(_CURATOR), 0, "base token: curator");
+        // Assert balances
+        _assertQuoteTokenBalances(quoteTokenIn, claimableRefund);
+        _assertBaseTokenBalances(unusedCapacity, claimablePayout, curatorFeeActual);
+        _assertLotRouting(claimablePayout);
 
         // Assert lot state
         // TODO update state?
@@ -229,26 +254,15 @@ contract ClaimProceedsTest is AuctionHouseTest {
         vm.prank(_SELLER);
         _auctionHouse.claimProceeds(_lotId);
 
-        // Assert quote token balances
-        assertEq(
-            _quoteToken.balanceOf(_SELLER),
-            _scaleQuoteTokenAmount(_BID_AMOUNT),
-            "quote token: seller"
-        );
-        assertEq(_quoteToken.balanceOf(address(_auctionHouse)), 0, "quote token: auction house");
+        uint256 quoteTokenIn = _scaleQuoteTokenAmount(_BID_AMOUNT);
+        uint256 claimablePayout = _scaleBaseTokenAmount(_BID_AMOUNT_OUT);
+        uint256 curatorFeeActual = 0;
+        uint256 unusedCapacity = _scaleBaseTokenAmount(_LOT_CAPACITY) - claimablePayout;
 
-        // Assert base token balances
-        assertEq(
-            _baseToken.balanceOf(_SELLER),
-            _scaleBaseTokenAmount(_LOT_CAPACITY - _BID_AMOUNT_OUT),
-            "base token: seller"
-        );
-        assertEq(
-            _baseToken.balanceOf(address(_auctionHouse)),
-            _scaleBaseTokenAmount(_BID_AMOUNT_OUT),
-            "base token: auction house"
-        ); // To be claimed by bidder
-        assertEq(_baseToken.balanceOf(_CURATOR), 0, "base token: curator");
+        // Assert balances
+        _assertQuoteTokenBalances(quoteTokenIn, 0);
+        _assertBaseTokenBalances(unusedCapacity, claimablePayout, curatorFeeActual);
+        _assertLotRouting(claimablePayout);
 
         // Assert lot state
         // TODO update state?
@@ -284,25 +298,15 @@ contract ClaimProceedsTest is AuctionHouseTest {
         vm.prank(_SELLER);
         _auctionHouse.claimProceeds(_lotId);
 
-        // Calculate the curator fees
+        uint256 quoteTokenIn = _scaleQuoteTokenAmount(_BID_AMOUNT * 5);
+        uint256 claimablePayout = _scaleBaseTokenAmount(_BID_AMOUNT_OUT * 5);
         uint96 curatorFeeActual = 0;
+        uint256 unusedCapacity = 0;
 
-        // Assert quote token balances
-        assertEq(
-            _quoteToken.balanceOf(_SELLER),
-            _scaleQuoteTokenAmount(_BID_AMOUNT * 5),
-            "quote token: seller"
-        );
-        assertEq(_quoteToken.balanceOf(address(_auctionHouse)), 0, "quote token: auction house");
-
-        // Assert base token balances
-        assertEq(_baseToken.balanceOf(_SELLER), 0, "base token: seller"); // Nothing returned
-        assertEq(
-            _baseToken.balanceOf(address(_auctionHouse)),
-            _scaleBaseTokenAmount(_BID_AMOUNT_OUT * 5),
-            "base token: auction house"
-        ); // To be claimed by bidder
-        assertEq(_baseToken.balanceOf(_CURATOR), curatorFeeActual, "base token: curator");
+        // Assert balances
+        _assertQuoteTokenBalances(quoteTokenIn, 0);
+        _assertBaseTokenBalances(unusedCapacity, claimablePayout, curatorFeeActual);
+        _assertLotRouting(claimablePayout);
 
         // Assert lot state
         // TODO update state?
@@ -341,25 +345,16 @@ contract ClaimProceedsTest is AuctionHouseTest {
         vm.prank(_SELLER);
         _auctionHouse.claimProceeds(_lotId);
 
-        // Calculate the curator fees
+        uint256 quoteTokenIn = _scaleQuoteTokenAmount(_BID_AMOUNT * 6 - _BID_AMOUNT_PARTIAL_REFUND);
+        uint256 claimablePayout =
+            _scaleBaseTokenAmount(_LOT_CAPACITY - _BID_AMOUNT_OUT_PARTIAL_PAYOUT);
         uint96 curatorFeeActual = 0;
+        uint256 unusedCapacity = 0;
 
-        // Assert quote token balances
-        assertEq(
-            _quoteToken.balanceOf(_SELLER),
-            _scaleQuoteTokenAmount(_BID_AMOUNT * 6 - _BID_AMOUNT_PARTIAL_REFUND),
-            "quote token: seller"
-        );
-        assertEq(_quoteToken.balanceOf(address(_auctionHouse)), 0, "quote token: auction house");
-
-        // Assert base token balances
-        assertEq(_baseToken.balanceOf(_SELLER), 0, "base token: seller"); // Nothing returned
-        assertEq(
-            _baseToken.balanceOf(address(_auctionHouse)),
-            _scaleBaseTokenAmount(_LOT_CAPACITY - _BID_AMOUNT_OUT_PARTIAL_PAYOUT),
-            "base token: auction house"
-        ); // To be claimed by bidder
-        assertEq(_baseToken.balanceOf(_CURATOR), curatorFeeActual, "base token: curator");
+        // Assert balances
+        _assertQuoteTokenBalances(quoteTokenIn, 0);
+        _assertBaseTokenBalances(unusedCapacity, claimablePayout, curatorFeeActual);
+        _assertLotRouting(claimablePayout);
 
         // Assert lot state
         // TODO update state?
@@ -399,25 +394,15 @@ contract ClaimProceedsTest is AuctionHouseTest {
         vm.prank(_SELLER);
         _auctionHouse.claimProceeds(_lotId);
 
-        // Calculate the curator fees
+        uint256 quoteTokenIn = _scaleQuoteTokenAmount(_BID_AMOUNT * 5);
+        uint256 claimablePayout = _scaleBaseTokenAmount(_BID_AMOUNT_OUT * 5);
         uint96 curatorFeeActual = _BID_AMOUNT_OUT * 5 * _curatorFeePercentActual / 1e5;
+        uint256 unusedCapacity = 0;
 
-        // Assert quote token balances
-        assertEq(
-            _quoteToken.balanceOf(_SELLER),
-            _scaleQuoteTokenAmount(_BID_AMOUNT * 5),
-            "quote token: seller"
-        );
-        assertEq(_quoteToken.balanceOf(address(_auctionHouse)), 0, "quote token: auction house");
-
-        // Assert base token balances
-        assertEq(_baseToken.balanceOf(_SELLER), 0, "base token: seller"); // Nothing returned
-        assertEq(
-            _baseToken.balanceOf(address(_auctionHouse)),
-            _scaleBaseTokenAmount(_BID_AMOUNT_OUT * 5 + _curatorMaxPotentialFee - curatorFeeActual),
-            "base token: auction house"
-        ); // To be claimed by bidder
-        assertEq(_baseToken.balanceOf(_CURATOR), curatorFeeActual, "base token: curator");
+        // Assert balances
+        _assertQuoteTokenBalances(quoteTokenIn, 0);
+        _assertBaseTokenBalances(unusedCapacity, claimablePayout, curatorFeeActual);
+        _assertLotRouting(claimablePayout);
 
         // Assert lot state
         // TODO update state?
@@ -460,28 +445,16 @@ contract ClaimProceedsTest is AuctionHouseTest {
         vm.prank(_SELLER);
         _auctionHouse.claimProceeds(_lotId);
 
-        // Calculate the curator fees
+        uint256 quoteTokenIn = _scaleQuoteTokenAmount(_BID_AMOUNT * 6 - _BID_AMOUNT_PARTIAL_REFUND);
+        uint256 claimablePayout =
+            _scaleBaseTokenAmount(_LOT_CAPACITY - _BID_AMOUNT_OUT_PARTIAL_PAYOUT);
         uint96 curatorFeeActual = _LOT_CAPACITY * _curatorFeePercentActual / 1e5;
+        uint256 unusedCapacity = 0;
 
-        // Assert quote token balances
-        assertEq(
-            _quoteToken.balanceOf(_SELLER),
-            _scaleQuoteTokenAmount(_BID_AMOUNT * 6 - _BID_AMOUNT_PARTIAL_REFUND),
-            "quote token: seller"
-        );
-        assertEq(_quoteToken.balanceOf(address(_auctionHouse)), 0, "quote token: auction house");
-
-        // Assert base token balances
-        assertEq(_baseToken.balanceOf(_SELLER), 0, "base token: seller"); // Nothing returned
-        assertEq(
-            _baseToken.balanceOf(address(_auctionHouse)),
-            _scaleBaseTokenAmount(
-                _LOT_CAPACITY + _curatorMaxPotentialFee - curatorFeeActual
-                    - _BID_AMOUNT_OUT_PARTIAL_PAYOUT
-            ),
-            "base token: auction house"
-        ); // To be claimed by bidder, minus partial payment
-        assertEq(_baseToken.balanceOf(_CURATOR), curatorFeeActual, "base token: curator");
+        // Assert balances
+        _assertQuoteTokenBalances(quoteTokenIn, 0);
+        _assertBaseTokenBalances(unusedCapacity, claimablePayout, curatorFeeActual);
+        _assertLotRouting(claimablePayout);
 
         // Assert lot state
         // TODO update state?
@@ -506,22 +479,16 @@ contract ClaimProceedsTest is AuctionHouseTest {
         vm.prank(_SELLER);
         _auctionHouse.claimProceeds(_lotId);
 
-        // Assert quote token balances
-        assertEq(_quoteToken.balanceOf(_SELLER), 0, "quote token: seller");
-        assertEq(
-            _quoteToken.balanceOf(address(_auctionHouse)),
-            _scaleQuoteTokenAmount(_BID_AMOUNT),
-            "quote token: auction house"
-        ); // To be claimed by bidder
+        uint256 quoteTokenIn = 0;
+        uint256 claimablePayout = 0;
+        uint256 claimableRefund = _scaleQuoteTokenAmount(_BID_AMOUNT);
+        uint256 curatorFeeActual = 0;
+        uint256 unusedCapacity = _scaleBaseTokenAmount(_LOT_CAPACITY);
 
-        // Assert base token balances
-        assertEq(
-            _baseToken.balanceOf(_SELLER),
-            _scaleBaseTokenAmount(_LOT_CAPACITY),
-            "base token: seller"
-        );
-        assertEq(_baseToken.balanceOf(address(_auctionHouse)), 0, "base token: auction house");
-        assertEq(_baseToken.balanceOf(_CURATOR), 0, "base token: curator");
+        // Assert balances
+        _assertQuoteTokenBalances(quoteTokenIn, claimableRefund);
+        _assertBaseTokenBalances(unusedCapacity, claimablePayout, curatorFeeActual);
+        _assertLotRouting(claimablePayout);
 
         // Assert lot state
         // TODO update state?
@@ -546,26 +513,15 @@ contract ClaimProceedsTest is AuctionHouseTest {
         vm.prank(_SELLER);
         _auctionHouse.claimProceeds(_lotId);
 
-        // Assert quote token balances
-        assertEq(
-            _quoteToken.balanceOf(_SELLER),
-            _scaleQuoteTokenAmount(_BID_AMOUNT),
-            "quote token: seller"
-        );
-        assertEq(_quoteToken.balanceOf(address(_auctionHouse)), 0, "quote token: auction house");
+        uint256 quoteTokenIn = _scaleQuoteTokenAmount(_BID_AMOUNT);
+        uint256 claimablePayout = _scaleBaseTokenAmount(_BID_AMOUNT_OUT);
+        uint256 curatorFeeActual = 0;
+        uint256 unusedCapacity = _scaleBaseTokenAmount(_LOT_CAPACITY) - claimablePayout;
 
-        // Assert base token balances
-        assertEq(
-            _baseToken.balanceOf(_SELLER),
-            _scaleBaseTokenAmount(_LOT_CAPACITY - _BID_AMOUNT_OUT),
-            "base token: seller"
-        );
-        assertEq(
-            _baseToken.balanceOf(address(_auctionHouse)),
-            _scaleBaseTokenAmount(_BID_AMOUNT_OUT),
-            "base token: auction house"
-        ); // To be claimed by bidder
-        assertEq(_baseToken.balanceOf(_CURATOR), 0, "base token: curator");
+        // Assert balances
+        _assertQuoteTokenBalances(quoteTokenIn, 0);
+        _assertBaseTokenBalances(unusedCapacity, claimablePayout, curatorFeeActual);
+        _assertLotRouting(claimablePayout);
 
         // Assert lot state
         // TODO update state?
@@ -596,31 +552,16 @@ contract ClaimProceedsTest is AuctionHouseTest {
         vm.prank(_SELLER);
         _auctionHouse.claimProceeds(_lotId);
 
-        // Calculate the curator fees
+        uint256 quoteTokenIn = _scaleQuoteTokenAmount(_BID_AMOUNT);
+        uint256 claimablePayout = _scaleBaseTokenAmount(_BID_AMOUNT_OUT);
         uint96 curatorFeeActual = _BID_AMOUNT_OUT * _curatorFeePercentActual / 1e5;
+        uint256 unusedCapacity =
+            _LOT_CAPACITY + _curatorMaxPotentialFee - _BID_AMOUNT_OUT - curatorFeeActual;
 
-        // Assert quote token balances
-        assertEq(
-            _quoteToken.balanceOf(_SELLER),
-            _scaleQuoteTokenAmount(_BID_AMOUNT),
-            "quote token: seller"
-        );
-        assertEq(_quoteToken.balanceOf(address(_auctionHouse)), 0, "quote token: auction house");
-
-        // Assert base token balances
-        assertEq(
-            _baseToken.balanceOf(_SELLER),
-            _scaleBaseTokenAmount(
-                _LOT_CAPACITY + _curatorMaxPotentialFee - _BID_AMOUNT_OUT - curatorFeeActual
-            ),
-            "base token: seller"
-        );
-        assertEq(
-            _baseToken.balanceOf(address(_auctionHouse)),
-            _scaleBaseTokenAmount(_BID_AMOUNT_OUT),
-            "base token: auction house"
-        ); // To be claimed by bidder
-        assertEq(_baseToken.balanceOf(_CURATOR), curatorFeeActual, "base token: curator");
+        // Assert balances
+        _assertQuoteTokenBalances(quoteTokenIn, 0);
+        _assertBaseTokenBalances(unusedCapacity, claimablePayout, curatorFeeActual);
+        _assertLotRouting(claimablePayout);
 
         // Assert lot state
         // TODO update state?
@@ -663,25 +604,15 @@ contract ClaimProceedsTest is AuctionHouseTest {
         vm.prank(_SELLER);
         _auctionHouse.claimProceeds(_lotId);
 
-        // Calculate the curator fees
+        uint256 quoteTokenIn = _scaleQuoteTokenAmount(_BID_AMOUNT * 5);
+        uint256 claimablePayout = _scaleBaseTokenAmount(_BID_AMOUNT_OUT * 5);
         uint96 curatorFeeActual = _BID_AMOUNT_OUT * 5 * _curatorFeePercentActual / 1e5;
+        uint256 unusedCapacity = 0;
 
-        // Assert quote token balances
-        assertEq(
-            _quoteToken.balanceOf(_SELLER),
-            _scaleQuoteTokenAmount(_BID_AMOUNT * 5),
-            "quote token: seller"
-        );
-        assertEq(_quoteToken.balanceOf(address(_auctionHouse)), 0, "quote token: auction house");
-
-        // Assert base token balances
-        assertEq(_baseToken.balanceOf(_SELLER), 0, "base token: seller"); // Nothing returned
-        assertEq(
-            _baseToken.balanceOf(address(_auctionHouse)),
-            _scaleBaseTokenAmount(_BID_AMOUNT_OUT * 5),
-            "base token: auction house"
-        ); // To be claimed by bidder
-        assertEq(_baseToken.balanceOf(_CURATOR), curatorFeeActual, "base token: curator");
+        // Assert balances
+        _assertQuoteTokenBalances(quoteTokenIn, 0);
+        _assertBaseTokenBalances(unusedCapacity, claimablePayout, curatorFeeActual);
+        _assertLotRouting(claimablePayout);
 
         // Assert lot state
         // TODO update state?
@@ -727,25 +658,16 @@ contract ClaimProceedsTest is AuctionHouseTest {
         vm.prank(_SELLER);
         _auctionHouse.claimProceeds(_lotId);
 
-        // Calculate the curator fees
+        uint256 quoteTokenIn = _scaleQuoteTokenAmount(_BID_AMOUNT * 6 - _BID_AMOUNT_PARTIAL_REFUND);
+        uint256 claimablePayout =
+            _scaleBaseTokenAmount(_LOT_CAPACITY - _BID_AMOUNT_OUT_PARTIAL_PAYOUT);
         uint96 curatorFeeActual = _LOT_CAPACITY * _curatorFeePercentActual / 1e5;
+        uint256 unusedCapacity = 0;
 
-        // Assert quote token balances
-        assertEq(
-            _quoteToken.balanceOf(_SELLER),
-            _scaleQuoteTokenAmount(_BID_AMOUNT * 6 - _BID_AMOUNT_PARTIAL_REFUND),
-            "quote token: seller"
-        );
-        assertEq(_quoteToken.balanceOf(address(_auctionHouse)), 0, "quote token: auction house");
-
-        // Assert base token balances
-        assertEq(_baseToken.balanceOf(_SELLER), 0, "base token: seller"); // Nothing returned
-        assertEq(
-            _baseToken.balanceOf(address(_auctionHouse)),
-            _scaleBaseTokenAmount(_LOT_CAPACITY - _BID_AMOUNT_OUT_PARTIAL_PAYOUT),
-            "base token: auction house"
-        ); // To be claimed by bidder, minus partial payment
-        assertEq(_baseToken.balanceOf(_CURATOR), curatorFeeActual, "base token: curator");
+        // Assert balances
+        _assertQuoteTokenBalances(quoteTokenIn, 0);
+        _assertBaseTokenBalances(unusedCapacity, claimablePayout, curatorFeeActual);
+        _assertLotRouting(claimablePayout);
 
         // Assert lot state
         // TODO update state?
@@ -785,25 +707,16 @@ contract ClaimProceedsTest is AuctionHouseTest {
         vm.prank(_SELLER);
         _auctionHouse.claimProceeds(_lotId);
 
-        // Calculate the curator fees
+        uint256 quoteTokenIn = _scaleQuoteTokenAmount(_BID_AMOUNT * 6 - _BID_AMOUNT_PARTIAL_REFUND);
+        uint256 claimablePayout =
+            _scaleBaseTokenAmount(_LOT_CAPACITY - _BID_AMOUNT_OUT_PARTIAL_PAYOUT);
         uint96 curatorFeeActual = 0;
+        uint256 unusedCapacity = 0;
 
-        // Assert quote token balances
-        assertEq(
-            _quoteToken.balanceOf(_SELLER),
-            _scaleQuoteTokenAmount(_BID_AMOUNT * 6 - _BID_AMOUNT_PARTIAL_REFUND),
-            "quote token: seller"
-        );
-        assertEq(_quoteToken.balanceOf(address(_auctionHouse)), 0, "quote token: auction house");
-
-        // Assert base token balances
-        assertEq(_baseToken.balanceOf(_SELLER), 0, "base token: seller"); // Nothing returned
-        assertEq(
-            _baseToken.balanceOf(address(_auctionHouse)),
-            _scaleBaseTokenAmount(_LOT_CAPACITY - _BID_AMOUNT_OUT_PARTIAL_PAYOUT),
-            "base token: auction house"
-        ); // To be claimed by bidder, minus partial payment
-        assertEq(_baseToken.balanceOf(_CURATOR), curatorFeeActual, "base token: curator");
+        // Assert balances
+        _assertQuoteTokenBalances(quoteTokenIn, 0);
+        _assertBaseTokenBalances(unusedCapacity, claimablePayout, curatorFeeActual);
+        _assertLotRouting(claimablePayout);
 
         // Assert lot state
         // TODO update state?
