@@ -161,7 +161,7 @@ contract ClaimBidTest is AuctionHouseTest {
         _expectedAuctionHouseQuoteTokenBalance += 0; // No fees are collected
         _expectedBidderQuoteTokenBalance = amountIn_; // Returned to the bidder
 
-        _expectedAuctionHouseBaseTokenBalance = 0; // Returned to the seller during settlement
+        _expectedAuctionHouseBaseTokenBalance = scaledLotCapacity; // To be collected in claimProceeds()
         _expectedBidderBaseTokenBalance = 0;
         _expectedCuratorBaseTokenBalance = 0;
         _;
@@ -184,10 +184,10 @@ contract ClaimBidTest is AuctionHouseTest {
         _expectedProtocolFee += toProtocol;
 
         // Set expected balances
-        _expectedAuctionHouseQuoteTokenBalance += toReferrer + toProtocol; // Payment sent to the seller during settlement
+        _expectedAuctionHouseQuoteTokenBalance += amountIn_; // Payment to be collected in claimProceeds()
         _expectedBidderQuoteTokenBalance += 0;
 
-        _expectedAuctionHouseBaseTokenBalance = 0; // Returned to the seller during settlement
+        _expectedAuctionHouseBaseTokenBalance = scaledLotCapacity - payout_; // To be collected in claimProceeds()
         _expectedBidderBaseTokenBalance = payout_;
         _expectedCuratorBaseTokenBalance = 0;
         _;
