@@ -519,9 +519,9 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
                 _calculatePayoutFees(feeData.curated, feeData.curatorFee, capacity);
 
             // Collect the payout from the seller
+            // Any unutilised capacity and fees can be claimed in `claimProceeds()`
             if (routing.prefunding == 0) {
                 routing.prefunding = capacity + curatorFeePayout;
-                // TODO transfer only what's needed
                 _collectPayout(lotId_, settlement.totalIn, capacity + curatorFeePayout, routing);
             }
 
