@@ -49,6 +49,7 @@ abstract contract Auction {
     /// @param      capacity            The capacity of the lot
     /// @param      sold                The amount of base tokens sold
     /// @param      purchased           The amount of quote tokens purchased
+    /// @param      partialPayout       The amount of partial payout tokens
     // TODO pack slots
     struct Lot {
         uint48 start; // 6 +
@@ -59,6 +60,7 @@ abstract contract Auction {
         uint96 capacity;
         uint96 sold;
         uint96 purchased;
+        uint96 partialPayout;
     }
 
     /// @notice     Parameters when creating an auction lot
@@ -654,6 +656,7 @@ abstract contract AuctionModule is Auction, Module {
         // Store sold and purchased amounts
         lotData[lotId_].purchased = uint96(settlement.totalIn);
         lotData[lotId_].sold = uint96(settlement.totalOut);
+        lotData[lotId_].partialPayout = uint96(settlement.pfPayout);
     }
 
     /// @notice     Implementation-specific lot settlement logic
@@ -690,6 +693,7 @@ abstract contract AuctionModule is Auction, Module {
     {
         // Standard validation
         _revertIfLotInvalid(lotId_);
+        _revertIfLotProceedsClaimed(lotId_);
         _revertIfLotNotSettled(lotId_);
 
         // Call implementation-specific logic

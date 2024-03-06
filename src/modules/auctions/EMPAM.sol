@@ -15,7 +15,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
 
     // ========== ERRORS ========== //
     error Auction_InvalidKey();
-    error Auction_WrongState(uint96 lotId);
+    error Auction_WrongState(uint96 lotId); // TODO shift into Auction?
     error Bid_WrongState(uint96 lotId, uint64 bidId);
     error NotPermitted(address caller);
 
