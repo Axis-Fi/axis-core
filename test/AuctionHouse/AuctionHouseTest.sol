@@ -519,26 +519,6 @@ abstract contract AuctionHouseTest is Test, Permit2User {
     }
 
     function _getLotData(uint96 lotId_) internal view returns (Auction.Lot memory) {
-        (
-            uint48 start_,
-            uint48 conclusion_,
-            uint8 quoteTokenDecimals_,
-            uint8 baseTokenDecimals_,
-            bool capacityInQuote_,
-            uint96 capacity_,
-            uint96 sold_,
-            uint96 purchased_
-        ) = _auctionModule.lotData(lotId_);
-
-        return Auction.Lot({
-            start: start_,
-            conclusion: conclusion_,
-            quoteTokenDecimals: quoteTokenDecimals_,
-            baseTokenDecimals: baseTokenDecimals_,
-            capacityInQuote: capacityInQuote_,
-            capacity: capacity_,
-            sold: sold_,
-            purchased: purchased_
-        });
+        return _auctionModule.getLot(lotId_);
     }
 }
