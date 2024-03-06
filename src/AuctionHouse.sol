@@ -603,13 +603,13 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
 
         // Load data for the lot
         Routing storage routing = lotRouting[lotId_];
-        FeeData storage feeData = lotFees[lotId_];
 
         // Calculate the referrer and protocol fees for the amount in
         // Fees are not allocated until the user claims their payout so that we don't have to iterate through them here
         // If a referrer is not set, that portion of the fee defaults to the protocol
         uint256 totalInLessFees;
         {
+            FeeData storage feeData = lotFees[lotId_];
             (, uint256 toProtocol) =
                 calculateQuoteFees(feeData.protocolFee, feeData.referrerFee, false, purchased_);
             totalInLessFees = purchased_ - toProtocol;

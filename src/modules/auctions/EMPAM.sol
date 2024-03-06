@@ -721,7 +721,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         Lot memory lot = lotData[lotId_];
 
         // Return the required data
-        return (lot.purchased, lot.sold, 0);
+        return (lot.purchased, lot.sold, lot.partialPayout);
     }
 
     // ========== AUCTION INFORMATION ========== //
