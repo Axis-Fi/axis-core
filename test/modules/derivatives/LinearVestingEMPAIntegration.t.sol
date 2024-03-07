@@ -535,6 +535,42 @@ contract LinearVestingEMPAIntegrationTest is AuctionHouseTest {
     // [X] derivative tokens are minted to the bidder, but cannot be transferred
     // [X] given the expiry time has passed, the derivative tokens can be redeemed for the base tokens
 
+    function test_claimBid_refund()
+        external
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenAuctionTypeIsEMPA
+        givenDerivativeTypeIsLinearVesting
+        givenLotIsCreated
+        givenLotHasStarted
+        givenUserHasQuoteTokenBalance(4e18)
+        givenUserHasQuoteTokenAllowance(4e18)
+        givenBidIsCreated(4e18, 2e18)
+        givenLotIsConcluded
+        givenPrivateKeyIsSubmitted
+        givenLotIsDecrypted
+        givenLotIsSettled
+        givenBidIsClaimed(1)
+    {
+        // Check the bid
+        (EncryptedMarginalPriceAuctionModule.Bid memory bid,) = _empaModule.getBid(_lotId, 1);
+        assertEq(
+            uint8(bid.status),
+            uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed),
+            "status"
+        );
+
+        uint256 derivativeTokenId =
+            _linearVestingModule.computeId(address(_baseToken), abi.encode(_linearVestingParams));
+
+        // Check the balances
+        assertEq(_quoteToken.balanceOf(_bidder), 4e18, "quote token: bidder");
+
+        assertEq(_linearVestingModule.balanceOf(_bidder, derivativeTokenId), 0, "bidder balance");
+
+        assertEq(_baseToken.balanceOf(_bidder), 0, "bidder balance");
+    }
+
     function test_claimBid()
         external
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
@@ -560,16 +596,21 @@ contract LinearVestingEMPAIntegrationTest is AuctionHouseTest {
             "status"
         );
 
-        // Check the balances
         uint256 derivativeTokenId =
             _linearVestingModule.computeId(address(_baseToken), abi.encode(_linearVestingParams));
+
+        // Check the balances
+        assertEq(_quoteToken.balanceOf(_bidder), 0, "quote token: bidder");
+
+        assertEq(_baseToken.balanceOf(_bidder), 0, "base token: bidder");
+
         assertEq(
             _linearVestingModule.balanceOf(_bidder, derivativeTokenId),
             _BID_AMOUNT_OUT,
-            "bidder balance"
+            "derivative: bidder"
         );
+
         assertEq(_linearVestingModule.redeemable(_bidder, derivativeTokenId), 0, "redeemable");
-        assertEq(_baseToken.balanceOf(_bidder), 0, "bidder balance");
     }
 
     function test_claimBid_givenAfterVesting()
