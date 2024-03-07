@@ -255,9 +255,9 @@ contract CancelAuctionTest is AuctionHouseTest {
             "base token: balance mismatch for auction house"
         );
 
-        // Check prefunding amount
+        // Check funding amount
         (,,,,,,,,, uint256 lotPrefunding) = _auctionHouse.lotRouting(_lotId);
-        assertEq(lotPrefunding, 0, "mismatch on prefunding");
+        assertEq(lotPrefunding, 0, "mismatch on funding");
     }
 
     function test_prefunded_givenCuratorHasApproved()
@@ -293,9 +293,9 @@ contract CancelAuctionTest is AuctionHouseTest {
             "base token: balance mismatch for auction house"
         );
 
-        // Check prefunding amount
+        // Check funding amount
         (,,,,,,,,, uint256 lotPrefunding) = _auctionHouse.lotRouting(_lotId);
-        assertEq(lotPrefunding, 0, "mismatch on prefunding");
+        assertEq(lotPrefunding, 0, "mismatch on funding");
     }
 
     function test_prefunded_givenPurchase_givenCuratorHasApproved()
@@ -338,9 +338,9 @@ contract CancelAuctionTest is AuctionHouseTest {
             "base token: balance mismatch for auction house"
         );
 
-        // Check prefunding amount
+        // Check funding amount
         (,,,,,,,,, uint256 lotPrefunding) = _auctionHouse.lotRouting(_lotId);
-        assertEq(lotPrefunding, 0, "mismatch on prefunding");
+        assertEq(lotPrefunding, 0, "mismatch on funding");
     }
 
     function test_prefunded_givenPurchase_givenCuratorHasApproved_givenPurchase()
@@ -387,9 +387,9 @@ contract CancelAuctionTest is AuctionHouseTest {
             "base token: balance mismatch for auction house"
         );
 
-        // Check prefunding amount
+        // Check funding amount
         (,,,,,,,,, uint256 lotPrefunding) = _auctionHouse.lotRouting(_lotId);
-        assertEq(lotPrefunding, 0, "mismatch on prefunding");
+        assertEq(lotPrefunding, 0, "mismatch on funding");
     }
 
     function test_prefunded_givenCuratorHasApproved_givenPurchase()
@@ -431,8 +431,8 @@ contract CancelAuctionTest is AuctionHouseTest {
             "base token: balance mismatch for auction house"
         );
 
-        // Check prefunding amount
+        // Check funding amount
         (,,,,,,,,, uint256 lotPrefunding) = _auctionHouse.lotRouting(_lotId);
-        assertEq(lotPrefunding, 0, "mismatch on prefunding");
+        assertEq(lotPrefunding, 0, "mismatch on funding");
     }
 }

@@ -85,7 +85,7 @@ contract SendPayoutTest is Test, Permit2User {
             derivativeReference: _derivativeReference,
             derivativeParams: _derivativeParams,
             wrapDerivative: _wrapDerivative,
-            prefunding: 0
+            funding: 0
         });
     }
 

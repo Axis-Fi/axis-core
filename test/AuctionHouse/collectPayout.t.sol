@@ -64,7 +64,7 @@ contract CollectPayoutTest is Test, Permit2User {
             derivativeReference: _derivativeReference,
             derivativeParams: _derivativeParams,
             wrapDerivative: _wrapDerivative,
-            prefunding: 0
+            funding: 0
         });
     }
 
@@ -458,7 +458,7 @@ contract CollectPayoutTest is Test, Permit2User {
     //  [X] it does not transfer the base token to the auction house
 
     modifier givenAuctionIsPrefunded(uint256 amount_) {
-        _routingParams.prefunding = amount_;
+        _routingParams.funding = amount_;
         _;
     }
 

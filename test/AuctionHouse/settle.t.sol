@@ -361,7 +361,7 @@ contract SettleTest is AuctionHouseTest {
     //   [X] it transfers the capacity and curator fee to the seller
     //  [X] it transfer the capacity to the seller
     // [X] when there is a partial fill
-    //  [X] it allocates fees, updates prefunding, transfers the partial payment and refund to the bidder, transfers the payment to the seller, and allocates fees to the curator
+    //  [X] it allocates fees, updates funding, transfers the partial payment and refund to the bidder, transfers the payment to the seller, and allocates fees to the curator
     // [X] when capacity is not filled
     //  [X] when curated is true
     //   [X] it transfers the remaining capacity back to the seller, and pays the curator fee based on the utilised capacity

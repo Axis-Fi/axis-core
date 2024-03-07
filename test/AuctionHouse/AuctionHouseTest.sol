@@ -502,7 +502,7 @@ abstract contract AuctionHouseTest is Test, Permit2User {
             derivativeReference: derivativeReference_,
             derivativeParams: derivativeParams_,
             wrapDerivative: wrapDerivative_,
-            prefunding: prefunding_
+            funding: prefunding_
         });
     }
 

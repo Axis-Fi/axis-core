@@ -39,10 +39,10 @@ contract ClaimProceedsTest is AuctionHouseTest {
         assertEq(_baseToken.balanceOf(_CURATOR), curatorBalance, "base token: curator");
     }
 
-    function _assertLotRouting(uint256 prefunding) internal {
+    function _assertLotRouting(uint256 funding) internal {
         // Check the lot
         Auctioneer.Routing memory lotRouting = _getLotRouting(_lotId);
-        assertEq(lotRouting.prefunding, prefunding, "prefunding");
+        assertEq(lotRouting.funding, funding, "funding");
 
         // Check the lot status
         assertEq(uint8(_batchAuctionModule.lotStatus(_lotId)), uint8(Auction.Status.Claimed));
