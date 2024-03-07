@@ -283,8 +283,7 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
 
         // Collect payout from seller, if needed
         if (routing.funding == 0) {
-            routing.funding = payoutAmount + curatorFeePayout;
-
+            // No need to update the funding amount, as it will be zero-ed out within this function
             _collectPayout(params_.lotId, amountLessFees, payoutAmount + curatorFeePayout, routing);
         }
 
