@@ -75,11 +75,6 @@ contract LinearVesting is DerivativeModule {
         uint48 expiry;
     }
 
-    struct UserVesting {
-        uint48 receivedAt;
-        uint256 claimed;
-    }
-
     uint256 internal immutable _VESTING_PARAMS_LEN = 64;
 
     // ========== STATE VARIABLES ========== //
@@ -87,8 +82,8 @@ contract LinearVesting is DerivativeModule {
     /// @notice     Stores the clonable implementation of the wrapped derivative token
     address internal immutable _IMPLEMENTATION;
 
-    /// @notice     Stores the timestamp that the user last received or claimed tokens at
-    mapping(address owner_ => mapping(uint256 tokenId_ => UserVesting)) public userVesting;
+    /// @notice     Stores the amount that a user has claimed
+    mapping(address owner_ => mapping(uint256 tokenId_ => uint256 claimed_)) public userClaimed;
 
     // ========== MODULE SETUP ========== //
 
@@ -201,23 +196,9 @@ contract LinearVesting is DerivativeModule {
             _deployWrapIfNeeded(tokenId_, token_);
         }
 
-        // If the user has any tokens already, redeem the vested amount.
-        // We claim any outstanding before reseting the user's receivedAt and claimed values so the amounts are correct.
-        uint256 redeemableAmount = redeemable(to_, tokenId_);
-        if (redeemableAmount > 0) {
-            _redeem(tokenId_, to_, redeemableAmount);
-        }
-
-        VestingData memory data = abi.decode(token_.data, (VestingData));
-
-        // Reset claimed and receivedAt timestamp to the current time
-        // If the time of minting is prior to vesting start, it would result in inaccurate vesting calculations.
-        userVesting[to_][tokenId_].receivedAt =
-            uint48(block.timestamp) < data.start ? uint48(data.start) : uint48(block.timestamp);
-        userVesting[to_][tokenId_].claimed = 0;
-
         // Transfer collateral token to this contract
         {
+            VestingData memory data = abi.decode(token_.data, (VestingData));
             uint256 balanceBefore = data.baseToken.balanceOf(address(this));
             data.baseToken.safeTransferFrom(msg.sender, address(this), amount_);
 
@@ -351,7 +332,7 @@ contract LinearVesting is DerivativeModule {
         }
 
         // Update the user's claimed amount
-        userVesting[user_][tokenId_].claimed += amount_;
+        userClaimed[user_][tokenId_] += amount_;
 
         // Burn the unwrapped tokens
         if (derivativeToBurn > 0) {
@@ -408,7 +389,7 @@ contract LinearVesting is DerivativeModule {
     ///             - The amount of tokens that have vested
     ///               - x: number of vestable tokens
     ///               - t: current timestamp
-    ///               - s: receivedAt timestamp (when the most recent vesting starts)
+    ///               - s: start timestamp
     ///               - T: expiry timestamp
     ///               - Vested = x * (t - s) / (T - s)
     ///             - Minus the amount of tokens that have already been redeemed
@@ -427,15 +408,11 @@ contract LinearVesting is DerivativeModule {
         // If before the start time, 0
         if (block.timestamp <= data.start) return 0;
 
-        // If the owner has not received any tokens, the redeemable amount is 0
-        uint48 ownerReceivedAt = userVesting[owner_][tokenId_].receivedAt;
-        if (ownerReceivedAt == 0) return 0;
-
         // Get balances
         uint256 derivativeBalance = balanceOf[owner_][tokenId_];
         uint256 wrappedBalance =
             token.wrapped == address(0) ? 0 : SoulboundCloneERC20(token.wrapped).balanceOf(owner_);
-        uint256 claimedBalance = userVesting[owner_][tokenId_].claimed;
+        uint256 claimedBalance = userClaimed[owner_][tokenId_];
         uint256 totalAmount = derivativeBalance + wrappedBalance + claimedBalance;
 
         // Determine the amount that has been vested until date, excluding what has already been claimed
@@ -446,9 +423,7 @@ contract LinearVesting is DerivativeModule {
         }
         // If before the expiry time, calculate what has vested already
         else {
-            vested = totalAmount.mulDivDown(
-                block.timestamp - ownerReceivedAt, data.expiry - ownerReceivedAt
-            );
+            vested = totalAmount.mulDivDown(block.timestamp - data.start, data.expiry - data.start);
         }
 
         // Check invariant: cannot have claimed more than vested

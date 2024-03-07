@@ -36,6 +36,7 @@ contract LinearVestingTest is Test, Permit2User {
     uint48 internal constant _VESTING_DURATION = _VESTING_EXPIRY - _VESTING_START;
 
     uint256 internal constant _AMOUNT = 1e18;
+    uint256 internal constant _AMOUNT_TWO = 2e18;
 
     uint256 internal constant _VESTING_DATA_LEN = 96; // length + 1 slot for expiry + 1 slot for start
 
@@ -743,6 +744,12 @@ contract LinearVestingTest is Test, Permit2User {
     //  [X] it reverts
     // [X] given the underlying token is fee-on-transfer
     //  [X] it reverts
+    // [X] given it is before the vesting start
+    //  [X] it mints the derivative tokens and returns a redeemable amount of 0
+    // [X] given it is after the vesting start
+    //  [X] it mints the derivative tokens and returns the correct redeemable amount
+    // [X] given the user has existing minted tokens
+    //  [X] it mints the additional derivative tokens and returns the correct redeemable amount
     // [X] when wrapped is false
     //  [X] given the token is not deployed
     //   [X] it deploys the token and mints the derivative token
@@ -914,6 +921,103 @@ contract LinearVestingTest is Test, Permit2User {
         _linearVesting.mint(_ALICE, _underlyingTokenAddress, _vestingParamsBytes, _AMOUNT, false);
     }
 
+    function test_mint_params_beforeVestingStart()
+        public
+        givenParentHasUnderlyingTokenBalance(_AMOUNT)
+        givenBeforeVestingStart
+    {
+        // Call
+        vm.prank(address(_auctionHouse));
+        (uint256 tokenId, address wrappedAddress, uint256 amountCreated) = _linearVesting.mint(
+            _ALICE, _underlyingTokenAddress, _vestingParamsBytes, _AMOUNT, false
+        );
+
+        // Check values
+        assertTrue(tokenId > 0, "tokenId mismatch");
+        assertTrue(wrappedAddress == address(0), "wrappedAddress mismatch");
+        assertEq(amountCreated, _AMOUNT, "amountCreated mismatch");
+        assertEq(
+            _linearVesting.balanceOf(_ALICE, tokenId), _AMOUNT, "derivative: balanceOf mismatch"
+        );
+        assertEq(_underlyingToken.balanceOf(_ALICE), 0, "underlying: balanceOf mismatch");
+        assertEq(_linearVesting.redeemable(_ALICE, tokenId), 0, "redeemable mismatch");
+    }
+
+    function test_mint_params_afterVestingStart(uint48 elapsed_)
+        public
+        givenParentHasUnderlyingTokenBalance(_AMOUNT)
+    {
+        uint48 elapsed = uint48(bound(elapsed_, 1, _VESTING_DURATION));
+        vm.warp(_VESTING_START + elapsed);
+
+        // Calculate the amount that should be redeemed
+        uint256 expectedRedeemableAmount = _AMOUNT * elapsed / _VESTING_DURATION;
+
+        // Call
+        vm.prank(address(_auctionHouse));
+        (uint256 tokenId, address wrappedAddress, uint256 amountCreated) = _linearVesting.mint(
+            _ALICE, _underlyingTokenAddress, _vestingParamsBytes, _AMOUNT, false
+        );
+
+        // Check values
+        assertTrue(tokenId > 0, "tokenId mismatch");
+        assertTrue(wrappedAddress == address(0), "wrappedAddress mismatch");
+        assertEq(amountCreated, _AMOUNT, "amountCreated mismatch");
+        assertEq(
+            _linearVesting.balanceOf(_ALICE, tokenId), _AMOUNT, "derivative: balanceOf mismatch"
+        );
+        assertEq(_underlyingToken.balanceOf(_ALICE), 0, "underlying: balanceOf mismatch");
+        assertEq(
+            _linearVesting.redeemable(_ALICE, tokenId),
+            expectedRedeemableAmount,
+            "redeemable mismatch"
+        );
+    }
+
+    function test_mint_params_givenExistingDerivativeTokens_afterVestingStart(uint48 elapsed_)
+        public
+        givenParentHasUnderlyingTokenBalance(_AMOUNT + _AMOUNT_TWO)
+    {
+        uint48 elapsedOne = uint48(10_000);
+        uint48 elapsedTwo = uint48(bound(elapsed_, elapsedOne + 1, _VESTING_DURATION));
+
+        // Warp to the first checkpoint
+        vm.warp(_VESTING_START + elapsedOne);
+
+        // Call
+        vm.prank(address(_auctionHouse));
+        (uint256 tokenId,,) = _linearVesting.mint(
+            _ALICE, _underlyingTokenAddress, _vestingParamsBytes, _AMOUNT, false
+        );
+
+        // Warp to the second checkpoint
+        vm.warp(_VESTING_START + elapsedTwo);
+
+        // Calculate amounts
+        uint256 expectedRedeemableAmount = (_AMOUNT + _AMOUNT_TWO) * elapsedTwo / _VESTING_DURATION;
+
+        // Mint more tokens
+        vm.prank(address(_auctionHouse));
+        (uint256 tokenIdTwo, address wrappedAddressTwo, uint256 amountCreatedTwo) = _linearVesting
+            .mint(_ALICE, _underlyingTokenAddress, _vestingParamsBytes, _AMOUNT_TWO, false);
+
+        // Check values
+        assertEq(tokenId, tokenIdTwo, "tokenId mismatch");
+        assertTrue(wrappedAddressTwo == address(0), "wrappedAddress mismatch");
+        assertEq(amountCreatedTwo, _AMOUNT_TWO, "amountCreated mismatch");
+        assertEq(
+            _linearVesting.balanceOf(_ALICE, tokenId),
+            _AMOUNT + _AMOUNT_TWO,
+            "derivative: balanceOf mismatch"
+        );
+        assertEq(_underlyingToken.balanceOf(_ALICE), 0, "underlying: balanceOf mismatch");
+        assertEq(
+            _linearVesting.redeemable(_ALICE, tokenId),
+            expectedRedeemableAmount,
+            "redeemable mismatch"
+        );
+    }
+
     function test_mint_params_notWrapped_tokenNotDeployed()
         public
         givenParentHasUnderlyingTokenBalance(_AMOUNT)
@@ -1032,6 +1136,12 @@ contract LinearVestingTest is Test, Permit2User {
     //  [X] it reverts
     // [X] given the underlying token is fee-on-transfer
     //  [X] it reverts
+    // [X] given it is before the vesting start
+    //  [X] it mints the derivative tokens and returns a redeemable amount of 0
+    // [X] given it is after the vesting start
+    //  [X] it mints the derivative tokens and returns the correct redeemable amount
+    // [X] given the user has existing minted tokens
+    //  [X] it mints the additional derivative tokens and returns the correct redeemable amount
     // [X] when wrapped is false
     //  [X] it mints the derivative token
     // [X] when wrapped is true
@@ -1111,6 +1221,102 @@ contract LinearVestingTest is Test, Permit2User {
         // Call
         vm.prank(address(_auctionHouse));
         _linearVesting.mint(_ALICE, _derivativeTokenId, _AMOUNT, false);
+    }
+
+    function test_mint_tokenId_beforeVestingStart()
+        public
+        givenParentHasUnderlyingTokenBalance(_AMOUNT)
+        givenBeforeVestingStart
+        givenDerivativeIsDeployed
+    {
+        // Call
+        vm.prank(address(_auctionHouse));
+        (uint256 tokenId, address wrappedAddress, uint256 amountCreated) =
+            _linearVesting.mint(_ALICE, _derivativeTokenId, _AMOUNT, false);
+
+        // Check values
+        assertTrue(tokenId > 0, "tokenId mismatch");
+        assertTrue(wrappedAddress == address(0), "wrappedAddress mismatch");
+        assertEq(amountCreated, _AMOUNT, "amountCreated mismatch");
+        assertEq(
+            _linearVesting.balanceOf(_ALICE, tokenId), _AMOUNT, "derivative: balanceOf mismatch"
+        );
+        assertEq(_underlyingToken.balanceOf(_ALICE), 0, "underlying: balanceOf mismatch");
+        assertEq(_linearVesting.redeemable(_ALICE, tokenId), 0, "redeemable mismatch");
+    }
+
+    function test_mint_tokenId_afterVestingStart(uint48 elapsed_)
+        public
+        givenParentHasUnderlyingTokenBalance(_AMOUNT)
+        givenDerivativeIsDeployed
+    {
+        uint48 elapsed = uint48(bound(elapsed_, 1, _VESTING_DURATION));
+        vm.warp(_VESTING_START + elapsed);
+
+        // Calculate the amount that should be redeemed
+        uint256 expectedRedeemableAmount = _AMOUNT * elapsed / _VESTING_DURATION;
+
+        // Call
+        vm.prank(address(_auctionHouse));
+        (uint256 tokenId, address wrappedAddress, uint256 amountCreated) =
+            _linearVesting.mint(_ALICE, _derivativeTokenId, _AMOUNT, false);
+
+        // Check values
+        assertTrue(tokenId > 0, "tokenId mismatch");
+        assertTrue(wrappedAddress == address(0), "wrappedAddress mismatch");
+        assertEq(amountCreated, _AMOUNT, "amountCreated mismatch");
+        assertEq(
+            _linearVesting.balanceOf(_ALICE, tokenId), _AMOUNT, "derivative: balanceOf mismatch"
+        );
+        assertEq(_underlyingToken.balanceOf(_ALICE), 0, "underlying: balanceOf mismatch");
+        assertEq(
+            _linearVesting.redeemable(_ALICE, tokenId),
+            expectedRedeemableAmount,
+            "redeemable mismatch"
+        );
+    }
+
+    function test_mint_tokenId_givenExistingDerivativeTokens_afterVestingStart(uint48 elapsed_)
+        public
+        givenParentHasUnderlyingTokenBalance(_AMOUNT + _AMOUNT_TWO)
+        givenDerivativeIsDeployed
+    {
+        uint48 elapsedOne = uint48(10_000);
+        uint48 elapsedTwo = uint48(bound(elapsed_, elapsedOne + 1, _VESTING_DURATION));
+
+        // Warp to the first checkpoint
+        vm.warp(_VESTING_START + elapsedOne);
+
+        // Call
+        vm.prank(address(_auctionHouse));
+        (uint256 tokenId,,) = _linearVesting.mint(_ALICE, _derivativeTokenId, _AMOUNT, false);
+
+        // Warp to the second checkpoint
+        vm.warp(_VESTING_START + elapsedTwo);
+
+        // Calculate amounts
+        uint256 expectedRedeemableAmount = (_AMOUNT + _AMOUNT_TWO) * elapsedTwo / _VESTING_DURATION;
+
+        // Mint more tokens
+        vm.prank(address(_auctionHouse));
+        (uint256 tokenIdTwo, address wrappedAddressTwo, uint256 amountCreatedTwo) =
+            _linearVesting.mint(_ALICE, _derivativeTokenId, _AMOUNT_TWO, false);
+
+        // Check values
+        assertEq(tokenId, tokenIdTwo, "tokenId mismatch");
+        assertTrue(wrappedAddressTwo == address(0), "wrappedAddress mismatch");
+        assertEq(amountCreatedTwo, _AMOUNT_TWO, "amountCreated mismatch");
+        assertEq(
+            _linearVesting.balanceOf(_ALICE, tokenId),
+            _AMOUNT + _AMOUNT_TWO,
+            "derivative: balanceOf mismatch"
+        );
+        assertEq(_underlyingToken.balanceOf(_ALICE), 0, "underlying: balanceOf mismatch");
+        assertEq(
+            _linearVesting.redeemable(_ALICE, tokenId),
+            expectedRedeemableAmount,
+            "redeemable mismatch"
+        );
     }
 
     function test_mint_tokenId_notWrapped()
@@ -1692,16 +1898,16 @@ contract LinearVestingTest is Test, Permit2User {
         uint48 elapsed = 50_000;
         vm.warp(_VESTING_START + elapsed);
 
-        // Mint tokens, claims all redeemable tokens at the same time
+        // Mint tokens
         _mintDerivativeTokens(_ALICE, amount);
 
-        uint256 expectedRedeemable = 0;
+        uint256 expectedRedeemable = (_AMOUNT + amount) * elapsed / _VESTING_DURATION;
 
         // Call
         uint256 redeemableAmount = _linearVesting.redeemable(_ALICE, _derivativeTokenId);
 
         // Check values
-        assertEq(redeemableAmount, expectedRedeemable);
+        assertEq(redeemableAmount, expectedRedeemable, "redeemable mismatch");
     }
 
     function test_redeemable_givenWrappedTokensMintedAfterDeployment(uint256 amount_)
@@ -1715,16 +1921,16 @@ contract LinearVestingTest is Test, Permit2User {
         uint48 elapsed = 50_000;
         vm.warp(_VESTING_START + elapsed);
 
-        // Mint tokens, claims all redeemable tokens at the same time
+        // Mint tokens
         _mintWrappedDerivativeTokens(_ALICE, amount);
 
-        uint256 expectedRedeemable = 0;
+        uint256 expectedRedeemable = (_AMOUNT + amount) * elapsed / _VESTING_DURATION;
 
         // Call
         uint256 redeemableAmount = _linearVesting.redeemable(_ALICE, _derivativeTokenId);
 
         // Check values
-        assertEq(redeemableAmount, expectedRedeemable);
+        assertEq(redeemableAmount, expectedRedeemable, "redeemable mismatch");
     }
 
     function test_redeemable_givenRedemption_givenTokensMintedAfterDeployment(
@@ -1754,7 +1960,6 @@ contract LinearVestingTest is Test, Permit2User {
         _linearVesting.redeem(_derivativeTokenId, amountToRedeem);
 
         // Mint more tokens
-        // This claims all the redeemable tokens
         _mintDerivativeTokens(_ALICE, _AMOUNT);
         _mintWrappedDerivativeTokens(_ALICE, _AMOUNT);
 
@@ -1763,10 +1968,9 @@ contract LinearVestingTest is Test, Permit2User {
         vm.warp(_VESTING_START + elapsed);
 
         // Calculate the vested amount
-        uint256 vestedAmount = (elapsed - 50_000)
-            * (_AMOUNT + _AMOUNT + unwrappedAmount + wrappedAmount - redeemable)
-            / (_VESTING_DURATION - 50_000);
-        uint256 claimedAmount = 0;
+        uint256 vestedAmount =
+            elapsed * (_AMOUNT + _AMOUNT + unwrappedAmount + wrappedAmount) / _VESTING_DURATION;
+        uint256 claimedAmount = amountToRedeem;
         uint256 expectedRedeemableAmount = vestedAmount - claimedAmount;
 
         // Call
