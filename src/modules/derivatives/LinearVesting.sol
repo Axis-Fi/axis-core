@@ -273,12 +273,6 @@ contract LinearVesting is DerivativeModule {
             revert InvalidParams();
         }
 
-        // Underlying token is required
-        if (underlyingToken_ == address(0)) revert InvalidParams();
-
-        // Ensure the expiry is in the future
-        if (params.expiry < block.timestamp) revert InvalidParams();
-
         // If necessary, deploy and store the data
         (tokenId_,) = _deployIfNeeded(underlyingToken_, params, wrapped_);
 
