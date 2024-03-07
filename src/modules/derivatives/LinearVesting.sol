@@ -13,7 +13,14 @@ import {Derivative, DerivativeModule} from "src/modules/Derivative.sol";
 import {Module, Veecode, toKeycode, wrapVeecode} from "src/modules/Modules.sol";
 import {SoulboundCloneERC20} from "src/modules/derivatives/SoulboundCloneERC20.sol";
 
-// TODO natspec
+/// @title      LinearVesting
+/// @notice     A derivative module that allows for the creation of linearly vesting tokens
+/// @dev        This module allows for the creation of linearly vesting tokens, where the vesting
+///             period is defined by a start and expiry timestamp. The tokens can be wrapped and
+///             unwrapped, and the underlying tokens can be redeemed once vested.
+///
+///             The start timestamp enables vesting tokens to have a cliff, after which vesting commences.
+/// @author     Axis Finance
 contract LinearVesting is DerivativeModule {
     using SafeTransferLib for ERC20;
     using ClonesWithImmutableArgs for address;
@@ -205,9 +212,8 @@ contract LinearVesting is DerivativeModule {
 
         // Reset claimed and receivedAt timestamp to the current time
         // If the time of minting is prior to vesting start, it would result in inaccurate vesting calculations.
-        userVesting[to_][tokenId_].receivedAt = uint48(block.timestamp) < data.start
-            ? uint48(data.start)
-            : uint48(block.timestamp);
+        userVesting[to_][tokenId_].receivedAt =
+            uint48(block.timestamp) < data.start ? uint48(data.start) : uint48(block.timestamp);
         userVesting[to_][tokenId_].claimed = 0;
 
         // Transfer collateral token to this contract
