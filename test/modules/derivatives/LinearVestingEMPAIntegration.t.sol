@@ -181,10 +181,33 @@ contract LinearVestingEMPAIntegrationTest is AuctionHouseTest {
         assertEq(lotRouting.derivativeParams, abi.encode(_linearVestingParams), "derivativeParams");
         assertEq(lotRouting.wrapDerivative, false, "wrapDerivative");
         assertEq(lotRouting.funding, _LOT_CAPACITY, "funding");
+
+        // Check balances
+        assertEq(_baseToken.balanceOf(_SELLER), 0, "seller balance");
+        assertEq(_baseToken.balanceOf(address(_auctionHouse)), _LOT_CAPACITY, "seller balance");
     }
 
     // cancel
-    // [ ] it cancels the auction
+    // [X] it cancels the auction
+
+    function test_cancel()
+        external
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenAuctionTypeIsEMPA
+        givenDerivativeTypeIsLinearVesting
+        givenLotIsCreated
+        givenLotIsCancelled
+    {
+        // Check the auction data
+        EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData =
+            _empaModule.getAuctionData(_lotId);
+        assertEq(uint8(auctionData.status), uint8(Auction.Status.Claimed), "status");
+
+        // Check balances
+        assertEq(_baseToken.balanceOf(_SELLER), _LOT_CAPACITY, "seller balance");
+        assertEq(_baseToken.balanceOf(address(_auctionHouse)), 0, "auction house balance");
+    }
 
     // purchase
     // [X] it reverts
