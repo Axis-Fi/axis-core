@@ -73,7 +73,8 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         uint64 nextDecryptIndex; // 8 +
         uint96 minFilled; // 12 +
         uint96 minBidSize; // 12 = 32 - end of slot 2
-        Auction.Status status; // 1 - slot 3
+        Auction.Status status; // 1 +
+        uint64 marginalBidId; // 8 = 9 - end of slot 3
         Point publicKey; // 64 - slots 4 and 5
         uint256 privateKey; // 32 - slot 6
         uint64[] bidIds; // slots 7+
@@ -335,12 +336,13 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
             ? 0
             : Math.mulDivUp(uint256(bidData.amount), baseScale, uint256(bidData.minAmountOut));
 
-        // If the bid price is greater than or equal to the marginal price, the bid is filled
+        // If the bid price is greater than the marginal price, the bid is filled.
+        // If the bid price is equal to the marginal price and the bid was submitted before or is the marginal bid, the bid is filled.
         // Auctions that do not meet capacity or price thresholds to settle will have their marginal price set at the maximum uint96
         // Therefore, all bids will be refunded.
         // We handle the only potential marginal fill during settlement. All other bids are either completely filled or refunded.
         uint256 marginalPrice = uint256(auctionData[lotId_].marginalPrice);
-        if (price >= marginalPrice) {
+        if (price > marginalPrice || (price == marginalPrice && bidId_ <= auctionData[lotId_].marginalBidId)) {
             // Payout is calculated using the marginal price of the auction
             bidClaim.paid = uint256(bidData.amount);
             bidClaim.payout = (bidClaim.paid * baseScale) / marginalPrice;
@@ -582,10 +584,12 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         // Capacity is always in base token units for this auction type
         uint256 capacity = lotData[lotId_].capacity;
         uint256 baseScale = 10 ** lotData[lotId_].baseTokenDecimals;
+        uint256 quoteScale = 10 ** lotData[lotId_].quoteTokenDecimals;
         uint96 minimumPrice = auctionData[lotId_].minPrice;
 
         // Iterate over bid queue (sorted in descending price) to calculate the marginal clearing price of the auction
         uint96 marginalPrice;
+        uint64 marginalBidId;
         uint256 totalAmountIn;
         uint256 capacityExpended;
         uint64 partialFillBidId;
@@ -611,8 +615,20 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
                 );
 
                 // If the price is below the minimum price, the previous price is the marginal price
+                // TODO we may not be able to clear at the last price, but could clear at the minimum or an intermediate price
                 if (price < minimumPrice) {
                     marginalPrice = lastPrice;
+                    break;
+                }
+
+                // Check if the auction can clear with the existing bids at a price between current price and last price
+                // There will be no partial fills because we select the price that exactly fills the capacity
+                // Note: totalAmountIn here has not had the current bid added to it
+                capacityExpended = totalAmountIn * baseScale / price;
+                if (capacityExpended >= capacity) {
+                    marginalPrice = uint96(Math.mulDivUp(totalAmountIn, quoteScale, capacity));
+                    marginalBidId = uint64(0); // we set this to zero so that any bids at the current price are not considered in the case that capacityExpended == capacity
+                    capacityExpended = capacity;
                     break;
                 }
 
@@ -627,8 +643,10 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
                 capacityExpended = Math.mulDivDown(totalAmountIn, baseScale, uint256(price));
 
                 // If total capacity expended is greater than or equal to the capacity, we have found the marginal price
+                // If capacity expended is strictly greater than capacity, then we have a partially filled bid
                 if (capacityExpended >= capacity) {
                     marginalPrice = price;
+                    marginalBidId = bidId;
                     if (capacityExpended > capacity) {
                         partialFillBidId = bidId;
                     }
@@ -638,6 +656,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
                 // If we have reached the end of the queue, we have found the marginal price and the maximum capacity that can be filled
                 if (i == numBids - 1) {
                     marginalPrice = price;
+                    marginalBidId = bidId;
                 }
             }
         }
