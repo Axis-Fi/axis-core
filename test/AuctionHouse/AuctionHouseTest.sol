@@ -251,14 +251,22 @@ abstract contract AuctionHouseTest is Test, Permit2User {
         _;
     }
 
+    function _concludeLot() internal {
+        vm.warp(_startTime + _duration);
+    }
+
     modifier givenLotIsConcluded() {
-        vm.warp(_startTime + _duration + 1);
+        _concludeLot();
         _;
     }
 
-    modifier givenLotIsSettled() {
+    function _settleLot() internal {
         vm.prank(_SELLER);
         _auctionHouse.settle(_lotId);
+    }
+
+    modifier givenLotIsSettled() {
+        _settleLot();
         _;
     }
 

@@ -41,6 +41,7 @@ contract LinearVestingEMPAIntegrationTest is AuctionHouseTest {
     modifier givenAuctionTypeIsEMPA() {
         _empaModule = new EncryptedMarginalPriceAuctionModule(address(_auctionHouse));
         _auctionHouse.installModule(_empaModule);
+        _auctionModule = _empaModule;
         _auctionModuleKeycode = keycodeFromVeecode(_empaModule.VEECODE());
 
         _routingParams.auctionType = keycodeFromVeecode(_empaModule.VEECODE());
@@ -140,13 +141,21 @@ contract LinearVestingEMPAIntegrationTest is AuctionHouseTest {
         _;
     }
 
-    modifier givenPrivateKeyIsSubmitted() {
+    function _submitPrivateKey() internal {
         _empaModule.submitPrivateKey(_lotId, _AUCTION_PRIVATE_KEY, 0);
+    }
+
+    modifier givenPrivateKeyIsSubmitted() {
+        _submitPrivateKey();
         _;
     }
 
-    modifier givenLotIsDecrypted() {
+    function _decryptLot() internal {
         _empaModule.decryptAndSortBids(_lotId, 10);
+    }
+
+    modifier givenLotIsDecrypted() {
+        _decryptLot();
         _;
     }
 
@@ -361,6 +370,32 @@ contract LinearVestingEMPAIntegrationTest is AuctionHouseTest {
         EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData =
             _empaModule.getAuctionData(_lotId);
         assertEq(uint8(auctionData.status), uint8(Auction.Status.Settled), "status");
+
+        // Check the lot
+        Auction.Lot memory lotData = _getLotData(_lotId);
+        assertEq(lotData.purchased, _BID_AMOUNT, "purchased");
+        assertEq(lotData.sold, _BID_AMOUNT_OUT, "sold");
+        assertEq(lotData.partialPayout, 0, "partial payout");
+
+        // Get the derivative token id
+        uint256 derivativeTokenId =
+            _linearVestingModule.computeId(address(_baseToken), abi.encode(_linearVestingParams));
+
+        // Check the balances
+        assertEq(_quoteToken.balanceOf(_bidder), 0, "quote token: bidder");
+        assertEq(
+            _quoteToken.balanceOf(address(_auctionHouse)), _BID_AMOUNT, "quote token: auction house"
+        ); // Bid amount
+
+        assertEq(_baseToken.balanceOf(_bidder), 0, "base token: bidder");
+        assertEq(_baseToken.balanceOf(address(_auctionHouse)), 10e18, "base token: auction house"); // Base tokens to be claimed + unused capacity
+        assertEq(
+            _baseToken.balanceOf(address(_linearVestingModule)), 0, "base token: vesting module"
+        );
+
+        assertEq(
+            _linearVestingModule.balanceOf(_bidder, derivativeTokenId), 0, "derivative: bidder"
+        );
     }
 
     function test_settle_givenCurated()
@@ -403,6 +438,68 @@ contract LinearVestingEMPAIntegrationTest is AuctionHouseTest {
         );
         assertEq(_linearVestingModule.redeemable(_CURATOR, derivativeTokenId), 0, "redeemable");
     }
+
+    function test_settle_partialFill()
+        external
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenAuctionTypeIsEMPA
+        givenDerivativeTypeIsLinearVesting
+        givenLotIsCreated
+        givenLotHasStarted
+        givenUserHasQuoteTokenBalance(8e18 + 4e18)
+        givenUserHasQuoteTokenAllowance(8e18 + 4e18)
+    {
+        // Create bids
+        _createBid(_bidder, 8e18, 4e18); // 1: marginal price 2, totalIn 8, capacity at 4/10
+        _createBid(_bidder, 4e18, 4e18); // 2: marginal price 1, totalIn 12, capacity at 12/10
+
+        // Conclude and settle
+        _concludeLot();
+        _submitPrivateKey();
+        _decryptLot();
+        _settleLot();
+
+        // Check the bids
+        (EncryptedMarginalPriceAuctionModule.Bid memory bid1,) = _empaModule.getBid(_lotId, 1);
+        assertEq(
+            uint8(bid1.status),
+            uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Decrypted),
+            "bid 1: status"
+        );
+        (EncryptedMarginalPriceAuctionModule.Bid memory bid2,) = _empaModule.getBid(_lotId, 2);
+        assertEq(
+            uint8(bid2.status),
+            uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed),
+            "bid 2: status"
+        );
+
+        // Check the lot
+        Auction.Lot memory lotData = _getLotData(_lotId);
+        assertEq(lotData.purchased, 10e18, "purchased");
+        assertEq(lotData.sold, 10e18, "sold");
+        assertEq(lotData.partialPayout, 2e18, "partial payout");
+
+        // Get the derivative token id
+        uint256 derivativeTokenId =
+            _linearVestingModule.computeId(address(_baseToken), abi.encode(_linearVestingParams));
+
+        // Check the balances
+        assertEq(_quoteToken.balanceOf(_bidder), 2e18, "quote token: bidder"); // Partial fill: refund
+        assertEq(_quoteToken.balanceOf(address(_auctionHouse)), 10e18, "quote token: auction house");
+
+        assertEq(_baseToken.balanceOf(_bidder), 0, "base token: bidder");
+        assertEq(_baseToken.balanceOf(address(_auctionHouse)), 8e18, "base token: auction house");
+        assertEq(
+            _baseToken.balanceOf(address(_linearVestingModule)), 2e18, "base token: vesting module"
+        );
+
+        assertEq(
+            _linearVestingModule.balanceOf(_bidder, derivativeTokenId), 2e18, "derivative: bidder"
+        ); // Partial fill: payout
+    }
+
+    // TODO assert roundtrip numbers
 
     // claimProceeds
     // [X] quote tokens are sent to the seller and excess capacity is returned to the seller
