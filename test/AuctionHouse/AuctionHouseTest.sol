@@ -476,6 +476,12 @@ abstract contract AuctionHouseTest is Test, Permit2User {
         _;
     }
 
+    modifier givenBidIsClaimed(uint64 bidId_) {
+        vm.prank(_bidder);
+        _auctionHouse.claimBid(_lotId, bidId_);
+        _;
+    }
+
     // ===== Helpers ===== //
 
     function _getLotRouting(uint96 lotId_) internal view returns (Auctioneer.Routing memory) {
