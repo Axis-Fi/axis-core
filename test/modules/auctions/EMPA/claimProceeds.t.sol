@@ -1,9 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.19;
 
-import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
-
-import {Module} from "src/modules/Modules.sol";
 import {Auction} from "src/modules/Auction.sol";
 import {EncryptedMarginalPriceAuctionModule} from "src/modules/auctions/EMPAM.sol";
 

@@ -39,7 +39,7 @@ contract SetCondenserTest is Test, Permit2User {
         _baseToken = new MockERC20("Base Token", "BASE", 18);
         _quoteToken = new MockERC20("Quote Token", "QUOTE", 18);
 
-        _auctionHouse = new AuctionHouse(address(this), _PROTOCOL, _PERMIT2_ADDRESS);
+        _auctionHouse = new AuctionHouse(address(this), _PROTOCOL, _permit2Address);
         _mockAuctionModule = new MockAuctionModule(address(_auctionHouse));
         _mockDerivativeModule = new MockDerivativeModule(address(_auctionHouse));
         _mockCondenserModule = new MockCondenserModule(address(_auctionHouse));

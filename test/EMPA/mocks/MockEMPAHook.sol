@@ -5,7 +5,6 @@ import {ERC20} from "solmate/tokens/ERC20.sol";
 import {SafeTransferLib} from "solmate/utils/SafeTransferLib.sol";
 
 import {IHooks} from "src/interfaces/IHooks.sol";
-import {Keycode, unwrapVeecode} from "src/modules/Modules.sol";
 import {EncryptedMarginalPriceAuction} from "src/EMPA.sol";
 
 contract MockEMPAHook is IHooks {

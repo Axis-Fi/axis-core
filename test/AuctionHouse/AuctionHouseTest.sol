@@ -95,7 +95,7 @@ abstract contract AuctionHouseTest is Test, Permit2User {
         _baseToken = new MockFeeOnTransferERC20("Base Token", "BASE", 18);
         _quoteToken = new MockFeeOnTransferERC20("Quote Token", "QUOTE", 18);
 
-        _auctionHouse = new AuctionHouse(address(this), _PROTOCOL, _PERMIT2_ADDRESS);
+        _auctionHouse = new AuctionHouse(address(this), _PROTOCOL, _permit2Address);
         _catalogue = new Catalogue(address(_auctionHouse));
 
         _atomicAuctionModule = new MockAtomicAuctionModule(address(_auctionHouse));
@@ -281,7 +281,7 @@ abstract contract AuctionHouseTest is Test, Permit2User {
     modifier whenPermit2ApprovalIsProvided(uint256 amount_) {
         // Approve the Permit2 contract to spend the quote token
         vm.prank(_bidder);
-        _quoteToken.approve(_PERMIT2_ADDRESS, type(uint256).max);
+        _quoteToken.approve(_permit2Address, type(uint256).max);
 
         // Set up the Permit2 approval
         uint48 deadline = uint48(block.timestamp);

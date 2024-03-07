@@ -3,7 +3,6 @@ pragma solidity 0.8.19;
 
 // Libraries
 import {Test} from "forge-std/Test.sol";
-import {console2} from "forge-std/console2.sol";
 import {ClonesWithImmutableArgs} from "src/lib/clones/ClonesWithImmutableArgs.sol";
 import {StringHelper} from "test/lib/String.sol";
 
@@ -14,42 +13,42 @@ contract SoulboundCloneERC20Test is Test {
     using ClonesWithImmutableArgs for address;
     using StringHelper for string;
 
-    SoulboundCloneERC20 internal _IMPLEMENTATION;
-    SoulboundCloneERC20 internal clonedImplementation;
-    MockERC20 internal underlyingToken;
+    SoulboundCloneERC20 internal _implementation;
+    SoulboundCloneERC20 internal _clonedImplementation;
+    MockERC20 internal _underlyingToken;
 
-    string internal tokenName = "Test Token";
-    string internal tokenSymbol = "TEST";
-    uint8 internal tokenDecimals = 18;
-    uint256 internal tokenSalt = 222;
-    uint48 internal tokenExpiry = 1_705_055_144;
-    uint256 internal tokenNameLength;
-    uint256 internal tokenSymbolLength;
+    string internal _tokenName = "Test Token";
+    string internal _tokenSymbol = "TEST";
+    uint8 internal _tokenDecimals = 18;
+    uint256 internal _tokenSalt = 222;
+    uint48 internal _tokenExpiry = 1_705_055_144;
+    uint256 internal _tokenNameLength;
+    uint256 internal _tokenSymbolLength;
 
-    address internal alice = address(0x1);
-    address internal bob = address(0x2);
-    address internal owner = address(0x3);
+    address internal constant _ALICE = address(0x1);
+    address internal constant _BOB = address(0x2);
+    address internal constant _OWNER = address(0x3);
 
     function setUp() public {
-        _IMPLEMENTATION = new SoulboundCloneERC20();
+        _implementation = new SoulboundCloneERC20();
 
-        underlyingToken = new MockERC20("Underlying Token", "UNDERLYING", 18);
+        _underlyingToken = new MockERC20("Underlying Token", "UNDERLYING", 18);
 
-        tokenNameLength = bytes(tokenName).length;
-        tokenSymbolLength = bytes(tokenSymbol).length;
+        _tokenNameLength = bytes(_tokenName).length;
+        _tokenSymbolLength = bytes(_tokenSymbol).length;
     }
 
     modifier givenCloneIsDeployed() {
         bytes memory tokenData = abi.encodePacked(
-            bytes32(bytes(tokenName)),
-            bytes32(bytes(tokenSymbol)),
-            uint8(tokenDecimals),
-            uint64(tokenExpiry),
-            owner,
-            address(underlyingToken)
+            bytes32(bytes(_tokenName)),
+            bytes32(bytes(_tokenSymbol)),
+            uint8(_tokenDecimals),
+            uint64(_tokenExpiry),
+            _OWNER,
+            address(_underlyingToken)
         );
-        address clonedContract = address(_IMPLEMENTATION).clone3(tokenData, bytes32(tokenSalt));
-        clonedImplementation = SoulboundCloneERC20(clonedContract);
+        address clonedContract = address(_implementation).clone3(tokenData, bytes32(_tokenSalt));
+        _clonedImplementation = SoulboundCloneERC20(clonedContract);
         _;
     }
 
@@ -62,30 +61,34 @@ contract SoulboundCloneERC20Test is Test {
     // [X] approval
     //  [X] it succeeds
     // [X] mint
-    //  [X] it reverts if not called by the owner
-    //  [X] it succeeds if called by the owner
+    //  [X] it reverts if not called by the _OWNER
+    //  [X] it succeeds if called by the _OWNER
     // [X] burn
-    //  [X] it reverts if not called by the owner
-    //  [X] it succeeds if called by the owner
+    //  [X] it reverts if not called by the _OWNER
+    //  [X] it succeeds if called by the _OWNER
 
     function test_deployment() public givenCloneIsDeployed {
-        assertEq(clonedImplementation.name().trim(0, tokenNameLength), tokenName, "name mismatch");
         assertEq(
-            clonedImplementation.symbol().trim(0, tokenSymbolLength), tokenSymbol, "symbol mismatch"
+            _clonedImplementation.name().trim(0, _tokenNameLength), _tokenName, "name mismatch"
         );
-        assertEq(clonedImplementation.decimals(), tokenDecimals, "decimals mismatch");
-        assertEq(clonedImplementation.expiry(), tokenExpiry, "expiry mismatch");
-        assertEq(clonedImplementation.owner(), owner, "owner mismatch");
         assertEq(
-            address(clonedImplementation.underlying()),
-            address(underlyingToken),
+            _clonedImplementation.symbol().trim(0, _tokenSymbolLength),
+            _tokenSymbol,
+            "symbol mismatch"
+        );
+        assertEq(_clonedImplementation.decimals(), _tokenDecimals, "decimals mismatch");
+        assertEq(_clonedImplementation.expiry(), _tokenExpiry, "expiry mismatch");
+        assertEq(_clonedImplementation.owner(), _OWNER, "_OWNER mismatch");
+        assertEq(
+            address(_clonedImplementation.underlying()),
+            address(_underlyingToken),
             "underlying mismatch"
         );
 
         // Ensure it is deterministic
         assertEq(
-            ClonesWithImmutableArgs.addressOfClone3(bytes32(tokenSalt)),
-            address(clonedImplementation)
+            ClonesWithImmutableArgs.addressOfClone3(bytes32(_tokenSalt)),
+            address(_clonedImplementation)
         );
     }
 
@@ -95,8 +98,8 @@ contract SoulboundCloneERC20Test is Test {
         vm.expectRevert(err);
 
         // Approve tokens
-        vm.prank(owner);
-        clonedImplementation.approve(bob, 100);
+        vm.prank(_OWNER);
+        _clonedImplementation.approve(_BOB, 100);
     }
 
     function test_approval_notOwner_reverts() public givenCloneIsDeployed {
@@ -105,73 +108,73 @@ contract SoulboundCloneERC20Test is Test {
         vm.expectRevert(err);
 
         // Approve tokens
-        vm.prank(alice);
-        clonedImplementation.approve(bob, 100);
+        vm.prank(_ALICE);
+        _clonedImplementation.approve(_BOB, 100);
     }
 
     function test_transfer_reverts() public givenCloneIsDeployed {
         // Mint to the caller
-        vm.prank(owner);
-        clonedImplementation.mint(address(this), 100);
+        vm.prank(_OWNER);
+        _clonedImplementation.mint(address(this), 100);
 
         // Expect revert
         bytes memory err = abi.encodeWithSelector(SoulboundCloneERC20.NotPermitted.selector);
         vm.expectRevert(err);
 
         // Transfer tokens
-        vm.prank(owner);
-        clonedImplementation.transfer(bob, 100);
+        vm.prank(_OWNER);
+        _clonedImplementation.transfer(_BOB, 100);
     }
 
     function test_transfer_notOwner_reverts() public givenCloneIsDeployed {
         // Mint to the caller
-        vm.prank(owner);
-        clonedImplementation.mint(alice, 100);
+        vm.prank(_OWNER);
+        _clonedImplementation.mint(_ALICE, 100);
 
         // Expect revert
         bytes memory err = abi.encodeWithSelector(SoulboundCloneERC20.NotPermitted.selector);
         vm.expectRevert(err);
 
         // Transfer tokens
-        vm.prank(alice);
-        clonedImplementation.transfer(bob, 100);
+        vm.prank(_ALICE);
+        _clonedImplementation.transfer(_BOB, 100);
     }
 
     function test_transferFrom_reverts() public givenCloneIsDeployed {
         // Mint to the caller
-        vm.prank(owner);
-        clonedImplementation.mint(address(this), 100);
+        vm.prank(_OWNER);
+        _clonedImplementation.mint(address(this), 100);
 
         // Expect revert
         bytes memory err = abi.encodeWithSelector(SoulboundCloneERC20.NotPermitted.selector);
         vm.expectRevert(err);
 
         // Transfer tokens
-        vm.prank(owner);
-        clonedImplementation.transferFrom(address(this), bob, 100);
+        vm.prank(_OWNER);
+        _clonedImplementation.transferFrom(address(this), _BOB, 100);
     }
 
     function test_transferFrom_notOwner_reverts() public givenCloneIsDeployed {
         // Mint to the caller
-        vm.prank(owner);
-        clonedImplementation.mint(alice, 100);
+        vm.prank(_OWNER);
+        _clonedImplementation.mint(_ALICE, 100);
 
         // Expect revert
         bytes memory err = abi.encodeWithSelector(SoulboundCloneERC20.NotPermitted.selector);
         vm.expectRevert(err);
 
         // Transfer tokens
-        vm.prank(alice);
-        clonedImplementation.transferFrom(alice, bob, 100);
+        vm.prank(_ALICE);
+        _clonedImplementation.transferFrom(_ALICE, _BOB, 100);
     }
 
     function test_mint() public givenCloneIsDeployed {
         // Mint tokens
-        vm.prank(owner);
-        clonedImplementation.mint(alice, 100);
+        vm.prank(_OWNER);
+        _clonedImplementation.mint(_ALICE, 100);
 
         // Check balances
-        assertEq(clonedImplementation.balanceOf(alice), 100);
+        assertEq(_clonedImplementation.balanceOf(_ALICE), 100);
     }
 
     function test_mint_notOwner_reverts() public givenCloneIsDeployed {
@@ -180,34 +183,34 @@ contract SoulboundCloneERC20Test is Test {
         vm.expectRevert(err);
 
         // Mint tokens
-        vm.prank(alice);
-        clonedImplementation.mint(alice, 100);
+        vm.prank(_ALICE);
+        _clonedImplementation.mint(_ALICE, 100);
     }
 
     function test_burn() public givenCloneIsDeployed {
         // Mint tokens
-        vm.prank(owner);
-        clonedImplementation.mint(alice, 100);
+        vm.prank(_OWNER);
+        _clonedImplementation.mint(_ALICE, 100);
 
         // Burn tokens
-        vm.prank(owner);
-        clonedImplementation.burn(alice, 100);
+        vm.prank(_OWNER);
+        _clonedImplementation.burn(_ALICE, 100);
 
         // Check balances
-        assertEq(clonedImplementation.balanceOf(alice), 0);
+        assertEq(_clonedImplementation.balanceOf(_ALICE), 0);
     }
 
     function test_burn_notOwner_reverts() public givenCloneIsDeployed {
         // Mint tokens
-        vm.prank(owner);
-        clonedImplementation.mint(alice, 100);
+        vm.prank(_OWNER);
+        _clonedImplementation.mint(_ALICE, 100);
 
         // Expect revert
         bytes memory err = abi.encodeWithSelector(SoulboundCloneERC20.NotPermitted.selector);
         vm.expectRevert(err);
 
         // Burn tokens
-        vm.prank(alice);
-        clonedImplementation.burn(alice, 100);
+        vm.prank(_ALICE);
+        _clonedImplementation.burn(_ALICE, 100);
     }
 }

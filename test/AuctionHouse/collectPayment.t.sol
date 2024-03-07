@@ -31,7 +31,7 @@ contract CollectPaymentTest is Test, Permit2User {
         // Set reasonable starting block
         vm.warp(1_000_000);
 
-        _auctionHouse = new MockAuctionHouse(_PROTOCOL, _PERMIT2_ADDRESS);
+        _auctionHouse = new MockAuctionHouse(_PROTOCOL, _permit2Address);
 
         _quoteToken = new MockFeeOnTransferERC20("QUOTE", "QT", 18);
         _quoteToken.setTransferFee(0);
@@ -76,7 +76,7 @@ contract CollectPaymentTest is Test, Permit2User {
     modifier givenPermit2Approved() {
         // Approve the Permit2 contract to spend the quote token
         vm.prank(_user);
-        _quoteToken.approve(_PERMIT2_ADDRESS, type(uint256).max);
+        _quoteToken.approve(_permit2Address, type(uint256).max);
         _;
     }
 

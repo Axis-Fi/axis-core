@@ -84,7 +84,7 @@
 //         underlyingToken = new MockERC20("Underlying", "UNDERLYING", underlyingTokenDecimals);
 //         underlyingTokenAddress = address(underlyingToken);
 
-//         auctionHouse = new AuctionHouse(address(this), _protocol, _PERMIT2_ADDRESS);
+//         auctionHouse = new AuctionHouse(address(this), _protocol, _permit2Address);
 
 //         catalogue = new Catalogue(address(auctionHouse));
 

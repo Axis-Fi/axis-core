@@ -55,7 +55,7 @@ abstract contract EmpaModuleTest is Test, Permit2User {
     function setUp() public {
         vm.warp(1_000_000);
 
-        _auctionHouse = new AuctionHouse(address(this), _PROTOCOL, _PERMIT2_ADDRESS);
+        _auctionHouse = new AuctionHouse(address(this), _PROTOCOL, _permit2Address);
         _module = new EncryptedMarginalPriceAuctionModule(address(_auctionHouse));
 
         _auctionPublicKey = ECIES.calcPubKey(Point(1, 2), _AUCTION_PRIVATE_KEY);

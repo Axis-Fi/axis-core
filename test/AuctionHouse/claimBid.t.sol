@@ -6,8 +6,6 @@ import {Auctioneer} from "src/bases/Auctioneer.sol";
 
 import {AuctionHouseTest} from "test/AuctionHouse/AuctionHouseTest.sol";
 
-import {console2} from "forge-std/console2.sol";
-
 contract ClaimBidTest is AuctionHouseTest {
     uint96 internal constant _BID_AMOUNT = 1e18;
     uint96 internal constant _BID_AMOUNT_OUT = 2e18;

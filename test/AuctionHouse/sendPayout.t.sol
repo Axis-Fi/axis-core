@@ -53,7 +53,7 @@ contract SendPayoutTest is Test, Permit2User {
         // Set reasonable starting block
         vm.warp(1_000_000);
 
-        _auctionHouse = new MockAuctionHouse(_PROTOCOL, _PERMIT2_ADDRESS);
+        _auctionHouse = new MockAuctionHouse(_PROTOCOL, _permit2Address);
         _mockAuctionModule = new MockAtomicAuctionModule(address(_auctionHouse));
         _mockDerivativeModule = new MockDerivativeModule(address(_auctionHouse));
         _mockCondenserModule = new MockCondenserModule(address(_auctionHouse));
