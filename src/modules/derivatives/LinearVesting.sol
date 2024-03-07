@@ -201,14 +201,17 @@ contract LinearVesting is DerivativeModule {
             _redeem(tokenId_, to_, redeemableAmount);
         }
 
+        VestingData memory data = abi.decode(token_.data, (VestingData));
+
         // Reset claimed and receivedAt timestamp to the current time
-        userVesting[to_][tokenId_].receivedAt = uint48(block.timestamp);
+        // If the time of minting is prior to vesting start, it would result in inaccurate vesting calculations.
+        userVesting[to_][tokenId_].receivedAt = uint48(block.timestamp) < data.start
+            ? uint48(data.start)
+            : uint48(block.timestamp);
         userVesting[to_][tokenId_].claimed = 0;
 
         // Transfer collateral token to this contract
         {
-            VestingData memory data = abi.decode(token_.data, (VestingData));
-
             uint256 balanceBefore = data.baseToken.balanceOf(address(this));
             data.baseToken.safeTransferFrom(msg.sender, address(this), amount_);
 
