@@ -1590,9 +1590,8 @@ contract LinearVestingTest is Test, Permit2User {
         _mintWrappedDerivativeTokens(_ALICE, _AMOUNT);
 
         // Warp to before expiry
-        uint48 start = uint48(block.timestamp);
         uint48 elapsed = 50_000;
-        vm.warp(start + elapsed);
+        vm.warp(_VESTING_START + elapsed);
 
         // Calculate the vested amount
         uint256 vestedAmount = (elapsed * (_AMOUNT + _AMOUNT)) / _VESTING_DURATION;
@@ -1638,7 +1637,7 @@ contract LinearVestingTest is Test, Permit2User {
 
         // Warp to another time
         elapsed = 60_000;
-        vm.warp(start + elapsed);
+        vm.warp(_VESTING_START + elapsed);
 
         // Calculate the vested amount
         vestedAmount = elapsed * (_AMOUNT + _AMOUNT) / _VESTING_DURATION;
@@ -1744,9 +1743,8 @@ contract LinearVestingTest is Test, Permit2User {
         _mintDerivativeTokens(_ALICE, unwrappedAmount);
 
         // Warp to before expiry
-        uint48 start = uint48(block.timestamp);
         uint48 elapsed = 50_000;
-        vm.warp(start + elapsed);
+        vm.warp(_VESTING_START + elapsed);
 
         // Redeem wrapped tokens
         uint256 redeemable = elapsed * (wrappedAmount + unwrappedAmount) / _VESTING_DURATION;
@@ -1762,7 +1760,7 @@ contract LinearVestingTest is Test, Permit2User {
 
         // Warp to another time
         elapsed = 60_000;
-        vm.warp(start + elapsed);
+        vm.warp(_VESTING_START + elapsed);
 
         // Calculate the vested amount
         uint256 vestedAmount = (elapsed - 50_000)
@@ -1785,9 +1783,8 @@ contract LinearVestingTest is Test, Permit2User {
         givenAliceHasWrappedDerivativeTokens(_AMOUNT)
     {
         // Warp to before expiry
-        uint48 start = uint48(block.timestamp);
         uint48 elapsed = 50_000;
-        vm.warp(start + elapsed);
+        vm.warp(_VESTING_START + elapsed);
 
         uint256 vested = (_AMOUNT + _AMOUNT).mulDivDown(elapsed, _VESTING_DURATION);
 
@@ -1810,7 +1807,7 @@ contract LinearVestingTest is Test, Permit2User {
 
         // Warp to another time
         elapsed = 60_000;
-        vm.warp(start + elapsed);
+        vm.warp(_VESTING_START + elapsed);
 
         vested = (_AMOUNT + _AMOUNT).mulDivDown(elapsed, _VESTING_DURATION);
         expectedRedeemableAmount = vested - redeemAmount;
@@ -1827,9 +1824,8 @@ contract LinearVestingTest is Test, Permit2User {
         givenAliceHasWrappedDerivativeTokens(_AMOUNT)
     {
         // Warp to before expiry
-        uint48 start = uint48(block.timestamp);
         uint48 elapsed = 50_000;
-        vm.warp(start + elapsed);
+        vm.warp(_VESTING_START + elapsed);
 
         uint256 vested = (_AMOUNT + _AMOUNT).mulDivDown(elapsed, _VESTING_DURATION);
 
@@ -1851,7 +1847,7 @@ contract LinearVestingTest is Test, Permit2User {
 
         // Warp to another time
         elapsed = 60_000;
-        vm.warp(start + elapsed);
+        vm.warp(_VESTING_START + elapsed);
 
         vested = (_AMOUNT + _AMOUNT).mulDivDown(elapsed, _VESTING_DURATION);
         expectedRedeemableAmount = vested - redeemAmount;
