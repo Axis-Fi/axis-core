@@ -295,7 +295,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         // Bid three: 0 out
 
         uint96 bidAmountInTotal = _scaleQuoteTokenAmount(_BID_PRICE_TEN + _BID_PRICE_TEN);
-        uint96 bidAmountOutTotal = _scaleBaseTokenAmount(_BID_PRICE_TEN_OUT + _BID_PRICE_TEN_OUT);
+        uint96 bidAmountOutTotal = _scaleBaseTokenAmount(_LOT_CAPACITY);
 
         _expectedTotalIn = bidAmountInTotal;
         _expectedTotalOut = bidAmountOutTotal;
@@ -324,7 +324,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         // Bid two: 10 / 2 = 5 out
 
         uint96 bidAmountInTotal = _scaleQuoteTokenAmount(_BID_PRICE_TEN + _BID_PRICE_TEN);
-        uint96 bidAmountOutTotal = _scaleBaseTokenAmount(_BID_PRICE_TEN_OUT + _BID_PRICE_TEN_OUT);
+        uint96 bidAmountOutTotal = _scaleBaseTokenAmount(_LOT_CAPACITY);
 
         _expectedTotalIn = bidAmountInTotal;
         _expectedTotalOut = bidAmountOutTotal;
@@ -397,15 +397,8 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         // Bid one: 19 / 2 = 9.5 out
         // Bid two: 1 / 2 = 0.5 out
 
-        uint96 bidOneAmountOutActual = _scaleBaseTokenAmount(_LOT_CAPACITY); // 10
-        uint96 bidOneAmountInActual =
-            _scaleQuoteTokenAmount(_BID_SIZE_NINE_AMOUNT + _BID_PRICE_ONE_AMOUNT); // 20
-
-        uint96 bidAmountInSuccess = bidOneAmountInActual;
-        uint96 bidAmountOutSuccess = bidOneAmountOutActual;
-
-        _expectedTotalIn = bidAmountInSuccess;
-        _expectedTotalOut = bidAmountOutSuccess;
+        _expectedTotalIn = _scaleQuoteTokenAmount(_BID_SIZE_NINE_AMOUNT + _BID_PRICE_ONE_AMOUNT); // 20
+        _expectedTotalOut = _scaleBaseTokenAmount(_LOT_CAPACITY); // 10
 
         // Partial fill
         // None
