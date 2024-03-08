@@ -438,8 +438,8 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         // Bid two: 1 / 2 = 0.5 out
         // Bid three: 0 out
 
-        _expectedTotalIn = _scaleBaseTokenAmount(_LOT_CAPACITY); // 10
-        _expectedTotalOut = _scaleQuoteTokenAmount(_BID_SIZE_NINE_AMOUNT + _BID_PRICE_ONE_AMOUNT); // 20
+        _expectedTotalIn = _scaleQuoteTokenAmount(_BID_SIZE_NINE_AMOUNT + _BID_PRICE_ONE_AMOUNT); // 20
+        _expectedTotalOut = _scaleBaseTokenAmount(_LOT_CAPACITY); // 10
 
         // Partial fill
         // None
@@ -1328,7 +1328,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         _assertSettlement(settlement, auctionOutput);
     }
 
-    function test_notLastBid_filledBelowMinimumFilled_aboveCapacityUsingMinimumPrice()
+    function test_filledBelowMinimumFilled_aboveCapacityUsingMinimumPrice_givenNotLastBid()
         external
         givenLotIsCreated
         givenLotHasStarted
@@ -1344,7 +1344,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         _assertSettlement(settlement, auctionOutput);
     }
 
-    function test_notLastBid_filledBelowMinimumFilled_aboveCapacityUsingMinimumPrice_quoteTokenDecimalsLarger(
+    function test_filledBelowMinimumFilled_aboveCapacityUsingMinimumPrice_givenNotLastBid_quoteTokenDecimalsLarger(
     )
         external
         givenQuoteTokenDecimals(17)
@@ -1363,7 +1363,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         _assertSettlement(settlement, auctionOutput);
     }
 
-    function test_notLastBid_filledBelowMinimumFilled_aboveCapacityUsingMinimumPrice_quoteTokenDecimalsSmaller(
+    function test_filledBelowMinimumFilled_aboveCapacityUsingMinimumPrice_givenNotLastBid_quoteTokenDecimalsSmaller(
     )
         external
         givenQuoteTokenDecimals(13)
@@ -1382,7 +1382,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         _assertSettlement(settlement, auctionOutput);
     }
 
-    function test_lastBid_filledBelowMinimumFilled_aboveCapacityUsingMinimumPrice()
+    function test_filledBelowMinimumFilled_aboveCapacityUsingMinimumPrice_givenLastBid()
         external
         givenLotIsCreated
         givenLotHasStarted
@@ -1398,7 +1398,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         _assertSettlement(settlement, auctionOutput);
     }
 
-    function test_lastBid_filledBelowMinimumFilled_aboveCapacityUsingMinimumPrice_quoteTokenDecimalsLarger(
+    function test_filledBelowMinimumFilled_aboveCapacityUsingMinimumPrice_givenLastBid_quoteTokenDecimalsLarger(
     )
         external
         givenQuoteTokenDecimals(17)
@@ -1417,7 +1417,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         _assertSettlement(settlement, auctionOutput);
     }
 
-    function test_lastBid_filledBelowMinimumFilled_aboveCapacityUsingMinimumPrice_quoteTokenDecimalsSmaller(
+    function test_filledBelowMinimumFilled_aboveCapacityUsingMinimumPrice_givenLastBid_quoteTokenDecimalsSmaller(
     )
         external
         givenQuoteTokenDecimals(13)
