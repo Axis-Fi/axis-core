@@ -32,7 +32,6 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         Submitted,
         Decrypted,
         Claimed // Bid status will also be set to claimed if the bid is cancelled/refunded
-
     }
 
     /// @notice        Core data for a bid
@@ -590,42 +589,6 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         return (bidId, amountIn, price);
     }
 
-    function _getMarginalPriceIfAboveMinFilled(
-        uint256 totalAmountIn_,
-        uint256 baseScale_,
-        uint96 price_,
-        uint96 minFilled_
-    ) internal pure returns (bool aboveMinFilled, uint96 marginalPrice) {
-        if (price_ == 0) {
-            return (false, 0);
-        }
-
-        // If the total amount in is greater than or equal to the minimum filled, the marginal price is the price
-        if (Math.mulDivDown(totalAmountIn_, baseScale_, price_) >= minFilled_) {
-            return (true, price_);
-        }
-
-        return (false, 0);
-    }
-
-    function _getMarginalPriceIfMinimumPriceFillsCapacity(
-        uint256 totalAmountIn_,
-        uint256 baseScale_,
-        uint96 minimumPrice_,
-        uint256 capacity_
-    ) internal pure returns (bool minimumPriceFillsCapacity, uint96 marginalPrice) {
-        if (minimumPrice_ == 0) {
-            return (false, 0);
-        }
-
-        // If `minimumPrice_` can fill `capacity_` (or more), there is a price >= `minimumPrice_` that can fill the capacity
-        if (Math.mulDivDown(totalAmountIn_, baseScale_, minimumPrice_) >= capacity_) {
-            return (true, uint96(Math.mulDivUp(totalAmountIn_, baseScale_, capacity_)));
-        }
-
-        return (false, 0);
-    }
-
     /// @notice     Calculates the marginal price of a lot
     ///
     /// @param      lotId_          The lot ID of the auction to calculate the marginal price for
@@ -658,59 +621,41 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
 
                 // If the price is below the minimum price, then determine a marginal price from the previous bids with the knowledge that no other bids will be considered
                 if (price < lotAuctionData.minPrice) {
-                    (bool success_, uint96 marginalPrice_) = _getMarginalPriceIfAboveMinFilled(
-                        result.totalAmountIn, baseScale, lastPrice, lotAuctionData.minFilled
+                    console2.log("price below minimum price");
+                    // We know that the lastPrice was not sufficient to fill capacity or the loop would have exited
+                    // We check if minimum price can result in a fill. If so, find the exact marginal price between last price and minimum price
+                    // If not, we set the marginal price to the minimum price. Whether the capacity filled meets the minimum filled will be checked later in the settlement process.
+                    if (
+                        lotAuctionData.minPrice == 0
+                            || Math.mulDivDown(result.totalAmountIn, baseScale, lotAuctionData.minPrice)
+                                >= capacity
+                    ) {
+                        result.marginalPrice =
+                            uint96(Math.mulDivUp(result.totalAmountIn, baseScale, capacity));
+                    } else {
+                        result.marginalPrice = lotAuctionData.minPrice; // note this cannot be zero since it is checked above
+                    }
+
+                    // Update capacity expended with the new marginal price
+                    result.capacityExpended = Math.mulDivDown(
+                        result.totalAmountIn, baseScale, uint256(result.marginalPrice)
                     );
+                    // marginal bid id can be zero, there are no bids at the marginal price
 
-                    if (success_) {
-                        result.marginalPrice = marginalPrice_;
-                        result.capacityExpended = Math.mulDivDown(
-                            result.totalAmountIn, baseScale, uint256(result.marginalPrice)
-                        );
-                        // Marginal bid id can be set to the max uint64 to denote that all bids at/above the marginal price are filled
-                        result.marginalBidId = type(uint64).max;
-                        break;
-                    }
-
-                    (success_, marginalPrice_) = _getMarginalPriceIfMinimumPriceFillsCapacity(
-                        result.totalAmountIn, baseScale, lotAuctionData.minPrice, capacity
-                    );
-
-                    if (success_) {
-                        result.marginalPrice = marginalPrice_;
-                        result.capacityExpended = Math.mulDivDown(
-                            result.totalAmountIn, baseScale, uint256(result.marginalPrice)
-                        );
-                        // Marginal bid id can be set to the max uint64 to denote that all bids at/above the marginal price are filled
-                        result.marginalBidId = type(uint64).max;
-                        break;
-                    }
-
-                    // Otherwise exit, using the existing marginal price
-                    // The marginal price may change, so re-evaluate the capacity expended
-                    if (result.marginalPrice > 0) {
-                        // TODO does capacity expended need to be part of the result? It is calculated from totalAmountIn and the price
-                        result.capacityExpended = Math.mulDivDown(
-                            result.totalAmountIn, baseScale, uint256(result.marginalPrice)
-                        );
-                    }
-
-                    // Marginal bid id can be set to the max uint64 to denote that all bids at/above the marginal price are filled
-                    result.marginalBidId = type(uint64).max;
+                    // Exit the outer loop
                     break;
                 }
-
-                // TODO need to handle the scenario where it is the last bid and the capacity can be filled using the minimum price
 
                 // Check if the auction can clear with the existing bids at a price between current price and last price
                 // There will be no partial fills because we select the price that exactly fills the capacity
                 // Note: totalAmountIn here has not had the current bid added to it
-                result.capacityExpended = result.totalAmountIn * baseScale / price;
+                result.capacityExpended = Math.mulDivDown(result.totalAmountIn, baseScale, price);
                 if (result.capacityExpended >= capacity) {
                     result.marginalPrice =
                         uint96(Math.mulDivUp(result.totalAmountIn, baseScale, capacity));
                     result.marginalBidId = uint64(0); // we set this to zero so that any bids at the current price are not considered in the case that capacityExpended == capacity
                     result.capacityExpended = capacity; // updated based on the marginal price
+                    console2.log("we use this branch");
                     break;
                 }
 
@@ -736,10 +681,26 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
                     break;
                 }
 
-                // If we have reached the end of the queue, we have found the marginal price and the maximum capacity that can be filled
+                // If we have reached the end of the queue, we check the same cases as when the price of a bid is below the minimum price.
                 if (i == numBids - 1) {
-                    result.marginalPrice = price;
-                    result.marginalBidId = bidId;
+                    // We know that the price was not sufficient to fill capacity or the loop would have exited
+                    // We check if minimum price can result in a complete fill. If so, find the exact marginal price between last price and minimum price
+                    // If not, we set the marginal price to the minimum price. Whether the capacity filled meets the minimum filled will be checked later in the settlement process
+                    if (
+                        lotAuctionData.minPrice == 0
+                            || Math.mulDivDown(result.totalAmountIn, baseScale, lotAuctionData.minPrice)
+                                >= capacity
+                    ) {
+                        result.marginalPrice =
+                            uint96(Math.mulDivUp(result.totalAmountIn, baseScale, capacity));
+                    } else {
+                        result.marginalPrice = lotAuctionData.minPrice;
+                    }
+
+                    result.capacityExpended = Math.mulDivDown(
+                        result.totalAmountIn, baseScale, uint256(result.marginalPrice)
+                    );
+                    // marginal bid id can be zero, there are no bids at the marginal price
                 }
             }
         }

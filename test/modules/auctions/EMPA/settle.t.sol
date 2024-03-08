@@ -123,12 +123,12 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
     modifier givenBidsAreBelowMinimumFilled() {
         // Capacity: 1 + 1 < 2.5 minimum
         _createBid(
-            _scaleQuoteTokenAmount(_BID_PRICE_TWO_AMOUNT),
-            _scaleBaseTokenAmount(_BID_PRICE_TWO_AMOUNT_OUT)
+            _scaleQuoteTokenAmount(_BID_PRICE_ONE_AMOUNT),
+            _scaleBaseTokenAmount(_BID_PRICE_ONE_AMOUNT_OUT)
         );
         _createBid(
-            _scaleQuoteTokenAmount(_BID_PRICE_TWO_AMOUNT),
-            _scaleBaseTokenAmount(_BID_PRICE_TWO_AMOUNT_OUT)
+            _scaleQuoteTokenAmount(_BID_PRICE_ONE_AMOUNT),
+            _scaleBaseTokenAmount(_BID_PRICE_ONE_AMOUNT_OUT)
         );
 
         // Marginal price: max (due to not meeting minimum)
@@ -189,29 +189,27 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
             _scaleBaseTokenAmount(_BID_PRICE_TWO_AMOUNT_OUT)
         );
         // Marginal price 0.5, so this bid is not considered.
-        // Considering the previous bids, marginal price is 2, total in is 8, used capacity is 4, which is above the minimum filled. So bid 4 sets the marginal price and it exits.
+        // Considering the previous bids, we calculate a marginal price of (2+2+2+2)/10 = 0.8, which is below the minimum price. Therefore, the marginal price is the minimum price: 1.
         _createBid(
             _scaleQuoteTokenAmount(_BID_PRICE_BELOW_ONE_AMOUNT),
             _scaleBaseTokenAmount(_BID_PRICE_BELOW_ONE_AMOUNT_OUT)
         );
 
-        // Marginal price: 2 >= 1
-        _expectedMarginalPrice = _scaleQuoteTokenAmount(2 * _BASE_SCALE);
+        // Marginal price: 1
+        _expectedMarginalPrice = _scaleQuoteTokenAmount(1 * _BASE_SCALE);
 
         // Output
-        // Bid one: 2 / 2 = 1 out
-        // Bid two: 2 / 2 = 1 out
-        // Bid three: 2 / 2 = 1 out
-        // Bid four: 2 / 2 = 1 out
+        // Bid one: 2 / 1 = 2 out
+        // Bid two: 2 / 1 = 2 out
+        // Bid three: 2 / 1 = 2 out
+        // Bid four: 2 / 1 = 2 out
         // Bid five: 0 out
 
         uint96 bidAmountInTotal = _scaleQuoteTokenAmount(
-            _BID_PRICE_TWO_AMOUNT + _BID_PRICE_TWO_AMOUNT + _BID_PRICE_TWO_AMOUNT
-                + _BID_PRICE_TWO_AMOUNT
+            _BID_PRICE_TWO_AMOUNT * 4
         );
         uint96 bidAmountOutTotal = _scaleBaseTokenAmount(
-            _BID_PRICE_TWO_AMOUNT_OUT + _BID_PRICE_TWO_AMOUNT_OUT + _BID_PRICE_TWO_AMOUNT_OUT
-                + _BID_PRICE_TWO_AMOUNT_OUT
+            _BID_PRICE_TWO_AMOUNT * 4
         );
 
         _expectedTotalIn = bidAmountInTotal;
@@ -242,24 +240,22 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
             _scaleQuoteTokenAmount(_BID_PRICE_TWO_AMOUNT),
             _scaleBaseTokenAmount(_BID_PRICE_TWO_AMOUNT_OUT)
         );
-        // Considering the previous bids, marginal price is 2, total in is 8, used capacity is 4, which is above the minimum filled. So bid 4 sets the marginal price and it exits.
+        // On last bid, we calculate a marginal price to fill capacity of (2+2+2+2)/10 = 0.8, which is below the minimum price. Therefore, the marginal price is the minimum price: 1.
 
-        // Marginal price: 2 >= 1
-        _expectedMarginalPrice = _scaleQuoteTokenAmount(2 * _BASE_SCALE);
+        // Marginal price: 1
+        _expectedMarginalPrice = _scaleQuoteTokenAmount(1 * _BASE_SCALE);
 
         // Output
-        // Bid one: 2 / 2 = 1 out
-        // Bid two: 2 / 2 = 1 out
-        // Bid three: 2 / 2 = 1 out
-        // Bid four: 2 / 2 = 1 out
+        // Bid one: 2 / 1 = 2 out
+        // Bid two: 2 / 1 = 2 out
+        // Bid three: 2 / 1 = 2 out
+        // Bid four: 2 / 1 = 2 out
 
         uint96 bidAmountInTotal = _scaleQuoteTokenAmount(
-            _BID_PRICE_TWO_AMOUNT + _BID_PRICE_TWO_AMOUNT + _BID_PRICE_TWO_AMOUNT
-                + _BID_PRICE_TWO_AMOUNT
+            _BID_PRICE_TWO_AMOUNT * 4
         );
         uint96 bidAmountOutTotal = _scaleBaseTokenAmount(
-            _BID_PRICE_TWO_AMOUNT_OUT + _BID_PRICE_TWO_AMOUNT_OUT + _BID_PRICE_TWO_AMOUNT_OUT
-                + _BID_PRICE_TWO_AMOUNT_OUT
+            _BID_PRICE_TWO_AMOUNT * 4
         );
 
         _expectedTotalIn = bidAmountInTotal;
@@ -334,41 +330,35 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
     }
 
     modifier givenBidsAreAboveMinimumAndBelowCapacity() {
-        // Capacity: 1 + 1 + 1 + 1 >= 2.5 minimum && < 10 capacity
+        // Capacity: 2 + 2 + 2 + 2 >= 2.5 minimum && < 10 capacity
         _createBid(
-            _scaleQuoteTokenAmount(_BID_PRICE_TWO_AMOUNT),
-            _scaleBaseTokenAmount(_BID_PRICE_TWO_AMOUNT_OUT)
+            _scaleQuoteTokenAmount(_BID_PRICE_TWO_SIZE_TWO_AMOUNT),
+            _scaleBaseTokenAmount(_BID_PRICE_TWO_SIZE_TWO_AMOUNT_OUT)
         );
         _createBid(
-            _scaleQuoteTokenAmount(_BID_PRICE_TWO_AMOUNT),
-            _scaleBaseTokenAmount(_BID_PRICE_TWO_AMOUNT_OUT)
+            _scaleQuoteTokenAmount(_BID_PRICE_TWO_SIZE_TWO_AMOUNT),
+            _scaleBaseTokenAmount(_BID_PRICE_TWO_SIZE_TWO_AMOUNT_OUT)
         );
         _createBid(
-            _scaleQuoteTokenAmount(_BID_PRICE_TWO_AMOUNT),
-            _scaleBaseTokenAmount(_BID_PRICE_TWO_AMOUNT_OUT)
+            _scaleQuoteTokenAmount(_BID_PRICE_TWO_SIZE_TWO_AMOUNT),
+            _scaleBaseTokenAmount(_BID_PRICE_TWO_SIZE_TWO_AMOUNT_OUT)
         );
         _createBid(
-            _scaleQuoteTokenAmount(_BID_PRICE_TWO_AMOUNT),
-            _scaleBaseTokenAmount(_BID_PRICE_TWO_AMOUNT_OUT)
+            _scaleQuoteTokenAmount(_BID_PRICE_TWO_SIZE_TWO_AMOUNT),
+            _scaleBaseTokenAmount(_BID_PRICE_TWO_SIZE_TWO_AMOUNT_OUT)
         );
 
-        // Marginal price: 2 >= 1 (due to capacity not being reached and the last bid having a price of 2)
-        _expectedMarginalPrice = _scaleQuoteTokenAmount(2 * _BASE_SCALE);
+        // Marginal price calculated between last bid price and minimum price as: (4+4+4+4)/10 = 1.6
+        _expectedMarginalPrice = _scaleQuoteTokenAmount(16 * _BASE_SCALE / 10);
 
         // Output
-        // Bid one: 2 / 2 = 1 out
-        // Bid two: 2 / 2 = 1 out
-        // Bid three: 2 / 2 = 1 out
-        // Bid four: 2 / 2 = 1 out
+        // Bid one: 4 / 1.6 = 2.5 out
+        // Bid two: 4 / 1.6 = 2.5 out
+        // Bid three: 4 / 1.6 = 2.5 out
+        // Bid four: 4 / 1.6 = 2.5 out
 
-        uint96 bidAmountInTotal = _scaleQuoteTokenAmount(
-            _BID_PRICE_TWO_AMOUNT + _BID_PRICE_TWO_AMOUNT + _BID_PRICE_TWO_AMOUNT
-                + _BID_PRICE_TWO_AMOUNT
-        );
-        uint96 bidAmountOutTotal = _scaleBaseTokenAmount(
-            _BID_PRICE_TWO_AMOUNT_OUT + _BID_PRICE_TWO_AMOUNT_OUT + _BID_PRICE_TWO_AMOUNT_OUT
-                + _BID_PRICE_TWO_AMOUNT_OUT
-        );
+        uint96 bidAmountInTotal = _scaleQuoteTokenAmount(_BID_PRICE_TWO_SIZE_TWO_AMOUNT * 4);
+        uint96 bidAmountOutTotal = _scaleBaseTokenAmount(_LOT_CAPACITY);
 
         _expectedTotalIn = bidAmountInTotal;
         _expectedTotalOut = bidAmountOutTotal;
@@ -378,26 +368,24 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
     }
 
     modifier givenLotMarginalPriceBetweenBidsAndLastBid() {
-        // Marginal price of 2.1111, used capacity of (19/2.111111) = 9, continues
+        // Marginal price of 2.66667, used capacity of (8/2.66667) = 3, continues
+        _createBid(_scaleQuoteTokenAmount(8e18), _scaleBaseTokenAmount(3e18));
+        // Marginal price of 2, used capacity of (8+4)/2 = 6 < 10, continues but marginal price can be found between
+        // this bid and the next one by calculating the marginal price that fills capacity: (8+4)/10 = 1.2
         _createBid(
-            _scaleQuoteTokenAmount(_BID_SIZE_NINE_AMOUNT),
-            _scaleBaseTokenAmount(_BID_SIZE_NINE_AMOUNT_OUT)
-        );
-        // Marginal price of 1, used capacity of (19+1)/1 = 20 > 10, so it calculates a marginal price that fills capacity without a partial fill
-        _createBid(
-            _scaleQuoteTokenAmount(_BID_PRICE_ONE_AMOUNT),
-            _scaleBaseTokenAmount(_BID_PRICE_ONE_AMOUNT_OUT)
+            _scaleQuoteTokenAmount(_BID_PRICE_TWO_SIZE_TWO_AMOUNT),
+            _scaleBaseTokenAmount(_BID_PRICE_TWO_SIZE_TWO_AMOUNT_OUT)
         );
 
-        // Marginal price: 2 >= 1 (due to capacity being reached on bid 2)
-        // Bid 2 sets the marginal price at a number between 2.1111 and 1 that fills capacity
-        _expectedMarginalPrice = _scaleQuoteTokenAmount(2e18);
+        // Marginal price: 1.2 >= 1 (due to capacity being reached between bids 2 and 3)
+        // Bid 1 & 2 fill capacity at a marginal price of 1.2, which is greater than the price of bid 3
+        _expectedMarginalPrice = _scaleQuoteTokenAmount(12e17);
 
         // Output
-        // Bid one: 19 / 2 = 9.5 out
-        // Bid two: 1 / 2 = 0.5 out
+        // Bid one: 8 / 1.2 = 6.667 out
+        // Bid two: 4 / 1.2 = 3.333 out
 
-        _expectedTotalIn = _scaleQuoteTokenAmount(_BID_SIZE_NINE_AMOUNT + _BID_PRICE_ONE_AMOUNT); // 20
+        _expectedTotalIn = _scaleQuoteTokenAmount(12e18); // 12
         _expectedTotalOut = _scaleBaseTokenAmount(_LOT_CAPACITY); // 10
 
         // Partial fill
@@ -406,32 +394,30 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
     }
 
     modifier givenLotMarginalPriceBetweenBidsAndNotLastBid() {
-        // Marginal price of 2.1111, used capacity of (19/2.111111) = 9, continues
+        // Marginal price of 2.66667, used capacity of (8/2.66667) = 3, continues
+        _createBid(_scaleQuoteTokenAmount(8e18), _scaleBaseTokenAmount(3e18));
+        // Marginal price of 2, used capacity of (8+4)/2 = 6 < 10, continues but marginal price can be found between
+        // this bid and the next one by calculating the marginal price that fills capacity: (8+4)/10 = 1.2
         _createBid(
-            _scaleQuoteTokenAmount(_BID_SIZE_NINE_AMOUNT),
-            _scaleBaseTokenAmount(_BID_SIZE_NINE_AMOUNT_OUT)
+            _scaleQuoteTokenAmount(_BID_PRICE_TWO_SIZE_TWO_AMOUNT),
+            _scaleBaseTokenAmount(_BID_PRICE_TWO_SIZE_TWO_AMOUNT_OUT)
         );
-        // Marginal price of 1, used capacity of (19+1)/1 = 20 > 10, so it calculates a marginal price that fills capacity without a partial fill
+        // Marginal price of 1, this won't end up being considered
         _createBid(
             _scaleQuoteTokenAmount(_BID_PRICE_ONE_AMOUNT),
             _scaleBaseTokenAmount(_BID_PRICE_ONE_AMOUNT_OUT)
         );
-        // Marginal price below 1, so this bid is not considered
-        _createBid(
-            _scaleQuoteTokenAmount(_BID_PRICE_BELOW_ONE_AMOUNT),
-            _scaleBaseTokenAmount(_BID_PRICE_BELOW_ONE_AMOUNT_OUT)
-        );
 
-        // Marginal price: 2 >= 1 (due to capacity being reached on bid 2)
-        // Bid 2 sets the marginal price at a number between 2.1111 and 1 that fills capacity
-        _expectedMarginalPrice = _scaleQuoteTokenAmount(2e18);
+        // Marginal price: 1.2 >= 1 (due to capacity being reached between bids 2 and 3)
+        // Bid 1 & 2 fill capacity at a marginal price of 1.2, which is greater than the price of bid 3
+        _expectedMarginalPrice = _scaleQuoteTokenAmount(12e17);
 
         // Output
-        // Bid one: 19 / 2 = 9.5 out
-        // Bid two: 1 / 2 = 0.5 out
+        // Bid one: 8 / 1.2 = 6.667 out
+        // Bid two: 4 / 1.2 = 3.333 out
         // Bid three: 0 out
 
-        _expectedTotalIn = _scaleQuoteTokenAmount(_BID_SIZE_NINE_AMOUNT + _BID_PRICE_ONE_AMOUNT); // 20
+        _expectedTotalIn = _scaleQuoteTokenAmount(12e18); // 12
         _expectedTotalOut = _scaleBaseTokenAmount(_LOT_CAPACITY); // 10
 
         // Partial fill
@@ -640,7 +626,8 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         );
 
         // Marginal price: 3 >= 1 (due to capacity not being reached and the last bid above the minimum having a price of 3)
-        _expectedMarginalPrice = _scaleQuoteTokenAmount(3 * _BASE_SCALE);
+        // Marginal price is calculated as the price at which the two valid bids fill the capacity: (6+6)/10 = 1.2
+        _expectedMarginalPrice = _scaleQuoteTokenAmount(12 * _BASE_SCALE / 10);
 
         // Output
         // Bid one: 6 / 3 = 2 out
@@ -652,8 +639,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
             _scaleQuoteTokenAmount(_BID_PRICE_THREE_AMOUNT + _BID_PRICE_THREE_AMOUNT);
         uint96 bidAmountInFail =
             _scaleQuoteTokenAmount(_BID_PRICE_BELOW_ONE_AMOUNT + _BID_PRICE_BELOW_ONE_AMOUNT);
-        uint96 bidAmountOutSuccess =
-            _scaleBaseTokenAmount(_BID_PRICE_THREE_AMOUNT_OUT + _BID_PRICE_THREE_AMOUNT_OUT);
+        uint96 bidAmountOutSuccess = _scaleBaseTokenAmount(_LOT_CAPACITY);
 
         _expectedTotalIn = bidAmountInSuccess;
         _expectedTotalOut = bidAmountOutSuccess;
