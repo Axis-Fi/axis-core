@@ -69,7 +69,10 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
     //  [X] it returns the amounts in and out, excluding those below the minimum price, and no partial fill
     // [X] given a bid sets a marginal price that results in the previous bid exceeding the capacity
     //  [X] it handles different token decimals
-    //  [X] it calculates a marginal price that results in complete utilisation of the capacity, and no partial fill
+    //  [X] given the bid is the last bid
+    //   [X] it calculates a marginal price that results in complete utilisation of the capacity, and no partial fill
+    //  [X] given the bid is not the last bid
+    //   [X] it calculates a marginal price that results in complete utilisation of the capacity, and no partial fill
     // [X] given a bid's marginal price does not result in the lot capacity being filled, but is above the minimum filled
     //  [X] given the bid is the last bid
     //   [X] it sets the marginal price to the bid price, and returns the amounts in and out
@@ -374,7 +377,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         _;
     }
 
-    modifier givenLotMarginalPriceBetweenBids() {
+    modifier givenLotMarginalPriceBetweenBidsAndLastBid() {
         // Marginal price of 2.1111, used capacity of (19/2.111111) = 9, continues
         _createBid(
             _scaleQuoteTokenAmount(_BID_SIZE_NINE_AMOUNT),
@@ -403,6 +406,40 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
 
         _expectedTotalIn = bidAmountInSuccess;
         _expectedTotalOut = bidAmountOutSuccess;
+
+        // Partial fill
+        // None
+        _;
+    }
+
+    modifier givenLotMarginalPriceBetweenBidsAndNotLastBid() {
+        // Marginal price of 2.1111, used capacity of (19/2.111111) = 9, continues
+        _createBid(
+            _scaleQuoteTokenAmount(_BID_SIZE_NINE_AMOUNT),
+            _scaleBaseTokenAmount(_BID_SIZE_NINE_AMOUNT_OUT)
+        );
+        // Marginal price of 1, used capacity of (19+1)/1 = 20 > 10, so it calculates a marginal price that fills capacity without a partial fill
+        _createBid(
+            _scaleQuoteTokenAmount(_BID_PRICE_ONE_AMOUNT),
+            _scaleBaseTokenAmount(_BID_PRICE_ONE_AMOUNT_OUT)
+        );
+        // Marginal price below 1, so this bid is not considered
+        _createBid(
+            _scaleQuoteTokenAmount(_BID_PRICE_BELOW_ONE_AMOUNT),
+            _scaleBaseTokenAmount(_BID_PRICE_BELOW_ONE_AMOUNT_OUT)
+        );
+
+        // Marginal price: 2 >= 1 (due to capacity being reached on bid 2)
+        // Bid 2 sets the marginal price at a number between 2.1111 and 1 that fills capacity
+        _expectedMarginalPrice = _scaleQuoteTokenAmount(2e18);
+
+        // Output
+        // Bid one: 19 / 2 = 9.5 out
+        // Bid two: 1 / 2 = 0.5 out
+        // Bid three: 0 out
+
+        _expectedTotalIn = _scaleBaseTokenAmount(_LOT_CAPACITY); // 10
+        _expectedTotalOut = _scaleQuoteTokenAmount(_BID_SIZE_NINE_AMOUNT + _BID_PRICE_ONE_AMOUNT); // 20
 
         // Partial fill
         // None
@@ -1083,11 +1120,11 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         _assertSettlement(settlement, auctionOutput);
     }
 
-    function test_marginalPriceBetweenBids()
+    function test_marginalPriceBetweenBids_givenLastBid()
         external
         givenLotIsCreated
         givenLotHasStarted
-        givenLotMarginalPriceBetweenBids
+        givenLotMarginalPriceBetweenBidsAndLastBid
         givenLotHasConcluded
         givenPrivateKeyIsSubmitted
         givenLotIsDecrypted
@@ -1099,13 +1136,13 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         _assertSettlement(settlement, auctionOutput);
     }
 
-    function test_marginalPriceBetweenBids_quoteTokenDecimalsLarger()
+    function test_marginalPriceBetweenBids_givenLastBid_quoteTokenDecimalsLarger()
         external
         givenQuoteTokenDecimals(17)
         givenBaseTokenDecimals(13)
         givenLotIsCreated
         givenLotHasStarted
-        givenLotMarginalPriceBetweenBids
+        givenLotMarginalPriceBetweenBidsAndLastBid
         givenLotHasConcluded
         givenPrivateKeyIsSubmitted
         givenLotIsDecrypted
@@ -1117,13 +1154,65 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         _assertSettlement(settlement, auctionOutput);
     }
 
-    function test_marginalPriceBetweenBids_quoteTokenDecimalsSmaller()
+    function test_marginalPriceBetweenBids_givenLastBid_quoteTokenDecimalsSmaller()
         external
         givenQuoteTokenDecimals(13)
         givenBaseTokenDecimals(17)
         givenLotIsCreated
         givenLotHasStarted
-        givenLotMarginalPriceBetweenBids
+        givenLotMarginalPriceBetweenBidsAndLastBid
+        givenLotHasConcluded
+        givenPrivateKeyIsSubmitted
+        givenLotIsDecrypted
+    {
+        // Call function
+        (Auction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
+
+        // Assert settlement
+        _assertSettlement(settlement, auctionOutput);
+    }
+
+    function test_marginalPriceBetweenBids_givenNotLastBid()
+        external
+        givenLotIsCreated
+        givenLotHasStarted
+        givenLotMarginalPriceBetweenBidsAndNotLastBid
+        givenLotHasConcluded
+        givenPrivateKeyIsSubmitted
+        givenLotIsDecrypted
+    {
+        // Call function
+        (Auction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
+
+        // Assert settlement
+        _assertSettlement(settlement, auctionOutput);
+    }
+
+    function test_marginalPriceBetweenBids_givenNotLastBid_quoteTokenDecimalsLarger()
+        external
+        givenQuoteTokenDecimals(17)
+        givenBaseTokenDecimals(13)
+        givenLotIsCreated
+        givenLotHasStarted
+        givenLotMarginalPriceBetweenBidsAndNotLastBid
+        givenLotHasConcluded
+        givenPrivateKeyIsSubmitted
+        givenLotIsDecrypted
+    {
+        // Call function
+        (Auction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
+
+        // Assert settlement
+        _assertSettlement(settlement, auctionOutput);
+    }
+
+    function test_marginalPriceBetweenBids_givenNotLastBid_quoteTokenDecimalsSmaller()
+        external
+        givenQuoteTokenDecimals(13)
+        givenBaseTokenDecimals(17)
+        givenLotIsCreated
+        givenLotHasStarted
+        givenLotMarginalPriceBetweenBidsAndNotLastBid
         givenLotHasConcluded
         givenPrivateKeyIsSubmitted
         givenLotIsDecrypted
