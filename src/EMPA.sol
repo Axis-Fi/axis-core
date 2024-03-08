@@ -361,7 +361,6 @@ contract EncryptedMarginalPriceAuction is WithModules, Router, FeeManager {
         Submitted,
         Decrypted,
         Claimed // Claimed status will also be set if the bid is cancelled/refunded
-
     }
 
     /// @notice        Struct containing encrypted bid data

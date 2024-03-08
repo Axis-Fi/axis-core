@@ -205,12 +205,8 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         // Bid four: 2 / 1 = 2 out
         // Bid five: 0 out
 
-        uint96 bidAmountInTotal = _scaleQuoteTokenAmount(
-            _BID_PRICE_TWO_AMOUNT * 4
-        );
-        uint96 bidAmountOutTotal = _scaleBaseTokenAmount(
-            _BID_PRICE_TWO_AMOUNT * 4
-        );
+        uint96 bidAmountInTotal = _scaleQuoteTokenAmount(_BID_PRICE_TWO_AMOUNT * 4);
+        uint96 bidAmountOutTotal = _scaleBaseTokenAmount(_BID_PRICE_TWO_AMOUNT * 4);
 
         _expectedTotalIn = bidAmountInTotal;
         _expectedTotalOut = bidAmountOutTotal;
@@ -251,12 +247,8 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         // Bid three: 2 / 1 = 2 out
         // Bid four: 2 / 1 = 2 out
 
-        uint96 bidAmountInTotal = _scaleQuoteTokenAmount(
-            _BID_PRICE_TWO_AMOUNT * 4
-        );
-        uint96 bidAmountOutTotal = _scaleBaseTokenAmount(
-            _BID_PRICE_TWO_AMOUNT * 4
-        );
+        uint96 bidAmountInTotal = _scaleQuoteTokenAmount(_BID_PRICE_TWO_AMOUNT * 4);
+        uint96 bidAmountOutTotal = _scaleBaseTokenAmount(_BID_PRICE_TWO_AMOUNT * 4);
 
         _expectedTotalIn = bidAmountInTotal;
         _expectedTotalOut = bidAmountOutTotal;

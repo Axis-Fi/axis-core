@@ -12,7 +12,6 @@ contract MockBatchAuctionModule is AuctionModule {
         Submitted,
         Decrypted,
         Claimed // Bid status will also be set to claimed if the bid is cancelled/refunded
-
     }
 
     /// @notice        Core data for a bid
