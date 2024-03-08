@@ -401,18 +401,21 @@ contract EmpaModuleClaimBidsTest is EmpaModuleTest {
         vm.prank(address(_auctionHouse));
         (Auction.BidClaim[] memory bidClaims,) = _module.claimBids(_lotId, _bidIds);
 
+        // auction is settled at marginal price of 1.6, so payout is 8 / 1.6 = 5
+        uint96 amountOut = 5e18;
+
         // Check the result
         Auction.BidClaim memory bidClaimOne = bidClaims[0];
         assertEq(bidClaimOne.bidder, _BIDDER);
         assertEq(bidClaimOne.referrer, _REFERRER);
         assertEq(bidClaimOne.paid, _scaleQuoteTokenAmount(_BID_AMOUNT));
-        assertEq(bidClaimOne.payout, _scaleBaseTokenAmount(_BID_AMOUNT_OUT));
+        assertEq(bidClaimOne.payout, _scaleBaseTokenAmount(amountOut));
 
         Auction.BidClaim memory bidClaimTwo = bidClaims[1];
         assertEq(bidClaimTwo.bidder, _BIDDER_TWO);
         assertEq(bidClaimTwo.referrer, _REFERRER);
         assertEq(bidClaimTwo.paid, _scaleQuoteTokenAmount(_BID_AMOUNT));
-        assertEq(bidClaimTwo.payout, _scaleBaseTokenAmount(_BID_AMOUNT_OUT));
+        assertEq(bidClaimTwo.payout, _scaleBaseTokenAmount(amountOut));
 
         assertEq(bidClaims.length, 2);
 
@@ -443,18 +446,21 @@ contract EmpaModuleClaimBidsTest is EmpaModuleTest {
         vm.prank(address(_auctionHouse));
         (Auction.BidClaim[] memory bidClaims,) = _module.claimBids(_lotId, _bidIds);
 
+        // auction is settled at marginal price of 1.6, so payout is 8 / 1.6 = 5
+        uint96 amountOut = 5e18;
+
         // Check the result
         Auction.BidClaim memory bidClaimOne = bidClaims[0];
         assertEq(bidClaimOne.bidder, _BIDDER);
         assertEq(bidClaimOne.referrer, _REFERRER);
         assertEq(bidClaimOne.paid, _scaleQuoteTokenAmount(_BID_AMOUNT));
-        assertEq(bidClaimOne.payout, _scaleBaseTokenAmount(_BID_AMOUNT_OUT));
+        assertEq(bidClaimOne.payout, _scaleBaseTokenAmount(amountOut));
 
         Auction.BidClaim memory bidClaimTwo = bidClaims[1];
         assertEq(bidClaimTwo.bidder, _BIDDER_TWO);
         assertEq(bidClaimTwo.referrer, _REFERRER);
         assertEq(bidClaimTwo.paid, _scaleQuoteTokenAmount(_BID_AMOUNT));
-        assertEq(bidClaimTwo.payout, _scaleBaseTokenAmount(_BID_AMOUNT_OUT));
+        assertEq(bidClaimTwo.payout, _scaleBaseTokenAmount(amountOut));
 
         assertEq(bidClaims.length, 2);
 

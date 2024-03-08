@@ -297,7 +297,7 @@ contract EmpaModuleClaimBidTest is EmpaModuleTest {
         assertEq(bidClaim.bidder, _BIDDER);
         assertEq(bidClaim.referrer, _REFERRER);
         assertEq(bidClaim.paid, _BID_AMOUNT);
-        assertEq(bidClaim.payout, _BID_AMOUNT_OUT);
+        assertEq(bidClaim.payout, _BID_AMOUNT); // auction is settled at minimum price (1) so payout is equal to paid
 
         // Check the bid status
         EncryptedMarginalPriceAuctionModule.Bid memory bid = _getBid(_lotId, _bidId);
@@ -324,7 +324,7 @@ contract EmpaModuleClaimBidTest is EmpaModuleTest {
         assertEq(bidClaim.bidder, _BIDDER);
         assertEq(bidClaim.referrer, _REFERRER);
         assertEq(bidClaim.paid, _scaleQuoteTokenAmount(_BID_AMOUNT));
-        assertEq(bidClaim.payout, _scaleBaseTokenAmount(_BID_AMOUNT_OUT));
+        assertEq(bidClaim.payout, _scaleBaseTokenAmount(_BID_AMOUNT)); // auction is settled at minimum price (1) so payout is equal to paid
 
         // Check the bid status
         EncryptedMarginalPriceAuctionModule.Bid memory bid = _getBid(_lotId, _bidId);
@@ -351,7 +351,7 @@ contract EmpaModuleClaimBidTest is EmpaModuleTest {
         assertEq(bidClaim.bidder, _BIDDER);
         assertEq(bidClaim.referrer, _REFERRER);
         assertEq(bidClaim.paid, _scaleQuoteTokenAmount(_BID_AMOUNT));
-        assertEq(bidClaim.payout, _scaleBaseTokenAmount(_BID_AMOUNT_OUT));
+        assertEq(bidClaim.payout, _scaleBaseTokenAmount(_BID_AMOUNT)); // auction is settled at minimum price (1) so payout is equal to paid
 
         // Check the bid status
         EncryptedMarginalPriceAuctionModule.Bid memory bid = _getBid(_lotId, _bidId);
@@ -364,7 +364,7 @@ contract EmpaModuleClaimBidTest is EmpaModuleTest {
         givenLotHasStarted
     {
         // Bound the amount in
-        uint96 bidAmountIn = uint96(bound(bidAmountIn_, _BID_AMOUNT_OUT, 10e20)); // Ensures that the price is greater than _MIN_PRICE
+        uint96 bidAmountIn = uint96(bound(bidAmountIn_, _BID_AMOUNT_OUT, 100e18)); // Ensures that the price is greater than _MIN_PRICE
 
         // Create the bid
         _bidId = _createBid(bidAmountIn, _BID_AMOUNT_OUT);
@@ -377,7 +377,8 @@ contract EmpaModuleClaimBidTest is EmpaModuleTest {
 
         // Calculate the expected amounts
         uint256 marginalPrice =
-            FixedPointMathLib.mulDivUp(uint256(bidAmountIn), _BASE_SCALE, _BID_AMOUNT_OUT);
+            FixedPointMathLib.mulDivUp(uint256(bidAmountIn), _BASE_SCALE, _LOT_CAPACITY);
+        marginalPrice = marginalPrice < _MIN_PRICE ? _MIN_PRICE : marginalPrice;
         uint256 expectedAmountOut =
             FixedPointMathLib.mulDivDown(bidAmountIn, _BASE_SCALE, marginalPrice);
 

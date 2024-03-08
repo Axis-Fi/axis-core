@@ -651,6 +651,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
                 // Note: totalAmountIn here has not had the current bid added to it
                 result.capacityExpended = Math.mulDivDown(result.totalAmountIn, baseScale, price);
                 if (result.capacityExpended >= capacity) {
+                    console2.log("previous bids fill capacity at intermediate price");
                     result.marginalPrice =
                         uint96(Math.mulDivUp(result.totalAmountIn, baseScale, capacity));
                     result.marginalBidId = uint64(0); // we set this to zero so that any bids at the current price are not considered in the case that capacityExpended == capacity
@@ -673,9 +674,11 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
                 // If total capacity expended is greater than or equal to the capacity, we have found the marginal price
                 // If capacity expended is strictly greater than capacity, then we have a partially filled bid
                 if (result.capacityExpended >= capacity) {
+                    console2.log("current bid fills capacity");
                     result.marginalPrice = price;
                     result.marginalBidId = bidId;
                     if (result.capacityExpended > capacity) {
+                        console2.log("current bid partial fill");
                         result.partialFillBidId = bidId;
                     }
                     break;
@@ -683,6 +686,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
 
                 // If we have reached the end of the queue, we check the same cases as when the price of a bid is below the minimum price.
                 if (i == numBids - 1) {
+                    console2.log("last bid in queue");
                     // We know that the price was not sufficient to fill capacity or the loop would have exited
                     // We check if minimum price can result in a complete fill. If so, find the exact marginal price between last price and minimum price
                     // If not, we set the marginal price to the minimum price. Whether the capacity filled meets the minimum filled will be checked later in the settlement process
