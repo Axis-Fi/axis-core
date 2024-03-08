@@ -342,7 +342,10 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         // Therefore, all bids will be refunded.
         // We handle the only potential marginal fill during settlement. All other bids are either completely filled or refunded.
         uint256 marginalPrice = uint256(auctionData[lotId_].marginalPrice);
-        if (price > marginalPrice || (price == marginalPrice && bidId_ <= auctionData[lotId_].marginalBidId)) {
+        if (
+            price > marginalPrice
+                || (price == marginalPrice && bidId_ <= auctionData[lotId_].marginalBidId)
+        ) {
             // Payout is calculated using the marginal price of the auction
             bidClaim.paid = uint256(bidData.amount);
             bidClaim.payout = (bidClaim.paid * baseScale) / marginalPrice;
@@ -620,7 +623,8 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
                     // Otherwise, we see if minimum price can result in a fill
                     if (capacityExpended >= auctionData[lotId_].minFilled) {
                         marginalPrice = lastPrice;
-                    } else if (Math.mulDivDown(totalAmountIn, baseScale, minimumPrice) >= capacity) {
+                    } else if (Math.mulDivDown(totalAmountIn, baseScale, minimumPrice) >= capacity)
+                    {
                         marginalPrice = uint96(Math.mulDivUp(totalAmountIn, baseScale, capacity));
                     }
                     // If neither cases are true, then marginalPrice stays zero
