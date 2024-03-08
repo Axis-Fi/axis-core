@@ -30,6 +30,8 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
     uint96 internal constant _BID_PRICE_TWO_SIZE_ELEVEN_AMOUNT_OUT = 11e18;
     uint96 internal constant _BID_PRICE_OVERFLOW_AMOUNT = type(uint96).max;
     uint96 internal constant _BID_PRICE_OVERFLOW_AMOUNT_OUT = 1e17;
+    uint96 internal constant _BID_PRICE_TEN = 10e18;
+    uint96 internal constant _BID_PRICE_TEN_OUT = 1e18;
 
     uint96 internal constant _LOT_CAPACITY_OVERFLOW = type(uint96).max - 10;
 
@@ -67,7 +69,17 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
     //  [X] it returns the amounts in and out, excluding those below the minimum price, and no partial fill
     // [X] given a bid sets a marginal price that results in the previous bid exceeding the capacity
     //  [X] it handles different token decimals
-    //  [X] it returns the amounts in and out, and a partial fill for the previous bid
+    //  [X] it calculates a marginal price that results in complete utilisation of the capacity, and no partial fill
+    // [X] given a bid's marginal price does not result in the lot capacity being filled, but is above the minimum filled
+    //  [X] given the bid is the last bid
+    //   [X] it sets the marginal price to the bid price, and returns the amounts in and out
+    //  [X] given the bid is not the last bid
+    //   [X] it sets the marginal price to the bid price, and returns the amounts in and out
+    // [X] given a bid's marginal price does not result in the minimum filled being reached, but the minimum price results in capacity being filled
+    //   [X] given the bid is the last bid
+    //    [X] it sets the marginal price to the price that will fill capacity, and returns the amounts in and out
+    //   [X] given the bid is not the last bid
+    //    [X] it sets the marginal price to the bid price, and returns the amounts in and out
     // [X] given the lot capacity is exactly met
     //  [X] it handles different token decimals
     //  [X] it returns the amounts in and out, and no partial fill
@@ -126,15 +138,17 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
     }
 
     modifier givenAllBidsAreBelowMinimumPrice() {
-        // Capacity: 2 + 2 + 2 >= 2.5
+        // Marginal price 0.5, used capacity 2, exits as it is below the minimum price
         _createBid(
             _scaleQuoteTokenAmount(_BID_PRICE_BELOW_ONE_AMOUNT),
             _scaleBaseTokenAmount(_BID_PRICE_BELOW_ONE_AMOUNT_OUT)
         );
+        // Not considered
         _createBid(
             _scaleQuoteTokenAmount(_BID_PRICE_BELOW_ONE_AMOUNT),
             _scaleBaseTokenAmount(_BID_PRICE_BELOW_ONE_AMOUNT_OUT)
         );
+        // Not considered
         _createBid(
             _scaleQuoteTokenAmount(_BID_PRICE_BELOW_ONE_AMOUNT),
             _scaleBaseTokenAmount(_BID_PRICE_BELOW_ONE_AMOUNT_OUT)
@@ -146,6 +160,173 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         // Output
         // Bid one: 0 out
         // Bid two: 0 out
+        // Bid three: 0 out
+        _;
+    }
+
+    modifier givenNotLastBidAndAboveMinimumFilled() {
+        // Marginal price 2, total in 2, used capacity 1, continues as below lot capacity
+        _createBid(
+            _scaleQuoteTokenAmount(_BID_PRICE_TWO_AMOUNT),
+            _scaleBaseTokenAmount(_BID_PRICE_TWO_AMOUNT_OUT)
+        );
+        // Marginal price 2, total in 4, used capacity 2, continues as below lot capacity
+        _createBid(
+            _scaleQuoteTokenAmount(_BID_PRICE_TWO_AMOUNT),
+            _scaleBaseTokenAmount(_BID_PRICE_TWO_AMOUNT_OUT)
+        );
+        // Marginal price 2, total in 6, used capacity 3, continues as below lot capacity
+        _createBid(
+            _scaleQuoteTokenAmount(_BID_PRICE_TWO_AMOUNT),
+            _scaleBaseTokenAmount(_BID_PRICE_TWO_AMOUNT_OUT)
+        );
+        // Marginal price 2, total in 8, used capacity 4, continues as below lot capacity
+        _createBid(
+            _scaleQuoteTokenAmount(_BID_PRICE_TWO_AMOUNT),
+            _scaleBaseTokenAmount(_BID_PRICE_TWO_AMOUNT_OUT)
+        );
+        // Marginal price 0.5, so this bid is not considered.
+        // Considering the previous bids, marginal price is 2, total in is 8, used capacity is 4, which is above the minimum filled. So bid 4 sets the marginal price and it exits.
+        _createBid(
+            _scaleQuoteTokenAmount(_BID_PRICE_BELOW_ONE_AMOUNT),
+            _scaleBaseTokenAmount(_BID_PRICE_BELOW_ONE_AMOUNT_OUT)
+        );
+
+        // Marginal price: 2 >= 1
+        _expectedMarginalPrice = _scaleQuoteTokenAmount(2 * _BASE_SCALE);
+
+        // Output
+        // Bid one: 2 / 2 = 1 out
+        // Bid two: 2 / 2 = 1 out
+        // Bid three: 2 / 2 = 1 out
+        // Bid four: 2 / 2 = 1 out
+        // Bid five: 0 out
+
+        uint96 bidAmountInTotal = _scaleQuoteTokenAmount(
+            _BID_PRICE_TWO_AMOUNT + _BID_PRICE_TWO_AMOUNT + _BID_PRICE_TWO_AMOUNT
+                + _BID_PRICE_TWO_AMOUNT
+        );
+        uint96 bidAmountOutTotal = _scaleBaseTokenAmount(
+            _BID_PRICE_TWO_AMOUNT_OUT + _BID_PRICE_TWO_AMOUNT_OUT + _BID_PRICE_TWO_AMOUNT_OUT
+                + _BID_PRICE_TWO_AMOUNT_OUT
+        );
+
+        _expectedTotalIn = bidAmountInTotal;
+        _expectedTotalOut = bidAmountOutTotal;
+
+        // No partial fill
+        _;
+    }
+
+    modifier givenLastBidAndAboveMinimumFilled() {
+        // Marginal price 2, total in 2, used capacity 1, continues as below lot capacity
+        _createBid(
+            _scaleQuoteTokenAmount(_BID_PRICE_TWO_AMOUNT),
+            _scaleBaseTokenAmount(_BID_PRICE_TWO_AMOUNT_OUT)
+        );
+        // Marginal price 2, total in 4, used capacity 2, continues as below lot capacity
+        _createBid(
+            _scaleQuoteTokenAmount(_BID_PRICE_TWO_AMOUNT),
+            _scaleBaseTokenAmount(_BID_PRICE_TWO_AMOUNT_OUT)
+        );
+        // Marginal price 2, total in 6, used capacity 3, continues as below lot capacity
+        _createBid(
+            _scaleQuoteTokenAmount(_BID_PRICE_TWO_AMOUNT),
+            _scaleBaseTokenAmount(_BID_PRICE_TWO_AMOUNT_OUT)
+        );
+        // Marginal price 2, total in 8, used capacity 4, continues as below lot capacity
+        _createBid(
+            _scaleQuoteTokenAmount(_BID_PRICE_TWO_AMOUNT),
+            _scaleBaseTokenAmount(_BID_PRICE_TWO_AMOUNT_OUT)
+        );
+        // Considering the previous bids, marginal price is 2, total in is 8, used capacity is 4, which is above the minimum filled. So bid 4 sets the marginal price and it exits.
+
+        // Marginal price: 2 >= 1
+        _expectedMarginalPrice = _scaleQuoteTokenAmount(2 * _BASE_SCALE);
+
+        // Output
+        // Bid one: 2 / 2 = 1 out
+        // Bid two: 2 / 2 = 1 out
+        // Bid three: 2 / 2 = 1 out
+        // Bid four: 2 / 2 = 1 out
+
+        uint96 bidAmountInTotal = _scaleQuoteTokenAmount(
+            _BID_PRICE_TWO_AMOUNT + _BID_PRICE_TWO_AMOUNT + _BID_PRICE_TWO_AMOUNT
+                + _BID_PRICE_TWO_AMOUNT
+        );
+        uint96 bidAmountOutTotal = _scaleBaseTokenAmount(
+            _BID_PRICE_TWO_AMOUNT_OUT + _BID_PRICE_TWO_AMOUNT_OUT + _BID_PRICE_TWO_AMOUNT_OUT
+                + _BID_PRICE_TWO_AMOUNT_OUT
+        );
+
+        _expectedTotalIn = bidAmountInTotal;
+        _expectedTotalOut = bidAmountOutTotal;
+
+        // No partial fill
+        _;
+    }
+
+    modifier givenNotLastBidAndFilledBelowMinimumFilledAndAboveCapacityUsingMinimumPrice() {
+        // Marginal price 10, total in 10, used capacity 1, continues as below lot min fill and capacity
+        _createBid(
+            _scaleQuoteTokenAmount(_BID_PRICE_TEN), _scaleBaseTokenAmount(_BID_PRICE_TEN_OUT)
+        );
+        // Marginal price 10, total in 20, used capacity 2, continues as below lot min fill and capacity
+        _createBid(
+            _scaleQuoteTokenAmount(_BID_PRICE_TEN), _scaleBaseTokenAmount(_BID_PRICE_TEN_OUT)
+        );
+        // Marginal price 0.5, so this bid is not considered.
+        // Considering the previous bids, marginal price is 10, total in 20, used capacity 2. This is not above the minimum filled.
+        // At the minimum price, used capacity is 20 / 1 = 20, which is more than the lot capacity and thus a fill is possible. The marginal price is determined as total in / capacity = 20 / 10 = 2.
+        _createBid(
+            _scaleQuoteTokenAmount(_BID_PRICE_BELOW_ONE_AMOUNT),
+            _scaleBaseTokenAmount(_BID_PRICE_BELOW_ONE_AMOUNT_OUT)
+        );
+
+        // Marginal price: 2
+        _expectedMarginalPrice = _scaleQuoteTokenAmount(2 * _BASE_SCALE);
+
+        // Output
+        // Bid one: 10 / 2 = 5 out
+        // Bid two: 10 / 2 = 5 out
+        // Bid three: 0 out
+
+        uint96 bidAmountInTotal = _scaleQuoteTokenAmount(_BID_PRICE_TEN + _BID_PRICE_TEN);
+        uint96 bidAmountOutTotal = _scaleBaseTokenAmount(_BID_PRICE_TEN_OUT + _BID_PRICE_TEN_OUT);
+
+        _expectedTotalIn = bidAmountInTotal;
+        _expectedTotalOut = bidAmountOutTotal;
+
+        // No partial fill
+        _;
+    }
+
+    modifier givenLastBidFilledBelowMinimumFilledAndAboveCapacityUsingMinimumPrice() {
+        // Marginal price 10, total in 10, used capacity 1, continues as below lot min fill and capacity
+        _createBid(
+            _scaleQuoteTokenAmount(_BID_PRICE_TEN), _scaleBaseTokenAmount(_BID_PRICE_TEN_OUT)
+        );
+        // Marginal price 10, total in 20, used capacity 2, continues as below lot min fill and capacity
+        _createBid(
+            _scaleQuoteTokenAmount(_BID_PRICE_TEN), _scaleBaseTokenAmount(_BID_PRICE_TEN_OUT)
+        );
+        // Considering the previous bids, marginal price is 10, total in 20, used capacity 2. This is not above the minimum filled.
+        // At the minimum price, used capacity is 20 / 1 = 20, which is more than the lot capacity and thus a fill is possible. The marginal price is determined as total in / capacity = 20 / 10 = 2.
+
+        // Marginal price: 2
+        _expectedMarginalPrice = _scaleQuoteTokenAmount(2 * _BASE_SCALE);
+
+        // Output
+        // Bid one: 10 / 2 = 5 out
+        // Bid two: 10 / 2 = 5 out
+
+        uint96 bidAmountInTotal = _scaleQuoteTokenAmount(_BID_PRICE_TEN + _BID_PRICE_TEN);
+        uint96 bidAmountOutTotal = _scaleBaseTokenAmount(_BID_PRICE_TEN_OUT + _BID_PRICE_TEN_OUT);
+
+        _expectedTotalIn = bidAmountInTotal;
+        _expectedTotalOut = bidAmountOutTotal;
+
+        // No partial fill
         _;
     }
 
@@ -193,28 +374,29 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         _;
     }
 
-    modifier givenLotIsOverSubscribedByPreviousBid() {
-        // Capacity: 9 + 1 = 10 capacity
-        // Capacity reached on bid 2
+    modifier givenLotMarginalPriceBetweenBids() {
+        // Marginal price of 2.1111, used capacity of (19/2.111111) = 9, continues
         _createBid(
             _scaleQuoteTokenAmount(_BID_SIZE_NINE_AMOUNT),
             _scaleBaseTokenAmount(_BID_SIZE_NINE_AMOUNT_OUT)
         );
+        // Marginal price of 1, used capacity of (19+1)/1 = 20 > 10, so it calculates a marginal price that fills capacity without a partial fill
         _createBid(
             _scaleQuoteTokenAmount(_BID_PRICE_ONE_AMOUNT),
             _scaleBaseTokenAmount(_BID_PRICE_ONE_AMOUNT_OUT)
         );
 
-        // Marginal price: 1 >= 1 (due to capacity being reached on bid 2)
-        // Bid 2 sets the marginal price, but the marginal price results in bid 1 exceeding the capacity
-        _expectedMarginalPrice = _scaleQuoteTokenAmount(1 * _BASE_SCALE);
+        // Marginal price: 2 >= 1 (due to capacity being reached on bid 2)
+        // Bid 2 sets the marginal price at a number between 2.1111 and 1 that fills capacity
+        _expectedMarginalPrice = _scaleQuoteTokenAmount(2e18);
 
         // Output
-        // Bid one: 19 / 1 = 19 out > 10 capacity. 10 out (partial fill)
-        // Bid two: 0
+        // Bid one: 19 / 2 = 9.5 out
+        // Bid two: 1 / 2 = 0.5 out
 
         uint96 bidOneAmountOutActual = _scaleBaseTokenAmount(_LOT_CAPACITY); // 10
-        uint96 bidOneAmountInActual = _scaleQuoteTokenAmount(10e18); // 10
+        uint96 bidOneAmountInActual =
+            _scaleQuoteTokenAmount(_BID_SIZE_NINE_AMOUNT + _BID_PRICE_ONE_AMOUNT); // 20
 
         uint96 bidAmountInSuccess = bidOneAmountInActual;
         uint96 bidAmountOutSuccess = bidOneAmountOutActual;
@@ -223,11 +405,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         _expectedTotalOut = bidAmountOutSuccess;
 
         // Partial fill
-        // Bid one has a partial refund
-        _expectedPartialFillBidder = _BIDDER;
-        _expectedPartialFillReferrer = _REFERRER;
-        _expectedPartialFillRefund = _scaleQuoteTokenAmount(9e18); // 19 - 10
-        _expectedPartialFillPayout = bidOneAmountOutActual;
+        // None
         _;
     }
 
@@ -515,6 +693,9 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
 
         // Marginal price: 2
         _expectedMarginalPrice = _scaleQuoteTokenAmount(2 * _BASE_SCALE);
+
+        _expectedTotalIn = 10 * 2e18;
+        _expectedTotalOut = 10 * 1e18;
         _;
     }
 
@@ -878,15 +1059,38 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         _assertSettlement(settlement, auctionOutput);
     }
 
-    function test_overSubscribedByPreviousBid()
+    function test_someBidsBelowMinimumPrice_gasUsage()
         external
         givenLotIsCreated
         givenLotHasStarted
-        givenLotIsOverSubscribedByPreviousBid
+        givenLargeNumberOfUnfilledBids
         givenLotHasConcluded
         givenPrivateKeyIsSubmitted
         givenLotIsDecrypted
-        givenLotIsSettled
+    {
+        // Call function
+        uint256 gasBefore = gasleft();
+        (Auction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
+        uint256 gasAfter = gasleft();
+        console2.log("gas used", gasBefore - gasAfter);
+
+        // Validate auction data
+        EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
+        assertEq(auctionData.marginalPrice, _expectedMarginalPrice, "marginalPrice");
+        assertEq(uint8(auctionData.status), uint8(Auction.Status.Settled), "status");
+
+        // Assert settlement
+        _assertSettlement(settlement, auctionOutput);
+    }
+
+    function test_marginalPriceBetweenBids()
+        external
+        givenLotIsCreated
+        givenLotHasStarted
+        givenLotMarginalPriceBetweenBids
+        givenLotHasConcluded
+        givenPrivateKeyIsSubmitted
+        givenLotIsDecrypted
     {
         // Call function
         (Auction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
@@ -895,17 +1099,16 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         _assertSettlement(settlement, auctionOutput);
     }
 
-    function test_overSubscribedByPreviousBid_quoteTokenDecimalsLarger()
+    function test_marginalPriceBetweenBids_quoteTokenDecimalsLarger()
         external
         givenQuoteTokenDecimals(17)
         givenBaseTokenDecimals(13)
         givenLotIsCreated
         givenLotHasStarted
-        givenLotIsOverSubscribedByPreviousBid
+        givenLotMarginalPriceBetweenBids
         givenLotHasConcluded
         givenPrivateKeyIsSubmitted
         givenLotIsDecrypted
-        givenLotIsSettled
     {
         // Call function
         (Auction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
@@ -914,17 +1117,228 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         _assertSettlement(settlement, auctionOutput);
     }
 
-    function test_overSubscribedByPreviousBid_quoteTokenDecimalsSmaller()
+    function test_marginalPriceBetweenBids_quoteTokenDecimalsSmaller()
         external
         givenQuoteTokenDecimals(13)
         givenBaseTokenDecimals(17)
         givenLotIsCreated
         givenLotHasStarted
-        givenLotIsOverSubscribedByPreviousBid
+        givenLotMarginalPriceBetweenBids
         givenLotHasConcluded
         givenPrivateKeyIsSubmitted
         givenLotIsDecrypted
-        givenLotIsSettled
+    {
+        // Call function
+        (Auction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
+
+        // Assert settlement
+        _assertSettlement(settlement, auctionOutput);
+    }
+
+    function test_notLastBid_aboveMinimumFilled()
+        external
+        givenLotIsCreated
+        givenLotHasStarted
+        givenNotLastBidAndAboveMinimumFilled
+        givenLotHasConcluded
+        givenPrivateKeyIsSubmitted
+        givenLotIsDecrypted
+    {
+        // Call function
+        (Auction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
+
+        // Assert settlement
+        _assertSettlement(settlement, auctionOutput);
+    }
+
+    function test_notLastBid_aboveMinimumFilled_quoteTokenDecimalsLarger()
+        external
+        givenQuoteTokenDecimals(17)
+        givenBaseTokenDecimals(13)
+        givenLotIsCreated
+        givenLotHasStarted
+        givenNotLastBidAndAboveMinimumFilled
+        givenLotHasConcluded
+        givenPrivateKeyIsSubmitted
+        givenLotIsDecrypted
+    {
+        // Call function
+        (Auction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
+
+        // Assert settlement
+        _assertSettlement(settlement, auctionOutput);
+    }
+
+    function test_notLastBid_aboveMinimumFilled_quoteTokenDecimalsSmaller()
+        external
+        givenQuoteTokenDecimals(13)
+        givenBaseTokenDecimals(17)
+        givenLotIsCreated
+        givenLotHasStarted
+        givenNotLastBidAndAboveMinimumFilled
+        givenLotHasConcluded
+        givenPrivateKeyIsSubmitted
+        givenLotIsDecrypted
+    {
+        // Call function
+        (Auction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
+
+        // Assert settlement
+        _assertSettlement(settlement, auctionOutput);
+    }
+
+    function test_lastBid_aboveMinimumFilled()
+        external
+        givenLotIsCreated
+        givenLotHasStarted
+        givenLastBidAndAboveMinimumFilled
+        givenLotHasConcluded
+        givenPrivateKeyIsSubmitted
+        givenLotIsDecrypted
+    {
+        // Call function
+        (Auction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
+
+        // Assert settlement
+        _assertSettlement(settlement, auctionOutput);
+    }
+
+    function test_lastBid_aboveMinimumFilled_quoteTokenDecimalsLarger()
+        external
+        givenQuoteTokenDecimals(17)
+        givenBaseTokenDecimals(13)
+        givenLotIsCreated
+        givenLotHasStarted
+        givenLastBidAndAboveMinimumFilled
+        givenLotHasConcluded
+        givenPrivateKeyIsSubmitted
+        givenLotIsDecrypted
+    {
+        // Call function
+        (Auction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
+
+        // Assert settlement
+        _assertSettlement(settlement, auctionOutput);
+    }
+
+    function test_lastBid_aboveMinimumFilled_quoteTokenDecimalsSmaller()
+        external
+        givenQuoteTokenDecimals(13)
+        givenBaseTokenDecimals(17)
+        givenLotIsCreated
+        givenLotHasStarted
+        givenLastBidAndAboveMinimumFilled
+        givenLotHasConcluded
+        givenPrivateKeyIsSubmitted
+        givenLotIsDecrypted
+    {
+        // Call function
+        (Auction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
+
+        // Assert settlement
+        _assertSettlement(settlement, auctionOutput);
+    }
+
+    function test_notLastBid_filledBelowMinimumFilled_aboveCapacityUsingMinimumPrice()
+        external
+        givenLotIsCreated
+        givenLotHasStarted
+        givenNotLastBidAndFilledBelowMinimumFilledAndAboveCapacityUsingMinimumPrice
+        givenLotHasConcluded
+        givenPrivateKeyIsSubmitted
+        givenLotIsDecrypted
+    {
+        // Call function
+        (Auction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
+
+        // Assert settlement
+        _assertSettlement(settlement, auctionOutput);
+    }
+
+    function test_notLastBid_filledBelowMinimumFilled_aboveCapacityUsingMinimumPrice_quoteTokenDecimalsLarger(
+    )
+        external
+        givenQuoteTokenDecimals(17)
+        givenBaseTokenDecimals(13)
+        givenLotIsCreated
+        givenLotHasStarted
+        givenNotLastBidAndFilledBelowMinimumFilledAndAboveCapacityUsingMinimumPrice
+        givenLotHasConcluded
+        givenPrivateKeyIsSubmitted
+        givenLotIsDecrypted
+    {
+        // Call function
+        (Auction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
+
+        // Assert settlement
+        _assertSettlement(settlement, auctionOutput);
+    }
+
+    function test_notLastBid_filledBelowMinimumFilled_aboveCapacityUsingMinimumPrice_quoteTokenDecimalsSmaller(
+    )
+        external
+        givenQuoteTokenDecimals(13)
+        givenBaseTokenDecimals(17)
+        givenLotIsCreated
+        givenLotHasStarted
+        givenNotLastBidAndFilledBelowMinimumFilledAndAboveCapacityUsingMinimumPrice
+        givenLotHasConcluded
+        givenPrivateKeyIsSubmitted
+        givenLotIsDecrypted
+    {
+        // Call function
+        (Auction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
+
+        // Assert settlement
+        _assertSettlement(settlement, auctionOutput);
+    }
+
+    function test_lastBid_filledBelowMinimumFilled_aboveCapacityUsingMinimumPrice()
+        external
+        givenLotIsCreated
+        givenLotHasStarted
+        givenLastBidFilledBelowMinimumFilledAndAboveCapacityUsingMinimumPrice
+        givenLotHasConcluded
+        givenPrivateKeyIsSubmitted
+        givenLotIsDecrypted
+    {
+        // Call function
+        (Auction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
+
+        // Assert settlement
+        _assertSettlement(settlement, auctionOutput);
+    }
+
+    function test_lastBid_filledBelowMinimumFilled_aboveCapacityUsingMinimumPrice_quoteTokenDecimalsLarger(
+    )
+        external
+        givenQuoteTokenDecimals(17)
+        givenBaseTokenDecimals(13)
+        givenLotIsCreated
+        givenLotHasStarted
+        givenLastBidFilledBelowMinimumFilledAndAboveCapacityUsingMinimumPrice
+        givenLotHasConcluded
+        givenPrivateKeyIsSubmitted
+        givenLotIsDecrypted
+    {
+        // Call function
+        (Auction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
+
+        // Assert settlement
+        _assertSettlement(settlement, auctionOutput);
+    }
+
+    function test_lastBid_filledBelowMinimumFilled_aboveCapacityUsingMinimumPrice_quoteTokenDecimalsSmaller(
+    )
+        external
+        givenQuoteTokenDecimals(13)
+        givenBaseTokenDecimals(17)
+        givenLotIsCreated
+        givenLotHasStarted
+        givenLastBidFilledBelowMinimumFilledAndAboveCapacityUsingMinimumPrice
+        givenLotHasConcluded
+        givenPrivateKeyIsSubmitted
+        givenLotIsDecrypted
     {
         // Call function
         (Auction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
