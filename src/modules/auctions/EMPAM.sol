@@ -10,6 +10,8 @@ import {FixedPointMathLib as Math} from "lib/solmate/src/utils/FixedPointMathLib
 import {ECIES, Point} from "src/lib/ECIES.sol";
 import {MaxPriorityQueue, Queue, Bid as QueueBid} from "src/lib/MaxPriorityQueue.sol";
 
+import {console2} from "forge-std/console2.sol";
+
 contract EncryptedMarginalPriceAuctionModule is AuctionModule {
     using MaxPriorityQueue for Queue;
 
@@ -93,7 +95,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         uint64 marginalBidId;
         uint64 partialFillBidId;
         uint256 totalAmountIn;
-        uint256 capacityExpended;
+        uint256 capacityExpended; // TODO consider removing
     }
 
     // ========== STATE VARIABLES ========== //
@@ -588,26 +590,40 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         return (bidId, amountIn, price);
     }
 
-    function _calculateLastMarginalPrice(
-        uint96 lastPrice_,
-        AuctionData memory auctionData_,
+    function _getMarginalPriceIfAboveMinFilled(
         uint256 totalAmountIn_,
-        uint256 capacity_,
-        uint256 capacityExpended_,
-        uint256 baseScale_
-    ) internal pure returns (uint96 marginalPrice) {
-        // We know that the lastPrice was not sufficient to fill capacity or the loop would have exited
-        // We check if the minimum filled has been reached, if so, we use the last price
-        // Otherwise, we see if minimum price can result in a fill
-        if (capacityExpended_ >= auctionData_.minFilled) {
-            marginalPrice = lastPrice_;
-        } else if (Math.mulDivDown(totalAmountIn_, baseScale_, auctionData_.minPrice) >= capacity_)
-        {
-            marginalPrice = uint96(Math.mulDivUp(totalAmountIn_, baseScale_, capacity_));
+        uint256 baseScale_,
+        uint96 price_,
+        uint96 minFilled_
+    ) internal pure returns (bool aboveMinFilled, uint96 marginalPrice) {
+        if (price_ == 0) {
+            return (false, 0);
         }
-        // If neither cases are true, then marginalPrice stays zero
 
-        return marginalPrice;
+        // If the total amount in is greater than or equal to the minimum filled, the marginal price is the price
+        if (Math.mulDivDown(totalAmountIn_, baseScale_, price_) >= minFilled_) {
+            return (true, price_);
+        }
+
+        return (false, 0);
+    }
+
+    function _getMarginalPriceIfMinimumPriceFillsCapacity(
+        uint256 totalAmountIn_,
+        uint256 baseScale_,
+        uint96 minimumPrice_,
+        uint256 capacity_
+    ) internal pure returns (bool minimumPriceFillsCapacity, uint96 marginalPrice) {
+        if (minimumPrice_ == 0) {
+            return (false, 0);
+        }
+
+        // If `minimumPrice_` can fill `capacity_` (or more), there is a price >= `minimumPrice_` that can fill the capacity
+        if (Math.mulDivDown(totalAmountIn_, baseScale_, minimumPrice_) >= capacity_) {
+            return (true, uint96(Math.mulDivUp(totalAmountIn_, baseScale_, capacity_)));
+        }
+
+        return (false, 0);
     }
 
     /// @notice     Calculates the marginal price of a lot
@@ -638,22 +654,53 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
 
                 // Get bid info
                 (uint64 bidId, uint256 amountIn, uint96 price) = _getNextBid(queue, baseScale);
+                console2.log("bidId", bidId);
 
                 // If the price is below the minimum price, then determine a marginal price from the previous bids with the knowledge that no other bids will be considered
                 if (price < lotAuctionData.minPrice) {
-                    result.marginalPrice = _calculateLastMarginalPrice(
-                        lastPrice,
-                        lotAuctionData,
-                        result.totalAmountIn,
-                        capacity,
-                        result.capacityExpended,
-                        baseScale
+                    (bool success_, uint96 marginalPrice_) = _getMarginalPriceIfAboveMinFilled(
+                        result.totalAmountIn, baseScale, lastPrice, lotAuctionData.minFilled
                     );
+
+                    if (success_) {
+                        result.marginalPrice = marginalPrice_;
+                        result.capacityExpended = Math.mulDivDown(
+                            result.totalAmountIn, baseScale, uint256(result.marginalPrice)
+                        );
+                        // Marginal bid id can be set to the max uint64 to denote that all bids at/above the marginal price are filled
+                        result.marginalBidId = type(uint64).max;
+                        break;
+                    }
+
+                    (success_, marginalPrice_) = _getMarginalPriceIfMinimumPriceFillsCapacity(
+                        result.totalAmountIn, baseScale, lotAuctionData.minPrice, capacity
+                    );
+
+                    if (success_) {
+                        result.marginalPrice = marginalPrice_;
+                        result.capacityExpended = Math.mulDivDown(
+                            result.totalAmountIn, baseScale, uint256(result.marginalPrice)
+                        );
+                        // Marginal bid id can be set to the max uint64 to denote that all bids at/above the marginal price are filled
+                        result.marginalBidId = type(uint64).max;
+                        break;
+                    }
+
+                    // Otherwise exit, using the existing marginal price
+                    // The marginal price may change, so re-evaluate the capacity expended
+                    if (result.marginalPrice > 0) {
+                        // TODO does capacity expended need to be part of the result? It is calculated from totalAmountIn and the price
+                        result.capacityExpended = Math.mulDivDown(
+                            result.totalAmountIn, baseScale, uint256(result.marginalPrice)
+                        );
+                    }
 
                     // Marginal bid id can be set to the max uint64 to denote that all bids at/above the marginal price are filled
                     result.marginalBidId = type(uint64).max;
                     break;
                 }
+
+                // TODO need to handle the scenario where it is the last bid and the capacity can be filled using the minimum price
 
                 // Check if the auction can clear with the existing bids at a price between current price and last price
                 // There will be no partial fills because we select the price that exactly fills the capacity
@@ -738,7 +785,6 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         AuctionData memory lotAuctionData = auctionData[lotId_];
 
         // Delete the rest of the decrypted bids queue for a gas refund
-        // TODO make sure this iteration doesn't cause out of gas issues, but it shouldn't due to the storage refunds
         {
             Queue storage queue = decryptedBids[lotId_];
             uint256 remainingBids = queue.getNumBids();
