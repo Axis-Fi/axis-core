@@ -768,6 +768,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         ) {
             // Auction can be settled at the marginal price if we reach this point
             auctionData[lotId_].marginalPrice = result.marginalPrice;
+            auctionData[lotId_].marginalBidId = result.marginalBidId;
 
             // If there is a partially filled bid, set refund and payout for the bid and mark as claimed
             if (result.partialFillBidId != 0) {
