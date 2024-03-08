@@ -343,7 +343,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         // Calculate the bid price
         uint256 baseScale = 10 ** lotData[lotId_].baseTokenDecimals;
         uint256 price = bidData.minAmountOut == 0
-            ? 0
+            ? 0 // TODO technically minAmountOut == 0 should be an infinite price, but need to check that later. Need to be careful we don't introduce a way to claim a bid when we set marginalPrice to type(uint96).max when it cannot be settled.
             : Math.mulDivUp(uint256(bidData.amount), baseScale, uint256(bidData.minAmountOut));
 
         // If the bid price is greater than the marginal price, the bid is filled.

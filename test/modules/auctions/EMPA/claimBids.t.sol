@@ -2,6 +2,7 @@
 pragma solidity 0.8.19;
 
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
+import {console2} from "forge-std/console2.sol";
 
 import {Module} from "src/modules/Modules.sol";
 import {Auction} from "src/modules/Auction.sol";
@@ -206,13 +207,12 @@ contract EmpaModuleClaimBidsTest is EmpaModuleTest {
     }
 
     function test_unsuccessfulBid_fuzz(
-        uint96 bidAmountIn_,
-        uint96 bidAmountOut_
+        uint96 bidAmountIn_
     ) external givenLotIsCreated givenLotHasStarted {
         uint96 minFillAmount = _MIN_FILL_PERCENT * _LOT_CAPACITY / 1e5;
         // Bound the amounts
-        uint96 bidAmountIn = uint96(bound(bidAmountIn_, 1e18, 10e18));
-        uint96 bidAmountOut = uint96(bound(bidAmountOut_, 1e18, minFillAmount - 1)); // Ensures that it will not be a winning bid
+        uint96 bidAmountIn = uint96(bound(bidAmountIn_, 1e18, minFillAmount - 1)); // Ensures that it cannot settle even at minimum price
+        uint96 bidAmountOut = 1e18; // at minimum price
 
         // Create the bid
         _createBid(bidAmountIn, bidAmountOut);
@@ -363,13 +363,14 @@ contract EmpaModuleClaimBidsTest is EmpaModuleTest {
         assertEq(bidClaimOne.bidder, _BIDDER, "bid one: bidder");
         assertEq(bidClaimOne.referrer, _REFERRER, "bid one: referrer");
         assertEq(bidClaimOne.paid, _scaleQuoteTokenAmount(_BID_AMOUNT), "bid one: paid");
-        assertEq(bidClaimOne.payout, _scaleBaseTokenAmount(_BID_AMOUNT_OUT), "bid one: payout");
+        // auction is settled at marginal price of 1.6, so payout is 8 / 1.6 = 5
+        assertEq(bidClaimOne.payout, _scaleBaseTokenAmount(5e18), "bid one: payout");
 
         Auction.BidClaim memory bidClaimTwo = bidClaims[1];
         assertEq(bidClaimTwo.bidder, _BIDDER_TWO, "bid two: bidder");
         assertEq(bidClaimTwo.referrer, _REFERRER, "bid two: referrer");
         assertEq(bidClaimTwo.paid, _scaleQuoteTokenAmount(_BID_AMOUNT), "bid two: paid");
-        assertEq(bidClaimTwo.payout, _scaleBaseTokenAmount(_BID_AMOUNT_OUT), "bid two: payout");
+        assertEq(bidClaimTwo.payout, _scaleBaseTokenAmount(5e18), "bid two: payout");
 
         assertEq(bidClaims.length, 2, "bid claims length");
 
@@ -484,9 +485,11 @@ contract EmpaModuleClaimBidsTest is EmpaModuleTest {
 
         // Calculate the expected amounts
         uint256 marginalPrice =
-            FixedPointMathLib.mulDivUp(uint256(_BID_AMOUNT), _BASE_SCALE, _BID_AMOUNT_OUT);
-        uint256 expectedAmountOut =
+            FixedPointMathLib.mulDivUp(uint256(_BID_AMOUNT + bidAmountIn), _BASE_SCALE, _LOT_CAPACITY);
+        uint256 expectedAmountOutOne =
             FixedPointMathLib.mulDivDown(bidAmountIn, _BASE_SCALE, marginalPrice);
+        uint256 expectedAmountOutTwo =
+            FixedPointMathLib.mulDivDown(_BID_AMOUNT, _BASE_SCALE, marginalPrice);
 
         // Call the function
         vm.prank(address(_auctionHouse));
@@ -497,13 +500,13 @@ contract EmpaModuleClaimBidsTest is EmpaModuleTest {
         assertEq(bidClaimOne.bidder, _BIDDER, "bid one: bidder");
         assertEq(bidClaimOne.referrer, _REFERRER, "bid one: referrer");
         assertEq(bidClaimOne.paid, bidAmountIn, "bid one: paid");
-        assertEq(bidClaimOne.payout, expectedAmountOut, "bid one: payout");
+        assertEq(bidClaimOne.payout, expectedAmountOutOne, "bid one: payout");
 
         Auction.BidClaim memory bidClaimTwo = bidClaims[1];
         assertEq(bidClaimTwo.bidder, _BIDDER_TWO, "bid two: bidder");
         assertEq(bidClaimTwo.referrer, _REFERRER, "bid two: referrer");
         assertEq(bidClaimTwo.paid, _BID_AMOUNT, "bid two: paid");
-        assertEq(bidClaimTwo.payout, _BID_AMOUNT_OUT, "bid two: payout");
+        assertEq(bidClaimTwo.payout, expectedAmountOutTwo, "bid two: payout");
 
         assertEq(bidClaims.length, 2);
 
@@ -535,9 +538,11 @@ contract EmpaModuleClaimBidsTest is EmpaModuleTest {
 
         // Calculate the payout for bid one
         uint256 marginalPrice =
-            FixedPointMathLib.mulDivUp(uint256(_BID_AMOUNT), _BASE_SCALE, _BID_AMOUNT_OUT);
-        uint256 expectedAmountOut =
+            FixedPointMathLib.mulDivUp(uint256(_BID_AMOUNT + bidAmountIn), _BASE_SCALE, _LOT_CAPACITY);
+        uint256 expectedAmountOutOne =
             FixedPointMathLib.mulDivDown(bidAmountIn, _BASE_SCALE, marginalPrice);
+        uint256 expectedAmountOutTwo =
+            FixedPointMathLib.mulDivDown(_BID_AMOUNT, _BASE_SCALE, marginalPrice);
 
         // Call the function
         vm.prank(address(_auctionHouse));
@@ -548,13 +553,13 @@ contract EmpaModuleClaimBidsTest is EmpaModuleTest {
         assertEq(bidClaimOne.bidder, _BIDDER, "bid one: bidder");
         assertEq(bidClaimOne.referrer, _REFERRER, "bid one: referrer");
         assertEq(bidClaimOne.paid, bidAmountIn, "bid one: paid");
-        assertEq(bidClaimOne.payout, expectedAmountOut, "bid one: payout");
+        assertEq(bidClaimOne.payout, expectedAmountOutOne, "bid one: payout");
 
         Auction.BidClaim memory bidClaimTwo = bidClaims[1];
         assertEq(bidClaimTwo.bidder, _BIDDER_TWO, "bid two: bidder");
         assertEq(bidClaimTwo.referrer, _REFERRER, "bid two: referrer");
         assertEq(bidClaimTwo.paid, _BID_AMOUNT, "bid two: paid");
-        assertEq(bidClaimTwo.payout, _BID_AMOUNT_OUT, "bid two: payout");
+        assertEq(bidClaimTwo.payout, expectedAmountOutTwo, "bid two: payout");
 
         assertEq(bidClaims.length, 2);
 
@@ -588,7 +593,8 @@ contract EmpaModuleClaimBidsTest is EmpaModuleTest {
         assertEq(bidClaimOne.bidder, _BIDDER, "bid one: bidder");
         assertEq(bidClaimOne.referrer, _REFERRER, "bid one: referrer");
         assertEq(bidClaimOne.paid, _scaleQuoteTokenAmount(_BID_AMOUNT), "bid one: paid");
-        assertEq(bidClaimOne.payout, _scaleBaseTokenAmount(_BID_AMOUNT_OUT), "bid one: payout");
+        // auction is settled at minimum price of 1, so payout = paid (scaled to the correct decimals)
+        assertEq(bidClaimOne.payout, _scaleBaseTokenAmount(_BID_AMOUNT), "bid one: payout");
 
         Auction.BidClaim memory bidClaimTwo = bidClaims[1];
         assertEq(bidClaimTwo.bidder, _BIDDER_TWO, "bid two: bidder");
@@ -635,7 +641,8 @@ contract EmpaModuleClaimBidsTest is EmpaModuleTest {
         assertEq(bidClaimOne.bidder, _BIDDER);
         assertEq(bidClaimOne.referrer, _REFERRER);
         assertEq(bidClaimOne.paid, _scaleQuoteTokenAmount(_BID_AMOUNT));
-        assertEq(bidClaimOne.payout, _scaleBaseTokenAmount(_BID_AMOUNT_OUT));
+        // auction is settled at marginal price of 1.6, so payout is 8 / 1.6 = 5
+        assertEq(bidClaimOne.payout, _scaleBaseTokenAmount(5e18));
 
         assertEq(bidClaims.length, 1);
 
