@@ -349,13 +349,16 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
     function refundBid(uint96 lotId_, uint64 bidId_) external override nonReentrant {
         _isLotValid(lotId_);
 
-        // Refund the bid on the auction module
-        // The auction module is responsible for validating the bid and authorizing the caller
-        uint256 refundAmount = _getModuleForId(lotId_).refundBid(lotId_, bidId_, msg.sender);
-
         // Transfer the quote token to the bidder
         // The ownership of the bid has already been verified by the auction module
-        Transfer.transfer(lotRouting[lotId_].quoteToken, msg.sender, refundAmount, false);
+        Transfer.transfer(
+            lotRouting[lotId_].quoteToken,
+            msg.sender,
+            // Refund the bid on the auction module
+            // The auction module is responsible for validating the bid and authorizing the caller
+            _getModuleForId(lotId_).refundBid(lotId_, bidId_, msg.sender),
+            false
+        );
 
         // Emit event
         emit RefundBid(lotId_, bidId_, msg.sender);
@@ -544,8 +547,8 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
         _isLotValid(lotId_);
 
         // Call auction module to validate and update data
-        AuctionModule module = _getModuleForId(lotId_);
-        (uint256 purchased_, uint256 sold_, uint256 payoutSent_) = module.claimProceeds(lotId_);
+        (uint256 purchased_, uint256 sold_, uint256 payoutSent_) =
+            _getModuleForId(lotId_).claimProceeds(lotId_);
 
         // Load data for the lot
         Routing storage routing = lotRouting[lotId_];
