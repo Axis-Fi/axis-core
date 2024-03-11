@@ -41,7 +41,7 @@ contract Catalogue {
             Veecode derivativeReference,
             bytes memory derivativeParams,
             bool wrapDerivative,
-            uint256 prefunding
+            uint256 funding
         ) = Auctioneer(auctionHouse).lotRouting(lotId_);
 
         return Auctioneer.Routing({
@@ -54,7 +54,7 @@ contract Catalogue {
             derivativeReference: derivativeReference,
             derivativeParams: derivativeParams,
             wrapDerivative: wrapDerivative,
-            prefunding: prefunding
+            funding: funding
         });
     }
 

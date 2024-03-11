@@ -91,8 +91,7 @@ abstract contract EmpaTest is Test, Permit2User {
         _baseToken = new MockFeeOnTransferERC20("Base Token", "BASE", 18);
         _quoteToken = new MockFeeOnTransferERC20("Quote Token", "QUOTE", 18);
 
-        _auctionHouse =
-            new EncryptedMarginalPriceAuction(address(this), _PROTOCOL, _PERMIT2_ADDRESS);
+        _auctionHouse = new EncryptedMarginalPriceAuction(address(this), _PROTOCOL, _permit2Address);
         _mockDerivativeModule = new MockDerivativeModule(address(_auctionHouse));
         _mockAllowlist = new MockAllowlist();
         _mockHook = new MockEMPAHook(address(_quoteToken), address(_baseToken));
@@ -411,7 +410,7 @@ abstract contract EmpaTest is Test, Permit2User {
     modifier whenPermit2ApprovalIsProvided(uint96 amountIn_) {
         // Approve the Permit2 contract to spend the quote token
         vm.prank(_bidder);
-        _quoteToken.approve(_PERMIT2_ADDRESS, type(uint256).max);
+        _quoteToken.approve(_permit2Address, type(uint256).max);
 
         // Set up the Permit2 approval
         uint48 deadline = uint48(block.timestamp);

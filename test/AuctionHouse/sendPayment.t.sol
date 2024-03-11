@@ -25,7 +25,7 @@ contract SendPaymentTest is Test, Permit2User {
         // Set reasonable starting block
         vm.warp(1_000_000);
 
-        _auctionHouse = new MockAuctionHouse(_PROTOCOL, _PERMIT2_ADDRESS);
+        _auctionHouse = new MockAuctionHouse(_PROTOCOL, _permit2Address);
 
         _quoteToken = new MockFeeOnTransferERC20("Quote Token", "QUOTE", 18);
         _quoteToken.setTransferFee(0);

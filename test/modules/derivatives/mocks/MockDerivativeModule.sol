@@ -18,9 +18,9 @@ contract MockDerivativeModule is DerivativeModule {
     using ClonesWithImmutableArgs for address;
     using SafeTransferLib for ERC20;
 
-    bool internal validateFails;
+    bool internal _validateFails;
     MockERC6909 public derivativeToken;
-    MockWrappedDerivative internal wrappedImplementation;
+    MockWrappedDerivative internal _wrappedImplementation;
 
     error InvalidDerivativeParams();
 
@@ -138,17 +138,17 @@ contract MockDerivativeModule is DerivativeModule {
     ) external pure virtual override returns (uint256) {}
 
     function validate(address, bytes memory) external view virtual override returns (bool) {
-        if (validateFails) revert("validation error");
+        if (_validateFails) revert("validation error");
 
         return true;
     }
 
     function setValidateFails(bool validateFails_) external {
-        validateFails = validateFails_;
+        _validateFails = validateFails_;
     }
 
     function setWrappedImplementation(MockWrappedDerivative implementation_) external {
-        wrappedImplementation = implementation_;
+        _wrappedImplementation = implementation_;
     }
 
     function _computeId(ERC20 base_, uint48 expiry_) internal pure returns (uint256) {
@@ -181,10 +181,10 @@ contract MockDerivativeModule is DerivativeModule {
         if (!token.exists) {
             if (wrapped_) {
                 // If there is no wrapped implementation, abort
-                if (address(wrappedImplementation) == address(0)) revert("");
+                if (address(_wrappedImplementation) == address(0)) revert("");
 
                 // Deploy the wrapped implementation
-                wrappedAddress = address(wrappedImplementation).clone3(
+                wrappedAddress = address(_wrappedImplementation).clone3(
                     abi.encodePacked(derivativeToken, tokenId), bytes32(tokenId)
                 );
                 token.wrapped = wrappedAddress;

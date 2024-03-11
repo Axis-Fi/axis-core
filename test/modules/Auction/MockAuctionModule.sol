@@ -2,7 +2,7 @@
 pragma solidity 0.8.19;
 
 // Modules
-import {Module, Veecode, toKeycode, wrapVeecode} from "src/modules/Modules.sol";
+import {Veecode, toKeycode, wrapVeecode} from "src/modules/Modules.sol";
 
 // Auctions
 import {AuctionModule} from "src/modules/Auction.sol";
@@ -42,6 +42,8 @@ contract MockAuctionModule is AuctionModule {
 
     function _settle(uint96 lotId_) internal override returns (Settlement memory, bytes memory) {}
 
+    function _claimProceeds(uint96 lotId_) internal override returns (uint256, uint256, uint256) {}
+
     function _refundBid(
         uint96 lotId_,
         uint64 bidId_,
@@ -71,6 +73,8 @@ contract MockAuctionModule is AuctionModule {
     function _revertIfLotSettled(uint96 lotId_) internal view virtual override {}
 
     function _revertIfLotNotSettled(uint96 lotId_) internal view virtual override {}
+
+    function _revertIfLotProceedsClaimed(uint96 lotId_) internal view virtual override {}
 }
 
 contract MockAuctionModuleV2 is MockAuctionModule {

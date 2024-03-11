@@ -25,6 +25,10 @@ contract BidTest is AuctionHouseTest {
     //  [X] it reverts
     // [X] given the auction is concluded
     //  [X] it reverts
+    // [X] given the auction is settled
+    //  [X] it reverts
+    // [X] given the auction proceeds have been claimed
+    //  [X] it reverts
     // [X] given the auction has an allowlist
     //  [X] reverts if the sender is not on the allowlist
     //  [X] it succeeds
@@ -78,6 +82,37 @@ contract BidTest is AuctionHouseTest {
         whenBatchAuctionModuleIsInstalled
         givenLotIsCreated
         givenLotIsConcluded
+    {
+        bytes memory err = abi.encodeWithSelector(Auction.Auction_MarketNotActive.selector, _lotId);
+        vm.expectRevert(err);
+
+        // Call the function
+        _createBid(_BID_AMOUNT, _bidAuctionData);
+    }
+
+    function test_givenLotIsSettled_reverts()
+        external
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenLotIsCreated
+        givenLotIsConcluded
+        givenLotIsSettled
+    {
+        bytes memory err = abi.encodeWithSelector(Auction.Auction_MarketNotActive.selector, _lotId);
+        vm.expectRevert(err);
+
+        // Call the function
+        _createBid(_BID_AMOUNT, _bidAuctionData);
+    }
+
+    function test_givenLotProceedsHaveBeenClaimed_reverts()
+        external
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenLotIsCreated
+        givenLotIsConcluded
+        givenLotIsSettled
+        givenLotProceedsAreClaimed
     {
         bytes memory err = abi.encodeWithSelector(Auction.Auction_MarketNotActive.selector, _lotId);
         vm.expectRevert(err);

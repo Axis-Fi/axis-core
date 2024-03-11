@@ -25,6 +25,8 @@ contract EmpaModuleBidTest is EmpaModuleTest {
     //  [X] it reverts
     // [X] when the lot has been cancelled
     //  [X] it reverts
+    // [X] when the lot proceeds have been claimed
+    //  [X] it reverts
     // [X] when the auction data is in an invalid format
     //  [X] it reverts
     // [X] when the implied amount out is less than the minimum bid size
@@ -90,6 +92,26 @@ contract EmpaModuleBidTest is EmpaModuleTest {
         givenLotHasConcluded
         givenPrivateKeyIsSubmitted
         givenLotIsSettled
+    {
+        // Prepare the inputs
+        bytes memory bidData = _createBidData(_BID_AMOUNT, _BID_AMOUNT_OUT);
+
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(Auction.Auction_MarketNotActive.selector, _lotId);
+        vm.expectRevert(err);
+
+        // Call the function
+        vm.prank(address(_auctionHouse));
+        _module.bid(_lotId, _BIDDER, _REFERRER, _BID_AMOUNT, bidData);
+    }
+
+    function test_lotProceedsClaimed_reverts()
+        public
+        givenLotIsCreated
+        givenLotHasConcluded
+        givenPrivateKeyIsSubmitted
+        givenLotIsSettled
+        givenLotProceedsAreClaimed
     {
         // Prepare the inputs
         bytes memory bidData = _createBidData(_BID_AMOUNT, _BID_AMOUNT_OUT);

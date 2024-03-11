@@ -2,7 +2,6 @@
 pragma solidity 0.8.19;
 
 import {Test} from "forge-std/Test.sol";
-import {console2} from "forge-std/console2.sol";
 
 import {
     Keycode,
@@ -24,16 +23,16 @@ contract KeycodeTest is Test {
 
     function test_ensureValidVeecode_singleDigitNumber() external {
         Keycode keycode = toKeycode("TEST");
-        Veecode t1_veecode = wrapVeecode(keycode, 1);
+        Veecode t1Veecode = wrapVeecode(keycode, 1);
 
-        ensureValidVeecode(t1_veecode);
+        ensureValidVeecode(t1Veecode);
     }
 
     function test_ensureValidVeecode_doubleDigitNumber() external {
         Keycode keycode = toKeycode("TEST");
-        Veecode t1_veecode = wrapVeecode(keycode, 11);
+        Veecode t1Veecode = wrapVeecode(keycode, 11);
 
-        ensureValidVeecode(t1_veecode);
+        ensureValidVeecode(t1Veecode);
     }
 
     function _modifyKeycode(
@@ -47,24 +46,24 @@ contract KeycodeTest is Test {
     }
 
     function test_ensureValidVeecode_length() external {
-        Keycode t1_keycode = toKeycode("TES");
-        Veecode t1_veecode = wrapVeecode(t1_keycode, 11);
-        ensureValidVeecode(t1_veecode);
+        Keycode t1Keycode = toKeycode("TES");
+        Veecode t1Veecode = wrapVeecode(t1Keycode, 11);
+        ensureValidVeecode(t1Veecode);
 
-        Keycode t2_keycode = toKeycode("TEST");
-        Veecode t2_veecode = wrapVeecode(t2_keycode, 11);
-        ensureValidVeecode(t2_veecode);
-        assertFalse(fromVeecode(t1_veecode) == fromVeecode(t2_veecode));
+        Keycode t2Keycode = toKeycode("TEST");
+        Veecode t2Veecode = wrapVeecode(t2Keycode, 11);
+        ensureValidVeecode(t2Veecode);
+        assertFalse(fromVeecode(t1Veecode) == fromVeecode(t2Veecode));
 
-        Keycode t3_keycode = toKeycode("TESTT");
-        Veecode t3_veecode = wrapVeecode(t3_keycode, 21);
-        ensureValidVeecode(t3_veecode);
-        assertFalse(fromVeecode(t2_veecode) == fromVeecode(t3_veecode));
+        Keycode t3Keycode = toKeycode("TESTT");
+        Veecode t3Veecode = wrapVeecode(t3Keycode, 21);
+        ensureValidVeecode(t3Veecode);
+        assertFalse(fromVeecode(t2Veecode) == fromVeecode(t3Veecode));
 
-        Keycode t4_keycode = toKeycode("TESTT");
-        Veecode t4_veecode = wrapVeecode(t4_keycode, 1);
-        ensureValidVeecode(t4_veecode);
-        assertFalse(fromVeecode(t3_veecode) == fromVeecode(t4_veecode));
+        Keycode t4Keycode = toKeycode("TESTT");
+        Veecode t4Veecode = wrapVeecode(t4Keycode, 1);
+        ensureValidVeecode(t4Veecode);
+        assertFalse(fromVeecode(t3Veecode) == fromVeecode(t4Veecode));
     }
 
     function testRevert_ensureValidVeecode_invalidRequiredCharacter(
@@ -81,12 +80,12 @@ contract KeycodeTest is Test {
         bytes5 keycodeInput = _modifyKeycode("TST", index_, character_);
 
         Keycode keycode = toKeycode(keycodeInput);
-        Veecode t1_veecode = wrapVeecode(keycode, 1);
+        Veecode t1Veecode = wrapVeecode(keycode, 1);
 
-        bytes memory err = abi.encodeWithSelector(InvalidVeecode.selector, t1_veecode);
+        bytes memory err = abi.encodeWithSelector(InvalidVeecode.selector, t1Veecode);
         vm.expectRevert(err);
 
-        ensureValidVeecode(t1_veecode);
+        ensureValidVeecode(t1Veecode);
     }
 
     function testRevert_ensureValidVeecode_invalidOptionalCharacter(
@@ -103,22 +102,22 @@ contract KeycodeTest is Test {
         bytes5 keycodeInput = _modifyKeycode("TST", index_, character_);
 
         Keycode keycode = toKeycode(keycodeInput);
-        Veecode t1_veecode = wrapVeecode(keycode, 1);
+        Veecode t1Veecode = wrapVeecode(keycode, 1);
 
-        bytes memory err = abi.encodeWithSelector(InvalidVeecode.selector, t1_veecode);
+        bytes memory err = abi.encodeWithSelector(InvalidVeecode.selector, t1Veecode);
         vm.expectRevert(err);
 
-        ensureValidVeecode(t1_veecode);
+        ensureValidVeecode(t1Veecode);
     }
 
     function testRevert_ensureValidVeecode_zeroVersion() external {
         Keycode keycode = toKeycode("TEST");
-        Veecode t1_veecode = wrapVeecode(keycode, 0);
+        Veecode t1Veecode = wrapVeecode(keycode, 0);
 
-        bytes memory err = abi.encodeWithSelector(InvalidVeecode.selector, t1_veecode);
+        bytes memory err = abi.encodeWithSelector(InvalidVeecode.selector, t1Veecode);
         vm.expectRevert(err);
 
-        ensureValidVeecode(t1_veecode);
+        ensureValidVeecode(t1Veecode);
     }
 
     function testRevert_ensureValidVeecode_invalidVersion(uint8 version_) external {
@@ -126,39 +125,39 @@ contract KeycodeTest is Test {
         vm.assume(!(version_ >= 0 && version_ <= 99));
 
         Keycode keycode = toKeycode("TEST");
-        Veecode t1_veecode = wrapVeecode(keycode, version_);
+        Veecode t1Veecode = wrapVeecode(keycode, version_);
 
-        bytes memory err = abi.encodeWithSelector(InvalidVeecode.selector, t1_veecode);
+        bytes memory err = abi.encodeWithSelector(InvalidVeecode.selector, t1Veecode);
         vm.expectRevert(err);
 
-        ensureValidVeecode(t1_veecode);
+        ensureValidVeecode(t1Veecode);
     }
 
     function test_unwrapVeecode() external {
         Keycode keycode = toKeycode("TEST");
-        Veecode t1_veecode = wrapVeecode(keycode, 1);
-        (Keycode keycode_, uint8 moduleVersion_) = unwrapVeecode(t1_veecode);
+        Veecode t1Veecode = wrapVeecode(keycode, 1);
+        (Keycode keycode_, uint8 moduleVersion_) = unwrapVeecode(t1Veecode);
         assertEq(fromKeycode(keycode_), "TEST");
         assertEq(moduleVersion_, 1);
 
-        Veecode t2_veecode = wrapVeecode(keycode, 11);
-        (keycode_, moduleVersion_) = unwrapVeecode(t2_veecode);
+        Veecode t2Veecode = wrapVeecode(keycode, 11);
+        (keycode_, moduleVersion_) = unwrapVeecode(t2Veecode);
         assertEq(moduleVersion_, 11);
 
-        Veecode t3_veecode = wrapVeecode(keycode, 99);
-        (keycode_, moduleVersion_) = unwrapVeecode(t3_veecode);
+        Veecode t3Veecode = wrapVeecode(keycode, 99);
+        (keycode_, moduleVersion_) = unwrapVeecode(t3Veecode);
         assertEq(moduleVersion_, 99);
 
-        Veecode t4_veecode = wrapVeecode(keycode, 0);
-        (keycode_, moduleVersion_) = unwrapVeecode(t4_veecode);
+        Veecode t4Veecode = wrapVeecode(keycode, 0);
+        (keycode_, moduleVersion_) = unwrapVeecode(t4Veecode);
         assertEq(moduleVersion_, 0);
 
-        Veecode t5_veecode = wrapVeecode(toKeycode("TES"), 11);
-        (keycode_, moduleVersion_) = unwrapVeecode(t5_veecode);
+        Veecode t5Veecode = wrapVeecode(toKeycode("TES"), 11);
+        (keycode_, moduleVersion_) = unwrapVeecode(t5Veecode);
         assertEq(fromKeycode(keycode_), "TES");
 
-        Veecode t6_veecode = wrapVeecode(toKeycode("TESTT"), 11);
-        (keycode_, moduleVersion_) = unwrapVeecode(t6_veecode);
+        Veecode t6Veecode = wrapVeecode(toKeycode("TESTT"), 11);
+        (keycode_, moduleVersion_) = unwrapVeecode(t6Veecode);
         assertEq(fromKeycode(keycode_), "TESTT");
     }
 }

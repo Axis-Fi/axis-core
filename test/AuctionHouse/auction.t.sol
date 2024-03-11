@@ -182,7 +182,7 @@ contract AuctionTest is AuctionHouseTest {
         assertEq(fromVeecode(routing.derivativeReference), "", "derivative type mismatch");
         assertEq(routing.derivativeParams, "", "derivative params mismatch");
         assertEq(routing.wrapDerivative, false, "wrap derivative mismatch");
-        assertEq(routing.prefunding, 0, "prefunding mismatch");
+        assertEq(routing.funding, 0, "funding mismatch");
 
         // Curation updated
         Auctioneer.FeeData memory curation = _getLotFees(_lotId);
@@ -564,9 +564,9 @@ contract AuctionTest is AuctionHouseTest {
         vm.prank(_SELLER);
         _lotId = _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
 
-        // Check the prefunding status
+        // Check the funding status
         Auctioneer.Routing memory routing = _getLotRouting(_lotId);
-        assertEq(routing.prefunding, _LOT_CAPACITY, "prefunding mismatch");
+        assertEq(routing.funding, _LOT_CAPACITY, "funding mismatch");
 
         // Check balances
         assertEq(_baseToken.balanceOf(address(_hook)), 0, "hook balance mismatch");
@@ -591,9 +591,9 @@ contract AuctionTest is AuctionHouseTest {
         vm.prank(_SELLER);
         _lotId = _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
 
-        // Check the prefunding status
+        // Check the funding status
         Auctioneer.Routing memory routing = _getLotRouting(_lotId);
-        assertEq(routing.prefunding, _scaleBaseTokenAmount(_LOT_CAPACITY), "prefunding mismatch");
+        assertEq(routing.funding, _scaleBaseTokenAmount(_LOT_CAPACITY), "funding mismatch");
 
         // Check balances
         assertEq(_baseToken.balanceOf(address(_hook)), 0, "hook balance mismatch");
@@ -618,9 +618,9 @@ contract AuctionTest is AuctionHouseTest {
         vm.prank(_SELLER);
         _lotId = _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
 
-        // Check the prefunding status
+        // Check the funding status
         Auctioneer.Routing memory routing = _getLotRouting(_lotId);
-        assertEq(routing.prefunding, _scaleBaseTokenAmount(_LOT_CAPACITY), "prefunding mismatch");
+        assertEq(routing.funding, _scaleBaseTokenAmount(_LOT_CAPACITY), "funding mismatch");
 
         // Check balances
         assertEq(_baseToken.balanceOf(address(_hook)), 0, "hook balance mismatch");
@@ -689,9 +689,9 @@ contract AuctionTest is AuctionHouseTest {
         vm.prank(_SELLER);
         _lotId = _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
 
-        // Check the prefunding status
+        // Check the funding status
         Auctioneer.Routing memory routing = _getLotRouting(_lotId);
-        assertEq(routing.prefunding, _LOT_CAPACITY, "prefunding mismatch");
+        assertEq(routing.funding, _LOT_CAPACITY, "funding mismatch");
 
         // Check balances
         assertEq(_baseToken.balanceOf(address(this)), 0, "seller balance mismatch");
@@ -716,9 +716,9 @@ contract AuctionTest is AuctionHouseTest {
         vm.prank(_SELLER);
         _lotId = _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
 
-        // Check the prefunding status
+        // Check the funding status
         Auctioneer.Routing memory routing = _getLotRouting(_lotId);
-        assertEq(routing.prefunding, _scaleBaseTokenAmount(_LOT_CAPACITY), "prefunding mismatch");
+        assertEq(routing.funding, _scaleBaseTokenAmount(_LOT_CAPACITY), "funding mismatch");
 
         // Check balances
         assertEq(_baseToken.balanceOf(address(this)), 0, "seller balance mismatch");
@@ -743,9 +743,9 @@ contract AuctionTest is AuctionHouseTest {
         vm.prank(_SELLER);
         _lotId = _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
 
-        // Check the prefunding status
+        // Check the funding status
         Auctioneer.Routing memory routing = _getLotRouting(_lotId);
-        assertEq(routing.prefunding, _scaleBaseTokenAmount(_LOT_CAPACITY), "prefunding mismatch");
+        assertEq(routing.funding, _scaleBaseTokenAmount(_LOT_CAPACITY), "funding mismatch");
 
         // Check balances
         assertEq(_baseToken.balanceOf(address(this)), 0, "seller balance mismatch");

@@ -12,29 +12,29 @@ import {MockModuleV1} from "test/modules/Modules/MockModule.sol";
 import {WithModules, Module} from "src/modules/Modules.sol";
 
 contract GetModuleForVeecodeTest is Test {
-    WithModules internal withModules;
-    MockModuleV1 internal mockModule;
+    WithModules internal _withModules;
+    MockModuleV1 internal _mockModule;
 
     function setUp() external {
-        withModules = new MockWithModules(address(this));
-        mockModule = new MockModuleV1(address(withModules));
+        _withModules = new MockWithModules(address(this));
+        _mockModule = new MockModuleV1(address(_withModules));
     }
 
     modifier whenAModuleIsInstalled() {
         // Install the module
-        withModules.installModule(mockModule);
+        _withModules.installModule(_mockModule);
         _;
     }
 
     function test_WhenAMatchingModuleCannotBeFound() external {
-        Module module = withModules.getModuleForVeecode(mockModule.VEECODE());
+        Module module = _withModules.getModuleForVeecode(_mockModule.VEECODE());
 
         assertEq(address(module), address(0));
     }
 
     function test_WhenAMatchingModuleIsFound() external whenAModuleIsInstalled {
-        Module module = withModules.getModuleForVeecode(mockModule.VEECODE());
+        Module module = _withModules.getModuleForVeecode(_mockModule.VEECODE());
 
-        assertEq(address(module), address(mockModule));
+        assertEq(address(module), address(_mockModule));
     }
 }
