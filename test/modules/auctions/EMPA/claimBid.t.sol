@@ -186,17 +186,15 @@ contract EmpaModuleClaimBidTest is EmpaModuleTest {
         assertEq(uint8(bid.status), uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed));
     }
 
-    function test_unsuccessfulBid_fuzz(
-        uint96 bidAmountIn_,
-        uint96 bidAmountOut_
-    ) external givenLotIsCreated givenLotHasStarted {
-        uint96 minFillAmount = _MIN_FILL_PERCENT * _LOT_CAPACITY / 1e5;
-        // Bound the amounts
-        uint96 bidAmountIn = uint96(bound(bidAmountIn_, 1e18, 10e18));
-        uint96 bidAmountOut = uint96(bound(bidAmountOut_, 1e18, minFillAmount - 1)); // Ensures that it will not be a winning bid
+    function test_unsuccessfulBid_fuzz(uint96 bidAmountIn_)
+        external
+        givenLotIsCreated
+        givenLotHasStarted
+    {
+        uint96 bidAmountIn = uint96(bound(bidAmountIn_, 1e17, _BID_AMOUNT_OUT - 1)); // Ensures that the price is less than _MIN_PRICE
 
         // Create the bid
-        _bidId = _createBid(bidAmountIn, bidAmountOut);
+        _bidId = _createBid(bidAmountIn, _BID_AMOUNT_OUT);
 
         // Wrap up the lot
         _concludeLot();
@@ -422,10 +420,9 @@ contract EmpaModuleClaimBidTest is EmpaModuleTest {
         _settleLot();
 
         // Calculate the expected amounts
-        uint256 marginalPrice =
-            FixedPointMathLib.mulDivUp(uint256(bidAmountIn), _BASE_SCALE, bidAmountOut);
+        EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
         uint256 expectedAmountOut =
-            FixedPointMathLib.mulDivDown(bidAmountIn, _BASE_SCALE, marginalPrice);
+            FixedPointMathLib.mulDivDown(bidAmountIn, _BASE_SCALE, auctionData.marginalPrice);
 
         // Call the function
         vm.prank(address(_auctionHouse));
@@ -484,6 +481,82 @@ contract EmpaModuleClaimBidTest is EmpaModuleTest {
         );
     }
 
+    function test_givenLotOverCapacity_higherMarginalPrice_beforeLastSettledBid()
+        external
+        givenLotIsCreated
+        givenLotHasStarted
+        givenBidIsCreated(_BID_PRICE_FOUR_AMOUNT, _BID_PRICE_FOUR_AMOUNT_OUT)
+        givenBidIsCreated(_BID_PRICE_TWO_AMOUNT, _BID_PRICE_TWO_AMOUNT_OUT)
+        givenBidIsCreated(_BID_PRICE_TWO_AMOUNT, _BID_PRICE_TWO_AMOUNT_OUT)
+        givenBidIsCreated(_BID_PRICE_TWO_AMOUNT, _BID_PRICE_TWO_AMOUNT_OUT)
+        givenBidIsCreated(_BID_PRICE_TWO_AMOUNT, _BID_PRICE_TWO_AMOUNT_OUT)
+        givenLotHasConcluded
+        givenPrivateKeyIsSubmitted
+        givenLotIsDecrypted
+        givenLotIsSettled
+    {
+        // Marginal price is 2
+        // Bids 1, 3-5 are settled
+        // Bid 2 is not settled (based on order of insertion)
+        uint64 bidId = 4;
+
+        // Call the function
+        vm.prank(address(_auctionHouse));
+        (Auction.BidClaim memory bidClaim,) = _module.claimBid(_lotId, bidId, _BIDDER);
+
+        // Check the result
+        assertEq(bidClaim.bidder, _BIDDER, "bidder");
+        assertEq(bidClaim.referrer, _REFERRER, "referrer");
+        assertEq(bidClaim.paid, _BID_PRICE_TWO_AMOUNT, "paid");
+        assertEq(bidClaim.payout, _BID_PRICE_TWO_AMOUNT_OUT, "payout");
+
+        // Check the bid status
+        EncryptedMarginalPriceAuctionModule.Bid memory bid = _getBid(_lotId, bidId);
+        assertEq(
+            uint8(bid.status),
+            uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed),
+            "status"
+        );
+    }
+
+    function test_givenLotOverCapacity_higherMarginalPrice_lastSettledBid()
+        external
+        givenLotIsCreated
+        givenLotHasStarted
+        givenBidIsCreated(_BID_PRICE_FOUR_AMOUNT, _BID_PRICE_FOUR_AMOUNT_OUT)
+        givenBidIsCreated(_BID_PRICE_TWO_AMOUNT, _BID_PRICE_TWO_AMOUNT_OUT)
+        givenBidIsCreated(_BID_PRICE_TWO_AMOUNT, _BID_PRICE_TWO_AMOUNT_OUT)
+        givenBidIsCreated(_BID_PRICE_TWO_AMOUNT, _BID_PRICE_TWO_AMOUNT_OUT)
+        givenBidIsCreated(_BID_PRICE_TWO_AMOUNT, _BID_PRICE_TWO_AMOUNT_OUT)
+        givenLotHasConcluded
+        givenPrivateKeyIsSubmitted
+        givenLotIsDecrypted
+        givenLotIsSettled
+    {
+        // Marginal price is 2
+        // Bids 1, 3-5 are settled
+        // Bid 2 is not settled (based on order of insertion)
+        uint64 bidId = 3;
+
+        // Call the function
+        vm.prank(address(_auctionHouse));
+        (Auction.BidClaim memory bidClaim,) = _module.claimBid(_lotId, bidId, _BIDDER);
+
+        // Check the result
+        assertEq(bidClaim.bidder, _BIDDER, "bidder");
+        assertEq(bidClaim.referrer, _REFERRER, "referrer");
+        assertEq(bidClaim.paid, _BID_PRICE_TWO_AMOUNT, "paid");
+        assertEq(bidClaim.payout, _BID_PRICE_TWO_AMOUNT_OUT, "payout");
+
+        // Check the bid status
+        EncryptedMarginalPriceAuctionModule.Bid memory bid = _getBid(_lotId, bidId);
+        assertEq(
+            uint8(bid.status),
+            uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed),
+            "status"
+        );
+    }
+
     function test_givenLotOverCapacity_higherMarginalPrice_afterLastSettledBid()
         external
         givenLotIsCreated
@@ -499,9 +572,9 @@ contract EmpaModuleClaimBidTest is EmpaModuleTest {
         givenLotIsSettled
     {
         // Marginal price is 2
-        // Bids 1-4 are settled
-        // Bid 5 is not settled (based on order of insertion)
-        uint64 bidId = 5;
+        // Bids 1, 3-5 are settled
+        // Bid 2 is not settled (based on order of insertion)
+        uint64 bidId = 2;
 
         // Call the function
         vm.prank(address(_auctionHouse));
@@ -512,6 +585,45 @@ contract EmpaModuleClaimBidTest is EmpaModuleTest {
         assertEq(bidClaim.referrer, _REFERRER, "referrer");
         assertEq(bidClaim.paid, _BID_PRICE_TWO_AMOUNT, "paid");
         assertEq(bidClaim.payout, 0, "payout");
+
+        // Check the bid status
+        EncryptedMarginalPriceAuctionModule.Bid memory bid = _getBid(_lotId, bidId);
+        assertEq(
+            uint8(bid.status),
+            uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed),
+            "status"
+        );
+    }
+
+    function test_givenLotOverCapacity_sameMarginalPrice_beforeLastSettledBid()
+        external
+        givenLotIsCreated
+        givenLotHasStarted
+        givenBidIsCreated(_BID_PRICE_TWO_AMOUNT, _BID_PRICE_TWO_AMOUNT_OUT)
+        givenBidIsCreated(_BID_PRICE_TWO_AMOUNT, _BID_PRICE_TWO_AMOUNT_OUT)
+        givenBidIsCreated(_BID_PRICE_TWO_AMOUNT, _BID_PRICE_TWO_AMOUNT_OUT)
+        givenBidIsCreated(_BID_PRICE_TWO_AMOUNT, _BID_PRICE_TWO_AMOUNT_OUT)
+        givenBidIsCreated(_BID_PRICE_TWO_AMOUNT, _BID_PRICE_TWO_AMOUNT_OUT)
+        givenBidIsCreated(_BID_PRICE_TWO_AMOUNT, _BID_PRICE_TWO_AMOUNT_OUT)
+        givenLotHasConcluded
+        givenPrivateKeyIsSubmitted
+        givenLotIsDecrypted
+        givenLotIsSettled
+    {
+        // Marginal price is 2
+        // Bids 2-6 are settled
+        // Bid 1 is not settled (based on order of insertion)
+        uint64 bidId = 3;
+
+        // Call the function
+        vm.prank(address(_auctionHouse));
+        (Auction.BidClaim memory bidClaim,) = _module.claimBid(_lotId, bidId, _BIDDER);
+
+        // Check the result
+        assertEq(bidClaim.bidder, _BIDDER, "bidder");
+        assertEq(bidClaim.referrer, _REFERRER, "referrer");
+        assertEq(bidClaim.paid, _BID_PRICE_TWO_AMOUNT, "paid");
+        assertEq(bidClaim.payout, _BID_PRICE_TWO_AMOUNT_OUT, "payout");
 
         // Check the bid status
         EncryptedMarginalPriceAuctionModule.Bid memory bid = _getBid(_lotId, bidId);
@@ -538,9 +650,9 @@ contract EmpaModuleClaimBidTest is EmpaModuleTest {
         givenLotIsSettled
     {
         // Marginal price is 2
-        // Bids 1-5 are settled
-        // Bid 6 is not settled (based on order of insertion)
-        uint64 bidId = 5;
+        // Bids 2-6 are settled
+        // Bid 1 is not settled (based on order of insertion)
+        uint64 bidId = 2;
 
         // Call the function
         vm.prank(address(_auctionHouse));
@@ -577,9 +689,9 @@ contract EmpaModuleClaimBidTest is EmpaModuleTest {
         givenLotIsSettled
     {
         // Marginal price is 2
-        // Bids 1-5 are settled
-        // Bid 6 is not settled (based on order of insertion)
-        uint64 bidId = 6;
+        // Bids 2-6 are settled
+        // Bid 1 is not settled (based on order of insertion)
+        uint64 bidId = 1;
 
         // Call the function
         vm.prank(address(_auctionHouse));

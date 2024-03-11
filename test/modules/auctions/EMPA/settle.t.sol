@@ -36,6 +36,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
     uint96 internal constant _LOT_CAPACITY_OVERFLOW = type(uint96).max - 10;
 
     uint96 internal _expectedMarginalPrice;
+    uint64 internal _expectedMarginalBidId;
     uint96 internal _expectedTotalIn;
     uint96 internal _expectedTotalOut;
     address internal _expectedPartialFillBidder;
@@ -118,6 +119,9 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         assertEq(settlement_.pfRefund, _expectedPartialFillRefund, "pfRefund");
         assertEq(settlement_.pfPayout, _expectedPartialFillPayout, "pfPayout");
         assertEq(auctionOutput_, _expectedAuctionOutput, "auctionOutput");
+
+        EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
+        assertEq(auctionData.marginalBidId, _expectedMarginalBidId, "marginalBidId");
     }
 
     modifier givenBidsAreBelowMinimumFilled() {
@@ -443,6 +447,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
 
         // Marginal price: 2 >= 1 (due to capacity being reached on bid 5)
         _expectedMarginalPrice = _scaleQuoteTokenAmount(2 * _BASE_SCALE);
+        _expectedMarginalBidId = 1; // Bid 5 processed first, bid 1 processed last
 
         // Output
         // Bid one: 4 / 2 = 2 out
@@ -483,6 +488,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
 
         // Marginal price: 2 >= 1 (due to capacity being reached on bid 2)
         _expectedMarginalPrice = _scaleQuoteTokenAmount(2 * _BASE_SCALE);
+        _expectedMarginalBidId = 2;
 
         // Output
         // Bid one: 19 / 2 = 9.5 out
@@ -531,6 +537,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
 
         // Marginal price: 2 >= 1 (due to capacity being reached on bid 1)
         _expectedMarginalPrice = _scaleQuoteTokenAmount(2 * _BASE_SCALE);
+        _expectedMarginalBidId = 1;
 
         // Output
         // Bid two: 4 / 2 = 2 out
@@ -571,6 +578,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
 
         // Marginal price: 2 >= 1 (due to capacity being reached on bid 1)
         _expectedMarginalPrice = _scaleQuoteTokenAmount(2 * _BASE_SCALE);
+        _expectedMarginalBidId = 1;
 
         // Output
         // Bid one: 10 out (partial fill)
@@ -653,6 +661,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
 
         // Marginal price = 12621933
         _expectedMarginalPrice = _mulDivUp(bidTwoAmount, _BASE_SCALE, bidTwoAmountOut);
+        _expectedMarginalBidId = 1;
 
         // These calculations mimic how the capacity usage is calculated in the settle function
         uint256 baseTokensRequired = FixedPointMathLib.mulDivDown(
@@ -695,12 +704,14 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         }
 
         // Create more bids that will not be filled
+        // Lower price, otherwise they will be filled first due to ordering
         for (uint256 i; i < 1500; i++) {
-            _createBid(2e18, 1e18);
+            _createBid(19e17, 1e18);
         }
 
         // Marginal price: 2
         _expectedMarginalPrice = _scaleQuoteTokenAmount(2 * _BASE_SCALE);
+        _expectedMarginalBidId = 1; // Bid 10 processed first, bid 1 processed last
 
         _expectedTotalIn = 10 * 2e18;
         _expectedTotalOut = 10 * 1e18;
@@ -1067,7 +1078,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         _assertSettlement(settlement, auctionOutput);
     }
 
-    function test_someBidsBelowMinimumPrice_gasUsage()
+    function test_largeNumberOfUnfilledBids_gasUsage()
         external
         givenLotIsCreated
         givenLotHasStarted
