@@ -629,12 +629,12 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
     // ========== CURATION ========== //
 
     /// @notice     Accept curation request for a lot.
+    /// @notice     If the curator wishes to charge a fee, it must be set before this function is called.
     /// @notice     Access controlled. Must be proposed curator for lot.
     /// @dev        This function reverts if:
     ///             - the lot ID is invalid
     ///             - the caller is not the proposed curator
     ///             - the auction has ended or been cancelled
-    ///             - the curator fee is not set
     ///             - the auction is prefunded and the fee cannot be collected
     ///             - re-entrancy is detected
     ///
@@ -656,13 +656,9 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
         AuctionModule module = getModuleForId(lotId_);
         if (module.hasEnded(lotId_) == true) revert InvalidState();
 
-        // Check that the curator fee is set
-        uint48 curatorFee = fees[auctionType].curator[msg.sender];
-        if (curatorFee == 0) revert InvalidFee();
-
         // Set the curator as approved
         feeData.curated = true;
-        feeData.curatorFee = curatorFee;
+        feeData.curatorFee = fees[auctionType].curator[msg.sender];
 
         // If the auction is pre-funded, transfer the fee amount from the seller
         if (routing.funding > 0) {

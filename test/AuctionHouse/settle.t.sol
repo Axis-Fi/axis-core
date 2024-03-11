@@ -507,6 +507,31 @@ contract SettleTest is AuctionHouseTest {
         _assertAccruedFees();
     }
 
+    function test_notSettled_curated_curatorFeeNotSet()
+        public
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenCuratorIsSet
+        givenLotIsPrefunded
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenLotIsCreated
+        givenCuratorMaxFeeIsSet
+        givenCuratorHasApproved
+        givenProtocolFeeIsSet
+        givenReferrerFeeIsSet
+        givenLotDoesNotSettle
+        givenAuctionHouseHasQuoteTokenBalance(_BID_AMOUNT_TOTAL)
+    {
+        // Call function
+        _auctionHouse.settle(_lotId);
+
+        // Check balances
+        _assertBaseTokenBalances();
+        _assertQuoteTokenBalances();
+        _assertAccruedFees();
+    }
+
     function test_notSettled_notCurated()
         public
         whenAuctionTypeIsBatch
@@ -664,6 +689,31 @@ contract SettleTest is AuctionHouseTest {
         givenReferrerFeeIsSet
         givenLotHasPartialFill
         givenAuctionHouseHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT_TOTAL))
+    {
+        // Call function
+        _auctionHouse.settle(_lotId);
+
+        // Check balances
+        _assertBaseTokenBalances();
+        _assertQuoteTokenBalances();
+        _assertAccruedFees();
+    }
+
+    function test_partialFill_curated_curatorFeeNotSet()
+        public
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenCuratorIsSet
+        givenLotIsPrefunded
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenLotIsCreated
+        givenCuratorMaxFeeIsSet
+        givenCuratorHasApproved
+        givenProtocolFeeIsSet
+        givenReferrerFeeIsSet
+        givenLotHasPartialFill
+        givenAuctionHouseHasQuoteTokenBalance(_BID_AMOUNT_TOTAL)
     {
         // Call function
         _auctionHouse.settle(_lotId);
@@ -864,6 +914,31 @@ contract SettleTest is AuctionHouseTest {
         _assertAccruedFees();
     }
 
+    function test_underCapacity_curated_curatorFeeNotSet()
+        public
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenCuratorIsSet
+        givenLotIsPrefunded
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenLotIsCreated
+        givenCuratorMaxFeeIsSet
+        givenCuratorHasApproved
+        givenProtocolFeeIsSet
+        givenReferrerFeeIsSet
+        givenLotIsUnderCapacity
+        givenAuctionHouseHasQuoteTokenBalance(_BID_AMOUNT_TOTAL)
+    {
+        // Call function
+        _auctionHouse.settle(_lotId);
+
+        // Check balances
+        _assertBaseTokenBalances();
+        _assertQuoteTokenBalances();
+        _assertAccruedFees();
+    }
+
     function test_underCapacity_notCurated()
         public
         whenAuctionTypeIsBatch
@@ -1021,6 +1096,31 @@ contract SettleTest is AuctionHouseTest {
         givenReferrerFeeIsSet
         givenLotCapacityIsFilled
         givenAuctionHouseHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT_TOTAL))
+    {
+        // Call function
+        _auctionHouse.settle(_lotId);
+
+        // Check balances
+        _assertBaseTokenBalances();
+        _assertQuoteTokenBalances();
+        _assertAccruedFees();
+    }
+
+    function test_capacityFilled_curated_curatorFeeNotSet()
+        public
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenCuratorIsSet
+        givenLotIsPrefunded
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenLotIsCreated
+        givenCuratorMaxFeeIsSet
+        givenCuratorHasApproved
+        givenProtocolFeeIsSet
+        givenReferrerFeeIsSet
+        givenLotCapacityIsFilled
+        givenAuctionHouseHasQuoteTokenBalance(_BID_AMOUNT_TOTAL)
     {
         // Call function
         _auctionHouse.settle(_lotId);
@@ -1434,6 +1534,30 @@ contract SettleTest is AuctionHouseTest {
         _assertAccruedFees();
     }
 
+    function test_notPrefunded_notSettled_curated_curatorFeeNotSet()
+        public
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenCuratorIsSet
+        givenLotIsCreated
+        givenCuratorMaxFeeIsSet
+        givenCuratorHasApproved
+        givenProtocolFeeIsSet
+        givenReferrerFeeIsSet
+        givenLotDoesNotSettle
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenAuctionHouseHasQuoteTokenBalance(_BID_AMOUNT_TOTAL)
+    {
+        // Call function
+        _auctionHouse.settle(_lotId);
+
+        // Check balances
+        _assertBaseTokenBalances();
+        _assertQuoteTokenBalances();
+        _assertAccruedFees();
+    }
+
     function test_notPrefunded_notSettled_notCurated()
         public
         whenAuctionTypeIsBatch
@@ -1580,6 +1704,30 @@ contract SettleTest is AuctionHouseTest {
         _assertAccruedFees();
     }
 
+    function test_notPrefunded_partialFill_curated_curatorFeeNotSet()
+        public
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenCuratorIsSet
+        givenLotIsCreated
+        givenCuratorMaxFeeIsSet
+        givenCuratorHasApproved
+        givenProtocolFeeIsSet
+        givenReferrerFeeIsSet
+        givenLotHasPartialFill
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenAuctionHouseHasQuoteTokenBalance(_BID_AMOUNT_TOTAL)
+    {
+        // Call function
+        _auctionHouse.settle(_lotId);
+
+        // Check balances
+        _assertBaseTokenBalances();
+        _assertQuoteTokenBalances();
+        _assertAccruedFees();
+    }
+
     function test_notPrefunded_partialFill_notCurated()
         public
         whenAuctionTypeIsBatch
@@ -1716,6 +1864,30 @@ contract SettleTest is AuctionHouseTest {
         givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY + _curatorMaxPotentialFee))
         givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY + _curatorMaxPotentialFee))
         givenAuctionHouseHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT_TOTAL))
+    {
+        // Call function
+        _auctionHouse.settle(_lotId);
+
+        // Check balances
+        _assertBaseTokenBalances();
+        _assertQuoteTokenBalances();
+        _assertAccruedFees();
+    }
+
+    function test_notPrefunded_underCapacity_curated_curatorFeeNotSet()
+        public
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenCuratorIsSet
+        givenLotIsCreated
+        givenCuratorMaxFeeIsSet
+        givenCuratorHasApproved
+        givenProtocolFeeIsSet
+        givenReferrerFeeIsSet
+        givenLotIsUnderCapacity
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenAuctionHouseHasQuoteTokenBalance(_BID_AMOUNT_TOTAL)
     {
         // Call function
         _auctionHouse.settle(_lotId);
