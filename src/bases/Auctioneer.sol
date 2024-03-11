@@ -428,7 +428,5 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
     /// @param      lotId_  ID of the auction lot
     function _isLotValid(uint96 lotId_) internal view {
         if (lotId_ >= lotCounter) revert InvalidLotId(lotId_);
-
-        if (lotRouting[lotId_].seller == address(0)) revert InvalidLotId(lotId_);
     }
 }
