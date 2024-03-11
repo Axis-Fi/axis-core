@@ -93,7 +93,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         uint64 marginalBidId;
         uint64 partialFillBidId;
         uint256 totalAmountIn;
-        uint256 capacityExpended; // TODO consider removing
+        uint256 capacityExpended;
     }
 
     // ========== STATE VARIABLES ========== //
@@ -500,7 +500,8 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
             // Only store the decrypt if the amount out is greater than or equal to the minimum bid size
             if (amountOut > 0 && amountOut >= minBidSize) {
                 // Only store the decrypt if the price does not overflow
-                // TODO can price be zero if amountOut is large enough and amount is small enough?
+                // We don't need to check for a zero bid price, because the smallest possible bid price is 1, due to the use of mulDivUp
+                // 1 * 10^6 / type(uint96).max = 1
                 if (
                     Math.mulDivUp(
                         uint256(bidData.amount),

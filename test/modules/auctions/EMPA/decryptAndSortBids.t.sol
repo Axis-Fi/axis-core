@@ -3,8 +3,11 @@ pragma solidity 0.8.19;
 
 import {Auction} from "src/modules/Auction.sol";
 import {EncryptedMarginalPriceAuctionModule} from "src/modules/auctions/EMPAM.sol";
+import {FixedPointMathLib} from "lib/solmate/src/utils/FixedPointMathLib.sol";
 
 import {EmpaModuleTest} from "test/modules/auctions/EMPA/EMPAModuleTest.sol";
+
+import {console2} from "forge-std/console2.sol";
 
 contract EmpaModuleDecryptBidsTest is EmpaModuleTest {
     uint96 internal constant _BID_AMOUNT = 2e18;
@@ -194,6 +197,39 @@ contract EmpaModuleDecryptBidsTest is EmpaModuleTest {
         // Check the bid queue
         (uint64 numBids) = _module.decryptedBids(_lotId);
         assertEq(numBids, 0, "decryptedBids");
+
+        // Check the auction state
+        EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
+        assertEq(auctionData.nextDecryptIndex, 1, "nextDecryptIndex");
+        assertEq(uint8(auctionData.status), uint8(Auction.Status.Decrypted), "auction status");
+    }
+
+    function test_givenSmallestPossibleMarginalPrice()
+        external
+        givenMinimumPrice(1)
+        givenMinimumBidPercentage(10)
+        givenBaseTokenDecimals(6)
+        givenLotIsCreated
+        givenLotHasStarted
+        givenBidIsCreated(1, type(uint96).max)
+        givenLotHasConcluded
+        givenPrivateKeyIsSubmitted
+    {
+        // Call the function
+        _module.decryptAndSortBids(_lotId, 1);
+
+        // Check the bid state
+        EncryptedMarginalPriceAuctionModule.Bid memory bidData = _getBid(_lotId, _bidId);
+        assertEq(bidData.minAmountOut, type(uint96).max, "minAmountOut");
+        assertEq(
+            uint8(bidData.status),
+            uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Decrypted),
+            "bid status"
+        );
+
+        // Check the bid queue
+        (uint64 numBids) = _module.decryptedBids(_lotId);
+        assertEq(numBids, 1, "decryptedBids");
 
         // Check the auction state
         EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
