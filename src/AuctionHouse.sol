@@ -136,8 +136,6 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
 
     error AmountLessThanMinimum();
 
-    error Broken_Invariant();
-
     // ========== EVENTS ========== //
 
     event Purchase(
@@ -151,6 +149,8 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
     event Bid(uint96 indexed lotId, uint96 indexed bidId, address indexed bidder, uint256 amount);
 
     event RefundBid(uint96 indexed lotId, uint96 indexed bidId, address indexed bidder);
+
+    // TODO events for ClaimBid, ClaimProceeds?
 
     event Settle(uint96 indexed lotId);
 
@@ -269,7 +269,7 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
         _sendPayment(routing.seller, amountLessFees, routing.quoteToken, routing.hooks);
 
         // Calculate the curator fee (if applicable)
-        FeeData storage feeData = lotFees[params_.lotId];
+        FeeData memory feeData = lotFees[params_.lotId];
         uint256 curatorFeePayout =
             _calculatePayoutFees(feeData.curated, feeData.curatorFee, payoutAmount);
 
@@ -281,8 +281,6 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
 
         // Decrease the funding amount (if applicable)
         if (routing.funding > 0) {
-            // Check invariant
-            if (routing.funding < payoutAmount) revert Broken_Invariant();
             unchecked {
                 routing.funding -= payoutAmount;
             }
@@ -295,8 +293,6 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
         if (curatorFeePayout > 0) {
             // Decrease the funding amount
             if (routing.funding > 0) {
-                // Check invariant
-                if (routing.funding < curatorFeePayout) revert Broken_Invariant();
                 unchecked {
                     routing.funding -= curatorFeePayout;
                 }
@@ -524,7 +520,10 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
                 uint256 capacityRefund = capacity - settlement.totalOut;
 
                 uint256 feeRefund = Math.mulDivDown(curatorFeePayout, capacityRefund, capacity);
-                curatorFeePayout -= feeRefund;
+                // Can't be more than curatorFeePayout
+                unchecked {
+                    curatorFeePayout -= feeRefund;
+                }
             }
 
             // Reduce funding by curator fee and send, if applicable
@@ -567,9 +566,9 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
         // If a referrer is not set, that portion of the fee defaults to the protocol
         uint256 totalInLessFees;
         {
-            FeeData memory feeData = lotFees[lotId_];
-            (, uint256 toProtocol) =
-                calculateQuoteFees(feeData.protocolFee, feeData.referrerFee, false, purchased_);
+            (, uint256 toProtocol) = calculateQuoteFees(
+                lotFees[lotId_].protocolFee, lotFees[lotId_].referrerFee, false, purchased_
+            );
             totalInLessFees = purchased_ - toProtocol;
         }
 
@@ -627,7 +626,10 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
             );
 
             // Increment the funding
-            routing.funding += curatorFeePayout;
+            // Cannot overflow, as capacity is bounded by uint96 and the curator fee has a maximum percentage
+            unchecked {
+                routing.funding += curatorFeePayout;
+            }
 
             // Don't need to check for fee on transfer here because it was checked on auction creation
             Transfer.transferFrom(
