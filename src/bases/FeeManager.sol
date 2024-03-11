@@ -71,19 +71,19 @@ abstract contract FeeManager is ReentrancyGuard {
         bool hasReferrer_,
         uint256 amount_
     ) public pure returns (uint256 toReferrer, uint256 toProtocol) {
-        uint256 FEE_DECIMALS = uint256(_FEE_DECIMALS);
+        uint256 feeDecimals = uint256(_FEE_DECIMALS);
 
         if (hasReferrer_) {
             // In this case we need to:
             // 1. Calculate referrer fee
             // 2. Calculate protocol fee as the total expected fee amount minus the referrer fee
             //    to avoid issues with rounding from separate fee calculations
-            toReferrer = Math.mulDivDown(amount_, referrerFee_, FEE_DECIMALS);
+            toReferrer = Math.mulDivDown(amount_, referrerFee_, feeDecimals);
             toProtocol =
-                Math.mulDivDown(amount_, protocolFee_ + referrerFee_, FEE_DECIMALS) - toReferrer;
+                Math.mulDivDown(amount_, protocolFee_ + referrerFee_, feeDecimals) - toReferrer;
         } else {
             // If there is no referrer, the protocol gets the entire fee
-            toProtocol = Math.mulDivDown(amount_, protocolFee_ + referrerFee_, FEE_DECIMALS);
+            toProtocol = Math.mulDivDown(amount_, protocolFee_ + referrerFee_, feeDecimals);
         }
     }
 

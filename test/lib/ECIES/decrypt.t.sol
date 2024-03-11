@@ -4,7 +4,7 @@ pragma solidity 0.8.19;
 // Testing Libraries
 import {Test} from "forge-std/Test.sol";
 import {console2} from "forge-std/console2.sol";
-import {ECIES_FFI_Test} from "./ECIES_FFI.sol";
+import {ECIESFFITest} from "./ECIES_FFI.sol";
 
 // ECIES
 import {Point, ECIES} from "src/lib/ECIES.sol";
@@ -123,7 +123,7 @@ contract ECIESDecryptTest is Test {
     }
 }
 
-contract ECIESDecryptFFITest is ECIES_FFI_Test {
+contract ECIESDecryptFFITest is ECIESFFITest {
     function test_decrypt() public {
         // Setup encryption parameters
         uint256 ciphertext = 1;

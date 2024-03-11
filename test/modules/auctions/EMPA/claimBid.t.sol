@@ -534,9 +534,9 @@ contract EmpaModuleClaimBidTest is EmpaModuleTest {
         givenLotIsSettled
     {
         // Marginal price is 2
-        // Bids 1, 3-5 are settled
-        // Bid 2 is not settled (based on order of insertion)
-        uint64 bidId = 3;
+        // Bids 1-4 are settled
+        // Bid 5 is not settled (based on order of insertion)
+        uint64 bidId = 4;
 
         // Call the function
         vm.prank(address(_auctionHouse));
@@ -611,9 +611,9 @@ contract EmpaModuleClaimBidTest is EmpaModuleTest {
         givenLotIsSettled
     {
         // Marginal price is 2
-        // Bids 2-6 are settled
-        // Bid 1 is not settled (based on order of insertion)
-        uint64 bidId = 3;
+        // Bids 1-5 are settled
+        // Bid 6 is not settled (based on order of insertion)
+        uint64 bidId = 5;
 
         // Call the function
         vm.prank(address(_auctionHouse));
@@ -650,9 +650,9 @@ contract EmpaModuleClaimBidTest is EmpaModuleTest {
         givenLotIsSettled
     {
         // Marginal price is 2
-        // Bids 2-6 are settled
-        // Bid 1 is not settled (based on order of insertion)
-        uint64 bidId = 2;
+        // Bids 1-5 are settled
+        // Bid 6 is not settled (based on order of insertion)
+        uint64 bidId = 5;
 
         // Call the function
         vm.prank(address(_auctionHouse));

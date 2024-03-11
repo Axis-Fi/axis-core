@@ -63,7 +63,7 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
     /// @param      derivativeReference (optional) Derivative module, represented by its Veecode
     /// @param      derivativeParams    (optional) abi-encoded data to be used to create payout derivatives on a purchase
     /// @param      wrapDerivative      (optional) Whether to wrap the derivative in a ERC20 token instead of the native ERC6909 format
-    /// @param      prefunding          The amount of base tokens in prefunding remaining
+    /// @param      funding             The amount of base tokens in funding remaining
     struct Routing {
         Veecode auctionReference;
         address seller;
@@ -74,7 +74,7 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
         Veecode derivativeReference;
         bytes derivativeParams;
         bool wrapDerivative;
-        uint256 prefunding;
+        uint256 funding;
     }
 
     /// @notice     Fee information for a lot
@@ -283,7 +283,7 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
             if (params_.capacityInQuote) revert InvalidParams();
 
             // Store pre-funding information
-            routing.prefunding = lotCapacity;
+            routing.funding = lotCapacity;
 
             // Call hook on hooks contract if provided
             if (address(routing_.hooks) != address(0)) {
@@ -336,14 +336,14 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
         getModuleForId(lotId_).cancelAuction(lotId_);
 
         // If the auction is prefunded and supported, transfer the remaining capacity to the seller
-        if (routing.prefunding > 0) {
-            uint256 prefunding = routing.prefunding;
+        if (routing.funding > 0) {
+            uint256 funding = routing.funding;
 
             // Set to 0 before transfer to avoid re-entrancy
-            lotRouting[lotId_].prefunding = 0;
+            lotRouting[lotId_].funding = 0;
 
             // Transfer payout tokens to the seller
-            Transfer.transfer(routing.baseToken, routing.seller, prefunding, false);
+            Transfer.transfer(routing.baseToken, routing.seller, funding, false);
         }
 
         emit AuctionCancelled(lotId_, routing.auctionReference);

@@ -11,6 +11,8 @@ contract EmpaModuleSubmitPrivateKeyTest is EmpaModuleTest {
     //  [X] it reverts
     // [X] when the lot is active
     //  [X] it reverts
+    // [X] given the lot has been cancelled
+    //  [X] it reverts
     // [X] when the lot has not started
     //  [X] it reverts
     // [X] given the private key has already been submitted
@@ -46,6 +48,16 @@ contract EmpaModuleSubmitPrivateKeyTest is EmpaModuleTest {
     }
 
     function test_lotHasNotStarted_reverts() external givenLotIsCreated {
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(Auction.Auction_MarketNotActive.selector, _lotId);
+        vm.expectRevert(err);
+
+        // Call the function
+        vm.prank(address(_auctionHouse));
+        _module.submitPrivateKey(_lotId, _AUCTION_PRIVATE_KEY, 0);
+    }
+
+    function test_lotCancelled_reverts() external givenLotIsCreated givenLotIsCancelled {
         // Expect revert
         bytes memory err = abi.encodeWithSelector(Auction.Auction_MarketNotActive.selector, _lotId);
         vm.expectRevert(err);

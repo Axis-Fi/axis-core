@@ -258,9 +258,9 @@ contract PurchaseTest is AuctionHouseTest {
     }
 
     function _assertPrefunding() internal {
-        // Check prefunding amount
+        // Check funding amount
         Auctioneer.Routing memory routing = _getLotRouting(_lotId);
-        assertEq(routing.prefunding, _expectedPrefunding, "mismatch on prefunding");
+        assertEq(routing.funding, _expectedPrefunding, "mismatch on funding");
     }
 
     // ======== Tests ======== //

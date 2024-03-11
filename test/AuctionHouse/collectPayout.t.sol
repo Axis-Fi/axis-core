@@ -41,7 +41,7 @@ contract CollectPayoutTest is Test, Permit2User {
         // Set reasonable starting block
         vm.warp(1_000_000);
 
-        _auctionHouse = new MockAuctionHouse(_PROTOCOL, _PERMIT2_ADDRESS);
+        _auctionHouse = new MockAuctionHouse(_PROTOCOL, _permit2Address);
         _mockDerivativeModule = new MockDerivativeModule(address(_auctionHouse));
 
         _quoteToken = new MockFeeOnTransferERC20("Quote Token", "QUOTE", 18);
@@ -64,7 +64,7 @@ contract CollectPayoutTest is Test, Permit2User {
             derivativeReference: _derivativeReference,
             derivativeParams: _derivativeParams,
             wrapDerivative: _wrapDerivative,
-            prefunding: 0
+            funding: 0
         });
     }
 
@@ -458,7 +458,7 @@ contract CollectPayoutTest is Test, Permit2User {
     //  [X] it does not transfer the base token to the auction house
 
     modifier givenAuctionIsPrefunded(uint256 amount_) {
-        _routingParams.prefunding = amount_;
+        _routingParams.funding = amount_;
         _;
     }
 

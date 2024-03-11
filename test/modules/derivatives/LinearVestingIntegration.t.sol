@@ -84,7 +84,7 @@
 //         underlyingToken = new MockERC20("Underlying", "UNDERLYING", underlyingTokenDecimals);
 //         underlyingTokenAddress = address(underlyingToken);
 
-//         auctionHouse = new AuctionHouse(address(this), _protocol, _PERMIT2_ADDRESS);
+//         auctionHouse = new AuctionHouse(address(this), _protocol, _permit2Address);
 
 //         catalogue = new Catalogue(address(auctionHouse));
 
@@ -293,7 +293,7 @@
 //         assertEq(address(routingData.quoteToken), address(quoteToken), "quote token mismatch");
 //         assertEq(address(routingData.baseToken), underlyingTokenAddress, "base token mismatch");
 //         assertEq(routingData.derivativeParams, vestingParamsBytes, "derivative params mismatch");
-//         assertEq(routingData.prefunding, 0, "prefunding mismatch");
+//         assertEq(routingData.funding, 0, "funding mismatch");
 
 //         // Base tokens have not been transferred
 //         assertEq(underlyingToken.balanceOf(address(auctionHouse)), 0, "base token balance mismatch");
@@ -314,7 +314,7 @@
 //         assertEq(address(routingData.quoteToken), address(quoteToken), "quote token mismatch");
 //         assertEq(address(routingData.baseToken), underlyingTokenAddress, "base token mismatch");
 //         assertEq(routingData.derivativeParams, vestingParamsBytes, "derivative params mismatch");
-//         assertEq(routingData.prefunding, LOT_CAPACITY, "prefunding mismatch"); // Due to EMPAM
+//         assertEq(routingData.funding, LOT_CAPACITY, "funding mismatch"); // Due to EMPAM
 
 //         // Base tokens have been transferred
 //         assertEq(

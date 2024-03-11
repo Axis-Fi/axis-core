@@ -10,14 +10,14 @@ import {Permit2Clone} from "test/lib/permit2/Permit2Clone.sol";
 /// @notice Helper functions for Permit2
 ///         Largely lifted from https://github.com/dragonfly-xyz/useful-solidity-patterns/blob/main/test/Permit2Vault.t.sol
 contract Permit2User is Test {
-    bytes32 constant TOKEN_PERMISSIONS_TYPEHASH =
+    bytes32 internal constant _TOKEN_PERMISSIONS_TYPEHASH =
         keccak256("TokenPermissions(address token,uint256 amount)");
-    bytes32 constant PERMIT_TRANSFER_FROM_TYPEHASH = keccak256(
+    bytes32 internal constant _PERMIT_TRANSFER_FROM_TYPEHASH = keccak256(
         "PermitTransferFrom(TokenPermissions permitted,address spender,uint256 nonce,uint256 deadline)TokenPermissions(address token,uint256 amount)"
     );
 
-    Permit2Clone internal _PERMIT2 = new Permit2Clone();
-    address internal _PERMIT2_ADDRESS = address(_PERMIT2);
+    Permit2Clone internal _permit2 = new Permit2Clone();
+    address internal _permit2Address = address(_permit2);
 
     // Generate a random uint256
     function _getRandomUint256() internal view returns (uint256) {
@@ -62,13 +62,13 @@ contract Permit2User is Test {
         return keccak256(
             abi.encodePacked(
                 "\x19\x01",
-                _PERMIT2.DOMAIN_SEPARATOR(),
+                _permit2.DOMAIN_SEPARATOR(),
                 keccak256(
                     abi.encode(
-                        PERMIT_TRANSFER_FROM_TYPEHASH,
+                        _PERMIT_TRANSFER_FROM_TYPEHASH,
                         keccak256(
                             abi.encode(
-                                TOKEN_PERMISSIONS_TYPEHASH,
+                                _TOKEN_PERMISSIONS_TYPEHASH,
                                 permit.permitted.token,
                                 permit.permitted.amount
                             )

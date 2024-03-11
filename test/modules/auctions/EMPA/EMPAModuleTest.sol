@@ -55,7 +55,7 @@ abstract contract EmpaModuleTest is Test, Permit2User {
     function setUp() public {
         vm.warp(1_000_000);
 
-        _auctionHouse = new AuctionHouse(address(this), _PROTOCOL, _PERMIT2_ADDRESS);
+        _auctionHouse = new AuctionHouse(address(this), _PROTOCOL, _permit2Address);
         _module = new EncryptedMarginalPriceAuctionModule(address(_auctionHouse));
 
         _auctionPublicKey = ECIES.calcPubKey(Point(1, 2), _AUCTION_PRIVATE_KEY);
@@ -329,6 +329,12 @@ abstract contract EmpaModuleTest is Test, Permit2User {
         _;
     }
 
+    modifier givenLotProceedsAreClaimed() {
+        vm.prank(address(_auctionHouse));
+        _module.claimProceeds(_lotId);
+        _;
+    }
+
     // ======== Internal Functions ======== //
 
     function _mulDivUp(uint96 mul1_, uint96 mul2_, uint96 div_) internal pure returns (uint96) {
@@ -387,27 +393,7 @@ abstract contract EmpaModuleTest is Test, Permit2User {
     }
 
     function _getAuctionLot(uint96 lotId_) internal view returns (Auction.Lot memory) {
-        (
-            uint48 start_,
-            uint48 conclusion_,
-            uint8 quoteTokenDecimals_,
-            uint8 baseTokenDecimals_,
-            bool capacityInQuote_,
-            uint96 capacity_,
-            uint96 sold_,
-            uint96 purchased_
-        ) = _module.lotData(lotId_);
-
-        return Auction.Lot({
-            start: start_,
-            conclusion: conclusion_,
-            quoteTokenDecimals: quoteTokenDecimals_,
-            baseTokenDecimals: baseTokenDecimals_,
-            capacityInQuote: capacityInQuote_,
-            capacity: capacity_,
-            sold: sold_,
-            purchased: purchased_
-        });
+        return _module.getLot(lotId_);
     }
 
     function _getBid(
