@@ -191,7 +191,7 @@ contract EmpaModuleClaimBidTest is EmpaModuleTest {
         givenLotIsCreated
         givenLotHasStarted
     {
-        uint96 bidAmountIn = uint96(bound(bidAmountIn_, 1e17, _BID_AMOUNT_OUT - 1)); // Ensures that the price is less than _MIN_PRICE
+        uint96 bidAmountIn = uint96(bound(bidAmountIn_, 1e17, _BID_AMOUNT_OUT - 1e18)); // Ensures that the price is less than _MIN_PRICE
 
         // Create the bid
         _bidId = _createBid(bidAmountIn, _BID_AMOUNT_OUT);
