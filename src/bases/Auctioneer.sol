@@ -188,7 +188,6 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
             // We load it here vs. later to avoid two checks.
             AuctionModule auctionModule =
                 AuctionModule(_getLatestModuleIfActive(routing_.auctionType));
-            auctionReference = auctionModule.VEECODE();
 
             // Confirm tokens are within the required decimal range
             uint8 baseTokenDecimals = routing_.baseToken.decimals();
@@ -205,6 +204,7 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
             // Call module auction function to store implementation-specific data
             (requiresPrefunding, lotCapacity) =
                 auctionModule.auction(lotId, params_, quoteTokenDecimals, baseTokenDecimals);
+            auctionReference = auctionModule.VEECODE();
         }
 
         // Store routing information
