@@ -173,29 +173,29 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
         Auction.AuctionParams calldata params_,
         string calldata infoHash_
     ) external nonReentrant returns (uint96 lotId) {
-        // Load auction type module, this checks that it is installed.
-        // We load it here vs. later to avoid two checks.
-        AuctionModule auctionModule = AuctionModule(_getLatestModuleIfActive(routing_.auctionType));
-
         // Check that the module for the auction type is valid
         // Validate routing parameters
-        if (
-            auctionModule.TYPE() != Module.Type.Auction || address(routing_.baseToken) == address(0)
-                || address(routing_.quoteToken) == address(0)
-        ) {
+        if (address(routing_.baseToken) == address(0) || address(routing_.quoteToken) == address(0))
+        {
             revert InvalidParams();
         }
 
         bool requiresPrefunding;
         uint256 lotCapacity;
+        Veecode auctionReference;
         {
+            // Load auction type module, this checks that it is installed.
+            // We load it here vs. later to avoid two checks.
+            AuctionModule auctionModule =
+                AuctionModule(_getLatestModuleIfActive(routing_.auctionType));
+
             // Confirm tokens are within the required decimal range
             uint8 baseTokenDecimals = routing_.baseToken.decimals();
             uint8 quoteTokenDecimals = routing_.quoteToken.decimals();
 
             if (
-                baseTokenDecimals < 6 || baseTokenDecimals > 18 || quoteTokenDecimals < 6
-                    || quoteTokenDecimals > 18
+                auctionModule.TYPE() != Module.Type.Auction || baseTokenDecimals < 6
+                    || baseTokenDecimals > 18 || quoteTokenDecimals < 6 || quoteTokenDecimals > 18
             ) revert InvalidParams();
 
             // Increment lot count and get ID
@@ -208,7 +208,7 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
 
         // Store routing information
         Routing storage routing = lotRouting[lotId];
-        routing.auctionReference = auctionModule.VEECODE();
+        routing.auctionReference = auctionReference;
         routing.seller = msg.sender;
         routing.baseToken = routing_.baseToken;
         routing.quoteToken = routing_.quoteToken;
