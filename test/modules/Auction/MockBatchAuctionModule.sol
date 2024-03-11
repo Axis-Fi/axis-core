@@ -11,7 +11,8 @@ contract MockBatchAuctionModule is AuctionModule {
     enum BidStatus {
         Submitted,
         Decrypted,
-        Claimed // Bid status will also be set to claimed if the bid is cancelled/refunded
+        // Bid status will also be set to claimed if the bid is cancelled/refunded
+        Claimed
     }
 
     /// @notice        Core data for a bid

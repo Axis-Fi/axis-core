@@ -206,9 +206,11 @@ contract EmpaModuleClaimBidsTest is EmpaModuleTest {
         assertEq(uint8(bidTwo.status), uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed));
     }
 
-    function test_unsuccessfulBid_fuzz(
-        uint96 bidAmountIn_
-    ) external givenLotIsCreated givenLotHasStarted {
+    function test_unsuccessfulBid_fuzz(uint96 bidAmountIn_)
+        external
+        givenLotIsCreated
+        givenLotHasStarted
+    {
         uint96 minFillAmount = _MIN_FILL_PERCENT * _LOT_CAPACITY / 1e5;
         // Bound the amounts
         uint96 bidAmountIn = uint96(bound(bidAmountIn_, 1e18, minFillAmount - 1)); // Ensures that it cannot settle even at minimum price
@@ -490,8 +492,9 @@ contract EmpaModuleClaimBidsTest is EmpaModuleTest {
         _settleLot();
 
         // Calculate the expected amounts
-        uint256 marginalPrice =
-            FixedPointMathLib.mulDivUp(uint256(_BID_AMOUNT + bidAmountIn), _BASE_SCALE, _LOT_CAPACITY);
+        uint256 marginalPrice = FixedPointMathLib.mulDivUp(
+            uint256(_BID_AMOUNT + bidAmountIn), _BASE_SCALE, _LOT_CAPACITY
+        );
         uint256 expectedAmountOutOne =
             FixedPointMathLib.mulDivDown(bidAmountIn, _BASE_SCALE, marginalPrice);
         uint256 expectedAmountOutTwo =
@@ -543,8 +546,9 @@ contract EmpaModuleClaimBidsTest is EmpaModuleTest {
         _settleLot();
 
         // Calculate the payout for bid one
-        uint256 marginalPrice =
-            FixedPointMathLib.mulDivUp(uint256(_BID_AMOUNT + bidAmountIn), _BASE_SCALE, _LOT_CAPACITY);
+        uint256 marginalPrice = FixedPointMathLib.mulDivUp(
+            uint256(_BID_AMOUNT + bidAmountIn), _BASE_SCALE, _LOT_CAPACITY
+        );
         uint256 expectedAmountOutOne =
             FixedPointMathLib.mulDivDown(bidAmountIn, _BASE_SCALE, marginalPrice);
         uint256 expectedAmountOutTwo =

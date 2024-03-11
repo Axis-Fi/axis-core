@@ -1556,7 +1556,6 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         givenPrivateKeyIsSubmitted
         givenLotIsDecrypted
     {
-        console2.log("before settle");
         // Call function
         (Auction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
 
@@ -1593,7 +1592,6 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
     {
         // Call function
         (Auction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
-        console2.log("after settle");
 
         // Assert settlement
         _assertSettlement(settlement, auctionOutput);
