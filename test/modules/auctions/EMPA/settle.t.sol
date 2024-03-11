@@ -447,7 +447,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
 
         // Marginal price: 2 >= 1 (due to capacity being reached on bid 5)
         _expectedMarginalPrice = _scaleQuoteTokenAmount(2 * _BASE_SCALE);
-        _expectedMarginalBidId = 1; // Bid 5 processed first, bid 1 processed last
+        _expectedMarginalBidId = 5;
 
         // Output
         // Bid one: 4 / 2 = 2 out
@@ -527,34 +527,34 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         // Capacity: 10 + 2 > 10 capacity
         // Capacity reached on bid 1 (which is processed second)
         _createBid(
-            _scaleQuoteTokenAmount(_BID_PRICE_TWO_SIZE_TEN_AMOUNT),
-            _scaleBaseTokenAmount(_BID_PRICE_TWO_SIZE_TEN_AMOUNT_OUT)
-        );
-        _createBid(
             _scaleQuoteTokenAmount(_BID_PRICE_TWO_SIZE_TWO_AMOUNT),
             _scaleBaseTokenAmount(_BID_PRICE_TWO_SIZE_TWO_AMOUNT_OUT)
+        );
+        _createBid(
+            _scaleQuoteTokenAmount(_BID_PRICE_TWO_SIZE_TEN_AMOUNT),
+            _scaleBaseTokenAmount(_BID_PRICE_TWO_SIZE_TEN_AMOUNT_OUT)
         );
 
         // Marginal price: 2 >= 1 (due to capacity being reached on bid 1)
         _expectedMarginalPrice = _scaleQuoteTokenAmount(2 * _BASE_SCALE);
-        _expectedMarginalBidId = 1;
+        _expectedMarginalBidId = 2;
 
         // Output
-        // Bid two: 4 / 2 = 2 out
-        // Bid one: 10 - 2 = 8 out (partial fill)
+        // Bid one: 4 / 2 = 2 out
+        // Bid two: 10 - 2 = 8 out (partial fill)
 
-        uint96 bidTwoAmountOutActual = _scaleBaseTokenAmount(_BID_PRICE_TWO_SIZE_TWO_AMOUNT_OUT); // 2
-        uint96 bidTwoAmountInActual = _scaleQuoteTokenAmount(_BID_PRICE_TWO_SIZE_TWO_AMOUNT); // 4
-        uint96 bidOneAmountOutActual = _auctionParams.capacity - bidTwoAmountOutActual; // 8
-        uint96 bidOneAmountInActual = _mulDivUp(
-            bidOneAmountOutActual,
+        uint96 bidOneAmountOutActual = _scaleBaseTokenAmount(_BID_PRICE_TWO_SIZE_TWO_AMOUNT_OUT); // 2
+        uint96 bidOneAmountInActual = _scaleQuoteTokenAmount(_BID_PRICE_TWO_SIZE_TWO_AMOUNT); // 4
+        uint96 bidTwoAmountOutActual = _auctionParams.capacity - bidOneAmountOutActual; // 8
+        uint96 bidTwoAmountInActual = _mulDivUp(
+            bidTwoAmountOutActual,
             _scaleQuoteTokenAmount(_BID_PRICE_TWO_SIZE_TEN_AMOUNT),
             _scaleBaseTokenAmount(_BID_PRICE_TWO_SIZE_TEN_AMOUNT_OUT)
         ); // 8 * 20 / 10 = 16
 
         uint96 bidAmountInSuccess = bidOneAmountInActual + bidTwoAmountInActual;
         uint96 bidAmountInFail =
-            _scaleQuoteTokenAmount(_BID_PRICE_TWO_SIZE_TEN_AMOUNT) - bidOneAmountInActual;
+            _scaleQuoteTokenAmount(_BID_PRICE_TWO_SIZE_TEN_AMOUNT) - bidTwoAmountInActual;
         uint96 bidAmountOutSuccess = bidOneAmountOutActual + bidTwoAmountOutActual;
 
         _expectedTotalIn = bidAmountInSuccess;
@@ -564,7 +564,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         _expectedPartialFillBidder = _BIDDER;
         _expectedPartialFillReferrer = _REFERRER;
         _expectedPartialFillRefund = bidAmountInFail;
-        _expectedPartialFillPayout = bidOneAmountOutActual;
+        _expectedPartialFillPayout = bidTwoAmountOutActual;
         _;
     }
 
@@ -661,30 +661,30 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
 
         // Marginal price = 12621933
         _expectedMarginalPrice = _mulDivUp(bidTwoAmount, _BASE_SCALE, bidTwoAmountOut);
-        _expectedMarginalBidId = 1;
+        _expectedMarginalBidId = 2;
 
         // These calculations mimic how the capacity usage is calculated in the settle function
         uint256 baseTokensRequired = FixedPointMathLib.mulDivDown(
             bidOneAmount + bidTwoAmount, _BASE_SCALE, _expectedMarginalPrice
         );
-        uint256 bidOneAmountOutFull =
-            FixedPointMathLib.mulDivDown(bidOneAmount, _BASE_SCALE, _expectedMarginalPrice);
-        uint256 bidOneAmountOutOverflow = baseTokensRequired - _LOT_CAPACITY_OVERFLOW;
+        uint256 bidTwoAmountOutFull =
+            FixedPointMathLib.mulDivDown(bidTwoAmount, _BASE_SCALE, _expectedMarginalPrice);
+        uint256 bidTwoAmountOutOverflow = baseTokensRequired - _LOT_CAPACITY_OVERFLOW;
 
         // Output
-        // Bid one: 90 out (partial fill)
-        // Bid two: bidTwoAmountOut out
+        // Bid one: bidOneAmountOut out
+        // Bid two: 90 out (partial fill)
 
-        uint96 bidTwoAmountInActual = bidTwoAmount;
-        uint96 bidTwoAmountOutActual =
-            _mulDivDown(bidTwoAmount, _BASE_SCALE, _expectedMarginalPrice);
-        uint96 bidOneAmountOutActual = uint96(bidOneAmountOutFull - bidOneAmountOutOverflow);
-        uint96 bidOneAmountInActual = uint96(
-            FixedPointMathLib.mulDivUp(bidOneAmount, bidOneAmountOutActual, bidOneAmountOutFull)
+        uint96 bidOneAmountInActual = bidOneAmount;
+        uint96 bidOneAmountOutActual =
+            _mulDivDown(bidOneAmount, _BASE_SCALE, _expectedMarginalPrice);
+        uint96 bidTwoAmountOutActual = uint96(bidTwoAmountOutFull - bidTwoAmountOutOverflow);
+        uint96 bidTwoAmountInActual = uint96(
+            FixedPointMathLib.mulDivUp(bidTwoAmount, bidTwoAmountOutActual, bidTwoAmountOutFull)
         );
 
         uint96 bidAmountInSuccess = bidOneAmountInActual + bidTwoAmountInActual;
-        uint96 bidAmountInFail = bidOneAmount - bidOneAmountInActual;
+        uint96 bidAmountInFail = bidTwoAmount - bidTwoAmountInActual;
 
         _expectedTotalIn = bidAmountInSuccess;
         _expectedTotalOut = _LOT_CAPACITY_OVERFLOW;
@@ -693,7 +693,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         _expectedPartialFillBidder = _BIDDER;
         _expectedPartialFillReferrer = _REFERRER;
         _expectedPartialFillRefund = bidAmountInFail;
-        _expectedPartialFillPayout = bidOneAmountOutActual;
+        _expectedPartialFillPayout = bidTwoAmountOutActual;
         _;
     }
 
@@ -711,7 +711,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
 
         // Marginal price: 2
         _expectedMarginalPrice = _scaleQuoteTokenAmount(2 * _BASE_SCALE);
-        _expectedMarginalBidId = 1; // Bid 10 processed first, bid 1 processed last
+        _expectedMarginalBidId = 10;
 
         _expectedTotalIn = 10 * 2e18;
         _expectedTotalOut = 10 * 1e18;
