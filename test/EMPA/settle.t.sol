@@ -238,55 +238,6 @@ contract EmpaSettleTest is EmpaTest {
         _;
     }
 
-    modifier givenBidsAreOverSubscribedRespectsOrdering() {
-        // Capacity: 10 + 2 > 10 capacity
-        // Capacity reached on bid 1 (which is processed second)
-        _createBid(_BID_PRICE_TWO_SIZE_TEN_AMOUNT, _BID_PRICE_TWO_SIZE_TEN_AMOUNT_OUT);
-        _createBid(_BID_PRICE_TWO_SIZE_TWO_AMOUNT, _BID_PRICE_TWO_SIZE_TWO_AMOUNT_OUT);
-
-        // Marginal price: 2 >= 2 (due to capacity being reached on bid 1)
-        _marginalPrice = _scaleQuoteTokenAmount(2 * _BASE_SCALE);
-
-        // Output
-        // Bid two: 4 / 2 = 2 out
-        // Bid one: 10 - 2 = 8 out (partial fill)
-
-        uint96 bidTwoAmountOutActual = _scaleBaseTokenAmount(_BID_PRICE_TWO_SIZE_TWO_AMOUNT_OUT); // 2
-        uint96 bidTwoAmountInActual = _scaleQuoteTokenAmount(_BID_PRICE_TWO_SIZE_TWO_AMOUNT); // 4
-        uint96 bidOneAmountOutActual = _auctionParams.capacity - bidTwoAmountOutActual; // 8
-        uint96 bidOneAmountInActual = _mulDivUp(
-            bidOneAmountOutActual,
-            _scaleQuoteTokenAmount(_BID_PRICE_TWO_SIZE_TEN_AMOUNT),
-            _scaleBaseTokenAmount(_BID_PRICE_TWO_SIZE_TEN_AMOUNT_OUT)
-        ); // 8 * 20 / 10 = 16
-
-        uint96 bidAmountInSuccess = bidOneAmountInActual + bidTwoAmountInActual;
-        uint96 bidAmountInFail =
-            _scaleQuoteTokenAmount(_BID_PRICE_TWO_SIZE_TEN_AMOUNT) - bidOneAmountInActual;
-        uint96 bidAmountOutSuccess = bidOneAmountOutActual + bidTwoAmountOutActual;
-
-        // Fees
-        _expectedReferrerFee = _calculateReferrerFee(bidAmountInSuccess);
-        _expectedProtocolFee = _calculateProtocolFee(bidAmountInSuccess);
-        _expectedReferrerFeeAcrrued = _calculateReferrerFee(bidOneAmountInActual); // Accrued on partial fill
-        _expectedProtocolFeeAcrrued = _calculateProtocolFee(bidOneAmountInActual); // Accrued on partial fill
-
-        uint96 prefundedCuratorFee = _calculatePrefundedCuratorFee();
-        uint96 curatorFee = _calculateCuratorFee(bidAmountOutSuccess);
-        uint96 curatorFeeToRefund = prefundedCuratorFee - curatorFee;
-
-        _expectedAuctionHouseBaseTokenBalance = bidTwoAmountOutActual; // To be claimed by the bidder
-        _expectedAuctionOwnerBaseTokenBalance = curatorFeeToRefund; // No unused capacity
-        _expectedBidderBaseTokenBalance = bidOneAmountOutActual; // Partial fill transferred
-        _expectedCuratorBaseTokenBalance = curatorFee;
-
-        _expectedAuctionHouseQuoteTokenBalance = _expectedReferrerFee + _expectedProtocolFee; // Accrued fees
-        _expectedAuctionOwnerQuoteTokenBalance = bidOneAmountInActual + bidTwoAmountInActual
-            - _expectedReferrerFee - _expectedProtocolFee; // Actual payout minus fees
-        _expectedBidderQuoteTokenBalance = bidAmountInFail; // Partial fill returned
-        _;
-    }
-
     modifier givenBidsAreOverSubscribedOnFirstBid() {
         // Capacity: 11 > 10 capacity
         // Capacity reached on bid 1
@@ -1182,7 +1133,7 @@ contract EmpaSettleTest is EmpaTest {
         givenOwnerHasBaseTokenAllowance(_curatorMaxPotentialFee)
         givenCuratorHasApproved
         givenLotHasStarted
-        givenBidsAreOverSubscribedRespectsOrdering
+        givenBidsAreOverSubscribed
         givenLotHasConcluded
         givenPrivateKeyIsSubmitted
         givenLotIsDecrypted
@@ -1199,7 +1150,7 @@ contract EmpaSettleTest is EmpaTest {
         assertEq(uint8(lot.status), uint8(EncryptedMarginalPriceAuction.AuctionStatus.Settled));
 
         // Validate status of partial fill bid
-        EncryptedMarginalPriceAuction.Bid memory bid = _getBid(_lotId, 1); // Bid one is processed second due to insertion order
+        EncryptedMarginalPriceAuction.Bid memory bid = _getBid(_lotId, 2);
         assertEq(uint8(bid.status), uint8(EncryptedMarginalPriceAuction.BidStatus.Claimed));
 
         _assertBaseTokenBalances();
@@ -1222,7 +1173,7 @@ contract EmpaSettleTest is EmpaTest {
         givenOwnerHasBaseTokenAllowance(_curatorMaxPotentialFee)
         givenCuratorHasApproved
         givenLotHasStarted
-        givenBidsAreOverSubscribedRespectsOrdering
+        givenBidsAreOverSubscribed
         givenLotHasConcluded
         givenPrivateKeyIsSubmitted
         givenLotIsDecrypted
@@ -1239,7 +1190,7 @@ contract EmpaSettleTest is EmpaTest {
         assertEq(uint8(lot.status), uint8(EncryptedMarginalPriceAuction.AuctionStatus.Settled));
 
         // Validate status of partial fill bid
-        EncryptedMarginalPriceAuction.Bid memory bid = _getBid(_lotId, 1); // Bid one is processed second due to insertion order
+        EncryptedMarginalPriceAuction.Bid memory bid = _getBid(_lotId, 2);
         assertEq(uint8(bid.status), uint8(EncryptedMarginalPriceAuction.BidStatus.Claimed));
 
         _assertBaseTokenBalances();
@@ -1262,7 +1213,7 @@ contract EmpaSettleTest is EmpaTest {
         givenOwnerHasBaseTokenAllowance(_curatorMaxPotentialFee)
         givenCuratorHasApproved
         givenLotHasStarted
-        givenBidsAreOverSubscribedRespectsOrdering
+        givenBidsAreOverSubscribed
         givenLotHasConcluded
         givenPrivateKeyIsSubmitted
         givenLotIsDecrypted
@@ -1279,7 +1230,7 @@ contract EmpaSettleTest is EmpaTest {
         assertEq(uint8(lot.status), uint8(EncryptedMarginalPriceAuction.AuctionStatus.Settled));
 
         // Validate status of partial fill bid
-        EncryptedMarginalPriceAuction.Bid memory bid = _getBid(_lotId, 1); // Bid one is processed second due to insertion order
+        EncryptedMarginalPriceAuction.Bid memory bid = _getBid(_lotId, 2);
         assertEq(uint8(bid.status), uint8(EncryptedMarginalPriceAuction.BidStatus.Claimed));
 
         _assertBaseTokenBalances();
