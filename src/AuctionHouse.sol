@@ -485,11 +485,6 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
     ///             - collecting the payout from the seller fails
     ///             - re-entrancy is detected
     function settle(uint96 lotId_) external override nonReentrant {
-        // TODO this implementation is pretty opinionated about only having one partial fill.
-        // The initial EMPAM works this way, but other batch auctions may not.
-        // It may be better to allow arbitrary partial fills and handle them in the claimBid function instead of here.
-        // However, this may change the desired behavior.
-
         // Validation
         _isLotValid(lotId_);
 
