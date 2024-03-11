@@ -12,41 +12,41 @@ import {MockModuleV1} from "test/modules/Modules/MockModule.sol";
 import {WithModules, Module, Veecode, toKeycode} from "src/modules/Modules.sol";
 
 contract ExecOnModule is Test {
-    MockWithModules internal withModules;
-    MockModuleV1 internal mockModule;
+    MockWithModules internal _withModules;
+    MockModuleV1 internal _mockModule;
 
     function setUp() external {
-        withModules = new MockWithModules(address(this));
-        mockModule = new MockModuleV1(address(withModules));
+        _withModules = new MockWithModules(address(this));
+        _mockModule = new MockModuleV1(address(_withModules));
     }
 
     modifier whenVersion1IsInstalled() {
-        withModules.installModule(mockModule);
+        _withModules.installModule(_mockModule);
         _;
     }
 
     function testReverts_whenUnauthorized() external whenVersion1IsInstalled {
         address alice = address(0x1);
-        Veecode veecode = mockModule.VEECODE();
+        Veecode veecode = _mockModule.VEECODE();
 
         vm.expectRevert("UNAUTHORIZED");
 
         vm.prank(alice);
-        withModules.execOnModule(veecode, abi.encodeWithSelector(MockModuleV1.mock.selector));
+        _withModules.execOnModule(veecode, abi.encodeWithSelector(MockModuleV1.mock.selector));
     }
 
     function testReverts_whenModuleNotInstalled() external {
-        Veecode veecode = mockModule.VEECODE();
+        Veecode veecode = _mockModule.VEECODE();
 
         bytes memory err =
             abi.encodeWithSelector(WithModules.ModuleNotInstalled.selector, toKeycode("MOCK"), 1);
         vm.expectRevert(err);
 
-        withModules.execOnModule(veecode, abi.encodeWithSelector(MockModuleV1.mock.selector));
+        _withModules.execOnModule(veecode, abi.encodeWithSelector(MockModuleV1.mock.selector));
     }
 
     function testReverts_whenFunctionIsOnlyInternal() external whenVersion1IsInstalled {
-        Veecode veecode = mockModule.VEECODE();
+        Veecode veecode = _mockModule.VEECODE();
 
         // This mimics that the function was called from the outside (e.g. governance) via execOnModule
         bytes memory err = abi.encodeWithSelector(
@@ -55,17 +55,17 @@ contract ExecOnModule is Test {
         );
         vm.expectRevert(err);
 
-        withModules.execOnModule(veecode, abi.encodeWithSelector(MockModuleV1.prohibited.selector));
+        _withModules.execOnModule(veecode, abi.encodeWithSelector(MockModuleV1.prohibited.selector));
     }
 
     function test_whenFunctionIsOnlyInternal_whenParentIsCalling()
         external
         whenVersion1IsInstalled
     {
-        Veecode veecode = mockModule.VEECODE();
+        Veecode veecode = _mockModule.VEECODE();
 
         // Mimic the parent contract calling a protected function directly
-        bool returnValue = withModules.callProhibited(veecode);
+        bool returnValue = _withModules.callProhibited(veecode);
         assertEq(returnValue, true);
     }
 
@@ -77,7 +77,7 @@ contract ExecOnModule is Test {
         vm.expectRevert(err);
 
         // Mimic the parent contract calling a protected function directly
-        mockModule.mock();
+        _mockModule.mock();
     }
 
     function testReverts_whenFunctionIsOnlyInternal_whenExternalIsCalling()
@@ -88,12 +88,12 @@ contract ExecOnModule is Test {
         vm.expectRevert(err);
 
         // Mimic the parent contract calling a protected function directly
-        mockModule.prohibited();
+        _mockModule.prohibited();
     }
 
     function test_success() external whenVersion1IsInstalled {
-        bytes memory returnData = withModules.execOnModule(
-            mockModule.VEECODE(), abi.encodeWithSelector(MockModuleV1.mock.selector)
+        bytes memory returnData = _withModules.execOnModule(
+            _mockModule.VEECODE(), abi.encodeWithSelector(MockModuleV1.mock.selector)
         );
 
         // Decode the return data

@@ -114,7 +114,7 @@ library MaxPriorityQueue {
         uint256 relI = uint256(bidI.amountIn) * uint256(bidJ.minAmountOut);
         uint256 relJ = uint256(bidJ.amountIn) * uint256(bidI.minAmountOut);
         if (relI == relJ) {
-            return iId < jId;
+            return iId > jId;
         }
         return relI < relJ;
     }

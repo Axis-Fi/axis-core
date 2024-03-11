@@ -258,9 +258,9 @@ contract PurchaseTest is AuctionHouseTest {
     }
 
     function _assertPrefunding() internal {
-        // Check prefunding amount
+        // Check funding amount
         Auctioneer.Routing memory routing = _getLotRouting(_lotId);
-        assertEq(routing.prefunding, _expectedPrefunding, "mismatch on prefunding");
+        assertEq(routing.funding, _expectedPrefunding, "mismatch on funding");
     }
 
     // ======== Tests ======== //
@@ -373,7 +373,7 @@ contract PurchaseTest is AuctionHouseTest {
         givenLotHasStarted
     {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(AuctionHouse.InvalidBidder.selector, _bidder);
+        bytes memory err = abi.encodeWithSelector(Auctioneer.NotPermitted.selector, _bidder);
         vm.expectRevert(err);
 
         // Purchase
@@ -1390,6 +1390,36 @@ contract PurchaseTest is AuctionHouseTest {
     {
         // Purchase
         _createPurchase(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut, _purchaseAuctionData);
+
+        // Check state
+        _assertQuoteTokenBalances();
+        _assertBaseTokenBalances();
+        _assertDerivativeTokenBalances();
+        _assertAccruedFees();
+        _assertPrefunding();
+    }
+
+    function test_givenCuratorHasApproved_givenCuratorFeeNotSet()
+        external
+        whenAuctionTypeIsAtomic
+        whenAtomicAuctionModuleIsInstalled
+        givenCuratorIsSet
+        givenLotIsCreated
+        givenLotHasStarted
+        givenProtocolFeeIsSet
+        givenReferrerFeeIsSet
+        givenCuratorMaxFeeIsSet
+        givenCuratorHasApproved
+        givenUserHasQuoteTokenBalance(_AMOUNT_IN)
+        givenUserHasQuoteTokenAllowance(_AMOUNT_IN)
+        givenFeesAreCalculated(_AMOUNT_IN)
+        whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
+        givenSellerHasBaseTokenBalance(_amountOut)
+        givenSellerHasBaseTokenAllowance(_amountOut)
+        givenBalancesAreCalculated(_AMOUNT_IN, _amountOut)
+    {
+        // Purchase
+        _createPurchase(_AMOUNT_IN, _amountOut, _purchaseAuctionData);
 
         // Check state
         _assertQuoteTokenBalances();

@@ -4,7 +4,7 @@ pragma solidity 0.8.19;
 import {IAllowlist} from "src/bases/Auctioneer.sol";
 
 contract MockAllowlist is IAllowlist {
-    bool registerReverts = false;
+    bool internal _registerReverts = false;
 
     uint256[] public registeredIds;
 
@@ -19,7 +19,7 @@ contract MockAllowlist is IAllowlist {
     }
 
     function register(uint96 lotId_, bytes calldata) external override {
-        if (registerReverts) {
+        if (_registerReverts) {
             revert("MockAllowlist: register reverted");
         }
 
@@ -27,7 +27,7 @@ contract MockAllowlist is IAllowlist {
     }
 
     function setRegisterReverts(bool registerReverts_) external {
-        registerReverts = registerReverts_;
+        _registerReverts = registerReverts_;
     }
 
     function getRegisteredIds() external view returns (uint256[] memory) {

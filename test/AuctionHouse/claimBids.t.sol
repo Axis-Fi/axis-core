@@ -12,7 +12,6 @@ contract ClaimBidsTest is AuctionHouseTest {
 
     address internal constant _BIDDER_TWO = address(0x20);
 
-    uint64[] internal _bidIds;
     Auction.BidClaim[] internal _bidClaims;
 
     uint256 internal _expectedBidderQuoteTokenBalance;
@@ -160,6 +159,11 @@ contract ClaimBidsTest is AuctionHouseTest {
         return (toReferrer, toProtocol);
     }
 
+    modifier givenBalancesAreSet() {
+        _expectedAuctionHouseBaseTokenBalance = _scaleBaseTokenAmount(_LOT_CAPACITY);
+        _;
+    }
+
     /// @dev    Assumes that any amounts are scaled to the current decimal scale
     modifier givenPayoutIsNotSet(address bidder_, address referrer_, uint96 amountIn_) {
         _mockClaimBid(bidder_, referrer_, amountIn_, 0);
@@ -170,11 +174,11 @@ contract ClaimBidsTest is AuctionHouseTest {
         _expectedProtocolFee += toProtocol;
 
         // Set expected balances
-        _expectedAuctionHouseQuoteTokenBalance += 0; // No fees are collected
+        _expectedAuctionHouseQuoteTokenBalance += 0; // No quote tokens are collected
         _expectedBidderQuoteTokenBalance += bidder_ == _bidder ? amountIn_ : 0; // Returned to the bidder
         _expectedBidderTwoQuoteTokenBalance += bidder_ == _BIDDER_TWO ? amountIn_ : 0; // Returned to the bidder
 
-        _expectedAuctionHouseBaseTokenBalance += 0; // Returned to the seller during settlement
+        _expectedAuctionHouseBaseTokenBalance -= 0;
         _expectedBidderBaseTokenBalance += 0;
         _expectedCuratorBaseTokenBalance += 0;
         _;
@@ -195,10 +199,10 @@ contract ClaimBidsTest is AuctionHouseTest {
         _expectedProtocolFee += toProtocol;
 
         // Set expected balances
-        _expectedAuctionHouseQuoteTokenBalance += toReferrer + toProtocol; // Payment sent to the seller during settlement
+        _expectedAuctionHouseQuoteTokenBalance += amountIn_; // Payment to be collected in claimProceeds()
         _expectedBidderQuoteTokenBalance += 0;
 
-        _expectedAuctionHouseBaseTokenBalance -= 0; // Returned to the seller during settlement
+        _expectedAuctionHouseBaseTokenBalance -= payout_; // To be collected in claimProceeds()
         _expectedBidderBaseTokenBalance += bidder_ == _bidder ? payout_ : 0;
         _expectedBidderTwoBaseTokenBalance += bidder_ == _BIDDER_TWO ? payout_ : 0;
         _expectedCuratorBaseTokenBalance += 0;
@@ -260,13 +264,6 @@ contract ClaimBidsTest is AuctionHouseTest {
         _;
     }
 
-    modifier givenBidCreated(address bidder_, uint96 amount_, bytes memory auctionData_) {
-        uint64 bidId = _createBid(bidder_, amount_, auctionData_);
-
-        _bidIds.push(bidId);
-        _;
-    }
-
     // ============ Tests ============
 
     function test_invalidLotId_reverts() external {
@@ -315,6 +312,7 @@ contract ClaimBidsTest is AuctionHouseTest {
         givenLotHasStarted
         givenReferrerFeeIsSet
         givenProtocolFeeIsSet
+        givenBalancesAreSet
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
@@ -351,6 +349,7 @@ contract ClaimBidsTest is AuctionHouseTest {
         givenLotHasStarted
         givenReferrerFeeIsSet
         givenProtocolFeeIsSet
+        givenBalancesAreSet
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
@@ -387,6 +386,7 @@ contract ClaimBidsTest is AuctionHouseTest {
         givenLotHasStarted
         givenReferrerFeeIsSet
         givenProtocolFeeIsSet
+        givenBalancesAreSet
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
@@ -421,6 +421,7 @@ contract ClaimBidsTest is AuctionHouseTest {
         givenLotHasStarted
         givenReferrerFeeIsSet
         givenProtocolFeeIsSet
+        givenBalancesAreSet
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
@@ -459,6 +460,7 @@ contract ClaimBidsTest is AuctionHouseTest {
         givenLotHasStarted
         givenReferrerFeeIsSet
         givenProtocolFeeIsSet
+        givenBalancesAreSet
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
@@ -497,6 +499,7 @@ contract ClaimBidsTest is AuctionHouseTest {
         givenLotHasStarted
         givenReferrerFeeIsSet
         givenProtocolFeeIsSet
+        givenBalancesAreSet
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
@@ -543,6 +546,7 @@ contract ClaimBidsTest is AuctionHouseTest {
         givenLotHasStarted
         givenReferrerFeeIsSet
         givenProtocolFeeIsSet
+        givenBalancesAreSet
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
@@ -589,6 +593,7 @@ contract ClaimBidsTest is AuctionHouseTest {
         givenLotHasStarted
         givenReferrerFeeIsSet
         givenProtocolFeeIsSet
+        givenBalancesAreSet
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
@@ -633,6 +638,7 @@ contract ClaimBidsTest is AuctionHouseTest {
         givenLotHasStarted
         givenReferrerFeeIsSet
         givenProtocolFeeIsSet
+        givenBalancesAreSet
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
@@ -681,6 +687,7 @@ contract ClaimBidsTest is AuctionHouseTest {
         givenLotHasStarted
         givenReferrerFeeIsSet
         givenProtocolFeeIsSet
+        givenBalancesAreSet
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
@@ -729,6 +736,7 @@ contract ClaimBidsTest is AuctionHouseTest {
         givenLotHasStarted
         givenReferrerFeeIsSet
         givenProtocolFeeIsSet
+        givenBalancesAreSet
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
@@ -775,6 +783,7 @@ contract ClaimBidsTest is AuctionHouseTest {
         givenLotHasStarted
         givenReferrerFeeIsSet
         givenProtocolFeeIsSet
+        givenBalancesAreSet
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
@@ -821,6 +830,7 @@ contract ClaimBidsTest is AuctionHouseTest {
         givenLotHasStarted
         givenReferrerFeeIsSet
         givenProtocolFeeIsSet
+        givenBalancesAreSet
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
@@ -864,6 +874,7 @@ contract ClaimBidsTest is AuctionHouseTest {
         givenLotIsCreated
         givenLotHasStarted
         givenReferrerFeeIsSet
+        givenBalancesAreSet
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
@@ -909,6 +920,7 @@ contract ClaimBidsTest is AuctionHouseTest {
         givenLotIsCreated
         givenLotHasStarted
         givenReferrerFeeIsSet
+        givenBalancesAreSet
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
@@ -954,6 +966,7 @@ contract ClaimBidsTest is AuctionHouseTest {
         givenLotIsCreated
         givenLotHasStarted
         givenReferrerFeeIsSet
+        givenBalancesAreSet
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
@@ -997,6 +1010,7 @@ contract ClaimBidsTest is AuctionHouseTest {
         givenLotIsCreated
         givenLotHasStarted
         givenProtocolFeeIsSet
+        givenBalancesAreSet
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
@@ -1042,6 +1056,7 @@ contract ClaimBidsTest is AuctionHouseTest {
         givenLotIsCreated
         givenLotHasStarted
         givenProtocolFeeIsSet
+        givenBalancesAreSet
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
@@ -1087,6 +1102,7 @@ contract ClaimBidsTest is AuctionHouseTest {
         givenLotIsCreated
         givenLotHasStarted
         givenProtocolFeeIsSet
+        givenBalancesAreSet
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
@@ -1129,6 +1145,7 @@ contract ClaimBidsTest is AuctionHouseTest {
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenLotIsCreated
         givenLotHasStarted
+        givenBalancesAreSet
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
@@ -1173,6 +1190,7 @@ contract ClaimBidsTest is AuctionHouseTest {
         givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenLotIsCreated
         givenLotHasStarted
+        givenBalancesAreSet
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
@@ -1217,6 +1235,7 @@ contract ClaimBidsTest is AuctionHouseTest {
         givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenLotIsCreated
         givenLotHasStarted
+        givenBalancesAreSet
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
@@ -1259,6 +1278,7 @@ contract ClaimBidsTest is AuctionHouseTest {
         givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenLotIsCreated
         givenLotHasStarted
+        givenBalancesAreSet
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")

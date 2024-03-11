@@ -15,7 +15,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
 
     // ========== ERRORS ========== //
     error Auction_InvalidKey();
-    error Auction_WrongState(uint96 lotId);
+    error Auction_WrongState(uint96 lotId); // TODO shift into Auction?
     error Bid_WrongState(uint96 lotId, uint64 bidId);
     error NotPermitted(address caller);
 
@@ -212,8 +212,8 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         // Batch auctions cannot be cancelled once started, otherwise the seller could cancel the auction after bids have been submitted
         _revertIfLotActive(lotId_);
 
-        // Set auction status to settled so that bids can be refunded
-        auctionData[lotId_].status = Auction.Status.Settled;
+        // Set auction status to claimed so that bids can be refunded
+        auctionData[lotId_].status = Auction.Status.Claimed;
     }
 
     // ========== BID ========== //
@@ -313,7 +313,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         return uint256(bids[lotId_][bidId_].amount);
     }
 
-    /// @inheritdoc AuctionModule
+    /// @notice     Claims a bid and calculates the paid and payout amounts
     /// @dev        This function performs the following:
     ///             - Validates inputs
     ///             - Marks the bid as claimed
@@ -328,7 +328,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
     function _claimBid(
         uint96 lotId_,
         uint64 bidId_
-    ) internal override returns (BidClaim memory bidClaim, bytes memory auctionOutput_) {
+    ) internal returns (BidClaim memory bidClaim, bytes memory auctionOutput_) {
         // Load bid data
         Bid storage bidData = bids[lotId_][bidId_];
 
@@ -346,14 +346,14 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
             : Math.mulDivUp(uint256(bidData.amount), baseScale, uint256(bidData.minAmountOut));
 
         // If the bid price is greater than the marginal price, the bid is filled.
-        // If the bid price is equal to the marginal price and the bid was submitted after (due to queue ordering) or is the marginal bid, the bid is filled.
+        // If the bid price is equal to the marginal price and the bid was submitted before or is the marginal bid, the bid is filled.
         // Auctions that do not meet capacity or price thresholds to settle will have their marginal price set at the maximum uint96
         // Therefore, all bids will be refunded.
         // We handle the only potential marginal fill during settlement. All other bids are either completely filled or refunded.
         uint256 marginalPrice = uint256(auctionData[lotId_].marginalPrice);
         if (
             price > marginalPrice
-                || (price == marginalPrice && bidId_ >= auctionData[lotId_].marginalBidId)
+                || (price == marginalPrice && bidId_ <= auctionData[lotId_].marginalBidId)
         ) {
             // Payout is calculated using the marginal price of the auction
             bidClaim.paid = uint256(bidData.amount);
@@ -820,15 +820,27 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         return (settlement_, auctionOutput_);
     }
 
+    /// @inheritdoc AuctionModule
+    function _claimProceeds(uint96 lotId_)
+        internal
+        override
+        returns (uint256 purchased, uint256 sold, uint256 payoutSent)
+    {
+        // Update the status
+        auctionData[lotId_].status = Auction.Status.Claimed;
+
+        // Get the lot data
+        Lot memory lot = lotData[lotId_];
+
+        // Return the required data
+        return (lot.purchased, lot.sold, lot.partialPayout);
+    }
+
     // ========== AUCTION INFORMATION ========== //
 
     // ========== VALIDATION ========== //
 
-    /// @notice     Checks that the lot represented by `lotId_` is active
-    /// @dev        Should revert if the lot is active
-    ///             Inheriting contracts can override this to implement custom logic
-    ///
-    /// @param      lotId_  The lot ID
+    /// @inheritdoc AuctionModule
     function _revertIfLotActive(uint96 lotId_) internal view override {
         if (
             auctionData[lotId_].status == Auction.Status.Created
@@ -837,11 +849,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         ) revert Auction_WrongState(lotId_);
     }
 
-    /// @notice     Checks that the lot represented by `lotId_` is not settled
-    /// @dev        Should revert if the lot is settled
-    ///             Inheriting contracts must override this to implement custom logic
-    ///
-    /// @param      lotId_  The lot ID
+    /// @inheritdoc AuctionModule
     function _revertIfLotSettled(uint96 lotId_) internal view override {
         // Auction must not be settled
         if (auctionData[lotId_].status == Auction.Status.Settled) {
@@ -849,11 +857,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         }
     }
 
-    /// @notice     Checks that the lot represented by `lotId_` is settled
-    /// @dev        Should revert if the lot is not settled
-    ///             Inheriting contracts must override this to implement custom logic
-    ///
-    /// @param      lotId_  The lot ID
+    /// @inheritdoc AuctionModule
     function _revertIfLotNotSettled(uint96 lotId_) internal view override {
         // Auction must be settled
         if (auctionData[lotId_].status != Auction.Status.Settled) {
@@ -861,12 +865,15 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         }
     }
 
-    /// @notice     Checks that the lot and bid combination is valid
-    /// @dev        Should revert if the bid is invalid
-    ///             Inheriting contracts must override this to implement custom logic
-    ///
-    /// @param      lotId_  The lot ID
-    /// @param      bidId_  The bid ID
+    /// @inheritdoc AuctionModule
+    function _revertIfLotProceedsClaimed(uint96 lotId_) internal view override {
+        // Auction must not have proceeds claimed
+        if (auctionData[lotId_].status == Auction.Status.Claimed) {
+            revert Auction_WrongState(lotId_);
+        }
+    }
+
+    /// @inheritdoc AuctionModule
     function _revertIfBidInvalid(uint96 lotId_, uint64 bidId_) internal view override {
         // Bid ID must be less than number of bids for lot
         if (bidId_ >= auctionData[lotId_].nextBidId) revert Auction_InvalidBidId(lotId_, bidId_);
@@ -875,13 +882,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         if (bids[lotId_][bidId_].bidder == address(0)) revert Auction_InvalidBidId(lotId_, bidId_);
     }
 
-    /// @notice     Checks that `caller_` is the bid owner
-    /// @dev        Should revert if `caller_` is not the bid owner
-    ///             Inheriting contracts must override this to implement custom logic
-    ///
-    /// @param      lotId_      The lot ID
-    /// @param      bidId_      The bid ID
-    /// @param      caller_     The caller
+    /// @inheritdoc AuctionModule
     function _revertIfNotBidOwner(
         uint96 lotId_,
         uint64 bidId_,
@@ -891,12 +892,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         if (caller_ != bids[lotId_][bidId_].bidder) revert NotPermitted(caller_);
     }
 
-    /// @notice     Checks that the bid is not refunded/claimed already
-    /// @dev        Should revert if the bid is claimed
-    ///             Inheriting contracts must override this to implement custom logic
-    ///
-    /// @param      lotId_      The lot ID
-    /// @param      bidId_      The bid ID
+    /// @inheritdoc AuctionModule
     function _revertIfBidClaimed(uint96 lotId_, uint64 bidId_) internal view override {
         // Bid must not be refunded or claimed (same status)
         if (bids[lotId_][bidId_].status == BidStatus.Claimed) {

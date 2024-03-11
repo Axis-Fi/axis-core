@@ -86,6 +86,7 @@ abstract contract AuctionHouseTest is Test, Permit2User {
     // Outputs
     uint96 internal _lotId = type(uint96).max; // Set to max to ensure it's not a valid lot id
     uint64 internal _bidId = type(uint64).max; // Set to max to ensure it's not a valid bid id
+    uint64[] internal _bidIds;
 
     function setUp() public {
         // Set block timestamp
@@ -94,7 +95,7 @@ abstract contract AuctionHouseTest is Test, Permit2User {
         _baseToken = new MockFeeOnTransferERC20("Base Token", "BASE", 18);
         _quoteToken = new MockFeeOnTransferERC20("Quote Token", "QUOTE", 18);
 
-        _auctionHouse = new AuctionHouse(address(this), _PROTOCOL, _PERMIT2_ADDRESS);
+        _auctionHouse = new AuctionHouse(address(this), _PROTOCOL, _permit2Address);
         _catalogue = new Catalogue(address(_auctionHouse));
 
         _atomicAuctionModule = new MockAtomicAuctionModule(address(_auctionHouse));
@@ -255,6 +256,12 @@ abstract contract AuctionHouseTest is Test, Permit2User {
         _;
     }
 
+    modifier givenLotIsSettled() {
+        vm.prank(_SELLER);
+        _auctionHouse.settle(_lotId);
+        _;
+    }
+
     modifier givenLotHasAllowlist() {
         _routingParams.allowlist = _allowlist;
         _;
@@ -274,7 +281,7 @@ abstract contract AuctionHouseTest is Test, Permit2User {
     modifier whenPermit2ApprovalIsProvided(uint256 amount_) {
         // Approve the Permit2 contract to spend the quote token
         vm.prank(_bidder);
-        _quoteToken.approve(_PERMIT2_ADDRESS, type(uint256).max);
+        _quoteToken.approve(_permit2Address, type(uint256).max);
 
         // Set up the Permit2 approval
         uint48 deadline = uint48(block.timestamp);
@@ -352,7 +359,16 @@ abstract contract AuctionHouseTest is Test, Permit2User {
     }
 
     modifier givenBid(uint96 amount_, bytes memory auctionData_) {
-        _createBid(amount_, auctionData_);
+        uint64 bidId = _createBid(amount_, auctionData_);
+
+        _bidIds.push(bidId);
+        _;
+    }
+
+    modifier givenBidCreated(address bidder_, uint96 amount_, bytes memory auctionData_) {
+        uint64 bidId = _createBid(bidder_, amount_, auctionData_);
+
+        _bidIds.push(bidId);
         _;
     }
 
@@ -449,6 +465,17 @@ abstract contract AuctionHouseTest is Test, Permit2User {
         _;
     }
 
+    modifier givenBatchAuctionRequiresPrefunding() {
+        _batchAuctionModule.setRequiredPrefunding(true);
+        _;
+    }
+
+    modifier givenLotProceedsAreClaimed() {
+        vm.prank(_SELLER);
+        _auctionHouse.claimProceeds(_lotId);
+        _;
+    }
+
     // ===== Helpers ===== //
 
     function _getLotRouting(uint96 lotId_) internal view returns (Auctioneer.Routing memory) {
@@ -475,7 +502,7 @@ abstract contract AuctionHouseTest is Test, Permit2User {
             derivativeReference: derivativeReference_,
             derivativeParams: derivativeParams_,
             wrapDerivative: wrapDerivative_,
-            prefunding: prefunding_
+            funding: prefunding_
         });
     }
 
@@ -498,26 +525,6 @@ abstract contract AuctionHouseTest is Test, Permit2User {
     }
 
     function _getLotData(uint96 lotId_) internal view returns (Auction.Lot memory) {
-        (
-            uint48 start_,
-            uint48 conclusion_,
-            uint8 quoteTokenDecimals_,
-            uint8 baseTokenDecimals_,
-            bool capacityInQuote_,
-            uint96 capacity_,
-            uint96 sold_,
-            uint96 purchased_
-        ) = _auctionModule.lotData(lotId_);
-
-        return Auction.Lot({
-            start: start_,
-            conclusion: conclusion_,
-            quoteTokenDecimals: quoteTokenDecimals_,
-            baseTokenDecimals: baseTokenDecimals_,
-            capacityInQuote: capacityInQuote_,
-            capacity: capacity_,
-            sold: sold_,
-            purchased: purchased_
-        });
+        return _auctionModule.getLot(lotId_);
     }
 }
