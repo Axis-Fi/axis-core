@@ -571,7 +571,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
     /// @param          baseScale_      The scaling factor for the base token
     /// @return         bidId           The ID of the bid
     /// @return         amountIn        The amount in of the bid (in quote token units)
-    /// @return         price           The price of the bid (in quote token units)
+    /// @return         price           The price of the bid (in quote token units), or 0 if it could not be determined
     function _getNextBid(
         Queue storage queue_,
         uint256 baseScale_
@@ -581,6 +581,13 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         // Load bid info (in quote token units)
         QueueBid memory qBid = queue_.delMax();
         amountIn = uint256(qBid.amountIn);
+        uint256 minAmountOut = uint256(qBid.minAmountOut);
+
+        // A zero minAmountOut value should be filtered out during decryption. However, cover the case here to avoid a potential division by zero error that would brick settlement.
+        if (minAmountOut == 0) {
+            // A zero price would be filtered out being below the minimum price
+            return (bidId, amountIn, 0);
+        }
 
         // Calculate the price of the bid
         // Cannot overflow on cast back to uint96. It was checked during decryption.
@@ -619,6 +626,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
                 (uint64 bidId, uint256 amountIn, uint96 price) = _getNextBid(queue, baseScale);
 
                 // If the price is below the minimum price, then determine a marginal price from the previous bids with the knowledge that no other bids will be considered
+                // This will also handle a zero price returned from `_getNextBid()`, since `minPrice` is always greater than zero
                 if (price < lotAuctionData.minPrice) {
                     // We know that the lastPrice was not sufficient to fill capacity or the loop would have exited
                     // We check if minimum price can result in a fill. If so, find the exact marginal price between last price and minimum price
