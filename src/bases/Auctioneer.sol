@@ -47,7 +47,17 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
     /// @param          auctionRef  Auction module, represented by its Veecode
     /// @param          infoHash    IPFS hash of the auction information
     event AuctionCreated(uint96 indexed lotId, Veecode indexed auctionRef, string infoHash);
+
+    /// @notice         Emitted when an auction lot is cancelled
+    ///
+    /// @param          lotId       ID of the auction lot
+    /// @param          auctionRef  Auction module, represented by its Veecode
     event AuctionCancelled(uint96 indexed lotId, Veecode indexed auctionRef);
+
+    /// @notice         Emitted when a curator accepts curation of an auction lot
+    ///
+    /// @param          lotId       ID of the auction lot
+    /// @param          curator     Address of the curator
     event Curated(uint96 indexed lotId, address indexed curator);
 
     // ========= DATA STRUCTURES ========== //
@@ -216,7 +226,6 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
             // Load derivative module, this checks that it is installed.
             DerivativeModule derivativeModule =
                 DerivativeModule(_getLatestModuleIfActive(routing_.derivativeType));
-            Veecode derivativeRef = derivativeModule.VEECODE();
 
             // Check that the module for the derivative type is valid
             if (derivativeModule.TYPE() != Module.Type.Derivative) {
@@ -229,7 +238,7 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
             }
 
             // Store derivative information
-            routing.derivativeReference = derivativeRef;
+            routing.derivativeReference = derivativeModule.VEECODE();
             routing.derivativeParams = routing_.derivativeParams;
         }
 
@@ -340,7 +349,7 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
             uint256 funding = routing.funding;
 
             // Set to 0 before transfer to avoid re-entrancy
-            lotRouting[lotId_].funding = 0;
+            routing.funding = 0;
 
             // Transfer payout tokens to the seller
             Transfer.transfer(routing.baseToken, routing.seller, funding, false);
