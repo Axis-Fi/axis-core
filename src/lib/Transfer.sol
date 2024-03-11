@@ -12,7 +12,6 @@ library Transfer {
 
     // ============ Data Structures ============ //
 
-    // TODO move Permit2Approval into here
     /// @notice     Parameters used for Permit2 approvals
     struct Permit2Approval {
         uint48 deadline;

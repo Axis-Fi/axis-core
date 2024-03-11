@@ -231,24 +231,26 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
         }
 
         // Calculate quote fees for purchase
-        // TODO this enables protocol and referrer fees to be changed between purchases
+        // Note: this enables protocol and referrer fees to be changed between purchases
         uint256 amountLessFees;
         {
             Keycode auctionKeycode = keycodeFromVeecode(routing.auctionReference);
-            amountLessFees = params_.amount
-                - _allocateQuoteFees(
-                    fees[auctionKeycode].protocol,
-                    fees[auctionKeycode].referrer,
-                    params_.referrer,
-                    routing.seller,
-                    routing.quoteToken,
-                    params_.amount
-                );
+            uint256 totalFees = _allocateQuoteFees(
+                fees[auctionKeycode].protocol,
+                fees[auctionKeycode].referrer,
+                params_.referrer,
+                routing.seller,
+                routing.quoteToken,
+                params_.amount
+            );
+            unchecked {
+                amountLessFees = params_.amount - totalFees;
+            }
         }
 
         // Send purchase to auction house and get payout plus any extra output
         bytes memory auctionOutput;
-        (payoutAmount, auctionOutput) = getModuleForId(params_.lotId).purchase(
+        (payoutAmount, auctionOutput) = _getModuleForId(params_.lotId).purchase(
             params_.lotId, uint96(amountLessFees), params_.auctionData
         );
 
@@ -282,7 +284,7 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
         // Decrease the funding amount (if applicable)
         if (routing.funding > 0) {
             unchecked {
-                routing.funding -= payoutAmount;
+                routing.funding -= payoutAmount + curatorFeePayout;
             }
         }
 
@@ -291,13 +293,6 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
 
         // Send curator fee to curator
         if (curatorFeePayout > 0) {
-            // Decrease the funding amount
-            if (routing.funding > 0) {
-                unchecked {
-                    routing.funding -= curatorFeePayout;
-                }
-            }
-
             _sendPayout(params_.lotId, feeData.curator, curatorFeePayout, routing, auctionOutput);
         }
 
@@ -327,7 +322,7 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
 
         // Record the bid on the auction module
         // The module will determine if the bid is valid - minimum bid size, minimum price, auction status, etc
-        bidId = getModuleForId(params_.lotId).bid(
+        bidId = _getModuleForId(params_.lotId).bid(
             params_.lotId, msg.sender, params_.referrer, params_.amount, params_.auctionData
         );
 
@@ -356,7 +351,7 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
 
         // Refund the bid on the auction module
         // The auction module is responsible for validating the bid and authorizing the caller
-        uint256 refundAmount = getModuleForId(lotId_).refundBid(lotId_, bidId_, msg.sender);
+        uint256 refundAmount = _getModuleForId(lotId_).refundBid(lotId_, bidId_, msg.sender);
 
         // Transfer the quote token to the bidder
         // The ownership of the bid has already been verified by the auction module
@@ -377,7 +372,7 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
         // Claim the bids on the auction module
         // The auction module is responsible for validating the bid and authorizing the caller
         (Auction.BidClaim[] memory bidClaims, bytes memory auctionOutput) =
-            getModuleForId(lotId_).claimBids(lotId_, bidIds_);
+            _getModuleForId(lotId_).claimBids(lotId_, bidIds_);
 
         // Load routing data for the lot
         Routing memory routing = lotRouting[lotId_];
@@ -442,16 +437,13 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
 
         // Settle the lot on the auction module and get the winning bids
         // Reverts if the auction cannot be settled yet
-        AuctionModule module = getModuleForId(lotId_);
+        AuctionModule module = _getModuleForId(lotId_);
 
         // Store the capacity before settling
         uint256 capacity = module.remainingCapacity(lotId_);
 
         // Settle the auction
         (Auction.Settlement memory settlement, bytes memory auctionOutput) = module.settle(lotId_);
-
-        // Load routing data for the lot
-        Routing storage routing = lotRouting[lotId_];
 
         // Check if the auction settled
         // If so, calculate fees, handle partial bid, transfer proceeds + (possible) refund to seller, and curator fee
@@ -460,6 +452,9 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
 
             // Load curator data and calculate fee (excluding any refunds of capacity)
             FeeData storage feeData = lotFees[lotId_];
+
+            // Load routing data for the lot
+            Routing storage routing = lotRouting[lotId_];
 
             // Store the protocol and referrer fees
             // If this is not done, the amount that the seller receives could be modified after settlement
@@ -476,7 +471,7 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
             // Any unutilised capacity and fees can be claimed in `claimProceeds()`
             if (routing.funding == 0) {
                 routing.funding = capacity + curatorFeePayout;
-                _collectPayout(lotId_, settlement.totalIn, capacity + curatorFeePayout, routing);
+                _collectPayout(lotId_, totalIn, routing.funding, routing);
             }
 
             // Check if there was a partial fill and handle the payout + refund
@@ -517,7 +512,10 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
 
             // If the lot is under capacity, adjust the curator payout
             if (settlement.totalOut < capacity && curatorFeePayout > 0) {
-                uint256 capacityRefund = capacity - settlement.totalOut;
+                uint256 capacityRefund;
+                unchecked {
+                    capacityRefund = capacity - settlement.totalOut;
+                }
 
                 uint256 feeRefund = Math.mulDivDown(curatorFeePayout, capacityRefund, capacity);
                 // Can't be more than curatorFeePayout
@@ -555,7 +553,7 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
         _isLotValid(lotId_);
 
         // Call auction module to validate and update data
-        AuctionModule module = getModuleForId(lotId_);
+        AuctionModule module = _getModuleForId(lotId_);
         (uint256 purchased_, uint256 sold_, uint256 payoutSent_) = module.claimProceeds(lotId_);
 
         // Load data for the lot
@@ -569,7 +567,9 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
             (, uint256 toProtocol) = calculateQuoteFees(
                 lotFees[lotId_].protocolFee, lotFees[lotId_].referrerFee, false, purchased_
             );
-            totalInLessFees = purchased_ - toProtocol;
+            unchecked {
+                totalInLessFees = purchased_ - toProtocol;
+            }
         }
 
         // TODO implement hooks
@@ -580,7 +580,9 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
         // Refund any unused capacity and curator fees to the seller
         // By this stage, a partial payout (if applicable) and curator fees have been paid, leaving only the payout amount (`totalOut`) remaining.
         uint256 prefundingRefund = routing.funding + payoutSent_ - sold_;
-        routing.funding -= prefundingRefund;
+        unchecked {
+            routing.funding -= prefundingRefund;
+        }
         Transfer.transfer(routing.baseToken, routing.seller, prefundingRefund, false);
     }
 
@@ -605,12 +607,11 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
         // Check that the caller is the proposed curator
         if (msg.sender != feeData.curator) revert NotPermitted(msg.sender);
 
-        // Check that the curator has not already approved the auction
-        if (feeData.curated) revert InvalidState();
+        AuctionModule module = _getModuleForId(lotId_);
 
+        // Check that the curator has not already approved the auction
         // Check that the auction has not ended or been cancelled
-        AuctionModule module = getModuleForId(lotId_);
-        if (module.hasEnded(lotId_) == true) revert InvalidState();
+        if (feeData.curated || module.hasEnded(lotId_) == true) revert InvalidState();
 
         Routing storage routing = lotRouting[lotId_];
 
