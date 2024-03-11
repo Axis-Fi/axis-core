@@ -303,7 +303,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         return uint256(bids[lotId_][bidId_].amount);
     }
 
-    /// @inheritdoc AuctionModule
+    /// @notice     Claims a bid and calculates the paid and payout amounts
     /// @dev        This function performs the following:
     ///             - Validates inputs
     ///             - Marks the bid as claimed
@@ -318,7 +318,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
     function _claimBid(
         uint96 lotId_,
         uint64 bidId_
-    ) internal override returns (BidClaim memory bidClaim, bytes memory auctionOutput_) {
+    ) internal returns (BidClaim memory bidClaim, bytes memory auctionOutput_) {
         // Load bid data
         Bid storage bidData = bids[lotId_][bidId_];
 

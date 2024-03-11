@@ -96,21 +96,11 @@ abstract contract Router {
     /// @param      bidId_          Bid ID
     function refundBid(uint96 lotId_, uint64 bidId_) external virtual;
 
-    /// @notice     Claim bid payout and/or refund after a batch auction has settled
-    /// @dev        The implementing function must perform the following:
-    ///             1. Validate the lot ID
-    ///             2. Pass the request to the auction module to validate and update bid data
-    ///             3. Send the refund and/or payout to the bidder
-    ///
-    /// @param      lotId_          Lot ID
-    /// @param      bidId_          Bid ID
-    function claimBid(uint96 lotId_, uint64 bidId_) external virtual;
-
     /// @notice     Claim bid payouts and/or refunds after a batch auction has settled
     /// @dev        The implementing function must perform the following:
     ///             1. Validate the lot ID
     ///             2. Pass the request to the auction module to validate and update bid data
-    ///             3. Send the refund and/or payout to the bidder
+    ///             3. Send the refund and/or payout to the bidders
     ///
     /// @param      lotId_          Lot ID
     /// @param      bidIds_         Bid IDs
@@ -381,49 +371,8 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
     /// @inheritdoc Router
     /// @dev        This function reverts if:
     ///             - the lot ID is invalid
-    ///             - the auction module reverts when claiming the bid
+    ///             - the auction module reverts when claiming the bids
     ///             - re-entrancy is detected
-    function claimBid(uint96 lotId_, uint64 bidId_) external override nonReentrant {
-        _isLotValid(lotId_);
-
-        // Claim the bid on the auction module
-        // The auction module is responsible for validating the bid and authorizing the caller
-        (Auction.BidClaim memory bidClaim, bytes memory auctionOutput) =
-            getModuleForId(lotId_).claimBid(lotId_, bidId_, msg.sender);
-
-        // Load routing data for the lot
-        Routing storage routing = lotRouting[lotId_];
-
-        // If payout is greater than zero, then the bid was filled.
-        // Otherwise, it was not and the bidder is refunded the paid amount.
-        if (bidClaim.payout > 0) {
-            // Load fee data
-            FeeData storage feeData = lotFees[lotId_];
-
-            // Allocate quote and protocol fees for bid
-            _allocateQuoteFees(
-                feeData.protocolFee,
-                feeData.referrerFee,
-                bidClaim.referrer,
-                routing.seller,
-                routing.quoteToken,
-                bidClaim.paid
-            );
-
-            // Reduce funding by the payout amount
-            unchecked {
-                routing.funding -= bidClaim.payout;
-            }
-
-            // Send the payout to the bidder
-            _sendPayout(lotId_, bidClaim.bidder, bidClaim.payout, routing, auctionOutput);
-        } else {
-            // Refund the paid amount to the bidder
-            Transfer.transfer(routing.quoteToken, bidClaim.bidder, bidClaim.paid, false);
-        }
-    }
-
-    /// @inheritdoc Router
     function claimBids(uint96 lotId_, uint64[] calldata bidIds_) external override nonReentrant {
         _isLotValid(lotId_);
 
