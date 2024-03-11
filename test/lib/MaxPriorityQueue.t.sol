@@ -89,8 +89,8 @@ contract EmpaMaxPriorityQueueTest is Test {
     function test_addBidSamePrice() external {
         _queue.initialize();
 
-        _queue.insert(0, 2, 1);
-        _queue.insert(1, 4, 2);
+        _queue.insert(1, 2, 1);
+        _queue.insert(2, 4, 2);
 
         // Check values
         assertEq(_queue.getNumBids(), 2);
@@ -99,12 +99,12 @@ contract EmpaMaxPriorityQueueTest is Test {
         uint64 maxId = _queue.getMaxId();
         assertEq(maxId, 1);
         Bid memory maxBid = _queue.delMax();
-        assertEq(maxBid.amountIn, 4);
+        assertEq(maxBid.amountIn, 2);
 
         maxId = _queue.getMaxId();
-        assertEq(maxId, 0);
+        assertEq(maxId, 2);
         maxBid = _queue.delMax();
-        assertEq(maxBid.amountIn, 2);
+        assertEq(maxBid.amountIn, 4);
 
         assertEq(_queue.isEmpty(), true);
     }
@@ -112,8 +112,8 @@ contract EmpaMaxPriorityQueueTest is Test {
     function test_addBidSamePrice_reverse() external {
         _queue.initialize();
 
-        _queue.insert(0, 4, 2);
-        _queue.insert(1, 2, 1);
+        _queue.insert(1, 4, 2);
+        _queue.insert(2, 2, 1);
 
         // Check values
         assertEq(_queue.getNumBids(), 2);
@@ -122,12 +122,12 @@ contract EmpaMaxPriorityQueueTest is Test {
         uint64 maxId = _queue.getMaxId();
         assertEq(maxId, 1);
         Bid memory maxBid = _queue.delMax();
-        assertEq(maxBid.amountIn, 2);
+        assertEq(maxBid.amountIn, 4);
 
         maxId = _queue.getMaxId();
-        assertEq(maxId, 0);
+        assertEq(maxId, 2);
         maxBid = _queue.delMax();
-        assertEq(maxBid.amountIn, 4);
+        assertEq(maxBid.amountIn, 2);
 
         assertEq(_queue.isEmpty(), true);
     }

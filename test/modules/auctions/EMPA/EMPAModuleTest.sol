@@ -372,6 +372,7 @@ abstract contract EmpaModuleTest is Test, Permit2User {
             uint96 minFilled_,
             uint96 minBidSize_,
             Auction.Status status_,
+            uint64 marginalBidId_,
             Point memory publicKey_,
             uint256 privateKey_
         ) = _module.auctionData(lotId_);
@@ -384,6 +385,7 @@ abstract contract EmpaModuleTest is Test, Permit2User {
             minFilled: minFilled_,
             minBidSize: minBidSize_,
             status: status_,
+            marginalBidId: marginalBidId_,
             publicKey: publicKey_,
             privateKey: privateKey_,
             bidIds: new uint64[](0)
