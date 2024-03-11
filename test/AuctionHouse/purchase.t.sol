@@ -1399,6 +1399,36 @@ contract PurchaseTest is AuctionHouseTest {
         _assertPrefunding();
     }
 
+    function test_givenCuratorHasApproved_givenCuratorFeeNotSet()
+        external
+        whenAuctionTypeIsAtomic
+        whenAtomicAuctionModuleIsInstalled
+        givenCuratorIsSet
+        givenLotIsCreated
+        givenLotHasStarted
+        givenProtocolFeeIsSet
+        givenReferrerFeeIsSet
+        givenCuratorMaxFeeIsSet
+        givenCuratorHasApproved
+        givenUserHasQuoteTokenBalance(_AMOUNT_IN)
+        givenUserHasQuoteTokenAllowance(_AMOUNT_IN)
+        givenFeesAreCalculated(_AMOUNT_IN)
+        whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
+        givenSellerHasBaseTokenBalance(_amountOut)
+        givenSellerHasBaseTokenAllowance(_amountOut)
+        givenBalancesAreCalculated(_AMOUNT_IN, _amountOut)
+    {
+        // Purchase
+        _createPurchase(_AMOUNT_IN, _amountOut, _purchaseAuctionData);
+
+        // Check state
+        _assertQuoteTokenBalances();
+        _assertBaseTokenBalances();
+        _assertDerivativeTokenBalances();
+        _assertAccruedFees();
+        _assertPrefunding();
+    }
+
     function test_givenCuratorHasApproved_givenCuratorFeeIsChanged()
         external
         whenAuctionTypeIsAtomic

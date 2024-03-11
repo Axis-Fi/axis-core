@@ -82,21 +82,21 @@ contract EmpaModuleClaimProceedsTest is EmpaModuleTest {
             _scaleBaseTokenAmount(_BID_PRICE_TWO_AMOUNT_OUT)
         );
 
-        // Marginal price: 2 >= 1 (due to capacity not being reached and the last bid having a price of 2)
+        // Marginal price: 1 (due to capacity not being reached and minimum price being 1)
 
         // Output
-        // Bid one: 2 / 2 = 1 out
-        // Bid two: 2 / 2 = 1 out
-        // Bid three: 2 / 2 = 1 out
-        // Bid four: 2 / 2 = 1 out
+        // Bid one: 2 / 1 = 2 out
+        // Bid two: 2 / 1 = 2 out
+        // Bid three: 2 / 1 = 2 out
+        // Bid four: 2 / 1 = 2 out
 
         uint96 bidAmountInTotal = _scaleQuoteTokenAmount(
             _BID_PRICE_TWO_AMOUNT + _BID_PRICE_TWO_AMOUNT + _BID_PRICE_TWO_AMOUNT
                 + _BID_PRICE_TWO_AMOUNT
         );
         uint96 bidAmountOutTotal = _scaleBaseTokenAmount(
-            _BID_PRICE_TWO_AMOUNT_OUT + _BID_PRICE_TWO_AMOUNT_OUT + _BID_PRICE_TWO_AMOUNT_OUT
-                + _BID_PRICE_TWO_AMOUNT_OUT
+            _BID_PRICE_TWO_AMOUNT + _BID_PRICE_TWO_AMOUNT + _BID_PRICE_TWO_AMOUNT
+                + _BID_PRICE_TWO_AMOUNT
         );
 
         _expectedPurchased = bidAmountInTotal;
