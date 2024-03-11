@@ -281,8 +281,11 @@ abstract contract EmpaModuleTest is Test, Permit2User {
     }
 
     modifier givenBidIsClaimed(uint64 bidId_) {
+        uint64[] memory bidIds = new uint64[](1);
+        bidIds[0] = bidId_;
+
         vm.prank(address(_auctionHouse));
-        _module.claimBid(_lotId, bidId_, _BIDDER);
+        _module.claimBids(_lotId, bidIds);
         _;
     }
 

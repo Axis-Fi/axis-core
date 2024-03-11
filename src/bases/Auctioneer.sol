@@ -47,7 +47,17 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
     /// @param          auctionRef  Auction module, represented by its Veecode
     /// @param          infoHash    IPFS hash of the auction information
     event AuctionCreated(uint96 indexed lotId, Veecode indexed auctionRef, string infoHash);
+
+    /// @notice         Emitted when an auction lot is cancelled
+    ///
+    /// @param          lotId       ID of the auction lot
+    /// @param          auctionRef  Auction module, represented by its Veecode
     event AuctionCancelled(uint96 indexed lotId, Veecode indexed auctionRef);
+
+    /// @notice         Emitted when a curator accepts curation of an auction lot
+    ///
+    /// @param          lotId       ID of the auction lot
+    /// @param          curator     Address of the curator
     event Curated(uint96 indexed lotId, address indexed curator);
 
     // ========= DATA STRUCTURES ========== //
@@ -163,15 +173,8 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
         Auction.AuctionParams calldata params_,
         string calldata infoHash_
     ) external nonReentrant returns (uint96 lotId) {
-        // Load auction type module, this checks that it is installed.
-        // We load it here vs. later to avoid two checks.
-        AuctionModule auctionModule = AuctionModule(_getLatestModuleIfActive(routing_.auctionType));
-
         // Check that the module for the auction type is valid
-        if (auctionModule.TYPE() != Module.Type.Auction) revert InvalidParams();
-
         // Validate routing parameters
-
         if (address(routing_.baseToken) == address(0) || address(routing_.quoteToken) == address(0))
         {
             revert InvalidParams();
@@ -179,14 +182,20 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
 
         bool requiresPrefunding;
         uint256 lotCapacity;
+        Veecode auctionReference;
         {
+            // Load auction type module, this checks that it is installed.
+            // We load it here vs. later to avoid two checks.
+            AuctionModule auctionModule =
+                AuctionModule(_getLatestModuleIfActive(routing_.auctionType));
+
             // Confirm tokens are within the required decimal range
             uint8 baseTokenDecimals = routing_.baseToken.decimals();
             uint8 quoteTokenDecimals = routing_.quoteToken.decimals();
 
             if (
-                baseTokenDecimals < 6 || baseTokenDecimals > 18 || quoteTokenDecimals < 6
-                    || quoteTokenDecimals > 18
+                auctionModule.TYPE() != Module.Type.Auction || baseTokenDecimals < 6
+                    || baseTokenDecimals > 18 || quoteTokenDecimals < 6 || quoteTokenDecimals > 18
             ) revert InvalidParams();
 
             // Increment lot count and get ID
@@ -195,11 +204,12 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
             // Call module auction function to store implementation-specific data
             (requiresPrefunding, lotCapacity) =
                 auctionModule.auction(lotId, params_, quoteTokenDecimals, baseTokenDecimals);
+            auctionReference = auctionModule.VEECODE();
         }
 
         // Store routing information
         Routing storage routing = lotRouting[lotId];
-        routing.auctionReference = auctionModule.VEECODE();
+        routing.auctionReference = auctionReference;
         routing.seller = msg.sender;
         routing.baseToken = routing_.baseToken;
         routing.quoteToken = routing_.quoteToken;
@@ -216,20 +226,18 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
             // Load derivative module, this checks that it is installed.
             DerivativeModule derivativeModule =
                 DerivativeModule(_getLatestModuleIfActive(routing_.derivativeType));
-            Veecode derivativeRef = derivativeModule.VEECODE();
 
             // Check that the module for the derivative type is valid
-            if (derivativeModule.TYPE() != Module.Type.Derivative) {
-                revert InvalidParams();
-            }
-
             // Call module validate function to validate implementation-specific data
-            if (!derivativeModule.validate(address(routing.baseToken), routing_.derivativeParams)) {
+            if (
+                derivativeModule.TYPE() != Module.Type.Derivative
+                    || !derivativeModule.validate(address(routing.baseToken), routing_.derivativeParams)
+            ) {
                 revert InvalidParams();
             }
 
             // Store derivative information
-            routing.derivativeReference = derivativeRef;
+            routing.derivativeReference = derivativeModule.VEECODE();
             routing.derivativeParams = routing_.derivativeParams;
         }
 
@@ -333,14 +341,14 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
         if (msg.sender != routing.seller) revert NotPermitted(msg.sender);
 
         // Cancel the auction on the module
-        getModuleForId(lotId_).cancelAuction(lotId_);
+        _getModuleForId(lotId_).cancelAuction(lotId_);
 
         // If the auction is prefunded and supported, transfer the remaining capacity to the seller
         if (routing.funding > 0) {
             uint256 funding = routing.funding;
 
             // Set to 0 before transfer to avoid re-entrancy
-            lotRouting[lotId_].funding = 0;
+            routing.funding = 0;
 
             // Transfer payout tokens to the seller
             Transfer.transfer(routing.baseToken, routing.seller, funding, false);
@@ -351,17 +359,27 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
 
     // ========== INTERNAL HELPER FUNCTIONS ========== //
 
+    /// @notice         Gets the module for a given lot ID
+    /// @dev            The function assumes:
+    ///                 - The lot ID is valid
+    ///
+    /// @param lotId_   ID of the auction lot
+    /// @return         AuctionModule
+    function _getModuleForId(uint96 lotId_) internal view returns (AuctionModule) {
+        // Load module, will revert if not installed
+        return AuctionModule(_getModuleIfInstalled(lotRouting[lotId_].auctionReference));
+    }
+
     /// @notice     Gets the module for a given lot ID
     /// @dev        The function reverts if:
     ///             - The lot ID is invalid
     ///             - The module for the auction type is not installed
     ///
     /// @param      lotId_      ID of the auction lot
-    function getModuleForId(uint96 lotId_) public view returns (AuctionModule) {
+    function getModuleForId(uint96 lotId_) external view returns (AuctionModule) {
         _isLotValid(lotId_);
 
-        // Load module, will revert if not installed
-        return AuctionModule(_getModuleIfInstalled(lotRouting[lotId_].auctionReference));
+        return _getModuleForId(lotId_);
     }
 
     // ========== GOVERNANCE FUNCTIONS ========== //
@@ -410,7 +428,5 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
     /// @param      lotId_  ID of the auction lot
     function _isLotValid(uint96 lotId_) internal view {
         if (lotId_ >= lotCounter) revert InvalidLotId(lotId_);
-
-        if (lotRouting[lotId_].seller == address(0)) revert InvalidLotId(lotId_);
     }
 }

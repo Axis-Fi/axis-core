@@ -373,7 +373,7 @@ contract PurchaseTest is AuctionHouseTest {
         givenLotHasStarted
     {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(AuctionHouse.InvalidBidder.selector, _bidder);
+        bytes memory err = abi.encodeWithSelector(Auctioneer.NotPermitted.selector, _bidder);
         vm.expectRevert(err);
 
         // Purchase

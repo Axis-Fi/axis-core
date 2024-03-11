@@ -313,7 +313,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         return uint256(bids[lotId_][bidId_].amount);
     }
 
-    /// @inheritdoc AuctionModule
+    /// @notice     Claims a bid and calculates the paid and payout amounts
     /// @dev        This function performs the following:
     ///             - Validates inputs
     ///             - Marks the bid as claimed
@@ -328,7 +328,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
     function _claimBid(
         uint96 lotId_,
         uint64 bidId_
-    ) internal override returns (BidClaim memory bidClaim, bytes memory auctionOutput_) {
+    ) internal returns (BidClaim memory bidClaim, bytes memory auctionOutput_) {
         // Load bid data
         Bid storage bidData = bids[lotId_][bidId_];
 
@@ -346,14 +346,14 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
             : Math.mulDivUp(uint256(bidData.amount), baseScale, uint256(bidData.minAmountOut));
 
         // If the bid price is greater than the marginal price, the bid is filled.
-        // If the bid price is equal to the marginal price and the bid was submitted after (due to queue ordering) or is the marginal bid, the bid is filled.
+        // If the bid price is equal to the marginal price and the bid was submitted before or is the marginal bid, the bid is filled.
         // Auctions that do not meet capacity or price thresholds to settle will have their marginal price set at the maximum uint96
         // Therefore, all bids will be refunded.
         // We handle the only potential marginal fill during settlement. All other bids are either completely filled or refunded.
         uint256 marginalPrice = uint256(auctionData[lotId_].marginalPrice);
         if (
             price > marginalPrice
-                || (price == marginalPrice && bidId_ >= auctionData[lotId_].marginalBidId)
+                || (price == marginalPrice && bidId_ <= auctionData[lotId_].marginalBidId)
         ) {
             // Payout is calculated using the marginal price of the auction
             bidClaim.paid = uint256(bidData.amount);
