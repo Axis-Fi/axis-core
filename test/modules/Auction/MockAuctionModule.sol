@@ -2,7 +2,7 @@
 pragma solidity 0.8.19;
 
 // Modules
-import {Module, Veecode, toKeycode, wrapVeecode} from "src/modules/Modules.sol";
+import {Veecode, toKeycode, wrapVeecode} from "src/modules/Modules.sol";
 
 // Auctions
 import {AuctionModule} from "src/modules/Auction.sol";
@@ -28,58 +28,48 @@ contract MockAuctionModule is AuctionModule {
 
     function _purchase(
         uint96 id_,
-        uint256 amount_,
+        uint96 amount_,
         bytes calldata auctionData_
     ) internal override returns (uint256 payout, bytes memory auctionOutput) {}
 
     function _bid(
         uint96 id_,
         address bidder_,
-        address recipient_,
         address referrer_,
-        uint256 amount_,
+        uint96 amount_,
         bytes calldata auctionData_
-    ) internal override returns (uint96) {}
+    ) internal override returns (uint64) {}
 
-    function payoutFor(
-        uint96 lotId_,
-        uint256 amount_
-    ) public view virtual override returns (uint256) {}
+    function _settle(uint96 lotId_) internal override returns (Settlement memory, bytes memory) {}
 
-    function priceFor(
-        uint96 lotId_,
-        uint256 payout_
-    ) public view virtual override returns (uint256) {}
-
-    function maxPayout(uint96 lotId_) public view virtual override returns (uint256) {}
-
-    function maxAmountAccepted(uint96 lotId_) public view virtual override returns (uint256) {}
-
-    function _settle(uint96 lotId_)
-        internal
-        override
-        returns (Bid[] memory winningBids_, bytes memory auctionOutput_)
-    {}
+    function _claimProceeds(uint96 lotId_) internal override returns (uint256, uint256, uint256) {}
 
     function _refundBid(
         uint96 lotId_,
-        uint96 bidId_,
+        uint64 bidId_,
         address bidder_
     ) internal virtual override returns (uint256) {}
 
-    function _revertIfBidInvalid(uint96 lotId_, uint96 bidId_) internal view virtual override {}
+    function _claimBids(
+        uint96 lotId_,
+        uint64[] calldata bidIds_
+    ) internal virtual override returns (BidClaim[] memory bidClaims, bytes memory auctionOutput) {}
+
+    function _revertIfBidInvalid(uint96 lotId_, uint64 bidId_) internal view virtual override {}
 
     function _revertIfNotBidOwner(
         uint96 lotId_,
-        uint96 bidId_,
+        uint64 bidId_,
         address caller_
     ) internal view virtual override {}
 
-    function _revertIfBidRefunded(uint96 lotId_, uint96 bidId_) internal view virtual override {}
+    function _revertIfBidClaimed(uint96 lotId_, uint64 bidId_) internal view virtual override {}
 
     function _revertIfLotSettled(uint96 lotId_) internal view virtual override {}
 
     function _revertIfLotNotSettled(uint96 lotId_) internal view virtual override {}
+
+    function _revertIfLotProceedsClaimed(uint96 lotId_) internal view virtual override {}
 }
 
 contract MockAuctionModuleV2 is MockAuctionModule {

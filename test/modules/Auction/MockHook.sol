@@ -6,7 +6,6 @@ import {ERC20} from "solmate/tokens/ERC20.sol";
 import {IHooks} from "src/interfaces/IHooks.sol";
 import {Auction} from "src/modules/Auction.sol";
 import {Auctioneer} from "src/bases/Auctioneer.sol";
-import {Keycode, unwrapVeecode} from "src/modules/Modules.sol";
 
 import {SafeTransferLib} from "solmate/utils/SafeTransferLib.sol";
 

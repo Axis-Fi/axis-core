@@ -4,6 +4,7 @@ pragma solidity 0.8.19;
 import {ERC20} from "solmate/tokens/ERC20.sol";
 import {Transfer} from "src/lib/Transfer.sol";
 import {ReentrancyGuard} from "solmate/utils/ReentrancyGuard.sol";
+import {FixedPointMathLib as Math} from "lib/solmate/src/utils/FixedPointMathLib.sol";
 
 import {Keycode} from "src/modules/Modules.sol";
 
@@ -65,37 +66,38 @@ abstract contract FeeManager is ReentrancyGuard {
 
     /// @notice     Calculates and allocates fees that are collected in the quote token
     function calculateQuoteFees(
-        Keycode auctionType_,
+        uint256 protocolFee_,
+        uint256 referrerFee_,
         bool hasReferrer_,
         uint256 amount_
-    ) public view returns (uint256 toReferrer, uint256 toProtocol) {
-        // Load protocol fee for the auction type
-        uint48 protocolFee = fees[auctionType_].protocol;
+    ) public pure returns (uint256 toReferrer, uint256 toProtocol) {
+        uint256 feeDecimals = uint256(_FEE_DECIMALS);
 
         if (hasReferrer_) {
-            // Load referrer fee for the auction type
-            uint48 referrerFee = fees[auctionType_].referrer;
-
             // In this case we need to:
             // 1. Calculate referrer fee
             // 2. Calculate protocol fee as the total expected fee amount minus the referrer fee
             //    to avoid issues with rounding from separate fee calculations
-            toReferrer = (amount_ * referrerFee) / _FEE_DECIMALS;
-            toProtocol = ((amount_ * (protocolFee + referrerFee)) / _FEE_DECIMALS) - toReferrer;
+            toReferrer = Math.mulDivDown(amount_, referrerFee_, feeDecimals);
+            toProtocol =
+                Math.mulDivDown(amount_, protocolFee_ + referrerFee_, feeDecimals) - toReferrer;
         } else {
-            // There is no referrer
-            toProtocol = (amount_ * protocolFee) / _FEE_DECIMALS;
+            // If there is no referrer, the protocol gets the entire fee
+            toProtocol = Math.mulDivDown(amount_, protocolFee_ + referrerFee_, feeDecimals);
         }
     }
 
     /// @notice     Calculates and allocates fees that are collected in the payout token
     function _calculatePayoutFees(
-        Keycode auctionType_,
-        address curator_,
+        bool curated_,
+        uint48 curatorFee_,
         uint256 payout_
-    ) internal view returns (uint256 toCurator) {
+    ) internal pure returns (uint256 toCurator) {
+        // No fees if the auction is not yet curated
+        if (curated_ == false) return 0;
+
         // Calculate curator fee
-        toCurator = (payout_ * fees[auctionType_].curator[curator_]) / _FEE_DECIMALS;
+        toCurator = Math.mulDivDown(payout_, uint256(curatorFee_), uint256(_FEE_DECIMALS));
     }
 
     // ========== FEE MANAGEMENT ========== //

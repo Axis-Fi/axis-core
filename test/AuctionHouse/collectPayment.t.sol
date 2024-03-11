@@ -10,56 +10,51 @@ import {MockFeeOnTransferERC20} from "test/lib/mocks/MockFeeOnTransferERC20.sol"
 import {Permit2Clone} from "test/lib/permit2/Permit2Clone.sol";
 import {Permit2User} from "test/lib/permit2/Permit2User.sol";
 
-import {IPermit2} from "src/lib/permit2/interfaces/IPermit2.sol";
-import {AuctionHouse} from "src/AuctionHouse.sol";
-import {Auctioneer} from "src/bases/Auctioneer.sol";
-import {IHooks} from "src/interfaces/IHooks.sol";
-
 contract CollectPaymentTest is Test, Permit2User {
-    MockAuctionHouse internal auctionHouse;
+    MockAuctionHouse internal _auctionHouse;
 
-    address internal constant PROTOCOL = address(0x1);
+    address internal constant _PROTOCOL = address(0x1);
 
-    uint256 internal userKey;
-    address internal USER;
+    uint256 internal _userKey;
+    address internal _user;
 
     // Function parameters
-    uint96 internal lotId = 1;
-    uint256 internal amount = 10e18;
-    MockFeeOnTransferERC20 internal quoteToken;
-    MockHook internal hook;
-    uint48 internal approvalDeadline = 0;
-    uint256 internal approvalNonce = 0;
-    bytes internal approvalSignature = "";
+    uint96 internal _lotId = 1;
+    uint256 internal _amount = 10e18;
+    MockFeeOnTransferERC20 internal _quoteToken;
+    MockHook internal _hook;
+    uint48 internal _approvalDeadline = 0;
+    uint256 internal _approvalNonce = 0;
+    bytes internal _approvalSignature = "";
 
     function setUp() public {
         // Set reasonable starting block
         vm.warp(1_000_000);
 
-        auctionHouse = new MockAuctionHouse(PROTOCOL, _PERMIT2_ADDRESS);
+        _auctionHouse = new MockAuctionHouse(_PROTOCOL, _permit2Address);
 
-        quoteToken = new MockFeeOnTransferERC20("QUOTE", "QT", 18);
-        quoteToken.setTransferFee(0);
+        _quoteToken = new MockFeeOnTransferERC20("QUOTE", "QT", 18);
+        _quoteToken.setTransferFee(0);
 
-        userKey = _getRandomUint256();
-        USER = vm.addr(userKey);
+        _userKey = _getRandomUint256();
+        _user = vm.addr(_userKey);
     }
 
     modifier givenUserHasBalance(uint256 amount_) {
-        quoteToken.mint(USER, amount_);
+        _quoteToken.mint(_user, amount_);
         _;
     }
 
     modifier givenUserHasApprovedRouter() {
-        // As USER, grant approval to transfer quote tokens to the auctionHouse
-        vm.prank(USER);
-        quoteToken.approve(address(auctionHouse), amount);
+        // As _user, grant approval to transfer quote tokens to the _auctionHouse
+        vm.prank(_user);
+        _quoteToken.approve(address(_auctionHouse), _amount);
         _;
     }
 
     modifier givenTokenTakesFeeOnTransfer() {
         // Configure the token to take a 1% fee
-        quoteToken.setTransferFee(100);
+        _quoteToken.setTransferFee(100);
         _;
     }
 
@@ -73,52 +68,52 @@ contract CollectPaymentTest is Test, Permit2User {
     //  [X] when the Permit2 signature is valid
     //   [X] given the caller has insufficient balance of the quote token
     //    [X] it reverts
-    //   [X] given the received amount is not equal to the transferred amount
+    //   [X] given the received _amount is not equal to the transferred _amount
     //    [X] it reverts
-    //   [X] given the received amount is the same as the transferred amount
-    //    [X] quote tokens are transferred from the caller to the auction owner
+    //   [X] given the received _amount is the same as the transferred _amount
+    //    [X] quote tokens are transferred from the caller to the seller
 
     modifier givenPermit2Approved() {
         // Approve the Permit2 contract to spend the quote token
-        vm.prank(USER);
-        quoteToken.approve(_PERMIT2_ADDRESS, type(uint256).max);
+        vm.prank(_user);
+        _quoteToken.approve(_permit2Address, type(uint256).max);
         _;
     }
 
     modifier whenPermit2ApprovalIsValid() {
         // Assumes approval has been given
 
-        approvalNonce = _getRandomUint256();
-        approvalDeadline = uint48(block.timestamp + 1 days);
-        approvalSignature = _signPermit(
-            address(quoteToken),
-            amount,
-            approvalNonce,
-            approvalDeadline,
-            address(auctionHouse),
-            userKey
+        _approvalNonce = _getRandomUint256();
+        _approvalDeadline = uint48(block.timestamp + 1 days);
+        _approvalSignature = _signPermit(
+            address(_quoteToken),
+            _amount,
+            _approvalNonce,
+            _approvalDeadline,
+            address(_auctionHouse),
+            _userKey
         );
         _;
     }
 
     modifier whenPermit2ApprovalNonceIsUsed() {
         // Assumes that whenPermit2ApprovalIsValid precedes this modifier
-        require(approvalNonce != 0, "approval nonce is 0");
+        require(_approvalNonce != 0, "approval nonce is 0");
 
         // Mint tokens
-        quoteToken.mint(USER, amount);
+        _quoteToken.mint(_user, _amount);
 
         // Consume the nonce
-        vm.prank(USER);
-        auctionHouse.collectPayment(
-            lotId,
-            amount,
-            quoteToken,
-            hook,
+        vm.prank(_user);
+        _auctionHouse.collectPayment(
+            _lotId,
+            _amount,
+            _quoteToken,
+            _hook,
             Transfer.Permit2Approval({
-                deadline: approvalDeadline,
-                nonce: approvalNonce,
-                signature: approvalSignature
+                deadline: _approvalDeadline,
+                nonce: _approvalNonce,
+                signature: _approvalSignature
             })
         );
         _;
@@ -128,75 +123,80 @@ contract CollectPaymentTest is Test, Permit2User {
         // Sign as another user
         uint256 anotherUserKey = _getRandomUint256();
 
-        approvalNonce = _getRandomUint256();
-        approvalDeadline = uint48(block.timestamp + 1 days);
-        approvalSignature = _signPermit(
-            address(quoteToken),
-            amount,
-            approvalNonce,
-            approvalDeadline,
-            address(auctionHouse),
+        _approvalNonce = _getRandomUint256();
+        _approvalDeadline = uint48(block.timestamp + 1 days);
+        _approvalSignature = _signPermit(
+            address(_quoteToken),
+            _amount,
+            _approvalNonce,
+            _approvalDeadline,
+            address(_auctionHouse),
             anotherUserKey
         );
         _;
     }
 
     modifier whenPermit2ApprovalIsOtherSpender() {
-        approvalNonce = _getRandomUint256();
-        approvalDeadline = uint48(block.timestamp + 1 days);
-        approvalSignature = _signPermit(
-            address(quoteToken), amount, approvalNonce, approvalDeadline, address(PROTOCOL), userKey
+        _approvalNonce = _getRandomUint256();
+        _approvalDeadline = uint48(block.timestamp + 1 days);
+        _approvalSignature = _signPermit(
+            address(_quoteToken),
+            _amount,
+            _approvalNonce,
+            _approvalDeadline,
+            address(_PROTOCOL),
+            _userKey
         );
         _;
     }
 
     modifier whenPermit2ApprovalIsInvalid() {
-        approvalNonce = _getRandomUint256();
-        approvalDeadline = uint48(block.timestamp + 1 days);
-        approvalSignature = "JUNK";
+        _approvalNonce = _getRandomUint256();
+        _approvalDeadline = uint48(block.timestamp + 1 days);
+        _approvalSignature = "JUNK";
         _;
     }
 
     modifier whenPermit2ApprovalIsExpired() {
-        approvalNonce = _getRandomUint256();
-        approvalDeadline = uint48(block.timestamp - 1 days);
-        approvalSignature = _signPermit(
-            address(quoteToken),
-            amount,
-            approvalNonce,
-            approvalDeadline,
-            address(auctionHouse),
-            userKey
+        _approvalNonce = _getRandomUint256();
+        _approvalDeadline = uint48(block.timestamp - 1 days);
+        _approvalSignature = _signPermit(
+            address(_quoteToken),
+            _amount,
+            _approvalNonce,
+            _approvalDeadline,
+            address(_auctionHouse),
+            _userKey
         );
         _;
     }
 
     function test_permit2_givenNoTokenApproval_reverts()
         public
-        givenUserHasBalance(amount)
+        givenUserHasBalance(_amount)
         whenPermit2ApprovalIsValid
     {
         // Expect the error
         vm.expectRevert(bytes("TRANSFER_FROM_FAILED"));
 
         // Call
-        vm.prank(USER);
-        auctionHouse.collectPayment(
-            lotId,
-            amount,
-            quoteToken,
-            hook,
+        vm.prank(_user);
+        _auctionHouse.collectPayment(
+            _lotId,
+            _amount,
+            _quoteToken,
+            _hook,
             Transfer.Permit2Approval({
-                deadline: approvalDeadline,
-                nonce: approvalNonce,
-                signature: approvalSignature
+                deadline: _approvalDeadline,
+                nonce: _approvalNonce,
+                signature: _approvalSignature
             })
         );
     }
 
     function test_permit2_whenApprovalSignatureIsReused_reverts()
         public
-        givenUserHasBalance(amount)
+        givenUserHasBalance(_amount)
         givenPermit2Approved
         whenPermit2ApprovalIsValid
         whenPermit2ApprovalNonceIsUsed
@@ -206,23 +206,23 @@ contract CollectPaymentTest is Test, Permit2User {
         vm.expectRevert(err);
 
         // Call
-        vm.prank(USER);
-        auctionHouse.collectPayment(
-            lotId,
-            amount,
-            quoteToken,
-            hook,
+        vm.prank(_user);
+        _auctionHouse.collectPayment(
+            _lotId,
+            _amount,
+            _quoteToken,
+            _hook,
             Transfer.Permit2Approval({
-                deadline: approvalDeadline,
-                nonce: approvalNonce,
-                signature: approvalSignature
+                deadline: _approvalDeadline,
+                nonce: _approvalNonce,
+                signature: _approvalSignature
             })
         );
     }
 
     function test_permit2_whenApprovalSignatureIsInvalid_reverts()
         public
-        givenUserHasBalance(amount)
+        givenUserHasBalance(_amount)
         givenPermit2Approved
         whenPermit2ApprovalIsInvalid
     {
@@ -231,49 +231,49 @@ contract CollectPaymentTest is Test, Permit2User {
         vm.expectRevert(err);
 
         // Call
-        vm.prank(USER);
-        auctionHouse.collectPayment(
-            lotId,
-            amount,
-            quoteToken,
-            hook,
+        vm.prank(_user);
+        _auctionHouse.collectPayment(
+            _lotId,
+            _amount,
+            _quoteToken,
+            _hook,
             Transfer.Permit2Approval({
-                deadline: approvalDeadline,
-                nonce: approvalNonce,
-                signature: approvalSignature
+                deadline: _approvalDeadline,
+                nonce: _approvalNonce,
+                signature: _approvalSignature
             })
         );
     }
 
     function test_permit2_whenApprovalSignatureIsExpired_reverts()
         public
-        givenUserHasBalance(amount)
+        givenUserHasBalance(_amount)
         givenPermit2Approved
         whenPermit2ApprovalIsExpired
     {
         // Expect the error
         bytes memory err =
-            abi.encodeWithSelector(Permit2Clone.SignatureExpired.selector, approvalDeadline);
+            abi.encodeWithSelector(Permit2Clone.SignatureExpired.selector, _approvalDeadline);
         vm.expectRevert(err);
 
         // Call
-        vm.prank(USER);
-        auctionHouse.collectPayment(
-            lotId,
-            amount,
-            quoteToken,
-            hook,
+        vm.prank(_user);
+        _auctionHouse.collectPayment(
+            _lotId,
+            _amount,
+            _quoteToken,
+            _hook,
             Transfer.Permit2Approval({
-                deadline: approvalDeadline,
-                nonce: approvalNonce,
-                signature: approvalSignature
+                deadline: _approvalDeadline,
+                nonce: _approvalNonce,
+                signature: _approvalSignature
             })
         );
     }
 
     function test_permit2_whenApprovalSignatureBelongsToOtherSigner_reverts()
         public
-        givenUserHasBalance(amount)
+        givenUserHasBalance(_amount)
         givenPermit2Approved
         whenPermit2ApprovalIsOtherSigner
     {
@@ -282,23 +282,23 @@ contract CollectPaymentTest is Test, Permit2User {
         vm.expectRevert(err);
 
         // Call
-        vm.prank(USER);
-        auctionHouse.collectPayment(
-            lotId,
-            amount,
-            quoteToken,
-            hook,
+        vm.prank(_user);
+        _auctionHouse.collectPayment(
+            _lotId,
+            _amount,
+            _quoteToken,
+            _hook,
             Transfer.Permit2Approval({
-                deadline: approvalDeadline,
-                nonce: approvalNonce,
-                signature: approvalSignature
+                deadline: _approvalDeadline,
+                nonce: _approvalNonce,
+                signature: _approvalSignature
             })
         );
     }
 
     function test_permit2_whenApprovalSignatureBelongsToOtherSpender_reverts()
         public
-        givenUserHasBalance(amount)
+        givenUserHasBalance(_amount)
         givenPermit2Approved
         whenPermit2ApprovalIsOtherSpender
     {
@@ -307,16 +307,16 @@ contract CollectPaymentTest is Test, Permit2User {
         vm.expectRevert(err);
 
         // Call
-        vm.prank(USER);
-        auctionHouse.collectPayment(
-            lotId,
-            amount,
-            quoteToken,
-            hook,
+        vm.prank(_user);
+        _auctionHouse.collectPayment(
+            _lotId,
+            _amount,
+            _quoteToken,
+            _hook,
             Transfer.Permit2Approval({
-                deadline: approvalDeadline,
-                nonce: approvalNonce,
-                signature: approvalSignature
+                deadline: _approvalDeadline,
+                nonce: _approvalNonce,
+                signature: _approvalSignature
             })
         );
     }
@@ -330,72 +330,72 @@ contract CollectPaymentTest is Test, Permit2User {
         vm.expectRevert(bytes("TRANSFER_FROM_FAILED"));
 
         // Call
-        vm.prank(USER);
-        auctionHouse.collectPayment(
-            lotId,
-            amount,
-            quoteToken,
-            hook,
+        vm.prank(_user);
+        _auctionHouse.collectPayment(
+            _lotId,
+            _amount,
+            _quoteToken,
+            _hook,
             Transfer.Permit2Approval({
-                deadline: approvalDeadline,
-                nonce: approvalNonce,
-                signature: approvalSignature
+                deadline: _approvalDeadline,
+                nonce: _approvalNonce,
+                signature: _approvalSignature
             })
         );
     }
 
     function test_permit2_givenTokenTakesFeeOnTransfer_reverts()
         public
-        givenUserHasBalance(amount)
+        givenUserHasBalance(_amount)
         givenTokenTakesFeeOnTransfer
         givenPermit2Approved
         whenPermit2ApprovalIsValid
     {
         // Expect the error
         bytes memory err =
-            abi.encodeWithSelector(Transfer.UnsupportedToken.selector, address(quoteToken));
+            abi.encodeWithSelector(Transfer.UnsupportedToken.selector, address(_quoteToken));
         vm.expectRevert(err);
 
         // Call
-        vm.prank(USER);
-        auctionHouse.collectPayment(
-            lotId,
-            amount,
-            quoteToken,
-            hook,
+        vm.prank(_user);
+        _auctionHouse.collectPayment(
+            _lotId,
+            _amount,
+            _quoteToken,
+            _hook,
             Transfer.Permit2Approval({
-                deadline: approvalDeadline,
-                nonce: approvalNonce,
-                signature: approvalSignature
+                deadline: _approvalDeadline,
+                nonce: _approvalNonce,
+                signature: _approvalSignature
             })
         );
     }
 
     function test_permit2()
         public
-        givenUserHasBalance(amount)
+        givenUserHasBalance(_amount)
         givenPermit2Approved
         whenPermit2ApprovalIsValid
     {
         // Call
-        vm.prank(USER);
-        auctionHouse.collectPayment(
-            lotId,
-            amount,
-            quoteToken,
-            hook,
+        vm.prank(_user);
+        _auctionHouse.collectPayment(
+            _lotId,
+            _amount,
+            _quoteToken,
+            _hook,
             Transfer.Permit2Approval({
-                deadline: approvalDeadline,
-                nonce: approvalNonce,
-                signature: approvalSignature
+                deadline: _approvalDeadline,
+                nonce: _approvalNonce,
+                signature: _approvalSignature
             })
         );
 
         // Expect the user to have no balance
-        assertEq(quoteToken.balanceOf(USER), 0);
+        assertEq(_quoteToken.balanceOf(_user), 0);
 
-        // Expect the auctionHouse to have the balance
-        assertEq(quoteToken.balanceOf(address(auctionHouse)), amount);
+        // Expect the _auctionHouse to have the balance
+        assertEq(_quoteToken.balanceOf(address(_auctionHouse)), _amount);
     }
 
     // ============ Transfer flow ============
@@ -406,123 +406,123 @@ contract CollectPaymentTest is Test, Permit2User {
     //  [X] given the caller has sufficient balance of the quote token
     //   [X] given the caller has not approved the auction house to transfer the quote token
     //    [X] it reverts
-    //   [X] given the received amount is not equal to the transferred amount
+    //   [X] given the received _amount is not equal to the transferred _amount
     //    [X] it reverts
-    //   [X] given the received amount is the same as the transferred amount
-    //    [X] quote tokens are transferred from the caller to the auction owner
+    //   [X] given the received _amount is the same as the transferred _amount
+    //    [X] quote tokens are transferred from the caller to the seller
 
     function test_transfer_whenUserHasInsufficientBalance_reverts() public {
         // Expect the error
         vm.expectRevert(bytes("TRANSFER_FROM_FAILED"));
 
         // Call
-        vm.prank(USER);
-        auctionHouse.collectPayment(
-            lotId,
-            amount,
-            quoteToken,
-            hook,
+        vm.prank(_user);
+        _auctionHouse.collectPayment(
+            _lotId,
+            _amount,
+            _quoteToken,
+            _hook,
             Transfer.Permit2Approval({
-                deadline: approvalDeadline,
-                nonce: approvalNonce,
-                signature: approvalSignature
+                deadline: _approvalDeadline,
+                nonce: _approvalNonce,
+                signature: _approvalSignature
             })
         );
     }
 
-    function test_transfer_givenNoTokenApproval_reverts() public givenUserHasBalance(amount) {
+    function test_transfer_givenNoTokenApproval_reverts() public givenUserHasBalance(_amount) {
         // Expect the error
         vm.expectRevert(bytes("TRANSFER_FROM_FAILED"));
 
         // Call
-        vm.prank(USER);
-        auctionHouse.collectPayment(
-            lotId,
-            amount,
-            quoteToken,
-            hook,
+        vm.prank(_user);
+        _auctionHouse.collectPayment(
+            _lotId,
+            _amount,
+            _quoteToken,
+            _hook,
             Transfer.Permit2Approval({
-                deadline: approvalDeadline,
-                nonce: approvalNonce,
-                signature: approvalSignature
+                deadline: _approvalDeadline,
+                nonce: _approvalNonce,
+                signature: _approvalSignature
             })
         );
     }
 
     function test_transfer_givenTokenTakesFeeOnTransfer_reverts()
         public
-        givenUserHasBalance(amount)
+        givenUserHasBalance(_amount)
         givenUserHasApprovedRouter
         givenTokenTakesFeeOnTransfer
     {
         // Expect the error
         bytes memory err =
-            abi.encodeWithSelector(Transfer.UnsupportedToken.selector, address(quoteToken));
+            abi.encodeWithSelector(Transfer.UnsupportedToken.selector, address(_quoteToken));
         vm.expectRevert(err);
 
         // Call
-        vm.prank(USER);
-        auctionHouse.collectPayment(
-            lotId,
-            amount,
-            quoteToken,
-            hook,
+        vm.prank(_user);
+        _auctionHouse.collectPayment(
+            _lotId,
+            _amount,
+            _quoteToken,
+            _hook,
             Transfer.Permit2Approval({
-                deadline: approvalDeadline,
-                nonce: approvalNonce,
-                signature: approvalSignature
+                deadline: _approvalDeadline,
+                nonce: _approvalNonce,
+                signature: _approvalSignature
             })
         );
     }
 
-    function test_transfer() public givenUserHasBalance(amount) givenUserHasApprovedRouter {
+    function test_transfer() public givenUserHasBalance(_amount) givenUserHasApprovedRouter {
         // Call
-        vm.prank(USER);
-        auctionHouse.collectPayment(
-            lotId,
-            amount,
-            quoteToken,
-            hook,
+        vm.prank(_user);
+        _auctionHouse.collectPayment(
+            _lotId,
+            _amount,
+            _quoteToken,
+            _hook,
             Transfer.Permit2Approval({
-                deadline: approvalDeadline,
-                nonce: approvalNonce,
-                signature: approvalSignature
+                deadline: _approvalDeadline,
+                nonce: _approvalNonce,
+                signature: _approvalSignature
             })
         );
 
         // Expect the user to have no balance
-        assertEq(quoteToken.balanceOf(USER), 0);
+        assertEq(_quoteToken.balanceOf(_user), 0);
 
-        // Expect the auctionHouse to have the balance
-        assertEq(quoteToken.balanceOf(address(auctionHouse)), amount);
+        // Expect the _auctionHouse to have the balance
+        assertEq(_quoteToken.balanceOf(address(_auctionHouse)), _amount);
     }
 
     // ============ Hooks flow ============
 
     // [X] given the auction has hooks defined
-    //  [X] when the pre hook reverts
+    //  [X] when the pre _hook reverts
     //   [X] it reverts
-    //  [ ] when the pre hook does not revert
+    //  [ ] when the pre _hook does not revert
     //   [ ] given the invariant is violated
     //    [ ] it reverts
     //   [X] given the invariant is not violated - TODO define invariant
     //    [X] it succeeds
 
     modifier whenHooksIsSet() {
-        hook = new MockHook(address(quoteToken), address(0));
+        _hook = new MockHook(address(_quoteToken), address(0));
 
         // Set the addresses to track
         address[] memory addresses = new address[](3);
-        addresses[0] = USER;
-        addresses[1] = address(auctionHouse);
-        addresses[2] = address(hook);
+        addresses[0] = _user;
+        addresses[1] = address(_auctionHouse);
+        addresses[2] = address(_hook);
 
-        hook.setBalanceAddresses(addresses);
+        _hook.setBalanceAddresses(addresses);
         _;
     }
 
     modifier whenPreHookReverts() {
-        hook.setPreHookReverts(true);
+        _hook.setPreHookReverts(true);
         _;
     }
 
@@ -531,78 +531,78 @@ contract CollectPaymentTest is Test, Permit2User {
         vm.expectRevert("revert");
 
         // Call
-        vm.prank(USER);
-        auctionHouse.collectPayment(
-            lotId,
-            amount,
-            quoteToken,
-            hook,
+        vm.prank(_user);
+        _auctionHouse.collectPayment(
+            _lotId,
+            _amount,
+            _quoteToken,
+            _hook,
             Transfer.Permit2Approval({
-                deadline: approvalDeadline,
-                nonce: approvalNonce,
-                signature: approvalSignature
+                deadline: _approvalDeadline,
+                nonce: _approvalNonce,
+                signature: _approvalSignature
             })
         );
     }
 
     function test_preHook_withTransfer()
         public
-        givenUserHasBalance(amount)
+        givenUserHasBalance(_amount)
         givenUserHasApprovedRouter
         whenHooksIsSet
     {
         // Call
-        vm.prank(USER);
-        auctionHouse.collectPayment(
-            lotId,
-            amount,
-            quoteToken,
-            hook,
+        vm.prank(_user);
+        _auctionHouse.collectPayment(
+            _lotId,
+            _amount,
+            _quoteToken,
+            _hook,
             Transfer.Permit2Approval({
-                deadline: approvalDeadline,
-                nonce: approvalNonce,
-                signature: approvalSignature
+                deadline: _approvalDeadline,
+                nonce: _approvalNonce,
+                signature: _approvalSignature
             })
         );
 
-        // Expect the pre hook to have recorded the balance of USER before the transfer
-        assertEq(hook.preHookCalled(), true);
-        assertEq(hook.preHookBalances(quoteToken, USER), amount);
-        assertEq(quoteToken.balanceOf(USER), 0);
+        // Expect the pre _hook to have recorded the balance of _user before the transfer
+        assertEq(_hook.preHookCalled(), true);
+        assertEq(_hook.preHookBalances(_quoteToken, _user), _amount);
+        assertEq(_quoteToken.balanceOf(_user), 0);
 
         // Ensure that the mid and post hooks were not called
-        assertEq(hook.midHookCalled(), false);
-        assertEq(hook.postHookCalled(), false);
+        assertEq(_hook.midHookCalled(), false);
+        assertEq(_hook.postHookCalled(), false);
     }
 
     function test_preHook_withPermit2()
         public
-        givenUserHasBalance(amount)
+        givenUserHasBalance(_amount)
         givenPermit2Approved
         whenPermit2ApprovalIsValid
         whenHooksIsSet
     {
         // Call
-        vm.prank(USER);
-        auctionHouse.collectPayment(
-            lotId,
-            amount,
-            quoteToken,
-            hook,
+        vm.prank(_user);
+        _auctionHouse.collectPayment(
+            _lotId,
+            _amount,
+            _quoteToken,
+            _hook,
             Transfer.Permit2Approval({
-                deadline: approvalDeadline,
-                nonce: approvalNonce,
-                signature: approvalSignature
+                deadline: _approvalDeadline,
+                nonce: _approvalNonce,
+                signature: _approvalSignature
             })
         );
 
-        // Expect the pre hook to have recorded the balance of USER before the transfer
-        assertEq(hook.preHookCalled(), true);
-        assertEq(hook.preHookBalances(quoteToken, USER), amount);
-        assertEq(quoteToken.balanceOf(USER), 0);
+        // Expect the pre _hook to have recorded the balance of _user before the transfer
+        assertEq(_hook.preHookCalled(), true);
+        assertEq(_hook.preHookBalances(_quoteToken, _user), _amount);
+        assertEq(_quoteToken.balanceOf(_user), 0);
 
         // Ensure that the mid and post hooks were not called
-        assertEq(hook.midHookCalled(), false);
-        assertEq(hook.postHookCalled(), false);
+        assertEq(_hook.midHookCalled(), false);
+        assertEq(_hook.postHookCalled(), false);
     }
 }

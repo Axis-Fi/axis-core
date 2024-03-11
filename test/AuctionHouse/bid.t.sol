@@ -1,222 +1,20 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.19;
 
-// Libraries
-import {Test} from "forge-std/Test.sol";
-import {ERC20} from "lib/solmate/src/tokens/ERC20.sol";
-import {Transfer} from "src/lib/Transfer.sol";
-
 // Mocks
-import {MockERC20} from "lib/solmate/src/test/utils/mocks/MockERC20.sol";
-import {MockAtomicAuctionModule} from "test/modules/Auction/MockAtomicAuctionModule.sol";
 import {MockBatchAuctionModule} from "test/modules/Auction/MockBatchAuctionModule.sol";
-import {Permit2User} from "test/lib/permit2/Permit2User.sol";
-import {MockAllowlist} from "test/modules/Auction/MockAllowlist.sol";
 
 // Auctions
-import {AuctionHouse, Router, FeeManager} from "src/AuctionHouse.sol";
+import {AuctionHouse} from "src/AuctionHouse.sol";
 import {Auction} from "src/modules/Auction.sol";
-import {IHooks, IAllowlist, Auctioneer} from "src/bases/Auctioneer.sol";
+import {Auctioneer} from "src/bases/Auctioneer.sol";
 
-// Modules
-import {
-    Keycode,
-    toKeycode,
-    Veecode,
-    wrapVeecode,
-    unwrapVeecode,
-    fromVeecode,
-    WithModules,
-    Module
-} from "src/modules/Modules.sol";
+import {AuctionHouseTest} from "test/AuctionHouse/AuctionHouseTest.sol";
 
-contract BidTest is Test, Permit2User {
-    MockERC20 internal baseToken;
-    MockERC20 internal quoteToken;
-    MockBatchAuctionModule internal mockAuctionModule;
+contract BidTest is AuctionHouseTest {
+    uint96 internal constant _BID_AMOUNT = 1e18;
 
-    AuctionHouse internal auctionHouse;
-
-    uint96 internal lotId;
-    uint48 internal auctionDuration = 1 days;
-
-    address internal immutable protocol = address(0x2);
-    address internal immutable curator = address(0x3);
-    address internal immutable referrer = address(0x4);
-    address internal immutable auctionOwner = address(0x5);
-    address internal immutable recipient = address(0x6);
-
-    uint256 internal aliceKey;
-    address internal alice;
-
-    uint256 internal constant BID_AMOUNT = 1e18;
-
-    // Function parameters (can be modified)
-    Auctioneer.RoutingParams internal routingParams;
-    Auction.AuctionParams internal auctionParams;
-    Router.BidParams internal bidParams;
-
-    Keycode internal auctionType = toKeycode("BATCH");
-
-    uint48 internal PROTOCOL_FEE = 100;
-    uint48 internal REFERRER_FEE = 105;
-    uint48 internal CURATOR_FEE = 110;
-    uint48 internal CURATOR_MAX_FEE = 120;
-
-    bytes internal auctionData;
-    bytes internal allowlistProof;
-    bytes internal permit2Data;
-
-    string internal INFO_HASH = "";
-
-    function setUp() external {
-        // Set block timestamp
-        vm.warp(1_000_000);
-
-        aliceKey = _getRandomUint256();
-        alice = vm.addr(aliceKey);
-
-        baseToken = new MockERC20("Base Token", "BASE", 18);
-        quoteToken = new MockERC20("Quote Token", "QUOTE", 18);
-
-        auctionHouse = new AuctionHouse(address(this), auctionOwner, _PERMIT2_ADDRESS);
-        mockAuctionModule = new MockBatchAuctionModule(address(auctionHouse));
-
-        auctionHouse.installModule(mockAuctionModule);
-
-        auctionParams = Auction.AuctionParams({
-            start: uint48(block.timestamp),
-            duration: auctionDuration,
-            capacityInQuote: false,
-            capacity: 10e18,
-            implParams: abi.encode("")
-        });
-
-        routingParams = Auctioneer.RoutingParams({
-            auctionType: auctionType,
-            baseToken: baseToken,
-            quoteToken: quoteToken,
-            curator: address(0),
-            hooks: IHooks(address(0)),
-            allowlist: IAllowlist(address(0)),
-            allowlistParams: abi.encode(""),
-            derivativeType: toKeycode(""),
-            derivativeParams: abi.encode("")
-        });
-
-        bidParams = Router.BidParams({
-            lotId: lotId,
-            recipient: recipient,
-            referrer: referrer,
-            amount: BID_AMOUNT,
-            auctionData: auctionData,
-            allowlistProof: allowlistProof,
-            permit2Data: permit2Data
-        });
-
-        // Set the maximum curator fee
-        auctionHouse.setFee(auctionType, FeeManager.FeeType.MaxCurator, CURATOR_MAX_FEE);
-    }
-
-    modifier givenLotIsCreated() {
-        vm.prank(auctionOwner);
-        lotId = auctionHouse.auction(routingParams, auctionParams, INFO_HASH);
-        _;
-    }
-
-    modifier givenLotIsAtomicAuction() {
-        // Install the atomic auction module
-        MockAtomicAuctionModule mockAtomicAuctionModule =
-            new MockAtomicAuctionModule(address(auctionHouse));
-        auctionHouse.installModule(mockAtomicAuctionModule);
-
-        // Update routing parameters
-        (Keycode moduleKeycode,) = unwrapVeecode(mockAtomicAuctionModule.VEECODE());
-        routingParams.auctionType = moduleKeycode;
-        auctionType = moduleKeycode;
-
-        vm.prank(auctionOwner);
-        lotId = auctionHouse.auction(routingParams, auctionParams, INFO_HASH);
-
-        // Update bid parameters
-        bidParams.lotId = lotId;
-        _;
-    }
-
-    modifier givenLotIsCancelled() {
-        vm.prank(auctionOwner);
-        auctionHouse.cancel(lotId);
-        _;
-    }
-
-    modifier givenLotIsConcluded() {
-        vm.warp(block.timestamp + auctionDuration + 1);
-        _;
-    }
-
-    modifier whenLotIdIsInvalid() {
-        lotId = 255;
-
-        // Update bid parameters
-        bidParams.lotId = lotId;
-        _;
-    }
-
-    modifier givenLotHasAllowlist() {
-        MockAllowlist allowlist = new MockAllowlist();
-        routingParams.allowlist = allowlist;
-
-        // Register a new auction with an allowlist
-        vm.prank(auctionOwner);
-        lotId = auctionHouse.auction(routingParams, auctionParams, INFO_HASH);
-
-        // Add the sender to the allowlist
-        allowlist.setAllowedWithProof(alice, allowlistProof, true);
-
-        // Update bid parameters
-        bidParams.lotId = lotId;
-        _;
-    }
-
-    modifier withIncorrectAllowlistProof() {
-        allowlistProof = abi.encode("incorrect proof");
-
-        // Update bid parameters
-        bidParams.allowlistProof = allowlistProof;
-        _;
-    }
-
-    modifier givenUserHasQuoteTokenBalance(uint256 amount_) {
-        quoteToken.mint(alice, amount_);
-        _;
-    }
-
-    modifier givenUserHasApprovedQuoteToken(uint256 amount_) {
-        vm.prank(alice);
-        quoteToken.approve(address(auctionHouse), amount_);
-        _;
-    }
-
-    modifier whenPermit2ApprovalIsProvided() {
-        // Approve the Permit2 contract to spend the quote token
-        vm.prank(alice);
-        quoteToken.approve(_PERMIT2_ADDRESS, type(uint256).max);
-
-        // Set up the Permit2 approval
-        uint48 deadline = uint48(block.timestamp);
-        uint256 nonce = _getRandomUint256();
-        bytes memory signature = _signPermit(
-            address(quoteToken), BID_AMOUNT, nonce, deadline, address(auctionHouse), aliceKey
-        );
-
-        permit2Data = abi.encode(
-            Transfer.Permit2Approval({deadline: deadline, nonce: nonce, signature: signature})
-        );
-
-        // Update bid parameters
-        bidParams.permit2Data = permit2Data;
-        _;
-    }
+    bytes internal _bidAuctionData = abi.encode("");
 
     // bid
     // [X] given the auction is atomic
@@ -226,6 +24,10 @@ contract BidTest is Test, Permit2User {
     // [X] given the auction is cancelled
     //  [X] it reverts
     // [X] given the auction is concluded
+    //  [X] it reverts
+    // [X] given the auction is settled
+    //  [X] it reverts
+    // [X] given the auction proceeds have been claimed
     //  [X] it reverts
     // [X] given the auction has an allowlist
     //  [X] reverts if the sender is not on the allowlist
@@ -238,225 +40,282 @@ contract BidTest is Test, Permit2User {
     //  [X] it transfers the tokens from the sender
     // [X] it records the bid
 
-    function test_givenAtomicAuction_reverts() external givenLotIsAtomicAuction {
+    function test_givenAtomicAuction_reverts()
+        external
+        whenAuctionTypeIsAtomic
+        whenAtomicAuctionModuleIsInstalled
+        givenLotIsCreated
+        givenLotHasStarted
+    {
         bytes memory err = abi.encodeWithSelector(Auction.Auction_NotImplemented.selector);
         vm.expectRevert(err);
 
         // Call the function
-        vm.prank(alice);
-        auctionHouse.bid(bidParams);
+        _createBid(_BID_AMOUNT, _bidAuctionData);
     }
 
-    function test_whenLotIdIsInvalid_reverts() external givenLotIsCreated whenLotIdIsInvalid {
-        bytes memory err = abi.encodeWithSelector(Auctioneer.InvalidLotId.selector, lotId);
+    function test_whenLotIdIsInvalid_reverts() external {
+        bytes memory err = abi.encodeWithSelector(Auctioneer.InvalidLotId.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function
-        vm.prank(alice);
-        auctionHouse.bid(bidParams);
+        _createBid(_BID_AMOUNT, _bidAuctionData);
     }
 
-    function test_givenLotIsCancelled_reverts() external givenLotIsCreated givenLotIsCancelled {
-        bytes memory err = abi.encodeWithSelector(Auction.Auction_MarketNotActive.selector, lotId);
+    function test_givenLotIsCancelled_reverts()
+        external
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenLotIsCreated
+        givenLotIsCancelled
+    {
+        bytes memory err = abi.encodeWithSelector(Auction.Auction_MarketNotActive.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function
-        vm.prank(alice);
-        auctionHouse.bid(bidParams);
+        _createBid(_BID_AMOUNT, _bidAuctionData);
     }
 
-    function test_givenLotIsConcluded_reverts() external givenLotIsCreated givenLotIsConcluded {
-        bytes memory err = abi.encodeWithSelector(Auction.Auction_MarketNotActive.selector, lotId);
+    function test_givenLotIsConcluded_reverts()
+        external
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenLotIsCreated
+        givenLotIsConcluded
+    {
+        bytes memory err = abi.encodeWithSelector(Auction.Auction_MarketNotActive.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function
-        vm.prank(alice);
-        auctionHouse.bid(bidParams);
+        _createBid(_BID_AMOUNT, _bidAuctionData);
+    }
+
+    function test_givenLotIsSettled_reverts()
+        external
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenLotIsCreated
+        givenLotIsConcluded
+        givenLotIsSettled
+    {
+        bytes memory err = abi.encodeWithSelector(Auction.Auction_MarketNotActive.selector, _lotId);
+        vm.expectRevert(err);
+
+        // Call the function
+        _createBid(_BID_AMOUNT, _bidAuctionData);
+    }
+
+    function test_givenLotProceedsHaveBeenClaimed_reverts()
+        external
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenLotIsCreated
+        givenLotIsConcluded
+        givenLotIsSettled
+        givenLotProceedsAreClaimed
+    {
+        bytes memory err = abi.encodeWithSelector(Auction.Auction_MarketNotActive.selector, _lotId);
+        vm.expectRevert(err);
+
+        // Call the function
+        _createBid(_BID_AMOUNT, _bidAuctionData);
     }
 
     function test_incorrectAllowlistProof_reverts()
         external
-        givenLotIsCreated
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
         givenLotHasAllowlist
-        withIncorrectAllowlistProof
+        givenLotIsCreated
+        givenLotHasStarted
+        whenAllowlistProofIsIncorrect
     {
-        bytes memory err = abi.encodeWithSelector(AuctionHouse.InvalidBidder.selector, alice);
+        bytes memory err = abi.encodeWithSelector(Auctioneer.NotPermitted.selector, _bidder);
         vm.expectRevert(err);
 
         // Call the function
-        vm.prank(alice);
-        auctionHouse.bid(bidParams);
+        _createBid(_BID_AMOUNT, _bidAuctionData);
     }
 
     function test_givenLotHasAllowlist()
         external
-        givenLotIsCreated
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
         givenLotHasAllowlist
-        givenUserHasQuoteTokenBalance(BID_AMOUNT)
-        givenUserHasApprovedQuoteToken(BID_AMOUNT)
+        givenLotIsCreated
+        givenLotHasStarted
+        whenAllowlistProofIsCorrect
+        givenUserHasQuoteTokenBalance(_BID_AMOUNT)
+        givenUserHasQuoteTokenAllowance(_BID_AMOUNT)
     {
         // Call the function
-        vm.prank(alice);
-        auctionHouse.bid(bidParams);
+        _createBid(_BID_AMOUNT, _bidAuctionData);
     }
 
     function test_givenUserHasInsufficientBalance_reverts()
         public
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
         givenLotIsCreated
-        givenUserHasApprovedQuoteToken(BID_AMOUNT)
+        givenLotHasStarted
+        givenUserHasQuoteTokenAllowance(_BID_AMOUNT)
     {
         vm.expectRevert("TRANSFER_FROM_FAILED");
 
         // Call the function
-        vm.prank(alice);
-        auctionHouse.bid(bidParams);
+        _createBid(_BID_AMOUNT, _bidAuctionData);
     }
 
     function test_whenPermit2ApprovalIsProvided()
         external
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
         givenLotIsCreated
-        givenUserHasQuoteTokenBalance(BID_AMOUNT)
-        whenPermit2ApprovalIsProvided
+        givenLotHasStarted
+        givenUserHasQuoteTokenBalance(_BID_AMOUNT)
+        whenPermit2ApprovalIsProvided(_BID_AMOUNT)
     {
         // Call the function
-        vm.prank(alice);
-        uint96 bidId = auctionHouse.bid(bidParams);
+        uint64 bidId = _createBid(_BID_AMOUNT, _bidAuctionData);
 
         // Check the balances
-        assertEq(quoteToken.balanceOf(alice), 0, "alice: quote token balance mismatch");
+        assertEq(_quoteToken.balanceOf(_bidder), 0, "_bidder: quote token balance mismatch");
         assertEq(
-            quoteToken.balanceOf(address(auctionHouse)),
-            BID_AMOUNT,
+            _quoteToken.balanceOf(address(_auctionHouse)),
+            _BID_AMOUNT,
             "auction house: quote token balance mismatch"
         );
 
         // Check the bid
-        Auction.Bid memory bid = mockAuctionModule.getBid(lotId, bidId);
-        assertEq(bid.bidder, alice, "bidder mismatch");
-        assertEq(bid.recipient, recipient, "recipient mismatch");
-        assertEq(bid.referrer, referrer, "referrer mismatch");
-        assertEq(bid.amount, BID_AMOUNT, "amount mismatch");
+        MockBatchAuctionModule.Bid memory bid = _batchAuctionModule.getBid(_lotId, bidId);
+        assertEq(bid.bidder, _bidder, "bidder mismatch");
+        assertEq(bid.referrer, _REFERRER, "referrer mismatch");
+        assertEq(bid.amount, _BID_AMOUNT, "amount mismatch");
         assertEq(bid.minAmountOut, 0, "minAmountOut mismatch");
-        assertEq(bid.auctionParam, auctionData, "auctionParam mismatch");
     }
 
     function test_whenPermit2ApprovalIsNotProvided()
         external
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
         givenLotIsCreated
-        givenUserHasQuoteTokenBalance(BID_AMOUNT)
-        givenUserHasApprovedQuoteToken(BID_AMOUNT)
+        givenLotHasStarted
+        givenUserHasQuoteTokenBalance(_BID_AMOUNT)
+        givenUserHasQuoteTokenAllowance(_BID_AMOUNT)
     {
         // Call the function
-        vm.prank(alice);
-        uint96 bidId = auctionHouse.bid(bidParams);
+        uint64 bidId = _createBid(_BID_AMOUNT, _bidAuctionData);
 
         // Check the balances
-        assertEq(quoteToken.balanceOf(alice), 0, "alice: quote token balance mismatch");
+        assertEq(_quoteToken.balanceOf(_bidder), 0, "_bidder: quote token balance mismatch");
         assertEq(
-            quoteToken.balanceOf(address(auctionHouse)),
-            BID_AMOUNT,
+            _quoteToken.balanceOf(address(_auctionHouse)),
+            _BID_AMOUNT,
             "auction house: quote token balance mismatch"
         );
 
         // Check the bid
-        Auction.Bid memory bid = mockAuctionModule.getBid(lotId, bidId);
-        assertEq(bid.bidder, alice, "bidder mismatch");
-        assertEq(bid.recipient, recipient, "recipient mismatch");
-        assertEq(bid.referrer, referrer, "referrer mismatch");
-        assertEq(bid.amount, BID_AMOUNT, "amount mismatch");
+        MockBatchAuctionModule.Bid memory bid = _batchAuctionModule.getBid(_lotId, bidId);
+        assertEq(bid.bidder, _bidder, "bidder mismatch");
+        assertEq(bid.referrer, _REFERRER, "referrer mismatch");
+        assertEq(bid.amount, _BID_AMOUNT, "amount mismatch");
         assertEq(bid.minAmountOut, 0, "minAmountOut mismatch");
-        assertEq(bid.auctionParam, auctionData, "auctionParam mismatch");
     }
 
     function test_whenAuctionParamIsProvided()
         external
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
         givenLotIsCreated
-        givenUserHasQuoteTokenBalance(BID_AMOUNT)
-        givenUserHasApprovedQuoteToken(BID_AMOUNT)
+        givenLotHasStarted
+        givenUserHasQuoteTokenBalance(_BID_AMOUNT)
+        givenUserHasQuoteTokenAllowance(_BID_AMOUNT)
     {
-        auctionData = abi.encode("auction data");
-
-        // Update bid parameters
-        bidParams.auctionData = auctionData;
+        _bidAuctionData = abi.encode("auction data");
 
         // Call the function
-        vm.prank(alice);
-        uint96 bidId = auctionHouse.bid(bidParams);
+        uint64 bidId = _createBid(_BID_AMOUNT, _bidAuctionData);
 
         // Check the bid
-        Auction.Bid memory bid = mockAuctionModule.getBid(lotId, bidId);
-        assertEq(bid.auctionParam, auctionData, "auctionParam mismatch");
+        _batchAuctionModule.getBid(_lotId, bidId);
     }
 
     // [X] given there is no protocol fee set for the auction type
     //  [X] the protocol fee is not accrued
     // [X] the protocol fee is not accrued
 
-    modifier givenProtocolFeeIsSet() {
-        auctionHouse.setFee(auctionType, FeeManager.FeeType.Protocol, PROTOCOL_FEE);
-        _;
-    }
-
     function test_givenProtocolFeeIsSet()
         external
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
         givenProtocolFeeIsSet
         givenLotIsCreated
-        givenUserHasQuoteTokenBalance(BID_AMOUNT)
-        givenUserHasApprovedQuoteToken(BID_AMOUNT)
+        givenLotHasStarted
+        givenUserHasQuoteTokenBalance(_BID_AMOUNT)
+        givenUserHasQuoteTokenAllowance(_BID_AMOUNT)
     {
         // Call the function
-        vm.prank(alice);
-        auctionHouse.bid(bidParams);
+        _createBid(_BID_AMOUNT, _bidAuctionData);
 
         // Check the rewards
         assertEq(
-            auctionHouse.rewards(protocol, quoteToken), 0, "quote token: protocol rewards mismatch"
+            _auctionHouse.rewards(_PROTOCOL, _quoteToken),
+            0,
+            "quote token: protocol rewards mismatch"
         );
         assertEq(
-            auctionHouse.rewards(referrer, quoteToken), 0, "quote token: referrer rewards mismatch"
+            _auctionHouse.rewards(_REFERRER, _quoteToken),
+            0,
+            "quote token: referrer rewards mismatch"
         );
         assertEq(
-            auctionHouse.rewards(curator, quoteToken), 0, "quote token: curator rewards mismatch"
+            _auctionHouse.rewards(_CURATOR, _quoteToken), 0, "quote token: curator rewards mismatch"
         );
         assertEq(
-            auctionHouse.rewards(protocol, baseToken), 0, "base token: protocol rewards mismatch"
+            _auctionHouse.rewards(_PROTOCOL, _baseToken), 0, "base token: protocol rewards mismatch"
         );
         assertEq(
-            auctionHouse.rewards(referrer, baseToken), 0, "base token: referrer rewards mismatch"
+            _auctionHouse.rewards(_REFERRER, _baseToken), 0, "base token: referrer rewards mismatch"
         );
         assertEq(
-            auctionHouse.rewards(curator, baseToken), 0, "base token: curator rewards mismatch"
+            _auctionHouse.rewards(_CURATOR, _baseToken), 0, "base token: curator rewards mismatch"
         );
     }
 
     function test_givenProtocolFeeIsNotSet()
         external
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
         givenLotIsCreated
-        givenUserHasQuoteTokenBalance(BID_AMOUNT)
-        givenUserHasApprovedQuoteToken(BID_AMOUNT)
+        givenLotHasStarted
+        givenUserHasQuoteTokenBalance(_BID_AMOUNT)
+        givenUserHasQuoteTokenAllowance(_BID_AMOUNT)
     {
         // Call the function
-        vm.prank(alice);
-        auctionHouse.bid(bidParams);
+        _createBid(_BID_AMOUNT, _bidAuctionData);
 
         // Check the rewards
         assertEq(
-            auctionHouse.rewards(protocol, quoteToken), 0, "quote token: protocol rewards mismatch"
+            _auctionHouse.rewards(_PROTOCOL, _quoteToken),
+            0,
+            "quote token: protocol rewards mismatch"
         );
         assertEq(
-            auctionHouse.rewards(referrer, quoteToken), 0, "quote token: referrer rewards mismatch"
+            _auctionHouse.rewards(_REFERRER, _quoteToken),
+            0,
+            "quote token: referrer rewards mismatch"
         );
         assertEq(
-            auctionHouse.rewards(curator, quoteToken), 0, "quote token: curator rewards mismatch"
+            _auctionHouse.rewards(_CURATOR, _quoteToken), 0, "quote token: curator rewards mismatch"
         );
         assertEq(
-            auctionHouse.rewards(protocol, baseToken), 0, "base token: protocol rewards mismatch"
+            _auctionHouse.rewards(_PROTOCOL, _baseToken), 0, "base token: protocol rewards mismatch"
         );
         assertEq(
-            auctionHouse.rewards(referrer, baseToken), 0, "base token: referrer rewards mismatch"
+            _auctionHouse.rewards(_REFERRER, _baseToken), 0, "base token: referrer rewards mismatch"
         );
         assertEq(
-            auctionHouse.rewards(curator, baseToken), 0, "base token: curator rewards mismatch"
+            _auctionHouse.rewards(_CURATOR, _baseToken), 0, "base token: curator rewards mismatch"
         );
     }
 
@@ -464,71 +323,78 @@ contract BidTest is Test, Permit2User {
     //  [X] the referrer fee is not accrued
     // [X] the referrer fee is not accrued
 
-    modifier givenReferrerFeeIsSet() {
-        auctionHouse.setFee(auctionType, FeeManager.FeeType.Referrer, REFERRER_FEE);
-        _;
-    }
-
     function test_givenReferrerFeeIsSet()
         external
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
         givenReferrerFeeIsSet
         givenLotIsCreated
-        givenUserHasQuoteTokenBalance(BID_AMOUNT)
-        givenUserHasApprovedQuoteToken(BID_AMOUNT)
+        givenLotHasStarted
+        givenUserHasQuoteTokenBalance(_BID_AMOUNT)
+        givenUserHasQuoteTokenAllowance(_BID_AMOUNT)
     {
         // Call the function
-        vm.prank(alice);
-        auctionHouse.bid(bidParams);
+        _createBid(_BID_AMOUNT, _bidAuctionData);
 
         // Check the rewards
         assertEq(
-            auctionHouse.rewards(protocol, quoteToken), 0, "quote token: protocol rewards mismatch"
+            _auctionHouse.rewards(_PROTOCOL, _quoteToken),
+            0,
+            "quote token: protocol rewards mismatch"
         );
         assertEq(
-            auctionHouse.rewards(referrer, quoteToken), 0, "quote token: referrer rewards mismatch"
+            _auctionHouse.rewards(_REFERRER, _quoteToken),
+            0,
+            "quote token: referrer rewards mismatch"
         );
         assertEq(
-            auctionHouse.rewards(curator, quoteToken), 0, "quote token: curator rewards mismatch"
+            _auctionHouse.rewards(_CURATOR, _quoteToken), 0, "quote token: curator rewards mismatch"
         );
         assertEq(
-            auctionHouse.rewards(protocol, baseToken), 0, "base token: protocol rewards mismatch"
+            _auctionHouse.rewards(_PROTOCOL, _baseToken), 0, "base token: protocol rewards mismatch"
         );
         assertEq(
-            auctionHouse.rewards(referrer, baseToken), 0, "base token: referrer rewards mismatch"
+            _auctionHouse.rewards(_REFERRER, _baseToken), 0, "base token: referrer rewards mismatch"
         );
         assertEq(
-            auctionHouse.rewards(curator, baseToken), 0, "base token: curator rewards mismatch"
+            _auctionHouse.rewards(_CURATOR, _baseToken), 0, "base token: curator rewards mismatch"
         );
     }
 
     function test_givenReferrerFeeIsNotSet()
         external
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
         givenLotIsCreated
-        givenUserHasQuoteTokenBalance(BID_AMOUNT)
-        givenUserHasApprovedQuoteToken(BID_AMOUNT)
+        givenLotHasStarted
+        givenUserHasQuoteTokenBalance(_BID_AMOUNT)
+        givenUserHasQuoteTokenAllowance(_BID_AMOUNT)
     {
         // Call the function
-        vm.prank(alice);
-        auctionHouse.bid(bidParams);
+        _createBid(_BID_AMOUNT, _bidAuctionData);
 
         // Check the rewards
         assertEq(
-            auctionHouse.rewards(protocol, quoteToken), 0, "quote token: protocol rewards mismatch"
+            _auctionHouse.rewards(_PROTOCOL, _quoteToken),
+            0,
+            "quote token: protocol rewards mismatch"
         );
         assertEq(
-            auctionHouse.rewards(referrer, quoteToken), 0, "quote token: referrer rewards mismatch"
+            _auctionHouse.rewards(_REFERRER, _quoteToken),
+            0,
+            "quote token: referrer rewards mismatch"
         );
         assertEq(
-            auctionHouse.rewards(curator, quoteToken), 0, "quote token: curator rewards mismatch"
+            _auctionHouse.rewards(_CURATOR, _quoteToken), 0, "quote token: curator rewards mismatch"
         );
         assertEq(
-            auctionHouse.rewards(protocol, baseToken), 0, "base token: protocol rewards mismatch"
+            _auctionHouse.rewards(_PROTOCOL, _baseToken), 0, "base token: protocol rewards mismatch"
         );
         assertEq(
-            auctionHouse.rewards(referrer, baseToken), 0, "base token: referrer rewards mismatch"
+            _auctionHouse.rewards(_REFERRER, _baseToken), 0, "base token: referrer rewards mismatch"
         );
         assertEq(
-            auctionHouse.rewards(curator, baseToken), 0, "base token: curator rewards mismatch"
+            _auctionHouse.rewards(_CURATOR, _baseToken), 0, "base token: curator rewards mismatch"
         );
     }
 
@@ -539,66 +405,61 @@ contract BidTest is Test, Permit2User {
     //   [X] no payout token is transferred to the curator
     //  [X] no payout token is transferred to the curator
 
-    modifier givenCuratorIsSet() {
-        routingParams.curator = curator;
-        _;
-    }
-
-    modifier givenCuratorHasApproved() {
-        // Set the curator fee
-        vm.prank(curator);
-        auctionHouse.setCuratorFee(auctionType, CURATOR_FEE);
-
-        vm.prank(curator);
-        auctionHouse.curate(lotId);
-        _;
-    }
-
     function test_givenCuratorIsNotSet()
         external
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
         givenLotIsCreated
-        givenUserHasQuoteTokenBalance(BID_AMOUNT)
-        givenUserHasApprovedQuoteToken(BID_AMOUNT)
+        givenLotHasStarted
+        givenCuratorMaxFeeIsSet
+        givenUserHasQuoteTokenBalance(_BID_AMOUNT)
+        givenUserHasQuoteTokenAllowance(_BID_AMOUNT)
     {
         // Call the function
-        vm.prank(alice);
-        auctionHouse.bid(bidParams);
+        _createBid(_BID_AMOUNT, _bidAuctionData);
 
         // Check the balances
-        assertEq(quoteToken.balanceOf(curator), 0, "curator: quote token balance mismatch");
-        assertEq(baseToken.balanceOf(curator), 0, "curator: base token balance mismatch");
+        assertEq(_quoteToken.balanceOf(_CURATOR), 0, "curator: quote token balance mismatch");
+        assertEq(_baseToken.balanceOf(_CURATOR), 0, "curator: base token balance mismatch");
     }
 
     function test_givenCuratorHasNotApproved()
         external
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
         givenCuratorIsSet
         givenLotIsCreated
-        givenUserHasQuoteTokenBalance(BID_AMOUNT)
-        givenUserHasApprovedQuoteToken(BID_AMOUNT)
+        givenLotHasStarted
+        givenCuratorMaxFeeIsSet
+        givenUserHasQuoteTokenBalance(_BID_AMOUNT)
+        givenUserHasQuoteTokenAllowance(_BID_AMOUNT)
     {
         // Call the function
-        vm.prank(alice);
-        auctionHouse.bid(bidParams);
+        _createBid(_BID_AMOUNT, _bidAuctionData);
 
         // Check the balances
-        assertEq(quoteToken.balanceOf(curator), 0, "curator: quote token balance mismatch");
-        assertEq(baseToken.balanceOf(curator), 0, "curator: base token balance mismatch");
+        assertEq(_quoteToken.balanceOf(_CURATOR), 0, "curator: quote token balance mismatch");
+        assertEq(_baseToken.balanceOf(_CURATOR), 0, "curator: base token balance mismatch");
     }
 
     function test_givenCuratorHasApproved()
         external
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
         givenCuratorIsSet
         givenLotIsCreated
+        givenLotHasStarted
+        givenCuratorMaxFeeIsSet
+        givenCuratorFeeIsSet
         givenCuratorHasApproved
-        givenUserHasQuoteTokenBalance(BID_AMOUNT)
-        givenUserHasApprovedQuoteToken(BID_AMOUNT)
+        givenUserHasQuoteTokenBalance(_BID_AMOUNT)
+        givenUserHasQuoteTokenAllowance(_BID_AMOUNT)
     {
         // Call the function
-        vm.prank(alice);
-        auctionHouse.bid(bidParams);
+        _createBid(_BID_AMOUNT, _bidAuctionData);
 
         // Check the balances
-        assertEq(quoteToken.balanceOf(curator), 0, "curator: quote token balance mismatch");
-        assertEq(baseToken.balanceOf(curator), 0, "curator: base token balance mismatch");
+        assertEq(_quoteToken.balanceOf(_CURATOR), 0, "curator: quote token balance mismatch");
+        assertEq(_baseToken.balanceOf(_CURATOR), 0, "curator: base token balance mismatch");
     }
 }

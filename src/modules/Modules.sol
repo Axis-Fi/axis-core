@@ -106,7 +106,6 @@ abstract contract WithModules is Owned {
     error InvalidModuleInstall(Keycode keycode_, uint8 version_);
     error ModuleNotInstalled(Keycode keycode_, uint8 version_);
     error ModuleExecutionReverted(bytes error_);
-    error ModuleFunctionInvalid(bytes4 function_);
     error ModuleAlreadySunset(Keycode keycode_);
     error ModuleIsSunset(Keycode keycode_);
 
@@ -218,8 +217,7 @@ abstract contract WithModules is Owned {
     function _moduleIsInstalled(Keycode keycode_) internal view returns (bool) {
         // Any module that has been installed will have a latest version greater than 0
         // We can check not equal here to save gas
-        uint8 latestVersion = getModuleStatus[keycode_].latestVersion;
-        return latestVersion != uint8(0);
+        return getModuleStatus[keycode_].latestVersion != uint8(0);
     }
 
     /// @notice         Returns the address of the latest version of a module
@@ -306,10 +304,8 @@ abstract contract WithModules is Owned {
         isExecOnModule = true;
 
         // Check that the module is installed (or revert)
-        address module = _getModuleIfInstalled(veecode_);
-
         // Call the module
-        (bool success, bytes memory returnData) = module.call(callData_);
+        (bool success, bytes memory returnData) = _getModuleIfInstalled(veecode_).call(callData_);
         if (!success) revert ModuleExecutionReverted(returnData);
 
         // Reset the flag to false
