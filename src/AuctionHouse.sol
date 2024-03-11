@@ -136,8 +136,6 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
 
     error AmountLessThanMinimum();
 
-    error InvalidBidder(address bidder_);
-
     error Broken_Invariant();
 
     // ========== EVENTS ========== //
@@ -229,20 +227,24 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
 
         // Check if the purchaser is on the allowlist
         if (!_isAllowed(routing.allowlist, params_.lotId, msg.sender, params_.allowlistProof)) {
-            revert InvalidBidder(msg.sender);
+            revert NotPermitted(msg.sender);
         }
 
         // Calculate quote fees for purchase
         // TODO this enables protocol and referrer fees to be changed between purchases
-        uint256 amountLessFees = params_.amount
-            - _allocateQuoteFees(
-                fees[keycodeFromVeecode(routing.auctionReference)].protocol,
-                fees[keycodeFromVeecode(routing.auctionReference)].referrer,
-                params_.referrer,
-                routing.seller,
-                routing.quoteToken,
-                params_.amount
-            );
+        uint256 amountLessFees;
+        {
+            Keycode auctionKeycode = keycodeFromVeecode(routing.auctionReference);
+            amountLessFees = params_.amount
+                - _allocateQuoteFees(
+                    fees[auctionKeycode].protocol,
+                    fees[auctionKeycode].referrer,
+                    params_.referrer,
+                    routing.seller,
+                    routing.quoteToken,
+                    params_.amount
+                );
+        }
 
         // Send purchase to auction house and get payout plus any extra output
         bytes memory auctionOutput;
@@ -324,7 +326,7 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
 
         // Determine if the bidder is authorized to bid
         if (!_isAllowed(routing.allowlist, params_.lotId, msg.sender, params_.allowlistProof)) {
-            revert InvalidBidder(msg.sender);
+            revert NotPermitted(msg.sender);
         }
 
         // Record the bid on the auction module
@@ -382,10 +384,10 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
             getModuleForId(lotId_).claimBids(lotId_, bidIds_);
 
         // Load routing data for the lot
-        Routing storage routing = lotRouting[lotId_];
+        Routing memory routing = lotRouting[lotId_];
 
         // Load fee data
-        FeeData storage feeData = lotFees[lotId_];
+        FeeData memory feeData = lotFees[lotId_];
 
         // Iterate through the bid claims and handle each one
         for (uint256 i = 0; i < bidClaims.length; i++) {
@@ -465,8 +467,11 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
 
             // Store the protocol and referrer fees
             // If this is not done, the amount that the seller receives could be modified after settlement
-            feeData.protocolFee = fees[keycodeFromVeecode(routing.auctionReference)].protocol;
-            feeData.referrerFee = fees[keycodeFromVeecode(routing.auctionReference)].referrer;
+            {
+                Keycode auctionKeycode = keycodeFromVeecode(routing.auctionReference);
+                feeData.protocolFee = fees[auctionKeycode].protocol;
+                feeData.referrerFee = fees[auctionKeycode].referrer;
+            }
 
             uint256 curatorFeePayout =
                 _calculatePayoutFees(feeData.curated, feeData.curatorFee, capacity);
@@ -562,7 +567,7 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
         // If a referrer is not set, that portion of the fee defaults to the protocol
         uint256 totalInLessFees;
         {
-            FeeData storage feeData = lotFees[lotId_];
+            FeeData memory feeData = lotFees[lotId_];
             (, uint256 toProtocol) =
                 calculateQuoteFees(feeData.protocolFee, feeData.referrerFee, false, purchased_);
             totalInLessFees = purchased_ - toProtocol;
@@ -596,9 +601,7 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
     function curate(uint96 lotId_) external nonReentrant {
         _isLotValid(lotId_);
 
-        Routing storage routing = lotRouting[lotId_];
         FeeData storage feeData = lotFees[lotId_];
-        Keycode auctionType = keycodeFromVeecode(routing.auctionReference);
 
         // Check that the caller is the proposed curator
         if (msg.sender != feeData.curator) revert NotPermitted(msg.sender);
@@ -610,13 +613,11 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
         AuctionModule module = getModuleForId(lotId_);
         if (module.hasEnded(lotId_) == true) revert InvalidState();
 
-        // Check that the curator fee is set
-        uint48 curatorFee = fees[auctionType].curator[msg.sender];
-        if (curatorFee == 0) revert InvalidFee();
+        Routing storage routing = lotRouting[lotId_];
 
         // Set the curator as approved
         feeData.curated = true;
-        feeData.curatorFee = curatorFee;
+        feeData.curatorFee = fees[keycodeFromVeecode(routing.auctionReference)].curator[msg.sender];
 
         // If the auction is pre-funded, transfer the fee amount from the seller
         if (routing.funding > 0) {

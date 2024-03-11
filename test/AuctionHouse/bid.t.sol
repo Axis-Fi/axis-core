@@ -130,7 +130,7 @@ contract BidTest is AuctionHouseTest {
         givenLotHasStarted
         whenAllowlistProofIsIncorrect
     {
-        bytes memory err = abi.encodeWithSelector(AuctionHouse.InvalidBidder.selector, _bidder);
+        bytes memory err = abi.encodeWithSelector(Auctioneer.NotPermitted.selector, _bidder);
         vm.expectRevert(err);
 
         // Call the function
