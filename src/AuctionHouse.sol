@@ -378,10 +378,12 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
         Routing memory routing = lotRouting[lotId_];
 
         // Load fee data
-        FeeData memory feeData = lotFees[lotId_];
+        uint48 protocolFee = lotFees[lotId_].protocolFee;
+        uint48 referrerFee = lotFees[lotId_].referrerFee;
 
         // Iterate through the bid claims and handle each one
-        for (uint256 i = 0; i < bidClaims.length; i++) {
+        uint256 bidClaimsLen = bidClaims.length;
+        for (uint256 i = 0; i < bidClaimsLen; i++) {
             Auction.BidClaim memory bidClaim = bidClaims[i];
 
             // If payout is greater than zero, then the bid was filled.
@@ -389,8 +391,8 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
             if (bidClaim.payout > 0) {
                 // Allocate quote and protocol fees for bid
                 _allocateQuoteFees(
-                    feeData.protocolFee,
-                    feeData.referrerFee,
+                    protocolFee,
+                    referrerFee,
                     bidClaim.referrer,
                     routing.seller,
                     routing.quoteToken,
@@ -448,8 +450,6 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
         // Check if the auction settled
         // If so, calculate fees, handle partial bid, transfer proceeds + (possible) refund to seller, and curator fee
         if (settlement.totalIn > 0 && settlement.totalOut > 0) {
-            uint256 totalIn = settlement.totalIn;
-
             // Load curator data and calculate fee (excluding any refunds of capacity)
             FeeData storage feeData = lotFees[lotId_];
 
@@ -471,15 +471,11 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
             // Any unutilised capacity and fees can be claimed in `claimProceeds()`
             if (routing.funding == 0) {
                 routing.funding = capacity + curatorFeePayout;
-                _collectPayout(lotId_, totalIn, routing.funding, routing);
+                _collectPayout(lotId_, settlement.totalIn, routing.funding, routing);
             }
 
             // Check if there was a partial fill and handle the payout + refund
             if (settlement.pfBidder != address(0)) {
-                // Reconstruct bid amount from the settlement price and the amount out
-                uint256 filledAmount =
-                    Math.mulDivDown(settlement.pfPayout, totalIn, settlement.totalOut);
-
                 // Allocate quote and protocol fees for bid
                 _allocateQuoteFees(
                     feeData.protocolFee,
@@ -487,18 +483,13 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
                     settlement.pfReferrer,
                     routing.seller,
                     routing.quoteToken,
-                    filledAmount
+                    // Reconstruct bid amount from the settlement price and the amount out
+                    Math.mulDivDown(settlement.pfPayout, settlement.totalIn, settlement.totalOut)
                 );
 
                 // Reduce funding by the payout amount
                 unchecked {
                     routing.funding -= settlement.pfPayout;
-                }
-
-                // Reduce the total amount in by the refund amount
-                // This is so that fees are not charged on the refunded amount
-                unchecked {
-                    totalIn -= settlement.pfRefund;
                 }
 
                 // Send refund and payout to the bidder
