@@ -5,7 +5,7 @@ pragma solidity 0.8.19;
 import {Veecode, toKeycode, wrapVeecode} from "src/modules/Modules.sol";
 
 // Auctions
-import {AuctionModule} from "src/modules/Auction.sol";
+import {Auction, AuctionModule} from "src/modules/Auction.sol";
 
 contract MockAuctionModule is AuctionModule {
     constructor(address _owner) AuctionModule(_owner) {
@@ -18,6 +18,11 @@ contract MockAuctionModule is AuctionModule {
 
     function TYPE() public pure virtual override returns (Type) {
         return Type.Auction;
+    }
+
+    /// @inheritdoc Auction
+    function auctionType() external pure override returns (AuctionType) {
+        return AuctionType.Atomic;
     }
 
     function _auction(uint96, Lot memory, bytes memory) internal virtual override returns (bool) {}

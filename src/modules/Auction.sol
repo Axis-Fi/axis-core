@@ -31,6 +31,14 @@ abstract contract Auction {
 
     // ========== DATA STRUCTURES ========== //
 
+    /// @notice     The type of auction lot
+    /// @dev        Auction modules specify their type in the `auctionType()` function
+    enum AuctionType {
+        Atomic,
+        Batch
+    }
+
+    /// @notice     The status of an auction lot
     enum Status {
         Created,
         Decrypted,
@@ -273,6 +281,11 @@ abstract contract Auction {
     /// @param      lotId_  The lot id
     /// @return     bool    Whether or not the capacity is in quote tokens
     function capacityInQuote(uint96 lotId_) external view virtual returns (bool);
+
+    /// @notice     Get the type of an auction
+    ///
+    /// @return     AuctionType     The type of auction
+    function auctionType() external pure virtual returns (AuctionType);
 }
 
 abstract contract AuctionModule is Auction, Module {

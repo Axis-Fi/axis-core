@@ -55,6 +55,11 @@ contract MockBatchAuctionModule is AuctionModule {
         return Type.Auction;
     }
 
+    /// @inheritdoc Auction
+    function auctionType() external pure override returns (AuctionType) {
+        return AuctionType.Batch;
+    }
+
     function setRequiredPrefunding(bool prefunding_) external virtual {
         requiresPrefunding = prefunding_;
     }
