@@ -2,7 +2,6 @@
 pragma solidity 0.8.19;
 
 import {Auctioneer} from "src/bases/Auctioneer.sol";
-import {FeeManager} from "src/bases/FeeManager.sol";
 
 import {AuctionHouseTest} from "test/AuctionHouse/AuctionHouseTest.sol";
 

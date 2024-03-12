@@ -5,7 +5,6 @@ pragma solidity 0.8.19;
 import {MockBatchAuctionModule} from "test/modules/Auction/MockBatchAuctionModule.sol";
 
 // Auctions
-import {AuctionHouse} from "src/AuctionHouse.sol";
 import {Auction} from "src/modules/Auction.sol";
 import {Auctioneer} from "src/bases/Auctioneer.sol";
 
