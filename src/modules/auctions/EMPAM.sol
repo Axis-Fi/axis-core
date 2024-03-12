@@ -880,6 +880,11 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         return auctionData[lotId_];
     }
 
+    /// @inheritdoc Auction
+    function auctionType() external pure override returns (AuctionType) {
+        return AuctionType.Batch;
+    }
+
     // ========== VALIDATION ========== //
 
     /// @inheritdoc AuctionModule
