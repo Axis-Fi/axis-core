@@ -39,9 +39,7 @@ contract MockAtomicAuctionModule is AuctionModule {
         requiresPrefunding = prefunding_;
     }
 
-    function _auction(uint96, Lot memory, bytes memory) internal virtual override returns (bool) {
-        return requiresPrefunding;
-    }
+    function _auction(uint96, Lot memory, bytes memory) internal virtual override {}
 
     function _cancelAuction(uint96 id_) internal override {
         cancelled[id_] = true;
