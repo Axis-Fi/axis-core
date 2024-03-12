@@ -477,7 +477,7 @@ contract AuctionTest is AuctionHouseTest {
         assertEq(address(routing.hooks), address(_hook), "hooks mismatch");
     }
 
-    // [X] given the auction module requires prefunding
+    // [X] given the auction type is batch
     //  [X] reverts when the auction has capacity in quote
     //  [X] when the auction has hooks
     //   [X] reverts when the hook does not transfer enough payout tokens
@@ -503,11 +503,10 @@ contract AuctionTest is AuctionHouseTest {
         _;
     }
 
-    function test_prefunding_capacityInQuote_reverts()
+    function test_whenBatchAuction_capacityInQuote_reverts()
         external
-        whenAuctionTypeIsAtomic
-        whenAtomicAuctionModuleIsInstalled
-        givenAtomicAuctionRequiresPrefunding
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
         whenAuctionCapacityInQuote
     {
         // Expect revert
@@ -518,12 +517,11 @@ contract AuctionTest is AuctionHouseTest {
         _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
     }
 
-    function test_prefunding_withHooks_invariantBreaks_reverts()
+    function test_whenBatchAuction_withHooks_invariantBreaks_reverts()
         external
-        whenAuctionTypeIsAtomic
-        whenAtomicAuctionModuleIsInstalled
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
         whenHooksIsSet
-        givenAtomicAuctionRequiresPrefunding
         givenHookHasBaseTokenBalance(_LOT_CAPACITY)
         givenPreAuctionCreateHookBreaksInvariant
     {
@@ -535,12 +533,11 @@ contract AuctionTest is AuctionHouseTest {
         _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
     }
 
-    function test_prefunding_withHooks_feeOnTransfer_reverts()
+    function test_whenBatchAuction_withHooks_feeOnTransfer_reverts()
         external
-        whenAuctionTypeIsAtomic
-        whenAtomicAuctionModuleIsInstalled
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
         whenHooksIsSet
-        givenAtomicAuctionRequiresPrefunding
         givenHookHasBaseTokenBalance(_LOT_CAPACITY)
         givenBaseTokenTakesFeeOnTransfer
     {
@@ -552,12 +549,11 @@ contract AuctionTest is AuctionHouseTest {
         _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
     }
 
-    function test_prefunding_withHooks()
+    function test_whenBatchAuction_withHooks()
         external
-        whenAuctionTypeIsAtomic
-        whenAtomicAuctionModuleIsInstalled
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
         whenHooksIsSet
-        givenAtomicAuctionRequiresPrefunding
         givenHookHasBaseTokenBalance(_LOT_CAPACITY)
     {
         // Create the auction
@@ -577,12 +573,11 @@ contract AuctionTest is AuctionHouseTest {
         );
     }
 
-    function test_prefunding_withHooks_quoteTokenDecimalsLarger()
+    function test_whenBatchAuction_withHooks_quoteTokenDecimalsLarger()
         external
-        whenAuctionTypeIsAtomic
-        whenAtomicAuctionModuleIsInstalled
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
         whenHooksIsSet
-        givenAtomicAuctionRequiresPrefunding
         givenQuoteTokenHasDecimals(17)
         givenBaseTokenHasDecimals(13)
         givenHookHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
@@ -604,12 +599,11 @@ contract AuctionTest is AuctionHouseTest {
         );
     }
 
-    function test_prefunding_withHooks_quoteTokenDecimalsSmaller()
+    function test_whenBatchAuction_withHooks_quoteTokenDecimalsSmaller()
         external
-        whenAuctionTypeIsAtomic
-        whenAtomicAuctionModuleIsInstalled
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
         whenHooksIsSet
-        givenAtomicAuctionRequiresPrefunding
         givenQuoteTokenHasDecimals(13)
         givenBaseTokenHasDecimals(17)
         givenHookHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
@@ -631,11 +625,10 @@ contract AuctionTest is AuctionHouseTest {
         );
     }
 
-    function test_prefunding_insufficientBalance_reverts()
+    function test_whenBatchAuction_insufficientBalance_reverts()
         external
-        whenAuctionTypeIsAtomic
-        whenAtomicAuctionModuleIsInstalled
-        givenAtomicAuctionRequiresPrefunding
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
     {
         // Expect revert
@@ -645,11 +638,10 @@ contract AuctionTest is AuctionHouseTest {
         _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
     }
 
-    function test_prefunding_insufficientAllowance_reverts()
+    function test_whenBatchAuction_insufficientAllowance_reverts()
         external
-        whenAuctionTypeIsAtomic
-        whenAtomicAuctionModuleIsInstalled
-        givenAtomicAuctionRequiresPrefunding
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
     {
         // Expect revert
@@ -659,11 +651,10 @@ contract AuctionTest is AuctionHouseTest {
         _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
     }
 
-    function test_prefunding_feeOnTransfer_reverts()
+    function test_whenBatchAuction_feeOnTransfer_reverts()
         external
-        whenAuctionTypeIsAtomic
-        whenAtomicAuctionModuleIsInstalled
-        givenAtomicAuctionRequiresPrefunding
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenBaseTokenTakesFeeOnTransfer
@@ -677,11 +668,10 @@ contract AuctionTest is AuctionHouseTest {
         _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
     }
 
-    function test_prefunding()
+    function test_whenBatchAuction()
         external
-        whenAuctionTypeIsAtomic
-        whenAtomicAuctionModuleIsInstalled
-        givenAtomicAuctionRequiresPrefunding
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
     {
@@ -702,11 +692,10 @@ contract AuctionTest is AuctionHouseTest {
         );
     }
 
-    function test_prefunding_quoteTokenDecimalsLarger()
+    function test_whenBatchAuction_quoteTokenDecimalsLarger()
         external
-        whenAuctionTypeIsAtomic
-        whenAtomicAuctionModuleIsInstalled
-        givenAtomicAuctionRequiresPrefunding
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
         givenQuoteTokenHasDecimals(17)
         givenBaseTokenHasDecimals(13)
         givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
@@ -729,11 +718,10 @@ contract AuctionTest is AuctionHouseTest {
         );
     }
 
-    function test_prefunding_quoteTokenDecimalsSmaller()
+    function test_whenBatchAuction_quoteTokenDecimalsSmaller()
         external
-        whenAuctionTypeIsAtomic
-        whenAtomicAuctionModuleIsInstalled
-        givenAtomicAuctionRequiresPrefunding
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
         givenQuoteTokenHasDecimals(13)
         givenBaseTokenHasDecimals(17)
         givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
