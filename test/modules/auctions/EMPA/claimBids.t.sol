@@ -2,7 +2,6 @@
 pragma solidity 0.8.19;
 
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
-import {console2} from "forge-std/console2.sol";
 
 import {Module} from "src/modules/Modules.sol";
 import {Auction} from "src/modules/Auction.sol";
@@ -496,6 +495,109 @@ contract EmpaModuleClaimBidsTest is EmpaModuleTest {
         assertEq(uint8(bidOne.status), uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed));
         EncryptedMarginalPriceAuctionModule.Bid memory bidTwo = _getBid(_lotId, _bidIds[1]);
         assertEq(uint8(bidTwo.status), uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed));
+    }
+
+    function test_successfulBid_marginalPriceRounding()
+        external
+        givenLotIsCreated
+        givenLotHasStarted
+        givenBidIsCreated(12e18 - 1, _BID_AMOUNT_OUT) // Bid price: ~ 3
+        givenBidIsCreatedByBidderTwo(_BID_AMOUNT, _BID_AMOUNT_OUT) // Bid price: 2
+        givenLotHasConcluded
+        givenPrivateKeyIsSubmitted
+        givenLotIsDecrypted
+        givenLotIsSettled
+    {
+        // Call the function
+        vm.prank(address(_auctionHouse));
+        (Auction.BidClaim[] memory bidClaims,) = _module.claimBids(_lotId, _bidIds);
+
+        // Calculate the expected amounts
+        uint256 marginalPrice =
+            FixedPointMathLib.mulDivUp(uint256(12e18 - 1 + _BID_AMOUNT), _BASE_SCALE, _LOT_CAPACITY);
+
+        uint256 expectedAmountOutOne =
+            FixedPointMathLib.mulDivDown(12e18 - 1, _BASE_SCALE, marginalPrice);
+        uint256 expectedAmountOutTwo =
+            FixedPointMathLib.mulDivDown(_BID_AMOUNT, _BASE_SCALE, marginalPrice);
+
+        // Check the result
+        Auction.BidClaim memory bidClaimOne = bidClaims[0];
+        assertEq(bidClaimOne.bidder, _BIDDER, "bid one: bidder");
+        assertEq(bidClaimOne.referrer, _REFERRER, "bid one: referrer");
+        assertEq(bidClaimOne.paid, 12e18 - 1, "bid one: paid");
+        assertEq(bidClaimOne.payout, expectedAmountOutOne, "bid one: payout");
+
+        Auction.BidClaim memory bidClaimTwo = bidClaims[1];
+        assertEq(bidClaimTwo.bidder, _BIDDER_TWO, "bid two: bidder");
+        assertEq(bidClaimTwo.referrer, _REFERRER, "bid two: referrer");
+        assertEq(bidClaimTwo.paid, _BID_AMOUNT, "bid two: paid");
+        assertEq(bidClaimTwo.payout, expectedAmountOutTwo, "bid two: payout");
+
+        assertEq(bidClaims.length, 2, "bid claims length");
+
+        // Check the bid status
+        EncryptedMarginalPriceAuctionModule.Bid memory bidOne = _getBid(_lotId, _bidIds[0]);
+        assertEq(uint8(bidOne.status), uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed));
+        EncryptedMarginalPriceAuctionModule.Bid memory bidTwo = _getBid(_lotId, _bidIds[1]);
+        assertEq(uint8(bidTwo.status), uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed));
+    }
+
+    function test_successfulBid_marginalPriceRounding_capacityExceeded()
+        external
+        givenLotIsCreated
+        givenLotHasStarted
+        givenBidIsCreated(12e18 - 1, _BID_AMOUNT_OUT) // Bid price: ~ 3
+        givenBidIsCreatedByBidderTwo(_BID_AMOUNT, _BID_AMOUNT_OUT) // Bid price: 2
+        givenBidIsCreated(1e18, 1e18) // Bid price: 1
+        givenLotHasConcluded
+        givenPrivateKeyIsSubmitted
+        givenLotIsDecrypted
+        givenLotIsSettled
+    {
+        // Call the function
+        vm.prank(address(_auctionHouse));
+        (Auction.BidClaim[] memory bidClaims,) = _module.claimBids(_lotId, _bidIds);
+
+        // Calculate the expected amounts
+        uint256 marginalPrice =
+            FixedPointMathLib.mulDivUp(uint256(12e18 - 1 + _BID_AMOUNT), _BASE_SCALE, _LOT_CAPACITY);
+
+        uint256 expectedAmountOutOne =
+            FixedPointMathLib.mulDivDown(12e18 - 1, _BASE_SCALE, marginalPrice);
+        uint256 expectedAmountOutTwo =
+            FixedPointMathLib.mulDivDown(_BID_AMOUNT, _BASE_SCALE, marginalPrice);
+
+        // Check the result
+        Auction.BidClaim memory bidClaimOne = bidClaims[0];
+        assertEq(bidClaimOne.bidder, _BIDDER, "bid one: bidder");
+        assertEq(bidClaimOne.referrer, _REFERRER, "bid one: referrer");
+        assertEq(bidClaimOne.paid, 12e18 - 1, "bid one: paid");
+        assertEq(bidClaimOne.payout, expectedAmountOutOne, "bid one: payout");
+
+        Auction.BidClaim memory bidClaimTwo = bidClaims[1];
+        assertEq(bidClaimTwo.bidder, _BIDDER_TWO, "bid two: bidder");
+        assertEq(bidClaimTwo.referrer, _REFERRER, "bid two: referrer");
+        assertEq(bidClaimTwo.paid, _BID_AMOUNT, "bid two: paid");
+        assertEq(bidClaimTwo.payout, expectedAmountOutTwo, "bid two: payout");
+
+        Auction.BidClaim memory bidClaimThree = bidClaims[2];
+        assertEq(bidClaimThree.bidder, _BIDDER, "bid three: bidder");
+        assertEq(bidClaimThree.referrer, _REFERRER, "bid three: referrer");
+        assertEq(bidClaimThree.paid, 1e18, "bid three: paid");
+        assertEq(bidClaimThree.payout, 0, "bid three: payout");
+
+        assertEq(bidClaims.length, 3, "bid claims length");
+
+        // Check the bid status
+        EncryptedMarginalPriceAuctionModule.Bid memory bidOne = _getBid(_lotId, _bidIds[0]);
+        assertEq(uint8(bidOne.status), uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed));
+        EncryptedMarginalPriceAuctionModule.Bid memory bidTwo = _getBid(_lotId, _bidIds[1]);
+        assertEq(uint8(bidTwo.status), uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed));
+        EncryptedMarginalPriceAuctionModule.Bid memory bidThree = _getBid(_lotId, _bidIds[2]);
+        assertEq(
+            uint8(bidThree.status), uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed)
+        );
     }
 
     function test_successfulBid_amountIn_fuzz(uint96 bidAmountIn_)

@@ -614,6 +614,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         {
             Queue storage queue = decryptedBids[lotId_];
             uint96 lastPrice;
+            uint64 lastBidId;
             uint256 numBids = queue.getNumBids();
             for (uint256 i = 0; i < numBids; i++) {
                 // A bid can be considered if:
@@ -642,6 +643,11 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
                         result.marginalPrice = lotAuctionData.minPrice; // note this cannot be zero since it is checked above
                     }
 
+                    // If the marginal price is re-calculated and is the same as the previous, we need to set the marginal bid id, otherwise the previous bid will not be able to claim.
+                    if (lastPrice == result.marginalPrice) {
+                        result.marginalBidId = lastBidId;
+                    }
+
                     // Update capacity expended with the new marginal price
                     result.capacityExpended = Math.mulDivDown(
                         result.totalAmountIn, baseScale, uint256(result.marginalPrice)
@@ -659,13 +665,24 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
                 if (result.capacityExpended >= capacity) {
                     result.marginalPrice =
                         uint96(Math.mulDivUp(result.totalAmountIn, baseScale, capacity));
-                    result.marginalBidId = uint64(0); // we set this to zero so that any bids at the current price are not considered in the case that capacityExpended == capacity
-                    result.capacityExpended = capacity; // updated based on the marginal price
+
+                    // If the marginal price is re-calculated and is the same as the previous, we need to set the marginal bid id, otherwise the previous bid will not be able to claim.
+                    if (lastPrice == result.marginalPrice) {
+                        result.marginalBidId = lastBidId;
+                    } else {
+                        result.marginalBidId = uint64(0); // we set this to zero so that any bids at the current price are not considered in the case that capacityExpended == capacity
+                    }
+
+                    // Calculate the capacity expended in the same way as before, instead of setting it to `capacity`
+                    // This will normally equal `capacity`, except when rounding would cause the the capacity expended to be slightly less than `capacity`
+                    result.capacityExpended =
+                        Math.mulDivDown(result.totalAmountIn, baseScale, result.marginalPrice); // updated based on the marginal price
                     break;
                 }
 
                 // The current price will now be considered, so we can set this
                 lastPrice = price;
+                lastBidId = bidId;
 
                 // Increment total amount in
                 result.totalAmountIn += amountIn;
@@ -700,6 +717,11 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
                             uint96(Math.mulDivUp(result.totalAmountIn, baseScale, capacity));
                     } else {
                         result.marginalPrice = lotAuctionData.minPrice;
+                    }
+
+                    // If the marginal price is re-calculated and is the same as the previous, we need to set the marginal bid id, otherwise the current bid will not be able to claim.
+                    if (price == result.marginalPrice) {
+                        result.marginalBidId = bidId;
                     }
 
                     result.capacityExpended = Math.mulDivDown(
