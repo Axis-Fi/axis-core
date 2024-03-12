@@ -33,8 +33,8 @@ contract LinearVestingEMPAIntegrationTest is AuctionHouseTest {
     uint48 internal constant _VESTING_EXPIRY = 1_705_055_144; // 2024-01-12
     uint48 internal constant _VESTING_DURATION = _VESTING_EXPIRY - _VESTING_START;
 
-    uint96 internal constant _BID_AMOUNT = 8e18;
-    uint96 internal constant _BID_AMOUNT_OUT = 4e18;
+    uint96 internal constant _BID_AMOUNT = 15e18;
+    uint96 internal constant _BID_AMOUNT_OUT = 10e18; // Ensures that capacit is filled and the price is not adjusted
 
     // ============ Modifiers ============ //
 
@@ -545,7 +545,7 @@ contract LinearVestingEMPAIntegrationTest is AuctionHouseTest {
         givenLotHasStarted
         givenUserHasQuoteTokenBalance(4e18)
         givenUserHasQuoteTokenAllowance(4e18)
-        givenBidIsCreated(4e18, 2e18)
+        givenBidIsCreated(4e18, 5e18) // Below the minimum price
         givenLotIsConcluded
         givenPrivateKeyIsSubmitted
         givenLotIsDecrypted

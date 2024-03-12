@@ -485,8 +485,11 @@ abstract contract AuctionHouseTest is Test, Permit2User {
     }
 
     modifier givenBidIsClaimed(uint64 bidId_) {
+        uint64[] memory bids = new uint64[](1);
+        bids[0] = bidId_;
+
         vm.prank(_bidder);
-        _auctionHouse.claimBid(_lotId, bidId_);
+        _auctionHouse.claimBids(_lotId, bids);
         _;
     }
 
