@@ -614,6 +614,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         {
             Queue storage queue = decryptedBids[lotId_];
             uint96 lastPrice;
+            uint64 lastBidId;
             uint256 numBids = queue.getNumBids();
             for (uint256 i = 0; i < numBids; i++) {
                 // A bid can be considered if:
@@ -642,6 +643,11 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
                         result.marginalPrice = lotAuctionData.minPrice; // note this cannot be zero since it is checked above
                     }
 
+                    // If the marginal price is re-calculated and is the same as the previous, we need to set the marginal bid id, otherwise the previous bid will not be able to claim.
+                    if (lastPrice == result.marginalPrice) {
+                        result.marginalBidId = lastBidId;
+                    }
+
                     // Update capacity expended with the new marginal price
                     result.capacityExpended = Math.mulDivDown(
                         result.totalAmountIn, baseScale, uint256(result.marginalPrice)
@@ -666,6 +672,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
 
                 // The current price will now be considered, so we can set this
                 lastPrice = price;
+                lastBidId = bidId;
 
                 // Increment total amount in
                 result.totalAmountIn += amountIn;
@@ -700,6 +707,11 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
                             uint96(Math.mulDivUp(result.totalAmountIn, baseScale, capacity));
                     } else {
                         result.marginalPrice = lotAuctionData.minPrice;
+                    }
+
+                    // If the marginal price is re-calculated and is the same as the previous, we need to set the marginal bid id, otherwise the current bid will not be able to claim.
+                    if (price == result.marginalPrice) {
+                        result.marginalBidId = bidId;
                     }
 
                     result.capacityExpended = Math.mulDivDown(

@@ -732,6 +732,78 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         _;
     }
 
+    modifier givenBidAmountsRespectsRoundingLastBid() {
+        // Capacity: 2 + 2 + 2 + 2 >= 2.5 minimum
+        _createBid(
+            _scaleQuoteTokenAmount(12e18 - 1), // 11999999999999999999
+            _scaleBaseTokenAmount(4e18)
+        );
+        _createBid(
+            _scaleQuoteTokenAmount(8e18),
+            _scaleBaseTokenAmount(4e18)
+        );
+
+        // Total amount in: 11999999999999999999 + 8e18 = 20e18-1
+        // Price of bid 2: 8e18 * 1e18 / 4e18 = 2e18
+        // Total amount out: (20e18-1) * 1e18 / 2e18 = 10e18-1 // 9999999999999999999
+        // Marginal price: 2
+        _expectedMarginalPrice = _scaleQuoteTokenAmount(2e18);
+        _expectedMarginalBidId = 2; // Otherwise bid 2 will not be able to claim
+
+        // Output
+        // Bid one: (12e18 - 1) / 2 = 6e18-1 out
+        // Bid two: 8 / 2 = 4 out
+
+        uint96 bidAmountInSuccess =
+            _scaleQuoteTokenAmount(12e18 - 1 + 8e18);
+        uint96 bidAmountOutSuccess = _scaleBaseTokenAmount(_LOT_CAPACITY - 1);
+
+        _expectedTotalIn = bidAmountInSuccess;
+        _expectedTotalOut = bidAmountOutSuccess;
+
+        // Partial fill
+        // None
+        _;
+    }
+
+    modifier givenBidAmountsRespectsRoundingNotLastBid() {
+        // Capacity: 2 + 2 + 2 + 2 >= 2.5 minimum
+        _createBid(
+            _scaleQuoteTokenAmount(12e18 - 1), // 11999999999999999999
+            _scaleBaseTokenAmount(4e18)
+        );
+        _createBid(
+            _scaleQuoteTokenAmount(8e18),
+            _scaleBaseTokenAmount(4e18)
+        );
+        _createBid(_scaleQuoteTokenAmount(_BID_PRICE_BELOW_ONE_AMOUNT),
+            _scaleBaseTokenAmount(_BID_PRICE_BELOW_ONE_AMOUNT_OUT)
+        );
+
+        // Total amount in: 11999999999999999999 + 8e18 = 20e18-1
+        // Price of bid 2: 8e18 * 1e18 / 4e18 = 2e18
+        // Total amount out: (20e18-1) * 1e18 / 2e18 = 10e18-1 // 9999999999999999999
+        // Marginal price: 2
+        _expectedMarginalPrice = _scaleQuoteTokenAmount(2e18);
+        _expectedMarginalBidId = 2; // Otherwise bid 2 will not be able to claim
+
+        // Output
+        // Bid one: (12e18 - 1) / 2 = 6e18-1 out
+        // Bid two: 8 / 2 = 4 out
+        // Bid three: 0 out
+
+        uint96 bidAmountInSuccess =
+            _scaleQuoteTokenAmount(12e18 - 1 + 8e18);
+        uint96 bidAmountOutSuccess = _scaleBaseTokenAmount(_LOT_CAPACITY - 1);
+
+        _expectedTotalIn = bidAmountInSuccess;
+        _expectedTotalOut = bidAmountOutSuccess;
+
+        // Partial fill
+        // None
+        _;
+    }
+
     // ============ Tests ============ //
 
     function test_invalidLotId_reverts() external {
@@ -1666,6 +1738,40 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         givenLotIsCreated
         givenLotHasStarted
         givenBidsCauseCapacityOverflow
+        givenLotHasConcluded
+        givenPrivateKeyIsSubmitted
+        givenLotIsDecrypted
+    {
+        // Call function
+        (Auction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
+
+        // Assert settlement
+        _assertSettlement(settlement, auctionOutput);
+        _assertLot();
+    }
+
+    function test_givenBidAmountRespectsRoundingLastBid()
+        external
+        givenLotIsCreated
+        givenLotHasStarted
+        givenBidAmountsRespectsRoundingLastBid
+        givenLotHasConcluded
+        givenPrivateKeyIsSubmitted
+        givenLotIsDecrypted
+    {
+        // Call function
+        (Auction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
+
+        // Assert settlement
+        _assertSettlement(settlement, auctionOutput);
+        _assertLot();
+    }
+
+    function test_givenBidAmountRespectsRoundingNotLastBid()
+        external
+        givenLotIsCreated
+        givenLotHasStarted
+        givenBidAmountsRespectsRoundingNotLastBid
         givenLotHasConcluded
         givenPrivateKeyIsSubmitted
         givenLotIsDecrypted
