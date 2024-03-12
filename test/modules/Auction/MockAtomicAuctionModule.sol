@@ -10,7 +10,6 @@ import {Auction, AuctionModule} from "src/modules/Auction.sol";
 contract MockAtomicAuctionModule is AuctionModule {
     mapping(uint256 => uint256) public payoutData;
     bool public purchaseReverts;
-    bool public requiresPrefunding;
 
     struct Output {
         uint256 multiplier;
@@ -33,10 +32,6 @@ contract MockAtomicAuctionModule is AuctionModule {
     /// @inheritdoc Auction
     function auctionType() external pure override returns (AuctionType) {
         return AuctionType.Atomic;
-    }
-
-    function setRequiredPrefunding(bool prefunding_) external virtual {
-        requiresPrefunding = prefunding_;
     }
 
     function _auction(uint96, Lot memory, bytes memory) internal virtual override {}

@@ -125,8 +125,7 @@ contract PurchaseTest is AuctionHouseTest {
             _expectedSellerBaseTokenBalance + _expectedBidderBaseTokenBalance
                 + _expectedAuctionHouseBaseTokenBalance + _expectedCuratorBaseTokenBalance
                 + _expectedDerivativeModuleBaseTokenBalance,
-            amountOut_
-                + curatorFee,
+            amountOut_ + curatorFee,
             "base token: total balance mismatch"
         );
 
