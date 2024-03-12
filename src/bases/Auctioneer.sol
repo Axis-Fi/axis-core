@@ -84,7 +84,7 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
         Veecode derivativeReference;
         bytes derivativeParams;
         bool wrapDerivative;
-        uint256 funding;
+        uint96 funding;
     }
 
     /// @notice     Fee information for a lot
@@ -181,7 +181,7 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
         }
 
         bool requiresPrefunding;
-        uint256 lotCapacity;
+        uint96 lotCapacity;
         Veecode auctionReference;
         {
             // Load auction type module, this checks that it is installed.
@@ -263,7 +263,7 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
 
         // Validate callbacks address and store if provided
         // This does not check whether the callbacks contract is implemented properly
-        // Certain functions may revert later. TODO need to think about security with this, specifically in regards to auctions that can't be settled. That specific callback might need to be prevented from reverting.
+        // Certain functions may revert later. TODO need to think about security with this.
         if (!Callbacks.isValidCallbacksAddress(routing_.callbacks)) revert InvalidParams();
         // The zero address passes the isValidCallbackAddress check since we allow auctions to not use a callbacks contract
         if (address(routing_.callbacks) != address(0)) routing.callbacks = routing_.callbacks;
@@ -332,7 +332,7 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
 
         // If the auction is prefunded and supported, transfer the remaining capacity to the seller
         if (routing.funding > 0) {
-            uint256 funding = routing.funding;
+            uint96 funding = routing.funding;
 
             // Set to 0 before transfer to avoid re-entrancy
             routing.funding = 0;
