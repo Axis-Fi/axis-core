@@ -40,8 +40,6 @@ contract PurchaseTest is AuctionHouseTest {
     uint96 internal _expectedProtocolFeesAllocated;
     uint96 internal _expectedReferrerFeesAllocated;
 
-    uint96 internal _expectedPrefunding;
-
     // ======== Modifiers ======== //
 
     modifier whenPurchaseReverts() {
@@ -98,7 +96,6 @@ contract PurchaseTest is AuctionHouseTest {
         uint96 curatorFee = _curatorApproved ? (amountOut_ * _curatorFeePercentActual) / 1e5 : 0;
         bool hasDerivativeToken = _derivativeTokenId != type(uint256).max;
         bool hasHook = address(_routingParams.hooks) != address(0);
-        bool isPrefunding = _atomicAuctionModule.requiresPrefunding();
         uint96 scaledLotCapacity = _scaleBaseTokenAmount(_LOT_CAPACITY);
         uint96 scaledCuratorMaxPotentialFee = _scaleBaseTokenAmount(_curatorMaxPotentialFee);
 
@@ -121,32 +118,21 @@ contract PurchaseTest is AuctionHouseTest {
         // Base token
         _expectedSellerBaseTokenBalance = 0;
         _expectedBidderBaseTokenBalance = hasDerivativeToken ? 0 : _amountOut;
-        _expectedAuctionHouseBaseTokenBalance = isPrefunding
-            ? scaledLotCapacity + scaledCuratorMaxPotentialFee - _amountOut - curatorFee
-            : 0;
+        _expectedAuctionHouseBaseTokenBalance = 0;
         _expectedCuratorBaseTokenBalance = hasDerivativeToken ? 0 : curatorFee;
         _expectedDerivativeModuleBaseTokenBalance = hasDerivativeToken ? _amountOut + curatorFee : 0;
         assertEq(
             _expectedSellerBaseTokenBalance + _expectedBidderBaseTokenBalance
                 + _expectedAuctionHouseBaseTokenBalance + _expectedCuratorBaseTokenBalance
                 + _expectedDerivativeModuleBaseTokenBalance,
-            (isPrefunding ? scaledLotCapacity : amountOut_)
-                + (isPrefunding ? scaledCuratorMaxPotentialFee : curatorFee),
+            amountOut_
+                + curatorFee,
             "base token: total balance mismatch"
         );
 
         // Derivative token
         _expectedBidderDerivativeTokenBalance = hasDerivativeToken ? _amountOut : 0;
         _expectedCuratorDerivativeTokenBalance = hasDerivativeToken ? curatorFee : 0;
-
-        // Prefunding
-        if (isPrefunding) {
-            _expectedPrefunding = scaledLotCapacity - _amountOut;
-            if (_curatorApproved) {
-                _expectedPrefunding += scaledCuratorMaxPotentialFee;
-                _expectedPrefunding -= curatorFee;
-            }
-        }
         _;
     }
 
@@ -255,12 +241,6 @@ contract PurchaseTest is AuctionHouseTest {
             _expectedProtocolFeesAllocated,
             "protocol fee"
         );
-    }
-
-    function _assertPrefunding() internal {
-        // Check funding amount
-        Auctioneer.Routing memory routing = _getLotRouting(_lotId);
-        assertEq(routing.funding, _expectedPrefunding, "mismatch on funding");
     }
 
     // ======== Tests ======== //
@@ -408,7 +388,6 @@ contract PurchaseTest is AuctionHouseTest {
         _assertBaseTokenBalances();
         _assertDerivativeTokenBalances();
         _assertAccruedFees();
-        _assertPrefunding();
     }
 
     // transfer quote token to auction house
@@ -441,7 +420,6 @@ contract PurchaseTest is AuctionHouseTest {
         _assertBaseTokenBalances();
         _assertDerivativeTokenBalances();
         _assertAccruedFees();
-        _assertPrefunding();
     }
 
     function test_whenPermit2Signature_quoteTokenDecimalsLarger()
@@ -470,7 +448,6 @@ contract PurchaseTest is AuctionHouseTest {
         _assertBaseTokenBalances();
         _assertDerivativeTokenBalances();
         _assertAccruedFees();
-        _assertPrefunding();
     }
 
     function test_whenPermit2Signature_quoteTokenDecimalsSmaller()
@@ -499,7 +476,6 @@ contract PurchaseTest is AuctionHouseTest {
         _assertBaseTokenBalances();
         _assertDerivativeTokenBalances();
         _assertAccruedFees();
-        _assertPrefunding();
     }
 
     function test_whenNoPermit2Signature()
@@ -526,7 +502,6 @@ contract PurchaseTest is AuctionHouseTest {
         _assertBaseTokenBalances();
         _assertDerivativeTokenBalances();
         _assertAccruedFees();
-        _assertPrefunding();
     }
 
     function test_whenNoPermit2Signature_quoteTokenDecimalsLarger()
@@ -555,7 +530,6 @@ contract PurchaseTest is AuctionHouseTest {
         _assertBaseTokenBalances();
         _assertDerivativeTokenBalances();
         _assertAccruedFees();
-        _assertPrefunding();
     }
 
     function test_whenNoPermit2Signature_quoteTokenDecimalsSmaller()
@@ -584,7 +558,6 @@ contract PurchaseTest is AuctionHouseTest {
         _assertBaseTokenBalances();
         _assertDerivativeTokenBalances();
         _assertAccruedFees();
-        _assertPrefunding();
     }
 
     // [X] given the auction has hooks defined
@@ -617,7 +590,6 @@ contract PurchaseTest is AuctionHouseTest {
         _assertBaseTokenBalances();
         _assertDerivativeTokenBalances();
         _assertAccruedFees();
-        _assertPrefunding();
     }
 
     function test_hooks_quoteTokenDecimalsLarger()
@@ -647,7 +619,6 @@ contract PurchaseTest is AuctionHouseTest {
         _assertBaseTokenBalances();
         _assertDerivativeTokenBalances();
         _assertAccruedFees();
-        _assertPrefunding();
     }
 
     function test_hooks_quoteTokenDecimalsSmaller()
@@ -677,7 +648,6 @@ contract PurchaseTest is AuctionHouseTest {
         _assertBaseTokenBalances();
         _assertDerivativeTokenBalances();
         _assertAccruedFees();
-        _assertPrefunding();
     }
 
     function test_noHooks()
@@ -704,7 +674,6 @@ contract PurchaseTest is AuctionHouseTest {
         _assertBaseTokenBalances();
         _assertDerivativeTokenBalances();
         _assertAccruedFees();
-        _assertPrefunding();
     }
 
     function test_noHooks_quoteTokenDecimalsLarger()
@@ -733,7 +702,6 @@ contract PurchaseTest is AuctionHouseTest {
         _assertBaseTokenBalances();
         _assertDerivativeTokenBalances();
         _assertAccruedFees();
-        _assertPrefunding();
     }
 
     function test_noHooks_quoteTokenDecimalsSmaller()
@@ -762,7 +730,6 @@ contract PurchaseTest is AuctionHouseTest {
         _assertBaseTokenBalances();
         _assertDerivativeTokenBalances();
         _assertAccruedFees();
-        _assertPrefunding();
     }
 
     // ======== Derivative flow ======== //
@@ -798,7 +765,6 @@ contract PurchaseTest is AuctionHouseTest {
         _assertBaseTokenBalances();
         _assertDerivativeTokenBalances();
         _assertAccruedFees();
-        _assertPrefunding();
     }
 
     function test_derivative_quoteTokenDecimalsLarger()
@@ -831,7 +797,6 @@ contract PurchaseTest is AuctionHouseTest {
         _assertBaseTokenBalances();
         _assertDerivativeTokenBalances();
         _assertAccruedFees();
-        _assertPrefunding();
     }
 
     function test_derivative_quoteTokenDecimalsSmaller()
@@ -864,7 +829,6 @@ contract PurchaseTest is AuctionHouseTest {
         _assertBaseTokenBalances();
         _assertDerivativeTokenBalances();
         _assertAccruedFees();
-        _assertPrefunding();
     }
 
     // [X] given there is no _PROTOCOL fee set for the auction type
@@ -894,7 +858,6 @@ contract PurchaseTest is AuctionHouseTest {
         _assertBaseTokenBalances();
         _assertDerivativeTokenBalances();
         _assertAccruedFees();
-        _assertPrefunding();
     }
 
     function test_givenProtocolFeeIsNotSet_quoteTokenDecimalsLarger()
@@ -922,7 +885,6 @@ contract PurchaseTest is AuctionHouseTest {
         _assertBaseTokenBalances();
         _assertDerivativeTokenBalances();
         _assertAccruedFees();
-        _assertPrefunding();
     }
 
     function test_givenProtocolFeeIsNotSet_quoteTokenDecimalsSmaller()
@@ -950,7 +912,6 @@ contract PurchaseTest is AuctionHouseTest {
         _assertBaseTokenBalances();
         _assertDerivativeTokenBalances();
         _assertAccruedFees();
-        _assertPrefunding();
     }
 
     function test_givenProtocolFeeIsSet()
@@ -977,7 +938,6 @@ contract PurchaseTest is AuctionHouseTest {
         _assertBaseTokenBalances();
         _assertDerivativeTokenBalances();
         _assertAccruedFees();
-        _assertPrefunding();
     }
 
     function test_givenProtocolFeeIsSet_quoteTokenDecimalsLarger()
@@ -1006,7 +966,6 @@ contract PurchaseTest is AuctionHouseTest {
         _assertBaseTokenBalances();
         _assertDerivativeTokenBalances();
         _assertAccruedFees();
-        _assertPrefunding();
     }
 
     function test_givenProtocolFeeIsSet_quoteTokenDecimalsSmaller()
@@ -1035,7 +994,6 @@ contract PurchaseTest is AuctionHouseTest {
         _assertBaseTokenBalances();
         _assertDerivativeTokenBalances();
         _assertAccruedFees();
-        _assertPrefunding();
     }
 
     // [X] given there is no _REFERRER fee set for the auction type
@@ -1065,7 +1023,6 @@ contract PurchaseTest is AuctionHouseTest {
         _assertBaseTokenBalances();
         _assertDerivativeTokenBalances();
         _assertAccruedFees();
-        _assertPrefunding();
     }
 
     function test_givenReferrerFeeIsNotSet_quoteTokenDecimalsLarger()
@@ -1093,7 +1050,6 @@ contract PurchaseTest is AuctionHouseTest {
         _assertBaseTokenBalances();
         _assertDerivativeTokenBalances();
         _assertAccruedFees();
-        _assertPrefunding();
     }
 
     function test_givenReferrerFeeIsNotSet_quoteTokenDecimalsSmaller()
@@ -1121,7 +1077,6 @@ contract PurchaseTest is AuctionHouseTest {
         _assertBaseTokenBalances();
         _assertDerivativeTokenBalances();
         _assertAccruedFees();
-        _assertPrefunding();
     }
 
     function test_givenReferrerFeeIsSet()
@@ -1148,7 +1103,6 @@ contract PurchaseTest is AuctionHouseTest {
         _assertBaseTokenBalances();
         _assertDerivativeTokenBalances();
         _assertAccruedFees();
-        _assertPrefunding();
     }
 
     function test_givenReferrerFeeIsSet_quoteTokenDecimalsLarger()
@@ -1177,7 +1131,6 @@ contract PurchaseTest is AuctionHouseTest {
         _assertBaseTokenBalances();
         _assertDerivativeTokenBalances();
         _assertAccruedFees();
-        _assertPrefunding();
     }
 
     function test_givenReferrerFeeIsSet_quoteTokenDecimalsSmaller()
@@ -1206,7 +1159,6 @@ contract PurchaseTest is AuctionHouseTest {
         _assertBaseTokenBalances();
         _assertDerivativeTokenBalances();
         _assertAccruedFees();
-        _assertPrefunding();
     }
 
     function test_givenReferrerIsNotSet()
@@ -1235,7 +1187,6 @@ contract PurchaseTest is AuctionHouseTest {
         _assertBaseTokenBalances();
         _assertDerivativeTokenBalances();
         _assertAccruedFees();
-        _assertPrefunding();
     }
 
     // [X] given there is no curator set
@@ -1273,7 +1224,6 @@ contract PurchaseTest is AuctionHouseTest {
         _assertBaseTokenBalances();
         _assertDerivativeTokenBalances();
         _assertAccruedFees();
-        _assertPrefunding();
     }
 
     function test_givenCuratorIsSet()
@@ -1301,7 +1251,6 @@ contract PurchaseTest is AuctionHouseTest {
         _assertBaseTokenBalances();
         _assertDerivativeTokenBalances();
         _assertAccruedFees();
-        _assertPrefunding();
     }
 
     function test_givenCuratorHasApproved()
@@ -1332,7 +1281,6 @@ contract PurchaseTest is AuctionHouseTest {
         _assertBaseTokenBalances();
         _assertDerivativeTokenBalances();
         _assertAccruedFees();
-        _assertPrefunding();
     }
 
     function test_givenCuratorHasApproved_quoteTokenDecimalsLarger()
@@ -1365,7 +1313,6 @@ contract PurchaseTest is AuctionHouseTest {
         _assertBaseTokenBalances();
         _assertDerivativeTokenBalances();
         _assertAccruedFees();
-        _assertPrefunding();
     }
 
     function test_givenCuratorHasApproved_quoteTokenDecimalsSmaller()
@@ -1398,7 +1345,6 @@ contract PurchaseTest is AuctionHouseTest {
         _assertBaseTokenBalances();
         _assertDerivativeTokenBalances();
         _assertAccruedFees();
-        _assertPrefunding();
     }
 
     function test_givenCuratorHasApproved_givenCuratorFeeNotSet()
@@ -1428,7 +1374,6 @@ contract PurchaseTest is AuctionHouseTest {
         _assertBaseTokenBalances();
         _assertDerivativeTokenBalances();
         _assertAccruedFees();
-        _assertPrefunding();
     }
 
     function test_givenCuratorHasApproved_givenCuratorFeeIsChanged()
@@ -1463,7 +1408,6 @@ contract PurchaseTest is AuctionHouseTest {
         _assertBaseTokenBalances();
         _assertDerivativeTokenBalances();
         _assertAccruedFees();
-        _assertPrefunding();
     }
 
     function test_derivative_givenCuratorHasApproved()
@@ -1498,7 +1442,6 @@ contract PurchaseTest is AuctionHouseTest {
         _assertBaseTokenBalances();
         _assertDerivativeTokenBalances();
         _assertAccruedFees();
-        _assertPrefunding();
     }
 
     function test_derivative_givenCuratorHasApproved_quoteTokenDecimalsLarger()
@@ -1535,7 +1478,6 @@ contract PurchaseTest is AuctionHouseTest {
         _assertBaseTokenBalances();
         _assertDerivativeTokenBalances();
         _assertAccruedFees();
-        _assertPrefunding();
     }
 
     function test_derivative_givenCuratorHasApproved_quoteTokenDecimalsSmaller()
@@ -1572,6 +1514,5 @@ contract PurchaseTest is AuctionHouseTest {
         _assertBaseTokenBalances();
         _assertDerivativeTokenBalances();
         _assertAccruedFees();
-        _assertPrefunding();
     }
 }
