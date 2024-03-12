@@ -25,7 +25,7 @@ contract MockAuctionModule is AuctionModule {
         return AuctionType.Atomic;
     }
 
-    function _auction(uint96, Lot memory, bytes memory) internal virtual override returns (bool) {}
+    function _auction(uint96, Lot memory, bytes memory) internal virtual override {}
 
     function _cancelAuction(uint96 id_) internal override {
         //

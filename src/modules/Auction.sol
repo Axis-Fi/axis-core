@@ -219,14 +219,13 @@ abstract contract Auction {
     /// @param      params_                 The auction parameters
     /// @param      quoteTokenDecimals_     The quote token decimals
     /// @param      baseTokenDecimals_      The base token decimals
-    /// @return     prefundingRequired      Whether or not prefunding is required
     /// @return     capacity                The capacity of the lot
     function auction(
         uint96 lotId_,
         AuctionParams memory params_,
         uint8 quoteTokenDecimals_,
         uint8 baseTokenDecimals_
-    ) external virtual returns (bool prefundingRequired, uint256 capacity);
+    ) external virtual returns (uint256 capacity);
 
     /// @notice     Cancel an auction lot
     /// @dev        The implementing function should handle the following:
@@ -307,7 +306,7 @@ abstract contract AuctionModule is Auction, Module {
         AuctionParams memory params_,
         uint8 quoteTokenDecimals_,
         uint8 baseTokenDecimals_
-    ) external override onlyInternal returns (bool prefundingRequired, uint256 capacity) {
+    ) external override onlyInternal returns (uint256 capacity) {
         // Start time must be zero or in the future
         if (params_.start > 0 && params_.start < uint48(block.timestamp)) {
             revert Auction_InvalidStart(params_.start, uint48(block.timestamp));
@@ -328,12 +327,12 @@ abstract contract AuctionModule is Auction, Module {
         lot.capacity = params_.capacity;
 
         // Call internal createAuction function to store implementation-specific data
-        (prefundingRequired) = _auction(lotId_, lot, params_.implParams);
+        _auction(lotId_, lot, params_.implParams);
 
         // Store lot data
         lotData[lotId_] = lot;
 
-        return (prefundingRequired, uint256(lot.capacity));
+        return (uint256(lot.capacity));
     }
 
     /// @notice     Implementation-specific auction creation logic
@@ -342,12 +341,7 @@ abstract contract AuctionModule is Auction, Module {
     /// @param      lotId_              The lot ID
     /// @param      lot_                The lot data
     /// @param      params_             Additional auction parameters
-    /// @return     prefundingRequired  Whether or not prefunding is required
-    function _auction(
-        uint96 lotId_,
-        Lot memory lot_,
-        bytes memory params_
-    ) internal virtual returns (bool prefundingRequired);
+    function _auction(uint96 lotId_, Lot memory lot_, bytes memory params_) internal virtual;
 
     /// @notice     Cancel an auction lot
     /// @dev        Assumptions:
