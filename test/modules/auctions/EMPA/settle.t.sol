@@ -732,16 +732,12 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         _;
     }
 
-    modifier givenBidAmountsRespectsRoundingLastBid() {
-        // Capacity: 2 + 2 + 2 + 2 >= 2.5 minimum
+    modifier givenMarginalPriceRoundingLastBid() {
         _createBid(
             _scaleQuoteTokenAmount(12e18 - 1), // 11999999999999999999
             _scaleBaseTokenAmount(4e18)
         );
-        _createBid(
-            _scaleQuoteTokenAmount(8e18),
-            _scaleBaseTokenAmount(4e18)
-        );
+        _createBid(_scaleQuoteTokenAmount(8e18), _scaleBaseTokenAmount(4e18));
 
         // Total amount in: 11999999999999999999 + 8e18 = 20e18-1
         // Price of bid 2: 8e18 * 1e18 / 4e18 = 2e18
@@ -754,8 +750,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         // Bid one: (12e18 - 1) / 2 = 6e18-1 out
         // Bid two: 8 / 2 = 4 out
 
-        uint96 bidAmountInSuccess =
-            _scaleQuoteTokenAmount(12e18 - 1 + 8e18);
+        uint96 bidAmountInSuccess = _scaleQuoteTokenAmount(12e18 - 1 + 8e18);
         uint96 bidAmountOutSuccess = _scaleBaseTokenAmount(_LOT_CAPACITY - 1);
 
         _expectedTotalIn = bidAmountInSuccess;
@@ -766,17 +761,14 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         _;
     }
 
-    modifier givenBidAmountsRespectsRoundingNotLastBid() {
-        // Capacity: 2 + 2 + 2 + 2 >= 2.5 minimum
+    modifier givenMarginalPriceRoundingNotLastBid() {
         _createBid(
             _scaleQuoteTokenAmount(12e18 - 1), // 11999999999999999999
             _scaleBaseTokenAmount(4e18)
         );
+        _createBid(_scaleQuoteTokenAmount(8e18), _scaleBaseTokenAmount(4e18));
         _createBid(
-            _scaleQuoteTokenAmount(8e18),
-            _scaleBaseTokenAmount(4e18)
-        );
-        _createBid(_scaleQuoteTokenAmount(_BID_PRICE_BELOW_ONE_AMOUNT),
+            _scaleQuoteTokenAmount(_BID_PRICE_BELOW_ONE_AMOUNT),
             _scaleBaseTokenAmount(_BID_PRICE_BELOW_ONE_AMOUNT_OUT)
         );
 
@@ -792,8 +784,40 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         // Bid two: 8 / 2 = 4 out
         // Bid three: 0 out
 
-        uint96 bidAmountInSuccess =
-            _scaleQuoteTokenAmount(12e18 - 1 + 8e18);
+        uint96 bidAmountInSuccess = _scaleQuoteTokenAmount(12e18 - 1 + 8e18);
+        uint96 bidAmountOutSuccess = _scaleBaseTokenAmount(_LOT_CAPACITY - 1);
+
+        _expectedTotalIn = bidAmountInSuccess;
+        _expectedTotalOut = bidAmountOutSuccess;
+
+        // Partial fill
+        // None
+        _;
+    }
+
+    modifier givenMarginalPriceRoundingThenCapacityExceeded() {
+        _createBid(
+            _scaleQuoteTokenAmount(12e18 - 1), // 11999999999999999999
+            _scaleBaseTokenAmount(4e18)
+        );
+        _createBid(_scaleQuoteTokenAmount(8e18), _scaleBaseTokenAmount(4e18));
+        // This will be considered, as capacity expended (9999999999999999999) is not greater than capacity (10e18)
+        _createBid(
+            _scaleQuoteTokenAmount(_BID_PRICE_ONE_AMOUNT),
+            _scaleBaseTokenAmount(_BID_PRICE_ONE_AMOUNT_OUT)
+        );
+
+        // Total amount in: 11999999999999999999 + 8e18 + 1e18 = 21e18-1
+        // Marginal price: 2
+        _expectedMarginalPrice = _scaleQuoteTokenAmount(2e18);
+        _expectedMarginalBidId = 2; // Otherwise bid 2 will not be able to claim
+
+        // Output
+        // Bid one: (12e18 - 1) / 2 = 6e18-1 out
+        // Bid two: 8 / 2 = 4 out
+        // Bid three: 0 out as it will round down to 0
+
+        uint96 bidAmountInSuccess = _scaleQuoteTokenAmount(12e18 - 1 + 8e18);
         uint96 bidAmountOutSuccess = _scaleBaseTokenAmount(_LOT_CAPACITY - 1);
 
         _expectedTotalIn = bidAmountInSuccess;
@@ -1754,7 +1778,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         external
         givenLotIsCreated
         givenLotHasStarted
-        givenBidAmountsRespectsRoundingLastBid
+        givenMarginalPriceRoundingLastBid
         givenLotHasConcluded
         givenPrivateKeyIsSubmitted
         givenLotIsDecrypted
@@ -1771,7 +1795,24 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         external
         givenLotIsCreated
         givenLotHasStarted
-        givenBidAmountsRespectsRoundingNotLastBid
+        givenMarginalPriceRoundingNotLastBid
+        givenLotHasConcluded
+        givenPrivateKeyIsSubmitted
+        givenLotIsDecrypted
+    {
+        // Call function
+        (Auction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
+
+        // Assert settlement
+        _assertSettlement(settlement, auctionOutput);
+        _assertLot();
+    }
+
+    function test_givenMarginalPriceRoundingThenCapacityExceeded()
+        external
+        givenLotIsCreated
+        givenLotHasStarted
+        givenMarginalPriceRoundingThenCapacityExceeded
         givenLotHasConcluded
         givenPrivateKeyIsSubmitted
         givenLotIsDecrypted
