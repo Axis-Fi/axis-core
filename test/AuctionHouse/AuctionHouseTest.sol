@@ -473,11 +473,6 @@ abstract contract AuctionHouseTest is Test, Permit2User {
         _;
     }
 
-    modifier givenBatchAuctionRequiresPrefunding() {
-        _batchAuctionModule.setRequiredPrefunding(true);
-        _;
-    }
-
     modifier givenLotProceedsAreClaimed() {
         vm.prank(_SELLER);
         _auctionHouse.claimProceeds(_lotId);
