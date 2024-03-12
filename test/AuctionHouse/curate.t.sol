@@ -207,13 +207,12 @@ contract CurateTest is AuctionHouseTest {
         assertEq(_baseToken.balanceOf(_CURATOR), 0);
     }
 
-    function test_givenAtomicAuctionRequiresPrefunding()
+    function test_whenBatchAuction()
         public
-        whenAuctionTypeIsAtomic
-        whenAtomicAuctionModuleIsInstalled
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
-        givenAtomicAuctionRequiresPrefunding
         givenLotIsCreated
         givenCuratorMaxFeeIsSet
         givenCuratorFeeIsSet
@@ -241,15 +240,14 @@ contract CurateTest is AuctionHouseTest {
         assertEq(_baseToken.balanceOf(_CURATOR), 0, "base token: _CURATOR balance mismatch");
     }
 
-    function test_givenAtomicAuctionRequiresPrefunding_quoteTokenDecimalsLarger()
+    function test_whenBatchAuction_quoteTokenDecimalsLarger()
         public
-        whenAuctionTypeIsAtomic
-        whenAtomicAuctionModuleIsInstalled
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
         givenQuoteTokenHasDecimals(17)
         givenBaseTokenHasDecimals(13)
         givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
-        givenAtomicAuctionRequiresPrefunding
         givenLotIsCreated
         givenCuratorMaxFeeIsSet
         givenCuratorFeeIsSet
@@ -277,15 +275,14 @@ contract CurateTest is AuctionHouseTest {
         assertEq(_baseToken.balanceOf(_CURATOR), 0, "base token: _CURATOR balance mismatch");
     }
 
-    function test_givenAtomicAuctionRequiresPrefunding_quoteTokenDecimalsSmaller()
+    function test_whenBatchAuction_quoteTokenDecimalsSmaller()
         public
-        whenAuctionTypeIsAtomic
-        whenAtomicAuctionModuleIsInstalled
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
         givenQuoteTokenHasDecimals(13)
         givenBaseTokenHasDecimals(17)
         givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
-        givenAtomicAuctionRequiresPrefunding
         givenLotIsCreated
         givenCuratorMaxFeeIsSet
         givenCuratorFeeIsSet
@@ -313,13 +310,12 @@ contract CurateTest is AuctionHouseTest {
         assertEq(_baseToken.balanceOf(_CURATOR), 0, "base token: _CURATOR balance mismatch");
     }
 
-    function test_givenAtomicAuctionRequiresPrefunding_curatorFeeNotSet()
+    function test_whenBatchAuction_curatorFeeNotSet()
         public
-        whenAuctionTypeIsAtomic
-        whenAtomicAuctionModuleIsInstalled
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
-        givenAtomicAuctionRequiresPrefunding
         givenLotIsCreated
         givenCuratorMaxFeeIsSet
         givenLotHasStarted
