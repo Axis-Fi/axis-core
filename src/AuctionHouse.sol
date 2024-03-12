@@ -275,18 +275,9 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
         uint256 curatorFeePayout =
             _calculatePayoutFees(feeData.curated, feeData.curatorFee, payoutAmount);
 
-        // Collect payout from seller, if needed
-        if (routing.funding == 0) {
-            // No need to update the funding amount, as it will be zero-ed out within this function
-            _collectPayout(params_.lotId, amountLessFees, payoutAmount + curatorFeePayout, routing);
-        }
-
-        // Decrease the funding amount (if applicable)
-        if (routing.funding > 0) {
-            unchecked {
-                routing.funding -= payoutAmount + curatorFeePayout;
-            }
-        }
+        // Collect payout from seller
+        // Atomic auctions are not prefunded
+        _collectPayout(params_.lotId, amountLessFees, payoutAmount + curatorFeePayout, routing);
 
         // Send payout to recipient
         _sendPayout(params_.lotId, params_.recipient, payoutAmount, routing, auctionOutput);
@@ -465,12 +456,7 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
             uint256 curatorFeePayout =
                 _calculatePayoutFees(feeData.curated, feeData.curatorFee, capacity);
 
-            // Collect the payout from the seller
-            // Any unutilised capacity and fees can be claimed in `claimProceeds()`
-            if (routing.funding == 0) {
-                routing.funding = capacity + curatorFeePayout;
-                _collectPayout(lotId_, settlement.totalIn, routing.funding, routing);
-            }
+            // Payout has already been collected at the time of auction creation and curation
 
             // Check if there was a partial fill and handle the payout + refund
             if (settlement.pfBidder != address(0)) {
@@ -608,7 +594,7 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
         feeData.curated = true;
         feeData.curatorFee = fees[keycodeFromVeecode(routing.auctionReference)].curator[msg.sender];
 
-        // If the auction is pre-funded, transfer the fee amount from the seller
+        // If the auction is pre-funded (required for batch auctions), transfer the fee amount from the seller
         if (routing.funding > 0) {
             // Calculate the fee amount based on the remaining capacity (must be in base token if auction is pre-funded)
             uint256 curatorFeePayout = _calculatePayoutFees(
