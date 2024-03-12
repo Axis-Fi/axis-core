@@ -5,6 +5,7 @@ pragma solidity 0.8.19;
 import {Test} from "forge-std/Test.sol";
 import {ERC20} from "solmate/tokens/ERC20.sol";
 import {Transfer} from "src/lib/Transfer.sol";
+import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 
 // Mocks
 import {MockAtomicAuctionModule} from "test/modules/Auction/MockAtomicAuctionModule.sol";
@@ -45,22 +46,28 @@ abstract contract AuctionHouseTest is Test, Permit2User {
     MockAllowlist internal _allowlist;
     MockHook internal _hook;
 
-    address internal _auctionOwner = address(0x1);
-    address internal immutable _PROTOCOL = address(0x2);
-    address internal immutable _CURATOR = address(0x3);
-    address internal immutable _RECIPIENT = address(0x5);
-    address internal immutable _REFERRER = address(0x6);
+    uint96 internal constant _BASE_SCALE = 1e18;
+
+    address internal constant _SELLER = address(0x1);
+    address internal constant _PROTOCOL = address(0x2);
+    address internal constant _CURATOR = address(0x3);
+    address internal constant _RECIPIENT = address(0x5);
+    address internal constant _REFERRER = address(0x6);
 
     address internal _bidder = address(0x4);
     uint256 internal _bidderKey;
 
     uint24 internal constant _CURATOR_MAX_FEE_PERCENT = 100;
     uint24 internal constant _CURATOR_FEE_PERCENT = 90;
+    uint24 internal _curatorFeePercentActual;
 
     uint24 internal constant _PROTOCOL_FEE_PERCENT = 100;
     uint24 internal constant _REFERRER_FEE_PERCENT = 105;
+    uint24 internal _protocolFeePercentActual;
+    uint24 internal _referrerFeePercentActual;
 
-    uint96 internal _curatorMaxPotentialFee = _CURATOR_FEE_PERCENT * _LOT_CAPACITY / 1e5;
+    uint96 internal _curatorMaxPotentialFee;
+    bool internal _curatorApproved;
 
     // Input to parameters
     uint48 internal _startTime;
@@ -79,6 +86,7 @@ abstract contract AuctionHouseTest is Test, Permit2User {
     // Outputs
     uint96 internal _lotId = type(uint96).max; // Set to max to ensure it's not a valid lot id
     uint64 internal _bidId = type(uint64).max; // Set to max to ensure it's not a valid bid id
+    uint64[] internal _bidIds;
 
     function setUp() public {
         // Set block timestamp
@@ -87,7 +95,7 @@ abstract contract AuctionHouseTest is Test, Permit2User {
         _baseToken = new MockFeeOnTransferERC20("Base Token", "BASE", 18);
         _quoteToken = new MockFeeOnTransferERC20("Quote Token", "QUOTE", 18);
 
-        _auctionHouse = new AuctionHouse(address(this), _PROTOCOL, _PERMIT2_ADDRESS);
+        _auctionHouse = new AuctionHouse(address(this), _PROTOCOL, _permit2Address);
         _catalogue = new Catalogue(address(_auctionHouse));
 
         _atomicAuctionModule = new MockAtomicAuctionModule(address(_auctionHouse));
@@ -129,7 +137,66 @@ abstract contract AuctionHouseTest is Test, Permit2User {
         _bidder = vm.addr(_bidderKey);
     }
 
+    // ===== Helper Functions ===== //
+
+    function _mulDivUp(uint96 mul1_, uint96 mul2_, uint96 div_) internal pure returns (uint96) {
+        uint256 product = FixedPointMathLib.mulDivUp(mul1_, mul2_, div_);
+        if (product > type(uint96).max) revert("overflow");
+
+        return uint96(product);
+    }
+
+    function _mulDivDown(uint96 mul1_, uint96 mul2_, uint96 div_) internal pure returns (uint96) {
+        uint256 product = FixedPointMathLib.mulDivDown(mul1_, mul2_, div_);
+        if (product > type(uint96).max) revert("overflow");
+
+        return uint96(product);
+    }
+
+    function _scaleQuoteTokenAmount(uint96 amount_) internal view returns (uint96) {
+        return _mulDivUp(amount_, uint96(10 ** (_quoteToken.decimals())), _BASE_SCALE);
+    }
+
+    function _scaleBaseTokenAmount(uint96 amount_) internal view returns (uint96) {
+        return _mulDivUp(amount_, uint96(10 ** (_baseToken.decimals())), _BASE_SCALE);
+    }
+
     // ===== Modifiers ===== //
+
+    function _setBaseTokenDecimals(uint8 decimals_) internal {
+        _baseToken = new MockFeeOnTransferERC20("Base Token", "BASE", decimals_);
+
+        uint96 lotCapacity = _scaleBaseTokenAmount(_LOT_CAPACITY);
+
+        // Update routing params
+        _routingParams.baseToken = _baseToken;
+
+        // Update auction params
+        _auctionParams.capacity = uint96(lotCapacity);
+
+        // Update the hook
+        _hook.setPayoutToken(address(_baseToken));
+    }
+
+    modifier givenBaseTokenHasDecimals(uint8 decimals_) {
+        _setBaseTokenDecimals(decimals_);
+        _;
+    }
+
+    function _setQuoteTokenDecimals(uint8 decimals_) internal {
+        _quoteToken = new MockFeeOnTransferERC20("Quote Token", "QUOTE", decimals_);
+
+        // Update routing params
+        _routingParams.quoteToken = _quoteToken;
+
+        // Update the hook
+        _hook.setQuoteToken(address(_quoteToken));
+    }
+
+    modifier givenQuoteTokenHasDecimals(uint8 decimals_) {
+        _setQuoteTokenDecimals(decimals_);
+        _;
+    }
 
     modifier whenAuctionTypeIsAtomic() {
         _routingParams.auctionType = _atomicAuctionModuleKeycode;
@@ -168,7 +235,7 @@ abstract contract AuctionHouseTest is Test, Permit2User {
     }
 
     modifier givenLotIsCreated() {
-        vm.prank(_auctionOwner);
+        vm.prank(_SELLER);
         _lotId = _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
         _;
     }
@@ -179,13 +246,19 @@ abstract contract AuctionHouseTest is Test, Permit2User {
     }
 
     modifier givenLotIsCancelled() {
-        vm.prank(_auctionOwner);
+        vm.prank(_SELLER);
         _auctionHouse.cancel(_lotId);
         _;
     }
 
     modifier givenLotIsConcluded() {
         vm.warp(_startTime + _duration + 1);
+        _;
+    }
+
+    modifier givenLotIsSettled() {
+        vm.prank(_SELLER);
+        _auctionHouse.settle(_lotId);
         _;
     }
 
@@ -208,7 +281,7 @@ abstract contract AuctionHouseTest is Test, Permit2User {
     modifier whenPermit2ApprovalIsProvided(uint256 amount_) {
         // Approve the Permit2 contract to spend the quote token
         vm.prank(_bidder);
-        _quoteToken.approve(_PERMIT2_ADDRESS, type(uint256).max);
+        _quoteToken.approve(_permit2Address, type(uint256).max);
 
         // Set up the Permit2 approval
         uint48 deadline = uint48(block.timestamp);
@@ -228,19 +301,19 @@ abstract contract AuctionHouseTest is Test, Permit2User {
         _;
     }
 
-    modifier givenUserHasApprovedQuoteToken(uint256 amount_) {
+    modifier givenUserHasQuoteTokenAllowance(uint256 amount_) {
         vm.prank(_bidder);
         _quoteToken.approve(address(_auctionHouse), amount_);
         _;
     }
 
-    modifier givenOwnerHasBaseTokenBalance(uint256 amount_) {
-        _baseToken.mint(_auctionOwner, amount_);
+    modifier givenSellerHasBaseTokenBalance(uint256 amount_) {
+        _baseToken.mint(_SELLER, amount_);
         _;
     }
 
-    modifier givenOwnerHasBaseTokenAllowance(uint256 amount_) {
-        vm.prank(_auctionOwner);
+    modifier givenSellerHasBaseTokenAllowance(uint256 amount_) {
+        vm.prank(_SELLER);
         _baseToken.approve(address(_auctionHouse), amount_);
         _;
     }
@@ -261,7 +334,11 @@ abstract contract AuctionHouseTest is Test, Permit2User {
         _;
     }
 
-    function _createBid(uint96 amount_, bytes memory auctionData_) internal returns (uint64) {
+    function _createBid(
+        address bidder_,
+        uint96 amount_,
+        bytes memory auctionData_
+    ) internal returns (uint64) {
         Router.BidParams memory bidParams = Router.BidParams({
             lotId: _lotId,
             referrer: _REFERRER,
@@ -271,25 +348,39 @@ abstract contract AuctionHouseTest is Test, Permit2User {
             permit2Data: _permit2Data
         });
 
-        vm.prank(_bidder);
+        vm.prank(bidder_);
         _bidId = _auctionHouse.bid(bidParams);
 
         return _bidId;
     }
 
+    function _createBid(uint96 amount_, bytes memory auctionData_) internal returns (uint64) {
+        return _createBid(_bidder, amount_, auctionData_);
+    }
+
     modifier givenBid(uint96 amount_, bytes memory auctionData_) {
-        _createBid(amount_, auctionData_);
+        uint64 bidId = _createBid(amount_, auctionData_);
+
+        _bidIds.push(bidId);
+        _;
+    }
+
+    modifier givenBidCreated(address bidder_, uint96 amount_, bytes memory auctionData_) {
+        uint64 bidId = _createBid(bidder_, amount_, auctionData_);
+
+        _bidIds.push(bidId);
         _;
     }
 
     function _createPurchase(
         uint96 amount_,
         uint96 minAmountOut_,
-        bytes memory auctionData_
+        bytes memory auctionData_,
+        address referrer_
     ) internal returns (uint256) {
         Router.PurchaseParams memory purchaseParams = Router.PurchaseParams({
             recipient: _bidder,
-            referrer: _REFERRER,
+            referrer: referrer_,
             lotId: _lotId,
             amount: amount_,
             minAmountOut: minAmountOut_,
@@ -302,6 +393,14 @@ abstract contract AuctionHouseTest is Test, Permit2User {
         uint256 payout = _auctionHouse.purchase(purchaseParams);
 
         return payout;
+    }
+
+    function _createPurchase(
+        uint96 amount_,
+        uint96 minAmountOut_,
+        bytes memory auctionData_
+    ) internal returns (uint256) {
+        return _createPurchase(amount_, minAmountOut_, auctionData_, _REFERRER);
     }
 
     modifier givenPurchase(uint96 amount_, uint96 minAmountOut_, bytes memory auctionData_) {
@@ -322,30 +421,58 @@ abstract contract AuctionHouseTest is Test, Permit2User {
         _;
     }
 
-    modifier givenCuratorFeeIsSet() {
-        // Set the curator fee
+    function _setCuratorFee(uint24 fee_) internal {
         vm.prank(_CURATOR);
-        _auctionHouse.setCuratorFee(_auctionModuleKeycode, _CURATOR_FEE_PERCENT);
+        _auctionHouse.setCuratorFee(_auctionModuleKeycode, fee_);
+        _curatorFeePercentActual = fee_;
+        _curatorMaxPotentialFee = _curatorFeePercentActual * _LOT_CAPACITY / 1e5;
+    }
+
+    modifier givenCuratorFeeIsSet() {
+        _setCuratorFee(_CURATOR_FEE_PERCENT);
         _;
     }
 
     modifier givenCuratorHasApproved() {
         vm.prank(_CURATOR);
         _auctionHouse.curate(_lotId);
+        _curatorApproved = true;
         _;
+    }
+
+    function _setProtocolFee(uint24 fee_) internal {
+        _auctionHouse.setFee(_auctionModuleKeycode, FeeManager.FeeType.Protocol, fee_);
+        _protocolFeePercentActual = fee_;
     }
 
     modifier givenProtocolFeeIsSet() {
-        _auctionHouse.setFee(
-            _auctionModuleKeycode, FeeManager.FeeType.Protocol, _PROTOCOL_FEE_PERCENT
-        );
+        _setProtocolFee(_PROTOCOL_FEE_PERCENT);
         _;
     }
 
+    function _setReferrerFee(uint24 fee_) internal {
+        _auctionHouse.setFee(_auctionModuleKeycode, FeeManager.FeeType.Referrer, fee_);
+        _referrerFeePercentActual = fee_;
+    }
+
     modifier givenReferrerFeeIsSet() {
-        _auctionHouse.setFee(
-            _auctionModuleKeycode, FeeManager.FeeType.Referrer, _REFERRER_FEE_PERCENT
-        );
+        _setReferrerFee(_REFERRER_FEE_PERCENT);
+        _;
+    }
+
+    modifier givenAtomicAuctionRequiresPrefunding() {
+        _atomicAuctionModule.setRequiredPrefunding(true);
+        _;
+    }
+
+    modifier givenBatchAuctionRequiresPrefunding() {
+        _batchAuctionModule.setRequiredPrefunding(true);
+        _;
+    }
+
+    modifier givenLotProceedsAreClaimed() {
+        vm.prank(_SELLER);
+        _auctionHouse.claimProceeds(_lotId);
         _;
     }
 
@@ -354,7 +481,7 @@ abstract contract AuctionHouseTest is Test, Permit2User {
     function _getLotRouting(uint96 lotId_) internal view returns (Auctioneer.Routing memory) {
         (
             Veecode auctionReference_,
-            address owner_,
+            address seller_,
             ERC20 baseToken_,
             ERC20 quoteToken_,
             IHooks hooks_,
@@ -367,7 +494,7 @@ abstract contract AuctionHouseTest is Test, Permit2User {
 
         return Auctioneer.Routing({
             auctionReference: auctionReference_,
-            owner: owner_,
+            seller: seller_,
             baseToken: baseToken_,
             quoteToken: quoteToken_,
             hooks: hooks_,
@@ -375,37 +502,29 @@ abstract contract AuctionHouseTest is Test, Permit2User {
             derivativeReference: derivativeReference_,
             derivativeParams: derivativeParams_,
             wrapDerivative: wrapDerivative_,
-            prefunding: prefunding_
+            funding: prefunding_
         });
     }
 
-    function _getLotCuration(uint96 lotId_) internal view returns (Auctioneer.Curation memory) {
-        (address curator_, bool curated_) = _auctionHouse.lotCuration(lotId_);
+    function _getLotFees(uint96 lotId_) internal view returns (Auctioneer.FeeData memory) {
+        (
+            address curator_,
+            bool curated_,
+            uint48 curatorFee_,
+            uint48 protocolFee_,
+            uint48 referrerFee_
+        ) = _auctionHouse.lotFees(lotId_);
 
-        return Auctioneer.Curation({curator: curator_, curated: curated_});
+        return Auctioneer.FeeData({
+            curator: curator_,
+            curated: curated_,
+            curatorFee: curatorFee_,
+            protocolFee: protocolFee_,
+            referrerFee: referrerFee_
+        });
     }
 
     function _getLotData(uint96 lotId_) internal view returns (Auction.Lot memory) {
-        (
-            uint48 start_,
-            uint48 conclusion_,
-            uint8 quoteTokenDecimals_,
-            uint8 baseTokenDecimals_,
-            bool capacityInQuote_,
-            uint96 capacity_,
-            uint96 sold_,
-            uint96 purchased_
-        ) = _auctionModule.lotData(lotId_);
-
-        return Auction.Lot({
-            start: start_,
-            conclusion: conclusion_,
-            quoteTokenDecimals: quoteTokenDecimals_,
-            baseTokenDecimals: baseTokenDecimals_,
-            capacityInQuote: capacityInQuote_,
-            capacity: capacity_,
-            sold: sold_,
-            purchased: purchased_
-        });
+        return _auctionModule.getLot(lotId_);
     }
 }

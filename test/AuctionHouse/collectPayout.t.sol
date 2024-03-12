@@ -22,7 +22,7 @@ contract CollectPayoutTest is Test, Permit2User {
     address internal constant _PROTOCOL = address(0x1);
 
     address internal constant _USER = address(0x2);
-    address internal constant _OWNER = address(0x3);
+    address internal constant _SELLER = address(0x3);
 
     // Function parameters
     uint96 internal _lotId = 1;
@@ -41,7 +41,7 @@ contract CollectPayoutTest is Test, Permit2User {
         // Set reasonable starting block
         vm.warp(1_000_000);
 
-        _auctionHouse = new MockAuctionHouse(_PROTOCOL, _PERMIT2_ADDRESS);
+        _auctionHouse = new MockAuctionHouse(_PROTOCOL, _permit2Address);
         _mockDerivativeModule = new MockDerivativeModule(address(_auctionHouse));
 
         _quoteToken = new MockFeeOnTransferERC20("Quote Token", "QUOTE", 18);
@@ -56,7 +56,7 @@ contract CollectPayoutTest is Test, Permit2User {
 
         _routingParams = Auctioneer.Routing({
             auctionReference: wrapVeecode(toKeycode("MOCK"), 1),
-            owner: _OWNER,
+            seller: _SELLER,
             baseToken: _payoutToken,
             quoteToken: _quoteToken,
             hooks: _hook,
@@ -64,17 +64,17 @@ contract CollectPayoutTest is Test, Permit2User {
             derivativeReference: _derivativeReference,
             derivativeParams: _derivativeParams,
             wrapDerivative: _wrapDerivative,
-            prefunding: 0
+            funding: 0
         });
     }
 
-    modifier givenOwnerHasBalance(uint256 amount_) {
-        _payoutToken.mint(_OWNER, amount_);
+    modifier givenSellerHasBalance(uint256 amount_) {
+        _payoutToken.mint(_SELLER, amount_);
         _;
     }
 
-    modifier givenOwnerHasApprovedRouter() {
-        vm.prank(_OWNER);
+    modifier givenSellerHasApprovedRouter() {
+        vm.prank(_SELLER);
         _payoutToken.approve(address(_auctionHouse), type(uint256).max);
         _;
     }
@@ -102,7 +102,7 @@ contract CollectPayoutTest is Test, Permit2User {
         // Set the addresses to track
         address[] memory addresses = new address[](5);
         addresses[0] = _USER;
-        addresses[1] = _OWNER;
+        addresses[1] = _SELLER;
         addresses[2] = address(_auctionHouse);
         addresses[3] = address(_hook);
         addresses[4] = address(_mockDerivativeModule);
@@ -190,7 +190,7 @@ contract CollectPayoutTest is Test, Permit2User {
         // Expect the _hook to be called prior to any transfer of the payout token
         assertEq(_hook.midHookCalled(), true);
         assertEq(
-            _hook.midHookBalances(_payoutToken, _OWNER), 0, "mid-_hook: owner balance mismatch"
+            _hook.midHookBalances(_payoutToken, _SELLER), 0, "mid-_hook: seller balance mismatch"
         );
         assertEq(_hook.midHookBalances(_payoutToken, _USER), 0, "mid-_hook: user balance mismatch");
         assertEq(
@@ -214,7 +214,7 @@ contract CollectPayoutTest is Test, Permit2User {
         assertEq(_hook.postHookCalled(), false);
 
         // Expect payout token balance to be transferred to the _auctionHouse
-        assertEq(_payoutToken.balanceOf(_OWNER), 0, "owner balance mismatch");
+        assertEq(_payoutToken.balanceOf(_SELLER), 0, "seller balance mismatch");
         assertEq(_payoutToken.balanceOf(_USER), 0, "user balance mismatch");
         assertEq(
             _payoutToken.balanceOf(address(_auctionHouse)),
@@ -232,9 +232,9 @@ contract CollectPayoutTest is Test, Permit2User {
     // ========== Non-hooks flow ========== //
 
     // [X] given the auction does not have hooks defined
-    //  [X] given the auction owner has insufficient balance of the payout token
+    //  [X] given the seller has insufficient balance of the payout token
     //   [X] it reverts
-    //  [X] given the auction owner has not approved the _auctionHouse to transfer the payout token
+    //  [X] given the seller has not approved the _auctionHouse to transfer the payout token
     //   [X] it reverts
     //  [X] given transferring the payout token would result in a lesser amount being received
     //   [X] it reverts
@@ -249,7 +249,7 @@ contract CollectPayoutTest is Test, Permit2User {
         _auctionHouse.collectPayout(_lotId, _paymentAmount, _payoutAmount, _routingParams);
     }
 
-    function test_insufficientAllowance_reverts() public givenOwnerHasBalance(_payoutAmount) {
+    function test_insufficientAllowance_reverts() public givenSellerHasBalance(_payoutAmount) {
         // Expect revert
         vm.expectRevert(bytes("TRANSFER_FROM_FAILED"));
 
@@ -260,8 +260,8 @@ contract CollectPayoutTest is Test, Permit2User {
 
     function test_feeOnTransfer_reverts()
         public
-        givenOwnerHasBalance(_payoutAmount)
-        givenOwnerHasApprovedRouter
+        givenSellerHasBalance(_payoutAmount)
+        givenSellerHasApprovedRouter
         givenTokenTakesFeeOnTransfer
     {
         // Expect revert
@@ -276,15 +276,15 @@ contract CollectPayoutTest is Test, Permit2User {
 
     function test_success()
         public
-        givenOwnerHasBalance(_payoutAmount)
-        givenOwnerHasApprovedRouter
+        givenSellerHasBalance(_payoutAmount)
+        givenSellerHasApprovedRouter
     {
         // Call
         vm.prank(_USER);
         _auctionHouse.collectPayout(_lotId, _paymentAmount, _payoutAmount, _routingParams);
 
         // Expect payout token balance to be transferred to the _auctionHouse
-        assertEq(_payoutToken.balanceOf(_OWNER), 0);
+        assertEq(_payoutToken.balanceOf(_SELLER), 0);
         assertEq(_payoutToken.balanceOf(_USER), 0);
         assertEq(_payoutToken.balanceOf(address(_auctionHouse)), _payoutAmount);
         assertEq(_payoutToken.balanceOf(address(_hook)), 0);
@@ -299,9 +299,9 @@ contract CollectPayoutTest is Test, Permit2User {
     //    [X] it reverts
     //   [X] it succeeds - base token is transferred to the auction house, mid _hook is called before transfer
     //  [X] given the auction does not have hooks defined
-    //   [X] given the auction owner has insufficient balance of the payout token
+    //   [X] given the seller has insufficient balance of the payout token
     //    [X] it reverts
-    //   [X] given the auction owner has not approved the _auctionHouse to transfer the payout token
+    //   [X] given the seller has not approved the _auctionHouse to transfer the payout token
     //    [X] it reverts
     //   [X] given transferring the payout token would result in a lesser amount being received
     //    [X] it reverts
@@ -346,7 +346,7 @@ contract CollectPayoutTest is Test, Permit2User {
         _auctionHouse.collectPayout(_lotId, _paymentAmount, _payoutAmount, _routingParams);
 
         // Expect payout token balance to be transferred to the derivative module
-        assertEq(_payoutToken.balanceOf(_OWNER), 0, "payout token: owner balance mismatch");
+        assertEq(_payoutToken.balanceOf(_SELLER), 0, "payout token: seller balance mismatch");
         assertEq(_payoutToken.balanceOf(_USER), 0, "payout token: user balance mismatch");
         assertEq(
             _payoutToken.balanceOf(address(_auctionHouse)),
@@ -363,7 +363,7 @@ contract CollectPayoutTest is Test, Permit2User {
         // Expect the _hook to be called prior to any transfer of the payout token
         assertEq(_hook.midHookCalled(), true);
         assertEq(
-            _hook.midHookBalances(_payoutToken, _OWNER), 0, "mid-_hook: owner balance mismatch"
+            _hook.midHookBalances(_payoutToken, _SELLER), 0, "mid-_hook: seller balance mismatch"
         );
         assertEq(_hook.midHookBalances(_payoutToken, _USER), 0, "mid-_hook: user balance mismatch");
         assertEq(
@@ -399,7 +399,7 @@ contract CollectPayoutTest is Test, Permit2User {
     function test_derivative_insufficientAllowance_reverts()
         public
         givenAuctionHasDerivative
-        givenOwnerHasBalance(_payoutAmount)
+        givenSellerHasBalance(_payoutAmount)
     {
         // Expect revert
         vm.expectRevert(bytes("TRANSFER_FROM_FAILED"));
@@ -412,8 +412,8 @@ contract CollectPayoutTest is Test, Permit2User {
     function test_derivative_feeOnTransfer_reverts()
         public
         givenAuctionHasDerivative
-        givenOwnerHasBalance(_payoutAmount)
-        givenOwnerHasApprovedRouter
+        givenSellerHasBalance(_payoutAmount)
+        givenSellerHasApprovedRouter
         givenTokenTakesFeeOnTransfer
     {
         // Expect revert
@@ -429,15 +429,15 @@ contract CollectPayoutTest is Test, Permit2User {
     function test_derivative_success()
         public
         givenAuctionHasDerivative
-        givenOwnerHasBalance(_payoutAmount)
-        givenOwnerHasApprovedRouter
+        givenSellerHasBalance(_payoutAmount)
+        givenSellerHasApprovedRouter
     {
         // Call
         vm.prank(_USER);
         _auctionHouse.collectPayout(_lotId, _paymentAmount, _payoutAmount, _routingParams);
 
         // Expect payout token balance to be transferred to the auction house
-        assertEq(_payoutToken.balanceOf(_OWNER), 0, "payout token: owner balance mismatch");
+        assertEq(_payoutToken.balanceOf(_SELLER), 0, "payout token: seller balance mismatch");
         assertEq(_payoutToken.balanceOf(_USER), 0, "payout token: user balance mismatch");
         assertEq(
             _payoutToken.balanceOf(address(_auctionHouse)),
@@ -458,7 +458,7 @@ contract CollectPayoutTest is Test, Permit2User {
     //  [X] it does not transfer the base token to the auction house
 
     modifier givenAuctionIsPrefunded(uint256 amount_) {
-        _routingParams.prefunding = amount_;
+        _routingParams.funding = amount_;
         _;
     }
 
@@ -470,12 +470,13 @@ contract CollectPayoutTest is Test, Permit2User {
     function test_prefunded()
         public
         givenAuctionIsPrefunded(_payoutAmount)
-        givenAuctionHouseHasPayoutTokenBalance(_payoutAmount)
+        givenSellerHasBalance(_payoutAmount)
+        givenSellerHasApprovedRouter
     {
         // Assert previous balance
         assertEq(
             _payoutToken.balanceOf(address(_auctionHouse)),
-            _payoutAmount,
+            0,
             "payout token: _auctionHouse balance mismatch"
         );
 
@@ -484,7 +485,7 @@ contract CollectPayoutTest is Test, Permit2User {
         _auctionHouse.collectPayout(_lotId, _paymentAmount, _payoutAmount, _routingParams);
 
         // Check balances
-        assertEq(_payoutToken.balanceOf(_OWNER), 0, "payout token: owner balance mismatch");
+        assertEq(_payoutToken.balanceOf(_SELLER), 0, "payout token: seller balance mismatch");
         assertEq(_payoutToken.balanceOf(_USER), 0, "payout token: user balance mismatch");
         assertEq(
             _payoutToken.balanceOf(address(_auctionHouse)),

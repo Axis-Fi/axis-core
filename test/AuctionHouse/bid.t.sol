@@ -25,6 +25,10 @@ contract BidTest is AuctionHouseTest {
     //  [X] it reverts
     // [X] given the auction is concluded
     //  [X] it reverts
+    // [X] given the auction is settled
+    //  [X] it reverts
+    // [X] given the auction proceeds have been claimed
+    //  [X] it reverts
     // [X] given the auction has an allowlist
     //  [X] reverts if the sender is not on the allowlist
     //  [X] it succeeds
@@ -86,6 +90,37 @@ contract BidTest is AuctionHouseTest {
         _createBid(_BID_AMOUNT, _bidAuctionData);
     }
 
+    function test_givenLotIsSettled_reverts()
+        external
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenLotIsCreated
+        givenLotIsConcluded
+        givenLotIsSettled
+    {
+        bytes memory err = abi.encodeWithSelector(Auction.Auction_MarketNotActive.selector, _lotId);
+        vm.expectRevert(err);
+
+        // Call the function
+        _createBid(_BID_AMOUNT, _bidAuctionData);
+    }
+
+    function test_givenLotProceedsHaveBeenClaimed_reverts()
+        external
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenLotIsCreated
+        givenLotIsConcluded
+        givenLotIsSettled
+        givenLotProceedsAreClaimed
+    {
+        bytes memory err = abi.encodeWithSelector(Auction.Auction_MarketNotActive.selector, _lotId);
+        vm.expectRevert(err);
+
+        // Call the function
+        _createBid(_BID_AMOUNT, _bidAuctionData);
+    }
+
     function test_incorrectAllowlistProof_reverts()
         external
         whenAuctionTypeIsBatch
@@ -95,7 +130,7 @@ contract BidTest is AuctionHouseTest {
         givenLotHasStarted
         whenAllowlistProofIsIncorrect
     {
-        bytes memory err = abi.encodeWithSelector(AuctionHouse.InvalidBidder.selector, _bidder);
+        bytes memory err = abi.encodeWithSelector(Auctioneer.NotPermitted.selector, _bidder);
         vm.expectRevert(err);
 
         // Call the function
@@ -111,7 +146,7 @@ contract BidTest is AuctionHouseTest {
         givenLotHasStarted
         whenAllowlistProofIsCorrect
         givenUserHasQuoteTokenBalance(_BID_AMOUNT)
-        givenUserHasApprovedQuoteToken(_BID_AMOUNT)
+        givenUserHasQuoteTokenAllowance(_BID_AMOUNT)
     {
         // Call the function
         _createBid(_BID_AMOUNT, _bidAuctionData);
@@ -123,7 +158,7 @@ contract BidTest is AuctionHouseTest {
         whenBatchAuctionModuleIsInstalled
         givenLotIsCreated
         givenLotHasStarted
-        givenUserHasApprovedQuoteToken(_BID_AMOUNT)
+        givenUserHasQuoteTokenAllowance(_BID_AMOUNT)
     {
         vm.expectRevert("TRANSFER_FROM_FAILED");
 
@@ -166,7 +201,7 @@ contract BidTest is AuctionHouseTest {
         givenLotIsCreated
         givenLotHasStarted
         givenUserHasQuoteTokenBalance(_BID_AMOUNT)
-        givenUserHasApprovedQuoteToken(_BID_AMOUNT)
+        givenUserHasQuoteTokenAllowance(_BID_AMOUNT)
     {
         // Call the function
         uint64 bidId = _createBid(_BID_AMOUNT, _bidAuctionData);
@@ -194,7 +229,7 @@ contract BidTest is AuctionHouseTest {
         givenLotIsCreated
         givenLotHasStarted
         givenUserHasQuoteTokenBalance(_BID_AMOUNT)
-        givenUserHasApprovedQuoteToken(_BID_AMOUNT)
+        givenUserHasQuoteTokenAllowance(_BID_AMOUNT)
     {
         _bidAuctionData = abi.encode("auction data");
 
@@ -217,7 +252,7 @@ contract BidTest is AuctionHouseTest {
         givenLotIsCreated
         givenLotHasStarted
         givenUserHasQuoteTokenBalance(_BID_AMOUNT)
-        givenUserHasApprovedQuoteToken(_BID_AMOUNT)
+        givenUserHasQuoteTokenAllowance(_BID_AMOUNT)
     {
         // Call the function
         _createBid(_BID_AMOUNT, _bidAuctionData);
@@ -254,7 +289,7 @@ contract BidTest is AuctionHouseTest {
         givenLotIsCreated
         givenLotHasStarted
         givenUserHasQuoteTokenBalance(_BID_AMOUNT)
-        givenUserHasApprovedQuoteToken(_BID_AMOUNT)
+        givenUserHasQuoteTokenAllowance(_BID_AMOUNT)
     {
         // Call the function
         _createBid(_BID_AMOUNT, _bidAuctionData);
@@ -296,7 +331,7 @@ contract BidTest is AuctionHouseTest {
         givenLotIsCreated
         givenLotHasStarted
         givenUserHasQuoteTokenBalance(_BID_AMOUNT)
-        givenUserHasApprovedQuoteToken(_BID_AMOUNT)
+        givenUserHasQuoteTokenAllowance(_BID_AMOUNT)
     {
         // Call the function
         _createBid(_BID_AMOUNT, _bidAuctionData);
@@ -333,7 +368,7 @@ contract BidTest is AuctionHouseTest {
         givenLotIsCreated
         givenLotHasStarted
         givenUserHasQuoteTokenBalance(_BID_AMOUNT)
-        givenUserHasApprovedQuoteToken(_BID_AMOUNT)
+        givenUserHasQuoteTokenAllowance(_BID_AMOUNT)
     {
         // Call the function
         _createBid(_BID_AMOUNT, _bidAuctionData);
@@ -378,7 +413,7 @@ contract BidTest is AuctionHouseTest {
         givenLotHasStarted
         givenCuratorMaxFeeIsSet
         givenUserHasQuoteTokenBalance(_BID_AMOUNT)
-        givenUserHasApprovedQuoteToken(_BID_AMOUNT)
+        givenUserHasQuoteTokenAllowance(_BID_AMOUNT)
     {
         // Call the function
         _createBid(_BID_AMOUNT, _bidAuctionData);
@@ -397,7 +432,7 @@ contract BidTest is AuctionHouseTest {
         givenLotHasStarted
         givenCuratorMaxFeeIsSet
         givenUserHasQuoteTokenBalance(_BID_AMOUNT)
-        givenUserHasApprovedQuoteToken(_BID_AMOUNT)
+        givenUserHasQuoteTokenAllowance(_BID_AMOUNT)
     {
         // Call the function
         _createBid(_BID_AMOUNT, _bidAuctionData);
@@ -418,7 +453,7 @@ contract BidTest is AuctionHouseTest {
         givenCuratorFeeIsSet
         givenCuratorHasApproved
         givenUserHasQuoteTokenBalance(_BID_AMOUNT)
-        givenUserHasApprovedQuoteToken(_BID_AMOUNT)
+        givenUserHasQuoteTokenAllowance(_BID_AMOUNT)
     {
         // Call the function
         _createBid(_BID_AMOUNT, _bidAuctionData);

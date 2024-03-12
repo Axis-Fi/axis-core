@@ -3,13 +3,12 @@ pragma solidity 0.8.19;
 
 // Testing Libraries
 import {Test} from "forge-std/Test.sol";
-import {console2} from "forge-std/console2.sol";
 
 // ECIES
 import {Point} from "src/lib/ECIES.sol";
 
-abstract contract ECIES_FFI_Test is Test {
-    string internal constant executable = "./crates/ecies-cli/target/debug/ecies-cli";
+abstract contract ECIESFFITest is Test {
+    string internal constant _EXECUTABLE = "./crates/ecies-cli/target/debug/ecies-cli";
 
     function _encrypt(
         uint256 message_,
@@ -29,7 +28,7 @@ abstract contract ECIES_FFI_Test is Test {
         inputs[0] = "bash";
         inputs[1] = "-c";
         inputs[2] = string.concat(
-            executable,
+            _EXECUTABLE,
             " encrypt ",
             message,
             " ",
@@ -67,7 +66,7 @@ abstract contract ECIES_FFI_Test is Test {
         inputs[0] = "bash";
         inputs[1] = "-c";
         inputs[2] = string.concat(
-            executable,
+            _EXECUTABLE,
             " decrypt ",
             cipherText,
             " ",

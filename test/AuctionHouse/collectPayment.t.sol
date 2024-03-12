@@ -31,7 +31,7 @@ contract CollectPaymentTest is Test, Permit2User {
         // Set reasonable starting block
         vm.warp(1_000_000);
 
-        _auctionHouse = new MockAuctionHouse(_PROTOCOL, _PERMIT2_ADDRESS);
+        _auctionHouse = new MockAuctionHouse(_PROTOCOL, _permit2Address);
 
         _quoteToken = new MockFeeOnTransferERC20("QUOTE", "QT", 18);
         _quoteToken.setTransferFee(0);
@@ -71,12 +71,12 @@ contract CollectPaymentTest is Test, Permit2User {
     //   [X] given the received _amount is not equal to the transferred _amount
     //    [X] it reverts
     //   [X] given the received _amount is the same as the transferred _amount
-    //    [X] quote tokens are transferred from the caller to the auction owner
+    //    [X] quote tokens are transferred from the caller to the seller
 
     modifier givenPermit2Approved() {
         // Approve the Permit2 contract to spend the quote token
         vm.prank(_user);
-        _quoteToken.approve(_PERMIT2_ADDRESS, type(uint256).max);
+        _quoteToken.approve(_permit2Address, type(uint256).max);
         _;
     }
 
@@ -409,7 +409,7 @@ contract CollectPaymentTest is Test, Permit2User {
     //   [X] given the received _amount is not equal to the transferred _amount
     //    [X] it reverts
     //   [X] given the received _amount is the same as the transferred _amount
-    //    [X] quote tokens are transferred from the caller to the auction owner
+    //    [X] quote tokens are transferred from the caller to the seller
 
     function test_transfer_whenUserHasInsufficientBalance_reverts() public {
         // Expect the error

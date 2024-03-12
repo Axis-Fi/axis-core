@@ -62,7 +62,7 @@ contract RefundBidTest is AuctionHouseTest {
         givenLotIsCreated
         givenLotHasStarted
         givenUserHasQuoteTokenBalance(_BID_AMOUNT)
-        givenUserHasApprovedQuoteToken(_BID_AMOUNT)
+        givenUserHasQuoteTokenAllowance(_BID_AMOUNT)
         givenBid(_BID_AMOUNT, _auctionDataParams)
         givenLotIsConcluded
     {
@@ -97,7 +97,7 @@ contract RefundBidTest is AuctionHouseTest {
         givenLotIsCreated
         givenLotHasStarted
         givenUserHasQuoteTokenBalance(_BID_AMOUNT)
-        givenUserHasApprovedQuoteToken(_BID_AMOUNT)
+        givenUserHasQuoteTokenAllowance(_BID_AMOUNT)
         givenBid(_BID_AMOUNT, _auctionDataParams)
         givenBidIsRefunded
     {
@@ -117,14 +117,14 @@ contract RefundBidTest is AuctionHouseTest {
         givenLotIsCreated
         givenLotHasStarted
         givenUserHasQuoteTokenBalance(_BID_AMOUNT)
-        givenUserHasApprovedQuoteToken(_BID_AMOUNT)
+        givenUserHasQuoteTokenAllowance(_BID_AMOUNT)
         givenBid(_BID_AMOUNT, _auctionDataParams)
     {
         bytes memory err = abi.encodeWithSelector(Auction.Auction_NotBidder.selector);
         vm.expectRevert(err);
 
         // Call the function
-        vm.prank(_auctionOwner);
+        vm.prank(_SELLER);
         _auctionHouse.refundBid(_lotId, _bidId);
     }
 
@@ -135,7 +135,7 @@ contract RefundBidTest is AuctionHouseTest {
         givenLotIsCreated
         givenLotHasStarted
         givenUserHasQuoteTokenBalance(_BID_AMOUNT)
-        givenUserHasApprovedQuoteToken(_BID_AMOUNT)
+        givenUserHasQuoteTokenAllowance(_BID_AMOUNT)
         givenBid(_BID_AMOUNT, _auctionDataParams)
     {
         // Get _bidder's balance

@@ -2,7 +2,7 @@
 pragma solidity 0.8.19;
 
 // Modules
-import {Module, Veecode, toKeycode, wrapVeecode} from "src/modules/Modules.sol";
+import {Veecode, toKeycode, wrapVeecode} from "src/modules/Modules.sol";
 
 // Auctions
 import {AuctionModule} from "src/modules/Auction.sol";
@@ -51,10 +51,15 @@ contract MockAtomicAuctionModule is AuctionModule {
 
         if (cancelled[lotId_]) revert Auction_MarketNotActive(lotId_);
 
+        // Handle decimals
+        uint256 quoteTokenScale = 10 ** lotData[lotId_].quoteTokenDecimals;
+        uint256 baseTokenScale = 10 ** lotData[lotId_].baseTokenDecimals;
+        uint256 adjustedAmount = amount_ * baseTokenScale / quoteTokenScale;
+
         if (payoutData[lotId_] == 0) {
-            payout = amount_;
+            payout = adjustedAmount;
         } else {
-            payout = (payoutData[lotId_] * amount_) / 1e5;
+            payout = (payoutData[lotId_] * adjustedAmount) / 1e5;
         }
 
         // Reduce capacity
@@ -87,16 +92,24 @@ contract MockAtomicAuctionModule is AuctionModule {
         revert Auction_NotImplemented();
     }
 
-    function _claimBid(
-        uint96,
-        uint64
-    ) internal virtual override returns (address, uint256, uint256, bytes memory) {
+    function _claimBids(
+        uint96 lotId_,
+        uint64[] calldata bidIds_
+    ) internal virtual override returns (BidClaim[] memory bidClaims, bytes memory auctionOutput) {}
+
+    function settle(uint96) external pure override returns (Settlement memory, bytes memory) {
         revert Auction_NotImplemented();
     }
 
-    function settle(uint96 lotId_) external override returns (Settlement memory, bytes memory) {}
-
     function _settle(uint96) internal pure override returns (Settlement memory, bytes memory) {
+        revert Auction_NotImplemented();
+    }
+
+    function claimProceeds(uint96) external pure override returns (uint256, uint256, uint256) {
+        revert Auction_NotImplemented();
+    }
+
+    function _claimProceeds(uint96) internal pure override returns (uint256, uint256, uint256) {
         revert Auction_NotImplemented();
     }
 
@@ -113,4 +126,6 @@ contract MockAtomicAuctionModule is AuctionModule {
     function _revertIfLotSettled(uint96 lotId_) internal view virtual override {}
 
     function _revertIfLotNotSettled(uint96 lotId_) internal view virtual override {}
+
+    function _revertIfLotProceedsClaimed(uint96 lotId_) internal view virtual override {}
 }

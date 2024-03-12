@@ -2,7 +2,7 @@
 pragma solidity 0.8.19;
 
 // Modules
-import {Module, Veecode, toKeycode, wrapVeecode} from "src/modules/Modules.sol";
+import {Veecode, toKeycode, wrapVeecode} from "src/modules/Modules.sol";
 
 // Auctions
 import {Auction, AuctionModule} from "src/modules/Auction.sol";
@@ -11,8 +11,8 @@ contract MockBatchAuctionModule is AuctionModule {
     enum BidStatus {
         Submitted,
         Decrypted,
-        Claimed // Bid status will also be set to claimed if the bid is cancelled/refunded
-
+        // Bid status will also be set to claimed if the bid is cancelled/refunded
+        Claimed
     }
 
     /// @notice        Core data for a bid
@@ -36,7 +36,12 @@ contract MockBatchAuctionModule is AuctionModule {
     mapping(uint96 lotId => mapping(uint64 => bool)) public bidCancelled;
     mapping(uint96 lotId => mapping(uint64 => bool)) public bidRefunded;
 
+    mapping(uint96 lotId => Settlement) public lotSettlements;
+
+    mapping(uint96 lotId => Auction.Status) public lotStatus;
+
     mapping(uint96 => bool) public settled;
+    bool public requiresPrefunding;
 
     constructor(address _owner) AuctionModule(_owner) {
         minAuctionDuration = 1 days;
@@ -50,7 +55,13 @@ contract MockBatchAuctionModule is AuctionModule {
         return Type.Auction;
     }
 
-    function _auction(uint96, Lot memory, bytes memory) internal virtual override returns (bool) {}
+    function setRequiredPrefunding(bool prefunding_) external virtual {
+        requiresPrefunding = prefunding_;
+    }
+
+    function _auction(uint96, Lot memory, bytes memory) internal virtual override returns (bool) {
+        return requiresPrefunding;
+    }
 
     function _cancelAuction(uint96 id_) internal override {
         //
@@ -111,16 +122,35 @@ contract MockBatchAuctionModule is AuctionModule {
         return bidData[lotId_][bidId_].amount;
     }
 
-    function _claimBid(
+    function _claimBids(
         uint96 lotId_,
-        uint64 bidId_
-    ) internal virtual override returns (address, uint256, uint256, bytes memory) {
-        // TODO implement?
+        uint64[] calldata bidIds_
+    ) internal virtual override returns (BidClaim[] memory bidClaims, bytes memory auctionOutput) {}
+
+    function setLotSettlement(uint96 lotId_, Settlement calldata settlement_) external {
+        lotSettlements[lotId_] = settlement_;
+
+        // Also update sold and purchased
+        Lot storage lot = lotData[lotId_];
+        lot.purchased = uint96(settlement_.totalIn);
+        lot.sold = uint96(settlement_.totalOut);
+        lot.partialPayout = uint96(settlement_.pfPayout);
     }
 
-    function settle(uint96 lotId_) external override returns (Settlement memory, bytes memory) {}
+    function _settle(uint96 lotId_) internal override returns (Settlement memory, bytes memory) {
+        // Update status
+        lotStatus[lotId_] = Auction.Status.Settled;
 
-    function _settle(uint96 lotId_) internal override returns (Settlement memory, bytes memory) {}
+        return (lotSettlements[lotId_], "");
+    }
+
+    function _claimProceeds(uint96 lotId_) internal override returns (uint256, uint256, uint256) {
+        // Update status
+        lotStatus[lotId_] = Auction.Status.Claimed;
+
+        Lot storage lot = lotData[lotId_];
+        return (lot.purchased, lot.sold, lot.partialPayout);
+    }
 
     function getBid(uint96 lotId_, uint64 bidId_) external view returns (Bid memory bid_) {
         bid_ = bidData[lotId_][bidId_];
@@ -153,19 +183,22 @@ contract MockBatchAuctionModule is AuctionModule {
 
     function _revertIfLotSettled(uint96 lotId_) internal view virtual override {
         // Check that the lot has not been settled
-        if (settled[lotId_] == true) {
+        if (lotStatus[lotId_] == Auction.Status.Settled) {
             revert Auction.Auction_MarketNotActive(lotId_);
         }
     }
 
     function _revertIfLotNotSettled(uint96 lotId_) internal view virtual override {
         // Check that the lot has been settled
-        if (settled[lotId_] == false) {
-            revert Auction.Auction_MarketNotActive(lotId_);
+        if (lotStatus[lotId_] != Auction.Status.Settled) {
+            revert Auction.Auction_InvalidParams();
         }
     }
 
-    function setIsSettled(uint96 lotId_, bool isSettled_) external {
-        settled[lotId_] = isSettled_;
+    function _revertIfLotProceedsClaimed(uint96 lotId_) internal view virtual override {
+        // Check that the lot has not been claimed
+        if (lotStatus[lotId_] == Auction.Status.Claimed) {
+            revert Auction.Auction_InvalidParams();
+        }
     }
 }

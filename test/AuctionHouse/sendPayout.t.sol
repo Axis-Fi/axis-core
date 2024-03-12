@@ -28,7 +28,7 @@ contract SendPayoutTest is Test, Permit2User {
 
     address internal constant _PROTOCOL = address(0x1);
     address internal constant _USER = address(0x2);
-    address internal constant _OWNER = address(0x3);
+    address internal constant _SELLER = address(0x3);
     address internal constant _RECIPIENT = address(0x4);
 
     uint48 internal constant _DERIVATIVE_EXPIRY = 1 days;
@@ -53,7 +53,7 @@ contract SendPayoutTest is Test, Permit2User {
         // Set reasonable starting block
         vm.warp(1_000_000);
 
-        _auctionHouse = new MockAuctionHouse(_PROTOCOL, _PERMIT2_ADDRESS);
+        _auctionHouse = new MockAuctionHouse(_PROTOCOL, _permit2Address);
         _mockAuctionModule = new MockAtomicAuctionModule(address(_auctionHouse));
         _mockDerivativeModule = new MockDerivativeModule(address(_auctionHouse));
         _mockCondenserModule = new MockCondenserModule(address(_auctionHouse));
@@ -77,7 +77,7 @@ contract SendPayoutTest is Test, Permit2User {
 
         _routingParams = Auctioneer.Routing({
             auctionReference: _mockAuctionModule.VEECODE(),
-            owner: _OWNER,
+            seller: _SELLER,
             baseToken: _payoutToken,
             quoteToken: _quoteToken,
             hooks: _hook,
@@ -85,7 +85,7 @@ contract SendPayoutTest is Test, Permit2User {
             derivativeReference: _derivativeReference,
             derivativeParams: _derivativeParams,
             wrapDerivative: _wrapDerivative,
-            prefunding: 0
+            funding: 0
         });
     }
 
@@ -117,7 +117,7 @@ contract SendPayoutTest is Test, Permit2User {
         // Set the addresses to track
         address[] memory addresses = new address[](6);
         addresses[0] = _USER;
-        addresses[1] = _OWNER;
+        addresses[1] = _SELLER;
         addresses[2] = address(_auctionHouse);
         addresses[3] = address(_hook);
         addresses[4] = _RECIPIENT;
@@ -178,7 +178,7 @@ contract SendPayoutTest is Test, Permit2User {
 
         // Check balances
         assertEq(_payoutToken.balanceOf(_USER), 0, "user balance mismatch");
-        assertEq(_payoutToken.balanceOf(_OWNER), 0, "owner balance mismatch");
+        assertEq(_payoutToken.balanceOf(_SELLER), 0, "seller balance mismatch");
         assertEq(
             _payoutToken.balanceOf(address(_auctionHouse)), 0, "_auctionHouse balance mismatch"
         );
@@ -196,7 +196,7 @@ contract SendPayoutTest is Test, Permit2User {
         assertEq(_hook.postHookCalled(), true, "post _hook mismatch");
         assertEq(_hook.postHookBalances(_payoutToken, _USER), 0, "post _hook user balance mismatch");
         assertEq(
-            _hook.postHookBalances(_payoutToken, _OWNER), 0, "post _hook owner balance mismatch"
+            _hook.postHookBalances(_payoutToken, _SELLER), 0, "post _hook seller balance mismatch"
         );
         assertEq(
             _hook.postHookBalances(_payoutToken, address(_auctionHouse)),
@@ -258,7 +258,7 @@ contract SendPayoutTest is Test, Permit2User {
 
         // Check balances
         assertEq(_payoutToken.balanceOf(_USER), 0, "user balance mismatch");
-        assertEq(_payoutToken.balanceOf(_OWNER), 0, "owner balance mismatch");
+        assertEq(_payoutToken.balanceOf(_SELLER), 0, "seller balance mismatch");
         assertEq(
             _payoutToken.balanceOf(address(_auctionHouse)), 0, "_auctionHouse balance mismatch"
         );
@@ -383,9 +383,9 @@ contract SendPayoutTest is Test, Permit2User {
             "derivative token: user balance mismatch"
         );
         assertEq(
-            _mockDerivativeModule.derivativeToken().balanceOf(_OWNER, _derivativeTokenId),
+            _mockDerivativeModule.derivativeToken().balanceOf(_SELLER, _derivativeTokenId),
             0,
-            "derivative token: owner balance mismatch"
+            "derivative token: seller balance mismatch"
         );
         assertEq(
             _mockDerivativeModule.derivativeToken().balanceOf(
@@ -414,7 +414,7 @@ contract SendPayoutTest is Test, Permit2User {
 
         // Check balances of payout token
         assertEq(_payoutToken.balanceOf(_USER), 0, "payout token: user balance mismatch");
-        assertEq(_payoutToken.balanceOf(_OWNER), 0, "payout token: owner balance mismatch");
+        assertEq(_payoutToken.balanceOf(_SELLER), 0, "payout token: seller balance mismatch");
         assertEq(
             _payoutToken.balanceOf(address(_auctionHouse)),
             0,
@@ -446,9 +446,9 @@ contract SendPayoutTest is Test, Permit2User {
             "wrapped derivative token: user balance mismatch"
         );
         assertEq(
-            _wrappedDerivative.balanceOf(_OWNER),
+            _wrappedDerivative.balanceOf(_SELLER),
             0,
-            "wrapped derivative token: owner balance mismatch"
+            "wrapped derivative token: seller balance mismatch"
         );
         assertEq(
             _wrappedDerivative.balanceOf(address(_auctionHouse)),
@@ -478,9 +478,9 @@ contract SendPayoutTest is Test, Permit2User {
             "derivative token: user balance mismatch"
         );
         assertEq(
-            _mockDerivativeModule.derivativeToken().balanceOf(_OWNER, _derivativeTokenId),
+            _mockDerivativeModule.derivativeToken().balanceOf(_SELLER, _derivativeTokenId),
             0,
-            "derivative token: owner balance mismatch"
+            "derivative token: seller balance mismatch"
         );
         assertEq(
             _mockDerivativeModule.derivativeToken().balanceOf(
@@ -509,7 +509,7 @@ contract SendPayoutTest is Test, Permit2User {
 
         // Check balances of payout token
         assertEq(_payoutToken.balanceOf(_USER), 0, "payout token: user balance mismatch");
-        assertEq(_payoutToken.balanceOf(_OWNER), 0, "payout token: owner balance mismatch");
+        assertEq(_payoutToken.balanceOf(_SELLER), 0, "payout token: seller balance mismatch");
         assertEq(
             _payoutToken.balanceOf(address(_auctionHouse)),
             0,
@@ -571,9 +571,9 @@ contract SendPayoutTest is Test, Permit2User {
             "user balance mismatch"
         );
         assertEq(
-            _mockDerivativeModule.derivativeToken().balanceOf(_OWNER, _derivativeTokenId),
+            _mockDerivativeModule.derivativeToken().balanceOf(_SELLER, _derivativeTokenId),
             0,
-            "owner balance mismatch"
+            "seller balance mismatch"
         );
         assertEq(
             _mockDerivativeModule.derivativeToken().balanceOf(
@@ -602,7 +602,7 @@ contract SendPayoutTest is Test, Permit2User {
 
         // Check balances of payout token
         assertEq(_payoutToken.balanceOf(_USER), 0, "user balance mismatch");
-        assertEq(_payoutToken.balanceOf(_OWNER), 0, "owner balance mismatch");
+        assertEq(_payoutToken.balanceOf(_SELLER), 0, "seller balance mismatch");
         assertEq(
             _payoutToken.balanceOf(address(_auctionHouse)), 0, "_auctionHouse balance mismatch"
         );
