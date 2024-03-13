@@ -82,6 +82,8 @@ abstract contract AuctionHouseTest is Test, Permit2User {
     Auction.AuctionParams internal _auctionParams;
     bytes internal _allowlistProof;
     bytes internal _permit2Data;
+    bool internal _callbackSendBaseTokens;
+    bool internal _callbackSendQuoteTokens;
 
     // Outputs
     uint96 internal _lotId = type(uint96).max; // Set to max to ensure it's not a valid lot id
@@ -106,22 +108,6 @@ abstract contract AuctionHouseTest is Test, Permit2User {
         _derivativeModuleKeycode = keycodeFromVeecode(_derivativeModule.VEECODE());
         _condenserModule = new MockCondenserModule(address(_auctionHouse));
         _condenserModuleKeycode = keycodeFromVeecode(_condenserModule.VEECODE());
-
-        _callback = new MockCallback(
-            address(_auctionHouse),
-            Callbacks.Permissions({
-                onCreate: true,
-                onCancel: true,
-                onCurate: true,
-                onPurchase: true,
-                onBid: true,
-                onClaimProceeds: true,
-                sendBaseTokens: true,
-                receiveQuoteTokens: true
-            }),
-            _SELLER
-        );
-        // TODO tests for sendBaseTokens or receiveQuoteTokens false
 
         _startTime = uint48(block.timestamp) + 1;
 
@@ -325,14 +311,33 @@ abstract contract AuctionHouseTest is Test, Permit2User {
     }
 
     modifier givenCallbackIsSet() {
-        // TODO deploy using flags
+        // TODO need to calculate salt to generate correct prefix based on parameters
+        _callback = new MockCallback(
+            address(_auctionHouse),
+            Callbacks.Permissions({
+                onCreate: true,
+                onCancel: true,
+                onCurate: true,
+                onPurchase: true,
+                onBid: true,
+                onClaimProceeds: true,
+                sendBaseTokens: _callbackSendBaseTokens,
+                receiveQuoteTokens: _callbackSendQuoteTokens
+            }),
+            _SELLER
+        );
 
         _routingParams.callbacks = _callback;
         _;
     }
 
     modifier givenCallbackHasSendBaseTokensFlag() {
-        // TODO adjust flag
+        _callbackSendBaseTokens = true;
+        _;
+    }
+
+    modifier givenCallbackHasSendQuoteTokensFlag() {
+        _callbackSendQuoteTokens = true;
         _;
     }
 
