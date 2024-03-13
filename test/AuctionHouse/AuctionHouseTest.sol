@@ -386,7 +386,6 @@ abstract contract AuctionHouseTest is Test, Permit2User {
         // );
 
         // Set the salt based on which token flags are set
-        // TODO for some reason this isn't working
         bytes32 salt;
         if (_callbackSendBaseTokens && _callbackSendQuoteTokens) {
             // 11111111 = 0xFF
@@ -402,6 +401,7 @@ abstract contract AuctionHouseTest is Test, Permit2User {
             salt = bytes32(0xb70bffe176e014f58609a9f198cd21461d547043d59e24b8c4979c3446f33fa3);
         }
 
+        vm.broadcast(); // required for CREATE2 address to work correctly. doesn't do anything in a test
         _callback = new MockCallback{salt: salt}(
             address(_auctionHouse),
             Callbacks.Permissions({

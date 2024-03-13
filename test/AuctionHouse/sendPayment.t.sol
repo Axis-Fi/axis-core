@@ -33,12 +33,35 @@ contract SendPaymentTest is Test, Permit2User {
     }
 
     // [X] given the auction has hooks defined
-    //  [X] it transfers the payment amount to the _hook
+    //  [X] it transfers the payment amount to the _callback
     // [X] given the auction does not have hooks defined
     //  [X] it transfers the payment amount to the seller
 
-    modifier givenAuctionHasHook() {
-        _callback = new MockCallback(
+    modifier givenAuctionHasCallback() {
+
+        // 00000010 - 0x02
+        // bytes memory bytecode = abi.encodePacked(
+        //     type(MockCallback).creationCode,
+        //     abi.encode(address(_auctionHouse), Callbacks.Permissions({
+        //         onCreate: false,
+        //         onCancel: false,
+        //         onCurate: false,
+        //         onPurchase: false,
+        //         onBid: false,
+        //         onClaimProceeds: false,
+        //         receiveQuoteTokens: true,
+        //         sendBaseTokens: false
+        //     }), _SELLER)
+        // );
+        // vm.writeFile(
+        //     "./bytecode/MockCallback02.bin",
+        //     vm.toString(bytecode)
+        // );
+
+        bytes32 salt = bytes32(0xd28411ef0e453fb266244b1d627b31b396172ef958c1dfb6afe660bcc8cfa7a8);
+
+        vm.broadcast(); // required for CREATE2 address to work correctly. doesn't do anything in a test
+        _callback = new MockCallback{salt: salt}(
             address(_auctionHouse),
             Callbacks.Permissions({
                 onCreate: false,
@@ -47,8 +70,8 @@ contract SendPaymentTest is Test, Permit2User {
                 onPurchase: false,
                 onBid: false,
                 onClaimProceeds: false,
-                sendBaseTokens: false,
-                receiveQuoteTokens: true
+                receiveQuoteTokens: true,
+                sendBaseTokens: false
             }),
             _SELLER
         );
@@ -71,9 +94,9 @@ contract SendPaymentTest is Test, Permit2User {
         _;
     }
 
-    function test_givenAuctionHasHook_givenReceivesTokens()
+    function test_givenAuctionHasCallback_givenReceivesTokens()
         public
-        givenAuctionHasHook
+        givenAuctionHasCallback
         givenCallbackReceivesTokens
         givenRouterHasBalance(_paymentAmount)
     {
@@ -86,13 +109,13 @@ contract SendPaymentTest is Test, Permit2User {
         assertEq(_quoteToken.balanceOf(_SELLER), 0, "seller balance mismatch");
         assertEq(_quoteToken.balanceOf(address(_auctionHouse)), 0, "_auctionHouse balance mismatch");
         assertEq(
-            _quoteToken.balanceOf(address(_callback)), _paymentAmount, "_hook balance mismatch"
+            _quoteToken.balanceOf(address(_callback)), _paymentAmount, "_callback balance mismatch"
         );
     }
 
-    function test_givenAuctionHasHook()
+    function test_givenAuctionHasCallback()
         public
-        givenAuctionHasHook
+        givenAuctionHasCallback
         givenRouterHasBalance(_paymentAmount)
     {
         // Call
@@ -101,12 +124,12 @@ contract SendPaymentTest is Test, Permit2User {
 
         // Check balances
         assertEq(_quoteToken.balanceOf(_USER), 0, "user balance mismatch");
-        assertEq(_quoteToken.balanceOf(_SELLER), _paymentAmount, "seller balance mismatch");
+        assertEq(_quoteToken.balanceOf(_SELLER), 0, "seller balance mismatch");
         assertEq(_quoteToken.balanceOf(address(_auctionHouse)), 0, "_auctionHouse balance mismatch");
-        assertEq(_quoteToken.balanceOf(address(_callback)), 0, "_hook balance mismatch");
+        assertEq(_quoteToken.balanceOf(address(_callback)), _paymentAmount, "_callback balance mismatch");
     }
 
-    function test_givenAuctionHasNoHook() public givenRouterHasBalance(_paymentAmount) {
+    function test_givenAuctionHasNoCallback() public givenRouterHasBalance(_paymentAmount) {
         // Call
         vm.prank(_USER);
         _auctionHouse.sendPayment(_SELLER, _paymentAmount, _quoteToken, _callback);
