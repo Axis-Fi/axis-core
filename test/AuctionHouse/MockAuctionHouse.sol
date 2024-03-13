@@ -36,7 +36,6 @@ contract MockAuctionHouse is AuctionHouse {
     }
 
     function sendPayout(
-        uint96 lotId_,
         address recipient_,
         uint256 payoutAmount_,
         Auctioneer.Routing memory routingParams_,

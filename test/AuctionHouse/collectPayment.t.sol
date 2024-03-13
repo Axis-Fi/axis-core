@@ -4,7 +4,6 @@ pragma solidity 0.8.19;
 import {Test} from "forge-std/Test.sol";
 import {Transfer} from "src/lib/Transfer.sol";
 
-import {MockHook} from "test/modules/Auction/MockHook.sol";
 import {MockAuctionHouse} from "test/AuctionHouse/MockAuctionHouse.sol";
 import {MockFeeOnTransferERC20} from "test/lib/mocks/MockFeeOnTransferERC20.sol";
 import {Permit2Clone} from "test/lib/permit2/Permit2Clone.sol";
@@ -22,7 +21,6 @@ contract CollectPaymentTest is Test, Permit2User {
     uint96 internal _lotId = 1;
     uint256 internal _amount = 10e18;
     MockFeeOnTransferERC20 internal _quoteToken;
-    MockHook internal _hook;
     uint48 internal _approvalDeadline = 0;
     uint256 internal _approvalNonce = 0;
     bytes internal _approvalSignature = "";
@@ -106,10 +104,8 @@ contract CollectPaymentTest is Test, Permit2User {
         // Consume the nonce
         vm.prank(_user);
         _auctionHouse.collectPayment(
-            _lotId,
             _amount,
             _quoteToken,
-            _hook,
             Transfer.Permit2Approval({
                 deadline: _approvalDeadline,
                 nonce: _approvalNonce,
@@ -182,10 +178,8 @@ contract CollectPaymentTest is Test, Permit2User {
         // Call
         vm.prank(_user);
         _auctionHouse.collectPayment(
-            _lotId,
             _amount,
             _quoteToken,
-            _hook,
             Transfer.Permit2Approval({
                 deadline: _approvalDeadline,
                 nonce: _approvalNonce,
@@ -208,10 +202,8 @@ contract CollectPaymentTest is Test, Permit2User {
         // Call
         vm.prank(_user);
         _auctionHouse.collectPayment(
-            _lotId,
             _amount,
             _quoteToken,
-            _hook,
             Transfer.Permit2Approval({
                 deadline: _approvalDeadline,
                 nonce: _approvalNonce,
@@ -233,10 +225,8 @@ contract CollectPaymentTest is Test, Permit2User {
         // Call
         vm.prank(_user);
         _auctionHouse.collectPayment(
-            _lotId,
             _amount,
             _quoteToken,
-            _hook,
             Transfer.Permit2Approval({
                 deadline: _approvalDeadline,
                 nonce: _approvalNonce,
@@ -259,10 +249,8 @@ contract CollectPaymentTest is Test, Permit2User {
         // Call
         vm.prank(_user);
         _auctionHouse.collectPayment(
-            _lotId,
             _amount,
             _quoteToken,
-            _hook,
             Transfer.Permit2Approval({
                 deadline: _approvalDeadline,
                 nonce: _approvalNonce,
@@ -284,10 +272,8 @@ contract CollectPaymentTest is Test, Permit2User {
         // Call
         vm.prank(_user);
         _auctionHouse.collectPayment(
-            _lotId,
             _amount,
             _quoteToken,
-            _hook,
             Transfer.Permit2Approval({
                 deadline: _approvalDeadline,
                 nonce: _approvalNonce,
@@ -309,10 +295,8 @@ contract CollectPaymentTest is Test, Permit2User {
         // Call
         vm.prank(_user);
         _auctionHouse.collectPayment(
-            _lotId,
             _amount,
             _quoteToken,
-            _hook,
             Transfer.Permit2Approval({
                 deadline: _approvalDeadline,
                 nonce: _approvalNonce,
@@ -332,10 +316,8 @@ contract CollectPaymentTest is Test, Permit2User {
         // Call
         vm.prank(_user);
         _auctionHouse.collectPayment(
-            _lotId,
             _amount,
             _quoteToken,
-            _hook,
             Transfer.Permit2Approval({
                 deadline: _approvalDeadline,
                 nonce: _approvalNonce,
@@ -359,10 +341,8 @@ contract CollectPaymentTest is Test, Permit2User {
         // Call
         vm.prank(_user);
         _auctionHouse.collectPayment(
-            _lotId,
             _amount,
             _quoteToken,
-            _hook,
             Transfer.Permit2Approval({
                 deadline: _approvalDeadline,
                 nonce: _approvalNonce,
@@ -380,10 +360,8 @@ contract CollectPaymentTest is Test, Permit2User {
         // Call
         vm.prank(_user);
         _auctionHouse.collectPayment(
-            _lotId,
             _amount,
             _quoteToken,
-            _hook,
             Transfer.Permit2Approval({
                 deadline: _approvalDeadline,
                 nonce: _approvalNonce,
@@ -418,10 +396,8 @@ contract CollectPaymentTest is Test, Permit2User {
         // Call
         vm.prank(_user);
         _auctionHouse.collectPayment(
-            _lotId,
             _amount,
             _quoteToken,
-            _hook,
             Transfer.Permit2Approval({
                 deadline: _approvalDeadline,
                 nonce: _approvalNonce,
@@ -437,10 +413,8 @@ contract CollectPaymentTest is Test, Permit2User {
         // Call
         vm.prank(_user);
         _auctionHouse.collectPayment(
-            _lotId,
             _amount,
             _quoteToken,
-            _hook,
             Transfer.Permit2Approval({
                 deadline: _approvalDeadline,
                 nonce: _approvalNonce,
@@ -463,10 +437,8 @@ contract CollectPaymentTest is Test, Permit2User {
         // Call
         vm.prank(_user);
         _auctionHouse.collectPayment(
-            _lotId,
             _amount,
             _quoteToken,
-            _hook,
             Transfer.Permit2Approval({
                 deadline: _approvalDeadline,
                 nonce: _approvalNonce,
@@ -479,10 +451,8 @@ contract CollectPaymentTest is Test, Permit2User {
         // Call
         vm.prank(_user);
         _auctionHouse.collectPayment(
-            _lotId,
             _amount,
             _quoteToken,
-            _hook,
             Transfer.Permit2Approval({
                 deadline: _approvalDeadline,
                 nonce: _approvalNonce,
@@ -495,114 +465,5 @@ contract CollectPaymentTest is Test, Permit2User {
 
         // Expect the _auctionHouse to have the balance
         assertEq(_quoteToken.balanceOf(address(_auctionHouse)), _amount);
-    }
-
-    // ============ Hooks flow ============
-
-    // [X] given the auction has hooks defined
-    //  [X] when the pre _hook reverts
-    //   [X] it reverts
-    //  [ ] when the pre _hook does not revert
-    //   [ ] given the invariant is violated
-    //    [ ] it reverts
-    //   [X] given the invariant is not violated - TODO define invariant
-    //    [X] it succeeds
-
-    modifier whenHooksIsSet() {
-        _hook = new MockHook(address(_quoteToken), address(0));
-
-        // Set the addresses to track
-        address[] memory addresses = new address[](3);
-        addresses[0] = _user;
-        addresses[1] = address(_auctionHouse);
-        addresses[2] = address(_hook);
-
-        _hook.setBalanceAddresses(addresses);
-        _;
-    }
-
-    modifier whenPreHookReverts() {
-        _hook.setPreHookReverts(true);
-        _;
-    }
-
-    function test_preHook_reverts() public whenHooksIsSet whenPreHookReverts {
-        // Expect the error
-        vm.expectRevert("revert");
-
-        // Call
-        vm.prank(_user);
-        _auctionHouse.collectPayment(
-            _lotId,
-            _amount,
-            _quoteToken,
-            _hook,
-            Transfer.Permit2Approval({
-                deadline: _approvalDeadline,
-                nonce: _approvalNonce,
-                signature: _approvalSignature
-            })
-        );
-    }
-
-    function test_preHook_withTransfer()
-        public
-        givenUserHasBalance(_amount)
-        givenUserHasApprovedRouter
-        whenHooksIsSet
-    {
-        // Call
-        vm.prank(_user);
-        _auctionHouse.collectPayment(
-            _lotId,
-            _amount,
-            _quoteToken,
-            _hook,
-            Transfer.Permit2Approval({
-                deadline: _approvalDeadline,
-                nonce: _approvalNonce,
-                signature: _approvalSignature
-            })
-        );
-
-        // Expect the pre _hook to have recorded the balance of _user before the transfer
-        assertEq(_hook.preHookCalled(), true);
-        assertEq(_hook.preHookBalances(_quoteToken, _user), _amount);
-        assertEq(_quoteToken.balanceOf(_user), 0);
-
-        // Ensure that the mid and post hooks were not called
-        assertEq(_hook.midHookCalled(), false);
-        assertEq(_hook.postHookCalled(), false);
-    }
-
-    function test_preHook_withPermit2()
-        public
-        givenUserHasBalance(_amount)
-        givenPermit2Approved
-        whenPermit2ApprovalIsValid
-        whenHooksIsSet
-    {
-        // Call
-        vm.prank(_user);
-        _auctionHouse.collectPayment(
-            _lotId,
-            _amount,
-            _quoteToken,
-            _hook,
-            Transfer.Permit2Approval({
-                deadline: _approvalDeadline,
-                nonce: _approvalNonce,
-                signature: _approvalSignature
-            })
-        );
-
-        // Expect the pre _hook to have recorded the balance of _user before the transfer
-        assertEq(_hook.preHookCalled(), true);
-        assertEq(_hook.preHookBalances(_quoteToken, _user), _amount);
-        assertEq(_quoteToken.balanceOf(_user), 0);
-
-        // Ensure that the mid and post hooks were not called
-        assertEq(_hook.midHookCalled(), false);
-        assertEq(_hook.postHookCalled(), false);
     }
 }
