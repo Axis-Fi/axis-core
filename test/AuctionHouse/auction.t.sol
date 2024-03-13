@@ -11,8 +11,7 @@ import {MockERC20} from "lib/solmate/src/test/utils/mocks/MockERC20.sol";
 
 import {Auctioneer} from "src/bases/Auctioneer.sol";
 import {Auction} from "src/modules/Auction.sol";
-import {IAllowlist} from "src/interfaces/IAllowlist.sol";
-import {IHooks} from "src/interfaces/IHooks.sol";
+import {ICallback} from "src/interfaces/ICallback.sol";
 import {Veecode, WithModules, wrapVeecode, fromVeecode} from "src/modules/Modules.sol";
 
 contract AuctionTest is AuctionHouseTest {

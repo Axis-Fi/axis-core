@@ -14,7 +14,7 @@ import {Permit2User} from "test/lib/permit2/Permit2User.sol";
 import {MockWrappedDerivative} from "test/lib/mocks/MockWrappedDerivative.sol";
 
 import {ERC20} from "solmate/tokens/ERC20.sol";
-import {IAllowlist} from "src/interfaces/IAllowlist.sol";
+import {ICallback} from "src/interfaces/ICallback.sol";
 import {Auctioneer} from "src/bases/Auctioneer.sol";
 
 import {Veecode, toVeecode} from "src/modules/Modules.sol";
@@ -80,8 +80,7 @@ contract SendPayoutTest is Test, Permit2User {
             seller: _SELLER,
             baseToken: _payoutToken,
             quoteToken: _quoteToken,
-            hooks: _hook,
-            allowlist: IAllowlist(address(0)),
+            callbacks: _hook,
             derivativeReference: _derivativeReference,
             derivativeParams: _derivativeParams,
             wrapDerivative: _wrapDerivative,

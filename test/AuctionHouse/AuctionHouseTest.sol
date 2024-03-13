@@ -21,8 +21,9 @@ import {MockFeeOnTransferERC20} from "test/lib/mocks/MockFeeOnTransferERC20.sol"
 import {AuctionHouse, Router} from "src/AuctionHouse.sol";
 import {Auction, AuctionModule} from "src/modules/Auction.sol";
 import {FeeManager} from "src/bases/FeeManager.sol";
-import {IHooks, IAllowlist, Auctioneer} from "src/bases/Auctioneer.sol";
+import {Auctioneer} from "src/bases/Auctioneer.sol";
 import {Catalogue} from "src/Catalogue.sol";
+import {ICallback} from "src/interfaces/ICallback.sol";
 
 import {Veecode, toKeycode, keycodeFromVeecode, Keycode} from "src/modules/Modules.sol";
 
@@ -484,12 +485,11 @@ abstract contract AuctionHouseTest is Test, Permit2User {
             address seller_,
             ERC20 baseToken_,
             ERC20 quoteToken_,
-            IHooks hooks_,
-            IAllowlist allowlist_,
+            ICallback callback_,
             Veecode derivativeReference_,
             bytes memory derivativeParams_,
             bool wrapDerivative_,
-            uint256 prefunding_
+            uint96 prefunding_
         ) = _auctionHouse.lotRouting(lotId_);
 
         return Auctioneer.Routing({
@@ -497,8 +497,7 @@ abstract contract AuctionHouseTest is Test, Permit2User {
             seller: seller_,
             baseToken: baseToken_,
             quoteToken: quoteToken_,
-            hooks: hooks_,
-            allowlist: allowlist_,
+            callbacks: callback_,
             derivativeReference: derivativeReference_,
             derivativeParams: derivativeParams_,
             wrapDerivative: wrapDerivative_,
