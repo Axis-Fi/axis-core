@@ -577,23 +577,22 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
     function _getNextBid(
         Queue storage queue_,
         uint256 baseScale_
-    ) internal returns (uint64 bidId, uint256 amountIn, uint96 price) {
+    ) internal returns (uint64 bidId, uint96 amountIn, uint96 price) {
         bidId = queue_.getMaxId();
 
         // Load bid info (in quote token units)
         QueueBid memory qBid = queue_.delMax();
-        amountIn = uint256(qBid.amountIn);
-        uint256 minAmountOut = uint256(qBid.minAmountOut);
+        amountIn = qBid.amountIn;
 
         // A zero minAmountOut value should be filtered out during decryption. However, cover the case here to avoid a potential division by zero error that would brick settlement.
-        if (minAmountOut == 0) {
+        if (qBid.minAmountOut == 0) {
             // A zero price would be filtered out being below the minimum price
             return (bidId, amountIn, 0);
         }
 
         // Calculate the price of the bid
         // Cannot overflow on cast back to uint96. It was checked during decryption.
-        price = uint96(Math.mulDivUp(amountIn, baseScale_, uint256(qBid.minAmountOut)));
+        price = uint96(Math.mulDivUp(amountIn, baseScale_, qBid.minAmountOut));
 
         return (bidId, amountIn, price);
     }
@@ -626,7 +625,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
                 // There is no need to check if the bid is the minimum bid size, as this was checked during decryption
 
                 // Get bid info
-                (uint64 bidId, uint256 amountIn, uint96 price) = _getNextBid(queue, baseScale);
+                (uint64 bidId, uint96 amountIn, uint96 price) = _getNextBid(queue, baseScale);
 
                 // If the price is below the minimum price, then determine a marginal price from the previous bids with the knowledge that no other bids will be considered
                 // This will also handle a zero price returned from `_getNextBid()`, since `minPrice` is always greater than zero
@@ -831,9 +830,9 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
             }
 
             // Set settlement data
-            settlement_.totalIn = result.totalAmountIn;
-            settlement_.totalOut =
-                result.capacityExpended > capacity ? capacity : result.capacityExpended;
+            // TODO think about casting checks
+            settlement_.totalIn = uint96(result.totalAmountIn);
+            settlement_.totalOut = uint96(result.capacityExpended > capacity ? capacity : result.capacityExpended);
         } else {
             // Auction cannot be settled if we reach this point
             // Marginal price is set as the max uint96 for the auction so the system knows all bids should be refunded
@@ -849,7 +848,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
     function _claimProceeds(uint96 lotId_)
         internal
         override
-        returns (uint256 purchased, uint256 sold, uint256 payoutSent)
+        returns (uint96 purchased, uint96 sold, uint96 payoutSent)
     {
         // Update the status
         auctionData[lotId_].status = Auction.Status.Claimed;
@@ -931,7 +930,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         uint96,
         uint96,
         bytes calldata
-    ) internal pure override returns (uint256, bytes memory) {
+    ) internal pure override returns (uint96, bytes memory) {
         revert Auction_NotImplemented();
     }
 }

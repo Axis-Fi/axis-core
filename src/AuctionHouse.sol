@@ -72,7 +72,7 @@ abstract contract Router {
     function purchase(
         PurchaseParams memory params_,
         bytes calldata callbackData_
-    ) external virtual returns (uint256 payout);
+    ) external virtual returns (uint96 payout);
 
     // ========== BATCH AUCTIONS ========== //
 
@@ -202,7 +202,7 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
     function purchase(
         PurchaseParams memory params_,
         bytes calldata callbackData_
-    ) external override nonReentrant returns (uint256 payoutAmount) {
+    ) external override nonReentrant returns (uint96 payoutAmount) {
         _isLotValid(params_.lotId);
 
         // Load routing data for the lot
@@ -210,10 +210,10 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
 
         // Calculate quote fees for purchase
         // Note: this enables protocol and referrer fees to be changed between purchases
-        uint256 amountLessFees;
+        uint96 amountLessFees;
         {
             Keycode auctionKeycode = keycodeFromVeecode(routing.auctionReference);
-            uint256 totalFees = _allocateQuoteFees(
+            uint96 totalFees = _allocateQuoteFees(
                 fees[auctionKeycode].protocol,
                 fees[auctionKeycode].referrer,
                 params_.referrer,
@@ -229,7 +229,7 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
         // Send purchase to auction house and get payout plus any extra output
         bytes memory auctionOutput;
         (payoutAmount, auctionOutput) = _getModuleForId(params_.lotId).purchase(
-            params_.lotId, uint96(amountLessFees), params_.auctionData
+            params_.lotId, amountLessFees, params_.auctionData
         );
 
         // Check that payout is at least minimum amount out
@@ -246,7 +246,7 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
 
         // Calculate the curator fee (if applicable)
         FeeData memory feeData = lotFees[params_.lotId];
-        uint256 curatorFeePayout =
+        uint96 curatorFeePayout =
             _calculatePayoutFees(feeData.curated, feeData.curatorFee, payoutAmount);
 
         // If not prefunded, collect payout from auction owner or callbacks contract, if not prefunded
@@ -261,8 +261,8 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
                     routing.callbacks,
                     params_.lotId,
                     msg.sender,
-                    uint96(amountLessFees),
-                    uint96(payoutAmount + curatorFeePayout),
+                    amountLessFees,
+                    payoutAmount + curatorFeePayout,
                     false,
                     callbackData_
                 );
@@ -291,8 +291,8 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
                     routing.callbacks,
                     params_.lotId,
                     msg.sender,
-                    uint96(amountLessFees),
-                    uint96(payoutAmount + curatorFeePayout),
+                    amountLessFees,
+                    payoutAmount + curatorFeePayout,
                     true,
                     callbackData_
                 );
@@ -303,8 +303,8 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
                 routing.callbacks,
                 params_.lotId,
                 msg.sender,
-                uint96(amountLessFees),
-                uint96(payoutAmount + curatorFeePayout),
+                amountLessFees,
+                payoutAmount + curatorFeePayout,
                 true,
                 callbackData_
             );
@@ -313,7 +313,7 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
             // Check invariant
             if (routing.funding < payoutAmount) revert InsufficientFunding();
             unchecked {
-                routing.funding -= uint96(payoutAmount + curatorFeePayout);
+                routing.funding -= payoutAmount + curatorFeePayout;
             }
         }
 
@@ -432,7 +432,7 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
 
                 // Reduce funding by the payout amount
                 unchecked {
-                    routing.funding -= uint96(bidClaim.payout);
+                    routing.funding -= bidClaim.payout;
                 }
 
                 // Send the payout to the bidder
@@ -468,7 +468,7 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
         AuctionModule module = _getModuleForId(lotId_);
 
         // Store the capacity before settling
-        uint256 capacity = module.remainingCapacity(lotId_);
+        uint96 capacity = module.remainingCapacity(lotId_);
 
         // Settle the auction
         (Auction.Settlement memory settlement, bytes memory auctionOutput) = module.settle(lotId_);
@@ -490,13 +490,13 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
                 feeData.referrerFee = fees[auctionKeycode].referrer;
             }
 
-            uint256 curatorFeePayout =
+            uint96 curatorFeePayout =
                 _calculatePayoutFees(feeData.curated, feeData.curatorFee, capacity);
 
             // Collect the payout from the seller
             // Any unutilised capacity and fees can be claimed in `claimProceeds()`
             if (routing.funding == 0) {
-                routing.funding = uint96(capacity + curatorFeePayout);
+                routing.funding = capacity + curatorFeePayout;
                 Transfer.transferFrom(
                     routing.quoteToken,
                     routing.seller,
@@ -516,7 +516,7 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
                     routing.seller,
                     routing.quoteToken,
                     // Reconstruct bid amount from the settlement price and the amount out
-                    Math.mulDivDown(settlement.pfPayout, settlement.totalIn, settlement.totalOut)
+                    uint96(Math.mulDivDown(settlement.pfPayout, settlement.totalIn, settlement.totalOut))
                 );
 
                 // Reduce funding by the payout amount
@@ -533,12 +533,12 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
 
             // If the lot is under capacity, adjust the curator payout
             if (settlement.totalOut < capacity && curatorFeePayout > 0) {
-                uint256 capacityRefund;
+                uint96 capacityRefund;
                 unchecked {
                     capacityRefund = capacity - settlement.totalOut;
                 }
 
-                uint256 feeRefund = Math.mulDivDown(curatorFeePayout, capacityRefund, capacity);
+                uint96 feeRefund = uint96(Math.mulDivDown(curatorFeePayout, capacityRefund, capacity));
                 // Can't be more than curatorFeePayout
                 unchecked {
                     curatorFeePayout -= feeRefund;
@@ -548,7 +548,7 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
             // Reduce funding by curator fee and send, if applicable
             if (curatorFeePayout > 0) {
                 unchecked {
-                    routing.funding -= uint96(curatorFeePayout);
+                    routing.funding -= curatorFeePayout;
                 }
                 _sendPayout(feeData.curator, curatorFeePayout, routing, auctionOutput);
             }
@@ -577,7 +577,7 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
         _isLotValid(lotId_);
 
         // Call auction module to validate and update data
-        (uint256 purchased_, uint256 sold_, uint256 payoutSent_) =
+        (uint96 purchased_, uint96 sold_, uint96 payoutSent_) =
             _getModuleForId(lotId_).claimProceeds(lotId_);
 
         // Load data for the lot
@@ -588,11 +588,11 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
         // If a referrer is not set, that portion of the fee defaults to the protocol
         uint96 totalInLessFees;
         {
-            (, uint256 toProtocol) = calculateQuoteFees(
+            (, uint96 toProtocol) = calculateQuoteFees(
                 lotFees[lotId_].protocolFee, lotFees[lotId_].referrerFee, false, purchased_
             );
             unchecked {
-                totalInLessFees = uint96(purchased_ - toProtocol);
+                totalInLessFees = purchased_ - toProtocol;
             }
         }
 
@@ -611,7 +611,7 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
 
         // Refund any unused capacity and curator fees to the address dictated by the callbacks address
         // By this stage, a partial payout (if applicable) and curator fees have been paid, leaving only the payout amount (`totalOut`) remaining.
-        uint96 prefundingRefund = uint96(routing.funding + payoutSent_ - sold_);
+        uint96 prefundingRefund = routing.funding + payoutSent_ - sold_;
         unchecked {
             routing.funding -= prefundingRefund;
         }
@@ -852,21 +852,21 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
     // ========== FEE FUNCTIONS ========== //
 
     function _allocateQuoteFees(
-        uint256 protocolFee_,
-        uint256 referrerFee_,
+        uint96 protocolFee_,
+        uint96 referrerFee_,
         address referrer_,
         address seller_,
         ERC20 quoteToken_,
-        uint256 amount_
-    ) internal returns (uint256 totalFees) {
+        uint96 amount_
+    ) internal returns (uint96 totalFees) {
         // Calculate fees for purchase
-        (uint256 toReferrer, uint256 toProtocol) = calculateQuoteFees(
+        (uint96 toReferrer, uint96 toProtocol) = calculateQuoteFees(
             protocolFee_, referrerFee_, referrer_ != address(0) && referrer_ != seller_, amount_
         );
 
         // Update fee balances if non-zero
-        if (toReferrer > 0) rewards[referrer_][quoteToken_] += toReferrer;
-        if (toProtocol > 0) rewards[_protocol][quoteToken_] += toProtocol;
+        if (toReferrer > 0) rewards[referrer_][quoteToken_] += uint256(toReferrer);
+        if (toProtocol > 0) rewards[_protocol][quoteToken_] += uint256(toProtocol);
 
         return toReferrer + toProtocol;
     }

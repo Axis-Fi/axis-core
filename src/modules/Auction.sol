@@ -79,8 +79,8 @@ abstract contract Auction {
 
     /// @dev Only used in memory so doesn't need to be packed
     struct Settlement {
-        uint256 totalIn;
-        uint256 totalOut;
+        uint96 totalIn;
+        uint96 totalOut;
         address pfBidder;
         address pfReferrer;
         uint96 pfRefund;
@@ -124,7 +124,7 @@ abstract contract Auction {
         uint96 lotId_,
         uint96 amount_,
         bytes calldata auctionData_
-    ) external virtual returns (uint256 payout, bytes memory auctionOutput);
+    ) external virtual returns (uint96 payout, bytes memory auctionOutput);
 
     // ========== BATCH AUCTIONS ========== //
 
@@ -201,7 +201,7 @@ abstract contract Auction {
     function claimProceeds(uint96 lotId_)
         external
         virtual
-        returns (uint256 purchased, uint256 sold, uint256 payoutSent);
+        returns (uint96 purchased, uint96 sold, uint96 payoutSent);
 
     // ========== AUCTION MANAGEMENT ========== //
 
@@ -387,7 +387,7 @@ abstract contract AuctionModule is Auction, Module {
         uint96 lotId_,
         uint96 amount_,
         bytes calldata auctionData_
-    ) external override onlyInternal returns (uint256 payout, bytes memory auctionOutput) {
+    ) external override onlyInternal returns (uint96 payout, bytes memory auctionOutput) {
         // Standard validation
         _revertIfLotInvalid(lotId_);
         _revertIfLotInactive(lotId_);
@@ -408,7 +408,7 @@ abstract contract AuctionModule is Auction, Module {
         uint96 lotId_,
         uint96 amount_,
         bytes calldata auctionData_
-    ) internal virtual returns (uint256 payout, bytes memory auctionOutput);
+    ) internal virtual returns (uint96 payout, bytes memory auctionOutput);
 
     // ========== BATCH AUCTIONS ========== //
 
@@ -590,9 +590,9 @@ abstract contract AuctionModule is Auction, Module {
         lotData[lotId_].capacity = 0;
 
         // Store sold and purchased amounts
-        lotData[lotId_].purchased = uint96(settlement.totalIn);
-        lotData[lotId_].sold = uint96(settlement.totalOut);
-        lotData[lotId_].partialPayout = uint96(settlement.pfPayout);
+        lotData[lotId_].purchased = settlement.totalIn;
+        lotData[lotId_].sold = settlement.totalOut;
+        lotData[lotId_].partialPayout = settlement.pfPayout;
     }
 
     /// @notice     Implementation-specific lot settlement logic
@@ -626,7 +626,7 @@ abstract contract AuctionModule is Auction, Module {
         virtual
         override
         onlyInternal
-        returns (uint256 purchased, uint256 sold, uint256 payoutSent)
+        returns (uint96 purchased, uint96 sold, uint96 payoutSent)
     {
         // Standard validation
         _revertIfLotInvalid(lotId_);
@@ -648,7 +648,7 @@ abstract contract AuctionModule is Auction, Module {
     function _claimProceeds(uint96 lotId_)
         internal
         virtual
-        returns (uint256 purchased, uint256 sold, uint256 payoutSent);
+        returns (uint96 purchased, uint96 sold, uint96 payoutSent);
 
     // ========== AUCTION INFORMATION ========== //
 

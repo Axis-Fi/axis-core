@@ -66,24 +66,24 @@ abstract contract FeeManager is ReentrancyGuard {
 
     /// @notice     Calculates and allocates fees that are collected in the quote token
     function calculateQuoteFees(
-        uint256 protocolFee_,
-        uint256 referrerFee_,
+        uint96 protocolFee_,
+        uint96 referrerFee_,
         bool hasReferrer_,
-        uint256 amount_
-    ) public pure returns (uint256 toReferrer, uint256 toProtocol) {
-        uint256 feeDecimals = uint256(_FEE_DECIMALS);
+        uint96 amount_
+    ) public pure returns (uint96 toReferrer, uint96 toProtocol) {
+        uint96 feeDecimals = uint96(_FEE_DECIMALS);
 
         if (hasReferrer_) {
             // In this case we need to:
             // 1. Calculate referrer fee
             // 2. Calculate protocol fee as the total expected fee amount minus the referrer fee
             //    to avoid issues with rounding from separate fee calculations
-            toReferrer = Math.mulDivDown(amount_, referrerFee_, feeDecimals);
+            toReferrer = uint96(Math.mulDivDown(amount_, referrerFee_, feeDecimals));
             toProtocol =
-                Math.mulDivDown(amount_, protocolFee_ + referrerFee_, feeDecimals) - toReferrer;
+                uint96(Math.mulDivDown(amount_, protocolFee_ + referrerFee_, feeDecimals)) - toReferrer;
         } else {
             // If there is no referrer, the protocol gets the entire fee
-            toProtocol = Math.mulDivDown(amount_, protocolFee_ + referrerFee_, feeDecimals);
+            toProtocol = uint96(Math.mulDivDown(amount_, protocolFee_ + referrerFee_, feeDecimals));
         }
     }
 
@@ -91,13 +91,13 @@ abstract contract FeeManager is ReentrancyGuard {
     function _calculatePayoutFees(
         bool curated_,
         uint48 curatorFee_,
-        uint256 payout_
-    ) internal pure returns (uint256 toCurator) {
+        uint96 payout_
+    ) internal pure returns (uint96 toCurator) {
         // No fees if the auction is not yet curated
         if (curated_ == false) return 0;
 
         // Calculate curator fee
-        toCurator = Math.mulDivDown(payout_, uint256(curatorFee_), uint256(_FEE_DECIMALS));
+        toCurator = uint96(Math.mulDivDown(payout_, uint256(curatorFee_), uint256(_FEE_DECIMALS)));
     }
 
     // ========== FEE MANAGEMENT ========== //
