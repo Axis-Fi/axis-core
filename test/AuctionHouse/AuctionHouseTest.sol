@@ -206,6 +206,11 @@ abstract contract AuctionHouseTest is Test, Permit2User {
         _;
     }
 
+    modifier whenBatchRequiresPrefunding() {
+        _batchAuctionModule.setRequiredPrefunding(true);
+        _;
+    }
+
     modifier whenAtomicAuctionModuleIsInstalled() {
         _auctionHouse.installModule(_atomicAuctionModule);
         _;
@@ -255,6 +260,43 @@ abstract contract AuctionHouseTest is Test, Permit2User {
     }
 
     modifier givenLotHasAllowlist() {
+        // Allowlist callback supports onPurchase and onBid callbacks
+        // 00011000 = 0x18
+        // bytes memory bytecode = abi.encodePacked(
+        //     type(MockCallback).creationCode,
+        //     abi.encode(address(_auctionHouse), Callbacks.Permissions({
+        //         onCreate: false,
+        //         onCancel: false,
+        //         onCurate: false,
+        //         onPurchase: true,
+        //         onBid: true,
+        //         onClaimProceeds: false,
+        //         receiveQuoteTokens: false,
+        //         sendBaseTokens: false
+        //     }), _SELLER)
+        // );
+        // vm.writeFile(
+        //     "./bytecode/MockCallback18.bin",
+        //     vm.toString(bytecode)
+        // );
+
+        bytes32 salt = bytes32(0x85270e468ebfba44a3333fd90f26b988e2c7b7a1a2459a3ec326cd2d823fd98a);
+        vm.broadcast(); // required for CREATE2 address to work correctly. doesn't do anything in a test
+        _callback = new MockCallback{salt: salt}(
+            address(_auctionHouse),
+            Callbacks.Permissions({
+                onCreate: false,
+                onCancel: false,
+                onCurate: false,
+                onPurchase: true,
+                onBid: true,
+                onClaimProceeds: false,
+                receiveQuoteTokens: false,
+                sendBaseTokens: false
+            }),
+            _SELLER
+        );
+
         _routingParams.callbacks = _callback;
         _;
     }

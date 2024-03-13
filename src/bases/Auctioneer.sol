@@ -276,7 +276,7 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
             // Store pre-funding information
             routing.funding = lotCapacity;
 
-            // Call hook on hooks contract if provided
+            // Handle funding from callback or seller as configured
             if (routing_.callbacks.hasPermission(Callbacks.SEND_BASE_TOKENS_FLAG)) {
                 uint256 balanceBefore = routing_.baseToken.balanceOf(address(this));
 
@@ -288,12 +288,12 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
                     revert InvalidCallback();
                 }
             }
-            // Otherwise fallback to a standard ERC20 transfer
+            // Otherwise fallback to a standard ERC20 transfer and then call the onCreate callback
             else {
-                // TODO call onCreate here?
                 Transfer.transferFrom(
                     routing_.baseToken, msg.sender, address(this), lotCapacity, true
                 );
+                _onCreateCallback(routing_, lotId, lotCapacity, false);
             }
         } else {
             // Call onCreate callback with no prefunding

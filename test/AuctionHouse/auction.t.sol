@@ -445,6 +445,7 @@ contract AuctionTest is AuctionHouseTest {
         external
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
+        whenBatchRequiresPrefunding
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         whenAuctionCapacityInQuote
@@ -461,6 +462,7 @@ contract AuctionTest is AuctionHouseTest {
         external
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
+        whenBatchRequiresPrefunding
         givenCallbackHasSendBaseTokensFlag
         givenCallbackIsSet
         givenCallbackHasBaseTokenBalance(_LOT_CAPACITY)
@@ -478,6 +480,7 @@ contract AuctionTest is AuctionHouseTest {
         external
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
+        whenBatchRequiresPrefunding
         givenCallbackHasSendBaseTokensFlag
         givenCallbackIsSet
         givenCallbackHasBaseTokenBalance(_LOT_CAPACITY)
@@ -495,6 +498,7 @@ contract AuctionTest is AuctionHouseTest {
         external
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
+        whenBatchRequiresPrefunding
         givenCallbackHasSendBaseTokensFlag
         givenCallbackIsSet
         givenCallbackHasBaseTokenBalance(_LOT_CAPACITY)
@@ -525,6 +529,7 @@ contract AuctionTest is AuctionHouseTest {
         external
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
+        whenBatchRequiresPrefunding
         givenCallbackHasSendBaseTokensFlag
         givenCallbackIsSet
         givenQuoteTokenHasDecimals(17)
@@ -557,6 +562,7 @@ contract AuctionTest is AuctionHouseTest {
         external
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
+        whenBatchRequiresPrefunding
         givenCallbackHasSendBaseTokensFlag
         givenCallbackIsSet
         givenQuoteTokenHasDecimals(13)
@@ -589,6 +595,7 @@ contract AuctionTest is AuctionHouseTest {
         external
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
+        whenBatchRequiresPrefunding
         givenCallbackIsSet
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
     {
@@ -603,6 +610,7 @@ contract AuctionTest is AuctionHouseTest {
         external
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
+        whenBatchRequiresPrefunding
         givenCallbackIsSet
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
     {
@@ -617,6 +625,7 @@ contract AuctionTest is AuctionHouseTest {
         external
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
+        whenBatchRequiresPrefunding
         givenCallbackIsSet
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
@@ -635,10 +644,12 @@ contract AuctionTest is AuctionHouseTest {
         external
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
+        whenBatchRequiresPrefunding
+        givenCallbackHasSendBaseTokensFlag
         givenCallbackIsSet
-        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
-        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenCallbackHasBaseTokenBalance(_LOT_CAPACITY)
     {
+        
         // Create the auction
         vm.prank(_SELLER);
         _lotId = _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
@@ -648,7 +659,7 @@ contract AuctionTest is AuctionHouseTest {
         assertEq(routing.funding, _LOT_CAPACITY, "funding mismatch");
 
         // Check balances
-        assertEq(_baseToken.balanceOf(address(this)), 0, "seller balance mismatch");
+        assertEq(_baseToken.balanceOf(address(_callback)), 0, "callback balance mismatch");
         assertEq(
             _baseToken.balanceOf(address(_auctionHouse)),
             _LOT_CAPACITY,
@@ -665,6 +676,7 @@ contract AuctionTest is AuctionHouseTest {
         external
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
+        whenBatchRequiresPrefunding
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
     {
         // Expect revert
@@ -678,6 +690,7 @@ contract AuctionTest is AuctionHouseTest {
         external
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
+        whenBatchRequiresPrefunding
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
     {
         // Expect revert
@@ -691,6 +704,7 @@ contract AuctionTest is AuctionHouseTest {
         external
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
+        whenBatchRequiresPrefunding
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenBaseTokenTakesFeeOnTransfer
@@ -708,9 +722,10 @@ contract AuctionTest is AuctionHouseTest {
         external
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
+        whenBatchRequiresPrefunding
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
-    {
+    {        
         // Create the auction
         vm.prank(_SELLER);
         _lotId = _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
@@ -726,17 +741,13 @@ contract AuctionTest is AuctionHouseTest {
             _LOT_CAPACITY,
             "auction house balance mismatch"
         );
-
-        // Check that the callback was called
-        (address baseToken_, address quoteToken_) = _callback.lotTokens(_lotId);
-        assertEq(baseToken_, address(_baseToken), "base token mismatch");
-        assertEq(quoteToken_, address(_quoteToken), "quote token mismatch");
     }
 
     function test_prefunding_quoteTokenDecimalsLarger()
         external
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
+        whenBatchRequiresPrefunding
         givenQuoteTokenHasDecimals(17)
         givenBaseTokenHasDecimals(13)
         givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
@@ -757,17 +768,13 @@ contract AuctionTest is AuctionHouseTest {
             _scaleBaseTokenAmount(_LOT_CAPACITY),
             "auction house balance mismatch"
         );
-
-        // Check that the callback was called
-        (address baseToken_, address quoteToken_) = _callback.lotTokens(_lotId);
-        assertEq(baseToken_, address(_baseToken), "base token mismatch");
-        assertEq(quoteToken_, address(_quoteToken), "quote token mismatch");
     }
 
     function test_prefunding_quoteTokenDecimalsSmaller()
         external
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
+        whenBatchRequiresPrefunding
         givenQuoteTokenHasDecimals(13)
         givenBaseTokenHasDecimals(17)
         givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
@@ -788,10 +795,5 @@ contract AuctionTest is AuctionHouseTest {
             _scaleBaseTokenAmount(_LOT_CAPACITY),
             "auction house balance mismatch"
         );
-
-        // Check that the callback was called
-        (address baseToken_, address quoteToken_) = _callback.lotTokens(_lotId);
-        assertEq(baseToken_, address(_baseToken), "base token mismatch");
-        assertEq(quoteToken_, address(_quoteToken), "quote token mismatch");
     }
 }
