@@ -4,7 +4,7 @@ pragma solidity ^0.8.19;
 import {ICallback} from "src/interfaces/ICallback.sol";
 
 /// @notice Library for handling callbacks
-/// @dev This library is based on the design of UniswapV4's Hooks library (https://github.com/Uniswap/v4-core/blob/main/src/libraries/Hooks.sol) 
+/// @dev This library is based on the design of UniswapV4's Hooks library (https://github.com/Uniswap/v4-core/blob/main/src/libraries/Hooks.sol)
 /// and is published under the same MIT license.
 /// We use the term callbacks because it is more appropriate for the type of extensibility we are providing to the Axis auction system.
 /// The system decides whether to invoke specific hooks by inspecting the leading bits (first byte)
@@ -23,7 +23,7 @@ library Callbacks {
     uint256 internal constant ON_CLAIM_PROCEEDS_FLAG = 1 << 154;
     uint256 internal constant RECEIVE_QUOTE_TOKENS_FLAG = 1 << 153;
     uint256 internal constant SEND_BASE_TOKENS_FLAG = 1 << 152;
-    
+
     struct Permissions {
         bool onCreate;
         bool onCancel;
@@ -49,7 +49,10 @@ library Callbacks {
     /// the deployed hooks address causes the intended hooks to be called
     /// @param permissions The hooks that are intended to be called
     /// @dev permissions param is memory as the function will be called from constructors
-    function validateCallbacksPermissions(ICallback self, Permissions memory permissions) internal pure {
+    function validateCallbacksPermissions(
+        ICallback self,
+        Permissions memory permissions
+    ) internal pure {
         if (
             permissions.onCreate != self.hasPermission(ON_CREATE_FLAG)
                 || permissions.onCancel != self.hasPermission(ON_CANCEL_FLAG)
@@ -59,7 +62,6 @@ library Callbacks {
                 || permissions.onClaimProceeds != self.hasPermission(ON_CLAIM_PROCEEDS_FLAG)
                 || permissions.receiveQuoteTokens != self.hasPermission(RECEIVE_QUOTE_TOKENS_FLAG)
                 || permissions.sendBaseTokens != self.hasPermission(SEND_BASE_TOKENS_FLAG)
-                
         ) {
             revert CallbacksAddressNotValid(address(self));
         }
@@ -69,7 +71,12 @@ library Callbacks {
     /// @param callbacks The callbacks contract to verify
     function isValidCallbacksAddress(ICallback callbacks) internal pure returns (bool) {
         // Ensure that if the contract is expected to send base tokens, then it implements atleast onCreate and onCurate OR onPurchase (atomic auctions may not be prefunded).
-        if (callbacks.hasPermission(SEND_BASE_TOKENS_FLAG) && (!callbacks.hasPermission(ON_CREATE_FLAG) || !callbacks.hasPermission(ON_CURATE_FLAG)) && !callbacks.hasPermission(ON_PURCHASE_FLAG)) {
+        if (
+            callbacks.hasPermission(SEND_BASE_TOKENS_FLAG)
+                && (
+                    !callbacks.hasPermission(ON_CREATE_FLAG) || !callbacks.hasPermission(ON_CURATE_FLAG)
+                ) && !callbacks.hasPermission(ON_PURCHASE_FLAG)
+        ) {
             return false;
         }
 
@@ -95,65 +102,128 @@ library Callbacks {
     }
 
     /// @notice calls onCreate callback if permissioned and validates return value
-    function onCreate(ICallback self, uint96 lotId, address seller, address baseToken, address quoteToken, uint96 capacity, bool preFund, bytes calldata callbackData)
-        internal
-    {
+    function onCreate(
+        ICallback self,
+        uint96 lotId,
+        address seller,
+        address baseToken,
+        address quoteToken,
+        uint96 capacity,
+        bool preFund,
+        bytes calldata callbackData
+    ) internal {
         if (self.hasPermission(ON_CREATE_FLAG)) {
             self.callback(
-                abi.encodeWithSelector(ICallback.onCreate.selector, lotId, seller, baseToken, quoteToken, capacity, preFund, callbackData)
+                abi.encodeWithSelector(
+                    ICallback.onCreate.selector,
+                    lotId,
+                    seller,
+                    baseToken,
+                    quoteToken,
+                    capacity,
+                    preFund,
+                    callbackData
+                )
             );
         }
     }
 
     /// @notice calls onCancel callback if permissioned and validates return value
-    function onCancel(ICallback self, uint96 lotId, uint96 refund, bool preFunded, bytes calldata callbackData) internal {
+    function onCancel(
+        ICallback self,
+        uint96 lotId,
+        uint96 refund,
+        bool preFunded,
+        bytes calldata callbackData
+    ) internal {
         if (self.hasPermission(ON_CANCEL_FLAG)) {
             self.callback(
-                abi.encodeWithSelector(ICallback.onCancel.selector, lotId, refund, preFunded, callbackData)
+                abi.encodeWithSelector(
+                    ICallback.onCancel.selector, lotId, refund, preFunded, callbackData
+                )
             );
-
         }
     }
 
     /// @notice calls onCurate callback if permissioned and validates return value
-    function onCurate(ICallback self, uint96 lotId, uint96 curatorFee, bool preFund, bytes calldata callbackData) internal {
+    function onCurate(
+        ICallback self,
+        uint96 lotId,
+        uint96 curatorFee,
+        bool preFund,
+        bytes calldata callbackData
+    ) internal {
         if (self.hasPermission(ON_CURATE_FLAG)) {
             self.callback(
-                abi.encodeWithSelector(ICallback.onCurate.selector, lotId, curatorFee, preFund, callbackData)
+                abi.encodeWithSelector(
+                    ICallback.onCurate.selector, lotId, curatorFee, preFund, callbackData
+                )
             );
         }
     }
 
     /// @notice calls onPurchase callback if permissioned and validates return value
-    function onPurchase(ICallback self, uint96 lotId, address buyer, uint96 amount, uint96 payout, bool preFunded, bytes calldata callbackData)
-        internal
-    {
+    function onPurchase(
+        ICallback self,
+        uint96 lotId,
+        address buyer,
+        uint96 amount,
+        uint96 payout,
+        bool preFunded,
+        bytes calldata callbackData
+    ) internal {
         if (self.hasPermission(ON_PURCHASE_FLAG)) {
             self.callback(
-                abi.encodeWithSelector(ICallback.onPurchase.selector, lotId, buyer, amount, payout, preFunded, callbackData)
+                abi.encodeWithSelector(
+                    ICallback.onPurchase.selector,
+                    lotId,
+                    buyer,
+                    amount,
+                    payout,
+                    preFunded,
+                    callbackData
+                )
             );
-
         }
     }
 
     /// @notice calls onBid callback if permissioned and validates return value
-    function onBid(ICallback self, uint96 lotId, uint64 bidId, address buyer, uint96 amount, bytes calldata callbackData)
-        internal
-    {
+    function onBid(
+        ICallback self,
+        uint96 lotId,
+        uint64 bidId,
+        address buyer,
+        uint96 amount,
+        bytes calldata callbackData
+    ) internal {
         if (self.hasPermission(ON_BID_FLAG)) {
             self.callback(
-                abi.encodeWithSelector(ICallback.onBid.selector, lotId, bidId, buyer, amount, callbackData)
+                abi.encodeWithSelector(
+                    ICallback.onBid.selector, lotId, bidId, buyer, amount, callbackData
+                )
             );
         }
     }
 
     /// @notice calls onClaimProceeds callback if permissioned and validates return value
-    function onClaimProceeds(ICallback self, uint96 lotId, uint96 proceeds, uint96 refund, bytes calldata callbackData, bytes memory auctionOutput)
-        internal
-    {
+    function onClaimProceeds(
+        ICallback self,
+        uint96 lotId,
+        uint96 proceeds,
+        uint96 refund,
+        bytes calldata callbackData,
+        bytes memory auctionOutput
+    ) internal {
         if (self.hasPermission(ON_CLAIM_PROCEEDS_FLAG)) {
             self.callback(
-                abi.encodeWithSelector(ICallback.onClaimProceeds.selector, lotId, proceeds, refund, callbackData, auctionOutput)
+                abi.encodeWithSelector(
+                    ICallback.onClaimProceeds.selector,
+                    lotId,
+                    proceeds,
+                    refund,
+                    callbackData,
+                    auctionOutput
+                )
             );
         }
     }

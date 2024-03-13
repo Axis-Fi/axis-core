@@ -15,7 +15,6 @@ interface ITokenBalance {
 /// @dev    This shouldn't be used with liquid, transferable ERC-20s because it can easily be bypassed via flash loans or other swap mechanisms
 /// @dev    The intent is to use this with non-transferable tokens (e.g. vote escrow) or illiquid tokens that are not as easily manipulated, e.g. community NFTs
 contract TokenAllowlist is BaseCallback {
-
     // ========== ERRORS ========== //
 
     // ========== STATE VARIABLES ========== //
@@ -64,30 +63,21 @@ contract TokenAllowlist is BaseCallback {
         if (address(token).code.length == 0) revert Callback_InvalidParams();
 
         // Try to get balance for token, revert if it fails
-        try token.balanceOf(address(this)) returns (uint256) {} catch {
+        try token.balanceOf(address(this)) returns (uint256) {}
+        catch {
             revert Callback_InvalidParams();
         }
-        
+
         // Set the lot check
         lotChecks[lotId_] = TokenCheck(token, threshold);
     }
 
-    function _onCancel(
-        uint96,
-        uint96,
-        bool,
-        bytes calldata
-    ) internal pure override {
+    function _onCancel(uint96, uint96, bool, bytes calldata) internal pure override {
         // Not implemented
         revert Callback_NotImplemented();
     }
 
-    function _onCurate(
-        uint96,
-        uint96,
-        bool,
-        bytes calldata
-    ) internal pure override {
+    function _onCurate(uint96, uint96, bool, bytes calldata) internal pure override {
         // Not implemented
         revert Callback_NotImplemented();
     }
@@ -124,7 +114,6 @@ contract TokenAllowlist is BaseCallback {
         revert Callback_NotImplemented();
     }
 
-
     // ========== INTERNAL FUNCTIONS ========== //
 
     function _canParticipate(uint96 lotId_, address buyer_) internal view {
@@ -134,5 +123,4 @@ contract TokenAllowlist is BaseCallback {
         // Check if the buyer's balance is above the threshold
         if (check.token.balanceOf(buyer_) < check.threshold) revert Callback_NotAuthorized();
     }
-
 }

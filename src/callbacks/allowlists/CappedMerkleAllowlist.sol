@@ -75,10 +75,11 @@ contract CappedMerkleAllowlist is MerkleAllowlist {
     // ========== INTERNAL FUNCTIONS ========== //
     function _canBuy(uint96 lotId_, address buyer_, uint96 amount_) internal {
         // Check if the buyer has already spent their limit
-        if (lotBuyerSpent[lotId_][buyer_] + amount_ > lotBuyerLimit[lotId_]) revert Callback_ExceedsLimit();
+        if (lotBuyerSpent[lotId_][buyer_] + amount_ > lotBuyerLimit[lotId_]) {
+            revert Callback_ExceedsLimit();
+        }
 
         // Update the buyer spent amount
         lotBuyerSpent[lotId_][buyer_] += amount_;
     }
 }
-

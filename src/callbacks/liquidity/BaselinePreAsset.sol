@@ -38,7 +38,6 @@ interface IBaselineFactory {
 /// @notice This contract is a replacement PreAsset for a Baseline Market that allows depositing proceeds from a Batch auction directly into Baseline.
 /// @dev The contract is the base token that should be auctioned. It provides a pre-asset token that buyers can then use to claim bAssets from after the Baseline Market is deployed.
 contract BaselinePreAsset is ERC20, BaseCallback, IPreAsset {
-
     // ========== ERRORS ========== //
 
     error Callback_AlreadyComplete();
@@ -49,7 +48,6 @@ contract BaselinePreAsset is ERC20, BaseCallback, IPreAsset {
     error PreAsset_BAssetNotSet();
     error PreAsset_NotAuthorized();
     error PreAsset_PoolNotSeeded();
-    
 
     // ========== EVENTS ========== //
 
@@ -80,7 +78,10 @@ contract BaselinePreAsset is ERC20, BaseCallback, IPreAsset {
         address seller_,
         address reserve_,
         address baselineFactory_
-    ) ERC20(preAssetName_, preAssetSymbol_, 18) BaseCallback(auctionHouse_, permissions_, seller_) {
+    )
+        ERC20(preAssetName_, preAssetSymbol_, 18)
+        BaseCallback(auctionHouse_, permissions_, seller_)
+    {
         // Check that the reserve token has 18 decimals
         if (ERC20(reserve_).decimals() != 18) revert Callback_InvalidParams();
 
@@ -116,7 +117,9 @@ contract BaselinePreAsset is ERC20, BaseCallback, IPreAsset {
     ) internal override {
         // Validate the base token is the pre asset (this contract)
         // and the quote token is the reserve
-        if (baseToken_ != address(this) || quoteToken_ != address(reserve)) revert Callback_InvalidParams();
+        if (baseToken_ != address(this) || quoteToken_ != address(reserve)) {
+            revert Callback_InvalidParams();
+        }
 
         // Validate that prefund is true
         if (!prefund_) revert Callback_InvalidParams();
@@ -176,13 +179,7 @@ contract BaselinePreAsset is ERC20, BaseCallback, IPreAsset {
         revert Callback_NotImplemented();
     }
 
-    function _onBid(
-        uint96,
-        uint64,
-        address,
-        uint96,
-        bytes calldata
-    ) internal pure override {
+    function _onBid(uint96, uint64, address, uint96, bytes calldata) internal pure override {
         // Not implemented
         revert Callback_NotImplemented();
     }
@@ -204,7 +201,8 @@ contract BaselinePreAsset is ERC20, BaseCallback, IPreAsset {
         if (proceeds_ < reserve.balanceOf(address(this))) revert Callback_MissingFunds();
 
         // Decode callback data to get bAsset initialization parameters
-        (string memory name, string memory symbol, bytes32 salt, address feeRecipient) = abi.decode(callbackData, (string, string, bytes32, address));
+        (string memory name, string memory symbol, bytes32 salt, address feeRecipient) =
+            abi.decode(callbackData, (string, string, bytes32, address));
 
         // Set the auction as complete
         auctionComplete = true;
@@ -222,7 +220,6 @@ contract BaselinePreAsset is ERC20, BaseCallback, IPreAsset {
         uint256 initFloor = 0; // TODO liquidity in floor
         uint256 initDisc = 0; // TODO liquidity in discovery
 
-        
         // Deploy the baseline pool
         // This function will re-enter this contract to set the bAsset and seed the pool
         // At the end of the call, this contract should have the initial supply of bAssets
@@ -302,5 +299,4 @@ contract BaselinePreAsset is ERC20, BaseCallback, IPreAsset {
         emit Claim(msg.sender, claimable);
         return claimable;
     }
-
 }

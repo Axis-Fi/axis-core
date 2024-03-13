@@ -7,11 +7,9 @@ import {BaseCallback} from "src/callbacks/BaseCallback.sol";
 import {Callbacks} from "src/lib/Callbacks.sol";
 
 contract MerkleAllowlist is BaseCallback {
-
     // ========== STATE VARIABLES ========== //
 
     mapping(uint96 => bytes32) public lotMerkleRoot;
-    
 
     // ========== CONSTRUCTOR ========== //
 
@@ -30,9 +28,7 @@ contract MerkleAllowlist is BaseCallback {
         address auctionHouse_,
         Callbacks.Permissions memory permissions_,
         address seller_
-    ) BaseCallback(auctionHouse_, permissions_, seller_) {
-
-    }
+    ) BaseCallback(auctionHouse_, permissions_, seller_) {}
 
     // ========== CALLBACK FUNCTIONS ========== //
 
@@ -52,22 +48,12 @@ contract MerkleAllowlist is BaseCallback {
         lotMerkleRoot[lotId_] = merkleRoot;
     }
 
-    function _onCancel(
-        uint96,
-        uint96,
-        bool,
-        bytes calldata
-    ) internal pure override {
+    function _onCancel(uint96, uint96, bool, bytes calldata) internal pure override {
         // Not implemented
         revert Callback_NotImplemented();
     }
 
-    function _onCurate(
-        uint96,
-        uint96,
-        bool,
-        bytes calldata
-    ) internal pure override {
+    function _onCurate(uint96, uint96, bool, bytes calldata) internal pure override {
         // Not implemented
         revert Callback_NotImplemented();
     }
@@ -131,7 +117,11 @@ contract MerkleAllowlist is BaseCallback {
 
     // ========== INTERNAL FUNCTIONS ========== //
 
-    function _canParticipate(uint96 lotId_, address buyer_, bytes calldata callbackData_) internal view virtual {
+    function _canParticipate(
+        uint96 lotId_,
+        address buyer_,
+        bytes calldata callbackData_
+    ) internal view virtual {
         // Decode the merkle proof from the callback data
         bytes32[] memory proof = abi.decode(callbackData_, (bytes32[]));
 
@@ -139,7 +129,8 @@ contract MerkleAllowlist is BaseCallback {
         bytes32 leaf = keccak256(abi.encodePacked(buyer_));
 
         // Validate the merkle proof
-        if(!MerkleProofLib.verify(proof, lotMerkleRoot[lotId_], leaf)) revert Callback_NotAuthorized();
+        if (!MerkleProofLib.verify(proof, lotMerkleRoot[lotId_], leaf)) {
+            revert Callback_NotAuthorized();
+        }
     }
-
 }

@@ -282,7 +282,16 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
                 uint256 balanceBefore = routing_.baseToken.balanceOf(address(this));
 
                 // The pre-auction create hook should transfer the base token to this contract
-                Callbacks.onCreate(routing_.callbacks, lotId, msg.sender, address(routing_.baseToken), address(routing_.quoteToken), lotCapacity, true, routing_.callbackData);
+                Callbacks.onCreate(
+                    routing_.callbacks,
+                    lotId,
+                    msg.sender,
+                    address(routing_.baseToken),
+                    address(routing_.quoteToken),
+                    lotCapacity,
+                    true,
+                    routing_.callbackData
+                );
 
                 // Check that the hook transferred the expected amount of base tokens
                 if (routing_.baseToken.balanceOf(address(this)) < balanceBefore + lotCapacity) {
@@ -297,7 +306,16 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
             }
         } else {
             // Call onCreate callback with no prefunding
-            Callbacks.onCreate(routing_.callbacks, lotId, msg.sender, address(routing_.baseToken), address(routing_.quoteToken), lotCapacity, false, routing_.callbackData);
+            Callbacks.onCreate(
+                routing_.callbacks,
+                lotId,
+                msg.sender,
+                address(routing_.baseToken),
+                address(routing_.quoteToken),
+                lotCapacity,
+                false,
+                routing_.callbackData
+            );
         }
 
         emit AuctionCreated(lotId, routing.auctionReference, infoHash_);
