@@ -3,10 +3,11 @@ pragma solidity 0.8.19;
 
 import {Test} from "forge-std/Test.sol";
 
-import {MockHook} from "test/modules/Auction/MockHook.sol";
+import {MockCallback} from "test/AuctionHouse/MockCallback.sol";
 import {MockAuctionHouse} from "test/AuctionHouse/MockAuctionHouse.sol";
 import {MockFeeOnTransferERC20} from "test/lib/mocks/MockFeeOnTransferERC20.sol";
 import {Permit2User} from "test/lib/permit2/Permit2User.sol";
+import {Callbacks} from "src/lib/Callbacks.sol";
 
 contract SendPaymentTest is Test, Permit2User {
     MockAuctionHouse internal _auctionHouse;
@@ -19,7 +20,7 @@ contract SendPaymentTest is Test, Permit2User {
     // Function parameters
     uint256 internal _paymentAmount = 1e18;
     MockFeeOnTransferERC20 internal _quoteToken;
-    MockHook internal _hook;
+    MockCallback internal _callback;
 
     function setUp() public {
         // Set reasonable starting block
@@ -37,22 +38,56 @@ contract SendPaymentTest is Test, Permit2User {
     //  [X] it transfers the payment amount to the seller
 
     modifier givenAuctionHasHook() {
-        _hook = new MockHook(address(_quoteToken), address(0));
+        _callback = new MockCallback(
+            address(_auctionHouse),
+            Callbacks.Permissions({
+                onCreate: false,
+                onCancel: false,
+                onCurate: false,
+                onPurchase: false,
+                onBid: false,
+                onClaimProceeds: false,
+                sendBaseTokens: false,
+                receiveQuoteTokens: true
+            }),
+            _SELLER
+        );
+        _;
+    }
 
-        // Set the addresses to track
-        address[] memory addresses = new address[](4);
-        addresses[0] = address(_USER);
-        addresses[1] = address(_SELLER);
-        addresses[2] = address(_auctionHouse);
-        addresses[3] = address(_hook);
-
-        _hook.setBalanceAddresses(addresses);
+    modifier givenCallbackReceivesTokens() {
+        vm.mockCall(
+            address(_callback),
+            abi.encodeWithSelector(
+                MockCallback.hasPermission.selector, Callbacks.RECEIVE_QUOTE_TOKENS_FLAG
+            ),
+            abi.encode(true)
+        );
         _;
     }
 
     modifier givenRouterHasBalance(uint256 amount_) {
         _quoteToken.mint(address(_auctionHouse), amount_);
         _;
+    }
+
+    function test_givenAuctionHasHook_givenReceivesTokens()
+        public
+        givenAuctionHasHook
+        givenCallbackReceivesTokens
+        givenRouterHasBalance(_paymentAmount)
+    {
+        // Call
+        vm.prank(_USER);
+        _auctionHouse.sendPayment(_SELLER, _paymentAmount, _quoteToken, _callback);
+
+        // Check balances
+        assertEq(_quoteToken.balanceOf(_USER), 0, "user balance mismatch");
+        assertEq(_quoteToken.balanceOf(_SELLER), 0, "seller balance mismatch");
+        assertEq(_quoteToken.balanceOf(address(_auctionHouse)), 0, "_auctionHouse balance mismatch");
+        assertEq(
+            _quoteToken.balanceOf(address(_callback)), _paymentAmount, "_hook balance mismatch"
+        );
     }
 
     function test_givenAuctionHasHook()
@@ -62,24 +97,19 @@ contract SendPaymentTest is Test, Permit2User {
     {
         // Call
         vm.prank(_USER);
-        _auctionHouse.sendPayment(_SELLER, _paymentAmount, _quoteToken, _hook);
+        _auctionHouse.sendPayment(_SELLER, _paymentAmount, _quoteToken, _callback);
 
         // Check balances
         assertEq(_quoteToken.balanceOf(_USER), 0, "user balance mismatch");
-        assertEq(_quoteToken.balanceOf(_SELLER), 0, "seller balance mismatch");
+        assertEq(_quoteToken.balanceOf(_SELLER), _paymentAmount, "seller balance mismatch");
         assertEq(_quoteToken.balanceOf(address(_auctionHouse)), 0, "_auctionHouse balance mismatch");
-        assertEq(_quoteToken.balanceOf(address(_hook)), _paymentAmount, "_hook balance mismatch");
-
-        // Hooks not called
-        assertEq(_hook.preHookCalled(), false, "pre _hook called");
-        assertEq(_hook.midHookCalled(), false, "mid _hook called");
-        assertEq(_hook.postHookCalled(), false, "post _hook called");
+        assertEq(_quoteToken.balanceOf(address(_callback)), 0, "_hook balance mismatch");
     }
 
     function test_givenAuctionHasNoHook() public givenRouterHasBalance(_paymentAmount) {
         // Call
         vm.prank(_USER);
-        _auctionHouse.sendPayment(_SELLER, _paymentAmount, _quoteToken, _hook);
+        _auctionHouse.sendPayment(_SELLER, _paymentAmount, _quoteToken, _callback);
 
         // Check balances
         assertEq(_quoteToken.balanceOf(_USER), 0, "user balance mismatch");

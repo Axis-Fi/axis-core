@@ -12,8 +12,7 @@ import {MockAtomicAuctionModule} from "test/modules/Auction/MockAtomicAuctionMod
 import {MockBatchAuctionModule} from "test/modules/Auction/MockBatchAuctionModule.sol";
 import {MockDerivativeModule} from "test/modules/derivatives/mocks/MockDerivativeModule.sol";
 import {MockCondenserModule} from "test/modules/Condenser/MockCondenserModule.sol";
-import {MockAllowlist} from "test/modules/Auction/MockAllowlist.sol";
-import {MockHook} from "test/modules/Auction/MockHook.sol";
+import {MockCallback} from "test/AuctionHouse/MockCallback.sol";
 import {Permit2User} from "test/lib/permit2/Permit2User.sol";
 import {MockFeeOnTransferERC20} from "test/lib/mocks/MockFeeOnTransferERC20.sol";
 
@@ -24,6 +23,7 @@ import {FeeManager} from "src/bases/FeeManager.sol";
 import {Auctioneer} from "src/bases/Auctioneer.sol";
 import {Catalogue} from "src/Catalogue.sol";
 import {ICallback} from "src/interfaces/ICallback.sol";
+import {Callbacks} from "src/lib/Callbacks.sol";
 
 import {Veecode, toKeycode, keycodeFromVeecode, Keycode} from "src/modules/Modules.sol";
 
@@ -44,8 +44,7 @@ abstract contract AuctionHouseTest is Test, Permit2User {
     Keycode internal _derivativeModuleKeycode;
     MockCondenserModule internal _condenserModule;
     Keycode internal _condenserModuleKeycode;
-    MockAllowlist internal _allowlist;
-    MockHook internal _hook;
+    MockCallback internal _callback;
 
     uint96 internal constant _BASE_SCALE = 1e18;
 
@@ -108,8 +107,21 @@ abstract contract AuctionHouseTest is Test, Permit2User {
         _condenserModule = new MockCondenserModule(address(_auctionHouse));
         _condenserModuleKeycode = keycodeFromVeecode(_condenserModule.VEECODE());
 
-        _allowlist = new MockAllowlist();
-        _hook = new MockHook(address(_quoteToken), address(_baseToken));
+        _callback = new MockCallback(
+            address(_auctionHouse),
+            Callbacks.Permissions({
+                onCreate: true,
+                onCancel: true,
+                onCurate: true,
+                onPurchase: true,
+                onBid: true,
+                onClaimProceeds: true,
+                sendBaseTokens: true,
+                receiveQuoteTokens: true
+            }),
+            _SELLER
+        );
+        // TODO tests for sendBaseTokens or receiveQuoteTokens false
 
         _startTime = uint48(block.timestamp) + 1;
 
@@ -126,9 +138,8 @@ abstract contract AuctionHouseTest is Test, Permit2User {
             baseToken: _baseToken,
             quoteToken: _quoteToken,
             curator: _CURATOR,
-            hooks: IHooks(address(0)),
-            allowlist: IAllowlist(address(0)),
-            allowlistParams: abi.encode(""),
+            callbacks: ICallback(address(0)),
+            callbackData: abi.encode(""),
             derivativeType: toKeycode(""),
             derivativeParams: _derivativeParams
         });
@@ -174,9 +185,6 @@ abstract contract AuctionHouseTest is Test, Permit2User {
 
         // Update auction params
         _auctionParams.capacity = uint96(lotCapacity);
-
-        // Update the hook
-        _hook.setPayoutToken(address(_baseToken));
     }
 
     modifier givenBaseTokenHasDecimals(uint8 decimals_) {
@@ -189,9 +197,6 @@ abstract contract AuctionHouseTest is Test, Permit2User {
 
         // Update routing params
         _routingParams.quoteToken = _quoteToken;
-
-        // Update the hook
-        _hook.setQuoteToken(address(_quoteToken));
     }
 
     modifier givenQuoteTokenHasDecimals(uint8 decimals_) {
@@ -248,7 +253,7 @@ abstract contract AuctionHouseTest is Test, Permit2User {
 
     modifier givenLotIsCancelled() {
         vm.prank(_SELLER);
-        _auctionHouse.cancel(_lotId);
+        _auctionHouse.cancel(_lotId, bytes(""));
         _;
     }
 
@@ -264,13 +269,13 @@ abstract contract AuctionHouseTest is Test, Permit2User {
     }
 
     modifier givenLotHasAllowlist() {
-        _routingParams.allowlist = _allowlist;
+        _routingParams.callbacks = _callback;
         _;
     }
 
     modifier whenAllowlistProofIsCorrect() {
         // Add the sender to the allowlist
-        _allowlist.setAllowedWithProof(_bidder, _allowlistProof, true);
+        _callback.setAllowedWithProof(_bidder, _allowlistProof, true);
         _;
     }
 
@@ -320,17 +325,17 @@ abstract contract AuctionHouseTest is Test, Permit2User {
     }
 
     modifier givenAuctionHasHook() {
-        _routingParams.hooks = _hook;
+        _routingParams.callbacks = _callback;
         _;
     }
 
     modifier givenHookHasBaseTokenBalance(uint256 amount_) {
-        _baseToken.mint(address(_hook), amount_);
+        _baseToken.mint(address(_callback), amount_);
         _;
     }
 
     modifier givenHookHasBaseTokenAllowance(uint256 amount_) {
-        vm.prank(address(_hook));
+        vm.prank(address(_callback));
         _baseToken.approve(address(_auctionHouse), amount_);
         _;
     }
@@ -345,12 +350,11 @@ abstract contract AuctionHouseTest is Test, Permit2User {
             referrer: _REFERRER,
             amount: amount_,
             auctionData: auctionData_,
-            allowlistProof: _allowlistProof,
             permit2Data: _permit2Data
         });
 
         vm.prank(bidder_);
-        _bidId = _auctionHouse.bid(bidParams);
+        _bidId = _auctionHouse.bid(bidParams, _allowlistProof);
 
         return _bidId;
     }
@@ -386,12 +390,11 @@ abstract contract AuctionHouseTest is Test, Permit2User {
             amount: amount_,
             minAmountOut: minAmountOut_,
             auctionData: auctionData_,
-            allowlistProof: _allowlistProof,
             permit2Data: _permit2Data
         });
 
         vm.prank(_bidder);
-        uint256 payout = _auctionHouse.purchase(purchaseParams);
+        uint256 payout = _auctionHouse.purchase(purchaseParams, _allowlistProof);
 
         return payout;
     }
@@ -436,7 +439,7 @@ abstract contract AuctionHouseTest is Test, Permit2User {
 
     modifier givenCuratorHasApproved() {
         vm.prank(_CURATOR);
-        _auctionHouse.curate(_lotId);
+        _auctionHouse.curate(_lotId, bytes(""));
         _curatorApproved = true;
         _;
     }
@@ -473,7 +476,7 @@ abstract contract AuctionHouseTest is Test, Permit2User {
 
     modifier givenLotProceedsAreClaimed() {
         vm.prank(_SELLER);
-        _auctionHouse.claimProceeds(_lotId);
+        _auctionHouse.claimProceeds(_lotId, bytes(""));
         _;
     }
 

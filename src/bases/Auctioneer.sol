@@ -180,9 +180,10 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
             revert InvalidParams();
         }
 
+        Routing storage routing = lotRouting[lotId];
+
         bool requiresPrefunding;
         uint96 lotCapacity;
-        Veecode auctionReference;
         {
             // Load auction type module, this checks that it is installed.
             // We load it here vs. later to avoid two checks.
@@ -204,12 +205,10 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
             // Call module auction function to store implementation-specific data
             (requiresPrefunding, lotCapacity) =
                 auctionModule.auction(lotId, params_, quoteTokenDecimals, baseTokenDecimals);
-            auctionReference = auctionModule.VEECODE();
+            routing.auctionReference = auctionModule.VEECODE();
         }
 
         // Store routing information
-        Routing storage routing = lotRouting[lotId];
-        routing.auctionReference = auctionReference;
         routing.seller = msg.sender;
         routing.baseToken = routing_.baseToken;
         routing.quoteToken = routing_.quoteToken;
@@ -282,16 +281,7 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
                 uint256 balanceBefore = routing_.baseToken.balanceOf(address(this));
 
                 // The pre-auction create hook should transfer the base token to this contract
-                Callbacks.onCreate(
-                    routing_.callbacks,
-                    lotId,
-                    msg.sender,
-                    address(routing_.baseToken),
-                    address(routing_.quoteToken),
-                    lotCapacity,
-                    true,
-                    routing_.callbackData
-                );
+                _onCreateCallback(routing_, lotId, lotCapacity, true);
 
                 // Check that the hook transferred the expected amount of base tokens
                 if (routing_.baseToken.balanceOf(address(this)) < balanceBefore + lotCapacity) {
@@ -300,22 +290,14 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
             }
             // Otherwise fallback to a standard ERC20 transfer
             else {
+                // TODO call onCreate here?
                 Transfer.transferFrom(
                     routing_.baseToken, msg.sender, address(this), lotCapacity, true
                 );
             }
         } else {
             // Call onCreate callback with no prefunding
-            Callbacks.onCreate(
-                routing_.callbacks,
-                lotId,
-                msg.sender,
-                address(routing_.baseToken),
-                address(routing_.quoteToken),
-                lotCapacity,
-                false,
-                routing_.callbackData
-            );
+            _onCreateCallback(routing_, lotId, lotCapacity, false);
         }
 
         emit AuctionCreated(lotId, routing.auctionReference, infoHash_);
@@ -395,6 +377,24 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
         _isLotValid(lotId_);
 
         return _getModuleForId(lotId_);
+    }
+
+    function _onCreateCallback(
+        RoutingParams calldata routing_,
+        uint96 lotId_,
+        uint96 capacity_,
+        bool preFund_
+    ) internal {
+        Callbacks.onCreate(
+            routing_.callbacks,
+            lotId_,
+            msg.sender,
+            address(routing_.baseToken),
+            address(routing_.quoteToken),
+            capacity_,
+            preFund_,
+            routing_.callbackData
+        );
     }
 
     // ========== GOVERNANCE FUNCTIONS ========== //

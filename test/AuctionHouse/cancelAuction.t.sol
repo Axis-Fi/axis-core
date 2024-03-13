@@ -37,7 +37,7 @@ contract CancelAuctionTest is AuctionHouseTest {
         bytes memory err = abi.encodeWithSelector(Auctioneer.NotPermitted.selector, address(this));
         vm.expectRevert(err);
 
-        _auctionHouse.cancel(_lotId);
+        _auctionHouse.cancel(_lotId, bytes(""));
     }
 
     function testReverts_whenUnauthorized(address user_)
@@ -52,7 +52,7 @@ contract CancelAuctionTest is AuctionHouseTest {
         vm.expectRevert(err);
 
         vm.prank(user_);
-        _auctionHouse.cancel(_lotId);
+        _auctionHouse.cancel(_lotId, bytes(""));
     }
 
     function testReverts_whenLotIdInvalid() external {
@@ -60,7 +60,7 @@ contract CancelAuctionTest is AuctionHouseTest {
         vm.expectRevert(err);
 
         vm.prank(_SELLER);
-        _auctionHouse.cancel(_lotId);
+        _auctionHouse.cancel(_lotId, bytes(""));
     }
 
     function testReverts_whenLotIsConcluded()
@@ -74,7 +74,7 @@ contract CancelAuctionTest is AuctionHouseTest {
         vm.expectRevert(err);
 
         vm.prank(_SELLER);
-        _auctionHouse.cancel(_lotId);
+        _auctionHouse.cancel(_lotId, bytes(""));
     }
 
     function test_givenCancelled_reverts()
@@ -90,7 +90,7 @@ contract CancelAuctionTest is AuctionHouseTest {
 
         // Call the function
         vm.prank(_SELLER);
-        _auctionHouse.cancel(_lotId);
+        _auctionHouse.cancel(_lotId, bytes(""));
     }
 
     function test_whenBeforeStart()
@@ -101,7 +101,7 @@ contract CancelAuctionTest is AuctionHouseTest {
     {
         // Cancel the lot
         vm.prank(_SELLER);
-        _auctionHouse.cancel(_lotId);
+        _auctionHouse.cancel(_lotId, bytes(""));
 
         // Get lot data from the module
         Auction.Lot memory lot = _getLotData(_lotId);
@@ -121,7 +121,7 @@ contract CancelAuctionTest is AuctionHouseTest {
         assertTrue(_atomicAuctionModule.isLive(_lotId), "before cancellation: isLive mismatch");
 
         vm.prank(_SELLER);
-        _auctionHouse.cancel(_lotId);
+        _auctionHouse.cancel(_lotId, bytes(""));
 
         // Get lot data from the module
         Auction.Lot memory lot = _getLotData(_lotId);
@@ -161,7 +161,7 @@ contract CancelAuctionTest is AuctionHouseTest {
 
         // Cancel the lot
         vm.prank(_SELLER);
-        _auctionHouse.cancel(_lotId);
+        _auctionHouse.cancel(_lotId, bytes(""));
 
         // Check the seller's balance
         assertEq(
@@ -188,7 +188,7 @@ contract CancelAuctionTest is AuctionHouseTest {
 
         // Cancel the lot
         vm.prank(_SELLER);
-        _auctionHouse.cancel(_lotId);
+        _auctionHouse.cancel(_lotId, bytes(""));
 
         // Check the seller's balance
         assertEq(
@@ -241,7 +241,7 @@ contract CancelAuctionTest is AuctionHouseTest {
 
         // Cancel the lot
         vm.prank(_SELLER);
-        _auctionHouse.cancel(_lotId);
+        _auctionHouse.cancel(_lotId, bytes(""));
 
         // Check the base token balances
         assertEq(
@@ -256,8 +256,8 @@ contract CancelAuctionTest is AuctionHouseTest {
         );
 
         // Check funding amount
-        (,,,,,,,,, uint256 lotPrefunding) = _auctionHouse.lotRouting(_lotId);
-        assertEq(lotPrefunding, 0, "mismatch on funding");
+        Auctioneer.Routing memory lotRouting = _getLotRouting(_lotId);
+        assertEq(lotRouting.funding, 0, "mismatch on funding");
     }
 
     function test_prefunded_givenCuratorHasApproved()
@@ -279,7 +279,7 @@ contract CancelAuctionTest is AuctionHouseTest {
 
         // Cancel the lot
         vm.prank(_SELLER);
-        _auctionHouse.cancel(_lotId);
+        _auctionHouse.cancel(_lotId, bytes(""));
 
         // Check the seller's balance
         assertEq(
@@ -294,8 +294,8 @@ contract CancelAuctionTest is AuctionHouseTest {
         );
 
         // Check funding amount
-        (,,,,,,,,, uint256 lotPrefunding) = _auctionHouse.lotRouting(_lotId);
-        assertEq(lotPrefunding, 0, "mismatch on funding");
+        Auctioneer.Routing memory lotRouting = _getLotRouting(_lotId);
+        assertEq(lotRouting.funding, 0, "mismatch on funding");
     }
 
     function test_prefunded_givenPurchase_givenCuratorHasApproved()
@@ -324,7 +324,7 @@ contract CancelAuctionTest is AuctionHouseTest {
 
         // Cancel the lot
         vm.prank(_SELLER);
-        _auctionHouse.cancel(_lotId);
+        _auctionHouse.cancel(_lotId, bytes(""));
 
         // Check the seller's balance
         assertEq(
@@ -339,8 +339,8 @@ contract CancelAuctionTest is AuctionHouseTest {
         );
 
         // Check funding amount
-        (,,,,,,,,, uint256 lotPrefunding) = _auctionHouse.lotRouting(_lotId);
-        assertEq(lotPrefunding, 0, "mismatch on funding");
+        Auctioneer.Routing memory lotRouting = _getLotRouting(_lotId);
+        assertEq(lotRouting.funding, 0, "mismatch on funding");
     }
 
     function test_prefunded_givenPurchase_givenCuratorHasApproved_givenPurchase()
@@ -372,7 +372,7 @@ contract CancelAuctionTest is AuctionHouseTest {
 
         // Cancel the lot
         vm.prank(_SELLER);
-        _auctionHouse.cancel(_lotId);
+        _auctionHouse.cancel(_lotId, bytes(""));
 
         // Check the seller's balance
         assertEq(
@@ -388,8 +388,8 @@ contract CancelAuctionTest is AuctionHouseTest {
         );
 
         // Check funding amount
-        (,,,,,,,,, uint256 lotPrefunding) = _auctionHouse.lotRouting(_lotId);
-        assertEq(lotPrefunding, 0, "mismatch on funding");
+        Auctioneer.Routing memory lotRouting = _getLotRouting(_lotId);
+        assertEq(lotRouting.funding, 0, "mismatch on funding");
     }
 
     function test_prefunded_givenCuratorHasApproved_givenPurchase()
@@ -417,7 +417,7 @@ contract CancelAuctionTest is AuctionHouseTest {
 
         // Cancel the lot
         vm.prank(_SELLER);
-        _auctionHouse.cancel(_lotId);
+        _auctionHouse.cancel(_lotId, bytes(""));
 
         // Check the seller's balance
         assertEq(
@@ -432,7 +432,7 @@ contract CancelAuctionTest is AuctionHouseTest {
         );
 
         // Check funding amount
-        (,,,,,,,,, uint256 lotPrefunding) = _auctionHouse.lotRouting(_lotId);
-        assertEq(lotPrefunding, 0, "mismatch on funding");
+        Auctioneer.Routing memory lotRouting = _getLotRouting(_lotId);
+        assertEq(lotRouting.funding, 0, "mismatch on funding");
     }
 }

@@ -154,7 +154,7 @@ contract ClaimProceedsTest is AuctionHouseTest {
 
         // Call function
         vm.prank(_SELLER);
-        _auctionHouse.claimProceeds(_lotId);
+        _auctionHouse.claimProceeds(_lotId, bytes(""));
     }
 
     function test_notBatchAuction_reverts()
@@ -170,7 +170,7 @@ contract ClaimProceedsTest is AuctionHouseTest {
 
         // Call function
         vm.prank(_SELLER);
-        _auctionHouse.claimProceeds(_lotId);
+        _auctionHouse.claimProceeds(_lotId, bytes(""));
     }
 
     function test_lotNotSettled()
@@ -192,7 +192,7 @@ contract ClaimProceedsTest is AuctionHouseTest {
 
         // Call function
         vm.prank(_SELLER);
-        _auctionHouse.claimProceeds(_lotId);
+        _auctionHouse.claimProceeds(_lotId, bytes(""));
     }
 
     function test_givenAlreadyClaimed()
@@ -216,7 +216,7 @@ contract ClaimProceedsTest is AuctionHouseTest {
 
         // Call function
         vm.prank(_SELLER);
-        _auctionHouse.claimProceeds(_lotId);
+        _auctionHouse.claimProceeds(_lotId, bytes(""));
     }
 
     function test_lotSettlementNotSuccessful()
@@ -235,7 +235,7 @@ contract ClaimProceedsTest is AuctionHouseTest {
     {
         // Call function
         vm.prank(_SELLER);
-        _auctionHouse.claimProceeds(_lotId);
+        _auctionHouse.claimProceeds(_lotId, bytes(""));
 
         uint256 quoteTokenIn = 0;
         uint256 claimablePayout = 0;
@@ -265,7 +265,7 @@ contract ClaimProceedsTest is AuctionHouseTest {
     {
         // Call function
         vm.prank(_SELLER);
-        _auctionHouse.claimProceeds(_lotId);
+        _auctionHouse.claimProceeds(_lotId, bytes(""));
 
         uint256 quoteTokenIn = _scaleQuoteTokenAmount(_BID_AMOUNT);
         uint256 claimablePayout = _scaleBaseTokenAmount(_BID_AMOUNT_OUT);
@@ -306,7 +306,7 @@ contract ClaimProceedsTest is AuctionHouseTest {
     {
         // Call function
         vm.prank(_SELLER);
-        _auctionHouse.claimProceeds(_lotId);
+        _auctionHouse.claimProceeds(_lotId, bytes(""));
 
         uint256 quoteTokenIn = _scaleQuoteTokenAmount(_BID_AMOUNT * 5);
         uint256 claimablePayout = _scaleBaseTokenAmount(_BID_AMOUNT_OUT * 5);
@@ -350,7 +350,7 @@ contract ClaimProceedsTest is AuctionHouseTest {
     {
         // Call function
         vm.prank(_SELLER);
-        _auctionHouse.claimProceeds(_lotId);
+        _auctionHouse.claimProceeds(_lotId, bytes(""));
 
         uint256 quoteTokenIn = _scaleQuoteTokenAmount(_BID_AMOUNT * 6 - _BID_AMOUNT_PARTIAL_REFUND);
         uint256 claimablePayout =
@@ -396,7 +396,7 @@ contract ClaimProceedsTest is AuctionHouseTest {
     {
         // Call function
         vm.prank(_SELLER);
-        _auctionHouse.claimProceeds(_lotId);
+        _auctionHouse.claimProceeds(_lotId, bytes(""));
 
         uint256 quoteTokenIn = _scaleQuoteTokenAmount(_BID_AMOUNT * 5);
         uint256 claimablePayout = _scaleBaseTokenAmount(_BID_AMOUNT_OUT * 5);
@@ -440,7 +440,7 @@ contract ClaimProceedsTest is AuctionHouseTest {
     {
         // Call function
         vm.prank(_SELLER);
-        _auctionHouse.claimProceeds(_lotId);
+        _auctionHouse.claimProceeds(_lotId, bytes(""));
 
         uint256 quoteTokenIn = _scaleQuoteTokenAmount(_BID_AMOUNT * 5);
         uint256 claimablePayout = _scaleBaseTokenAmount(_BID_AMOUNT_OUT * 5);
@@ -488,7 +488,7 @@ contract ClaimProceedsTest is AuctionHouseTest {
     {
         // Call function
         vm.prank(_SELLER);
-        _auctionHouse.claimProceeds(_lotId);
+        _auctionHouse.claimProceeds(_lotId, bytes(""));
 
         uint256 quoteTokenIn = _scaleQuoteTokenAmount(_BID_AMOUNT * 6 - _BID_AMOUNT_PARTIAL_REFUND);
         uint256 claimablePayout =
@@ -536,7 +536,7 @@ contract ClaimProceedsTest is AuctionHouseTest {
     {
         // Call function
         vm.prank(_SELLER);
-        _auctionHouse.claimProceeds(_lotId);
+        _auctionHouse.claimProceeds(_lotId, bytes(""));
 
         uint256 quoteTokenIn = _scaleQuoteTokenAmount(_BID_AMOUNT * 6 - _BID_AMOUNT_PARTIAL_REFUND);
         uint256 claimablePayout =
@@ -567,7 +567,7 @@ contract ClaimProceedsTest is AuctionHouseTest {
     {
         // Call function
         vm.prank(_SELLER);
-        _auctionHouse.claimProceeds(_lotId);
+        _auctionHouse.claimProceeds(_lotId, bytes(""));
 
         uint256 quoteTokenIn = 0;
         uint256 claimablePayout = 0;
@@ -598,7 +598,7 @@ contract ClaimProceedsTest is AuctionHouseTest {
     {
         // Call function
         vm.prank(_SELLER);
-        _auctionHouse.claimProceeds(_lotId);
+        _auctionHouse.claimProceeds(_lotId, bytes(""));
 
         uint256 quoteTokenIn = _scaleQuoteTokenAmount(_BID_AMOUNT);
         uint256 claimablePayout = _scaleBaseTokenAmount(_BID_AMOUNT_OUT);
@@ -634,7 +634,7 @@ contract ClaimProceedsTest is AuctionHouseTest {
     {
         // Call function
         vm.prank(_SELLER);
-        _auctionHouse.claimProceeds(_lotId);
+        _auctionHouse.claimProceeds(_lotId, bytes(""));
 
         uint256 quoteTokenIn = _scaleQuoteTokenAmount(_BID_AMOUNT);
         uint256 claimablePayout = _scaleBaseTokenAmount(_BID_AMOUNT_OUT);
@@ -668,7 +668,7 @@ contract ClaimProceedsTest is AuctionHouseTest {
     {
         // Call function
         vm.prank(_SELLER);
-        _auctionHouse.claimProceeds(_lotId);
+        _auctionHouse.claimProceeds(_lotId, bytes(""));
 
         uint256 quoteTokenIn = _scaleQuoteTokenAmount(_BID_AMOUNT);
         uint256 claimablePayout = _scaleBaseTokenAmount(_BID_AMOUNT_OUT);
@@ -717,7 +717,7 @@ contract ClaimProceedsTest is AuctionHouseTest {
     {
         // Call function
         vm.prank(_SELLER);
-        _auctionHouse.claimProceeds(_lotId);
+        _auctionHouse.claimProceeds(_lotId, bytes(""));
 
         uint256 quoteTokenIn = _scaleQuoteTokenAmount(_BID_AMOUNT * 5);
         uint256 claimablePayout = _scaleBaseTokenAmount(_BID_AMOUNT_OUT * 5);
@@ -762,7 +762,7 @@ contract ClaimProceedsTest is AuctionHouseTest {
     {
         // Call function
         vm.prank(_SELLER);
-        _auctionHouse.claimProceeds(_lotId);
+        _auctionHouse.claimProceeds(_lotId, bytes(""));
 
         uint256 quoteTokenIn = _scaleQuoteTokenAmount(_BID_AMOUNT * 5);
         uint256 claimablePayout = _scaleBaseTokenAmount(_BID_AMOUNT_OUT * 5);
@@ -813,7 +813,7 @@ contract ClaimProceedsTest is AuctionHouseTest {
     {
         // Call function
         vm.prank(_SELLER);
-        _auctionHouse.claimProceeds(_lotId);
+        _auctionHouse.claimProceeds(_lotId, bytes(""));
 
         uint256 quoteTokenIn = _scaleQuoteTokenAmount(_BID_AMOUNT * 6 - _BID_AMOUNT_PARTIAL_REFUND);
         uint256 claimablePayout =
@@ -862,7 +862,7 @@ contract ClaimProceedsTest is AuctionHouseTest {
     {
         // Call function
         vm.prank(_SELLER);
-        _auctionHouse.claimProceeds(_lotId);
+        _auctionHouse.claimProceeds(_lotId, bytes(""));
 
         uint256 quoteTokenIn = _scaleQuoteTokenAmount(_BID_AMOUNT * 6 - _BID_AMOUNT_PARTIAL_REFUND);
         uint256 claimablePayout =
@@ -908,7 +908,7 @@ contract ClaimProceedsTest is AuctionHouseTest {
     {
         // Call function
         vm.prank(_SELLER);
-        _auctionHouse.claimProceeds(_lotId);
+        _auctionHouse.claimProceeds(_lotId, bytes(""));
 
         uint256 quoteTokenIn = _scaleQuoteTokenAmount(_BID_AMOUNT * 6 - _BID_AMOUNT_PARTIAL_REFUND);
         uint256 claimablePayout =

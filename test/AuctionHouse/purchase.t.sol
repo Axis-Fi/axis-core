@@ -97,7 +97,7 @@ contract PurchaseTest is AuctionHouseTest {
         // Determine curator fee
         uint96 curatorFee = _curatorApproved ? (amountOut_ * _curatorFeePercentActual) / 1e5 : 0;
         bool hasDerivativeToken = _derivativeTokenId != type(uint256).max;
-        bool hasHook = address(_routingParams.hooks) != address(0);
+        bool hasHook = address(_routingParams.callbacks) != address(0);
         bool isPrefunding = _atomicAuctionModule.requiresPrefunding();
         uint96 scaledLotCapacity = _scaleBaseTokenAmount(_LOT_CAPACITY);
         uint96 scaledCuratorMaxPotentialFee = _scaleBaseTokenAmount(_curatorMaxPotentialFee);
@@ -176,7 +176,7 @@ contract PurchaseTest is AuctionHouseTest {
             "base token: curator balance"
         );
         assertEq(_baseToken.balanceOf(_PROTOCOL), 0, "base token: protocol balance");
-        assertEq(_baseToken.balanceOf(address(_hook)), 0, "base token: hook balance");
+        assertEq(_baseToken.balanceOf(address(_callback)), 0, "base token: hook balance");
     }
 
     function _assertQuoteTokenBalances() internal {
@@ -200,7 +200,7 @@ contract PurchaseTest is AuctionHouseTest {
         assertEq(_quoteToken.balanceOf(_CURATOR), 0, "quote token: curator balance");
         assertEq(_quoteToken.balanceOf(_PROTOCOL), 0, "quote token: protocol balance");
         assertEq(
-            _quoteToken.balanceOf(address(_hook)),
+            _quoteToken.balanceOf(address(_callback)),
             _expectedHookQuoteTokenBalance,
             "quote token: hook balance"
         );
@@ -219,7 +219,7 @@ contract PurchaseTest is AuctionHouseTest {
             "derivative token: curator balance"
         );
         assertEq(
-            _derivativeModule.derivativeToken().balanceOf(address(_hook), _derivativeTokenId),
+            _derivativeModule.derivativeToken().balanceOf(address(_callback), _derivativeTokenId),
             0,
             "derivative token: hook balance"
         );

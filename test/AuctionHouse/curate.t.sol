@@ -44,7 +44,7 @@ contract CurateTest is AuctionHouseTest {
 
         // Call
         vm.prank(_CURATOR);
-        _auctionHouse.curate(_lotId);
+        _auctionHouse.curate(_lotId, bytes(""));
     }
 
     function test_givenNoCuratorIsSet_whenCalledByCurator_reverts()
@@ -62,7 +62,7 @@ contract CurateTest is AuctionHouseTest {
 
         // Call
         vm.prank(_CURATOR);
-        _auctionHouse.curate(_lotId);
+        _auctionHouse.curate(_lotId, bytes(""));
     }
 
     function test_givenNoCuratorIsSet_whenCalledBySeller_reverts()
@@ -79,7 +79,7 @@ contract CurateTest is AuctionHouseTest {
 
         // Call
         vm.prank(_SELLER);
-        _auctionHouse.curate(_lotId);
+        _auctionHouse.curate(_lotId, bytes(""));
     }
 
     function test_alreadyCurated_reverts()
@@ -98,7 +98,7 @@ contract CurateTest is AuctionHouseTest {
 
         // Curate again
         vm.prank(_CURATOR);
-        _auctionHouse.curate(_lotId);
+        _auctionHouse.curate(_lotId, bytes(""));
     }
 
     function test_givenLotHasConcluded_reverts()
@@ -115,7 +115,7 @@ contract CurateTest is AuctionHouseTest {
 
         // Call
         vm.prank(_CURATOR);
-        _auctionHouse.curate(_lotId);
+        _auctionHouse.curate(_lotId, bytes(""));
     }
 
     function test_givenLotHasBeenCancelled_reverts()
@@ -132,7 +132,7 @@ contract CurateTest is AuctionHouseTest {
 
         // Call
         vm.prank(_CURATOR);
-        _auctionHouse.curate(_lotId);
+        _auctionHouse.curate(_lotId, bytes(""));
     }
 
     function test_beforeStart()
@@ -145,7 +145,7 @@ contract CurateTest is AuctionHouseTest {
     {
         // Curate
         vm.prank(_CURATOR);
-        _auctionHouse.curate(_lotId);
+        _auctionHouse.curate(_lotId, bytes(""));
 
         // Verify
         Auctioneer.FeeData memory curation = _getLotFees(_lotId);
@@ -168,7 +168,7 @@ contract CurateTest is AuctionHouseTest {
     {
         // Curate
         vm.prank(_CURATOR);
-        _auctionHouse.curate(_lotId);
+        _auctionHouse.curate(_lotId, bytes(""));
 
         // Verify
         Auctioneer.FeeData memory curation = _getLotFees(_lotId);
@@ -193,7 +193,7 @@ contract CurateTest is AuctionHouseTest {
     {
         // Curate
         vm.prank(_CURATOR);
-        _auctionHouse.curate(_lotId);
+        _auctionHouse.curate(_lotId, bytes(""));
 
         // Verify
         Auctioneer.FeeData memory curation = _getLotFees(_lotId);
@@ -223,7 +223,7 @@ contract CurateTest is AuctionHouseTest {
     {
         // Curate
         vm.prank(_CURATOR);
-        _auctionHouse.curate(_lotId);
+        _auctionHouse.curate(_lotId, bytes(""));
 
         // Verify
         Auctioneer.FeeData memory curation = _getLotFees(_lotId);
@@ -259,7 +259,7 @@ contract CurateTest is AuctionHouseTest {
     {
         // Curate
         vm.prank(_CURATOR);
-        _auctionHouse.curate(_lotId);
+        _auctionHouse.curate(_lotId, bytes(""));
 
         // Verify
         Auctioneer.FeeData memory curation = _getLotFees(_lotId);
@@ -295,7 +295,7 @@ contract CurateTest is AuctionHouseTest {
     {
         // Curate
         vm.prank(_CURATOR);
-        _auctionHouse.curate(_lotId);
+        _auctionHouse.curate(_lotId, bytes(""));
 
         // Verify
         Auctioneer.FeeData memory curation = _getLotFees(_lotId);
@@ -328,7 +328,7 @@ contract CurateTest is AuctionHouseTest {
     {
         // Curate
         vm.prank(_CURATOR);
-        _auctionHouse.curate(_lotId);
+        _auctionHouse.curate(_lotId, bytes(""));
 
         // Verify
         Auctioneer.FeeData memory curation = _getLotFees(_lotId);

@@ -176,8 +176,7 @@ contract AuctionTest is AuctionHouseTest {
         assertEq(routing.seller, _SELLER, "seller mismatch");
         assertEq(address(routing.baseToken), address(_baseToken), "base token mismatch");
         assertEq(address(routing.quoteToken), address(_quoteToken), "quote token mismatch");
-        assertEq(address(routing.hooks), address(0), "hooks mismatch");
-        assertEq(address(routing.allowlist), address(0), "allowlist mismatch");
+        assertEq(address(routing.callbacks), address(0), "hooks mismatch");
         assertEq(fromVeecode(routing.derivativeReference), "", "derivative type mismatch");
         assertEq(routing.derivativeParams, "", "derivative params mismatch");
         assertEq(routing.wrapDerivative, false, "wrap derivative mismatch");
@@ -372,78 +371,9 @@ contract AuctionTest is AuctionHouseTest {
         // Won't revert
     }
 
-    // [X] allowlist
-    //  [X] reverts when the allowlist address is not a contract
-    //  [X] reverts when allowlist validation fails
-    //  [X] sets the allowlist on the auction lot
-
-    modifier whenAllowlistIsSet() {
-        // Update routing params
-        _routingParams.allowlist = _allowlist;
-        _;
-    }
-
-    function test_success_allowlistIsSet()
-        external
-        whenAuctionTypeIsAtomic
-        whenAtomicAuctionModuleIsInstalled
-        whenAllowlistIsSet
-    {
-        // Create the auction
-        vm.prank(_SELLER);
-        _lotId = _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
-
-        // Assert values
-        Auctioneer.Routing memory routing = _getLotRouting(_lotId);
-        assertEq(address(routing.allowlist), address(_allowlist), "allowlist mismatch");
-
-        // Check that it has been registered with the allowlist
-        uint256[] memory registeredIds = _allowlist.getRegisteredIds();
-        assertEq(registeredIds.length, 1, "registered ids length mismatch");
-        assertEq(registeredIds[0], _lotId, "registered id mismatch");
-    }
-
-    function testReverts_whenAllowlistIsNotContract()
-        external
-        whenAuctionTypeIsAtomic
-        whenAtomicAuctionModuleIsInstalled
-    {
-        // Update routing params
-        _routingParams.allowlist = IAllowlist(address(0x10));
-
-        // Expect revert
-        bytes memory err = abi.encodeWithSelector(Auctioneer.InvalidParams.selector);
-        vm.expectRevert(err);
-
-        vm.prank(_SELLER);
-        _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
-    }
-
-    function testReverts_whenAllowlistValidationFails()
-        external
-        whenAuctionTypeIsAtomic
-        whenAtomicAuctionModuleIsInstalled
-    {
-        // Update routing params
-        _routingParams.allowlist = _allowlist;
-
-        // Expect revert
-        _allowlist.setRegisterReverts(true);
-        vm.expectRevert("MockAllowlist: register reverted");
-
-        vm.prank(_SELLER);
-        _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
-    }
-
     // [X] hooks
     //  [X] reverts when the hooks address is not a contract
     //  [X] sets the hooks on the auction lot
-
-    modifier whenHooksIsSet() {
-        // Update routing params
-        _routingParams.hooks = _hook;
-        _;
-    }
 
     function testReverts_whenHooksIsNotContract()
         external
@@ -451,7 +381,7 @@ contract AuctionTest is AuctionHouseTest {
         whenAtomicAuctionModuleIsInstalled
     {
         // Update routing params
-        _routingParams.hooks = IHooks(address(0x10));
+        _routingParams.callbacks = ICallback(address(0x10));
 
         // Expect revert
         bytes memory err = abi.encodeWithSelector(Auctioneer.InvalidParams.selector);
@@ -465,7 +395,7 @@ contract AuctionTest is AuctionHouseTest {
         external
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
-        whenHooksIsSet
+        givenAuctionHasHook
     {
         // Create the auction
         vm.prank(_SELLER);
@@ -473,7 +403,7 @@ contract AuctionTest is AuctionHouseTest {
 
         // Assert values
         Auctioneer.Routing memory routing = _getLotRouting(_lotId);
-        assertEq(address(routing.hooks), address(_hook), "hooks mismatch");
+        assertEq(address(routing.callbacks), address(_callback), "hooks mismatch");
     }
 
     // [X] given the auction module requires prefunding
@@ -492,7 +422,7 @@ contract AuctionTest is AuctionHouseTest {
     }
 
     modifier givenPreAuctionCreateHookBreaksInvariant() {
-        _hook.setPreAuctionCreateMultiplier(9000);
+        _callback.setOnCreateMultiplier(9000);
         _;
     }
 
@@ -521,7 +451,7 @@ contract AuctionTest is AuctionHouseTest {
         external
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
-        whenHooksIsSet
+        givenAuctionHasHook
         givenAtomicAuctionRequiresPrefunding
         givenHookHasBaseTokenBalance(_LOT_CAPACITY)
         givenPreAuctionCreateHookBreaksInvariant
@@ -538,7 +468,7 @@ contract AuctionTest is AuctionHouseTest {
         external
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
-        whenHooksIsSet
+        givenAuctionHasHook
         givenAtomicAuctionRequiresPrefunding
         givenHookHasBaseTokenBalance(_LOT_CAPACITY)
         givenBaseTokenTakesFeeOnTransfer
@@ -555,7 +485,7 @@ contract AuctionTest is AuctionHouseTest {
         external
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
-        whenHooksIsSet
+        givenAuctionHasHook
         givenAtomicAuctionRequiresPrefunding
         givenHookHasBaseTokenBalance(_LOT_CAPACITY)
     {
@@ -568,7 +498,7 @@ contract AuctionTest is AuctionHouseTest {
         assertEq(routing.funding, _LOT_CAPACITY, "funding mismatch");
 
         // Check balances
-        assertEq(_baseToken.balanceOf(address(_hook)), 0, "hook balance mismatch");
+        assertEq(_baseToken.balanceOf(address(_callback)), 0, "hook balance mismatch");
         assertEq(
             _baseToken.balanceOf(address(_auctionHouse)),
             _LOT_CAPACITY,
@@ -580,7 +510,7 @@ contract AuctionTest is AuctionHouseTest {
         external
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
-        whenHooksIsSet
+        givenAuctionHasHook
         givenAtomicAuctionRequiresPrefunding
         givenQuoteTokenHasDecimals(17)
         givenBaseTokenHasDecimals(13)
@@ -595,7 +525,7 @@ contract AuctionTest is AuctionHouseTest {
         assertEq(routing.funding, _scaleBaseTokenAmount(_LOT_CAPACITY), "funding mismatch");
 
         // Check balances
-        assertEq(_baseToken.balanceOf(address(_hook)), 0, "hook balance mismatch");
+        assertEq(_baseToken.balanceOf(address(_callback)), 0, "hook balance mismatch");
         assertEq(
             _baseToken.balanceOf(address(_auctionHouse)),
             _scaleBaseTokenAmount(_LOT_CAPACITY),
@@ -607,7 +537,7 @@ contract AuctionTest is AuctionHouseTest {
         external
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
-        whenHooksIsSet
+        givenAuctionHasHook
         givenAtomicAuctionRequiresPrefunding
         givenQuoteTokenHasDecimals(13)
         givenBaseTokenHasDecimals(17)
@@ -622,7 +552,7 @@ contract AuctionTest is AuctionHouseTest {
         assertEq(routing.funding, _scaleBaseTokenAmount(_LOT_CAPACITY), "funding mismatch");
 
         // Check balances
-        assertEq(_baseToken.balanceOf(address(_hook)), 0, "hook balance mismatch");
+        assertEq(_baseToken.balanceOf(address(_callback)), 0, "hook balance mismatch");
         assertEq(
             _baseToken.balanceOf(address(_auctionHouse)),
             _scaleBaseTokenAmount(_LOT_CAPACITY),
