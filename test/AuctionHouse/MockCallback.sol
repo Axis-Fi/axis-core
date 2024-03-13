@@ -142,8 +142,7 @@ contract MockCallback is BaseCallback {
         uint96 lotId_,
         uint96 proceeds_,
         uint96 refund_,
-        bytes calldata callbackData_,
-        bytes memory auctionOutput
+        bytes calldata callbackData_
     ) internal virtual override {
         if (onClaimProceedsReverts) {
             revert("revert");

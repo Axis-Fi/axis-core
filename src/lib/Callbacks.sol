@@ -31,8 +31,8 @@ library Callbacks {
         bool onPurchase;
         bool onBid;
         bool onClaimProceeds;
-        bool sendBaseTokens;
         bool receiveQuoteTokens;
+        bool sendBaseTokens;
     }
 
     /// @notice Thrown if the address will not lead to the specified callbacks being called
@@ -211,8 +211,7 @@ library Callbacks {
         uint96 lotId,
         uint96 proceeds,
         uint96 refund,
-        bytes calldata callbackData,
-        bytes memory auctionOutput
+        bytes calldata callbackData
     ) internal {
         if (self.hasPermission(ON_CLAIM_PROCEEDS_FLAG)) {
             self.callback(
@@ -221,8 +220,7 @@ library Callbacks {
                     lotId,
                     proceeds,
                     refund,
-                    callbackData,
-                    auctionOutput
+                    callbackData
                 )
             );
         }

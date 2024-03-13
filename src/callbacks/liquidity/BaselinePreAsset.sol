@@ -188,8 +188,7 @@ contract BaselinePreAsset is ERC20, BaseCallback, IPreAsset {
         uint96 lotId_,
         uint96 proceeds_,
         uint96 refund_,
-        bytes calldata callbackData,
-        bytes memory
+        bytes calldata callbackData
     ) internal override {
         // Validate the lot ID
         if (lotId_ != lotId) revert Callback_InvalidParams();

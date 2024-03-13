@@ -116,8 +116,8 @@ contract ClaimBidsTest is AuctionHouseTest {
     function _mockClaimBid(
         address bidder_,
         address referrer_,
-        uint256 paid_,
-        uint256 payout_
+        uint96 paid_,
+        uint96 payout_
     ) internal {
         _bidClaims.push(
             Auction.BidClaim({bidder: bidder_, referrer: referrer_, paid: paid_, payout: payout_})

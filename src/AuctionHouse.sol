@@ -586,28 +586,39 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
         // Calculate the referrer and protocol fees for the amount in
         // Fees are not allocated until the user claims their payout so that we don't have to iterate through them here
         // If a referrer is not set, that portion of the fee defaults to the protocol
-        uint256 totalInLessFees;
+        uint96 totalInLessFees;
         {
             (, uint256 toProtocol) = calculateQuoteFees(
                 lotFees[lotId_].protocolFee, lotFees[lotId_].referrerFee, false, purchased_
             );
             unchecked {
-                totalInLessFees = purchased_ - toProtocol;
+                totalInLessFees = uint96(purchased_ - toProtocol);
             }
         }
 
-        // TODO implement hooks
+        // If the callbacks contract is configured to receive quote tokens, send the quote tokens to the callbacks contract and call the onClaimProceeds callback
+        // If not, send the quote tokens to the seller and call the onClaimProceeds callback
+        address quoteTokensTo = Callbacks.hasPermission(
+            routing.callbacks, Callbacks.RECEIVE_QUOTE_TOKENS_FLAG
+        ) ? address(routing.callbacks) : routing.seller;
 
-        // Send payment in bulk to the seller
-        _sendPayment(routing.seller, totalInLessFees, routing.quoteToken, routing.callbacks);
+        address baseTokensTo = Callbacks.hasPermission(
+            routing.callbacks, Callbacks.SEND_BASE_TOKENS_FLAG
+        ) ? address(routing.callbacks) : routing.seller;
 
-        // Refund any unused capacity and curator fees to the seller
+        // Send payment in bulk to the address dictated by the callbacks address
+        _sendPayment(quoteTokensTo, totalInLessFees, routing.quoteToken, routing.callbacks);
+
+        // Refund any unused capacity and curator fees to the address dictated by the callbacks address
         // By this stage, a partial payout (if applicable) and curator fees have been paid, leaving only the payout amount (`totalOut`) remaining.
         uint96 prefundingRefund = uint96(routing.funding + payoutSent_ - sold_);
         unchecked {
             routing.funding -= prefundingRefund;
         }
-        Transfer.transfer(routing.baseToken, routing.seller, prefundingRefund, false);
+        Transfer.transfer(routing.baseToken, baseTokensTo, prefundingRefund, false);
+
+        // Call the onClaimProceeds callback
+        Callbacks.onClaimProceeds(routing.callbacks, lotId_, totalInLessFees, prefundingRefund, callbackData_);
     }
 
     // ========== CURATION ========== //

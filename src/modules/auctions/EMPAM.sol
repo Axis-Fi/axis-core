@@ -341,26 +341,26 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
 
         // Calculate the bid price
         uint256 baseScale = 10 ** lotData[lotId_].baseTokenDecimals;
-        uint256 price = bidData.minAmountOut == 0
+        uint96 price = uint96(bidData.minAmountOut == 0
             ? 0 // TODO technically minAmountOut == 0 should be an infinite price, but need to check that later. Need to be careful we don't introduce a way to claim a bid when we set marginalPrice to type(uint96).max when it cannot be settled.
-            : Math.mulDivUp(uint256(bidData.amount), baseScale, uint256(bidData.minAmountOut));
+            : Math.mulDivUp(uint256(bidData.amount), baseScale, uint256(bidData.minAmountOut)));
 
         // If the bid price is greater than the marginal price, the bid is filled.
         // If the bid price is equal to the marginal price and the bid was submitted before or is the marginal bid, the bid is filled.
         // Auctions that do not meet capacity or price thresholds to settle will have their marginal price set at the maximum uint96
         // Therefore, all bids will be refunded.
         // We handle the only potential marginal fill during settlement. All other bids are either completely filled or refunded.
-        uint256 marginalPrice = uint256(auctionData[lotId_].marginalPrice);
+        uint96 marginalPrice = auctionData[lotId_].marginalPrice;
         if (
             price > marginalPrice
                 || (price == marginalPrice && bidId_ <= auctionData[lotId_].marginalBidId)
         ) {
             // Payout is calculated using the marginal price of the auction
-            bidClaim.paid = uint256(bidData.amount);
-            bidClaim.payout = (bidClaim.paid * baseScale) / marginalPrice;
+            bidClaim.paid = bidData.amount;
+            bidClaim.payout = uint96(Math.mulDivDown(bidClaim.paid, baseScale, marginalPrice));
         } else {
             // Bidder is refunded the paid amount and receives no payout
-            bidClaim.paid = uint256(bidData.amount);
+            bidClaim.paid = bidData.amount;
         }
 
         return (bidClaim, auctionOutput_);
@@ -817,8 +817,8 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
                 uint256 fullFill =
                     Math.mulDivDown(uint256(bidData.amount), baseScale, result.marginalPrice);
                 uint256 excess = result.capacityExpended - capacity;
-                settlement_.pfPayout = fullFill - excess;
-                settlement_.pfRefund = Math.mulDivDown(uint256(bidData.amount), excess, fullFill);
+                settlement_.pfPayout = uint96(fullFill - excess);
+                settlement_.pfRefund = uint96(Math.mulDivDown(uint256(bidData.amount), excess, fullFill));
 
                 // Reduce the total amount in by the refund amount
                 result.totalAmountIn -= settlement_.pfRefund;

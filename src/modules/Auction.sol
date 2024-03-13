@@ -83,8 +83,8 @@ abstract contract Auction {
         uint256 totalOut;
         address pfBidder;
         address pfReferrer;
-        uint256 pfRefund;
-        uint256 pfPayout;
+        uint96 pfRefund;
+        uint96 pfPayout;
         bytes auctionOutput;
     }
 
@@ -92,8 +92,8 @@ abstract contract Auction {
     struct BidClaim {
         address bidder;
         address referrer;
-        uint256 paid;
-        uint256 payout;
+        uint96 paid;
+        uint96 payout;
     }
 
     // ========= STATE ========== //

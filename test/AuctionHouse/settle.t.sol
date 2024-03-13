@@ -124,9 +124,9 @@ contract SettleTest is AuctionHouseTest {
         uint256 scaledLotCapacity = _scaleBaseTokenAmount(_LOT_CAPACITY);
 
         // Total bid was 4e18, since 2e18 of quote token = 1e18 of base token
-        uint256 pfRefundAmount = _scaleQuoteTokenAmount(2e18);
-        uint256 pfPayoutAmount = _scaleBaseTokenAmount(1e18);
-        uint256 pfFilledAmount = _scaleQuoteTokenAmount(4e18) - pfRefundAmount;
+        uint96 pfRefundAmount = _scaleQuoteTokenAmount(2e18);
+        uint96 pfPayoutAmount = _scaleBaseTokenAmount(1e18);
+        uint96 pfFilledAmount = _scaleQuoteTokenAmount(4e18) - pfRefundAmount;
         uint256 totalInFilled = totalIn - pfRefundAmount;
 
         Auction.Settlement memory settlement = Auction.Settlement({

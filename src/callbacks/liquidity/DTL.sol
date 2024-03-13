@@ -64,8 +64,7 @@ abstract contract DirectToLiquidity is BaseCallback {
         uint96 lotId_,
         uint96 proceeds_,
         uint96 refund_,
-        bytes calldata callbackData_,
-        bytes memory auctionOutput_
+        bytes calldata callbackData_
     ) internal virtual override {
         // TODO
         // Reduce expected tokens to deposit by the refund

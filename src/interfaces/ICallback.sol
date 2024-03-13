@@ -13,10 +13,9 @@ interface ICallback {
     ///     Bit 3: onCurate
     ///     Bit 4: onPurchase
     ///     Bit 5: onBid
-    ///     Bit 6: onSettle
+    ///     Bit 6: onClaimProceeds
     ///     Bit 7: Receives quote tokens
     ///     Bit 8: Sends base tokens (and receives them if refunded)
-    // TODO write up deploying a contract with the correct leading bits using CREATE2
 
     // General functions that can be used by all auctions
 
@@ -82,7 +81,6 @@ interface ICallback {
         uint96 lotId,
         uint96 proceeds,
         uint96 refund,
-        bytes calldata callbackData,
-        bytes memory auctionOutput
+        bytes calldata callbackData
     ) external returns (bytes4);
 }

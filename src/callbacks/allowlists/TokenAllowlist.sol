@@ -107,8 +107,7 @@ contract TokenAllowlist is BaseCallback {
         uint96,
         uint96,
         uint96,
-        bytes calldata,
-        bytes memory
+        bytes calldata
     ) internal pure override {
         // Not implemented
         revert Callback_NotImplemented();

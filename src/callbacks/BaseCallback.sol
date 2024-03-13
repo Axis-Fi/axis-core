@@ -169,11 +169,10 @@ abstract contract BaseCallback is ICallback, Owned {
         uint96 lotId_,
         uint96 proceeds_,
         uint96 refund_,
-        bytes calldata callbackData_,
-        bytes memory auctionOutput
+        bytes calldata callbackData_
     ) external override onlyAuctionHouse onlyRegisteredLot(lotId_) returns (bytes4) {
         // Call implementation specific logic
-        _onClaimProceeds(lotId_, proceeds_, refund_, callbackData_, auctionOutput);
+        _onClaimProceeds(lotId_, proceeds_, refund_, callbackData_);
 
         return this.onClaimProceeds.selector;
     }
@@ -182,8 +181,7 @@ abstract contract BaseCallback is ICallback, Owned {
         uint96 lotId_,
         uint96 proceeds_,
         uint96 refund_,
-        bytes calldata callbackData_,
-        bytes memory auctionOutput
+        bytes calldata callbackData_
     ) internal virtual;
 
     // ========== ADMIN FUNCTIONS ========= //
