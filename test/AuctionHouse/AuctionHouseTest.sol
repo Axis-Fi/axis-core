@@ -324,17 +324,24 @@ abstract contract AuctionHouseTest is Test, Permit2User {
         _;
     }
 
-    modifier givenAuctionHasHook() {
+    modifier givenCallbackIsSet() {
+        // TODO deploy using flags
+
         _routingParams.callbacks = _callback;
         _;
     }
 
-    modifier givenHookHasBaseTokenBalance(uint256 amount_) {
+    modifier givenCallbackHasSendBaseTokensFlag() {
+        // TODO adjust flag
+        _;
+    }
+
+    modifier givenCallbackHasBaseTokenBalance(uint256 amount_) {
         _baseToken.mint(address(_callback), amount_);
         _;
     }
 
-    modifier givenHookHasBaseTokenAllowance(uint256 amount_) {
+    modifier givenCallbackHasBaseTokenAllowance(uint256 amount_) {
         vm.prank(address(_callback));
         _baseToken.approve(address(_auctionHouse), amount_);
         _;

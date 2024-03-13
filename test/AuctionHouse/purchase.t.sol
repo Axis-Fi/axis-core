@@ -594,7 +594,7 @@ contract PurchaseTest is AuctionHouseTest {
         public
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
-        givenAuctionHasHook
+        givenCallbackIsSet
         givenLotIsCreated
         givenLotHasStarted
         givenProtocolFeeIsSet
@@ -604,8 +604,8 @@ contract PurchaseTest is AuctionHouseTest {
         givenFeesAreCalculated(_AMOUNT_IN)
         whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
         givenBalancesAreCalculated(_AMOUNT_IN, _amountOut)
-        givenHookHasBaseTokenBalance(_amountOut)
-        givenHookHasBaseTokenAllowance(_amountOut)
+        givenCallbackHasBaseTokenBalance(_amountOut)
+        givenCallbackHasBaseTokenAllowance(_amountOut)
     {
         // Purchase
         _createPurchase(_AMOUNT_IN, _amountOut, _purchaseAuctionData);
@@ -624,7 +624,7 @@ contract PurchaseTest is AuctionHouseTest {
         whenAtomicAuctionModuleIsInstalled
         givenQuoteTokenHasDecimals(17)
         givenBaseTokenHasDecimals(13)
-        givenAuctionHasHook
+        givenCallbackIsSet
         givenLotIsCreated
         givenLotHasStarted
         givenProtocolFeeIsSet
@@ -634,8 +634,8 @@ contract PurchaseTest is AuctionHouseTest {
         givenFeesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN))
         whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
         givenBalancesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut)
-        givenHookHasBaseTokenBalance(_amountOut)
-        givenHookHasBaseTokenAllowance(_amountOut)
+        givenCallbackHasBaseTokenBalance(_amountOut)
+        givenCallbackHasBaseTokenAllowance(_amountOut)
     {
         // Purchase
         _createPurchase(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut, _purchaseAuctionData);
@@ -654,7 +654,7 @@ contract PurchaseTest is AuctionHouseTest {
         whenAtomicAuctionModuleIsInstalled
         givenQuoteTokenHasDecimals(13)
         givenBaseTokenHasDecimals(17)
-        givenAuctionHasHook
+        givenCallbackIsSet
         givenLotIsCreated
         givenLotHasStarted
         givenProtocolFeeIsSet
@@ -664,8 +664,8 @@ contract PurchaseTest is AuctionHouseTest {
         givenFeesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN))
         whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
         givenBalancesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut)
-        givenHookHasBaseTokenBalance(_amountOut)
-        givenHookHasBaseTokenAllowance(_amountOut)
+        givenCallbackHasBaseTokenBalance(_amountOut)
+        givenCallbackHasBaseTokenAllowance(_amountOut)
     {
         // Purchase
         _createPurchase(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut, _purchaseAuctionData);

@@ -36,7 +36,7 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
     error InvalidParams();
     error InvalidLotId(uint96 id_);
     error InvalidState();
-    error InvalidHook();
+    error InvalidCallback();
 
     /// @notice     Used when the caller is not permitted to perform that action
     error NotPermitted(address caller_);
@@ -285,7 +285,7 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
 
                 // Check that the hook transferred the expected amount of base tokens
                 if (routing_.baseToken.balanceOf(address(this)) < balanceBefore + lotCapacity) {
-                    revert InvalidHook();
+                    revert InvalidCallback();
                 }
             }
             // Otherwise fallback to a standard ERC20 transfer

@@ -272,7 +272,7 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
                     routing.baseToken.balanceOf(address(this))
                         < balanceBefore + payoutAmount + curatorFeePayout
                 ) {
-                    revert InvalidHook();
+                    revert InvalidCallback();
                 }
             }
             // Otherwise, transfer directly from the auction owner
@@ -658,7 +658,7 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
 
                 // Check that the callback transferred the expected amount of base tokens
                 if (routing.baseToken.balanceOf(address(this)) < balanceBefore + curatorFeePayout) {
-                    revert InvalidHook();
+                    revert InvalidCallback();
                 }
             } else {
                 // Don't need to check for fee on transfer here because it was checked on auction creation

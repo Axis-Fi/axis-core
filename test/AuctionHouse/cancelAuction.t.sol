@@ -27,6 +27,8 @@ contract CancelAuctionTest is AuctionHouseTest {
     //  [X] it sets the lot to inactive on the AuctionModule
     // [X] given the lot has not started
     //  [X] it succeeds
+    // [ ] given the callback is set
+    //  [ ] and the onCancel callback called
 
     function testReverts_whenNotSeller()
         external
@@ -133,6 +135,10 @@ contract CancelAuctionTest is AuctionHouseTest {
 
     // [X] given the auction is prefunded
     //  [X] it refunds the prefunded amount in payout tokens to the seller
+    //  [ ] given the callback is set
+    //   [ ] given the callback has the send base tokens flag
+    //    [ ] the refund is sent to the callback and the onCancel callback called
+    //   [ ] the refund is sent to the seller and the onCancel callback called
     //  [X] given a purchase has been made
     //   [X] it refunds the remaining prefunded amount in payout tokens to the seller
 
