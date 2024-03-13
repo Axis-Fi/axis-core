@@ -69,7 +69,10 @@ abstract contract Router {
     /// @param      params_         Purchase parameters
     /// @param      callbackData_   Custom data provided to the onPurchase callback
     /// @return     payout          Amount of baseToken received by `recipient_` (in native decimals)
-    function purchase(PurchaseParams memory params_, bytes calldata callbackData_) external virtual returns (uint256 payout);
+    function purchase(
+        PurchaseParams memory params_,
+        bytes calldata callbackData_
+    ) external virtual returns (uint256 payout);
 
     // ========== BATCH AUCTIONS ========== //
 
@@ -82,7 +85,10 @@ abstract contract Router {
     /// @param      params_         Bid parameters
     /// @param      callbackData_   Custom data provided to the onBid callback
     /// @return     bidId           Bid ID
-    function bid(BidParams memory params_, bytes calldata callbackData_) external virtual returns (uint64 bidId);
+    function bid(
+        BidParams memory params_,
+        bytes calldata callbackData_
+    ) external virtual returns (uint64 bidId);
 
     /// @notice     Refund a bid on a lot in a batch auction
     /// @dev        The implementing function must perform the following:
@@ -193,12 +199,10 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
     ///             - Any of the callbacks fail
     ///             - Any of the token transfers fail
     ///             - re-entrancy is detected
-    function purchase(PurchaseParams memory params_, bytes calldata callbackData_)
-        external
-        override
-        nonReentrant
-        returns (uint256 payoutAmount)
-    {
+    function purchase(
+        PurchaseParams memory params_,
+        bytes calldata callbackData_
+    ) external override nonReentrant returns (uint256 payoutAmount) {
         _isLotValid(params_.lotId);
 
         // Load routing data for the lot
@@ -234,9 +238,7 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
 
         // Collect payment from the purchaser
         _collectPayment(
-            params_.amount,
-            routing.quoteToken,
-            Transfer.decodePermit2Approval(params_.permit2Data)
+            params_.amount, routing.quoteToken, Transfer.decodePermit2Approval(params_.permit2Data)
         );
 
         // Send payment, this function handles routing of the quote tokens correctly
@@ -255,23 +257,46 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
                 uint256 balanceBefore = routing.baseToken.balanceOf(address(this));
 
                 // The onPurchase callback is expected to transfer the base tokens
-                Callbacks.onPurchase(routing.callbacks, params_.lotId, msg.sender, uint96(amountLessFees), uint96(payoutAmount + curatorFeePayout), false, callbackData_);
+                Callbacks.onPurchase(
+                    routing.callbacks,
+                    params_.lotId,
+                    msg.sender,
+                    uint96(amountLessFees),
+                    uint96(payoutAmount + curatorFeePayout),
+                    false,
+                    callbackData_
+                );
 
                 // Check that the mid hook transferred the expected amount of payout tokens
-                if (routing.baseToken.balanceOf(address(this)) < balanceBefore + payoutAmount + curatorFeePayout) {
+                if (
+                    routing.baseToken.balanceOf(address(this))
+                        < balanceBefore + payoutAmount + curatorFeePayout
+                ) {
                     revert InvalidHook();
                 }
-            } 
+            }
             // Otherwise, transfer directly from the auction owner
             else {
                 Transfer.transferFrom(
-                    routing.baseToken, routing.seller, address(this), payoutAmount + curatorFeePayout, true
+                    routing.baseToken,
+                    routing.seller,
+                    address(this),
+                    payoutAmount + curatorFeePayout,
+                    true
                 );
             }
         } else {
             // If the auction is prefunded, call the onPurchase callback
-            Callbacks.onPurchase(routing.callbacks, params_.lotId, msg.sender, uint96(amountLessFees), uint96(payoutAmount + curatorFeePayout), true, callbackData_);
-            
+            Callbacks.onPurchase(
+                routing.callbacks,
+                params_.lotId,
+                msg.sender,
+                uint96(amountLessFees),
+                uint96(payoutAmount + curatorFeePayout),
+                true,
+                callbackData_
+            );
+
             // Decrease the funding amount (if applicable)
             // Check invariant
             if (routing.funding < payoutAmount) revert InsufficientFunding();
@@ -281,11 +306,11 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
         }
 
         // Send payout to recipient
-        _sendPayout(params_.lotId, params_.recipient, payoutAmount, routing, auctionOutput);
+        _sendPayout(params_.recipient, payoutAmount, routing, auctionOutput);
 
         // Send curator fee to curator
         if (curatorFeePayout > 0) {
-            _sendPayout(params_.lotId, feeData.curator, curatorFeePayout, routing, auctionOutput);
+            _sendPayout(feeData.curator, curatorFeePayout, routing, auctionOutput);
         }
 
         // Emit event
@@ -301,7 +326,10 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
     ///             - the auction module reverts when creating a bid
     ///             - the quote token transfer fails
     ///             - re-entrancy is detected
-    function bid(BidParams memory params_, bytes calldata callbackData_) external override nonReentrant returns (uint64 bidId) {
+    function bid(
+        BidParams memory params_,
+        bytes calldata callbackData_
+    ) external override nonReentrant returns (uint64 bidId) {
         _isLotValid(params_.lotId);
 
         // Load routing data for the lot
@@ -315,13 +343,13 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
 
         // Transfer the quote token from the bidder
         _collectPayment(
-            params_.amount,
-            routing.quoteToken,
-            Transfer.decodePermit2Approval(params_.permit2Data)
+            params_.amount, routing.quoteToken, Transfer.decodePermit2Approval(params_.permit2Data)
         );
 
         // Call the onBid callback
-        Callbacks.onBid(routing.callbacks, params_.lotId, bidId, msg.sender, params_.amount, callbackData_);
+        Callbacks.onBid(
+            routing.callbacks, params_.lotId, bidId, msg.sender, params_.amount, callbackData_
+        );
 
         // Emit event
         emit Bid(params_.lotId, bidId, msg.sender, params_.amount);
@@ -396,7 +424,7 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
                 }
 
                 // Send the payout to the bidder
-                _sendPayout(lotId_, bidClaim.bidder, bidClaim.payout, routing, auctionOutput);
+                _sendPayout(bidClaim.bidder, bidClaim.payout, routing, auctionOutput);
             } else {
                 // Refund the paid amount to the bidder
                 Transfer.transfer(routing.quoteToken, bidClaim.bidder, bidClaim.paid, false);
@@ -457,7 +485,13 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
             // Any unutilised capacity and fees can be claimed in `claimProceeds()`
             if (routing.funding == 0) {
                 routing.funding = uint96(capacity + curatorFeePayout);
-                Transfer.transferFrom(routing.quoteToken, routing.seller, address(this), uint256(routing.funding), false);
+                Transfer.transferFrom(
+                    routing.quoteToken,
+                    routing.seller,
+                    address(this),
+                    uint256(routing.funding),
+                    false
+                );
             }
 
             // Check if there was a partial fill and handle the payout + refund
@@ -482,9 +516,7 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
                 Transfer.transfer(
                     routing.quoteToken, settlement.pfBidder, settlement.pfRefund, false
                 );
-                _sendPayout(
-                    lotId_, settlement.pfBidder, settlement.pfPayout, routing, auctionOutput
-                );
+                _sendPayout(settlement.pfBidder, settlement.pfPayout, routing, auctionOutput);
             }
 
             // If the lot is under capacity, adjust the curator payout
@@ -506,7 +538,7 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
                 unchecked {
                     routing.funding -= uint96(curatorFeePayout);
                 }
-                _sendPayout(lotId_, feeData.curator, curatorFeePayout, routing, auctionOutput);
+                _sendPayout(feeData.curator, curatorFeePayout, routing, auctionOutput);
             }
         }
 
@@ -525,7 +557,10 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
     ///             - the lot ID is invalid
     ///             - the lot is not settled
     ///             - the proceeds have already been claimed
-    function claimProceeds(uint96 lotId_, bytes calldata callbackData_) external override nonReentrant {
+    function claimProceeds(
+        uint96 lotId_,
+        bytes calldata callbackData_
+    ) external override nonReentrant {
         // Validation
         _isLotValid(lotId_);
 
@@ -599,9 +634,11 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
         feeData.curatorFee = fees[keycodeFromVeecode(routing.auctionReference)].curator[msg.sender];
 
         // Calculate the fee amount based on the remaining capacity (must be in base token if auction is pre-funded)
-        uint96 curatorFeePayout = uint96(_calculatePayoutFees(
-            feeData.curated, feeData.curatorFee, module.remainingCapacity(lotId_)
-        ));
+        uint96 curatorFeePayout = uint96(
+            _calculatePayoutFees(
+                feeData.curated, feeData.curatorFee, module.remainingCapacity(lotId_)
+            )
+        );
 
         // If the auction is pre-funded, transfer the fee amount from the seller
         if (routing.funding > 0) {
@@ -625,7 +662,9 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
                 }
             } else {
                 // Don't need to check for fee on transfer here because it was checked on auction creation
-                Transfer.transferFrom(routing.baseToken, routing.seller, address(this), curatorFeePayout, false);
+                Transfer.transferFrom(
+                    routing.baseToken, routing.seller, address(this), curatorFeePayout, false
+                );
             }
         } else {
             // If the auction is not pre-funded, call the onCurate callback
@@ -732,13 +771,11 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
     ///             - The post-hook reverts
     ///             - The post-hook invariant is violated
     ///
-    /// @param      lotId_          Lot ID
     /// @param      recipient_      Address to receive payout
     /// @param      payoutAmount_   Amount of payoutToken to send (in native decimals)
     /// @param      routingParams_  Routing parameters for the lot
     /// @param      auctionOutput_  Custom data returned by the auction module
     function _sendPayout(
-        uint96 lotId_,
         address recipient_,
         uint256 payoutAmount_,
         Routing memory routingParams_,
