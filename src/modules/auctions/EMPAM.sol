@@ -860,6 +860,26 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
 
     // ========== AUCTION INFORMATION ========== //
 
+    function getBid(
+        uint96 lotId_,
+        uint64 bidId_
+    ) external view returns (Bid memory bid, EncryptedBid memory encryptedBid) {
+        _revertIfLotInvalid(lotId_);
+        _revertIfBidInvalid(lotId_, bidId_);
+
+        return (bids[lotId_][bidId_], encryptedBids[lotId_][bidId_]);
+    }
+
+    function getAuctionData(uint96 lotId_)
+        external
+        view
+        returns (AuctionData memory auctionData_)
+    {
+        _revertIfLotInvalid(lotId_);
+
+        return auctionData[lotId_];
+    }
+
     // ========== VALIDATION ========== //
 
     /// @inheritdoc AuctionModule

@@ -251,14 +251,22 @@ abstract contract AuctionHouseTest is Test, Permit2User {
         _;
     }
 
-    modifier givenLotIsConcluded() {
+    function _concludeLot() internal {
         vm.warp(_startTime + _duration + 1);
+    }
+
+    modifier givenLotIsConcluded() {
+        _concludeLot();
         _;
     }
 
-    modifier givenLotIsSettled() {
+    function _settleLot() internal {
         vm.prank(_SELLER);
         _auctionHouse.settle(_lotId);
+    }
+
+    modifier givenLotIsSettled() {
+        _settleLot();
         _;
     }
 
@@ -473,6 +481,15 @@ abstract contract AuctionHouseTest is Test, Permit2User {
     modifier givenLotProceedsAreClaimed() {
         vm.prank(_SELLER);
         _auctionHouse.claimProceeds(_lotId);
+        _;
+    }
+
+    modifier givenBidIsClaimed(uint64 bidId_) {
+        uint64[] memory bids = new uint64[](1);
+        bids[0] = bidId_;
+
+        vm.prank(_bidder);
+        _auctionHouse.claimBids(_lotId, bids);
         _;
     }
 
