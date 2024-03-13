@@ -311,8 +311,98 @@ abstract contract AuctionHouseTest is Test, Permit2User {
     }
 
     modifier givenCallbackIsSet() {
-        // TODO need to calculate salt to generate correct prefix based on parameters
-        _callback = new MockCallback(
+        // Uncomment to regenerate bytecode to mine new salts if the MockCallback changes
+        // // 11111111 = 0xFF
+        // bytes memory bytecode = abi.encodePacked(
+        //     type(MockCallback).creationCode,
+        //     abi.encode(address(_auctionHouse), Callbacks.Permissions({
+        //         onCreate: true,
+        //         onCancel: true,
+        //         onCurate: true,
+        //         onPurchase: true,
+        //         onBid: true,
+        //         onClaimProceeds: true,
+        //         receiveQuoteTokens: true,
+        //         sendBaseTokens: true
+        //     }), _SELLER)
+        // );
+        // vm.writeFile(
+        //     "./bytecode/MockCallbackFF.bin",
+        //     vm.toString(bytecode)
+        // );
+        // // 11111101 = 0xFD
+        // bytecode = abi.encodePacked(
+        //     type(MockCallback).creationCode,
+        //     abi.encode(address(_auctionHouse), Callbacks.Permissions({
+        //         onCreate: true,
+        //         onCancel: true,
+        //         onCurate: true,
+        //         onPurchase: true,
+        //         onBid: true,
+        //         onClaimProceeds: true,
+        //         receiveQuoteTokens: false,
+        //         sendBaseTokens: true
+        //     }), _SELLER)
+        // );
+        // vm.writeFile(
+        //     "./bytecode/MockCallbackFD.bin",
+        //     vm.toString(bytecode)
+        // );
+        // // 11111110 = 0xFE
+        // bytecode = abi.encodePacked(
+        //     type(MockCallback).creationCode,
+        //     abi.encode(address(_auctionHouse), Callbacks.Permissions({
+        //         onCreate: true,
+        //         onCancel: true,
+        //         onCurate: true,
+        //         onPurchase: true,
+        //         onBid: true,
+        //         onClaimProceeds: true,
+        //         receiveQuoteTokens: true,
+        //         sendBaseTokens: false
+        //     }), _SELLER)
+        // );
+        // vm.writeFile(
+        //     "./bytecode/MockCallbackFE.bin",
+        //     vm.toString(bytecode)
+        // );
+        // // 11111100 = 0xFC
+        // bytecode = abi.encodePacked(
+        //     type(MockCallback).creationCode,
+        //     abi.encode(address(_auctionHouse), Callbacks.Permissions({
+        //         onCreate: true,
+        //         onCancel: true,
+        //         onCurate: true,
+        //         onPurchase: true,
+        //         onBid: true,
+        //         onClaimProceeds: true,
+        //         receiveQuoteTokens: false,
+        //         sendBaseTokens: false
+        //     }), _SELLER)
+        // );
+        // vm.writeFile(
+        //     "./bytecode/MockCallbackFC.bin",
+        //     vm.toString(bytecode)
+        // );
+
+        // Set the salt based on which token flags are set
+        // TODO for some reason this isn't working
+        bytes32 salt;
+        if (_callbackSendBaseTokens && _callbackSendQuoteTokens) {
+            // 11111111 = 0xFF
+            salt = bytes32(0x1d1c14a83676f89762c1dc5715bbe477aa9b3ef131f5746deb6fea26e0d3fe59);
+        } else if (_callbackSendBaseTokens) {
+            // 11111101 = 0xFD
+            salt = bytes32(0xa2bb3a44f408f53157f184f507de8d62a967ef17ac4b60bb71230a1a4b6ec1a1);
+        } else if (_callbackSendQuoteTokens) {
+            // 11111110 = 0xFE
+            salt = bytes32(0xb434351213112c7545b6f53fd4b1ed3a90fd8d0132889640fcfe36bc7af3fc9c);
+        } else {
+            // 11111100 = 0xFC
+            salt = bytes32(0xb70bffe176e014f58609a9f198cd21461d547043d59e24b8c4979c3446f33fa3);
+        }
+
+        _callback = new MockCallback{salt: salt}(
             address(_auctionHouse),
             Callbacks.Permissions({
                 onCreate: true,
@@ -321,8 +411,8 @@ abstract contract AuctionHouseTest is Test, Permit2User {
                 onPurchase: true,
                 onBid: true,
                 onClaimProceeds: true,
-                sendBaseTokens: _callbackSendBaseTokens,
-                receiveQuoteTokens: _callbackSendQuoteTokens
+                receiveQuoteTokens: _callbackSendQuoteTokens,
+                sendBaseTokens: _callbackSendBaseTokens
             }),
             _SELLER
         );
