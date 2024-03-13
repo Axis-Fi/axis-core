@@ -119,15 +119,15 @@ contract SettleTest is AuctionHouseTest {
     }
 
     modifier givenLotHasPartialFill() {
-        uint256 totalIn = _scaleQuoteTokenAmount(_BID_AMOUNT_TOTAL);
-        uint256 totalOut = _scaleBaseTokenAmount(_LOT_CAPACITY);
+        uint96 totalIn = _scaleQuoteTokenAmount(_BID_AMOUNT_TOTAL);
+        uint96 totalOut = _scaleBaseTokenAmount(_LOT_CAPACITY);
         uint256 scaledLotCapacity = _scaleBaseTokenAmount(_LOT_CAPACITY);
 
         // Total bid was 4e18, since 2e18 of quote token = 1e18 of base token
         uint96 pfRefundAmount = _scaleQuoteTokenAmount(2e18);
         uint96 pfPayoutAmount = _scaleBaseTokenAmount(1e18);
         uint96 pfFilledAmount = _scaleQuoteTokenAmount(4e18) - pfRefundAmount;
-        uint256 totalInFilled = totalIn - pfRefundAmount;
+        uint96 totalInFilled = totalIn - pfRefundAmount;
 
         Auction.Settlement memory settlement = Auction.Settlement({
             totalIn: totalIn,
@@ -180,8 +180,8 @@ contract SettleTest is AuctionHouseTest {
     }
 
     modifier givenLotIsUnderCapacity() {
-        uint256 totalIn = _scaleQuoteTokenAmount(_BID_AMOUNT_TOTAL);
-        uint256 totalOut = _scaleBaseTokenAmount(5e18); // 50% filled
+        uint96 totalIn = _scaleQuoteTokenAmount(_BID_AMOUNT_TOTAL);
+        uint96 totalOut = _scaleBaseTokenAmount(5e18); // 50% filled
         uint256 scaledLotCapacity = _scaleBaseTokenAmount(_LOT_CAPACITY);
 
         Auction.Settlement memory settlement = Auction.Settlement({
@@ -235,8 +235,8 @@ contract SettleTest is AuctionHouseTest {
     }
 
     modifier givenLotCapacityIsFilled() {
-        uint256 totalIn = _scaleQuoteTokenAmount(_BID_AMOUNT_TOTAL);
-        uint256 totalOut = _scaleBaseTokenAmount(_LOT_CAPACITY);
+        uint96 totalIn = _scaleQuoteTokenAmount(_BID_AMOUNT_TOTAL);
+        uint96 totalOut = _scaleBaseTokenAmount(_LOT_CAPACITY);
         uint256 scaledLotCapacity = _scaleBaseTokenAmount(_LOT_CAPACITY);
 
         Auction.Settlement memory settlement = Auction.Settlement({
@@ -290,8 +290,8 @@ contract SettleTest is AuctionHouseTest {
     }
 
     modifier givenLotDoesNotSettle() {
-        uint256 totalIn = 0;
-        uint256 totalOut = 0;
+        uint96 totalIn = 0;
+        uint96 totalOut = 0;
         uint256 scaledLotCapacity = _scaleBaseTokenAmount(_LOT_CAPACITY);
 
         Auction.Settlement memory settlement = Auction.Settlement({

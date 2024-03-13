@@ -46,7 +46,7 @@ contract MockAtomicAuctionModule is AuctionModule {
         uint96 lotId_,
         uint96 amount_,
         bytes calldata
-    ) internal override returns (uint256 payout, bytes memory auctionOutput) {
+    ) internal override returns (uint96 payout, bytes memory auctionOutput) {
         if (purchaseReverts) revert("error");
 
         if (cancelled[lotId_]) revert Auction_MarketNotActive(lotId_);
@@ -57,9 +57,9 @@ contract MockAtomicAuctionModule is AuctionModule {
         uint256 adjustedAmount = amount_ * baseTokenScale / quoteTokenScale;
 
         if (payoutData[lotId_] == 0) {
-            payout = adjustedAmount;
+            payout = uint96(adjustedAmount);
         } else {
-            payout = (payoutData[lotId_] * adjustedAmount) / 1e5;
+            payout = uint96((payoutData[lotId_] * adjustedAmount) / 1e5);
         }
 
         // Reduce capacity
@@ -105,11 +105,11 @@ contract MockAtomicAuctionModule is AuctionModule {
         revert Auction_NotImplemented();
     }
 
-    function claimProceeds(uint96) external pure override returns (uint256, uint256, uint256) {
+    function claimProceeds(uint96) external pure override returns (uint96, uint96, uint96) {
         revert Auction_NotImplemented();
     }
 
-    function _claimProceeds(uint96) internal pure override returns (uint256, uint256, uint256) {
+    function _claimProceeds(uint96) internal pure override returns (uint96, uint96, uint96) {
         revert Auction_NotImplemented();
     }
 
