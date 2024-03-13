@@ -341,9 +341,11 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
 
         // Calculate the bid price
         uint256 baseScale = 10 ** lotData[lotId_].baseTokenDecimals;
-        uint96 price = uint96(bidData.minAmountOut == 0
-            ? 0 // TODO technically minAmountOut == 0 should be an infinite price, but need to check that later. Need to be careful we don't introduce a way to claim a bid when we set marginalPrice to type(uint96).max when it cannot be settled.
-            : Math.mulDivUp(uint256(bidData.amount), baseScale, uint256(bidData.minAmountOut)));
+        uint96 price = uint96(
+            bidData.minAmountOut == 0
+                ? 0 // TODO technically minAmountOut == 0 should be an infinite price, but need to check that later. Need to be careful we don't introduce a way to claim a bid when we set marginalPrice to type(uint96).max when it cannot be settled.
+                : Math.mulDivUp(uint256(bidData.amount), baseScale, uint256(bidData.minAmountOut))
+        );
 
         // If the bid price is greater than the marginal price, the bid is filled.
         // If the bid price is equal to the marginal price and the bid was submitted before or is the marginal bid, the bid is filled.
@@ -818,7 +820,8 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
                     Math.mulDivDown(uint256(bidData.amount), baseScale, result.marginalPrice);
                 uint256 excess = result.capacityExpended - capacity;
                 settlement_.pfPayout = uint96(fullFill - excess);
-                settlement_.pfRefund = uint96(Math.mulDivDown(uint256(bidData.amount), excess, fullFill));
+                settlement_.pfRefund =
+                    uint96(Math.mulDivDown(uint256(bidData.amount), excess, fullFill));
 
                 // Reduce the total amount in by the refund amount
                 result.totalAmountIn -= settlement_.pfRefund;

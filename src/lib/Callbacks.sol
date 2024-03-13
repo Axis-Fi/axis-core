@@ -216,11 +216,7 @@ library Callbacks {
         if (self.hasPermission(ON_CLAIM_PROCEEDS_FLAG)) {
             self.callback(
                 abi.encodeWithSelector(
-                    ICallback.onClaimProceeds.selector,
-                    lotId,
-                    proceeds,
-                    refund,
-                    callbackData
+                    ICallback.onClaimProceeds.selector, lotId, proceeds, refund, callbackData
                 )
             );
         }

@@ -103,12 +103,7 @@ contract TokenAllowlist is BaseCallback {
         _canParticipate(lotId_, buyer_);
     }
 
-    function _onClaimProceeds(
-        uint96,
-        uint96,
-        uint96,
-        bytes calldata
-    ) internal pure override {
+    function _onClaimProceeds(uint96, uint96, uint96, bytes calldata) internal pure override {
         // Not implemented
         revert Callback_NotImplemented();
     }

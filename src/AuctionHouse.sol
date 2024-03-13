@@ -618,7 +618,9 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
         Transfer.transfer(routing.baseToken, baseTokensTo, prefundingRefund, false);
 
         // Call the onClaimProceeds callback
-        Callbacks.onClaimProceeds(routing.callbacks, lotId_, totalInLessFees, prefundingRefund, callbackData_);
+        Callbacks.onClaimProceeds(
+            routing.callbacks, lotId_, totalInLessFees, prefundingRefund, callbackData_
+        );
     }
 
     // ========== CURATION ========== //
@@ -688,7 +690,9 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
                 );
 
                 // Call the onCurate callback
-                Callbacks.onCurate(routing.callbacks, lotId_, curatorFeePayout, false, callbackData_);
+                Callbacks.onCurate(
+                    routing.callbacks, lotId_, curatorFeePayout, false, callbackData_
+                );
             }
         } else {
             // If the auction is not pre-funded, call the onCurate callback

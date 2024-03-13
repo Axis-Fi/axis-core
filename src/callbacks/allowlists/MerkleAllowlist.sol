@@ -104,12 +104,7 @@ contract MerkleAllowlist is BaseCallback {
         bytes calldata callbackData_
     ) internal virtual {}
 
-    function _onClaimProceeds(
-        uint96,
-        uint96,
-        uint96,
-        bytes calldata
-    ) internal pure override {
+    function _onClaimProceeds(uint96, uint96, uint96, bytes calldata) internal pure override {
         // Not implemented
         revert Callback_NotImplemented();
     }
