@@ -129,7 +129,8 @@ abstract contract AuctionHouseTest is Test, Permit2User {
             allowlist: IAllowlist(address(0)),
             allowlistParams: abi.encode(""),
             derivativeType: toKeycode(""),
-            derivativeParams: _derivativeParams
+            derivativeParams: _derivativeParams,
+            prefunded: false
         });
 
         // Bidder
@@ -208,6 +209,7 @@ abstract contract AuctionHouseTest is Test, Permit2User {
 
     modifier whenAuctionTypeIsBatch() {
         _routingParams.auctionType = _batchAuctionModuleKeycode;
+        _routingParams.prefunded = true;
 
         _auctionModule = _batchAuctionModule;
         _auctionModuleKeycode = _batchAuctionModuleKeycode;
@@ -468,8 +470,8 @@ abstract contract AuctionHouseTest is Test, Permit2User {
         _;
     }
 
-    modifier givenAtomicAuctionRequiresPrefunding() {
-        _atomicAuctionModule.setRequiredPrefunding(true);
+    modifier givenAuctionIsPrefunded() {
+        _routingParams.prefunded = true;
         _;
     }
 

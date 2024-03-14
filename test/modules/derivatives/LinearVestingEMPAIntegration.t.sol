@@ -45,6 +45,7 @@ contract LinearVestingEMPAIntegrationTest is AuctionHouseTest {
         _auctionModuleKeycode = keycodeFromVeecode(_empaModule.VEECODE());
 
         _routingParams.auctionType = keycodeFromVeecode(_empaModule.VEECODE());
+        _routingParams.prefunded = true;
 
         _auctionPublicKey = ECIES.calcPubKey(Point(1, 2), _AUCTION_PRIVATE_KEY);
         _bidPublicKey = ECIES.calcPubKey(Point(1, 2), _BID_PRIVATE_KEY);

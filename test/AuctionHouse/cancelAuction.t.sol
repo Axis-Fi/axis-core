@@ -136,23 +136,13 @@ contract CancelAuctionTest is AuctionHouseTest {
     //  [X] given a purchase has been made
     //   [X] it refunds the remaining prefunded amount in payout tokens to the seller
 
-    modifier givenLotIsPrefunded() {
-        _atomicAuctionModule.setRequiredPrefunding(true);
-
-        // Mint payout tokens to the seller
-        _baseToken.mint(_SELLER, _LOT_CAPACITY);
-
-        // Approve transfer to the auction house
-        vm.prank(_SELLER);
-        _baseToken.approve(address(_auctionHouse), _LOT_CAPACITY);
-        _;
-    }
-
     function test_prefunded()
         external
-        givenLotIsPrefunded
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
+        givenAuctionIsPrefunded
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenLotIsCreated
         givenLotHasStarted
     {
@@ -173,9 +163,11 @@ contract CancelAuctionTest is AuctionHouseTest {
 
     function test_prefunded_givenPurchase()
         external
-        givenLotIsPrefunded
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
+        givenAuctionIsPrefunded
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenLotIsCreated
         givenLotHasStarted
         givenUserHasQuoteTokenBalance(_PURCHASE_AMOUNT)
@@ -222,10 +214,12 @@ contract CancelAuctionTest is AuctionHouseTest {
 
     function test_prefunded_givenCuratorIsSet()
         external
-        givenLotIsPrefunded
-        givenCuratorIsSet
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
+        givenAuctionIsPrefunded
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenCuratorIsSet
         givenLotIsCreated
         givenLotHasStarted
         givenSellerHasCuratorFeeBalance
@@ -262,10 +256,12 @@ contract CancelAuctionTest is AuctionHouseTest {
 
     function test_prefunded_givenCuratorHasApproved()
         external
-        givenLotIsPrefunded
-        givenCuratorIsSet
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
+        givenAuctionIsPrefunded
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenCuratorIsSet
         givenLotIsCreated
         givenLotHasStarted
         givenCuratorMaxFeeIsSet
@@ -300,10 +296,12 @@ contract CancelAuctionTest is AuctionHouseTest {
 
     function test_prefunded_givenPurchase_givenCuratorHasApproved()
         external
-        givenLotIsPrefunded
-        givenCuratorIsSet
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
+        givenAuctionIsPrefunded
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenCuratorIsSet
         givenLotIsCreated
         givenLotHasStarted
         givenUserHasQuoteTokenBalance(_PURCHASE_AMOUNT)
@@ -345,10 +343,12 @@ contract CancelAuctionTest is AuctionHouseTest {
 
     function test_prefunded_givenPurchase_givenCuratorHasApproved_givenPurchase()
         external
-        givenLotIsPrefunded
-        givenCuratorIsSet
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
+        givenAuctionIsPrefunded
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenCuratorIsSet
         givenLotIsCreated
         givenLotHasStarted
         givenUserHasQuoteTokenBalance(_PURCHASE_AMOUNT)
@@ -394,10 +394,12 @@ contract CancelAuctionTest is AuctionHouseTest {
 
     function test_prefunded_givenCuratorHasApproved_givenPurchase()
         external
-        givenLotIsPrefunded
-        givenCuratorIsSet
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
+        givenAuctionIsPrefunded
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenCuratorIsSet
         givenLotIsCreated
         givenLotHasStarted
         givenSellerHasCuratorFeeBalance

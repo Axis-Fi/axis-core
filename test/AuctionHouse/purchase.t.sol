@@ -98,7 +98,7 @@ contract PurchaseTest is AuctionHouseTest {
         uint96 curatorFee = _curatorApproved ? (amountOut_ * _curatorFeePercentActual) / 1e5 : 0;
         bool hasDerivativeToken = _derivativeTokenId != type(uint256).max;
         bool hasHook = address(_routingParams.hooks) != address(0);
-        bool isPrefunding = _atomicAuctionModule.requiresPrefunding();
+        bool isPrefunding = _routingParams.prefunded;
         uint96 scaledLotCapacity = _scaleBaseTokenAmount(_LOT_CAPACITY);
         uint96 scaledCuratorMaxPotentialFee = _scaleBaseTokenAmount(_curatorMaxPotentialFee);
 
@@ -288,6 +288,8 @@ contract PurchaseTest is AuctionHouseTest {
         external
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenLotIsCreated
         givenLotHasStarted
         givenUserHasQuoteTokenBalance(_AMOUNT_IN)
@@ -1584,7 +1586,7 @@ contract PurchaseTest is AuctionHouseTest {
         external
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
-        givenAtomicAuctionRequiresPrefunding
+        givenAuctionIsPrefunded
         givenCuratorIsSet
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
@@ -1613,7 +1615,7 @@ contract PurchaseTest is AuctionHouseTest {
         external
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
-        givenAtomicAuctionRequiresPrefunding
+        givenAuctionIsPrefunded
         givenCuratorIsSet
         givenQuoteTokenHasDecimals(17)
         givenBaseTokenHasDecimals(13)
@@ -1644,7 +1646,7 @@ contract PurchaseTest is AuctionHouseTest {
         external
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
-        givenAtomicAuctionRequiresPrefunding
+        givenAuctionIsPrefunded
         givenCuratorIsSet
         givenQuoteTokenHasDecimals(13)
         givenBaseTokenHasDecimals(17)
@@ -1675,7 +1677,7 @@ contract PurchaseTest is AuctionHouseTest {
         external
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
-        givenAtomicAuctionRequiresPrefunding
+        givenAuctionIsPrefunded
         givenCuratorIsSet
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
@@ -1709,7 +1711,7 @@ contract PurchaseTest is AuctionHouseTest {
         external
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
-        givenAtomicAuctionRequiresPrefunding
+        givenAuctionIsPrefunded
         givenCuratorIsSet
         givenQuoteTokenHasDecimals(17)
         givenBaseTokenHasDecimals(13)
@@ -1745,7 +1747,7 @@ contract PurchaseTest is AuctionHouseTest {
         external
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
-        givenAtomicAuctionRequiresPrefunding
+        givenAuctionIsPrefunded
         givenCuratorIsSet
         givenQuoteTokenHasDecimals(13)
         givenBaseTokenHasDecimals(17)
@@ -1781,7 +1783,7 @@ contract PurchaseTest is AuctionHouseTest {
         external
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
-        givenAtomicAuctionRequiresPrefunding
+        givenAuctionIsPrefunded
         givenCuratorIsSet
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
