@@ -144,11 +144,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
     ///             - The minimum fill percent is greater than 100%
     ///             - The minimum bid percent is less than the minimum or greater than 100%
     ///             - The public key is not valid
-    function _auction(
-        uint96 lotId_,
-        Lot memory lot_,
-        bytes memory params_
-    ) internal override returns (bool prefundingRequired) {
+    function _auction(uint96 lotId_, Lot memory lot_, bytes memory params_) internal override {
         // Decode implementation params
         AuctionDataParams memory implParams = abi.decode(params_, (AuctionDataParams));
 
@@ -192,11 +188,6 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         data.nextBidId = 1;
 
         decryptedBids[lotId_].initialize();
-
-        // This auction type requires pre-funding
-        // This setting requires the capacity to be in the base token,
-        // so we know the capacity values above are in base token units.
-        prefundingRequired = true;
     }
 
     /// @inheritdoc AuctionModule
@@ -878,6 +869,11 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         _revertIfLotInvalid(lotId_);
 
         return auctionData[lotId_];
+    }
+
+    /// @inheritdoc Auction
+    function auctionType() external pure override returns (AuctionType) {
+        return AuctionType.Batch;
     }
 
     // ========== VALIDATION ========== //

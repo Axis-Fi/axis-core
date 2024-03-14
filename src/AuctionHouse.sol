@@ -465,12 +465,8 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
             uint256 curatorFeePayout =
                 _calculatePayoutFees(feeData.curated, feeData.curatorFee, capacity);
 
-            // Collect the payout from the seller
-            // Any unutilised capacity and fees can be claimed in `claimProceeds()`
-            if (routing.funding == 0) {
-                routing.funding = capacity + curatorFeePayout;
-                _collectPayout(lotId_, settlement.totalIn, routing.funding, routing);
-            }
+            // settle() is for batch auctions only, and all batch auctions are prefunded.
+            // Payout has already been collected at the time of auction creation and curation
 
             // Check if there was a partial fill and handle the payout + refund
             if (settlement.pfBidder != address(0)) {
@@ -608,7 +604,7 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
         feeData.curated = true;
         feeData.curatorFee = fees[keycodeFromVeecode(routing.auctionReference)].curator[msg.sender];
 
-        // If the auction is pre-funded, transfer the fee amount from the seller
+        // If the auction is pre-funded (required for batch auctions), transfer the fee amount from the seller
         if (routing.funding > 0) {
             // Calculate the fee amount based on the remaining capacity (must be in base token if auction is pre-funded)
             uint256 curatorFeePayout = _calculatePayoutFees(

@@ -39,6 +39,7 @@ contract AuctionTest is AuctionHouseTest {
     // [X] reverts when quote token decimals are out of bounds
     // [X] reverts when base token is 0
     // [X] reverts when quote token is 0
+    // [X] reverts when the auction type is batch and prefunded is false
     // [X] creates the auction lot
 
     function testReverts_whenModuleNotInstalled() external whenAuctionTypeIsAtomic {
@@ -149,6 +150,22 @@ contract AuctionTest is AuctionHouseTest {
         whenAtomicAuctionModuleIsInstalled
     {
         _routingParams.quoteToken = ERC20(address(0));
+
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(Auctioneer.InvalidParams.selector);
+        vm.expectRevert(err);
+
+        vm.prank(_SELLER);
+        _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
+    }
+
+    function test_whenAuctionTypeIsBatch_whenNotPrefunded_reverts()
+        external
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+    {
+        // Override the prefunded value
+        _routingParams.prefunded = false;
 
         // Expect revert
         bytes memory err = abi.encodeWithSelector(Auctioneer.InvalidParams.selector);
@@ -477,8 +494,9 @@ contract AuctionTest is AuctionHouseTest {
         assertEq(address(routing.hooks), address(_hook), "hooks mismatch");
     }
 
-    // [X] given the auction module requires prefunding
-    //  [X] reverts when the auction has capacity in quote
+    // [X] given the auction is prefunded
+    //  [X] when the auction has capacity in quote
+    //   [X] reverts
     //  [X] when the auction has hooks
     //   [X] reverts when the hook does not transfer enough payout tokens
     //   [X] it succeeds
@@ -507,7 +525,7 @@ contract AuctionTest is AuctionHouseTest {
         external
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
-        givenAtomicAuctionRequiresPrefunding
+        givenAuctionIsPrefunded
         whenAuctionCapacityInQuote
     {
         // Expect revert
@@ -523,7 +541,7 @@ contract AuctionTest is AuctionHouseTest {
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
         whenHooksIsSet
-        givenAtomicAuctionRequiresPrefunding
+        givenAuctionIsPrefunded
         givenHookHasBaseTokenBalance(_LOT_CAPACITY)
         givenPreAuctionCreateHookBreaksInvariant
     {
@@ -540,7 +558,7 @@ contract AuctionTest is AuctionHouseTest {
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
         whenHooksIsSet
-        givenAtomicAuctionRequiresPrefunding
+        givenAuctionIsPrefunded
         givenHookHasBaseTokenBalance(_LOT_CAPACITY)
         givenBaseTokenTakesFeeOnTransfer
     {
@@ -557,7 +575,7 @@ contract AuctionTest is AuctionHouseTest {
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
         whenHooksIsSet
-        givenAtomicAuctionRequiresPrefunding
+        givenAuctionIsPrefunded
         givenHookHasBaseTokenBalance(_LOT_CAPACITY)
     {
         // Create the auction
@@ -582,7 +600,7 @@ contract AuctionTest is AuctionHouseTest {
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
         whenHooksIsSet
-        givenAtomicAuctionRequiresPrefunding
+        givenAuctionIsPrefunded
         givenQuoteTokenHasDecimals(17)
         givenBaseTokenHasDecimals(13)
         givenHookHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
@@ -609,7 +627,7 @@ contract AuctionTest is AuctionHouseTest {
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
         whenHooksIsSet
-        givenAtomicAuctionRequiresPrefunding
+        givenAuctionIsPrefunded
         givenQuoteTokenHasDecimals(13)
         givenBaseTokenHasDecimals(17)
         givenHookHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
@@ -635,7 +653,7 @@ contract AuctionTest is AuctionHouseTest {
         external
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
-        givenAtomicAuctionRequiresPrefunding
+        givenAuctionIsPrefunded
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
     {
         // Expect revert
@@ -649,7 +667,7 @@ contract AuctionTest is AuctionHouseTest {
         external
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
-        givenAtomicAuctionRequiresPrefunding
+        givenAuctionIsPrefunded
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
     {
         // Expect revert
@@ -663,7 +681,7 @@ contract AuctionTest is AuctionHouseTest {
         external
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
-        givenAtomicAuctionRequiresPrefunding
+        givenAuctionIsPrefunded
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenBaseTokenTakesFeeOnTransfer
@@ -681,7 +699,7 @@ contract AuctionTest is AuctionHouseTest {
         external
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
-        givenAtomicAuctionRequiresPrefunding
+        givenAuctionIsPrefunded
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
     {
@@ -706,7 +724,7 @@ contract AuctionTest is AuctionHouseTest {
         external
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
-        givenAtomicAuctionRequiresPrefunding
+        givenAuctionIsPrefunded
         givenQuoteTokenHasDecimals(17)
         givenBaseTokenHasDecimals(13)
         givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
@@ -733,7 +751,7 @@ contract AuctionTest is AuctionHouseTest {
         external
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
-        givenAtomicAuctionRequiresPrefunding
+        givenAuctionIsPrefunded
         givenQuoteTokenHasDecimals(13)
         givenBaseTokenHasDecimals(17)
         givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))

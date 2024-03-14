@@ -59,6 +59,8 @@ contract RefundBidTest is AuctionHouseTest {
         external
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenLotIsCreated
         givenLotHasStarted
         givenUserHasQuoteTokenBalance(_BID_AMOUNT)
@@ -78,6 +80,8 @@ contract RefundBidTest is AuctionHouseTest {
         external
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenLotIsCreated
         givenLotHasStarted
     {
@@ -94,6 +98,8 @@ contract RefundBidTest is AuctionHouseTest {
         external
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenLotIsCreated
         givenLotHasStarted
         givenUserHasQuoteTokenBalance(_BID_AMOUNT)
@@ -114,6 +120,8 @@ contract RefundBidTest is AuctionHouseTest {
         external
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenLotIsCreated
         givenLotHasStarted
         givenUserHasQuoteTokenBalance(_BID_AMOUNT)
@@ -132,6 +140,8 @@ contract RefundBidTest is AuctionHouseTest {
         external
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenLotIsCreated
         givenLotHasStarted
         givenUserHasQuoteTokenBalance(_BID_AMOUNT)
