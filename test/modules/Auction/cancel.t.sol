@@ -59,7 +59,8 @@ contract CancelTest is Test, Permit2User {
             callbacks: ICallback(address(0)),
             callbackData: abi.encode(""),
             derivativeType: toKeycode(""),
-            derivativeParams: abi.encode("")
+            derivativeParams: abi.encode(""),
+            prefunded: false
         });
     }
 

@@ -113,11 +113,6 @@ contract SettleTest is AuctionHouseTest {
         _;
     }
 
-    modifier givenLotIsPrefunded() {
-        _batchAuctionModule.setRequiredPrefunding(true);
-        _;
-    }
-
     modifier givenLotHasPartialFill() {
         uint96 totalIn = _scaleQuoteTokenAmount(_BID_AMOUNT_TOTAL);
         uint96 totalOut = _scaleBaseTokenAmount(_LOT_CAPACITY);
@@ -314,7 +309,7 @@ contract SettleTest is AuctionHouseTest {
         _expectedProtocolFeesAllocated = 0;
         _expectedReferrerFeesAllocated = 0;
 
-        bool isPrefunded = _batchAuctionModule.requiresPrefunding();
+        bool isPrefunded = _routingParams.prefunded;
 
         // Set up expected values
         // Quote token
@@ -375,17 +370,6 @@ contract SettleTest is AuctionHouseTest {
     // [X] when curated is true
     //  [X] it transfers the curator fee to the curator
     // [X] it transfers the payment (minus protocol and referrer fees) to the seller
-    // [X] when prefunding is disabled
-    //  [X] when the auction is not settled
-    //   [X] it does not transfer any base tokens to the auction house
-    //  [X] when there is a partial fill
-    //   [X] when curated is true
-    //    [X] it transfers the capacity and curator fee to the auction house
-    //   [X] it transfers the capacity to the auction house
-    //  [X] when capacity is not filled
-    //   [X] when curated is true
-    //    [X] it transfers the used capacity and curator fee to the auction house
-    //   [X] it transfers the used capacity to the auction house
     // [X] when the curator fee is changed before settlement
     //  [X] it sends the curator payout using the original curator fee
     // [X] it caches the protocol and referrer fees
@@ -404,7 +388,6 @@ contract SettleTest is AuctionHouseTest {
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
         givenCuratorIsSet
-        givenLotIsPrefunded
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenLotIsCreated
@@ -424,7 +407,6 @@ contract SettleTest is AuctionHouseTest {
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
         givenCuratorIsSet
-        givenLotIsPrefunded
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenLotIsCreated
@@ -454,7 +436,6 @@ contract SettleTest is AuctionHouseTest {
         givenCuratorIsSet
         givenQuoteTokenHasDecimals(17)
         givenBaseTokenHasDecimals(13)
-        givenLotIsPrefunded
         givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenLotIsCreated
@@ -484,7 +465,6 @@ contract SettleTest is AuctionHouseTest {
         givenCuratorIsSet
         givenQuoteTokenHasDecimals(13)
         givenBaseTokenHasDecimals(17)
-        givenLotIsPrefunded
         givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenLotIsCreated
@@ -512,7 +492,6 @@ contract SettleTest is AuctionHouseTest {
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
         givenCuratorIsSet
-        givenLotIsPrefunded
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenLotIsCreated
@@ -537,7 +516,6 @@ contract SettleTest is AuctionHouseTest {
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
         givenCuratorIsSet
-        givenLotIsPrefunded
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenLotIsCreated
@@ -564,7 +542,6 @@ contract SettleTest is AuctionHouseTest {
         givenCuratorIsSet
         givenQuoteTokenHasDecimals(17)
         givenBaseTokenHasDecimals(13)
-        givenLotIsPrefunded
         givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenLotIsCreated
@@ -591,7 +568,6 @@ contract SettleTest is AuctionHouseTest {
         givenCuratorIsSet
         givenQuoteTokenHasDecimals(13)
         givenBaseTokenHasDecimals(17)
-        givenLotIsPrefunded
         givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenLotIsCreated
@@ -616,7 +592,6 @@ contract SettleTest is AuctionHouseTest {
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
         givenCuratorIsSet
-        givenLotIsPrefunded
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenLotIsCreated
@@ -646,7 +621,6 @@ contract SettleTest is AuctionHouseTest {
         givenCuratorIsSet
         givenQuoteTokenHasDecimals(17)
         givenBaseTokenHasDecimals(13)
-        givenLotIsPrefunded
         givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenLotIsCreated
@@ -676,7 +650,6 @@ contract SettleTest is AuctionHouseTest {
         givenCuratorIsSet
         givenQuoteTokenHasDecimals(13)
         givenBaseTokenHasDecimals(17)
-        givenLotIsPrefunded
         givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenLotIsCreated
@@ -704,7 +677,6 @@ contract SettleTest is AuctionHouseTest {
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
         givenCuratorIsSet
-        givenLotIsPrefunded
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenLotIsCreated
@@ -729,7 +701,6 @@ contract SettleTest is AuctionHouseTest {
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
         givenCuratorIsSet
-        givenLotIsPrefunded
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenLotIsCreated
@@ -760,7 +731,6 @@ contract SettleTest is AuctionHouseTest {
         public
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
-        givenLotIsPrefunded
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenLotIsCreated
@@ -784,7 +754,6 @@ contract SettleTest is AuctionHouseTest {
         whenBatchAuctionModuleIsInstalled
         givenQuoteTokenHasDecimals(17)
         givenBaseTokenHasDecimals(13)
-        givenLotIsPrefunded
         givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenLotIsCreated
@@ -808,7 +777,6 @@ contract SettleTest is AuctionHouseTest {
         whenBatchAuctionModuleIsInstalled
         givenQuoteTokenHasDecimals(13)
         givenBaseTokenHasDecimals(17)
-        givenLotIsPrefunded
         givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenLotIsCreated
@@ -831,7 +799,6 @@ contract SettleTest is AuctionHouseTest {
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
         givenCuratorIsSet
-        givenLotIsPrefunded
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenLotIsCreated
@@ -861,7 +828,6 @@ contract SettleTest is AuctionHouseTest {
         givenCuratorIsSet
         givenQuoteTokenHasDecimals(17)
         givenBaseTokenHasDecimals(13)
-        givenLotIsPrefunded
         givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenLotIsCreated
@@ -891,7 +857,6 @@ contract SettleTest is AuctionHouseTest {
         givenCuratorIsSet
         givenQuoteTokenHasDecimals(13)
         givenBaseTokenHasDecimals(17)
-        givenLotIsPrefunded
         givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenLotIsCreated
@@ -919,7 +884,6 @@ contract SettleTest is AuctionHouseTest {
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
         givenCuratorIsSet
-        givenLotIsPrefunded
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenLotIsCreated
@@ -944,7 +908,6 @@ contract SettleTest is AuctionHouseTest {
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
         givenCuratorIsSet
-        givenLotIsPrefunded
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenLotIsCreated
@@ -971,7 +934,6 @@ contract SettleTest is AuctionHouseTest {
         givenCuratorIsSet
         givenQuoteTokenHasDecimals(17)
         givenBaseTokenHasDecimals(13)
-        givenLotIsPrefunded
         givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenLotIsCreated
@@ -998,7 +960,6 @@ contract SettleTest is AuctionHouseTest {
         givenCuratorIsSet
         givenQuoteTokenHasDecimals(13)
         givenBaseTokenHasDecimals(17)
-        givenLotIsPrefunded
         givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenLotIsCreated
@@ -1023,7 +984,6 @@ contract SettleTest is AuctionHouseTest {
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
         givenCuratorIsSet
-        givenLotIsPrefunded
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenLotIsCreated
@@ -1053,7 +1013,6 @@ contract SettleTest is AuctionHouseTest {
         givenCuratorIsSet
         givenQuoteTokenHasDecimals(17)
         givenBaseTokenHasDecimals(13)
-        givenLotIsPrefunded
         givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenLotIsCreated
@@ -1083,7 +1042,6 @@ contract SettleTest is AuctionHouseTest {
         givenCuratorIsSet
         givenQuoteTokenHasDecimals(13)
         givenBaseTokenHasDecimals(17)
-        givenLotIsPrefunded
         givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenLotIsCreated
@@ -1111,7 +1069,6 @@ contract SettleTest is AuctionHouseTest {
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
         givenCuratorIsSet
-        givenLotIsPrefunded
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenLotIsCreated
@@ -1135,7 +1092,6 @@ contract SettleTest is AuctionHouseTest {
         public
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
-        givenLotIsPrefunded
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenLotIsCreated
@@ -1159,7 +1115,6 @@ contract SettleTest is AuctionHouseTest {
         whenBatchAuctionModuleIsInstalled
         givenQuoteTokenHasDecimals(17)
         givenBaseTokenHasDecimals(13)
-        givenLotIsPrefunded
         givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenLotIsCreated
@@ -1183,7 +1138,6 @@ contract SettleTest is AuctionHouseTest {
         whenBatchAuctionModuleIsInstalled
         givenQuoteTokenHasDecimals(13)
         givenBaseTokenHasDecimals(17)
-        givenLotIsPrefunded
         givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenLotIsCreated
@@ -1206,7 +1160,6 @@ contract SettleTest is AuctionHouseTest {
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
         givenCuratorIsSet
-        givenLotIsPrefunded
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenLotIsCreated
@@ -1235,7 +1188,6 @@ contract SettleTest is AuctionHouseTest {
         givenCuratorIsSet
         givenQuoteTokenHasDecimals(17)
         givenBaseTokenHasDecimals(13)
-        givenLotIsPrefunded
         givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenLotIsCreated
@@ -1264,7 +1216,6 @@ contract SettleTest is AuctionHouseTest {
         givenCuratorIsSet
         givenQuoteTokenHasDecimals(13)
         givenBaseTokenHasDecimals(17)
-        givenLotIsPrefunded
         givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenLotIsCreated
@@ -1291,7 +1242,6 @@ contract SettleTest is AuctionHouseTest {
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
         givenCuratorIsSet
-        givenLotIsPrefunded
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenLotIsCreated
@@ -1320,7 +1270,6 @@ contract SettleTest is AuctionHouseTest {
         givenCuratorIsSet
         givenQuoteTokenHasDecimals(17)
         givenBaseTokenHasDecimals(13)
-        givenLotIsPrefunded
         givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenLotIsCreated
@@ -1349,7 +1298,6 @@ contract SettleTest is AuctionHouseTest {
         givenCuratorIsSet
         givenQuoteTokenHasDecimals(13)
         givenBaseTokenHasDecimals(17)
-        givenLotIsPrefunded
         givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenLotIsCreated
@@ -1376,7 +1324,6 @@ contract SettleTest is AuctionHouseTest {
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
         givenCuratorIsSet
-        givenLotIsPrefunded
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenLotIsCreated
@@ -1404,7 +1351,6 @@ contract SettleTest is AuctionHouseTest {
         givenCuratorIsSet
         givenQuoteTokenHasDecimals(17)
         givenBaseTokenHasDecimals(13)
-        givenLotIsPrefunded
         givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenLotIsCreated
@@ -1432,7 +1378,6 @@ contract SettleTest is AuctionHouseTest {
         givenCuratorIsSet
         givenQuoteTokenHasDecimals(13)
         givenBaseTokenHasDecimals(17)
-        givenLotIsPrefunded
         givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenLotIsCreated
@@ -1442,518 +1387,6 @@ contract SettleTest is AuctionHouseTest {
         givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_curatorMaxPotentialFee))
         givenCuratorHasApproved
         givenLotCapacityIsFilled
-        givenAuctionHouseHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT_TOTAL))
-    {
-        // Call function
-        _auctionHouse.settle(_lotId);
-
-        // Check balances
-        _assertBaseTokenBalances();
-        _assertQuoteTokenBalances();
-        _assertAccruedFees();
-    }
-
-    // ======== not prefunded ======== //
-
-    function test_notPrefunded_notSettled_curated()
-        public
-        whenAuctionTypeIsBatch
-        whenBatchAuctionModuleIsInstalled
-        givenCuratorIsSet
-        givenLotIsCreated
-        givenCuratorMaxFeeIsSet
-        givenCuratorFeeIsSet
-        givenCuratorHasApproved
-        givenProtocolFeeIsSet
-        givenReferrerFeeIsSet
-        givenLotDoesNotSettle
-        givenSellerHasBaseTokenBalance(_LOT_CAPACITY + _curatorMaxPotentialFee)
-        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY + _curatorMaxPotentialFee)
-        givenAuctionHouseHasQuoteTokenBalance(_BID_AMOUNT_TOTAL)
-    {
-        // Call function
-        _auctionHouse.settle(_lotId);
-
-        // Check balances
-        _assertBaseTokenBalances();
-        _assertQuoteTokenBalances();
-        _assertAccruedFees();
-    }
-
-    function test_notPrefunded_notSettled_curated_quoteTokenDecimalsLarger()
-        public
-        whenAuctionTypeIsBatch
-        whenBatchAuctionModuleIsInstalled
-        givenCuratorIsSet
-        givenQuoteTokenHasDecimals(17)
-        givenBaseTokenHasDecimals(13)
-        givenLotIsCreated
-        givenCuratorMaxFeeIsSet
-        givenCuratorFeeIsSet
-        givenCuratorHasApproved
-        givenProtocolFeeIsSet
-        givenReferrerFeeIsSet
-        givenLotDoesNotSettle
-        givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY + _curatorMaxPotentialFee))
-        givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY + _curatorMaxPotentialFee))
-        givenAuctionHouseHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT_TOTAL))
-    {
-        // Call function
-        _auctionHouse.settle(_lotId);
-
-        // Check balances
-        _assertBaseTokenBalances();
-        _assertQuoteTokenBalances();
-        _assertAccruedFees();
-    }
-
-    function test_notPrefunded_notSettled_curated_quoteTokenDecimalsSmaller()
-        public
-        whenAuctionTypeIsBatch
-        whenBatchAuctionModuleIsInstalled
-        givenCuratorIsSet
-        givenQuoteTokenHasDecimals(13)
-        givenBaseTokenHasDecimals(17)
-        givenLotIsCreated
-        givenCuratorMaxFeeIsSet
-        givenCuratorFeeIsSet
-        givenCuratorHasApproved
-        givenProtocolFeeIsSet
-        givenReferrerFeeIsSet
-        givenLotDoesNotSettle
-        givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY + _curatorMaxPotentialFee))
-        givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY + _curatorMaxPotentialFee))
-        givenAuctionHouseHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT_TOTAL))
-    {
-        // Call function
-        _auctionHouse.settle(_lotId);
-
-        // Check balances
-        _assertBaseTokenBalances();
-        _assertQuoteTokenBalances();
-        _assertAccruedFees();
-    }
-
-    function test_notPrefunded_notSettled_curated_curatorFeeNotSet()
-        public
-        whenAuctionTypeIsBatch
-        whenBatchAuctionModuleIsInstalled
-        givenCuratorIsSet
-        givenLotIsCreated
-        givenCuratorMaxFeeIsSet
-        givenCuratorHasApproved
-        givenProtocolFeeIsSet
-        givenReferrerFeeIsSet
-        givenLotDoesNotSettle
-        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
-        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
-        givenAuctionHouseHasQuoteTokenBalance(_BID_AMOUNT_TOTAL)
-    {
-        // Call function
-        _auctionHouse.settle(_lotId);
-
-        // Check balances
-        _assertBaseTokenBalances();
-        _assertQuoteTokenBalances();
-        _assertAccruedFees();
-    }
-
-    function test_notPrefunded_notSettled_notCurated()
-        public
-        whenAuctionTypeIsBatch
-        whenBatchAuctionModuleIsInstalled
-        givenLotIsCreated
-        givenProtocolFeeIsSet
-        givenReferrerFeeIsSet
-        givenLotDoesNotSettle
-        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
-        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
-        givenAuctionHouseHasQuoteTokenBalance(_BID_AMOUNT_TOTAL)
-    {
-        // Call function
-        _auctionHouse.settle(_lotId);
-
-        // Check balances
-        _assertBaseTokenBalances();
-        _assertQuoteTokenBalances();
-        _assertAccruedFees();
-    }
-
-    function test_notPrefunded_notSettled_notCurated_quoteTokenDecimalsLarger()
-        public
-        whenAuctionTypeIsBatch
-        whenBatchAuctionModuleIsInstalled
-        givenQuoteTokenHasDecimals(17)
-        givenBaseTokenHasDecimals(13)
-        givenLotIsCreated
-        givenProtocolFeeIsSet
-        givenReferrerFeeIsSet
-        givenLotDoesNotSettle
-        givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
-        givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
-        givenAuctionHouseHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT_TOTAL))
-    {
-        // Call function
-        _auctionHouse.settle(_lotId);
-
-        // Check balances
-        _assertBaseTokenBalances();
-        _assertQuoteTokenBalances();
-        _assertAccruedFees();
-    }
-
-    function test_notPrefunded_notSettled_notCurated_quoteTokenDecimalsSmaller()
-        public
-        whenAuctionTypeIsBatch
-        whenBatchAuctionModuleIsInstalled
-        givenQuoteTokenHasDecimals(13)
-        givenBaseTokenHasDecimals(17)
-        givenLotIsCreated
-        givenProtocolFeeIsSet
-        givenReferrerFeeIsSet
-        givenLotDoesNotSettle
-        givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
-        givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
-        givenAuctionHouseHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT_TOTAL))
-    {
-        // Call function
-        _auctionHouse.settle(_lotId);
-
-        // Check balances
-        _assertBaseTokenBalances();
-        _assertQuoteTokenBalances();
-        _assertAccruedFees();
-    }
-
-    function test_notPrefunded_partialFill_curated()
-        public
-        whenAuctionTypeIsBatch
-        whenBatchAuctionModuleIsInstalled
-        givenCuratorIsSet
-        givenLotIsCreated
-        givenCuratorMaxFeeIsSet
-        givenCuratorFeeIsSet
-        givenCuratorHasApproved
-        givenProtocolFeeIsSet
-        givenReferrerFeeIsSet
-        givenLotHasPartialFill
-        givenSellerHasBaseTokenBalance(_LOT_CAPACITY + _curatorMaxPotentialFee)
-        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY + _curatorMaxPotentialFee)
-        givenAuctionHouseHasQuoteTokenBalance(_BID_AMOUNT_TOTAL)
-    {
-        // Call function
-        _auctionHouse.settle(_lotId);
-
-        // Check balances
-        _assertBaseTokenBalances();
-        _assertQuoteTokenBalances();
-        _assertAccruedFees();
-    }
-
-    function test_notPrefunded_partialFill_curated_quoteTokenDecimalsLarger()
-        public
-        whenAuctionTypeIsBatch
-        whenBatchAuctionModuleIsInstalled
-        givenCuratorIsSet
-        givenQuoteTokenHasDecimals(17)
-        givenBaseTokenHasDecimals(13)
-        givenLotIsCreated
-        givenCuratorMaxFeeIsSet
-        givenCuratorFeeIsSet
-        givenCuratorHasApproved
-        givenProtocolFeeIsSet
-        givenReferrerFeeIsSet
-        givenLotHasPartialFill
-        givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY + _curatorMaxPotentialFee))
-        givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY + _curatorMaxPotentialFee))
-        givenAuctionHouseHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT_TOTAL))
-    {
-        // Call function
-        _auctionHouse.settle(_lotId);
-
-        // Check balances
-        _assertBaseTokenBalances();
-        _assertQuoteTokenBalances();
-        _assertAccruedFees();
-    }
-
-    function test_notPrefunded_partialFill_curated_quoteTokenDecimalsSmaller()
-        public
-        whenAuctionTypeIsBatch
-        whenBatchAuctionModuleIsInstalled
-        givenCuratorIsSet
-        givenQuoteTokenHasDecimals(13)
-        givenBaseTokenHasDecimals(17)
-        givenLotIsCreated
-        givenCuratorMaxFeeIsSet
-        givenCuratorFeeIsSet
-        givenCuratorHasApproved
-        givenProtocolFeeIsSet
-        givenReferrerFeeIsSet
-        givenLotHasPartialFill
-        givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY + _curatorMaxPotentialFee))
-        givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY + _curatorMaxPotentialFee))
-        givenAuctionHouseHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT_TOTAL))
-    {
-        // Call function
-        _auctionHouse.settle(_lotId);
-
-        // Check balances
-        _assertBaseTokenBalances();
-        _assertQuoteTokenBalances();
-        _assertAccruedFees();
-    }
-
-    function test_notPrefunded_partialFill_curated_curatorFeeNotSet()
-        public
-        whenAuctionTypeIsBatch
-        whenBatchAuctionModuleIsInstalled
-        givenCuratorIsSet
-        givenLotIsCreated
-        givenCuratorMaxFeeIsSet
-        givenCuratorHasApproved
-        givenProtocolFeeIsSet
-        givenReferrerFeeIsSet
-        givenLotHasPartialFill
-        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
-        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
-        givenAuctionHouseHasQuoteTokenBalance(_BID_AMOUNT_TOTAL)
-    {
-        // Call function
-        _auctionHouse.settle(_lotId);
-
-        // Check balances
-        _assertBaseTokenBalances();
-        _assertQuoteTokenBalances();
-        _assertAccruedFees();
-    }
-
-    function test_notPrefunded_partialFill_notCurated()
-        public
-        whenAuctionTypeIsBatch
-        whenBatchAuctionModuleIsInstalled
-        givenLotIsCreated
-        givenProtocolFeeIsSet
-        givenReferrerFeeIsSet
-        givenLotHasPartialFill
-        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
-        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
-        givenAuctionHouseHasQuoteTokenBalance(_BID_AMOUNT_TOTAL)
-    {
-        // Call function
-        _auctionHouse.settle(_lotId);
-
-        // Check balances
-        _assertBaseTokenBalances();
-        _assertQuoteTokenBalances();
-        _assertAccruedFees();
-    }
-
-    function test_notPrefunded_partialFill_notCurated_quoteTokenDecimalsLarger()
-        public
-        whenAuctionTypeIsBatch
-        whenBatchAuctionModuleIsInstalled
-        givenQuoteTokenHasDecimals(17)
-        givenBaseTokenHasDecimals(13)
-        givenLotIsCreated
-        givenProtocolFeeIsSet
-        givenReferrerFeeIsSet
-        givenLotHasPartialFill
-        givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
-        givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
-        givenAuctionHouseHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT_TOTAL))
-    {
-        // Call function
-        _auctionHouse.settle(_lotId);
-
-        // Check balances
-        _assertBaseTokenBalances();
-        _assertQuoteTokenBalances();
-        _assertAccruedFees();
-    }
-
-    function test_notPrefunded_partialFill_notCurated_quoteTokenDecimalsSmaller()
-        public
-        whenAuctionTypeIsBatch
-        whenBatchAuctionModuleIsInstalled
-        givenQuoteTokenHasDecimals(13)
-        givenBaseTokenHasDecimals(17)
-        givenLotIsCreated
-        givenProtocolFeeIsSet
-        givenReferrerFeeIsSet
-        givenLotHasPartialFill
-        givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
-        givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
-        givenAuctionHouseHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT_TOTAL))
-    {
-        // Call function
-        _auctionHouse.settle(_lotId);
-
-        // Check balances
-        _assertBaseTokenBalances();
-        _assertQuoteTokenBalances();
-        _assertAccruedFees();
-    }
-
-    function test_notPrefunded_underCapacity_curated()
-        public
-        whenAuctionTypeIsBatch
-        whenBatchAuctionModuleIsInstalled
-        givenCuratorIsSet
-        givenLotIsCreated
-        givenCuratorMaxFeeIsSet
-        givenCuratorFeeIsSet
-        givenCuratorHasApproved
-        givenProtocolFeeIsSet
-        givenReferrerFeeIsSet
-        givenLotIsUnderCapacity
-        givenSellerHasBaseTokenBalance(_LOT_CAPACITY + _curatorMaxPotentialFee)
-        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY + _curatorMaxPotentialFee)
-        givenAuctionHouseHasQuoteTokenBalance(_BID_AMOUNT_TOTAL)
-    {
-        // Call function
-        _auctionHouse.settle(_lotId);
-
-        // Check balances
-        _assertBaseTokenBalances();
-        _assertQuoteTokenBalances();
-        _assertAccruedFees();
-    }
-
-    function test_notPrefunded_underCapacity_curated_quoteTokenDecimalsLarger()
-        public
-        whenAuctionTypeIsBatch
-        whenBatchAuctionModuleIsInstalled
-        givenCuratorIsSet
-        givenQuoteTokenHasDecimals(17)
-        givenBaseTokenHasDecimals(13)
-        givenLotIsCreated
-        givenCuratorMaxFeeIsSet
-        givenCuratorFeeIsSet
-        givenCuratorHasApproved
-        givenProtocolFeeIsSet
-        givenReferrerFeeIsSet
-        givenLotIsUnderCapacity
-        givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY + _curatorMaxPotentialFee))
-        givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY + _curatorMaxPotentialFee))
-        givenAuctionHouseHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT_TOTAL))
-    {
-        // Call function
-        _auctionHouse.settle(_lotId);
-
-        // Check balances
-        _assertBaseTokenBalances();
-        _assertQuoteTokenBalances();
-        _assertAccruedFees();
-    }
-
-    function test_notPrefunded_underCapacity_curated_quoteTokenDecimalsSmaller()
-        public
-        whenAuctionTypeIsBatch
-        whenBatchAuctionModuleIsInstalled
-        givenCuratorIsSet
-        givenQuoteTokenHasDecimals(13)
-        givenBaseTokenHasDecimals(17)
-        givenLotIsCreated
-        givenCuratorMaxFeeIsSet
-        givenCuratorFeeIsSet
-        givenCuratorHasApproved
-        givenProtocolFeeIsSet
-        givenReferrerFeeIsSet
-        givenLotIsUnderCapacity
-        givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY + _curatorMaxPotentialFee))
-        givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY + _curatorMaxPotentialFee))
-        givenAuctionHouseHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT_TOTAL))
-    {
-        // Call function
-        _auctionHouse.settle(_lotId);
-
-        // Check balances
-        _assertBaseTokenBalances();
-        _assertQuoteTokenBalances();
-        _assertAccruedFees();
-    }
-
-    function test_notPrefunded_underCapacity_curated_curatorFeeNotSet()
-        public
-        whenAuctionTypeIsBatch
-        whenBatchAuctionModuleIsInstalled
-        givenCuratorIsSet
-        givenLotIsCreated
-        givenCuratorMaxFeeIsSet
-        givenCuratorHasApproved
-        givenProtocolFeeIsSet
-        givenReferrerFeeIsSet
-        givenLotIsUnderCapacity
-        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
-        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
-        givenAuctionHouseHasQuoteTokenBalance(_BID_AMOUNT_TOTAL)
-    {
-        // Call function
-        _auctionHouse.settle(_lotId);
-
-        // Check balances
-        _assertBaseTokenBalances();
-        _assertQuoteTokenBalances();
-        _assertAccruedFees();
-    }
-
-    function test_notPrefunded_underCapacity_notCurated()
-        public
-        whenAuctionTypeIsBatch
-        whenBatchAuctionModuleIsInstalled
-        givenLotIsCreated
-        givenProtocolFeeIsSet
-        givenReferrerFeeIsSet
-        givenLotIsUnderCapacity
-        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
-        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
-        givenAuctionHouseHasQuoteTokenBalance(_BID_AMOUNT_TOTAL)
-    {
-        // Call function
-        _auctionHouse.settle(_lotId);
-
-        // Check balances
-        _assertBaseTokenBalances();
-        _assertQuoteTokenBalances();
-        _assertAccruedFees();
-    }
-
-    function test_notPrefunded_underCapacity_notCurated_quoteTokenDecimalsLarger()
-        public
-        whenAuctionTypeIsBatch
-        whenBatchAuctionModuleIsInstalled
-        givenQuoteTokenHasDecimals(17)
-        givenBaseTokenHasDecimals(13)
-        givenLotIsCreated
-        givenProtocolFeeIsSet
-        givenReferrerFeeIsSet
-        givenLotIsUnderCapacity
-        givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
-        givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
-        givenAuctionHouseHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT_TOTAL))
-    {
-        // Call function
-        _auctionHouse.settle(_lotId);
-
-        // Check balances
-        _assertBaseTokenBalances();
-        _assertQuoteTokenBalances();
-        _assertAccruedFees();
-    }
-
-    function test_notPrefunded_underCapacity_notCurated_quoteTokenDecimalsSmaller()
-        public
-        whenAuctionTypeIsBatch
-        whenBatchAuctionModuleIsInstalled
-        givenQuoteTokenHasDecimals(13)
-        givenBaseTokenHasDecimals(17)
-        givenLotIsCreated
-        givenProtocolFeeIsSet
-        givenReferrerFeeIsSet
-        givenLotIsUnderCapacity
-        givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
-        givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenAuctionHouseHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT_TOTAL))
     {
         // Call function

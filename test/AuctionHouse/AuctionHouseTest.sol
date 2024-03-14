@@ -127,7 +127,8 @@ abstract contract AuctionHouseTest is Test, Permit2User {
             callbacks: ICallback(address(0)),
             callbackData: abi.encode(""),
             derivativeType: toKeycode(""),
-            derivativeParams: _derivativeParams
+            derivativeParams: _derivativeParams,
+            prefunded: false
         });
 
         // Bidder
@@ -200,14 +201,10 @@ abstract contract AuctionHouseTest is Test, Permit2User {
 
     modifier whenAuctionTypeIsBatch() {
         _routingParams.auctionType = _batchAuctionModuleKeycode;
+        _routingParams.prefunded = true;
 
         _auctionModule = _batchAuctionModule;
         _auctionModuleKeycode = _batchAuctionModuleKeycode;
-        _;
-    }
-
-    modifier whenBatchRequiresPrefunding() {
-        _batchAuctionModule.setRequiredPrefunding(true);
         _;
     }
 
@@ -248,14 +245,22 @@ abstract contract AuctionHouseTest is Test, Permit2User {
         _;
     }
 
-    modifier givenLotIsConcluded() {
+    function _concludeLot() internal {
         vm.warp(_startTime + _duration + 1);
+    }
+
+    modifier givenLotIsConcluded() {
+        _concludeLot();
         _;
     }
 
-    modifier givenLotIsSettled() {
+    function _settleLot() internal {
         vm.prank(_SELLER);
         _auctionHouse.settle(_lotId);
+    }
+
+    modifier givenLotIsSettled() {
+        _settleLot();
         _;
     }
 
@@ -611,19 +616,23 @@ abstract contract AuctionHouseTest is Test, Permit2User {
         _;
     }
 
-    modifier givenAtomicAuctionRequiresPrefunding() {
-        _atomicAuctionModule.setRequiredPrefunding(true);
-        _;
-    }
-
-    modifier givenBatchAuctionRequiresPrefunding() {
-        _batchAuctionModule.setRequiredPrefunding(true);
+    modifier givenAuctionIsPrefunded() {
+        _routingParams.prefunded = true;
         _;
     }
 
     modifier givenLotProceedsAreClaimed() {
         vm.prank(_SELLER);
         _auctionHouse.claimProceeds(_lotId, bytes(""));
+        _;
+    }
+
+    modifier givenBidIsClaimed(uint64 bidId_) {
+        uint64[] memory bids = new uint64[](1);
+        bids[0] = bidId_;
+
+        vm.prank(_bidder);
+        _auctionHouse.claimBids(_lotId, bids);
         _;
     }
 

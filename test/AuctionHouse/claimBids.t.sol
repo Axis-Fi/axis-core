@@ -138,11 +138,6 @@ contract ClaimBidsTest is AuctionHouseTest {
         _;
     }
 
-    modifier givenLotIsPrefunded() {
-        _batchAuctionModule.setRequiredPrefunding(true);
-        _;
-    }
-
     function _calculateFees(
         address referrer_,
         uint256 amountIn_
@@ -280,7 +275,6 @@ contract ClaimBidsTest is AuctionHouseTest {
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
         givenCuratorIsSet
-        givenLotIsPrefunded
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenLotIsCreated
@@ -305,7 +299,6 @@ contract ClaimBidsTest is AuctionHouseTest {
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
         givenCuratorIsSet
-        givenLotIsPrefunded
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenLotIsCreated
@@ -340,7 +333,6 @@ contract ClaimBidsTest is AuctionHouseTest {
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
         givenCuratorIsSet
-        givenLotIsPrefunded
         givenQuoteTokenHasDecimals(17)
         givenBaseTokenHasDecimals(13)
         givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
@@ -377,7 +369,6 @@ contract ClaimBidsTest is AuctionHouseTest {
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
         givenCuratorIsSet
-        givenLotIsPrefunded
         givenQuoteTokenHasDecimals(13)
         givenBaseTokenHasDecimals(17)
         givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
@@ -414,7 +405,6 @@ contract ClaimBidsTest is AuctionHouseTest {
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
         givenCuratorIsSet
-        givenLotIsPrefunded
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenLotIsCreated
@@ -453,7 +443,6 @@ contract ClaimBidsTest is AuctionHouseTest {
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
         givenCuratorIsSet
-        givenLotIsPrefunded
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenLotIsCreated
@@ -492,7 +481,6 @@ contract ClaimBidsTest is AuctionHouseTest {
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
         givenCuratorIsSet
-        givenLotIsPrefunded
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenLotIsCreated
@@ -537,7 +525,6 @@ contract ClaimBidsTest is AuctionHouseTest {
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
         givenCuratorIsSet
-        givenLotIsPrefunded
         givenQuoteTokenHasDecimals(17)
         givenBaseTokenHasDecimals(13)
         givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
@@ -584,7 +571,6 @@ contract ClaimBidsTest is AuctionHouseTest {
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
         givenCuratorIsSet
-        givenLotIsPrefunded
         givenQuoteTokenHasDecimals(13)
         givenBaseTokenHasDecimals(17)
         givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
@@ -631,7 +617,6 @@ contract ClaimBidsTest is AuctionHouseTest {
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
         givenCuratorIsSet
-        givenLotIsPrefunded
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenLotIsCreated
@@ -680,7 +665,6 @@ contract ClaimBidsTest is AuctionHouseTest {
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
         givenCuratorIsSet
-        givenLotIsPrefunded
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenLotIsCreated
@@ -729,7 +713,6 @@ contract ClaimBidsTest is AuctionHouseTest {
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
         givenCuratorIsSet
-        givenLotIsPrefunded
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenLotIsCreated
@@ -774,7 +757,6 @@ contract ClaimBidsTest is AuctionHouseTest {
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
         givenCuratorIsSet
-        givenLotIsPrefunded
         givenQuoteTokenHasDecimals(17)
         givenBaseTokenHasDecimals(13)
         givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
@@ -821,7 +803,6 @@ contract ClaimBidsTest is AuctionHouseTest {
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
         givenCuratorIsSet
-        givenLotIsPrefunded
         givenQuoteTokenHasDecimals(13)
         givenBaseTokenHasDecimals(17)
         givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
@@ -868,7 +849,6 @@ contract ClaimBidsTest is AuctionHouseTest {
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
         givenCuratorIsSet
-        givenLotIsPrefunded
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenLotIsCreated
@@ -912,7 +892,6 @@ contract ClaimBidsTest is AuctionHouseTest {
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
         givenCuratorIsSet
-        givenLotIsPrefunded
         givenQuoteTokenHasDecimals(17)
         givenBaseTokenHasDecimals(13)
         givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
@@ -958,7 +937,6 @@ contract ClaimBidsTest is AuctionHouseTest {
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
         givenCuratorIsSet
-        givenLotIsPrefunded
         givenQuoteTokenHasDecimals(13)
         givenBaseTokenHasDecimals(17)
         givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
@@ -1004,7 +982,6 @@ contract ClaimBidsTest is AuctionHouseTest {
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
         givenCuratorIsSet
-        givenLotIsPrefunded
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenLotIsCreated
@@ -1048,7 +1025,6 @@ contract ClaimBidsTest is AuctionHouseTest {
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
         givenCuratorIsSet
-        givenLotIsPrefunded
         givenQuoteTokenHasDecimals(17)
         givenBaseTokenHasDecimals(13)
         givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
@@ -1094,7 +1070,6 @@ contract ClaimBidsTest is AuctionHouseTest {
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
         givenCuratorIsSet
-        givenLotIsPrefunded
         givenQuoteTokenHasDecimals(13)
         givenBaseTokenHasDecimals(17)
         givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
@@ -1140,7 +1115,6 @@ contract ClaimBidsTest is AuctionHouseTest {
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
         givenCuratorIsSet
-        givenLotIsPrefunded
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenLotIsCreated
@@ -1183,7 +1157,6 @@ contract ClaimBidsTest is AuctionHouseTest {
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
         givenCuratorIsSet
-        givenLotIsPrefunded
         givenQuoteTokenHasDecimals(17)
         givenBaseTokenHasDecimals(13)
         givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
@@ -1228,7 +1201,6 @@ contract ClaimBidsTest is AuctionHouseTest {
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
         givenCuratorIsSet
-        givenLotIsPrefunded
         givenQuoteTokenHasDecimals(13)
         givenBaseTokenHasDecimals(17)
         givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
@@ -1273,7 +1245,6 @@ contract ClaimBidsTest is AuctionHouseTest {
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
         givenCuratorIsSet
-        givenLotIsPrefunded
         givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenLotIsCreated

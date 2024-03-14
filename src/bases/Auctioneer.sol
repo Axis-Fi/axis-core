@@ -113,14 +113,15 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
     /// @notice     Auction routing information provided as input parameters
     /// @dev        After validation, this information is stored in the Routing struct
     ///
-    /// @param      auctionType     Auction type, represented by the Keycode for the auction submodule
-    /// @param      baseToken       Token provided by seller
-    /// @param      quoteToken      Token to accept as payment
-    /// @param      curator         (optional) Address of the proposed curator
-    /// @param      callbacks       (optional) Callbacks implementation for extended functionality
-    /// @param      callbackData    (optional) abi-encoded data to be sent to the onCreate callback function
-    /// @param      derivativeType  (optional) Derivative type, represented by the Keycode for the derivative submodule
-    /// @param      derivativeParams (optional) abi-encoded data to be used to create payout derivatives on a purchase. The format of this is dependent on the derivative module.
+    /// @param      auctionType         Auction type, represented by the Keycode for the auction submodule
+    /// @param      baseToken           Token provided by seller
+    /// @param      quoteToken          Token to accept as payment
+    /// @param      curator             (optional) Address of the proposed curator
+    /// @param      callbacks           (optional) Callbacks implementation for extended functionality
+    /// @param      callbackData        (optional) abi-encoded data to be sent to the onCreate callback function
+    /// @param      derivativeType      (optional) Derivative type, represented by the Keycode for the derivative submodule
+    /// @param      derivativeParams    (optional) abi-encoded data to be used to create payout derivatives on a purchase. The format of this is dependent on the derivative module.
+    /// @param      prefunded           Whether the auction should be pre-funded. Must be true for batch auctions.
     struct RoutingParams {
         Keycode auctionType;
         ERC20 baseToken;
@@ -130,6 +131,7 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
         bytes callbackData;
         Keycode derivativeType;
         bytes derivativeParams;
+        bool prefunded;
     }
 
     // ========= STATE ========== //
@@ -154,6 +156,7 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
     ///             - The module for the auction type is not installed
     ///             - The auction type is sunset
     ///             - The base token or quote token decimals are not within the required range
+    ///             - The value of `RoutingParams.prefunded` is incorrect for the auction type
     ///             - Validation for the auction parameters fails
     ///             - The module for the optional specified derivative type is not installed
     ///             - Validation for the optional specified derivative type fails
@@ -203,9 +206,17 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
             lotId = lotCounter++;
 
             // Call module auction function to store implementation-specific data
-            (requiresPrefunding, lotCapacity) =
+            (lotCapacity) =
                 auctionModule.auction(lotId, params_, quoteTokenDecimals, baseTokenDecimals);
             routing.auctionReference = auctionModule.VEECODE();
+
+            // Prefunding is required for batch auctions
+            // Check that this is not incorrectly overridden
+            if (auctionModule.auctionType() == Auction.AuctionType.Batch && !routing_.prefunded) {
+                revert InvalidParams();
+            }
+
+            requiresPrefunding = routing_.prefunded;
         }
 
         // Store routing information

@@ -5,12 +5,11 @@ pragma solidity 0.8.19;
 import {Veecode, toKeycode, wrapVeecode} from "src/modules/Modules.sol";
 
 // Auctions
-import {AuctionModule} from "src/modules/Auction.sol";
+import {Auction, AuctionModule} from "src/modules/Auction.sol";
 
 contract MockAtomicAuctionModule is AuctionModule {
     mapping(uint256 => uint256) public payoutData;
     bool public purchaseReverts;
-    bool public requiresPrefunding;
 
     struct Output {
         uint256 multiplier;
@@ -30,13 +29,12 @@ contract MockAtomicAuctionModule is AuctionModule {
         return Type.Auction;
     }
 
-    function setRequiredPrefunding(bool prefunding_) external virtual {
-        requiresPrefunding = prefunding_;
+    /// @inheritdoc Auction
+    function auctionType() external pure override returns (AuctionType) {
+        return AuctionType.Atomic;
     }
 
-    function _auction(uint96, Lot memory, bytes memory) internal virtual override returns (bool) {
-        return requiresPrefunding;
-    }
+    function _auction(uint96, Lot memory, bytes memory) internal virtual override {}
 
     function _cancelAuction(uint96 id_) internal override {
         cancelled[id_] = true;

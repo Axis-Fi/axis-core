@@ -38,6 +38,7 @@ contract AuctionTest is AuctionHouseTest {
     // [X] reverts when quote token decimals are out of bounds
     // [X] reverts when base token is 0
     // [X] reverts when quote token is 0
+    // [X] reverts when the auction type is batch and prefunded is false
     // [X] creates the auction lot
 
     function test_whenModuleNotInstalled_reverts() external whenAuctionTypeIsAtomic {
@@ -148,6 +149,22 @@ contract AuctionTest is AuctionHouseTest {
         whenAtomicAuctionModuleIsInstalled
     {
         _routingParams.quoteToken = ERC20(address(0));
+
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(Auctioneer.InvalidParams.selector);
+        vm.expectRevert(err);
+
+        vm.prank(_SELLER);
+        _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
+    }
+
+    function test_whenAuctionTypeIsBatch_whenNotPrefunded_reverts()
+        external
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+    {
+        // Override the prefunded value
+        _routingParams.prefunded = false;
 
         // Expect revert
         bytes memory err = abi.encodeWithSelector(Auctioneer.InvalidParams.selector);
@@ -411,8 +428,9 @@ contract AuctionTest is AuctionHouseTest {
         assertEq(quoteToken_, address(_quoteToken), "quote token mismatch");
     }
 
-    // [X] given the auction module requires prefunding
-    //  [X] reverts when the auction has capacity in quote
+    // [X] given the auction is prefunded
+    //  [X] when the auction has capacity in quote
+    //   [X] reverts
     //  [X] when the auction has callbacks with the send base tokens flag
     //   [X] reverts when the callback does not transfer enough payout tokens
     //   [X] it succeeds
@@ -445,7 +463,6 @@ contract AuctionTest is AuctionHouseTest {
         external
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
-        whenBatchRequiresPrefunding
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         whenAuctionCapacityInQuote
@@ -462,7 +479,6 @@ contract AuctionTest is AuctionHouseTest {
         external
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
-        whenBatchRequiresPrefunding
         givenCallbackHasSendBaseTokensFlag
         givenCallbackIsSet
         givenCallbackHasBaseTokenBalance(_LOT_CAPACITY)
@@ -480,7 +496,6 @@ contract AuctionTest is AuctionHouseTest {
         external
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
-        whenBatchRequiresPrefunding
         givenCallbackHasSendBaseTokensFlag
         givenCallbackIsSet
         givenCallbackHasBaseTokenBalance(_LOT_CAPACITY)
@@ -498,7 +513,6 @@ contract AuctionTest is AuctionHouseTest {
         external
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
-        whenBatchRequiresPrefunding
         givenCallbackHasSendBaseTokensFlag
         givenCallbackIsSet
         givenCallbackHasBaseTokenBalance(_LOT_CAPACITY)
@@ -529,7 +543,6 @@ contract AuctionTest is AuctionHouseTest {
         external
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
-        whenBatchRequiresPrefunding
         givenCallbackHasSendBaseTokensFlag
         givenCallbackIsSet
         givenQuoteTokenHasDecimals(17)
@@ -562,7 +575,6 @@ contract AuctionTest is AuctionHouseTest {
         external
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
-        whenBatchRequiresPrefunding
         givenCallbackHasSendBaseTokensFlag
         givenCallbackIsSet
         givenQuoteTokenHasDecimals(13)
@@ -595,7 +607,6 @@ contract AuctionTest is AuctionHouseTest {
         external
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
-        whenBatchRequiresPrefunding
         givenCallbackIsSet
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
     {
@@ -610,7 +621,6 @@ contract AuctionTest is AuctionHouseTest {
         external
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
-        whenBatchRequiresPrefunding
         givenCallbackIsSet
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
     {
@@ -625,7 +635,6 @@ contract AuctionTest is AuctionHouseTest {
         external
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
-        whenBatchRequiresPrefunding
         givenCallbackIsSet
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
@@ -644,12 +653,11 @@ contract AuctionTest is AuctionHouseTest {
         external
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
-        whenBatchRequiresPrefunding
         givenCallbackHasSendBaseTokensFlag
         givenCallbackIsSet
         givenCallbackHasBaseTokenBalance(_LOT_CAPACITY)
     {
-        
+
         // Create the auction
         vm.prank(_SELLER);
         _lotId = _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
@@ -676,7 +684,6 @@ contract AuctionTest is AuctionHouseTest {
         external
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
-        whenBatchRequiresPrefunding
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
     {
         // Expect revert
@@ -690,7 +697,6 @@ contract AuctionTest is AuctionHouseTest {
         external
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
-        whenBatchRequiresPrefunding
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
     {
         // Expect revert
@@ -704,7 +710,6 @@ contract AuctionTest is AuctionHouseTest {
         external
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
-        whenBatchRequiresPrefunding
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenBaseTokenTakesFeeOnTransfer
@@ -722,10 +727,9 @@ contract AuctionTest is AuctionHouseTest {
         external
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
-        whenBatchRequiresPrefunding
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
-    {        
+    {
         // Create the auction
         vm.prank(_SELLER);
         _lotId = _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
@@ -747,7 +751,6 @@ contract AuctionTest is AuctionHouseTest {
         external
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
-        whenBatchRequiresPrefunding
         givenQuoteTokenHasDecimals(17)
         givenBaseTokenHasDecimals(13)
         givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
@@ -774,7 +777,6 @@ contract AuctionTest is AuctionHouseTest {
         external
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
-        whenBatchRequiresPrefunding
         givenQuoteTokenHasDecimals(13)
         givenBaseTokenHasDecimals(17)
         givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))

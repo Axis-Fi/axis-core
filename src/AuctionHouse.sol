@@ -493,18 +493,8 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
             uint96 curatorFeePayout =
                 _calculatePayoutFees(feeData.curated, feeData.curatorFee, capacity);
 
-            // Collect the payout from the seller
-            // Any unutilised capacity and fees can be claimed in `claimProceeds()`
-            if (routing.funding == 0) {
-                routing.funding = capacity + curatorFeePayout;
-                Transfer.transferFrom(
-                    routing.quoteToken,
-                    routing.seller,
-                    address(this),
-                    uint256(routing.funding),
-                    false
-                );
-            }
+            // settle() is for batch auctions only, and all batch auctions are prefunded.
+            // Payout has already been collected at the time of auction creation and curation
 
             // Check if there was a partial fill and handle the payout + refund
             if (settlement.pfBidder != address(0)) {
@@ -663,7 +653,7 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
             )
         );
 
-        // If the auction is pre-funded, transfer the fee amount from the seller
+        // If the auction is pre-funded (required for batch auctions), transfer the fee amount from the seller
         if (routing.funding > 0) {
             // Increment the funding
             // Cannot overflow, as capacity is bounded by uint96 and the curator fee has a maximum percentage

@@ -31,12 +31,14 @@ contract LinearVestingTest is Test, Permit2User {
 
     LinearVesting.VestingParams internal _vestingParams;
     bytes internal _vestingParamsBytes;
+    uint48 internal constant _VESTING_START = 1_704_882_344; // 2024-01-10
     uint48 internal constant _VESTING_EXPIRY = 1_705_055_144; // 2024-01-12
-    uint48 internal constant _VESTING_DURATION = 2 days;
+    uint48 internal constant _VESTING_DURATION = _VESTING_EXPIRY - _VESTING_START;
 
     uint256 internal constant _AMOUNT = 1e18;
+    uint256 internal constant _AMOUNT_TWO = 2e18;
 
-    uint256 internal constant _VESTING_DATA_LEN = 64; // length + 1 slot for expiry
+    uint256 internal constant _VESTING_DATA_LEN = 96; // length + 1 slot for expiry + 1 slot for start
 
     uint256 internal _derivativeTokenId;
     address internal _derivativeWrappedAddress;
@@ -46,8 +48,8 @@ contract LinearVestingTest is Test, Permit2User {
     uint256 internal _wrappedDerivativeTokenSymbolLength;
 
     function setUp() public {
-        // Wrap to reasonable timestamp
-        vm.warp(1_704_882_344);
+        // Warp to before vesting start
+        vm.warp(_VESTING_START - 1);
 
         _underlyingToken =
             new MockFeeOnTransferERC20("Underlying", "UNDERLYING", _underlyingTokenDecimals);
@@ -57,7 +59,8 @@ contract LinearVestingTest is Test, Permit2User {
         _linearVesting = new LinearVesting(address(_auctionHouse));
         _auctionHouse.installModule(_linearVesting);
 
-        _vestingParams = LinearVesting.VestingParams({expiry: _VESTING_EXPIRY});
+        _vestingParams =
+            LinearVesting.VestingParams({start: _VESTING_START, expiry: _VESTING_EXPIRY});
         _vestingParamsBytes = abi.encode(_vestingParams);
 
         _wrappedDerivativeTokenName = "Underlying 2024-01-12";
@@ -75,6 +78,36 @@ contract LinearVestingTest is Test, Permit2User {
 
     modifier whenUnderlyingTokenIsZero() {
         _underlyingTokenAddress = address(0);
+        _;
+    }
+
+    modifier whenStartTimestampIsZero() {
+        _vestingParams.start = 0;
+        _vestingParamsBytes = abi.encode(_vestingParams);
+        _;
+    }
+
+    modifier whenExpiryTimestampIsZero() {
+        _vestingParams.expiry = 0;
+        _vestingParamsBytes = abi.encode(_vestingParams);
+        _;
+    }
+
+    modifier whenStartAndExpiryTimestampsAreTheSame() {
+        _vestingParams.expiry = _vestingParams.start;
+        _vestingParamsBytes = abi.encode(_vestingParams);
+        _;
+    }
+
+    modifier whenStartTimestampIsAfterExpiryTimestamp() {
+        _vestingParams.start = _vestingParams.expiry + 1;
+        _vestingParamsBytes = abi.encode(_vestingParams);
+        _;
+    }
+
+    modifier whenStartTimestampIsBeforeCurrentTimestamp() {
+        _vestingParams.start = uint48(block.timestamp) - 1;
+        _vestingParamsBytes = abi.encode(_vestingParams);
         _;
     }
 
@@ -142,6 +175,11 @@ contract LinearVestingTest is Test, Permit2User {
         _;
     }
 
+    modifier givenBeforeVestingStart() {
+        vm.warp(_VESTING_START - 1);
+        _;
+    }
+
     modifier givenAfterVestingExpiry() {
         vm.warp(_VESTING_EXPIRY + 1);
         _;
@@ -197,6 +235,16 @@ contract LinearVestingTest is Test, Permit2User {
     //  [X] it reverts
     // [X] when the underlying token is 0
     //  [X] it reverts
+    // [X] when the start timestamp is 0
+    //  [X] it reverts
+    // [X] when the expiry timestamp is 0
+    //  [X] it reverts
+    // [X] when the start and expiry timestamps are the same
+    //  [X] it reverts
+    // [X] when the start timestamp is after the expiry timestamp
+    //  [X] it reverts
+    // [X] when the start timestamp is before the current timestamp
+    //  [X] it succeeds
     // [X] when the expiry timestamp is before the current timestamp
     //  [X] it reverts
     // [X] given the token is already deployed
@@ -227,6 +275,61 @@ contract LinearVestingTest is Test, Permit2User {
         _linearVesting.deploy(_underlyingTokenAddress, _vestingParamsBytes, false);
     }
 
+    function test_deploy_startTimestampIsZero_reverts() public whenStartTimestampIsZero {
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(LinearVesting.InvalidParams.selector);
+        vm.expectRevert(err);
+
+        // Call
+        _linearVesting.deploy(_underlyingTokenAddress, _vestingParamsBytes, false);
+    }
+
+    function test_deploy_expiryTimestampIsZero_reverts() public whenExpiryTimestampIsZero {
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(LinearVesting.InvalidParams.selector);
+        vm.expectRevert(err);
+
+        // Call
+        _linearVesting.deploy(_underlyingTokenAddress, _vestingParamsBytes, false);
+    }
+
+    function test_deploy_startAndExpiryTimestampsAreTheSame_reverts()
+        public
+        whenStartAndExpiryTimestampsAreTheSame
+    {
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(LinearVesting.InvalidParams.selector);
+        vm.expectRevert(err);
+
+        // Call
+        _linearVesting.deploy(_underlyingTokenAddress, _vestingParamsBytes, false);
+    }
+
+    function test_deploy_startTimestampIsAfterExpiryTimestamp_reverts()
+        public
+        whenStartTimestampIsAfterExpiryTimestamp
+    {
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(LinearVesting.InvalidParams.selector);
+        vm.expectRevert(err);
+
+        // Call
+        _linearVesting.deploy(_underlyingTokenAddress, _vestingParamsBytes, false);
+    }
+
+    function test_deploy_startTimestampIsBeforeCurrentTimestamp()
+        public
+        whenStartTimestampIsBeforeCurrentTimestamp
+    {
+        // Call
+        (uint256 tokenId, address wrappedAddress) =
+            _linearVesting.deploy(_underlyingTokenAddress, _vestingParamsBytes, true);
+
+        // Check values
+        assertTrue(tokenId > 0, "tokenId mismatch");
+        assertTrue(wrappedAddress != address(0), "wrappedAddress mismatch");
+    }
+
     function test_deploy_expiryTimestampIsBeforeCurrentTimestamp_reverts()
         public
         whenExpiryTimestampIsBeforeCurrentTimestamp
@@ -248,21 +351,24 @@ contract LinearVestingTest is Test, Permit2User {
             _linearVesting.deploy(_underlyingTokenAddress, _vestingParamsBytes, true);
 
         // Check values
-        assertEq(tokenId, _derivativeTokenId);
-        assertEq(wrappedAddress, _derivativeWrappedAddress);
+        assertEq(tokenId, _derivativeTokenId, "derivative token id");
+        assertEq(wrappedAddress, _derivativeWrappedAddress, "derivative wrapped address");
 
         // Check token metadata
         Derivative.Token memory tokenMetadata = _linearVesting.getTokenMetadata(tokenId);
-        assertEq(tokenMetadata.exists, true);
-        assertEq(tokenMetadata.wrapped, wrappedAddress);
-        assertEq(tokenMetadata.underlyingToken, _underlyingTokenAddress);
-        assertEq(tokenMetadata.data.length, _VESTING_DATA_LEN);
+        assertEq(tokenMetadata.exists, true, "tokenMetadata exists");
+        assertEq(tokenMetadata.wrapped, wrappedAddress, "tokenMetadata wrapped");
+        assertEq(
+            tokenMetadata.underlyingToken, _underlyingTokenAddress, "tokenMetadata underlying token"
+        );
+        assertEq(tokenMetadata.data.length, _VESTING_DATA_LEN, "tokenMetadata data length");
 
         // Check implementation data
         LinearVesting.VestingData memory vestingData =
             abi.decode(tokenMetadata.data, (LinearVesting.VestingData));
-        assertEq(vestingData.expiry, _VESTING_EXPIRY);
-        assertEq(address(vestingData.baseToken), _underlyingTokenAddress);
+        assertEq(vestingData.start, _VESTING_START, "vesting start");
+        assertEq(vestingData.expiry, _VESTING_EXPIRY, "vesting expiry");
+        assertEq(address(vestingData.baseToken), _underlyingTokenAddress, "vesting base token");
     }
 
     function test_deploy_wrapped_derivativeDeployed_wrappedDerivativeNotDeployed()
@@ -274,21 +380,24 @@ contract LinearVestingTest is Test, Permit2User {
             _linearVesting.deploy(_underlyingTokenAddress, _vestingParamsBytes, true);
 
         // Check values
-        assertEq(tokenId, _derivativeTokenId);
-        assertTrue(wrappedAddress != address(0));
+        assertEq(tokenId, _derivativeTokenId, "derivative token id");
+        assertTrue(wrappedAddress != address(0), "derivative wrapped address");
 
         // Check token metadata
         Derivative.Token memory tokenMetadata = _linearVesting.getTokenMetadata(tokenId);
-        assertEq(tokenMetadata.exists, true);
-        assertEq(tokenMetadata.wrapped, wrappedAddress);
-        assertEq(tokenMetadata.underlyingToken, _underlyingTokenAddress);
-        assertEq(tokenMetadata.data.length, _VESTING_DATA_LEN);
+        assertEq(tokenMetadata.exists, true, "tokenMetadata exists");
+        assertEq(tokenMetadata.wrapped, wrappedAddress, "tokenMetadata wrapped");
+        assertEq(
+            tokenMetadata.underlyingToken, _underlyingTokenAddress, "tokenMetadata underlying token"
+        );
+        assertEq(tokenMetadata.data.length, _VESTING_DATA_LEN, "tokenMetadata data length");
 
         // Check implementation data
         LinearVesting.VestingData memory vestingData =
             abi.decode(tokenMetadata.data, (LinearVesting.VestingData));
-        assertEq(vestingData.expiry, _VESTING_EXPIRY);
-        assertEq(address(vestingData.baseToken), _underlyingTokenAddress);
+        assertEq(vestingData.start, _VESTING_START, "vesting start");
+        assertEq(vestingData.expiry, _VESTING_EXPIRY, "vesting expiry");
+        assertEq(address(vestingData.baseToken), _underlyingTokenAddress, "vesting base token");
     }
 
     function test_deploy_wrapped() public {
@@ -297,36 +406,45 @@ contract LinearVestingTest is Test, Permit2User {
             _linearVesting.deploy(_underlyingTokenAddress, _vestingParamsBytes, true);
 
         // Check values
-        assertTrue(tokenId > 0);
-        assertTrue(wrappedAddress != address(0));
+        assertTrue(tokenId > 0, "derivative token id");
+        assertTrue(wrappedAddress != address(0), "derivative wrapped address");
 
         // Check wrapped token
         SoulboundCloneERC20 wrappedDerivative = SoulboundCloneERC20(wrappedAddress);
         assertEq(
             wrappedDerivative.name().trim(0, _wrappedDerivativeTokenNameLength),
-            _wrappedDerivativeTokenName
+            _wrappedDerivativeTokenName,
+            "wrapped derivative name"
         );
         assertEq(
             wrappedDerivative.symbol().trim(0, _wrappedDerivativeTokenSymbolLength),
-            _wrappedDerivativeTokenSymbol
+            _wrappedDerivativeTokenSymbol,
+            "wrapped derivative symbol"
         );
-        assertEq(wrappedDerivative.decimals(), 18);
-        assertEq(address(wrappedDerivative.underlying()), _underlyingTokenAddress);
-        assertEq(wrappedDerivative.expiry(), _VESTING_EXPIRY);
-        assertEq(wrappedDerivative.owner(), address(_linearVesting));
+        assertEq(wrappedDerivative.decimals(), 18, "wrapped derivative decimals");
+        assertEq(
+            address(wrappedDerivative.underlying()),
+            _underlyingTokenAddress,
+            "wrapped derivative underlying address"
+        );
+        assertEq(wrappedDerivative.expiry(), _VESTING_EXPIRY, "wrapped derivative expiry");
+        assertEq(wrappedDerivative.owner(), address(_linearVesting), "wrapped derivative owner");
 
         // Check token metadata
         Derivative.Token memory tokenMetadata = _linearVesting.getTokenMetadata(tokenId);
-        assertEq(tokenMetadata.exists, true);
-        assertEq(tokenMetadata.wrapped, wrappedAddress);
-        assertEq(tokenMetadata.underlyingToken, _underlyingTokenAddress);
-        assertEq(tokenMetadata.data.length, _VESTING_DATA_LEN);
+        assertEq(tokenMetadata.exists, true, "tokenMetadata exists");
+        assertEq(tokenMetadata.wrapped, wrappedAddress, "tokenMetadata wrapped");
+        assertEq(
+            tokenMetadata.underlyingToken, _underlyingTokenAddress, "tokenMetadata underlying token"
+        );
+        assertEq(tokenMetadata.data.length, _VESTING_DATA_LEN, "tokenMetadata data length");
 
         // Check implementation data
         LinearVesting.VestingData memory vestingData =
             abi.decode(tokenMetadata.data, (LinearVesting.VestingData));
-        assertEq(vestingData.expiry, _VESTING_EXPIRY);
-        assertEq(address(vestingData.baseToken), _underlyingTokenAddress);
+        assertEq(vestingData.start, _VESTING_START, "vesting start");
+        assertEq(vestingData.expiry, _VESTING_EXPIRY, "vesting expiry");
+        assertEq(address(vestingData.baseToken), _underlyingTokenAddress, "vesting base token");
     }
 
     function test_deploy_notWrapped() public {
@@ -335,21 +453,24 @@ contract LinearVestingTest is Test, Permit2User {
             _linearVesting.deploy(_underlyingTokenAddress, _vestingParamsBytes, false);
 
         // Check values
-        assertTrue(tokenId > 0);
-        assertTrue(wrappedAddress == address(0));
+        assertTrue(tokenId > 0, "derivative token id");
+        assertTrue(wrappedAddress == address(0), "wrapped address");
 
         // Check token metadata
         Derivative.Token memory tokenMetadata = _linearVesting.getTokenMetadata(tokenId);
-        assertEq(tokenMetadata.exists, true);
-        assertEq(tokenMetadata.wrapped, address(0));
-        assertEq(tokenMetadata.underlyingToken, _underlyingTokenAddress);
-        assertEq(tokenMetadata.data.length, _VESTING_DATA_LEN);
+        assertEq(tokenMetadata.exists, true, "tokenMetadata exists");
+        assertEq(tokenMetadata.wrapped, address(0), "tokenMetadata wrapped address");
+        assertEq(
+            tokenMetadata.underlyingToken, _underlyingTokenAddress, "tokenMetadata underlying token"
+        );
+        assertEq(tokenMetadata.data.length, _VESTING_DATA_LEN, "tokenMetadata data length");
 
         // Check implementation data
         LinearVesting.VestingData memory vestingData =
             abi.decode(tokenMetadata.data, (LinearVesting.VestingData));
-        assertEq(vestingData.expiry, _VESTING_EXPIRY);
-        assertEq(address(vestingData.baseToken), _underlyingTokenAddress);
+        assertEq(vestingData.start, _VESTING_START, "vesting start");
+        assertEq(vestingData.expiry, _VESTING_EXPIRY, "vesting expiry");
+        assertEq(address(vestingData.baseToken), _underlyingTokenAddress, "vesting base token");
     }
 
     function test_deploy_notParent() public {
@@ -359,23 +480,29 @@ contract LinearVestingTest is Test, Permit2User {
             _linearVesting.deploy(_underlyingTokenAddress, _vestingParamsBytes, true);
 
         // Check values
-        assertTrue(tokenId > 0);
-        assertTrue(wrappedAddress != address(0));
+        assertTrue(tokenId > 0, "derivative token id");
+        assertTrue(wrappedAddress != address(0), "derivative wrapped address");
 
         // Check wrapped token
         SoulboundCloneERC20 wrappedDerivative = SoulboundCloneERC20(wrappedAddress);
         assertEq(
             wrappedDerivative.name().trim(0, _wrappedDerivativeTokenNameLength),
-            _wrappedDerivativeTokenName
+            _wrappedDerivativeTokenName,
+            "wrapped derivative name"
         );
         assertEq(
             wrappedDerivative.symbol().trim(0, _wrappedDerivativeTokenSymbolLength),
-            _wrappedDerivativeTokenSymbol
+            _wrappedDerivativeTokenSymbol,
+            "wrapped derivative symbol"
         );
-        assertEq(wrappedDerivative.decimals(), 18);
-        assertEq(address(wrappedDerivative.underlying()), _underlyingTokenAddress);
+        assertEq(wrappedDerivative.decimals(), 18, "wrapped derivative decimals");
+        assertEq(
+            address(wrappedDerivative.underlying()),
+            _underlyingTokenAddress,
+            "wrapped derivative underlying address"
+        );
         assertEq(wrappedDerivative.expiry(), _vestingParams.expiry);
-        assertEq(wrappedDerivative.owner(), address(_linearVesting));
+        assertEq(wrappedDerivative.owner(), address(_linearVesting), "wrapped derivative owner");
     }
 
     function test_deploy_notParent_derivativeDeployed_wrappedDerivativeDeployed()
@@ -388,8 +515,8 @@ contract LinearVestingTest is Test, Permit2User {
             _linearVesting.deploy(_underlyingTokenAddress, _vestingParamsBytes, true);
 
         // Check values
-        assertEq(tokenId, _derivativeTokenId);
-        assertEq(wrappedAddress, _derivativeWrappedAddress);
+        assertEq(tokenId, _derivativeTokenId, "derivative token id");
+        assertEq(wrappedAddress, _derivativeWrappedAddress, "derivative wrapped address");
     }
 
     function test_deploy_differentVestingParams()
@@ -402,23 +529,29 @@ contract LinearVestingTest is Test, Permit2User {
             _linearVesting.deploy(_underlyingTokenAddress, _vestingParamsBytes, true);
 
         // Check values
-        assertFalse(tokenId == _derivativeTokenId);
-        assertFalse(wrappedAddress == _derivativeWrappedAddress);
+        assertFalse(tokenId == _derivativeTokenId, "derivative token id");
+        assertFalse(wrappedAddress == _derivativeWrappedAddress, "derivative wrapped address");
 
         // Check wrapped token
         SoulboundCloneERC20 wrappedDerivative = SoulboundCloneERC20(wrappedAddress);
         assertEq(
             wrappedDerivative.name().trim(0, _wrappedDerivativeTokenNameLength),
-            _wrappedDerivativeTokenName
+            _wrappedDerivativeTokenName,
+            "wrapped derivative name"
         );
         assertEq(
             wrappedDerivative.symbol().trim(0, _wrappedDerivativeTokenSymbolLength),
-            _wrappedDerivativeTokenSymbol
+            _wrappedDerivativeTokenSymbol,
+            "wrapped derivative symbol"
         );
-        assertEq(wrappedDerivative.decimals(), 18);
-        assertEq(address(wrappedDerivative.underlying()), _underlyingTokenAddress);
+        assertEq(wrappedDerivative.decimals(), 18, "wrapped derivative decimals");
+        assertEq(
+            address(wrappedDerivative.underlying()),
+            _underlyingTokenAddress,
+            "wrapped derivative underlying address"
+        );
         assertEq(wrappedDerivative.expiry(), _vestingParams.expiry);
-        assertEq(wrappedDerivative.owner(), address(_linearVesting));
+        assertEq(wrappedDerivative.owner(), address(_linearVesting), "wrapped derivative owner");
     }
 
     function test_deploy_differentUnderlyingToken()
@@ -431,27 +564,43 @@ contract LinearVestingTest is Test, Permit2User {
             _linearVesting.deploy(_underlyingTokenAddress, _vestingParamsBytes, true);
 
         // Check values
-        assertFalse(tokenId == _derivativeTokenId);
-        assertFalse(wrappedAddress == _derivativeWrappedAddress);
+        assertFalse(tokenId == _derivativeTokenId, "derivative token id");
+        assertFalse(wrappedAddress == _derivativeWrappedAddress, "derivative wrapped address");
 
         // Check wrapped token
         SoulboundCloneERC20 wrappedDerivative = SoulboundCloneERC20(wrappedAddress);
         assertEq(
             wrappedDerivative.name().trim(0, _wrappedDerivativeTokenNameLength),
-            _wrappedDerivativeTokenName
+            _wrappedDerivativeTokenName,
+            "wrapped derivative name"
         );
         assertEq(
             wrappedDerivative.symbol().trim(0, _wrappedDerivativeTokenSymbolLength),
-            _wrappedDerivativeTokenSymbol
+            _wrappedDerivativeTokenSymbol,
+            "wrapped derivative symbol"
         );
         assertEq(wrappedDerivative.decimals(), 17);
-        assertEq(address(wrappedDerivative.underlying()), _underlyingTokenAddress);
+        assertEq(
+            address(wrappedDerivative.underlying()),
+            _underlyingTokenAddress,
+            "wrapped derivative underlying address"
+        );
         assertEq(wrappedDerivative.expiry(), _vestingParams.expiry);
-        assertEq(wrappedDerivative.owner(), address(_linearVesting));
+        assertEq(wrappedDerivative.owner(), address(_linearVesting), "wrapped derivative owner");
     }
 
     // validate
     // [X] when the vesting params are in the incorrect format
+    //  [X] it returns false
+    // [X] when the start timestamp is 0
+    //  [X] it returns false
+    // [X] when the expiry timestamp is 0
+    //  [X] it returns false
+    // [X] when the start and expiry timestamps are the same
+    //  [X] it returns false
+    // [X] when the start timestamp is after the expiry timestamp
+    //  [X] it returns false
+    // [X] when the start timestamp is before the current timestamp
     //  [X] it returns false
     // [X] when the expiry timestamp is before the current timestamp
     //  [X] it returns false
@@ -464,6 +613,55 @@ contract LinearVestingTest is Test, Permit2User {
 
         // Call
         _linearVesting.validate(_underlyingTokenAddress, _vestingParamsBytes);
+    }
+
+    function test_validate_startTimestampIsZero() public whenStartTimestampIsZero {
+        // Call
+        bool isValid = _linearVesting.validate(_underlyingTokenAddress, _vestingParamsBytes);
+
+        // Check values
+        assertFalse(isValid);
+    }
+
+    function test_validate_expiryTimestampIsZero() public whenExpiryTimestampIsZero {
+        // Call
+        bool isValid = _linearVesting.validate(_underlyingTokenAddress, _vestingParamsBytes);
+
+        // Check values
+        assertFalse(isValid);
+    }
+
+    function test_validate_startAndExpiryTimestampsAreTheSame()
+        public
+        whenStartAndExpiryTimestampsAreTheSame
+    {
+        // Call
+        bool isValid = _linearVesting.validate(_underlyingTokenAddress, _vestingParamsBytes);
+
+        // Check values
+        assertFalse(isValid);
+    }
+
+    function test_validate_startTimestampIsAfterExpiryTimestamp()
+        public
+        whenStartTimestampIsAfterExpiryTimestamp
+    {
+        // Call
+        bool isValid = _linearVesting.validate(_underlyingTokenAddress, _vestingParamsBytes);
+
+        // Check values
+        assertFalse(isValid);
+    }
+
+    function test_validate_startTimestampIsBeforeCurrentTimestamp()
+        public
+        whenStartTimestampIsBeforeCurrentTimestamp
+    {
+        // Call
+        bool isValid = _linearVesting.validate(_underlyingTokenAddress, _vestingParamsBytes);
+
+        // Check values
+        assertTrue(isValid);
     }
 
     function test_validate_expiryTimestampIsBeforeCurrentTimestamp()
@@ -510,7 +708,7 @@ contract LinearVestingTest is Test, Permit2User {
         uint256 tokenId = _linearVesting.computeId(_underlyingTokenAddress, _vestingParamsBytes);
 
         // Check values
-        assertFalse(tokenId == _derivativeTokenId);
+        assertFalse(tokenId == _derivativeTokenId, "derivative token id");
     }
 
     function test_computeId() public givenDerivativeIsDeployed {
@@ -518,13 +716,23 @@ contract LinearVestingTest is Test, Permit2User {
         uint256 tokenId = _linearVesting.computeId(_underlyingTokenAddress, _vestingParamsBytes);
 
         // Check values
-        assertEq(tokenId, _derivativeTokenId);
+        assertEq(tokenId, _derivativeTokenId, "derivative token id");
     }
 
     // mint with params
     // [X] when the vesting params are in the incorrect format
     //  [X] it reverts
     // [X] when the underlying token is 0
+    //  [X] it reverts
+    // [X] when the start timestamp is 0
+    //  [X] it reverts
+    // [X] when the expiry timestamp is 0
+    //  [X] it reverts
+    // [X] when the start and expiry timestamps are the same
+    //  [X] it reverts
+    // [X] when the start timestamp is after the expiry timestamp
+    //  [X] it reverts
+    // [X] when the start timestamp is before the current timestamp
     //  [X] it reverts
     // [X] when the expiry timestamp is before the current timestamp
     //  [X] it reverts
@@ -536,6 +744,12 @@ contract LinearVestingTest is Test, Permit2User {
     //  [X] it reverts
     // [X] given the underlying token is fee-on-transfer
     //  [X] it reverts
+    // [X] given it is before the vesting start
+    //  [X] it mints the derivative tokens and returns a redeemable amount of 0
+    // [X] given it is after the vesting start
+    //  [X] it mints the derivative tokens and returns the correct redeemable amount
+    // [X] given the user has existing minted tokens
+    //  [X] it mints the additional derivative tokens and returns the correct redeemable amount
     // [X] when wrapped is false
     //  [X] given the token is not deployed
     //   [X] it deploys the token and mints the derivative token
@@ -564,6 +778,70 @@ contract LinearVestingTest is Test, Permit2User {
         // Call
         vm.prank(address(_auctionHouse));
         _linearVesting.mint(_ALICE, _underlyingTokenAddress, _vestingParamsBytes, _AMOUNT, false);
+    }
+
+    function test_mint_params_startTimestampIsZero_reverts() public whenStartTimestampIsZero {
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(LinearVesting.InvalidParams.selector);
+        vm.expectRevert(err);
+
+        // Call
+        vm.prank(address(_auctionHouse));
+        _linearVesting.mint(_ALICE, _underlyingTokenAddress, _vestingParamsBytes, _AMOUNT, false);
+    }
+
+    function test_mint_params_expiryTimestampIsZero_reverts() public whenExpiryTimestampIsZero {
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(LinearVesting.InvalidParams.selector);
+        vm.expectRevert(err);
+
+        // Call
+        vm.prank(address(_auctionHouse));
+        _linearVesting.mint(_ALICE, _underlyingTokenAddress, _vestingParamsBytes, _AMOUNT, false);
+    }
+
+    function test_mint_params_startAndExpiryTimestampsAreTheSame_reverts()
+        public
+        whenStartAndExpiryTimestampsAreTheSame
+    {
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(LinearVesting.InvalidParams.selector);
+        vm.expectRevert(err);
+
+        // Call
+        vm.prank(address(_auctionHouse));
+        _linearVesting.mint(_ALICE, _underlyingTokenAddress, _vestingParamsBytes, _AMOUNT, false);
+    }
+
+    function test_mint_params_startTimestampIsAfterExpiryTimestamp_reverts()
+        public
+        whenStartTimestampIsAfterExpiryTimestamp
+    {
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(LinearVesting.InvalidParams.selector);
+        vm.expectRevert(err);
+
+        // Call
+        vm.prank(address(_auctionHouse));
+        _linearVesting.mint(_ALICE, _underlyingTokenAddress, _vestingParamsBytes, _AMOUNT, false);
+    }
+
+    function test_mint_params_startTimestampIsBeforeCurrentTimestamp()
+        public
+        whenStartTimestampIsBeforeCurrentTimestamp
+        givenParentHasUnderlyingTokenBalance(_AMOUNT)
+    {
+        // Call
+        vm.prank(address(_auctionHouse));
+        (uint256 tokenId, address wrappedAddress, uint256 amountCreated) = _linearVesting.mint(
+            _ALICE, _underlyingTokenAddress, _vestingParamsBytes, _AMOUNT, false
+        );
+
+        // Check values
+        assertTrue(tokenId > 0, "tokenId mismatch");
+        assertTrue(wrappedAddress == address(0), "wrappedAddress mismatch");
+        assertEq(amountCreated, _AMOUNT, "amountCreated mismatch");
+        assertEq(_linearVesting.balanceOf(_ALICE, tokenId), _AMOUNT, "balanceOf mismatch");
     }
 
     function test_mint_params_expiryTimestampIsBeforeCurrentTimestamp_reverts()
@@ -641,6 +919,103 @@ contract LinearVestingTest is Test, Permit2User {
         // Call
         vm.prank(address(_auctionHouse));
         _linearVesting.mint(_ALICE, _underlyingTokenAddress, _vestingParamsBytes, _AMOUNT, false);
+    }
+
+    function test_mint_params_beforeVestingStart()
+        public
+        givenParentHasUnderlyingTokenBalance(_AMOUNT)
+        givenBeforeVestingStart
+    {
+        // Call
+        vm.prank(address(_auctionHouse));
+        (uint256 tokenId, address wrappedAddress, uint256 amountCreated) = _linearVesting.mint(
+            _ALICE, _underlyingTokenAddress, _vestingParamsBytes, _AMOUNT, false
+        );
+
+        // Check values
+        assertTrue(tokenId > 0, "tokenId mismatch");
+        assertTrue(wrappedAddress == address(0), "wrappedAddress mismatch");
+        assertEq(amountCreated, _AMOUNT, "amountCreated mismatch");
+        assertEq(
+            _linearVesting.balanceOf(_ALICE, tokenId), _AMOUNT, "derivative: balanceOf mismatch"
+        );
+        assertEq(_underlyingToken.balanceOf(_ALICE), 0, "underlying: balanceOf mismatch");
+        assertEq(_linearVesting.redeemable(_ALICE, tokenId), 0, "redeemable mismatch");
+    }
+
+    function test_mint_params_afterVestingStart(uint48 elapsed_)
+        public
+        givenParentHasUnderlyingTokenBalance(_AMOUNT)
+    {
+        uint48 elapsed = uint48(bound(elapsed_, 1, _VESTING_DURATION));
+        vm.warp(_VESTING_START + elapsed);
+
+        // Calculate the amount that should be redeemed
+        uint256 expectedRedeemableAmount = _AMOUNT * elapsed / _VESTING_DURATION;
+
+        // Call
+        vm.prank(address(_auctionHouse));
+        (uint256 tokenId, address wrappedAddress, uint256 amountCreated) = _linearVesting.mint(
+            _ALICE, _underlyingTokenAddress, _vestingParamsBytes, _AMOUNT, false
+        );
+
+        // Check values
+        assertTrue(tokenId > 0, "tokenId mismatch");
+        assertTrue(wrappedAddress == address(0), "wrappedAddress mismatch");
+        assertEq(amountCreated, _AMOUNT, "amountCreated mismatch");
+        assertEq(
+            _linearVesting.balanceOf(_ALICE, tokenId), _AMOUNT, "derivative: balanceOf mismatch"
+        );
+        assertEq(_underlyingToken.balanceOf(_ALICE), 0, "underlying: balanceOf mismatch");
+        assertEq(
+            _linearVesting.redeemable(_ALICE, tokenId),
+            expectedRedeemableAmount,
+            "redeemable mismatch"
+        );
+    }
+
+    function test_mint_params_givenExistingDerivativeTokens_afterVestingStart(uint48 elapsed_)
+        public
+        givenParentHasUnderlyingTokenBalance(_AMOUNT + _AMOUNT_TWO)
+    {
+        uint48 elapsedOne = uint48(10_000);
+        uint48 elapsedTwo = uint48(bound(elapsed_, elapsedOne + 1, _VESTING_DURATION));
+
+        // Warp to the first checkpoint
+        vm.warp(_VESTING_START + elapsedOne);
+
+        // Call
+        vm.prank(address(_auctionHouse));
+        (uint256 tokenId,,) = _linearVesting.mint(
+            _ALICE, _underlyingTokenAddress, _vestingParamsBytes, _AMOUNT, false
+        );
+
+        // Warp to the second checkpoint
+        vm.warp(_VESTING_START + elapsedTwo);
+
+        // Calculate amounts
+        uint256 expectedRedeemableAmount = (_AMOUNT + _AMOUNT_TWO) * elapsedTwo / _VESTING_DURATION;
+
+        // Mint more tokens
+        vm.prank(address(_auctionHouse));
+        (uint256 tokenIdTwo, address wrappedAddressTwo, uint256 amountCreatedTwo) = _linearVesting
+            .mint(_ALICE, _underlyingTokenAddress, _vestingParamsBytes, _AMOUNT_TWO, false);
+
+        // Check values
+        assertEq(tokenId, tokenIdTwo, "tokenId mismatch");
+        assertTrue(wrappedAddressTwo == address(0), "wrappedAddress mismatch");
+        assertEq(amountCreatedTwo, _AMOUNT_TWO, "amountCreated mismatch");
+        assertEq(
+            _linearVesting.balanceOf(_ALICE, tokenId),
+            _AMOUNT + _AMOUNT_TWO,
+            "derivative: balanceOf mismatch"
+        );
+        assertEq(_underlyingToken.balanceOf(_ALICE), 0, "underlying: balanceOf mismatch");
+        assertEq(
+            _linearVesting.redeemable(_ALICE, tokenId),
+            expectedRedeemableAmount,
+            "redeemable mismatch"
+        );
     }
 
     function test_mint_params_notWrapped_tokenNotDeployed()
@@ -761,6 +1136,12 @@ contract LinearVestingTest is Test, Permit2User {
     //  [X] it reverts
     // [X] given the underlying token is fee-on-transfer
     //  [X] it reverts
+    // [X] given it is before the vesting start
+    //  [X] it mints the derivative tokens and returns a redeemable amount of 0
+    // [X] given it is after the vesting start
+    //  [X] it mints the derivative tokens and returns the correct redeemable amount
+    // [X] given the user has existing minted tokens
+    //  [X] it mints the additional derivative tokens and returns the correct redeemable amount
     // [X] when wrapped is false
     //  [X] it mints the derivative token
     // [X] when wrapped is true
@@ -842,6 +1223,102 @@ contract LinearVestingTest is Test, Permit2User {
         _linearVesting.mint(_ALICE, _derivativeTokenId, _AMOUNT, false);
     }
 
+    function test_mint_tokenId_beforeVestingStart()
+        public
+        givenParentHasUnderlyingTokenBalance(_AMOUNT)
+        givenBeforeVestingStart
+        givenDerivativeIsDeployed
+    {
+        // Call
+        vm.prank(address(_auctionHouse));
+        (uint256 tokenId, address wrappedAddress, uint256 amountCreated) =
+            _linearVesting.mint(_ALICE, _derivativeTokenId, _AMOUNT, false);
+
+        // Check values
+        assertTrue(tokenId > 0, "tokenId mismatch");
+        assertTrue(wrappedAddress == address(0), "wrappedAddress mismatch");
+        assertEq(amountCreated, _AMOUNT, "amountCreated mismatch");
+        assertEq(
+            _linearVesting.balanceOf(_ALICE, tokenId), _AMOUNT, "derivative: balanceOf mismatch"
+        );
+        assertEq(_underlyingToken.balanceOf(_ALICE), 0, "underlying: balanceOf mismatch");
+        assertEq(_linearVesting.redeemable(_ALICE, tokenId), 0, "redeemable mismatch");
+    }
+
+    function test_mint_tokenId_afterVestingStart(uint48 elapsed_)
+        public
+        givenParentHasUnderlyingTokenBalance(_AMOUNT)
+        givenDerivativeIsDeployed
+    {
+        uint48 elapsed = uint48(bound(elapsed_, 1, _VESTING_DURATION));
+        vm.warp(_VESTING_START + elapsed);
+
+        // Calculate the amount that should be redeemed
+        uint256 expectedRedeemableAmount = _AMOUNT * elapsed / _VESTING_DURATION;
+
+        // Call
+        vm.prank(address(_auctionHouse));
+        (uint256 tokenId, address wrappedAddress, uint256 amountCreated) =
+            _linearVesting.mint(_ALICE, _derivativeTokenId, _AMOUNT, false);
+
+        // Check values
+        assertTrue(tokenId > 0, "tokenId mismatch");
+        assertTrue(wrappedAddress == address(0), "wrappedAddress mismatch");
+        assertEq(amountCreated, _AMOUNT, "amountCreated mismatch");
+        assertEq(
+            _linearVesting.balanceOf(_ALICE, tokenId), _AMOUNT, "derivative: balanceOf mismatch"
+        );
+        assertEq(_underlyingToken.balanceOf(_ALICE), 0, "underlying: balanceOf mismatch");
+        assertEq(
+            _linearVesting.redeemable(_ALICE, tokenId),
+            expectedRedeemableAmount,
+            "redeemable mismatch"
+        );
+    }
+
+    function test_mint_tokenId_givenExistingDerivativeTokens_afterVestingStart(uint48 elapsed_)
+        public
+        givenParentHasUnderlyingTokenBalance(_AMOUNT + _AMOUNT_TWO)
+        givenDerivativeIsDeployed
+    {
+        uint48 elapsedOne = uint48(10_000);
+        uint48 elapsedTwo = uint48(bound(elapsed_, elapsedOne + 1, _VESTING_DURATION));
+
+        // Warp to the first checkpoint
+        vm.warp(_VESTING_START + elapsedOne);
+
+        // Call
+        vm.prank(address(_auctionHouse));
+        (uint256 tokenId,,) = _linearVesting.mint(_ALICE, _derivativeTokenId, _AMOUNT, false);
+
+        // Warp to the second checkpoint
+        vm.warp(_VESTING_START + elapsedTwo);
+
+        // Calculate amounts
+        uint256 expectedRedeemableAmount = (_AMOUNT + _AMOUNT_TWO) * elapsedTwo / _VESTING_DURATION;
+
+        // Mint more tokens
+        vm.prank(address(_auctionHouse));
+        (uint256 tokenIdTwo, address wrappedAddressTwo, uint256 amountCreatedTwo) =
+            _linearVesting.mint(_ALICE, _derivativeTokenId, _AMOUNT_TWO, false);
+
+        // Check values
+        assertEq(tokenId, tokenIdTwo, "tokenId mismatch");
+        assertTrue(wrappedAddressTwo == address(0), "wrappedAddress mismatch");
+        assertEq(amountCreatedTwo, _AMOUNT_TWO, "amountCreated mismatch");
+        assertEq(
+            _linearVesting.balanceOf(_ALICE, tokenId),
+            _AMOUNT + _AMOUNT_TWO,
+            "derivative: balanceOf mismatch"
+        );
+        assertEq(_underlyingToken.balanceOf(_ALICE), 0, "underlying: balanceOf mismatch");
+        assertEq(
+            _linearVesting.redeemable(_ALICE, tokenId),
+            expectedRedeemableAmount,
+            "redeemable mismatch"
+        );
+    }
+
     function test_mint_tokenId_notWrapped()
         public
         givenParentHasUnderlyingTokenBalance(_AMOUNT)
@@ -853,7 +1330,7 @@ contract LinearVestingTest is Test, Permit2User {
             _linearVesting.mint(_ALICE, _derivativeTokenId, _AMOUNT, false);
 
         // Check values
-        assertEq(tokenId, _derivativeTokenId);
+        assertEq(tokenId, _derivativeTokenId, "derivative token id");
         assertTrue(wrappedAddress == address(0));
         assertEq(amountCreated, _AMOUNT);
         assertEq(_linearVesting.balanceOf(_ALICE, tokenId), _AMOUNT, "balanceOf mismatch");
@@ -870,8 +1347,8 @@ contract LinearVestingTest is Test, Permit2User {
             _linearVesting.mint(_ALICE, _derivativeTokenId, _AMOUNT, true);
 
         // Check values
-        assertEq(tokenId, _derivativeTokenId);
-        assertTrue(wrappedAddress != address(0));
+        assertEq(tokenId, _derivativeTokenId, "derivative token id");
+        assertTrue(wrappedAddress != address(0), "derivative wrapped address");
         assertEq(amountCreated, _AMOUNT);
         assertEq(_linearVesting.balanceOf(_ALICE, tokenId), 0, "balanceOf mismatch");
         assertEq(
@@ -890,8 +1367,8 @@ contract LinearVestingTest is Test, Permit2User {
             _linearVesting.mint(_ALICE, _derivativeTokenId, _AMOUNT, true);
 
         // Check values
-        assertEq(tokenId, _derivativeTokenId);
-        assertEq(wrappedAddress, _derivativeWrappedAddress);
+        assertEq(tokenId, _derivativeTokenId, "derivative token id");
+        assertEq(wrappedAddress, _derivativeWrappedAddress, "derivative wrapped address");
         assertEq(amountCreated, _AMOUNT);
         assertEq(_linearVesting.balanceOf(_ALICE, tokenId), 0, "balanceOf mismatch");
         assertEq(
@@ -910,8 +1387,8 @@ contract LinearVestingTest is Test, Permit2User {
             _linearVesting.mint(_ALICE, _derivativeTokenId, _AMOUNT, true);
 
         // Check values
-        assertEq(tokenId, _derivativeTokenId);
-        assertEq(wrappedAddress, _derivativeWrappedAddress);
+        assertEq(tokenId, _derivativeTokenId, "derivative token id");
+        assertEq(wrappedAddress, _derivativeWrappedAddress, "derivative wrapped address");
         assertEq(amountCreated, _AMOUNT);
         assertEq(_linearVesting.balanceOf(_ALICE, tokenId), 0, "balanceOf mismatch");
         assertEq(
@@ -962,7 +1439,7 @@ contract LinearVestingTest is Test, Permit2User {
     {
         // Warp to mid-way, so not all tokens are vested
         uint48 elapsed = uint48(bound(elapsed_, 1, _VESTING_DURATION - 1));
-        vm.warp(block.timestamp + elapsed);
+        vm.warp(_VESTING_START + elapsed);
 
         // Expect revert
         bytes memory err = abi.encodeWithSelector(LinearVesting.InsufficientBalance.selector);
@@ -1147,7 +1624,7 @@ contract LinearVestingTest is Test, Permit2User {
 
         // Warp during vesting
         uint48 elapsed = uint48(bound(elapsed_, 1, _VESTING_DURATION - 1));
-        vm.warp(block.timestamp + elapsed);
+        vm.warp(_VESTING_START + elapsed);
 
         uint256 redeemable = (_AMOUNT + _AMOUNT) * elapsed / _VESTING_DURATION;
         uint256 expectedBalanceUnwrapped;
@@ -1185,6 +1662,8 @@ contract LinearVestingTest is Test, Permit2User {
     // redeemable
     // [X] when the token id does not exist
     //  [X] it reverts
+    // [X] given the block timestamp is before the start timestamp
+    //  [X] it returns 0
     // [X] given the block timestamp is after the expiry timestamp
     //  [X] it returns the full balance
     // [X] when wrapped is true
@@ -1213,6 +1692,19 @@ contract LinearVestingTest is Test, Permit2User {
 
         // Call
         _linearVesting.redeemable(_ALICE, _derivativeTokenId);
+    }
+
+    function test_redeemable_givenBeforeStart_returnsZero()
+        public
+        givenDerivativeIsDeployed
+        givenAliceHasDerivativeTokens(_AMOUNT)
+        givenBeforeVestingStart
+    {
+        // Call
+        uint256 redeemableAmount = _linearVesting.redeemable(_ALICE, _derivativeTokenId);
+
+        // Check values
+        assertEq(redeemableAmount, 0);
     }
 
     function test_redeemable_givenAfterExpiry()
@@ -1252,7 +1744,7 @@ contract LinearVestingTest is Test, Permit2User {
 
         // Warp to before expiry
         uint48 elapsed = 100_000;
-        vm.warp(block.timestamp + elapsed);
+        vm.warp(_VESTING_START + elapsed);
 
         // Includes wrapped and unwrapped balances
         uint256 expectedRedeemable = elapsed * (_AMOUNT + amount) / _VESTING_DURATION;
@@ -1281,7 +1773,7 @@ contract LinearVestingTest is Test, Permit2User {
 
         // Warp to before expiry
         uint48 elapsed = 50_000;
-        vm.warp(block.timestamp + elapsed);
+        vm.warp(_VESTING_START + elapsed);
 
         // Calculate redeemable amount
         uint256 redeemable = elapsed * (wrappedAmount + unwrappedAmount) / _VESTING_DURATION;
@@ -1304,9 +1796,8 @@ contract LinearVestingTest is Test, Permit2User {
         _mintWrappedDerivativeTokens(_ALICE, _AMOUNT);
 
         // Warp to before expiry
-        uint48 start = uint48(block.timestamp);
         uint48 elapsed = 50_000;
-        vm.warp(start + elapsed);
+        vm.warp(_VESTING_START + elapsed);
 
         // Calculate the vested amount
         uint256 vestedAmount = (elapsed * (_AMOUNT + _AMOUNT)) / _VESTING_DURATION;
@@ -1352,7 +1843,7 @@ contract LinearVestingTest is Test, Permit2User {
 
         // Warp to another time
         elapsed = 60_000;
-        vm.warp(start + elapsed);
+        vm.warp(_VESTING_START + elapsed);
 
         // Calculate the vested amount
         vestedAmount = elapsed * (_AMOUNT + _AMOUNT) / _VESTING_DURATION;
@@ -1405,18 +1896,18 @@ contract LinearVestingTest is Test, Permit2User {
 
         // Warp to before expiry
         uint48 elapsed = 50_000;
-        vm.warp(block.timestamp + elapsed);
+        vm.warp(_VESTING_START + elapsed);
 
-        // Mint tokens, claims all redeemable tokens at the same time
+        // Mint tokens
         _mintDerivativeTokens(_ALICE, amount);
 
-        uint256 expectedRedeemable = 0;
+        uint256 expectedRedeemable = (_AMOUNT + amount) * elapsed / _VESTING_DURATION;
 
         // Call
         uint256 redeemableAmount = _linearVesting.redeemable(_ALICE, _derivativeTokenId);
 
         // Check values
-        assertEq(redeemableAmount, expectedRedeemable);
+        assertEq(redeemableAmount, expectedRedeemable, "redeemable mismatch");
     }
 
     function test_redeemable_givenWrappedTokensMintedAfterDeployment(uint256 amount_)
@@ -1428,18 +1919,18 @@ contract LinearVestingTest is Test, Permit2User {
 
         // Warp to before expiry
         uint48 elapsed = 50_000;
-        vm.warp(block.timestamp + elapsed);
+        vm.warp(_VESTING_START + elapsed);
 
-        // Mint tokens, claims all redeemable tokens at the same time
+        // Mint tokens
         _mintWrappedDerivativeTokens(_ALICE, amount);
 
-        uint256 expectedRedeemable = 0;
+        uint256 expectedRedeemable = (_AMOUNT + amount) * elapsed / _VESTING_DURATION;
 
         // Call
         uint256 redeemableAmount = _linearVesting.redeemable(_ALICE, _derivativeTokenId);
 
         // Check values
-        assertEq(redeemableAmount, expectedRedeemable);
+        assertEq(redeemableAmount, expectedRedeemable, "redeemable mismatch");
     }
 
     function test_redeemable_givenRedemption_givenTokensMintedAfterDeployment(
@@ -1458,9 +1949,8 @@ contract LinearVestingTest is Test, Permit2User {
         _mintDerivativeTokens(_ALICE, unwrappedAmount);
 
         // Warp to before expiry
-        uint48 start = uint48(block.timestamp);
         uint48 elapsed = 50_000;
-        vm.warp(start + elapsed);
+        vm.warp(_VESTING_START + elapsed);
 
         // Redeem wrapped tokens
         uint256 redeemable = elapsed * (wrappedAmount + unwrappedAmount) / _VESTING_DURATION;
@@ -1470,19 +1960,17 @@ contract LinearVestingTest is Test, Permit2User {
         _linearVesting.redeem(_derivativeTokenId, amountToRedeem);
 
         // Mint more tokens
-        // This claims all the redeemable tokens
         _mintDerivativeTokens(_ALICE, _AMOUNT);
         _mintWrappedDerivativeTokens(_ALICE, _AMOUNT);
 
         // Warp to another time
         elapsed = 60_000;
-        vm.warp(start + elapsed);
+        vm.warp(_VESTING_START + elapsed);
 
         // Calculate the vested amount
-        uint256 vestedAmount = (elapsed - 50_000)
-            * (_AMOUNT + _AMOUNT + unwrappedAmount + wrappedAmount - redeemable)
-            / (_VESTING_DURATION - 50_000);
-        uint256 claimedAmount = 0;
+        uint256 vestedAmount =
+            elapsed * (_AMOUNT + _AMOUNT + unwrappedAmount + wrappedAmount) / _VESTING_DURATION;
+        uint256 claimedAmount = amountToRedeem;
         uint256 expectedRedeemableAmount = vestedAmount - claimedAmount;
 
         // Call
@@ -1499,9 +1987,8 @@ contract LinearVestingTest is Test, Permit2User {
         givenAliceHasWrappedDerivativeTokens(_AMOUNT)
     {
         // Warp to before expiry
-        uint48 start = uint48(block.timestamp);
         uint48 elapsed = 50_000;
-        vm.warp(start + elapsed);
+        vm.warp(_VESTING_START + elapsed);
 
         uint256 vested = (_AMOUNT + _AMOUNT).mulDivDown(elapsed, _VESTING_DURATION);
 
@@ -1524,7 +2011,7 @@ contract LinearVestingTest is Test, Permit2User {
 
         // Warp to another time
         elapsed = 60_000;
-        vm.warp(start + elapsed);
+        vm.warp(_VESTING_START + elapsed);
 
         vested = (_AMOUNT + _AMOUNT).mulDivDown(elapsed, _VESTING_DURATION);
         expectedRedeemableAmount = vested - redeemAmount;
@@ -1541,9 +2028,8 @@ contract LinearVestingTest is Test, Permit2User {
         givenAliceHasWrappedDerivativeTokens(_AMOUNT)
     {
         // Warp to before expiry
-        uint48 start = uint48(block.timestamp);
         uint48 elapsed = 50_000;
-        vm.warp(start + elapsed);
+        vm.warp(_VESTING_START + elapsed);
 
         uint256 vested = (_AMOUNT + _AMOUNT).mulDivDown(elapsed, _VESTING_DURATION);
 
@@ -1565,7 +2051,7 @@ contract LinearVestingTest is Test, Permit2User {
 
         // Warp to another time
         elapsed = 60_000;
-        vm.warp(start + elapsed);
+        vm.warp(_VESTING_START + elapsed);
 
         vested = (_AMOUNT + _AMOUNT).mulDivDown(elapsed, _VESTING_DURATION);
         expectedRedeemableAmount = vested - redeemAmount;
