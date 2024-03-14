@@ -311,7 +311,7 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
 
             // Decrease the funding amount (if applicable)
             // Check invariant
-            if (routing.funding < payoutAmount) revert InsufficientFunding();
+            if (routing.funding < payoutAmount + curatorFeePayout) revert InsufficientFunding();
             unchecked {
                 routing.funding -= payoutAmount + curatorFeePayout;
             }
