@@ -132,6 +132,7 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
         Keycode derivativeType;
         bytes derivativeParams;
         bool prefunded;
+        // TODO add wrapDerivative?
     }
 
     // ========= STATE ========== //
