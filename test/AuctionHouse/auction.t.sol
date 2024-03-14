@@ -526,6 +526,7 @@ contract AuctionTest is AuctionHouseTest {
         assertEq(routing.funding, _LOT_CAPACITY, "funding mismatch");
 
         // Check balances
+        assertEq(_baseToken.balanceOf(_SELLER), 0, "seller balance mismatch");
         assertEq(_baseToken.balanceOf(address(_callback)), 0, "callback balance mismatch");
         assertEq(
             _baseToken.balanceOf(address(_auctionHouse)),
@@ -653,9 +654,9 @@ contract AuctionTest is AuctionHouseTest {
         external
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
-        givenCallbackHasSendBaseTokensFlag
         givenCallbackIsSet
-        givenCallbackHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
     {
         // Create the auction
         vm.prank(_SELLER);
@@ -666,6 +667,7 @@ contract AuctionTest is AuctionHouseTest {
         assertEq(routing.funding, _LOT_CAPACITY, "funding mismatch");
 
         // Check balances
+        assertEq(_baseToken.balanceOf(_SELLER), 0, "seller balance mismatch");
         assertEq(_baseToken.balanceOf(address(_callback)), 0, "callback balance mismatch");
         assertEq(
             _baseToken.balanceOf(address(_auctionHouse)),
