@@ -591,18 +591,17 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
             }
         }
 
+        // Send payment in bulk to the address dictated by the callbacks address
         // If the callbacks contract is configured to receive quote tokens, send the quote tokens to the callbacks contract and call the onClaimProceeds callback
         // If not, send the quote tokens to the seller and call the onClaimProceeds callback
-        address quoteTokensTo = Callbacks.hasPermission(
-            routing.callbacks, Callbacks.RECEIVE_QUOTE_TOKENS_FLAG
-        ) ? address(routing.callbacks) : routing.seller;
-
-        address baseTokensTo = Callbacks.hasPermission(
-            routing.callbacks, Callbacks.SEND_BASE_TOKENS_FLAG
-        ) ? address(routing.callbacks) : routing.seller;
-
-        // Send payment in bulk to the address dictated by the callbacks address
-        _sendPayment(quoteTokensTo, totalInLessFees, routing.quoteToken, routing.callbacks);
+        _sendPayment(
+            Callbacks.hasPermission(routing.callbacks, Callbacks.RECEIVE_QUOTE_TOKENS_FLAG)
+                ? address(routing.callbacks)
+                : routing.seller,
+            totalInLessFees,
+            routing.quoteToken,
+            routing.callbacks
+        );
 
         // Refund any unused capacity and curator fees to the address dictated by the callbacks address
         // By this stage, a partial payout (if applicable) and curator fees have been paid, leaving only the payout amount (`totalOut`) remaining.
@@ -610,7 +609,14 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
         unchecked {
             routing.funding -= prefundingRefund;
         }
-        Transfer.transfer(routing.baseToken, baseTokensTo, prefundingRefund, false);
+        Transfer.transfer(
+            routing.baseToken,
+            Callbacks.hasPermission(routing.callbacks, Callbacks.SEND_BASE_TOKENS_FLAG)
+                ? address(routing.callbacks)
+                : routing.seller,
+            prefundingRefund,
+            false
+        );
 
         // Call the onClaimProceeds callback
         Callbacks.onClaimProceeds(
