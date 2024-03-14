@@ -85,8 +85,7 @@ contract SendPaymentTest is Test, Permit2User {
         bytes32 salt;
         if (_callbackReceiveQuoteTokens) {
             salt = bytes32(0x4948191b360de05a0f4186b65106fd24c3b96ccf9199865d0bdaee42a0558625);
-        }
-        else {
+        } else {
             salt = bytes32(0xb272f6e6ab89cbea47dda64484c7d69f332560831e753af244bf725e53a5d718);
         }
 
@@ -145,9 +144,7 @@ contract SendPaymentTest is Test, Permit2User {
         assertEq(_quoteToken.balanceOf(_USER), 0, "user balance mismatch");
         assertEq(_quoteToken.balanceOf(_SELLER), _paymentAmount, "seller balance mismatch");
         assertEq(_quoteToken.balanceOf(address(_auctionHouse)), 0, "_auctionHouse balance mismatch");
-        assertEq(
-            _quoteToken.balanceOf(address(_callback)), 0, "_callback balance mismatch"
-        );
+        assertEq(_quoteToken.balanceOf(address(_callback)), 0, "_callback balance mismatch");
     }
 
     function test_givenAuctionHasNoCallback() public givenRouterHasBalance(_paymentAmount) {
