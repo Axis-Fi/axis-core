@@ -348,20 +348,21 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
             // Set to 0 before transfer to avoid re-entrancy
             routing.funding = 0;
 
-            bool callbackHasSendBaseTokensFlag =
-                routing.callbacks.hasPermission(Callbacks.SEND_BASE_TOKENS_FLAG);
-
             // Transfer the base tokens to the appropriate contract
             Transfer.transfer(
                 routing.baseToken,
-                callbackHasSendBaseTokensFlag ? address(routing.callbacks) : routing.seller,
+                _getAddressGivenCallbackBaseTokenFlag(routing.callbacks, routing.seller),
                 funding,
                 false
             );
 
             // Call the callback to transfer the base token to the owner
             Callbacks.onCancel(
-                routing.callbacks, lotId_, funding, callbackHasSendBaseTokensFlag, callbackData_
+                routing.callbacks,
+                lotId_,
+                funding,
+                routing.callbacks.hasPermission(Callbacks.SEND_BASE_TOKENS_FLAG),
+                callbackData_
             );
         } else {
             // Call the callback to notify of the cancellation
@@ -412,6 +413,15 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
             preFund_,
             routing_.callbackData
         );
+    }
+
+    function _getAddressGivenCallbackBaseTokenFlag(
+        ICallback callbacks_,
+        address seller_
+    ) internal pure returns (address) {
+        return callbacks_.hasPermission(Callbacks.SEND_BASE_TOKENS_FLAG)
+            ? address(callbacks_)
+            : seller_;
     }
 
     // ========== GOVERNANCE FUNCTIONS ========== //

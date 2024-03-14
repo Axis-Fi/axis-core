@@ -245,9 +245,9 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
         _sendPayment(routing.seller, amountLessFees, routing.quoteToken, routing.callbacks);
 
         // Calculate the curator fee (if applicable)
-        FeeData memory feeData = lotFees[params_.lotId];
-        uint96 curatorFeePayout =
-            _calculatePayoutFees(feeData.curated, feeData.curatorFee, payoutAmount);
+        uint96 curatorFeePayout = _calculatePayoutFees(
+            lotFees[params_.lotId].curated, lotFees[params_.lotId].curatorFee, payoutAmount
+        );
 
         // If not prefunded, collect payout from auction owner or callbacks contract, if not prefunded
         // If prefunded, call the onPurchase callback
@@ -322,7 +322,7 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
 
         // Send curator fee to curator
         if (curatorFeePayout > 0) {
-            _sendPayout(feeData.curator, curatorFeePayout, routing, auctionOutput);
+            _sendPayout(lotFees[params_.lotId].curator, curatorFeePayout, routing, auctionOutput);
         }
 
         // Emit event
@@ -615,9 +615,7 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
         }
         Transfer.transfer(
             routing.baseToken,
-            Callbacks.hasPermission(routing.callbacks, Callbacks.SEND_BASE_TOKENS_FLAG)
-                ? address(routing.callbacks)
-                : routing.seller,
+            _getAddressGivenCallbackBaseTokenFlag(routing.callbacks, routing.seller),
             prefundingRefund,
             false
         );
