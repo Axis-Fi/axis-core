@@ -129,8 +129,10 @@ contract BidTest is AuctionHouseTest {
         givenLotIsCreated
         givenLotHasStarted
         whenAllowlistProofIsIncorrect
+        givenUserHasQuoteTokenBalance(_BID_AMOUNT)
+        givenUserHasQuoteTokenAllowance(_BID_AMOUNT)
     {
-        bytes memory err = abi.encodeWithSelector(Auctioneer.NotPermitted.selector, _bidder);
+        bytes memory err = abi.encodePacked("not allowed");
         vm.expectRevert(err);
 
         // Call the function

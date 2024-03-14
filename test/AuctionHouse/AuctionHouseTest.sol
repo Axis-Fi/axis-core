@@ -83,7 +83,7 @@ abstract contract AuctionHouseTest is Test, Permit2User {
     bytes internal _allowlistProof;
     bytes internal _permit2Data;
     bool internal _callbackSendBaseTokens;
-    bool internal _callbackSendQuoteTokens;
+    bool internal _callbackReceiveQuoteTokens;
 
     // Outputs
     uint96 internal _lotId = type(uint96).max; // Set to max to ensure it's not a valid lot id
@@ -260,12 +260,12 @@ abstract contract AuctionHouseTest is Test, Permit2User {
     }
 
     modifier givenLotHasAllowlist() {
-        // Allowlist callback supports onPurchase and onBid callbacks
-        // 00011000 = 0x18
+        // Allowlist callback supports onCreate, onPurchase, and onBid callbacks
+        // 10011000 = 0x98
         // bytes memory bytecode = abi.encodePacked(
         //     type(MockCallback).creationCode,
         //     abi.encode(address(_auctionHouse), Callbacks.Permissions({
-        //         onCreate: false,
+        //         onCreate: true,
         //         onCancel: false,
         //         onCurate: false,
         //         onPurchase: true,
@@ -276,16 +276,16 @@ abstract contract AuctionHouseTest is Test, Permit2User {
         //     }), _SELLER)
         // );
         // vm.writeFile(
-        //     "./bytecode/MockCallback18.bin",
+        //     "./bytecode/MockCallback98.bin",
         //     vm.toString(bytecode)
         // );
 
-        bytes32 salt = bytes32(0x85270e468ebfba44a3333fd90f26b988e2c7b7a1a2459a3ec326cd2d823fd98a);
+        bytes32 salt = bytes32(0x193322e829e554b89d83f85f7991f166c9937133765d139f9af8340c1aa23a01);
         vm.broadcast(); // required for CREATE2 address to work correctly. doesn't do anything in a test
         _callback = new MockCallback{salt: salt}(
             address(_auctionHouse),
             Callbacks.Permissions({
-                onCreate: false,
+                onCreate: true,
                 onCancel: false,
                 onCurate: false,
                 onPurchase: true,
@@ -298,6 +298,9 @@ abstract contract AuctionHouseTest is Test, Permit2User {
         );
 
         _routingParams.callbacks = _callback;
+
+        // Set allowlist enabled on the callback
+        _callback.setAllowlistEnabled(true);
         _;
     }
 
@@ -429,13 +432,13 @@ abstract contract AuctionHouseTest is Test, Permit2User {
 
         // Set the salt based on which token flags are set
         bytes32 salt;
-        if (_callbackSendBaseTokens && _callbackSendQuoteTokens) {
+        if (_callbackSendBaseTokens && _callbackReceiveQuoteTokens) {
             // 11111111 = 0xFF
             salt = bytes32(0x1d1c14a83676f89762c1dc5715bbe477aa9b3ef131f5746deb6fea26e0d3fe59);
         } else if (_callbackSendBaseTokens) {
             // 11111101 = 0xFD
             salt = bytes32(0xa2bb3a44f408f53157f184f507de8d62a967ef17ac4b60bb71230a1a4b6ec1a1);
-        } else if (_callbackSendQuoteTokens) {
+        } else if (_callbackReceiveQuoteTokens) {
             // 11111110 = 0xFE
             salt = bytes32(0xb434351213112c7545b6f53fd4b1ed3a90fd8d0132889640fcfe36bc7af3fc9c);
         } else {
@@ -453,7 +456,7 @@ abstract contract AuctionHouseTest is Test, Permit2User {
                 onPurchase: true,
                 onBid: true,
                 onClaimProceeds: true,
-                receiveQuoteTokens: _callbackSendQuoteTokens,
+                receiveQuoteTokens: _callbackReceiveQuoteTokens,
                 sendBaseTokens: _callbackSendBaseTokens
             }),
             _SELLER
@@ -469,7 +472,7 @@ abstract contract AuctionHouseTest is Test, Permit2User {
     }
 
     modifier givenCallbackHasSendQuoteTokensFlag() {
-        _callbackSendQuoteTokens = true;
+        _callbackReceiveQuoteTokens = true;
         _;
     }
 

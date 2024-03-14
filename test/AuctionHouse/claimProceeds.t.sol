@@ -199,6 +199,7 @@ contract ClaimProceedsTest is AuctionHouseTest {
         external
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
+        whenBatchRequiresPrefunding
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenLotIsCreated
@@ -253,6 +254,7 @@ contract ClaimProceedsTest is AuctionHouseTest {
         external
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
+        whenBatchRequiresPrefunding
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenLotIsCreated
@@ -282,10 +284,11 @@ contract ClaimProceedsTest is AuctionHouseTest {
         external
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
-        givenLotIsCreated
-        givenLotHasStarted
+        whenBatchRequiresPrefunding
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenLotIsCreated
+        givenLotHasStarted
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
@@ -323,10 +326,11 @@ contract ClaimProceedsTest is AuctionHouseTest {
         external
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
-        givenLotIsCreated
-        givenLotHasStarted
+        whenBatchRequiresPrefunding
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenLotIsCreated
+        givenLotHasStarted
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
@@ -368,13 +372,14 @@ contract ClaimProceedsTest is AuctionHouseTest {
         external
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
-        givenCuratorIsSet
-        givenLotIsCreated
-        givenLotHasStarted
+        whenBatchRequiresPrefunding
         givenCuratorMaxFeeIsSet
         givenCuratorFeeIsSet
+        givenCuratorIsSet
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY + _curatorMaxPotentialFee)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY + _curatorMaxPotentialFee)
+        givenLotIsCreated
+        givenLotHasStarted
         givenCuratorHasApproved
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
@@ -413,12 +418,13 @@ contract ClaimProceedsTest is AuctionHouseTest {
         external
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
+        whenBatchRequiresPrefunding
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenCuratorIsSet
         givenLotIsCreated
         givenLotHasStarted
         givenCuratorMaxFeeIsSet
-        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
-        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenCuratorHasApproved
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
@@ -457,13 +463,14 @@ contract ClaimProceedsTest is AuctionHouseTest {
         external
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
-        givenCuratorIsSet
-        givenLotIsCreated
-        givenLotHasStarted
+        whenBatchRequiresPrefunding
         givenCuratorMaxFeeIsSet
         givenCuratorFeeIsSet
+        givenCuratorIsSet
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY + _curatorMaxPotentialFee)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY + _curatorMaxPotentialFee)
+        givenLotIsCreated
+        givenLotHasStarted
         givenCuratorHasApproved
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
@@ -506,12 +513,13 @@ contract ClaimProceedsTest is AuctionHouseTest {
         external
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
+        whenBatchRequiresPrefunding
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenCuratorIsSet
         givenLotIsCreated
         givenLotHasStarted
         givenCuratorMaxFeeIsSet
-        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
-        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenCuratorHasApproved
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
