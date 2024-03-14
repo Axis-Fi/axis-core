@@ -344,9 +344,6 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
     ) external override nonReentrant returns (uint64 bidId) {
         _isLotValid(params_.lotId);
 
-        // Load routing data for the lot
-        Routing memory routing = lotRouting[params_.lotId];
-
         // Record the bid on the auction module
         // The module will determine if the bid is valid - minimum bid size, minimum price, auction status, etc
         bidId = _getModuleForId(params_.lotId).bid(
@@ -355,12 +352,19 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
 
         // Transfer the quote token from the bidder
         _collectPayment(
-            params_.amount, routing.quoteToken, Transfer.decodePermit2Approval(params_.permit2Data)
+            params_.amount,
+            lotRouting[params_.lotId].quoteToken,
+            Transfer.decodePermit2Approval(params_.permit2Data)
         );
 
         // Call the onBid callback
         Callbacks.onBid(
-            routing.callbacks, params_.lotId, bidId, msg.sender, params_.amount, callbackData_
+            lotRouting[params_.lotId].callbacks,
+            params_.lotId,
+            bidId,
+            msg.sender,
+            params_.amount,
+            callbackData_
         );
 
         // Emit event
