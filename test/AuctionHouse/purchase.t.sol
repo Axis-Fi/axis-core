@@ -604,7 +604,7 @@ contract PurchaseTest is AuctionHouseTest {
         public
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
-        givenCallbackHasSendQuoteTokensFlag
+        givenCallbackHasReceiveQuoteTokensFlag
         givenCallbackHasSendBaseTokensFlag
         givenCallbackIsSet
         givenLotIsCreated
@@ -638,7 +638,7 @@ contract PurchaseTest is AuctionHouseTest {
         whenAtomicAuctionModuleIsInstalled
         givenQuoteTokenHasDecimals(17)
         givenBaseTokenHasDecimals(13)
-        givenCallbackHasSendQuoteTokensFlag
+        givenCallbackHasReceiveQuoteTokensFlag
         givenCallbackHasSendBaseTokensFlag
         givenCallbackIsSet
         givenLotIsCreated
@@ -672,7 +672,7 @@ contract PurchaseTest is AuctionHouseTest {
         whenAtomicAuctionModuleIsInstalled
         givenQuoteTokenHasDecimals(13)
         givenBaseTokenHasDecimals(17)
-        givenCallbackHasSendQuoteTokensFlag
+        givenCallbackHasReceiveQuoteTokensFlag
         givenCallbackHasSendBaseTokensFlag
         givenCallbackIsSet
         givenLotIsCreated

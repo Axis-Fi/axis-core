@@ -476,7 +476,7 @@ abstract contract AuctionHouseTest is Test, Permit2User {
         _;
     }
 
-    modifier givenCallbackHasSendQuoteTokensFlag() {
+    modifier givenCallbackHasReceiveQuoteTokensFlag() {
         _callbackReceiveQuoteTokens = true;
         _;
     }
