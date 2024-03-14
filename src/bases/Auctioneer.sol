@@ -359,7 +359,13 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
             // Else, transfer the base tokens directly to the seller
             else {
                 Transfer.transfer(routing.baseToken, routing.seller, funding, false);
+
+                // Call the callback to notify of the cancellation
+                Callbacks.onCancel(routing.callbacks, lotId_, funding, false, callbackData_);
             }
+        } else {
+            // Call the callback to notify of the cancellation
+            Callbacks.onCancel(routing.callbacks, lotId_, 0, false, callbackData_);
         }
 
         emit AuctionCancelled(lotId_, routing.auctionReference);

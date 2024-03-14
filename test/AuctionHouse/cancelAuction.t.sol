@@ -27,8 +27,8 @@ contract CancelAuctionTest is AuctionHouseTest {
     //  [X] it sets the lot to inactive on the AuctionModule
     // [X] given the lot has not started
     //  [X] it succeeds
-    // [ ] given the callback is set
-    //  [ ] and the onCancel callback called
+    // [X] given the callback is set
+    //  [X] and the onCancel callback called
 
     function testReverts_whenNotSeller()
         external
@@ -133,12 +133,36 @@ contract CancelAuctionTest is AuctionHouseTest {
         assertFalse(_atomicAuctionModule.isLive(_lotId), "after cancellation: isLive mismatch");
     }
 
+    function test_givenCallback()
+        external
+        whenAuctionTypeIsAtomic
+        whenAtomicAuctionModuleIsInstalled
+        givenCallbackIsSet
+        givenLotIsCreated
+        givenLotHasStarted
+    {
+        assertTrue(_atomicAuctionModule.isLive(_lotId), "before cancellation: isLive mismatch");
+
+        vm.prank(_SELLER);
+        _auctionHouse.cancel(_lotId, bytes(""));
+
+        // Get lot data from the module
+        Auction.Lot memory lot = _getLotData(_lotId);
+        assertEq(lot.conclusion, uint48(block.timestamp));
+        assertEq(lot.capacity, 0);
+
+        assertFalse(_atomicAuctionModule.isLive(_lotId), "after cancellation: isLive mismatch");
+
+        // Check the callback
+        assertEq(_callback.lotCancelled(_lotId), true, "callback: lotCancelled mismatch");
+    }
+
     // [X] given the auction is prefunded
     //  [X] it refunds the prefunded amount in payout tokens to the seller
-    //  [ ] given the callback is set
-    //   [ ] given the callback has the send base tokens flag
-    //    [ ] the refund is sent to the callback and the onCancel callback called
-    //   [ ] the refund is sent to the seller and the onCancel callback called
+    //  [X] given the callback is set
+    //   [X] given the callback has the send base tokens flag
+    //    [X] the refund is sent to the callback and the onCancel callback called
+    //   [X] the refund is sent to the seller and the onCancel callback called
     //  [X] given a purchase has been made
     //   [X] it refunds the remaining prefunded amount in payout tokens to the seller
 
@@ -194,6 +218,66 @@ contract CancelAuctionTest is AuctionHouseTest {
             sellerBalance + _LOT_CAPACITY - _PURCHASE_AMOUNT_OUT,
             "base token: seller balance mismatch"
         );
+    }
+
+    function test_prefunded_givenCallback()
+        external
+        whenAuctionTypeIsAtomic
+        whenAtomicAuctionModuleIsInstalled
+        givenAuctionIsPrefunded
+        givenCallbackIsSet
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenLotIsCreated
+        givenLotHasStarted
+    {
+        // Check the seller's balance
+        uint256 sellerBalance = _baseToken.balanceOf(_SELLER);
+
+        // Cancel the lot
+        vm.prank(_SELLER);
+        _auctionHouse.cancel(_lotId, bytes(""));
+
+        // Check the seller's balance
+        assertEq(
+            _baseToken.balanceOf(_SELLER),
+            sellerBalance + _LOT_CAPACITY,
+            "base token: seller balance mismatch"
+        );
+
+        // Check the callback
+        assertEq(_callback.lotCancelled(_lotId), true, "callback: lotCancelled mismatch");
+    }
+
+    function test_prefunded_givenCallback_givenSendBaseTokensFlag()
+        external
+        whenAuctionTypeIsAtomic
+        whenAtomicAuctionModuleIsInstalled
+        givenAuctionIsPrefunded
+        givenCallbackHasSendBaseTokensFlag
+        givenCallbackIsSet
+        givenCallbackHasBaseTokenBalance(_LOT_CAPACITY)
+        givenCallbackHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenLotIsCreated
+        givenLotHasStarted
+    {
+        // Check the callback's balance
+        uint256 sellerBalance = _baseToken.balanceOf(address(_callback));
+
+        // Cancel the lot
+        vm.prank(_SELLER);
+        _auctionHouse.cancel(_lotId, bytes(""));
+
+        // Check the callback's balance
+        assertEq(
+            _baseToken.balanceOf(address(_callback)),
+            sellerBalance + _LOT_CAPACITY,
+            "base token: seller balance mismatch"
+        );
+        assertEq(_baseToken.balanceOf(_SELLER), 0, "base token: seller balance mismatch");
+
+        // Check the callback
+        assertEq(_callback.lotCancelled(_lotId), true, "callback: lotCancelled mismatch");
     }
 
     // [X] given the auction is prefunded
