@@ -31,15 +31,15 @@ contract Catalogue {
     /// @return     routing Routing information for the auction lot
     function getRouting(uint96 lotId_) public view returns (Auctioneer.Routing memory) {
         (
-            Veecode auctionReference,
             address seller,
+            uint96 funding,
             ERC20 baseToken,
+            Veecode auctionReference,
             ERC20 quoteToken,
             ICallback callbacks,
             Veecode derivativeReference,
-            bytes memory derivativeParams,
             bool wrapDerivative,
-            uint96 funding
+            bytes memory derivativeParams
         ) = Auctioneer(auctionHouse).lotRouting(lotId_);
 
         return Auctioneer.Routing({

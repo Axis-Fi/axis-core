@@ -640,15 +640,15 @@ abstract contract AuctionHouseTest is Test, Permit2User {
 
     function _getLotRouting(uint96 lotId_) internal view returns (Auctioneer.Routing memory) {
         (
-            Veecode auctionReference_,
             address seller_,
+            uint96 prefunding_,
             ERC20 baseToken_,
+            Veecode auctionReference_,
             ERC20 quoteToken_,
             ICallback callback_,
             Veecode derivativeReference_,
-            bytes memory derivativeParams_,
             bool wrapDerivative_,
-            uint96 prefunding_
+            bytes memory derivativeParams_
         ) = _auctionHouse.lotRouting(lotId_);
 
         return Auctioneer.Routing({

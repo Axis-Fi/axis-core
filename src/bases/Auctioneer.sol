@@ -76,15 +76,15 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
     /// @param      wrapDerivative      (optional) Whether to wrap the derivative in a ERC20 token instead of the native ERC6909 format
     /// @param      funding             The amount of base tokens in funding remaining
     struct Routing {
-        Veecode auctionReference;
-        address seller;
-        ERC20 baseToken;
-        ERC20 quoteToken;
-        ICallback callbacks;
-        Veecode derivativeReference;
+        address seller; // 20 bytes
+        uint96 funding; // 12 bytes
+        ERC20 baseToken; // 20 bytes
+        Veecode auctionReference; // 7 bytes
+        ERC20 quoteToken; // 20 bytes
+        ICallback callbacks; // 20 bytes
+        Veecode derivativeReference; // 7 bytes
+        bool wrapDerivative; // 1 byte
         bytes derivativeParams;
-        bool wrapDerivative;
-        uint96 funding;
     }
 
     /// @notice     Fee information for a lot
@@ -103,11 +103,11 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
     /// @param      protocolFee The fee charged by the protocol
     /// @param      referrerFee The fee charged by the referrer
     struct FeeData {
-        address curator;
-        bool curated;
-        uint48 curatorFee;
-        uint48 protocolFee;
-        uint48 referrerFee;
+        address curator; // 20 bytes
+        bool curated; // 1 byte
+        uint48 curatorFee; // 6 bytes
+        uint48 protocolFee; // 6 bytes
+        uint48 referrerFee; // 6 bytes
     }
 
     /// @notice     Auction routing information provided as input parameters
@@ -132,8 +132,8 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
         Keycode derivativeType;
         bytes derivativeParams;
         bool prefunded;
-        // TODO add wrapDerivative?
     }
+    // TODO add wrapDerivative?
 
     // ========= STATE ========== //
 
