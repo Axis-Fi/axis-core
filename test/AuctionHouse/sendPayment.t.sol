@@ -21,6 +21,7 @@ contract SendPaymentTest is Test, Permit2User {
     uint256 internal _paymentAmount = 1e18;
     MockFeeOnTransferERC20 internal _quoteToken;
     MockCallback internal _callback;
+    bool internal _callbackReceiveQuoteTokens;
 
     function setUp() public {
         // Set reasonable starting block
@@ -37,7 +38,31 @@ contract SendPaymentTest is Test, Permit2User {
     // [X] given the auction does not have hooks defined
     //  [X] it transfers the payment amount to the seller
 
+    modifier givenCallbackReceivesQuoteTokens() {
+        _callbackReceiveQuoteTokens = true;
+        _;
+    }
+
     modifier givenAuctionHasCallback() {
+        // 00000000 - 0x00
+        // bytes memory bytecode = abi.encodePacked(
+        //     type(MockCallback).creationCode,
+        //     abi.encode(address(_auctionHouse), Callbacks.Permissions({
+        //         onCreate: false,
+        //         onCancel: false,
+        //         onCurate: false,
+        //         onPurchase: false,
+        //         onBid: false,
+        //         onClaimProceeds: false,
+        //         receiveQuoteTokens: false,
+        //         sendBaseTokens: false
+        //     }), _SELLER)
+        // );
+        // vm.writeFile(
+        //     "./bytecode/MockCallback00.bin",
+        //     vm.toString(bytecode)
+        // );
+
         // 00000010 - 0x02
         // bytes memory bytecode = abi.encodePacked(
         //     type(MockCallback).creationCode,
@@ -57,7 +82,13 @@ contract SendPaymentTest is Test, Permit2User {
         //     vm.toString(bytecode)
         // );
 
-        bytes32 salt = bytes32(0xd28411ef0e453fb266244b1d627b31b396172ef958c1dfb6afe660bcc8cfa7a8);
+        bytes32 salt;
+        if (_callbackReceiveQuoteTokens) {
+            salt = bytes32(0x4948191b360de05a0f4186b65106fd24c3b96ccf9199865d0bdaee42a0558625);
+        }
+        else {
+            salt = bytes32(0xb272f6e6ab89cbea47dda64484c7d69f332560831e753af244bf725e53a5d718);
+        }
 
         vm.broadcast(); // required for CREATE2 address to work correctly. doesn't do anything in a test
         _callback = new MockCallback{salt: salt}(
@@ -69,21 +100,10 @@ contract SendPaymentTest is Test, Permit2User {
                 onPurchase: false,
                 onBid: false,
                 onClaimProceeds: false,
-                receiveQuoteTokens: true,
+                receiveQuoteTokens: _callbackReceiveQuoteTokens,
                 sendBaseTokens: false
             }),
             _SELLER
-        );
-        _;
-    }
-
-    modifier givenCallbackReceivesTokens() {
-        vm.mockCall(
-            address(_callback),
-            abi.encodeWithSelector(
-                MockCallback.hasPermission.selector, Callbacks.RECEIVE_QUOTE_TOKENS_FLAG
-            ),
-            abi.encode(true)
         );
         _;
     }
@@ -95,8 +115,8 @@ contract SendPaymentTest is Test, Permit2User {
 
     function test_givenAuctionHasCallback_givenReceivesTokens()
         public
+        givenCallbackReceivesQuoteTokens
         givenAuctionHasCallback
-        givenCallbackReceivesTokens
         givenRouterHasBalance(_paymentAmount)
     {
         // Call
@@ -123,10 +143,10 @@ contract SendPaymentTest is Test, Permit2User {
 
         // Check balances
         assertEq(_quoteToken.balanceOf(_USER), 0, "user balance mismatch");
-        assertEq(_quoteToken.balanceOf(_SELLER), 0, "seller balance mismatch");
+        assertEq(_quoteToken.balanceOf(_SELLER), _paymentAmount, "seller balance mismatch");
         assertEq(_quoteToken.balanceOf(address(_auctionHouse)), 0, "_auctionHouse balance mismatch");
         assertEq(
-            _quoteToken.balanceOf(address(_callback)), _paymentAmount, "_callback balance mismatch"
+            _quoteToken.balanceOf(address(_callback)), 0, "_callback balance mismatch"
         );
     }
 

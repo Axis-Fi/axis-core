@@ -35,6 +35,12 @@ contract MockCallback is BaseCallback {
     }
 
     mapping(uint96 => LotTokens) public lotTokens;
+    mapping(uint96 => bool) public lotCreated;
+    mapping(uint96 => bool) public lotCancelled;
+    mapping(uint96 => bool) public lotCurated;
+    mapping(uint96 => bool) public lotPurchased;
+    mapping(uint96 => bool) public lotBid;
+    mapping(uint96 => bool) public lotClaimedProceeds;
 
     function _onCreate(
         uint96 lotId_,
@@ -50,6 +56,7 @@ contract MockCallback is BaseCallback {
         }
 
         lotTokens[lotId_] = LotTokens({baseToken: baseToken_, quoteToken: quoteToken_});
+        lotCreated[lotId_] = true;
 
         if (prefund_) {
             if (onCreateMultiplier > 0) {
@@ -70,6 +77,8 @@ contract MockCallback is BaseCallback {
         if (onCancelReverts) {
             revert("revert");
         }
+
+        lotCancelled[lotId_] = true;
     }
 
     function _onCurate(
@@ -90,6 +99,8 @@ contract MockCallback is BaseCallback {
             // Transfer the base tokens to the auction house
             ERC20(lotTokens[lotId_].baseToken).transfer(address(auctionHouse), curatorFee_);
         }
+
+        lotCurated[lotId_] = true;
     }
 
     function _onPurchase(
@@ -119,6 +130,8 @@ contract MockCallback is BaseCallback {
             // Transfer the base tokens to the auction house
             ERC20(lotTokens[lotId_].baseToken).transfer(address(auctionHouse), payout_);
         }
+
+        lotPurchased[lotId_] = true;
     }
 
     function _onBid(
@@ -136,6 +149,8 @@ contract MockCallback is BaseCallback {
         if (allowlistEnabled && !allowedWithProof[buyer_][callbackData_]) {
             revert("not allowed");
         }
+
+        lotBid[lotId_] = true;
     }
 
     function _onClaimProceeds(
@@ -147,11 +162,8 @@ contract MockCallback is BaseCallback {
         if (onClaimProceedsReverts) {
             revert("revert");
         }
-    }
 
-    /// @dev So that it can be mocked
-    function hasPermission(uint256) public pure returns (bool) {
-        return false;
+        lotClaimedProceeds[lotId_] = true;
     }
 
     function setOnCreateReverts(bool reverts_) external {
