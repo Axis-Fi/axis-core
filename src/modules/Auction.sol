@@ -399,7 +399,9 @@ abstract contract AuctionModule is Auction, Module {
         // Update capacity
         Lot storage lot = lotData[lotId_];
         // Revert if the capacity is insufficient
-        if (lot.capacityInQuote ? amount_ > lot.capacity : payout > lot.capacity) revert Auction_InsufficientCapacity();
+        if (lot.capacityInQuote ? amount_ > lot.capacity : payout > lot.capacity) {
+            revert Auction_InsufficientCapacity();
+        }
         unchecked {
             lot.capacity -= lot.capacityInQuote ? amount_ : payout;
         }

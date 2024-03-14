@@ -27,7 +27,7 @@ contract FixedPriceAuctionModule is AuctionModule {
         uint96 price;
         uint24 maxPayoutPercent;
     }
-    
+
     // ========== STATE VARIABLES ========== //
 
     /// @notice     Auction-specific data for a lot
@@ -71,12 +71,21 @@ contract FixedPriceAuctionModule is AuctionModule {
         if (auctionParams.price == 0) revert Auction_InvalidParams();
 
         // Validate the max payout percent is between 1% and 100%
-        if (auctionParams.maxPayoutPercent < 1e3 || auctionParams.maxPayoutPercent > _ONE_HUNDRED_PERCENT) revert Auction_InvalidParams();
+        if (
+            auctionParams.maxPayoutPercent < 1e3
+                || auctionParams.maxPayoutPercent > _ONE_HUNDRED_PERCENT
+        ) revert Auction_InvalidParams();
 
         // Calculate the max payout
-        uint96 maxPayout = uint96(Math.mulDivDown(lot_.capacity, auctionParams.maxPayoutPercent, _ONE_HUNDRED_PERCENT));
+        uint96 maxPayout = uint96(
+            Math.mulDivDown(lot_.capacity, auctionParams.maxPayoutPercent, _ONE_HUNDRED_PERCENT)
+        );
         // If capacity in quote, convert max payout to base token using the provided price
-        if (lot_.capacityInQuote) maxPayout = uint96(Math.mulDivDown(maxPayout, 10**lot_.baseTokenDecimals, auctionParams.price));
+        if (lot_.capacityInQuote) {
+            maxPayout = uint96(
+                Math.mulDivDown(maxPayout, 10 ** lot_.baseTokenDecimals, auctionParams.price)
+            );
+        }
 
         // Store the auction data
         AuctionData storage data = auctionData[lotId_];
@@ -94,12 +103,20 @@ contract FixedPriceAuctionModule is AuctionModule {
     // ========== PURCHASE ========== //
 
     /// @inheritdoc AuctionModule
-    function _purchase(uint96 lotId_, uint96 amount_, bytes calldata auctionData_) internal view override returns (uint96 payout, bytes memory) {
+    function _purchase(
+        uint96 lotId_,
+        uint96 amount_,
+        bytes calldata auctionData_
+    ) internal view override returns (uint96 payout, bytes memory) {
         // Decode the auction data into the min amount out
         uint96 minAmountOut = abi.decode(auctionData_, (uint96));
 
         // Calculate the amount of the base token to purchase
-        payout = uint96(Math.mulDivDown(amount_, 10 ** lotData[lotId_].baseTokenDecimals, auctionData[lotId_].price));
+        payout = uint96(
+            Math.mulDivDown(
+                amount_, 10 ** lotData[lotId_].baseTokenDecimals, auctionData[lotId_].price
+            )
+        );
 
         // Validate the payout is greater than or equal to the minimum amount out
         if (payout < minAmountOut) revert Auction_InsufficientPayout();
@@ -121,11 +138,7 @@ contract FixedPriceAuctionModule is AuctionModule {
         revert Auction_NotImplemented();
     }
 
-    function _refundBid(
-        uint96,
-        uint64,
-        address
-    ) internal pure override returns (uint96) {
+    function _refundBid(uint96, uint64, address) internal pure override returns (uint96) {
         revert Auction_NotImplemented();
     }
 
@@ -136,21 +149,13 @@ contract FixedPriceAuctionModule is AuctionModule {
         revert Auction_NotImplemented();
     }
 
-    function _settle(uint96)
-        internal
-        pure
-        override
-        returns (Settlement memory, bytes memory) {
-            revert Auction_NotImplemented();
-        }
+    function _settle(uint96) internal pure override returns (Settlement memory, bytes memory) {
+        revert Auction_NotImplemented();
+    }
 
-    function _claimProceeds(uint96)
-        internal
-        pure
-        override
-        returns (uint96, uint96, uint96) {
-            revert Auction_NotImplemented();
-        }
+    function _claimProceeds(uint96) internal pure override returns (uint96, uint96, uint96) {
+        revert Auction_NotImplemented();
+    }
 
     function _revertIfLotSettled(uint96) internal view override {}
 
@@ -160,11 +165,7 @@ contract FixedPriceAuctionModule is AuctionModule {
 
     function _revertIfBidInvalid(uint96, uint64) internal view override {}
 
-    function _revertIfNotBidOwner(
-        uint96,
-        uint64,
-        address
-    ) internal view override {}
+    function _revertIfNotBidOwner(uint96, uint64, address) internal view override {}
 
     function _revertIfBidClaimed(uint96, uint64) internal view override {}
 }
