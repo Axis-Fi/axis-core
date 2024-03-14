@@ -594,8 +594,10 @@ contract PurchaseTest is AuctionHouseTest {
     }
 
     // [X] given the auction has callbacks defined
+    //  [X] given the callback has the receive quote tokens flag
+    //   [X] it succeeds - payout token transferred from seller, quote token transferred to callback, quote token (minus fees) transferred to _bidder
     //  [X] given the callback has the send base tokens flag
-    //   [X] it succeeds - quote token transferred to callback, payout token (minus fees) transferred to _bidder
+    //   [X] it succeeds - payout token transferred from callback, quote token transferred to seller, payout token (minus fees) transferred to _bidder
     //  [X] it succeeds - quote token transferred to seller, payout token (minus fees) transferred to _bidder
     // [X] given the auction does not have callbacks defined
     //  [X] it succeeds - quote token transferred to seller, payout token (minus fees) transferred to _bidder
@@ -604,7 +606,6 @@ contract PurchaseTest is AuctionHouseTest {
         public
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
-        givenCallbackHasReceiveQuoteTokensFlag
         givenCallbackHasSendBaseTokensFlag
         givenCallbackIsSet
         givenLotIsCreated
@@ -638,7 +639,6 @@ contract PurchaseTest is AuctionHouseTest {
         whenAtomicAuctionModuleIsInstalled
         givenQuoteTokenHasDecimals(17)
         givenBaseTokenHasDecimals(13)
-        givenCallbackHasReceiveQuoteTokensFlag
         givenCallbackHasSendBaseTokensFlag
         givenCallbackIsSet
         givenLotIsCreated
@@ -672,7 +672,6 @@ contract PurchaseTest is AuctionHouseTest {
         whenAtomicAuctionModuleIsInstalled
         givenQuoteTokenHasDecimals(13)
         givenBaseTokenHasDecimals(17)
-        givenCallbackHasReceiveQuoteTokensFlag
         givenCallbackHasSendBaseTokensFlag
         givenCallbackIsSet
         givenLotIsCreated
@@ -689,6 +688,37 @@ contract PurchaseTest is AuctionHouseTest {
     {
         // Purchase
         _createPurchase(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut, _purchaseAuctionData);
+
+        // Check state
+        _assertQuoteTokenBalances();
+        _assertBaseTokenBalances();
+        _assertDerivativeTokenBalances();
+        _assertAccruedFees();
+        _assertPrefunding();
+
+        assertEq(_callback.lotPurchased(_lotId), true, "lotPurchased");
+    }
+
+    function test_callbacks_givenCallbackReceiveQuoteTokensFlag()
+        public
+        whenAuctionTypeIsAtomic
+        whenAtomicAuctionModuleIsInstalled
+        givenCallbackHasReceiveQuoteTokensFlag
+        givenCallbackIsSet
+        givenLotIsCreated
+        givenLotHasStarted
+        givenProtocolFeeIsSet
+        givenReferrerFeeIsSet
+        givenUserHasQuoteTokenBalance(_AMOUNT_IN)
+        givenUserHasQuoteTokenAllowance(_AMOUNT_IN)
+        givenFeesAreCalculated(_AMOUNT_IN)
+        whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
+        givenBalancesAreCalculated(_AMOUNT_IN, _amountOut)
+        givenSellerHasBaseTokenBalance(_amountOut)
+        givenSellerHasBaseTokenAllowance(_amountOut)
+    {
+        // Purchase
+        _createPurchase(_AMOUNT_IN, _amountOut, _purchaseAuctionData);
 
         // Check state
         _assertQuoteTokenBalances();
