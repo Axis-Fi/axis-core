@@ -8,7 +8,6 @@ import {FixedPointMathLib as Math} from "lib/solmate/src/utils/FixedPointMathLib
 import {Auctioneer} from "src/bases/Auctioneer.sol";
 import {FeeManager} from "src/bases/FeeManager.sol";
 
-import {CondenserModule} from "src/modules/Condenser.sol";
 import {DerivativeModule} from "src/modules/Derivative.sol";
 import {Auction, AuctionModule} from "src/modules/Auction.sol";
 

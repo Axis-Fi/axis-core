@@ -5,20 +5,11 @@ import {ERC20} from "lib/solmate/src/tokens/ERC20.sol";
 import {Transfer} from "src/lib/Transfer.sol";
 import {ReentrancyGuard} from "lib/solmate/src/utils/ReentrancyGuard.sol";
 
-import {
-    fromKeycode,
-    Keycode,
-    fromVeecode,
-    keycodeFromVeecode,
-    Veecode,
-    Module,
-    WithModules
-} from "src/modules/Modules.sol";
+import {fromKeycode, Keycode, Veecode, Module, WithModules} from "src/modules/Modules.sol";
 
 import {Auction, AuctionModule} from "src/modules/Auction.sol";
 
 import {DerivativeModule} from "src/modules/Derivative.sol";
-import {CondenserModule} from "src/modules/Condenser.sol";
 
 import {ICallback} from "src/interfaces/ICallback.sol";
 import {Callbacks} from "src/lib/Callbacks.sol";
