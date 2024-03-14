@@ -770,7 +770,7 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
         ERC20 quoteToken_,
         ICallback callbacks_
     ) internal {
-        // Determine where the send the payment
+        // Determine where to send the payment
         address to = callbacks_.hasPermission(Callbacks.RECEIVE_QUOTE_TOKENS_FLAG)
             ? address(callbacks_)
             : lotOwner_;

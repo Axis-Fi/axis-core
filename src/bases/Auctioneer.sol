@@ -293,7 +293,7 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
             if (routing_.callbacks.hasPermission(Callbacks.SEND_BASE_TOKENS_FLAG)) {
                 uint256 balanceBefore = routing_.baseToken.balanceOf(address(this));
 
-                // The pre-auction create hook should transfer the base token to this contract
+                // The onCreate callback should transfer the base token to this contract
                 _onCreateCallback(routing_, lotId, lotCapacity, true);
 
                 // Check that the hook transferred the expected amount of base tokens
