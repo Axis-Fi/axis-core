@@ -172,24 +172,3 @@ fn main() -> Result<()> {
 
     Ok(())
 }
-
-// // Parse values from byte strings
-// let message = U256::from_big_endian(&message).as_u128();
-// let x = BaseField::from(BigUint::from_bytes_be(&public_key_x));
-// let y = BaseField::from(BigUint::from_bytes_be(&public_key_y));
-
-// // Construct public key from coordinates
-// // Will revert if the point is not on the curve
-// let public_key = G1::new(x, y).into_group();
-
-// // Format the message for encryption
-// // 1. Generate a random seed to mask the message
-// let message_seed: u128 = thread_rng().gen();
-// // 2. Mask the message with the seed, allowing for underflows
-// let masked_message = message_seed.wrapping_sub(message);
-// // 3. Concatenate the seed and the masked message to create the message to encrypt
-// let plaintext = [
-//     message_seed.to_be_bytes().to_vec(),
-//     masked_message.to_be_bytes().to_vec(),
-// ]
-// .concat();

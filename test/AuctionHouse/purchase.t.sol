@@ -26,7 +26,7 @@ contract PurchaseTest is AuctionHouseTest {
     uint96 internal _expectedSellerQuoteTokenBalance;
     uint96 internal _expectedBidderQuoteTokenBalance;
     uint96 internal _expectedAuctionHouseQuoteTokenBalance;
-    uint96 internal _expectedHookQuoteTokenBalance;
+    uint96 internal _expectedCallbackQuoteTokenBalance;
 
     uint96 internal _expectedSellerBaseTokenBalance;
     uint96 internal _expectedBidderBaseTokenBalance;
@@ -97,7 +97,7 @@ contract PurchaseTest is AuctionHouseTest {
         // Determine curator fee
         uint96 curatorFee = _curatorApproved ? (amountOut_ * _curatorFeePercentActual) / 1e5 : 0;
         bool hasDerivativeToken = _derivativeTokenId != type(uint256).max;
-        bool hasHook = address(_routingParams.hooks) != address(0);
+        bool hasCallback = address(_routingParams.callbacks) != address(0);
         bool isPrefunding = _routingParams.prefunded;
         uint96 scaledLotCapacity = _scaleBaseTokenAmount(_LOT_CAPACITY);
         uint96 scaledCuratorMaxPotentialFee = _scaleBaseTokenAmount(_curatorMaxPotentialFee);
@@ -106,14 +106,16 @@ contract PurchaseTest is AuctionHouseTest {
             amountIn_ - _expectedProtocolFeesAllocated - _expectedReferrerFeesAllocated;
 
         // Quote token
-        _expectedSellerQuoteTokenBalance = hasHook ? 0 : amountInLessFees;
+        _expectedSellerQuoteTokenBalance =
+            hasCallback && _callbackReceiveQuoteTokens ? 0 : amountInLessFees;
         _expectedBidderQuoteTokenBalance = 0;
         _expectedAuctionHouseQuoteTokenBalance =
             _expectedProtocolFeesAllocated + _expectedReferrerFeesAllocated;
-        _expectedHookQuoteTokenBalance = hasHook ? amountInLessFees : 0;
+        _expectedCallbackQuoteTokenBalance =
+            hasCallback && _callbackReceiveQuoteTokens ? amountInLessFees : 0;
         assertEq(
             _expectedSellerQuoteTokenBalance + _expectedBidderQuoteTokenBalance
-                + _expectedAuctionHouseQuoteTokenBalance + _expectedHookQuoteTokenBalance,
+                + _expectedAuctionHouseQuoteTokenBalance + _expectedCallbackQuoteTokenBalance,
             amountIn_,
             "quote token: total balance mismatch"
         );
@@ -176,7 +178,7 @@ contract PurchaseTest is AuctionHouseTest {
             "base token: curator balance"
         );
         assertEq(_baseToken.balanceOf(_PROTOCOL), 0, "base token: protocol balance");
-        assertEq(_baseToken.balanceOf(address(_hook)), 0, "base token: hook balance");
+        assertEq(_baseToken.balanceOf(address(_callback)), 0, "base token: callback balance");
     }
 
     function _assertQuoteTokenBalances() internal {
@@ -200,9 +202,9 @@ contract PurchaseTest is AuctionHouseTest {
         assertEq(_quoteToken.balanceOf(_CURATOR), 0, "quote token: curator balance");
         assertEq(_quoteToken.balanceOf(_PROTOCOL), 0, "quote token: protocol balance");
         assertEq(
-            _quoteToken.balanceOf(address(_hook)),
-            _expectedHookQuoteTokenBalance,
-            "quote token: hook balance"
+            _quoteToken.balanceOf(address(_callback)),
+            _expectedCallbackQuoteTokenBalance,
+            "quote token: callback balance"
         );
     }
 
@@ -219,9 +221,9 @@ contract PurchaseTest is AuctionHouseTest {
             "derivative token: curator balance"
         );
         assertEq(
-            _derivativeModule.derivativeToken().balanceOf(address(_hook), _derivativeTokenId),
+            _derivativeModule.derivativeToken().balanceOf(address(_callback), _derivativeTokenId),
             0,
-            "derivative token: hook balance"
+            "derivative token: callback balance"
         );
         assertEq(
             _derivativeModule.derivativeToken().balanceOf(
@@ -373,9 +375,13 @@ contract PurchaseTest is AuctionHouseTest {
         whenAllowlistProofIsIncorrect
         givenLotIsCreated
         givenLotHasStarted
+        givenUserHasQuoteTokenBalance(_AMOUNT_IN)
+        givenUserHasQuoteTokenAllowance(_AMOUNT_IN)
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
     {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(Auctioneer.NotPermitted.selector, _bidder);
+        bytes memory err = abi.encodePacked("not allowed");
         vm.expectRevert(err);
 
         // Purchase
@@ -587,16 +593,21 @@ contract PurchaseTest is AuctionHouseTest {
         _assertPrefunding();
     }
 
-    // [X] given the auction has hooks defined
-    //  [X] it succeeds - quote token transferred to hook, payout token (minus fees) transferred to _bidder
-    // [X] given the auction does not have hooks defined
+    // [X] given the auction has callbacks defined
+    //  [X] given the callback has the receive quote tokens flag
+    //   [X] it succeeds - payout token transferred from seller, quote token transferred to callback, quote token (minus fees) transferred to _bidder
+    //  [X] given the callback has the send base tokens flag
+    //   [X] it succeeds - payout token transferred from callback, quote token transferred to seller, payout token (minus fees) transferred to _bidder
+    //  [X] it succeeds - quote token transferred to seller, payout token (minus fees) transferred to _bidder
+    // [X] given the auction does not have callbacks defined
     //  [X] it succeeds - quote token transferred to seller, payout token (minus fees) transferred to _bidder
 
-    function test_hooks()
+    function test_callbacks_givenCallbackSendBaseTokensFlag()
         public
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
-        givenAuctionHasHook
+        givenCallbackHasSendBaseTokensFlag
+        givenCallbackIsSet
         givenLotIsCreated
         givenLotHasStarted
         givenProtocolFeeIsSet
@@ -606,8 +617,8 @@ contract PurchaseTest is AuctionHouseTest {
         givenFeesAreCalculated(_AMOUNT_IN)
         whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
         givenBalancesAreCalculated(_AMOUNT_IN, _amountOut)
-        givenHookHasBaseTokenBalance(_amountOut)
-        givenHookHasBaseTokenAllowance(_amountOut)
+        givenCallbackHasBaseTokenBalance(_amountOut)
+        givenCallbackHasBaseTokenAllowance(_amountOut)
     {
         // Purchase
         _createPurchase(_AMOUNT_IN, _amountOut, _purchaseAuctionData);
@@ -618,15 +629,18 @@ contract PurchaseTest is AuctionHouseTest {
         _assertDerivativeTokenBalances();
         _assertAccruedFees();
         _assertPrefunding();
+
+        assertEq(_callback.lotPurchased(_lotId), true, "lotPurchased");
     }
 
-    function test_hooks_quoteTokenDecimalsLarger()
+    function test_callbacks_givenCallbackSendBaseTokensFlag_quoteTokenDecimalsLarger()
         public
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
         givenQuoteTokenHasDecimals(17)
         givenBaseTokenHasDecimals(13)
-        givenAuctionHasHook
+        givenCallbackHasSendBaseTokensFlag
+        givenCallbackIsSet
         givenLotIsCreated
         givenLotHasStarted
         givenProtocolFeeIsSet
@@ -636,8 +650,8 @@ contract PurchaseTest is AuctionHouseTest {
         givenFeesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN))
         whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
         givenBalancesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut)
-        givenHookHasBaseTokenBalance(_amountOut)
-        givenHookHasBaseTokenAllowance(_amountOut)
+        givenCallbackHasBaseTokenBalance(_amountOut)
+        givenCallbackHasBaseTokenAllowance(_amountOut)
     {
         // Purchase
         _createPurchase(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut, _purchaseAuctionData);
@@ -648,15 +662,18 @@ contract PurchaseTest is AuctionHouseTest {
         _assertDerivativeTokenBalances();
         _assertAccruedFees();
         _assertPrefunding();
+
+        assertEq(_callback.lotPurchased(_lotId), true, "lotPurchased");
     }
 
-    function test_hooks_quoteTokenDecimalsSmaller()
+    function test_callbacks_givenCallbackSendBaseTokensFlag_quoteTokenDecimalsSmaller()
         public
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
         givenQuoteTokenHasDecimals(13)
         givenBaseTokenHasDecimals(17)
-        givenAuctionHasHook
+        givenCallbackHasSendBaseTokensFlag
+        givenCallbackIsSet
         givenLotIsCreated
         givenLotHasStarted
         givenProtocolFeeIsSet
@@ -666,8 +683,8 @@ contract PurchaseTest is AuctionHouseTest {
         givenFeesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN))
         whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
         givenBalancesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut)
-        givenHookHasBaseTokenBalance(_amountOut)
-        givenHookHasBaseTokenAllowance(_amountOut)
+        givenCallbackHasBaseTokenBalance(_amountOut)
+        givenCallbackHasBaseTokenAllowance(_amountOut)
     {
         // Purchase
         _createPurchase(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut, _purchaseAuctionData);
@@ -678,9 +695,72 @@ contract PurchaseTest is AuctionHouseTest {
         _assertDerivativeTokenBalances();
         _assertAccruedFees();
         _assertPrefunding();
+
+        assertEq(_callback.lotPurchased(_lotId), true, "lotPurchased");
     }
 
-    function test_noHooks()
+    function test_callbacks_givenCallbackReceiveQuoteTokensFlag()
+        public
+        whenAuctionTypeIsAtomic
+        whenAtomicAuctionModuleIsInstalled
+        givenCallbackHasReceiveQuoteTokensFlag
+        givenCallbackIsSet
+        givenLotIsCreated
+        givenLotHasStarted
+        givenProtocolFeeIsSet
+        givenReferrerFeeIsSet
+        givenUserHasQuoteTokenBalance(_AMOUNT_IN)
+        givenUserHasQuoteTokenAllowance(_AMOUNT_IN)
+        givenFeesAreCalculated(_AMOUNT_IN)
+        whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
+        givenBalancesAreCalculated(_AMOUNT_IN, _amountOut)
+        givenSellerHasBaseTokenBalance(_amountOut)
+        givenSellerHasBaseTokenAllowance(_amountOut)
+    {
+        // Purchase
+        _createPurchase(_AMOUNT_IN, _amountOut, _purchaseAuctionData);
+
+        // Check state
+        _assertQuoteTokenBalances();
+        _assertBaseTokenBalances();
+        _assertDerivativeTokenBalances();
+        _assertAccruedFees();
+        _assertPrefunding();
+
+        assertEq(_callback.lotPurchased(_lotId), true, "lotPurchased");
+    }
+
+    function test_callbacks()
+        public
+        whenAuctionTypeIsAtomic
+        whenAtomicAuctionModuleIsInstalled
+        givenCallbackIsSet
+        givenLotIsCreated
+        givenLotHasStarted
+        givenProtocolFeeIsSet
+        givenReferrerFeeIsSet
+        givenUserHasQuoteTokenBalance(_AMOUNT_IN)
+        givenUserHasQuoteTokenAllowance(_AMOUNT_IN)
+        givenFeesAreCalculated(_AMOUNT_IN)
+        whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
+        givenBalancesAreCalculated(_AMOUNT_IN, _amountOut)
+        givenSellerHasBaseTokenBalance(_amountOut)
+        givenSellerHasBaseTokenAllowance(_amountOut)
+    {
+        // Purchase
+        _createPurchase(_AMOUNT_IN, _amountOut, _purchaseAuctionData);
+
+        // Check state
+        _assertQuoteTokenBalances();
+        _assertBaseTokenBalances();
+        _assertDerivativeTokenBalances();
+        _assertAccruedFees();
+        _assertPrefunding();
+
+        assertEq(_callback.lotPurchased(_lotId), true, "lotPurchased");
+    }
+
+    function test_noCallbacks()
         public
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
@@ -707,7 +787,7 @@ contract PurchaseTest is AuctionHouseTest {
         _assertPrefunding();
     }
 
-    function test_noHooks_quoteTokenDecimalsLarger()
+    function test_noCallbacks_quoteTokenDecimalsLarger()
         public
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
@@ -736,7 +816,7 @@ contract PurchaseTest is AuctionHouseTest {
         _assertPrefunding();
     }
 
-    function test_noHooks_quoteTokenDecimalsSmaller()
+    function test_noCallbacks_quoteTokenDecimalsSmaller()
         public
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
@@ -1578,6 +1658,8 @@ contract PurchaseTest is AuctionHouseTest {
     // ======== Prefunding flow ======== //
 
     // [X] given the auction is prefunded
+    //  [X] given the auction has callbacks
+    //   [X] it calls the callback
     //  [X] given the curator has approved
     //   [X] it succeeds - base token is not transferred from seller again
     //  [X] it succeeds - base token is not transferred from seller again
@@ -1671,6 +1753,38 @@ contract PurchaseTest is AuctionHouseTest {
         _assertDerivativeTokenBalances();
         _assertAccruedFees();
         _assertPrefunding();
+    }
+
+    function test_prefunded_givenAuctionHasCallback()
+        external
+        whenAuctionTypeIsAtomic
+        whenAtomicAuctionModuleIsInstalled
+        givenAuctionIsPrefunded
+        givenCuratorIsSet
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenCallbackIsSet
+        givenLotIsCreated
+        givenProtocolFeeIsSet
+        givenReferrerFeeIsSet
+        givenLotHasStarted
+        givenUserHasQuoteTokenBalance(_AMOUNT_IN)
+        givenUserHasQuoteTokenAllowance(_AMOUNT_IN)
+        givenFeesAreCalculated(_AMOUNT_IN)
+        whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
+        givenBalancesAreCalculated(_AMOUNT_IN, _amountOut)
+    {
+        // Purchase
+        _createPurchase(_AMOUNT_IN, _amountOut, _purchaseAuctionData);
+
+        // Check state
+        _assertQuoteTokenBalances();
+        _assertBaseTokenBalances();
+        _assertDerivativeTokenBalances();
+        _assertAccruedFees();
+        _assertPrefunding();
+
+        assertEq(_callback.lotPurchased(_lotId), true, "lotPurchased");
     }
 
     function test_prefunded_givenCuratorHasApproved()

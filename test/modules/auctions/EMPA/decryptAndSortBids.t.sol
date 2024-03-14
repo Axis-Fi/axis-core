@@ -3,11 +3,8 @@ pragma solidity 0.8.19;
 
 import {Auction} from "src/modules/Auction.sol";
 import {EncryptedMarginalPriceAuctionModule} from "src/modules/auctions/EMPAM.sol";
-import {FixedPointMathLib} from "lib/solmate/src/utils/FixedPointMathLib.sol";
 
 import {EmpaModuleTest} from "test/modules/auctions/EMPA/EMPAModuleTest.sol";
-
-import {console2} from "forge-std/console2.sol";
 
 contract EmpaModuleDecryptBidsTest is EmpaModuleTest {
     uint96 internal constant _BID_AMOUNT = 2e18;

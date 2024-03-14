@@ -69,7 +69,7 @@ contract MockBatchAuctionModule is AuctionModule {
         uint96,
         uint96,
         bytes calldata
-    ) internal pure override returns (uint256, bytes memory) {
+    ) internal pure override returns (uint96, bytes memory) {
         revert Auction_NotImplemented();
     }
 
@@ -100,7 +100,7 @@ contract MockBatchAuctionModule is AuctionModule {
         uint96 lotId_,
         uint64 bidId_,
         address
-    ) internal virtual override returns (uint256 refundAmount) {
+    ) internal virtual override returns (uint96 refundAmount) {
         // Cancel the bid
         bidCancelled[lotId_][bidId_] = true;
 
@@ -142,7 +142,7 @@ contract MockBatchAuctionModule is AuctionModule {
         return (lotSettlements[lotId_], "");
     }
 
-    function _claimProceeds(uint96 lotId_) internal override returns (uint256, uint256, uint256) {
+    function _claimProceeds(uint96 lotId_) internal override returns (uint96, uint96, uint96) {
         // Update status
         lotStatus[lotId_] = Auction.Status.Claimed;
 

@@ -11,9 +11,7 @@ import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 import {MockAtomicAuctionModule} from "test/modules/Auction/MockAtomicAuctionModule.sol";
 import {MockBatchAuctionModule} from "test/modules/Auction/MockBatchAuctionModule.sol";
 import {MockDerivativeModule} from "test/modules/derivatives/mocks/MockDerivativeModule.sol";
-import {MockCondenserModule} from "test/modules/Condenser/MockCondenserModule.sol";
-import {MockAllowlist} from "test/modules/Auction/MockAllowlist.sol";
-import {MockHook} from "test/modules/Auction/MockHook.sol";
+import {MockCallback} from "test/AuctionHouse/MockCallback.sol";
 import {Permit2User} from "test/lib/permit2/Permit2User.sol";
 import {MockFeeOnTransferERC20} from "test/lib/mocks/MockFeeOnTransferERC20.sol";
 
@@ -21,8 +19,10 @@ import {MockFeeOnTransferERC20} from "test/lib/mocks/MockFeeOnTransferERC20.sol"
 import {AuctionHouse, Router} from "src/AuctionHouse.sol";
 import {Auction, AuctionModule} from "src/modules/Auction.sol";
 import {FeeManager} from "src/bases/FeeManager.sol";
-import {IHooks, IAllowlist, Auctioneer} from "src/bases/Auctioneer.sol";
+import {Auctioneer} from "src/bases/Auctioneer.sol";
 import {Catalogue} from "src/Catalogue.sol";
+import {ICallback} from "src/interfaces/ICallback.sol";
+import {Callbacks} from "src/lib/Callbacks.sol";
 
 import {Veecode, toKeycode, keycodeFromVeecode, Keycode} from "src/modules/Modules.sol";
 
@@ -41,10 +41,7 @@ abstract contract AuctionHouseTest is Test, Permit2User {
     Keycode internal _batchAuctionModuleKeycode;
     MockDerivativeModule internal _derivativeModule;
     Keycode internal _derivativeModuleKeycode;
-    MockCondenserModule internal _condenserModule;
-    Keycode internal _condenserModuleKeycode;
-    MockAllowlist internal _allowlist;
-    MockHook internal _hook;
+    MockCallback internal _callback;
 
     uint96 internal constant _BASE_SCALE = 1e18;
 
@@ -82,6 +79,8 @@ abstract contract AuctionHouseTest is Test, Permit2User {
     Auction.AuctionParams internal _auctionParams;
     bytes internal _allowlistProof;
     bytes internal _permit2Data;
+    bool internal _callbackSendBaseTokens;
+    bool internal _callbackReceiveQuoteTokens;
 
     // Outputs
     uint96 internal _lotId = type(uint96).max; // Set to max to ensure it's not a valid lot id
@@ -104,11 +103,6 @@ abstract contract AuctionHouseTest is Test, Permit2User {
         _batchAuctionModuleKeycode = keycodeFromVeecode(_batchAuctionModule.VEECODE());
         _derivativeModule = new MockDerivativeModule(address(_auctionHouse));
         _derivativeModuleKeycode = keycodeFromVeecode(_derivativeModule.VEECODE());
-        _condenserModule = new MockCondenserModule(address(_auctionHouse));
-        _condenserModuleKeycode = keycodeFromVeecode(_condenserModule.VEECODE());
-
-        _allowlist = new MockAllowlist();
-        _hook = new MockHook(address(_quoteToken), address(_baseToken));
 
         _startTime = uint48(block.timestamp) + 1;
 
@@ -125,11 +119,11 @@ abstract contract AuctionHouseTest is Test, Permit2User {
             baseToken: _baseToken,
             quoteToken: _quoteToken,
             curator: _CURATOR,
-            hooks: IHooks(address(0)),
-            allowlist: IAllowlist(address(0)),
-            allowlistParams: abi.encode(""),
+            callbacks: ICallback(address(0)),
+            callbackData: abi.encode(""),
             derivativeType: toKeycode(""),
             derivativeParams: _derivativeParams,
+            wrapDerivative: false,
             prefunded: false
         });
 
@@ -174,9 +168,6 @@ abstract contract AuctionHouseTest is Test, Permit2User {
 
         // Update auction params
         _auctionParams.capacity = uint96(lotCapacity);
-
-        // Update the hook
-        _hook.setPayoutToken(address(_baseToken));
     }
 
     modifier givenBaseTokenHasDecimals(uint8 decimals_) {
@@ -189,9 +180,6 @@ abstract contract AuctionHouseTest is Test, Permit2User {
 
         // Update routing params
         _routingParams.quoteToken = _quoteToken;
-
-        // Update the hook
-        _hook.setQuoteToken(address(_quoteToken));
     }
 
     modifier givenQuoteTokenHasDecimals(uint8 decimals_) {
@@ -249,7 +237,7 @@ abstract contract AuctionHouseTest is Test, Permit2User {
 
     modifier givenLotIsCancelled() {
         vm.prank(_SELLER);
-        _auctionHouse.cancel(_lotId);
+        _auctionHouse.cancel(_lotId, bytes(""));
         _;
     }
 
@@ -273,13 +261,53 @@ abstract contract AuctionHouseTest is Test, Permit2User {
     }
 
     modifier givenLotHasAllowlist() {
-        _routingParams.allowlist = _allowlist;
+        // Allowlist callback supports onCreate, onPurchase, and onBid callbacks
+        // // 10011000 = 0x98
+        // bytes memory bytecode = abi.encodePacked(
+        //     type(MockCallback).creationCode,
+        //     abi.encode(address(_auctionHouse), Callbacks.Permissions({
+        //         onCreate: true,
+        //         onCancel: false,
+        //         onCurate: false,
+        //         onPurchase: true,
+        //         onBid: true,
+        //         onClaimProceeds: false,
+        //         receiveQuoteTokens: false,
+        //         sendBaseTokens: false
+        //     }), _SELLER)
+        // );
+        // vm.writeFile(
+        //     "./bytecode/MockCallback98.bin",
+        //     vm.toString(bytecode)
+        // );
+
+        bytes32 salt = bytes32(0xf0ed8d3497b89c15f75f5b50feaceaef84f932e48da2479214055d6200680dcc);
+        vm.broadcast(); // required for CREATE2 address to work correctly. doesn't do anything in a test
+        _callback = new MockCallback{salt: salt}(
+            address(_auctionHouse),
+            Callbacks.Permissions({
+                onCreate: true,
+                onCancel: false,
+                onCurate: false,
+                onPurchase: true,
+                onBid: true,
+                onClaimProceeds: false,
+                receiveQuoteTokens: false,
+                sendBaseTokens: false
+            }),
+            _SELLER
+        );
+
+        _routingParams.callbacks = _callback;
+
+        // Set allowlist enabled on the callback
+        _callback.setAllowlistEnabled(true);
         _;
     }
 
     modifier whenAllowlistProofIsCorrect() {
         // Add the sender to the allowlist
-        _allowlist.setAllowedWithProof(_bidder, _allowlistProof, true);
+        _callback.setAllowedWithProof(_bidder, _allowlistProof, true);
         _;
     }
 
@@ -328,18 +356,134 @@ abstract contract AuctionHouseTest is Test, Permit2User {
         _;
     }
 
-    modifier givenAuctionHasHook() {
-        _routingParams.hooks = _hook;
+    modifier givenCallbackIsSet() {
+        // Uncomment to regenerate bytecode to mine new salts if the MockCallback changes
+        // // 11111111 = 0xFF
+        // bytes memory bytecode = abi.encodePacked(
+        //     type(MockCallback).creationCode,
+        //     abi.encode(address(_auctionHouse), Callbacks.Permissions({
+        //         onCreate: true,
+        //         onCancel: true,
+        //         onCurate: true,
+        //         onPurchase: true,
+        //         onBid: true,
+        //         onClaimProceeds: true,
+        //         receiveQuoteTokens: true,
+        //         sendBaseTokens: true
+        //     }), _SELLER)
+        // );
+        // vm.writeFile(
+        //     "./bytecode/MockCallbackFF.bin",
+        //     vm.toString(bytecode)
+        // );
+        // // 11111101 = 0xFD
+        // bytecode = abi.encodePacked(
+        //     type(MockCallback).creationCode,
+        //     abi.encode(address(_auctionHouse), Callbacks.Permissions({
+        //         onCreate: true,
+        //         onCancel: true,
+        //         onCurate: true,
+        //         onPurchase: true,
+        //         onBid: true,
+        //         onClaimProceeds: true,
+        //         receiveQuoteTokens: false,
+        //         sendBaseTokens: true
+        //     }), _SELLER)
+        // );
+        // vm.writeFile(
+        //     "./bytecode/MockCallbackFD.bin",
+        //     vm.toString(bytecode)
+        // );
+        // // 11111110 = 0xFE
+        // bytecode = abi.encodePacked(
+        //     type(MockCallback).creationCode,
+        //     abi.encode(address(_auctionHouse), Callbacks.Permissions({
+        //         onCreate: true,
+        //         onCancel: true,
+        //         onCurate: true,
+        //         onPurchase: true,
+        //         onBid: true,
+        //         onClaimProceeds: true,
+        //         receiveQuoteTokens: true,
+        //         sendBaseTokens: false
+        //     }), _SELLER)
+        // );
+        // vm.writeFile(
+        //     "./bytecode/MockCallbackFE.bin",
+        //     vm.toString(bytecode)
+        // );
+        // // 11111100 = 0xFC
+        // bytecode = abi.encodePacked(
+        //     type(MockCallback).creationCode,
+        //     abi.encode(address(_auctionHouse), Callbacks.Permissions({
+        //         onCreate: true,
+        //         onCancel: true,
+        //         onCurate: true,
+        //         onPurchase: true,
+        //         onBid: true,
+        //         onClaimProceeds: true,
+        //         receiveQuoteTokens: false,
+        //         sendBaseTokens: false
+        //     }), _SELLER)
+        // );
+        // vm.writeFile(
+        //     "./bytecode/MockCallbackFC.bin",
+        //     vm.toString(bytecode)
+        // );
+
+        // Set the salt based on which token flags are set
+        bytes32 salt;
+        if (_callbackSendBaseTokens && _callbackReceiveQuoteTokens) {
+            // 11111111 = 0xFF
+            salt = bytes32(0x734ab13cde907c9201029664873144c66fc543778575644bfb463e206e5a9f13);
+        } else if (_callbackSendBaseTokens) {
+            // 11111101 = 0xFD
+            salt = bytes32(0x4e801b9863ac4b904ad17350aeadfe6aa99ea95f851f7374bda10483c7674e3e);
+        } else if (_callbackReceiveQuoteTokens) {
+            // 11111110 = 0xFE
+            salt = bytes32(0xb6112be8b260aeb5327d08438412850578697c5df20098edf0f08d4ba3cd27cd);
+        } else {
+            // 11111100 = 0xFC
+            salt = bytes32(0xf048bb05cd13f600e256232984dfc0d69193e620014936571e456d440bed7f8f);
+        }
+
+        vm.broadcast(); // required for CREATE2 address to work correctly. doesn't do anything in a test
+        _callback = new MockCallback{salt: salt}(
+            address(_auctionHouse),
+            Callbacks.Permissions({
+                onCreate: true,
+                onCancel: true,
+                onCurate: true,
+                onPurchase: true,
+                onBid: true,
+                onClaimProceeds: true,
+                receiveQuoteTokens: _callbackReceiveQuoteTokens,
+                sendBaseTokens: _callbackSendBaseTokens
+            }),
+            _SELLER
+        );
+
+        _routingParams.callbacks = _callback;
         _;
     }
 
-    modifier givenHookHasBaseTokenBalance(uint256 amount_) {
-        _baseToken.mint(address(_hook), amount_);
+    modifier givenCallbackHasSendBaseTokensFlag() {
+        _callbackSendBaseTokens = true;
         _;
     }
 
-    modifier givenHookHasBaseTokenAllowance(uint256 amount_) {
-        vm.prank(address(_hook));
+    modifier givenCallbackHasReceiveQuoteTokensFlag() {
+        _callbackReceiveQuoteTokens = true;
+        _;
+    }
+
+    modifier givenCallbackHasBaseTokenBalance(uint256 amount_) {
+        _baseToken.mint(address(_callback), amount_);
+        _;
+    }
+
+    modifier givenCallbackHasBaseTokenAllowance(uint256 amount_) {
+        vm.prank(address(_callback));
         _baseToken.approve(address(_auctionHouse), amount_);
         _;
     }
@@ -354,12 +498,11 @@ abstract contract AuctionHouseTest is Test, Permit2User {
             referrer: _REFERRER,
             amount: amount_,
             auctionData: auctionData_,
-            allowlistProof: _allowlistProof,
             permit2Data: _permit2Data
         });
 
         vm.prank(bidder_);
-        _bidId = _auctionHouse.bid(bidParams);
+        _bidId = _auctionHouse.bid(bidParams, _allowlistProof);
 
         return _bidId;
     }
@@ -395,12 +538,11 @@ abstract contract AuctionHouseTest is Test, Permit2User {
             amount: amount_,
             minAmountOut: minAmountOut_,
             auctionData: auctionData_,
-            allowlistProof: _allowlistProof,
             permit2Data: _permit2Data
         });
 
         vm.prank(_bidder);
-        uint256 payout = _auctionHouse.purchase(purchaseParams);
+        uint256 payout = _auctionHouse.purchase(purchaseParams, _allowlistProof);
 
         return payout;
     }
@@ -445,7 +587,7 @@ abstract contract AuctionHouseTest is Test, Permit2User {
 
     modifier givenCuratorHasApproved() {
         vm.prank(_CURATOR);
-        _auctionHouse.curate(_lotId);
+        _auctionHouse.curate(_lotId, bytes(""));
         _curatorApproved = true;
         _;
     }
@@ -477,7 +619,7 @@ abstract contract AuctionHouseTest is Test, Permit2User {
 
     modifier givenLotProceedsAreClaimed() {
         vm.prank(_SELLER);
-        _auctionHouse.claimProceeds(_lotId);
+        _auctionHouse.claimProceeds(_lotId, bytes(""));
         _;
     }
 
@@ -494,16 +636,15 @@ abstract contract AuctionHouseTest is Test, Permit2User {
 
     function _getLotRouting(uint96 lotId_) internal view returns (Auctioneer.Routing memory) {
         (
-            Veecode auctionReference_,
             address seller_,
+            uint96 prefunding_,
             ERC20 baseToken_,
+            Veecode auctionReference_,
             ERC20 quoteToken_,
-            IHooks hooks_,
-            IAllowlist allowlist_,
+            ICallback callback_,
             Veecode derivativeReference_,
-            bytes memory derivativeParams_,
             bool wrapDerivative_,
-            uint256 prefunding_
+            bytes memory derivativeParams_
         ) = _auctionHouse.lotRouting(lotId_);
 
         return Auctioneer.Routing({
@@ -511,8 +652,7 @@ abstract contract AuctionHouseTest is Test, Permit2User {
             seller: seller_,
             baseToken: baseToken_,
             quoteToken: quoteToken_,
-            hooks: hooks_,
-            allowlist: allowlist_,
+            callbacks: callback_,
             derivativeReference: derivativeReference_,
             derivativeParams: derivativeParams_,
             wrapDerivative: wrapDerivative_,

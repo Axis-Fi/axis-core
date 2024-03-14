@@ -81,6 +81,9 @@ contract ClaimBidsTest is AuctionHouseTest {
             "base token: curator balance"
         );
         assertEq(_baseToken.balanceOf(_PROTOCOL), 0, "base token: protocol balance");
+
+        Auctioneer.Routing memory routing = _getLotRouting(_lotId);
+        assertEq(routing.funding, _expectedAuctionHouseBaseTokenBalance, "funding");
     }
 
     function _assertQuoteTokenBalances() internal {
@@ -116,8 +119,8 @@ contract ClaimBidsTest is AuctionHouseTest {
     function _mockClaimBid(
         address bidder_,
         address referrer_,
-        uint256 paid_,
-        uint256 payout_
+        uint96 paid_,
+        uint96 payout_
     ) internal {
         _bidClaims.push(
             Auction.BidClaim({bidder: bidder_, referrer: referrer_, paid: paid_, payout: payout_})

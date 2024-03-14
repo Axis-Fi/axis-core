@@ -1,27 +1,18 @@
-/// SPDX-License-Identifier: AGPL-3.0
+/// SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.19;
 
-import {ERC20} from "solmate/tokens/ERC20.sol";
+import {ERC20} from "lib/solmate/src/tokens/ERC20.sol";
 import {Transfer} from "src/lib/Transfer.sol";
-import {ReentrancyGuard} from "solmate/utils/ReentrancyGuard.sol";
+import {ReentrancyGuard} from "lib/solmate/src/utils/ReentrancyGuard.sol";
 
-import {
-    fromKeycode,
-    Keycode,
-    fromVeecode,
-    keycodeFromVeecode,
-    Veecode,
-    Module,
-    WithModules
-} from "src/modules/Modules.sol";
+import {fromKeycode, Keycode, Veecode, Module, WithModules} from "src/modules/Modules.sol";
 
 import {Auction, AuctionModule} from "src/modules/Auction.sol";
 
 import {DerivativeModule} from "src/modules/Derivative.sol";
-import {CondenserModule} from "src/modules/Condenser.sol";
 
-import {IHooks} from "src/interfaces/IHooks.sol";
-import {IAllowlist} from "src/interfaces/IAllowlist.sol";
+import {ICallback} from "src/interfaces/ICallback.sol";
+import {Callbacks} from "src/lib/Callbacks.sol";
 
 /// @title  Auctioneer
 /// @notice The Auctioneer handles the following:
@@ -29,12 +20,14 @@ import {IAllowlist} from "src/interfaces/IAllowlist.sol";
 ///         - Cancelling auction lots
 ///         - Storing information about how to handle inputs and outputs for auctions ("routing")
 abstract contract Auctioneer is WithModules, ReentrancyGuard {
+    using Callbacks for ICallback;
+
     // ========= ERRORS ========= //
 
     error InvalidParams();
     error InvalidLotId(uint96 id_);
     error InvalidState();
-    error InvalidHook();
+    error InvalidCallback();
 
     /// @notice     Used when the caller is not permitted to perform that action
     error NotPermitted(address caller_);
@@ -68,23 +61,21 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
     /// @param      seller              Lot seller
     /// @param      baseToken           Token provided by seller
     /// @param      quoteToken          Token to accept as payment
-    /// @param      hooks               (optional) Address to call for any hooks to be executed
-    /// @param      allowlist           (optional) Contract that implements an allowlist for the auction lot
+    /// @param      callbacks           (optional) Callbacks implementation for extended functionality
     /// @param      derivativeReference (optional) Derivative module, represented by its Veecode
     /// @param      derivativeParams    (optional) abi-encoded data to be used to create payout derivatives on a purchase
     /// @param      wrapDerivative      (optional) Whether to wrap the derivative in a ERC20 token instead of the native ERC6909 format
     /// @param      funding             The amount of base tokens in funding remaining
     struct Routing {
-        Veecode auctionReference;
-        address seller;
-        ERC20 baseToken;
-        ERC20 quoteToken;
-        IHooks hooks;
-        IAllowlist allowlist;
-        Veecode derivativeReference;
+        address seller; // 20 bytes
+        uint96 funding; // 12 bytes
+        ERC20 baseToken; // 20 bytes
+        Veecode auctionReference; // 7 bytes
+        ERC20 quoteToken; // 20 bytes
+        ICallback callbacks; // 20 bytes
+        Veecode derivativeReference; // 7 bytes
+        bool wrapDerivative; // 1 byte
         bytes derivativeParams;
-        bool wrapDerivative;
-        uint256 funding;
     }
 
     /// @notice     Fee information for a lot
@@ -103,11 +94,11 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
     /// @param      protocolFee The fee charged by the protocol
     /// @param      referrerFee The fee charged by the referrer
     struct FeeData {
-        address curator;
-        bool curated;
-        uint48 curatorFee;
-        uint48 protocolFee;
-        uint48 referrerFee;
+        address curator; // 20 bytes
+        bool curated; // 1 byte
+        uint48 curatorFee; // 6 bytes
+        uint48 protocolFee; // 6 bytes
+        uint48 referrerFee; // 6 bytes
     }
 
     /// @notice     Auction routing information provided as input parameters
@@ -117,9 +108,8 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
     /// @param      baseToken           Token provided by seller
     /// @param      quoteToken          Token to accept as payment
     /// @param      curator             (optional) Address of the proposed curator
-    /// @param      hooks               (optional) Address to call for any hooks to be executed
-    /// @param      allowlist           (optional) Contract that implements an allowlist for the auction lot
-    /// @param      allowlistParams     (optional) abi-encoded data to be used to register the auction on the allowlist
+    /// @param      callbacks           (optional) Callbacks implementation for extended functionality
+    /// @param      callbackData        (optional) abi-encoded data to be sent to the onCreate callback function
     /// @param      derivativeType      (optional) Derivative type, represented by the Keycode for the derivative submodule
     /// @param      derivativeParams    (optional) abi-encoded data to be used to create payout derivatives on a purchase. The format of this is dependent on the derivative module.
     /// @param      prefunded           Whether the auction should be pre-funded. Must be true for batch auctions.
@@ -128,11 +118,11 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
         ERC20 baseToken;
         ERC20 quoteToken;
         address curator;
-        IHooks hooks;
-        IAllowlist allowlist;
-        bytes allowlistParams;
+        ICallback callbacks;
+        bytes callbackData;
         Keycode derivativeType;
         bytes derivativeParams;
+        bool wrapDerivative;
         bool prefunded;
     }
 
@@ -146,10 +136,6 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
 
     /// @notice     Mapping of lot IDs to their fee information
     mapping(uint96 lotId => FeeData) public lotFees;
-
-    /// @notice     Mapping auction and derivative references to the condenser that is used to pass data between them
-    mapping(Veecode auctionRef => mapping(Veecode derivativeRef => Veecode condenserRef)) public
-        condensers;
 
     // ========== AUCTION MANAGEMENT ========== //
 
@@ -178,14 +164,17 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
     ) external nonReentrant returns (uint96 lotId) {
         // Check that the module for the auction type is valid
         // Validate routing parameters
+
+        // Tokens must not be the zero address
         if (address(routing_.baseToken) == address(0) || address(routing_.quoteToken) == address(0))
         {
             revert InvalidParams();
         }
 
+        Routing storage routing = lotRouting[lotId];
+
         bool requiresPrefunding;
-        uint256 lotCapacity;
-        Veecode auctionReference;
+        uint96 lotCapacity;
         {
             // Load auction type module, this checks that it is installed.
             // We load it here vs. later to avoid two checks.
@@ -207,7 +196,7 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
             // Call module auction function to store implementation-specific data
             (lotCapacity) =
                 auctionModule.auction(lotId, params_, quoteTokenDecimals, baseTokenDecimals);
-            auctionReference = auctionModule.VEECODE();
+            routing.auctionReference = auctionModule.VEECODE();
 
             // Prefunding is required for batch auctions
             // Check that this is not incorrectly overridden
@@ -219,8 +208,6 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
         }
 
         // Store routing information
-        Routing storage routing = lotRouting[lotId];
-        routing.auctionReference = auctionReference;
         routing.seller = msg.sender;
         routing.baseToken = routing_.baseToken;
         routing.quoteToken = routing_.quoteToken;
@@ -250,50 +237,15 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
             // Store derivative information
             routing.derivativeReference = derivativeModule.VEECODE();
             routing.derivativeParams = routing_.derivativeParams;
+            routing.wrapDerivative = routing_.wrapDerivative;
         }
 
-        // Condenser
-        {
-            // Get condenser reference
-            Veecode condenserRef = condensers[routing.auctionReference][routing.derivativeReference];
-
-            // Check that the module for the condenser type is valid
-            if (fromVeecode(condenserRef) != bytes7(0)) {
-                if (
-                    CondenserModule(_getModuleIfInstalled(condenserRef)).TYPE()
-                        != Module.Type.Condenser
-                ) revert InvalidParams();
-
-                // Check module status
-                Keycode moduleKeycode = keycodeFromVeecode(condenserRef);
-                if (getModuleStatus[moduleKeycode].sunset == true) {
-                    revert ModuleIsSunset(moduleKeycode);
-                }
-            }
-        }
-
-        // If allowlist is being used, validate the allowlist data and register the auction on the allowlist
-        if (address(routing_.allowlist) != address(0)) {
-            // Check that it is a contract
-            // It is assumed that the user will do validation of the allowlist
-            if (address(routing_.allowlist).code.length == 0) revert InvalidParams();
-
-            // Register with the allowlist
-            routing_.allowlist.register(lotId, routing_.allowlistParams);
-
-            // Store allowlist information
-            routing.allowlist = routing_.allowlist;
-        }
-
-        // If hooks are being used, validate the hooks data
-        if (address(routing_.hooks) != address(0)) {
-            // Check that it is a contract
-            // It is assumed that the user will do validation of the hooks
-            if (address(routing_.hooks).code.length == 0) revert InvalidParams();
-
-            // Store hooks information
-            routing.hooks = routing_.hooks;
-        }
+        // Validate callbacks address and store if provided
+        // This does not check whether the callbacks contract is implemented properly
+        // Certain functions may revert later. TODO need to think about security with this.
+        if (!Callbacks.isValidCallbacksAddress(routing_.callbacks)) revert InvalidParams();
+        // The zero address passes the isValidCallbackAddress check since we allow auctions to not use a callbacks contract
+        if (address(routing_.callbacks) != address(0)) routing.callbacks = routing_.callbacks;
 
         // Perform pre-funding, if needed
         // It does not make sense to pre-fund the auction if the capacity is in quote tokens
@@ -304,24 +256,28 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
             // Store pre-funding information
             routing.funding = lotCapacity;
 
-            // Call hook on hooks contract if provided
-            if (address(routing_.hooks) != address(0)) {
+            // Handle funding from callback or seller as configured
+            if (routing_.callbacks.hasPermission(Callbacks.SEND_BASE_TOKENS_FLAG)) {
                 uint256 balanceBefore = routing_.baseToken.balanceOf(address(this));
 
-                // The pre-auction create hook should transfer the base token to this contract
-                routing_.hooks.preAuctionCreate(lotId);
+                // The onCreate callback should transfer the base token to this contract
+                _onCreateCallback(routing_, lotId, lotCapacity, true);
 
                 // Check that the hook transferred the expected amount of base tokens
                 if (routing_.baseToken.balanceOf(address(this)) < balanceBefore + lotCapacity) {
-                    revert InvalidHook();
+                    revert InvalidCallback();
                 }
             }
-            // Otherwise fallback to a standard ERC20 transfer
+            // Otherwise fallback to a standard ERC20 transfer and then call the onCreate callback
             else {
                 Transfer.transferFrom(
                     routing_.baseToken, msg.sender, address(this), lotCapacity, true
                 );
+                _onCreateCallback(routing_, lotId, lotCapacity, false);
             }
+        } else {
+            // Call onCreate callback with no prefunding
+            _onCreateCallback(routing_, lotId, lotCapacity, false);
         }
 
         emit AuctionCreated(lotId, routing.auctionReference, infoHash_);
@@ -342,7 +298,7 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
     ///             - re-entrancy is detected
     ///
     /// @param      lotId_      ID of the auction lot
-    function cancel(uint96 lotId_) external nonReentrant {
+    function cancel(uint96 lotId_, bytes calldata callbackData_) external nonReentrant {
         // Validation
         _isLotValid(lotId_);
 
@@ -356,13 +312,30 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
 
         // If the auction is prefunded and supported, transfer the remaining capacity to the seller
         if (routing.funding > 0) {
-            uint256 funding = routing.funding;
+            uint96 funding = routing.funding;
 
             // Set to 0 before transfer to avoid re-entrancy
             routing.funding = 0;
 
-            // Transfer payout tokens to the seller
-            Transfer.transfer(routing.baseToken, routing.seller, funding, false);
+            // Transfer the base tokens to the appropriate contract
+            Transfer.transfer(
+                routing.baseToken,
+                _getAddressGivenCallbackBaseTokenFlag(routing.callbacks, routing.seller),
+                funding,
+                false
+            );
+
+            // Call the callback to transfer the base token to the owner
+            Callbacks.onCancel(
+                routing.callbacks,
+                lotId_,
+                funding,
+                routing.callbacks.hasPermission(Callbacks.SEND_BASE_TOKENS_FLAG),
+                callbackData_
+            );
+        } else {
+            // Call the callback to notify of the cancellation
+            Callbacks.onCancel(routing.callbacks, lotId_, 0, false, callbackData_);
         }
 
         emit AuctionCancelled(lotId_, routing.auctionReference);
@@ -393,42 +366,31 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
         return _getModuleForId(lotId_);
     }
 
-    // ========== GOVERNANCE FUNCTIONS ========== //
+    function _onCreateCallback(
+        RoutingParams calldata routing_,
+        uint96 lotId_,
+        uint96 capacity_,
+        bool preFund_
+    ) internal {
+        Callbacks.onCreate(
+            routing_.callbacks,
+            lotId_,
+            msg.sender,
+            address(routing_.baseToken),
+            address(routing_.quoteToken),
+            capacity_,
+            preFund_,
+            routing_.callbackData
+        );
+    }
 
-    /// @notice     Sets the value of the Condenser for a given auction and derivative combination
-    /// @dev        To remove a condenser, set the value of `condenserRef_` to a blank Veecode
-    ///
-    ///             This function will revert if:
-    ///             - The caller is not the owner
-    ///             - `auctionRef_` or `derivativeRef_` are empty
-    ///             - `auctionRef_` does not belong to an auction module
-    ///             - `derivativeRef_` does not belong to a derivative module
-    ///             - `condenserRef_` does not belong to a condenser module
-    ///
-    /// @param      auctionRef_    The auction type
-    /// @param      derivativeRef_ The derivative type
-    /// @param      condenserRef_  The condenser type
-    function setCondenser(
-        Veecode auctionRef_,
-        Veecode derivativeRef_,
-        Veecode condenserRef_
-    ) external onlyOwner {
-        // Check that the auction type, derivative type, and condenser types are valid
-        if (
-            (AuctionModule(_getModuleIfInstalled(auctionRef_)).TYPE() != Module.Type.Auction)
-                || (
-                    DerivativeModule(_getModuleIfInstalled(derivativeRef_)).TYPE()
-                        != Module.Type.Derivative
-                )
-                || (
-                    fromVeecode(condenserRef_) != bytes7(0)
-                        && CondenserModule(_getModuleIfInstalled(condenserRef_)).TYPE()
-                            != Module.Type.Condenser
-                )
-        ) revert InvalidParams();
-
-        // Set the condenser reference
-        condensers[auctionRef_][derivativeRef_] = condenserRef_;
+    function _getAddressGivenCallbackBaseTokenFlag(
+        ICallback callbacks_,
+        address seller_
+    ) internal pure returns (address) {
+        return callbacks_.hasPermission(Callbacks.SEND_BASE_TOKENS_FLAG)
+            ? address(callbacks_)
+            : seller_;
     }
 
     // ========= VALIDATION FUNCTIONS ========= //

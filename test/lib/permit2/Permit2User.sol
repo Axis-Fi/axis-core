@@ -24,6 +24,7 @@ contract Permit2User is Test {
         return uint256(
             keccak256(
                 abi.encode(
+                    // solhint-disable-next-line avoid-tx-origin
                     tx.origin,
                     block.number,
                     block.timestamp,

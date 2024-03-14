@@ -14,7 +14,7 @@
     "fmt:check": "forge fmt --check",
     "solhint": "solhint --fix --config ./.solhint.json 'src/**/*.sol'",
     "solhint:check": "solhint --config ./.solhint.json 'src/**/*.sol'",
-    "lint": "npm run fmt && npm run solhint",
+    "lint": "pnpm run fmt && pnpm run solhint",
     "lint:check": "pnpm run fmt:check && pnpm run solhint:check",
     "size": "forge clean && forge build --sizes --skip test --skip '*/Mock*.sol'",
     "test": "forge test -vvv"

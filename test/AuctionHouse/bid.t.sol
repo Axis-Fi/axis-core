@@ -5,7 +5,6 @@ pragma solidity 0.8.19;
 import {MockBatchAuctionModule} from "test/modules/Auction/MockBatchAuctionModule.sol";
 
 // Auctions
-import {AuctionHouse} from "src/AuctionHouse.sol";
 import {Auction} from "src/modules/Auction.sol";
 import {Auctioneer} from "src/bases/Auctioneer.sol";
 
@@ -38,6 +37,8 @@ contract BidTest is AuctionHouseTest {
     //  [X] it transfers the tokens from the sender using Permit2
     // [X] when Permit2 approval is not provided
     //  [X] it transfers the tokens from the sender
+    // [X] given the auction has callbacks
+    //  [X] it calls the callback
     // [X] it records the bid
 
     function test_givenAtomicAuction_reverts()
@@ -139,8 +140,10 @@ contract BidTest is AuctionHouseTest {
         givenLotIsCreated
         givenLotHasStarted
         whenAllowlistProofIsIncorrect
+        givenUserHasQuoteTokenBalance(_BID_AMOUNT)
+        givenUserHasQuoteTokenAllowance(_BID_AMOUNT)
     {
-        bytes memory err = abi.encodeWithSelector(Auctioneer.NotPermitted.selector, _bidder);
+        bytes memory err = abi.encodePacked("not allowed");
         vm.expectRevert(err);
 
         // Call the function
@@ -257,7 +260,45 @@ contract BidTest is AuctionHouseTest {
         uint64 bidId = _createBid(_BID_AMOUNT, _bidAuctionData);
 
         // Check the bid
-        _batchAuctionModule.getBid(_lotId, bidId);
+        MockBatchAuctionModule.Bid memory bid = _batchAuctionModule.getBid(_lotId, bidId);
+        assertEq(bid.bidder, _bidder, "bidder mismatch");
+        assertEq(bid.referrer, _REFERRER, "referrer mismatch");
+        assertEq(bid.amount, _BID_AMOUNT, "amount mismatch");
+        assertEq(bid.minAmountOut, 0, "minAmountOut mismatch");
+    }
+
+    function test_givenCallbackIsSet()
+        external
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenCallbackIsSet
+        givenLotIsCreated
+        givenLotHasStarted
+        givenUserHasQuoteTokenBalance(_BID_AMOUNT)
+        givenUserHasQuoteTokenAllowance(_BID_AMOUNT)
+    {
+        // Call the function
+        uint64 bidId = _createBid(_BID_AMOUNT, _bidAuctionData);
+
+        // Check the balances
+        assertEq(_quoteToken.balanceOf(_bidder), 0, "_bidder: quote token balance mismatch");
+        assertEq(
+            _quoteToken.balanceOf(address(_auctionHouse)),
+            _BID_AMOUNT,
+            "auction house: quote token balance mismatch"
+        );
+
+        // Check the bid
+        MockBatchAuctionModule.Bid memory bid = _batchAuctionModule.getBid(_lotId, bidId);
+        assertEq(bid.bidder, _bidder, "bidder mismatch");
+        assertEq(bid.referrer, _REFERRER, "referrer mismatch");
+        assertEq(bid.amount, _BID_AMOUNT, "amount mismatch");
+        assertEq(bid.minAmountOut, 0, "minAmountOut mismatch");
+
+        // Check the callback
+        assertEq(_callback.lotBid(_lotId), true, "lotBid");
     }
 
     // [X] given there is no protocol fee set for the auction type

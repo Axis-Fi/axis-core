@@ -13,7 +13,8 @@ import {Permit2User} from "test/lib/permit2/Permit2User.sol";
 // Auctions
 import {AuctionHouse} from "src/AuctionHouse.sol";
 import {Auction} from "src/modules/Auction.sol";
-import {IHooks, IAllowlist, Auctioneer} from "src/bases/Auctioneer.sol";
+import {Auctioneer} from "src/bases/Auctioneer.sol";
+import {ICallback} from "src/interfaces/ICallback.sol";
 
 // Modules
 import {toKeycode, Module} from "src/modules/Modules.sol";
@@ -58,11 +59,11 @@ contract AuctionTest is Test, Permit2User {
             baseToken: _baseToken,
             quoteToken: _quoteToken,
             curator: address(0),
-            hooks: IHooks(address(0)),
-            allowlist: IAllowlist(address(0)),
-            allowlistParams: abi.encode(""),
+            callbacks: ICallback(address(0)),
+            callbackData: abi.encode(""),
             derivativeType: toKeycode(""),
             derivativeParams: abi.encode(""),
+            wrapDerivative: false,
             prefunded: false
         });
     }

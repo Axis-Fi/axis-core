@@ -6,8 +6,7 @@ import {Auctioneer} from "src/bases/Auctioneer.sol";
 import {FeeManager} from "src/bases/FeeManager.sol";
 import {Veecode, keycodeFromVeecode, Keycode} from "src/modules/Modules.sol";
 import {ERC20} from "solmate/tokens/ERC20.sol";
-import {IHooks} from "src/interfaces/IHooks.sol";
-import {IAllowlist} from "src/interfaces/IAllowlist.sol";
+import {ICallback} from "src/interfaces/ICallback.sol";
 
 /// @notice Contract that provides view functions for Auctions
 contract Catalogue {
@@ -32,16 +31,15 @@ contract Catalogue {
     /// @return     routing Routing information for the auction lot
     function getRouting(uint96 lotId_) public view returns (Auctioneer.Routing memory) {
         (
-            Veecode auctionReference,
             address seller,
+            uint96 funding,
             ERC20 baseToken,
+            Veecode auctionReference,
             ERC20 quoteToken,
-            IHooks hooks,
-            IAllowlist allowlist,
+            ICallback callbacks,
             Veecode derivativeReference,
-            bytes memory derivativeParams,
             bool wrapDerivative,
-            uint256 funding
+            bytes memory derivativeParams
         ) = Auctioneer(auctionHouse).lotRouting(lotId_);
 
         return Auctioneer.Routing({
@@ -49,8 +47,7 @@ contract Catalogue {
             seller: seller,
             baseToken: baseToken,
             quoteToken: quoteToken,
-            hooks: hooks,
-            allowlist: allowlist,
+            callbacks: callbacks,
             derivativeReference: derivativeReference,
             derivativeParams: derivativeParams,
             wrapDerivative: wrapDerivative,

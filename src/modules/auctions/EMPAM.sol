@@ -1,4 +1,4 @@
-/// SPDX-License-Identifier: AGPL-3.0
+// SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.19;
 
 /// Protocol dependencies
@@ -285,7 +285,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         uint96 lotId_,
         uint64 bidId_,
         address
-    ) internal override returns (uint256 refund) {
+    ) internal override returns (uint96 refund) {
         // Set bid status to claimed
         bids[lotId_][bidId_].status = BidStatus.Claimed;
 
@@ -301,7 +301,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         }
 
         // Return the amount to be refunded
-        return uint256(bids[lotId_][bidId_].amount);
+        return bids[lotId_][bidId_].amount;
     }
 
     /// @notice     Claims a bid and calculates the paid and payout amounts
@@ -332,26 +332,28 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
 
         // Calculate the bid price
         uint256 baseScale = 10 ** lotData[lotId_].baseTokenDecimals;
-        uint256 price = bidData.minAmountOut == 0
-            ? 0 // TODO technically minAmountOut == 0 should be an infinite price, but need to check that later. Need to be careful we don't introduce a way to claim a bid when we set marginalPrice to type(uint96).max when it cannot be settled.
-            : Math.mulDivUp(uint256(bidData.amount), baseScale, uint256(bidData.minAmountOut));
+        uint96 price = uint96(
+            bidData.minAmountOut == 0
+                ? 0 // TODO technically minAmountOut == 0 should be an infinite price, but need to check that later. Need to be careful we don't introduce a way to claim a bid when we set marginalPrice to type(uint96).max when it cannot be settled.
+                : Math.mulDivUp(uint256(bidData.amount), baseScale, uint256(bidData.minAmountOut))
+        );
 
         // If the bid price is greater than the marginal price, the bid is filled.
         // If the bid price is equal to the marginal price and the bid was submitted before or is the marginal bid, the bid is filled.
         // Auctions that do not meet capacity or price thresholds to settle will have their marginal price set at the maximum uint96
         // Therefore, all bids will be refunded.
         // We handle the only potential marginal fill during settlement. All other bids are either completely filled or refunded.
-        uint256 marginalPrice = uint256(auctionData[lotId_].marginalPrice);
+        uint96 marginalPrice = auctionData[lotId_].marginalPrice;
         if (
             price > marginalPrice
                 || (price == marginalPrice && bidId_ <= auctionData[lotId_].marginalBidId)
         ) {
             // Payout is calculated using the marginal price of the auction
-            bidClaim.paid = uint256(bidData.amount);
-            bidClaim.payout = (bidClaim.paid * baseScale) / marginalPrice;
+            bidClaim.paid = bidData.amount;
+            bidClaim.payout = uint96(Math.mulDivDown(bidClaim.paid, baseScale, marginalPrice));
         } else {
             // Bidder is refunded the paid amount and receives no payout
-            bidClaim.paid = uint256(bidData.amount);
+            bidClaim.paid = bidData.amount;
         }
 
         return (bidClaim, auctionOutput_);
@@ -566,23 +568,22 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
     function _getNextBid(
         Queue storage queue_,
         uint256 baseScale_
-    ) internal returns (uint64 bidId, uint256 amountIn, uint96 price) {
+    ) internal returns (uint64 bidId, uint96 amountIn, uint96 price) {
         bidId = queue_.getMaxId();
 
         // Load bid info (in quote token units)
         QueueBid memory qBid = queue_.delMax();
-        amountIn = uint256(qBid.amountIn);
-        uint256 minAmountOut = uint256(qBid.minAmountOut);
+        amountIn = qBid.amountIn;
 
         // A zero minAmountOut value should be filtered out during decryption. However, cover the case here to avoid a potential division by zero error that would brick settlement.
-        if (minAmountOut == 0) {
+        if (qBid.minAmountOut == 0) {
             // A zero price would be filtered out being below the minimum price
             return (bidId, amountIn, 0);
         }
 
         // Calculate the price of the bid
         // Cannot overflow on cast back to uint96. It was checked during decryption.
-        price = uint96(Math.mulDivUp(amountIn, baseScale_, uint256(qBid.minAmountOut)));
+        price = uint96(Math.mulDivUp(amountIn, baseScale_, qBid.minAmountOut));
 
         return (bidId, amountIn, price);
     }
@@ -615,7 +616,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
                 // There is no need to check if the bid is the minimum bid size, as this was checked during decryption
 
                 // Get bid info
-                (uint64 bidId, uint256 amountIn, uint96 price) = _getNextBid(queue, baseScale);
+                (uint64 bidId, uint96 amountIn, uint96 price) = _getNextBid(queue, baseScale);
 
                 // If the price is below the minimum price, then determine a marginal price from the previous bids with the knowledge that no other bids will be considered
                 // This will also handle a zero price returned from `_getNextBid()`, since `minPrice` is always greater than zero
@@ -808,8 +809,9 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
                 uint256 fullFill =
                     Math.mulDivDown(uint256(bidData.amount), baseScale, result.marginalPrice);
                 uint256 excess = result.capacityExpended - capacity;
-                settlement_.pfPayout = fullFill - excess;
-                settlement_.pfRefund = Math.mulDivDown(uint256(bidData.amount), excess, fullFill);
+                settlement_.pfPayout = uint96(fullFill - excess);
+                settlement_.pfRefund =
+                    uint96(Math.mulDivDown(uint256(bidData.amount), excess, fullFill));
 
                 // Reduce the total amount in by the refund amount
                 result.totalAmountIn -= settlement_.pfRefund;
@@ -819,9 +821,10 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
             }
 
             // Set settlement data
-            settlement_.totalIn = result.totalAmountIn;
+            // TODO think about casting checks
+            settlement_.totalIn = uint96(result.totalAmountIn);
             settlement_.totalOut =
-                result.capacityExpended > capacity ? capacity : result.capacityExpended;
+                uint96(result.capacityExpended > capacity ? capacity : result.capacityExpended);
         } else {
             // Auction cannot be settled if we reach this point
             // Marginal price is set as the max uint96 for the auction so the system knows all bids should be refunded
@@ -837,7 +840,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
     function _claimProceeds(uint96 lotId_)
         internal
         override
-        returns (uint256 purchased, uint256 sold, uint256 payoutSent)
+        returns (uint96 purchased, uint96 sold, uint96 payoutSent)
     {
         // Update the status
         auctionData[lotId_].status = Auction.Status.Claimed;
@@ -944,7 +947,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         uint96,
         uint96,
         bytes calldata
-    ) internal pure override returns (uint256, bytes memory) {
+    ) internal pure override returns (uint96, bytes memory) {
         revert Auction_NotImplemented();
     }
 }
