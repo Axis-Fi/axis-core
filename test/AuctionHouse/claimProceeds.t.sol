@@ -287,7 +287,7 @@ contract ClaimProceedsTest is AuctionHouseTest {
     {
         // Call function
         vm.prank(_SELLER);
-        _auctionHouse.claimProceeds(_lotId);
+        _auctionHouse.claimProceeds(_lotId, bytes(""));
 
         uint256 quoteTokenIn = _scaleQuoteTokenAmount(_BID_AMOUNT);
         uint256 claimablePayout = _scaleBaseTokenAmount(_BID_AMOUNT_OUT);
@@ -320,7 +320,7 @@ contract ClaimProceedsTest is AuctionHouseTest {
     {
         // Call function
         vm.prank(_SELLER);
-        _auctionHouse.claimProceeds(_lotId);
+        _auctionHouse.claimProceeds(_lotId, bytes(""));
 
         uint256 quoteTokenIn = _scaleQuoteTokenAmount(_BID_AMOUNT);
         uint256 claimablePayout = _scaleBaseTokenAmount(_BID_AMOUNT_OUT);
@@ -409,7 +409,7 @@ contract ClaimProceedsTest is AuctionHouseTest {
     {
         // Call function
         vm.prank(_SELLER);
-        _auctionHouse.claimProceeds(_lotId);
+        _auctionHouse.claimProceeds(_lotId, bytes(""));
 
         uint256 quoteTokenIn = _scaleQuoteTokenAmount(_BID_AMOUNT * 5);
         uint256 claimablePayout = _scaleBaseTokenAmount(_BID_AMOUNT_OUT * 5);
@@ -453,7 +453,7 @@ contract ClaimProceedsTest is AuctionHouseTest {
     {
         // Call function
         vm.prank(_SELLER);
-        _auctionHouse.claimProceeds(_lotId);
+        _auctionHouse.claimProceeds(_lotId, bytes(""));
 
         uint256 quoteTokenIn = _scaleQuoteTokenAmount(_BID_AMOUNT * 5);
         uint256 claimablePayout = _scaleBaseTokenAmount(_BID_AMOUNT_OUT * 5);
@@ -701,7 +701,6 @@ contract ClaimProceedsTest is AuctionHouseTest {
         external
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
-        givenBatchAuctionRequiresPrefunding
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenLotIsCreated
@@ -732,7 +731,6 @@ contract ClaimProceedsTest is AuctionHouseTest {
         external
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
-        givenBatchAuctionRequiresPrefunding
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenLotIsCreated
@@ -762,7 +760,6 @@ contract ClaimProceedsTest is AuctionHouseTest {
         external
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
-        givenBatchAuctionRequiresPrefunding
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenCuratorIsSet
@@ -799,7 +796,6 @@ contract ClaimProceedsTest is AuctionHouseTest {
         external
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
-        givenBatchAuctionRequiresPrefunding
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenCuratorIsSet
@@ -833,7 +829,6 @@ contract ClaimProceedsTest is AuctionHouseTest {
         external
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
-        givenBatchAuctionRequiresPrefunding
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenCuratorIsSet
@@ -881,7 +876,6 @@ contract ClaimProceedsTest is AuctionHouseTest {
         external
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
-        givenBatchAuctionRequiresPrefunding
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenCuratorIsSet
@@ -926,7 +920,6 @@ contract ClaimProceedsTest is AuctionHouseTest {
         external
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
-        givenBatchAuctionRequiresPrefunding
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenCuratorIsSet
@@ -978,7 +971,6 @@ contract ClaimProceedsTest is AuctionHouseTest {
         external
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
-        givenBatchAuctionRequiresPrefunding
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenCuratorIsSet
@@ -1027,7 +1019,6 @@ contract ClaimProceedsTest is AuctionHouseTest {
         external
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
-        givenBatchAuctionRequiresPrefunding
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenLotIsCreated
@@ -1106,7 +1097,7 @@ contract ClaimProceedsTest is AuctionHouseTest {
     {
         // Call function
         vm.prank(_SELLER);
-        _auctionHouse.claimProceeds(_lotId);
+        _auctionHouse.claimProceeds(_lotId, bytes(""));
 
         uint256 quoteTokenIn = _scaleQuoteTokenAmount(_BID_AMOUNT * 6 - _BID_AMOUNT_PARTIAL_REFUND);
         uint256 claimablePayout =
@@ -1154,7 +1145,7 @@ contract ClaimProceedsTest is AuctionHouseTest {
     {
         // Call function
         vm.prank(_SELLER);
-        _auctionHouse.claimProceeds(_lotId);
+        _auctionHouse.claimProceeds(_lotId, bytes(""));
 
         uint256 quoteTokenIn = _scaleQuoteTokenAmount(_BID_AMOUNT * 6 - _BID_AMOUNT_PARTIAL_REFUND);
         uint256 claimablePayout =

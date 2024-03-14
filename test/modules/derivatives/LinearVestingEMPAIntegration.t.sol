@@ -126,12 +126,11 @@ contract LinearVestingEMPAIntegrationTest is AuctionHouseTest {
             referrer: _REFERRER,
             amount: amountIn_,
             auctionData: bidData,
-            allowlistProof: "",
             permit2Data: ""
         });
 
         vm.prank(_bidder);
-        bidId = _auctionHouse.bid(bid);
+        bidId = _auctionHouse.bid(bid, bytes(""));
         _bidIds.push(bidId);
 
         return bidId;
@@ -183,8 +182,7 @@ contract LinearVestingEMPAIntegrationTest is AuctionHouseTest {
         assertEq(lotRouting.seller, _SELLER, "seller");
         assertEq(address(lotRouting.baseToken), address(_baseToken), "base token");
         assertEq(address(lotRouting.quoteToken), address(_quoteToken), "quote token");
-        assertEq(address(lotRouting.hooks), address(0), "hooks");
-        assertEq(address(lotRouting.allowlist), address(0), "allowlist");
+        assertEq(address(lotRouting.callbacks), address(0), "callbacks");
         assertEq(
             fromVeecode(lotRouting.derivativeReference), fromVeecode(_linearVestingModule.VEECODE())
         );
