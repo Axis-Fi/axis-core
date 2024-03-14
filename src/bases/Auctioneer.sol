@@ -348,21 +348,21 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
             // Set to 0 before transfer to avoid re-entrancy
             routing.funding = 0;
 
-            // Check if the callback is configured to send (so in this case, receive) base tokens
-            if (routing.callbacks.hasPermission(Callbacks.SEND_BASE_TOKENS_FLAG)) {
-                // Transfer the base tokens to the callbacks contract
-                Transfer.transfer(routing.baseToken, address(routing.callbacks), funding, false);
+            bool callbackHasSendBaseTokensFlag =
+                routing.callbacks.hasPermission(Callbacks.SEND_BASE_TOKENS_FLAG);
 
-                // Call the callback to transfer the base token to the owner
-                Callbacks.onCancel(routing.callbacks, lotId_, funding, true, callbackData_);
-            }
-            // Else, transfer the base tokens directly to the seller
-            else {
-                Transfer.transfer(routing.baseToken, routing.seller, funding, false);
+            // Transfer the base tokens to the appropriate contract
+            Transfer.transfer(
+                routing.baseToken,
+                callbackHasSendBaseTokensFlag ? address(routing.callbacks) : routing.seller,
+                funding,
+                false
+            );
 
-                // Call the callback to notify of the cancellation
-                Callbacks.onCancel(routing.callbacks, lotId_, funding, false, callbackData_);
-            }
+            // Call the callback to transfer the base token to the owner
+            Callbacks.onCancel(
+                routing.callbacks, lotId_, funding, callbackHasSendBaseTokensFlag, callbackData_
+            );
         } else {
             // Call the callback to notify of the cancellation
             Callbacks.onCancel(routing.callbacks, lotId_, 0, false, callbackData_);
