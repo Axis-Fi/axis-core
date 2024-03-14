@@ -25,7 +25,7 @@ abstract contract BaseCallback is ICallback, Owned {
         address auctionHouse_,
         Callbacks.Permissions memory permissions_,
         address seller_
-    ) Owned(msg.sender) {
+    ) Owned(seller_) {
         // Validate the permissions against the deployed address
         Callbacks.validateCallbacksPermissions(this, permissions_);
 
