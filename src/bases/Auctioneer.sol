@@ -146,10 +146,6 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
     /// @notice     Mapping of lot IDs to their fee information
     mapping(uint96 lotId => FeeData) public lotFees;
 
-    /// @notice     Mapping auction and derivative references to the condenser that is used to pass data between them
-    mapping(Veecode auctionRef => mapping(Veecode derivativeRef => Veecode condenserRef)) public
-        condensers;
-
     // ========== AUCTION MANAGEMENT ========== //
 
     /// @notice     Creates a new auction lot
@@ -251,26 +247,6 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
             routing.derivativeReference = derivativeModule.VEECODE();
             routing.derivativeParams = routing_.derivativeParams;
             routing.wrapDerivative = routing_.wrapDerivative;
-        }
-
-        // Condenser
-        {
-            // Get condenser reference
-            Veecode condenserRef = condensers[routing.auctionReference][routing.derivativeReference];
-
-            // Check that the module for the condenser type is valid
-            if (fromVeecode(condenserRef) != bytes7(0)) {
-                if (
-                    CondenserModule(_getModuleIfInstalled(condenserRef)).TYPE()
-                        != Module.Type.Condenser
-                ) revert InvalidParams();
-
-                // Check module status
-                Keycode moduleKeycode = keycodeFromVeecode(condenserRef);
-                if (getModuleStatus[moduleKeycode].sunset == true) {
-                    revert ModuleIsSunset(moduleKeycode);
-                }
-            }
         }
 
         // Validate callbacks address and store if provided
@@ -424,44 +400,6 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
         return callbacks_.hasPermission(Callbacks.SEND_BASE_TOKENS_FLAG)
             ? address(callbacks_)
             : seller_;
-    }
-
-    // ========== GOVERNANCE FUNCTIONS ========== //
-
-    /// @notice     Sets the value of the Condenser for a given auction and derivative combination
-    /// @dev        To remove a condenser, set the value of `condenserRef_` to a blank Veecode
-    ///
-    ///             This function will revert if:
-    ///             - The caller is not the owner
-    ///             - `auctionRef_` or `derivativeRef_` are empty
-    ///             - `auctionRef_` does not belong to an auction module
-    ///             - `derivativeRef_` does not belong to a derivative module
-    ///             - `condenserRef_` does not belong to a condenser module
-    ///
-    /// @param      auctionRef_    The auction type
-    /// @param      derivativeRef_ The derivative type
-    /// @param      condenserRef_  The condenser type
-    function setCondenser(
-        Veecode auctionRef_,
-        Veecode derivativeRef_,
-        Veecode condenserRef_
-    ) external onlyOwner {
-        // Check that the auction type, derivative type, and condenser types are valid
-        if (
-            (AuctionModule(_getModuleIfInstalled(auctionRef_)).TYPE() != Module.Type.Auction)
-                || (
-                    DerivativeModule(_getModuleIfInstalled(derivativeRef_)).TYPE()
-                        != Module.Type.Derivative
-                )
-                || (
-                    fromVeecode(condenserRef_) != bytes7(0)
-                        && CondenserModule(_getModuleIfInstalled(condenserRef_)).TYPE()
-                            != Module.Type.Condenser
-                )
-        ) revert InvalidParams();
-
-        // Set the condenser reference
-        condensers[auctionRef_][derivativeRef_] = condenserRef_;
     }
 
     // ========= VALIDATION FUNCTIONS ========= //

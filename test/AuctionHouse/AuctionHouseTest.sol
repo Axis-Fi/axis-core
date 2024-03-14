@@ -11,7 +11,6 @@ import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 import {MockAtomicAuctionModule} from "test/modules/Auction/MockAtomicAuctionModule.sol";
 import {MockBatchAuctionModule} from "test/modules/Auction/MockBatchAuctionModule.sol";
 import {MockDerivativeModule} from "test/modules/derivatives/mocks/MockDerivativeModule.sol";
-import {MockCondenserModule} from "test/modules/Condenser/MockCondenserModule.sol";
 import {MockCallback} from "test/AuctionHouse/MockCallback.sol";
 import {Permit2User} from "test/lib/permit2/Permit2User.sol";
 import {MockFeeOnTransferERC20} from "test/lib/mocks/MockFeeOnTransferERC20.sol";
@@ -42,8 +41,6 @@ abstract contract AuctionHouseTest is Test, Permit2User {
     Keycode internal _batchAuctionModuleKeycode;
     MockDerivativeModule internal _derivativeModule;
     Keycode internal _derivativeModuleKeycode;
-    MockCondenserModule internal _condenserModule;
-    Keycode internal _condenserModuleKeycode;
     MockCallback internal _callback;
 
     uint96 internal constant _BASE_SCALE = 1e18;
@@ -106,8 +103,6 @@ abstract contract AuctionHouseTest is Test, Permit2User {
         _batchAuctionModuleKeycode = keycodeFromVeecode(_batchAuctionModule.VEECODE());
         _derivativeModule = new MockDerivativeModule(address(_auctionHouse));
         _derivativeModuleKeycode = keycodeFromVeecode(_derivativeModule.VEECODE());
-        _condenserModule = new MockCondenserModule(address(_auctionHouse));
-        _condenserModuleKeycode = keycodeFromVeecode(_condenserModule.VEECODE());
 
         _startTime = uint48(block.timestamp) + 1;
 

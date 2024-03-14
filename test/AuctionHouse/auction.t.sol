@@ -18,18 +18,6 @@ contract AuctionTest is AuctionHouseTest {
     // Imported events
     event AuctionCreated(uint96 indexed _lotId, Veecode indexed auctionRef, string infoHash);
 
-    modifier whenCondenserModuleIsInstalled() {
-        _auctionHouse.installModule(_condenserModule);
-        _;
-    }
-
-    modifier whenCondenserIsMapped() {
-        _auctionHouse.setCondenser(
-            _atomicAuctionModule.VEECODE(), _derivativeModule.VEECODE(), _condenserModule.VEECODE()
-        );
-        _;
-    }
-
     // auction
     // [X] reverts when auction module is sunset
     // [X] reverts when auction module is not installed
@@ -344,48 +332,6 @@ contract AuctionTest is AuctionHouseTest {
         assertEq(
             routing.derivativeParams, abi.encode("derivative params"), "derivative params mismatch"
         );
-    }
-
-    // [X] condenser
-    //  [X] reverts when condenser type is sunset
-    //  [X] reverts when compatibility check fails
-    //  [X] sets the condenser on the auction lot
-
-    function test_whenCondenserTypeIsSunset_reverts()
-        external
-        whenAuctionTypeIsAtomic
-        whenAtomicAuctionModuleIsInstalled
-        whenDerivativeTypeIsSet
-        whenDerivativeModuleIsInstalled
-        whenCondenserModuleIsInstalled
-        whenCondenserIsMapped
-    {
-        // Sunset the module, which prevents the creation of new auctions using that module
-        _auctionHouse.sunsetModule(_condenserModuleKeycode);
-
-        // Expect revert
-        bytes memory err =
-            abi.encodeWithSelector(WithModules.ModuleIsSunset.selector, _condenserModuleKeycode);
-        vm.expectRevert(err);
-
-        vm.prank(_SELLER);
-        _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
-    }
-
-    function test_whenCondenserIsSet()
-        external
-        whenAuctionTypeIsAtomic
-        whenAtomicAuctionModuleIsInstalled
-        whenDerivativeTypeIsSet
-        whenDerivativeModuleIsInstalled
-        whenCondenserModuleIsInstalled
-        whenCondenserIsMapped
-    {
-        // Create the auction
-        vm.prank(_SELLER);
-        _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
-
-        // Won't revert
     }
 
     // [X] callbacks

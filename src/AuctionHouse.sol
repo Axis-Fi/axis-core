@@ -798,12 +798,11 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
     /// @param      recipient_      Address to receive payout
     /// @param      payoutAmount_   Amount of payoutToken to send (in native decimals)
     /// @param      routingParams_  Routing parameters for the lot
-    /// @param      auctionOutput_  Custom data returned by the auction module
     function _sendPayout(
         address recipient_,
         uint256 payoutAmount_,
         Routing memory routingParams_,
-        bytes memory auctionOutput_
+        bytes memory
     ) internal {
         Veecode derivativeReference = routingParams_.derivativeReference;
         ERC20 baseToken = routingParams_.baseToken;
@@ -818,19 +817,6 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
             // We assume that the module type has been checked when the lot was created
             DerivativeModule module = DerivativeModule(_getModuleIfInstalled(derivativeReference));
 
-            bytes memory derivativeParams = routingParams_.derivativeParams;
-
-            // Lookup condensor module from combination of auction and derivative types
-            // If condenser specified, condense auction output and derivative params before sending to derivative module
-            Veecode condenserRef = condensers[routingParams_.auctionReference][derivativeReference];
-            if (fromVeecode(condenserRef) != bytes7("")) {
-                // Get condenser module
-                CondenserModule condenser = CondenserModule(_getModuleIfInstalled(condenserRef));
-
-                // Condense auction output and derivative params
-                derivativeParams = condenser.condense(auctionOutput_, derivativeParams);
-            }
-
             // Approve the module to transfer payout tokens when minting
             Transfer.approve(baseToken, address(module), payoutAmount_);
 
@@ -838,7 +824,7 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
             module.mint(
                 recipient_,
                 address(baseToken),
-                derivativeParams,
+                routingParams_.derivativeParams,
                 payoutAmount_,
                 routingParams_.wrapDerivative
             );

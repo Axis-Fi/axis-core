@@ -7,7 +7,6 @@ import {Transfer} from "src/lib/Transfer.sol";
 import {MockAuctionHouse} from "test/AuctionHouse/MockAuctionHouse.sol";
 import {MockAtomicAuctionModule} from "test/modules/Auction/MockAtomicAuctionModule.sol";
 import {MockDerivativeModule} from "test/modules/derivatives/mocks/MockDerivativeModule.sol";
-import {MockCondenserModule} from "test/modules/Condenser/MockCondenserModule.sol";
 import {MockFeeOnTransferERC20} from "test/lib/mocks/MockFeeOnTransferERC20.sol";
 import {Permit2User} from "test/lib/permit2/Permit2User.sol";
 import {MockWrappedDerivative} from "test/lib/mocks/MockWrappedDerivative.sol";
@@ -22,7 +21,6 @@ contract SendPayoutTest is Test, Permit2User {
     MockAuctionHouse internal _auctionHouse;
     MockAtomicAuctionModule internal _mockAuctionModule;
     MockDerivativeModule internal _mockDerivativeModule;
-    MockCondenserModule internal _mockCondenserModule;
     MockWrappedDerivative internal _derivativeWrappedImplementation;
 
     address internal constant _PROTOCOL = address(0x1);
@@ -54,7 +52,6 @@ contract SendPayoutTest is Test, Permit2User {
         _auctionHouse = new MockAuctionHouse(_PROTOCOL, _permit2Address);
         _mockAuctionModule = new MockAtomicAuctionModule(address(_auctionHouse));
         _mockDerivativeModule = new MockDerivativeModule(address(_auctionHouse));
-        _mockCondenserModule = new MockCondenserModule(address(_auctionHouse));
         _auctionHouse.installModule(_mockAuctionModule);
 
         _derivativeWrappedImplementation = new MockWrappedDerivative("name", "symbol", 18);
@@ -70,8 +67,6 @@ contract SendPayoutTest is Test, Permit2User {
         _derivativeParams = bytes("");
         _wrapDerivative = false;
         _auctionOutputMultiplier = 2;
-        _auctionOutput =
-            abi.encode(MockAtomicAuctionModule.Output({multiplier: _auctionOutputMultiplier})); // Does nothing unless the condenser is set
 
         _routingParams = Auctioneer.Routing({
             auctionReference: _mockAuctionModule.VEECODE(),
@@ -149,11 +144,6 @@ contract SendPayoutTest is Test, Permit2User {
     // ========== Derivative flow ========== //
 
     // [X] given the base token is a derivative
-    //  [X] given a condenser is set
-    //   [X] given the derivative parameters are invalid
-    //     [X] it reverts
-    //   [X] it uses the condenser to determine derivative parameters
-    //  [X] given a condenser is not set
     //   [X] given the derivative is wrapped
     //    [X] given the derivative parameters are invalid
     //     [X] it reverts
@@ -197,19 +187,6 @@ contract SendPayoutTest is Test, Permit2User {
 
         _wrapDerivative = true;
         _routingParams.wrapDerivative = _wrapDerivative;
-        _;
-    }
-
-    modifier givenDerivativeHasCondenser() {
-        // Install the condenser module
-        _auctionHouse.installModule(_mockCondenserModule);
-
-        // Set the condenser
-        _auctionHouse.setCondenser(
-            _mockAuctionModule.VEECODE(),
-            _mockDerivativeModule.VEECODE(),
-            _mockCondenserModule.VEECODE()
-        );
         _;
     }
 
@@ -395,75 +372,5 @@ contract SendPayoutTest is Test, Permit2User {
         // Call
         vm.prank(_USER);
         _auctionHouse.sendPayout(_RECIPIENT, _payoutAmount, _routingParams, _auctionOutput);
-    }
-
-    function test_derivative_condenser_invalidParams_reverts()
-        public
-        givenAuctionHouseHasBalance(_payoutAmount)
-        givenAuctionHasDerivative
-        givenDerivativeHasCondenser
-        givenDerivativeParamsAreInvalid
-    {
-        // Expect revert while decoding parameters
-        vm.expectRevert();
-
-        // Call
-        vm.prank(_USER);
-        _auctionHouse.sendPayout(_RECIPIENT, _payoutAmount, _routingParams, _auctionOutput);
-    }
-
-    function test_derivative_condenser()
-        public
-        givenAuctionHouseHasBalance(_payoutAmount)
-        givenAuctionHasDerivative
-        givenDerivativeHasCondenser
-    {
-        // Call
-        vm.prank(_USER);
-        _auctionHouse.sendPayout(_RECIPIENT, _payoutAmount, _routingParams, _auctionOutput);
-
-        // Check balances of the derivative token
-        assertEq(
-            _mockDerivativeModule.derivativeToken().balanceOf(_USER, _derivativeTokenId),
-            0,
-            "user balance mismatch"
-        );
-        assertEq(
-            _mockDerivativeModule.derivativeToken().balanceOf(_SELLER, _derivativeTokenId),
-            0,
-            "seller balance mismatch"
-        );
-        assertEq(
-            _mockDerivativeModule.derivativeToken().balanceOf(
-                address(_auctionHouse), _derivativeTokenId
-            ),
-            0,
-            "_auctionHouse balance mismatch"
-        );
-        assertEq(
-            _mockDerivativeModule.derivativeToken().balanceOf(_RECIPIENT, _derivativeTokenId),
-            _payoutAmount * _auctionOutputMultiplier, // Condenser multiplies the payout
-            "recipient balance mismatch"
-        );
-        assertEq(
-            _mockDerivativeModule.derivativeToken().balanceOf(
-                address(_mockDerivativeModule), _derivativeTokenId
-            ),
-            0,
-            "derivative module balance mismatch"
-        );
-
-        // Check balances of payout token
-        assertEq(_payoutToken.balanceOf(_USER), 0, "user balance mismatch");
-        assertEq(_payoutToken.balanceOf(_SELLER), 0, "seller balance mismatch");
-        assertEq(
-            _payoutToken.balanceOf(address(_auctionHouse)), 0, "_auctionHouse balance mismatch"
-        );
-        assertEq(_payoutToken.balanceOf(_RECIPIENT), 0, "recipient balance mismatch");
-        assertEq(
-            _payoutToken.balanceOf(address(_mockDerivativeModule)),
-            _payoutAmount,
-            "derivative module balance mismatch"
-        );
     }
 }
