@@ -41,7 +41,7 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: ${{ runner.os }}-cargo-
 
-      - name: Build local ecies-cli for use int testing
+      - name: Build local ecies-cli for use with testing
         run: cd crates/ecies-cli && cargo build && cd ../..
 
       - name: Install Foundry
