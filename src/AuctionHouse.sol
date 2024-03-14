@@ -410,7 +410,7 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
             _getModuleForId(lotId_).claimBids(lotId_, bidIds_);
 
         // Load routing data for the lot
-        Routing memory routing = lotRouting[lotId_];
+        Routing storage routing = lotRouting[lotId_];
 
         // Load fee data
         uint48 protocolFee = lotFees[lotId_].protocolFee;
