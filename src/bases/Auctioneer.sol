@@ -131,9 +131,9 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
         bytes callbackData;
         Keycode derivativeType;
         bytes derivativeParams;
+        bool wrapDerivative;
         bool prefunded;
     }
-    // TODO add wrapDerivative?
 
     // ========= STATE ========== //
 
@@ -250,6 +250,7 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
             // Store derivative information
             routing.derivativeReference = derivativeModule.VEECODE();
             routing.derivativeParams = routing_.derivativeParams;
+            routing.wrapDerivative = routing_.wrapDerivative;
         }
 
         // Condenser

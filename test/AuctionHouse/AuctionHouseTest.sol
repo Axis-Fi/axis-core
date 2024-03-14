@@ -128,6 +128,7 @@ abstract contract AuctionHouseTest is Test, Permit2User {
             callbackData: abi.encode(""),
             derivativeType: toKeycode(""),
             derivativeParams: _derivativeParams,
+            wrapDerivative: false,
             prefunded: false
         });
 
