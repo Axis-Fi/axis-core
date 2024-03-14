@@ -167,6 +167,10 @@ contract CurateTest is AuctionHouseTest {
         assertEq(_baseToken.balanceOf(_SELLER), 0);
         assertEq(_baseToken.balanceOf(address(_auctionHouse)), 0);
         assertEq(_baseToken.balanceOf(_CURATOR), 0);
+
+        // Check routing
+        Auctioneer.Routing memory lotRouting = _getLotRouting(_lotId);
+        assertEq(lotRouting.funding, 0, "funding");
     }
 
     function test_beforeStart_curatorFeeNotSet()
@@ -190,6 +194,10 @@ contract CurateTest is AuctionHouseTest {
         assertEq(_baseToken.balanceOf(_SELLER), 0);
         assertEq(_baseToken.balanceOf(address(_auctionHouse)), 0);
         assertEq(_baseToken.balanceOf(_CURATOR), 0);
+
+        // Check routing
+        Auctioneer.Routing memory lotRouting = _getLotRouting(_lotId);
+        assertEq(lotRouting.funding, 0, "funding");
     }
 
     function test_beforeStart_givenCallbackIsSet()
@@ -215,6 +223,10 @@ contract CurateTest is AuctionHouseTest {
         assertEq(_baseToken.balanceOf(_SELLER), 0);
         assertEq(_baseToken.balanceOf(address(_auctionHouse)), 0);
         assertEq(_baseToken.balanceOf(_CURATOR), 0);
+
+        // Check routing
+        Auctioneer.Routing memory lotRouting = _getLotRouting(_lotId);
+        assertEq(lotRouting.funding, 0, "funding");
 
         // Check callback
         assertEq(_callback.lotCurated(_lotId), true, "lotCurated");
@@ -243,6 +255,10 @@ contract CurateTest is AuctionHouseTest {
         assertEq(_baseToken.balanceOf(_SELLER), 0);
         assertEq(_baseToken.balanceOf(address(_auctionHouse)), 0);
         assertEq(_baseToken.balanceOf(_CURATOR), 0);
+
+        // Check routing
+        Auctioneer.Routing memory lotRouting = _getLotRouting(_lotId);
+        assertEq(lotRouting.funding, 0, "funding");
     }
 
     function test_givenAuctionIsPrefunded()
@@ -277,6 +293,10 @@ contract CurateTest is AuctionHouseTest {
             "base token: auction house balance mismatch"
         );
         assertEq(_baseToken.balanceOf(_CURATOR), 0, "base token: _CURATOR balance mismatch");
+
+        // Check routing
+        Auctioneer.Routing memory lotRouting = _getLotRouting(_lotId);
+        assertEq(lotRouting.funding, _LOT_CAPACITY + _curatorMaxPotentialFee, "funding");
     }
 
     function test_givenAuctionIsPrefunded_quoteTokenDecimalsLarger()
@@ -313,6 +333,14 @@ contract CurateTest is AuctionHouseTest {
             "base token: auction house balance mismatch"
         );
         assertEq(_baseToken.balanceOf(_CURATOR), 0, "base token: _CURATOR balance mismatch");
+
+        // Check routing
+        Auctioneer.Routing memory lotRouting = _getLotRouting(_lotId);
+        assertEq(
+            lotRouting.funding,
+            _scaleBaseTokenAmount(_LOT_CAPACITY) + _scaleBaseTokenAmount(_curatorMaxPotentialFee),
+            "funding"
+        );
     }
 
     function test_givenAuctionIsPrefunded_quoteTokenDecimalsSmaller()
@@ -349,6 +377,14 @@ contract CurateTest is AuctionHouseTest {
             "base token: auction house balance mismatch"
         );
         assertEq(_baseToken.balanceOf(_CURATOR), 0, "base token: _CURATOR balance mismatch");
+
+        // Check routing
+        Auctioneer.Routing memory lotRouting = _getLotRouting(_lotId);
+        assertEq(
+            lotRouting.funding,
+            _scaleBaseTokenAmount(_LOT_CAPACITY) + _scaleBaseTokenAmount(_curatorMaxPotentialFee),
+            "funding"
+        );
     }
 
     function test_givenAuctionIsPrefunded_curatorFeeNotSet()
@@ -382,6 +418,10 @@ contract CurateTest is AuctionHouseTest {
             "base token: auction house balance mismatch"
         );
         assertEq(_baseToken.balanceOf(_CURATOR), 0, "base token: _CURATOR balance mismatch");
+
+        // Check routing
+        Auctioneer.Routing memory lotRouting = _getLotRouting(_lotId);
+        assertEq(lotRouting.funding, _LOT_CAPACITY + 0, "funding");
     }
 
     function test_givenAuctionIsPrefunded_givenCallbackIsSet()
@@ -417,6 +457,10 @@ contract CurateTest is AuctionHouseTest {
             "base token: auction house balance mismatch"
         );
         assertEq(_baseToken.balanceOf(_CURATOR), 0, "base token: _CURATOR balance mismatch");
+
+        // Check routing
+        Auctioneer.Routing memory lotRouting = _getLotRouting(_lotId);
+        assertEq(lotRouting.funding, _LOT_CAPACITY + _curatorMaxPotentialFee, "funding");
 
         // Check callback
         assertEq(_callback.lotCurated(_lotId), true, "lotCurated");
@@ -459,6 +503,10 @@ contract CurateTest is AuctionHouseTest {
             "base token: auction house balance mismatch"
         );
         assertEq(_baseToken.balanceOf(_CURATOR), 0, "base token: _CURATOR balance mismatch");
+
+        // Check routing
+        Auctioneer.Routing memory lotRouting = _getLotRouting(_lotId);
+        assertEq(lotRouting.funding, _LOT_CAPACITY + _curatorMaxPotentialFee, "funding");
 
         // Check callback
         assertEq(_callback.lotCurated(_lotId), true, "lotCurated");

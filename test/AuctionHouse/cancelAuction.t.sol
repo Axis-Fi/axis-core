@@ -131,6 +131,10 @@ contract CancelAuctionTest is AuctionHouseTest {
         assertEq(lot.capacity, 0);
 
         assertFalse(_atomicAuctionModule.isLive(_lotId), "after cancellation: isLive mismatch");
+
+        // Check routing
+        Auctioneer.Routing memory lotRouting = _getLotRouting(_lotId);
+        assertEq(lotRouting.funding, 0, "mismatch on funding");
     }
 
     function test_givenCallback()
@@ -152,6 +156,10 @@ contract CancelAuctionTest is AuctionHouseTest {
         assertEq(lot.capacity, 0);
 
         assertFalse(_atomicAuctionModule.isLive(_lotId), "after cancellation: isLive mismatch");
+
+        // Check routing
+        Auctioneer.Routing memory lotRouting = _getLotRouting(_lotId);
+        assertEq(lotRouting.funding, 0, "mismatch on funding");
 
         // Check the callback
         assertEq(_callback.lotCancelled(_lotId), true, "callback: lotCancelled mismatch");
@@ -189,6 +197,10 @@ contract CancelAuctionTest is AuctionHouseTest {
             sellerBalance + _LOT_CAPACITY,
             "base token: seller balance mismatch"
         );
+
+        // Check routing
+        Auctioneer.Routing memory lotRouting = _getLotRouting(_lotId);
+        assertEq(lotRouting.funding, 0, "mismatch on funding");
     }
 
     function test_prefunded_givenPurchase()
@@ -218,6 +230,10 @@ contract CancelAuctionTest is AuctionHouseTest {
             sellerBalance + _LOT_CAPACITY - _PURCHASE_AMOUNT_OUT,
             "base token: seller balance mismatch"
         );
+
+        // Check routing
+        Auctioneer.Routing memory lotRouting = _getLotRouting(_lotId);
+        assertEq(lotRouting.funding, 0, "mismatch on funding");
     }
 
     function test_prefunded_givenCallback()
@@ -244,6 +260,10 @@ contract CancelAuctionTest is AuctionHouseTest {
             sellerBalance + _LOT_CAPACITY,
             "base token: seller balance mismatch"
         );
+
+        // Check routing
+        Auctioneer.Routing memory lotRouting = _getLotRouting(_lotId);
+        assertEq(lotRouting.funding, 0, "mismatch on funding");
 
         // Check the callback
         assertEq(_callback.lotCancelled(_lotId), true, "callback: lotCancelled mismatch");
@@ -275,6 +295,10 @@ contract CancelAuctionTest is AuctionHouseTest {
             "base token: seller balance mismatch"
         );
         assertEq(_baseToken.balanceOf(_SELLER), 0, "base token: seller balance mismatch");
+
+        // Check routing
+        Auctioneer.Routing memory lotRouting = _getLotRouting(_lotId);
+        assertEq(lotRouting.funding, 0, "mismatch on funding");
 
         // Check the callback
         assertEq(_callback.lotCancelled(_lotId), true, "callback: lotCancelled mismatch");

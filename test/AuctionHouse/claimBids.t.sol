@@ -81,6 +81,9 @@ contract ClaimBidsTest is AuctionHouseTest {
             "base token: curator balance"
         );
         assertEq(_baseToken.balanceOf(_PROTOCOL), 0, "base token: protocol balance");
+
+        Auctioneer.Routing memory routing = _getLotRouting(_lotId);
+        assertEq(routing.funding, _expectedAuctionHouseBaseTokenBalance, "funding");
     }
 
     function _assertQuoteTokenBalances() internal {

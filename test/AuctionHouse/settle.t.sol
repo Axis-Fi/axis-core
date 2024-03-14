@@ -49,6 +49,10 @@ contract SettleTest is AuctionHouseTest {
             "base token: curator balance"
         );
         assertEq(_baseToken.balanceOf(_PROTOCOL), 0, "base token: protocol balance");
+
+        // Check routing
+        Auctioneer.Routing memory lotRouting = _getLotRouting(_lotId);
+        assertEq(lotRouting.funding, _expectedAuctionHouseBaseTokenBalance, "funding");
     }
 
     function _assertQuoteTokenBalances() internal {
