@@ -38,7 +38,6 @@ contract SendPaymentTest is Test, Permit2User {
     //  [X] it transfers the payment amount to the seller
 
     modifier givenAuctionHasCallback() {
-
         // 00000010 - 0x02
         // bytes memory bytecode = abi.encodePacked(
         //     type(MockCallback).creationCode,
@@ -126,7 +125,9 @@ contract SendPaymentTest is Test, Permit2User {
         assertEq(_quoteToken.balanceOf(_USER), 0, "user balance mismatch");
         assertEq(_quoteToken.balanceOf(_SELLER), 0, "seller balance mismatch");
         assertEq(_quoteToken.balanceOf(address(_auctionHouse)), 0, "_auctionHouse balance mismatch");
-        assertEq(_quoteToken.balanceOf(address(_callback)), _paymentAmount, "_callback balance mismatch");
+        assertEq(
+            _quoteToken.balanceOf(address(_callback)), _paymentAmount, "_callback balance mismatch"
+        );
     }
 
     function test_givenAuctionHasNoCallback() public givenRouterHasBalance(_paymentAmount) {

@@ -106,11 +106,13 @@ contract PurchaseTest is AuctionHouseTest {
             amountIn_ - _expectedProtocolFeesAllocated - _expectedReferrerFeesAllocated;
 
         // Quote token
-        _expectedSellerQuoteTokenBalance = hasCallback && _callbackReceiveQuoteTokens ? 0 : amountInLessFees;
+        _expectedSellerQuoteTokenBalance =
+            hasCallback && _callbackReceiveQuoteTokens ? 0 : amountInLessFees;
         _expectedBidderQuoteTokenBalance = 0;
         _expectedAuctionHouseQuoteTokenBalance =
             _expectedProtocolFeesAllocated + _expectedReferrerFeesAllocated;
-        _expectedCallbackQuoteTokenBalance = hasCallback && _callbackReceiveQuoteTokens ? amountInLessFees : 0;
+        _expectedCallbackQuoteTokenBalance =
+            hasCallback && _callbackReceiveQuoteTokens ? amountInLessFees : 0;
         assertEq(
             _expectedSellerQuoteTokenBalance + _expectedBidderQuoteTokenBalance
                 + _expectedAuctionHouseQuoteTokenBalance + _expectedCallbackQuoteTokenBalance,

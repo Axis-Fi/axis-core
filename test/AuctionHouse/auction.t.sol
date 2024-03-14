@@ -657,7 +657,6 @@ contract AuctionTest is AuctionHouseTest {
         givenCallbackIsSet
         givenCallbackHasBaseTokenBalance(_LOT_CAPACITY)
     {
-
         // Create the auction
         vm.prank(_SELLER);
         _lotId = _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);

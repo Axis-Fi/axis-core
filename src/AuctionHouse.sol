@@ -506,7 +506,11 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
                     routing.seller,
                     routing.quoteToken,
                     // Reconstruct bid amount from the settlement price and the amount out
-                    uint96(Math.mulDivDown(settlement.pfPayout, settlement.totalIn, settlement.totalOut))
+                    uint96(
+                        Math.mulDivDown(
+                            settlement.pfPayout, settlement.totalIn, settlement.totalOut
+                        )
+                    )
                 );
 
                 // Reduce funding by the payout amount
@@ -528,7 +532,8 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
                     capacityRefund = capacity - settlement.totalOut;
                 }
 
-                uint96 feeRefund = uint96(Math.mulDivDown(curatorFeePayout, capacityRefund, capacity));
+                uint96 feeRefund =
+                    uint96(Math.mulDivDown(curatorFeePayout, capacityRefund, capacity));
                 // Can't be more than curatorFeePayout
                 unchecked {
                     curatorFeePayout -= feeRefund;

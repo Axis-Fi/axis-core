@@ -823,7 +823,8 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
             // Set settlement data
             // TODO think about casting checks
             settlement_.totalIn = uint96(result.totalAmountIn);
-            settlement_.totalOut = uint96(result.capacityExpended > capacity ? capacity : result.capacityExpended);
+            settlement_.totalOut =
+                uint96(result.capacityExpended > capacity ? capacity : result.capacityExpended);
         } else {
             // Auction cannot be settled if we reach this point
             // Marginal price is set as the max uint96 for the auction so the system knows all bids should be refunded
