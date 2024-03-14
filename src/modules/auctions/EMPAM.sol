@@ -285,7 +285,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         uint96 lotId_,
         uint64 bidId_,
         address
-    ) internal override returns (uint256 refund) {
+    ) internal override returns (uint96 refund) {
         // Set bid status to claimed
         bids[lotId_][bidId_].status = BidStatus.Claimed;
 
@@ -301,7 +301,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         }
 
         // Return the amount to be refunded
-        return uint256(bids[lotId_][bidId_].amount);
+        return bids[lotId_][bidId_].amount;
     }
 
     /// @notice     Claims a bid and calculates the paid and payout amounts

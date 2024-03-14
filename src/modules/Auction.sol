@@ -168,7 +168,7 @@ abstract contract Auction {
         uint96 lotId_,
         uint64 bidId_,
         address caller_
-    ) external virtual returns (uint256 refund);
+    ) external virtual returns (uint96 refund);
 
     /// @notice     Claim multiple bids
     /// @dev        The implementing function should handle the following:
@@ -238,13 +238,13 @@ abstract contract Auction {
 
     // ========== AUCTION INFORMATION ========== //
 
-    function payoutFor(uint96 lotId_, uint96 amount_) public view virtual returns (uint256) {}
+    function payoutFor(uint96 lotId_, uint96 amount_) public view virtual returns (uint96) {}
 
-    function priceFor(uint96 lotId_, uint96 payout_) public view virtual returns (uint256) {}
+    function priceFor(uint96 lotId_, uint96 payout_) public view virtual returns (uint96) {}
 
-    function maxPayout(uint96 lotId_) public view virtual returns (uint256) {}
+    function maxPayout(uint96 lotId_) public view virtual returns (uint96) {}
 
-    function maxAmountAccepted(uint96 lotId_) public view virtual returns (uint256) {}
+    function maxAmountAccepted(uint96 lotId_) public view virtual returns (uint96) {}
 
     /// @notice     Returns whether the auction is currently accepting bids or purchases
     /// @dev        The implementing function should handle the following:
@@ -269,7 +269,7 @@ abstract contract Auction {
     ///             - Return the remaining capacity of the lot
     ///
     /// @param      lotId_  The lot id
-    /// @return     uint256 The remaining capacity of the lot
+    /// @return     uint96 The remaining capacity of the lot
     function remainingCapacity(uint96 lotId_) external view virtual returns (uint96);
 
     /// @notice     Get whether or not the capacity is in quote tokens
@@ -493,7 +493,7 @@ abstract contract AuctionModule is Auction, Module {
         uint96 lotId_,
         uint64 bidId_,
         address caller_
-    ) external override onlyInternal returns (uint256 refund) {
+    ) external override onlyInternal returns (uint96 refund) {
         // Standard validation
         _revertIfLotInvalid(lotId_);
         _revertIfBeforeLotStart(lotId_);
@@ -517,7 +517,7 @@ abstract contract AuctionModule is Auction, Module {
         uint96 lotId_,
         uint64 bidId_,
         address caller_
-    ) internal virtual returns (uint256 refund);
+    ) internal virtual returns (uint96 refund);
 
     /// @inheritdoc Auction
     /// @dev        Implements a basic claimBids function that:

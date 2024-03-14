@@ -100,7 +100,7 @@ contract MockBatchAuctionModule is AuctionModule {
         uint96 lotId_,
         uint64 bidId_,
         address
-    ) internal virtual override returns (uint256 refundAmount) {
+    ) internal virtual override returns (uint96 refundAmount) {
         // Cancel the bid
         bidCancelled[lotId_][bidId_] = true;
 
