@@ -60,6 +60,9 @@ abstract contract BaseCallback is ICallback, Owned {
         // Validate the seller
         if (seller_ != seller) revert Callback_NotAuthorized();
 
+        // Validate the lot registration
+        if (lotIdRegistered[lotId_]) revert Callback_InvalidParams();
+
         // Set the lot ID as registered
         lotIdRegistered[lotId_] = true;
 
