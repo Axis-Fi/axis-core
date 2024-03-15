@@ -26,6 +26,8 @@ import {Callbacks} from "src/lib/Callbacks.sol";
 
 import {Veecode, toKeycode, keycodeFromVeecode, Keycode} from "src/modules/Modules.sol";
 
+import {console2} from "forge-std/console2.sol";
+
 abstract contract AuctionHouseTest is Test, Permit2User {
     MockFeeOnTransferERC20 internal _baseToken;
     MockFeeOnTransferERC20 internal _quoteToken;
@@ -263,6 +265,7 @@ abstract contract AuctionHouseTest is Test, Permit2User {
     modifier givenLotHasAllowlist() {
         // Allowlist callback supports onCreate, onPurchase, and onBid callbacks
         // // 10011000 = 0x98
+        // // cast create2 -s 98 -i $(cat ./bytecode/MockCallback98.bin)
         // bytes memory bytecode = abi.encodePacked(
         //     type(MockCallback).creationCode,
         //     abi.encode(address(_auctionHouse), Callbacks.Permissions({
@@ -281,7 +284,7 @@ abstract contract AuctionHouseTest is Test, Permit2User {
         //     vm.toString(bytecode)
         // );
 
-        bytes32 salt = bytes32(0xf0ed8d3497b89c15f75f5b50feaceaef84f932e48da2479214055d6200680dcc);
+        bytes32 salt = bytes32(0x9b2088ee6cd3886973cb26c6b5062b61fad144bf5b6e8e8a8da1b46b60c4e4b8);
         vm.broadcast(); // required for CREATE2 address to work correctly. doesn't do anything in a test
         _callback = new MockCallback{salt: salt}(
             address(_auctionHouse),
@@ -357,8 +360,9 @@ abstract contract AuctionHouseTest is Test, Permit2User {
     }
 
     modifier givenCallbackIsSet() {
-        // Uncomment to regenerate bytecode to mine new salts if the MockCallback changes
+        // // Uncomment to regenerate bytecode to mine new salts if the MockCallback changes
         // // 11111111 = 0xFF
+        // // cast create2 -s FF -i $(cat ./bytecode/MockCallbackFF.bin)
         // bytes memory bytecode = abi.encodePacked(
         //     type(MockCallback).creationCode,
         //     abi.encode(address(_auctionHouse), Callbacks.Permissions({
@@ -377,6 +381,7 @@ abstract contract AuctionHouseTest is Test, Permit2User {
         //     vm.toString(bytecode)
         // );
         // // 11111101 = 0xFD
+        // // cast create2 -s FD -i $(cat ./bytecode/MockCallbackFD.bin)
         // bytecode = abi.encodePacked(
         //     type(MockCallback).creationCode,
         //     abi.encode(address(_auctionHouse), Callbacks.Permissions({
@@ -395,6 +400,7 @@ abstract contract AuctionHouseTest is Test, Permit2User {
         //     vm.toString(bytecode)
         // );
         // // 11111110 = 0xFE
+        // // cast create2 -s FE -i $(cat ./bytecode/MockCallbackFE.bin)
         // bytecode = abi.encodePacked(
         //     type(MockCallback).creationCode,
         //     abi.encode(address(_auctionHouse), Callbacks.Permissions({
@@ -413,6 +419,7 @@ abstract contract AuctionHouseTest is Test, Permit2User {
         //     vm.toString(bytecode)
         // );
         // // 11111100 = 0xFC
+        // // cast create2 -s FC -i $(cat ./bytecode/MockCallbackFC.bin)
         // bytecode = abi.encodePacked(
         //     type(MockCallback).creationCode,
         //     abi.encode(address(_auctionHouse), Callbacks.Permissions({
@@ -435,16 +442,16 @@ abstract contract AuctionHouseTest is Test, Permit2User {
         bytes32 salt;
         if (_callbackSendBaseTokens && _callbackReceiveQuoteTokens) {
             // 11111111 = 0xFF
-            salt = bytes32(0x734ab13cde907c9201029664873144c66fc543778575644bfb463e206e5a9f13);
+            salt = bytes32(0xc42377cf93e340f3fb396653f38937a77a6a043682c7c8be79b1aefa2c9d6162);
         } else if (_callbackSendBaseTokens) {
             // 11111101 = 0xFD
-            salt = bytes32(0x4e801b9863ac4b904ad17350aeadfe6aa99ea95f851f7374bda10483c7674e3e);
+            salt = bytes32(0x6dc3b1c88808aeef3c9b783461f20f9a8bd6684efb34729b5a8cd34fca7cf67a);
         } else if (_callbackReceiveQuoteTokens) {
             // 11111110 = 0xFE
-            salt = bytes32(0xb6112be8b260aeb5327d08438412850578697c5df20098edf0f08d4ba3cd27cd);
+            salt = bytes32(0x4d5a00234b1f73a4d7021e21c3ae804c4870b73cc6bc79800a4f069fe2a491e1);
         } else {
             // 11111100 = 0xFC
-            salt = bytes32(0xf048bb05cd13f600e256232984dfc0d69193e620014936571e456d440bed7f8f);
+            salt = bytes32(0x8e7cde2d0234ebd8469c649c3e46c93efb6152ee2bb643ef95b3d3decb7e0d0a);
         }
 
         vm.broadcast(); // required for CREATE2 address to work correctly. doesn't do anything in a test
@@ -462,6 +469,7 @@ abstract contract AuctionHouseTest is Test, Permit2User {
             }),
             _SELLER
         );
+        console2.log("callback", address(_callback));
 
         _routingParams.callbacks = _callback;
         _;
