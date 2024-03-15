@@ -380,6 +380,7 @@ abstract contract AuctionModule is Auction, Module {
     ///             - the lot id is invalid
     ///             - the lot is inactive
     ///             - the caller is not an internal module
+    ///             - the payout is greater than the remaining capacity
     ///
     ///             Inheriting contracts should override _purchase to implement auction-specific logic, such as:
     ///             - Validating the auction-specific parameters

@@ -115,6 +115,14 @@ contract FixedPriceAuctionModule is AuctionModule {
     // ========== PURCHASE ========== //
 
     /// @inheritdoc AuctionModule
+    /// @dev        This function assumes the following:
+    ///             - The lot ID has been validated
+    ///             - The caller has been authorized
+    ///             - The auction is active
+    ///
+    ///             This function reverts if:
+    ///             - The payout is less than the minAmountOut specified by the purchaser
+    ///             - The payout is greater than the max payout
     function _purchase(
         uint96 lotId_,
         uint96 amount_,
@@ -170,15 +178,27 @@ contract FixedPriceAuctionModule is AuctionModule {
         revert Auction_NotImplemented();
     }
 
-    function _revertIfLotSettled(uint96) internal view override {}
+    function _revertIfLotSettled(uint96) internal pure override {
+        revert Auction_NotImplemented();
+    }
 
-    function _revertIfLotNotSettled(uint96) internal view override {}
+    function _revertIfLotNotSettled(uint96) internal pure override {
+        revert Auction_NotImplemented();
+    }
 
-    function _revertIfLotProceedsClaimed(uint96) internal view override {}
+    function _revertIfLotProceedsClaimed(uint96) internal pure override {
+        revert Auction_NotImplemented();
+    }
 
-    function _revertIfBidInvalid(uint96, uint64) internal view override {}
+    function _revertIfBidInvalid(uint96, uint64) internal pure override {
+        revert Auction_NotImplemented();
+    }
 
-    function _revertIfNotBidOwner(uint96, uint64, address) internal view override {}
+    function _revertIfNotBidOwner(uint96, uint64, address) internal pure override {
+        revert Auction_NotImplemented();
+    }
 
-    function _revertIfBidClaimed(uint96, uint64) internal view override {}
+    function _revertIfBidClaimed(uint96, uint64) internal pure override {
+        revert Auction_NotImplemented();
+    }
 }

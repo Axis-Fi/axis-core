@@ -275,4 +275,33 @@ contract FpaModulePurchaseTest is FpaModuleTest {
         assertEq(lot.purchased, _scaleQuoteTokenAmount(_PURCHASE_AMOUNT), "purchased");
         assertEq(lot.sold, expectedSold, "sold");
     }
+
+    function test_success_givenCapacityInQuote()
+        public
+        givenCapacityInQuote
+        givenLotIsCreated
+        givenLotHasStarted
+    {
+        // Calculate expected values
+        uint96 expectedSold = _mulDivDown(
+            _scaleQuoteTokenAmount(_PURCHASE_AMOUNT),
+            uint96(10) ** _baseTokenDecimals,
+            _scaleQuoteTokenAmount(_PRICE)
+        );
+
+        // Call the function
+        _createPurchase(
+            _scaleQuoteTokenAmount(_PURCHASE_AMOUNT), _scaleBaseTokenAmount(_PURCHASE_AMOUNT_OUT)
+        );
+
+        // Assert the capacity, purchased and sold
+        Auction.Lot memory lot = _getAuctionLot(_lotId);
+        assertEq(
+            lot.capacity,
+            _scaleBaseTokenAmount(_LOT_CAPACITY) - _scaleQuoteTokenAmount(_PURCHASE_AMOUNT),
+            "capacity"
+        );
+        assertEq(lot.purchased, _scaleQuoteTokenAmount(_PURCHASE_AMOUNT), "purchased");
+        assertEq(lot.sold, expectedSold, "sold");
+    }
 }
