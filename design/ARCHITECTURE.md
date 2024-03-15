@@ -1,4 +1,4 @@
-# Moonraker Architecture
+# Axis Architecture
 
 ## Contracts
 
@@ -55,8 +55,7 @@ classDiagram
     +batchPurchase(address recipient, address referrer, uint256[] lotIds, uint256[] amounts, uint256[] minAmountsOut, bytes[] auctionData, bytes[] approval): uint256[]
     +routePurchase(address recipient, address referrer, uint256[] lotIds, uint256 amount, uint256 minAmountOut, bytes[] auctionData, bytes approval): uint256
     +bid(address recipient, address referrer, uint256 lotId, uint256 amount, uint256 minAmountOut, bytes auctionData, bytes approval)
-    +settle(uint256 lotId): uint256[]
-    +settle(uint256 lotId, Auction.Bid[] bids): uint256[]
+    +settle(uint256 lotId)
   }
 
   class Derivatizer {
@@ -241,7 +240,7 @@ sequenceDiagram
   AuctionHouse-->>AuctionOwner: auction id
 ```
 
-### Purchase from an Atomic Auction (without hooks)
+### Purchase from an Atomic Auction (without callbacks)
 
 #### No Derivative
 
@@ -396,7 +395,7 @@ sequenceDiagram
   deactivate AuctionHouse
 ```
 
-### Batch Auction: Buyer bids on an on-chain batch auction (not relevant to off-chain batch auctions)
+### Batch Auction: Buyer bids on an on-chain batch auction
 
 ```mermaid
 sequenceDiagram
@@ -417,7 +416,7 @@ sequenceDiagram
   deactivate AuctionHouse
 ```
 
-### Batch Auction: Auction is settled from bids stored on-chain or passed in
+### Batch Auction: Auction is settled from bids stored on-chain
 
 ```mermaid
 sequenceDiagram
@@ -436,7 +435,7 @@ sequenceDiagram
       AuctionHouse->>BatchAuctionModule: settle(auctionId)
 
       Note over BatchAuctionModule: module-specific logic to determine winning bids from stored bids
-      BatchAuctionModule->>BatchAuctionModule: _settle(auctionId): Bids[] winningBids, bytes auctionOutput
+      BatchAuctionModule->>BatchAuctionModule: _settle(auctionId): Settlement settlement, bytes auctionOutput
 
       BatchAuctionModule-->>AuctionHouse: array of winningBids
     deactivate BatchAuctionModule
@@ -455,42 +454,7 @@ sequenceDiagram
   deactivate AuctionHouse
 ```
 
-Need to think about the implications of transferring to/from the AuctionOwner once here, because \_handleTransfers is not currently designed for this.
-
-### User Redeems Derivative Token - V1 (through AuctionHouse, requires refactoring AuctionModule)
-
-```mermaid
-sequenceDiagram
-  autoNumber
-  participant User
-  participant AuctionHouse
-  participant DerivativeModule
-  participant PayoutToken
-
-  activate AuctionHouse
-    User->>AuctionHouse: redeem(Keycode dType, uint256 tokenId, uint256 amount)
-
-    AuctionHouse->>AuctionHouse: getModuleIfInstalled(dType)
-
-    activate DerivativeModule
-      AuctionHouse->>DerivativeModule: redeem(tokenId, amount)
-
-      alt derivative token is wrapped
-        create participant DerivativeToken
-        DerivativeModule->>DerivativeToken: burn(user, amount)
-        destroy DerivativeToken
-        User-->>DerivativeToken: derivative tokens burned
-      else
-        DerivativeModule->>DerivativeModule: burn(tokenId, user, amount)
-        User-->>DerivativeModule: derivative tokens burned
-      end
-      DerivativeModule->>PayoutToken: safeTransfer(user, amount)
-      DerivativeModule-->>User: payout tokens transferred
-    deactivate DerivativeModule
-  deactivate AuctionHouse
-```
-
-### User Redeems Derivative Token - V2 (direct with module)
+### User Redeems Derivative Token
 
 ```mermaid
 sequenceDiagram
@@ -514,44 +478,3 @@ sequenceDiagram
     DerivativeModule-->>User: payout tokens transferred
   deactivate DerivativeModule
 ```
-
-### Transform Derivative Token into a new Derivative Token
-
-```mermaid
-sequenceDiagram
-  autoNumber
-  participant User
-  participant AuctionHouse
-  participant Transformer
-  participant DerivativeModule
-  participant DerivativeToken
-  participant NewDerivativeModule
-
-  activate AuctionHouse
-    User->>AuctionHouse: transform(Keycode fromType, uint256 fromId, Keycode toType, bytes toData, uint256 amount)
-
-    AuctionHouse->>AuctionHouse: getModuleIfInstalled(fromType): DerivativeModule
-    AuctionHouse->>AuctionHouse: getModuleIfInstalled(toType): NewDerivativeModule
-    AuctionHouse->>AuctionHouse: getTransformer(fromType, toType): Transformer
-
-    AuctionHouse->>Transformer: canTransform(fromModule, fromId, toModule, toData): bool
-
-    activate DerivativeModule
-      AuctionHouse->>DerivativeModule: transform(uint256 fromId, uint256 amount)
-      DerivativeModule->>DerivativeModule: burn(fromId, user, amount)
-      User-->>DerivativeModule: derivative tokens burned
-      DerivativeModule-->>AuctionHouse: base tokens transferred to AuctionHouse
-    deactivate DerivativeModule
-
-    activate NewDerivativeModule
-      AuctionHouse->>NewDerivativeModule: mint(toData, user, amount)
-      AuctionHouse-->>NewDerivativeModule: base tokens transferred to NewDerivativeModule
-      NewDerivativeModule-->>User: derivative tokens minted to user
-    deactivate NewDerivativeModule
-  deactivate AuctionHouse
-```
-
-### Create Auction by transforming one Derivative to another
-
-TODO determine if it makes sense to build this as a specific workflow within the system.
-It's a bit of an edge case and will add several variables to the auction creation process that are optional.

@@ -1,4 +1,4 @@
-# Bond Protocol - V2 Features
+# Axis Features
 
 ## Terminology
 
@@ -12,25 +12,35 @@ Auction
 
 -   The auction (specifically the type) specifies _how_ the lot is being sold
 
-Market
-
--   This term was used in the V1 protocol
--   `Auction` is a more expansive term that encompasses the functionality in the V2 protocol
-
 Quote Token
 
--   The token that is offered by the bidder in return for the payout token
+-   The token that is offered by the bidder and received by the seller in return for the base token
 
-Payout Token
+Base Token
 
--   The token that is provided to the bidder as a payment for the quote token
--   A payout token is used when the payout is non-vesting, where the payout token is transferred at the time of auction settlement
+-   The token that is provided to the bidder in exchange for the quote token
+-   If the auction is for a derivative of the base token, then the bidder receives the derivative on purchase or settlement instead of the base token.
 
 Derivative Token
 
--   A form of a payout token that is used when the payout vests over time
+-   A derivative of a base token that a bidder may receive instead of the base token for an auction
 
-### Actions
+## Actions
+
+Auction
+
+-   Create an auction for a lot starting immediately or at some point in the future.
+
+Cancel Auction
+
+-   Ends the auction immediately/prematurely
+-   Further capacity cannot be sold nor bids/purchases accepted
+-   Valid for all auction types
+-   In the case of a batch auction, the auction can only be cancelled before it starts.
+
+Curate
+
+-   Accept proposed curation of an auction. Curation is where a third-party vouches for an auction issuer. They may receive a fee.
 
 Purchase
 
@@ -49,14 +59,17 @@ Settle
 -   Finalises the bids for an auction
 -   Valid only for batch auctions (since atomic auctions are settled at the same time)
 
-Close
+Claim Bid
 
--   Ends the auction immediately/prematurely
--   Further capacity cannot be sold nor bids/purchases accepted
--   Valid for all auction types
--   In the case of a batch auction, the auction will not be settled
+-   Bidder claims payout or refund for a bid submitted on a batch auction.
+
+Claim Proceeds
+
+-   Seller claims proceeds received from a batch auction. An optional callback can be implemented to direct the proceeds of the auction.
 
 ## Features
+
+
 
 ### Flexibility in Storage and Computation
 
