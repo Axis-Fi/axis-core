@@ -161,6 +161,16 @@ abstract contract FpaModuleTest is Test, Permit2User {
         _;
     }
 
+    function _createPurchase(uint96 amount_, uint96 minAmountOut_) internal {
+        vm.prank(address(_auctionHouse));
+        _module.purchase(_lotId, amount_, abi.encode(minAmountOut_));
+    }
+
+    modifier givenPurchase(uint96 amount_, uint96 minAmountOut_) {
+        _createPurchase(amount_, minAmountOut_);
+        _;
+    }
+
     // ======== Internal Functions ======== //
 
     function _mulDivUp(uint96 mul1_, uint96 mul2_, uint96 div_) internal pure returns (uint96) {

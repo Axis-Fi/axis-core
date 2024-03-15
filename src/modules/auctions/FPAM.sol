@@ -140,6 +140,7 @@ contract FixedPriceAuctionModule is AuctionModule {
     }
 
     // ========== NOT IMPLEMENTED ========== //
+
     function _bid(
         uint96,
         address,
