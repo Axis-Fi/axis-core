@@ -137,6 +137,30 @@ abstract contract FpaModuleTest is Test, Permit2User {
         _;
     }
 
+    function _concludeLot() internal {
+        vm.warp(_start + _DURATION + 1);
+    }
+
+    modifier givenLotHasConcluded() {
+        _concludeLot();
+        _;
+    }
+
+    modifier givenLotHasStarted() {
+        vm.warp(_start + 1);
+        _;
+    }
+
+    function _cancelAuctionLot() internal {
+        vm.prank(address(_auctionHouse));
+        _module.cancelAuction(_lotId);
+    }
+
+    modifier givenLotIsCancelled() {
+        _cancelAuctionLot();
+        _;
+    }
+
     // ======== Internal Functions ======== //
 
     function _mulDivUp(uint96 mul1_, uint96 mul2_, uint96 div_) internal pure returns (uint96) {
