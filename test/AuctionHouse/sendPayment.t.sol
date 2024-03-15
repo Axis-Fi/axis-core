@@ -45,6 +45,7 @@ contract SendPaymentTest is Test, Permit2User {
 
     modifier givenAuctionHasCallback() {
         // // 00000000 - 0x00
+        // // cast create2 -s 00 -i $(cat ./bytecode/MockCallback00.bin)
         // bytes memory bytecode = abi.encodePacked(
         //     type(MockCallback).creationCode,
         //     abi.encode(address(_auctionHouse), Callbacks.Permissions({
@@ -64,6 +65,7 @@ contract SendPaymentTest is Test, Permit2User {
         // );
 
         // // 00000010 - 0x02
+        // // cast create2 -s 02 -i $(cat ./bytecode/MockCallback02.bin)
         // bytecode = abi.encodePacked(
         //     type(MockCallback).creationCode,
         //     abi.encode(address(_auctionHouse), Callbacks.Permissions({
@@ -83,10 +85,10 @@ contract SendPaymentTest is Test, Permit2User {
         // );
 
         bytes32 salt;
-        if (_callbackReceiveQuoteTokens) {
-            salt = bytes32(0xe12ee96d499ccc04c69c965222bc41524e2777b852517b153b7ec984171d3a67);
-        } else {
-            salt = bytes32(0x31cec4a625d46aadc53b90c0201177e98673673f8ebf9056bc7e061ce1575087);
+        if (_callbackReceiveQuoteTokens) { // 0x02
+            salt = bytes32(0xe3fac272563b951dccd2e1a1cb14678f914791aa7dd20e3bfc58089d251a11e4);
+        } else { // 0x00
+            salt = bytes32(0x4b68c04e426a76ef1c71fa325386350c30b4818b9a68f67402fbfd04653ec53a);
         }
 
         vm.broadcast(); // required for CREATE2 address to work correctly. doesn't do anything in a test

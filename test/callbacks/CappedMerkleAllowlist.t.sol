@@ -40,8 +40,8 @@ contract CappedMerkleAllowlistTest is Test, Permit2User {
     function setUp() public {
         _auctionHouse = new AuctionHouse(address(this), _PROTOCOL, _permit2Address);
 
-        // 10011000 = 0x98
-        // cast create2 -s 98 -i $(cat ./bytecode/CappedMerkleAllowlist98.bin)
+        // // 10011000 = 0x98
+        // // cast create2 -s 98 -i $(cat ./bytecode/CappedMerkleAllowlist98.bin)
         // bytes memory bytecode = abi.encodePacked(
         //     type(CappedMerkleAllowlist).creationCode,
         //     abi.encode(address(_auctionHouse), Callbacks.Permissions({
@@ -60,7 +60,7 @@ contract CappedMerkleAllowlistTest is Test, Permit2User {
         //     vm.toString(bytecode)
         // );
 
-        bytes32 salt = bytes32(0xa6fdedf3239520fcfe6556b49de1cc8dbb8934a2d61ccd6aefddba4df75137e6);
+        bytes32 salt = bytes32(0x79c0dc0e1b403ae86906210c4f44234245b3b5ec7180f72f5b4680347f908435);
         vm.broadcast();
         _allowlist = new CappedMerkleAllowlist{salt: salt}(
             address(_auctionHouse),
