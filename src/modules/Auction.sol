@@ -7,25 +7,19 @@ abstract contract Auction {
     // ========== ERRORS ========== //
 
     error Auction_MarketNotActive(uint96 lotId);
-
     error Auction_MarketActive(uint96 lotId);
-
     error Auction_InvalidStart(uint48 start_, uint48 minimum_);
-
     error Auction_InvalidDuration(uint48 duration_, uint48 minimum_);
-
     error Auction_InvalidLotId(uint96 lotId);
-
     error Auction_InvalidBidId(uint96 lotId, uint96 bidId);
-
     error Auction_OnlyMarketOwner();
     error Auction_AmountLessThanMinimum();
     error Auction_NotEnoughCapacity();
     error Auction_InvalidParams();
     error Auction_NotAuthorized();
     error Auction_NotImplemented();
-
     error Auction_NotBidder();
+    error Auction_InsufficientCapacity();
 
     // ========== EVENTS ========== //
 
@@ -386,6 +380,7 @@ abstract contract AuctionModule is Auction, Module {
     ///             - the lot id is invalid
     ///             - the lot is inactive
     ///             - the caller is not an internal module
+    ///             - the payout is greater than the remaining capacity
     ///
     ///             Inheriting contracts should override _purchase to implement auction-specific logic, such as:
     ///             - Validating the auction-specific parameters
@@ -400,7 +395,21 @@ abstract contract AuctionModule is Auction, Module {
         _revertIfLotInactive(lotId_);
 
         // Call implementation-specific logic
-        return _purchase(lotId_, amount_, auctionData_);
+        (payout, auctionOutput) = _purchase(lotId_, amount_, auctionData_);
+
+        // Update capacity
+        Lot storage lot = lotData[lotId_];
+        // Revert if the capacity is insufficient
+        if (lot.capacityInQuote ? amount_ > lot.capacity : payout > lot.capacity) {
+            revert Auction_InsufficientCapacity();
+        }
+        unchecked {
+            lot.capacity -= lot.capacityInQuote ? amount_ : payout;
+        }
+
+        // Update the purchased and sold amounts for the lot
+        lot.purchased += amount_;
+        lot.sold += payout;
     }
 
     /// @notice     Implementation-specific purchase logic
