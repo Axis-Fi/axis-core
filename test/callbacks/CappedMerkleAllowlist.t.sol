@@ -34,7 +34,7 @@ contract CappedMerkleAllowlistTest is Test, Permit2User {
     // Generated from: https://lab.miguelmota.com/merkletreejs/example/
     // Includes _BUYER, _BUYER_TWO but not _BUYER_THREE
     bytes32 internal _MERKLE_ROOT =
-        0x49c01b17e1c9cb11105ae5a1b7818489c8b124b7d17fa364c874010dc7a412f8;
+        0xf15a9691daa2aa0627e155c750530c1abcd6a00d93e4888dab4f50e11a29c36b;
     bytes32[] internal _MERKLE_PROOF;
 
     function setUp() public {
@@ -77,12 +77,12 @@ contract CappedMerkleAllowlistTest is Test, Permit2User {
             _SELLER
         );
 
+        // _MERKLE_PROOF.push(
+        //     bytes32(0x5b70e80538acdabd6137353b0f9d8d149f4dba91e8be2e7946e409bfdbe685b9)
+        // ); // Corresponds to _BUYER
         _MERKLE_PROOF.push(
-            bytes32(0x69c322e3248a5dfc29d73c5b0553b0185a35cd5bb6386747517ef7e53b15e287)
-        );
-        _MERKLE_PROOF.push(
-            bytes32(0x967f2a2c7f3d22f9278175c1e6aa39cf9171db91dceacd5ee0f37c2e507b5abe)
-        );
+            bytes32(0x90b0d289ea211dca8e020c9cc8c5d6ba2f416fe15fa692b47184a4b946b2214d)
+        ); // Corresponds to _BUYER_TWO
     }
 
     modifier givenOnCreate() {
@@ -205,8 +205,7 @@ contract CappedMerkleAllowlistTest is Test, Permit2User {
 
     function test_onPurchase_buyerNotInMerkleTree_reverts() public givenOnCreate {
         // Expect revert
-        bytes memory err =
-            abi.encodeWithSelector(CappedMerkleAllowlist.Callback_ExceedsLimit.selector);
+        bytes memory err = abi.encodeWithSelector(BaseCallback.Callback_NotAuthorized.selector);
         vm.expectRevert(err);
 
         _onPurchase(_lotId, _BUYER_THREE, 1e18);
@@ -274,8 +273,7 @@ contract CappedMerkleAllowlistTest is Test, Permit2User {
 
     function test_onBid_buyerNotInMerkleTree_reverts() public givenOnCreate {
         // Expect revert
-        bytes memory err =
-            abi.encodeWithSelector(CappedMerkleAllowlist.Callback_ExceedsLimit.selector);
+        bytes memory err = abi.encodeWithSelector(BaseCallback.Callback_NotAuthorized.selector);
         vm.expectRevert(err);
 
         _onBid(_lotId, _BUYER_THREE, 1e18);
