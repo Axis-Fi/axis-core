@@ -14,14 +14,15 @@ import {CappedMerkleAllowlist} from "src/callbacks/allowlists/CappedMerkleAllowl
 contract CappedMerkleAllowlistTest is Test, Permit2User {
     using Callbacks for CappedMerkleAllowlist;
 
-    address internal constant _PROTOCOL = address(0x1);
-    address internal constant _SELLER = address(0x2);
-    address internal constant _BUYER = address(0x3);
-    address internal constant _BUYER_TWO = address(0x4);
-    address internal constant _BASE_TOKEN = address(0x5);
-    address internal constant _QUOTE_TOKEN = address(0x6);
-    address internal constant _SELLER_TWO = address(0x7);
-    address internal constant _BUYER_THREE = address(0x8);
+    address internal constant _OWNER = address(0x1);
+    address internal constant _PROTOCOL = address(0x2);
+    address internal constant _SELLER = address(0x3);
+    address internal constant _BUYER = address(0x4);
+    address internal constant _BUYER_TWO = address(0x5);
+    address internal constant _BASE_TOKEN = address(0x6);
+    address internal constant _QUOTE_TOKEN = address(0x7);
+    address internal constant _SELLER_TWO = address(0x8);
+    address internal constant _BUYER_THREE = address(0x9);
 
     uint96 internal constant _LOT_CAPACITY = 10e18;
 
@@ -34,11 +35,21 @@ contract CappedMerkleAllowlistTest is Test, Permit2User {
     // Generated from: https://lab.miguelmota.com/merkletreejs/example/
     // Includes _BUYER, _BUYER_TWO but not _BUYER_THREE
     bytes32 internal _MERKLE_ROOT =
-        0xf15a9691daa2aa0627e155c750530c1abcd6a00d93e4888dab4f50e11a29c36b;
+        0x40e51f1c845d99162de6c210a9eaff4729f433ac605be8f3cde6d2e0afa44aeb;
     bytes32[] internal _MERKLE_PROOF;
 
     function setUp() public {
-        _auctionHouse = new AuctionHouse(address(this), _PROTOCOL, _permit2Address);
+        // Create an AuctionHouse at a deterministic address, since it is used as input to callbacks
+        AuctionHouse auctionHouse = new AuctionHouse(
+            _OWNER,
+            _PROTOCOL,
+            _permit2Address
+        );
+        _auctionHouse = AuctionHouse(address(0x000000000000000000000000000000000000000A));
+        vm.etch(address(_auctionHouse), address(auctionHouse).code);
+        vm.store(address(_auctionHouse), bytes32(uint256(0)), bytes32(abi.encode(_OWNER))); // Owner
+        vm.store(address(_auctionHouse), bytes32(uint256(6)), bytes32(abi.encode(1))); // Reentrancy
+        vm.store(address(_auctionHouse), bytes32(uint256(10)), bytes32(abi.encode(_PROTOCOL))); // Protocol
 
         // // 10011000 = 0x98
         // // cast create2 -s 98 -i $(cat ./bytecode/CappedMerkleAllowlist98.bin)
@@ -60,7 +71,7 @@ contract CappedMerkleAllowlistTest is Test, Permit2User {
         //     vm.toString(bytecode)
         // );
 
-        bytes32 salt = bytes32(0x79c0dc0e1b403ae86906210c4f44234245b3b5ec7180f72f5b4680347f908435);
+        bytes32 salt = bytes32(0xb2e51500d07f0ba0a80dbacc4940654716d83d4c490f447c6d7c0c427a50d815);
         vm.broadcast();
         _allowlist = new CappedMerkleAllowlist{salt: salt}(
             address(_auctionHouse),
@@ -77,12 +88,12 @@ contract CappedMerkleAllowlistTest is Test, Permit2User {
             _SELLER
         );
 
-        // _MERKLE_PROOF.push(
-        //     bytes32(0x5b70e80538acdabd6137353b0f9d8d149f4dba91e8be2e7946e409bfdbe685b9)
-        // ); // Corresponds to _BUYER
         _MERKLE_PROOF.push(
-            bytes32(0x90b0d289ea211dca8e020c9cc8c5d6ba2f416fe15fa692b47184a4b946b2214d)
-        ); // Corresponds to _BUYER_TWO
+            bytes32(0x421df1fa259221d02aa4956eb0d35ace318ca24c0a33a64c1af96cf67cf245b6)
+        ); // Corresponds to _BUYER
+        // _MERKLE_PROOF.push(
+        //     bytes32(0xa876da518a393dbd067dc72abfa08d475ed6447fca96d92ec3f9e7eba503ca61)
+        // ); // Corresponds to _BUYER_TWO
     }
 
     modifier givenOnCreate() {
