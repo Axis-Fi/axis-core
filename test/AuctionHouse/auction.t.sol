@@ -61,6 +61,7 @@ contract AuctionTest is AuctionHouseTest {
         whenAtomicAuctionModuleIsInstalled
     {
         // Sunset the module, which prevents the creation of new auctions using that module
+        vm.prank(_OWNER);
         _auctionHouse.sunsetModule(_atomicAuctionModuleKeycode);
 
         // Expect revert
@@ -262,6 +263,7 @@ contract AuctionTest is AuctionHouseTest {
         whenDerivativeModuleIsInstalled
     {
         // Sunset the module, which prevents the creation of new auctions using that module
+        vm.prank(_OWNER);
         _auctionHouse.sunsetModule(_derivativeModuleKeycode);
 
         // Expect revert

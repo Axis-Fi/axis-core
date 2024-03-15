@@ -47,13 +47,14 @@ abstract contract AuctionHouseTest is Test, Permit2User {
 
     uint96 internal constant _BASE_SCALE = 1e18;
 
-    address internal constant _SELLER = address(0x1);
-    address internal constant _PROTOCOL = address(0x2);
-    address internal constant _CURATOR = address(0x3);
+    address internal constant _OWNER = address(0x1);
+    address internal constant _SELLER = address(0x2);
+    address internal constant _PROTOCOL = address(0x3);
+    address internal constant _CURATOR = address(0x4);
     address internal constant _RECIPIENT = address(0x5);
     address internal constant _REFERRER = address(0x6);
 
-    address internal _bidder = address(0x4);
+    address internal _bidder;
     uint256 internal _bidderKey;
 
     uint24 internal constant _CURATOR_MAX_FEE_PERCENT = 100;
@@ -96,7 +97,18 @@ abstract contract AuctionHouseTest is Test, Permit2User {
         _baseToken = new MockFeeOnTransferERC20("Base Token", "BASE", 18);
         _quoteToken = new MockFeeOnTransferERC20("Quote Token", "QUOTE", 18);
 
-        _auctionHouse = new AuctionHouse(address(this), _PROTOCOL, _permit2Address);
+        // Create an AuctionHouse at a deterministic address, since it is used as input to callbacks
+        AuctionHouse auctionHouse = new AuctionHouse(
+            _OWNER,
+            _PROTOCOL,
+            _permit2Address
+        );
+        _auctionHouse = AuctionHouse(address(0x000000000000000000000000000000000000000A));
+        vm.etch(address(_auctionHouse), address(auctionHouse).code);
+        vm.store(address(_auctionHouse), bytes32(uint256(0)), bytes32(abi.encode(_OWNER))); // Owner
+        vm.store(address(_auctionHouse), bytes32(uint256(6)), bytes32(abi.encode(1))); // Reentrancy
+        vm.store(address(_auctionHouse), bytes32(uint256(10)), bytes32(abi.encode(_PROTOCOL))); // Protocol
+
         _catalogue = new Catalogue(address(_auctionHouse));
 
         _atomicAuctionModule = new MockAtomicAuctionModule(address(_auctionHouse));
@@ -207,11 +219,13 @@ abstract contract AuctionHouseTest is Test, Permit2User {
     }
 
     modifier whenAtomicAuctionModuleIsInstalled() {
+        vm.prank(_OWNER);
         _auctionHouse.installModule(_atomicAuctionModule);
         _;
     }
 
     modifier whenBatchAuctionModuleIsInstalled() {
+        vm.prank(_OWNER);
         _auctionHouse.installModule(_batchAuctionModule);
         _;
     }
@@ -222,6 +236,7 @@ abstract contract AuctionHouseTest is Test, Permit2User {
     }
 
     modifier whenDerivativeModuleIsInstalled() {
+        vm.prank(_OWNER);
         _auctionHouse.installModule(_derivativeModule);
         _;
     }
@@ -575,6 +590,7 @@ abstract contract AuctionHouseTest is Test, Permit2User {
     }
 
     modifier givenCuratorMaxFeeIsSet() {
+        vm.prank(_OWNER);
         _auctionHouse.setFee(
             _auctionModuleKeycode, FeeManager.FeeType.MaxCurator, _CURATOR_MAX_FEE_PERCENT
         );
@@ -601,6 +617,7 @@ abstract contract AuctionHouseTest is Test, Permit2User {
     }
 
     function _setProtocolFee(uint24 fee_) internal {
+        vm.prank(_OWNER);
         _auctionHouse.setFee(_auctionModuleKeycode, FeeManager.FeeType.Protocol, fee_);
         _protocolFeePercentActual = fee_;
     }
@@ -611,6 +628,7 @@ abstract contract AuctionHouseTest is Test, Permit2User {
     }
 
     function _setReferrerFee(uint24 fee_) internal {
+        vm.prank(_OWNER);
         _auctionHouse.setFee(_auctionModuleKeycode, FeeManager.FeeType.Referrer, fee_);
         _referrerFeePercentActual = fee_;
     }

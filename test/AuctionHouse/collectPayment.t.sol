@@ -12,7 +12,8 @@ import {Permit2User} from "test/lib/permit2/Permit2User.sol";
 contract CollectPaymentTest is Test, Permit2User {
     MockAuctionHouse internal _auctionHouse;
 
-    address internal constant _PROTOCOL = address(0x1);
+    address internal constant _OWNER = address(0x1);
+    address internal constant _PROTOCOL = address(0x2);
 
     uint256 internal _userKey;
     address internal _user;
@@ -29,7 +30,17 @@ contract CollectPaymentTest is Test, Permit2User {
         // Set reasonable starting block
         vm.warp(1_000_000);
 
-        _auctionHouse = new MockAuctionHouse(_PROTOCOL, _permit2Address);
+        // Create an AuctionHouse at a deterministic address, since it is used as input to callbacks
+        MockAuctionHouse mockAuctionHouse = new MockAuctionHouse(
+            _OWNER,
+            _PROTOCOL,
+            _permit2Address
+        );
+        _auctionHouse = MockAuctionHouse(address(0x000000000000000000000000000000000000000A));
+        vm.etch(address(_auctionHouse), address(mockAuctionHouse).code);
+        vm.store(address(_auctionHouse), bytes32(uint256(0)), bytes32(abi.encode(_OWNER))); // Owner
+        vm.store(address(_auctionHouse), bytes32(uint256(6)), bytes32(abi.encode(1))); // Reentrancy
+        vm.store(address(_auctionHouse), bytes32(uint256(10)), bytes32(abi.encode(_PROTOCOL))); // Protocol
 
         _quoteToken = new MockFeeOnTransferERC20("QUOTE", "QT", 18);
         _quoteToken.setTransferFee(0);
