@@ -2,6 +2,7 @@
 pragma solidity 0.8.19;
 
 // Protocol dependencies
+import {Module} from "src/modules/Modules.sol";
 import {AuctionModule, Auction} from "src/modules/Auction.sol";
 import {Veecode, toVeecode} from "src/modules/Modules.sol";
 
@@ -18,11 +19,19 @@ contract FixedPriceAuctionModule is AuctionModule {
 
     // ========== DATA STRUCTURES ========== //
 
+    /// @notice             Auction-specific data for a lot
+    ///
+    /// @param price        The fixed price of the lot
+    /// @param maxPayout    The maximum payout per purchase, in terms of the base token
     struct AuctionData {
         uint96 price;
         uint96 maxPayout;
     }
 
+    /// @notice                     Parameters for a fixed price auction
+    ///
+    /// @param price                The fixed price of the lot
+    /// @param maxPayoutPercent     The maximum payout per purchase, as a percentage of the capacity
     struct FixedPriceParams {
         uint96 price;
         uint24 maxPayoutPercent;
@@ -40,14 +49,17 @@ contract FixedPriceAuctionModule is AuctionModule {
         minAuctionDuration = 1 days;
     }
 
+    /// @inheritdoc Module
     function VEECODE() public pure override returns (Veecode) {
         return toVeecode("01FPAM");
     }
 
+    /// @inheritdoc Module
     function TYPE() public pure override returns (Type) {
         return Type.Auction;
     }
 
+    /// @inheritdoc Auction
     function auctionType() external pure override returns (AuctionType) {
         return AuctionType.Atomic;
     }
