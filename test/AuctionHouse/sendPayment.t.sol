@@ -85,9 +85,11 @@ contract SendPaymentTest is Test, Permit2User {
         // );
 
         bytes32 salt;
-        if (_callbackReceiveQuoteTokens) { // 0x02
+        if (_callbackReceiveQuoteTokens) {
+            // 0x02
             salt = bytes32(0xe3fac272563b951dccd2e1a1cb14678f914791aa7dd20e3bfc58089d251a11e4);
-        } else { // 0x00
+        } else {
+            // 0x00
             salt = bytes32(0x4b68c04e426a76ef1c71fa325386350c30b4818b9a68f67402fbfd04653ec53a);
         }
 
