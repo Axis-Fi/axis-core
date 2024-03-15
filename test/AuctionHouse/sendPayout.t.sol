@@ -17,8 +17,6 @@ import {Auctioneer} from "src/bases/Auctioneer.sol";
 
 import {Veecode, toVeecode} from "src/modules/Modules.sol";
 
-import {console2} from "forge-std/console2.sol";
-
 contract SendPayoutTest is Test, Permit2User {
     MockAuctionHouse internal _auctionHouse;
     MockAtomicAuctionModule internal _mockAuctionModule;
@@ -53,11 +51,7 @@ contract SendPayoutTest is Test, Permit2User {
         vm.warp(1_000_000);
 
         // Create an AuctionHouse at a deterministic address, since it is used as input to callbacks
-        MockAuctionHouse mockAuctionHouse = new MockAuctionHouse(
-            _OWNER,
-            _PROTOCOL,
-            _permit2Address
-        );
+        MockAuctionHouse mockAuctionHouse = new MockAuctionHouse(_OWNER, _PROTOCOL, _permit2Address);
         _auctionHouse = MockAuctionHouse(address(0x000000000000000000000000000000000000000A));
         vm.etch(address(_auctionHouse), address(mockAuctionHouse).code);
         vm.store(address(_auctionHouse), bytes32(uint256(0)), bytes32(abi.encode(_OWNER))); // Owner

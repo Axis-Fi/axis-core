@@ -26,8 +26,6 @@ import {Callbacks} from "src/lib/Callbacks.sol";
 
 import {Veecode, toKeycode, keycodeFromVeecode, Keycode} from "src/modules/Modules.sol";
 
-import {console2} from "forge-std/console2.sol";
-
 abstract contract AuctionHouseTest is Test, Permit2User {
     MockFeeOnTransferERC20 internal _baseToken;
     MockFeeOnTransferERC20 internal _quoteToken;
@@ -98,11 +96,7 @@ abstract contract AuctionHouseTest is Test, Permit2User {
         _quoteToken = new MockFeeOnTransferERC20("Quote Token", "QUOTE", 18);
 
         // Create an AuctionHouse at a deterministic address, since it is used as input to callbacks
-        AuctionHouse auctionHouse = new AuctionHouse(
-            _OWNER,
-            _PROTOCOL,
-            _permit2Address
-        );
+        AuctionHouse auctionHouse = new AuctionHouse(_OWNER, _PROTOCOL, _permit2Address);
         _auctionHouse = AuctionHouse(address(0x000000000000000000000000000000000000000A));
         vm.etch(address(_auctionHouse), address(auctionHouse).code);
         vm.store(address(_auctionHouse), bytes32(uint256(0)), bytes32(abi.encode(_OWNER))); // Owner
@@ -484,7 +478,6 @@ abstract contract AuctionHouseTest is Test, Permit2User {
             }),
             _SELLER
         );
-        console2.log("callback", address(_callback));
 
         _routingParams.callbacks = _callback;
         _;

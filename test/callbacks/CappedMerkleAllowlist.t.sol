@@ -31,20 +31,16 @@ contract CappedMerkleAllowlistTest is Test, Permit2User {
     AuctionHouse internal _auctionHouse;
     CappedMerkleAllowlist internal _allowlist;
 
-    uint96 internal _BUYER_LIMIT = 1e18;
+    uint96 internal constant _BUYER_LIMIT = 1e18;
     // Generated from: https://lab.miguelmota.com/merkletreejs/example/
     // Includes _BUYER, _BUYER_TWO but not _BUYER_THREE
-    bytes32 internal _MERKLE_ROOT =
+    bytes32 internal constant _MERKLE_ROOT =
         0x40e51f1c845d99162de6c210a9eaff4729f433ac605be8f3cde6d2e0afa44aeb;
-    bytes32[] internal _MERKLE_PROOF;
+    bytes32[] internal _merkleProof;
 
     function setUp() public {
         // Create an AuctionHouse at a deterministic address, since it is used as input to callbacks
-        AuctionHouse auctionHouse = new AuctionHouse(
-            _OWNER,
-            _PROTOCOL,
-            _permit2Address
-        );
+        AuctionHouse auctionHouse = new AuctionHouse(_OWNER, _PROTOCOL, _permit2Address);
         _auctionHouse = AuctionHouse(address(0x000000000000000000000000000000000000000A));
         vm.etch(address(_auctionHouse), address(auctionHouse).code);
         vm.store(address(_auctionHouse), bytes32(uint256(0)), bytes32(abi.encode(_OWNER))); // Owner
@@ -88,12 +84,12 @@ contract CappedMerkleAllowlistTest is Test, Permit2User {
             _SELLER
         );
 
-        _MERKLE_PROOF.push(
+        _merkleProof.push(
             bytes32(0x421df1fa259221d02aa4956eb0d35ace318ca24c0a33a64c1af96cf67cf245b6)
         ); // Corresponds to _BUYER
-        // _MERKLE_PROOF.push(
-        //     bytes32(0xa876da518a393dbd067dc72abfa08d475ed6447fca96d92ec3f9e7eba503ca61)
-        // ); // Corresponds to _BUYER_TWO
+            // _merkleProof.push(
+            //     bytes32(0xa876da518a393dbd067dc72abfa08d475ed6447fca96d92ec3f9e7eba503ca61)
+            // ); // Corresponds to _BUYER_TWO
     }
 
     modifier givenOnCreate() {
@@ -112,12 +108,12 @@ contract CappedMerkleAllowlistTest is Test, Permit2User {
 
     function _onPurchase(uint96 lotId_, address buyer_, uint96 amount_) internal {
         vm.prank(address(_auctionHouse));
-        _allowlist.onPurchase(lotId_, buyer_, amount_, 0, false, abi.encode(_MERKLE_PROOF));
+        _allowlist.onPurchase(lotId_, buyer_, amount_, 0, false, abi.encode(_merkleProof));
     }
 
     function _onBid(uint96 lotId_, address buyer_, uint96 amount_) internal {
         vm.prank(address(_auctionHouse));
-        _allowlist.onBid(lotId_, 1, buyer_, amount_, abi.encode(_MERKLE_PROOF));
+        _allowlist.onBid(lotId_, 1, buyer_, amount_, abi.encode(_merkleProof));
     }
 
     // onCreate
