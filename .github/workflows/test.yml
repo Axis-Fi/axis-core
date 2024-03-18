@@ -60,6 +60,10 @@ jobs:
       - name: Run lint check
         run: pnpm run lint:check
 
+      - name: remappings
+        run: |
+          forge remappings
+
       - name: Run Forge build
         run: |
           forge --version
