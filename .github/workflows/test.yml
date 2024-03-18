@@ -33,6 +33,14 @@ jobs:
         with:
           workspaces: crates/ecies-cli
 
+      - name: Configure sccache
+        run: |
+            echo "RUSTC_WRAPPER=sccache" >> $GITHUB_ENV
+            echo “SCCACHE_GHA_ENABLED=true" >> $GITHUB_ENV
+
+      - name: Run sccache-cache
+        uses: mozilla-actions/sccache-action@v0.0.2
+
       - name: Build local ecies-cli for use with testing
         run: cd crates/ecies-cli && cargo build && cd ../..
 
