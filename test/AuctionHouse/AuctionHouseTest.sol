@@ -475,6 +475,9 @@ abstract contract AuctionHouseTest is Test, Permit2User {
             receiveQuoteTokens: _callbackReceiveQuoteTokens,
             sendBaseTokens: _callbackSendBaseTokens
         });
+        console2.log("permissions");
+        console2.logBytes(abi.encode(permissions));
+        console2.logBytes32(keccak256(abi.encode(permissions)));
 
         // Required for CREATE2 address to work correctly. doesn't do anything in a test
         // Source: https://github.com/foundry-rs/foundry/issues/6402
