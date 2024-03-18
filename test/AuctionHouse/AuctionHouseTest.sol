@@ -462,7 +462,7 @@ abstract contract AuctionHouseTest is Test, Permit2User {
             salt = bytes32(0xe7f4388f366c3e35766d3c6139fbe69e4b2a6e784aeb345c06b28976c8ec839d);
         } else {
             // 11111100 = 0xFC
-            salt = bytes32(0x2d085bff93737a7308f86687855a637fa9b300e4eae37470574aeffe69211b2d);
+            salt = bytes32(0x579aae234bb0e1cd45856720f1621e1ba60a1bf4a96b4ee4dcaf50dff641c744);
         }
 
         Callbacks.Permissions memory permissions = Callbacks.Permissions({
