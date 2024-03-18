@@ -398,33 +398,41 @@ abstract contract AuctionHouseTest is Test, Permit2User {
         console2.log("auctionHouse", address(_auctionHouse));
         console2.log("SELLER", _SELLER);
         console2.log("0xFF parameters hash");
-        console2.logBytes32(keccak256(abi.encode(
-            address(_auctionHouse),
-            Callbacks.Permissions({
-                onCreate: true,
-                onCancel: true,
-                onCurate: true,
-                onPurchase: true,
-                onBid: true,
-                onClaimProceeds: true,
-                receiveQuoteTokens: true,
-                sendBaseTokens: true
-            }),
-            _SELLER
-        )));
+        console2.logBytes32(
+            keccak256(
+                abi.encode(
+                    address(_auctionHouse),
+                    Callbacks.Permissions({
+                        onCreate: true,
+                        onCancel: true,
+                        onCurate: true,
+                        onPurchase: true,
+                        onBid: true,
+                        onClaimProceeds: true,
+                        receiveQuoteTokens: true,
+                        sendBaseTokens: true
+                    }),
+                    _SELLER
+                )
+            )
+        );
         console2.log("0xFF permissions hash");
-        console2.logBytes32(keccak256(abi.encode(
-            Callbacks.Permissions({
-                onCreate: true,
-                onCancel: true,
-                onCurate: true,
-                onPurchase: true,
-                onBid: true,
-                onClaimProceeds: true,
-                receiveQuoteTokens: true,
-                sendBaseTokens: true
-            })
-        )));
+        console2.logBytes32(
+            keccak256(
+                abi.encode(
+                    Callbacks.Permissions({
+                        onCreate: true,
+                        onCancel: true,
+                        onCurate: true,
+                        onPurchase: true,
+                        onBid: true,
+                        onClaimProceeds: true,
+                        receiveQuoteTokens: true,
+                        sendBaseTokens: true
+                    })
+                )
+            )
+        );
         // vm.writeFile(
         //     "./bytecode/MockCallbackFF.bin",
         //     vm.toString(bytecode)
