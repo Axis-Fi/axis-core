@@ -95,9 +95,8 @@ contract Deploy is Script {
             // due to changes with forge-std or a struct needs to be used
             argsMap[name] =
                 data.parseRaw(string.concat(".sequence[?(@.name == '", name, "')].args"));
-            saltMap[name] = bytes32(
-                data.parseRaw(string.concat(".sequence[?(@.name == '", name, "')].salt"))
-            );
+            saltMap[name] =
+                bytes32(data.parseRaw(string.concat(".sequence[?(@.name == '", name, "')].salt")));
         } else {
             // More than one deployment
             string[] memory names = abi.decode(data.parseRaw(".sequence..name"), (string[]));
