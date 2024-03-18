@@ -56,6 +56,10 @@ jobs:
           forge build
         id: build
 
+      - name: Run Forge remappings
+        run : |
+          forge remappings
+
       - name: Run Forge tests
         run: |
           pnpm run test
