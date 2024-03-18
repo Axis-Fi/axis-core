@@ -462,7 +462,7 @@ abstract contract AuctionHouseTest is Test, Permit2User {
             salt = bytes32(0xe7f4388f366c3e35766d3c6139fbe69e4b2a6e784aeb345c06b28976c8ec839d);
         } else {
             // 11111100 = 0xFC
-            salt = bytes32(0x579aae234bb0e1cd45856720f1621e1ba60a1bf4a96b4ee4dcaf50dff641c744);
+            salt = bytes32(0xa22448d10f8d23668fd2f443ef32e62089203ee394ba8a14d975bb8910b30741);
         }
 
         Callbacks.Permissions memory permissions = Callbacks.Permissions({
@@ -475,9 +475,6 @@ abstract contract AuctionHouseTest is Test, Permit2User {
             receiveQuoteTokens: _callbackReceiveQuoteTokens,
             sendBaseTokens: _callbackSendBaseTokens
         });
-        console2.log("permissions");
-        console2.logBytes(abi.encode(permissions));
-        console2.logBytes32(keccak256(abi.encode(permissions)));
 
         // Required for CREATE2 address to work correctly. doesn't do anything in a test
         // Source: https://github.com/foundry-rs/foundry/issues/6402
