@@ -28,6 +28,13 @@ jobs:
         run: pnpm install
 
       # From: https://www.uffizzi.com/blog/optimizing-rust-builds-for-faster-github-actions-pipelines
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+          target: x86_64-unknown-linux-musl
+
       - name: Cargo Cache
         uses: Swatinem/rust-cache@v2
         with:
