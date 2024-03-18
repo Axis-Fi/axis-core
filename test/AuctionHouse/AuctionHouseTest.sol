@@ -376,16 +376,20 @@ abstract contract AuctionHouseTest is Test, Permit2User {
         // // cast create2 -s FF -i $(cat ./bytecode/MockCallbackFF.bin)
         bytes memory bytecode = abi.encodePacked(
             type(MockCallback).creationCode,
-            abi.encode(address(_auctionHouse), Callbacks.Permissions({
-                onCreate: true,
-                onCancel: true,
-                onCurate: true,
-                onPurchase: true,
-                onBid: true,
-                onClaimProceeds: true,
-                receiveQuoteTokens: true,
-                sendBaseTokens: true
-            }), _SELLER)
+            abi.encode(
+                address(_auctionHouse),
+                Callbacks.Permissions({
+                    onCreate: true,
+                    onCancel: true,
+                    onCurate: true,
+                    onPurchase: true,
+                    onBid: true,
+                    onClaimProceeds: true,
+                    receiveQuoteTokens: true,
+                    sendBaseTokens: true
+                }),
+                _SELLER
+            )
         );
         console2.log("0xFF hash");
         console2.logBytes32(keccak256(bytecode));
