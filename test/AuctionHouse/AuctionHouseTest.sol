@@ -481,8 +481,8 @@ abstract contract AuctionHouseTest is Test, Permit2User {
                 onPurchase: true,
                 onBid: true,
                 onClaimProceeds: true,
-                receiveQuoteTokens: _callbackReceiveQuoteTokens,
-                sendBaseTokens: _callbackSendBaseTokens
+                receiveQuoteTokens: false,
+                sendBaseTokens: false
             }),
             _SELLER
         );
