@@ -466,6 +466,9 @@ abstract contract AuctionHouseTest is Test, Permit2User {
         }
 
         vm.broadcast(); // required for CREATE2 address to work correctly. doesn't do anything in a test
+        console2.log("salt");
+        console2.logBytes32(salt);
+        console2.log("auctionHouse", address(_auctionHouse));
         _callback = new MockCallback{salt: salt}(
             address(_auctionHouse),
             Callbacks.Permissions({
@@ -480,8 +483,6 @@ abstract contract AuctionHouseTest is Test, Permit2User {
             }),
             _SELLER
         );
-        console2.log("salt");
-        console2.logBytes32(salt);
         console2.log("callback", address(_callback));
 
         _routingParams.callbacks = _callback;
