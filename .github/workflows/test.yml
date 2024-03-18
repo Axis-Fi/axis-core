@@ -27,19 +27,11 @@ jobs:
       - name: Install Node dependencies
         run: pnpm install
 
-      # From: https://ectobit.com/blog/speed-up-github-actions-rust-pipelines/
-      - name: Set up cargo cache
-        uses: actions/cache@v3
-        continue-on-error: false
+      # From: https://www.uffizzi.com/blog/optimizing-rust-builds-for-faster-github-actions-pipelines
+      - name: Cargo Cache
+        uses: Swatinem/rust-cache@v2
         with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: ${{ runner.os }}-cargo-
+          workspaces: crates/ecies-cli
 
       - name: Build local ecies-cli for use with testing
         run: cd crates/ecies-cli && cargo build && cd ../..
