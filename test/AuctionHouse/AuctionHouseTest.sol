@@ -465,26 +465,23 @@ abstract contract AuctionHouseTest is Test, Permit2User {
             salt = bytes32(0x0b7da4ae8c0332f2d853cd23fcb46f4db42e4b55e1f858caabb33721e9822604);
         }
 
-        Callbacks.Permissions memory permissions = Callbacks.Permissions({
-            onCreate: true,
-            onCancel: true,
-            onCurate: true,
-            onPurchase: true,
-            onBid: true,
-            onClaimProceeds: true,
-            receiveQuoteTokens: _callbackReceiveQuoteTokens,
-            sendBaseTokens: _callbackSendBaseTokens
-        });
-
         // Required for CREATE2 address to work correctly. doesn't do anything in a test
         // Source: https://github.com/foundry-rs/foundry/issues/6402
         vm.startBroadcast();
-        console2.log("salt");
-        console2.logBytes32(salt);
-        console2.log("auctionHouse", address(_auctionHouse));
-        console2.log("seller", _SELLER);
-        _callback = new MockCallback{salt: salt}(address(_auctionHouse), permissions, _SELLER);
-        console2.log("callback", address(_callback));
+        _callback = new MockCallback{salt: salt}(
+            address(_auctionHouse),
+            Callbacks.Permissions({
+                onCreate: true,
+                onCancel: true,
+                onCurate: true,
+                onPurchase: true,
+                onBid: true,
+                onClaimProceeds: true,
+                receiveQuoteTokens: _callbackReceiveQuoteTokens,
+                sendBaseTokens: _callbackSendBaseTokens
+            }),
+            _SELLER
+        );
         vm.stopBroadcast();
 
         _routingParams.callbacks = _callback;

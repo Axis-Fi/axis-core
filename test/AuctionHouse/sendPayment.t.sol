@@ -69,7 +69,6 @@ contract SendPaymentTest is Test, Permit2User {
         //     "./bytecode/MockCallback00.bin",
         //     vm.toString(bytecode)
         // );
-
         // // 00000010 - 0x02
         // // cast create2 -s 02 -i $(cat ./bytecode/MockCallback02.bin)
         // bytecode = abi.encodePacked(

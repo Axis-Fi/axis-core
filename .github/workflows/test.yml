@@ -68,7 +68,6 @@ jobs:
 
       - name: Run Forge tests
         run: |
-          cast create2 -s FC -i $(cat ./bytecode/MockCallbackFC.bin)
           pnpm run test
         id: test
 
