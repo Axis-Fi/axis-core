@@ -60,20 +60,11 @@ jobs:
       - name: Run lint check
         run: pnpm run lint:check
 
-      - name: remappings
-        run: |
-          forge remappings
-
       - name: Run Forge build
         run: |
           forge --version
           forge build
         id: build
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: MockCallback
-          path: out/MockCallback.sol/MockCallback.json
 
       - name: Run Forge tests
         run: |
