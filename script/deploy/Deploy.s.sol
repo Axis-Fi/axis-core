@@ -152,8 +152,8 @@ contract Deploy is Script {
         for (uint256 i = deployAH ? 1 : 0; i < len; i++) {
             // Get deploy deploy args from contract name
             string memory name = deployments[i];
-            // e.g. a deployment named EncryptedMarginalPriceAuctionModule would require the following function: _deployEncryptedMarginalPriceAuctionModule(bytes)
-            bytes4 selector = bytes4(bytes(string.concat("_deploy", name, "(bytes)")));
+            // e.g. a deployment named EncryptedMarginalPriceAuctionModule would require the following function: deployEncryptedMarginalPriceAuctionModule(bytes)
+            bytes4 selector = bytes4(keccak256(bytes(string.concat("deploy", name, "(bytes)"))));
             bytes memory args = argsMap[name];
 
             // Call the deploy function for the contract
@@ -192,7 +192,7 @@ contract Deploy is Script {
 
     // ========== MODULE DEPLOYMENTS ========== //
 
-    function _deployCatalogue(bytes memory) internal returns (address) {
+    function deployCatalogue(bytes memory) public returns (address) {
         // No args used
 
         console2.log("Deploying Catalogue");
@@ -205,7 +205,7 @@ contract Deploy is Script {
         return address(catalogue);
     }
 
-    function _deployEncryptedMarginalPriceAuctionModule(bytes memory) internal returns (address) {
+    function deployEncryptedMarginalPriceAuctionModule(bytes memory) public returns (address) {
         // No args used
 
         console2.log("Deploying EncryptedMarginalPriceAuctionModule");
@@ -220,7 +220,7 @@ contract Deploy is Script {
         return address(auctionModuleEmpa);
     }
 
-    function _deployFixedPriceAuctionModule(bytes memory) internal returns (address) {
+    function deployFixedPriceAuctionModule(bytes memory) public returns (address) {
         // No args used
 
         console2.log("Deploying FixedPriceAuctionModule");
@@ -233,7 +233,7 @@ contract Deploy is Script {
         return address(auctionModuleFpa);
     }
 
-    function _deployLinearVesting(bytes memory) internal returns (address) {
+    function deployLinearVesting(bytes memory) public returns (address) {
         // No args used
 
         console2.log("Deploying LinearVesting");
