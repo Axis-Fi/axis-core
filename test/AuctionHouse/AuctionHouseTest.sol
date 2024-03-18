@@ -284,7 +284,7 @@ abstract contract AuctionHouseTest is Test, Permit2User {
         //     vm.toString(bytecode)
         // );
 
-        bytes32 salt = bytes32(0x6be2d7de017fc8f79c65cad8905e6d39a67af5e1027f77d8c7e316275e4083c2);
+        bytes32 salt = bytes32(0xab1ab3789d4493b63a77e1fb31f5cfa877ae54d27913efbabfa9247be92c0a83);
         vm.broadcast(); // required for CREATE2 address to work correctly. doesn't do anything in a test
         _callback = new MockCallback{salt: salt}(
             address(_auctionHouse),
@@ -442,16 +442,16 @@ abstract contract AuctionHouseTest is Test, Permit2User {
         bytes32 salt;
         if (_callbackSendBaseTokens && _callbackReceiveQuoteTokens) {
             // 11111111 = 0xFF
-            salt = bytes32(0x4fbeff7db014fbe3c43b65e4eae395a81299177ac1ab0d463ae2bd8bbcfaf812);
+            salt = bytes32(0x32e1078b9d54a01af43eefd3a1917e0681b6ded11dd3fde80b19740b286706d9);
         } else if (_callbackSendBaseTokens) {
             // 11111101 = 0xFD
-            salt = bytes32(0x75ef50f9fcc183f29e8fbf3b786477f824f5a214f25339b58f0447c910ac1ed7);
+            salt = bytes32(0xfbc90e27b044a58cc9a38b7f1c61bafdfea6cd7972117afcb59af65e887d1a98);
         } else if (_callbackReceiveQuoteTokens) {
             // 11111110 = 0xFE
-            salt = bytes32(0x5c1d08f1deb0582beaf79da921cffa8d314abaa28c13e30823efcbc7b9f68750);
+            salt = bytes32(0xb7f86ae56377b2fbd4cd9684e04cccedb89a2d8dd6a497695501b7b1bb2cfb17);
         } else {
             // 11111100 = 0xFC
-            salt = bytes32(0x1b1828c2fd844a7f07f63d612e964ca5aa6c205b09f3e4c29bb1c6947e0c670c);
+            salt = bytes32(0x667ba1181a4f5ab0c74a749f9628c6c2d5939ba3fbdbb81a8d62f1f44babce6a);
         }
 
         vm.broadcast(); // required for CREATE2 address to work correctly. doesn't do anything in a test
