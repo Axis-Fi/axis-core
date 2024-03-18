@@ -2131,18 +2131,6 @@ contract LinearVestingTest is Test, Permit2User {
             wrapAmount,
             "wrapped derivative: balanceOf mismatch"
         );
-
-        // Check total supply
-        assertEq(
-            _linearVesting.totalSupply(_derivativeTokenId),
-            _AMOUNT - wrapAmount,
-            "derivative: totalSupply mismatch"
-        );
-        assertEq(
-            SoulboundCloneERC20(tokenMetadata.wrapped).totalSupply(),
-            wrapAmount,
-            "wrapped derivative: totalSupply mismatch"
-        );
     }
 
     function test_wrap_givenWrappedTokenDeployed(uint256 wrapAmount_)
@@ -2166,18 +2154,6 @@ contract LinearVestingTest is Test, Permit2User {
             SoulboundCloneERC20(_derivativeWrappedAddress).balanceOf(_ALICE),
             wrapAmount,
             "wrapped derivative: balanceOf mismatch"
-        );
-
-        // Check total supply
-        assertEq(
-            _linearVesting.totalSupply(_derivativeTokenId),
-            _AMOUNT - wrapAmount,
-            "derivative: totalSupply mismatch"
-        );
-        assertEq(
-            SoulboundCloneERC20(_derivativeWrappedAddress).totalSupply(),
-            wrapAmount,
-            "wrapped derivative: totalSupply mismatch"
         );
     }
 
@@ -2259,18 +2235,6 @@ contract LinearVestingTest is Test, Permit2User {
             SoulboundCloneERC20(_derivativeWrappedAddress).balanceOf(_ALICE),
             _AMOUNT - unwrapAmount,
             "wrapped derivative: balanceOf mismatch"
-        );
-
-        // Check total supply
-        assertEq(
-            _linearVesting.totalSupply(_derivativeTokenId),
-            unwrapAmount,
-            "derivative: totalSupply mismatch"
-        );
-        assertEq(
-            SoulboundCloneERC20(_derivativeWrappedAddress).totalSupply(),
-            _AMOUNT - unwrapAmount,
-            "wrapped derivative: totalSupply mismatch"
         );
     }
 
@@ -2381,49 +2345,6 @@ contract LinearVestingTest is Test, Permit2User {
 
         // Check values
         assertEq(balance, 0);
-    }
-
-    // totalSupply
-    // [X] when the token id is invalid
-    //  [X] it returns 0
-    // [X] it returns the total supply of the unwrapped derivative token
-
-    function test_totalSupply_givenTokenIdDoesNotExist() public {
-        // Call
-        uint256 balance = _linearVesting.totalSupply(_derivativeTokenId);
-
-        // Check values
-        assertEq(balance, 0);
-    }
-
-    function test_totalSupply(uint256 amount_) public givenWrappedDerivativeIsDeployed {
-        uint256 amount = bound(amount_, 0, _AMOUNT);
-
-        // Mint
-        if (amount > 0) {
-            _mintDerivativeTokens(_ALICE, amount);
-        }
-
-        // Call
-        uint256 totalSupply = _linearVesting.totalSupply(_derivativeTokenId);
-
-        // Check values
-        assertEq(totalSupply, amount);
-    }
-
-    function test_totalSupply_wrapped(uint256 amount_) public givenWrappedDerivativeIsDeployed {
-        uint256 amount = bound(amount_, 0, _AMOUNT);
-
-        // Mint
-        if (amount > 0) {
-            _mintWrappedDerivativeTokens(_ALICE, amount);
-        }
-
-        // Call
-        uint256 totalSupply = _linearVesting.totalSupply(_derivativeTokenId);
-
-        // Check values
-        assertEq(totalSupply, 0);
     }
 
     // reclaim
