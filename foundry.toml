@@ -8,12 +8,7 @@ ffi = true
 [fuzz]
 runs = 1024
 
-#remappings = [
-#  "ds-test/=lib/solmate/lib/ds-test/src/",
-#  "forge-std/=lib/forge-std/src/",
-#  "solady/=lib/solady/src/",
-#  "solmate/=lib/solmate/src/"
-#]
+# Remappings are setup using remappings.txt, since forge seems to ignore remappings here
 
 [fmt]
 line_length = 100
