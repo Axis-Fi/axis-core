@@ -462,13 +462,14 @@ abstract contract AuctionHouseTest is Test, Permit2User {
             salt = bytes32(0xe7f4388f366c3e35766d3c6139fbe69e4b2a6e784aeb345c06b28976c8ec839d);
         } else {
             // 11111100 = 0xFC
-            salt = bytes32(0x9b2322642a2b2373075d57c41d9d8da7ef087abc2683c4c02c6d2707479e3c0b);
+            salt = bytes32(0x2d085bff93737a7308f86687855a637fa9b300e4eae37470574aeffe69211b2d);
         }
 
         vm.startBroadcast(); // required for CREATE2 address to work correctly. doesn't do anything in a test
         console2.log("salt");
         console2.logBytes32(salt);
         console2.log("auctionHouse", address(_auctionHouse));
+        console2.log("seller", _SELLER);
         _callback = new MockCallback{salt: salt}(
             address(_auctionHouse),
             Callbacks.Permissions({
