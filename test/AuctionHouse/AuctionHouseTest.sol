@@ -465,7 +465,9 @@ abstract contract AuctionHouseTest is Test, Permit2User {
             salt = bytes32(0x2d085bff93737a7308f86687855a637fa9b300e4eae37470574aeffe69211b2d);
         }
 
-        vm.startBroadcast(); // required for CREATE2 address to work correctly. doesn't do anything in a test
+        // Required for CREATE2 address to work correctly. doesn't do anything in a test
+        // Source: https://github.com/foundry-rs/foundry/issues/6402
+        vm.startBroadcast();
         console2.log("salt");
         console2.logBytes32(salt);
         console2.log("auctionHouse", address(_auctionHouse));
