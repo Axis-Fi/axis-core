@@ -67,7 +67,7 @@ contract Deploy is Script {
         chain = chain_;
 
         // Load environment addresses
-        env = vm.readFile("./src/scripts/env.json");
+        env = vm.readFile("./script/env.json");
 
         envOwner = _envAddress("OWNER");
         envPermit2 = _envAddress("PERMIT2");
