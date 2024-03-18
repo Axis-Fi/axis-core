@@ -483,11 +483,7 @@ abstract contract AuctionHouseTest is Test, Permit2User {
         console2.logBytes32(salt);
         console2.log("auctionHouse", address(_auctionHouse));
         console2.log("seller", _SELLER);
-        _callback = new MockCallback{salt: salt}(
-            address(_auctionHouse),
-            permissions,
-            _SELLER
-        );
+        _callback = new MockCallback{salt: salt}(address(_auctionHouse), permissions, _SELLER);
         console2.log("callback", address(_callback));
         vm.stopBroadcast();
 
