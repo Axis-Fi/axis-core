@@ -453,16 +453,16 @@ abstract contract AuctionHouseTest is Test, Permit2User {
         bytes32 salt;
         if (_callbackSendBaseTokens && _callbackReceiveQuoteTokens) {
             // 11111111 = 0xFF
-            salt = bytes32(0x80806dd04cf76397f3bbb5ce0fa52642486d2ecaf914d996418b28808ec88879);
+            salt = bytes32(0x85562f6b977f049f629b46a5594463d0ece4a667bda374331ef8d5f4ac237f90);
         } else if (_callbackSendBaseTokens) {
             // 11111101 = 0xFD
-            salt = bytes32(0x5e1404b608ca147acb9ec55e9bac9753a3f1e237e7eecde81161cb0b9a37ea1c);
+            salt = bytes32(0x9c58c88fd4b4d29c183ebdec21f5500d204c8d44c3728e2304cdc93917df5ac4);
         } else if (_callbackReceiveQuoteTokens) {
             // 11111110 = 0xFE
-            salt = bytes32(0x0d0aaa1a746c22e16fbe4bd911e2b464661cfb85a1da6ba776213b2457a1961b);
+            salt = bytes32(0xe7f4388f366c3e35766d3c6139fbe69e4b2a6e784aeb345c06b28976c8ec839d);
         } else {
             // 11111100 = 0xFC
-            salt = bytes32(0xa2a026483d0495b58d57dc7453fe0bbff290b0a938e8bd2b9872a6e03b1a77c3);
+            salt = bytes32(0x9b2322642a2b2373075d57c41d9d8da7ef087abc2683c4c02c6d2707479e3c0b);
         }
 
         vm.broadcast(); // required for CREATE2 address to work correctly. doesn't do anything in a test
