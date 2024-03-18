@@ -453,16 +453,16 @@ abstract contract AuctionHouseTest is Test, Permit2User {
         bytes32 salt;
         if (_callbackSendBaseTokens && _callbackReceiveQuoteTokens) {
             // 11111111 = 0xFF
-            salt = bytes32(0x85562f6b977f049f629b46a5594463d0ece4a667bda374331ef8d5f4ac237f90);
+            salt = bytes32(0xb85f3bd3661323fc7a924af7f6ea471d778ddb95360d402ccc6fbe90caa42142);
         } else if (_callbackSendBaseTokens) {
             // 11111101 = 0xFD
-            salt = bytes32(0x9c58c88fd4b4d29c183ebdec21f5500d204c8d44c3728e2304cdc93917df5ac4);
+            salt = bytes32(0x999d2be673f14abd43b1404c1401c99168d9bcc79e4f398ab4fa5c838c062d56);
         } else if (_callbackReceiveQuoteTokens) {
             // 11111110 = 0xFE
-            salt = bytes32(0xe7f4388f366c3e35766d3c6139fbe69e4b2a6e784aeb345c06b28976c8ec839d);
+            salt = bytes32(0x07c1296d5742b76fb7c184204002841928ddf6636f318f9dbb3e5b3aecd8c507);
         } else {
             // 11111100 = 0xFC
-            salt = bytes32(0xa22448d10f8d23668fd2f443ef32e62089203ee394ba8a14d975bb8910b30741);
+            salt = bytes32(0x0b7da4ae8c0332f2d853cd23fcb46f4db42e4b55e1f858caabb33721e9822604);
         }
 
         Callbacks.Permissions memory permissions = Callbacks.Permissions({
