@@ -465,7 +465,7 @@ abstract contract AuctionHouseTest is Test, Permit2User {
             salt = bytes32(0x9b2322642a2b2373075d57c41d9d8da7ef087abc2683c4c02c6d2707479e3c0b);
         }
 
-        vm.broadcast(); // required for CREATE2 address to work correctly. doesn't do anything in a test
+        vm.startBroadcast(); // required for CREATE2 address to work correctly. doesn't do anything in a test
         console2.log("salt");
         console2.logBytes32(salt);
         console2.log("auctionHouse", address(_auctionHouse));
@@ -484,6 +484,7 @@ abstract contract AuctionHouseTest is Test, Permit2User {
             _SELLER
         );
         console2.log("callback", address(_callback));
+        vm.stopBroadcast();
 
         _routingParams.callbacks = _callback;
         _;
