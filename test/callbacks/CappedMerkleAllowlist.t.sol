@@ -44,23 +44,24 @@ contract CappedMerkleAllowlistTest is Test, Permit2User {
         // // cast create2 -s 98 -i $(cat ./bytecode/CappedMerkleAllowlist98.bin)
         // bytes memory bytecode = abi.encodePacked(
         //     type(CappedMerkleAllowlist).creationCode,
-        //     abi.encode(address(_auctionHouse), Callbacks.Permissions({
-        //         onCreate: true,
-        //         onCancel: false,
-        //         onCurate: false,
-        //         onPurchase: true,
-        //         onBid: true,
-        //         onClaimProceeds: false,
-        //         receiveQuoteTokens: false,
-        //         sendBaseTokens: false
-        //     }), _SELLER)
+        //     abi.encode(
+        //         address(_auctionHouse),
+        //         Callbacks.Permissions({
+        //             onCreate: true,
+        //             onCancel: false,
+        //             onCurate: false,
+        //             onPurchase: true,
+        //             onBid: true,
+        //             onClaimProceeds: false,
+        //             receiveQuoteTokens: false,
+        //             sendBaseTokens: false
+        //         }),
+        //         _SELLER
+        //     )
         // );
-        // vm.writeFile(
-        //     "./bytecode/CappedMerkleAllowlist98.bin",
-        //     vm.toString(bytecode)
-        // );
+        // vm.writeFile("./bytecode/CappedMerkleAllowlist98.bin", vm.toString(bytecode));
 
-        bytes32 salt = bytes32(0x79c0dc0e1b403ae86906210c4f44234245b3b5ec7180f72f5b4680347f908435);
+        bytes32 salt = bytes32(0x0af952a3c5eaeeb708512a67704ce487ab0d2083ff450240a3b69b3f3bce0098);
         vm.broadcast();
         _allowlist = new CappedMerkleAllowlist{salt: salt}(
             address(_auctionHouse),
