@@ -170,9 +170,21 @@ contract Deploy is Script {
     }
 
     function _saveDeployment(string memory chain_) internal {
+        // Create the deployments folder if it doesn't exist
+        if (!vm.isDir("./deployments")) {
+            console2.log("Creating deployments directory");
+
+            string[] memory inputs = new string[](2);
+            inputs[0] = "mkdir";
+            inputs[1] = "deployments";
+
+            vm.ffi(inputs);
+        }
+
         // Create file path
         string memory file =
             string.concat("./deployments/", ".", chain_, "-", vm.toString(block.timestamp), ".json");
+        console2.log("Writing deployments to", file);
 
         // Write deployment info to file in JSON format
         vm.writeLine(file, "{");
