@@ -374,65 +374,23 @@ abstract contract AuctionHouseTest is Test, Permit2User {
         // // Uncomment to regenerate bytecode to mine new salts if the MockCallback changes
         // // 11111111 = 0xFF
         // // cast create2 -s FF -i $(cat ./bytecode/MockCallbackFF.bin)
-        bytes memory bytecode = abi.encodePacked(
-            type(MockCallback).creationCode,
-            abi.encode(
-                address(_auctionHouse),
-                Callbacks.Permissions({
-                    onCreate: true,
-                    onCancel: true,
-                    onCurate: true,
-                    onPurchase: true,
-                    onBid: true,
-                    onClaimProceeds: true,
-                    receiveQuoteTokens: true,
-                    sendBaseTokens: true
-                }),
-                _SELLER
-            )
-        );
-        console2.log("0xFF hash");
-        console2.logBytes32(keccak256(bytecode));
-        console2.log("0xFF creationCode hash");
-        console2.logBytes32(keccak256(type(MockCallback).creationCode));
-        console2.log("auctionHouse", address(_auctionHouse));
-        console2.log("SELLER", _SELLER);
-        console2.log("0xFF parameters hash");
-        console2.logBytes32(
-            keccak256(
-                abi.encode(
-                    address(_auctionHouse),
-                    Callbacks.Permissions({
-                        onCreate: true,
-                        onCancel: true,
-                        onCurate: true,
-                        onPurchase: true,
-                        onBid: true,
-                        onClaimProceeds: true,
-                        receiveQuoteTokens: true,
-                        sendBaseTokens: true
-                    }),
-                    _SELLER
-                )
-            )
-        );
-        console2.log("0xFF permissions hash");
-        console2.logBytes32(
-            keccak256(
-                abi.encode(
-                    Callbacks.Permissions({
-                        onCreate: true,
-                        onCancel: true,
-                        onCurate: true,
-                        onPurchase: true,
-                        onBid: true,
-                        onClaimProceeds: true,
-                        receiveQuoteTokens: true,
-                        sendBaseTokens: true
-                    })
-                )
-            )
-        );
+        // bytes memory bytecode = abi.encodePacked(
+        //     type(MockCallback).creationCode,
+        //     abi.encode(
+        //         address(_auctionHouse),
+        //         Callbacks.Permissions({
+        //             onCreate: true,
+        //             onCancel: true,
+        //             onCurate: true,
+        //             onPurchase: true,
+        //             onBid: true,
+        //             onClaimProceeds: true,
+        //             receiveQuoteTokens: true,
+        //             sendBaseTokens: true
+        //         }),
+        //         _SELLER
+        //     )
+        // );
         // vm.writeFile(
         //     "./bytecode/MockCallbackFF.bin",
         //     vm.toString(bytecode)
