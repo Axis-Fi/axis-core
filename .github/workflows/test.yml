@@ -66,6 +66,11 @@ jobs:
           forge build
         id: build
 
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MockCallback
+          path: out/MockCallback.sol/MockCallback.json
+
       - name: Run Forge tests
         run: |
           pnpm run test
