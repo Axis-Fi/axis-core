@@ -54,6 +54,9 @@ jobs:
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
 
+      - name: Install Foundry dependencies
+        run: forge install
+
       - name: Run lint check
         run: pnpm run lint:check
 
@@ -62,10 +65,6 @@ jobs:
           forge --version
           forge build
         id: build
-
-      - name: Run Forge remappings
-        run : |
-          forge remappings
 
       - name: Run Forge tests
         run: |
