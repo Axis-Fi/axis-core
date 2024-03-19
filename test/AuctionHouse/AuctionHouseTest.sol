@@ -295,7 +295,7 @@ abstract contract AuctionHouseTest is Test, Permit2User {
         //     vm.toString(bytecode)
         // );
 
-        bytes32 salt = bytes32(0xab1ab3789d4493b63a77e1fb31f5cfa877ae54d27913efbabfa9247be92c0a83);
+        bytes32 salt = bytes32(0xb18b1fb5bfb58bc8fc1ce4fe87770f3970a639333c43a05286c6ce71e85ac268);
         vm.broadcast(); // required for CREATE2 address to work correctly. doesn't do anything in a test
         _callback = new MockCallback{salt: salt}(
             address(_auctionHouse),
@@ -371,7 +371,7 @@ abstract contract AuctionHouseTest is Test, Permit2User {
     }
 
     modifier givenCallbackIsSet() {
-        // Uncomment to regenerate bytecode to mine new salts if the MockCallback changes
+        // // Uncomment to regenerate bytecode to mine new salts if the MockCallback changes
         // // 11111111 = 0xFF
         // // cast create2 -s FF -i $(cat ./bytecode/MockCallbackFF.bin)
         // bytes memory bytecode = abi.encodePacked(
@@ -457,16 +457,16 @@ abstract contract AuctionHouseTest is Test, Permit2User {
         bytes32 salt;
         if (_callbackSendBaseTokens && _callbackReceiveQuoteTokens) {
             // 11111111 = 0xFF
-            salt = bytes32(0x32e1078b9d54a01af43eefd3a1917e0681b6ded11dd3fde80b19740b286706d9);
+            salt = bytes32(0x8928dbd8a2f5e4417be6dd22844e0103445992624f8e6ee360ec20742d3b2e92);
         } else if (_callbackSendBaseTokens) {
             // 11111101 = 0xFD
-            salt = bytes32(0xfbc90e27b044a58cc9a38b7f1c61bafdfea6cd7972117afcb59af65e887d1a98);
+            salt = bytes32(0x836a1597bc48dc0dca6e26ae54c691d8dc6e06753bb1865c282e2662dbc9c881);
         } else if (_callbackReceiveQuoteTokens) {
             // 11111110 = 0xFE
-            salt = bytes32(0xb7f86ae56377b2fbd4cd9684e04cccedb89a2d8dd6a497695501b7b1bb2cfb17);
+            salt = bytes32(0xe5022a2f9dd565b12f8c19ef3f29a9d9d86050d3dfe2c535edeaf4612f9c4003);
         } else {
             // 11111100 = 0xFC
-            salt = bytes32(0x667ba1181a4f5ab0c74a749f9628c6c2d5939ba3fbdbb81a8d62f1f44babce6a);
+            salt = bytes32(0xb05db88553d125f08a9767196b9c0bf66b77b0e344c21864f637106bd6cae569);
         }
 
         // Required for CREATE2 address to work correctly. doesn't do anything in a test
