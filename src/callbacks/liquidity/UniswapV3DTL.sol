@@ -4,6 +4,11 @@ pragma solidity ^0.8.19;
 import {BaseCallback} from "src/callbacks/BaseCallback.sol";
 import {Callbacks} from "src/lib/Callbacks.sol";
 
+/// @title      UniswapV3DirectToLiquidity
+/// @notice     This Callback contract deposits the proceeds from a batch auction into a Uniswap V3 pool
+///             in order to create liquidity immediately.
+///
+///             The LP tokens can optionally vest to the auction seller.
 contract UniswapV3DirectToLiquidity is BaseCallback {
     // ========== ERRORS ========== //
 
