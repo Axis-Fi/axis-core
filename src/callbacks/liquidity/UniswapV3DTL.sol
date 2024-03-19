@@ -4,12 +4,18 @@ pragma solidity ^0.8.19;
 import {BaseCallback} from "src/callbacks/BaseCallback.sol";
 import {Callbacks} from "src/lib/Callbacks.sol";
 
-abstract contract DirectToLiquidity is BaseCallback {
+contract UniswapV3DirectToLiquidity is BaseCallback {
     // ========== ERRORS ========== //
 
     // ========== STATE VARIABLES ========== //
 
     // TODO determine structure for storing pool configuration and vesting information
+
+    constructor(
+        address auctionHouse_,
+        Callbacks.Permissions memory permissions_,
+        address seller_
+    ) BaseCallback(auctionHouse_, permissions_, seller_) {}
 
     // ========== CALLBACK FUNCTIONS ========== //
 
