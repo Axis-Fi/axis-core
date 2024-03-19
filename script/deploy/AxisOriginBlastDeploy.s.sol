@@ -8,12 +8,14 @@ import {Script, console2} from "lib/forge-std/src/Script.sol";
 import {BlastAuctionHouse} from "src/blast/BlastAuctionHouse.sol";
 import {Catalogue} from "src/Catalogue.sol";
 import {BlastEMPAM} from "src/blast/modules/auctions/BlastEMPAM.sol";
+import {BlastFPAM} from "src/blast/modules/auctions/BlastFPAM.sol";
 import {BlastLinearVesting} from "src/blast/modules/derivatives/BlastLinearVesting.sol";
 
-contract AxisOriginDeploy is Script {
+contract AxisOriginBlastDeploy is Script {
     BlastAuctionHouse public auctionHouse;
     Catalogue public catalogue;
     BlastEMPAM public empam;
+    BlastFPAM public fpam;
     BlastLinearVesting public linearVesting;
     address public constant PERMIT2 = 0x000000000022D473030F116dDEE9F6B43aC78BA3;
 
@@ -27,16 +29,12 @@ contract AxisOriginDeploy is Script {
 
         // // Calculate salt for the auction house
         // bytes memory bytecode = abi.encodePacked(
-        //     type(BlastAuctionHouse).creationCode,
-        //     abi.encode(msg.sender, protocol, PERMIT2)
+        //     type(BlastAuctionHouse).creationCode, abi.encode(msg.sender, protocol, PERMIT2)
         // );
-        // vm.writeFile(
-        //     "./bytecode/BlastAuctionHouse.bin",
-        //     vm.toString(bytecode)
-        // );
+        // vm.writeFile("./bytecode/BlastAuctionHouse.bin", vm.toString(bytecode));
 
         // Load salt for Auction House
-        bytes32 salt = vm.envBytes32("AUCTION_HOUSE_SALT");
+        bytes32 salt = vm.envBytes32("BLAST_AUCTION_HOUSE_SALT");
 
         auctionHouse = new BlastAuctionHouse{salt: salt}(msg.sender, protocol, PERMIT2);
         console2.log("BlastAuctionHouse deployed at: ", address(auctionHouse));
@@ -47,11 +45,17 @@ contract AxisOriginDeploy is Script {
         empam = new BlastEMPAM(address(auctionHouse));
         console2.log("BlastEMPAM deployed at: ", address(empam));
 
-        auctionHouse.installModule(empam);
-        console2.log("BlastEMPAM installed at AuctionHouse");
+        fpam = new BlastFPAM(address(auctionHouse));
+        console2.log("BlastFPAM deployed at: ", address(fpam));
 
         linearVesting = new BlastLinearVesting(address(auctionHouse));
         console2.log("BlastLinearVesting deployed at: ", address(linearVesting));
+
+        auctionHouse.installModule(empam);
+        console2.log("BlastEMPAM installed at AuctionHouse");
+
+        auctionHouse.installModule(fpam);
+        console2.log("BlastFPAM installed at AuctionHouse");
 
         auctionHouse.installModule(linearVesting);
         console2.log("BlastLinearVesting installed at AuctionHouse");
