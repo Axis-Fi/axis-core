@@ -4,6 +4,8 @@ pragma solidity ^0.8.19;
 import {BaseCallback} from "src/callbacks/BaseCallback.sol";
 import {Callbacks} from "src/lib/Callbacks.sol";
 
+import {ERC20} from "solmate/tokens/ERC20.sol";
+
 /// @title      UniswapV3DirectToLiquidity
 /// @notice     This Callback contract deposits the proceeds from a batch auction into a Uniswap V3 pool
 ///             in order to create liquidity immediately.
@@ -11,6 +13,10 @@ import {Callbacks} from "src/lib/Callbacks.sol";
 ///             The LP tokens can optionally vest to the auction seller.
 contract UniswapV3DirectToLiquidity is BaseCallback {
     // ========== ERRORS ========== //
+
+    error Callback_InsufficientBalance(
+        address token_, uint256 amountRequired_, uint256 amountActual_
+    );
 
     // ========== STRUCTS ========== //
 
@@ -67,6 +73,7 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
 
     // [ ] Consider using bunni to manage the pool tokens
     // [ ] Functions to handle vesting LP tokens. Can we reuse LinearVesting?
+    // [ ] Enable the seller to withdraw base tokens
 
     // ========== CALLBACK FUNCTIONS ========== //
 
@@ -103,17 +110,54 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
             vestingExpiry: params.vestingExpiry
         });
 
-        // Should we assume the callback is sending base tokens? Account for both cases?
-        // Assume that the auction is prefunded since you should only create this with a claimProceeds callback
-        // which is only implemented for Batch Auctions
+        // If prefund_ is true, then the callback needs to transfer the capacity in base tokens to the auction house
+        if (prefund_) {
+            // No need to verify the sender, as it is done in BaseCallback
+            ERC20(baseToken_).transfer(msg.sender, capacity_);
+        }
+
+        // Check that there is enough capacity to create the pool
+        {
+            uint96 baseTokensRequired =
+                _baseTokensRequiredForPool(capacity_, params.proceedsUtilisationPercent);
+            uint256 baseTokenBalance = ERC20(baseToken_).balanceOf(address(this));
+            if (baseTokenBalance < baseTokensRequired) {
+                revert Callback_InsufficientBalance(
+                    baseToken_, baseTokensRequired, baseTokenBalance
+                );
+            }
+        }
     }
 
     function _onCancel(uint96, uint96, bool, bytes calldata) internal pure override {
-        // TODO only needed if sending base tokens + prefunded
+        // TODO mark as cancelled/claimed?
     }
 
-    function _onCurate(uint96, uint96, bool, bytes calldata) internal pure override {
-        // TODO only needed if sending base tokens + prefunded
+    function _onCurate(
+        uint96 lotId_,
+        uint96 curatorPayout_,
+        bool prefund_,
+        bytes calldata callbackData_
+    ) internal override {
+        DTLConfiguration memory config = lotConfiguration[lotId_];
+
+        // If prefunded, then the callback needs to transfer the curatorPayout_ in base tokens to the auction house
+        if (prefund_) {
+            // No need to verify the sender, as it is done in BaseCallback
+            ERC20(config.baseToken).transfer(msg.sender, curatorPayout_);
+        }
+
+        // Check that there is still enough capacity to create the pool
+        {
+            uint96 baseTokensRequired =
+                _baseTokensRequiredForPool(config.lotCapacity, config.proceedsUtilisationPercent);
+            uint256 baseTokenBalance = ERC20(config.baseToken).balanceOf(address(this));
+            if (baseTokenBalance < baseTokensRequired) {
+                revert Callback_InsufficientBalance(
+                    config.baseToken, baseTokensRequired, baseTokenBalance
+                );
+            }
+        }
     }
 
     function _onPurchase(
@@ -147,5 +191,14 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
 
         // Conditionally, create vesting tokens with the received LP tokens
         // Send spot or vesting LP tokens to seller
+    }
+
+    // ========== INTERNAL FUNCTIONS ========== //
+
+    function _baseTokensRequiredForPool(
+        uint96 capacity_,
+        uint24 proceedsUtilisationPercent_
+    ) internal pure returns (uint96) {
+        return (capacity_ * proceedsUtilisationPercent_) / MAX_PERCENT;
     }
 }
