@@ -4,6 +4,8 @@ pragma solidity ^0.8.19;
 import {BaseCallback} from "src/callbacks/BaseCallback.sol";
 import {Callbacks} from "src/lib/Callbacks.sol";
 
+import {TickMath} from "uniswap-v3-core/libraries/TickMath.sol";
+
 import {ERC20} from "solmate/tokens/ERC20.sol";
 
 /// @title      UniswapV3DirectToLiquidity
@@ -54,6 +56,7 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
     // ========== STATE VARIABLES ========== //
 
     uint24 public constant MAX_PERCENT = 1e5;
+    uint24 public constant MAX_POOL_FEE = 1e6;
 
     /// @notice     Maps the lot id to the DTL configuration
     mapping(uint96 lotId => DTLConfiguration) public lotConfiguration;
@@ -78,6 +81,19 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
 
     // ========== CALLBACK FUNCTIONS ========== //
 
+    /// @notice     Callback for when a lot is created
+    /// @dev        This function reverts if:
+    ///             - DTLParams.proceedsUtilisationPercent is out of bounds
+    ///             - DTLParams.poolFee is out of bounds
+    ///             - DTLParams.poolTickLower or DTLParams.poolTickUpper is out of bounds
+    ///             - DTLParams.vestingStart or DTLParams.vestingExpiry do not pass validation
+    ///
+    /// @param      lotId_          The lot ID
+    /// @param      baseToken_      The base token address
+    /// @param      quoteToken_     The quote token address
+    /// @param      capacity_       The capacity of the lot
+    /// @param      prefund_        Whether the callback has to prefund the lot
+    /// @param      callbackData_   Encoded DTLParams struct
     function _onCreate(
         uint96 lotId_,
         address,
@@ -92,11 +108,29 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
         DTLParams memory params = abi.decode(callbackData_, (DTLParams));
 
         // Validate the parameters
-        // utilisation within range (> 0, < MAX_PERCENT)
-        // pool fee
-        // ticks: lower < upper, within range
-        // vesting start < expiry (use LinearVesting.validate()?)
-        // if sending base tokens, should have the capacity of base token to create the pool
+        // Proceeds utilisation
+        if (
+            params.proceedsUtilisationPercent == 0
+                || params.proceedsUtilisationPercent > MAX_PERCENT
+        ) {
+            revert Callback_InvalidParams();
+        }
+
+        // Pool fee
+        // TODO can the poolFee be 0?
+        if (params.poolFee > MAX_POOL_FEE) {
+            revert Callback_InvalidParams();
+        }
+
+        // Pool ticks
+        if (
+            params.poolTickLower >= params.poolTickUpper || params.poolTickLower < TickMath.MIN_TICK
+                || params.poolTickUpper > TickMath.MAX_TICK
+        ) {
+            revert Callback_InvalidParams();
+        }
+
+        // TODO vesting start < expiry (use LinearVesting.validate()?)
 
         // Store the configuration
         lotConfiguration[lotId_] = DTLConfiguration({
