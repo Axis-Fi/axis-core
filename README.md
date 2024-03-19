@@ -72,11 +72,25 @@ The initial deployment of Axis will be on the Blast L2 network.
 ### Blast Sepolia Testnet
 
 **Core Contracts**
-BlastAuctionHouse: [0x00000000cB3c2A36dEF5Be4d3A674280eFC33498](https://testnet.blastscan.io/address/0x00000000cB3c2A36dEF5Be4d3A674280eFC33498)
-Catalogue: [0x0A0BA689D2D72D3f376293c534AF299B3C6Dac85](https://testnet.blastscan.io/address/0x0A0BA689D2D72D3f376293c534AF299B3C6Dac85)
+BlastAuctionHouse: [0x000000008D5D105e7e35483B4c03160761A2De5D](https://testnet.blastscan.io/address/0x000000008D5D105e7e35483B4c03160761A2De5D)
+Catalogue: [0x742485f9E2de202C5B0a2D540cac6d927FDE230f](https://testnet.blastscan.io/address/0x742485f9E2de202C5B0a2D540cac6d927FDE230f)
 
 **Auction Modules**
-BlastLSBBA: [0xcE56d3E3E145b44597B61E99c64cb82FB209Da04](https://testnet.blastscan.io/address/0xcE56d3E3E145b44597B61E99c64cb82FB209Da04)
+BlastEMPAM: [0xe1B83edA3399A2c9B8265215EA21042C9b918dc5](https://testnet.blastscan.io/address/0xe1B83edA3399A2c9B8265215EA21042C9b918dc5)
+BlastFPAM: [0x311016478a50d928386d422d44494fb57f9E692b](https://testnet.blastscan.io/address/0x311016478a50d928386d422d44494fb57f9E692b)
 
 **Derivative Modules**
-BlastLinearVesting: [0x32A7b69B9F42F0CD6306Bd897ae2664AF0eFBAbd](https://testnet.blastscan.io/address/0x32A7b69B9F42F0CD6306Bd897ae2664AF0eFBAbd)
+BlastLinearVesting: [0xd13d64dD95F3DB8d1B3E1E65a1ef3F952ee1FC73](https://testnet.blastscan.io/address/0xd13d64dD95F3DB8d1B3E1E65a1ef3F952ee1FC73)
+
+### Arbitrum Sepolia Testnet
+
+**Core Contracts**
+AuctionHouse: [0x0000000018430CdB845Ac2fa1CF883a6D94E5ee7](https://sepolia.arbiscan.io/0x0000000018430CdB845Ac2fa1CF883a6D94E5ee7)
+Catalogue: [0xA9AEAe1d42bbfa591F4a06945a895d75011bE6e8](https://sepolia.arbiscan.io/0xA9AEAe1d42bbfa591F4a06945a895d75011bE6e8)
+
+**Auction Modules**
+EMPAM: [0xe6c04Ce6ca70eeE60bEc40E2e6e62958D91E02CC](https://sepolia.arbiscan.io/0xe6c04Ce6ca70eeE60bEc40E2e6e62958D91E02CC)
+FPAM: [0x63Fb97Dd80060cFd70c87Aa54F594F3988B6Fc66](https://sepolia.arbiscan.io/0x63Fb97Dd80060cFd70c87Aa54F594F3988B6Fc66)
+
+**Derivative Modules**
+LinearVesting: [0x884E32d3c9D60962EF1A005f3d5365a41CDE38b8](https://sepolia.arbiscan.io/0x884E32d3c9D60962EF1A005f3d5365a41CDE38b8)
