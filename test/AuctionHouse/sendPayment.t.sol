@@ -92,10 +92,10 @@ contract SendPaymentTest is Test, Permit2User {
         bytes32 salt;
         if (_callbackReceiveQuoteTokens) {
             // 0x02
-            salt = bytes32(0x31d618251bbef33788bb7d736bac9b98d3968b80e1c96e1b4c7a643e47498708);
+            salt = bytes32(0x0eb83d1babeaf99f20b40a5d37914979c9d8120c3eadc8526ff5173904b27a5d);
         } else {
             // 0x00
-            salt = bytes32(0x390cd89cfeeef8066b8d753e8877333c5920e4b7e3f6a4789aaf4103f154250d);
+            salt = bytes32(0xeab3e04b6bfc51305f2740fdc44218356a09e180cf22e0fef2ca1d452c0c19c2);
         }
 
         vm.broadcast(); // required for CREATE2 address to work correctly. doesn't do anything in a test

@@ -1,6 +1,4 @@
-@prb/test/=lib/prb-math/node_modules/@prb/test/
 ds-test/=lib/forge-std/lib/ds-test/src/
 forge-std/=lib/forge-std/src/
-prb-math/=lib/prb-math/src/
-solady/=lib/solady/
+solady/=lib/solady/src/
 solmate/=lib/solmate/src/

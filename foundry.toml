@@ -4,6 +4,8 @@ out = "out"
 # libs = ["lib"]
 fs_permissions = [{access = "write", path = "./bytecode/"}]
 ffi = true
+solc_version = "0.8.19"
+evm_version = "paris"
 
 [fuzz]
 runs = 1024
