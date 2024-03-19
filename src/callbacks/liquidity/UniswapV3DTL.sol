@@ -25,6 +25,7 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
         address baseToken;
         address quoteToken;
         uint96 lotCapacity;
+        uint96 lotCuratorPayout;
         uint24 proceedsUtilisationPercent;
         uint24 poolFee;
         int24 poolTickLower;
@@ -73,7 +74,7 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
 
     // [ ] Consider using bunni to manage the pool tokens
     // [ ] Functions to handle vesting LP tokens. Can we reuse LinearVesting?
-    // [ ] Enable the seller to withdraw base tokens
+    // [ ] Enable the seller to withdraw base tokens, quote tokens
 
     // ========== CALLBACK FUNCTIONS ========== //
 
@@ -102,6 +103,7 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
             baseToken: baseToken_,
             quoteToken: quoteToken_,
             lotCapacity: capacity_,
+            lotCuratorPayout: 0,
             proceedsUtilisationPercent: params.proceedsUtilisationPercent,
             poolFee: params.poolFee,
             poolTickLower: params.poolTickLower,
@@ -115,18 +117,6 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
             // No need to verify the sender, as it is done in BaseCallback
             ERC20(baseToken_).transfer(msg.sender, capacity_);
         }
-
-        // Check that there is enough capacity to create the pool
-        {
-            uint96 baseTokensRequired =
-                _baseTokensRequiredForPool(capacity_, params.proceedsUtilisationPercent);
-            uint256 baseTokenBalance = ERC20(baseToken_).balanceOf(address(this));
-            if (baseTokenBalance < baseTokensRequired) {
-                revert Callback_InsufficientBalance(
-                    baseToken_, baseTokensRequired, baseTokenBalance
-                );
-            }
-        }
     }
 
     function _onCancel(uint96, uint96, bool, bytes calldata) internal pure override {
@@ -139,24 +129,15 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
         bool prefund_,
         bytes calldata callbackData_
     ) internal override {
-        DTLConfiguration memory config = lotConfiguration[lotId_];
-
         // If prefunded, then the callback needs to transfer the curatorPayout_ in base tokens to the auction house
         if (prefund_) {
+            DTLConfiguration storage config = lotConfiguration[lotId_];
+
+            // Update the funding
+            config.lotCuratorPayout = curatorPayout_;
+
             // No need to verify the sender, as it is done in BaseCallback
             ERC20(config.baseToken).transfer(msg.sender, curatorPayout_);
-        }
-
-        // Check that there is still enough capacity to create the pool
-        {
-            uint96 baseTokensRequired =
-                _baseTokensRequiredForPool(config.lotCapacity, config.proceedsUtilisationPercent);
-            uint256 baseTokenBalance = ERC20(config.baseToken).balanceOf(address(this));
-            if (baseTokenBalance < baseTokensRequired) {
-                revert Callback_InsufficientBalance(
-                    config.baseToken, baseTokensRequired, baseTokenBalance
-                );
-            }
         }
     }
 
@@ -183,11 +164,42 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
         uint96 refund_,
         bytes calldata callbackData_
     ) internal virtual override {
-        // TODO
-        // Reduce expected tokens to deposit by the refund
-        // Create pool and add proceeds and paired tokens to the pool
+        DTLConfiguration memory config = lotConfiguration[lotId_];
 
-        // TODO how to determine the ratio between base and quote tokens?
+        // Calculate the actual lot capacity that was used
+        uint96 capacityUtilised;
+        {
+            // If curation is enabled, refund_ will also contain the refund on the curator payout. Adjust for that.
+            // Example:
+            // 100 capacity + 10 curator
+            // 90 capacity sold, 9 curator payout
+            // 11 refund
+            // Utilisation = 1 - 11/110 = 90%
+            uint96 utilisationPercent =
+                1e5 - refund_ / (config.lotCapacity + config.lotCuratorPayout);
+
+            capacityUtilised = (config.lotCapacity * utilisationPercent) / MAX_PERCENT;
+        }
+
+        // Calculate the base tokens required to create the pool
+        uint96 baseTokensRequired =
+            _baseTokensRequiredForPool(capacityUtilised, config.proceedsUtilisationPercent);
+
+        // Check that there is still enough capacity to create the pool
+        {
+            uint256 baseTokenBalance = ERC20(config.baseToken).balanceOf(address(this));
+            if (baseTokenBalance < baseTokensRequired) {
+                revert Callback_InsufficientBalance(
+                    config.baseToken, baseTokensRequired, baseTokenBalance
+                );
+            }
+        }
+
+        // TODO how to determine the ratio between base and quote tokens? Would be based on the current tick of the pool (if it exists).
+
+        // Create the pool
+
+        // Deposit into the pool
 
         // Conditionally, create vesting tokens with the received LP tokens
         // Send spot or vesting LP tokens to seller
