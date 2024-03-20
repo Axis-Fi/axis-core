@@ -18,6 +18,7 @@ contract SqrtPriceMathTest is Test {
     uint256 internal constant AMOUNT0 = 100e18 * 3344; // DAI
     uint256 internal constant AMOUNT1 = 100e18; // WETH
     uint160 internal constant SQRTPRICEX96 = 1369947724019237678865797100; // sqrt(amount1/amount0)*2^96
+    // TODO the reserves are for all positions whereas sqrtPriceX96 above is for the _current_ tick, so they don't match. Need values from a full-range position, perhaps. Use OHM-WETH?
 
     // [X] when tokenA is token0
     //  [X] it calculates the correct sqrtPriceX96
