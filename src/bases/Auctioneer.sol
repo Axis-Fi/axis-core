@@ -171,6 +171,9 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
             revert InvalidParams();
         }
 
+        // Increment lot count and get ID
+        lotId = lotCounter++;
+
         Routing storage routing = lotRouting[lotId];
 
         bool requiresPrefunding;
@@ -189,9 +192,6 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
                 auctionModule.TYPE() != Module.Type.Auction || baseTokenDecimals < 6
                     || baseTokenDecimals > 18 || quoteTokenDecimals < 6 || quoteTokenDecimals > 18
             ) revert InvalidParams();
-
-            // Increment lot count and get ID
-            lotId = lotCounter++;
 
             // Call module auction function to store implementation-specific data
             (lotCapacity) =
