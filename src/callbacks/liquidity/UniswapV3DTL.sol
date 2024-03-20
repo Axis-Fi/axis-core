@@ -214,7 +214,35 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
             }
         }
 
-        // TODO how to determine the ratio between base and quote tokens? Would be based on the current tick of the pool (if it exists).
+        // Determine the ordering of tokens
+        bool quoteTokenIsToken0 = config.quoteToken < config.baseToken;
+
+        // Determine the initial price
+        uint96 initialTick;
+        {
+            // // Determine the price of token0 in terms of token1
+            // uint256 price;
+            // if (quoteTokenIsToken0) {
+            //     price = proceeds_ * 10 ** ERC20(config.baseToken).decimals() / capacityUtilised;
+            // }
+            // else {
+            //     price = capacityUtilised * 10 ** ERC20(config.quoteToken).decimals() / proceeds_;
+            // }
+
+            // Determine sqrtPriceX96
+            uint160 sqrtPriceX96;
+            {
+                uint160 amount0 = quoteTokenIsToken0 ? proceeds_ : capacityUtilised;
+                uint160 amount1 = quoteTokenIsToken0 ? capacityUtilised : proceeds_;
+
+                uint160 numerator = amount1 << 192;
+                uint160 denominator = amount0;
+                uint160 ratioX192 = (numerator / denominator);
+                // sqrtPriceX96 =
+            }
+
+            // TODO Determine the tick
+        }
 
         // Create the pool
 
