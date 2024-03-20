@@ -72,25 +72,44 @@ The initial deployment of Axis will be on the Blast L2 network.
 ### Blast Sepolia Testnet
 
 **Core Contracts**
-BlastAuctionHouse: [0x000000008D5D105e7e35483B4c03160761A2De5D](https://testnet.blastscan.io/address/0x000000008D5D105e7e35483B4c03160761A2De5D)
-Catalogue: [0x742485f9E2de202C5B0a2D540cac6d927FDE230f](https://testnet.blastscan.io/address/0x742485f9E2de202C5B0a2D540cac6d927FDE230f)
+BlastAuctionHouse: [0x000000009DB7a64d0B3f92E2F0e026a2AF9Cf9b3](https://testnet.blastscan.io/address/0x000000009DB7a64d0B3f92E2F0e026a2AF9Cf9b3)
+Catalogue: [0xc94404218178149EBeBfc1F47f0DF14B5FD881C5](https://testnet.blastscan.io/address/0xc94404218178149EBeBfc1F47f0DF14B5FD881C5)
 
 **Auction Modules**
-BlastEMPAM: [0xe1B83edA3399A2c9B8265215EA21042C9b918dc5](https://testnet.blastscan.io/address/0xe1B83edA3399A2c9B8265215EA21042C9b918dc5)
-BlastFPAM: [0x311016478a50d928386d422d44494fb57f9E692b](https://testnet.blastscan.io/address/0x311016478a50d928386d422d44494fb57f9E692b)
+BlastEMPAM: [0xF3e2578C66071a637F06cc02b1c11DeC0784C1A6](https://testnet.blastscan.io/address/0xF3e2578C66071a637F06cc02b1c11DeC0784C1A6)
+BlastFPAM: [0x9f3a5566AB27F79c0cF090f70FFc73B7F9962b36](https://testnet.blastscan.io/address/0x9f3a5566AB27F79c0cF090f70FFc73B7F9962b36)
 
 **Derivative Modules**
-BlastLinearVesting: [0xd13d64dD95F3DB8d1B3E1E65a1ef3F952ee1FC73](https://testnet.blastscan.io/address/0xd13d64dD95F3DB8d1B3E1E65a1ef3F952ee1FC73)
+BlastLinearVesting: [0xDe6D096f14812182F434D164AD6d184cC9A150Fd](https://testnet.blastscan.io/address/0xDe6D096f14812182F434D164AD6d184cC9A150Fd)
 
 ### Arbitrum Sepolia Testnet
 
 **Core Contracts**
-AuctionHouse: [0x0000000018430CdB845Ac2fa1CF883a6D94E5ee7](https://sepolia.arbiscan.io/0x0000000018430CdB845Ac2fa1CF883a6D94E5ee7)
-Catalogue: [0xA9AEAe1d42bbfa591F4a06945a895d75011bE6e8](https://sepolia.arbiscan.io/0xA9AEAe1d42bbfa591F4a06945a895d75011bE6e8)
+AuctionHouse: [0x00000000dca78197E4B82b17AFc5C263a097ef3e](https://sepolia.arbiscan.io/address/0x00000000dca78197E4B82b17AFc5C263a097ef3e)
+Catalogue: [0x0407910809D251c2E4c217576b63f263e3Fd1B59](https://sepolia.arbiscan.io/address/0x0407910809D251c2E4c217576b63f263e3Fd1B59)
 
 **Auction Modules**
-EMPAM: [0xe6c04Ce6ca70eeE60bEc40E2e6e62958D91E02CC](https://sepolia.arbiscan.io/0xe6c04Ce6ca70eeE60bEc40E2e6e62958D91E02CC)
-FPAM: [0x63Fb97Dd80060cFd70c87Aa54F594F3988B6Fc66](https://sepolia.arbiscan.io/0x63Fb97Dd80060cFd70c87Aa54F594F3988B6Fc66)
+EMPAM: [0x605A7105CA51FD5F107258362f52d8269eeA851A](https://sepolia.arbiscan.io/address/0x605A7105CA51FD5F107258362f52d8269eeA851A)
+FPAM: [0x6c80F20C5C0404a3D5349F71F9B25c0654884092](https://sepolia.arbiscan.io/address/0x6c80F20C5C0404a3D5349F71F9B25c0654884092)
 
 **Derivative Modules**
-LinearVesting: [0x884E32d3c9D60962EF1A005f3d5365a41CDE38b8](https://sepolia.arbiscan.io/0x884E32d3c9D60962EF1A005f3d5365a41CDE38b8)
+LinearVesting: [0xaC9957282BeA578f371078ddc4cD12A135B105d6](https://sepolia.arbiscan.io/address/0xaC9957282BeA578f371078ddc4cD12A135B105d6)
+
+### Mode Sepolia Testnet
+
+AuctionHouse deployed at:  0x0000000053307d4Ec2141c8b49fff0A04903F11D
+Catalogue deployed at:  0x76d2932BE90F1AEd4B7aACeFed9AC8B8b712c8bf
+EMPAM deployed at:  0x0407910809D251c2E4c217576b63f263e3Fd1B59
+FPAM deployed at:  0x605A7105CA51FD5F107258362f52d8269eeA851A
+LinearVesting deployed at:  0x6c80F20C5C0404a3D5349F71F9B25c0654884092
+
+**Core Contracts**
+AuctionHouse: [0x0000000053307d4Ec2141c8b49fff0A04903F11D](https://sepolia.explorer.mode.network/address/0x0000000053307d4Ec2141c8b49fff0A04903F11D)
+Catalogue: [0x76d2932BE90F1AEd4B7aACeFed9AC8B8b712c8bf](https://sepolia.explorer.mode.network/address/0x76d2932BE90F1AEd4B7aACeFed9AC8B8b712c8bf)
+
+**Auction Modules**
+EMPAM: [0x0407910809D251c2E4c217576b63f263e3Fd1B59](https://sepolia.explorer.mode.network/address/0x0407910809D251c2E4c217576b63f263e3Fd1B59)
+FPAM: [0x605A7105CA51FD5F107258362f52d8269eeA851A](https://sepolia.explorer.mode.network/address/0x605A7105CA51FD5F107258362f52d8269eeA851A)
+
+**Derivative Modules**
+LinearVesting: [0x6c80F20C5C0404a3D5349F71F9B25c0654884092](https://sepolia.explorer.mode.network/address/0x6c80F20C5C0404a3D5349F71F9B25c0654884092)
