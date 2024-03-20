@@ -65,51 +65,6 @@ $ pnpm run lint
 
 Scripts are written in Solidity using Foundry and are divided into `deploy` and `ops` scripts. Specific scripts are written for individual actions and can be found in the `scripts` directory along with shell scripts to run them.
 
-## Blast Deployment
+### Deployments
 
-The initial deployment of Axis will be on the Blast L2 network.
-
-### Blast Sepolia Testnet
-
-**Core Contracts**
-BlastAuctionHouse: [0x000000009DB7a64d0B3f92E2F0e026a2AF9Cf9b3](https://testnet.blastscan.io/address/0x000000009DB7a64d0B3f92E2F0e026a2AF9Cf9b3)
-Catalogue: [0xc94404218178149EBeBfc1F47f0DF14B5FD881C5](https://testnet.blastscan.io/address/0xc94404218178149EBeBfc1F47f0DF14B5FD881C5)
-
-**Auction Modules**
-BlastEMPAM: [0xF3e2578C66071a637F06cc02b1c11DeC0784C1A6](https://testnet.blastscan.io/address/0xF3e2578C66071a637F06cc02b1c11DeC0784C1A6)
-BlastFPAM: [0x9f3a5566AB27F79c0cF090f70FFc73B7F9962b36](https://testnet.blastscan.io/address/0x9f3a5566AB27F79c0cF090f70FFc73B7F9962b36)
-
-**Derivative Modules**
-BlastLinearVesting: [0xDe6D096f14812182F434D164AD6d184cC9A150Fd](https://testnet.blastscan.io/address/0xDe6D096f14812182F434D164AD6d184cC9A150Fd)
-
-### Arbitrum Sepolia Testnet
-
-**Core Contracts**
-AuctionHouse: [0x00000000dca78197E4B82b17AFc5C263a097ef3e](https://sepolia.arbiscan.io/address/0x00000000dca78197E4B82b17AFc5C263a097ef3e)
-Catalogue: [0x0407910809D251c2E4c217576b63f263e3Fd1B59](https://sepolia.arbiscan.io/address/0x0407910809D251c2E4c217576b63f263e3Fd1B59)
-
-**Auction Modules**
-EMPAM: [0x605A7105CA51FD5F107258362f52d8269eeA851A](https://sepolia.arbiscan.io/address/0x605A7105CA51FD5F107258362f52d8269eeA851A)
-FPAM: [0x6c80F20C5C0404a3D5349F71F9B25c0654884092](https://sepolia.arbiscan.io/address/0x6c80F20C5C0404a3D5349F71F9B25c0654884092)
-
-**Derivative Modules**
-LinearVesting: [0xaC9957282BeA578f371078ddc4cD12A135B105d6](https://sepolia.arbiscan.io/address/0xaC9957282BeA578f371078ddc4cD12A135B105d6)
-
-### Mode Sepolia Testnet
-
-AuctionHouse deployed at:  0x0000000053307d4Ec2141c8b49fff0A04903F11D
-Catalogue deployed at:  0x76d2932BE90F1AEd4B7aACeFed9AC8B8b712c8bf
-EMPAM deployed at:  0x0407910809D251c2E4c217576b63f263e3Fd1B59
-FPAM deployed at:  0x605A7105CA51FD5F107258362f52d8269eeA851A
-LinearVesting deployed at:  0x6c80F20C5C0404a3D5349F71F9B25c0654884092
-
-**Core Contracts**
-AuctionHouse: [0x0000000053307d4Ec2141c8b49fff0A04903F11D](https://sepolia.explorer.mode.network/address/0x0000000053307d4Ec2141c8b49fff0A04903F11D)
-Catalogue: [0x76d2932BE90F1AEd4B7aACeFed9AC8B8b712c8bf](https://sepolia.explorer.mode.network/address/0x76d2932BE90F1AEd4B7aACeFed9AC8B8b712c8bf)
-
-**Auction Modules**
-EMPAM: [0x0407910809D251c2E4c217576b63f263e3Fd1B59](https://sepolia.explorer.mode.network/address/0x0407910809D251c2E4c217576b63f263e3Fd1B59)
-FPAM: [0x605A7105CA51FD5F107258362f52d8269eeA851A](https://sepolia.explorer.mode.network/address/0x605A7105CA51FD5F107258362f52d8269eeA851A)
-
-**Derivative Modules**
-LinearVesting: [0x6c80F20C5C0404a3D5349F71F9B25c0654884092](https://sepolia.explorer.mode.network/address/0x6c80F20C5C0404a3D5349F71F9B25c0654884092)
+Deployments are listed in the Axis documentation. TODO: add link
