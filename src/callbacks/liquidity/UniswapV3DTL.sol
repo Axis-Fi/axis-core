@@ -10,6 +10,9 @@ import {TickMath} from "uniswap-v3-core/libraries/TickMath.sol";
 
 import {ERC20} from "solmate/tokens/ERC20.sol";
 
+import {INonfungiblePositionManager} from "src/lib/uniswap-v3/INonfungiblePositionManager.sol";
+import {IUniswapV3Factory} from "uniswap-v3-core/interfaces/IUniswapV3Factory.sol";
+
 /// @title      UniswapV3DirectToLiquidity
 /// @notice     This Callback contract deposits the proceeds from a batch auction into a Uniswap V3 pool
 ///             in order to create liquidity immediately.
@@ -57,10 +60,13 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
     /// @notice     Maps the lot id to the DTL configuration
     mapping(uint96 lotId => DTLConfiguration) public lotConfiguration;
 
+    INonfungiblePositionManager public uniswapV3NonfungiblePositionManager;
+
     constructor(
         address auctionHouse_,
         Callbacks.Permissions memory permissions_,
-        address seller_
+        address seller_,
+        address uniswapV3NonfungiblePositionManager_
     ) BaseCallback(auctionHouse_, permissions_, seller_) {
         // Ensure that the required permissions are met
         if (
@@ -69,6 +75,12 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
         ) {
             revert Callback_InvalidParams();
         }
+
+        if (uniswapV3NonfungiblePositionManager_ == address(0)) {
+            revert Callback_InvalidParams();
+        }
+        uniswapV3NonfungiblePositionManager =
+            INonfungiblePositionManager(uniswapV3NonfungiblePositionManager_);
     }
 
     // [ ] Consider using bunni to manage the pool tokens
@@ -80,7 +92,8 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
     /// @notice     Callback for when a lot is created
     /// @dev        This function reverts if:
     ///             - DTLParams.proceedsUtilisationPercent is out of bounds
-    ///             - DTLParams.poolFee is out of bounds
+    ///             - DTLParams.poolFee is out of bounds or not enabled
+    ///             - The pool for the token and fee combination already exists
     ///             - DTLParams.vestingStart or DTLParams.vestingExpiry do not pass validation
     ///
     /// @param      lotId_          The lot ID
@@ -112,14 +125,26 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
         }
 
         // Pool fee
-        // TODO can the poolFee be 0?
+        // Out of bounds
         if (params.poolFee > MAX_POOL_FEE) {
             revert Callback_InvalidParams();
         }
 
-        // TODO vesting start < expiry (use LinearVesting.validate()?)
+        IUniswapV3Factory factory = IUniswapV3Factory(
+            uniswapV3NonfungiblePositionManager.factory()
+        );
 
-        // TODO assert that the pool does not exist
+        // Not enabled
+        if (factory.feeAmountTickSpacing(params.poolFee) == 0) {
+            revert Callback_InvalidParams();
+        }
+
+        // Check that the pool does not exist
+        if (factory.getPool(baseToken_, quoteToken_, params.poolFee) != address(0)) {
+            revert Callback_InvalidParams();
+        }
+
+        // TODO vesting start < expiry (use LinearVesting.validate()?)
 
         // Store the configuration
         lotConfiguration[lotId_] = DTLConfiguration({
@@ -219,33 +244,33 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
         // Determine the ordering of tokens
         bool quoteTokenIsToken0 = config.quoteToken < config.baseToken;
 
-        // Determine the initial price
-        int24 initialTick;
+        // Determine sqrtPriceX96
+        uint160 sqrtPriceX96;
         {
-            // Determine sqrtPriceX96
-            uint160 sqrtPriceX96;
-            {
-                uint256 amount0 = quoteTokenIsToken0 ? proceeds_ : capacityUtilised;
-                uint256 amount1 = quoteTokenIsToken0 ? capacityUtilised : proceeds_;
+            uint256 amount0 = quoteTokenIsToken0 ? proceeds_ : capacityUtilised;
+            uint256 amount1 = quoteTokenIsToken0 ? capacityUtilised : proceeds_;
 
-                // Source: https://github.com/Uniswap/v3-sdk/blob/2c8aa3a653831c6b9e842e810f5394a5b5ed937f/src/utils/encodeSqrtRatioX96.ts
-                // Needs to be verified. Does it need to handle token decimal differences?
-                uint256 numerator = amount1 << 192;
-                uint256 denominator = amount0;
-                uint256 ratioX192 = (numerator / denominator);
-                uint256 sqrtPriceX96Temp = FixedPointMathLib.sqrt(ratioX192);
+            // Source: https://github.com/Uniswap/v3-sdk/blob/2c8aa3a653831c6b9e842e810f5394a5b5ed937f/src/utils/encodeSqrtRatioX96.ts
+            // Needs to be verified. Does it need to handle token decimal differences?
+            uint256 numerator = amount1 << 192;
+            uint256 denominator = amount0;
+            uint256 ratioX192 = (numerator / denominator);
+            uint256 sqrtPriceX96Temp = FixedPointMathLib.sqrt(ratioX192);
 
-                // TODO determine if this is the correct course of action - it would brick claiming proceeds
-                if (sqrtPriceX96Temp > type(uint160).max) revert Callback_InvalidParams();
+            // TODO determine if this is the correct course of action - it would brick claiming proceeds
+            if (sqrtPriceX96Temp > type(uint160).max) revert Callback_InvalidParams();
 
-                sqrtPriceX96 = uint160(sqrtPriceX96Temp);
-            }
-
-            // Convert to a tick
-            initialTick = TickMath.getTickAtSqrtRatio(sqrtPriceX96);
+            sqrtPriceX96 = uint160(sqrtPriceX96Temp);
         }
 
-        // Create the pool
+        // Create and initialize the pool
+        // If the pool already exists and is initialized, it will have no effect
+        address poolAddress = uniswapV3NonfungiblePositionManager.createAndInitializePoolIfNecessary(
+            quoteTokenIsToken0 ? config.quoteToken : config.baseToken,
+            quoteTokenIsToken0 ? config.baseToken : config.quoteToken,
+            config.poolFee,
+            sqrtPriceX96
+        );
 
         // Deposit into the pool
 
