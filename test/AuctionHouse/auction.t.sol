@@ -28,6 +28,7 @@ contract AuctionTest is AuctionHouseTest {
     // [X] reverts when quote token is 0
     // [X] reverts when the auction type is batch and prefunded is false
     // [X] creates the auction lot
+    // [X] creates multiple auction lots
 
     function test_whenModuleNotInstalled_reverts() external whenAuctionTypeIsAtomic {
         bytes memory err = abi.encodeWithSelector(
@@ -194,6 +195,78 @@ contract AuctionTest is AuctionHouseTest {
 
         // Auction module also updated
         Auction.Lot memory lotData = _getLotData(_lotId);
+        assertEq(lotData.start, _startTime, "start mismatch");
+    }
+
+    function test_success_multiple()
+        external
+        whenAuctionTypeIsAtomic
+        whenAtomicAuctionModuleIsInstalled
+    {
+        // Create the first auction
+        vm.prank(_SELLER);
+        uint96 lotIdOne = _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
+
+        // Expect event to be emitted
+        vm.expectEmit(address(_auctionHouse));
+        emit AuctionCreated(1, wrapVeecode(_routingParams.auctionType, 1), _INFO_HASH);
+
+        // Modify the parameters
+        _routingParams.baseToken = _quoteToken;
+        _routingParams.quoteToken = _baseToken;
+
+        // Create the second auction
+        vm.prank(_SELLER);
+        uint96 lotIdTwo = _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
+
+        // Assert values for lot one
+        Auctioneer.Routing memory routing = _getLotRouting(lotIdOne);
+        assertEq(
+            fromVeecode(routing.auctionReference),
+            fromVeecode(wrapVeecode(_routingParams.auctionType, 1)),
+            "auction type mismatch"
+        );
+        assertEq(routing.seller, _SELLER, "seller mismatch");
+        assertEq(address(routing.baseToken), address(_baseToken), "base token mismatch");
+        assertEq(address(routing.quoteToken), address(_quoteToken), "quote token mismatch");
+        assertEq(address(routing.callbacks), address(0), "callback mismatch");
+        assertEq(fromVeecode(routing.derivativeReference), "", "derivative type mismatch");
+        assertEq(routing.derivativeParams, "", "derivative params mismatch");
+        assertEq(routing.wrapDerivative, false, "wrap derivative mismatch");
+        assertEq(routing.funding, 0, "funding mismatch");
+
+        // Curation updated
+        Auctioneer.FeeData memory curation = _getLotFees(lotIdOne);
+        assertEq(curation.curator, _CURATOR, "curator mismatch");
+        assertEq(curation.curated, false, "curated mismatch");
+
+        // Auction module also updated
+        Auction.Lot memory lotData = _getLotData(lotIdOne);
+        assertEq(lotData.start, _startTime, "start mismatch");
+
+        // Assert values for lot two
+        routing = _getLotRouting(lotIdTwo);
+        assertEq(
+            fromVeecode(routing.auctionReference),
+            fromVeecode(wrapVeecode(_routingParams.auctionType, 1)),
+            "auction type mismatch"
+        );
+        assertEq(routing.seller, _SELLER, "seller mismatch");
+        assertEq(address(routing.baseToken), address(_quoteToken), "base token mismatch");
+        assertEq(address(routing.quoteToken), address(_baseToken), "quote token mismatch");
+        assertEq(address(routing.callbacks), address(0), "callback mismatch");
+        assertEq(fromVeecode(routing.derivativeReference), "", "derivative type mismatch");
+        assertEq(routing.derivativeParams, "", "derivative params mismatch");
+        assertEq(routing.wrapDerivative, false, "wrap derivative mismatch");
+        assertEq(routing.funding, 0, "funding mismatch");
+
+        // Curation updated
+        curation = _getLotFees(lotIdTwo);
+        assertEq(curation.curator, _CURATOR, "curator mismatch");
+        assertEq(curation.curated, false, "curated mismatch");
+
+        // Auction module also updated
+        lotData = _getLotData(lotIdTwo);
         assertEq(lotData.start, _startTime, "start mismatch");
     }
 
