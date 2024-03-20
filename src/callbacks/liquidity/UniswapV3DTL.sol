@@ -4,6 +4,8 @@ pragma solidity ^0.8.19;
 import {BaseCallback} from "src/callbacks/BaseCallback.sol";
 import {Callbacks} from "src/lib/Callbacks.sol";
 
+import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
+
 import {TickMath} from "uniswap-v3-core/libraries/TickMath.sol";
 
 import {ERC20} from "solmate/tokens/ERC20.sol";
@@ -218,30 +220,29 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
         bool quoteTokenIsToken0 = config.quoteToken < config.baseToken;
 
         // Determine the initial price
-        uint96 initialTick;
+        int24 initialTick;
         {
-            // // Determine the price of token0 in terms of token1
-            // uint256 price;
-            // if (quoteTokenIsToken0) {
-            //     price = proceeds_ * 10 ** ERC20(config.baseToken).decimals() / capacityUtilised;
-            // }
-            // else {
-            //     price = capacityUtilised * 10 ** ERC20(config.quoteToken).decimals() / proceeds_;
-            // }
-
             // Determine sqrtPriceX96
             uint160 sqrtPriceX96;
             {
-                uint160 amount0 = quoteTokenIsToken0 ? proceeds_ : capacityUtilised;
-                uint160 amount1 = quoteTokenIsToken0 ? capacityUtilised : proceeds_;
+                uint256 amount0 = quoteTokenIsToken0 ? proceeds_ : capacityUtilised;
+                uint256 amount1 = quoteTokenIsToken0 ? capacityUtilised : proceeds_;
 
-                uint160 numerator = amount1 << 192;
-                uint160 denominator = amount0;
-                uint160 ratioX192 = (numerator / denominator);
-                // sqrtPriceX96 =
+                // Source: https://github.com/Uniswap/v3-sdk/blob/2c8aa3a653831c6b9e842e810f5394a5b5ed937f/src/utils/encodeSqrtRatioX96.ts
+                // Needs to be verified. Does it need to handle token decimal differences?
+                uint256 numerator = amount1 << 192;
+                uint256 denominator = amount0;
+                uint256 ratioX192 = (numerator / denominator);
+                uint256 sqrtPriceX96Temp = FixedPointMathLib.sqrt(ratioX192);
+
+                // TODO determine if this is the correct course of action - it would brick claiming proceeds
+                if (sqrtPriceX96Temp > type(uint160).max) revert Callback_InvalidParams();
+
+                sqrtPriceX96 = uint160(sqrtPriceX96Temp);
             }
 
-            // TODO Determine the tick
+            // Convert to a tick
+            initialTick = TickMath.getTickAtSqrtRatio(sqrtPriceX96);
         }
 
         // Create the pool
