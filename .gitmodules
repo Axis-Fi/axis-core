@@ -16,3 +16,6 @@
 [submodule "lib/uniswap-v3-core"]
 	path = lib/uniswap-v3-core
 	url = https://github.com/uniswap/v3-core
+[submodule "lib/openzeppelin-contracts"]
+	path = lib/openzeppelin-contracts
+	url = https://github.com/OpenZeppelin/openzeppelin-contracts
