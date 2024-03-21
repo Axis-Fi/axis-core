@@ -7,6 +7,9 @@ import {IUniswapV3Factory} from "uniswap-v3-core/interfaces/IUniswapV3Factory.so
 
 import {BaseCallback} from "src/callbacks/BaseCallback.sol";
 import {Callbacks} from "src/lib/Callbacks.sol";
+import {LinearVesting} from "src/modules/derivatives/LinearVesting.sol";
+import {AuctionHouse} from "src/AuctionHouse.sol";
+import {Keycode, wrapVeecode} from "src/modules/Modules.sol";
 
 import {SqrtPriceMath} from "src/lib/uniswap-v3/SqrtPriceMath.sol";
 
@@ -22,6 +25,8 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
         address token_, uint256 amountRequired_, uint256 amountActual_
     );
 
+    error Callback_LinearVestingModuleNotFound();
+
     // ========== STRUCTS ========== //
 
     /// @notice     Configuration for the DTL callback
@@ -34,6 +39,7 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
         uint24 poolFee;
         uint48 vestingStart;
         uint48 vestingExpiry;
+        LinearVesting linearVestingModule;
     }
 
     /// @notice     Parameters used in the onCreate callback
@@ -53,6 +59,7 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
 
     uint24 public constant MAX_PERCENT = 1e5;
     uint24 public constant MAX_POOL_FEE = 1e6;
+    bytes5 public constant LINEAR_VESTING_KEYCODE = 0x4c564b0000; // "LIV"
 
     /// @notice     Maps the lot id to the DTL configuration
     mapping(uint96 lotId => DTLConfiguration) public lotConfiguration;
@@ -83,7 +90,6 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
     }
 
     // [ ] Consider using bunni to manage the pool tokens
-    // [ ] Functions to handle vesting LP tokens. Can we reuse LinearVesting?
     // [ ] Enable the seller to withdraw base tokens, quote tokens
 
     // ========== CALLBACK FUNCTIONS ========== //
@@ -94,6 +100,7 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
     ///             - DTLParams.poolFee is out of bounds or not enabled
     ///             - The pool for the token and fee combination already exists
     ///             - DTLParams.vestingStart or DTLParams.vestingExpiry do not pass validation
+    ///             - Vesting is enabled and the linear vesting module is not found
     ///
     /// @param      lotId_          The lot ID
     /// @param      baseToken_      The base token address
@@ -141,7 +148,25 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
             revert Callback_InvalidParams();
         }
 
-        // TODO vesting start < expiry (use LinearVesting.validate()?)
+        // Vesting
+        LinearVesting linearVestingModule;
+
+        // If vesting is enabled
+        if (params.vestingStart != 0 || params.vestingExpiry != 0) {
+            // Get the linear vesting module (or revert)
+            linearVestingModule = LinearVesting(_getLatestLinearVestingModule(msg.sender));
+
+            // Validate
+            if (
+                // We will actually use the LP tokens, but this is a placeholder as we really want to validate the vesting parameters
+                !linearVestingModule.validate(
+                    address(baseToken_),
+                    _getEncodedVestingParams(params.vestingStart, params.vestingExpiry)
+                )
+            ) {
+                revert Callback_InvalidParams();
+            }
+        }
 
         // Store the configuration
         lotConfiguration[lotId_] = DTLConfiguration({
@@ -152,7 +177,8 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
             proceedsUtilisationPercent: params.proceedsUtilisationPercent,
             poolFee: params.poolFee,
             vestingStart: params.vestingStart,
-            vestingExpiry: params.vestingExpiry
+            vestingExpiry: params.vestingExpiry,
+            linearVestingModule: linearVestingModule
         });
 
         // If prefund_ is true, then the callback needs to transfer the capacity in base tokens to the auction house
@@ -255,10 +281,26 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
             sqrtPriceX96
         );
 
-        // Deposit into the pool
+        // Deploy the pool token
+        address poolTokenAddress;
 
-        // Conditionally, create vesting tokens with the received LP tokens
-        // Send spot or vesting LP tokens to seller
+        // Deposit into the pool
+        uint256 poolTokenQuantity;
+
+        // If vesting is enabled, create the vesting tokens
+        if (address(config.linearVestingModule) != address(0)) {
+            // Mint the vesting tokens (it will deploy if necessary)
+            config.linearVestingModule.mint(
+                seller,
+                poolTokenAddress,
+                _getEncodedVestingParams(config.vestingStart, config.vestingExpiry),
+                poolTokenQuantity,
+                false // Wrap derivative tokens?
+            );
+        } else {
+            // Otherwise send to the seller
+            ERC20(poolTokenAddress).transfer(seller, poolTokenQuantity);
+        }
     }
 
     // ========== INTERNAL FUNCTIONS ========== //
@@ -268,5 +310,26 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
         uint24 proceedsUtilisationPercent_
     ) internal pure returns (uint96) {
         return (capacity_ * proceedsUtilisationPercent_) / MAX_PERCENT;
+    }
+
+    function _getLatestLinearVestingModule(address caller_) internal view returns (address) {
+        AuctionHouse auctionHouse = AuctionHouse(caller_);
+        Keycode moduleKeycode = Keycode.wrap(LINEAR_VESTING_KEYCODE);
+
+        // Get the module status
+        (uint8 latestVersion, bool isSunset) = auctionHouse.getModuleStatus(moduleKeycode);
+
+        if (isSunset || latestVersion == 0) {
+            revert Callback_LinearVestingModuleNotFound();
+        }
+
+        return address(auctionHouse.getModuleForVeecode(wrapVeecode(moduleKeycode, latestVersion)));
+    }
+
+    function _getEncodedVestingParams(
+        uint48 start_,
+        uint48 expiry_
+    ) internal pure returns (bytes memory) {
+        return abi.encode(LinearVesting.VestingParams({start: start_, expiry: expiry_}));
     }
 }
