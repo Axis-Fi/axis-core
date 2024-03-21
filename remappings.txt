@@ -6,3 +6,4 @@ uniswap-v3-core/=lib/uniswap-v3-core/contracts/
 uniswap-v3-periphery/=lib/uniswap-v3-periphery/contracts/
 arrakis-v2-core/=lib/arrakis-v2-core/contracts/
 @uniswap/v3-core/=lib/uniswap-v3-core/
+@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/
