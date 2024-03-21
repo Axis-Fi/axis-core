@@ -19,3 +19,6 @@
 [submodule "lib/arrakis-v2-core"]
 	path = lib/arrakis-v2-core
 	url = https://github.com/arrakisfinance/v2-core
+[submodule "lib/openzeppelin-contracts"]
+	path = lib/openzeppelin-contracts
+	url = https://github.com/openzeppelin/openzeppelin-contracts
