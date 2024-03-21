@@ -5,7 +5,16 @@ import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 
 import {console2} from "forge-std/console2.sol";
 
+/// @notice     Library to calculate sqrtPriceX96 from token amounts
 library SqrtPriceMath {
+    /// @notice     Calculates the sqrtPriceX96 from the token amounts
+    /// @dev        The order of the tokens is irrelevant, as the values will be re-ordered.
+    ///
+    /// @param      tokenA          The address of a token
+    /// @param      tokenB          The address of the other token
+    /// @param      amountA         The amount of tokenA
+    /// @param      amountB         The amount of tokenB
+    /// @return     sqrtPriceX96    The sqrtPriceX96
     function getSqrtPriceX96(
         address tokenA,
         address tokenB,

@@ -140,7 +140,7 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
 
         IUniswapV3Factory factory = IUniswapV3Factory(uniswapV3NonfungiblePositionManager.factory());
 
-        // Not enabled
+        // Fee not enabled
         if (factory.feeAmountTickSpacing(params.poolFee) == 0) {
             revert Callback_InvalidParams();
         }
