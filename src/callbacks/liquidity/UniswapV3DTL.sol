@@ -5,6 +5,10 @@ import {ERC20} from "solmate/tokens/ERC20.sol";
 import {INonfungiblePositionManager} from "src/lib/uniswap-v3/INonfungiblePositionManager.sol";
 import {IUniswapV3Factory} from "uniswap-v3-core/interfaces/IUniswapV3Factory.sol";
 
+import {IArrakisV2} from "arrakis-v2-core/interfaces/IArrakisV2.sol";
+import {IArrakisV2Factory} from "arrakis-v2-core/interfaces/IArrakisV2Factory.sol";
+import {InitializePayload} from "arrakis-v2-core/structs/SArrakisV2.sol";
+
 import {BaseCallback} from "src/callbacks/BaseCallback.sol";
 import {Callbacks} from "src/lib/Callbacks.sol";
 import {LinearVesting} from "src/modules/derivatives/LinearVesting.sol";
@@ -68,11 +72,16 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
     /// @dev        This contract is used to create Uniswap V3 pools
     INonfungiblePositionManager public uniswapV3NonfungiblePositionManager;
 
+    /// @notice     The Arrakis V2 Factory contract
+    /// @dev        This contract is used to create the ERC20 LP tokens
+    IArrakisV2Factory public arrakisV2Factory;
+
     constructor(
         address auctionHouse_,
         Callbacks.Permissions memory permissions_,
         address seller_,
-        address uniswapV3NonfungiblePositionManager_
+        address uniswapV3NonfungiblePositionManager_,
+        address arrakisV2Factory_
     ) BaseCallback(auctionHouse_, permissions_, seller_) {
         // Ensure that the required permissions are met
         if (
@@ -87,10 +96,12 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
         }
         uniswapV3NonfungiblePositionManager =
             INonfungiblePositionManager(uniswapV3NonfungiblePositionManager_);
-    }
 
-    // [ ] Consider using bunni to manage the pool tokens
-    // [ ] Enable the seller to withdraw base tokens, quote tokens
+        if (arrakisV2Factory_ == address(0)) {
+            revert Callback_InvalidParams();
+        }
+        arrakisV2Factory = IArrakisV2Factory(arrakisV2Factory_);
+    }
 
     // ========== CALLBACK FUNCTIONS ========== //
 
@@ -237,24 +248,30 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
     ) internal virtual override {
         DTLConfiguration memory config = lotConfiguration[lotId_];
 
-        // Calculate the actual lot capacity that was used
-        uint96 capacityUtilised;
+        uint96 baseTokensRequired;
+        uint96 quoteTokensRequired;
         {
-            // If curation is enabled, refund_ will also contain the refund on the curator payout. Adjust for that.
-            // Example:
-            // 100 capacity + 10 curator
-            // 90 capacity sold, 9 curator payout
-            // 11 refund
-            // Utilisation = 1 - 11/110 = 90%
-            uint96 utilisationPercent =
-                1e5 - refund_ / (config.lotCapacity + config.lotCuratorPayout);
+            // Calculate the actual lot capacity that was used
+            uint96 capacityUtilised;
+            {
+                // If curation is enabled, refund_ will also contain the refund on the curator payout. Adjust for that.
+                // Example:
+                // 100 capacity + 10 curator
+                // 90 capacity sold, 9 curator payout
+                // 11 refund
+                // Utilisation = 1 - 11/110 = 90%
+                uint96 utilisationPercent =
+                    1e5 - refund_ / (config.lotCapacity + config.lotCuratorPayout);
 
-            capacityUtilised = (config.lotCapacity * utilisationPercent) / MAX_PERCENT;
+                capacityUtilised = (config.lotCapacity * utilisationPercent) / MAX_PERCENT;
+            }
+
+            // Calculate the base tokens required to create the pool
+            baseTokensRequired =
+                _tokensRequiredForPool(capacityUtilised, config.proceedsUtilisationPercent);
+            quoteTokensRequired =
+                _tokensRequiredForPool(proceeds_, config.proceedsUtilisationPercent);
         }
-
-        // Calculate the base tokens required to create the pool
-        uint96 baseTokensRequired =
-            _baseTokensRequiredForPool(capacityUtilised, config.proceedsUtilisationPercent);
 
         // Check that there is still enough capacity to create the pool
         {
@@ -271,7 +288,7 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
 
         // Determine sqrtPriceX96
         uint160 sqrtPriceX96 = SqrtPriceMath.getSqrtPriceX96(
-            config.quoteToken, config.baseToken, proceeds_, capacityUtilised
+            config.quoteToken, config.baseToken, quoteTokensRequired, baseTokensRequired
         );
 
         // Create and initialize the pool
@@ -285,12 +302,47 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
 
         // Deploy the pool token
         address poolTokenAddress;
+        {
+            // Prepare the payload
+            uint24[] memory feeTiers = new uint24[](1);
+            feeTiers[0] = config.poolFee;
+
+            // Creates an Arrakis V2 vault that will convert the Uniswap V3
+            // position into an ERC20 token
+            // The vault is NOT private, and so anyone can mint into it, but that shouldn't affect the seller
+            InitializePayload memory payload = InitializePayload({
+                feeTiers: feeTiers,
+                token0: quoteTokenIsToken0 ? config.quoteToken : config.baseToken,
+                token1: quoteTokenIsToken0 ? config.baseToken : config.quoteToken,
+                owner: seller,
+                init0: quoteTokenIsToken0 ? quoteTokensRequired : baseTokensRequired,
+                init1: quoteTokenIsToken0 ? baseTokensRequired : quoteTokensRequired,
+                manager: seller,
+                routers: new address[](0)
+            });
+
+            poolTokenAddress = arrakisV2Factory.deployVault(payload, true);
+        }
 
         // Deposit into the pool
         uint256 poolTokenQuantity;
+        {
+            // Approve the vault to spend the tokens
+            ERC20(config.quoteToken).approve(address(arrakisV2Factory), quoteTokensRequired);
+            ERC20(config.baseToken).approve(address(arrakisV2Factory), baseTokensRequired);
+
+            // Calculate mint amount (1)
+            poolTokenQuantity = 10 ** ERC20(poolTokenAddress).decimals();
+
+            // Mint the LP tokens
+            IArrakisV2(poolTokenAddress).mint(poolTokenQuantity, address(this));
+        }
 
         // If vesting is enabled, create the vesting tokens
         if (address(config.linearVestingModule) != address(0)) {
+            // Approve spending of the tokens
+            ERC20(poolTokenAddress).approve(address(config.linearVestingModule), poolTokenQuantity);
+
             // Mint the vesting tokens (it will deploy if necessary)
             config.linearVestingModule.mint(
                 seller,
@@ -299,19 +351,33 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
                 poolTokenQuantity,
                 false // Wrap derivative tokens?
             );
-        } else {
-            // Otherwise send to the seller
-            ERC20(poolTokenAddress).transfer(seller, poolTokenQuantity);
+        }
+
+        // Send any remaining tokens to the seller
+        {
+            ERC20 quoteToken = ERC20(config.quoteToken);
+            ERC20 baseToken = ERC20(config.baseToken);
+
+            uint256 quoteTokenBalance = quoteToken.balanceOf(address(this));
+            uint256 baseTokenBalance = baseToken.balanceOf(address(this));
+
+            if (quoteTokenBalance > 0) {
+                quoteToken.transfer(seller, quoteTokenBalance);
+            }
+
+            if (baseTokenBalance > 0) {
+                baseToken.transfer(seller, baseTokenBalance);
+            }
         }
     }
 
     // ========== INTERNAL FUNCTIONS ========== //
 
-    function _baseTokensRequiredForPool(
-        uint96 capacity_,
+    function _tokensRequiredForPool(
+        uint96 amount_,
         uint24 proceedsUtilisationPercent_
     ) internal pure returns (uint96) {
-        return (capacity_ * proceedsUtilisationPercent_) / MAX_PERCENT;
+        return (amount_ * proceedsUtilisationPercent_) / MAX_PERCENT;
     }
 
     function _getLatestLinearVestingModule(address caller_) internal view returns (address) {
