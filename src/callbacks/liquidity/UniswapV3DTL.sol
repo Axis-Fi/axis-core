@@ -118,7 +118,9 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
         bytes calldata callbackData_
     ) internal virtual override {
         // Decode callback data into the params
-        // TODO check length of callbackData to provide a more helpful error message
+        if (callbackData_.length != 18) {
+            revert Callback_InvalidParams();
+        }
         DTLParams memory params = abi.decode(callbackData_, (DTLParams));
 
         // Validate the parameters
