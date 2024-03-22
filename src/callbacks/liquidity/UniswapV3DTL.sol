@@ -1,21 +1,27 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
+// Libraries
 import {ERC20} from "solmate/tokens/ERC20.sol";
+import {SqrtPriceMath} from "src/lib/uniswap-v3/SqrtPriceMath.sol";
+
+// Uniswap
 import {INonfungiblePositionManager} from "src/lib/uniswap-v3/INonfungiblePositionManager.sol";
 import {IUniswapV3Factory} from "uniswap-v3-core/interfaces/IUniswapV3Factory.sol";
+import {TickMath} from "uniswap-v3-core/libraries/TickMath.sol";
 
-import {IArrakisV2} from "arrakis-v2-core/interfaces/IArrakisV2.sol";
-import {IArrakisV2Factory} from "arrakis-v2-core/interfaces/IArrakisV2Factory.sol";
-import {InitializePayload} from "arrakis-v2-core/structs/SArrakisV2.sol";
+// G-UNI
+import {IGUniFactory} from "g-uni-v1-core/interfaces/IGUniFactory.sol";
+import {GUniPool} from "g-uni-v1-core/GUniPool.sol";
 
+// Callbacks
 import {BaseCallback} from "src/callbacks/BaseCallback.sol";
 import {Callbacks} from "src/lib/Callbacks.sol";
+
+// AuctionHouse
 import {LinearVesting} from "src/modules/derivatives/LinearVesting.sol";
 import {AuctionHouse} from "src/AuctionHouse.sol";
 import {Keycode, wrapVeecode} from "src/modules/Modules.sol";
-
-import {SqrtPriceMath} from "src/lib/uniswap-v3/SqrtPriceMath.sol";
 
 /// @title      UniswapV3DirectToLiquidity
 /// @notice     This Callback contract deposits the proceeds from a batch auction into a Uniswap V3 pool
@@ -34,6 +40,16 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
     // ========== STRUCTS ========== //
 
     /// @notice     Configuration for the DTL callback
+    /// @param      baseToken                   The base token address
+    /// @param      quoteToken                  The quote token address
+    /// @param      lotCapacity                 The capacity of the lot
+    /// @param      lotCuratorPayout            The maximum curator payout of the lot
+    /// @param      proceedsUtilisationPercent  The percentage of the proceeds to deposit into the pool
+    /// @param      poolFee                     The Uniswap V3 fee tier for the pool
+    /// @param      vestingStart                The start of the vesting period for the LP tokens (0 if disabled)
+    /// @param      vestingExpiry               The end of the vesting period for the LP tokens (0 if disabled)
+    /// @param      linearVestingModule         The LinearVesting module for the LP tokens (only set if linear vesting is enabled)
+    /// @param      active                      Whether the lot is active
     struct DTLConfiguration {
         address baseToken;
         address quoteToken;
@@ -44,6 +60,7 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
         uint48 vestingStart;
         uint48 vestingExpiry;
         LinearVesting linearVestingModule;
+        bool active;
     }
 
     /// @notice     Parameters used in the onCreate callback
@@ -59,6 +76,8 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
         uint48 vestingExpiry;
     }
 
+    // TODO implement deposit/withdrawal of base tokens to better handle tracking balances
+
     // ========== STATE VARIABLES ========== //
 
     uint24 public constant MAX_PERCENT = 1e5;
@@ -72,16 +91,16 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
     /// @dev        This contract is used to create Uniswap V3 pools
     INonfungiblePositionManager public uniswapV3NonfungiblePositionManager;
 
-    /// @notice     The Arrakis V2 Factory contract
+    /// @notice     The G-UNI Factory contract
     /// @dev        This contract is used to create the ERC20 LP tokens
-    IArrakisV2Factory public arrakisV2Factory;
+    IGUniFactory public gUniFactory;
 
     constructor(
         address auctionHouse_,
         Callbacks.Permissions memory permissions_,
         address seller_,
         address uniswapV3NonfungiblePositionManager_,
-        address arrakisV2Factory_
+        address gUniFactory_
     ) BaseCallback(auctionHouse_, permissions_, seller_) {
         // Ensure that the required permissions are met
         if (
@@ -97,16 +116,21 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
         uniswapV3NonfungiblePositionManager =
             INonfungiblePositionManager(uniswapV3NonfungiblePositionManager_);
 
-        if (arrakisV2Factory_ == address(0)) {
+        if (gUniFactory_ == address(0)) {
             revert Callback_InvalidParams();
         }
-        arrakisV2Factory = IArrakisV2Factory(arrakisV2Factory_);
+        gUniFactory = IGUniFactory(gUniFactory_);
     }
 
     // ========== CALLBACK FUNCTIONS ========== //
 
     /// @notice     Callback for when a lot is created
-    /// @dev        This function reverts if:
+    /// @dev        This function performs the following:
+    ///             - Validates the input data
+    ///             - Stores the configuration for the lot
+    ///             - If prefunded: transfers the base token capacity to the AuctionHouse
+    ///
+    ///             This function reverts if:
     ///             - DTLParams.proceedsUtilisationPercent is out of bounds
     ///             - DTLParams.poolFee is out of bounds or not enabled
     ///             - The pool for the token and fee combination already exists
@@ -127,7 +151,7 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
         uint96 capacity_,
         bool prefund_,
         bytes calldata callbackData_
-    ) internal virtual override {
+    ) internal virtual override onlyIfLotDoesNotExist(lotId_) {
         // Decode callback data into the params
         if (callbackData_.length != 18) {
             revert Callback_InvalidParams();
@@ -167,7 +191,7 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
         // If vesting is enabled
         if (params.vestingStart != 0 || params.vestingExpiry != 0) {
             // Get the linear vesting module (or revert)
-            linearVestingModule = LinearVesting(_getLatestLinearVestingModule(msg.sender));
+            linearVestingModule = LinearVesting(_getLatestLinearVestingModule());
 
             // Validate
             if (
@@ -191,26 +215,57 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
             poolFee: params.poolFee,
             vestingStart: params.vestingStart,
             vestingExpiry: params.vestingExpiry,
-            linearVestingModule: linearVestingModule
+            linearVestingModule: linearVestingModule,
+            active: true
         });
 
         // If prefund_ is true, then the callback needs to transfer the capacity in base tokens to the auction house
         if (prefund_) {
-            // No need to verify the sender, as it is done in BaseCallback
-            ERC20(baseToken_).transfer(msg.sender, capacity_);
+            // TODO it would help with tracking balances if the base token was either deposited into the callback prior to creation, or if the callback could pull from the seller address
+            ERC20(baseToken_).transfer(auctionHouse, capacity_);
         }
     }
 
-    function _onCancel(uint96, uint96, bool, bytes calldata) internal pure override {
-        // TODO mark as cancelled/claimed?
+    /// @notice     Callback for when a lot is cancelled
+    /// @dev        This function performs the following:
+    ///             - Marks the lot as inactive
+    ///             - If prefunded: refunds the base tokens to the seller
+    ///
+    ///             This function reverts if:
+    ///             - The lot is not registered
+    function _onCancel(
+        uint96 lotId_,
+        uint96 refund_,
+        bool prefunded_,
+        bytes calldata
+    ) internal override onlyIfLotExists(lotId_) {
+        // Mark the lot as inactive to prevent further actions
+        DTLConfiguration storage config = lotConfiguration[lotId_];
+        config.active = false;
+
+        // If there is a prefund, refund the tokens to the seller
+        // The AuctionHouse would have already sent the tokens prior to this call
+        if (prefunded_) {
+            ERC20(config.baseToken).transfer(seller, refund_);
+        }
     }
 
+    /// @notice     Callback for when a lot is curated
+    /// @dev        This function performs the following:
+    ///             - If prefunded: transfers the curator payout to the AuctionHouse
+    ///
+    ///             This function reverts if:
+    ///             - The lot is not registered
+    ///
+    /// @param      lotId_          The lot ID
+    /// @param      curatorPayout_  The maximum curator payout
+    /// @param      prefund_        Whether the callback has to prefund the curator payout
     function _onCurate(
         uint96 lotId_,
         uint96 curatorPayout_,
         bool prefund_,
-        bytes calldata callbackData_
-    ) internal override {
+        bytes calldata
+    ) internal override onlyIfLotExists(lotId_) {
         // If prefunded, then the callback needs to transfer the curatorPayout_ in base tokens to the auction house
         if (prefund_) {
             DTLConfiguration storage config = lotConfiguration[lotId_];
@@ -218,11 +273,12 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
             // Update the funding
             config.lotCuratorPayout = curatorPayout_;
 
-            // No need to verify the sender, as it is done in BaseCallback
-            ERC20(config.baseToken).transfer(msg.sender, curatorPayout_);
+            ERC20(config.baseToken).transfer(auctionHouse, curatorPayout_);
         }
     }
 
+    /// @notice     Callback for a purchase
+    /// @dev        Not implemented
     function _onPurchase(
         uint96,
         address,
@@ -235,17 +291,27 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
         revert Callback_NotImplemented();
     }
 
+    /// @notice     Callback for a bid
+    /// @dev        Not implemented
     function _onBid(uint96, uint64, address, uint96, bytes calldata) internal pure override {
         // Not implemented
         revert Callback_NotImplemented();
     }
 
+    /// @notice     Callback for claiming the proceeds
+    /// @dev        This function performs the following:
+    ///             - Calculates the base and quote tokens to deposit into the Uniswap V3 pool
+    ///             - Creates and initializes the pool, if necessary
+    ///             - Deploys a pool token to wrap the Uniswap V3 position as an ERC-20
+    ///             - Deposits the tokens into the pool and mint the LP tokens
+    ///             - If vesting is enabled, mints the vesting tokens
+    ///             - Sends any remaining quote and base tokens to the seller
     function _onClaimProceeds(
         uint96 lotId_,
         uint96 proceeds_,
         uint96 refund_,
-        bytes calldata callbackData_
-    ) internal virtual override {
+        bytes calldata
+    ) internal virtual override onlyIfLotExists(lotId_) {
         DTLConfiguration memory config = lotConfiguration[lotId_];
 
         uint96 baseTokensRequired;
@@ -254,6 +320,7 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
             // Calculate the actual lot capacity that was used
             uint96 capacityUtilised;
             {
+                // TODO what if the capacity is in quote tokens?
                 // If curation is enabled, refund_ will also contain the refund on the curator payout. Adjust for that.
                 // Example:
                 // 100 capacity + 10 curator
@@ -293,7 +360,7 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
 
         // Create and initialize the pool
         // If the pool already exists and is initialized, it will have no effect
-        address poolAddress = uniswapV3NonfungiblePositionManager.createAndInitializePoolIfNecessary(
+        uniswapV3NonfungiblePositionManager.createAndInitializePoolIfNecessary(
             quoteTokenIsToken0 ? config.quoteToken : config.baseToken,
             quoteTokenIsToken0 ? config.baseToken : config.quoteToken,
             config.poolFee,
@@ -303,39 +370,32 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
         // Deploy the pool token
         address poolTokenAddress;
         {
-            // Prepare the payload
-            uint24[] memory feeTiers = new uint24[](1);
-            feeTiers[0] = config.poolFee;
-
-            // Creates an Arrakis V2 vault that will convert the Uniswap V3
-            // position into an ERC20 token
-            // The vault is NOT private, and so anyone can mint into it, but that shouldn't affect the seller
-            InitializePayload memory payload = InitializePayload({
-                feeTiers: feeTiers,
-                token0: quoteTokenIsToken0 ? config.quoteToken : config.baseToken,
-                token1: quoteTokenIsToken0 ? config.baseToken : config.quoteToken,
-                owner: seller,
-                init0: quoteTokenIsToken0 ? quoteTokensRequired : baseTokensRequired,
-                init1: quoteTokenIsToken0 ? baseTokensRequired : quoteTokensRequired,
-                manager: seller,
-                routers: new address[](0)
-            });
-
-            poolTokenAddress = arrakisV2Factory.deployVault(payload, true);
+            poolTokenAddress = gUniFactory.createPool(
+                quoteTokenIsToken0 ? config.quoteToken : config.baseToken,
+                quoteTokenIsToken0 ? config.baseToken : config.quoteToken,
+                config.poolFee,
+                TickMath.MIN_TICK,
+                TickMath.MAX_TICK
+            );
         }
 
         // Deposit into the pool
         uint256 poolTokenQuantity;
         {
-            // Approve the vault to spend the tokens
-            ERC20(config.quoteToken).approve(address(arrakisV2Factory), quoteTokensRequired);
-            ERC20(config.baseToken).approve(address(arrakisV2Factory), baseTokensRequired);
+            GUniPool poolToken = GUniPool(poolTokenAddress);
 
-            // Calculate mint amount (1)
-            poolTokenQuantity = 10 ** ERC20(poolTokenAddress).decimals();
+            // Approve the vault to spend the tokens
+            ERC20(config.quoteToken).approve(address(poolTokenAddress), quoteTokensRequired);
+            ERC20(config.baseToken).approve(address(poolTokenAddress), baseTokensRequired);
+
+            // Calculate the mint amount
+            (,, poolTokenQuantity) = poolToken.getMintAmounts(
+                quoteTokenIsToken0 ? quoteTokensRequired : baseTokensRequired,
+                quoteTokenIsToken0 ? baseTokensRequired : quoteTokensRequired
+            );
 
             // Mint the LP tokens
-            IArrakisV2(poolTokenAddress).mint(poolTokenQuantity, address(this));
+            poolToken.mint(poolTokenQuantity, address(this));
         }
 
         // If vesting is enabled, create the vesting tokens
@@ -358,17 +418,35 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
             ERC20 quoteToken = ERC20(config.quoteToken);
             ERC20 baseToken = ERC20(config.baseToken);
 
-            uint256 quoteTokenBalance = quoteToken.balanceOf(address(this));
-            uint256 baseTokenBalance = baseToken.balanceOf(address(this));
+            uint256 quoteTokensToSend = proceeds_ - quoteTokensRequired;
+            // TODO need to double-check this under prefunding and non-prefunding scenarios
+            uint256 baseTokensToSend =
+                config.lotCapacity + config.lotCuratorPayout - refund_ - baseTokensRequired;
 
-            if (quoteTokenBalance > 0) {
-                quoteToken.transfer(seller, quoteTokenBalance);
+            if (quoteTokensToSend > 0) {
+                quoteToken.transfer(seller, quoteTokensToSend);
             }
 
-            if (baseTokenBalance > 0) {
-                baseToken.transfer(seller, baseTokenBalance);
+            if (baseTokensToSend > 0) {
+                baseToken.transfer(seller, baseTokensToSend);
             }
         }
+    }
+
+    // ========== MODIFIERS ========== //
+
+    modifier onlyIfLotDoesNotExist(uint96 lotId_) {
+        if (lotConfiguration[lotId_].baseToken != address(0)) {
+            revert Callback_InvalidParams();
+        }
+        _;
+    }
+
+    modifier onlyIfLotExists(uint96 lotId_) {
+        if (!lotConfiguration[lotId_].active) {
+            revert Callback_InvalidParams();
+        }
+        _;
     }
 
     // ========== INTERNAL FUNCTIONS ========== //
@@ -380,18 +458,20 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
         return (amount_ * proceedsUtilisationPercent_) / MAX_PERCENT;
     }
 
-    function _getLatestLinearVestingModule(address caller_) internal view returns (address) {
-        AuctionHouse auctionHouse = AuctionHouse(caller_);
+    function _getLatestLinearVestingModule() internal view returns (address) {
+        AuctionHouse auctionHouseContract = AuctionHouse(auctionHouse);
         Keycode moduleKeycode = Keycode.wrap(LINEAR_VESTING_KEYCODE);
 
         // Get the module status
-        (uint8 latestVersion, bool isSunset) = auctionHouse.getModuleStatus(moduleKeycode);
+        (uint8 latestVersion, bool isSunset) = auctionHouseContract.getModuleStatus(moduleKeycode);
 
         if (isSunset || latestVersion == 0) {
             revert Callback_LinearVestingModuleNotFound();
         }
 
-        return address(auctionHouse.getModuleForVeecode(wrapVeecode(moduleKeycode, latestVersion)));
+        return address(
+            auctionHouseContract.getModuleForVeecode(wrapVeecode(moduleKeycode, latestVersion))
+        );
     }
 
     function _getEncodedVestingParams(
