@@ -1,21 +1,27 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
+// Libraries
 import {ERC20} from "solmate/tokens/ERC20.sol";
+import {SqrtPriceMath} from "src/lib/uniswap-v3/SqrtPriceMath.sol";
+
+// Uniswap
 import {INonfungiblePositionManager} from "src/lib/uniswap-v3/INonfungiblePositionManager.sol";
 import {IUniswapV3Factory} from "uniswap-v3-core/interfaces/IUniswapV3Factory.sol";
+import {TickMath} from "uniswap-v3-core/libraries/TickMath.sol";
 
-import {IArrakisV2} from "arrakis-v2-core/interfaces/IArrakisV2.sol";
-import {IArrakisV2Factory} from "arrakis-v2-core/interfaces/IArrakisV2Factory.sol";
-import {InitializePayload} from "arrakis-v2-core/structs/SArrakisV2.sol";
+// G-UNI
+import {IGUniFactory} from "g-uni-v1-core/interfaces/IGUniFactory.sol";
+import {GUniPool} from "g-uni-v1-core/GUniPool.sol";
 
+// Callbacks
 import {BaseCallback} from "src/callbacks/BaseCallback.sol";
 import {Callbacks} from "src/lib/Callbacks.sol";
+
+// AuctionHouse
 import {LinearVesting} from "src/modules/derivatives/LinearVesting.sol";
 import {AuctionHouse} from "src/AuctionHouse.sol";
 import {Keycode, wrapVeecode} from "src/modules/Modules.sol";
-
-import {SqrtPriceMath} from "src/lib/uniswap-v3/SqrtPriceMath.sol";
 
 /// @title      UniswapV3DirectToLiquidity
 /// @notice     This Callback contract deposits the proceeds from a batch auction into a Uniswap V3 pool
@@ -72,16 +78,16 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
     /// @dev        This contract is used to create Uniswap V3 pools
     INonfungiblePositionManager public uniswapV3NonfungiblePositionManager;
 
-    /// @notice     The Arrakis V2 Factory contract
+    /// @notice     The G-UNI Factory contract
     /// @dev        This contract is used to create the ERC20 LP tokens
-    IArrakisV2Factory public arrakisV2Factory;
+    IGUniFactory public gUniFactory;
 
     constructor(
         address auctionHouse_,
         Callbacks.Permissions memory permissions_,
         address seller_,
         address uniswapV3NonfungiblePositionManager_,
-        address arrakisV2Factory_
+        address gUniFactory_
     ) BaseCallback(auctionHouse_, permissions_, seller_) {
         // Ensure that the required permissions are met
         if (
@@ -97,10 +103,10 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
         uniswapV3NonfungiblePositionManager =
             INonfungiblePositionManager(uniswapV3NonfungiblePositionManager_);
 
-        if (arrakisV2Factory_ == address(0)) {
+        if (gUniFactory_ == address(0)) {
             revert Callback_InvalidParams();
         }
-        arrakisV2Factory = IArrakisV2Factory(arrakisV2Factory_);
+        gUniFactory = IGUniFactory(gUniFactory_);
     }
 
     // ========== CALLBACK FUNCTIONS ========== //
@@ -303,39 +309,32 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
         // Deploy the pool token
         address poolTokenAddress;
         {
-            // Prepare the payload
-            uint24[] memory feeTiers = new uint24[](1);
-            feeTiers[0] = config.poolFee;
-
-            // Creates an Arrakis V2 vault that will convert the Uniswap V3
-            // position into an ERC20 token
-            // The vault is NOT private, and so anyone can mint into it, but that shouldn't affect the seller
-            InitializePayload memory payload = InitializePayload({
-                feeTiers: feeTiers,
-                token0: quoteTokenIsToken0 ? config.quoteToken : config.baseToken,
-                token1: quoteTokenIsToken0 ? config.baseToken : config.quoteToken,
-                owner: seller,
-                init0: quoteTokenIsToken0 ? quoteTokensRequired : baseTokensRequired,
-                init1: quoteTokenIsToken0 ? baseTokensRequired : quoteTokensRequired,
-                manager: seller,
-                routers: new address[](0)
-            });
-
-            poolTokenAddress = arrakisV2Factory.deployVault(payload, true);
+            poolTokenAddress = gUniFactory.createPool(
+                quoteTokenIsToken0 ? config.quoteToken : config.baseToken,
+                quoteTokenIsToken0 ? config.baseToken : config.quoteToken,
+                config.poolFee,
+                TickMath.MIN_TICK,
+                TickMath.MAX_TICK
+            );
         }
 
         // Deposit into the pool
         uint256 poolTokenQuantity;
         {
-            // Approve the vault to spend the tokens
-            ERC20(config.quoteToken).approve(address(arrakisV2Factory), quoteTokensRequired);
-            ERC20(config.baseToken).approve(address(arrakisV2Factory), baseTokensRequired);
+            GUniPool poolToken = GUniPool(poolTokenAddress);
 
-            // Calculate mint amount (1)
-            poolTokenQuantity = 10 ** ERC20(poolTokenAddress).decimals();
+            // Approve the vault to spend the tokens
+            ERC20(config.quoteToken).approve(address(poolTokenAddress), quoteTokensRequired);
+            ERC20(config.baseToken).approve(address(poolTokenAddress), baseTokensRequired);
+
+            // Calculate the mint amount
+            (,, poolTokenQuantity) = poolToken.getMintAmounts(
+                quoteTokenIsToken0 ? quoteTokensRequired : baseTokensRequired,
+                quoteTokenIsToken0 ? baseTokensRequired : quoteTokensRequired
+            );
 
             // Mint the LP tokens
-            IArrakisV2(poolTokenAddress).mint(poolTokenQuantity, address(this));
+            poolToken.mint(poolTokenQuantity, address(this));
         }
 
         // If vesting is enabled, create the vesting tokens
