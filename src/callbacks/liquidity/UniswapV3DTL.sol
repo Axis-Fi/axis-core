@@ -173,7 +173,7 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
         // If vesting is enabled
         if (params.vestingStart != 0 || params.vestingExpiry != 0) {
             // Get the linear vesting module (or revert)
-            linearVestingModule = LinearVesting(_getLatestLinearVestingModule(msg.sender));
+            linearVestingModule = LinearVesting(_getLatestLinearVestingModule());
 
             // Validate
             if (
@@ -203,7 +203,7 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
         // If prefund_ is true, then the callback needs to transfer the capacity in base tokens to the auction house
         if (prefund_) {
             // No need to verify the sender, as it is done in BaseCallback
-            ERC20(baseToken_).transfer(msg.sender, capacity_);
+            ERC20(baseToken_).transfer(auctionHouse, capacity_);
         }
     }
 
@@ -224,8 +224,7 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
             // Update the funding
             config.lotCuratorPayout = curatorPayout_;
 
-            // No need to verify the sender, as it is done in BaseCallback
-            ERC20(config.baseToken).transfer(msg.sender, curatorPayout_);
+            ERC20(config.baseToken).transfer(auctionHouse, curatorPayout_);
         }
     }
 
@@ -379,18 +378,20 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
         return (amount_ * proceedsUtilisationPercent_) / MAX_PERCENT;
     }
 
-    function _getLatestLinearVestingModule(address caller_) internal view returns (address) {
-        AuctionHouse auctionHouse = AuctionHouse(caller_);
+    function _getLatestLinearVestingModule() internal view returns (address) {
+        AuctionHouse auctionHouseContract = AuctionHouse(auctionHouse);
         Keycode moduleKeycode = Keycode.wrap(LINEAR_VESTING_KEYCODE);
 
         // Get the module status
-        (uint8 latestVersion, bool isSunset) = auctionHouse.getModuleStatus(moduleKeycode);
+        (uint8 latestVersion, bool isSunset) = auctionHouseContract.getModuleStatus(moduleKeycode);
 
         if (isSunset || latestVersion == 0) {
             revert Callback_LinearVestingModuleNotFound();
         }
 
-        return address(auctionHouse.getModuleForVeecode(wrapVeecode(moduleKeycode, latestVersion)));
+        return address(
+            auctionHouseContract.getModuleForVeecode(wrapVeecode(moduleKeycode, latestVersion))
+        );
     }
 
     function _getEncodedVestingParams(
