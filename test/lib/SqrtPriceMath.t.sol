@@ -5,21 +5,18 @@ import {Test} from "forge-std/Test.sol";
 
 import {SqrtPriceMath} from "src/lib/uniswap-v3/SqrtPriceMath.sol";
 
-import {TickMath} from "uniswap-v3-core/libraries/TickMath.sol";
-
-import {console2} from "forge-std/console2.sol";
-
 contract SqrtPriceMathTest is Test {
-    address internal constant TOKEN0 = address(0x1);
-    address internal constant TOKEN1 = address(0x2);
+    address internal constant TOKEN0 = 0x64aa3364F17a4D01c6f1751Fd97C2BD3D7e7f1D5;
+    address internal constant TOKEN1 = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
 
     // From OHM-WETH pool
     // Token id: 562564
     // https://revert.finance/#/account/0x245cc372C84B3645Bf0Ffe6538620B04a217988B (for current amounts)
     // https://etherscan.io/address/0x88051b0eea095007d3bef21ab287be961f3d8598#readContract#F11 (for sqrtPriceX96)
-    uint256 internal constant AMOUNT0 = 647_257_004_000_000_000_000; // OHM
-    uint256 internal constant AMOUNT1 = 185_339_349_000_000_000_000_000; // WETH
-    uint160 internal constant SQRTPRICEX96 = 148_058_773_132_005_407_513_152_397_312_640;
+    uint256 internal constant AMOUNT0 = 185_339_349_000_000;
+    uint256 internal constant AMOUNT1 = 647_257_004_000_000_000_000;
+    uint160 internal constant SQRTPRICEX96_ACTUAL = 148_058_773_132_005_407_513_152_397_312_640;
+    uint160 internal constant SQRTPRICEX96 = 148_058_773_168_959_257_235_299_580_805_548;
     // sqrt((647.257004*1e18)/(185339.349*1e9))*2**96 ~= 148058773132005407513152397312640
 
     // [X] when tokenA is token0
@@ -34,8 +31,6 @@ contract SqrtPriceMathTest is Test {
     function test_whenTokenAIsToken0() public {
         uint160 sqrtPriceX96 = SqrtPriceMath.getSqrtPriceX96(TOKEN0, TOKEN1, AMOUNT0, AMOUNT1);
         assertEq(sqrtPriceX96, SQRTPRICEX96, "SqrtPriceX96");
-
-        console2.log("ratio", TickMath.getSqrtRatioAtTick(-81_152));
     }
 
     function test_whenTokenAIsToken1() public {
