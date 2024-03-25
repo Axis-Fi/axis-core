@@ -2,11 +2,11 @@
 pragma solidity 0.8.19;
 
 import {Auction} from "src/modules/Auction.sol";
-import {EncryptedMarginalPriceAuctionModule} from "src/modules/auctions/EMPAM.sol";
+import {EncryptedMarginalPrice} from "src/modules/auctions/EMP.sol";
 
-import {EmpaModuleTest} from "test/modules/auctions/EMPA/EMPAModuleTest.sol";
+import {EmpModuleTest} from "test/modules/auctions/EMP/EMPModuleTest.sol";
 
-contract EmpaModuleClaimProceedsTest is EmpaModuleTest {
+contract EmpaModuleClaimProceedsTest is EmpModuleTest {
     uint96 internal constant _BID_PRICE_TWO_AMOUNT = 2e18;
     uint96 internal constant _BID_PRICE_TWO_AMOUNT_OUT = 1e18;
     uint96 internal constant _BID_SIZE_NINE_AMOUNT = 19e18;
@@ -139,7 +139,7 @@ contract EmpaModuleClaimProceedsTest is EmpaModuleTest {
         givenLotHasConcluded
     {
         bytes memory err = abi.encodeWithSelector(
-            EncryptedMarginalPriceAuctionModule.Auction_WrongState.selector, _lotId
+            EncryptedMarginalPrice.Auction_WrongState.selector, _lotId
         );
         vm.expectRevert(err);
 
@@ -156,7 +156,7 @@ contract EmpaModuleClaimProceedsTest is EmpaModuleTest {
         givenPrivateKeyIsSubmitted
     {
         bytes memory err = abi.encodeWithSelector(
-            EncryptedMarginalPriceAuctionModule.Auction_WrongState.selector, _lotId
+            EncryptedMarginalPrice.Auction_WrongState.selector, _lotId
         );
         vm.expectRevert(err);
 
@@ -167,7 +167,7 @@ contract EmpaModuleClaimProceedsTest is EmpaModuleTest {
 
     function test_givenLotCancelled_reverts() external givenLotIsCreated givenLotIsCancelled {
         bytes memory err = abi.encodeWithSelector(
-            EncryptedMarginalPriceAuctionModule.Auction_WrongState.selector, _lotId
+            EncryptedMarginalPrice.Auction_WrongState.selector, _lotId
         );
         vm.expectRevert(err);
 
@@ -186,7 +186,7 @@ contract EmpaModuleClaimProceedsTest is EmpaModuleTest {
         givenLotProceedsAreClaimed
     {
         bytes memory err = abi.encodeWithSelector(
-            EncryptedMarginalPriceAuctionModule.Auction_WrongState.selector, _lotId
+            EncryptedMarginalPrice.Auction_WrongState.selector, _lotId
         );
         vm.expectRevert(err);
 

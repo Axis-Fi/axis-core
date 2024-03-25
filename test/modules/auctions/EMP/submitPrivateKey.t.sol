@@ -2,11 +2,11 @@
 pragma solidity 0.8.19;
 
 import {Auction} from "src/modules/Auction.sol";
-import {EncryptedMarginalPriceAuctionModule} from "src/modules/auctions/EMPAM.sol";
+import {EncryptedMarginalPrice} from "src/modules/auctions/EMP.sol";
 
-import {EmpaModuleTest} from "test/modules/auctions/EMPA/EMPAModuleTest.sol";
+import {EmpModuleTest} from "test/modules/auctions/EMP/EMPModuleTest.sol";
 
-contract EmpaModuleSubmitPrivateKeyTest is EmpaModuleTest {
+contract EmpaModuleSubmitPrivateKeyTest is EmpModuleTest {
     // [X] when the lot id is invalid
     //  [X] it reverts
     // [X] when the lot is active
@@ -38,7 +38,7 @@ contract EmpaModuleSubmitPrivateKeyTest is EmpaModuleTest {
     function test_lotIsActive_reverts() external givenLotIsCreated givenLotHasStarted {
         // Expect revert
         bytes memory err = abi.encodeWithSelector(
-            EncryptedMarginalPriceAuctionModule.Auction_WrongState.selector, _lotId
+            EncryptedMarginalPrice.Auction_WrongState.selector, _lotId
         );
         vm.expectRevert(err);
 
@@ -75,7 +75,7 @@ contract EmpaModuleSubmitPrivateKeyTest is EmpaModuleTest {
     {
         // Expect revert
         bytes memory err = abi.encodeWithSelector(
-            EncryptedMarginalPriceAuctionModule.Auction_WrongState.selector, _lotId
+            EncryptedMarginalPrice.Auction_WrongState.selector, _lotId
         );
         vm.expectRevert(err);
 
@@ -91,7 +91,7 @@ contract EmpaModuleSubmitPrivateKeyTest is EmpaModuleTest {
     {
         // Expect revert
         bytes memory err =
-            abi.encodeWithSelector(EncryptedMarginalPriceAuctionModule.Auction_InvalidKey.selector);
+            abi.encodeWithSelector(EncryptedMarginalPrice.Auction_InvalidKey.selector);
         vm.expectRevert(err);
 
         // Call the function
@@ -111,14 +111,14 @@ contract EmpaModuleSubmitPrivateKeyTest is EmpaModuleTest {
         _module.submitPrivateKey(_lotId, _AUCTION_PRIVATE_KEY, 0);
 
         // Assert the private key is set
-        EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
+        EncryptedMarginalPrice.AuctionData memory auctionData = _getAuctionData(_lotId);
         assertEq(auctionData.privateKey, _AUCTION_PRIVATE_KEY);
 
         // Assert that the bids are not decrypted
-        EncryptedMarginalPriceAuctionModule.Bid memory bidData = _getBid(_lotId, 1);
+        EncryptedMarginalPrice.Bid memory bidData = _getBid(_lotId, 1);
         assertEq(
             uint8(bidData.status),
-            uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Submitted),
+            uint8(EncryptedMarginalPrice.BidStatus.Submitted),
             "bid status"
         );
     }
@@ -134,14 +134,14 @@ contract EmpaModuleSubmitPrivateKeyTest is EmpaModuleTest {
         _module.submitPrivateKey(_lotId, _AUCTION_PRIVATE_KEY, 0);
 
         // Assert the private key is set
-        EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
+        EncryptedMarginalPrice.AuctionData memory auctionData = _getAuctionData(_lotId);
         assertEq(auctionData.privateKey, _AUCTION_PRIVATE_KEY);
 
         // Assert that the bids are not decrypted
-        EncryptedMarginalPriceAuctionModule.Bid memory bidData = _getBid(_lotId, 1);
+        EncryptedMarginalPrice.Bid memory bidData = _getBid(_lotId, 1);
         assertEq(
             uint8(bidData.status),
-            uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Submitted),
+            uint8(EncryptedMarginalPrice.BidStatus.Submitted),
             "bid status"
         );
     }
@@ -158,14 +158,14 @@ contract EmpaModuleSubmitPrivateKeyTest is EmpaModuleTest {
         _module.submitPrivateKey(_lotId, _AUCTION_PRIVATE_KEY, 1);
 
         // Assert the private key is set
-        EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
+        EncryptedMarginalPrice.AuctionData memory auctionData = _getAuctionData(_lotId);
         assertEq(auctionData.privateKey, _AUCTION_PRIVATE_KEY);
 
         // Assert that the bids are not decrypted
-        EncryptedMarginalPriceAuctionModule.Bid memory bidData = _getBid(_lotId, 1);
+        EncryptedMarginalPrice.Bid memory bidData = _getBid(_lotId, 1);
         assertEq(
             uint8(bidData.status),
-            uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Decrypted),
+            uint8(EncryptedMarginalPrice.BidStatus.Decrypted),
             "bid status"
         );
     }

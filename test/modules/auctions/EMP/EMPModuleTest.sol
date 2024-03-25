@@ -12,9 +12,9 @@ import {Permit2User} from "test/lib/permit2/Permit2User.sol";
 // Modules
 import {AuctionHouse} from "src/AuctionHouse.sol";
 import {Auction} from "src/modules/Auction.sol";
-import {EncryptedMarginalPriceAuctionModule} from "src/modules/auctions/EMPAM.sol";
+import {EncryptedMarginalPrice} from "src/modules/auctions/EMP.sol";
 
-abstract contract EmpaModuleTest is Test, Permit2User {
+abstract contract EmpModuleTest is Test, Permit2User {
     uint96 internal constant _BASE_SCALE = 1e18;
 
     address internal constant _PROTOCOL = address(0x2);
@@ -39,12 +39,12 @@ abstract contract EmpaModuleTest is Test, Permit2User {
     Point internal _bidPublicKey;
 
     AuctionHouse internal _auctionHouse;
-    EncryptedMarginalPriceAuctionModule internal _module;
+    EncryptedMarginalPrice internal _module;
 
     // Input parameters (modifier via modifiers)
     uint48 internal _start;
     Auction.AuctionParams internal _auctionParams;
-    EncryptedMarginalPriceAuctionModule.AuctionDataParams internal _auctionDataParams;
+    EncryptedMarginalPrice.AuctionDataParams internal _auctionDataParams;
     uint96 internal _lotId = type(uint96).max;
     uint64 internal _bidId = type(uint64).max;
     uint64[] internal _bidIds;
@@ -56,14 +56,14 @@ abstract contract EmpaModuleTest is Test, Permit2User {
         vm.warp(1_000_000);
 
         _auctionHouse = new AuctionHouse(address(this), _PROTOCOL, _permit2Address);
-        _module = new EncryptedMarginalPriceAuctionModule(address(_auctionHouse));
+        _module = new EncryptedMarginalPrice(address(_auctionHouse));
 
         _auctionPublicKey = ECIES.calcPubKey(Point(1, 2), _AUCTION_PRIVATE_KEY);
         _bidPublicKey = ECIES.calcPubKey(Point(1, 2), _BID_PRIVATE_KEY);
 
         _start = uint48(block.timestamp) + 1;
 
-        _auctionDataParams = EncryptedMarginalPriceAuctionModule.AuctionDataParams({
+        _auctionDataParams = EncryptedMarginalPrice.AuctionDataParams({
             minPrice: _MIN_PRICE,
             minFillPercent: _MIN_FILL_PERCENT,
             minBidPercent: _MIN_BID_PERCENT,
@@ -299,7 +299,7 @@ abstract contract EmpaModuleTest is Test, Permit2User {
     }
 
     function _decryptLot() internal {
-        EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
+        EncryptedMarginalPrice.AuctionData memory auctionData = _getAuctionData(_lotId);
         _module.decryptAndSortBids(_lotId, auctionData.nextBidId - 1);
     }
 
@@ -365,7 +365,7 @@ abstract contract EmpaModuleTest is Test, Permit2User {
     function _getAuctionData(uint96 lotId_)
         internal
         view
-        returns (EncryptedMarginalPriceAuctionModule.AuctionData memory)
+        returns (EncryptedMarginalPrice.AuctionData memory)
     {
         (
             uint64 nextBidId_,
@@ -380,7 +380,7 @@ abstract contract EmpaModuleTest is Test, Permit2User {
             uint256 privateKey_
         ) = _module.auctionData(lotId_);
 
-        return EncryptedMarginalPriceAuctionModule.AuctionData({
+        return EncryptedMarginalPrice.AuctionData({
             nextBidId: nextBidId_,
             marginalPrice: marginalPrice_,
             minPrice: minPrice_,
@@ -402,16 +402,16 @@ abstract contract EmpaModuleTest is Test, Permit2User {
     function _getBid(
         uint96 lotId_,
         uint64 bidId_
-    ) internal view returns (EncryptedMarginalPriceAuctionModule.Bid memory) {
+    ) internal view returns (EncryptedMarginalPrice.Bid memory) {
         (
             address bidder_,
             uint96 amount_,
             uint96 minAmountOut_,
             address referrer_,
-            EncryptedMarginalPriceAuctionModule.BidStatus status_
+            EncryptedMarginalPrice.BidStatus status_
         ) = _module.bids(lotId_, bidId_);
 
-        return EncryptedMarginalPriceAuctionModule.Bid({
+        return EncryptedMarginalPrice.Bid({
             bidder: bidder_,
             amount: amount_,
             minAmountOut: minAmountOut_,
@@ -423,11 +423,11 @@ abstract contract EmpaModuleTest is Test, Permit2User {
     function _getEncryptedBid(
         uint96 lotId_,
         uint64 bidId_
-    ) internal view returns (EncryptedMarginalPriceAuctionModule.EncryptedBid memory) {
+    ) internal view returns (EncryptedMarginalPrice.EncryptedBid memory) {
         (uint256 encryptedAmountOut_, Point memory publicKey_) =
             _module.encryptedBids(lotId_, bidId_);
 
-        return EncryptedMarginalPriceAuctionModule.EncryptedBid({
+        return EncryptedMarginalPrice.EncryptedBid({
             encryptedAmountOut: encryptedAmountOut_,
             bidPubKey: publicKey_
         });

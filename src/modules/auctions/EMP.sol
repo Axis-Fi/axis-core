@@ -10,7 +10,7 @@ import {FixedPointMathLib as Math} from "lib/solmate/src/utils/FixedPointMathLib
 import {ECIES, Point} from "src/lib/ECIES.sol";
 import {MaxPriorityQueue, Queue, Bid as QueueBid} from "src/lib/MaxPriorityQueue.sol";
 
-contract EncryptedMarginalPriceAuctionModule is AuctionModule {
+contract EncryptedMarginalPrice is AuctionModule {
     using MaxPriorityQueue for Queue;
 
     // ========== ERRORS ========== //
@@ -122,7 +122,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
     }
 
     function VEECODE() public pure override returns (Veecode) {
-        return toVeecode("01EMPAM");
+        return toVeecode("01EMPA");
     }
 
     function TYPE() public pure override returns (Type) {

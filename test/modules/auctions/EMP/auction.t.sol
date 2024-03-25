@@ -3,11 +3,11 @@ pragma solidity 0.8.19;
 
 import {Module} from "src/modules/Modules.sol";
 import {Auction} from "src/modules/Auction.sol";
-import {EncryptedMarginalPriceAuctionModule} from "src/modules/auctions/EMPAM.sol";
+import {EncryptedMarginalPrice} from "src/modules/auctions/EMP.sol";
 
-import {EmpaModuleTest} from "test/modules/auctions/EMPA/EMPAModuleTest.sol";
+import {EmpModuleTest} from "test/modules/auctions/EMP/EMPModuleTest.sol";
 
-contract EmpaModuleAuctionTest is EmpaModuleTest {
+contract EmpaModuleAuctionTest is EmpModuleTest {
     // [X] when the caller is not the parent
     //  [X] it reverts
     // [X] when the start time is in the past
@@ -142,7 +142,7 @@ contract EmpaModuleAuctionTest is EmpaModuleTest {
         assertEq(lotData.sold, 0, "sold");
         assertEq(lotData.purchased, 0, "purchased");
 
-        EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
+        EncryptedMarginalPrice.AuctionData memory auctionData = _getAuctionData(_lotId);
         assertEq(auctionData.nextBidId, 1, "nextBidId");
         assertEq(auctionData.marginalPrice, 0, "marginalPrice");
         assertEq(auctionData.minPrice, _scaleQuoteTokenAmount(_MIN_PRICE), "minPrice");
@@ -178,7 +178,7 @@ contract EmpaModuleAuctionTest is EmpaModuleTest {
         assertEq(lotData.sold, 0, "sold");
         assertEq(lotData.purchased, 0, "purchased");
 
-        EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
+        EncryptedMarginalPrice.AuctionData memory auctionData = _getAuctionData(_lotId);
         assertEq(auctionData.nextBidId, 1, "nextBidId");
         assertEq(auctionData.marginalPrice, 0, "marginalPrice");
         assertEq(auctionData.minPrice, _scaleQuoteTokenAmount(_MIN_PRICE), "minPrice");
@@ -214,7 +214,7 @@ contract EmpaModuleAuctionTest is EmpaModuleTest {
         assertEq(lotData.sold, 0, "sold");
         assertEq(lotData.purchased, 0, "purchased");
 
-        EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
+        EncryptedMarginalPrice.AuctionData memory auctionData = _getAuctionData(_lotId);
         assertEq(auctionData.nextBidId, 1, "nextBidId");
         assertEq(auctionData.marginalPrice, 0, "marginalPrice");
         assertEq(auctionData.minPrice, _scaleQuoteTokenAmount(_MIN_PRICE), "minPrice");

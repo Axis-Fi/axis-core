@@ -2,11 +2,11 @@
 pragma solidity 0.8.19;
 
 import {Auction} from "src/modules/Auction.sol";
-import {EncryptedMarginalPriceAuctionModule} from "src/modules/auctions/EMPAM.sol";
+import {EncryptedMarginalPrice} from "src/modules/auctions/EMP.sol";
 
-import {EmpaModuleTest} from "test/modules/auctions/EMPA/EMPAModuleTest.sol";
+import {EmpModuleTest} from "test/modules/auctions/EMP/EMPModuleTest.sol";
 
-contract EmpaModuleDecryptBidsTest is EmpaModuleTest {
+contract EmpaModuleDecryptBidsTest is EmpModuleTest {
     uint96 internal constant _BID_AMOUNT = 2e18;
     uint96 internal constant _BID_AMOUNT_OUT = 1e18;
 
@@ -70,7 +70,7 @@ contract EmpaModuleDecryptBidsTest is EmpaModuleTest {
 
     function test_lotHasNotConcluded_reverts() external givenLotIsCreated givenLotHasStarted {
         bytes memory err = abi.encodeWithSelector(
-            EncryptedMarginalPriceAuctionModule.Auction_WrongState.selector, _lotId
+            EncryptedMarginalPrice.Auction_WrongState.selector, _lotId
         );
         vm.expectRevert(err);
 
@@ -84,7 +84,7 @@ contract EmpaModuleDecryptBidsTest is EmpaModuleTest {
         givenLotHasConcluded
     {
         bytes memory err = abi.encodeWithSelector(
-            EncryptedMarginalPriceAuctionModule.Auction_WrongState.selector, _lotId
+            EncryptedMarginalPrice.Auction_WrongState.selector, _lotId
         );
         vm.expectRevert(err);
 
@@ -100,7 +100,7 @@ contract EmpaModuleDecryptBidsTest is EmpaModuleTest {
     {
         // Call the function
         bytes memory err = abi.encodeWithSelector(
-            EncryptedMarginalPriceAuctionModule.Auction_WrongState.selector, _lotId
+            EncryptedMarginalPrice.Auction_WrongState.selector, _lotId
         );
         vm.expectRevert(err);
 
@@ -117,7 +117,7 @@ contract EmpaModuleDecryptBidsTest is EmpaModuleTest {
     {
         // Call the function
         bytes memory err = abi.encodeWithSelector(
-            EncryptedMarginalPriceAuctionModule.Auction_WrongState.selector, _lotId
+            EncryptedMarginalPrice.Auction_WrongState.selector, _lotId
         );
         vm.expectRevert(err);
 
@@ -135,7 +135,7 @@ contract EmpaModuleDecryptBidsTest is EmpaModuleTest {
     {
         // Call the function
         bytes memory err = abi.encodeWithSelector(
-            EncryptedMarginalPriceAuctionModule.Auction_WrongState.selector, _lotId
+            EncryptedMarginalPrice.Auction_WrongState.selector, _lotId
         );
         vm.expectRevert(err);
 
@@ -169,11 +169,11 @@ contract EmpaModuleDecryptBidsTest is EmpaModuleTest {
         _module.decryptAndSortBids(_lotId, 1);
 
         // Check the bid state
-        EncryptedMarginalPriceAuctionModule.Bid memory bidData = _getBid(_lotId, _bidId);
+        EncryptedMarginalPrice.Bid memory bidData = _getBid(_lotId, _bidId);
         assertEq(bidData.minAmountOut, 0, "minAmountOut");
         assertEq(
             uint8(bidData.status),
-            uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Decrypted),
+            uint8(EncryptedMarginalPrice.BidStatus.Decrypted),
             "bid status"
         );
 
@@ -182,7 +182,7 @@ contract EmpaModuleDecryptBidsTest is EmpaModuleTest {
         assertEq(numBids, 0, "decryptedBids");
 
         // Check the auction state
-        EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
+        EncryptedMarginalPrice.AuctionData memory auctionData = _getAuctionData(_lotId);
         assertEq(auctionData.nextDecryptIndex, 1, "nextDecryptIndex");
         assertEq(uint8(auctionData.status), uint8(Auction.Status.Decrypted), "auction status");
     }
@@ -203,11 +203,11 @@ contract EmpaModuleDecryptBidsTest is EmpaModuleTest {
         _module.decryptAndSortBids(_lotId, 1);
 
         // Check the bid state
-        EncryptedMarginalPriceAuctionModule.Bid memory bidData = _getBid(_lotId, _bidId);
+        EncryptedMarginalPrice.Bid memory bidData = _getBid(_lotId, _bidId);
         assertEq(bidData.minAmountOut, 0, "minAmountOut");
         assertEq(
             uint8(bidData.status),
-            uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Decrypted),
+            uint8(EncryptedMarginalPrice.BidStatus.Decrypted),
             "bid status"
         );
 
@@ -216,7 +216,7 @@ contract EmpaModuleDecryptBidsTest is EmpaModuleTest {
         assertEq(numBids, 0, "decryptedBids");
 
         // Check the auction state
-        EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
+        EncryptedMarginalPrice.AuctionData memory auctionData = _getAuctionData(_lotId);
         assertEq(auctionData.nextDecryptIndex, 1, "nextDecryptIndex");
         assertEq(uint8(auctionData.status), uint8(Auction.Status.Decrypted), "auction status");
     }
@@ -233,11 +233,11 @@ contract EmpaModuleDecryptBidsTest is EmpaModuleTest {
         _module.decryptAndSortBids(_lotId, 1);
 
         // Check the bid state
-        EncryptedMarginalPriceAuctionModule.Bid memory bidData = _getBid(_lotId, _bidId);
+        EncryptedMarginalPrice.Bid memory bidData = _getBid(_lotId, _bidId);
         assertEq(bidData.minAmountOut, 0, "minAmountOut");
         assertEq(
             uint8(bidData.status),
-            uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Decrypted),
+            uint8(EncryptedMarginalPrice.BidStatus.Decrypted),
             "bid status"
         );
 
@@ -246,7 +246,7 @@ contract EmpaModuleDecryptBidsTest is EmpaModuleTest {
         assertEq(numBids, 0, "decryptedBids");
 
         // Check the auction state
-        EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
+        EncryptedMarginalPrice.AuctionData memory auctionData = _getAuctionData(_lotId);
         assertEq(auctionData.nextDecryptIndex, 1, "nextDecryptIndex");
         assertEq(uint8(auctionData.status), uint8(Auction.Status.Decrypted), "auction status");
     }
@@ -266,11 +266,11 @@ contract EmpaModuleDecryptBidsTest is EmpaModuleTest {
         _module.decryptAndSortBids(_lotId, 1);
 
         // Check the bid state
-        EncryptedMarginalPriceAuctionModule.Bid memory bidData = _getBid(_lotId, _bidId);
+        EncryptedMarginalPrice.Bid memory bidData = _getBid(_lotId, _bidId);
         assertEq(bidData.minAmountOut, type(uint96).max, "minAmountOut");
         assertEq(
             uint8(bidData.status),
-            uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Decrypted),
+            uint8(EncryptedMarginalPrice.BidStatus.Decrypted),
             "bid status"
         );
 
@@ -279,7 +279,7 @@ contract EmpaModuleDecryptBidsTest is EmpaModuleTest {
         assertEq(numBids, 1, "decryptedBids");
 
         // Check the auction state
-        EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
+        EncryptedMarginalPrice.AuctionData memory auctionData = _getAuctionData(_lotId);
         assertEq(auctionData.nextDecryptIndex, 1, "nextDecryptIndex");
         assertEq(uint8(auctionData.status), uint8(Auction.Status.Decrypted), "auction status");
     }
@@ -296,14 +296,14 @@ contract EmpaModuleDecryptBidsTest is EmpaModuleTest {
         _module.decryptAndSortBids(_lotId, 10);
 
         // Check the bid state
-        EncryptedMarginalPriceAuctionModule.Bid memory bidData = _getBid(_lotId, _bidId);
+        EncryptedMarginalPrice.Bid memory bidData = _getBid(_lotId, _bidId);
         assertEq(bidData.minAmountOut, _BID_AMOUNT_OUT);
         assertEq(
-            uint8(bidData.status), uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Decrypted)
+            uint8(bidData.status), uint8(EncryptedMarginalPrice.BidStatus.Decrypted)
         );
 
         // Check the auction state
-        EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
+        EncryptedMarginalPrice.AuctionData memory auctionData = _getAuctionData(_lotId);
         assertEq(auctionData.nextDecryptIndex, 1);
         assertEq(uint8(auctionData.status), uint8(Auction.Status.Decrypted));
     }
@@ -320,11 +320,11 @@ contract EmpaModuleDecryptBidsTest is EmpaModuleTest {
         _module.decryptAndSortBids(_lotId, 1);
 
         // Check the bid state
-        EncryptedMarginalPriceAuctionModule.Bid memory bidData = _getBid(_lotId, _bidId);
+        EncryptedMarginalPrice.Bid memory bidData = _getBid(_lotId, _bidId);
         assertEq(bidData.minAmountOut, 0, "minAmountOut");
         assertEq(
             uint8(bidData.status),
-            uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Decrypted),
+            uint8(EncryptedMarginalPrice.BidStatus.Decrypted),
             "bid status"
         );
 
@@ -333,7 +333,7 @@ contract EmpaModuleDecryptBidsTest is EmpaModuleTest {
         assertEq(numBids, 0, "decryptedBids");
 
         // Check the auction state
-        EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
+        EncryptedMarginalPrice.AuctionData memory auctionData = _getAuctionData(_lotId);
         assertEq(auctionData.nextDecryptIndex, 1, "nextDecryptIndex");
         assertEq(uint8(auctionData.status), uint8(Auction.Status.Decrypted), "auction status");
     }
@@ -355,11 +355,11 @@ contract EmpaModuleDecryptBidsTest is EmpaModuleTest {
         _module.decryptAndSortBids(_lotId, 1);
 
         // Check the bid state
-        EncryptedMarginalPriceAuctionModule.Bid memory bidData = _getBid(_lotId, _bidId);
+        EncryptedMarginalPrice.Bid memory bidData = _getBid(_lotId, _bidId);
         assertEq(bidData.minAmountOut, 0, "minAmountOut");
         assertEq(
             uint8(bidData.status),
-            uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Decrypted),
+            uint8(EncryptedMarginalPrice.BidStatus.Decrypted),
             "bid status"
         );
 
@@ -368,7 +368,7 @@ contract EmpaModuleDecryptBidsTest is EmpaModuleTest {
         assertEq(numBids, 0, "decryptedBids");
 
         // Check the auction state
-        EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
+        EncryptedMarginalPrice.AuctionData memory auctionData = _getAuctionData(_lotId);
         assertEq(auctionData.nextDecryptIndex, 1, "nextDecryptIndex");
         assertEq(uint8(auctionData.status), uint8(Auction.Status.Decrypted), "auction status");
     }
@@ -390,11 +390,11 @@ contract EmpaModuleDecryptBidsTest is EmpaModuleTest {
         _module.decryptAndSortBids(_lotId, 1);
 
         // Check the bid state
-        EncryptedMarginalPriceAuctionModule.Bid memory bidData = _getBid(_lotId, _bidId);
+        EncryptedMarginalPrice.Bid memory bidData = _getBid(_lotId, _bidId);
         assertEq(bidData.minAmountOut, 0, "minAmountOut");
         assertEq(
             uint8(bidData.status),
-            uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Decrypted),
+            uint8(EncryptedMarginalPrice.BidStatus.Decrypted),
             "bid status"
         );
 
@@ -403,7 +403,7 @@ contract EmpaModuleDecryptBidsTest is EmpaModuleTest {
         assertEq(numBids, 0, "decryptedBids");
 
         // Check the auction state
-        EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
+        EncryptedMarginalPrice.AuctionData memory auctionData = _getAuctionData(_lotId);
         assertEq(auctionData.nextDecryptIndex, 1, "nextDecryptIndex");
         assertEq(uint8(auctionData.status), uint8(Auction.Status.Decrypted), "auction status");
     }
@@ -417,7 +417,7 @@ contract EmpaModuleDecryptBidsTest is EmpaModuleTest {
         // No need to call decrypt, as the lot is already marked as decrypted by submitPrivateKey
 
         // Check the auction state
-        EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
+        EncryptedMarginalPrice.AuctionData memory auctionData = _getAuctionData(_lotId);
         assertEq(uint8(auctionData.status), uint8(Auction.Status.Decrypted), "auction status");
     }
 
@@ -434,24 +434,24 @@ contract EmpaModuleDecryptBidsTest is EmpaModuleTest {
         _module.decryptAndSortBids(_lotId, 1);
 
         // Check the bid state
-        EncryptedMarginalPriceAuctionModule.Bid memory bidDataOne = _getBid(_lotId, 1);
+        EncryptedMarginalPrice.Bid memory bidDataOne = _getBid(_lotId, 1);
         assertEq(bidDataOne.minAmountOut, _BID_AMOUNT_OUT, "bid one: minAmountOut");
         assertEq(
             uint8(bidDataOne.status),
-            uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Decrypted),
+            uint8(EncryptedMarginalPrice.BidStatus.Decrypted),
             "bid one: status"
         );
 
-        EncryptedMarginalPriceAuctionModule.Bid memory bidDataTwo = _getBid(_lotId, 2);
+        EncryptedMarginalPrice.Bid memory bidDataTwo = _getBid(_lotId, 2);
         assertEq(bidDataTwo.minAmountOut, 0, "bid two: minAmountOut");
         assertEq(
             uint8(bidDataTwo.status),
-            uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Submitted),
+            uint8(EncryptedMarginalPrice.BidStatus.Submitted),
             "bid two: status"
         );
 
         // Check the auction state
-        EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
+        EncryptedMarginalPrice.AuctionData memory auctionData = _getAuctionData(_lotId);
         assertEq(auctionData.nextDecryptIndex, 1, "nextDecryptIndex");
         assertEq(uint8(auctionData.status), uint8(Auction.Status.Created), "auction status");
     }
@@ -472,24 +472,24 @@ contract EmpaModuleDecryptBidsTest is EmpaModuleTest {
         _module.decryptAndSortBids(_lotId, 1);
 
         // Check the bid state
-        EncryptedMarginalPriceAuctionModule.Bid memory bidDataOne = _getBid(_lotId, 1);
+        EncryptedMarginalPrice.Bid memory bidDataOne = _getBid(_lotId, 1);
         assertEq(bidDataOne.minAmountOut, _BID_AMOUNT_OUT, "bid one: minAmountOut");
         assertEq(
             uint8(bidDataOne.status),
-            uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Decrypted),
+            uint8(EncryptedMarginalPrice.BidStatus.Decrypted),
             "bid one: status"
         );
 
-        EncryptedMarginalPriceAuctionModule.Bid memory bidDataTwo = _getBid(_lotId, 2);
+        EncryptedMarginalPrice.Bid memory bidDataTwo = _getBid(_lotId, 2);
         assertEq(bidDataTwo.minAmountOut, _BID_AMOUNT_OUT, "bid two: minAmountOut");
         assertEq(
             uint8(bidDataTwo.status),
-            uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Decrypted),
+            uint8(EncryptedMarginalPrice.BidStatus.Decrypted),
             "bid two: status"
         );
 
         // Check the auction state
-        EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
+        EncryptedMarginalPrice.AuctionData memory auctionData = _getAuctionData(_lotId);
         assertEq(auctionData.nextDecryptIndex, 2, "nextDecryptIndex");
         assertEq(uint8(auctionData.status), uint8(Auction.Status.Decrypted), "auction status");
     }

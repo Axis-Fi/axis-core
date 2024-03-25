@@ -3,9 +3,9 @@ pragma solidity 0.8.19;
 
 import {Auction} from "src/modules/Auction.sol";
 
-import {EmpaModuleTest} from "test/modules/auctions/EMPA/EMPAModuleTest.sol";
+import {EmpModuleTest} from "test/modules/auctions/EMP/EMPModuleTest.sol";
 
-contract EmpaModulePurchaseTest is EmpaModuleTest {
+contract EmpaModulePurchaseTest is EmpModuleTest {
     // [X] it reverts
 
     function test_reverts() public givenLotIsCreated givenLotHasStarted {

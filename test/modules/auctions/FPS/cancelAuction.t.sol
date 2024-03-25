@@ -3,11 +3,12 @@ pragma solidity 0.8.19;
 
 import {Module} from "src/modules/Modules.sol";
 import {Auction} from "src/modules/Auction.sol";
-import {EncryptedMarginalPriceAuctionModule} from "src/modules/auctions/EMPAM.sol";
+import {FixedPriceSale} from "src/modules/auctions/FPS.sol";
+import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 
-import {EmpaModuleTest} from "test/modules/auctions/EMPA/EMPAModuleTest.sol";
+import {FpsModuleTest} from "test/modules/auctions/FPS/FPSModuleTest.sol";
 
-contract EmpaModuleCancelAuctionTest is EmpaModuleTest {
+contract FpsModuleCancelAuctionTest is FpsModuleTest {
     // [X] when the caller is not the parent
     //  [X] it reverts
     // [X] when the lot id is invalid
@@ -56,18 +57,7 @@ contract EmpaModuleCancelAuctionTest is EmpaModuleTest {
         _cancelAuctionLot();
     }
 
-    function test_auctionStarted_reverts() public givenLotIsCreated givenLotHasStarted {
-        // Expect revert
-        bytes memory err = abi.encodeWithSelector(
-            EncryptedMarginalPriceAuctionModule.Auction_WrongState.selector, _lotId
-        );
-        vm.expectRevert(err);
-
-        // Call the function
-        _cancelAuctionLot();
-    }
-
-    function test_success() public givenLotIsCreated {
+    function test_afterStart() public givenLotIsCreated givenLotHasStarted {
         // Call the function
         _cancelAuctionLot();
 
@@ -75,8 +65,15 @@ contract EmpaModuleCancelAuctionTest is EmpaModuleTest {
         Auction.Lot memory lotData = _getAuctionLot(_lotId);
         assertEq(lotData.conclusion, uint48(block.timestamp));
         assertEq(lotData.capacity, 0);
+    }
 
-        EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
-        assertEq(uint8(auctionData.status), uint8(Auction.Status.Claimed));
+    function test_beforeStart() public givenLotIsCreated {
+        // Call the function
+        _cancelAuctionLot();
+
+        // Check the state
+        Auction.Lot memory lotData = _getAuctionLot(_lotId);
+        assertEq(lotData.conclusion, uint48(block.timestamp));
+        assertEq(lotData.capacity, 0);
     }
 }

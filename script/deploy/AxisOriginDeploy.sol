@@ -7,13 +7,13 @@ import {Script, console2} from "lib/forge-std/src/Script.sol";
 // System contracts
 import {BlastAuctionHouse} from "src/blast/BlastAuctionHouse.sol";
 import {Catalogue} from "src/Catalogue.sol";
-import {BlastEMPAM} from "src/blast/modules/auctions/BlastEMPAM.sol";
+import {BlastEMP} from "src/blast/modules/auctions/BlastEMP.sol";
 import {BlastLinearVesting} from "src/blast/modules/derivatives/BlastLinearVesting.sol";
 
 contract AxisOriginDeploy is Script {
     BlastAuctionHouse public auctionHouse;
     Catalogue public catalogue;
-    BlastEMPAM public empam;
+    BlastEMP public emp;
     BlastLinearVesting public linearVesting;
     address public constant PERMIT2 = 0x000000000022D473030F116dDEE9F6B43aC78BA3;
 
@@ -44,11 +44,11 @@ contract AxisOriginDeploy is Script {
         catalogue = new Catalogue(address(auctionHouse));
         console2.log("Catalogue deployed at: ", address(catalogue));
 
-        empam = new BlastEMPAM(address(auctionHouse));
-        console2.log("BlastEMPAM deployed at: ", address(empam));
+        emp = new BlastEMP(address(auctionHouse));
+        console2.log("BlastEMP deployed at: ", address(emp));
 
-        auctionHouse.installModule(empam);
-        console2.log("BlastEMPAM installed at AuctionHouse");
+        auctionHouse.installModule(emp);
+        console2.log("BlastEMP installed at AuctionHouse");
 
         linearVesting = new BlastLinearVesting(address(auctionHouse));
         console2.log("BlastLinearVesting deployed at: ", address(linearVesting));

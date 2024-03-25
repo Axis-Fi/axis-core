@@ -11,9 +11,9 @@ import {Permit2User} from "test/lib/permit2/Permit2User.sol";
 // Modules
 import {AuctionHouse} from "src/AuctionHouse.sol";
 import {Auction} from "src/modules/Auction.sol";
-import {FixedPriceAuctionModule} from "src/modules/auctions/FPAM.sol";
+import {FixedPriceSale} from "src/modules/auctions/FPS.sol";
 
-abstract contract FpaModuleTest is Test, Permit2User {
+abstract contract FpsModuleTest is Test, Permit2User {
     uint96 internal constant _BASE_SCALE = 1e18;
 
     address internal constant _PROTOCOL = address(0x2);
@@ -26,13 +26,13 @@ abstract contract FpaModuleTest is Test, Permit2User {
     uint96 internal constant _PRICE = 2e18;
 
     AuctionHouse internal _auctionHouse;
-    FixedPriceAuctionModule internal _module;
+    FixedPriceSale internal _module;
 
     // Input parameters (modified by modifiers)
     uint48 internal _start;
     uint96 internal _lotId = type(uint96).max;
     Auction.AuctionParams internal _auctionParams;
-    FixedPriceAuctionModule.FixedPriceParams internal _fpaParams;
+    FixedPriceSale.FixedPriceParams internal _fpaParams;
 
     uint8 internal _quoteTokenDecimals = 18;
     uint8 internal _baseTokenDecimals = 18;
@@ -41,11 +41,11 @@ abstract contract FpaModuleTest is Test, Permit2User {
         vm.warp(1_000_000);
 
         _auctionHouse = new AuctionHouse(address(this), _PROTOCOL, _permit2Address);
-        _module = new FixedPriceAuctionModule(address(_auctionHouse));
+        _module = new FixedPriceSale(address(_auctionHouse));
 
         _start = uint48(block.timestamp) + 1;
 
-        _fpaParams = FixedPriceAuctionModule.FixedPriceParams({
+        _fpaParams = FixedPriceSale.FixedPriceParams({
             price: _PRICE,
             maxPayoutPercent: _MAX_PAYOUT_PERCENT
         });
@@ -202,10 +202,10 @@ abstract contract FpaModuleTest is Test, Permit2User {
     function _getAuctionData(uint96 lotId_)
         internal
         view
-        returns (FixedPriceAuctionModule.AuctionData memory)
+        returns (FixedPriceSale.AuctionData memory)
     {
         (uint96 price_, uint96 maxPayout_) = _module.auctionData(lotId_);
 
-        return FixedPriceAuctionModule.AuctionData({price: price_, maxPayout: maxPayout_});
+        return FixedPriceSale.AuctionData({price: price_, maxPayout: maxPayout_});
     }
 }

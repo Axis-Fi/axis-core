@@ -3,12 +3,12 @@ pragma solidity 0.8.19;
 
 import {Module} from "src/modules/Modules.sol";
 import {Auction} from "src/modules/Auction.sol";
-import {EncryptedMarginalPriceAuctionModule} from "src/modules/auctions/EMPAM.sol";
+import {EncryptedMarginalPrice} from "src/modules/auctions/EMP.sol";
 import {Point} from "src/lib/ECIES.sol";
 
-import {EmpaModuleTest} from "test/modules/auctions/EMPA/EMPAModuleTest.sol";
+import {EmpModuleTest} from "test/modules/auctions/EMP/EMPModuleTest.sol";
 
-contract EmpaModuleBidTest is EmpaModuleTest {
+contract EmpaModuleBidTest is EmpModuleTest {
     uint96 internal constant _BID_AMOUNT = 2e18;
     uint96 internal constant _BID_AMOUNT_OUT = 1e18;
     uint96 internal constant _BID_AMOUNT_BELOW_MIN = 1e16;
@@ -220,7 +220,7 @@ contract EmpaModuleBidTest is EmpaModuleTest {
 
         // Expect revert
         bytes memory err =
-            abi.encodeWithSelector(EncryptedMarginalPriceAuctionModule.Auction_InvalidKey.selector);
+            abi.encodeWithSelector(EncryptedMarginalPrice.Auction_InvalidKey.selector);
         vm.expectRevert(err);
 
         // Call the function
@@ -235,24 +235,24 @@ contract EmpaModuleBidTest is EmpaModuleTest {
         uint64 bidId = _createBid(_BID_AMOUNT, _BID_AMOUNT_OUT);
 
         // Assert the state
-        EncryptedMarginalPriceAuctionModule.Bid memory bidData = _getBid(_lotId, bidId);
+        EncryptedMarginalPrice.Bid memory bidData = _getBid(_lotId, bidId);
         assertEq(bidData.bidder, _BIDDER, "bidder");
         assertEq(bidData.amount, _BID_AMOUNT, "amount");
         assertEq(bidData.minAmountOut, 0, "amountOut");
         assertEq(bidData.referrer, _REFERRER, "referrer");
         assertEq(
             uint8(bidData.status),
-            uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Submitted),
+            uint8(EncryptedMarginalPrice.BidStatus.Submitted),
             "status"
         );
 
-        EncryptedMarginalPriceAuctionModule.EncryptedBid memory encryptedBidData =
+        EncryptedMarginalPrice.EncryptedBid memory encryptedBidData =
             _getEncryptedBid(_lotId, bidId);
         assertEq(encryptedBidData.encryptedAmountOut, encryptedAmountOut, "encryptedAmountOut");
         assertEq(encryptedBidData.bidPubKey.x, _bidPublicKey.x, "bidPubKey.x");
         assertEq(encryptedBidData.bidPubKey.y, _bidPublicKey.y, "bidPubKey.y");
 
-        EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
+        EncryptedMarginalPrice.AuctionData memory auctionData = _getAuctionData(_lotId);
         assertEq(auctionData.nextBidId, 2, "nextBidId");
     }
 }

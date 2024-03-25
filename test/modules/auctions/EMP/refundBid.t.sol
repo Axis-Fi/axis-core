@@ -3,11 +3,11 @@ pragma solidity 0.8.19;
 
 import {Module} from "src/modules/Modules.sol";
 import {Auction} from "src/modules/Auction.sol";
-import {EncryptedMarginalPriceAuctionModule} from "src/modules/auctions/EMPAM.sol";
+import {EncryptedMarginalPrice} from "src/modules/auctions/EMP.sol";
 
-import {EmpaModuleTest} from "test/modules/auctions/EMPA/EMPAModuleTest.sol";
+import {EmpModuleTest} from "test/modules/auctions/EMP/EMPModuleTest.sol";
 
-contract EmpaModuleRefundBidTest is EmpaModuleTest {
+contract EmpaModuleRefundBidTest is EmpModuleTest {
     // [X] when the lot id is invalid
     //  [X] it reverts
     // [X] when the bid id is invalid
@@ -60,7 +60,7 @@ contract EmpaModuleRefundBidTest is EmpaModuleTest {
     {
         // Expect revert
         bytes memory err = abi.encodeWithSelector(
-            EncryptedMarginalPriceAuctionModule.NotPermitted.selector, address(this)
+            EncryptedMarginalPrice.NotPermitted.selector, address(this)
         );
         vm.expectRevert(err);
 
@@ -78,7 +78,7 @@ contract EmpaModuleRefundBidTest is EmpaModuleTest {
     {
         // Expect revert
         bytes memory err = abi.encodeWithSelector(
-            EncryptedMarginalPriceAuctionModule.Bid_WrongState.selector, _lotId, _bidId
+            EncryptedMarginalPrice.Bid_WrongState.selector, _lotId, _bidId
         );
         vm.expectRevert(err);
 
@@ -196,10 +196,10 @@ contract EmpaModuleRefundBidTest is EmpaModuleTest {
         uint256 refundAmount = _module.refundBid(_lotId, _bidId, _BIDDER);
 
         // Assert the bid status
-        EncryptedMarginalPriceAuctionModule.Bid memory bidData = _getBid(_lotId, _bidId);
+        EncryptedMarginalPrice.Bid memory bidData = _getBid(_lotId, _bidId);
         assertEq(
             uint8(bidData.status),
-            uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed),
+            uint8(EncryptedMarginalPrice.BidStatus.Claimed),
             "bid status"
         );
 

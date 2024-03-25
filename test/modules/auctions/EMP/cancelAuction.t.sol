@@ -3,12 +3,11 @@ pragma solidity 0.8.19;
 
 import {Module} from "src/modules/Modules.sol";
 import {Auction} from "src/modules/Auction.sol";
-import {FixedPriceAuctionModule} from "src/modules/auctions/FPAM.sol";
-import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
+import {EncryptedMarginalPrice} from "src/modules/auctions/EMP.sol";
 
-import {FpaModuleTest} from "test/modules/auctions/FPA/FPAModuleTest.sol";
+import {EmpModuleTest} from "test/modules/auctions/EMP/EMPModuleTest.sol";
 
-contract FpaModuleCancelAuctionTest is FpaModuleTest {
+contract EmpaModuleCancelAuctionTest is EmpModuleTest {
     // [X] when the caller is not the parent
     //  [X] it reverts
     // [X] when the lot id is invalid
@@ -57,17 +56,18 @@ contract FpaModuleCancelAuctionTest is FpaModuleTest {
         _cancelAuctionLot();
     }
 
-    function test_afterStart() public givenLotIsCreated givenLotHasStarted {
+    function test_auctionStarted_reverts() public givenLotIsCreated givenLotHasStarted {
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(
+            EncryptedMarginalPrice.Auction_WrongState.selector, _lotId
+        );
+        vm.expectRevert(err);
+
         // Call the function
         _cancelAuctionLot();
-
-        // Check the state
-        Auction.Lot memory lotData = _getAuctionLot(_lotId);
-        assertEq(lotData.conclusion, uint48(block.timestamp));
-        assertEq(lotData.capacity, 0);
     }
 
-    function test_beforeStart() public givenLotIsCreated {
+    function test_success() public givenLotIsCreated {
         // Call the function
         _cancelAuctionLot();
 
@@ -75,5 +75,8 @@ contract FpaModuleCancelAuctionTest is FpaModuleTest {
         Auction.Lot memory lotData = _getAuctionLot(_lotId);
         assertEq(lotData.conclusion, uint48(block.timestamp));
         assertEq(lotData.capacity, 0);
+
+        EncryptedMarginalPrice.AuctionData memory auctionData = _getAuctionData(_lotId);
+        assertEq(uint8(auctionData.status), uint8(Auction.Status.Claimed));
     }
 }

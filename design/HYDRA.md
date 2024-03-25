@@ -1,11 +1,11 @@
 # HYDRA: Hybrid Decentralized Auctions
 
-HYDRA (name TBD) is a hybrid on-chain/off-chain, sealed bid batch auction system built on the Axis Protocol that uses a variety of "web3" technology to achieve a strong balance between user experience, security, efficiency, and decentralization. The purpose of the system is to allow any seller to create sealed bid batch auctions for any ERC20 token pair. Buyers place bids off-chain on a decentralized UI where they are encrypted using a decentralized key management protocol and stored in a decentralized database. When the auction ends, a web3 function is executed to settle the auction. The settlement is verified with a validity proof on the auction contract, and the provenance of the bid data is ensured by protocol ownership of the execution function. The experience is gasless for buyers. Sellers post a transaction to the network when creating an auction, but do not have to execute additional transactions to settle the auction. A fee is taken from the auction proceeds and used is to compensate the settlement executor.
+HYDRA (name TBD) is a hybrid on-chain/off-chain, sealed-bid batch auction system built on the Axis Protocol that uses a variety of "web3" technology to achieve a strong balance between user experience, security, efficiency, and decentralization. The purpose of the system is to allow any seller to create sealed-bid batch auctions for any ERC20 token pair. Buyers place bids off-chain on a decentralized UI where they are encrypted using a decentralized key management protocol and stored in a decentralized database. When the auction ends, a web3 function is executed to settle the auction. The settlement is verified with a validity proof on the auction contract, and the provenance of the bid data is ensured by protocol ownership of the execution function. The experience is gasless for buyers. Sellers post a transaction to the network when creating an auction, but do not have to execute additional transactions to settle the auction. A fee is taken from the auction proceeds and used is to compensate the settlement executor.
 
 ## User Features
 
 ### Sellers
-- Permissionlessly create sealed bid batch auctions, which improve execution over open bid auctions
+- Permissionlessly create sealed-bid batch auctions, which improve execution over open bid auctions
 - Auctions can be created for any ERC20 token pair
 - Two transactions to create auction: 1. approve base token (if not already), 2. create auction
 - Settlement handled by protocol in a transparent and verifiable way

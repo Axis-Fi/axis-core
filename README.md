@@ -27,8 +27,8 @@ Atomicity is a term used to describe a property of most databases (and subsequen
 Batch Auctions refer to the more familiar auction format of collecting bids from participants over a set duration and then settling the auction at the end based on the best received bids. “Batch” refers to the notion that proceeds are received and auction units distributed in a batch, rather than individually.
 
 Two auctions are initially implemented:
-- Encrypted Marginal Price Auction (see ./design/EMPA.md for spec), a sealed-bid batch auction
-- Fixed Price Auction, simple atomic auction to sell tokens at a fixed price. The CappedMerkleAllowlist callback implementation provides a way to do allowlisted, capped sales at a fixed price for a token. 
+- Encrypted Marginal Price (see ./design/EMP.md for spec), a sealed-bid batch auction
+- Fixed Price Sale, simple atomic auction to sell tokens at a fixed price. The CappedMerkleAllowlist callback implementation provides a way to do allowlisted, capped sales at a fixed price for a token. 
 
 
 ## Developer Guide
