@@ -283,13 +283,12 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
         bool prefund_,
         bytes calldata
     ) internal override onlyIfLotExists(lotId_) {
+        // Update the funding
+        DTLConfiguration storage config = lotConfiguration[lotId_];
+        config.lotCuratorPayout = curatorPayout_;
+
         // If prefunded, then the callback needs to transfer the curatorPayout_ in base tokens to the auction house
         if (prefund_) {
-            DTLConfiguration storage config = lotConfiguration[lotId_];
-
-            // Update the funding
-            config.lotCuratorPayout = curatorPayout_;
-
             ERC20(config.baseToken).safeTransferFrom(seller, auctionHouse, curatorPayout_);
         }
     }
