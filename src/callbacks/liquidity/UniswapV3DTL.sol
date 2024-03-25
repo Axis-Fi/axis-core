@@ -6,7 +6,7 @@ import {ERC20} from "solmate/tokens/ERC20.sol";
 import {SqrtPriceMath} from "src/lib/uniswap-v3/SqrtPriceMath.sol";
 
 // Uniswap
-import {INonfungiblePositionManager} from "src/lib/uniswap-v3/INonfungiblePositionManager.sol";
+import {IUniswapV3Pool} from "uniswap-v3-core/interfaces/IUniswapV3Pool.sol";
 import {IUniswapV3Factory} from "uniswap-v3-core/interfaces/IUniswapV3Factory.sol";
 import {TickMath} from "uniswap-v3-core/libraries/TickMath.sol";
 
@@ -75,8 +75,6 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
         uint48 vestingExpiry;
     }
 
-    // TODO implement deposit/withdrawal of base tokens to better handle tracking balances
-
     // ========== STATE VARIABLES ========== //
 
     uint24 public constant MAX_PERCENT = 1e5;
@@ -86,9 +84,9 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
     /// @notice     Maps the lot id to the DTL configuration
     mapping(uint96 lotId => DTLConfiguration) public lotConfiguration;
 
-    /// @notice     The Uniswap V3 NonfungiblePositionManager contract
+    /// @notice     The Uniswap V3 Factory contract
     /// @dev        This contract is used to create Uniswap V3 pools
-    INonfungiblePositionManager public uniswapV3NonfungiblePositionManager;
+    IUniswapV3Factory public uniV3Factory;
 
     /// @notice     The G-UNI Factory contract
     /// @dev        This contract is used to create the ERC20 LP tokens
@@ -98,7 +96,7 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
         address auctionHouse_,
         Callbacks.Permissions memory permissions_,
         address seller_,
-        address uniswapV3NonfungiblePositionManager_,
+        address uniV3Factory_,
         address gUniFactory_
     ) BaseCallback(auctionHouse_, permissions_, seller_) {
         // Checks that the required function permissions are set
@@ -109,11 +107,10 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
             revert Callback_InvalidParams();
         }
 
-        if (uniswapV3NonfungiblePositionManager_ == address(0)) {
+        if (uniV3Factory_ == address(0)) {
             revert Callback_InvalidParams();
         }
-        uniswapV3NonfungiblePositionManager =
-            INonfungiblePositionManager(uniswapV3NonfungiblePositionManager_);
+        uniV3Factory = IUniswapV3Factory(uniV3Factory_);
 
         if (gUniFactory_ == address(0)) {
             revert Callback_InvalidParams();
@@ -176,15 +173,13 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
             revert Callback_InvalidParams();
         }
 
-        IUniswapV3Factory factory = IUniswapV3Factory(uniswapV3NonfungiblePositionManager.factory());
-
         // Fee not enabled
-        if (factory.feeAmountTickSpacing(params.poolFee) == 0) {
+        if (uniV3Factory.feeAmountTickSpacing(params.poolFee) == 0) {
             revert Callback_InvalidParams();
         }
 
         // Check that the pool does not exist
-        if (factory.getPool(baseToken_, quoteToken_, params.poolFee) != address(0)) {
+        if (uniV3Factory.getPool(baseToken_, quoteToken_, params.poolFee) != address(0)) {
             revert Callback_InvalidParams();
         }
 
@@ -367,7 +362,7 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
             );
 
             // If the pool already exists and is initialized, it will have no effect
-            uniswapV3NonfungiblePositionManager.createAndInitializePoolIfNecessary(
+            _createAndInitializePoolIfNecessary(
                 quoteTokenIsToken0 ? config.quoteToken : config.baseToken,
                 quoteTokenIsToken0 ? config.baseToken : config.quoteToken,
                 config.poolFee,
@@ -531,5 +526,26 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
         uint48 expiry_
     ) internal pure returns (bytes memory) {
         return abi.encode(LinearVesting.VestingParams({start: start_, expiry: expiry_}));
+    }
+
+    /// @dev    Copied from UniswapV3's PoolInitializer (which is GPL >= 2)
+    function _createAndInitializePoolIfNecessary(
+        address token0,
+        address token1,
+        uint24 fee,
+        uint160 sqrtPriceX96
+    ) internal returns (address pool) {
+        require(token0 < token1);
+        pool = uniV3Factory.getPool(token0, token1, fee);
+
+        if (pool == address(0)) {
+            pool = uniV3Factory.createPool(token0, token1, fee);
+            IUniswapV3Pool(pool).initialize(sqrtPriceX96);
+        } else {
+            (uint160 sqrtPriceX96Existing,,,,,,) = IUniswapV3Pool(pool).slot0();
+            if (sqrtPriceX96Existing == 0) {
+                IUniswapV3Pool(pool).initialize(sqrtPriceX96);
+            }
+        }
     }
 }
