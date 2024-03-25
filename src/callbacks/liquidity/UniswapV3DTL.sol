@@ -17,6 +17,7 @@ import {GUniPool} from "g-uni-v1-core/GUniPool.sol";
 // Callbacks
 import {BaseCallback} from "src/callbacks/BaseCallback.sol";
 import {Callbacks} from "src/lib/Callbacks.sol";
+import {ICallback} from "src/interfaces/ICallback.sol";
 
 // AuctionHouse
 import {LinearVesting} from "src/modules/derivatives/LinearVesting.sol";
@@ -28,12 +29,10 @@ import {Keycode, wrapVeecode} from "src/modules/Modules.sol";
 ///             in order to create liquidity immediately.
 ///
 ///             The LP tokens can optionally vest to the auction seller.
+/// @dev        As a general rule, this callback contract does not retain balances of tokens between calls.
+///             Transfers are performed within the same function that requires the balance.
 contract UniswapV3DirectToLiquidity is BaseCallback {
     // ========== ERRORS ========== //
-
-    error Callback_InsufficientBalance(
-        address token_, uint256 amountRequired_, uint256 amountActual_
-    );
 
     error Callback_LinearVestingModuleNotFound();
 
@@ -102,10 +101,10 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
         address uniswapV3NonfungiblePositionManager_,
         address gUniFactory_
     ) BaseCallback(auctionHouse_, permissions_, seller_) {
-        // Ensure that the required permissions are met
+        // Checks that the required function permissions are set
         if (
             !permissions_.onCreate || !permissions_.onCancel || !permissions_.onCurate
-                || !permissions_.onClaimProceeds || !permissions_.receiveQuoteTokens
+                || !permissions_.onClaimProceeds
         ) {
             revert Callback_InvalidParams();
         }
@@ -129,6 +128,10 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
     ///             - Validates the input data
     ///             - Stores the configuration for the lot
     ///             - If prefunded: transfers the base token capacity to the AuctionHouse
+    ///
+    ///             The assumptions are:
+    ///             - `prefund_` is true: The seller address has the required balance of base tokens
+    ///             - `prefund_` is true: The seller has approved the AuctionHouse to spend the base tokens
     ///
     ///             This function reverts if:
     ///             - DTLParams.proceedsUtilisationPercent is out of bounds
@@ -219,10 +222,10 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
             active: true
         });
 
-        // If prefund_ is true, then the callback needs to transfer the capacity in base tokens to the auction house
+        // Handle funding
         if (prefund_) {
-            // TODO it would help with tracking balances if the base token was either deposited into the callback prior to creation, or if the callback could pull from the seller address
-            ERC20(baseToken_).transfer(auctionHouse, capacity_);
+            // Transfer from the seller to the AuctionHouse
+            ERC20(baseToken_).transferFrom(seller, auctionHouse, capacity_);
         }
     }
 
@@ -231,12 +234,15 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
     ///             - Marks the lot as inactive
     ///             - If prefunded: refunds the base tokens to the seller
     ///
+    ///             The assumptions are:
+    ///             - `prefund_` is true: The AuctionHouse has already transferred the base tokens to the callback
+    ///
     ///             This function reverts if:
     ///             - The lot is not registered
     function _onCancel(
         uint96 lotId_,
         uint96 refund_,
-        bool prefunded_,
+        bool prefund_,
         bytes calldata
     ) internal override onlyIfLotExists(lotId_) {
         // Mark the lot as inactive to prevent further actions
@@ -245,7 +251,7 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
 
         // If there is a prefund, refund the tokens to the seller
         // The AuctionHouse would have already sent the tokens prior to this call
-        if (prefunded_) {
+        if (prefund_) {
             ERC20(config.baseToken).transfer(seller, refund_);
         }
     }
@@ -253,6 +259,10 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
     /// @notice     Callback for when a lot is curated
     /// @dev        This function performs the following:
     ///             - If prefunded: transfers the curator payout to the AuctionHouse
+    ///
+    ///             The assumptions are:
+    ///             - `prefund_` is true: The seller address has the required balance of base tokens
+    ///             - `prefund_` is true: The seller has approved the AuctionHouse to spend the base tokens
     ///
     ///             This function reverts if:
     ///             - The lot is not registered
@@ -273,7 +283,7 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
             // Update the funding
             config.lotCuratorPayout = curatorPayout_;
 
-            ERC20(config.baseToken).transfer(auctionHouse, curatorPayout_);
+            ERC20(config.baseToken).transferFrom(seller, auctionHouse, curatorPayout_);
         }
     }
 
@@ -306,6 +316,12 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
     ///             - Deposits the tokens into the pool and mint the LP tokens
     ///             - If vesting is enabled, mints the vesting tokens
     ///             - Sends any remaining quote and base tokens to the seller
+    ///
+    ///             The assumptions are:
+    ///             - `receiveQuoteTokens` flag is set: the callback has `proceeds_` quantity of quote tokens
+    ///             - `sendBaseTokens` flag is set: the callback has `refund_` quantity of base tokens
+    ///             - `sendBaseTokens` flag is not set: the seller has the required balance of base tokens
+    ///             - `sendBaseTokens` flag is not set: the seller has approved the callback to spend the base tokens
     function _onClaimProceeds(
         uint96 lotId_,
         uint96 proceeds_,
@@ -314,8 +330,8 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
     ) internal virtual override onlyIfLotExists(lotId_) {
         DTLConfiguration memory config = lotConfiguration[lotId_];
 
-        uint96 baseTokensRequired;
-        uint96 quoteTokensRequired;
+        uint256 baseTokensRequired;
+        uint256 quoteTokensRequired;
         {
             // Calculate the actual lot capacity that was used
             uint96 capacityUtilised;
@@ -340,32 +356,24 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
                 _tokensRequiredForPool(proceeds_, config.proceedsUtilisationPercent);
         }
 
-        // Check that there is still enough capacity to create the pool
-        {
-            uint256 baseTokenBalance = ERC20(config.baseToken).balanceOf(address(this));
-            if (baseTokenBalance < baseTokensRequired) {
-                revert Callback_InsufficientBalance(
-                    config.baseToken, baseTokensRequired, baseTokenBalance
-                );
-            }
-        }
-
         // Determine the ordering of tokens
         bool quoteTokenIsToken0 = config.quoteToken < config.baseToken;
 
-        // Determine sqrtPriceX96
-        uint160 sqrtPriceX96 = SqrtPriceMath.getSqrtPriceX96(
-            config.quoteToken, config.baseToken, quoteTokensRequired, baseTokensRequired
-        );
+        // Create and initialize the pool if necessary
+        {
+            // Determine sqrtPriceX96
+            uint160 sqrtPriceX96 = SqrtPriceMath.getSqrtPriceX96(
+                config.quoteToken, config.baseToken, quoteTokensRequired, baseTokensRequired
+            );
 
-        // Create and initialize the pool
-        // If the pool already exists and is initialized, it will have no effect
-        uniswapV3NonfungiblePositionManager.createAndInitializePoolIfNecessary(
-            quoteTokenIsToken0 ? config.quoteToken : config.baseToken,
-            quoteTokenIsToken0 ? config.baseToken : config.quoteToken,
-            config.poolFee,
-            sqrtPriceX96
-        );
+            // If the pool already exists and is initialized, it will have no effect
+            uniswapV3NonfungiblePositionManager.createAndInitializePoolIfNecessary(
+                quoteTokenIsToken0 ? config.quoteToken : config.baseToken,
+                quoteTokenIsToken0 ? config.baseToken : config.quoteToken,
+                config.poolFee,
+                sqrtPriceX96
+            );
+        }
 
         // Deploy the pool token
         address poolTokenAddress;
@@ -389,13 +397,66 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
             ERC20(config.baseToken).approve(address(poolTokenAddress), baseTokensRequired);
 
             // Calculate the mint amount
-            (,, poolTokenQuantity) = poolToken.getMintAmounts(
+            uint256 amount0Required;
+            uint256 amount1Requied;
+            (amount0Required, amount1Requied, poolTokenQuantity) = poolToken.getMintAmounts(
                 quoteTokenIsToken0 ? quoteTokensRequired : baseTokensRequired,
                 quoteTokenIsToken0 ? baseTokensRequired : quoteTokensRequired
             );
 
+            // Update the tokens required based on actuals
+            quoteTokensRequired = quoteTokenIsToken0 ? amount0Required : amount1Requied;
+            baseTokensRequired = quoteTokenIsToken0 ? amount1Requied : amount0Required;
+        }
+
+        // Ensure the required tokens are present before minting
+        uint256 quoteTokenBalance;
+        uint256 baseTokenBalance;
+        {
+            // If receiveQuoteTokens is set, the quote tokens have been transferred to the callback
+            // Otherwise, pull from seller
+            if (
+                !Callbacks.hasPermission(
+                    ICallback(address(this)), Callbacks.RECEIVE_QUOTE_TOKENS_FLAG
+                )
+            ) {
+                ERC20(config.quoteToken).transferFrom(seller, address(this), quoteTokensRequired);
+                quoteTokenBalance += quoteTokensRequired;
+            } else {
+                quoteTokenBalance += proceeds_;
+            }
+
+            // If sendBaseTokens is not set, the callback needs to be funded by the seller
+            if (!Callbacks.hasPermission(ICallback(address(this)), Callbacks.SEND_BASE_TOKENS_FLAG))
+            {
+                ERC20(config.baseToken).transferFrom(seller, address(this), baseTokensRequired);
+                baseTokenBalance += baseTokensRequired;
+            }
+            // Otherwise the callback currently has `refund_` base tokens
+            else {
+                baseTokenBalance += refund_;
+
+                // Pull from the seller if the refund is not enough
+                if (refund_ < baseTokensRequired) {
+                    uint256 transferAmount = baseTokensRequired - refund_;
+
+                    ERC20(config.baseToken).transferFrom(seller, address(this), transferAmount);
+                    baseTokenBalance += transferAmount;
+                }
+            }
+        }
+
+        // Mint LP tokens
+        {
+            GUniPool poolToken = GUniPool(poolTokenAddress);
+
             // Mint the LP tokens
-            poolToken.mint(poolTokenQuantity, address(this));
+            (uint256 amount0Used, uint256 amount1Used,) =
+                poolToken.mint(poolTokenQuantity, address(this));
+
+            // Adjust running balance
+            quoteTokenBalance -= quoteTokenIsToken0 ? amount0Used : amount1Used;
+            baseTokenBalance -= quoteTokenIsToken0 ? amount1Used : amount0Used;
         }
 
         // If vesting is enabled, create the vesting tokens
@@ -409,27 +470,18 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
                 poolTokenAddress,
                 _getEncodedVestingParams(config.vestingStart, config.vestingExpiry),
                 poolTokenQuantity,
-                false // Wrap derivative tokens?
+                false // TODO Wrap derivative tokens?
             );
         }
 
-        // Send any remaining tokens to the seller
-        {
-            ERC20 quoteToken = ERC20(config.quoteToken);
-            ERC20 baseToken = ERC20(config.baseToken);
+        // Send any remaining quote tokens to the seller
+        if (quoteTokenBalance > 0) {
+            ERC20(config.quoteToken).transfer(seller, quoteTokenBalance);
+        }
 
-            uint256 quoteTokensToSend = proceeds_ - quoteTokensRequired;
-            // TODO need to double-check this under prefunding and non-prefunding scenarios
-            uint256 baseTokensToSend =
-                config.lotCapacity + config.lotCuratorPayout - refund_ - baseTokensRequired;
-
-            if (quoteTokensToSend > 0) {
-                quoteToken.transfer(seller, quoteTokensToSend);
-            }
-
-            if (baseTokensToSend > 0) {
-                baseToken.transfer(seller, baseTokensToSend);
-            }
+        // Send any remaining base tokens to the seller
+        if (baseTokenBalance > 0) {
+            ERC20(config.baseToken).transfer(seller, baseTokenBalance);
         }
     }
 
