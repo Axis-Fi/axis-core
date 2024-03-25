@@ -55,7 +55,7 @@ contract UniswapV3DirectToLiquidityOnCreateTest is UniswapV3DirectToLiquidityTes
     // ============ Assertions ============ //
 
     function _expectTransferFrom() internal {
-        vm.expectRevert("TRANSFER_FROM");
+        vm.expectRevert("TRANSFER_FROM_FAILED");
     }
 
     function _expectInvalidParams() internal {

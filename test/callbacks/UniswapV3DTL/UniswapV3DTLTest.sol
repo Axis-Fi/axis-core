@@ -223,18 +223,18 @@ abstract contract UniswapV3DirectToLiquidityTest is Test, Permit2User {
         bytes32 salt;
         if (_callbackPermissions.receiveQuoteTokens && _callbackPermissions.sendBaseTokens) {
             // E7
-            salt = bytes32(0xae7578a772c3d9a41fabde7f0695f70cb14079efc626469cdf956a92de29a62a);
+            salt = bytes32(0xbbd0d7c7133883d8e735b48012a39b258f4338e9eadb87565b6ac38d575c226b);
         } else if (!_callbackPermissions.receiveQuoteTokens && _callbackPermissions.sendBaseTokens)
         {
             // E5
-            salt = bytes32(0x2dc4ab0426d497181f25d74f052e99a492454b637f22661f7b54c5187c2ee87e);
+            salt = bytes32(0xc71aa076906182068c4ce2fa8d29085575e322c8fac556a26a42e1d95bea9890);
         } else if (_callbackPermissions.receiveQuoteTokens && !_callbackPermissions.sendBaseTokens)
         {
             // E6
-            salt = bytes32(0x9466d8990f8a9be91682c3268f71af9578d57c51dc9b3176b0c9a9611af83c7a);
+            salt = bytes32(0x30e50df555014d6b7c7f2012a077c818432c8c11001d6e5f39b63ce39e1a8419);
         } else {
             // E4
-            salt = bytes32(0xd5fedbc6f794e4201a10f0150c59dcec2aafdd39362f2a76009e6703a80e90a4);
+            salt = bytes32(0x85408c4c2e11266cb4cd15465b54b1d1df605f0011071423b644a79128c604c4);
         }
 
         // Required for CREATE2 address to work correctly. doesn't do anything in a test

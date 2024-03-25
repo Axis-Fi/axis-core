@@ -4,6 +4,7 @@ pragma solidity ^0.8.19;
 // Libraries
 import {ERC20} from "solmate/tokens/ERC20.sol";
 import {SqrtPriceMath} from "src/lib/uniswap-v3/SqrtPriceMath.sol";
+import {SafeTransferLib} from "solmate/utils/SafeTransferLib.sol";
 
 // Uniswap
 import {IUniswapV3Pool} from "uniswap-v3-core/interfaces/IUniswapV3Pool.sol";
@@ -32,6 +33,8 @@ import {Keycode, wrapVeecode} from "src/modules/Modules.sol";
 /// @dev        As a general rule, this callback contract does not retain balances of tokens between calls.
 ///             Transfers are performed within the same function that requires the balance.
 contract UniswapV3DirectToLiquidity is BaseCallback {
+    using SafeTransferLib for ERC20;
+
     // ========== ERRORS ========== //
 
     error Callback_Params_InsufficientPermissions();
@@ -229,7 +232,7 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
         // Handle funding
         if (prefund_) {
             // Transfer from the seller to the AuctionHouse
-            ERC20(baseToken_).transferFrom(seller, auctionHouse, capacity_);
+            ERC20(baseToken_).safeTransferFrom(seller, auctionHouse, capacity_);
         }
     }
 
@@ -256,7 +259,7 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
         // If there is a prefund, refund the tokens to the seller
         // The AuctionHouse would have already sent the tokens prior to this call
         if (prefund_) {
-            ERC20(config.baseToken).transfer(seller, refund_);
+            ERC20(config.baseToken).safeTransfer(seller, refund_);
         }
     }
 
@@ -287,7 +290,7 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
             // Update the funding
             config.lotCuratorPayout = curatorPayout_;
 
-            ERC20(config.baseToken).transferFrom(seller, auctionHouse, curatorPayout_);
+            ERC20(config.baseToken).safeTransferFrom(seller, auctionHouse, curatorPayout_);
         }
     }
 
@@ -424,7 +427,7 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
                     ICallback(address(this)), Callbacks.RECEIVE_QUOTE_TOKENS_FLAG
                 )
             ) {
-                ERC20(config.quoteToken).transferFrom(seller, address(this), quoteTokensRequired);
+                ERC20(config.quoteToken).safeTransferFrom(seller, address(this), quoteTokensRequired);
                 quoteTokenBalance += quoteTokensRequired;
             } else {
                 quoteTokenBalance += proceeds_;
@@ -433,7 +436,7 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
             // If sendBaseTokens is not set, the callback needs to be funded by the seller
             if (!Callbacks.hasPermission(ICallback(address(this)), Callbacks.SEND_BASE_TOKENS_FLAG))
             {
-                ERC20(config.baseToken).transferFrom(seller, address(this), baseTokensRequired);
+                ERC20(config.baseToken).safeTransferFrom(seller, address(this), baseTokensRequired);
                 baseTokenBalance += baseTokensRequired;
             }
             // Otherwise the callback currently has `refund_` base tokens
@@ -444,7 +447,7 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
                 if (refund_ < baseTokensRequired) {
                     uint256 transferAmount = baseTokensRequired - refund_;
 
-                    ERC20(config.baseToken).transferFrom(seller, address(this), transferAmount);
+                    ERC20(config.baseToken).safeTransferFrom(seller, address(this), transferAmount);
                     baseTokenBalance += transferAmount;
                 }
             }
@@ -479,17 +482,17 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
         }
         // Send the LP tokens to the seller
         else {
-            ERC20(poolTokenAddress).transfer(seller, poolTokenQuantity);
+            ERC20(poolTokenAddress).safeTransfer(seller, poolTokenQuantity);
         }
 
         // Send any remaining quote tokens to the seller
         if (quoteTokenBalance > 0) {
-            ERC20(config.quoteToken).transfer(seller, quoteTokenBalance);
+            ERC20(config.quoteToken).safeTransfer(seller, quoteTokenBalance);
         }
 
         // Send any remaining base tokens to the seller
         if (baseTokenBalance > 0) {
-            ERC20(config.baseToken).transfer(seller, baseTokenBalance);
+            ERC20(config.baseToken).safeTransfer(seller, baseTokenBalance);
         }
     }
 
