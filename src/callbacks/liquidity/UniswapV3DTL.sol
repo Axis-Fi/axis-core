@@ -34,6 +34,18 @@ import {Keycode, wrapVeecode} from "src/modules/Modules.sol";
 contract UniswapV3DirectToLiquidity is BaseCallback {
     // ========== ERRORS ========== //
 
+    error Callback_Params_InsufficientPermissions();
+
+    error Callback_Params_InvalidAddress();
+
+    error Callback_Params_UtilisationPercentOutOfBounds(uint24 actual_, uint24 min_, uint24 max_);
+
+    error Callback_Params_PoolFeeNotEnabled();
+
+    error Callback_Params_PoolExists();
+
+    error Callback_Params_InvalidVestingParams();
+
     error Callback_LinearVestingModuleNotFound();
 
     // ========== STRUCTS ========== //
@@ -77,6 +89,7 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
 
     // ========== STATE VARIABLES ========== //
 
+    uint8 internal constant DTL_PARAMS_LENGTH = 128;
     uint24 public constant MAX_PERCENT = 1e5;
     uint24 public constant MAX_POOL_FEE = 1e6;
     bytes5 public constant LINEAR_VESTING_KEYCODE = 0x4c564b0000; // "LIV"
@@ -104,16 +117,16 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
             !permissions_.onCreate || !permissions_.onCancel || !permissions_.onCurate
                 || !permissions_.onClaimProceeds
         ) {
-            revert Callback_InvalidParams();
+            revert Callback_Params_InsufficientPermissions();
         }
 
         if (uniV3Factory_ == address(0)) {
-            revert Callback_InvalidParams();
+            revert Callback_Params_InvalidAddress();
         }
         uniV3Factory = IUniswapV3Factory(uniV3Factory_);
 
         if (gUniFactory_ == address(0)) {
-            revert Callback_InvalidParams();
+            revert Callback_Params_InvalidAddress();
         }
         gUniFactory = IGUniFactory(gUniFactory_);
     }
@@ -153,7 +166,7 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
         bytes calldata callbackData_
     ) internal virtual override onlyIfLotDoesNotExist(lotId_) {
         // Decode callback data into the params
-        if (callbackData_.length != 18) {
+        if (callbackData_.length != DTL_PARAMS_LENGTH) {
             revert Callback_InvalidParams();
         }
         DTLParams memory params = abi.decode(callbackData_, (DTLParams));
@@ -164,18 +177,20 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
             params.proceedsUtilisationPercent == 0
                 || params.proceedsUtilisationPercent > MAX_PERCENT
         ) {
-            revert Callback_InvalidParams();
+            revert Callback_Params_UtilisationPercentOutOfBounds(
+                params.proceedsUtilisationPercent, 1, MAX_PERCENT
+            );
         }
 
         // Pool fee
         // Fee not enabled
         if (uniV3Factory.feeAmountTickSpacing(params.poolFee) == 0) {
-            revert Callback_InvalidParams();
+            revert Callback_Params_PoolFeeNotEnabled();
         }
 
         // Check that the pool does not exist
         if (uniV3Factory.getPool(baseToken_, quoteToken_, params.poolFee) != address(0)) {
-            revert Callback_InvalidParams();
+            revert Callback_Params_PoolExists();
         }
 
         // Vesting
@@ -194,7 +209,7 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
                     _getEncodedVestingParams(params.vestingStart, params.vestingExpiry)
                 )
             ) {
-                revert Callback_InvalidParams();
+                revert Callback_Params_InvalidVestingParams();
             }
         }
 

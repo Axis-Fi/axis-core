@@ -78,7 +78,19 @@ abstract contract UniswapV3DirectToLiquidityTest is Test, Permit2User {
         //     "./bytecode/UniswapV3FactoryClone.bin",
         //     vm.toString(bytecode)
         // );
-        _uniV3Factory = new UniswapV3FactoryClone{salt: bytes32(0xbecf6f3548fab5820a733e3b397c3bf2cf4c0a7e7df3060a45ae5a5037ac241e)}();
+        _uniV3Factory = new UniswapV3FactoryClone{
+            salt: bytes32(0xbecf6f3548fab5820a733e3b397c3bf2cf4c0a7e7df3060a45ae5a5037ac241e)
+        }();
+
+        // Set the storage slots
+        vm.store(address(_uniV3Factory), bytes32(uint256(3)), bytes32(abi.encode(_OWNER))); // Owner
+
+        // Set the standard fees
+        vm.startPrank(_OWNER);
+        _uniV3Factory.enableFeeAmount(500, 10);
+        _uniV3Factory.enableFeeAmount(3000, 60);
+        _uniV3Factory.enableFeeAmount(10_000, 200);
+        vm.stopPrank();
 
         // // Uncomment to regenerate bytecode to mine new salts if the GUniFactory changes
         // // cast create2 -s 00 -i $(cat ./bytecode/GUniFactory.bin)
@@ -90,7 +102,9 @@ abstract contract UniswapV3DirectToLiquidityTest is Test, Permit2User {
         //     "./bytecode/GUniFactory.bin",
         //     vm.toString(bytecode)
         // );
-        _gUniFactory = new GUniFactory{salt: bytes32(0xfdb23b8a5d4bf11c4f82da11e01689a4cfbda09325a6f57a3146afd4f5f12de1)}(address(_uniV3Factory));
+        _gUniFactory = new GUniFactory{
+            salt: bytes32(0xfdb23b8a5d4bf11c4f82da11e01689a4cfbda09325a6f57a3146afd4f5f12de1)
+        }(address(_uniV3Factory));
         _linearVesting = new LinearVesting(address(_auctionHouse));
 
         _quoteToken = new MockERC20("Quote Token", "QT", 18);
@@ -98,6 +112,12 @@ abstract contract UniswapV3DirectToLiquidityTest is Test, Permit2User {
     }
 
     // ========== MODIFIERS ========== //
+
+    modifier givenLinearVestingModuleIsInstalled() {
+        vm.prank(_OWNER);
+        _auctionHouse.installModule(_linearVesting);
+        _;
+    }
 
     modifier givenCallbackReceiveQuoteTokensIsSet() {
         _callbackPermissions.receiveQuoteTokens = true;
@@ -215,18 +235,18 @@ abstract contract UniswapV3DirectToLiquidityTest is Test, Permit2User {
         bytes32 salt;
         if (_callbackPermissions.receiveQuoteTokens && _callbackPermissions.sendBaseTokens) {
             // E7
-            salt = bytes32(0x2b1cec6aef4d6b4c8f8477ba468f6466111971ea0917756758bffa2c6e521b7d);
+            salt = bytes32(0xa0b9d08f898d99dbacdbd1fc2c998a26cee5e078c3767d12909c849ab982e989);
         } else if (!_callbackPermissions.receiveQuoteTokens && _callbackPermissions.sendBaseTokens)
         {
             // E5
-            salt = bytes32(0x77e33b3ac11c4b615b9aabce05a6867e76f4a543434513a53c60ddb7f3511946);
+            salt = bytes32(0x474f72beb72ae3d6a8e4195689b60a3ed3f6f8532051997c4e134c826f0f18a6);
         } else if (_callbackPermissions.receiveQuoteTokens && !_callbackPermissions.sendBaseTokens)
         {
             // E6
-            salt = bytes32(0xc9874ae03ab7a39da9a7e832d2ff3a4e74048d8342306365a8d50434ab912b74);
+            salt = bytes32(0xc77e33d604d5849a5314e79e0eb30ccaef10a13208da40c7ba607d3a119bec23);
         } else {
             // E4
-            salt = bytes32(0xb8b52b7cc397e01690f01603f78bee2b0cf55150ad2abe61cd69ec94b7e28be6);
+            salt = bytes32(0xc4391d63f2249e73ca19385960cedf35057a2d68ca88452cc3608b4f24f9a46d);
         }
 
         // Required for CREATE2 address to work correctly. doesn't do anything in a test
@@ -263,5 +283,39 @@ abstract contract UniswapV3DirectToLiquidityTest is Test, Permit2User {
         vm.prank(owner_);
         _baseToken.approve(spender_, amount_);
         _;
+    }
+
+    // ========== FUNCTIONS ========== //
+
+    function _getDTLConfiguration(uint96 lotId_)
+        internal
+        view
+        returns (UniswapV3DirectToLiquidity.DTLConfiguration memory)
+    {
+        (
+            address baseToken_,
+            address quoteToken_,
+            uint96 lotCapacity_,
+            uint96 lotCuratorPayout_,
+            uint24 proceedsUtilisationPercent_,
+            uint24 poolFee_,
+            uint48 vestingStart_,
+            uint48 vestingExpiry_,
+            LinearVesting linearVestingModule_,
+            bool active_
+        ) = _dtl.lotConfiguration(lotId_);
+
+        return UniswapV3DirectToLiquidity.DTLConfiguration({
+            baseToken: baseToken_,
+            quoteToken: quoteToken_,
+            lotCapacity: lotCapacity_,
+            lotCuratorPayout: lotCuratorPayout_,
+            proceedsUtilisationPercent: proceedsUtilisationPercent_,
+            poolFee: poolFee_,
+            vestingStart: vestingStart_,
+            vestingExpiry: vestingExpiry_,
+            linearVestingModule: linearVestingModule_,
+            active: active_
+        });
     }
 }
