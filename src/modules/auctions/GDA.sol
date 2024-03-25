@@ -8,7 +8,7 @@ import {AtomicAuctionModule} from "src/modules/auctions/bases/AtomicAuctionModul
 import {SD59x18, sd, convert, ZERO, UNIT} from "lib/prb-math/src/SD59x18.sol";
 import {FullMath} from "src/lib/FullMath.sol";
 
-contract GradualDutchAuctionModule is AtomicAuctionModule {
+contract GradualDutchAuction is AtomicAuctionModule {
     using FullMath for uint256;
 
     // ========== DATA STRUCTURES ========== //
@@ -21,6 +21,7 @@ contract GradualDutchAuctionModule is AtomicAuctionModule {
     /// @notice Auction pricing data
     struct AuctionData {
         uint256 equilibriumPrice; // price at which the auction is balanced
+        uint256 minimumPrice; // minimum price for the auction
         uint48 lastAuctionStart;
         Decay decayType; // type of decay to use for the market
         SD59x18 decayConstant; // speed at which the price decays, as SD59x18.
@@ -29,6 +30,7 @@ contract GradualDutchAuctionModule is AtomicAuctionModule {
 
     struct GDAParams {
         uint256 equilibriumPrice;
+        uint256 minimumPrice;
         SD59x18 decayConstant;
         Decay decayType;
     }
@@ -53,8 +55,10 @@ contract GradualDutchAuctionModule is AtomicAuctionModule {
         GDAParams memory params = abi.decode(params_, (GDAParams));
 
         // Validate parameters
-        // Price must not be zero
-        if (params.equilibriumPrice == 0) revert Auction_InvalidParams();
+        // Equilibrium Price must not be zero and greater than minimum price (which can be zero)
+        if (params.equilibriumPrice == 0 || params.equilibriumPrice <= params.minimumPrice) {
+            revert Auction_InvalidParams();
+        }
 
         // Validate the decay constant
         // The maximum value is enforced by decoding to the SD59x18 type
@@ -68,12 +72,14 @@ contract GradualDutchAuctionModule is AtomicAuctionModule {
         }
 
         // Calculate emissions rate
-        SD59x18 emissionsRate =
-            sd(int256(lot_.capacity * uUNIT / 10 ** lot_.baseTokenDecimals)).div(duration);
+        SD59x18 emissionsRate = sd(
+            int256(uint256(lot_.capacity).mulDiv(_uUNIT, 10 ** lot_.baseTokenDecimals))
+        ).div(duration);
 
         // Store auction data
         AuctionData storage data = auctionData[lotId_];
         data.equilibriumPrice = params.equilibriumPrice;
+        data.minimumPrice = params.minimumPrice;
         data.decayType = params.decayType;
         data.decayConstant = params.decayConstant;
         data.emissionsRate = emissionsRate;
@@ -125,40 +131,47 @@ contract GradualDutchAuctionModule is AtomicAuctionModule {
     }
 
     // For Continuos GDAs with exponential decay, the price of a given token t seconds after being emitted is:
-    // p(t) = p0 * e^(-k*t)
+    // q(t) = q0 * e^(-k*t)
+    // where k is the decay constant and q0 is the initial price
     // Integrating this function from the last auction start time for a particular number of tokens,
     // gives the multiplier for the token price to determine amount of quote tokens required to purchase:
-    // P(T) = (p0 / k) * (e^(-k*q) - 1) / e^(-k*T)
-    // where T is the time since the last auction start, q is the number of tokens to purchase, and p0 is the initial price.
+    // Q(T) = (q0 * (e^(k*P) - 1)) / ke^(k*T)
+    // where T is the time since the last auction start, P is the number of tokens to purchase.
+    // If the price is less than the minimum price for the provided payout value, then the minimum is returned
     function _exponentialPriceFor(uint96 lotId_, uint256 payout_) internal view returns (uint256) {
         Lot memory lot = lotData[lotId_];
         AuctionData memory auction = auctionData[lotId_];
 
         // Convert payout to SD59x18. We scale first to 18 decimals from the payout token decimals
         uint256 baseTokenScale = 10 ** lot.baseTokenDecimals;
-        SD59x18 payout = sd(int256(payout_.mulDiv(uUNIT, baseTokenScale)));
+        SD59x18 payout = sd(int256(payout_.mulDiv(_uUNIT, baseTokenScale)));
 
         // Calculate time since last auction start
         SD59x18 timeSinceLastAuctionStart =
             convert(int256(block.timestamp - uint256(auction.lastAuctionStart)));
 
-        // Calculate the first numerator factor
+        // Scale the initial price to 18 decimals, set as numerator factor 1
         uint256 quoteTokenScale = 10 ** lot.quoteTokenDecimals;
-        SD59x18 num1 = sd(int256(auction.equilibriumPrice.mulDiv(uUNIT, quoteTokenScale))).div(
-            auction.decayConstant
-        );
+        SD59x18 num1 = sd(int256(auction.equilibriumPrice.mulDiv(_uUNIT, quoteTokenScale)));
 
         // Calculate the second numerator factor
-        SD59x18 num2 = auction.decayConstant.mul(NEGATIVE_UNIT).mul(payout).exp().sub(UNIT);
+        SD59x18 num2 = auction.decayConstant.mul(payout).exp().sub(UNIT);
 
         // Calculate the denominator
         SD59x18 denominator =
-            auction.decayConstant.mul(NEGATIVE_UNIT).mul(timeSinceLastAuctionStart).exp();
+            auction.decayConstant.mul(timeSinceLastAuctionStart).exp().mul(auction.decayConstant);
 
-        // Calculate return value
+        // Calculate auction price
         // This value should always be positive, therefore, we can safely cast to uint256
-        // We scale the return value back to payout token decimals
-        return num1.mul(num2).div(denominator).intoUint256().mulDiv(baseTokenScale, uUNIT);
+        // We scale the price back to quote token decimals
+        uint256 price =
+            num1.mul(num2).div(denominator).intoUint256().mulDiv(quoteTokenScale, _uUNIT);
+
+        // Calculate the minimum price for the payout amount
+        uint256 minPrice = auction.minimumPrice.mulDiv(payout_, baseTokenScale);
+
+        // Return the maximum of the price and the minimum price
+        return price > minPrice ? price : minPrice;
     }
 
     // p(t) = p0 * (1 - k*t)
@@ -172,7 +185,7 @@ contract GradualDutchAuctionModule is AtomicAuctionModule {
 
         // Convert payout to SD59x18. We scale first to 18 decimals from the payout token decimals
         uint256 baseTokenScale = 10 ** lot.baseTokenDecimals;
-        SD59x18 payout = sd(int256(payout_.mulDiv(uUNIT, baseTokenScale)));
+        SD59x18 payout = sd(int256(payout_.mulDiv(_uUNIT, baseTokenScale)));
 
         // Calculate time since last auction start
         SD59x18 timeSinceLastAuctionStart =
@@ -187,11 +200,11 @@ contract GradualDutchAuctionModule is AtomicAuctionModule {
         // Calculate payout factor
         uint256 quoteTokenScale = 10 ** lot.quoteTokenDecimals;
         SD59x18 payoutFactor =
-            payout.mul(sd(int256(auction.equilibriumPrice.mulDiv(uUNIT, quoteTokenScale))));
+            payout.mul(sd(int256(auction.equilibriumPrice.mulDiv(_uUNIT, quoteTokenScale))));
 
         // Calculate final return value and convert back to market scale
         return payoutFactor.mul(decayFactor).div(auction.emissionsRate).intoUint256().mulDiv(
-            quoteTokenScale, uUNIT
+            quoteTokenScale, _uUNIT
         );
     }
 
@@ -226,9 +239,9 @@ contract GradualDutchAuctionModule is AtomicAuctionModule {
         }
     }
 
-    // P = (r / k) * ln(Q * k / p0 * e^(k*T) + 1)
+    // P = (r * ln((Q * k * e^(k*T) / k) + 1)) / q0
     // where P is the number of payout tokens, Q is the number of quote tokens,
-    // r is the emissions rate, k is the decay constant, p0 is the price target of the market,
+    // r is the emissions rate, k is the decay constant, q0 is the equilibrium price of the auction,
     // and T is the time since the last auction start
     function _payoutForExpDecay(
         uint96 lotId_,
@@ -237,37 +250,40 @@ contract GradualDutchAuctionModule is AtomicAuctionModule {
         Lot memory lot = lotData[lotId_];
         AuctionData memory auction = auctionData[lotId_];
 
-        // Convert to 18 decimals for fixed math by pre-computing the Q / p0 factor (which is in payout token units)
-        // and then scaling using payout token decimals
-        SD59x18 payout;
-        uint256 baseTokenScale = 10 ** lot.baseTokenDecimals;
-        {
-            SD59x18 scaledQ = sd(
-                int256(
-                    amount_.mulDiv(10 ** lot.quoteTokenDecimals, auction.equilibriumPrice).mulDiv(
-                        uUNIT, baseTokenScale
-                    )
-                )
-            );
+        // Factors are calculated in a certain order to avoid precision loss
 
-            // Calculate time since last auction start
-            SD59x18 timeSinceLastAuctionStart =
-                convert(int256(block.timestamp - uint256(auction.lastAuctionStart)));
+        // Get quote token scale and convert equilibrium price to 18 decimals
+        uint256 quoteTokenScale = 10 ** lot.quoteTokenDecimals;
+        SD59x18 q0 = sd(int256(auction.equilibriumPrice.mulDiv(_uUNIT, quoteTokenScale)));
+
+        // Scale amount to 18 decimals
+        SD59x18 amount = sd(int256(amount_.mulDiv(_uUNIT, quoteTokenScale)));
+
+        // Calculate the logarithm factor
+        SD59x18 logFactor;
+        {
+            // Calculate the exponential factor
+            SD59x18 ekt = auction.decayConstant.mul(
+                convert(int256(block.timestamp - uint256(auction.lastAuctionStart)))
+            ).exp();
 
             // Calculate the logarithm
-            SD59x18 logFactor = auction.decayConstant.mul(timeSinceLastAuctionStart).exp().mul(
-                scaledQ
-            ).mul(auction.decayConstant).add(UNIT).ln();
-
-            // Calculate the payout
-            payout = logFactor.mul(auction.emissionsRate).div(auction.decayConstant);
+            logFactor = amount.mul(auction.decayConstant).mul(ekt).div(q0).add(UNIT).ln();
         }
+
+        // Calculate the payout
+        SD59x18 payout = auction.emissionsRate.mul(logFactor).div(auction.decayConstant);
+
+        // Calculate the payout at the minimum price for the provided amount of quote tokens
+        SD59x18 minimumPrice = sd(int256(auction.minimumPrice.mulDiv(_uUNIT, quoteTokenScale)));
+        SD59x18 maxPayout = amount.div(minimumPrice);
+
+        // Set the payout as the minimum of the calculated payout and the maximum payout
+        payout = payout < maxPayout ? payout : maxPayout;
 
         // Calculate seconds of emissions from payout or amount (depending on capacity type)
         uint48 secondsOfEmissions;
         if (lot.capacityInQuote) {
-            // Convert amount to SD59x18
-            SD59x18 amount = sd(int256(amount_.mulDiv(uUNIT, 10 ** lot.quoteTokenDecimals)));
             // TODO need to think about overflows on this cast
             secondsOfEmissions = uint48(amount.div(auction.emissionsRate).intoUint256());
         } else {
@@ -276,7 +292,8 @@ contract GradualDutchAuctionModule is AtomicAuctionModule {
 
         // Scale payout to payout token decimals and return
         // Payout should always be positive since it is atleast 1, therefore, we can safely cast to uint256
-        return (payout.intoUint256().mulDiv(baseTokenScale, uUNIT), secondsOfEmissions);
+        return
+            (payout.intoUint256().mulDiv(10 ** lot.baseTokenDecimals, _uUNIT), secondsOfEmissions);
     }
 
     // P = (r / k) * (sqrt(2 * k * Q / p0) + k * T - 1)
@@ -298,7 +315,7 @@ contract GradualDutchAuctionModule is AtomicAuctionModule {
             SD59x18 scaledQ = sd(
                 int256(
                     amount_.mulDiv(10 ** lot.quoteTokenDecimals, auction.equilibriumPrice).mulDiv(
-                        uUNIT, baseTokenScale
+                        _uUNIT, baseTokenScale
                     )
                 )
             );
@@ -320,7 +337,7 @@ contract GradualDutchAuctionModule is AtomicAuctionModule {
         uint48 secondsOfEmissions;
         if (lot.capacityInQuote) {
             // Convert amount to SD59x18
-            SD59x18 amount = sd(int256(amount_.mulDiv(uUNIT, 10 ** lot.quoteTokenDecimals)));
+            SD59x18 amount = sd(int256(amount_.mulDiv(_uUNIT, 10 ** lot.quoteTokenDecimals)));
             // TODO think about overflows on this cast
             secondsOfEmissions = uint48(amount.div(auction.emissionsRate).intoUint256());
         } else {
@@ -328,6 +345,6 @@ contract GradualDutchAuctionModule is AtomicAuctionModule {
         }
 
         // Scale payout to payout token decimals and return
-        return (payout.intoUint256().mulDiv(baseTokenScale, uUNIT), secondsOfEmissions);
+        return (payout.intoUint256().mulDiv(baseTokenScale, _uUNIT), secondsOfEmissions);
     }
 }
