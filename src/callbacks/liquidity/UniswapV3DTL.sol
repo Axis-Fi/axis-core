@@ -427,7 +427,9 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
                     ICallback(address(this)), Callbacks.RECEIVE_QUOTE_TOKENS_FLAG
                 )
             ) {
-                ERC20(config.quoteToken).safeTransferFrom(seller, address(this), quoteTokensRequired);
+                ERC20(config.quoteToken).safeTransferFrom(
+                    seller, address(this), quoteTokensRequired
+                );
                 quoteTokenBalance += quoteTokensRequired;
             } else {
                 quoteTokenBalance += proceeds_;

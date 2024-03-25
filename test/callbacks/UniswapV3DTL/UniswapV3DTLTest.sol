@@ -12,7 +12,7 @@ import {BaseCallback} from "src/callbacks/BaseCallback.sol";
 import {GUniFactory} from "g-uni-v1-core/GUniFactory.sol";
 import {IUniswapV3Factory} from "uniswap-v3-core/interfaces/IUniswapV3Factory.sol";
 
-import {UniswapV3FactoryClone} from "test/lib/uniswap-v3/UniswapV3FactoryClone.sol";
+import {UniswapV3Factory} from "test/lib/uniswap-v3/UniswapV3Factory.sol";
 
 import {UniswapV3DirectToLiquidity} from "src/callbacks/liquidity/UniswapV3DTL.sol";
 import {LinearVesting} from "src/modules/derivatives/LinearVesting.sol";
@@ -69,41 +69,21 @@ abstract contract UniswapV3DirectToLiquidityTest is Test, Permit2User {
             sendBaseTokens: false
         });
 
-        // // Uncomment to regenerate bytecode to mine new salts if the UniswapV3FactoryClone changes
-        // // cast create2 -s 00 -i $(cat ./bytecode/UniswapV3FactoryClone.bin)
-        // bytes memory bytecode = abi.encodePacked(
-        //     type(UniswapV3FactoryClone).creationCode
-        // );
-        // vm.writeFile(
-        //     "./bytecode/UniswapV3FactoryClone.bin",
-        //     vm.toString(bytecode)
-        // );
-        _uniV3Factory = new UniswapV3FactoryClone{
-            salt: bytes32(0xbecf6f3548fab5820a733e3b397c3bf2cf4c0a7e7df3060a45ae5a5037ac241e)
+        // // Uncomment to regenerate bytecode to mine new salts if the UniswapV3Factory changes
+        // // cast create2 -s 00 -i $(cat ./bytecode/UniswapV3Factory.bin)
+        // bytes memory bytecode = abi.encodePacked(type(UniswapV3Factory).creationCode);
+        // vm.writeFile("./bytecode/UniswapV3Factory.bin", vm.toString(bytecode));
+        _uniV3Factory = new UniswapV3Factory{
+            salt: bytes32(0xbc65534283bdbbac4a95a3fb1933af63d55135566688dd54d1c55a626b1bc366)
         }();
 
-        // Set the storage slots
-        vm.store(address(_uniV3Factory), bytes32(uint256(3)), bytes32(abi.encode(_OWNER))); // Owner
-
-        // Set the standard fees
-        vm.startPrank(_OWNER);
-        _uniV3Factory.enableFeeAmount(500, 10);
-        _uniV3Factory.enableFeeAmount(3000, 60);
-        _uniV3Factory.enableFeeAmount(10_000, 200);
-        vm.stopPrank();
-
-        // // Uncomment to regenerate bytecode to mine new salts if the GUniFactory changes
-        // // cast create2 -s 00 -i $(cat ./bytecode/GUniFactory.bin)
-        // bytes memory bytecode = abi.encodePacked(
-        //     type(GUniFactory).creationCode,
-        //     abi.encode(address(_uniV3Factory))
-        // );
-        // vm.writeFile(
-        //     "./bytecode/GUniFactory.bin",
-        //     vm.toString(bytecode)
-        // );
+        // // // Uncomment to regenerate bytecode to mine new salts if the GUniFactory changes
+        // // // cast create2 -s 00 -i $(cat ./bytecode/GUniFactory.bin)
+        // bytes memory bytecode =
+        //     abi.encodePacked(type(GUniFactory).creationCode, abi.encode(address(_uniV3Factory)));
+        // vm.writeFile("./bytecode/GUniFactory.bin", vm.toString(bytecode));
         _gUniFactory = new GUniFactory{
-            salt: bytes32(0xfdb23b8a5d4bf11c4f82da11e01689a4cfbda09325a6f57a3146afd4f5f12de1)
+            salt: bytes32(0x31d4bb3a2cd73df799deceac86fa252d040e24c2ea206f4172d74f72cfa34e4b)
         }(address(_uniV3Factory));
         _linearVesting = new LinearVesting(address(_auctionHouse));
 
@@ -223,18 +203,18 @@ abstract contract UniswapV3DirectToLiquidityTest is Test, Permit2User {
         bytes32 salt;
         if (_callbackPermissions.receiveQuoteTokens && _callbackPermissions.sendBaseTokens) {
             // E7
-            salt = bytes32(0xbbd0d7c7133883d8e735b48012a39b258f4338e9eadb87565b6ac38d575c226b);
+            salt = bytes32(0xc7b879d7c6b66d8e9f4616172f53698fc1f7f153e49d4ed13106dbfc9f6cbc23);
         } else if (!_callbackPermissions.receiveQuoteTokens && _callbackPermissions.sendBaseTokens)
         {
             // E5
-            salt = bytes32(0xc71aa076906182068c4ce2fa8d29085575e322c8fac556a26a42e1d95bea9890);
+            salt = bytes32(0x58084bbe06bd54a6cdbbf03e898db76eb6b2879c492b0d70665c566e8de868ae);
         } else if (_callbackPermissions.receiveQuoteTokens && !_callbackPermissions.sendBaseTokens)
         {
             // E6
-            salt = bytes32(0x30e50df555014d6b7c7f2012a077c818432c8c11001d6e5f39b63ce39e1a8419);
+            salt = bytes32(0x4810ed1312f2bd8e72b04f8cc6cc89b89583a604fc634af1046cd4239f89f2a1);
         } else {
             // E4
-            salt = bytes32(0x85408c4c2e11266cb4cd15465b54b1d1df605f0011071423b644a79128c604c4);
+            salt = bytes32(0x9336bb7d9517b21cb3f768c1a0b59f5d1a6bb244f459f79796f6e3133d7599a5);
         }
 
         // Required for CREATE2 address to work correctly. doesn't do anything in a test
