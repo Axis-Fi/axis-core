@@ -152,10 +152,7 @@ abstract contract UniswapV3DirectToLiquidityTest is Test, Permit2User {
         //         address(_gUniFactory)
         //     )
         // );
-        // vm.writeFile(
-        //     "./bytecode/UniswapV3DirectToLiquidityE7.bin",
-        //     vm.toString(bytecode)
-        // );
+        // vm.writeFile("./bytecode/UniswapV3DirectToLiquidityE7.bin", vm.toString(bytecode));
         // // 11100101 = 0xE5
         // // cast create2 -s E5 -i $(cat ./bytecode/UniswapV3DirectToLiquidityE5.bin)
         // bytecode = abi.encodePacked(
@@ -177,10 +174,7 @@ abstract contract UniswapV3DirectToLiquidityTest is Test, Permit2User {
         //         address(_gUniFactory)
         //     )
         // );
-        // vm.writeFile(
-        //     "./bytecode/UniswapV3DirectToLiquidityE5.bin",
-        //     vm.toString(bytecode)
-        // );
+        // vm.writeFile("./bytecode/UniswapV3DirectToLiquidityE5.bin", vm.toString(bytecode));
         // // 11100110 = 0xE6
         // // cast create2 -s E6 -i $(cat ./bytecode/UniswapV3DirectToLiquidityE6.bin)
         // bytecode = abi.encodePacked(
@@ -202,10 +196,7 @@ abstract contract UniswapV3DirectToLiquidityTest is Test, Permit2User {
         //         address(_gUniFactory)
         //     )
         // );
-        // vm.writeFile(
-        //     "./bytecode/UniswapV3DirectToLiquidityE6.bin",
-        //     vm.toString(bytecode)
-        // );
+        // vm.writeFile("./bytecode/UniswapV3DirectToLiquidityE6.bin", vm.toString(bytecode));
         // // 11100100 = 0xE4
         // // cast create2 -s E4 -i $(cat ./bytecode/UniswapV3DirectToLiquidityE4.bin)
         // bytecode = abi.encodePacked(
@@ -227,26 +218,23 @@ abstract contract UniswapV3DirectToLiquidityTest is Test, Permit2User {
         //         address(_gUniFactory)
         //     )
         // );
-        // vm.writeFile(
-        //     "./bytecode/UniswapV3DirectToLiquidityE4.bin",
-        //     vm.toString(bytecode)
-        // );
+        // vm.writeFile("./bytecode/UniswapV3DirectToLiquidityE4.bin", vm.toString(bytecode));
 
         bytes32 salt;
         if (_callbackPermissions.receiveQuoteTokens && _callbackPermissions.sendBaseTokens) {
             // E7
-            salt = bytes32(0xa0b9d08f898d99dbacdbd1fc2c998a26cee5e078c3767d12909c849ab982e989);
+            salt = bytes32(0xae7578a772c3d9a41fabde7f0695f70cb14079efc626469cdf956a92de29a62a);
         } else if (!_callbackPermissions.receiveQuoteTokens && _callbackPermissions.sendBaseTokens)
         {
             // E5
-            salt = bytes32(0x474f72beb72ae3d6a8e4195689b60a3ed3f6f8532051997c4e134c826f0f18a6);
+            salt = bytes32(0x2dc4ab0426d497181f25d74f052e99a492454b637f22661f7b54c5187c2ee87e);
         } else if (_callbackPermissions.receiveQuoteTokens && !_callbackPermissions.sendBaseTokens)
         {
             // E6
-            salt = bytes32(0xc77e33d604d5849a5314e79e0eb30ccaef10a13208da40c7ba607d3a119bec23);
+            salt = bytes32(0x9466d8990f8a9be91682c3268f71af9578d57c51dc9b3176b0c9a9611af83c7a);
         } else {
             // E4
-            salt = bytes32(0xc4391d63f2249e73ca19385960cedf35057a2d68ca88452cc3608b4f24f9a46d);
+            salt = bytes32(0xd5fedbc6f794e4201a10f0150c59dcec2aafdd39362f2a76009e6703a80e90a4);
         }
 
         // Required for CREATE2 address to work correctly. doesn't do anything in a test

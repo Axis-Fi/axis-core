@@ -89,10 +89,9 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
 
     // ========== STATE VARIABLES ========== //
 
-    uint8 internal constant DTL_PARAMS_LENGTH = 128;
+    uint8 internal constant _DTL_PARAMS_LENGTH = 128;
     uint24 public constant MAX_PERCENT = 1e5;
-    uint24 public constant MAX_POOL_FEE = 1e6;
-    bytes5 public constant LINEAR_VESTING_KEYCODE = 0x4c564b0000; // "LIV"
+    bytes5 public constant LINEAR_VESTING_KEYCODE = 0x4c49560000; // "LIV"
 
     /// @notice     Maps the lot id to the DTL configuration
     mapping(uint96 lotId => DTLConfiguration) public lotConfiguration;
@@ -166,7 +165,7 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
         bytes calldata callbackData_
     ) internal virtual override onlyIfLotDoesNotExist(lotId_) {
         // Decode callback data into the params
-        if (callbackData_.length != DTL_PARAMS_LENGTH) {
+        if (callbackData_.length != _DTL_PARAMS_LENGTH) {
             revert Callback_InvalidParams();
         }
         DTLParams memory params = abi.decode(callbackData_, (DTLParams));
