@@ -23,16 +23,16 @@ contract TestData is Script {
         vm.startBroadcast();
 
         // Deploy mock tokens
-        quoteToken = new MockERC20("Stormlight Orbs", "SLO", 18);
+        quoteToken = new MockERC20("Test Token 1", "TT1", 18);
         console2.log("Quote token deployed at address: ", address(quoteToken));
-        baseToken = new MockERC20("Atium Beads", "ATUM", 18);
+        baseToken = new MockERC20("Test Token 2", "TT2", 18);
         console2.log("Base token deployed at address: ", address(baseToken));
 
         // Mint quote tokens to buyer
         quoteToken.mint(buyer, 1e25);
 
         // Mint base tokens to seller
-        baseToken.mint(seller, 1e24);
+        baseToken.mint(seller, 1e25);
 
         vm.stopBroadcast();
     }
@@ -43,16 +43,23 @@ contract TestData is Script {
         MockERC20(token).mint(receiver, 1e24);
     }
 
-    function createAuction(uint256 pubKeyX, uint256 pubKeyY, address buyer) public returns (uint96) {
+    function createAuction(
+        uint256 pubKeyX,
+        uint256 pubKeyY,
+        address buyer
+    ) public returns (uint96) {
         // Load addresses from .env
         auctionHouse = AuctionHouse(vm.envAddress("AUCTION_HOUSE"));
 
         Point memory publicKey = Point(pubKeyX, pubKeyY);
 
-        // Deploy test tokens and store addresses
-        deployTestTokens(msg.sender, buyer);
+        // // Deploy test tokens and store addresses
+        // deployTestTokens(msg.sender, buyer);
 
         vm.startBroadcast();
+
+        quoteToken = MockERC20(address(0x8e5a555bcaB474C91dcA326bE3DFdDa7e30c3765));
+        baseToken = MockERC20(address(0x532cEd32173222d5D51Ac908e39EA2824d334607));
 
         // Approve auction house for base token since it will be pre-funded
         baseToken.approve(address(auctionHouse), 1e24);
@@ -68,7 +75,7 @@ contract TestData is Script {
         EMPAM.AuctionDataParams memory auctionDataParams;
         auctionDataParams.minPrice = 2e18; // 3 quote tokens per base token
         auctionDataParams.minFillPercent = uint24(10_000); // 10%
-        auctionDataParams.minBidPercent = uint24(4_000); // 4%
+        auctionDataParams.minBidPercent = uint24(4000); // 4%
         auctionDataParams.publicKey = publicKey;
         bytes memory implParams = abi.encode(auctionDataParams);
 
