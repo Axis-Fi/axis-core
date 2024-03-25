@@ -8,6 +8,9 @@ import {AtomicAuctionModule} from "src/modules/auctions/bases/AtomicAuctionModul
 import {SD59x18, sd, convert, ZERO, UNIT} from "lib/prb-math/src/SD59x18.sol";
 import {FullMath} from "src/lib/FullMath.sol";
 
+// TODO can probably switch from signed math to unsigned math, but need to research it a bit more.
+// There are also some assumptions that need to hold for the square roots to be valid and those need to be documented and validated.
+
 contract GradualDutchAuction is AtomicAuctionModule {
     using FullMath for uint256;
 
@@ -37,7 +40,7 @@ contract GradualDutchAuction is AtomicAuctionModule {
 
     // ========== STATE VARIABLES ========== //
 
-    SD59x18 internal constant _NEGATIVE_UNIT = SD59x18.wrap(int256(-1e18));
+    SD59x18 internal constant _TWO = SD59x18.wrap(int256(2e18));
     uint256 internal constant _uUNIT = 1e18;
 
     mapping(uint256 id => AuctionData data) public auctionData;
@@ -174,9 +177,10 @@ contract GradualDutchAuction is AtomicAuctionModule {
         return price > minPrice ? price : minPrice;
     }
 
-    // p(t) = p0 * (1 - k*t)
-    // where p0 is the initial price, k is the decay constant, and t is the time since the last auction start
-    // P(T) = (p0 * q / r) * (1 - k*T + k*q/2r)
+    // q(t) = (q0 - qMin) * (1 - k*t) + qMin
+    // where q0 is the initial price, qMin is the minimum price,
+    // k is the decay constant, and t is the time since the last auction start
+    // Q(T) = (k * (q0 - qMin) * (P^2 / r^2 - 2 * T * P / r) / 2) + (q0 * P) / r
     // where T is the time since the last auction start, q is the number of tokens to purchase,
     // r is the emissions rate, and p0 is the initial price
     function _linearPriceFor(uint96 lotId_, uint256 payout_) internal view returns (uint256) {
@@ -187,25 +191,36 @@ contract GradualDutchAuction is AtomicAuctionModule {
         uint256 baseTokenScale = 10 ** lot.baseTokenDecimals;
         SD59x18 payout = sd(int256(payout_.mulDiv(_uUNIT, baseTokenScale)));
 
-        // Calculate time since last auction start
-        SD59x18 timeSinceLastAuctionStart =
-            convert(int256(block.timestamp - uint256(auction.lastAuctionStart)));
+        // Calculate the payout factor: (P^2 / r^2 - 2 * T * P / r)
+        SD59x18 payoutFactor;
+        {
+            // Caclualate the first factor: P^2 / r^2
+            SD59x18 f1 = payout.mul(payout).div(auction.emissionsRate.mul(auction.emissionsRate));
 
-        // Calculate decay factor
-        // TODO can we confirm this will be positive?
-        SD59x18 decayFactor = UNIT.sub(auction.decayConstant.mul(timeSinceLastAuctionStart)).add(
-            auction.decayConstant.mul(payout).div(convert(int256(2)).mul(auction.emissionsRate))
-        );
+            // Calculate time since last auction start
+            SD59x18 timeSinceLastAuctionStart =
+                convert(int256(block.timestamp - uint256(auction.lastAuctionStart)));
 
-        // Calculate payout factor
+            // Calculate the second factor: 2 * T * P / r
+            SD59x18 f2 = timeSinceLastAuctionStart.mul(payout).mul(_TWO).div(auction.emissionsRate);
+
+            // Combine
+            payoutFactor = f1.sub(f2);
+        }
+
+        // Convert the equilibrium and minimum prices to 18 decimals
         uint256 quoteTokenScale = 10 ** lot.quoteTokenDecimals;
-        SD59x18 payoutFactor =
-            payout.mul(sd(int256(auction.equilibriumPrice.mulDiv(_uUNIT, quoteTokenScale))));
+        SD59x18 q0 = sd(int256(auction.equilibriumPrice.mulDiv(_uUNIT, quoteTokenScale)));
+        SD59x18 qMin = sd(int256(auction.minimumPrice.mulDiv(_uUNIT, quoteTokenScale)));
 
-        // Calculate final return value and convert back to market scale
-        return payoutFactor.mul(decayFactor).div(auction.emissionsRate).intoUint256().mulDiv(
-            quoteTokenScale, _uUNIT
-        );
+        // Calculate the first factor: (k * (q0 - qMin) * payoutFactor / 2)
+        SD59x18 firstFactor = auction.decayConstant.mul(q0.sub(qMin)).mul(payoutFactor).div(_TWO);
+
+        // Calculate the second factor: (q0 * payout / r)
+        SD59x18 secondFactor = q0.mul(payout).div(auction.emissionsRate);
+
+        // Calculate the price, convert back to quote token scale
+        return firstFactor.add(secondFactor).intoUint256().mulDiv(quoteTokenScale, _uUNIT);
     }
 
     /* ========== PAYOUT CALCULATIONS ========== */
@@ -296,10 +311,10 @@ contract GradualDutchAuction is AtomicAuctionModule {
             (payout.intoUint256().mulDiv(10 ** lot.baseTokenDecimals, _uUNIT), secondsOfEmissions);
     }
 
-    // P = (r / k) * (sqrt(2 * k * Q / p0) + k * T - 1)
+    // P = (2 * r * (sqrt(Q + ((q0 - k * T * (q0 - qMin))^2) - ((q0 - k * T * (q0 - qMin))))) / sqrt(2 * k * (q0 - qMin))
     // where P is the number of payout tokens, Q is the number of quote tokens,
-    // r is the emissions rate, k is the decay constant, p0 is the price target of the market,
-    // and T is the time since the last auction start
+    // r is the emissions rate, k is the decay constant, p0 is the price target of the auction,
+    // qMin is the minimum price of the auction, and T is the time since the last auction start
     function _payoutForLinearDecay(
         uint96 lotId_,
         uint256 amount_
@@ -307,37 +322,48 @@ contract GradualDutchAuction is AtomicAuctionModule {
         Lot memory lot = lotData[lotId_];
         AuctionData memory auction = auctionData[lotId_];
 
-        // Convert to 18 decimals for fixed math by pre-computing the Q / p0 factor (which is in payout token units)
-        // and then scaling using payout token decimals
-        SD59x18 payout;
-        uint256 baseTokenScale = 10 ** lot.baseTokenDecimals;
+        // Calculate the largest factor first
+        // Steps are structured to avoid precision loss from early divisions where possible
+
+        // Convert the amount to 18 decimals
+        uint256 quoteTokenScale = 10 ** lot.quoteTokenDecimals;
+        SD59x18 amount = sd(int256(amount_.mulDiv(_uUNIT, quoteTokenScale)));
+
+        // Convert the price values to 18 decimals
+        SD59x18 q0 = sd(int256(auction.equilibriumPrice.mulDiv(_uUNIT, quoteTokenScale)));
+        SD59x18 qMin = sd(int256(auction.minimumPrice.mulDiv(_uUNIT, quoteTokenScale)));
+
+        // There are some expressions that are used several times
+        // We pre-calculate these to save gas
+        // 2 * k * (q0 - qMin)
+        SD59x18 twoKQDiff = auction.decayConstant.mul(q0.sub(qMin)).mul(_TWO);
+        // k * T * (q0 - qMin)
+        SD59x18 kTQDiff = auction.decayConstant.mul(
+            convert(int256(block.timestamp - uint256(auction.lastAuctionStart))).mul(q0.sub(qMin))
+        );
+
+        // Calculate the numerator
+        SD59x18 num;
         {
-            SD59x18 scaledQ = sd(
-                int256(
-                    amount_.mulDiv(10 ** lot.quoteTokenDecimals, auction.equilibriumPrice).mulDiv(
-                        _uUNIT, baseTokenScale
-                    )
-                )
-            );
+            // Calculate the first num factor (sqrt(Q + ((q0 - k * T * (q0 - qMin))^2)))
+            SD59x18 f1 = amount.mul(twoKQDiff).add(kTQDiff.mul(kTQDiff)).sqrt();
 
-            // Calculate time since last auction start
-            SD59x18 timeSinceLastAuctionStart =
-                convert(int256(block.timestamp - uint256(auction.lastAuctionStart)));
+            // Calculate the second num factor
+            SD59x18 f2 = q0.sub(kTQDiff);
 
-            // Calculate factors
-            SD59x18 sqrtFactor = convert(int256(2)).mul(auction.decayConstant).mul(scaledQ).sqrt();
-            SD59x18 factor =
-                sqrtFactor.add(auction.decayConstant.mul(timeSinceLastAuctionStart)).sub(UNIT);
-
-            // Calculate payout
-            payout = auction.emissionsRate.div(auction.decayConstant).mul(factor);
+            // Combine the numerator factors and multiply by 2 * r
+            num = f1.sub(f2).mul(_TWO).mul(auction.emissionsRate);
         }
+
+        // Calculate the denominator
+        SD59x18 den = twoKQDiff.sqrt();
+
+        // Calculate the payout
+        SD59x18 payout = num.div(den);
 
         // Calculate seconds of emissions from payout or amount (depending on capacity type)
         uint48 secondsOfEmissions;
         if (lot.capacityInQuote) {
-            // Convert amount to SD59x18
-            SD59x18 amount = sd(int256(amount_.mulDiv(_uUNIT, 10 ** lot.quoteTokenDecimals)));
             // TODO think about overflows on this cast
             secondsOfEmissions = uint48(amount.div(auction.emissionsRate).intoUint256());
         } else {
@@ -345,6 +371,7 @@ contract GradualDutchAuction is AtomicAuctionModule {
         }
 
         // Scale payout to payout token decimals and return
-        return (payout.intoUint256().mulDiv(baseTokenScale, _uUNIT), secondsOfEmissions);
+        return
+            (payout.intoUint256().mulDiv(10 ** lot.baseTokenDecimals, _uUNIT), secondsOfEmissions);
     }
 }
