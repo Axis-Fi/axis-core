@@ -132,7 +132,7 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
     ///
     ///             This function reverts if:
     ///             - DTLParams.proceedsUtilisationPercent is out of bounds
-    ///             - DTLParams.poolFee is out of bounds or not enabled
+    ///             - DTLParams.poolFee is not enabled
     ///             - The pool for the token and fee combination already exists
     ///             - DTLParams.vestingStart or DTLParams.vestingExpiry do not pass validation
     ///             - Vesting is enabled and the linear vesting module is not found
@@ -168,11 +168,6 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
         }
 
         // Pool fee
-        // Out of bounds
-        if (params.poolFee > MAX_POOL_FEE) {
-            revert Callback_InvalidParams();
-        }
-
         // Fee not enabled
         if (uniV3Factory.feeAmountTickSpacing(params.poolFee) == 0) {
             revert Callback_InvalidParams();

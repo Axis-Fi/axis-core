@@ -184,26 +184,29 @@ abstract contract UniswapV3DirectToLiquidityTest is Test, Permit2User {
         bytes32 salt;
         if (_callbackPermissions.receiveQuoteTokens && _callbackPermissions.sendBaseTokens) {
             // E7
-            salt = bytes32(0xfe4e6dd225e4eeb01483a143332bfdf079cce53f1aa0bf34e1b38c23186ba86b);
-        }
-        else if (!_callbackPermissions.receiveQuoteTokens && _callbackPermissions.sendBaseTokens) {
+            salt = bytes32(0xb6756239a7c6ef20e3d74acd5fef72b0b8608557c179517b559a3463a64e4d1f);
+        } else if (!_callbackPermissions.receiveQuoteTokens && _callbackPermissions.sendBaseTokens)
+        {
             // E5
-            salt = bytes32(0xe44abde6b1400f4235dbb13bb69f4ccfe209d84e76ae432a0fb1b81898925a1b);
-        }
-        else if (_callbackPermissions.receiveQuoteTokens && !_callbackPermissions.sendBaseTokens) {
+            salt = bytes32(0x20632d36e04681f97740fff54661f5fcab8cf6d259772e4a3701251ffbc50e62);
+        } else if (_callbackPermissions.receiveQuoteTokens && !_callbackPermissions.sendBaseTokens)
+        {
             // E6
-            salt = bytes32(0x67f0e855fd46c02dc158a4ebc3bd5dc4dab2e476dfee1267a26f98392fb79941);
-        }
-        else {
+            salt = bytes32(0x0effe14756e174bf98869fa4948f0ab6d501864ccc9afdc227dea623baf5fd35);
+        } else {
             // E4
-            salt = bytes32(0x9edb9f3c98d094e3cfa331971555c9fc0f6e39d89ac58b5c937a12ca7ffe67b1);
+            salt = bytes32(0xde041fd860cdaff3ae78fa4ca8a81d1f6cb3a6f2cc58ece642eafd480b7eefdd);
         }
 
         // Required for CREATE2 address to work correctly. doesn't do anything in a test
         // Source: https://github.com/foundry-rs/foundry/issues/6402
         vm.startBroadcast();
         _dtl = new UniswapV3DirectToLiquidity{salt: salt}(
-            address(_auctionHouse), _callbackPermissions, _SELLER, address(_uniV3Factory), address(_gUniFactory)
+            address(_auctionHouse),
+            _callbackPermissions,
+            _SELLER,
+            address(_uniV3Factory),
+            address(_gUniFactory)
         );
         vm.stopBroadcast();
         _;
