@@ -44,6 +44,8 @@ abstract contract UniswapV3DirectToLiquidityTest is Test, Permit2User {
 
     // Inputs
     Callbacks.Permissions internal _callbackPermissions;
+    UniswapV3DirectToLiquidity.DTLParams internal _dtlCreateParams = UniswapV3DirectToLiquidity
+        .DTLParams({proceedsUtilisationPercent: 1e5, poolFee: 500, vestingStart: 0, vestingExpiry: 0});
 
     function setUp() public {
         // Set reasonable timestamp
@@ -250,6 +252,40 @@ abstract contract UniswapV3DirectToLiquidityTest is Test, Permit2User {
     modifier givenAddressHasBaseTokenAllowance(address owner_, address spender_, uint256 amount_) {
         vm.prank(owner_);
         _baseToken.approve(spender_, amount_);
+        _;
+    }
+
+    modifier givenOnCreate() {
+        vm.prank(address(_auctionHouse));
+        _dtl.onCreate(
+            _lotId,
+            _SELLER,
+            address(_baseToken),
+            address(_quoteToken),
+            _LOT_CAPACITY,
+            false,
+            abi.encode(_dtlCreateParams)
+        );
+        _;
+    }
+
+    modifier givenProceedsUtilisationPercent(uint24 percent_) {
+        _dtlCreateParams.proceedsUtilisationPercent = percent_;
+        _;
+    }
+
+    modifier givenPoolFee(uint24 fee_) {
+        _dtlCreateParams.poolFee = fee_;
+        _;
+    }
+
+    modifier givenVestingStart(uint48 start_) {
+        _dtlCreateParams.vestingStart = start_;
+        _;
+    }
+
+    modifier givenVestingExpiry(uint48 end_) {
+        _dtlCreateParams.vestingExpiry = end_;
         _;
     }
 

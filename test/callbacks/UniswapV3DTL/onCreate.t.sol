@@ -7,14 +7,6 @@ import {UniswapV3DirectToLiquidity} from "src/callbacks/liquidity/UniswapV3DTL.s
 import {BaseCallback} from "src/callbacks/BaseCallback.sol";
 
 contract UniswapV3DirectToLiquidityOnCreateTest is UniswapV3DirectToLiquidityTest {
-    // Function inputs
-    UniswapV3DirectToLiquidity.DTLParams internal _dtlParams = UniswapV3DirectToLiquidity.DTLParams({
-        proceedsUtilisationPercent: 1e5,
-        poolFee: 500,
-        vestingStart: 0,
-        vestingExpiry: 0
-    });
-
     // ============ Modifiers ============ //
 
     function _performCallback() internal {
@@ -28,28 +20,8 @@ contract UniswapV3DirectToLiquidityOnCreateTest is UniswapV3DirectToLiquidityTes
             address(_quoteToken),
             _LOT_CAPACITY,
             isPrefund,
-            abi.encode(_dtlParams)
+            abi.encode(_dtlCreateParams)
         );
-    }
-
-    modifier givenProceedsUtilisationPercent(uint24 percent_) {
-        _dtlParams.proceedsUtilisationPercent = percent_;
-        _;
-    }
-
-    modifier givenPoolFee(uint24 fee_) {
-        _dtlParams.poolFee = fee_;
-        _;
-    }
-
-    modifier givenVestingStart(uint48 start_) {
-        _dtlParams.vestingStart = start_;
-        _;
-    }
-
-    modifier givenVestingExpiry(uint48 end_) {
-        _dtlParams.vestingExpiry = end_;
-        _;
     }
 
     // ============ Assertions ============ //
@@ -141,7 +113,7 @@ contract UniswapV3DirectToLiquidityOnCreateTest is UniswapV3DirectToLiquidityTes
             address(_quoteToken),
             _LOT_CAPACITY,
             false,
-            abi.encode(_dtlParams)
+            abi.encode(_dtlCreateParams)
         );
     }
 
@@ -368,10 +340,10 @@ contract UniswapV3DirectToLiquidityOnCreateTest is UniswapV3DirectToLiquidityTes
         assertEq(configuration.lotCuratorPayout, 0, "lotCuratorPayout");
         assertEq(
             configuration.proceedsUtilisationPercent,
-            _dtlParams.proceedsUtilisationPercent,
+            _dtlCreateParams.proceedsUtilisationPercent,
             "proceedsUtilisationPercent"
         );
-        assertEq(configuration.poolFee, _dtlParams.poolFee, "poolFee");
+        assertEq(configuration.poolFee, _dtlCreateParams.poolFee, "poolFee");
         assertEq(configuration.vestingStart, 0, "vestingStart");
         assertEq(configuration.vestingExpiry, 0, "vestingExpiry");
         assertEq(address(configuration.linearVestingModule), address(0), "linearVestingModule");
@@ -393,10 +365,10 @@ contract UniswapV3DirectToLiquidityOnCreateTest is UniswapV3DirectToLiquidityTes
         assertEq(configuration.lotCuratorPayout, 0, "lotCuratorPayout");
         assertEq(
             configuration.proceedsUtilisationPercent,
-            _dtlParams.proceedsUtilisationPercent,
+            _dtlCreateParams.proceedsUtilisationPercent,
             "proceedsUtilisationPercent"
         );
-        assertEq(configuration.poolFee, _dtlParams.poolFee, "poolFee");
+        assertEq(configuration.poolFee, _dtlCreateParams.poolFee, "poolFee");
         assertEq(configuration.vestingStart, 0, "vestingStart");
         assertEq(configuration.vestingExpiry, 0, "vestingExpiry");
         assertEq(address(configuration.linearVestingModule), address(0), "linearVestingModule");
