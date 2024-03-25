@@ -22,13 +22,13 @@ contract UniswapV3DirectToLiquidityOnCurateTest is UniswapV3DirectToLiquidityTes
 
     // [X] when the lot has not been registered
     //  [X] it reverts
-    // [ ] given the send base tokens flag is enabled
-    //  [ ] given the seller has an insufficient balance
-    //   [ ] it reverts
-    //  [ ] given the seller has an insufficient allowance
-    //   [ ] it reverts
-    //  [ ] it transfers the base tokens to the auction house
-    // [ ] it does nothing
+    // [X] given the send base tokens flag is enabled
+    //  [X] given the seller has an insufficient balance
+    //   [X] it reverts
+    //  [X] given the seller has an insufficient allowance
+    //   [X] it reverts
+    //  [X] it transfers the base tokens to the auction house
+    // [X] it does nothing
 
     function test_whenLotNotRegistered_reverts() public givenCallbackIsCreated {
         // Expect revert

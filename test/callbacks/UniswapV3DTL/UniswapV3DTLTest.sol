@@ -269,6 +269,14 @@ abstract contract UniswapV3DirectToLiquidityTest is Test, Permit2User {
         _;
     }
 
+    modifier givenOnCurate(uint96 curatorPayout_) {
+        bool isPrefund = _callbackPermissions.sendBaseTokens;
+
+        vm.prank(address(_auctionHouse));
+        _dtl.onCurate(_lotId, curatorPayout_, isPrefund, abi.encode(""));
+        _;
+    }
+
     modifier givenProceedsUtilisationPercent(uint24 percent_) {
         _dtlCreateParams.proceedsUtilisationPercent = percent_;
         _;
