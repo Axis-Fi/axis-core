@@ -309,7 +309,7 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
     ///             - Creates and initializes the pool, if necessary
     ///             - Deploys a pool token to wrap the Uniswap V3 position as an ERC-20
     ///             - Deposits the tokens into the pool and mint the LP tokens
-    ///             - If vesting is enabled, mints the vesting tokens
+    ///             - If vesting is enabled, mints the vesting tokens, or transfers the LP tokens to the seller
     ///             - Sends any remaining quote and base tokens to the seller
     ///
     ///             The assumptions are:
@@ -467,6 +467,10 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
                 poolTokenQuantity,
                 false // TODO Wrap derivative tokens?
             );
+        }
+        // Send the LP tokens to the seller
+        else {
+            ERC20(poolTokenAddress).transfer(seller, poolTokenQuantity);
         }
 
         // Send any remaining quote tokens to the seller
