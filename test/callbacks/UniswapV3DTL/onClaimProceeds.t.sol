@@ -7,6 +7,8 @@ import {IUniswapV3Pool} from "uniswap-v3-core/interfaces/IUniswapV3Pool.sol";
 import {GUniPool} from "g-uni-v1-core/GUniPool.sol";
 import {SqrtPriceMath} from "src/lib/uniswap-v3/SqrtPriceMath.sol";
 
+import {console2} from "forge-std/console2.sol";
+
 contract UniswapV3DirectToLiquidityOnClaimProceedsTest is UniswapV3DirectToLiquidityTest {
     uint96 internal constant _PROCEEDS = 20e18;
     uint96 internal constant _REFUND = 2e18;
@@ -14,8 +16,11 @@ contract UniswapV3DirectToLiquidityOnClaimProceedsTest is UniswapV3DirectToLiqui
     uint96 internal _proceeds;
     uint96 internal _refund;
     uint96 internal _capacityUtilised;
+    uint96 internal _quoteTokensToDeposit;
+    uint96 internal _baseTokensToDeposit;
+    uint96 internal _curatorPayout;
 
-    uint160 internal constant _SQRT_PRICE_X96_OVERRIDE = 125270724187523965593206000000; // Different to what is normally calculated
+    uint160 internal constant _SQRT_PRICE_X96_OVERRIDE = 125_270_724_187_523_965_593_206_000_000; // Different to what is normally calculated
 
     /// @dev Set via `setCallbackParameters` modifier
     uint160 internal _sqrtPriceX96;
@@ -39,8 +44,9 @@ contract UniswapV3DirectToLiquidityOnClaimProceedsTest is UniswapV3DirectToLiqui
         // Get the pools deployed by the DTL callback
         address[] memory pools = _gUniFactory.getPools(_dtlAddress);
         assertEq(pools.length, 1, "pools length");
+        GUniPool pool = GUniPool(pools[0]);
 
-        assertGt(GUniPool(pools[0]).balanceOf(_SELLER), 0, "seller: LP token balance");
+        assertEq(pool.balanceOf(_SELLER), pool.totalSupply(), "seller: LP token balance");
     }
 
     function _assertQuoteTokenBalance() internal {
@@ -81,21 +87,49 @@ contract UniswapV3DirectToLiquidityOnClaimProceedsTest is UniswapV3DirectToLiqui
         _;
     }
 
-    function _calculateSqrtPriceX96(uint256 quoteTokenAmount_, uint256 baseTokenAmount_) internal view returns (uint160) {
+    function _calculateSqrtPriceX96(
+        uint256 quoteTokenAmount_,
+        uint256 baseTokenAmount_
+    ) internal view returns (uint160) {
         return SqrtPriceMath.getSqrtPriceX96(
-            address(_quoteToken),
-            address(_baseToken),
-            quoteTokenAmount_,
-            baseTokenAmount_
+            address(_quoteToken), address(_baseToken), quoteTokenAmount_, baseTokenAmount_
         );
     }
 
     modifier setCallbackParameters(uint96 proceeds_, uint96 refund_) {
         _proceeds = proceeds_;
         _refund = refund_;
-        _capacityUtilised = _LOT_CAPACITY - _refund;
 
-        _sqrtPriceX96 = _calculateSqrtPriceX96(_proceeds, _capacityUtilised);
+        // Calculate the capacity utilised
+        // Any unspent curator payout is included in the refund
+        // However, curator payouts are linear to the capacity utilised
+        // Calculate the percent utilisation
+        uint96 capacityUtilisationPercent = 1e5 - _refund * 1e5 / (_LOT_CAPACITY + _curatorPayout);
+        _capacityUtilised = _LOT_CAPACITY * capacityUtilisationPercent / 1e5;
+
+        // The proceeds utilisation percent scales the quote tokens and base tokens linearly
+        _quoteTokensToDeposit = _proceeds * _dtlCreateParams.proceedsUtilisationPercent / 1e5;
+        _baseTokensToDeposit = _capacityUtilised * _dtlCreateParams.proceedsUtilisationPercent / 1e5;
+
+        _sqrtPriceX96 = _calculateSqrtPriceX96(_quoteTokensToDeposit, _baseTokensToDeposit);
+        _;
+    }
+
+    modifier givenUnboundedProceedsUtilisationPercent(uint24 percent_) {
+        // Bound the percent
+        uint24 percent = uint24(bound(percent_, 1, 1e5));
+
+        // Set the value on the DTL
+        _dtlCreateParams.proceedsUtilisationPercent = percent;
+        _;
+    }
+
+    modifier givenUnboundedOnCurate(uint96 curationPayout_) {
+        // Bound the value
+        _curatorPayout = uint96(bound(curationPayout_, 1e17, _LOT_CAPACITY));
+
+        // Call the onCurate callback
+        _performOnCurate(_curatorPayout);
         _;
     }
 
@@ -105,10 +139,10 @@ contract UniswapV3DirectToLiquidityOnClaimProceedsTest is UniswapV3DirectToLiqui
     //  [X] it initializes the pool
     // [X] given the pool is created and initialized
     //  [X] it succeeds
-    // [ ] given the proceeds utilisation percent is set
-    //  [ ] it calculates the deposit amount correctly
-    // [ ] given curation is enabled
-    //  [ ] the utilisation percent considers this
+    // [X] given the proceeds utilisation percent is set
+    //  [X] it calculates the deposit amount correctly
+    // [X] given curation is enabled
+    //  [X] the utilisation percent considers this
     // [ ] when the refund amount changes
     //  [ ] the utilisation percent considers this
     // [ ] given minting pool tokens utilises less than the available amount of base tokens
@@ -126,10 +160,10 @@ contract UniswapV3DirectToLiquidityOnClaimProceedsTest is UniswapV3DirectToLiqui
 
     function test_givenPoolIsCreated()
         public
-        setCallbackParameters(_PROCEEDS, _REFUND)
         givenCallbackIsCreated
         givenOnCreate
         givenPoolIsCreated
+        setCallbackParameters(_PROCEEDS, _REFUND)
         givenAddressHasQuoteTokenBalance(_dtlAddress, _proceeds)
         givenAddressHasBaseTokenBalance(_SELLER, _capacityUtilised)
         givenAddressHasBaseTokenAllowance(_SELLER, _dtlAddress, _capacityUtilised)
@@ -144,9 +178,9 @@ contract UniswapV3DirectToLiquidityOnClaimProceedsTest is UniswapV3DirectToLiqui
 
     function test_givenPoolIsCreatedAndInitialized()
         public
-        setCallbackParameters(_PROCEEDS, _REFUND)
         givenCallbackIsCreated
         givenOnCreate
+        setCallbackParameters(_PROCEEDS, _REFUND)
         givenPoolIsCreatedAndInitialized(_SQRT_PRICE_X96_OVERRIDE)
         givenAddressHasQuoteTokenBalance(_dtlAddress, _proceeds)
         givenAddressHasBaseTokenBalance(_SELLER, _capacityUtilised)
@@ -155,6 +189,64 @@ contract UniswapV3DirectToLiquidityOnClaimProceedsTest is UniswapV3DirectToLiqui
         _performCallback();
 
         _assertPoolState(_SQRT_PRICE_X96_OVERRIDE);
+        _assertLpTokenBalance();
+        _assertQuoteTokenBalance();
+        _assertBaseTokenBalance();
+    }
+
+    function test_givenProceedsUtilisationPercent_fuzz(uint24 percent_)
+        public
+        givenCallbackIsCreated
+        givenUnboundedProceedsUtilisationPercent(percent_)
+        givenOnCreate
+        setCallbackParameters(_PROCEEDS, _REFUND)
+        givenAddressHasQuoteTokenBalance(_dtlAddress, _proceeds)
+        givenAddressHasBaseTokenBalance(_SELLER, _capacityUtilised)
+        givenAddressHasBaseTokenAllowance(_SELLER, _dtlAddress, _capacityUtilised)
+    {
+        _performCallback();
+
+        _assertPoolState(_sqrtPriceX96);
+        _assertLpTokenBalance();
+        _assertQuoteTokenBalance();
+        _assertBaseTokenBalance();
+    }
+
+    function test_givenCurationPayout_fuzz(uint96 curationPayout_)
+        public
+        givenCallbackIsCreated
+        givenOnCreate
+        givenUnboundedOnCurate(curationPayout_)
+        setCallbackParameters(_PROCEEDS, _REFUND)
+        givenAddressHasQuoteTokenBalance(_dtlAddress, _proceeds)
+        givenAddressHasBaseTokenBalance(_SELLER, _capacityUtilised)
+        givenAddressHasBaseTokenAllowance(_SELLER, _dtlAddress, _capacityUtilised)
+    {
+        _performCallback();
+
+        _assertPoolState(_sqrtPriceX96);
+        _assertLpTokenBalance();
+        _assertQuoteTokenBalance();
+        _assertBaseTokenBalance();
+    }
+
+    function test_givenProceedsUtilisationPercent_givenCurationPayout_fuzz(
+        uint24 percent_,
+        uint96 curationPayout_
+    )
+        public
+        givenCallbackIsCreated
+        givenUnboundedProceedsUtilisationPercent(percent_)
+        givenOnCreate
+        givenUnboundedOnCurate(curationPayout_)
+        setCallbackParameters(_PROCEEDS, _REFUND)
+        givenAddressHasQuoteTokenBalance(_dtlAddress, _proceeds)
+        givenAddressHasBaseTokenBalance(_SELLER, _baseTokensToDeposit)
+        givenAddressHasBaseTokenAllowance(_SELLER, _dtlAddress, _baseTokensToDeposit)
+    {
+        _performCallback();
+
+        _assertPoolState(_sqrtPriceX96);
         _assertLpTokenBalance();
         _assertQuoteTokenBalance();
         _assertBaseTokenBalance();

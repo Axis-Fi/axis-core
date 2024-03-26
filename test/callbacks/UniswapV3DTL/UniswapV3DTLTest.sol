@@ -222,11 +222,15 @@ abstract contract UniswapV3DirectToLiquidityTest is Test, Permit2User {
         _;
     }
 
-    modifier givenOnCurate(uint96 curatorPayout_) {
+    function _performOnCurate(uint96 curatorPayout_) internal {
         bool isPrefund = _callbackPermissions.sendBaseTokens;
 
         vm.prank(address(_auctionHouse));
         _dtl.onCurate(_lotId, curatorPayout_, isPrefund, abi.encode(""));
+    }
+
+    modifier givenOnCurate(uint96 curatorPayout_) {
+        _performOnCurate(curatorPayout_);
         _;
     }
 
