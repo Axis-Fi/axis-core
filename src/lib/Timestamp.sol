@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0
+// SPDX-License-Identifier: MIT
 pragma solidity 0.8.19;
 
 import {uint2str} from "src/lib/Uint2Str.sol";
