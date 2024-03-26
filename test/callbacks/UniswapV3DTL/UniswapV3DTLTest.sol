@@ -10,6 +10,7 @@ import {AuctionHouse} from "src/AuctionHouse.sol";
 import {BaseCallback} from "src/callbacks/BaseCallback.sol";
 
 import {GUniFactory} from "g-uni-v1-core/GUniFactory.sol";
+import {GUniPool} from "g-uni-v1-core/GUniPool.sol";
 import {IUniswapV3Factory} from "uniswap-v3-core/interfaces/IUniswapV3Factory.sol";
 
 import {UniswapV3Factory} from "test/lib/uniswap-v3/UniswapV3Factory.sol";
@@ -80,14 +81,20 @@ abstract contract UniswapV3DirectToLiquidityTest is Test, Permit2User {
             salt: bytes32(0xbc65534283bdbbac4a95a3fb1933af63d55135566688dd54d1c55a626b1bc366)
         }();
 
-        // // // Uncomment to regenerate bytecode to mine new salts if the GUniFactory changes
-        // // // cast create2 -s 00 -i $(cat ./bytecode/GUniFactory.bin)
+        // // Uncomment to regenerate bytecode to mine new salts if the GUniFactory changes
+        // // cast create2 -s 00 -i $(cat ./bytecode/GUniFactory.bin)
         // bytes memory bytecode =
         //     abi.encodePacked(type(GUniFactory).creationCode, abi.encode(address(_uniV3Factory)));
         // vm.writeFile("./bytecode/GUniFactory.bin", vm.toString(bytecode));
         _gUniFactory = new GUniFactory{
             salt: bytes32(0x31d4bb3a2cd73df799deceac86fa252d040e24c2ea206f4172d74f72cfa34e4b)
         }(address(_uniV3Factory));
+
+        // Initialize the GUniFactory
+        address payable gelatoAddress = payable(address(0x10));
+        GUniPool poolImplementation = new GUniPool(gelatoAddress);
+        _gUniFactory.initialize(address(poolImplementation), address(0), address(this));
+
         _linearVesting = new LinearVesting(address(_auctionHouse));
 
         _quoteToken = new MockERC20("Quote Token", "QT", 18);
@@ -157,10 +164,10 @@ abstract contract UniswapV3DirectToLiquidityTest is Test, Permit2User {
         bytes32 salt;
         if (_callbackPermissions.receiveQuoteTokens && _callbackPermissions.sendBaseTokens) {
             // E7
-            salt = bytes32(0x73bd1938344d9256c54a9f4e98816480a58d32b411fd32de9577c0cc2e20cf29);
+            salt = bytes32(0x119b11dc7ff84f8e9e0dc6bedadac973c450fab0b2e12101aedeb67fd19f0aa4);
         } else {
             // E6
-            salt = bytes32(0x8a0001aad0fe7ba68a30b5a47b0c335fc4b8301acc8ccc18b5bee44ab7b52351);
+            salt = bytes32(0x0748f46d1ccf5be29c02dc9833b69a1f72540466b76d110551b4cf1fbf559bbd);
         }
 
         // Required for CREATE2 address to work correctly. doesn't do anything in a test
