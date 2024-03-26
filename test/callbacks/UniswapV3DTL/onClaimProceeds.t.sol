@@ -6,12 +6,15 @@ import {UniswapV3DirectToLiquidityTest} from "./UniswapV3DTLTest.sol";
 import {IUniswapV3Pool} from "uniswap-v3-core/interfaces/IUniswapV3Pool.sol";
 import {GUniPool} from "g-uni-v1-core/GUniPool.sol";
 import {SqrtPriceMath} from "src/lib/uniswap-v3/SqrtPriceMath.sol";
+import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
+import {LinearVesting} from "src/modules/derivatives/LinearVesting.sol";
+import {ERC20} from "solmate/tokens/ERC20.sol";
 
 import {console2} from "forge-std/console2.sol";
 
 contract UniswapV3DirectToLiquidityOnClaimProceedsTest is UniswapV3DirectToLiquidityTest {
     uint96 internal constant _PROCEEDS = 20e18;
-    uint96 internal constant _REFUND = 2e18;
+    uint96 internal constant _REFUND = 0;
 
     uint96 internal _proceeds;
     uint96 internal _refund;
@@ -39,14 +42,57 @@ contract UniswapV3DirectToLiquidityOnClaimProceedsTest is UniswapV3DirectToLiqui
     }
 
     function _assertLpTokenBalance() internal {
-        // TODO vesting
-
         // Get the pools deployed by the DTL callback
         address[] memory pools = _gUniFactory.getPools(_dtlAddress);
         assertEq(pools.length, 1, "pools length");
         GUniPool pool = GUniPool(pools[0]);
 
-        assertEq(pool.balanceOf(_SELLER), pool.totalSupply(), "seller: LP token balance");
+        uint256 sellerExpectedBalance;
+        uint256 linearVestingExpectedBalance;
+        // Only has a balance if not vesting
+        if (_dtlCreateParams.vestingStart == 0) {
+            sellerExpectedBalance = pool.totalSupply();
+        } else {
+            linearVestingExpectedBalance = pool.totalSupply();
+        }
+
+        assertEq(pool.balanceOf(_SELLER), sellerExpectedBalance, "seller: LP token balance");
+        assertEq(
+            pool.balanceOf(address(_linearVesting)),
+            linearVestingExpectedBalance,
+            "linear vesting: LP token balance"
+        );
+    }
+
+    function _assertVestingTokenBalance() internal {
+        // Exit if not vesting
+        if (_dtlCreateParams.vestingStart == 0) {
+            return;
+        }
+
+        // Get the pools deployed by the DTL callback
+        address[] memory pools = _gUniFactory.getPools(_dtlAddress);
+        assertEq(pools.length, 1, "pools length");
+
+        // Get the wrapped address
+        (, address wrappedVestingTokenAddress) = _linearVesting.deploy(
+            pools[0],
+            abi.encode(
+                LinearVesting.VestingParams({
+                    start: _dtlCreateParams.vestingStart,
+                    expiry: _dtlCreateParams.vestingExpiry
+                })
+            ),
+            true
+        );
+        ERC20 wrappedVestingToken = ERC20(wrappedVestingTokenAddress);
+        uint256 sellerExpectedBalance = wrappedVestingToken.totalSupply();
+
+        assertEq(
+            wrappedVestingToken.balanceOf(_SELLER),
+            sellerExpectedBalance,
+            "seller: vesting token balance"
+        );
     }
 
     function _assertQuoteTokenBalance() internal {
@@ -104,7 +150,8 @@ contract UniswapV3DirectToLiquidityOnClaimProceedsTest is UniswapV3DirectToLiqui
         // Any unspent curator payout is included in the refund
         // However, curator payouts are linear to the capacity utilised
         // Calculate the percent utilisation
-        uint96 capacityUtilisationPercent = 1e5 - _refund * 1e5 / (_LOT_CAPACITY + _curatorPayout);
+        uint96 capacityUtilisationPercent =
+            1e5 - uint96(FixedPointMathLib.mulDivDown(_refund, 1e5, _LOT_CAPACITY + _curatorPayout));
         _capacityUtilised = _LOT_CAPACITY * capacityUtilisationPercent / 1e5;
 
         // The proceeds utilisation percent scales the quote tokens and base tokens linearly
@@ -133,6 +180,12 @@ contract UniswapV3DirectToLiquidityOnClaimProceedsTest is UniswapV3DirectToLiqui
         _;
     }
 
+    modifier whenRefundIsBounded(uint96 refund_) {
+        // Bound the refund
+        _refund = uint96(bound(refund_, 1e17, 5e18));
+        _;
+    }
+
     // ========== Tests ========== //
 
     // [X] given the pool is created
@@ -143,8 +196,8 @@ contract UniswapV3DirectToLiquidityOnClaimProceedsTest is UniswapV3DirectToLiqui
     //  [X] it calculates the deposit amount correctly
     // [X] given curation is enabled
     //  [X] the utilisation percent considers this
-    // [ ] when the refund amount changes
-    //  [ ] the utilisation percent considers this
+    // [X] when the refund amount changes
+    //  [X] the utilisation percent considers this
     // [ ] given minting pool tokens utilises less than the available amount of base tokens
     //  [ ] the excess base tokens are returned
     // [ ] given minting pool tokens utilises less than the available amount of quote tokens
@@ -154,9 +207,9 @@ contract UniswapV3DirectToLiquidityOnClaimProceedsTest is UniswapV3DirectToLiqui
     // [ ] given the send base tokens flag is true
     //  [ ] when the refund amount is less than the base tokens required
     //   [ ] it transfers the base tokens from the seller
-    // [ ] given vesting is enabled
-    //  [ ] it mints the vesting tokens to the seller
-    // [ ] it creates and initializes the pool, creates a pool token, deposits into the pool token, transfers the LP token to the seller and transfers any excess back to the seller
+    // [X] given vesting is enabled
+    //  [X] it mints the vesting tokens to the seller
+    // [X] it creates and initializes the pool, creates a pool token, deposits into the pool token, transfers the LP token to the seller and transfers any excess back to the seller
 
     function test_givenPoolIsCreated()
         public
@@ -172,6 +225,7 @@ contract UniswapV3DirectToLiquidityOnClaimProceedsTest is UniswapV3DirectToLiqui
 
         _assertPoolState(_sqrtPriceX96);
         _assertLpTokenBalance();
+        _assertVestingTokenBalance();
         _assertQuoteTokenBalance();
         _assertBaseTokenBalance();
     }
@@ -190,6 +244,7 @@ contract UniswapV3DirectToLiquidityOnClaimProceedsTest is UniswapV3DirectToLiqui
 
         _assertPoolState(_SQRT_PRICE_X96_OVERRIDE);
         _assertLpTokenBalance();
+        _assertVestingTokenBalance();
         _assertQuoteTokenBalance();
         _assertBaseTokenBalance();
     }
@@ -208,6 +263,7 @@ contract UniswapV3DirectToLiquidityOnClaimProceedsTest is UniswapV3DirectToLiqui
 
         _assertPoolState(_sqrtPriceX96);
         _assertLpTokenBalance();
+        _assertVestingTokenBalance();
         _assertQuoteTokenBalance();
         _assertBaseTokenBalance();
     }
@@ -226,6 +282,7 @@ contract UniswapV3DirectToLiquidityOnClaimProceedsTest is UniswapV3DirectToLiqui
 
         _assertPoolState(_sqrtPriceX96);
         _assertLpTokenBalance();
+        _assertVestingTokenBalance();
         _assertQuoteTokenBalance();
         _assertBaseTokenBalance();
     }
@@ -248,6 +305,47 @@ contract UniswapV3DirectToLiquidityOnClaimProceedsTest is UniswapV3DirectToLiqui
 
         _assertPoolState(_sqrtPriceX96);
         _assertLpTokenBalance();
+        _assertVestingTokenBalance();
+        _assertQuoteTokenBalance();
+        _assertBaseTokenBalance();
+    }
+
+    function test_whenRefund_fuzz(uint96 refund_)
+        public
+        givenCallbackIsCreated
+        givenOnCreate
+        whenRefundIsBounded(refund_)
+        setCallbackParameters(_PROCEEDS, _refund)
+        givenAddressHasQuoteTokenBalance(_dtlAddress, _proceeds)
+        givenAddressHasBaseTokenBalance(_SELLER, _baseTokensToDeposit)
+        givenAddressHasBaseTokenAllowance(_SELLER, _dtlAddress, _baseTokensToDeposit)
+    {
+        _performCallback();
+
+        _assertPoolState(_sqrtPriceX96);
+        _assertLpTokenBalance();
+        _assertVestingTokenBalance();
+        _assertQuoteTokenBalance();
+        _assertBaseTokenBalance();
+    }
+
+    function test_givenVesting()
+        public
+        givenLinearVestingModuleIsInstalled
+        givenCallbackIsCreated
+        givenVestingStart(_START + 1)
+        givenVestingExpiry(_START + 2)
+        givenOnCreate
+        setCallbackParameters(_PROCEEDS, _REFUND)
+        givenAddressHasQuoteTokenBalance(_dtlAddress, _proceeds)
+        givenAddressHasBaseTokenBalance(_SELLER, _baseTokensToDeposit)
+        givenAddressHasBaseTokenAllowance(_SELLER, _dtlAddress, _baseTokensToDeposit)
+    {
+        _performCallback();
+
+        _assertPoolState(_sqrtPriceX96);
+        _assertLpTokenBalance();
+        _assertVestingTokenBalance();
         _assertQuoteTokenBalance();
         _assertBaseTokenBalance();
     }
