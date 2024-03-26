@@ -478,7 +478,7 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
                 poolTokenAddress,
                 _getEncodedVestingParams(config.vestingStart, config.vestingExpiry),
                 poolTokenQuantity,
-                false // TODO Wrap derivative tokens?
+                true // Wrap vesting LP tokens so they are easily visible
             );
         }
         // Send the LP tokens to the seller
