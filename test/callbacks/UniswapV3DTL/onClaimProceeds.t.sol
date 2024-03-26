@@ -4,7 +4,9 @@ pragma solidity 0.8.19;
 import {UniswapV3DirectToLiquidityTest} from "./UniswapV3DTLTest.sol";
 
 import {IUniswapV3Pool} from "uniswap-v3-core/interfaces/IUniswapV3Pool.sol";
+import {GUniFactory} from "g-uni-v1-core/GUniFactory.sol";
 import {GUniPool} from "g-uni-v1-core/GUniPool.sol";
+import {TickMath} from "uniswap-v3-core/libraries/TickMath.sol";
 import {SqrtPriceMath} from "src/lib/uniswap-v3/SqrtPriceMath.sol";
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 import {LinearVesting} from "src/modules/derivatives/LinearVesting.sol";
@@ -32,10 +34,7 @@ contract UniswapV3DirectToLiquidityOnClaimProceedsTest is UniswapV3DirectToLiqui
 
     function _assertPoolState(uint160 sqrtPriceX96_) internal {
         // Get the pool
-        (address token0, address token1) = address(_baseToken) < address(_quoteToken)
-            ? (address(_baseToken), address(_quoteToken))
-            : (address(_quoteToken), address(_baseToken));
-        address pool = _uniV3Factory.getPool(token0, token1, _dtlCreateParams.poolFee);
+        address pool = _getPool();
 
         (uint160 sqrtPriceX96,,,,,,) = IUniswapV3Pool(pool).slot0();
         assertEq(sqrtPriceX96, sqrtPriceX96_, "pool sqrt price");
@@ -186,6 +185,99 @@ contract UniswapV3DirectToLiquidityOnClaimProceedsTest is UniswapV3DirectToLiqui
         _;
     }
 
+    function _createGUniPool() internal returns (GUniPool) {
+        // Create a new GUniFactory to deposit through
+        GUniFactory gUniFactory = new GUniFactory(address(_uniV3Factory));
+        address payable gelatoAddress = payable(address(0x10));
+        GUniPool poolImplementation = new GUniPool(gelatoAddress);
+        gUniFactory.initialize(address(poolImplementation), address(0), address(this));
+
+        // Adjust the full-range ticks according to the tick spacing for the current fee
+        int24 tickSpacing = _uniV3Factory.feeAmountTickSpacing(_dtlCreateParams.poolFee);
+        int24 minTick = TickMath.MIN_TICK / tickSpacing * tickSpacing;
+        int24 maxTick = TickMath.MAX_TICK / tickSpacing * tickSpacing;
+
+        // Create the pool
+        bool quoteTokenIsToken0 = address(_quoteToken) < address(_baseToken);
+        address gUniPoolAddress = gUniFactory.createPool(
+            quoteTokenIsToken0 ? address(_quoteToken) : address(_baseToken),
+            quoteTokenIsToken0 ? address(_baseToken) : address(_quoteToken),
+            _dtlCreateParams.poolFee,
+            minTick,
+            maxTick
+        );
+
+        return GUniPool(gUniPoolAddress);
+    }
+
+    modifier givenPoolHasDepositLowerPrice() {
+        GUniPool gUniPool = _createGUniPool();
+        bool quoteTokenIsToken0 = address(_quoteToken) < address(_baseToken);
+
+        // Calculate the mint amount
+        uint256 quoteTokenAmount = _PROCEEDS / 2;
+        uint256 baseTokenAmount = _LOT_CAPACITY;
+        (,, uint256 poolTokenQuantity) = gUniPool.getMintAmounts(
+            quoteTokenIsToken0 ? quoteTokenAmount : baseTokenAmount,
+            quoteTokenIsToken0 ? baseTokenAmount : quoteTokenAmount
+        );
+
+        // Mint the underlying tokens
+        _quoteToken.mint(address(this), quoteTokenAmount);
+        _baseToken.mint(address(this), baseTokenAmount);
+        _quoteToken.approve(address(gUniPool), quoteTokenAmount);
+        _baseToken.approve(address(gUniPool), baseTokenAmount);
+
+        // Mint the pool tokens
+        gUniPool.mint(poolTokenQuantity, address(this));
+        _;
+    }
+
+    modifier givenPoolHasDepositHigherPrice() {
+        GUniPool gUniPool = _createGUniPool();
+        bool quoteTokenIsToken0 = address(_quoteToken) < address(_baseToken);
+
+        // Calculate the mint amount
+        uint256 quoteTokenAmount = _PROCEEDS * 10;
+        uint256 baseTokenAmount = _LOT_CAPACITY / 2;
+        (,, uint256 poolTokenQuantity) = gUniPool.getMintAmounts(
+            quoteTokenIsToken0 ? quoteTokenAmount : baseTokenAmount,
+            quoteTokenIsToken0 ? baseTokenAmount : quoteTokenAmount
+        );
+
+        // Mint the underlying tokens
+        _quoteToken.mint(address(this), quoteTokenAmount);
+        _baseToken.mint(address(this), baseTokenAmount);
+        _quoteToken.approve(address(gUniPool), quoteTokenAmount);
+        _baseToken.approve(address(gUniPool), baseTokenAmount);
+
+        // TODO the tick does not appear to be changing. Why?
+        (,int24 tick,,,,,) = IUniswapV3Pool(_getPool()).slot0();
+        console2.log("tick before", tick);
+
+        (uint256 amount0, uint256 amount1) = gUniPool.getUnderlyingBalances();
+        console2.log("amount0", amount0);
+        console2.log("amount1", amount1);
+
+        // Mint the pool tokens
+        gUniPool.mint(poolTokenQuantity, address(this));
+
+        (,tick,,,,,) = IUniswapV3Pool(_getPool()).slot0();
+        console2.log("tick after", tick);
+
+        (amount0, amount1) = gUniPool.getUnderlyingBalances();
+        console2.log("amount0 after", amount0);
+        console2.log("amount1 after", amount1);
+        _;
+    }
+
+    function _getPool() internal view returns (address) {
+        (address token0, address token1) = address(_baseToken) < address(_quoteToken)
+            ? (address(_baseToken), address(_quoteToken))
+            : (address(_quoteToken), address(_baseToken));
+        return _uniV3Factory.getPool(token0, token1, _dtlCreateParams.poolFee);
+    }
+
     // ========== Tests ========== //
 
     // [X] given the pool is created
@@ -316,6 +408,46 @@ contract UniswapV3DirectToLiquidityOnClaimProceedsTest is UniswapV3DirectToLiqui
         givenOnCreate
         whenRefundIsBounded(refund_)
         setCallbackParameters(_PROCEEDS, _refund)
+        givenAddressHasQuoteTokenBalance(_dtlAddress, _proceeds)
+        givenAddressHasBaseTokenBalance(_SELLER, _baseTokensToDeposit)
+        givenAddressHasBaseTokenAllowance(_SELLER, _dtlAddress, _baseTokensToDeposit)
+    {
+        _performCallback();
+
+        _assertPoolState(_sqrtPriceX96);
+        _assertLpTokenBalance();
+        _assertVestingTokenBalance();
+        _assertQuoteTokenBalance();
+        _assertBaseTokenBalance();
+    }
+
+    function test_givenPoolHasDepositWithLowerPrice()
+        public
+        givenCallbackIsCreated
+        givenOnCreate
+        setCallbackParameters(_PROCEEDS, _REFUND)
+        givenPoolIsCreatedAndInitialized(_sqrtPriceX96)
+        givenPoolHasDepositLowerPrice
+        givenAddressHasQuoteTokenBalance(_dtlAddress, _proceeds)
+        givenAddressHasBaseTokenBalance(_SELLER, _baseTokensToDeposit)
+        givenAddressHasBaseTokenAllowance(_SELLER, _dtlAddress, _baseTokensToDeposit)
+    {
+        _performCallback();
+
+        _assertPoolState(_sqrtPriceX96);
+        _assertLpTokenBalance();
+        _assertVestingTokenBalance();
+        _assertQuoteTokenBalance();
+        _assertBaseTokenBalance();
+    }
+
+    function test_givenPoolHasDepositWithHigherPrice()
+        public
+        givenCallbackIsCreated
+        givenOnCreate
+        setCallbackParameters(_PROCEEDS, _REFUND)
+        givenPoolIsCreatedAndInitialized(_sqrtPriceX96)
+        givenPoolHasDepositHigherPrice
         givenAddressHasQuoteTokenBalance(_dtlAddress, _proceeds)
         givenAddressHasBaseTokenBalance(_SELLER, _baseTokensToDeposit)
         givenAddressHasBaseTokenAllowance(_SELLER, _dtlAddress, _baseTokensToDeposit)
