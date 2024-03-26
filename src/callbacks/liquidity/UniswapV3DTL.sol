@@ -30,6 +30,11 @@ import {Keycode, wrapVeecode} from "src/modules/Modules.sol";
 ///             in order to create liquidity immediately.
 ///
 ///             The LP tokens can optionally vest to the auction seller.
+///
+///             An important risk to consider: if the auction's base token is available and liquid, a third-party
+///             could front-run the auction by creating the pool before the auction ends. This would allow them to
+///             manipulate the price of the pool and potentially profit from the eventual deposit of the auction proceeds.
+///
 /// @dev        As a general rule, this callback contract does not retain balances of tokens between calls.
 ///             Transfers are performed within the same function that requires the balance.
 contract UniswapV3DirectToLiquidity is BaseCallback {
@@ -373,6 +378,7 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
             );
 
             // If the pool already exists and is initialized, it will have no effect
+            // Please see the risks section in the contract documentation for more information
             _createAndInitializePoolIfNecessary(
                 quoteTokenIsToken0 ? config.quoteToken : config.baseToken,
                 quoteTokenIsToken0 ? config.baseToken : config.quoteToken,
