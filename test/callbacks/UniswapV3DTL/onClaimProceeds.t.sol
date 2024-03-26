@@ -185,89 +185,13 @@ contract UniswapV3DirectToLiquidityOnClaimProceedsTest is UniswapV3DirectToLiqui
         _;
     }
 
-    function _createGUniPool() internal returns (GUniPool) {
-        // Create a new GUniFactory to deposit through
-        GUniFactory gUniFactory = new GUniFactory(address(_uniV3Factory));
-        address payable gelatoAddress = payable(address(0x10));
-        GUniPool poolImplementation = new GUniPool(gelatoAddress);
-        gUniFactory.initialize(address(poolImplementation), address(0), address(this));
-
-        // Adjust the full-range ticks according to the tick spacing for the current fee
-        int24 tickSpacing = _uniV3Factory.feeAmountTickSpacing(_dtlCreateParams.poolFee);
-        int24 minTick = TickMath.MIN_TICK / tickSpacing * tickSpacing;
-        int24 maxTick = TickMath.MAX_TICK / tickSpacing * tickSpacing;
-
-        // Create the pool
-        bool quoteTokenIsToken0 = address(_quoteToken) < address(_baseToken);
-        address gUniPoolAddress = gUniFactory.createPool(
-            quoteTokenIsToken0 ? address(_quoteToken) : address(_baseToken),
-            quoteTokenIsToken0 ? address(_baseToken) : address(_quoteToken),
-            _dtlCreateParams.poolFee,
-            minTick,
-            maxTick
-        );
-
-        return GUniPool(gUniPoolAddress);
-    }
-
     modifier givenPoolHasDepositLowerPrice() {
-        GUniPool gUniPool = _createGUniPool();
-        bool quoteTokenIsToken0 = address(_quoteToken) < address(_baseToken);
-
-        // Calculate the mint amount
-        uint256 quoteTokenAmount = _PROCEEDS / 2;
-        uint256 baseTokenAmount = _LOT_CAPACITY;
-        (,, uint256 poolTokenQuantity) = gUniPool.getMintAmounts(
-            quoteTokenIsToken0 ? quoteTokenAmount : baseTokenAmount,
-            quoteTokenIsToken0 ? baseTokenAmount : quoteTokenAmount
-        );
-
-        // Mint the underlying tokens
-        _quoteToken.mint(address(this), quoteTokenAmount);
-        _baseToken.mint(address(this), baseTokenAmount);
-        _quoteToken.approve(address(gUniPool), quoteTokenAmount);
-        _baseToken.approve(address(gUniPool), baseTokenAmount);
-
-        // Mint the pool tokens
-        gUniPool.mint(poolTokenQuantity, address(this));
+        _sqrtPriceX96 = _calculateSqrtPriceX96(_PROCEEDS / 2, _LOT_CAPACITY * 10);
         _;
     }
 
     modifier givenPoolHasDepositHigherPrice() {
-        GUniPool gUniPool = _createGUniPool();
-        bool quoteTokenIsToken0 = address(_quoteToken) < address(_baseToken);
-
-        // Calculate the mint amount
-        uint256 quoteTokenAmount = _PROCEEDS * 10;
-        uint256 baseTokenAmount = _LOT_CAPACITY / 2;
-        (,, uint256 poolTokenQuantity) = gUniPool.getMintAmounts(
-            quoteTokenIsToken0 ? quoteTokenAmount : baseTokenAmount,
-            quoteTokenIsToken0 ? baseTokenAmount : quoteTokenAmount
-        );
-
-        // Mint the underlying tokens
-        _quoteToken.mint(address(this), quoteTokenAmount);
-        _baseToken.mint(address(this), baseTokenAmount);
-        _quoteToken.approve(address(gUniPool), quoteTokenAmount);
-        _baseToken.approve(address(gUniPool), baseTokenAmount);
-
-        // TODO the tick does not appear to be changing. Why?
-        (,int24 tick,,,,,) = IUniswapV3Pool(_getPool()).slot0();
-        console2.log("tick before", tick);
-
-        (uint256 amount0, uint256 amount1) = gUniPool.getUnderlyingBalances();
-        console2.log("amount0", amount0);
-        console2.log("amount1", amount1);
-
-        // Mint the pool tokens
-        gUniPool.mint(poolTokenQuantity, address(this));
-
-        (,tick,,,,,) = IUniswapV3Pool(_getPool()).slot0();
-        console2.log("tick after", tick);
-
-        (amount0, amount1) = gUniPool.getUnderlyingBalances();
-        console2.log("amount0 after", amount0);
-        console2.log("amount1 after", amount1);
+        _sqrtPriceX96 = _calculateSqrtPriceX96(_PROCEEDS * 10, _LOT_CAPACITY / 2);
         _;
     }
 
@@ -290,10 +214,10 @@ contract UniswapV3DirectToLiquidityOnClaimProceedsTest is UniswapV3DirectToLiqui
     //  [X] the utilisation percent considers this
     // [X] when the refund amount changes
     //  [X] the utilisation percent considers this
-    // [ ] given minting pool tokens utilises less than the available amount of base tokens
-    //  [ ] the excess base tokens are returned
-    // [ ] given minting pool tokens utilises less than the available amount of quote tokens
-    //  [ ] the excess quote tokens are returned
+    // [X] given minting pool tokens utilises less than the available amount of base tokens
+    //  [X] the excess base tokens are returned
+    // [X] given minting pool tokens utilises less than the available amount of quote tokens
+    //  [X] the excess quote tokens are returned
     // [X] given the send base tokens flag is false
     //  [X] it transfers the base tokens from the seller
     // [X] given the send base tokens flag is true
@@ -426,8 +350,8 @@ contract UniswapV3DirectToLiquidityOnClaimProceedsTest is UniswapV3DirectToLiqui
         givenCallbackIsCreated
         givenOnCreate
         setCallbackParameters(_PROCEEDS, _REFUND)
-        givenPoolIsCreatedAndInitialized(_sqrtPriceX96)
         givenPoolHasDepositLowerPrice
+        givenPoolIsCreatedAndInitialized(_sqrtPriceX96)
         givenAddressHasQuoteTokenBalance(_dtlAddress, _proceeds)
         givenAddressHasBaseTokenBalance(_SELLER, _baseTokensToDeposit)
         givenAddressHasBaseTokenAllowance(_SELLER, _dtlAddress, _baseTokensToDeposit)
@@ -446,8 +370,8 @@ contract UniswapV3DirectToLiquidityOnClaimProceedsTest is UniswapV3DirectToLiqui
         givenCallbackIsCreated
         givenOnCreate
         setCallbackParameters(_PROCEEDS, _REFUND)
-        givenPoolIsCreatedAndInitialized(_sqrtPriceX96)
         givenPoolHasDepositHigherPrice
+        givenPoolIsCreatedAndInitialized(_sqrtPriceX96)
         givenAddressHasQuoteTokenBalance(_dtlAddress, _proceeds)
         givenAddressHasBaseTokenBalance(_SELLER, _baseTokensToDeposit)
         givenAddressHasBaseTokenAllowance(_SELLER, _dtlAddress, _baseTokensToDeposit)
