@@ -157,10 +157,10 @@ abstract contract UniswapV3DirectToLiquidityTest is Test, Permit2User {
         bytes32 salt;
         if (_callbackPermissions.receiveQuoteTokens && _callbackPermissions.sendBaseTokens) {
             // E7
-            salt = bytes32(0x683e68ef487135194430d6bdb667fee4fb73c688770a196b7bd73b318ec96e0d);
+            salt = bytes32(0x73bd1938344d9256c54a9f4e98816480a58d32b411fd32de9577c0cc2e20cf29);
         } else {
             // E6
-            salt = bytes32(0xd163384c3034671208c7c68a5d04241bfb6e14e92776c03734fbcd2021e677dd);
+            salt = bytes32(0x8a0001aad0fe7ba68a30b5a47b0c335fc4b8301acc8ccc18b5bee44ab7b52351);
         }
 
         // Required for CREATE2 address to work correctly. doesn't do anything in a test

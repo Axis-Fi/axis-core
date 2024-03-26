@@ -390,12 +390,17 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
         // Deploy the pool token
         address poolTokenAddress;
         {
+            // Adjust the full-range ticks according to the tick spacing for the current fee
+            int24 tickSpacing = uniV3Factory.feeAmountTickSpacing(config.poolFee);
+            int24 minTick = TickMath.MIN_TICK / tickSpacing * tickSpacing;
+            int24 maxTick = TickMath.MAX_TICK / tickSpacing * tickSpacing;
+
             poolTokenAddress = gUniFactory.createPool(
                 quoteTokenIsToken0 ? config.quoteToken : config.baseToken,
                 quoteTokenIsToken0 ? config.baseToken : config.quoteToken,
                 config.poolFee,
-                TickMath.MIN_TICK,
-                TickMath.MAX_TICK
+                minTick,
+                maxTick
             );
         }
 
