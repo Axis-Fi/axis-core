@@ -43,7 +43,7 @@ contract UniswapV3DirectToLiquidityOnCurateTest is UniswapV3DirectToLiquidityTes
         public
         givenCallbackSendBaseTokensIsSet
         givenCallbackIsCreated
-        givenAddressHasBaseTokenAllowance(_SELLER, address(_dtl), _PAYOUT_AMOUNT)
+        givenAddressHasBaseTokenAllowance(_SELLER, _dtlAddress, _PAYOUT_AMOUNT)
         givenOnCreate
     {
         // Expect revert
@@ -72,7 +72,7 @@ contract UniswapV3DirectToLiquidityOnCurateTest is UniswapV3DirectToLiquidityTes
         givenCallbackSendBaseTokensIsSet
         givenCallbackIsCreated
         givenAddressHasBaseTokenBalance(_SELLER, _PAYOUT_AMOUNT)
-        givenAddressHasBaseTokenAllowance(_SELLER, address(_dtl), _PAYOUT_AMOUNT)
+        givenAddressHasBaseTokenAllowance(_SELLER, _dtlAddress, _PAYOUT_AMOUNT)
         givenOnCreate
     {
         // Call the function
@@ -84,7 +84,7 @@ contract UniswapV3DirectToLiquidityOnCurateTest is UniswapV3DirectToLiquidityTes
         assertEq(configuration.lotCuratorPayout, _PAYOUT_AMOUNT, "lotCuratorPayout");
 
         // Check the balances
-        assertEq(_baseToken.balanceOf(address(_dtl)), 0, "base token balance");
+        assertEq(_baseToken.balanceOf(_dtlAddress), 0, "base token balance");
         assertEq(_baseToken.balanceOf(_SELLER), 0, "seller base token balance");
         assertEq(
             _baseToken.balanceOf(address(_auctionHouse)),
@@ -103,7 +103,7 @@ contract UniswapV3DirectToLiquidityOnCurateTest is UniswapV3DirectToLiquidityTes
         assertEq(configuration.lotCuratorPayout, _PAYOUT_AMOUNT, "lotCuratorPayout");
 
         // Check the balances
-        assertEq(_baseToken.balanceOf(address(_dtl)), 0, "base token balance");
+        assertEq(_baseToken.balanceOf(_dtlAddress), 0, "base token balance");
         assertEq(_baseToken.balanceOf(_SELLER), 0, "seller base token balance");
         assertEq(
             _baseToken.balanceOf(address(_auctionHouse)), 0, "auction house base token balance"

@@ -35,6 +35,7 @@ abstract contract UniswapV3DirectToLiquidityTest is Test, Permit2User {
 
     AuctionHouse internal _auctionHouse;
     UniswapV3DirectToLiquidity internal _dtl;
+    address internal _dtlAddress;
     IUniswapV3Factory internal _uniV3Factory;
     GUniFactory internal _gUniFactory;
     LinearVesting internal _linearVesting;
@@ -101,11 +102,6 @@ abstract contract UniswapV3DirectToLiquidityTest is Test, Permit2User {
         _;
     }
 
-    modifier givenCallbackReceiveQuoteTokensIsSet() {
-        _callbackPermissions.receiveQuoteTokens = true;
-        _;
-    }
-
     modifier givenCallbackSendBaseTokensIsSet() {
         _callbackPermissions.sendBaseTokens = true;
         _;
@@ -161,10 +157,10 @@ abstract contract UniswapV3DirectToLiquidityTest is Test, Permit2User {
         bytes32 salt;
         if (_callbackPermissions.receiveQuoteTokens && _callbackPermissions.sendBaseTokens) {
             // E7
-            salt = bytes32(0x6005ae97f5faf5c253e76d38e6435c2f101dd3330f093d9f53ee01f1cba8e1d4);
+            salt = bytes32(0x683e68ef487135194430d6bdb667fee4fb73c688770a196b7bd73b318ec96e0d);
         } else {
             // E6
-            salt = bytes32(0xe246766b93778e01ad34b971383a60b877ac795f2bf276d602d93c7ecedecbb9);
+            salt = bytes32(0xd163384c3034671208c7c68a5d04241bfb6e14e92776c03734fbcd2021e677dd);
         }
 
         // Required for CREATE2 address to work correctly. doesn't do anything in a test
@@ -178,6 +174,8 @@ abstract contract UniswapV3DirectToLiquidityTest is Test, Permit2User {
             address(_gUniFactory)
         );
         vm.stopBroadcast();
+
+        _dtlAddress = address(_dtl);
         _;
     }
 

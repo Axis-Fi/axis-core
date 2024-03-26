@@ -42,7 +42,7 @@ contract UniswapV3DirectToLiquidityOnCreateTest is UniswapV3DirectToLiquidityTes
 
     function _assertBaseTokenBalances() internal {
         assertEq(_baseToken.balanceOf(_SELLER), 0, "seller balance");
-        assertEq(_baseToken.balanceOf(address(_dtl)), 0, "dtl balance");
+        assertEq(_baseToken.balanceOf(_dtlAddress), 0, "dtl balance");
 
         // If the send base tokens flag is enabled, the base tokens should be transferred to the auction house
         if (_callbackPermissions.sendBaseTokens) {
@@ -304,7 +304,7 @@ contract UniswapV3DirectToLiquidityOnCreateTest is UniswapV3DirectToLiquidityTes
         public
         givenCallbackSendBaseTokensIsSet
         givenCallbackIsCreated
-        givenAddressHasBaseTokenAllowance(_SELLER, address(_dtl), _LOT_CAPACITY)
+        givenAddressHasBaseTokenAllowance(_SELLER, _dtlAddress, _LOT_CAPACITY)
     {
         _expectTransferFrom();
 
@@ -327,7 +327,7 @@ contract UniswapV3DirectToLiquidityOnCreateTest is UniswapV3DirectToLiquidityTes
         givenCallbackSendBaseTokensIsSet
         givenCallbackIsCreated
         givenAddressHasBaseTokenBalance(_SELLER, _LOT_CAPACITY)
-        givenAddressHasBaseTokenAllowance(_SELLER, address(_dtl), _LOT_CAPACITY)
+        givenAddressHasBaseTokenAllowance(_SELLER, _dtlAddress, _LOT_CAPACITY)
     {
         _performCallback();
 

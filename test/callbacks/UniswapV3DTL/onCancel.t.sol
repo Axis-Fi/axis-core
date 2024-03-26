@@ -40,7 +40,7 @@ contract UniswapV3DirectToLiquidityOnCancelTest is UniswapV3DirectToLiquidityTes
         givenCallbackSendBaseTokensIsSet
         givenCallbackIsCreated
         givenOnCreate
-        givenAddressHasBaseTokenBalance(address(_dtl), _REFUND_AMOUNT)
+        givenAddressHasBaseTokenBalance(_dtlAddress, _REFUND_AMOUNT)
     {
         // Call the function
         _performCallback();
@@ -51,7 +51,7 @@ contract UniswapV3DirectToLiquidityOnCancelTest is UniswapV3DirectToLiquidityTes
         assertEq(configuration.active, false, "active");
 
         // Check the balances
-        assertEq(_baseToken.balanceOf(address(_dtl)), 0, "base token balance");
+        assertEq(_baseToken.balanceOf(_dtlAddress), 0, "base token balance");
         assertEq(_baseToken.balanceOf(_SELLER), _REFUND_AMOUNT, "seller base token balance");
     }
 
@@ -65,7 +65,7 @@ contract UniswapV3DirectToLiquidityOnCancelTest is UniswapV3DirectToLiquidityTes
         assertEq(configuration.active, false, "active");
 
         // Check the balances
-        assertEq(_baseToken.balanceOf(address(_dtl)), 0, "base token balance");
+        assertEq(_baseToken.balanceOf(_dtlAddress), 0, "base token balance");
         assertEq(_baseToken.balanceOf(_SELLER), 0, "seller base token balance");
     }
 }
