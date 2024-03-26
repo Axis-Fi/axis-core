@@ -117,7 +117,7 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
         // Checks that the required function permissions are set
         if (
             !permissions_.onCreate || !permissions_.onCancel || !permissions_.onCurate
-                || !permissions_.onClaimProceeds
+                || !permissions_.onClaimProceeds || !permissions_.receiveQuoteTokens
         ) {
             revert Callback_Params_InsufficientPermissions();
         }
@@ -324,7 +324,7 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
     ///             - Sends any remaining quote and base tokens to the seller
     ///
     ///             The assumptions are:
-    ///             - `receiveQuoteTokens` flag is set: the callback has `proceeds_` quantity of quote tokens
+    ///             - the callback has `proceeds_` quantity of quote tokens (as `receiveQuoteTokens` flag is set)
     ///             - `sendBaseTokens` flag is set: the callback has `refund_` quantity of base tokens
     ///             - `sendBaseTokens` flag is not set: the seller has the required balance of base tokens
     ///             - `sendBaseTokens` flag is not set: the seller has approved the callback to spend the base tokens
@@ -419,20 +419,8 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
         uint256 quoteTokenBalance;
         uint256 baseTokenBalance;
         {
-            // If receiveQuoteTokens is set, the quote tokens have been transferred to the callback
-            // Otherwise, pull from seller
-            if (
-                !Callbacks.hasPermission(
-                    ICallback(address(this)), Callbacks.RECEIVE_QUOTE_TOKENS_FLAG
-                )
-            ) {
-                ERC20(config.quoteToken).safeTransferFrom(
-                    seller, address(this), quoteTokensRequired
-                );
-                quoteTokenBalance += quoteTokensRequired;
-            } else {
-                quoteTokenBalance += proceeds_;
-            }
+            // As receiveQuoteTokens is set, the quote tokens have been transferred to the callback
+            quoteTokenBalance += proceeds_;
 
             // If sendBaseTokens is not set, the callback needs to be funded by the seller
             if (!Callbacks.hasPermission(ICallback(address(this)), Callbacks.SEND_BASE_TOKENS_FLAG))

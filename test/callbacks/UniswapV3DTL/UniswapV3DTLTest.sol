@@ -67,7 +67,7 @@ abstract contract UniswapV3DirectToLiquidityTest is Test, Permit2User {
             onPurchase: false,
             onBid: false,
             onClaimProceeds: true,
-            receiveQuoteTokens: false,
+            receiveQuoteTokens: true,
             sendBaseTokens: false
         });
 
@@ -135,28 +135,6 @@ abstract contract UniswapV3DirectToLiquidityTest is Test, Permit2User {
         //     )
         // );
         // vm.writeFile("./bytecode/UniswapV3DirectToLiquidityE7.bin", vm.toString(bytecode));
-        // // 11100101 = 0xE5
-        // // cast create2 -s E5 -i $(cat ./bytecode/UniswapV3DirectToLiquidityE5.bin)
-        // bytecode = abi.encodePacked(
-        //     type(UniswapV3DirectToLiquidity).creationCode,
-        //     abi.encode(
-        //         address(_auctionHouse),
-        //         Callbacks.Permissions({
-        //             onCreate: true,
-        //             onCancel: true,
-        //             onCurate: true,
-        //             onPurchase: false,
-        //             onBid: false,
-        //             onClaimProceeds: true,
-        //             receiveQuoteTokens: false,
-        //             sendBaseTokens: true
-        //         }),
-        //         _SELLER,
-        //         address(_uniV3Factory),
-        //         address(_gUniFactory)
-        //     )
-        // );
-        // vm.writeFile("./bytecode/UniswapV3DirectToLiquidityE5.bin", vm.toString(bytecode));
         // // 11100110 = 0xE6
         // // cast create2 -s E6 -i $(cat ./bytecode/UniswapV3DirectToLiquidityE6.bin)
         // bytecode = abi.encodePacked(
@@ -179,44 +157,14 @@ abstract contract UniswapV3DirectToLiquidityTest is Test, Permit2User {
         //     )
         // );
         // vm.writeFile("./bytecode/UniswapV3DirectToLiquidityE6.bin", vm.toString(bytecode));
-        // // 11100100 = 0xE4
-        // // cast create2 -s E4 -i $(cat ./bytecode/UniswapV3DirectToLiquidityE4.bin)
-        // bytecode = abi.encodePacked(
-        //     type(UniswapV3DirectToLiquidity).creationCode,
-        //     abi.encode(
-        //         address(_auctionHouse),
-        //         Callbacks.Permissions({
-        //             onCreate: true,
-        //             onCancel: true,
-        //             onCurate: true,
-        //             onPurchase: false,
-        //             onBid: false,
-        //             onClaimProceeds: true,
-        //             receiveQuoteTokens: false,
-        //             sendBaseTokens: false
-        //         }),
-        //         _SELLER,
-        //         address(_uniV3Factory),
-        //         address(_gUniFactory)
-        //     )
-        // );
-        // vm.writeFile("./bytecode/UniswapV3DirectToLiquidityE4.bin", vm.toString(bytecode));
 
         bytes32 salt;
         if (_callbackPermissions.receiveQuoteTokens && _callbackPermissions.sendBaseTokens) {
             // E7
-            salt = bytes32(0xef8e3642c726ecd29f5a0d3292d199058987cd96273c81fc06f0d6a665c11bc0);
-        } else if (!_callbackPermissions.receiveQuoteTokens && _callbackPermissions.sendBaseTokens)
-        {
-            // E5
-            salt = bytes32(0x982bc8550260589104f6546b357b5d3b0c1fec8333e14f6eb3208f2f587cffb2);
-        } else if (_callbackPermissions.receiveQuoteTokens && !_callbackPermissions.sendBaseTokens)
-        {
-            // E6
-            salt = bytes32(0xefe60f32ee424680b195351c173de4abc3fe7f9280384212bc083e890eabfda8);
+            salt = bytes32(0x6005ae97f5faf5c253e76d38e6435c2f101dd3330f093d9f53ee01f1cba8e1d4);
         } else {
-            // E4
-            salt = bytes32(0x50abade696fdd87b52acd80bc85967a4cb7863a07a5a68d85de42e634cbd8621);
+            // E6
+            salt = bytes32(0xe246766b93778e01ad34b971383a60b877ac795f2bf276d602d93c7ecedecbb9);
         }
 
         // Required for CREATE2 address to work correctly. doesn't do anything in a test

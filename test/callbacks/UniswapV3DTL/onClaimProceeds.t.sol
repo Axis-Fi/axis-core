@@ -28,8 +28,6 @@ contract UniswapV3DirectToLiquidityOnClaimProceedsTest is UniswapV3DirectToLiqui
     //  [ ] the excess base tokens are returned
     // [ ] given minting pool tokens utilises less than the available amount of quote tokens
     //  [ ] the excess quote tokens are returned
-    // [ ] given the receive quote tokens flag is false
-    //  [ ] it transfers the quote tokens from the seller
     // [ ] given the send base tokens flag is false
     //  [ ] it transfers the base tokens from the seller
     // [ ] given the send base tokens flag is true
