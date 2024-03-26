@@ -12,8 +12,6 @@ import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 import {LinearVesting} from "src/modules/derivatives/LinearVesting.sol";
 import {ERC20} from "solmate/tokens/ERC20.sol";
 
-import {console2} from "forge-std/console2.sol";
-
 contract UniswapV3DirectToLiquidityOnClaimProceedsTest is UniswapV3DirectToLiquidityTest {
     uint96 internal constant _PROCEEDS = 20e18;
     uint96 internal constant _REFUND = 0;

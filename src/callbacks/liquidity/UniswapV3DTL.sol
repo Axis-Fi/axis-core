@@ -25,8 +25,6 @@ import {LinearVesting} from "src/modules/derivatives/LinearVesting.sol";
 import {AuctionHouse} from "src/AuctionHouse.sol";
 import {Keycode, wrapVeecode} from "src/modules/Modules.sol";
 
-import {console2} from "forge-std/console2.sol";
-
 /// @title      UniswapV3DirectToLiquidity
 /// @notice     This Callback contract deposits the proceeds from a batch auction into a Uniswap V3 pool
 ///             in order to create liquidity immediately.
@@ -358,10 +356,8 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
                 // Utilisation = 1 - 11/110 = 90%
                 uint96 utilisationPercent =
                     1e5 - refund_ * 1e5 / (config.lotCapacity + config.lotCuratorPayout);
-                console2.log("utilisationPercent", utilisationPercent);
 
                 capacityUtilised = (config.lotCapacity * utilisationPercent) / MAX_PERCENT;
-                console2.log("capacityUtilised", capacityUtilised);
             }
 
             // Calculate the base tokens required to create the pool
@@ -369,13 +365,10 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
                 _tokensRequiredForPool(capacityUtilised, config.proceedsUtilisationPercent);
             quoteTokensRequired =
                 _tokensRequiredForPool(proceeds_, config.proceedsUtilisationPercent);
-            console2.log("baseTokensRequired", baseTokensRequired);
-            console2.log("quoteTokensRequired", quoteTokensRequired);
         }
 
         // Determine the ordering of tokens
         bool quoteTokenIsToken0 = config.quoteToken < config.baseToken;
-        console2.log("quoteTokenIsToken0", quoteTokenIsToken0);
 
         // Create and initialize the pool if necessary
         {
@@ -402,6 +395,7 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
             int24 minTick = TickMath.MIN_TICK / tickSpacing * tickSpacing;
             int24 maxTick = TickMath.MAX_TICK / tickSpacing * tickSpacing;
 
+            // TODO managedPool to enable compounding of fees?
             poolTokenAddress = gUniFactory.createPool(
                 quoteTokenIsToken0 ? config.quoteToken : config.baseToken,
                 quoteTokenIsToken0 ? config.baseToken : config.quoteToken,
@@ -467,8 +461,6 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
             // Mint the LP tokens
             (uint256 amount0Used, uint256 amount1Used,) =
                 poolToken.mint(poolTokenQuantity, address(this));
-            console2.log("amount0Used", amount0Used);
-            console2.log("amount1Used", amount1Used);
 
             // Adjust running balance
             quoteTokenBalance -= quoteTokenIsToken0 ? amount0Used : amount1Used;
