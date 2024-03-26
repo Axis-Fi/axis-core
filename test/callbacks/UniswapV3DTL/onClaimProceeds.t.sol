@@ -10,8 +10,14 @@ import {SqrtPriceMath} from "src/lib/uniswap-v3/SqrtPriceMath.sol";
 contract UniswapV3DirectToLiquidityOnClaimProceedsTest is UniswapV3DirectToLiquidityTest {
     uint96 internal constant _PROCEEDS = 20e18;
     uint96 internal constant _REFUND = 2e18;
-    uint96 internal constant _CAPACITY_UTILISED = _LOT_CAPACITY - _REFUND;
 
+    uint96 internal _proceeds;
+    uint96 internal _refund;
+    uint96 internal _capacityUtilised;
+
+    uint160 internal constant _SQRT_PRICE_X96_OVERRIDE = 125270724187523965593206000000; // Different to what is normally calculated
+
+    /// @dev Set via `setCallbackParameters` modifier
     uint160 internal _sqrtPriceX96;
 
     // ========== Assertions ========== //
@@ -47,9 +53,9 @@ contract UniswapV3DirectToLiquidityOnClaimProceedsTest is UniswapV3DirectToLiqui
 
     // ========== Modifiers ========== //
 
-    function _performCallback(uint96 proceeds_, uint96 refund_) internal {
+    function _performCallback() internal {
         vm.prank(address(_auctionHouse));
-        _dtl.onClaimProceeds(_lotId, proceeds_, refund_, abi.encode(""));
+        _dtl.onClaimProceeds(_lotId, _proceeds, _refund, abi.encode(""));
     }
 
     function _createPool() internal returns (address) {
@@ -75,8 +81,8 @@ contract UniswapV3DirectToLiquidityOnClaimProceedsTest is UniswapV3DirectToLiqui
         _;
     }
 
-    function _calculateSqrtPriceX96(uint256 quoteTokenAmount_, uint256 baseTokenAmount_) internal {
-        _sqrtPriceX96 = SqrtPriceMath.getSqrtPriceX96(
+    function _calculateSqrtPriceX96(uint256 quoteTokenAmount_, uint256 baseTokenAmount_) internal view returns (uint160) {
+        return SqrtPriceMath.getSqrtPriceX96(
             address(_quoteToken),
             address(_baseToken),
             quoteTokenAmount_,
@@ -84,8 +90,12 @@ contract UniswapV3DirectToLiquidityOnClaimProceedsTest is UniswapV3DirectToLiqui
         );
     }
 
-    modifier calculateSqrtPriceX96(uint256 quoteTokenAmount_, uint256 baseTokenAmount_) {
-        _calculateSqrtPriceX96(quoteTokenAmount_, baseTokenAmount_);
+    modifier setCallbackParameters(uint96 proceeds_, uint96 refund_) {
+        _proceeds = proceeds_;
+        _refund = refund_;
+        _capacityUtilised = _LOT_CAPACITY - _refund;
+
+        _sqrtPriceX96 = _calculateSqrtPriceX96(_proceeds, _capacityUtilised);
         _;
     }
 
@@ -93,8 +103,8 @@ contract UniswapV3DirectToLiquidityOnClaimProceedsTest is UniswapV3DirectToLiqui
 
     // [X] given the pool is created
     //  [X] it initializes the pool
-    // [ ] given the pool is created and initialized
-    //  [ ] it succeeds
+    // [X] given the pool is created and initialized
+    //  [X] it succeeds
     // [ ] given the proceeds utilisation percent is set
     //  [ ] it calculates the deposit amount correctly
     // [ ] given curation is enabled
@@ -116,17 +126,35 @@ contract UniswapV3DirectToLiquidityOnClaimProceedsTest is UniswapV3DirectToLiqui
 
     function test_givenPoolIsCreated()
         public
+        setCallbackParameters(_PROCEEDS, _REFUND)
         givenCallbackIsCreated
         givenOnCreate
         givenPoolIsCreated
-        givenAddressHasQuoteTokenBalance(_dtlAddress, _PROCEEDS)
-        givenAddressHasBaseTokenBalance(_SELLER, _CAPACITY_UTILISED)
-        givenAddressHasBaseTokenAllowance(_SELLER, _dtlAddress, _CAPACITY_UTILISED)
-        calculateSqrtPriceX96(_PROCEEDS, _CAPACITY_UTILISED)
+        givenAddressHasQuoteTokenBalance(_dtlAddress, _proceeds)
+        givenAddressHasBaseTokenBalance(_SELLER, _capacityUtilised)
+        givenAddressHasBaseTokenAllowance(_SELLER, _dtlAddress, _capacityUtilised)
     {
-        _performCallback(_PROCEEDS, _REFUND);
+        _performCallback();
 
         _assertPoolState(_sqrtPriceX96);
+        _assertLpTokenBalance();
+        _assertQuoteTokenBalance();
+        _assertBaseTokenBalance();
+    }
+
+    function test_givenPoolIsCreatedAndInitialized()
+        public
+        setCallbackParameters(_PROCEEDS, _REFUND)
+        givenCallbackIsCreated
+        givenOnCreate
+        givenPoolIsCreatedAndInitialized(_SQRT_PRICE_X96_OVERRIDE)
+        givenAddressHasQuoteTokenBalance(_dtlAddress, _proceeds)
+        givenAddressHasBaseTokenBalance(_SELLER, _capacityUtilised)
+        givenAddressHasBaseTokenAllowance(_SELLER, _dtlAddress, _capacityUtilised)
+    {
+        _performCallback();
+
+        _assertPoolState(_SQRT_PRICE_X96_OVERRIDE);
         _assertLpTokenBalance();
         _assertQuoteTokenBalance();
         _assertBaseTokenBalance();
