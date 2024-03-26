@@ -202,11 +202,11 @@ contract UniswapV3DirectToLiquidityOnClaimProceedsTest is UniswapV3DirectToLiqui
     //  [ ] the excess base tokens are returned
     // [ ] given minting pool tokens utilises less than the available amount of quote tokens
     //  [ ] the excess quote tokens are returned
-    // [ ] given the send base tokens flag is false
-    //  [ ] it transfers the base tokens from the seller
-    // [ ] given the send base tokens flag is true
-    //  [ ] when the refund amount is less than the base tokens required
-    //   [ ] it transfers the base tokens from the seller
+    // [X] given the send base tokens flag is false
+    //  [X] it transfers the base tokens from the seller
+    // [X] given the send base tokens flag is true
+    //  [X] when the refund amount is less than the base tokens required
+    //   [X] it transfers the base tokens from the seller
     // [X] given vesting is enabled
     //  [X] it mints the vesting tokens to the seller
     // [X] it creates and initializes the pool, creates a pool token, deposits into the pool token, transfers the LP token to the seller and transfers any excess back to the seller
@@ -319,6 +319,46 @@ contract UniswapV3DirectToLiquidityOnClaimProceedsTest is UniswapV3DirectToLiqui
         givenAddressHasQuoteTokenBalance(_dtlAddress, _proceeds)
         givenAddressHasBaseTokenBalance(_SELLER, _baseTokensToDeposit)
         givenAddressHasBaseTokenAllowance(_SELLER, _dtlAddress, _baseTokensToDeposit)
+    {
+        _performCallback();
+
+        _assertPoolState(_sqrtPriceX96);
+        _assertLpTokenBalance();
+        _assertVestingTokenBalance();
+        _assertQuoteTokenBalance();
+        _assertBaseTokenBalance();
+    }
+
+    function test_givenSendBaseTokens_whenRefundLessThanRequired_fuzz(uint96 refund_)
+        public
+        givenCallbackSendBaseTokensIsSet
+        givenCallbackIsCreated
+        givenOnCreate
+        whenRefundIsBounded(refund_)
+        setCallbackParameters(_PROCEEDS, _refund)
+        givenAddressHasQuoteTokenBalance(_dtlAddress, _proceeds)
+        givenAddressHasBaseTokenBalance(_dtlAddress, _refund)
+        givenAddressHasBaseTokenBalance(_SELLER, _baseTokensToDeposit - _refund)
+        givenAddressHasBaseTokenAllowance(_SELLER, _dtlAddress, _baseTokensToDeposit - _refund)
+    {
+        _performCallback();
+
+        _assertPoolState(_sqrtPriceX96);
+        _assertLpTokenBalance();
+        _assertVestingTokenBalance();
+        _assertQuoteTokenBalance();
+        _assertBaseTokenBalance();
+    }
+
+    function test_givenSendBaseTokens_whenRefundMoreThanRequired()
+        public
+        givenCallbackSendBaseTokensIsSet
+        givenCallbackIsCreated
+        givenProceedsUtilisationPercent(1e4)
+        givenOnCreate
+        setCallbackParameters(_PROCEEDS, 2e18)
+        givenAddressHasQuoteTokenBalance(_dtlAddress, _proceeds)
+        givenAddressHasBaseTokenBalance(_dtlAddress, _refund)
     {
         _performCallback();
 
