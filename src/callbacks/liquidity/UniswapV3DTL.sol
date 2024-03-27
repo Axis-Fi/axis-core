@@ -18,7 +18,6 @@ import {GUniPool} from "g-uni-v1-core/GUniPool.sol";
 // Callbacks
 import {BaseCallback} from "src/callbacks/BaseCallback.sol";
 import {Callbacks} from "src/lib/Callbacks.sol";
-import {ICallback} from "src/interfaces/ICallback.sol";
 
 // AuctionHouse
 import {LinearVesting} from "src/modules/derivatives/LinearVesting.sol";
@@ -125,6 +124,11 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
                 || !permissions_.onClaimProceeds || !permissions_.receiveQuoteTokens
         ) {
             revert Callback_Params_InsufficientPermissions();
+        }
+
+        // Send base tokens is not supported
+        if (permissions_.sendBaseTokens) {
+            revert Callback_InvalidParams();
         }
 
         if (uniV3Factory_ == address(0)) {
@@ -330,9 +334,8 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
     ///
     ///             The assumptions are:
     ///             - the callback has `proceeds_` quantity of quote tokens (as `receiveQuoteTokens` flag is set)
-    ///             - `sendBaseTokens` flag is set: the callback has `refund_` quantity of base tokens
-    ///             - `sendBaseTokens` flag is not set: the seller has the required balance of base tokens
-    ///             - `sendBaseTokens` flag is not set: the seller has approved the callback to spend the base tokens
+    ///             - the seller has the required balance of base tokens
+    ///             - the seller has approved the callback to spend the base tokens
     function _onClaimProceeds(
         uint96 lotId_,
         uint96 proceeds_,
@@ -434,24 +437,9 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
             // As receiveQuoteTokens is set, the quote tokens have been transferred to the callback
             quoteTokenBalance += proceeds_;
 
-            // If sendBaseTokens is not set, the callback needs to be funded by the seller
-            if (!Callbacks.hasPermission(ICallback(address(this)), Callbacks.SEND_BASE_TOKENS_FLAG))
-            {
-                ERC20(config.baseToken).safeTransferFrom(seller, address(this), baseTokensRequired);
-                baseTokenBalance += baseTokensRequired;
-            }
-            // Otherwise the callback currently has `refund_` base tokens
-            else {
-                baseTokenBalance += refund_;
-
-                // Pull from the seller if the refund is not enough
-                if (refund_ < baseTokensRequired) {
-                    uint256 transferAmount = baseTokensRequired - refund_;
-
-                    ERC20(config.baseToken).safeTransferFrom(seller, address(this), transferAmount);
-                    baseTokenBalance += transferAmount;
-                }
-            }
+            // Fund the callback by the seller
+            ERC20(config.baseToken).safeTransferFrom(seller, address(this), baseTokensRequired);
+            baseTokenBalance += baseTokensRequired;
         }
 
         // Mint LP tokens

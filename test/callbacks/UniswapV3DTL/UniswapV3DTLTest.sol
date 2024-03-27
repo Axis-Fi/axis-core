@@ -109,38 +109,11 @@ abstract contract UniswapV3DirectToLiquidityTest is Test, Permit2User {
         _;
     }
 
-    modifier givenCallbackSendBaseTokensIsSet() {
-        _callbackPermissions.sendBaseTokens = true;
-        _;
-    }
-
     modifier givenCallbackIsCreated() {
         // // Uncomment to regenerate bytecode to mine new salts if the UniswapV3DirectToLiquidity changes
-        // // 11100111 = 0xE7
-        // // cast create2 -s E7 -i $(cat ./bytecode/UniswapV3DirectToLiquidityE7.bin)
-        // bytes memory bytecode = abi.encodePacked(
-        //     type(UniswapV3DirectToLiquidity).creationCode,
-        //     abi.encode(
-        //         address(_auctionHouse),
-        //         Callbacks.Permissions({
-        //             onCreate: true,
-        //             onCancel: true,
-        //             onCurate: true,
-        //             onPurchase: false,
-        //             onBid: false,
-        //             onClaimProceeds: true,
-        //             receiveQuoteTokens: true,
-        //             sendBaseTokens: true
-        //         }),
-        //         _SELLER,
-        //         address(_uniV3Factory),
-        //         address(_gUniFactory)
-        //     )
-        // );
-        // vm.writeFile("./bytecode/UniswapV3DirectToLiquidityE7.bin", vm.toString(bytecode));
         // // 11100110 = 0xE6
         // // cast create2 -s E6 -i $(cat ./bytecode/UniswapV3DirectToLiquidityE6.bin)
-        // bytecode = abi.encodePacked(
+        // bytes memory bytecode = abi.encodePacked(
         //     type(UniswapV3DirectToLiquidity).creationCode,
         //     abi.encode(
         //         address(_auctionHouse),
@@ -161,14 +134,8 @@ abstract contract UniswapV3DirectToLiquidityTest is Test, Permit2User {
         // );
         // vm.writeFile("./bytecode/UniswapV3DirectToLiquidityE6.bin", vm.toString(bytecode));
 
-        bytes32 salt;
-        if (_callbackPermissions.receiveQuoteTokens && _callbackPermissions.sendBaseTokens) {
-            // E7
-            salt = bytes32(0xe30fe0aa90c102c20ad36570df97808f98f7d450b6e751613aa936c282491b1f);
-        } else {
-            // E6
-            salt = bytes32(0xc576a8c18fb2e16ef0b58a1e141dc19229548828abcc6a0a521d2002f61b5d7f);
-        }
+        // E6
+        bytes32 salt = bytes32(0x484158875e093fdfcd0451b6ece3c4081fc94e70474f8a9020528aa51edac487);
 
         // Required for CREATE2 address to work correctly. doesn't do anything in a test
         // Source: https://github.com/foundry-rs/foundry/issues/6402

@@ -80,12 +80,6 @@ contract UniswapV3DirectToLiquidityOnCreateTest is UniswapV3DirectToLiquidityTes
     //  [X] given the linear vesting module is not installed
     //   [X] it reverts
     //  [X] it records the address of the linear vesting module
-    // [X] given the send base tokens flag is enabled
-    //  [X] given the seller has an insufficient balance
-    //   [X] it reverts
-    //  [X] given the seller has an insufficient allowance
-    //   [X] it reverts
-    //  [X] it registers the lot, transfers the base tokens to the auction house
     // [X] it registers the lot
 
     function test_whenCallbackDataIsIncorrect_reverts() public givenCallbackIsCreated {
@@ -295,59 +289,6 @@ contract UniswapV3DirectToLiquidityOnCreateTest is UniswapV3DirectToLiquidityTes
             address(_linearVesting),
             "linearVestingModule"
         );
-
-        // Assert balances
-        _assertBaseTokenBalances();
-    }
-
-    function test_givenSendBaseTokens_givenSellerHasInsufficientBalance_reverts()
-        public
-        givenCallbackSendBaseTokensIsSet
-        givenCallbackIsCreated
-        givenAddressHasBaseTokenAllowance(_SELLER, _dtlAddress, _LOT_CAPACITY)
-    {
-        _expectTransferFrom();
-
-        _performCallback();
-    }
-
-    function test_givenSendBaseTokens_givenSellerHasInsufficientAllowance_reverts()
-        public
-        givenCallbackSendBaseTokensIsSet
-        givenCallbackIsCreated
-        givenAddressHasBaseTokenBalance(_SELLER, _LOT_CAPACITY)
-    {
-        _expectTransferFrom();
-
-        _performCallback();
-    }
-
-    function test_givenSendBaseTokens_succeeds()
-        public
-        givenCallbackSendBaseTokensIsSet
-        givenCallbackIsCreated
-        givenAddressHasBaseTokenBalance(_SELLER, _LOT_CAPACITY)
-        givenAddressHasBaseTokenAllowance(_SELLER, _dtlAddress, _LOT_CAPACITY)
-    {
-        _performCallback();
-
-        // Assert values
-        UniswapV3DirectToLiquidity.DTLConfiguration memory configuration =
-            _getDTLConfiguration(_lotId);
-        assertEq(address(configuration.baseToken), address(_baseToken), "baseToken");
-        assertEq(address(configuration.quoteToken), address(_quoteToken), "quoteToken");
-        assertEq(configuration.lotCapacity, _LOT_CAPACITY, "lotCapacity");
-        assertEq(configuration.lotCuratorPayout, 0, "lotCuratorPayout");
-        assertEq(
-            configuration.proceedsUtilisationPercent,
-            _dtlCreateParams.proceedsUtilisationPercent,
-            "proceedsUtilisationPercent"
-        );
-        assertEq(configuration.poolFee, _dtlCreateParams.poolFee, "poolFee");
-        assertEq(configuration.vestingStart, 0, "vestingStart");
-        assertEq(configuration.vestingExpiry, 0, "vestingExpiry");
-        assertEq(address(configuration.linearVestingModule), address(0), "linearVestingModule");
-        assertEq(configuration.active, true, "active");
 
         // Assert balances
         _assertBaseTokenBalances();

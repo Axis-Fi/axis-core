@@ -22,8 +22,6 @@ contract UniswapV3DirectToLiquidityOnCancelTest is UniswapV3DirectToLiquidityTes
 
     // [X] when the lot has not been registered
     //  [X] it reverts
-    // [X] given the send base tokens flag is true
-    //  [X] it marks the lot as inactive, it transfers the base tokens to the seller
     // [X] it marks the lot as inactive
 
     function test_whenLotNotRegistered_reverts() public givenCallbackIsCreated {
@@ -33,26 +31,6 @@ contract UniswapV3DirectToLiquidityOnCancelTest is UniswapV3DirectToLiquidityTes
 
         // Call the function
         _performCallback();
-    }
-
-    function test_givenSendBaseTokens()
-        public
-        givenCallbackSendBaseTokensIsSet
-        givenCallbackIsCreated
-        givenOnCreate
-        givenAddressHasBaseTokenBalance(_dtlAddress, _REFUND_AMOUNT)
-    {
-        // Call the function
-        _performCallback();
-
-        // Check the values
-        UniswapV3DirectToLiquidity.DTLConfiguration memory configuration =
-            _getDTLConfiguration(_lotId);
-        assertEq(configuration.active, false, "active");
-
-        // Check the balances
-        assertEq(_baseToken.balanceOf(_dtlAddress), 0, "base token balance");
-        assertEq(_baseToken.balanceOf(_SELLER), _REFUND_AMOUNT, "seller base token balance");
     }
 
     function test_success() public givenCallbackIsCreated givenOnCreate {
