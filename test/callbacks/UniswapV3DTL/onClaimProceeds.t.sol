@@ -28,6 +28,30 @@ contract UniswapV3DirectToLiquidityOnClaimProceedsTest is UniswapV3DirectToLiqui
     /// @dev Set via `setCallbackParameters` modifier
     uint160 internal _sqrtPriceX96;
 
+    // ========== Internal functions ========== //
+
+    function _getGUniPool() internal view returns (GUniPool) {
+        // Get the pools deployed by the DTL callback
+        address[] memory pools = _gUniFactory.getPools(_dtlAddress);
+
+        return GUniPool(pools[0]);
+    }
+
+    function _getVestingTokenId() internal view returns (uint256) {
+        // Get the pools deployed by the DTL callback
+        address pool = address(_getGUniPool());
+
+        return _linearVesting.computeId(
+            pool,
+            abi.encode(
+                LinearVesting.VestingParams({
+                    start: _dtlCreateParams.vestingStart,
+                    expiry: _dtlCreateParams.vestingExpiry
+                })
+            )
+        );
+    }
+
     // ========== Assertions ========== //
 
     function _assertPoolState(uint160 sqrtPriceX96_) internal {
@@ -40,9 +64,7 @@ contract UniswapV3DirectToLiquidityOnClaimProceedsTest is UniswapV3DirectToLiqui
 
     function _assertLpTokenBalance() internal {
         // Get the pools deployed by the DTL callback
-        address[] memory pools = _gUniFactory.getPools(_dtlAddress);
-        assertEq(pools.length, 1, "pools length");
-        GUniPool pool = GUniPool(pools[0]);
+        GUniPool pool = _getGUniPool();
 
         uint256 sellerExpectedBalance;
         uint256 linearVestingExpectedBalance;
@@ -68,12 +90,11 @@ contract UniswapV3DirectToLiquidityOnClaimProceedsTest is UniswapV3DirectToLiqui
         }
 
         // Get the pools deployed by the DTL callback
-        address[] memory pools = _gUniFactory.getPools(_dtlAddress);
-        assertEq(pools.length, 1, "pools length");
+        address pool = address(_getGUniPool());
 
         // Get the wrapped address
         (, address wrappedVestingTokenAddress) = _linearVesting.deploy(
-            pools[0],
+            pool,
             abi.encode(
                 LinearVesting.VestingParams({
                     start: _dtlCreateParams.vestingStart,
@@ -399,6 +420,33 @@ contract UniswapV3DirectToLiquidityOnClaimProceedsTest is UniswapV3DirectToLiqui
         _assertVestingTokenBalance();
         _assertQuoteTokenBalance();
         _assertBaseTokenBalance();
+    }
+
+    function test_givenVesting_redemption()
+        public
+        givenLinearVestingModuleIsInstalled
+        givenCallbackIsCreated
+        givenVestingStart(_START + 1)
+        givenVestingExpiry(_START + 2)
+        givenOnCreate
+        setCallbackParameters(_PROCEEDS, _REFUND)
+        givenAddressHasQuoteTokenBalance(_dtlAddress, _proceeds)
+        givenAddressHasBaseTokenBalance(_SELLER, _baseTokensToDeposit)
+        givenAddressHasBaseTokenAllowance(_SELLER, _dtlAddress, _baseTokensToDeposit)
+    {
+        _performCallback();
+
+        // Warp to the end of the vesting period
+        vm.warp(_START + 3);
+
+        // Redeem the vesting tokens
+        uint256 tokenId = _getVestingTokenId();
+        vm.prank(_SELLER);
+        _linearVesting.redeemMax(tokenId);
+
+        // Assert that the LP token has been transferred to the seller
+        GUniPool pool = _getGUniPool();
+        assertEq(pool.balanceOf(_SELLER), pool.totalSupply(), "seller: LP token balance");
     }
 
     function test_withdrawLpToken()
