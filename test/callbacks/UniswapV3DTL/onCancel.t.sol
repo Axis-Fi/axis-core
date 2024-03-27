@@ -12,10 +12,8 @@ contract UniswapV3DirectToLiquidityOnCancelTest is UniswapV3DirectToLiquidityTes
     // ============ Modifiers ============ //
 
     function _performCallback() internal {
-        bool isPrefund = _callbackPermissions.sendBaseTokens;
-
         vm.prank(address(_auctionHouse));
-        _dtl.onCancel(_lotId, _REFUND_AMOUNT, isPrefund, abi.encode(""));
+        _dtl.onCancel(_lotId, _REFUND_AMOUNT, false, abi.encode(""));
     }
 
     // ============ Tests ============ //

@@ -10,8 +10,6 @@ contract UniswapV3DirectToLiquidityOnCreateTest is UniswapV3DirectToLiquidityTes
     // ============ Modifiers ============ //
 
     function _performCallback() internal {
-        bool isPrefund = _callbackPermissions.sendBaseTokens;
-
         vm.prank(address(_auctionHouse));
         _dtl.onCreate(
             _lotId,
@@ -19,7 +17,7 @@ contract UniswapV3DirectToLiquidityOnCreateTest is UniswapV3DirectToLiquidityTes
             address(_baseToken),
             address(_quoteToken),
             _LOT_CAPACITY,
-            isPrefund,
+            false,
             abi.encode(_dtlCreateParams)
         );
     }
@@ -43,13 +41,6 @@ contract UniswapV3DirectToLiquidityOnCreateTest is UniswapV3DirectToLiquidityTes
     function _assertBaseTokenBalances() internal {
         assertEq(_baseToken.balanceOf(_SELLER), 0, "seller balance");
         assertEq(_baseToken.balanceOf(_dtlAddress), 0, "dtl balance");
-
-        // If the send base tokens flag is enabled, the base tokens should be transferred to the auction house
-        if (_callbackPermissions.sendBaseTokens) {
-            assertEq(
-                _baseToken.balanceOf(address(_auctionHouse)), _LOT_CAPACITY, "auction house balance"
-            );
-        }
     }
 
     // ============ Tests ============ //

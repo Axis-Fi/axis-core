@@ -45,7 +45,6 @@ abstract contract UniswapV3DirectToLiquidityTest is Test, Permit2User {
     MockERC20 internal _baseToken;
 
     // Inputs
-    Callbacks.Permissions internal _callbackPermissions;
     UniswapV3DirectToLiquidity.DTLParams internal _dtlCreateParams = UniswapV3DirectToLiquidity
         .DTLParams({proceedsUtilisationPercent: 1e5, poolFee: 500, vestingStart: 0, vestingExpiry: 0});
 
@@ -60,18 +59,6 @@ abstract contract UniswapV3DirectToLiquidityTest is Test, Permit2User {
         vm.store(address(_auctionHouse), bytes32(uint256(0)), bytes32(abi.encode(_OWNER))); // Owner
         vm.store(address(_auctionHouse), bytes32(uint256(6)), bytes32(abi.encode(1))); // Reentrancy
         vm.store(address(_auctionHouse), bytes32(uint256(10)), bytes32(abi.encode(_PROTOCOL))); // Protocol
-
-        // Set default permissions
-        _callbackPermissions = Callbacks.Permissions({
-            onCreate: true,
-            onCancel: true,
-            onCurate: true,
-            onPurchase: false,
-            onBid: false,
-            onClaimProceeds: true,
-            receiveQuoteTokens: true,
-            sendBaseTokens: false
-        });
 
         // // Uncomment to regenerate bytecode to mine new salts if the UniswapV3Factory changes
         // // cast create2 -s 00 -i $(cat ./bytecode/UniswapV3Factory.bin)
@@ -117,16 +104,6 @@ abstract contract UniswapV3DirectToLiquidityTest is Test, Permit2User {
         //     type(UniswapV3DirectToLiquidity).creationCode,
         //     abi.encode(
         //         address(_auctionHouse),
-        //         Callbacks.Permissions({
-        //             onCreate: true,
-        //             onCancel: true,
-        //             onCurate: true,
-        //             onPurchase: false,
-        //             onBid: false,
-        //             onClaimProceeds: true,
-        //             receiveQuoteTokens: true,
-        //             sendBaseTokens: false
-        //         }),
         //         _SELLER,
         //         address(_uniV3Factory),
         //         address(_gUniFactory)
@@ -135,14 +112,13 @@ abstract contract UniswapV3DirectToLiquidityTest is Test, Permit2User {
         // vm.writeFile("./bytecode/UniswapV3DirectToLiquidityE6.bin", vm.toString(bytecode));
 
         // E6
-        bytes32 salt = bytes32(0x484158875e093fdfcd0451b6ece3c4081fc94e70474f8a9020528aa51edac487);
+        bytes32 salt = bytes32(0xb854b7a80a106416e12d310e4648d66875682387cb65d70a7a82190bb4813925);
 
         // Required for CREATE2 address to work correctly. doesn't do anything in a test
         // Source: https://github.com/foundry-rs/foundry/issues/6402
         vm.startBroadcast();
         _dtl = new UniswapV3DirectToLiquidity{salt: salt}(
             address(_auctionHouse),
-            _callbackPermissions,
             _SELLER,
             address(_uniV3Factory),
             address(_gUniFactory)
@@ -190,10 +166,8 @@ abstract contract UniswapV3DirectToLiquidityTest is Test, Permit2User {
     }
 
     function _performOnCurate(uint96 curatorPayout_) internal {
-        bool isPrefund = _callbackPermissions.sendBaseTokens;
-
         vm.prank(address(_auctionHouse));
-        _dtl.onCurate(_lotId, curatorPayout_, isPrefund, abi.encode(""));
+        _dtl.onCurate(_lotId, curatorPayout_, false, abi.encode(""));
     }
 
     modifier givenOnCurate(uint96 curatorPayout_) {

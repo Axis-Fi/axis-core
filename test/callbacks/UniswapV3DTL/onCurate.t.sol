@@ -12,10 +12,8 @@ contract UniswapV3DirectToLiquidityOnCurateTest is UniswapV3DirectToLiquidityTes
     // ============ Modifiers ============ //
 
     function _performCallback() internal {
-        bool isPrefund = _callbackPermissions.sendBaseTokens;
-
         vm.prank(address(_auctionHouse));
-        _dtl.onCurate(_lotId, _PAYOUT_AMOUNT, isPrefund, abi.encode(""));
+        _dtl.onCurate(_lotId, _PAYOUT_AMOUNT, false, abi.encode(""));
     }
 
     // ============ Tests ============ //

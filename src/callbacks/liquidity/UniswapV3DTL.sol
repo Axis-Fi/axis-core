@@ -113,24 +113,25 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
 
     constructor(
         address auctionHouse_,
-        Callbacks.Permissions memory permissions_,
         address seller_,
         address uniV3Factory_,
         address gUniFactory_
-    ) BaseCallback(auctionHouse_, permissions_, seller_) {
-        // Checks that the required function permissions are set
-        if (
-            !permissions_.onCreate || !permissions_.onCancel || !permissions_.onCurate
-                || !permissions_.onClaimProceeds || !permissions_.receiveQuoteTokens
-        ) {
-            revert Callback_Params_InsufficientPermissions();
-        }
-
-        // Send base tokens is not supported
-        if (permissions_.sendBaseTokens) {
-            revert Callback_InvalidParams();
-        }
-
+    )
+        BaseCallback(
+            auctionHouse_,
+            Callbacks.Permissions({
+                onCreate: true,
+                onCancel: true,
+                onCurate: true,
+                onPurchase: false,
+                onBid: false,
+                onClaimProceeds: true,
+                receiveQuoteTokens: true,
+                sendBaseTokens: false
+            }),
+            seller_
+        )
+    {
         if (uniV3Factory_ == address(0)) {
             revert Callback_Params_InvalidAddress();
         }
