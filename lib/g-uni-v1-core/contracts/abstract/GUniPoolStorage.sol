@@ -18,6 +18,8 @@ import {
 /// @dev Add all inherited contracts with state vars here: APPEND ONLY
 /// @dev ERC20Upgradable Includes Initialize
 // solhint-disable-next-line max-states-count
+/// @dev Modified to support 0.8.19
+/// @dev Modified to set the gelatoFeeBPS to 0
 abstract contract GUniPoolStorage is
     ERC20Upgradeable, /* XXXX DONT MODIFY ORDERING XXXX */
     ReentrancyGuardUpgradeable,
@@ -29,7 +31,7 @@ abstract contract GUniPoolStorage is
     // solhint-disable-next-line const-name-snakecase
     string public constant version = "1.0.0";
     // solhint-disable-next-line const-name-snakecase
-    uint16 public constant gelatoFeeBPS = 250;
+    uint16 public constant gelatoFeeBPS = 0;
 
     // XXXXXXXX DO NOT MODIFY ORDERING XXXXXXXX
     int24 public lowerTick;
