@@ -149,11 +149,6 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
     /// @dev        This function performs the following:
     ///             - Validates the input data
     ///             - Stores the configuration for the lot
-    ///             - If prefunded: transfers the base token capacity to the AuctionHouse
-    ///
-    ///             The assumptions are:
-    ///             - `prefund_` is true: The seller address has the required balance of base tokens
-    ///             - `prefund_` is true: The seller has approved the AuctionHouse to spend the base tokens
     ///
     ///             This function reverts if:
     ///             - DTLParams.proceedsUtilisationPercent is out of bounds
@@ -166,7 +161,6 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
     /// @param      baseToken_      The base token address
     /// @param      quoteToken_     The quote token address
     /// @param      capacity_       The capacity of the lot
-    /// @param      prefund_        Whether the callback has to prefund the lot
     /// @param      callbackData_   Encoded DTLParams struct
     function _onCreate(
         uint96 lotId_,
@@ -174,7 +168,7 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
         address baseToken_,
         address quoteToken_,
         uint96 capacity_,
-        bool prefund_,
+        bool,
         bytes calldata callbackData_
     ) internal virtual override onlyIfLotDoesNotExist(lotId_) {
         // Decode callback data into the params
@@ -238,69 +232,45 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
             linearVestingModule: linearVestingModule,
             active: true
         });
-
-        // Handle funding
-        if (prefund_) {
-            // Transfer from the seller to the AuctionHouse
-            ERC20(baseToken_).safeTransferFrom(seller, auctionHouse, capacity_);
-        }
     }
 
     /// @notice     Callback for when a lot is cancelled
     /// @dev        This function performs the following:
     ///             - Marks the lot as inactive
-    ///             - If prefunded: refunds the base tokens to the seller
-    ///
-    ///             The assumptions are:
-    ///             - `prefund_` is true: The AuctionHouse has already transferred the base tokens to the callback
     ///
     ///             This function reverts if:
     ///             - The lot is not registered
+    ///
+    /// @param      lotId_          The lot ID
     function _onCancel(
         uint96 lotId_,
-        uint96 refund_,
-        bool prefund_,
+        uint96,
+        bool,
         bytes calldata
     ) internal override onlyIfLotExists(lotId_) {
         // Mark the lot as inactive to prevent further actions
         DTLConfiguration storage config = lotConfiguration[lotId_];
         config.active = false;
-
-        // If there is a prefund, refund the tokens to the seller
-        // The AuctionHouse would have already sent the tokens prior to this call
-        if (prefund_) {
-            ERC20(config.baseToken).safeTransfer(seller, refund_);
-        }
     }
 
     /// @notice     Callback for when a lot is curated
     /// @dev        This function performs the following:
-    ///             - If prefunded: transfers the curator payout to the AuctionHouse
-    ///
-    ///             The assumptions are:
-    ///             - `prefund_` is true: The seller address has the required balance of base tokens
-    ///             - `prefund_` is true: The seller has approved the AuctionHouse to spend the base tokens
+    ///             - Records the curator payout
     ///
     ///             This function reverts if:
     ///             - The lot is not registered
     ///
     /// @param      lotId_          The lot ID
     /// @param      curatorPayout_  The maximum curator payout
-    /// @param      prefund_        Whether the callback has to prefund the curator payout
     function _onCurate(
         uint96 lotId_,
         uint96 curatorPayout_,
-        bool prefund_,
+        bool,
         bytes calldata
     ) internal override onlyIfLotExists(lotId_) {
         // Update the funding
         DTLConfiguration storage config = lotConfiguration[lotId_];
         config.lotCuratorPayout = curatorPayout_;
-
-        // If prefunded, then the callback needs to transfer the curatorPayout_ in base tokens to the auction house
-        if (prefund_) {
-            ERC20(config.baseToken).safeTransferFrom(seller, auctionHouse, curatorPayout_);
-        }
     }
 
     /// @notice     Callback for a purchase
@@ -351,7 +321,6 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
             // Calculate the actual lot capacity that was used
             uint96 capacityUtilised;
             {
-                // TODO what if the capacity is in quote tokens?
                 // If curation is enabled, refund_ will also contain the refund on the curator payout. Adjust for that.
                 // Example:
                 // 100 capacity + 10 curator
@@ -399,7 +368,9 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
             int24 minTick = TickMath.MIN_TICK / tickSpacing * tickSpacing;
             int24 maxTick = TickMath.MAX_TICK / tickSpacing * tickSpacing;
 
-            // TODO managedPool to enable compounding of fees?
+            // Create an unmanaged pool
+            // The range of the position will not be changed after deployment
+            // Fees will also be collected at the time of withdrawal
             poolTokenAddress = gUniFactory.createPool(
                 quoteTokenIsToken0 ? config.quoteToken : config.baseToken,
                 quoteTokenIsToken0 ? config.baseToken : config.quoteToken,
