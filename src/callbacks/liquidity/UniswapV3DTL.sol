@@ -4,7 +4,6 @@ pragma solidity ^0.8.19;
 // Libraries
 import {ERC20} from "solmate/tokens/ERC20.sol";
 import {SqrtPriceMath} from "src/lib/uniswap-v3/SqrtPriceMath.sol";
-import {SafeTransferLib} from "solmate/utils/SafeTransferLib.sol";
 
 // Uniswap
 import {IUniswapV3Pool} from "uniswap-v3-core/interfaces/IUniswapV3Pool.sol";
@@ -31,13 +30,9 @@ import {BaseUniswapDirectToLiquidity} from "src/callbacks/liquidity/BaseUniswapD
 /// @dev        As a general rule, this callback contract does not retain balances of tokens between calls.
 ///             Transfers are performed within the same function that requires the balance.
 contract UniswapV3DirectToLiquidity is BaseUniswapDirectToLiquidity {
-    using SafeTransferLib for ERC20;
-
     // ========== ERRORS ========== //
 
     error Callback_Params_PoolFeeNotEnabled();
-
-    // ========== STRUCTS ========== //
 
     // ========== STATE VARIABLES ========== //
 
@@ -48,6 +43,8 @@ contract UniswapV3DirectToLiquidity is BaseUniswapDirectToLiquidity {
     /// @notice     The G-UNI Factory contract
     /// @dev        This contract is used to create the ERC20 LP tokens
     IGUniFactory public gUniFactory;
+
+    // ========== CONSTRUCTOR ========== //
 
     constructor(
         address auctionHouse_,
