@@ -110,16 +110,13 @@ abstract contract UniswapV3DirectToLiquidityTest is Test, Permit2User {
         // bytes memory bytecode = abi.encodePacked(
         //     type(UniswapV3DirectToLiquidity).creationCode,
         //     abi.encode(
-        //         address(_auctionHouse),
-        //         _SELLER,
-        //         address(_uniV3Factory),
-        //         address(_gUniFactory)
+        //         address(_auctionHouse), _SELLER, address(_uniV3Factory), address(_gUniFactory)
         //     )
         // );
         // vm.writeFile("./bytecode/UniswapV3DirectToLiquidityE6.bin", vm.toString(bytecode));
 
         // E6
-        bytes32 salt = bytes32(0x3b6292e7e257fbdf3c6a0407c585bea0a03be19e044a6caa239340c584cdb935);
+        bytes32 salt = bytes32(0x15b4743db8f87f52d0ba764bd8a2989cced8b2df78a5aecb2ab5ddcc1d806a16);
 
         // Required for CREATE2 address to work correctly. doesn't do anything in a test
         // Source: https://github.com/foundry-rs/foundry/issues/6402

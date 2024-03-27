@@ -41,8 +41,6 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
 
     // ========== ERRORS ========== //
 
-    error Callback_Params_InsufficientPermissions();
-
     error Callback_Params_InvalidAddress();
 
     error Callback_Params_UtilisationPercentOutOfBounds(uint24 actual_, uint24 min_, uint24 max_);
