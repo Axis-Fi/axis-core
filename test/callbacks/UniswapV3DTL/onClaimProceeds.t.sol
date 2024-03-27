@@ -447,12 +447,12 @@ contract UniswapV3DirectToLiquidityOnClaimProceedsTest is UniswapV3DirectToLiqui
         givenCallbackIsCreated
         givenVestingStart(_START + 1)
         givenVestingExpiry(_START + 2)
+        whenRecipientIsNotSeller
         givenOnCreate
         setCallbackParameters(_PROCEEDS, _REFUND)
         givenAddressHasQuoteTokenBalance(_dtlAddress, _proceeds)
         givenAddressHasBaseTokenBalance(_SELLER, _baseTokensToDeposit)
         givenAddressHasBaseTokenAllowance(_SELLER, _dtlAddress, _baseTokensToDeposit)
-        whenRecipientIsNotSeller
     {
         _performCallback();
 
@@ -548,12 +548,12 @@ contract UniswapV3DirectToLiquidityOnClaimProceedsTest is UniswapV3DirectToLiqui
     function test_whenRecipientIsNotSeller()
         public
         givenCallbackIsCreated
+        whenRecipientIsNotSeller
         givenOnCreate
         setCallbackParameters(_PROCEEDS, _REFUND)
         givenAddressHasQuoteTokenBalance(_dtlAddress, _proceeds)
         givenAddressHasBaseTokenBalance(_SELLER, _capacityUtilised)
         givenAddressHasBaseTokenAllowance(_SELLER, _dtlAddress, _capacityUtilised)
-        whenRecipientIsNotSeller
     {
         _performCallback();
 

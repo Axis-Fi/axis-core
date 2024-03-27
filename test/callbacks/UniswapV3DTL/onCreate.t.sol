@@ -293,7 +293,7 @@ contract UniswapV3DirectToLiquidityOnCreateTest is UniswapV3DirectToLiquidityTes
         _dtlCreateParams.recipient = address(0);
 
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(BaseCallback.Callback_InvalidParams.selector);
+        bytes memory err = abi.encodeWithSelector(UniswapV3DirectToLiquidity.Callback_Params_InvalidAddress.selector);
         vm.expectRevert(err);
 
         _performCallback();

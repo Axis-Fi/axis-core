@@ -223,6 +223,11 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
             }
         }
 
+        // If the recipient is the zero address
+        if (params.recipient == address(0)) {
+            revert Callback_Params_InvalidAddress();
+        }
+
         // Store the configuration
         lotConfiguration[lotId_] = DTLConfiguration({
             baseToken: baseToken_,
