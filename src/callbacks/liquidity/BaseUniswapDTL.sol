@@ -65,9 +65,9 @@ abstract contract BaseUniswapDirectToLiquidity is BaseCallback {
     /// @param      vestingExpiry                The end of the vesting period for the LP tokens (0 if disabled)
     /// @param      recipient                    The recipient of the LP tokens
     /// @param      implParams                   The implementation-specific parameters
-    struct DTLParams {
+    struct DTLParams { // TODO rename to OnCreateParams
         uint24 proceedsUtilisationPercent;
-        uint24 poolFee;
+        uint24 poolFee; // TODO shift into implementation-specific params?
         uint48 vestingStart;
         uint48 vestingExpiry;
         address recipient;
