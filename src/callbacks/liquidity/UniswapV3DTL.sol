@@ -160,6 +160,7 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
     ///             - The pool for the token and fee combination already exists
     ///             - DTLParams.vestingStart or DTLParams.vestingExpiry do not pass validation
     ///             - Vesting is enabled and the linear vesting module is not found
+    ///             - The DTLParams.recipient address is the zero address
     ///
     /// @param      lotId_          The lot ID
     /// @param      baseToken_      The base token address
