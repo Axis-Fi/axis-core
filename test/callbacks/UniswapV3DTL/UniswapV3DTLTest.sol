@@ -118,10 +118,7 @@ abstract contract UniswapV3DirectToLiquidityTest is Test, Permit2User {
         // Source: https://github.com/foundry-rs/foundry/issues/6402
         vm.startBroadcast();
         _dtl = new UniswapV3DirectToLiquidity{salt: salt}(
-            address(_auctionHouse),
-            _SELLER,
-            address(_uniV3Factory),
-            address(_gUniFactory)
+            address(_auctionHouse), _SELLER, address(_uniV3Factory), address(_gUniFactory)
         );
         vm.stopBroadcast();
 
