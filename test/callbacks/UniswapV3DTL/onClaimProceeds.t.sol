@@ -3,15 +3,22 @@ pragma solidity 0.8.19;
 
 import {UniswapV3DirectToLiquidityTest} from "./UniswapV3DTLTest.sol";
 
-import {BaseCallback} from "src/callbacks/BaseCallback.sol";
+// Libraries
+import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
+import {ERC20} from "solmate/tokens/ERC20.sol";
+
+// Uniswap
 import {IUniswapV3Pool} from "uniswap-v3-core/interfaces/IUniswapV3Pool.sol";
-import {GUniFactory} from "g-uni-v1-core/GUniFactory.sol";
-import {GUniPool} from "g-uni-v1-core/GUniPool.sol";
 import {TickMath} from "uniswap-v3-core/libraries/TickMath.sol";
 import {SqrtPriceMath} from "src/lib/uniswap-v3/SqrtPriceMath.sol";
-import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
+
+// G-UNI
+import {GUniFactory} from "g-uni-v1-core/GUniFactory.sol";
+import {GUniPool} from "g-uni-v1-core/GUniPool.sol";
+
+// AuctionHouse
+import {BaseCallback} from "src/callbacks/BaseCallback.sol";
 import {LinearVesting} from "src/modules/derivatives/LinearVesting.sol";
-import {ERC20} from "solmate/tokens/ERC20.sol";
 
 contract UniswapV3DirectToLiquidityOnClaimProceedsTest is UniswapV3DirectToLiquidityTest {
     uint96 internal constant _PROCEEDS = 20e18;

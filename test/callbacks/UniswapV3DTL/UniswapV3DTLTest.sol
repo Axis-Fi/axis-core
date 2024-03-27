@@ -15,6 +15,7 @@ import {IUniswapV3Factory} from "uniswap-v3-core/interfaces/IUniswapV3Factory.so
 
 import {UniswapV3Factory} from "test/lib/uniswap-v3/UniswapV3Factory.sol";
 
+import {BaseUniswapDirectToLiquidity} from "src/callbacks/liquidity/BaseUniswapDTL.sol";
 import {UniswapV3DirectToLiquidity} from "src/callbacks/liquidity/UniswapV3DTL.sol";
 import {LinearVesting} from "src/modules/derivatives/LinearVesting.sol";
 
@@ -46,7 +47,7 @@ abstract contract UniswapV3DirectToLiquidityTest is Test, Permit2User {
     MockERC20 internal _baseToken;
 
     // Inputs
-    UniswapV3DirectToLiquidity.DTLParams internal _dtlCreateParams = UniswapV3DirectToLiquidity
+    BaseUniswapDirectToLiquidity.DTLParams internal _dtlCreateParams = BaseUniswapDirectToLiquidity
         .DTLParams({
         proceedsUtilisationPercent: 1e5,
         poolFee: 500,
@@ -206,7 +207,7 @@ abstract contract UniswapV3DirectToLiquidityTest is Test, Permit2User {
     function _getDTLConfiguration(uint96 lotId_)
         internal
         view
-        returns (UniswapV3DirectToLiquidity.DTLConfiguration memory)
+        returns (BaseUniswapDirectToLiquidity.DTLConfiguration memory)
     {
         (
             address baseToken_,
@@ -222,7 +223,7 @@ abstract contract UniswapV3DirectToLiquidityTest is Test, Permit2User {
             bool active_
         ) = _dtl.lotConfiguration(lotId_);
 
-        return UniswapV3DirectToLiquidity.DTLConfiguration({
+        return BaseUniswapDirectToLiquidity.DTLConfiguration({
             baseToken: baseToken_,
             quoteToken: quoteToken_,
             recipient: recipient_,

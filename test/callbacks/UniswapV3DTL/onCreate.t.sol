@@ -3,8 +3,9 @@ pragma solidity 0.8.19;
 
 import {UniswapV3DirectToLiquidityTest} from "./UniswapV3DTLTest.sol";
 
-import {UniswapV3DirectToLiquidity} from "src/callbacks/liquidity/UniswapV3DTL.sol";
 import {BaseCallback} from "src/callbacks/BaseCallback.sol";
+import {BaseUniswapDirectToLiquidity} from "src/callbacks/liquidity/BaseUniswapDTL.sol";
+import {UniswapV3DirectToLiquidity} from "src/callbacks/liquidity/UniswapV3DTL.sol";
 
 contract UniswapV3DirectToLiquidityOnCreateTest is UniswapV3DirectToLiquidityTest {
     // ============ Modifiers ============ //
@@ -121,7 +122,7 @@ contract UniswapV3DirectToLiquidityOnCreateTest is UniswapV3DirectToLiquidityTes
     {
         // Expect revert
         bytes memory err = abi.encodeWithSelector(
-            UniswapV3DirectToLiquidity.Callback_Params_UtilisationPercentOutOfBounds.selector,
+            BaseUniswapDirectToLiquidity.Callback_Params_UtilisationPercentOutOfBounds.selector,
             0,
             1,
             1e5
@@ -138,7 +139,7 @@ contract UniswapV3DirectToLiquidityOnCreateTest is UniswapV3DirectToLiquidityTes
     {
         // Expect revert
         bytes memory err = abi.encodeWithSelector(
-            UniswapV3DirectToLiquidity.Callback_Params_UtilisationPercentOutOfBounds.selector,
+            BaseUniswapDirectToLiquidity.Callback_Params_UtilisationPercentOutOfBounds.selector,
             1e5 + 1,
             1,
             1e5
@@ -172,7 +173,7 @@ contract UniswapV3DirectToLiquidityOnCreateTest is UniswapV3DirectToLiquidityTes
 
         // Expect revert
         bytes memory err =
-            abi.encodeWithSelector(UniswapV3DirectToLiquidity.Callback_Params_PoolExists.selector);
+            abi.encodeWithSelector(BaseUniswapDirectToLiquidity.Callback_Params_PoolExists.selector);
         vm.expectRevert(err);
 
         _performCallback();
@@ -187,7 +188,7 @@ contract UniswapV3DirectToLiquidityOnCreateTest is UniswapV3DirectToLiquidityTes
     {
         // Expect revert
         bytes memory err = abi.encodeWithSelector(
-            UniswapV3DirectToLiquidity.Callback_Params_InvalidVestingParams.selector
+            BaseUniswapDirectToLiquidity.Callback_Params_InvalidVestingParams.selector
         );
         vm.expectRevert(err);
 
@@ -203,7 +204,7 @@ contract UniswapV3DirectToLiquidityOnCreateTest is UniswapV3DirectToLiquidityTes
     {
         // Expect revert
         bytes memory err = abi.encodeWithSelector(
-            UniswapV3DirectToLiquidity.Callback_Params_InvalidVestingParams.selector
+            BaseUniswapDirectToLiquidity.Callback_Params_InvalidVestingParams.selector
         );
         vm.expectRevert(err);
 
@@ -220,7 +221,7 @@ contract UniswapV3DirectToLiquidityOnCreateTest is UniswapV3DirectToLiquidityTes
         _performCallback();
 
         // Assert values
-        UniswapV3DirectToLiquidity.DTLConfiguration memory configuration =
+        BaseUniswapDirectToLiquidity.DTLConfiguration memory configuration =
             _getDTLConfiguration(_lotId);
         assertEq(configuration.vestingStart, _START - 1, "vestingStart");
         assertEq(configuration.vestingExpiry, _START + 1, "vestingExpiry");
@@ -243,7 +244,7 @@ contract UniswapV3DirectToLiquidityOnCreateTest is UniswapV3DirectToLiquidityTes
     {
         // Expect revert
         bytes memory err = abi.encodeWithSelector(
-            UniswapV3DirectToLiquidity.Callback_Params_InvalidVestingParams.selector
+            BaseUniswapDirectToLiquidity.Callback_Params_InvalidVestingParams.selector
         );
         vm.expectRevert(err);
 
@@ -258,7 +259,7 @@ contract UniswapV3DirectToLiquidityOnCreateTest is UniswapV3DirectToLiquidityTes
     {
         // Expect revert
         bytes memory err = abi.encodeWithSelector(
-            UniswapV3DirectToLiquidity.Callback_LinearVestingModuleNotFound.selector
+            BaseUniswapDirectToLiquidity.Callback_LinearVestingModuleNotFound.selector
         );
         vm.expectRevert(err);
 
@@ -275,7 +276,7 @@ contract UniswapV3DirectToLiquidityOnCreateTest is UniswapV3DirectToLiquidityTes
         _performCallback();
 
         // Assert values
-        UniswapV3DirectToLiquidity.DTLConfiguration memory configuration =
+        BaseUniswapDirectToLiquidity.DTLConfiguration memory configuration =
             _getDTLConfiguration(_lotId);
         assertEq(configuration.vestingStart, _START + 1, "vestingStart");
         assertEq(configuration.vestingExpiry, _START + 2, "vestingExpiry");
@@ -294,7 +295,7 @@ contract UniswapV3DirectToLiquidityOnCreateTest is UniswapV3DirectToLiquidityTes
 
         // Expect revert
         bytes memory err = abi.encodeWithSelector(
-            UniswapV3DirectToLiquidity.Callback_Params_InvalidAddress.selector
+            BaseUniswapDirectToLiquidity.Callback_Params_InvalidAddress.selector
         );
         vm.expectRevert(err);
 
@@ -309,7 +310,7 @@ contract UniswapV3DirectToLiquidityOnCreateTest is UniswapV3DirectToLiquidityTes
         _performCallback();
 
         // Assert values
-        UniswapV3DirectToLiquidity.DTLConfiguration memory configuration =
+        BaseUniswapDirectToLiquidity.DTLConfiguration memory configuration =
             _getDTLConfiguration(_lotId);
         assertEq(configuration.recipient, _NOT_SELLER, "recipient");
 
@@ -321,7 +322,7 @@ contract UniswapV3DirectToLiquidityOnCreateTest is UniswapV3DirectToLiquidityTes
         _performCallback();
 
         // Assert values
-        UniswapV3DirectToLiquidity.DTLConfiguration memory configuration =
+        BaseUniswapDirectToLiquidity.DTLConfiguration memory configuration =
             _getDTLConfiguration(_lotId);
         assertEq(address(configuration.baseToken), address(_baseToken), "baseToken");
         assertEq(address(configuration.quoteToken), address(_quoteToken), "quoteToken");
