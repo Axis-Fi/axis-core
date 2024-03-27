@@ -400,4 +400,41 @@ contract UniswapV3DirectToLiquidityOnClaimProceedsTest is UniswapV3DirectToLiqui
         _assertQuoteTokenBalance();
         _assertBaseTokenBalance();
     }
+
+    function test_withdrawLpToken()
+        public
+        givenCallbackIsCreated
+        givenOnCreate
+        givenPoolIsCreated
+        setCallbackParameters(_PROCEEDS, _REFUND)
+        givenAddressHasQuoteTokenBalance(_dtlAddress, _proceeds)
+        givenAddressHasBaseTokenBalance(_SELLER, _capacityUtilised)
+        givenAddressHasBaseTokenAllowance(_SELLER, _dtlAddress, _capacityUtilised)
+    {
+        _performCallback();
+
+        // Get the pools deployed by the DTL callback
+        address[] memory pools = _gUniFactory.getPools(_dtlAddress);
+        assertEq(pools.length, 1, "pools length");
+        GUniPool pool = GUniPool(pools[0]);
+
+        address uniPool = _getPool();
+
+        // Withdraw the LP token
+        uint256 sellerBalance = pool.balanceOf(_SELLER);
+        vm.prank(_SELLER);
+        pool.burn(sellerBalance, _SELLER);
+
+        // Check the balances
+        assertEq(pool.balanceOf(_SELLER), 0, "seller: LP token balance");
+        assertEq(_quoteToken.balanceOf(_SELLER), _proceeds - 1, "seller: quote token balance");
+        assertEq(_baseToken.balanceOf(_SELLER), _capacityUtilised - 1, "seller: base token balance");
+        assertEq(_quoteToken.balanceOf(pools[0]), 0, "pool: quote token balance");
+        assertEq(_baseToken.balanceOf(pools[0]), 0, "pool: base token balance");
+        assertEq(_quoteToken.balanceOf(_dtlAddress), 0, "DTL: quote token balance");
+        assertEq(_baseToken.balanceOf(_dtlAddress), 0, "DTL: base token balance");
+        // There is a rounding error when burning the LP token, which leaves dust in the pool
+        assertEq(_quoteToken.balanceOf(uniPool), 1, "uni pool: quote token balance");
+        assertEq(_baseToken.balanceOf(uniPool), 1, "uni pool: base token balance");
+    }
 }
