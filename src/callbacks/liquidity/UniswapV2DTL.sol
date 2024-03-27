@@ -11,7 +11,6 @@ import {IUniswapV2Factory} from "uniswap-v2-core/interfaces/IUniswapV2Factory.so
 import {BaseUniswapDirectToLiquidity} from "src/callbacks/liquidity/BaseUniswapDTL.sol";
 
 contract UniswapV2DirectToLiquidity is BaseUniswapDirectToLiquidity {
-
     // ========== STATE VARIABLES ========== //
 
     IUniswapV2Factory public uniV2Factory;
