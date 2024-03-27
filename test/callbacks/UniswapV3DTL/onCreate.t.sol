@@ -71,6 +71,10 @@ contract UniswapV3DirectToLiquidityOnCreateTest is UniswapV3DirectToLiquidityTes
     //  [X] given the linear vesting module is not installed
     //   [X] it reverts
     //  [X] it records the address of the linear vesting module
+    // [X] when the recipient is the zero address
+    //  [X] it reverts
+    // [X] when the recipient is not the seller
+    //  [X] it records the recipient
     // [X] it registers the lot
 
     function test_whenCallbackDataIsIncorrect_reverts() public givenCallbackIsCreated {
@@ -285,6 +289,32 @@ contract UniswapV3DirectToLiquidityOnCreateTest is UniswapV3DirectToLiquidityTes
         _assertBaseTokenBalances();
     }
 
+    function test_whenRecipientIsZeroAddress_reverts() public givenCallbackIsCreated {
+        _dtlCreateParams.recipient = address(0);
+
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(BaseCallback.Callback_InvalidParams.selector);
+        vm.expectRevert(err);
+
+        _performCallback();
+    }
+
+    function test_whenRecipientIsNotSeller_succeeds()
+        public
+        givenCallbackIsCreated
+        whenRecipientIsNotSeller
+    {
+        _performCallback();
+
+        // Assert values
+        UniswapV3DirectToLiquidity.DTLConfiguration memory configuration =
+            _getDTLConfiguration(_lotId);
+        assertEq(configuration.recipient, _NOT_SELLER, "recipient");
+
+        // Assert balances
+        _assertBaseTokenBalances();
+    }
+
     function test_succeeds() public givenCallbackIsCreated {
         _performCallback();
 
@@ -293,6 +323,7 @@ contract UniswapV3DirectToLiquidityOnCreateTest is UniswapV3DirectToLiquidityTes
             _getDTLConfiguration(_lotId);
         assertEq(address(configuration.baseToken), address(_baseToken), "baseToken");
         assertEq(address(configuration.quoteToken), address(_quoteToken), "quoteToken");
+        assertEq(configuration.recipient, _SELLER, "recipient");
         assertEq(configuration.lotCapacity, _LOT_CAPACITY, "lotCapacity");
         assertEq(configuration.lotCuratorPayout, 0, "lotCuratorPayout");
         assertEq(

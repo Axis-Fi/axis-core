@@ -27,6 +27,7 @@ abstract contract UniswapV3DirectToLiquidityTest is Test, Permit2User {
     address internal constant _PROTOCOL = address(0x2);
     address internal constant _SELLER = address(0x3);
     address internal constant _BUYER = address(0x4);
+    address internal constant _NOT_SELLER = address(0x20);
 
     uint96 internal constant _LOT_CAPACITY = 10e18;
 
@@ -46,7 +47,13 @@ abstract contract UniswapV3DirectToLiquidityTest is Test, Permit2User {
 
     // Inputs
     UniswapV3DirectToLiquidity.DTLParams internal _dtlCreateParams = UniswapV3DirectToLiquidity
-        .DTLParams({proceedsUtilisationPercent: 1e5, poolFee: 500, vestingStart: 0, vestingExpiry: 0});
+        .DTLParams({
+        proceedsUtilisationPercent: 1e5,
+        poolFee: 500,
+        vestingStart: 0,
+        vestingExpiry: 0,
+        recipient: _SELLER
+    });
 
     function setUp() public {
         // Set reasonable timestamp
@@ -112,7 +119,7 @@ abstract contract UniswapV3DirectToLiquidityTest is Test, Permit2User {
         // vm.writeFile("./bytecode/UniswapV3DirectToLiquidityE6.bin", vm.toString(bytecode));
 
         // E6
-        bytes32 salt = bytes32(0xd6f4bae2f88d90f3e4befba0428daaf2537ca95e19ea1fddf46ee6dfaf93eb81);
+        bytes32 salt = bytes32(0x47aaeff673e18d3d6a14c5ef49b4e7cf67c17850e64e0b6710c177f6f7d36dda);
 
         // Required for CREATE2 address to work correctly. doesn't do anything in a test
         // Source: https://github.com/foundry-rs/foundry/issues/6402
@@ -192,6 +199,11 @@ abstract contract UniswapV3DirectToLiquidityTest is Test, Permit2User {
         _;
     }
 
+    modifier whenRecipientIsNotSeller() {
+        _dtlCreateParams.recipient = _NOT_SELLER;
+        _;
+    }
+
     // ========== FUNCTIONS ========== //
 
     function _getDTLConfiguration(uint96 lotId_)
@@ -202,6 +214,7 @@ abstract contract UniswapV3DirectToLiquidityTest is Test, Permit2User {
         (
             address baseToken_,
             address quoteToken_,
+            address recipient_,
             uint96 lotCapacity_,
             uint96 lotCuratorPayout_,
             uint24 proceedsUtilisationPercent_,
@@ -215,6 +228,7 @@ abstract contract UniswapV3DirectToLiquidityTest is Test, Permit2User {
         return UniswapV3DirectToLiquidity.DTLConfiguration({
             baseToken: baseToken_,
             quoteToken: quoteToken_,
+            recipient: recipient_,
             lotCapacity: lotCapacity_,
             lotCuratorPayout: lotCuratorPayout_,
             proceedsUtilisationPercent: proceedsUtilisationPercent_,

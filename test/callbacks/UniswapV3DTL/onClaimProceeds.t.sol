@@ -17,8 +17,6 @@ contract UniswapV3DirectToLiquidityOnClaimProceedsTest is UniswapV3DirectToLiqui
     uint96 internal constant _PROCEEDS = 20e18;
     uint96 internal constant _REFUND = 0;
 
-    address internal constant _NOT_SELLER = address(0x20);
-
     uint96 internal _proceeds;
     uint96 internal _refund;
     uint96 internal _capacityUtilised;
@@ -30,8 +28,6 @@ contract UniswapV3DirectToLiquidityOnClaimProceedsTest is UniswapV3DirectToLiqui
 
     /// @dev Set via `setCallbackParameters` modifier
     uint160 internal _sqrtPriceX96;
-
-    address internal _recipient = _SELLER;
 
     // ========== Internal functions ========== //
 
@@ -82,12 +78,12 @@ contract UniswapV3DirectToLiquidityOnClaimProceedsTest is UniswapV3DirectToLiqui
 
         assertEq(
             pool.balanceOf(_SELLER),
-            _recipient == _SELLER ? sellerExpectedBalance : 0,
+            _dtlCreateParams.recipient == _SELLER ? sellerExpectedBalance : 0,
             "seller: LP token balance"
         );
         assertEq(
             pool.balanceOf(_NOT_SELLER),
-            _recipient == _NOT_SELLER ? sellerExpectedBalance : 0,
+            _dtlCreateParams.recipient == _NOT_SELLER ? sellerExpectedBalance : 0,
             "not seller: LP token balance"
         );
         assertEq(
@@ -122,12 +118,12 @@ contract UniswapV3DirectToLiquidityOnClaimProceedsTest is UniswapV3DirectToLiqui
 
         assertEq(
             wrappedVestingToken.balanceOf(_SELLER),
-            _recipient == _SELLER ? sellerExpectedBalance : 0,
+            _dtlCreateParams.recipient == _SELLER ? sellerExpectedBalance : 0,
             "seller: vesting token balance"
         );
         assertEq(
             wrappedVestingToken.balanceOf(_NOT_SELLER),
-            _recipient == _NOT_SELLER ? sellerExpectedBalance : 0,
+            _dtlCreateParams.recipient == _NOT_SELLER ? sellerExpectedBalance : 0,
             "not seller: vesting token balance"
         );
     }
@@ -144,7 +140,7 @@ contract UniswapV3DirectToLiquidityOnClaimProceedsTest is UniswapV3DirectToLiqui
 
     function _performCallback() internal {
         vm.prank(address(_auctionHouse));
-        _dtl.onClaimProceeds(_lotId, _proceeds, _refund, abi.encode(_recipient));
+        _dtl.onClaimProceeds(_lotId, _proceeds, _refund, abi.encode(""));
     }
 
     function _createPool() internal returns (address) {
@@ -238,11 +234,6 @@ contract UniswapV3DirectToLiquidityOnClaimProceedsTest is UniswapV3DirectToLiqui
             ? (address(_baseToken), address(_quoteToken))
             : (address(_quoteToken), address(_baseToken));
         return _uniV3Factory.getPool(token0, token1, _dtlCreateParams.poolFee);
-    }
-
-    modifier whenRecipientIsNotSeller() {
-        _recipient = _NOT_SELLER;
-        _;
     }
 
     // ========== Tests ========== //
@@ -552,24 +543,6 @@ contract UniswapV3DirectToLiquidityOnClaimProceedsTest is UniswapV3DirectToLiqui
         _assertVestingTokenBalance();
         _assertQuoteTokenBalance();
         _assertBaseTokenBalance();
-    }
-
-    function test_invalidCallbackData_reverts()
-        public
-        givenCallbackIsCreated
-        givenOnCreate
-        setCallbackParameters(_PROCEEDS, _REFUND)
-        givenAddressHasQuoteTokenBalance(_dtlAddress, _proceeds)
-        givenAddressHasBaseTokenBalance(_SELLER, _capacityUtilised)
-        givenAddressHasBaseTokenAllowance(_SELLER, _dtlAddress, _capacityUtilised)
-    {
-        // Expect revert
-        bytes memory err = abi.encodeWithSelector(BaseCallback.Callback_InvalidParams.selector);
-        vm.expectRevert(err);
-
-        // Call function
-        vm.prank(address(_auctionHouse));
-        _dtl.onClaimProceeds(_lotId, _proceeds, _refund, abi.encode(uint256(20)));
     }
 
     function test_whenRecipientIsNotSeller()

@@ -60,6 +60,7 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
     /// @notice     Configuration for the DTL callback
     /// @param      baseToken                   The base token address
     /// @param      quoteToken                  The quote token address
+    /// @param      recipient                   The recipient of the LP tokens
     /// @param      lotCapacity                 The capacity of the lot
     /// @param      lotCuratorPayout            The maximum curator payout of the lot
     /// @param      proceedsUtilisationPercent  The percentage of the proceeds to deposit into the pool
@@ -71,6 +72,7 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
     struct DTLConfiguration {
         address baseToken;
         address quoteToken;
+        address recipient;
         uint96 lotCapacity;
         uint96 lotCuratorPayout;
         uint24 proceedsUtilisationPercent;
@@ -87,16 +89,18 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
     /// @param      poolFee                      The Uniswap V3 fee tier for the pool
     /// @param      vestingStart                 The start of the vesting period for the LP tokens (0 if disabled)
     /// @param      vestingExpiry                The end of the vesting period for the LP tokens (0 if disabled)
+    /// @param      recipient                    The recipient of the LP tokens
     struct DTLParams {
         uint24 proceedsUtilisationPercent;
         uint24 poolFee;
         uint48 vestingStart;
         uint48 vestingExpiry;
+        address recipient;
     }
 
     // ========== STATE VARIABLES ========== //
 
-    uint8 internal constant _DTL_PARAMS_LENGTH = 128;
+    uint8 internal constant _DTL_PARAMS_LENGTH = 160;
     uint24 public constant MAX_PERCENT = 1e5;
     bytes5 public constant LINEAR_VESTING_KEYCODE = 0x4c49560000; // "LIV"
 
@@ -223,6 +227,7 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
         lotConfiguration[lotId_] = DTLConfiguration({
             baseToken: baseToken_,
             quoteToken: quoteToken_,
+            recipient: params.recipient,
             lotCapacity: capacity_,
             lotCuratorPayout: 0,
             proceedsUtilisationPercent: params.proceedsUtilisationPercent,
@@ -300,13 +305,21 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
     ///             - Creates and initializes the pool, if necessary
     ///             - Deploys a pool token to wrap the Uniswap V3 position as an ERC-20
     ///             - Deposits the tokens into the pool and mint the LP tokens
-    ///             - If vesting is enabled, mints the vesting tokens, or transfers the LP tokens to the seller
+    ///             - If vesting is enabled, mints the vesting tokens, or transfers the LP tokens to the recipient
     ///             - Sends any remaining quote and base tokens to the seller
     ///
     ///             The assumptions are:
     ///             - the callback has `proceeds_` quantity of quote tokens (as `receiveQuoteTokens` flag is set)
     ///             - the seller has the required balance of base tokens
     ///             - the seller has approved the callback to spend the base tokens
+    ///
+    ///             This function reverts if:
+    ///             - The lot is not registered
+    ///             - The callback data is not the correct length
+    ///
+    /// @param      lotId_          The lot ID
+    /// @param      proceeds_       The proceeds from the auction
+    /// @param      refund_         The refund from the auction
     function _onClaimProceeds(
         uint96 lotId_,
         uint96 proceeds_,
@@ -434,7 +447,7 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
 
             // Mint the vesting tokens (it will deploy if necessary)
             config.linearVestingModule.mint(
-                seller,
+                config.recipient,
                 poolTokenAddress,
                 _getEncodedVestingParams(config.vestingStart, config.vestingExpiry),
                 poolTokenQuantity,
@@ -443,7 +456,7 @@ contract UniswapV3DirectToLiquidity is BaseCallback {
         }
         // Send the LP tokens to the seller
         else {
-            ERC20(poolTokenAddress).safeTransfer(seller, poolTokenQuantity);
+            ERC20(poolTokenAddress).safeTransfer(config.recipient, poolTokenQuantity);
         }
 
         // Send any remaining quote tokens to the seller
