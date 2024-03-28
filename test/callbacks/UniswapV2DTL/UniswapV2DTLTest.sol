@@ -81,8 +81,8 @@ abstract contract UniswapV2DirectToLiquidityTest is Test, Permit2User {
         // bytes memory bytecode = abi.encodePacked(type(UniswapV2RouterClone).creationCode);
         // vm.writeFile("./bytecode/UniswapV2RouterClone.bin", vm.toString(bytecode));
         _uniV2Router = new UniswapV2RouterClone{
-            salt: bytes32(0xd4d6115c0bdd67a7d256e9eba46e6241e7c4f441a4e34c3d930251d03c854403)}();
-        // TODO set storage slots
+            salt: bytes32(0xd4d6115c0bdd67a7d256e9eba46e6241e7c4f441a4e34c3d930251d03c854403)
+        }();
 
         _linearVesting = new LinearVesting(address(_auctionHouse));
 
