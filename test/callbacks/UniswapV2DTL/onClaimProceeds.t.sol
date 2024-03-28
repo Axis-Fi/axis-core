@@ -19,6 +19,9 @@ contract UniswapV2DirectToLiquidityOnClaimProceedsTest is UniswapV2DirectToLiqui
     uint96 internal constant _PROCEEDS = 20e18;
     uint96 internal constant _REFUND = 0;
 
+    /// @dev The minimum amount of liquidity retained in the pool
+    uint256 internal constant MINIMUM_LIQUIDITY = 10 ** 3;
+
     uint96 internal _proceeds;
     uint96 internal _refund;
     uint96 internal _capacityUtilised;
@@ -60,9 +63,9 @@ contract UniswapV2DirectToLiquidityOnClaimProceedsTest is UniswapV2DirectToLiqui
         uint256 linearVestingExpectedBalance;
         // Only has a balance if not vesting
         if (_dtlCreateParams.vestingStart == 0) {
-            sellerExpectedBalance = pool.totalSupply();
+            sellerExpectedBalance = pool.totalSupply() - MINIMUM_LIQUIDITY;
         } else {
-            linearVestingExpectedBalance = pool.totalSupply();
+            linearVestingExpectedBalance = pool.totalSupply() - MINIMUM_LIQUIDITY;
         }
 
         assertEq(
