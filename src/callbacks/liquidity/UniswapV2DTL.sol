@@ -14,6 +14,11 @@ import {BaseDirectToLiquidity} from "src/callbacks/liquidity/BaseDTL.sol";
 contract UniswapV2DirectToLiquidity is BaseDirectToLiquidity {
     // ========== STRUCTS ========== //
 
+    /// @notice     Parameters for the onClaimProceeds callback
+    /// @dev        This will be encoded in the `callbackData_` parameter
+    ///
+    /// @param      quoteTokenAmountMin     The minimum amount of quote tokens to add as liquidity
+    /// @param      baseTokenAmountMin      The minimum amount of base tokens to add as liquidity
     struct OnClaimProceedsParams {
         uint256 quoteTokenAmountMin;
         uint256 baseTokenAmountMin;
@@ -21,7 +26,12 @@ contract UniswapV2DirectToLiquidity is BaseDirectToLiquidity {
 
     // ========== STATE VARIABLES ========== //
 
+    /// @notice     The Uniswap V2 factory
+    /// @dev        This contract is used to create Uniswap V2 pools
     IUniswapV2Factory public uniV2Factory;
+
+    /// @notice     The Uniswap V2 router
+    /// @dev        This contract is used to add liquidity to Uniswap V2 pools
     IUniswapV2Router02 public uniV2Router;
 
     // ========== CONSTRUCTOR ========== //

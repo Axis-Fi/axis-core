@@ -373,6 +373,7 @@ abstract contract BaseDirectToLiquidity is BaseCallback {
     ///             It is expected to:
     ///             - Create and initialize the pool
     ///             - Deposit the quote and base tokens into the pool
+    ///             - The pool tokens should be received by this contract
     ///             - Return the ERC20 pool token
     ///
     /// @param      lotId_              The lot ID
