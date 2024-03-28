@@ -542,24 +542,39 @@ contract UniswapV2DirectToLiquidityOnClaimProceedsTest is UniswapV2DirectToLiqui
         // Get the pools deployed by the DTL callback
         IUniswapV2Pair pool = _getUniswapV2Pool();
 
+        // Approve the spending of the LP token
+        uint256 lpTokenAmount = pool.balanceOf(_SELLER);
+        vm.prank(_SELLER);
+        pool.approve(address(_uniV2Router), lpTokenAmount);
+
         // Withdraw the LP token
         vm.prank(_SELLER);
         _uniV2Router.removeLiquidity(
             address(_quoteToken),
             address(_baseToken),
-            pool.balanceOf(_SELLER),
-            _quoteTokensToDeposit,
-            _baseTokensToDeposit,
+            lpTokenAmount,
+            _quoteTokensToDeposit * 99 / 100,
+            _baseTokensToDeposit * 99 / 100,
             _SELLER,
             block.timestamp
         );
 
+        // Get the minimum liquidity retained in the pool
+        uint256 quoteTokenPoolAmount = _quoteToken.balanceOf(address(pool));
+        uint256 baseTokenPoolAmount = _baseToken.balanceOf(address(pool));
+
         // Check the balances
         assertEq(pool.balanceOf(_SELLER), 0, "seller: LP token balance");
-        assertEq(_quoteToken.balanceOf(_SELLER), _proceeds, "seller: quote token balance");
-        assertEq(_baseToken.balanceOf(_SELLER), _capacityUtilised, "seller: base token balance");
-        assertEq(_quoteToken.balanceOf(address(pool)), 0, "pool: quote token balance");
-        assertEq(_baseToken.balanceOf(address(pool)), 0, "pool: base token balance");
+        assertEq(
+            _quoteToken.balanceOf(_SELLER),
+            _proceeds - quoteTokenPoolAmount,
+            "seller: quote token balance"
+        );
+        assertEq(
+            _baseToken.balanceOf(_SELLER),
+            _capacityUtilised - baseTokenPoolAmount,
+            "seller: base token balance"
+        );
         assertEq(_quoteToken.balanceOf(_dtlAddress), 0, "DTL: quote token balance");
         assertEq(_baseToken.balanceOf(_dtlAddress), 0, "DTL: base token balance");
     }
