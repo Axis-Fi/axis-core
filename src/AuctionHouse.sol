@@ -157,7 +157,7 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
 
     event RefundBid(uint96 indexed lotId, uint96 indexed bidId, address indexed bidder);
 
-    // TODO events for ClaimBid, ClaimProceeds?
+    event ClaimBid(uint96 indexed lotId, uint96 indexed bidId);
 
     event Settle(uint96 indexed lotId);
 
@@ -416,6 +416,8 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
         uint48 referrerFee = lotFees[lotId_].referrerFee;
 
         // Iterate through the bid claims and handle each one
+        // TODO - require claims are the same length as bidIds?
+        // Required to reference the bidId in the loop
         uint256 bidClaimsLen = bidClaims.length;
         for (uint256 i = 0; i < bidClaimsLen; i++) {
             Auction.BidClaim memory bidClaim = bidClaims[i];
@@ -444,6 +446,9 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
                 // Refund the paid amount to the bidder
                 Transfer.transfer(routing.quoteToken, bidClaim.bidder, bidClaim.paid, false);
             }
+
+            // Emit event
+            emit ClaimBid(lotId_, bidIds_[i]);
         }
     }
 
