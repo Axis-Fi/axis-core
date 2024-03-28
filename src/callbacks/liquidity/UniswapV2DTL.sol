@@ -88,6 +88,10 @@ contract UniswapV2DirectToLiquidity is BaseDirectToLiquidity {
             pairAddress = uniV2Factory.createPair(config.baseToken, config.quoteToken);
         }
 
+        // Approve the router to spend the tokens
+        ERC20(config.quoteToken).approve(address(uniV2Router), quoteTokenAmount_);
+        ERC20(config.baseToken).approve(address(uniV2Router), baseTokenAmount_);
+
         // Deposit into the pool
         uniV2Router.addLiquidity(
             config.quoteToken,

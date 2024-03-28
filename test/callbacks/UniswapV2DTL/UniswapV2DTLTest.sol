@@ -113,7 +113,7 @@ abstract contract UniswapV2DirectToLiquidityTest is Test, Permit2User {
         // vm.writeFile("./bytecode/UniswapV2DirectToLiquidityE6.bin", vm.toString(bytecode));
 
         // E6
-        bytes32 salt = bytes32(0x298a9938994a76fd103734636b9656970bfc2dedcf743bb096470293679e57fb);
+        bytes32 salt = bytes32(0x2386572fcd4da6e4f4124bfb8f20b4577db7fd84770348ed45068561c46f4f9c);
 
         // Required for CREATE2 address to work correctly. doesn't do anything in a test
         // Source: https://github.com/foundry-rs/foundry/issues/6402
