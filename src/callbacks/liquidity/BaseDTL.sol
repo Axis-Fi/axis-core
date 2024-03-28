@@ -32,17 +32,18 @@ abstract contract BaseDirectToLiquidity is BaseCallback {
     // ========== STRUCTS ========== //
 
     /// @notice     Configuration for the DTL callback
+    ///
     /// @param      baseToken                   The base token address
     /// @param      quoteToken                  The quote token address
     /// @param      recipient                   The recipient of the LP tokens
     /// @param      lotCapacity                 The capacity of the lot
     /// @param      lotCuratorPayout            The maximum curator payout of the lot
     /// @param      proceedsUtilisationPercent  The percentage of the proceeds to deposit into the pool
-    /// @param      poolFee                     The fee tier for the pool
     /// @param      vestingStart                The start of the vesting period for the LP tokens (0 if disabled)
     /// @param      vestingExpiry               The end of the vesting period for the LP tokens (0 if disabled)
     /// @param      linearVestingModule         The LinearVesting module for the LP tokens (only set if linear vesting is enabled)
     /// @param      active                      Whether the lot is active
+    /// @param      implParams                  The implementation-specific parameters
     struct DTLConfiguration {
         address baseToken;
         address quoteToken;
@@ -50,33 +51,30 @@ abstract contract BaseDirectToLiquidity is BaseCallback {
         uint96 lotCapacity;
         uint96 lotCuratorPayout;
         uint24 proceedsUtilisationPercent;
-        uint24 poolFee;
         uint48 vestingStart;
         uint48 vestingExpiry;
         LinearVesting linearVestingModule;
         bool active;
+        bytes implParams;
     }
 
     /// @notice     Parameters used in the onCreate callback
     ///
     /// @param      proceedsUtilisationPercent   The percentage of the proceeds to use in the pool
-    /// @param      poolFee                      The fee tier for the pool
     /// @param      vestingStart                 The start of the vesting period for the LP tokens (0 if disabled)
     /// @param      vestingExpiry                The end of the vesting period for the LP tokens (0 if disabled)
     /// @param      recipient                    The recipient of the LP tokens
     /// @param      implParams                   The implementation-specific parameters
-    struct DTLParams {
-        // TODO rename to OnCreateParams
+    struct OnCreateParams {
         uint24 proceedsUtilisationPercent;
-        uint24 poolFee; // TODO shift into implementation-specific params?
         uint48 vestingStart;
         uint48 vestingExpiry;
         address recipient;
+        bytes implParams;
     }
 
     // ========== STATE VARIABLES ========== //
 
-    uint8 internal constant _DTL_PARAMS_LENGTH = 160;
     uint24 public constant MAX_PERCENT = 1e5;
     bytes5 public constant LINEAR_VESTING_KEYCODE = 0x4c49560000; // "LIV"
 
@@ -115,16 +113,16 @@ abstract contract BaseDirectToLiquidity is BaseCallback {
     ///             - Stores the configuration for the lot
     ///
     ///             This function reverts if:
-    ///             - DTLParams.proceedsUtilisationPercent is out of bounds
-    ///             - DTLParams.vestingStart or DTLParams.vestingExpiry do not pass validation
+    ///             - OnCreateParams.proceedsUtilisationPercent is out of bounds
+    ///             - OnCreateParams.vestingStart or OnCreateParams.vestingExpiry do not pass validation
     ///             - Vesting is enabled and the linear vesting module is not found
-    ///             - The DTLParams.recipient address is the zero address
+    ///             - The OnCreateParams.recipient address is the zero address
     ///
     /// @param      lotId_          The lot ID
     /// @param      baseToken_      The base token address
     /// @param      quoteToken_     The quote token address
     /// @param      capacity_       The capacity of the lot
-    /// @param      callbackData_   Encoded DTLParams struct
+    /// @param      callbackData_   Encoded OnCreateParams struct
     function _onCreate(
         uint96 lotId_,
         address seller_,
@@ -135,10 +133,7 @@ abstract contract BaseDirectToLiquidity is BaseCallback {
         bytes calldata callbackData_
     ) internal virtual override onlyIfLotDoesNotExist(lotId_) {
         // Decode callback data into the params
-        if (callbackData_.length != _DTL_PARAMS_LENGTH) {
-            revert Callback_InvalidParams();
-        }
-        DTLParams memory params = abi.decode(callbackData_, (DTLParams));
+        OnCreateParams memory params = abi.decode(callbackData_, (OnCreateParams));
 
         // Validate the parameters
         // Proceeds utilisation
@@ -176,9 +171,6 @@ abstract contract BaseDirectToLiquidity is BaseCallback {
             revert Callback_Params_InvalidAddress();
         }
 
-        // Call the Uniswap-specific implementation
-        __onCreate(lotId_, seller_, baseToken_, quoteToken_, capacity_, prefund_, callbackData_);
-
         // Store the configuration
         lotConfiguration[lotId_] = DTLConfiguration({
             baseToken: baseToken_,
@@ -187,17 +179,20 @@ abstract contract BaseDirectToLiquidity is BaseCallback {
             lotCapacity: capacity_,
             lotCuratorPayout: 0,
             proceedsUtilisationPercent: params.proceedsUtilisationPercent,
-            poolFee: params.poolFee,
             vestingStart: params.vestingStart,
             vestingExpiry: params.vestingExpiry,
             linearVestingModule: linearVestingModule,
-            active: true
+            active: true,
+            implParams: params.implParams
         });
+
+        // Call the Uniswap-specific implementation
+        __onCreate(lotId_, seller_, baseToken_, quoteToken_, capacity_, prefund_, callbackData_);
     }
 
     /// @notice     Uniswap-specific implementation of the onCreate callback
     /// @dev        The implementation will be called by the _onCreate function
-    ///             after the `callbackData_` has been validated, but before the
+    ///             after the `callbackData_` has been validated and after the
     ///             lot configuration is stored.
     ///
     ///             The implementation should perform the following:
@@ -209,7 +204,7 @@ abstract contract BaseDirectToLiquidity is BaseCallback {
     /// @param      quoteToken_     The quote token address
     /// @param      capacity_       The capacity of the lot
     /// @param      prefund_        Whether the lot is prefunded
-    /// @param      callbackData_   Encoded DTLParams struct
+    /// @param      callbackData_   Encoded OnCreateParams struct
     function __onCreate(
         uint96 lotId_,
         address seller_,

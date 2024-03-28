@@ -70,28 +70,29 @@ contract UniswapV3DirectToLiquidity is BaseDirectToLiquidity {
     ///             - Validates the input data
     ///
     ///             This function reverts if:
-    ///             - DTLParams.poolFee is not enabled
+    ///             - OnCreateParams.implParams.poolFee is not enabled
     ///             - The pool for the token and fee combination already exists
     function __onCreate(
-        uint96 lotId_,
+        uint96,
         address,
         address baseToken_,
         address quoteToken_,
         uint96,
         bool,
         bytes calldata callbackData_
-    ) internal virtual override onlyIfLotDoesNotExist(lotId_) {
-        DTLParams memory params = abi.decode(callbackData_, (DTLParams));
+    ) internal virtual override {
+        OnCreateParams memory params = abi.decode(callbackData_, (OnCreateParams));
+        (uint24 poolFee) = abi.decode(params.implParams, (uint24));
 
         // Validate the parameters
         // Pool fee
         // Fee not enabled
-        if (uniV3Factory.feeAmountTickSpacing(params.poolFee) == 0) {
+        if (uniV3Factory.feeAmountTickSpacing(poolFee) == 0) {
             revert Callback_Params_PoolFeeNotEnabled();
         }
 
         // Check that the pool does not exist
-        if (uniV3Factory.getPool(baseToken_, quoteToken_, params.poolFee) != address(0)) {
+        if (uniV3Factory.getPool(baseToken_, quoteToken_, poolFee) != address(0)) {
             revert Callback_Params_PoolExists();
         }
     }
@@ -112,6 +113,9 @@ contract UniswapV3DirectToLiquidity is BaseDirectToLiquidity {
     ) internal virtual override returns (ERC20 poolToken) {
         DTLConfiguration memory config = lotConfiguration[lotId_];
 
+        // Extract the pool fee from the implParams
+        (uint24 poolFee) = abi.decode(config.implParams, (uint24));
+
         // Determine the ordering of tokens
         bool quoteTokenIsToken0 = config.quoteToken < config.baseToken;
 
@@ -127,7 +131,7 @@ contract UniswapV3DirectToLiquidity is BaseDirectToLiquidity {
             _createAndInitializePoolIfNecessary(
                 quoteTokenIsToken0 ? config.quoteToken : config.baseToken,
                 quoteTokenIsToken0 ? config.baseToken : config.quoteToken,
-                config.poolFee,
+                poolFee,
                 sqrtPriceX96
             );
         }
@@ -136,7 +140,7 @@ contract UniswapV3DirectToLiquidity is BaseDirectToLiquidity {
         address poolTokenAddress;
         {
             // Adjust the full-range ticks according to the tick spacing for the current fee
-            int24 tickSpacing = uniV3Factory.feeAmountTickSpacing(config.poolFee);
+            int24 tickSpacing = uniV3Factory.feeAmountTickSpacing(poolFee);
             int24 minTick = TickMath.MIN_TICK / tickSpacing * tickSpacing;
             int24 maxTick = TickMath.MAX_TICK / tickSpacing * tickSpacing;
 
@@ -146,7 +150,7 @@ contract UniswapV3DirectToLiquidity is BaseDirectToLiquidity {
             poolTokenAddress = gUniFactory.createPool(
                 quoteTokenIsToken0 ? config.quoteToken : config.baseToken,
                 quoteTokenIsToken0 ? config.baseToken : config.quoteToken,
-                config.poolFee,
+                poolFee,
                 minTick,
                 maxTick
             );

@@ -47,12 +47,14 @@ abstract contract UniswapV3DirectToLiquidityTest is Test, Permit2User {
     MockERC20 internal _baseToken;
 
     // Inputs
-    BaseDirectToLiquidity.DTLParams internal _dtlCreateParams = BaseDirectToLiquidity.DTLParams({
+    uint24 internal _poolFee = 500;
+    BaseDirectToLiquidity.OnCreateParams internal _dtlCreateParams = BaseDirectToLiquidity
+        .OnCreateParams({
         proceedsUtilisationPercent: 1e5,
-        poolFee: 500,
         vestingStart: 0,
         vestingExpiry: 0,
-        recipient: _SELLER
+        recipient: _SELLER,
+        implParams: abi.encode(_poolFee)
     });
 
     function setUp() public {
@@ -116,7 +118,7 @@ abstract contract UniswapV3DirectToLiquidityTest is Test, Permit2User {
         // vm.writeFile("./bytecode/UniswapV3DirectToLiquidityE6.bin", vm.toString(bytecode));
 
         // E6
-        bytes32 salt = bytes32(0x0514ee3257575550d343b1cca032c61bcaef0982157cec0e2db9912497ad0dd7);
+        bytes32 salt = bytes32(0x0a4fe70c9e7862f3db99a333923f3f398ef5db397c99ef0c54ba04d8d936c59b);
 
         // Required for CREATE2 address to work correctly. doesn't do anything in a test
         // Source: https://github.com/foundry-rs/foundry/issues/6402
@@ -182,7 +184,8 @@ abstract contract UniswapV3DirectToLiquidityTest is Test, Permit2User {
     }
 
     modifier givenPoolFee(uint24 fee_) {
-        _dtlCreateParams.poolFee = fee_;
+        _poolFee = fee_;
+        _dtlCreateParams.implParams = abi.encode(_poolFee);
         _;
     }
 
@@ -215,11 +218,11 @@ abstract contract UniswapV3DirectToLiquidityTest is Test, Permit2User {
             uint96 lotCapacity_,
             uint96 lotCuratorPayout_,
             uint24 proceedsUtilisationPercent_,
-            uint24 poolFee_,
             uint48 vestingStart_,
             uint48 vestingExpiry_,
             LinearVesting linearVestingModule_,
-            bool active_
+            bool active_,
+            bytes memory implParams_
         ) = _dtl.lotConfiguration(lotId_);
 
         return BaseDirectToLiquidity.DTLConfiguration({
@@ -229,11 +232,11 @@ abstract contract UniswapV3DirectToLiquidityTest is Test, Permit2User {
             lotCapacity: lotCapacity_,
             lotCuratorPayout: lotCuratorPayout_,
             proceedsUtilisationPercent: proceedsUtilisationPercent_,
-            poolFee: poolFee_,
             vestingStart: vestingStart_,
             vestingExpiry: vestingExpiry_,
             linearVestingModule: linearVestingModule_,
-            active: active_
+            active: active_,
+            implParams: implParams_
         });
     }
 }

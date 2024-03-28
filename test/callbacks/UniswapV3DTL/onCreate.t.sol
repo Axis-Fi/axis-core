@@ -79,7 +79,8 @@ contract UniswapV3DirectToLiquidityOnCreateTest is UniswapV3DirectToLiquidityTes
     // [X] it registers the lot
 
     function test_whenCallbackDataIsIncorrect_reverts() public givenCallbackIsCreated {
-        _expectInvalidParams();
+        // Expect revert
+        vm.expectRevert();
 
         vm.prank(address(_auctionHouse));
         _dtl.onCreate(
@@ -326,11 +327,13 @@ contract UniswapV3DirectToLiquidityOnCreateTest is UniswapV3DirectToLiquidityTes
             _dtlCreateParams.proceedsUtilisationPercent,
             "proceedsUtilisationPercent"
         );
-        assertEq(configuration.poolFee, _dtlCreateParams.poolFee, "poolFee");
         assertEq(configuration.vestingStart, 0, "vestingStart");
         assertEq(configuration.vestingExpiry, 0, "vestingExpiry");
         assertEq(address(configuration.linearVestingModule), address(0), "linearVestingModule");
         assertEq(configuration.active, true, "active");
+
+        (uint24 configurationPoolFee) = abi.decode(configuration.implParams, (uint24));
+        assertEq(configurationPoolFee, _poolFee, "poolFee");
 
         // Assert balances
         _assertBaseTokenBalances();

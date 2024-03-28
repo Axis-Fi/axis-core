@@ -155,7 +155,7 @@ contract UniswapV3DirectToLiquidityOnClaimProceedsTest is UniswapV3DirectToLiqui
             ? (address(_baseToken), address(_quoteToken))
             : (address(_quoteToken), address(_baseToken));
 
-        return _uniV3Factory.createPool(token0, token1, _dtlCreateParams.poolFee);
+        return _uniV3Factory.createPool(token0, token1, _poolFee);
     }
 
     function _initializePool(address pool_, uint160 sqrtPriceX96_) internal {
@@ -240,7 +240,7 @@ contract UniswapV3DirectToLiquidityOnClaimProceedsTest is UniswapV3DirectToLiqui
         (address token0, address token1) = address(_baseToken) < address(_quoteToken)
             ? (address(_baseToken), address(_quoteToken))
             : (address(_quoteToken), address(_baseToken));
-        return _uniV3Factory.getPool(token0, token1, _dtlCreateParams.poolFee);
+        return _uniV3Factory.getPool(token0, token1, _poolFee);
     }
 
     // ========== Tests ========== //
