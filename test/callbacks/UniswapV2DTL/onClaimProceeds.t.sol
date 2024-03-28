@@ -477,7 +477,7 @@ contract UniswapV2DirectToLiquidityOnClaimProceedsTest is UniswapV2DirectToLiqui
 
         // Assert that the LP token has been transferred to the seller
         IUniswapV2Pair pool = _getUniswapV2Pool();
-        assertEq(pool.balanceOf(_SELLER), pool.totalSupply(), "seller: LP token balance");
+        assertEq(pool.balanceOf(_SELLER), pool.totalSupply() - MINIMUM_LIQUIDITY, "seller: LP token balance");
     }
 
     function test_withdrawLpToken()
