@@ -15,7 +15,7 @@ import {IGUniFactory} from "g-uni-v1-core/interfaces/IGUniFactory.sol";
 import {GUniPool} from "g-uni-v1-core/GUniPool.sol";
 
 // Callbacks
-import {BaseUniswapDirectToLiquidity} from "src/callbacks/liquidity/BaseUniswapDTL.sol";
+import {BaseDirectToLiquidity} from "src/callbacks/liquidity/BaseDTL.sol";
 
 /// @title      UniswapV3DirectToLiquidity
 /// @notice     This Callback contract deposits the proceeds from a batch auction into a Uniswap V3 pool
@@ -29,7 +29,7 @@ import {BaseUniswapDirectToLiquidity} from "src/callbacks/liquidity/BaseUniswapD
 ///
 /// @dev        As a general rule, this callback contract does not retain balances of tokens between calls.
 ///             Transfers are performed within the same function that requires the balance.
-contract UniswapV3DirectToLiquidity is BaseUniswapDirectToLiquidity {
+contract UniswapV3DirectToLiquidity is BaseDirectToLiquidity {
     // ========== ERRORS ========== //
 
     error Callback_Params_PoolFeeNotEnabled();
@@ -51,7 +51,7 @@ contract UniswapV3DirectToLiquidity is BaseUniswapDirectToLiquidity {
         address seller_,
         address uniV3Factory_,
         address gUniFactory_
-    ) BaseUniswapDirectToLiquidity(auctionHouse_, seller_) {
+    ) BaseDirectToLiquidity(auctionHouse_, seller_) {
         if (uniV3Factory_ == address(0)) {
             revert Callback_Params_InvalidAddress();
         }
@@ -65,7 +65,7 @@ contract UniswapV3DirectToLiquidity is BaseUniswapDirectToLiquidity {
 
     // ========== CALLBACK FUNCTIONS ========== //
 
-    /// @inheritdoc BaseUniswapDirectToLiquidity
+    /// @inheritdoc BaseDirectToLiquidity
     /// @dev        This function performs the following:
     ///             - Validates the input data
     ///
@@ -96,7 +96,7 @@ contract UniswapV3DirectToLiquidity is BaseUniswapDirectToLiquidity {
         }
     }
 
-    /// @inheritdoc BaseUniswapDirectToLiquidity
+    /// @inheritdoc BaseDirectToLiquidity
     /// @dev        This function performs the following:
     ///             - Creates and initializes the pool, if necessary
     ///             - Deploys a pool token to wrap the Uniswap V3 position as an ERC-20

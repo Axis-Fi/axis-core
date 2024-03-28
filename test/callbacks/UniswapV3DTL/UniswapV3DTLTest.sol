@@ -15,7 +15,7 @@ import {IUniswapV3Factory} from "uniswap-v3-core/interfaces/IUniswapV3Factory.so
 
 import {UniswapV3Factory} from "test/lib/uniswap-v3/UniswapV3Factory.sol";
 
-import {BaseUniswapDirectToLiquidity} from "src/callbacks/liquidity/BaseUniswapDTL.sol";
+import {BaseDirectToLiquidity} from "src/callbacks/liquidity/BaseDTL.sol";
 import {UniswapV3DirectToLiquidity} from "src/callbacks/liquidity/UniswapV3DTL.sol";
 import {LinearVesting} from "src/modules/derivatives/LinearVesting.sol";
 
@@ -47,8 +47,7 @@ abstract contract UniswapV3DirectToLiquidityTest is Test, Permit2User {
     MockERC20 internal _baseToken;
 
     // Inputs
-    BaseUniswapDirectToLiquidity.DTLParams internal _dtlCreateParams = BaseUniswapDirectToLiquidity
-        .DTLParams({
+    BaseDirectToLiquidity.DTLParams internal _dtlCreateParams = BaseDirectToLiquidity.DTLParams({
         proceedsUtilisationPercent: 1e5,
         poolFee: 500,
         vestingStart: 0,
@@ -117,7 +116,7 @@ abstract contract UniswapV3DirectToLiquidityTest is Test, Permit2User {
         // vm.writeFile("./bytecode/UniswapV3DirectToLiquidityE6.bin", vm.toString(bytecode));
 
         // E6
-        bytes32 salt = bytes32(0xdcedafc09dfa0c0a1a7e2f5b9cb6d1739b679c19b0ca36bbb88dd8b734f7716f);
+        bytes32 salt = bytes32(0x0514ee3257575550d343b1cca032c61bcaef0982157cec0e2db9912497ad0dd7);
 
         // Required for CREATE2 address to work correctly. doesn't do anything in a test
         // Source: https://github.com/foundry-rs/foundry/issues/6402
@@ -207,7 +206,7 @@ abstract contract UniswapV3DirectToLiquidityTest is Test, Permit2User {
     function _getDTLConfiguration(uint96 lotId_)
         internal
         view
-        returns (BaseUniswapDirectToLiquidity.DTLConfiguration memory)
+        returns (BaseDirectToLiquidity.DTLConfiguration memory)
     {
         (
             address baseToken_,
@@ -223,7 +222,7 @@ abstract contract UniswapV3DirectToLiquidityTest is Test, Permit2User {
             bool active_
         ) = _dtl.lotConfiguration(lotId_);
 
-        return BaseUniswapDirectToLiquidity.DTLConfiguration({
+        return BaseDirectToLiquidity.DTLConfiguration({
             baseToken: baseToken_,
             quoteToken: quoteToken_,
             recipient: recipient_,

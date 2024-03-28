@@ -4,7 +4,7 @@ pragma solidity 0.8.19;
 import {UniswapV3DirectToLiquidityTest} from "./UniswapV3DTLTest.sol";
 
 import {BaseCallback} from "src/callbacks/BaseCallback.sol";
-import {BaseUniswapDirectToLiquidity} from "src/callbacks/liquidity/BaseUniswapDTL.sol";
+import {BaseDirectToLiquidity} from "src/callbacks/liquidity/BaseDTL.sol";
 import {UniswapV3DirectToLiquidity} from "src/callbacks/liquidity/UniswapV3DTL.sol";
 
 contract UniswapV3DirectToLiquidityOnCurateTest is UniswapV3DirectToLiquidityTest {
@@ -37,8 +37,7 @@ contract UniswapV3DirectToLiquidityOnCurateTest is UniswapV3DirectToLiquidityTes
         _performCallback();
 
         // Check the values
-        BaseUniswapDirectToLiquidity.DTLConfiguration memory configuration =
-            _getDTLConfiguration(_lotId);
+        BaseDirectToLiquidity.DTLConfiguration memory configuration = _getDTLConfiguration(_lotId);
         assertEq(configuration.lotCuratorPayout, _PAYOUT_AMOUNT, "lotCuratorPayout");
 
         // Check the balances

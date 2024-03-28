@@ -8,9 +8,9 @@ import {ERC20} from "solmate/tokens/ERC20.sol";
 import {IUniswapV2Factory} from "uniswap-v2-core/interfaces/IUniswapV2Factory.sol";
 
 // Callbacks
-import {BaseUniswapDirectToLiquidity} from "src/callbacks/liquidity/BaseUniswapDTL.sol";
+import {BaseDirectToLiquidity} from "src/callbacks/liquidity/BaseDTL.sol";
 
-contract UniswapV2DirectToLiquidity is BaseUniswapDirectToLiquidity {
+contract UniswapV2DirectToLiquidity is BaseDirectToLiquidity {
     // ========== STATE VARIABLES ========== //
 
     IUniswapV2Factory public uniV2Factory;
@@ -22,7 +22,7 @@ contract UniswapV2DirectToLiquidity is BaseUniswapDirectToLiquidity {
         address seller_,
         address uniswapV2Factory_,
         address uniswapV2Router_
-    ) BaseUniswapDirectToLiquidity(auctionHouse_, seller_) {
+    ) BaseDirectToLiquidity(auctionHouse_, seller_) {
         if (uniswapV2Factory_ == address(0)) {
             revert Callback_Params_InvalidAddress();
         }
@@ -31,7 +31,7 @@ contract UniswapV2DirectToLiquidity is BaseUniswapDirectToLiquidity {
 
     // ========== CALLBACK FUNCTIONS ========== //
 
-    /// @inheritdoc BaseUniswapDirectToLiquidity
+    /// @inheritdoc BaseDirectToLiquidity
     /// @dev        This function implements the following:
     ///             - Validates the parameters
     ///
@@ -52,7 +52,7 @@ contract UniswapV2DirectToLiquidity is BaseUniswapDirectToLiquidity {
         }
     }
 
-    /// @inheritdoc BaseUniswapDirectToLiquidity
+    /// @inheritdoc BaseDirectToLiquidity
     function _mintAndDeposit(
         uint96 lotId_,
         uint256 quoteTokenAmount_,

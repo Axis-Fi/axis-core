@@ -14,7 +14,7 @@ import {LinearVesting} from "src/modules/derivatives/LinearVesting.sol";
 import {AuctionHouse} from "src/AuctionHouse.sol";
 import {Keycode, wrapVeecode} from "src/modules/Modules.sol";
 
-abstract contract BaseUniswapDirectToLiquidity is BaseCallback {
+abstract contract BaseDirectToLiquidity is BaseCallback {
     using SafeTransferLib for ERC20;
 
     // ========== ERRORS ========== //
@@ -65,7 +65,8 @@ abstract contract BaseUniswapDirectToLiquidity is BaseCallback {
     /// @param      vestingExpiry                The end of the vesting period for the LP tokens (0 if disabled)
     /// @param      recipient                    The recipient of the LP tokens
     /// @param      implParams                   The implementation-specific parameters
-    struct DTLParams { // TODO rename to OnCreateParams
+    struct DTLParams {
+        // TODO rename to OnCreateParams
         uint24 proceedsUtilisationPercent;
         uint24 poolFee; // TODO shift into implementation-specific params?
         uint48 vestingStart;
