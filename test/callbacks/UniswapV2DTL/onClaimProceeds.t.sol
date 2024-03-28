@@ -197,6 +197,12 @@ contract UniswapV2DirectToLiquidityOnClaimProceedsTest is UniswapV2DirectToLiqui
         _;
     }
 
+    modifier givenMinimumAmounts(uint256 quoteTokenAmountMin_, uint256 baseTokenAmountMin_) {
+        _quoteTokenAmountMin = quoteTokenAmountMin_;
+        _baseTokenAmountMin = baseTokenAmountMin_;
+        _;
+    }
+
     modifier givenPoolHasDepositLowerPrice() {
         // TODO deposit
         // _sqrtPriceX96 = _calculateSqrtPriceX96(_PROCEEDS / 2, _LOT_CAPACITY * 10);
@@ -329,11 +335,29 @@ contract UniswapV2DirectToLiquidityOnClaimProceedsTest is UniswapV2DirectToLiqui
         _assertBaseTokenBalance();
     }
 
-    function test_givenPoolHasDepositWithLowerPrice()
+    function test_givenPoolHasDepositWithLowerPrice_reverts()
         public
         givenCallbackIsCreated
         givenOnCreate
         setCallbackParameters(_PROCEEDS, _REFUND)
+        givenPoolIsCreated
+        givenPoolHasDepositLowerPrice
+        givenAddressHasQuoteTokenBalance(_dtlAddress, _proceeds)
+        givenAddressHasBaseTokenBalance(_SELLER, _baseTokensToDeposit)
+        givenAddressHasBaseTokenAllowance(_SELLER, _dtlAddress, _baseTokensToDeposit)
+    {
+        // Expect revert
+        vm.expectRevert("UniswapV2Router: INSUFFICIENT_B_AMOUNT");
+
+        _performCallback();
+    }
+
+    function test_givenPoolHasDepositWithLowerPrice_whenMinimumAmountsIsSet()
+        public
+        givenCallbackIsCreated
+        givenOnCreate
+        setCallbackParameters(_PROCEEDS, _REFUND)
+        givenMinimumAmounts(_quoteTokensToDeposit * 95 / 100, _baseTokensToDeposit * 95 / 100)
         givenPoolIsCreated
         givenPoolHasDepositLowerPrice
         givenAddressHasQuoteTokenBalance(_dtlAddress, _proceeds)
@@ -348,11 +372,29 @@ contract UniswapV2DirectToLiquidityOnClaimProceedsTest is UniswapV2DirectToLiqui
         _assertBaseTokenBalance();
     }
 
-    function test_givenPoolHasDepositWithHigherPrice()
+    function test_givenPoolHasDepositWithHigherPrice_reverts()
         public
         givenCallbackIsCreated
         givenOnCreate
         setCallbackParameters(_PROCEEDS, _REFUND)
+        givenPoolIsCreated
+        givenPoolHasDepositHigherPrice
+        givenAddressHasQuoteTokenBalance(_dtlAddress, _proceeds)
+        givenAddressHasBaseTokenBalance(_SELLER, _baseTokensToDeposit)
+        givenAddressHasBaseTokenAllowance(_SELLER, _dtlAddress, _baseTokensToDeposit)
+    {
+        // Expect revert
+        vm.expectRevert("UniswapV2Router: INSUFFICIENT_A_AMOUNT");
+
+        _performCallback();
+    }
+
+    function test_givenPoolHasDepositWithHigherPrice_whenMinimumAmountsIsSet()
+        public
+        givenCallbackIsCreated
+        givenOnCreate
+        setCallbackParameters(_PROCEEDS, _REFUND)
+        givenMinimumAmounts(_quoteTokensToDeposit * 95 / 100, _baseTokensToDeposit * 95 / 100)
         givenPoolIsCreated
         givenPoolHasDepositHigherPrice
         givenAddressHasQuoteTokenBalance(_dtlAddress, _proceeds)
