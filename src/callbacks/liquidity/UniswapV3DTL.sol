@@ -109,7 +109,8 @@ contract UniswapV3DirectToLiquidity is BaseDirectToLiquidity {
     function _mintAndDeposit(
         uint96 lotId_,
         uint256 quoteTokenAmount_,
-        uint256 baseTokenAmount_
+        uint256 baseTokenAmount_,
+        bytes memory
     ) internal virtual override returns (ERC20 poolToken) {
         DTLConfiguration memory config = lotConfiguration[lotId_];
 

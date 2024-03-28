@@ -293,11 +293,12 @@ abstract contract BaseDirectToLiquidity is BaseCallback {
     /// @param      lotId_          The lot ID
     /// @param      proceeds_       The proceeds from the auction
     /// @param      refund_         The refund from the auction
+    /// @param      callbackData_   Implementation-specific data
     function _onClaimProceeds(
         uint96 lotId_,
         uint96 proceeds_,
         uint96 refund_,
-        bytes calldata
+        bytes calldata callbackData_
     ) internal virtual override onlyIfLotExists(lotId_) {
         DTLConfiguration memory config = lotConfiguration[lotId_];
 
@@ -330,7 +331,8 @@ abstract contract BaseDirectToLiquidity is BaseCallback {
         ERC20(config.baseToken).safeTransferFrom(seller, address(this), baseTokensRequired);
 
         // Mint and deposit into the pool
-        (ERC20 poolToken) = _mintAndDeposit(lotId_, quoteTokensRequired, baseTokensRequired);
+        (ERC20 poolToken) =
+            _mintAndDeposit(lotId_, quoteTokensRequired, baseTokensRequired, callbackData_);
         uint256 poolTokenQuantity = poolToken.balanceOf(address(this));
 
         // If vesting is enabled, create the vesting tokens
@@ -376,11 +378,13 @@ abstract contract BaseDirectToLiquidity is BaseCallback {
     /// @param      lotId_              The lot ID
     /// @param      quoteTokenAmount_   The amount of quote tokens to deposit
     /// @param      baseTokenAmount_    The amount of base tokens to deposit
+    /// @param      callbackData_       Implementation-specific data
     /// @return     poolToken           The ERC20 pool token
     function _mintAndDeposit(
         uint96 lotId_,
         uint256 quoteTokenAmount_,
-        uint256 baseTokenAmount_
+        uint256 baseTokenAmount_,
+        bytes memory callbackData_
     ) internal virtual returns (ERC20 poolToken);
 
     // ========== MODIFIERS ========== //

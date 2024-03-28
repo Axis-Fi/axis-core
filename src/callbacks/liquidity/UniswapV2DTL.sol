@@ -5,15 +5,24 @@ pragma solidity ^0.8.19;
 import {ERC20} from "solmate/tokens/ERC20.sol";
 
 // Uniswap
-import {IUniswapV2Factory} from "uniswap-v2-core/interfaces/IUniswapV2Factory.sol";
+import {IUniswapV2Factory} from "src/lib/uniswap-v2/IUniswapV2Factory.sol";
+import {IUniswapV2Router02} from "src/lib/uniswap-v2/IUniswapV2Router02.sol";
 
 // Callbacks
 import {BaseDirectToLiquidity} from "src/callbacks/liquidity/BaseDTL.sol";
 
 contract UniswapV2DirectToLiquidity is BaseDirectToLiquidity {
+    // ========== STRUCTS ========== //
+
+    struct OnClaimProceedsParams {
+        uint256 quoteTokenAmountMin;
+        uint256 baseTokenAmountMin;
+    }
+
     // ========== STATE VARIABLES ========== //
 
     IUniswapV2Factory public uniV2Factory;
+    IUniswapV2Router02 public uniV2Router;
 
     // ========== CONSTRUCTOR ========== //
 
@@ -27,6 +36,11 @@ contract UniswapV2DirectToLiquidity is BaseDirectToLiquidity {
             revert Callback_Params_InvalidAddress();
         }
         uniV2Factory = IUniswapV2Factory(uniswapV2Factory_);
+
+        if (uniswapV2Router_ == address(0)) {
+            revert Callback_Params_InvalidAddress();
+        }
+        uniV2Router = IUniswapV2Router02(uniswapV2Router_);
     }
 
     // ========== CALLBACK FUNCTIONS ========== //
@@ -53,15 +67,19 @@ contract UniswapV2DirectToLiquidity is BaseDirectToLiquidity {
     }
 
     /// @inheritdoc BaseDirectToLiquidity
+    /// @dev        This function implements the following:
+    ///             - Creates the pool if necessary
+    ///             - Deposits the tokens into the pool
     function _mintAndDeposit(
         uint96 lotId_,
         uint256 quoteTokenAmount_,
-        uint256 baseTokenAmount_
+        uint256 baseTokenAmount_,
+        bytes memory callbackData_
     ) internal virtual override returns (ERC20 poolToken) {
-        DTLConfiguration memory config = lotConfiguration[lotId_];
+        // Decode the callback data
+        OnClaimProceedsParams memory params = abi.decode(callbackData_, (OnClaimProceedsParams));
 
-        // Determine the ordering of tokens
-        bool quoteTokenIsToken0 = config.quoteToken < config.baseToken;
+        DTLConfiguration memory config = lotConfiguration[lotId_];
 
         // Create and initialize the pool if necessary
         // Token orientation is irrelevant
@@ -71,8 +89,17 @@ contract UniswapV2DirectToLiquidity is BaseDirectToLiquidity {
         }
 
         // Deposit into the pool
-        // router.addLiquidity
+        uniV2Router.addLiquidity(
+            config.quoteToken,
+            config.baseToken,
+            quoteTokenAmount_,
+            baseTokenAmount_,
+            params.quoteTokenAmountMin,
+            params.baseTokenAmountMin,
+            address(this),
+            block.timestamp
+        );
 
-        // TODO Handle slippage - encode in callback data?
+        return ERC20(pairAddress);
     }
 }
