@@ -59,13 +59,16 @@ contract UniswapV2DirectToLiquidityOnClaimProceedsTest is UniswapV2DirectToLiqui
         // Get the pools deployed by the DTL callback
         IUniswapV2Pair pool = _getUniswapV2Pool();
 
+        // Exclude the LP token balance on this contract
+        uint256 testBalance = pool.balanceOf(address(this));
+
         uint256 sellerExpectedBalance;
         uint256 linearVestingExpectedBalance;
         // Only has a balance if not vesting
         if (_dtlCreateParams.vestingStart == 0) {
-            sellerExpectedBalance = pool.totalSupply() - MINIMUM_LIQUIDITY;
+            sellerExpectedBalance = pool.totalSupply() - testBalance - MINIMUM_LIQUIDITY;
         } else {
-            linearVestingExpectedBalance = pool.totalSupply() - MINIMUM_LIQUIDITY;
+            linearVestingExpectedBalance = pool.totalSupply() - testBalance - MINIMUM_LIQUIDITY;
         }
 
         assertEq(
@@ -207,14 +210,54 @@ contract UniswapV2DirectToLiquidityOnClaimProceedsTest is UniswapV2DirectToLiqui
     }
 
     modifier givenPoolHasDepositLowerPrice() {
-        // TODO deposit
-        // _sqrtPriceX96 = _calculateSqrtPriceX96(_PROCEEDS / 2, _LOT_CAPACITY * 10);
+        uint256 quoteTokensToDeposit = _quoteTokensToDeposit * 95 / 100;
+        uint256 baseTokensToDeposit = _baseTokensToDeposit;
+
+        // Mint additional tokens
+        _quoteToken.mint(address(this), quoteTokensToDeposit);
+        _baseToken.mint(address(this), baseTokensToDeposit);
+
+        // Approve spending
+        _quoteToken.approve(address(_uniV2Router), quoteTokensToDeposit);
+        _baseToken.approve(address(_uniV2Router), baseTokensToDeposit);
+
+        // Deposit tokens into the pool
+        _uniV2Router.addLiquidity(
+            address(_quoteToken),
+            address(_baseToken),
+            quoteTokensToDeposit,
+            baseTokensToDeposit,
+            quoteTokensToDeposit,
+            baseTokensToDeposit,
+            address(this),
+            block.timestamp
+        );
         _;
     }
 
     modifier givenPoolHasDepositHigherPrice() {
-        // TODO deposit
-        // _sqrtPriceX96 = _calculateSqrtPriceX96(_PROCEEDS * 10, _LOT_CAPACITY / 2);
+        uint256 quoteTokensToDeposit = _quoteTokensToDeposit;
+        uint256 baseTokensToDeposit = _baseTokensToDeposit * 95 / 100;
+
+        // Mint additional tokens
+        _quoteToken.mint(address(this), quoteTokensToDeposit);
+        _baseToken.mint(address(this), baseTokensToDeposit);
+
+        // Approve spending
+        _quoteToken.approve(address(_uniV2Router), quoteTokensToDeposit);
+        _baseToken.approve(address(_uniV2Router), baseTokensToDeposit);
+
+        // Deposit tokens into the pool
+        _uniV2Router.addLiquidity(
+            address(_quoteToken),
+            address(_baseToken),
+            quoteTokensToDeposit,
+            baseTokensToDeposit,
+            quoteTokensToDeposit,
+            baseTokensToDeposit,
+            address(this),
+            block.timestamp
+        );
         _;
     }
 
@@ -350,7 +393,7 @@ contract UniswapV2DirectToLiquidityOnClaimProceedsTest is UniswapV2DirectToLiqui
         givenAddressHasBaseTokenAllowance(_SELLER, _dtlAddress, _baseTokensToDeposit)
     {
         // Expect revert
-        vm.expectRevert("UniswapV2Router: INSUFFICIENT_B_AMOUNT");
+        vm.expectRevert("UniswapV2Router: INSUFFICIENT_A_AMOUNT");
 
         _performCallback();
     }
@@ -360,12 +403,12 @@ contract UniswapV2DirectToLiquidityOnClaimProceedsTest is UniswapV2DirectToLiqui
         givenCallbackIsCreated
         givenOnCreate
         setCallbackParameters(_PROCEEDS, _REFUND)
-        givenMinimumAmounts(_quoteTokensToDeposit * 95 / 100, _baseTokensToDeposit * 95 / 100)
         givenPoolIsCreated
         givenPoolHasDepositLowerPrice
         givenAddressHasQuoteTokenBalance(_dtlAddress, _proceeds)
         givenAddressHasBaseTokenBalance(_SELLER, _baseTokensToDeposit)
         givenAddressHasBaseTokenAllowance(_SELLER, _dtlAddress, _baseTokensToDeposit)
+        givenMinimumAmounts(_quoteTokensToDeposit * 95 / 100, _baseTokensToDeposit)
     {
         _performCallback();
 
@@ -387,7 +430,7 @@ contract UniswapV2DirectToLiquidityOnClaimProceedsTest is UniswapV2DirectToLiqui
         givenAddressHasBaseTokenAllowance(_SELLER, _dtlAddress, _baseTokensToDeposit)
     {
         // Expect revert
-        vm.expectRevert("UniswapV2Router: INSUFFICIENT_A_AMOUNT");
+        vm.expectRevert("UniswapV2Router: INSUFFICIENT_B_AMOUNT");
 
         _performCallback();
     }
@@ -397,12 +440,12 @@ contract UniswapV2DirectToLiquidityOnClaimProceedsTest is UniswapV2DirectToLiqui
         givenCallbackIsCreated
         givenOnCreate
         setCallbackParameters(_PROCEEDS, _REFUND)
-        givenMinimumAmounts(_quoteTokensToDeposit * 95 / 100, _baseTokensToDeposit * 95 / 100)
         givenPoolIsCreated
         givenPoolHasDepositHigherPrice
         givenAddressHasQuoteTokenBalance(_dtlAddress, _proceeds)
         givenAddressHasBaseTokenBalance(_SELLER, _baseTokensToDeposit)
         givenAddressHasBaseTokenAllowance(_SELLER, _dtlAddress, _baseTokensToDeposit)
+        givenMinimumAmounts(_quoteTokensToDeposit, _baseTokensToDeposit * 95 / 100)
     {
         _performCallback();
 
@@ -477,7 +520,11 @@ contract UniswapV2DirectToLiquidityOnClaimProceedsTest is UniswapV2DirectToLiqui
 
         // Assert that the LP token has been transferred to the seller
         IUniswapV2Pair pool = _getUniswapV2Pool();
-        assertEq(pool.balanceOf(_SELLER), pool.totalSupply() - MINIMUM_LIQUIDITY, "seller: LP token balance");
+        assertEq(
+            pool.balanceOf(_SELLER),
+            pool.totalSupply() - MINIMUM_LIQUIDITY,
+            "seller: LP token balance"
+        );
     }
 
     function test_withdrawLpToken()
@@ -497,7 +544,15 @@ contract UniswapV2DirectToLiquidityOnClaimProceedsTest is UniswapV2DirectToLiqui
 
         // Withdraw the LP token
         vm.prank(_SELLER);
-        pool.burn(_SELLER);
+        _uniV2Router.removeLiquidity(
+            address(_quoteToken),
+            address(_baseToken),
+            pool.balanceOf(_SELLER),
+            _quoteTokensToDeposit,
+            _baseTokensToDeposit,
+            _SELLER,
+            block.timestamp
+        );
 
         // Check the balances
         assertEq(pool.balanceOf(_SELLER), 0, "seller: LP token balance");
