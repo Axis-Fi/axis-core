@@ -85,4 +85,23 @@ abstract contract ECIESFFITest is Test {
         // Decode output and assign to return variable
         message_ = abi.decode(result, (uint256));
     }
+
+    function _salt(uint96 lotId_, address bidder_, uint96 amount_) internal returns (uint256 salt_) {
+        // Construct the inputs
+        string memory lotId = vm.toString(lotId_);
+        string memory bidder = vm.toString(bidder_);
+        string memory amount = vm.toString(amount_);
+
+        // Create inputs for the FFI
+        string[] memory inputs = new string[](3);
+        inputs[0] = "bash";
+        inputs[1] = "-c";
+        inputs[2] = string.concat(_EXECUTABLE, " salt ", lotId, " ", bidder, " ", amount);
+
+        // Execute the FFI
+        bytes memory output = vm.ffi(inputs);
+
+        // Decode the output and assign to return variable
+        salt_ = abi.decode(output, (uint256));
+    }
 }
