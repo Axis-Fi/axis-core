@@ -86,7 +86,11 @@ abstract contract ECIESFFITest is Test {
         message_ = abi.decode(result, (uint256));
     }
 
-    function _salt(uint96 lotId_, address bidder_, uint96 amount_) internal returns (uint256 salt_) {
+    function _salt(
+        uint96 lotId_,
+        address bidder_,
+        uint96 amount_
+    ) internal returns (uint256 salt_) {
         // Construct the inputs
         string memory lotId = vm.toString(lotId_);
         string memory bidder = vm.toString(bidder_);

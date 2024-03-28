@@ -6,7 +6,6 @@ import {ECIESFFITest} from "./ECIES_FFI.sol";
 import {console2} from "forge-std/console2.sol";
 
 contract SaltTest is ECIESFFITest {
-
     function test_salt() public {
         // Setup salt parameters
         uint96 lotId = 1;
@@ -25,11 +24,7 @@ contract SaltTest is ECIESFFITest {
         assertEq(expectedSalt, salt);
     }
 
-    function testFuzz_salt(
-        uint96 lotId_,
-        address bidder_,
-        uint96 amount_
-    ) public {
+    function testFuzz_salt(uint96 lotId_, address bidder_, uint96 amount_) public {
         // Generate the salt locally
         uint256 expectedSalt = uint256(keccak256(abi.encodePacked(lotId_, bidder_, amount_)));
 
