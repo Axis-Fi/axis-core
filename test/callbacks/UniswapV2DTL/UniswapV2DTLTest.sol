@@ -12,8 +12,8 @@ import {BaseCallback} from "src/callbacks/BaseCallback.sol";
 import {IUniswapV2Factory} from "src/lib/uniswap-v2/IUniswapV2Factory.sol";
 import {UniswapV2FactoryClone} from "test/lib/uniswap-v2/UniswapV2FactoryClone.sol";
 
-import {IUniswapV2Router02} from "src/lib/uniswap-v2/IUniswapV2Router02.sol";
-import {UniswapV2RouterClone} from "test/lib/uniswap-v2/UniswapV2RouterClone.sol";
+import {IUniswapV2Router02} from "uniswap-v2-periphery/interfaces/IUniswapV2Router02.sol";
+import {UniswapV2Router02} from "uniswap-v2-periphery/UniswapV2Router02.sol";
 
 import {BaseDirectToLiquidity} from "src/callbacks/liquidity/BaseDTL.sol";
 import {UniswapV2DirectToLiquidity} from "src/callbacks/liquidity/UniswapV2DTL.sol";
@@ -76,13 +76,15 @@ abstract contract UniswapV2DirectToLiquidityTest is Test, Permit2User {
             salt: bytes32(0x911053989b82d03d4ebf250c9295372f0f07d0680da49ce333cb5aa9297dde95)
         }();
 
-        // // Uncomment to regenerate bytecode to mine new salts if the UniswapV2RouterClone changes
-        // // cast create2 -s 00 -i $(cat ./bytecode/UniswapV2RouterClone.bin)
-        // bytes memory bytecode = abi.encodePacked(type(UniswapV2RouterClone).creationCode);
-        // vm.writeFile("./bytecode/UniswapV2RouterClone.bin", vm.toString(bytecode));
-        _uniV2Router = new UniswapV2RouterClone{
-            salt: bytes32(0xd4d6115c0bdd67a7d256e9eba46e6241e7c4f441a4e34c3d930251d03c854403)
-        }();
+        // // Uncomment to regenerate bytecode to mine new salts if the UniswapV2Router02 changes
+        // // cast create2 -s 00 -i $(cat ./bytecode/UniswapV2Router02.bin)
+        // bytes memory bytecode = abi.encodePacked(type(UniswapV2Router02).creationCode, abi.encode(
+        //         address(_uniV2Factory), address(0)
+        //     ));
+        // vm.writeFile("./bytecode/UniswapV2Router02.bin", vm.toString(bytecode));
+        _uniV2Router = new UniswapV2Router02{
+            salt: bytes32(0x035ba535d735a8e92093764ec05c30d49ab56cfd0d3da306185ab02b1fcac4f4)
+        }(address(_uniV2Factory), address(0));
 
         _linearVesting = new LinearVesting(address(_auctionHouse));
 
@@ -99,19 +101,19 @@ abstract contract UniswapV2DirectToLiquidityTest is Test, Permit2User {
     }
 
     modifier givenCallbackIsCreated() {
-        // Uncomment to regenerate bytecode to mine new salts if the UniswapV2DirectToLiquidity changes
-        // 11100110 = 0xE6
-        // cast create2 -s E6 -i $(cat ./bytecode/UniswapV2DirectToLiquidityE6.bin)
-        bytes memory bytecode = abi.encodePacked(
-            type(UniswapV2DirectToLiquidity).creationCode,
-            abi.encode(
-                address(_auctionHouse), _SELLER, address(_uniV2Factory), address(_uniV2Router)
-            )
-        );
-        vm.writeFile("./bytecode/UniswapV2DirectToLiquidityE6.bin", vm.toString(bytecode));
+        // // Uncomment to regenerate bytecode to mine new salts if the UniswapV2DirectToLiquidity changes
+        // // 11100110 = 0xE6
+        // // cast create2 -s E6 -i $(cat ./bytecode/UniswapV2DirectToLiquidityE6.bin)
+        // bytes memory bytecode = abi.encodePacked(
+        //     type(UniswapV2DirectToLiquidity).creationCode,
+        //     abi.encode(
+        //         address(_auctionHouse), _SELLER, address(_uniV2Factory), address(_uniV2Router)
+        //     )
+        // );
+        // vm.writeFile("./bytecode/UniswapV2DirectToLiquidityE6.bin", vm.toString(bytecode));
 
         // E6
-        bytes32 salt = bytes32(0x449b1b5e5cd74a0b61510ddd636e9f9857476933556f7b14dfdd6bdbd87c973d);
+        bytes32 salt = bytes32(0x298a9938994a76fd103734636b9656970bfc2dedcf743bb096470293679e57fb);
 
         // Required for CREATE2 address to work correctly. doesn't do anything in a test
         // Source: https://github.com/foundry-rs/foundry/issues/6402
