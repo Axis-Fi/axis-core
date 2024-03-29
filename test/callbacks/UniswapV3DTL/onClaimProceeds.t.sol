@@ -146,8 +146,16 @@ contract UniswapV3DirectToLiquidityOnClaimProceedsTest is UniswapV3DirectToLiqui
 
     function _assertApprovals() internal {
         // Ensure there are no dangling approvals
-        assertEq(_quoteToken.allowance(_dtlAddress, address(_getGUniPool())), 0, "DTL: quote token allowance");
-        assertEq(_baseToken.allowance(_dtlAddress, address(_getGUniPool())), 0, "DTL: base token allowance");
+        assertEq(
+            _quoteToken.allowance(_dtlAddress, address(_getGUniPool())),
+            0,
+            "DTL: quote token allowance"
+        );
+        assertEq(
+            _baseToken.allowance(_dtlAddress, address(_getGUniPool())),
+            0,
+            "DTL: base token allowance"
+        );
     }
 
     // ========== Modifiers ========== //
