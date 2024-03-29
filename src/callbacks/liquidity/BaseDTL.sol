@@ -19,6 +19,10 @@ abstract contract BaseDirectToLiquidity is BaseCallback {
 
     // ========== ERRORS ========== //
 
+    error Callback_InsufficientBalance(
+        address token_, address account_, uint256 balance_, uint256 required_
+    );
+
     error Callback_Params_InvalidAddress();
 
     error Callback_Params_UtilisationPercentOutOfBounds(uint24 actual_, uint24 min_, uint24 max_);
@@ -328,7 +332,17 @@ abstract contract BaseDirectToLiquidity is BaseCallback {
         }
 
         // Ensure the required tokens are present before minting
-        ERC20(config.baseToken).safeTransferFrom(seller, address(this), baseTokensRequired);
+        {
+            // Check that sufficient balance exists
+            uint256 baseTokenBalance = ERC20(config.baseToken).balanceOf(seller);
+            if (baseTokenBalance < baseTokensRequired) {
+                revert Callback_InsufficientBalance(
+                    config.baseToken, seller, baseTokensRequired, baseTokenBalance
+                );
+            }
+
+            ERC20(config.baseToken).safeTransferFrom(seller, address(this), baseTokensRequired);
+        }
 
         // Mint and deposit into the pool
         (ERC20 poolToken) =
@@ -355,15 +369,19 @@ abstract contract BaseDirectToLiquidity is BaseCallback {
         }
 
         // Send any remaining quote tokens to the seller
-        uint256 quoteTokenBalance = ERC20(config.quoteToken).balanceOf(address(this));
-        if (quoteTokenBalance > 0) {
-            ERC20(config.quoteToken).safeTransfer(seller, quoteTokenBalance);
+        {
+            uint256 quoteTokenBalance = ERC20(config.quoteToken).balanceOf(address(this));
+            if (quoteTokenBalance > 0) {
+                ERC20(config.quoteToken).safeTransfer(seller, quoteTokenBalance);
+            }
         }
 
         // Send any remaining base tokens to the seller
-        uint256 baseTokenBalance = ERC20(config.baseToken).balanceOf(address(this));
-        if (baseTokenBalance > 0) {
-            ERC20(config.baseToken).safeTransfer(seller, baseTokenBalance);
+        {
+            uint256 baseTokenBalance = ERC20(config.baseToken).balanceOf(address(this));
+            if (baseTokenBalance > 0) {
+                ERC20(config.baseToken).safeTransfer(seller, baseTokenBalance);
+            }
         }
     }
 

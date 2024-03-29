@@ -13,6 +13,7 @@ import {IUniswapV2Pair} from "uniswap-v2-core/interfaces/IUniswapV2Pair.sol";
 // AuctionHouse
 import {BaseCallback} from "src/callbacks/BaseCallback.sol";
 import {LinearVesting} from "src/modules/derivatives/LinearVesting.sol";
+import {BaseDirectToLiquidity} from "src/callbacks/liquidity/BaseDTL.sol";
 import {UniswapV2DirectToLiquidity} from "src/callbacks/liquidity/UniswapV2DTL.sol";
 
 contract UniswapV2DirectToLiquidityOnClaimProceedsTest is UniswapV2DirectToLiquidityTest {
@@ -129,6 +130,12 @@ contract UniswapV2DirectToLiquidityOnClaimProceedsTest is UniswapV2DirectToLiqui
 
     function _assertBaseTokenBalance() internal {
         assertEq(_baseToken.balanceOf(_dtlAddress), 0, "DTL: base token balance");
+    }
+
+    function _assertApprovals() internal {
+        // Ensure there are no dangling approvals
+        assertEq(_quoteToken.allowance(_dtlAddress, address(_uniV2Router)), 0, "DTL: quote token allowance");
+        assertEq(_baseToken.allowance(_dtlAddress, address(_uniV2Router)), 0, "DTL: base token allowance");
     }
 
     // ========== Modifiers ========== //
@@ -303,6 +310,7 @@ contract UniswapV2DirectToLiquidityOnClaimProceedsTest is UniswapV2DirectToLiqui
         _assertVestingTokenBalance();
         _assertQuoteTokenBalance();
         _assertBaseTokenBalance();
+        _assertApprovals();
     }
 
     function test_givenProceedsUtilisationPercent_fuzz(uint24 percent_)
@@ -321,6 +329,7 @@ contract UniswapV2DirectToLiquidityOnClaimProceedsTest is UniswapV2DirectToLiqui
         _assertVestingTokenBalance();
         _assertQuoteTokenBalance();
         _assertBaseTokenBalance();
+        _assertApprovals();
     }
 
     function test_givenCurationPayout_fuzz(uint96 curationPayout_)
@@ -339,6 +348,7 @@ contract UniswapV2DirectToLiquidityOnClaimProceedsTest is UniswapV2DirectToLiqui
         _assertVestingTokenBalance();
         _assertQuoteTokenBalance();
         _assertBaseTokenBalance();
+        _assertApprovals();
     }
 
     function test_givenProceedsUtilisationPercent_givenCurationPayout_fuzz(
@@ -361,6 +371,7 @@ contract UniswapV2DirectToLiquidityOnClaimProceedsTest is UniswapV2DirectToLiqui
         _assertVestingTokenBalance();
         _assertQuoteTokenBalance();
         _assertBaseTokenBalance();
+        _assertApprovals();
     }
 
     function test_whenRefund_fuzz(uint96 refund_)
@@ -379,6 +390,7 @@ contract UniswapV2DirectToLiquidityOnClaimProceedsTest is UniswapV2DirectToLiqui
         _assertVestingTokenBalance();
         _assertQuoteTokenBalance();
         _assertBaseTokenBalance();
+        _assertApprovals();
     }
 
     function test_givenPoolHasDepositWithLowerPrice_reverts()
@@ -416,6 +428,7 @@ contract UniswapV2DirectToLiquidityOnClaimProceedsTest is UniswapV2DirectToLiqui
         _assertVestingTokenBalance();
         _assertQuoteTokenBalance();
         _assertBaseTokenBalance();
+        _assertApprovals();
     }
 
     function test_givenPoolHasDepositWithHigherPrice_reverts()
@@ -453,6 +466,7 @@ contract UniswapV2DirectToLiquidityOnClaimProceedsTest is UniswapV2DirectToLiqui
         _assertVestingTokenBalance();
         _assertQuoteTokenBalance();
         _assertBaseTokenBalance();
+        _assertApprovals();
     }
 
     function test_givenVesting()
@@ -473,6 +487,7 @@ contract UniswapV2DirectToLiquidityOnClaimProceedsTest is UniswapV2DirectToLiqui
         _assertVestingTokenBalance();
         _assertQuoteTokenBalance();
         _assertBaseTokenBalance();
+        _assertApprovals();
     }
 
     function test_givenVesting_whenRecipientIsNotSeller()
@@ -494,6 +509,7 @@ contract UniswapV2DirectToLiquidityOnClaimProceedsTest is UniswapV2DirectToLiqui
         _assertVestingTokenBalance();
         _assertQuoteTokenBalance();
         _assertBaseTokenBalance();
+        _assertApprovals();
     }
 
     function test_givenVesting_redemption()
@@ -579,6 +595,43 @@ contract UniswapV2DirectToLiquidityOnClaimProceedsTest is UniswapV2DirectToLiqui
         assertEq(_baseToken.balanceOf(_dtlAddress), 0, "DTL: base token balance");
     }
 
+    function test_givenInsufficientBaseTokenBalance_reverts()
+        public
+        givenCallbackIsCreated
+        givenOnCreate
+        setCallbackParameters(_PROCEEDS, _REFUND)
+        givenAddressHasQuoteTokenBalance(_dtlAddress, _proceeds)
+        givenAddressHasBaseTokenBalance(_SELLER, _capacityUtilised - 1)
+        givenAddressHasBaseTokenAllowance(_SELLER, _dtlAddress, _capacityUtilised)
+    {
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(
+            BaseDirectToLiquidity.Callback_InsufficientBalance.selector,
+            address(_baseToken),
+            _SELLER,
+            _baseTokensToDeposit,
+            _baseTokensToDeposit - 1
+        );
+        vm.expectRevert(err);
+
+        _performCallback();
+    }
+
+    function test_givenInsufficientBaseTokenAllowance_reverts()
+        public
+        givenCallbackIsCreated
+        givenOnCreate
+        setCallbackParameters(_PROCEEDS, _REFUND)
+        givenAddressHasQuoteTokenBalance(_dtlAddress, _proceeds)
+        givenAddressHasBaseTokenBalance(_SELLER, _capacityUtilised)
+        givenAddressHasBaseTokenAllowance(_SELLER, _dtlAddress, _capacityUtilised - 1)
+    {
+        // Expect revert
+        vm.expectRevert("TRANSFER_FROM_FAILED");
+
+        _performCallback();
+    }
+
     function test_success()
         public
         givenCallbackIsCreated
@@ -594,6 +647,7 @@ contract UniswapV2DirectToLiquidityOnClaimProceedsTest is UniswapV2DirectToLiqui
         _assertVestingTokenBalance();
         _assertQuoteTokenBalance();
         _assertBaseTokenBalance();
+        _assertApprovals();
     }
 
     function test_whenRecipientIsNotSeller()
@@ -612,5 +666,6 @@ contract UniswapV2DirectToLiquidityOnClaimProceedsTest is UniswapV2DirectToLiqui
         _assertVestingTokenBalance();
         _assertQuoteTokenBalance();
         _assertBaseTokenBalance();
+        _assertApprovals();
     }
 }

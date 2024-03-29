@@ -114,6 +114,11 @@ contract UniswapV2DirectToLiquidity is BaseDirectToLiquidity {
             block.timestamp
         );
 
+        // Remove any dangling approvals
+        // This is necessary, since the router may not spend all available tokens
+        ERC20(config.quoteToken).approve(address(uniV2Router), 0);
+        ERC20(config.baseToken).approve(address(uniV2Router), 0);
+
         return ERC20(pairAddress);
     }
 }

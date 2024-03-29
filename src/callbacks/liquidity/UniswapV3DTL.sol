@@ -158,24 +158,24 @@ contract UniswapV3DirectToLiquidity is BaseDirectToLiquidity {
         }
 
         // Deposit into the pool
-        uint256 poolTokenQuantity;
         {
             GUniPool gUniPoolToken = GUniPool(poolTokenAddress);
 
-            // Approve the vault to spend the tokens
-            ERC20(config.quoteToken).approve(address(poolTokenAddress), quoteTokenAmount_);
-            ERC20(config.baseToken).approve(address(poolTokenAddress), baseTokenAmount_);
-
-            // Calculate the mint amount
-            (,, poolTokenQuantity) = gUniPoolToken.getMintAmounts(
+            // Calculate the optimal mint amount
+            // When adding liquidity, the current tick of the pool will be used.
+            // If the pool was previously initialized, then that tick will be used
+            // and the deposit will be made at the appropriate ratio.
+            (uint256 amount0Actual, uint256 amount1Actual, uint256 poolTokenQuantity) =
+            gUniPoolToken.getMintAmounts(
                 quoteTokenIsToken0 ? quoteTokenAmount_ : baseTokenAmount_,
                 quoteTokenIsToken0 ? baseTokenAmount_ : quoteTokenAmount_
             );
-        }
+            uint256 quoteTokenRequired = quoteTokenIsToken0 ? amount0Actual : amount1Actual;
+            uint256 baseTokenRequired = quoteTokenIsToken0 ? amount1Actual : amount0Actual;
 
-        // Mint LP tokens
-        {
-            GUniPool gUniPoolToken = GUniPool(poolTokenAddress);
+            // Approve the vault to spend the tokens
+            ERC20(config.quoteToken).approve(address(poolTokenAddress), quoteTokenRequired);
+            ERC20(config.baseToken).approve(address(poolTokenAddress), baseTokenRequired);
 
             // Mint the LP tokens
             // The parent callback is responsible for transferring any leftover quote and base tokens
