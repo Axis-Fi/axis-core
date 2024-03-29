@@ -121,21 +121,18 @@ contract UniswapV2DirectToLiquidity is BaseDirectToLiquidity {
         uint256 baseTokenAmount_,
         bytes memory callbackData_
     ) internal virtual override returns (ERC20 poolToken) {
-        // Decode the callback data
-        BalancerOnClaimProceedsParams memory params =
-            abi.decode(callbackData_, (BalancerOnClaimProceedsParams));
-
-        DTLConfiguration memory config = lotConfiguration[lotId_];
-        BalancerOnCreateParams memory implParams =
-            abi.decode(config.implParams, (BalancerOnCreateParams));
+        ERC20 quoteToken;
+        ERC20 baseToken;
+        {
+            DTLConfiguration memory config = lotConfiguration[lotId_];
+            baseToken = ERC20(config.baseToken);
+            quoteToken = ERC20(config.quoteToken);
+        }
 
         address poolAddress;
         {
-            ERC20 quoteToken = ERC20(config.quoteToken);
-            ERC20 baseToken = ERC20(config.baseToken);
-
             // Order the tokens
-            bool quoteTokenIsToken0 = config.quoteToken < config.baseToken;
+            bool quoteTokenIsToken0 = address(quoteToken) < address(baseToken);
             ERC20[] memory poolTokens = new ERC20[](2);
             poolTokens[0] = quoteTokenIsToken0 ? quoteToken : baseToken;
             poolTokens[1] = quoteTokenIsToken0 ? baseToken : quoteToken;
@@ -164,21 +161,29 @@ contract UniswapV2DirectToLiquidity is BaseDirectToLiquidity {
             rateProviders[1] = IRateProvider(address(0));
 
             // Create and initialize the pool
-            poolAddress = poolFactory.create(
-                implParams.name,
-                implParams.symbol,
-                poolTokens,
-                weights,
-                rateProviders,
-                implParams.swapFeePercentage,
-                seller,
-                params.salt
-            );
+            {
+                // Decode the callback data
+                BalancerOnClaimProceedsParams memory params =
+                    abi.decode(callbackData_, (BalancerOnClaimProceedsParams));
+                BalancerOnCreateParams memory implParams =
+                    abi.decode(lotConfiguration[lotId_].implParams, (BalancerOnCreateParams));
+
+                poolAddress = poolFactory.create(
+                    implParams.name,
+                    implParams.symbol,
+                    poolTokens,
+                    weights,
+                    rateProviders,
+                    implParams.swapFeePercentage,
+                    seller,
+                    params.salt
+                );
+            }
         }
 
         // Approve the vault to spend the tokens
-        ERC20(config.quoteToken).approve(address(vault), quoteTokenAmount_);
-        ERC20(config.baseToken).approve(address(vault), baseTokenAmount_);
+        quoteToken.approve(address(vault), quoteTokenAmount_);
+        baseToken.approve(address(vault), baseTokenAmount_);
 
         // Deposit into the pool
         {
@@ -186,11 +191,13 @@ contract UniswapV2DirectToLiquidity is BaseDirectToLiquidity {
             IWeightedPool pool = IWeightedPool(poolAddress);
             bytes32 poolId = pool.getPoolId();
 
-            bool quoteTokenIsToken0 = config.quoteToken < config.baseToken;
+            bool quoteTokenIsToken0 = address(quoteToken) < address(baseToken);
 
             IAsset[] memory assets = new IAsset[](2);
-            assets[0] = quoteTokenIsToken0 ? IAsset(config.quoteToken) : IAsset(config.baseToken);
-            assets[1] = quoteTokenIsToken0 ? IAsset(config.baseToken) : IAsset(config.quoteToken);
+            assets[0] =
+                quoteTokenIsToken0 ? IAsset(address(quoteToken)) : IAsset(address(baseToken));
+            assets[1] =
+                quoteTokenIsToken0 ? IAsset(address(baseToken)) : IAsset(address(quoteToken));
 
             uint256[] memory maxAmountsIn = new uint256[](2);
             maxAmountsIn[0] = quoteTokenIsToken0 ? quoteTokenAmount_ : baseTokenAmount_;
@@ -209,8 +216,8 @@ contract UniswapV2DirectToLiquidity is BaseDirectToLiquidity {
 
         // Remove any dangling approvals
         // This is necessary, since the router may not spend all available tokens
-        ERC20(config.quoteToken).approve(address(vault), 0);
-        ERC20(config.baseToken).approve(address(vault), 0);
+        quoteToken.approve(address(vault), 0);
+        baseToken.approve(address(vault), 0);
 
         return ERC20(poolAddress);
     }
