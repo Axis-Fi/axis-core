@@ -30,8 +30,9 @@ contract CancelTest is Test, Permit2User {
     uint96 internal _lotId;
 
     address internal constant _SELLER = address(0x1);
-
     address internal constant _PROTOCOL = address(0x2);
+    uint48 internal constant _DURATION = uint48(1 days);
+
     string internal _infoHash = "";
 
     function setUp() external {
@@ -45,7 +46,7 @@ contract CancelTest is Test, Permit2User {
 
         _auctionParams = Auction.AuctionParams({
             start: uint48(block.timestamp),
-            duration: uint48(1 days),
+            duration: _DURATION,
             capacityInQuote: false,
             capacity: 10e18,
             implParams: abi.encode("")
@@ -75,6 +76,7 @@ contract CancelTest is Test, Permit2User {
     // [X] reverts if not the parent
     // [X] reverts if lot id is invalid
     // [X] reverts if lot is not active
+    // [X] reverts if the conclusion timestamp has been reached
     // [X] sets the lot to inactive
 
     function testReverts_whenCallerIsNotParent() external whenLotIsCreated {
@@ -98,6 +100,20 @@ contract CancelTest is Test, Permit2User {
         _mockAuctionModule.cancelAuction(_lotId);
 
         // Cancel again
+        bytes memory err = abi.encodeWithSelector(Auction.Auction_MarketNotActive.selector, _lotId);
+        vm.expectRevert(err);
+
+        vm.prank(address(_auctionHouse));
+        _mockAuctionModule.cancelAuction(_lotId);
+    }
+
+    function testReverts_conclusion(uint48 conclusionElapsed_) external whenLotIsCreated {
+        uint48 conclusionElapsed = uint48(bound(conclusionElapsed_, 0, 1 days));
+
+        // Warp to the conclusion
+        vm.warp(block.timestamp + _DURATION + conclusionElapsed);
+
+        // Expect revert
         bytes memory err = abi.encodeWithSelector(Auction.Auction_MarketNotActive.selector, _lotId);
         vm.expectRevert(err);
 

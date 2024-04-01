@@ -885,8 +885,8 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
     function _revertIfLotActive(uint96 lotId_) internal view override {
         if (
             auctionData[lotId_].status == Auction.Status.Created
-                && lotData[lotId_].start <= block.timestamp
-                && lotData[lotId_].conclusion > block.timestamp
+                && block.timestamp >= lotData[lotId_].start
+                && block.timestamp < lotData[lotId_].conclusion
         ) revert Auction_WrongState(lotId_);
     }
 

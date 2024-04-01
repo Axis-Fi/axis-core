@@ -678,14 +678,15 @@ abstract contract AuctionModule is Auction, Module {
     /// @return     bool    Whether or not the lot is active
     function isLive(uint96 lotId_) public view override returns (bool) {
         return (
-            lotData[lotId_].capacity != 0 && lotData[lotId_].conclusion > uint48(block.timestamp)
-                && lotData[lotId_].start <= uint48(block.timestamp)
+            lotData[lotId_].capacity != 0 && uint48(block.timestamp) < lotData[lotId_].conclusion
+                && uint48(block.timestamp) >= lotData[lotId_].start
         );
     }
 
     /// @inheritdoc Auction
     function hasEnded(uint96 lotId_) public view override returns (bool) {
-        return lotData[lotId_].conclusion < uint48(block.timestamp) || lotData[lotId_].capacity == 0;
+        return
+            uint48(block.timestamp) >= lotData[lotId_].conclusion || lotData[lotId_].capacity == 0;
     }
 
     /// @inheritdoc Auction
@@ -719,20 +720,20 @@ abstract contract AuctionModule is Auction, Module {
     /// @notice     Checks that the lot represented by `lotId_` has not started
     /// @dev        Should revert if the lot has not started
     function _revertIfBeforeLotStart(uint96 lotId_) internal view virtual {
-        if (lotData[lotId_].start > uint48(block.timestamp)) revert Auction_MarketNotActive(lotId_);
+        if (uint48(block.timestamp) < lotData[lotId_].start) revert Auction_MarketNotActive(lotId_);
     }
 
     /// @notice     Checks that the lot represented by `lotId_` has started
     /// @dev        Should revert if the lot has started
     function _revertIfLotStarted(uint96 lotId_) internal view virtual {
-        if (lotData[lotId_].start <= uint48(block.timestamp)) revert Auction_MarketActive(lotId_);
+        if (uint48(block.timestamp) >= lotData[lotId_].start) revert Auction_MarketActive(lotId_);
     }
 
     /// @notice     Checks that the lot represented by `lotId_` has not concluded
     /// @dev        Should revert if the lot has concluded
     function _revertIfLotConcluded(uint96 lotId_) internal view virtual {
         // Beyond the conclusion time
-        if (lotData[lotId_].conclusion < uint48(block.timestamp)) {
+        if (uint48(block.timestamp) >= lotData[lotId_].conclusion) {
             revert Auction_MarketNotActive(lotId_);
         }
 
