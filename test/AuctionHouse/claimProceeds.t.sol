@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.19;
 
-import {Auction} from "src/modules/Auction.sol";
+import {Auction, AuctionModule} from "src/modules/Auction.sol";
 import {Auctioneer} from "src/bases/Auctioneer.sol";
 
 import {AuctionHouseTest} from "test/AuctionHouse/AuctionHouseTest.sol";
@@ -12,6 +12,8 @@ contract ClaimProceedsTest is AuctionHouseTest {
 
     uint96 internal constant _BID_AMOUNT_PARTIAL_REFUND = 15e17;
     uint96 internal constant _BID_AMOUNT_OUT_PARTIAL_PAYOUT = 1e18;
+
+    Auction.BidClaim[] internal _bidClaims;
 
     function _assertQuoteTokenBalances(
         uint256 sellerBalance,
@@ -135,6 +137,51 @@ contract ClaimProceedsTest is AuctionHouseTest {
     modifier givenLotSettlementIsNotSuccessful() {
         // Payout tokens will be returned to the seller
         _auctionHouse.settle(_lotId);
+        _;
+    }
+
+    function _mockClaimBid(
+        address bidder_,
+        address referrer_,
+        uint96 paid_,
+        uint96 payout_
+    ) internal {
+        _bidClaims.push(
+            Auction.BidClaim({bidder: bidder_, referrer: referrer_, paid: paid_, payout: payout_})
+        );
+    }
+
+    modifier givenMockClaimBidIsSet() {
+        vm.mockCall(
+            address(_auctionModule),
+            abi.encodeWithSelector(AuctionModule.claimBids.selector, _lotId, _bidIds),
+            abi.encode(_bidClaims, "")
+        );
+        _;
+    }
+
+    /// @dev    Assumes that any amounts are scaled to the current decimal scale
+    modifier givenPayoutIsSet(
+        address bidder_,
+        address referrer_,
+        uint96 amountIn_,
+        uint96 payout_
+    ) {
+        _mockClaimBid(bidder_, referrer_, amountIn_, payout_);
+
+        // // Calculate fees
+        // (uint256 toReferrer, uint256 toProtocol) = _calculateFees(referrer_, amountIn_);
+        // _expectedReferrerFee += toReferrer;
+        // _expectedProtocolFee += toProtocol;
+
+        // // Set expected balances
+        // _expectedAuctionHouseQuoteTokenBalance += amountIn_; // Payment to be collected in claimProceeds()
+        // _expectedBidderQuoteTokenBalance += 0;
+
+        // _expectedAuctionHouseBaseTokenBalance -= payout_; // To be collected in claimProceeds()
+        // _expectedBidderBaseTokenBalance += bidder_ == _bidder ? payout_ : 0;
+        // _expectedBidderTwoBaseTokenBalance += bidder_ == _BIDDER_TWO ? payout_ : 0;
+        // _expectedCuratorBaseTokenBalance += 0;
         _;
     }
 
@@ -355,6 +402,43 @@ contract ClaimProceedsTest is AuctionHouseTest {
         uint96 curatorFeeActual = _BID_AMOUNT_OUT * _curatorFeePercentActual / 1e5;
         uint256 unusedCapacity =
             _LOT_CAPACITY + _curatorMaxPotentialFee - _BID_AMOUNT_OUT - curatorFeeActual;
+
+        // Assert balances
+        _assertQuoteTokenBalances(quoteTokenIn, 0);
+        _assertBaseTokenBalances(unusedCapacity, claimablePayout, curatorFeeActual);
+        _assertLotRouting(claimablePayout);
+    }
+
+    function test_givenLotSettlementIsFullCapacity_givenBidsClaimed()
+        external
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenLotIsCreated
+        givenLotHasStarted
+        givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT * 5))
+        givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT * 5))
+        givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT * 5), "")
+        givenPayoutIsSet(
+            _bidder,
+            _REFERRER,
+            _scaleQuoteTokenAmount(_BID_AMOUNT * 5),
+            _scaleBaseTokenAmount(_BID_AMOUNT_OUT * 5)
+        )
+        givenLotIsConcluded
+        givenLotSettlementIsFullCapacity
+        givenMockClaimBidIsSet
+        givenBidIsClaimed(_bidIds[0])
+    {
+        // Call function
+        vm.prank(_SELLER);
+        _auctionHouse.claimProceeds(_lotId, bytes(""));
+
+        uint256 quoteTokenIn = _scaleQuoteTokenAmount(_BID_AMOUNT * 5);
+        uint256 claimablePayout = _scaleBaseTokenAmount(_BID_AMOUNT_OUT * 5);
+        uint256 curatorFeeActual = 0;
+        uint256 unusedCapacity = _scaleBaseTokenAmount(_LOT_CAPACITY) - claimablePayout;
 
         // Assert balances
         _assertQuoteTokenBalances(quoteTokenIn, 0);
