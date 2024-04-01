@@ -42,6 +42,8 @@ contract MockBatchAuctionModule is AuctionModule {
 
     mapping(uint96 => bool) public settled;
 
+    mapping(uint96 => uint96) public bidsToBeClaimed;
+
     constructor(address _owner) AuctionModule(_owner) {
         minAuctionDuration = 1 days;
     }
@@ -133,6 +135,8 @@ contract MockBatchAuctionModule is AuctionModule {
         lot.purchased = uint96(settlement_.totalIn);
         lot.sold = uint96(settlement_.totalOut);
         lot.partialPayout = uint96(settlement_.pfPayout);
+
+        bidsToBeClaimed[lotId_] = lot.sold - lot.partialPayout;
     }
 
     function _settle(uint96 lotId_) internal override returns (Settlement memory, bytes memory) {
@@ -142,12 +146,12 @@ contract MockBatchAuctionModule is AuctionModule {
         return (lotSettlements[lotId_], "");
     }
 
-    function _claimProceeds(uint96 lotId_) internal override returns (uint96, uint96, uint96) {
+    function _claimProceeds(uint96 lotId_) internal override returns (uint96, uint96) {
         // Update status
         lotStatus[lotId_] = Auction.Status.Claimed;
 
         Lot storage lot = lotData[lotId_];
-        return (lot.purchased, lot.sold, lot.partialPayout);
+        return (lot.purchased, bidsToBeClaimed[lotId_]);
     }
 
     function getBid(uint96 lotId_, uint64 bidId_) external view returns (Bid memory bid_) {

@@ -168,20 +168,6 @@ contract ClaimProceedsTest is AuctionHouseTest {
         uint96 payout_
     ) {
         _mockClaimBid(bidder_, referrer_, amountIn_, payout_);
-
-        // // Calculate fees
-        // (uint256 toReferrer, uint256 toProtocol) = _calculateFees(referrer_, amountIn_);
-        // _expectedReferrerFee += toReferrer;
-        // _expectedProtocolFee += toProtocol;
-
-        // // Set expected balances
-        // _expectedAuctionHouseQuoteTokenBalance += amountIn_; // Payment to be collected in claimProceeds()
-        // _expectedBidderQuoteTokenBalance += 0;
-
-        // _expectedAuctionHouseBaseTokenBalance -= payout_; // To be collected in claimProceeds()
-        // _expectedBidderBaseTokenBalance += bidder_ == _bidder ? payout_ : 0;
-        // _expectedBidderTwoBaseTokenBalance += bidder_ == _BIDDER_TWO ? payout_ : 0;
-        // _expectedCuratorBaseTokenBalance += 0;
         _;
     }
 

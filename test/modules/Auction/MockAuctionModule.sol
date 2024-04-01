@@ -47,7 +47,7 @@ contract MockAuctionModule is AuctionModule {
 
     function _settle(uint96 lotId_) internal override returns (Settlement memory, bytes memory) {}
 
-    function _claimProceeds(uint96 lotId_) internal override returns (uint96, uint96, uint96) {}
+    function _claimProceeds(uint96 lotId_) internal override returns (uint96, uint96) {}
 
     function _refundBid(
         uint96 lotId_,

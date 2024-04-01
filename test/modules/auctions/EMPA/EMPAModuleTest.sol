@@ -377,7 +377,8 @@ abstract contract EmpaModuleTest is Test, Permit2User {
             Auction.Status status_,
             uint64 marginalBidId_,
             Point memory publicKey_,
-            uint256 privateKey_
+            uint256 privateKey_,
+            uint96 amountOutToClaim_
         ) = _module.auctionData(lotId_);
 
         return EncryptedMarginalPriceAuctionModule.AuctionData({
@@ -391,7 +392,8 @@ abstract contract EmpaModuleTest is Test, Permit2User {
             marginalBidId: marginalBidId_,
             publicKey: publicKey_,
             privateKey: privateKey_,
-            bidIds: new uint64[](0)
+            bidIds: new uint64[](0),
+            amountOutToClaim: amountOutToClaim_
         });
     }
 

@@ -18,6 +18,8 @@ import {
 import {ICallback} from "src/interfaces/ICallback.sol";
 import {Callbacks} from "src/lib/Callbacks.sol";
 
+import {console2} from "forge-std/console2.sol";
+
 /// @title      Router
 /// @notice     An interface to define the AuctionHouse's buyer-facing functions
 abstract contract Router {
@@ -575,8 +577,9 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
         _isLotValid(lotId_);
 
         // Call auction module to validate and update data
-        (uint96 purchased_, uint96 sold_, uint96 payoutSent_) =
+        (uint96 purchased_, uint96 bidAmountOutToBeClaimed) =
             _getModuleForId(lotId_).claimProceeds(lotId_);
+        console2.log("to be claimed", bidAmountOutToBeClaimed);
 
         // Load data for the lot
         Routing storage routing = lotRouting[lotId_];
@@ -600,8 +603,10 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
         _sendPayment(routing.seller, totalInLessFees, routing.quoteToken, routing.callbacks);
 
         // Refund any unused capacity and curator fees to the address dictated by the callbacks address
-        // By this stage, a partial payout (if applicable) and curator fees have been paid, leaving only the payout amount (`totalOut`) remaining.
-        uint96 prefundingRefund = routing.funding + payoutSent_ - sold_;
+        // At this point, any partial payout and curator fees have been paid out. Hence, the routing.funding value can only be composed of bids that have not been claimed, and any unused capacity to be refunded to the seller
+        uint96 prefundingRefund = routing.funding - bidAmountOutToBeClaimed;
+        console2.log("routing.funding", routing.funding);
+        console2.log("refund", prefundingRefund);
         unchecked {
             routing.funding -= prefundingRefund;
         }

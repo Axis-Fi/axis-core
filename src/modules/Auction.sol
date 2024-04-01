@@ -196,14 +196,13 @@ abstract contract Auction {
     ///             - Validate the lot parameters
     ///             - Update the lot data
     ///
-    /// @param      lotId_          The lot id
-    /// @return     purchased       The amount of quote tokens purchased
-    /// @return     sold            The amount of base tokens sold
-    /// @return     payoutSent      The amount of base tokens that have already been paid out
+    /// @param      lotId_                  The lot id
+    /// @return     purchased               The amount of quote tokens purchased
+    /// @return     amountOutToClaim        The amount of base tokens to be claimed
     function claimProceeds(uint96 lotId_)
         external
         virtual
-        returns (uint96 purchased, uint96 sold, uint96 payoutSent);
+        returns (uint96 purchased, uint96 amountOutToClaim);
 
     // ========== AUCTION MANAGEMENT ========== //
 
@@ -642,7 +641,7 @@ abstract contract AuctionModule is Auction, Module {
         virtual
         override
         onlyInternal
-        returns (uint96 purchased, uint96 sold, uint96 payoutSent)
+        returns (uint96 purchased, uint96 amountOutToClaim)
     {
         // Standard validation
         _revertIfLotInvalid(lotId_);
@@ -657,14 +656,13 @@ abstract contract AuctionModule is Auction, Module {
     /// @dev        Auction modules should override this to perform any additional logic,
     ///             such as updating the lot data
     ///
-    /// @param      lotId_          The lot ID
-    /// @return     purchased       The amount of quote tokens purchased
-    /// @return     sold            The amount of base tokens sold
-    /// @return     payoutSent      The amount of base tokens that have already been paid out
+    /// @param      lotId_                  The lot ID
+    /// @return     purchased               The amount of quote tokens purchased
+    /// @return     amountOutToClaim        The amount of base tokens to be claimed
     function _claimProceeds(uint96 lotId_)
         internal
         virtual
-        returns (uint96 purchased, uint96 sold, uint96 payoutSent);
+        returns (uint96 purchased, uint96 amountOutToClaim);
 
     // ========== AUCTION INFORMATION ========== //
 

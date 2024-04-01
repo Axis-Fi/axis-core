@@ -228,6 +228,10 @@ contract EmpaModuleClaimBidsTest is EmpaModuleTest {
         assertEq(uint8(bidOne.status), uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed));
         EncryptedMarginalPriceAuctionModule.Bid memory bidTwo = _getBid(_lotId, _bidIds[1]);
         assertEq(uint8(bidTwo.status), uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed));
+
+        // Check the auction data
+        EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
+        assertEq(auctionData.amountOutToClaim, 0, "amountOutToClaim");
     }
 
     function test_unsuccessfulBid_fuzz(uint96 bidAmountIn_)
@@ -274,6 +278,10 @@ contract EmpaModuleClaimBidsTest is EmpaModuleTest {
         assertEq(uint8(bidOne.status), uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed));
         EncryptedMarginalPriceAuctionModule.Bid memory bidTwo = _getBid(_lotId, _bidIds[1]);
         assertEq(uint8(bidTwo.status), uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed));
+
+        // Check the auction data
+        EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
+        assertEq(auctionData.amountOutToClaim, 0, "amountOutToClaim");
     }
 
     function test_unsuccessfulBid_quoteTokenDecimalsLarger()
@@ -319,6 +327,10 @@ contract EmpaModuleClaimBidsTest is EmpaModuleTest {
         assertEq(uint8(bidOne.status), uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed));
         EncryptedMarginalPriceAuctionModule.Bid memory bidTwo = _getBid(_lotId, _bidIds[1]);
         assertEq(uint8(bidTwo.status), uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed));
+
+        // Check the auction data
+        EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
+        assertEq(auctionData.amountOutToClaim, 0, "amountOutToClaim");
     }
 
     function test_unsuccessfulBid_quoteTokenDecimalsSmaller()
@@ -364,6 +376,10 @@ contract EmpaModuleClaimBidsTest is EmpaModuleTest {
         assertEq(uint8(bidOne.status), uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed));
         EncryptedMarginalPriceAuctionModule.Bid memory bidTwo = _getBid(_lotId, _bidIds[1]);
         assertEq(uint8(bidTwo.status), uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed));
+
+        // Check the auction data
+        EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
+        assertEq(auctionData.amountOutToClaim, 0, "amountOutToClaim");
     }
 
     function test_successfulBid()
@@ -405,6 +421,10 @@ contract EmpaModuleClaimBidsTest is EmpaModuleTest {
         assertEq(uint8(bidOne.status), uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed));
         EncryptedMarginalPriceAuctionModule.Bid memory bidTwo = _getBid(_lotId, _bidIds[1]);
         assertEq(uint8(bidTwo.status), uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed));
+
+        // Check the auction data
+        EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
+        assertEq(auctionData.amountOutToClaim, 0, "amountOutToClaim");
     }
 
     function test_successfulBid_quoteTokenDecimalsLarger()
@@ -450,6 +470,10 @@ contract EmpaModuleClaimBidsTest is EmpaModuleTest {
         assertEq(uint8(bidOne.status), uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed));
         EncryptedMarginalPriceAuctionModule.Bid memory bidTwo = _getBid(_lotId, _bidIds[1]);
         assertEq(uint8(bidTwo.status), uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed));
+
+        // Check the auction data
+        EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
+        assertEq(auctionData.amountOutToClaim, 0, "amountOutToClaim");
     }
 
     function test_successfulBid_quoteTokenDecimalsSmaller()
@@ -495,6 +519,10 @@ contract EmpaModuleClaimBidsTest is EmpaModuleTest {
         assertEq(uint8(bidOne.status), uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed));
         EncryptedMarginalPriceAuctionModule.Bid memory bidTwo = _getBid(_lotId, _bidIds[1]);
         assertEq(uint8(bidTwo.status), uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed));
+
+        // Check the auction data
+        EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
+        assertEq(auctionData.amountOutToClaim, 0, "amountOutToClaim");
     }
 
     function test_successfulBid_marginalPriceRounding()
@@ -541,6 +569,10 @@ contract EmpaModuleClaimBidsTest is EmpaModuleTest {
         assertEq(uint8(bidOne.status), uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed));
         EncryptedMarginalPriceAuctionModule.Bid memory bidTwo = _getBid(_lotId, _bidIds[1]);
         assertEq(uint8(bidTwo.status), uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed));
+
+        // Check the auction data
+        EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
+        assertEq(auctionData.amountOutToClaim, 0, "amountOutToClaim");
     }
 
     function test_successfulBid_marginalPriceRounding_capacityExceeded()
@@ -598,6 +630,10 @@ contract EmpaModuleClaimBidsTest is EmpaModuleTest {
         assertEq(
             uint8(bidThree.status), uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed)
         );
+
+        // Check the auction data
+        EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
+        assertEq(auctionData.amountOutToClaim, 0, "amountOutToClaim");
     }
 
     function test_successfulBid_amountIn_fuzz(uint96 bidAmountIn_)
@@ -651,6 +687,10 @@ contract EmpaModuleClaimBidsTest is EmpaModuleTest {
         assertEq(uint8(bidOne.status), uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed));
         EncryptedMarginalPriceAuctionModule.Bid memory bidTwo = _getBid(_lotId, _bidIds[1]);
         assertEq(uint8(bidTwo.status), uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed));
+
+        // Check the auction data
+        EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
+        assertEq(auctionData.amountOutToClaim, 0, "amountOutToClaim");
     }
 
     function test_successfulBid_amountOut_fuzz(uint96 bidAmountOut_)
@@ -705,6 +745,10 @@ contract EmpaModuleClaimBidsTest is EmpaModuleTest {
         assertEq(uint8(bidOne.status), uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed));
         EncryptedMarginalPriceAuctionModule.Bid memory bidTwo = _getBid(_lotId, _bidIds[1]);
         assertEq(uint8(bidTwo.status), uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed));
+
+        // Check the auction data
+        EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
+        assertEq(auctionData.amountOutToClaim, 0, "amountOutToClaim");
     }
 
     function test_mixtureBids()
@@ -748,6 +792,10 @@ contract EmpaModuleClaimBidsTest is EmpaModuleTest {
         assertEq(uint8(bidOne.status), uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed));
         EncryptedMarginalPriceAuctionModule.Bid memory bidTwo = _getBid(_lotId, _bidIds[1]);
         assertEq(uint8(bidTwo.status), uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed));
+
+        // Check the auction data
+        EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
+        assertEq(auctionData.amountOutToClaim, 0, "amountOutToClaim");
     }
 
     function test_unclaimedBids()
@@ -790,6 +838,10 @@ contract EmpaModuleClaimBidsTest is EmpaModuleTest {
         assertEq(
             uint8(bidTwo.status), uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Decrypted)
         );
+
+        // Check the auction data
+        EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
+        assertEq(auctionData.amountOutToClaim, _scaleBaseTokenAmount(5e18), "amountOutToClaim");
     }
 
     function test_givenLotOverCapacity_higherMarginalPrice()
@@ -832,6 +884,14 @@ contract EmpaModuleClaimBidsTest is EmpaModuleTest {
             uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed),
             "status"
         );
+
+        // Check the auction data
+        EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
+        assertEq(
+            auctionData.amountOutToClaim,
+            _scaleBaseTokenAmount(_BID_PRICE_TWO_AMOUNT_OUT * 3),
+            "amountOutToClaim"
+        );
     }
 
     function test_givenLotOverCapacity_higherMarginalPrice_beforeLastSettledBid()
@@ -849,9 +909,9 @@ contract EmpaModuleClaimBidsTest is EmpaModuleTest {
         givenLotIsSettled
     {
         // Marginal price is 2
-        // Bids 1, 3-5 are settled
-        // Bid 2 is not settled (based on order of insertion)
-        uint64 bidId = 4;
+        // Bids 1-4 are settled
+        // Bid 5 is not settled (based on order of insertion)
+        uint64 bidId = 3;
 
         uint64[] memory bidIds = new uint64[](1);
         bidIds[0] = bidId;
@@ -873,6 +933,14 @@ contract EmpaModuleClaimBidsTest is EmpaModuleTest {
             uint8(bid.status),
             uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed),
             "status"
+        );
+
+        // Check the auction data
+        EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
+        assertEq(
+            auctionData.amountOutToClaim,
+            _scaleBaseTokenAmount(_BID_PRICE_FOUR_AMOUNT_OUT * 2 + _BID_PRICE_TWO_AMOUNT_OUT * 2),
+            "amountOutToClaim"
         );
     }
 
@@ -916,6 +984,14 @@ contract EmpaModuleClaimBidsTest is EmpaModuleTest {
             uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed),
             "status"
         );
+
+        // Check the auction data
+        EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
+        assertEq(
+            auctionData.amountOutToClaim,
+            _scaleBaseTokenAmount(_BID_PRICE_FOUR_AMOUNT_OUT * 2 + _BID_PRICE_TWO_AMOUNT_OUT * 2),
+            "amountOutToClaim"
+        );
     }
 
     function test_givenLotOverCapacity_higherMarginalPrice_afterLastSettledBid()
@@ -958,6 +1034,14 @@ contract EmpaModuleClaimBidsTest is EmpaModuleTest {
             uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed),
             "status"
         );
+
+        // Check the auction data
+        EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
+        assertEq(
+            auctionData.amountOutToClaim,
+            _scaleBaseTokenAmount(_BID_PRICE_FOUR_AMOUNT_OUT * 2 + _BID_PRICE_TWO_AMOUNT_OUT * 3),
+            "amountOutToClaim"
+        );
     }
 
     function test_givenLotOverCapacity_sameMarginalPrice_beforeLastSettledBid()
@@ -978,7 +1062,7 @@ contract EmpaModuleClaimBidsTest is EmpaModuleTest {
         // Marginal price is 2
         // Bids 1-5 are settled
         // Bid 6 is not settled (based on order of insertion)
-        uint64 bidId = 5;
+        uint64 bidId = 4;
 
         uint64[] memory bidIds = new uint64[](1);
         bidIds[0] = bidId;
@@ -1000,6 +1084,14 @@ contract EmpaModuleClaimBidsTest is EmpaModuleTest {
             uint8(bid.status),
             uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed),
             "status"
+        );
+
+        // Check the auction data
+        EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
+        assertEq(
+            auctionData.amountOutToClaim,
+            _scaleBaseTokenAmount(_BID_PRICE_TWO_AMOUNT_OUT * 4),
+            "amountOutToClaim"
         );
     }
 
@@ -1044,6 +1136,14 @@ contract EmpaModuleClaimBidsTest is EmpaModuleTest {
             uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed),
             "status"
         );
+
+        // Check the auction data
+        EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
+        assertEq(
+            auctionData.amountOutToClaim,
+            _scaleBaseTokenAmount(_BID_PRICE_TWO_AMOUNT_OUT * 4),
+            "amountOutToClaim"
+        );
     }
 
     function test_givenLotOverCapacity_sameMarginalPrice_afterSettledBid()
@@ -1087,6 +1187,14 @@ contract EmpaModuleClaimBidsTest is EmpaModuleTest {
             uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed),
             "status"
         );
+
+        // Check the auction data
+        EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
+        assertEq(
+            auctionData.amountOutToClaim,
+            _scaleBaseTokenAmount(_BID_PRICE_TWO_AMOUNT_OUT * 5),
+            "amountOutToClaim"
+        );
     }
 
     function test_givenLotOverCapacity_unsuccessfulBid()
@@ -1105,6 +1213,8 @@ contract EmpaModuleClaimBidsTest is EmpaModuleTest {
         givenLotIsDecrypted
         givenLotIsSettled
     {
+        // Bids 1-5 successful
+        // Bids 6-7 unsuccessful
         uint64 bidId = 7;
 
         uint64[] memory bidIds = new uint64[](1);
@@ -1128,6 +1238,14 @@ contract EmpaModuleClaimBidsTest is EmpaModuleTest {
             uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed),
             "status"
         );
+
+        // Check the auction data
+        EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
+        assertEq(
+            auctionData.amountOutToClaim,
+            _scaleBaseTokenAmount(_BID_PRICE_TWO_AMOUNT_OUT * 5),
+            "amountOutToClaim"
+        );
     }
 
     function test_givenLotOverCapacity_unsuccessfulBid_respectsOrdering()
@@ -1146,6 +1264,8 @@ contract EmpaModuleClaimBidsTest is EmpaModuleTest {
         givenLotIsDecrypted
         givenLotIsSettled
     {
+        // Bids 2-5 successful
+        // Bids 1, 7 unsuccessful
         uint64 bidId = 1;
 
         uint64[] memory bidIds = new uint64[](1);
@@ -1168,6 +1288,14 @@ contract EmpaModuleClaimBidsTest is EmpaModuleTest {
             uint8(bid.status),
             uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed),
             "status"
+        );
+
+        // Check the auction data
+        EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
+        assertEq(
+            auctionData.amountOutToClaim,
+            _scaleBaseTokenAmount(_BID_PRICE_TWO_AMOUNT_OUT * 5),
+            "amountOutToClaim"
         );
     }
 }

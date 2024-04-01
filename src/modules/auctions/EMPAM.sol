@@ -66,6 +66,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
     /// @param         publicKey           The public key used to encrypt bids (a point on the alt_bn128 curve from the generator point (1,2))
     /// @param         privateKey          The private key used to decrypt bids (not provided until after the auction ends)
     /// @param         bidIds              The list of bid IDs to decrypt in order of submission, excluding cancelled bids
+    /// @param         amountOutToClaim    The amount out (base token) that can be claimed by bidders
     struct AuctionData {
         uint64 nextBidId; // 8 +
         uint96 marginalPrice; // 12 +
@@ -78,6 +79,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         Point publicKey; // 64 - slots 4 and 5
         uint256 privateKey; // 32 - slot 6
         uint64[] bidIds; // slots 7+
+        uint96 amountOutToClaim;
     }
 
     struct AuctionDataParams {
@@ -351,6 +353,9 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
             // Payout is calculated using the marginal price of the auction
             bidClaim.paid = bidData.amount;
             bidClaim.payout = uint96(Math.mulDivDown(bidClaim.paid, baseScale, marginalPrice));
+
+            // Reduce the amount out to claim
+            auctionData[lotId_].amountOutToClaim -= bidClaim.payout;
         } else {
             // Bidder is refunded the paid amount and receives no payout
             bidClaim.paid = bidData.amount;
@@ -825,6 +830,9 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
             settlement_.totalIn = uint96(result.totalAmountIn);
             settlement_.totalOut =
                 uint96(result.capacityExpended > capacity ? capacity : result.capacityExpended);
+
+            // Cache the amount to be claimed
+            auctionData[lotId_].amountOutToClaim = settlement_.totalOut - settlement_.pfPayout;
         } else {
             // Auction cannot be settled if we reach this point
             // Marginal price is set as the max uint96 for the auction so the system knows all bids should be refunded
@@ -840,7 +848,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
     function _claimProceeds(uint96 lotId_)
         internal
         override
-        returns (uint96 purchased, uint96 sold, uint96 payoutSent)
+        returns (uint96 purchased, uint96 amountOutToBeClaimed)
     {
         // Update the status
         auctionData[lotId_].status = Auction.Status.Claimed;
@@ -848,8 +856,11 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         // Get the lot data
         Lot memory lot = lotData[lotId_];
 
+        // Get the auction data
+        AuctionData memory auction = auctionData[lotId_];
+
         // Return the required data
-        return (lot.purchased, lot.sold, lot.partialPayout);
+        return (lot.purchased, auction.amountOutToClaim);
     }
 
     // ========== AUCTION INFORMATION ========== //
