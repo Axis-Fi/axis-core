@@ -295,7 +295,7 @@ abstract contract AuctionHouseTest is Test, Permit2User {
         //     vm.toString(bytecode)
         // );
 
-        bytes32 salt = bytes32(0xb18b1fb5bfb58bc8fc1ce4fe87770f3970a639333c43a05286c6ce71e85ac268);
+        bytes32 salt = bytes32(0x50310f4aa048925d4f8e68b07a5ad331f10cffe8cf264538db30f4262cfa6312);
         vm.broadcast(); // required for CREATE2 address to work correctly. doesn't do anything in a test
         _callback = new MockCallback{salt: salt}(
             address(_auctionHouse),
@@ -457,16 +457,16 @@ abstract contract AuctionHouseTest is Test, Permit2User {
         bytes32 salt;
         if (_callbackSendBaseTokens && _callbackReceiveQuoteTokens) {
             // 11111111 = 0xFF
-            salt = bytes32(0x8928dbd8a2f5e4417be6dd22844e0103445992624f8e6ee360ec20742d3b2e92);
+            salt = bytes32(0x5918cbd9f6779991ad5adeae38f34c6c331b561a07aa1c147a7798e08c2dc54f);
         } else if (_callbackSendBaseTokens) {
             // 11111101 = 0xFD
-            salt = bytes32(0x836a1597bc48dc0dca6e26ae54c691d8dc6e06753bb1865c282e2662dbc9c881);
+            salt = bytes32(0x4353a34be1df82dbffea8e2f96fe7d037b4408829bb6bf9f4cef079ef6acdb2f);
         } else if (_callbackReceiveQuoteTokens) {
             // 11111110 = 0xFE
-            salt = bytes32(0xe5022a2f9dd565b12f8c19ef3f29a9d9d86050d3dfe2c535edeaf4612f9c4003);
+            salt = bytes32(0x24a33422d10bbf4a533033133e5aa619c755a9a03b040c25c9976f7128cf1916);
         } else {
             // 11111100 = 0xFC
-            salt = bytes32(0xb05db88553d125f08a9767196b9c0bf66b77b0e344c21864f637106bd6cae569);
+            salt = bytes32(0xb3cf4572a0a5220ad73e10aaa5d9abee8fedc6cff443c3fe858523c6889762cc);
         }
 
         // Required for CREATE2 address to work correctly. doesn't do anything in a test
@@ -657,6 +657,16 @@ abstract contract AuctionHouseTest is Test, Permit2User {
 
         vm.prank(_bidder);
         _auctionHouse.claimBids(_lotId, bids);
+        _;
+    }
+
+    modifier givenBaseTokenIsRevertOnZero() {
+        _baseToken.setRevertOnZero(true);
+        _;
+    }
+
+    modifier givenQuoteTokenIsRevertOnZero() {
+        _quoteToken.setRevertOnZero(true);
         _;
     }
 
