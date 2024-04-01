@@ -68,7 +68,7 @@ contract CappedMerkleAllowlistTest is Test, Permit2User {
         // );
         // vm.writeFile("./bytecode/CappedMerkleAllowlist98.bin", vm.toString(bytecode));
 
-        bytes32 salt = bytes32(0x7d30067a220f39fa52807f8fce8d62863bcf292e9b1644acce23edbd48781f7a);
+        bytes32 salt = bytes32(0x13e858356e6c37632a6a4e6677bb119d4a32d46987f542b6c2ef90bd49605343);
         vm.broadcast();
         _allowlist = new CappedMerkleAllowlist{salt: salt}(
             address(_auctionHouse),
