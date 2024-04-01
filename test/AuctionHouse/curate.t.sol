@@ -32,6 +32,8 @@ contract CurateTest is AuctionHouseTest {
     //  [X] it reverts
     // [X] given the lot has been cancelled
     //  [X] it reverts
+    // [X] given the curator fee would cause an overflow
+    //  [X] it reverts
     // [X] given no _CURATOR fee is set
     //  [X] it succeeds
     // [X] given the lot is prefunded
@@ -533,6 +535,30 @@ contract CurateTest is AuctionHouseTest {
         // Expect revert
         bytes memory err = abi.encodeWithSelector(Auctioneer.InvalidCallback.selector);
         vm.expectRevert(err);
+
+        // Curate
+        vm.prank(_CURATOR);
+        _auctionHouse.curate(_lotId, bytes(""));
+    }
+
+    function test_givenAuctionIsPrefunded_overflow_reverts()
+        public
+        whenAuctionTypeIsAtomic
+        whenAtomicAuctionModuleIsInstalled
+        givenLotHasCapacity(type(uint96).max)
+        givenSellerHasBaseTokenBalance(type(uint96).max)
+        givenSellerHasBaseTokenAllowance(type(uint96).max)
+        givenAuctionIsPrefunded
+        givenLotIsCreated
+        givenCuratorMaxFeeIsSet
+        givenCuratorFeeIsSet
+        givenLotHasStarted
+        givenSellerHasBaseTokenBalance(_curatorMaxPotentialFee)
+        givenSellerHasBaseTokenAllowance(_curatorMaxPotentialFee)
+    {
+        // Expect revert
+        // Can't catch the overflow error
+        vm.expectRevert();
 
         // Curate
         vm.prank(_CURATOR);
