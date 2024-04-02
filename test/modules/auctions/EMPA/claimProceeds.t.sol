@@ -210,9 +210,14 @@ contract EmpaModuleClaimProceedsTest is EmpaModuleTest {
         (uint256 purchased, uint256 sold, uint256 partialPayout) = _module.claimProceeds(_lotId);
 
         // Assert values
-        assertEq(purchased, _expectedPurchased);
-        assertEq(sold, _expectedSold);
-        assertEq(partialPayout, _expectedPartialPayout);
+        assertEq(purchased, _expectedPurchased, "purchased");
+        assertEq(sold, _expectedSold, "sold");
+        assertEq(partialPayout, _expectedPartialPayout, "partialPayout");
+
+        // Assert auction status
+        EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
+        assertEq(uint8(auctionData.status), uint8(Auction.Status.Settled), "status");
+        assertEq(auctionData.proceedsClaimed, true, "proceedsClaimed");
     }
 
     function test_givenLotIsUnderCapacity()
@@ -230,8 +235,13 @@ contract EmpaModuleClaimProceedsTest is EmpaModuleTest {
         (uint256 purchased, uint256 sold, uint256 partialPayout) = _module.claimProceeds(_lotId);
 
         // Assert values
-        assertEq(purchased, _expectedPurchased);
-        assertEq(sold, _expectedSold);
-        assertEq(partialPayout, _expectedPartialPayout);
+        assertEq(purchased, _expectedPurchased, "purchased");
+        assertEq(sold, _expectedSold, "sold");
+        assertEq(partialPayout, _expectedPartialPayout, "partialPayout");
+
+        // Assert auction status
+        EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
+        assertEq(uint8(auctionData.status), uint8(Auction.Status.Settled), "status");
+        assertEq(auctionData.proceedsClaimed, true, "proceedsClaimed");
     }
 }

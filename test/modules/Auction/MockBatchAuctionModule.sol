@@ -39,6 +39,7 @@ contract MockBatchAuctionModule is AuctionModule {
     mapping(uint96 lotId => Settlement) public lotSettlements;
 
     mapping(uint96 lotId => Auction.Status) public lotStatus;
+    mapping(uint96 lotId => bool) public lotProceedsClaimed;
 
     mapping(uint96 => bool) public settled;
 
@@ -144,7 +145,8 @@ contract MockBatchAuctionModule is AuctionModule {
 
     function _claimProceeds(uint96 lotId_) internal override returns (uint96, uint96, uint96) {
         // Update status
-        lotStatus[lotId_] = Auction.Status.Claimed;
+        lotStatus[lotId_] = Auction.Status.Settled;
+        lotProceedsClaimed[lotId_] = true;
 
         Lot storage lot = lotData[lotId_];
         return (lot.purchased, lot.sold, lot.partialPayout);
@@ -195,7 +197,7 @@ contract MockBatchAuctionModule is AuctionModule {
 
     function _revertIfLotProceedsClaimed(uint96 lotId_) internal view virtual override {
         // Check that the lot has not been claimed
-        if (lotStatus[lotId_] == Auction.Status.Claimed) {
+        if (lotProceedsClaimed[lotId_] == true) {
             revert Auction.Auction_InvalidParams();
         }
     }

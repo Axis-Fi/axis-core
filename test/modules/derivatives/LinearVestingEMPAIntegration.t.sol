@@ -210,7 +210,8 @@ contract LinearVestingEMPAIntegrationTest is AuctionHouseTest {
         // Check the auction data
         EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData =
             _empaModule.getAuctionData(_lotId);
-        assertEq(uint8(auctionData.status), uint8(Auction.Status.Claimed), "status");
+        assertEq(uint8(auctionData.status), uint8(Auction.Status.Settled), "status");
+        assertEq(auctionData.proceedsClaimed, true, "proceedsClaimed");
 
         // Check balances
         assertEq(_baseToken.balanceOf(_SELLER), _LOT_CAPACITY, "seller balance");
@@ -523,7 +524,8 @@ contract LinearVestingEMPAIntegrationTest is AuctionHouseTest {
         // Check the auction state
         EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData =
             _empaModule.getAuctionData(_lotId);
-        assertEq(uint8(auctionData.status), uint8(Auction.Status.Claimed), "status");
+        assertEq(uint8(auctionData.status), uint8(Auction.Status.Settled), "status");
+        assertEq(auctionData.proceedsClaimed, true, "proceedsClaimed");
 
         // Check the balances
         assertEq(_quoteToken.balanceOf(_SELLER), _BID_AMOUNT, "seller balance");

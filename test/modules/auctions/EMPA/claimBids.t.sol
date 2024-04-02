@@ -43,6 +43,8 @@ contract EmpaModuleClaimBidsTest is EmpaModuleTest {
     //  [X] it reverts
     // [X] when the caller is not the parent
     //  [X] it reverts
+    // [X] given the seller has claimed proceeds
+    //  [X] it refunds the bid
     // [X] given the minAmountOut is 0
     //  [X] it refunds the bid
     // [X] given the bids have different outcomes
@@ -185,6 +187,50 @@ contract EmpaModuleClaimBidsTest is EmpaModuleTest {
 
         // Call the function
         _module.claimBids(_lotId, _bidIds);
+    }
+
+    function test_givenClaimProceeds_unsuccessfulBid()
+        external
+        givenLotIsCreated
+        givenLotHasStarted
+        givenBidIsCreated(
+            _scaleQuoteTokenAmount(_BID_AMOUNT_UNSUCCESSFUL),
+            _scaleBaseTokenAmount(_BID_AMOUNT_OUT_UNSUCCESSFUL)
+        )
+        givenBidIsCreatedByBidderTwo(
+            _scaleQuoteTokenAmount(_BID_AMOUNT_UNSUCCESSFUL),
+            _scaleBaseTokenAmount(_BID_AMOUNT_OUT_UNSUCCESSFUL)
+        )
+        givenLotHasConcluded
+        givenPrivateKeyIsSubmitted
+        givenLotIsDecrypted
+        givenLotIsSettled
+        givenLotProceedsAreClaimed
+    {
+        // Call the function
+        vm.prank(address(_auctionHouse));
+        (Auction.BidClaim[] memory bidClaims,) = _module.claimBids(_lotId, _bidIds);
+
+        // Check the result
+        Auction.BidClaim memory bidClaimOne = bidClaims[0];
+        assertEq(bidClaimOne.bidder, _BIDDER);
+        assertEq(bidClaimOne.referrer, _REFERRER);
+        assertEq(bidClaimOne.paid, _BID_AMOUNT_UNSUCCESSFUL);
+        assertEq(bidClaimOne.payout, 0);
+
+        Auction.BidClaim memory bidClaimTwo = bidClaims[1];
+        assertEq(bidClaimTwo.bidder, _BIDDER_TWO);
+        assertEq(bidClaimTwo.referrer, _REFERRER);
+        assertEq(bidClaimTwo.paid, _BID_AMOUNT_UNSUCCESSFUL);
+        assertEq(bidClaimTwo.payout, 0);
+
+        assertEq(bidClaims.length, 2);
+
+        // Check the bid status
+        EncryptedMarginalPriceAuctionModule.Bid memory bidOne = _getBid(_lotId, _bidIds[0]);
+        assertEq(uint8(bidOne.status), uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed));
+        EncryptedMarginalPriceAuctionModule.Bid memory bidTwo = _getBid(_lotId, _bidIds[1]);
+        assertEq(uint8(bidTwo.status), uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed));
     }
 
     function test_unsuccessfulBid()

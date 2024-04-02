@@ -69,7 +69,7 @@ contract ClaimProceedsTest is AuctionHouseTest {
         assertEq(lotRouting.funding, funding, "funding");
 
         // Check the lot status
-        assertEq(uint8(_batchAuctionModule.lotStatus(_lotId)), uint8(Auction.Status.Claimed));
+        assertEq(uint8(_batchAuctionModule.lotStatus(_lotId)), uint8(Auction.Status.Settled));
     }
 
     // ============ Modifiers ============ //
