@@ -121,7 +121,14 @@ contract MockBatchAuctionModule is AuctionModule {
         return bidData[lotId_][bidId_].amount;
     }
 
-    function addBidClaim(uint96 lotId_, uint64 bidId_, address bidder_, address referrer_, uint96 paid_, uint96 payout_) public {
+    function addBidClaim(
+        uint96 lotId_,
+        uint64 bidId_,
+        address bidder_,
+        address referrer_,
+        uint96 paid_,
+        uint96 payout_
+    ) public {
         bidClaims[lotId_][bidId_].bidder = bidder_;
         bidClaims[lotId_][bidId_].referrer = referrer_;
         bidClaims[lotId_][bidId_].paid = paid_;
@@ -131,7 +138,12 @@ contract MockBatchAuctionModule is AuctionModule {
     function _claimBids(
         uint96 lotId_,
         uint64[] calldata bidIds_
-    ) internal virtual override returns (BidClaim[] memory bidClaims_, bytes memory auctionOutput_) {
+    )
+        internal
+        virtual
+        override
+        returns (BidClaim[] memory bidClaims_, bytes memory auctionOutput_)
+    {
         uint256 len = bidIds_.length;
         bidClaims_ = new BidClaim[](len);
         for (uint256 i; i < len; i++) {
@@ -147,6 +159,8 @@ contract MockBatchAuctionModule is AuctionModule {
             bidClaimOut.referrer = bidClaimIn.referrer;
             bidClaimOut.paid = bidClaimIn.paid;
             bidClaimOut.payout = bidClaimIn.payout;
+
+            lotData[lotId_].claimableBidAmountOut -= bidClaimIn.payout;
         }
 
         return (bidClaims_, auctionOutput_);
