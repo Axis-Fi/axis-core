@@ -764,25 +764,6 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         uint256 baseScale = 10 ** lotData[lotId_].baseTokenDecimals;
         AuctionData memory lotAuctionData = auctionData[lotId_];
 
-        // Delete the rest of the decrypted bids queue for a gas refund
-        {
-            Queue storage queue = decryptedBids[lotId_];
-            uint256 remainingBids = queue.getNumBids();
-            if (remainingBids > 0) {
-                for (uint256 i = remainingBids - 1; i >= 0; i--) {
-                    uint64 bidId = queue.bidIdList[i];
-                    delete queue.idToBidMap[bidId];
-                    queue.bidIdList.pop();
-
-                    // Otherwise an underflow will occur
-                    if (i == 0) {
-                        break;
-                    }
-                }
-                delete queue.numBids;
-            }
-        }
-
         // Determine if the auction can be filled, if so settle the auction, otherwise refund the seller
         // We set the status as settled either way to denote this function has been executed
         auctionData[lotId_].status = Auction.Status.Settled;
