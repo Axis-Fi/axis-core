@@ -719,7 +719,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
 
         // Create more bids that will not be filled
         // Lower price, otherwise they will be filled first due to ordering
-        for (uint256 i; i < 1500; i++) {
+        for (uint256 i; i < 2000; i++) {
             _createBid(19e17, 1e18);
         }
 
@@ -733,15 +733,15 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
     }
 
     modifier givenLargeNumberOfFilledBids() {
-        // Create 1000 bids that will fill capacity
-        for (uint256 i; i < 1000; i++) {
-            _createBid(2e16, 1e16);
+        // Create 2000 bids that will fill capacity
+        for (uint256 i; i < 2000; i++) {
+            _createBid(1e16, 5e15);
         }
 
         // Create more bids that will not be filled
         // Lower price, otherwise they will be filled first due to ordering
-        for (uint256 i; i < 1500; i++) {
-            _createBid(19e15, 1e16);
+        for (uint256 i; i < 1000; i++) {
+            _createBid(19e14, 1e15);
         }
 
         // Marginal price: 2

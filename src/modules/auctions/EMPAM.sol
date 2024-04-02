@@ -10,7 +10,7 @@ import {Veecode, toVeecode} from "src/modules/Modules.sol";
 // Libraries
 import {FixedPointMathLib as Math} from "lib/solmate/src/utils/FixedPointMathLib.sol";
 import {ECIES, Point} from "src/lib/ECIES.sol";
-import {MaxPriorityQueue, Queue, Bid as QueueBid} from "src/lib/MaxPriorityQueue.sol";
+import {MaxPriorityQueue, Queue} from "src/lib/MaxPriorityQueue2.sol";
 
 contract EncryptedMarginalPriceAuctionModule is AuctionModule {
     using MaxPriorityQueue for Queue;
@@ -189,7 +189,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         data.publicKey = implParams.publicKey;
         data.nextBidId = 1;
 
-        decryptedBids[lotId_].initialize();
+        // decryptedBids[lotId_].initialize();
     }
 
     /// @inheritdoc AuctionModule

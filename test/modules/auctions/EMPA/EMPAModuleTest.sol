@@ -3,6 +3,7 @@ pragma solidity 0.8.19;
 
 // Libraries
 import {Test} from "forge-std/Test.sol";
+import {console2} from "forge-std/console2.sol";
 import {Point, ECIES} from "src/lib/ECIES.sol";
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 
@@ -300,7 +301,17 @@ abstract contract EmpaModuleTest is Test, Permit2User {
 
     function _decryptLot() internal {
         EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
-        _module.decryptAndSortBids(_lotId, auctionData.nextBidId - 1);
+        uint256 numBids = auctionData.nextBidId - 1;
+        while (numBids > 0) {
+            uint256 gasStart = gasleft();
+            _module.decryptAndSortBids(_lotId, 100);    
+            console2.log("Gas used for decrypts: ", gasStart - gasleft());
+            if (numBids > 100) {
+                numBids -= 100;
+            } else {
+                numBids = 0;
+            }
+        }
     }
 
     modifier givenLotIsDecrypted() {
