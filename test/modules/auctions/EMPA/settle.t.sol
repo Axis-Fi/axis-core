@@ -732,6 +732,27 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         _;
     }
 
+    modifier givenLargeNumberOfFilledBids() {
+        // Create 1000 bids that will fill capacity
+        for (uint256 i; i < 1000; i++) {
+            _createBid(2e16, 1e16);
+        }
+
+        // Create more bids that will not be filled
+        // Lower price, otherwise they will be filled first due to ordering
+        for (uint256 i; i < 1500; i++) {
+            _createBid(19e15, 1e16);
+        }
+
+        // Marginal price: 2
+        _expectedMarginalPrice = _scaleQuoteTokenAmount(2 * _BASE_SCALE);
+        _expectedMarginalBidId = 1000;
+
+        _expectedTotalIn = 10 * 2e18;
+        _expectedTotalOut = 10 * 1e18;
+        _;
+    }
+
     modifier givenMarginalPriceRoundingLastBid() {
         _createBid(
             _scaleQuoteTokenAmount(12e18 - 1), // 11999999999999999999
@@ -1235,6 +1256,30 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         givenLotIsCreated
         givenLotHasStarted
         givenLargeNumberOfUnfilledBids
+        givenLotHasConcluded
+        givenPrivateKeyIsSubmitted
+        givenLotIsDecrypted
+    {
+        // Call function
+        uint256 gasBefore = gasleft();
+        (Auction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
+        uint256 gasAfter = gasleft();
+        console2.log("gas used", gasBefore - gasAfter);
+
+        // Validate auction data
+        EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
+        assertEq(auctionData.marginalPrice, _expectedMarginalPrice, "marginalPrice");
+        assertEq(uint8(auctionData.status), uint8(Auction.Status.Settled), "status");
+
+        // Assert settlement
+        _assertSettlement(settlement, auctionOutput);
+    }
+
+    function test_largeNumberOfFilledBids_gasUsage()
+        external
+        givenLotIsCreated
+        givenLotHasStarted
+        givenLargeNumberOfFilledBids
         givenLotHasConcluded
         givenPrivateKeyIsSubmitted
         givenLotIsDecrypted

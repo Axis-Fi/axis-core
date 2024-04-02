@@ -11,7 +11,7 @@ import {EmpaModuleTest} from "test/modules/auctions/EMPA/EMPAModuleTest.sol";
 contract EmpaModuleBidTest is EmpaModuleTest {
     uint96 internal constant _BID_AMOUNT = 2e18;
     uint96 internal constant _BID_AMOUNT_OUT = 1e18;
-    uint96 internal constant _BID_AMOUNT_BELOW_MIN = 1e16;
+    uint96 internal constant _BID_AMOUNT_BELOW_MIN = 1e14;
 
     // [X] when the caller is not the parent
     //  [X] it reverts
