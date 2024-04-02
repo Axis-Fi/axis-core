@@ -302,7 +302,12 @@ The final step to settle an auction is to evaluate the sorted, decrypted bids to
 
 What could cause a loss of funds?
 
--
+- ✅ Revert from fee-on-transfer quote token: this is already checked during bidding when transferring the quote token from the bidder to the AuctionHouse.
+- ✅ Revert from fee-on-transfer base token: this is already checked during auction creation when transferring the base token from the seller to the AuctionHouse.
+- ✅ Revert-on-zero quote token: the transfer amount is checked before calling `transfer()`
+- ✅ Revert-on-zero base token: the transfer amount is checked before calling `transfer()`
+- ❌ Partial fill bidder on blacklist: if the partial fill bidder is added to the quote or base token's blacklist after the auction is created and funded, the transfer of the quote or base tokens to the bidder would fail.
+- ❌ Curator on blacklist: if the curator is added to the base token's blacklist after the auction is created and funded, the transfer of the base tokens to the curator would fail.
 
 ```mermaid
 sequenceDiagram
@@ -325,32 +330,29 @@ sequenceDiagram
       AuctionHouse->>AuctionHouse: Validate auction status and settle auction
       AuctionHouse->>EMPA: Call settle function with auction ID
       activate EMPA
-          EMPA->>EMPA: Validate auction status and settle auction
+          Note over EMPA: Auction status must be decrypted
+          EMPA->>EMPA: Validate auction status
           alt auction did not reach minimum price or capacity
               EMPA->>EMPA: Set auction status to "settled"
           else auction reached minimum price and capacity
               EMPA->>EMPA: Set auction status to "settled"
               EMPA->>EMPA: Calculate marginal price
-              EMPA->>EMPA: Distribute proceeds to winners
-              EMPA->>EMPA: Distribute refunds to losers
           end
-          EMPA-->AuctionHouse: Hand execution back to AuctionHouse
+          EMPA-->AuctionHouse: Return settlement output to AuctionHouse
       deactivate EMPA
-      AuctionHouse->>AuctionHouse: Collect fees
-      alt seller specified hook for proceeds
-          AuctionHouse->>Seller: Call hook with proceeds
-          Seller->>Seller: Execute hook logic
-          Seller-->AuctionHouse: Send base tokens and return execution to AuctionHouse
-      else
-          Seller-->AuctionHouse: Base tokens transferred from Seller to AuctionHouse
+      AuctionHouse->>AuctionHouse: Cache the protocol and referrer fee rates
+      AuctionHouse->>AuctionHouse: Calculate the curator payout based on the utilised capacity
+      alt there is a partial fill on a bid
+          AuctionHouse->>AuctionHouse: Allocate quote token fees for the partial payout
+          AuctionHouse->>Buyers: Send partial refund to the bidder
+          alt partial payout is a derivative of base token
+            AuctionHouse->>VestingModule: Mint vesting tokens to bidder
+            VestingModule-->Buyers: Send vesting tokens to bidder
+          else
+            AuctionHouse-->Buyers: Send partial payout to bidder
+          end
       end
-      alt payout is a derivative of base token
-        AuctionHouse->>VestingModule: Mint vesting tokens to winners
-        VestingModule-->Buyers: Send vesting tokens to winners
-      else
-        AuctionHouse-->Buyers: Send payouts to winners
-      end
-      AuctionHouse->>AuctionHouse: Set auction status to "settled"
+      AuctionHouse->>Curator: Send the curator payout in base tokens
       AuctionHouse-->UI: Return transaction result
   deactivate AuctionHouse
   UI-->User: Display transaction result and update auction status
