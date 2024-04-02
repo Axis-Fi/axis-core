@@ -753,6 +753,27 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         _;
     }
 
+    modifier givenSmallNumberOfFilledBids() {
+        // Create 10 bids that will fill capacity
+        for (uint256 i; i < 10; i++) {
+            _createBid(2e18, 1e18);
+        }
+
+        // Create more bids that will not be filled
+        // Lower price, otherwise they will be filled first due to ordering
+        for (uint256 i; i < 10; i++) {
+            _createBid(19e15, 1e16);
+        }
+
+        // Marginal price: 2
+        _expectedMarginalPrice = _scaleQuoteTokenAmount(2 * _BASE_SCALE);
+        _expectedMarginalBidId = 10;
+
+        _expectedTotalIn = 10 * 2e18;
+        _expectedTotalOut = 10 * 1e18;
+        _;
+    }
+
     modifier givenMarginalPriceRoundingLastBid() {
         _createBid(
             _scaleQuoteTokenAmount(12e18 - 1), // 11999999999999999999
@@ -1280,6 +1301,30 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         givenLotIsCreated
         givenLotHasStarted
         givenLargeNumberOfFilledBids
+        givenLotHasConcluded
+        givenPrivateKeyIsSubmitted
+        givenLotIsDecrypted
+    {
+        // Call function
+        uint256 gasBefore = gasleft();
+        (Auction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
+        uint256 gasAfter = gasleft();
+        console2.log("gas used", gasBefore - gasAfter);
+
+        // Validate auction data
+        EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
+        assertEq(auctionData.marginalPrice, _expectedMarginalPrice, "marginalPrice");
+        assertEq(uint8(auctionData.status), uint8(Auction.Status.Settled), "status");
+
+        // Assert settlement
+        _assertSettlement(settlement, auctionOutput);
+    }
+
+    function test_smallNumberOfFilledBids_gasUsage()
+        external
+        givenLotIsCreated
+        givenLotHasStarted
+        givenSmallNumberOfFilledBids
         givenLotHasConcluded
         givenPrivateKeyIsSubmitted
         givenLotIsDecrypted
