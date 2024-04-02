@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.19;
 
+import {console2} from "forge-std/console2.sol";
+
 /// Protocol dependencies
 import {AuctionModule, Auction} from "src/modules/Auction.sol";
 import {Veecode, toVeecode} from "src/modules/Modules.sol";
@@ -569,21 +571,19 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         Queue storage queue_,
         uint256 baseScale_
     ) internal returns (uint64 bidId, uint96 amountIn, uint96 price) {
-        bidId = queue_.getMaxId();
-
         // Load bid info (in quote token units)
-        QueueBid memory qBid = queue_.delMax();
-        amountIn = qBid.amountIn;
+        uint96 minAmountOut;
+        (bidId, amountIn, minAmountOut) = queue_.delMax();
 
         // A zero minAmountOut value should be filtered out during decryption. However, cover the case here to avoid a potential division by zero error that would brick settlement.
-        if (qBid.minAmountOut == 0) {
+        if (minAmountOut == 0) {
             // A zero price would be filtered out being below the minimum price
             return (bidId, amountIn, 0);
         }
 
         // Calculate the price of the bid
         // Cannot overflow on cast back to uint96. It was checked during decryption.
-        price = uint96(Math.mulDivUp(amountIn, baseScale_, qBid.minAmountOut));
+        price = uint96(Math.mulDivUp(amountIn, baseScale_, minAmountOut));
 
         return (bidId, amountIn, price);
     }
@@ -616,7 +616,13 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
                 // There is no need to check if the bid is the minimum bid size, as this was checked during decryption
 
                 // Get bid info
-                (uint64 bidId, uint96 amountIn, uint96 price) = _getNextBid(queue, baseScale);
+                uint64 bidId; uint96 amountIn; uint96 price;
+                {
+                    uint256 gasStart = gasleft();
+                    (bidId, amountIn, price) = _getNextBid(queue, baseScale);
+                    if (i % 100 == 0) console2.log("Gas used in _getNextBid: ", gasStart - gasleft());
+                }
+                
 
                 // If the price is below the minimum price, then determine a marginal price from the previous bids with the knowledge that no other bids will be considered
                 // This will also handle a zero price returned from `_getNextBid()`, since `minPrice` is always greater than zero
@@ -755,8 +761,14 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
             revert Auction_WrongState(lotId_);
         }
 
-        MarginalPriceResult memory result = _getLotMarginalPrice(lotId_);
 
+        MarginalPriceResult memory result;
+        {
+            uint256 gasStart = gasleft();
+            result = _getLotMarginalPrice(lotId_);
+            console2.log("Gas used for marginal price calculation: ", gasStart - gasleft());
+        }
+         
         // Calculate marginal price and number of winning bids
         // Cache capacity and scaling values
         // Capacity is always in base token units for this auction type

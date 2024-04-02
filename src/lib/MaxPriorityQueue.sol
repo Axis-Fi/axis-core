@@ -93,7 +93,7 @@ library MaxPriorityQueue {
     }
 
     ///@notice delete max bid from heap and return
-    function delMax(Queue storage self) public returns (Bid memory) {
+    function delMax(Queue storage self) public returns (uint64, uint96, uint96) {
         require(!isEmpty(self), "nothing to delete");
         uint64 bidId = self.bidIdList[1];
         Bid memory max = self.idToBidMap[bidId];
@@ -101,7 +101,7 @@ library MaxPriorityQueue {
         self.bidIdList.pop();
         delete self.idToBidMap[bidId];
         _sink(self, 1);
-        return max;
+        return (bidId, max.amountIn, max.minAmountOut);
     }
 
     ///@notice helper function to determine ordering. When two bids have the same price, give priority
