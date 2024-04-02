@@ -18,6 +18,12 @@ contract EmpaModuleCancelAuctionTest is EmpaModuleTest {
     //  [X] it reverts
     // [X] when the auction has started
     //  [X] it reverts
+    // [ ] when the private key has been submitted
+    //  [ ] it reverts
+    // [ ] when bids have been decrypted
+    //  [ ] it reverts
+    // [ ] when the auction has been settled
+    //  [ ] it reverts
     // [X] it updates the conclusion, capacity and status
 
     function test_notParent_reverts() public {

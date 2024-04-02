@@ -71,7 +71,7 @@ In order to display user bids on the dapp, it is most convenient to use a subgra
 ## Actions
 
 ### Seller Creates Auction
-A seller creating an auction is the first step in the lifecycle. They provide common auction parameters as well as auction specific parameters to the AuctionHouse contract to kick it off. They must approve the AuctionHouse for the token they are selling (base token) or provide a Hooks contract that will settle the auction 
+A seller creating an auction is the first step in the lifecycle. They provide common auction parameters as well as auction specific parameters to the AuctionHouse contract to kick it off. They must approve the AuctionHouse for the token they are selling (base token) or provide a Hooks contract that will settle the auction
 
 ```mermaid
 sequenceDiagram
@@ -178,15 +178,15 @@ sequenceDiagram
   UI->>Subgraph: Fetch bids for user on auction ID
   UI-->Buyer: Display bids for user
   Buyer->>UI: Click "Cancel bid" button
-  UI->>AuctionHouse: Send `cancelBid(lotId, bidId)` transaction to blockchain.
+  UI->>AuctionHouse: Send `refundBid(lotId, bidId)` transaction to blockchain.
   activate AuctionHouse
-    Note over AuctionHouse: Not exactly sure the separation of duties between module and AuctionHouse yet
-    AuctionHouse->>AuctionHouse: Validate and delete bid, if it exists
-    AuctionHouse->>EMPA: Call cancelBid function with auction ID and bid ID
+    AuctionHouse->>EMPA: Call `refundBid(lotId, bidId)`
     activate EMPA
-        EMPA->>EMPA: Validate and delete bid (ensuring that it doesn't mess up settlement)
-        EMPA-->AuctionHouse: Hand execution back to AuctionHouse
+        Note over EMPA: Auction must be active, bid must not be refunded
+        EMPA->>EMPA: Validate and delete bid
+        EMPA-->AuctionHouse: Return refund amount to AuctionHouse
     deactivate EMPA
+    AuctionHouse->>AuctionHouse: Transfer refund to bidder
     AuctionHouse-->UI: Return transaction result
   deactivate AuctionHouse
   UI-->Buyer: Display transaction result and update bids
@@ -208,18 +208,19 @@ sequenceDiagram
   UI->>AuctionHouse: Fetch data for auction ID (base token, quote token, public key, start, conclusion, auction type, derivative type + info, capacity, min bid size)
   UI-->Seller: Display auction data
   Seller->>UI: Click "Cancel auction" button
-  UI->>AuctionHouse: Send `cancelAuction(lotId)` transaction to blockchain.
+  UI->>AuctionHouse: Send `cancel(lotId)` transaction to blockchain.
   activate AuctionHouse
-    AuctionHouse->>AuctionHouse: Validate and delete auction
-    AuctionHouse->>EMPA: Call cancelAuction function with auction ID
+    AuctionHouse->>EMPA: Call cancelAuction(lotId)
     activate EMPA
+        Note over EMPA: The auction must not have started, in order to cancel it.
         EMPA->>EMPA: Validate and delete auction
         EMPA-->AuctionHouse: Hand execution back to AuctionHouse
-        EMPA-->Watcher: Emit event for auction cancellation
-        Watcher->>Watcher: Get auction ID from event
-        Watcher->>Database: Delete auction ID and conclusion timestamp for public key
     deactivate EMPA
+    AuctionHouse->>AuctionHouse: Transfer prefunding amount to seller
     AuctionHouse-->UI: Return transaction result
+    AuctionHouse-->Watcher: Emit event for auction cancellation
+    Watcher->>Watcher: Get auction ID from event
+    Watcher->>Database: Delete auction ID and conclusion timestamp for public key
   deactivate AuctionHouse
   UI-->Seller: Display transaction result and update auction status
 ```
