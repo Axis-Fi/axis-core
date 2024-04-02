@@ -417,8 +417,8 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         // Store the private key
         auctionData[lotId_].privateKey = privateKey_;
 
-        // Decrypt and sort bids
-        _decryptAndSortBids(lotId_, num_);
+        // // Decrypt and sort bids
+        // _decryptAndSortBids(lotId_, num_);
     }
 
     /// @notice         Decrypts a batch of bids and sorts them by price in descending order
@@ -440,7 +440,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
     ///
     /// @param          lotId_          The lot ID of the auction to decrypt bids for
     /// @param          num_            The number of bids to decrypt. Reduced to the number remaining if greater.
-    function decryptAndSortBids(uint96 lotId_, uint64 num_) external {
+    function decryptAndSortBids(uint96 lotId_, uint64 num_, bytes32[] calldata sortHints_) external {
         // Check that lotId is valid
         _revertIfLotInvalid(lotId_);
         _revertIfBeforeLotStart(lotId_);
@@ -455,14 +455,17 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         }
 
         // Decrypt and sort bids
-        _decryptAndSortBids(lotId_, num_);
+        _decryptAndSortBids(lotId_, num_, sortHints_);
     }
 
-    function _decryptAndSortBids(uint96 lotId_, uint64 num_) internal {
+    function _decryptAndSortBids(uint96 lotId_, uint64 num_, bytes32[] calldata sortHints_) internal {
         // Load next decrypt index and min bid size
         AuctionData storage lotBidData = auctionData[lotId_];
         uint64 nextDecryptIndex = lotBidData.nextDecryptIndex;
         uint96 minBidSize = auctionData[lotId_].minBidSize;
+
+        // Validate that the sort hints are the correct length
+        if (sortHints_.length != num_) revert Auction_InvalidParams();
 
         // Check that the number of decrypts is less than or equal to the number of bids remaining to be decrypted
         // If so, reduce to the number remaining
@@ -505,7 +508,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
                     ) < type(uint96).max
                 ) {
                     // Store the decrypt in the sorted bid queue and set the min amount out on the bid
-                    decryptedBids[lotId_].insert(bidId, bidData.amount, amountOut);
+                    decryptedBids[lotId_].insert(sortHints_[i], bidId, bidData.amount, amountOut);
                     bidData.minAmountOut = amountOut;
                 }
             }
