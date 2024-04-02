@@ -661,10 +661,8 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
         // If the auction is pre-funded (required for batch auctions), transfer the fee amount from the seller
         if (routing.funding > 0) {
             // Increment the funding
-            // Cannot overflow, as capacity is bounded by uint96 and the curator fee has a maximum percentage
-            unchecked {
-                routing.funding += curatorFeePayout;
-            }
+            // NOT unchecked, as we want this to revert on overflow
+            routing.funding += curatorFeePayout;
 
             // If the callbacks contract is configured to send base tokens, then source the fee from the callbacks contract
             // Otherwise, transfer from the auction owner

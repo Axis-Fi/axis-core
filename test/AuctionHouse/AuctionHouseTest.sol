@@ -160,6 +160,11 @@ abstract contract AuctionHouseTest is Test, Permit2User {
 
     // ===== Modifiers ===== //
 
+    modifier givenLotHasCapacity(uint96 capacity_) {
+        _auctionParams.capacity = capacity_;
+        _;
+    }
+
     function _setBaseTokenDecimals(uint8 decimals_) internal {
         _baseToken = new MockFeeOnTransferERC20("Base Token", "BASE", decimals_);
 
