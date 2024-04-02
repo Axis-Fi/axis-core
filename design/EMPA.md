@@ -225,7 +225,6 @@ sequenceDiagram
   UI-->Seller: Display transaction result and update auction status
 ```
 
-
 ### Auction Settlement Part 1: Decryption
 After an auction has concluded, the bids must be decrypted and sorted by price. We do this by releasing the EC private key from the database via the API to anyone on the dapp looking at the auction page. Decryption works by providing an array of (amountOut, seed) for the bids in the order they were submitted to the contract. The seed was randomly generated on submission and can be extracted by decrypting the bid. The API provides a convenience function for returning an array for the next bids that need to be decrypted from an auction (using its ID). It may take several decryption transactions depending on the number of bids and gas limit. Once, all bids are decrypted on the contract, we can move to part 2 of the settlement process.
 
@@ -257,11 +256,13 @@ sequenceDiagram
   UI->>UI: Create transaction to decrypt bids with array
   UI-->User: Display transaction for signing
   User->>UI: Sign transaction to decrypt bids
-  UI->>EMPA: Send transaction to blockchain
+  UI->>EMPA: Send transaction to blockchain: submitPrivateKey(privateKey, numBids)
   activate EMPA
+      Note over EMPA: The auction must have concluded, the private key must not yet be submitted, and the private key must be valid
+      EMPA->>EMPA: Store the private key
       EMPA->>EMPA: Validate and store decrypted bids
       alt all bids decrypted
-          EMPA->>EMPA: Set auction status to "decrypted"
+          EMPA->>EMPA: Set auction status to "Decrypted"
       end
       EMPA-->UI: Return transaction result
   deactivate EMPA
