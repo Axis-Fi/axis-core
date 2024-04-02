@@ -48,14 +48,10 @@ library MaxPriorityQueue {
         self.nextBid[QUEUE_START] = QUEUE_END;
         self.prevBid[QUEUE_END] = QUEUE_START;
     }
-    
+
     // ========== HELPERS =========== //
 
-    function contains(Queue storage self, bytes32 value)
-        internal
-        view
-        returns (bool)
-    {
+    function contains(Queue storage self, bytes32 value) internal view returns (bool) {
         if (value == QUEUE_START) {
             return false;
         }
@@ -83,15 +79,19 @@ library MaxPriorityQueue {
         require(!contains(self, key), "bid already exists");
 
         // Confirm that the hint is higher priority than the new bid and has been in the queue at some point
-        require(isHigherPriorityThan(prevHint_, key) && (prevHint_ == QUEUE_START || self.prevBid[prevHint_] != bytes32(0)), "invalid hint");
+        require(
+            isHigherPriorityThan(prevHint_, key)
+                && (prevHint_ == QUEUE_START || self.prevBid[prevHint_] != bytes32(0)),
+            "invalid hint"
+        );
 
         // Use the hint as a starting point, find the exact spot to insert the new bid
         // Find the closest bid still in the queue with higher priority by traversing up the queue from the hint
         bytes32 anchor = prevHint_;
-        while (!contains(self, anchor)) {
+        while (anchor != QUEUE_START && !contains(self, anchor)) {
             anchor = self.prevBid[anchor];
         }
-        
+
         // Now, traverse down the queue from the anchor to find the correct spot to insert the new bid
         bytes32 follower = self.nextBid[anchor];
         while (isHigherPriorityThan(follower, key)) {
@@ -122,7 +122,7 @@ library MaxPriorityQueue {
         delete self.nextBid[maxKey];
         delete self.prevBid[maxKey];
         self.nextBid[QUEUE_START] = temp;
-        self.prevBid[temp] = QUEUE_START;
+        // self.prevBid[temp] = QUEUE_START;
 
         // Decrement the number of bids in the queue
         self.numBids--;
@@ -146,10 +146,7 @@ library MaxPriorityQueue {
 
     // ========= UTILITIES ========= //
 
-    function isHigherPriorityThan(
-        bytes32 alpha,
-        bytes32 beta
-    ) private pure returns (bool) {
+    function isHigherPriorityThan(bytes32 alpha, bytes32 beta) private pure returns (bool) {
         Bid memory a = alpha.decode();
         Bid memory b = beta.decode();
         uint256 relA = uint256(a.amountIn) * uint256(b.minAmountOut);

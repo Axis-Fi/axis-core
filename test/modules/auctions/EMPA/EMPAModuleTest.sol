@@ -302,9 +302,13 @@ abstract contract EmpaModuleTest is Test, Permit2User {
     function _decryptLot() internal {
         EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
         uint256 numBids = auctionData.nextBidId - 1;
+        bytes32[] memory hints = new bytes32[](100);
+        for (uint256 i = 0; i < 100; i++) {
+            hints[i] = bytes32(0x0000000000000000ffffffffffffffffffffffff000000000000000000000001);
+        }
         while (numBids > 0) {
             uint256 gasStart = gasleft();
-            _module.decryptAndSortBids(_lotId, 100);    
+            _module.decryptAndSortBids(_lotId, 100, hints);
             console2.log("Gas used for decrypts: ", gasStart - gasleft());
             if (numBids > 100) {
                 numBids -= 100;

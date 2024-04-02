@@ -151,7 +151,11 @@ contract LinearVestingEMPAIntegrationTest is AuctionHouseTest {
     }
 
     function _decryptLot() internal {
-        _empaModule.decryptAndSortBids(_lotId, 10);
+        bytes32[] memory hints = new bytes32[](10);
+        for (uint256 i = 0; i < 10; i++) {
+            hints[i] = bytes32(0x0000000000000000ffffffffffffffffffffffff000000000000000000000001);
+        }
+        _empaModule.decryptAndSortBids(_lotId, 10, hints);
     }
 
     modifier givenLotIsDecrypted() {
@@ -327,7 +331,9 @@ contract LinearVestingEMPAIntegrationTest is AuctionHouseTest {
         givenPrivateKeyIsSubmitted
     {
         // Decrypt bids
-        _empaModule.decryptAndSortBids(_lotId, 1);
+        bytes32[] memory hints = new bytes32[](1);
+        hints[0] = bytes32(0x0000000000000000ffffffffffffffffffffffff000000000000000000000001);
+        _empaModule.decryptAndSortBids(_lotId, 1, hints);
 
         // Check the auction
         EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData =

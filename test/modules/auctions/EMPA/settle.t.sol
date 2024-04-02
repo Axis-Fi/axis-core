@@ -746,7 +746,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
 
         // Marginal price: 2
         _expectedMarginalPrice = _scaleQuoteTokenAmount(2 * _BASE_SCALE);
-        _expectedMarginalBidId = 1000;
+        _expectedMarginalBidId = 2000;
 
         _expectedTotalIn = 10 * 2e18;
         _expectedTotalOut = 10 * 1e18;

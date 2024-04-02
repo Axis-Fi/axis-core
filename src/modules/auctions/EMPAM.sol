@@ -10,7 +10,7 @@ import {Veecode, toVeecode} from "src/modules/Modules.sol";
 // Libraries
 import {FixedPointMathLib as Math} from "lib/solmate/src/utils/FixedPointMathLib.sol";
 import {ECIES, Point} from "src/lib/ECIES.sol";
-import {MaxPriorityQueue, Queue} from "src/lib/MaxPriorityQueue2.sol";
+import {MaxPriorityQueue, Queue} from "src/lib/MaxPriorityQueue3.sol";
 
 contract EncryptedMarginalPriceAuctionModule is AuctionModule {
     using MaxPriorityQueue for Queue;
@@ -189,7 +189,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         data.publicKey = implParams.publicKey;
         data.nextBidId = 1;
 
-        // decryptedBids[lotId_].initialize();
+        decryptedBids[lotId_].initialize();
     }
 
     /// @inheritdoc AuctionModule
@@ -440,7 +440,11 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
     ///
     /// @param          lotId_          The lot ID of the auction to decrypt bids for
     /// @param          num_            The number of bids to decrypt. Reduced to the number remaining if greater.
-    function decryptAndSortBids(uint96 lotId_, uint64 num_, bytes32[] calldata sortHints_) external {
+    function decryptAndSortBids(
+        uint96 lotId_,
+        uint64 num_,
+        bytes32[] calldata sortHints_
+    ) external {
         // Check that lotId is valid
         _revertIfLotInvalid(lotId_);
         _revertIfBeforeLotStart(lotId_);
@@ -458,11 +462,15 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         _decryptAndSortBids(lotId_, num_, sortHints_);
     }
 
-    function _decryptAndSortBids(uint96 lotId_, uint64 num_, bytes32[] calldata sortHints_) internal {
+    function _decryptAndSortBids(
+        uint96 lotId_,
+        uint64 num_,
+        bytes32[] calldata sortHints_
+    ) internal {
         // Load next decrypt index and min bid size
         AuctionData storage lotBidData = auctionData[lotId_];
         uint64 nextDecryptIndex = lotBidData.nextDecryptIndex;
-        uint96 minBidSize = auctionData[lotId_].minBidSize;
+        // uint96 minBidSize = auctionData[lotId_].minBidSize;
 
         // Validate that the sort hints are the correct length
         if (sortHints_.length != num_) revert Auction_InvalidParams();
@@ -480,41 +488,8 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
             // Load encrypted bid
             uint64 bidId = bidIds[nextDecryptIndex + i];
 
-            // Decrypt the bid
-            uint96 amountOut;
-            {
-                uint256 result = _decrypt(lotId_, bidId, lotBidData.privateKey);
-
-                // Only set the amount out if it is less than or equal to the maximum value of a uint96
-                if (result <= type(uint96).max) {
-                    amountOut = uint96(result);
-                }
-            }
-
-            // Set bid status to decrypted
-            Bid storage bidData = bids[lotId_][bidId];
-            bidData.status = BidStatus.Decrypted;
-
-            // Only store the decrypt if the amount out is greater than or equal to the minimum bid size
-            if (amountOut > 0 && amountOut >= minBidSize) {
-                // Only store the decrypt if the price does not overflow
-                // We don't need to check for a zero bid price, because the smallest possible bid price is 1, due to the use of mulDivUp
-                // 1 * 10^6 / type(uint96).max = 1
-                if (
-                    Math.mulDivUp(
-                        uint256(bidData.amount),
-                        10 ** lotData[lotId_].baseTokenDecimals,
-                        uint256(amountOut)
-                    ) < type(uint96).max
-                ) {
-                    // Store the decrypt in the sorted bid queue and set the min amount out on the bid
-                    decryptedBids[lotId_].insert(sortHints_[i], bidId, bidData.amount, amountOut);
-                    bidData.minAmountOut = amountOut;
-                }
-            }
-
-            // Emit event
-            emit BidDecrypted(lotId_, bidId, bidData.amount, amountOut);
+            // Decrypt the bid and store the data in the queue, if applicable
+            _decrypt(lotId_, bidId, lotBidData.privateKey, sortHints_[i]);
         }
 
         // Increment next decrypt index
@@ -529,35 +504,69 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
     function _decrypt(
         uint96 lotId_,
         uint64 bidId_,
-        uint256 privateKey_
-    ) internal view returns (uint256 amountOut) {
-        // Load the encrypted bid data
-        EncryptedBid memory encryptedBid = encryptedBids[lotId_][bidId_];
-
+        uint256 privateKey_,
+        bytes32 sortHint_
+    ) internal {
         // Decrypt the message
         // We expect a salt calculated as the keccak256 hash of lot id, bidder, and amount to provide some (not total) uniqueness to the encryption, even if the same shared secret is used
         Bid storage bidData = bids[lotId_][bidId_];
-        uint256 message = ECIES.decrypt(
-            encryptedBid.encryptedAmountOut,
-            encryptedBid.bidPubKey,
-            privateKey_,
-            uint256(keccak256(abi.encodePacked(lotId_, bidData.bidder, bidData.amount)))
-        );
+        uint256 plaintext;
+        {
+            // Load the encrypted bid data
+            EncryptedBid memory encryptedBid = encryptedBids[lotId_][bidId_];
 
-        // Convert the message into the amount out
-        // We don't need larger than 16 bytes for a message
-        // To avoid attacks that check for leading zero values, encrypted bids should use a 128-bit random number
-        // as a seed to randomize the message. The seed should be the first 16 bytes.
-        // During encryption, we subtract the seed from the amount out to get a masked value.
-        // After decryption, we can combine them again (adding the seed to the masked value) and get the amount out
-        // This works due to the overflow/underflow properties of modular arithmetic
-        uint128 maskedValue = uint128(message);
-        uint128 seed = uint128(message >> 128);
+            uint256 message = ECIES.decrypt(
+                encryptedBid.encryptedAmountOut,
+                encryptedBid.bidPubKey,
+                privateKey_,
+                uint256(keccak256(abi.encodePacked(lotId_, bidData.bidder, bidData.amount)))
+            );
 
-        // We want to allow underflow here
-        unchecked {
-            amountOut = uint256(maskedValue + seed);
+            // Convert the message into the amount out
+            // We don't need larger than 16 bytes for a message
+            // To avoid attacks that check for leading zero values, encrypted bids should use a 128-bit random number
+            // as a seed to randomize the message. The seed should be the first 16 bytes.
+            // During encryption, we subtract the seed from the amount out to get a masked value.
+            // After decryption, we can combine them again (adding the seed to the masked value) and get the amount out
+            // This works due to the overflow/underflow properties of modular arithmetic
+            uint128 maskedValue = uint128(message);
+            uint128 seed = uint128(message >> 128);
+
+            // We want to allow underflow here
+            unchecked {
+                plaintext = uint256(maskedValue + seed);
+            }
         }
+
+        uint96 amountOut;
+        // Only set the amount out if it is less than or equal to the maximum value of a uint96
+        if (plaintext <= type(uint96).max) {
+            amountOut = uint96(plaintext);
+        }
+
+        // Set bid status to decrypted
+        bidData.status = BidStatus.Decrypted;
+
+        // Only store the decrypt if the amount out is greater than or equal to the minimum bid size
+        if (amountOut > 0 && amountOut >= auctionData[lotId_].minBidSize) {
+            // Only store the decrypt if the price does not overflow
+            // We don't need to check for a zero bid price, because the smallest possible bid price is 1, due to the use of mulDivUp
+            // 1 * 10^6 / type(uint96).max = 1
+            if (
+                Math.mulDivUp(
+                    uint256(bidData.amount),
+                    10 ** lotData[lotId_].baseTokenDecimals,
+                    uint256(amountOut)
+                ) < type(uint96).max
+            ) {
+                // Store the decrypt in the sorted bid queue and set the min amount out on the bid
+                decryptedBids[lotId_].insert(sortHint_, bidId_, bidData.amount, amountOut);
+                bidData.minAmountOut = amountOut;
+            }
+        }
+
+        // Emit event
+        emit BidDecrypted(lotId_, bidId_, bidData.amount, amountOut);
     }
 
     // ========== SETTLEMENT ========== //
@@ -619,13 +628,16 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
                 // There is no need to check if the bid is the minimum bid size, as this was checked during decryption
 
                 // Get bid info
-                uint64 bidId; uint96 amountIn; uint96 price;
+                uint64 bidId;
+                uint96 amountIn;
+                uint96 price;
                 {
                     uint256 gasStart = gasleft();
                     (bidId, amountIn, price) = _getNextBid(queue, baseScale);
-                    if (i % 100 == 0) console2.log("Gas used in _getNextBid: ", gasStart - gasleft());
+                    if (i % 100 == 0) {
+                        console2.log("Gas used in _getNextBid: ", gasStart - gasleft());
+                    }
                 }
-                
 
                 // If the price is below the minimum price, then determine a marginal price from the previous bids with the knowledge that no other bids will be considered
                 // This will also handle a zero price returned from `_getNextBid()`, since `minPrice` is always greater than zero
@@ -764,14 +776,13 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
             revert Auction_WrongState(lotId_);
         }
 
-
         MarginalPriceResult memory result;
         {
             uint256 gasStart = gasleft();
             result = _getLotMarginalPrice(lotId_);
             console2.log("Gas used for marginal price calculation: ", gasStart - gasleft());
         }
-         
+
         // Calculate marginal price and number of winning bids
         // Cache capacity and scaling values
         // Capacity is always in base token units for this auction type
