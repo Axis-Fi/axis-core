@@ -189,6 +189,7 @@ contract ClaimBidsTest is AuctionHouseTest {
         uint96 amountIn_,
         uint96 payout_
     ) {
+        // TODO shift to implementation
         _mockClaimBid(bidder_, referrer_, amountIn_, payout_);
 
         // Calculate fees

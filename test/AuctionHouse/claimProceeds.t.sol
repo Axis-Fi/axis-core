@@ -140,34 +140,15 @@ contract ClaimProceedsTest is AuctionHouseTest {
         _;
     }
 
-    function _mockClaimBid(
-        address bidder_,
-        address referrer_,
-        uint96 paid_,
-        uint96 payout_
-    ) internal {
-        _bidClaims.push(
-            Auction.BidClaim({bidder: bidder_, referrer: referrer_, paid: paid_, payout: payout_})
-        );
-    }
-
-    modifier givenMockClaimBidIsSet() {
-        vm.mockCall(
-            address(_auctionModule),
-            abi.encodeWithSelector(AuctionModule.claimBids.selector, _lotId, _bidIds),
-            abi.encode(_bidClaims, "")
-        );
-        _;
-    }
-
     /// @dev    Assumes that any amounts are scaled to the current decimal scale
     modifier givenPayoutIsSet(
+        uint64 bidId_,
         address bidder_,
         address referrer_,
         uint96 amountIn_,
         uint96 payout_
     ) {
-        _mockClaimBid(bidder_, referrer_, amountIn_, payout_);
+        _batchAuctionModule.addBidClaim(_lotId, bidId_, bidder_, referrer_, amountIn_, payout_);
         _;
     }
 
@@ -406,16 +387,16 @@ contract ClaimProceedsTest is AuctionHouseTest {
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT * 5))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT * 5))
         givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT * 5), "")
+        givenLotIsConcluded
+        givenLotSettlementIsFullCapacity
         givenPayoutIsSet(
+            1,
             _bidder,
             _REFERRER,
             _scaleQuoteTokenAmount(_BID_AMOUNT * 5),
             _scaleBaseTokenAmount(_BID_AMOUNT_OUT * 5)
         )
-        givenLotIsConcluded
-        givenLotSettlementIsFullCapacity
-        givenMockClaimBidIsSet
-        givenBidIsClaimed(_bidIds[0])
+        givenBidIsClaimed(1)
     {
         // Call function
         vm.prank(_SELLER);
@@ -449,16 +430,16 @@ contract ClaimProceedsTest is AuctionHouseTest {
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT * 5))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT * 5))
         givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT * 5), "")
+        givenLotIsConcluded
+        givenLotSettlementIsFullCapacity
         givenPayoutIsSet(
+            1,
             _bidder,
             _REFERRER,
             _scaleQuoteTokenAmount(_BID_AMOUNT * 5),
             _scaleBaseTokenAmount(_BID_AMOUNT_OUT * 5)
         )
-        givenLotIsConcluded
-        givenLotSettlementIsFullCapacity
-        givenMockClaimBidIsSet
-        givenBidIsClaimed(_bidIds[0])
+        givenBidIsClaimed(1)
     {
         // Call function
         vm.prank(_SELLER);
