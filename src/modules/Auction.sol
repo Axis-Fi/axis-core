@@ -42,15 +42,16 @@ abstract contract Auction {
 
     /// @notice     Core data for an auction lot
     ///
-    /// @param      start               The timestamp when the auction starts
-    /// @param      conclusion          The timestamp when the auction ends
-    /// @param      quoteTokenDecimals  The quote token decimals
-    /// @param      baseTokenDecimals   The base token decimals
-    /// @param      capacityInQuote     Whether or not the capacity is in quote tokens
-    /// @param      capacity            The capacity of the lot
-    /// @param      sold                The amount of base tokens sold
-    /// @param      purchased           The amount of quote tokens purchased
-    /// @param      partialPayout       The amount of partial payout (in base tokens)
+    /// @param      start                   The timestamp when the auction starts
+    /// @param      conclusion              The timestamp when the auction ends
+    /// @param      quoteTokenDecimals      The quote token decimals
+    /// @param      baseTokenDecimals       The base token decimals
+    /// @param      capacityInQuote         Whether or not the capacity is in quote tokens
+    /// @param      capacity                The capacity of the lot
+    /// @param      sold                    The amount of base tokens sold
+    /// @param      purchased               The amount of quote tokens purchased
+    /// @param      partialPayout           The amount of partial payout (in base tokens)
+    /// @param      claimableBidAmountOut   The amount of base tokens that can be claimed by bidders
     // TODO pack slots
     struct Lot {
         uint48 start; // 6 +
@@ -62,6 +63,7 @@ abstract contract Auction {
         uint96 sold;
         uint96 purchased;
         uint96 partialPayout;
+        uint96 claimableBidAmountOut;
     }
 
     /// @notice     Parameters when creating an auction lot
@@ -196,14 +198,13 @@ abstract contract Auction {
     ///             - Validate the lot parameters
     ///             - Update the lot data
     ///
-    /// @param      lotId_          The lot id
-    /// @return     purchased       The amount of quote tokens purchased
-    /// @return     sold            The amount of base tokens sold
-    /// @return     payoutSent      The amount of base tokens that have already been paid out
+    /// @param      lotId_                  The lot id
+    /// @return     purchased               The amount of quote tokens purchased
+    /// @return     claimableBidAmountOut   The amount of base tokens that can be claimed by bidders
     function claimProceeds(uint96 lotId_)
         external
         virtual
-        returns (uint96 purchased, uint96 sold, uint96 payoutSent);
+        returns (uint96 purchased, uint96 claimableBidAmountOut);
 
     // ========== AUCTION MANAGEMENT ========== //
 
@@ -642,7 +643,7 @@ abstract contract AuctionModule is Auction, Module {
         virtual
         override
         onlyInternal
-        returns (uint96 purchased, uint96 sold, uint96 payoutSent)
+        returns (uint96 purchased, uint96 claimableBidAmountOut)
     {
         // Standard validation
         _revertIfLotInvalid(lotId_);
@@ -657,14 +658,13 @@ abstract contract AuctionModule is Auction, Module {
     /// @dev        Auction modules should override this to perform any additional logic,
     ///             such as updating the lot data
     ///
-    /// @param      lotId_          The lot ID
-    /// @return     purchased       The amount of quote tokens purchased
-    /// @return     sold            The amount of base tokens sold
-    /// @return     payoutSent      The amount of base tokens that have already been paid out
+    /// @param      lotId_                  The lot ID
+    /// @return     purchased               The amount of quote tokens purchased
+    /// @return     claimableBidAmountOut   The amount of base tokens that can be claimed by bidders
     function _claimProceeds(uint96 lotId_)
         internal
         virtual
-        returns (uint96 purchased, uint96 sold, uint96 payoutSent);
+        returns (uint96 purchased, uint96 claimableBidAmountOut);
 
     // ========== AUCTION INFORMATION ========== //
 

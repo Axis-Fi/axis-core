@@ -123,7 +123,9 @@ contract MockBatchAuctionModule is AuctionModule {
     function _claimBids(
         uint96 lotId_,
         uint64[] calldata bidIds_
-    ) internal virtual override returns (BidClaim[] memory bidClaims, bytes memory auctionOutput) {}
+    ) internal virtual override returns (BidClaim[] memory bidClaims, bytes memory auctionOutput) {
+        // TODO implement bid claiming
+    }
 
     function setLotSettlement(uint96 lotId_, Settlement calldata settlement_) external {
         lotSettlements[lotId_] = settlement_;
@@ -133,6 +135,7 @@ contract MockBatchAuctionModule is AuctionModule {
         lot.purchased = uint96(settlement_.totalIn);
         lot.sold = uint96(settlement_.totalOut);
         lot.partialPayout = uint96(settlement_.pfPayout);
+        lot.claimableBidAmountOut = lot.sold - lot.partialPayout;
     }
 
     function _settle(uint96 lotId_) internal override returns (Settlement memory, bytes memory) {
@@ -142,12 +145,12 @@ contract MockBatchAuctionModule is AuctionModule {
         return (lotSettlements[lotId_], "");
     }
 
-    function _claimProceeds(uint96 lotId_) internal override returns (uint96, uint96, uint96) {
+    function _claimProceeds(uint96 lotId_) internal override returns (uint96, uint96) {
         // Update status
         lotStatus[lotId_] = Auction.Status.Claimed;
 
         Lot storage lot = lotData[lotId_];
-        return (lot.purchased, lot.sold, lot.partialPayout);
+        return (lot.purchased, lot.claimableBidAmountOut);
     }
 
     function getBid(uint96 lotId_, uint64 bidId_) external view returns (Bid memory bid_) {

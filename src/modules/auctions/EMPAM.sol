@@ -351,6 +351,9 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
             // Payout is calculated using the marginal price of the auction
             bidClaim.paid = bidData.amount;
             bidClaim.payout = uint96(Math.mulDivDown(bidClaim.paid, baseScale, marginalPrice));
+
+            // Reduce the amount out to claim
+            lotData[lotId_].claimableBidAmountOut -= bidClaim.payout;
         } else {
             // Bidder is refunded the paid amount and receives no payout
             bidClaim.paid = bidData.amount;
@@ -825,6 +828,9 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
             settlement_.totalIn = uint96(result.totalAmountIn);
             settlement_.totalOut =
                 uint96(result.capacityExpended > capacity ? capacity : result.capacityExpended);
+
+            // Cache the amount to be claimed
+            lotData[lotId_].claimableBidAmountOut = settlement_.totalOut - settlement_.pfPayout;
         } else {
             // Auction cannot be settled if we reach this point
             // Marginal price is set as the max uint96 for the auction so the system knows all bids should be refunded
@@ -840,7 +846,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
     function _claimProceeds(uint96 lotId_)
         internal
         override
-        returns (uint96 purchased, uint96 sold, uint96 payoutSent)
+        returns (uint96 purchased, uint96 claimableBidAmountOut)
     {
         // Update the status
         auctionData[lotId_].status = Auction.Status.Claimed;
@@ -849,7 +855,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         Lot memory lot = lotData[lotId_];
 
         // Return the required data
-        return (lot.purchased, lot.sold, lot.partialPayout);
+        return (lot.purchased, lot.claimableBidAmountOut);
     }
 
     // ========== AUCTION INFORMATION ========== //

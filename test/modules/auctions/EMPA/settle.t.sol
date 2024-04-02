@@ -126,6 +126,13 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
 
         EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
         assertEq(auctionData.marginalBidId, _expectedMarginalBidId, "marginalBidId");
+
+        Auction.Lot memory auctionLot = _getAuctionLot(_lotId);
+        assertEq(
+            auctionLot.claimableBidAmountOut,
+            _expectedTotalOut - _expectedPartialFillPayout,
+            "claimableBidAmountOut"
+        );
     }
 
     function _assertLot() internal {

@@ -575,7 +575,7 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
         _isLotValid(lotId_);
 
         // Call auction module to validate and update data
-        (uint96 purchased_, uint96 sold_, uint96 payoutSent_) =
+        (uint96 purchased_, uint96 claimableBidAmountOut) =
             _getModuleForId(lotId_).claimProceeds(lotId_);
 
         // Load data for the lot
@@ -600,8 +600,8 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
         _sendPayment(routing.seller, totalInLessFees, routing.quoteToken, routing.callbacks);
 
         // Refund any unused capacity and curator fees to the address dictated by the callbacks address
-        // By this stage, a partial payout (if applicable) and curator fees have been paid, leaving only the payout amount (`totalOut`) remaining.
-        uint96 prefundingRefund = routing.funding + payoutSent_ - sold_;
+        // At this point, any partial payout and curator fees have been paid out. Hence, the routing.funding value can only be composed of bids that have not been claimed, and any unused capacity to be refunded to the seller
+        uint96 prefundingRefund = routing.funding - claimableBidAmountOut;
         unchecked {
             routing.funding -= prefundingRefund;
         }
