@@ -5,6 +5,7 @@ EMPA is a fully on-chain, sealed-bid, batch auction system built on the Axis Pro
 ## User Features
 
 ### Sellers
+
 - Permissionlessly create sealed bid batch auctions, which improve execution over open bid auctions
 - Auctions can be created for any (non-weird) ERC20 token pair
 - Two transactions to create auction: 1. approve base token (if not already), 2. create auction
@@ -15,13 +16,16 @@ EMPA is a fully on-chain, sealed-bid, batch auction system built on the Axis Pro
 - System is on-chain and transparent
 
 ### Buyers
+
 - Permissionlessly place bids on any auction (assuming no allowlist)
 - Bids are encrypted. Protocol key service hides private key from everyone, even sellers, so that no one can peek at your bids until after the auction is over.
 - Settlement is permissionless
 - System is on-chain and transparent
 
 ## Components and Design Decisions
+
 This version of a sealed bid auction system has a few key properties that make it attractive:
+
 1. Maximally Permissionless. The entire auction process happens on-chain and can be executed without relying on our off-chain infrastructure.
 2. Transparent. All bids are encrypted and stored on-chain, but the bids are not decrypted until after the auction ends. This allows anyone to verify the bids and the settlement process.
 3. Simple. As an early version of the system, we wanted to get something out that isn't too difficult to build.
@@ -31,17 +35,21 @@ However, the user experience is not as good as an off-chain or hybrid system cou
 ### Smart Contracts
 
 #### Axis Protocol
+
 Axis enables arbitrary auction and derivative combinations in a single settlement contract (the AuctionHouse). For this particular solution, there are only 3 contracts required.
-  - Auction House
-  - EMPA (Auction Module)
-  - Vesting Module
+
+- Auction House
+- EMPA (Auction Module)
+- Vesting Module
 
 #### Permit2 Approvals
-Gasless for buyers after initial approval
+
+- Gasless for buyers after initial approval
 [Permit2](https://github.com/Uniswap/permit2): Signature-based approvals for any ERC20 token
-  - [Integration Guide](https://blog.uniswap.org/permit2-integration-guide)
+- [Integration Guide](https://blog.uniswap.org/permit2-integration-guide)
 
 ### Encryption Key Management
+
 What: Need to be able to encrypt bids and other data with a key that no interested party controls until the auction ends. This is to prevent insider dealing or other bad behavior.
 
 Solution: API and private database that creates EC keypairs and store the private key until an auction ends. If an auction is cancelled, the private key is never released.
@@ -53,7 +61,9 @@ The API will be written in Rust and the database will be a MongoDB instance foll
 In addition to the API, there will be a Rust service that watches for new auction creation events, checks whether the API provided the key, and stores the auction ID and conclusion timestamp in the database. This will allow the API to release the private key at the correct time. We need this service since we cannot be sure of the auction ID when a key is generated (it may be front-run by another transaction, for example).
 
 ### UI / dApp
+
 We will provide a user interface (aka dApp) for both Sellers and Buyers to interact with the product. The key user actions are defined below in the Actions section. The core pages we be:
+
 - List of auctions (TBD on design and filtering between statuses)
 - Create auction page - for sellers to create new auctions
 - Auction page - Details the status and available actions for a given auction. The auction page will need to support these differents states:
@@ -466,6 +476,7 @@ sequenceDiagram
 ## Marginal Price Settle Logic
 
 ### Terms
+
 - Capacity - total amount of base tokens offered for sale
 - Minimum Fill - minimum amount of base tokens that must be sold to settle auction
 - Minimum Price - minimum amount of quote tokens per base token that must be received to settle auction
@@ -474,6 +485,7 @@ sequenceDiagram
 - Marginal Bid ID - the last bid ID that settles at a given marginal price. if the marginal price is in between bids, then this will be zero.
 
 ### Goals
+
 1. Fill as much of the capacity as possible with valid bids (above minimum price and minimum size)
 2. Check for intermediate marginal prices that fill total capacity between bids to avoid large cliffs.
 3. If not able to fill total capacity, try to settle the auction at the minimum price with a portion of the capacity (must be greater than the minimum fill).
