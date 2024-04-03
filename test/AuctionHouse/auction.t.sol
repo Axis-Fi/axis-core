@@ -191,6 +191,49 @@ contract AuctionTest is AuctionHouseTest {
         Auctioneer.FeeData memory curation = _getLotFees(_lotId);
         assertEq(curation.curator, _CURATOR, "curator mismatch");
         assertEq(curation.curated, false, "curated mismatch");
+        assertEq(curation.curatorFee, 0, "curator fee mismatch");
+
+        // Auction module also updated
+        Auction.Lot memory lotData = _getLotData(_lotId);
+        assertEq(lotData.start, _startTime, "start mismatch");
+    }
+
+    function test_success_givenCuratorFeeIsSet()
+        external
+        whenAuctionTypeIsAtomic
+        whenAtomicAuctionModuleIsInstalled
+        givenCuratorMaxFeeIsSet
+        givenCuratorFeeIsSet
+    {
+        // Expect event to be emitted
+        vm.expectEmit(address(_auctionHouse));
+        emit AuctionCreated(0, wrapVeecode(_routingParams.auctionType, 1), _INFO_HASH);
+
+        // Create the auction
+        vm.prank(_SELLER);
+        _lotId = _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
+
+        // Assert values
+        Auctioneer.Routing memory routing = _getLotRouting(_lotId);
+        assertEq(
+            fromVeecode(routing.auctionReference),
+            fromVeecode(wrapVeecode(_routingParams.auctionType, 1)),
+            "auction type mismatch"
+        );
+        assertEq(routing.seller, _SELLER, "seller mismatch");
+        assertEq(address(routing.baseToken), address(_baseToken), "base token mismatch");
+        assertEq(address(routing.quoteToken), address(_quoteToken), "quote token mismatch");
+        assertEq(address(routing.callbacks), address(0), "callback mismatch");
+        assertEq(fromVeecode(routing.derivativeReference), "", "derivative type mismatch");
+        assertEq(routing.derivativeParams, "", "derivative params mismatch");
+        assertEq(routing.wrapDerivative, false, "wrap derivative mismatch");
+        assertEq(routing.funding, 0, "funding mismatch");
+
+        // Fees updated at the time of creation
+        Auctioneer.FeeData memory curation = _getLotFees(_lotId);
+        assertEq(curation.curator, _CURATOR, "curator mismatch");
+        assertEq(curation.curated, false, "curated mismatch");
+        assertEq(curation.curatorFee, _CURATOR_FEE_PERCENT, "curator fee mismatch");
 
         // Auction module also updated
         Auction.Lot memory lotData = _getLotData(_lotId);
