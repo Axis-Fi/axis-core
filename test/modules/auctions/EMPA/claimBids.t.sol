@@ -688,9 +688,17 @@ contract EmpaModuleClaimBidsTest is EmpaModuleTest {
         EncryptedMarginalPriceAuctionModule.Bid memory bidTwo = _getBid(_lotId, _bidIds[1]);
         assertEq(uint8(bidTwo.status), uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed));
 
+        // The amount out might not exactly match the lot capacity, due to rounding,
+        uint256 totalAmountOut =
+            FixedPointMathLib.mulDivDown(_BID_AMOUNT + bidAmountIn, _BASE_SCALE, marginalPrice);
+
         // Check the auction lot
         Auction.Lot memory auctionLot = _getAuctionLot(_lotId);
-        assertEq(auctionLot.claimableBidAmountOut, 0, "claimableBidAmountOut");
+        assertEq(
+            auctionLot.claimableBidAmountOut,
+            totalAmountOut - expectedAmountOutOne - expectedAmountOutTwo,
+            "claimableBidAmountOut"
+        );
     }
 
     function test_successfulBid_amountOut_fuzz(uint96 bidAmountOut_)
@@ -746,9 +754,17 @@ contract EmpaModuleClaimBidsTest is EmpaModuleTest {
         EncryptedMarginalPriceAuctionModule.Bid memory bidTwo = _getBid(_lotId, _bidIds[1]);
         assertEq(uint8(bidTwo.status), uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed));
 
+        // The amount out might not exactly match the lot capacity, due to rounding,
+        uint256 totalAmountOut =
+            FixedPointMathLib.mulDivDown(_BID_AMOUNT + bidAmountIn, _BASE_SCALE, marginalPrice);
+
         // Check the auction lot
         Auction.Lot memory auctionLot = _getAuctionLot(_lotId);
-        assertEq(auctionLot.claimableBidAmountOut, 0, "claimableBidAmountOut");
+        assertEq(
+            auctionLot.claimableBidAmountOut,
+            totalAmountOut - expectedAmountOutOne - expectedAmountOutTwo,
+            "claimableBidAmountOut"
+        );
     }
 
     function test_mixtureBids()
