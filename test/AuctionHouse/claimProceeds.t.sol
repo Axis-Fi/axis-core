@@ -41,8 +41,7 @@ contract ClaimProceedsTest is AuctionHouseTest {
 
     function _assertBaseTokenBalances(
         uint256 sellerBalance,
-        uint256 auctionHouseBalance,
-        uint256 curatorBalance
+        uint256 auctionHouseBalance
     ) internal {
         assertEq(
             _baseToken.balanceOf(_SELLER),
@@ -54,7 +53,7 @@ contract ClaimProceedsTest is AuctionHouseTest {
             auctionHouseBalance,
             "base token: auction house"
         );
-        assertEq(_baseToken.balanceOf(_CURATOR), curatorBalance, "base token: curator");
+        assertEq(_baseToken.balanceOf(_CURATOR), 0, "base token: curator");
 
         if (address(_callback) != address(0)) {
             assertEq(
@@ -275,12 +274,11 @@ contract ClaimProceedsTest is AuctionHouseTest {
         uint256 quoteTokenIn = 0;
         uint256 claimablePayout = 0;
         uint256 claimableRefund = _scaleQuoteTokenAmount(_BID_AMOUNT);
-        uint96 curatorFeeActual = 0;
-        uint256 unusedCapacity = _scaleBaseTokenAmount(_LOT_CAPACITY);
+        uint256 sellerBaseTokenBalance = _scaleBaseTokenAmount(_LOT_CAPACITY);
 
         // Assert balances
         _assertQuoteTokenBalances(quoteTokenIn, claimableRefund);
-        _assertBaseTokenBalances(unusedCapacity, claimablePayout, curatorFeeActual);
+        _assertBaseTokenBalances(sellerBaseTokenBalance, claimablePayout);
         _assertLotRouting(claimablePayout);
     }
 
@@ -304,12 +302,11 @@ contract ClaimProceedsTest is AuctionHouseTest {
 
         uint256 quoteTokenIn = _scaleQuoteTokenAmount(_BID_AMOUNT);
         uint256 claimablePayout = _scaleBaseTokenAmount(_BID_AMOUNT_OUT);
-        uint256 curatorFeeActual = 0;
-        uint256 unusedCapacity = _scaleBaseTokenAmount(_LOT_CAPACITY) - claimablePayout;
+        uint256 sellerBaseTokenBalance = _scaleBaseTokenAmount(_LOT_CAPACITY) - claimablePayout;
 
         // Assert balances
         _assertQuoteTokenBalances(quoteTokenIn, 0);
-        _assertBaseTokenBalances(unusedCapacity, claimablePayout, curatorFeeActual);
+        _assertBaseTokenBalances(sellerBaseTokenBalance, claimablePayout);
         _assertLotRouting(claimablePayout);
     }
 
@@ -379,13 +376,11 @@ contract ClaimProceedsTest is AuctionHouseTest {
 
         uint256 quoteTokenIn = _scaleQuoteTokenAmount(_BID_AMOUNT);
         uint256 claimablePayout = _scaleBaseTokenAmount(_BID_AMOUNT_OUT);
-        uint96 curatorFeeActual = _BID_AMOUNT_OUT * _curatorFeePercentActual / 1e5;
-        uint256 unusedCapacity =
-            _LOT_CAPACITY + _curatorMaxPotentialFee - _BID_AMOUNT_OUT - curatorFeeActual;
+        uint256 sellerBaseTokenBalance = _LOT_CAPACITY + _curatorMaxPotentialFee - claimablePayout;
 
         // Assert balances
         _assertQuoteTokenBalances(quoteTokenIn, 0);
-        _assertBaseTokenBalances(unusedCapacity, claimablePayout, curatorFeeActual);
+        _assertBaseTokenBalances(sellerBaseTokenBalance, claimablePayout);
         _assertLotRouting(claimablePayout);
     }
 
@@ -412,13 +407,11 @@ contract ClaimProceedsTest is AuctionHouseTest {
 
         uint256 quoteTokenIn = _scaleQuoteTokenAmount(_BID_AMOUNT);
         uint256 claimablePayout = _scaleBaseTokenAmount(_BID_AMOUNT_OUT);
-        uint96 curatorFeeActual = _BID_AMOUNT_OUT * _curatorFeePercentActual / 1e5;
-        uint256 unusedCapacity =
-            _LOT_CAPACITY + _curatorMaxPotentialFee - _BID_AMOUNT_OUT - curatorFeeActual;
+        uint256 sellerBaseTokenBalance = _LOT_CAPACITY + _curatorMaxPotentialFee - claimablePayout;
 
         // Assert balances
         _assertQuoteTokenBalances(quoteTokenIn, 0);
-        _assertBaseTokenBalances(unusedCapacity, claimablePayout, curatorFeeActual);
+        _assertBaseTokenBalances(sellerBaseTokenBalance, claimablePayout);
         _assertLotRouting(claimablePayout);
     }
 
@@ -538,12 +531,11 @@ contract ClaimProceedsTest is AuctionHouseTest {
 
         uint256 quoteTokenIn = _scaleQuoteTokenAmount(_BID_AMOUNT * 5);
         uint256 claimablePayout = _scaleBaseTokenAmount(_BID_AMOUNT_OUT * 5);
-        uint96 curatorFeeActual = 0;
-        uint256 unusedCapacity = 0;
+        uint256 sellerBaseTokenBalance = 0;
 
         // Assert balances
         _assertQuoteTokenBalances(quoteTokenIn, 0);
-        _assertBaseTokenBalances(unusedCapacity, claimablePayout, curatorFeeActual);
+        _assertBaseTokenBalances(sellerBaseTokenBalance, claimablePayout);
         _assertLotRouting(claimablePayout);
     }
 
@@ -585,12 +577,11 @@ contract ClaimProceedsTest is AuctionHouseTest {
 
         uint256 quoteTokenIn = _scaleQuoteTokenAmount(_BID_AMOUNT * 5);
         uint256 claimablePayout = _scaleBaseTokenAmount(_BID_AMOUNT_OUT * 5);
-        uint96 curatorFeeActual = _BID_AMOUNT_OUT * 5 * _curatorFeePercentActual / 1e5;
-        uint256 unusedCapacity = 0;
+        uint256 sellerBaseTokenBalance = 0;
 
         // Assert balances
         _assertQuoteTokenBalances(quoteTokenIn, 0);
-        _assertBaseTokenBalances(unusedCapacity, claimablePayout, curatorFeeActual);
+        _assertBaseTokenBalances(sellerBaseTokenBalance, claimablePayout);
         _assertLotRouting(claimablePayout);
     }
 
@@ -629,12 +620,11 @@ contract ClaimProceedsTest is AuctionHouseTest {
 
         uint256 quoteTokenIn = _scaleQuoteTokenAmount(_BID_AMOUNT * 5);
         uint256 claimablePayout = _scaleBaseTokenAmount(_BID_AMOUNT_OUT * 5);
-        uint96 curatorFeeActual = _BID_AMOUNT_OUT * 5 * _curatorFeePercentActual / 1e5;
-        uint256 unusedCapacity = 0;
+        uint256 sellerBaseTokenBalance = 0;
 
         // Assert balances
         _assertQuoteTokenBalances(quoteTokenIn, 0);
-        _assertBaseTokenBalances(unusedCapacity, claimablePayout, curatorFeeActual);
+        _assertBaseTokenBalances(sellerBaseTokenBalance, claimablePayout);
         _assertLotRouting(claimablePayout);
     }
 
@@ -674,12 +664,11 @@ contract ClaimProceedsTest is AuctionHouseTest {
         uint256 quoteTokenIn = _scaleQuoteTokenAmount(_BID_AMOUNT * 6 - _BID_AMOUNT_PARTIAL_REFUND);
         uint256 claimablePayout =
             _scaleBaseTokenAmount(_LOT_CAPACITY - _BID_AMOUNT_OUT_PARTIAL_PAYOUT);
-        uint96 curatorFeeActual = 0;
-        uint256 unusedCapacity = 0;
+        uint256 sellerBaseTokenBalance = 0;
 
         // Assert balances
         _assertQuoteTokenBalances(quoteTokenIn, 0);
-        _assertBaseTokenBalances(unusedCapacity, claimablePayout, curatorFeeActual);
+        _assertBaseTokenBalances(sellerBaseTokenBalance, claimablePayout);
         _assertLotRouting(claimablePayout);
     }
 
@@ -772,12 +761,11 @@ contract ClaimProceedsTest is AuctionHouseTest {
 
         uint256 quoteTokenIn = _scaleQuoteTokenAmount(_BID_AMOUNT * 5);
         uint256 claimablePayout = _scaleBaseTokenAmount(_BID_AMOUNT_OUT * 5);
-        uint96 curatorFeeActual = _BID_AMOUNT_OUT * 5 * _curatorFeePercentActual / 1e5;
-        uint256 unusedCapacity = 0;
+        uint256 sellerBaseTokenBalance = 0;
 
         // Assert balances
         _assertQuoteTokenBalances(quoteTokenIn, 0);
-        _assertBaseTokenBalances(unusedCapacity, claimablePayout, curatorFeeActual);
+        _assertBaseTokenBalances(sellerBaseTokenBalance, claimablePayout);
         _assertLotRouting(claimablePayout);
     }
 
@@ -816,12 +804,11 @@ contract ClaimProceedsTest is AuctionHouseTest {
 
         uint256 quoteTokenIn = _scaleQuoteTokenAmount(_BID_AMOUNT * 5);
         uint256 claimablePayout = _scaleBaseTokenAmount(_BID_AMOUNT_OUT * 5);
-        uint96 curatorFeeActual = _BID_AMOUNT_OUT * 5 * _curatorFeePercentActual / 1e5;
-        uint256 unusedCapacity = 0;
+        uint256 sellerBaseTokenBalance = 0;
 
         // Assert balances
         _assertQuoteTokenBalances(quoteTokenIn, 0);
-        _assertBaseTokenBalances(unusedCapacity, claimablePayout, curatorFeeActual);
+        _assertBaseTokenBalances(sellerBaseTokenBalance, claimablePayout);
         _assertLotRouting(claimablePayout);
     }
 
@@ -862,15 +849,13 @@ contract ClaimProceedsTest is AuctionHouseTest {
         vm.prank(_SELLER);
         _auctionHouse.claimProceeds(_lotId, bytes(""));
 
-        uint256 quoteTokenIn = _scaleQuoteTokenAmount(_BID_AMOUNT * 6 - _BID_AMOUNT_PARTIAL_REFUND);
-        uint256 claimablePayout =
-            _scaleBaseTokenAmount(_LOT_CAPACITY - _BID_AMOUNT_OUT_PARTIAL_PAYOUT);
-        uint96 curatorFeeActual = _LOT_CAPACITY * _curatorFeePercentActual / 1e5;
-        uint256 unusedCapacity = 0;
+        uint256 quoteTokenIn = _scaleQuoteTokenAmount(_BID_AMOUNT * 6);
+        uint256 claimablePayout = _scaleBaseTokenAmount(_LOT_CAPACITY);
+        uint256 sellerBaseTokenBalance = 0;
 
         // Assert balances
         _assertQuoteTokenBalances(quoteTokenIn, 0);
-        _assertBaseTokenBalances(unusedCapacity, claimablePayout, curatorFeeActual);
+        _assertBaseTokenBalances(sellerBaseTokenBalance, claimablePayout);
         _assertLotRouting(claimablePayout);
     }
 
@@ -910,15 +895,13 @@ contract ClaimProceedsTest is AuctionHouseTest {
         vm.prank(_SELLER);
         _auctionHouse.claimProceeds(_lotId, bytes(""));
 
-        uint256 quoteTokenIn = _scaleQuoteTokenAmount(_BID_AMOUNT * 6 - _BID_AMOUNT_PARTIAL_REFUND);
-        uint256 claimablePayout =
-            _scaleBaseTokenAmount(_LOT_CAPACITY - _BID_AMOUNT_OUT_PARTIAL_PAYOUT);
-        uint96 curatorFeeActual = _LOT_CAPACITY * _curatorFeePercentActual / 1e5;
-        uint256 unusedCapacity = 0;
+        uint256 quoteTokenIn = _scaleQuoteTokenAmount(_BID_AMOUNT * 6);
+        uint256 claimablePayout = _scaleBaseTokenAmount(_LOT_CAPACITY);
+        uint256 sellerBaseTokenBalance = 0;
 
         // Assert balances
         _assertQuoteTokenBalances(quoteTokenIn, 0);
-        _assertBaseTokenBalances(unusedCapacity, claimablePayout, curatorFeeActual);
+        _assertBaseTokenBalances(sellerBaseTokenBalance, claimablePayout);
         _assertLotRouting(claimablePayout);
     }
 
@@ -961,15 +944,13 @@ contract ClaimProceedsTest is AuctionHouseTest {
         vm.prank(_SELLER);
         _auctionHouse.claimProceeds(_lotId, bytes(""));
 
-        uint256 quoteTokenIn = _scaleQuoteTokenAmount(_BID_AMOUNT * 6 - _BID_AMOUNT_PARTIAL_REFUND);
-        uint256 claimablePayout =
-            _scaleBaseTokenAmount(_LOT_CAPACITY - _BID_AMOUNT_OUT_PARTIAL_PAYOUT);
-        uint96 curatorFeeActual = _LOT_CAPACITY * _curatorFeePercentActual / 1e5;
-        uint256 unusedCapacity = 0;
+        uint256 quoteTokenIn = _scaleQuoteTokenAmount(_BID_AMOUNT * 6);
+        uint256 claimablePayout = _scaleBaseTokenAmount(_LOT_CAPACITY);
+        uint256 sellerBaseTokenBalance = 0;
 
         // Assert balances
         _assertQuoteTokenBalances(quoteTokenIn, 0);
-        _assertBaseTokenBalances(unusedCapacity, claimablePayout, curatorFeeActual);
+        _assertBaseTokenBalances(sellerBaseTokenBalance, claimablePayout);
         _assertLotRouting(claimablePayout);
     }
 
@@ -1009,15 +990,13 @@ contract ClaimProceedsTest is AuctionHouseTest {
         vm.prank(_SELLER);
         _auctionHouse.claimProceeds(_lotId, bytes(""));
 
-        uint256 quoteTokenIn = _scaleQuoteTokenAmount(_BID_AMOUNT * 6 - _BID_AMOUNT_PARTIAL_REFUND);
-        uint256 claimablePayout =
-            _scaleBaseTokenAmount(_LOT_CAPACITY - _BID_AMOUNT_OUT_PARTIAL_PAYOUT);
-        uint96 curatorFeeActual = _LOT_CAPACITY * _curatorFeePercentActual / 1e5;
-        uint256 unusedCapacity = 0;
+        uint256 quoteTokenIn = _scaleQuoteTokenAmount(_BID_AMOUNT * 6);
+        uint256 claimablePayout = _scaleBaseTokenAmount(_LOT_CAPACITY);
+        uint256 sellerBaseTokenBalance = 0;
 
         // Assert balances
         _assertQuoteTokenBalances(quoteTokenIn, 0);
-        _assertBaseTokenBalances(unusedCapacity, claimablePayout, curatorFeeActual);
+        _assertBaseTokenBalances(sellerBaseTokenBalance, claimablePayout);
         _assertLotRouting(claimablePayout);
     }
 
@@ -1048,13 +1027,11 @@ contract ClaimProceedsTest is AuctionHouseTest {
 
         uint256 quoteTokenIn = _scaleQuoteTokenAmount(_BID_AMOUNT);
         uint256 claimablePayout = _scaleBaseTokenAmount(_BID_AMOUNT_OUT);
-        uint96 curatorFeeActual = _BID_AMOUNT_OUT * _curatorFeePercentActual / 1e5;
-        uint256 unusedCapacity =
-            _LOT_CAPACITY + _curatorMaxPotentialFee - _BID_AMOUNT_OUT - curatorFeeActual;
+        uint256 sellerBaseTokenBalance = _LOT_CAPACITY + _curatorMaxPotentialFee - claimablePayout;
 
         // Assert balances
         _assertQuoteTokenBalances(quoteTokenIn, 0);
-        _assertBaseTokenBalances(unusedCapacity, claimablePayout, curatorFeeActual);
+        _assertBaseTokenBalances(sellerBaseTokenBalance, claimablePayout);
         _assertLotRouting(claimablePayout);
 
         assertEq(_callback.lotClaimedProceeds(_lotId), true, "lotClaimedProceeds");
@@ -1088,13 +1065,11 @@ contract ClaimProceedsTest is AuctionHouseTest {
 
         uint256 quoteTokenIn = _scaleQuoteTokenAmount(_BID_AMOUNT);
         uint256 claimablePayout = _scaleBaseTokenAmount(_BID_AMOUNT_OUT);
-        uint96 curatorFeeActual = _BID_AMOUNT_OUT * _curatorFeePercentActual / 1e5;
-        uint256 unusedCapacity =
-            _LOT_CAPACITY + _curatorMaxPotentialFee - _BID_AMOUNT_OUT - curatorFeeActual;
+        uint256 sellerBaseTokenBalance = _LOT_CAPACITY + _curatorMaxPotentialFee - claimablePayout;
 
         // Assert balances
         _assertQuoteTokenBalances(quoteTokenIn, 0);
-        _assertBaseTokenBalances(unusedCapacity, claimablePayout, curatorFeeActual);
+        _assertBaseTokenBalances(sellerBaseTokenBalance, claimablePayout);
         _assertLotRouting(claimablePayout);
 
         assertEq(_callback.lotClaimedProceeds(_lotId), true, "lotClaimedProceeds");
@@ -1128,13 +1103,11 @@ contract ClaimProceedsTest is AuctionHouseTest {
 
         uint256 quoteTokenIn = _scaleQuoteTokenAmount(_BID_AMOUNT);
         uint256 claimablePayout = _scaleBaseTokenAmount(_BID_AMOUNT_OUT);
-        uint96 curatorFeeActual = _BID_AMOUNT_OUT * _curatorFeePercentActual / 1e5;
-        uint256 unusedCapacity =
-            _LOT_CAPACITY + _curatorMaxPotentialFee - _BID_AMOUNT_OUT - curatorFeeActual;
+        uint256 sellerBaseTokenBalance = _LOT_CAPACITY + _curatorMaxPotentialFee - claimablePayout;
 
         // Assert balances
         _assertQuoteTokenBalances(quoteTokenIn, 0);
-        _assertBaseTokenBalances(unusedCapacity, claimablePayout, curatorFeeActual);
+        _assertBaseTokenBalances(sellerBaseTokenBalance, claimablePayout);
         _assertLotRouting(claimablePayout);
 
         assertEq(_callback.lotClaimedProceeds(_lotId), true, "lotClaimedProceeds");

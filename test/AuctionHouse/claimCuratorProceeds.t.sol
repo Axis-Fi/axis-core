@@ -17,6 +17,12 @@ contract ClaimCuratorProceedsTest is AuctionHouseTest {
 //  [ ] it does not transfer any funds
 // [ ] given the capacity is not filled
 //  [ ] it calculates the curator payout based on the utilised capacity
+// [ ] given the seller has claimed proceeds
+//  [ ] given the bidders have claimed proceeds
+//   [ ] it calculates the curator payout based on the remaining capacity
+//  [ ] it calculates the curator payout based on the remaining capacity
+// [ ] given the bidders have claimed proceeds
+//  [ ] it calculates the curator payout based on the remaining capacity
 // [ ] when the caller is not the curator
 //  [ ] it transfers to the curator
 // [ ] when the caller is the curator
