@@ -9,13 +9,12 @@ import {EncryptedMarginalPriceAuctionModule} from "src/modules/auctions/EMPAM.so
 
 import {EmpaModuleTest} from "test/modules/auctions/EMPA/EMPAModuleTest.sol";
 
-import {BidEncoding, Bid as QueueBid} from "src/lib/MaxPriorityQueue4.sol";
+import {BidEncoding} from "src/lib/MaxPriorityQueue.sol";
 
 import {console2} from "forge-std/console2.sol";
 
 contract EmpaModuleSettleTest is EmpaModuleTest {
     using BidEncoding for bytes32;
-    using BidEncoding for QueueBid;
 
     uint96 internal constant _BID_PRICE_BELOW_ONE_AMOUNT = 1e18;
     uint96 internal constant _BID_PRICE_BELOW_ONE_AMOUNT_OUT = 2e18;
@@ -683,9 +682,8 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         _expectedMarginalBidId = 2;
 
         // These calculations mimic how the capacity usage is calculated in the settle function
-        uint256 baseTokensRequired = Math.mulDivDown(
-            bidOneAmount + bidTwoAmount, _BASE_SCALE, _expectedMarginalPrice
-        );
+        uint256 baseTokensRequired =
+            Math.mulDivDown(bidOneAmount + bidTwoAmount, _BASE_SCALE, _expectedMarginalPrice);
         uint256 bidTwoAmountOutFull =
             Math.mulDivDown(bidTwoAmount, _BASE_SCALE, _expectedMarginalPrice);
         uint256 bidTwoAmountOutOverflow = baseTokensRequired - _LOT_CAPACITY_OVERFLOW;
@@ -698,9 +696,8 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         uint96 bidOneAmountOutActual =
             _mulDivDown(bidOneAmount, _BASE_SCALE, _expectedMarginalPrice);
         uint96 bidTwoAmountOutActual = uint96(bidTwoAmountOutFull - bidTwoAmountOutOverflow);
-        uint96 bidTwoAmountInActual = uint96(
-            Math.mulDivUp(bidTwoAmount, bidTwoAmountOutActual, bidTwoAmountOutFull)
-        );
+        uint96 bidTwoAmountInActual =
+            uint96(Math.mulDivUp(bidTwoAmount, bidTwoAmountOutActual, bidTwoAmountOutFull));
 
         uint96 bidAmountInSuccess = bidOneAmountInActual + bidTwoAmountInActual;
         uint96 bidAmountInFail = bidTwoAmount - bidTwoAmountInActual;
@@ -825,7 +822,10 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
                 uint256 price = Math.mulDivUp(uint256(bid.amount), _BASE_SCALE, amountOut);
 
                 // Determine if the bid should be inserted into the queue
-                if (amountOut == 0 || amountOut < _minBidSize || price < _MIN_PRICE || price > type(uint96).max) {
+                if (
+                    amountOut == 0 || amountOut < _minBidSize || price < _MIN_PRICE
+                        || price > type(uint96).max
+                ) {
                     // Skip this bid
                     continue;
                 }
@@ -835,7 +835,8 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
 
                 // Iterate through the lot's decrypted bid from the queue start and find the correct position
                 // TODO: doesn't consider bids in this current batch and is brute-forcing to account for all situations
-                bytes32 prev = bytes32(0x0000000000000000ffffffffffffffffffffffff000000000000000000000001);
+                bytes32 prev =
+                    bytes32(0x0000000000000000ffffffffffffffffffffffff000000000000000000000001);
                 while (_module.getNextInQueue(_lotId, prev).isHigherPriorityThan(key)) {
                     prev = _module.getNextInQueue(_lotId, prev);
                 }
@@ -1379,7 +1380,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         _assertSettlement(settlement, auctionOutput);
     }
 
-    function test_largeNumberBidsBelowMinPrice_gasUsage() 
+    function test_largeNumberBidsBelowMinPrice_gasUsage()
         external
         givenLotIsCreated
         givenLotHasStarted

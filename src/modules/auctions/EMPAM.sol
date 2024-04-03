@@ -10,7 +10,7 @@ import {Veecode, toVeecode} from "src/modules/Modules.sol";
 // Libraries
 import {FixedPointMathLib as Math} from "lib/solmate/src/utils/FixedPointMathLib.sol";
 import {ECIES, Point} from "src/lib/ECIES.sol";
-import {MaxPriorityQueue, Queue} from "src/lib/MaxPriorityQueue4.sol";
+import {MaxPriorityQueue, Queue} from "src/lib/MaxPriorityQueue.sol";
 
 contract EncryptedMarginalPriceAuctionModule is AuctionModule {
     using MaxPriorityQueue for Queue;
@@ -500,10 +500,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         }
     }
 
-    function decryptBid(
-        uint96 lotId_,
-        uint64 bidId_
-    ) public view returns (uint256 amountOut) {
+    function decryptBid(uint96 lotId_, uint64 bidId_) public view returns (uint256 amountOut) {
         // Load the private key
         uint256 privateKey = auctionData[lotId_].privateKey;
 
@@ -539,11 +536,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         }
     }
 
-    function _decrypt(
-        uint96 lotId_,
-        uint64 bidId_,
-        bytes32 sortHint_
-    ) internal {
+    function _decrypt(uint96 lotId_, uint64 bidId_, bytes32 sortHint_) internal {
         // Decrypt the message
         Bid storage bidData = bids[lotId_][bidId_];
         uint256 plaintext = decryptBid(lotId_, bidId_);
@@ -563,13 +556,9 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
             // We don't need to check for a zero bid price, because the smallest possible bid price is 1, due to the use of mulDivUp
             // 1 * 10^6 / type(uint96).max = 1
             uint256 price = Math.mulDivUp(
-                uint256(bidData.amount),
-                10 ** lotData[lotId_].baseTokenDecimals,
-                uint256(amountOut)
+                uint256(bidData.amount), 10 ** lotData[lotId_].baseTokenDecimals, uint256(amountOut)
             );
-            if (
-                price < type(uint96).max && price >= uint256(auctionData[lotId_].minPrice)
-            ) {
+            if (price < type(uint96).max && price >= uint256(auctionData[lotId_].minPrice)) {
                 // Store the decrypt in the sorted bid queue and set the min amount out on the bid
                 decryptedBids[lotId_].insert(sortHint_, bidId_, bidData.amount, amountOut);
                 bidData.minAmountOut = amountOut;
