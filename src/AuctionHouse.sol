@@ -419,6 +419,8 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
         for (uint256 i = 0; i < bidClaimsLen; i++) {
             Auction.BidClaim memory bidClaim = bidClaims[i];
 
+            // TODO needs to be modified to handle a partial fill - payout and paid both
+
             // If payout is greater than zero, then the bid was filled.
             // Otherwise, it was not and the bidder is refunded the paid amount.
             if (bidClaim.payout > 0) {
