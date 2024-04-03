@@ -284,6 +284,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
     function _refundBid(
         uint96 lotId_,
         uint64 bidId_,
+        uint256 index_,
         address
     ) internal override returns (uint96 refund) {
         // Set bid status to claimed
@@ -291,14 +292,18 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
 
         // Remove bid from list of bids to decrypt
         uint64[] storage bidIds = auctionData[lotId_].bidIds;
+
+        // Validate that index is within bounds
         uint256 len = bidIds.length;
-        for (uint256 i; i < len; i++) {
-            if (bidIds[i] == bidId_) {
-                bidIds[i] = bidIds[len - 1];
-                bidIds.pop();
-                break;
-            }
-        }
+        if (index_ >= len) revert Auction_InvalidParams();
+
+        // Load the bid ID to remove and confirm it matches the provided one
+        uint64 bidId = bidIds[index_];
+        if (bidId != bidId_) revert Auction_InvalidParams();
+
+        // Remove the bid ID from the list
+        bidIds[index_] = bidIds[len - 1];
+        bidIds.pop();
 
         // Return the amount to be refunded
         return bids[lotId_][bidId_].amount;
@@ -877,6 +882,36 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
     /// @inheritdoc Auction
     function auctionType() external pure override returns (AuctionType) {
         return AuctionType.Batch;
+    }
+
+    function getBidIds(
+        uint96 lotId_,
+        uint256 startIndex_,
+        uint256 num_
+    ) external view returns (uint64[] memory) {
+        _revertIfLotInvalid(lotId_);
+
+        uint64[] storage bidIds = auctionData[lotId_].bidIds;
+        uint256 len = bidIds.length;
+
+        // Validate that start index is within bounds
+        if (startIndex_ >= len) revert Auction_InvalidParams();
+
+        // Calculate the number of bids to return
+        // Return the max of the number of bids remaining from the start index or the requested number
+        // This makes it easier to iterate over without needing to specify the number of bids remaining
+        uint256 remaining = len - startIndex_;
+        uint256 num = num_ > remaining ? remaining : num_;
+
+        // Initialize the array to return
+        uint64[] memory result = new uint64[](num);
+
+        // Load the bid IDs
+        for (uint256 i; i < num; i++) {
+            result[i] = bidIds[startIndex_ + i];
+        }
+
+        return result;
     }
 
     // ========== VALIDATION ========== //

@@ -97,7 +97,8 @@ abstract contract Router {
     ///
     /// @param      lotId_          Lot ID
     /// @param      bidId_          Bid ID
-    function refundBid(uint96 lotId_, uint64 bidId_) external virtual;
+    /// @param      index_          Index of the bid in the auction's bid list
+    function refundBid(uint96 lotId_, uint64 bidId_, uint256 index_) external virtual;
 
     /// @notice     Claim bid payouts and/or refunds after a batch auction has settled
     /// @dev        The implementing function must perform the following:
@@ -377,7 +378,11 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
     ///             - the lot ID is invalid
     ///             - the auction module reverts when cancelling the bid
     ///             - re-entrancy is detected
-    function refundBid(uint96 lotId_, uint64 bidId_) external override nonReentrant {
+    function refundBid(
+        uint96 lotId_,
+        uint64 bidId_,
+        uint256 index_
+    ) external override nonReentrant {
         _isLotValid(lotId_);
 
         // Transfer the quote token to the bidder
@@ -387,7 +392,7 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
             msg.sender,
             // Refund the bid on the auction module
             // The auction module is responsible for validating the bid and authorizing the caller
-            _getModuleForId(lotId_).refundBid(lotId_, bidId_, msg.sender),
+            _getModuleForId(lotId_).refundBid(lotId_, bidId_, index_, msg.sender),
             false
         );
 

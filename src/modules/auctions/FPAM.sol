@@ -159,7 +159,7 @@ contract FixedPriceAuctionModule is AuctionModule {
         revert Auction_NotImplemented();
     }
 
-    function _refundBid(uint96, uint64, address) internal pure override returns (uint96) {
+    function _refundBid(uint96, uint64, uint256, address) internal pure override returns (uint96) {
         revert Auction_NotImplemented();
     }
 

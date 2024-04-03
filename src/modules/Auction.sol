@@ -161,6 +161,7 @@ abstract contract Auction {
     function refundBid(
         uint96 lotId_,
         uint64 bidId_,
+        uint256 index_,
         address caller_
     ) external virtual returns (uint96 refund);
 
@@ -501,6 +502,7 @@ abstract contract AuctionModule is Auction, Module {
     function refundBid(
         uint96 lotId_,
         uint64 bidId_,
+        uint256 index_,
         address caller_
     ) external override onlyInternal returns (uint96 refund) {
         // Standard validation
@@ -512,7 +514,7 @@ abstract contract AuctionModule is Auction, Module {
         _revertIfLotConcluded(lotId_);
 
         // Call implementation-specific logic
-        return _refundBid(lotId_, bidId_, caller_);
+        return _refundBid(lotId_, bidId_, index_, caller_);
     }
 
     /// @notice     Implementation-specific bid refund logic
@@ -520,11 +522,13 @@ abstract contract AuctionModule is Auction, Module {
     ///
     /// @param      lotId_      The lot ID
     /// @param      bidId_      The bid ID
+    /// @param      index_      The index of the bid ID in the auction's bid list
     /// @param      caller_     The caller
     /// @return     refund   The amount of quote tokens to refund
     function _refundBid(
         uint96 lotId_,
         uint64 bidId_,
+        uint256 index_,
         address caller_
     ) internal virtual returns (uint96 refund);
 
