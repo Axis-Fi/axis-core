@@ -60,6 +60,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
     /// @notice        Struct containing auction-specific data
     ///
     /// @param         status              The status of the auction
+    /// @param         curatorPayoutClaimed Whether the curator payout has been claimed
     /// @param         nextBidId           The ID of the next bid to be submitted
     /// @param         nextDecryptIndex    The index of the next bid to decrypt
     /// @param         marginalPrice       The marginal price of the auction (determined at settlement, blank before)
@@ -74,7 +75,8 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         uint96 minFilled; // 12 +
         uint96 minBidSize; // 12 = 32 - end of slot 2
         Auction.Status status; // 1 +
-        uint64 marginalBidId; // 8 = 9 - end of slot 3
+        bool curatorPayoutClaimed; // 1 +
+        uint64 marginalBidId; // 8 = 10 - end of slot 3
         Point publicKey; // 64 - slots 4 and 5
         uint256 privateKey; // 32 - slot 6
         uint64[] bidIds; // slots 7+
@@ -157,7 +159,9 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         if (implParams.minPrice == 0) revert Auction_InvalidParams();
 
         // minFillPercent must be less than or equal to 100%
-        if (implParams.minFillPercent > _ONE_HUNDRED_PERCENT) revert Auction_InvalidParams();
+        if (implParams.minFillPercent > _ONE_HUNDRED_PERCENT) {
+            revert Auction_InvalidParams();
+        }
 
         // minBidPercent must be greater than or equal to the global min and less than or equal to 100%
         if (
@@ -168,7 +172,9 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         }
 
         // publicKey must be a valid point for the encryption library
-        if (!ECIES.isValid(implParams.publicKey)) revert Auction_InvalidParams();
+        if (!ECIES.isValid(implParams.publicKey)) {
+            revert Auction_InvalidParams();
+        }
 
         // Set auction data
         AuctionData storage data = auctionData[lotId_];
@@ -410,13 +416,17 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         _revertIfBeforeLotStart(lotId_);
 
         // Revert if the private key has already been verified and set
-        if (auctionData[lotId_].privateKey != 0) revert Auction_WrongState(lotId_);
+        if (auctionData[lotId_].privateKey != 0) {
+            revert Auction_WrongState(lotId_);
+        }
 
         // Check that the private key is valid for the public key
         // We assume that all public keys are derived from the same generator: (1, 2)
         Point memory calcPubKey = ECIES.calcPubKey(Point(1, 2), privateKey_);
         Point memory pubKey = auctionData[lotId_].publicKey;
-        if (calcPubKey.x != pubKey.x || calcPubKey.y != pubKey.y) revert Auction_InvalidKey();
+        if (calcPubKey.x != pubKey.x || calcPubKey.y != pubKey.y) {
+            revert Auction_InvalidKey();
+        }
 
         // Store the private key
         auctionData[lotId_].privateKey = privateKey_;
@@ -849,7 +859,12 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
     function _claimProceeds(uint96 lotId_)
         internal
         override
-        returns (uint96 purchased, uint96 sold, uint96 claimableBidAmountOut)
+        returns (
+            uint96 purchased,
+            uint96 sold,
+            uint96 claimableBidAmountOut,
+            bool curatorPayoutClaimed
+        )
     {
         // Update the status
         auctionData[lotId_].status = Auction.Status.Claimed;
@@ -858,7 +873,20 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         Lot memory lot = lotData[lotId_];
 
         // Return the required data
-        return (lot.purchased, lot.sold, lot.claimableBidAmountOut);
+        return (
+            lot.purchased,
+            lot.sold,
+            lot.claimableBidAmountOut,
+            auctionData[lotId_].curatorPayoutClaimed
+        );
+    }
+
+    /// @inheritdoc AuctionModule
+    function _claimCuratorPayout(uint96 lotId_) internal virtual override returns (uint96 sold) {
+        // Update the payout status
+        auctionData[lotId_].curatorPayoutClaimed = true;
+
+        return lotData[lotId_].sold;
     }
 
     // ========== AUCTION INFORMATION ========== //
@@ -931,12 +959,23 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
     }
 
     /// @inheritdoc AuctionModule
+    function _revertIfLotCuratorPayoutClaimed(uint96 lotId_) internal view virtual override {
+        if (auctionData[lotId_].curatorPayoutClaimed) {
+            revert Auction_WrongState(lotId_);
+        }
+    }
+
+    /// @inheritdoc AuctionModule
     function _revertIfBidInvalid(uint96 lotId_, uint64 bidId_) internal view override {
         // Bid ID must be less than number of bids for lot
-        if (bidId_ >= auctionData[lotId_].nextBidId) revert Auction_InvalidBidId(lotId_, bidId_);
+        if (bidId_ >= auctionData[lotId_].nextBidId) {
+            revert Auction_InvalidBidId(lotId_, bidId_);
+        }
 
         // Bid should have a bidder
-        if (bids[lotId_][bidId_].bidder == address(0)) revert Auction_InvalidBidId(lotId_, bidId_);
+        if (bids[lotId_][bidId_].bidder == address(0)) {
+            revert Auction_InvalidBidId(lotId_, bidId_);
+        }
     }
 
     /// @inheritdoc AuctionModule
@@ -946,7 +985,9 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         address caller_
     ) internal view override {
         // Check that sender is the bidder
-        if (caller_ != bids[lotId_][bidId_].bidder) revert NotPermitted(caller_);
+        if (caller_ != bids[lotId_][bidId_].bidder) {
+            revert NotPermitted(caller_);
+        }
     }
 
     /// @inheritdoc AuctionModule

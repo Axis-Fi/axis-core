@@ -6,14 +6,20 @@ import {Auctioneer} from "src/bases/Auctioneer.sol";
 
 import {AuctionHouseTest} from "test/AuctionHouse/AuctionHouseTest.sol";
 
-contract ClaimCuratorProceedsTest is AuctionHouseTest {
+contract ClaimCuratorPayoutTest is AuctionHouseTest {
 // [ ] when the lot id is invalid
 //  [ ] it reverts
 // [ ] when the auction has not concluded
 //  [ ] it reverts
+// [ ] when the auction has not been settled
+//  [ ] it reverts
 // [ ] when the auction module reverts
 //  [ ] it reverts
-// [ ] when the curator fee is zero
+// [ ] given the curator payout has already been claimed
+//  [ ] it reverts
+// [ ] given the lot is not curated
+//  [ ] it does not transfer any funds
+// [ ] given the curator fee is zero
 //  [ ] it does not transfer any funds
 // [ ] given the capacity is not filled
 //  [ ] it calculates the curator payout based on the utilised capacity

@@ -118,6 +118,8 @@ contract EmpaModuleClaimProceedsTest is EmpaModuleTest {
     //  [X] it reverts
     // [X] given the auction proceeds have been claimed
     //  [X] it reverts
+    // [ ] given the curator payout has been claimed
+    //  [ ] it returns true
     // [X] when the lot settlement is a partial fill
     //  [X] it updates the auction status to claimed, and returns the required information
     // [X] it updates the auction status to claimed, and returns the required information
@@ -207,13 +209,14 @@ contract EmpaModuleClaimProceedsTest is EmpaModuleTest {
     {
         // Call function
         vm.prank(address(_auctionHouse));
-        (uint256 purchased, uint256 sold, uint256 claimableBidAmountOut) =
-            _module.claimProceeds(_lotId);
+        (uint256 purchased, uint256 sold, uint256 claimableBidAmountOut, bool curatorPayoutClaimed_)
+        = _module.claimProceeds(_lotId);
 
         // Assert values
         assertEq(purchased, _expectedPurchased);
         assertEq(sold, _expectedSold);
         assertEq(claimableBidAmountOut, _expectedSold);
+        assertEq(curatorPayoutClaimed_, false);
     }
 
     function test_givenLotIsUnderCapacity()
@@ -228,12 +231,13 @@ contract EmpaModuleClaimProceedsTest is EmpaModuleTest {
     {
         // Call function
         vm.prank(address(_auctionHouse));
-        (uint256 purchased, uint256 sold, uint256 claimableBidAmountOut) =
-            _module.claimProceeds(_lotId);
+        (uint256 purchased, uint256 sold, uint256 claimableBidAmountOut, bool curatorPayoutClaimed)
+        = _module.claimProceeds(_lotId);
 
         // Assert values
         assertEq(purchased, _expectedPurchased);
         assertEq(sold, _expectedSold);
         assertEq(claimableBidAmountOut, _expectedSold - _expectedPartialPayout);
+        assertEq(curatorPayoutClaimed, false);
     }
 }

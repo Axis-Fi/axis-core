@@ -43,6 +43,8 @@ contract MockBatchAuctionModule is AuctionModule {
 
     mapping(uint96 => bool) public settled;
 
+    mapping(uint96 => bool) public lotCuratorPayoutClaimed;
+
     constructor(address _owner) AuctionModule(_owner) {
         minAuctionDuration = 1 days;
     }
@@ -184,12 +186,22 @@ contract MockBatchAuctionModule is AuctionModule {
         return (lotSettlements[lotId_], "");
     }
 
-    function _claimProceeds(uint96 lotId_) internal override returns (uint96, uint96, uint96) {
+    function _claimProceeds(uint96 lotId_)
+        internal
+        override
+        returns (uint96, uint96, uint96, bool)
+    {
         // Update status
         lotStatus[lotId_] = Auction.Status.Claimed;
 
         Lot storage lot = lotData[lotId_];
-        return (lot.purchased, lot.sold, lot.claimableBidAmountOut);
+        return (lot.purchased, lot.sold, lot.claimableBidAmountOut, lotCuratorPayoutClaimed[lotId_]);
+    }
+
+    function _claimCuratorPayout(uint96 lotId_) internal virtual override returns (uint96 sold) {
+        lotCuratorPayoutClaimed[lotId_] = true;
+
+        return lotData[lotId_].sold;
     }
 
     function getBid(uint96 lotId_, uint64 bidId_) external view returns (Bid memory bid_) {
@@ -238,6 +250,13 @@ contract MockBatchAuctionModule is AuctionModule {
     function _revertIfLotProceedsClaimed(uint96 lotId_) internal view virtual override {
         // Check that the lot has not been claimed
         if (lotStatus[lotId_] == Auction.Status.Claimed) {
+            revert Auction.Auction_InvalidParams();
+        }
+    }
+
+    function _revertIfLotCuratorPayoutClaimed(uint96 lotId_) internal view virtual override {
+        // Check that the lot has not been claimed
+        if (lotCuratorPayoutClaimed[lotId_] == true) {
             revert Auction.Auction_InvalidParams();
         }
     }

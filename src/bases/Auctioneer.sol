@@ -137,9 +137,6 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
     /// @notice     Mapping of lot IDs to their fee information
     mapping(uint96 lotId => FeeData) public lotFees;
 
-    /// @notice     Mapping of lot IDs to whether the curator has been paid
-    mapping(uint96 lotId => bool) public lotCuratorPaid;
-
     // ========== AUCTION MANAGEMENT ========== //
 
     /// @notice     Creates a new auction lot

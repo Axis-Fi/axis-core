@@ -47,7 +47,11 @@ contract MockAuctionModule is AuctionModule {
 
     function _settle(uint96 lotId_) internal override returns (Settlement memory, bytes memory) {}
 
-    function _claimProceeds(uint96 lotId_) internal override returns (uint96, uint96, uint96) {}
+    function _claimProceeds(uint96 lotId_)
+        internal
+        override
+        returns (uint96, uint96, uint96, bool)
+    {}
 
     function _refundBid(
         uint96 lotId_,
@@ -75,6 +79,10 @@ contract MockAuctionModule is AuctionModule {
     function _revertIfLotNotSettled(uint96 lotId_) internal view virtual override {}
 
     function _revertIfLotProceedsClaimed(uint96 lotId_) internal view virtual override {}
+
+    function _claimCuratorPayout(uint96 lotId_) internal virtual override returns (uint96 sold) {}
+
+    function _revertIfLotCuratorPayoutClaimed(uint96 lotId_) internal view virtual override {}
 }
 
 contract MockAuctionModuleV2 is MockAuctionModule {

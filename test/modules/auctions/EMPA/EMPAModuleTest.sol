@@ -375,6 +375,7 @@ abstract contract EmpaModuleTest is Test, Permit2User {
             uint96 minFilled_,
             uint96 minBidSize_,
             Auction.Status status_,
+            bool curatorPayoutClaimed_,
             uint64 marginalBidId_,
             Point memory publicKey_,
             uint256 privateKey_
@@ -388,6 +389,7 @@ abstract contract EmpaModuleTest is Test, Permit2User {
             minFilled: minFilled_,
             minBidSize: minBidSize_,
             status: status_,
+            curatorPayoutClaimed: curatorPayoutClaimed_,
             marginalBidId: marginalBidId_,
             publicKey: publicKey_,
             privateKey: privateKey_,

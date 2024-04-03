@@ -513,15 +513,15 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
         _isLotValid(lotId_);
 
         // Call auction module to validate and update data
-        (uint96 purchased_, uint96 sold_, uint96 claimableBidAmountOut_) =
-            _getModuleForId(lotId_).claimProceeds(lotId_);
+        (uint96 purchased_, uint96 sold_, uint96 claimableBidAmountOut_, bool curatorPayoutClaimed_)
+        = _getModuleForId(lotId_).claimProceeds(lotId_);
 
         // Load data for the lot
         Routing storage routing = lotRouting[lotId_];
 
         // Calculate the curator payout
         uint96 curatorFeePayout;
-        if (lotCuratorPaid[lotId_] == false) {
+        if (curatorPayoutClaimed_ == false) {
             FeeData storage feeData = lotFees[lotId_];
             curatorFeePayout = _calculatePayoutFees(feeData.curated, feeData.curatorFee, sold_);
         }
@@ -641,6 +641,41 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
 
         // Emit event that the lot is curated by the proposed curator
         emit Curated(lotId_, msg.sender);
+    }
+
+    /// @notice     Claim the curator proceeds for a lot
+    /// @dev        This function performs the following:
+    ///             - Validates the lot
+    ///             - Calculates the curator fee payout
+    ///             - Sends the payout to the curator
+    ///             - Decreases the funding amount
+    ///
+    ///             This function reverts if:
+    ///             - the lot ID is invalid
+    ///             - the curator payout has already been claimed
+    ///
+    /// @param      lotId_      Lot ID
+    function claimCuratorPayout(uint96 lotId_) external nonReentrant {
+        _isLotValid(lotId_);
+
+        // Validate and obtain the required data from the auction module
+        (uint96 sold_) = _getModuleForId(lotId_).claimCuratorPayout(lotId_);
+
+        FeeData storage feeData = lotFees[lotId_];
+
+        // Load routing data for the lot
+        Routing storage routing = lotRouting[lotId_];
+
+        // Calculate the curator payout
+        uint96 curatorFeePayout = _calculatePayoutFees(feeData.curated, feeData.curatorFee, sold_);
+
+        // Send the curator fee to the curator
+        _sendPayout(feeData.curator, curatorFeePayout, routing, bytes(""));
+
+        // Decrease the funding amount
+        unchecked {
+            routing.funding -= curatorFeePayout;
+        }
     }
 
     // ========== ADMIN FUNCTIONS ========== //
