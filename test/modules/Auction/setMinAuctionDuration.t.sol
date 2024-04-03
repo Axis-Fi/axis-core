@@ -1,0 +1,68 @@
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity 0.8.19;
+
+// Libraries
+import {Test} from "forge-std/Test.sol";
+
+// Mocks
+import {MockAuctionModule} from "test/modules/Auction/MockAuctionModule.sol";
+import {Permit2User} from "test/lib/permit2/Permit2User.sol";
+
+// Auctions
+import {AuctionModule} from "src/modules/Auction.sol";
+import {AuctionHouse} from "src/AuctionHouse.sol";
+
+// Modules
+import {Module} from "src/modules/Modules.sol";
+
+contract SetMinAuctionDurationTest is Test, Permit2User {
+    MockAuctionModule internal _mockAuctionModule;
+    AuctionHouse internal _auctionHouse;
+    address internal constant _PROTOCOL = address(0x2);
+
+    function setUp() external {
+        // Ensure the block timestamp is a sane value
+        vm.warp(1_000_000);
+
+        _auctionHouse = new AuctionHouse(address(this), _PROTOCOL, _permit2Address);
+        _mockAuctionModule = new MockAuctionModule(address(_auctionHouse));
+
+        _auctionHouse.installModule(_mockAuctionModule);
+    }
+
+    // [X] when the caller is not the auction house owner
+    //  [X] it reverts
+    // [X] when the caller is using execOnModule
+    //  [X] it sets the min auction duration
+    // [X] when the caller is the auction house
+    //  [X] it sets the min auction duration
+
+    function test_notOwner_reverts() public {
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(Module.Module_OnlyParent.selector, address(this));
+        vm.expectRevert(err);
+
+        // Call the function
+        _mockAuctionModule.setMinAuctionDuration(1);
+    }
+
+    function test_execOnModule() public {
+        // Call the function
+        _auctionHouse.execOnModule(
+            _mockAuctionModule.VEECODE(),
+            abi.encodeWithSelector(AuctionModule.setMinAuctionDuration.selector, 1)
+        );
+
+        // Check values
+        assertEq(_mockAuctionModule.minAuctionDuration(), 1);
+    }
+
+    function test_auctionHouse() public {
+        // Call the function
+        vm.prank(address(_auctionHouse));
+        _mockAuctionModule.setMinAuctionDuration(1);
+
+        // Check values
+        assertEq(_mockAuctionModule.minAuctionDuration(), 1);
+    }
+}

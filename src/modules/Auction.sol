@@ -272,6 +272,15 @@ abstract contract AuctionModule is Auction, Module {
     /// @notice     Get the auction type
     function auctionType() external pure virtual returns (AuctionType);
 
+    // ========== ADMIN FUNCTIONS ========== //
+
+    /// @notice     Set the minimum auction duration
+    /// @dev        This function must be called by the parent AuctionHouse, and
+    ///             can be called by governance using `execOnModule`.
+    function setMinAuctionDuration(uint48 duration_) external onlyParent {
+        minAuctionDuration = duration_;
+    }
+
     // ========== MODIFIERS ========== //
 
     /// @notice     Checks that `lotId_` is valid
