@@ -513,11 +513,21 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
         _isLotValid(lotId_);
 
         // Call auction module to validate and update data
-        (uint96 purchased_,, uint96 claimableBidAmountOut_) =
+        (uint96 purchased_, uint96 sold_, uint96 claimableBidAmountOut_) =
             _getModuleForId(lotId_).claimProceeds(lotId_);
 
         // Load data for the lot
         Routing storage routing = lotRouting[lotId_];
+
+        // Fetch the curator fee data
+        uint96 curatorFeePayout;
+        {
+            FeeData storage feeData = lotFees[lotId_];
+            curatorFeePayout = _calculatePayoutFees(
+                feeData.curated, feeData.curatorFee, sold_
+            );
+        }
+        // TODO flag if curator fee has been paid out
 
         // Calculate the referrer and protocol fees for the amount in
         // Fees are not allocated until the user claims their payout so that we don't have to iterate through them here
