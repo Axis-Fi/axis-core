@@ -114,6 +114,9 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
     /// @notice     Queue of decrypted bids for a lot (populated on decryption)
     mapping(uint96 lotId => Queue) public decryptedBids;
 
+    /// @notice     Settlement data for a lot
+    mapping(uint96 lotId => Settlement) public lotSettlements;
+
     // ========== SETUP ========== //
 
     constructor(address auctionHouse_) AuctionModule(auctionHouse_) {
@@ -878,6 +881,13 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         _revertIfLotInvalid(lotId_);
 
         return auctionData[lotId_];
+    }
+
+    function getSettlement(uint96 lotId_) external view returns (Settlement memory settlement) {
+        _revertIfLotInvalid(lotId_);
+        _revertIfLotNotSettled(lotId_);
+
+        return lotSettlements[lotId_];
     }
 
     /// @inheritdoc Auction

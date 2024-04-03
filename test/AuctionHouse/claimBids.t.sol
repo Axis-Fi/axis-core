@@ -30,6 +30,8 @@ contract ClaimBidsTest is AuctionHouseTest {
     //  [X] it reverts
     // [X] when the auction module reverts
     //  [X] it reverts
+    // [ ] when the paid and payout amounts are both set
+    //  [ ] it transfers the quote and base tokens to the bidder
     // [X] when the payout is not set
     //  [X] it returns the bid amount to the bidders
     // [X] when the referrer is set

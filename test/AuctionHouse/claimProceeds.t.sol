@@ -158,6 +158,12 @@ contract ClaimProceedsTest is AuctionHouseTest {
     //  [X] it reverts
     // [X] given it is not a batch auction
     //  [X] it reverts
+    // [ ] when protocol fees are not set
+    //  [ ] it transfers the entire payment - referrer fees to the seller
+    // [ ] when referrer fees are not set
+    //  [ ] it transfers the entire payment - protocol fees to the seller
+    // [ ] when protocol and referrer fees are not set
+    //  [ ] it transfers the entire payment to the seller
     // [X] given the lot did not settle
     //  [X] it sends the unused capacity to the seller, and marks the lot as claimed
     // [X] given the lot has a partial fill

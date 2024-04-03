@@ -133,6 +133,15 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
             _expectedTotalOut - _expectedPartialFillPayout,
             "claimableBidAmountOut"
         );
+
+        // Ensure that the stored settlement data is correct
+        Auction.Settlement memory storedSettlement = _getLotSettlement(_lotId);
+        assertEq(storedSettlement.totalIn, _expectedTotalIn, "stored totalIn");
+        assertEq(storedSettlement.totalOut, _expectedTotalOut, "stored totalOut");
+        assertEq(storedSettlement.pfBidder, _expectedPartialFillBidder, "stored pfBidder");
+        assertEq(storedSettlement.pfReferrer, _expectedPartialFillReferrer, "stored pfReferrer");
+        assertEq(storedSettlement.pfRefund, _expectedPartialFillRefund, "stored pfRefund");
+        assertEq(storedSettlement.pfPayout, _expectedPartialFillPayout, "stored pfPayout");
     }
 
     function _assertLot() internal {

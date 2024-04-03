@@ -43,6 +43,8 @@ contract EmpaModuleClaimBidsTest is EmpaModuleTest {
     //  [X] it reverts
     // [X] when the caller is not the parent
     //  [X] it reverts
+    // [ ] given the bid is a partial fill
+    //  [ ] it returns the correct paid and payout amounts
     // [X] given the minAmountOut is 0
     //  [X] it refunds the bid
     // [X] given the bids have different outcomes
