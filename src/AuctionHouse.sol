@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.19;
 
-import {ERC20} from "lib/solmate/src/tokens/ERC20.sol";
+import {ERC20} from "solmate/tokens/ERC20.sol";
 import {Transfer} from "src/lib/Transfer.sol";
-import {FixedPointMathLib as Math} from "lib/solmate/src/utils/FixedPointMathLib.sol";
 
 import {Auctioneer} from "src/bases/Auctioneer.sol";
 import {FeeManager} from "src/bases/FeeManager.sol";
@@ -470,11 +469,8 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
         // Reverts if the auction cannot be settled yet
         AuctionModule module = _getModuleForId(lotId_);
 
-        // Store the capacity before settling
-        uint96 capacity = module.remainingCapacity(lotId_);
-
         // Settle the auction
-        (Auction.Settlement memory settlement, bytes memory auctionOutput) = module.settle(lotId_);
+        (Auction.Settlement memory settlement,) = module.settle(lotId_);
 
         // Check if the auction settled
         // If so, calculate fees, handle partial bid, transfer proceeds + (possible) refund to seller, and curator fee
@@ -491,64 +487,6 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
                 Keycode auctionKeycode = keycodeFromVeecode(routing.auctionReference);
                 feeData.protocolFee = fees[auctionKeycode].protocol;
                 feeData.referrerFee = fees[auctionKeycode].referrer;
-            }
-
-            uint96 curatorFeePayout =
-                _calculatePayoutFees(feeData.curated, feeData.curatorFee, capacity);
-
-            // settle() is for batch auctions only, and all batch auctions are prefunded.
-            // Payout has already been collected at the time of auction creation and curation
-
-            // Check if there was a partial fill and handle the payout + refund
-            if (settlement.pfBidder != address(0)) {
-                // Allocate quote and protocol fees for bid
-                _allocateQuoteFees(
-                    feeData.protocolFee,
-                    feeData.referrerFee,
-                    settlement.pfReferrer,
-                    routing.seller,
-                    routing.quoteToken,
-                    // Reconstruct bid amount from the settlement price and the amount out
-                    uint96(
-                        Math.mulDivDown(
-                            settlement.pfPayout, settlement.totalIn, settlement.totalOut
-                        )
-                    )
-                );
-
-                // Reduce funding by the payout amount
-                unchecked {
-                    routing.funding -= uint96(settlement.pfPayout);
-                }
-
-                // Send refund and payout to the bidder
-                Transfer.transfer(
-                    routing.quoteToken, settlement.pfBidder, settlement.pfRefund, false
-                );
-                _sendPayout(settlement.pfBidder, settlement.pfPayout, routing, auctionOutput);
-            }
-
-            // If the lot is under capacity, adjust the curator payout
-            if (settlement.totalOut < capacity && curatorFeePayout > 0) {
-                uint96 capacityRefund;
-                unchecked {
-                    capacityRefund = capacity - settlement.totalOut;
-                }
-
-                uint96 feeRefund =
-                    uint96(Math.mulDivDown(curatorFeePayout, capacityRefund, capacity));
-                // Can't be more than curatorFeePayout
-                unchecked {
-                    curatorFeePayout -= feeRefund;
-                }
-            }
-
-            // Reduce funding by curator fee and send, if applicable
-            if (curatorFeePayout > 0) {
-                unchecked {
-                    routing.funding -= curatorFeePayout;
-                }
-                _sendPayout(feeData.curator, curatorFeePayout, routing, auctionOutput);
             }
         }
 
