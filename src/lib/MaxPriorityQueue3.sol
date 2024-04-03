@@ -27,10 +27,7 @@ struct Queue {
     mapping(bytes32 => bytes32) nextBid;
 }
 
-/// @notice This library implements a max priority queue using an ordered array.
-/// @dev    Insert operations are less efficient than a heap implementation, but
-///         the queue is sorted after an insert and can be inspected in place.
-///         Binary heap implementations only guarantee the top element is sorted.
+/// @notice This library implements a max priority queue using a doubly linked list
 library MaxPriorityQueue {
     using BidEncoding for Bid;
     using BidEncoding for bytes32;

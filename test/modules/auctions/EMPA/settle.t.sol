@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.19;
 
-import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
+import {FixedPointMathLib as Math} from "solmate/utils/FixedPointMathLib.sol";
 
 import {Module} from "src/modules/Modules.sol";
 import {Auction} from "src/modules/Auction.sol";
@@ -9,9 +9,14 @@ import {EncryptedMarginalPriceAuctionModule} from "src/modules/auctions/EMPAM.so
 
 import {EmpaModuleTest} from "test/modules/auctions/EMPA/EMPAModuleTest.sol";
 
+import {BidEncoding, Bid as QueueBid} from "src/lib/MaxPriorityQueue4.sol";
+
 import {console2} from "forge-std/console2.sol";
 
 contract EmpaModuleSettleTest is EmpaModuleTest {
+    using BidEncoding for bytes32;
+    using BidEncoding for QueueBid;
+
     uint96 internal constant _BID_PRICE_BELOW_ONE_AMOUNT = 1e18;
     uint96 internal constant _BID_PRICE_BELOW_ONE_AMOUNT_OUT = 2e18;
     uint96 internal constant _BID_PRICE_ONE_AMOUNT = 1e18;
@@ -678,11 +683,11 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         _expectedMarginalBidId = 2;
 
         // These calculations mimic how the capacity usage is calculated in the settle function
-        uint256 baseTokensRequired = FixedPointMathLib.mulDivDown(
+        uint256 baseTokensRequired = Math.mulDivDown(
             bidOneAmount + bidTwoAmount, _BASE_SCALE, _expectedMarginalPrice
         );
         uint256 bidTwoAmountOutFull =
-            FixedPointMathLib.mulDivDown(bidTwoAmount, _BASE_SCALE, _expectedMarginalPrice);
+            Math.mulDivDown(bidTwoAmount, _BASE_SCALE, _expectedMarginalPrice);
         uint256 bidTwoAmountOutOverflow = baseTokensRequired - _LOT_CAPACITY_OVERFLOW;
 
         // Output
@@ -694,7 +699,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
             _mulDivDown(bidOneAmount, _BASE_SCALE, _expectedMarginalPrice);
         uint96 bidTwoAmountOutActual = uint96(bidTwoAmountOutFull - bidTwoAmountOutOverflow);
         uint96 bidTwoAmountInActual = uint96(
-            FixedPointMathLib.mulDivUp(bidTwoAmount, bidTwoAmountOutActual, bidTwoAmountOutFull)
+            Math.mulDivUp(bidTwoAmount, bidTwoAmountOutActual, bidTwoAmountOutFull)
         );
 
         uint96 bidAmountInSuccess = bidOneAmountInActual + bidTwoAmountInActual;
@@ -732,10 +737,30 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         _;
     }
 
-    modifier givenLargeNumberOfFilledBids() {
-        // Create 2000 bids that will fill capacity
+    modifier givenLargeNumberOfBidsBelowMinPrice() {
+        // Create 10 bids that will fill capacity
+        for (uint256 i; i < 10; i++) {
+            _createBid(2e18, 1e18);
+        }
+
+        // Create more bids that are below the min price
         for (uint256 i; i < 2000; i++) {
-            _createBid(1e16, 5e15);
+            _createBid(9e17, 1e18);
+        }
+
+        // Marginal price: 2
+        _expectedMarginalPrice = _scaleQuoteTokenAmount(2 * _BASE_SCALE);
+        _expectedMarginalBidId = 10;
+
+        _expectedTotalIn = 10 * 2e18;
+        _expectedTotalOut = 10 * 1e18;
+        _;
+    }
+
+    modifier givenLargeNumberOfFilledBids() {
+        // Create 2500 bids that will fill capacity
+        for (uint256 i; i < 2500; i++) {
+            _createBid(8e15, 4e15);
         }
 
         // Create more bids that will not be filled
@@ -746,7 +771,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
 
         // Marginal price: 2
         _expectedMarginalPrice = _scaleQuoteTokenAmount(2 * _BASE_SCALE);
-        _expectedMarginalBidId = 2000;
+        _expectedMarginalBidId = 2500;
 
         _expectedTotalIn = 10 * 2e18;
         _expectedTotalOut = 10 * 1e18;
@@ -771,6 +796,65 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
 
         _expectedTotalIn = 10 * 2e18;
         _expectedTotalOut = 10 * 1e18;
+        _;
+    }
+
+    modifier givenLotIsDecryptedOptimally() {
+        // Assumes that no bids are cancelled so numBids == auctionData.bidIds.length
+        EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
+        uint256 numBids = auctionData.nextBidId - 1;
+        uint256 decryptsAtOnce = 20;
+        bytes32[] memory hints = new bytes32[](decryptsAtOnce);
+        uint256 totalDecryptGas;
+        while (numBids > 0) {
+            // Refresh auction data
+            auctionData = _getAuctionData(_lotId);
+
+            uint64 nextDecryptIndex = auctionData.nextDecryptIndex;
+
+            for (uint256 i = 0; i < (numBids < decryptsAtOnce ? numBids : decryptsAtOnce); i++) {
+                // Get the bidId to decrypt
+                uint64 bidId = _module.getBidIdAtIndex(_lotId, nextDecryptIndex + i);
+
+                // Load the bid
+                EncryptedMarginalPriceAuctionModule.Bid memory bid = _getBid(_lotId, bidId);
+
+                // Decrypt the bid
+                uint256 amountOut = _module.decryptBid(_lotId, bidId);
+
+                uint256 price = Math.mulDivUp(uint256(bid.amount), _BASE_SCALE, amountOut);
+
+                // Determine if the bid should be inserted into the queue
+                if (amountOut == 0 || amountOut < _minBidSize || price < _MIN_PRICE || price > type(uint96).max) {
+                    // Skip this bid
+                    continue;
+                }
+
+                // Encode the bid as a key for the queue
+                bytes32 key = BidEncoding.encode(bidId, bid.amount, uint96(amountOut));
+
+                // Iterate through the lot's decrypted bid from the queue start and find the correct position
+                // TODO: doesn't consider bids in this current batch and is brute-forcing to account for all situations
+                bytes32 prev = bytes32(0x0000000000000000ffffffffffffffffffffffff000000000000000000000001);
+                while (_module.getNextInQueue(_lotId, prev).isHigherPriorityThan(key)) {
+                    prev = _module.getNextInQueue(_lotId, prev);
+                }
+
+                // Add the hint to the list
+                hints[i] = prev;
+            }
+
+            uint256 gasStart = gasleft();
+            _module.decryptAndSortBids(_lotId, uint64(decryptsAtOnce), hints);
+            console2.log("Gas used for decrypts: ", gasStart - gasleft());
+            totalDecryptGas += gasStart - gasleft();
+            if (numBids > decryptsAtOnce) {
+                numBids -= decryptsAtOnce;
+            } else {
+                numBids = 0;
+            }
+        }
+        console2.log("Total gas used for decrypts: ", totalDecryptGas);
         _;
     }
 
@@ -1284,8 +1368,30 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         // Call function
         uint256 gasBefore = gasleft();
         (Auction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
-        uint256 gasAfter = gasleft();
-        console2.log("gas used", gasBefore - gasAfter);
+        console2.log("Total gas used for settlement:", gasBefore - gasleft());
+
+        // Validate auction data
+        EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
+        assertEq(auctionData.marginalPrice, _expectedMarginalPrice, "marginalPrice");
+        assertEq(uint8(auctionData.status), uint8(Auction.Status.Settled), "status");
+
+        // Assert settlement
+        _assertSettlement(settlement, auctionOutput);
+    }
+
+    function test_largeNumberBidsBelowMinPrice_gasUsage() 
+        external
+        givenLotIsCreated
+        givenLotHasStarted
+        givenLargeNumberOfBidsBelowMinPrice
+        givenLotHasConcluded
+        givenPrivateKeyIsSubmitted
+        givenLotIsDecrypted
+    {
+        // Call function
+        uint256 gasBefore = gasleft();
+        (Auction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
+        console2.log("Total gas used for settlement:", gasBefore - gasleft());
 
         // Validate auction data
         EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
@@ -1308,8 +1414,30 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         // Call function
         uint256 gasBefore = gasleft();
         (Auction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
-        uint256 gasAfter = gasleft();
-        console2.log("gas used", gasBefore - gasAfter);
+        console2.log("Total gas used for settlement:", gasBefore - gasleft());
+
+        // Validate auction data
+        EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
+        assertEq(auctionData.marginalPrice, _expectedMarginalPrice, "marginalPrice");
+        assertEq(uint8(auctionData.status), uint8(Auction.Status.Settled), "status");
+
+        // Assert settlement
+        _assertSettlement(settlement, auctionOutput);
+    }
+
+    function test_largeNumberOfFilledBids_optimalDecryption_gasUsage()
+        external
+        givenLotIsCreated
+        givenLotHasStarted
+        givenLargeNumberOfFilledBids
+        givenLotHasConcluded
+        givenPrivateKeyIsSubmitted
+        givenLotIsDecryptedOptimally
+    {
+        // Call function
+        uint256 gasBefore = gasleft();
+        (Auction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
+        console2.log("Total gas used for settlement:", gasBefore - gasleft());
 
         // Validate auction data
         EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
@@ -1333,7 +1461,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         uint256 gasBefore = gasleft();
         (Auction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
         uint256 gasAfter = gasleft();
-        console2.log("gas used", gasBefore - gasAfter);
+        console2.log("Total gas used for settlement:", gasBefore - gasAfter);
 
         // Validate auction data
         EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
