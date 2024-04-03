@@ -99,6 +99,7 @@ contract MockBatchAuctionModule is AuctionModule {
     function _refundBid(
         uint96 lotId_,
         uint64 bidId_,
+        uint256 index_,
         address
     ) internal virtual override returns (uint96 refundAmount) {
         // Cancel the bid
@@ -109,12 +110,9 @@ contract MockBatchAuctionModule is AuctionModule {
 
         // Remove from bid id array
         uint256 len = bidIds.length;
-        for (uint256 i = 0; i < len; i++) {
-            if (bidIds[i] == bidId_) {
-                bidIds[i] = bidIds[len - 1];
-                bidIds.pop();
-                break;
-            }
+        if (len != 0 && index_ < len) {
+            bidIds[index_] = bidIds[len - 1];
+            bidIds.pop();
         }
 
         return bidData[lotId_][bidId_].amount;

@@ -12,7 +12,7 @@ contract RefundBidTest is AuctionHouseTest {
 
     modifier givenBidIsRefunded() {
         vm.prank(_bidder);
-        _auctionHouse.refundBid(_lotId, _bidId);
+        _auctionHouse.refundBid(_lotId, _bidId, 0);
         _;
     }
 
@@ -37,7 +37,7 @@ contract RefundBidTest is AuctionHouseTest {
 
         // Call the function
         vm.prank(_bidder);
-        _auctionHouse.refundBid(_lotId, _bidId);
+        _auctionHouse.refundBid(_lotId, _bidId, 0);
     }
 
     function test_invalidAuctionType_reverts()
@@ -52,7 +52,7 @@ contract RefundBidTest is AuctionHouseTest {
 
         // Call the function
         vm.prank(_bidder);
-        _auctionHouse.refundBid(_lotId, _bidId);
+        _auctionHouse.refundBid(_lotId, _bidId, 0);
     }
 
     function test_lotConcluded_reverts()
@@ -73,7 +73,7 @@ contract RefundBidTest is AuctionHouseTest {
 
         // Call the function
         vm.prank(_bidder);
-        _auctionHouse.refundBid(_lotId, _bidId);
+        _auctionHouse.refundBid(_lotId, _bidId, 0);
     }
 
     function test_givenBidDoesNotExist_reverts()
@@ -91,7 +91,7 @@ contract RefundBidTest is AuctionHouseTest {
 
         // Call the function
         vm.prank(_bidder);
-        _auctionHouse.refundBid(_lotId, _bidId);
+        _auctionHouse.refundBid(_lotId, _bidId, 0);
     }
 
     function test_givenBidRefunded_reverts()
@@ -113,7 +113,7 @@ contract RefundBidTest is AuctionHouseTest {
 
         // Call the function
         vm.prank(_bidder);
-        _auctionHouse.refundBid(_lotId, _bidId);
+        _auctionHouse.refundBid(_lotId, _bidId, 0);
     }
 
     function test_givenCallerIsNotBidOwner_reverts()
@@ -133,7 +133,7 @@ contract RefundBidTest is AuctionHouseTest {
 
         // Call the function
         vm.prank(_SELLER);
-        _auctionHouse.refundBid(_lotId, _bidId);
+        _auctionHouse.refundBid(_lotId, _bidId, 0);
     }
 
     function test_itRefundsTheBid()
@@ -153,7 +153,7 @@ contract RefundBidTest is AuctionHouseTest {
 
         // Call the function
         vm.prank(_bidder);
-        _auctionHouse.refundBid(_lotId, _bidId);
+        _auctionHouse.refundBid(_lotId, _bidId, 0);
 
         // Assert the bid is cancelled
         assertTrue(_batchAuctionModule.bidCancelled(_lotId, _bidId));

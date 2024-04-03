@@ -52,6 +52,7 @@ contract MockAuctionModule is AuctionModule {
     function _refundBid(
         uint96 lotId_,
         uint64 bidId_,
+        uint256 index_,
         address bidder_
     ) internal virtual override returns (uint96) {}
 

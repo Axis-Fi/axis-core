@@ -86,7 +86,12 @@ contract MockAtomicAuctionModule is AuctionModule {
         revert Auction_NotImplemented();
     }
 
-    function _refundBid(uint96, uint64, address) internal virtual override returns (uint96) {
+    function _refundBid(
+        uint96,
+        uint64,
+        uint256,
+        address
+    ) internal virtual override returns (uint96) {
         revert Auction_NotImplemented();
     }
 
