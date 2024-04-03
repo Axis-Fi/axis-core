@@ -519,15 +519,12 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
         // Load data for the lot
         Routing storage routing = lotRouting[lotId_];
 
-        // Fetch the curator fee data
+        // Calculate the curator payout
         uint96 curatorFeePayout;
-        {
+        if (lotCuratorPaid[lotId_] == false) {
             FeeData storage feeData = lotFees[lotId_];
-            curatorFeePayout = _calculatePayoutFees(
-                feeData.curated, feeData.curatorFee, sold_
-            );
+            curatorFeePayout = _calculatePayoutFees(feeData.curated, feeData.curatorFee, sold_);
         }
-        // TODO flag if curator fee has been paid out
 
         // Calculate the referrer and protocol fees for the amount in
         // Fees are not allocated until the user claims their payout so that we don't have to iterate through them here
@@ -549,7 +546,7 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
 
         // Refund any unused capacity and curator fees to the address dictated by the callbacks address
         // At this point, any partial payout and curator fees have been paid out. Hence, the routing.funding value can only be composed of bids that have not been claimed, and any unused capacity to be refunded to the seller
-        uint96 prefundingRefund = routing.funding - claimableBidAmountOut_;
+        uint96 prefundingRefund = routing.funding - curatorFeePayout - claimableBidAmountOut_;
         unchecked {
             routing.funding -= prefundingRefund;
         }

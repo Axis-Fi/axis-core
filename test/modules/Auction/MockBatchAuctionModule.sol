@@ -174,7 +174,7 @@ contract MockBatchAuctionModule is AuctionModule {
         lot.purchased = uint96(settlement_.totalIn);
         lot.sold = uint96(settlement_.totalOut);
         lot.partialPayout = uint96(settlement_.pfPayout);
-        lot.claimableBidAmountOut = lot.sold - lot.partialPayout;
+        lot.claimableBidAmountOut = lot.sold;
     }
 
     function _settle(uint96 lotId_) internal override returns (Settlement memory, bytes memory) {

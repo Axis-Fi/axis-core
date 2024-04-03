@@ -833,7 +833,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
                 uint96(result.capacityExpended > capacity ? capacity : result.capacityExpended);
 
             // Cache the amount to be claimed
-            lotData[lotId_].claimableBidAmountOut = settlement_.totalOut - settlement_.pfPayout;
+            lotData[lotId_].claimableBidAmountOut = settlement_.totalOut;
         } else {
             // Auction cannot be settled if we reach this point
             // Marginal price is set as the max uint96 for the auction so the system knows all bids should be refunded

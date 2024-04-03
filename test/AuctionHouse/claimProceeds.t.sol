@@ -15,6 +15,8 @@ contract ClaimProceedsTest is AuctionHouseTest {
 
     Auction.BidClaim[] internal _bidClaims;
 
+    bool internal _curatorPayoutClaimed;
+
     function _assertQuoteTokenBalances(
         uint256 sellerBalance,
         uint256 auctionHouseBalance
@@ -51,10 +53,14 @@ contract ClaimProceedsTest is AuctionHouseTest {
         );
         assertEq(
             _baseToken.balanceOf(address(_auctionHouse)),
-            auctionHouseBalance,
+            auctionHouseBalance + (_curatorPayoutClaimed ? 0 : curatorBalance),
             "base token: auction house"
         );
-        assertEq(_baseToken.balanceOf(_CURATOR), curatorBalance, "base token: curator");
+        assertEq(
+            _baseToken.balanceOf(_CURATOR),
+            _curatorPayoutClaimed ? curatorBalance : 0,
+            "base token: curator"
+        );
 
         if (address(_callback) != address(0)) {
             assertEq(
@@ -63,12 +69,14 @@ contract ClaimProceedsTest is AuctionHouseTest {
                 "base token: callback"
             );
         }
-    }
 
-    function _assertLotRouting(uint256 funding) internal {
         // Check the lot
         Auctioneer.Routing memory lotRouting = _getLotRouting(_lotId);
-        assertEq(lotRouting.funding, funding, "funding");
+        assertEq(
+            lotRouting.funding,
+            auctionHouseBalance + (_curatorPayoutClaimed ? 0 : curatorBalance),
+            "funding"
+        );
 
         // Check the lot status
         assertEq(uint8(_batchAuctionModule.lotStatus(_lotId)), uint8(Auction.Status.Claimed));
@@ -152,6 +160,12 @@ contract ClaimProceedsTest is AuctionHouseTest {
         _;
     }
 
+    modifier givenCuratorPayoutClaimed() {
+        // TODO add actual claiming
+        _curatorPayoutClaimed = true;
+        _;
+    }
+
     // ============ Test Cases ============ //
 
     // [X] when the lot id is invalid
@@ -164,6 +178,8 @@ contract ClaimProceedsTest is AuctionHouseTest {
     //  [ ] it transfers the entire payment - protocol fees to the seller
     // [ ] when protocol and referrer fees are not set
     //  [ ] it transfers the entire payment to the seller
+    // [ ] given the curator payout has been claimed
+    //  [ ] it excludes the curator payout from the seller refund
     // [X] given the lot did not settle
     //  [X] it sends the unused capacity to the seller, and marks the lot as claimed
     // [X] given the lot has a partial fill
@@ -281,7 +297,6 @@ contract ClaimProceedsTest is AuctionHouseTest {
         // Assert balances
         _assertQuoteTokenBalances(quoteTokenIn, claimableRefund);
         _assertBaseTokenBalances(unusedCapacity, claimablePayout, curatorFeeActual);
-        _assertLotRouting(claimablePayout);
     }
 
     function test_lotSettlementSuccessful()
@@ -310,7 +325,6 @@ contract ClaimProceedsTest is AuctionHouseTest {
         // Assert balances
         _assertQuoteTokenBalances(quoteTokenIn, 0);
         _assertBaseTokenBalances(unusedCapacity, claimablePayout, curatorFeeActual);
-        _assertLotRouting(claimablePayout);
     }
 
     function test_lotSettlementSuccessful_givenBidsClaimed()
@@ -350,7 +364,6 @@ contract ClaimProceedsTest is AuctionHouseTest {
         // Assert balances
         _assertQuoteTokenBalances(quoteTokenIn, 0);
         _assertBaseTokenBalances(unusedCapacity, claimablePayout, curatorFeeActual);
-        _assertLotRouting(claimablePayout);
     }
 
     function test_lotSettlementSuccessful_givenCurated()
@@ -386,7 +399,6 @@ contract ClaimProceedsTest is AuctionHouseTest {
         // Assert balances
         _assertQuoteTokenBalances(quoteTokenIn, 0);
         _assertBaseTokenBalances(unusedCapacity, claimablePayout, curatorFeeActual);
-        _assertLotRouting(claimablePayout);
     }
 
     function test_lotSettlementSuccessful_givenCurated_givenCuratorFeeNotSet()
@@ -419,7 +431,6 @@ contract ClaimProceedsTest is AuctionHouseTest {
         // Assert balances
         _assertQuoteTokenBalances(quoteTokenIn, 0);
         _assertBaseTokenBalances(unusedCapacity, claimablePayout, curatorFeeActual);
-        _assertLotRouting(claimablePayout);
     }
 
     function test_givenLotSettlementIsFullCapacity_givenBidsClaimed()
@@ -458,7 +469,6 @@ contract ClaimProceedsTest is AuctionHouseTest {
         // Assert balances
         _assertQuoteTokenBalances(quoteTokenIn, 0);
         _assertBaseTokenBalances(unusedCapacity, claimablePayout, curatorFeeActual);
-        _assertLotRouting(claimablePayout);
     }
 
     function test_givenLotSettlementIsFullCapacity_givenCurated_givenBidsClaimed()
@@ -503,7 +513,6 @@ contract ClaimProceedsTest is AuctionHouseTest {
         // Assert balances
         _assertQuoteTokenBalances(quoteTokenIn, 0);
         _assertBaseTokenBalances(unusedCapacity, claimablePayout, curatorFeeActual);
-        _assertLotRouting(claimablePayout);
     }
 
     function test_lotSettlementIsFullCapacity()
@@ -544,7 +553,6 @@ contract ClaimProceedsTest is AuctionHouseTest {
         // Assert balances
         _assertQuoteTokenBalances(quoteTokenIn, 0);
         _assertBaseTokenBalances(unusedCapacity, claimablePayout, curatorFeeActual);
-        _assertLotRouting(claimablePayout);
     }
 
     function test_lotSettlementIsFullCapacity_givenCurated()
@@ -591,7 +599,6 @@ contract ClaimProceedsTest is AuctionHouseTest {
         // Assert balances
         _assertQuoteTokenBalances(quoteTokenIn, 0);
         _assertBaseTokenBalances(unusedCapacity, claimablePayout, curatorFeeActual);
-        _assertLotRouting(claimablePayout);
     }
 
     function test_lotSettlementIsFullCapacity_givenCurated_givenCuratorFeeNotSet()
@@ -635,7 +642,6 @@ contract ClaimProceedsTest is AuctionHouseTest {
         // Assert balances
         _assertQuoteTokenBalances(quoteTokenIn, 0);
         _assertBaseTokenBalances(unusedCapacity, claimablePayout, curatorFeeActual);
-        _assertLotRouting(claimablePayout);
     }
 
     function test_lotSettlementIsPartialFill()
@@ -671,15 +677,15 @@ contract ClaimProceedsTest is AuctionHouseTest {
         vm.prank(_SELLER);
         _auctionHouse.claimProceeds(_lotId, bytes(""));
 
-        uint256 quoteTokenIn = _scaleQuoteTokenAmount(_BID_AMOUNT * 6);
+        uint256 quoteTokenIn = _scaleQuoteTokenAmount(_BID_AMOUNT * 6 - _BID_AMOUNT_PARTIAL_REFUND);
+        uint256 claimableQuoteToken = _scaleQuoteTokenAmount(_BID_AMOUNT_PARTIAL_REFUND);
         uint256 claimablePayout = _scaleBaseTokenAmount(_LOT_CAPACITY);
         uint96 curatorFeeActual = 0;
         uint256 unusedCapacity = 0;
 
         // Assert balances
-        _assertQuoteTokenBalances(quoteTokenIn, 0);
+        _assertQuoteTokenBalances(quoteTokenIn, claimableQuoteToken);
         _assertBaseTokenBalances(unusedCapacity, claimablePayout, curatorFeeActual);
-        _assertLotRouting(claimablePayout);
     }
 
     function test_lotSettlementIsPartialFill_givenBidsClaimed()
@@ -723,15 +729,15 @@ contract ClaimProceedsTest is AuctionHouseTest {
         vm.prank(_SELLER);
         _auctionHouse.claimProceeds(_lotId, bytes(""));
 
-        uint256 quoteTokenIn = _scaleQuoteTokenAmount(_BID_AMOUNT * 6);
+        uint256 quoteTokenIn = _scaleQuoteTokenAmount(_BID_AMOUNT * 6 - _BID_AMOUNT_PARTIAL_REFUND);
+        uint256 claimableQuoteToken = _scaleQuoteTokenAmount(_BID_AMOUNT_PARTIAL_REFUND);
         uint256 claimablePayout = _scaleBaseTokenAmount(_LOT_CAPACITY - _BID_AMOUNT_OUT);
         uint96 curatorFeeActual = 0;
         uint256 unusedCapacity = 0;
 
         // Assert balances
-        _assertQuoteTokenBalances(quoteTokenIn, 0);
+        _assertQuoteTokenBalances(quoteTokenIn, claimableQuoteToken);
         _assertBaseTokenBalances(unusedCapacity, claimablePayout, curatorFeeActual);
-        _assertLotRouting(claimablePayout);
     }
 
     function test_givenCurated_lotSettlementIsFullCapacity()
@@ -776,7 +782,6 @@ contract ClaimProceedsTest is AuctionHouseTest {
         // Assert balances
         _assertQuoteTokenBalances(quoteTokenIn, 0);
         _assertBaseTokenBalances(unusedCapacity, claimablePayout, curatorFeeActual);
-        _assertLotRouting(claimablePayout);
     }
 
     function test_givenCurated_givenCuratorFeeNotSet_lotSettlementIsFullCapacity()
@@ -820,7 +825,6 @@ contract ClaimProceedsTest is AuctionHouseTest {
         // Assert balances
         _assertQuoteTokenBalances(quoteTokenIn, 0);
         _assertBaseTokenBalances(unusedCapacity, claimablePayout, curatorFeeActual);
-        _assertLotRouting(claimablePayout);
     }
 
     function test_givenCurated_lotSettlementIsPartialFill()
@@ -860,15 +864,15 @@ contract ClaimProceedsTest is AuctionHouseTest {
         vm.prank(_SELLER);
         _auctionHouse.claimProceeds(_lotId, bytes(""));
 
-        uint256 quoteTokenIn = _scaleQuoteTokenAmount(_BID_AMOUNT * 6);
+        uint256 quoteTokenIn = _scaleQuoteTokenAmount(_BID_AMOUNT * 6 - _BID_AMOUNT_PARTIAL_REFUND);
+        uint256 claimableQuoteToken = _scaleQuoteTokenAmount(_BID_AMOUNT_PARTIAL_REFUND);
         uint256 claimablePayout = _scaleBaseTokenAmount(_LOT_CAPACITY);
         uint96 curatorFeeActual = _LOT_CAPACITY * _curatorFeePercentActual / 1e5;
         uint256 unusedCapacity = 0;
 
         // Assert balances
-        _assertQuoteTokenBalances(quoteTokenIn, 0);
+        _assertQuoteTokenBalances(quoteTokenIn, claimableQuoteToken);
         _assertBaseTokenBalances(unusedCapacity, claimablePayout, curatorFeeActual);
-        _assertLotRouting(claimablePayout);
     }
 
     function test_givenCurated_givenCuratorFeeNotSet_lotSettlementIsPartialFill()
@@ -907,15 +911,15 @@ contract ClaimProceedsTest is AuctionHouseTest {
         vm.prank(_SELLER);
         _auctionHouse.claimProceeds(_lotId, bytes(""));
 
-        uint256 quoteTokenIn = _scaleQuoteTokenAmount(_BID_AMOUNT * 6);
+        uint256 quoteTokenIn = _scaleQuoteTokenAmount(_BID_AMOUNT * 6 - _BID_AMOUNT_PARTIAL_REFUND);
+        uint256 claimableQuoteToken = _scaleQuoteTokenAmount(_BID_AMOUNT_PARTIAL_REFUND);
         uint256 claimablePayout = _scaleBaseTokenAmount(_LOT_CAPACITY);
         uint96 curatorFeeActual = _LOT_CAPACITY * _curatorFeePercentActual / 1e5;
         uint256 unusedCapacity = 0;
 
         // Assert balances
-        _assertQuoteTokenBalances(quoteTokenIn, 0);
+        _assertQuoteTokenBalances(quoteTokenIn, claimableQuoteToken);
         _assertBaseTokenBalances(unusedCapacity, claimablePayout, curatorFeeActual);
-        _assertLotRouting(claimablePayout);
     }
 
     function test_lotSettlementIsPartialFill_givenCurated()
@@ -957,15 +961,15 @@ contract ClaimProceedsTest is AuctionHouseTest {
         vm.prank(_SELLER);
         _auctionHouse.claimProceeds(_lotId, bytes(""));
 
-        uint256 quoteTokenIn = _scaleQuoteTokenAmount(_BID_AMOUNT * 6);
+        uint256 quoteTokenIn = _scaleQuoteTokenAmount(_BID_AMOUNT * 6 - _BID_AMOUNT_PARTIAL_REFUND);
+        uint256 claimableQuoteToken = _scaleQuoteTokenAmount(_BID_AMOUNT_PARTIAL_REFUND);
         uint256 claimablePayout = _scaleBaseTokenAmount(_LOT_CAPACITY);
         uint96 curatorFeeActual = _LOT_CAPACITY * _curatorFeePercentActual / 1e5;
         uint256 unusedCapacity = 0;
 
         // Assert balances
-        _assertQuoteTokenBalances(quoteTokenIn, 0);
+        _assertQuoteTokenBalances(quoteTokenIn, claimableQuoteToken);
         _assertBaseTokenBalances(unusedCapacity, claimablePayout, curatorFeeActual);
-        _assertLotRouting(claimablePayout);
     }
 
     function test_lotSettlementIsPartialFill_givenCurated_givenCuratorFeeNotSet()
@@ -1004,15 +1008,15 @@ contract ClaimProceedsTest is AuctionHouseTest {
         vm.prank(_SELLER);
         _auctionHouse.claimProceeds(_lotId, bytes(""));
 
-        uint256 quoteTokenIn = _scaleQuoteTokenAmount(_BID_AMOUNT * 6);
+        uint256 quoteTokenIn = _scaleQuoteTokenAmount(_BID_AMOUNT * 6 - _BID_AMOUNT_PARTIAL_REFUND);
+        uint256 claimableQuoteToken = _scaleQuoteTokenAmount(_BID_AMOUNT_PARTIAL_REFUND);
         uint256 claimablePayout = _scaleBaseTokenAmount(_LOT_CAPACITY);
         uint96 curatorFeeActual = _LOT_CAPACITY * _curatorFeePercentActual / 1e5;
         uint256 unusedCapacity = 0;
 
         // Assert balances
-        _assertQuoteTokenBalances(quoteTokenIn, 0);
+        _assertQuoteTokenBalances(quoteTokenIn, claimableQuoteToken);
         _assertBaseTokenBalances(unusedCapacity, claimablePayout, curatorFeeActual);
-        _assertLotRouting(claimablePayout);
     }
 
     function test_lotSettlementSuccessful_givenCallbackIsSet()
@@ -1049,7 +1053,6 @@ contract ClaimProceedsTest is AuctionHouseTest {
         // Assert balances
         _assertQuoteTokenBalances(quoteTokenIn, 0);
         _assertBaseTokenBalances(unusedCapacity, claimablePayout, curatorFeeActual);
-        _assertLotRouting(claimablePayout);
 
         assertEq(_callback.lotClaimedProceeds(_lotId), true, "lotClaimedProceeds");
     }
@@ -1089,7 +1092,6 @@ contract ClaimProceedsTest is AuctionHouseTest {
         // Assert balances
         _assertQuoteTokenBalances(quoteTokenIn, 0);
         _assertBaseTokenBalances(unusedCapacity, claimablePayout, curatorFeeActual);
-        _assertLotRouting(claimablePayout);
 
         assertEq(_callback.lotClaimedProceeds(_lotId), true, "lotClaimedProceeds");
     }
@@ -1129,7 +1131,6 @@ contract ClaimProceedsTest is AuctionHouseTest {
         // Assert balances
         _assertQuoteTokenBalances(quoteTokenIn, 0);
         _assertBaseTokenBalances(unusedCapacity, claimablePayout, curatorFeeActual);
-        _assertLotRouting(claimablePayout);
 
         assertEq(_callback.lotClaimedProceeds(_lotId), true, "lotClaimedProceeds");
     }

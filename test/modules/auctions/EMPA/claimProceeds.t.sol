@@ -213,7 +213,7 @@ contract EmpaModuleClaimProceedsTest is EmpaModuleTest {
         // Assert values
         assertEq(purchased, _expectedPurchased);
         assertEq(sold, _expectedSold);
-        assertEq(claimableBidAmountOut, _expectedSold - _expectedPartialPayout);
+        assertEq(claimableBidAmountOut, _expectedSold);
     }
 
     function test_givenLotIsUnderCapacity()
