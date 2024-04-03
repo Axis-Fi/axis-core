@@ -182,7 +182,7 @@ contract CurateTest is AuctionHouseTest {
         givenLotIsCreated
     {
         // Change the curator fee
-        _setCuratorFee(_curatorFeePercentActual + 1);
+        _setCuratorFee(_CURATOR_FEE_PERCENT + 1);
 
         // Curate
         vm.prank(_CURATOR);
@@ -192,7 +192,7 @@ contract CurateTest is AuctionHouseTest {
         Auctioneer.FeeData memory curation = _getLotFees(_lotId);
         assertEq(curation.curator, _CURATOR);
         assertEq(curation.curated, true);
-        assertEq(curation.curatorFee, _curatorFeePercentActual); // Original value from time of creation
+        assertEq(curation.curatorFee, _CURATOR_FEE_PERCENT); // Original value from time of creation
 
         // No _CURATOR fee is transferred to the auction house
         assertEq(_baseToken.balanceOf(_SELLER), 0);
@@ -306,7 +306,7 @@ contract CurateTest is AuctionHouseTest {
         _startLot();
 
         // Change the curator fee
-        _setCuratorFee(_curatorFeePercentActual + 1);
+        _setCuratorFee(_CURATOR_FEE_PERCENT + 1);
 
         // Curate
         vm.prank(_CURATOR);
@@ -316,7 +316,7 @@ contract CurateTest is AuctionHouseTest {
         Auctioneer.FeeData memory curation = _getLotFees(_lotId);
         assertEq(curation.curator, _CURATOR);
         assertEq(curation.curated, true);
-        assertEq(curation.curatorFee, _curatorFeePercentActual); // Does not change
+        assertEq(curation.curatorFee, _CURATOR_FEE_PERCENT); // Does not change
 
         // No _CURATOR fee is transferred to the auction house
         assertEq(_baseToken.balanceOf(_SELLER), 0);
@@ -370,18 +370,17 @@ contract CurateTest is AuctionHouseTest {
         public
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
-        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
-        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenAuctionIsPrefunded
         givenCuratorMaxFeeIsSet
         givenCuratorFeeIsSet
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY + _curatorMaxPotentialFee)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY + _curatorMaxPotentialFee)
         givenLotIsCreated
         givenLotHasStarted
-        givenSellerHasBaseTokenBalance(_curatorMaxPotentialFee)
-        givenSellerHasBaseTokenAllowance(_curatorMaxPotentialFee)
     {
         // Change the curator fee
-        _setCuratorFee(_curatorFeePercentActual + 1);
+        uint256 originalCuratorMaxPotentialFee = _curatorMaxPotentialFee;
+        _setCuratorFee(_CURATOR_FEE_PERCENT + 1);
 
         // Curate
         vm.prank(_CURATOR);
@@ -391,20 +390,20 @@ contract CurateTest is AuctionHouseTest {
         Auctioneer.FeeData memory curation = _getLotFees(_lotId);
         assertEq(curation.curator, _CURATOR);
         assertEq(curation.curated, true);
-        assertEq(curation.curatorFee, _curatorFeePercentActual); // Does not change
+        assertEq(curation.curatorFee, _CURATOR_FEE_PERCENT); // Does not change
 
         // Maximum curator fee is transferred to the auction house
         assertEq(_baseToken.balanceOf(_SELLER), 0, "base token: seller balance mismatch");
         assertEq(
             _baseToken.balanceOf(address(_auctionHouse)),
-            _LOT_CAPACITY + _curatorMaxPotentialFee,
+            _LOT_CAPACITY + originalCuratorMaxPotentialFee,
             "base token: auction house balance mismatch"
         );
         assertEq(_baseToken.balanceOf(_CURATOR), 0, "base token: _CURATOR balance mismatch");
 
         // Check routing
         Auctioneer.Routing memory lotRouting = _getLotRouting(_lotId);
-        assertEq(lotRouting.funding, _LOT_CAPACITY + _curatorMaxPotentialFee, "funding");
+        assertEq(lotRouting.funding, _LOT_CAPACITY + originalCuratorMaxPotentialFee, "funding");
     }
 
     function test_givenAuctionIsPrefunded_quoteTokenDecimalsLarger()
