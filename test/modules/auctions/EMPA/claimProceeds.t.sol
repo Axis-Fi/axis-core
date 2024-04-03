@@ -216,7 +216,11 @@ contract EmpaModuleClaimProceedsTest is EmpaModuleTest {
 
         // Assert auction status
         EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
-        assertEq(uint8(auctionData.status), uint8(Auction.Status.Settled), "status");
+        assertEq(
+            uint8(auctionData.status),
+            uint8(EncryptedMarginalPriceAuctionModule.LotStatus.Settled),
+            "status"
+        );
         assertEq(auctionData.proceedsClaimed, true, "proceedsClaimed");
     }
 
@@ -241,7 +245,11 @@ contract EmpaModuleClaimProceedsTest is EmpaModuleTest {
 
         // Assert auction status
         EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
-        assertEq(uint8(auctionData.status), uint8(Auction.Status.Settled), "status");
+        assertEq(
+            uint8(auctionData.status),
+            uint8(EncryptedMarginalPriceAuctionModule.LotStatus.Settled),
+            "status"
+        );
         assertEq(auctionData.proceedsClaimed, true, "proceedsClaimed");
     }
 }

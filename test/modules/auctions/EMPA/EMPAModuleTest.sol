@@ -374,7 +374,7 @@ abstract contract EmpaModuleTest is Test, Permit2User {
             uint64 nextDecryptIndex_,
             uint96 minFilled_,
             uint96 minBidSize_,
-            Auction.Status status_,
+            EncryptedMarginalPriceAuctionModule.LotStatus status_,
             bool proceedsClaimed_,
             uint64 marginalBidId_,
             Point memory publicKey_,

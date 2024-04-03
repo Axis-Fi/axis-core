@@ -16,6 +16,11 @@ contract MockBatchAuctionModule is BatchAuctionModule {
         Claimed
     }
 
+    enum LotStatus {
+        Created,
+        Settled
+    }
+
     /// @notice        Core data for a bid
     ///
     /// @param         status              The status of the bid
@@ -39,7 +44,7 @@ contract MockBatchAuctionModule is BatchAuctionModule {
 
     mapping(uint96 lotId => Settlement) public lotSettlements;
 
-    mapping(uint96 lotId => Auction.Status) public lotStatus;
+    mapping(uint96 lotId => LotStatus) public lotStatus;
     mapping(uint96 lotId => bool) public lotProceedsClaimed;
 
     mapping(uint96 => bool) public settled;
@@ -122,14 +127,14 @@ contract MockBatchAuctionModule is BatchAuctionModule {
 
     function _settle(uint96 lotId_) internal override returns (Settlement memory, bytes memory) {
         // Update status
-        lotStatus[lotId_] = Auction.Status.Settled;
+        lotStatus[lotId_] = LotStatus.Settled;
 
         return (lotSettlements[lotId_], "");
     }
 
     function _claimProceeds(uint96 lotId_) internal override returns (uint96, uint96, uint96) {
         // Update status
-        lotStatus[lotId_] = Auction.Status.Settled;
+        lotStatus[lotId_] = LotStatus.Settled;
         lotProceedsClaimed[lotId_] = true;
 
         Lot storage lot = lotData[lotId_];
@@ -167,14 +172,14 @@ contract MockBatchAuctionModule is BatchAuctionModule {
 
     function _revertIfLotSettled(uint96 lotId_) internal view virtual override {
         // Check that the lot has not been settled
-        if (lotStatus[lotId_] == Auction.Status.Settled) {
+        if (lotStatus[lotId_] == LotStatus.Settled) {
             revert Auction.Auction_MarketNotActive(lotId_);
         }
     }
 
     function _revertIfLotNotSettled(uint96 lotId_) internal view virtual override {
         // Check that the lot has been settled
-        if (lotStatus[lotId_] != Auction.Status.Settled) {
+        if (lotStatus[lotId_] != LotStatus.Settled) {
             revert Auction.Auction_InvalidParams();
         }
     }

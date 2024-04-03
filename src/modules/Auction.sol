@@ -29,13 +29,6 @@ abstract contract Auction {
         Batch
     }
 
-    /// @notice     The status of an auction lot
-    enum Status {
-        Created,
-        Decrypted,
-        Settled
-    }
-
     /// @notice     Core data for an auction lot
     ///
     /// @param      start               The timestamp when the auction starts

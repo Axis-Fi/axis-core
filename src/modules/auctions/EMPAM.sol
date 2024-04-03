@@ -27,10 +27,18 @@ contract EncryptedMarginalPriceAuctionModule is BatchAuctionModule {
 
     // ========== DATA STRUCTURES ========== //
 
+    /// @notice     The status of the auction lot
+    enum LotStatus {
+        Created,
+        Decrypted,
+        Settled
+    }
+
+    /// @notice     The status of a bid
+    /// @dev        Bid status will also be set to claimed if the bid is cancelled/refunded
     enum BidStatus {
         Submitted,
         Decrypted,
-        // Bid status will also be set to claimed if the bid is cancelled/refunded
         Claimed
     }
 
@@ -66,7 +74,7 @@ contract EncryptedMarginalPriceAuctionModule is BatchAuctionModule {
     /// @param         nextDecryptIndex    The index of the next bid to decrypt
     /// @param         minFilled           The minimum amount of the lot that must be filled
     /// @param         minBidSize          The minimum size of a bid
-    /// @param         status              The status of the auction
+    /// @param         status              The status of the auction lot
     /// @param         proceedsClaimed     Whether the proceeds have been claimed
     /// @param         marginalBidId       The ID of the marginal bid (marking that bids following it are not filled)
     /// @param         publicKey           The public key used to encrypt bids (a point on the alt_bn128 curve from the generator point (1,2))
@@ -79,7 +87,7 @@ contract EncryptedMarginalPriceAuctionModule is BatchAuctionModule {
         uint64 nextDecryptIndex; // 8 +
         uint96 minFilled; // 12 +
         uint96 minBidSize; // 12 = 32 - end of slot 2
-        Auction.Status status; // 1 +
+        LotStatus status; // 1 +
         bool proceedsClaimed; // 1 +
         uint64 marginalBidId; // 8 = 10 - end of slot 3
         Point publicKey; // 64 - slots 4 and 5
@@ -207,7 +215,7 @@ contract EncryptedMarginalPriceAuctionModule is BatchAuctionModule {
         _revertIfLotActive(lotId_);
 
         // Set auction status to settled so that bids can be refunded
-        auctionData[lotId_].status = Auction.Status.Settled;
+        auctionData[lotId_].status = LotStatus.Settled;
         auctionData[lotId_].proceedsClaimed = true;
     }
 
@@ -449,10 +457,8 @@ contract EncryptedMarginalPriceAuctionModule is BatchAuctionModule {
         _revertIfLotActive(lotId_);
 
         // Revert if already decrypted or if the private key has not been provided
-        if (
-            auctionData[lotId_].status != Auction.Status.Created
-                || auctionData[lotId_].privateKey == 0
-        ) {
+        if (auctionData[lotId_].status != LotStatus.Created || auctionData[lotId_].privateKey == 0)
+        {
             revert Auction_WrongState(lotId_);
         }
 
@@ -521,7 +527,7 @@ contract EncryptedMarginalPriceAuctionModule is BatchAuctionModule {
 
         // If all bids have been decrypted, set auction status to decrypted
         if (auctionData[lotId_].nextDecryptIndex == bidIds.length) {
-            auctionData[lotId_].status = Auction.Status.Decrypted;
+            auctionData[lotId_].status = LotStatus.Decrypted;
         }
     }
 
@@ -755,7 +761,7 @@ contract EncryptedMarginalPriceAuctionModule is BatchAuctionModule {
     {
         // Settle the auction
         // Check that auction is in the right state for settlement
-        if (auctionData[lotId_].status != Auction.Status.Decrypted) {
+        if (auctionData[lotId_].status != LotStatus.Decrypted) {
             revert Auction_WrongState(lotId_);
         }
 
@@ -789,7 +795,7 @@ contract EncryptedMarginalPriceAuctionModule is BatchAuctionModule {
 
         // Determine if the auction can be filled, if so settle the auction, otherwise refund the seller
         // We set the status as settled either way to denote this function has been executed
-        auctionData[lotId_].status = Auction.Status.Settled;
+        auctionData[lotId_].status = LotStatus.Settled;
         // Auction cannot be settled if the total filled is less than the minimum filled
         // or if the marginal price is less than the minimum price
         if (
@@ -883,7 +889,7 @@ contract EncryptedMarginalPriceAuctionModule is BatchAuctionModule {
     /// @inheritdoc AuctionModule
     function _revertIfLotActive(uint96 lotId_) internal view override {
         if (
-            auctionData[lotId_].status == Auction.Status.Created
+            auctionData[lotId_].status == LotStatus.Created
                 && lotData[lotId_].start <= block.timestamp
                 && lotData[lotId_].conclusion > block.timestamp
         ) revert Auction_WrongState(lotId_);
@@ -892,7 +898,7 @@ contract EncryptedMarginalPriceAuctionModule is BatchAuctionModule {
     /// @inheritdoc BatchAuctionModule
     function _revertIfLotSettled(uint96 lotId_) internal view override {
         // Auction must not be settled
-        if (auctionData[lotId_].status == Auction.Status.Settled) {
+        if (auctionData[lotId_].status == LotStatus.Settled) {
             revert Auction_WrongState(lotId_);
         }
     }
@@ -900,7 +906,7 @@ contract EncryptedMarginalPriceAuctionModule is BatchAuctionModule {
     /// @inheritdoc BatchAuctionModule
     function _revertIfLotNotSettled(uint96 lotId_) internal view override {
         // Auction must be settled
-        if (auctionData[lotId_].status != Auction.Status.Settled) {
+        if (auctionData[lotId_].status != LotStatus.Settled) {
             revert Auction_WrongState(lotId_);
         }
     }

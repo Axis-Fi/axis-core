@@ -3,6 +3,7 @@ pragma solidity 0.8.19;
 
 import {Auction} from "src/modules/Auction.sol";
 import {Auctioneer} from "src/bases/Auctioneer.sol";
+import {MockBatchAuctionModule} from "test/modules/Auction/MockBatchAuctionModule.sol";
 
 import {AuctionHouseTest} from "test/AuctionHouse/AuctionHouseTest.sol";
 
@@ -69,7 +70,10 @@ contract ClaimProceedsTest is AuctionHouseTest {
         assertEq(lotRouting.funding, funding, "funding");
 
         // Check the lot status
-        assertEq(uint8(_batchAuctionModule.lotStatus(_lotId)), uint8(Auction.Status.Settled));
+        assertEq(
+            uint8(_batchAuctionModule.lotStatus(_lotId)),
+            uint8(MockBatchAuctionModule.LotStatus.Settled)
+        );
     }
 
     // ============ Modifiers ============ //
