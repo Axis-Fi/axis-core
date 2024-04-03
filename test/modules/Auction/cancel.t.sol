@@ -6,7 +6,7 @@ import {Test} from "forge-std/Test.sol";
 
 // Mocks
 import {MockERC20} from "lib/solmate/src/test/utils/mocks/MockERC20.sol";
-import {MockAuctionModule} from "test/modules/Auction/MockAuctionModule.sol";
+import {MockAtomicAuctionModule} from "test/modules/Auction/MockAtomicAuctionModule.sol";
 import {Permit2User} from "test/lib/permit2/Permit2User.sol";
 
 // Auctions
@@ -21,7 +21,7 @@ import {toKeycode, Module} from "src/modules/Modules.sol";
 contract CancelTest is Test, Permit2User {
     MockERC20 internal _baseToken;
     MockERC20 internal _quoteToken;
-    MockAuctionModule internal _mockAuctionModule;
+    MockAtomicAuctionModule internal _mockAuctionModule;
 
     AuctionHouse internal _auctionHouse;
     Auctioneer.RoutingParams internal _routingParams;
@@ -39,7 +39,7 @@ contract CancelTest is Test, Permit2User {
         _quoteToken = new MockERC20("Quote Token", "QUOTE", 18);
 
         _auctionHouse = new AuctionHouse(address(this), _PROTOCOL, _permit2Address);
-        _mockAuctionModule = new MockAuctionModule(address(_auctionHouse));
+        _mockAuctionModule = new MockAtomicAuctionModule(address(_auctionHouse));
 
         _auctionHouse.installModule(_mockAuctionModule);
 
@@ -52,7 +52,7 @@ contract CancelTest is Test, Permit2User {
         });
 
         _routingParams = Auctioneer.RoutingParams({
-            auctionType: toKeycode("MOCK"),
+            auctionType: toKeycode("ATOM"),
             baseToken: _baseToken,
             quoteToken: _quoteToken,
             curator: address(0),

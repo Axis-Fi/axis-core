@@ -3,6 +3,8 @@ pragma solidity 0.8.19;
 
 import {Auction, AuctionModule} from "src/modules/Auction.sol";
 
+/// @title  Batch Auction Module
+/// @notice A base contract for batch auctions
 abstract contract BatchAuctionModule is AuctionModule {
     // ========== ERRORS ========== //
 

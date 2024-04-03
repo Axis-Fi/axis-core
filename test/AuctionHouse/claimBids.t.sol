@@ -111,7 +111,7 @@ contract ClaimBidsTest is AuctionHouseTest {
     function _mockAuctionModuleReverts() internal {
         vm.mockCallRevert(
             address(_auctionModule),
-            abi.encodeWithSelector(AuctionModule.claimBids.selector, _lotId, _bidIds),
+            abi.encodeWithSelector(Auction.claimBids.selector, _lotId, _bidIds),
             "revert"
         );
     }
@@ -130,7 +130,7 @@ contract ClaimBidsTest is AuctionHouseTest {
     modifier givenMockClaimBidIsSet() {
         vm.mockCall(
             address(_auctionModule),
-            abi.encodeWithSelector(AuctionModule.claimBids.selector, _lotId, _bidIds),
+            abi.encodeWithSelector(Auction.claimBids.selector, _lotId, _bidIds),
             abi.encode(_bidClaims, "")
         );
         _;

@@ -3,6 +3,8 @@ pragma solidity 0.8.19;
 
 import {Auction, AuctionModule} from "src/modules/Auction.sol";
 
+/// @title  Atomic Auction Module
+/// @notice A base contract for atomic auctions
 abstract contract AtomicAuctionModule is AuctionModule {
     // ========== SETUP ========== //
 

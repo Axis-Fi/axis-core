@@ -6,8 +6,9 @@ import {Veecode, toKeycode, wrapVeecode} from "src/modules/Modules.sol";
 
 // Auctions
 import {Auction, AuctionModule} from "src/modules/Auction.sol";
+import {BatchAuctionModule} from "src/modules/auctions/BatchAuctionModule.sol";
 
-contract MockBatchAuctionModule is AuctionModule {
+contract MockBatchAuctionModule is BatchAuctionModule {
     enum BidStatus {
         Submitted,
         Decrypted,
@@ -51,27 +52,10 @@ contract MockBatchAuctionModule is AuctionModule {
         return wrapVeecode(toKeycode("BATCH"), 1);
     }
 
-    function TYPE() public pure virtual override returns (Type) {
-        return Type.Auction;
-    }
-
-    /// @inheritdoc Auction
-    function auctionType() external pure override returns (AuctionType) {
-        return AuctionType.Batch;
-    }
-
     function _auction(uint96, Lot memory, bytes memory) internal virtual override {}
 
     function _cancelAuction(uint96 id_) internal override {
         //
-    }
-
-    function _purchase(
-        uint96,
-        uint96,
-        bytes calldata
-    ) internal pure override returns (uint96, bytes memory) {
-        revert Auction_NotImplemented();
     }
 
     function _bid(
@@ -159,7 +143,7 @@ contract MockBatchAuctionModule is AuctionModule {
     function _revertIfBidInvalid(uint96 lotId_, uint64 bidId_) internal view virtual override {
         // Check that the bid exists
         if (nextBidId <= bidId_) {
-            revert Auction.Auction_InvalidBidId(lotId_, bidId_);
+            revert BatchAuctionModule.Auction_InvalidBidId(lotId_, bidId_);
         }
     }
 
@@ -170,14 +154,14 @@ contract MockBatchAuctionModule is AuctionModule {
     ) internal view virtual override {
         // Check that the bidder is the owner of the bid
         if (bidData[lotId_][bidId_].bidder != caller_) {
-            revert Auction.Auction_NotBidder();
+            revert BatchAuctionModule.Auction_NotBidder();
         }
     }
 
     function _revertIfBidClaimed(uint96 lotId_, uint64 bidId_) internal view virtual override {
         // Check that the bid has not been cancelled
         if (bidCancelled[lotId_][bidId_] == true) {
-            revert Auction.Auction_InvalidBidId(lotId_, bidId_);
+            revert BatchAuctionModule.Auction_InvalidBidId(lotId_, bidId_);
         }
     }
 

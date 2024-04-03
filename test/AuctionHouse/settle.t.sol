@@ -103,7 +103,7 @@ contract SettleTest is AuctionHouseTest {
     ) internal {
         vm.mockCall(
             address(_auctionModule),
-            abi.encodeWithSelector(AuctionModule.settle.selector, _lotId),
+            abi.encodeWithSelector(Auction.settle.selector, _lotId),
             abi.encode(settlement_, auctionOutput_)
         );
     }
@@ -111,7 +111,7 @@ contract SettleTest is AuctionHouseTest {
     modifier givenAuctionModuleReverts() {
         vm.mockCallRevert(
             address(_auctionModule),
-            abi.encodeWithSelector(AuctionModule.settle.selector, _lotId),
+            abi.encodeWithSelector(Auction.settle.selector, _lotId),
             "revert"
         );
         _;
