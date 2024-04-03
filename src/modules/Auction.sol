@@ -200,11 +200,12 @@ abstract contract Auction {
     ///
     /// @param      lotId_                  The lot id
     /// @return     purchased               The amount of quote tokens purchased
+    /// @return     sold                    The amount of base tokens sold
     /// @return     claimableBidAmountOut   The amount of base tokens that can be claimed by bidders
     function claimProceeds(uint96 lotId_)
         external
         virtual
-        returns (uint96 purchased, uint96 claimableBidAmountOut);
+        returns (uint96 purchased, uint96 sold, uint96 claimableBidAmountOut);
 
     // ========== AUCTION MANAGEMENT ========== //
 
@@ -643,7 +644,7 @@ abstract contract AuctionModule is Auction, Module {
         virtual
         override
         onlyInternal
-        returns (uint96 purchased, uint96 claimableBidAmountOut)
+        returns (uint96 purchased, uint96 sold, uint96 claimableBidAmountOut)
     {
         // Standard validation
         _revertIfLotInvalid(lotId_);
@@ -660,11 +661,12 @@ abstract contract AuctionModule is Auction, Module {
     ///
     /// @param      lotId_                  The lot ID
     /// @return     purchased               The amount of quote tokens purchased
+    /// @return     sold                    The amount of base tokens sold
     /// @return     claimableBidAmountOut   The amount of base tokens that can be claimed by bidders
     function _claimProceeds(uint96 lotId_)
         internal
         virtual
-        returns (uint96 purchased, uint96 claimableBidAmountOut);
+        returns (uint96 purchased, uint96 sold, uint96 claimableBidAmountOut);
 
     // ========== AUCTION INFORMATION ========== //
 

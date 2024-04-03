@@ -184,12 +184,12 @@ contract MockBatchAuctionModule is AuctionModule {
         return (lotSettlements[lotId_], "");
     }
 
-    function _claimProceeds(uint96 lotId_) internal override returns (uint96, uint96) {
+    function _claimProceeds(uint96 lotId_) internal override returns (uint96, uint96, uint96) {
         // Update status
         lotStatus[lotId_] = Auction.Status.Claimed;
 
         Lot storage lot = lotData[lotId_];
-        return (lot.purchased, lot.claimableBidAmountOut);
+        return (lot.purchased, lot.sold, lot.claimableBidAmountOut);
     }
 
     function getBid(uint96 lotId_, uint64 bidId_) external view returns (Bid memory bid_) {

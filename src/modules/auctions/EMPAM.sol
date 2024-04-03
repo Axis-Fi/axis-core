@@ -846,7 +846,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
     function _claimProceeds(uint96 lotId_)
         internal
         override
-        returns (uint96 purchased, uint96 claimableBidAmountOut)
+        returns (uint96 purchased, uint96 sold, uint96 claimableBidAmountOut)
     {
         // Update the status
         auctionData[lotId_].status = Auction.Status.Claimed;
@@ -855,7 +855,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         Lot memory lot = lotData[lotId_];
 
         // Return the required data
-        return (lot.purchased, lot.claimableBidAmountOut);
+        return (lot.purchased, lot.sold, lot.claimableBidAmountOut);
     }
 
     // ========== AUCTION INFORMATION ========== //

@@ -174,7 +174,7 @@ contract FixedPriceAuctionModule is AuctionModule {
         revert Auction_NotImplemented();
     }
 
-    function _claimProceeds(uint96) internal pure override returns (uint96, uint96) {
+    function _claimProceeds(uint96) internal pure override returns (uint96, uint96, uint96) {
         revert Auction_NotImplemented();
     }
 
