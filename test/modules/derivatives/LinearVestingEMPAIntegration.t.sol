@@ -404,9 +404,9 @@ contract LinearVestingEMPAIntegrationTest is AuctionHouseTest {
         givenAuctionTypeIsEMPA
         givenDerivativeTypeIsLinearVesting
         givenCuratorIsSet
-        givenLotIsCreated
         givenCuratorMaxFeeIsSet
         givenCuratorFeeIsSet
+        givenLotIsCreated
         givenLotHasStarted
         givenSellerHasBaseTokenBalance(_curatorMaxPotentialFee)
         givenSellerHasBaseTokenAllowance(_curatorMaxPotentialFee)

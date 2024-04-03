@@ -300,10 +300,10 @@ contract ClaimProceedsTest is AuctionHouseTest {
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenCuratorIsSet
-        givenLotIsCreated
-        givenLotHasStarted
         givenCuratorMaxFeeIsSet
         givenCuratorFeeIsSet
+        givenLotIsCreated
+        givenLotHasStarted
         givenSellerHasBaseTokenBalance(_curatorMaxPotentialFee)
         givenSellerHasBaseTokenAllowance(_curatorMaxPotentialFee)
         givenCuratorHasApproved
@@ -336,9 +336,9 @@ contract ClaimProceedsTest is AuctionHouseTest {
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenCuratorIsSet
+        givenCuratorMaxFeeIsSet
         givenLotIsCreated
         givenLotHasStarted
-        givenCuratorMaxFeeIsSet
         givenCuratorHasApproved
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
@@ -410,10 +410,10 @@ contract ClaimProceedsTest is AuctionHouseTest {
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenCuratorIsSet
-        givenLotIsCreated
-        givenLotHasStarted
         givenCuratorMaxFeeIsSet
         givenCuratorFeeIsSet
+        givenLotIsCreated
+        givenLotHasStarted
         givenSellerHasBaseTokenBalance(_curatorMaxPotentialFee)
         givenSellerHasBaseTokenAllowance(_curatorMaxPotentialFee)
         givenCuratorHasApproved
@@ -457,9 +457,9 @@ contract ClaimProceedsTest is AuctionHouseTest {
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenCuratorIsSet
+        givenCuratorMaxFeeIsSet
         givenLotIsCreated
         givenLotHasStarted
-        givenCuratorMaxFeeIsSet
         givenCuratorHasApproved
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
@@ -591,9 +591,9 @@ contract ClaimProceedsTest is AuctionHouseTest {
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenCuratorIsSet
+        givenCuratorMaxFeeIsSet
         givenLotIsCreated
         givenLotHasStarted
-        givenCuratorMaxFeeIsSet
         givenCuratorHasApproved
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
@@ -684,9 +684,9 @@ contract ClaimProceedsTest is AuctionHouseTest {
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenCuratorIsSet
+        givenCuratorMaxFeeIsSet
         givenLotIsCreated
         givenLotHasStarted
-        givenCuratorMaxFeeIsSet
         givenCuratorHasApproved
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
@@ -732,10 +732,10 @@ contract ClaimProceedsTest is AuctionHouseTest {
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenCuratorIsSet
-        givenLotIsCreated
-        givenLotHasStarted
         givenCuratorMaxFeeIsSet
         givenCuratorFeeIsSet
+        givenLotIsCreated
+        givenLotHasStarted
         givenSellerHasBaseTokenBalance(_curatorMaxPotentialFee)
         givenSellerHasBaseTokenAllowance(_curatorMaxPotentialFee)
         givenCuratorHasApproved
@@ -783,9 +783,9 @@ contract ClaimProceedsTest is AuctionHouseTest {
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenCuratorIsSet
+        givenCuratorMaxFeeIsSet
         givenLotIsCreated
         givenLotHasStarted
-        givenCuratorMaxFeeIsSet
         givenCuratorHasApproved
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
@@ -831,11 +831,11 @@ contract ClaimProceedsTest is AuctionHouseTest {
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenCuratorIsSet
+        givenCuratorMaxFeeIsSet
+        givenCuratorFeeIsSet
         givenCallbackIsSet
         givenLotIsCreated
         givenLotHasStarted
-        givenCuratorMaxFeeIsSet
-        givenCuratorFeeIsSet
         givenSellerHasBaseTokenBalance(_curatorMaxPotentialFee)
         givenSellerHasBaseTokenAllowance(_curatorMaxPotentialFee)
         givenCuratorHasApproved
@@ -870,12 +870,12 @@ contract ClaimProceedsTest is AuctionHouseTest {
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenCuratorIsSet
+        givenCuratorMaxFeeIsSet
+        givenCuratorFeeIsSet
         givenCallbackHasReceiveQuoteTokensFlag
         givenCallbackIsSet
         givenLotIsCreated
         givenLotHasStarted
-        givenCuratorMaxFeeIsSet
-        givenCuratorFeeIsSet
         givenSellerHasBaseTokenBalance(_curatorMaxPotentialFee)
         givenSellerHasBaseTokenAllowance(_curatorMaxPotentialFee)
         givenCuratorHasApproved
@@ -908,14 +908,14 @@ contract ClaimProceedsTest is AuctionHouseTest {
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
         givenCuratorIsSet
+        givenCuratorMaxFeeIsSet
+        givenCuratorFeeIsSet
         givenCallbackHasSendBaseTokensFlag
         givenCallbackIsSet
         givenCallbackHasBaseTokenBalance(_LOT_CAPACITY)
         givenCallbackHasBaseTokenAllowance(_LOT_CAPACITY)
         givenLotIsCreated
         givenLotHasStarted
-        givenCuratorMaxFeeIsSet
-        givenCuratorFeeIsSet
         givenCallbackHasBaseTokenBalance(_curatorMaxPotentialFee)
         givenCallbackHasBaseTokenAllowance(_curatorMaxPotentialFee)
         givenCuratorHasApproved

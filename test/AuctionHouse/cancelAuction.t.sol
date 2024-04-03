@@ -334,10 +334,10 @@ contract CancelAuctionTest is AuctionHouseTest {
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenCuratorIsSet
+        givenCuratorMaxFeeIsSet
         givenLotIsCreated
         givenLotHasStarted
         givenSellerHasCuratorFeeBalance
-        givenCuratorMaxFeeIsSet
     {
         // Balance before
         uint256 sellerBalanceBefore = _baseToken.balanceOf(_SELLER);
@@ -376,10 +376,10 @@ contract CancelAuctionTest is AuctionHouseTest {
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenCuratorIsSet
-        givenLotIsCreated
-        givenLotHasStarted
         givenCuratorMaxFeeIsSet
         givenCuratorFeeIsSet
+        givenLotIsCreated
+        givenLotHasStarted
         givenSellerHasCuratorFeeBalance
         givenCuratorHasApproved
     {
@@ -416,14 +416,14 @@ contract CancelAuctionTest is AuctionHouseTest {
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenCuratorIsSet
+        givenCuratorMaxFeeIsSet
+        givenCuratorFeeIsSet
         givenLotIsCreated
         givenLotHasStarted
         givenUserHasQuoteTokenBalance(_PURCHASE_AMOUNT)
         givenUserHasQuoteTokenAllowance(_PURCHASE_AMOUNT)
         givenPayoutMultiplier(_PAYOUT_MULTIPLIER)
         givenPurchase(_PURCHASE_AMOUNT, _PURCHASE_AMOUNT_OUT, _purchaseAuctionData)
-        givenCuratorMaxFeeIsSet
-        givenCuratorFeeIsSet
         givenSellerHasCuratorFeeBalance
         givenCuratorHasApproved
     {
@@ -463,14 +463,14 @@ contract CancelAuctionTest is AuctionHouseTest {
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenCuratorIsSet
+        givenCuratorMaxFeeIsSet
+        givenCuratorFeeIsSet
         givenLotIsCreated
         givenLotHasStarted
         givenUserHasQuoteTokenBalance(_PURCHASE_AMOUNT)
         givenUserHasQuoteTokenAllowance(_PURCHASE_AMOUNT)
         givenPayoutMultiplier(_PAYOUT_MULTIPLIER)
         givenPurchase(_PURCHASE_AMOUNT, _PURCHASE_AMOUNT_OUT, _purchaseAuctionData)
-        givenCuratorMaxFeeIsSet
-        givenCuratorFeeIsSet
         givenSellerHasCuratorFeeBalance
         givenCuratorHasApproved
         givenUserHasQuoteTokenBalance(_PURCHASE_AMOUNT * 2)
@@ -514,11 +514,11 @@ contract CancelAuctionTest is AuctionHouseTest {
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenCuratorIsSet
+        givenCuratorMaxFeeIsSet
+        givenCuratorFeeIsSet
         givenLotIsCreated
         givenLotHasStarted
         givenSellerHasCuratorFeeBalance
-        givenCuratorMaxFeeIsSet
-        givenCuratorFeeIsSet
         givenCuratorHasApproved
         givenUserHasQuoteTokenBalance(_PURCHASE_AMOUNT)
         givenUserHasQuoteTokenAllowance(_PURCHASE_AMOUNT)

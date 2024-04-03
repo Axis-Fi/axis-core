@@ -1389,12 +1389,12 @@ contract PurchaseTest is AuctionHouseTest {
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
         givenCuratorIsSet
+        givenCuratorMaxFeeIsSet
+        givenCuratorFeeIsSet
         givenLotIsCreated
         givenLotHasStarted
         givenProtocolFeeIsSet
         givenReferrerFeeIsSet
-        givenCuratorMaxFeeIsSet
-        givenCuratorFeeIsSet
         givenCuratorHasApproved
         givenUserHasQuoteTokenBalance(_AMOUNT_IN)
         givenUserHasQuoteTokenAllowance(_AMOUNT_IN)
@@ -1420,14 +1420,14 @@ contract PurchaseTest is AuctionHouseTest {
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
         givenCuratorIsSet
+        givenCuratorMaxFeeIsSet
+        givenCuratorFeeIsSet
         givenQuoteTokenHasDecimals(17)
         givenBaseTokenHasDecimals(13)
         givenLotIsCreated
         givenLotHasStarted
         givenProtocolFeeIsSet
         givenReferrerFeeIsSet
-        givenCuratorMaxFeeIsSet
-        givenCuratorFeeIsSet
         givenCuratorHasApproved
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_AMOUNT_IN))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_AMOUNT_IN))
@@ -1453,14 +1453,14 @@ contract PurchaseTest is AuctionHouseTest {
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
         givenCuratorIsSet
+        givenCuratorMaxFeeIsSet
+        givenCuratorFeeIsSet
         givenQuoteTokenHasDecimals(13)
         givenBaseTokenHasDecimals(17)
         givenLotIsCreated
         givenLotHasStarted
         givenProtocolFeeIsSet
         givenReferrerFeeIsSet
-        givenCuratorMaxFeeIsSet
-        givenCuratorFeeIsSet
         givenCuratorHasApproved
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_AMOUNT_IN))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_AMOUNT_IN))
@@ -1486,11 +1486,11 @@ contract PurchaseTest is AuctionHouseTest {
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
         givenCuratorIsSet
+        givenCuratorMaxFeeIsSet
         givenLotIsCreated
         givenLotHasStarted
         givenProtocolFeeIsSet
         givenReferrerFeeIsSet
-        givenCuratorMaxFeeIsSet
         givenCuratorHasApproved
         givenUserHasQuoteTokenBalance(_AMOUNT_IN)
         givenUserHasQuoteTokenAllowance(_AMOUNT_IN)
@@ -1516,12 +1516,12 @@ contract PurchaseTest is AuctionHouseTest {
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
         givenCuratorIsSet
+        givenCuratorMaxFeeIsSet
+        givenCuratorFeeIsSet
         givenLotIsCreated
         givenLotHasStarted
         givenProtocolFeeIsSet
         givenReferrerFeeIsSet
-        givenCuratorMaxFeeIsSet
-        givenCuratorFeeIsSet
         givenCuratorHasApproved
         givenUserHasQuoteTokenBalance(_AMOUNT_IN)
         givenUserHasQuoteTokenAllowance(_AMOUNT_IN)
@@ -1555,12 +1555,12 @@ contract PurchaseTest is AuctionHouseTest {
         givenDerivativeParamsAreSet
         givenDerivativeIsDeployed
         givenCuratorIsSet
+        givenCuratorMaxFeeIsSet
+        givenCuratorFeeIsSet
         givenLotIsCreated
         givenLotHasStarted
         givenProtocolFeeIsSet
         givenReferrerFeeIsSet
-        givenCuratorMaxFeeIsSet
-        givenCuratorFeeIsSet
         givenCuratorHasApproved
         givenUserHasQuoteTokenBalance(_AMOUNT_IN)
         givenUserHasQuoteTokenAllowance(_AMOUNT_IN)
@@ -1592,12 +1592,12 @@ contract PurchaseTest is AuctionHouseTest {
         givenDerivativeParamsAreSet
         givenDerivativeIsDeployed
         givenCuratorIsSet
+        givenCuratorMaxFeeIsSet
+        givenCuratorFeeIsSet
         givenLotIsCreated
         givenLotHasStarted
         givenProtocolFeeIsSet
         givenReferrerFeeIsSet
-        givenCuratorMaxFeeIsSet
-        givenCuratorFeeIsSet
         givenCuratorHasApproved
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_AMOUNT_IN))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_AMOUNT_IN))
@@ -1629,12 +1629,12 @@ contract PurchaseTest is AuctionHouseTest {
         givenDerivativeParamsAreSet
         givenDerivativeIsDeployed
         givenCuratorIsSet
+        givenCuratorMaxFeeIsSet
+        givenCuratorFeeIsSet
         givenLotIsCreated
         givenLotHasStarted
         givenProtocolFeeIsSet
         givenReferrerFeeIsSet
-        givenCuratorMaxFeeIsSet
-        givenCuratorFeeIsSet
         givenCuratorHasApproved
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_AMOUNT_IN))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_AMOUNT_IN))
@@ -1793,14 +1793,14 @@ contract PurchaseTest is AuctionHouseTest {
         whenAtomicAuctionModuleIsInstalled
         givenAuctionIsPrefunded
         givenCuratorIsSet
+        givenCuratorMaxFeeIsSet
+        givenCuratorFeeIsSet
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenLotIsCreated
         givenLotHasStarted
         givenProtocolFeeIsSet
         givenReferrerFeeIsSet
-        givenCuratorMaxFeeIsSet
-        givenCuratorFeeIsSet
         givenFeesAreCalculated(_AMOUNT_IN)
         whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
         givenSellerHasBaseTokenBalance(_curatorMaxPotentialFee)
@@ -1827,6 +1827,8 @@ contract PurchaseTest is AuctionHouseTest {
         whenAtomicAuctionModuleIsInstalled
         givenAuctionIsPrefunded
         givenCuratorIsSet
+        givenCuratorMaxFeeIsSet
+        givenCuratorFeeIsSet
         givenQuoteTokenHasDecimals(17)
         givenBaseTokenHasDecimals(13)
         givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
@@ -1835,8 +1837,6 @@ contract PurchaseTest is AuctionHouseTest {
         givenLotHasStarted
         givenProtocolFeeIsSet
         givenReferrerFeeIsSet
-        givenCuratorMaxFeeIsSet
-        givenCuratorFeeIsSet
         givenFeesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN))
         whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
         givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_curatorMaxPotentialFee))
@@ -1863,6 +1863,8 @@ contract PurchaseTest is AuctionHouseTest {
         whenAtomicAuctionModuleIsInstalled
         givenAuctionIsPrefunded
         givenCuratorIsSet
+        givenCuratorMaxFeeIsSet
+        givenCuratorFeeIsSet
         givenQuoteTokenHasDecimals(13)
         givenBaseTokenHasDecimals(17)
         givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
@@ -1871,8 +1873,6 @@ contract PurchaseTest is AuctionHouseTest {
         givenLotHasStarted
         givenProtocolFeeIsSet
         givenReferrerFeeIsSet
-        givenCuratorMaxFeeIsSet
-        givenCuratorFeeIsSet
         givenFeesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN))
         whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
         givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_curatorMaxPotentialFee))
@@ -1899,14 +1899,14 @@ contract PurchaseTest is AuctionHouseTest {
         whenAtomicAuctionModuleIsInstalled
         givenAuctionIsPrefunded
         givenCuratorIsSet
+        givenCuratorMaxFeeIsSet
+        givenCuratorFeeIsSet
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenLotIsCreated
         givenLotHasStarted
         givenProtocolFeeIsSet
         givenReferrerFeeIsSet
-        givenCuratorMaxFeeIsSet
-        givenCuratorFeeIsSet
         givenFeesAreCalculated(_AMOUNT_IN)
         whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
         givenSellerHasBaseTokenBalance(_curatorMaxPotentialFee)
