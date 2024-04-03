@@ -3,11 +3,18 @@ pragma solidity 0.8.19;
 
 import {ERC20} from "lib/solmate/src/tokens/ERC20.sol";
 import {Transfer} from "src/lib/Transfer.sol";
-import {ReentrancyGuard} from "lib/solmate/src/utils/ReentrancyGuard.sol";
 
-import {fromKeycode, Keycode, Veecode, Module, WithModules} from "src/modules/Modules.sol";
+import {
+    fromKeycode,
+    keycodeFromVeecode,
+    Keycode,
+    Veecode,
+    Module,
+    WithModules
+} from "src/modules/Modules.sol";
 
 import {Auction, AuctionModule} from "src/modules/Auction.sol";
+import {FeeManager} from "src/bases/FeeManager.sol";
 
 import {DerivativeModule} from "src/modules/Derivative.sol";
 
@@ -19,7 +26,7 @@ import {Callbacks} from "src/lib/Callbacks.sol";
 ///         - Creating new auction lots
 ///         - Cancelling auction lots
 ///         - Storing information about how to handle inputs and outputs for auctions ("routing")
-abstract contract Auctioneer is WithModules, ReentrancyGuard {
+abstract contract Auctioneer is FeeManager, WithModules {
     using Callbacks for ICallback;
 
     // ========= ERRORS ========= //
@@ -137,6 +144,10 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
     /// @notice     Mapping of lot IDs to their fee information
     mapping(uint96 lotId => FeeData) public lotFees;
 
+    // ========= CONSTRUCTOR ========= //
+
+    constructor(address protocol_) FeeManager(protocol_) {}
+
     // ========== AUCTION MANAGEMENT ========== //
 
     /// @notice     Creates a new auction lot
@@ -214,9 +225,15 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
 
         // Store curation information
         {
-            FeeData storage fees = lotFees[lotId];
-            fees.curator = routing_.curator;
-            fees.curated = false;
+            FeeData storage currentLotFees = lotFees[lotId];
+            currentLotFees.curator = routing_.curator;
+            currentLotFees.curated = false;
+
+            // If the curator is set
+            if (routing_.curator != address(0)) {
+                currentLotFees.curatorFee =
+                    fees[keycodeFromVeecode(routing.auctionReference)].curator[routing_.curator];
+            }
         }
 
         // Derivative

@@ -135,7 +135,7 @@ abstract contract Router {
 
 /// @title      AuctionHouse
 /// @notice     As its name implies, the AuctionHouse is where auctions are created, bid on, and settled. The core protocol logic is implemented here.
-contract AuctionHouse is Auctioneer, Router, FeeManager {
+contract AuctionHouse is Auctioneer, Router {
     using Callbacks for ICallback;
 
     // ========== ERRORS ========== //
@@ -171,7 +171,7 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
         address owner_,
         address protocol_,
         address permit2_
-    ) FeeManager(protocol_) WithModules(owner_) {
+    ) Auctioneer(protocol_) WithModules(owner_) {
         _PERMIT2 = permit2_;
     }
 
@@ -649,7 +649,6 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
 
         // Set the curator as approved
         feeData.curated = true;
-        feeData.curatorFee = fees[keycodeFromVeecode(routing.auctionReference)].curator[msg.sender];
 
         // Calculate the fee amount based on the remaining capacity (must be in base token if auction is pre-funded)
         uint96 curatorFeePayout = uint96(
