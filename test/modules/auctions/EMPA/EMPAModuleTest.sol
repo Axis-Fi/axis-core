@@ -53,6 +53,8 @@ abstract contract EmpaModuleTest is Test, Permit2User {
     uint8 internal _quoteTokenDecimals = 18;
     uint8 internal _baseTokenDecimals = 18;
 
+    bytes32 internal constant _QUEUE_START = bytes32(0x0000000000000000ffffffffffffffffffffffff000000000000000000000001);
+
     function setUp() public {
         vm.warp(1_000_000);
 
@@ -291,7 +293,7 @@ abstract contract EmpaModuleTest is Test, Permit2User {
     }
 
     function _submitPrivateKey() internal {
-        _module.submitPrivateKey(_lotId, _AUCTION_PRIVATE_KEY, 0);
+        _module.submitPrivateKey(_lotId, _AUCTION_PRIVATE_KEY, 0, new bytes32[](0));
     }
 
     modifier givenPrivateKeyIsSubmitted() {

@@ -32,7 +32,7 @@ contract EmpaModuleSubmitPrivateKeyTest is EmpaModuleTest {
 
         // Call the function
         vm.prank(address(_auctionHouse));
-        _module.submitPrivateKey(_lotId, _AUCTION_PRIVATE_KEY, 0);
+        _module.submitPrivateKey(_lotId, _AUCTION_PRIVATE_KEY, 0, new bytes32[](0));
     }
 
     function test_lotIsActive_reverts() external givenLotIsCreated givenLotHasStarted {
@@ -44,7 +44,7 @@ contract EmpaModuleSubmitPrivateKeyTest is EmpaModuleTest {
 
         // Call the function
         vm.prank(address(_auctionHouse));
-        _module.submitPrivateKey(_lotId, _AUCTION_PRIVATE_KEY, 0);
+        _module.submitPrivateKey(_lotId, _AUCTION_PRIVATE_KEY, 0, new bytes32[](0));
     }
 
     function test_lotHasNotStarted_reverts() external givenLotIsCreated {
@@ -54,7 +54,7 @@ contract EmpaModuleSubmitPrivateKeyTest is EmpaModuleTest {
 
         // Call the function
         vm.prank(address(_auctionHouse));
-        _module.submitPrivateKey(_lotId, _AUCTION_PRIVATE_KEY, 0);
+        _module.submitPrivateKey(_lotId, _AUCTION_PRIVATE_KEY, 0, new bytes32[](0));
     }
 
     function test_lotCancelled_reverts() external givenLotIsCreated givenLotIsCancelled {
@@ -64,7 +64,7 @@ contract EmpaModuleSubmitPrivateKeyTest is EmpaModuleTest {
 
         // Call the function
         vm.prank(address(_auctionHouse));
-        _module.submitPrivateKey(_lotId, _AUCTION_PRIVATE_KEY, 0);
+        _module.submitPrivateKey(_lotId, _AUCTION_PRIVATE_KEY, 0, new bytes32[](0));
     }
 
     function test_privateKeyAlreadySubmitted_reverts()
@@ -81,7 +81,7 @@ contract EmpaModuleSubmitPrivateKeyTest is EmpaModuleTest {
 
         // Call the function
         vm.prank(address(_auctionHouse));
-        _module.submitPrivateKey(_lotId, _AUCTION_PRIVATE_KEY, 0);
+        _module.submitPrivateKey(_lotId, _AUCTION_PRIVATE_KEY, 0, new bytes32[](0));
     }
 
     function test_privateKeyNotDerivedFromPublicKey_reverts()
@@ -96,7 +96,7 @@ contract EmpaModuleSubmitPrivateKeyTest is EmpaModuleTest {
 
         // Call the function
         vm.prank(address(_auctionHouse));
-        _module.submitPrivateKey(_lotId, uint256(1), 0);
+        _module.submitPrivateKey(_lotId, uint256(1), 0, new bytes32[](0));
     }
 
     function test_success()
@@ -108,7 +108,7 @@ contract EmpaModuleSubmitPrivateKeyTest is EmpaModuleTest {
     {
         // Call the function
         vm.prank(address(_auctionHouse));
-        _module.submitPrivateKey(_lotId, _AUCTION_PRIVATE_KEY, 0);
+        _module.submitPrivateKey(_lotId, _AUCTION_PRIVATE_KEY, 0, new bytes32[](0));
 
         // Assert the private key is set
         EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
@@ -131,7 +131,7 @@ contract EmpaModuleSubmitPrivateKeyTest is EmpaModuleTest {
         givenLotHasConcluded
     {
         // Call the function
-        _module.submitPrivateKey(_lotId, _AUCTION_PRIVATE_KEY, 0);
+        _module.submitPrivateKey(_lotId, _AUCTION_PRIVATE_KEY, 0, new bytes32[](0));
 
         // Assert the private key is set
         EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
@@ -153,9 +153,13 @@ contract EmpaModuleSubmitPrivateKeyTest is EmpaModuleTest {
         givenBidIsCreated(2e18, 1e18)
         givenLotHasConcluded
     {
+        // Create hint for decryption
+        bytes32[] memory hints = new bytes32[](1);
+        hints[0] = _QUEUE_START;
+        
         // Call the function
         vm.prank(address(_auctionHouse));
-        _module.submitPrivateKey(_lotId, _AUCTION_PRIVATE_KEY, 1);
+        _module.submitPrivateKey(_lotId, _AUCTION_PRIVATE_KEY, 1, hints);
 
         // Assert the private key is set
         EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);

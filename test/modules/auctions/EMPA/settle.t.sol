@@ -835,8 +835,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
 
                 // Iterate through the lot's decrypted bid from the queue start and find the correct position
                 // TODO: doesn't consider bids in this current batch and is brute-forcing to account for all situations
-                bytes32 prev =
-                    bytes32(0x0000000000000000ffffffffffffffffffffffff000000000000000000000001);
+                bytes32 prev = _QUEUE_START;
                 while (_module.getNextInQueue(_lotId, prev).isHigherPriorityThan(key)) {
                     prev = _module.getNextInQueue(_lotId, prev);
                 }

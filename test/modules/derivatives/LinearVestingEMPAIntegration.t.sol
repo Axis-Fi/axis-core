@@ -142,7 +142,7 @@ contract LinearVestingEMPAIntegrationTest is AuctionHouseTest {
     }
 
     function _submitPrivateKey() internal {
-        _empaModule.submitPrivateKey(_lotId, _AUCTION_PRIVATE_KEY, 0);
+        _empaModule.submitPrivateKey(_lotId, _AUCTION_PRIVATE_KEY, 0, new bytes32[](0));
     }
 
     modifier givenPrivateKeyIsSubmitted() {

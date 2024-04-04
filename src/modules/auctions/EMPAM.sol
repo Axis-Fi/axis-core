@@ -399,7 +399,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
     ///                 - The lot is not active
     ///                 - The lot has not concluded
     ///                 - The private key has already been submitted
-    function submitPrivateKey(uint96 lotId_, uint256 privateKey_, uint64 num_) external {
+    function submitPrivateKey(uint96 lotId_, uint256 privateKey_, uint64 num_, bytes32[] calldata sortHints_) external {
         // Validation
         _revertIfLotInvalid(lotId_);
         _revertIfLotActive(lotId_);
@@ -417,8 +417,8 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         // Store the private key
         auctionData[lotId_].privateKey = privateKey_;
 
-        // // Decrypt and sort bids
-        // _decryptAndSortBids(lotId_, num_);
+        // Decrypt and sort bids
+        _decryptAndSortBids(lotId_, num_, sortHints_);
     }
 
     /// @notice         Decrypts a batch of bids and sorts them by price in descending order
@@ -469,7 +469,6 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
     ) internal {
         // Load next decrypt index and min bid size
         uint64 nextDecryptIndex = auctionData[lotId_].nextDecryptIndex;
-        // uint96 minBidSize = auctionData[lotId_].minBidSize;
 
         // Validate that the sort hints are the correct length
         if (sortHints_.length != num_) revert Auction_InvalidParams();
@@ -484,11 +483,8 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         // Iterate over the provided number of bids, decrypt them, and then store them in the sorted bid queue
         // All submitted bids will be marked as decrypted, but only those with valid values will have the minAmountOut set and be stored in the sorted bid queue
         for (uint64 i; i < num_; i++) {
-            // Load encrypted bid
-            uint64 bidId = bidIds[nextDecryptIndex + i];
-
             // Decrypt the bid and store the data in the queue, if applicable
-            _decrypt(lotId_, bidId, sortHints_[i]);
+            _decrypt(lotId_, bidIds[nextDecryptIndex + i], sortHints_[i]);
         }
 
         // Increment next decrypt index
