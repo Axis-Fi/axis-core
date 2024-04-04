@@ -399,7 +399,12 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
     ///                 - The lot is not active
     ///                 - The lot has not concluded
     ///                 - The private key has already been submitted
-    function submitPrivateKey(uint96 lotId_, uint256 privateKey_, uint64 num_, bytes32[] calldata sortHints_) external {
+    function submitPrivateKey(
+        uint96 lotId_,
+        uint256 privateKey_,
+        uint64 num_,
+        bytes32[] calldata sortHints_
+    ) external {
         // Validation
         _revertIfLotInvalid(lotId_);
         _revertIfLotActive(lotId_);

@@ -156,7 +156,7 @@ contract EmpaModuleSubmitPrivateKeyTest is EmpaModuleTest {
         // Create hint for decryption
         bytes32[] memory hints = new bytes32[](1);
         hints[0] = _QUEUE_START;
-        
+
         // Call the function
         vm.prank(address(_auctionHouse));
         _module.submitPrivateKey(_lotId, _AUCTION_PRIVATE_KEY, 1, hints);
