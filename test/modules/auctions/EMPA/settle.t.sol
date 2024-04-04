@@ -119,10 +119,6 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
     ) internal {
         assertEq(settlement_.totalIn, _expectedTotalIn, "totalIn");
         assertEq(settlement_.totalOut, _expectedTotalOut, "totalOut");
-        assertEq(settlement_.pfBidder, _expectedPartialFillBidder, "pfBidder");
-        assertEq(settlement_.pfReferrer, _expectedPartialFillReferrer, "pfReferrer");
-        assertEq(settlement_.pfRefund, _expectedPartialFillRefund, "pfRefund");
-        assertEq(settlement_.pfPayout, _expectedPartialFillPayout, "pfPayout");
         assertEq(auctionOutput_, _expectedAuctionOutput, "auctionOutput");
 
         EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);

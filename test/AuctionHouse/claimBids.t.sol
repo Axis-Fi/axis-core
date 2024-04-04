@@ -232,10 +232,6 @@ contract ClaimBidsTest is AuctionHouseTest {
             Auction.Settlement({
                 totalIn: _scaleQuoteTokenAmount(_BID_AMOUNT),
                 totalOut: _scaleBaseTokenAmount(_BID_AMOUNT_OUT),
-                pfBidder: address(0),
-                pfReferrer: address(0),
-                pfRefund: 0,
-                pfPayout: 0,
                 auctionOutput: ""
             })
         );
@@ -251,10 +247,6 @@ contract ClaimBidsTest is AuctionHouseTest {
             Auction.Settlement({
                 totalIn: _scaleQuoteTokenAmount(_BID_AMOUNT + _BID_AMOUNT / 2),
                 totalOut: _scaleBaseTokenAmount(_BID_AMOUNT_OUT + _BID_AMOUNT_OUT),
-                pfBidder: address(0),
-                pfReferrer: address(0),
-                pfRefund: 0,
-                pfPayout: 0,
                 auctionOutput: ""
             })
         );
@@ -270,10 +262,6 @@ contract ClaimBidsTest is AuctionHouseTest {
             Auction.Settlement({
                 totalIn: _scaleQuoteTokenAmount(_BID_AMOUNT + _BID_AMOUNT),
                 totalOut: _scaleBaseTokenAmount(_BID_AMOUNT_OUT + _BID_AMOUNT_OUT),
-                pfBidder: address(0),
-                pfReferrer: address(0),
-                pfRefund: 0,
-                pfPayout: 0,
                 auctionOutput: ""
             })
         );

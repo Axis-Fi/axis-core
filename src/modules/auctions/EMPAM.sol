@@ -836,20 +836,21 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
                 // Load routing and bid data
                 Bid storage bidData = bids[lotId_][result.partialFillBidId];
 
-                // Set the bidder on for the partially filled bid
-                settlement_.pfBidder = bidData.bidder;
-                settlement_.pfReferrer = bidData.referrer;
-
                 // Calculate the payout and refund amounts
                 uint256 fullFill =
                     Math.mulDivDown(uint256(bidData.amount), baseScale, result.marginalPrice);
                 uint256 excess = result.capacityExpended - capacity;
-                settlement_.pfPayout = uint96(fullFill - excess);
-                settlement_.pfRefund =
-                    uint96(Math.mulDivDown(uint256(bidData.amount), excess, fullFill));
+
+                // Store the settlement data for use with partial fills
+                PartialFillResult memory pfResult = PartialFillResult({
+                    bidId: result.partialFillBidId,
+                    refund: uint96(Math.mulDivDown(uint256(bidData.amount), excess, fullFill)),
+                    payout: uint96(fullFill - excess)
+                });
+                lotPartialFillResults[lotId_] = pfResult;
 
                 // Reduce the total amount in by the refund amount
-                result.totalAmountIn -= settlement_.pfRefund;
+                result.totalAmountIn -= pfResult.refund;
             }
 
             // Set settlement data
@@ -857,13 +858,6 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
             settlement_.totalIn = uint96(result.totalAmountIn);
             settlement_.totalOut =
                 uint96(result.capacityExpended > capacity ? capacity : result.capacityExpended);
-
-            // Store the settlement data for use with partial fills
-            lotPartialFillResults[lotId_] = PartialFillResult({
-                bidId: result.partialFillBidId,
-                refund: settlement_.pfRefund,
-                payout: settlement_.pfPayout
-            });
 
             // Cache the amount to be claimed
             lotData[lotId_].claimableBidAmountOut = settlement_.totalOut;

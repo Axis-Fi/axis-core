@@ -90,15 +90,8 @@ contract SettleTest is AuctionHouseTest {
         uint96 pfRefundAmount = _scaleQuoteTokenAmount(2e18);
         uint96 pfPayoutAmount = _scaleBaseTokenAmount(1e18);
 
-        Auction.Settlement memory settlement = Auction.Settlement({
-            totalIn: totalIn,
-            totalOut: totalOut,
-            pfBidder: _bidder,
-            pfReferrer: _REFERRER,
-            pfRefund: pfRefundAmount,
-            pfPayout: pfPayoutAmount,
-            auctionOutput: ""
-        });
+        Auction.Settlement memory settlement =
+            Auction.Settlement({totalIn: totalIn, totalOut: totalOut, auctionOutput: ""});
         _mockSettlement(settlement, "");
 
         // Calculate fees
@@ -121,15 +114,8 @@ contract SettleTest is AuctionHouseTest {
         uint96 totalOut = _scaleBaseTokenAmount(5e18); // 50% filled
         uint256 scaledLotCapacity = _scaleBaseTokenAmount(_LOT_CAPACITY);
 
-        Auction.Settlement memory settlement = Auction.Settlement({
-            totalIn: totalIn,
-            totalOut: totalOut,
-            pfBidder: address(0),
-            pfReferrer: address(0),
-            pfRefund: 0,
-            pfPayout: 0,
-            auctionOutput: ""
-        });
+        Auction.Settlement memory settlement =
+            Auction.Settlement({totalIn: totalIn, totalOut: totalOut, auctionOutput: ""});
         _mockSettlement(settlement, "");
 
         // Calculate fees
@@ -152,15 +138,8 @@ contract SettleTest is AuctionHouseTest {
         uint96 totalOut = _scaleBaseTokenAmount(_LOT_CAPACITY);
         uint256 scaledLotCapacity = _scaleBaseTokenAmount(_LOT_CAPACITY);
 
-        Auction.Settlement memory settlement = Auction.Settlement({
-            totalIn: totalIn,
-            totalOut: totalOut,
-            pfBidder: address(0),
-            pfReferrer: address(0),
-            pfRefund: 0,
-            pfPayout: 0,
-            auctionOutput: ""
-        });
+        Auction.Settlement memory settlement =
+            Auction.Settlement({totalIn: totalIn, totalOut: totalOut, auctionOutput: ""});
         _mockSettlement(settlement, "");
 
         // Calculate fees
@@ -183,15 +162,8 @@ contract SettleTest is AuctionHouseTest {
         uint96 totalOut = 0;
         uint256 scaledLotCapacity = _scaleBaseTokenAmount(_LOT_CAPACITY);
 
-        Auction.Settlement memory settlement = Auction.Settlement({
-            totalIn: totalIn,
-            totalOut: totalOut,
-            pfBidder: address(0),
-            pfReferrer: address(0),
-            pfRefund: 0,
-            pfPayout: 0,
-            auctionOutput: ""
-        });
+        Auction.Settlement memory settlement =
+            Auction.Settlement({totalIn: totalIn, totalOut: totalOut, auctionOutput: ""});
         _mockSettlement(settlement, "");
 
         // Calculate fees

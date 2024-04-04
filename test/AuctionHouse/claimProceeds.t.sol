@@ -91,10 +91,6 @@ contract ClaimProceedsTest is AuctionHouseTest {
             Auction.Settlement({
                 totalIn: _scaleQuoteTokenAmount(_BID_AMOUNT),
                 totalOut: _scaleBaseTokenAmount(_BID_AMOUNT_OUT),
-                pfBidder: address(0),
-                pfReferrer: address(0),
-                pfRefund: 0,
-                pfPayout: 0,
                 auctionOutput: ""
             })
         );
@@ -110,10 +106,6 @@ contract ClaimProceedsTest is AuctionHouseTest {
             Auction.Settlement({
                 totalIn: _scaleQuoteTokenAmount(_BID_AMOUNT * 5),
                 totalOut: _scaleBaseTokenAmount(_BID_AMOUNT_OUT * 5),
-                pfBidder: address(0),
-                pfReferrer: address(0),
-                pfRefund: 0,
-                pfPayout: 0,
                 auctionOutput: ""
             })
         );
@@ -130,13 +122,13 @@ contract ClaimProceedsTest is AuctionHouseTest {
                 totalIn: _scaleQuoteTokenAmount(_BID_AMOUNT * 6)
                     - _scaleQuoteTokenAmount(_BID_AMOUNT_PARTIAL_REFUND),
                 totalOut: _scaleBaseTokenAmount(_LOT_CAPACITY),
-                pfBidder: _bidder,
-                pfReferrer: _REFERRER,
-                pfRefund: _scaleQuoteTokenAmount(_BID_AMOUNT_PARTIAL_REFUND),
-                pfPayout: _scaleBaseTokenAmount(_BID_AMOUNT_OUT_PARTIAL_PAYOUT),
                 auctionOutput: ""
             })
         );
+
+        // TODO handle partial refund
+        // pfRefund: _scaleQuoteTokenAmount(_BID_AMOUNT_PARTIAL_REFUND),
+        // pfPayout: _scaleBaseTokenAmount(_BID_AMOUNT_OUT_PARTIAL_PAYOUT),
 
         _auctionHouse.settle(_lotId);
         _;
