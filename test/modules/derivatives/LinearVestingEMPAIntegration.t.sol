@@ -211,7 +211,8 @@ contract LinearVestingEMPAIntegrationTest is AuctionHouseTest {
         EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData =
             _empaModule.getAuctionData(_lotId);
         assertEq(uint8(auctionData.status), uint8(Auction.Status.Settled), "status");
-        assertEq(auctionData.proceedsClaimed, true, "proceedsClaimed");
+        Auction.Lot memory lotData = _empaModule.getLot(_lotId);
+        assertEq(lotData.proceedsClaimed, true, "proceedsClaimed");
 
         // Check balances
         assertEq(_baseToken.balanceOf(_SELLER), _LOT_CAPACITY, "seller balance");
@@ -428,8 +429,12 @@ contract LinearVestingEMPAIntegrationTest is AuctionHouseTest {
         uint256 derivativeTokenId =
             _linearVestingModule.computeId(address(_baseToken), abi.encode(_linearVestingParams));
 
-        // Check that the curator has NOT been paid in derivative token
-        assertEq(_linearVestingModule.balanceOf(_CURATOR, derivativeTokenId), 0, "curator fee"); // To be claimed
+        // Check that the curator has paid on settle since the payout is a derivative token
+        assertEq(
+            _linearVestingModule.balanceOf(_CURATOR, derivativeTokenId),
+            _curatorMaxPotentialFee,
+            "curator fee"
+        ); // To be claimed
     }
 
     function test_settle_partialFill()
@@ -517,61 +522,12 @@ contract LinearVestingEMPAIntegrationTest is AuctionHouseTest {
         EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData =
             _empaModule.getAuctionData(_lotId);
         assertEq(uint8(auctionData.status), uint8(Auction.Status.Settled), "status");
-        assertEq(auctionData.proceedsClaimed, true, "proceedsClaimed");
+        Auction.Lot memory lotData = _empaModule.getLot(_lotId);
+        assertEq(lotData.proceedsClaimed, true, "proceedsClaimed");
 
         // Check the balances
         assertEq(_quoteToken.balanceOf(_SELLER), _BID_AMOUNT, "seller balance");
         assertEq(_baseToken.balanceOf(_SELLER), _LOT_CAPACITY - _BID_AMOUNT_OUT, "seller balance");
-    }
-
-    // claimCuratorPayout
-    // [X] derivative tokens are minted to the curator, but cannot be transferred
-
-    function test_claimCuratorPayout()
-        external
-        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
-        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
-        givenAuctionTypeIsEMPA
-        givenDerivativeTypeIsLinearVesting
-        givenCuratorIsSet
-        givenCuratorMaxFeeIsSet
-        givenCuratorFeeIsSet
-        givenLotIsCreated
-        givenLotHasStarted
-        givenSellerHasBaseTokenBalance(_curatorMaxPotentialFee)
-        givenSellerHasBaseTokenAllowance(_curatorMaxPotentialFee)
-        givenCuratorHasApproved
-        givenUserHasQuoteTokenBalance(_BID_AMOUNT)
-        givenUserHasQuoteTokenAllowance(_BID_AMOUNT)
-        givenBidIsCreated(_BID_AMOUNT, _BID_AMOUNT_OUT)
-        givenLotIsConcluded
-        givenPrivateKeyIsSubmitted
-        givenLotIsDecrypted
-        givenLotIsSettled
-        givenCuratorPayoutIsClaimed
-    {
-        // Check the auction state
-        EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData =
-            _empaModule.getAuctionData(_lotId);
-        assertEq(uint8(auctionData.status), uint8(Auction.Status.Settled), "status");
-        assertEq(auctionData.curatorPayoutClaimed, true, "curatorPayoutClaimed");
-
-        uint256 derivativeTokenId =
-            _linearVestingModule.computeId(address(_baseToken), abi.encode(_linearVestingParams));
-
-        // Curator payout
-        uint256 curatorPayout = _BID_AMOUNT_OUT * _curatorFeePercentActual / 1e5;
-
-        // Check the balances
-        assertEq(_quoteToken.balanceOf(_CURATOR), 0, "quote token: curator");
-
-        assertEq(
-            _linearVestingModule.balanceOf(_CURATOR, derivativeTokenId),
-            curatorPayout,
-            "vesting token: curator balance"
-        );
-
-        assertEq(_baseToken.balanceOf(_CURATOR), 0, "vesting token: curator balance");
     }
 
     // claimBid

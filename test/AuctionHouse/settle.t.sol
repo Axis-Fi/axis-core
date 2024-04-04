@@ -3,6 +3,7 @@ pragma solidity 0.8.19;
 
 import {Auction, AuctionModule} from "src/modules/Auction.sol";
 import {Auctioneer} from "src/bases/Auctioneer.sol";
+import {fromVeecode} from "src/modules/Modules.sol";
 
 import {AuctionHouseTest} from "test/AuctionHouse/AuctionHouseTest.sol";
 
@@ -12,6 +13,9 @@ contract SettleTest is AuctionHouseTest {
     uint256 internal _expectedAuctionHouseQuoteTokenBalance;
 
     uint256 internal _expectedAuctionHouseBaseTokenBalance;
+
+    uint256 internal _expectedDerivativeBaseTokenBalance;
+    uint256 internal _expectedCuratorBaseTokenRewards;
 
     bool internal _lotSettles;
 
@@ -29,10 +33,20 @@ contract SettleTest is AuctionHouseTest {
         assertEq(_baseToken.balanceOf(_REFERRER), 0, "base token: referrer balance");
         assertEq(_baseToken.balanceOf(_CURATOR), 0, "base token: curator balance");
         assertEq(_baseToken.balanceOf(_PROTOCOL), 0, "base token: protocol balance");
+        assertEq(
+            _baseToken.balanceOf(address(_derivativeModule)),
+            _expectedDerivativeBaseTokenBalance,
+            "base token: derivative balance"
+        );
 
         // Check routing
         Auctioneer.Routing memory lotRouting = _getLotRouting(_lotId);
-        assertEq(lotRouting.funding, _expectedAuctionHouseBaseTokenBalance, "funding");
+        assertEq(
+            lotRouting.funding,
+            _expectedAuctionHouseBaseTokenBalance - _expectedDerivativeBaseTokenBalance
+                - _expectedCuratorBaseTokenRewards,
+            "funding"
+        );
     }
 
     function _assertQuoteTokenBalances() internal {
@@ -55,9 +69,13 @@ contract SettleTest is AuctionHouseTest {
         assertEq(feeData.protocolFee, _lotSettles ? _protocolFeePercentActual : 0, "protocol fee");
         assertEq(feeData.referrerFee, _lotSettles ? _referrerFeePercentActual : 0, "referrer fee");
 
-        // Check accrued quote token fees
+        // Check accrued fees
         assertEq(_auctionHouse.rewards(_REFERRER, _quoteToken), 0, "referrer fee");
-        assertEq(_auctionHouse.rewards(_CURATOR, _quoteToken), 0, "curator fee"); // Always 0
+        assertEq(
+            _auctionHouse.rewards(_CURATOR, _baseToken),
+            _expectedCuratorBaseTokenRewards,
+            "curator fee"
+        );
         assertEq(_auctionHouse.rewards(_PROTOCOL, _quoteToken), 0, "protocol fee");
     }
 
@@ -102,8 +120,15 @@ contract SettleTest is AuctionHouseTest {
         // Quote token
         _expectedAuctionHouseQuoteTokenBalance = totalIn; // To be claimed by bidder
 
+        // Determine if auction is using a payout derivative
+        Auctioneer.Routing memory routing = _getLotRouting(_lotId);
+        bool payoutDerivative = fromVeecode(routing.derivativeReference) != bytes7("");
+
         // Base token
-        _expectedAuctionHouseBaseTokenBalance = scaledLotCapacity + prefundedCuratorFees; // Entire capacity and potential curator fees are kept in the auctionhouse (regardless of prefunding)
+        _expectedAuctionHouseBaseTokenBalance =
+            scaledLotCapacity + (payoutDerivative ? 0 : prefundedCuratorFees); // Entire capacity and potential curator fees are kept in the auctionhouse, unless a derivative is used
+        _expectedDerivativeBaseTokenBalance = payoutDerivative ? prefundedCuratorFees : 0; // curator fee sent to derivative module if used
+        _expectedCuratorBaseTokenRewards = payoutDerivative ? 0 : prefundedCuratorFees; // curator fee kept in auctionhouse if no derivative is used
 
         _lotSettles = true;
         _;
@@ -126,8 +151,16 @@ contract SettleTest is AuctionHouseTest {
         // Quote token
         _expectedAuctionHouseQuoteTokenBalance = totalIn;
 
+        // Determine if auction is using a payout derivative
+        Auctioneer.Routing memory routing = _getLotRouting(_lotId);
+        bool payoutDerivative = fromVeecode(routing.derivativeReference) != bytes7("");
+        uint256 curatorFeeEarned = prefundedCuratorFees * uint256(totalOut) / scaledLotCapacity;
+
         // Base token
-        _expectedAuctionHouseBaseTokenBalance = scaledLotCapacity + prefundedCuratorFees; // Entire capacity and potential curator fees are kept in the auctionhouse (regardless of prefunding)
+        _expectedAuctionHouseBaseTokenBalance =
+            scaledLotCapacity + prefundedCuratorFees - (payoutDerivative ? curatorFeeEarned : 0); // To be claimed by bidders and seller
+        _expectedDerivativeBaseTokenBalance = payoutDerivative ? curatorFeeEarned : 0; // curator fee sent to derivative module if used
+        _expectedCuratorBaseTokenRewards = payoutDerivative ? 0 : curatorFeeEarned; // curator fee kept in auctionhouse if no derivative is used
 
         _lotSettles = true;
         _;
@@ -150,8 +183,15 @@ contract SettleTest is AuctionHouseTest {
         // Quote token
         _expectedAuctionHouseQuoteTokenBalance = totalIn;
 
+        // Determine if auction is using a payout derivative
+        Auctioneer.Routing memory routing = _getLotRouting(_lotId);
+        bool payoutDerivative = fromVeecode(routing.derivativeReference) != bytes7("");
+
         // Base token
-        _expectedAuctionHouseBaseTokenBalance = scaledLotCapacity + prefundedCuratorFees; // To be claimed by bidders and seller
+        _expectedAuctionHouseBaseTokenBalance =
+            scaledLotCapacity + (payoutDerivative ? 0 : prefundedCuratorFees); // To be claimed by bidders and seller
+        _expectedDerivativeBaseTokenBalance = payoutDerivative ? prefundedCuratorFees : 0; // curator fee sent to derivative module if used
+        _expectedCuratorBaseTokenRewards = payoutDerivative ? 0 : prefundedCuratorFees; // curator fee kept in auctionhouse if no derivative is used
 
         _lotSettles = true;
         _;

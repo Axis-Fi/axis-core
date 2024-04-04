@@ -176,11 +176,7 @@ contract FixedPriceAuctionModule is AuctionModule {
         revert Auction_NotImplemented();
     }
 
-    function _claimProceeds(uint96) internal pure override returns (uint96, uint96, uint96, bool) {
-        revert Auction_NotImplemented();
-    }
-
-    function _claimCuratorPayout(uint96) internal virtual override returns (uint96) {
+    function _claimProceeds(uint96) internal pure override returns (uint96, uint96, uint96) {
         revert Auction_NotImplemented();
     }
 
@@ -193,10 +189,6 @@ contract FixedPriceAuctionModule is AuctionModule {
     }
 
     function _revertIfLotProceedsClaimed(uint96) internal pure override {
-        revert Auction_NotImplemented();
-    }
-
-    function _revertIfLotCuratorPayoutClaimed(uint96) internal view virtual override {
         revert Auction_NotImplemented();
     }
 

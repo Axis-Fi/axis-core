@@ -67,7 +67,6 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
     /// @param         minBidSize          The minimum size of a bid
     /// @param         status              The status of the auction
     /// @param         proceedsClaimed     Whether the proceeds have been claimed
-    /// @param         curatorPayoutClaimed Whether the curator payout has been claimed
     /// @param         marginalBidId       The ID of the marginal bid (marking that bids following it are not filled)
     /// @param         publicKey           The public key used to encrypt bids (a point on the alt_bn128 curve from the generator point (1,2))
     /// @param         privateKey          The private key used to decrypt bids (not provided until after the auction ends)
@@ -80,9 +79,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         uint96 minFilled; // 12 +
         uint96 minBidSize; // 12 = 32 - end of slot 2
         Auction.Status status; // 1 +
-        bool proceedsClaimed; // 1 +
-        bool curatorPayoutClaimed; // 1 +
-        uint64 marginalBidId; // 8 = 11 - end of slot 3
+        uint64 marginalBidId; // 8 = 9 - end of slot 3
         Point publicKey; // 64 - slots 4 and 5
         uint256 privateKey; // 32 - slot 6
         uint64[] bidIds; // slots 7+
@@ -231,7 +228,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
 
         // Set auction status to settled so that bids can be refunded
         auctionData[lotId_].status = Auction.Status.Settled;
-        auctionData[lotId_].proceedsClaimed = true;
+        lotData[lotId_].proceedsClaimed = true;
     }
 
     // ========== BID ========== //
@@ -881,34 +878,15 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
     function _claimProceeds(uint96 lotId_)
         internal
         override
-        returns (
-            uint96 purchased,
-            uint96 sold,
-            uint96 claimableBidAmountOut,
-            bool curatorPayoutClaimed
-        )
+        returns (uint96 purchased, uint96 sold, uint96 claimableBidAmountOut)
     {
-        // Update the status
-        auctionData[lotId_].proceedsClaimed = true;
+        Lot storage lot = lotData[lotId_];
 
-        // Get the lot data
-        Lot memory lot = lotData[lotId_];
+        // Update the status
+        lot.proceedsClaimed = true;
 
         // Return the required data
-        return (
-            lot.purchased,
-            lot.sold,
-            lot.claimableBidAmountOut,
-            auctionData[lotId_].curatorPayoutClaimed
-        );
-    }
-
-    /// @inheritdoc AuctionModule
-    function _claimCuratorPayout(uint96 lotId_) internal virtual override returns (uint96 sold) {
-        // Update the payout status
-        auctionData[lotId_].curatorPayoutClaimed = true;
-
-        return lotData[lotId_].sold;
+        return (lot.purchased, lot.sold, lot.claimableBidAmountOut);
     }
 
     // ========== AUCTION INFORMATION ========== //
@@ -975,14 +953,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
     /// @inheritdoc AuctionModule
     function _revertIfLotProceedsClaimed(uint96 lotId_) internal view override {
         // Auction must not have proceeds claimed
-        if (auctionData[lotId_].proceedsClaimed == true) {
-            revert Auction_WrongState(lotId_);
-        }
-    }
-
-    /// @inheritdoc AuctionModule
-    function _revertIfLotCuratorPayoutClaimed(uint96 lotId_) internal view virtual override {
-        if (auctionData[lotId_].curatorPayoutClaimed) {
+        if (lotData[lotId_].proceedsClaimed == true) {
             revert Auction_WrongState(lotId_);
         }
     }

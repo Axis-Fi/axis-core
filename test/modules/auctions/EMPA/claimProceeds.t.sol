@@ -209,19 +209,19 @@ contract EmpaModuleClaimProceedsTest is EmpaModuleTest {
     {
         // Call function
         vm.prank(address(_auctionHouse));
-        (uint256 purchased, uint256 sold, uint256 claimableBidAmountOut, bool curatorPayoutClaimed)
-        = _module.claimProceeds(_lotId);
+        (uint256 purchased, uint256 sold, uint256 claimableBidAmountOut) =
+            _module.claimProceeds(_lotId);
 
         // Assert values
         assertEq(purchased, _expectedPurchased, "purchased");
         assertEq(sold, _expectedSold, "sold");
         assertEq(claimableBidAmountOut, _expectedSold, "claimableBidAmountOut");
-        assertEq(curatorPayoutClaimed, false, "curatorPayoutClaimed");
 
         // Assert auction status
         EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
         assertEq(uint8(auctionData.status), uint8(Auction.Status.Settled), "status");
-        assertEq(auctionData.proceedsClaimed, true, "proceedsClaimed");
+        Auction.Lot memory lotData = _getAuctionLot(_lotId);
+        assertEq(lotData.proceedsClaimed, true, "proceedsClaimed");
     }
 
     function test_givenLotIsUnderCapacity()
@@ -236,46 +236,18 @@ contract EmpaModuleClaimProceedsTest is EmpaModuleTest {
     {
         // Call function
         vm.prank(address(_auctionHouse));
-        (uint256 purchased, uint256 sold, uint256 claimableBidAmountOut, bool curatorPayoutClaimed)
-        = _module.claimProceeds(_lotId);
+        (uint256 purchased, uint256 sold, uint256 claimableBidAmountOut) =
+            _module.claimProceeds(_lotId);
 
         // Assert values
         assertEq(purchased, _expectedPurchased, "purchased");
         assertEq(sold, _expectedSold, "sold");
         assertEq(claimableBidAmountOut, _expectedSold, "claimableBidAmountOut");
-        assertEq(curatorPayoutClaimed, false, "curatorPayoutClaimed");
 
         // Assert auction status
         EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
         assertEq(uint8(auctionData.status), uint8(Auction.Status.Settled), "status");
-        assertEq(auctionData.proceedsClaimed, true, "proceedsClaimed");
-    }
-
-    function test_givenLotIsUnderCapacity_givenCuratorPayoutClaimed()
-        external
-        givenLotIsCreated
-        givenLotHasStarted
-        givenBidsAreAboveMinimumAndBelowCapacity
-        givenLotHasConcluded
-        givenPrivateKeyIsSubmitted
-        givenLotIsDecrypted
-        givenLotIsSettled
-        givenLotCuratorPayoutIsClaimed
-    {
-        // Call function
-        vm.prank(address(_auctionHouse));
-        (uint256 purchased, uint256 sold, uint256 claimableBidAmountOut, bool curatorPayoutClaimed)
-        = _module.claimProceeds(_lotId);
-
-        // Assert values
-        assertEq(purchased, _expectedPurchased, "purchased");
-        assertEq(sold, _expectedSold, "sold");
-        assertEq(claimableBidAmountOut, _expectedSold, "claimableBidAmountOut");
-        assertEq(curatorPayoutClaimed, true, "curatorPayoutClaimed");
-
-        // Assert auction status
-        EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
-        assertEq(uint8(auctionData.status), uint8(Auction.Status.Settled), "status");
-        assertEq(auctionData.proceedsClaimed, true, "proceedsClaimed");
+        Auction.Lot memory lotData = _getAuctionLot(_lotId);
+        assertEq(lotData.proceedsClaimed, true, "proceedsClaimed");
     }
 }
