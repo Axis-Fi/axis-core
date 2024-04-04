@@ -493,7 +493,9 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         }
 
         // Increment next decrypt index
-        auctionData[lotId_].nextDecryptIndex += num_;
+        unchecked {
+            auctionData[lotId_].nextDecryptIndex += num_;
+        }
 
         // If all bids have been decrypted, set auction status to decrypted
         if (auctionData[lotId_].nextDecryptIndex == bidIds.length) {
@@ -507,9 +509,6 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
 
         // Revert if the private key has not been provided
         if (privateKey == 0) revert Auction_WrongState(lotId_);
-
-        // // Load the encrypted bid data
-        // EncryptedBid memory encryptedBid = encryptedBids[lotId_][bidId_];
 
         // Decrypt the message
         // We expect a salt calculated as the keccak256 hash of lot id, bidder, and amount to provide some (not total) uniqueness to the encryption, even if the same shared secret is used
@@ -531,7 +530,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         uint128 maskedValue = uint128(message);
         uint128 seed = uint128(message >> 128);
 
-        // We want to allow underflow here
+        // We want to allow underflow here prior to casting to uint256
         unchecked {
             return uint256(maskedValue + seed);
         }
@@ -562,7 +561,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
             if (price < type(uint96).max && price >= uint256(auctionData[lotId_].minPrice)) {
                 // Store the decrypt in the sorted bid queue and set the min amount out on the bid
                 decryptedBids[lotId_].insert(sortHint_, bidId_, bidData.amount, amountOut);
-                bidData.minAmountOut = amountOut;
+                bidData.minAmountOut = amountOut; // TODO should this be set regardless? Do we need it for claiming a refund?
             }
         }
 
