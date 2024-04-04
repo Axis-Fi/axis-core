@@ -265,7 +265,7 @@ What could cause a loss of funds?
 
 - ❌ If the seller creates an auction directly with the contracts (eschewing the API) and retains the private key, they are able to delay settlement indefinitely by withholding the private key. In the current design, bidder funds would be held until decryption and settlement is complete.
 - ✅ If the bid decryption fails: the decryption of the bid amount out reverts if the submitted private key is invalid, but `submitPrivateKey` checks if the private key is valid before storing it.
-- ✅ If the storage of a decrypted bid fails: the decrypted bid amount out will only be stored if it and the drived price (`amount/amountOut`) is within the bounds of `uint96`. A number larger than that will be skipped.
+- ✅ If the storage of a decrypted bid fails: the decrypted bid amount out will only be stored if it and the derived price (`amount/amountOut`) is within the bounds of `uint96`. A number larger than that will be skipped.
 
 ```mermaid
 sequenceDiagram
@@ -306,18 +306,15 @@ sequenceDiagram
   UI-->User: Display transaction result and update auction status
 ```
 
-### Auction Settlement Part 2: Evaluate winners and send proceeds
+### Auction Settlement Part 2: Evaluate Winners
 
 The final step to settle an auction is to evaluate the sorted, decrypted bids to determine the marginal price for the auction and distribute funds to the winners. If the auction did not reach the minimum price or minimum fill capacity, then the auction is settled without winners, and users can claim refunds. If there are winners, the settlement is stored for later. The settlement function is open and can be called by anyone after the decryption process is complete.
 
 What could cause a loss of funds?
 
-- ✅ Revert from fee-on-transfer quote token: this is already checked during bidding when transferring the quote token from the bidder to the AuctionHouse.
-- ✅ Revert from fee-on-transfer base token: this is already checked during auction creation when transferring the base token from the seller to the AuctionHouse.
-- ✅ Revert-on-zero quote token: the transfer amount is checked before calling `transfer()`
-- ✅ Revert-on-zero base token: the transfer amount is checked before calling `transfer()`
-- ❌ Partial fill bidder on blacklist: if the partial fill bidder is added to the quote or base token's blacklist after the auction is created and funded, the transfer of the quote or base tokens to the bidder would fail.
-- ❌ Curator on blacklist: if the curator is added to the base token's blacklist after the auction is created and funded, the transfer of the base tokens to the curator would fail.
+- ✅ As of [#119](https://github.com/Axis-Fi/moonraker/pull/119), there are no transfers in the `settle()` function, which greatly reduces the scenarios that could result in funds being bricked.
+- ✅ Due to filtering in the decryption stage, bids are guaranteed to be within the bounds of `uint96` and have a derived price that is also within the bounds of `uint96`.
+- ✅ Overflow in summation variables: the variables that track the sum of quote tokens in and base tokens out could overflow if there are enough bids. This is mitigated by using `uint256` for the summation variables.
 
 ```mermaid
 sequenceDiagram
@@ -351,18 +348,6 @@ sequenceDiagram
           EMPA-->AuctionHouse: Return settlement output to AuctionHouse
       deactivate EMPA
       AuctionHouse->>AuctionHouse: Cache the protocol and referrer fee rates
-      AuctionHouse->>AuctionHouse: Calculate the curator payout based on the utilised capacity
-      alt there is a partial fill on a bid
-          AuctionHouse->>AuctionHouse: Allocate quote token fees for the partial payout
-          AuctionHouse->>Buyers: Send partial refund to the bidder
-          alt partial payout is a derivative of base token
-            AuctionHouse->>VestingModule: Mint vesting tokens to bidder
-            VestingModule-->Buyers: Send vesting tokens to bidder
-          else
-            AuctionHouse-->Buyers: Send partial payout to bidder
-          end
-      end
-      AuctionHouse->>Curator: Send the curator payout in base tokens
       AuctionHouse-->UI: Return transaction result
   deactivate AuctionHouse
   UI-->User: Display transaction result and update auction status
@@ -412,6 +397,43 @@ sequenceDiagram
   UI-->User: Display transaction result and update auction status
 ```
 
+## Curator Claims Payout
+
+After settlement, curators can claim their payout.
+
+What can cause a loss of funds?
+
+- ✅ Revert from fee-on-transfer base token: this is already checked during auction creation when transferring the base token from the seller to the AuctionHouse.
+- ✅ Revert-on-zero base token: the transfer amount is checked before calling `transfer()`
+- ❌ Curator on blacklist: if the curator is added to the base token's blacklist after the auction is created and funded, the transfer of the base tokens to the curator would fail.
+
+```mermaid
+sequenceDiagram
+  autoNumber
+  participant User
+  participant UI
+  participant AuctionHouse
+  participant EMPA
+  participant Curator
+
+  User->>UI: Navigate to Auction page
+  UI-->User: Display auction status
+  User->>UI: Click "Claim Curator Payout" button
+  UI-->User: Display transaction for signing
+  User->>UI: Sign transaction to claim curator payout
+  UI->>AuctionHouse: Send transaction to blockchain
+  activate AuctionHouse
+    AuctionHouse->>AuctionHouse: Validate auction status
+    AuctionHouse->>EMPA: Call claimCuratorPayout(lotId)
+    activate EMPA
+      Note over EMPA: The auction must have been settled, and the curator payout not yet claimed
+      EMPA->>EMPA: Validate auction status and update state flag
+    deactivate EMPA
+    AuctionHouse->>Curator: Transfer base token payout to curator
+  deactivate AuctionHouse
+  UI-->User: Display transaction result and update auction status
+```
+
 ## Bidder Claims Bid
 
 After settlement, bidders can claim the outcome of their bid. This can be a refund (if under the marginal price) or payout.
@@ -422,7 +444,7 @@ What can cause a loss of funds?
 - ✅ Revert from fee-on-transfer base token: this is already checked during auction creation when transferring the base token from the seller to the AuctionHouse.
 - ✅ Revert-on-zero quote/base token: the transfer amount is checked before calling `transfer()`
 - ❌ Bidder on blacklist: if the bidder is added to the quote or base token's blacklist, the transfer of the quote or base tokens to the bidder would fail. Other bidders could be shielded from this by splitting the affected bidId from the `claimBids` call.
-- ❌ Late vesting: with the current design, the LinearVesting derivative module will revert when deploying or minting a derivative token where the vesting expiry is in the past. If a bid is claimed beyond the vesting expiry timestamp, it will revert and the payout for that bidder will be bricked.
+- ✅ Late vesting: the LinearVesting derivative module can deploy or mint a derivative token even when the vesting expiry is in the past. (Fixed in [#116](https://github.com/Axis-Fi/moonraker/pull/116))
 
 ```mermaid
 sequenceDiagram
@@ -451,7 +473,7 @@ sequenceDiagram
             Note over EMPA: Bid must not have been claimed
             EMPA->>EMPA: Validate bid status
             EMPA->>EMPA: Set bid status to "Claimed"
-            EMPA->>EMPA: Return paid and payout amounts
+            EMPA->>EMPA: Return paid, payout and refund amounts
           end
           EMPA-->AuctionHouse: Return bid claims
       deactivate EMPA
@@ -464,7 +486,9 @@ sequenceDiagram
           else
             AuctionHouse-->Buyers: Send payout to bidder
           end
-        else
+        end
+
+        alt bid has refund
           AuctionHouse-->Buyers: Send refund to bidder
         end
       end
