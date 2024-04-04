@@ -38,8 +38,8 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
     uint96 internal _expectedMarginalPrice;
     uint64 internal _expectedMarginalBidId;
     uint64 internal _expectedPartialFillBidId;
-    uint96 internal _expectedTotalIn;
-    uint96 internal _expectedTotalOut;
+    uint256 internal _expectedTotalIn;
+    uint256 internal _expectedTotalOut;
     address internal _expectedPartialFillBidder;
     address internal _expectedPartialFillReferrer;
     uint96 internal _expectedPartialFillRefund;
@@ -829,6 +829,37 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
 
         uint96 bidAmountInSuccess = _scaleQuoteTokenAmount(12e18 - 1 + 8e18);
         uint96 bidAmountOutSuccess = _scaleBaseTokenAmount(_LOT_CAPACITY - 1);
+
+        _expectedTotalIn = bidAmountInSuccess;
+        _expectedTotalOut = bidAmountOutSuccess;
+
+        // Partial fill
+        // None
+        _;
+    }
+
+    modifier givenOverCapacityTotalInOverflow() {
+        _createBid(
+            _scaleQuoteTokenAmount(type(uint96).max),
+            _scaleBaseTokenAmount(5e18)
+        );
+        _createBid(_scaleQuoteTokenAmount(type(uint96).max), _scaleBaseTokenAmount(5e18));
+        _createBid(_scaleQuoteTokenAmount(10e18), _scaleBaseTokenAmount(5e18));
+
+        // Total amount in: 2^96-1 + 2^96-1 + 10e18
+        // Price of bids 1 and 2: (2^96 -1) / 5e18
+        // Total amount out: 5e18 + 5e18 = 10e18
+        // Marginal price: (2^96 -1) / 5e18
+        _expectedMarginalPrice = _mulDivUp(type(uint96).max, 1e18, 5e18);
+        _expectedMarginalBidId = 2; // Otherwise bid 2 will not be able to claim
+
+        // Output
+        // Bid one: 5 out
+        // Bid two: 5 out
+        // Bid three: 0 out
+
+        uint256 bidAmountInSuccess = type(uint96).max + type(uint96).max;
+        uint256 bidAmountOutSuccess = 5e18 + 5e18;
 
         _expectedTotalIn = bidAmountInSuccess;
         _expectedTotalOut = bidAmountOutSuccess;
@@ -1823,6 +1854,23 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         givenLotIsCreated
         givenLotHasStarted
         givenMarginalPriceRoundingThenCapacityExceeded
+        givenLotHasConcluded
+        givenPrivateKeyIsSubmitted
+        givenLotIsDecrypted
+    {
+        // Call function
+        (Auction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
+
+        // Assert settlement
+        _assertSettlement(settlement, auctionOutput);
+        _assertLot();
+    }
+
+    function test_givenTotalInOverflow()
+        external
+        givenLotIsCreated
+        givenLotHasStarted
+        givenOverCapacityTotalInOverflow
         givenLotHasConcluded
         givenPrivateKeyIsSubmitted
         givenLotIsDecrypted
