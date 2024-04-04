@@ -34,7 +34,7 @@ contract LinearVestingEMPAIntegrationTest is AuctionHouseTest {
     uint48 internal constant _VESTING_DURATION = _VESTING_EXPIRY - _VESTING_START;
 
     uint96 internal constant _BID_AMOUNT = 15e18;
-    uint96 internal constant _BID_AMOUNT_OUT = 10e18; // Ensures that capacit is filled and the price is not adjusted
+    uint96 internal constant _BID_AMOUNT_OUT = 10e18; // Ensures that capacity is filled and the price is not adjusted
 
     // ============ Modifiers ============ //
 
@@ -404,9 +404,9 @@ contract LinearVestingEMPAIntegrationTest is AuctionHouseTest {
         givenAuctionTypeIsEMPA
         givenDerivativeTypeIsLinearVesting
         givenCuratorIsSet
-        givenLotIsCreated
         givenCuratorMaxFeeIsSet
         givenCuratorFeeIsSet
+        givenLotIsCreated
         givenLotHasStarted
         givenSellerHasBaseTokenBalance(_curatorMaxPotentialFee)
         givenSellerHasBaseTokenAllowance(_curatorMaxPotentialFee)
@@ -525,11 +525,58 @@ contract LinearVestingEMPAIntegrationTest is AuctionHouseTest {
     }
 
     // claimCuratorPayout
-    // [ ] derivative tokens are minted to the curator, but cannot be transferred
+    // [X] derivative tokens are minted to the curator, but cannot be transferred
+
+    function test_claimCuratorPayout()
+        external
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenAuctionTypeIsEMPA
+        givenDerivativeTypeIsLinearVesting
+        givenCuratorIsSet
+        givenCuratorMaxFeeIsSet
+        givenCuratorFeeIsSet
+        givenLotIsCreated
+        givenLotHasStarted
+        givenSellerHasBaseTokenBalance(_curatorMaxPotentialFee)
+        givenSellerHasBaseTokenAllowance(_curatorMaxPotentialFee)
+        givenCuratorHasApproved
+        givenUserHasQuoteTokenBalance(_BID_AMOUNT)
+        givenUserHasQuoteTokenAllowance(_BID_AMOUNT)
+        givenBidIsCreated(_BID_AMOUNT, _BID_AMOUNT_OUT)
+        givenLotIsConcluded
+        givenPrivateKeyIsSubmitted
+        givenLotIsDecrypted
+        givenLotIsSettled
+        givenCuratorPayoutIsClaimed
+    {
+        // Check the auction state
+        EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData =
+            _empaModule.getAuctionData(_lotId);
+        assertEq(uint8(auctionData.status), uint8(Auction.Status.Settled), "status");
+        assertEq(auctionData.curatorPayoutClaimed, true, "curatorPayoutClaimed");
+
+        uint256 derivativeTokenId =
+            _linearVestingModule.computeId(address(_baseToken), abi.encode(_linearVestingParams));
+
+        // Curator payout
+        uint256 curatorPayout = _BID_AMOUNT_OUT * _curatorFeePercentActual / 1e5;
+
+        // Check the balances
+        assertEq(_quoteToken.balanceOf(_CURATOR), 0, "quote token: curator");
+
+        assertEq(
+            _linearVestingModule.balanceOf(_CURATOR, derivativeTokenId),
+            curatorPayout,
+            "vesting token: curator balance"
+        );
+
+        assertEq(_baseToken.balanceOf(_CURATOR), 0, "vesting token: curator balance");
+    }
 
     // claimBid
-    // [ ] when the bid is a partial fill
-    //  [ ] quote tokens are refunded to the bidder, and the derivative tokens are minted to the bidder, but cannot be transferred
+    // [X] when the bid is a partial fill
+    //  [X] quote tokens are refunded to the bidder, and the derivative tokens are minted to the bidder, but cannot be transferred
     // [X] derivative tokens are minted to the bidder, but cannot be transferred
     // [X] given the expiry time has passed, the derivative tokens can be redeemed for the base tokens
 
@@ -606,6 +653,48 @@ contract LinearVestingEMPAIntegrationTest is AuctionHouseTest {
             _linearVestingModule.balanceOf(_bidder, derivativeTokenId),
             _BID_AMOUNT_OUT,
             "derivative: bidder"
+        );
+
+        assertEq(_linearVestingModule.redeemable(_bidder, derivativeTokenId), 0, "redeemable");
+    }
+
+    function test_claimBid_partialFill()
+        external
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenAuctionTypeIsEMPA
+        givenDerivativeTypeIsLinearVesting
+        givenLotIsCreated
+        givenLotHasStarted
+        givenUserHasQuoteTokenBalance(8e18 * 3)
+        givenUserHasQuoteTokenAllowance(8e18 * 3)
+        givenBidIsCreated(8e18, 4e18)
+        givenBidIsCreated(8e18, 4e18)
+        givenBidIsCreated(8e18, 4e18)
+        givenLotIsConcluded
+        givenPrivateKeyIsSubmitted
+        givenLotIsDecrypted
+        givenLotIsSettled
+        givenBidIsClaimed(3)
+    {
+        // Check the bid
+        (EncryptedMarginalPriceAuctionModule.Bid memory bid,) = _empaModule.getBid(_lotId, 3);
+        assertEq(
+            uint8(bid.status),
+            uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed),
+            "status"
+        );
+
+        uint256 derivativeTokenId =
+            _linearVestingModule.computeId(address(_baseToken), abi.encode(_linearVestingParams));
+
+        // Check the balances
+        assertEq(_quoteToken.balanceOf(_bidder), 4e18, "quote token: bidder");
+
+        assertEq(_baseToken.balanceOf(_bidder), 0, "base token: bidder");
+
+        assertEq(
+            _linearVestingModule.balanceOf(_bidder, derivativeTokenId), 2e18, "derivative: bidder"
         );
 
         assertEq(_linearVestingModule.redeemable(_bidder, derivativeTokenId), 0, "redeemable");
