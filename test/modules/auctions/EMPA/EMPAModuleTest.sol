@@ -401,12 +401,12 @@ abstract contract EmpaModuleTest is Test, Permit2User {
         return _module.getLot(lotId_);
     }
 
-    function _getLotSettlement(uint96 lotId_)
+    function _getPartialFillResult(uint96 lotId_)
         internal
         view
-        returns (EncryptedMarginalPriceAuctionModule.Settlement memory)
+        returns (EncryptedMarginalPriceAuctionModule.PartialFillResult memory)
     {
-        return _module.getSettlement(lotId_);
+        return _module.getPartialFillResult(lotId_);
     }
 
     function _getBid(

@@ -37,6 +37,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
 
     uint96 internal _expectedMarginalPrice;
     uint64 internal _expectedMarginalBidId;
+    uint64 internal _expectedPartialFillBidId;
     uint96 internal _expectedTotalIn;
     uint96 internal _expectedTotalOut;
     address internal _expectedPartialFillBidder;
@@ -131,13 +132,11 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         assertEq(auctionLot.claimableBidAmountOut, _expectedTotalOut, "claimableBidAmountOut");
 
         // Ensure that the stored settlement data is correct
-        Auction.Settlement memory storedSettlement = _getLotSettlement(_lotId);
-        assertEq(storedSettlement.totalIn, _expectedTotalIn, "stored totalIn");
-        assertEq(storedSettlement.totalOut, _expectedTotalOut, "stored totalOut");
-        assertEq(storedSettlement.pfBidder, _expectedPartialFillBidder, "stored pfBidder");
-        assertEq(storedSettlement.pfReferrer, _expectedPartialFillReferrer, "stored pfReferrer");
-        assertEq(storedSettlement.pfRefund, _expectedPartialFillRefund, "stored pfRefund");
-        assertEq(storedSettlement.pfPayout, _expectedPartialFillPayout, "stored pfPayout");
+        EncryptedMarginalPriceAuctionModule.PartialFillResult memory partialFillResult =
+            _getPartialFillResult(_lotId);
+        assertEq(partialFillResult.bidId, _expectedPartialFillBidId, "partialFillResult.bidId");
+        assertEq(partialFillResult.refund, _expectedPartialFillRefund, "partialFillResult.refund");
+        assertEq(partialFillResult.payout, _expectedPartialFillPayout, "partialFillResult.payout");
     }
 
     function _assertLot() internal {
@@ -546,6 +545,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         _expectedPartialFillReferrer = _REFERRER;
         _expectedPartialFillRefund = bidAmountInFail;
         _expectedPartialFillPayout = bidTwoAmountOutActual;
+        _expectedPartialFillBidId = 2;
         _;
     }
 
@@ -591,6 +591,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         _expectedPartialFillReferrer = _REFERRER;
         _expectedPartialFillRefund = bidAmountInFail;
         _expectedPartialFillPayout = bidTwoAmountOutActual;
+        _expectedPartialFillBidId = 2;
         _;
     }
 
@@ -629,6 +630,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         _expectedPartialFillReferrer = _REFERRER;
         _expectedPartialFillRefund = bidAmountInFail;
         _expectedPartialFillPayout = bidOneAmountOutActual;
+        _expectedPartialFillBidId = 1;
         _;
     }
 
@@ -720,6 +722,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         _expectedPartialFillReferrer = _REFERRER;
         _expectedPartialFillRefund = bidAmountInFail;
         _expectedPartialFillPayout = bidTwoAmountOutActual;
+        _expectedPartialFillBidId = 2;
         _;
     }
 

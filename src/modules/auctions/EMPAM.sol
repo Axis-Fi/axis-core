@@ -89,6 +89,17 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         Point publicKey;
     }
 
+    /// @notice        Struct containing partial fill data for a lot
+    ///
+    /// @param         bidId        The ID of the bid
+    /// @param         refund       The amount to refund to the bidder
+    /// @param         payout       The amount to payout to the bidder
+    struct PartialFillResult {
+        uint64 bidId; // 8 +
+        uint96 refund; // 12 +
+        uint96 payout; // 12 = 32 - end of slot 1
+    }
+
     /// @dev    Memory only, no need to pack
     struct MarginalPriceResult {
         uint96 marginalPrice;
@@ -116,8 +127,8 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
     /// @notice     Queue of decrypted bids for a lot (populated on decryption)
     mapping(uint96 lotId => Queue) public decryptedBids;
 
-    /// @notice     Settlement data for a lot
-    mapping(uint96 lotId => Settlement) public lotSettlements;
+    /// @notice     Partial fill data for a lot
+    mapping(uint96 lotId => PartialFillResult) public lotPartialFillResults;
 
     // ========== SETUP ========== //
 
@@ -840,8 +851,11 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
                 uint96(result.capacityExpended > capacity ? capacity : result.capacityExpended);
 
             // Store the settlement data for use with partial fills
-            // TODO consider storing just partial fill to save space
-            lotSettlements[lotId_] = settlement_;
+            lotPartialFillResults[lotId_] = PartialFillResult({
+                bidId: result.partialFillBidId,
+                refund: settlement_.pfRefund,
+                payout: settlement_.pfPayout
+            });
 
             // Cache the amount to be claimed
             lotData[lotId_].claimableBidAmountOut = settlement_.totalOut;
@@ -912,11 +926,15 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         return auctionData[lotId_];
     }
 
-    function getSettlement(uint96 lotId_) external view returns (Settlement memory settlement) {
+    function getPartialFillResult(uint96 lotId_)
+        external
+        view
+        returns (PartialFillResult memory settlement)
+    {
         _revertIfLotInvalid(lotId_);
         _revertIfLotNotSettled(lotId_);
 
-        return lotSettlements[lotId_];
+        return lotPartialFillResults[lotId_];
     }
 
     /// @inheritdoc Auction
