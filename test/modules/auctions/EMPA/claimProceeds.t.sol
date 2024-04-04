@@ -209,14 +209,19 @@ contract EmpaModuleClaimProceedsTest is EmpaModuleTest {
     {
         // Call function
         vm.prank(address(_auctionHouse));
-        (uint256 purchased, uint256 sold, uint256 claimableBidAmountOut, bool curatorPayoutClaimed_)
+        (uint256 purchased, uint256 sold, uint256 claimableBidAmountOut, bool curatorPayoutClaimed)
         = _module.claimProceeds(_lotId);
 
         // Assert values
-        assertEq(purchased, _expectedPurchased);
-        assertEq(sold, _expectedSold);
-        assertEq(claimableBidAmountOut, _expectedSold);
-        assertEq(curatorPayoutClaimed_, false);
+        assertEq(purchased, _expectedPurchased, "purchased");
+        assertEq(sold, _expectedSold, "sold");
+        assertEq(claimableBidAmountOut, _expectedSold, "claimableBidAmountOut");
+        assertEq(curatorPayoutClaimed, false, "curatorPayoutClaimed");
+
+        // Assert auction status
+        EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
+        assertEq(uint8(auctionData.status), uint8(Auction.Status.Settled), "status");
+        assertEq(auctionData.proceedsClaimed, true, "proceedsClaimed");
     }
 
     function test_givenLotIsUnderCapacity()
@@ -235,10 +240,15 @@ contract EmpaModuleClaimProceedsTest is EmpaModuleTest {
         = _module.claimProceeds(_lotId);
 
         // Assert values
-        assertEq(purchased, _expectedPurchased);
-        assertEq(sold, _expectedSold);
-        assertEq(claimableBidAmountOut, _expectedSold);
-        assertEq(curatorPayoutClaimed, false);
+        assertEq(purchased, _expectedPurchased, "purchased");
+        assertEq(sold, _expectedSold, "sold");
+        assertEq(claimableBidAmountOut, _expectedSold, "claimableBidAmountOut");
+        assertEq(curatorPayoutClaimed, false, "curatorPayoutClaimed");
+
+        // Assert auction status
+        EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
+        assertEq(uint8(auctionData.status), uint8(Auction.Status.Settled), "status");
+        assertEq(auctionData.proceedsClaimed, true, "proceedsClaimed");
     }
 
     function test_givenLotIsUnderCapacity_givenCuratorPayoutClaimed()
@@ -258,9 +268,14 @@ contract EmpaModuleClaimProceedsTest is EmpaModuleTest {
         = _module.claimProceeds(_lotId);
 
         // Assert values
-        assertEq(purchased, _expectedPurchased);
-        assertEq(sold, _expectedSold);
-        assertEq(claimableBidAmountOut, _expectedSold);
-        assertEq(curatorPayoutClaimed, true);
+        assertEq(purchased, _expectedPurchased, "purchased");
+        assertEq(sold, _expectedSold, "sold");
+        assertEq(claimableBidAmountOut, _expectedSold, "claimableBidAmountOut");
+        assertEq(curatorPayoutClaimed, true, "curatorPayoutClaimed");
+
+        // Assert auction status
+        EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
+        assertEq(uint8(auctionData.status), uint8(Auction.Status.Settled), "status");
+        assertEq(auctionData.proceedsClaimed, true, "proceedsClaimed");
     }
 }
