@@ -171,7 +171,6 @@ contract MockBatchAuctionModule is AuctionModule {
         Lot storage lot = lotData[lotId_];
         lot.purchased = uint96(settlement_.totalIn);
         lot.sold = uint96(settlement_.totalOut);
-        lot.partialPayout = uint96(settlement_.pfPayout);
         lot.claimableBidAmountOut = lot.sold;
     }
 

@@ -146,7 +146,6 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         assertEq(lotData.sold, _expectedTotalOut, "lot sold");
         assertEq(lotData.purchased, _expectedTotalIn, "lot purchased");
         assertEq(lotData.capacity, 0, "lot capacity");
-        assertEq(lotData.partialPayout, _expectedPartialFillPayout, "lot partialPayout");
     }
 
     modifier givenBidsAreBelowMinimumFilled() {

@@ -374,7 +374,6 @@ contract LinearVestingEMPAIntegrationTest is AuctionHouseTest {
         Auction.Lot memory lotData = _getLotData(_lotId);
         assertEq(lotData.purchased, _BID_AMOUNT, "purchased");
         assertEq(lotData.sold, _BID_AMOUNT_OUT, "sold");
-        assertEq(lotData.partialPayout, 0, "partial payout");
 
         // Get the derivative token id
         uint256 derivativeTokenId =
@@ -471,7 +470,6 @@ contract LinearVestingEMPAIntegrationTest is AuctionHouseTest {
         Auction.Lot memory lotData = _getLotData(_lotId);
         assertEq(lotData.purchased, 10e18, "purchased");
         assertEq(lotData.sold, 10e18, "sold");
-        assertEq(lotData.partialPayout, 2e18, "partial payout");
 
         // Get the derivative token id
         uint256 derivativeTokenId =
