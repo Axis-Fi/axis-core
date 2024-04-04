@@ -863,6 +863,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
             // Set settlement data
             // TODO think about casting checks
             settlement_.totalIn = uint96(result.totalAmountIn);
+            // This is safe to cast, since capacity is within bounds of uint96
             settlement_.totalOut =
                 uint96(result.capacityExpended > capacity ? capacity : result.capacityExpended);
 
