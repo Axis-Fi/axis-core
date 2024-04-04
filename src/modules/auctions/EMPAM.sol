@@ -861,8 +861,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
             }
 
             // Set settlement data
-            // TODO think about casting checks
-            settlement_.totalIn = uint96(result.totalAmountIn);
+            settlement_.totalIn = result.totalAmountIn;
             // This is safe to cast, since capacity is within bounds of uint96
             settlement_.totalOut =
                 uint96(result.capacityExpended > capacity ? capacity : result.capacityExpended);
@@ -885,7 +884,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         internal
         override
         returns (
-            uint96 purchased,
+            uint256 purchased,
             uint96 sold,
             uint96 claimableBidAmountOut,
             bool curatorPayoutClaimed

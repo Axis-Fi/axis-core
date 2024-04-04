@@ -59,7 +59,7 @@ abstract contract Auction {
         bool capacityInQuote;
         uint96 capacity;
         uint96 sold;
-        uint96 purchased;
+        uint256 purchased;
         uint96 claimableBidAmountOut;
     }
 
@@ -80,7 +80,7 @@ abstract contract Auction {
 
     /// @dev Only used in memory so doesn't need to be packed
     struct Settlement {
-        uint96 totalIn;
+        uint256 totalIn;
         uint96 totalOut;
         bytes auctionOutput;
     }
@@ -201,7 +201,7 @@ abstract contract Auction {
         external
         virtual
         returns (
-            uint96 purchased,
+            uint256 purchased,
             uint96 sold,
             uint96 claimableBidAmountOut,
             bool curatorPayoutClaimed
@@ -653,7 +653,7 @@ abstract contract AuctionModule is Auction, Module {
         override
         onlyInternal
         returns (
-            uint96 purchased,
+            uint256 purchased,
             uint96 sold,
             uint96 claimableBidAmountOut,
             bool curatorPayoutClaimed
@@ -681,7 +681,7 @@ abstract contract AuctionModule is Auction, Module {
         internal
         virtual
         returns (
-            uint96 purchased,
+            uint256 purchased,
             uint96 sold,
             uint96 claimableBidAmountOut,
             bool curatorPayoutClaimed

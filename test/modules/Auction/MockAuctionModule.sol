@@ -50,7 +50,7 @@ contract MockAuctionModule is AuctionModule {
     function _claimProceeds(uint96 lotId_)
         internal
         override
-        returns (uint96, uint96, uint96, bool)
+        returns (uint256, uint96, uint96, bool)
     {}
 
     function _refundBid(
