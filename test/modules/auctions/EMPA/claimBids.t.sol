@@ -41,8 +41,6 @@ contract EmpaModuleClaimBidsTest is EmpaModuleTest {
     //  [X] it reverts
     // [X] given the lot is not settled
     //  [X] it reverts
-    // [ ] given the lot is cancelled
-    //  [ ] it reverts
     // [X] when the caller is not the parent
     //  [X] it reverts
     // [X] given the bid is a partial fill
