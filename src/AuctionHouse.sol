@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.19;
 
-import {ERC20} from "solmate/tokens/ERC20.sol";
+import {ERC20} from "lib/solmate/src/tokens/ERC20.sol";
 import {Transfer} from "src/lib/Transfer.sol";
 
 import {Auctioneer} from "src/bases/Auctioneer.sol";
@@ -485,11 +485,9 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
 
             // Store the protocol and referrer fees
             // If this is not done, the amount that the seller receives could be modified after settlement
-            {
-                Keycode auctionKeycode = keycodeFromVeecode(routing.auctionReference);
-                feeData.protocolFee = fees[auctionKeycode].protocol;
-                feeData.referrerFee = fees[auctionKeycode].referrer;
-            }
+            Keycode auctionKeycode = keycodeFromVeecode(routing.auctionReference);
+            feeData.protocolFee = fees[auctionKeycode].protocol;
+            feeData.referrerFee = fees[auctionKeycode].referrer;
         }
 
         // Emit event
