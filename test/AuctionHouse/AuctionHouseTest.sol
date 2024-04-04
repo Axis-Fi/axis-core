@@ -640,6 +640,11 @@ abstract contract AuctionHouseTest is Test, Permit2User {
         _;
     }
 
+    modifier givenCuratorPayoutIsClaimed() {
+        _auctionHouse.claimCuratorPayout(_lotId);
+        _;
+    }
+
     // ===== Helpers ===== //
 
     function _getLotRouting(uint96 lotId_) internal view returns (Auctioneer.Routing memory) {

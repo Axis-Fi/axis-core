@@ -188,8 +188,6 @@ contract SettleTest is AuctionHouseTest {
 
     // ======== Tests ======== //
 
-    // TODO remove obsolete tests/values
-
     // [X] when the lot id is invalid
     //  [X] it reverts
     // [X] when the auction module reverts
