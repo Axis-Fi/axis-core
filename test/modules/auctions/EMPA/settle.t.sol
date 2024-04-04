@@ -128,11 +128,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         assertEq(auctionData.marginalBidId, _expectedMarginalBidId, "marginalBidId");
 
         Auction.Lot memory auctionLot = _getAuctionLot(_lotId);
-        assertEq(
-            auctionLot.claimableBidAmountOut,
-            _expectedTotalOut - _expectedPartialFillPayout,
-            "claimableBidAmountOut"
-        );
+        assertEq(auctionLot.claimableBidAmountOut, _expectedTotalOut, "claimableBidAmountOut");
 
         // Ensure that the stored settlement data is correct
         Auction.Settlement memory storedSettlement = _getLotSettlement(_lotId);

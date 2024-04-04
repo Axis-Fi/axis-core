@@ -831,9 +831,6 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
 
                 // Reduce the total amount in by the refund amount
                 result.totalAmountIn -= settlement_.pfRefund;
-
-                // Set bid as claimed
-                bidData.status = BidStatus.Claimed;
             }
 
             // Set settlement data
@@ -841,6 +838,10 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
             settlement_.totalIn = uint96(result.totalAmountIn);
             settlement_.totalOut =
                 uint96(result.capacityExpended > capacity ? capacity : result.capacityExpended);
+
+            // Store the settlement data for use with partial fills
+            // TODO consider storing just partial fill to save space
+            lotSettlements[lotId_] = settlement_;
 
             // Cache the amount to be claimed
             lotData[lotId_].claimableBidAmountOut = settlement_.totalOut;

@@ -62,7 +62,7 @@ abstract contract Auction {
         uint96 capacity;
         uint96 sold;
         uint96 purchased;
-        uint96 partialPayout;
+        uint96 partialPayout; // TODO required?
         uint96 claimableBidAmountOut;
     }
 
