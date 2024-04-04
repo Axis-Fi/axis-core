@@ -858,7 +858,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         // Bid two: 5 out
         // Bid three: 0 out
 
-        uint256 bidAmountInSuccess = type(uint96).max + type(uint96).max;
+        uint256 bidAmountInSuccess = uint256(type(uint96).max) + uint256(type(uint96).max);
         uint256 bidAmountOutSuccess = 5e18 + 5e18;
 
         _expectedTotalIn = bidAmountInSuccess;
