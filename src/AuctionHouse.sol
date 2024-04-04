@@ -654,6 +654,7 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
     ///
     ///             This function reverts if:
     ///             - the lot ID is invalid
+    ///             - the lot is not curated
     ///             - the curator payout has already been claimed
     ///
     /// @param      lotId_      Lot ID
@@ -664,6 +665,9 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
         (uint96 sold_) = _getModuleForId(lotId_).claimCuratorPayout(lotId_);
 
         FeeData storage feeData = lotFees[lotId_];
+
+        // Revert if curation not approved
+        if (feeData.curated == false) revert InvalidState();
 
         // Load routing data for the lot
         Routing storage routing = lotRouting[lotId_];

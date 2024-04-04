@@ -65,7 +65,7 @@ contract EmpaClaimCuratorPayoutTest is EmpaModuleTest {
     // [X] when the auction has not been settled
     //  [X] it reverts
     // [X] when the auction has been cancelled
-    //  [X] it reverts
+    //  [X] it returns 0 sold
     // [X] when the curator payout has been claimed
     //  [X] it reverts
     // [X] it returns the sold amount, and updates the curator payout status
@@ -113,15 +113,17 @@ contract EmpaClaimCuratorPayoutTest is EmpaModuleTest {
         _module.claimCuratorPayout(_lotId);
     }
 
-    function test_givenLotCancelled_reverts() external givenLotIsCreated givenLotIsCancelled {
-        bytes memory err = abi.encodeWithSelector(
-            EncryptedMarginalPriceAuctionModule.Auction_WrongState.selector, _lotId
-        );
-        vm.expectRevert(err);
-
-        // Call the function
+    function test_givenLotCancelled() external givenLotIsCreated givenLotIsCancelled {
+        // Call function
         vm.prank(address(_auctionHouse));
-        _module.claimCuratorPayout(_lotId);
+        (uint256 sold) = _module.claimCuratorPayout(_lotId);
+
+        // Assert values
+        assertEq(sold, 0);
+
+        // Assert curator payout status
+        EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
+        assertEq(auctionData.curatorPayoutClaimed, true);
     }
 
     function test_givenLotCuratorPayoutClaimed_reverts()
