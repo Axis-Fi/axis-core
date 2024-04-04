@@ -16,10 +16,10 @@ contract EmpaModuleRefundBidTest is EmpaModuleTest {
     //  [X] it reverts
     // [X] given the bid has already been refunded
     //  [X] it reverts
-    // [X] given the lot is concluded
-    //  [X] it reverts
     // [X] given the lot has been cancelled
     //  [X] it reverts
+    // [X] given the lot is concluded
+    //  [X] it refunds the bid amount and updates the bid status
     // [X] given the lot is decrypted
     //  [X] it reverts
     // [X] given the lot is settled
@@ -87,20 +87,27 @@ contract EmpaModuleRefundBidTest is EmpaModuleTest {
         _module.refundBid(_lotId, _bidId, _BIDDER);
     }
 
-    function test_lotIsConcluded_reverts()
+    function test_lotIsConcluded()
         external
         givenLotIsCreated
         givenLotHasStarted
         givenBidIsCreated(2e18, 1e18)
         givenLotHasConcluded
     {
-        // Expect revert
-        bytes memory err = abi.encodeWithSelector(Auction.Auction_MarketNotActive.selector, _lotId);
-        vm.expectRevert(err);
-
         // Call the function
         vm.prank(address(_auctionHouse));
-        _module.refundBid(_lotId, _bidId, _BIDDER);
+        uint256 refundAmount = _module.refundBid(_lotId, _bidId, _BIDDER);
+
+        // Assert the bid status
+        EncryptedMarginalPriceAuctionModule.Bid memory bidData = _getBid(_lotId, _bidId);
+        assertEq(
+            uint8(bidData.status),
+            uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed),
+            "bid status"
+        );
+
+        // Assert the refund amount
+        assertEq(refundAmount, 2e18, "refund amount");
     }
 
     function test_lotIsCancelled_reverts() external givenLotIsCreated givenLotIsCancelled {
@@ -123,7 +130,9 @@ contract EmpaModuleRefundBidTest is EmpaModuleTest {
         givenLotIsDecrypted
     {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(Auction.Auction_MarketNotActive.selector, _lotId);
+        bytes memory err = abi.encodeWithSelector(
+            EncryptedMarginalPriceAuctionModule.Auction_WrongState.selector, _lotId
+        );
         vm.expectRevert(err);
 
         // Call the function
@@ -142,7 +151,9 @@ contract EmpaModuleRefundBidTest is EmpaModuleTest {
         givenLotIsSettled
     {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(Auction.Auction_MarketNotActive.selector, _lotId);
+        bytes memory err = abi.encodeWithSelector(
+            EncryptedMarginalPriceAuctionModule.Auction_WrongState.selector, _lotId
+        );
         vm.expectRevert(err);
 
         // Call the function
@@ -162,7 +173,9 @@ contract EmpaModuleRefundBidTest is EmpaModuleTest {
         givenLotProceedsAreClaimed
     {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(Auction.Auction_MarketNotActive.selector, _lotId);
+        bytes memory err = abi.encodeWithSelector(
+            EncryptedMarginalPriceAuctionModule.Auction_WrongState.selector, _lotId
+        );
         vm.expectRevert(err);
 
         // Call the function

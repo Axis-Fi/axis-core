@@ -293,6 +293,40 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         return bidId;
     }
 
+    /// @inheritdoc Auction
+    /// @dev        Implements a basic refundBid function that:
+    ///             - Calls implementation-specific validation logic
+    ///             - Calls the auction module
+    ///
+    ///             This function reverts if:
+    ///             - the lot id is invalid
+    ///             - the lot is decrypted or settled
+    ///             - the bid id is invalid
+    ///             - `caller_` is not the bid owner
+    ///             - the bid is cancelled
+    ///             - the bid is already refunded
+    ///             - the caller is not an internal module
+    ///
+    ///             This is a modified version of the refundBid function in the AuctionModule contract.
+    ///             It does not revert if the lot is concluded.
+    function refundBid(
+        uint96 lotId_,
+        uint64 bidId_,
+        address caller_
+    ) external override onlyInternal returns (uint96 refund) {
+        // Standard validation
+        _revertIfLotInvalid(lotId_);
+        _revertIfBeforeLotStart(lotId_);
+        _revertIfBidInvalid(lotId_, bidId_);
+        _revertIfNotBidOwner(lotId_, bidId_, caller_);
+        _revertIfBidClaimed(lotId_, bidId_);
+        _revertIfLotDecrypted(lotId_);
+        _revertIfLotSettled(lotId_);
+
+        // Call implementation-specific logic
+        return _refundBid(lotId_, bidId_, caller_);
+    }
+
     /// @inheritdoc AuctionModule
     /// @dev        This function performs the following:
     ///             - Validates inputs
@@ -960,6 +994,13 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
                 && lotData[lotId_].start <= block.timestamp
                 && lotData[lotId_].conclusion > block.timestamp
         ) revert Auction_WrongState(lotId_);
+    }
+
+    function _revertIfLotDecrypted(uint96 lotId_) internal view {
+        // Auction must not be decrypted
+        if (auctionData[lotId_].status == Auction.Status.Decrypted) {
+            revert Auction_WrongState(lotId_);
+        }
     }
 
     /// @inheritdoc AuctionModule

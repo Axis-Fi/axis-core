@@ -311,7 +311,7 @@ abstract contract AuctionModule is Auction, Module {
         AuctionParams memory params_,
         uint8 quoteTokenDecimals_,
         uint8 baseTokenDecimals_
-    ) external override onlyInternal returns (uint96 capacity) {
+    ) external virtual override onlyInternal returns (uint96 capacity) {
         // Start time must be zero or in the future
         if (params_.start > 0 && params_.start < uint48(block.timestamp)) {
             revert Auction_InvalidStart(params_.start, uint48(block.timestamp));
@@ -359,7 +359,7 @@ abstract contract AuctionModule is Auction, Module {
     ///             - the lot has concluded
     ///
     /// @param      lotId_      The lot id
-    function cancelAuction(uint96 lotId_) external override onlyInternal {
+    function cancelAuction(uint96 lotId_) external virtual override onlyInternal {
         // Validation
         _revertIfLotInvalid(lotId_);
         _revertIfLotConcluded(lotId_);
@@ -400,7 +400,7 @@ abstract contract AuctionModule is Auction, Module {
         uint96 lotId_,
         uint96 amount_,
         bytes calldata auctionData_
-    ) external override onlyInternal returns (uint96 payout, bytes memory auctionOutput) {
+    ) external virtual override onlyInternal returns (uint96 payout, bytes memory auctionOutput) {
         // Standard validation
         _revertIfLotInvalid(lotId_);
         _revertIfLotInactive(lotId_);
@@ -460,7 +460,7 @@ abstract contract AuctionModule is Auction, Module {
         address referrer_,
         uint96 amount_,
         bytes calldata auctionData_
-    ) external override onlyInternal returns (uint64 bidId) {
+    ) external virtual override onlyInternal returns (uint64 bidId) {
         // Standard validation
         _revertIfLotInvalid(lotId_);
         _revertIfBeforeLotStart(lotId_);
@@ -497,7 +497,7 @@ abstract contract AuctionModule is Auction, Module {
     ///
     ///             This function reverts if:
     ///             - the lot id is invalid
-    ///             - the lot is not settled
+    ///             - the lot is concluded, decrypted or settled
     ///             - the bid id is invalid
     ///             - `caller_` is not the bid owner
     ///             - the bid is cancelled
@@ -513,7 +513,7 @@ abstract contract AuctionModule is Auction, Module {
         uint96 lotId_,
         uint64 bidId_,
         address caller_
-    ) external override onlyInternal returns (uint96 refund) {
+    ) external virtual override onlyInternal returns (uint96 refund) {
         // Standard validation
         _revertIfLotInvalid(lotId_);
         _revertIfBeforeLotStart(lotId_);
@@ -558,6 +558,7 @@ abstract contract AuctionModule is Auction, Module {
         uint64[] calldata bidIds_
     )
         external
+        virtual
         override
         onlyInternal
         returns (BidClaim[] memory bidClaims, bytes memory auctionOutput)
