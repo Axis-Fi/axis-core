@@ -634,7 +634,14 @@ contract AuctionHouse is Auctioneer, Router {
     function curate(uint96 lotId_, bytes calldata callbackData_) external nonReentrant {
         _isLotValid(lotId_);
 
+        Routing storage routing = lotRouting[lotId_];
         FeeData storage feeData = lotFees[lotId_];
+
+        // Check that the fee is not greater than the maximum
+        // This prevents grand-fathering of fees when the maximum is changed
+        if (feeData.curatorFee > fees[keycodeFromVeecode(routing.auctionReference)].maxCuratorFee) {
+            revert InvalidFee();
+        }
 
         // Check that the caller is the proposed curator
         if (msg.sender != feeData.curator) revert NotPermitted(msg.sender);
@@ -644,8 +651,6 @@ contract AuctionHouse is Auctioneer, Router {
         // Check that the curator has not already approved the auction
         // Check that the auction has not ended or been cancelled
         if (feeData.curated || module.hasEnded(lotId_) == true) revert InvalidState();
-
-        Routing storage routing = lotRouting[lotId_];
 
         // Set the curator as approved
         feeData.curated = true;

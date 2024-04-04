@@ -2,6 +2,7 @@
 pragma solidity 0.8.19;
 
 import {Auctioneer} from "src/bases/Auctioneer.sol";
+import {FeeManager} from "src/bases/FeeManager.sol";
 
 import {AuctionHouseTest} from "test/AuctionHouse/AuctionHouseTest.sol";
 
@@ -34,6 +35,8 @@ contract CurateTest is AuctionHouseTest {
     //  [X] it reverts
     // [X] given no _CURATOR fee is set
     //  [X] it succeeds
+    // [X] given the curator fee exceeds the maximum
+    //  [X] it reverts
     // [X] given the lot is prefunded
     //  [X] given the callback is set
     //    [X] given the callback has the send base tokens flag
@@ -104,6 +107,29 @@ contract CurateTest is AuctionHouseTest {
     {
         // Expect revert
         bytes memory err = abi.encodeWithSelector(Auctioneer.InvalidState.selector);
+        vm.expectRevert(err);
+
+        // Curate again
+        vm.prank(_CURATOR);
+        _auctionHouse.curate(_lotId, bytes(""));
+    }
+
+    function test_curatorFeeAboveMax_reverts()
+        public
+        whenAuctionTypeIsAtomic
+        whenAtomicAuctionModuleIsInstalled
+        givenCuratorMaxFeeIsSet
+        givenCuratorFeeIsSet
+        givenLotIsCreated
+        givenLotHasStarted
+    {
+        // Set the maximum curator fee below the curator fee
+        _auctionHouse.setFee(
+            _auctionModuleKeycode, FeeManager.FeeType.MaxCurator, _CURATOR_FEE_PERCENT - 1
+        );
+
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(FeeManager.InvalidFee.selector);
         vm.expectRevert(err);
 
         // Curate again
