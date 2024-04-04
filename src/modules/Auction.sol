@@ -98,6 +98,7 @@ abstract contract Auction {
         address referrer;
         uint96 paid;
         uint96 payout;
+        uint96 refund;
     }
 
     // ========= STATE ========== //

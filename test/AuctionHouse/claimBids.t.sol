@@ -31,7 +31,7 @@ contract ClaimBidsTest is AuctionHouseTest {
     // [X] when the auction module reverts
     //  [X] it reverts
     // [ ] when the paid and payout amounts are both set
-    //  [ ] it transfers the quote and base tokens to the bidder
+    //  [ ] it transfers the quote and base tokens to the bidder, and calculates fees correctly
     // [X] when the payout is not set
     //  [X] it returns the bid amount to the bidders
     // [X] when the referrer is set
@@ -151,7 +151,7 @@ contract ClaimBidsTest is AuctionHouseTest {
         address referrer_,
         uint96 amountIn_
     ) {
-        _batchAuctionModule.addBidClaim(_lotId, bidId_, bidder_, referrer_, amountIn_, 0);
+        _batchAuctionModule.addBidClaim(_lotId, bidId_, bidder_, referrer_, amountIn_, 0, amountIn_);
 
         // Calculate fees
         (uint256 toReferrer, uint256 toProtocol) = _calculateFees(referrer_, 0);
@@ -177,7 +177,7 @@ contract ClaimBidsTest is AuctionHouseTest {
         uint96 amountIn_,
         uint96 payout_
     ) {
-        _batchAuctionModule.addBidClaim(_lotId, bidId_, bidder_, referrer_, amountIn_, payout_);
+        _batchAuctionModule.addBidClaim(_lotId, bidId_, bidder_, referrer_, amountIn_, payout_, 0);
 
         // Calculate fees
         (uint256 toReferrer, uint256 toProtocol) = _calculateFees(referrer_, amountIn_);

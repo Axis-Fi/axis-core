@@ -357,27 +357,35 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
                 ? 0 // TODO technically minAmountOut == 0 should be an infinite price, but need to check that later. Need to be careful we don't introduce a way to claim a bid when we set marginalPrice to type(uint96).max when it cannot be settled.
                 : Math.mulDivUp(uint256(bidData.amount), baseScale, uint256(bidData.minAmountOut))
         );
+        uint96 marginalPrice = auctionData[lotId_].marginalPrice;
 
+        // Check if the bid id is a partial fill result
+        if (lotPartialFillResults[lotId_].bidId == bidId_) {
+            bidClaim.paid = bidData.amount;
+            bidClaim.payout = lotPartialFillResults[lotId_].payout;
+            bidClaim.refund = lotPartialFillResults[lotId_].refund;
+        }
         // If the bid price is greater than the marginal price, the bid is filled.
         // If the bid price is equal to the marginal price and the bid was submitted before or is the marginal bid, the bid is filled.
         // Auctions that do not meet capacity or price thresholds to settle will have their marginal price set at the maximum uint96
         // Therefore, all bids will be refunded.
         // We handle the only potential marginal fill during settlement. All other bids are either completely filled or refunded.
-        uint96 marginalPrice = auctionData[lotId_].marginalPrice;
-        if (
+        else if (
             price > marginalPrice
                 || (price == marginalPrice && bidId_ <= auctionData[lotId_].marginalBidId)
         ) {
             // Payout is calculated using the marginal price of the auction
             bidClaim.paid = bidData.amount;
             bidClaim.payout = uint96(Math.mulDivDown(bidClaim.paid, baseScale, marginalPrice));
-
-            // Reduce the amount out to claim
-            lotData[lotId_].claimableBidAmountOut -= bidClaim.payout;
+            bidClaim.refund = 0;
         } else {
             // Bidder is refunded the paid amount and receives no payout
             bidClaim.paid = bidData.amount;
+            bidClaim.refund = bidData.amount;
         }
+
+        // Reduce the amount out to claim
+        lotData[lotId_].claimableBidAmountOut -= bidClaim.payout;
 
         return (bidClaim, auctionOutput_);
     }

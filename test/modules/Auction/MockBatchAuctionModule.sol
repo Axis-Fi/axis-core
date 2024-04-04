@@ -129,12 +129,14 @@ contract MockBatchAuctionModule is AuctionModule {
         address bidder_,
         address referrer_,
         uint96 paid_,
-        uint96 payout_
+        uint96 payout_,
+        uint96 refund_
     ) public {
         bidClaims[lotId_][bidId_].bidder = bidder_;
         bidClaims[lotId_][bidId_].referrer = referrer_;
         bidClaims[lotId_][bidId_].paid = paid_;
         bidClaims[lotId_][bidId_].payout = payout_;
+        bidClaims[lotId_][bidId_].refund = refund_;
     }
 
     function _claimBids(
@@ -154,15 +156,9 @@ contract MockBatchAuctionModule is AuctionModule {
             Bid storage bidData_ = bidData[lotId_][bidId];
             bidData_.status = BidStatus.Claimed;
 
-            BidClaim storage bidClaimIn = bidClaims[lotId_][bidId];
+            bidClaims_[i] = bidClaims[lotId_][bidId];
 
-            BidClaim memory bidClaimOut = bidClaims_[i];
-            bidClaimOut.bidder = bidClaimIn.bidder;
-            bidClaimOut.referrer = bidClaimIn.referrer;
-            bidClaimOut.paid = bidClaimIn.paid;
-            bidClaimOut.payout = bidClaimIn.payout;
-
-            lotData[lotId_].claimableBidAmountOut -= bidClaimIn.payout;
+            lotData[lotId_].claimableBidAmountOut -= bidClaims_[i].payout;
         }
 
         return (bidClaims_, auctionOutput_);

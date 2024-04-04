@@ -156,7 +156,7 @@ contract ClaimProceedsTest is AuctionHouseTest {
         uint96 amountIn_,
         uint96 payout_
     ) {
-        _batchAuctionModule.addBidClaim(_lotId, bidId_, bidder_, referrer_, amountIn_, payout_);
+        _batchAuctionModule.addBidClaim(_lotId, bidId_, bidder_, referrer_, amountIn_, payout_, 0);
         _;
     }
 
