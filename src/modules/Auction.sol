@@ -85,7 +85,7 @@ abstract contract Auction {
     struct Settlement {
         uint96 totalIn;
         uint96 totalOut;
-        address pfBidder;
+        address pfBidder; // TODO consider removing pf* fields
         address pfReferrer;
         uint96 pfRefund;
         uint96 pfPayout;

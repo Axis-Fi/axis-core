@@ -30,8 +30,8 @@ contract ClaimBidsTest is AuctionHouseTest {
     //  [X] it reverts
     // [X] when the auction module reverts
     //  [X] it reverts
-    // [ ] when the paid and payout amounts are both set
-    //  [ ] it transfers the quote and base tokens to the bidder, and calculates fees correctly
+    // [X] when the paid and payout amounts are both set
+    //  [X] it transfers the quote and base tokens to the bidder, and calculates fees correctly
     // [X] when the payout is not set
     //  [X] it returns the bid amount to the bidders
     // [X] when the referrer is set
@@ -195,6 +195,36 @@ contract ClaimBidsTest is AuctionHouseTest {
         _;
     }
 
+    /// @dev    Assumes that any amounts are scaled to the current decimal scale
+    modifier givenPayoutIsPartial(
+        uint64 bidId_,
+        address bidder_,
+        address referrer_,
+        uint96 amountIn_,
+        uint96 payout_,
+        uint96 refund_
+    ) {
+        _batchAuctionModule.addBidClaim(
+            _lotId, bidId_, bidder_, referrer_, amountIn_, payout_, refund_
+        );
+
+        // Calculate fees
+        (uint256 toReferrer, uint256 toProtocol) = _calculateFees(referrer_, amountIn_ - refund_);
+        _expectedReferrerFee += toReferrer;
+        _expectedProtocolFee += toProtocol;
+
+        // Set expected balances
+        _expectedAuctionHouseQuoteTokenBalance += amountIn_ - refund_; // Payment to be collected in claimProceeds()
+        _expectedBidderQuoteTokenBalance += bidder_ == _bidder ? refund_ : 0;
+        _expectedBidderTwoQuoteTokenBalance += bidder_ == _BIDDER_TWO ? refund_ : 0;
+
+        _expectedAuctionHouseBaseTokenBalance -= payout_; // To be collected in claimProceeds()
+        _expectedBidderBaseTokenBalance += bidder_ == _bidder ? payout_ : 0;
+        _expectedBidderTwoBaseTokenBalance += bidder_ == _BIDDER_TWO ? payout_ : 0;
+        _expectedCuratorBaseTokenBalance += 0;
+        _;
+    }
+
     modifier givenLotSettlementIsMixed() {
         // Set the settlement data
         _batchAuctionModule.setLotSettlement(
@@ -202,6 +232,25 @@ contract ClaimBidsTest is AuctionHouseTest {
             Auction.Settlement({
                 totalIn: _scaleQuoteTokenAmount(_BID_AMOUNT),
                 totalOut: _scaleBaseTokenAmount(_BID_AMOUNT_OUT),
+                pfBidder: address(0),
+                pfReferrer: address(0),
+                pfRefund: 0,
+                pfPayout: 0,
+                auctionOutput: ""
+            })
+        );
+
+        _auctionHouse.settle(_lotId);
+        _;
+    }
+
+    modifier givenLotSettlementIsPartialFill() {
+        // Set the settlement data
+        _batchAuctionModule.setLotSettlement(
+            _lotId,
+            Auction.Settlement({
+                totalIn: _scaleQuoteTokenAmount(_BID_AMOUNT + _BID_AMOUNT / 2),
+                totalOut: _scaleBaseTokenAmount(_BID_AMOUNT_OUT + _BID_AMOUNT_OUT),
                 pfBidder: address(0),
                 pfReferrer: address(0),
                 pfRefund: 0,
@@ -1269,6 +1318,52 @@ contract ClaimBidsTest is AuctionHouseTest {
         givenPayoutIsNotSet(_bidIds[1], _BIDDER_TWO, _REFERRER, _scaleQuoteTokenAmount(_BID_AMOUNT))
         givenLotIsConcluded
         givenLotSettlementIsMixed
+    {
+        // Call the function
+        vm.prank(address(this));
+        _auctionHouse.claimBids(_lotId, _bidIds);
+
+        // Check the accrued fees
+        _assertAccruedFees();
+        _assertQuoteTokenBalances();
+        _assertBaseTokenBalances();
+    }
+
+    function test_givenPartialFill()
+        external
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenCuratorIsSet
+        givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenLotIsCreated
+        givenLotHasStarted
+        givenReferrerFeeIsSet
+        givenProtocolFeeIsSet
+        givenBalancesAreSet
+        givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
+        givenBidderTwoHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenBidderTwoHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenBidCreated(_BIDDER_TWO, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
+        givenPayoutIsSet(
+            _bidIds[0],
+            _bidder,
+            _REFERRER,
+            _scaleQuoteTokenAmount(_BID_AMOUNT),
+            _scaleBaseTokenAmount(_BID_AMOUNT_OUT)
+        )
+        givenPayoutIsPartial(
+            _bidIds[1],
+            _BIDDER_TWO,
+            _REFERRER,
+            _scaleQuoteTokenAmount(_BID_AMOUNT),
+            _scaleBaseTokenAmount(_BID_AMOUNT_OUT),
+            _scaleQuoteTokenAmount(_BID_AMOUNT / 2)
+        )
+        givenLotIsConcluded
+        givenLotSettlementIsPartialFill
     {
         // Call the function
         vm.prank(address(this));
