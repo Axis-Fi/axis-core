@@ -103,11 +103,11 @@ contract MockAtomicAuctionModule is AuctionModule {
         revert Auction_NotImplemented();
     }
 
-    function claimProceeds(uint96) external pure override returns (uint256, uint96, uint96, bool) {
+    function claimProceeds(uint96) external pure override returns (uint96, uint96, uint96) {
         revert Auction_NotImplemented();
     }
 
-    function _claimProceeds(uint96) internal pure override returns (uint256, uint96, uint96, bool) {
+    function _claimProceeds(uint96) internal pure override returns (uint96, uint96, uint96) {
         revert Auction_NotImplemented();
     }
 
@@ -126,8 +126,4 @@ contract MockAtomicAuctionModule is AuctionModule {
     function _revertIfLotNotSettled(uint96 lotId_) internal view virtual override {}
 
     function _revertIfLotProceedsClaimed(uint96 lotId_) internal view virtual override {}
-
-    function _claimCuratorPayout(uint96 lotId_) internal virtual override returns (uint96 sold) {}
-
-    function _revertIfLotCuratorPayoutClaimed(uint96 lotId_) internal view virtual override {}
 }

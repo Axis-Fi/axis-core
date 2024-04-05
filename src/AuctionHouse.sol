@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.19;
 
-import {ERC20} from "solmate/tokens/ERC20.sol";
+import {ERC20} from "lib/solmate/src/tokens/ERC20.sol";
 import {Transfer} from "src/lib/Transfer.sol";
 
 import {Auctioneer} from "src/bases/Auctioneer.sol";
@@ -485,10 +485,30 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
 
             // Store the protocol and referrer fees
             // If this is not done, the amount that the seller receives could be modified after settlement
-            {
-                Keycode auctionKeycode = keycodeFromVeecode(routing.auctionReference);
-                feeData.protocolFee = fees[auctionKeycode].protocol;
-                feeData.referrerFee = fees[auctionKeycode].referrer;
+            Keycode auctionKeycode = keycodeFromVeecode(routing.auctionReference);
+            feeData.protocolFee = fees[auctionKeycode].protocol;
+            feeData.referrerFee = fees[auctionKeycode].referrer;
+
+            // Calculate the curator fee and allocate the fees to be claimed
+            uint96 curatorFeePayout =
+                _calculatePayoutFees(feeData.curated, feeData.curatorFee, settlement.totalOut);
+
+            // If the curator fee is not zero, allocate it
+            if (curatorFeePayout > 0) {
+                // If the payout is a derivative, mint the derivative directly to the curator
+                // Otherwise, allocate the fee using the internal rewards mechanism
+                if (fromVeecode(routing.derivativeReference) != bytes7("")) {
+                    // Mint the derivative to the curator
+                    _sendPayout(feeData.curator, curatorFeePayout, routing, bytes(""));
+                } else {
+                    // Allocate the curator fee to be claimed
+                    rewards[feeData.curator][routing.baseToken] += curatorFeePayout;
+                }
+
+                // Decrease the funding amount
+                unchecked {
+                    routing.funding -= curatorFeePayout;
+                }
             }
         }
 
@@ -515,18 +535,11 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
         _isLotValid(lotId_);
 
         // Call auction module to validate and update data
-        (uint256 purchased_, uint96 sold_, uint96 claimableBidAmountOut_, bool curatorPayoutClaimed_)
-        = _getModuleForId(lotId_).claimProceeds(lotId_);
+        (uint96 purchased_, uint96 sold_, uint96 claimableBidAmountOut_) =
+            _getModuleForId(lotId_).claimProceeds(lotId_);
 
         // Load data for the lot
         Routing storage routing = lotRouting[lotId_];
-
-        // Calculate the curator payout
-        uint96 curatorFeePayout;
-        if (curatorPayoutClaimed_ == false) {
-            FeeData storage feeData = lotFees[lotId_];
-            curatorFeePayout = _calculatePayoutFees(feeData.curated, feeData.curatorFee, sold_);
-        }
 
         // Calculate the referrer and protocol fees for the amount in
         // Fees are not allocated until the user claims their payout so that we don't have to iterate through them here
@@ -548,7 +561,8 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
 
         // Refund any unused capacity and curator fees to the address dictated by the callbacks address
         // At this point, any partial payout and curator fees have been paid out. Hence, the routing.funding value can only be composed of bids that have not been claimed, and any unused capacity to be refunded to the seller
-        uint96 prefundingRefund = routing.funding - curatorFeePayout - claimableBidAmountOut_;
+        // Any payable curator fee was already deducted from the funding during settlement
+        uint96 prefundingRefund = routing.funding - claimableBidAmountOut_;
         unchecked {
             routing.funding -= prefundingRefund;
         }
@@ -643,45 +657,6 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
 
         // Emit event that the lot is curated by the proposed curator
         emit Curated(lotId_, msg.sender);
-    }
-
-    /// @notice     Claim the curator proceeds for a lot
-    /// @dev        This function performs the following:
-    ///             - Validates the lot
-    ///             - Calculates the curator fee payout
-    ///             - Sends the payout to the curator
-    ///             - Decreases the funding amount
-    ///
-    ///             This function reverts if:
-    ///             - the lot ID is invalid
-    ///             - the lot is not curated
-    ///             - the curator payout has already been claimed
-    ///
-    /// @param      lotId_      Lot ID
-    function claimCuratorPayout(uint96 lotId_) external nonReentrant {
-        _isLotValid(lotId_);
-
-        // Validate and obtain the required data from the auction module
-        (uint96 sold_) = _getModuleForId(lotId_).claimCuratorPayout(lotId_);
-
-        FeeData storage feeData = lotFees[lotId_];
-
-        // Revert if curation not approved
-        if (feeData.curated == false) revert InvalidState();
-
-        // Load routing data for the lot
-        Routing storage routing = lotRouting[lotId_];
-
-        // Calculate the curator payout
-        uint96 curatorFeePayout = _calculatePayoutFees(feeData.curated, feeData.curatorFee, sold_);
-
-        // Send the curator fee to the curator
-        _sendPayout(feeData.curator, curatorFeePayout, routing, bytes(""));
-
-        // Decrease the funding amount
-        unchecked {
-            routing.funding -= curatorFeePayout;
-        }
     }
 
     // ========== ADMIN FUNCTIONS ========== //

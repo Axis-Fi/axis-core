@@ -61,6 +61,7 @@ abstract contract Auction {
         uint96 sold;
         uint256 purchased;
         uint96 claimableBidAmountOut;
+        bool proceedsClaimed;
     }
 
     /// @notice     Parameters when creating an auction lot
@@ -196,25 +197,10 @@ abstract contract Auction {
     /// @return     purchased               The amount of quote tokens purchased
     /// @return     sold                    The amount of base tokens sold
     /// @return     claimableBidAmountOut   The amount of base tokens that can be claimed by bidders
-    /// @return     curatorPayoutClaimed    Whether or not the curator payout has been claimed
     function claimProceeds(uint96 lotId_)
         external
         virtual
-        returns (
-            uint256 purchased,
-            uint96 sold,
-            uint96 claimableBidAmountOut,
-            bool curatorPayoutClaimed
-        );
-
-    /// @notice     Claim the curator payout from a settled auction lot
-    /// @dev        The implementing function should handle the following:
-    ///             - Validate the lot parameters
-    ///             - Update the lot data
-    ///
-    /// @param      lotId_                  The lot id
-    /// @return     sold                    The amount of base tokens sold
-    function claimCuratorPayout(uint96 lotId_) external virtual returns (uint96 sold);
+        returns (uint96 purchased, uint96 sold, uint96 claimableBidAmountOut);
 
     // ========== AUCTION MANAGEMENT ========== //
 
@@ -652,12 +638,7 @@ abstract contract AuctionModule is Auction, Module {
         virtual
         override
         onlyInternal
-        returns (
-            uint256 purchased,
-            uint96 sold,
-            uint96 claimableBidAmountOut,
-            bool curatorPayoutClaimed
-        )
+        returns (uint96 purchased, uint96 sold, uint96 claimableBidAmountOut)
     {
         // Standard validation
         _revertIfLotInvalid(lotId_);
@@ -676,55 +657,10 @@ abstract contract AuctionModule is Auction, Module {
     /// @return     purchased               The amount of quote tokens purchased
     /// @return     sold                    The amount of base tokens sold
     /// @return     claimableBidAmountOut   The amount of base tokens that can be claimed by bidders
-    /// @return     curatorPayoutClaimed    Whether or not the curator payout has been claimed
     function _claimProceeds(uint96 lotId_)
         internal
         virtual
-        returns (
-            uint256 purchased,
-            uint96 sold,
-            uint96 claimableBidAmountOut,
-            bool curatorPayoutClaimed
-        );
-
-    /// @inheritdoc Auction
-    /// @dev        Implements a basic claimProceeds function that:
-    ///             - Calls common validation logic
-    ///             - Calls the implementation-specific function for the auction module
-    ///
-    ///             This function reverts if:
-    ///             - the lot id is invalid
-    ///             - the lot is not settled
-    ///             - the lot proceeds have already been claimed
-    ///             - the lot is cancelled
-    ///             - the caller is not an internal module
-    ///
-    ///             Inheriting contracts should override _claimProceeds to implement auction-specific logic, such as:
-    ///             - Validating the auction-specific parameters
-    ///             - Updating the lot data
-    function claimCuratorPayout(uint96 lotId_)
-        external
-        virtual
-        override
-        onlyInternal
-        returns (uint96 sold)
-    {
-        // Standard validation
-        _revertIfLotInvalid(lotId_);
-        _revertIfLotCuratorPayoutClaimed(lotId_);
-        _revertIfLotNotSettled(lotId_);
-
-        // Call implementation-specific logic
-        return _claimCuratorPayout(lotId_);
-    }
-
-    /// @notice     Implementation-specific claim curator payout logic
-    /// @dev        Auction modules should override this to perform any additional logic,
-    ///             such as updating the lot data
-    ///
-    /// @param      lotId_                  The lot ID
-    /// @return     sold                    The amount of base tokens sold
-    function _claimCuratorPayout(uint96 lotId_) internal virtual returns (uint96 sold);
+        returns (uint96 purchased, uint96 sold, uint96 claimableBidAmountOut);
 
     // ========== AUCTION INFORMATION ========== //
 
@@ -838,13 +774,6 @@ abstract contract AuctionModule is Auction, Module {
     ///
     /// @param      lotId_  The lot ID
     function _revertIfLotProceedsClaimed(uint96 lotId_) internal view virtual;
-
-    /// @notice     Checks if the lot represented by `lotId_` has had the curator payout claimed
-    /// @dev        Should revert if the lot curator payout has been claimed
-    ///             Inheriting contracts must override this to implement custom logic
-    ///
-    /// @param      lotId_  The lot ID
-    function _revertIfLotCuratorPayoutClaimed(uint96 lotId_) internal view virtual;
 
     /// @notice     Checks that the lot and bid combination is valid
     /// @dev        Should revert if the bid is invalid

@@ -338,12 +338,6 @@ abstract contract EmpaModuleTest is Test, Permit2User {
         _;
     }
 
-    modifier givenLotCuratorPayoutIsClaimed() {
-        vm.prank(address(_auctionHouse));
-        _module.claimCuratorPayout(_lotId);
-        _;
-    }
-
     // ======== Internal Functions ======== //
 
     function _mulDivUp(uint96 mul1_, uint96 mul2_, uint96 div_) internal pure returns (uint96) {
@@ -381,8 +375,6 @@ abstract contract EmpaModuleTest is Test, Permit2User {
             uint96 minFilled_,
             uint96 minBidSize_,
             Auction.Status status_,
-            bool proceedsClaimed_,
-            bool curatorPayoutClaimed_,
             uint64 marginalBidId_,
             Point memory publicKey_,
             uint256 privateKey_
@@ -396,8 +388,6 @@ abstract contract EmpaModuleTest is Test, Permit2User {
             minFilled: minFilled_,
             minBidSize: minBidSize_,
             status: status_,
-            proceedsClaimed: proceedsClaimed_,
-            curatorPayoutClaimed: curatorPayoutClaimed_,
             marginalBidId: marginalBidId_,
             publicKey: publicKey_,
             privateKey: privateKey_,
@@ -409,12 +399,12 @@ abstract contract EmpaModuleTest is Test, Permit2User {
         return _module.getLot(lotId_);
     }
 
-    function _getPartialFillResult(uint96 lotId_)
+    function _getPartialFill(uint96 lotId_)
         internal
         view
-        returns (EncryptedMarginalPriceAuctionModule.PartialFillResult memory)
+        returns (EncryptedMarginalPriceAuctionModule.PartialFill memory)
     {
-        return _module.getPartialFillResult(lotId_);
+        return _module.getPartialFill(lotId_);
     }
 
     function _getBid(
