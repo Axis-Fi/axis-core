@@ -1756,24 +1756,25 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         _assertLot();
     }
 
-    function test_givenBidsCauseCapacityOverflow()
-        external
-        givenMinimumPrice(1)
-        givenLotCapacity(_LOT_CAPACITY_OVERFLOW)
-        givenLotIsCreated
-        givenLotHasStarted
-        givenBidsCauseCapacityOverflow
-        givenLotHasConcluded
-        givenPrivateKeyIsSubmitted
-        givenLotIsDecrypted
-    {
-        // Call function
-        (Auction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
+    // Do not believe this can happen with uint256 capacity and uint96 * max of 1e18 decimal bids
+    // function test_givenBidsCauseCapacityOverflow()
+    //     external
+    //     givenMinimumPrice(1)
+    //     givenLotCapacity(_LOT_CAPACITY_OVERFLOW)
+    //     givenLotIsCreated
+    //     givenLotHasStarted
+    //     givenBidsCauseCapacityOverflow
+    //     givenLotHasConcluded
+    //     givenPrivateKeyIsSubmitted
+    //     givenLotIsDecrypted
+    // {
+    //     // Call function
+    //     (Auction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
 
-        // Assert settlement
-        _assertSettlement(settlement, auctionOutput);
-        _assertLot();
-    }
+    //     // Assert settlement
+    //     _assertSettlement(settlement, auctionOutput);
+    //     _assertLot();
+    // }
 
     function test_givenBidAmountRespectsRoundingLastBid()
         external
