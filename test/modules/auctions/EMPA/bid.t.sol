@@ -5,6 +5,8 @@ import {Module} from "src/modules/Modules.sol";
 import {Auction} from "src/modules/Auction.sol";
 import {EncryptedMarginalPriceAuctionModule} from "src/modules/auctions/EMPAM.sol";
 import {Point} from "src/lib/ECIES.sol";
+import {FixedPointMathLib as Math} from "lib/solmate/src/utils/FixedPointMathLib.sol";
+import {console2} from "forge-std/console2.sol";
 
 import {EmpaModuleTest} from "test/modules/auctions/EMPA/EMPAModuleTest.sol";
 
@@ -254,5 +256,36 @@ contract EmpaModuleBidTest is EmpaModuleTest {
 
         EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
         assertEq(auctionData.nextBidId, 2, "nextBidId");
+    }
+
+    function testFuzz_bidPayoutInvariant_atMarginalPrice(uint96 amountIn, uint96 amountOut) public {
+        vm.assume(amountIn != 0 && amountOut != 0);
+
+        // Calculate the bid price
+        uint256 price = Math.mulDivUp(uint256(amountIn), 1e18, uint256(amountOut));
+
+        // Calculate the payout from the amountIn and price
+        uint256 payout = Math.mulDivDown(uint256(amountIn), 1e18, price);
+
+        // Bid payout must be <= bid amount out when price is at marginal price
+        assertLe(payout, amountOut, "payout <= amountOut");
+    }
+
+    function testFuzz_bidPayoutInvariant_aboveMarginalPrice(uint96 amountIn, uint96 amountOut) public {
+        vm.assume(amountIn >= 1e6 && amountOut >= 1e6);
+        console2.log("amountIn", amountIn);
+        console2.log("amountOut", amountOut);
+
+        // Calculate a marginal price less than the amountIn
+        uint256 price = Math.mulDivUp(uint256(amountIn) * 4 / 5, 1e18, uint256(amountOut));
+        console2.log("price", price);
+
+        // Calculate the payout from the amountIn and price
+        uint256 payout = Math.mulDivDown(uint256(amountIn), 1e18, price);
+        console2.log("payout", payout);
+        console2.log("price diff * amountOut", uint256(amountOut) * 5 / 4);
+
+        // Bid payout must be <= price diff * amountOut when price is above marginal price
+        assertLe(payout, uint256(amountOut) * 5 / 4, "payout <= amountOut");
     }
 }
