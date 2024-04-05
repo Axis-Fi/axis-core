@@ -26,9 +26,9 @@ library ECIES {
         21_888_242_871_839_275_222_246_405_745_257_275_088_696_311_157_297_823_662_689_037_894_645_226_208_583;
 
     /// @notice We use a hash function to derive a symmetric key from the shared secret and a provided salt.
-    /// @dev This is not as secure as modern key derivation functions, since hash-based keys are susceptible to dictionary attacks.
-    ///      However, it is simple and cheap to implement, and is sufficient for our purposes.
-    ///      The salt prevents duplication even if a shared secret is reused.
+    /// @dev    This is not as secure as modern key derivation functions, since hash-based keys are susceptible to dictionary attacks.
+    ///         However, it is simple and cheap to implement, and is sufficient for our purposes.
+    ///         The salt prevents duplication even if a shared secret is reused.
     function deriveSymmetricKey(
         uint256 sharedSecret_,
         uint256 s1_
@@ -55,11 +55,12 @@ library ECIES {
 
     /// @notice Decrypt a message using the provided ciphertext, ciphertext public key, and private key from the recipient.
     /// @dev    We use XOR encryption. The security of the algorithm relies on the security of the elliptic curve to hide the shared secret.
-    /// @param ciphertext_ - The encrypted message.
-    /// @param ciphertextPubKey_ - The ciphertext public key provided by the sender.
-    /// @param privateKey_ - The private key of the recipient.
-    /// @param salt_ - A salt used to derive the symmetric key from the shared secret. Ensures that the symmetric key is unique even if the shared secret is reused.
-    /// @return message_ - The decrypted message.
+    ///
+    /// @param  ciphertext_         The encrypted message.
+    /// @param  ciphertextPubKey_   The ciphertext public key provided by the sender.
+    /// @param  privateKey_         The private key of the recipient.
+    /// @param  salt_               A salt used to derive the symmetric key from the shared secret. Ensures that the symmetric key is unique even if the shared secret is reused.
+    /// @return message_            The decrypted message.
     function decrypt(
         uint256 ciphertext_,
         Point memory ciphertextPubKey_,
@@ -78,12 +79,13 @@ library ECIES {
     }
 
     /// @notice Encrypt a message using the provided recipient public key and the sender private key. Note: sending the private key to an RPC can leak it. This should be used locally.
-    /// @param message_ - The message to encrypt.
-    /// @param recipientPubKey_ - The public key of the recipient.
-    /// @param privateKey_ - The private key to use to encrypt the message.
-    /// @param salt_ - A salt used to derive the symmetric key from the shared secret. Ensures that the symmetric key is unique even if the shared secret is reused.
-    /// @return ciphertext_ - The encrypted message.
-    /// @return messagePubKey_ - The public key of the message that the receipient can use to decrypt it.
+    ///
+    /// @param  message_            The message to encrypt.
+    /// @param  recipientPubKey_    The public key of the recipient.
+    /// @param  privateKey_         The private key to use to encrypt the message.
+    /// @param  salt_               A salt used to derive the symmetric key from the shared secret. Ensures that the symmetric key is unique even if the shared secret is reused.
+    /// @return ciphertext_         The encrypted message.
+    /// @return messagePubKey_      The public key of the message that the receipient can use to decrypt it.
     function encrypt(
         uint256 message_,
         Point memory recipientPubKey_,
@@ -106,9 +108,8 @@ library ECIES {
     }
 
     /// @notice Calculate the point on the generator curve that corresponds to the provided private key. This is used as the public key.
-    /// @param generator_ - The point on the the alt_bn128 curve to use as the generator.
-    ///                     This function assumes a valid point is provided to save gas.
-    /// @param privateKey_ - The private key to calculate the public key for.
+    /// @param  generator_  The point on the the alt_bn128 curve to use as the generator. This function assumes a valid point is provided to save gas.
+    /// @param  privateKey_ The private key to calculate the public key for.
     function calcPubKey(
         Point memory generator_,
         uint256 privateKey_
@@ -132,7 +133,7 @@ library ECIES {
     }
 
     /// @notice Checks whether a point is on the alt_bn128 curve.
-    /// @param  p - The point to check (consists of x and y coordinates).
+    /// @param  p   The point to check (consists of x and y coordinates).
     function isOnBn128(Point memory p) internal pure returns (bool) {
         // check if the provided point is on the bn128 curve y**2 = x**3 + 3, which has generator point (1, 2)
         return _fieldmul(p.y, p.y) == _fieldadd(_fieldmul(p.x, _fieldmul(p.x, p.x)), 3);
