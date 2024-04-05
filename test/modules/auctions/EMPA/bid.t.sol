@@ -13,8 +13,6 @@ contract EmpaModuleBidTest is EmpaModuleTest {
     uint256 internal constant _BID_AMOUNT_OUT = 1e18;
     uint256 internal constant _BID_AMOUNT_BELOW_MIN = 1e16;
 
-    // TODO need to add test for when the bid amount passed from the AuctionHouse is greater than uint96 since we revert on that
-
     // [X] when the caller is not the parent
     //  [X] it reverts
     // [X] when the lot id is invalid
@@ -34,6 +32,8 @@ contract EmpaModuleBidTest is EmpaModuleTest {
     // [X] when the implied amount out is less than the minimum bid size
     //  [X] it reverts
     // [X] when the bid public key is invalid
+    //  [X] it reverts
+    // [X] when the bid amount is greater than uint96 max
     //  [X] it reverts
     // [X] it stores the bid data
 
@@ -228,6 +228,24 @@ contract EmpaModuleBidTest is EmpaModuleTest {
         // Call the function
         vm.prank(address(_auctionHouse));
         _module.bid(_lotId, _BIDDER, _REFERRER, _BID_AMOUNT, bidData);
+    }
+
+    function test_bidAmountGreaterThanUint96Max_reverts(uint256 amountIn_)
+        public
+        givenLotIsCreated
+        givenLotHasStarted
+    {
+        uint256 amountIn = bound(amountIn_, uint256(2 ** 96), type(uint256).max);
+
+        // Prepare the inputs
+        bytes memory bidData = _createBidData(amountIn, _BID_AMOUNT_OUT);
+
+        // Expect revert
+        vm.expectRevert();
+
+        // Call the function
+        vm.prank(address(_auctionHouse));
+        _module.bid(_lotId, _BIDDER, _REFERRER, amountIn, bidData);
     }
 
     function test_success() public givenLotIsCreated givenLotHasStarted {
