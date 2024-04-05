@@ -1,6 +1,8 @@
 //SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.0;
 
+import {FixedPointMathLib as Math} from "lib/solmate/src/utils/FixedPointMathLib.sol";
+
 library BidEncoding {
     function encode(
         uint64 bidId,
@@ -20,12 +22,12 @@ library BidEncoding {
     function isHigherPriorityThan(bytes32 alpha, bytes32 beta) internal pure returns (bool) {
         (uint64 aId, uint96 aAmountIn, uint96 aMinAmountOut) = decode(alpha);
         (uint64 bId, uint96 bAmountIn, uint96 bMinAmountOut) = decode(beta);
-        uint256 relA = uint256(aAmountIn) * uint256(bMinAmountOut);
-        uint256 relB = uint256(bAmountIn) * uint256(aMinAmountOut);
-        if (relA == relB) {
+        uint256 priceA = Math.mulDivUp(uint256(aAmountIn), 1e18, uint256(aMinAmountOut));
+        uint256 priceB = Math.mulDivUp(uint256(bAmountIn), 1e18, uint256(bMinAmountOut));
+        if (priceA == priceB) {
             return aId < bId;
         } else {
-            return relA > relB;
+            return priceA > priceB;
         }
     }
 }
