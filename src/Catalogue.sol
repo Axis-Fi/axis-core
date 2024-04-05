@@ -5,7 +5,7 @@ import {Auction} from "src/modules/Auction.sol";
 import {Auctioneer} from "src/bases/Auctioneer.sol";
 import {FeeManager} from "src/bases/FeeManager.sol";
 import {Veecode, keycodeFromVeecode, Keycode} from "src/modules/Modules.sol";
-import {ERC20} from "solmate/tokens/ERC20.sol";
+import {ERC20} from "lib/solmate/src/tokens/ERC20.sol";
 import {ICallback} from "src/interfaces/ICallback.sol";
 
 /// @notice Contract that provides view functions for Auctions
@@ -32,10 +32,10 @@ contract Catalogue {
     function getRouting(uint96 lotId_) public view returns (Auctioneer.Routing memory) {
         (
             address seller,
-            uint96 funding,
             ERC20 baseToken,
-            Veecode auctionReference,
             ERC20 quoteToken,
+            Veecode auctionReference,
+            uint256 funding,
             ICallback callbacks,
             Veecode derivativeReference,
             bool wrapDerivative,
@@ -55,7 +55,7 @@ contract Catalogue {
         });
     }
 
-    function payoutFor(uint96 lotId_, uint96 amount_) external view returns (uint256) {
+    function payoutFor(uint96 lotId_, uint256 amount_) external view returns (uint256) {
         Auction module = Auctioneer(auctionHouse).getModuleForId(lotId_);
         Auctioneer.Routing memory routing = getRouting(lotId_);
 
@@ -72,7 +72,7 @@ contract Catalogue {
         return module.payoutFor(lotId_, amount_ - uint96(toProtocol) - uint96(toReferrer));
     }
 
-    function priceFor(uint96 lotId_, uint96 payout_) external view returns (uint256) {
+    function priceFor(uint96 lotId_, uint256 payout_) external view returns (uint256) {
         Auction module = Auctioneer(auctionHouse).getModuleForId(lotId_);
         Auctioneer.Routing memory routing = getRouting(lotId_);
 

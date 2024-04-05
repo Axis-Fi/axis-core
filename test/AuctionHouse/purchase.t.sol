@@ -10,37 +10,37 @@ import {MockDerivativeModule} from "test/modules/derivatives/mocks/MockDerivativ
 import {AuctionHouseTest} from "test/AuctionHouse/AuctionHouseTest.sol";
 
 contract PurchaseTest is AuctionHouseTest {
-    uint96 internal constant _AMOUNT_IN = 2e18;
-    uint96 internal constant _PAYOUT_MULTIPLIER = 50_000; // 50%
+    uint256 internal constant _AMOUNT_IN = 2e18;
+    uint256 internal constant _PAYOUT_MULTIPLIER = 50_000; // 50%
 
     /// @dev Set by whenPayoutMultiplierIsSet
-    uint96 internal _amountOut;
+    uint256 internal _amountOut;
     /// @dev Set by whenPayoutMultiplierIsSet
-    uint96 internal _curatorFeeActual;
+    uint256 internal _curatorFeeActual;
 
     bytes internal _purchaseAuctionData = abi.encode("");
 
     uint48 internal constant _DERIVATIVE_EXPIRY = 1 days;
     uint256 internal _derivativeTokenId = type(uint256).max;
 
-    uint96 internal _expectedSellerQuoteTokenBalance;
-    uint96 internal _expectedBidderQuoteTokenBalance;
-    uint96 internal _expectedAuctionHouseQuoteTokenBalance;
-    uint96 internal _expectedCallbackQuoteTokenBalance;
+    uint256 internal _expectedSellerQuoteTokenBalance;
+    uint256 internal _expectedBidderQuoteTokenBalance;
+    uint256 internal _expectedAuctionHouseQuoteTokenBalance;
+    uint256 internal _expectedCallbackQuoteTokenBalance;
 
-    uint96 internal _expectedSellerBaseTokenBalance;
-    uint96 internal _expectedBidderBaseTokenBalance;
-    uint96 internal _expectedAuctionHouseBaseTokenBalance;
-    uint96 internal _expectedCuratorBaseTokenBalance;
-    uint96 internal _expectedDerivativeModuleBaseTokenBalance;
+    uint256 internal _expectedSellerBaseTokenBalance;
+    uint256 internal _expectedBidderBaseTokenBalance;
+    uint256 internal _expectedAuctionHouseBaseTokenBalance;
+    uint256 internal _expectedCuratorBaseTokenBalance;
+    uint256 internal _expectedDerivativeModuleBaseTokenBalance;
 
-    uint96 internal _expectedBidderDerivativeTokenBalance;
-    uint96 internal _expectedCuratorDerivativeTokenBalance;
+    uint256 internal _expectedBidderDerivativeTokenBalance;
+    uint256 internal _expectedCuratorDerivativeTokenBalance;
 
-    uint96 internal _expectedProtocolFeesAllocated;
-    uint96 internal _expectedReferrerFeesAllocated;
+    uint256 internal _expectedProtocolFeesAllocated;
+    uint256 internal _expectedReferrerFeesAllocated;
 
-    uint96 internal _expectedPrefunding;
+    uint256 internal _expectedPrefunding;
 
     // ======== Modifiers ======== //
 
@@ -49,13 +49,12 @@ contract PurchaseTest is AuctionHouseTest {
         _;
     }
 
-    modifier whenPayoutMultiplierIsSet(uint96 multiplier_) {
+    modifier whenPayoutMultiplierIsSet(uint256 multiplier_) {
         _atomicAuctionModule.setPayoutMultiplier(_lotId, multiplier_);
 
-        uint96 amountInLessFees = _scaleQuoteTokenAmount(_AMOUNT_IN)
+        uint256 amountInLessFees = _scaleQuoteTokenAmount(_AMOUNT_IN)
             - _expectedProtocolFeesAllocated - _expectedReferrerFeesAllocated;
-        amountInLessFees =
-            uint96(uint256(amountInLessFees) * _BASE_SCALE / 10 ** _quoteToken.decimals());
+        amountInLessFees = amountInLessFees * _BASE_SCALE / (10 ** _quoteToken.decimals());
 
         // Set the amount out
         _amountOut = _scaleBaseTokenAmount((amountInLessFees * multiplier_) / 1e5);
@@ -80,29 +79,29 @@ contract PurchaseTest is AuctionHouseTest {
         _;
     }
 
-    modifier givenFeesAreCalculated(uint96 amountIn_) {
+    modifier givenFeesAreCalculated(uint256 amountIn_) {
         _expectedReferrerFeesAllocated = (amountIn_ * _referrerFeePercentActual) / 1e5;
         _expectedProtocolFeesAllocated = (amountIn_ * _protocolFeePercentActual) / 1e5;
         _;
     }
 
-    modifier givenFeesAreCalculatedNoReferrer(uint96 amountIn_) {
+    modifier givenFeesAreCalculatedNoReferrer(uint256 amountIn_) {
         _expectedReferrerFeesAllocated = 0;
         _expectedProtocolFeesAllocated =
             (amountIn_ * (_protocolFeePercentActual + _referrerFeePercentActual)) / 1e5;
         _;
     }
 
-    modifier givenBalancesAreCalculated(uint96 amountIn_, uint96 amountOut_) {
+    modifier givenBalancesAreCalculated(uint256 amountIn_, uint256 amountOut_) {
         // Determine curator fee
-        uint96 curatorFee = _curatorApproved ? (amountOut_ * _curatorFeePercentActual) / 1e5 : 0;
+        uint256 curatorFee = _curatorApproved ? (amountOut_ * _curatorFeePercentActual) / 1e5 : 0;
         bool hasDerivativeToken = _derivativeTokenId != type(uint256).max;
         bool hasCallback = address(_routingParams.callbacks) != address(0);
         bool isPrefunding = _routingParams.prefunded;
-        uint96 scaledLotCapacity = _scaleBaseTokenAmount(_LOT_CAPACITY);
-        uint96 scaledCuratorMaxPotentialFee = _scaleBaseTokenAmount(_curatorMaxPotentialFee);
+        uint256 scaledLotCapacity = _scaleBaseTokenAmount(_LOT_CAPACITY);
+        uint256 scaledCuratorMaxPotentialFee = _scaleBaseTokenAmount(_curatorMaxPotentialFee);
 
-        uint96 amountInLessFees =
+        uint256 amountInLessFees =
             amountIn_ - _expectedProtocolFeesAllocated - _expectedReferrerFeesAllocated;
 
         // Quote token

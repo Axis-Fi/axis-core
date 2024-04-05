@@ -3,16 +3,17 @@ pragma solidity 0.8.19;
 
 import {Auction} from "src/modules/Auction.sol";
 import {EncryptedMarginalPriceAuctionModule} from "src/modules/auctions/EMPAM.sol";
+import {FixedPointMathLib as Math} from "lib/solmate/src/utils/FixedPointMathLib.sol";
 
 import {EmpaModuleTest} from "test/modules/auctions/EMPA/EMPAModuleTest.sol";
 
 contract EmpaModuleClaimProceedsTest is EmpaModuleTest {
-    uint96 internal constant _BID_PRICE_TWO_AMOUNT = 2e18;
-    uint96 internal constant _BID_PRICE_TWO_AMOUNT_OUT = 1e18;
-    uint96 internal constant _BID_SIZE_NINE_AMOUNT = 19e18;
-    uint96 internal constant _BID_SIZE_NINE_AMOUNT_OUT = 9e18;
-    uint96 internal constant _BID_PRICE_TWO_SIZE_TWO_AMOUNT = 4e18;
-    uint96 internal constant _BID_PRICE_TWO_SIZE_TWO_AMOUNT_OUT = 2e18;
+    uint256 internal constant _BID_PRICE_TWO_AMOUNT = 2e18;
+    uint256 internal constant _BID_PRICE_TWO_AMOUNT_OUT = 1e18;
+    uint256 internal constant _BID_SIZE_NINE_AMOUNT = 19e18;
+    uint256 internal constant _BID_SIZE_NINE_AMOUNT_OUT = 9e18;
+    uint256 internal constant _BID_PRICE_TWO_SIZE_TWO_AMOUNT = 4e18;
+    uint256 internal constant _BID_PRICE_TWO_SIZE_TWO_AMOUNT_OUT = 2e18;
 
     uint256 internal _expectedSold;
     uint256 internal _expectedPurchased;
@@ -33,29 +34,29 @@ contract EmpaModuleClaimProceedsTest is EmpaModuleTest {
         );
 
         // Marginal price: 2 >= 1 (due to capacity being reached on bid 2)
-        uint96 expectedMarginalPrice = _scaleQuoteTokenAmount(2 * _BASE_SCALE);
+        uint256 expectedMarginalPrice = _scaleQuoteTokenAmount(2 * _BASE_SCALE);
 
         // Output
         // Bid one: 19 / 2 = 9.5 out
         // Bid two: 10 - 9.5 = 0.5 out (partial fill)
 
-        uint96 bidOneAmountOutActual = _mulDivUp(
+        uint256 bidOneAmountOutActual = Math.mulDivDown(
             _scaleQuoteTokenAmount(_BID_SIZE_NINE_AMOUNT),
-            uint96(10 ** _baseTokenDecimals),
+            10 ** _baseTokenDecimals,
             expectedMarginalPrice
         ); // 9.5
-        uint96 bidOneAmountInActual = _scaleQuoteTokenAmount(_BID_SIZE_NINE_AMOUNT); // 19
-        uint96 bidTwoAmountOutActual = _auctionParams.capacity - bidOneAmountOutActual; // 0.5
-        uint96 bidTwoAmountInActual = _mulDivUp(
+        uint256 bidOneAmountInActual = _scaleQuoteTokenAmount(_BID_SIZE_NINE_AMOUNT); // 19
+        uint256 bidTwoAmountOutActual = _auctionParams.capacity - bidOneAmountOutActual; // 0.5
+        uint256 bidTwoAmountInActual = Math.mulDivDown(
             bidTwoAmountOutActual,
             _scaleQuoteTokenAmount(_BID_PRICE_TWO_SIZE_TWO_AMOUNT),
             _scaleBaseTokenAmount(_BID_PRICE_TWO_SIZE_TWO_AMOUNT_OUT)
         ); // 0.5 * 4 / 2 = 1
 
-        uint96 bidAmountInSuccess = bidOneAmountInActual + bidTwoAmountInActual;
-        uint96 bidAmountInFail =
+        uint256 bidAmountInSuccess = bidOneAmountInActual + bidTwoAmountInActual;
+        uint256 bidAmountInFail =
             _scaleQuoteTokenAmount(_BID_PRICE_TWO_SIZE_TWO_AMOUNT) - bidTwoAmountInActual;
-        uint96 bidAmountOutSuccess = bidOneAmountOutActual + bidTwoAmountOutActual;
+        uint256 bidAmountOutSuccess = bidOneAmountOutActual + bidTwoAmountOutActual;
 
         _expectedPurchased = bidAmountInSuccess;
         _expectedSold = bidAmountOutSuccess;
@@ -90,11 +91,11 @@ contract EmpaModuleClaimProceedsTest is EmpaModuleTest {
         // Bid three: 2 / 1 = 2 out
         // Bid four: 2 / 1 = 2 out
 
-        uint96 bidAmountInTotal = _scaleQuoteTokenAmount(
+        uint256 bidAmountInTotal = _scaleQuoteTokenAmount(
             _BID_PRICE_TWO_AMOUNT + _BID_PRICE_TWO_AMOUNT + _BID_PRICE_TWO_AMOUNT
                 + _BID_PRICE_TWO_AMOUNT
         );
-        uint96 bidAmountOutTotal = _scaleBaseTokenAmount(
+        uint256 bidAmountOutTotal = _scaleBaseTokenAmount(
             _BID_PRICE_TWO_AMOUNT + _BID_PRICE_TWO_AMOUNT + _BID_PRICE_TWO_AMOUNT
                 + _BID_PRICE_TWO_AMOUNT
         );

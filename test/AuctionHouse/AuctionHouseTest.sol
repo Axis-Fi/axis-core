@@ -3,7 +3,7 @@ pragma solidity 0.8.19;
 
 // Libraries
 import {Test} from "forge-std/Test.sol";
-import {ERC20} from "solmate/tokens/ERC20.sol";
+import {ERC20} from "lib/solmate/src/tokens/ERC20.sol";
 import {Transfer} from "src/lib/Transfer.sol";
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 
@@ -45,7 +45,7 @@ abstract contract AuctionHouseTest is Test, Permit2User {
     Keycode internal _derivativeModuleKeycode;
     MockCallback internal _callback;
 
-    uint96 internal constant _BASE_SCALE = 1e18;
+    uint256 internal constant _BASE_SCALE = 1e18;
 
     address internal constant _SELLER = address(0x1);
     address internal constant _PROTOCOL = address(0x2);
@@ -65,14 +65,14 @@ abstract contract AuctionHouseTest is Test, Permit2User {
     uint24 internal _protocolFeePercentActual;
     uint24 internal _referrerFeePercentActual;
 
-    uint96 internal _curatorMaxPotentialFee;
+    uint256 internal _curatorMaxPotentialFee;
     bool internal _curatorApproved;
 
     // Input to parameters
     uint48 internal _startTime;
     uint48 internal _duration = 1 days;
     /// @dev    Needs to be updated if the base token scale is changed
-    uint96 internal constant _LOT_CAPACITY = 10e18;
+    uint256 internal constant _LOT_CAPACITY = 10e18;
     string internal constant _INFO_HASH = "info hash";
     bytes internal _derivativeParams = abi.encode("");
 
@@ -136,26 +136,12 @@ abstract contract AuctionHouseTest is Test, Permit2User {
 
     // ===== Helper Functions ===== //
 
-    function _mulDivUp(uint96 mul1_, uint96 mul2_, uint96 div_) internal pure returns (uint96) {
-        uint256 product = FixedPointMathLib.mulDivUp(mul1_, mul2_, div_);
-        if (product > type(uint96).max) revert("overflow");
-
-        return uint96(product);
+    function _scaleQuoteTokenAmount(uint256 amount_) internal view returns (uint256) {
+        return FixedPointMathLib.mulDivDown(amount_, 10 ** _quoteToken.decimals(), _BASE_SCALE);
     }
 
-    function _mulDivDown(uint96 mul1_, uint96 mul2_, uint96 div_) internal pure returns (uint96) {
-        uint256 product = FixedPointMathLib.mulDivDown(mul1_, mul2_, div_);
-        if (product > type(uint96).max) revert("overflow");
-
-        return uint96(product);
-    }
-
-    function _scaleQuoteTokenAmount(uint96 amount_) internal view returns (uint96) {
-        return _mulDivUp(amount_, uint96(10 ** (_quoteToken.decimals())), _BASE_SCALE);
-    }
-
-    function _scaleBaseTokenAmount(uint96 amount_) internal view returns (uint96) {
-        return _mulDivUp(amount_, uint96(10 ** (_baseToken.decimals())), _BASE_SCALE);
+    function _scaleBaseTokenAmount(uint256 amount_) internal view returns (uint256) {
+        return FixedPointMathLib.mulDivDown(amount_, 10 ** _baseToken.decimals(), _BASE_SCALE);
     }
 
     // ===== Modifiers ===== //
@@ -163,13 +149,13 @@ abstract contract AuctionHouseTest is Test, Permit2User {
     function _setBaseTokenDecimals(uint8 decimals_) internal {
         _baseToken = new MockFeeOnTransferERC20("Base Token", "BASE", decimals_);
 
-        uint96 lotCapacity = _scaleBaseTokenAmount(_LOT_CAPACITY);
+        uint256 lotCapacity = _scaleBaseTokenAmount(_LOT_CAPACITY);
 
         // Update routing params
         _routingParams.baseToken = _baseToken;
 
         // Update auction params
-        _auctionParams.capacity = uint96(lotCapacity);
+        _auctionParams.capacity = lotCapacity;
     }
 
     modifier givenBaseTokenHasDecimals(uint8 decimals_) {
@@ -498,7 +484,7 @@ abstract contract AuctionHouseTest is Test, Permit2User {
 
     function _createBid(
         address bidder_,
-        uint96 amount_,
+        uint256 amount_,
         bytes memory auctionData_
     ) internal returns (uint64) {
         Router.BidParams memory bidParams = Router.BidParams({
@@ -515,18 +501,18 @@ abstract contract AuctionHouseTest is Test, Permit2User {
         return _bidId;
     }
 
-    function _createBid(uint96 amount_, bytes memory auctionData_) internal returns (uint64) {
+    function _createBid(uint256 amount_, bytes memory auctionData_) internal returns (uint64) {
         return _createBid(_bidder, amount_, auctionData_);
     }
 
-    modifier givenBid(uint96 amount_, bytes memory auctionData_) {
+    modifier givenBid(uint256 amount_, bytes memory auctionData_) {
         uint64 bidId = _createBid(amount_, auctionData_);
 
         _bidIds.push(bidId);
         _;
     }
 
-    modifier givenBidCreated(address bidder_, uint96 amount_, bytes memory auctionData_) {
+    modifier givenBidCreated(address bidder_, uint256 amount_, bytes memory auctionData_) {
         uint64 bidId = _createBid(bidder_, amount_, auctionData_);
 
         _bidIds.push(bidId);
@@ -534,8 +520,8 @@ abstract contract AuctionHouseTest is Test, Permit2User {
     }
 
     function _createPurchase(
-        uint96 amount_,
-        uint96 minAmountOut_,
+        uint256 amount_,
+        uint256 minAmountOut_,
         bytes memory auctionData_,
         address referrer_
     ) internal returns (uint256) {
@@ -556,14 +542,14 @@ abstract contract AuctionHouseTest is Test, Permit2User {
     }
 
     function _createPurchase(
-        uint96 amount_,
-        uint96 minAmountOut_,
+        uint256 amount_,
+        uint256 minAmountOut_,
         bytes memory auctionData_
     ) internal returns (uint256) {
         return _createPurchase(amount_, minAmountOut_, auctionData_, _REFERRER);
     }
 
-    modifier givenPurchase(uint96 amount_, uint96 minAmountOut_, bytes memory auctionData_) {
+    modifier givenPurchase(uint256 amount_, uint256 minAmountOut_, bytes memory auctionData_) {
         // Purchase
         _createPurchase(amount_, minAmountOut_, auctionData_);
         _;
@@ -645,10 +631,10 @@ abstract contract AuctionHouseTest is Test, Permit2User {
     function _getLotRouting(uint96 lotId_) internal view returns (Auctioneer.Routing memory) {
         (
             address seller_,
-            uint96 prefunding_,
             ERC20 baseToken_,
-            Veecode auctionReference_,
             ERC20 quoteToken_,
+            Veecode auctionReference_,
+            uint256 funding_,
             ICallback callback_,
             Veecode derivativeReference_,
             bool wrapDerivative_,
@@ -664,7 +650,7 @@ abstract contract AuctionHouseTest is Test, Permit2User {
             derivativeReference: derivativeReference_,
             derivativeParams: derivativeParams_,
             wrapDerivative: wrapDerivative_,
-            funding: prefunding_
+            funding: funding_
         });
     }
 

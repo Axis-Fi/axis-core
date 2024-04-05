@@ -58,10 +58,10 @@ abstract contract Auction {
         uint8 quoteTokenDecimals;
         uint8 baseTokenDecimals;
         bool capacityInQuote;
-        uint96 capacity;
-        uint96 sold;
-        uint96 purchased;
-        uint96 partialPayout;
+        uint256 capacity;
+        uint256 sold;
+        uint256 purchased;
+        uint256 partialPayout;
     }
 
     /// @notice     Parameters when creating an auction lot
@@ -75,18 +75,18 @@ abstract contract Auction {
         uint48 start;
         uint48 duration;
         bool capacityInQuote;
-        uint96 capacity;
+        uint256 capacity;
         bytes implParams;
     }
 
     /// @dev Only used in memory so doesn't need to be packed
     struct Settlement {
-        uint96 totalIn;
-        uint96 totalOut;
+        uint256 totalIn;
+        uint256 totalOut;
         address pfBidder;
         address pfReferrer;
-        uint96 pfRefund;
-        uint96 pfPayout;
+        uint256 pfRefund;
+        uint256 pfPayout;
         bytes auctionOutput;
     }
 
@@ -94,8 +94,8 @@ abstract contract Auction {
     struct BidClaim {
         address bidder;
         address referrer;
-        uint96 paid;
-        uint96 payout;
+        uint256 paid;
+        uint256 payout;
     }
 
     // ========= STATE ========== //
@@ -124,9 +124,9 @@ abstract contract Auction {
     /// @return     auctionOutput   The auction-specific output
     function purchase(
         uint96 lotId_,
-        uint96 amount_,
+        uint256 amount_,
         bytes calldata auctionData_
-    ) external virtual returns (uint96 payout, bytes memory auctionOutput);
+    ) external virtual returns (uint256 payout, bytes memory auctionOutput);
 
     // ========== BATCH AUCTIONS ========== //
 
@@ -144,7 +144,7 @@ abstract contract Auction {
         uint96 lotId_,
         address bidder_,
         address referrer_,
-        uint96 amount_,
+        uint256 amount_,
         bytes calldata auctionData_
     ) external virtual returns (uint64 bidId);
 
@@ -162,7 +162,7 @@ abstract contract Auction {
         uint96 lotId_,
         uint64 bidId_,
         address caller_
-    ) external virtual returns (uint96 refund);
+    ) external virtual returns (uint256 refund);
 
     /// @notice     Claim multiple bids
     /// @dev        The implementing function should handle the following:
@@ -203,7 +203,7 @@ abstract contract Auction {
     function claimProceeds(uint96 lotId_)
         external
         virtual
-        returns (uint96 purchased, uint96 sold, uint96 payoutSent);
+        returns (uint256 purchased, uint256 sold, uint256 payoutSent);
 
     // ========== AUCTION MANAGEMENT ========== //
 
@@ -219,7 +219,7 @@ abstract contract Auction {
         AuctionParams memory params_,
         uint8 quoteTokenDecimals_,
         uint8 baseTokenDecimals_
-    ) external virtual returns (uint96 capacity);
+    ) external virtual returns (uint256 capacity);
 
     /// @notice     Cancel an auction lot
     /// @dev        The implementing function should handle the following:
@@ -232,13 +232,13 @@ abstract contract Auction {
 
     // ========== AUCTION INFORMATION ========== //
 
-    function payoutFor(uint96 lotId_, uint96 amount_) public view virtual returns (uint96) {}
+    function payoutFor(uint96 lotId_, uint256 amount_) public view virtual returns (uint256) {}
 
-    function priceFor(uint96 lotId_, uint96 payout_) public view virtual returns (uint96) {}
+    function priceFor(uint96 lotId_, uint256 payout_) public view virtual returns (uint256) {}
 
-    function maxPayout(uint96 lotId_) public view virtual returns (uint96) {}
+    function maxPayout(uint96 lotId_) public view virtual returns (uint256) {}
 
-    function maxAmountAccepted(uint96 lotId_) public view virtual returns (uint96) {}
+    function maxAmountAccepted(uint96 lotId_) public view virtual returns (uint256) {}
 
     /// @notice     Returns whether the auction is currently accepting bids or purchases
     /// @dev        The implementing function should handle the following:
@@ -264,7 +264,7 @@ abstract contract Auction {
     ///
     /// @param      lotId_  The lot id
     /// @return     uint96 The remaining capacity of the lot
-    function remainingCapacity(uint96 lotId_) external view virtual returns (uint96);
+    function remainingCapacity(uint96 lotId_) external view virtual returns (uint256);
 
     /// @notice     Get whether or not the capacity is in quote tokens
     /// @dev        The implementing function should handle the following:
@@ -300,7 +300,7 @@ abstract contract AuctionModule is Auction, Module {
         AuctionParams memory params_,
         uint8 quoteTokenDecimals_,
         uint8 baseTokenDecimals_
-    ) external override onlyInternal returns (uint96 capacity) {
+    ) external override onlyInternal returns (uint256 capacity) {
         // Start time must be zero or in the future
         if (params_.start > 0 && params_.start < uint48(block.timestamp)) {
             revert Auction_InvalidStart(params_.start, uint48(block.timestamp));
@@ -387,9 +387,9 @@ abstract contract AuctionModule is Auction, Module {
     ///             - Storing the purchase data
     function purchase(
         uint96 lotId_,
-        uint96 amount_,
+        uint256 amount_,
         bytes calldata auctionData_
-    ) external override onlyInternal returns (uint96 payout, bytes memory auctionOutput) {
+    ) external override onlyInternal returns (uint256 payout, bytes memory auctionOutput) {
         // Standard validation
         _revertIfLotInvalid(lotId_);
         _revertIfLotInactive(lotId_);
@@ -422,9 +422,9 @@ abstract contract AuctionModule is Auction, Module {
     /// @return     auctionOutput   The auction-specific output
     function _purchase(
         uint96 lotId_,
-        uint96 amount_,
+        uint256 amount_,
         bytes calldata auctionData_
-    ) internal virtual returns (uint96 payout, bytes memory auctionOutput);
+    ) internal virtual returns (uint256 payout, bytes memory auctionOutput);
 
     // ========== BATCH AUCTIONS ========== //
 
@@ -447,7 +447,7 @@ abstract contract AuctionModule is Auction, Module {
         uint96 lotId_,
         address bidder_,
         address referrer_,
-        uint96 amount_,
+        uint256 amount_,
         bytes calldata auctionData_
     ) external override onlyInternal returns (uint64 bidId) {
         // Standard validation
@@ -475,7 +475,7 @@ abstract contract AuctionModule is Auction, Module {
         uint96 lotId_,
         address bidder_,
         address referrer_,
-        uint96 amount_,
+        uint256 amount_,
         bytes calldata auctionData_
     ) internal virtual returns (uint64 bidId);
 
@@ -502,7 +502,7 @@ abstract contract AuctionModule is Auction, Module {
         uint96 lotId_,
         uint64 bidId_,
         address caller_
-    ) external override onlyInternal returns (uint96 refund) {
+    ) external override onlyInternal returns (uint256 refund) {
         // Standard validation
         _revertIfLotInvalid(lotId_);
         _revertIfBeforeLotStart(lotId_);
@@ -526,7 +526,7 @@ abstract contract AuctionModule is Auction, Module {
         uint96 lotId_,
         uint64 bidId_,
         address caller_
-    ) internal virtual returns (uint96 refund);
+    ) internal virtual returns (uint256 refund);
 
     /// @inheritdoc Auction
     /// @dev        Implements a basic claimBids function that:
@@ -642,7 +642,7 @@ abstract contract AuctionModule is Auction, Module {
         virtual
         override
         onlyInternal
-        returns (uint96 purchased, uint96 sold, uint96 payoutSent)
+        returns (uint256 purchased, uint256 sold, uint256 payoutSent)
     {
         // Standard validation
         _revertIfLotInvalid(lotId_);
@@ -664,7 +664,7 @@ abstract contract AuctionModule is Auction, Module {
     function _claimProceeds(uint96 lotId_)
         internal
         virtual
-        returns (uint96 purchased, uint96 sold, uint96 payoutSent);
+        returns (uint256 purchased, uint256 sold, uint256 payoutSent);
 
     // ========== AUCTION INFORMATION ========== //
 
@@ -689,7 +689,7 @@ abstract contract AuctionModule is Auction, Module {
     }
 
     /// @inheritdoc Auction
-    function remainingCapacity(uint96 lotId_) external view override returns (uint96) {
+    function remainingCapacity(uint96 lotId_) external view override returns (uint256) {
         return lotData[lotId_].capacity;
     }
 

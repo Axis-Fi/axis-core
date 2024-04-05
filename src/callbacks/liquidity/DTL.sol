@@ -18,7 +18,7 @@ abstract contract DirectToLiquidity is BaseCallback {
         address,
         address baseToken_,
         address quoteToken_,
-        uint96 capacity_,
+        uint256 capacity_,
         bool,
         bytes calldata callbackData_
     ) internal virtual override {
@@ -35,19 +35,19 @@ abstract contract DirectToLiquidity is BaseCallback {
         // which is only implemented for Batch Auctions
     }
 
-    function _onCancel(uint96, uint96, bool, bytes calldata) internal pure override {
+    function _onCancel(uint96, uint256, bool, bytes calldata) internal pure override {
         // TODO only needed if sending base tokens + prefunded
     }
 
-    function _onCurate(uint96, uint96, bool, bytes calldata) internal pure override {
+    function _onCurate(uint96, uint256, bool, bytes calldata) internal pure override {
         // TODO only needed if sending base tokens + prefunded
     }
 
     function _onPurchase(
         uint96,
         address,
-        uint96,
-        uint96,
+        uint256,
+        uint256,
         bool,
         bytes calldata
     ) internal pure override {
@@ -55,15 +55,15 @@ abstract contract DirectToLiquidity is BaseCallback {
         revert Callback_NotImplemented();
     }
 
-    function _onBid(uint96, uint64, address, uint96, bytes calldata) internal pure override {
+    function _onBid(uint96, uint64, address, uint256, bytes calldata) internal pure override {
         // Not implemented
         revert Callback_NotImplemented();
     }
 
     function _onClaimProceeds(
         uint96 lotId_,
-        uint96 proceeds_,
-        uint96 refund_,
+        uint256 proceeds_,
+        uint256 refund_,
         bytes calldata callbackData_
     ) internal virtual override {
         // TODO

@@ -11,7 +11,7 @@ import {Auctioneer} from "src/bases/Auctioneer.sol";
 import {AuctionHouseTest} from "test/AuctionHouse/AuctionHouseTest.sol";
 
 contract BidTest is AuctionHouseTest {
-    uint96 internal constant _BID_AMOUNT = 1e18;
+    uint256 internal constant _BID_AMOUNT = 1e18;
 
     bytes internal _bidAuctionData = abi.encode("");
 

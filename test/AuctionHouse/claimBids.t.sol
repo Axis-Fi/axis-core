@@ -7,8 +7,8 @@ import {Auctioneer} from "src/bases/Auctioneer.sol";
 import {AuctionHouseTest} from "test/AuctionHouse/AuctionHouseTest.sol";
 
 contract ClaimBidsTest is AuctionHouseTest {
-    uint96 internal constant _BID_AMOUNT = 1e18;
-    uint96 internal constant _BID_AMOUNT_OUT = 2e18;
+    uint256 internal constant _BID_AMOUNT = 1e18;
+    uint256 internal constant _BID_AMOUNT_OUT = 2e18;
 
     address internal constant _BIDDER_TWO = address(0x20);
 
@@ -119,8 +119,8 @@ contract ClaimBidsTest is AuctionHouseTest {
     function _mockClaimBid(
         address bidder_,
         address referrer_,
-        uint96 paid_,
-        uint96 payout_
+        uint256 paid_,
+        uint256 payout_
     ) internal {
         _bidClaims.push(
             Auction.BidClaim({bidder: bidder_, referrer: referrer_, paid: paid_, payout: payout_})
@@ -163,7 +163,7 @@ contract ClaimBidsTest is AuctionHouseTest {
     }
 
     /// @dev    Assumes that any amounts are scaled to the current decimal scale
-    modifier givenPayoutIsNotSet(address bidder_, address referrer_, uint96 amountIn_) {
+    modifier givenPayoutIsNotSet(address bidder_, address referrer_, uint256 amountIn_) {
         _mockClaimBid(bidder_, referrer_, amountIn_, 0);
 
         // Calculate fees
@@ -186,8 +186,8 @@ contract ClaimBidsTest is AuctionHouseTest {
     modifier givenPayoutIsSet(
         address bidder_,
         address referrer_,
-        uint96 amountIn_,
-        uint96 payout_
+        uint256 amountIn_,
+        uint256 payout_
     ) {
         _mockClaimBid(bidder_, referrer_, amountIn_, payout_);
 

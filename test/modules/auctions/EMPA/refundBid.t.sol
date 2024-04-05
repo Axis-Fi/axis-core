@@ -207,12 +207,12 @@ contract EmpaModuleRefundBidTest is EmpaModuleTest {
         assertEq(refundAmount, 2e18, "refund amount");
     }
 
-    function test_refundAmount_fuzz(uint96 bidAmount_)
+    function test_refundAmount_fuzz(uint256 bidAmount_)
         external
         givenLotIsCreated
         givenLotHasStarted
     {
-        uint96 bidAmount = uint96(bound(bidAmount_, _minBidAmount, type(uint96).max));
+        uint256 bidAmount = bound(bidAmount_, _minBidAmount, type(uint96).max);
 
         // Create the bid
         _bidId = _createBid(bidAmount, 1e18);
@@ -225,14 +225,14 @@ contract EmpaModuleRefundBidTest is EmpaModuleTest {
         assertEq(refundAmount, bidAmount, "refund amount");
     }
 
-    function test_refundAmount_quoteTokenDecimalsLarger_fuzz(uint96 bidAmount_)
+    function test_refundAmount_quoteTokenDecimalsLarger_fuzz(uint256 bidAmount_)
         external
         givenQuoteTokenDecimals(17)
         givenBaseTokenDecimals(13)
         givenLotIsCreated
         givenLotHasStarted
     {
-        uint96 bidAmount = uint96(bound(bidAmount_, _minBidAmount, type(uint96).max));
+        uint256 bidAmount = bound(bidAmount_, _minBidAmount, type(uint96).max);
 
         // Create the bid
         _bidId = _createBid(bidAmount, 1e18);
@@ -245,14 +245,14 @@ contract EmpaModuleRefundBidTest is EmpaModuleTest {
         assertEq(refundAmount, bidAmount, "refund amount");
     }
 
-    function test_refundAmount_quoteTokenDecimalsSmaller_fuzz(uint96 bidAmount_)
+    function test_refundAmount_quoteTokenDecimalsSmaller_fuzz(uint256 bidAmount_)
         external
         givenQuoteTokenDecimals(13)
         givenBaseTokenDecimals(17)
         givenLotIsCreated
         givenLotHasStarted
     {
-        uint96 bidAmount = uint96(bound(bidAmount_, _minBidAmount, type(uint96).max));
+        uint256 bidAmount = bound(bidAmount_, _minBidAmount, type(uint96).max);
 
         // Create the bid
         _bidId = _createBid(bidAmount, 1e18);

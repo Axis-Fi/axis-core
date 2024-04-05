@@ -7,7 +7,7 @@ import {Auction} from "src/modules/Auction.sol";
 import {AuctionHouseTest} from "test/AuctionHouse/AuctionHouseTest.sol";
 
 contract RefundBidTest is AuctionHouseTest {
-    uint96 internal constant _BID_AMOUNT = 1e18;
+    uint256 internal constant _BID_AMOUNT = 1e18;
     bytes internal _auctionDataParams = abi.encode("");
 
     modifier givenBidIsRefunded() {

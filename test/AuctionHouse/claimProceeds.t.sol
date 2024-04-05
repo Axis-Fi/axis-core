@@ -7,11 +7,11 @@ import {Auctioneer} from "src/bases/Auctioneer.sol";
 import {AuctionHouseTest} from "test/AuctionHouse/AuctionHouseTest.sol";
 
 contract ClaimProceedsTest is AuctionHouseTest {
-    uint96 internal constant _BID_AMOUNT = 2e18;
-    uint96 internal constant _BID_AMOUNT_OUT = 2e18;
+    uint256 internal constant _BID_AMOUNT = 2e18;
+    uint256 internal constant _BID_AMOUNT_OUT = 2e18;
 
-    uint96 internal constant _BID_AMOUNT_PARTIAL_REFUND = 15e17;
-    uint96 internal constant _BID_AMOUNT_OUT_PARTIAL_PAYOUT = 1e18;
+    uint256 internal constant _BID_AMOUNT_PARTIAL_REFUND = 15e17;
+    uint256 internal constant _BID_AMOUNT_OUT_PARTIAL_PAYOUT = 1e18;
 
     function _assertQuoteTokenBalances(
         uint256 sellerBalance,
@@ -255,7 +255,7 @@ contract ClaimProceedsTest is AuctionHouseTest {
         uint256 quoteTokenIn = 0;
         uint256 claimablePayout = 0;
         uint256 claimableRefund = _scaleQuoteTokenAmount(_BID_AMOUNT);
-        uint96 curatorFeeActual = 0;
+        uint256 curatorFeeActual = 0;
         uint256 unusedCapacity = _scaleBaseTokenAmount(_LOT_CAPACITY);
 
         // Assert balances
@@ -319,7 +319,7 @@ contract ClaimProceedsTest is AuctionHouseTest {
 
         uint256 quoteTokenIn = _scaleQuoteTokenAmount(_BID_AMOUNT);
         uint256 claimablePayout = _scaleBaseTokenAmount(_BID_AMOUNT_OUT);
-        uint96 curatorFeeActual = _BID_AMOUNT_OUT * _curatorFeePercentActual / 1e5;
+        uint256 curatorFeeActual = _BID_AMOUNT_OUT * _curatorFeePercentActual / 1e5;
         uint256 unusedCapacity =
             _LOT_CAPACITY + _curatorMaxPotentialFee - _BID_AMOUNT_OUT - curatorFeeActual;
 
@@ -352,7 +352,7 @@ contract ClaimProceedsTest is AuctionHouseTest {
 
         uint256 quoteTokenIn = _scaleQuoteTokenAmount(_BID_AMOUNT);
         uint256 claimablePayout = _scaleBaseTokenAmount(_BID_AMOUNT_OUT);
-        uint96 curatorFeeActual = _BID_AMOUNT_OUT * _curatorFeePercentActual / 1e5;
+        uint256 curatorFeeActual = _BID_AMOUNT_OUT * _curatorFeePercentActual / 1e5;
         uint256 unusedCapacity =
             _LOT_CAPACITY + _curatorMaxPotentialFee - _BID_AMOUNT_OUT - curatorFeeActual;
 
@@ -394,7 +394,7 @@ contract ClaimProceedsTest is AuctionHouseTest {
 
         uint256 quoteTokenIn = _scaleQuoteTokenAmount(_BID_AMOUNT * 5);
         uint256 claimablePayout = _scaleBaseTokenAmount(_BID_AMOUNT_OUT * 5);
-        uint96 curatorFeeActual = 0;
+        uint256 curatorFeeActual = 0;
         uint256 unusedCapacity = 0;
 
         // Assert balances
@@ -441,7 +441,7 @@ contract ClaimProceedsTest is AuctionHouseTest {
 
         uint256 quoteTokenIn = _scaleQuoteTokenAmount(_BID_AMOUNT * 5);
         uint256 claimablePayout = _scaleBaseTokenAmount(_BID_AMOUNT_OUT * 5);
-        uint96 curatorFeeActual = _BID_AMOUNT_OUT * 5 * _curatorFeePercentActual / 1e5;
+        uint256 curatorFeeActual = _BID_AMOUNT_OUT * 5 * _curatorFeePercentActual / 1e5;
         uint256 unusedCapacity = 0;
 
         // Assert balances
@@ -485,7 +485,7 @@ contract ClaimProceedsTest is AuctionHouseTest {
 
         uint256 quoteTokenIn = _scaleQuoteTokenAmount(_BID_AMOUNT * 5);
         uint256 claimablePayout = _scaleBaseTokenAmount(_BID_AMOUNT_OUT * 5);
-        uint96 curatorFeeActual = _BID_AMOUNT_OUT * 5 * _curatorFeePercentActual / 1e5;
+        uint256 curatorFeeActual = _BID_AMOUNT_OUT * 5 * _curatorFeePercentActual / 1e5;
         uint256 unusedCapacity = 0;
 
         // Assert balances
@@ -530,7 +530,7 @@ contract ClaimProceedsTest is AuctionHouseTest {
         uint256 quoteTokenIn = _scaleQuoteTokenAmount(_BID_AMOUNT * 6 - _BID_AMOUNT_PARTIAL_REFUND);
         uint256 claimablePayout =
             _scaleBaseTokenAmount(_LOT_CAPACITY - _BID_AMOUNT_OUT_PARTIAL_PAYOUT);
-        uint96 curatorFeeActual = 0;
+        uint256 curatorFeeActual = 0;
         uint256 unusedCapacity = 0;
 
         // Assert balances
@@ -575,7 +575,7 @@ contract ClaimProceedsTest is AuctionHouseTest {
 
         uint256 quoteTokenIn = _scaleQuoteTokenAmount(_BID_AMOUNT * 5);
         uint256 claimablePayout = _scaleBaseTokenAmount(_BID_AMOUNT_OUT * 5);
-        uint96 curatorFeeActual = _BID_AMOUNT_OUT * 5 * _curatorFeePercentActual / 1e5;
+        uint256 curatorFeeActual = _BID_AMOUNT_OUT * 5 * _curatorFeePercentActual / 1e5;
         uint256 unusedCapacity = 0;
 
         // Assert balances
@@ -619,7 +619,7 @@ contract ClaimProceedsTest is AuctionHouseTest {
 
         uint256 quoteTokenIn = _scaleQuoteTokenAmount(_BID_AMOUNT * 5);
         uint256 claimablePayout = _scaleBaseTokenAmount(_BID_AMOUNT_OUT * 5);
-        uint96 curatorFeeActual = _BID_AMOUNT_OUT * 5 * _curatorFeePercentActual / 1e5;
+        uint256 curatorFeeActual = _BID_AMOUNT_OUT * 5 * _curatorFeePercentActual / 1e5;
         uint256 unusedCapacity = 0;
 
         // Assert balances
@@ -668,7 +668,7 @@ contract ClaimProceedsTest is AuctionHouseTest {
         uint256 quoteTokenIn = _scaleQuoteTokenAmount(_BID_AMOUNT * 6 - _BID_AMOUNT_PARTIAL_REFUND);
         uint256 claimablePayout =
             _scaleBaseTokenAmount(_LOT_CAPACITY - _BID_AMOUNT_OUT_PARTIAL_PAYOUT);
-        uint96 curatorFeeActual = _LOT_CAPACITY * _curatorFeePercentActual / 1e5;
+        uint256 curatorFeeActual = _LOT_CAPACITY * _curatorFeePercentActual / 1e5;
         uint256 unusedCapacity = 0;
 
         // Assert balances
@@ -716,7 +716,7 @@ contract ClaimProceedsTest is AuctionHouseTest {
         uint256 quoteTokenIn = _scaleQuoteTokenAmount(_BID_AMOUNT * 6 - _BID_AMOUNT_PARTIAL_REFUND);
         uint256 claimablePayout =
             _scaleBaseTokenAmount(_LOT_CAPACITY - _BID_AMOUNT_OUT_PARTIAL_PAYOUT);
-        uint96 curatorFeeActual = _LOT_CAPACITY * _curatorFeePercentActual / 1e5;
+        uint256 curatorFeeActual = _LOT_CAPACITY * _curatorFeePercentActual / 1e5;
         uint256 unusedCapacity = 0;
 
         // Assert balances
@@ -767,7 +767,7 @@ contract ClaimProceedsTest is AuctionHouseTest {
         uint256 quoteTokenIn = _scaleQuoteTokenAmount(_BID_AMOUNT * 6 - _BID_AMOUNT_PARTIAL_REFUND);
         uint256 claimablePayout =
             _scaleBaseTokenAmount(_LOT_CAPACITY - _BID_AMOUNT_OUT_PARTIAL_PAYOUT);
-        uint96 curatorFeeActual = _LOT_CAPACITY * _curatorFeePercentActual / 1e5;
+        uint256 curatorFeeActual = _LOT_CAPACITY * _curatorFeePercentActual / 1e5;
         uint256 unusedCapacity = 0;
 
         // Assert balances
@@ -815,7 +815,7 @@ contract ClaimProceedsTest is AuctionHouseTest {
         uint256 quoteTokenIn = _scaleQuoteTokenAmount(_BID_AMOUNT * 6 - _BID_AMOUNT_PARTIAL_REFUND);
         uint256 claimablePayout =
             _scaleBaseTokenAmount(_LOT_CAPACITY - _BID_AMOUNT_OUT_PARTIAL_PAYOUT);
-        uint96 curatorFeeActual = _LOT_CAPACITY * _curatorFeePercentActual / 1e5;
+        uint256 curatorFeeActual = _LOT_CAPACITY * _curatorFeePercentActual / 1e5;
         uint256 unusedCapacity = 0;
 
         // Assert balances
@@ -851,7 +851,7 @@ contract ClaimProceedsTest is AuctionHouseTest {
 
         uint256 quoteTokenIn = _scaleQuoteTokenAmount(_BID_AMOUNT);
         uint256 claimablePayout = _scaleBaseTokenAmount(_BID_AMOUNT_OUT);
-        uint96 curatorFeeActual = _BID_AMOUNT_OUT * _curatorFeePercentActual / 1e5;
+        uint256 curatorFeeActual = _BID_AMOUNT_OUT * _curatorFeePercentActual / 1e5;
         uint256 unusedCapacity =
             _LOT_CAPACITY + _curatorMaxPotentialFee - _BID_AMOUNT_OUT - curatorFeeActual;
 
@@ -891,7 +891,7 @@ contract ClaimProceedsTest is AuctionHouseTest {
 
         uint256 quoteTokenIn = _scaleQuoteTokenAmount(_BID_AMOUNT);
         uint256 claimablePayout = _scaleBaseTokenAmount(_BID_AMOUNT_OUT);
-        uint96 curatorFeeActual = _BID_AMOUNT_OUT * _curatorFeePercentActual / 1e5;
+        uint256 curatorFeeActual = _BID_AMOUNT_OUT * _curatorFeePercentActual / 1e5;
         uint256 unusedCapacity =
             _LOT_CAPACITY + _curatorMaxPotentialFee - _BID_AMOUNT_OUT - curatorFeeActual;
 
@@ -931,7 +931,7 @@ contract ClaimProceedsTest is AuctionHouseTest {
 
         uint256 quoteTokenIn = _scaleQuoteTokenAmount(_BID_AMOUNT);
         uint256 claimablePayout = _scaleBaseTokenAmount(_BID_AMOUNT_OUT);
-        uint96 curatorFeeActual = _BID_AMOUNT_OUT * _curatorFeePercentActual / 1e5;
+        uint256 curatorFeeActual = _BID_AMOUNT_OUT * _curatorFeePercentActual / 1e5;
         uint256 unusedCapacity =
             _LOT_CAPACITY + _curatorMaxPotentialFee - _BID_AMOUNT_OUT - curatorFeeActual;
 

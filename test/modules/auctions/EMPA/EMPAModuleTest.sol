@@ -4,7 +4,7 @@ pragma solidity 0.8.19;
 // Libraries
 import {Test} from "forge-std/Test.sol";
 import {Point, ECIES} from "src/lib/ECIES.sol";
-import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
+import {FixedPointMathLib as Math} from "solmate/utils/FixedPointMathLib.sol";
 
 // Mocks
 import {Permit2User} from "test/lib/permit2/Permit2User.sol";
@@ -15,21 +15,21 @@ import {Auction} from "src/modules/Auction.sol";
 import {EncryptedMarginalPriceAuctionModule} from "src/modules/auctions/EMPAM.sol";
 
 abstract contract EmpaModuleTest is Test, Permit2User {
-    uint96 internal constant _BASE_SCALE = 1e18;
+    uint256 internal constant _BASE_SCALE = 1e18;
 
     address internal constant _PROTOCOL = address(0x2);
     address internal constant _BIDDER = address(0x3);
     address internal constant _REFERRER = address(0x4);
 
-    uint96 internal constant _LOT_CAPACITY = 10e18;
+    uint256 internal constant _LOT_CAPACITY = 10e18;
     uint48 internal constant _DURATION = 1 days;
-    uint96 internal constant _MIN_PRICE = 1e18;
+    uint256 internal constant _MIN_PRICE = 1e18;
     uint24 internal constant _MIN_FILL_PERCENT = 25_000; // 25%
     uint24 internal constant _MIN_BID_PERCENT = 1000; // 1%
     /// @dev Re-calculated by _updateMinBidSize()
-    uint96 internal _minBidSize;
+    uint256 internal _minBidSize;
     /// @dev Re-calculated by _updateMinBidAmount()
-    uint96 internal _minBidAmount;
+    uint256 internal _minBidAmount;
 
     uint256 internal constant _AUCTION_PRIVATE_KEY = 112_233_445_566;
     Point internal _auctionPublicKey;
@@ -113,7 +113,7 @@ abstract contract EmpaModuleTest is Test, Permit2User {
         _;
     }
 
-    modifier givenLotCapacity(uint96 capacity_) {
+    modifier givenLotCapacity(uint256 capacity_) {
         _auctionParams.capacity = capacity_;
 
         _updateMinBidSize();
@@ -121,7 +121,7 @@ abstract contract EmpaModuleTest is Test, Permit2User {
         _;
     }
 
-    modifier givenMinimumPrice(uint96 price_) {
+    modifier givenMinimumPrice(uint256 price_) {
         _auctionDataParams.minPrice = price_;
 
         _auctionParams.implParams = abi.encode(_auctionDataParams);
@@ -149,13 +149,14 @@ abstract contract EmpaModuleTest is Test, Permit2User {
 
     function _updateMinBidSize() internal {
         // Calculate the minimum bid size
-        _minBidSize = _mulDivDown(_auctionParams.capacity, _MIN_BID_PERCENT, 1e5);
+        _minBidSize = Math.mulDivDown(_auctionParams.capacity, _MIN_BID_PERCENT, 1e5);
     }
 
     function _updateMinBidAmount() internal {
         // Calculate the minimum bid amount
+        // TODO roundup?
         _minBidAmount =
-            _mulDivDown(_minBidSize, _auctionDataParams.minPrice, uint96(10 ** _baseTokenDecimals));
+            Math.mulDivDown(_minBidSize, _auctionDataParams.minPrice, 10 ** _baseTokenDecimals);
     }
 
     modifier givenMinimumBidPercentage(uint24 percentage_) {
@@ -195,12 +196,12 @@ abstract contract EmpaModuleTest is Test, Permit2User {
         _;
     }
 
-    function _formatBid(uint128 amountOut_) internal pure returns (uint256) {
+    function _formatBid(uint256 amountOut_) internal pure returns (uint256) {
         uint256 formattedAmountOut;
         {
             uint128 subtracted;
             unchecked {
-                subtracted = amountOut_ - _BID_SEED;
+                subtracted = uint128(amountOut_) - _BID_SEED;
             }
             formattedAmountOut = uint256(bytes32(abi.encodePacked(_BID_SEED, subtracted)));
         }
@@ -211,8 +212,8 @@ abstract contract EmpaModuleTest is Test, Permit2User {
     function _encryptBid(
         uint96 lotId_,
         address bidder_,
-        uint96 amountIn_,
-        uint128 amountOut_,
+        uint256 amountIn_,
+        uint256 amountOut_,
         uint256 auctionPrivateKey_
     ) internal view returns (uint256) {
         // Format the amount out
@@ -228,16 +229,16 @@ abstract contract EmpaModuleTest is Test, Permit2User {
     function _encryptBid(
         uint96 lotId_,
         address bidder_,
-        uint96 amountIn_,
-        uint128 amountOut_
+        uint256 amountIn_,
+        uint256 amountOut_
     ) internal view returns (uint256) {
         return _encryptBid(lotId_, bidder_, amountIn_, amountOut_, _AUCTION_PRIVATE_KEY); // TODO is the use of the private key here correct?
     }
 
     function _createBidData(
         address bidder_,
-        uint96 amountIn_,
-        uint96 amountOut_
+        uint256 amountIn_,
+        uint256 amountOut_
     ) internal view returns (bytes memory) {
         uint256 encryptedAmountOut = _encryptBid(_lotId, bidder_, amountIn_, amountOut_);
 
@@ -245,16 +246,16 @@ abstract contract EmpaModuleTest is Test, Permit2User {
     }
 
     function _createBidData(
-        uint96 amountIn_,
-        uint96 amountOut_
+        uint256 amountIn_,
+        uint256 amountOut_
     ) internal view returns (bytes memory) {
         return _createBidData(_BIDDER, amountIn_, amountOut_);
     }
 
     function _createBid(
         address bidder_,
-        uint96 amountIn_,
-        uint96 amountOut_
+        uint256 amountIn_,
+        uint256 amountOut_
     ) internal returns (uint64 bidId) {
         bytes memory bidData = _createBidData(bidder_, amountIn_, amountOut_);
 
@@ -265,11 +266,11 @@ abstract contract EmpaModuleTest is Test, Permit2User {
         return bidId;
     }
 
-    function _createBid(uint96 amountIn_, uint96 amountOut_) internal returns (uint64 bidId) {
+    function _createBid(uint256 amountIn_, uint256 amountOut_) internal returns (uint64 bidId) {
         return _createBid(_BIDDER, amountIn_, amountOut_);
     }
 
-    modifier givenBidIsCreated(uint96 amountIn_, uint96 amountOut_) {
+    modifier givenBidIsCreated(uint256 amountIn_, uint256 amountOut_) {
         _bidId = _createBid(amountIn_, amountOut_);
         _;
     }
@@ -340,26 +341,12 @@ abstract contract EmpaModuleTest is Test, Permit2User {
 
     // ======== Internal Functions ======== //
 
-    function _mulDivUp(uint96 mul1_, uint96 mul2_, uint96 div_) internal pure returns (uint96) {
-        uint256 product = FixedPointMathLib.mulDivUp(mul1_, mul2_, div_);
-        if (product > type(uint96).max) revert("overflow");
-
-        return uint96(product);
+    function _scaleQuoteTokenAmount(uint256 amount_) internal view returns (uint256) {
+        return Math.mulDivDown(amount_, 10 ** _quoteTokenDecimals, _BASE_SCALE);
     }
 
-    function _mulDivDown(uint96 mul1_, uint96 mul2_, uint96 div_) internal pure returns (uint96) {
-        uint256 product = FixedPointMathLib.mulDivDown(mul1_, mul2_, div_);
-        if (product > type(uint96).max) revert("overflow");
-
-        return uint96(product);
-    }
-
-    function _scaleQuoteTokenAmount(uint96 amount_) internal view returns (uint96) {
-        return _mulDivUp(amount_, uint96(10 ** _quoteTokenDecimals), _BASE_SCALE);
-    }
-
-    function _scaleBaseTokenAmount(uint96 amount_) internal view returns (uint96) {
-        return _mulDivUp(amount_, uint96(10 ** _baseTokenDecimals), _BASE_SCALE);
+    function _scaleBaseTokenAmount(uint256 amount_) internal view returns (uint256) {
+        return Math.mulDivDown(amount_, 10 ** _baseTokenDecimals, _BASE_SCALE);
     }
 
     function _getAuctionData(uint96 lotId_)
@@ -369,26 +356,26 @@ abstract contract EmpaModuleTest is Test, Permit2User {
     {
         (
             uint64 nextBidId_,
-            uint96 marginalPrice_,
-            uint96 minPrice_,
             uint64 nextDecryptIndex_,
-            uint96 minFilled_,
-            uint96 minBidSize_,
             Auction.Status status_,
             uint64 marginalBidId_,
+            uint256 marginalPrice_,
+            uint256 minPrice_,
+            uint256 minFilled_,
+            uint256 minBidSize_,
             Point memory publicKey_,
             uint256 privateKey_
         ) = _module.auctionData(lotId_);
 
         return EncryptedMarginalPriceAuctionModule.AuctionData({
             nextBidId: nextBidId_,
-            marginalPrice: marginalPrice_,
-            minPrice: minPrice_,
             nextDecryptIndex: nextDecryptIndex_,
-            minFilled: minFilled_,
-            minBidSize: minBidSize_,
             status: status_,
             marginalBidId: marginalBidId_,
+            marginalPrice: marginalPrice_,
+            minFilled: minFilled_,
+            minBidSize: minBidSize_,
+            minPrice: minPrice_,
             publicKey: publicKey_,
             privateKey: privateKey_,
             bidIds: new uint64[](0)

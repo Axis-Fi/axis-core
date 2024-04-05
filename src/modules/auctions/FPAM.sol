@@ -24,8 +24,8 @@ contract FixedPriceAuctionModule is AuctionModule {
     /// @param price        The fixed price of the lot
     /// @param maxPayout    The maximum payout per purchase, in terms of the base token
     struct AuctionData {
-        uint96 price;
-        uint96 maxPayout;
+        uint256 price;
+        uint256 maxPayout;
     }
 
     /// @notice                     Parameters for a fixed price auction
@@ -33,7 +33,7 @@ contract FixedPriceAuctionModule is AuctionModule {
     /// @param price                The fixed price of the lot
     /// @param maxPayoutPercent     The maximum payout per purchase, as a percentage of the capacity
     struct FixedPriceParams {
-        uint96 price;
+        uint256 price;
         uint24 maxPayoutPercent;
     }
 
@@ -89,14 +89,12 @@ contract FixedPriceAuctionModule is AuctionModule {
         ) revert Auction_InvalidParams();
 
         // Calculate the max payout
-        uint96 maxPayout = uint96(
-            Math.mulDivDown(lot_.capacity, auctionParams.maxPayoutPercent, _ONE_HUNDRED_PERCENT)
-        );
+        uint256 maxPayout =
+            Math.mulDivDown(lot_.capacity, auctionParams.maxPayoutPercent, _ONE_HUNDRED_PERCENT);
         // If capacity in quote, convert max payout to base token using the provided price
         if (lot_.capacityInQuote) {
-            maxPayout = uint96(
-                Math.mulDivDown(maxPayout, 10 ** lot_.baseTokenDecimals, auctionParams.price)
-            );
+            maxPayout =
+                Math.mulDivDown(maxPayout, 10 ** lot_.baseTokenDecimals, auctionParams.price);
         }
 
         // Store the auction data
@@ -125,17 +123,15 @@ contract FixedPriceAuctionModule is AuctionModule {
     ///             - The payout is greater than the max payout
     function _purchase(
         uint96 lotId_,
-        uint96 amount_,
+        uint256 amount_,
         bytes calldata auctionData_
-    ) internal view override returns (uint96 payout, bytes memory) {
+    ) internal view override returns (uint256 payout, bytes memory) {
         // Decode the auction data into the min amount out
-        uint96 minAmountOut = abi.decode(auctionData_, (uint96));
+        uint256 minAmountOut = abi.decode(auctionData_, (uint256));
 
         // Calculate the amount of the base token to purchase
-        payout = uint96(
-            Math.mulDivDown(
-                amount_, 10 ** lotData[lotId_].baseTokenDecimals, auctionData[lotId_].price
-            )
+        payout = Math.mulDivDown(
+            amount_, 10 ** lotData[lotId_].baseTokenDecimals, auctionData[lotId_].price
         );
 
         // Validate the payout is greater than or equal to the minimum amount out
@@ -153,13 +149,13 @@ contract FixedPriceAuctionModule is AuctionModule {
         uint96,
         address,
         address,
-        uint96,
+        uint256,
         bytes calldata
     ) internal pure override returns (uint64) {
         revert Auction_NotImplemented();
     }
 
-    function _refundBid(uint96, uint64, address) internal pure override returns (uint96) {
+    function _refundBid(uint96, uint64, address) internal pure override returns (uint256) {
         revert Auction_NotImplemented();
     }
 
@@ -174,7 +170,7 @@ contract FixedPriceAuctionModule is AuctionModule {
         revert Auction_NotImplemented();
     }
 
-    function _claimProceeds(uint96) internal pure override returns (uint96, uint96, uint96) {
+    function _claimProceeds(uint96) internal pure override returns (uint256, uint256, uint256) {
         revert Auction_NotImplemented();
     }
 

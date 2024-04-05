@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.19;
 
-import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
+import {FixedPointMathLib as Math} from "solmate/utils/FixedPointMathLib.sol";
 
 import {Module} from "src/modules/Modules.sol";
 import {Auction} from "src/modules/Auction.sol";
@@ -12,37 +12,40 @@ import {EmpaModuleTest} from "test/modules/auctions/EMPA/EMPAModuleTest.sol";
 import {console2} from "forge-std/console2.sol";
 
 contract EmpaModuleSettleTest is EmpaModuleTest {
-    uint96 internal constant _BID_PRICE_BELOW_ONE_AMOUNT = 1e18;
-    uint96 internal constant _BID_PRICE_BELOW_ONE_AMOUNT_OUT = 2e18;
-    uint96 internal constant _BID_PRICE_ONE_AMOUNT = 1e18;
-    uint96 internal constant _BID_PRICE_ONE_AMOUNT_OUT = 1e18;
-    uint96 internal constant _BID_PRICE_TWO_AMOUNT = 2e18;
-    uint96 internal constant _BID_PRICE_TWO_AMOUNT_OUT = 1e18;
-    uint96 internal constant _BID_PRICE_TWO_SIZE_TWO_AMOUNT = 4e18;
-    uint96 internal constant _BID_PRICE_TWO_SIZE_TWO_AMOUNT_OUT = 2e18;
-    uint96 internal constant _BID_SIZE_NINE_AMOUNT = 19e18;
-    uint96 internal constant _BID_SIZE_NINE_AMOUNT_OUT = 9e18;
-    uint96 internal constant _BID_PRICE_THREE_AMOUNT = 6e18;
-    uint96 internal constant _BID_PRICE_THREE_AMOUNT_OUT = 2e18;
-    uint96 internal constant _BID_PRICE_TWO_SIZE_TEN_AMOUNT = 20e18;
-    uint96 internal constant _BID_PRICE_TWO_SIZE_TEN_AMOUNT_OUT = 10e18;
-    uint96 internal constant _BID_PRICE_TWO_SIZE_ELEVEN_AMOUNT = 22e18;
-    uint96 internal constant _BID_PRICE_TWO_SIZE_ELEVEN_AMOUNT_OUT = 11e18;
-    uint96 internal constant _BID_PRICE_OVERFLOW_AMOUNT = type(uint96).max;
-    uint96 internal constant _BID_PRICE_OVERFLOW_AMOUNT_OUT = 1e17;
-    uint96 internal constant _BID_PRICE_TEN = 10e18;
-    uint96 internal constant _BID_PRICE_TEN_OUT = 1e18;
+    // TODO need to update overflow cases with new capacity and price types
+    // The price cannot overflow anymore because the max bid amount is 2^96 - 1, max base scale is 1e18 => max price is 2^96 - 1 * 1e18 = 7.96e48  < 2^256 - 1 = 1.15e77
 
-    uint96 internal constant _LOT_CAPACITY_OVERFLOW = type(uint96).max - 10;
+    uint256 internal constant _BID_PRICE_BELOW_ONE_AMOUNT = 1e18;
+    uint256 internal constant _BID_PRICE_BELOW_ONE_AMOUNT_OUT = 2e18;
+    uint256 internal constant _BID_PRICE_ONE_AMOUNT = 1e18;
+    uint256 internal constant _BID_PRICE_ONE_AMOUNT_OUT = 1e18;
+    uint256 internal constant _BID_PRICE_TWO_AMOUNT = 2e18;
+    uint256 internal constant _BID_PRICE_TWO_AMOUNT_OUT = 1e18;
+    uint256 internal constant _BID_PRICE_TWO_SIZE_TWO_AMOUNT = 4e18;
+    uint256 internal constant _BID_PRICE_TWO_SIZE_TWO_AMOUNT_OUT = 2e18;
+    uint256 internal constant _BID_SIZE_NINE_AMOUNT = 19e18;
+    uint256 internal constant _BID_SIZE_NINE_AMOUNT_OUT = 9e18;
+    uint256 internal constant _BID_PRICE_THREE_AMOUNT = 6e18;
+    uint256 internal constant _BID_PRICE_THREE_AMOUNT_OUT = 2e18;
+    uint256 internal constant _BID_PRICE_TWO_SIZE_TEN_AMOUNT = 20e18;
+    uint256 internal constant _BID_PRICE_TWO_SIZE_TEN_AMOUNT_OUT = 10e18;
+    uint256 internal constant _BID_PRICE_TWO_SIZE_ELEVEN_AMOUNT = 22e18;
+    uint256 internal constant _BID_PRICE_TWO_SIZE_ELEVEN_AMOUNT_OUT = 11e18;
+    uint256 internal constant _BID_PRICE_OVERFLOW_AMOUNT = type(uint256).max;
+    uint256 internal constant _BID_PRICE_OVERFLOW_AMOUNT_OUT = 1e17;
+    uint256 internal constant _BID_PRICE_TEN = 10e18;
+    uint256 internal constant _BID_PRICE_TEN_OUT = 1e18;
 
-    uint96 internal _expectedMarginalPrice;
+    uint256 internal constant _LOT_CAPACITY_OVERFLOW = type(uint256).max - 10;
+
+    uint256 internal _expectedMarginalPrice;
     uint64 internal _expectedMarginalBidId;
-    uint96 internal _expectedTotalIn;
-    uint96 internal _expectedTotalOut;
+    uint256 internal _expectedTotalIn;
+    uint256 internal _expectedTotalOut;
     address internal _expectedPartialFillBidder;
     address internal _expectedPartialFillReferrer;
-    uint96 internal _expectedPartialFillRefund;
-    uint96 internal _expectedPartialFillPayout;
+    uint256 internal _expectedPartialFillRefund;
+    uint256 internal _expectedPartialFillPayout;
     bytes internal _expectedAuctionOutput = bytes("");
 
     // [X] when the lot id is invalid
@@ -150,7 +153,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         );
 
         // Marginal price: max (due to not meeting minimum)
-        _expectedMarginalPrice = type(uint96).max;
+        _expectedMarginalPrice = type(uint256).max;
 
         // Output
         // Bid one: 0 out
@@ -176,7 +179,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         );
 
         // Marginal price: max (since 0.5 < 1 minimum)
-        _expectedMarginalPrice = type(uint96).max;
+        _expectedMarginalPrice = type(uint256).max;
 
         // Output
         // Bid one: 0 out
@@ -223,8 +226,8 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         // Bid four: 2 / 1 = 2 out
         // Bid five: 0 out
 
-        uint96 bidAmountInTotal = _scaleQuoteTokenAmount(_BID_PRICE_TWO_AMOUNT * 4);
-        uint96 bidAmountOutTotal = _scaleBaseTokenAmount(_BID_PRICE_TWO_AMOUNT * 4);
+        uint256 bidAmountInTotal = _scaleQuoteTokenAmount(_BID_PRICE_TWO_AMOUNT * 4);
+        uint256 bidAmountOutTotal = _scaleBaseTokenAmount(_BID_PRICE_TWO_AMOUNT * 4);
 
         _expectedTotalIn = bidAmountInTotal;
         _expectedTotalOut = bidAmountOutTotal;
@@ -265,8 +268,8 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         // Bid three: 2 / 1 = 2 out
         // Bid four: 2 / 1 = 2 out
 
-        uint96 bidAmountInTotal = _scaleQuoteTokenAmount(_BID_PRICE_TWO_AMOUNT * 4);
-        uint96 bidAmountOutTotal = _scaleBaseTokenAmount(_BID_PRICE_TWO_AMOUNT * 4);
+        uint256 bidAmountInTotal = _scaleQuoteTokenAmount(_BID_PRICE_TWO_AMOUNT * 4);
+        uint256 bidAmountOutTotal = _scaleBaseTokenAmount(_BID_PRICE_TWO_AMOUNT * 4);
 
         _expectedTotalIn = bidAmountInTotal;
         _expectedTotalOut = bidAmountOutTotal;
@@ -300,8 +303,8 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         // Bid two: 10 / 2 = 5 out
         // Bid three: 0 out
 
-        uint96 bidAmountInTotal = _scaleQuoteTokenAmount(_BID_PRICE_TEN + _BID_PRICE_TEN);
-        uint96 bidAmountOutTotal = _scaleBaseTokenAmount(_LOT_CAPACITY);
+        uint256 bidAmountInTotal = _scaleQuoteTokenAmount(_BID_PRICE_TEN + _BID_PRICE_TEN);
+        uint256 bidAmountOutTotal = _scaleBaseTokenAmount(_LOT_CAPACITY);
 
         _expectedTotalIn = bidAmountInTotal;
         _expectedTotalOut = bidAmountOutTotal;
@@ -329,8 +332,8 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         // Bid one: 10 / 2 = 5 out
         // Bid two: 10 / 2 = 5 out
 
-        uint96 bidAmountInTotal = _scaleQuoteTokenAmount(_BID_PRICE_TEN + _BID_PRICE_TEN);
-        uint96 bidAmountOutTotal = _scaleBaseTokenAmount(_LOT_CAPACITY);
+        uint256 bidAmountInTotal = _scaleQuoteTokenAmount(_BID_PRICE_TEN + _BID_PRICE_TEN);
+        uint256 bidAmountOutTotal = _scaleBaseTokenAmount(_LOT_CAPACITY);
 
         _expectedTotalIn = bidAmountInTotal;
         _expectedTotalOut = bidAmountOutTotal;
@@ -367,8 +370,8 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         // Bid three: 4 / 1.6 = 2.5 out
         // Bid four: 4 / 1.6 = 2.5 out
 
-        uint96 bidAmountInTotal = _scaleQuoteTokenAmount(_BID_PRICE_TWO_SIZE_TWO_AMOUNT * 4);
-        uint96 bidAmountOutTotal = _scaleBaseTokenAmount(_LOT_CAPACITY);
+        uint256 bidAmountInTotal = _scaleQuoteTokenAmount(_BID_PRICE_TWO_SIZE_TWO_AMOUNT * 4);
+        uint256 bidAmountOutTotal = _scaleBaseTokenAmount(_LOT_CAPACITY);
 
         _expectedTotalIn = bidAmountInTotal;
         _expectedTotalOut = bidAmountOutTotal;
@@ -470,12 +473,12 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         // Bid four: 4 / 2 = 2 out
         // Bid five: 4 / 2 = 2 out
 
-        uint96 bidAmountInSuccess = _scaleQuoteTokenAmount(
+        uint256 bidAmountInSuccess = _scaleQuoteTokenAmount(
             _BID_PRICE_TWO_SIZE_TWO_AMOUNT + _BID_PRICE_TWO_SIZE_TWO_AMOUNT
                 + _BID_PRICE_TWO_SIZE_TWO_AMOUNT + _BID_PRICE_TWO_SIZE_TWO_AMOUNT
                 + _BID_PRICE_TWO_SIZE_TWO_AMOUNT
         );
-        uint96 bidAmountOutSuccess = _scaleBaseTokenAmount(
+        uint256 bidAmountOutSuccess = _scaleBaseTokenAmount(
             _BID_PRICE_TWO_SIZE_TWO_AMOUNT_OUT + _BID_PRICE_TWO_SIZE_TWO_AMOUNT_OUT
                 + _BID_PRICE_TWO_SIZE_TWO_AMOUNT_OUT + _BID_PRICE_TWO_SIZE_TWO_AMOUNT_OUT
                 + _BID_PRICE_TWO_SIZE_TWO_AMOUNT_OUT
@@ -508,23 +511,23 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         // Bid one: 19 / 2 = 9.5 out
         // Bid two: 10 - 9.5 = 0.5 out (partial fill)
 
-        uint96 bidOneAmountOutActual = _mulDivUp(
+        uint256 bidOneAmountOutActual = Math.mulDivDown(
             _scaleQuoteTokenAmount(_BID_SIZE_NINE_AMOUNT),
-            uint96(10 ** _baseTokenDecimals),
+            10 ** _baseTokenDecimals,
             _expectedMarginalPrice
         ); // 9.5
-        uint96 bidOneAmountInActual = _scaleQuoteTokenAmount(_BID_SIZE_NINE_AMOUNT); // 19
-        uint96 bidTwoAmountOutActual = _auctionParams.capacity - bidOneAmountOutActual; // 0.5
-        uint96 bidTwoAmountInActual = _mulDivUp(
+        uint256 bidOneAmountInActual = _scaleQuoteTokenAmount(_BID_SIZE_NINE_AMOUNT); // 19
+        uint256 bidTwoAmountOutActual = _auctionParams.capacity - bidOneAmountOutActual; // 0.5
+        uint256 bidTwoAmountInActual = Math.mulDivDown(
             bidTwoAmountOutActual,
             _scaleQuoteTokenAmount(_BID_PRICE_TWO_SIZE_TWO_AMOUNT),
             _scaleBaseTokenAmount(_BID_PRICE_TWO_SIZE_TWO_AMOUNT_OUT)
         ); // 0.5 * 4 / 2 = 1
 
-        uint96 bidAmountInSuccess = bidOneAmountInActual + bidTwoAmountInActual;
-        uint96 bidAmountInFail =
+        uint256 bidAmountInSuccess = bidOneAmountInActual + bidTwoAmountInActual;
+        uint256 bidAmountInFail =
             _scaleQuoteTokenAmount(_BID_PRICE_TWO_SIZE_TWO_AMOUNT) - bidTwoAmountInActual;
-        uint96 bidAmountOutSuccess = bidOneAmountOutActual + bidTwoAmountOutActual;
+        uint256 bidAmountOutSuccess = bidOneAmountOutActual + bidTwoAmountOutActual;
 
         _expectedTotalIn = bidAmountInSuccess;
         _expectedTotalOut = bidAmountOutSuccess;
@@ -557,19 +560,19 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         // Bid one: 4 / 2 = 2 out
         // Bid two: 10 - 2 = 8 out (partial fill)
 
-        uint96 bidOneAmountOutActual = _scaleBaseTokenAmount(_BID_PRICE_TWO_SIZE_TWO_AMOUNT_OUT); // 2
-        uint96 bidOneAmountInActual = _scaleQuoteTokenAmount(_BID_PRICE_TWO_SIZE_TWO_AMOUNT); // 4
-        uint96 bidTwoAmountOutActual = _auctionParams.capacity - bidOneAmountOutActual; // 8
-        uint96 bidTwoAmountInActual = _mulDivUp(
+        uint256 bidOneAmountOutActual = _scaleBaseTokenAmount(_BID_PRICE_TWO_SIZE_TWO_AMOUNT_OUT); // 2
+        uint256 bidOneAmountInActual = _scaleQuoteTokenAmount(_BID_PRICE_TWO_SIZE_TWO_AMOUNT); // 4
+        uint256 bidTwoAmountOutActual = _auctionParams.capacity - bidOneAmountOutActual; // 8
+        uint256 bidTwoAmountInActual = Math.mulDivDown(
             bidTwoAmountOutActual,
             _scaleQuoteTokenAmount(_BID_PRICE_TWO_SIZE_TEN_AMOUNT),
             _scaleBaseTokenAmount(_BID_PRICE_TWO_SIZE_TEN_AMOUNT_OUT)
         ); // 8 * 20 / 10 = 16
 
-        uint96 bidAmountInSuccess = bidOneAmountInActual + bidTwoAmountInActual;
-        uint96 bidAmountInFail =
+        uint256 bidAmountInSuccess = bidOneAmountInActual + bidTwoAmountInActual;
+        uint256 bidAmountInFail =
             _scaleQuoteTokenAmount(_BID_PRICE_TWO_SIZE_TEN_AMOUNT) - bidTwoAmountInActual;
-        uint96 bidAmountOutSuccess = bidOneAmountOutActual + bidTwoAmountOutActual;
+        uint256 bidAmountOutSuccess = bidOneAmountOutActual + bidTwoAmountOutActual;
 
         _expectedTotalIn = bidAmountInSuccess;
         _expectedTotalOut = bidAmountOutSuccess;
@@ -597,17 +600,17 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         // Output
         // Bid one: 10 out (partial fill)
 
-        uint96 bidOneAmountOutActual = _auctionParams.capacity;
-        uint96 bidOneAmountInActual = _mulDivUp(
+        uint256 bidOneAmountOutActual = _auctionParams.capacity;
+        uint256 bidOneAmountInActual = Math.mulDivDown(
             bidOneAmountOutActual,
             _scaleQuoteTokenAmount(_BID_PRICE_TWO_SIZE_ELEVEN_AMOUNT),
             _scaleBaseTokenAmount(_BID_PRICE_TWO_SIZE_ELEVEN_AMOUNT_OUT)
         );
 
-        uint96 bidAmountInSuccess = bidOneAmountInActual;
-        uint96 bidAmountInFail =
+        uint256 bidAmountInSuccess = bidOneAmountInActual;
+        uint256 bidAmountInFail =
             _scaleQuoteTokenAmount(_BID_PRICE_TWO_SIZE_ELEVEN_AMOUNT) - bidOneAmountInActual;
-        uint96 bidAmountOutSuccess = bidOneAmountOutActual;
+        uint256 bidAmountOutSuccess = bidOneAmountOutActual;
 
         _expectedTotalIn = bidAmountInSuccess;
         _expectedTotalOut = bidAmountOutSuccess;
@@ -649,11 +652,11 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         // Bid three: 0 out
         // Bid four: 0 out
 
-        uint96 bidAmountInSuccess =
+        uint256 bidAmountInSuccess =
             _scaleQuoteTokenAmount(_BID_PRICE_THREE_AMOUNT + _BID_PRICE_THREE_AMOUNT);
-        uint96 bidAmountInFail =
+        uint256 bidAmountInFail =
             _scaleQuoteTokenAmount(_BID_PRICE_BELOW_ONE_AMOUNT + _BID_PRICE_BELOW_ONE_AMOUNT);
-        uint96 bidAmountOutSuccess = _scaleBaseTokenAmount(_LOT_CAPACITY);
+        uint256 bidAmountOutSuccess = _scaleBaseTokenAmount(_LOT_CAPACITY);
 
         _expectedTotalIn = bidAmountInSuccess;
         _expectedTotalOut = bidAmountOutSuccess;
@@ -664,41 +667,39 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
     }
 
     modifier givenBidsCauseCapacityOverflow() {
-        uint96 bidOneAmount = 1e22;
-        uint96 bidOneAmountOut = type(uint96).max - 1e24;
-        uint96 bidTwoAmount = 1e22;
-        uint96 bidTwoAmountOut = type(uint96).max - 1e24;
+        uint256 bidOneAmount = 1e22;
+        uint256 bidOneAmountOut = type(uint256).max - 1e24;
+        uint256 bidTwoAmount = 1e22;
+        uint256 bidTwoAmountOut = type(uint256).max - 1e24;
 
         // Capacity
         _createBid(_scaleQuoteTokenAmount(bidOneAmount), _scaleBaseTokenAmount(bidOneAmountOut));
         _createBid(_scaleQuoteTokenAmount(bidTwoAmount), _scaleBaseTokenAmount(bidTwoAmountOut));
 
         // Marginal price = 12621933
-        _expectedMarginalPrice = _mulDivUp(bidTwoAmount, _BASE_SCALE, bidTwoAmountOut);
+        _expectedMarginalPrice = Math.mulDivDown(bidTwoAmount, _BASE_SCALE, bidTwoAmountOut);
         _expectedMarginalBidId = 2;
 
         // These calculations mimic how the capacity usage is calculated in the settle function
-        uint256 baseTokensRequired = FixedPointMathLib.mulDivDown(
-            bidOneAmount + bidTwoAmount, _BASE_SCALE, _expectedMarginalPrice
-        );
+        uint256 baseTokensRequired =
+            Math.mulDivDown(bidOneAmount + bidTwoAmount, _BASE_SCALE, _expectedMarginalPrice);
         uint256 bidTwoAmountOutFull =
-            FixedPointMathLib.mulDivDown(bidTwoAmount, _BASE_SCALE, _expectedMarginalPrice);
+            Math.mulDivDown(bidTwoAmount, _BASE_SCALE, _expectedMarginalPrice);
         uint256 bidTwoAmountOutOverflow = baseTokensRequired - _LOT_CAPACITY_OVERFLOW;
 
         // Output
         // Bid one: bidOneAmountOut out
         // Bid two: 90 out (partial fill)
 
-        uint96 bidOneAmountInActual = bidOneAmount;
-        uint96 bidOneAmountOutActual =
-            _mulDivDown(bidOneAmount, _BASE_SCALE, _expectedMarginalPrice);
-        uint96 bidTwoAmountOutActual = uint96(bidTwoAmountOutFull - bidTwoAmountOutOverflow);
-        uint96 bidTwoAmountInActual = uint96(
-            FixedPointMathLib.mulDivUp(bidTwoAmount, bidTwoAmountOutActual, bidTwoAmountOutFull)
-        );
+        uint256 bidOneAmountInActual = bidOneAmount;
+        uint256 bidOneAmountOutActual =
+            Math.mulDivDown(bidOneAmount, _BASE_SCALE, _expectedMarginalPrice);
+        uint256 bidTwoAmountOutActual = bidTwoAmountOutFull - bidTwoAmountOutOverflow;
+        uint256 bidTwoAmountInActual =
+            Math.mulDivDown(bidTwoAmount, bidTwoAmountOutActual, bidTwoAmountOutFull);
 
-        uint96 bidAmountInSuccess = bidOneAmountInActual + bidTwoAmountInActual;
-        uint96 bidAmountInFail = bidTwoAmount - bidTwoAmountInActual;
+        uint256 bidAmountInSuccess = bidOneAmountInActual + bidTwoAmountInActual;
+        uint256 bidAmountInFail = bidTwoAmount - bidTwoAmountInActual;
 
         _expectedTotalIn = bidAmountInSuccess;
         _expectedTotalOut = _LOT_CAPACITY_OVERFLOW;
@@ -750,8 +751,8 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         // Bid one: (12e18 - 1) / 2 = 6e18-1 out
         // Bid two: 8 / 2 = 4 out
 
-        uint96 bidAmountInSuccess = _scaleQuoteTokenAmount(12e18 - 1 + 8e18);
-        uint96 bidAmountOutSuccess = _scaleBaseTokenAmount(_LOT_CAPACITY - 1);
+        uint256 bidAmountInSuccess = _scaleQuoteTokenAmount(12e18 - 1 + 8e18);
+        uint256 bidAmountOutSuccess = _scaleBaseTokenAmount(_LOT_CAPACITY - 1);
 
         _expectedTotalIn = bidAmountInSuccess;
         _expectedTotalOut = bidAmountOutSuccess;
@@ -784,8 +785,8 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         // Bid two: 8 / 2 = 4 out
         // Bid three: 0 out
 
-        uint96 bidAmountInSuccess = _scaleQuoteTokenAmount(12e18 - 1 + 8e18);
-        uint96 bidAmountOutSuccess = _scaleBaseTokenAmount(_LOT_CAPACITY - 1);
+        uint256 bidAmountInSuccess = _scaleQuoteTokenAmount(12e18 - 1 + 8e18);
+        uint256 bidAmountOutSuccess = _scaleBaseTokenAmount(_LOT_CAPACITY - 1);
 
         _expectedTotalIn = bidAmountInSuccess;
         _expectedTotalOut = bidAmountOutSuccess;
@@ -817,8 +818,8 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         // Bid two: 8 / 2 = 4 out
         // Bid three: 0 out as it will round down to 0
 
-        uint96 bidAmountInSuccess = _scaleQuoteTokenAmount(12e18 - 1 + 8e18);
-        uint96 bidAmountOutSuccess = _scaleBaseTokenAmount(_LOT_CAPACITY - 1);
+        uint256 bidAmountInSuccess = _scaleQuoteTokenAmount(12e18 - 1 + 8e18);
+        uint256 bidAmountOutSuccess = _scaleBaseTokenAmount(_LOT_CAPACITY - 1);
 
         _expectedTotalIn = bidAmountInSuccess;
         _expectedTotalOut = bidAmountOutSuccess;

@@ -7,11 +7,11 @@ import {EncryptedMarginalPriceAuctionModule} from "src/modules/auctions/EMPAM.so
 import {EmpaModuleTest} from "test/modules/auctions/EMPA/EMPAModuleTest.sol";
 
 contract EmpaModuleDecryptBidsTest is EmpaModuleTest {
-    uint96 internal constant _BID_AMOUNT = 2e18;
-    uint96 internal constant _BID_AMOUNT_OUT = 1e18;
+    uint256 internal constant _BID_AMOUNT = 2e18;
+    uint256 internal constant _BID_AMOUNT_OUT = 1e18;
 
-    uint96 internal constant _BID_AMOUNT_SMALL = 1e17;
-    uint96 internal constant _BID_AMOUNT_OUT_SMALL = 1e16;
+    uint256 internal constant _BID_AMOUNT_SMALL = 1e17;
+    uint256 internal constant _BID_AMOUNT_OUT_SMALL = 1e16;
 
     // [X] when the lot id is invalid
     //  [X] it reverts

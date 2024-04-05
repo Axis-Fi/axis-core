@@ -24,7 +24,7 @@ contract LinearVestingEMPAIntegrationTest is AuctionHouseTest {
     Point internal _bidPublicKey;
 
     EncryptedMarginalPriceAuctionModule.AuctionDataParams internal _auctionDataParams;
-    uint96 internal constant _MIN_PRICE = 1e18;
+    uint256 internal constant _MIN_PRICE = 1e18;
     uint24 internal constant _MIN_FILL_PERCENT = 25_000; // 25%
     uint24 internal constant _MIN_BID_PERCENT = 1000; // 1%
 
@@ -33,8 +33,8 @@ contract LinearVestingEMPAIntegrationTest is AuctionHouseTest {
     uint48 internal constant _VESTING_EXPIRY = 1_705_055_144; // 2024-01-12
     uint48 internal constant _VESTING_DURATION = _VESTING_EXPIRY - _VESTING_START;
 
-    uint96 internal constant _BID_AMOUNT = 15e18;
-    uint96 internal constant _BID_AMOUNT_OUT = 10e18; // Ensures that capacit is filled and the price is not adjusted
+    uint256 internal constant _BID_AMOUNT = 15e18;
+    uint256 internal constant _BID_AMOUNT_OUT = 10e18; // Ensures that capacit is filled and the price is not adjusted
 
     // ============ Modifiers ============ //
 
@@ -73,12 +73,12 @@ contract LinearVestingEMPAIntegrationTest is AuctionHouseTest {
         _;
     }
 
-    function _formatBid(uint128 amountOut_) internal pure returns (uint256) {
+    function _formatBid(uint256 amountOut_) internal pure returns (uint256) {
         uint256 formattedAmountOut;
         {
             uint128 subtracted;
             unchecked {
-                subtracted = amountOut_ - _BID_SEED;
+                subtracted = uint128(amountOut_) - _BID_SEED;
             }
             formattedAmountOut = uint256(bytes32(abi.encodePacked(_BID_SEED, subtracted)));
         }
@@ -89,8 +89,8 @@ contract LinearVestingEMPAIntegrationTest is AuctionHouseTest {
     function _encryptBid(
         uint96 lotId_,
         address bidder_,
-        uint96 amountIn_,
-        uint128 amountOut_,
+        uint256 amountIn_,
+        uint256 amountOut_,
         uint256 auctionPrivateKey_
     ) internal view returns (uint256) {
         // Format the amount out
@@ -105,8 +105,8 @@ contract LinearVestingEMPAIntegrationTest is AuctionHouseTest {
 
     function _createBidData(
         address bidder_,
-        uint96 amountIn_,
-        uint96 amountOut_
+        uint256 amountIn_,
+        uint256 amountOut_
     ) internal view returns (bytes memory) {
         uint256 encryptedAmountOut =
             _encryptBid(_lotId, bidder_, amountIn_, amountOut_, _AUCTION_PRIVATE_KEY);
@@ -116,8 +116,8 @@ contract LinearVestingEMPAIntegrationTest is AuctionHouseTest {
 
     function _createBid(
         address bidder_,
-        uint96 amountIn_,
-        uint96 amountOut_
+        uint256 amountIn_,
+        uint256 amountOut_
     ) internal returns (uint64 bidId) {
         bytes memory bidData = _createBidData(bidder_, amountIn_, amountOut_);
 
@@ -136,7 +136,7 @@ contract LinearVestingEMPAIntegrationTest is AuctionHouseTest {
         return bidId;
     }
 
-    modifier givenBidIsCreated(uint96 amountIn_, uint96 amountOut_) {
+    modifier givenBidIsCreated(uint256 amountIn_, uint256 amountOut_) {
         _createBid(_bidder, amountIn_, amountOut_);
         _;
     }

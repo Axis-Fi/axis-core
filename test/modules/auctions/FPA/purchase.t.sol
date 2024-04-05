@@ -4,13 +4,13 @@ pragma solidity 0.8.19;
 import {Module} from "src/modules/Modules.sol";
 import {Auction} from "src/modules/Auction.sol";
 import {FixedPriceAuctionModule} from "src/modules/auctions/FPAM.sol";
-import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
+import {FixedPointMathLib as Math} from "solmate/utils/FixedPointMathLib.sol";
 
 import {FpaModuleTest} from "test/modules/auctions/FPA/FPAModuleTest.sol";
 
 contract FpaModulePurchaseTest is FpaModuleTest {
-    uint96 internal constant _PURCHASE_AMOUNT = 2e18;
-    uint96 internal constant _PURCHASE_AMOUNT_OUT = 1e18;
+    uint256 internal constant _PURCHASE_AMOUNT = 2e18;
+    uint256 internal constant _PURCHASE_AMOUNT_OUT = 1e18;
 
     // [X] when the caller is not the parent
     //  [X] it reverts
@@ -206,9 +206,9 @@ contract FpaModulePurchaseTest is FpaModuleTest {
 
     function test_success() public givenLotIsCreated givenLotHasStarted {
         // Calculate expected values
-        uint96 expectedSold = _mulDivDown(
+        uint256 expectedSold = Math.mulDivDown(
             _scaleQuoteTokenAmount(_PURCHASE_AMOUNT),
-            uint96(10) ** _baseTokenDecimals,
+            10 ** _baseTokenDecimals,
             _scaleQuoteTokenAmount(_PRICE)
         );
 
@@ -232,9 +232,9 @@ contract FpaModulePurchaseTest is FpaModuleTest {
         givenLotHasStarted
     {
         // Calculate expected values
-        uint96 expectedSold = _mulDivDown(
+        uint256 expectedSold = Math.mulDivDown(
             _scaleQuoteTokenAmount(_PURCHASE_AMOUNT),
-            uint96(10) ** _baseTokenDecimals,
+            10 ** _baseTokenDecimals,
             _scaleQuoteTokenAmount(_PRICE)
         );
 
@@ -258,9 +258,9 @@ contract FpaModulePurchaseTest is FpaModuleTest {
         givenLotHasStarted
     {
         // Calculate expected values
-        uint96 expectedSold = _mulDivDown(
+        uint256 expectedSold = Math.mulDivDown(
             _scaleQuoteTokenAmount(_PURCHASE_AMOUNT),
-            uint96(10) ** _baseTokenDecimals,
+            10 ** _baseTokenDecimals,
             _scaleQuoteTokenAmount(_PRICE)
         );
 
@@ -283,9 +283,9 @@ contract FpaModulePurchaseTest is FpaModuleTest {
         givenLotHasStarted
     {
         // Calculate expected values
-        uint96 expectedSold = _mulDivDown(
+        uint256 expectedSold = Math.mulDivDown(
             _scaleQuoteTokenAmount(_PURCHASE_AMOUNT),
-            uint96(10) ** _baseTokenDecimals,
+            10 ** _baseTokenDecimals,
             _scaleQuoteTokenAmount(_PRICE)
         );
 

@@ -16,6 +16,7 @@ contract MockBatchAuctionModule is AuctionModule {
     }
 
     /// @notice        Core data for a bid
+    /// @dev           Generic batch auctions do not have to use the uint96 size like EMPA
     ///
     /// @param         status              The status of the bid
     /// @param         bidder              The address of the bidder
@@ -23,10 +24,10 @@ contract MockBatchAuctionModule is AuctionModule {
     /// @param         minAmountOut        The minimum amount out (not set until the bid is decrypted)
     /// @param         referrer            The address of the referrer
     struct Bid {
-        address bidder; // 20 +
-        uint96 amount; // 12 = 32 - end of slot 1
-        uint96 minAmountOut; // 12 +
-        address referrer; // 20 = 32 - end of slot 2
+        address bidder;
+        uint256 amount;
+        uint256 minAmountOut;
+        address referrer;
         BidStatus status; // 1 - slot 3
     }
 
@@ -67,9 +68,9 @@ contract MockBatchAuctionModule is AuctionModule {
 
     function _purchase(
         uint96,
-        uint96,
+        uint256,
         bytes calldata
-    ) internal pure override returns (uint96, bytes memory) {
+    ) internal pure override returns (uint256, bytes memory) {
         revert Auction_NotImplemented();
     }
 
@@ -77,7 +78,7 @@ contract MockBatchAuctionModule is AuctionModule {
         uint96 lotId_,
         address bidder_,
         address referrer_,
-        uint96 amount_,
+        uint256 amount_,
         bytes calldata
     ) internal override returns (uint64) {
         // Create a new bid
@@ -100,7 +101,7 @@ contract MockBatchAuctionModule is AuctionModule {
         uint96 lotId_,
         uint64 bidId_,
         address
-    ) internal virtual override returns (uint96 refundAmount) {
+    ) internal virtual override returns (uint256 refundAmount) {
         // Cancel the bid
         bidCancelled[lotId_][bidId_] = true;
 
@@ -130,9 +131,9 @@ contract MockBatchAuctionModule is AuctionModule {
 
         // Also update sold and purchased
         Lot storage lot = lotData[lotId_];
-        lot.purchased = uint96(settlement_.totalIn);
-        lot.sold = uint96(settlement_.totalOut);
-        lot.partialPayout = uint96(settlement_.pfPayout);
+        lot.purchased = settlement_.totalIn;
+        lot.sold = settlement_.totalOut;
+        lot.partialPayout = settlement_.pfPayout;
     }
 
     function _settle(uint96 lotId_) internal override returns (Settlement memory, bytes memory) {
@@ -142,7 +143,7 @@ contract MockBatchAuctionModule is AuctionModule {
         return (lotSettlements[lotId_], "");
     }
 
-    function _claimProceeds(uint96 lotId_) internal override returns (uint96, uint96, uint96) {
+    function _claimProceeds(uint96 lotId_) internal override returns (uint256, uint256, uint256) {
         // Update status
         lotStatus[lotId_] = Auction.Status.Claimed;
 

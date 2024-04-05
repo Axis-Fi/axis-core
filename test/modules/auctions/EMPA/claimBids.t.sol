@@ -10,23 +10,23 @@ import {EncryptedMarginalPriceAuctionModule} from "src/modules/auctions/EMPAM.so
 import {EmpaModuleTest} from "test/modules/auctions/EMPA/EMPAModuleTest.sol";
 
 contract EmpaModuleClaimBidsTest is EmpaModuleTest {
-    uint96 internal constant _BID_AMOUNT = 8e18;
-    uint96 internal constant _BID_AMOUNT_OUT = 4e18;
+    uint256 internal constant _BID_AMOUNT = 8e18;
+    uint256 internal constant _BID_AMOUNT_OUT = 4e18;
 
-    uint96 internal constant _BID_AMOUNT_UNSUCCESSFUL = 1e18;
-    uint96 internal constant _BID_AMOUNT_OUT_UNSUCCESSFUL = 2e18;
+    uint256 internal constant _BID_AMOUNT_UNSUCCESSFUL = 1e18;
+    uint256 internal constant _BID_AMOUNT_OUT_UNSUCCESSFUL = 2e18;
 
-    uint96 internal constant _BID_PRICE_TWO_AMOUNT = 4e18;
-    uint96 internal constant _BID_PRICE_TWO_AMOUNT_OUT = 2e18;
+    uint256 internal constant _BID_PRICE_TWO_AMOUNT = 4e18;
+    uint256 internal constant _BID_PRICE_TWO_AMOUNT_OUT = 2e18;
 
-    uint96 internal constant _BID_PRICE_FOUR_AMOUNT = 8e18;
-    uint96 internal constant _BID_PRICE_FOUR_AMOUNT_OUT = 2e18;
+    uint256 internal constant _BID_PRICE_FOUR_AMOUNT = 8e18;
+    uint256 internal constant _BID_PRICE_FOUR_AMOUNT_OUT = 2e18;
 
     address internal constant _BIDDER_TWO = address(0x20);
 
     // ============ Modifiers ============ //
 
-    modifier givenBidIsCreatedByBidderTwo(uint96 amountIn_, uint96 amountOut_) {
+    modifier givenBidIsCreatedByBidderTwo(uint256 amountIn_, uint256 amountOut_) {
         _createBid(_BIDDER_TWO, amountIn_, amountOut_);
         _;
     }
@@ -230,15 +230,15 @@ contract EmpaModuleClaimBidsTest is EmpaModuleTest {
         assertEq(uint8(bidTwo.status), uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed));
     }
 
-    function test_unsuccessfulBid_fuzz(uint96 bidAmountIn_)
+    function test_unsuccessfulBid_fuzz(uint256 bidAmountIn_)
         external
         givenLotIsCreated
         givenLotHasStarted
     {
-        uint96 minFillAmount = _MIN_FILL_PERCENT * _LOT_CAPACITY / 1e5;
+        uint256 minFillAmount = _MIN_FILL_PERCENT * _LOT_CAPACITY / 1e5;
         // Bound the amounts
-        uint96 bidAmountIn = uint96(bound(bidAmountIn_, 1e18, minFillAmount - 1)); // Ensures that it cannot settle even at minimum price
-        uint96 bidAmountOut = 1e18; // at minimum price
+        uint256 bidAmountIn = bound(bidAmountIn_, 1e18, minFillAmount - 1); // Ensures that it cannot settle even at minimum price
+        uint256 bidAmountOut = 1e18; // at minimum price
 
         // Create the bid
         _createBid(bidAmountIn, bidAmountOut);
@@ -428,7 +428,7 @@ contract EmpaModuleClaimBidsTest is EmpaModuleTest {
         (Auction.BidClaim[] memory bidClaims,) = _module.claimBids(_lotId, _bidIds);
 
         // auction is settled at marginal price of 1.6, so payout is 8 / 1.6 = 5
-        uint96 amountOut = 5e18;
+        uint256 amountOut = 5e18;
 
         // Check the result
         Auction.BidClaim memory bidClaimOne = bidClaims[0];
@@ -473,7 +473,7 @@ contract EmpaModuleClaimBidsTest is EmpaModuleTest {
         (Auction.BidClaim[] memory bidClaims,) = _module.claimBids(_lotId, _bidIds);
 
         // auction is settled at marginal price of 1.6, so payout is 8 / 1.6 = 5
-        uint96 amountOut = 5e18;
+        uint256 amountOut = 5e18;
 
         // Check the result
         Auction.BidClaim memory bidClaimOne = bidClaims[0];
@@ -600,13 +600,13 @@ contract EmpaModuleClaimBidsTest is EmpaModuleTest {
         );
     }
 
-    function test_successfulBid_amountIn_fuzz(uint96 bidAmountIn_)
+    function test_successfulBid_amountIn_fuzz(uint256 bidAmountIn_)
         external
         givenLotIsCreated
         givenLotHasStarted
     {
         // Bound the amount in
-        uint96 bidAmountIn = uint96(bound(bidAmountIn_, _BID_AMOUNT, 12e18)); // Ensures that the price is greater than _MIN_PRICE and bid 2
+        uint256 bidAmountIn = bound(bidAmountIn_, _BID_AMOUNT, 12e18); // Ensures that the price is greater than _MIN_PRICE and bid 2
 
         // Create the bid
         _createBid(bidAmountIn, _BID_AMOUNT_OUT);
@@ -653,14 +653,14 @@ contract EmpaModuleClaimBidsTest is EmpaModuleTest {
         assertEq(uint8(bidTwo.status), uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed));
     }
 
-    function test_successfulBid_amountOut_fuzz(uint96 bidAmountOut_)
+    function test_successfulBid_amountOut_fuzz(uint256 bidAmountOut_)
         external
         givenLotIsCreated
         givenLotHasStarted
     {
         // Bound the amount out
-        uint96 bidAmountOut = uint96(bound(bidAmountOut_, _BID_AMOUNT_OUT, 5e18)); // Ensures that the lot settles but is not overfilled
-        uint96 bidAmountIn = 11e18; // Ensures that the price is greater than bid 2
+        uint256 bidAmountOut = bound(bidAmountOut_, _BID_AMOUNT_OUT, 5e18); // Ensures that the lot settles but is not overfilled
+        uint256 bidAmountIn = 11e18; // Ensures that the price is greater than bid 2
 
         // Create the bid
         _createBid(bidAmountIn, bidAmountOut);

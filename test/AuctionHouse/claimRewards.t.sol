@@ -4,12 +4,12 @@ pragma solidity 0.8.19;
 import {AuctionHouseTest} from "test/AuctionHouse/AuctionHouseTest.sol";
 
 contract ClaimRewardsTest is AuctionHouseTest {
-    uint96 internal constant _AMOUNT_IN = 1e18;
-    uint96 internal _amountInReferrerFee = (_AMOUNT_IN * _REFERRER_FEE_PERCENT) / 1e5;
-    uint96 internal _amountInProtocolFee = (_AMOUNT_IN * _PROTOCOL_FEE_PERCENT) / 1e5;
-    uint96 internal _amountInLessFee = _AMOUNT_IN - _amountInReferrerFee - _amountInProtocolFee;
+    uint256 internal constant _AMOUNT_IN = 1e18;
+    uint256 internal _amountInReferrerFee = (_AMOUNT_IN * _REFERRER_FEE_PERCENT) / 1e5;
+    uint256 internal _amountInProtocolFee = (_AMOUNT_IN * _PROTOCOL_FEE_PERCENT) / 1e5;
+    uint256 internal _amountInLessFee = _AMOUNT_IN - _amountInReferrerFee - _amountInProtocolFee;
     // 1:1 exchange rate
-    uint96 internal _amountOut = _amountInLessFee;
+    uint256 internal _amountOut = _amountInLessFee;
 
     bytes internal _purchaseAuctionData = abi.encode("");
 

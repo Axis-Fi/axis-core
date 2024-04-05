@@ -9,9 +9,11 @@ import {Point} from "src/lib/ECIES.sol";
 import {EmpaModuleTest} from "test/modules/auctions/EMPA/EMPAModuleTest.sol";
 
 contract EmpaModuleBidTest is EmpaModuleTest {
-    uint96 internal constant _BID_AMOUNT = 2e18;
-    uint96 internal constant _BID_AMOUNT_OUT = 1e18;
-    uint96 internal constant _BID_AMOUNT_BELOW_MIN = 1e16;
+    uint256 internal constant _BID_AMOUNT = 2e18;
+    uint256 internal constant _BID_AMOUNT_OUT = 1e18;
+    uint256 internal constant _BID_AMOUNT_BELOW_MIN = 1e16;
+
+    // TODO need to add test for when the bid amount passed from the AuctionHouse is greater than uint96 since we revert on that
 
     // [X] when the caller is not the parent
     //  [X] it reverts

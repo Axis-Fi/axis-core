@@ -57,21 +57,21 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
 
     /// @notice     Auction routing information for a lot
     ///
-    /// @param      auctionReference    Auction module, represented by its Veecode
     /// @param      seller              Lot seller
     /// @param      baseToken           Token provided by seller
     /// @param      quoteToken          Token to accept as payment
+    /// @param      auctionReference    Auction module, represented by its Veecode
+    /// @param      funding             The amount of base tokens in funding remaining
     /// @param      callbacks           (optional) Callbacks implementation for extended functionality
     /// @param      derivativeReference (optional) Derivative module, represented by its Veecode
-    /// @param      derivativeParams    (optional) abi-encoded data to be used to create payout derivatives on a purchase
     /// @param      wrapDerivative      (optional) Whether to wrap the derivative in a ERC20 token instead of the native ERC6909 format
-    /// @param      funding             The amount of base tokens in funding remaining
+    /// @param      derivativeParams    (optional) abi-encoded data to be used to create payout derivatives on a purchase
     struct Routing {
         address seller; // 20 bytes
-        uint96 funding; // 12 bytes
         ERC20 baseToken; // 20 bytes
-        Veecode auctionReference; // 7 bytes
         ERC20 quoteToken; // 20 bytes
+        Veecode auctionReference; // 7 bytes
+        uint256 funding; // 32 bytes
         ICallback callbacks; // 20 bytes
         Veecode derivativeReference; // 7 bytes
         bool wrapDerivative; // 1 byte
@@ -174,7 +174,7 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
         Routing storage routing = lotRouting[lotId];
 
         bool requiresPrefunding;
-        uint96 lotCapacity;
+        uint256 lotCapacity;
         {
             // Load auction type module, this checks that it is installed.
             // We load it here vs. later to avoid two checks.
@@ -312,7 +312,7 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
 
         // If the auction is prefunded and supported, transfer the remaining capacity to the seller
         if (routing.funding > 0) {
-            uint96 funding = routing.funding;
+            uint256 funding = routing.funding;
 
             // Set to 0 before transfer to avoid re-entrancy
             routing.funding = 0;
@@ -369,7 +369,7 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
     function _onCreateCallback(
         RoutingParams calldata routing_,
         uint96 lotId_,
-        uint96 capacity_,
+        uint256 capacity_,
         bool preFund_
     ) internal {
         Callbacks.onCreate(

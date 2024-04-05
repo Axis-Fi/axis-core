@@ -23,14 +23,14 @@ contract CappedMerkleAllowlistTest is Test, Permit2User {
     address internal constant _SELLER_TWO = address(0x7);
     address internal constant _BUYER_THREE = address(0x8);
 
-    uint96 internal constant _LOT_CAPACITY = 10e18;
+    uint256 internal constant _LOT_CAPACITY = 10e18;
 
     uint96 internal _lotId = 1;
 
     AuctionHouse internal _auctionHouse;
     CappedMerkleAllowlist internal _allowlist;
 
-    uint96 internal _BUYER_LIMIT = 1e18;
+    uint256 internal _BUYER_LIMIT = 1e18;
     // Generated from: https://lab.miguelmota.com/merkletreejs/example/
     // Includes _BUYER, _BUYER_TWO but not _BUYER_THREE
     bytes32 internal _MERKLE_ROOT =
@@ -100,12 +100,12 @@ contract CappedMerkleAllowlistTest is Test, Permit2User {
         _;
     }
 
-    function _onPurchase(uint96 lotId_, address buyer_, uint96 amount_) internal {
+    function _onPurchase(uint96 lotId_, address buyer_, uint256 amount_) internal {
         vm.prank(address(_auctionHouse));
         _allowlist.onPurchase(lotId_, buyer_, amount_, 0, false, abi.encode(_MERKLE_PROOF));
     }
 
-    function _onBid(uint96 lotId_, address buyer_, uint96 amount_) internal {
+    function _onBid(uint96 lotId_, address buyer_, uint256 amount_) internal {
         vm.prank(address(_auctionHouse));
         _allowlist.onBid(lotId_, 1, buyer_, amount_, abi.encode(_MERKLE_PROOF));
     }
@@ -235,8 +235,8 @@ contract CappedMerkleAllowlistTest is Test, Permit2User {
         _onPurchase(_lotId, _BUYER, 1);
     }
 
-    function test_onPurchase(uint96 amount_) public givenOnCreate {
-        uint96 amount = uint96(bound(amount_, 1, _BUYER_LIMIT));
+    function test_onPurchase(uint256 amount_) public givenOnCreate {
+        uint256 amount = bound(amount_, 1, _BUYER_LIMIT);
 
         _onPurchase(_lotId, _BUYER, amount);
 
@@ -303,8 +303,8 @@ contract CappedMerkleAllowlistTest is Test, Permit2User {
         _onBid(_lotId, _BUYER, 1);
     }
 
-    function test_onBid(uint96 amount_) public givenOnCreate {
-        uint96 amount = uint96(bound(amount_, 1, _BUYER_LIMIT));
+    function test_onBid(uint256 amount_) public givenOnCreate {
+        uint256 amount = bound(amount_, 1, _BUYER_LIMIT);
 
         _onBid(_lotId, _BUYER, amount);
 

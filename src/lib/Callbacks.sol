@@ -108,7 +108,7 @@ library Callbacks {
         address seller,
         address baseToken,
         address quoteToken,
-        uint96 capacity,
+        uint256 capacity,
         bool preFund,
         bytes calldata callbackData
     ) internal {
@@ -132,7 +132,7 @@ library Callbacks {
     function onCancel(
         ICallback self,
         uint96 lotId,
-        uint96 refund,
+        uint256 refund,
         bool preFunded,
         bytes calldata callbackData
     ) internal {
@@ -149,7 +149,7 @@ library Callbacks {
     function onCurate(
         ICallback self,
         uint96 lotId,
-        uint96 curatorFee,
+        uint256 curatorFee,
         bool preFund,
         bytes calldata callbackData
     ) internal {
@@ -167,8 +167,8 @@ library Callbacks {
         ICallback self,
         uint96 lotId,
         address buyer,
-        uint96 amount,
-        uint96 payout,
+        uint256 amount,
+        uint256 payout,
         bool preFunded,
         bytes calldata callbackData
     ) internal {
@@ -193,7 +193,7 @@ library Callbacks {
         uint96 lotId,
         uint64 bidId,
         address buyer,
-        uint96 amount,
+        uint256 amount,
         bytes calldata callbackData
     ) internal {
         if (self.hasPermission(ON_BID_FLAG)) {
@@ -209,8 +209,8 @@ library Callbacks {
     function onClaimProceeds(
         ICallback self,
         uint96 lotId,
-        uint96 proceeds,
-        uint96 refund,
+        uint256 proceeds,
+        uint256 refund,
         bytes calldata callbackData
     ) internal {
         if (self.hasPermission(ON_CLAIM_PROCEEDS_FLAG)) {
