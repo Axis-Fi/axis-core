@@ -89,6 +89,7 @@ contract FixedPriceAuctionModule is AuctionModule {
         ) revert Auction_InvalidParams();
 
         // Calculate the max payout
+        // OK to cast, as `lot_.capacity` is uint96
         uint96 maxPayout = uint96(
             Math.mulDivDown(lot_.capacity, auctionParams.maxPayoutPercent, _ONE_HUNDRED_PERCENT)
         );

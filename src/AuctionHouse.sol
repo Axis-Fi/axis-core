@@ -614,10 +614,8 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
         feeData.curatorFee = fees[keycodeFromVeecode(routing.auctionReference)].curator[msg.sender];
 
         // Calculate the fee amount based on the remaining capacity (must be in base token if auction is pre-funded)
-        uint96 curatorFeePayout = uint96(
-            _calculatePayoutFees(
-                feeData.curated, feeData.curatorFee, module.remainingCapacity(lotId_)
-            )
+        uint96 curatorFeePayout = _calculatePayoutFees(
+            feeData.curated, feeData.curatorFee, module.remainingCapacity(lotId_)
         );
 
         // If the auction is pre-funded (required for batch auctions), transfer the fee amount from the seller

@@ -69,6 +69,7 @@ contract Catalogue {
             FeeManager(auctionHouse).calculateQuoteFees(protocolFee, referrerFee, true, amount_); // we assume there is a referrer to give a conservative amount
 
         // Get payout from module
+        // OK to cast, as `amount_` is uint96
         return module.payoutFor(lotId_, amount_ - uint96(toProtocol) - uint96(toReferrer));
     }
 

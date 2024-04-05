@@ -97,6 +97,7 @@ abstract contract FeeManager is ReentrancyGuard {
         if (curated_ == false) return 0;
 
         // Calculate curator fee
+        // OK to cast, as `payout_` is uint96
         toCurator = uint96(Math.mulDivDown(payout_, uint256(curatorFee_), uint256(_FEE_DECIMALS)));
     }
 
