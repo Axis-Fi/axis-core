@@ -186,7 +186,7 @@ contract BaselinePreAsset is ERC20, BaseCallback, IPreAsset {
 
     function _onClaimProceeds(
         uint96 lotId_,
-        uint96 proceeds_,
+        uint256 proceeds_,
         uint96 refund_,
         bytes calldata callbackData
     ) internal override {

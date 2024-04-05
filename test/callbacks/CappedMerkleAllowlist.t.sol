@@ -30,12 +30,12 @@ contract CappedMerkleAllowlistTest is Test, Permit2User {
     AuctionHouse internal _auctionHouse;
     CappedMerkleAllowlist internal _allowlist;
 
-    uint96 internal _BUYER_LIMIT = 1e18;
+    uint96 internal constant _BUYER_LIMIT = 1e18;
     // Generated from: https://lab.miguelmota.com/merkletreejs/example/
     // Includes _BUYER, _BUYER_TWO but not _BUYER_THREE
-    bytes32 internal _MERKLE_ROOT =
+    bytes32 internal constant _MERKLE_ROOT =
         0xf15a9691daa2aa0627e155c750530c1abcd6a00d93e4888dab4f50e11a29c36b;
-    bytes32[] internal _MERKLE_PROOF;
+    bytes32[] internal _merkleProof;
 
     function setUp() public {
         _auctionHouse = new AuctionHouse(address(this), _PROTOCOL, _permit2Address);
@@ -61,7 +61,7 @@ contract CappedMerkleAllowlistTest is Test, Permit2User {
         // );
         // vm.writeFile("./bytecode/CappedMerkleAllowlist98.bin", vm.toString(bytecode));
 
-        bytes32 salt = bytes32(0x0af952a3c5eaeeb708512a67704ce487ab0d2083ff450240a3b69b3f3bce0098);
+        bytes32 salt = bytes32(0xe0cab897e1b42f8811d7fadbab521dd38835d89261f4cc5a94075f42eb2bddf2);
         vm.broadcast();
         _allowlist = new CappedMerkleAllowlist{salt: salt}(
             address(_auctionHouse),
@@ -78,10 +78,10 @@ contract CappedMerkleAllowlistTest is Test, Permit2User {
             _SELLER
         );
 
-        // _MERKLE_PROOF.push(
+        // _merkleProof.push(
         //     bytes32(0x5b70e80538acdabd6137353b0f9d8d149f4dba91e8be2e7946e409bfdbe685b9)
         // ); // Corresponds to _BUYER
-        _MERKLE_PROOF.push(
+        _merkleProof.push(
             bytes32(0x90b0d289ea211dca8e020c9cc8c5d6ba2f416fe15fa692b47184a4b946b2214d)
         ); // Corresponds to _BUYER_TWO
     }
@@ -102,12 +102,12 @@ contract CappedMerkleAllowlistTest is Test, Permit2User {
 
     function _onPurchase(uint96 lotId_, address buyer_, uint96 amount_) internal {
         vm.prank(address(_auctionHouse));
-        _allowlist.onPurchase(lotId_, buyer_, amount_, 0, false, abi.encode(_MERKLE_PROOF));
+        _allowlist.onPurchase(lotId_, buyer_, amount_, 0, false, abi.encode(_merkleProof));
     }
 
     function _onBid(uint96 lotId_, address buyer_, uint96 amount_) internal {
         vm.prank(address(_auctionHouse));
-        _allowlist.onBid(lotId_, 1, buyer_, amount_, abi.encode(_MERKLE_PROOF));
+        _allowlist.onBid(lotId_, 1, buyer_, amount_, abi.encode(_merkleProof));
     }
 
     // onCreate

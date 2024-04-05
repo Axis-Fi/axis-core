@@ -170,7 +170,7 @@ abstract contract BaseCallback is ICallback, Owned {
 
     function onClaimProceeds(
         uint96 lotId_,
-        uint96 proceeds_,
+        uint256 proceeds_,
         uint96 refund_,
         bytes calldata callbackData_
     ) external override onlyAuctionHouse onlyRegisteredLot(lotId_) returns (bytes4) {
@@ -182,7 +182,7 @@ abstract contract BaseCallback is ICallback, Owned {
 
     function _onClaimProceeds(
         uint96 lotId_,
-        uint96 proceeds_,
+        uint256 proceeds_,
         uint96 refund_,
         bytes calldata callbackData_
     ) internal virtual;

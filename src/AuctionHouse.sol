@@ -536,7 +536,7 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
         _isLotValid(lotId_);
 
         // Call auction module to validate and update data
-        (uint256 purchased_, uint96 sold_, uint96 claimableBidAmountOut_) =
+        (uint256 purchased_,, uint96 claimableBidAmountOut_) =
             _getModuleForId(lotId_).claimProceeds(lotId_);
 
         // Load data for the lot

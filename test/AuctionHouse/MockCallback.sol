@@ -4,7 +4,6 @@ pragma solidity 0.8.19;
 import {ERC20} from "solmate/tokens/ERC20.sol";
 
 import {BaseCallback} from "src/callbacks/BaseCallback.sol";
-import {ICallback} from "src/interfaces/ICallback.sol";
 import {Callbacks} from "src/lib/Callbacks.sol";
 
 contract MockCallback is BaseCallback {
@@ -44,12 +43,12 @@ contract MockCallback is BaseCallback {
 
     function _onCreate(
         uint96 lotId_,
-        address seller_,
+        address,
         address baseToken_,
         address quoteToken_,
         uint96 capacity_,
         bool prefund_,
-        bytes calldata callbackData_
+        bytes calldata
     ) internal virtual override {
         if (onCreateReverts) {
             revert("revert");
@@ -68,12 +67,7 @@ contract MockCallback is BaseCallback {
         }
     }
 
-    function _onCancel(
-        uint96 lotId_,
-        uint96 refund_,
-        bool prefunded_,
-        bytes calldata callbackData_
-    ) internal virtual override {
+    function _onCancel(uint96 lotId_, uint96, bool, bytes calldata) internal virtual override {
         if (onCancelReverts) {
             revert("revert");
         }
@@ -85,11 +79,13 @@ contract MockCallback is BaseCallback {
         uint96 lotId_,
         uint96 curatorFee_,
         bool prefund_,
-        bytes calldata callbackData_
+        bytes calldata
     ) internal virtual override {
         if (onCurateReverts) {
             revert("revert");
         }
+
+        lotCurated[lotId_] = true;
 
         if (prefund_) {
             if (onCurateMultiplier > 0) {
@@ -99,14 +95,12 @@ contract MockCallback is BaseCallback {
             // Transfer the base tokens to the auction house
             ERC20(lotTokens[lotId_].baseToken).transfer(address(auctionHouse), curatorFee_);
         }
-
-        lotCurated[lotId_] = true;
     }
 
     function _onPurchase(
         uint96 lotId_,
         address buyer_,
-        uint96 amount_,
+        uint96,
         uint96 payout_,
         bool prefunded_,
         bytes calldata callbackData_
@@ -120,6 +114,8 @@ contract MockCallback is BaseCallback {
             revert("not allowed");
         }
 
+        lotPurchased[lotId_] = true;
+
         if (prefunded_) {
             // Do nothing, as tokens have already been transferred
         } else {
@@ -130,15 +126,13 @@ contract MockCallback is BaseCallback {
             // Transfer the base tokens to the auction house
             ERC20(lotTokens[lotId_].baseToken).transfer(address(auctionHouse), payout_);
         }
-
-        lotPurchased[lotId_] = true;
     }
 
     function _onBid(
         uint96 lotId_,
-        uint64 bidId,
+        uint64,
         address buyer_,
-        uint96 amount_,
+        uint96,
         bytes calldata callbackData_
     ) internal virtual override {
         if (onBidReverts) {
@@ -155,9 +149,9 @@ contract MockCallback is BaseCallback {
 
     function _onClaimProceeds(
         uint96 lotId_,
-        uint96 proceeds_,
-        uint96 refund_,
-        bytes calldata callbackData_
+        uint256,
+        uint96,
+        bytes calldata
     ) internal virtual override {
         if (onClaimProceedsReverts) {
             revert("revert");

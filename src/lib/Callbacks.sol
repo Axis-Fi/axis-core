@@ -209,7 +209,7 @@ library Callbacks {
     function onClaimProceeds(
         ICallback self,
         uint96 lotId,
-        uint96 proceeds,
+        uint256 proceeds,
         uint96 refund,
         bytes calldata callbackData
     ) internal {
