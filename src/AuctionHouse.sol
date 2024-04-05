@@ -211,7 +211,7 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
         uint96 amountLessFees;
         {
             Keycode auctionKeycode = keycodeFromVeecode(routing.auctionReference);
-            uint96 totalFees = _allocateQuoteFees(
+            uint256 totalFees = _allocateQuoteFees(
                 fees[auctionKeycode].protocol,
                 fees[auctionKeycode].referrer,
                 params_.referrer,
@@ -220,7 +220,8 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
                 params_.amount
             );
             unchecked {
-                amountLessFees = params_.amount - totalFees;
+                // Safe to cast, since the `params_.amount` is uint96 and `totalFees` cannot be more than that
+                amountLessFees = params_.amount - uint96(totalFees);
             }
         }
 
@@ -546,7 +547,7 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
         // If a referrer is not set, that portion of the fee defaults to the protocol
         uint256 totalInLessFees;
         {
-            (, uint96 toProtocol) = calculateQuoteFees(
+            (, uint256 toProtocol) = calculateQuoteFees(
                 lotFees[lotId_].protocolFee, lotFees[lotId_].referrerFee, false, purchased_
             );
             unchecked {
@@ -800,15 +801,15 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
         address seller_,
         ERC20 quoteToken_,
         uint96 amount_
-    ) internal returns (uint96 totalFees) {
+    ) internal returns (uint256 totalFees) {
         // Calculate fees for purchase
-        (uint96 toReferrer, uint96 toProtocol) = calculateQuoteFees(
+        (uint256 toReferrer, uint256 toProtocol) = calculateQuoteFees(
             protocolFee_, referrerFee_, referrer_ != address(0) && referrer_ != seller_, amount_
         );
 
         // Update fee balances if non-zero
-        if (toReferrer > 0) rewards[referrer_][quoteToken_] += uint256(toReferrer);
-        if (toProtocol > 0) rewards[_protocol][quoteToken_] += uint256(toProtocol);
+        if (toReferrer > 0) rewards[referrer_][quoteToken_] += toReferrer;
+        if (toProtocol > 0) rewards[_protocol][quoteToken_] += toProtocol;
 
         return toReferrer + toProtocol;
     }
