@@ -50,6 +50,7 @@ abstract contract Auction {
     /// @param      sold                    The amount of base tokens sold
     /// @param      purchased               The amount of quote tokens purchased
     /// @param      claimableBidAmountOut   The amount of base tokens that can be claimed by bidders
+    /// @param      proceedsClaimed         Whether or not the proceeds have been claimed
     // TODO pack slots
     struct Lot {
         uint48 start; // 6 +
@@ -200,7 +201,7 @@ abstract contract Auction {
     function claimProceeds(uint96 lotId_)
         external
         virtual
-        returns (uint96 purchased, uint96 sold, uint96 claimableBidAmountOut);
+        returns (uint256 purchased, uint96 sold, uint96 claimableBidAmountOut);
 
     // ========== AUCTION MANAGEMENT ========== //
 
@@ -229,13 +230,21 @@ abstract contract Auction {
 
     // ========== AUCTION INFORMATION ========== //
 
-    function payoutFor(uint96 lotId_, uint96 amount_) public view virtual returns (uint96) {}
+    function payoutFor(
+        uint96 lotId_,
+        uint96 amount_
+    ) public view virtual returns (uint96 payout_) {}
 
-    function priceFor(uint96 lotId_, uint96 payout_) public view virtual returns (uint96) {}
+    function priceFor(uint96 lotId_, uint96 payout_) public view virtual returns (uint96 price_) {}
 
-    function maxPayout(uint96 lotId_) public view virtual returns (uint96) {}
+    function maxPayout(uint96 lotId_) public view virtual returns (uint96 maxPayout_) {}
 
-    function maxAmountAccepted(uint96 lotId_) public view virtual returns (uint96) {}
+    function maxAmountAccepted(uint96 lotId_)
+        public
+        view
+        virtual
+        returns (uint96 maxAmountAccepted_)
+    {}
 
     /// @notice     Returns whether the auction is currently accepting bids or purchases
     /// @dev        The implementing function should handle the following:
@@ -638,7 +647,7 @@ abstract contract AuctionModule is Auction, Module {
         virtual
         override
         onlyInternal
-        returns (uint96 purchased, uint96 sold, uint96 claimableBidAmountOut)
+        returns (uint256 purchased, uint96 sold, uint96 claimableBidAmountOut)
     {
         // Standard validation
         _revertIfLotInvalid(lotId_);
@@ -660,7 +669,7 @@ abstract contract AuctionModule is Auction, Module {
     function _claimProceeds(uint96 lotId_)
         internal
         virtual
-        returns (uint96 purchased, uint96 sold, uint96 claimableBidAmountOut);
+        returns (uint256 purchased, uint96 sold, uint96 claimableBidAmountOut);
 
     // ========== AUCTION INFORMATION ========== //
 

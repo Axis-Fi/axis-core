@@ -37,8 +37,8 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
 
     uint96 internal _expectedMarginalPrice;
     uint64 internal _expectedMarginalBidId;
-    uint96 internal _expectedTotalIn;
-    uint96 internal _expectedTotalOut;
+    uint256 internal _expectedTotalIn;
+    uint256 internal _expectedTotalOut;
     address internal _expectedPartialFillBidder;
     address internal _expectedPartialFillReferrer;
     uint96 internal _expectedPartialFillRefund;
@@ -837,10 +837,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
     }
 
     modifier givenOverCapacityTotalInOverflow() {
-        _createBid(
-            _scaleQuoteTokenAmount(type(uint96).max),
-            _scaleBaseTokenAmount(5e18)
-        );
+        _createBid(_scaleQuoteTokenAmount(type(uint96).max), _scaleBaseTokenAmount(5e18));
         _createBid(_scaleQuoteTokenAmount(type(uint96).max), _scaleBaseTokenAmount(5e18));
         _createBid(_scaleQuoteTokenAmount(10e18), _scaleBaseTokenAmount(5e18));
 

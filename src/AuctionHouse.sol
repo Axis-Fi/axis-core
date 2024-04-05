@@ -535,7 +535,7 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
         _isLotValid(lotId_);
 
         // Call auction module to validate and update data
-        (uint96 purchased_, uint96 sold_, uint96 claimableBidAmountOut_) =
+        (uint256 purchased_, uint96 sold_, uint96 claimableBidAmountOut_) =
             _getModuleForId(lotId_).claimProceeds(lotId_);
 
         // Load data for the lot
@@ -544,7 +544,7 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
         // Calculate the referrer and protocol fees for the amount in
         // Fees are not allocated until the user claims their payout so that we don't have to iterate through them here
         // If a referrer is not set, that portion of the fee defaults to the protocol
-        uint96 totalInLessFees;
+        uint256 totalInLessFees;
         {
             (, uint96 toProtocol) = calculateQuoteFees(
                 lotFees[lotId_].protocolFee, lotFees[lotId_].referrerFee, false, purchased_

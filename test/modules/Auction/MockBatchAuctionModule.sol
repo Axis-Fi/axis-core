@@ -180,7 +180,7 @@ contract MockBatchAuctionModule is AuctionModule {
         return (lotSettlements[lotId_], "");
     }
 
-    function _claimProceeds(uint96 lotId_) internal override returns (uint96, uint96, uint96) {
+    function _claimProceeds(uint96 lotId_) internal override returns (uint256, uint96, uint96) {
         // Update status
         lotStatus[lotId_] = Auction.Status.Settled;
         lotProceedsClaimed[lotId_] = true;

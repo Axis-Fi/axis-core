@@ -878,7 +878,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
     function _claimProceeds(uint96 lotId_)
         internal
         override
-        returns (uint96 purchased, uint96 sold, uint96 claimableBidAmountOut)
+        returns (uint256 purchased, uint96 sold, uint96 claimableBidAmountOut)
     {
         Lot storage lot = lotData[lotId_];
 
