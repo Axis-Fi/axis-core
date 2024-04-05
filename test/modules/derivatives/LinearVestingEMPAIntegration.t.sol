@@ -91,12 +91,12 @@ contract LinearVestingEMPAIntegrationTest is AuctionHouseTest {
         address bidder_,
         uint96 amountIn_,
         uint128 amountOut_,
-        uint256 auctionPrivateKey_
+        uint256 bidPrivateKey_
     ) internal view returns (uint256) {
         // Format the amount out
         uint256 formattedAmountOut = _formatBid(amountOut_);
 
-        Point memory sharedSecretKey = ECIES.calcPubKey(_bidPublicKey, auctionPrivateKey_); // TODO is the use of the private key here correct?
+        Point memory sharedSecretKey = ECIES.calcPubKey(_auctionPublicKey, bidPrivateKey_);
         uint256 salt = uint256(keccak256(abi.encodePacked(lotId_, bidder_, amountIn_)));
         uint256 symmetricKey = uint256(keccak256(abi.encodePacked(sharedSecretKey.x, salt)));
 
@@ -109,7 +109,7 @@ contract LinearVestingEMPAIntegrationTest is AuctionHouseTest {
         uint96 amountOut_
     ) internal view returns (bytes memory) {
         uint256 encryptedAmountOut =
-            _encryptBid(_lotId, bidder_, amountIn_, amountOut_, _AUCTION_PRIVATE_KEY);
+            _encryptBid(_lotId, bidder_, amountIn_, amountOut_, _BID_PRIVATE_KEY);
 
         return abi.encode(encryptedAmountOut, _bidPublicKey);
     }
