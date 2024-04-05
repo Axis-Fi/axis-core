@@ -31,13 +31,15 @@ library BidEncoding {
 }
 
 struct Queue {
+    /// @notice     The number of bids in the queue
     uint256 numBids;
+    /// @notice     Mapping of bid keys to the next bid key in the queue
     mapping(bytes32 => bytes32) nextBid;
 }
 
-/// @notice This library implements a max priority queue using a linked list.
-/// We can achieve ~O(1) insertion by providing optimal hints for the insert position.
-/// The linked list design automatically gives us O(1) removal of the max bid.
+/// @notice     This library implements a max priority queue using a linked list.
+///             We can achieve ~O(1) insertion by providing optimal hints for the insert position.
+///             The linked list design automatically gives us O(1) removal of the max bid.
 library MaxPriorityQueue {
     using BidEncoding for bytes32;
 

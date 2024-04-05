@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.19;
 
-import {console2} from "forge-std/console2.sol";
-
 /// Protocol dependencies
 import {AuctionModule, Auction} from "src/modules/Auction.sol";
 import {Veecode, toVeecode} from "src/modules/Modules.sol";
@@ -399,6 +397,11 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
     ///                 - The lot is not active
     ///                 - The lot has not concluded
     ///                 - The private key has already been submitted
+    ///
+    /// @param          lotId_          The lot ID of the auction to submit the private key for
+    /// @param          privateKey_     The ECIES private key to decrypt the bids
+    /// @param          num_            The number of bids to decrypt after submitting the private key (passed to `_decryptAndSortBids()`)
+    /// @param          sortHints_      The sort hints for the bid decryption (passed to `_decryptAndSortBids()`)
     function submitPrivateKey(
         uint96 lotId_,
         uint256 privateKey_,
@@ -444,7 +447,8 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
     ///                 - The private key has not been provided
     ///
     /// @param          lotId_          The lot ID of the auction to decrypt bids for
-    /// @param          num_            The number of bids to decrypt. Reduced to the number remaining if greater.
+    /// @param          num_            The number of bids to decrypt. Reduced to the number remaining if greater
+    /// @param          sortHints_      The sort hints for the bid decryption
     function decryptAndSortBids(
         uint96 lotId_,
         uint64 num_,
@@ -503,6 +507,10 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         }
     }
 
+    /// @notice     Decrypts a bid
+    ///
+    /// @param      lotId_  The lot ID of the auction to decrypt the bid for
+    /// @param      bidId_  The bid ID to decrypt
     function decryptBid(uint96 lotId_, uint64 bidId_) public view returns (uint256 amountOut) {
         // Load the private key
         uint256 privateKey = auctionData[lotId_].privateKey;
@@ -536,6 +544,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         }
     }
 
+    /// @notice     Decrypts a bid and stores it in the sorted bid queue
     function _decrypt(uint96 lotId_, uint64 bidId_, bytes32 sortHint_) internal {
         // Decrypt the message
         Bid storage bidData = bids[lotId_][bidId_];
@@ -775,12 +784,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
             revert Auction_WrongState(lotId_);
         }
 
-        MarginalPriceResult memory result;
-        {
-            uint256 gasStart = gasleft();
-            result = _getLotMarginalPrice(lotId_);
-            console2.log("Gas used for marginal price calculation: ", gasStart - gasleft());
-        }
+        MarginalPriceResult memory result = _getLotMarginalPrice(lotId_);
 
         // Calculate marginal price and number of winning bids
         // Cache capacity and scaling values
