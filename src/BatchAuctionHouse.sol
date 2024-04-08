@@ -131,13 +131,18 @@ contract BatchAuctionHouse is AuctionHouse, BatchRouter {
 
     // ========== AUCTION MANAGEMENT ========== //
 
+    /// @inheritdoc AuctionHouse
+    /// @dev        Handles auction creation for a batch auction.
+    ///
+    ///             This function performs the following:
+    ///             - Performs additional validation
+    ///             - Collects the payout token from the seller (prefunding)
+    ///             - Calls the onCreate callback, if configured
     function _auction(
         uint96 lotId_,
         RoutingParams calldata routing_,
         Auction.AuctionParams calldata params_
     ) internal override returns (bool performedCallback) {
-        
-
         // Batch auctions must be pre-funded
 
         // Capacity must be in base token for auctions that require pre-funding

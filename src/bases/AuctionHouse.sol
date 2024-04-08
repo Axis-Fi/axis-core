@@ -15,8 +15,8 @@ import {DerivativeModule} from "src/modules/Derivative.sol";
 import {ICallback} from "src/interfaces/ICallback.sol";
 import {Callbacks} from "src/lib/Callbacks.sol";
 
-/// @title  Auctioneer
-/// @notice The Auctioneer handles the following:
+/// @title  AuctionHouse
+/// @notice The AuctionHouse handles the following:
 ///         - Creating new auction lots
 ///         - Cancelling auction lots
 ///         - Storing information about how to handle inputs and outputs for auctions ("routing")
@@ -155,14 +155,11 @@ abstract contract AuctionHouse is WithModules, ReentrancyGuard, FeeManager {
     ///             - The module for the auction type is not installed
     ///             - The auction type is sunset
     ///             - The base token or quote token decimals are not within the required range
-    ///             - The value of `RoutingParams.prefunded` is incorrect for the auction type
     ///             - Validation for the auction parameters fails
     ///             - The module for the optional specified derivative type is not installed
     ///             - Validation for the optional specified derivative type fails
-    ///             - Registration for the optional allowlist fails
-    ///             - The optional specified hooks contract is not a contract
-    ///             - The condenser module is not installed or is sunset
-    ///             - re-entrancy is detected
+    ///             - The optional specified callbacks contract is not a contract
+    ///             - Re-entrancy is detected
     ///
     /// @param      routing_    Routing information for the auction lot
     /// @param      params_     Auction parameters for the auction lot
@@ -259,6 +256,15 @@ abstract contract AuctionHouse is WithModules, ReentrancyGuard, FeeManager {
         emit AuctionCreated(lotId, routing.auctionReference, infoHash_);
     }
 
+    /// @notice     Implementation-specific logic for auction creation
+    /// @dev        Inheriting contracts can implement additional logic, such as:
+    ///             - Validation
+    ///             - Prefunding
+    ///
+    /// @param      lotId_              The auction lot ID
+    /// @param      routing_            RoutingParams
+    /// @param      params_             AuctionParams
+    /// @return     performedCallback   `true` if the implementing function calls the `onCreate` callback
     function _auction(
         uint96 lotId_,
         RoutingParams calldata routing_,
@@ -292,6 +298,7 @@ abstract contract AuctionHouse is WithModules, ReentrancyGuard, FeeManager {
         // Cancel the auction on the module
         _getModuleForId(lotId_).cancelAuction(lotId_);
 
+        // TODO shift prefunding code to `_cancel()`
         // If the auction is prefunded and supported, transfer the remaining capacity to the seller
         if (routing.funding > 0) {
             uint256 funding = routing.funding;
@@ -423,6 +430,7 @@ abstract contract AuctionHouse is WithModules, ReentrancyGuard, FeeManager {
             feeData.curated, feeData.curatorFee, module.remainingCapacity(lotId_)
         );
 
+        // TODO shift to _curate()
         // If the auction is pre-funded (required for batch auctions), transfer the fee amount from the seller
         if (routing.funding > 0) {
             // Increment the funding

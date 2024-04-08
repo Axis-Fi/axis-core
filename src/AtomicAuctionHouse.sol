@@ -87,7 +87,7 @@ contract AtomicAuctionHouse is AuctionHouse, AtomicRouter {
         uint96,
         RoutingParams calldata,
         Auction.AuctionParams calldata
-    ) internal override returns (bool performedCallback) {
+    ) internal pure override returns (bool performedCallback) {
         // No additional logic for atomic auctions.
         // They cannot be prefunded.
         return false;
@@ -168,6 +168,7 @@ contract AtomicAuctionHouse is AuctionHouse, AtomicRouter {
 
         // If not prefunded, collect payout from auction owner or callbacks contract, if not prefunded
         // If prefunded, call the onPurchase callback
+        // TODO simplify prefunding code
         if (routing.funding == 0) {
             // If callbacks contract is configured to send base tokens, then source the payout from the callbacks contract
             if (Callbacks.hasPermission(routing.callbacks, Callbacks.SEND_BASE_TOKENS_FLAG)) {
