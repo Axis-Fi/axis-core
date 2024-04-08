@@ -258,7 +258,10 @@ contract EmpaModuleBidTest is EmpaModuleTest {
         assertEq(auctionData.nextBidId, 2, "nextBidId");
     }
 
-    function testFuzz_bidPayoutInvariant_atMarginalPrice(uint96 amountIn, uint96 amountOut) public {
+    function testFuzz_bidPayoutInvariant_atMarginalPrice(
+        uint96 amountIn,
+        uint96 amountOut
+    ) public {
         vm.assume(amountIn != 0 && amountOut != 0);
 
         // Calculate the bid price
@@ -271,7 +274,10 @@ contract EmpaModuleBidTest is EmpaModuleTest {
         assertLe(payout, amountOut, "payout <= amountOut");
     }
 
-    function testFuzz_bidPayoutInvariant_aboveMarginalPrice(uint96 amountIn, uint96 amountOut) public {
+    function testFuzz_bidPayoutInvariant_aboveMarginalPrice(
+        uint96 amountIn,
+        uint96 amountOut
+    ) public {
         vm.assume(amountIn >= 1e6 && amountOut >= 1e6);
         console2.log("amountIn", amountIn);
         console2.log("amountOut", amountOut);
