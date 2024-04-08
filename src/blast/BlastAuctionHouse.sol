@@ -33,23 +33,29 @@ contract BlastAuctionHouse is AuctionHouse {
     // ========== STATE VARIABLES ========== //
 
     /// @notice    Blast contract for claiming gas fees
-    IBlast internal constant _BLAST = IBlast(0x4300000000000000000000000000000000000002);
+    IBlast internal immutable _BLAST;
 
     /// @notice    Address of the WETH contract on Blast
-    IERC20Rebasing internal constant _WETH =
-        IERC20Rebasing(0x4200000000000000000000000000000000000023);
+    IERC20Rebasing internal immutable _WETH;
 
     /// @notice    Address of the USDB contract on Blast
-    IERC20Rebasing internal constant _USDB =
-        IERC20Rebasing(0x4200000000000000000000000000000000000022);
+    IERC20Rebasing internal immutable _USDB;
 
     // ========== CONSTRUCTOR ========== //
 
     constructor(
         address owner_,
         address protocol_,
-        address permit2_
+        address permit2_,
+        address blast_,
+        address weth_,
+        address usdb_
     ) AuctionHouse(owner_, protocol_, permit2_) {
+        // Set addresses
+        _BLAST = IBlast(blast_);
+        _WETH = IERC20Rebasing(weth_);
+        _USDB = IERC20Rebasing(usdb_);
+
         // Set the yield mode to claimable for the WETH and USDB tokens
         _WETH.configure(YieldMode.CLAIMABLE);
         _USDB.configure(YieldMode.CLAIMABLE);
