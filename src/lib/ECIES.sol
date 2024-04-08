@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.0;
 
+import {console2} from "forge-std/console2.sol";
+
 struct Point {
     uint256 x;
     uint256 y;
@@ -37,16 +39,15 @@ library ECIES {
     }
 
     /// @notice Recover the shared secret as the x-coordinate of the EC point computed as the multiplication of the ciphertext public key and the private key.
-    /// @dev    We assume the public key is on the curve and the private key is valid to save gas. This should already be checked prior to recovering the secret.
     function recoverSharedSecret(
         Point memory ciphertextPubKey_,
         uint256 privateKey_
     ) internal view returns (uint256) {
-        // // Validate public key is on the curve
-        // if (!isOnBn128(ciphertextPubKey_)) revert("Invalid public key.");
+        // Validate public key is on the curve
+        if (!isOnBn128(ciphertextPubKey_)) revert("Invalid public key.");
 
-        // // Validate private key is less than the group order and not zero
-        // if (privateKey_ >= GROUP_ORDER || privateKey_ == 0) revert("Invalid private key.");
+        // Validate private key is less than the group order and not zero
+        if (privateKey_ >= GROUP_ORDER || privateKey_ == 0) revert("Invalid private key.");
 
         Point memory p = _ecMul(ciphertextPubKey_, privateKey_);
 
@@ -108,14 +109,14 @@ library ECIES {
     }
 
     /// @notice Calculate the point on the generator curve that corresponds to the provided private key. This is used as the public key.
-    /// @param  generator_  The point on the the alt_bn128 curve to use as the generator. This function assumes a valid point is provided to save gas.
+    /// @param  generator_  The point on the the alt_bn128 curve to use as the generator.
     /// @param  privateKey_ The private key to calculate the public key for.
     function calcPubKey(
         Point memory generator_,
         uint256 privateKey_
     ) internal view returns (Point memory) {
-        // // Validate generator is on the curve
-        // if (!isOnBn128(generator_)) revert("Invalid generator point.");
+        // Validate generator is on the curve
+        if (!isOnBn128(generator_)) revert("Invalid generator point.");
 
         // Validate private key is less than the group order and not zero
         if (privateKey_ >= GROUP_ORDER || privateKey_ == 0) revert("Invalid private key.");
@@ -141,8 +142,7 @@ library ECIES {
 
     /// @notice Checks whether a point is valid. We consider a point valid if it is on the curve and not the generator point or the point at infinity.
     function isValid(Point memory p) internal pure returns (bool) {
-        return isOnBn128(p) && !(p.x == 1 && p.y == 2) && !(p.x == 0 && p.y == 0)
-            && p.x < FIELD_MODULUS && p.y < FIELD_MODULUS;
+        return isOnBn128(p) && !(p.x == 1 && p.y == 2) && !(p.x == 0 && p.y == 0);
     }
 
     function _fieldmul(uint256 a, uint256 b) private pure returns (uint256 c) {
