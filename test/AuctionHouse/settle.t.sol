@@ -3,6 +3,7 @@ pragma solidity 0.8.19;
 
 import {Auction, AuctionModule} from "src/modules/Auction.sol";
 import {Auctioneer} from "src/bases/Auctioneer.sol";
+import {BatchAuctionModule} from "src/modules/auctions/BatchAuctionModule.sol";
 
 import {AuctionHouseTest} from "test/AuctionHouse/AuctionHouseTest.sol";
 
@@ -103,7 +104,7 @@ contract SettleTest is AuctionHouseTest {
     ) internal {
         vm.mockCall(
             address(_auctionModule),
-            abi.encodeWithSelector(AuctionModule.settle.selector, _lotId),
+            abi.encodeWithSelector(BatchAuctionModule.settle.selector, _lotId),
             abi.encode(settlement_, auctionOutput_)
         );
     }
@@ -111,7 +112,7 @@ contract SettleTest is AuctionHouseTest {
     modifier givenAuctionModuleReverts() {
         vm.mockCallRevert(
             address(_auctionModule),
-            abi.encodeWithSelector(AuctionModule.settle.selector, _lotId),
+            abi.encodeWithSelector(BatchAuctionModule.settle.selector, _lotId),
             "revert"
         );
         _;

@@ -3,6 +3,7 @@ pragma solidity 0.8.19;
 
 import {Auctioneer} from "src/bases/Auctioneer.sol";
 import {Auction} from "src/modules/Auction.sol";
+import {BatchAuctionModule} from "src/modules/auctions/BatchAuctionModule.sol";
 
 import {AuctionHouseTest} from "test/AuctionHouse/AuctionHouseTest.sol";
 
@@ -86,7 +87,7 @@ contract RefundBidTest is AuctionHouseTest {
         givenLotHasStarted
     {
         bytes memory err =
-            abi.encodeWithSelector(Auction.Auction_InvalidBidId.selector, _lotId, _bidId);
+            abi.encodeWithSelector(BatchAuctionModule.Auction_InvalidBidId.selector, _lotId, _bidId);
         vm.expectRevert(err);
 
         // Call the function
@@ -108,7 +109,7 @@ contract RefundBidTest is AuctionHouseTest {
         givenBidIsRefunded
     {
         bytes memory err =
-            abi.encodeWithSelector(Auction.Auction_InvalidBidId.selector, _lotId, _bidId);
+            abi.encodeWithSelector(BatchAuctionModule.Auction_InvalidBidId.selector, _lotId, _bidId);
         vm.expectRevert(err);
 
         // Call the function
@@ -128,7 +129,7 @@ contract RefundBidTest is AuctionHouseTest {
         givenUserHasQuoteTokenAllowance(_BID_AMOUNT)
         givenBid(_BID_AMOUNT, _auctionDataParams)
     {
-        bytes memory err = abi.encodeWithSelector(Auction.Auction_NotBidder.selector);
+        bytes memory err = abi.encodeWithSelector(BatchAuctionModule.Auction_NotBidder.selector);
         vm.expectRevert(err);
 
         // Call the function

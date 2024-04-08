@@ -6,6 +6,7 @@ import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 import {Module} from "src/modules/Modules.sol";
 import {Auction} from "src/modules/Auction.sol";
 import {EncryptedMarginalPriceAuctionModule} from "src/modules/auctions/EMPAM.sol";
+import {BatchAuctionModule} from "src/modules/auctions/BatchAuctionModule.sol";
 
 import {EmpaModuleTest} from "test/modules/auctions/EMPA/EMPAModuleTest.sol";
 
@@ -87,7 +88,8 @@ contract EmpaModuleClaimBidsTest is EmpaModuleTest {
         givenPrivateKeyIsSubmitted
         givenLotIsSettled
     {
-        bytes memory err = abi.encodeWithSelector(Auction.Auction_InvalidBidId.selector, _lotId, 1);
+        bytes memory err =
+            abi.encodeWithSelector(BatchAuctionModule.Auction_InvalidBidId.selector, _lotId, 1);
         vm.expectRevert(err);
 
         _bidIds.push(1);
@@ -108,7 +110,8 @@ contract EmpaModuleClaimBidsTest is EmpaModuleTest {
         givenLotIsDecrypted
         givenLotIsSettled
     {
-        bytes memory err = abi.encodeWithSelector(Auction.Auction_InvalidBidId.selector, _lotId, 2);
+        bytes memory err =
+            abi.encodeWithSelector(BatchAuctionModule.Auction_InvalidBidId.selector, _lotId, 2);
         vm.expectRevert(err);
 
         _bidIds.push(2);

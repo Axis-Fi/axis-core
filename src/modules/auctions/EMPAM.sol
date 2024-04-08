@@ -4,6 +4,7 @@ pragma solidity 0.8.19;
 /// Protocol dependencies
 import {AuctionModule, Auction} from "src/modules/Auction.sol";
 import {Veecode, toVeecode} from "src/modules/Modules.sol";
+import {BatchAuctionModule} from "src/modules/auctions/BatchAuctionModule.sol";
 
 // Libraries
 import {FixedPointMathLib as Math} from "solady/utils/FixedPointMathLib.sol";
@@ -129,10 +130,6 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         return toVeecode("01EMPAM");
     }
 
-    function TYPE() public pure override returns (Type) {
-        return Type.Auction;
-    }
-
     // ========== MODIFIERS ========== //
 
     // ========== AUCTION ========== //
@@ -204,7 +201,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
 
     // ========== BID ========== //
 
-    /// @inheritdoc AuctionModule
+    /// @inheritdoc BatchAuctionModule
     /// @dev        This function performs the following:
     ///             - Validates inputs
     ///             - Stores the encrypted bid
@@ -264,7 +261,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         return bidId;
     }
 
-    /// @inheritdoc AuctionModule
+    /// @inheritdoc BatchAuctionModule
     /// @dev        This function performs the following:
     ///             - Validates inputs
     ///             - Marks the bid as refunded
@@ -355,7 +352,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         return (bidClaim, auctionOutput_);
     }
 
-    /// @inheritdoc AuctionModule
+    /// @inheritdoc BatchAuctionModule
     /// @dev        This function performs the following:
     ///             - Validates inputs
     ///             - Marks the bid as claimed
@@ -719,7 +716,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         return result;
     }
 
-    /// @inheritdoc AuctionModule
+    /// @inheritdoc BatchAuctionModule
     /// @dev        This function performs the following:
     ///             - Validates inputs
     ///             - Iterates over the decrypted bids to calculate the marginal price and number of winning bids
@@ -826,7 +823,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         return (settlement_, auctionOutput_);
     }
 
-    /// @inheritdoc AuctionModule
+    /// @inheritdoc BatchAuctionModule
     function _claimProceeds(uint96 lotId_)
         internal
         override
@@ -864,11 +861,6 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         return auctionData[lotId_];
     }
 
-    /// @inheritdoc Auction
-    function auctionType() external pure override returns (AuctionType) {
-        return AuctionType.Batch;
-    }
-
     // ========== VALIDATION ========== //
 
     /// @inheritdoc AuctionModule
@@ -880,7 +872,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         ) revert Auction_WrongState(lotId_);
     }
 
-    /// @inheritdoc AuctionModule
+    /// @inheritdoc BatchAuctionModule
     function _revertIfLotSettled(uint96 lotId_) internal view override {
         // Auction must not be settled
         if (auctionData[lotId_].status == Auction.Status.Settled) {
@@ -888,7 +880,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         }
     }
 
-    /// @inheritdoc AuctionModule
+    /// @inheritdoc BatchAuctionModule
     function _revertIfLotNotSettled(uint96 lotId_) internal view override {
         // Auction must be settled
         if (auctionData[lotId_].status != Auction.Status.Settled) {
@@ -896,7 +888,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         }
     }
 
-    /// @inheritdoc AuctionModule
+    /// @inheritdoc BatchAuctionModule
     function _revertIfLotProceedsClaimed(uint96 lotId_) internal view override {
         // Auction must not have proceeds claimed
         if (auctionData[lotId_].status == Auction.Status.Claimed) {
@@ -904,7 +896,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         }
     }
 
-    /// @inheritdoc AuctionModule
+    /// @inheritdoc BatchAuctionModule
     function _revertIfBidInvalid(uint96 lotId_, uint64 bidId_) internal view override {
         // Bid ID must be less than number of bids for lot
         if (bidId_ >= auctionData[lotId_].nextBidId) revert Auction_InvalidBidId(lotId_, bidId_);
@@ -913,7 +905,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         if (bids[lotId_][bidId_].bidder == address(0)) revert Auction_InvalidBidId(lotId_, bidId_);
     }
 
-    /// @inheritdoc AuctionModule
+    /// @inheritdoc BatchAuctionModule
     function _revertIfNotBidOwner(
         uint96 lotId_,
         uint64 bidId_,
@@ -923,21 +915,11 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         if (caller_ != bids[lotId_][bidId_].bidder) revert NotPermitted(caller_);
     }
 
-    /// @inheritdoc AuctionModule
+    /// @inheritdoc BatchAuctionModule
     function _revertIfBidClaimed(uint96 lotId_, uint64 bidId_) internal view override {
         // Bid must not be refunded or claimed (same status)
         if (bids[lotId_][bidId_].status == BidStatus.Claimed) {
             revert Bid_WrongState(lotId_, bidId_);
         }
-    }
-
-    // ========== NOT IMPLEMENTED ========== //
-
-    function _purchase(
-        uint96,
-        uint256,
-        bytes calldata
-    ) internal pure override returns (uint256, bytes memory) {
-        revert Auction_NotImplemented();
     }
 }
