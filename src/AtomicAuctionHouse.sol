@@ -83,6 +83,7 @@ contract AtomicAuctionHouse is AuctionHouse, AtomicRouter {
 
     // ========== AUCTION MANAGEMENT ========== //
 
+    /// @inheritdoc AuctionHouse
     function _auction(
         uint96,
         RoutingParams calldata,
@@ -90,6 +91,16 @@ contract AtomicAuctionHouse is AuctionHouse, AtomicRouter {
     ) internal pure override returns (bool performedCallback) {
         // No additional logic for atomic auctions.
         // They cannot be prefunded.
+        return false;
+    }
+
+    /// @inheritdoc AuctionHouse
+    function _cancel(
+        uint96,
+        bytes calldata
+    ) internal pure override returns (bool performedCallback) {
+        // No additional logic for atomic auctions.
+        // They are not prefunded.
         return false;
     }
 
@@ -166,57 +177,41 @@ contract AtomicAuctionHouse is AuctionHouse, AtomicRouter {
             lotFees[params_.lotId].curated, lotFees[params_.lotId].curatorFee, payoutAmount
         );
 
-        // If not prefunded, collect payout from auction owner or callbacks contract, if not prefunded
-        // If prefunded, call the onPurchase callback
-        // TODO simplify prefunding code
-        if (routing.funding == 0) {
-            // If callbacks contract is configured to send base tokens, then source the payout from the callbacks contract
-            if (Callbacks.hasPermission(routing.callbacks, Callbacks.SEND_BASE_TOKENS_FLAG)) {
-                uint256 balanceBefore = routing.baseToken.balanceOf(address(this));
+        // If callbacks contract is configured to send base tokens, then source the payout from the callbacks contract
+        if (Callbacks.hasPermission(routing.callbacks, Callbacks.SEND_BASE_TOKENS_FLAG)) {
+            uint256 balanceBefore = routing.baseToken.balanceOf(address(this));
 
-                // The onPurchase callback is expected to transfer the base tokens
-                Callbacks.onPurchase(
-                    routing.callbacks,
-                    params_.lotId,
-                    msg.sender,
-                    amountLessFees,
-                    payoutAmount + curatorFeePayout,
-                    false,
-                    callbackData_
-                );
+            // The onPurchase callback is expected to transfer the base tokens
+            Callbacks.onPurchase(
+                routing.callbacks,
+                params_.lotId,
+                msg.sender,
+                amountLessFees,
+                payoutAmount + curatorFeePayout,
+                false,
+                callbackData_
+            );
 
-                // Check that the mid hook transferred the expected amount of payout tokens
-                if (
-                    routing.baseToken.balanceOf(address(this))
-                        < balanceBefore + payoutAmount + curatorFeePayout
-                ) {
-                    revert InvalidCallback();
-                }
+            // Check that the mid hook transferred the expected amount of payout tokens
+            if (
+                routing.baseToken.balanceOf(address(this))
+                    < balanceBefore + payoutAmount + curatorFeePayout
+            ) {
+                revert InvalidCallback();
             }
-            // Otherwise, transfer directly from the auction owner
-            // Still call the onPurchase callback to allow for custom logic
-            else {
-                Transfer.transferFrom(
-                    routing.baseToken,
-                    routing.seller,
-                    address(this),
-                    payoutAmount + curatorFeePayout,
-                    true
-                );
+        }
+        // Otherwise, transfer directly from the auction owner
+        // Still call the onPurchase callback to allow for custom logic
+        else {
+            Transfer.transferFrom(
+                routing.baseToken,
+                routing.seller,
+                address(this),
+                payoutAmount + curatorFeePayout,
+                true
+            );
 
-                // Call the onPurchase callback
-                Callbacks.onPurchase(
-                    routing.callbacks,
-                    params_.lotId,
-                    msg.sender,
-                    amountLessFees,
-                    payoutAmount + curatorFeePayout,
-                    true,
-                    callbackData_
-                );
-            }
-        } else {
-            // If the auction is prefunded, call the onPurchase callback
+            // Call the onPurchase callback
             Callbacks.onPurchase(
                 routing.callbacks,
                 params_.lotId,
@@ -226,13 +221,6 @@ contract AtomicAuctionHouse is AuctionHouse, AtomicRouter {
                 true,
                 callbackData_
             );
-
-            // Decrease the funding amount (if applicable)
-            // Check invariant
-            if (routing.funding < payoutAmount + curatorFeePayout) revert InsufficientFunding();
-            unchecked {
-                routing.funding -= payoutAmount + curatorFeePayout;
-            }
         }
 
         // Send payout to recipient

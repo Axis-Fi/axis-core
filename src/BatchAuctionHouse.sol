@@ -119,8 +119,6 @@ contract BatchAuctionHouse is AuctionHouse, BatchRouter {
 
     // ========== STATE VARIABLES ========== //
 
-    address internal immutable _PERMIT2;
-
     // ========== CONSTRUCTOR ========== //
 
     constructor(
@@ -173,6 +171,38 @@ contract BatchAuctionHouse is AuctionHouse, BatchRouter {
 
         // Return true to indicate that the callback was performed
         return true;
+    }
+
+    /// @inheritdoc AuctionHouse
+    function _cancel(
+        uint96 lotId_,
+        bytes calldata callbackData_
+    ) internal override returns (bool performedCallback) {
+        // No additional validation needed
+
+        // All batch auctions are prefunded
+        Routing storage routing = lotRouting[lotId_];
+        uint256 funding = routing.funding;
+
+        // Set to 0 before transfer to avoid re-entrancy
+        routing.funding = 0;
+
+        // Transfer the base tokens to the appropriate contract
+        Transfer.transfer(
+            routing.baseToken,
+            _getAddressGivenCallbackBaseTokenFlag(routing.callbacks, routing.seller),
+            funding,
+            false
+        );
+
+        // Call the callback to transfer the base token to the owner
+        Callbacks.onCancel(
+            routing.callbacks,
+            lotId_,
+            funding,
+            routing.callbacks.hasPermission(Callbacks.SEND_BASE_TOKENS_FLAG),
+            callbackData_
+        );
     }
 
     // ========== BID, REFUND, CLAIM ========== //

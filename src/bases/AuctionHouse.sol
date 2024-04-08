@@ -298,37 +298,29 @@ abstract contract AuctionHouse is WithModules, ReentrancyGuard, FeeManager {
         // Cancel the auction on the module
         _getModuleForId(lotId_).cancelAuction(lotId_);
 
-        // TODO shift prefunding code to `_cancel()`
-        // If the auction is prefunded and supported, transfer the remaining capacity to the seller
-        if (routing.funding > 0) {
-            uint256 funding = routing.funding;
+        // Call the implementation logic
+        bool performedCallback = _cancel(lotId_, callbackData_);
 
-            // Set to 0 before transfer to avoid re-entrancy
-            routing.funding = 0;
-
-            // Transfer the base tokens to the appropriate contract
-            Transfer.transfer(
-                routing.baseToken,
-                _getAddressGivenCallbackBaseTokenFlag(routing.callbacks, routing.seller),
-                funding,
-                false
-            );
-
-            // Call the callback to transfer the base token to the owner
-            Callbacks.onCancel(
-                routing.callbacks,
-                lotId_,
-                funding,
-                routing.callbacks.hasPermission(Callbacks.SEND_BASE_TOKENS_FLAG),
-                callbackData_
-            );
-        } else {
+        // Call the onCancel callback with no prefunding if not already called
+        if (!performedCallback) {
             // Call the callback to notify of the cancellation
             Callbacks.onCancel(routing.callbacks, lotId_, 0, false, callbackData_);
         }
 
         emit AuctionCancelled(lotId_, routing.auctionReference);
     }
+
+    /// @notice     Implementation-specific logic for auction cancellation
+    /// @dev        Inheriting contracts can implement additional logic, such as:
+    ///             - Validation
+    ///             - Refunding
+    ///
+    /// @param      lotId_              The auction lot ID
+    /// @param      callbackData_       Calldata for the callback
+    /// @return     performedCallback   `true` if the implementing function calls the `onCancel` callback
+    function _cancel(
+        uint96 lotId_,
+        bytes calldata callbackData_) internal virtual returns (bool performedCallback);
 
     // ========== INTERNAL HELPER FUNCTIONS ========== //
 
