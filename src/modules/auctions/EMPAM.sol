@@ -100,7 +100,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
 
     /// @notice Constant for percentages
     /// @dev    1% = 1_000 or 1e3. 100% = 100_000 or 1e5.
-    uint24 internal constant _MIN_BID_PERCENT = 10; // 0.01%
+    uint24 internal constant _MIN_BID_PERCENT = 40; // 0.04%, or a max of 2,500 winning bids
 
     /// @notice     Auction-specific data for a lot
     mapping(uint96 lotId => AuctionData) public auctionData;

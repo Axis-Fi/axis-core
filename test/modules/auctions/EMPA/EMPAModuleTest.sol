@@ -26,7 +26,7 @@ abstract contract EmpaModuleTest is Test, Permit2User {
     uint48 internal constant _DURATION = 1 days;
     uint96 internal constant _MIN_PRICE = 1e18;
     uint24 internal constant _MIN_FILL_PERCENT = 25_000; // 25%
-    uint24 internal constant _MIN_BID_PERCENT = 10; // 0.01%
+    uint24 internal constant _MIN_BID_PERCENT = 40; // 0.04%
     /// @dev Re-calculated by _updateMinBidSize()
     uint96 internal _minBidSize;
     /// @dev Re-calculated by _updateMinBidAmount()

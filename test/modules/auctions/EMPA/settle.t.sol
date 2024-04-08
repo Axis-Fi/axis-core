@@ -763,7 +763,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         // Create more bids that will not be filled
         // Lower price, otherwise they will be filled first due to ordering
         for (uint256 i; i < 1000; i++) {
-            _createBid(19e14, 1e15);
+            _createBid(8e15, 5e15);
         }
 
         // Marginal price: 2
