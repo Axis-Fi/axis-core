@@ -145,4 +145,9 @@ library MaxPriorityQueue {
     function getNumBids(Queue storage self) internal view returns (uint256) {
         return self.numBids;
     }
+
+    /// @notice Return true if the queue is empty.
+    function isEmpty(Queue storage self) internal view returns (bool) {
+        return self.numBids == 0;
+    }
 }
