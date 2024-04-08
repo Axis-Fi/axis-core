@@ -3,19 +3,42 @@ pragma solidity 0.8.19;
 
 import {Auction, AuctionModule} from "src/modules/Auction.sol";
 
-/// @title  Atomic Auction Module
-/// @notice A base contract for atomic auctions
-abstract contract AtomicAuctionModule is AuctionModule {
-    // ========== SETUP ========== //
-
-    /// @inheritdoc Auction
-    function auctionType() external pure override returns (AuctionType) {
-        return AuctionType.Atomic;
-    }
-
+abstract contract AtomicAuction {
     // ========== ATOMIC AUCTIONS ========== //
 
-    /// @inheritdoc Auction
+    /// @notice     Purchase tokens from an auction lot
+    /// @dev        The implementing function should handle the following:
+    ///             - Validate the purchase parameters
+    ///             - Store the purchase data
+    ///
+    /// @param      lotId_             The lot id
+    /// @param      amount_         The amount of quote tokens to purchase
+    /// @param      auctionData_    The auction-specific data
+    /// @return     payout          The amount of payout tokens to receive
+    /// @return     auctionOutput   The auction-specific output
+    function purchase(
+        uint96 lotId_,
+        uint256 amount_,
+        bytes calldata auctionData_
+    ) external virtual returns (uint256 payout, bytes memory auctionOutput);
+
+    // ========== VIEW FUNCTIONS ========== //
+
+    function payoutFor(uint96 lotId_, uint256 amount_) public view virtual returns (uint256) {}
+
+    function priceFor(uint96 lotId_, uint256 payout_) public view virtual returns (uint256) {}
+
+    function maxPayout(uint96 lotId_) public view virtual returns (uint256) {}
+
+    function maxAmountAccepted(uint96 lotId_) public view virtual returns (uint256) {}
+}
+
+/// @title  Atomic Auction Module
+/// @notice A base contract for atomic auctions
+abstract contract AtomicAuctionModule is AtomicAuction, AuctionModule {
+    // ========== ATOMIC AUCTIONS ========== //
+
+    /// @inheritdoc AtomicAuction
     /// @dev        Implements a basic purchase function that:
     ///             - Calls implementation-specific validation logic
     ///             - Calls the auction module
@@ -69,35 +92,4 @@ abstract contract AtomicAuctionModule is AuctionModule {
         uint256 amount_,
         bytes calldata auctionData_
     ) internal virtual returns (uint256 payout, bytes memory auctionOutput);
-
-    // ========== NOT IMPLEMENTED ========== //
-
-    function bid(
-        uint96,
-        address,
-        address,
-        uint256,
-        bytes calldata
-    ) external virtual override returns (uint64) {
-        revert Auction_NotImplemented();
-    }
-
-    function refundBid(uint96, uint64, address) external virtual override returns (uint256) {
-        revert Auction_NotImplemented();
-    }
-
-    function claimBids(
-        uint96,
-        uint64[] calldata
-    ) external virtual override returns (BidClaim[] memory, bytes memory) {
-        revert Auction_NotImplemented();
-    }
-
-    function settle(uint96) external virtual override returns (Settlement memory, bytes memory) {
-        revert Auction_NotImplemented();
-    }
-
-    function claimProceeds(uint96) external virtual override returns (uint256, uint256, uint256) {
-        revert Auction_NotImplemented();
-    }
 }

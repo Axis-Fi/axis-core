@@ -5,11 +5,9 @@ import {Transfer} from "src/lib/Transfer.sol";
 import {FixedPointMathLib as Math} from "lib/solmate/src/utils/FixedPointMathLib.sol";
 
 import {AuctionHouse} from "src/bases/AuctionHouse.sol";
-
-import {Auction, AuctionModule} from "src/modules/Auction.sol";
-
+import {Auction} from "src/modules/Auction.sol";
+import {BatchAuction, BatchAuctionModule} from "src/modules/auctions/BatchAuctionModule.sol";
 import {Keycode, keycodeFromVeecode} from "src/modules/Modules.sol";
-
 import {ICallback} from "src/interfaces/ICallback.sol";
 import {Callbacks} from "src/lib/Callbacks.sol";
 
@@ -201,6 +199,8 @@ contract BatchAuctionHouse is AuctionHouse, BatchRouter {
             routing.callbacks.hasPermission(Callbacks.SEND_BASE_TOKENS_FLAG),
             callbackData_
         );
+
+        return true;
     }
 
     // ========== BID, REFUND, CLAIM ========== //
@@ -220,7 +220,7 @@ contract BatchAuctionHouse is AuctionHouse, BatchRouter {
 
         // Record the bid on the auction module
         // The module will determine if the bid is valid - minimum bid size, minimum price, auction status, etc
-        bidId = _getModuleForId(params_.lotId).bid(
+        bidId = _getBatchModuleForId(params_.lotId).bid(
             params_.lotId, msg.sender, params_.referrer, params_.amount, params_.auctionData
         );
 
@@ -262,7 +262,7 @@ contract BatchAuctionHouse is AuctionHouse, BatchRouter {
             msg.sender,
             // Refund the bid on the auction module
             // The auction module is responsible for validating the bid and authorizing the caller
-            _getModuleForId(lotId_).refundBid(lotId_, bidId_, msg.sender),
+            _getBatchModuleForId(lotId_).refundBid(lotId_, bidId_, msg.sender),
             false
         );
 
@@ -280,8 +280,8 @@ contract BatchAuctionHouse is AuctionHouse, BatchRouter {
 
         // Claim the bids on the auction module
         // The auction module is responsible for validating the bid and authorizing the caller
-        (Auction.BidClaim[] memory bidClaims, bytes memory auctionOutput) =
-            _getModuleForId(lotId_).claimBids(lotId_, bidIds_);
+        (BatchAuction.BidClaim[] memory bidClaims, bytes memory auctionOutput) =
+            _getBatchModuleForId(lotId_).claimBids(lotId_, bidIds_);
 
         // Load routing data for the lot
         Routing storage routing = lotRouting[lotId_];
@@ -293,7 +293,7 @@ contract BatchAuctionHouse is AuctionHouse, BatchRouter {
         // Iterate through the bid claims and handle each one
         uint256 bidClaimsLen = bidClaims.length;
         for (uint256 i = 0; i < bidClaimsLen; i++) {
-            Auction.BidClaim memory bidClaim = bidClaims[i];
+            BatchAuction.BidClaim memory bidClaim = bidClaims[i];
 
             // If payout is greater than zero, then the bid was filled.
             // Otherwise, it was not and the bidder is refunded the paid amount.
@@ -343,13 +343,14 @@ contract BatchAuctionHouse is AuctionHouse, BatchRouter {
 
         // Settle the lot on the auction module and get the winning bids
         // Reverts if the auction cannot be settled yet
-        AuctionModule module = _getModuleForId(lotId_);
+        BatchAuctionModule module = _getBatchModuleForId(lotId_);
 
         // Store the capacity before settling
         uint256 capacity = module.remainingCapacity(lotId_);
 
         // Settle the auction
-        (Auction.Settlement memory settlement, bytes memory auctionOutput) = module.settle(lotId_);
+        (BatchAuction.Settlement memory settlement, bytes memory auctionOutput) =
+            module.settle(lotId_);
 
         // Check if the auction settled
         // If so, calculate fees, handle partial bid, transfer proceeds + (possible) refund to seller, and curator fee
@@ -446,7 +447,7 @@ contract BatchAuctionHouse is AuctionHouse, BatchRouter {
 
         // Call auction module to validate and update data
         (uint256 purchased_, uint256 sold_, uint256 payoutSent_) =
-            _getModuleForId(lotId_).claimProceeds(lotId_);
+            _getBatchModuleForId(lotId_).claimProceeds(lotId_);
 
         // Load data for the lot
         Routing storage routing = lotRouting[lotId_];
@@ -486,5 +487,11 @@ contract BatchAuctionHouse is AuctionHouse, BatchRouter {
         Callbacks.onClaimProceeds(
             routing.callbacks, lotId_, totalInLessFees, prefundingRefund, callbackData_
         );
+    }
+
+    // ========== INTERNAL FUNCTIONS ========== //
+
+    function _getBatchModuleForId(uint96 lotId_) internal view returns (BatchAuctionModule) {
+        return BatchAuctionModule(address(_getModuleForId(lotId_)));
     }
 }

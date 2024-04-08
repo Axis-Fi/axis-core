@@ -22,13 +22,6 @@ abstract contract Auction {
 
     // ========== DATA STRUCTURES ========== //
 
-    /// @notice     The type of auction lot
-    /// @dev        Auction modules specify their type in the `auctionType()` function
-    enum AuctionType {
-        Atomic,
-        Batch
-    }
-
     /// @notice     Core data for an auction lot
     ///
     /// @param      start               The timestamp when the auction starts
@@ -39,8 +32,6 @@ abstract contract Auction {
     /// @param      capacity            The capacity of the lot
     /// @param      sold                The amount of base tokens sold
     /// @param      purchased           The amount of quote tokens purchased
-    /// @param      partialPayout       The amount of partial payout (in base tokens)
-    // TODO pack slots
     struct Lot {
         uint48 start; // 6 +
         uint48 conclusion; //
@@ -50,7 +41,6 @@ abstract contract Auction {
         uint256 capacity;
         uint256 sold;
         uint256 purchased;
-        uint256 partialPayout;
     }
 
     /// @notice     Parameters when creating an auction lot
@@ -68,26 +58,6 @@ abstract contract Auction {
         bytes implParams;
     }
 
-    /// @dev Only used in memory so doesn't need to be packed
-    struct Settlement {
-        uint256 totalIn;
-        uint256 totalOut;
-        address pfBidder;
-        address pfReferrer;
-        uint256 pfRefund;
-        uint256 pfPayout;
-        bytes auctionOutput;
-    }
-
-    /// @dev Only used in memory so doesn't need to be packed
-    // TODO shift to batch
-    struct BidClaim {
-        address bidder;
-        address referrer;
-        uint256 paid;
-        uint256 payout;
-    }
-
     // ========= STATE ========== //
 
     /// @notice Minimum auction duration in seconds
@@ -99,101 +69,6 @@ abstract contract Auction {
 
     /// @notice General information pertaining to auction lots
     mapping(uint96 id => Lot lot) public lotData;
-
-    // ========== ATOMIC AUCTIONS ========== //
-
-    /// @notice     Purchase tokens from an auction lot
-    /// @dev        The implementing function should handle the following:
-    ///             - Validate the purchase parameters
-    ///             - Store the purchase data
-    ///
-    /// @param      lotId_             The lot id
-    /// @param      amount_         The amount of quote tokens to purchase
-    /// @param      auctionData_    The auction-specific data
-    /// @return     payout          The amount of payout tokens to receive
-    /// @return     auctionOutput   The auction-specific output
-    function purchase(
-        uint96 lotId_,
-        uint256 amount_,
-        bytes calldata auctionData_
-    ) external virtual returns (uint256 payout, bytes memory auctionOutput);
-
-    // ========== BATCH AUCTIONS ========== //
-
-    /// @notice     Bid on an auction lot
-    /// @dev        The implementing function should handle the following:
-    ///             - Validate the bid parameters
-    ///             - Store the bid data
-    ///
-    /// @param      lotId_          The lot id
-    /// @param      bidder_         The bidder of the purchased tokens
-    /// @param      referrer_       The referrer of the bid
-    /// @param      amount_         The amount of quote tokens to bid
-    /// @param      auctionData_    The auction-specific data
-    function bid(
-        uint96 lotId_,
-        address bidder_,
-        address referrer_,
-        uint256 amount_,
-        bytes calldata auctionData_
-    ) external virtual returns (uint64 bidId);
-
-    /// @notice     Refund a bid
-    /// @dev        The implementing function should handle the following:
-    ///             - Validate the bid parameters
-    ///             - Authorize `caller_`
-    ///             - Update the bid data
-    ///
-    /// @param      lotId_      The lot id
-    /// @param      bidId_      The bid id
-    /// @param      caller_     The caller
-    /// @return     refund   The amount of quote tokens to refund
-    function refundBid(
-        uint96 lotId_,
-        uint64 bidId_,
-        address caller_
-    ) external virtual returns (uint256 refund);
-
-    /// @notice     Claim multiple bids
-    /// @dev        The implementing function should handle the following:
-    ///             - Validate the bid parameters
-    ///             - Update the bid data
-    ///
-    /// @param      lotId_          The lot id
-    /// @param      bidIds_         The bid ids
-    /// @return     bidClaims       The bid claim data
-    /// @return     auctionOutput   The auction-specific output
-    function claimBids(
-        uint96 lotId_,
-        uint64[] calldata bidIds_
-    ) external virtual returns (BidClaim[] memory bidClaims, bytes memory auctionOutput);
-
-    /// @notice     Settle a batch auction lot with on-chain storage and settlement
-    /// @dev        The implementing function should handle the following:
-    ///             - Validate the lot parameters
-    ///             - Determine the winning bids
-    ///             - Update the lot data
-    ///
-    /// @param      lotId_          The lot id
-    /// @return     settlement      The settlement data
-    function settle(uint96 lotId_)
-        external
-        virtual
-        returns (Settlement memory settlement, bytes memory auctionOutput);
-
-    /// @notice     Claim the seller proceeds from a settled auction lot
-    /// @dev        The implementing function should handle the following:
-    ///             - Validate the lot parameters
-    ///             - Update the lot data
-    ///
-    /// @param      lotId_          The lot id
-    /// @return     purchased       The amount of quote tokens purchased
-    /// @return     sold            The amount of base tokens sold
-    /// @return     payoutSent      The amount of base tokens that have already been paid out
-    function claimProceeds(uint96 lotId_)
-        external
-        virtual
-        returns (uint256 purchased, uint256 sold, uint256 payoutSent);
 
     // ========== AUCTION MANAGEMENT ========== //
 
@@ -220,14 +95,6 @@ abstract contract Auction {
     function cancelAuction(uint96 lotId_) external virtual;
 
     // ========== AUCTION INFORMATION ========== //
-
-    function payoutFor(uint96 lotId_, uint256 amount_) public view virtual returns (uint256) {}
-
-    function priceFor(uint96 lotId_, uint256 payout_) public view virtual returns (uint256) {}
-
-    function maxPayout(uint96 lotId_) public view virtual returns (uint256) {}
-
-    function maxAmountAccepted(uint96 lotId_) public view virtual returns (uint256) {}
 
     /// @notice     Returns whether the auction is currently accepting bids or purchases
     /// @dev        The implementing function should handle the following:
@@ -263,11 +130,6 @@ abstract contract Auction {
     /// @param      lotId_  The lot id
     /// @return     bool    Whether or not the capacity is in quote tokens
     function capacityInQuote(uint96 lotId_) external view virtual returns (bool);
-
-    /// @notice     Get the type of an auction
-    ///
-    /// @return     AuctionType     The type of auction
-    function auctionType() external pure virtual returns (AuctionType);
 }
 
 abstract contract AuctionModule is Auction, Module {

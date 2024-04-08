@@ -5,9 +5,8 @@ import {Transfer} from "src/lib/Transfer.sol";
 
 import {AuctionHouse} from "src/bases/AuctionHouse.sol";
 import {Auction} from "src/modules/Auction.sol";
-
+import {AtomicAuctionModule} from "src/modules/auctions/AtomicAuctionModule.sol";
 import {Keycode, keycodeFromVeecode} from "src/modules/Modules.sol";
-
 import {ICallback} from "src/interfaces/ICallback.sol";
 import {Callbacks} from "src/lib/Callbacks.sol";
 
@@ -153,9 +152,8 @@ contract AtomicAuctionHouse is AuctionHouse, AtomicRouter {
 
         // Send purchase to auction house and get payout plus any extra output
         bytes memory auctionOutput;
-        (payoutAmount, auctionOutput) = _getModuleForId(params_.lotId).purchase(
-            params_.lotId, amountLessFees, params_.auctionData
-        );
+        (payoutAmount, auctionOutput) = AtomicAuctionModule(address(_getModuleForId(params_.lotId)))
+            .purchase(params_.lotId, amountLessFees, params_.auctionData);
 
         // Check that payout is at least minimum amount out
         // @dev Moved the slippage check from the auction to the AuctionHouse to allow different routing and purchase logic
