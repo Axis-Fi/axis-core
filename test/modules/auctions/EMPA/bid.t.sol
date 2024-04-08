@@ -278,20 +278,24 @@ contract EmpaModuleBidTest is EmpaModuleTest {
         uint96 amountIn,
         uint96 amountOut
     ) public {
-        vm.assume(amountIn >= 1e6 && amountOut >= 1e6);
+        vm.assume(amountIn >= 1e6 && amountOut >= 1e18);
+        uint256 baseScale = 1e18;
+
         console2.log("amountIn", amountIn);
         console2.log("amountOut", amountOut);
+        console2.log("bid price", Math.mulDivUp(uint256(amountIn), baseScale, uint256(amountOut)));
 
         // Calculate a marginal price less than the amountIn
-        uint256 price = Math.mulDivUp(uint256(amountIn) * 4 / 5, 1e18, uint256(amountOut));
-        console2.log("price", price);
+        uint256 price = Math.mulDivUp(uint256(amountIn) * 4 / 5, baseScale, uint256(amountOut));
+        console2.log("marginal price", price);
 
         // Calculate the payout from the amountIn and price
-        uint256 payout = Math.mulDivDown(uint256(amountIn), 1e18, price);
+        uint256 payout = Math.mulDivDown(uint256(amountIn), baseScale, price);
+        uint256 expectedPayout = uint256(amountOut) * 5 / 4;
         console2.log("payout", payout);
-        console2.log("price diff * amountOut", uint256(amountOut) * 5 / 4);
+        console2.log("expectedPayout", expectedPayout);
 
-        // Bid payout must be <= price diff * amountOut when price is above marginal price
-        assertLe(payout, uint256(amountOut) * 5 / 4, "payout <= amountOut");
+        // Bid payout must be <= expected payout when price is above marginal price
+        assertLe(payout, expectedPayout, "payout > expected payout");
     }
 }
