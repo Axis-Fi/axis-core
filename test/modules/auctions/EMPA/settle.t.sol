@@ -940,7 +940,11 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         // Validate auction data
         EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
         assertEq(auctionData.marginalPrice, _expectedMarginalPrice, "marginalPrice");
-        assertEq(uint8(auctionData.status), uint8(Auction.Status.Settled), "status");
+        assertEq(
+            uint8(auctionData.status),
+            uint8(EncryptedMarginalPriceAuctionModule.LotStatus.Settled),
+            "status"
+        );
 
         // Assert settlement
         _assertSettlement(settlement, auctionOutput);
@@ -964,7 +968,11 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         // Validate auction data
         EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
         assertEq(auctionData.marginalPrice, _expectedMarginalPrice, "marginalPrice");
-        assertEq(uint8(auctionData.status), uint8(Auction.Status.Settled), "status");
+        assertEq(
+            uint8(auctionData.status),
+            uint8(EncryptedMarginalPriceAuctionModule.LotStatus.Settled),
+            "status"
+        );
 
         // Assert settlement
         _assertSettlement(settlement, auctionOutput);
@@ -988,7 +996,11 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         // Validate auction data
         EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
         assertEq(auctionData.marginalPrice, _expectedMarginalPrice, "marginalPrice");
-        assertEq(uint8(auctionData.status), uint8(Auction.Status.Settled), "status");
+        assertEq(
+            uint8(auctionData.status),
+            uint8(EncryptedMarginalPriceAuctionModule.LotStatus.Settled),
+            "status"
+        );
 
         // Assert settlement
         _assertSettlement(settlement, auctionOutput);
@@ -1010,7 +1022,11 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         // Validate auction data
         EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
         assertEq(auctionData.marginalPrice, _expectedMarginalPrice, "marginalPrice");
-        assertEq(uint8(auctionData.status), uint8(Auction.Status.Settled), "status");
+        assertEq(
+            uint8(auctionData.status),
+            uint8(EncryptedMarginalPriceAuctionModule.LotStatus.Settled),
+            "status"
+        );
 
         // Assert settlement
         _assertSettlement(settlement, auctionOutput);
@@ -1034,7 +1050,11 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         // Validate auction data
         EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
         assertEq(auctionData.marginalPrice, _expectedMarginalPrice, "marginalPrice");
-        assertEq(uint8(auctionData.status), uint8(Auction.Status.Settled), "status");
+        assertEq(
+            uint8(auctionData.status),
+            uint8(EncryptedMarginalPriceAuctionModule.LotStatus.Settled),
+            "status"
+        );
 
         // Assert settlement
         _assertSettlement(settlement, auctionOutput);
@@ -1058,7 +1078,11 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         // Validate auction data
         EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
         assertEq(auctionData.marginalPrice, _expectedMarginalPrice, "marginalPrice");
-        assertEq(uint8(auctionData.status), uint8(Auction.Status.Settled), "status");
+        assertEq(
+            uint8(auctionData.status),
+            uint8(EncryptedMarginalPriceAuctionModule.LotStatus.Settled),
+            "status"
+        );
 
         // Assert settlement
         _assertSettlement(settlement, auctionOutput);
@@ -1080,7 +1104,11 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         // Validate auction data
         EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
         assertEq(auctionData.marginalPrice, _expectedMarginalPrice, "marginalPrice");
-        assertEq(uint8(auctionData.status), uint8(Auction.Status.Settled), "status");
+        assertEq(
+            uint8(auctionData.status),
+            uint8(EncryptedMarginalPriceAuctionModule.LotStatus.Settled),
+            "status"
+        );
 
         // Assert settlement
         _assertSettlement(settlement, auctionOutput);
@@ -1104,7 +1132,11 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         // Validate auction data
         EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
         assertEq(auctionData.marginalPrice, _expectedMarginalPrice, "marginalPrice");
-        assertEq(uint8(auctionData.status), uint8(Auction.Status.Settled), "status");
+        assertEq(
+            uint8(auctionData.status),
+            uint8(EncryptedMarginalPriceAuctionModule.LotStatus.Settled),
+            "status"
+        );
 
         // Assert settlement
         _assertSettlement(settlement, auctionOutput);
@@ -1128,7 +1160,11 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         // Validate auction data
         EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
         assertEq(auctionData.marginalPrice, _expectedMarginalPrice, "marginalPrice");
-        assertEq(uint8(auctionData.status), uint8(Auction.Status.Settled), "status");
+        assertEq(
+            uint8(auctionData.status),
+            uint8(EncryptedMarginalPriceAuctionModule.LotStatus.Settled),
+            "status"
+        );
 
         // Assert settlement
         _assertSettlement(settlement, auctionOutput);
@@ -1150,7 +1186,11 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         // Validate auction data
         EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
         assertEq(auctionData.marginalPrice, _expectedMarginalPrice, "marginalPrice");
-        assertEq(uint8(auctionData.status), uint8(Auction.Status.Settled), "status");
+        assertEq(
+            uint8(auctionData.status),
+            uint8(EncryptedMarginalPriceAuctionModule.LotStatus.Settled),
+            "status"
+        );
 
         // Assert settlement
         _assertSettlement(settlement, auctionOutput);
@@ -1174,7 +1214,11 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         // Validate auction data
         EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
         assertEq(auctionData.marginalPrice, _expectedMarginalPrice, "marginalPrice");
-        assertEq(uint8(auctionData.status), uint8(Auction.Status.Settled), "status");
+        assertEq(
+            uint8(auctionData.status),
+            uint8(EncryptedMarginalPriceAuctionModule.LotStatus.Settled),
+            "status"
+        );
 
         // Assert settlement
         _assertSettlement(settlement, auctionOutput);
@@ -1198,7 +1242,11 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         // Validate auction data
         EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
         assertEq(auctionData.marginalPrice, _expectedMarginalPrice, "marginalPrice");
-        assertEq(uint8(auctionData.status), uint8(Auction.Status.Settled), "status");
+        assertEq(
+            uint8(auctionData.status),
+            uint8(EncryptedMarginalPriceAuctionModule.LotStatus.Settled),
+            "status"
+        );
 
         // Assert settlement
         _assertSettlement(settlement, auctionOutput);
@@ -1223,7 +1271,11 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         // Validate auction data
         EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
         assertEq(auctionData.marginalPrice, _expectedMarginalPrice, "marginalPrice");
-        assertEq(uint8(auctionData.status), uint8(Auction.Status.Settled), "status");
+        assertEq(
+            uint8(auctionData.status),
+            uint8(EncryptedMarginalPriceAuctionModule.LotStatus.Settled),
+            "status"
+        );
 
         // Assert settlement
         _assertSettlement(settlement, auctionOutput);

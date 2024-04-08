@@ -9,6 +9,13 @@ import {BatchAuctionModule} from "src/modules/auctions/BatchAuctionModule.sol";
 import {Auction, AuctionModule} from "src/modules/Auction.sol";
 
 contract MockBatchAuctionModule is BatchAuctionModule {
+    enum LotStatus {
+        Created,
+        Decrypted,
+        Settled,
+        Claimed
+    }
+
     enum BidStatus {
         Submitted,
         Decrypted,
@@ -40,7 +47,7 @@ contract MockBatchAuctionModule is BatchAuctionModule {
 
     mapping(uint96 lotId => Settlement) public lotSettlements;
 
-    mapping(uint96 lotId => Auction.Status) public lotStatus;
+    mapping(uint96 lotId => LotStatus) public lotStatus;
 
     mapping(uint96 => bool) public settled;
 
@@ -122,14 +129,14 @@ contract MockBatchAuctionModule is BatchAuctionModule {
 
     function _settle(uint96 lotId_) internal override returns (Settlement memory, bytes memory) {
         // Update status
-        lotStatus[lotId_] = Auction.Status.Settled;
+        lotStatus[lotId_] = LotStatus.Settled;
 
         return (lotSettlements[lotId_], "");
     }
 
     function _claimProceeds(uint96 lotId_) internal override returns (uint256, uint256, uint256) {
         // Update status
-        lotStatus[lotId_] = Auction.Status.Claimed;
+        lotStatus[lotId_] = LotStatus.Claimed;
 
         Lot storage lot = lotData[lotId_];
         return (lot.purchased, lot.sold, lot.partialPayout);
@@ -166,21 +173,21 @@ contract MockBatchAuctionModule is BatchAuctionModule {
 
     function _revertIfLotSettled(uint96 lotId_) internal view virtual override {
         // Check that the lot has not been settled
-        if (lotStatus[lotId_] == Auction.Status.Settled) {
+        if (lotStatus[lotId_] == LotStatus.Settled) {
             revert Auction.Auction_MarketNotActive(lotId_);
         }
     }
 
     function _revertIfLotNotSettled(uint96 lotId_) internal view virtual override {
         // Check that the lot has been settled
-        if (lotStatus[lotId_] != Auction.Status.Settled) {
+        if (lotStatus[lotId_] != LotStatus.Settled) {
             revert Auction.Auction_InvalidParams();
         }
     }
 
     function _revertIfLotProceedsClaimed(uint96 lotId_) internal view virtual override {
         // Check that the lot has not been claimed
-        if (lotStatus[lotId_] == Auction.Status.Claimed) {
+        if (lotStatus[lotId_] == LotStatus.Claimed) {
             revert Auction.Auction_InvalidParams();
         }
     }
