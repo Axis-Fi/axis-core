@@ -194,8 +194,8 @@ abstract contract Auctioneer is WithModules, ReentrancyGuard {
             lotId = lotCounter++;
 
             // Call module auction function to store implementation-specific data
-            (lotCapacity) =
-                auctionModule.auction(lotId, params_, quoteTokenDecimals, baseTokenDecimals);
+            // (lotCapacity) =
+            //     auctionModule.auction(lotId, params_, quoteTokenDecimals, baseTokenDecimals);
             routing.auctionReference = auctionModule.VEECODE();
 
             // Prefunding is required for batch auctions

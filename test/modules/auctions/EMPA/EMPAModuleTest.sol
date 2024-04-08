@@ -177,9 +177,9 @@ abstract contract EmpaModuleTest is Test, Permit2User {
         _;
     }
 
-    function _createAuctionLot() internal returns (uint256 capacity) {
+    function _createAuctionLot() internal {
         vm.prank(address(_auctionHouse));
-        return _module.auction(_lotId, _auctionParams, _quoteTokenDecimals, _baseTokenDecimals);
+        _module.auction(_lotId, _auctionParams, _quoteTokenDecimals, _baseTokenDecimals);
     }
 
     modifier givenLotIsCreated() {
