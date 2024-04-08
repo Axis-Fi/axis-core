@@ -5,7 +5,7 @@ pragma solidity 0.8.19;
 import {Veecode, toKeycode, wrapVeecode} from "src/modules/Modules.sol";
 
 // Auctions
-import {Auction, AuctionModule} from "src/modules/Auction.sol";
+import {AuctionModule} from "src/modules/Auction.sol";
 import {AtomicAuctionModule} from "src/modules/auctions/AtomicAuctionModule.sol";
 
 contract MockAtomicAuctionModule is AtomicAuctionModule {

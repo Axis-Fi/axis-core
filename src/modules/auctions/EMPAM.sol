@@ -2,7 +2,7 @@
 pragma solidity 0.8.19;
 
 /// Protocol dependencies
-import {AuctionModule, Auction} from "src/modules/Auction.sol";
+import {AuctionModule} from "src/modules/Auction.sol";
 import {Veecode, toVeecode} from "src/modules/Modules.sol";
 import {BatchAuctionModule} from "src/modules/auctions/BatchAuctionModule.sol";
 
