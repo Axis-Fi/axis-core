@@ -5,7 +5,15 @@ import {ERC20} from "lib/solmate/src/tokens/ERC20.sol";
 import {Transfer} from "src/lib/Transfer.sol";
 import {ReentrancyGuard} from "lib/solmate/src/utils/ReentrancyGuard.sol";
 
-import {fromKeycode, fromVeecode, keycodeFromVeecode, Keycode, Veecode, Module, WithModules} from "src/modules/Modules.sol";
+import {
+    fromKeycode,
+    fromVeecode,
+    keycodeFromVeecode,
+    Keycode,
+    Veecode,
+    Module,
+    WithModules
+} from "src/modules/Modules.sol";
 import {FeeManager} from "src/bases/FeeManager.sol";
 
 import {Auction, AuctionModule} from "src/modules/Auction.sol";
@@ -320,7 +328,8 @@ abstract contract AuctionHouse is WithModules, ReentrancyGuard, FeeManager {
     /// @return     performedCallback   `true` if the implementing function calls the `onCancel` callback
     function _cancel(
         uint96 lotId_,
-        bytes calldata callbackData_) internal virtual returns (bool performedCallback);
+        bytes calldata callbackData_
+    ) internal virtual returns (bool performedCallback);
 
     // ========== INTERNAL HELPER FUNCTIONS ========== //
 

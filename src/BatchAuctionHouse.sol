@@ -8,9 +8,7 @@ import {AuctionHouse} from "src/bases/AuctionHouse.sol";
 
 import {Auction, AuctionModule} from "src/modules/Auction.sol";
 
-import {
-    Keycode, keycodeFromVeecode, WithModules
-} from "src/modules/Modules.sol";
+import {Keycode, keycodeFromVeecode, WithModules} from "src/modules/Modules.sol";
 
 import {ICallback} from "src/interfaces/ICallback.sol";
 import {Callbacks} from "src/lib/Callbacks.sol";

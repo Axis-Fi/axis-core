@@ -7,9 +7,7 @@ import {FixedPointMathLib as Math} from "lib/solmate/src/utils/FixedPointMathLib
 import {AuctionHouse} from "src/bases/AuctionHouse.sol";
 import {Auction} from "src/modules/Auction.sol";
 
-import {
-    Keycode, keycodeFromVeecode, WithModules
-} from "src/modules/Modules.sol";
+import {Keycode, keycodeFromVeecode, WithModules} from "src/modules/Modules.sol";
 
 import {ICallback} from "src/interfaces/ICallback.sol";
 import {Callbacks} from "src/lib/Callbacks.sol";
