@@ -81,9 +81,6 @@ library MaxPriorityQueue {
         // Encode the bid
         bytes32 key = BidEncoding.encode(bidId_, amountIn_, minAmountOut_);
 
-        // TODO do we need to validate that the bid key is valid? our usage of the library should prevent this
-        // It would cost extra gas to validate. This is a very sensitive function that will potentially be called 1,000s of times in a single auction.
-
         // Verify that the bid is not already in the queue
         require(!contains(self, key), "bid already exists");
 
