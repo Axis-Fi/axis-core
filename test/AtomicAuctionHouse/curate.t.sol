@@ -3,9 +3,9 @@ pragma solidity 0.8.19;
 
 import {AuctionHouse} from "src/bases/AuctionHouse.sol";
 
-import {AuctionHouseTest} from "test/AtomicAuctionHouse/AuctionHouseTest.sol";
+import {AtomicAuctionHouseTest} from "test/AtomicAuctionHouse/AuctionHouseTest.sol";
 
-contract CurateTest is AuctionHouseTest {
+contract AtomicCurateTest is AtomicAuctionHouseTest {
     // ===== Modifiers ===== //
 
     modifier givenCuratorIsZero() {

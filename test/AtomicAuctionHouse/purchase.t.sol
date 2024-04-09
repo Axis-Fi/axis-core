@@ -7,9 +7,9 @@ import {AtomicAuctionHouse} from "src/AtomicAuctionHouse.sol";
 
 import {MockDerivativeModule} from "test/modules/derivatives/mocks/MockDerivativeModule.sol";
 
-import {AuctionHouseTest} from "test/AtomicAuctionHouse/AuctionHouseTest.sol";
+import {AtomicAuctionHouseTest} from "test/AtomicAuctionHouse/AuctionHouseTest.sol";
 
-contract PurchaseTest is AuctionHouseTest {
+contract AtomicPurchaseTest is AtomicAuctionHouseTest {
     uint256 internal constant _AMOUNT_IN = 2e18;
     uint256 internal constant _PAYOUT_MULTIPLIER = 50_000; // 50%
 

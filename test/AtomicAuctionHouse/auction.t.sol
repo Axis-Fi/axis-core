@@ -2,7 +2,7 @@
 pragma solidity 0.8.19;
 
 // Libraries
-import {AuctionHouseTest} from "test/AtomicAuctionHouse/AuctionHouseTest.sol";
+import {AtomicAuctionHouseTest} from "test/AtomicAuctionHouse/AuctionHouseTest.sol";
 import {ERC20} from "solmate/tokens/ERC20.sol";
 
 // Mocks
@@ -21,7 +21,7 @@ import {
     fromVeecode
 } from "src/modules/Modules.sol";
 
-contract AuctionTest is AuctionHouseTest {
+contract AtomicCreateAuctionTest is AtomicAuctionHouseTest {
     MockBatchAuctionModule internal _batchAuctionModule;
     Keycode internal _batchAuctionModuleKeycode;
 
@@ -31,10 +31,10 @@ contract AuctionTest is AuctionHouseTest {
     // ======= Modifiers =======//
 
     modifier whenAuctionTypeIsBatch() {
-        _routingParams.auctionType = _batchAuctionModuleKeycode;
-
         _batchAuctionModule = new MockBatchAuctionModule(address(_auctionHouse));
         _batchAuctionModuleKeycode = keycodeFromVeecode(_batchAuctionModule.VEECODE());
+
+        _routingParams.auctionType = _batchAuctionModuleKeycode;
 
         _auctionModule = _batchAuctionModule;
         _auctionModuleKeycode = _batchAuctionModuleKeycode;

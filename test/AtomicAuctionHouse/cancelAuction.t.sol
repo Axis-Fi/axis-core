@@ -5,9 +5,9 @@ pragma solidity 0.8.19;
 import {Auction} from "src/modules/Auction.sol";
 import {AuctionHouse} from "src/bases/AuctionHouse.sol";
 
-import {AuctionHouseTest} from "test/AtomicAuctionHouse/AuctionHouseTest.sol";
+import {AtomicAuctionHouseTest} from "test/AtomicAuctionHouse/AuctionHouseTest.sol";
 
-contract CancelAuctionTest is AuctionHouseTest {
+contract AtomicCancelAuctionTest is AtomicAuctionHouseTest {
     uint256 internal constant _PURCHASE_AMOUNT = 2e18;
     uint256 internal constant _PURCHASE_AMOUNT_OUT = 1e18;
     uint32 internal constant _PAYOUT_MULTIPLIER = 50_000; // 50%

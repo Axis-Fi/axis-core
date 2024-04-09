@@ -15,7 +15,7 @@ import {AtomicAuctionHouse} from "src/AtomicAuctionHouse.sol";
 // Modules
 import {Keycode, toKeycode} from "src/modules/Modules.sol";
 
-contract SetFeeTest is Test, Permit2User {
+contract AtomicSetFeeTest is Test, Permit2User {
     MockAtomicAuctionModule internal _mockAuctionModule;
 
     AtomicAuctionHouse internal _auctionHouse;
