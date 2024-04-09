@@ -15,12 +15,12 @@ import {MaxPriorityQueue, Queue, Bid as QueueBid} from "src/lib/MaxPriorityQueue
 /// @dev        This batch auction module allows for bids to be encrypted off-chain, then stored, decrypted and settled on-chain.
 ///
 ///             Note that the maximum bid amount is bounded by uint96.
-contract EncryptedMarginalPriceAuctionModule is AuctionModule {
+contract EncryptedMarginalPriceAuctionModule is BatchAuctionModule {
     using MaxPriorityQueue for Queue;
 
     // ========== ERRORS ========== //
     error Auction_InvalidKey();
-    error Auction_WrongState(uint96 lotId); // TODO shift into Auction?
+    error Auction_WrongState(uint96 lotId);
     error Bid_WrongState(uint96 lotId, uint64 bidId);
     error NotPermitted(address caller);
 
