@@ -86,7 +86,7 @@ contract CappedMerkleAllowlistTest is Test, Permit2User {
         // vm.writeFile("./bytecode/CappedMerkleAllowlistBatch88.bin", vm.toString(bytecode));
 
         bytes32 atomicSalt =
-            bytes32(0x079a53890d4fd435137b72052d92aeb2918666cc50eeb085685ff7595cd22837);
+            bytes32(0xc4593baf2f710bfc172b576140b3fdc420c18f8c5eed79407dd77ea042986371);
         vm.broadcast();
         _atomicAllowlist = new CappedMerkleAllowlist{salt: atomicSalt}(
             address(_atomicAuctionHouse),
@@ -104,7 +104,7 @@ contract CappedMerkleAllowlistTest is Test, Permit2User {
         );
 
         bytes32 batchSalt =
-            bytes32(0x079a53890d4fd435137b72052d92aeb2918666cc50eeb085685ff7595cd22837);
+            bytes32(0x1cb7a271aa2536ad06f1246cf64e56d66323cca283886a0ae6e13225ae85619d);
         vm.broadcast();
         _batchAllowlist = new CappedMerkleAllowlist{salt: batchSalt}(
             address(_batchAuctionHouse),
@@ -144,7 +144,7 @@ contract CappedMerkleAllowlistTest is Test, Permit2User {
     }
 
     modifier givenBatchOnCreate() {
-        vm.prank(address(_atomicAuctionHouse));
+        vm.prank(address(_batchAuctionHouse));
         _batchAllowlist.onCreate(
             _lotId,
             _SELLER,
