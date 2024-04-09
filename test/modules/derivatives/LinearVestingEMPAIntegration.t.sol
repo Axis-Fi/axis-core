@@ -36,6 +36,9 @@ contract LinearVestingEMPAIntegrationTest is BatchAuctionHouseTest {
     uint256 internal constant _BID_AMOUNT = 15e18;
     uint256 internal constant _BID_AMOUNT_OUT = 10e18; // Ensures that capacity is filled and the price is not adjusted
 
+    bytes32 internal constant _QUEUE_START =
+        bytes32(0x0000000000000000ffffffffffffffffffffffff000000000000000000000001);
+
     // ============ Modifiers ============ //
 
     modifier givenAuctionTypeIsEMPA() {
@@ -90,12 +93,12 @@ contract LinearVestingEMPAIntegrationTest is BatchAuctionHouseTest {
         address bidder_,
         uint256 amountIn_,
         uint256 amountOut_,
-        uint256 auctionPrivateKey_
+        uint256 bidPrivateKey_
     ) internal view returns (uint256) {
         // Format the amount out
         uint256 formattedAmountOut = _formatBid(amountOut_);
 
-        Point memory sharedSecretKey = ECIES.calcPubKey(_bidPublicKey, auctionPrivateKey_); // TODO is the use of the private key here correct?
+        Point memory sharedSecretKey = ECIES.calcPubKey(_auctionPublicKey, bidPrivateKey_);
         uint256 salt = uint256(keccak256(abi.encodePacked(lotId_, bidder_, uint96(amountIn_))));
         uint256 symmetricKey = uint256(keccak256(abi.encodePacked(sharedSecretKey.x, salt)));
 
@@ -108,7 +111,7 @@ contract LinearVestingEMPAIntegrationTest is BatchAuctionHouseTest {
         uint256 amountOut_
     ) internal view returns (bytes memory) {
         uint256 encryptedAmountOut =
-            _encryptBid(_lotId, bidder_, amountIn_, amountOut_, _AUCTION_PRIVATE_KEY);
+            _encryptBid(_lotId, bidder_, amountIn_, amountOut_, _BID_PRIVATE_KEY);
 
         return abi.encode(encryptedAmountOut, _bidPublicKey);
     }
@@ -141,7 +144,7 @@ contract LinearVestingEMPAIntegrationTest is BatchAuctionHouseTest {
     }
 
     function _submitPrivateKey() internal {
-        _empaModule.submitPrivateKey(_lotId, _AUCTION_PRIVATE_KEY, 0);
+        _empaModule.submitPrivateKey(_lotId, _AUCTION_PRIVATE_KEY, 0, new bytes32[](0));
     }
 
     modifier givenPrivateKeyIsSubmitted() {
@@ -150,7 +153,11 @@ contract LinearVestingEMPAIntegrationTest is BatchAuctionHouseTest {
     }
 
     function _decryptLot() internal {
-        _empaModule.decryptAndSortBids(_lotId, 10);
+        bytes32[] memory hints = new bytes32[](10);
+        for (uint256 i = 0; i < 10; i++) {
+            hints[i] = _QUEUE_START;
+        }
+        _empaModule.decryptAndSortBids(_lotId, 10, hints);
     }
 
     modifier givenLotIsDecrypted() {
@@ -308,7 +315,9 @@ contract LinearVestingEMPAIntegrationTest is BatchAuctionHouseTest {
         givenPrivateKeyIsSubmitted
     {
         // Decrypt bids
-        _empaModule.decryptAndSortBids(_lotId, 1);
+        bytes32[] memory hints = new bytes32[](1);
+        hints[0] = _QUEUE_START;
+        _empaModule.decryptAndSortBids(_lotId, 1, hints);
 
         // Check the auction
         EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData =

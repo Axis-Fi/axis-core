@@ -474,7 +474,11 @@ contract EncryptedMarginalPriceAuctionModule is BatchAuctionModule {
         _decryptAndSortBids(lotId_, num_, sortHints_);
     }
 
-    function _decryptAndSortBids(uint96 lotId_, uint64 num_, bytes32[] calldata sortHints_) internal {
+    function _decryptAndSortBids(
+        uint96 lotId_,
+        uint64 num_,
+        bytes32[] calldata sortHints_
+    ) internal {
         // Load next decrypt index and min bid size
         uint64 nextDecryptIndex = auctionData[lotId_].nextDecryptIndex;
 

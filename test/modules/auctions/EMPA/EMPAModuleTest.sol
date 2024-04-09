@@ -3,6 +3,7 @@ pragma solidity 0.8.19;
 
 // Libraries
 import {Test} from "forge-std/Test.sol";
+import {console2} from "forge-std/console2.sol";
 import {Point, ECIES} from "src/lib/ECIES.sol";
 import {FixedPointMathLib as Math} from "solady/utils/FixedPointMathLib.sol";
 
@@ -25,7 +26,7 @@ abstract contract EmpaModuleTest is Test, Permit2User {
     uint48 internal constant _DURATION = 1 days;
     uint256 internal constant _MIN_PRICE = 1e18;
     uint24 internal constant _MIN_FILL_PERCENT = 25_000; // 25%
-    uint24 internal constant _MIN_BID_PERCENT = 1000; // 1%
+    uint24 internal constant _MIN_BID_PERCENT = 40; // 0.04%
     /// @dev Re-calculated by _updateMinBidSize()
     uint256 internal _minBidSize;
     /// @dev Re-calculated by _updateMinBidAmount()
@@ -51,6 +52,9 @@ abstract contract EmpaModuleTest is Test, Permit2User {
 
     uint8 internal _quoteTokenDecimals = 18;
     uint8 internal _baseTokenDecimals = 18;
+
+    bytes32 internal constant _QUEUE_START =
+        bytes32(0x0000000000000000ffffffffffffffffffffffff000000000000000000000001);
 
     function setUp() public {
         vm.warp(1_000_000);
@@ -215,12 +219,12 @@ abstract contract EmpaModuleTest is Test, Permit2User {
         address bidder_,
         uint256 amountIn_,
         uint256 amountOut_,
-        uint256 auctionPrivateKey_
+        uint256 bidPrivateKey_
     ) internal view returns (uint256) {
         // Format the amount out
         uint256 formattedAmountOut = _formatBid(amountOut_);
 
-        Point memory sharedSecretKey = ECIES.calcPubKey(_bidPublicKey, auctionPrivateKey_); // TODO is the use of the private key here correct?
+        Point memory sharedSecretKey = ECIES.calcPubKey(_auctionPublicKey, bidPrivateKey_);
         uint256 salt = uint256(keccak256(abi.encodePacked(lotId_, bidder_, uint96(amountIn_))));
         uint256 symmetricKey = uint256(keccak256(abi.encodePacked(sharedSecretKey.x, salt)));
 
@@ -233,7 +237,7 @@ abstract contract EmpaModuleTest is Test, Permit2User {
         uint256 amountIn_,
         uint256 amountOut_
     ) internal view returns (uint256) {
-        return _encryptBid(lotId_, bidder_, amountIn_, amountOut_, _AUCTION_PRIVATE_KEY); // TODO is the use of the private key here correct?
+        return _encryptBid(lotId_, bidder_, amountIn_, amountOut_, _BID_PRIVATE_KEY);
     }
 
     function _createBidData(
@@ -292,7 +296,7 @@ abstract contract EmpaModuleTest is Test, Permit2User {
     }
 
     function _submitPrivateKey() internal {
-        _module.submitPrivateKey(_lotId, _AUCTION_PRIVATE_KEY, 0);
+        _module.submitPrivateKey(_lotId, _AUCTION_PRIVATE_KEY, 0, new bytes32[](0));
     }
 
     modifier givenPrivateKeyIsSubmitted() {
@@ -302,7 +306,21 @@ abstract contract EmpaModuleTest is Test, Permit2User {
 
     function _decryptLot() internal {
         EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
-        _module.decryptAndSortBids(_lotId, auctionData.nextBidId - 1);
+        uint256 numBids = auctionData.nextBidId - 1;
+        bytes32[] memory hints = new bytes32[](100);
+        for (uint256 i = 0; i < 100; i++) {
+            hints[i] = bytes32(0x0000000000000000ffffffffffffffffffffffff000000000000000000000001);
+        }
+        while (numBids > 0) {
+            uint256 gasStart = gasleft();
+            _module.decryptAndSortBids(_lotId, 100, hints);
+            console2.log("Gas used for decrypts: ", gasStart - gasleft());
+            if (numBids > 100) {
+                numBids -= 100;
+            } else {
+                numBids = 0;
+            }
+        }
     }
 
     modifier givenLotIsDecrypted() {
