@@ -430,46 +430,32 @@ abstract contract AuctionHouse is WithModules, ReentrancyGuard, FeeManager {
             feeData.curated, feeData.curatorFee, module.remainingCapacity(lotId_)
         );
 
-        // TODO shift to _curate()
-        // If the auction is pre-funded (required for batch auctions), transfer the fee amount from the seller
-        if (routing.funding > 0) {
-            // Increment the funding
-            // Cannot overflow, as capacity is bounded by uint96 and the curator fee has a maximum percentage
-            unchecked {
-                routing.funding += curatorFeePayout;
-            }
+        // Call the implementation-specific logic
+        (bool performedCallback) = _curate(lotId_, curatorFeePayout, callbackData_);
 
-            // If the callbacks contract is configured to send base tokens, then source the fee from the callbacks contract
-            // Otherwise, transfer from the auction owner
-            if (Callbacks.hasPermission(routing.callbacks, Callbacks.SEND_BASE_TOKENS_FLAG)) {
-                uint256 balanceBefore = routing.baseToken.balanceOf(address(this));
-
-                // The onCurate callback is expected to transfer the base tokens
-                Callbacks.onCurate(routing.callbacks, lotId_, curatorFeePayout, true, callbackData_);
-
-                // Check that the callback transferred the expected amount of base tokens
-                if (routing.baseToken.balanceOf(address(this)) < balanceBefore + curatorFeePayout) {
-                    revert InvalidCallback();
-                }
-            } else {
-                // Don't need to check for fee on transfer here because it was checked on auction creation
-                Transfer.transferFrom(
-                    routing.baseToken, routing.seller, address(this), curatorFeePayout, false
-                );
-
-                // Call the onCurate callback
-                Callbacks.onCurate(
-                    routing.callbacks, lotId_, curatorFeePayout, false, callbackData_
-                );
-            }
-        } else {
-            // If the auction is not pre-funded, call the onCurate callback
+        // Call onCurate if necessary
+        if (!performedCallback) {
             Callbacks.onCurate(routing.callbacks, lotId_, curatorFeePayout, false, callbackData_);
         }
 
         // Emit event that the lot is curated by the proposed curator
         emit Curated(lotId_, msg.sender);
     }
+
+    /// @notice     Implementation-specific logic for curation
+    /// @dev        Inheriting contracts can implement additional logic, such as:
+    ///             - Validation
+    ///             - Prefunding
+    ///
+    /// @param      lotId_              The auction lot ID
+    /// @param      curatorFeePayout_   The amount to pay the curator
+    /// @param      callbackData_       Calldata for the callback
+    /// @return     performedCallback   `true` if the implementing function calls the `onCurate` callback
+    function _curate(
+        uint96 lotId_,
+        uint256 curatorFeePayout_,
+        bytes calldata callbackData_
+    ) internal virtual returns (bool performedCallback);
 
     // ========== ADMIN FUNCTIONS ========== //
 

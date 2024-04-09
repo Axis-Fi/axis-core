@@ -235,4 +235,13 @@ contract AtomicAuctionHouse is AuctionHouse, AtomicRouter {
         // Emit event
         emit Purchase(params_.lotId, msg.sender, params_.referrer, params_.amount, payoutAmount);
     }
+
+    // ========== CURATION ========== //
+
+    /// @inheritdoc AuctionHouse
+    function _curate(uint96, uint256, bytes calldata) internal virtual override returns (bool) {
+        // No additional logic for atomic auctions.
+        // They are not prefunded.
+        return false;
+    }
 }

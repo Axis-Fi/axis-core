@@ -209,6 +209,45 @@ contract BatchAuctionHouse is AuctionHouse, BatchRouter {
         return true;
     }
 
+    // ========== CURATION ========== //
+
+    /// @inheritdoc AuctionHouse
+    function _curate(
+        uint96 lotId_,
+        uint256 curatorFeePayout_,
+        bytes calldata callbackData_
+    ) internal override returns (bool performedCallback) {
+        Routing storage routing = lotRouting[lotId_];
+
+        // Increment the funding
+        routing.funding += curatorFeePayout_;
+
+        // If the callbacks contract is configured to send base tokens, then source the fee from the callbacks contract
+        // Otherwise, transfer from the auction owner
+        if (Callbacks.hasPermission(routing.callbacks, Callbacks.SEND_BASE_TOKENS_FLAG)) {
+            uint256 balanceBefore = routing.baseToken.balanceOf(address(this));
+
+            // The onCurate callback is expected to transfer the base tokens
+            Callbacks.onCurate(routing.callbacks, lotId_, curatorFeePayout_, true, callbackData_);
+
+            // Check that the callback transferred the expected amount of base tokens
+            if (routing.baseToken.balanceOf(address(this)) < balanceBefore + curatorFeePayout_) {
+                revert InvalidCallback();
+            }
+        } else {
+            // Don't need to check for fee on transfer here because it was checked on auction creation
+            Transfer.transferFrom(
+                routing.baseToken, routing.seller, address(this), curatorFeePayout_, false
+            );
+
+            // Call the onCurate callback
+            Callbacks.onCurate(routing.callbacks, lotId_, curatorFeePayout_, false, callbackData_);
+        }
+
+        // Calls the callback
+        return true;
+    }
+
     // ========== BID, REFUND, CLAIM ========== //
 
     /// @inheritdoc BatchRouter

@@ -55,4 +55,10 @@ contract MockAuctionHouse is AuctionHouse {
         uint96 lotId_,
         bytes calldata callbackData_
     ) internal virtual override returns (bool performedCallback) {}
+
+    function _curate(
+        uint96 lotId_,
+        uint256 curatorFeePayout_,
+        bytes calldata callbackData_
+    ) internal virtual override returns (bool performedCallback) {}
 }
