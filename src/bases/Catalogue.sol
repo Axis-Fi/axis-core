@@ -98,11 +98,11 @@ abstract contract Catalogue {
         count = startId_ + count_ > maxLotId ? maxLotId - startId_ + 1 : count_;
     }
 
-    function getAuctionsBySeller(address seller_, uint96 startId_, uint96 count_)
-        external
-        view
-        returns (uint96[] memory)
-    {
+    function getAuctionsBySeller(
+        address seller_,
+        uint96 startId_,
+        uint96 count_
+    ) external view returns (uint96[] memory) {
         uint256 count = _validateRange(startId_, count_);
 
         // Iterate through the provided range and get the count of auctions owned by the seller in this range
@@ -124,14 +124,14 @@ abstract contract Catalogue {
             }
         }
 
-        return sellerLots;   
+        return sellerLots;
     }
 
-    function getAuctionsByQuoteToken(ERC20 quoteToken_, uint96 startId_, uint96 count_)
-        external
-        view
-        returns (uint96[] memory)
-    {
+    function getAuctionsByQuoteToken(
+        ERC20 quoteToken_,
+        uint96 startId_,
+        uint96 count_
+    ) external view returns (uint96[] memory) {
         uint256 count = _validateRange(startId_, count_);
 
         // Iterate through the provided range and get the count of auctions with the quoteToken in this range
@@ -156,11 +156,11 @@ abstract contract Catalogue {
         return quoteTokenLots;
     }
 
-    function getAuctionsByBaseToken(ERC20 baseToken_, uint96 startId_, uint96 count_)
-        external
-        view
-        returns (uint96[] memory)
-    {
+    function getAuctionsByBaseToken(
+        ERC20 baseToken_,
+        uint96 startId_,
+        uint96 count_
+    ) external view returns (uint96[] memory) {
         uint256 count = _validateRange(startId_, count_);
 
         // Iterate through the provided range and get the count of auctions with the baseToken in this range
@@ -185,11 +185,11 @@ abstract contract Catalogue {
         return baseTokenLots;
     }
 
-    function getAuctionsByType(Veecode auctionReference_, uint96 startId_, uint96 count_)
-        external
-        view
-        returns (uint96[] memory)
-    {
+    function getAuctionsByType(
+        Veecode auctionReference_,
+        uint96 startId_,
+        uint96 count_
+    ) external view returns (uint96[] memory) {
         uint256 count = _validateRange(startId_, count_);
 
         // Iterate through the provided range and get the count of auctions with the auctionReference in this range
@@ -214,7 +214,10 @@ abstract contract Catalogue {
         return auctionReferenceLots;
     }
 
-    function getLiveAuctions(uint96 startId_, uint96 count_) external view returns (uint96[] memory) {
+    function getLiveAuctions(
+        uint96 startId_,
+        uint96 count_
+    ) external view returns (uint96[] memory) {
         uint256 count = _validateRange(startId_, count_);
 
         // Iterate through the provided range and get the count of live auctions in this range

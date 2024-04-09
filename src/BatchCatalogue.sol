@@ -9,7 +9,6 @@ import {keycodeFromVeecode, Keycode} from "src/modules/Modules.sol";
 
 /// @notice Contract that provides view functions for Batch Auctions
 contract BatchCatalogue is Catalogue {
-
     // ========== CONSTRUCTOR ========== //
 
     constructor(address auctionHouse_) Catalogue(auctionHouse_) {}

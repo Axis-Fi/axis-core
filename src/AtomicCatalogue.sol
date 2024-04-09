@@ -9,7 +9,6 @@ import {keycodeFromVeecode, Keycode} from "src/modules/Modules.sol";
 
 /// @notice Contract that provides view functions for atomic Auctions
 contract AtomicCatalogue is Catalogue {
-
     // ========== CONSTRUCTOR ========== //
 
     constructor(address auctionHouse_) Catalogue(auctionHouse_) {}
@@ -66,8 +65,7 @@ contract AtomicCatalogue is Catalogue {
         uint256 maxAmount = module.maxAmountAccepted(lotId_);
 
         // Calculate fee estimate assuming there is a referrer and add to max amount
-        maxAmount +=
-            _calculateFeeEstimate(keycodeFromVeecode(routing.auctionReference), maxAmount);
+        maxAmount += _calculateFeeEstimate(keycodeFromVeecode(routing.auctionReference), maxAmount);
 
         return maxAmount;
     }
