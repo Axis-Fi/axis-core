@@ -40,8 +40,6 @@ contract PurchaseTest is AuctionHouseTest {
     uint256 internal _expectedProtocolFeesAllocated;
     uint256 internal _expectedReferrerFeesAllocated;
 
-    uint256 internal _expectedPrefunding;
-
     // ======== Modifiers ======== //
 
     modifier whenPurchaseReverts() {
@@ -248,7 +246,7 @@ contract PurchaseTest is AuctionHouseTest {
     function _assertPrefunding() internal {
         // Check funding amount
         AuctionHouse.Routing memory routing = _getLotRouting(_lotId);
-        assertEq(routing.funding, _expectedPrefunding, "mismatch on funding");
+        assertEq(routing.funding, 0, "mismatch on funding");
     }
 
     // ======== Tests ======== //

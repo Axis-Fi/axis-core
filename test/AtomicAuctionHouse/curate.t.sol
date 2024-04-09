@@ -18,8 +18,6 @@ contract CurateTest is AuctionHouseTest {
         _;
     }
 
-    // TODO curate to AuctionHouse
-
     // ===== Tests ===== //
 
     // [X] when the lot id is invalid
@@ -38,8 +36,7 @@ contract CurateTest is AuctionHouseTest {
     //  [X] it succeeds
     // [X] given the lot has not started
     //  [X] it succeeds
-    // [X] it succeeds
-    // [X] it caches the curator fee
+    // [X] it succeeds and it caches the curator fee
 
     function test_whenLotIdIsInvalid() public {
         // Expect revert

@@ -146,8 +146,8 @@ contract CancelAuctionTest is AuctionHouseTest {
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
         givenCuratorIsSet
-        givenCuratorFeeIsSet
         givenCuratorMaxFeeIsSet
+        givenCuratorFeeIsSet
         givenLotIsCreated
         givenCuratorHasApproved
         givenLotHasStarted
@@ -171,6 +171,8 @@ contract CancelAuctionTest is AuctionHouseTest {
         whenAtomicAuctionModuleIsInstalled
         givenLotIsCreated
         givenLotHasStarted
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenUserHasQuoteTokenBalance(_PURCHASE_AMOUNT)
         givenUserHasQuoteTokenAllowance(_PURCHASE_AMOUNT)
         givenPayoutMultiplier(_PAYOUT_MULTIPLIER)
@@ -187,6 +189,16 @@ contract CancelAuctionTest is AuctionHouseTest {
         // Check routing
         AuctionHouse.Routing memory lotRouting = _getLotRouting(_lotId);
         assertEq(lotRouting.funding, 0, "mismatch on funding");
+
+        // Check balances
+        assertEq(
+            _baseToken.balanceOf(_SELLER),
+            _LOT_CAPACITY - _PURCHASE_AMOUNT_OUT,
+            "seller: base token balance mismatch"
+        );
+        assertEq(
+            _baseToken.balanceOf(address(_auctionHouse)), 0, "contract: base token balance mismatch"
+        );
     }
 
     function test_givenCallback()

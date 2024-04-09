@@ -51,12 +51,12 @@ contract AuctionTest is AuctionHouseTest {
     // auction
     // [X] reverts when auction module is sunset
     // [X] reverts when auction module is not installed
-    // [X] reverts when auction type is not an auction module
+    // [X] reverts when auction type is not the keycode of an auction module
+    // [X] when the auction type is batch
     // [X] reverts when base token decimals are out of bounds
     // [X] reverts when quote token decimals are out of bounds
     // [X] reverts when base token is 0
     // [X] reverts when quote token is 0
-    // [ ] when the auction type is batch
     // [X] creates the auction lot
 
     function test_whenModuleNotInstalled_reverts() external whenAuctionTypeIsAtomic {
@@ -77,6 +77,22 @@ contract AuctionTest is AuctionHouseTest {
     {
         // Set the auction type to a derivative module
         _routingParams.auctionType = _derivativeModuleKeycode;
+
+        bytes memory err = abi.encodeWithSelector(AuctionHouse.InvalidParams.selector);
+        vm.expectRevert(err);
+
+        vm.prank(_SELLER);
+        _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
+    }
+
+    function test_whenAuctionTypeIncorrect_reverts()
+        external
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        whenDerivativeModuleIsInstalled
+    {
+        // Set the auction type to a derivative module
+        _routingParams.auctionType = _batchAuctionModuleKeycode;
 
         bytes memory err = abi.encodeWithSelector(AuctionHouse.InvalidParams.selector);
         vm.expectRevert(err);
@@ -387,6 +403,4 @@ contract AuctionTest is AuctionHouseTest {
         assertEq(baseToken_, address(_baseToken), "base token mismatch");
         assertEq(quoteToken_, address(_quoteToken), "quote token mismatch");
     }
-
-    // [ ] given the auction type is batch
 }
