@@ -87,12 +87,12 @@ contract EmpaModuleRefundBidTest is EmpaModuleTest {
         _module.refundBid(_lotId, _bidId, _BIDDER);
     }
 
-    function test_lotIsConcluded()
+    function test_lotSettlePeriodHasPassed()
         external
         givenLotIsCreated
         givenLotHasStarted
         givenBidIsCreated(2e18, 1e18)
-        givenLotHasConcluded
+        givenLotSettlePeriodHasPassed
     {
         // Call the function
         vm.prank(address(_auctionHouse));
@@ -108,6 +108,24 @@ contract EmpaModuleRefundBidTest is EmpaModuleTest {
 
         // Assert the refund amount
         assertEq(refundAmount, 2e18, "refund amount");
+    }
+
+    function test_lotIsConcluded_reverts()
+        external
+        givenLotIsCreated
+        givenLotHasStarted
+        givenBidIsCreated(2e18, 1e18)
+        givenLotHasConcluded
+    {
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(
+            EncryptedMarginalPriceAuctionModule.Auction_WrongState.selector, _lotId
+        );
+        vm.expectRevert(err);
+
+        // Call the function
+        vm.prank(address(_auctionHouse));
+        _module.refundBid(_lotId, _bidId, _BIDDER);
     }
 
     function test_lotIsCancelled_reverts() external givenLotIsCreated givenLotIsCancelled {

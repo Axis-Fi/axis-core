@@ -332,6 +332,11 @@ abstract contract EmpaModuleTest is Test, Permit2User {
         _;
     }
 
+    modifier givenLotSettlePeriodHasPassed() {
+        vm.warp(_start + _DURATION + 6 hours);
+        _;
+    }
+
     modifier givenLotProceedsAreClaimed() {
         vm.prank(address(_auctionHouse));
         _module.claimProceeds(_lotId);
