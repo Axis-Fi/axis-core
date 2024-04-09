@@ -7,9 +7,9 @@ import {BatchAuction} from "src/modules/auctions/BatchAuctionModule.sol";
 
 import {MockBatchAuctionModule} from "test/modules/Auction/MockBatchAuctionModule.sol";
 
-import {AuctionHouseTest} from "test/BatchAuctionHouse/AuctionHouseTest.sol";
+import {BatchAuctionHouseTest} from "test/BatchAuctionHouse/AuctionHouseTest.sol";
 
-contract ClaimProceedsTest is AuctionHouseTest {
+contract BatchClaimProceedsTest is BatchAuctionHouseTest {
     uint256 internal constant _BID_AMOUNT = 2e18;
     uint256 internal constant _BID_AMOUNT_OUT = 2e18;
 

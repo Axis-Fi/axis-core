@@ -5,9 +5,9 @@ import {AuctionHouse} from "src/bases/AuctionHouse.sol";
 import {Auction} from "src/modules/Auction.sol";
 import {BatchAuction} from "src/modules/auctions/BatchAuctionModule.sol";
 
-import {AuctionHouseTest} from "test/BatchAuctionHouse/AuctionHouseTest.sol";
+import {BatchAuctionHouseTest} from "test/BatchAuctionHouse/AuctionHouseTest.sol";
 
-contract RefundBidTest is AuctionHouseTest {
+contract BatchRefundBidTest is BatchAuctionHouseTest {
     uint256 internal constant _BID_AMOUNT = 1e18;
     bytes internal _auctionDataParams = abi.encode("");
 

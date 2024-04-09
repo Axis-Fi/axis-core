@@ -10,9 +10,9 @@ import {Auction} from "src/modules/Auction.sol";
 
 import {keycodeFromVeecode, fromVeecode} from "src/modules/Modules.sol";
 
-import {AuctionHouseTest} from "test/BatchAuctionHouse/AuctionHouseTest.sol";
+import {BatchAuctionHouseTest} from "test/BatchAuctionHouse/AuctionHouseTest.sol";
 
-contract LinearVestingEMPAIntegrationTest is AuctionHouseTest {
+contract LinearVestingEMPAIntegrationTest is BatchAuctionHouseTest {
     EncryptedMarginalPriceAuctionModule internal _empaModule;
     LinearVesting internal _linearVestingModule;
 

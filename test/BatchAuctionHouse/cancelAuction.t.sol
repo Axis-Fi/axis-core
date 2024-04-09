@@ -5,9 +5,9 @@ pragma solidity 0.8.19;
 import {Auction} from "src/modules/Auction.sol";
 import {AuctionHouse} from "src/bases/AuctionHouse.sol";
 
-import {AuctionHouseTest} from "test/BatchAuctionHouse/AuctionHouseTest.sol";
+import {BatchAuctionHouseTest} from "test/BatchAuctionHouse/AuctionHouseTest.sol";
 
-contract CancelAuctionTest is AuctionHouseTest {
+contract BatchCancelAuctionTest is BatchAuctionHouseTest {
     // cancel
     // [X] reverts if not the seller
     // [X] reverts if lot id is invalid
@@ -27,6 +27,8 @@ contract CancelAuctionTest is AuctionHouseTest {
         external
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenLotIsCreated
     {
         bytes memory err = abi.encodeWithSelector(AuctionHouse.NotPermitted.selector, address(this));
@@ -39,6 +41,8 @@ contract CancelAuctionTest is AuctionHouseTest {
         external
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenLotIsCreated
     {
         vm.assume(user_ != _SELLER);
@@ -62,6 +66,8 @@ contract CancelAuctionTest is AuctionHouseTest {
         external
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenLotIsCreated
         givenLotIsConcluded
     {
@@ -76,6 +82,8 @@ contract CancelAuctionTest is AuctionHouseTest {
         external
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenLotIsCreated
         givenLotIsCancelled
     {

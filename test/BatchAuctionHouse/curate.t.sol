@@ -3,9 +3,9 @@ pragma solidity 0.8.19;
 
 import {AuctionHouse} from "src/bases/AuctionHouse.sol";
 
-import {AuctionHouseTest} from "test/BatchAuctionHouse/AuctionHouseTest.sol";
+import {BatchAuctionHouseTest} from "test/BatchAuctionHouse/AuctionHouseTest.sol";
 
-contract CurateTest is AuctionHouseTest {
+contract BatchCurateTest is BatchAuctionHouseTest {
     // ===== Modifiers ===== //
 
     modifier givenCuratorIsZero() {
@@ -168,9 +168,9 @@ contract CurateTest is AuctionHouseTest {
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenLotIsCreated
         givenCuratorMaxFeeIsSet
+        givenCuratorFeeIsSet
         givenSellerHasBaseTokenBalance(_curatorMaxPotentialFee)
         givenSellerHasBaseTokenAllowance(_curatorMaxPotentialFee)
-        givenCuratorFeeIsSet
     {
         // Curate
         vm.prank(_CURATOR);
@@ -191,7 +191,7 @@ contract CurateTest is AuctionHouseTest {
 
         // Check routing
         AuctionHouse.Routing memory lotRouting = _getLotRouting(_lotId);
-        assertEq(lotRouting.funding, 0, "funding");
+        assertEq(lotRouting.funding, _LOT_CAPACITY + _curatorMaxPotentialFee, "funding");
     }
 
     function test_afterStart()

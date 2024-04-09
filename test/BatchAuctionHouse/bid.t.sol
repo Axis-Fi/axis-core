@@ -8,9 +8,9 @@ import {MockBatchAuctionModule} from "test/modules/Auction/MockBatchAuctionModul
 import {Auction} from "src/modules/Auction.sol";
 import {AuctionHouse} from "src/bases/AuctionHouse.sol";
 
-import {AuctionHouseTest} from "test/BatchAuctionHouse/AuctionHouseTest.sol";
+import {BatchAuctionHouseTest} from "test/BatchAuctionHouse/AuctionHouseTest.sol";
 
-contract BidTest is AuctionHouseTest {
+contract BatchBidTest is BatchAuctionHouseTest {
     uint256 internal constant _BID_AMOUNT = 1e18;
 
     bytes internal _bidAuctionData = abi.encode("");

@@ -4,9 +4,9 @@ pragma solidity 0.8.19;
 import {AuctionHouse} from "src/bases/AuctionHouse.sol";
 import {BatchAuction, BatchAuctionModule} from "src/modules/auctions/BatchAuctionModule.sol";
 
-import {AuctionHouseTest} from "test/BatchAuctionHouse/AuctionHouseTest.sol";
+import {BatchAuctionHouseTest} from "test/BatchAuctionHouse/AuctionHouseTest.sol";
 
-contract ClaimBidsTest is AuctionHouseTest {
+contract BatchClaimBidsTest is BatchAuctionHouseTest {
     uint256 internal constant _BID_AMOUNT = 1e18;
     uint256 internal constant _BID_AMOUNT_OUT = 2e18;
 

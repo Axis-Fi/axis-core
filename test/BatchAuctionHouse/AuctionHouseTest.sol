@@ -27,7 +27,7 @@ import {Veecode, toKeycode, keycodeFromVeecode, Keycode} from "src/modules/Modul
 
 import {console2} from "forge-std/console2.sol";
 
-abstract contract AuctionHouseTest is Test, Permit2User {
+abstract contract BatchAuctionHouseTest is Test, Permit2User {
     MockFeeOnTransferERC20 internal _baseToken;
     MockFeeOnTransferERC20 internal _quoteToken;
 
