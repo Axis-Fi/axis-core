@@ -121,6 +121,9 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
     /// @dev    1% = 1_000 or 1e3. 100% = 100_000 or 1e5.
     uint24 internal constant _MIN_BID_PERCENT = 10; // 0.01%
 
+    /// @notice Time period after auction conclusion where bidders cannot refund bids
+    uint48 public dedicatedSettlePeriod;
+
     /// @notice     Auction-specific data for a lot
     mapping(uint96 lotId => AuctionData) public auctionData;
 
@@ -141,6 +144,9 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
     constructor(address auctionHouse_) AuctionModule(auctionHouse_) {
         // Set the minimum auction duration to 1 day initially
         minAuctionDuration = 1 days;
+
+        // Set the dedicated settle period to 6 hours initially
+        dedicatedSettlePeriod = 6 hours;
     }
 
     function VEECODE() public pure override returns (Veecode) {
@@ -320,6 +326,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         _revertIfBidInvalid(lotId_, bidId_);
         _revertIfNotBidOwner(lotId_, bidId_, caller_);
         _revertIfBidClaimed(lotId_, bidId_);
+        _revertIfDedicatedSettlePeriod(lotId_);
         _revertIfLotDecrypted(lotId_);
         _revertIfLotSettled(lotId_);
 
@@ -985,6 +992,15 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         return AuctionType.Batch;
     }
 
+    // ========== ADMIN CONFIGURATION ========== //
+
+    function setDedicatedSettlePeriod(uint48 period_) external onlyParent {
+        // Dedicated settle period cannot be more than 7 days
+        if (period_ > 7 days) revert Auction_InvalidParams();
+
+        dedicatedSettlePeriod = period_;
+    }
+
     // ========== VALIDATION ========== //
 
     /// @inheritdoc AuctionModule
@@ -1064,6 +1080,13 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         // Bid must not be refunded or claimed (same status)
         if (bids[lotId_][bidId_].status == BidStatus.Claimed) {
             revert Bid_WrongState(lotId_, bidId_);
+        }
+    }
+
+    function _revertIfDedicatedSettlePeriod(uint96 lotId_) internal view {
+        // Auction must not be in the dedicated settle period
+        if (uint48(block.timestamp) < lotData[lotId_].conclusion + dedicatedSettlePeriod) {
+            revert Auction_WrongState(lotId_);
         }
     }
 
