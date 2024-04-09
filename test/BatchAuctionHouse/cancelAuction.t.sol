@@ -8,12 +8,6 @@ import {AuctionHouse} from "src/bases/AuctionHouse.sol";
 import {AuctionHouseTest} from "test/BatchAuctionHouse/AuctionHouseTest.sol";
 
 contract CancelAuctionTest is AuctionHouseTest {
-    uint256 internal constant _PURCHASE_AMOUNT = 2e18;
-    uint256 internal constant _PURCHASE_AMOUNT_OUT = 1e18;
-    uint32 internal constant _PAYOUT_MULTIPLIER = 50_000; // 50%
-
-    bytes internal _purchaseAuctionData = abi.encode("");
-
     // cancel
     // [X] reverts if not the seller
     // [X] reverts if lot id is invalid
