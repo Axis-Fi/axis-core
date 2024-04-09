@@ -5,7 +5,7 @@ pragma solidity 0.8.19;
 import {Module} from "src/modules/Modules.sol";
 import {AuctionModule} from "src/modules/Auction.sol";
 import {Veecode, toVeecode} from "src/modules/Modules.sol";
-import {AtomicAuctionModule} from "src/modules/auctions/AtomicAuctionModule.sol";
+import {AtomicAuction, AtomicAuctionModule} from "src/modules/auctions/AtomicAuctionModule.sol";
 
 // Libraries
 import {FixedPointMathLib as Math} from "lib/solmate/src/utils/FixedPointMathLib.sol";
@@ -80,18 +80,18 @@ contract FixedPriceAuctionModule is AtomicAuctionModule {
         ) revert Auction_InvalidParams();
 
         // Calculate the max payout
-        uint256 maxPayout =
+        uint256 maxPayout_ =
             Math.mulDivDown(lot_.capacity, auctionParams.maxPayoutPercent, _ONE_HUNDRED_PERCENT);
         // If capacity in quote, convert max payout to base token using the provided price
         if (lot_.capacityInQuote) {
-            maxPayout =
-                Math.mulDivDown(maxPayout, 10 ** lot_.baseTokenDecimals, auctionParams.price);
+            maxPayout_ =
+                Math.mulDivDown(maxPayout_, 10 ** lot_.baseTokenDecimals, auctionParams.price);
         }
 
         // Store the auction data
         AuctionData storage data = auctionData[lotId_];
         data.price = auctionParams.price;
-        data.maxPayout = maxPayout;
+        data.maxPayout = maxPayout_;
     }
 
     /// @inheritdoc AuctionModule
@@ -132,5 +132,35 @@ contract FixedPriceAuctionModule is AtomicAuctionModule {
         if (payout > auctionData[lotId_].maxPayout) revert Auction_PayoutGreaterThanMax();
 
         return (payout, bytes(""));
+    }
+
+    // ========== VIEW FUNCTIONS ========== //
+
+    /// @inheritdoc AtomicAuction
+    function payoutFor(uint96 lotId_, uint256 amount_) public view override returns (uint256) {
+        return Math.mulDivDown(
+            amount_, 10 ** lotData[lotId_].baseTokenDecimals, auctionData[lotId_].price
+        );
+    }
+
+    /// @inheritdoc AtomicAuction
+    function priceFor(uint96 lotId_, uint256 payout_) public view override returns (uint256) {
+        return Math.mulDivUp(
+            payout_, auctionData[lotId_].price, 10 ** lotData[lotId_].baseTokenDecimals
+        );
+    }
+
+    /// @inheritdoc AtomicAuction
+    function maxPayout(uint96 lotId_) public view override returns (uint256) {
+        return auctionData[lotId_].maxPayout;
+    }
+
+    /// @inheritdoc AtomicAuction
+    function maxAmountAccepted(uint96 lotId_) public view override returns (uint256) {
+        return Math.mulDivUp(
+            auctionData[lotId_].maxPayout,
+            auctionData[lotId_].price,
+            10 ** lotData[lotId_].baseTokenDecimals
+        );
     }
 }
