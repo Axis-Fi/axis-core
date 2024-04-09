@@ -149,14 +149,15 @@ abstract contract EmpaModuleTest is Test, Permit2User {
 
     function _updateMinBidSize() internal {
         // Calculate the minimum bid size
-        _minBidSize = Math.mulDivDown(_auctionParams.capacity, _MIN_BID_PERCENT, 1e5);
+        // Rounding consistent with EMPA
+        _minBidSize = Math.mulDivUp(_auctionParams.capacity, _MIN_BID_PERCENT, 1e5);
     }
 
     function _updateMinBidAmount() internal {
         // Calculate the minimum bid amount
-        // TODO roundup?
+        // Rounding consistent with EMPA
         _minBidAmount =
-            Math.mulDivDown(_minBidSize, _auctionDataParams.minPrice, 10 ** _baseTokenDecimals);
+            Math.mulDivUp(_minBidSize, _auctionDataParams.minPrice, 10 ** _baseTokenDecimals);
     }
 
     modifier givenMinimumBidPercentage(uint24 percentage_) {
