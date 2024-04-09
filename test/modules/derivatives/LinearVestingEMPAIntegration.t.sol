@@ -34,7 +34,7 @@ contract LinearVestingEMPAIntegrationTest is AuctionHouseTest {
     uint48 internal constant _VESTING_DURATION = _VESTING_EXPIRY - _VESTING_START;
 
     uint256 internal constant _BID_AMOUNT = 15e18;
-    uint256 internal constant _BID_AMOUNT_OUT = 10e18; // Ensures that capacit is filled and the price is not adjusted
+    uint256 internal constant _BID_AMOUNT_OUT = 10e18; // Ensures that capacity is filled and the price is not adjusted
 
     // ============ Modifiers ============ //
 

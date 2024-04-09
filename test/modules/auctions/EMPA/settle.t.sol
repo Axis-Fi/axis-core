@@ -667,6 +667,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
     }
 
     modifier givenBidsCauseCapacityOverflow() {
+        // TODO do these need to change? Overflow point is still uint96?
         uint256 bidOneAmount = 1e22;
         uint256 bidOneAmountOut = type(uint256).max - 1e24;
         uint256 bidTwoAmount = 1e22;

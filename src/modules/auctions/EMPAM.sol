@@ -10,6 +10,10 @@ import {FixedPointMathLib as Math} from "lib/solmate/src/utils/FixedPointMathLib
 import {ECIES, Point} from "src/lib/ECIES.sol";
 import {MaxPriorityQueue, Queue, Bid as QueueBid} from "src/lib/MaxPriorityQueue.sol";
 
+/// @notice     Encrypted Marginal Price
+/// @dev        This batch auction module allows for bids to be encrypted off-chain, then stored, decrypted and settled on-chain.
+///
+///             Note that the maximum bid amount is bounded by uint96.
 contract EncryptedMarginalPriceAuctionModule is AuctionModule {
     using MaxPriorityQueue for Queue;
 
