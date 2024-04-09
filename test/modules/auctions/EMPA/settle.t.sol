@@ -12,9 +12,6 @@ import {EmpaModuleTest} from "test/modules/auctions/EMPA/EMPAModuleTest.sol";
 import {console2} from "forge-std/console2.sol";
 
 contract EmpaModuleSettleTest is EmpaModuleTest {
-    // TODO need to update overflow cases with new capacity and price types
-    // The price cannot overflow anymore because the max bid amount is 2^96 - 1, max base scale is 1e18 => max price is 2^96 - 1 * 1e18 = 7.96e48  < 2^256 - 1 = 1.15e77
-
     uint256 internal constant _BID_PRICE_BELOW_ONE_AMOUNT = 1e18;
     uint256 internal constant _BID_PRICE_BELOW_ONE_AMOUNT_OUT = 2e18;
     uint256 internal constant _BID_PRICE_ONE_AMOUNT = 1e18;
@@ -35,8 +32,6 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
     uint256 internal constant _BID_PRICE_OVERFLOW_AMOUNT_OUT = 1e17;
     uint256 internal constant _BID_PRICE_TEN = 10e18;
     uint256 internal constant _BID_PRICE_TEN_OUT = 1e18;
-
-    uint256 internal constant _LOT_CAPACITY_OVERFLOW = type(uint256).max - 10;
 
     uint256 internal _expectedMarginalPrice;
     uint64 internal _expectedMarginalBidId;
@@ -101,9 +96,6 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
     //  [X] it handles different token decimals
     //  [X] it respects the ordering of the bids
     //  [X] it returns the amounts in and out, with the marginal price is the price at which the lot capacity is exhausted, and a partial fill for the lowest winning bid
-
-    // [X] given the expended capacity results in a uint96 overflow
-    //  [X] the settle function does not revert
 
     function _settle()
         internal
@@ -663,53 +655,6 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
 
         // Partial fill
         // None
-        _;
-    }
-
-    modifier givenBidsCauseCapacityOverflow() {
-        // TODO do these need to change? Overflow point is still uint96?
-        uint256 bidOneAmount = 1e22;
-        uint256 bidOneAmountOut = type(uint256).max - 1e24;
-        uint256 bidTwoAmount = 1e22;
-        uint256 bidTwoAmountOut = type(uint256).max - 1e24;
-
-        // Capacity
-        _createBid(_scaleQuoteTokenAmount(bidOneAmount), _scaleBaseTokenAmount(bidOneAmountOut));
-        _createBid(_scaleQuoteTokenAmount(bidTwoAmount), _scaleBaseTokenAmount(bidTwoAmountOut));
-
-        // Marginal price = 12621933
-        _expectedMarginalPrice = Math.mulDivDown(bidTwoAmount, _BASE_SCALE, bidTwoAmountOut);
-        _expectedMarginalBidId = 2;
-
-        // These calculations mimic how the capacity usage is calculated in the settle function
-        uint256 baseTokensRequired =
-            Math.mulDivDown(bidOneAmount + bidTwoAmount, _BASE_SCALE, _expectedMarginalPrice);
-        uint256 bidTwoAmountOutFull =
-            Math.mulDivDown(bidTwoAmount, _BASE_SCALE, _expectedMarginalPrice);
-        uint256 bidTwoAmountOutOverflow = baseTokensRequired - _LOT_CAPACITY_OVERFLOW;
-
-        // Output
-        // Bid one: bidOneAmountOut out
-        // Bid two: 90 out (partial fill)
-
-        uint256 bidOneAmountInActual = bidOneAmount;
-        uint256 bidOneAmountOutActual =
-            Math.mulDivDown(bidOneAmount, _BASE_SCALE, _expectedMarginalPrice);
-        uint256 bidTwoAmountOutActual = bidTwoAmountOutFull - bidTwoAmountOutOverflow;
-        uint256 bidTwoAmountInActual =
-            Math.mulDivDown(bidTwoAmount, bidTwoAmountOutActual, bidTwoAmountOutFull);
-
-        uint256 bidAmountInSuccess = bidOneAmountInActual + bidTwoAmountInActual;
-        uint256 bidAmountInFail = bidTwoAmount - bidTwoAmountInActual;
-
-        _expectedTotalIn = bidAmountInSuccess;
-        _expectedTotalOut = _LOT_CAPACITY_OVERFLOW;
-
-        // Partial fill
-        _expectedPartialFillBidder = _BIDDER;
-        _expectedPartialFillReferrer = _REFERRER;
-        _expectedPartialFillRefund = bidAmountInFail;
-        _expectedPartialFillPayout = bidTwoAmountOutActual;
         _;
     }
 
@@ -1756,26 +1701,6 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         _assertSettlement(settlement, auctionOutput);
         _assertLot();
     }
-
-    // Do not believe this can happen with uint256 capacity and uint96 * max of 1e18 decimal bids
-    // function test_givenBidsCauseCapacityOverflow()
-    //     external
-    //     givenMinimumPrice(1)
-    //     givenLotCapacity(_LOT_CAPACITY_OVERFLOW)
-    //     givenLotIsCreated
-    //     givenLotHasStarted
-    //     givenBidsCauseCapacityOverflow
-    //     givenLotHasConcluded
-    //     givenPrivateKeyIsSubmitted
-    //     givenLotIsDecrypted
-    // {
-    //     // Call function
-    //     (Auction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
-
-    //     // Assert settlement
-    //     _assertSettlement(settlement, auctionOutput);
-    //     _assertLot();
-    // }
 
     function test_givenBidAmountRespectsRoundingLastBid()
         external
