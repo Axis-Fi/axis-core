@@ -428,13 +428,6 @@ contract LinearVestingEMPAIntegrationTest is AuctionHouseTest {
         // Get the derivative token id
         uint256 derivativeTokenId =
             _linearVestingModule.computeId(address(_baseToken), abi.encode(_linearVestingParams));
-
-        // Check that the curator has paid on settle since the payout is a derivative token
-        assertEq(
-            _linearVestingModule.balanceOf(_CURATOR, derivativeTokenId),
-            _curatorMaxPotentialFee,
-            "curator fee"
-        ); // To be claimed
     }
 
     function test_settle_partialFill()
@@ -525,9 +518,23 @@ contract LinearVestingEMPAIntegrationTest is AuctionHouseTest {
         Auction.Lot memory lotData = _empaModule.getLot(_lotId);
         assertEq(lotData.proceedsClaimed, true, "proceedsClaimed");
 
+        // Get derivative token id
+        uint256 derivativeTokenId =
+            _linearVestingModule.computeId(address(_baseToken), abi.encode(_linearVestingParams));
+
         // Check the balances
         assertEq(_quoteToken.balanceOf(_SELLER), _BID_AMOUNT, "seller balance");
         assertEq(_baseToken.balanceOf(_SELLER), _LOT_CAPACITY - _BID_AMOUNT_OUT, "seller balance");
+        assertEq(
+            _baseToken.balanceOf(address(_linearVestingModule)),
+            _curatorMaxPotentialFee,
+            "linear vesting balance"
+        );
+        assertEq(
+            _linearVestingModule.balanceOf(_CURATOR, derivativeTokenId),
+            _curatorMaxPotentialFee,
+            "derivative: curator"
+        );
     }
 
     // claimBid

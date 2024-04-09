@@ -41,12 +41,7 @@ contract SettleTest is AuctionHouseTest {
 
         // Check routing
         Auctioneer.Routing memory lotRouting = _getLotRouting(_lotId);
-        assertEq(
-            lotRouting.funding,
-            _expectedAuctionHouseBaseTokenBalance - _expectedDerivativeBaseTokenBalance
-                - _expectedCuratorBaseTokenRewards,
-            "funding"
-        );
+        assertEq(lotRouting.funding, _expectedAuctionHouseBaseTokenBalance, "funding");
     }
 
     function _assertQuoteTokenBalances() internal {
@@ -125,10 +120,7 @@ contract SettleTest is AuctionHouseTest {
         bool payoutDerivative = fromVeecode(routing.derivativeReference) != bytes7("");
 
         // Base token
-        _expectedAuctionHouseBaseTokenBalance =
-            scaledLotCapacity + (payoutDerivative ? 0 : prefundedCuratorFees); // Entire capacity and potential curator fees are kept in the auctionhouse, unless a derivative is used
-        _expectedDerivativeBaseTokenBalance = payoutDerivative ? prefundedCuratorFees : 0; // curator fee sent to derivative module if used
-        _expectedCuratorBaseTokenRewards = payoutDerivative ? 0 : prefundedCuratorFees; // curator fee kept in auctionhouse if no derivative is used
+        _expectedAuctionHouseBaseTokenBalance = scaledLotCapacity + prefundedCuratorFees; // Entire capacity and potential curator fees are kept in the auctionhouse
 
         _lotSettles = true;
         _;
@@ -151,16 +143,8 @@ contract SettleTest is AuctionHouseTest {
         // Quote token
         _expectedAuctionHouseQuoteTokenBalance = totalIn;
 
-        // Determine if auction is using a payout derivative
-        Auctioneer.Routing memory routing = _getLotRouting(_lotId);
-        bool payoutDerivative = fromVeecode(routing.derivativeReference) != bytes7("");
-        uint256 curatorFeeEarned = prefundedCuratorFees * uint256(totalOut) / scaledLotCapacity;
-
         // Base token
-        _expectedAuctionHouseBaseTokenBalance =
-            scaledLotCapacity + prefundedCuratorFees - (payoutDerivative ? curatorFeeEarned : 0); // To be claimed by bidders and seller
-        _expectedDerivativeBaseTokenBalance = payoutDerivative ? curatorFeeEarned : 0; // curator fee sent to derivative module if used
-        _expectedCuratorBaseTokenRewards = payoutDerivative ? 0 : curatorFeeEarned; // curator fee kept in auctionhouse if no derivative is used
+        _expectedAuctionHouseBaseTokenBalance = scaledLotCapacity + prefundedCuratorFees; // To be claimed by bidders, seller, and curator
 
         _lotSettles = true;
         _;
@@ -183,15 +167,8 @@ contract SettleTest is AuctionHouseTest {
         // Quote token
         _expectedAuctionHouseQuoteTokenBalance = totalIn;
 
-        // Determine if auction is using a payout derivative
-        Auctioneer.Routing memory routing = _getLotRouting(_lotId);
-        bool payoutDerivative = fromVeecode(routing.derivativeReference) != bytes7("");
-
         // Base token
-        _expectedAuctionHouseBaseTokenBalance =
-            scaledLotCapacity + (payoutDerivative ? 0 : prefundedCuratorFees); // To be claimed by bidders and seller
-        _expectedDerivativeBaseTokenBalance = payoutDerivative ? prefundedCuratorFees : 0; // curator fee sent to derivative module if used
-        _expectedCuratorBaseTokenRewards = payoutDerivative ? 0 : prefundedCuratorFees; // curator fee kept in auctionhouse if no derivative is used
+        _expectedAuctionHouseBaseTokenBalance = scaledLotCapacity + prefundedCuratorFees; // To be claimed by bidders, seller, and curator
 
         _lotSettles = true;
         _;

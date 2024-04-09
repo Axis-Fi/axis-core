@@ -488,28 +488,6 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
             Keycode auctionKeycode = keycodeFromVeecode(routing.auctionReference);
             feeData.protocolFee = fees[auctionKeycode].protocol;
             feeData.referrerFee = fees[auctionKeycode].referrer;
-
-            // Calculate the curator fee and allocate the fees to be claimed
-            uint96 curatorFeePayout =
-                _calculatePayoutFees(feeData.curated, feeData.curatorFee, settlement.totalOut);
-
-            // If the curator fee is not zero, allocate it
-            if (curatorFeePayout > 0) {
-                // If the payout is a derivative, mint the derivative directly to the curator
-                // Otherwise, allocate the fee using the internal rewards mechanism
-                if (fromVeecode(routing.derivativeReference) != bytes7("")) {
-                    // Mint the derivative to the curator
-                    _sendPayout(feeData.curator, curatorFeePayout, routing, bytes(""));
-                } else {
-                    // Allocate the curator fee to be claimed
-                    rewards[feeData.curator][routing.baseToken] += curatorFeePayout;
-                }
-
-                // Decrease the funding amount
-                unchecked {
-                    routing.funding -= curatorFeePayout;
-                }
-            }
         }
 
         // Emit event
@@ -540,6 +518,28 @@ contract AuctionHouse is Auctioneer, Router, FeeManager {
 
         // Load data for the lot
         Routing storage routing = lotRouting[lotId_];
+        FeeData storage feeData = lotFees[lotId_];
+
+        // Calculate the curator fee and allocate the fees to be claimed
+        uint96 curatorFeePayout = _calculatePayoutFees(feeData.curated, feeData.curatorFee, sold_);
+
+        // If the curator fee is not zero, allocate it
+        if (curatorFeePayout > 0) {
+            // If the payout is a derivative, mint the derivative directly to the curator
+            // Otherwise, allocate the fee using the internal rewards mechanism
+            if (fromVeecode(routing.derivativeReference) != bytes7("")) {
+                // Mint the derivative to the curator
+                _sendPayout(feeData.curator, curatorFeePayout, routing, bytes(""));
+            } else {
+                // Allocate the curator fee to be claimed
+                rewards[feeData.curator][routing.baseToken] += curatorFeePayout;
+            }
+
+            // Decrease the funding amount
+            unchecked {
+                routing.funding -= curatorFeePayout;
+            }
+        }
 
         // Calculate the referrer and protocol fees for the amount in
         // Fees are not allocated until the user claims their payout so that we don't have to iterate through them here
