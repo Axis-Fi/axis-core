@@ -52,7 +52,7 @@ contract CancelTest is Test, Permit2User {
         });
 
         _routingParams = AuctionHouse.RoutingParams({
-            auctionType: toKeycode("MOCK"),
+            auctionType: toKeycode("ATOM"),
             baseToken: _baseToken,
             quoteToken: _quoteToken,
             curator: address(0),
