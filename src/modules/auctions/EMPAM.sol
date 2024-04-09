@@ -1085,7 +1085,8 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
 
     function _revertIfDedicatedSettlePeriod(uint96 lotId_) internal view {
         // Auction must not be in the dedicated settle period
-        if (uint48(block.timestamp) < lotData[lotId_].conclusion + dedicatedSettlePeriod) {
+        uint48 conclusion = lotData[lotId_].conclusion;
+        if (uint48(block.timestamp) >= conclusion && uint48(block.timestamp) < conclusion + dedicatedSettlePeriod) {
             revert Auction_WrongState(lotId_);
         }
     }
