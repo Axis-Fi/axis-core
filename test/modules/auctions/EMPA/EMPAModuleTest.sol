@@ -4,7 +4,7 @@ pragma solidity 0.8.19;
 // Libraries
 import {Test} from "forge-std/Test.sol";
 import {Point, ECIES} from "src/lib/ECIES.sol";
-import {FixedPointMathLib as Math} from "solmate/utils/FixedPointMathLib.sol";
+import {FixedPointMathLib as Math} from "solady/utils/FixedPointMathLib.sol";
 
 // Mocks
 import {Permit2User} from "test/lib/permit2/Permit2User.sol";
@@ -150,14 +150,14 @@ abstract contract EmpaModuleTest is Test, Permit2User {
     function _updateMinBidSize() internal {
         // Calculate the minimum bid size
         // Rounding consistent with EMPA
-        _minBidSize = Math.mulDivUp(_auctionParams.capacity, _MIN_BID_PERCENT, 1e5);
+        _minBidSize = Math.fullMulDivUp(_auctionParams.capacity, _MIN_BID_PERCENT, 1e5);
     }
 
     function _updateMinBidAmount() internal {
         // Calculate the minimum bid amount
         // Rounding consistent with EMPA
         _minBidAmount =
-            Math.mulDivUp(_minBidSize, _auctionDataParams.minPrice, 10 ** _baseTokenDecimals);
+            Math.fullMulDivUp(_minBidSize, _auctionDataParams.minPrice, 10 ** _baseTokenDecimals);
     }
 
     modifier givenMinimumBidPercentage(uint24 percentage_) {
@@ -343,11 +343,11 @@ abstract contract EmpaModuleTest is Test, Permit2User {
     // ======== Internal Functions ======== //
 
     function _scaleQuoteTokenAmount(uint256 amount_) internal view returns (uint256) {
-        return Math.mulDivDown(amount_, 10 ** _quoteTokenDecimals, _BASE_SCALE);
+        return Math.fullMulDiv(amount_, 10 ** _quoteTokenDecimals, _BASE_SCALE);
     }
 
     function _scaleBaseTokenAmount(uint256 amount_) internal view returns (uint256) {
-        return Math.mulDivDown(amount_, 10 ** _baseTokenDecimals, _BASE_SCALE);
+        return Math.fullMulDiv(amount_, 10 ** _baseTokenDecimals, _BASE_SCALE);
     }
 
     function _getAuctionData(uint96 lotId_)

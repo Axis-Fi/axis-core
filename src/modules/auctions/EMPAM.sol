@@ -6,7 +6,7 @@ import {AuctionModule, Auction} from "src/modules/Auction.sol";
 import {Veecode, toVeecode} from "src/modules/Modules.sol";
 
 // Libraries
-import {FixedPointMathLib as Math} from "lib/solmate/src/utils/FixedPointMathLib.sol";
+import {FixedPointMathLib as Math} from "solady/utils/FixedPointMathLib.sol";
 import {ECIES, Point} from "src/lib/ECIES.sol";
 import {MaxPriorityQueue, Queue, Bid as QueueBid} from "src/lib/MaxPriorityQueue.sol";
 
@@ -176,9 +176,9 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         data.minPrice = implParams.minPrice;
         // We round up to be conservative with the minimums
         data.minFilled =
-            Math.mulDivUp(lot_.capacity, implParams.minFillPercent, _ONE_HUNDRED_PERCENT);
+            Math.fullMulDivUp(lot_.capacity, implParams.minFillPercent, _ONE_HUNDRED_PERCENT);
         data.minBidSize =
-            Math.mulDivUp(lot_.capacity, implParams.minBidPercent, _ONE_HUNDRED_PERCENT);
+            Math.fullMulDivUp(lot_.capacity, implParams.minBidPercent, _ONE_HUNDRED_PERCENT);
         data.publicKey = implParams.publicKey;
         data.nextBidId = 1;
 
@@ -237,7 +237,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         if (amount_ > type(uint96).max) revert Auction_InvalidParams();
 
         // Amount must be at least the minimum bid size at the minimum price
-        uint256 minAmount = Math.mulDivDown(
+        uint256 minAmount = Math.mulDiv(
             uint256(auctionData[lotId_].minBidSize),
             uint256(auctionData[lotId_].minPrice),
             10 ** lotData[lotId_].baseTokenDecimals
@@ -346,7 +346,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
         ) {
             // Payout is calculated using the marginal price of the auction
             bidClaim.paid = bidData.amount;
-            bidClaim.payout = Math.mulDivDown(bidClaim.paid, baseScale, marginalPrice);
+            bidClaim.payout = Math.mulDiv(bidClaim.paid, baseScale, marginalPrice);
         } else {
             // Bidder is refunded the paid amount and receives no payout
             bidClaim.paid = bidData.amount;
@@ -621,11 +621,11 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
                     // If not, we set the marginal price to the minimum price. Whether the capacity filled meets the minimum filled will be checked later in the settlement process.
                     if (
                         lotAuctionData.minPrice == 0
-                            || Math.mulDivDown(result.totalAmountIn, baseScale, lotAuctionData.minPrice)
+                            || Math.fullMulDiv(result.totalAmountIn, baseScale, lotAuctionData.minPrice)
                                 >= capacity
                     ) {
                         result.marginalPrice =
-                            Math.mulDivUp(result.totalAmountIn, baseScale, capacity);
+                            Math.fullMulDivUp(result.totalAmountIn, baseScale, capacity);
                     } else {
                         result.marginalPrice = lotAuctionData.minPrice; // note this cannot be zero since it is checked above
                     }
@@ -637,7 +637,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
 
                     // Update capacity expended with the new marginal price
                     result.capacityExpended =
-                        Math.mulDivDown(result.totalAmountIn, baseScale, result.marginalPrice);
+                        Math.fullMulDiv(result.totalAmountIn, baseScale, result.marginalPrice);
                     // marginal bid id can be zero, there are no bids at the marginal price
 
                     // Exit the outer loop
@@ -647,9 +647,10 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
                 // Check if the auction can clear with the existing bids at a price between current price and last price
                 // There will be no partial fills because we select the price that exactly fills the capacity
                 // Note: totalAmountIn here has not had the current bid added to it
-                result.capacityExpended = Math.mulDivDown(result.totalAmountIn, baseScale, price);
+                result.capacityExpended = Math.fullMulDiv(result.totalAmountIn, baseScale, price);
                 if (result.capacityExpended >= capacity) {
-                    result.marginalPrice = Math.mulDivUp(result.totalAmountIn, baseScale, capacity);
+                    result.marginalPrice =
+                        Math.fullMulDivUp(result.totalAmountIn, baseScale, capacity);
 
                     // If the marginal price is re-calculated and is the same as the previous, we need to set the marginal bid id, otherwise the previous bid will not be able to claim.
                     if (lastPrice == result.marginalPrice) {
@@ -661,7 +662,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
                     // Calculate the capacity expended in the same way as before, instead of setting it to `capacity`
                     // This will normally equal `capacity`, except when rounding would cause the the capacity expended to be slightly less than `capacity`
                     result.capacityExpended =
-                        Math.mulDivDown(result.totalAmountIn, baseScale, result.marginalPrice); // updated based on the marginal price
+                        Math.fullMulDiv(result.totalAmountIn, baseScale, result.marginalPrice); // updated based on the marginal price
                     break;
                 }
 
@@ -674,7 +675,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
 
                 // Determine total capacity expended at this price (in base token units)
                 // quote scale * base scale / quote scale = base scale
-                result.capacityExpended = Math.mulDivDown(result.totalAmountIn, baseScale, price);
+                result.capacityExpended = Math.fullMulDiv(result.totalAmountIn, baseScale, price);
 
                 // If total capacity expended is greater than or equal to the capacity, we have found the marginal price
                 // If capacity expended is strictly greater than capacity, then we have a partially filled bid
@@ -694,7 +695,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
                     // If not, we set the marginal price to the minimum price. Whether the capacity filled meets the minimum filled will be checked later in the settlement process
                     if (
                         lotAuctionData.minPrice == 0
-                            || Math.mulDivDown(result.totalAmountIn, baseScale, lotAuctionData.minPrice)
+                            || Math.mulDiv(result.totalAmountIn, baseScale, lotAuctionData.minPrice)
                                 >= capacity
                     ) {
                         result.marginalPrice =
@@ -709,7 +710,7 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
                     }
 
                     result.capacityExpended =
-                        Math.mulDivDown(result.totalAmountIn, baseScale, result.marginalPrice);
+                        Math.fullMulDiv(result.totalAmountIn, baseScale, result.marginalPrice);
                     // marginal bid id can be zero, there are no bids at the marginal price
                 }
             }
@@ -798,10 +799,10 @@ contract EncryptedMarginalPriceAuctionModule is AuctionModule {
 
                 // Calculate the payout and refund amounts
                 uint256 fullFill =
-                    Math.mulDivDown(uint256(bidData.amount), baseScale, result.marginalPrice);
+                    Math.mulDiv(uint256(bidData.amount), baseScale, result.marginalPrice);
                 uint256 excess = result.capacityExpended - capacity;
                 settlement_.pfPayout = fullFill - excess;
-                settlement_.pfRefund = Math.mulDivDown(uint256(bidData.amount), excess, fullFill);
+                settlement_.pfRefund = Math.mulDiv(uint256(bidData.amount), excess, fullFill);
 
                 // Reduce the total amount in by the refund amount
                 result.totalAmountIn -= settlement_.pfRefund;
