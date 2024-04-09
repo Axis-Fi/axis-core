@@ -1,7 +1,7 @@
 /// SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.19;
 
-import {AuctionHouse} from "src/AuctionHouse.sol";
+import {BatchAuctionHouse} from "src/BatchAuctionHouse.sol";
 import {Veecode} from "src/modules/Modules.sol";
 
 enum YieldMode {
@@ -29,7 +29,7 @@ interface IERC20Rebasing {
     function getClaimableAmount(address account) external view returns (uint256);
 }
 
-contract BlastAuctionHouse is AuctionHouse {
+contract BlastBatchAuctionHouse is BatchAuctionHouse {
     // ========== STATE VARIABLES ========== //
 
     /// @notice    Blast contract for claiming gas fees
@@ -49,7 +49,7 @@ contract BlastAuctionHouse is AuctionHouse {
         address owner_,
         address protocol_,
         address permit2_
-    ) AuctionHouse(owner_, protocol_, permit2_) {
+    ) BatchAuctionHouse(owner_, protocol_, permit2_) {
         // Set the yield mode to claimable for the WETH and USDB tokens
         _WETH.configure(YieldMode.CLAIMABLE);
         _USDB.configure(YieldMode.CLAIMABLE);

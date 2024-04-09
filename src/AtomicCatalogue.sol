@@ -2,14 +2,18 @@
 pragma solidity 0.8.19;
 
 import {Auction} from "src/modules/Auction.sol";
-import {Auctioneer} from "src/bases/Auctioneer.sol";
+import {AtomicAuctionModule} from "src/modules/auctions/AtomicAuctionModule.sol";
+import {AuctionHouse} from "src/bases/AuctionHouse.sol";
+import {AtomicAuctionHouse} from "src/AtomicAuctionHouse.sol";
 import {FeeManager} from "src/bases/FeeManager.sol";
 import {Veecode, keycodeFromVeecode, Keycode} from "src/modules/Modules.sol";
 import {ERC20} from "lib/solmate/src/tokens/ERC20.sol";
 import {ICallback} from "src/interfaces/ICallback.sol";
 
-/// @notice Contract that provides view functions for Auctions
-contract Catalogue {
+// TODO batch catalogue
+
+/// @notice Contract that provides view functions for atomic Auctions
+contract AtomicCatalogue {
     // ========== STATE VARIABLES ========== //
     /// @notice Address of the AuctionHouse contract
     address public auctionHouse;
@@ -29,7 +33,7 @@ contract Catalogue {
     ///
     /// @param      lotId_  ID of the auction lot
     /// @return     routing Routing information for the auction lot
-    function getRouting(uint96 lotId_) public view returns (Auctioneer.Routing memory) {
+    function getRouting(uint96 lotId_) public view returns (AuctionHouse.Routing memory) {
         (
             address seller,
             ERC20 baseToken,
@@ -40,9 +44,9 @@ contract Catalogue {
             Veecode derivativeReference,
             bool wrapDerivative,
             bytes memory derivativeParams
-        ) = Auctioneer(auctionHouse).lotRouting(lotId_);
+        ) = AuctionHouse(auctionHouse).lotRouting(lotId_);
 
-        return Auctioneer.Routing({
+        return AuctionHouse.Routing({
             auctionReference: auctionReference,
             seller: seller,
             baseToken: baseToken,
@@ -56,8 +60,8 @@ contract Catalogue {
     }
 
     function payoutFor(uint96 lotId_, uint256 amount_) external view returns (uint256) {
-        Auction module = Auctioneer(auctionHouse).getModuleForId(lotId_);
-        Auctioneer.Routing memory routing = getRouting(lotId_);
+        AtomicAuctionModule module = AtomicAuctionModule(address(AtomicAuctionHouse(auctionHouse).getModuleForId(lotId_)));
+        AuctionHouse.Routing memory routing = getRouting(lotId_);
 
         // Get protocol fee from FeeManager
         // TODO depending on whether this is a purchase or a bid, we should use different fee sources
@@ -73,8 +77,8 @@ contract Catalogue {
     }
 
     function priceFor(uint96 lotId_, uint256 payout_) external view returns (uint256) {
-        Auction module = Auctioneer(auctionHouse).getModuleForId(lotId_);
-        Auctioneer.Routing memory routing = getRouting(lotId_);
+        AtomicAuctionModule module = AtomicAuctionModule(address(AtomicAuctionHouse(auctionHouse).getModuleForId(lotId_)));
+        AuctionHouse.Routing memory routing = getRouting(lotId_);
 
         // Get price from module (in quote token units)
         uint256 price = module.priceFor(lotId_, payout_);
@@ -86,7 +90,7 @@ contract Catalogue {
     }
 
     function maxPayout(uint96 lotId_) external view returns (uint256) {
-        Auction module = Auctioneer(auctionHouse).getModuleForId(lotId_);
+        AtomicAuctionModule module = AtomicAuctionModule(address(AtomicAuctionHouse(auctionHouse).getModuleForId(lotId_)));
 
         // No fees need to be considered here since an amount is not provided
 
@@ -95,8 +99,8 @@ contract Catalogue {
     }
 
     function maxAmountAccepted(uint96 lotId_) external view returns (uint256) {
-        Auction module = Auctioneer(auctionHouse).getModuleForId(lotId_);
-        Auctioneer.Routing memory routing = getRouting(lotId_);
+        AtomicAuctionModule module = AtomicAuctionModule(address(AtomicAuctionHouse(auctionHouse).getModuleForId(lotId_)));
+        AuctionHouse.Routing memory routing = getRouting(lotId_);
 
         // Get max amount accepted from module
         uint256 maxAmount = module.maxAmountAccepted(lotId_);
@@ -111,21 +115,21 @@ contract Catalogue {
     /// @notice    Returns whether the auction is currently accepting bids or purchases
     /// @dev       Auctions that have been created, but not yet started will return false
     function isLive(uint96 lotId_) external view returns (bool) {
-        Auction module = Auctioneer(auctionHouse).getModuleForId(lotId_);
+        Auction module = AuctionHouse(auctionHouse).getModuleForId(lotId_);
 
         // Get isLive from module
         return module.isLive(lotId_);
     }
 
     function hasEnded(uint96 lotId_) external view returns (bool) {
-        Auction module = Auctioneer(auctionHouse).getModuleForId(lotId_);
+        Auction module = AuctionHouse(auctionHouse).getModuleForId(lotId_);
 
         // Get hasEnded from module
         return module.hasEnded(lotId_);
     }
 
     function remainingCapacity(uint96 lotId_) external view returns (uint256) {
-        Auction module = Auctioneer(auctionHouse).getModuleForId(lotId_);
+        Auction module = AuctionHouse(auctionHouse).getModuleForId(lotId_);
 
         // Get remaining capacity from module
         return module.remainingCapacity(lotId_);

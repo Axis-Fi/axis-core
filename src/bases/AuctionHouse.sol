@@ -166,7 +166,7 @@ abstract contract AuctionHouse is WithModules, ReentrancyGuard, FeeManager {
     ///             - Validation for the auction parameters fails
     ///             - The module for the optional specified derivative type is not installed
     ///             - Validation for the optional specified derivative type fails
-    ///             - The optional specified callbacks contract is not a contract
+    ///             - Validation for the optional specified callbacks contract fails
     ///             - Re-entrancy is detected
     ///
     /// @param      routing_    Routing information for the auction lot

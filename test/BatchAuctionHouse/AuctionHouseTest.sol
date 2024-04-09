@@ -11,16 +11,16 @@ import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 import {MockAtomicAuctionModule} from "test/modules/Auction/MockAtomicAuctionModule.sol";
 import {MockBatchAuctionModule} from "test/modules/Auction/MockBatchAuctionModule.sol";
 import {MockDerivativeModule} from "test/modules/derivatives/mocks/MockDerivativeModule.sol";
-import {MockCallback} from "test/AuctionHouse/MockCallback.sol";
+import {MockCallback} from "test/callbacks/MockCallback.sol";
 import {Permit2User} from "test/lib/permit2/Permit2User.sol";
 import {MockFeeOnTransferERC20} from "test/lib/mocks/MockFeeOnTransferERC20.sol";
 
 // Auctions
-import {AuctionHouse, Router} from "src/AuctionHouse.sol";
+import {BatchAuctionHouse} from "src/BatchAuctionHouse.sol";
 import {Auction, AuctionModule} from "src/modules/Auction.sol";
 import {FeeManager} from "src/bases/FeeManager.sol";
-import {Auctioneer} from "src/bases/Auctioneer.sol";
-import {Catalogue} from "src/Catalogue.sol";
+import {AuctionHouse} from "src/bases/AuctionHouse.sol";
+// import {Catalogue} from "src/Catalogue.sol";
 import {ICallback} from "src/interfaces/ICallback.sol";
 import {Callbacks} from "src/lib/Callbacks.sol";
 
@@ -35,7 +35,7 @@ abstract contract AuctionHouseTest is Test, Permit2User {
     AuctionHouse internal _auctionHouse;
     AuctionModule internal _auctionModule;
     Keycode internal _auctionModuleKeycode;
-    Catalogue internal _catalogue;
+    // Catalogue internal _catalogue;
 
     MockAtomicAuctionModule internal _atomicAuctionModule;
     Keycode internal _atomicAuctionModuleKeycode;
@@ -97,7 +97,7 @@ abstract contract AuctionHouseTest is Test, Permit2User {
         _quoteToken = new MockFeeOnTransferERC20("Quote Token", "QUOTE", 18);
 
         _auctionHouse = new AuctionHouse(address(this), _PROTOCOL, _permit2Address);
-        _catalogue = new Catalogue(address(_auctionHouse));
+        // _catalogue = new Catalogue(address(_auctionHouse));
 
         _atomicAuctionModule = new MockAtomicAuctionModule(address(_auctionHouse));
         _atomicAuctionModuleKeycode = keycodeFromVeecode(_atomicAuctionModule.VEECODE());
