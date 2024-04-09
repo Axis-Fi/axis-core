@@ -3,6 +3,7 @@ pragma solidity 0.8.19;
 
 import {AuctionHouse} from "src/bases/AuctionHouse.sol";
 import {Auction} from "src/modules/Auction.sol";
+import {AtomicAuctionHouse} from "src/AtomicAuctionHouse.sol";
 
 import {MockDerivativeModule} from "test/modules/derivatives/mocks/MockDerivativeModule.sol";
 
@@ -96,7 +97,6 @@ contract PurchaseTest is AuctionHouseTest {
         uint256 curatorFee = _curatorApproved ? (amountOut_ * _curatorFeePercentActual) / 1e5 : 0;
         bool hasDerivativeToken = _derivativeTokenId != type(uint256).max;
         bool hasCallback = address(_routingParams.callbacks) != address(0);
-        bool isPrefunding = _routingParams.prefunded;
         uint256 scaledLotCapacity = _scaleBaseTokenAmount(_LOT_CAPACITY);
         uint256 scaledCuratorMaxPotentialFee = _scaleBaseTokenAmount(_curatorMaxPotentialFee);
 
@@ -121,32 +121,20 @@ contract PurchaseTest is AuctionHouseTest {
         // Base token
         _expectedSellerBaseTokenBalance = 0;
         _expectedBidderBaseTokenBalance = hasDerivativeToken ? 0 : _amountOut;
-        _expectedAuctionHouseBaseTokenBalance = isPrefunding
-            ? scaledLotCapacity + scaledCuratorMaxPotentialFee - _amountOut - curatorFee
-            : 0;
+        _expectedAuctionHouseBaseTokenBalance = 0;
         _expectedCuratorBaseTokenBalance = hasDerivativeToken ? 0 : curatorFee;
         _expectedDerivativeModuleBaseTokenBalance = hasDerivativeToken ? _amountOut + curatorFee : 0;
         assertEq(
             _expectedSellerBaseTokenBalance + _expectedBidderBaseTokenBalance
                 + _expectedAuctionHouseBaseTokenBalance + _expectedCuratorBaseTokenBalance
                 + _expectedDerivativeModuleBaseTokenBalance,
-            (isPrefunding ? scaledLotCapacity : amountOut_)
-                + (isPrefunding ? scaledCuratorMaxPotentialFee : curatorFee),
+            amountOut_ + curatorFee,
             "base token: total balance mismatch"
         );
 
         // Derivative token
         _expectedBidderDerivativeTokenBalance = hasDerivativeToken ? _amountOut : 0;
         _expectedCuratorDerivativeTokenBalance = hasDerivativeToken ? curatorFee : 0;
-
-        // Prefunding
-        if (isPrefunding) {
-            _expectedPrefunding = scaledLotCapacity - _amountOut;
-            if (_curatorApproved) {
-                _expectedPrefunding += scaledCuratorMaxPotentialFee;
-                _expectedPrefunding -= curatorFee;
-            }
-        }
         _;
     }
 
@@ -259,7 +247,7 @@ contract PurchaseTest is AuctionHouseTest {
 
     function _assertPrefunding() internal {
         // Check funding amount
-        Auctioneer.Routing memory routing = _getLotRouting(_lotId);
+        AuctionHouse.Routing memory routing = _getLotRouting(_lotId);
         assertEq(routing.funding, _expectedPrefunding, "mismatch on funding");
     }
 
@@ -268,8 +256,6 @@ contract PurchaseTest is AuctionHouseTest {
     // parameter checks
     // [X] when the lot id is invalid
     //  [X] it reverts
-    // [X] given the auction is not atomic
-    //  [X] it reverts
     // [X] given the auction is not active
     //  [X] it reverts
     // [X] when the auction module reverts
@@ -277,26 +263,7 @@ contract PurchaseTest is AuctionHouseTest {
 
     function test_whenLotIdIsInvalid_reverts() external {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(Auctioneer.InvalidLotId.selector, _lotId);
-        vm.expectRevert(err);
-
-        // Purchase
-        _createPurchase(_AMOUNT_IN, _amountOut, _purchaseAuctionData);
-    }
-
-    function test_whenNotAtomicAuction_reverts()
-        external
-        whenAuctionTypeIsBatch
-        whenBatchAuctionModuleIsInstalled
-        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
-        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
-        givenLotIsCreated
-        givenLotHasStarted
-        givenUserHasQuoteTokenBalance(_AMOUNT_IN)
-        givenSellerHasBaseTokenBalance(_amountOut)
-    {
-        // Expect revert
-        bytes memory err = abi.encodeWithSelector(Auction.Auction_NotImplemented.selector);
+        bytes memory err = abi.encodeWithSelector(AuctionHouse.InvalidLotId.selector, _lotId);
         vm.expectRevert(err);
 
         // Purchase
@@ -351,7 +318,7 @@ contract PurchaseTest is AuctionHouseTest {
         givenSellerHasBaseTokenAllowance(_amountOut)
     {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(AuctionHouse.AmountLessThanMinimum.selector);
+        bytes memory err = abi.encodeWithSelector(AtomicAuctionHouse.AmountLessThanMinimum.selector);
         vm.expectRevert(err);
 
         // Purchase
@@ -1646,282 +1613,6 @@ contract PurchaseTest is AuctionHouseTest {
         _createPurchase(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut, _purchaseAuctionData);
 
         // Check state
-        _assertQuoteTokenBalances();
-        _assertBaseTokenBalances();
-        _assertDerivativeTokenBalances();
-        _assertAccruedFees();
-        _assertPrefunding();
-    }
-
-    // ======== Prefunding flow ======== //
-
-    // [X] given the auction is prefunded
-    //  [X] given the auction has callbacks
-    //   [X] it calls the callback
-    //  [X] given the curator has approved
-    //   [X] it succeeds - base token is not transferred from seller again
-    //  [X] it succeeds - base token is not transferred from seller again
-
-    function test_prefunded()
-        external
-        whenAuctionTypeIsAtomic
-        whenAtomicAuctionModuleIsInstalled
-        givenAuctionIsPrefunded
-        givenCuratorIsSet
-        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
-        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
-        givenLotIsCreated
-        givenProtocolFeeIsSet
-        givenReferrerFeeIsSet
-        givenLotHasStarted
-        givenUserHasQuoteTokenBalance(_AMOUNT_IN)
-        givenUserHasQuoteTokenAllowance(_AMOUNT_IN)
-        givenFeesAreCalculated(_AMOUNT_IN)
-        whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
-        givenBalancesAreCalculated(_AMOUNT_IN, _amountOut)
-    {
-        // Purchase
-        _createPurchase(_AMOUNT_IN, _amountOut, _purchaseAuctionData);
-
-        // Check state
-        _assertQuoteTokenBalances();
-        _assertBaseTokenBalances();
-        _assertDerivativeTokenBalances();
-        _assertAccruedFees();
-        _assertPrefunding();
-    }
-
-    function test_prefunded_quoteTokenDecimalsLarger()
-        external
-        whenAuctionTypeIsAtomic
-        whenAtomicAuctionModuleIsInstalled
-        givenAuctionIsPrefunded
-        givenCuratorIsSet
-        givenQuoteTokenHasDecimals(17)
-        givenBaseTokenHasDecimals(13)
-        givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
-        givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
-        givenLotIsCreated
-        givenProtocolFeeIsSet
-        givenReferrerFeeIsSet
-        givenLotHasStarted
-        givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_AMOUNT_IN))
-        givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_AMOUNT_IN))
-        givenFeesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN))
-        whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
-        givenBalancesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut)
-    {
-        // Purchase
-        _createPurchase(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut, _purchaseAuctionData);
-
-        // Check state
-        _assertQuoteTokenBalances();
-        _assertBaseTokenBalances();
-        _assertDerivativeTokenBalances();
-        _assertAccruedFees();
-        _assertPrefunding();
-    }
-
-    function test_prefunded_quoteTokenDecimalsSmaller()
-        external
-        whenAuctionTypeIsAtomic
-        whenAtomicAuctionModuleIsInstalled
-        givenAuctionIsPrefunded
-        givenCuratorIsSet
-        givenQuoteTokenHasDecimals(13)
-        givenBaseTokenHasDecimals(17)
-        givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
-        givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
-        givenLotIsCreated
-        givenProtocolFeeIsSet
-        givenReferrerFeeIsSet
-        givenLotHasStarted
-        givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_AMOUNT_IN))
-        givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_AMOUNT_IN))
-        givenFeesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN))
-        whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
-        givenBalancesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut)
-    {
-        // Purchase
-        _createPurchase(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut, _purchaseAuctionData);
-
-        // Check state
-        _assertQuoteTokenBalances();
-        _assertBaseTokenBalances();
-        _assertDerivativeTokenBalances();
-        _assertAccruedFees();
-        _assertPrefunding();
-    }
-
-    function test_prefunded_givenAuctionHasCallback()
-        external
-        whenAuctionTypeIsAtomic
-        whenAtomicAuctionModuleIsInstalled
-        givenAuctionIsPrefunded
-        givenCuratorIsSet
-        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
-        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
-        givenCallbackIsSet
-        givenLotIsCreated
-        givenProtocolFeeIsSet
-        givenReferrerFeeIsSet
-        givenLotHasStarted
-        givenUserHasQuoteTokenBalance(_AMOUNT_IN)
-        givenUserHasQuoteTokenAllowance(_AMOUNT_IN)
-        givenFeesAreCalculated(_AMOUNT_IN)
-        whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
-        givenBalancesAreCalculated(_AMOUNT_IN, _amountOut)
-    {
-        // Purchase
-        _createPurchase(_AMOUNT_IN, _amountOut, _purchaseAuctionData);
-
-        // Check state
-        _assertQuoteTokenBalances();
-        _assertBaseTokenBalances();
-        _assertDerivativeTokenBalances();
-        _assertAccruedFees();
-        _assertPrefunding();
-
-        assertEq(_callback.lotPurchased(_lotId), true, "lotPurchased");
-    }
-
-    function test_prefunded_givenCuratorHasApproved()
-        external
-        whenAuctionTypeIsAtomic
-        whenAtomicAuctionModuleIsInstalled
-        givenAuctionIsPrefunded
-        givenCuratorIsSet
-        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
-        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
-        givenLotIsCreated
-        givenLotHasStarted
-        givenProtocolFeeIsSet
-        givenReferrerFeeIsSet
-        givenCuratorMaxFeeIsSet
-        givenCuratorFeeIsSet
-        givenFeesAreCalculated(_AMOUNT_IN)
-        whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
-        givenSellerHasBaseTokenBalance(_curatorMaxPotentialFee)
-        givenSellerHasBaseTokenAllowance(_curatorMaxPotentialFee)
-        givenCuratorHasApproved
-        givenUserHasQuoteTokenBalance(_AMOUNT_IN)
-        givenUserHasQuoteTokenAllowance(_AMOUNT_IN)
-        givenBalancesAreCalculated(_AMOUNT_IN, _amountOut)
-    {
-        // Purchase
-        _createPurchase(_AMOUNT_IN, _amountOut, _purchaseAuctionData);
-
-        // Check state
-        _assertQuoteTokenBalances();
-        _assertBaseTokenBalances();
-        _assertDerivativeTokenBalances();
-        _assertAccruedFees();
-        _assertPrefunding();
-    }
-
-    function test_prefunded_givenCuratorHasApproved_quoteTokenDecimalsLarger()
-        external
-        whenAuctionTypeIsAtomic
-        whenAtomicAuctionModuleIsInstalled
-        givenAuctionIsPrefunded
-        givenCuratorIsSet
-        givenQuoteTokenHasDecimals(17)
-        givenBaseTokenHasDecimals(13)
-        givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
-        givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
-        givenLotIsCreated
-        givenLotHasStarted
-        givenProtocolFeeIsSet
-        givenReferrerFeeIsSet
-        givenCuratorMaxFeeIsSet
-        givenCuratorFeeIsSet
-        givenFeesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN))
-        whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
-        givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_curatorMaxPotentialFee))
-        givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_curatorMaxPotentialFee))
-        givenCuratorHasApproved
-        givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_AMOUNT_IN))
-        givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_AMOUNT_IN))
-        givenBalancesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut)
-    {
-        // Purchase
-        _createPurchase(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut, _purchaseAuctionData);
-
-        // Check state
-        _assertQuoteTokenBalances();
-        _assertBaseTokenBalances();
-        _assertDerivativeTokenBalances();
-        _assertAccruedFees();
-        _assertPrefunding();
-    }
-
-    function test_prefunded_givenCuratorHasApproved_quoteTokenDecimalsSmaller()
-        external
-        whenAuctionTypeIsAtomic
-        whenAtomicAuctionModuleIsInstalled
-        givenAuctionIsPrefunded
-        givenCuratorIsSet
-        givenQuoteTokenHasDecimals(13)
-        givenBaseTokenHasDecimals(17)
-        givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
-        givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
-        givenLotIsCreated
-        givenLotHasStarted
-        givenProtocolFeeIsSet
-        givenReferrerFeeIsSet
-        givenCuratorMaxFeeIsSet
-        givenCuratorFeeIsSet
-        givenFeesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN))
-        whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
-        givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_curatorMaxPotentialFee))
-        givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_curatorMaxPotentialFee))
-        givenCuratorHasApproved
-        givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_AMOUNT_IN))
-        givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_AMOUNT_IN))
-        givenBalancesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut)
-    {
-        // Purchase
-        _createPurchase(_scaleQuoteTokenAmount(_AMOUNT_IN), _amountOut, _purchaseAuctionData);
-
-        // Check state
-        _assertQuoteTokenBalances();
-        _assertBaseTokenBalances();
-        _assertDerivativeTokenBalances();
-        _assertAccruedFees();
-        _assertPrefunding();
-    }
-
-    function test_prefunded_givenCuratorHasApproved_givenCuratorFeeIsChanged()
-        external
-        whenAuctionTypeIsAtomic
-        whenAtomicAuctionModuleIsInstalled
-        givenAuctionIsPrefunded
-        givenCuratorIsSet
-        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
-        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
-        givenLotIsCreated
-        givenLotHasStarted
-        givenProtocolFeeIsSet
-        givenReferrerFeeIsSet
-        givenCuratorMaxFeeIsSet
-        givenCuratorFeeIsSet
-        givenFeesAreCalculated(_AMOUNT_IN)
-        whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
-        givenSellerHasBaseTokenBalance(_curatorMaxPotentialFee)
-        givenSellerHasBaseTokenAllowance(_curatorMaxPotentialFee)
-        givenCuratorHasApproved
-        givenUserHasQuoteTokenBalance(_AMOUNT_IN)
-        givenUserHasQuoteTokenAllowance(_AMOUNT_IN)
-        givenBalancesAreCalculated(_AMOUNT_IN, _amountOut)
-    {
-        // Change the curator fee
-        _setCuratorFee(95);
-
-        // Purchase
-        _createPurchase(_AMOUNT_IN, _amountOut, _purchaseAuctionData);
-
-        // Check state
-        // Assertions are not updated with the curator fee, so the test will fail if the new curator fee is used by the AuctionHouse
         _assertQuoteTokenBalances();
         _assertBaseTokenBalances();
         _assertDerivativeTokenBalances();

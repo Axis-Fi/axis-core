@@ -9,7 +9,7 @@ import {FixedPointMathLib as Math} from "lib/solmate/src/utils/FixedPointMathLib
 import {Permit2User} from "test/lib/permit2/Permit2User.sol";
 
 // Modules
-import {AuctionHouse} from "src/AuctionHouse.sol";
+import {AtomicAuctionHouse} from "src/AtomicAuctionHouse.sol";
 import {Auction} from "src/modules/Auction.sol";
 import {FixedPriceAuctionModule} from "src/modules/auctions/FPAM.sol";
 
@@ -25,7 +25,7 @@ abstract contract FpaModuleTest is Test, Permit2User {
     uint24 internal constant _MAX_PAYOUT_PERCENT = 5e4; // 50%
     uint256 internal constant _PRICE = 2e18;
 
-    AuctionHouse internal _auctionHouse;
+    AtomicAuctionHouse internal _auctionHouse;
     FixedPriceAuctionModule internal _module;
 
     // Input parameters (modified by modifiers)
@@ -40,7 +40,7 @@ abstract contract FpaModuleTest is Test, Permit2User {
     function setUp() external {
         vm.warp(1_000_000);
 
-        _auctionHouse = new AuctionHouse(address(this), _PROTOCOL, _permit2Address);
+        _auctionHouse = new AtomicAuctionHouse(address(this), _PROTOCOL, _permit2Address);
         _module = new FixedPriceAuctionModule(address(_auctionHouse));
 
         _start = uint48(block.timestamp) + 1;

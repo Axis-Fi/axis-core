@@ -60,7 +60,8 @@ contract AtomicCatalogue {
     }
 
     function payoutFor(uint96 lotId_, uint256 amount_) external view returns (uint256) {
-        AtomicAuctionModule module = AtomicAuctionModule(address(AtomicAuctionHouse(auctionHouse).getModuleForId(lotId_)));
+        AtomicAuctionModule module =
+            AtomicAuctionModule(address(AtomicAuctionHouse(auctionHouse).getModuleForId(lotId_)));
         AuctionHouse.Routing memory routing = getRouting(lotId_);
 
         // Get protocol fee from FeeManager
@@ -77,7 +78,8 @@ contract AtomicCatalogue {
     }
 
     function priceFor(uint96 lotId_, uint256 payout_) external view returns (uint256) {
-        AtomicAuctionModule module = AtomicAuctionModule(address(AtomicAuctionHouse(auctionHouse).getModuleForId(lotId_)));
+        AtomicAuctionModule module =
+            AtomicAuctionModule(address(AtomicAuctionHouse(auctionHouse).getModuleForId(lotId_)));
         AuctionHouse.Routing memory routing = getRouting(lotId_);
 
         // Get price from module (in quote token units)
@@ -90,7 +92,8 @@ contract AtomicCatalogue {
     }
 
     function maxPayout(uint96 lotId_) external view returns (uint256) {
-        AtomicAuctionModule module = AtomicAuctionModule(address(AtomicAuctionHouse(auctionHouse).getModuleForId(lotId_)));
+        AtomicAuctionModule module =
+            AtomicAuctionModule(address(AtomicAuctionHouse(auctionHouse).getModuleForId(lotId_)));
 
         // No fees need to be considered here since an amount is not provided
 
@@ -99,7 +102,8 @@ contract AtomicCatalogue {
     }
 
     function maxAmountAccepted(uint96 lotId_) external view returns (uint256) {
-        AtomicAuctionModule module = AtomicAuctionModule(address(AtomicAuctionHouse(auctionHouse).getModuleForId(lotId_)));
+        AtomicAuctionModule module =
+            AtomicAuctionModule(address(AtomicAuctionHouse(auctionHouse).getModuleForId(lotId_)));
         AuctionHouse.Routing memory routing = getRouting(lotId_);
 
         // Get max amount accepted from module

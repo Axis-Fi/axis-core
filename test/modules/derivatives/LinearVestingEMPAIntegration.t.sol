@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.19;
 
+import {BatchRouter} from "src/BatchAuctionHouse.sol";
 import {EncryptedMarginalPriceAuctionModule} from "src/modules/auctions/EMPAM.sol";
 import {LinearVesting} from "src/modules/derivatives/LinearVesting.sol";
 import {Point, ECIES} from "src/lib/ECIES.sol";
-import {Auctioneer} from "src/bases/Auctioneer.sol";
+import {AuctionHouse} from "src/bases/AuctionHouse.sol";
 import {Auction} from "src/modules/Auction.sol";
-import {Router} from "src/AuctionHouse.sol";
 
 import {keycodeFromVeecode, fromVeecode} from "src/modules/Modules.sol";
 
-import {AuctionHouseTest} from "test/AuctionHouse/AuctionHouseTest.sol";
+import {AuctionHouseTest} from "test/BatchAuctionHouse/AuctionHouseTest.sol";
 
 contract LinearVestingEMPAIntegrationTest is AuctionHouseTest {
     EncryptedMarginalPriceAuctionModule internal _empaModule;
@@ -45,7 +45,6 @@ contract LinearVestingEMPAIntegrationTest is AuctionHouseTest {
         _auctionModuleKeycode = keycodeFromVeecode(_empaModule.VEECODE());
 
         _routingParams.auctionType = keycodeFromVeecode(_empaModule.VEECODE());
-        _routingParams.prefunded = true;
 
         _auctionPublicKey = ECIES.calcPubKey(Point(1, 2), _AUCTION_PRIVATE_KEY);
         _bidPublicKey = ECIES.calcPubKey(Point(1, 2), _BID_PRIVATE_KEY);
@@ -121,7 +120,7 @@ contract LinearVestingEMPAIntegrationTest is AuctionHouseTest {
     ) internal returns (uint64 bidId) {
         bytes memory bidData = _createBidData(bidder_, amountIn_, amountOut_);
 
-        Router.BidParams memory bid = Router.BidParams({
+        BatchRouter.BidParams memory bid = BatchRouter.BidParams({
             lotId: _lotId,
             referrer: _REFERRER,
             amount: amountIn_,
@@ -173,7 +172,7 @@ contract LinearVestingEMPAIntegrationTest is AuctionHouseTest {
         givenLotIsCreated
     {
         // Check the routing parameters
-        Auctioneer.Routing memory lotRouting = _getLotRouting(_lotId);
+        AuctionHouse.Routing memory lotRouting = _getLotRouting(_lotId);
         assertEq(
             fromVeecode(lotRouting.auctionReference),
             fromVeecode(_empaModule.VEECODE()),
@@ -219,28 +218,6 @@ contract LinearVestingEMPAIntegrationTest is AuctionHouseTest {
         // Check balances
         assertEq(_baseToken.balanceOf(_SELLER), _LOT_CAPACITY, "seller balance");
         assertEq(_baseToken.balanceOf(address(_auctionHouse)), 0, "auction house balance");
-    }
-
-    // purchase
-    // [X] it reverts
-
-    function test_purchase_reverts()
-        external
-        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
-        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
-        givenAuctionTypeIsEMPA
-        givenDerivativeTypeIsLinearVesting
-        givenLotIsCreated
-        givenLotHasStarted
-        givenUserHasQuoteTokenBalance(_BID_AMOUNT)
-        givenUserHasQuoteTokenAllowance(_BID_AMOUNT)
-    {
-        // Expect revert
-        bytes memory err = abi.encodeWithSelector(Auction.Auction_NotImplemented.selector);
-        vm.expectRevert(err);
-
-        // Call function
-        _createPurchase(_BID_AMOUNT, _BID_AMOUNT_OUT, "");
     }
 
     // bid
@@ -386,7 +363,6 @@ contract LinearVestingEMPAIntegrationTest is AuctionHouseTest {
         Auction.Lot memory lotData = _getLotData(_lotId);
         assertEq(lotData.purchased, _BID_AMOUNT, "purchased");
         assertEq(lotData.sold, _BID_AMOUNT_OUT, "sold");
-        assertEq(lotData.partialPayout, 0, "partial payout");
 
         // Get the derivative token id
         uint256 derivativeTokenId =
@@ -493,7 +469,6 @@ contract LinearVestingEMPAIntegrationTest is AuctionHouseTest {
         Auction.Lot memory lotData = _getLotData(_lotId);
         assertEq(lotData.purchased, 10e18, "purchased");
         assertEq(lotData.sold, 10e18, "sold");
-        assertEq(lotData.partialPayout, 2e18, "partial payout");
 
         // Get the derivative token id
         uint256 derivativeTokenId =

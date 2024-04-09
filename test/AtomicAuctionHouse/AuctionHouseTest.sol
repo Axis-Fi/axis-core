@@ -9,14 +9,13 @@ import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 
 // Mocks
 import {MockAtomicAuctionModule} from "test/modules/Auction/MockAtomicAuctionModule.sol";
-import {MockBatchAuctionModule} from "test/modules/Auction/MockBatchAuctionModule.sol";
 import {MockDerivativeModule} from "test/modules/derivatives/mocks/MockDerivativeModule.sol";
 import {MockCallback} from "test/callbacks/MockCallback.sol";
 import {Permit2User} from "test/lib/permit2/Permit2User.sol";
 import {MockFeeOnTransferERC20} from "test/lib/mocks/MockFeeOnTransferERC20.sol";
 
 // Auctions
-import {AtomicAuctionHouse} from "src/AtomicAuctionHouse.sol";
+import {AtomicAuctionHouse, AtomicRouter} from "src/AtomicAuctionHouse.sol";
 import {AuctionHouse} from "src/bases/AuctionHouse.sol";
 import {Auction, AuctionModule} from "src/modules/Auction.sol";
 import {FeeManager} from "src/bases/FeeManager.sol";
@@ -39,8 +38,6 @@ abstract contract AuctionHouseTest is Test, Permit2User {
 
     MockAtomicAuctionModule internal _atomicAuctionModule;
     Keycode internal _atomicAuctionModuleKeycode;
-    MockBatchAuctionModule internal _batchAuctionModule;
-    Keycode internal _batchAuctionModuleKeycode;
     MockDerivativeModule internal _derivativeModule;
     Keycode internal _derivativeModuleKeycode;
     MockCallback internal _callback;
@@ -101,8 +98,6 @@ abstract contract AuctionHouseTest is Test, Permit2User {
 
         _atomicAuctionModule = new MockAtomicAuctionModule(address(_auctionHouse));
         _atomicAuctionModuleKeycode = keycodeFromVeecode(_atomicAuctionModule.VEECODE());
-        _batchAuctionModule = new MockBatchAuctionModule(address(_auctionHouse));
-        _batchAuctionModuleKeycode = keycodeFromVeecode(_batchAuctionModule.VEECODE());
         _derivativeModule = new MockDerivativeModule(address(_auctionHouse));
         _derivativeModuleKeycode = keycodeFromVeecode(_derivativeModule.VEECODE());
 
@@ -125,8 +120,7 @@ abstract contract AuctionHouseTest is Test, Permit2User {
             callbackData: abi.encode(""),
             derivativeType: toKeycode(""),
             derivativeParams: _derivativeParams,
-            wrapDerivative: false,
-            prefunded: false
+            wrapDerivative: false
         });
 
         // Bidder
@@ -183,22 +177,8 @@ abstract contract AuctionHouseTest is Test, Permit2User {
         _;
     }
 
-    modifier whenAuctionTypeIsBatch() {
-        _routingParams.auctionType = _batchAuctionModuleKeycode;
-        _routingParams.prefunded = true;
-
-        _auctionModule = _batchAuctionModule;
-        _auctionModuleKeycode = _batchAuctionModuleKeycode;
-        _;
-    }
-
     modifier whenAtomicAuctionModuleIsInstalled() {
         _auctionHouse.installModule(_atomicAuctionModule);
-        _;
-    }
-
-    modifier whenBatchAuctionModuleIsInstalled() {
-        _auctionHouse.installModule(_batchAuctionModule);
         _;
     }
 
@@ -235,16 +215,6 @@ abstract contract AuctionHouseTest is Test, Permit2User {
 
     modifier givenLotIsConcluded() {
         _concludeLot();
-        _;
-    }
-
-    function _settleLot() internal {
-        vm.prank(_SELLER);
-        _auctionHouse.settle(_lotId);
-    }
-
-    modifier givenLotIsSettled() {
-        _settleLot();
         _;
     }
 
@@ -488,7 +458,7 @@ abstract contract AuctionHouseTest is Test, Permit2User {
         bytes memory auctionData_,
         address referrer_
     ) internal returns (uint256) {
-        Router.PurchaseParams memory purchaseParams = Router.PurchaseParams({
+        AtomicRouter.PurchaseParams memory purchaseParams = AtomicRouter.PurchaseParams({
             recipient: _bidder,
             referrer: referrer_,
             lotId: _lotId,

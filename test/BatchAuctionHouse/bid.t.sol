@@ -6,9 +6,9 @@ import {MockBatchAuctionModule} from "test/modules/Auction/MockBatchAuctionModul
 
 // Auctions
 import {Auction} from "src/modules/Auction.sol";
-import {Auctioneer} from "src/bases/Auctioneer.sol";
+import {AuctionHouse} from "src/bases/AuctionHouse.sol";
 
-import {AuctionHouseTest} from "test/AuctionHouse/AuctionHouseTest.sol";
+import {AuctionHouseTest} from "test/BatchAuctionHouse/AuctionHouseTest.sol";
 
 contract BidTest is AuctionHouseTest {
     uint256 internal constant _BID_AMOUNT = 1e18;
@@ -16,8 +16,6 @@ contract BidTest is AuctionHouseTest {
     bytes internal _bidAuctionData = abi.encode("");
 
     // bid
-    // [X] given the auction is atomic
-    //  [X] it reverts
     // [X] when the lot id is invalid
     //  [X] it reverts
     // [X] given the auction is cancelled
@@ -41,22 +39,8 @@ contract BidTest is AuctionHouseTest {
     //  [X] it calls the callback
     // [X] it records the bid
 
-    function test_givenAtomicAuction_reverts()
-        external
-        whenAuctionTypeIsAtomic
-        whenAtomicAuctionModuleIsInstalled
-        givenLotIsCreated
-        givenLotHasStarted
-    {
-        bytes memory err = abi.encodeWithSelector(Auction.Auction_NotImplemented.selector);
-        vm.expectRevert(err);
-
-        // Call the function
-        _createBid(_BID_AMOUNT, _bidAuctionData);
-    }
-
     function test_whenLotIdIsInvalid_reverts() external {
-        bytes memory err = abi.encodeWithSelector(Auctioneer.InvalidLotId.selector, _lotId);
+        bytes memory err = abi.encodeWithSelector(AuctionHouse.InvalidLotId.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function

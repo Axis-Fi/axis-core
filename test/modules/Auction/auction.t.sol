@@ -11,9 +11,9 @@ import {MockAtomicAuctionModule} from "test/modules/Auction/MockAtomicAuctionMod
 import {Permit2User} from "test/lib/permit2/Permit2User.sol";
 
 // Auctions
-import {AuctionHouse} from "src/AuctionHouse.sol";
+import {AtomicAuctionHouse} from "src/AtomicAuctionHouse.sol";
 import {Auction} from "src/modules/Auction.sol";
-import {Auctioneer} from "src/bases/Auctioneer.sol";
+import {AuctionHouse} from "src/bases/AuctionHouse.sol";
 import {ICallback} from "src/interfaces/ICallback.sol";
 
 // Modules
@@ -24,8 +24,8 @@ contract AuctionTest is Test, Permit2User {
     MockERC20 internal _quoteToken;
     MockAtomicAuctionModule internal _mockAuctionModule;
 
-    AuctionHouse internal _auctionHouse;
-    Auctioneer.RoutingParams internal _routingParams;
+    AtomicAuctionHouse internal _auctionHouse;
+    AuctionHouse.RoutingParams internal _routingParams;
     Auction.AuctionParams internal _auctionParams;
 
     address internal constant _PROTOCOL = address(0x2);
@@ -41,7 +41,7 @@ contract AuctionTest is Test, Permit2User {
         _baseToken = new MockERC20("Base Token", "BASE", _BASE_TOKEN_DECIMALS);
         _quoteToken = new MockERC20("Quote Token", "QUOTE", _QUOTE_TOKEN_DECIMALS);
 
-        _auctionHouse = new AuctionHouse(address(this), _PROTOCOL, _permit2Address);
+        _auctionHouse = new AtomicAuctionHouse(address(this), _PROTOCOL, _permit2Address);
         _mockAuctionModule = new MockAtomicAuctionModule(address(_auctionHouse));
 
         _auctionHouse.installModule(_mockAuctionModule);
@@ -54,7 +54,7 @@ contract AuctionTest is Test, Permit2User {
             implParams: abi.encode("")
         });
 
-        _routingParams = Auctioneer.RoutingParams({
+        _routingParams = AuctionHouse.RoutingParams({
             auctionType: toKeycode("MOCK"),
             baseToken: _baseToken,
             quoteToken: _quoteToken,
@@ -63,8 +63,7 @@ contract AuctionTest is Test, Permit2User {
             callbackData: abi.encode(""),
             derivativeType: toKeycode(""),
             derivativeParams: abi.encode(""),
-            wrapDerivative: false,
-            prefunded: false
+            wrapDerivative: false
         });
     }
 

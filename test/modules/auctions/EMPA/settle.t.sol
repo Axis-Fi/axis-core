@@ -5,6 +5,7 @@ import {FixedPointMathLib as Math} from "solmate/utils/FixedPointMathLib.sol";
 
 import {Module} from "src/modules/Modules.sol";
 import {Auction} from "src/modules/Auction.sol";
+import {BatchAuction} from "src/modules/auctions/BatchAuctionModule.sol";
 import {EncryptedMarginalPriceAuctionModule} from "src/modules/auctions/EMPAM.sol";
 
 import {EmpaModuleTest} from "test/modules/auctions/EMPA/EMPAModuleTest.sol";
@@ -99,7 +100,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
 
     function _settle()
         internal
-        returns (Auction.Settlement memory settlement_, bytes memory auctionOutput_)
+        returns (BatchAuction.Settlement memory settlement_, bytes memory auctionOutput_)
     {
         vm.prank(address(_auctionHouse));
         (settlement_, auctionOutput_) = _module.settle(_lotId);
@@ -108,7 +109,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
     }
 
     function _assertSettlement(
-        Auction.Settlement memory settlement_,
+        BatchAuction.Settlement memory settlement_,
         bytes memory auctionOutput_
     ) internal {
         assertEq(settlement_.totalIn, _expectedTotalIn, "totalIn");
@@ -130,7 +131,8 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         assertEq(lotData.sold, _expectedTotalOut, "lot sold");
         assertEq(lotData.purchased, _expectedTotalIn, "lot purchased");
         assertEq(lotData.capacity, 0, "lot capacity");
-        assertEq(lotData.partialPayout, _expectedPartialFillPayout, "lot partialPayout");
+
+        assertEq(_module.lotPartialPayout(_lotId), _expectedPartialFillPayout, "lot partial payout");
     }
 
     modifier givenBidsAreBelowMinimumFilled() {
@@ -935,7 +937,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         givenLotIsDecrypted
     {
         // Call function
-        (Auction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
+        (BatchAuction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
 
         // Validate auction data
         EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
@@ -963,7 +965,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         givenLotIsDecrypted
     {
         // Call function
-        (Auction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
+        (BatchAuction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
 
         // Validate auction data
         EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
@@ -991,7 +993,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         givenLotIsDecrypted
     {
         // Call function
-        (Auction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
+        (BatchAuction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
 
         // Validate auction data
         EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
@@ -1017,7 +1019,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         givenLotIsDecrypted
     {
         // Call function
-        (Auction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
+        (BatchAuction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
 
         // Validate auction data
         EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
@@ -1045,7 +1047,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         givenLotIsDecrypted
     {
         // Call function
-        (Auction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
+        (BatchAuction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
 
         // Validate auction data
         EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
@@ -1073,7 +1075,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         givenLotIsDecrypted
     {
         // Call function
-        (Auction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
+        (BatchAuction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
 
         // Validate auction data
         EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
@@ -1099,7 +1101,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         givenLotIsDecrypted
     {
         // Call function
-        (Auction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
+        (BatchAuction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
 
         // Validate auction data
         EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
@@ -1127,7 +1129,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         givenLotIsDecrypted
     {
         // Call function
-        (Auction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
+        (BatchAuction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
 
         // Validate auction data
         EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
@@ -1155,7 +1157,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         givenLotIsDecrypted
     {
         // Call function
-        (Auction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
+        (BatchAuction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
 
         // Validate auction data
         EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
@@ -1181,7 +1183,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         givenLotIsDecrypted
     {
         // Call function
-        (Auction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
+        (BatchAuction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
 
         // Validate auction data
         EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
@@ -1209,7 +1211,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         givenLotIsDecrypted
     {
         // Call function
-        (Auction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
+        (BatchAuction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
 
         // Validate auction data
         EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
@@ -1237,7 +1239,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         givenLotIsDecrypted
     {
         // Call function
-        (Auction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
+        (BatchAuction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
 
         // Validate auction data
         EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
@@ -1264,7 +1266,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
     {
         // Call function
         uint256 gasBefore = gasleft();
-        (Auction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
+        (BatchAuction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
         uint256 gasAfter = gasleft();
         console2.log("gas used", gasBefore - gasAfter);
 
@@ -1291,7 +1293,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         givenLotIsDecrypted
     {
         // Call function
-        (Auction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
+        (BatchAuction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
 
         // Assert settlement
         _assertSettlement(settlement, auctionOutput);
@@ -1310,7 +1312,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         givenLotIsDecrypted
     {
         // Call function
-        (Auction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
+        (BatchAuction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
 
         // Assert settlement
         _assertSettlement(settlement, auctionOutput);
@@ -1329,7 +1331,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         givenLotIsDecrypted
     {
         // Call function
-        (Auction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
+        (BatchAuction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
 
         // Assert settlement
         _assertSettlement(settlement, auctionOutput);
@@ -1345,7 +1347,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         givenLotIsDecrypted
     {
         // Call function
-        (Auction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
+        (BatchAuction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
 
         // Assert settlement
         _assertSettlement(settlement, auctionOutput);
@@ -1363,7 +1365,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         givenLotIsDecrypted
     {
         // Call function
-        (Auction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
+        (BatchAuction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
 
         // Assert settlement
         _assertSettlement(settlement, auctionOutput);
@@ -1381,7 +1383,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         givenLotIsDecrypted
     {
         // Call function
-        (Auction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
+        (BatchAuction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
 
         // Assert settlement
         _assertSettlement(settlement, auctionOutput);
@@ -1397,7 +1399,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         givenLotIsDecrypted
     {
         // Call function
-        (Auction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
+        (BatchAuction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
 
         // Assert settlement
         _assertSettlement(settlement, auctionOutput);
@@ -1415,7 +1417,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         givenLotIsDecrypted
     {
         // Call function
-        (Auction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
+        (BatchAuction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
 
         // Assert settlement
         _assertSettlement(settlement, auctionOutput);
@@ -1433,7 +1435,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         givenLotIsDecrypted
     {
         // Call function
-        (Auction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
+        (BatchAuction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
 
         // Assert settlement
         _assertSettlement(settlement, auctionOutput);
@@ -1449,7 +1451,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         givenLotIsDecrypted
     {
         // Call function
-        (Auction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
+        (BatchAuction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
 
         // Assert settlement
         _assertSettlement(settlement, auctionOutput);
@@ -1467,7 +1469,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         givenLotIsDecrypted
     {
         // Call function
-        (Auction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
+        (BatchAuction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
 
         // Assert settlement
         _assertSettlement(settlement, auctionOutput);
@@ -1485,7 +1487,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         givenLotIsDecrypted
     {
         // Call function
-        (Auction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
+        (BatchAuction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
 
         // Assert settlement
         _assertSettlement(settlement, auctionOutput);
@@ -1501,7 +1503,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         givenLotIsDecrypted
     {
         // Call function
-        (Auction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
+        (BatchAuction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
 
         // Assert settlement
         _assertSettlement(settlement, auctionOutput);
@@ -1520,7 +1522,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         givenLotIsDecrypted
     {
         // Call function
-        (Auction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
+        (BatchAuction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
 
         // Assert settlement
         _assertSettlement(settlement, auctionOutput);
@@ -1539,7 +1541,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         givenLotIsDecrypted
     {
         // Call function
-        (Auction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
+        (BatchAuction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
 
         // Assert settlement
         _assertSettlement(settlement, auctionOutput);
@@ -1555,7 +1557,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         givenLotIsDecrypted
     {
         // Call function
-        (Auction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
+        (BatchAuction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
 
         // Assert settlement
         _assertSettlement(settlement, auctionOutput);
@@ -1574,7 +1576,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         givenLotIsDecrypted
     {
         // Call function
-        (Auction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
+        (BatchAuction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
 
         // Assert settlement
         _assertSettlement(settlement, auctionOutput);
@@ -1593,7 +1595,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         givenLotIsDecrypted
     {
         // Call function
-        (Auction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
+        (BatchAuction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
 
         // Assert settlement
         _assertSettlement(settlement, auctionOutput);
@@ -1610,7 +1612,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         givenLotIsDecrypted
     {
         // Call function
-        (Auction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
+        (BatchAuction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
 
         // Assert settlement
         _assertSettlement(settlement, auctionOutput);
@@ -1629,7 +1631,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         givenLotIsDecrypted
     {
         // Call function
-        (Auction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
+        (BatchAuction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
 
         // Assert settlement
         _assertSettlement(settlement, auctionOutput);
@@ -1648,7 +1650,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         givenLotIsDecrypted
     {
         // Call function
-        (Auction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
+        (BatchAuction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
 
         // Assert settlement
         _assertSettlement(settlement, auctionOutput);
@@ -1665,7 +1667,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         givenLotIsDecrypted
     {
         // Call function
-        (Auction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
+        (BatchAuction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
 
         // Assert settlement
         _assertSettlement(settlement, auctionOutput);
@@ -1684,7 +1686,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         givenLotIsDecrypted
     {
         // Call function
-        (Auction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
+        (BatchAuction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
 
         // Assert settlement
         _assertSettlement(settlement, auctionOutput);
@@ -1703,7 +1705,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         givenLotIsDecrypted
     {
         // Call function
-        (Auction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
+        (BatchAuction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
 
         // Assert settlement
         _assertSettlement(settlement, auctionOutput);
@@ -1720,7 +1722,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         givenLotIsDecrypted
     {
         // Call function
-        (Auction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
+        (BatchAuction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
 
         // Assert settlement
         _assertSettlement(settlement, auctionOutput);
@@ -1739,7 +1741,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         givenLotIsDecrypted
     {
         // Call function
-        (Auction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
+        (BatchAuction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
 
         // Assert settlement
         _assertSettlement(settlement, auctionOutput);
@@ -1758,7 +1760,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         givenLotIsDecrypted
     {
         // Call function
-        (Auction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
+        (BatchAuction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
 
         // Assert settlement
         _assertSettlement(settlement, auctionOutput);
@@ -1775,7 +1777,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         givenLotIsDecrypted
     {
         // Call function
-        (Auction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
+        (BatchAuction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
 
         // Assert settlement
         _assertSettlement(settlement, auctionOutput);
@@ -1792,7 +1794,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         givenLotIsDecrypted
     {
         // Call function
-        (Auction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
+        (BatchAuction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
 
         // Assert settlement
         _assertSettlement(settlement, auctionOutput);
@@ -1809,7 +1811,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         givenLotIsDecrypted
     {
         // Call function
-        (Auction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
+        (BatchAuction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
 
         // Assert settlement
         _assertSettlement(settlement, auctionOutput);
@@ -1826,7 +1828,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         givenLotIsDecrypted
     {
         // Call function
-        (Auction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
+        (BatchAuction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
 
         // Assert settlement
         _assertSettlement(settlement, auctionOutput);

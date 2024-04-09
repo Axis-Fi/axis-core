@@ -2,11 +2,12 @@
 pragma solidity 0.8.19;
 
 import {Auction} from "src/modules/Auction.sol";
-import {Auctioneer} from "src/bases/Auctioneer.sol";
+import {AuctionHouse} from "src/bases/AuctionHouse.sol";
+import {BatchAuction} from "src/modules/auctions/BatchAuctionModule.sol";
 
 import {MockBatchAuctionModule} from "test/modules/Auction/MockBatchAuctionModule.sol";
 
-import {AuctionHouseTest} from "test/AuctionHouse/AuctionHouseTest.sol";
+import {AuctionHouseTest} from "test/BatchAuctionHouse/AuctionHouseTest.sol";
 
 contract ClaimProceedsTest is AuctionHouseTest {
     uint256 internal constant _BID_AMOUNT = 2e18;
@@ -67,7 +68,7 @@ contract ClaimProceedsTest is AuctionHouseTest {
 
     function _assertLotRouting(uint256 funding) internal {
         // Check the lot
-        Auctioneer.Routing memory lotRouting = _getLotRouting(_lotId);
+        AuctionHouse.Routing memory lotRouting = _getLotRouting(_lotId);
         assertEq(lotRouting.funding, funding, "funding");
 
         // Check the lot status
@@ -83,7 +84,7 @@ contract ClaimProceedsTest is AuctionHouseTest {
         // Set the settlement data
         _batchAuctionModule.setLotSettlement(
             _lotId,
-            Auction.Settlement({
+            BatchAuction.Settlement({
                 totalIn: _scaleQuoteTokenAmount(_BID_AMOUNT),
                 totalOut: _scaleBaseTokenAmount(_BID_AMOUNT_OUT),
                 pfBidder: address(0),
@@ -102,7 +103,7 @@ contract ClaimProceedsTest is AuctionHouseTest {
         // Set the settlement data
         _batchAuctionModule.setLotSettlement(
             _lotId,
-            Auction.Settlement({
+            BatchAuction.Settlement({
                 totalIn: _scaleQuoteTokenAmount(_BID_AMOUNT * 5),
                 totalOut: _scaleBaseTokenAmount(_BID_AMOUNT_OUT * 5),
                 pfBidder: address(0),
@@ -121,7 +122,7 @@ contract ClaimProceedsTest is AuctionHouseTest {
         // Set the settlement data
         _batchAuctionModule.setLotSettlement(
             _lotId,
-            Auction.Settlement({
+            BatchAuction.Settlement({
                 totalIn: _scaleQuoteTokenAmount(_BID_AMOUNT * 6)
                     - _scaleQuoteTokenAmount(_BID_AMOUNT_PARTIAL_REFUND),
                 totalOut: _scaleBaseTokenAmount(_LOT_CAPACITY),
@@ -147,8 +148,6 @@ contract ClaimProceedsTest is AuctionHouseTest {
 
     // [X] when the lot id is invalid
     //  [X] it reverts
-    // [X] given it is not a batch auction
-    //  [X] it reverts
     // [X] given the lot did not settle
     //  [X] it sends the unused capacity to the seller, and marks the lot as claimed
     // [X] given the lot has a partial fill
@@ -169,23 +168,7 @@ contract ClaimProceedsTest is AuctionHouseTest {
 
     function test_invalidLotId_reverts() external {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(Auctioneer.InvalidLotId.selector, _lotId);
-        vm.expectRevert(err);
-
-        // Call function
-        vm.prank(_SELLER);
-        _auctionHouse.claimProceeds(_lotId, bytes(""));
-    }
-
-    function test_notBatchAuction_reverts()
-        external
-        whenAuctionTypeIsAtomic
-        whenAtomicAuctionModuleIsInstalled
-        givenLotIsCreated
-        givenLotIsConcluded
-    {
-        // Expect revert
-        bytes memory err = abi.encodeWithSelector(Auction.Auction_NotImplemented.selector);
+        bytes memory err = abi.encodeWithSelector(AuctionHouse.InvalidLotId.selector, _lotId);
         vm.expectRevert(err);
 
         // Call function

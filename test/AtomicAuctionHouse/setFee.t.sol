@@ -9,7 +9,8 @@ import {MockAtomicAuctionModule} from "test/modules/Auction/MockAtomicAuctionMod
 import {Permit2User} from "test/lib/permit2/Permit2User.sol";
 
 // Auctions
-import {AuctionHouse, FeeManager} from "src/AuctionHouse.sol";
+import {FeeManager} from "src/bases/FeeManager.sol";
+import {AtomicAuctionHouse} from "src/AtomicAuctionHouse.sol";
 
 // Modules
 import {Keycode, toKeycode} from "src/modules/Modules.sol";
@@ -17,7 +18,7 @@ import {Keycode, toKeycode} from "src/modules/Modules.sol";
 contract SetFeeTest is Test, Permit2User {
     MockAtomicAuctionModule internal _mockAuctionModule;
 
-    AuctionHouse internal _auctionHouse;
+    AtomicAuctionHouse internal _auctionHouse;
 
     address internal immutable _PROTOCOL = address(0x2);
     address internal immutable _CURATOR = address(0x3);
@@ -28,7 +29,7 @@ contract SetFeeTest is Test, Permit2User {
     uint48 internal constant _MAX_FEE = 1e5;
 
     function setUp() external {
-        _auctionHouse = new AuctionHouse(address(this), _PROTOCOL, _permit2Address);
+        _auctionHouse = new AtomicAuctionHouse(address(this), _PROTOCOL, _permit2Address);
         _mockAuctionModule = new MockAtomicAuctionModule(address(_auctionHouse));
         _auctionHouse.installModule(_mockAuctionModule);
     }

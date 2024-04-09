@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.19;
 
-import {Auction} from "src/modules/Auction.sol";
-import {Auctioneer} from "src/bases/Auctioneer.sol";
-import {BatchAuctionModule} from "src/modules/auctions/BatchAuctionModule.sol";
+import {AuctionHouse} from "src/bases/AuctionHouse.sol";
+import {BatchAuction, BatchAuctionModule} from "src/modules/auctions/BatchAuctionModule.sol";
 
-import {AuctionHouseTest} from "test/AuctionHouse/AuctionHouseTest.sol";
+import {AuctionHouseTest} from "test/BatchAuctionHouse/AuctionHouseTest.sol";
 
 contract ClaimBidsTest is AuctionHouseTest {
     uint256 internal constant _BID_AMOUNT = 1e18;
@@ -13,7 +12,7 @@ contract ClaimBidsTest is AuctionHouseTest {
 
     address internal constant _BIDDER_TWO = address(0x20);
 
-    Auction.BidClaim[] internal _bidClaims;
+    BatchAuction.BidClaim[] internal _bidClaims;
 
     uint256 internal _expectedBidderQuoteTokenBalance;
     uint256 internal _expectedBidderTwoQuoteTokenBalance;
@@ -83,7 +82,7 @@ contract ClaimBidsTest is AuctionHouseTest {
         );
         assertEq(_baseToken.balanceOf(_PROTOCOL), 0, "base token: protocol balance");
 
-        Auctioneer.Routing memory routing = _getLotRouting(_lotId);
+        AuctionHouse.Routing memory routing = _getLotRouting(_lotId);
         assertEq(routing.funding, _expectedAuctionHouseBaseTokenBalance, "funding");
     }
 
@@ -124,7 +123,12 @@ contract ClaimBidsTest is AuctionHouseTest {
         uint256 payout_
     ) internal {
         _bidClaims.push(
-            Auction.BidClaim({bidder: bidder_, referrer: referrer_, paid: paid_, payout: payout_})
+            BatchAuction.BidClaim({
+                bidder: bidder_,
+                referrer: referrer_,
+                paid: paid_,
+                payout: payout_
+            })
         );
     }
 
@@ -212,7 +216,7 @@ contract ClaimBidsTest is AuctionHouseTest {
         // Set the settlement data
         _batchAuctionModule.setLotSettlement(
             _lotId,
-            Auction.Settlement({
+            BatchAuction.Settlement({
                 totalIn: _scaleQuoteTokenAmount(_BID_AMOUNT),
                 totalOut: _scaleBaseTokenAmount(_BID_AMOUNT_OUT),
                 pfBidder: address(0),
@@ -231,7 +235,7 @@ contract ClaimBidsTest is AuctionHouseTest {
         // Set the settlement data
         _batchAuctionModule.setLotSettlement(
             _lotId,
-            Auction.Settlement({
+            BatchAuction.Settlement({
                 totalIn: _scaleQuoteTokenAmount(_BID_AMOUNT + _BID_AMOUNT),
                 totalOut: _scaleBaseTokenAmount(_BID_AMOUNT_OUT + _BID_AMOUNT_OUT),
                 pfBidder: address(0),
@@ -266,7 +270,7 @@ contract ClaimBidsTest is AuctionHouseTest {
     // ============ Tests ============
 
     function test_invalidLotId_reverts() external {
-        bytes memory err = abi.encodeWithSelector(Auctioneer.InvalidLotId.selector, _lotId);
+        bytes memory err = abi.encodeWithSelector(AuctionHouse.InvalidLotId.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function

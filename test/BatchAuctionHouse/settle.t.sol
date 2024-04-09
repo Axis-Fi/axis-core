@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.19;
 
-import {Auction} from "src/modules/Auction.sol";
-import {Auctioneer} from "src/bases/Auctioneer.sol";
-import {BatchAuctionModule} from "src/modules/auctions/BatchAuctionModule.sol";
+import {AuctionHouse} from "src/bases/AuctionHouse.sol";
+import {BatchAuction, BatchAuctionModule} from "src/modules/auctions/BatchAuctionModule.sol";
 
-import {AuctionHouseTest} from "test/AuctionHouse/AuctionHouseTest.sol";
+import {AuctionHouseTest} from "test/BatchAuctionHouse/AuctionHouseTest.sol";
 
 contract SettleTest is AuctionHouseTest {
     uint256 internal constant _BID_AMOUNT_TOTAL = 20e18;
@@ -52,7 +51,7 @@ contract SettleTest is AuctionHouseTest {
         assertEq(_baseToken.balanceOf(_PROTOCOL), 0, "base token: protocol balance");
 
         // Check routing
-        Auctioneer.Routing memory lotRouting = _getLotRouting(_lotId);
+        AuctionHouse.Routing memory lotRouting = _getLotRouting(_lotId);
         assertEq(lotRouting.funding, _expectedAuctionHouseBaseTokenBalance, "funding");
     }
 
@@ -80,7 +79,7 @@ contract SettleTest is AuctionHouseTest {
 
     function _assertAccruedFees() internal {
         // Check that the protocol and referrer fees have been cached
-        Auctioneer.FeeData memory feeData = _getLotFees(_lotId);
+        AuctionHouse.FeeData memory feeData = _getLotFees(_lotId);
         assertEq(feeData.protocolFee, _lotSettles ? _protocolFeePercentActual : 0, "protocol fee");
         assertEq(feeData.referrerFee, _lotSettles ? _referrerFeePercentActual : 0, "referrer fee");
 
@@ -99,7 +98,7 @@ contract SettleTest is AuctionHouseTest {
     }
 
     function _mockSettlement(
-        Auction.Settlement memory settlement_,
+        BatchAuction.Settlement memory settlement_,
         bytes memory auctionOutput_
     ) internal {
         vm.mockCall(
@@ -129,7 +128,7 @@ contract SettleTest is AuctionHouseTest {
         uint256 pfFilledAmount = _scaleQuoteTokenAmount(4e18) - pfRefundAmount;
         uint256 totalInFilled = totalIn - pfRefundAmount;
 
-        Auction.Settlement memory settlement = Auction.Settlement({
+        BatchAuction.Settlement memory settlement = BatchAuction.Settlement({
             totalIn: totalIn,
             totalOut: totalOut,
             pfBidder: _bidder,
@@ -184,7 +183,7 @@ contract SettleTest is AuctionHouseTest {
         uint256 totalOut = _scaleBaseTokenAmount(5e18); // 50% filled
         uint256 scaledLotCapacity = _scaleBaseTokenAmount(_LOT_CAPACITY);
 
-        Auction.Settlement memory settlement = Auction.Settlement({
+        BatchAuction.Settlement memory settlement = BatchAuction.Settlement({
             totalIn: totalIn,
             totalOut: totalOut,
             pfBidder: address(0),
@@ -239,7 +238,7 @@ contract SettleTest is AuctionHouseTest {
         uint256 totalOut = _scaleBaseTokenAmount(_LOT_CAPACITY);
         uint256 scaledLotCapacity = _scaleBaseTokenAmount(_LOT_CAPACITY);
 
-        Auction.Settlement memory settlement = Auction.Settlement({
+        BatchAuction.Settlement memory settlement = BatchAuction.Settlement({
             totalIn: totalIn,
             totalOut: totalOut,
             pfBidder: address(0),
@@ -294,7 +293,7 @@ contract SettleTest is AuctionHouseTest {
         uint256 totalOut = 0;
         uint256 scaledLotCapacity = _scaleBaseTokenAmount(_LOT_CAPACITY);
 
-        Auction.Settlement memory settlement = Auction.Settlement({
+        BatchAuction.Settlement memory settlement = BatchAuction.Settlement({
             totalIn: totalIn,
             totalOut: totalOut,
             pfBidder: address(0),
@@ -314,8 +313,6 @@ contract SettleTest is AuctionHouseTest {
         _expectedProtocolFeesAllocated = 0;
         _expectedReferrerFeesAllocated = 0;
 
-        bool isPrefunded = _routingParams.prefunded;
-
         // Set up expected values
         // Quote token
         _expectedSellerQuoteTokenBalance = 0; // To be claimed by seller
@@ -329,10 +326,9 @@ contract SettleTest is AuctionHouseTest {
         );
 
         // Base token
-        _expectedSellerBaseTokenBalance = isPrefunded ? 0 : scaledLotCapacity + prefundedCuratorFees;
+        _expectedSellerBaseTokenBalance = 0;
         _expectedBidderBaseTokenBalance = 0;
-        _expectedAuctionHouseBaseTokenBalance =
-            isPrefunded ? scaledLotCapacity + prefundedCuratorFees : 0; // To be claimed by seller
+        _expectedAuctionHouseBaseTokenBalance = scaledLotCapacity + prefundedCuratorFees; // To be claimed by seller
         _expectedCuratorBaseTokenBalance = 0;
         assertEq(
             _expectedSellerBaseTokenBalance + _expectedBidderBaseTokenBalance
@@ -381,7 +377,7 @@ contract SettleTest is AuctionHouseTest {
 
     function test_whenLotIdIsInvalid_reverts() public {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(Auctioneer.InvalidLotId.selector, _lotId);
+        bytes memory err = abi.encodeWithSelector(AuctionHouse.InvalidLotId.selector, _lotId);
         vm.expectRevert(err);
 
         // Call function

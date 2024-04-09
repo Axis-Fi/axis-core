@@ -9,7 +9,7 @@ import {StringHelper} from "test/lib/String.sol";
 import {MockFeeOnTransferERC20} from "test/lib/mocks/MockFeeOnTransferERC20.sol";
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 
-import {AuctionHouse} from "src/AuctionHouse.sol";
+import {AtomicAuctionHouse} from "src/AtomicAuctionHouse.sol";
 import {Derivative} from "src/modules/Derivative.sol";
 import {LinearVesting} from "src/modules/derivatives/LinearVesting.sol";
 import {SoulboundCloneERC20} from "src/modules/derivatives/SoulboundCloneERC20.sol";
@@ -26,7 +26,7 @@ contract LinearVestingTest is Test, Permit2User {
     address internal _underlyingTokenAddress;
     uint8 internal _underlyingTokenDecimals = 18;
 
-    AuctionHouse internal _auctionHouse;
+    AtomicAuctionHouse internal _auctionHouse;
     LinearVesting internal _linearVesting;
 
     LinearVesting.VestingParams internal _vestingParams;
@@ -55,7 +55,7 @@ contract LinearVestingTest is Test, Permit2User {
             new MockFeeOnTransferERC20("Underlying", "UNDERLYING", _underlyingTokenDecimals);
         _underlyingTokenAddress = address(_underlyingToken);
 
-        _auctionHouse = new AuctionHouse(address(this), _PROTOCOL, _permit2Address);
+        _auctionHouse = new AtomicAuctionHouse(address(this), _PROTOCOL, _permit2Address);
         _linearVesting = new LinearVesting(address(_auctionHouse));
         _auctionHouse.installModule(_linearVesting);
 

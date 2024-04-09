@@ -3,7 +3,7 @@ pragma solidity 0.8.19;
 
 // Modules
 import {Veecode, toKeycode, wrapVeecode} from "src/modules/Modules.sol";
-import {BatchAuctionModule} from "src/modules/auctions/BatchAuctionModule.sol";
+import {BatchAuction, BatchAuctionModule} from "src/modules/auctions/BatchAuctionModule.sol";
 
 // Auctions
 import {Auction, AuctionModule} from "src/modules/Auction.sol";
@@ -124,7 +124,8 @@ contract MockBatchAuctionModule is BatchAuctionModule {
         Lot storage lot = lotData[lotId_];
         lot.purchased = settlement_.totalIn;
         lot.sold = settlement_.totalOut;
-        lot.partialPayout = settlement_.pfPayout;
+
+        lotPartialPayout[lotId_] = settlement_.pfPayout;
     }
 
     function _settle(uint96 lotId_) internal override returns (Settlement memory, bytes memory) {
@@ -139,7 +140,7 @@ contract MockBatchAuctionModule is BatchAuctionModule {
         lotStatus[lotId_] = LotStatus.Claimed;
 
         Lot storage lot = lotData[lotId_];
-        return (lot.purchased, lot.sold, lot.partialPayout);
+        return (lot.purchased, lot.sold, lotPartialPayout[lotId_]);
     }
 
     function getBid(uint96 lotId_, uint64 bidId_) external view returns (Bid memory bid_) {
@@ -149,7 +150,7 @@ contract MockBatchAuctionModule is BatchAuctionModule {
     function _revertIfBidInvalid(uint96 lotId_, uint64 bidId_) internal view virtual override {
         // Check that the bid exists
         if (nextBidId <= bidId_) {
-            revert BatchAuctionModule.Auction_InvalidBidId(lotId_, bidId_);
+            revert BatchAuction.Auction_InvalidBidId(lotId_, bidId_);
         }
     }
 
@@ -160,14 +161,14 @@ contract MockBatchAuctionModule is BatchAuctionModule {
     ) internal view virtual override {
         // Check that the bidder is the owner of the bid
         if (bidData[lotId_][bidId_].bidder != caller_) {
-            revert BatchAuctionModule.Auction_NotBidder();
+            revert BatchAuction.Auction_NotBidder();
         }
     }
 
     function _revertIfBidClaimed(uint96 lotId_, uint64 bidId_) internal view virtual override {
         // Check that the bid has not been cancelled
         if (bidCancelled[lotId_][bidId_] == true) {
-            revert BatchAuctionModule.Auction_InvalidBidId(lotId_, bidId_);
+            revert BatchAuction.Auction_InvalidBidId(lotId_, bidId_);
         }
     }
 

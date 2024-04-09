@@ -40,13 +40,7 @@ contract MockAuctionHouse is AuctionHouse {
         AuctionHouse.Routing memory routingParams_,
         bytes memory auctionOutput_
     ) external {
-        return
-            _sendPayout(
-                recipient_,
-                payoutAmount_,
-                routingParams_,
-                auctionOutput_
-            );
+        return _sendPayout(recipient_, payoutAmount_, routingParams_, auctionOutput_);
     }
 
     // Not implemented

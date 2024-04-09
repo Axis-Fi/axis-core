@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.19;
 
-import {Auctioneer} from "src/bases/Auctioneer.sol";
+import {AuctionHouse} from "src/bases/AuctionHouse.sol";
 import {Auction} from "src/modules/Auction.sol";
-import {BatchAuctionModule} from "src/modules/auctions/BatchAuctionModule.sol";
+import {BatchAuction} from "src/modules/auctions/BatchAuctionModule.sol";
 
-import {AuctionHouseTest} from "test/AuctionHouse/AuctionHouseTest.sol";
+import {AuctionHouseTest} from "test/BatchAuctionHouse/AuctionHouseTest.sol";
 
 contract RefundBidTest is AuctionHouseTest {
     uint256 internal constant _BID_AMOUNT = 1e18;
@@ -20,8 +20,6 @@ contract RefundBidTest is AuctionHouseTest {
     // refundBid
     // [X] given the auction lot does not exist
     //  [X] it reverts
-    // [X] given the auction lot is an atomic auction
-    //  [X] it reverts
     // [X] given the auction lot is concluded
     //  [X] it reverts
     // [X] given the bid does not exist
@@ -33,22 +31,7 @@ contract RefundBidTest is AuctionHouseTest {
     // [X] it cancels the bid and transfers the quote tokens back to the bidder
 
     function test_invalidLotId_reverts() external {
-        bytes memory err = abi.encodeWithSelector(Auctioneer.InvalidLotId.selector, _lotId);
-        vm.expectRevert(err);
-
-        // Call the function
-        vm.prank(_bidder);
-        _auctionHouse.refundBid(_lotId, _bidId);
-    }
-
-    function test_invalidAuctionType_reverts()
-        external
-        whenAuctionTypeIsAtomic
-        whenAtomicAuctionModuleIsInstalled
-        givenLotIsCreated
-        givenLotHasStarted
-    {
-        bytes memory err = abi.encodeWithSelector(Auction.Auction_NotImplemented.selector);
+        bytes memory err = abi.encodeWithSelector(AuctionHouse.InvalidLotId.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function
@@ -87,7 +70,7 @@ contract RefundBidTest is AuctionHouseTest {
         givenLotHasStarted
     {
         bytes memory err =
-            abi.encodeWithSelector(BatchAuctionModule.Auction_InvalidBidId.selector, _lotId, _bidId);
+            abi.encodeWithSelector(BatchAuction.Auction_InvalidBidId.selector, _lotId, _bidId);
         vm.expectRevert(err);
 
         // Call the function
@@ -109,7 +92,7 @@ contract RefundBidTest is AuctionHouseTest {
         givenBidIsRefunded
     {
         bytes memory err =
-            abi.encodeWithSelector(BatchAuctionModule.Auction_InvalidBidId.selector, _lotId, _bidId);
+            abi.encodeWithSelector(BatchAuction.Auction_InvalidBidId.selector, _lotId, _bidId);
         vm.expectRevert(err);
 
         // Call the function
@@ -129,7 +112,7 @@ contract RefundBidTest is AuctionHouseTest {
         givenUserHasQuoteTokenAllowance(_BID_AMOUNT)
         givenBid(_BID_AMOUNT, _auctionDataParams)
     {
-        bytes memory err = abi.encodeWithSelector(BatchAuctionModule.Auction_NotBidder.selector);
+        bytes memory err = abi.encodeWithSelector(BatchAuction.Auction_NotBidder.selector);
         vm.expectRevert(err);
 
         // Call the function

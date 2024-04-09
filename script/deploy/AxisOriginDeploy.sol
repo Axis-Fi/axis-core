@@ -50,9 +50,11 @@ contract AxisOriginDeploy is Script {
         bytes32 atomicSalt = vm.envBytes32("ATOMIC_AUCTION_HOUSE_SALT");
         bytes32 batchSalt = vm.envBytes32("BATCH_AUCTION_HOUSE_SALT");
 
-        atomicAuctionHouse = new BlastAtomicAuctionHouse{salt: atomicSalt}(msg.sender, protocol, PERMIT2);
+        atomicAuctionHouse =
+            new BlastAtomicAuctionHouse{salt: atomicSalt}(msg.sender, protocol, PERMIT2);
         console2.log("BlastAtomicAuctionHouse deployed at: ", address(atomicAuctionHouse));
-        batchAuctionHouse = new BlastBatchAuctionHouse{salt: batchSalt}(msg.sender, protocol, PERMIT2);
+        batchAuctionHouse =
+            new BlastBatchAuctionHouse{salt: batchSalt}(msg.sender, protocol, PERMIT2);
         console2.log("BlastBatchAuctionHouse deployed at: ", address(batchAuctionHouse));
 
         atomicCatalogue = new AtomicCatalogue(address(atomicAuctionHouse));

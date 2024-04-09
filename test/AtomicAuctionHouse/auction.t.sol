@@ -2,30 +2,61 @@
 pragma solidity 0.8.19;
 
 // Libraries
-import {AtomicAuctionHouseTest} from "test/AtomicAuctionHouse/AuctionHouseTest.sol";
-import {Transfer} from "src/lib/Transfer.sol";
+import {AuctionHouseTest} from "test/AtomicAuctionHouse/AuctionHouseTest.sol";
 import {ERC20} from "solmate/tokens/ERC20.sol";
 
 // Mocks
 import {MockERC20} from "lib/solmate/src/test/utils/mocks/MockERC20.sol";
+import {MockBatchAuctionModule} from "test/modules/Auction/MockBatchAuctionModule.sol";
 
 import {AuctionHouse} from "src/bases/AuctionHouse.sol";
 import {Auction} from "src/modules/Auction.sol";
 import {ICallback} from "src/interfaces/ICallback.sol";
-import {Veecode, WithModules, wrapVeecode, fromVeecode} from "src/modules/Modules.sol";
+import {
+    Keycode,
+    keycodeFromVeecode,
+    Veecode,
+    WithModules,
+    wrapVeecode,
+    fromVeecode
+} from "src/modules/Modules.sol";
 
-contract AuctionTest is AtomicAuctionHouseTest {
+contract AuctionTest is AuctionHouseTest {
+    MockBatchAuctionModule internal _batchAuctionModule;
+    Keycode internal _batchAuctionModuleKeycode;
+
     // Imported events
     event AuctionCreated(uint96 indexed _lotId, Veecode indexed auctionRef, string infoHash);
+
+    // ======= Modifiers =======//
+
+    modifier whenAuctionTypeIsBatch() {
+        _routingParams.auctionType = _batchAuctionModuleKeycode;
+
+        _batchAuctionModule = new MockBatchAuctionModule(address(_auctionHouse));
+        _batchAuctionModuleKeycode = keycodeFromVeecode(_batchAuctionModule.VEECODE());
+
+        _auctionModule = _batchAuctionModule;
+        _auctionModuleKeycode = _batchAuctionModuleKeycode;
+        _;
+    }
+
+    modifier whenBatchAuctionModuleIsInstalled() {
+        _auctionHouse.installModule(_batchAuctionModule);
+        _;
+    }
+
+    // ======= Tests ======= //
 
     // auction
     // [X] reverts when auction module is sunset
     // [X] reverts when auction module is not installed
-    // [X] reverts when auction type is not auction
+    // [X] reverts when auction type is not an auction module
     // [X] reverts when base token decimals are out of bounds
     // [X] reverts when quote token decimals are out of bounds
     // [X] reverts when base token is 0
     // [X] reverts when quote token is 0
+    // [ ] when the auction type is batch
     // [X] creates the auction lot
 
     function test_whenModuleNotInstalled_reverts() external whenAuctionTypeIsAtomic {

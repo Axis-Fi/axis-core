@@ -10,7 +10,7 @@ import {FixedPointMathLib as Math} from "solady/utils/FixedPointMathLib.sol";
 import {Permit2User} from "test/lib/permit2/Permit2User.sol";
 
 // Modules
-import {AuctionHouse} from "src/AuctionHouse.sol";
+import {BatchAuctionHouse} from "src/BatchAuctionHouse.sol";
 import {Auction} from "src/modules/Auction.sol";
 import {EncryptedMarginalPriceAuctionModule} from "src/modules/auctions/EMPAM.sol";
 
@@ -38,7 +38,7 @@ abstract contract EmpaModuleTest is Test, Permit2User {
     uint256 internal constant _BID_PRIVATE_KEY = 112_233_445_566_778;
     Point internal _bidPublicKey;
 
-    AuctionHouse internal _auctionHouse;
+    BatchAuctionHouse internal _auctionHouse;
     EncryptedMarginalPriceAuctionModule internal _module;
 
     // Input parameters (modifier via modifiers)
@@ -55,7 +55,7 @@ abstract contract EmpaModuleTest is Test, Permit2User {
     function setUp() public {
         vm.warp(1_000_000);
 
-        _auctionHouse = new AuctionHouse(address(this), _PROTOCOL, _permit2Address);
+        _auctionHouse = new BatchAuctionHouse(address(this), _PROTOCOL, _permit2Address);
         _module = new EncryptedMarginalPriceAuctionModule(address(_auctionHouse));
 
         _auctionPublicKey = ECIES.calcPubKey(Point(1, 2), _AUCTION_PRIVATE_KEY);

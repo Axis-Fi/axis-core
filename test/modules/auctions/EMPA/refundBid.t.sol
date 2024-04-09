@@ -4,7 +4,7 @@ pragma solidity 0.8.19;
 import {Module} from "src/modules/Modules.sol";
 import {Auction} from "src/modules/Auction.sol";
 import {EncryptedMarginalPriceAuctionModule} from "src/modules/auctions/EMPAM.sol";
-import {BatchAuctionModule} from "src/modules/auctions/BatchAuctionModule.sol";
+import {BatchAuction} from "src/modules/auctions/BatchAuctionModule.sol";
 
 import {EmpaModuleTest} from "test/modules/auctions/EMPA/EMPAModuleTest.sol";
 
@@ -45,7 +45,7 @@ contract EmpaModuleRefundBidTest is EmpaModuleTest {
     function test_invalidBidId_reverts() external givenLotIsCreated givenLotHasStarted {
         // Expect revert
         bytes memory err =
-            abi.encodeWithSelector(BatchAuctionModule.Auction_InvalidBidId.selector, _lotId, _bidId);
+            abi.encodeWithSelector(BatchAuction.Auction_InvalidBidId.selector, _lotId, _bidId);
         vm.expectRevert(err);
 
         // Call the function

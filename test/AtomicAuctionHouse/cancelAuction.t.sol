@@ -40,7 +40,7 @@ contract CancelAuctionTest is AuctionHouseTest {
         whenAtomicAuctionModuleIsInstalled
         givenLotIsCreated
     {
-        bytes memory err = abi.encodeWithSelector(Auctioneer.NotPermitted.selector, address(this));
+        bytes memory err = abi.encodeWithSelector(AuctionHouse.NotPermitted.selector, address(this));
         vm.expectRevert(err);
 
         _auctionHouse.cancel(_lotId, bytes(""));
@@ -54,7 +54,7 @@ contract CancelAuctionTest is AuctionHouseTest {
     {
         vm.assume(user_ != _SELLER);
 
-        bytes memory err = abi.encodeWithSelector(Auctioneer.NotPermitted.selector, user_);
+        bytes memory err = abi.encodeWithSelector(AuctionHouse.NotPermitted.selector, user_);
         vm.expectRevert(err);
 
         vm.prank(user_);
@@ -62,7 +62,7 @@ contract CancelAuctionTest is AuctionHouseTest {
     }
 
     function testReverts_whenLotIdInvalid() external {
-        bytes memory err = abi.encodeWithSelector(Auctioneer.InvalidLotId.selector, _lotId);
+        bytes memory err = abi.encodeWithSelector(AuctionHouse.InvalidLotId.selector, _lotId);
         vm.expectRevert(err);
 
         vm.prank(_SELLER);
@@ -137,7 +137,7 @@ contract CancelAuctionTest is AuctionHouseTest {
         assertFalse(_atomicAuctionModule.isLive(_lotId), "after cancellation: isLive mismatch");
 
         // Check routing
-        Auctioneer.Routing memory lotRouting = _getLotRouting(_lotId);
+        AuctionHouse.Routing memory lotRouting = _getLotRouting(_lotId);
         assertEq(lotRouting.funding, 0, "mismatch on funding");
     }
 
@@ -161,7 +161,7 @@ contract CancelAuctionTest is AuctionHouseTest {
         assertEq(lot.capacity, 0);
 
         // Check routing
-        Auctioneer.Routing memory lotRouting = _getLotRouting(_lotId);
+        AuctionHouse.Routing memory lotRouting = _getLotRouting(_lotId);
         assertEq(lotRouting.funding, 0, "mismatch on funding");
     }
 
@@ -185,7 +185,7 @@ contract CancelAuctionTest is AuctionHouseTest {
         assertEq(lot.capacity, 0);
 
         // Check routing
-        Auctioneer.Routing memory lotRouting = _getLotRouting(_lotId);
+        AuctionHouse.Routing memory lotRouting = _getLotRouting(_lotId);
         assertEq(lotRouting.funding, 0, "mismatch on funding");
     }
 
@@ -210,7 +210,7 @@ contract CancelAuctionTest is AuctionHouseTest {
         assertFalse(_atomicAuctionModule.isLive(_lotId), "after cancellation: isLive mismatch");
 
         // Check routing
-        Auctioneer.Routing memory lotRouting = _getLotRouting(_lotId);
+        AuctionHouse.Routing memory lotRouting = _getLotRouting(_lotId);
         assertEq(lotRouting.funding, 0, "mismatch on funding");
 
         // Check the callback
