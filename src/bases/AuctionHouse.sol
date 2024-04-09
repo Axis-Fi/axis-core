@@ -284,14 +284,13 @@ abstract contract AuctionHouse is WithModules, ReentrancyGuard, FeeManager {
     ///             - Checks that the lot ID is valid
     ///             - Checks that caller is the seller
     ///             - Calls the auction module to validate state, update records and determine the amount to be refunded
-    ///             - If prefunded, sends the refund of payout tokens to the seller
     ///
     ///             The function reverts if:
     ///             - The lot ID is invalid
     ///             - The caller is not the seller
     ///             - The respective auction module reverts
     ///             - The transfer of payout tokens fails
-    ///             - re-entrancy is detected
+    ///             - Re-entrancy is detected
     ///
     /// @param      lotId_      ID of the auction lot
     function cancel(uint96 lotId_, bytes calldata callbackData_) external nonReentrant {
