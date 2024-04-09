@@ -22,6 +22,12 @@ abstract contract Auction {
 
     // ========== DATA STRUCTURES ========== //
 
+    /// @notice     Types of auctions
+    enum AuctionType {
+        Atomic,
+        Batch
+    }
+
     /// @notice     Core data for an auction lot
     ///
     /// @param      start               The timestamp when the auction starts
@@ -261,6 +267,9 @@ abstract contract AuctionModule is Auction, Module {
     function getLot(uint96 lotId_) external view returns (Lot memory) {
         return lotData[lotId_];
     }
+
+    /// @notice     Get the auction type
+    function auctionType() external pure virtual returns (AuctionType);
 
     // ========== MODIFIERS ========== //
 

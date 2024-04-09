@@ -5,7 +5,7 @@ import {Transfer} from "src/lib/Transfer.sol";
 import {FixedPointMathLib as Math} from "lib/solmate/src/utils/FixedPointMathLib.sol";
 
 import {AuctionHouse} from "src/bases/AuctionHouse.sol";
-import {Auction} from "src/modules/Auction.sol";
+import {Auction, AuctionModule} from "src/modules/Auction.sol";
 import {BatchAuction, BatchAuctionModule} from "src/modules/auctions/BatchAuctionModule.sol";
 import {Keycode, keycodeFromVeecode} from "src/modules/Modules.sol";
 import {ICallback} from "src/interfaces/ICallback.sol";
@@ -137,6 +137,12 @@ contract BatchAuctionHouse is AuctionHouse, BatchRouter {
         RoutingParams calldata routing_,
         Auction.AuctionParams calldata params_
     ) internal override returns (bool performedCallback) {
+        // Validation
+
+        // Ensure the auction type is atomic
+        AuctionModule auctionModule = AuctionModule(_getLatestModuleIfActive(routing_.auctionType));
+        if (auctionModule.auctionType() != Auction.AuctionType.Batch) revert InvalidParams();
+
         // Batch auctions must be pre-funded
 
         // Capacity must be in base token for auctions that require pre-funding

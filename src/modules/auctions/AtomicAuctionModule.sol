@@ -36,6 +36,11 @@ abstract contract AtomicAuction {
 /// @title  Atomic Auction Module
 /// @notice A base contract for atomic auctions
 abstract contract AtomicAuctionModule is AtomicAuction, AuctionModule {
+    /// @inheritdoc AuctionModule
+    function auctionType() external pure override returns (AuctionType) {
+        return AuctionType.Atomic;
+    }
+
     // ========== ATOMIC AUCTIONS ========== //
 
     /// @inheritdoc AtomicAuction

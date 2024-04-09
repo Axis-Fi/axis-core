@@ -115,6 +115,11 @@ abstract contract BatchAuction {
 /// @title  Batch Auction Module
 /// @notice A base contract for batch auctions
 abstract contract BatchAuctionModule is BatchAuction, AuctionModule {
+    /// @inheritdoc AuctionModule
+    function auctionType() external pure override returns (AuctionType) {
+        return AuctionType.Batch;
+    }
+
     // ========== BATCH AUCTIONS ========== //
 
     /// @inheritdoc BatchAuction

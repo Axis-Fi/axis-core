@@ -4,7 +4,7 @@ pragma solidity 0.8.19;
 import {Transfer} from "src/lib/Transfer.sol";
 
 import {AuctionHouse} from "src/bases/AuctionHouse.sol";
-import {Auction} from "src/modules/Auction.sol";
+import {Auction, AuctionModule} from "src/modules/Auction.sol";
 import {AtomicAuctionModule} from "src/modules/auctions/AtomicAuctionModule.sol";
 import {Keycode, keycodeFromVeecode} from "src/modules/Modules.sol";
 import {ICallback} from "src/interfaces/ICallback.sol";
@@ -82,11 +82,17 @@ contract AtomicAuctionHouse is AuctionHouse, AtomicRouter {
     /// @inheritdoc AuctionHouse
     function _auction(
         uint96,
-        RoutingParams calldata,
+        RoutingParams calldata routing_,
         Auction.AuctionParams calldata
-    ) internal pure override returns (bool performedCallback) {
-        // No additional logic for atomic auctions.
-        // They cannot be prefunded.
+    ) internal view override returns (bool performedCallback) {
+        // Validation
+
+        // Ensure the auction type is atomic
+        AuctionModule auctionModule = AuctionModule(_getLatestModuleIfActive(routing_.auctionType));
+        if (auctionModule.auctionType() != Auction.AuctionType.Atomic) revert InvalidParams();
+
+        // Cannot be prefunded
+
         return false;
     }
 
