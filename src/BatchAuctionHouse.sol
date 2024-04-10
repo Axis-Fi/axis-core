@@ -79,7 +79,13 @@ abstract contract BatchRouter {
     ///             5. Send the fees to the curator
     ///
     /// @param      lotId_          Lot ID
-    function settle(uint96 lotId_) external virtual;
+    /// @return     totalIn_        Total amount of quote tokens from bids that were filled
+    /// @return     totalOut_       Total amount of base tokens paid out to winning bids
+    /// @return     auctionOutput_  Custom data returned by the auction module
+    function settle(uint96 lotId_)
+        external
+        virtual
+        returns (uint256 totalIn_, uint256 totalOut_, bytes memory auctionOutput_);
 
     /// @notice     Claim the proceeds of a settled auction
     /// @dev        The implementing function must perform the following:
@@ -394,7 +400,12 @@ contract BatchAuctionHouse is AuctionHouse, BatchRouter {
     ///             - the auction module reverts when settling the auction
     ///             - collecting the payout from the seller fails
     ///             - re-entrancy is detected
-    function settle(uint96 lotId_) external override nonReentrant {
+    function settle(uint96 lotId_)
+        external
+        override
+        nonReentrant
+        returns (uint256 totalIn_, uint256 totalOut_, bytes memory auctionOutput_)
+    {
         // Validation
         _isLotValid(lotId_);
 
@@ -403,7 +414,7 @@ contract BatchAuctionHouse is AuctionHouse, BatchRouter {
         BatchAuctionModule module = _getBatchModuleForId(lotId_);
 
         // Settle the auction
-        module.settle(lotId_);
+        (totalIn_, totalOut_, auctionOutput_) = module.settle(lotId_);
 
         // Emit event
         emit Settle(lotId_);

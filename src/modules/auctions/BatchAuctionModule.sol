@@ -81,7 +81,13 @@ abstract contract BatchAuction {
     ///             - Update the lot data
     ///
     /// @param      lotId_          The lot id
-    function settle(uint96 lotId_) external virtual;
+    /// @return     totalIn_        Total amount of quote tokens from bids that were filled
+    /// @return     totalOut_       Total amount of base tokens paid out to winning bids
+    /// @return     auctionOutput_  Custom data returned by the auction module
+    function settle(uint96 lotId_)
+        external
+        virtual
+        returns (uint256 totalIn_, uint256 totalOut_, bytes memory auctionOutput_);
 
     /// @notice     Claim the seller proceeds from a settled auction lot
     /// @dev        The implementing function should handle the following:
@@ -266,7 +272,13 @@ abstract contract BatchAuctionModule is BatchAuction, AuctionModule {
     ///             - Validating the auction-specific parameters
     ///             - Determining the winning bids
     ///             - Updating the lot data
-    function settle(uint96 lotId_) external virtual override onlyInternal {
+    function settle(uint96 lotId_)
+        external
+        virtual
+        override
+        onlyInternal
+        returns (uint256 totalIn_, uint256 totalOut_, bytes memory auctionOutput_)
+    {
         // Standard validation
         _revertIfLotInvalid(lotId_);
         _revertIfBeforeLotStart(lotId_);
@@ -274,11 +286,11 @@ abstract contract BatchAuctionModule is BatchAuction, AuctionModule {
         _revertIfLotSettled(lotId_);
 
         // Call implementation-specific logic
-        (uint256 totalIn, uint256 totalOut, bytes memory auctionOutput_) = _settle(lotId_);
+        (totalIn_, totalOut_, auctionOutput_) = _settle(lotId_);
 
         // Store sold and purchased amounts
-        lotData[lotId_].purchased = totalIn;
-        lotData[lotId_].sold = totalOut;
+        lotData[lotId_].purchased = totalIn_;
+        lotData[lotId_].sold = totalOut_;
         auctionOutput[lotId_] = auctionOutput_;
     }
 

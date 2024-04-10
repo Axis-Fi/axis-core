@@ -135,7 +135,7 @@ contract EncryptedMarginalPriceAuctionModule is BatchAuctionModule {
 
     /// @notice     Partial fill data for a lot
     /// @dev        Each EMPA can have at most one partial fill
-    mapping(uint96 lotId => PartialFill) public lotPartialFill;
+    mapping(uint96 lotId => PartialFill) internal _lotPartialFill;
 
     /// @notice     General information about bids on a lot
     mapping(uint96 lotId => mapping(uint64 bidId => Bid)) public bids;
@@ -367,10 +367,10 @@ contract EncryptedMarginalPriceAuctionModule is BatchAuctionModule {
         // If the bid price is equal to the marginal price and the bid was submitted before or is the marginal bid, the bid is filled.
         // Auctions that do not meet capacity or price thresholds to settle will have their marginal price set at the maximum uint96
         // and there will be no partial fill. Therefore, all bids will be refunded.
-        if (lotPartialFill[lotId_].bidId == bidId_) {
+        if (_lotPartialFill[lotId_].bidId == bidId_) {
             bidClaim.paid = bidData.amount;
-            bidClaim.payout = lotPartialFill[lotId_].payout;
-            bidClaim.refund = lotPartialFill[lotId_].refund;
+            bidClaim.payout = _lotPartialFill[lotId_].payout;
+            bidClaim.refund = _lotPartialFill[lotId_].refund;
         } else if (
             price > marginalPrice
                 || (price == marginalPrice && bidId_ <= auctionData[lotId_].marginalBidId)
@@ -846,7 +846,7 @@ contract EncryptedMarginalPriceAuctionModule is BatchAuctionModule {
                     refund: uint96(Math.mulDiv(uint256(bidData.amount), excess, fullFill)),
                     payout: fullFill - excess
                 });
-                lotPartialFill[lotId_] = pf;
+                _lotPartialFill[lotId_] = pf;
 
                 // Reduce the total amount in by the refund amount
                 result.totalAmountIn -= pf.refund;
@@ -892,6 +892,13 @@ contract EncryptedMarginalPriceAuctionModule is BatchAuctionModule {
         _revertIfLotInvalid(lotId_);
 
         return auctionData[lotId_];
+    }
+
+    function getPartialFill(uint96 lotId_) external view returns (PartialFill memory) {
+        _revertIfLotInvalid(lotId_);
+        _revertIfLotNotSettled(lotId_);
+
+        return _lotPartialFill[lotId_];
     }
 
     // ========== VALIDATION ========== //
