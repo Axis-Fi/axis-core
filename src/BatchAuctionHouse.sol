@@ -156,6 +156,9 @@ contract BatchAuctionHouse is AuctionHouse, BatchRouter {
         // Capacity must be in base token for auctions that require pre-funding
         if (params_.capacityInQuote) revert InvalidParams();
 
+        // Store pre-funding information
+        lotRouting[lotId_].funding = params_.capacity;
+
         // Handle funding from callback or seller as configured
         if (routing_.callbacks.hasPermission(Callbacks.SEND_BASE_TOKENS_FLAG)) {
             uint256 balanceBefore = routing_.baseToken.balanceOf(address(this));
@@ -175,9 +178,6 @@ contract BatchAuctionHouse is AuctionHouse, BatchRouter {
             );
             _onCreateCallback(routing_, lotId_, params_.capacity, false);
         }
-
-        // Store pre-funding information
-        lotRouting[lotId_].funding = params_.capacity;
 
         // Return true to indicate that the callback was performed
         return true;
