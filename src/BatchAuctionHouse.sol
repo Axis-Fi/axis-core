@@ -464,7 +464,7 @@ contract BatchAuctionHouse is AuctionHouse, BatchRouter {
         uint256 totalInLessFees;
         {
             (, uint256 toProtocol) = calculateQuoteFees(
-                lotFees[lotId_].protocolFee, lotFees[lotId_].referrerFee, false, purchased_
+                feeData.protocolFee, feeData.referrerFee, false, purchased_
             );
             unchecked {
                 totalInLessFees = purchased_ - toProtocol;
