@@ -402,9 +402,9 @@ contract LinearVestingEMPAIntegrationTest is BatchAuctionHouseTest {
         givenAuctionTypeIsEMPA
         givenDerivativeTypeIsLinearVesting
         givenCuratorIsSet
-        givenLotIsCreated
         givenCuratorMaxFeeIsSet
         givenCuratorFeeIsSet
+        givenLotIsCreated
         givenLotHasStarted
         givenSellerHasBaseTokenBalance(_curatorMaxPotentialFee)
         givenSellerHasBaseTokenAllowance(_curatorMaxPotentialFee)
@@ -425,19 +425,6 @@ contract LinearVestingEMPAIntegrationTest is BatchAuctionHouseTest {
             uint8(EncryptedMarginalPriceAuctionModule.LotStatus.Settled),
             "status"
         );
-
-        // Get the derivative token id
-        uint256 derivativeTokenId =
-            _linearVestingModule.computeId(address(_baseToken), abi.encode(_linearVestingParams));
-
-        // Check that the curator has been paid in derivative token
-        uint256 expectedCuratorFee = _BID_AMOUNT_OUT * _curatorFeePercentActual / 1e5;
-        assertEq(
-            _linearVestingModule.balanceOf(_CURATOR, derivativeTokenId),
-            expectedCuratorFee,
-            "curator fee"
-        );
-        assertEq(_linearVestingModule.redeemable(_CURATOR, derivativeTokenId), 0, "redeemable");
     }
 
     function test_settle_partialFill()
@@ -471,7 +458,7 @@ contract LinearVestingEMPAIntegrationTest is BatchAuctionHouseTest {
         (EncryptedMarginalPriceAuctionModule.Bid memory bid2,) = _empaModule.getBid(_lotId, 2);
         assertEq(
             uint8(bid2.status),
-            uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed),
+            uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Decrypted),
             "bid 2: status"
         );
 
@@ -485,18 +472,18 @@ contract LinearVestingEMPAIntegrationTest is BatchAuctionHouseTest {
             _linearVestingModule.computeId(address(_baseToken), abi.encode(_linearVestingParams));
 
         // Check the balances
-        assertEq(_quoteToken.balanceOf(_bidder), 2e18, "quote token: bidder"); // Partial fill: refund
-        assertEq(_quoteToken.balanceOf(address(_auctionHouse)), 10e18, "quote token: auction house");
+        assertEq(_quoteToken.balanceOf(_bidder), 0, "quote token: bidder"); // Not refunded until claimed
+        assertEq(_quoteToken.balanceOf(address(_auctionHouse)), 12e18, "quote token: auction house"); // Includes all bids submitted until proceeds or refunds claimed
 
         assertEq(_baseToken.balanceOf(_bidder), 0, "base token: bidder");
-        assertEq(_baseToken.balanceOf(address(_auctionHouse)), 8e18, "base token: auction house");
+        assertEq(_baseToken.balanceOf(address(_auctionHouse)), 10e18, "base token: auction house"); // Not distributed until claimed
         assertEq(
-            _baseToken.balanceOf(address(_linearVestingModule)), 2e18, "base token: vesting module"
-        );
+            _baseToken.balanceOf(address(_linearVestingModule)), 0, "base token: vesting module"
+        ); // None until bids are claimed
 
         assertEq(
-            _linearVestingModule.balanceOf(_bidder, derivativeTokenId), 2e18, "derivative: bidder"
-        ); // Partial fill: payout
+            _linearVestingModule.balanceOf(_bidder, derivativeTokenId), 0, "derivative: bidder"
+        ); // None until bids are claimed
     }
 
     // TODO assert roundtrip numbers

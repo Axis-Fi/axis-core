@@ -17,7 +17,6 @@ contract EmpaModuleClaimProceedsTest is EmpaModuleTest {
 
     uint256 internal _expectedSold;
     uint256 internal _expectedPurchased;
-    uint256 internal _expectedPartialPayout;
 
     // ============ Modifiers ============ //
 
@@ -60,7 +59,6 @@ contract EmpaModuleClaimProceedsTest is EmpaModuleTest {
 
         _expectedPurchased = bidAmountInSuccess;
         _expectedSold = bidAmountOutSuccess;
-        _expectedPartialPayout = bidTwoAmountOutActual;
         _;
     }
 
@@ -208,12 +206,12 @@ contract EmpaModuleClaimProceedsTest is EmpaModuleTest {
     {
         // Call function
         vm.prank(address(_auctionHouse));
-        (uint256 purchased, uint256 sold, uint256 partialPayout) = _module.claimProceeds(_lotId);
+        (uint256 purchased, uint256 sold, uint256 capacity) = _module.claimProceeds(_lotId);
 
         // Assert values
         assertEq(purchased, _expectedPurchased, "purchased");
         assertEq(sold, _expectedSold, "sold");
-        assertEq(partialPayout, _expectedPartialPayout, "partialPayout");
+        assertEq(capacity, _LOT_CAPACITY, "capacity");
 
         // Assert auction status
         EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
@@ -237,12 +235,12 @@ contract EmpaModuleClaimProceedsTest is EmpaModuleTest {
     {
         // Call function
         vm.prank(address(_auctionHouse));
-        (uint256 purchased, uint256 sold, uint256 partialPayout) = _module.claimProceeds(_lotId);
+        (uint256 purchased, uint256 sold, uint256 capacity) = _module.claimProceeds(_lotId);
 
         // Assert values
         assertEq(purchased, _expectedPurchased, "purchased");
         assertEq(sold, _expectedSold, "sold");
-        assertEq(partialPayout, _expectedPartialPayout, "partialPayout");
+        assertEq(capacity, _LOT_CAPACITY, "capacity");
 
         // Assert auction status
         EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);

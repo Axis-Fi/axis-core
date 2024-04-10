@@ -782,6 +782,11 @@ contract BatchCreateAuctionTest is BatchAuctionHouseTest {
         givenBaseTokenHasDecimals(13)
         givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenProtocolFeeIsSet
+        givenReferrerFeeIsSet
+        givenCuratorIsSet
+        givenCuratorMaxFeeIsSet
+        givenCuratorFeeIsSet
     {
         // Create the auction
         vm.prank(_SELLER);
@@ -798,6 +803,14 @@ contract BatchCreateAuctionTest is BatchAuctionHouseTest {
             _scaleBaseTokenAmount(_LOT_CAPACITY),
             "auction house balance mismatch"
         );
+
+        // Check that the fees have been cached
+        AuctionHouse.FeeData memory feeData = _getLotFees(_lotId);
+        assertEq(feeData.protocolFee, _protocolFeePercentActual, "protocol fee");
+        assertEq(feeData.referrerFee, _referrerFeePercentActual, "referrer fee");
+        assertEq(feeData.curatorFee, _curatorFeePercentActual, "curator fee");
+        assertEq(feeData.curator, address(_CURATOR), "curator address");
+        assertFalse(feeData.curated, "curated flag");
     }
 
     function test_quoteTokenDecimalsSmaller()
@@ -808,6 +821,11 @@ contract BatchCreateAuctionTest is BatchAuctionHouseTest {
         givenBaseTokenHasDecimals(17)
         givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenProtocolFeeIsSet
+        givenReferrerFeeIsSet
+        givenCuratorIsSet
+        givenCuratorMaxFeeIsSet
+        givenCuratorFeeIsSet
     {
         // Create the auction
         vm.prank(_SELLER);
@@ -824,5 +842,13 @@ contract BatchCreateAuctionTest is BatchAuctionHouseTest {
             _scaleBaseTokenAmount(_LOT_CAPACITY),
             "auction house balance mismatch"
         );
+
+        // Check that the fees have been cached
+        AuctionHouse.FeeData memory feeData = _getLotFees(_lotId);
+        assertEq(feeData.protocolFee, _protocolFeePercentActual, "protocol fee");
+        assertEq(feeData.referrerFee, _referrerFeePercentActual, "referrer fee");
+        assertEq(feeData.curatorFee, _curatorFeePercentActual, "curator fee");
+        assertEq(feeData.curator, address(_CURATOR), "curator address");
+        assertFalse(feeData.curated, "curated flag");
     }
 }

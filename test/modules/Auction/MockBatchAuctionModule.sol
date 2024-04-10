@@ -41,6 +41,7 @@ contract MockBatchAuctionModule is BatchAuctionModule {
     mapping(uint96 lotId => mapping(uint64 => Bid)) public bidData;
     mapping(uint96 lotId => mapping(uint64 => bool)) public bidCancelled;
     mapping(uint96 lotId => mapping(uint64 => bool)) public bidRefunded;
+    mapping(uint96 lotId => mapping(uint64 => BidClaim)) public bidClaims;
 
     mapping(uint96 lotId => LotStatus) public lotStatus;
     mapping(uint96 lotId => bool) public lotProceedsClaimed;
@@ -108,10 +109,42 @@ contract MockBatchAuctionModule is BatchAuctionModule {
         return bidData[lotId_][bidId_].amount;
     }
 
+    function addBidClaim(
+        uint96 lotId_,
+        uint64 bidId_,
+        address bidder_,
+        address referrer_,
+        uint96 paid_,
+        uint96 payout_,
+        uint96 refund_
+    ) public {
+        BidClaim storage claim = bidClaims[lotId_][bidId_];
+        claim.bidder = bidder_;
+        claim.referrer = referrer_;
+        claim.paid = paid_;
+        claim.payout = payout_;
+        claim.refund = refund_;
+    }
+
     function _claimBids(
         uint96 lotId_,
         uint64[] calldata bidIds_
-    ) internal virtual override returns (BidClaim[] memory bidClaims, bytes memory auctionOutput) {}
+    )
+        internal
+        virtual
+        override
+        returns (BidClaim[] memory bidClaims_, bytes memory auctionOutput_)
+    {
+        uint256 len = bidIds_.length;
+        bidClaims_ = new BidClaim[](len);
+
+        for (uint256 i = 0; i < len; i++) {
+            uint64 bidId = bidIds_[i];
+            bidClaims_[i] = bidClaims[lotId_][bidId];
+        }
+
+        return (bidClaims_, "");
+    }
 
     function setLotSettlement(uint96 lotId_, uint256 totalIn_, uint256 totalOut_) external {
         // Also update sold and purchased

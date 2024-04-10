@@ -101,9 +101,9 @@ contract BatchCurateTest is BatchAuctionHouseTest {
         whenBatchAuctionModuleIsInstalled
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
-        givenLotIsCreated
         givenCuratorMaxFeeIsSet
         givenCuratorFeeIsSet
+        givenLotIsCreated
         givenSellerHasBaseTokenBalance(_curatorMaxPotentialFee)
         givenSellerHasBaseTokenAllowance(_curatorMaxPotentialFee)
         givenCuratorHasApproved
@@ -166,9 +166,9 @@ contract BatchCurateTest is BatchAuctionHouseTest {
         whenBatchAuctionModuleIsInstalled
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
-        givenLotIsCreated
         givenCuratorMaxFeeIsSet
         givenCuratorFeeIsSet
+        givenLotIsCreated
         givenSellerHasBaseTokenBalance(_curatorMaxPotentialFee)
         givenSellerHasBaseTokenAllowance(_curatorMaxPotentialFee)
     {
@@ -200,9 +200,9 @@ contract BatchCurateTest is BatchAuctionHouseTest {
         whenBatchAuctionModuleIsInstalled
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
-        givenLotIsCreated
         givenCuratorMaxFeeIsSet
         givenCuratorFeeIsSet
+        givenLotIsCreated
         givenLotHasStarted
         givenSellerHasBaseTokenBalance(_curatorMaxPotentialFee)
         givenSellerHasBaseTokenAllowance(_curatorMaxPotentialFee)
@@ -239,9 +239,9 @@ contract BatchCurateTest is BatchAuctionHouseTest {
         givenBaseTokenHasDecimals(13)
         givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
-        givenLotIsCreated
         givenCuratorMaxFeeIsSet
         givenCuratorFeeIsSet
+        givenLotIsCreated
         givenLotHasStarted
         givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_curatorMaxPotentialFee))
         givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_curatorMaxPotentialFee))
@@ -282,9 +282,9 @@ contract BatchCurateTest is BatchAuctionHouseTest {
         givenBaseTokenHasDecimals(17)
         givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
-        givenLotIsCreated
         givenCuratorMaxFeeIsSet
         givenCuratorFeeIsSet
+        givenLotIsCreated
         givenLotHasStarted
         givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_curatorMaxPotentialFee))
         givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_curatorMaxPotentialFee))
@@ -360,9 +360,9 @@ contract BatchCurateTest is BatchAuctionHouseTest {
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenCallbackIsSet
-        givenLotIsCreated
         givenCuratorMaxFeeIsSet
         givenCuratorFeeIsSet
+        givenLotIsCreated
         givenLotHasStarted
         givenSellerHasBaseTokenBalance(_curatorMaxPotentialFee)
         givenSellerHasBaseTokenAllowance(_curatorMaxPotentialFee)
@@ -402,9 +402,9 @@ contract BatchCurateTest is BatchAuctionHouseTest {
         givenCallbackIsSet
         givenCallbackHasBaseTokenBalance(_LOT_CAPACITY)
         givenCallbackHasBaseTokenAllowance(_LOT_CAPACITY)
-        givenLotIsCreated
         givenCuratorMaxFeeIsSet
         givenCuratorFeeIsSet
+        givenLotIsCreated
         givenLotHasStarted
         givenCallbackHasBaseTokenBalance(_curatorMaxPotentialFee)
         givenCallbackHasBaseTokenAllowance(_curatorMaxPotentialFee)
@@ -447,9 +447,9 @@ contract BatchCurateTest is BatchAuctionHouseTest {
         givenCallbackIsSet
         givenCallbackHasBaseTokenBalance(_LOT_CAPACITY)
         givenCallbackHasBaseTokenAllowance(_LOT_CAPACITY)
-        givenLotIsCreated
         givenCuratorMaxFeeIsSet
         givenCuratorFeeIsSet
+        givenLotIsCreated
         givenLotHasStarted
         givenCallbackHasBaseTokenBalance(_curatorMaxPotentialFee)
         givenCallbackHasBaseTokenAllowance(_curatorMaxPotentialFee)

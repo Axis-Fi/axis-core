@@ -53,8 +53,8 @@ contract AtomicCurateTest is AtomicAuctionHouseTest {
         givenCuratorIsZero
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
-        givenLotIsCreated
         givenCuratorMaxFeeIsSet
+        givenLotIsCreated
         givenLotHasStarted
     {
         // Expect revert
@@ -87,9 +87,9 @@ contract AtomicCurateTest is AtomicAuctionHouseTest {
         public
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
-        givenLotIsCreated
         givenCuratorMaxFeeIsSet
         givenCuratorFeeIsSet
+        givenLotIsCreated
         givenCuratorHasApproved
         givenLotHasStarted
     {
@@ -106,8 +106,8 @@ contract AtomicCurateTest is AtomicAuctionHouseTest {
         public
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
-        givenLotIsCreated
         givenCuratorMaxFeeIsSet
+        givenLotIsCreated
         givenLotIsConcluded
     {
         // Expect revert
@@ -123,8 +123,8 @@ contract AtomicCurateTest is AtomicAuctionHouseTest {
         public
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
-        givenLotIsCreated
         givenCuratorMaxFeeIsSet
+        givenLotIsCreated
         givenLotIsCancelled
     {
         // Expect revert
@@ -140,9 +140,9 @@ contract AtomicCurateTest is AtomicAuctionHouseTest {
         public
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
-        givenLotIsCreated
         givenCuratorMaxFeeIsSet
         givenCuratorFeeIsSet
+        givenLotIsCreated
     {
         // Curate
         vm.prank(_CURATOR);
@@ -168,8 +168,8 @@ contract AtomicCurateTest is AtomicAuctionHouseTest {
         public
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
-        givenLotIsCreated
         givenCuratorMaxFeeIsSet
+        givenLotIsCreated
     {
         // Curate
         vm.prank(_CURATOR);
@@ -196,9 +196,9 @@ contract AtomicCurateTest is AtomicAuctionHouseTest {
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
         givenCallbackIsSet
-        givenLotIsCreated
         givenCuratorMaxFeeIsSet
         givenCuratorFeeIsSet
+        givenLotIsCreated
     {
         // Curate
         vm.prank(_CURATOR);
@@ -227,9 +227,9 @@ contract AtomicCurateTest is AtomicAuctionHouseTest {
         public
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
-        givenLotIsCreated
         givenCuratorMaxFeeIsSet
         givenCuratorFeeIsSet
+        givenLotIsCreated
         givenLotHasStarted
     {
         // Curate
