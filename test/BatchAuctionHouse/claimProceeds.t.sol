@@ -74,7 +74,7 @@ contract BatchClaimProceedsTest is BatchAuctionHouseTest {
         // Check the lot status
         assertEq(
             uint8(_batchAuctionModule.lotStatus(_lotId)),
-            uint8(MockBatchAuctionModule.LotStatus.Claimed)
+            uint8(MockBatchAuctionModule.LotStatus.Settled)
         );
     }
 

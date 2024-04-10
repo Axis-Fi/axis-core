@@ -218,9 +218,10 @@ contract LinearVestingEMPAIntegrationTest is BatchAuctionHouseTest {
             _empaModule.getAuctionData(_lotId);
         assertEq(
             uint8(auctionData.status),
-            uint8(EncryptedMarginalPriceAuctionModule.LotStatus.Claimed),
+            uint8(EncryptedMarginalPriceAuctionModule.LotStatus.Settled),
             "status"
         );
+        assertTrue(auctionData.proceedsClaimed, "proceedsClaimed");
 
         // Check balances
         assertEq(_baseToken.balanceOf(_SELLER), _LOT_CAPACITY, "seller balance");
@@ -525,9 +526,10 @@ contract LinearVestingEMPAIntegrationTest is BatchAuctionHouseTest {
             _empaModule.getAuctionData(_lotId);
         assertEq(
             uint8(auctionData.status),
-            uint8(EncryptedMarginalPriceAuctionModule.LotStatus.Claimed),
+            uint8(EncryptedMarginalPriceAuctionModule.LotStatus.Settled),
             "status"
         );
+        assertTrue(auctionData.proceedsClaimed, "proceedsClaimed");
 
         // Check the balances
         assertEq(_quoteToken.balanceOf(_SELLER), _BID_AMOUNT, "seller balance");

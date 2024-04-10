@@ -11,14 +11,11 @@ import {Auction, AuctionModule} from "src/modules/Auction.sol";
 contract MockBatchAuctionModule is BatchAuctionModule {
     enum LotStatus {
         Created,
-        Decrypted,
-        Settled,
-        Claimed
+        Settled
     }
 
     enum BidStatus {
         Submitted,
-        Decrypted,
         // Bid status will also be set to claimed if the bid is cancelled/refunded
         Claimed
     }
@@ -48,6 +45,7 @@ contract MockBatchAuctionModule is BatchAuctionModule {
     mapping(uint96 lotId => Settlement) public lotSettlements;
 
     mapping(uint96 lotId => LotStatus) public lotStatus;
+    mapping(uint96 lotId => bool) public lotProceedsClaimed;
 
     mapping(uint96 => bool) public settled;
 
@@ -136,8 +134,8 @@ contract MockBatchAuctionModule is BatchAuctionModule {
     }
 
     function _claimProceeds(uint96 lotId_) internal override returns (uint256, uint256, uint256) {
-        // Update status
-        lotStatus[lotId_] = LotStatus.Claimed;
+        // Update claim status
+        lotProceedsClaimed[lotId_] = true;
 
         Lot storage lot = lotData[lotId_];
         return (lot.purchased, lot.sold, lotPartialPayout[lotId_]);
@@ -188,7 +186,7 @@ contract MockBatchAuctionModule is BatchAuctionModule {
 
     function _revertIfLotProceedsClaimed(uint96 lotId_) internal view virtual override {
         // Check that the lot has not been claimed
-        if (lotStatus[lotId_] == LotStatus.Claimed) {
+        if (lotProceedsClaimed[lotId_]) {
             revert Auction.Auction_InvalidParams();
         }
     }

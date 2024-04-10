@@ -73,12 +73,15 @@ contract EmpaModuleCancelAuctionTest is EmpaModuleTest {
 
         // Check the state
         Auction.Lot memory lotData = _getAuctionLot(_lotId);
-        assertEq(lotData.conclusion, uint48(block.timestamp));
-        assertEq(lotData.capacity, 0);
+        assertEq(lotData.conclusion, uint48(block.timestamp), "conclusion");
+        assertEq(lotData.capacity, 0, "capacity");
 
         EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
         assertEq(
-            uint8(auctionData.status), uint8(EncryptedMarginalPriceAuctionModule.LotStatus.Claimed)
+            uint8(auctionData.status),
+            uint8(EncryptedMarginalPriceAuctionModule.LotStatus.Settled),
+            "status"
         );
+        assertTrue(auctionData.proceedsClaimed, "proceedsClaimed");
     }
 }
