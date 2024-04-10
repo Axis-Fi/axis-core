@@ -12,13 +12,6 @@ abstract contract BatchAuction {
     // ========== DATA STRUCTURES ========== //
 
     /// @dev Only used in memory so doesn't need to be packed
-    struct Settlement {
-        uint256 totalIn;
-        uint256 totalOut;
-        bytes auctionOutput;
-    }
-
-    /// @dev Only used in memory so doesn't need to be packed
     struct BidClaim {
         address bidder;
         address referrer;
@@ -26,6 +19,10 @@ abstract contract BatchAuction {
         uint256 payout;
         uint256 refund;
     }
+
+    // ========== STATE VARIABLES ========== //
+
+    mapping(uint96 => bytes) public auctionOutput;
 
     // ========== BATCH AUCTIONS ========== //
 
@@ -84,11 +81,7 @@ abstract contract BatchAuction {
     ///             - Update the lot data
     ///
     /// @param      lotId_          The lot id
-    /// @return     settlement      The settlement data
-    function settle(uint96 lotId_)
-        external
-        virtual
-        returns (Settlement memory settlement, bytes memory auctionOutput);
+    function settle(uint96 lotId_) external virtual;
 
     /// @notice     Claim the seller proceeds from a settled auction lot
     /// @dev        The implementing function should handle the following:
@@ -273,13 +266,7 @@ abstract contract BatchAuctionModule is BatchAuction, AuctionModule {
     ///             - Validating the auction-specific parameters
     ///             - Determining the winning bids
     ///             - Updating the lot data
-    function settle(uint96 lotId_)
-        external
-        virtual
-        override
-        onlyInternal
-        returns (Settlement memory settlement, bytes memory auctionOutput)
-    {
+    function settle(uint96 lotId_) external virtual override onlyInternal {
         // Standard validation
         _revertIfLotInvalid(lotId_);
         _revertIfBeforeLotStart(lotId_);
@@ -287,11 +274,12 @@ abstract contract BatchAuctionModule is BatchAuction, AuctionModule {
         _revertIfLotSettled(lotId_);
 
         // Call implementation-specific logic
-        (settlement, auctionOutput) = _settle(lotId_);
+        (uint256 totalIn, uint256 totalOut, bytes memory auctionOutput_) = _settle(lotId_);
 
         // Store sold and purchased amounts
-        lotData[lotId_].purchased = settlement.totalIn;
-        lotData[lotId_].sold = settlement.totalOut;
+        lotData[lotId_].purchased = totalIn;
+        lotData[lotId_].sold = totalOut;
+        auctionOutput[lotId_] = auctionOutput_;
     }
 
     /// @notice     Implementation-specific lot settlement logic
@@ -299,11 +287,13 @@ abstract contract BatchAuctionModule is BatchAuction, AuctionModule {
     ///             such as determining the winning bids and updating the lot data
     ///
     /// @param      lotId_          The lot ID
-    /// @return     settlement      The settlement data
+    /// @return     totalIn_        The total amount of quote tokens that filled the auction
+    /// @return     totalOut_       The total amount of base tokens sold
+    /// @return     auctionOutput_  The auction-type specific output to be used with a condenser
     function _settle(uint96 lotId_)
         internal
         virtual
-        returns (Settlement memory settlement, bytes memory auctionOutput);
+        returns (uint256 totalIn_, uint256 totalOut_, bytes memory auctionOutput_);
 
     /// @inheritdoc BatchAuction
     /// @dev        Implements a basic claimProceeds function that:

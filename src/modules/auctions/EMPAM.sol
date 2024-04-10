@@ -792,7 +792,7 @@ contract EncryptedMarginalPriceAuctionModule is BatchAuctionModule {
     function _settle(uint96 lotId_)
         internal
         override
-        returns (Settlement memory settlement_, bytes memory auctionOutput_)
+        returns (uint256 totalIn_, uint256 totalOut_, bytes memory auctionOutput_)
     {
         // Settle the auction
         // Check that auction is in the right state for settlement
@@ -843,7 +843,7 @@ contract EncryptedMarginalPriceAuctionModule is BatchAuctionModule {
                 // packed with the bid ID in the PartialFill struct.
                 PartialFill memory pf = PartialFill({
                     bidId: result.marginalBidId,
-                    refund: uint96(Math.mulDivDown(uint256(bidData.amount), excess, fullFill)),
+                    refund: uint96(Math.mulDiv(uint256(bidData.amount), excess, fullFill)),
                     payout: fullFill - excess
                 });
                 lotPartialFill[lotId_] = pf;
@@ -853,9 +853,8 @@ contract EncryptedMarginalPriceAuctionModule is BatchAuctionModule {
             }
 
             // Set settlement data
-            settlement_.totalIn = result.totalAmountIn;
-            settlement_.totalOut =
-                result.capacityExpended > capacity ? capacity : result.capacityExpended;
+            totalIn_ = result.totalAmountIn;
+            totalOut_ = result.capacityExpended > capacity ? capacity : result.capacityExpended;
         } else {
             // Auction cannot be settled if we reach this point
             // Marginal price is set as the max uint256 for the auction so the system knows all bids should be refunded
@@ -864,7 +863,7 @@ contract EncryptedMarginalPriceAuctionModule is BatchAuctionModule {
             // totalIn and totalOut are not set since the auction does not clear
         }
 
-        return (settlement_, auctionOutput_);
+        return (totalIn_, totalOut_, auctionOutput_);
     }
 
     /// @inheritdoc BatchAuctionModule

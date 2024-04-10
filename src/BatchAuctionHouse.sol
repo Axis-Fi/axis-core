@@ -463,9 +463,8 @@ contract BatchAuctionHouse is AuctionHouse, BatchRouter {
         // If a referrer is not set, that portion of the fee defaults to the protocol
         uint256 totalInLessFees;
         {
-            (, uint256 toProtocol) = calculateQuoteFees(
-                feeData.protocolFee, feeData.referrerFee, false, purchased_
-            );
+            (, uint256 toProtocol) =
+                calculateQuoteFees(feeData.protocolFee, feeData.referrerFee, false, purchased_);
             unchecked {
                 totalInLessFees = purchased_ - toProtocol;
             }

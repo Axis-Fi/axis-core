@@ -42,8 +42,6 @@ contract MockBatchAuctionModule is BatchAuctionModule {
     mapping(uint96 lotId => mapping(uint64 => bool)) public bidCancelled;
     mapping(uint96 lotId => mapping(uint64 => bool)) public bidRefunded;
 
-    mapping(uint96 lotId => Settlement) public lotSettlements;
-
     mapping(uint96 lotId => LotStatus) public lotStatus;
     mapping(uint96 lotId => bool) public lotProceedsClaimed;
 
@@ -115,20 +113,18 @@ contract MockBatchAuctionModule is BatchAuctionModule {
         uint64[] calldata bidIds_
     ) internal virtual override returns (BidClaim[] memory bidClaims, bytes memory auctionOutput) {}
 
-    function setLotSettlement(uint96 lotId_, Settlement calldata settlement_) external {
-        lotSettlements[lotId_] = settlement_;
-
+    function setLotSettlement(uint96 lotId_, uint256 totalIn_, uint256 totalOut_) external {
         // Also update sold and purchased
         Lot storage lot = lotData[lotId_];
-        lot.purchased = settlement_.totalIn;
-        lot.sold = settlement_.totalOut;
+        lot.purchased = totalIn_;
+        lot.sold = totalOut_;
     }
 
-    function _settle(uint96 lotId_) internal override returns (Settlement memory, bytes memory) {
+    function _settle(uint96 lotId_) internal override returns (uint256, uint256, bytes memory) {
         // Update status
         lotStatus[lotId_] = LotStatus.Settled;
 
-        return (lotSettlements[lotId_], "");
+        return (lotData[lotId_].purchased, lotData[lotId_].sold, "");
     }
 
     function _claimProceeds(uint96 lotId_) internal override {
