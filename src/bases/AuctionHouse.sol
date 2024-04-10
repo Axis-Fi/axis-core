@@ -217,11 +217,16 @@ abstract contract AuctionHouse is WithModules, ReentrancyGuard, FeeManager {
         routing.baseToken = routing_.baseToken;
         routing.quoteToken = routing_.quoteToken;
 
-        // Store curation information
+        // Store fee information from params and snapshot fees for the lot
         {
-            FeeData storage fees = lotFees[lotId];
-            fees.curator = routing_.curator;
-            fees.curated = false;
+            FeeData storage lotFee = lotFees[lotId];
+            lotFee.curator = routing_.curator;
+            lotFee.curated = false;
+
+            Fees storage auctionFees = fees[routing_.auctionType];
+            lotFee.curatorFee = auctionFees.curator[routing_.curator];
+            lotFee.protocolFee = auctionFees.protocol;
+            lotFee.referrerFee = auctionFees.referrer;
         }
 
         // Derivative
@@ -423,7 +428,6 @@ abstract contract AuctionHouse is WithModules, ReentrancyGuard, FeeManager {
 
         // Set the curator as approved
         feeData.curated = true;
-        feeData.curatorFee = fees[keycodeFromVeecode(routing.auctionReference)].curator[msg.sender];
 
         // Calculate the fee amount based on the remaining capacity (must be in base token if auction is pre-funded)
         uint256 curatorFeePayout = _calculatePayoutFees(

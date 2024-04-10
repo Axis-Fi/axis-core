@@ -150,9 +150,6 @@ contract BatchAuctionHouse is AuctionHouse, BatchRouter {
         // Capacity must be in base token for auctions that require pre-funding
         if (params_.capacityInQuote) revert InvalidParams();
 
-        // Store pre-funding information
-        lotRouting[lotId_].funding = params_.capacity;
-
         // Handle funding from callback or seller as configured
         if (routing_.callbacks.hasPermission(Callbacks.SEND_BASE_TOKENS_FLAG)) {
             uint256 balanceBefore = routing_.baseToken.balanceOf(address(this));
@@ -172,6 +169,9 @@ contract BatchAuctionHouse is AuctionHouse, BatchRouter {
             );
             _onCreateCallback(routing_, lotId_, params_.capacity, false);
         }
+
+        // Store pre-funding information
+        lotRouting[lotId_].funding = params_.capacity;
 
         // Return true to indicate that the callback was performed
         return true;
@@ -403,23 +403,7 @@ contract BatchAuctionHouse is AuctionHouse, BatchRouter {
         BatchAuctionModule module = _getBatchModuleForId(lotId_);
 
         // Settle the auction
-        (BatchAuction.Settlement memory settlement,) = module.settle(lotId_);
-
-        // Check if the auction settled
-        // If so, calculate fees, handle partial bid, transfer proceeds + (possible) refund to seller, and curator fee
-        if (settlement.totalIn > 0 && settlement.totalOut > 0) {
-            // Load curator data and calculate fee (excluding any refunds of capacity)
-            FeeData storage feeData = lotFees[lotId_];
-
-            // Load routing data for the lot
-            Routing storage routing = lotRouting[lotId_];
-
-            // Store the protocol and referrer fees
-            // If this is not done, the amount that the seller receives could be modified after settlement
-            Keycode auctionKeycode = keycodeFromVeecode(routing.auctionReference);
-            feeData.protocolFee = fees[auctionKeycode].protocol;
-            feeData.referrerFee = fees[auctionKeycode].referrer;
-        }
+        module.settle(lotId_);
 
         // Emit event
         emit Settle(lotId_);
