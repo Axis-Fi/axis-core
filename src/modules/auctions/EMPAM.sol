@@ -35,8 +35,7 @@ contract EncryptedMarginalPriceAuctionModule is BatchAuctionModule {
     enum LotStatus {
         Created,
         Decrypted,
-        Settled,
-        Claimed
+        Settled
     }
 
     /// @notice     The status of a bid
@@ -77,6 +76,7 @@ contract EncryptedMarginalPriceAuctionModule is BatchAuctionModule {
     /// @param         nextDecryptIndex    The index of the next bid to decrypt
     /// @param         status              The status of the auction
     /// @param         marginalBidId       The ID of the marginal bid (marking that bids following it are not filled)
+    /// @param         proceedsClaimed     Whether the proceeds have been claimed
     /// @param         marginalPrice       The marginal price of the auction (determined at settlement, blank before)
     /// @param         minFilled           The minimum amount of the lot that must be filled
     /// @param         minBidSize          The minimum size of a bid
@@ -87,7 +87,8 @@ contract EncryptedMarginalPriceAuctionModule is BatchAuctionModule {
         uint64 nextBidId; // 8 +
         uint64 nextDecryptIndex; // 8 +
         LotStatus status; // 1 +
-        uint64 marginalBidId; // 8 = 25 - end of slot 1
+        uint64 marginalBidId; // 8 +
+        bool proceedsClaimed; // 1 = 26 - end of slot 1
         uint256 marginalPrice; // 32 - slot 2
         uint256 minPrice; // 32 - slot 3
         uint256 minFilled; // 32 - slot 4
@@ -207,8 +208,9 @@ contract EncryptedMarginalPriceAuctionModule is BatchAuctionModule {
         // Batch auctions cannot be cancelled once started, otherwise the seller could cancel the auction after bids have been submitted
         _revertIfLotActive(lotId_);
 
-        // Set auction status to claimed so that bids can be refunded
-        auctionData[lotId_].status = LotStatus.Claimed;
+        // Set auction status to settled so that bids can be refunded
+        auctionData[lotId_].status = LotStatus.Settled;
+        auctionData[lotId_].proceedsClaimed = true;
     }
 
     // ========== BID ========== //
@@ -847,8 +849,8 @@ contract EncryptedMarginalPriceAuctionModule is BatchAuctionModule {
         override
         returns (uint256 purchased, uint256 sold, uint256 payoutSent)
     {
-        // Update the status
-        auctionData[lotId_].status = LotStatus.Claimed;
+        // Update the claim status
+        auctionData[lotId_].proceedsClaimed = true;
 
         // Get the lot data
         Lot memory lot = lotData[lotId_];
@@ -909,7 +911,7 @@ contract EncryptedMarginalPriceAuctionModule is BatchAuctionModule {
     /// @inheritdoc BatchAuctionModule
     function _revertIfLotProceedsClaimed(uint96 lotId_) internal view override {
         // Auction must not have proceeds claimed
-        if (auctionData[lotId_].status == LotStatus.Claimed) {
+        if (auctionData[lotId_].proceedsClaimed) {
             revert Auction_WrongState(lotId_);
         }
     }
