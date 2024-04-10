@@ -381,6 +381,7 @@ contract EncryptedMarginalPriceAuctionModule is BatchAuctionModule {
         } else {
             // Bidder is refunded the paid amount and receives no payout
             bidClaim.paid = bidData.amount;
+            bidClaim.refund = bidData.amount;
         }
 
         return (bidClaim, auctionOutput_);
