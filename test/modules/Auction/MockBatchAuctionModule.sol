@@ -122,8 +122,6 @@ contract MockBatchAuctionModule is BatchAuctionModule {
         Lot storage lot = lotData[lotId_];
         lot.purchased = settlement_.totalIn;
         lot.sold = settlement_.totalOut;
-
-        lotPartialPayout[lotId_] = settlement_.pfPayout;
     }
 
     function _settle(uint96 lotId_) internal override returns (Settlement memory, bytes memory) {
@@ -133,13 +131,10 @@ contract MockBatchAuctionModule is BatchAuctionModule {
         return (lotSettlements[lotId_], "");
     }
 
-    function _claimProceeds(uint96 lotId_) internal override returns (uint256, uint256, uint256) {
+    function _claimProceeds(uint96 lotId_) internal override {
         // Update claim status
         lotStatus[lotId_] = LotStatus.Settled;
         lotProceedsClaimed[lotId_] = true;
-
-        Lot storage lot = lotData[lotId_];
-        return (lot.purchased, lot.sold, lotPartialPayout[lotId_]);
     }
 
     function getBid(uint96 lotId_, uint64 bidId_) external view returns (Bid memory bid_) {

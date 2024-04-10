@@ -15,10 +15,6 @@ abstract contract BatchAuction {
     struct Settlement {
         uint256 totalIn;
         uint256 totalOut;
-        address pfBidder;
-        address pfReferrer;
-        uint256 pfRefund;
-        uint256 pfPayout;
         bytes auctionOutput;
     }
 
@@ -28,11 +24,8 @@ abstract contract BatchAuction {
         address referrer;
         uint256 paid;
         uint256 payout;
+        uint256 refund;
     }
-
-    // ========== STATE VARIABLES ========== //
-
-    mapping(uint96 => uint256) public lotPartialPayout; // TODO may be specific to the EMPAM?
 
     // ========== BATCH AUCTIONS ========== //
 
@@ -105,11 +98,11 @@ abstract contract BatchAuction {
     /// @param      lotId_          The lot id
     /// @return     purchased       The amount of quote tokens purchased
     /// @return     sold            The amount of base tokens sold
-    /// @return     payoutSent      The amount of base tokens that have already been paid out
+    /// @return     capacity        The original capacity of the lot
     function claimProceeds(uint96 lotId_)
         external
         virtual
-        returns (uint256 purchased, uint256 sold, uint256 payoutSent);
+        returns (uint256 purchased, uint256 sold, uint256 capacity);
 }
 
 /// @title  Batch Auction Module
@@ -296,13 +289,9 @@ abstract contract BatchAuctionModule is BatchAuction, AuctionModule {
         // Call implementation-specific logic
         (settlement, auctionOutput) = _settle(lotId_);
 
-        // Set lot capacity to zero
-        lotData[lotId_].capacity = 0;
-
         // Store sold and purchased amounts
         lotData[lotId_].purchased = settlement.totalIn;
         lotData[lotId_].sold = settlement.totalOut;
-        lotPartialPayout[lotId_] = settlement.pfPayout;
     }
 
     /// @notice     Implementation-specific lot settlement logic
@@ -336,7 +325,7 @@ abstract contract BatchAuctionModule is BatchAuction, AuctionModule {
         virtual
         override
         onlyInternal
-        returns (uint256 purchased, uint256 sold, uint256 payoutSent)
+        returns (uint256 purchased, uint256 sold, uint256 capacity)
     {
         // Standard validation
         _revertIfLotInvalid(lotId_);
@@ -344,7 +333,13 @@ abstract contract BatchAuctionModule is BatchAuction, AuctionModule {
         _revertIfLotNotSettled(lotId_);
 
         // Call implementation-specific logic
-        return _claimProceeds(lotId_);
+        _claimProceeds(lotId_);
+
+        // Get the lot data
+        Lot memory lot = lotData[lotId_];
+
+        // Return the required data
+        return (lot.purchased, lot.sold, lot.capacity);
     }
 
     /// @notice     Implementation-specific claim proceeds logic
@@ -352,13 +347,7 @@ abstract contract BatchAuctionModule is BatchAuction, AuctionModule {
     ///             such as updating the lot data
     ///
     /// @param      lotId_          The lot ID
-    /// @return     purchased       The amount of quote tokens purchased
-    /// @return     sold            The amount of base tokens sold
-    /// @return     payoutSent      The amount of base tokens that have already been paid out
-    function _claimProceeds(uint96 lotId_)
-        internal
-        virtual
-        returns (uint256 purchased, uint256 sold, uint256 payoutSent);
+    function _claimProceeds(uint96 lotId_) internal virtual;
 
     // ========== MODIFIERS ========== //
 

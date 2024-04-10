@@ -109,9 +109,19 @@ contract EncryptedMarginalPriceAuctionModule is BatchAuctionModule {
     struct MarginalPriceResult {
         uint256 marginalPrice;
         uint64 marginalBidId;
-        uint64 partialFillBidId;
         uint256 totalAmountIn;
         uint256 capacityExpended;
+    }
+
+    /// @notice        Struct containing partial fill data for a lot
+    ///
+    /// @param         bidId        The ID of the bid
+    /// @param         refund       The amount to refund to the bidder
+    /// @param         payout       The amount to payout to the bidder
+    struct PartialFill {
+        uint64 bidId; // 8 +
+        uint96 refund; // 12 = 20 - end of slot 1
+        uint256 payout; // 32 - slot 2
     }
 
     // ========== STATE VARIABLES ========== //
@@ -122,6 +132,10 @@ contract EncryptedMarginalPriceAuctionModule is BatchAuctionModule {
 
     /// @notice     Auction-specific data for a lot
     mapping(uint96 lotId => AuctionData) public auctionData;
+
+    /// @notice     Partial fill data for a lot
+    /// @dev        Each EMPA can have at most one partial fill
+    mapping(uint96 lotId => PartialFill) public lotPartialFill;
 
     /// @notice     General information about bids on a lot
     mapping(uint96 lotId => mapping(uint64 bidId => Bid)) public bids;
@@ -344,14 +358,20 @@ contract EncryptedMarginalPriceAuctionModule is BatchAuctionModule {
         uint256 price = bidData.minAmountOut == 0
             ? 0 // Set price to zero for this bid since it was invalid
             : Math.mulDivUp(bidData.amount, baseScale, bidData.minAmountOut);
+        
+        uint256 marginalPrice = auctionData[lotId_].marginalPrice;
 
+        // If the bidId matches the partial fill for the lot, assign the stored data.
+        // Otherwise,
         // If the bid price is greater than the marginal price, the bid is filled.
         // If the bid price is equal to the marginal price and the bid was submitted before or is the marginal bid, the bid is filled.
         // Auctions that do not meet capacity or price thresholds to settle will have their marginal price set at the maximum uint96
-        // Therefore, all bids will be refunded.
-        // We handle the only potential marginal fill during settlement. All other bids are either completely filled or refunded.
-        uint256 marginalPrice = auctionData[lotId_].marginalPrice;
-        if (
+        // and there will be no partial fill. Therefore, all bids will be refunded.
+        if (lotPartialFill[lotId_].bidId == bidId_) {
+            bidClaim.paid = bidData.amount;
+            bidClaim.payout = lotPartialFill[lotId_].payout;
+            bidClaim.refund = lotPartialFill[lotId_].refund;
+        } else if (
             price > marginalPrice
                 || (price == marginalPrice && bidId_ <= auctionData[lotId_].marginalBidId)
         ) {
@@ -718,9 +738,6 @@ contract EncryptedMarginalPriceAuctionModule is BatchAuctionModule {
                 if (result.capacityExpended >= capacity) {
                     result.marginalPrice = price;
                     result.marginalBidId = bidId;
-                    if (result.capacityExpended > capacity) {
-                        result.partialFillBidId = bidId;
-                    }
                     break;
                 }
 
@@ -805,27 +822,34 @@ contract EncryptedMarginalPriceAuctionModule is BatchAuctionModule {
             auctionData[lotId_].marginalPrice = result.marginalPrice;
             auctionData[lotId_].marginalBidId = result.marginalBidId;
 
-            // If there is a partially filled bid, set refund and payout for the bid and mark as claimed
-            if (result.partialFillBidId != 0) {
+            // If capacity expended is greater than capacity, then the marginal bid is partially filled
+            // Set refund and payout for the bid so it can be handled during claim
+            if (result.capacityExpended > capacity) {
                 // Load routing and bid data
-                Bid storage bidData = bids[lotId_][result.partialFillBidId];
-
-                // Set the bidder on for the partially filled bid
-                settlement_.pfBidder = bidData.bidder;
-                settlement_.pfReferrer = bidData.referrer;
+                Bid storage bidData = bids[lotId_][result.marginalBidId];
 
                 // Calculate the payout and refund amounts
                 uint256 fullFill =
                     Math.mulDiv(uint256(bidData.amount), baseScale, result.marginalPrice);
                 uint256 excess = result.capacityExpended - capacity;
-                settlement_.pfPayout = fullFill - excess;
-                settlement_.pfRefund = Math.mulDiv(uint256(bidData.amount), excess, fullFill);
+
+                // Store the settlement data for use with partial fills
+                // refund casting logic:
+                // bidData.amount is a uint96.
+                // excess must be less than fullFill because some of the 
+                // bid's capacity must be filled at the marginal price.
+                // Therefore, bidData.amount * excess / fullFill < bidData.amount < 2^96
+                // Using a uint96 for refund saves a storage slot since it can be 
+                // packed with the bid ID in the PartialFill struct.
+                PartialFill memory pf = PartialFill({
+                    bidId: result.marginalBidId,
+                    refund: uint96(Math.mulDivDown(uint256(bidData.amount), excess, fullFill)),
+                    payout: fullFill - excess
+                });
+                lotPartialFill[lotId_] = pf;
 
                 // Reduce the total amount in by the refund amount
-                result.totalAmountIn -= settlement_.pfRefund;
-
-                // Set bid as claimed
-                bidData.status = BidStatus.Claimed;
+                result.totalAmountIn -= pf.refund;
             }
 
             // Set settlement data
@@ -847,16 +871,9 @@ contract EncryptedMarginalPriceAuctionModule is BatchAuctionModule {
     function _claimProceeds(uint96 lotId_)
         internal
         override
-        returns (uint256 purchased, uint256 sold, uint256 payoutSent)
     {
         // Update the claim status
         auctionData[lotId_].proceedsClaimed = true;
-
-        // Get the lot data
-        Lot memory lot = lotData[lotId_];
-
-        // Return the required data
-        return (lot.purchased, lot.sold, lotPartialPayout[lotId_]);
     }
 
     // ========== AUCTION INFORMATION ========== //
