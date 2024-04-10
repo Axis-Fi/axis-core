@@ -358,7 +358,7 @@ contract EncryptedMarginalPriceAuctionModule is BatchAuctionModule {
         uint256 price = bidData.minAmountOut == 0
             ? 0 // Set price to zero for this bid since it was invalid
             : Math.mulDivUp(bidData.amount, baseScale, bidData.minAmountOut);
-        
+
         uint256 marginalPrice = auctionData[lotId_].marginalPrice;
 
         // If the bidId matches the partial fill for the lot, assign the stored data.
@@ -836,10 +836,10 @@ contract EncryptedMarginalPriceAuctionModule is BatchAuctionModule {
                 // Store the settlement data for use with partial fills
                 // refund casting logic:
                 // bidData.amount is a uint96.
-                // excess must be less than fullFill because some of the 
+                // excess must be less than fullFill because some of the
                 // bid's capacity must be filled at the marginal price.
                 // Therefore, bidData.amount * excess / fullFill < bidData.amount < 2^96
-                // Using a uint96 for refund saves a storage slot since it can be 
+                // Using a uint96 for refund saves a storage slot since it can be
                 // packed with the bid ID in the PartialFill struct.
                 PartialFill memory pf = PartialFill({
                     bidId: result.marginalBidId,
@@ -868,10 +868,7 @@ contract EncryptedMarginalPriceAuctionModule is BatchAuctionModule {
     }
 
     /// @inheritdoc BatchAuctionModule
-    function _claimProceeds(uint96 lotId_)
-        internal
-        override
-    {
+    function _claimProceeds(uint96 lotId_) internal override {
         // Update the claim status
         auctionData[lotId_].proceedsClaimed = true;
     }

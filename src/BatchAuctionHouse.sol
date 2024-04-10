@@ -403,8 +403,7 @@ contract BatchAuctionHouse is AuctionHouse, BatchRouter {
         BatchAuctionModule module = _getBatchModuleForId(lotId_);
 
         // Settle the auction
-        (BatchAuction.Settlement memory settlement, ) =
-            module.settle(lotId_);
+        (BatchAuction.Settlement memory settlement,) = module.settle(lotId_);
 
         // Check if the auction settled
         // If so, calculate fees, handle partial bid, transfer proceeds + (possible) refund to seller, and curator fee
@@ -448,14 +447,13 @@ contract BatchAuctionHouse is AuctionHouse, BatchRouter {
         (uint256 purchased_, uint256 sold_, uint256 capacity_) =
             _getBatchModuleForId(lotId_).claimProceeds(lotId_);
 
-        
-
         // Load data for the lot
         Routing storage routing = lotRouting[lotId_];
         FeeData storage feeData = lotFees[lotId_];
 
         // Calculate the curator fee and allocate the fees to be claimed
-        uint256 maxCuratorPayout = _calculatePayoutFees(feeData.curated, feeData.curatorFee, capacity_);
+        uint256 maxCuratorPayout =
+            _calculatePayoutFees(feeData.curated, feeData.curatorFee, capacity_);
         uint256 curatorPayout = _calculatePayoutFees(feeData.curated, feeData.curatorFee, sold_);
 
         // If the curator payout is not zero, allocate it
