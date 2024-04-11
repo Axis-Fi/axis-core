@@ -5,27 +5,27 @@ pragma solidity 0.8.19;
 import {Test} from "forge-std/Test.sol";
 
 // Mocks
-import {MockAuctionModule} from "test/modules/Auction/MockAuctionModule.sol";
+import {MockAtomicAuctionModule} from "test/modules/Auction/MockAtomicAuctionModule.sol";
 import {Permit2User} from "test/lib/permit2/Permit2User.sol";
 
 // Auctions
 import {AuctionModule} from "src/modules/Auction.sol";
-import {AuctionHouse} from "src/AuctionHouse.sol";
+import {AtomicAuctionHouse} from "src/AtomicAuctionHouse.sol";
 
 // Modules
 import {Module} from "src/modules/Modules.sol";
 
 contract SetMinAuctionDurationTest is Test, Permit2User {
-    MockAuctionModule internal _mockAuctionModule;
-    AuctionHouse internal _auctionHouse;
+    MockAtomicAuctionModule internal _mockAuctionModule;
+    AtomicAuctionHouse internal _auctionHouse;
     address internal constant _PROTOCOL = address(0x2);
 
     function setUp() external {
         // Ensure the block timestamp is a sane value
         vm.warp(1_000_000);
 
-        _auctionHouse = new AuctionHouse(address(this), _PROTOCOL, _permit2Address);
-        _mockAuctionModule = new MockAuctionModule(address(_auctionHouse));
+        _auctionHouse = new AtomicAuctionHouse(address(this), _PROTOCOL, _permit2Address);
+        _mockAuctionModule = new MockAtomicAuctionModule(address(_auctionHouse));
 
         _auctionHouse.installModule(_mockAuctionModule);
     }
