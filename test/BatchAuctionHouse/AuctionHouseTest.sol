@@ -574,6 +574,16 @@ abstract contract BatchAuctionHouseTest is Test, Permit2User {
         _;
     }
 
+    modifier givenBaseTokenIsRevertOnZero() {
+        _baseToken.setRevertOnZero(true);
+        _;
+    }
+
+    modifier givenQuoteTokenIsRevertOnZero() {
+        _quoteToken.setRevertOnZero(true);
+        _;
+    }
+
     // ===== Helpers ===== //
 
     function _getLotRouting(uint96 lotId_) internal view returns (AuctionHouse.Routing memory) {
