@@ -19,9 +19,9 @@ contract EmpaModuleRefundBidTest is EmpaModuleTest {
     //  [X] it reverts
     // [X] given the lot has been cancelled
     //  [X] it reverts
-    // [X] given the lot is concluded
-    //  [ ] given it is within the settle period
-    //   [ ] it reverts
+    // [X] given the lot is concluded (and not decrypted)
+    //  [X] given it is within the settle period
+    //   [X] it reverts
     //  [X] it refunds the bid amount and updates the bid status
     // [X] given the lot is decrypted
     //  [X] it reverts
