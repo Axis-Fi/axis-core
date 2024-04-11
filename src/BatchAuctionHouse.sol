@@ -441,8 +441,6 @@ contract BatchAuctionHouse is AuctionHouse, BatchRouter {
         (uint256 purchased_, uint256 sold_, uint256 capacity_) =
             _getBatchModuleForId(lotId_).claimProceeds(lotId_);
 
-
-
         // Load data for the lot
         Routing storage routing = lotRouting[lotId_];
         FeeData storage feeData = lotFees[lotId_];
