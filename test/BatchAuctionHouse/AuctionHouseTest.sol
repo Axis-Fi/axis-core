@@ -250,7 +250,7 @@ abstract contract BatchAuctionHouseTest is Test, Permit2User {
         //     vm.toString(bytecode)
         // );
 
-        bytes32 salt = bytes32(0xbdd47150d56efa755cc542e812c83602d2ce2f605e31fa1cab195cc010eb3d0f);
+        bytes32 salt = bytes32(0x0441dbdca969a7cc608425088896794edff9384cc9236e0cb808d57ae7b92ef8);
         vm.broadcast(); // required for CREATE2 address to work correctly. doesn't do anything in a test
         _callback = new MockCallback{salt: salt}(
             address(_auctionHouse),
@@ -405,19 +405,19 @@ abstract contract BatchAuctionHouseTest is Test, Permit2User {
         if (_callbackSendBaseTokens && _callbackReceiveQuoteTokens) {
             // 11111111 = 0xFF
             // cast create2 -s FF -i $(cat ./bytecode/MockCallbackBatchFF.bin)
-            salt = bytes32(0x9fb97c08a4bcba8e7e2c261f596cdb15408486d6af58d89bf0b37bd421bc421e);
+            salt = bytes32(0xf4f88b2074a14b9921b26ad4082c6cceced7cca5d772f3712e24e807bfe0c7b4);
         } else if (_callbackSendBaseTokens) {
             // 11111101 = 0xFD
             // cast create2 -s FD -i $(cat ./bytecode/MockCallbackBatchFD.bin)
-            salt = bytes32(0xaf035f0121f935d1ceeda8d5220c29aa0d1bb4c7f677ca7c889b7da09e50f603);
+            salt = bytes32(0x506a12bdbe4e7da657e9388da05783ab8cf7e6cded5c7f66293177dd6ac592f2);
         } else if (_callbackReceiveQuoteTokens) {
             // 11111110 = 0xFE
             // cast create2 -s FE -i $(cat ./bytecode/MockCallbackBatchFE.bin)
-            salt = bytes32(0x77c496b54a7c39fca879a2fe5e6764797f02494aa0c076231d41e82153f91af4);
+            salt = bytes32(0xada26af410854be8ed4d4e8d7c73d40ca8ce1807ec87c298e95a5cc3bfd92ec3);
         } else {
             // 11111100 = 0xFC
             // cast create2 -s FC -i $(cat ./bytecode/MockCallbackBatchFC.bin)
-            salt = bytes32(0x18d571779625e364a393820339c320606f97c232807887afb29c196bda2a2c73);
+            salt = bytes32(0x1a5d7149173199bfdaddbfb5ac23e64bde0f5ae633b91e7b35cd9f2c5ab6d514);
         }
 
         vm.broadcast(); // required for CREATE2 address to work correctly. doesn't do anything in a test
