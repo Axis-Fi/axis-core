@@ -98,8 +98,7 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         _mockSettlement(totalInFilled, totalOut, "");
 
         // Calculate fees
-        uint256 prefundedCuratorFees =
-            _curatorApproved ? _curatorMaxPotentialFee : 0;
+        uint256 prefundedCuratorFees = _curatorApproved ? _curatorMaxPotentialFee : 0;
 
         // Set up expected values
         // Quote token
@@ -120,8 +119,7 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         _mockSettlement(totalIn, totalOut, "");
 
         // Calculate fees
-        uint256 prefundedCuratorFees =
-            _curatorApproved ? _curatorMaxPotentialFee : 0;
+        uint256 prefundedCuratorFees = _curatorApproved ? _curatorMaxPotentialFee : 0;
 
         // Set up expected values
         // Quote token
@@ -142,8 +140,7 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         _mockSettlement(totalIn, totalOut, "");
 
         // Calculate fees
-        uint256 prefundedCuratorFees =
-            _curatorApproved ? _curatorMaxPotentialFee : 0;
+        uint256 prefundedCuratorFees = _curatorApproved ? _curatorMaxPotentialFee : 0;
 
         // Set up expected values
         // Quote token
@@ -164,8 +161,7 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         _mockSettlement(totalIn, totalOut, "");
 
         // Calculate fees
-        uint256 prefundedCuratorFees =
-            _curatorApproved ? _curatorMaxPotentialFee : 0;
+        uint256 prefundedCuratorFees = _curatorApproved ? _curatorMaxPotentialFee : 0;
 
         // Set up expected values
         // Quote token
