@@ -11,8 +11,6 @@ import {MockAtomicAuctionModule} from "test/modules/Auction/MockAtomicAuctionMod
 import {MockERC20} from "lib/solmate/src/test/utils/mocks/MockERC20.sol";
 
 import {Auction} from "src/modules/Auction.sol";
-import {AuctionHouse} from "src/bases/AuctionHouse.sol";
-import {BatchAuctionHouse} from "src/BatchAuctionHouse.sol";
 import {ICallback} from "src/interfaces/ICallback.sol";
 import {
     Veecode,
