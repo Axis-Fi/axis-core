@@ -135,7 +135,7 @@ abstract contract BatchAuctionModule is BatchAuction, AuctionModule {
         address referrer_,
         uint256 amount_,
         bytes calldata auctionData_
-    ) external override onlyInternal returns (uint64 bidId) {
+    ) external virtual override onlyInternal returns (uint64 bidId) {
         // Standard validation
         _revertIfLotInvalid(lotId_);
         _revertIfBeforeLotStart(lotId_);
@@ -172,7 +172,7 @@ abstract contract BatchAuctionModule is BatchAuction, AuctionModule {
     ///
     ///             This function reverts if:
     ///             - the lot id is invalid
-    ///             - the lot is not settled
+    ///             - the lot is concluded, decrypted or settled
     ///             - the bid id is invalid
     ///             - `caller_` is not the bid owner
     ///             - the bid is cancelled
@@ -188,7 +188,7 @@ abstract contract BatchAuctionModule is BatchAuction, AuctionModule {
         uint96 lotId_,
         uint64 bidId_,
         address caller_
-    ) external override onlyInternal returns (uint256 refund) {
+    ) external virtual override onlyInternal returns (uint256 refund) {
         // Standard validation
         _revertIfLotInvalid(lotId_);
         _revertIfBeforeLotStart(lotId_);
@@ -233,6 +233,7 @@ abstract contract BatchAuctionModule is BatchAuction, AuctionModule {
         uint64[] calldata bidIds_
     )
         external
+        virtual
         override
         onlyInternal
         returns (BidClaim[] memory bidClaims, bytes memory auctionOutput)

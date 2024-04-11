@@ -162,7 +162,7 @@ abstract contract AuctionModule is Auction, Module {
         AuctionParams memory params_,
         uint8 quoteTokenDecimals_,
         uint8 baseTokenDecimals_
-    ) external override onlyInternal {
+    ) external virtual override onlyInternal {
         // Start time must be zero or in the future
         if (params_.start > 0 && params_.start < uint48(block.timestamp)) {
             revert Auction_InvalidStart(params_.start, uint48(block.timestamp));
@@ -208,7 +208,7 @@ abstract contract AuctionModule is Auction, Module {
     ///             - the lot has concluded
     ///
     /// @param      lotId_      The lot id
-    function cancelAuction(uint96 lotId_) external override onlyInternal {
+    function cancelAuction(uint96 lotId_) external virtual override onlyInternal {
         // Validation
         _revertIfLotInvalid(lotId_);
         _revertIfLotConcluded(lotId_);
