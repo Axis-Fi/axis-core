@@ -13,9 +13,6 @@ contract EmpaModuleDecryptBidsTest is EmpaModuleTest {
     uint96 internal constant _BID_AMOUNT_SMALL = 1e16;
     uint96 internal constant _BID_AMOUNT_OUT_SMALL = 1e15;
 
-    bytes32 internal constant _QUEUE_START =
-        0x0000000000000000ffffffffffffffffffffffff000000000000000000000001;
-
     // [X] when the lot id is invalid
     //  [X] it reverts
     // [X] given the lot has not started
