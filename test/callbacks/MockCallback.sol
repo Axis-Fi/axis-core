@@ -67,12 +67,7 @@ contract MockCallback is BaseCallback {
         }
     }
 
-    function _onCancel(
-        uint96 lotId_,
-        uint256,
-        bool,
-        bytes calldata
-    ) internal virtual override {
+    function _onCancel(uint96 lotId_, uint256, bool, bytes calldata) internal virtual override {
         if (onCancelReverts) {
             revert("revert");
         }
