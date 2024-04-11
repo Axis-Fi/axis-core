@@ -5,7 +5,6 @@ import {AtomicAuctionHouse} from "src/AtomicAuctionHouse.sol";
 import {BlastAuctionHouse} from "src/blast/BlastAuctionHouse.sol";
 
 contract BlastAtomicAuctionHouse is AtomicAuctionHouse, BlastAuctionHouse {
-
     // ========== CONSTRUCTOR ========== //
 
     constructor(
@@ -16,5 +15,4 @@ contract BlastAtomicAuctionHouse is AtomicAuctionHouse, BlastAuctionHouse {
         address weth_,
         address usdb_
     ) AtomicAuctionHouse(owner_, protocol_, permit2_) BlastAuctionHouse(blast_, weth_, usdb_) {}
-
 }

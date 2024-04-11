@@ -7,5 +7,8 @@ import {BlastGas} from "src/blast/modules/BlastGas.sol";
 contract BlastLinearVesting is LinearVesting, BlastGas {
     // ========== CONSTRUCTOR ========== //
 
-    constructor(address auctionHouse_, address blast_) LinearVesting(auctionHouse_) BlastGas(auctionHouse_, blast_) {}
+    constructor(
+        address auctionHouse_,
+        address blast_
+    ) LinearVesting(auctionHouse_) BlastGas(auctionHouse_, blast_) {}
 }

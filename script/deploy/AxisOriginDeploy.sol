@@ -62,8 +62,9 @@ contract AxisOriginDeploy is Script {
             msg.sender, protocol, PERMIT2, blast, weth, usdb
         );
         console2.log("BlastAtomicAuctionHouse deployed at: ", address(atomicAuctionHouse));
-        batchAuctionHouse =
-            new BlastBatchAuctionHouse{salt: batchSalt}(msg.sender, protocol, PERMIT2, blast, weth, usdb);
+        batchAuctionHouse = new BlastBatchAuctionHouse{salt: batchSalt}(
+            msg.sender, protocol, PERMIT2, blast, weth, usdb
+        );
         console2.log("BlastBatchAuctionHouse deployed at: ", address(batchAuctionHouse));
 
         atomicCatalogue = new AtomicCatalogue(address(atomicAuctionHouse));
@@ -88,7 +89,7 @@ contract AxisOriginDeploy is Script {
         atomicAuctionHouse.installModule(linearVestingA);
         console2.log("BlastLinearVesting A installed at AtomicAuctionHouse");
 
-        // Linear vesting B 
+        // Linear vesting B
         linearVestingB = new BlastLinearVesting(address(batchAuctionHouse), blast);
         console2.log("BlastLinearVesting A deployed at: ", address(linearVestingB));
 

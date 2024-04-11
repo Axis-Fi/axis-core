@@ -43,11 +43,7 @@ abstract contract BlastAuctionHouse is AuctionHouse {
 
     // ========== CONSTRUCTOR ========== //
 
-    constructor(
-        address blast_,
-        address weth_,
-        address usdb_
-    ) {
+    constructor(address blast_, address weth_, address usdb_) {
         // Set blast addresses
         _BLAST = IBlast(blast_);
         _WETH = IERC20Rebasing(weth_);
