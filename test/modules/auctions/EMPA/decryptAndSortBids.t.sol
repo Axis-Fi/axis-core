@@ -13,7 +13,7 @@ contract EmpaModuleDecryptBidsTest is EmpaModuleTest {
     uint96 internal constant _BID_AMOUNT_SMALL = 1e16;
     uint96 internal constant _BID_AMOUNT_OUT_SMALL = 1e15;
 
-    bytes32 internal constant QUEUE_START =
+    bytes32 internal constant _QUEUE_START =
         0x0000000000000000ffffffffffffffffffffffff000000000000000000000001;
 
     // [X] when the lot id is invalid
@@ -170,7 +170,7 @@ contract EmpaModuleDecryptBidsTest is EmpaModuleTest {
 
         // Call the function
         bytes32[] memory hints = new bytes32[](1);
-        hints[0] = QUEUE_START;
+        hints[0] = _QUEUE_START;
         _module.decryptAndSortBids(_lotId, 1, hints);
 
         // Check the bid state
@@ -210,7 +210,7 @@ contract EmpaModuleDecryptBidsTest is EmpaModuleTest {
 
         // Call the function
         bytes32[] memory hints = new bytes32[](1);
-        hints[0] = QUEUE_START;
+        hints[0] = _QUEUE_START;
         _module.decryptAndSortBids(_lotId, 1, hints);
 
         // Check the bid state
@@ -246,7 +246,7 @@ contract EmpaModuleDecryptBidsTest is EmpaModuleTest {
     {
         // Call the function
         bytes32[] memory hints = new bytes32[](1);
-        hints[0] = QUEUE_START;
+        hints[0] = _QUEUE_START;
         _module.decryptAndSortBids(_lotId, 1, hints);
 
         // Check the bid state
@@ -285,7 +285,7 @@ contract EmpaModuleDecryptBidsTest is EmpaModuleTest {
     {
         // Call the function
         bytes32[] memory hints = new bytes32[](1);
-        hints[0] = QUEUE_START;
+        hints[0] = _QUEUE_START;
         _module.decryptAndSortBids(_lotId, 1, hints);
 
         // Check the bid state
@@ -322,7 +322,7 @@ contract EmpaModuleDecryptBidsTest is EmpaModuleTest {
         // Call the function
         bytes32[] memory hints = new bytes32[](10);
         for (uint256 i = 0; i < 10; i++) {
-            hints[i] = QUEUE_START;
+            hints[i] = _QUEUE_START;
         }
 
         bytes memory err = abi.encodeWithSelector(Auction.Auction_InvalidParams.selector);
@@ -341,7 +341,7 @@ contract EmpaModuleDecryptBidsTest is EmpaModuleTest {
         // Call the function
         bytes32[] memory hints = new bytes32[](10);
         for (uint256 i = 0; i < 10; i++) {
-            hints[i] = QUEUE_START;
+            hints[i] = _QUEUE_START;
         }
         _module.decryptAndSortBids(_lotId, 10, hints);
 
@@ -371,7 +371,7 @@ contract EmpaModuleDecryptBidsTest is EmpaModuleTest {
     {
         // Call the function
         bytes32[] memory hints = new bytes32[](1);
-        hints[0] = QUEUE_START;
+        hints[0] = _QUEUE_START;
         _module.decryptAndSortBids(_lotId, 1, hints);
 
         // Check the bid state
@@ -412,7 +412,7 @@ contract EmpaModuleDecryptBidsTest is EmpaModuleTest {
     {
         // Call the function
         bytes32[] memory hints = new bytes32[](1);
-        hints[0] = QUEUE_START;
+        hints[0] = _QUEUE_START;
         _module.decryptAndSortBids(_lotId, 1, hints);
 
         // Check the bid state
@@ -453,7 +453,7 @@ contract EmpaModuleDecryptBidsTest is EmpaModuleTest {
     {
         // Call the function
         bytes32[] memory hints = new bytes32[](1);
-        hints[0] = QUEUE_START;
+        hints[0] = _QUEUE_START;
         _module.decryptAndSortBids(_lotId, 1, hints);
 
         // Check the bid state
@@ -507,7 +507,7 @@ contract EmpaModuleDecryptBidsTest is EmpaModuleTest {
     {
         // Call the function
         bytes32[] memory hints = new bytes32[](1);
-        hints[0] = QUEUE_START;
+        hints[0] = _QUEUE_START;
         _module.decryptAndSortBids(_lotId, 1, hints);
 
         // Check the bid state
@@ -548,7 +548,7 @@ contract EmpaModuleDecryptBidsTest is EmpaModuleTest {
     {
         // Call the function to decrypt 1 bid
         bytes32[] memory hints = new bytes32[](1);
-        hints[0] = QUEUE_START;
+        hints[0] = _QUEUE_START;
         _module.decryptAndSortBids(_lotId, 1, hints);
 
         // Call the function to decrypt the remaining bid

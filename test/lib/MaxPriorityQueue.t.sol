@@ -9,9 +9,9 @@ contract MaxPriorityQueueTest is Test {
 
     Queue internal _queue;
 
-    bytes32 internal constant QUEUE_START =
+    bytes32 internal constant _QUEUE_START =
         0x0000000000000000ffffffffffffffffffffffff000000000000000000000001;
-    bytes32 internal constant QUEUE_END =
+    bytes32 internal constant _QUEUE_END =
         0xffffffffffffffff000000000000000000000000000000000000000000000001;
 
     // [X] insert
@@ -30,7 +30,7 @@ contract MaxPriorityQueueTest is Test {
     //         [X] it reverts
     //     [X] when a bid is higher priority than its hint
     //         [X] it reverts
-    //     [X] when a bid is the QUEUE_START
+    //     [X] when a bid is the _QUEUE_START
     //         [X] it reverts
     //     [X] when minAmountOut is zero
     //         [X] it reverts
@@ -57,9 +57,9 @@ contract MaxPriorityQueueTest is Test {
     function test_insert_ascendingPrice() external {
         _queue.initialize();
 
-        _queue.insert(QUEUE_START, 0, 1, 1);
-        _queue.insert(QUEUE_START, 1, 2, 1);
-        _queue.insert(QUEUE_START, 2, 3, 1);
+        _queue.insert(_QUEUE_START, 0, 1, 1);
+        _queue.insert(_QUEUE_START, 1, 2, 1);
+        _queue.insert(_QUEUE_START, 2, 3, 1);
 
         // Check values
         assertEq(_queue.getNumBids(), 3);
@@ -86,9 +86,9 @@ contract MaxPriorityQueueTest is Test {
     function test_insert_descendingPrice() external {
         _queue.initialize();
 
-        _queue.insert(QUEUE_START, 2, 3, 1);
-        _queue.insert(QUEUE_START, 1, 2, 1);
-        _queue.insert(QUEUE_START, 0, 1, 1);
+        _queue.insert(_QUEUE_START, 2, 3, 1);
+        _queue.insert(_QUEUE_START, 1, 2, 1);
+        _queue.insert(_QUEUE_START, 0, 1, 1);
 
         // Check values
         assertEq(_queue.getNumBids(), 3);
@@ -115,7 +115,7 @@ contract MaxPriorityQueueTest is Test {
     function test_insert_singleBid() external {
         _queue.initialize();
 
-        _queue.insert(QUEUE_START, 0, 1, 1);
+        _queue.insert(_QUEUE_START, 0, 1, 1);
 
         // Check values
         assertEq(_queue.getNumBids(), 1);
@@ -132,8 +132,8 @@ contract MaxPriorityQueueTest is Test {
     function test_insert_addLargerBid() external {
         _queue.initialize();
 
-        _queue.insert(QUEUE_START, 0, 1, 1);
-        _queue.insert(QUEUE_START, 1, 4, 2);
+        _queue.insert(_QUEUE_START, 0, 1, 1);
+        _queue.insert(_QUEUE_START, 1, 4, 2);
 
         // Check values
         assertEq(_queue.getNumBids(), 2);
@@ -155,7 +155,7 @@ contract MaxPriorityQueueTest is Test {
     function test_insert_addBidSamePrice() external {
         _queue.initialize();
 
-        _queue.insert(QUEUE_START, 1, 2, 1);
+        _queue.insert(_QUEUE_START, 1, 2, 1);
         bytes32 prevHint = BidEncoding.encode(1, 2, 1);
         _queue.insert(prevHint, 2, 4, 2);
 
@@ -179,7 +179,7 @@ contract MaxPriorityQueueTest is Test {
     function test_insert_addBidSamePrice_reverse() external {
         _queue.initialize();
 
-        _queue.insert(QUEUE_START, 1, 4, 2);
+        _queue.insert(_QUEUE_START, 1, 4, 2);
         bytes32 prevHint = BidEncoding.encode(1, 4, 2);
         _queue.insert(prevHint, 2, 2, 1);
 
@@ -203,8 +203,8 @@ contract MaxPriorityQueueTest is Test {
     function test_insert_addBidInMiddle() external {
         _queue.initialize();
 
-        _queue.insert(QUEUE_START, 0, 1, 1);
-        _queue.insert(QUEUE_START, 1, 3, 1);
+        _queue.insert(_QUEUE_START, 0, 1, 1);
+        _queue.insert(_QUEUE_START, 1, 3, 1);
         bytes32 prevHint = BidEncoding.encode(1, 3, 1);
         _queue.insert(prevHint, 2, 2, 1);
 
@@ -233,8 +233,8 @@ contract MaxPriorityQueueTest is Test {
     function test_insert_addSmallerBid() external {
         _queue.initialize();
 
-        _queue.insert(QUEUE_START, 1, 2, 1);
-        _queue.insert(QUEUE_START, 0, 1, 1);
+        _queue.insert(_QUEUE_START, 1, 2, 1);
+        _queue.insert(_QUEUE_START, 0, 1, 1);
 
         // Check values
         assertEq(_queue.getNumBids(), 2);
@@ -256,8 +256,8 @@ contract MaxPriorityQueueTest is Test {
     function test_insert_duplicateBidId() external {
         _queue.initialize();
 
-        _queue.insert(QUEUE_START, 0, 1, 1);
-        _queue.insert(QUEUE_START, 0, 3, 1);
+        _queue.insert(_QUEUE_START, 0, 1, 1);
+        _queue.insert(_QUEUE_START, 0, 3, 1);
 
         // Check values
         assertEq(_queue.getNumBids(), 2, "numBids mismatch");
@@ -281,8 +281,8 @@ contract MaxPriorityQueueTest is Test {
     function test_insert_zeroAmountIn() external {
         _queue.initialize();
 
-        _queue.insert(QUEUE_START, 0, 0, 1);
-        _queue.insert(QUEUE_START, 1, 1, 1);
+        _queue.insert(_QUEUE_START, 0, 0, 1);
+        _queue.insert(_QUEUE_START, 1, 1, 1);
 
         // Check values
         assertEq(_queue.getNumBids(), 2, "numBids mismatch");
@@ -304,18 +304,18 @@ contract MaxPriorityQueueTest is Test {
     function test_insert_zeroAmountOut_reverts() external {
         _queue.initialize();
 
-        _queue.insert(QUEUE_START, 1, 1, 1);
+        _queue.insert(_QUEUE_START, 1, 1, 1);
 
         bytes memory err = abi.encodePacked("invalid minAmountOut");
         vm.expectRevert(err);
-        _queue.insert(QUEUE_START, 0, 1, 0);
+        _queue.insert(_QUEUE_START, 0, 1, 0);
     }
 
     function test_insert_largeNumber() external {
         _queue.initialize();
 
-        _queue.insert(QUEUE_START, 0, 1e18, 1e18);
-        _queue.insert(QUEUE_START, 1, 2e18, 1e18);
+        _queue.insert(_QUEUE_START, 0, 1e18, 1e18);
+        _queue.insert(_QUEUE_START, 1, 2e18, 1e18);
 
         // Check values
         assertEq(_queue.getNumBids(), 2, "numBids mismatch");
@@ -335,11 +335,11 @@ contract MaxPriorityQueueTest is Test {
     function testRevert_insert_bidAlreadyExists() external {
         _queue.initialize();
 
-        _queue.insert(QUEUE_START, 0, 1, 1);
+        _queue.insert(_QUEUE_START, 0, 1, 1);
 
         bytes memory err = abi.encodePacked("bid already exists");
         vm.expectRevert(err);
-        _queue.insert(QUEUE_START, 0, 1, 1);
+        _queue.insert(_QUEUE_START, 0, 1, 1);
     }
 
     function testRevert_insert_prevHintDoesNotExist() external {
@@ -356,8 +356,8 @@ contract MaxPriorityQueueTest is Test {
     function testRevert_insert_bidHigherPriorityThanHint() external {
         _queue.initialize();
 
-        _queue.insert(QUEUE_START, 0, 1, 1);
-        _queue.insert(QUEUE_START, 1, 2, 1);
+        _queue.insert(_QUEUE_START, 0, 1, 1);
+        _queue.insert(_QUEUE_START, 1, 2, 1);
 
         bytes32 prevHint = BidEncoding.encode(1, 2, 1);
         bytes32 key = BidEncoding.encode(2, 3, 1);
@@ -380,9 +380,9 @@ contract MaxPriorityQueueTest is Test {
     function test_delMax() external {
         _queue.initialize();
 
-        _queue.insert(QUEUE_START, 0, 1, 1);
-        _queue.insert(QUEUE_START, 1, 2, 1);
-        _queue.insert(QUEUE_START, 2, 3, 1);
+        _queue.insert(_QUEUE_START, 0, 1, 1);
+        _queue.insert(_QUEUE_START, 1, 2, 1);
+        _queue.insert(_QUEUE_START, 2, 3, 1);
 
         // Check values
         assertEq(_queue.getNumBids(), 3);
@@ -401,9 +401,9 @@ contract MaxPriorityQueueTest is Test {
     function test_getMax() external {
         _queue.initialize();
 
-        _queue.insert(QUEUE_START, 0, 1, 1);
-        _queue.insert(QUEUE_START, 1, 2, 1);
-        _queue.insert(QUEUE_START, 2, 3, 1);
+        _queue.insert(_QUEUE_START, 0, 1, 1);
+        _queue.insert(_QUEUE_START, 1, 2, 1);
+        _queue.insert(_QUEUE_START, 2, 3, 1);
 
         // Check values
         assertEq(_queue.getNumBids(), 3);
@@ -422,15 +422,15 @@ contract MaxPriorityQueueTest is Test {
     function test_getNext() external {
         _queue.initialize();
 
-        _queue.insert(QUEUE_START, 0, 1, 1);
-        _queue.insert(QUEUE_START, 1, 2, 1);
-        _queue.insert(QUEUE_START, 2, 3, 1);
+        _queue.insert(_QUEUE_START, 0, 1, 1);
+        _queue.insert(_QUEUE_START, 1, 2, 1);
+        _queue.insert(_QUEUE_START, 2, 3, 1);
 
         // Check values
         assertEq(_queue.getNumBids(), 3);
 
         // Check order of values
-        bytes32 firstKey = _queue.getNext(QUEUE_START);
+        bytes32 firstKey = _queue.getNext(_QUEUE_START);
         assertEq(firstKey, BidEncoding.encode(2, 3, 1));
 
         bytes32 secondKey = _queue.getNext(firstKey);
@@ -439,7 +439,7 @@ contract MaxPriorityQueueTest is Test {
         bytes32 thirdKey = _queue.getNext(secondKey);
         assertEq(thirdKey, BidEncoding.encode(0, 1, 1));
 
-        assertEq(_queue.getNext(thirdKey), QUEUE_END);
+        assertEq(_queue.getNext(thirdKey), _QUEUE_END);
 
         assertEq(_queue.getNumBids(), 3);
     }
@@ -455,7 +455,7 @@ contract MaxPriorityQueueTest is Test {
     function test_getNumBids_one() external {
         _queue.initialize();
 
-        _queue.insert(QUEUE_START, 0, 1, 1);
+        _queue.insert(_QUEUE_START, 0, 1, 1);
 
         assertEq(_queue.getNumBids(), 1);
     }
@@ -463,9 +463,9 @@ contract MaxPriorityQueueTest is Test {
     function test_getNumBids_many() external {
         _queue.initialize();
 
-        _queue.insert(QUEUE_START, 0, 1, 1);
-        _queue.insert(QUEUE_START, 1, 2, 1);
-        _queue.insert(QUEUE_START, 2, 3, 1);
+        _queue.insert(_QUEUE_START, 0, 1, 1);
+        _queue.insert(_QUEUE_START, 1, 2, 1);
+        _queue.insert(_QUEUE_START, 2, 3, 1);
 
         assertEq(_queue.getNumBids(), 3);
     }
@@ -481,7 +481,7 @@ contract MaxPriorityQueueTest is Test {
     function test_isEmpty_false_one() external {
         _queue.initialize();
 
-        _queue.insert(QUEUE_START, 0, 1, 1);
+        _queue.insert(_QUEUE_START, 0, 1, 1);
 
         assertFalse(_queue.isEmpty());
     }
@@ -489,9 +489,9 @@ contract MaxPriorityQueueTest is Test {
     function test_isEmpty_false_many() external {
         _queue.initialize();
 
-        _queue.insert(QUEUE_START, 0, 1, 1);
-        _queue.insert(QUEUE_START, 1, 2, 1);
-        _queue.insert(QUEUE_START, 2, 3, 1);
+        _queue.insert(_QUEUE_START, 0, 1, 1);
+        _queue.insert(_QUEUE_START, 1, 2, 1);
+        _queue.insert(_QUEUE_START, 2, 3, 1);
 
         assertFalse(_queue.isEmpty());
     }
