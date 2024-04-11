@@ -16,6 +16,9 @@ contract AxisOriginDeploy is Script {
     BlastEMPAM public empam;
     BlastLinearVesting public linearVesting;
     address public constant PERMIT2 = 0x000000000022D473030F116dDEE9F6B43aC78BA3;
+    address public weth;
+    address public usdb;
+    address public blast;
 
     function deploy() public {
         // Load the protocol address to receive fees at
@@ -34,23 +37,25 @@ contract AxisOriginDeploy is Script {
         //     "./bytecode/BlastAuctionHouse.bin",
         //     vm.toString(bytecode)
         // );
+        // TODO set WETH, USDB, and Blast addresses
 
         // Load salt for Auction House
         bytes32 salt = vm.envBytes32("AUCTION_HOUSE_SALT");
 
-        auctionHouse = new BlastAuctionHouse{salt: salt}(msg.sender, protocol, PERMIT2);
+        auctionHouse =
+            new BlastAuctionHouse{salt: salt}(msg.sender, protocol, PERMIT2, blast, weth, usdb);
         console2.log("BlastAuctionHouse deployed at: ", address(auctionHouse));
 
         catalogue = new Catalogue(address(auctionHouse));
         console2.log("Catalogue deployed at: ", address(catalogue));
 
-        empam = new BlastEMPAM(address(auctionHouse));
+        empam = new BlastEMPAM(address(auctionHouse), blast);
         console2.log("BlastEMPAM deployed at: ", address(empam));
 
         auctionHouse.installModule(empam);
         console2.log("BlastEMPAM installed at AuctionHouse");
 
-        linearVesting = new BlastLinearVesting(address(auctionHouse));
+        linearVesting = new BlastLinearVesting(address(auctionHouse), blast);
         console2.log("BlastLinearVesting deployed at: ", address(linearVesting));
 
         auctionHouse.installModule(linearVesting);
