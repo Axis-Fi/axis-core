@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.19;
 
-import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
+import {FixedPointMathLib as Math} from "lib/solady/src/utils/FixedPointMathLib.sol";
+import {console2} from "forge-std/console2.sol";
 
 import {Module} from "src/modules/Modules.sol";
 import {Auction} from "src/modules/Auction.sol";
@@ -663,12 +664,10 @@ contract EmpaModuleClaimBidsTest is EmpaModuleTest {
 
         // Calculate the expected amounts
         uint256 marginalPrice =
-            FixedPointMathLib.mulDivUp(uint256(12e18 - 1 + _BID_AMOUNT), _BASE_SCALE, _LOT_CAPACITY);
+            Math.mulDivUp(uint256(12e18 - 1 + _BID_AMOUNT), _BASE_SCALE, _LOT_CAPACITY);
 
-        uint256 expectedAmountOutOne =
-            FixedPointMathLib.mulDivDown(12e18 - 1, _BASE_SCALE, marginalPrice);
-        uint256 expectedAmountOutTwo =
-            FixedPointMathLib.mulDivDown(_BID_AMOUNT, _BASE_SCALE, marginalPrice);
+        uint256 expectedAmountOutOne = Math.mulDiv(12e18 - 1, _BASE_SCALE, marginalPrice);
+        uint256 expectedAmountOutTwo = Math.mulDiv(_BID_AMOUNT, _BASE_SCALE, marginalPrice);
 
         // Check the result
         BatchAuction.BidClaim memory bidClaimOne = bidClaims[0];
@@ -720,12 +719,10 @@ contract EmpaModuleClaimBidsTest is EmpaModuleTest {
 
         // Calculate the expected amounts
         uint256 marginalPrice =
-            FixedPointMathLib.mulDivUp(uint256(12e18 - 1 + _BID_AMOUNT), _BASE_SCALE, _LOT_CAPACITY);
+            Math.mulDivUp(uint256(12e18 - 1 + _BID_AMOUNT), _BASE_SCALE, _LOT_CAPACITY);
 
-        uint256 expectedAmountOutOne =
-            FixedPointMathLib.mulDivDown(12e18 - 1, _BASE_SCALE, marginalPrice);
-        uint256 expectedAmountOutTwo =
-            FixedPointMathLib.mulDivDown(_BID_AMOUNT, _BASE_SCALE, marginalPrice);
+        uint256 expectedAmountOutOne = Math.mulDiv(12e18 - 1, _BASE_SCALE, marginalPrice);
+        uint256 expectedAmountOutTwo = Math.mulDiv(_BID_AMOUNT, _BASE_SCALE, marginalPrice);
 
         // Check the result
         BatchAuction.BidClaim memory bidClaimOne = bidClaims[0];
@@ -791,13 +788,10 @@ contract EmpaModuleClaimBidsTest is EmpaModuleTest {
         _settleLot();
 
         // Calculate the expected amounts
-        uint256 marginalPrice = FixedPointMathLib.mulDivUp(
-            uint256(_BID_AMOUNT + bidAmountIn), _BASE_SCALE, _LOT_CAPACITY
-        );
-        uint256 expectedAmountOutOne =
-            FixedPointMathLib.mulDivDown(bidAmountIn, _BASE_SCALE, marginalPrice);
-        uint256 expectedAmountOutTwo =
-            FixedPointMathLib.mulDivDown(_BID_AMOUNT, _BASE_SCALE, marginalPrice);
+        uint256 marginalPrice =
+            Math.mulDivUp(uint256(_BID_AMOUNT + bidAmountIn), _BASE_SCALE, _LOT_CAPACITY);
+        uint256 expectedAmountOutOne = Math.mulDiv(bidAmountIn, _BASE_SCALE, marginalPrice);
+        uint256 expectedAmountOutTwo = Math.mulDiv(_BID_AMOUNT, _BASE_SCALE, marginalPrice);
 
         // Call the function
         vm.prank(address(_auctionHouse));
@@ -855,13 +849,10 @@ contract EmpaModuleClaimBidsTest is EmpaModuleTest {
         _settleLot();
 
         // Calculate the payout for bid one
-        uint256 marginalPrice = FixedPointMathLib.mulDivUp(
-            uint256(_BID_AMOUNT + bidAmountIn), _BASE_SCALE, _LOT_CAPACITY
-        );
-        uint256 expectedAmountOutOne =
-            FixedPointMathLib.mulDivDown(bidAmountIn, _BASE_SCALE, marginalPrice);
-        uint256 expectedAmountOutTwo =
-            FixedPointMathLib.mulDivDown(_BID_AMOUNT, _BASE_SCALE, marginalPrice);
+        uint256 marginalPrice =
+            Math.mulDivUp(uint256(_BID_AMOUNT + bidAmountIn), _BASE_SCALE, _LOT_CAPACITY);
+        uint256 expectedAmountOutOne = Math.mulDiv(bidAmountIn, _BASE_SCALE, marginalPrice);
+        uint256 expectedAmountOutTwo = Math.mulDiv(_BID_AMOUNT, _BASE_SCALE, marginalPrice);
 
         // Call the function
         vm.prank(address(_auctionHouse));
@@ -1393,5 +1384,53 @@ contract EmpaModuleClaimBidsTest is EmpaModuleTest {
             uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed),
             "status"
         );
+    }
+
+    function test_below_price_precisio_totalCorrect()
+        external
+        givenLotIsCreated
+        givenLotHasStarted
+        givenBidIsCreated(4e18 + 1, 2e18) // bidId = 1
+        givenBidIsCreated(4e18 + 2, 2e18) // bidId = 2
+        givenBidIsCreated(4e18 + 2, 2e18) // bidId = 3
+        givenBidIsCreated(4e18 + 2, 2e18) // bidId = 4
+        givenBidIsCreated(4e18 + 2, 2e18) // bidId = 5
+        givenBidIsCreated(4e18 + 2, 2e18) // bidId = 6
+        givenLotHasConcluded
+        givenPrivateKeyIsSubmitted
+        givenLotIsDecrypted
+        givenLotIsSettled
+    {
+        EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
+
+        console2.log("marginal price     ==>  ", auctionData.marginalPrice);
+        console2.log("marginal bid id    ==>  ", auctionData.marginalBidId);
+        console2.log("");
+
+        // Construct array to claim all bids at once
+        uint64[] memory bidIds = new uint64[](6);
+        for (uint64 i = 1; i <= 6; i++) {
+            bidIds[i - 1] = i;
+        }
+
+        // Claim bids
+        vm.prank(address(_auctionHouse));
+        (BatchAuction.BidClaim[] memory bidClaims,) = _module.claimBids(_lotId, bidIds);
+
+        // Total up payouts
+        uint256 capacityPaidOut;
+        for (uint64 i; i < 6; i++) {
+            BatchAuction.BidClaim memory bidClaim = bidClaims[i];
+            capacityPaidOut += bidClaim.payout;
+            if (i > 0) {
+                console2.log("*****");
+            }
+            console2.log("paid to bid ", i + 1, "      ==>  ", bidClaim.paid);
+            console2.log("payout to bid ", i + 1, "    ==>  ", bidClaim.payout);
+            console2.log("refunded to bid ", i + 1, "  ==>  ", bidClaim.refund);
+        }
+        console2.log("capacity paid out", capacityPaidOut);
+
+        assertEq(capacityPaidOut, _LOT_CAPACITY, "capacity");
     }
 }
