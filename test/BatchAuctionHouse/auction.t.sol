@@ -10,10 +10,16 @@ import {ERC20} from "solmate/tokens/ERC20.sol";
 import {MockAtomicAuctionModule} from "test/modules/Auction/MockAtomicAuctionModule.sol";
 import {MockERC20} from "lib/solmate/src/test/utils/mocks/MockERC20.sol";
 
+import {Auction} from "src/modules/Auction.sol";
 import {AuctionHouse} from "src/bases/AuctionHouse.sol";
 import {ICallback} from "src/interfaces/ICallback.sol";
 import {
-    Veecode, keycodeFromVeecode, Keycode, WithModules, fromVeecode
+    Veecode,
+    keycodeFromVeecode,
+    Keycode,
+    WithModules,
+    wrapVeecode,
+    fromVeecode
 } from "src/modules/Modules.sol";
 
 contract BatchCreateAuctionTest is BatchAuctionHouseTest {
@@ -188,6 +194,100 @@ contract BatchCreateAuctionTest is BatchAuctionHouseTest {
 
         vm.prank(_SELLER);
         _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
+    }
+
+    function test_success()
+        external
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
+    {
+        // Expect event to be emitted
+        vm.expectEmit(address(_auctionHouse));
+        emit AuctionCreated(0, wrapVeecode(_routingParams.auctionType, 1), _INFO_HASH);
+
+        // Create the auction
+        vm.prank(_SELLER);
+        _lotId = _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
+
+        // Assert values
+        AuctionHouse.Routing memory routing = _getLotRouting(_lotId);
+        assertEq(
+            fromVeecode(routing.auctionReference),
+            fromVeecode(wrapVeecode(_routingParams.auctionType, 1)),
+            "auction type mismatch"
+        );
+        assertEq(routing.seller, _SELLER, "seller mismatch");
+        assertEq(address(routing.baseToken), address(_baseToken), "base token mismatch");
+        assertEq(address(routing.quoteToken), address(_quoteToken), "quote token mismatch");
+        assertEq(address(routing.callbacks), address(0), "callback mismatch");
+        assertEq(fromVeecode(routing.derivativeReference), "", "derivative type mismatch");
+        assertEq(routing.derivativeParams, "", "derivative params mismatch");
+        assertEq(routing.wrapDerivative, false, "wrap derivative mismatch");
+        assertEq(routing.funding, _LOT_CAPACITY, "funding mismatch");
+
+        // Curation updated
+        AuctionHouse.FeeData memory curation = _getLotFees(_lotId);
+        assertEq(curation.curator, _CURATOR, "curator mismatch");
+        assertEq(curation.curated, false, "curated mismatch");
+
+        // Auction module also updated
+        Auction.Lot memory lotData = _getLotData(_lotId);
+        assertEq(lotData.start, _startTime, "start mismatch");
+
+        // Check balances
+        assertEq(_baseToken.balanceOf(address(this)), 0, "seller balance mismatch");
+        assertEq(
+            _baseToken.balanceOf(address(_auctionHouse)),
+            _LOT_CAPACITY,
+            "auction house balance mismatch"
+        );
+    }
+
+    function test_success_multiple()
+        external
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenUserHasQuoteTokenBalance(_LOT_CAPACITY)
+        givenUserHasQuoteTokenAllowance(_LOT_CAPACITY)
+    {
+        // Create the first auction
+        vm.prank(_SELLER);
+        uint96 lotIdOne = _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
+
+        // Expect event to be emitted
+        vm.expectEmit(address(_auctionHouse));
+        emit AuctionCreated(1, wrapVeecode(_routingParams.auctionType, 1), _INFO_HASH);
+
+        // Modify the parameters
+        _routingParams.baseToken = _quoteToken;
+        _routingParams.quoteToken = _baseToken;
+        _auctionParams.start = _startTime + 1;
+
+        // Create the second auction
+        vm.prank(_bidder);
+        uint96 lotIdTwo = _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
+
+        // Assert values for lot one
+        AuctionHouse.Routing memory routing = _getLotRouting(lotIdOne);
+        assertEq(address(routing.baseToken), address(_baseToken), "lot one: base token mismatch");
+        assertEq(address(routing.quoteToken), address(_quoteToken), "lot one: quote token mismatch");
+        assertEq(routing.funding, _LOT_CAPACITY, "funding mismatch");
+        assertEq(routing.seller, _SELLER, "seller mismatch");
+        Auction.Lot memory lotData = _getLotData(lotIdOne);
+        assertEq(lotData.start, _startTime, "lot one: start mismatch");
+
+        // Assert values for lot two
+        routing = _getLotRouting(lotIdTwo);
+        assertEq(address(routing.baseToken), address(_quoteToken), "lot two: base token mismatch");
+        assertEq(address(routing.quoteToken), address(_baseToken), "lot two: quote token mismatch");
+        assertEq(routing.funding, _LOT_CAPACITY, "funding mismatch");
+        assertEq(routing.seller, _bidder, "seller mismatch");
+        lotData = _getLotData(lotIdTwo);
+        assertEq(lotData.start, _startTime + 1, "lot two: start mismatch");
     }
 
     function test_whenBaseAndQuoteTokenSame()
@@ -672,30 +772,6 @@ contract BatchCreateAuctionTest is BatchAuctionHouseTest {
 
         vm.prank(_SELLER);
         _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
-    }
-
-    function test_success()
-        external
-        whenAuctionTypeIsBatch
-        whenBatchAuctionModuleIsInstalled
-        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
-        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
-    {
-        // Create the auction
-        vm.prank(_SELLER);
-        _lotId = _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
-
-        // Check the funding status
-        AuctionHouse.Routing memory routing = _getLotRouting(_lotId);
-        assertEq(routing.funding, _LOT_CAPACITY, "funding mismatch");
-
-        // Check balances
-        assertEq(_baseToken.balanceOf(address(this)), 0, "seller balance mismatch");
-        assertEq(
-            _baseToken.balanceOf(address(_auctionHouse)),
-            _LOT_CAPACITY,
-            "auction house balance mismatch"
-        );
     }
 
     function test_quoteTokenDecimalsLarger()

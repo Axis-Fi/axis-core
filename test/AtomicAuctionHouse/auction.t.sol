@@ -58,6 +58,7 @@ contract AtomicCreateAuctionTest is AtomicAuctionHouseTest {
     // [X] reverts when base token is 0
     // [X] reverts when quote token is 0
     // [X] creates the auction lot
+    // [X] creates multiple auction lots
 
     function test_whenModuleNotInstalled_reverts() external whenAuctionTypeIsAtomic {
         bytes memory err = abi.encodeWithSelector(
@@ -225,6 +226,43 @@ contract AtomicCreateAuctionTest is AtomicAuctionHouseTest {
         // Auction module also updated
         Auction.Lot memory lotData = _getLotData(_lotId);
         assertEq(lotData.start, _startTime, "start mismatch");
+    }
+
+    function test_success_multiple()
+        external
+        whenAuctionTypeIsAtomic
+        whenAtomicAuctionModuleIsInstalled
+    {
+        // Create the first auction
+        vm.prank(_SELLER);
+        uint96 lotIdOne = _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
+
+        // Expect event to be emitted
+        vm.expectEmit(address(_auctionHouse));
+        emit AuctionCreated(1, wrapVeecode(_routingParams.auctionType, 1), _INFO_HASH);
+
+        // Modify the parameters
+        _routingParams.baseToken = _quoteToken;
+        _routingParams.quoteToken = _baseToken;
+        _auctionParams.start = _startTime + 1;
+
+        // Create the second auction
+        vm.prank(_SELLER);
+        uint96 lotIdTwo = _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
+
+        // Assert values for lot one
+        AuctionHouse.Routing memory routing = _getLotRouting(lotIdOne);
+        assertEq(address(routing.baseToken), address(_baseToken), "lot one: base token mismatch");
+        assertEq(address(routing.quoteToken), address(_quoteToken), "lot one: quote token mismatch");
+        Auction.Lot memory lotData = _getLotData(lotIdOne);
+        assertEq(lotData.start, _startTime, "lot one: start mismatch");
+
+        // Assert values for lot two
+        routing = _getLotRouting(lotIdTwo);
+        assertEq(address(routing.baseToken), address(_quoteToken), "lot two: base token mismatch");
+        assertEq(address(routing.quoteToken), address(_baseToken), "lot two: quote token mismatch");
+        lotData = _getLotData(lotIdTwo);
+        assertEq(lotData.start, _startTime + 1, "lot two: start mismatch");
     }
 
     function test_whenBaseAndQuoteTokenSame()
