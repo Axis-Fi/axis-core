@@ -135,6 +135,7 @@ contract MockBatchAuctionModule is BatchAuctionModule {
 
     function _claimProceeds(uint96 lotId_) internal override returns (uint256, uint256, uint256) {
         // Update claim status
+        lotStatus[lotId_] = LotStatus.Settled;
         lotProceedsClaimed[lotId_] = true;
 
         Lot storage lot = lotData[lotId_];
