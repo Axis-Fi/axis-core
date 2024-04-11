@@ -74,6 +74,9 @@ contract BatchClaimProceedsTest is BatchAuctionHouseTest {
             uint8(_batchAuctionModule.lotStatus(_lotId)),
             uint8(MockBatchAuctionModule.LotStatus.Settled)
         );
+
+        // Check the lot proceeds claimed status
+        assertEq(_batchAuctionModule.lotProceedsClaimed(_lotId), true);
     }
 
     // ============ Modifiers ============ //
@@ -135,6 +138,12 @@ contract BatchClaimProceedsTest is BatchAuctionHouseTest {
 
     // [X] when the lot id is invalid
     //  [X] it reverts
+    // [X] when protocol fees are set
+    //  [X] it transfers the entire payment - protocol fees to the seller
+    // [X] when referrer fees are set
+    //  [X] it transfers the entire payment - referrer fees to the seller
+    // [X] when protocol and referrer fees are set
+    //  [X] it transfers the entire payment - protocol and referrer fees to the seller
     // [X] given the lot did not settle
     //  [X] it sends the unused capacity to the seller, and marks the lot as claimed
     // [X] given the lot has a partial fill
@@ -553,6 +562,133 @@ contract BatchClaimProceedsTest is BatchAuctionHouseTest {
         _assertLotRouting(claimablePayout);
     }
 
+    function test_lotSettlementIsFullCapacity_givenProtocolFeeIsSet()
+        external
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenLotIsCreated
+        givenLotHasStarted
+        givenProtocolFeeIsSet
+        givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
+        givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
+        givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
+        givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
+        givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
+        givenLotIsConcluded
+        givenLotSettlementIsFullCapacity
+    {
+        // Call function
+        vm.prank(_SELLER);
+        _auctionHouse.claimProceeds(_lotId, bytes(""));
+
+        uint256 quoteTokenIn = _scaleQuoteTokenAmount(_BID_AMOUNT * 5);
+        uint256 claimablePayout = _scaleBaseTokenAmount(_BID_AMOUNT_OUT * 5);
+        uint96 curatorFeeActual = 0;
+        uint256 unusedCapacity = 0;
+
+        // Assert balances
+        _assertQuoteTokenBalances(quoteTokenIn, 0);
+        _assertBaseTokenBalances(unusedCapacity, claimablePayout + curatorFeeActual);
+        _assertLotRouting(claimablePayout);
+    }
+
+    function test_lotSettlementIsFullCapacity_givenReferrerFeeIsSet()
+        external
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenLotIsCreated
+        givenLotHasStarted
+        givenReferrerFeeIsSet
+        givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
+        givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
+        givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
+        givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
+        givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
+        givenLotIsConcluded
+        givenLotSettlementIsFullCapacity
+    {
+        // Call function
+        vm.prank(_SELLER);
+        _auctionHouse.claimProceeds(_lotId, bytes(""));
+
+        uint256 quoteTokenIn = _scaleQuoteTokenAmount(_BID_AMOUNT * 5);
+        uint256 claimablePayout = _scaleBaseTokenAmount(_BID_AMOUNT_OUT * 5);
+        uint96 curatorFeeActual = 0;
+        uint256 unusedCapacity = 0;
+
+        // Assert balances
+        _assertQuoteTokenBalances(quoteTokenIn, 0);
+        _assertBaseTokenBalances(unusedCapacity, claimablePayout + curatorFeeActual);
+        _assertLotRouting(claimablePayout);
+    }
+
+    function test_lotSettlementIsFullCapacity_givenProtocolFeeIsSet_givenReferrerFeeIsSet()
+        external
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenLotIsCreated
+        givenLotHasStarted
+        givenProtocolFeeIsSet
+        givenReferrerFeeIsSet
+        givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
+        givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
+        givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
+        givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
+        givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
+        givenLotIsConcluded
+        givenLotSettlementIsFullCapacity
+    {
+        // Call function
+        vm.prank(_SELLER);
+        _auctionHouse.claimProceeds(_lotId, bytes(""));
+
+        uint256 quoteTokenIn = _scaleQuoteTokenAmount(_BID_AMOUNT * 5);
+        uint256 claimablePayout = _scaleBaseTokenAmount(_BID_AMOUNT_OUT * 5);
+        uint96 curatorFeeActual = 0;
+        uint256 unusedCapacity = 0;
+
+        // Assert balances
+        _assertQuoteTokenBalances(quoteTokenIn, 0);
+        _assertBaseTokenBalances(unusedCapacity, claimablePayout + curatorFeeActual);
+        _assertLotRouting(claimablePayout);
+    }
+
     function test_lotSettlementIsPartialFill()
         external
         whenAuctionTypeIsBatch
@@ -587,12 +723,13 @@ contract BatchClaimProceedsTest is BatchAuctionHouseTest {
         _auctionHouse.claimProceeds(_lotId, bytes(""));
 
         uint256 quoteTokenIn = _scaleQuoteTokenAmount(_BID_AMOUNT * 6 - _BID_AMOUNT_PARTIAL_REFUND);
+        uint256 claimableQuoteToken = _scaleQuoteTokenAmount(_BID_AMOUNT_PARTIAL_REFUND);
         uint256 claimablePayout = _scaleBaseTokenAmount(_LOT_CAPACITY);
         uint256 curatorFeeActual = 0;
         uint256 unusedCapacity = 0;
 
         // Assert balances
-        _assertQuoteTokenBalances(quoteTokenIn, _scaleQuoteTokenAmount(_BID_AMOUNT_PARTIAL_REFUND));
+        _assertQuoteTokenBalances(quoteTokenIn, claimableQuoteToken);
         _assertBaseTokenBalances(unusedCapacity, claimablePayout + curatorFeeActual);
         _assertLotRouting(claimablePayout);
     }
@@ -639,13 +776,13 @@ contract BatchClaimProceedsTest is BatchAuctionHouseTest {
         _auctionHouse.claimProceeds(_lotId, bytes(""));
 
         uint256 quoteTokenIn = _scaleQuoteTokenAmount(_BID_AMOUNT * 6 - _BID_AMOUNT_PARTIAL_REFUND);
-        uint256 quoteTokenToRefund = _scaleQuoteTokenAmount(_BID_AMOUNT_PARTIAL_REFUND);
+        uint256 claimableQuoteToken = _scaleQuoteTokenAmount(_BID_AMOUNT_PARTIAL_REFUND);
         uint256 claimablePayout = _scaleBaseTokenAmount(_LOT_CAPACITY - _BID_AMOUNT_OUT);
         uint96 curatorFeeActual = 0;
         uint256 unusedCapacity = 0;
 
         // Assert balances
-        _assertQuoteTokenBalances(quoteTokenIn, quoteTokenToRefund);
+        _assertQuoteTokenBalances(quoteTokenIn, claimableQuoteToken);
         _assertBaseTokenBalances(unusedCapacity, claimablePayout + curatorFeeActual);
         _assertLotRouting(claimablePayout);
     }
@@ -777,12 +914,13 @@ contract BatchClaimProceedsTest is BatchAuctionHouseTest {
         _auctionHouse.claimProceeds(_lotId, bytes(""));
 
         uint256 quoteTokenIn = _scaleQuoteTokenAmount(_BID_AMOUNT * 6 - _BID_AMOUNT_PARTIAL_REFUND);
+        uint256 claimableQuoteToken = _scaleQuoteTokenAmount(_BID_AMOUNT_PARTIAL_REFUND);
         uint256 claimablePayout = _scaleBaseTokenAmount(_LOT_CAPACITY);
         uint256 curatorFeeActual = _LOT_CAPACITY * _curatorFeePercentActual / 1e5;
         uint256 unusedCapacity = 0;
 
         // Assert balances
-        _assertQuoteTokenBalances(quoteTokenIn, _scaleQuoteTokenAmount(_BID_AMOUNT_PARTIAL_REFUND));
+        _assertQuoteTokenBalances(quoteTokenIn, claimableQuoteToken);
         _assertBaseTokenBalances(unusedCapacity, claimablePayout + curatorFeeActual);
         _assertLotRouting(claimablePayout);
     }
@@ -824,12 +962,13 @@ contract BatchClaimProceedsTest is BatchAuctionHouseTest {
         _auctionHouse.claimProceeds(_lotId, bytes(""));
 
         uint256 quoteTokenIn = _scaleQuoteTokenAmount(_BID_AMOUNT * 6 - _BID_AMOUNT_PARTIAL_REFUND);
+        uint256 claimableQuoteToken = _scaleQuoteTokenAmount(_BID_AMOUNT_PARTIAL_REFUND);
         uint256 claimablePayout = _scaleBaseTokenAmount(_LOT_CAPACITY);
         uint256 curatorFeeActual = _LOT_CAPACITY * _curatorFeePercentActual / 1e5;
         uint256 unusedCapacity = 0;
 
         // Assert balances
-        _assertQuoteTokenBalances(quoteTokenIn, _scaleQuoteTokenAmount(_BID_AMOUNT_PARTIAL_REFUND));
+        _assertQuoteTokenBalances(quoteTokenIn, claimableQuoteToken);
         _assertBaseTokenBalances(unusedCapacity, claimablePayout + curatorFeeActual);
         _assertLotRouting(claimablePayout);
     }
@@ -874,12 +1013,13 @@ contract BatchClaimProceedsTest is BatchAuctionHouseTest {
         _auctionHouse.claimProceeds(_lotId, bytes(""));
 
         uint256 quoteTokenIn = _scaleQuoteTokenAmount(_BID_AMOUNT * 6 - _BID_AMOUNT_PARTIAL_REFUND);
+        uint256 claimableQuoteToken = _scaleQuoteTokenAmount(_BID_AMOUNT_PARTIAL_REFUND);
         uint256 claimablePayout = _scaleBaseTokenAmount(_LOT_CAPACITY);
         uint256 curatorFeeActual = _LOT_CAPACITY * _curatorFeePercentActual / 1e5;
         uint256 unusedCapacity = 0;
 
         // Assert balances
-        _assertQuoteTokenBalances(quoteTokenIn, _scaleQuoteTokenAmount(_BID_AMOUNT_PARTIAL_REFUND));
+        _assertQuoteTokenBalances(quoteTokenIn, claimableQuoteToken);
         _assertBaseTokenBalances(unusedCapacity, claimablePayout + curatorFeeActual);
         _assertLotRouting(claimablePayout);
     }
@@ -921,12 +1061,13 @@ contract BatchClaimProceedsTest is BatchAuctionHouseTest {
         _auctionHouse.claimProceeds(_lotId, bytes(""));
 
         uint256 quoteTokenIn = _scaleQuoteTokenAmount(_BID_AMOUNT * 6 - _BID_AMOUNT_PARTIAL_REFUND);
+        uint256 claimableQuoteToken = _scaleQuoteTokenAmount(_BID_AMOUNT_PARTIAL_REFUND);
         uint256 claimablePayout = _scaleBaseTokenAmount(_LOT_CAPACITY);
         uint256 curatorFeeActual = _LOT_CAPACITY * _curatorFeePercentActual / 1e5;
         uint256 unusedCapacity = 0;
 
         // Assert balances
-        _assertQuoteTokenBalances(quoteTokenIn, _scaleQuoteTokenAmount(_BID_AMOUNT_PARTIAL_REFUND));
+        _assertQuoteTokenBalances(quoteTokenIn, claimableQuoteToken);
         _assertBaseTokenBalances(unusedCapacity, claimablePayout + curatorFeeActual);
         _assertLotRouting(claimablePayout);
     }

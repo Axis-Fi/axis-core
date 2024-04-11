@@ -220,26 +220,34 @@ contract EmpaModuleClaimBidsTest is EmpaModuleTest {
 
         // Check the result
         BatchAuction.BidClaim memory bidClaimOne = bidClaims[0];
-        assertEq(bidClaimOne.bidder, _BIDDER);
-        assertEq(bidClaimOne.referrer, _REFERRER);
-        assertEq(bidClaimOne.paid, _BID_AMOUNT_UNSUCCESSFUL);
-        assertEq(bidClaimOne.payout, 0);
-        assertEq(bidClaimOne.refund, _BID_AMOUNT_UNSUCCESSFUL);
+        assertEq(bidClaimOne.bidder, _BIDDER, "bid one: bidder");
+        assertEq(bidClaimOne.referrer, _REFERRER, "bid one: referrer");
+        assertEq(bidClaimOne.paid, _BID_AMOUNT_UNSUCCESSFUL, "bid one: paid");
+        assertEq(bidClaimOne.payout, 0, "bid one: payout");
+        assertEq(bidClaimOne.refund, _BID_AMOUNT_UNSUCCESSFUL, "bid one: refund");
 
         BatchAuction.BidClaim memory bidClaimTwo = bidClaims[1];
-        assertEq(bidClaimTwo.bidder, _BIDDER_TWO);
-        assertEq(bidClaimTwo.referrer, _REFERRER);
-        assertEq(bidClaimTwo.paid, _BID_AMOUNT_UNSUCCESSFUL);
-        assertEq(bidClaimTwo.payout, 0);
-        assertEq(bidClaimTwo.refund, _BID_AMOUNT_UNSUCCESSFUL);
+        assertEq(bidClaimTwo.bidder, _BIDDER_TWO, "bid two: bidder");
+        assertEq(bidClaimTwo.referrer, _REFERRER, "bid two: referrer");
+        assertEq(bidClaimTwo.paid, _BID_AMOUNT_UNSUCCESSFUL, "bid two: paid");
+        assertEq(bidClaimTwo.payout, 0, "bid two: payout");
+        assertEq(bidClaimTwo.refund, _BID_AMOUNT_UNSUCCESSFUL, "bid two: refund");
 
-        assertEq(bidClaims.length, 2);
+        assertEq(bidClaims.length, 2, "bid count");
 
         // Check the bid status
         EncryptedMarginalPriceAuctionModule.Bid memory bidOne = _getBid(_lotId, _bidIds[0]);
-        assertEq(uint8(bidOne.status), uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed));
+        assertEq(
+            uint8(bidOne.status),
+            uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed),
+            "bid one: status"
+        );
         EncryptedMarginalPriceAuctionModule.Bid memory bidTwo = _getBid(_lotId, _bidIds[1]);
-        assertEq(uint8(bidTwo.status), uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed));
+        assertEq(
+            uint8(bidTwo.status),
+            uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed),
+            "bid two: status"
+        );
     }
 
     function test_unsuccessfulBid()
@@ -265,26 +273,34 @@ contract EmpaModuleClaimBidsTest is EmpaModuleTest {
 
         // Check the result
         BatchAuction.BidClaim memory bidClaimOne = bidClaims[0];
-        assertEq(bidClaimOne.bidder, _BIDDER);
-        assertEq(bidClaimOne.referrer, _REFERRER);
-        assertEq(bidClaimOne.paid, _BID_AMOUNT_UNSUCCESSFUL);
-        assertEq(bidClaimOne.payout, 0);
-        assertEq(bidClaimOne.refund, _BID_AMOUNT_UNSUCCESSFUL);
+        assertEq(bidClaimOne.bidder, _BIDDER, "bid one: bidder");
+        assertEq(bidClaimOne.referrer, _REFERRER, "bid one: referrer");
+        assertEq(bidClaimOne.paid, _BID_AMOUNT_UNSUCCESSFUL, "bid one: paid");
+        assertEq(bidClaimOne.payout, 0, "bid one: payout");
+        assertEq(bidClaimOne.refund, _BID_AMOUNT_UNSUCCESSFUL, "bid one: refund");
 
         BatchAuction.BidClaim memory bidClaimTwo = bidClaims[1];
-        assertEq(bidClaimTwo.bidder, _BIDDER_TWO);
-        assertEq(bidClaimTwo.referrer, _REFERRER);
-        assertEq(bidClaimTwo.paid, _BID_AMOUNT_UNSUCCESSFUL);
-        assertEq(bidClaimTwo.payout, 0);
-        assertEq(bidClaimTwo.refund, _BID_AMOUNT_UNSUCCESSFUL);
+        assertEq(bidClaimTwo.bidder, _BIDDER_TWO, "bid two: bidder");
+        assertEq(bidClaimTwo.referrer, _REFERRER, "bid two: referrer");
+        assertEq(bidClaimTwo.paid, _BID_AMOUNT_UNSUCCESSFUL, "bid two: paid");
+        assertEq(bidClaimTwo.payout, 0, "bid two: payout");
+        assertEq(bidClaimTwo.refund, _BID_AMOUNT_UNSUCCESSFUL, "bid two: refund");
 
-        assertEq(bidClaims.length, 2);
+        assertEq(bidClaims.length, 2, "bid count");
 
         // Check the bid status
         EncryptedMarginalPriceAuctionModule.Bid memory bidOne = _getBid(_lotId, _bidIds[0]);
-        assertEq(uint8(bidOne.status), uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed));
+        assertEq(
+            uint8(bidOne.status),
+            uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed),
+            "bid one: status"
+        );
         EncryptedMarginalPriceAuctionModule.Bid memory bidTwo = _getBid(_lotId, _bidIds[1]);
-        assertEq(uint8(bidTwo.status), uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed));
+        assertEq(
+            uint8(bidTwo.status),
+            uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed),
+            "bid two: status"
+        );
     }
 
     function test_unsuccessfulBid_fuzz(uint256 bidAmountIn_)
@@ -313,26 +329,34 @@ contract EmpaModuleClaimBidsTest is EmpaModuleTest {
 
         // Check the result
         BatchAuction.BidClaim memory bidClaimOne = bidClaims[0];
-        assertEq(bidClaimOne.bidder, _BIDDER);
-        assertEq(bidClaimOne.referrer, _REFERRER);
-        assertEq(bidClaimOne.paid, bidAmountIn);
-        assertEq(bidClaimOne.payout, 0);
-        assertEq(bidClaimOne.refund, bidAmountIn);
+        assertEq(bidClaimOne.bidder, _BIDDER, "bid one: bidder");
+        assertEq(bidClaimOne.referrer, _REFERRER, "bid one: referrer");
+        assertEq(bidClaimOne.paid, bidAmountIn, "bid one: paid");
+        assertEq(bidClaimOne.payout, 0, "bid one: payout");
+        assertEq(bidClaimOne.refund, bidAmountIn, "bid one: refund");
 
         BatchAuction.BidClaim memory bidClaimTwo = bidClaims[1];
-        assertEq(bidClaimTwo.bidder, _BIDDER_TWO);
-        assertEq(bidClaimTwo.referrer, _REFERRER);
-        assertEq(bidClaimTwo.paid, _BID_AMOUNT_UNSUCCESSFUL);
-        assertEq(bidClaimTwo.payout, 0);
-        assertEq(bidClaimTwo.refund, _BID_AMOUNT_UNSUCCESSFUL);
+        assertEq(bidClaimTwo.bidder, _BIDDER_TWO, "bid two: bidder");
+        assertEq(bidClaimTwo.referrer, _REFERRER, "bid two: referrer");
+        assertEq(bidClaimTwo.paid, _BID_AMOUNT_UNSUCCESSFUL, "bid two: paid");
+        assertEq(bidClaimTwo.payout, 0, "bid two: payout");
+        assertEq(bidClaimTwo.refund, _BID_AMOUNT_UNSUCCESSFUL, "bid two: refund");
 
-        assertEq(bidClaims.length, 2);
+        assertEq(bidClaims.length, 2, "bid count");
 
         // Check the bid status
         EncryptedMarginalPriceAuctionModule.Bid memory bidOne = _getBid(_lotId, _bidIds[0]);
-        assertEq(uint8(bidOne.status), uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed));
+        assertEq(
+            uint8(bidOne.status),
+            uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed),
+            "bid one: status"
+        );
         EncryptedMarginalPriceAuctionModule.Bid memory bidTwo = _getBid(_lotId, _bidIds[1]);
-        assertEq(uint8(bidTwo.status), uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed));
+        assertEq(
+            uint8(bidTwo.status),
+            uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed),
+            "bid two: status"
+        );
     }
 
     function test_unsuccessfulBid_quoteTokenDecimalsLarger()
@@ -360,26 +384,42 @@ contract EmpaModuleClaimBidsTest is EmpaModuleTest {
 
         // Check the result
         BatchAuction.BidClaim memory bidClaimOne = bidClaims[0];
-        assertEq(bidClaimOne.bidder, _BIDDER);
-        assertEq(bidClaimOne.referrer, _REFERRER);
-        assertEq(bidClaimOne.paid, _scaleQuoteTokenAmount(_BID_AMOUNT_UNSUCCESSFUL));
-        assertEq(bidClaimOne.payout, 0);
-        assertEq(bidClaimOne.refund, _scaleQuoteTokenAmount(_BID_AMOUNT_UNSUCCESSFUL));
+        assertEq(bidClaimOne.bidder, _BIDDER, "bid one: bidder");
+        assertEq(bidClaimOne.referrer, _REFERRER, "bid one: referrer");
+        assertEq(
+            bidClaimOne.paid, _scaleQuoteTokenAmount(_BID_AMOUNT_UNSUCCESSFUL), "bid one: paid"
+        );
+        assertEq(bidClaimOne.payout, 0, "bid one: payout");
+        assertEq(
+            bidClaimOne.refund, _scaleQuoteTokenAmount(_BID_AMOUNT_UNSUCCESSFUL), "bid one: refund"
+        );
 
         BatchAuction.BidClaim memory bidClaimTwo = bidClaims[1];
-        assertEq(bidClaimTwo.bidder, _BIDDER_TWO);
-        assertEq(bidClaimTwo.referrer, _REFERRER);
-        assertEq(bidClaimTwo.paid, _scaleQuoteTokenAmount(_BID_AMOUNT_UNSUCCESSFUL));
-        assertEq(bidClaimTwo.payout, 0);
-        assertEq(bidClaimTwo.refund, _scaleQuoteTokenAmount(_BID_AMOUNT_UNSUCCESSFUL));
+        assertEq(bidClaimTwo.bidder, _BIDDER_TWO, "bid two: bidder");
+        assertEq(bidClaimTwo.referrer, _REFERRER, "bid two: referrer");
+        assertEq(
+            bidClaimTwo.paid, _scaleQuoteTokenAmount(_BID_AMOUNT_UNSUCCESSFUL), "bid two: paid"
+        );
+        assertEq(bidClaimTwo.payout, 0, "bid two: payout");
+        assertEq(
+            bidClaimTwo.refund, _scaleQuoteTokenAmount(_BID_AMOUNT_UNSUCCESSFUL), "bid two: refund"
+        );
 
-        assertEq(bidClaims.length, 2);
+        assertEq(bidClaims.length, 2, "bid count");
 
         // Check the bid status
         EncryptedMarginalPriceAuctionModule.Bid memory bidOne = _getBid(_lotId, _bidIds[0]);
-        assertEq(uint8(bidOne.status), uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed));
+        assertEq(
+            uint8(bidOne.status),
+            uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed),
+            "bid one: status"
+        );
         EncryptedMarginalPriceAuctionModule.Bid memory bidTwo = _getBid(_lotId, _bidIds[1]);
-        assertEq(uint8(bidTwo.status), uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed));
+        assertEq(
+            uint8(bidTwo.status),
+            uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed),
+            "bid two: status"
+        );
     }
 
     function test_unsuccessfulBid_quoteTokenDecimalsSmaller()
@@ -407,26 +447,42 @@ contract EmpaModuleClaimBidsTest is EmpaModuleTest {
 
         // Check the result
         BatchAuction.BidClaim memory bidClaimOne = bidClaims[0];
-        assertEq(bidClaimOne.bidder, _BIDDER);
-        assertEq(bidClaimOne.referrer, _REFERRER);
-        assertEq(bidClaimOne.paid, _scaleQuoteTokenAmount(_BID_AMOUNT_UNSUCCESSFUL));
-        assertEq(bidClaimOne.payout, 0);
-        assertEq(bidClaimOne.refund, _scaleQuoteTokenAmount(_BID_AMOUNT_UNSUCCESSFUL));
+        assertEq(bidClaimOne.bidder, _BIDDER, "bid one: bidder");
+        assertEq(bidClaimOne.referrer, _REFERRER, "bid one: referrer");
+        assertEq(
+            bidClaimOne.paid, _scaleQuoteTokenAmount(_BID_AMOUNT_UNSUCCESSFUL), "bid one: paid"
+        );
+        assertEq(bidClaimOne.payout, 0, "bid one: payout");
+        assertEq(
+            bidClaimOne.refund, _scaleQuoteTokenAmount(_BID_AMOUNT_UNSUCCESSFUL), "bid one: refund"
+        );
 
         BatchAuction.BidClaim memory bidClaimTwo = bidClaims[1];
-        assertEq(bidClaimTwo.bidder, _BIDDER_TWO);
-        assertEq(bidClaimTwo.referrer, _REFERRER);
-        assertEq(bidClaimTwo.paid, _scaleQuoteTokenAmount(_BID_AMOUNT_UNSUCCESSFUL));
-        assertEq(bidClaimTwo.payout, 0);
-        assertEq(bidClaimTwo.refund, _scaleQuoteTokenAmount(_BID_AMOUNT_UNSUCCESSFUL));
+        assertEq(bidClaimTwo.bidder, _BIDDER_TWO, "bid two: bidder");
+        assertEq(bidClaimTwo.referrer, _REFERRER, "bid two: referrer");
+        assertEq(
+            bidClaimTwo.paid, _scaleQuoteTokenAmount(_BID_AMOUNT_UNSUCCESSFUL), "bid two: paid"
+        );
+        assertEq(bidClaimTwo.payout, 0, "bid two: payout");
+        assertEq(
+            bidClaimTwo.refund, _scaleQuoteTokenAmount(_BID_AMOUNT_UNSUCCESSFUL), "bid two: refund"
+        );
 
-        assertEq(bidClaims.length, 2);
+        assertEq(bidClaims.length, 2, "bid count");
 
         // Check the bid status
         EncryptedMarginalPriceAuctionModule.Bid memory bidOne = _getBid(_lotId, _bidIds[0]);
-        assertEq(uint8(bidOne.status), uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed));
+        assertEq(
+            uint8(bidOne.status),
+            uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed),
+            "bid one: status"
+        );
         EncryptedMarginalPriceAuctionModule.Bid memory bidTwo = _getBid(_lotId, _bidIds[1]);
-        assertEq(uint8(bidTwo.status), uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed));
+        assertEq(
+            uint8(bidTwo.status),
+            uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed),
+            "bid two: status"
+        );
     }
 
     function test_successfulBid()
@@ -467,9 +523,17 @@ contract EmpaModuleClaimBidsTest is EmpaModuleTest {
 
         // Check the bid status
         EncryptedMarginalPriceAuctionModule.Bid memory bidOne = _getBid(_lotId, _bidIds[0]);
-        assertEq(uint8(bidOne.status), uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed));
+        assertEq(
+            uint8(bidOne.status),
+            uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed),
+            "bid one: status"
+        );
         EncryptedMarginalPriceAuctionModule.Bid memory bidTwo = _getBid(_lotId, _bidIds[1]);
-        assertEq(uint8(bidTwo.status), uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed));
+        assertEq(
+            uint8(bidTwo.status),
+            uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed),
+            "bid two: status"
+        );
     }
 
     function test_successfulBid_quoteTokenDecimalsLarger()
@@ -497,26 +561,34 @@ contract EmpaModuleClaimBidsTest is EmpaModuleTest {
 
         // Check the result
         BatchAuction.BidClaim memory bidClaimOne = bidClaims[0];
-        assertEq(bidClaimOne.bidder, _BIDDER);
-        assertEq(bidClaimOne.referrer, _REFERRER);
-        assertEq(bidClaimOne.paid, _scaleQuoteTokenAmount(_BID_AMOUNT));
-        assertEq(bidClaimOne.payout, _scaleBaseTokenAmount(amountOut));
-        assertEq(bidClaimOne.refund, 0);
+        assertEq(bidClaimOne.bidder, _BIDDER, "bid one: bidder");
+        assertEq(bidClaimOne.referrer, _REFERRER, "bid one: referrer");
+        assertEq(bidClaimOne.paid, _scaleQuoteTokenAmount(_BID_AMOUNT), "bid one: paid");
+        assertEq(bidClaimOne.payout, _scaleBaseTokenAmount(amountOut), "bid one: payout");
+        assertEq(bidClaimOne.refund, 0, "bid one: refund");
 
         BatchAuction.BidClaim memory bidClaimTwo = bidClaims[1];
-        assertEq(bidClaimTwo.bidder, _BIDDER_TWO);
-        assertEq(bidClaimTwo.referrer, _REFERRER);
-        assertEq(bidClaimTwo.paid, _scaleQuoteTokenAmount(_BID_AMOUNT));
-        assertEq(bidClaimTwo.payout, _scaleBaseTokenAmount(amountOut));
-        assertEq(bidClaimTwo.refund, 0);
+        assertEq(bidClaimTwo.bidder, _BIDDER_TWO, "bid two: bidder");
+        assertEq(bidClaimTwo.referrer, _REFERRER, "bid two: referrer");
+        assertEq(bidClaimTwo.paid, _scaleQuoteTokenAmount(_BID_AMOUNT), "bid two: paid");
+        assertEq(bidClaimTwo.payout, _scaleBaseTokenAmount(amountOut), "bid two: payout");
+        assertEq(bidClaimTwo.refund, 0, "bid two: refund");
 
-        assertEq(bidClaims.length, 2);
+        assertEq(bidClaims.length, 2, "bid count");
 
         // Check the bid status
         EncryptedMarginalPriceAuctionModule.Bid memory bidOne = _getBid(_lotId, _bidIds[0]);
-        assertEq(uint8(bidOne.status), uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed));
+        assertEq(
+            uint8(bidOne.status),
+            uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed),
+            "bid one: status"
+        );
         EncryptedMarginalPriceAuctionModule.Bid memory bidTwo = _getBid(_lotId, _bidIds[1]);
-        assertEq(uint8(bidTwo.status), uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed));
+        assertEq(
+            uint8(bidTwo.status),
+            uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed),
+            "bid two: status"
+        );
     }
 
     function test_successfulBid_quoteTokenDecimalsSmaller()
@@ -544,26 +616,34 @@ contract EmpaModuleClaimBidsTest is EmpaModuleTest {
 
         // Check the result
         BatchAuction.BidClaim memory bidClaimOne = bidClaims[0];
-        assertEq(bidClaimOne.bidder, _BIDDER);
-        assertEq(bidClaimOne.referrer, _REFERRER);
-        assertEq(bidClaimOne.paid, _scaleQuoteTokenAmount(_BID_AMOUNT));
-        assertEq(bidClaimOne.payout, _scaleBaseTokenAmount(amountOut));
-        assertEq(bidClaimOne.refund, 0);
+        assertEq(bidClaimOne.bidder, _BIDDER, "bid one: bidder");
+        assertEq(bidClaimOne.referrer, _REFERRER, "bid one: referrer");
+        assertEq(bidClaimOne.paid, _scaleQuoteTokenAmount(_BID_AMOUNT), "bid one: paid");
+        assertEq(bidClaimOne.payout, _scaleBaseTokenAmount(amountOut), "bid one: payout");
+        assertEq(bidClaimOne.refund, 0, "bid one: refund");
 
         BatchAuction.BidClaim memory bidClaimTwo = bidClaims[1];
-        assertEq(bidClaimTwo.bidder, _BIDDER_TWO);
-        assertEq(bidClaimTwo.referrer, _REFERRER);
-        assertEq(bidClaimTwo.paid, _scaleQuoteTokenAmount(_BID_AMOUNT));
-        assertEq(bidClaimTwo.payout, _scaleBaseTokenAmount(amountOut));
-        assertEq(bidClaimTwo.refund, 0);
+        assertEq(bidClaimTwo.bidder, _BIDDER_TWO, "bid two: bidder");
+        assertEq(bidClaimTwo.referrer, _REFERRER, "bid two: referrer");
+        assertEq(bidClaimTwo.paid, _scaleQuoteTokenAmount(_BID_AMOUNT), "bid two: paid");
+        assertEq(bidClaimTwo.payout, _scaleBaseTokenAmount(amountOut), "bid two: payout");
+        assertEq(bidClaimTwo.refund, 0, "bid two: refund");
 
-        assertEq(bidClaims.length, 2);
+        assertEq(bidClaims.length, 2, "bid count");
 
         // Check the bid status
         EncryptedMarginalPriceAuctionModule.Bid memory bidOne = _getBid(_lotId, _bidIds[0]);
-        assertEq(uint8(bidOne.status), uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed));
+        assertEq(
+            uint8(bidOne.status),
+            uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed),
+            "bid one: status"
+        );
         EncryptedMarginalPriceAuctionModule.Bid memory bidTwo = _getBid(_lotId, _bidIds[1]);
-        assertEq(uint8(bidTwo.status), uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed));
+        assertEq(
+            uint8(bidTwo.status),
+            uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed),
+            "bid two: status"
+        );
     }
 
     function test_successfulBid_marginalPriceRounding()
@@ -609,9 +689,17 @@ contract EmpaModuleClaimBidsTest is EmpaModuleTest {
 
         // Check the bid status
         EncryptedMarginalPriceAuctionModule.Bid memory bidOne = _getBid(_lotId, _bidIds[0]);
-        assertEq(uint8(bidOne.status), uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed));
+        assertEq(
+            uint8(bidOne.status),
+            uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed),
+            "bid one: status"
+        );
         EncryptedMarginalPriceAuctionModule.Bid memory bidTwo = _getBid(_lotId, _bidIds[1]);
-        assertEq(uint8(bidTwo.status), uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed));
+        assertEq(
+            uint8(bidTwo.status),
+            uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed),
+            "bid two: status"
+        );
     }
 
     function test_successfulBid_marginalPriceRounding_capacityExceeded()
@@ -665,12 +753,22 @@ contract EmpaModuleClaimBidsTest is EmpaModuleTest {
 
         // Check the bid status
         EncryptedMarginalPriceAuctionModule.Bid memory bidOne = _getBid(_lotId, _bidIds[0]);
-        assertEq(uint8(bidOne.status), uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed));
+        assertEq(
+            uint8(bidOne.status),
+            uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed),
+            "bid one: status"
+        );
         EncryptedMarginalPriceAuctionModule.Bid memory bidTwo = _getBid(_lotId, _bidIds[1]);
-        assertEq(uint8(bidTwo.status), uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed));
+        assertEq(
+            uint8(bidTwo.status),
+            uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed),
+            "bid two: status"
+        );
         EncryptedMarginalPriceAuctionModule.Bid memory bidThree = _getBid(_lotId, _bidIds[2]);
         assertEq(
-            uint8(bidThree.status), uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed)
+            uint8(bidThree.status),
+            uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed),
+            "bid three: status"
         );
     }
 
@@ -720,13 +818,21 @@ contract EmpaModuleClaimBidsTest is EmpaModuleTest {
         assertEq(bidClaimTwo.payout, expectedAmountOutTwo, "bid two: payout");
         assertEq(bidClaimTwo.refund, 0, "bid two: refund");
 
-        assertEq(bidClaims.length, 2);
+        assertEq(bidClaims.length, 2, "bid count");
 
         // Check the bid status
         EncryptedMarginalPriceAuctionModule.Bid memory bidOne = _getBid(_lotId, _bidIds[0]);
-        assertEq(uint8(bidOne.status), uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed));
+        assertEq(
+            uint8(bidOne.status),
+            uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed),
+            "bid one: status"
+        );
         EncryptedMarginalPriceAuctionModule.Bid memory bidTwo = _getBid(_lotId, _bidIds[1]);
-        assertEq(uint8(bidTwo.status), uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed));
+        assertEq(
+            uint8(bidTwo.status),
+            uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed),
+            "bid two: status"
+        );
     }
 
     function test_successfulBid_amountOut_fuzz(uint256 bidAmountOut_)
@@ -776,13 +882,21 @@ contract EmpaModuleClaimBidsTest is EmpaModuleTest {
         assertEq(bidClaimTwo.payout, expectedAmountOutTwo, "bid two: payout");
         assertEq(bidClaimTwo.refund, 0, "bid two: refund");
 
-        assertEq(bidClaims.length, 2);
+        assertEq(bidClaims.length, 2, "bid count");
 
         // Check the bid status
         EncryptedMarginalPriceAuctionModule.Bid memory bidOne = _getBid(_lotId, _bidIds[0]);
-        assertEq(uint8(bidOne.status), uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed));
+        assertEq(
+            uint8(bidOne.status),
+            uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed),
+            "bid one: status"
+        );
         EncryptedMarginalPriceAuctionModule.Bid memory bidTwo = _getBid(_lotId, _bidIds[1]);
-        assertEq(uint8(bidTwo.status), uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed));
+        assertEq(
+            uint8(bidTwo.status),
+            uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed),
+            "bid two: status"
+        );
     }
 
     function test_mixtureBids()
@@ -827,9 +941,17 @@ contract EmpaModuleClaimBidsTest is EmpaModuleTest {
 
         // Check the bid status
         EncryptedMarginalPriceAuctionModule.Bid memory bidOne = _getBid(_lotId, _bidIds[0]);
-        assertEq(uint8(bidOne.status), uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed));
+        assertEq(
+            uint8(bidOne.status),
+            uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed),
+            "bid one: status"
+        );
         EncryptedMarginalPriceAuctionModule.Bid memory bidTwo = _getBid(_lotId, _bidIds[1]);
-        assertEq(uint8(bidTwo.status), uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed));
+        assertEq(
+            uint8(bidTwo.status),
+            uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed),
+            "bid two: status"
+        );
     }
 
     function test_unclaimedBids()
@@ -857,21 +979,27 @@ contract EmpaModuleClaimBidsTest is EmpaModuleTest {
 
         // Check the result
         BatchAuction.BidClaim memory bidClaimOne = bidClaims[0];
-        assertEq(bidClaimOne.bidder, _BIDDER);
-        assertEq(bidClaimOne.referrer, _REFERRER);
-        assertEq(bidClaimOne.paid, _scaleQuoteTokenAmount(_BID_AMOUNT));
+        assertEq(bidClaimOne.bidder, _BIDDER, "bid one: bidder");
+        assertEq(bidClaimOne.referrer, _REFERRER, "bid one: referrer");
+        assertEq(bidClaimOne.paid, _scaleQuoteTokenAmount(_BID_AMOUNT), "bid one: paid");
         // auction is settled at marginal price of 1.6, so payout is 8 / 1.6 = 5
-        assertEq(bidClaimOne.payout, _scaleBaseTokenAmount(5e18));
-        assertEq(bidClaimOne.refund, 0);
+        assertEq(bidClaimOne.payout, _scaleBaseTokenAmount(5e18), "bid one: payout");
+        assertEq(bidClaimOne.refund, 0, "bid one: refund");
 
         assertEq(bidClaims.length, 1);
 
         // Check the bid status
         EncryptedMarginalPriceAuctionModule.Bid memory bidOne = _getBid(_lotId, 1);
-        assertEq(uint8(bidOne.status), uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed));
+        assertEq(
+            uint8(bidOne.status),
+            uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Claimed),
+            "bid one: status"
+        );
         EncryptedMarginalPriceAuctionModule.Bid memory bidTwo = _getBid(_lotId, 2);
         assertEq(
-            uint8(bidTwo.status), uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Decrypted)
+            uint8(bidTwo.status),
+            uint8(EncryptedMarginalPriceAuctionModule.BidStatus.Decrypted),
+            "bid two: status"
         );
     }
 
