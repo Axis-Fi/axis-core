@@ -72,7 +72,7 @@ contract FpaModuleAuctionTest is FpaModuleTest {
 
     function test_maxPayoutPercentIsLessThanMinimum_reverts(uint24 maxPayout_) public {
         uint24 maxPayout = uint24(bound(maxPayout_, 0, 1e3 - 1));
-        setMaxPayout(maxPayout);
+        _setMaxPayout(maxPayout);
 
         // Expect revert
         bytes memory err = abi.encodeWithSelector(Auction.Auction_InvalidParams.selector);
@@ -84,7 +84,7 @@ contract FpaModuleAuctionTest is FpaModuleTest {
 
     function test_maxPayoutPercentIsGreaterThanMaximum_reverts(uint24 maxPayout_) public {
         uint24 maxPayout = uint24(bound(maxPayout_, 1e5 + 1, type(uint24).max));
-        setMaxPayout(maxPayout);
+        _setMaxPayout(maxPayout);
 
         // Expect revert
         bytes memory err = abi.encodeWithSelector(Auction.Auction_InvalidParams.selector);
@@ -96,7 +96,7 @@ contract FpaModuleAuctionTest is FpaModuleTest {
 
     function test_maxPayoutPercent_fuzz(uint24 maxPayout_) public {
         uint24 maxPayout = uint24(bound(maxPayout_, 1e3, 1e5));
-        setMaxPayout(maxPayout);
+        _setMaxPayout(maxPayout);
 
         // Calculate the expected value
         uint256 expectedMaxPayout = Math.mulDivDown(_LOT_CAPACITY, maxPayout, 1e5);

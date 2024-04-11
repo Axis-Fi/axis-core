@@ -127,13 +127,13 @@ abstract contract FpaModuleTest is Test, Permit2User {
         _;
     }
 
-    function setMaxPayout(uint24 maxPayout_) internal {
+    function _setMaxPayout(uint24 maxPayout_) internal {
         _fpaParams.maxPayoutPercent = maxPayout_;
         _auctionParams.implParams = abi.encode(_fpaParams);
     }
 
     modifier givenMaxPayout(uint24 maxPayout_) {
-        setMaxPayout(maxPayout_);
+        _setMaxPayout(maxPayout_);
         _;
     }
 
