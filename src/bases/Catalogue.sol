@@ -1,13 +1,11 @@
 /// SPDX-License-Identifier: APGL-3.0
 pragma solidity 0.8.19;
 
-import {Auction, AuctionModule} from "src/modules/Auction.sol";
+import {Auction} from "src/modules/Auction.sol";
 import {AuctionHouse} from "src/bases/AuctionHouse.sol";
 import {Veecode, fromVeecode} from "src/modules/Modules.sol";
 import {ERC20} from "lib/solmate/src/tokens/ERC20.sol";
 import {ICallback} from "src/interfaces/ICallback.sol";
-
-// TODO batch catalogue
 
 /// @notice Contract that provides view functions for atomic Auctions
 abstract contract Catalogue {
