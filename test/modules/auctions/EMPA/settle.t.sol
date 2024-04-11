@@ -775,6 +775,34 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         _;
     }
 
+    modifier givenOverCapacityTotalInOverflow() {
+        _createBid(_scaleQuoteTokenAmount(type(uint96).max), _scaleBaseTokenAmount(5e18));
+        _createBid(_scaleQuoteTokenAmount(type(uint96).max), _scaleBaseTokenAmount(5e18));
+        _createBid(_scaleQuoteTokenAmount(10e18), _scaleBaseTokenAmount(5e18));
+
+        // Total amount in: 2^96-1 + 2^96-1 + 10e18
+        // Price of bids 1 and 2: (2^96 -1) / 5e18
+        // Total amount out: 5e18 + 5e18 = 10e18
+        // Marginal price: (2^96 -1) / 5e18
+        _expectedMarginalPrice = Math.mulDivUp(type(uint96).max, 1e18, 5e18);
+        _expectedMarginalBidId = 2; // Otherwise bid 2 will not be able to claim
+
+        // Output
+        // Bid one: 5 out
+        // Bid two: 5 out
+        // Bid three: 0 out
+
+        uint256 bidAmountInSuccess = uint256(type(uint96).max) + uint256(type(uint96).max);
+        uint256 bidAmountOutSuccess = 5e18 + 5e18;
+
+        _expectedTotalIn = bidAmountInSuccess;
+        _expectedTotalOut = bidAmountOutSuccess;
+
+        // Partial fill
+        // None
+        _;
+    }
+
     // ============ Tests ============ //
 
     function test_invalidLotId_reverts() external {
@@ -1741,6 +1769,23 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         givenLotIsCreated
         givenLotHasStarted
         givenMarginalPriceRoundingThenCapacityExceeded
+        givenLotHasConcluded
+        givenPrivateKeyIsSubmitted
+        givenLotIsDecrypted
+    {
+        // Call function
+        (Auction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
+
+        // Assert settlement
+        _assertSettlement(settlement, auctionOutput);
+        _assertLot();
+    }
+
+    function test_givenTotalInOverflow()
+        external
+        givenLotIsCreated
+        givenLotHasStarted
+        givenOverCapacityTotalInOverflow
         givenLotHasConcluded
         givenPrivateKeyIsSubmitted
         givenLotIsDecrypted
