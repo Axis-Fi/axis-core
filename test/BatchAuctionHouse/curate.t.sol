@@ -22,9 +22,11 @@ contract BatchCurateTest is BatchAuctionHouseTest {
 
     // [X] when the lot id is invalid
     //  [X] it reverts
-    // [X] given no _CURATOR is set
+    // [X] given the curator fee would cause a uint96 overflow
+    //  [X] it handles the overflow
+    // [X] given no curator is set
     //  [X] it reverts
-    // [X] when the caller is not the lot _CURATOR
+    // [X] when the caller is not the lot curator
     //  [X] it reverts
     // [X] given the lot is already curated
     //  [X] it reverts
@@ -32,7 +34,7 @@ contract BatchCurateTest is BatchAuctionHouseTest {
     //  [X] it reverts
     // [X] given the lot has been cancelled
     //  [X] it reverts
-    // [X] given no _CURATOR fee is set
+    // [X] given no curator fee is set
     //  [X] it succeeds
     // [X] given the lot has not started
     //  [X] it succeeds
@@ -261,7 +263,7 @@ contract BatchCurateTest is BatchAuctionHouseTest {
         assertEq(curation.curated, true, "curated");
         assertEq(curation.curatorFee, _CURATOR_FEE_PERCENT, "curator fee");
 
-        // Maximum _CURATOR fee is transferred to the auction house
+        // Maximum curator fee is transferred to the auction house
         assertEq(_baseToken.balanceOf(_SELLER), 0, "base token: seller balance mismatch");
         assertEq(
             _baseToken.balanceOf(address(_auctionHouse)),
@@ -307,7 +309,7 @@ contract BatchCurateTest is BatchAuctionHouseTest {
         assertEq(curation.curated, true, "curated");
         assertEq(curation.curatorFee, _CURATOR_FEE_PERCENT, "curator fee");
 
-        // Maximum _CURATOR fee is transferred to the auction house
+        // Maximum curator fee is transferred to the auction house
         assertEq(_baseToken.balanceOf(_SELLER), 0, "base token: seller balance mismatch");
         assertEq(
             _baseToken.balanceOf(address(_auctionHouse)),
@@ -333,8 +335,8 @@ contract BatchCurateTest is BatchAuctionHouseTest {
         givenCuratorFeeIsSet
         givenLotIsCreated
         givenLotHasStarted
-        givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_curatorMaxPotentialFee))
-        givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_curatorMaxPotentialFee))
+        givenSellerHasBaseTokenBalance(_curatorMaxPotentialFee)
+        givenSellerHasBaseTokenAllowance(_curatorMaxPotentialFee)
     {
         // Curate
         vm.prank(_CURATOR);
@@ -346,11 +348,11 @@ contract BatchCurateTest is BatchAuctionHouseTest {
         assertEq(curation.curated, true, "curated");
         assertEq(curation.curatorFee, _CURATOR_FEE_PERCENT, "curator fee");
 
-        // Maximum _CURATOR fee is transferred to the auction house
+        // Maximum curator fee is transferred to the auction house
         assertEq(_baseToken.balanceOf(_SELLER), 0, "base token: seller balance mismatch");
         assertEq(
             _baseToken.balanceOf(address(_auctionHouse)),
-            _scaleBaseTokenAmount(_LOT_CAPACITY) + _scaleBaseTokenAmount(_curatorMaxPotentialFee),
+            _scaleBaseTokenAmount(_LOT_CAPACITY) + _curatorMaxPotentialFee,
             "base token: auction house balance mismatch"
         );
         assertEq(_baseToken.balanceOf(_CURATOR), 0, "base token: curator balance mismatch");
@@ -359,7 +361,7 @@ contract BatchCurateTest is BatchAuctionHouseTest {
         AuctionHouse.Routing memory lotRouting = _getLotRouting(_lotId);
         assertEq(
             lotRouting.funding,
-            _scaleBaseTokenAmount(_LOT_CAPACITY) + _scaleBaseTokenAmount(_curatorMaxPotentialFee),
+            _scaleBaseTokenAmount(_LOT_CAPACITY) + _curatorMaxPotentialFee,
             "funding"
         );
     }
@@ -376,8 +378,8 @@ contract BatchCurateTest is BatchAuctionHouseTest {
         givenCuratorFeeIsSet
         givenLotIsCreated
         givenLotHasStarted
-        givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_curatorMaxPotentialFee))
-        givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_curatorMaxPotentialFee))
+        givenSellerHasBaseTokenBalance(_curatorMaxPotentialFee)
+        givenSellerHasBaseTokenAllowance(_curatorMaxPotentialFee)
     {
         // Curate
         vm.prank(_CURATOR);
@@ -389,11 +391,11 @@ contract BatchCurateTest is BatchAuctionHouseTest {
         assertEq(curation.curated, true, "curated");
         assertEq(curation.curatorFee, _CURATOR_FEE_PERCENT, "curator fee");
 
-        // Maximum _CURATOR fee is transferred to the auction house
+        // Maximum curator fee is transferred to the auction house
         assertEq(_baseToken.balanceOf(_SELLER), 0, "base token: seller balance mismatch");
         assertEq(
             _baseToken.balanceOf(address(_auctionHouse)),
-            _scaleBaseTokenAmount(_LOT_CAPACITY) + _scaleBaseTokenAmount(_curatorMaxPotentialFee),
+            _scaleBaseTokenAmount(_LOT_CAPACITY) + _curatorMaxPotentialFee,
             "base token: auction house balance mismatch"
         );
         assertEq(_baseToken.balanceOf(_CURATOR), 0, "base token: curator balance mismatch");
@@ -402,7 +404,7 @@ contract BatchCurateTest is BatchAuctionHouseTest {
         AuctionHouse.Routing memory lotRouting = _getLotRouting(_lotId);
         assertEq(
             lotRouting.funding,
-            _scaleBaseTokenAmount(_LOT_CAPACITY) + _scaleBaseTokenAmount(_curatorMaxPotentialFee),
+            _scaleBaseTokenAmount(_LOT_CAPACITY) + _curatorMaxPotentialFee,
             "funding"
         );
     }
@@ -429,7 +431,7 @@ contract BatchCurateTest is BatchAuctionHouseTest {
         assertEq(curation.curated, true, "curated");
         assertEq(curation.curatorFee, 0);
 
-        // Maximum _CURATOR fee is transferred to the auction house
+        // Maximum curator fee is transferred to the auction house
         assertEq(_baseToken.balanceOf(_SELLER), 0, "base token: seller balance mismatch");
         assertEq(
             _baseToken.balanceOf(address(_auctionHouse)),
@@ -467,7 +469,7 @@ contract BatchCurateTest is BatchAuctionHouseTest {
         assertEq(curation.curated, true, "curated");
         assertEq(curation.curatorFee, _CURATOR_FEE_PERCENT, "curator fee");
 
-        // Maximum _CURATOR fee is transferred to the auction house
+        // Maximum curator fee is transferred to the auction house
         assertEq(_baseToken.balanceOf(_SELLER), 0, "base token: seller balance mismatch");
         assertEq(
             _baseToken.balanceOf(address(_auctionHouse)),
@@ -509,7 +511,7 @@ contract BatchCurateTest is BatchAuctionHouseTest {
         assertEq(curation.curated, true, "curated");
         assertEq(curation.curatorFee, _CURATOR_FEE_PERCENT, "curator fee");
 
-        // Maximum _CURATOR fee is transferred to the auction house
+        // Maximum curator fee is transferred to the auction house
         assertEq(
             _baseToken.balanceOf(address(_callback)), 0, "base token: callback balance mismatch"
         );
@@ -552,5 +554,40 @@ contract BatchCurateTest is BatchAuctionHouseTest {
         // Curate
         vm.prank(_CURATOR);
         _auctionHouse.curate(_lotId, bytes(""));
+    }
+
+    function test_overflow()
+        public
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenLotHasCapacity(type(uint96).max)
+        givenSellerHasBaseTokenBalance(type(uint96).max)
+        givenSellerHasBaseTokenAllowance(type(uint96).max)
+        givenCuratorMaxFeeIsSet
+        givenCuratorFeeIsSet
+        givenLotIsCreated
+        givenLotHasStarted
+        givenSellerHasBaseTokenBalance(_curatorMaxPotentialFee)
+        givenSellerHasBaseTokenAllowance(_curatorMaxPotentialFee)
+    {
+        // Curate
+        vm.prank(_CURATOR);
+        _auctionHouse.curate(_lotId, bytes(""));
+
+        // Maximum curator fee is transferred to the auction house
+        assertEq(
+            _baseToken.balanceOf(address(_callback)), 0, "base token: callback balance mismatch"
+        );
+        assertEq(_baseToken.balanceOf(_SELLER), 0, "base token: seller balance mismatch");
+        assertEq(
+            _baseToken.balanceOf(address(_auctionHouse)),
+            type(uint96).max + _curatorMaxPotentialFee,
+            "base token: auction house balance mismatch"
+        );
+        assertEq(_baseToken.balanceOf(_CURATOR), 0, "base token: curator balance mismatch");
+
+        // Check routing
+        AuctionHouse.Routing memory lotRouting = _getLotRouting(_lotId);
+        assertEq(lotRouting.funding, type(uint96).max + _curatorMaxPotentialFee, "funding");
     }
 }
