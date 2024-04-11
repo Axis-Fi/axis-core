@@ -2,12 +2,11 @@
 pragma solidity 0.8.19;
 
 import {Transfer} from "src/lib/Transfer.sol";
-import {FixedPointMathLib as Math} from "lib/solmate/src/utils/FixedPointMathLib.sol";
 
 import {AuctionHouse} from "src/bases/AuctionHouse.sol";
 import {Auction, AuctionModule} from "src/modules/Auction.sol";
 import {BatchAuction, BatchAuctionModule} from "src/modules/auctions/BatchAuctionModule.sol";
-import {fromVeecode, Keycode, keycodeFromVeecode} from "src/modules/Modules.sol";
+import {fromVeecode} from "src/modules/Modules.sol";
 import {ICallback} from "src/interfaces/ICallback.sol";
 import {Callbacks} from "src/lib/Callbacks.sol";
 

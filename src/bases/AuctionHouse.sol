@@ -8,7 +8,6 @@ import {ReentrancyGuard} from "lib/solmate/src/utils/ReentrancyGuard.sol";
 import {
     fromKeycode,
     fromVeecode,
-    keycodeFromVeecode,
     Keycode,
     Veecode,
     Module,

@@ -5,7 +5,6 @@ import {FixedPointMathLib as Math} from "solmate/utils/FixedPointMathLib.sol";
 
 import {Module} from "src/modules/Modules.sol";
 import {Auction} from "src/modules/Auction.sol";
-import {BatchAuction} from "src/modules/auctions/BatchAuctionModule.sol";
 import {EncryptedMarginalPriceAuctionModule as EMPAM} from "src/modules/auctions/EMPAM.sol";
 import {BidEncoding} from "src/lib/MaxPriorityQueue.sol";
 
