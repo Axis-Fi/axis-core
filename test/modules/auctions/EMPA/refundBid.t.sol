@@ -41,7 +41,7 @@ contract EmpaModuleRefundBidTest is EmpaModuleTest {
 
         // Call the function
         vm.prank(address(_auctionHouse));
-        _module.refundBid(_lotId, _bidId, _BIDDER);
+        _module.refundBid(_lotId, _bidId, 0, _BIDDER);
     }
 
     function test_invalidBidId_reverts() external givenLotIsCreated givenLotHasStarted {
@@ -52,7 +52,7 @@ contract EmpaModuleRefundBidTest is EmpaModuleTest {
 
         // Call the function
         vm.prank(address(_auctionHouse));
-        _module.refundBid(_lotId, _bidId, _BIDDER);
+        _module.refundBid(_lotId, _bidId, 0, _BIDDER);
     }
 
     function test_bidderIsNotBidOwner_reverts()
@@ -69,7 +69,7 @@ contract EmpaModuleRefundBidTest is EmpaModuleTest {
 
         // Call the function
         vm.prank(address(_auctionHouse));
-        _module.refundBid(_lotId, _bidId, address(this));
+        _module.refundBid(_lotId, _bidId, 0, address(this));
     }
 
     function test_bidAlreadyRefunded_reverts()
@@ -87,7 +87,7 @@ contract EmpaModuleRefundBidTest is EmpaModuleTest {
 
         // Call the function
         vm.prank(address(_auctionHouse));
-        _module.refundBid(_lotId, _bidId, _BIDDER);
+        _module.refundBid(_lotId, _bidId, 0, _BIDDER);
     }
 
     function test_lotSettlePeriodHasPassed()
@@ -99,7 +99,7 @@ contract EmpaModuleRefundBidTest is EmpaModuleTest {
     {
         // Call the function
         vm.prank(address(_auctionHouse));
-        uint256 refundAmount = _module.refundBid(_lotId, _bidId, _BIDDER);
+        uint256 refundAmount = _module.refundBid(_lotId, _bidId, 0, _BIDDER);
 
         // Assert the bid status
         EncryptedMarginalPriceAuctionModule.Bid memory bidData = _getBid(_lotId, _bidId);
@@ -133,7 +133,7 @@ contract EmpaModuleRefundBidTest is EmpaModuleTest {
 
         // Call the function
         vm.prank(address(_auctionHouse));
-        _module.refundBid(_lotId, _bidId, _BIDDER);
+        _module.refundBid(_lotId, _bidId, 0, _BIDDER);
     }
 
     function test_lotIsCancelled_reverts() external givenLotIsCreated givenLotIsCancelled {
@@ -143,7 +143,7 @@ contract EmpaModuleRefundBidTest is EmpaModuleTest {
 
         // Call the function
         vm.prank(address(_auctionHouse));
-        _module.refundBid(_lotId, _bidId, _BIDDER);
+        _module.refundBid(_lotId, _bidId, 0, _BIDDER);
     }
 
     function test_lotIsDecrypted_reverts()
@@ -163,7 +163,7 @@ contract EmpaModuleRefundBidTest is EmpaModuleTest {
 
         // Call the function
         vm.prank(address(_auctionHouse));
-        _module.refundBid(_lotId, _bidId, _BIDDER);
+        _module.refundBid(_lotId, _bidId, 0, _BIDDER);
     }
 
     function test_lotIsSettled_reverts()
@@ -184,7 +184,7 @@ contract EmpaModuleRefundBidTest is EmpaModuleTest {
 
         // Call the function
         vm.prank(address(_auctionHouse));
-        _module.refundBid(_lotId, _bidId, _BIDDER);
+        _module.refundBid(_lotId, _bidId, 0, _BIDDER);
     }
 
     function test_lotProceedsClaimed_reverts()
@@ -206,7 +206,7 @@ contract EmpaModuleRefundBidTest is EmpaModuleTest {
 
         // Call the function
         vm.prank(address(_auctionHouse));
-        _module.refundBid(_lotId, _bidId, _BIDDER);
+        _module.refundBid(_lotId, _bidId, 0, _BIDDER);
     }
 
     function test_callerIsNotParent_reverts()
@@ -221,7 +221,7 @@ contract EmpaModuleRefundBidTest is EmpaModuleTest {
 
         // Call the function
         vm.prank(address(this));
-        _module.refundBid(_lotId, _bidId, _BIDDER);
+        _module.refundBid(_lotId, _bidId, 0, _BIDDER);
     }
 
     function test_success()
@@ -232,7 +232,7 @@ contract EmpaModuleRefundBidTest is EmpaModuleTest {
     {
         // Call the function
         vm.prank(address(_auctionHouse));
-        uint256 refundAmount = _module.refundBid(_lotId, _bidId, _BIDDER);
+        uint256 refundAmount = _module.refundBid(_lotId, _bidId, 0, _BIDDER);
 
         // Assert the bid status
         EncryptedMarginalPriceAuctionModule.Bid memory bidData = _getBid(_lotId, _bidId);
@@ -258,7 +258,7 @@ contract EmpaModuleRefundBidTest is EmpaModuleTest {
 
         // Call the function
         vm.prank(address(_auctionHouse));
-        uint256 refundAmount = _module.refundBid(_lotId, _bidId, _BIDDER);
+        uint256 refundAmount = _module.refundBid(_lotId, _bidId, 0, _BIDDER);
 
         // Assert the refund amount
         assertEq(refundAmount, bidAmount, "refund amount");
@@ -278,7 +278,7 @@ contract EmpaModuleRefundBidTest is EmpaModuleTest {
 
         // Call the function
         vm.prank(address(_auctionHouse));
-        uint256 refundAmount = _module.refundBid(_lotId, _bidId, _BIDDER);
+        uint256 refundAmount = _module.refundBid(_lotId, _bidId, 0, _BIDDER);
 
         // Assert the refund amount
         assertEq(refundAmount, bidAmount, "refund amount");
@@ -298,7 +298,7 @@ contract EmpaModuleRefundBidTest is EmpaModuleTest {
 
         // Call the function
         vm.prank(address(_auctionHouse));
-        uint256 refundAmount = _module.refundBid(_lotId, _bidId, _BIDDER);
+        uint256 refundAmount = _module.refundBid(_lotId, _bidId, 0, _BIDDER);
 
         // Assert the refund amount
         assertEq(refundAmount, bidAmount, "refund amount");
