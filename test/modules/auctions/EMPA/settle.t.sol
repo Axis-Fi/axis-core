@@ -1845,7 +1845,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
         givenLotIsDecrypted
     {
         // Call function
-        (Auction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
+        (BatchAuction.Settlement memory settlement, bytes memory auctionOutput) = _settle();
 
         // Assert settlement
         _assertSettlement(settlement, auctionOutput);
