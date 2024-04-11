@@ -4,7 +4,7 @@ pragma solidity 0.8.19;
 /// Protocol dependencies
 import {AuctionModule} from "src/modules/Auction.sol";
 import {Veecode, toVeecode} from "src/modules/Modules.sol";
-import {BatchAuctionModule} from "src/modules/auctions/BatchAuctionModule.sol";
+import {BatchAuction, BatchAuctionModule} from "src/modules/auctions/BatchAuctionModule.sol";
 
 // Libraries
 import {FixedPointMathLib as Math} from "solady/utils/FixedPointMathLib.sol";
@@ -126,9 +126,12 @@ contract EncryptedMarginalPriceAuctionModule is BatchAuctionModule {
 
     // ========== STATE VARIABLES ========== //
 
-    /// @notice Constant for percentages
-    /// @dev    1% = 1_000 or 1e3. 100% = 100_000 or 1e5.
+    /// @notice     Constant for percentages
+    /// @dev        1% = 1_000 or 1e3. 100% = 100_000 or 1e5.
     uint24 internal constant _MIN_BID_PERCENT = 40; // 0.04% or a max of 2,500 winning bids
+
+    /// @notice     Time period after auction conclusion where bidders cannot refund bids
+    uint48 public dedicatedSettlePeriod;
 
     /// @notice     Auction-specific data for a lot
     mapping(uint96 lotId => AuctionData) public auctionData;
@@ -151,6 +154,9 @@ contract EncryptedMarginalPriceAuctionModule is BatchAuctionModule {
     constructor(address auctionHouse_) AuctionModule(auctionHouse_) {
         // Set the minimum auction duration to 1 day initially
         minAuctionDuration = 1 days;
+
+        // Set the dedicated settle period to 6 hours initially
+        dedicatedSettlePeriod = 6 hours;
     }
 
     function VEECODE() public pure override returns (Veecode) {
@@ -287,6 +293,41 @@ contract EncryptedMarginalPriceAuctionModule is BatchAuctionModule {
         auctionData[lotId_].bidIds.push(bidId);
 
         return bidId;
+    }
+
+    /// @inheritdoc BatchAuction
+    /// @dev        Implements a basic refundBid function that:
+    ///             - Calls implementation-specific validation logic
+    ///             - Calls the auction module
+    ///
+    ///             This function reverts if:
+    ///             - the lot id is invalid
+    ///             - the lot is decrypted or settled
+    ///             - the bid id is invalid
+    ///             - `caller_` is not the bid owner
+    ///             - the bid is cancelled
+    ///             - the bid is already refunded
+    ///             - the caller is not an internal module
+    ///
+    ///             This is a modified version of the refundBid function in the AuctionModule contract.
+    ///             It does not revert if the lot is concluded.
+    function refundBid(
+        uint96 lotId_,
+        uint64 bidId_,
+        address caller_
+    ) external override onlyInternal returns (uint256 refund) {
+        // Standard validation
+        _revertIfLotInvalid(lotId_);
+        _revertIfBeforeLotStart(lotId_);
+        _revertIfBidInvalid(lotId_, bidId_);
+        _revertIfNotBidOwner(lotId_, bidId_, caller_);
+        _revertIfBidClaimed(lotId_, bidId_);
+        _revertIfDedicatedSettlePeriod(lotId_);
+        _revertIfLotDecrypted(lotId_);
+        _revertIfLotSettled(lotId_);
+
+        // Call implementation-specific logic
+        return _refundBid(lotId_, bidId_, caller_);
     }
 
     /// @inheritdoc BatchAuctionModule
@@ -902,6 +943,15 @@ contract EncryptedMarginalPriceAuctionModule is BatchAuctionModule {
         return _lotPartialFill[lotId_];
     }
 
+    // ========== ADMIN CONFIGURATION ========== //
+
+    function setDedicatedSettlePeriod(uint48 period_) external onlyParent {
+        // Dedicated settle period cannot be more than 7 days
+        if (period_ > 7 days) revert Auction_InvalidParams();
+
+        dedicatedSettlePeriod = period_;
+    }
+
     // ========== VALIDATION ========== //
 
     /// @inheritdoc AuctionModule
@@ -911,6 +961,13 @@ contract EncryptedMarginalPriceAuctionModule is BatchAuctionModule {
                 && lotData[lotId_].start <= block.timestamp
                 && lotData[lotId_].conclusion > block.timestamp
         ) revert Auction_WrongState(lotId_);
+    }
+
+    function _revertIfLotDecrypted(uint96 lotId_) internal view {
+        // Auction must not be decrypted
+        if (auctionData[lotId_].status == LotStatus.Decrypted) {
+            revert Auction_WrongState(lotId_);
+        }
     }
 
     /// @inheritdoc BatchAuctionModule
@@ -925,6 +982,17 @@ contract EncryptedMarginalPriceAuctionModule is BatchAuctionModule {
     function _revertIfLotNotSettled(uint96 lotId_) internal view override {
         // Auction must be settled
         if (auctionData[lotId_].status != LotStatus.Settled) {
+            revert Auction_WrongState(lotId_);
+        }
+    }
+
+    function _revertIfDedicatedSettlePeriod(uint96 lotId_) internal view {
+        // Auction must not be in the dedicated settle period
+        uint48 conclusion = lotData[lotId_].conclusion;
+        if (
+            uint48(block.timestamp) >= conclusion
+                && uint48(block.timestamp) < conclusion + dedicatedSettlePeriod
+        ) {
             revert Auction_WrongState(lotId_);
         }
     }
