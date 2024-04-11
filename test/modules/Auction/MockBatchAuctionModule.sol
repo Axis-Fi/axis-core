@@ -114,9 +114,9 @@ contract MockBatchAuctionModule is BatchAuctionModule {
         uint64 bidId_,
         address bidder_,
         address referrer_,
-        uint96 paid_,
-        uint96 payout_,
-        uint96 refund_
+        uint256 paid_,
+        uint256 payout_,
+        uint256 refund_
     ) public {
         BidClaim storage claim = bidClaims[lotId_][bidId_];
         claim.bidder = bidder_;

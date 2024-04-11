@@ -935,7 +935,7 @@ contract EmpaModuleClaimBidsTest is EmpaModuleTest {
         // Marginal price is 2
         // Bids 1-4 are settled
         // Bid 5 is not settled (based on order of insertion)
-        uint64 bidId = 2;
+        uint64 bidId = 3;
 
         uint64[] memory bidIds = new uint64[](1);
         bidIds[0] = bidId;
@@ -1065,7 +1065,7 @@ contract EmpaModuleClaimBidsTest is EmpaModuleTest {
         // Marginal price is 2
         // Bids 1-5 are settled
         // Bid 6 is not settled (based on order of insertion)
-        uint64 bidId = 2;
+        uint64 bidId = 4;
 
         uint64[] memory bidIds = new uint64[](1);
         bidIds[0] = bidId;
@@ -1195,6 +1195,8 @@ contract EmpaModuleClaimBidsTest is EmpaModuleTest {
         givenLotIsDecrypted
         givenLotIsSettled
     {
+        // Bids 1-5 successful
+        // Bids 6-7 unsuccessful
         uint64 bidId = 7;
 
         uint64[] memory bidIds = new uint64[](1);
@@ -1237,6 +1239,8 @@ contract EmpaModuleClaimBidsTest is EmpaModuleTest {
         givenLotIsDecrypted
         givenLotIsSettled
     {
+        // Bids 2-5 successful
+        // Bids 1, 7 unsuccessful
         uint64 bidId = 1;
 
         uint64[] memory bidIds = new uint64[](1);
