@@ -489,7 +489,7 @@ contract LinearVestingEMPAIntegrationTest is BatchAuctionHouseTest {
     // TODO assert roundtrip numbers
 
     // claimProceeds
-    // [X] quote tokens are sent to the seller and excess capacity is returned to the seller
+    // [X] quote tokens are sent to the seller, curator payout is minted and excess capacity is returned to the seller
 
     function test_claimProceeds()
         external

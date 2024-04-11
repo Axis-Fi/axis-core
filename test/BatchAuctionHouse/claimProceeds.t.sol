@@ -79,6 +79,29 @@ contract BatchClaimProceedsTest is BatchAuctionHouseTest {
         assertEq(_batchAuctionModule.lotProceedsClaimed(_lotId), true);
     }
 
+    function _assertRewards(uint256 capacityUtilised) internal {
+        // Protocol and referrer rewards allocated when bids are claimed
+
+        // Curator rewards are allocated in claimProceeds
+        uint256 curatorRewards = capacityUtilised * _curatorFeePercentActual / 1e5;
+
+        // Check the protocol rewards
+        assertEq(_auctionHouse.rewards(_PROTOCOL, _quoteToken), 0, "quote token: protocol rewards");
+        assertEq(_auctionHouse.rewards(_PROTOCOL, _baseToken), 0, "base token: protocol rewards");
+
+        // Check the referrer rewards
+        assertEq(_auctionHouse.rewards(_REFERRER, _quoteToken), 0, "quote token: referrer rewards");
+        assertEq(_auctionHouse.rewards(_REFERRER, _baseToken), 0, "base token: referrer rewards");
+
+        // Check the curator rewards
+        assertEq(_auctionHouse.rewards(_CURATOR, _quoteToken), 0, "quote token: curator rewards");
+        assertEq(
+            _auctionHouse.rewards(_CURATOR, _baseToken),
+            curatorRewards,
+            "base token: curator rewards"
+        );
+    }
+
     // ============ Modifiers ============ //
 
     modifier givenLotSettlementIsSuccessful() {
@@ -246,6 +269,7 @@ contract BatchClaimProceedsTest is BatchAuctionHouseTest {
         _assertQuoteTokenBalances(quoteTokenIn, claimableRefund);
         _assertBaseTokenBalances(unusedCapacity, claimablePayout + curatorFeeActual);
         _assertLotRouting(claimablePayout);
+        _assertRewards(claimablePayout);
     }
 
     function test_lotSettlementSuccessful()
@@ -275,6 +299,7 @@ contract BatchClaimProceedsTest is BatchAuctionHouseTest {
         _assertQuoteTokenBalances(quoteTokenIn, 0);
         _assertBaseTokenBalances(unusedCapacity, claimablePayout + curatorFeeActual);
         _assertLotRouting(claimablePayout);
+        _assertRewards(claimablePayout);
     }
 
     function test_lotSettlementSuccessful_givenCurated()
@@ -311,6 +336,7 @@ contract BatchClaimProceedsTest is BatchAuctionHouseTest {
         _assertQuoteTokenBalances(quoteTokenIn, 0);
         _assertBaseTokenBalances(unusedCapacity, claimablePayout + curatorFeeActual);
         _assertLotRouting(claimablePayout);
+        _assertRewards(claimablePayout);
     }
 
     function test_lotSettlementSuccessful_givenCurated_givenCuratorFeeNotSet()
@@ -344,6 +370,7 @@ contract BatchClaimProceedsTest is BatchAuctionHouseTest {
         _assertQuoteTokenBalances(quoteTokenIn, 0);
         _assertBaseTokenBalances(unusedCapacity, claimablePayout + curatorFeeActual);
         _assertLotRouting(claimablePayout);
+        _assertRewards(claimablePayout);
     }
 
     function test_givenLotSettlementIsFullCapacity_givenBidsClaimed()
@@ -383,6 +410,7 @@ contract BatchClaimProceedsTest is BatchAuctionHouseTest {
         _assertQuoteTokenBalances(quoteTokenIn, 0);
         _assertBaseTokenBalances(unusedCapacity, claimablePayout + curatorFeeActual);
         _assertLotRouting(claimablePayout);
+        _assertRewards(claimablePayout + claimedPayout);
     }
 
     function test_givenLotSettlementIsFullCapacity_givenCurated_givenBidsClaimed()
@@ -428,6 +456,7 @@ contract BatchClaimProceedsTest is BatchAuctionHouseTest {
         _assertQuoteTokenBalances(quoteTokenIn, 0);
         _assertBaseTokenBalances(unusedCapacity, claimablePayout + curatorFeeActual);
         _assertLotRouting(claimablePayout);
+        _assertRewards(claimablePayout + claimedPayout);
     }
 
     function test_lotSettlementIsFullCapacity()
@@ -469,6 +498,7 @@ contract BatchClaimProceedsTest is BatchAuctionHouseTest {
         _assertQuoteTokenBalances(quoteTokenIn, 0);
         _assertBaseTokenBalances(unusedCapacity, claimablePayout + curatorFeeActual);
         _assertLotRouting(claimablePayout);
+        _assertRewards(claimablePayout);
     }
 
     function test_lotSettlementIsFullCapacity_givenCurated()
@@ -516,6 +546,7 @@ contract BatchClaimProceedsTest is BatchAuctionHouseTest {
         _assertQuoteTokenBalances(quoteTokenIn, 0);
         _assertBaseTokenBalances(unusedCapacity, claimablePayout + curatorFeeActual);
         _assertLotRouting(claimablePayout);
+        _assertRewards(claimablePayout);
     }
 
     function test_lotSettlementIsFullCapacity_givenCurated_givenCuratorFeeNotSet()
@@ -560,6 +591,7 @@ contract BatchClaimProceedsTest is BatchAuctionHouseTest {
         _assertQuoteTokenBalances(quoteTokenIn, 0);
         _assertBaseTokenBalances(unusedCapacity, claimablePayout + curatorFeeActual);
         _assertLotRouting(claimablePayout);
+        _assertRewards(claimablePayout);
     }
 
     function test_lotSettlementIsFullCapacity_givenProtocolFeeIsSet()
@@ -602,6 +634,7 @@ contract BatchClaimProceedsTest is BatchAuctionHouseTest {
         _assertQuoteTokenBalances(quoteTokenIn, 0);
         _assertBaseTokenBalances(unusedCapacity, claimablePayout + curatorFeeActual);
         _assertLotRouting(claimablePayout);
+        _assertRewards(claimablePayout);
     }
 
     function test_lotSettlementIsFullCapacity_givenReferrerFeeIsSet()
@@ -644,6 +677,7 @@ contract BatchClaimProceedsTest is BatchAuctionHouseTest {
         _assertQuoteTokenBalances(quoteTokenIn, 0);
         _assertBaseTokenBalances(unusedCapacity, claimablePayout + curatorFeeActual);
         _assertLotRouting(claimablePayout);
+        _assertRewards(claimablePayout);
     }
 
     function test_lotSettlementIsFullCapacity_givenProtocolFeeIsSet_givenReferrerFeeIsSet()
@@ -687,6 +721,7 @@ contract BatchClaimProceedsTest is BatchAuctionHouseTest {
         _assertQuoteTokenBalances(quoteTokenIn, 0);
         _assertBaseTokenBalances(unusedCapacity, claimablePayout + curatorFeeActual);
         _assertLotRouting(claimablePayout);
+        _assertRewards(claimablePayout);
     }
 
     function test_lotSettlementIsPartialFill()
@@ -732,6 +767,7 @@ contract BatchClaimProceedsTest is BatchAuctionHouseTest {
         _assertQuoteTokenBalances(quoteTokenIn, claimableQuoteToken);
         _assertBaseTokenBalances(unusedCapacity, claimablePayout + curatorFeeActual);
         _assertLotRouting(claimablePayout);
+        _assertRewards(claimablePayout);
     }
 
     function test_lotSettlementIsPartialFill_givenBidsClaimed()
@@ -785,6 +821,7 @@ contract BatchClaimProceedsTest is BatchAuctionHouseTest {
         _assertQuoteTokenBalances(quoteTokenIn, claimableQuoteToken);
         _assertBaseTokenBalances(unusedCapacity, claimablePayout + curatorFeeActual);
         _assertLotRouting(claimablePayout);
+        _assertRewards(claimablePayout);
     }
 
     function test_givenCurated_lotSettlementIsFullCapacity()
@@ -830,6 +867,7 @@ contract BatchClaimProceedsTest is BatchAuctionHouseTest {
         _assertQuoteTokenBalances(quoteTokenIn, 0);
         _assertBaseTokenBalances(unusedCapacity, claimablePayout + curatorFeeActual);
         _assertLotRouting(claimablePayout);
+        _assertRewards(claimablePayout);
     }
 
     function test_givenCurated_givenCuratorFeeNotSet_lotSettlementIsFullCapacity()
@@ -874,6 +912,7 @@ contract BatchClaimProceedsTest is BatchAuctionHouseTest {
         _assertQuoteTokenBalances(quoteTokenIn, 0);
         _assertBaseTokenBalances(unusedCapacity, claimablePayout + curatorFeeActual);
         _assertLotRouting(claimablePayout);
+        _assertRewards(claimablePayout);
     }
 
     function test_givenCurated_lotSettlementIsPartialFill()
@@ -923,6 +962,7 @@ contract BatchClaimProceedsTest is BatchAuctionHouseTest {
         _assertQuoteTokenBalances(quoteTokenIn, claimableQuoteToken);
         _assertBaseTokenBalances(unusedCapacity, claimablePayout + curatorFeeActual);
         _assertLotRouting(claimablePayout);
+        _assertRewards(claimablePayout);
     }
 
     function test_givenCurated_givenCuratorFeeNotSet_lotSettlementIsPartialFill()
@@ -971,6 +1011,7 @@ contract BatchClaimProceedsTest is BatchAuctionHouseTest {
         _assertQuoteTokenBalances(quoteTokenIn, claimableQuoteToken);
         _assertBaseTokenBalances(unusedCapacity, claimablePayout + curatorFeeActual);
         _assertLotRouting(claimablePayout);
+        _assertRewards(claimablePayout);
     }
 
     function test_lotSettlementIsPartialFill_givenCurated()
@@ -1022,6 +1063,7 @@ contract BatchClaimProceedsTest is BatchAuctionHouseTest {
         _assertQuoteTokenBalances(quoteTokenIn, claimableQuoteToken);
         _assertBaseTokenBalances(unusedCapacity, claimablePayout + curatorFeeActual);
         _assertLotRouting(claimablePayout);
+        _assertRewards(claimablePayout);
     }
 
     function test_lotSettlementIsPartialFill_givenCurated_givenCuratorFeeNotSet()
@@ -1070,6 +1112,7 @@ contract BatchClaimProceedsTest is BatchAuctionHouseTest {
         _assertQuoteTokenBalances(quoteTokenIn, claimableQuoteToken);
         _assertBaseTokenBalances(unusedCapacity, claimablePayout + curatorFeeActual);
         _assertLotRouting(claimablePayout);
+        _assertRewards(claimablePayout);
     }
 
     function test_lotSettlementSuccessful_givenCallbackIsSet()
@@ -1107,6 +1150,7 @@ contract BatchClaimProceedsTest is BatchAuctionHouseTest {
         _assertQuoteTokenBalances(quoteTokenIn, 0);
         _assertBaseTokenBalances(unusedCapacity, claimablePayout + curatorFeeActual);
         _assertLotRouting(claimablePayout);
+        _assertRewards(claimablePayout);
 
         assertEq(_callback.lotClaimedProceeds(_lotId), true, "lotClaimedProceeds");
     }
@@ -1147,6 +1191,7 @@ contract BatchClaimProceedsTest is BatchAuctionHouseTest {
         _assertQuoteTokenBalances(quoteTokenIn, 0);
         _assertBaseTokenBalances(unusedCapacity, claimablePayout + curatorFeeActual);
         _assertLotRouting(claimablePayout);
+        _assertRewards(claimablePayout);
 
         assertEq(_callback.lotClaimedProceeds(_lotId), true, "lotClaimedProceeds");
     }
@@ -1187,6 +1232,7 @@ contract BatchClaimProceedsTest is BatchAuctionHouseTest {
         _assertQuoteTokenBalances(quoteTokenIn, 0);
         _assertBaseTokenBalances(unusedCapacity, claimablePayout + curatorFeeActual);
         _assertLotRouting(claimablePayout);
+        _assertRewards(claimablePayout);
 
         assertEq(_callback.lotClaimedProceeds(_lotId), true, "lotClaimedProceeds");
     }
