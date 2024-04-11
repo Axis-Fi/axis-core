@@ -109,7 +109,9 @@ contract BatchAuctionHouse is AuctionHouse, BatchRouter {
 
     event RefundBid(uint96 indexed lotId, uint96 indexed bidId, address indexed bidder);
 
-    // TODO events for ClaimBid, ClaimProceeds?
+    event ClaimBid(uint96 indexed lotId, uint96 indexed bidId, address indexed bidder);
+
+    event ClaimProceeds(uint96 indexed lotId, address indexed seller);
 
     event Settle(uint96 indexed lotId);
 
@@ -364,6 +366,9 @@ contract BatchAuctionHouse is AuctionHouse, BatchRouter {
                 // Refund the paid amount to the bidder
                 Transfer.transfer(routing.quoteToken, bidClaim.bidder, bidClaim.paid, false);
             }
+
+            // Emit event
+            emit ClaimBid(lotId_, bidIds_[i], bidClaim.bidder);
         }
     }
 
@@ -532,6 +537,9 @@ contract BatchAuctionHouse is AuctionHouse, BatchRouter {
         Callbacks.onClaimProceeds(
             routing.callbacks, lotId_, totalInLessFees, prefundingRefund, callbackData_
         );
+
+        // Emit event
+        emit ClaimProceeds(lotId_, routing.seller);
     }
 
     // ========== INTERNAL FUNCTIONS ========== //
