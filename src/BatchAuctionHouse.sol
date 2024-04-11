@@ -56,7 +56,8 @@ abstract contract BatchRouter {
     ///
     /// @param      lotId_          Lot ID
     /// @param      bidId_          Bid ID
-    function refundBid(uint96 lotId_, uint64 bidId_) external virtual;
+    /// @param      index_          Index of the bid in the auction's bid list
+    function refundBid(uint96 lotId_, uint64 bidId_, uint256 index_) external virtual;
 
     /// @notice     Claim bid payouts and/or refunds after a batch auction has settled
     /// @dev        The implementing function must perform the following:
@@ -272,7 +273,7 @@ contract BatchAuctionHouse is AuctionHouse, BatchRouter {
 
         // Record the bid on the auction module
         // The module will determine if the bid is valid - minimum bid size, minimum price, auction status, etc
-        bidId = _getBatchModuleForId(params_.lotId).bid(
+        bidId = getBatchModuleForId(params_.lotId).bid(
             params_.lotId, msg.sender, params_.referrer, params_.amount, params_.auctionData
         );
 
@@ -304,7 +305,11 @@ contract BatchAuctionHouse is AuctionHouse, BatchRouter {
     ///             - the lot ID is invalid
     ///             - the auction module reverts when cancelling the bid
     ///             - re-entrancy is detected
-    function refundBid(uint96 lotId_, uint64 bidId_) external override nonReentrant {
+    function refundBid(
+        uint96 lotId_,
+        uint64 bidId_,
+        uint256 index_
+    ) external override nonReentrant {
         _isLotValid(lotId_);
 
         // Transfer the quote token to the bidder
@@ -314,7 +319,7 @@ contract BatchAuctionHouse is AuctionHouse, BatchRouter {
             msg.sender,
             // Refund the bid on the auction module
             // The auction module is responsible for validating the bid and authorizing the caller
-            _getBatchModuleForId(lotId_).refundBid(lotId_, bidId_, msg.sender),
+            getBatchModuleForId(lotId_).refundBid(lotId_, bidId_, index_, msg.sender),
             false
         );
 
@@ -333,7 +338,7 @@ contract BatchAuctionHouse is AuctionHouse, BatchRouter {
         // Claim the bids on the auction module
         // The auction module is responsible for validating the bid and authorizing the caller
         (BatchAuction.BidClaim[] memory bidClaims, bytes memory auctionOutput) =
-            _getBatchModuleForId(lotId_).claimBids(lotId_, bidIds_);
+            getBatchModuleForId(lotId_).claimBids(lotId_, bidIds_);
 
         // Load routing data for the lot
         Routing storage routing = lotRouting[lotId_];
@@ -410,7 +415,7 @@ contract BatchAuctionHouse is AuctionHouse, BatchRouter {
 
         // Settle the lot on the auction module and get the winning bids
         // Reverts if the auction cannot be settled yet
-        BatchAuctionModule module = _getBatchModuleForId(lotId_);
+        BatchAuctionModule module = getBatchModuleForId(lotId_);
 
         // Settle the auction
         (totalIn_, totalOut_, auctionOutput_) = module.settle(lotId_);
@@ -439,7 +444,7 @@ contract BatchAuctionHouse is AuctionHouse, BatchRouter {
 
         // Call auction module to validate and update data
         (uint256 purchased_, uint256 sold_, uint256 capacity_) =
-            _getBatchModuleForId(lotId_).claimProceeds(lotId_);
+            getBatchModuleForId(lotId_).claimProceeds(lotId_);
 
         // Load data for the lot
         Routing storage routing = lotRouting[lotId_];
@@ -511,7 +516,7 @@ contract BatchAuctionHouse is AuctionHouse, BatchRouter {
 
     // ========== INTERNAL FUNCTIONS ========== //
 
-    function _getBatchModuleForId(uint96 lotId_) internal view returns (BatchAuctionModule) {
+    function getBatchModuleForId(uint96 lotId_) public view returns (BatchAuctionModule) {
         return BatchAuctionModule(address(_getModuleForId(lotId_)));
     }
 }
