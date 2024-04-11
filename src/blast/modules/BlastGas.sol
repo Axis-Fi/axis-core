@@ -10,10 +10,10 @@ interface IBlast {
 abstract contract BlastGas {
     // ========== CONSTRUCTOR ========== //
 
-    constructor(address parent_) {
+    constructor(address parent_, address blast_) {
         // Configure gas as claimable
-        IBlast(0x4300000000000000000000000000000000000002).configureClaimableGas();
+        IBlast(blast_).configureClaimableGas();
         // Configure governor to claim gas fees
-        IBlast(0x4300000000000000000000000000000000000002).configureGovernor(parent_);
+        IBlast(blast_).configureGovernor(parent_);
     }
 }
