@@ -198,8 +198,12 @@ abstract contract BatchAuctionHouseTest is Test, Permit2User {
         _;
     }
 
-    modifier givenLotHasStarted() {
+    function _startLot() internal {
         vm.warp(_startTime);
+    }
+
+    modifier givenLotHasStarted() {
+        _startLot();
         _;
     }
 
