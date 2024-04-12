@@ -79,6 +79,9 @@ abstract contract Auction {
     // ========== AUCTION MANAGEMENT ========== //
 
     /// @notice     Create an auction lot
+    /// @dev        The implementing function should handle the following:
+    ///             - Validate the lot parameters
+    ///             - Store the lot data
     ///
     /// @param      lotId_                  The lot id
     /// @param      params_                 The auction parameters
@@ -95,7 +98,6 @@ abstract contract Auction {
     /// @dev        The implementing function should handle the following:
     ///             - Validate the lot parameters
     ///             - Update the lot data
-    ///             - Return the remaining capacity (so that the AuctionHouse can refund the seller)
     ///
     /// @param      lotId_              The lot id
     function cancelAuction(uint96 lotId_) external virtual;
@@ -151,12 +153,17 @@ abstract contract AuctionModule is Auction, Module {
     // ========== AUCTION MANAGEMENT ========== //
 
     /// @inheritdoc Auction
-    /// @dev        If the start time is zero, the auction will have a start time of the current block timestamp
+    /// @dev        If the start time is zero, the auction will have a start time of the current block timestamp.
     ///
-    /// @dev        This function reverts if:
-    ///             - the caller is not the parent of the module
-    ///             - the start time is in the past
-    ///             - the duration is less than the minimum
+    ///             This function handles the following:
+    ///             - Validates the lot parameters
+    ///             - Stores the auction lot
+    ///             - Calls the implementation-specific function
+    ///
+    ///             This function reverts if:
+    ///             - The caller is not the parent of the module
+    ///             - The start time is in the past
+    ///             - The duration is less than the minimum
     function auction(
         uint96 lotId_,
         AuctionParams memory params_,
@@ -201,6 +208,10 @@ abstract contract AuctionModule is Auction, Module {
     /// @dev        Assumptions:
     ///             - The parent will refund the seller the remaining capacity
     ///             - The parent will verify that the caller is the seller
+    ///
+    ///             This function handles the following:
+    ///             - Calls the implementation-specific function
+    ///             - Updates the lot data
     ///
     ///             This function reverts if:
     ///             - the caller is not the parent of the module

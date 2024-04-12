@@ -11,7 +11,7 @@ abstract contract AtomicAuction {
     ///             - Validate the purchase parameters
     ///             - Store the purchase data
     ///
-    /// @param      lotId_             The lot id
+    /// @param      lotId_          The lot id
     /// @param      amount_         The amount of quote tokens to purchase
     /// @param      auctionData_    The auction-specific data
     /// @return     payout          The amount of payout tokens to receive
@@ -24,12 +24,16 @@ abstract contract AtomicAuction {
 
     // ========== VIEW FUNCTIONS ========== //
 
+    /// @notice     Returns the payout for a given lot and amount
     function payoutFor(uint96 lotId_, uint256 amount_) public view virtual returns (uint256) {}
 
+    /// @notice     Returns the price for a given lot and payout
     function priceFor(uint96 lotId_, uint256 payout_) public view virtual returns (uint256) {}
 
+    /// @notice     Returns the max payout for a given lot
     function maxPayout(uint96 lotId_) public view virtual returns (uint256) {}
 
+    /// @notice     Returns the max amount of quote tokens that can be accepted for a given lot
     function maxAmountAccepted(uint96 lotId_) public view virtual returns (uint256) {}
 }
 
@@ -45,14 +49,15 @@ abstract contract AtomicAuctionModule is AtomicAuction, AuctionModule {
 
     /// @inheritdoc AtomicAuction
     /// @dev        Implements a basic purchase function that:
-    ///             - Calls implementation-specific validation logic
-    ///             - Calls the auction module
+    ///             - Validates the lot and purchase parameters
+    ///             - Calls the implementation-specific function
+    ///             - Updates the lot data
     ///
     ///             This function reverts if:
-    ///             - the lot id is invalid
-    ///             - the lot is inactive
-    ///             - the caller is not an internal module
-    ///             - the payout is greater than the remaining capacity
+    ///             - The lot id is invalid
+    ///             - The lot is inactive
+    ///             - The caller is not an internal module
+    ///             - The payout is greater than the remaining capacity
     ///
     ///             Inheriting contracts should override _purchase to implement auction-specific logic, such as:
     ///             - Validating the auction-specific parameters

@@ -118,19 +118,15 @@ abstract contract BatchAuctionModule is BatchAuction, AuctionModule {
 
     /// @inheritdoc BatchAuction
     /// @dev        Implements a basic bid function that:
-    ///             - Calls implementation-specific validation logic
-    ///             - Calls the auction module
+    ///             - Validates the lot and bid parameters
+    ///             - Calls the implementation-specific function
     ///
     ///             This function reverts if:
-    ///             - the lot id is invalid
-    ///             - the lot has not started
-    ///             - the lot has concluded
-    ///             - the lot is already settled
-    ///             - the caller is not an internal module
-    ///
-    ///             Inheriting contracts should override _bid to implement auction-specific logic, such as:
-    ///             - Validating the auction-specific parameters
-    ///             - Storing the bid data
+    ///             - The lot id is invalid
+    ///             - The lot has not started
+    ///             - The lot has concluded
+    ///             - The lot is already settled
+    ///             - The caller is not an internal module
     function bid(
         uint96 lotId_,
         address bidder_,
@@ -149,7 +145,8 @@ abstract contract BatchAuctionModule is BatchAuction, AuctionModule {
     }
 
     /// @notice     Implementation-specific bid logic
-    /// @dev        Auction modules should override this to perform any additional logic
+    /// @dev        Auction modules should override this to perform any additional logic, such as validation and storage.
+    ///
     ///             The returned `bidId` should be a unique and persistent identifier for the bid,
     ///             which can be used in subsequent calls (e.g. `cancelBid()` or `settle()`).
     ///
@@ -169,23 +166,17 @@ abstract contract BatchAuctionModule is BatchAuction, AuctionModule {
 
     /// @inheritdoc BatchAuction
     /// @dev        Implements a basic refundBid function that:
-    ///             - Calls implementation-specific validation logic
-    ///             - Calls the auction module
+    ///             - Validates the lot and bid parameters
+    ///             - Calls the implementation-specific function
     ///
     ///             This function reverts if:
-    ///             - the lot id is invalid
-    ///             - the lot is concluded, decrypted or settled
-    ///             - the bid id is invalid
+    ///             - The lot id is invalid
+    ///             - The lot has not started
+    ///             - The lot is concluded, decrypted or settled
+    ///             - The bid id is invalid
     ///             - `caller_` is not the bid owner
-    ///             - the bid is cancelled
-    ///             - the bid is already refunded
-    ///             - the caller is not an internal module
-    ///
-    ///             Inheriting contracts should check for lot cancellation, if needed.
-    ///
-    ///             Inheriting contracts should override _refundBid to implement auction-specific logic, such as:
-    ///             - Validating the auction-specific parameters
-    ///             - Updating the bid data
+    ///             - The bid is claimed or refunded
+    ///             - The caller is not an internal module
     function refundBid(
         uint96 lotId_,
         uint64 bidId_,
@@ -205,7 +196,9 @@ abstract contract BatchAuctionModule is BatchAuction, AuctionModule {
     }
 
     /// @notice     Implementation-specific bid refund logic
-    /// @dev        Auction modules should override this to perform any additional logic
+    /// @dev        Auction modules should override this to perform any additional logic, such as validation and storage.
+    ///
+    ///             Implementation functions should check for lot cancellation, if needed.
     ///
     /// @param      lotId_      The lot ID
     /// @param      bidId_      The bid ID
@@ -221,18 +214,13 @@ abstract contract BatchAuctionModule is BatchAuction, AuctionModule {
 
     /// @inheritdoc BatchAuction
     /// @dev        Implements a basic claimBids function that:
-    ///             - Calls implementation-specific validation logic
-    ///             - Calls the auction module
+    ///             - Validates the lot and bid parameters
+    ///             - Calls the implementation-specific function
     ///
     ///             This function reverts if:
-    ///             - the lot id is invalid
-    ///             - the lot is not settled
-    ///             - the caller is not an internal module
-    ///
-    ///             Inheriting contracts should override _claimBids to implement auction-specific logic, such as:
-    ///             - Validating the auction-specific parameters
-    ///             - Validating the validity and status of each bid
-    ///             - Updating the bid data
+    ///             - The lot id is invalid
+    ///             - The lot is not settled
+    ///             - The caller is not an internal module
     function claimBids(
         uint96 lotId_,
         uint64[] calldata bidIds_
@@ -252,7 +240,10 @@ abstract contract BatchAuctionModule is BatchAuction, AuctionModule {
     }
 
     /// @notice     Implementation-specific bid claim logic
-    /// @dev        Auction modules should override this to perform any additional logic
+    /// @dev        Auction modules should override this to perform any additional logic, such as:
+    ///             - Validating the auction-specific parameters
+    ///             - Validating the validity and status of each bid
+    ///             - Updating the bid data
     ///
     /// @param      lotId_          The lot ID
     /// @param      bidIds_         The bid IDs
@@ -265,19 +256,16 @@ abstract contract BatchAuctionModule is BatchAuction, AuctionModule {
 
     /// @inheritdoc BatchAuction
     /// @dev        Implements a basic settle function that:
-    ///             - Calls common validation logic
-    ///             - Calls the implementation-specific function for the auction module
+    ///             - Validates the lot and bid parameters
+    ///             - Calls the implementation-specific function
+    ///             - Updates the lot data
     ///
     ///             This function reverts if:
-    ///             - the lot id is invalid
-    ///             - the lot is still active
-    ///             - the lot has already been settled
-    ///             - the caller is not an internal module
-    ///
-    ///             Inheriting contracts should override _settle to implement auction-specific logic, such as:
-    ///             - Validating the auction-specific parameters
-    ///             - Determining the winning bids
-    ///             - Updating the lot data
+    ///             - The lot id is invalid
+    ///             - The lot has not started
+    ///             - The lot is active
+    ///             - The lot has already been settled
+    ///             - The caller is not an internal module
     function settle(uint96 lotId_)
         external
         virtual
@@ -301,8 +289,10 @@ abstract contract BatchAuctionModule is BatchAuction, AuctionModule {
     }
 
     /// @notice     Implementation-specific lot settlement logic
-    /// @dev        Auction modules should override this to perform any additional logic,
-    ///             such as determining the winning bids and updating the lot data
+    /// @dev        Auction modules should override this to perform any additional logic, such as:
+    ///             - Validating the auction-specific parameters
+    ///             - Determining the winning bids
+    ///             - Updating the lot data
     ///
     /// @param      lotId_          The lot ID
     /// @return     totalIn_        The total amount of quote tokens that filled the auction
@@ -315,19 +305,15 @@ abstract contract BatchAuctionModule is BatchAuction, AuctionModule {
 
     /// @inheritdoc BatchAuction
     /// @dev        Implements a basic claimProceeds function that:
-    ///             - Calls common validation logic
-    ///             - Calls the implementation-specific function for the auction module
+    ///             - Validates the lot and bid parameters
+    ///             - Calls the implementation-specific function
     ///
     ///             This function reverts if:
-    ///             - the lot id is invalid
-    ///             - the lot is not settled
-    ///             - the lot proceeds have already been claimed
-    ///             - the lot is cancelled
-    ///             - the caller is not an internal module
-    ///
-    ///             Inheriting contracts should override _claimProceeds to implement auction-specific logic, such as:
-    ///             - Validating the auction-specific parameters
-    ///             - Updating the lot data
+    ///             - The lot id is invalid
+    ///             - The lot is not settled
+    ///             - The lot proceeds have already been claimed
+    ///             - The lot is cancelled
+    ///             - The caller is not an internal module
     function claimProceeds(uint96 lotId_)
         external
         virtual
@@ -351,8 +337,9 @@ abstract contract BatchAuctionModule is BatchAuction, AuctionModule {
     }
 
     /// @notice     Implementation-specific claim proceeds logic
-    /// @dev        Auction modules should override this to perform any additional logic,
-    ///             such as updating the lot data
+    /// @dev        Auction modules should override this to perform any additional logic, such as:
+    ///             - Validating the auction-specific parameters
+    ///             - Updating the lot data
     ///
     /// @param      lotId_          The lot ID
     function _claimProceeds(uint96 lotId_) internal virtual;
