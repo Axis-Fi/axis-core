@@ -265,11 +265,15 @@ Notes:
 
 - This requires direct transactions to the EMPA auction module since the `submitPrivateKey` and `decryptAndSortBids` functions are not generic and won't be on the BatchAuctionHouse
 - If a seller elects to manage the private key through the API, then anyone can release the private key upon auction conclusion.
+- However, if the seller manages the private key directly, this may pose a problem, as the seller will be able to decrypt the bids at any time and potentially elect to not settle the auction lot. This is mitigated through the following:
+  - The seller will not receive any of the proceeds unless the auction lot is settled.
+  - As batch auctions are pre-funded, the base token capacity of the auction lot will not be returned to the seller.
+  - Prior to submission of the private key (which would allow for bid decryption and then settlement) and outside of the dedicated settlement window (by default, until 6 hours after the conclusion of the auction lot), bidders are able to cancel/refund their bids.
+  - The net effect is that if the seller elects to never settle the auction lot, bidders are able to obtain their deposits.
 
 What could cause a loss of funds?
 
-- ❌ If the seller creates an auction directly with the contracts (eschewing the API) and retains the private key, they are able to delay settlement indefinitely by withholding the private key. In the current design, bidder funds would be held until decryption and settlement is complete.
-  - However, outside of the initial settlement window (for 6 hours after conclusion of the auction lot) and before the submission of the private key, bidders are able to obtain refunds of their bids.
+- ✅ If the seller creates an auction directly with the contracts (eschewing the API) and retains the private key, they are able to delay settlement indefinitely by withholding the private key. For this reason, bids can be cancelled/refunded until the private key is submitted.
 - ✅ If the bid decryption fails: the decryption of the bid amount out reverts if the submitted private key is invalid, but `submitPrivateKey` checks if the private key is valid before storing it.
 - ✅ If the storage of a decrypted bid fails: the decrypted bid amount out will only be stored if it and the derived price (`amount/amountOut`) is within the bounds of `uint96`. A number larger than that will be skipped.
 
