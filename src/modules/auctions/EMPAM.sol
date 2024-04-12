@@ -313,6 +313,7 @@ contract EncryptedMarginalPriceAuctionModule is BatchAuctionModule {
     ///             - The lot id is invalid
     ///             - The lot has not started
     ///             - The lot is decrypted or settled (but not concluded)
+    ///             - The lot is within the dedicated settle period
     ///             - The bid id is invalid
     ///             - `caller_` is not the bid owner
     ///             - The bid is claimed or refunded
@@ -453,6 +454,10 @@ contract EncryptedMarginalPriceAuctionModule is BatchAuctionModule {
     ///             - The lot ID has been validated
     ///             - The caller has been authorized
     ///             - The auction is not settled
+    ///
+    ///             This function reverts if:
+    ///             - The bid ID is invalid
+    ///             - The bid has already been claimed
     function _claimBids(
         uint96 lotId_,
         uint64[] calldata bidIds_
@@ -527,9 +532,10 @@ contract EncryptedMarginalPriceAuctionModule is BatchAuctionModule {
     ///
     ///                 This function reverts if:
     ///                 - The lot ID is invalid
-    ///                 - The lot has not concluded
-    ///                 - The lot has already been decrypted in full
+    ///                 - The lot has not started
+    ///                 - The lot is active
     ///                 - The private key has not been provided
+    ///                 - `num_` and `sortHints_` have different lengths
     ///
     /// @param          lotId_          The lot ID of the auction to decrypt bids for
     /// @param          num_            The number of bids to decrypt. Reduced to the number remaining if greater
@@ -594,6 +600,10 @@ contract EncryptedMarginalPriceAuctionModule is BatchAuctionModule {
 
     /// @notice     Returns the decrypted amountOut of a single bid
     /// @dev        This function does not alter the state of the contract, but provides a way to peek at the decrypted bid
+    ///
+    ///             This function reverts if:
+    ///             - The lot ID is invalid
+    ///             - The private key has not been provided
     ///
     /// @param      lotId_      The lot ID of the auction to decrypt the bid for
     /// @param      bidId_      The bid ID to decrypt
