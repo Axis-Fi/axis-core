@@ -189,7 +189,7 @@ contract AtomicAuctionHouse is AuctionHouse, AtomicRouter {
                 msg.sender,
                 amountLessFees,
                 payoutAmount + curatorFeePayout,
-                false,
+                false, // TODO this seems like it should be true, as the callback should send tokens
                 callbackData_
             );
 
@@ -219,7 +219,7 @@ contract AtomicAuctionHouse is AuctionHouse, AtomicRouter {
                 msg.sender,
                 amountLessFees,
                 payoutAmount + curatorFeePayout,
-                true,
+                true, // TODO this seems like it should be false, as the callback should not send tokens
                 callbackData_
             );
         }
