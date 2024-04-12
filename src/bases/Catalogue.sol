@@ -7,7 +7,7 @@ import {Veecode, fromVeecode} from "src/modules/Modules.sol";
 import {ERC20} from "lib/solmate/src/tokens/ERC20.sol";
 import {ICallback} from "src/interfaces/ICallback.sol";
 
-/// @notice Contract that provides view functions for atomic Auctions
+/// @notice Contract that provides view functions for auctions
 abstract contract Catalogue {
     // ========== ERRORS ========== //
     error InvalidParams();

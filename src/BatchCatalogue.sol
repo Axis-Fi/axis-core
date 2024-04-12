@@ -5,7 +5,7 @@ import {Catalogue} from "src/bases/Catalogue.sol";
 import {BatchAuctionModule} from "src/modules/auctions/BatchAuctionModule.sol";
 import {BatchAuctionHouse} from "src/BatchAuctionHouse.sol";
 
-/// @notice Contract that provides view functions for Batch Auctions
+/// @notice Contract that provides view functions for batch auctions
 contract BatchCatalogue is Catalogue {
     // ========== CONSTRUCTOR ========== //
 

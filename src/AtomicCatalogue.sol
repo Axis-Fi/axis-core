@@ -7,7 +7,7 @@ import {AuctionHouse} from "src/bases/AuctionHouse.sol";
 import {FeeManager} from "src/bases/FeeManager.sol";
 import {keycodeFromVeecode, Keycode} from "src/modules/Modules.sol";
 
-/// @notice Contract that provides view functions for atomic Auctions
+/// @notice Contract that provides view functions for atomic auctions
 contract AtomicCatalogue is Catalogue {
     // ========== CONSTRUCTOR ========== //
 
