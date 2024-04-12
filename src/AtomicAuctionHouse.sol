@@ -182,14 +182,13 @@ contract AtomicAuctionHouse is AuctionHouse, AtomicRouter {
         if (Callbacks.hasPermission(routing.callbacks, Callbacks.SEND_BASE_TOKENS_FLAG)) {
             uint256 balanceBefore = routing.baseToken.balanceOf(address(this));
 
-            // The onPurchase callback is expected to transfer the base tokens
             Callbacks.onPurchase(
                 routing.callbacks,
                 params_.lotId,
                 msg.sender,
                 amountLessFees,
                 payoutAmount + curatorFeePayout,
-                false, // TODO this seems like it should be true, as the callback should send tokens
+                false, // Not prefunded. The onPurchase callback is expected to transfer the base tokens
                 callbackData_
             );
 
@@ -219,7 +218,7 @@ contract AtomicAuctionHouse is AuctionHouse, AtomicRouter {
                 msg.sender,
                 amountLessFees,
                 payoutAmount + curatorFeePayout,
-                true, // TODO this seems like it should be false, as the callback should not send tokens
+                true, // Already prefunded
                 callbackData_
             );
         }

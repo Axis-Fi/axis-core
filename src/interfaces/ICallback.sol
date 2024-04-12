@@ -78,7 +78,7 @@ interface ICallback {
     /// @param  buyer         The address of the buyer
     /// @param  amount        The amount of quote tokens purchased
     /// @param  payout        The amount of base tokens to receive
-    /// @param  preFunded     If true, the calling contract expects base tokens to be sent to it
+    /// @param  preFunded     If true, the calling contract has already been provided the base tokens. Otherwise, they must be provided.
     /// @param  callbackData  Custom data provided by the buyer
     function onPurchase(
         uint96 lotId,
