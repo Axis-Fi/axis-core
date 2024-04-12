@@ -27,7 +27,7 @@ library Transfer {
 
     // ============ Functions ============ //
 
-    function approve(ERC20 token_, address spender_, uint256 amount_) public {
+    function approve(ERC20 token_, address spender_, uint256 amount_) internal {
         token_.safeApprove(spender_, amount_);
     }
 
@@ -51,7 +51,7 @@ library Transfer {
         address recipient_,
         uint256 amount_,
         bool validateBalance_
-    ) public {
+    ) internal {
         uint256 balanceBefore;
         if (validateBalance_ == true) {
             balanceBefore = token_.balanceOf(recipient_);
@@ -92,7 +92,7 @@ library Transfer {
         address recipient_,
         uint256 amount_,
         bool validateBalance_
-    ) public {
+    ) internal {
         uint256 balanceBefore;
         if (validateBalance_ == true) {
             balanceBefore = token_.balanceOf(recipient_);
@@ -119,7 +119,7 @@ library Transfer {
         uint256 amount_,
         Permit2Approval memory approval_,
         bool validateBalance_
-    ) public {
+    ) internal {
         uint256 balanceBefore;
         if (validateBalance_ == true) {
             balanceBefore = token_.balanceOf(recipient_);
@@ -153,7 +153,7 @@ library Transfer {
         uint256 amount_,
         Permit2Approval memory approval_,
         bool validateBalance_
-    ) public {
+    ) internal {
         // If a Permit2 approval signature is provided, use it to transfer the quote token
         if (permit2_ != address(0) && approval_.signature.length > 0) {
             permit2TransferFrom(
@@ -167,7 +167,7 @@ library Transfer {
     }
 
     function decodePermit2Approval(bytes memory data_)
-        public
+        internal
         pure
         returns (Permit2Approval memory)
     {
