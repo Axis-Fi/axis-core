@@ -176,7 +176,12 @@ sequenceDiagram
 
 ### Buyer Cancels Bid
 
-Buyers are able to cancel bids they make prior to the auction concluding and receive their deposit back. The bid must be deleted from the stored bids so as to not require it to be decrypted.
+Buyers are able to cancel bids (and receive the deposited quote tokens) at certain times during the auction lifecycle. The bid must be deleted from the stored bids so as to not require it to be decrypted.
+
+Bids can be cancelled/refunded:
+
+- Before conclusion of the lot
+- After the post-conclusion settlement period (by default, 6 hours) has passed and before the private key has been submitted
 
 What would cause a loss of funds?
 
@@ -264,6 +269,7 @@ Notes:
 What could cause a loss of funds?
 
 - ❌ If the seller creates an auction directly with the contracts (eschewing the API) and retains the private key, they are able to delay settlement indefinitely by withholding the private key. In the current design, bidder funds would be held until decryption and settlement is complete.
+  - However, outside of the initial settlement window (for 6 hours after conclusion of the auction lot) and before the submission of the private key, bidders are able to obtain refunds of their bids.
 - ✅ If the bid decryption fails: the decryption of the bid amount out reverts if the submitted private key is invalid, but `submitPrivateKey` checks if the private key is valid before storing it.
 - ✅ If the storage of a decrypted bid fails: the decrypted bid amount out will only be stored if it and the derived price (`amount/amountOut`) is within the bounds of `uint96`. A number larger than that will be skipped.
 
@@ -323,9 +329,6 @@ sequenceDiagram
   participant UI
   participant BatchAuctionHouse
   participant EMPA
-  participant VestingModule
-  participant Seller
-  participant Buyers
 
   User->>UI: Navigate to Auction page
   UI-->User: Display auction status
@@ -357,12 +360,18 @@ sequenceDiagram
 
 After settlement, the seller of the auction can claim the proceeds. This involves sending the proceeds (quote tokens) to the seller, and refunding any unused base token capacity.
 
+Additionally, the curator payout is handled in one of two ways:
+
+- If there is no derivative, the curator payout is allocated and can be later claimed through `claimRewards()`.
+- Otherwise if there is a derivative, the required number of derivative tokens are minted to the curator. This involves a transfer from the BatchAuctionHouse to the derivative module.
+
 What could cause a loss of funds?
 
 - ✅ Revert from fee-on-transfer quote token: this is already checked during bidding when transferring the quote token from the bidder to the BatchAuctionHouse.
 - ✅ Revert from fee-on-transfer base token: this is already checked during auction creation when transferring the base token from the seller to the BatchAuctionHouse.
 - ✅ Revert-on-zero quote/base token: the transfer amount is checked before calling `transfer()`
-- ❌ Seller on blacklist: if the seller is added to the quote or base token's blacklist after the auction is created and funded, the transfer of the quote or base tokens back to the seller would fail.
+- ❌ Seller or callback on blacklist: if the seller or callback is added to the quote or base token's blacklist after the auction is created and funded, the transfer of the quote or base tokens would fail.
+- ✅ Curator on blacklist: there are no direct transfers to the curator in this function, so it would not be affected.
 
 ```mermaid
 sequenceDiagram
@@ -371,6 +380,7 @@ sequenceDiagram
   participant UI
   participant BatchAuctionHouse
   participant EMPA
+  participant DerivativeModule
   participant Seller
 
   User->>UI: Navigate to Auction page
@@ -393,6 +403,11 @@ sequenceDiagram
       BatchAuctionHouse->>Seller: Call onClaimProceeds hook
       Seller->>Seller: Execute hook logic
     end
+    alt derivative is defined
+      BatchAuctionHouse->>DerivativeModule: mint payout to curator as derivative
+    else
+      BatchAuctionHouse->>BatchAuctionHouse: allocate base token rewards for curator
+    end
   deactivate BatchAuctionHouse
   UI-->User: Display transaction result and update auction status
 ```
@@ -413,7 +428,6 @@ sequenceDiagram
   participant User
   participant UI
   participant BatchAuctionHouse
-  participant EMPA
   participant Curator
 
   User->>UI: Navigate to Auction page
@@ -423,12 +437,7 @@ sequenceDiagram
   User->>UI: Sign transaction to claim curator payout
   UI->>BatchAuctionHouse: Send transaction to blockchain
   activate BatchAuctionHouse
-    BatchAuctionHouse->>BatchAuctionHouse: Validate auction status
-    BatchAuctionHouse->>EMPA: Call claimCuratorPayout(lotId)
-    activate EMPA
-      Note over EMPA: The auction must have been settled, and the curator payout not yet claimed
-      EMPA->>EMPA: Validate auction status and update state flag
-    deactivate EMPA
+    BatchAuctionHouse->>BatchAuctionHouse: Call `claimRewards()`
     BatchAuctionHouse->>Curator: Transfer base token payout to curator
   deactivate BatchAuctionHouse
   UI-->User: Display transaction result and update auction status
@@ -453,8 +462,7 @@ sequenceDiagram
   participant UI
   participant BatchAuctionHouse
   participant EMPA
-  participant VestingModule
-  participant Seller
+  participant DerivativeModule
   participant Buyers
 
   User->>UI: Navigate to Auction page
@@ -481,8 +489,8 @@ sequenceDiagram
         alt bid has payout
           BatchAuctionHouse->>BatchAuctionHouse: Allocate quote token fees
           alt payout is a derivative of base token
-            BatchAuctionHouse->>VestingModule: Mint vesting tokens to bidder
-            VestingModule-->Buyers: Send vesting tokens to bidder
+            BatchAuctionHouse->>DerivativeModule: Mint vesting tokens to bidder
+            DerivativeModule-->Buyers: Send vesting tokens to bidder
           else
             BatchAuctionHouse-->Buyers: Send payout to bidder
           end
