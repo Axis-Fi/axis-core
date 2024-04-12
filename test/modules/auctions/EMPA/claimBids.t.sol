@@ -1386,7 +1386,7 @@ contract EmpaModuleClaimBidsTest is EmpaModuleTest {
         );
     }
 
-    function test_below_price_precisio_totalCorrect()
+    function test_below_price_precision_totalCorrect()
         external
         givenLotIsCreated
         givenLotHasStarted
