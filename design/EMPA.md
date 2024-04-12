@@ -312,7 +312,7 @@ The final step to settle an auction is to evaluate the sorted, decrypted bids to
 
 What could cause a loss of funds?
 
-- ✅ As of [#119](https://github.com/Axis-Fi/moonraker/pull/119), there are no transfers in the `settle()` function, which greatly reduces the scenarios that could result in funds being bricked.
+- ✅ As of [#140](https://github.com/Axis-Fi/moonraker/pull/140), there are no transfers in the `settle()` function, which greatly reduces the scenarios that could result in funds being bricked.
 - ✅ Due to filtering in the decryption stage, bids are guaranteed to be within the bounds of `uint96` and have a derived price that is also within the bounds of `uint96`.
 - ✅ Overflow in summation variables: the variables that track the sum of quote tokens in and base tokens out could overflow if there are enough bids. This is mitigated by using `uint256` for the summation variables.
 
