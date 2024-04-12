@@ -50,7 +50,7 @@ abstract contract AtomicRouter {
 }
 
 /// @title      AtomicAuctionHouse
-/// @notice     As its name implies, the AuctionHouse is where auctions are created, bid on, and settled. The core protocol logic is implemented here.
+/// @notice     As its name implies, the AtomicAuctionHouse is where atomic auction lots are created and purchased. The core protocol logic is implemented here.
 contract AtomicAuctionHouse is AuctionHouse, AtomicRouter {
     using Callbacks for ICallback;
 
@@ -111,12 +111,12 @@ contract AtomicAuctionHouse is AuctionHouse, AtomicRouter {
     /// @inheritdoc AtomicRouter
     /// @dev        This fuction handles the following:
     ///             1. Calculates the fees for the purchase
-    ///             2. Sends the purchase amount to the auction module
-    ///             3. Records the purchase on the auction module
-    ///             4. Transfers the quote token from the caller
-    ///             5. Transfers the quote token to the seller
-    ///             5. Transfers the base token from the seller or executes the callback
-    ///             6. Transfers the base token to the recipient
+    ///             2. Obtains the payout from the auction module
+    ///             3. Transfers the purchase amount (quote token) from the caller
+    ///             4. Transfers the purchase amount (quote token) to the seller
+    ///             5. Transfers the payout and curator fee amounts (base token) from the seller or executes the callback
+    ///             6. Transfers the payout amount (base token) to the recipient
+    ///             7. Transfers the fee amount (base token) to the curator
     ///
     ///             Note that this function will deduct from the payment amount to cover the protocol and referrer fees. The fees at the time of purchase are used.
     ///
@@ -128,7 +128,7 @@ contract AtomicAuctionHouse is AuctionHouse, AtomicRouter {
     ///             - The seller does not have sufficient balance of the payout token
     ///             - Any of the callbacks fail
     ///             - Any of the token transfers fail
-    ///             - re-entrancy is detected
+    ///             - Re-entrancy is detected
     function purchase(
         PurchaseParams memory params_,
         bytes calldata callbackData_
