@@ -370,6 +370,50 @@ contract MaxPriorityQueueTest is Test {
         _queue.insert(prevHint, 2, 3, 1, _BASE_SCALE);
     }
 
+    function test_insert_precision_ordering() external {
+        _queue.initialize();
+
+        _queue.insert(_QUEUE_START, 0, 4e18 + 2, 2e18, 1e18);
+        _queue.insert(_QUEUE_START, 1, 4e18 + 1, 2e18, 1e18);
+
+        // Check values
+        assertEq(_queue.getNumBids(), 2, "numBids mismatch");
+
+        // Check order of values
+        // Bid 1 will be marginally higher than bid 0
+        (uint64 bidId, uint96 amountIn, uint96 amountOut) = _queue.delMax();
+        assertEq(bidId, 0);
+        assertEq(amountIn, 4e18 + 2);
+        assertEq(amountOut, 2e18);
+
+        (bidId, amountIn, amountOut) = _queue.delMax();
+        assertEq(bidId, 1);
+        assertEq(amountIn, 4e18 + 1);
+        assertEq(amountOut, 2e18);
+    }
+
+    function test_insert_precision() external {
+        _queue.initialize();
+
+        _queue.insert(_QUEUE_START, 0, 4e18 + 1, 2e18, 1e18);
+        _queue.insert(_QUEUE_START, 1, 4e18 + 2, 2e18, 1e18);
+
+        // Check values
+        assertEq(_queue.getNumBids(), 2, "numBids mismatch");
+
+        // Check order of values
+        // Bid 1 price is marginally higher than bid 0, but that precision is lost, so it reverts to order of insertion
+        (uint64 bidId, uint96 amountIn, uint96 amountOut) = _queue.delMax();
+        assertEq(bidId, 0);
+        assertEq(amountIn, 4e18 + 1);
+        assertEq(amountOut, 2e18);
+
+        (bidId, amountIn, amountOut) = _queue.delMax();
+        assertEq(bidId, 1);
+        assertEq(amountIn, 4e18 + 2);
+        assertEq(amountOut, 2e18);
+    }
+
     // ========== delMax ========== //
     function testRevert_delMax_emptyQueue() external {
         _queue.initialize();
