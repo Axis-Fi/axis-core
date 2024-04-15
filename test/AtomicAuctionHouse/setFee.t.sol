@@ -13,7 +13,7 @@ import {FeeManager} from "src/bases/FeeManager.sol";
 import {AtomicAuctionHouse} from "src/AtomicAuctionHouse.sol";
 
 // Modules
-import {Keycode, toKeycode} from "src/modules/Modules.sol";
+import {Keycode, keycodeFromVeecode} from "src/modules/Modules.sol";
 
 contract AtomicSetFeeTest is Test, Permit2User {
     MockAtomicAuctionModule internal _mockAuctionModule;
@@ -24,13 +24,14 @@ contract AtomicSetFeeTest is Test, Permit2User {
     address internal immutable _CURATOR = address(0x3);
     address internal immutable _REFERRER = address(0x4);
 
-    Keycode internal _auctionKeycode = toKeycode("ATOM");
+    Keycode internal _auctionKeycode;
 
     uint48 internal constant _MAX_FEE = 1e5;
 
     function setUp() external {
         _auctionHouse = new AtomicAuctionHouse(address(this), _PROTOCOL, _permit2Address);
         _mockAuctionModule = new MockAtomicAuctionModule(address(_auctionHouse));
+        _auctionKeycode = keycodeFromVeecode(_mockAuctionModule.VEECODE());
         _auctionHouse.installModule(_mockAuctionModule);
     }
 
