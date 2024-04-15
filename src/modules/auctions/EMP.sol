@@ -15,7 +15,7 @@ import {MaxPriorityQueue, Queue} from "src/lib/MaxPriorityQueue.sol";
 /// @dev        This batch auction module allows for bids to be encrypted off-chain, then stored, decrypted and settled on-chain.
 ///
 ///             Note that the maximum bid amount is bounded by uint96.
-contract EncryptedMarginalPriceAuctionModule is BatchAuctionModule {
+contract EncryptedMarginalPrice is BatchAuctionModule {
     using MaxPriorityQueue for Queue;
 
     // ========== ERRORS ========== //
@@ -160,7 +160,7 @@ contract EncryptedMarginalPriceAuctionModule is BatchAuctionModule {
     }
 
     function VEECODE() public pure override returns (Veecode) {
-        return toVeecode("01EMPAM");
+        return toVeecode("01EMPA");
     }
 
     // ========== MODIFIERS ========== //

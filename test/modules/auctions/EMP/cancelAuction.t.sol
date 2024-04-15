@@ -3,11 +3,11 @@ pragma solidity 0.8.19;
 
 import {Module} from "src/modules/Modules.sol";
 import {Auction} from "src/modules/Auction.sol";
-import {EncryptedMarginalPriceAuctionModule} from "src/modules/auctions/EMPAM.sol";
+import {EncryptedMarginalPrice} from "src/modules/auctions/EMP.sol";
 
-import {EmpaModuleTest} from "test/modules/auctions/EMPA/EMPAModuleTest.sol";
+import {EmpTest} from "test/modules/auctions/EMP/EMPTest.sol";
 
-contract EmpaModuleCancelAuctionTest is EmpaModuleTest {
+contract EmpaModuleCancelAuctionTest is EmpTest {
     // [X] when the caller is not the parent
     //  [X] it reverts
     // [X] when the lot id is invalid
@@ -64,7 +64,7 @@ contract EmpaModuleCancelAuctionTest is EmpaModuleTest {
     function test_auctionStarted_reverts() public givenLotIsCreated givenLotHasStarted {
         // Expect revert
         bytes memory err = abi.encodeWithSelector(
-            EncryptedMarginalPriceAuctionModule.Auction_WrongState.selector, _lotId
+            EncryptedMarginalPrice.Auction_WrongState.selector, _lotId
         );
         vm.expectRevert(err);
 
@@ -81,10 +81,10 @@ contract EmpaModuleCancelAuctionTest is EmpaModuleTest {
         assertEq(lotData.conclusion, uint48(block.timestamp), "conclusion");
         assertEq(lotData.capacity, 0, "capacity");
 
-        EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
+        EncryptedMarginalPrice.AuctionData memory auctionData = _getAuctionData(_lotId);
         assertEq(
             uint8(auctionData.status),
-            uint8(EncryptedMarginalPriceAuctionModule.LotStatus.Settled),
+            uint8(EncryptedMarginalPrice.LotStatus.Settled),
             "status"
         );
         assertTrue(auctionData.proceedsClaimed, "proceedsClaimed");

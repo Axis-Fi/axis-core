@@ -4,9 +4,9 @@ pragma solidity 0.8.19;
 import {Module} from "src/modules/Modules.sol";
 import {Auction} from "src/modules/Auction.sol";
 
-import {FpaModuleTest} from "test/modules/auctions/FPA/FPAModuleTest.sol";
+import {FpsTest} from "test/modules/auctions/FPS/FPSTest.sol";
 
-contract FpaModuleCancelAuctionTest is FpaModuleTest {
+contract FpsCancelAuctionTest is FpsTest {
     // [X] when the caller is not the parent
     //  [X] it reverts
     // [X] when the lot id is invalid

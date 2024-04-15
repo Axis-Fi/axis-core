@@ -10,7 +10,7 @@ import {AtomicAuction, AtomicAuctionModule} from "src/modules/auctions/AtomicAuc
 // Libraries
 import {FixedPointMathLib as Math} from "lib/solmate/src/utils/FixedPointMathLib.sol";
 
-contract FixedPriceAuctionModule is AtomicAuctionModule {
+contract FixedPriceSale is AtomicAuctionModule {
     // ========== ERRORS ========== //
 
     error Auction_InsufficientPayout();
@@ -52,7 +52,7 @@ contract FixedPriceAuctionModule is AtomicAuctionModule {
 
     /// @inheritdoc Module
     function VEECODE() public pure override returns (Veecode) {
-        return toVeecode("01FPAM");
+        return toVeecode("01FPSA");
     }
 
     // ========== AUCTION ========== //

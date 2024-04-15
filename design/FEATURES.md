@@ -77,7 +77,7 @@ core system only supports atomic auctions. Batch auctions not supported. Except 
 
 For this reason, V2 supports off-chain bids and settlement computation. This enables auctions that were not possible earlier:
 
-- sealed bid auctions
+- sealed-bid auctions
   - list of winning bidders provided to the contract for settlement
 - providing Bond Protocol auctions as a liquidity source for CoW Protocol
 - off-chain computation of auction settlement by solvers
@@ -89,7 +89,7 @@ limit order system is a version of intents. Custom settlement contract.
 sweet spot for GDA to do a TWAP swap. Solvers can plug into it. Better than FraxSwap TWAP (req ext liquidity) or CoW Swap TWAP (paying gas every time)
 OTC swap is an exchange between parties without 3PL
 
-sealed batch auctions could be done on-chain, but are difficult
+sealed-bid batch auctions could be done on-chain, but are difficult
 
 ### Auction Types
 
