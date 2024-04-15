@@ -137,7 +137,8 @@ contract Deploy is Script {
         require(len > 0, "No deployments");
 
         // Check if an AuctionHouse is to be deployed
-        bool indexZeroIsAH = _isAtomicAuctionHouse(deployments[0]) || _isBatchAuctionHouse(deployments[0]);
+        bool indexZeroIsAH =
+            _isAtomicAuctionHouse(deployments[0]) || _isBatchAuctionHouse(deployments[0]);
         if (indexZeroIsAH) {
             bytes32 salt = saltMap[deployments[0]];
 
@@ -149,7 +150,8 @@ contract Deploy is Script {
         }
 
         // Both AuctionHouses can be deployed in the same script, in which case both the first and second sequence items should be the AuctionHouses
-        bool indexOneIsAH = indexZeroIsAH && _isAtomicAuctionHouse(deployments[1]) || _isBatchAuctionHouse(deployments[1]);
+        bool indexOneIsAH = indexZeroIsAH && _isAtomicAuctionHouse(deployments[1])
+            || _isBatchAuctionHouse(deployments[1]);
         if (indexOneIsAH) {
             bytes32 salt = saltMap[deployments[1]];
 
@@ -282,9 +284,7 @@ contract Deploy is Script {
 
         // Deploy the module
         amEmp = new EncryptedMarginalPrice(address(batchAuctionHouse));
-        console2.log(
-            "    EncryptedMarginalPrice deployed at:", address(amEmp)
-        );
+        console2.log("    EncryptedMarginalPrice deployed at:", address(amEmp));
 
         return address(amEmp);
     }
