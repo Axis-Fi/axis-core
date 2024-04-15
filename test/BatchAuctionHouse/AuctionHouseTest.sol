@@ -19,7 +19,6 @@ import {BatchAuctionHouse, BatchRouter} from "src/BatchAuctionHouse.sol";
 import {Auction, AuctionModule} from "src/modules/Auction.sol";
 import {FeeManager} from "src/bases/FeeManager.sol";
 import {AuctionHouse} from "src/bases/AuctionHouse.sol";
-// import {Catalogue} from "src/Catalogue.sol";
 import {ICallback} from "src/interfaces/ICallback.sol";
 import {Callbacks} from "src/lib/Callbacks.sol";
 
@@ -95,7 +94,6 @@ abstract contract BatchAuctionHouseTest is Test, Permit2User {
         _quoteToken = new MockFeeOnTransferERC20("Quote Token", "QUOTE", 18);
 
         _auctionHouse = new BatchAuctionHouse(_OWNER, _PROTOCOL, _permit2Address);
-        // _catalogue = new Catalogue(address(_auctionHouse));
 
         _batchAuctionModule = new MockBatchAuctionModule(address(_auctionHouse));
         _batchAuctionModuleKeycode = keycodeFromVeecode(_batchAuctionModule.VEECODE());
