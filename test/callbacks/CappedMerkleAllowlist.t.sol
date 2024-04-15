@@ -38,7 +38,7 @@ contract CappedMerkleAllowlistTest is Test, Permit2User {
     // Generated from: https://lab.miguelmota.com/merkletreejs/example/
     // Includes _BUYER, _BUYER_TWO but not _BUYER_THREE
     bytes32 internal constant _MERKLE_ROOT =
-        0xf15a9691daa2aa0627e155c750530c1abcd6a00d93e4888dab4f50e11a29c36b;
+        0x40e51f1c845d99162de6c210a9eaff4729f433ac605be8f3cde6d2e0afa44aeb;
     bytes32[] internal _merkleProof;
 
     function setUp() public {
@@ -86,7 +86,7 @@ contract CappedMerkleAllowlistTest is Test, Permit2User {
 
         // cast create2 -s 90 -i $(cat ./bytecode/CappedMerkleAllowlistAtomic90.bin)
         bytes32 atomicSalt =
-            bytes32(0x7b1c872cdb8274d724cc92f1edcc11c01d42dd74c0766b9b6a0f74994a449a07);
+            bytes32(0x15d20025759e16be1d91f6c9c6c4c188b5d480d28b35c1b6bde843fc03927c5b);
         vm.broadcast();
         _atomicAllowlist = new CappedMerkleAllowlist{salt: atomicSalt}(
             address(_atomicAuctionHouse),
@@ -105,7 +105,7 @@ contract CappedMerkleAllowlistTest is Test, Permit2User {
 
         // cast create2 -s 88 -i $(cat ./bytecode/CappedMerkleAllowlistBatch88.bin)
         bytes32 batchSalt =
-            bytes32(0x92899e7f20cb0276b07bae6391f07f23bbf434f84a3191f2a9d6faef66c82f49);
+            bytes32(0xe5ac433cbb37a89e6ca69e2a407b8d3f5b413528778a0dbd34eee744daf9e7c9);
         vm.broadcast();
         _batchAllowlist = new CappedMerkleAllowlist{salt: batchSalt}(
             address(_batchAuctionHouse),
@@ -122,12 +122,12 @@ contract CappedMerkleAllowlistTest is Test, Permit2User {
             _SELLER
         );
 
-        // _merkleProof.push(
-        //     bytes32(0x5b70e80538acdabd6137353b0f9d8d149f4dba91e8be2e7946e409bfdbe685b9)
-        // ); // Corresponds to _BUYER
         _merkleProof.push(
-            bytes32(0x90b0d289ea211dca8e020c9cc8c5d6ba2f416fe15fa692b47184a4b946b2214d)
-        ); // Corresponds to _BUYER_TWO
+            bytes32(0x421df1fa259221d02aa4956eb0d35ace318ca24c0a33a64c1af96cf67cf245b6)
+        ); // Corresponds to _BUYER
+            // _merkleProof.push(
+            //     bytes32(0xa876da518a393dbd067dc72abfa08d475ed6447fca96d92ec3f9e7eba503ca61)
+            // ); // Corresponds to _BUYER_TWO
     }
 
     modifier givenAtomicOnCreate() {
