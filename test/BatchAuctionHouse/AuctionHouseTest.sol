@@ -24,8 +24,6 @@ import {Callbacks} from "src/lib/Callbacks.sol";
 
 import {Veecode, toKeycode, keycodeFromVeecode, Keycode} from "src/modules/Modules.sol";
 
-import {console2} from "forge-std/console2.sol";
-
 abstract contract BatchAuctionHouseTest is Test, Permit2User {
     MockFeeOnTransferERC20 internal _baseToken;
     MockFeeOnTransferERC20 internal _quoteToken;
