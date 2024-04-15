@@ -42,8 +42,8 @@ contract AtomicCatalogue is Catalogue {
         // Get price from module (in quote token units)
         uint256 price = module.priceFor(lotId_, payout_);
 
-        // Calculate fee estimate assuming there is a referrer and add to price
-        price += _calculateFeeEstimate(keycodeFromVeecode(routing.auctionReference), price);
+        // Calculate price with fee estimate
+        price = _withFee(keycodeFromVeecode(routing.auctionReference), price);
 
         return price;
     }
@@ -69,18 +69,18 @@ contract AtomicCatalogue is Catalogue {
         uint256 maxAmount = module.maxAmountAccepted(lotId_);
 
         // Calculate fee estimate assuming there is a referrer and add to max amount
-        maxAmount += _calculateFeeEstimate(keycodeFromVeecode(routing.auctionReference), maxAmount);
+        maxAmount = _withFee(keycodeFromVeecode(routing.auctionReference), maxAmount);
 
         return maxAmount;
     }
 
     // ========== INTERNAL UTILITY FUNCTIONS ========== //
 
-    /// @notice Estimates fees for a `priceFor` or `maxAmountAccepted` calls
-    function _calculateFeeEstimate(
+    /// @notice Adds a conservative fee estimate to `priceFor` or `maxAmountAccepted` calls
+    function _withFee(
         Keycode auctionType_,
         uint256 price_
-    ) internal view returns (uint256 feeEstimate) {
+    ) internal view returns (uint256 priceWithFee) {
         // In this case we have to invert the fee calculation
         // We provide a conservative estimate by assuming there is a referrer and rounding up
         (uint48 fee, uint48 referrerFee,) = FeeManager(auctionHouse).fees(auctionType_);
