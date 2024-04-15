@@ -5,6 +5,7 @@ EMPA is a fully on-chain, sealed-bid, batch auction system built on the Axis Pro
 ## User Features
 
 ### Sellers
+
 - Permissionlessly create sealed bid batch auctions, which improve execution over open bid auctions
 - Auctions can be created for any (non-weird) ERC20 token pair
 - Two transactions to create auction: 1. approve base token (if not already), 2. create auction
@@ -15,13 +16,16 @@ EMPA is a fully on-chain, sealed-bid, batch auction system built on the Axis Pro
 - System is on-chain and transparent
 
 ### Buyers
+
 - Permissionlessly place bids on any auction (assuming no allowlist)
 - Bids are encrypted. Protocol key service hides private key from everyone, even sellers, so that no one can peek at your bids until after the auction is over.
 - Settlement is permissionless
 - System is on-chain and transparent
 
 ## Components and Design Decisions
+
 This version of a sealed bid auction system has a few key properties that make it attractive:
+
 1. Maximally Permissionless. The entire auction process happens on-chain and can be executed without relying on our off-chain infrastructure.
 2. Transparent. All bids are encrypted and stored on-chain, but the bids are not decrypted until after the auction ends. This allows anyone to verify the bids and the settlement process.
 3. Simple. As an early version of the system, we wanted to get something out that isn't too difficult to build.
@@ -31,17 +35,21 @@ However, the user experience is not as good as an off-chain or hybrid system cou
 ### Smart Contracts
 
 #### Axis Protocol
-Axis enables arbitrary auction and derivative combinations in a single settlement contract (the AuctionHouse). For this particular solution, there are only 3 contracts required.
-  - Auction House
-  - EMPA (Auction Module)
-  - Vesting Module
+
+Axis enables arbitrary auction and derivative combinations in a single settlement contract (the BatchAuctionHouse). For this particular solution, there are only 3 contracts required.
+
+- Auction House
+- EMP Auction Module
+- Vesting Module
 
 #### Permit2 Approvals
-Gasless for buyers after initial approval
+
+- Gasless for buyers after initial approval
 [Permit2](https://github.com/Uniswap/permit2): Signature-based approvals for any ERC20 token
-  - [Integration Guide](https://blog.uniswap.org/permit2-integration-guide)
+- [Integration Guide](https://blog.uniswap.org/permit2-integration-guide)
 
 ### Encryption Key Management
+
 What: Need to be able to encrypt bids and other data with a key that no interested party controls until the auction ends. This is to prevent insider dealing or other bad behavior.
 
 Solution: API and private database that creates EC keypairs and store the private key until an auction ends. If an auction is cancelled, the private key is never released.
@@ -53,7 +61,9 @@ The API will be written in Rust and the database will be a MongoDB instance foll
 In addition to the API, there will be a Rust service that watches for new auction creation events, checks whether the API provided the key, and stores the auction ID and conclusion timestamp in the database. This will allow the API to release the private key at the correct time. We need this service since we cannot be sure of the auction ID when a key is generated (it may be front-run by another transaction, for example).
 
 ### UI / dApp
+
 We will provide a user interface (aka dApp) for both Sellers and Buyers to interact with the product. The key user actions are defined below in the Actions section. The core pages we be:
+
 - List of auctions (TBD on design and filtering between statuses)
 - Create auction page - for sellers to create new auctions
 - Auction page - Details the status and available actions for a given auction. The auction page will need to support these differents states:
@@ -66,12 +76,14 @@ We will provide a user interface (aka dApp) for both Sellers and Buyers to inter
 The architecture will be a Single Page App (SPA) hosted on [IPFS](https://docs.ipfs.tech/how-to/websites-on-ipfs/single-page-website/) with [Eth.limo](https://eth.limo/) domain resolution to ENS owned by the protocol.
 
 #### Subgraph
-In order to display user bids on the dapp, it is most convenient to use a subgraph to index the bids from events emitted from the smart contracts. Therefore, we will need to create a subgraph for the AuctionHouse (and possibly other modules depending on where the events reside).
+
+In order to display user bids on the dapp, it is most convenient to use a subgraph to index the bids from events emitted from the smart contracts. Therefore, we will need to create a subgraph for the BatchAuctionHouse (and possibly other modules depending on where the events reside).
 
 ## Actions
 
 ### Seller Creates Auction
-A seller creating an auction is the first step in the lifecycle. They provide common auction parameters as well as auction specific parameters to the AuctionHouse contract to kick it off. They must approve the AuctionHouse for the token they are selling (base token) or provide a Hooks contract that will settle the auction 
+
+A seller creating an auction is the first step in the lifecycle. They provide common auction parameters as well as auction specific parameters to the BatchAuctionHouse contract to kick it off. They must approve the BatchAuctionHouse for the token they are selling (base token) or provide a Callbacks contract that will settle the auction.
 
 ```mermaid
 sequenceDiagram
@@ -80,13 +92,13 @@ sequenceDiagram
   participant UI
   participant API
   participant Database
-  participant AuctionHouse
+  participant BatchAuctionHouse
   participant EMPA
   participant Watcher
 
   Seller->>UI: Navigate to Create Auction page
   activate UI
-    Seller->>UI: Input auction data (baseToken, quoteToken, start, duration, minPrice, capacity, optionally hooks, allowlist, and derivative data)
+    Seller->>UI: Input auction data (baseToken, quoteToken, start, duration, minPrice, capacity, optionally callbacks, and derivative data)
     Seller->>UI: Click "Create Auction"
     UI->>API: Request new EC keypair
     activate API
@@ -97,36 +109,37 @@ sequenceDiagram
     UI->>UI: Create transaction to create auction with input data + public key
     UI-->Seller: Present transaction to Seller to sign
     Seller->>UI: Sign transaction to create auction
-    UI->>AuctionHouse: Send transaction to blockchain
-    activate AuctionHouse
-        AuctionHouse->>AuctionHouse: Validate and store routing & derivative parameters
-        AuctionHouse->>EMPA: Call auction module with auction params and lot ID
+    UI->>BatchAuctionHouse: Send transaction to blockchain
+    activate BatchAuctionHouse
+        BatchAuctionHouse->>BatchAuctionHouse: Validate and store routing & derivative parameters
+        BatchAuctionHouse->>EMPA: Call auction module with auction params and lot ID
         activate EMPA
             EMPA->>EMPA: Validate and store auction parameters
-            EMPA-->AuctionHouse: Hand execution back to AuctionHouse
+            EMPA-->BatchAuctionHouse: Hand execution back to BatchAuctionHouse
             EMPA-->Watcher: Emit event for auction creation with public key
             Watcher->>Database: Store auction ID and conclusion timestamp for public key
         deactivate EMPA
-        AuctionHouse-->UI: Finish execution and return result
-    deactivate AuctionHouse
+        BatchAuctionHouse-->UI: Finish execution and return result
+    deactivate BatchAuctionHouse
     UI-->Seller: Show transaction status
   deactivate UI
 ```
 
 ### Buyer Places Bid
+
 ```mermaid
 sequenceDiagram
   autoNumber
   participant Buyer
   participant UI
   participant Permit2
-  participant AuctionHouse
+  participant BatchAuctionHouse
   participant EMPA
 
   Buyer->>UI: Navigate to Auction page
-  UI->>AuctionHouse: Fetch data for auction ID (base token, quote token, public key, start, conclusion, auction type, derivative type + info, capacity, min bid size)
-  AuctionHouse->>EMPA: Get data stored on module to return
-  AuctionHouse-->UI: Return results
+  UI->>BatchAuctionHouse: Fetch data for auction ID (base token, quote token, public key, start, conclusion, auction type, derivative type + info, capacity, min bid size)
+  BatchAuctionHouse->>EMPA: Get data stored on module to return
+  BatchAuctionHouse-->UI: Return results
   UI-->Buyer: Display data for user
   Buyer->>UI: Input bid data (amount, minAmountOut)
   UI->>Permit2: Check user's approval for quote token
@@ -142,93 +155,127 @@ sequenceDiagram
   Buyer->>UI: Click "Place bid" button
   UI->>UI: Get random seed for encryption
   UI->>UI: Encrypt minAmountOut with public key from auction
-  UI->>UI: Construct permit2 approval for AuctionHouse
+  UI->>UI: Construct permit2 approval for BatchAuctionHouse
   UI-->Buyer: Display permit2 signature request
   Buyer->>UI: Sign permit2 signature request
   UI->>UI: Create bid transaction with permit2 approval and bid data (amount, encrypted minAmountOut)
   UI-->Buyer: Display transaction for signing
   Buyer->>UI: Sign bid transaction
-  UI->>AuctionHouse: Send bid transaction to blockchain
-  activate AuctionHouse
-    AuctionHouse->>AuctionHouse: Validate permit2 approval and transfer quote tokens
-    AuctionHouse->>EMPA: Call bid function with auction ID, amount, and encrypted minAmountOut
+  UI->>BatchAuctionHouse: Send bid transaction to blockchain
+  activate BatchAuctionHouse
+    BatchAuctionHouse->>BatchAuctionHouse: Validate permit2 approval and transfer quote tokens
+    BatchAuctionHouse->>EMPA: Call bid function with auction ID, amount, and encrypted minAmountOut
     activate EMPA
         EMPA->>EMPA: Validate bid parameters and store encrypted bid data
-        EMPA-->AuctionHouse: Hand execution back to AuctionHouse
+        EMPA-->BatchAuctionHouse: Hand execution back to BatchAuctionHouse
     deactivate EMPA
-    AuctionHouse-->UI: Return transaction result
-  deactivate AuctionHouse
+    BatchAuctionHouse-->UI: Return transaction result
+  deactivate BatchAuctionHouse
   UI-->Buyer: Display submission result to user
 ```
 
 ### Buyer Cancels Bid
-Buyers are able to cancel bids they make prior to the auction concluding and receive their deposit back. The bid must be deleted from the stored bids so as to not require it to be decrypted.
+
+Buyers are able to cancel bids (and receive the deposited quote tokens) at certain times during the auction lifecycle. The bid must be deleted from the stored bids so as to not require it to be decrypted.
+
+Bids can be cancelled/refunded:
+
+- Before conclusion of the lot
+- After the post-conclusion settlement period (by default, 6 hours) has passed and before the private key has been submitted
+
+What would cause a loss of funds?
+
+- ✅ Revert from fee-on-transfer ERC20 token: this is already checked during bidding when transferring the quote token from the bidder to the BatchAuctionHouse.
+- ✅ Revert-on-zero ERC20 token: the transfer amount is checked before calling `transfer()`
+- ❌ Bidder on blacklist: if the bidder is added to the quote token's blacklist after the bid is placed, the transfer of the quote tokens back to the bidder would fail.
 
 ```mermaid
 sequenceDiagram
   autoNumber
   participant Buyer
   participant UI
-  participant AuctionHouse
+  participant BatchAuctionHouse
   participant EMPA
   participant Subgraph
 
   Buyer->>UI: Navigate to Auction page
-  UI->>AuctionHouse: Fetch data for auction ID (base token, quote token, public key, start, conclusion, auction type, derivative type + info, capacity, min bid size)
+  UI->>BatchAuctionHouse: Fetch data for auction ID (base token, quote token, public key, start, conclusion, auction type, derivative type + info, capacity, min bid size)
   UI->>Subgraph: Fetch bids for user on auction ID
   UI-->Buyer: Display bids for user
   Buyer->>UI: Click "Cancel bid" button
-  UI->>AuctionHouse: Send `cancelBid(lotId, bidId)` transaction to blockchain.
-  activate AuctionHouse
-    Note over AuctionHouse: Not exactly sure the separation of duties between module and AuctionHouse yet
-    AuctionHouse->>AuctionHouse: Validate and delete bid, if it exists
-    AuctionHouse->>EMPA: Call cancelBid function with auction ID and bid ID
+  UI->>BatchAuctionHouse: Send `refundBid(lotId, bidId)` transaction to blockchain.
+  activate BatchAuctionHouse
+    BatchAuctionHouse->>EMPA: Call `refundBid(lotId, bidId)`
     activate EMPA
-        EMPA->>EMPA: Validate and delete bid (ensuring that it doesn't mess up settlement)
-        EMPA-->AuctionHouse: Hand execution back to AuctionHouse
+        Note over EMPA: Auction must be active, bid must not be refunded
+        EMPA->>EMPA: Validate and delete bid
+        EMPA-->BatchAuctionHouse: Return refund amount to BatchAuctionHouse
     deactivate EMPA
-    AuctionHouse-->UI: Return transaction result
-  deactivate AuctionHouse
+    BatchAuctionHouse->>BatchAuctionHouse: Transfer refund to bidder
+    BatchAuctionHouse-->UI: Return transaction result
+  deactivate BatchAuctionHouse
   UI-->Buyer: Display transaction result and update bids
 ```
 
 ### Seller Cancels Auction
+
 Sellers are able to specify a start time for their auction in the future. If they want to cancel the auction before it starts, they can do so and the auction will be deleted. If the auction has already started and is accepting bids, then the seller can no longer cancel it.
+
+What would cause a loss of funds?
+
+- ✅ Revert from fee-on-transfer ERC20 token: this is already checked during auction creation when transferring the base token from the seller to the BatchAuctionHouse.
+- ✅ Revert-on-zero ERC20 token: the transfer amount is checked before calling `transfer()`
+- ❌ Seller on blacklist: if the seller is added to the base token's blacklist after the auction is created and funded, the transfer of the base tokens back to the seller would fail.
 
 ```mermaid
 sequenceDiagram
   autoNumber
   participant Seller
   participant UI
-  participant AuctionHouse
+  participant BatchAuctionHouse
   participant EMPA
   participant Watcher
 
   Seller->>UI: Navigate to Auction page
-  UI->>AuctionHouse: Fetch data for auction ID (base token, quote token, public key, start, conclusion, auction type, derivative type + info, capacity, min bid size)
+  UI->>BatchAuctionHouse: Fetch data for auction ID (base token, quote token, public key, start, conclusion, auction type, derivative type + info, capacity, min bid size)
   UI-->Seller: Display auction data
   Seller->>UI: Click "Cancel auction" button
-  UI->>AuctionHouse: Send `cancelAuction(lotId)` transaction to blockchain.
-  activate AuctionHouse
-    AuctionHouse->>AuctionHouse: Validate and delete auction
-    AuctionHouse->>EMPA: Call cancelAuction function with auction ID
+  UI->>BatchAuctionHouse: Send `cancel(lotId)` transaction to blockchain.
+  activate BatchAuctionHouse
+    BatchAuctionHouse->>EMPA: Call cancelAuction(lotId)
     activate EMPA
+        Note over EMPA: The auction must not have started, in order to cancel it.
         EMPA->>EMPA: Validate and delete auction
-        EMPA-->AuctionHouse: Hand execution back to AuctionHouse
-        EMPA-->Watcher: Emit event for auction cancellation
-        Watcher->>Watcher: Get auction ID from event
-        Watcher->>Database: Delete auction ID and conclusion timestamp for public key
+        EMPA-->BatchAuctionHouse: Hand execution back to BatchAuctionHouse
     deactivate EMPA
-    AuctionHouse-->UI: Return transaction result
-  deactivate AuctionHouse
+    BatchAuctionHouse->>BatchAuctionHouse: Transfer prefunding amount to seller
+    BatchAuctionHouse-->UI: Return transaction result
+    BatchAuctionHouse-->Watcher: Emit event for auction cancellation
+    Watcher->>Watcher: Get auction ID from event
+    Watcher->>Database: Delete auction ID and conclusion timestamp for public key
+  deactivate BatchAuctionHouse
   UI-->Seller: Display transaction result and update auction status
 ```
 
-
 ### Auction Settlement Part 1: Decryption
+
 After an auction has concluded, the bids must be decrypted and sorted by price. We do this by releasing the EC private key from the database via the API to anyone on the dapp looking at the auction page. Decryption works by providing an array of (amountOut, seed) for the bids in the order they were submitted to the contract. The seed was randomly generated on submission and can be extracted by decrypting the bid. The API provides a convenience function for returning an array for the next bids that need to be decrypted from an auction (using its ID). It may take several decryption transactions depending on the number of bids and gas limit. Once, all bids are decrypted on the contract, we can move to part 2 of the settlement process.
 
-Note: this requires direct transactions to the EMPA auction module since the `decryptBids` function is not generic and won't be on the AuctionHouse
+Notes:
+
+- This requires direct transactions to the EMPA auction module since the `submitPrivateKey` and `decryptAndSortBids` functions are not generic and won't be on the BatchAuctionHouse
+- If a seller elects to manage the private key through the API, then anyone can release the private key upon auction conclusion.
+- However, if the seller manages the private key directly, this may pose a problem, as the seller will be able to decrypt the bids at any time and potentially elect to not settle the auction lot. This is mitigated through the following:
+  - The seller will not receive any of the proceeds unless the auction lot is settled.
+  - As batch auctions are pre-funded, the base token capacity of the auction lot will not be returned to the seller.
+  - Prior to submission of the private key (which would allow for bid decryption and then settlement) and outside of the dedicated settlement window (by default, until 6 hours after the conclusion of the auction lot), bidders are able to cancel/refund their bids.
+  - The net effect is that if the seller elects to never settle the auction lot, bidders are able to obtain their deposits.
+
+What could cause a loss of funds?
+
+- ✅ If the seller creates an auction directly with the contracts (eschewing the API) and retains the private key, they are able to delay settlement indefinitely by withholding the private key. For this reason, bids can be cancelled/refunded until the private key is submitted.
+- ✅ If the bid decryption fails: the decryption of the bid amount out reverts if the submitted private key is invalid, but `submitPrivateKey` checks if the private key is valid before storing it.
+- ✅ If the storage of a decrypted bid fails: the decrypted bid amount out will only be stored if it and the derived price (`amount/amountOut`) is within the bounds of `uint96`. A number larger than that will be skipped.
 
 ```mermaid
 sequenceDiagram
@@ -256,75 +303,216 @@ sequenceDiagram
   UI->>UI: Create transaction to decrypt bids with array
   UI-->User: Display transaction for signing
   User->>UI: Sign transaction to decrypt bids
-  UI->>EMPA: Send transaction to blockchain
+  UI->>EMPA: Send transaction to blockchain: submitPrivateKey(privateKey, numBids)
   activate EMPA
+      Note over EMPA: The auction must have concluded, the private key must not yet be submitted, and the private key must be valid
+      EMPA->>EMPA: Store the private key
       EMPA->>EMPA: Validate and store decrypted bids
       alt all bids decrypted
-          EMPA->>EMPA: Set auction status to "decrypted"
+          EMPA->>EMPA: Set auction status to "Decrypted"
       end
       EMPA-->UI: Return transaction result
   deactivate EMPA
   UI-->User: Display transaction result and update auction status
 ```
 
-### Auction Settlement Part 2: Evaluate winners and send proceeds
-The final step to settle an auction is to evaluate the sorted, decrypted bids to determine the marginal price for the auction and distribute funds to the winners. If the auction did not reach the minimum price or minimum fill capacity, then the auction is settled without winners, and users can claim refunds. If there are winners, then they are paid out the base tokens (or derivative) and the seller receives the proceeds. Users that do not win must claim a refund. The settlement function is open and can be called by anyone after the decryption process is complete.
+### Auction Settlement Part 2: Evaluate Winners
+
+The final step to settle an auction is to evaluate the sorted, decrypted bids to determine the marginal price for the auction and distribute funds to the winners. If the auction did not reach the minimum price or minimum fill capacity, then the auction is settled without winners, and users can claim refunds. If there are winners, the settlement is stored for later. The settlement function is open and can be called by anyone after the decryption process is complete.
+
+What could cause a loss of funds?
+
+- ✅ As of [#140](https://github.com/Axis-Fi/moonraker/pull/140), there are no transfers in the `settle()` function, which greatly reduces the scenarios that could result in funds being bricked.
+- ✅ Due to filtering in the decryption stage, bids are guaranteed to be within the bounds of `uint96` and have a derived price that is also within the bounds of `uint96`.
+- ✅ Overflow in summation variables: the variables that track the sum of quote tokens in and base tokens out could overflow if there are enough bids. This is mitigated by using `uint256` for the summation variables.
 
 ```mermaid
 sequenceDiagram
   autoNumber
   participant User
   participant UI
-  participant AuctionHouse
+  participant BatchAuctionHouse
   participant EMPA
-  participant VestingModule
-  participant Seller
-  participant Buyers
 
   User->>UI: Navigate to Auction page
   UI-->User: Display auction status
   User->>UI: Click "Settle auction" button
   UI-->User: Display transaction for signing
   User->>UI: Sign transaction to settle auction
-  UI->>AuctionHouse: Send transaction to blockchain
-  activate AuctionHouse
-      AuctionHouse->>AuctionHouse: Validate auction status and settle auction
-      AuctionHouse->>EMPA: Call settle function with auction ID
+  UI->>BatchAuctionHouse: Send transaction to blockchain
+  activate BatchAuctionHouse
+      BatchAuctionHouse->>BatchAuctionHouse: Validate auction status and settle auction
+      BatchAuctionHouse->>EMPA: Call settle function with auction ID
       activate EMPA
-          EMPA->>EMPA: Validate auction status and settle auction
+          Note over EMPA: Auction status must be decrypted
+          EMPA->>EMPA: Validate auction status
           alt auction did not reach minimum price or capacity
               EMPA->>EMPA: Set auction status to "settled"
           else auction reached minimum price and capacity
               EMPA->>EMPA: Set auction status to "settled"
               EMPA->>EMPA: Calculate marginal price
-              EMPA->>EMPA: Distribute proceeds to winners
-              EMPA->>EMPA: Distribute refunds to losers
           end
-          EMPA-->AuctionHouse: Hand execution back to AuctionHouse
+          EMPA-->BatchAuctionHouse: Return settlement output to BatchAuctionHouse
       deactivate EMPA
-      AuctionHouse->>AuctionHouse: Collect fees
-      alt seller specified hook for proceeds
-          AuctionHouse->>Seller: Call hook with proceeds
-          Seller->>Seller: Execute hook logic
-          Seller-->AuctionHouse: Send base tokens and return execution to AuctionHouse
-      else
-          Seller-->AuctionHouse: Base tokens transferred from Seller to AuctionHouse
-      end
-      alt payout is a derivative of base token
-        AuctionHouse->>VestingModule: Mint vesting tokens to winners
-        VestingModule-->Buyers: Send vesting tokens to winners
-      else
-        AuctionHouse-->Buyers: Send payouts to winners
-      end
-      AuctionHouse->>AuctionHouse: Set auction status to "settled"
-      AuctionHouse-->UI: Return transaction result
-  deactivate AuctionHouse
+      BatchAuctionHouse->>BatchAuctionHouse: Cache the protocol and referrer fee rates
+      BatchAuctionHouse-->UI: Return transaction result
+  deactivate BatchAuctionHouse
   UI-->User: Display transaction result and update auction status
+```
+
+## Seller Claims Proceeds
+
+After settlement, the seller of the auction can claim the proceeds. This involves sending the proceeds (quote tokens) to the seller, and refunding any unused base token capacity.
+
+Additionally, the curator payout is handled in one of two ways:
+
+- If there is no derivative, the curator payout is allocated and can be later claimed through `claimRewards()`.
+- Otherwise if there is a derivative, the required number of derivative tokens are minted to the curator. This involves a transfer from the BatchAuctionHouse to the derivative module.
+
+What could cause a loss of funds?
+
+- ✅ Revert from fee-on-transfer quote token: this is already checked during bidding when transferring the quote token from the bidder to the BatchAuctionHouse.
+- ✅ Revert from fee-on-transfer base token: this is already checked during auction creation when transferring the base token from the seller to the BatchAuctionHouse.
+- ✅ Revert-on-zero quote/base token: the transfer amount is checked before calling `transfer()`
+- ❌ Seller or callback on blacklist: if the seller or callback is added to the quote or base token's blacklist after the auction is created and funded, the transfer of the quote or base tokens would fail.
+- ✅ Curator on blacklist: there are no direct transfers to the curator in this function, so it would not be affected.
+
+```mermaid
+sequenceDiagram
+  autoNumber
+  participant User
+  participant UI
+  participant BatchAuctionHouse
+  participant EMPA
+  participant DerivativeModule
+  participant Seller
+
+  User->>UI: Navigate to Auction page
+  UI-->User: Display auction status
+  User->>UI: Click "Claim Proceeds" button
+  UI-->User: Display transaction for signing
+  User->>UI: Sign transaction to claim auction proceeds
+  UI->>BatchAuctionHouse: Send transaction to blockchain
+  activate BatchAuctionHouse
+    BatchAuctionHouse->>BatchAuctionHouse: Validate auction status
+    BatchAuctionHouse->>EMPA: Call claimProceeds(lotId)
+    activate EMPA
+      Note over EMPA: The auction must have been settled, and the proceeds not yet claimed
+      EMPA->>EMPA: Validate auction status
+    deactivate EMPA
+    BatchAuctionHouse->>Seller: Transfer quote token proceeds to seller (or callback) (minus fees)
+    Note right of BatchAuctionHouse: The remaining base tokens are the prefunded capacity and curator payout, minus any pending bid claims
+    BatchAuctionHouse->>Seller: Transfer remaining base tokens to seller (or callback)
+    alt seller specified callback for proceeds
+      BatchAuctionHouse->>Seller: Call onClaimProceeds callback
+      Seller->>Seller: Execute callback logic
+    end
+    alt derivative is defined
+      BatchAuctionHouse->>DerivativeModule: mint payout to curator as derivative
+    else
+      BatchAuctionHouse->>BatchAuctionHouse: allocate base token rewards for curator
+    end
+  deactivate BatchAuctionHouse
+  UI-->User: Display transaction result and update auction status
+```
+
+## Curator Claims Payout
+
+After settlement, curators can claim their payout.
+
+What can cause a loss of funds?
+
+- ✅ Revert from fee-on-transfer base token: this is already checked during auction creation when transferring the base token from the seller to the BatchAuctionHouse.
+- ✅ Revert-on-zero base token: the transfer amount is checked before calling `transfer()`
+- ❌ Curator on blacklist: if the curator is added to the base token's blacklist after the auction is created and funded, the transfer of the base tokens to the curator would fail.
+
+```mermaid
+sequenceDiagram
+  autoNumber
+  participant User
+  participant UI
+  participant BatchAuctionHouse
+  participant Curator
+
+  User->>UI: Navigate to Auction page
+  UI-->User: Display auction status
+  User->>UI: Click "Claim Curator Payout" button
+  UI-->User: Display transaction for signing
+  User->>UI: Sign transaction to claim curator payout
+  UI->>BatchAuctionHouse: Send transaction to blockchain
+  activate BatchAuctionHouse
+    BatchAuctionHouse->>BatchAuctionHouse: Call `claimRewards()`
+    BatchAuctionHouse->>Curator: Transfer base token payout to curator
+  deactivate BatchAuctionHouse
+  UI-->User: Display transaction result and update auction status
+```
+
+## Bidder Claims Bid
+
+After settlement, bidders can claim the outcome of their bid. This can be a refund (if under the marginal price) or payout.
+
+What can cause a loss of funds?
+
+- ✅ Revert from fee-on-transfer quote token: this is already checked during bidding when transferring the quote token from the bidder to the BatchAuctionHouse.
+- ✅ Revert from fee-on-transfer base token: this is already checked during auction creation when transferring the base token from the seller to the BatchAuctionHouse.
+- ✅ Revert-on-zero quote/base token: the transfer amount is checked before calling `transfer()`
+- ❌ Bidder on blacklist: if the bidder is added to the quote or base token's blacklist, the transfer of the quote or base tokens to the bidder would fail. Other bidders could be shielded from this by splitting the affected bidId from the `claimBids` call.
+- ✅ Late vesting: the LinearVesting derivative module can deploy or mint a derivative token even when the vesting expiry is in the past. (Fixed in [#116](https://github.com/Axis-Fi/moonraker/pull/116))
+
+```mermaid
+sequenceDiagram
+  autoNumber
+  participant User
+  participant UI
+  participant BatchAuctionHouse
+  participant EMPA
+  participant DerivativeModule
+  participant Buyers
+
+  User->>UI: Navigate to Auction page
+  UI-->User: Display auction status
+  User->>UI: Click "Claim Bid" button
+  UI-->User: Display transaction for signing
+  User->>UI: Sign transaction to settle auction
+  UI->>BatchAuctionHouse: Send transaction to blockchain
+  activate BatchAuctionHouse
+      BatchAuctionHouse->>BatchAuctionHouse: Validate auction status
+      BatchAuctionHouse->>EMPA: Call claimBids(lotId, bidIds) function
+      activate EMPA
+          Note over EMPA: Auction must be settled
+          EMPA->>EMPA: Validate auction status
+          loop
+            Note over EMPA: Bid must not have been claimed
+            EMPA->>EMPA: Validate bid status
+            EMPA->>EMPA: Set bid status to "Claimed"
+            EMPA->>EMPA: Return paid, payout and refund amounts
+          end
+          EMPA-->BatchAuctionHouse: Return bid claims
+      deactivate EMPA
+      loop
+        alt bid has payout
+          BatchAuctionHouse->>BatchAuctionHouse: Allocate quote token fees
+          alt payout is a derivative of base token
+            BatchAuctionHouse->>DerivativeModule: Mint vesting tokens to bidder
+            DerivativeModule-->Buyers: Send vesting tokens to bidder
+          else
+            BatchAuctionHouse-->Buyers: Send payout to bidder
+          end
+        end
+
+        alt bid has refund
+          BatchAuctionHouse-->Buyers: Send refund to bidder
+        end
+      end
+      BatchAuctionHouse-->UI: Return transaction result
+  deactivate BatchAuctionHouse
+  UI-->User: Display transaction result and update bid statuses
 ```
 
 ## Marginal Price Settle Logic
 
 ### Terms
+
 - Capacity - total amount of base tokens offered for sale
 - Minimum Fill - minimum amount of base tokens that must be sold to settle auction
 - Minimum Price - minimum amount of quote tokens per base token that must be received to settle auction
@@ -333,6 +521,7 @@ sequenceDiagram
 - Marginal Bid ID - the last bid ID that settles at a given marginal price. if the marginal price is in between bids, then this will be zero.
 
 ### Goals
+
 1. Fill as much of the capacity as possible with valid bids (above minimum price and minimum size)
 2. Check for intermediate marginal prices that fill total capacity between bids to avoid large cliffs.
 3. If not able to fill total capacity, try to settle the auction at the minimum price with a portion of the capacity (must be greater than the minimum fill).

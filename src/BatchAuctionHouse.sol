@@ -11,7 +11,7 @@ import {ICallback} from "src/interfaces/ICallback.sol";
 import {Callbacks} from "src/lib/Callbacks.sol";
 
 /// @title      BatchRouter
-/// @notice     An interface to define the AuctionHouse's buyer-facing functions
+/// @notice     An interface to define the BatchAuctionHouse's buyer-facing functions
 abstract contract BatchRouter {
     // ========== DATA STRUCTURES ========== //
 
@@ -93,6 +93,7 @@ abstract contract BatchRouter {
     ///             2. Pass the request to the auction module to get the proceeds data
     ///             3. Send the proceeds (quote tokens) to the seller
     ///             4. Refund any unused base tokens to the seller
+    ///             5. Allocate the curator fee (base tokens) to the curator
     ///
     /// @param      lotId_          Lot ID
     /// @param      callbackData_   Custom data provided to the onClaimProceeds callback
@@ -100,7 +101,7 @@ abstract contract BatchRouter {
 }
 
 /// @title      BatchAuctionHouse
-/// @notice     As its name implies, the AuctionHouse is where auctions are created, bid on, and settled. The core protocol logic is implemented here.
+/// @notice     As its name implies, the BatchAuctionHouse is where batch auctions are created, bid on, and settled. The core protocol logic is implemented here.
 contract BatchAuctionHouse is AuctionHouse, BatchRouter {
     using Callbacks for ICallback;
 
@@ -140,6 +141,10 @@ contract BatchAuctionHouse is AuctionHouse, BatchRouter {
     ///             - Performs additional validation
     ///             - Collects the payout token from the seller (prefunding)
     ///             - Calls the onCreate callback, if configured
+    ///
+    ///             This function reverts if:
+    ///             - The specified auction module is not for batch auctions
+    ///             - The capacity is in quote tokens
     function _auction(
         uint96 lotId_,
         RoutingParams calldata routing_,
@@ -147,7 +152,7 @@ contract BatchAuctionHouse is AuctionHouse, BatchRouter {
     ) internal override returns (bool performedCallback) {
         // Validation
 
-        // Ensure the auction type is atomic
+        // Ensure the auction type is batch
         AuctionModule auctionModule = AuctionModule(_getLatestModuleIfActive(routing_.auctionType));
         if (auctionModule.auctionType() != Auction.AuctionType.Batch) revert InvalidParams();
 
@@ -184,6 +189,11 @@ contract BatchAuctionHouse is AuctionHouse, BatchRouter {
     }
 
     /// @inheritdoc AuctionHouse
+    /// @dev        Handles cancellation of a batch auction lot.
+    ///
+    ///             This function performs the following:
+    ///             - Refunds the base token to the seller (or callback)
+    ///             - Calls the onCancel callback, if configured
     function _cancel(
         uint96 lotId_,
         bytes calldata callbackData_
@@ -220,6 +230,11 @@ contract BatchAuctionHouse is AuctionHouse, BatchRouter {
     // ========== CURATION ========== //
 
     /// @inheritdoc AuctionHouse
+    /// @dev        Handles curation approval for a batch auction lot.
+    ///
+    ///             This function performs the following:
+    ///             - Transfers the required base tokens from the seller (or callback)
+    ///             - Calls the onCurate callback, if configured
     function _curate(
         uint96 lotId_,
         uint256 curatorFeePayout_,
@@ -259,12 +274,17 @@ contract BatchAuctionHouse is AuctionHouse, BatchRouter {
     // ========== BID, REFUND, CLAIM ========== //
 
     /// @inheritdoc BatchRouter
-    /// @dev        This function reverts if:
-    ///             - lotId is invalid
-    ///             - the bidder is not on the optional allowlist
-    ///             - the auction module reverts when creating a bid
-    ///             - the quote token transfer fails
-    ///             - re-entrancy is detected
+    /// @dev        This function performs the following:
+    ///             - Validates the lot ID
+    ///             - Records the bid on the auction module
+    ///             - Transfers the quote token from the bidder
+    ///             - Calls the onBid callback
+    ///
+    ///             This function reverts if:
+    ///             - `params_.lotId` is invalid
+    ///             - The auction module reverts when creating a bid
+    ///             - The quote token transfer fails
+    ///             - Re-entrancy is detected
     function bid(
         BidParams memory params_,
         bytes calldata callbackData_
@@ -301,10 +321,15 @@ contract BatchAuctionHouse is AuctionHouse, BatchRouter {
     }
 
     /// @inheritdoc BatchRouter
-    /// @dev        This function reverts if:
-    ///             - the lot ID is invalid
-    ///             - the auction module reverts when cancelling the bid
-    ///             - re-entrancy is detected
+    /// @dev        This function performs the following:
+    ///             - Validates the lot ID
+    ///             - Refunds the bid on the auction module
+    ///             - Transfers the quote token to the bidder
+    ///
+    ///             This function reverts if:
+    ///             - The lot ID is invalid
+    ///             - The auction module reverts when cancelling the bid
+    ///             - Re-entrancy is detected
     function refundBid(
         uint96 lotId_,
         uint64 bidId_,
@@ -328,10 +353,16 @@ contract BatchAuctionHouse is AuctionHouse, BatchRouter {
     }
 
     /// @inheritdoc BatchRouter
-    /// @dev        This function reverts if:
-    ///             - the lot ID is invalid
-    ///             - the auction module reverts when claiming the bids
-    ///             - re-entrancy is detected
+    /// @dev        This function performs the following:
+    ///             - Validates the lot ID
+    ///             - Claims the bids on the auction module
+    ///             - Allocates the fees for each successful bid
+    ///             - Transfers the payout and/or refund to each bidder
+    ///
+    ///             This function reverts if:
+    ///             - The lot ID is invalid
+    ///             - The auction module reverts when claiming the bids
+    ///             - Re-entrancy is detected
     function claimBids(uint96 lotId_, uint64[] calldata bidIds_) external override nonReentrant {
         _isLotValid(lotId_);
 
@@ -392,18 +423,11 @@ contract BatchAuctionHouse is AuctionHouse, BatchRouter {
     /// @inheritdoc BatchRouter
     /// @dev        This function handles the following:
     ///             - Settles the auction on the auction module
-    ///             - Calculates the payout amount, taking partial fill into consideration
-    ///             - Caches the fees for the lot
-    ///             - Calculates the fees taken on the quote token
-    ///             - Collects the payout from the seller (if necessary)
-    ///             - Sends the refund and payout to the bidder (if there is a partial fill)
-    ///             - Sends the payout to the curator (if curation is approved)
     ///
     ///             This function reverts if:
-    ///             - the lot ID is invalid
-    ///             - the auction module reverts when settling the auction
-    ///             - collecting the payout from the seller fails
-    ///             - re-entrancy is detected
+    ///             - The lot ID is invalid
+    ///             - The auction module reverts when settling the auction
+    ///             - Re-entrancy is detected
     function settle(uint96 lotId_)
         external
         override
@@ -426,15 +450,16 @@ contract BatchAuctionHouse is AuctionHouse, BatchRouter {
 
     /// @inheritdoc BatchRouter
     /// @dev        This function handles the following:
-    ///             1. Validates the lot
-    ///             2. Sends the proceeds to the seller
-    ///             3. If the auction lot is pre-funded, any unused capacity and curator fees are refunded to the seller
-    ///             4. Calls the onClaimProceeds callback on the hooks contract (if provided)
+    ///             - Validates the lot
+    ///             - Calls the auction module to claim the proceeds
+    ///             - Allocates the rewards to the curator
+    ///             - Transfers the proceeds to the seller (minus any fees)
+    ///             - Refunds any unused capacity and curator fees to the seller
+    ///             - Calls the onClaimProceeds callback on the hooks contract (if provided)
     ///
     ///             This function reverts if:
-    ///             - the lot ID is invalid
-    ///             - the lot is not settled
-    ///             - the proceeds have already been claimed
+    ///             - The lot ID is invalid
+    ///             - The auction module reverts
     function claimProceeds(
         uint96 lotId_,
         bytes calldata callbackData_

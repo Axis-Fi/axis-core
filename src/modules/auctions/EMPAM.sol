@@ -172,6 +172,11 @@ contract EncryptedMarginalPriceAuctionModule is BatchAuctionModule {
     ///             - The lot ID has been validated
     ///             - The start and duration of the lot have been validated
     ///
+    ///             This function performs the following:
+    ///             - Validates the auction parameters
+    ///             - Stores the auction data
+    ///             - Initializes the decrypted bids queue
+    ///
     ///             This function reverts if:
     ///             - The parameters cannot be decoded into the correct format
     ///             - The minimum price is zero
@@ -221,6 +226,9 @@ contract EncryptedMarginalPriceAuctionModule is BatchAuctionModule {
     ///             - The caller has been authorized
     ///             - The auction has not concluded
     ///
+    ///             This function performs the following:
+    ///             - Sets the auction status to settled, and prevents claiming of proceeds
+    ///
     ///             This function reverts if:
     ///             - The auction is active or has not concluded
     function _cancelAuction(uint96 lotId_) internal override {
@@ -239,7 +247,7 @@ contract EncryptedMarginalPriceAuctionModule is BatchAuctionModule {
     /// @dev        This function performs the following:
     ///             - Validates inputs
     ///             - Stores the encrypted bid
-    ///             - Adds the bid ID to the list of bids to decrypt (in `AuctionData.bidIds`)
+    ///             - Adds the bid ID to the list of bids to decrypt
     ///             - Returns the bid ID
     ///
     ///             This function assumes:
@@ -249,6 +257,7 @@ contract EncryptedMarginalPriceAuctionModule is BatchAuctionModule {
     ///
     ///             This function reverts if:
     ///             - The parameters cannot be decoded into the correct format
+    ///             - The amount is greater than the max uint96 value
     ///             - The amount is less than the minimum bid size for the lot
     ///             - The bid public key is not valid
     function _bid(
@@ -297,17 +306,18 @@ contract EncryptedMarginalPriceAuctionModule is BatchAuctionModule {
 
     /// @inheritdoc BatchAuction
     /// @dev        Implements a basic refundBid function that:
-    ///             - Calls implementation-specific validation logic
-    ///             - Calls the auction module
+    ///             - Validates the lot and bid parameters
+    ///             - Calls the implementation-specific function
     ///
     ///             This function reverts if:
-    ///             - the lot id is invalid
-    ///             - the lot is decrypted or settled
-    ///             - the bid id is invalid
+    ///             - The lot id is invalid
+    ///             - The lot has not started
+    ///             - The lot is decrypted or settled (but not concluded)
+    ///             - The lot is within the dedicated settle period
+    ///             - The bid id is invalid
     ///             - `caller_` is not the bid owner
-    ///             - the bid is cancelled
-    ///             - the bid is already refunded
-    ///             - the caller is not an internal module
+    ///             - The bid is claimed or refunded
+    ///             - The caller is not an internal module
     ///
     ///             This is a modified version of the refundBid function in the AuctionModule contract.
     ///             It does not revert if the lot is concluded.
@@ -444,6 +454,10 @@ contract EncryptedMarginalPriceAuctionModule is BatchAuctionModule {
     ///             - The lot ID has been validated
     ///             - The caller has been authorized
     ///             - The auction is not settled
+    ///
+    ///             This function reverts if:
+    ///             - The bid ID is invalid
+    ///             - The bid has already been claimed
     function _claimBids(
         uint96 lotId_,
         uint64[] calldata bidIds_
@@ -467,11 +481,12 @@ contract EncryptedMarginalPriceAuctionModule is BatchAuctionModule {
     ///                 It does not require gating. If the seller wishes to limit who can call, they can simply not reveal the key to anyone else.
     ///                 On the other hand, if a key management service is used, then anyone can call it once the key is revealed.
     ///
-    /// @dev            This function reverts if:
+    ///                 This function reverts if:
     ///                 - The lot ID is invalid
     ///                 - The lot is not active
     ///                 - The lot has not concluded
     ///                 - The private key has already been submitted
+    ///                 - The private key is invalid for the public key
     ///
     /// @param          lotId_          The lot ID of the auction to submit the private key for
     /// @param          privateKey_     The ECIES private key to decrypt the bids
@@ -517,9 +532,10 @@ contract EncryptedMarginalPriceAuctionModule is BatchAuctionModule {
     ///
     ///                 This function reverts if:
     ///                 - The lot ID is invalid
-    ///                 - The lot has not concluded
-    ///                 - The lot has already been decrypted in full
+    ///                 - The lot has not started
+    ///                 - The lot is active
     ///                 - The private key has not been provided
+    ///                 - `num_` and `sortHints_` have different lengths
     ///
     /// @param          lotId_          The lot ID of the auction to decrypt bids for
     /// @param          num_            The number of bids to decrypt. Reduced to the number remaining if greater
@@ -582,10 +598,16 @@ contract EncryptedMarginalPriceAuctionModule is BatchAuctionModule {
         }
     }
 
-    /// @notice     Decrypts a bid
+    /// @notice     Returns the decrypted amountOut of a single bid
+    /// @dev        This function does not alter the state of the contract, but provides a way to peek at the decrypted bid
     ///
-    /// @param      lotId_  The lot ID of the auction to decrypt the bid for
-    /// @param      bidId_  The bid ID to decrypt
+    ///             This function reverts if:
+    ///             - The lot ID is invalid
+    ///             - The private key has not been provided
+    ///
+    /// @param      lotId_      The lot ID of the auction to decrypt the bid for
+    /// @param      bidId_      The bid ID to decrypt
+    /// @return     amountOut   The decrypted amount out
     function decryptBid(uint96 lotId_, uint64 bidId_) public view returns (uint256 amountOut) {
         // Load the private key
         uint256 privateKey = auctionData[lotId_].privateKey;
@@ -660,10 +682,12 @@ contract EncryptedMarginalPriceAuctionModule is BatchAuctionModule {
         emit BidDecrypted(lotId_, bidId_, bidData.amount, amountOut);
     }
 
+    /// @notice     Returns the bid after `key_` in the queue
     function getNextInQueue(uint96 lotId_, bytes32 key_) external view returns (bytes32) {
         return decryptedBids[lotId_].getNext(key_);
     }
 
+    /// @notice     Returns the bid id at the specified index
     function getBidIdAtIndex(uint96 lotId_, uint256 index_) external view returns (uint64) {
         return auctionData[lotId_].bidIds[index_];
     }
@@ -837,7 +861,6 @@ contract EncryptedMarginalPriceAuctionModule is BatchAuctionModule {
     ///             - Iterates over the decrypted bids to calculate the marginal price and number of winning bids
     ///             - If applicable, calculates the payout and refund for a partially filled bid
     ///             - Sets the auction status to settled
-    ///             - Deletes the remaining decrypted bids for a gas refund
     ///
     ///             This function assumes:
     ///             - The lot ID has been validated
@@ -926,6 +949,8 @@ contract EncryptedMarginalPriceAuctionModule is BatchAuctionModule {
     }
 
     /// @inheritdoc BatchAuctionModule
+    /// @dev        This function performs the following:
+    ///             - Updates the auction data to mark the proceeds as claimed
     function _claimProceeds(uint96 lotId_) internal override {
         // Update the claim status
         auctionData[lotId_].proceedsClaimed = true;

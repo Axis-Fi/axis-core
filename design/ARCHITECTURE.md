@@ -207,8 +207,8 @@ classDiagram
 
 ### TODOs
 
--   [ ] Add section for Auction and Derivative module implementations after we prioritize which ones to build first
--   [ ] Create a function or add return values so that a solver / user can determine the derivative token that a market will return (useful for then creating off-chain orders for that token). This also brings up a point about how certain auction view functions that rely solely on an amount need to be refactored for a multi-variate auction world, e.g. `payoutFor(uint256)` -> `payoutFor(uint256, bytes)`
+- [ ] Add section for Auction and Derivative module implementations after we prioritize which ones to build first
+- [ ] Create a function or add return values so that a solver / user can determine the derivative token that a market will return (useful for then creating off-chain orders for that token). This also brings up a point about how certain auction view functions that rely solely on an amount need to be refactored for a multi-variate auction world, e.g. `payoutFor(uint256)` -> `payoutFor(uint256, bytes)`
 
 ## Processes
 

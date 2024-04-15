@@ -5,7 +5,7 @@ import {Catalogue} from "src/bases/Catalogue.sol";
 import {BatchAuctionModule} from "src/modules/auctions/BatchAuctionModule.sol";
 import {BatchAuctionHouse} from "src/BatchAuctionHouse.sol";
 
-/// @notice Contract that provides view functions for Batch Auctions
+/// @notice Contract that provides view functions for batch auctions
 contract BatchCatalogue is Catalogue {
     // ========== CONSTRUCTOR ========== //
 
@@ -17,9 +17,10 @@ contract BatchCatalogue is Catalogue {
 
     /// @notice Get a range of bids for a batch auction, based on their current stored order
     /// @dev    This function is used to iterate through bids offline to find indexes for removing a bid
-    /// @param  lotId_ The ID of the lot
-    /// @param  start_ The index to start retrieving bid IDs from
-    /// @param  count_ The number of bids to retrieve
+    ///
+    /// @param  lotId_  The ID of the lot
+    /// @param  start_  The index to start retrieving bid IDs from
+    /// @param  count_  The number of bids to retrieve
     function getBidIds(
         uint96 lotId_,
         uint256 start_,

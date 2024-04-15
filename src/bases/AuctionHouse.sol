@@ -23,7 +23,8 @@ import {ICallback} from "src/interfaces/ICallback.sol";
 import {Callbacks} from "src/lib/Callbacks.sol";
 
 /// @title  AuctionHouse
-/// @notice The AuctionHouse handles the following:
+/// @notice The base AuctionHouse contract defines common structures and functions across auction types (atomic and batch).
+///         It defines the following:
 ///         - Creating new auction lots
 ///         - Cancelling auction lots
 ///         - Storing information about how to handle inputs and outputs for auctions ("routing")
@@ -90,8 +91,7 @@ abstract contract AuctionHouse is WithModules, ReentrancyGuard, FeeManager {
     /// @dev        This is split into a separate struct, otherwise the Routing struct would be too large
     ///             and would throw a "stack too deep" error.
     ///
-    ///             The curator information is stored when curation is approved by the curator.
-    ///             The protocol and referrer fees are set at the time of lot settlement.
+    ///             Fee information is set at the time of auction creation, in order to prevent subsequent inflation.
     ///             The fees are cached in order to prevent:
     ///             - Reducing the amount of base tokens available for payout to the winning bidders
     ///             - Reducing the amount of quote tokens available for payment to the seller
@@ -120,6 +120,7 @@ abstract contract AuctionHouse is WithModules, ReentrancyGuard, FeeManager {
     /// @param      callbackData        (optional) abi-encoded data to be sent to the onCreate callback function
     /// @param      derivativeType      (optional) Derivative type, represented by the Keycode for the derivative submodule
     /// @param      derivativeParams    (optional) abi-encoded data to be used to create payout derivatives on a purchase. The format of this is dependent on the derivative module.
+    /// @param      wrapDerivative      (optional) Whether to wrap the derivative in a ERC20 token instead of the native ERC6909 format
     struct RoutingParams {
         Keycode auctionType;
         ERC20 baseToken;
@@ -134,6 +135,7 @@ abstract contract AuctionHouse is WithModules, ReentrancyGuard, FeeManager {
 
     // ========== STATE ========== //
 
+    /// @notice     Address of the Permit2 contract
     address internal immutable _PERMIT2;
 
     /// @notice     Counter for auction lots
@@ -158,7 +160,18 @@ abstract contract AuctionHouse is WithModules, ReentrancyGuard, FeeManager {
     // ========== AUCTION MANAGEMENT ========== //
 
     /// @notice     Creates a new auction lot
-    /// @dev        The function reverts if:
+    /// @dev        This function performs the following:
+    ///             - Validates the auction parameters
+    ///             - Validates the auction module
+    ///             - Validates the derivative module (if provided)
+    ///             - Validates the callbacks contract (if provided)
+    ///             - Stores the auction routing information
+    ///             - Calls the auction module to store implementation-specific data
+    ///             - Caches the fees for the lot
+    ///             - Calls the implementation-specific auction function
+    ///             - Calls the onCreate callback (if needed)
+    ///
+    ///             This function reverts if:
     ///             - The module for the auction type is not installed
     ///             - The auction type is sunset
     ///             - The base token or quote token decimals are not within the required range
@@ -251,7 +264,8 @@ abstract contract AuctionHouse is WithModules, ReentrancyGuard, FeeManager {
 
         // Validate callbacks address and store if provided
         // This does not check whether the callbacks contract is implemented properly
-        // Certain functions may revert later. TODO need to think about security with this.
+        // Certain functions may revert later.
+        // TODO need to think about security with this.
         if (!Callbacks.isValidCallbacksAddress(routing_.callbacks)) revert InvalidParams();
         // The zero address passes the isValidCallbackAddress check since we allow auctions to not use a callbacks contract
         if (address(routing_.callbacks) != address(0)) routing.callbacks = routing_.callbacks;
@@ -288,12 +302,13 @@ abstract contract AuctionHouse is WithModules, ReentrancyGuard, FeeManager {
     ///             - Checks that the lot ID is valid
     ///             - Checks that caller is the seller
     ///             - Calls the auction module to validate state, update records and determine the amount to be refunded
+    ///             - Calls the implementation-specific logic for auction cancellation
+    ///             - Calls the onCancel callback (if needed)
     ///
     ///             The function reverts if:
     ///             - The lot ID is invalid
     ///             - The caller is not the seller
     ///             - The respective auction module reverts
-    ///             - The transfer of payout tokens fails
     ///             - Re-entrancy is detected
     ///
     /// @param      lotId_      ID of the auction lot
@@ -401,12 +416,19 @@ abstract contract AuctionHouse is WithModules, ReentrancyGuard, FeeManager {
     /// @notice     Accept curation request for a lot.
     /// @notice     If the curator wishes to charge a fee, it must be set before this function is called.
     /// @notice     Access controlled. Must be proposed curator for lot.
-    /// @dev        This function reverts if:
-    ///             - the lot ID is invalid
-    ///             - the caller is not the proposed curator
-    ///             - the auction has ended or been cancelled
-    ///             - the auction is prefunded and the fee cannot be collected
-    ///             - re-entrancy is detected
+    /// @dev        This function performs the following:
+    ///             - Checks that the lot ID is valid
+    ///             - Checks that the caller is the proposed curator
+    ///             - Validates state
+    ///             - Sets the curated state to true
+    ///             - Calls the implementation-specific logic for curation
+    ///             - Calls the onCurate callback (if needed)
+    ///
+    ///             This function reverts if:
+    ///             - The lot ID is invalid
+    ///             - The caller is not the proposed curator
+    ///             - The auction has ended or is already curated
+    ///             - Re-entrancy is detected
     ///
     /// @param     lotId_       Lot ID
     function curate(uint96 lotId_, bytes calldata callbackData_) external nonReentrant {
@@ -485,18 +507,8 @@ abstract contract AuctionHouse is WithModules, ReentrancyGuard, FeeManager {
 
     // ========== TOKEN TRANSFERS ========== //
 
-    /// @notice     Collects payment of the quote token from the user
-    /// @dev        This function handles the following:
-    ///             1. Transfers the quote token from the user
-    ///             1a. Uses Permit2 to transfer if approval signature is provided
-    ///             1b. Otherwise uses a standard ERC20 transfer
-    ///
-    ///             This function reverts if:
-    ///             - The Permit2 approval is invalid
-    ///             - The caller does not have sufficient balance of the quote token
-    ///             - Approval has not been granted to transfer the quote token
-    ///             - The quote token transfer fails
-    ///             - Transferring the quote token would result in a lesser amount being received
+    /// @notice     Convenience function to collect payment of the quote token from the user
+    /// @dev        This function calls the Transfer library to handle the transfer of the quote token
     ///
     /// @param      amount_             Amount of quoteToken to collect (in native decimals)
     /// @param      quoteToken_         Quote token to collect
@@ -511,15 +523,8 @@ abstract contract AuctionHouse is WithModules, ReentrancyGuard, FeeManager {
         );
     }
 
-    /// @notice     Sends payment of the quote token to the seller
-    /// @dev        This function handles the following:
-    ///             1. Sends the payment amount to the seller or hook (if provided)
-    ///             This function assumes:
-    ///             - The quote token has already been transferred to this contract
-    ///             - The quote token is supported (e.g. not fee-on-transfer)
-    ///
-    ///             This function reverts if:
-    ///             - The transfer fails
+    /// @notice     Convenience function to send payment of the quote token to the seller
+    /// @dev        This function calls the Transfer library to handle the transfer of the quote token
     ///
     /// @param      lotOwner_       Owner of the lot
     /// @param      amount_         Amount of quoteToken to send (in native decimals)
@@ -542,9 +547,8 @@ abstract contract AuctionHouse is WithModules, ReentrancyGuard, FeeManager {
 
     /// @notice     Sends the payout token to the recipient
     /// @dev        This function handles the following:
-    ///             1. Sends the payout token from the router to the recipient
-    ///             1a. If the lot is a derivative, mints the derivative token to the recipient
-    ///             2. Calls the post hook on the hooks contract (if provided)
+    ///             - If the lot has a derivative defined, mints the derivative token ot the recipient
+    ///             - Otherwise, sends the payout token to the recipient
     ///
     ///             This function assumes that:
     ///             - The payout token has already been transferred to this contract
@@ -553,8 +557,6 @@ abstract contract AuctionHouse is WithModules, ReentrancyGuard, FeeManager {
     ///             This function reverts if:
     ///             - The payout token transfer fails
     ///             - The payout token transfer would result in a lesser amount being received
-    ///             - The post-hook reverts
-    ///             - The post-hook invariant is violated
     ///
     /// @param      recipient_      Address to receive payout
     /// @param      payoutAmount_   Amount of payoutToken to send (in native decimals)
@@ -594,6 +596,15 @@ abstract contract AuctionHouse is WithModules, ReentrancyGuard, FeeManager {
 
     // ========== FEE FUNCTIONS ========== //
 
+    /// @notice  Allocates fees on quote tokens to the protocol and referrer
+    /// @dev     This function calculates the fees for the quote token and updates the balances.
+    ///
+    /// @param   protocolFee_   The fee charged by the protocol
+    /// @param   referrerFee_   The fee charged by the referrer
+    /// @param   referrer_      The address of the referrer
+    /// @param   seller_        The address of the seller
+    /// @param   quoteToken_    The quote token
+    /// @param   amount_        The amount of quote tokens
     function _allocateQuoteFees(
         uint48 protocolFee_,
         uint48 referrerFee_,
