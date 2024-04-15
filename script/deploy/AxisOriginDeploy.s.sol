@@ -34,22 +34,13 @@ contract AxisOriginDeploy is Script {
 
         // // Calculate salt for the atomic auction house
         // bytes memory bytecode = abi.encodePacked(
-        //     type(BlastAtomicAuctionHouse).creationCode,
-        //     abi.encode(msg.sender, protocol, PERMIT2)
+        //     type(AtomicAuctionHouse).creationCode, abi.encode(msg.sender, protocol, PERMIT2)
         // );
-        // vm.writeFile(
-        //     "./bytecode/BlastAtomicAuctionHouse.bin",
-        //     vm.toString(bytecode)
-        // );
+        // vm.writeFile("./bytecode/AtomicAuctionHouse.bin", vm.toString(bytecode));
         // bytecode = abi.encodePacked(
-        //     type(BlastBatchAuctionHouse).creationCode,
-        //     abi.encode(msg.sender, protocol, PERMIT2)
+        //     type(BatchAuctionHouse).creationCode, abi.encode(msg.sender, protocol, PERMIT2)
         // );
-        // vm.writeFile(
-        //     "./bytecode/BlastBatchAuctionHouse.bin",
-        //     vm.toString(bytecode)
-        // );
-        // vm.writeFile("./bytecode/BlastAuctionHouse.bin", vm.toString(bytecode));
+        // vm.writeFile("./bytecode/BatchAuctionHouse.bin", vm.toString(bytecode));
 
         // Load salt for Auction House
         bytes32 atomicSalt = vm.envBytes32("ATOMIC_AUCTION_HOUSE_SALT");
