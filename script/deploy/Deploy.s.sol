@@ -35,6 +35,10 @@ import {LinearVesting} from "src/modules/derivatives/LinearVesting.sol";
 
 // TODO can we separate the base of the deploy system from the actual contracts to be deployed
 
+
+// TODOs
+// [ ] Install the modules in the AuctionHouse. What if the owner is different or is a Safe?
+
 contract Deploy is Script {
     using stdJson for string;
 
@@ -256,7 +260,7 @@ contract Deploy is Script {
         console2.log("Deploying AtomicCatalogue");
         console2.log("    AtomicAuctionHouse", address(atomicAuctionHouse));
 
-        // Deploy the module
+        // Deploy the catalogue
         atomicCatalogue = new AtomicCatalogue(address(atomicAuctionHouse));
         console2.log("    AtomicCatalogue deployed at:", address(atomicCatalogue));
 
@@ -269,7 +273,7 @@ contract Deploy is Script {
         console2.log("Deploying BatchCatalogue");
         console2.log("    BatchAuctionHouse", address(batchAuctionHouse));
 
-        // Deploy the module
+        // Deploy the catalogue
         batchCatalogue = new BatchCatalogue(address(batchAuctionHouse));
         console2.log("    BatchCatalogue deployed at:", address(batchCatalogue));
 
