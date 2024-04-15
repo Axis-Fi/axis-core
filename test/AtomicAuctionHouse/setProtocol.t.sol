@@ -18,6 +18,7 @@ contract AtomicSetProtocolTest is AtomicAuctionHouseTest {
     // ===== Modifiers ===== //
 
     modifier givenProtocolAddressIsSet(address protocol_) {
+        vm.prank(_OWNER);
         _auctionHouse.setProtocol(protocol_);
         _;
     }

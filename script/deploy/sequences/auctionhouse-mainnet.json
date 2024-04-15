@@ -1,0 +1,29 @@
+{
+    "sequence": [
+        {
+            "name": "AuctionHouse",
+            "args": {},
+            "salt": 0
+        },
+        {
+            "name": "Catalogue",
+            "args": {},
+            "salt": 0
+        },
+        {
+            "name": "EncryptedMarginalPriceAuctionModule",
+            "args": {},
+            "salt": 0
+        },
+        {
+            "name": "FixedPriceAuctionModule",
+            "args": {},
+            "salt": 0
+        },
+        {
+            "name": "LinearVesting",
+            "args": {},
+            "salt": 0
+        }
+    ]
+}

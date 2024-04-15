@@ -50,6 +50,7 @@ contract AxisOriginDeploy is Script {
         //     "./bytecode/BlastBatchAuctionHouse.bin",
         //     vm.toString(bytecode)
         // );
+        // vm.writeFile("./bytecode/BlastAuctionHouse.bin", vm.toString(bytecode));
 
         // TODO set blast, weth, usdb
 

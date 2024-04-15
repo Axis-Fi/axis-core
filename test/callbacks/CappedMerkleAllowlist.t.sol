@@ -15,14 +15,15 @@ import {CappedMerkleAllowlist} from "src/callbacks/allowlists/CappedMerkleAllowl
 contract CappedMerkleAllowlistTest is Test, Permit2User {
     using Callbacks for CappedMerkleAllowlist;
 
-    address internal constant _PROTOCOL = address(0x1);
-    address internal constant _SELLER = address(0x2);
-    address internal constant _BUYER = address(0x3);
-    address internal constant _BUYER_TWO = address(0x4);
-    address internal constant _BASE_TOKEN = address(0x5);
-    address internal constant _QUOTE_TOKEN = address(0x6);
-    address internal constant _SELLER_TWO = address(0x7);
-    address internal constant _BUYER_THREE = address(0x8);
+    address internal constant _OWNER = address(0x1);
+    address internal constant _PROTOCOL = address(0x2);
+    address internal constant _SELLER = address(0x3);
+    address internal constant _BUYER = address(0x4);
+    address internal constant _BUYER_TWO = address(0x5);
+    address internal constant _BASE_TOKEN = address(0x6);
+    address internal constant _QUOTE_TOKEN = address(0x7);
+    address internal constant _SELLER_TWO = address(0x8);
+    address internal constant _BUYER_THREE = address(0x9);
 
     uint256 internal constant _LOT_CAPACITY = 10e18;
 
@@ -41,8 +42,8 @@ contract CappedMerkleAllowlistTest is Test, Permit2User {
     bytes32[] internal _merkleProof;
 
     function setUp() public {
-        _atomicAuctionHouse = new AtomicAuctionHouse(address(this), _PROTOCOL, _permit2Address);
-        _batchAuctionHouse = new BatchAuctionHouse(address(this), _PROTOCOL, _permit2Address);
+        _atomicAuctionHouse = new AtomicAuctionHouse(_OWNER, _PROTOCOL, _permit2Address);
+        _batchAuctionHouse = new BatchAuctionHouse(_OWNER, _PROTOCOL, _permit2Address);
 
         // // 10010000 = 0x90
         // bytes memory bytecode = abi.encodePacked(

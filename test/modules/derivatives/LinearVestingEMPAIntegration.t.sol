@@ -43,7 +43,10 @@ contract LinearVestingEMPAIntegrationTest is BatchAuctionHouseTest {
 
     modifier givenAuctionTypeIsEMPA() {
         _empaModule = new EncryptedMarginalPrice(address(_auctionHouse));
+
+        vm.prank(_OWNER);
         _auctionHouse.installModule(_empaModule);
+
         _auctionModule = _empaModule;
         _auctionModuleKeycode = keycodeFromVeecode(_empaModule.VEECODE());
 
@@ -64,7 +67,10 @@ contract LinearVestingEMPAIntegrationTest is BatchAuctionHouseTest {
 
     modifier givenDerivativeTypeIsLinearVesting() {
         _linearVestingModule = new LinearVesting(address(_auctionHouse));
+
+        vm.prank(_OWNER);
         _auctionHouse.installModule(_linearVestingModule);
+
         _derivativeModuleKeycode = keycodeFromVeecode(_linearVestingModule.VEECODE());
 
         _routingParams.derivativeType = keycodeFromVeecode(_linearVestingModule.VEECODE());

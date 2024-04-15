@@ -44,13 +44,14 @@ abstract contract BatchAuctionHouseTest is Test, Permit2User {
 
     uint256 internal constant _BASE_SCALE = 1e18;
 
-    address internal constant _SELLER = address(0x1);
-    address internal constant _PROTOCOL = address(0x2);
-    address internal constant _CURATOR = address(0x3);
+    address internal constant _OWNER = address(0x1);
+    address internal constant _SELLER = address(0x2);
+    address internal constant _PROTOCOL = address(0x3);
+    address internal constant _CURATOR = address(0x4);
     address internal constant _RECIPIENT = address(0x5);
     address internal constant _REFERRER = address(0x6);
 
-    address internal _bidder = address(0x4);
+    address internal _bidder;
     uint256 internal _bidderKey;
 
     uint24 internal constant _CURATOR_MAX_FEE_PERCENT = 100;
@@ -93,7 +94,7 @@ abstract contract BatchAuctionHouseTest is Test, Permit2User {
         _baseToken = new MockFeeOnTransferERC20("Base Token", "BASE", 18);
         _quoteToken = new MockFeeOnTransferERC20("Quote Token", "QUOTE", 18);
 
-        _auctionHouse = new BatchAuctionHouse(address(this), _PROTOCOL, _permit2Address);
+        _auctionHouse = new BatchAuctionHouse(_OWNER, _PROTOCOL, _permit2Address);
         // _catalogue = new Catalogue(address(_auctionHouse));
 
         _batchAuctionModule = new MockBatchAuctionModule(address(_auctionHouse));
@@ -183,6 +184,7 @@ abstract contract BatchAuctionHouseTest is Test, Permit2User {
     }
 
     modifier whenBatchAuctionModuleIsInstalled() {
+        vm.prank(_OWNER);
         _auctionHouse.installModule(_batchAuctionModule);
         _;
     }
@@ -193,6 +195,7 @@ abstract contract BatchAuctionHouseTest is Test, Permit2User {
     }
 
     modifier whenDerivativeModuleIsInstalled() {
+        vm.prank(_OWNER);
         _auctionHouse.installModule(_derivativeModule);
         _;
     }
@@ -339,16 +342,20 @@ abstract contract BatchAuctionHouseTest is Test, Permit2User {
         // // 11111111 = 0xFF
         // bytes memory bytecode = abi.encodePacked(
         //     type(MockCallback).creationCode,
-        //     abi.encode(address(_auctionHouse), Callbacks.Permissions({
-        //         onCreate: true,
-        //         onCancel: true,
-        //         onCurate: true,
-        //         onPurchase: true,
-        //         onBid: true,
-        //         onClaimProceeds: true,
-        //         receiveQuoteTokens: true,
-        //         sendBaseTokens: true
-        //     }), _SELLER)
+        //     abi.encode(
+        //         address(_auctionHouse),
+        //         Callbacks.Permissions({
+        //             onCreate: true,
+        //             onCancel: true,
+        //             onCurate: true,
+        //             onPurchase: true,
+        //             onBid: true,
+        //             onClaimProceeds: true,
+        //             receiveQuoteTokens: true,
+        //             sendBaseTokens: true
+        //         }),
+        //         _SELLER
+        //     )
         // );
         // vm.writeFile(
         //     "./bytecode/MockCallbackBatchFF.bin",
@@ -429,7 +436,9 @@ abstract contract BatchAuctionHouseTest is Test, Permit2User {
             salt = bytes32(0xdd833f6715deb891b62e2b2753fda3ffba9d641b4a8027aeab84a0d030f1f0f9);
         }
 
-        vm.broadcast(); // required for CREATE2 address to work correctly. doesn't do anything in a test
+        // Required for CREATE2 address to work correctly. doesn't do anything in a test
+        // Source: https://github.com/foundry-rs/foundry/issues/6402
+        vm.startBroadcast();
         _callback = new MockCallback{salt: salt}(
             address(_auctionHouse),
             Callbacks.Permissions({
@@ -444,7 +453,7 @@ abstract contract BatchAuctionHouseTest is Test, Permit2User {
             }),
             _SELLER
         );
-        console2.log("callback", address(_callback));
+        vm.stopBroadcast();
 
         _routingParams.callbacks = _callback;
         _;
@@ -514,6 +523,7 @@ abstract contract BatchAuctionHouseTest is Test, Permit2User {
     }
 
     modifier givenCuratorMaxFeeIsSet() {
+        vm.prank(_OWNER);
         _auctionHouse.setFee(
             _auctionModuleKeycode, FeeManager.FeeType.MaxCurator, _CURATOR_MAX_FEE_PERCENT
         );
@@ -540,6 +550,7 @@ abstract contract BatchAuctionHouseTest is Test, Permit2User {
     }
 
     function _setProtocolFee(uint24 fee_) internal {
+        vm.prank(_OWNER);
         _auctionHouse.setFee(_auctionModuleKeycode, FeeManager.FeeType.Protocol, fee_);
         _protocolFeePercentActual = fee_;
     }
@@ -550,6 +561,7 @@ abstract contract BatchAuctionHouseTest is Test, Permit2User {
     }
 
     function _setReferrerFee(uint24 fee_) internal {
+        vm.prank(_OWNER);
         _auctionHouse.setFee(_auctionModuleKeycode, FeeManager.FeeType.Referrer, fee_);
         _referrerFeePercentActual = fee_;
     }

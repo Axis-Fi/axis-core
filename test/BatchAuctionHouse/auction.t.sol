@@ -61,6 +61,7 @@ contract BatchCreateAuctionTest is BatchAuctionHouseTest {
     // [X] given the curator fee would cause an overflow
     //  [X] it reverts
     // [X] creates the auction lot
+    // [X] creates multiple auction lots
 
     function test_whenModuleNotInstalled_reverts() external whenAuctionTypeIsBatch {
         bytes memory err = abi.encodeWithSelector(
@@ -113,6 +114,7 @@ contract BatchCreateAuctionTest is BatchAuctionHouseTest {
         whenBatchAuctionModuleIsInstalled
     {
         // Sunset the module, which prevents the creation of new auctions using that module
+        vm.prank(_OWNER);
         _auctionHouse.sunsetModule(_batchAuctionModuleKeycode);
 
         // Expect revert
@@ -391,6 +393,7 @@ contract BatchCreateAuctionTest is BatchAuctionHouseTest {
         whenDerivativeModuleIsInstalled
     {
         // Sunset the module, which prevents the creation of new auctions using that module
+        vm.prank(_OWNER);
         _auctionHouse.sunsetModule(_derivativeModuleKeycode);
 
         // Expect revert
