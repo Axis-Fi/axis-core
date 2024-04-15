@@ -31,7 +31,6 @@ abstract contract BatchAuctionHouseTest is Test, Permit2User {
     BatchAuctionHouse internal _auctionHouse;
     AuctionModule internal _auctionModule;
     Keycode internal _auctionModuleKeycode;
-    // Catalogue internal _catalogue;
 
     MockBatchAuctionModule internal _batchAuctionModule;
     Keycode internal _batchAuctionModuleKeycode;
@@ -265,7 +264,7 @@ abstract contract BatchAuctionHouseTest is Test, Permit2User {
         // );
 
         bytes32 salt = bytes32(0x0de8a4842be84ac4f99d2243a821b384cb6c843f50a4d62503c9cea647a2ba0c);
-        vm.broadcast(); // required for CREATE2 address to work correctly. doesn't do anything in a test
+        vm.startBroadcast(); // required for CREATE2 address to work correctly. doesn't do anything in a test
         _callback = new MockCallback{salt: salt}(
             address(_auctionHouse),
             Callbacks.Permissions({
@@ -280,6 +279,7 @@ abstract contract BatchAuctionHouseTest is Test, Permit2User {
             }),
             _SELLER
         );
+        vm.stopBroadcast();
 
         _routingParams.callbacks = _callback;
 

@@ -24,8 +24,6 @@ import {Callbacks} from "src/lib/Callbacks.sol";
 
 import {Veecode, toKeycode, keycodeFromVeecode, Keycode} from "src/modules/Modules.sol";
 
-import {console2} from "forge-std/console2.sol";
-
 abstract contract AtomicAuctionHouseTest is Test, Permit2User {
     MockFeeOnTransferERC20 internal _baseToken;
     MockFeeOnTransferERC20 internal _quoteToken;
@@ -252,7 +250,7 @@ abstract contract AtomicAuctionHouseTest is Test, Permit2User {
         // );
 
         bytes32 salt = bytes32(0x181a083f669f7aaac29282726740ef6640e5659da77f3111020d9b1fb6837044);
-        vm.broadcast(); // required for CREATE2 address to work correctly. doesn't do anything in a test
+        vm.startBroadcast(); // required for CREATE2 address to work correctly. doesn't do anything in a test
         _callback = new MockCallback{salt: salt}(
             address(_auctionHouse),
             Callbacks.Permissions({
@@ -267,6 +265,7 @@ abstract contract AtomicAuctionHouseTest is Test, Permit2User {
             }),
             _SELLER
         );
+        vm.stopBroadcast();
 
         _routingParams.callbacks = _callback;
 
@@ -421,7 +420,9 @@ abstract contract AtomicAuctionHouseTest is Test, Permit2User {
             salt = bytes32(0x14942535b6e21e122de63cb5fe6f13f1c33bf280a77046d962245eee116a79fd);
         }
 
-        vm.broadcast(); // required for CREATE2 address to work correctly. doesn't do anything in a test
+        // Required for CREATE2 address to work correctly. doesn't do anything in a test
+        // Source: https://github.com/foundry-rs/foundry/issues/6402
+        vm.startBroadcast(); // required for CREATE2 address to work correctly. doesn't do anything in a test
         _callback = new MockCallback{salt: salt}(
             address(_auctionHouse),
             Callbacks.Permissions({
@@ -436,7 +437,7 @@ abstract contract AtomicAuctionHouseTest is Test, Permit2User {
             }),
             _SELLER
         );
-        console2.log("callback", address(_callback));
+        vm.stopBroadcast();
 
         _routingParams.callbacks = _callback;
         _;
