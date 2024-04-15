@@ -3,12 +3,12 @@ pragma solidity 0.8.19;
 
 import {Module} from "src/modules/Modules.sol";
 import {Auction} from "src/modules/Auction.sol";
-import {FixedPriceAuctionModule} from "src/modules/auctions/FPAM.sol";
+import {FixedPriceSale} from "src/modules/auctions/FPS.sol";
 import {FixedPointMathLib as Math} from "solmate/utils/FixedPointMathLib.sol";
 
-import {FpaModuleTest} from "test/modules/auctions/FPA/FPAModuleTest.sol";
+import {FpsTest} from "test/modules/auctions/FPS/FPSTest.sol";
 
-contract FpaModuleAuctionTest is FpaModuleTest {
+contract FpsCreateAuctionTest is FpsTest {
     // [X] when the caller is not the parent
     //  [X] it reverts
     // [X] when the start time is in the past
@@ -105,7 +105,7 @@ contract FpaModuleAuctionTest is FpaModuleTest {
         _createAuctionLot();
 
         // Check the value
-        FixedPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
+        FixedPriceSale.AuctionData memory auctionData = _getAuctionData(_lotId);
         assertEq(auctionData.maxPayout, expectedMaxPayout);
     }
 
@@ -128,7 +128,7 @@ contract FpaModuleAuctionTest is FpaModuleTest {
         assertEq(lotData.capacity, _scaleQuoteTokenAmount(_LOT_CAPACITY), "capacity");
 
         // Check the value
-        FixedPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
+        FixedPriceSale.AuctionData memory auctionData = _getAuctionData(_lotId);
         assertEq(auctionData.maxPayout, expectedMaxPayout, "maxPayout");
     }
 
@@ -156,7 +156,7 @@ contract FpaModuleAuctionTest is FpaModuleTest {
         assertEq(lotData.capacity, _scaleQuoteTokenAmount(_LOT_CAPACITY), "capacity");
 
         // Check the value
-        FixedPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
+        FixedPriceSale.AuctionData memory auctionData = _getAuctionData(_lotId);
         assertEq(auctionData.maxPayout, expectedMaxPayout, "maxPayout");
     }
 
@@ -184,7 +184,7 @@ contract FpaModuleAuctionTest is FpaModuleTest {
         assertEq(lotData.capacity, _scaleQuoteTokenAmount(_LOT_CAPACITY), "capacity");
 
         // Check the value
-        FixedPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
+        FixedPriceSale.AuctionData memory auctionData = _getAuctionData(_lotId);
         assertEq(auctionData.maxPayout, expectedMaxPayout, "maxPayout");
     }
 
@@ -204,7 +204,7 @@ contract FpaModuleAuctionTest is FpaModuleTest {
         assertEq(lotData.purchased, 0, "purchased");
 
         // Check the auction data
-        FixedPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
+        FixedPriceSale.AuctionData memory auctionData = _getAuctionData(_lotId);
         assertEq(auctionData.price, _scaleQuoteTokenAmount(_PRICE), "price");
         assertEq(
             auctionData.maxPayout,
@@ -233,7 +233,7 @@ contract FpaModuleAuctionTest is FpaModuleTest {
         assertEq(lotData.purchased, 0, "purchased");
 
         // Check the auction data
-        FixedPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
+        FixedPriceSale.AuctionData memory auctionData = _getAuctionData(_lotId);
         assertEq(auctionData.price, _scaleQuoteTokenAmount(_PRICE), "price");
         assertEq(
             auctionData.maxPayout,
@@ -262,7 +262,7 @@ contract FpaModuleAuctionTest is FpaModuleTest {
         assertEq(lotData.purchased, 0, "purchased");
 
         // Check the auction data
-        FixedPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
+        FixedPriceSale.AuctionData memory auctionData = _getAuctionData(_lotId);
         assertEq(auctionData.price, _scaleQuoteTokenAmount(_PRICE), "price");
         assertEq(
             auctionData.maxPayout,

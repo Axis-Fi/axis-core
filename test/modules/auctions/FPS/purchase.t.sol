@@ -3,12 +3,12 @@ pragma solidity 0.8.19;
 
 import {Module} from "src/modules/Modules.sol";
 import {Auction} from "src/modules/Auction.sol";
-import {FixedPriceAuctionModule} from "src/modules/auctions/FPAM.sol";
+import {FixedPriceSale} from "src/modules/auctions/FPS.sol";
 import {FixedPointMathLib as Math} from "solmate/utils/FixedPointMathLib.sol";
 
-import {FpaModuleTest} from "test/modules/auctions/FPA/FPAModuleTest.sol";
+import {FpsTest} from "test/modules/auctions/FPS/FPSTest.sol";
 
-contract FpaModulePurchaseTest is FpaModuleTest {
+contract FpsPurchaseTest is FpsTest {
     uint256 internal constant _PURCHASE_AMOUNT = 2e18;
     uint256 internal constant _PURCHASE_AMOUNT_OUT = 1e18;
 
@@ -119,7 +119,7 @@ contract FpaModulePurchaseTest is FpaModuleTest {
     {
         // Expect revert
         bytes memory err =
-            abi.encodeWithSelector(FixedPriceAuctionModule.Auction_PayoutGreaterThanMax.selector);
+            abi.encodeWithSelector(FixedPriceSale.Auction_PayoutGreaterThanMax.selector);
         vm.expectRevert(err);
 
         // Call the function
@@ -135,7 +135,7 @@ contract FpaModulePurchaseTest is FpaModuleTest {
     {
         // Expect revert
         bytes memory err =
-            abi.encodeWithSelector(FixedPriceAuctionModule.Auction_PayoutGreaterThanMax.selector);
+            abi.encodeWithSelector(FixedPriceSale.Auction_PayoutGreaterThanMax.selector);
         vm.expectRevert(err);
 
         // Call the function
@@ -151,7 +151,7 @@ contract FpaModulePurchaseTest is FpaModuleTest {
     {
         // Expect revert
         bytes memory err =
-            abi.encodeWithSelector(FixedPriceAuctionModule.Auction_PayoutGreaterThanMax.selector);
+            abi.encodeWithSelector(FixedPriceSale.Auction_PayoutGreaterThanMax.selector);
         vm.expectRevert(err);
 
         // Call the function
@@ -165,7 +165,7 @@ contract FpaModulePurchaseTest is FpaModuleTest {
     {
         // Expect revert
         bytes memory err =
-            abi.encodeWithSelector(FixedPriceAuctionModule.Auction_InsufficientPayout.selector);
+            abi.encodeWithSelector(FixedPriceSale.Auction_InsufficientPayout.selector);
         vm.expectRevert(err);
 
         // Call the function
@@ -181,7 +181,7 @@ contract FpaModulePurchaseTest is FpaModuleTest {
     {
         // Expect revert
         bytes memory err =
-            abi.encodeWithSelector(FixedPriceAuctionModule.Auction_InsufficientPayout.selector);
+            abi.encodeWithSelector(FixedPriceSale.Auction_InsufficientPayout.selector);
         vm.expectRevert(err);
 
         // Call the function
@@ -197,7 +197,7 @@ contract FpaModulePurchaseTest is FpaModuleTest {
     {
         // Expect revert
         bytes memory err =
-            abi.encodeWithSelector(FixedPriceAuctionModule.Auction_InsufficientPayout.selector);
+            abi.encodeWithSelector(FixedPriceSale.Auction_InsufficientPayout.selector);
         vm.expectRevert(err);
 
         // Call the function

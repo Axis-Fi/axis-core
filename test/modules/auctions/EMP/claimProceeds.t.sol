@@ -2,12 +2,12 @@
 pragma solidity 0.8.19;
 
 import {Auction} from "src/modules/Auction.sol";
-import {EncryptedMarginalPriceAuctionModule} from "src/modules/auctions/EMPAM.sol";
+import {EncryptedMarginalPrice} from "src/modules/auctions/EMP.sol";
 import {FixedPointMathLib as Math} from "lib/solmate/src/utils/FixedPointMathLib.sol";
 
-import {EmpaModuleTest} from "test/modules/auctions/EMPA/EMPAModuleTest.sol";
+import {EmpTest} from "test/modules/auctions/EMP/EMPTest.sol";
 
-contract EmpaModuleClaimProceedsTest is EmpaModuleTest {
+contract EmpaModuleClaimProceedsTest is EmpTest {
     uint256 internal constant _BID_PRICE_TWO_AMOUNT = 2e18;
     uint256 internal constant _BID_PRICE_TWO_AMOUNT_OUT = 1e18;
     uint256 internal constant _BID_SIZE_NINE_AMOUNT = 19e18;
@@ -137,9 +137,8 @@ contract EmpaModuleClaimProceedsTest is EmpaModuleTest {
         givenLotHasStarted
         givenLotHasConcluded
     {
-        bytes memory err = abi.encodeWithSelector(
-            EncryptedMarginalPriceAuctionModule.Auction_WrongState.selector, _lotId
-        );
+        bytes memory err =
+            abi.encodeWithSelector(EncryptedMarginalPrice.Auction_WrongState.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function
@@ -154,9 +153,8 @@ contract EmpaModuleClaimProceedsTest is EmpaModuleTest {
         givenLotHasConcluded
         givenPrivateKeyIsSubmitted
     {
-        bytes memory err = abi.encodeWithSelector(
-            EncryptedMarginalPriceAuctionModule.Auction_WrongState.selector, _lotId
-        );
+        bytes memory err =
+            abi.encodeWithSelector(EncryptedMarginalPrice.Auction_WrongState.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function
@@ -165,9 +163,8 @@ contract EmpaModuleClaimProceedsTest is EmpaModuleTest {
     }
 
     function test_givenLotCancelled_reverts() external givenLotIsCreated givenLotIsCancelled {
-        bytes memory err = abi.encodeWithSelector(
-            EncryptedMarginalPriceAuctionModule.Auction_WrongState.selector, _lotId
-        );
+        bytes memory err =
+            abi.encodeWithSelector(EncryptedMarginalPrice.Auction_WrongState.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function
@@ -184,9 +181,8 @@ contract EmpaModuleClaimProceedsTest is EmpaModuleTest {
         givenLotIsSettled
         givenLotProceedsAreClaimed
     {
-        bytes memory err = abi.encodeWithSelector(
-            EncryptedMarginalPriceAuctionModule.Auction_WrongState.selector, _lotId
-        );
+        bytes memory err =
+            abi.encodeWithSelector(EncryptedMarginalPrice.Auction_WrongState.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function
@@ -214,11 +210,9 @@ contract EmpaModuleClaimProceedsTest is EmpaModuleTest {
         assertEq(capacity, _LOT_CAPACITY, "capacity");
 
         // Assert auction status
-        EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
+        EncryptedMarginalPrice.AuctionData memory auctionData = _getAuctionData(_lotId);
         assertEq(
-            uint8(auctionData.status),
-            uint8(EncryptedMarginalPriceAuctionModule.LotStatus.Settled),
-            "status"
+            uint8(auctionData.status), uint8(EncryptedMarginalPrice.LotStatus.Settled), "status"
         );
         assertTrue(auctionData.proceedsClaimed, "proceedsClaimed");
     }
@@ -243,11 +237,9 @@ contract EmpaModuleClaimProceedsTest is EmpaModuleTest {
         assertEq(capacity, _LOT_CAPACITY, "capacity");
 
         // Assert auction status
-        EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
+        EncryptedMarginalPrice.AuctionData memory auctionData = _getAuctionData(_lotId);
         assertEq(
-            uint8(auctionData.status),
-            uint8(EncryptedMarginalPriceAuctionModule.LotStatus.Settled),
-            "status"
+            uint8(auctionData.status), uint8(EncryptedMarginalPrice.LotStatus.Settled), "status"
         );
         assertTrue(auctionData.proceedsClaimed, "proceedsClaimed");
     }

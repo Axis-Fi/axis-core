@@ -1,4 +1,4 @@
-/// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.19;
 
 // Scripting libraries
@@ -8,17 +8,16 @@ import {Script, console2} from "lib/forge-std/src/Script.sol";
 import {BlastAtomicAuctionHouse} from "src/blast/BlastAtomicAuctionHouse.sol";
 import {BlastBatchAuctionHouse} from "src/blast/BlastBatchAuctionHouse.sol";
 import {AtomicCatalogue} from "src/AtomicCatalogue.sol";
-import {BlastEMPAM} from "src/blast/modules/auctions/BlastEMPAM.sol";
-import {BlastFPAM} from "src/blast/modules/auctions/BlastFPAM.sol";
+import {BlastEMP} from "src/blast/modules/auctions/BlastEMP.sol";
+import {BlastFPSale} from "src/blast/modules/auctions/BlastFPS.sol";
 import {BlastLinearVesting} from "src/blast/modules/derivatives/BlastLinearVesting.sol";
 
 contract AxisOriginDeploy is Script {
     BlastAtomicAuctionHouse public atomicAuctionHouse;
     BlastBatchAuctionHouse public batchAuctionHouse;
     AtomicCatalogue public atomicCatalogue;
-    // BlastFPAM public fpam;
-    BlastEMPAM public empam;
-    BlastFPAM public fpam;
+    BlastEMP public emp;
+    BlastFPSale public fps;
     BlastLinearVesting public linearVestingA;
     BlastLinearVesting public linearVestingB;
     address public constant PERMIT2 = 0x000000000022D473030F116dDEE9F6B43aC78BA3;
@@ -70,17 +69,17 @@ contract AxisOriginDeploy is Script {
         atomicCatalogue = new AtomicCatalogue(address(atomicAuctionHouse));
         console2.log("Catalogue deployed at: ", address(atomicCatalogue));
 
-        empam = new BlastEMPAM(address(batchAuctionHouse), blast);
-        console2.log("BlastEMPAM deployed at: ", address(empam));
+        emp = new BlastEMP(address(batchAuctionHouse), blast);
+        console2.log("BlastEMP deployed at: ", address(emp));
 
-        batchAuctionHouse.installModule(empam);
-        console2.log("BlastEMPAM installed at BatchAuctionHouse");
+        batchAuctionHouse.installModule(emp);
+        console2.log("BlastEMP installed at BatchAuctionHouse");
 
-        fpam = new BlastFPAM(address(atomicAuctionHouse), blast);
-        console2.log("BlastFPAM deployed at: ", address(fpam));
+        fps = new BlastFPSale(address(atomicAuctionHouse), blast);
+        console2.log("BlastFPSale deployed at: ", address(fps));
 
-        atomicAuctionHouse.installModule(fpam);
-        console2.log("BlastFPAM installed at AtomicAuctionHouse");
+        atomicAuctionHouse.installModule(fps);
+        console2.log("BlastFPSale installed at AtomicAuctionHouse");
 
         // Linear vesting A
         linearVestingA = new BlastLinearVesting(address(atomicAuctionHouse), blast);
