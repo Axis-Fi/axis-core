@@ -93,7 +93,13 @@ abstract contract AtomicAuctionHouseTest is Test, Permit2User {
         _baseToken = new MockFeeOnTransferERC20("Base Token", "BASE", 18);
         _quoteToken = new MockFeeOnTransferERC20("Quote Token", "QUOTE", 18);
 
-        _auctionHouse = new AtomicAuctionHouse(_OWNER, _PROTOCOL, _permit2Address);
+        // Create an AtomicAuctionHouse at a deterministic address, since it is used as input to callbacks
+        AtomicAuctionHouse auctionHouse = new AtomicAuctionHouse(_OWNER, _PROTOCOL, _permit2Address);
+        _auctionHouse = AtomicAuctionHouse(address(0x000000000000000000000000000000000000000A));
+        vm.etch(address(_auctionHouse), address(auctionHouse).code);
+        vm.store(address(_auctionHouse), bytes32(uint256(0)), bytes32(abi.encode(_OWNER))); // Owner
+        vm.store(address(_auctionHouse), bytes32(uint256(6)), bytes32(abi.encode(1))); // Reentrancy
+        vm.store(address(_auctionHouse), bytes32(uint256(10)), bytes32(abi.encode(_PROTOCOL))); // Protocol
 
         _atomicAuctionModule = new MockAtomicAuctionModule(address(_auctionHouse));
         _atomicAuctionModuleKeycode = keycodeFromVeecode(_atomicAuctionModule.VEECODE());

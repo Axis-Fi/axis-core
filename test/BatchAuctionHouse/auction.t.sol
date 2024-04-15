@@ -43,6 +43,7 @@ contract BatchCreateAuctionTest is BatchAuctionHouseTest {
     }
 
     modifier whenAtomicAuctionModuleIsInstalled() {
+        vm.prank(_OWNER);
         _auctionHouse.installModule(_atomicAuctionModule);
         _;
     }

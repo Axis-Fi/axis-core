@@ -91,7 +91,13 @@ abstract contract BatchAuctionHouseTest is Test, Permit2User {
         _baseToken = new MockFeeOnTransferERC20("Base Token", "BASE", 18);
         _quoteToken = new MockFeeOnTransferERC20("Quote Token", "QUOTE", 18);
 
-        _auctionHouse = new BatchAuctionHouse(_OWNER, _PROTOCOL, _permit2Address);
+        // Create a BatchAuctionHouse at a deterministic address, since it is used as input to callbacks
+        BatchAuctionHouse auctionHouse = new BatchAuctionHouse(_OWNER, _PROTOCOL, _permit2Address);
+        _auctionHouse = BatchAuctionHouse(address(0x000000000000000000000000000000000000000A));
+        vm.etch(address(_auctionHouse), address(auctionHouse).code);
+        vm.store(address(_auctionHouse), bytes32(uint256(0)), bytes32(abi.encode(_OWNER))); // Owner
+        vm.store(address(_auctionHouse), bytes32(uint256(6)), bytes32(abi.encode(1))); // Reentrancy
+        vm.store(address(_auctionHouse), bytes32(uint256(10)), bytes32(abi.encode(_PROTOCOL))); // Protocol
 
         _batchAuctionModule = new MockBatchAuctionModule(address(_auctionHouse));
         _batchAuctionModuleKeycode = keycodeFromVeecode(_batchAuctionModule.VEECODE());
