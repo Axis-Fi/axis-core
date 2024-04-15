@@ -143,9 +143,8 @@ contract EmpaModuleClaimBidsTest is EmpTest {
         givenLotIsSettled
         givenBidIsClaimed(_bidId)
     {
-        bytes memory err = abi.encodeWithSelector(
-            EncryptedMarginalPrice.Bid_WrongState.selector, _lotId, _bidId
-        );
+        bytes memory err =
+            abi.encodeWithSelector(EncryptedMarginalPrice.Bid_WrongState.selector, _lotId, _bidId);
         vm.expectRevert(err);
 
         // Call the function
@@ -166,9 +165,8 @@ contract EmpaModuleClaimBidsTest is EmpTest {
         givenPrivateKeyIsSubmitted
         givenLotIsDecrypted
     {
-        bytes memory err = abi.encodeWithSelector(
-            EncryptedMarginalPrice.Auction_WrongState.selector, _lotId
-        );
+        bytes memory err =
+            abi.encodeWithSelector(EncryptedMarginalPrice.Auction_WrongState.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function
@@ -239,15 +237,11 @@ contract EmpaModuleClaimBidsTest is EmpTest {
         // Check the bid status
         EncryptedMarginalPrice.Bid memory bidOne = _getBid(_lotId, _bidIds[0]);
         assertEq(
-            uint8(bidOne.status),
-            uint8(EncryptedMarginalPrice.BidStatus.Claimed),
-            "bid one: status"
+            uint8(bidOne.status), uint8(EncryptedMarginalPrice.BidStatus.Claimed), "bid one: status"
         );
         EncryptedMarginalPrice.Bid memory bidTwo = _getBid(_lotId, _bidIds[1]);
         assertEq(
-            uint8(bidTwo.status),
-            uint8(EncryptedMarginalPrice.BidStatus.Claimed),
-            "bid two: status"
+            uint8(bidTwo.status), uint8(EncryptedMarginalPrice.BidStatus.Claimed), "bid two: status"
         );
     }
 
@@ -292,15 +286,11 @@ contract EmpaModuleClaimBidsTest is EmpTest {
         // Check the bid status
         EncryptedMarginalPrice.Bid memory bidOne = _getBid(_lotId, _bidIds[0]);
         assertEq(
-            uint8(bidOne.status),
-            uint8(EncryptedMarginalPrice.BidStatus.Claimed),
-            "bid one: status"
+            uint8(bidOne.status), uint8(EncryptedMarginalPrice.BidStatus.Claimed), "bid one: status"
         );
         EncryptedMarginalPrice.Bid memory bidTwo = _getBid(_lotId, _bidIds[1]);
         assertEq(
-            uint8(bidTwo.status),
-            uint8(EncryptedMarginalPrice.BidStatus.Claimed),
-            "bid two: status"
+            uint8(bidTwo.status), uint8(EncryptedMarginalPrice.BidStatus.Claimed), "bid two: status"
         );
     }
 
@@ -348,15 +338,11 @@ contract EmpaModuleClaimBidsTest is EmpTest {
         // Check the bid status
         EncryptedMarginalPrice.Bid memory bidOne = _getBid(_lotId, _bidIds[0]);
         assertEq(
-            uint8(bidOne.status),
-            uint8(EncryptedMarginalPrice.BidStatus.Claimed),
-            "bid one: status"
+            uint8(bidOne.status), uint8(EncryptedMarginalPrice.BidStatus.Claimed), "bid one: status"
         );
         EncryptedMarginalPrice.Bid memory bidTwo = _getBid(_lotId, _bidIds[1]);
         assertEq(
-            uint8(bidTwo.status),
-            uint8(EncryptedMarginalPrice.BidStatus.Claimed),
-            "bid two: status"
+            uint8(bidTwo.status), uint8(EncryptedMarginalPrice.BidStatus.Claimed), "bid two: status"
         );
     }
 
@@ -411,15 +397,11 @@ contract EmpaModuleClaimBidsTest is EmpTest {
         // Check the bid status
         EncryptedMarginalPrice.Bid memory bidOne = _getBid(_lotId, _bidIds[0]);
         assertEq(
-            uint8(bidOne.status),
-            uint8(EncryptedMarginalPrice.BidStatus.Claimed),
-            "bid one: status"
+            uint8(bidOne.status), uint8(EncryptedMarginalPrice.BidStatus.Claimed), "bid one: status"
         );
         EncryptedMarginalPrice.Bid memory bidTwo = _getBid(_lotId, _bidIds[1]);
         assertEq(
-            uint8(bidTwo.status),
-            uint8(EncryptedMarginalPrice.BidStatus.Claimed),
-            "bid two: status"
+            uint8(bidTwo.status), uint8(EncryptedMarginalPrice.BidStatus.Claimed), "bid two: status"
         );
     }
 
@@ -474,15 +456,11 @@ contract EmpaModuleClaimBidsTest is EmpTest {
         // Check the bid status
         EncryptedMarginalPrice.Bid memory bidOne = _getBid(_lotId, _bidIds[0]);
         assertEq(
-            uint8(bidOne.status),
-            uint8(EncryptedMarginalPrice.BidStatus.Claimed),
-            "bid one: status"
+            uint8(bidOne.status), uint8(EncryptedMarginalPrice.BidStatus.Claimed), "bid one: status"
         );
         EncryptedMarginalPrice.Bid memory bidTwo = _getBid(_lotId, _bidIds[1]);
         assertEq(
-            uint8(bidTwo.status),
-            uint8(EncryptedMarginalPrice.BidStatus.Claimed),
-            "bid two: status"
+            uint8(bidTwo.status), uint8(EncryptedMarginalPrice.BidStatus.Claimed), "bid two: status"
         );
     }
 
@@ -525,15 +503,11 @@ contract EmpaModuleClaimBidsTest is EmpTest {
         // Check the bid status
         EncryptedMarginalPrice.Bid memory bidOne = _getBid(_lotId, _bidIds[0]);
         assertEq(
-            uint8(bidOne.status),
-            uint8(EncryptedMarginalPrice.BidStatus.Claimed),
-            "bid one: status"
+            uint8(bidOne.status), uint8(EncryptedMarginalPrice.BidStatus.Claimed), "bid one: status"
         );
         EncryptedMarginalPrice.Bid memory bidTwo = _getBid(_lotId, _bidIds[1]);
         assertEq(
-            uint8(bidTwo.status),
-            uint8(EncryptedMarginalPrice.BidStatus.Claimed),
-            "bid two: status"
+            uint8(bidTwo.status), uint8(EncryptedMarginalPrice.BidStatus.Claimed), "bid two: status"
         );
     }
 
@@ -580,15 +554,11 @@ contract EmpaModuleClaimBidsTest is EmpTest {
         // Check the bid status
         EncryptedMarginalPrice.Bid memory bidOne = _getBid(_lotId, _bidIds[0]);
         assertEq(
-            uint8(bidOne.status),
-            uint8(EncryptedMarginalPrice.BidStatus.Claimed),
-            "bid one: status"
+            uint8(bidOne.status), uint8(EncryptedMarginalPrice.BidStatus.Claimed), "bid one: status"
         );
         EncryptedMarginalPrice.Bid memory bidTwo = _getBid(_lotId, _bidIds[1]);
         assertEq(
-            uint8(bidTwo.status),
-            uint8(EncryptedMarginalPrice.BidStatus.Claimed),
-            "bid two: status"
+            uint8(bidTwo.status), uint8(EncryptedMarginalPrice.BidStatus.Claimed), "bid two: status"
         );
     }
 
@@ -635,15 +605,11 @@ contract EmpaModuleClaimBidsTest is EmpTest {
         // Check the bid status
         EncryptedMarginalPrice.Bid memory bidOne = _getBid(_lotId, _bidIds[0]);
         assertEq(
-            uint8(bidOne.status),
-            uint8(EncryptedMarginalPrice.BidStatus.Claimed),
-            "bid one: status"
+            uint8(bidOne.status), uint8(EncryptedMarginalPrice.BidStatus.Claimed), "bid one: status"
         );
         EncryptedMarginalPrice.Bid memory bidTwo = _getBid(_lotId, _bidIds[1]);
         assertEq(
-            uint8(bidTwo.status),
-            uint8(EncryptedMarginalPrice.BidStatus.Claimed),
-            "bid two: status"
+            uint8(bidTwo.status), uint8(EncryptedMarginalPrice.BidStatus.Claimed), "bid two: status"
         );
     }
 
@@ -689,15 +655,11 @@ contract EmpaModuleClaimBidsTest is EmpTest {
         // Check the bid status
         EncryptedMarginalPrice.Bid memory bidOne = _getBid(_lotId, _bidIds[0]);
         assertEq(
-            uint8(bidOne.status),
-            uint8(EncryptedMarginalPrice.BidStatus.Claimed),
-            "bid one: status"
+            uint8(bidOne.status), uint8(EncryptedMarginalPrice.BidStatus.Claimed), "bid one: status"
         );
         EncryptedMarginalPrice.Bid memory bidTwo = _getBid(_lotId, _bidIds[1]);
         assertEq(
-            uint8(bidTwo.status),
-            uint8(EncryptedMarginalPrice.BidStatus.Claimed),
-            "bid two: status"
+            uint8(bidTwo.status), uint8(EncryptedMarginalPrice.BidStatus.Claimed), "bid two: status"
         );
     }
 
@@ -751,15 +713,11 @@ contract EmpaModuleClaimBidsTest is EmpTest {
         // Check the bid status
         EncryptedMarginalPrice.Bid memory bidOne = _getBid(_lotId, _bidIds[0]);
         assertEq(
-            uint8(bidOne.status),
-            uint8(EncryptedMarginalPrice.BidStatus.Claimed),
-            "bid one: status"
+            uint8(bidOne.status), uint8(EncryptedMarginalPrice.BidStatus.Claimed), "bid one: status"
         );
         EncryptedMarginalPrice.Bid memory bidTwo = _getBid(_lotId, _bidIds[1]);
         assertEq(
-            uint8(bidTwo.status),
-            uint8(EncryptedMarginalPrice.BidStatus.Claimed),
-            "bid two: status"
+            uint8(bidTwo.status), uint8(EncryptedMarginalPrice.BidStatus.Claimed), "bid two: status"
         );
         EncryptedMarginalPrice.Bid memory bidThree = _getBid(_lotId, _bidIds[2]);
         assertEq(
@@ -817,15 +775,11 @@ contract EmpaModuleClaimBidsTest is EmpTest {
         // Check the bid status
         EncryptedMarginalPrice.Bid memory bidOne = _getBid(_lotId, _bidIds[0]);
         assertEq(
-            uint8(bidOne.status),
-            uint8(EncryptedMarginalPrice.BidStatus.Claimed),
-            "bid one: status"
+            uint8(bidOne.status), uint8(EncryptedMarginalPrice.BidStatus.Claimed), "bid one: status"
         );
         EncryptedMarginalPrice.Bid memory bidTwo = _getBid(_lotId, _bidIds[1]);
         assertEq(
-            uint8(bidTwo.status),
-            uint8(EncryptedMarginalPrice.BidStatus.Claimed),
-            "bid two: status"
+            uint8(bidTwo.status), uint8(EncryptedMarginalPrice.BidStatus.Claimed), "bid two: status"
         );
     }
 
@@ -878,15 +832,11 @@ contract EmpaModuleClaimBidsTest is EmpTest {
         // Check the bid status
         EncryptedMarginalPrice.Bid memory bidOne = _getBid(_lotId, _bidIds[0]);
         assertEq(
-            uint8(bidOne.status),
-            uint8(EncryptedMarginalPrice.BidStatus.Claimed),
-            "bid one: status"
+            uint8(bidOne.status), uint8(EncryptedMarginalPrice.BidStatus.Claimed), "bid one: status"
         );
         EncryptedMarginalPrice.Bid memory bidTwo = _getBid(_lotId, _bidIds[1]);
         assertEq(
-            uint8(bidTwo.status),
-            uint8(EncryptedMarginalPrice.BidStatus.Claimed),
-            "bid two: status"
+            uint8(bidTwo.status), uint8(EncryptedMarginalPrice.BidStatus.Claimed), "bid two: status"
         );
     }
 
@@ -933,15 +883,11 @@ contract EmpaModuleClaimBidsTest is EmpTest {
         // Check the bid status
         EncryptedMarginalPrice.Bid memory bidOne = _getBid(_lotId, _bidIds[0]);
         assertEq(
-            uint8(bidOne.status),
-            uint8(EncryptedMarginalPrice.BidStatus.Claimed),
-            "bid one: status"
+            uint8(bidOne.status), uint8(EncryptedMarginalPrice.BidStatus.Claimed), "bid one: status"
         );
         EncryptedMarginalPrice.Bid memory bidTwo = _getBid(_lotId, _bidIds[1]);
         assertEq(
-            uint8(bidTwo.status),
-            uint8(EncryptedMarginalPrice.BidStatus.Claimed),
-            "bid two: status"
+            uint8(bidTwo.status), uint8(EncryptedMarginalPrice.BidStatus.Claimed), "bid two: status"
         );
     }
 
@@ -982,9 +928,7 @@ contract EmpaModuleClaimBidsTest is EmpTest {
         // Check the bid status
         EncryptedMarginalPrice.Bid memory bidOne = _getBid(_lotId, 1);
         assertEq(
-            uint8(bidOne.status),
-            uint8(EncryptedMarginalPrice.BidStatus.Claimed),
-            "bid one: status"
+            uint8(bidOne.status), uint8(EncryptedMarginalPrice.BidStatus.Claimed), "bid one: status"
         );
         EncryptedMarginalPrice.Bid memory bidTwo = _getBid(_lotId, 2);
         assertEq(
@@ -1030,11 +974,7 @@ contract EmpaModuleClaimBidsTest is EmpTest {
 
         // Check the bid status
         EncryptedMarginalPrice.Bid memory bid = _getBid(_lotId, bidId);
-        assertEq(
-            uint8(bid.status),
-            uint8(EncryptedMarginalPrice.BidStatus.Claimed),
-            "status"
-        );
+        assertEq(uint8(bid.status), uint8(EncryptedMarginalPrice.BidStatus.Claimed), "status");
     }
 
     function test_givenLotOverCapacity_higherMarginalPrice_beforeLastSettledBid()
@@ -1073,11 +1013,7 @@ contract EmpaModuleClaimBidsTest is EmpTest {
 
         // Check the bid status
         EncryptedMarginalPrice.Bid memory bid = _getBid(_lotId, bidId);
-        assertEq(
-            uint8(bid.status),
-            uint8(EncryptedMarginalPrice.BidStatus.Claimed),
-            "status"
-        );
+        assertEq(uint8(bid.status), uint8(EncryptedMarginalPrice.BidStatus.Claimed), "status");
     }
 
     function test_givenLotOverCapacity_higherMarginalPrice_lastSettledBid()
@@ -1116,11 +1052,7 @@ contract EmpaModuleClaimBidsTest is EmpTest {
 
         // Check the bid status
         EncryptedMarginalPrice.Bid memory bid = _getBid(_lotId, bidId);
-        assertEq(
-            uint8(bid.status),
-            uint8(EncryptedMarginalPrice.BidStatus.Claimed),
-            "status"
-        );
+        assertEq(uint8(bid.status), uint8(EncryptedMarginalPrice.BidStatus.Claimed), "status");
     }
 
     function test_givenLotOverCapacity_higherMarginalPrice_afterLastSettledBid()
@@ -1159,11 +1091,7 @@ contract EmpaModuleClaimBidsTest is EmpTest {
 
         // Check the bid status
         EncryptedMarginalPrice.Bid memory bid = _getBid(_lotId, bidId);
-        assertEq(
-            uint8(bid.status),
-            uint8(EncryptedMarginalPrice.BidStatus.Claimed),
-            "status"
-        );
+        assertEq(uint8(bid.status), uint8(EncryptedMarginalPrice.BidStatus.Claimed), "status");
     }
 
     function test_givenLotOverCapacity_sameMarginalPrice_beforeLastSettledBid()
@@ -1203,11 +1131,7 @@ contract EmpaModuleClaimBidsTest is EmpTest {
 
         // Check the bid status
         EncryptedMarginalPrice.Bid memory bid = _getBid(_lotId, bidId);
-        assertEq(
-            uint8(bid.status),
-            uint8(EncryptedMarginalPrice.BidStatus.Claimed),
-            "status"
-        );
+        assertEq(uint8(bid.status), uint8(EncryptedMarginalPrice.BidStatus.Claimed), "status");
     }
 
     function test_givenLotOverCapacity_sameMarginalPrice_lastSettledBid()
@@ -1247,11 +1171,7 @@ contract EmpaModuleClaimBidsTest is EmpTest {
 
         // Check the bid status
         EncryptedMarginalPrice.Bid memory bid = _getBid(_lotId, bidId);
-        assertEq(
-            uint8(bid.status),
-            uint8(EncryptedMarginalPrice.BidStatus.Claimed),
-            "status"
-        );
+        assertEq(uint8(bid.status), uint8(EncryptedMarginalPrice.BidStatus.Claimed), "status");
     }
 
     function test_givenLotOverCapacity_sameMarginalPrice_afterSettledBid()
@@ -1291,11 +1211,7 @@ contract EmpaModuleClaimBidsTest is EmpTest {
 
         // Check the bid status
         EncryptedMarginalPrice.Bid memory bid = _getBid(_lotId, bidId);
-        assertEq(
-            uint8(bid.status),
-            uint8(EncryptedMarginalPrice.BidStatus.Claimed),
-            "status"
-        );
+        assertEq(uint8(bid.status), uint8(EncryptedMarginalPrice.BidStatus.Claimed), "status");
     }
 
     function test_givenLotOverCapacity_unsuccessfulBid()
@@ -1335,11 +1251,7 @@ contract EmpaModuleClaimBidsTest is EmpTest {
 
         // Check the bid status
         EncryptedMarginalPrice.Bid memory bid = _getBid(_lotId, bidId);
-        assertEq(
-            uint8(bid.status),
-            uint8(EncryptedMarginalPrice.BidStatus.Claimed),
-            "status"
-        );
+        assertEq(uint8(bid.status), uint8(EncryptedMarginalPrice.BidStatus.Claimed), "status");
     }
 
     function test_givenLotOverCapacity_unsuccessfulBid_respectsOrdering()
@@ -1379,11 +1291,7 @@ contract EmpaModuleClaimBidsTest is EmpTest {
 
         // Check the bid status
         EncryptedMarginalPrice.Bid memory bid = _getBid(_lotId, bidId);
-        assertEq(
-            uint8(bid.status),
-            uint8(EncryptedMarginalPrice.BidStatus.Claimed),
-            "status"
-        );
+        assertEq(uint8(bid.status), uint8(EncryptedMarginalPrice.BidStatus.Claimed), "status");
     }
 
     function test_below_price_precision_totalCorrect()

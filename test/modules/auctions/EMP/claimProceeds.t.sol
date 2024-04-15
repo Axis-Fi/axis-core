@@ -137,9 +137,8 @@ contract EmpaModuleClaimProceedsTest is EmpTest {
         givenLotHasStarted
         givenLotHasConcluded
     {
-        bytes memory err = abi.encodeWithSelector(
-            EncryptedMarginalPrice.Auction_WrongState.selector, _lotId
-        );
+        bytes memory err =
+            abi.encodeWithSelector(EncryptedMarginalPrice.Auction_WrongState.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function
@@ -154,9 +153,8 @@ contract EmpaModuleClaimProceedsTest is EmpTest {
         givenLotHasConcluded
         givenPrivateKeyIsSubmitted
     {
-        bytes memory err = abi.encodeWithSelector(
-            EncryptedMarginalPrice.Auction_WrongState.selector, _lotId
-        );
+        bytes memory err =
+            abi.encodeWithSelector(EncryptedMarginalPrice.Auction_WrongState.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function
@@ -165,9 +163,8 @@ contract EmpaModuleClaimProceedsTest is EmpTest {
     }
 
     function test_givenLotCancelled_reverts() external givenLotIsCreated givenLotIsCancelled {
-        bytes memory err = abi.encodeWithSelector(
-            EncryptedMarginalPrice.Auction_WrongState.selector, _lotId
-        );
+        bytes memory err =
+            abi.encodeWithSelector(EncryptedMarginalPrice.Auction_WrongState.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function
@@ -184,9 +181,8 @@ contract EmpaModuleClaimProceedsTest is EmpTest {
         givenLotIsSettled
         givenLotProceedsAreClaimed
     {
-        bytes memory err = abi.encodeWithSelector(
-            EncryptedMarginalPrice.Auction_WrongState.selector, _lotId
-        );
+        bytes memory err =
+            abi.encodeWithSelector(EncryptedMarginalPrice.Auction_WrongState.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function
@@ -216,9 +212,7 @@ contract EmpaModuleClaimProceedsTest is EmpTest {
         // Assert auction status
         EncryptedMarginalPrice.AuctionData memory auctionData = _getAuctionData(_lotId);
         assertEq(
-            uint8(auctionData.status),
-            uint8(EncryptedMarginalPrice.LotStatus.Settled),
-            "status"
+            uint8(auctionData.status), uint8(EncryptedMarginalPrice.LotStatus.Settled), "status"
         );
         assertTrue(auctionData.proceedsClaimed, "proceedsClaimed");
     }
@@ -245,9 +239,7 @@ contract EmpaModuleClaimProceedsTest is EmpTest {
         // Assert auction status
         EncryptedMarginalPrice.AuctionData memory auctionData = _getAuctionData(_lotId);
         assertEq(
-            uint8(auctionData.status),
-            uint8(EncryptedMarginalPrice.LotStatus.Settled),
-            "status"
+            uint8(auctionData.status), uint8(EncryptedMarginalPrice.LotStatus.Settled), "status"
         );
         assertTrue(auctionData.proceedsClaimed, "proceedsClaimed");
     }

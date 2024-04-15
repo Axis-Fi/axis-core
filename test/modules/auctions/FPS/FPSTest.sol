@@ -45,10 +45,8 @@ abstract contract FpsTest is Test, Permit2User {
 
         _start = uint48(block.timestamp) + 1;
 
-        _fpaParams = FixedPriceSale.FixedPriceParams({
-            price: _PRICE,
-            maxPayoutPercent: _MAX_PAYOUT_PERCENT
-        });
+        _fpaParams =
+            FixedPriceSale.FixedPriceParams({price: _PRICE, maxPayoutPercent: _MAX_PAYOUT_PERCENT});
 
         _auctionParams = Auction.AuctionParams({
             start: _start,

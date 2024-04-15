@@ -37,9 +37,8 @@ contract EmpaModuleSubmitPrivateKeyTest is EmpTest {
 
     function test_lotIsActive_reverts() external givenLotIsCreated givenLotHasStarted {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(
-            EncryptedMarginalPrice.Auction_WrongState.selector, _lotId
-        );
+        bytes memory err =
+            abi.encodeWithSelector(EncryptedMarginalPrice.Auction_WrongState.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function
@@ -74,9 +73,8 @@ contract EmpaModuleSubmitPrivateKeyTest is EmpTest {
         givenPrivateKeyIsSubmitted
     {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(
-            EncryptedMarginalPrice.Auction_WrongState.selector, _lotId
-        );
+        bytes memory err =
+            abi.encodeWithSelector(EncryptedMarginalPrice.Auction_WrongState.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function
@@ -117,9 +115,7 @@ contract EmpaModuleSubmitPrivateKeyTest is EmpTest {
         // Assert that the bids are not decrypted
         EncryptedMarginalPrice.Bid memory bidData = _getBid(_lotId, 1);
         assertEq(
-            uint8(bidData.status),
-            uint8(EncryptedMarginalPrice.BidStatus.Submitted),
-            "bid status"
+            uint8(bidData.status), uint8(EncryptedMarginalPrice.BidStatus.Submitted), "bid status"
         );
     }
 
@@ -140,9 +136,7 @@ contract EmpaModuleSubmitPrivateKeyTest is EmpTest {
         // Assert that the bids are not decrypted
         EncryptedMarginalPrice.Bid memory bidData = _getBid(_lotId, 1);
         assertEq(
-            uint8(bidData.status),
-            uint8(EncryptedMarginalPrice.BidStatus.Submitted),
-            "bid status"
+            uint8(bidData.status), uint8(EncryptedMarginalPrice.BidStatus.Submitted), "bid status"
         );
     }
 
@@ -166,9 +160,7 @@ contract EmpaModuleSubmitPrivateKeyTest is EmpTest {
         // Assert that the bids are not decrypted
         EncryptedMarginalPrice.Bid memory bidData = _getBid(_lotId, 1);
         assertEq(
-            uint8(bidData.status),
-            uint8(EncryptedMarginalPrice.BidStatus.Decrypted),
-            "bid status"
+            uint8(bidData.status), uint8(EncryptedMarginalPrice.BidStatus.Decrypted), "bid status"
         );
     }
 }

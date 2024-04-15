@@ -214,12 +214,9 @@ contract LinearVestingEMPAIntegrationTest is BatchAuctionHouseTest {
         givenLotIsCancelled
     {
         // Check the auction data
-        EncryptedMarginalPrice.AuctionData memory auctionData =
-            _empaModule.getAuctionData(_lotId);
+        EncryptedMarginalPrice.AuctionData memory auctionData = _empaModule.getAuctionData(_lotId);
         assertEq(
-            uint8(auctionData.status),
-            uint8(EncryptedMarginalPrice.LotStatus.Settled),
-            "status"
+            uint8(auctionData.status), uint8(EncryptedMarginalPrice.LotStatus.Settled), "status"
         );
         assertTrue(auctionData.proceedsClaimed, "proceedsClaimed");
 
@@ -253,11 +250,7 @@ contract LinearVestingEMPAIntegrationTest is BatchAuctionHouseTest {
         assertEq(bid.amount, _BID_AMOUNT, "amountIn");
         assertEq(bid.minAmountOut, 0, "amountOut");
         assertEq(bid.referrer, _REFERRER, "referrer");
-        assertEq(
-            uint8(bid.status),
-            uint8(EncryptedMarginalPrice.BidStatus.Submitted),
-            "status"
-        );
+        assertEq(uint8(bid.status), uint8(EncryptedMarginalPrice.BidStatus.Submitted), "status");
 
         assertEq(encryptedBid.bidPubKey.x, _bidPublicKey.x, "bidPubKey.x");
         assertEq(encryptedBid.bidPubKey.y, _bidPublicKey.y, "bidPubKey.y");
@@ -284,18 +277,13 @@ contract LinearVestingEMPAIntegrationTest is BatchAuctionHouseTest {
         givenPrivateKeyIsSubmitted
     {
         // Check the auction
-        EncryptedMarginalPrice.AuctionData memory auctionData =
-            _empaModule.getAuctionData(_lotId);
+        EncryptedMarginalPrice.AuctionData memory auctionData = _empaModule.getAuctionData(_lotId);
         assertEq(auctionData.privateKey, _AUCTION_PRIVATE_KEY, "privateKey");
 
         // Check the bid
         (EncryptedMarginalPrice.Bid memory bid,) = _empaModule.getBid(_lotId, 1);
 
-        assertEq(
-            uint8(bid.status),
-            uint8(EncryptedMarginalPrice.BidStatus.Submitted),
-            "status"
-        );
+        assertEq(uint8(bid.status), uint8(EncryptedMarginalPrice.BidStatus.Submitted), "status");
     }
 
     // decrypt
@@ -321,21 +309,14 @@ contract LinearVestingEMPAIntegrationTest is BatchAuctionHouseTest {
         _empaModule.decryptAndSortBids(_lotId, 1, hints);
 
         // Check the auction
-        EncryptedMarginalPrice.AuctionData memory auctionData =
-            _empaModule.getAuctionData(_lotId);
+        EncryptedMarginalPrice.AuctionData memory auctionData = _empaModule.getAuctionData(_lotId);
         assertEq(
-            uint8(auctionData.status),
-            uint8(EncryptedMarginalPrice.LotStatus.Decrypted),
-            "status"
+            uint8(auctionData.status), uint8(EncryptedMarginalPrice.LotStatus.Decrypted), "status"
         );
 
         // Check the bid
         (EncryptedMarginalPrice.Bid memory bid,) = _empaModule.getBid(_lotId, 1);
-        assertEq(
-            uint8(bid.status),
-            uint8(EncryptedMarginalPrice.BidStatus.Decrypted),
-            "status"
-        );
+        assertEq(uint8(bid.status), uint8(EncryptedMarginalPrice.BidStatus.Decrypted), "status");
         assertEq(bid.minAmountOut, _BID_AMOUNT_OUT, "minAmountOut");
     }
 
@@ -361,12 +342,9 @@ contract LinearVestingEMPAIntegrationTest is BatchAuctionHouseTest {
         givenLotIsSettled
     {
         // Check the auction
-        EncryptedMarginalPrice.AuctionData memory auctionData =
-            _empaModule.getAuctionData(_lotId);
+        EncryptedMarginalPrice.AuctionData memory auctionData = _empaModule.getAuctionData(_lotId);
         assertEq(
-            uint8(auctionData.status),
-            uint8(EncryptedMarginalPrice.LotStatus.Settled),
-            "status"
+            uint8(auctionData.status), uint8(EncryptedMarginalPrice.LotStatus.Settled), "status"
         );
 
         // Check the lot
@@ -418,12 +396,9 @@ contract LinearVestingEMPAIntegrationTest is BatchAuctionHouseTest {
         givenLotIsSettled
     {
         // Check the auction
-        EncryptedMarginalPrice.AuctionData memory auctionData =
-            _empaModule.getAuctionData(_lotId);
+        EncryptedMarginalPrice.AuctionData memory auctionData = _empaModule.getAuctionData(_lotId);
         assertEq(
-            uint8(auctionData.status),
-            uint8(EncryptedMarginalPrice.LotStatus.Settled),
-            "status"
+            uint8(auctionData.status), uint8(EncryptedMarginalPrice.LotStatus.Settled), "status"
         );
     }
 
@@ -451,15 +426,11 @@ contract LinearVestingEMPAIntegrationTest is BatchAuctionHouseTest {
         // Check the bids
         (EncryptedMarginalPrice.Bid memory bid1,) = _empaModule.getBid(_lotId, 1);
         assertEq(
-            uint8(bid1.status),
-            uint8(EncryptedMarginalPrice.BidStatus.Decrypted),
-            "bid 1: status"
+            uint8(bid1.status), uint8(EncryptedMarginalPrice.BidStatus.Decrypted), "bid 1: status"
         );
         (EncryptedMarginalPrice.Bid memory bid2,) = _empaModule.getBid(_lotId, 2);
         assertEq(
-            uint8(bid2.status),
-            uint8(EncryptedMarginalPrice.BidStatus.Decrypted),
-            "bid 2: status"
+            uint8(bid2.status), uint8(EncryptedMarginalPrice.BidStatus.Decrypted), "bid 2: status"
         );
 
         // Check the lot
@@ -507,12 +478,9 @@ contract LinearVestingEMPAIntegrationTest is BatchAuctionHouseTest {
         givenLotProceedsAreClaimed
     {
         // Check the auction state
-        EncryptedMarginalPrice.AuctionData memory auctionData =
-            _empaModule.getAuctionData(_lotId);
+        EncryptedMarginalPrice.AuctionData memory auctionData = _empaModule.getAuctionData(_lotId);
         assertEq(
-            uint8(auctionData.status),
-            uint8(EncryptedMarginalPrice.LotStatus.Settled),
-            "status"
+            uint8(auctionData.status), uint8(EncryptedMarginalPrice.LotStatus.Settled), "status"
         );
         assertTrue(auctionData.proceedsClaimed, "proceedsClaimed");
 
@@ -560,11 +528,7 @@ contract LinearVestingEMPAIntegrationTest is BatchAuctionHouseTest {
     {
         // Check the bid
         (EncryptedMarginalPrice.Bid memory bid,) = _empaModule.getBid(_lotId, 1);
-        assertEq(
-            uint8(bid.status),
-            uint8(EncryptedMarginalPrice.BidStatus.Claimed),
-            "status"
-        );
+        assertEq(uint8(bid.status), uint8(EncryptedMarginalPrice.BidStatus.Claimed), "status");
 
         uint256 derivativeTokenId =
             _linearVestingModule.computeId(address(_baseToken), abi.encode(_linearVestingParams));
@@ -596,11 +560,7 @@ contract LinearVestingEMPAIntegrationTest is BatchAuctionHouseTest {
     {
         // Check the bid
         (EncryptedMarginalPrice.Bid memory bid,) = _empaModule.getBid(_lotId, 1);
-        assertEq(
-            uint8(bid.status),
-            uint8(EncryptedMarginalPrice.BidStatus.Claimed),
-            "status"
-        );
+        assertEq(uint8(bid.status), uint8(EncryptedMarginalPrice.BidStatus.Claimed), "status");
 
         uint256 derivativeTokenId =
             _linearVestingModule.computeId(address(_baseToken), abi.encode(_linearVestingParams));
@@ -640,11 +600,7 @@ contract LinearVestingEMPAIntegrationTest is BatchAuctionHouseTest {
     {
         // Check the bid
         (EncryptedMarginalPrice.Bid memory bid,) = _empaModule.getBid(_lotId, 3);
-        assertEq(
-            uint8(bid.status),
-            uint8(EncryptedMarginalPrice.BidStatus.Claimed),
-            "status"
-        );
+        assertEq(uint8(bid.status), uint8(EncryptedMarginalPrice.BidStatus.Claimed), "status");
 
         uint256 derivativeTokenId =
             _linearVestingModule.computeId(address(_baseToken), abi.encode(_linearVestingParams));

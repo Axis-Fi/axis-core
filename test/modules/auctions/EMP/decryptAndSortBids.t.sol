@@ -69,9 +69,8 @@ contract EmpaModuleDecryptBidsTest is EmpTest {
     }
 
     function test_lotHasNotConcluded_reverts() external givenLotIsCreated givenLotHasStarted {
-        bytes memory err = abi.encodeWithSelector(
-            EncryptedMarginalPrice.Auction_WrongState.selector, _lotId
-        );
+        bytes memory err =
+            abi.encodeWithSelector(EncryptedMarginalPrice.Auction_WrongState.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function
@@ -83,9 +82,8 @@ contract EmpaModuleDecryptBidsTest is EmpTest {
         givenLotIsCreated
         givenLotHasConcluded
     {
-        bytes memory err = abi.encodeWithSelector(
-            EncryptedMarginalPrice.Auction_WrongState.selector, _lotId
-        );
+        bytes memory err =
+            abi.encodeWithSelector(EncryptedMarginalPrice.Auction_WrongState.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function
@@ -99,9 +97,8 @@ contract EmpaModuleDecryptBidsTest is EmpTest {
         givenPrivateKeyIsSubmitted
     {
         // Call the function
-        bytes memory err = abi.encodeWithSelector(
-            EncryptedMarginalPrice.Auction_WrongState.selector, _lotId
-        );
+        bytes memory err =
+            abi.encodeWithSelector(EncryptedMarginalPrice.Auction_WrongState.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function
@@ -116,9 +113,8 @@ contract EmpaModuleDecryptBidsTest is EmpTest {
         givenLotIsSettled
     {
         // Call the function
-        bytes memory err = abi.encodeWithSelector(
-            EncryptedMarginalPrice.Auction_WrongState.selector, _lotId
-        );
+        bytes memory err =
+            abi.encodeWithSelector(EncryptedMarginalPrice.Auction_WrongState.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function
@@ -134,9 +130,8 @@ contract EmpaModuleDecryptBidsTest is EmpTest {
         givenLotProceedsAreClaimed
     {
         // Call the function
-        bytes memory err = abi.encodeWithSelector(
-            EncryptedMarginalPrice.Auction_WrongState.selector, _lotId
-        );
+        bytes memory err =
+            abi.encodeWithSelector(EncryptedMarginalPrice.Auction_WrongState.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function
@@ -174,9 +169,7 @@ contract EmpaModuleDecryptBidsTest is EmpTest {
         EncryptedMarginalPrice.Bid memory bidData = _getBid(_lotId, _bidId);
         assertEq(bidData.minAmountOut, 0, "minAmountOut");
         assertEq(
-            uint8(bidData.status),
-            uint8(EncryptedMarginalPrice.BidStatus.Decrypted),
-            "bid status"
+            uint8(bidData.status), uint8(EncryptedMarginalPrice.BidStatus.Decrypted), "bid status"
         );
 
         // Check the bid queue
@@ -214,9 +207,7 @@ contract EmpaModuleDecryptBidsTest is EmpTest {
         EncryptedMarginalPrice.Bid memory bidData = _getBid(_lotId, _bidId);
         assertEq(bidData.minAmountOut, 0, "minAmountOut");
         assertEq(
-            uint8(bidData.status),
-            uint8(EncryptedMarginalPrice.BidStatus.Decrypted),
-            "bid status"
+            uint8(bidData.status), uint8(EncryptedMarginalPrice.BidStatus.Decrypted), "bid status"
         );
 
         // Check the bid queue
@@ -250,9 +241,7 @@ contract EmpaModuleDecryptBidsTest is EmpTest {
         EncryptedMarginalPrice.Bid memory bidData = _getBid(_lotId, _bidId);
         assertEq(bidData.minAmountOut, 0, "minAmountOut");
         assertEq(
-            uint8(bidData.status),
-            uint8(EncryptedMarginalPrice.BidStatus.Decrypted),
-            "bid status"
+            uint8(bidData.status), uint8(EncryptedMarginalPrice.BidStatus.Decrypted), "bid status"
         );
 
         // Check the bid queue
@@ -289,9 +278,7 @@ contract EmpaModuleDecryptBidsTest is EmpTest {
         EncryptedMarginalPrice.Bid memory bidData = _getBid(_lotId, _bidId);
         assertEq(bidData.minAmountOut, type(uint96).max, "minAmountOut");
         assertEq(
-            uint8(bidData.status),
-            uint8(EncryptedMarginalPrice.BidStatus.Decrypted),
-            "bid status"
+            uint8(bidData.status), uint8(EncryptedMarginalPrice.BidStatus.Decrypted), "bid status"
         );
 
         // Check the bid queue
@@ -345,17 +332,12 @@ contract EmpaModuleDecryptBidsTest is EmpTest {
         // Check the bid state
         EncryptedMarginalPrice.Bid memory bidData = _getBid(_lotId, _bidId);
         assertEq(bidData.minAmountOut, _BID_AMOUNT_OUT);
-        assertEq(
-            uint8(bidData.status), uint8(EncryptedMarginalPrice.BidStatus.Decrypted)
-        );
+        assertEq(uint8(bidData.status), uint8(EncryptedMarginalPrice.BidStatus.Decrypted));
 
         // Check the auction state
         EncryptedMarginalPrice.AuctionData memory auctionData = _getAuctionData(_lotId);
         assertEq(auctionData.nextDecryptIndex, 1);
-        assertEq(
-            uint8(auctionData.status),
-            uint8(EncryptedMarginalPrice.LotStatus.Decrypted)
-        );
+        assertEq(uint8(auctionData.status), uint8(EncryptedMarginalPrice.LotStatus.Decrypted));
     }
 
     function test_belowMinimumBidSize()
@@ -375,9 +357,7 @@ contract EmpaModuleDecryptBidsTest is EmpTest {
         EncryptedMarginalPrice.Bid memory bidData = _getBid(_lotId, _bidId);
         assertEq(bidData.minAmountOut, 0, "minAmountOut");
         assertEq(
-            uint8(bidData.status),
-            uint8(EncryptedMarginalPrice.BidStatus.Decrypted),
-            "bid status"
+            uint8(bidData.status), uint8(EncryptedMarginalPrice.BidStatus.Decrypted), "bid status"
         );
 
         // Check the bid queue
@@ -416,9 +396,7 @@ contract EmpaModuleDecryptBidsTest is EmpTest {
         EncryptedMarginalPrice.Bid memory bidData = _getBid(_lotId, _bidId);
         assertEq(bidData.minAmountOut, 0, "minAmountOut");
         assertEq(
-            uint8(bidData.status),
-            uint8(EncryptedMarginalPrice.BidStatus.Decrypted),
-            "bid status"
+            uint8(bidData.status), uint8(EncryptedMarginalPrice.BidStatus.Decrypted), "bid status"
         );
 
         // Check the bid queue
@@ -457,9 +435,7 @@ contract EmpaModuleDecryptBidsTest is EmpTest {
         EncryptedMarginalPrice.Bid memory bidData = _getBid(_lotId, _bidId);
         assertEq(bidData.minAmountOut, 0, "minAmountOut");
         assertEq(
-            uint8(bidData.status),
-            uint8(EncryptedMarginalPrice.BidStatus.Decrypted),
-            "bid status"
+            uint8(bidData.status), uint8(EncryptedMarginalPrice.BidStatus.Decrypted), "bid status"
         );
 
         // Check the bid queue
