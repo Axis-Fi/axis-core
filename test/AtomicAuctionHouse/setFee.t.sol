@@ -20,18 +20,21 @@ contract AtomicSetFeeTest is Test, Permit2User {
 
     AtomicAuctionHouse internal _auctionHouse;
 
-    address internal immutable _PROTOCOL = address(0x2);
-    address internal immutable _CURATOR = address(0x3);
-    address internal immutable _REFERRER = address(0x4);
+    address internal constant _OWNER = address(0x1);
+    address internal constant _PROTOCOL = address(0x2);
+    address internal constant _CURATOR = address(0x4);
+    address internal constant _REFERRER = address(0x6);
 
     Keycode internal _auctionKeycode;
 
     uint48 internal constant _MAX_FEE = 1e5;
 
     function setUp() external {
-        _auctionHouse = new AtomicAuctionHouse(address(this), _PROTOCOL, _permit2Address);
+        _auctionHouse = new AtomicAuctionHouse(_OWNER, _PROTOCOL, _permit2Address);
         _mockAuctionModule = new MockAtomicAuctionModule(address(_auctionHouse));
         _auctionKeycode = keycodeFromVeecode(_mockAuctionModule.VEECODE());
+
+        vm.prank(_OWNER);
         _auctionHouse.installModule(_mockAuctionModule);
     }
 
@@ -59,12 +62,14 @@ contract AtomicSetFeeTest is Test, Permit2User {
         bytes memory err = abi.encodeWithSelector(FeeManager.InvalidFee.selector);
         vm.expectRevert(err);
 
+        vm.prank(_OWNER);
         _auctionHouse.setFee(_auctionKeycode, FeeManager.FeeType.Protocol, _MAX_FEE + 1);
     }
 
     function test_protocolFee(uint48 fee_) public {
         uint48 fee = uint48(bound(fee_, 0, _MAX_FEE));
 
+        vm.prank(_OWNER);
         _auctionHouse.setFee(_auctionKeycode, FeeManager.FeeType.Protocol, fee);
 
         // Validate
@@ -78,6 +83,7 @@ contract AtomicSetFeeTest is Test, Permit2User {
     function test_referrerFee(uint48 fee_) public {
         uint48 fee = uint48(bound(fee_, 0, _MAX_FEE));
 
+        vm.prank(_OWNER);
         _auctionHouse.setFee(_auctionKeycode, FeeManager.FeeType.Referrer, fee);
 
         // Validate
@@ -91,6 +97,7 @@ contract AtomicSetFeeTest is Test, Permit2User {
     function test_curatorFee(uint48 fee_) public {
         uint48 fee = uint48(bound(fee_, 0, _MAX_FEE));
 
+        vm.prank(_OWNER);
         _auctionHouse.setFee(_auctionKeycode, FeeManager.FeeType.MaxCurator, fee);
 
         // Validate
