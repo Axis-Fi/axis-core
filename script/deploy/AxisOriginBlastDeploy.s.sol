@@ -8,6 +8,7 @@ import {Script, console2} from "lib/forge-std/src/Script.sol";
 import {BlastAtomicAuctionHouse} from "src/blast/BlastAtomicAuctionHouse.sol";
 import {BlastBatchAuctionHouse} from "src/blast/BlastBatchAuctionHouse.sol";
 import {AtomicCatalogue} from "src/AtomicCatalogue.sol";
+import {BatchCatalogue} from "src/BatchCatalogue.sol";
 import {BlastEMP} from "src/blast/modules/auctions/BlastEMP.sol";
 import {BlastFPSale} from "src/blast/modules/auctions/BlastFPS.sol";
 import {BlastLinearVesting} from "src/blast/modules/derivatives/BlastLinearVesting.sol";
@@ -16,6 +17,7 @@ contract AxisOriginDeploy is Script {
     BlastAtomicAuctionHouse public atomicAuctionHouse;
     BlastBatchAuctionHouse public batchAuctionHouse;
     AtomicCatalogue public atomicCatalogue;
+    BatchCatalogue public batchCatalogue;
     BlastEMP public emp;
     BlastFPSale public fps;
     BlastLinearVesting public linearVestingA;
@@ -55,8 +57,8 @@ contract AxisOriginDeploy is Script {
         // TODO set blast, weth, usdb
 
         // Load salt for Auction House
-        bytes32 atomicSalt = vm.envBytes32("ATOMIC_AUCTION_HOUSE_SALT");
-        bytes32 batchSalt = vm.envBytes32("BATCH_AUCTION_HOUSE_SALT");
+        bytes32 atomicSalt = vm.envBytes32("BLAST_ATOMIC_AUCTION_HOUSE_SALT");
+        bytes32 batchSalt = vm.envBytes32("BLAST_BATCH_AUCTION_HOUSE_SALT");
 
         atomicAuctionHouse = new BlastAtomicAuctionHouse{salt: atomicSalt}(
             msg.sender, protocol, PERMIT2, blast, weth, usdb
@@ -68,7 +70,9 @@ contract AxisOriginDeploy is Script {
         console2.log("BlastBatchAuctionHouse deployed at: ", address(batchAuctionHouse));
 
         atomicCatalogue = new AtomicCatalogue(address(atomicAuctionHouse));
-        console2.log("Catalogue deployed at: ", address(atomicCatalogue));
+        console2.log("AtomicCatalogue deployed at: ", address(atomicCatalogue));
+        batchCatalogue = new BatchCatalogue(address(batchAuctionHouse));
+        console2.log("BatchCatalogue deployed at: ", address(batchCatalogue));
 
         emp = new BlastEMP(address(batchAuctionHouse), blast);
         console2.log("BlastEMP deployed at: ", address(emp));
