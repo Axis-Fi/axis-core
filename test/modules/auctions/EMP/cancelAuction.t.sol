@@ -63,8 +63,9 @@ contract EmpaModuleCancelAuctionTest is EmpTest {
 
     function test_auctionStarted_reverts() public givenLotIsCreated givenLotHasStarted {
         // Expect revert
-        bytes memory err =
-            abi.encodeWithSelector(EncryptedMarginalPrice.Auction_WrongState.selector, _lotId);
+        bytes memory err = abi.encodeWithSelector(
+            EncryptedMarginalPrice.Auction_WrongState.selector, _lotId
+        );
         vm.expectRevert(err);
 
         // Call the function
@@ -82,7 +83,9 @@ contract EmpaModuleCancelAuctionTest is EmpTest {
 
         EncryptedMarginalPrice.AuctionData memory auctionData = _getAuctionData(_lotId);
         assertEq(
-            uint8(auctionData.status), uint8(EncryptedMarginalPrice.LotStatus.Settled), "status"
+            uint8(auctionData.status),
+            uint8(EncryptedMarginalPrice.LotStatus.Settled),
+            "status"
         );
         assertTrue(auctionData.proceedsClaimed, "proceedsClaimed");
     }

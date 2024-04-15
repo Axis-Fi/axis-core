@@ -262,7 +262,11 @@ contract EmpaModuleBidTest is EmpTest {
         assertEq(bidData.amount, _BID_AMOUNT, "amount");
         assertEq(bidData.minAmountOut, 0, "amountOut");
         assertEq(bidData.referrer, _REFERRER, "referrer");
-        assertEq(uint8(bidData.status), uint8(EncryptedMarginalPrice.BidStatus.Submitted), "status");
+        assertEq(
+            uint8(bidData.status),
+            uint8(EncryptedMarginalPrice.BidStatus.Submitted),
+            "status"
+        );
 
         EncryptedMarginalPrice.EncryptedBid memory encryptedBidData =
             _getEncryptedBid(_lotId, bidId);
