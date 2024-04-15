@@ -16,12 +16,13 @@ import {AuctionHouse} from "src/bases/AuctionHouse.sol";
 import {ICallback} from "src/interfaces/ICallback.sol";
 
 // Modules
-import {toKeycode, Module} from "src/modules/Modules.sol";
+import {toKeycode, Module, Keycode, keycodeFromVeecode} from "src/modules/Modules.sol";
 
 contract CancelTest is Test, Permit2User {
     MockERC20 internal _baseToken;
     MockERC20 internal _quoteToken;
     MockAtomicAuctionModule internal _mockAuctionModule;
+    Keycode internal _mockAuctionModuleKeycode;
 
     AtomicAuctionHouse internal _auctionHouse;
     AuctionHouse.RoutingParams internal _routingParams;
@@ -41,6 +42,7 @@ contract CancelTest is Test, Permit2User {
 
         _auctionHouse = new AtomicAuctionHouse(address(this), _PROTOCOL, _permit2Address);
         _mockAuctionModule = new MockAtomicAuctionModule(address(_auctionHouse));
+        _mockAuctionModuleKeycode = keycodeFromVeecode(_mockAuctionModule.VEECODE());
 
         _auctionHouse.installModule(_mockAuctionModule);
 
@@ -53,7 +55,7 @@ contract CancelTest is Test, Permit2User {
         });
 
         _routingParams = AuctionHouse.RoutingParams({
-            auctionType: toKeycode("ATOM"),
+            auctionType: _mockAuctionModuleKeycode,
             baseToken: _baseToken,
             quoteToken: _quoteToken,
             curator: address(0),

@@ -265,7 +265,6 @@ abstract contract AuctionHouse is WithModules, ReentrancyGuard, FeeManager {
         // Validate callbacks address and store if provided
         // This does not check whether the callbacks contract is implemented properly
         // Certain functions may revert later.
-        // TODO need to think about security with this.
         if (!Callbacks.isValidCallbacksAddress(routing_.callbacks)) revert InvalidParams();
         // The zero address passes the isValidCallbackAddress check since we allow auctions to not use a callbacks contract
         if (address(routing_.callbacks) != address(0)) routing.callbacks = routing_.callbacks;

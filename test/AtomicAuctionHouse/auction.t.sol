@@ -42,6 +42,7 @@ contract AtomicCreateAuctionTest is AtomicAuctionHouseTest {
     }
 
     modifier whenBatchAuctionModuleIsInstalled() {
+        vm.prank(_OWNER);
         _auctionHouse.installModule(_batchAuctionModule);
         _;
     }
@@ -108,6 +109,7 @@ contract AtomicCreateAuctionTest is AtomicAuctionHouseTest {
         whenAtomicAuctionModuleIsInstalled
     {
         // Sunset the module, which prevents the creation of new auctions using that module
+        vm.prank(_OWNER);
         _auctionHouse.sunsetModule(_atomicAuctionModuleKeycode);
 
         // Expect revert
@@ -330,6 +332,7 @@ contract AtomicCreateAuctionTest is AtomicAuctionHouseTest {
         whenDerivativeModuleIsInstalled
     {
         // Sunset the module, which prevents the creation of new auctions using that module
+        vm.prank(_OWNER);
         _auctionHouse.sunsetModule(_derivativeModuleKeycode);
 
         // Expect revert

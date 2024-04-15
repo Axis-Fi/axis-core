@@ -19,13 +19,10 @@ import {AtomicAuctionHouse, AtomicRouter} from "src/AtomicAuctionHouse.sol";
 import {AuctionHouse} from "src/bases/AuctionHouse.sol";
 import {Auction, AuctionModule} from "src/modules/Auction.sol";
 import {FeeManager} from "src/bases/FeeManager.sol";
-// import {Catalogue} from "src/Catalogue.sol";
 import {ICallback} from "src/interfaces/ICallback.sol";
 import {Callbacks} from "src/lib/Callbacks.sol";
 
 import {Veecode, toKeycode, keycodeFromVeecode, Keycode} from "src/modules/Modules.sol";
-
-import {console2} from "forge-std/console2.sol";
 
 abstract contract AtomicAuctionHouseTest is Test, Permit2User {
     MockFeeOnTransferERC20 internal _baseToken;
@@ -44,13 +41,14 @@ abstract contract AtomicAuctionHouseTest is Test, Permit2User {
 
     uint256 internal constant _BASE_SCALE = 1e18;
 
-    address internal constant _SELLER = address(0x1);
-    address internal constant _PROTOCOL = address(0x2);
-    address internal constant _CURATOR = address(0x3);
+    address internal constant _OWNER = address(0x1);
+    address internal constant _SELLER = address(0x2);
+    address internal constant _PROTOCOL = address(0x3);
+    address internal constant _CURATOR = address(0x4);
     address internal constant _RECIPIENT = address(0x5);
     address internal constant _REFERRER = address(0x6);
 
-    address internal _bidder = address(0x4);
+    address internal _bidder;
     uint256 internal _bidderKey;
 
     uint24 internal constant _CURATOR_MAX_FEE_PERCENT = 100;
@@ -93,8 +91,13 @@ abstract contract AtomicAuctionHouseTest is Test, Permit2User {
         _baseToken = new MockFeeOnTransferERC20("Base Token", "BASE", 18);
         _quoteToken = new MockFeeOnTransferERC20("Quote Token", "QUOTE", 18);
 
-        _auctionHouse = new AtomicAuctionHouse(address(this), _PROTOCOL, _permit2Address);
-        // _catalogue = new Catalogue(address(_auctionHouse));
+        // Create an AtomicAuctionHouse at a deterministic address, since it is used as input to callbacks
+        AtomicAuctionHouse auctionHouse = new AtomicAuctionHouse(_OWNER, _PROTOCOL, _permit2Address);
+        _auctionHouse = AtomicAuctionHouse(address(0x000000000000000000000000000000000000000A));
+        vm.etch(address(_auctionHouse), address(auctionHouse).code);
+        vm.store(address(_auctionHouse), bytes32(uint256(0)), bytes32(abi.encode(_OWNER))); // Owner
+        vm.store(address(_auctionHouse), bytes32(uint256(6)), bytes32(abi.encode(1))); // Reentrancy
+        vm.store(address(_auctionHouse), bytes32(uint256(7)), bytes32(abi.encode(_PROTOCOL))); // Protocol
 
         _atomicAuctionModule = new MockAtomicAuctionModule(address(_auctionHouse));
         _atomicAuctionModuleKeycode = keycodeFromVeecode(_atomicAuctionModule.VEECODE());
@@ -178,6 +181,7 @@ abstract contract AtomicAuctionHouseTest is Test, Permit2User {
     }
 
     modifier whenAtomicAuctionModuleIsInstalled() {
+        vm.prank(_OWNER);
         _auctionHouse.installModule(_atomicAuctionModule);
         _;
     }
@@ -188,6 +192,7 @@ abstract contract AtomicAuctionHouseTest is Test, Permit2User {
     }
 
     modifier whenDerivativeModuleIsInstalled() {
+        vm.prank(_OWNER);
         _auctionHouse.installModule(_derivativeModule);
         _;
     }
@@ -225,7 +230,7 @@ abstract contract AtomicAuctionHouseTest is Test, Permit2User {
     modifier givenLotHasAllowlist() {
         // // Allowlist callback supports onCreate, onPurchase, and onBid callbacks
         // // 10011000 = 0x98
-        // // cast create2 -s 98 -i $(cat ./bytecode/MockCallbackAtomic98.bin)
+        // // cast create2 -s 98 -i $(cat ./bytecode/MockCallback98.bin)
         // bytes memory bytecode = abi.encodePacked(
         //     type(MockCallback).creationCode,
         //     abi.encode(address(_auctionHouse), Callbacks.Permissions({
@@ -240,12 +245,12 @@ abstract contract AtomicAuctionHouseTest is Test, Permit2User {
         //     }), _SELLER)
         // );
         // vm.writeFile(
-        //     "./bytecode/MockCallbackAtomic98.bin",
+        //     "./bytecode/MockCallback98.bin",
         //     vm.toString(bytecode)
         // );
 
-        bytes32 salt = bytes32(0xb797b6c87f6e6d3a48e303eabe068ab4d6b145323b24827e86f2dc68ef03c637);
-        vm.broadcast(); // required for CREATE2 address to work correctly. doesn't do anything in a test
+        bytes32 salt = bytes32(0x01869ed52a30c61ffe6722cba9220cbfdf400af51b99cd80faf047638e284cf6);
+        vm.startBroadcast(); // required for CREATE2 address to work correctly. doesn't do anything in a test
         _callback = new MockCallback{salt: salt}(
             address(_auctionHouse),
             Callbacks.Permissions({
@@ -260,6 +265,7 @@ abstract contract AtomicAuctionHouseTest is Test, Permit2User {
             }),
             _SELLER
         );
+        vm.stopBroadcast();
 
         _routingParams.callbacks = _callback;
 
@@ -336,7 +342,7 @@ abstract contract AtomicAuctionHouseTest is Test, Permit2User {
         //     }), _SELLER)
         // );
         // vm.writeFile(
-        //     "./bytecode/MockCallbackAtomicFF.bin",
+        //     "./bytecode/MockCallbackFF.bin",
         //     vm.toString(bytecode)
         // );
         // // 11111101 = 0xFD
@@ -354,7 +360,7 @@ abstract contract AtomicAuctionHouseTest is Test, Permit2User {
         //     }), _SELLER)
         // );
         // vm.writeFile(
-        //     "./bytecode/MockCallbackAtomicFD.bin",
+        //     "./bytecode/MockCallbackFD.bin",
         //     vm.toString(bytecode)
         // );
         // // 11111110 = 0xFE
@@ -372,7 +378,7 @@ abstract contract AtomicAuctionHouseTest is Test, Permit2User {
         //     }), _SELLER)
         // );
         // vm.writeFile(
-        //     "./bytecode/MockCallbackAtomicFE.bin",
+        //     "./bytecode/MockCallbackFE.bin",
         //     vm.toString(bytecode)
         // );
         // // 11111100 = 0xFC
@@ -390,7 +396,7 @@ abstract contract AtomicAuctionHouseTest is Test, Permit2User {
         //     }), _SELLER)
         // );
         // vm.writeFile(
-        //     "./bytecode/MockCallbackAtomicFC.bin",
+        //     "./bytecode/MockCallbackFC.bin",
         //     vm.toString(bytecode)
         // );
 
@@ -398,23 +404,25 @@ abstract contract AtomicAuctionHouseTest is Test, Permit2User {
         bytes32 salt;
         if (_callbackSendBaseTokens && _callbackReceiveQuoteTokens) {
             // 11111111 = 0xFF
-            // cast create2 -s FF -i $(cat ./bytecode/MockCallbackAtomicFF.bin)
-            salt = bytes32(0x278e8503d853020d9628363d0e851b2dda8472fb985306fc33fcda43b307a314);
+            // cast create2 -s FF -i $(cat ./bytecode/MockCallbackFF.bin)
+            salt = bytes32(0x80626a5c754883542e39df22122e14e1bb05b4420aeda8872feb43e62297cade);
         } else if (_callbackSendBaseTokens) {
             // 11111101 = 0xFD
-            // cast create2 -s FD -i $(cat ./bytecode/MockCallbackAtomicFD.bin)
-            salt = bytes32(0x49255d69a582ec45568687e62ff9eca0878b09ab72da93c48f4aa364c1da0677);
+            // cast create2 -s FD -i $(cat ./bytecode/MockCallbackFD.bin)
+            salt = bytes32(0xc577954dbde2d9dea179eec3f3ba190034b52f1ecd95d4438de964697824f39a);
         } else if (_callbackReceiveQuoteTokens) {
             // 11111110 = 0xFE
-            // cast create2 -s FE -i $(cat ./bytecode/MockCallbackAtomicFE.bin)
-            salt = bytes32(0x2a05e283af80931b80d5f16cc077a7e246b5add21e326c017c0c747aaf527117);
+            // cast create2 -s FE -i $(cat ./bytecode/MockCallbackFE.bin)
+            salt = bytes32(0xee77df7d4de7979e577b01111b2c4669c6b254a738e149974c9e09af2caf614a);
         } else {
             // 11111100 = 0xFC
-            // cast create2 -s FC -i $(cat ./bytecode/MockCallbackAtomicFC.bin)
-            salt = bytes32(0x9d337cd6bcfa87d34cfa7a3ba884f74b6952627f5237131b70371777b76ade67);
+            // cast create2 -s FC -i $(cat ./bytecode/MockCallbackFC.bin)
+            salt = bytes32(0x43f799d07cd115f9f606c396f86fef5a63965c94828c1f368b16d5b401d2e9dd);
         }
 
-        vm.broadcast(); // required for CREATE2 address to work correctly. doesn't do anything in a test
+        // Required for CREATE2 address to work correctly. doesn't do anything in a test
+        // Source: https://github.com/foundry-rs/foundry/issues/6402
+        vm.startBroadcast(); // required for CREATE2 address to work correctly. doesn't do anything in a test
         _callback = new MockCallback{salt: salt}(
             address(_auctionHouse),
             Callbacks.Permissions({
@@ -429,7 +437,7 @@ abstract contract AtomicAuctionHouseTest is Test, Permit2User {
             }),
             _SELLER
         );
-        console2.log("callback", address(_callback));
+        vm.stopBroadcast();
 
         _routingParams.callbacks = _callback;
         _;
@@ -498,6 +506,7 @@ abstract contract AtomicAuctionHouseTest is Test, Permit2User {
     }
 
     modifier givenCuratorMaxFeeIsSet() {
+        vm.prank(_OWNER);
         _auctionHouse.setFee(
             _auctionModuleKeycode, FeeManager.FeeType.MaxCurator, _CURATOR_MAX_FEE_PERCENT
         );
@@ -524,6 +533,7 @@ abstract contract AtomicAuctionHouseTest is Test, Permit2User {
     }
 
     function _setProtocolFee(uint24 fee_) internal {
+        vm.prank(_OWNER);
         _auctionHouse.setFee(_auctionModuleKeycode, FeeManager.FeeType.Protocol, fee_);
         _protocolFeePercentActual = fee_;
     }
@@ -534,6 +544,7 @@ abstract contract AtomicAuctionHouseTest is Test, Permit2User {
     }
 
     function _setReferrerFee(uint24 fee_) internal {
+        vm.prank(_OWNER);
         _auctionHouse.setFee(_auctionModuleKeycode, FeeManager.FeeType.Referrer, fee_);
         _referrerFeePercentActual = fee_;
     }

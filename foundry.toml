@@ -2,13 +2,15 @@
 src = "src"
 out = "out"
 # libs = ["lib"]
-fs_permissions = [{access = "write", path = "./bytecode/"}]
+fs_permissions = [{access = "write", path = "./bytecode/"}, {access = "read", path = "./script/"}, {access = "read-write", path = "./deployments/"}]
 ffi = true
 solc_version = "0.8.19"
 evm_version = "paris"
 
 [fuzz]
 runs = 1024
+
+# Remappings are setup using remappings.txt, since forge seems to ignore remappings here
 
 [fmt]
 line_length = 100

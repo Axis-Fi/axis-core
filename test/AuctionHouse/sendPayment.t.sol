@@ -12,10 +12,10 @@ import {Callbacks} from "src/lib/Callbacks.sol";
 contract SendPaymentTest is Test, Permit2User {
     MockAuctionHouse internal _auctionHouse;
 
-    address internal constant _PROTOCOL = address(0x1);
-
-    address internal constant _USER = address(0x2);
-    address internal constant _SELLER = address(0x3);
+    address internal constant _OWNER = address(0x1);
+    address internal constant _PROTOCOL = address(0x2);
+    address internal constant _USER = address(0x3);
+    address internal constant _SELLER = address(0x4);
 
     // Function parameters
     uint256 internal _paymentAmount = 1e18;
@@ -27,7 +27,13 @@ contract SendPaymentTest is Test, Permit2User {
         // Set reasonable starting block
         vm.warp(1_000_000);
 
-        _auctionHouse = new MockAuctionHouse(_PROTOCOL, _permit2Address);
+        // Create an AuctionHouse at a deterministic address, since it is used as input to callbacks
+        MockAuctionHouse mockAuctionHouse = new MockAuctionHouse(_OWNER, _PROTOCOL, _permit2Address);
+        _auctionHouse = MockAuctionHouse(address(0x000000000000000000000000000000000000000A));
+        vm.etch(address(_auctionHouse), address(mockAuctionHouse).code);
+        vm.store(address(_auctionHouse), bytes32(uint256(0)), bytes32(abi.encode(_OWNER))); // Owner
+        vm.store(address(_auctionHouse), bytes32(uint256(6)), bytes32(abi.encode(1))); // Reentrancy
+        vm.store(address(_auctionHouse), bytes32(uint256(10)), bytes32(abi.encode(_PROTOCOL))); // Protocol
 
         _quoteToken = new MockFeeOnTransferERC20("Quote Token", "QUOTE", 18);
         _quoteToken.setTransferFee(0);
@@ -62,7 +68,6 @@ contract SendPaymentTest is Test, Permit2User {
         //     "./bytecode/MockCallback00.bin",
         //     vm.toString(bytecode)
         // );
-
         // // 00000010 - 0x02
         // bytecode = abi.encodePacked(
         //     type(MockCallback).creationCode,
@@ -86,11 +91,11 @@ contract SendPaymentTest is Test, Permit2User {
         if (_callbackReceiveQuoteTokens) {
             // 0x02
             // cast create2 -s 02 -i $(cat ./bytecode/MockCallback02.bin)
-            salt = bytes32(0x180ec64c02a8d7989d57c493a640df4670c3f12605b854ea424f45f40e935499);
+            salt = bytes32(0xcaf3843da7e869a4420ccc98ad4d763f7db30c5d8f4d8835aaac84922e527798);
         } else {
             // 0x00
             // cast create2 -s 00 -i $(cat ./bytecode/MockCallback00.bin)
-            salt = bytes32(0xa1e791e7b37c2f4d4616aa9bd81b309deafc1f84ae1767219a44616191f300ee);
+            salt = bytes32(0x4960aebb0a8ba9056baf240a7d7817e9b284d3839b7189da701998added97a7f);
         }
 
         vm.broadcast(); // required for CREATE2 address to work correctly. doesn't do anything in a test
