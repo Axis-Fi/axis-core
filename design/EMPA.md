@@ -83,7 +83,7 @@ In order to display user bids on the dapp, it is most convenient to use a subgra
 
 ### Seller Creates Auction
 
-A seller creating an auction is the first step in the lifecycle. They provide common auction parameters as well as auction specific parameters to the BatchAuctionHouse contract to kick it off. They must approve the BatchAuctionHouse for the token they are selling (base token) or provide a Hooks contract that will settle the auction.
+A seller creating an auction is the first step in the lifecycle. They provide common auction parameters as well as auction specific parameters to the BatchAuctionHouse contract to kick it off. They must approve the BatchAuctionHouse for the token they are selling (base token) or provide a Callbacks contract that will settle the auction.
 
 ```mermaid
 sequenceDiagram
@@ -98,7 +98,7 @@ sequenceDiagram
 
   Seller->>UI: Navigate to Create Auction page
   activate UI
-    Seller->>UI: Input auction data (baseToken, quoteToken, start, duration, minPrice, capacity, optionally hooks, allowlist, and derivative data)
+    Seller->>UI: Input auction data (baseToken, quoteToken, start, duration, minPrice, capacity, optionally callbacks, and derivative data)
     Seller->>UI: Click "Create Auction"
     UI->>API: Request new EC keypair
     activate API
@@ -403,9 +403,9 @@ sequenceDiagram
     BatchAuctionHouse->>Seller: Transfer quote token proceeds to seller (or callback) (minus fees)
     Note right of BatchAuctionHouse: The remaining base tokens are the prefunded capacity and curator payout, minus any pending bid claims
     BatchAuctionHouse->>Seller: Transfer remaining base tokens to seller (or callback)
-    alt seller specified hook for proceeds
-      BatchAuctionHouse->>Seller: Call onClaimProceeds hook
-      Seller->>Seller: Execute hook logic
+    alt seller specified callback for proceeds
+      BatchAuctionHouse->>Seller: Call onClaimProceeds callback
+      Seller->>Seller: Execute callback logic
     end
     alt derivative is defined
       BatchAuctionHouse->>DerivativeModule: mint payout to curator as derivative
