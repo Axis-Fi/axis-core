@@ -16,6 +16,32 @@ contract CallbacksTest is Test {
     address internal constant _AUCTION_HOUSE = address(0x1);
     address internal constant _SELLER = address(0x2);
 
+    function _allFalseSalt() internal returns (bytes32, Callbacks.Permissions memory) {
+        Callbacks.Permissions memory permissions = Callbacks.Permissions({
+            onCreate: false,
+            onCancel: false,
+            onCurate: false,
+            onPurchase: false,
+            onBid: false,
+            onClaimProceeds: false,
+            receiveQuoteTokens: false,
+            sendBaseTokens: false
+        });
+
+        // // 00000000 = 0x00
+        // // cast create2 -s 00 -i $(cat ./bytecode/MockCallback00.bin)
+        // bytes memory bytecode = abi.encodePacked(
+        //     type(MockCallback).creationCode,
+        //     abi.encode(_AUCTION_HOUSE, permissions, _SELLER)
+        // );
+        // vm.writeFile(
+        //     "./bytecode/MockCallback00.bin",
+        //     vm.toString(bytecode)
+        // );
+
+        return (bytes32(0x6274afc3961fb1fd4c1fc9ea6b09fee8682f3834d237bfbe08f18dd482f859e5), permissions);
+    }
+
     function _onCreateSalt() internal returns (bytes32, Callbacks.Permissions memory) {
         Callbacks.Permissions memory permissions = Callbacks.Permissions({
             onCreate: true,
@@ -252,6 +278,7 @@ contract CallbacksTest is Test {
     // [ ] sendBaseTokens is true
 
     // hasPermission
+    // [X] all false
     // [X] ON_CREATE_FLAG
     // [X] ON_CANCEL_FLAG
     // [X] ON_CURATE_FLAG
@@ -270,6 +297,22 @@ contract CallbacksTest is Test {
         vm.stopBroadcast();
 
         return callback;
+    }
+
+    function test_validateCallbacksPermissions_allFalse() public {
+        (bytes32 salt, Callbacks.Permissions memory permissions) = _allFalseSalt();
+        ICallback callback = _createCallback(salt, permissions);
+
+        assertEq(callback.hasPermission(Callbacks.ON_CREATE_FLAG), false, "onCreate");
+        assertEq(callback.hasPermission(Callbacks.ON_CANCEL_FLAG), false, "onCancel");
+        assertEq(callback.hasPermission(Callbacks.ON_CURATE_FLAG), false, "onCurate");
+        assertEq(callback.hasPermission(Callbacks.ON_PURCHASE_FLAG), false, "onPurchase");
+        assertEq(callback.hasPermission(Callbacks.ON_BID_FLAG), false, "onBid");
+        assertEq(callback.hasPermission(Callbacks.ON_CLAIM_PROCEEDS_FLAG), false, "onClaimProceeds");
+        assertEq(
+            callback.hasPermission(Callbacks.RECEIVE_QUOTE_TOKENS_FLAG), false, "receiveQuoteTokens"
+        );
+        assertEq(callback.hasPermission(Callbacks.SEND_BASE_TOKENS_FLAG), false, "sendBaseTokens");
     }
 
     function test_hasPermission_onCreate() public {
