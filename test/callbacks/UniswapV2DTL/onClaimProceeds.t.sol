@@ -11,7 +11,6 @@ import {ERC20} from "solmate/tokens/ERC20.sol";
 import {IUniswapV2Pair} from "uniswap-v2-core/interfaces/IUniswapV2Pair.sol";
 
 // AuctionHouse
-import {BaseCallback} from "src/callbacks/BaseCallback.sol";
 import {LinearVesting} from "src/modules/derivatives/LinearVesting.sol";
 import {BaseDirectToLiquidity} from "src/callbacks/liquidity/BaseDTL.sol";
 import {UniswapV2DirectToLiquidity} from "src/callbacks/liquidity/UniswapV2DTL.sol";
@@ -21,7 +20,7 @@ contract UniswapV2DirectToLiquidityOnClaimProceedsTest is UniswapV2DirectToLiqui
     uint96 internal constant _REFUND = 0;
 
     /// @dev The minimum amount of liquidity retained in the pool
-    uint256 internal constant MINIMUM_LIQUIDITY = 10 ** 3;
+    uint256 internal constant _MINIMUM_LIQUIDITY = 10 ** 3;
 
     uint96 internal _proceeds;
     uint96 internal _refund;
@@ -67,9 +66,9 @@ contract UniswapV2DirectToLiquidityOnClaimProceedsTest is UniswapV2DirectToLiqui
         uint256 linearVestingExpectedBalance;
         // Only has a balance if not vesting
         if (_dtlCreateParams.vestingStart == 0) {
-            sellerExpectedBalance = pool.totalSupply() - testBalance - MINIMUM_LIQUIDITY;
+            sellerExpectedBalance = pool.totalSupply() - testBalance - _MINIMUM_LIQUIDITY;
         } else {
-            linearVestingExpectedBalance = pool.totalSupply() - testBalance - MINIMUM_LIQUIDITY;
+            linearVestingExpectedBalance = pool.totalSupply() - testBalance - _MINIMUM_LIQUIDITY;
         }
 
         assertEq(
@@ -544,7 +543,7 @@ contract UniswapV2DirectToLiquidityOnClaimProceedsTest is UniswapV2DirectToLiqui
         IUniswapV2Pair pool = _getUniswapV2Pool();
         assertEq(
             pool.balanceOf(_SELLER),
-            pool.totalSupply() - MINIMUM_LIQUIDITY,
+            pool.totalSupply() - _MINIMUM_LIQUIDITY,
             "seller: LP token balance"
         );
     }

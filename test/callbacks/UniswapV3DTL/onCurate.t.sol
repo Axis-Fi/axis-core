@@ -5,7 +5,6 @@ import {UniswapV3DirectToLiquidityTest} from "./UniswapV3DTLTest.sol";
 
 import {BaseCallback} from "src/callbacks/BaseCallback.sol";
 import {BaseDirectToLiquidity} from "src/callbacks/liquidity/BaseDTL.sol";
-import {UniswapV3DirectToLiquidity} from "src/callbacks/liquidity/UniswapV3DTL.sol";
 
 contract UniswapV3DirectToLiquidityOnCurateTest is UniswapV3DirectToLiquidityTest {
     uint96 internal constant _PAYOUT_AMOUNT = 1e18;

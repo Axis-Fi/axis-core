@@ -7,8 +7,6 @@ import {Permit2User} from "test/lib/permit2/Permit2User.sol";
 
 import {BatchAuctionHouse} from "src/BatchAuctionHouse.sol";
 
-import {BaseCallback} from "src/callbacks/BaseCallback.sol";
-
 import {GUniFactory} from "g-uni-v1-core/GUniFactory.sol";
 import {GUniPool} from "g-uni-v1-core/GUniPool.sol";
 import {IUniswapV3Factory} from "uniswap-v3-core/interfaces/IUniswapV3Factory.sol";
