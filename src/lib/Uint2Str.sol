@@ -1,4 +1,4 @@
-/// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8;
 
 // Some fancy math to convert a uint into a string, courtesy of Provable Things.

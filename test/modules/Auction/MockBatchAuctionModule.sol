@@ -3,19 +3,25 @@ pragma solidity 0.8.19;
 
 // Modules
 import {Veecode, toKeycode, wrapVeecode} from "src/modules/Modules.sol";
+import {BatchAuction, BatchAuctionModule} from "src/modules/auctions/BatchAuctionModule.sol";
 
 // Auctions
 import {Auction, AuctionModule} from "src/modules/Auction.sol";
 
-contract MockBatchAuctionModule is AuctionModule {
+contract MockBatchAuctionModule is BatchAuctionModule {
+    enum LotStatus {
+        Created,
+        Settled
+    }
+
     enum BidStatus {
         Submitted,
-        Decrypted,
         // Bid status will also be set to claimed if the bid is cancelled/refunded
         Claimed
     }
 
     /// @notice        Core data for a bid
+    /// @dev           Generic batch auctions do not have to use the uint96 size like EMPA
     ///
     /// @param         status              The status of the bid
     /// @param         bidder              The address of the bidder
@@ -23,10 +29,10 @@ contract MockBatchAuctionModule is AuctionModule {
     /// @param         minAmountOut        The minimum amount out (not set until the bid is decrypted)
     /// @param         referrer            The address of the referrer
     struct Bid {
-        address bidder; // 20 +
-        uint96 amount; // 12 = 32 - end of slot 1
-        uint96 minAmountOut; // 12 +
-        address referrer; // 20 = 32 - end of slot 2
+        address bidder;
+        uint256 amount;
+        uint256 minAmountOut;
+        address referrer;
         BidStatus status; // 1 - slot 3
     }
 
@@ -35,10 +41,10 @@ contract MockBatchAuctionModule is AuctionModule {
     mapping(uint96 lotId => mapping(uint64 => Bid)) public bidData;
     mapping(uint96 lotId => mapping(uint64 => bool)) public bidCancelled;
     mapping(uint96 lotId => mapping(uint64 => bool)) public bidRefunded;
+    mapping(uint96 lotId => mapping(uint64 => BidClaim)) public bidClaims;
 
-    mapping(uint96 lotId => Settlement) public lotSettlements;
-
-    mapping(uint96 lotId => Auction.Status) public lotStatus;
+    mapping(uint96 lotId => LotStatus) public lotStatus;
+    mapping(uint96 lotId => bool) public lotProceedsClaimed;
 
     mapping(uint96 => bool) public settled;
 
@@ -50,34 +56,17 @@ contract MockBatchAuctionModule is AuctionModule {
         return wrapVeecode(toKeycode("BATCH"), 1);
     }
 
-    function TYPE() public pure virtual override returns (Type) {
-        return Type.Auction;
-    }
-
-    /// @inheritdoc Auction
-    function auctionType() external pure override returns (AuctionType) {
-        return AuctionType.Batch;
-    }
-
     function _auction(uint96, Lot memory, bytes memory) internal virtual override {}
 
     function _cancelAuction(uint96 id_) internal override {
         //
     }
 
-    function _purchase(
-        uint96,
-        uint96,
-        bytes calldata
-    ) internal pure override returns (uint96, bytes memory) {
-        revert Auction_NotImplemented();
-    }
-
     function _bid(
         uint96 lotId_,
         address bidder_,
         address referrer_,
-        uint96 amount_,
+        uint256 amount_,
         bytes calldata
     ) internal override returns (uint64) {
         // Create a new bid
@@ -99,8 +88,9 @@ contract MockBatchAuctionModule is AuctionModule {
     function _refundBid(
         uint96 lotId_,
         uint64 bidId_,
+        uint256 index_,
         address
-    ) internal virtual override returns (uint96 refundAmount) {
+    ) internal virtual override returns (uint256 refundAmount) {
         // Cancel the bid
         bidCancelled[lotId_][bidId_] = true;
 
@@ -109,45 +99,69 @@ contract MockBatchAuctionModule is AuctionModule {
 
         // Remove from bid id array
         uint256 len = bidIds.length;
-        for (uint256 i = 0; i < len; i++) {
-            if (bidIds[i] == bidId_) {
-                bidIds[i] = bidIds[len - 1];
-                bidIds.pop();
-                break;
-            }
+        if (len != 0 && index_ < len) {
+            bidIds[index_] = bidIds[len - 1];
+            bidIds.pop();
         }
 
         return bidData[lotId_][bidId_].amount;
     }
 
+    function addBidClaim(
+        uint96 lotId_,
+        uint64 bidId_,
+        address bidder_,
+        address referrer_,
+        uint256 paid_,
+        uint256 payout_,
+        uint256 refund_
+    ) public {
+        BidClaim storage claim = bidClaims[lotId_][bidId_];
+        claim.bidder = bidder_;
+        claim.referrer = referrer_;
+        claim.paid = paid_;
+        claim.payout = payout_;
+        claim.refund = refund_;
+    }
+
     function _claimBids(
         uint96 lotId_,
         uint64[] calldata bidIds_
-    ) internal virtual override returns (BidClaim[] memory bidClaims, bytes memory auctionOutput) {}
+    )
+        internal
+        virtual
+        override
+        returns (BidClaim[] memory bidClaims_, bytes memory auctionOutput_)
+    {
+        uint256 len = bidIds_.length;
+        bidClaims_ = new BidClaim[](len);
 
-    function setLotSettlement(uint96 lotId_, Settlement calldata settlement_) external {
-        lotSettlements[lotId_] = settlement_;
+        for (uint256 i = 0; i < len; i++) {
+            uint64 bidId = bidIds_[i];
+            bidClaims_[i] = bidClaims[lotId_][bidId];
+        }
 
+        return (bidClaims_, "");
+    }
+
+    function setLotSettlement(uint96 lotId_, uint256 totalIn_, uint256 totalOut_) external {
         // Also update sold and purchased
         Lot storage lot = lotData[lotId_];
-        lot.purchased = uint96(settlement_.totalIn);
-        lot.sold = uint96(settlement_.totalOut);
-        lot.partialPayout = uint96(settlement_.pfPayout);
+        lot.purchased = totalIn_;
+        lot.sold = totalOut_;
     }
 
-    function _settle(uint96 lotId_) internal override returns (Settlement memory, bytes memory) {
+    function _settle(uint96 lotId_) internal override returns (uint256, uint256, bytes memory) {
         // Update status
-        lotStatus[lotId_] = Auction.Status.Settled;
+        lotStatus[lotId_] = LotStatus.Settled;
 
-        return (lotSettlements[lotId_], "");
+        return (lotData[lotId_].purchased, lotData[lotId_].sold, "");
     }
 
-    function _claimProceeds(uint96 lotId_) internal override returns (uint96, uint96, uint96) {
-        // Update status
-        lotStatus[lotId_] = Auction.Status.Claimed;
-
-        Lot storage lot = lotData[lotId_];
-        return (lot.purchased, lot.sold, lot.partialPayout);
+    function _claimProceeds(uint96 lotId_) internal override {
+        // Update claim status
+        lotStatus[lotId_] = LotStatus.Settled;
+        lotProceedsClaimed[lotId_] = true;
     }
 
     function getBid(uint96 lotId_, uint64 bidId_) external view returns (Bid memory bid_) {
@@ -157,7 +171,7 @@ contract MockBatchAuctionModule is AuctionModule {
     function _revertIfBidInvalid(uint96 lotId_, uint64 bidId_) internal view virtual override {
         // Check that the bid exists
         if (nextBidId <= bidId_) {
-            revert Auction.Auction_InvalidBidId(lotId_, bidId_);
+            revert BatchAuction.Auction_InvalidBidId(lotId_, bidId_);
         }
     }
 
@@ -168,35 +182,55 @@ contract MockBatchAuctionModule is AuctionModule {
     ) internal view virtual override {
         // Check that the bidder is the owner of the bid
         if (bidData[lotId_][bidId_].bidder != caller_) {
-            revert Auction.Auction_NotBidder();
+            revert BatchAuction.Auction_NotBidder();
         }
     }
 
     function _revertIfBidClaimed(uint96 lotId_, uint64 bidId_) internal view virtual override {
         // Check that the bid has not been cancelled
         if (bidCancelled[lotId_][bidId_] == true) {
-            revert Auction.Auction_InvalidBidId(lotId_, bidId_);
+            revert BatchAuction.Auction_InvalidBidId(lotId_, bidId_);
         }
     }
 
     function _revertIfLotSettled(uint96 lotId_) internal view virtual override {
         // Check that the lot has not been settled
-        if (lotStatus[lotId_] == Auction.Status.Settled) {
+        if (lotStatus[lotId_] == LotStatus.Settled) {
             revert Auction.Auction_MarketNotActive(lotId_);
         }
     }
 
     function _revertIfLotNotSettled(uint96 lotId_) internal view virtual override {
         // Check that the lot has been settled
-        if (lotStatus[lotId_] != Auction.Status.Settled) {
+        if (lotStatus[lotId_] != LotStatus.Settled) {
             revert Auction.Auction_InvalidParams();
         }
     }
 
     function _revertIfLotProceedsClaimed(uint96 lotId_) internal view virtual override {
         // Check that the lot has not been claimed
-        if (lotStatus[lotId_] == Auction.Status.Claimed) {
+        if (lotProceedsClaimed[lotId_]) {
             revert Auction.Auction_InvalidParams();
         }
+    }
+
+    function getNumBids(uint96) external view override returns (uint256) {
+        return bidIds.length;
+    }
+
+    function getBidIds(
+        uint96,
+        uint256 start_,
+        uint256 count_
+    ) external view override returns (uint64[] memory) {
+        uint256 len = bidIds.length;
+        uint256 end = start_ + count_ > len ? len : start_ + count_;
+
+        uint64[] memory ids = new uint64[](end - start_);
+        for (uint256 i = start_; i < end; i++) {
+            ids[i - start_] = bidIds[i];
+        }
+
+        return ids;
     }
 }

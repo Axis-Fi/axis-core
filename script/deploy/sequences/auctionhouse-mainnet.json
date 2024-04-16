@@ -1,27 +1,42 @@
 {
     "sequence": [
         {
-            "name": "AuctionHouse",
+            "name": "AtomicAuctionHouse",
             "args": {},
             "salt": 0
         },
         {
-            "name": "Catalogue",
+            "name": "BatchAuctionHouse",
             "args": {},
             "salt": 0
         },
         {
-            "name": "EncryptedMarginalPriceAuctionModule",
+            "name": "AtomicCatalogue",
             "args": {},
             "salt": 0
         },
         {
-            "name": "FixedPriceAuctionModule",
+            "name": "BatchCatalogue",
             "args": {},
             "salt": 0
         },
         {
-            "name": "LinearVesting",
+            "name": "EncryptedMarginalPrice",
+            "args": {},
+            "salt": 0
+        },
+        {
+            "name": "FixedPriceSale",
+            "args": {},
+            "salt": 0
+        },
+        {
+            "name": "AtomicLinearVesting",
+            "args": {},
+            "salt": 0
+        },
+        {
+            "name": "BatchLinearVesting",
             "args": {},
             "salt": 0
         }

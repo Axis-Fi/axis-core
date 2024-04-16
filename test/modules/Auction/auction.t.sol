@@ -7,25 +7,26 @@ import {console2} from "forge-std/console2.sol";
 
 // Mocks
 import {MockERC20} from "lib/solmate/src/test/utils/mocks/MockERC20.sol";
-import {MockAuctionModule} from "test/modules/Auction/MockAuctionModule.sol";
+import {MockAtomicAuctionModule} from "test/modules/Auction/MockAtomicAuctionModule.sol";
 import {Permit2User} from "test/lib/permit2/Permit2User.sol";
 
 // Auctions
-import {AuctionHouse} from "src/AuctionHouse.sol";
+import {AtomicAuctionHouse} from "src/AtomicAuctionHouse.sol";
 import {Auction} from "src/modules/Auction.sol";
-import {Auctioneer} from "src/bases/Auctioneer.sol";
+import {AuctionHouse} from "src/bases/AuctionHouse.sol";
 import {ICallback} from "src/interfaces/ICallback.sol";
 
 // Modules
-import {toKeycode, Module} from "src/modules/Modules.sol";
+import {toKeycode, Module, Keycode, keycodeFromVeecode} from "src/modules/Modules.sol";
 
 contract AuctionTest is Test, Permit2User {
     MockERC20 internal _baseToken;
     MockERC20 internal _quoteToken;
-    MockAuctionModule internal _mockAuctionModule;
+    MockAtomicAuctionModule internal _mockAuctionModule;
+    Keycode internal _mockAuctionModuleKeycode;
 
-    AuctionHouse internal _auctionHouse;
-    Auctioneer.RoutingParams internal _routingParams;
+    AtomicAuctionHouse internal _auctionHouse;
+    AuctionHouse.RoutingParams internal _routingParams;
     Auction.AuctionParams internal _auctionParams;
 
     address internal constant _PROTOCOL = address(0x2);
@@ -41,8 +42,9 @@ contract AuctionTest is Test, Permit2User {
         _baseToken = new MockERC20("Base Token", "BASE", _BASE_TOKEN_DECIMALS);
         _quoteToken = new MockERC20("Quote Token", "QUOTE", _QUOTE_TOKEN_DECIMALS);
 
-        _auctionHouse = new AuctionHouse(address(this), _PROTOCOL, _permit2Address);
-        _mockAuctionModule = new MockAuctionModule(address(_auctionHouse));
+        _auctionHouse = new AtomicAuctionHouse(address(this), _PROTOCOL, _permit2Address);
+        _mockAuctionModule = new MockAtomicAuctionModule(address(_auctionHouse));
+        _mockAuctionModuleKeycode = keycodeFromVeecode(_mockAuctionModule.VEECODE());
 
         _auctionHouse.installModule(_mockAuctionModule);
 
@@ -54,8 +56,8 @@ contract AuctionTest is Test, Permit2User {
             implParams: abi.encode("")
         });
 
-        _routingParams = Auctioneer.RoutingParams({
-            auctionType: toKeycode("MOCK"),
+        _routingParams = AuctionHouse.RoutingParams({
+            auctionType: _mockAuctionModuleKeycode,
             baseToken: _baseToken,
             quoteToken: _quoteToken,
             curator: address(0),
@@ -63,8 +65,7 @@ contract AuctionTest is Test, Permit2User {
             callbackData: abi.encode(""),
             derivativeType: toKeycode(""),
             derivativeParams: abi.encode(""),
-            wrapDerivative: false,
-            prefunded: false
+            wrapDerivative: false
         });
     }
 

@@ -53,7 +53,7 @@ abstract contract BaseCallback is ICallback, Owned {
         address seller_,
         address baseToken_,
         address quoteToken_,
-        uint96 capacity_,
+        uint256 capacity_,
         bool prefund_,
         bytes calldata callbackData_
     ) external override onlyAuctionHouse returns (bytes4) {
@@ -78,14 +78,14 @@ abstract contract BaseCallback is ICallback, Owned {
         address seller_,
         address baseToken_,
         address quoteToken_,
-        uint96 capacity_,
+        uint256 capacity_,
         bool prefund_,
         bytes calldata callbackData_
     ) internal virtual;
 
     function onCancel(
         uint96 lotId_,
-        uint96 refund_,
+        uint256 refund_,
         bool prefunded_,
         bytes calldata callbackData_
     ) external override onlyAuctionHouse onlyRegisteredLot(lotId_) returns (bytes4) {
@@ -98,14 +98,14 @@ abstract contract BaseCallback is ICallback, Owned {
 
     function _onCancel(
         uint96 lotId_,
-        uint96 refund_,
+        uint256 refund_,
         bool prefunded_,
         bytes calldata callbackData_
     ) internal virtual;
 
     function onCurate(
         uint96 lotId_,
-        uint96 curatorFee_,
+        uint256 curatorFee_,
         bool prefund_,
         bytes calldata callbackData_
     ) external override onlyAuctionHouse onlyRegisteredLot(lotId_) returns (bytes4) {
@@ -118,7 +118,7 @@ abstract contract BaseCallback is ICallback, Owned {
 
     function _onCurate(
         uint96 lotId_,
-        uint96 curatorFee_,
+        uint256 curatorFee_,
         bool prefund_,
         bytes calldata callbackData_
     ) internal virtual;
@@ -126,13 +126,13 @@ abstract contract BaseCallback is ICallback, Owned {
     function onPurchase(
         uint96 lotId_,
         address buyer_,
-        uint96 amount_,
-        uint96 payout_,
+        uint256 amount_,
+        uint256 payout_,
         bool prefunded_,
         bytes calldata callbackData_
     ) external override onlyAuctionHouse onlyRegisteredLot(lotId_) returns (bytes4) {
         // Call implementation specific logic
-        // If prefunded, then the payout of base tokens will be sent back
+        // If not prefunded, the auction house will expect the payout_ to be sent
         _onPurchase(lotId_, buyer_, amount_, payout_, prefunded_, callbackData_);
 
         return this.onPurchase.selector;
@@ -141,8 +141,8 @@ abstract contract BaseCallback is ICallback, Owned {
     function _onPurchase(
         uint96 lotId_,
         address buyer_,
-        uint96 amount_,
-        uint96 payout_,
+        uint256 amount_,
+        uint256 payout_,
         bool prefunded_,
         bytes calldata callbackData_
     ) internal virtual;
@@ -151,7 +151,7 @@ abstract contract BaseCallback is ICallback, Owned {
         uint96 lotId_,
         uint64 bidId,
         address buyer_,
-        uint96 amount_,
+        uint256 amount_,
         bytes calldata callbackData_
     ) external override onlyAuctionHouse onlyRegisteredLot(lotId_) returns (bytes4) {
         // Call implementation specific logic
@@ -164,14 +164,14 @@ abstract contract BaseCallback is ICallback, Owned {
         uint96 lotId_,
         uint64 bidId,
         address buyer_,
-        uint96 amount_,
+        uint256 amount_,
         bytes calldata callbackData_
     ) internal virtual;
 
     function onClaimProceeds(
         uint96 lotId_,
-        uint96 proceeds_,
-        uint96 refund_,
+        uint256 proceeds_,
+        uint256 refund_,
         bytes calldata callbackData_
     ) external override onlyAuctionHouse onlyRegisteredLot(lotId_) returns (bytes4) {
         // Call implementation specific logic
@@ -182,8 +182,8 @@ abstract contract BaseCallback is ICallback, Owned {
 
     function _onClaimProceeds(
         uint96 lotId_,
-        uint96 proceeds_,
-        uint96 refund_,
+        uint256 proceeds_,
+        uint256 refund_,
         bytes calldata callbackData_
     ) internal virtual;
 

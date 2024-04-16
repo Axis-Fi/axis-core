@@ -1,4 +1,4 @@
-/// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.19;
 
 // Scripting libraries
@@ -6,12 +6,14 @@ import {Script, console2} from "forge-std/Script.sol";
 import {stdJson} from "forge-std/StdJson.sol";
 
 // System contracts
-import {AuctionHouse} from "src/AuctionHouse.sol";
-import {Catalogue} from "src/Catalogue.sol";
+import {AtomicAuctionHouse} from "src/AtomicAuctionHouse.sol";
+import {BatchAuctionHouse} from "src/BatchAuctionHouse.sol";
+import {AtomicCatalogue} from "src/AtomicCatalogue.sol";
+import {BatchCatalogue} from "src/BatchCatalogue.sol";
 
 // Auction modules
-import {EncryptedMarginalPriceAuctionModule} from "src/modules/auctions/EMPAM.sol";
-import {FixedPriceAuctionModule} from "src/modules/auctions/FPAM.sol";
+import {EncryptedMarginalPrice} from "src/modules/auctions/EMP.sol";
+import {FixedPriceSale} from "src/modules/auctions/FPS.sol";
 
 // Derivative modules
 import {LinearVesting} from "src/modules/derivatives/LinearVesting.sol";
@@ -33,11 +35,16 @@ import {LinearVesting} from "src/modules/derivatives/LinearVesting.sol";
 
 // TODO can we separate the base of the deploy system from the actual contracts to be deployed
 
+// TODOs
+// [ ] Install the modules in the AuctionHouse. What if the owner is different or is a Safe?
+
 contract Deploy is Script {
     using stdJson for string;
 
-    bytes internal constant _AUCTION_HOUSE_NAME = "AuctionHouse";
-    bytes internal constant _BLAST_AUCTION_HOUSE_NAME = "BlastAuctionHouse";
+    bytes internal constant _ATOMIC_AUCTION_HOUSE_NAME = "AtomicAuctionHouse";
+    bytes internal constant _BATCH_AUCTION_HOUSE_NAME = "BatchAuctionHouse";
+    bytes internal constant _BLAST_ATOMIC_AUCTION_HOUSE_NAME = "BlastAtomicAuctionHouse";
+    bytes internal constant _BLAST_BATCH_AUCTION_HOUSE_NAME = "BlasBatchAuctionHouse";
 
     // Environment variables
     address public envOwner;
@@ -46,12 +53,15 @@ contract Deploy is Script {
 
     // Contracts
     // TODO we would ideally not load every contract in here over time
-    AuctionHouse public auctionHouse;
-    Catalogue public catalogue;
+    AtomicAuctionHouse public atomicAuctionHouse;
+    BatchAuctionHouse public batchAuctionHouse;
+    AtomicCatalogue public atomicCatalogue;
+    BatchCatalogue public batchCatalogue;
 
-    EncryptedMarginalPriceAuctionModule public auctionModuleEmpa;
-    FixedPriceAuctionModule public auctionModuleFpa;
-    LinearVesting public derivativeModuleLinearVesting;
+    EncryptedMarginalPrice public amEmp;
+    FixedPriceSale public amFps;
+    LinearVesting public dmAtomicLinearVesting;
+    LinearVesting public dmBatchLinearVesting;
 
     // Deploy system storage
     string public chain;
@@ -129,30 +139,39 @@ contract Deploy is Script {
         uint256 len = deployments.length;
         require(len > 0, "No deployments");
 
-        // If Auction House is to be deployed, then it should be first (not included in contract -> selector mappings so it will error out if not first)
-        bool deployAH = _isAuctionHouse(deployments[0]);
-        if (deployAH) {
-            console2.log("Deploying AuctionHouse");
-
-            // No args
-
-            // Fetch salt
+        // Check if an AuctionHouse is to be deployed
+        bool indexZeroIsAH =
+            _isAtomicAuctionHouse(deployments[0]) || _isBatchAuctionHouse(deployments[0]);
+        if (indexZeroIsAH) {
             bytes32 salt = saltMap[deployments[0]];
 
-            console2.log("    owner:", envOwner);
-            console2.log("    permit2:", envPermit2);
-            console2.log("    protocol:", envProtocol);
-
-            vm.broadcast();
-            auctionHouse = new AuctionHouse{salt: salt}(envOwner, envProtocol, envPermit2);
-            console2.log("    AuctionHouse deployed at:", address(auctionHouse));
+            if (_isAtomicAuctionHouse(deployments[0])) {
+                _deployAtomicAuctionHouse(salt);
+            } else {
+                _deployBatchAuctionHouse(salt);
+            }
         }
 
+        // Both AuctionHouses can be deployed in the same script, in which case both the first and second sequence items should be the AuctionHouses
+        bool indexOneIsAH = indexZeroIsAH && _isAtomicAuctionHouse(deployments[1])
+            || _isBatchAuctionHouse(deployments[1]);
+        if (indexOneIsAH) {
+            bytes32 salt = saltMap[deployments[1]];
+
+            if (_isAtomicAuctionHouse(deployments[1])) {
+                _deployAtomicAuctionHouse(salt);
+            } else {
+                _deployBatchAuctionHouse(salt);
+            }
+        }
+
+        uint256 startingIndex = indexOneIsAH ? 2 : indexZeroIsAH ? 1 : 0;
+
         // Iterate through deployments
-        for (uint256 i = deployAH ? 1 : 0; i < len; i++) {
+        for (uint256 i = startingIndex; i < len; i++) {
             // Get deploy deploy args from contract name
             string memory name = deployments[i];
-            // e.g. a deployment named EncryptedMarginalPriceAuctionModule would require the following function: deployEncryptedMarginalPriceAuctionModule(bytes)
+            // e.g. a deployment named EncryptedMarginalPrice would require the following function: deployEncryptedMarginalPrice(bytes)
             bytes4 selector = bytes4(keccak256(bytes(string.concat("deploy", name, "(bytes)"))));
             bytes memory args = argsMap[name];
 
@@ -202,66 +221,125 @@ contract Deploy is Script {
         vm.writeLine(file, "}");
     }
 
+    // ========== AUCTIONHOUSE DEPLOYMENTS ========== //
+
+    function _deployAtomicAuctionHouse(bytes32 salt_) internal {
+        console2.log("Deploying AtomicAuctionHouse");
+
+        // No args
+
+        console2.log("    owner:", envOwner);
+        console2.log("    permit2:", envPermit2);
+        console2.log("    protocol:", envProtocol);
+
+        vm.broadcast();
+        atomicAuctionHouse = new AtomicAuctionHouse{salt: salt_}(envOwner, envProtocol, envPermit2);
+        console2.log("    AtomicAuctionHouse deployed at:", address(atomicAuctionHouse));
+    }
+
+    function _deployBatchAuctionHouse(bytes32 salt_) internal {
+        console2.log("Deploying BatchAuctionHouse");
+
+        // No args
+
+        console2.log("    owner:", envOwner);
+        console2.log("    permit2:", envPermit2);
+        console2.log("    protocol:", envProtocol);
+
+        vm.broadcast();
+        batchAuctionHouse = new BatchAuctionHouse{salt: salt_}(envOwner, envProtocol, envPermit2);
+        console2.log("    BatchAuctionHouse deployed at:", address(batchAuctionHouse));
+    }
+
     // ========== MODULE DEPLOYMENTS ========== //
 
-    function deployCatalogue(bytes memory) public returns (address) {
+    function deployAtomicCatalogue(bytes memory) public returns (address) {
         // No args used
 
-        console2.log("Deploying Catalogue");
-        console2.log("    AuctionHouse", address(auctionHouse));
+        console2.log("Deploying AtomicCatalogue");
+        console2.log("    AtomicAuctionHouse", address(atomicAuctionHouse));
 
-        // Deploy the module
-        catalogue = new Catalogue(address(auctionHouse));
-        console2.log("    Catalogue deployed at:", address(catalogue));
+        // Deploy the catalogue
+        atomicCatalogue = new AtomicCatalogue(address(atomicAuctionHouse));
+        console2.log("    AtomicCatalogue deployed at:", address(atomicCatalogue));
 
-        return address(catalogue);
+        return address(atomicCatalogue);
     }
 
-    function deployEncryptedMarginalPriceAuctionModule(bytes memory) public returns (address) {
+    function deployBatchCatalogue(bytes memory) public returns (address) {
         // No args used
 
-        console2.log("Deploying EncryptedMarginalPriceAuctionModule");
-        console2.log("    AuctionHouse", address(auctionHouse));
+        console2.log("Deploying BatchCatalogue");
+        console2.log("    BatchAuctionHouse", address(batchAuctionHouse));
 
-        // Deploy the module
-        auctionModuleEmpa = new EncryptedMarginalPriceAuctionModule(address(auctionHouse));
-        console2.log(
-            "    EncryptedMarginalPriceAuctionModule deployed at:", address(auctionModuleEmpa)
-        );
+        // Deploy the catalogue
+        batchCatalogue = new BatchCatalogue(address(batchAuctionHouse));
+        console2.log("    BatchCatalogue deployed at:", address(batchCatalogue));
 
-        return address(auctionModuleEmpa);
+        return address(batchCatalogue);
     }
 
-    function deployFixedPriceAuctionModule(bytes memory) public returns (address) {
+    function deployEncryptedMarginalPrice(bytes memory) public returns (address) {
         // No args used
 
-        console2.log("Deploying FixedPriceAuctionModule");
-        console2.log("    AuctionHouse", address(auctionHouse));
+        console2.log("Deploying EncryptedMarginalPrice");
+        console2.log("    BatchuctionHouse", address(batchAuctionHouse));
 
         // Deploy the module
-        auctionModuleFpa = new FixedPriceAuctionModule(address(auctionHouse));
-        console2.log("    FixedPriceAuctionModule deployed at:", address(auctionModuleFpa));
+        amEmp = new EncryptedMarginalPrice(address(batchAuctionHouse));
+        console2.log("    EncryptedMarginalPrice deployed at:", address(amEmp));
 
-        return address(auctionModuleFpa);
+        return address(amEmp);
     }
 
-    function deployLinearVesting(bytes memory) public returns (address) {
+    function deployFixedPriceSale(bytes memory) public returns (address) {
         // No args used
 
-        console2.log("Deploying LinearVesting");
-        console2.log("    AuctionHouse", address(auctionHouse));
+        console2.log("Deploying FixedPriceSale");
+        console2.log("    AtomicAuctionHouse", address(atomicAuctionHouse));
 
         // Deploy the module
-        derivativeModuleLinearVesting = new LinearVesting(address(auctionHouse));
-        console2.log("    LinearVesting deployed at:", address(derivativeModuleLinearVesting));
+        amFps = new FixedPriceSale(address(atomicAuctionHouse));
+        console2.log("    FixedPriceSale deployed at:", address(amFps));
 
-        return address(derivativeModuleLinearVesting);
+        return address(amFps);
+    }
+
+    function deployAtomicLinearVesting(bytes memory) public returns (address) {
+        // No args used
+
+        console2.log("Deploying LinearVesting (Atomic)");
+        console2.log("    AtomicAuctionHouse", address(atomicAuctionHouse));
+
+        // Deploy the module
+        dmAtomicLinearVesting = new LinearVesting(address(atomicAuctionHouse));
+        console2.log("    LinearVesting (Atomic) deployed at:", address(dmAtomicLinearVesting));
+
+        return address(dmAtomicLinearVesting);
+    }
+
+    function deployBatchLinearVesting(bytes memory) public returns (address) {
+        // No args used
+
+        console2.log("Deploying LinearVesting (Batch)");
+        console2.log("    BatchAuctionHouse", address(batchAuctionHouse));
+
+        // Deploy the module
+        dmBatchLinearVesting = new LinearVesting(address(batchAuctionHouse));
+        console2.log("    LinearVesting (Batch) deployed at:", address(dmBatchLinearVesting));
+
+        return address(dmBatchLinearVesting);
     }
 
     // ========== HELPER FUNCTIONS ========== //
 
-    function _isAuctionHouse(string memory deploymentName) internal pure returns (bool) {
-        return keccak256(bytes(deploymentName)) == keccak256(_AUCTION_HOUSE_NAME)
-            || keccak256(bytes(deploymentName)) == keccak256(_BLAST_AUCTION_HOUSE_NAME);
+    function _isAtomicAuctionHouse(string memory deploymentName) internal pure returns (bool) {
+        return keccak256(bytes(deploymentName)) == keccak256(_ATOMIC_AUCTION_HOUSE_NAME)
+            || keccak256(bytes(deploymentName)) == keccak256(_BLAST_ATOMIC_AUCTION_HOUSE_NAME);
+    }
+
+    function _isBatchAuctionHouse(string memory deploymentName) internal pure returns (bool) {
+        return keccak256(bytes(deploymentName)) == keccak256(_BATCH_AUCTION_HOUSE_NAME)
+            || keccak256(bytes(deploymentName)) == keccak256(_BLAST_BATCH_AUCTION_HOUSE_NAME);
     }
 }

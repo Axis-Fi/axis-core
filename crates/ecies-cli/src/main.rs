@@ -9,7 +9,10 @@
 use ark_bn254::{Fq as BaseField, Fr as ScalarField, G1Affine as G1};
 use ark_ec::{AffineRepr, CurveGroup};
 use clap::{error::Result, Parser, Subcommand};
-use ethers::{types::U256, utils::hex};
+use ethers::{
+    types::{Address, U256},
+    utils::hex,
+};
 use num_bigint::BigUint;
 
 // Helper function to convert bytes to a hex-encoded string
@@ -51,6 +54,14 @@ enum Commands {
         private_key: BigUint,
         #[arg(value_name = "salt")]
         salt: BigUint,
+    },
+    Salt {
+        #[arg(value_name = "lot_id")]
+        lot_id: BigUint,
+        #[arg(value_name = "bidder_address")]
+        bidder_address: Address,
+        #[arg(value_name = "amount")]
+        amount: BigUint,
     },
 }
 
@@ -164,6 +175,38 @@ fn main() -> Result<()> {
 
             // Convert the message to a hex-encoded string (abi-encoded since it is one slot)
             let output = bytes_to_string(&message);
+
+            // Print output to command line
+            println!("{}", output);
+        }
+        Commands::Salt {
+            lot_id,
+            bidder_address,
+            amount,
+        } => {
+            // Convert lot_id and amount to U256 to fix at 32 bytes initially (so we can slice later)
+            let lot_id = U256::from_big_endian(&lot_id.to_bytes_be());
+            let amount = U256::from_big_endian(&amount.to_bytes_be());
+
+            // Calculate the salt by taking the keccak256 hash of the lot_id, bidder_address, and amount
+            // We have to carefully pack this so the hash is accurate
+            let mut lot_id_bytes = [0u8; 32];
+            lot_id.to_big_endian(&mut lot_id_bytes);
+
+            let mut amount_bytes = [0u8; 32];
+            amount.to_big_endian(&mut amount_bytes);
+
+            let preimage = [
+                lot_id_bytes[20..].to_vec(),
+                bidder_address.as_bytes().to_vec(),
+                amount_bytes[20..].to_vec(),
+            ]
+            .concat();
+
+            let salt = ethers::utils::keccak256(preimage);
+
+            // Convert the salt to a hex-encoded string
+            let output = bytes_to_string(&salt);
 
             // Print output to command line
             println!("{}", output);

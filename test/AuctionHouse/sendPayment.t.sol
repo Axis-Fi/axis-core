@@ -1,9 +1,9 @@
-/// SPDX-License-Identifier: AGPL-3.0
+// SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.19;
 
 import {Test} from "forge-std/Test.sol";
 
-import {MockCallback} from "test/AuctionHouse/MockCallback.sol";
+import {MockCallback} from "test/callbacks/MockCallback.sol";
 import {MockAuctionHouse} from "test/AuctionHouse/MockAuctionHouse.sol";
 import {MockFeeOnTransferERC20} from "test/lib/mocks/MockFeeOnTransferERC20.sol";
 import {Permit2User} from "test/lib/permit2/Permit2User.sol";
@@ -51,7 +51,6 @@ contract SendPaymentTest is Test, Permit2User {
 
     modifier givenAuctionHasCallback() {
         // // 00000000 - 0x00
-        // // cast create2 -s 00 -i $(cat ./bytecode/MockCallback00.bin)
         // bytes memory bytecode = abi.encodePacked(
         //     type(MockCallback).creationCode,
         //     abi.encode(address(_auctionHouse), Callbacks.Permissions({
@@ -70,7 +69,6 @@ contract SendPaymentTest is Test, Permit2User {
         //     vm.toString(bytecode)
         // );
         // // 00000010 - 0x02
-        // // cast create2 -s 02 -i $(cat ./bytecode/MockCallback02.bin)
         // bytecode = abi.encodePacked(
         //     type(MockCallback).creationCode,
         //     abi.encode(address(_auctionHouse), Callbacks.Permissions({
@@ -92,10 +90,12 @@ contract SendPaymentTest is Test, Permit2User {
         bytes32 salt;
         if (_callbackReceiveQuoteTokens) {
             // 0x02
-            salt = bytes32(0x867bde04c395728ae94388eaa65ea38aca22ea129bb05908529da8dd771a7790);
+            // cast create2 -s 02 -i $(cat ./bytecode/MockCallback02.bin)
+            salt = bytes32(0xcaf3843da7e869a4420ccc98ad4d763f7db30c5d8f4d8835aaac84922e527798);
         } else {
             // 0x00
-            salt = bytes32(0xd4ec48418b6a9e305b635c090a74040592158afa65a4f3518ba237179a477c24);
+            // cast create2 -s 00 -i $(cat ./bytecode/MockCallback00.bin)
+            salt = bytes32(0x4960aebb0a8ba9056baf240a7d7817e9b284d3839b7189da701998added97a7f);
         }
 
         vm.broadcast(); // required for CREATE2 address to work correctly. doesn't do anything in a test

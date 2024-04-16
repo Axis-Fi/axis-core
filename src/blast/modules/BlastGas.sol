@@ -1,15 +1,19 @@
-/// SPDX-License-Identifier: BUSL-1.1
+// SPDX-License-Identifier: BSL-1.1
 pragma solidity 0.8.19;
 
 interface IBlast {
+    function configureClaimableGas() external;
+
     function configureGovernor(address governor_) external;
 }
 
 abstract contract BlastGas {
     // ========== CONSTRUCTOR ========== //
 
-    constructor(address parent_) {
+    constructor(address parent_, address blast_) {
+        // Configure gas as claimable
+        IBlast(blast_).configureClaimableGas();
         // Configure governor to claim gas fees
-        IBlast(0x4300000000000000000000000000000000000002).configureGovernor(parent_);
+        IBlast(blast_).configureGovernor(parent_);
     }
 }

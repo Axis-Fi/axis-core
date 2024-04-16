@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: BUSL-1.1
+// SPDX-License-Identifier: BSL-1.1
 pragma solidity 0.8.19;
 
 import {ERC20} from "solmate/tokens/ERC20.sol";
@@ -230,7 +230,8 @@ contract LinearVesting is DerivativeModule {
     ///             - The parameters are in an invalid format
     ///             - The parameters fail validation
     ///             - `amount_` is 0
-    ///             - Vesting for the derivative token with `tokenId_` has completed
+    ///
+    ///             A derivative token can be minted after vesting expiry, which prevents mitigates problems with auctions that settle late.
     ///
     /// @param      to_                 The address of the recipient of the derivative token
     /// @param      underlyingToken_    The address of the underlying token
@@ -281,7 +282,8 @@ contract LinearVesting is DerivativeModule {
     ///             This function reverts if:
     ///             - `tokenId_` does not exist
     ///             - The amount to mint is 0
-    ///             - Vesting for the derivative token with `tokenId_` has completed
+    ///
+    ///             A derivative token can be minted after vesting expiry, which prevents mitigates problems with auctions that settle late.
     ///
     /// @param      to_                 The address of the recipient of the derivative token
     /// @param      tokenId_            The ID of the derivative token
@@ -300,10 +302,6 @@ contract LinearVesting is DerivativeModule {
         if (amount_ == 0) revert InvalidParams();
 
         Token storage token = tokenMetadata[tokenId_];
-        VestingData memory data = abi.decode(token.data, (VestingData));
-
-        // Ensure the expiry is in the future
-        if (data.expiry < block.timestamp) revert InvalidParams();
 
         _mintDeployed(to_, tokenId_, amount_, token, wrapped_);
 
@@ -509,11 +507,10 @@ contract LinearVesting is DerivativeModule {
     /// @dev        This function performs the following checks:
     ///             - The start and expiry times are not 0
     ///             - The start time is before the expiry time
-    ///             - The expiry time is in the future
     ///             - The underlying token is not the zero address
     ///
-    ///             The start time does not have to be before the current block timestamp,
-    ///             as it is possible to deploy and mint derivative tokens after the start time.
+    ///             The start and expiry times do not have to be before the current block timestamp,
+    ///             as it is possible to deploy and mint derivative tokens after the vesting expiry. Otherwise, it would be possible to brick funds by delaying the auction settlement.
     ///
     /// @param      underlyingToken_    The address of the underlying token
     /// @param      data_               The parameters for the derivative token
@@ -521,7 +518,7 @@ contract LinearVesting is DerivativeModule {
     function _validate(
         address underlyingToken_,
         VestingParams memory data_
-    ) internal view returns (bool) {
+    ) internal pure returns (bool) {
         // Revert if any of the timestamps are 0
         if (data_.start == 0 || data_.expiry == 0) return false;
 
@@ -530,9 +527,6 @@ contract LinearVesting is DerivativeModule {
 
         // Check that the start time is before the expiry time
         if (data_.start >= data_.expiry) return false;
-
-        // Check that the expiry time is in the future
-        if (data_.expiry < block.timestamp) return false;
 
         // Check that the underlying token is not 0
         if (underlyingToken_ == address(0)) return false;

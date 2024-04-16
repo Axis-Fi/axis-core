@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0
+// SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity 0.8.19;
 
 import {ERC20} from "lib/solmate/src/tokens/ERC20.sol";
@@ -27,7 +27,7 @@ library Transfer {
 
     // ============ Functions ============ //
 
-    function approve(ERC20 token_, address spender_, uint256 amount_) public {
+    function approve(ERC20 token_, address spender_, uint256 amount_) internal {
         token_.safeApprove(spender_, amount_);
     }
 
@@ -51,15 +51,18 @@ library Transfer {
         address recipient_,
         uint256 amount_,
         bool validateBalance_
-    ) public {
+    ) internal {
         uint256 balanceBefore;
         if (validateBalance_ == true) {
             balanceBefore = token_.balanceOf(recipient_);
         }
 
         // Transfer the quote token from the user
-        // `safeTransferFrom()` will revert upon failure or the lack of allowance or balance
-        token_.safeTransfer(recipient_, amount_);
+        // `safeTransfer()` will revert upon failure or the lack of allowance or balance
+        // We need to check that the amount is greater than zero, to protect against revert on zero tokens
+        if (amount_ > 0) {
+            token_.safeTransfer(recipient_, amount_);
+        }
 
         // Check that it is not a fee-on-transfer token
         if (validateBalance_ == true && token_.balanceOf(recipient_) < balanceBefore + amount_) {
@@ -89,7 +92,7 @@ library Transfer {
         address recipient_,
         uint256 amount_,
         bool validateBalance_
-    ) public {
+    ) internal {
         uint256 balanceBefore;
         if (validateBalance_ == true) {
             balanceBefore = token_.balanceOf(recipient_);
@@ -97,7 +100,10 @@ library Transfer {
 
         // Transfer the quote token from the user
         // `safeTransferFrom()` will revert upon failure or the lack of allowance or balance
-        token_.safeTransferFrom(sender_, recipient_, amount_);
+        // We need to check that the amount is greater than zero, to protect against revert on zero tokens
+        if (amount_ > 0) {
+            token_.safeTransferFrom(sender_, recipient_, amount_);
+        }
 
         // Check that it is not a fee-on-transfer token
         if (validateBalance_ == true && token_.balanceOf(recipient_) < balanceBefore + amount_) {
@@ -113,7 +119,7 @@ library Transfer {
         uint256 amount_,
         Permit2Approval memory approval_,
         bool validateBalance_
-    ) public {
+    ) internal {
         uint256 balanceBefore;
         if (validateBalance_ == true) {
             balanceBefore = token_.balanceOf(recipient_);
@@ -147,7 +153,7 @@ library Transfer {
         uint256 amount_,
         Permit2Approval memory approval_,
         bool validateBalance_
-    ) public {
+    ) internal {
         // If a Permit2 approval signature is provided, use it to transfer the quote token
         if (permit2_ != address(0) && approval_.signature.length > 0) {
             permit2TransferFrom(
@@ -161,7 +167,7 @@ library Transfer {
     }
 
     function decodePermit2Approval(bytes memory data_)
-        public
+        internal
         pure
         returns (Permit2Approval memory)
     {
