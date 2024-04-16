@@ -8,8 +8,6 @@ import {MockCallback} from "test/callbacks/MockCallback.sol";
 
 import {Test} from "forge-std/Test.sol";
 
-import {console2} from "forge-std/console2.sol";
-
 contract CallbacksTest is Test {
     using Callbacks for ICallback;
 
@@ -212,7 +210,7 @@ contract CallbacksTest is Test {
         );
     }
 
-    function _onReceiveQuoteTokensSalt() internal returns (bytes32, Callbacks.Permissions memory) {
+    function _receiveQuoteTokensSalt() internal returns (bytes32, Callbacks.Permissions memory) {
         Callbacks.Permissions memory permissions = Callbacks.Permissions({
             onCreate: false,
             onCancel: false,
@@ -240,7 +238,7 @@ contract CallbacksTest is Test {
         );
     }
 
-    function _onSendBaseTokensSalt() internal returns (bytes32, Callbacks.Permissions memory) {
+    function _sendBaseTokensSalt() internal returns (bytes32, Callbacks.Permissions memory) {
         Callbacks.Permissions memory permissions = Callbacks.Permissions({
             onCreate: false,
             onCancel: false,
@@ -265,6 +263,130 @@ contract CallbacksTest is Test {
 
         return (
             bytes32(0x3f7e7126965c5f52a65d963ad59b2817e87f47da8546d247f8f4da68bc193faf), permissions
+        );
+    }
+
+    function _sendBaseTokens_onCreateSalt()
+        internal
+        returns (bytes32, Callbacks.Permissions memory)
+    {
+        Callbacks.Permissions memory permissions = Callbacks.Permissions({
+            onCreate: true,
+            onCancel: false,
+            onCurate: false,
+            onPurchase: false,
+            onBid: false,
+            onClaimProceeds: false,
+            receiveQuoteTokens: false,
+            sendBaseTokens: true
+        });
+
+        // // 10000001 = 0x81
+        // // cast create2 -s 81 -i $(cat ./bytecode/MockCallback81.bin)
+        // bytes memory bytecode = abi.encodePacked(
+        //     type(MockCallback).creationCode,
+        //     abi.encode(_AUCTION_HOUSE, permissions, _SELLER)
+        // );
+        // vm.writeFile(
+        //     "./bytecode/MockCallback81.bin",
+        //     vm.toString(bytecode)
+        // );
+
+        return (
+            bytes32(0xc1c22ca901065122c85e4591b8623252bf9dd0d643b60ec265f6087cf5ebf401), permissions
+        );
+    }
+
+    function _sendBaseTokens_onCurateSalt()
+        internal
+        returns (bytes32, Callbacks.Permissions memory)
+    {
+        Callbacks.Permissions memory permissions = Callbacks.Permissions({
+            onCreate: false,
+            onCancel: false,
+            onCurate: true,
+            onPurchase: false,
+            onBid: false,
+            onClaimProceeds: false,
+            receiveQuoteTokens: false,
+            sendBaseTokens: true
+        });
+
+        // // 00100001 = 0x21
+        // // cast create2 -s 21 -i $(cat ./bytecode/MockCallback21.bin)
+        // bytes memory bytecode = abi.encodePacked(
+        //     type(MockCallback).creationCode,
+        //     abi.encode(_AUCTION_HOUSE, permissions, _SELLER)
+        // );
+        // vm.writeFile(
+        //     "./bytecode/MockCallback21.bin",
+        //     vm.toString(bytecode)
+        // );
+
+        return (
+            bytes32(0x55d3cd48197db867bfa6af6e5b4fbbfa0409474280b65c20167439a9bb7517ef), permissions
+        );
+    }
+
+    function _sendBaseTokens_onCreate_onCurateSalt()
+        internal
+        returns (bytes32, Callbacks.Permissions memory)
+    {
+        Callbacks.Permissions memory permissions = Callbacks.Permissions({
+            onCreate: true,
+            onCancel: false,
+            onCurate: true,
+            onPurchase: false,
+            onBid: false,
+            onClaimProceeds: false,
+            receiveQuoteTokens: false,
+            sendBaseTokens: true
+        });
+
+        // // 10100001 = 0xA1
+        // // cast create2 -s A1 -i $(cat ./bytecode/MockCallbackA1.bin)
+        // bytes memory bytecode = abi.encodePacked(
+        //     type(MockCallback).creationCode,
+        //     abi.encode(_AUCTION_HOUSE, permissions, _SELLER)
+        // );
+        // vm.writeFile(
+        //     "./bytecode/MockCallbackA1.bin",
+        //     vm.toString(bytecode)
+        // );
+
+        return (
+            bytes32(0xd159fcd099011fac21f0862cc529408a6c71b33de5b30ad7f5ec23cccb427074), permissions
+        );
+    }
+
+    function _sendBaseTokens_onPurchaseSalt()
+        internal
+        returns (bytes32, Callbacks.Permissions memory)
+    {
+        Callbacks.Permissions memory permissions = Callbacks.Permissions({
+            onCreate: false,
+            onCancel: false,
+            onCurate: false,
+            onPurchase: true,
+            onBid: false,
+            onClaimProceeds: false,
+            receiveQuoteTokens: false,
+            sendBaseTokens: true
+        });
+
+        // // 00010001 = 0x11
+        // // cast create2 -s 11 -i $(cat ./bytecode/MockCallback11.bin)
+        // bytes memory bytecode = abi.encodePacked(
+        //     type(MockCallback).creationCode,
+        //     abi.encode(_AUCTION_HOUSE, permissions, _SELLER)
+        // );
+        // vm.writeFile(
+        //     "./bytecode/MockCallback11.bin",
+        //     vm.toString(bytecode)
+        // );
+
+        return (
+            bytes32(0x4c8bc75484e126bddb16f2d35bbff0e5dd93997899b06646f3f18cabf6371a58), permissions
         );
     }
 
@@ -479,14 +601,14 @@ contract CallbacksTest is Test {
     }
 
     function test_validateCallbacksPermissions_onReceiveQuoteTokens() public {
-        (bytes32 salt, Callbacks.Permissions memory permissions) = _onReceiveQuoteTokensSalt();
+        (bytes32 salt, Callbacks.Permissions memory permissions) = _receiveQuoteTokensSalt();
         ICallback callback = _createCallback(salt, permissions);
 
         _assertValidateCallbacksPermissions(callback, permissions);
     }
 
     function test_validateCallbacksPermissions_onSendBaseTokens() public {
-        (bytes32 salt, Callbacks.Permissions memory permissions) = _onSendBaseTokensSalt();
+        (bytes32 salt, Callbacks.Permissions memory permissions) = _sendBaseTokensSalt();
         ICallback callback = _createCallback(salt, permissions);
 
         _assertValidateCallbacksPermissions(callback, permissions);
@@ -627,7 +749,7 @@ contract CallbacksTest is Test {
     }
 
     function test_hasPermission_receiveQuoteTokens() public {
-        (bytes32 salt, Callbacks.Permissions memory permissions) = _onReceiveQuoteTokensSalt();
+        (bytes32 salt, Callbacks.Permissions memory permissions) = _receiveQuoteTokensSalt();
         ICallback callback = _createCallback(salt, permissions);
 
         assertEq(callback.hasPermission(Callbacks.ON_CREATE_FLAG), false, "onCreate");
@@ -643,7 +765,7 @@ contract CallbacksTest is Test {
     }
 
     function test_hasPermission_sendBaseTokens() public {
-        (bytes32 salt, Callbacks.Permissions memory permissions) = _onSendBaseTokensSalt();
+        (bytes32 salt, Callbacks.Permissions memory permissions) = _sendBaseTokensSalt();
         ICallback callback = _createCallback(salt, permissions);
 
         assertEq(callback.hasPermission(Callbacks.ON_CREATE_FLAG), false, "onCreate");
@@ -659,8 +781,116 @@ contract CallbacksTest is Test {
     }
 
     // isValidCallbacksAddress
-    // [ ] zero address
-    // [ ] if no flags are set, revert
-    // [ ] if only RECEIVE_QUOTE_TOKENS_FLAG is set, return true
-    // [ ] if any callback function is set, return true
+    // [X] zero address
+    // [X] when send base tokens flag is set
+    //  [X] when onCreate is set
+    //   [X] it returns false
+    //  [X] when onCurate is set
+    //   [X] when onCreate is set
+    //    [X] it returns true
+    //   [X] it returns false
+    //  [X] when onPurchase is set
+    //   [X] it returns true
+    //  [X] it returns false
+    // [X] if no flags are set, revert
+    // [X] if only RECEIVE_QUOTE_TOKENS_FLAG is set, return true
+    // [X] if any callback function is set, return true
+
+    function test_isValidCallbacksAddress_zero() public {
+        ICallback callback = ICallback(address(0));
+
+        assertEq(callback.isValidCallbacksAddress(), true, "invalid");
+    }
+
+    function test_isValidCallbacksAddress_allFalse() public {
+        (bytes32 salt, Callbacks.Permissions memory permissions) = _allFalseSalt();
+        ICallback callback = _createCallback(salt, permissions);
+
+        assertEq(callback.isValidCallbacksAddress(), false, "invalid");
+    }
+
+    function test_isValidCallbacksAddress_onCreate() public {
+        (bytes32 salt, Callbacks.Permissions memory permissions) = _onCreateSalt();
+        ICallback callback = _createCallback(salt, permissions);
+
+        assertEq(callback.isValidCallbacksAddress(), true, "invalid");
+    }
+
+    function test_isValidCallbacksAddress_onCancel() public {
+        (bytes32 salt, Callbacks.Permissions memory permissions) = _onCancelSalt();
+        ICallback callback = _createCallback(salt, permissions);
+
+        assertEq(callback.isValidCallbacksAddress(), true, "invalid");
+    }
+
+    function test_isValidCallbacksAddress_onCurate() public {
+        (bytes32 salt, Callbacks.Permissions memory permissions) = _onCurateSalt();
+        ICallback callback = _createCallback(salt, permissions);
+
+        assertEq(callback.isValidCallbacksAddress(), true, "invalid");
+    }
+
+    function test_isValidCallbacksAddress_onPurchase() public {
+        (bytes32 salt, Callbacks.Permissions memory permissions) = _onPurchaseSalt();
+        ICallback callback = _createCallback(salt, permissions);
+
+        assertEq(callback.isValidCallbacksAddress(), true, "invalid");
+    }
+
+    function test_isValidCallbacksAddress_onBid() public {
+        (bytes32 salt, Callbacks.Permissions memory permissions) = _onBidSalt();
+        ICallback callback = _createCallback(salt, permissions);
+
+        assertEq(callback.isValidCallbacksAddress(), true, "invalid");
+    }
+
+    function test_isValidCallbacksAddress_onClaimProceeds() public {
+        (bytes32 salt, Callbacks.Permissions memory permissions) = _onClaimProceedsSalt();
+        ICallback callback = _createCallback(salt, permissions);
+
+        assertEq(callback.isValidCallbacksAddress(), true, "invalid");
+    }
+
+    function test_isValidCallbacksAddress_receiveQuoteTokens() public {
+        (bytes32 salt, Callbacks.Permissions memory permissions) = _receiveQuoteTokensSalt();
+        ICallback callback = _createCallback(salt, permissions);
+
+        assertEq(callback.isValidCallbacksAddress(), true, "invalid");
+    }
+
+    function test_isValidCallbacksAddress_sendBaseTokens() public {
+        (bytes32 salt, Callbacks.Permissions memory permissions) = _sendBaseTokensSalt();
+        ICallback callback = _createCallback(salt, permissions);
+
+        assertEq(callback.isValidCallbacksAddress(), false, "valid");
+    }
+
+    function test_isValidCallbacksAddress_sendBaseTokens_onCreate() public {
+        (bytes32 salt, Callbacks.Permissions memory permissions) = _sendBaseTokens_onCreateSalt();
+        ICallback callback = _createCallback(salt, permissions);
+
+        assertEq(callback.isValidCallbacksAddress(), false, "invalid");
+    }
+
+    function test_isValidCallbacksAddress_sendBaseTokens_onCurate() public {
+        (bytes32 salt, Callbacks.Permissions memory permissions) = _sendBaseTokens_onCurateSalt();
+        ICallback callback = _createCallback(salt, permissions);
+
+        assertEq(callback.isValidCallbacksAddress(), false, "invalid");
+    }
+
+    function test_isValidCallbacksAddress_sendBaseTokens_onCreate_onCurate() public {
+        (bytes32 salt, Callbacks.Permissions memory permissions) =
+            _sendBaseTokens_onCreate_onCurateSalt();
+        ICallback callback = _createCallback(salt, permissions);
+
+        assertEq(callback.isValidCallbacksAddress(), true, "invalid");
+    }
+
+    function test_isValidCallbacksAddress_sendBaseTokens_onPurchase() public {
+        (bytes32 salt, Callbacks.Permissions memory permissions) = _sendBaseTokens_onPurchaseSalt();
+        ICallback callback = _createCallback(salt, permissions);
+
+        assertEq(callback.isValidCallbacksAddress(), true, "invalid");
+    }
 }
