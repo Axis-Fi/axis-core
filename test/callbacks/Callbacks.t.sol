@@ -39,7 +39,9 @@ contract CallbacksTest is Test {
         //     vm.toString(bytecode)
         // );
 
-        return (bytes32(0x6274afc3961fb1fd4c1fc9ea6b09fee8682f3834d237bfbe08f18dd482f859e5), permissions);
+        return (
+            bytes32(0x6274afc3961fb1fd4c1fc9ea6b09fee8682f3834d237bfbe08f18dd482f859e5), permissions
+        );
     }
 
     function _onCreateSalt() internal returns (bytes32, Callbacks.Permissions memory) {
@@ -267,15 +269,228 @@ contract CallbacksTest is Test {
     }
 
     // validateCallbacksPermissions
-    // [ ] all false
-    // [ ] onCreate is true
-    // [ ] onCancel is true
-    // [ ] onCurate is true
-    // [ ] onPurchase is true
-    // [ ] onBid is true
-    // [ ] onClaimProceeds is true
-    // [ ] receiveQuoteTokens is true
-    // [ ] sendBaseTokens is true
+    // [X] all false
+    // [X] onCreate is true
+    // [X] onCancel is true
+    // [X] onCurate is true
+    // [X] onPurchase is true
+    // [X] onBid is true
+    // [X] onClaimProceeds is true
+    // [X] receiveQuoteTokens is true
+    // [X] sendBaseTokens is true
+
+    function _assertValidateCallbacksPermission(
+        ICallback callback_,
+        Callbacks.Permissions memory permissions_,
+        bool expectValid_
+    ) internal {
+        if (!expectValid_) {
+            bytes memory err = abi.encodeWithSelector(
+                Callbacks.CallbacksAddressNotValid.selector, address(callback_)
+            );
+            vm.expectRevert(err);
+        }
+
+        callback_.validateCallbacksPermissions(permissions_);
+    }
+
+    function _assertValidateCallbacksPermissions(
+        ICallback callback_,
+        Callbacks.Permissions memory permissions_
+    ) internal {
+        // Iterate through all the permissions and check if they match the callback's permissions
+
+        // onCreate
+        _assertValidateCallbacksPermission(
+            callback_,
+            Callbacks.Permissions({
+                onCreate: true,
+                onCancel: false,
+                onCurate: false,
+                onPurchase: false,
+                onBid: false,
+                onClaimProceeds: false,
+                receiveQuoteTokens: false,
+                sendBaseTokens: false
+            }),
+            permissions_.onCreate
+        );
+
+        // onCancel
+        _assertValidateCallbacksPermission(
+            callback_,
+            Callbacks.Permissions({
+                onCreate: false,
+                onCancel: true,
+                onCurate: false,
+                onPurchase: false,
+                onBid: false,
+                onClaimProceeds: false,
+                receiveQuoteTokens: false,
+                sendBaseTokens: false
+            }),
+            permissions_.onCancel
+        );
+
+        // onCurate
+        _assertValidateCallbacksPermission(
+            callback_,
+            Callbacks.Permissions({
+                onCreate: false,
+                onCancel: false,
+                onCurate: true,
+                onPurchase: false,
+                onBid: false,
+                onClaimProceeds: false,
+                receiveQuoteTokens: false,
+                sendBaseTokens: false
+            }),
+            permissions_.onCurate
+        );
+
+        // onPurchase
+        _assertValidateCallbacksPermission(
+            callback_,
+            Callbacks.Permissions({
+                onCreate: false,
+                onCancel: false,
+                onCurate: false,
+                onPurchase: true,
+                onBid: false,
+                onClaimProceeds: false,
+                receiveQuoteTokens: false,
+                sendBaseTokens: false
+            }),
+            permissions_.onPurchase
+        );
+
+        // onBid
+        _assertValidateCallbacksPermission(
+            callback_,
+            Callbacks.Permissions({
+                onCreate: false,
+                onCancel: false,
+                onCurate: false,
+                onPurchase: false,
+                onBid: true,
+                onClaimProceeds: false,
+                receiveQuoteTokens: false,
+                sendBaseTokens: false
+            }),
+            permissions_.onBid
+        );
+
+        // onClaimProceeds
+        _assertValidateCallbacksPermission(
+            callback_,
+            Callbacks.Permissions({
+                onCreate: false,
+                onCancel: false,
+                onCurate: false,
+                onPurchase: false,
+                onBid: false,
+                onClaimProceeds: true,
+                receiveQuoteTokens: false,
+                sendBaseTokens: false
+            }),
+            permissions_.onClaimProceeds
+        );
+
+        // receiveQuoteTokens
+        _assertValidateCallbacksPermission(
+            callback_,
+            Callbacks.Permissions({
+                onCreate: false,
+                onCancel: false,
+                onCurate: false,
+                onPurchase: false,
+                onBid: false,
+                onClaimProceeds: false,
+                receiveQuoteTokens: true,
+                sendBaseTokens: false
+            }),
+            permissions_.receiveQuoteTokens
+        );
+
+        // sendBaseTokens
+        _assertValidateCallbacksPermission(
+            callback_,
+            Callbacks.Permissions({
+                onCreate: false,
+                onCancel: false,
+                onCurate: false,
+                onPurchase: false,
+                onBid: false,
+                onClaimProceeds: false,
+                receiveQuoteTokens: false,
+                sendBaseTokens: true
+            }),
+            permissions_.sendBaseTokens
+        );
+    }
+
+    function test_validateCallbacksPermissions_allFalse() public {
+        (bytes32 salt, Callbacks.Permissions memory permissions) = _allFalseSalt();
+        ICallback callback = _createCallback(salt, permissions);
+
+        _assertValidateCallbacksPermissions(callback, permissions);
+    }
+
+    function test_validateCallbacksPermissions_onCreate() public {
+        (bytes32 salt, Callbacks.Permissions memory permissions) = _onCreateSalt();
+        ICallback callback = _createCallback(salt, permissions);
+
+        _assertValidateCallbacksPermissions(callback, permissions);
+    }
+
+    function test_validateCallbacksPermissions_onCancel() public {
+        (bytes32 salt, Callbacks.Permissions memory permissions) = _onCancelSalt();
+        ICallback callback = _createCallback(salt, permissions);
+
+        _assertValidateCallbacksPermissions(callback, permissions);
+    }
+
+    function test_validateCallbacksPermissions_onCurate() public {
+        (bytes32 salt, Callbacks.Permissions memory permissions) = _onCurateSalt();
+        ICallback callback = _createCallback(salt, permissions);
+
+        _assertValidateCallbacksPermissions(callback, permissions);
+    }
+
+    function test_validateCallbacksPermissions_onPurchase() public {
+        (bytes32 salt, Callbacks.Permissions memory permissions) = _onPurchaseSalt();
+        ICallback callback = _createCallback(salt, permissions);
+
+        _assertValidateCallbacksPermissions(callback, permissions);
+    }
+
+    function test_validateCallbacksPermissions_onBid() public {
+        (bytes32 salt, Callbacks.Permissions memory permissions) = _onBidSalt();
+        ICallback callback = _createCallback(salt, permissions);
+
+        _assertValidateCallbacksPermissions(callback, permissions);
+    }
+
+    function test_validateCallbacksPermissions_onClaimProceeds() public {
+        (bytes32 salt, Callbacks.Permissions memory permissions) = _onClaimProceedsSalt();
+        ICallback callback = _createCallback(salt, permissions);
+
+        _assertValidateCallbacksPermissions(callback, permissions);
+    }
+
+    function test_validateCallbacksPermissions_onReceiveQuoteTokens() public {
+        (bytes32 salt, Callbacks.Permissions memory permissions) = _onReceiveQuoteTokensSalt();
+        ICallback callback = _createCallback(salt, permissions);
+
+        _assertValidateCallbacksPermissions(callback, permissions);
+    }
+
+    function test_validateCallbacksPermissions_onSendBaseTokens() public {
+        (bytes32 salt, Callbacks.Permissions memory permissions) = _onSendBaseTokensSalt();
+        ICallback callback = _createCallback(salt, permissions);
+
+        _assertValidateCallbacksPermissions(callback, permissions);
+    }
 
     // hasPermission
     // [X] all false
@@ -299,7 +514,7 @@ contract CallbacksTest is Test {
         return callback;
     }
 
-    function test_validateCallbacksPermissions_allFalse() public {
+    function test_hasPermission_allFalse() public {
         (bytes32 salt, Callbacks.Permissions memory permissions) = _allFalseSalt();
         ICallback callback = _createCallback(salt, permissions);
 
