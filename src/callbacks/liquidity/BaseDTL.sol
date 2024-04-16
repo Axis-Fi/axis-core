@@ -11,7 +11,7 @@ import {Callbacks} from "src/lib/Callbacks.sol";
 
 // AuctionHouse
 import {LinearVesting} from "src/modules/derivatives/LinearVesting.sol";
-import {AuctionHouse} from "src/AuctionHouse.sol";
+import {AuctionHouse} from "src/bases/AuctionHouse.sol";
 import {Keycode, wrapVeecode} from "src/modules/Modules.sol";
 
 abstract contract BaseDirectToLiquidity is BaseCallback {
@@ -52,8 +52,8 @@ abstract contract BaseDirectToLiquidity is BaseCallback {
         address baseToken;
         address quoteToken;
         address recipient;
-        uint96 lotCapacity;
-        uint96 lotCuratorPayout;
+        uint256 lotCapacity;
+        uint256 lotCuratorPayout;
         uint24 proceedsUtilisationPercent;
         uint48 vestingStart;
         uint48 vestingExpiry;
@@ -132,7 +132,7 @@ abstract contract BaseDirectToLiquidity is BaseCallback {
         address seller_,
         address baseToken_,
         address quoteToken_,
-        uint96 capacity_,
+        uint256 capacity_,
         bool prefund_,
         bytes calldata callbackData_
     ) internal virtual override onlyIfLotDoesNotExist(lotId_) {
@@ -214,7 +214,7 @@ abstract contract BaseDirectToLiquidity is BaseCallback {
         address seller_,
         address baseToken_,
         address quoteToken_,
-        uint96 capacity_,
+        uint256 capacity_,
         bool prefund_,
         bytes calldata callbackData_
     ) internal virtual;
@@ -229,7 +229,7 @@ abstract contract BaseDirectToLiquidity is BaseCallback {
     /// @param      lotId_          The lot ID
     function _onCancel(
         uint96 lotId_,
-        uint96,
+        uint256,
         bool,
         bytes calldata
     ) internal override onlyIfLotExists(lotId_) {
@@ -249,7 +249,7 @@ abstract contract BaseDirectToLiquidity is BaseCallback {
     /// @param      curatorPayout_  The maximum curator payout
     function _onCurate(
         uint96 lotId_,
-        uint96 curatorPayout_,
+        uint256 curatorPayout_,
         bool,
         bytes calldata
     ) internal override onlyIfLotExists(lotId_) {
@@ -263,8 +263,8 @@ abstract contract BaseDirectToLiquidity is BaseCallback {
     function _onPurchase(
         uint96,
         address,
-        uint96,
-        uint96,
+        uint256,
+        uint256,
         bool,
         bytes calldata
     ) internal pure override {
@@ -274,7 +274,7 @@ abstract contract BaseDirectToLiquidity is BaseCallback {
 
     /// @notice     Callback for a bid
     /// @dev        Not implemented
-    function _onBid(uint96, uint64, address, uint96, bytes calldata) internal pure override {
+    function _onBid(uint96, uint64, address, uint256, bytes calldata) internal pure override {
         // Not implemented
         revert Callback_NotImplemented();
     }
@@ -300,8 +300,8 @@ abstract contract BaseDirectToLiquidity is BaseCallback {
     /// @param      callbackData_   Implementation-specific data
     function _onClaimProceeds(
         uint96 lotId_,
-        uint96 proceeds_,
-        uint96 refund_,
+        uint256 proceeds_,
+        uint256 refund_,
         bytes calldata callbackData_
     ) internal virtual override onlyIfLotExists(lotId_) {
         DTLConfiguration memory config = lotConfiguration[lotId_];
@@ -310,7 +310,7 @@ abstract contract BaseDirectToLiquidity is BaseCallback {
         uint256 quoteTokensRequired;
         {
             // Calculate the actual lot capacity that was used
-            uint96 capacityUtilised;
+            uint256 capacityUtilised;
             {
                 // If curation is enabled, refund_ will also contain the refund on the curator payout. Adjust for that.
                 // Example:
@@ -318,7 +318,7 @@ abstract contract BaseDirectToLiquidity is BaseCallback {
                 // 90 capacity sold, 9 curator payout
                 // 11 refund
                 // Utilisation = 1 - 11/110 = 90%
-                uint96 utilisationPercent =
+                uint256 utilisationPercent =
                     1e5 - refund_ * 1e5 / (config.lotCapacity + config.lotCuratorPayout);
 
                 capacityUtilised = (config.lotCapacity * utilisationPercent) / MAX_PERCENT;
@@ -425,9 +425,9 @@ abstract contract BaseDirectToLiquidity is BaseCallback {
     // ========== INTERNAL FUNCTIONS ========== //
 
     function _tokensRequiredForPool(
-        uint96 amount_,
+        uint256 amount_,
         uint24 proceedsUtilisationPercent_
-    ) internal pure returns (uint96) {
+    ) internal pure returns (uint256) {
         return (amount_ * proceedsUtilisationPercent_) / MAX_PERCENT;
     }
 

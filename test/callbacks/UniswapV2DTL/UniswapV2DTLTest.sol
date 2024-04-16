@@ -5,7 +5,7 @@ import {Test} from "forge-std/Test.sol";
 import {Callbacks} from "src/lib/Callbacks.sol";
 import {Permit2User} from "test/lib/permit2/Permit2User.sol";
 
-import {AuctionHouse} from "src/AuctionHouse.sol";
+import {BatchAuctionHouse} from "src/BatchAuctionHouse.sol";
 
 import {BaseCallback} from "src/callbacks/BaseCallback.sol";
 
@@ -36,7 +36,7 @@ abstract contract UniswapV2DirectToLiquidityTest is Test, Permit2User {
 
     uint96 internal _lotId = 1;
 
-    AuctionHouse internal _auctionHouse;
+    BatchAuctionHouse internal _auctionHouse;
     UniswapV2DirectToLiquidity internal _dtl;
     address internal _dtlAddress;
     IUniswapV2Factory internal _uniV2Factory;
@@ -60,9 +60,9 @@ abstract contract UniswapV2DirectToLiquidityTest is Test, Permit2User {
         // Set reasonable timestamp
         vm.warp(_START);
 
-        // Create an AuctionHouse at a deterministic address, since it is used as input to callbacks
-        AuctionHouse auctionHouse = new AuctionHouse(_OWNER, _PROTOCOL, _permit2Address);
-        _auctionHouse = AuctionHouse(address(0x000000000000000000000000000000000000000A));
+        // Create an BatchAuctionHouse at a deterministic address, since it is used as input to callbacks
+        BatchAuctionHouse auctionHouse = new BatchAuctionHouse(_OWNER, _PROTOCOL, _permit2Address);
+        _auctionHouse = BatchAuctionHouse(address(0x000000000000000000000000000000000000000A));
         vm.etch(address(_auctionHouse), address(auctionHouse).code);
         vm.store(address(_auctionHouse), bytes32(uint256(0)), bytes32(abi.encode(_OWNER))); // Owner
         vm.store(address(_auctionHouse), bytes32(uint256(6)), bytes32(abi.encode(1))); // Reentrancy
@@ -204,8 +204,8 @@ abstract contract UniswapV2DirectToLiquidityTest is Test, Permit2User {
             address baseToken_,
             address quoteToken_,
             address recipient_,
-            uint96 lotCapacity_,
-            uint96 lotCuratorPayout_,
+            uint256 lotCapacity_,
+            uint256 lotCuratorPayout_,
             uint24 proceedsUtilisationPercent_,
             uint48 vestingStart_,
             uint48 vestingExpiry_,

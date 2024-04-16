@@ -66,7 +66,7 @@ contract UniswapV2DirectToLiquidity is BaseDirectToLiquidity {
         address,
         address baseToken_,
         address quoteToken_,
-        uint96,
+        uint256,
         bool,
         bytes calldata
     ) internal virtual override {
