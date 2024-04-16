@@ -242,7 +242,7 @@ abstract contract BatchAuctionHouseTest is Test, Permit2User {
     }
 
     modifier givenLotHasAllowlist() {
-        // Allowlist callback supports onCreate, onPurchase, and onBid callbacks
+        // // Allowlist callback supports onCreate, onPurchase, and onBid callbacks
         // // 10011000 = 0x98
         // // cast create2 -s 98 -i $(cat ./bytecode/MockCallback98.bin)
         // bytes memory bytecode = abi.encodePacked(
@@ -263,7 +263,7 @@ abstract contract BatchAuctionHouseTest is Test, Permit2User {
         //     vm.toString(bytecode)
         // );
 
-        bytes32 salt = bytes32(0x01869ed52a30c61ffe6722cba9220cbfdf400af51b99cd80faf047638e284cf6);
+        bytes32 salt = bytes32(0x3ff6d227b7e0351a6252541cb6b575fad302f3a1ac1cc85dbd1931a57fa825d8);
         vm.startBroadcast(); // required for CREATE2 address to work correctly. doesn't do anything in a test
         _callback = new MockCallback{salt: salt}(
             address(_auctionHouse),
@@ -423,19 +423,19 @@ abstract contract BatchAuctionHouseTest is Test, Permit2User {
         if (_callbackSendBaseTokens && _callbackReceiveQuoteTokens) {
             // 11111111 = 0xFF
             // cast create2 -s FF -i $(cat ./bytecode/MockCallbackFF.bin)
-            salt = bytes32(0x80626a5c754883542e39df22122e14e1bb05b4420aeda8872feb43e62297cade);
+            salt = bytes32(0x664958e94a55b97d20ced8f0ac5b27e8a043f948ba056966b87428a7d8f6c58b);
         } else if (_callbackSendBaseTokens) {
             // 11111101 = 0xFD
             // cast create2 -s FD -i $(cat ./bytecode/MockCallbackFD.bin)
-            salt = bytes32(0xc577954dbde2d9dea179eec3f3ba190034b52f1ecd95d4438de964697824f39a);
+            salt = bytes32(0xdf12e7d191346cb807e579dce7b6e95db1576eff5db468223f29d61061e73af7);
         } else if (_callbackReceiveQuoteTokens) {
             // 11111110 = 0xFE
             // cast create2 -s FE -i $(cat ./bytecode/MockCallbackFE.bin)
-            salt = bytes32(0xee77df7d4de7979e577b01111b2c4669c6b254a738e149974c9e09af2caf614a);
+            salt = bytes32(0x9a1a599eb0c227daf8a91576450d8ae321fe91ded8ab518d49434aee39cb6c7d);
         } else {
             // 11111100 = 0xFC
             // cast create2 -s FC -i $(cat ./bytecode/MockCallbackFC.bin)
-            salt = bytes32(0x43f799d07cd115f9f606c396f86fef5a63965c94828c1f368b16d5b401d2e9dd);
+            salt = bytes32(0xf91bbaf79465f2e98d6a0f8c10d0701dc2a8387fb195cb3b9bbe718e7bfc8383);
         }
 
         // Required for CREATE2 address to work correctly. doesn't do anything in a test

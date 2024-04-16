@@ -38,7 +38,7 @@ contract CallbacksTest is Test {
         // );
 
         return (
-            bytes32(0x6274afc3961fb1fd4c1fc9ea6b09fee8682f3834d237bfbe08f18dd482f859e5), permissions
+            bytes32(0x6a3b1897dfa202b73e46842314d76d2936e1abd3bbef472d3f55aa65a3e8dbba), permissions
         );
     }
 
@@ -66,7 +66,7 @@ contract CallbacksTest is Test {
         // );
 
         return (
-            bytes32(0xc950537943697bd7a8b1ea4f9d5dee17ead88f1941822672cd7ba50f6a48346b), permissions
+            bytes32(0x2ad269c1a5996dd43f85791da9c4af5ea1edaae9717cf0fd4e0c9590a92e073f), permissions
         );
     }
 
@@ -94,7 +94,7 @@ contract CallbacksTest is Test {
         // );
 
         return (
-            bytes32(0xcffeb355ea15c46babdec92cc6744d0ead33efd4fdf52708a1adc815e7295864), permissions
+            bytes32(0xd6d44ea0b5b5ffe0b8836765deaf24ebfd32d1ae0cc1a1e13824edd1475db555), permissions
         );
     }
 
@@ -122,7 +122,7 @@ contract CallbacksTest is Test {
         // );
 
         return (
-            bytes32(0xfc1a363591cfc7264e926cde5d34c9d8089cb0657680cb5888e3dfd44733e699), permissions
+            bytes32(0x8f9c21d7e8f3f9d4a0a58fd0a63b977dee1eac624b511d9bb82e216a14c1859f), permissions
         );
     }
 
@@ -150,7 +150,7 @@ contract CallbacksTest is Test {
         // );
 
         return (
-            bytes32(0x953c7dd5dc479cf1b0b0178e10ec218436ed4e738234a5b88d70b8fd4d7ad4d8), permissions
+            bytes32(0xc6000206f8d0f47448729fb2260bc839d3b38ee37351022bf163eeddb9cde8a7), permissions
         );
     }
 
@@ -178,7 +178,7 @@ contract CallbacksTest is Test {
         // );
 
         return (
-            bytes32(0xd466651502b03fc17fe2da3ae976e2704eb4ba6cc1f8773797c6d126e19236f7), permissions
+            bytes32(0xac178f4c3530ff125e82a31c8b52a8bd81cbefd1e69abcbc892b98c25513cc04), permissions
         );
     }
 
@@ -206,7 +206,7 @@ contract CallbacksTest is Test {
         // );
 
         return (
-            bytes32(0x21885aedd62feb2a6500b3a5ac4f8e54fae00c959070c3f45bce4828e7d3d9c9), permissions
+            bytes32(0x0634e082cc1110c4dd927edf5eb6eab0ada8702967efcd3742c9f6cc08aa7b7f), permissions
         );
     }
 
@@ -234,7 +234,7 @@ contract CallbacksTest is Test {
         // );
 
         return (
-            bytes32(0xe9922fa3f41d7ba26a8bc3be2865413fa6912f5434f21ebc2f380a0cc34d78c5), permissions
+            bytes32(0xec0268f42513781494874314f3b66fb96fc32781e8892aa004dae2e8e32252ce), permissions
         );
     }
 
@@ -262,7 +262,7 @@ contract CallbacksTest is Test {
         // );
 
         return (
-            bytes32(0x3f7e7126965c5f52a65d963ad59b2817e87f47da8546d247f8f4da68bc193faf), permissions
+            bytes32(0x4b5e4bfb81663a913023870fdb4b4406dcfdf186fa41ba545877b67eb4a8c77c), permissions
         );
     }
 
@@ -293,7 +293,7 @@ contract CallbacksTest is Test {
         // );
 
         return (
-            bytes32(0xc1c22ca901065122c85e4591b8623252bf9dd0d643b60ec265f6087cf5ebf401), permissions
+            bytes32(0x0166b394e13c196df4b63e4594544834b6a2f0ccc0c3eed3f1e4e193f82c8835), permissions
         );
     }
 
@@ -324,7 +324,7 @@ contract CallbacksTest is Test {
         // );
 
         return (
-            bytes32(0x55d3cd48197db867bfa6af6e5b4fbbfa0409474280b65c20167439a9bb7517ef), permissions
+            bytes32(0x00ebf270f49802ee0f5283b961cb84b40afeae4c1fd86dc4808a0c3cf5a2371a), permissions
         );
     }
 
@@ -355,7 +355,7 @@ contract CallbacksTest is Test {
         // );
 
         return (
-            bytes32(0xd159fcd099011fac21f0862cc529408a6c71b33de5b30ad7f5ec23cccb427074), permissions
+            bytes32(0xa7b865214acf848c64d628bc01200e2925ed893b58b437f3664525b78d93b6d2), permissions
         );
     }
 
@@ -386,7 +386,7 @@ contract CallbacksTest is Test {
         // );
 
         return (
-            bytes32(0x4c8bc75484e126bddb16f2d35bbff0e5dd93997899b06646f3f18cabf6371a58), permissions
+            bytes32(0xe5228f9ba15e580011a7c74760aa4fa71ac0c6cf42166f6025d37d7d09c752cf), permissions
         );
     }
 
