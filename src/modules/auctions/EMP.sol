@@ -692,6 +692,10 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
         return auctionData[lotId_].bidIds[index_];
     }
 
+    function getNumBidsInQueue(uint96 lotId_) external view returns (uint256) {
+        return decryptedBids[lotId_].getNumBids();
+    }
+
     // ========== SETTLEMENT ========== //
 
     /// @notice         Helper function to get the next bid from the queue and calculate the price
