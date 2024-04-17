@@ -257,14 +257,6 @@ contract BaselinePreAsset is ERC20, BaseCallback, IPreAsset {
         // Validate that the callback received the correct amount of proceeds
         if (proceeds_ < RESERVE.balanceOf(address(this))) revert Callback_MissingFunds();
 
-        // Validate that the BAsset has been set
-        if (address(bAsset) == address(0)) revert Callback_InvalidParams();
-
-        // Validate that the Baseline factory is consistent
-        if (address(bAsset.baseline()) != address(BASELINE_FACTORY)) {
-            revert Callback_InvalidParams();
-        }
-
         // Decode callback data to get bAsset initialization parameters
         (string memory name, string memory symbol, bytes32 salt, address feeRecipient) =
             abi.decode(callbackData, (string, string, bytes32, address));
@@ -300,6 +292,15 @@ contract BaselinePreAsset is ERC20, BaseCallback, IPreAsset {
             initFloor,
             initDisc
         );
+
+        // The BAsset is set by now
+        // Validate that the BAsset has been set
+        if (address(bAsset) == address(0)) revert Callback_InvalidParams();
+
+        // Validate that the Baseline factory is consistent
+        if (address(bAsset.baseline()) != address(BASELINE_FACTORY)) {
+            revert Callback_InvalidParams();
+        }
 
         // Store the total bAssets received
         totalBAssets = bAsset.balanceOf(address(this));
