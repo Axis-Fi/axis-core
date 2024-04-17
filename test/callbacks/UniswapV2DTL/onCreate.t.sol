@@ -120,7 +120,7 @@ contract UniswapV2DirectToLiquidityOnCreateTest is UniswapV2DirectToLiquidityTes
     {
         // Expect revert
         bytes memory err = abi.encodeWithSelector(
-            BaseDirectToLiquidity.Callback_Params_UtilisationPercentOutOfBounds.selector, 0, 1, 1e5
+            BaseDirectToLiquidity.Callback_Params_PercentOutOfBounds.selector, 0, 1, 1e5
         );
         vm.expectRevert(err);
 
@@ -134,10 +134,7 @@ contract UniswapV2DirectToLiquidityOnCreateTest is UniswapV2DirectToLiquidityTes
     {
         // Expect revert
         bytes memory err = abi.encodeWithSelector(
-            BaseDirectToLiquidity.Callback_Params_UtilisationPercentOutOfBounds.selector,
-            1e5 + 1,
-            1,
-            1e5
+            BaseDirectToLiquidity.Callback_Params_PercentOutOfBounds.selector, 1e5 + 1, 1, 1e5
         );
         vm.expectRevert(err);
 

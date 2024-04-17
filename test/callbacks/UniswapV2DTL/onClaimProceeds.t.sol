@@ -29,8 +29,7 @@ contract UniswapV2DirectToLiquidityOnClaimProceedsTest is UniswapV2DirectToLiqui
     uint96 internal _baseTokensToDeposit;
     uint96 internal _curatorPayout;
 
-    uint256 internal _quoteTokenAmountMin;
-    uint256 internal _baseTokenAmountMin;
+    uint24 internal _maxSlippage = 10; // 0.01%
 
     // ========== Internal functions ========== //
 
@@ -152,10 +151,7 @@ contract UniswapV2DirectToLiquidityOnClaimProceedsTest is UniswapV2DirectToLiqui
             _proceeds,
             _refund,
             abi.encode(
-                UniswapV2DirectToLiquidity.OnClaimProceedsParams({
-                    quoteTokenAmountMin: _quoteTokenAmountMin,
-                    baseTokenAmountMin: _baseTokenAmountMin
-                })
+                UniswapV2DirectToLiquidity.OnClaimProceedsParams({maxSlippage: _maxSlippage})
             )
         );
     }
@@ -184,10 +180,6 @@ contract UniswapV2DirectToLiquidityOnClaimProceedsTest is UniswapV2DirectToLiqui
         // The proceeds utilisation percent scales the quote tokens and base tokens linearly
         _quoteTokensToDeposit = _proceeds * _dtlCreateParams.proceedsUtilisationPercent / 1e5;
         _baseTokensToDeposit = _capacityUtilised * _dtlCreateParams.proceedsUtilisationPercent / 1e5;
-
-        // Calculate the minimum amounts
-        _quoteTokenAmountMin = _quoteTokensToDeposit;
-        _baseTokenAmountMin = _baseTokensToDeposit;
         _;
     }
 
@@ -215,9 +207,8 @@ contract UniswapV2DirectToLiquidityOnClaimProceedsTest is UniswapV2DirectToLiqui
         _;
     }
 
-    modifier givenMinimumAmounts(uint256 quoteTokenAmountMin_, uint256 baseTokenAmountMin_) {
-        _quoteTokenAmountMin = quoteTokenAmountMin_;
-        _baseTokenAmountMin = baseTokenAmountMin_;
+    modifier givenMaxSlippage(uint24 maxSlippage_) {
+        _maxSlippage = maxSlippage_;
         _;
     }
 
@@ -415,7 +406,7 @@ contract UniswapV2DirectToLiquidityOnClaimProceedsTest is UniswapV2DirectToLiqui
         _performCallback();
     }
 
-    function test_givenPoolHasDepositWithLowerPrice_whenMinimumAmountsIsSet()
+    function test_givenPoolHasDepositWithLowerPrice_whenMaxSlippageIsSet()
         public
         givenCallbackIsCreated
         givenOnCreate
@@ -425,7 +416,7 @@ contract UniswapV2DirectToLiquidityOnClaimProceedsTest is UniswapV2DirectToLiqui
         givenAddressHasQuoteTokenBalance(_dtlAddress, _proceeds)
         givenAddressHasBaseTokenBalance(_SELLER, _baseTokensToDeposit)
         givenAddressHasBaseTokenAllowance(_SELLER, _dtlAddress, _baseTokensToDeposit)
-        givenMinimumAmounts(_quoteTokensToDeposit * 95 / 100, _baseTokensToDeposit)
+        givenMaxSlippage(5000) // 5%
     {
         _performCallback();
 
@@ -453,7 +444,7 @@ contract UniswapV2DirectToLiquidityOnClaimProceedsTest is UniswapV2DirectToLiqui
         _performCallback();
     }
 
-    function test_givenPoolHasDepositWithHigherPrice_whenMinimumAmountsIsSet()
+    function test_givenPoolHasDepositWithHigherPrice_whenMaxSlippageIsSet()
         public
         givenCallbackIsCreated
         givenOnCreate
@@ -463,7 +454,7 @@ contract UniswapV2DirectToLiquidityOnClaimProceedsTest is UniswapV2DirectToLiqui
         givenAddressHasQuoteTokenBalance(_dtlAddress, _proceeds)
         givenAddressHasBaseTokenBalance(_SELLER, _baseTokensToDeposit)
         givenAddressHasBaseTokenAllowance(_SELLER, _dtlAddress, _baseTokensToDeposit)
-        givenMinimumAmounts(_quoteTokensToDeposit, _baseTokensToDeposit * 95 / 100)
+        givenMaxSlippage(5000) // 5%
     {
         _performCallback();
 

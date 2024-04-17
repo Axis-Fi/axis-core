@@ -17,11 +17,9 @@ contract UniswapV2DirectToLiquidity is BaseDirectToLiquidity {
     /// @notice     Parameters for the onClaimProceeds callback
     /// @dev        This will be encoded in the `callbackData_` parameter
     ///
-    /// @param      quoteTokenAmountMin     The minimum amount of quote tokens to add as liquidity
-    /// @param      baseTokenAmountMin      The minimum amount of base tokens to add as liquidity
+    /// @param      maxSlippage             The maximum slippage allowed when adding liquidity (in terms of `MAX_PERCENT`)
     struct OnClaimProceedsParams {
-        uint256 quoteTokenAmountMin;
-        uint256 baseTokenAmountMin;
+        uint24 maxSlippage;
     }
 
     // ========== STATE VARIABLES ========== //
@@ -98,6 +96,10 @@ contract UniswapV2DirectToLiquidity is BaseDirectToLiquidity {
             pairAddress = uniV2Factory.createPair(config.baseToken, config.quoteToken);
         }
 
+        // Calculate the minimum amount out for each token
+        uint256 quoteTokenAmountMin = _getAmountWithSlippage(quoteTokenAmount_, params.maxSlippage);
+        uint256 baseTokenAmountMin = _getAmountWithSlippage(baseTokenAmount_, params.maxSlippage);
+
         // Approve the router to spend the tokens
         ERC20(config.quoteToken).approve(address(uniV2Router), quoteTokenAmount_);
         ERC20(config.baseToken).approve(address(uniV2Router), baseTokenAmount_);
@@ -108,8 +110,8 @@ contract UniswapV2DirectToLiquidity is BaseDirectToLiquidity {
             config.baseToken,
             quoteTokenAmount_,
             baseTokenAmount_,
-            params.quoteTokenAmountMin,
-            params.baseTokenAmountMin,
+            quoteTokenAmountMin,
+            baseTokenAmountMin,
             address(this),
             block.timestamp
         );

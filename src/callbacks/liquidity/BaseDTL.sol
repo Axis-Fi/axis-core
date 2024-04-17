@@ -25,7 +25,7 @@ abstract contract BaseDirectToLiquidity is BaseCallback {
 
     error Callback_Params_InvalidAddress();
 
-    error Callback_Params_UtilisationPercentOutOfBounds(uint24 actual_, uint24 min_, uint24 max_);
+    error Callback_Params_PercentOutOfBounds(uint24 actual_, uint24 min_, uint24 max_);
 
     error Callback_Params_PoolExists();
 
@@ -145,7 +145,7 @@ abstract contract BaseDirectToLiquidity is BaseCallback {
             params.proceedsUtilisationPercent == 0
                 || params.proceedsUtilisationPercent > MAX_PERCENT
         ) {
-            revert Callback_Params_UtilisationPercentOutOfBounds(
+            revert Callback_Params_PercentOutOfBounds(
                 params.proceedsUtilisationPercent, 1, MAX_PERCENT
             );
         }
@@ -423,6 +423,17 @@ abstract contract BaseDirectToLiquidity is BaseCallback {
     }
 
     // ========== INTERNAL FUNCTIONS ========== //
+
+    function _getAmountWithSlippage(
+        uint256 amount_,
+        uint24 slippage_
+    ) internal pure returns (uint256) {
+        if (slippage_ > MAX_PERCENT) {
+            revert Callback_Params_PercentOutOfBounds(slippage_, 0, MAX_PERCENT);
+        }
+
+        return (amount_ * (MAX_PERCENT - slippage_)) / MAX_PERCENT;
+    }
 
     function _tokensRequiredForPool(
         uint256 amount_,

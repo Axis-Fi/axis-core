@@ -34,6 +34,18 @@ contract UniswapV3DirectToLiquidity is BaseDirectToLiquidity {
 
     error Callback_Params_PoolFeeNotEnabled();
 
+    error Callback_Slippage(address token_, uint256 amountActual_, uint256 amountMin_);
+
+    // ========== STRUCTS ========== //
+
+    /// @notice     Parameters for the onClaimProceeds callback
+    /// @dev        This will be encoded in the `callbackData_` parameter
+    ///
+    /// @param      maxSlippage             The maximum slippage allowed when adding liquidity (in terms of `MAX_PERCENT`)
+    struct OnClaimProceedsParams {
+        uint24 maxSlippage;
+    }
+
     // ========== STATE VARIABLES ========== //
 
     /// @notice     The Uniswap V3 Factory contract
@@ -100,8 +112,9 @@ contract UniswapV3DirectToLiquidity is BaseDirectToLiquidity {
     /// @inheritdoc BaseDirectToLiquidity
     /// @dev        This function performs the following:
     ///             - Creates and initializes the pool, if necessary
-    ///             - Deploys a pool token to wrap the Uniswap V3 position as an ERC-20
-    ///             - Deposits the tokens into the pool and mint the LP tokens
+    ///             - Deploys a pool token to wrap the Uniswap V3 position as an ERC-20 using GUni
+    ///             - Uses the `GUniPool.getMintAmounts()` function to calculate the quantity of quote and base tokens required, given the current pool liquidity
+    ///             - Mint the LP tokens
     ///
     ///             The assumptions are:
     ///             - the callback has `quoteTokenAmount_` quantity of quote tokens (as `receiveQuoteTokens` flag is set)
@@ -110,8 +123,11 @@ contract UniswapV3DirectToLiquidity is BaseDirectToLiquidity {
         uint96 lotId_,
         uint256 quoteTokenAmount_,
         uint256 baseTokenAmount_,
-        bytes memory
+        bytes memory callbackData_
     ) internal virtual override returns (ERC20 poolToken) {
+        // Decode the callback data
+        OnClaimProceedsParams memory params = abi.decode(callbackData_, (OnClaimProceedsParams));
+
         DTLConfiguration memory config = lotConfiguration[lotId_];
 
         // Extract the pool fee from the implParams
@@ -161,21 +177,38 @@ contract UniswapV3DirectToLiquidity is BaseDirectToLiquidity {
         {
             GUniPool gUniPoolToken = GUniPool(poolTokenAddress);
 
-            // Calculate the optimal mint amount
-            // When adding liquidity, the current tick of the pool will be used.
-            // If the pool was previously initialized, then that tick will be used
-            // and the deposit will be made at the appropriate ratio.
+            // Calculate the quantity of quote and base tokens required to deposit into the pool at the current tick
             (uint256 amount0Actual, uint256 amount1Actual, uint256 poolTokenQuantity) =
             gUniPoolToken.getMintAmounts(
                 quoteTokenIsToken0 ? quoteTokenAmount_ : baseTokenAmount_,
                 quoteTokenIsToken0 ? baseTokenAmount_ : quoteTokenAmount_
             );
-            uint256 quoteTokenRequired = quoteTokenIsToken0 ? amount0Actual : amount1Actual;
-            uint256 baseTokenRequired = quoteTokenIsToken0 ? amount1Actual : amount0Actual;
 
-            // Approve the vault to spend the tokens
-            ERC20(config.quoteToken).approve(address(poolTokenAddress), quoteTokenRequired);
-            ERC20(config.baseToken).approve(address(poolTokenAddress), baseTokenRequired);
+            // Revert if the slippage is too high
+            {
+                uint256 quoteTokenRequired = quoteTokenIsToken0 ? amount0Actual : amount1Actual;
+
+                // Ensures that `quoteTokenRequired` (as specified by GUniPool) is within the slippage range from the actual quote token amount
+                uint256 lower = _getAmountWithSlippage(quoteTokenAmount_, params.maxSlippage);
+                if (quoteTokenRequired < lower) {
+                    revert Callback_Slippage(config.quoteToken, quoteTokenRequired, lower);
+                }
+
+                // Approve the vault to spend the tokens
+                ERC20(config.quoteToken).approve(address(poolTokenAddress), quoteTokenRequired);
+            }
+            {
+                uint256 baseTokenRequired = quoteTokenIsToken0 ? amount1Actual : amount0Actual;
+
+                // Ensures that `baseTokenRequired` (as specified by GUniPool) is within the slippage range from the actual base token amount
+                uint256 lower = _getAmountWithSlippage(baseTokenAmount_, params.maxSlippage);
+                if (baseTokenRequired < lower) {
+                    revert Callback_Slippage(config.baseToken, baseTokenRequired, lower);
+                }
+
+                // Approve the vault to spend the tokens
+                ERC20(config.baseToken).approve(address(poolTokenAddress), baseTokenRequired);
+            }
 
             // Mint the LP tokens
             // The parent callback is responsible for transferring any leftover quote and base tokens

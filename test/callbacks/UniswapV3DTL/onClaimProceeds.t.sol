@@ -17,6 +17,7 @@ import {GUniPool} from "g-uni-v1-core/GUniPool.sol";
 // AuctionHouse
 import {LinearVesting} from "src/modules/derivatives/LinearVesting.sol";
 import {BaseDirectToLiquidity} from "src/callbacks/liquidity/BaseDTL.sol";
+import {UniswapV3DirectToLiquidity} from "src/callbacks/liquidity/UniswapV3DTL.sol";
 
 contract UniswapV3DirectToLiquidityOnClaimProceedsTest is UniswapV3DirectToLiquidityTest {
     uint96 internal constant _PROCEEDS = 20e18;
@@ -28,6 +29,7 @@ contract UniswapV3DirectToLiquidityOnClaimProceedsTest is UniswapV3DirectToLiqui
     uint96 internal _quoteTokensToDeposit;
     uint96 internal _baseTokensToDeposit;
     uint96 internal _curatorPayout;
+    uint24 internal _maxSlippage = 10; // 0.01%
 
     uint160 internal constant _SQRT_PRICE_X96_OVERRIDE = 125_270_724_187_523_965_593_206_000_000; // Different to what is normally calculated
 
@@ -159,7 +161,14 @@ contract UniswapV3DirectToLiquidityOnClaimProceedsTest is UniswapV3DirectToLiqui
 
     function _performCallback() internal {
         vm.prank(address(_auctionHouse));
-        _dtl.onClaimProceeds(_lotId, _proceeds, _refund, abi.encode(""));
+        _dtl.onClaimProceeds(
+            _lotId,
+            _proceeds,
+            _refund,
+            abi.encode(
+                UniswapV3DirectToLiquidity.OnClaimProceedsParams({maxSlippage: _maxSlippage})
+            )
+        );
     }
 
     function _createPool() internal returns (address) {
@@ -239,12 +248,12 @@ contract UniswapV3DirectToLiquidityOnClaimProceedsTest is UniswapV3DirectToLiqui
     }
 
     modifier givenPoolHasDepositLowerPrice() {
-        _sqrtPriceX96 = _calculateSqrtPriceX96(_PROCEEDS / 2, _LOT_CAPACITY * 10);
+        _sqrtPriceX96 = _calculateSqrtPriceX96(_PROCEEDS / 2, _LOT_CAPACITY);
         _;
     }
 
     modifier givenPoolHasDepositHigherPrice() {
-        _sqrtPriceX96 = _calculateSqrtPriceX96(_PROCEEDS * 10, _LOT_CAPACITY / 2);
+        _sqrtPriceX96 = _calculateSqrtPriceX96(_PROCEEDS * 2, _LOT_CAPACITY);
         _;
     }
 
@@ -253,6 +262,15 @@ contract UniswapV3DirectToLiquidityOnClaimProceedsTest is UniswapV3DirectToLiqui
             ? (address(_baseToken), address(_quoteToken))
             : (address(_quoteToken), address(_baseToken));
         return _uniV3Factory.getPool(token0, token1, _poolFee);
+    }
+
+    function _setMaxSlippage(uint24 maxSlippage_) internal {
+        _maxSlippage = maxSlippage_;
+    }
+
+    modifier givenMaxSlippage(uint24 maxSlippage_) {
+        _setMaxSlippage(maxSlippage_);
+        _;
     }
 
     // ========== Tests ========== //
@@ -310,6 +328,7 @@ contract UniswapV3DirectToLiquidityOnClaimProceedsTest is UniswapV3DirectToLiqui
         givenAddressHasQuoteTokenBalance(_dtlAddress, _proceeds)
         givenAddressHasBaseTokenBalance(_SELLER, _capacityUtilised)
         givenAddressHasBaseTokenAllowance(_SELLER, _dtlAddress, _capacityUtilised)
+        givenMaxSlippage(21_000) // 21%
     {
         _performCallback();
 
@@ -412,6 +431,7 @@ contract UniswapV3DirectToLiquidityOnClaimProceedsTest is UniswapV3DirectToLiqui
         setCallbackParameters(_PROCEEDS, _REFUND)
         givenPoolHasDepositLowerPrice
         givenPoolIsCreatedAndInitialized(_sqrtPriceX96)
+        givenMaxSlippage(51_000) // 51%
         givenAddressHasQuoteTokenBalance(_dtlAddress, _proceeds)
         givenAddressHasBaseTokenBalance(_SELLER, _baseTokensToDeposit)
         givenAddressHasBaseTokenAllowance(_SELLER, _dtlAddress, _baseTokensToDeposit)
@@ -433,6 +453,7 @@ contract UniswapV3DirectToLiquidityOnClaimProceedsTest is UniswapV3DirectToLiqui
         setCallbackParameters(_PROCEEDS, _REFUND)
         givenPoolHasDepositHigherPrice
         givenPoolIsCreatedAndInitialized(_sqrtPriceX96)
+        givenMaxSlippage(51_000) // 51%
         givenAddressHasQuoteTokenBalance(_dtlAddress, _proceeds)
         givenAddressHasBaseTokenBalance(_SELLER, _baseTokensToDeposit)
         givenAddressHasBaseTokenAllowance(_SELLER, _dtlAddress, _baseTokensToDeposit)
@@ -445,6 +466,48 @@ contract UniswapV3DirectToLiquidityOnClaimProceedsTest is UniswapV3DirectToLiqui
         _assertQuoteTokenBalance();
         _assertBaseTokenBalance();
         _assertApprovals();
+    }
+
+    function test_lessThanMaxSlippage()
+        public
+        givenCallbackIsCreated
+        givenOnCreate
+        setCallbackParameters(_PROCEEDS, _REFUND)
+        givenMaxSlippage(100) // 0.01%
+        givenAddressHasQuoteTokenBalance(_dtlAddress, _proceeds)
+        givenAddressHasBaseTokenBalance(_SELLER, _baseTokensToDeposit)
+        givenAddressHasBaseTokenAllowance(_SELLER, _dtlAddress, _baseTokensToDeposit)
+    {
+        _performCallback();
+
+        _assertPoolState(_sqrtPriceX96);
+        _assertLpTokenBalance();
+        _assertVestingTokenBalance();
+        _assertQuoteTokenBalance();
+        _assertBaseTokenBalance();
+        _assertApprovals();
+    }
+
+    function test_greaterThanMaxSlippage_reverts()
+        public
+        givenCallbackIsCreated
+        givenOnCreate
+        setCallbackParameters(_PROCEEDS, _REFUND)
+        givenMaxSlippage(0) // 0%
+        givenAddressHasQuoteTokenBalance(_dtlAddress, _proceeds)
+        givenAddressHasBaseTokenBalance(_SELLER, _baseTokensToDeposit)
+        givenAddressHasBaseTokenAllowance(_SELLER, _dtlAddress, _baseTokensToDeposit)
+    {
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(
+            UniswapV3DirectToLiquidity.Callback_Slippage.selector,
+            address(_quoteToken),
+            19_999_999_999_999_999_999, // Hardcoded
+            _quoteTokensToDeposit
+        );
+        vm.expectRevert(err);
+
+        _performCallback();
     }
 
     function test_givenVesting()
