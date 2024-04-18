@@ -6,6 +6,11 @@
 # TODOs
 # [ ] Support alternative Etherscan URLs
 # [ ] Support Tenderly verification
+# [X] Override use of Deploy.s.sol:Deploy with a different script
+
+# Specify either of these variables to override the defaults
+DEPLOY_SCRIPT=${DEPLOY_SCRIPT:-"./script/deploy/Deploy.s.sol"}
+DEPLOY_CONTRACT=${DEPLOY_CONTRACT:-"Deploy"}
 
 # Load environment variables, but respect overrides
 curenv=$(declare -p -x)
@@ -31,7 +36,11 @@ then
   exit 1
 fi
 
+echo "Using deploy script and contract: $DEPLOY_SCRIPT:$DEPLOY_CONTRACT"
+echo "Using deployment configuration: $DEPLOY_FILE"
 echo "Using RPC at URL: $RPC_URL"
+echo "Using chain: $CHAIN"
+echo ""
 
 # Set BROADCAST_FLAG based on BROADCAST
 BROADCAST_FLAG=""
@@ -60,7 +69,7 @@ else
 fi
 
 # Deploy using script
-forge script ./script/deploy/Deploy.s.sol:Deploy --sig "deploy(string,string)()" $CHAIN $DEPLOY_FILE \
+forge script $DEPLOY_SCRIPT:$DEPLOY_CONTRACT --sig "deploy(string,string)()" $CHAIN $DEPLOY_FILE \
 --rpc-url $RPC_URL --private-key $DEPLOYER_PRIVATE_KEY --froms $DEPLOYER_ADDRESS --slow -vvv \
 $BROADCAST_FLAG \
 $VERIFY_FLAG \
