@@ -13,6 +13,7 @@
     "deploy": "./script/deploy/deploy.sh",
     "fmt:check": "forge fmt --check",
     "fmt": "forge fmt",
+    "lint:all": "pnpm run fmt && pnpm run solhint:all",
     "lint:check": "pnpm run fmt:check && pnpm run solhint:check",
     "lint": "pnpm run fmt && pnpm run solhint",
     "salts": "./script/salts.sh",
