@@ -39,9 +39,6 @@ import {LinearVesting} from "src/modules/derivatives/LinearVesting.sol";
 
 // TODO can we separate the base of the deploy system from the actual contracts to be deployed
 
-// TODOs
-// [ ] Install the modules in the AuctionHouse. What if the owner is different or is a Safe?
-
 contract Deploy is Script, WithEnvironment {
     using stdJson for string;
 
