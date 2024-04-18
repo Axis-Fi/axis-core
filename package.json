@@ -15,7 +15,9 @@
     "fmt": "forge fmt",
     "lint:check": "pnpm run fmt:check && pnpm run solhint:check",
     "lint": "pnpm run fmt && pnpm run solhint",
+    "salts": "./script/salts.sh",
     "size": "forge clean && forge build --sizes --skip test --skip '*/Mock*.sol'",
+    "solhint:all": "solhint --fix --config ./.solhint.json 'src/**/*.sol' 'test/**/*.sol' 'script/**/*.sol'",
     "solhint:check": "solhint --config ./.solhint.json 'src/**/*.sol'",
     "solhint": "solhint --fix --config ./.solhint.json 'src/**/*.sol'",
     "test": "forge test --nmt optimal -vvv"

@@ -3,6 +3,10 @@
 # Usage:
 # ./deploy.sh <deploy-file> <broadcast=false> <verify=false>
 
+# TODOs
+# [ ] Support alternative Etherscan URLs
+# [ ] Support Tenderly verification
+
 # Load environment variables, but respect overrides
 curenv=$(declare -p -x)
 source .env
