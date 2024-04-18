@@ -122,6 +122,8 @@ contract Deploy is Script, WithEnvironment {
                 // Note: constructor args need to be provided in alphabetical order
                 // due to changes with forge-std or a struct needs to be used
                 argsMap[name] = _readDataValue(data, name, "args");
+
+                // Parse and store salt
                 saltMap[name] = bytes32(_readDataValue(data, name, "salt"));
 
                 // Check if it should be installed in the AtomicAuctionHouse
@@ -178,24 +180,28 @@ contract Deploy is Script, WithEnvironment {
             // Get deploy deploy args from contract name
             string memory name = deployments[i];
             // e.g. a deployment named EncryptedMarginalPrice would require the following function: deployEncryptedMarginalPrice(bytes)
-            bytes4 selector = bytes4(keccak256(bytes(string.concat("deploy", name, "(bytes)"))));
+            bytes4 selector =
+                bytes4(keccak256(bytes(string.concat("deploy", name, "(bytes,bytes32)"))));
             bytes memory args = argsMap[name];
+            bytes32 salt = saltMap[name];
 
             // Call the deploy function for the contract
             (bool success, bytes memory data) =
-                address(this).call(abi.encodeWithSelector(selector, args));
+                address(this).call(abi.encodeWithSelector(selector, args, salt));
             require(success, string.concat("Failed to deploy ", deployments[i]));
 
             // Store the deployed contract address for logging
             deployedTo[name] = abi.decode(data, (address));
 
             // If required, install in the AtomicAuctionHouse
+            // For this to work, the deployer address must be the same as the owner of the AuctionHouse (`_envOwner`)
             if (installAtomicAuctionHouseMap[name]) {
                 console2.log("    Installing in AtomicAuctionHouse");
                 atomicAuctionHouse.installModule(Module(deployedTo[name]));
             }
 
             // If required, install in the BatchAuctionHouse
+            // For this to work, the deployer address must be the same as the owner of the AuctionHouse (`_envOwner`)
             if (installBatchAuctionHouseMap[name]) {
                 console2.log("    Installing in BatchAuctionHouse");
                 batchAuctionHouse.installModule(Module(deployedTo[name]));
@@ -242,13 +248,13 @@ contract Deploy is Script, WithEnvironment {
     // ========== AUCTIONHOUSE DEPLOYMENTS ========== //
 
     function _deployAtomicAuctionHouse(bytes32 salt_) internal {
-        console2.log("Deploying AtomicAuctionHouse");
-
         // No args
 
+        console2.log("Deploying AtomicAuctionHouse");
         console2.log("    owner:", _envOwner);
         console2.log("    permit2:", _envPermit2);
         console2.log("    protocol:", _envProtocol);
+        console2.log("    salt:", vm.toString(salt_));
 
         vm.broadcast();
         atomicAuctionHouse =
@@ -257,13 +263,13 @@ contract Deploy is Script, WithEnvironment {
     }
 
     function _deployBatchAuctionHouse(bytes32 salt_) internal {
-        console2.log("Deploying BatchAuctionHouse");
-
         // No args
 
+        console2.log("Deploying BatchAuctionHouse");
         console2.log("    owner:", _envOwner);
         console2.log("    permit2:", _envPermit2);
         console2.log("    protocol:", _envProtocol);
+        console2.log("    salt:", vm.toString(salt_));
 
         vm.broadcast();
         batchAuctionHouse = new BatchAuctionHouse{salt: salt_}(_envOwner, _envProtocol, _envPermit2);
@@ -272,79 +278,85 @@ contract Deploy is Script, WithEnvironment {
 
     // ========== MODULE DEPLOYMENTS ========== //
 
-    function deployAtomicCatalogue(bytes memory) public returns (address) {
+    function deployAtomicCatalogue(bytes memory, bytes32 salt_) public returns (address) {
         // No args used
 
         console2.log("Deploying AtomicCatalogue");
         console2.log("    AtomicAuctionHouse", address(atomicAuctionHouse));
+        console2.log("    salt:", vm.toString(salt_));
 
         // Deploy the catalogue
-        atomicCatalogue = new AtomicCatalogue(address(atomicAuctionHouse));
+        atomicCatalogue = new AtomicCatalogue{salt: salt_}(address(atomicAuctionHouse));
         console2.log("    AtomicCatalogue deployed at:", address(atomicCatalogue));
 
         return address(atomicCatalogue);
     }
 
-    function deployBatchCatalogue(bytes memory) public returns (address) {
+    function deployBatchCatalogue(bytes memory, bytes32 salt_) public returns (address) {
         // No args used
 
         console2.log("Deploying BatchCatalogue");
         console2.log("    BatchAuctionHouse", address(batchAuctionHouse));
+        console2.log("    salt:", vm.toString(salt_));
 
         // Deploy the catalogue
-        batchCatalogue = new BatchCatalogue(address(batchAuctionHouse));
+        batchCatalogue = new BatchCatalogue{salt: salt_}(address(batchAuctionHouse));
         console2.log("    BatchCatalogue deployed at:", address(batchCatalogue));
 
         return address(batchCatalogue);
     }
 
-    function deployEncryptedMarginalPrice(bytes memory) public returns (address) {
+    function deployEncryptedMarginalPrice(bytes memory, bytes32 salt_) public returns (address) {
         // No args used
 
         console2.log("Deploying EncryptedMarginalPrice");
-        console2.log("    BatchuctionHouse", address(batchAuctionHouse));
+        console2.log("    BatchAuctionHouse", address(batchAuctionHouse));
+        console2.log("    salt:", vm.toString(salt_));
 
         // Deploy the module
-        amEmp = new EncryptedMarginalPrice(address(batchAuctionHouse));
+        amEmp = new EncryptedMarginalPrice{salt: salt_}(address(batchAuctionHouse));
         console2.log("    EncryptedMarginalPrice deployed at:", address(amEmp));
 
         return address(amEmp);
     }
 
-    function deployFixedPriceSale(bytes memory) public returns (address) {
+    function deployFixedPriceSale(bytes memory, bytes32 salt_) public returns (address) {
         // No args used
 
         console2.log("Deploying FixedPriceSale");
         console2.log("    AtomicAuctionHouse", address(atomicAuctionHouse));
+        console2.log("    salt:", vm.toString(salt_));
 
         // Deploy the module
-        amFps = new FixedPriceSale(address(atomicAuctionHouse));
+        amFps = new FixedPriceSale{salt: salt_}(address(atomicAuctionHouse));
         console2.log("    FixedPriceSale deployed at:", address(amFps));
 
         return address(amFps);
     }
 
-    function deployAtomicLinearVesting(bytes memory) public returns (address) {
+    function deployAtomicLinearVesting(bytes memory, bytes32 salt_) public returns (address) {
         // No args used
 
         console2.log("Deploying LinearVesting (Atomic)");
         console2.log("    AtomicAuctionHouse", address(atomicAuctionHouse));
+        console2.log("    salt:", vm.toString(salt_));
 
         // Deploy the module
-        dmAtomicLinearVesting = new LinearVesting(address(atomicAuctionHouse));
+        dmAtomicLinearVesting = new LinearVesting{salt: salt_}(address(atomicAuctionHouse));
         console2.log("    LinearVesting (Atomic) deployed at:", address(dmAtomicLinearVesting));
 
         return address(dmAtomicLinearVesting);
     }
 
-    function deployBatchLinearVesting(bytes memory) public returns (address) {
+    function deployBatchLinearVesting(bytes memory, bytes32 salt_) public returns (address) {
         // No args used
 
         console2.log("Deploying LinearVesting (Batch)");
         console2.log("    BatchAuctionHouse", address(batchAuctionHouse));
+        console2.log("    salt:", vm.toString(salt_));
 
         // Deploy the module
-        dmBatchLinearVesting = new LinearVesting(address(batchAuctionHouse));
+        dmBatchLinearVesting = new LinearVesting{salt: salt_}(address(batchAuctionHouse));
         console2.log("    LinearVesting (Batch) deployed at:", address(dmBatchLinearVesting));
 
         return address(dmBatchLinearVesting);
