@@ -101,37 +101,16 @@ contract Deploy is Script, WithEnvironment {
             // Only one deployment
             string memory name = abi.decode(data.parseRaw(".sequence..name"), (string));
             deployments.push(name);
-            console2.log("Deploying", name);
-            // Parse and store args
-            // Note: constructor args need to be provided in alphabetical order
-            // due to changes with forge-std or a struct needs to be used
-            argsMap[name] = _readDataValue(data, name, "args");
-            saltMap[name] = bytes32(_readDataValue(data, name, "salt"));
+
+            _configureDeployment(data, name);
         } else {
             // More than one deployment
             string[] memory names = abi.decode(data.parseRaw(".sequence..name"), (string[]));
             for (uint256 i = 0; i < len; i++) {
                 string memory name = names[i];
                 deployments.push(name);
-                console2.log("Deploying", name);
 
-                // Parse and store args
-                // Note: constructor args need to be provided in alphabetical order
-                // due to changes with forge-std or a struct needs to be used
-                argsMap[name] = _readDataValue(data, name, "args");
-
-                // Parse and store salt
-                saltMap[name] = bytes32(_readDataValue(data, name, "salt"));
-
-                // Check if it should be installed in the AtomicAuctionHouse
-                if (_readDataBoolean(data, name, "installAtomicAuctionHouse")) {
-                    installAtomicAuctionHouseMap[name] = true;
-                }
-
-                // Check if it should be installed in the BatchAuctionHouse
-                if (_readDataBoolean(data, name, "installBatchAuctionHouse")) {
-                    installBatchAuctionHouseMap[name] = true;
-                }
+                _configureDeployment(data, name);
             }
         }
     }
@@ -369,6 +348,28 @@ contract Deploy is Script, WithEnvironment {
     function _isBatchAuctionHouse(string memory deploymentName) internal pure returns (bool) {
         return keccak256(bytes(deploymentName)) == keccak256(_BATCH_AUCTION_HOUSE_NAME)
             || keccak256(bytes(deploymentName)) == keccak256(_BLAST_BATCH_AUCTION_HOUSE_NAME);
+    }
+
+    function _configureDeployment(string memory data_, string memory name_) internal {
+        console2.log("    Configuring", name_);
+
+        // Parse and store args
+        // Note: constructor args need to be provided in alphabetical order
+        // due to changes with forge-std or a struct needs to be used
+        argsMap[name_] = _readDataValue(data_, name_, "args");
+
+        // Parse and store salt
+        saltMap[name_] = bytes32(_readDataValue(data_, name_, "salt"));
+
+        // Check if it should be installed in the AtomicAuctionHouse
+        if (_readDataBoolean(data_, name_, "installAtomicAuctionHouse")) {
+            installAtomicAuctionHouseMap[name_] = true;
+        }
+
+        // Check if it should be installed in the BatchAuctionHouse
+        if (_readDataBoolean(data_, name_, "installBatchAuctionHouse")) {
+            installBatchAuctionHouseMap[name_] = true;
+        }
     }
 
     function _readDataValue(
