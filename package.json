@@ -10,6 +10,7 @@
   "scripts": {
     "build:ecies-cli": "cd crates/ecies-cli && cargo build && cd ../..",
     "build": "forge build && pnpm run build:ecies-cli",
+    "deploy": "./script/deploy/deploy.sh",
     "fmt": "forge fmt",
     "fmt:check": "forge fmt --check",
     "solhint": "solhint --fix --config ./.solhint.json 'src/**/*.sol'",
