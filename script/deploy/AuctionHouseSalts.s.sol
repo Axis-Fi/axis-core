@@ -39,7 +39,7 @@ contract AuctionHouseSalts is Script, WithEnvironment {
             "Run `cast create2 -s <PREFIX> -i $(cat ./bytecode/AtomicAuctionHouse.bin)` to generate the salt"
         );
         console2.log(
-            "Then add it to the env.json file under the `current.<CHAIN>.ATOMIC_AUCTION_HOUSE_SALT` key."
+            "Then add it to the deployment sequence file for the AtomicAuctionHouse contract"
         );
 
         bytecode = abi.encodePacked(
@@ -52,7 +52,7 @@ contract AuctionHouseSalts is Script, WithEnvironment {
             "Run `cast create2 -s <PREFIX> -i $(cat ./bytecode/BatchAuctionHouse.bin)` to generate the salt"
         );
         console2.log(
-            "Then add it to the env.json file under the `current.<CHAIN>.BATCH_AUCTION_HOUSE_SALT` key."
+            "Then add it to the deployment sequence file for the AtomicAuctionHouse contract"
         );
     }
 }
