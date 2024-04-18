@@ -216,7 +216,7 @@ contract Deploy is Script, WithEnvironment {
             vm.writeLine(
                 file,
                 string.concat(
-                    '"', deployments[i], '": "', vm.toString(deployedTo[deployments[i]]), '",'
+                    "\"", deployments[i], "\": \"", vm.toString(deployedTo[deployments[i]]), "\","
                 )
             );
         }
