@@ -74,7 +74,7 @@ contract Deploy is Script, WithEnvironment {
 
     // ========== DEPLOY SYSTEM FUNCTIONS ========== //
 
-    function _setUp(string calldata chain_, string calldata deployFilePath_) internal {
+    function _setUp(string calldata chain_, string calldata deployFilePath_) internal virtual {
         _loadEnv(chain_);
 
         // Cache required variables
@@ -225,7 +225,7 @@ contract Deploy is Script, WithEnvironment {
 
     // ========== AUCTIONHOUSE DEPLOYMENTS ========== //
 
-    function _deployAtomicAuctionHouse(bytes32 salt_) internal {
+    function _deployAtomicAuctionHouse(bytes32 salt_) internal virtual {
         // No args
 
         console2.log("Deploying AtomicAuctionHouse");
@@ -240,7 +240,7 @@ contract Deploy is Script, WithEnvironment {
         console2.log("    AtomicAuctionHouse deployed at:", address(atomicAuctionHouse));
     }
 
-    function _deployBatchAuctionHouse(bytes32 salt_) internal {
+    function _deployBatchAuctionHouse(bytes32 salt_) internal virtual {
         // No args
 
         console2.log("Deploying BatchAuctionHouse");
