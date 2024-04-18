@@ -28,19 +28,18 @@ contract AuctionHouseSalts is Script, WithEnvironment {
     function generate(string calldata chain_) public {
         _setUp(chain_);
 
-        // Calculate salt for the atomic auction house
+        // Calculate salt for the AtomicAuctionHouse
         bytes memory bytecode = abi.encodePacked(
             type(AtomicAuctionHouse).creationCode, abi.encode(_envOwner, _envProtocol, _envPermit2)
         );
         vm.writeFile("./bytecode/AtomicAuctionHouse.bin", vm.toString(bytecode));
-
         console2.log("AtomicAuctionHouse bytecode written to ./bytecode/AtomicAuctionHouse.bin");
 
+        // Calculate salt for the BatchAuctionHouse
         bytecode = abi.encodePacked(
             type(BatchAuctionHouse).creationCode, abi.encode(_envOwner, _envProtocol, _envPermit2)
         );
         vm.writeFile("./bytecode/BatchAuctionHouse.bin", vm.toString(bytecode));
-
         console2.log("BatchAuctionHouse bytecode written to ./bytecode/BatchAuctionHouse.bin");
     }
 }
