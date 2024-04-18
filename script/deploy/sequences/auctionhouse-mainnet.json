@@ -3,42 +3,38 @@
         {
             "name": "AtomicAuctionHouse",
             "args": {},
-            "salt": 0
+            "salt": ""
         },
         {
             "name": "BatchAuctionHouse",
             "args": {},
-            "salt": 0
+            "salt": ""
         },
         {
             "name": "AtomicCatalogue",
-            "args": {},
-            "salt": 0
+            "args": {}
         },
         {
             "name": "BatchCatalogue",
-            "args": {},
-            "salt": 0
+            "args": {}
         },
         {
             "name": "EncryptedMarginalPrice",
             "args": {},
-            "salt": 0
+            "installBatchAuctionHouse": true
         },
         {
             "name": "FixedPriceSale",
             "args": {},
-            "salt": 0
+            "installAtomicAuctionHouse": true
         },
         {
             "name": "AtomicLinearVesting",
-            "args": {},
-            "salt": 0
+            "args": {}
         },
         {
             "name": "BatchLinearVesting",
-            "args": {},
-            "salt": 0
+            "args": {}
         }
     ]
 }

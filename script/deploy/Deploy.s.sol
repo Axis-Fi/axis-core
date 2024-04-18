@@ -11,6 +11,7 @@ import {AtomicAuctionHouse} from "src/AtomicAuctionHouse.sol";
 import {BatchAuctionHouse} from "src/BatchAuctionHouse.sol";
 import {AtomicCatalogue} from "src/AtomicCatalogue.sol";
 import {BatchCatalogue} from "src/BatchCatalogue.sol";
+import {Module} from "src/modules/Modules.sol";
 
 // Auction modules
 import {EncryptedMarginalPrice} from "src/modules/auctions/EMP.sol";
@@ -18,6 +19,8 @@ import {FixedPriceSale} from "src/modules/auctions/FPS.sol";
 
 // Derivative modules
 import {LinearVesting} from "src/modules/derivatives/LinearVesting.sol";
+
+// TODO documentation
 
 // TODO would it be better to create a system to generate scripts from the sequences instead of having to add them manually to this master script?
 // See the RBS sim bash scripts for how I did this before
@@ -67,6 +70,8 @@ contract Deploy is Script, WithEnvironment {
     // Deploy system storage
     mapping(string => bytes) public argsMap;
     mapping(string => bytes32) public saltMap;
+    mapping(string => bool) public installAtomicAuctionHouseMap;
+    mapping(string => bool) public installBatchAuctionHouseMap;
     string[] public deployments;
     mapping(string => address) public deployedTo;
 
@@ -103,10 +108,8 @@ contract Deploy is Script, WithEnvironment {
             // Parse and store args
             // Note: constructor args need to be provided in alphabetical order
             // due to changes with forge-std or a struct needs to be used
-            argsMap[name] =
-                data.parseRaw(string.concat(".sequence[?(@.name == '", name, "')].args"));
-            saltMap[name] =
-                bytes32(data.parseRaw(string.concat(".sequence[?(@.name == '", name, "')].salt")));
+            argsMap[name] = _readDataValue(data, name, "args");
+            saltMap[name] = bytes32(_readDataValue(data, name, "salt"));
         } else {
             // More than one deployment
             string[] memory names = abi.decode(data.parseRaw(".sequence..name"), (string[]));
@@ -118,11 +121,18 @@ contract Deploy is Script, WithEnvironment {
                 // Parse and store args
                 // Note: constructor args need to be provided in alphabetical order
                 // due to changes with forge-std or a struct needs to be used
-                argsMap[name] =
-                    data.parseRaw(string.concat(".sequence[?(@.name == '", name, "')].args"));
-                saltMap[name] = bytes32(
-                    data.parseRaw(string.concat(".sequence[?(@.name == '", name, "')].salt"))
-                );
+                argsMap[name] = _readDataValue(data, name, "args");
+                saltMap[name] = bytes32(_readDataValue(data, name, "salt"));
+
+                // Check if it should be installed in the AtomicAuctionHouse
+                if (_readDataBoolean(data, name, "installAtomicAuctionHouse")) {
+                    installAtomicAuctionHouseMap[name] = true;
+                }
+
+                // Check if it should be installed in the BatchAuctionHouse
+                if (_readDataBoolean(data, name, "installBatchAuctionHouse")) {
+                    installBatchAuctionHouseMap[name] = true;
+                }
             }
         }
     }
@@ -178,6 +188,18 @@ contract Deploy is Script, WithEnvironment {
 
             // Store the deployed contract address for logging
             deployedTo[name] = abi.decode(data, (address));
+
+            // If required, install in the AtomicAuctionHouse
+            if (installAtomicAuctionHouseMap[name]) {
+                console2.log("    Installing in AtomicAuctionHouse");
+                atomicAuctionHouse.installModule(Module(deployedTo[name]));
+            }
+
+            // If required, install in the BatchAuctionHouse
+            if (installBatchAuctionHouseMap[name]) {
+                console2.log("    Installing in BatchAuctionHouse");
+                batchAuctionHouse.installModule(Module(deployedTo[name]));
+            }
         }
 
         // Save deployments to file
@@ -338,5 +360,25 @@ contract Deploy is Script, WithEnvironment {
     function _isBatchAuctionHouse(string memory deploymentName) internal pure returns (bool) {
         return keccak256(bytes(deploymentName)) == keccak256(_BATCH_AUCTION_HOUSE_NAME)
             || keccak256(bytes(deploymentName)) == keccak256(_BLAST_BATCH_AUCTION_HOUSE_NAME);
+    }
+
+    function _readDataValue(
+        string memory data_,
+        string memory name_,
+        string memory key_
+    ) internal pure returns (bytes memory) {
+        // This will return "0x" if the key doesn't exist
+        return data_.parseRaw(string.concat(".sequence[?(@.name == '", name_, "')].", key_));
+    }
+
+    function _readDataBoolean(
+        string memory data_,
+        string memory name_,
+        string memory key_
+    ) internal pure returns (bool) {
+        bytes memory dataValue = _readDataValue(data_, name_, key_);
+
+        // Comparing `bytes memory` directly doesn't work, so we need to convert to `bytes32`
+        return bytes32(dataValue) == bytes32(abi.encodePacked(uint256(1)));
     }
 }
