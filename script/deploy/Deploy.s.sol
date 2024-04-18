@@ -4,6 +4,7 @@ pragma solidity 0.8.19;
 // Scripting libraries
 import {Script, console2} from "forge-std/Script.sol";
 import {stdJson} from "forge-std/StdJson.sol";
+import {WithEnvironment} from "script/deploy/WithEnvironment.s.sol";
 
 // System contracts
 import {AtomicAuctionHouse} from "src/AtomicAuctionHouse.sol";
@@ -38,7 +39,7 @@ import {LinearVesting} from "src/modules/derivatives/LinearVesting.sol";
 // TODOs
 // [ ] Install the modules in the AuctionHouse. What if the owner is different or is a Safe?
 
-contract Deploy is Script {
+contract Deploy is Script, WithEnvironment {
     using stdJson for string;
 
     bytes internal constant _ATOMIC_AUCTION_HOUSE_NAME = "AtomicAuctionHouse";
@@ -47,9 +48,9 @@ contract Deploy is Script {
     bytes internal constant _BLAST_BATCH_AUCTION_HOUSE_NAME = "BlasBatchAuctionHouse";
 
     // Environment variables
-    address public envOwner;
-    address public envPermit2;
-    address public envProtocol;
+    address internal _envOwner;
+    address internal _envPermit2;
+    address internal _envProtocol;
 
     // Contracts
     // TODO we would ideally not load every contract in here over time
@@ -64,8 +65,6 @@ contract Deploy is Script {
     LinearVesting public dmBatchLinearVesting;
 
     // Deploy system storage
-    string public chain;
-    string public env;
     mapping(string => bytes) public argsMap;
     mapping(string => bytes32) public saltMap;
     string[] public deployments;
@@ -74,14 +73,15 @@ contract Deploy is Script {
     // ========== DEPLOY SYSTEM FUNCTIONS ========== //
 
     function _setUp(string calldata chain_, string calldata deployFilePath_) internal {
-        chain = chain_;
+        _loadEnv(chain_);
 
-        // Load environment addresses
-        env = vm.readFile("./script/env.json");
-
-        envOwner = _envAddress("OWNER");
-        envPermit2 = _envAddress("PERMIT2");
-        envProtocol = _envAddress("PROTOCOL");
+        // Cache required variables
+        _envOwner = _envAddress("OWNER");
+        console2.log("Owner:", _envOwner);
+        _envPermit2 = _envAddress("PERMIT2");
+        console2.log("Permit2:", _envPermit2);
+        _envProtocol = _envAddress("PROTOCOL");
+        console2.log("Protocol:", _envProtocol);
 
         // TODO can we automate assignment?
 
@@ -125,10 +125,6 @@ contract Deploy is Script {
                 );
             }
         }
-    }
-
-    function _envAddress(string memory key_) internal view returns (address) {
-        return env.readAddress(string.concat(".current.", chain, ".", key_));
     }
 
     function deploy(string calldata chain_, string calldata deployFilePath_) external {
@@ -228,12 +224,13 @@ contract Deploy is Script {
 
         // No args
 
-        console2.log("    owner:", envOwner);
-        console2.log("    permit2:", envPermit2);
-        console2.log("    protocol:", envProtocol);
+        console2.log("    owner:", _envOwner);
+        console2.log("    permit2:", _envPermit2);
+        console2.log("    protocol:", _envProtocol);
 
         vm.broadcast();
-        atomicAuctionHouse = new AtomicAuctionHouse{salt: salt_}(envOwner, envProtocol, envPermit2);
+        atomicAuctionHouse =
+            new AtomicAuctionHouse{salt: salt_}(_envOwner, _envProtocol, _envPermit2);
         console2.log("    AtomicAuctionHouse deployed at:", address(atomicAuctionHouse));
     }
 
@@ -242,12 +239,12 @@ contract Deploy is Script {
 
         // No args
 
-        console2.log("    owner:", envOwner);
-        console2.log("    permit2:", envPermit2);
-        console2.log("    protocol:", envProtocol);
+        console2.log("    owner:", _envOwner);
+        console2.log("    permit2:", _envPermit2);
+        console2.log("    protocol:", _envProtocol);
 
         vm.broadcast();
-        batchAuctionHouse = new BatchAuctionHouse{salt: salt_}(envOwner, envProtocol, envPermit2);
+        batchAuctionHouse = new BatchAuctionHouse{salt: salt_}(_envOwner, _envProtocol, _envPermit2);
         console2.log("    BatchAuctionHouse deployed at:", address(batchAuctionHouse));
     }
 
