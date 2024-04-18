@@ -127,9 +127,10 @@ contract Deploy is Script, WithEnvironment {
         bool indexZeroIsAH =
             _isAtomicAuctionHouse(deployments[0]) || _isBatchAuctionHouse(deployments[0]);
         if (indexZeroIsAH) {
-            bytes32 salt = saltMap[deployments[0]];
+            string memory name = deployments[0];
+            bytes32 salt = saltMap[name];
 
-            if (_isAtomicAuctionHouse(deployments[0])) {
+            if (_isAtomicAuctionHouse(name)) {
                 _deployAtomicAuctionHouse(salt);
             } else {
                 _deployBatchAuctionHouse(salt);
@@ -140,9 +141,10 @@ contract Deploy is Script, WithEnvironment {
         bool indexOneIsAH = indexZeroIsAH && _isAtomicAuctionHouse(deployments[1])
             || _isBatchAuctionHouse(deployments[1]);
         if (indexOneIsAH) {
-            bytes32 salt = saltMap[deployments[1]];
+            string memory name = deployments[1];
+            bytes32 salt = saltMap[name];
 
-            if (_isAtomicAuctionHouse(deployments[1])) {
+            if (_isAtomicAuctionHouse(name)) {
                 _deployAtomicAuctionHouse(salt);
             } else {
                 _deployBatchAuctionHouse(salt);
