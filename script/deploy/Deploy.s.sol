@@ -254,9 +254,9 @@ contract Deploy is Script, WithEnvironment {
         console2.log("    BatchAuctionHouse deployed at:", address(batchAuctionHouse));
     }
 
-    // ========== MODULE DEPLOYMENTS ========== //
+    // ========== CATALOGUE DEPLOYMENTS ========== //
 
-    function deployAtomicCatalogue(bytes memory, bytes32 salt_) public returns (address) {
+    function deployAtomicCatalogue(bytes memory, bytes32 salt_) public virtual returns (address) {
         // No args used
 
         console2.log("Deploying AtomicCatalogue");
@@ -270,7 +270,7 @@ contract Deploy is Script, WithEnvironment {
         return address(atomicCatalogue);
     }
 
-    function deployBatchCatalogue(bytes memory, bytes32 salt_) public returns (address) {
+    function deployBatchCatalogue(bytes memory, bytes32 salt_) public virtual returns (address) {
         // No args used
 
         console2.log("Deploying BatchCatalogue");
@@ -284,7 +284,12 @@ contract Deploy is Script, WithEnvironment {
         return address(batchCatalogue);
     }
 
-    function deployEncryptedMarginalPrice(bytes memory, bytes32 salt_) public returns (address) {
+    // ========== MODULE DEPLOYMENTS ========== //
+
+    function deployEncryptedMarginalPrice(
+        bytes memory,
+        bytes32 salt_
+    ) public virtual returns (address) {
         // No args used
 
         console2.log("Deploying EncryptedMarginalPrice");
@@ -298,7 +303,7 @@ contract Deploy is Script, WithEnvironment {
         return address(amEmp);
     }
 
-    function deployFixedPriceSale(bytes memory, bytes32 salt_) public returns (address) {
+    function deployFixedPriceSale(bytes memory, bytes32 salt_) public virtual returns (address) {
         // No args used
 
         console2.log("Deploying FixedPriceSale");
@@ -312,7 +317,10 @@ contract Deploy is Script, WithEnvironment {
         return address(amFps);
     }
 
-    function deployAtomicLinearVesting(bytes memory, bytes32 salt_) public returns (address) {
+    function deployAtomicLinearVesting(
+        bytes memory,
+        bytes32 salt_
+    ) public virtual returns (address) {
         // No args used
 
         console2.log("Deploying LinearVesting (Atomic)");
@@ -326,7 +334,10 @@ contract Deploy is Script, WithEnvironment {
         return address(dmAtomicLinearVesting);
     }
 
-    function deployBatchLinearVesting(bytes memory, bytes32 salt_) public returns (address) {
+    function deployBatchLinearVesting(
+        bytes memory,
+        bytes32 salt_
+    ) public virtual returns (address) {
         // No args used
 
         console2.log("Deploying LinearVesting (Batch)");

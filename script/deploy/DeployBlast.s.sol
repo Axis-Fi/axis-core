@@ -6,6 +6,9 @@ import {console2} from "forge-std/Script.sol";
 // System contracts
 import {BlastAtomicAuctionHouse} from "src/blast/BlastAtomicAuctionHouse.sol";
 import {BlastBatchAuctionHouse} from "src/blast/BlastBatchAuctionHouse.sol";
+import {BlastEMP} from "src/blast/modules/auctions/BlastEMP.sol";
+import {BlastFPSale} from "src/blast/modules/auctions/BlastFPS.sol";
+import {BlastLinearVesting} from "src/blast/modules/derivatives/BlastLinearVesting.sol";
 
 import {Deploy} from "script/deploy/Deploy.s.sol";
 
@@ -65,5 +68,74 @@ contract DeployBlast is Deploy {
             _envOwner, _envProtocol, _envPermit2, _envBlast, _envWeth, _envUsdb
         );
         console2.log("    BlastBatchAuctionHouse deployed at:", address(batchAuctionHouse));
+    }
+
+    // ========== MODULE DEPLOYMENTS ========== //
+
+    function deployEncryptedMarginalPrice(
+        bytes memory,
+        bytes32 salt_
+    ) public override returns (address) {
+        // No args used
+
+        console2.log("Deploying EncryptedMarginalPrice");
+        console2.log("    BatchAuctionHouse", address(batchAuctionHouse));
+        console2.log("    salt:", vm.toString(salt_));
+
+        // Deploy the module
+        amEmp = new BlastEMP{salt: salt_}(address(batchAuctionHouse), _envBlast);
+        console2.log("    EncryptedMarginalPrice deployed at:", address(amEmp));
+
+        return address(amEmp);
+    }
+
+    function deployFixedPriceSale(bytes memory, bytes32 salt_) public override returns (address) {
+        // No args used
+
+        console2.log("Deploying FixedPriceSale");
+        console2.log("    AtomicAuctionHouse", address(atomicAuctionHouse));
+        console2.log("    salt:", vm.toString(salt_));
+
+        // Deploy the module
+        amFps = new BlastFPSale{salt: salt_}(address(atomicAuctionHouse), _envBlast);
+        console2.log("    FixedPriceSale deployed at:", address(amFps));
+
+        return address(amFps);
+    }
+
+    function deployAtomicLinearVesting(
+        bytes memory,
+        bytes32 salt_
+    ) public override returns (address) {
+        // No args used
+
+        console2.log("Deploying LinearVesting (Atomic)");
+        console2.log("    AtomicAuctionHouse", address(atomicAuctionHouse));
+        console2.log("    salt:", vm.toString(salt_));
+
+        // Deploy the module
+        dmAtomicLinearVesting =
+            new BlastLinearVesting{salt: salt_}(address(atomicAuctionHouse), _envBlast);
+        console2.log("    LinearVesting (Atomic) deployed at:", address(dmAtomicLinearVesting));
+
+        return address(dmAtomicLinearVesting);
+    }
+
+    function deployBatchLinearVesting(
+        bytes memory,
+        bytes32 salt_
+    ) public override returns (address) {
+        // No args used
+
+        console2.log("Deploying LinearVesting (Batch)");
+        console2.log("    BatchAuctionHouse", address(batchAuctionHouse));
+        console2.log("    salt:", vm.toString(salt_));
+
+        // Deploy the module
+        dmBatchLinearVesting =
+            new BlastLinearVesting{salt: salt_}(address(batchAuctionHouse), _envBlast);
+        console2.log("    LinearVesting (Batch) deployed at:", address(dmBatchLinearVesting));
+
+        return address(dmBatchLinearVesting);
     }
 }
