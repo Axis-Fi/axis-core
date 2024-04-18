@@ -35,12 +35,6 @@ contract AuctionHouseSalts is Script, WithEnvironment {
         vm.writeFile("./bytecode/AtomicAuctionHouse.bin", vm.toString(bytecode));
 
         console2.log("AtomicAuctionHouse bytecode written to ./bytecode/AtomicAuctionHouse.bin");
-        console2.log(
-            "Run `cast create2 -s <PREFIX> -i $(cat ./bytecode/AtomicAuctionHouse.bin)` to generate the salt"
-        );
-        console2.log(
-            "Then add it to the deployment sequence file for the AtomicAuctionHouse contract"
-        );
 
         bytecode = abi.encodePacked(
             type(BatchAuctionHouse).creationCode, abi.encode(_envOwner, _envProtocol, _envPermit2)
@@ -48,11 +42,5 @@ contract AuctionHouseSalts is Script, WithEnvironment {
         vm.writeFile("./bytecode/BatchAuctionHouse.bin", vm.toString(bytecode));
 
         console2.log("BatchAuctionHouse bytecode written to ./bytecode/BatchAuctionHouse.bin");
-        console2.log(
-            "Run `cast create2 -s <PREFIX> -i $(cat ./bytecode/BatchAuctionHouse.bin)` to generate the salt"
-        );
-        console2.log(
-            "Then add it to the deployment sequence file for the AtomicAuctionHouse contract"
-        );
     }
 }
