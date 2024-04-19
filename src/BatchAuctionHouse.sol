@@ -468,7 +468,7 @@ contract BatchAuctionHouse is AuctionHouse, BatchRouter {
         _isLotValid(lotId_);
 
         // Call auction module to validate and update data
-        (uint256 purchased_, uint256 sold_, uint256 capacity_) =
+        (uint256 purchased_, uint256 sold_, uint256 capacity_, bytes memory auctionOutput_) =
             getBatchModuleForId(lotId_).claimProceeds(lotId_);
 
         // Load data for the lot
@@ -486,7 +486,7 @@ contract BatchAuctionHouse is AuctionHouse, BatchRouter {
             // Otherwise, allocate the fee using the internal rewards mechanism
             if (fromVeecode(routing.derivativeReference) != bytes7("")) {
                 // Mint the derivative to the curator
-                _sendPayout(feeData.curator, curatorPayout, routing, bytes(""));
+                _sendPayout(feeData.curator, curatorPayout, routing, auctionOutput_);
             } else {
                 // Allocate the curator fee to be claimed
                 rewards[feeData.curator][routing.baseToken] += curatorPayout;
