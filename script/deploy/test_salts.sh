@@ -15,6 +15,11 @@ echo "Using chain: $CHAIN"
 forge script ./script/deploy/TestSalts.s.sol:TestSalts --sig "generate(string)()" $CHAIN
 
 # Generate salts
+
+echo ""
+echo ""
+echo "AuctionHouseTest:"
+
 echo ""
 echo "MockCallback98:"
 ./script/deploy/salts.sh ./bytecode/MockCallback98.bin "98"
@@ -36,12 +41,20 @@ echo "MockCallbackFC:"
 ./script/deploy/salts.sh ./bytecode/MockCallbackFC.bin "FC"
 
 echo ""
+echo ""
+echo "SendPayment:"
+
+echo ""
 echo "MockCallback00:"
 ./script/deploy/salts.sh ./bytecode/MockCallback00.bin "00"
 
 echo ""
 echo "MockCallback02:"
 ./script/deploy/salts.sh ./bytecode/MockCallback02.bin "02"
+
+echo ""
+echo ""
+echo "CappedMerkleAllowlist:"
 
 echo ""
 echo "CappedMerkleAllowlistBatch88:"
