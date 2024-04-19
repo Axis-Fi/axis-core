@@ -471,6 +471,67 @@ contract BatchCreateAuctionTest is BatchAuctionHouseTest {
         );
     }
 
+    // [X] condenser
+    //  [X] reverts when condenser type is sunset
+    //  [X] sets the condenser on the auction lot
+
+    function test_whenCondenserTypeIsSunset_reverts()
+        external
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        whenDerivativeTypeIsSet
+        whenDerivativeModuleIsInstalled
+        whenCondenserModuleIsInstalled
+        whenCondenserIsMapped
+    {
+        // Sunset the module, which prevents the creation of new auctions using that module
+        vm.prank(_OWNER);
+        _auctionHouse.sunsetModule(_condenserModuleKeycode);
+
+        // Expect revert
+        bytes memory err =
+            abi.encodeWithSelector(WithModules.ModuleIsSunset.selector, _condenserModuleKeycode);
+        vm.expectRevert(err);
+
+        vm.prank(_SELLER);
+        _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
+    }
+
+    function test_whenCondenserIsSet()
+        external
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        whenDerivativeTypeIsSet
+        whenDerivativeModuleIsInstalled
+        whenCondenserModuleIsInstalled
+        whenCondenserIsMapped
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
+    {
+        // Create the auction
+        vm.prank(_SELLER);
+        _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
+
+        // Won't revert
+    }
+
+    function test_whenCondenserIsNotSet()
+        external
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        whenDerivativeTypeIsSet
+        whenDerivativeModuleIsInstalled
+        whenCondenserModuleIsInstalled
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
+    {
+        // Create the auction
+        vm.prank(_SELLER);
+        _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
+
+        // Won't revert
+    }
+
     // [X] callbacks
     //  [X] reverts when the callbacks address is not a contract
     //  [X] sets the callbacks on the auction lot
