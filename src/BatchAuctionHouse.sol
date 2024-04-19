@@ -476,8 +476,6 @@ contract BatchAuctionHouse is AuctionHouse, BatchRouter {
         FeeData storage feeData = lotFees[lotId_];
 
         // Calculate the curator fee and allocate the fees to be claimed
-        uint256 maxCuratorPayout =
-            _calculatePayoutFees(feeData.curated, feeData.curatorFee, capacity_);
         uint256 curatorPayout = _calculatePayoutFees(feeData.curated, feeData.curatorFee, sold_);
 
         // If the curator payout is not zero, allocate it
@@ -519,7 +517,12 @@ contract BatchAuctionHouse is AuctionHouse, BatchRouter {
         // Additionally, bidders are able to claim before the seller, so the funding isn't the right value
         // to use for the refund. Therefore, we use capacity, which is not decremented when batch auctions
         // are settled, minus the amount sold. Then, we add any unearned curator payout.
-        uint256 prefundingRefund = capacity_ - sold_ + maxCuratorPayout - curatorPayout;
+        uint256 prefundingRefund;
+        {
+            uint256 maxCuratorPayout =
+                _calculatePayoutFees(feeData.curated, feeData.curatorFee, capacity_);
+            prefundingRefund = capacity_ - sold_ + maxCuratorPayout - curatorPayout;
+        }
         unchecked {
             routing.funding -= prefundingRefund;
         }
