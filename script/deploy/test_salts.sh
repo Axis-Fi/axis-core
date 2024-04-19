@@ -42,3 +42,11 @@ echo "MockCallback00:"
 echo ""
 echo "MockCallback02:"
 ./script/deploy/salts.sh ./bytecode/MockCallback02.bin "02"
+
+echo ""
+echo "CappedMerkleAllowlistBatch88:"
+./script/deploy/salts.sh ./bytecode/CappedMerkleAllowlistBatch88.bin "88"
+
+echo ""
+echo "CappedMerkleAllowlistAtomic90:"
+./script/deploy/salts.sh ./bytecode/CappedMerkleAllowlistAtomic90.bin "90"

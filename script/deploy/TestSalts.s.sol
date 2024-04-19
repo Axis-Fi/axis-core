@@ -8,6 +8,7 @@ import {Permit2User} from "test/lib/permit2/Permit2User.sol";
 
 import {MockCallback} from "test/callbacks/MockCallback.sol";
 import {Callbacks} from "src/lib/Callbacks.sol";
+import {CappedMerkleAllowlist} from "src/callbacks/allowlists/CappedMerkleAllowlist.sol";
 
 contract TestSalts is Script, WithEnvironment, Permit2User {
     // TODO shift into abstract contract that tests also inherit from
@@ -22,6 +23,8 @@ contract TestSalts is Script, WithEnvironment, Permit2User {
 
     function generate(string calldata chain_) public {
         _setUp(chain_);
+
+        // ==================== MockCallback ==================== //
 
         // Allowlist callback supports onCreate, onPurchase, and onBid callbacks
         // 10011000 = 0x98
@@ -171,5 +174,53 @@ contract TestSalts is Script, WithEnvironment, Permit2User {
         );
         vm.writeFile("./bytecode/MockCallback02.bin", vm.toString(bytecode));
         console2.log("MockCallback bytecode written to ./bytecode/MockCallback02.bin");
+
+        // ==================== CappedMerkleAllowlist ==================== //
+
+        // 10001000 = 0x88
+        bytecode = abi.encodePacked(
+            type(CappedMerkleAllowlist).creationCode,
+            abi.encode(
+                _AUCTION_HOUSE,
+                Callbacks.Permissions({
+                    onCreate: true,
+                    onCancel: false,
+                    onCurate: false,
+                    onPurchase: false,
+                    onBid: true,
+                    onClaimProceeds: false,
+                    receiveQuoteTokens: false,
+                    sendBaseTokens: false
+                }),
+                _SELLER
+            )
+        );
+        vm.writeFile("./bytecode/CappedMerkleAllowlistBatch88.bin", vm.toString(bytecode));
+        console2.log(
+            "CappedMerkleAllowlist bytecode written to ./bytecode/CappedMerkleAllowlistBatch88.bin"
+        );
+
+        // 10010000 = 0x90
+        bytecode = abi.encodePacked(
+            type(CappedMerkleAllowlist).creationCode,
+            abi.encode(
+                _AUCTION_HOUSE,
+                Callbacks.Permissions({
+                    onCreate: true,
+                    onCancel: false,
+                    onCurate: false,
+                    onPurchase: true,
+                    onBid: false,
+                    onClaimProceeds: false,
+                    receiveQuoteTokens: false,
+                    sendBaseTokens: false
+                }),
+                _SELLER
+            )
+        );
+        vm.writeFile("./bytecode/CappedMerkleAllowlistAtomic90.bin", vm.toString(bytecode));
+        console2.log(
+            "CappedMerkleAllowlist bytecode written to ./bytecode/CappedMerkleAllowlistAtomic90.bin"
+        );
     }
 }
