@@ -25,9 +25,9 @@ forge script ./script/deploy/AuctionHouseSalts.s.sol:AuctionHouseSalts --sig "ge
 echo ""
 echo "AtomicAuctionHouse:"
 echo "    Using ATOMIC_PREFIX: $ATOMIC_PREFIX"
-./script/salts.sh ./bytecode/AtomicAuctionHouse.bin $ATOMIC_PREFIX
+./script/deploy/salts.sh ./bytecode/AtomicAuctionHouse.bin $ATOMIC_PREFIX
 
 echo ""
 echo "BatchAuctionHouse:"
 echo "    Using BATCH_PREFIX: $BATCH_PREFIX"
-./script/salts.sh ./bytecode/BatchAuctionHouse.bin $BATCH_PREFIX
+./script/deploy/salts.sh ./bytecode/BatchAuctionHouse.bin $BATCH_PREFIX
