@@ -2,7 +2,7 @@
 src = "src"
 out = "out"
 # libs = ["lib"]
-fs_permissions = [{access = "write", path = "./bytecode/"}, {access = "read", path = "./script/"}, {access = "read-write", path = "./deployments/"}]
+fs_permissions = [{access = "read-write", path = "./bytecode/"}, {access = "read", path = "./script/"}, {access = "read-write", path = "./deployments/"}]
 ffi = true
 solc_version = "0.8.19"
 evm_version = "paris"

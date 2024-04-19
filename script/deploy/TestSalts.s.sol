@@ -24,6 +24,17 @@ contract TestSalts is Script, WithEnvironment, Permit2User {
     function generate(string calldata chain_) public {
         _setUp(chain_);
 
+        // Create the bytecode folder if it doesn't exist
+        if (!vm.isDir("./bytecode")) {
+            console2.log("Creating bytecode directory");
+
+            string[] memory inputs = new string[](2);
+            inputs[0] = "mkdir";
+            inputs[1] = "bytecode";
+
+            vm.ffi(inputs);
+        }
+
         // ==================== MockCallback ==================== //
 
         // Allowlist callback supports onCreate, onPurchase, and onBid callbacks
