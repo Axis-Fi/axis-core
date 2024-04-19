@@ -11,7 +11,7 @@ import {BaseCallback} from "src/callbacks/BaseCallback.sol";
 
 import {CappedMerkleAllowlist} from "src/callbacks/allowlists/CappedMerkleAllowlist.sol";
 
-contract CappedMerkleAllowlistTest is Test, Permit2User {
+contract CappedMerkleAllowlistBatchTest is Test, Permit2User {
     using Callbacks for CappedMerkleAllowlist;
 
     address internal constant _OWNER = address(0x1);
