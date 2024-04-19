@@ -20,8 +20,6 @@ import {FixedPriceSale} from "src/modules/auctions/FPS.sol";
 // Derivative modules
 import {LinearVesting} from "src/modules/derivatives/LinearVesting.sol";
 
-// TODO documentation
-
 // TODO would it be better to create a system to generate scripts from the sequences instead of having to add them manually to this master script?
 // See the RBS sim bash scripts for how I did this before
 // Is this desirable? Writing scripts in Solidity is supposed to be a good thing
