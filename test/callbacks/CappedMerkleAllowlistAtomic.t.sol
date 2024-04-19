@@ -49,7 +49,7 @@ contract CappedMerkleAllowlistTest is Test, Permit2User {
 
         // cast create2 -s 90 -i $(cat ./bytecode/CappedMerkleAllowlistAtomic90.bin)
         bytes32 atomicSalt =
-            bytes32(0x7f0f83c1b42c5eaa925be25542ebba6e5acb282754d981df3a177242e05f186a);
+            bytes32(0x818b546a9f7e10d04217afd05e731831f25b467f65d5d30fd528f688ac70a7ce);
         vm.broadcast();
         _allowlist = new CappedMerkleAllowlist{salt: atomicSalt}(
             address(_auctionHouse),
