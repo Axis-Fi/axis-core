@@ -262,28 +262,9 @@ abstract contract BatchAuctionHouseTest is Test, Permit2User {
     }
 
     modifier givenLotHasAllowlist() {
-        // // Allowlist callback supports onCreate, onPurchase, and onBid callbacks
         // // 10011000 = 0x98
         // // cast create2 -s 98 -i $(cat ./bytecode/MockCallback98.bin)
-        // bytes memory bytecode = abi.encodePacked(
-        //     type(MockCallback).creationCode,
-        //     abi.encode(address(_auctionHouse), Callbacks.Permissions({
-        //         onCreate: true,
-        //         onCancel: false,
-        //         onCurate: false,
-        //         onPurchase: true,
-        //         onBid: true,
-        //         onClaimProceeds: false,
-        //         receiveQuoteTokens: false,
-        //         sendBaseTokens: false
-        //     }), _SELLER)
-        // );
-        // vm.writeFile(
-        //     "./bytecode/MockCallback98.bin",
-        //     vm.toString(bytecode)
-        // );
-
-        bytes32 salt = bytes32(0x8c88ce8e249b9e61b04716ad8e3f2cd9499e04ee74887e241b2475dbc43edbdf);
+        bytes32 salt = bytes32(0x5f37a3cd7ab7d66e75c8f80b3e50f27cba8086456a7a3fd444e13f16458dbff1);
         vm.startBroadcast(); // required for CREATE2 address to work correctly. doesn't do anything in a test
         _callback = new MockCallback{salt: salt}(
             address(_auctionHouse),
@@ -360,102 +341,24 @@ abstract contract BatchAuctionHouseTest is Test, Permit2User {
     }
 
     modifier givenCallbackIsSet() {
-        // // Uncomment to regenerate bytecode to mine new salts if the MockCallback changes
-        // // 11111111 = 0xFF
-        // bytes memory bytecode = abi.encodePacked(
-        //     type(MockCallback).creationCode,
-        //     abi.encode(
-        //         address(_auctionHouse),
-        //         Callbacks.Permissions({
-        //             onCreate: true,
-        //             onCancel: true,
-        //             onCurate: true,
-        //             onPurchase: true,
-        //             onBid: true,
-        //             onClaimProceeds: true,
-        //             receiveQuoteTokens: true,
-        //             sendBaseTokens: true
-        //         }),
-        //         _SELLER
-        //     )
-        // );
-        // vm.writeFile(
-        //     "./bytecode/MockCallbackFF.bin",
-        //     vm.toString(bytecode)
-        // );
-        // // 11111101 = 0xFD
-        // bytecode = abi.encodePacked(
-        //     type(MockCallback).creationCode,
-        //     abi.encode(address(_auctionHouse), Callbacks.Permissions({
-        //         onCreate: true,
-        //         onCancel: true,
-        //         onCurate: true,
-        //         onPurchase: true,
-        //         onBid: true,
-        //         onClaimProceeds: true,
-        //         receiveQuoteTokens: false,
-        //         sendBaseTokens: true
-        //     }), _SELLER)
-        // );
-        // vm.writeFile(
-        //     "./bytecode/MockCallbackFD.bin",
-        //     vm.toString(bytecode)
-        // );
-        // // 11111110 = 0xFE
-        // bytecode = abi.encodePacked(
-        //     type(MockCallback).creationCode,
-        //     abi.encode(address(_auctionHouse), Callbacks.Permissions({
-        //         onCreate: true,
-        //         onCancel: true,
-        //         onCurate: true,
-        //         onPurchase: true,
-        //         onBid: true,
-        //         onClaimProceeds: true,
-        //         receiveQuoteTokens: true,
-        //         sendBaseTokens: false
-        //     }), _SELLER)
-        // );
-        // vm.writeFile(
-        //     "./bytecode/MockCallbackFE.bin",
-        //     vm.toString(bytecode)
-        // );
-        // // 11111100 = 0xFC
-        // bytecode = abi.encodePacked(
-        //     type(MockCallback).creationCode,
-        //     abi.encode(address(_auctionHouse), Callbacks.Permissions({
-        //         onCreate: true,
-        //         onCancel: true,
-        //         onCurate: true,
-        //         onPurchase: true,
-        //         onBid: true,
-        //         onClaimProceeds: true,
-        //         receiveQuoteTokens: false,
-        //         sendBaseTokens: false
-        //     }), _SELLER)
-        // );
-        // vm.writeFile(
-        //     "./bytecode/MockCallbackFC.bin",
-        //     vm.toString(bytecode)
-        // );
-
         // Set the salt based on which token flags are set
         bytes32 salt;
         if (_callbackSendBaseTokens && _callbackReceiveQuoteTokens) {
             // 11111111 = 0xFF
             // cast create2 -s FF -i $(cat ./bytecode/MockCallbackFF.bin)
-            salt = bytes32(0x3b0c221e4b9d354f38ec89ae7953b9ef3eeba1558cbdb8681f89caae1b3743ba);
+            salt = bytes32(0xa54cbacf790dd7df9350d86939ba14af1f934842912184adac94a94aa6825d77);
         } else if (_callbackSendBaseTokens) {
             // 11111101 = 0xFD
             // cast create2 -s FD -i $(cat ./bytecode/MockCallbackFD.bin)
-            salt = bytes32(0xab91bacb109860cf27063eba0c732388096a66028f9732c1a9eaa1e7ef8216c3);
+            salt = bytes32(0xc7956f8f50f8bc4a5e6992af93b3d22f4b18fb07f4bb9c1982ffe77ff30bf72c);
         } else if (_callbackReceiveQuoteTokens) {
             // 11111110 = 0xFE
             // cast create2 -s FE -i $(cat ./bytecode/MockCallbackFE.bin)
-            salt = bytes32(0x9f579071c86104618c76a49154393dafd393c9fa8385022016c308e0a1c6e60c);
+            salt = bytes32(0xba42ab82eabb95a950417527a13c2771075284be93589eee3a38aedc03c8b327);
         } else {
             // 11111100 = 0xFC
             // cast create2 -s FC -i $(cat ./bytecode/MockCallbackFC.bin)
-            salt = bytes32(0xd12f5bd70b44353b53874b978f1e53c7f772252e59f787c62885af1d5d2214af);
+            salt = bytes32(0x3ca89fefe341362a4fcbcdc1354dea9d2dd9e04e7c421e3c7223f426ed2bb8d7);
         }
 
         // Required for CREATE2 address to work correctly. doesn't do anything in a test

@@ -13,9 +13,9 @@ contract SendPaymentTest is Test, Permit2User {
     MockAuctionHouse internal _auctionHouse;
 
     address internal constant _OWNER = address(0x1);
-    address internal constant _PROTOCOL = address(0x2);
-    address internal constant _USER = address(0x3);
-    address internal constant _SELLER = address(0x4);
+    address internal constant _SELLER = address(0x2);
+    address internal constant _PROTOCOL = address(0x3);
+    address internal constant _USER = address(0x4);
 
     // Function parameters
     uint256 internal _paymentAmount = 1e18;
@@ -50,52 +50,15 @@ contract SendPaymentTest is Test, Permit2User {
     }
 
     modifier givenAuctionHasCallback() {
-        // // 00000000 - 0x00
-        // bytes memory bytecode = abi.encodePacked(
-        //     type(MockCallback).creationCode,
-        //     abi.encode(address(_auctionHouse), Callbacks.Permissions({
-        //         onCreate: false,
-        //         onCancel: false,
-        //         onCurate: false,
-        //         onPurchase: false,
-        //         onBid: false,
-        //         onClaimProceeds: false,
-        //         receiveQuoteTokens: false,
-        //         sendBaseTokens: false
-        //     }), _SELLER)
-        // );
-        // vm.writeFile(
-        //     "./bytecode/MockCallback00.bin",
-        //     vm.toString(bytecode)
-        // );
-        // // 00000010 - 0x02
-        // bytecode = abi.encodePacked(
-        //     type(MockCallback).creationCode,
-        //     abi.encode(address(_auctionHouse), Callbacks.Permissions({
-        //         onCreate: false,
-        //         onCancel: false,
-        //         onCurate: false,
-        //         onPurchase: false,
-        //         onBid: false,
-        //         onClaimProceeds: false,
-        //         receiveQuoteTokens: true,
-        //         sendBaseTokens: false
-        //     }), _SELLER)
-        // );
-        // vm.writeFile(
-        //     "./bytecode/MockCallback02.bin",
-        //     vm.toString(bytecode)
-        // );
-
         bytes32 salt;
         if (_callbackReceiveQuoteTokens) {
             // 0x02
             // cast create2 -s 02 -i $(cat ./bytecode/MockCallback02.bin)
-            salt = bytes32(0xeda9894e77efb0b535cb6eb82300bffcd783841ab5b74f76d389540f68024e27);
+            salt = bytes32(0x6ff950930aaebd51d12fac0a23c6f63dbfac64e27d7f77466a79c3975d1bfb2c);
         } else {
             // 0x00
             // cast create2 -s 00 -i $(cat ./bytecode/MockCallback00.bin)
-            salt = bytes32(0x14055e975bfb177466001fa842ae8615d2f6a8a8eeec0704302a087681e37e99);
+            salt = bytes32(0xb60aee9874a4c3333bacfe11a4589854989ccd71c63a80b731385bcf20470eef);
         }
 
         vm.broadcast(); // required for CREATE2 address to work correctly. doesn't do anything in a test
