@@ -4,6 +4,16 @@ This document provides instructions on how to perform deployments using the avai
 
 ## Tasks
 
+### Generating Test Salts
+
+Many of the tests use salts to deploy callbacks at addresses with a specific prefix. Changes to the state variables in the test contract can require the re-generation of the salt. To do so, perform the following:
+
+```bash
+./script/deploy/test_salts.sh
+```
+
+Copy the salt into the respective variable in the test files. Salts are grouped by test contract and the prefix (e.g. "98").
+
 ### Generating AuctionHouse Salts
 
 For aesthetic reasons, the AuctionHouse contracts may need to be deployed at deterministic addresses.
