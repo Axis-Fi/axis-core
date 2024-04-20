@@ -174,7 +174,7 @@ contract EmpaModuleRefundBidTest is EmpaModuleTest {
 
         // Call the function
         vm.prank(address(_auctionHouse));
-        _module.refundBid(_lotId, _bidId, _BIDDER);
+        _module.refundBid(_lotId, _bidId, 0, _BIDDER);
     }
 
     function test_keyIsSubmitted_afterSettlePeriod_reverts()
@@ -194,7 +194,7 @@ contract EmpaModuleRefundBidTest is EmpaModuleTest {
 
         // Call the function
         vm.prank(address(_auctionHouse));
-        _module.refundBid(_lotId, _bidId, _BIDDER);
+        _module.refundBid(_lotId, _bidId, 0, _BIDDER);
     }
 
     function test_lotIsDecrypted_reverts()
