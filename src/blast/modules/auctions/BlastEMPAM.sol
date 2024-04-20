@@ -7,8 +7,8 @@ import {BlastGas} from "src/blast/modules/BlastGas.sol";
 contract BlastEMPAM is EncryptedMarginalPriceAuctionModule, BlastGas {
     // ========== CONSTRUCTOR ========== //
 
-    constructor(address auctionHouse_)
-        EncryptedMarginalPriceAuctionModule(auctionHouse_)
-        BlastGas(auctionHouse_)
-    {}
+    constructor(
+        address auctionHouse_,
+        address blast_
+    ) EncryptedMarginalPriceAuctionModule(auctionHouse_) BlastGas(auctionHouse_, blast_) {}
 }

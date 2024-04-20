@@ -11,7 +11,7 @@ import {EmpaModuleTest} from "test/modules/auctions/EMPA/EMPAModuleTest.sol";
 contract EmpaModuleBidTest is EmpaModuleTest {
     uint256 internal constant _BID_AMOUNT = 2e18;
     uint256 internal constant _BID_AMOUNT_OUT = 1e18;
-    uint256 internal constant _BID_AMOUNT_BELOW_MIN = 1e16;
+    uint256 internal constant _BID_AMOUNT_BELOW_MIN = 1e15;
 
     uint256 internal constant _LOT_CAPACITY_OVERFLOW = type(uint256).max - 10;
 
@@ -281,7 +281,7 @@ contract EmpaModuleBidTest is EmpaModuleTest {
     function test_givenMaximumLotCapacity_reverts()
         public
         givenMinimumPrice(1)
-        givenMinimumBidPercentage(10)
+        givenMinimumBidPercentage(100)
         givenLotCapacity(_LOT_CAPACITY_OVERFLOW)
         givenLotIsCreated
         givenLotHasStarted

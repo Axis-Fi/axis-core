@@ -61,7 +61,7 @@ abstract contract AtomicAuctionModule is AtomicAuction, AuctionModule {
         uint96 lotId_,
         uint256 amount_,
         bytes calldata auctionData_
-    ) external override onlyInternal returns (uint256 payout, bytes memory auctionOutput) {
+    ) external virtual override onlyInternal returns (uint256 payout, bytes memory auctionOutput) {
         // Standard validation
         _revertIfLotInvalid(lotId_);
         _revertIfLotInactive(lotId_);
