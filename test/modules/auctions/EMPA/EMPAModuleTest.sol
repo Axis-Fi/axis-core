@@ -281,8 +281,27 @@ abstract contract EmpaModuleTest is Test, Permit2User {
     }
 
     modifier givenBidIsRefunded(uint64 bidId_) {
+        // Find bid index
+
+        // Get number of bids from module
+        uint256 numBids = _module.getNumBids(_lotId);
+
+        // Retrieve bid IDs from the module
+        uint64[] memory bidIds = _module.getBidIds(_lotId, 0, numBids);
+
+        // Iterate through them to find the index of the bid
+        uint256 index = type(uint256).max;
+
+        uint256 len = bidIds.length;
+        for (uint256 i = 0; i < len; i++) {
+            if (bidIds[i] == bidId_) {
+                index = i;
+                break;
+            }
+        }
+
         vm.prank(address(_auctionHouse));
-        _module.refundBid(_lotId, bidId_, _BIDDER);
+        _module.refundBid(_lotId, bidId_, index, _BIDDER);
         _;
     }
 
@@ -352,6 +371,11 @@ abstract contract EmpaModuleTest is Test, Permit2User {
         _;
     }
 
+    modifier givenLotSettlePeriodHasPassed() {
+        vm.warp(_start + _DURATION + 6 hours);
+        _;
+    }
+
     modifier givenLotProceedsAreClaimed() {
         vm.prank(address(_auctionHouse));
         _module.claimProceeds(_lotId);
@@ -378,6 +402,7 @@ abstract contract EmpaModuleTest is Test, Permit2User {
             uint64 nextDecryptIndex_,
             EncryptedMarginalPriceAuctionModule.LotStatus status_,
             uint64 marginalBidId_,
+            bool proceedsClaimed_,
             uint256 marginalPrice_,
             uint256 minPrice_,
             uint256 minFilled_,
@@ -391,6 +416,7 @@ abstract contract EmpaModuleTest is Test, Permit2User {
             nextDecryptIndex: nextDecryptIndex_,
             status: status_,
             marginalBidId: marginalBidId_,
+            proceedsClaimed: proceedsClaimed_,
             marginalPrice: marginalPrice_,
             minFilled: minFilled_,
             minBidSize: minBidSize_,
@@ -403,6 +429,14 @@ abstract contract EmpaModuleTest is Test, Permit2User {
 
     function _getAuctionLot(uint96 lotId_) internal view returns (Auction.Lot memory) {
         return _module.getLot(lotId_);
+    }
+
+    function _getPartialFill(uint96 lotId_)
+        internal
+        view
+        returns (EncryptedMarginalPriceAuctionModule.PartialFill memory)
+    {
+        return _module.getPartialFill(lotId_);
     }
 
     function _getBid(

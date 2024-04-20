@@ -197,11 +197,11 @@ contract BatchCancelAuctionTest is BatchAuctionHouseTest {
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenCuratorIsSet
+        givenCuratorMaxFeeIsSet
         givenLotIsCreated
         givenLotHasStarted
         givenSellerHasBaseTokenBalance(_curatorMaxPotentialFee)
         givenSellerHasBaseTokenAllowance(_curatorMaxPotentialFee)
-        givenCuratorMaxFeeIsSet
     {
         // Balance before
         uint256 sellerBalanceBefore = _baseToken.balanceOf(_SELLER);
@@ -239,10 +239,10 @@ contract BatchCancelAuctionTest is BatchAuctionHouseTest {
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenCuratorIsSet
-        givenLotIsCreated
-        givenLotHasStarted
         givenCuratorMaxFeeIsSet
         givenCuratorFeeIsSet
+        givenLotIsCreated
+        givenLotHasStarted
         givenSellerHasBaseTokenBalance(_curatorMaxPotentialFee)
         givenSellerHasBaseTokenAllowance(_curatorMaxPotentialFee)
         givenCuratorHasApproved

@@ -58,8 +58,11 @@ library Transfer {
         }
 
         // Transfer the quote token from the user
-        // `safeTransferFrom()` will revert upon failure or the lack of allowance or balance
-        token_.safeTransfer(recipient_, amount_);
+        // `safeTransfer()` will revert upon failure or the lack of allowance or balance
+        // We need to check that the amount is greater than zero, to protect against revert on zero tokens
+        if (amount_ > 0) {
+            token_.safeTransfer(recipient_, amount_);
+        }
 
         // Check that it is not a fee-on-transfer token
         if (validateBalance_ == true && token_.balanceOf(recipient_) < balanceBefore + amount_) {
@@ -97,7 +100,10 @@ library Transfer {
 
         // Transfer the quote token from the user
         // `safeTransferFrom()` will revert upon failure or the lack of allowance or balance
-        token_.safeTransferFrom(sender_, recipient_, amount_);
+        // We need to check that the amount is greater than zero, to protect against revert on zero tokens
+        if (amount_ > 0) {
+            token_.safeTransferFrom(sender_, recipient_, amount_);
+        }
 
         // Check that it is not a fee-on-transfer token
         if (validateBalance_ == true && token_.balanceOf(recipient_) < balanceBefore + amount_) {

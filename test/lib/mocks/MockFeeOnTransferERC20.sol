@@ -5,6 +5,7 @@ import {MockERC20} from "solmate/test/utils/mocks/MockERC20.sol";
 
 contract MockFeeOnTransferERC20 is MockERC20 {
     uint256 public transferFee;
+    bool public revertOnZero;
 
     constructor(
         string memory name_,
@@ -16,7 +17,15 @@ contract MockFeeOnTransferERC20 is MockERC20 {
         transferFee = transferFee_;
     }
 
+    function setRevertOnZero(bool revertOnZero_) external {
+        revertOnZero = revertOnZero_;
+    }
+
     function transfer(address recipient_, uint256 amount_) public override returns (bool) {
+        if (revertOnZero && amount_ == 0) {
+            revert("MockFeeOnTransferERC20: amount is zero");
+        }
+
         uint256 fee = amount_ * transferFee / 10_000;
         return super.transfer(recipient_, amount_ - fee);
     }
@@ -26,6 +35,10 @@ contract MockFeeOnTransferERC20 is MockERC20 {
         address recipient_,
         uint256 amount_
     ) public override returns (bool) {
+        if (revertOnZero && amount_ == 0) {
+            revert("MockFeeOnTransferERC20: amount is zero");
+        }
+
         uint256 fee = amount_ * transferFee / 10_000;
         return super.transferFrom(sender_, recipient_, amount_ - fee);
     }

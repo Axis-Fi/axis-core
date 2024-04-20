@@ -96,7 +96,7 @@ contract AtomicPurchaseTest is AtomicAuctionHouseTest {
         bool hasDerivativeToken = _derivativeTokenId != type(uint256).max;
         bool hasCallback = address(_routingParams.callbacks) != address(0);
         uint256 scaledLotCapacity = _scaleBaseTokenAmount(_LOT_CAPACITY);
-        uint256 scaledCuratorMaxPotentialFee = _scaleBaseTokenAmount(_curatorMaxPotentialFee);
+        uint256 scaledCuratorMaxPotentialFee = _curatorMaxPotentialFee;
 
         uint256 amountInLessFees =
             amountIn_ - _expectedProtocolFeesAllocated - _expectedReferrerFeesAllocated;
@@ -357,10 +357,10 @@ contract AtomicPurchaseTest is AtomicAuctionHouseTest {
         whenAtomicAuctionModuleIsInstalled
         givenLotHasAllowlist
         whenAllowlistProofIsCorrect
-        givenLotIsCreated
-        givenLotHasStarted
         givenProtocolFeeIsSet
         givenReferrerFeeIsSet
+        givenLotIsCreated
+        givenLotHasStarted
         givenUserHasQuoteTokenBalance(_AMOUNT_IN)
         givenUserHasQuoteTokenAllowance(_AMOUNT_IN)
         givenFeesAreCalculated(_AMOUNT_IN)
@@ -390,10 +390,10 @@ contract AtomicPurchaseTest is AtomicAuctionHouseTest {
         external
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
-        givenLotIsCreated
-        givenLotHasStarted
         givenProtocolFeeIsSet
         givenReferrerFeeIsSet
+        givenLotIsCreated
+        givenLotHasStarted
         givenUserHasQuoteTokenBalance(_AMOUNT_IN)
         givenFeesAreCalculated(_AMOUNT_IN)
         whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
@@ -419,10 +419,10 @@ contract AtomicPurchaseTest is AtomicAuctionHouseTest {
         whenAtomicAuctionModuleIsInstalled
         givenQuoteTokenHasDecimals(17)
         givenBaseTokenHasDecimals(13)
-        givenLotIsCreated
-        givenLotHasStarted
         givenProtocolFeeIsSet
         givenReferrerFeeIsSet
+        givenLotIsCreated
+        givenLotHasStarted
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_AMOUNT_IN))
         givenFeesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN))
         whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
@@ -448,10 +448,10 @@ contract AtomicPurchaseTest is AtomicAuctionHouseTest {
         whenAtomicAuctionModuleIsInstalled
         givenQuoteTokenHasDecimals(13)
         givenBaseTokenHasDecimals(17)
-        givenLotIsCreated
-        givenLotHasStarted
         givenProtocolFeeIsSet
         givenReferrerFeeIsSet
+        givenLotIsCreated
+        givenLotHasStarted
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_AMOUNT_IN))
         givenFeesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN))
         whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
@@ -475,10 +475,10 @@ contract AtomicPurchaseTest is AtomicAuctionHouseTest {
         external
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
-        givenLotIsCreated
-        givenLotHasStarted
         givenProtocolFeeIsSet
         givenReferrerFeeIsSet
+        givenLotIsCreated
+        givenLotHasStarted
         givenUserHasQuoteTokenBalance(_AMOUNT_IN)
         givenUserHasQuoteTokenAllowance(_AMOUNT_IN)
         givenFeesAreCalculated(_AMOUNT_IN)
@@ -504,10 +504,10 @@ contract AtomicPurchaseTest is AtomicAuctionHouseTest {
         whenAtomicAuctionModuleIsInstalled
         givenQuoteTokenHasDecimals(17)
         givenBaseTokenHasDecimals(13)
-        givenLotIsCreated
-        givenLotHasStarted
         givenProtocolFeeIsSet
         givenReferrerFeeIsSet
+        givenLotIsCreated
+        givenLotHasStarted
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_AMOUNT_IN))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_AMOUNT_IN))
         givenFeesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN))
@@ -533,10 +533,10 @@ contract AtomicPurchaseTest is AtomicAuctionHouseTest {
         whenAtomicAuctionModuleIsInstalled
         givenQuoteTokenHasDecimals(13)
         givenBaseTokenHasDecimals(17)
-        givenLotIsCreated
-        givenLotHasStarted
         givenProtocolFeeIsSet
         givenReferrerFeeIsSet
+        givenLotIsCreated
+        givenLotHasStarted
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_AMOUNT_IN))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_AMOUNT_IN))
         givenFeesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN))
@@ -571,10 +571,10 @@ contract AtomicPurchaseTest is AtomicAuctionHouseTest {
         whenAtomicAuctionModuleIsInstalled
         givenCallbackHasSendBaseTokensFlag
         givenCallbackIsSet
-        givenLotIsCreated
-        givenLotHasStarted
         givenProtocolFeeIsSet
         givenReferrerFeeIsSet
+        givenLotIsCreated
+        givenLotHasStarted
         givenUserHasQuoteTokenBalance(_AMOUNT_IN)
         givenUserHasQuoteTokenAllowance(_AMOUNT_IN)
         givenFeesAreCalculated(_AMOUNT_IN)
@@ -604,10 +604,10 @@ contract AtomicPurchaseTest is AtomicAuctionHouseTest {
         givenBaseTokenHasDecimals(13)
         givenCallbackHasSendBaseTokensFlag
         givenCallbackIsSet
-        givenLotIsCreated
-        givenLotHasStarted
         givenProtocolFeeIsSet
         givenReferrerFeeIsSet
+        givenLotIsCreated
+        givenLotHasStarted
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_AMOUNT_IN))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_AMOUNT_IN))
         givenFeesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN))
@@ -637,10 +637,10 @@ contract AtomicPurchaseTest is AtomicAuctionHouseTest {
         givenBaseTokenHasDecimals(17)
         givenCallbackHasSendBaseTokensFlag
         givenCallbackIsSet
-        givenLotIsCreated
-        givenLotHasStarted
         givenProtocolFeeIsSet
         givenReferrerFeeIsSet
+        givenLotIsCreated
+        givenLotHasStarted
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_AMOUNT_IN))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_AMOUNT_IN))
         givenFeesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN))
@@ -668,10 +668,10 @@ contract AtomicPurchaseTest is AtomicAuctionHouseTest {
         whenAtomicAuctionModuleIsInstalled
         givenCallbackHasReceiveQuoteTokensFlag
         givenCallbackIsSet
-        givenLotIsCreated
-        givenLotHasStarted
         givenProtocolFeeIsSet
         givenReferrerFeeIsSet
+        givenLotIsCreated
+        givenLotHasStarted
         givenUserHasQuoteTokenBalance(_AMOUNT_IN)
         givenUserHasQuoteTokenAllowance(_AMOUNT_IN)
         givenFeesAreCalculated(_AMOUNT_IN)
@@ -698,10 +698,10 @@ contract AtomicPurchaseTest is AtomicAuctionHouseTest {
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
         givenCallbackIsSet
-        givenLotIsCreated
-        givenLotHasStarted
         givenProtocolFeeIsSet
         givenReferrerFeeIsSet
+        givenLotIsCreated
+        givenLotHasStarted
         givenUserHasQuoteTokenBalance(_AMOUNT_IN)
         givenUserHasQuoteTokenAllowance(_AMOUNT_IN)
         givenFeesAreCalculated(_AMOUNT_IN)
@@ -727,10 +727,10 @@ contract AtomicPurchaseTest is AtomicAuctionHouseTest {
         public
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
-        givenLotIsCreated
-        givenLotHasStarted
         givenProtocolFeeIsSet
         givenReferrerFeeIsSet
+        givenLotIsCreated
+        givenLotHasStarted
         givenUserHasQuoteTokenBalance(_AMOUNT_IN)
         givenUserHasQuoteTokenAllowance(_AMOUNT_IN)
         givenFeesAreCalculated(_AMOUNT_IN)
@@ -756,10 +756,10 @@ contract AtomicPurchaseTest is AtomicAuctionHouseTest {
         whenAtomicAuctionModuleIsInstalled
         givenQuoteTokenHasDecimals(17)
         givenBaseTokenHasDecimals(13)
-        givenLotIsCreated
-        givenLotHasStarted
         givenProtocolFeeIsSet
         givenReferrerFeeIsSet
+        givenLotIsCreated
+        givenLotHasStarted
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_AMOUNT_IN))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_AMOUNT_IN))
         givenFeesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN))
@@ -785,10 +785,10 @@ contract AtomicPurchaseTest is AtomicAuctionHouseTest {
         whenAtomicAuctionModuleIsInstalled
         givenQuoteTokenHasDecimals(13)
         givenBaseTokenHasDecimals(17)
-        givenLotIsCreated
-        givenLotHasStarted
         givenProtocolFeeIsSet
         givenReferrerFeeIsSet
+        givenLotIsCreated
+        givenLotHasStarted
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_AMOUNT_IN))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_AMOUNT_IN))
         givenFeesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN))
@@ -821,10 +821,10 @@ contract AtomicPurchaseTest is AtomicAuctionHouseTest {
         whenDerivativeModuleIsInstalled
         givenDerivativeParamsAreSet
         givenDerivativeIsDeployed
-        givenLotIsCreated
-        givenLotHasStarted
         givenProtocolFeeIsSet
         givenReferrerFeeIsSet
+        givenLotIsCreated
+        givenLotHasStarted
         givenUserHasQuoteTokenBalance(_AMOUNT_IN)
         givenUserHasQuoteTokenAllowance(_AMOUNT_IN)
         givenFeesAreCalculated(_AMOUNT_IN)
@@ -854,10 +854,10 @@ contract AtomicPurchaseTest is AtomicAuctionHouseTest {
         whenDerivativeModuleIsInstalled
         givenDerivativeParamsAreSet
         givenDerivativeIsDeployed
-        givenLotIsCreated
-        givenLotHasStarted
         givenProtocolFeeIsSet
         givenReferrerFeeIsSet
+        givenLotIsCreated
+        givenLotHasStarted
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_AMOUNT_IN))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_AMOUNT_IN))
         givenFeesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN))
@@ -887,10 +887,10 @@ contract AtomicPurchaseTest is AtomicAuctionHouseTest {
         whenDerivativeModuleIsInstalled
         givenDerivativeParamsAreSet
         givenDerivativeIsDeployed
-        givenLotIsCreated
-        givenLotHasStarted
         givenProtocolFeeIsSet
         givenReferrerFeeIsSet
+        givenLotIsCreated
+        givenLotHasStarted
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_AMOUNT_IN))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_AMOUNT_IN))
         givenFeesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN))
@@ -918,9 +918,9 @@ contract AtomicPurchaseTest is AtomicAuctionHouseTest {
         external
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
+        givenReferrerFeeIsSet
         givenLotIsCreated
         givenLotHasStarted
-        givenReferrerFeeIsSet
         givenUserHasQuoteTokenBalance(_AMOUNT_IN)
         givenUserHasQuoteTokenAllowance(_AMOUNT_IN)
         givenFeesAreCalculated(_AMOUNT_IN)
@@ -946,9 +946,9 @@ contract AtomicPurchaseTest is AtomicAuctionHouseTest {
         whenAtomicAuctionModuleIsInstalled
         givenQuoteTokenHasDecimals(17)
         givenBaseTokenHasDecimals(13)
+        givenReferrerFeeIsSet
         givenLotIsCreated
         givenLotHasStarted
-        givenReferrerFeeIsSet
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_AMOUNT_IN))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_AMOUNT_IN))
         givenFeesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN))
@@ -974,9 +974,9 @@ contract AtomicPurchaseTest is AtomicAuctionHouseTest {
         whenAtomicAuctionModuleIsInstalled
         givenQuoteTokenHasDecimals(13)
         givenBaseTokenHasDecimals(17)
+        givenReferrerFeeIsSet
         givenLotIsCreated
         givenLotHasStarted
-        givenReferrerFeeIsSet
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_AMOUNT_IN))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_AMOUNT_IN))
         givenFeesAreCalculated(_scaleQuoteTokenAmount(_AMOUNT_IN))
@@ -1000,9 +1000,9 @@ contract AtomicPurchaseTest is AtomicAuctionHouseTest {
         external
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
-        givenLotIsCreated
         givenProtocolFeeIsSet
         givenReferrerFeeIsSet
+        givenLotIsCreated
         givenLotHasStarted
         givenUserHasQuoteTokenBalance(_AMOUNT_IN)
         givenUserHasQuoteTokenAllowance(_AMOUNT_IN)
@@ -1029,9 +1029,9 @@ contract AtomicPurchaseTest is AtomicAuctionHouseTest {
         whenAtomicAuctionModuleIsInstalled
         givenQuoteTokenHasDecimals(17)
         givenBaseTokenHasDecimals(13)
-        givenLotIsCreated
         givenProtocolFeeIsSet
         givenReferrerFeeIsSet
+        givenLotIsCreated
         givenLotHasStarted
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_AMOUNT_IN))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_AMOUNT_IN))
@@ -1058,9 +1058,9 @@ contract AtomicPurchaseTest is AtomicAuctionHouseTest {
         whenAtomicAuctionModuleIsInstalled
         givenQuoteTokenHasDecimals(13)
         givenBaseTokenHasDecimals(17)
-        givenLotIsCreated
         givenProtocolFeeIsSet
         givenReferrerFeeIsSet
+        givenLotIsCreated
         givenLotHasStarted
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_AMOUNT_IN))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_AMOUNT_IN))
@@ -1296,10 +1296,10 @@ contract AtomicPurchaseTest is AtomicAuctionHouseTest {
         external
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
-        givenLotIsCreated
-        givenLotHasStarted
         givenProtocolFeeIsSet
         givenReferrerFeeIsSet
+        givenLotIsCreated
+        givenLotHasStarted
         givenUserHasQuoteTokenBalance(_AMOUNT_IN)
         givenUserHasQuoteTokenAllowance(_AMOUNT_IN)
         givenFeesAreCalculated(_AMOUNT_IN)
@@ -1324,10 +1324,10 @@ contract AtomicPurchaseTest is AtomicAuctionHouseTest {
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
         givenCuratorIsSet
-        givenLotIsCreated
-        givenLotHasStarted
         givenProtocolFeeIsSet
         givenReferrerFeeIsSet
+        givenLotIsCreated
+        givenLotHasStarted
         givenUserHasQuoteTokenBalance(_AMOUNT_IN)
         givenUserHasQuoteTokenAllowance(_AMOUNT_IN)
         givenFeesAreCalculated(_AMOUNT_IN)
@@ -1352,12 +1352,12 @@ contract AtomicPurchaseTest is AtomicAuctionHouseTest {
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
         givenCuratorIsSet
-        givenLotIsCreated
-        givenLotHasStarted
-        givenProtocolFeeIsSet
-        givenReferrerFeeIsSet
         givenCuratorMaxFeeIsSet
         givenCuratorFeeIsSet
+        givenProtocolFeeIsSet
+        givenReferrerFeeIsSet
+        givenLotIsCreated
+        givenLotHasStarted
         givenCuratorHasApproved
         givenUserHasQuoteTokenBalance(_AMOUNT_IN)
         givenUserHasQuoteTokenAllowance(_AMOUNT_IN)
@@ -1385,12 +1385,12 @@ contract AtomicPurchaseTest is AtomicAuctionHouseTest {
         givenCuratorIsSet
         givenQuoteTokenHasDecimals(17)
         givenBaseTokenHasDecimals(13)
-        givenLotIsCreated
-        givenLotHasStarted
         givenProtocolFeeIsSet
         givenReferrerFeeIsSet
         givenCuratorMaxFeeIsSet
         givenCuratorFeeIsSet
+        givenLotIsCreated
+        givenLotHasStarted
         givenCuratorHasApproved
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_AMOUNT_IN))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_AMOUNT_IN))
@@ -1418,12 +1418,12 @@ contract AtomicPurchaseTest is AtomicAuctionHouseTest {
         givenCuratorIsSet
         givenQuoteTokenHasDecimals(13)
         givenBaseTokenHasDecimals(17)
-        givenLotIsCreated
-        givenLotHasStarted
         givenProtocolFeeIsSet
         givenReferrerFeeIsSet
         givenCuratorMaxFeeIsSet
         givenCuratorFeeIsSet
+        givenLotIsCreated
+        givenLotHasStarted
         givenCuratorHasApproved
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_AMOUNT_IN))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_AMOUNT_IN))
@@ -1449,11 +1449,11 @@ contract AtomicPurchaseTest is AtomicAuctionHouseTest {
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
         givenCuratorIsSet
-        givenLotIsCreated
-        givenLotHasStarted
         givenProtocolFeeIsSet
         givenReferrerFeeIsSet
         givenCuratorMaxFeeIsSet
+        givenLotIsCreated
+        givenLotHasStarted
         givenCuratorHasApproved
         givenUserHasQuoteTokenBalance(_AMOUNT_IN)
         givenUserHasQuoteTokenAllowance(_AMOUNT_IN)
@@ -1479,12 +1479,12 @@ contract AtomicPurchaseTest is AtomicAuctionHouseTest {
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
         givenCuratorIsSet
-        givenLotIsCreated
-        givenLotHasStarted
         givenProtocolFeeIsSet
         givenReferrerFeeIsSet
         givenCuratorMaxFeeIsSet
         givenCuratorFeeIsSet
+        givenLotIsCreated
+        givenLotHasStarted
         givenCuratorHasApproved
         givenUserHasQuoteTokenBalance(_AMOUNT_IN)
         givenUserHasQuoteTokenAllowance(_AMOUNT_IN)
@@ -1518,12 +1518,12 @@ contract AtomicPurchaseTest is AtomicAuctionHouseTest {
         givenDerivativeParamsAreSet
         givenDerivativeIsDeployed
         givenCuratorIsSet
-        givenLotIsCreated
-        givenLotHasStarted
         givenProtocolFeeIsSet
         givenReferrerFeeIsSet
         givenCuratorMaxFeeIsSet
         givenCuratorFeeIsSet
+        givenLotIsCreated
+        givenLotHasStarted
         givenCuratorHasApproved
         givenUserHasQuoteTokenBalance(_AMOUNT_IN)
         givenUserHasQuoteTokenAllowance(_AMOUNT_IN)
@@ -1555,12 +1555,12 @@ contract AtomicPurchaseTest is AtomicAuctionHouseTest {
         givenDerivativeParamsAreSet
         givenDerivativeIsDeployed
         givenCuratorIsSet
-        givenLotIsCreated
-        givenLotHasStarted
         givenProtocolFeeIsSet
         givenReferrerFeeIsSet
         givenCuratorMaxFeeIsSet
         givenCuratorFeeIsSet
+        givenLotIsCreated
+        givenLotHasStarted
         givenCuratorHasApproved
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_AMOUNT_IN))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_AMOUNT_IN))
@@ -1592,12 +1592,12 @@ contract AtomicPurchaseTest is AtomicAuctionHouseTest {
         givenDerivativeParamsAreSet
         givenDerivativeIsDeployed
         givenCuratorIsSet
-        givenLotIsCreated
-        givenLotHasStarted
         givenProtocolFeeIsSet
         givenReferrerFeeIsSet
         givenCuratorMaxFeeIsSet
         givenCuratorFeeIsSet
+        givenLotIsCreated
+        givenLotHasStarted
         givenCuratorHasApproved
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_AMOUNT_IN))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_AMOUNT_IN))

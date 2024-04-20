@@ -58,6 +58,8 @@ contract BatchCreateAuctionTest is BatchAuctionHouseTest {
     // [X] reverts when base token is 0
     // [X] reverts when quote token is 0
     // [X] reverts when the auction type is not batch
+    // [X] given the curator fee would cause an overflow
+    //  [X] it reverts
     // [X] creates the auction lot
 
     function test_whenModuleNotInstalled_reverts() external whenAuctionTypeIsBatch {
@@ -194,6 +196,34 @@ contract BatchCreateAuctionTest is BatchAuctionHouseTest {
 
         vm.prank(_SELLER);
         _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
+    }
+
+    function test_givenCuratorFeeIsSet_whenCuratorFeeCausesUint96Overflow()
+        external
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenLotHasCapacity(type(uint96).max)
+        givenCuratorIsSet
+        givenCuratorMaxFeeIsSet
+        givenCuratorFeeIsSet
+        givenSellerHasBaseTokenBalance(type(uint96).max + _curatorMaxPotentialFee)
+        givenSellerHasBaseTokenAllowance(type(uint96).max + _curatorMaxPotentialFee)
+    {
+        // Create the auction
+        vm.prank(_SELLER);
+        _lotId = _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
+
+        // Assert values
+        AuctionHouse.Routing memory routing = _getLotRouting(_lotId);
+        assertEq(routing.funding, type(uint96).max, "funding mismatch");
+
+        // Check balances
+        assertEq(_baseToken.balanceOf(address(this)), 0, "seller balance mismatch");
+        assertEq(
+            _baseToken.balanceOf(address(_auctionHouse)),
+            type(uint96).max,
+            "auction house balance mismatch"
+        );
     }
 
     function test_success()
@@ -782,6 +812,11 @@ contract BatchCreateAuctionTest is BatchAuctionHouseTest {
         givenBaseTokenHasDecimals(13)
         givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenProtocolFeeIsSet
+        givenReferrerFeeIsSet
+        givenCuratorIsSet
+        givenCuratorMaxFeeIsSet
+        givenCuratorFeeIsSet
     {
         // Create the auction
         vm.prank(_SELLER);
@@ -798,6 +833,14 @@ contract BatchCreateAuctionTest is BatchAuctionHouseTest {
             _scaleBaseTokenAmount(_LOT_CAPACITY),
             "auction house balance mismatch"
         );
+
+        // Check that the fees have been cached
+        AuctionHouse.FeeData memory feeData = _getLotFees(_lotId);
+        assertEq(feeData.protocolFee, _protocolFeePercentActual, "protocol fee");
+        assertEq(feeData.referrerFee, _referrerFeePercentActual, "referrer fee");
+        assertEq(feeData.curatorFee, _curatorFeePercentActual, "curator fee");
+        assertEq(feeData.curator, address(_CURATOR), "curator address");
+        assertFalse(feeData.curated, "curated flag");
     }
 
     function test_quoteTokenDecimalsSmaller()
@@ -808,6 +851,11 @@ contract BatchCreateAuctionTest is BatchAuctionHouseTest {
         givenBaseTokenHasDecimals(17)
         givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenProtocolFeeIsSet
+        givenReferrerFeeIsSet
+        givenCuratorIsSet
+        givenCuratorMaxFeeIsSet
+        givenCuratorFeeIsSet
     {
         // Create the auction
         vm.prank(_SELLER);
@@ -824,5 +872,13 @@ contract BatchCreateAuctionTest is BatchAuctionHouseTest {
             _scaleBaseTokenAmount(_LOT_CAPACITY),
             "auction house balance mismatch"
         );
+
+        // Check that the fees have been cached
+        AuctionHouse.FeeData memory feeData = _getLotFees(_lotId);
+        assertEq(feeData.protocolFee, _protocolFeePercentActual, "protocol fee");
+        assertEq(feeData.referrerFee, _referrerFeePercentActual, "referrer fee");
+        assertEq(feeData.curatorFee, _curatorFeePercentActual, "curator fee");
+        assertEq(feeData.curator, address(_CURATOR), "curator address");
+        assertFalse(feeData.curated, "curated flag");
     }
 }
