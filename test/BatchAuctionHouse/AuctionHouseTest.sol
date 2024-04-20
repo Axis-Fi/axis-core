@@ -140,6 +140,11 @@ abstract contract BatchAuctionHouseTest is Test, Permit2User {
 
     // ===== Modifiers ===== //
 
+    modifier givenLotHasCapacity(uint96 capacity_) {
+        _auctionParams.capacity = capacity_;
+        _;
+    }
+
     function _setBaseTokenDecimals(uint8 decimals_) internal {
         _baseToken = new MockFeeOnTransferERC20("Base Token", "BASE", decimals_);
 
@@ -198,8 +203,12 @@ abstract contract BatchAuctionHouseTest is Test, Permit2User {
         _;
     }
 
-    modifier givenLotHasStarted() {
+    function _startLot() internal {
         vm.warp(_startTime);
+    }
+
+    modifier givenLotHasStarted() {
+        _startLot();
         _;
     }
 
@@ -515,7 +524,7 @@ abstract contract BatchAuctionHouseTest is Test, Permit2User {
         vm.prank(_CURATOR);
         _auctionHouse.setCuratorFee(_auctionModuleKeycode, fee_);
         _curatorFeePercentActual = fee_;
-        _curatorMaxPotentialFee = _curatorFeePercentActual * _LOT_CAPACITY / 1e5;
+        _curatorMaxPotentialFee = _curatorFeePercentActual * _auctionParams.capacity / 1e5;
     }
 
     modifier givenCuratorFeeIsSet() {
@@ -562,6 +571,16 @@ abstract contract BatchAuctionHouseTest is Test, Permit2User {
 
         vm.prank(_bidder);
         _auctionHouse.claimBids(_lotId, bids);
+        _;
+    }
+
+    modifier givenBaseTokenIsRevertOnZero() {
+        _baseToken.setRevertOnZero(true);
+        _;
+    }
+
+    modifier givenQuoteTokenIsRevertOnZero() {
+        _quoteToken.setRevertOnZero(true);
         _;
     }
 

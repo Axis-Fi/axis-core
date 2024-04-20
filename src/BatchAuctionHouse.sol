@@ -2,12 +2,11 @@
 pragma solidity 0.8.19;
 
 import {Transfer} from "src/lib/Transfer.sol";
-import {FixedPointMathLib as Math} from "lib/solmate/src/utils/FixedPointMathLib.sol";
 
 import {AuctionHouse} from "src/bases/AuctionHouse.sol";
 import {Auction, AuctionModule} from "src/modules/Auction.sol";
 import {BatchAuction, BatchAuctionModule} from "src/modules/auctions/BatchAuctionModule.sol";
-import {Keycode, keycodeFromVeecode} from "src/modules/Modules.sol";
+import {fromVeecode} from "src/modules/Modules.sol";
 import {ICallback} from "src/interfaces/ICallback.sol";
 import {Callbacks} from "src/lib/Callbacks.sol";
 
@@ -57,7 +56,8 @@ abstract contract BatchRouter {
     ///
     /// @param      lotId_          Lot ID
     /// @param      bidId_          Bid ID
-    function refundBid(uint96 lotId_, uint64 bidId_) external virtual;
+    /// @param      index_          Index of the bid in the auction's bid list
+    function refundBid(uint96 lotId_, uint64 bidId_, uint256 index_) external virtual;
 
     /// @notice     Claim bid payouts and/or refunds after a batch auction has settled
     /// @dev        The implementing function must perform the following:
@@ -79,7 +79,13 @@ abstract contract BatchRouter {
     ///             5. Send the fees to the curator
     ///
     /// @param      lotId_          Lot ID
-    function settle(uint96 lotId_) external virtual;
+    /// @return     totalIn_        Total amount of quote tokens from bids that were filled
+    /// @return     totalOut_       Total amount of base tokens paid out to winning bids
+    /// @return     auctionOutput_  Custom data returned by the auction module
+    function settle(uint96 lotId_)
+        external
+        virtual
+        returns (uint256 totalIn_, uint256 totalOut_, bytes memory auctionOutput_);
 
     /// @notice     Claim the proceeds of a settled auction
     /// @dev        The implementing function must perform the following:
@@ -267,7 +273,7 @@ contract BatchAuctionHouse is AuctionHouse, BatchRouter {
 
         // Record the bid on the auction module
         // The module will determine if the bid is valid - minimum bid size, minimum price, auction status, etc
-        bidId = _getBatchModuleForId(params_.lotId).bid(
+        bidId = getBatchModuleForId(params_.lotId).bid(
             params_.lotId, msg.sender, params_.referrer, params_.amount, params_.auctionData
         );
 
@@ -299,7 +305,11 @@ contract BatchAuctionHouse is AuctionHouse, BatchRouter {
     ///             - the lot ID is invalid
     ///             - the auction module reverts when cancelling the bid
     ///             - re-entrancy is detected
-    function refundBid(uint96 lotId_, uint64 bidId_) external override nonReentrant {
+    function refundBid(
+        uint96 lotId_,
+        uint64 bidId_,
+        uint256 index_
+    ) external override nonReentrant {
         _isLotValid(lotId_);
 
         // Transfer the quote token to the bidder
@@ -309,7 +319,7 @@ contract BatchAuctionHouse is AuctionHouse, BatchRouter {
             msg.sender,
             // Refund the bid on the auction module
             // The auction module is responsible for validating the bid and authorizing the caller
-            _getBatchModuleForId(lotId_).refundBid(lotId_, bidId_, msg.sender),
+            getBatchModuleForId(lotId_).refundBid(lotId_, bidId_, index_, msg.sender),
             false
         );
 
@@ -328,7 +338,7 @@ contract BatchAuctionHouse is AuctionHouse, BatchRouter {
         // Claim the bids on the auction module
         // The auction module is responsible for validating the bid and authorizing the caller
         (BatchAuction.BidClaim[] memory bidClaims, bytes memory auctionOutput) =
-            _getBatchModuleForId(lotId_).claimBids(lotId_, bidIds_);
+            getBatchModuleForId(lotId_).claimBids(lotId_, bidIds_);
 
         // Load routing data for the lot
         Routing storage routing = lotRouting[lotId_];
@@ -343,7 +353,9 @@ contract BatchAuctionHouse is AuctionHouse, BatchRouter {
             BatchAuction.BidClaim memory bidClaim = bidClaims[i];
 
             // If payout is greater than zero, then the bid was filled.
-            // Otherwise, it was not and the bidder is refunded the paid amount.
+            // However, due to partial fills, there can be both a payout and a refund
+            // If payout is zero, then the bid was not filled and the paid amount should be refunded
+
             if (bidClaim.payout > 0) {
                 // Allocate quote and protocol fees for bid
                 _allocateQuoteFees(
@@ -352,7 +364,7 @@ contract BatchAuctionHouse is AuctionHouse, BatchRouter {
                     bidClaim.referrer,
                     routing.seller,
                     routing.quoteToken,
-                    bidClaim.paid
+                    bidClaim.paid - bidClaim.refund // refund is included in paid
                 );
 
                 // Reduce funding by the payout amount
@@ -362,9 +374,14 @@ contract BatchAuctionHouse is AuctionHouse, BatchRouter {
 
                 // Send the payout to the bidder
                 _sendPayout(bidClaim.bidder, bidClaim.payout, routing, auctionOutput);
-            } else {
-                // Refund the paid amount to the bidder
-                Transfer.transfer(routing.quoteToken, bidClaim.bidder, bidClaim.paid, false);
+            }
+
+            if (bidClaim.refund > 0) {
+                // Refund the provided amount to the bidder
+                // If the bid was not filled, the refund should be the full amount paid
+                // If the bid was partially filled, the refund should be the difference
+                // between the paid amount and the filled amount
+                Transfer.transfer(routing.quoteToken, bidClaim.bidder, bidClaim.refund, false);
             }
 
             // Emit event
@@ -387,91 +404,21 @@ contract BatchAuctionHouse is AuctionHouse, BatchRouter {
     ///             - the auction module reverts when settling the auction
     ///             - collecting the payout from the seller fails
     ///             - re-entrancy is detected
-    function settle(uint96 lotId_) external override nonReentrant {
+    function settle(uint96 lotId_)
+        external
+        override
+        nonReentrant
+        returns (uint256 totalIn_, uint256 totalOut_, bytes memory auctionOutput_)
+    {
         // Validation
         _isLotValid(lotId_);
 
         // Settle the lot on the auction module and get the winning bids
         // Reverts if the auction cannot be settled yet
-        BatchAuctionModule module = _getBatchModuleForId(lotId_);
-
-        // Store the capacity before settling
-        uint256 capacity = module.remainingCapacity(lotId_);
+        BatchAuctionModule module = getBatchModuleForId(lotId_);
 
         // Settle the auction
-        (BatchAuction.Settlement memory settlement, bytes memory auctionOutput) =
-            module.settle(lotId_);
-
-        // Check if the auction settled
-        // If so, calculate fees, handle partial bid, transfer proceeds + (possible) refund to seller, and curator fee
-        if (settlement.totalIn > 0 && settlement.totalOut > 0) {
-            // Load curator data and calculate fee (excluding any refunds of capacity)
-            FeeData storage feeData = lotFees[lotId_];
-
-            // Load routing data for the lot
-            Routing storage routing = lotRouting[lotId_];
-
-            // Store the protocol and referrer fees
-            // If this is not done, the amount that the seller receives could be modified after settlement
-            {
-                Keycode auctionKeycode = keycodeFromVeecode(routing.auctionReference);
-                feeData.protocolFee = fees[auctionKeycode].protocol;
-                feeData.referrerFee = fees[auctionKeycode].referrer;
-            }
-
-            uint256 curatorFeePayout =
-                _calculatePayoutFees(feeData.curated, feeData.curatorFee, capacity);
-
-            // settle() is for batch auctions only, and all batch auctions are prefunded.
-            // Payout has already been collected at the time of auction creation and curation
-
-            // Check if there was a partial fill and handle the payout + refund
-            if (settlement.pfBidder != address(0)) {
-                // Allocate quote and protocol fees for bid
-                _allocateQuoteFees(
-                    feeData.protocolFee,
-                    feeData.referrerFee,
-                    settlement.pfReferrer,
-                    routing.seller,
-                    routing.quoteToken,
-                    // Reconstruct bid amount from the settlement price and the amount out
-                    Math.mulDivDown(settlement.pfPayout, settlement.totalIn, settlement.totalOut)
-                );
-
-                // Reduce funding by the payout amount
-                unchecked {
-                    routing.funding -= settlement.pfPayout;
-                }
-
-                // Send refund and payout to the bidder
-                Transfer.transfer(
-                    routing.quoteToken, settlement.pfBidder, settlement.pfRefund, false
-                );
-                _sendPayout(settlement.pfBidder, settlement.pfPayout, routing, auctionOutput);
-            }
-
-            // If the lot is under capacity, adjust the curator payout
-            if (settlement.totalOut < capacity && curatorFeePayout > 0) {
-                uint256 capacityRefund;
-                unchecked {
-                    capacityRefund = capacity - settlement.totalOut;
-                }
-
-                uint256 feeRefund = Math.mulDivDown(curatorFeePayout, capacityRefund, capacity);
-                // Can't be more than curatorFeePayout
-                unchecked {
-                    curatorFeePayout -= feeRefund;
-                }
-            }
-
-            // Reduce funding by curator fee and send, if applicable
-            if (curatorFeePayout > 0) {
-                unchecked {
-                    routing.funding -= curatorFeePayout;
-                }
-                _sendPayout(feeData.curator, curatorFeePayout, routing, auctionOutput);
-            }
-        }
+        (totalIn_, totalOut_, auctionOutput_) = module.settle(lotId_);
 
         // Emit event
         emit Settle(lotId_);
@@ -496,20 +443,43 @@ contract BatchAuctionHouse is AuctionHouse, BatchRouter {
         _isLotValid(lotId_);
 
         // Call auction module to validate and update data
-        (uint256 purchased_, uint256 sold_, uint256 payoutSent_) =
-            _getBatchModuleForId(lotId_).claimProceeds(lotId_);
+        (uint256 purchased_, uint256 sold_, uint256 capacity_) =
+            getBatchModuleForId(lotId_).claimProceeds(lotId_);
 
         // Load data for the lot
         Routing storage routing = lotRouting[lotId_];
+        FeeData storage feeData = lotFees[lotId_];
+
+        // Calculate the curator fee and allocate the fees to be claimed
+        uint256 maxCuratorPayout =
+            _calculatePayoutFees(feeData.curated, feeData.curatorFee, capacity_);
+        uint256 curatorPayout = _calculatePayoutFees(feeData.curated, feeData.curatorFee, sold_);
+
+        // If the curator payout is not zero, allocate it
+        if (curatorPayout > 0) {
+            // If the payout is a derivative, mint the derivative directly to the curator
+            // Otherwise, allocate the fee using the internal rewards mechanism
+            if (fromVeecode(routing.derivativeReference) != bytes7("")) {
+                // Mint the derivative to the curator
+                _sendPayout(feeData.curator, curatorPayout, routing, bytes(""));
+            } else {
+                // Allocate the curator fee to be claimed
+                rewards[feeData.curator][routing.baseToken] += curatorPayout;
+            }
+
+            // Decrease the funding amount
+            unchecked {
+                routing.funding -= curatorPayout;
+            }
+        }
 
         // Calculate the referrer and protocol fees for the amount in
         // Fees are not allocated until the user claims their payout so that we don't have to iterate through them here
         // If a referrer is not set, that portion of the fee defaults to the protocol
         uint256 totalInLessFees;
         {
-            (, uint256 toProtocol) = calculateQuoteFees(
-                lotFees[lotId_].protocolFee, lotFees[lotId_].referrerFee, false, purchased_
-            );
+            (, uint256 toProtocol) =
+                calculateQuoteFees(feeData.protocolFee, feeData.referrerFee, false, purchased_);
             unchecked {
                 totalInLessFees = purchased_ - toProtocol;
             }
@@ -521,8 +491,10 @@ contract BatchAuctionHouse is AuctionHouse, BatchRouter {
         _sendPayment(routing.seller, totalInLessFees, routing.quoteToken, routing.callbacks);
 
         // Refund any unused capacity and curator fees to the address dictated by the callbacks address
-        // By this stage, a partial payout (if applicable) and curator fees have been paid, leaving only the payout amount (`totalOut`) remaining.
-        uint256 prefundingRefund = routing.funding + payoutSent_ - sold_;
+        // Additionally, bidders are able to claim before the seller, so the funding isn't the right value
+        // to use for the refund. Therefore, we use capacity, which is not decremented when batch auctions
+        // are settled, minus the amount sold. Then, we add any unearned curator payout.
+        uint256 prefundingRefund = capacity_ - sold_ + maxCuratorPayout - curatorPayout;
         unchecked {
             routing.funding -= prefundingRefund;
         }
@@ -544,7 +516,7 @@ contract BatchAuctionHouse is AuctionHouse, BatchRouter {
 
     // ========== INTERNAL FUNCTIONS ========== //
 
-    function _getBatchModuleForId(uint96 lotId_) internal view returns (BatchAuctionModule) {
+    function getBatchModuleForId(uint96 lotId_) public view returns (BatchAuctionModule) {
         return BatchAuctionModule(address(_getModuleForId(lotId_)));
     }
 }

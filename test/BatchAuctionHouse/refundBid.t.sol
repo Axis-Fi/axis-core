@@ -13,7 +13,7 @@ contract BatchRefundBidTest is BatchAuctionHouseTest {
 
     modifier givenBidIsRefunded() {
         vm.prank(_bidder);
-        _auctionHouse.refundBid(_lotId, _bidId);
+        _auctionHouse.refundBid(_lotId, _bidId, 0);
         _;
     }
 
@@ -36,7 +36,7 @@ contract BatchRefundBidTest is BatchAuctionHouseTest {
 
         // Call the function
         vm.prank(_bidder);
-        _auctionHouse.refundBid(_lotId, _bidId);
+        _auctionHouse.refundBid(_lotId, _bidId, 0);
     }
 
     function test_lotConcluded_reverts()
@@ -57,7 +57,7 @@ contract BatchRefundBidTest is BatchAuctionHouseTest {
 
         // Call the function
         vm.prank(_bidder);
-        _auctionHouse.refundBid(_lotId, _bidId);
+        _auctionHouse.refundBid(_lotId, _bidId, 0);
     }
 
     function test_givenBidDoesNotExist_reverts()
@@ -75,7 +75,7 @@ contract BatchRefundBidTest is BatchAuctionHouseTest {
 
         // Call the function
         vm.prank(_bidder);
-        _auctionHouse.refundBid(_lotId, _bidId);
+        _auctionHouse.refundBid(_lotId, _bidId, 0);
     }
 
     function test_givenBidRefunded_reverts()
@@ -97,7 +97,7 @@ contract BatchRefundBidTest is BatchAuctionHouseTest {
 
         // Call the function
         vm.prank(_bidder);
-        _auctionHouse.refundBid(_lotId, _bidId);
+        _auctionHouse.refundBid(_lotId, _bidId, 0);
     }
 
     function test_givenCallerIsNotBidOwner_reverts()
@@ -117,7 +117,7 @@ contract BatchRefundBidTest is BatchAuctionHouseTest {
 
         // Call the function
         vm.prank(_SELLER);
-        _auctionHouse.refundBid(_lotId, _bidId);
+        _auctionHouse.refundBid(_lotId, _bidId, 0);
     }
 
     function test_itRefundsTheBid()
@@ -137,7 +137,7 @@ contract BatchRefundBidTest is BatchAuctionHouseTest {
 
         // Call the function
         vm.prank(_bidder);
-        _auctionHouse.refundBid(_lotId, _bidId);
+        _auctionHouse.refundBid(_lotId, _bidId, 0);
 
         // Assert the bid is cancelled
         assertTrue(_batchAuctionModule.bidCancelled(_lotId, _bidId));

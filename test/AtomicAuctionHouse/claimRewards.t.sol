@@ -21,6 +21,8 @@ contract AtomicClaimRewardsTest is AtomicAuctionHouseTest {
     // [X] caller is _REFERRER
     // [X] caller is another user
 
+    // Note: the claimRewards functionality is shared between the Atomic and Batch AuctionHouses, so there is no need currently to have separate tests for each.
+
     function test_protocol()
         public
         whenAuctionTypeIsAtomic
