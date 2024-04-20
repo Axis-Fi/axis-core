@@ -3,13 +3,14 @@ pragma solidity 0.8.19;
 
 // Protocol dependencies
 import {Module} from "src/modules/Modules.sol";
-import {AuctionModule, Auction} from "src/modules/Auction.sol";
+import {AuctionModule} from "src/modules/Auction.sol";
 import {Veecode, toVeecode} from "src/modules/Modules.sol";
+import {AtomicAuction, AtomicAuctionModule} from "src/modules/auctions/AtomicAuctionModule.sol";
 
 // Libraries
 import {FixedPointMathLib as Math} from "lib/solmate/src/utils/FixedPointMathLib.sol";
 
-contract FixedPriceAuctionModule is AuctionModule {
+contract FixedPriceAuctionModule is AtomicAuctionModule {
     // ========== ERRORS ========== //
 
     error Auction_InsufficientPayout();
@@ -54,16 +55,6 @@ contract FixedPriceAuctionModule is AuctionModule {
         return toVeecode("01FPAM");
     }
 
-    /// @inheritdoc Module
-    function TYPE() public pure override returns (Type) {
-        return Type.Auction;
-    }
-
-    /// @inheritdoc Auction
-    function auctionType() external pure override returns (AuctionType) {
-        return AuctionType.Atomic;
-    }
-
     // ========== AUCTION ========== //
 
     /// @inheritdoc AuctionModule
@@ -89,18 +80,18 @@ contract FixedPriceAuctionModule is AuctionModule {
         ) revert Auction_InvalidParams();
 
         // Calculate the max payout
-        uint256 maxPayout =
+        uint256 maxPayout_ =
             Math.mulDivDown(lot_.capacity, auctionParams.maxPayoutPercent, _ONE_HUNDRED_PERCENT);
         // If capacity in quote, convert max payout to base token using the provided price
         if (lot_.capacityInQuote) {
-            maxPayout =
-                Math.mulDivDown(maxPayout, 10 ** lot_.baseTokenDecimals, auctionParams.price);
+            maxPayout_ =
+                Math.mulDivDown(maxPayout_, 10 ** lot_.baseTokenDecimals, auctionParams.price);
         }
 
         // Store the auction data
         AuctionData storage data = auctionData[lotId_];
         data.price = auctionParams.price;
-        data.maxPayout = maxPayout;
+        data.maxPayout = maxPayout_;
     }
 
     /// @inheritdoc AuctionModule
@@ -112,7 +103,7 @@ contract FixedPriceAuctionModule is AuctionModule {
 
     // ========== PURCHASE ========== //
 
-    /// @inheritdoc AuctionModule
+    /// @inheritdoc AtomicAuctionModule
     /// @dev        This function assumes the following:
     ///             - The lot ID has been validated
     ///             - The caller has been authorized
@@ -143,58 +134,33 @@ contract FixedPriceAuctionModule is AuctionModule {
         return (payout, bytes(""));
     }
 
-    // ========== NOT IMPLEMENTED ========== //
+    // ========== VIEW FUNCTIONS ========== //
 
-    function _bid(
-        uint96,
-        address,
-        address,
-        uint256,
-        bytes calldata
-    ) internal pure override returns (uint64) {
-        revert Auction_NotImplemented();
+    /// @inheritdoc AtomicAuction
+    function payoutFor(uint96 lotId_, uint256 amount_) public view override returns (uint256) {
+        return Math.mulDivDown(
+            amount_, 10 ** lotData[lotId_].baseTokenDecimals, auctionData[lotId_].price
+        );
     }
 
-    function _refundBid(uint96, uint64, address) internal pure override returns (uint256) {
-        revert Auction_NotImplemented();
+    /// @inheritdoc AtomicAuction
+    function priceFor(uint96 lotId_, uint256 payout_) public view override returns (uint256) {
+        return Math.mulDivUp(
+            payout_, auctionData[lotId_].price, 10 ** lotData[lotId_].baseTokenDecimals
+        );
     }
 
-    function _claimBids(
-        uint96,
-        uint64[] calldata
-    ) internal pure override returns (BidClaim[] memory, bytes memory) {
-        revert Auction_NotImplemented();
+    /// @inheritdoc AtomicAuction
+    function maxPayout(uint96 lotId_) public view override returns (uint256) {
+        return auctionData[lotId_].maxPayout;
     }
 
-    function _settle(uint96) internal pure override returns (Settlement memory, bytes memory) {
-        revert Auction_NotImplemented();
-    }
-
-    function _claimProceeds(uint96) internal pure override returns (uint256, uint256, uint256) {
-        revert Auction_NotImplemented();
-    }
-
-    function _revertIfLotSettled(uint96) internal pure override {
-        revert Auction_NotImplemented();
-    }
-
-    function _revertIfLotNotSettled(uint96) internal pure override {
-        revert Auction_NotImplemented();
-    }
-
-    function _revertIfLotProceedsClaimed(uint96) internal pure override {
-        revert Auction_NotImplemented();
-    }
-
-    function _revertIfBidInvalid(uint96, uint64) internal pure override {
-        revert Auction_NotImplemented();
-    }
-
-    function _revertIfNotBidOwner(uint96, uint64, address) internal pure override {
-        revert Auction_NotImplemented();
-    }
-
-    function _revertIfBidClaimed(uint96, uint64) internal pure override {
-        revert Auction_NotImplemented();
+    /// @inheritdoc AtomicAuction
+    function maxAmountAccepted(uint96 lotId_) public view override returns (uint256) {
+        return Math.mulDivUp(
+            auctionData[lotId_].maxPayout,
+            auctionData[lotId_].price,
+            10 ** lotData[lotId_].baseTokenDecimals
+        );
     }
 }

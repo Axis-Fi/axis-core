@@ -5,7 +5,8 @@ import {Test} from "forge-std/Test.sol";
 import {Callbacks} from "src/lib/Callbacks.sol";
 import {Permit2User} from "test/lib/permit2/Permit2User.sol";
 
-import {AuctionHouse} from "src/AuctionHouse.sol";
+import {AtomicAuctionHouse} from "src/AtomicAuctionHouse.sol";
+import {BatchAuctionHouse} from "src/BatchAuctionHouse.sol";
 
 import {BaseCallback} from "src/callbacks/BaseCallback.sol";
 
@@ -27,30 +28,51 @@ contract CappedMerkleAllowlistTest is Test, Permit2User {
 
     uint96 internal _lotId = 1;
 
-    AuctionHouse internal _auctionHouse;
-    CappedMerkleAllowlist internal _allowlist;
+    AtomicAuctionHouse internal _atomicAuctionHouse;
+    BatchAuctionHouse internal _batchAuctionHouse;
+    CappedMerkleAllowlist internal _atomicAllowlist;
+    CappedMerkleAllowlist internal _batchAllowlist;
 
-    uint256 internal _BUYER_LIMIT = 1e18;
+    uint256 internal constant _BUYER_LIMIT = 1e18;
     // Generated from: https://lab.miguelmota.com/merkletreejs/example/
     // Includes _BUYER, _BUYER_TWO but not _BUYER_THREE
-    bytes32 internal _MERKLE_ROOT =
+    bytes32 internal constant _MERKLE_ROOT =
         0xf15a9691daa2aa0627e155c750530c1abcd6a00d93e4888dab4f50e11a29c36b;
-    bytes32[] internal _MERKLE_PROOF;
+    bytes32[] internal _merkleProof;
 
     function setUp() public {
-        _auctionHouse = new AuctionHouse(address(this), _PROTOCOL, _permit2Address);
+        _atomicAuctionHouse = new AtomicAuctionHouse(address(this), _PROTOCOL, _permit2Address);
+        _batchAuctionHouse = new BatchAuctionHouse(address(this), _PROTOCOL, _permit2Address);
 
-        // // 10011000 = 0x98
-        // // cast create2 -s 98 -i $(cat ./bytecode/CappedMerkleAllowlist98.bin)
+        // // 10010000 = 0x90
         // bytes memory bytecode = abi.encodePacked(
         //     type(CappedMerkleAllowlist).creationCode,
         //     abi.encode(
-        //         address(_auctionHouse),
+        //         address(_atomicAuctionHouse),
         //         Callbacks.Permissions({
         //             onCreate: true,
         //             onCancel: false,
         //             onCurate: false,
         //             onPurchase: true,
+        //             onBid: false,
+        //             onClaimProceeds: false,
+        //             receiveQuoteTokens: false,
+        //             sendBaseTokens: false
+        //         }),
+        //         _SELLER
+        //     )
+        // );
+        // vm.writeFile("./bytecode/CappedMerkleAllowlistAtomic90.bin", vm.toString(bytecode));
+        // // 10001000 = 0x88
+        // bytecode = abi.encodePacked(
+        //     type(CappedMerkleAllowlist).creationCode,
+        //     abi.encode(
+        //         address(_batchAuctionHouse),
+        //         Callbacks.Permissions({
+        //             onCreate: true,
+        //             onCancel: false,
+        //             onCurate: false,
+        //             onPurchase: false,
         //             onBid: true,
         //             onClaimProceeds: false,
         //             receiveQuoteTokens: false,
@@ -59,17 +81,38 @@ contract CappedMerkleAllowlistTest is Test, Permit2User {
         //         _SELLER
         //     )
         // );
-        // vm.writeFile("./bytecode/CappedMerkleAllowlist98.bin", vm.toString(bytecode));
+        // vm.writeFile("./bytecode/CappedMerkleAllowlistBatch88.bin", vm.toString(bytecode));
 
-        bytes32 salt = bytes32(0x079a53890d4fd435137b72052d92aeb2918666cc50eeb085685ff7595cd22837);
+        // cast create2 -s 90 -i $(cat ./bytecode/CappedMerkleAllowlistAtomic90.bin)
+        bytes32 atomicSalt =
+            bytes32(0xd8ea0953cedebb6afda56c41ca0fc8dd4dad3e343ae057bcc6bf0e62b3658a64);
         vm.broadcast();
-        _allowlist = new CappedMerkleAllowlist{salt: salt}(
-            address(_auctionHouse),
+        _atomicAllowlist = new CappedMerkleAllowlist{salt: atomicSalt}(
+            address(_atomicAuctionHouse),
             Callbacks.Permissions({
                 onCreate: true,
                 onCancel: false,
                 onCurate: false,
                 onPurchase: true,
+                onBid: false,
+                onClaimProceeds: false,
+                receiveQuoteTokens: false,
+                sendBaseTokens: false
+            }),
+            _SELLER
+        );
+
+        // cast create2 -s 88 -i $(cat ./bytecode/CappedMerkleAllowlistBatch88.bin)
+        bytes32 batchSalt =
+            bytes32(0xc9f8a23da70e595b8eef60332308b3703cf5596b3f439405a9a4c816857e7a28);
+        vm.broadcast();
+        _batchAllowlist = new CappedMerkleAllowlist{salt: batchSalt}(
+            address(_batchAuctionHouse),
+            Callbacks.Permissions({
+                onCreate: true,
+                onCancel: false,
+                onCurate: false,
+                onPurchase: false,
                 onBid: true,
                 onClaimProceeds: false,
                 receiveQuoteTokens: false,
@@ -78,17 +121,31 @@ contract CappedMerkleAllowlistTest is Test, Permit2User {
             _SELLER
         );
 
-        // _MERKLE_PROOF.push(
+        // _merkleProof.push(
         //     bytes32(0x5b70e80538acdabd6137353b0f9d8d149f4dba91e8be2e7946e409bfdbe685b9)
         // ); // Corresponds to _BUYER
-        _MERKLE_PROOF.push(
+        _merkleProof.push(
             bytes32(0x90b0d289ea211dca8e020c9cc8c5d6ba2f416fe15fa692b47184a4b946b2214d)
         ); // Corresponds to _BUYER_TWO
     }
 
-    modifier givenOnCreate() {
-        vm.prank(address(_auctionHouse));
-        _allowlist.onCreate(
+    modifier givenAtomicOnCreate() {
+        vm.prank(address(_atomicAuctionHouse));
+        _atomicAllowlist.onCreate(
+            _lotId,
+            _SELLER,
+            _BASE_TOKEN,
+            _QUOTE_TOKEN,
+            _LOT_CAPACITY,
+            false,
+            abi.encode(_MERKLE_ROOT, _BUYER_LIMIT)
+        );
+        _;
+    }
+
+    modifier givenBatchOnCreate() {
+        vm.prank(address(_batchAuctionHouse));
+        _batchAllowlist.onCreate(
             _lotId,
             _SELLER,
             _BASE_TOKEN,
@@ -101,13 +158,13 @@ contract CappedMerkleAllowlistTest is Test, Permit2User {
     }
 
     function _onPurchase(uint96 lotId_, address buyer_, uint256 amount_) internal {
-        vm.prank(address(_auctionHouse));
-        _allowlist.onPurchase(lotId_, buyer_, amount_, 0, false, abi.encode(_MERKLE_PROOF));
+        vm.prank(address(_atomicAuctionHouse));
+        _atomicAllowlist.onPurchase(lotId_, buyer_, amount_, 0, false, abi.encode(_merkleProof));
     }
 
     function _onBid(uint96 lotId_, address buyer_, uint256 amount_) internal {
-        vm.prank(address(_auctionHouse));
-        _allowlist.onBid(lotId_, 1, buyer_, amount_, abi.encode(_MERKLE_PROOF));
+        vm.prank(address(_batchAuctionHouse));
+        _batchAllowlist.onBid(lotId_, 1, buyer_, amount_, abi.encode(_merkleProof));
     }
 
     // onCreate
@@ -124,7 +181,7 @@ contract CappedMerkleAllowlistTest is Test, Permit2User {
         bytes memory err = abi.encodeWithSelector(BaseCallback.Callback_NotAuthorized.selector);
         vm.expectRevert(err);
 
-        _allowlist.onCreate(
+        _atomicAllowlist.onCreate(
             _lotId,
             _SELLER,
             _BASE_TOKEN,
@@ -140,8 +197,8 @@ contract CappedMerkleAllowlistTest is Test, Permit2User {
         bytes memory err = abi.encodeWithSelector(BaseCallback.Callback_NotAuthorized.selector);
         vm.expectRevert(err);
 
-        vm.prank(address(_auctionHouse));
-        _allowlist.onCreate(
+        vm.prank(address(_atomicAuctionHouse));
+        _atomicAllowlist.onCreate(
             _lotId,
             _SELLER_TWO,
             _BASE_TOKEN,
@@ -152,13 +209,13 @@ contract CappedMerkleAllowlistTest is Test, Permit2User {
         );
     }
 
-    function test_onCreate_alreadyRegistered_reverts() public givenOnCreate {
+    function test_onCreate_alreadyRegistered_reverts() public givenAtomicOnCreate {
         // Expect revert
         bytes memory err = abi.encodeWithSelector(BaseCallback.Callback_InvalidParams.selector);
         vm.expectRevert(err);
 
-        vm.prank(address(_auctionHouse));
-        _allowlist.onCreate(
+        vm.prank(address(_atomicAuctionHouse));
+        _atomicAllowlist.onCreate(
             _lotId,
             _SELLER,
             _BASE_TOKEN,
@@ -169,10 +226,10 @@ contract CappedMerkleAllowlistTest is Test, Permit2User {
         );
     }
 
-    function test_onCreate() public givenOnCreate {
-        assertEq(_allowlist.lotIdRegistered(_lotId), true, "lotIdRegistered");
-        assertEq(_allowlist.lotMerkleRoot(_lotId), _MERKLE_ROOT, "lotMerkleRoot");
-        assertEq(_allowlist.lotBuyerLimit(_lotId), _BUYER_LIMIT, "lotBuyerLimit");
+    function test_onCreate() public givenAtomicOnCreate {
+        assertEq(_atomicAllowlist.lotIdRegistered(_lotId), true, "lotIdRegistered");
+        assertEq(_atomicAllowlist.lotMerkleRoot(_lotId), _MERKLE_ROOT, "lotMerkleRoot");
+        assertEq(_atomicAllowlist.lotBuyerLimit(_lotId), _BUYER_LIMIT, "lotBuyerLimit");
     }
 
     // onPurchase
@@ -188,12 +245,12 @@ contract CappedMerkleAllowlistTest is Test, Permit2User {
     //  [X] it reverts
     // [X] it updates the buyer spent
 
-    function test_onPurchase_callerNotAuctionHouse_reverts() public givenOnCreate {
+    function test_onPurchase_callerNotAuctionHouse_reverts() public givenAtomicOnCreate {
         // Expect revert
         bytes memory err = abi.encodeWithSelector(BaseCallback.Callback_NotAuthorized.selector);
         vm.expectRevert(err);
 
-        _allowlist.onPurchase(_lotId, _BUYER, 1e18, 0, false, "");
+        _atomicAllowlist.onPurchase(_lotId, _BUYER, 1e18, 0, false, "");
     }
 
     function test_onPurchase_lotNotRegistered_reverts() public {
@@ -204,7 +261,7 @@ contract CappedMerkleAllowlistTest is Test, Permit2User {
         _onPurchase(_lotId, _BUYER, 1e18);
     }
 
-    function test_onPurchase_buyerNotInMerkleTree_reverts() public givenOnCreate {
+    function test_onPurchase_buyerNotInMerkleTree_reverts() public givenAtomicOnCreate {
         // Expect revert
         bytes memory err = abi.encodeWithSelector(BaseCallback.Callback_NotAuthorized.selector);
         vm.expectRevert(err);
@@ -212,7 +269,7 @@ contract CappedMerkleAllowlistTest is Test, Permit2User {
         _onPurchase(_lotId, _BUYER_THREE, 1e18);
     }
 
-    function test_onPurchase_amountGreaterThanBuyerLimit_reverts() public givenOnCreate {
+    function test_onPurchase_amountGreaterThanBuyerLimit_reverts() public givenAtomicOnCreate {
         // Expect revert
         bytes memory err =
             abi.encodeWithSelector(CappedMerkleAllowlist.Callback_ExceedsLimit.selector);
@@ -223,7 +280,7 @@ contract CappedMerkleAllowlistTest is Test, Permit2User {
 
     function test_onPurchase_previousBuyerSpentPlusAmountGreaterThanBuyerLimit_reverts()
         public
-        givenOnCreate
+        givenAtomicOnCreate
     {
         _onPurchase(_lotId, _BUYER, _BUYER_LIMIT);
 
@@ -235,12 +292,12 @@ contract CappedMerkleAllowlistTest is Test, Permit2User {
         _onPurchase(_lotId, _BUYER, 1);
     }
 
-    function test_onPurchase(uint256 amount_) public givenOnCreate {
+    function test_onPurchase(uint256 amount_) public givenAtomicOnCreate {
         uint256 amount = bound(amount_, 1, _BUYER_LIMIT);
 
         _onPurchase(_lotId, _BUYER, amount);
 
-        assertEq(_allowlist.lotBuyerSpent(_lotId, _BUYER), amount, "lotBuyerSpent");
+        assertEq(_atomicAllowlist.lotBuyerSpent(_lotId, _BUYER), amount, "lotBuyerSpent");
     }
 
     // onBid
@@ -256,12 +313,12 @@ contract CappedMerkleAllowlistTest is Test, Permit2User {
     //  [X] it reverts
     // [X] it updates the buyer spent
 
-    function test_onBid_callerNotAuctionHouse_reverts() public givenOnCreate {
+    function test_onBid_callerNotAuctionHouse_reverts() public givenBatchOnCreate {
         // Expect revert
         bytes memory err = abi.encodeWithSelector(BaseCallback.Callback_NotAuthorized.selector);
         vm.expectRevert(err);
 
-        _allowlist.onBid(_lotId, 1, _BUYER, 1e18, "");
+        _batchAllowlist.onBid(_lotId, 1, _BUYER, 1e18, "");
     }
 
     function test_onBid_lotNotRegistered_reverts() public {
@@ -272,7 +329,7 @@ contract CappedMerkleAllowlistTest is Test, Permit2User {
         _onBid(_lotId, _BUYER, 1e18);
     }
 
-    function test_onBid_buyerNotInMerkleTree_reverts() public givenOnCreate {
+    function test_onBid_buyerNotInMerkleTree_reverts() public givenBatchOnCreate {
         // Expect revert
         bytes memory err = abi.encodeWithSelector(BaseCallback.Callback_NotAuthorized.selector);
         vm.expectRevert(err);
@@ -280,7 +337,7 @@ contract CappedMerkleAllowlistTest is Test, Permit2User {
         _onBid(_lotId, _BUYER_THREE, 1e18);
     }
 
-    function test_onBid_amountGreaterThanBuyerLimit_reverts() public givenOnCreate {
+    function test_onBid_amountGreaterThanBuyerLimit_reverts() public givenBatchOnCreate {
         // Expect revert
         bytes memory err =
             abi.encodeWithSelector(CappedMerkleAllowlist.Callback_ExceedsLimit.selector);
@@ -291,7 +348,7 @@ contract CappedMerkleAllowlistTest is Test, Permit2User {
 
     function test_onBid_previousBuyerSpentPlusAmountGreaterThanBuyerLimit_reverts()
         public
-        givenOnCreate
+        givenBatchOnCreate
     {
         _onBid(_lotId, _BUYER, _BUYER_LIMIT);
 
@@ -303,11 +360,11 @@ contract CappedMerkleAllowlistTest is Test, Permit2User {
         _onBid(_lotId, _BUYER, 1);
     }
 
-    function test_onBid(uint256 amount_) public givenOnCreate {
+    function test_onBid(uint256 amount_) public givenBatchOnCreate {
         uint256 amount = bound(amount_, 1, _BUYER_LIMIT);
 
         _onBid(_lotId, _BUYER, amount);
 
-        assertEq(_allowlist.lotBuyerSpent(_lotId, _BUYER), amount, "lotBuyerSpent");
+        assertEq(_batchAllowlist.lotBuyerSpent(_lotId, _BUYER), amount, "lotBuyerSpent");
     }
 }

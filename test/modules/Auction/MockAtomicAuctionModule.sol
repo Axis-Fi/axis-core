@@ -5,9 +5,10 @@ pragma solidity 0.8.19;
 import {Veecode, toKeycode, wrapVeecode} from "src/modules/Modules.sol";
 
 // Auctions
-import {Auction, AuctionModule} from "src/modules/Auction.sol";
+import {AuctionModule} from "src/modules/Auction.sol";
+import {AtomicAuctionModule} from "src/modules/auctions/AtomicAuctionModule.sol";
 
-contract MockAtomicAuctionModule is AuctionModule {
+contract MockAtomicAuctionModule is AtomicAuctionModule {
     mapping(uint256 => uint256) public payoutData;
     bool public purchaseReverts;
 
@@ -23,15 +24,6 @@ contract MockAtomicAuctionModule is AuctionModule {
 
     function VEECODE() public pure virtual override returns (Veecode) {
         return wrapVeecode(toKeycode("ATOM"), 1);
-    }
-
-    function TYPE() public pure virtual override returns (Type) {
-        return Type.Auction;
-    }
-
-    /// @inheritdoc Auction
-    function auctionType() external pure override returns (AuctionType) {
-        return AuctionType.Atomic;
     }
 
     function _auction(uint96, Lot memory, bytes memory) internal virtual override {}
@@ -75,55 +67,4 @@ contract MockAtomicAuctionModule is AuctionModule {
     function setPurchaseReverts(bool reverts_) external virtual {
         purchaseReverts = reverts_;
     }
-
-    function _bid(
-        uint96,
-        address,
-        address,
-        uint256,
-        bytes calldata
-    ) internal pure override returns (uint64) {
-        revert Auction_NotImplemented();
-    }
-
-    function _refundBid(uint96, uint64, address) internal virtual override returns (uint256) {
-        revert Auction_NotImplemented();
-    }
-
-    function _claimBids(
-        uint96 lotId_,
-        uint64[] calldata bidIds_
-    ) internal virtual override returns (BidClaim[] memory bidClaims, bytes memory auctionOutput) {}
-
-    function settle(uint96) external pure override returns (Settlement memory, bytes memory) {
-        revert Auction_NotImplemented();
-    }
-
-    function _settle(uint96) internal pure override returns (Settlement memory, bytes memory) {
-        revert Auction_NotImplemented();
-    }
-
-    function claimProceeds(uint96) external pure override returns (uint256, uint256, uint256) {
-        revert Auction_NotImplemented();
-    }
-
-    function _claimProceeds(uint96) internal pure override returns (uint256, uint256, uint256) {
-        revert Auction_NotImplemented();
-    }
-
-    function _revertIfBidInvalid(uint96 lotId_, uint64 bidId_) internal view virtual override {}
-
-    function _revertIfNotBidOwner(
-        uint96 lotId_,
-        uint64 bidId_,
-        address caller_
-    ) internal view virtual override {}
-
-    function _revertIfBidClaimed(uint96 lotId_, uint64 bidId_) internal view virtual override {}
-
-    function _revertIfLotSettled(uint96 lotId_) internal view virtual override {}
-
-    function _revertIfLotNotSettled(uint96 lotId_) internal view virtual override {}
-
-    function _revertIfLotProceedsClaimed(uint96 lotId_) internal view virtual override {}
 }

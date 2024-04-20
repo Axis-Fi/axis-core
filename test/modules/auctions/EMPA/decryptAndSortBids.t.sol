@@ -10,8 +10,8 @@ contract EmpaModuleDecryptBidsTest is EmpaModuleTest {
     uint256 internal constant _BID_AMOUNT = 2e18;
     uint256 internal constant _BID_AMOUNT_OUT = 1e18;
 
-    uint256 internal constant _BID_AMOUNT_SMALL = 1e17;
-    uint256 internal constant _BID_AMOUNT_OUT_SMALL = 1e16;
+    uint96 internal constant _BID_AMOUNT_SMALL = 1e16;
+    uint96 internal constant _BID_AMOUNT_OUT_SMALL = 1e15;
 
     // [X] when the lot id is invalid
     //  [X] it reverts
@@ -57,7 +57,7 @@ contract EmpaModuleDecryptBidsTest is EmpaModuleTest {
         vm.expectRevert(err);
 
         // Call the function
-        _module.decryptAndSortBids(_lotId, 0);
+        _module.decryptAndSortBids(_lotId, 0, new bytes32[](0));
     }
 
     function test_lotHasNotStarted_reverts() external givenLotIsCreated {
@@ -65,7 +65,7 @@ contract EmpaModuleDecryptBidsTest is EmpaModuleTest {
         vm.expectRevert(err);
 
         // Call the function
-        _module.decryptAndSortBids(_lotId, 0);
+        _module.decryptAndSortBids(_lotId, 0, new bytes32[](0));
     }
 
     function test_lotHasNotConcluded_reverts() external givenLotIsCreated givenLotHasStarted {
@@ -75,7 +75,7 @@ contract EmpaModuleDecryptBidsTest is EmpaModuleTest {
         vm.expectRevert(err);
 
         // Call the function
-        _module.decryptAndSortBids(_lotId, 0);
+        _module.decryptAndSortBids(_lotId, 0, new bytes32[](0));
     }
 
     function test_privateKeyNotSubmitted_reverts()
@@ -89,7 +89,7 @@ contract EmpaModuleDecryptBidsTest is EmpaModuleTest {
         vm.expectRevert(err);
 
         // Call the function
-        _module.decryptAndSortBids(_lotId, 0);
+        _module.decryptAndSortBids(_lotId, 0, new bytes32[](0));
     }
 
     function test_alreadyDecrypted_reverts()
@@ -105,7 +105,7 @@ contract EmpaModuleDecryptBidsTest is EmpaModuleTest {
         vm.expectRevert(err);
 
         // Call the function
-        _module.decryptAndSortBids(_lotId, 0);
+        _module.decryptAndSortBids(_lotId, 0, new bytes32[](0));
     }
 
     function test_givenLotIsSettled_reverts()
@@ -122,7 +122,7 @@ contract EmpaModuleDecryptBidsTest is EmpaModuleTest {
         vm.expectRevert(err);
 
         // Call the function
-        _module.decryptAndSortBids(_lotId, 0);
+        _module.decryptAndSortBids(_lotId, 0, new bytes32[](0));
     }
 
     function test_givenLotProceedsAreClaimed_reverts()
@@ -140,7 +140,7 @@ contract EmpaModuleDecryptBidsTest is EmpaModuleTest {
         vm.expectRevert(err);
 
         // Call the function
-        _module.decryptAndSortBids(_lotId, 0);
+        _module.decryptAndSortBids(_lotId, 0, new bytes32[](0));
     }
 
     function test_givenLotIsCancelled_reverts() external givenLotIsCreated givenLotIsCancelled {
@@ -149,7 +149,7 @@ contract EmpaModuleDecryptBidsTest is EmpaModuleTest {
         vm.expectRevert(err);
 
         // Call the function
-        _module.decryptAndSortBids(_lotId, 0);
+        _module.decryptAndSortBids(_lotId, 0, new bytes32[](0));
     }
 
     function test_incorrectBidEncryption() external givenLotIsCreated givenLotHasStarted {
@@ -166,7 +166,9 @@ contract EmpaModuleDecryptBidsTest is EmpaModuleTest {
         _submitPrivateKey();
 
         // Call the function
-        _module.decryptAndSortBids(_lotId, 1);
+        bytes32[] memory hints = new bytes32[](1);
+        hints[0] = _QUEUE_START;
+        _module.decryptAndSortBids(_lotId, 1, hints);
 
         // Check the bid state
         EncryptedMarginalPriceAuctionModule.Bid memory bidData = _getBid(_lotId, _bidId);
@@ -178,13 +180,17 @@ contract EmpaModuleDecryptBidsTest is EmpaModuleTest {
         );
 
         // Check the bid queue
-        (uint64 numBids) = _module.decryptedBids(_lotId);
+        uint256 numBids = _module.decryptedBids(_lotId);
         assertEq(numBids, 0, "decryptedBids");
 
         // Check the auction state
         EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
         assertEq(auctionData.nextDecryptIndex, 1, "nextDecryptIndex");
-        assertEq(uint8(auctionData.status), uint8(Auction.Status.Decrypted), "auction status");
+        assertEq(
+            uint8(auctionData.status),
+            uint8(EncryptedMarginalPriceAuctionModule.LotStatus.Decrypted),
+            "auction status"
+        );
     }
 
     function test_givenBidAmountOverflows() external givenLotIsCreated givenLotHasStarted {
@@ -200,7 +206,9 @@ contract EmpaModuleDecryptBidsTest is EmpaModuleTest {
         _submitPrivateKey();
 
         // Call the function
-        _module.decryptAndSortBids(_lotId, 1);
+        bytes32[] memory hints = new bytes32[](1);
+        hints[0] = _QUEUE_START;
+        _module.decryptAndSortBids(_lotId, 1, hints);
 
         // Check the bid state
         EncryptedMarginalPriceAuctionModule.Bid memory bidData = _getBid(_lotId, _bidId);
@@ -212,13 +220,17 @@ contract EmpaModuleDecryptBidsTest is EmpaModuleTest {
         );
 
         // Check the bid queue
-        (uint64 numBids) = _module.decryptedBids(_lotId);
+        uint256 numBids = _module.decryptedBids(_lotId);
         assertEq(numBids, 0, "decryptedBids");
 
         // Check the auction state
         EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
         assertEq(auctionData.nextDecryptIndex, 1, "nextDecryptIndex");
-        assertEq(uint8(auctionData.status), uint8(Auction.Status.Decrypted), "auction status");
+        assertEq(
+            uint8(auctionData.status),
+            uint8(EncryptedMarginalPriceAuctionModule.LotStatus.Decrypted),
+            "auction status"
+        );
     }
 
     function test_givenMarginalPriceOverflows()
@@ -230,7 +242,9 @@ contract EmpaModuleDecryptBidsTest is EmpaModuleTest {
         givenPrivateKeyIsSubmitted
     {
         // Call the function
-        _module.decryptAndSortBids(_lotId, 1);
+        bytes32[] memory hints = new bytes32[](1);
+        hints[0] = _QUEUE_START;
+        _module.decryptAndSortBids(_lotId, 1, hints);
 
         // Check the bid state
         EncryptedMarginalPriceAuctionModule.Bid memory bidData = _getBid(_lotId, _bidId);
@@ -242,19 +256,23 @@ contract EmpaModuleDecryptBidsTest is EmpaModuleTest {
         );
 
         // Check the bid queue
-        (uint64 numBids) = _module.decryptedBids(_lotId);
+        uint256 numBids = _module.decryptedBids(_lotId);
         assertEq(numBids, 0, "decryptedBids");
 
         // Check the auction state
         EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
         assertEq(auctionData.nextDecryptIndex, 1, "nextDecryptIndex");
-        assertEq(uint8(auctionData.status), uint8(Auction.Status.Decrypted), "auction status");
+        assertEq(
+            uint8(auctionData.status),
+            uint8(EncryptedMarginalPriceAuctionModule.LotStatus.Decrypted),
+            "auction status"
+        );
     }
 
     function test_givenSmallestPossibleMarginalPrice()
         external
         givenMinimumPrice(1)
-        givenMinimumBidPercentage(10)
+        givenMinimumBidPercentage(100)
         givenBaseTokenDecimals(6)
         givenLotIsCreated
         givenLotHasStarted
@@ -263,7 +281,9 @@ contract EmpaModuleDecryptBidsTest is EmpaModuleTest {
         givenPrivateKeyIsSubmitted
     {
         // Call the function
-        _module.decryptAndSortBids(_lotId, 1);
+        bytes32[] memory hints = new bytes32[](1);
+        hints[0] = _QUEUE_START;
+        _module.decryptAndSortBids(_lotId, 1, hints);
 
         // Check the bid state
         EncryptedMarginalPriceAuctionModule.Bid memory bidData = _getBid(_lotId, _bidId);
@@ -275,13 +295,36 @@ contract EmpaModuleDecryptBidsTest is EmpaModuleTest {
         );
 
         // Check the bid queue
-        (uint64 numBids) = _module.decryptedBids(_lotId);
+        uint256 numBids = _module.decryptedBids(_lotId);
         assertEq(numBids, 1, "decryptedBids");
 
         // Check the auction state
         EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
         assertEq(auctionData.nextDecryptIndex, 1, "nextDecryptIndex");
-        assertEq(uint8(auctionData.status), uint8(Auction.Status.Decrypted), "auction status");
+        assertEq(
+            uint8(auctionData.status),
+            uint8(EncryptedMarginalPriceAuctionModule.LotStatus.Decrypted),
+            "auction status"
+        );
+    }
+
+    function test_numberOfBidsDifferentThanHints_reverts()
+        external
+        givenLotIsCreated
+        givenLotHasStarted
+        givenBidIsCreated(_BID_AMOUNT, _BID_AMOUNT_OUT)
+        givenLotHasConcluded
+        givenPrivateKeyIsSubmitted
+    {
+        // Call the function
+        bytes32[] memory hints = new bytes32[](10);
+        for (uint256 i = 0; i < 10; i++) {
+            hints[i] = _QUEUE_START;
+        }
+
+        bytes memory err = abi.encodeWithSelector(Auction.Auction_InvalidParams.selector);
+        vm.expectRevert(err);
+        _module.decryptAndSortBids(_lotId, 5, hints);
     }
 
     function test_numberOfBidsToDecryptIsLargerThanNumberOfBids_succeeds()
@@ -293,7 +336,11 @@ contract EmpaModuleDecryptBidsTest is EmpaModuleTest {
         givenPrivateKeyIsSubmitted
     {
         // Call the function
-        _module.decryptAndSortBids(_lotId, 10);
+        bytes32[] memory hints = new bytes32[](10);
+        for (uint256 i = 0; i < 10; i++) {
+            hints[i] = _QUEUE_START;
+        }
+        _module.decryptAndSortBids(_lotId, 10, hints);
 
         // Check the bid state
         EncryptedMarginalPriceAuctionModule.Bid memory bidData = _getBid(_lotId, _bidId);
@@ -305,7 +352,10 @@ contract EmpaModuleDecryptBidsTest is EmpaModuleTest {
         // Check the auction state
         EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
         assertEq(auctionData.nextDecryptIndex, 1);
-        assertEq(uint8(auctionData.status), uint8(Auction.Status.Decrypted));
+        assertEq(
+            uint8(auctionData.status),
+            uint8(EncryptedMarginalPriceAuctionModule.LotStatus.Decrypted)
+        );
     }
 
     function test_belowMinimumBidSize()
@@ -317,7 +367,9 @@ contract EmpaModuleDecryptBidsTest is EmpaModuleTest {
         givenPrivateKeyIsSubmitted
     {
         // Call the function
-        _module.decryptAndSortBids(_lotId, 1);
+        bytes32[] memory hints = new bytes32[](1);
+        hints[0] = _QUEUE_START;
+        _module.decryptAndSortBids(_lotId, 1, hints);
 
         // Check the bid state
         EncryptedMarginalPriceAuctionModule.Bid memory bidData = _getBid(_lotId, _bidId);
@@ -329,13 +381,17 @@ contract EmpaModuleDecryptBidsTest is EmpaModuleTest {
         );
 
         // Check the bid queue
-        (uint64 numBids) = _module.decryptedBids(_lotId);
+        uint256 numBids = _module.decryptedBids(_lotId);
         assertEq(numBids, 0, "decryptedBids");
 
         // Check the auction state
         EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
         assertEq(auctionData.nextDecryptIndex, 1, "nextDecryptIndex");
-        assertEq(uint8(auctionData.status), uint8(Auction.Status.Decrypted), "auction status");
+        assertEq(
+            uint8(auctionData.status),
+            uint8(EncryptedMarginalPriceAuctionModule.LotStatus.Decrypted),
+            "auction status"
+        );
     }
 
     function test_belowMinimumBidSize_quoteTokenDecimalsLarger()
@@ -352,7 +408,9 @@ contract EmpaModuleDecryptBidsTest is EmpaModuleTest {
         givenPrivateKeyIsSubmitted
     {
         // Call the function
-        _module.decryptAndSortBids(_lotId, 1);
+        bytes32[] memory hints = new bytes32[](1);
+        hints[0] = _QUEUE_START;
+        _module.decryptAndSortBids(_lotId, 1, hints);
 
         // Check the bid state
         EncryptedMarginalPriceAuctionModule.Bid memory bidData = _getBid(_lotId, _bidId);
@@ -364,13 +422,17 @@ contract EmpaModuleDecryptBidsTest is EmpaModuleTest {
         );
 
         // Check the bid queue
-        (uint64 numBids) = _module.decryptedBids(_lotId);
+        uint256 numBids = _module.decryptedBids(_lotId);
         assertEq(numBids, 0, "decryptedBids");
 
         // Check the auction state
         EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
         assertEq(auctionData.nextDecryptIndex, 1, "nextDecryptIndex");
-        assertEq(uint8(auctionData.status), uint8(Auction.Status.Decrypted), "auction status");
+        assertEq(
+            uint8(auctionData.status),
+            uint8(EncryptedMarginalPriceAuctionModule.LotStatus.Decrypted),
+            "auction status"
+        );
     }
 
     function test_belowMinimumBidSize_quoteTokenDecimalsSmaller()
@@ -387,7 +449,9 @@ contract EmpaModuleDecryptBidsTest is EmpaModuleTest {
         givenPrivateKeyIsSubmitted
     {
         // Call the function
-        _module.decryptAndSortBids(_lotId, 1);
+        bytes32[] memory hints = new bytes32[](1);
+        hints[0] = _QUEUE_START;
+        _module.decryptAndSortBids(_lotId, 1, hints);
 
         // Check the bid state
         EncryptedMarginalPriceAuctionModule.Bid memory bidData = _getBid(_lotId, _bidId);
@@ -399,13 +463,17 @@ contract EmpaModuleDecryptBidsTest is EmpaModuleTest {
         );
 
         // Check the bid queue
-        (uint64 numBids) = _module.decryptedBids(_lotId);
+        uint256 numBids = _module.decryptedBids(_lotId);
         assertEq(numBids, 0, "decryptedBids");
 
         // Check the auction state
         EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
         assertEq(auctionData.nextDecryptIndex, 1, "nextDecryptIndex");
-        assertEq(uint8(auctionData.status), uint8(Auction.Status.Decrypted), "auction status");
+        assertEq(
+            uint8(auctionData.status),
+            uint8(EncryptedMarginalPriceAuctionModule.LotStatus.Decrypted),
+            "auction status"
+        );
     }
 
     function test_noBids()
@@ -418,7 +486,11 @@ contract EmpaModuleDecryptBidsTest is EmpaModuleTest {
 
         // Check the auction state
         EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
-        assertEq(uint8(auctionData.status), uint8(Auction.Status.Decrypted), "auction status");
+        assertEq(
+            uint8(auctionData.status),
+            uint8(EncryptedMarginalPriceAuctionModule.LotStatus.Decrypted),
+            "auction status"
+        );
     }
 
     function test_partialDecrypt()
@@ -431,7 +503,9 @@ contract EmpaModuleDecryptBidsTest is EmpaModuleTest {
         givenPrivateKeyIsSubmitted
     {
         // Call the function
-        _module.decryptAndSortBids(_lotId, 1);
+        bytes32[] memory hints = new bytes32[](1);
+        hints[0] = _QUEUE_START;
+        _module.decryptAndSortBids(_lotId, 1, hints);
 
         // Check the bid state
         EncryptedMarginalPriceAuctionModule.Bid memory bidDataOne = _getBid(_lotId, 1);
@@ -453,7 +527,11 @@ contract EmpaModuleDecryptBidsTest is EmpaModuleTest {
         // Check the auction state
         EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
         assertEq(auctionData.nextDecryptIndex, 1, "nextDecryptIndex");
-        assertEq(uint8(auctionData.status), uint8(Auction.Status.Created), "auction status");
+        assertEq(
+            uint8(auctionData.status),
+            uint8(EncryptedMarginalPriceAuctionModule.LotStatus.Created),
+            "auction status"
+        );
     }
 
     function test_partialDecrypt_remainingBids()
@@ -466,10 +544,12 @@ contract EmpaModuleDecryptBidsTest is EmpaModuleTest {
         givenPrivateKeyIsSubmitted
     {
         // Call the function to decrypt 1 bid
-        _module.decryptAndSortBids(_lotId, 1);
+        bytes32[] memory hints = new bytes32[](1);
+        hints[0] = _QUEUE_START;
+        _module.decryptAndSortBids(_lotId, 1, hints);
 
         // Call the function to decrypt the remaining bid
-        _module.decryptAndSortBids(_lotId, 1);
+        _module.decryptAndSortBids(_lotId, 1, hints);
 
         // Check the bid state
         EncryptedMarginalPriceAuctionModule.Bid memory bidDataOne = _getBid(_lotId, 1);
@@ -491,6 +571,10 @@ contract EmpaModuleDecryptBidsTest is EmpaModuleTest {
         // Check the auction state
         EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
         assertEq(auctionData.nextDecryptIndex, 2, "nextDecryptIndex");
-        assertEq(uint8(auctionData.status), uint8(Auction.Status.Decrypted), "auction status");
+        assertEq(
+            uint8(auctionData.status),
+            uint8(EncryptedMarginalPriceAuctionModule.LotStatus.Decrypted),
+            "auction status"
+        );
     }
 }

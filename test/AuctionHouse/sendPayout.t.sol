@@ -13,7 +13,7 @@ import {MockWrappedDerivative} from "test/lib/mocks/MockWrappedDerivative.sol";
 
 import {ERC20} from "solmate/tokens/ERC20.sol";
 import {ICallback} from "src/interfaces/ICallback.sol";
-import {Auctioneer} from "src/bases/Auctioneer.sol";
+import {AuctionHouse} from "src/bases/AuctionHouse.sol";
 
 import {Veecode, toVeecode} from "src/modules/Modules.sol";
 
@@ -43,7 +43,7 @@ contract SendPayoutTest is Test, Permit2User {
     uint256 internal _auctionOutputMultiplier;
     bytes internal _auctionOutput;
 
-    Auctioneer.Routing internal _routingParams;
+    AuctionHouse.Routing internal _routingParams;
 
     function setUp() public {
         // Set reasonable starting block
@@ -68,7 +68,7 @@ contract SendPayoutTest is Test, Permit2User {
         _wrapDerivative = false;
         _auctionOutputMultiplier = 2;
 
-        _routingParams = Auctioneer.Routing({
+        _routingParams = AuctionHouse.Routing({
             auctionReference: _mockAuctionModule.VEECODE(),
             seller: _SELLER,
             baseToken: _payoutToken,
