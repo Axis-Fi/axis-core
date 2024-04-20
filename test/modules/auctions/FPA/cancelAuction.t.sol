@@ -37,7 +37,12 @@ contract FpaModuleCancelAuctionTest is FpaModuleTest {
         _cancelAuctionLot();
     }
 
-    function test_auctionConcluded_reverts() public givenLotIsCreated givenLotHasConcluded {
+    function test_auctionConcluded_reverts(uint48 conclusionElapsed_) public givenLotIsCreated {
+        uint48 conclusionElapsed = uint48(bound(conclusionElapsed_, 0, 1 days));
+
+        // Warp to the conclusion
+        vm.warp(_start + _DURATION + conclusionElapsed);
+
         // Expect revert
         bytes memory err = abi.encodeWithSelector(Auction.Auction_MarketNotActive.selector, _lotId);
         vm.expectRevert(err);

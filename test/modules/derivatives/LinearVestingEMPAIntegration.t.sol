@@ -486,8 +486,6 @@ contract LinearVestingEMPAIntegrationTest is BatchAuctionHouseTest {
         ); // None until bids are claimed
     }
 
-    // TODO assert roundtrip numbers
-
     // claimProceeds
     // [X] quote tokens are sent to the seller, curator payout is minted and excess capacity is returned to the seller
 
