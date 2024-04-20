@@ -52,11 +52,13 @@ abstract contract BatchAuction {
     ///
     /// @param      lotId_      The lot id
     /// @param      bidId_      The bid id
+    /// @param      index_      The index of the bid ID in the auction's bid list
     /// @param      caller_     The caller
     /// @return     refund   The amount of quote tokens to refund
     function refundBid(
         uint96 lotId_,
         uint64 bidId_,
+        uint256 index_,
         address caller_
     ) external virtual returns (uint256 refund);
 
@@ -135,7 +137,7 @@ abstract contract BatchAuctionModule is BatchAuction, AuctionModule {
         address referrer_,
         uint256 amount_,
         bytes calldata auctionData_
-    ) external override onlyInternal returns (uint64 bidId) {
+    ) external virtual override onlyInternal returns (uint64 bidId) {
         // Standard validation
         _revertIfLotInvalid(lotId_);
         _revertIfBeforeLotStart(lotId_);
@@ -172,7 +174,7 @@ abstract contract BatchAuctionModule is BatchAuction, AuctionModule {
     ///
     ///             This function reverts if:
     ///             - the lot id is invalid
-    ///             - the lot is not settled
+    ///             - the lot is concluded, decrypted or settled
     ///             - the bid id is invalid
     ///             - `caller_` is not the bid owner
     ///             - the bid is cancelled
@@ -187,8 +189,9 @@ abstract contract BatchAuctionModule is BatchAuction, AuctionModule {
     function refundBid(
         uint96 lotId_,
         uint64 bidId_,
+        uint256 index_,
         address caller_
-    ) external override onlyInternal returns (uint256 refund) {
+    ) external virtual override onlyInternal returns (uint256 refund) {
         // Standard validation
         _revertIfLotInvalid(lotId_);
         _revertIfBeforeLotStart(lotId_);
@@ -198,7 +201,7 @@ abstract contract BatchAuctionModule is BatchAuction, AuctionModule {
         _revertIfLotConcluded(lotId_);
 
         // Call implementation-specific logic
-        return _refundBid(lotId_, bidId_, caller_);
+        return _refundBid(lotId_, bidId_, index_, caller_);
     }
 
     /// @notice     Implementation-specific bid refund logic
@@ -206,11 +209,13 @@ abstract contract BatchAuctionModule is BatchAuction, AuctionModule {
     ///
     /// @param      lotId_      The lot ID
     /// @param      bidId_      The bid ID
+    /// @param      index_      The index of the bid ID in the auction's bid list
     /// @param      caller_     The caller
-    /// @return     refund   The amount of quote tokens to refund
+    /// @return     refund      The amount of quote tokens to refund
     function _refundBid(
         uint96 lotId_,
         uint64 bidId_,
+        uint256 index_,
         address caller_
     ) internal virtual returns (uint256 refund);
 
@@ -233,6 +238,7 @@ abstract contract BatchAuctionModule is BatchAuction, AuctionModule {
         uint64[] calldata bidIds_
     )
         external
+        virtual
         override
         onlyInternal
         returns (BidClaim[] memory bidClaims, bytes memory auctionOutput)
@@ -402,4 +408,14 @@ abstract contract BatchAuctionModule is BatchAuction, AuctionModule {
     /// @param      lotId_      The lot ID
     /// @param      bidId_      The bid ID
     function _revertIfBidClaimed(uint96 lotId_, uint64 bidId_) internal view virtual;
+
+    // ========== VIEW FUNCTIONS ========== //
+
+    function getNumBids(uint96 lotId_) external view virtual returns (uint256);
+
+    function getBidIds(
+        uint96 lotId_,
+        uint256 start_,
+        uint256 count_
+    ) external view virtual returns (uint64[] memory);
 }

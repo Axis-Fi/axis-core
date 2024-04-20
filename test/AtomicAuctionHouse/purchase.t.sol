@@ -96,7 +96,7 @@ contract AtomicPurchaseTest is AtomicAuctionHouseTest {
         bool hasDerivativeToken = _derivativeTokenId != type(uint256).max;
         bool hasCallback = address(_routingParams.callbacks) != address(0);
         uint256 scaledLotCapacity = _scaleBaseTokenAmount(_LOT_CAPACITY);
-        uint256 scaledCuratorMaxPotentialFee = _scaleBaseTokenAmount(_curatorMaxPotentialFee);
+        uint256 scaledCuratorMaxPotentialFee = _curatorMaxPotentialFee;
 
         uint256 amountInLessFees =
             amountIn_ - _expectedProtocolFeesAllocated - _expectedReferrerFeesAllocated;

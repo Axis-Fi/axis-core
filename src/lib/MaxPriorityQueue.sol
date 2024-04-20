@@ -1,6 +1,8 @@
 //SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.0;
 
+import {FixedPointMathLib as Math} from "lib/solady/src/utils/FixedPointMathLib.sol";
+
 library BidEncoding {
     function encode(
         uint64 bidId,
@@ -17,15 +19,19 @@ library BidEncoding {
         return (bidId, amountIn, minAmountOut);
     }
 
-    function isHigherPriorityThan(bytes32 alpha, bytes32 beta) internal pure returns (bool) {
+    function isHigherPriorityThan(
+        bytes32 alpha,
+        bytes32 beta,
+        uint256 baseScale
+    ) internal pure returns (bool) {
         (uint64 aId, uint96 aAmountIn, uint96 aMinAmountOut) = decode(alpha);
         (uint64 bId, uint96 bAmountIn, uint96 bMinAmountOut) = decode(beta);
-        uint256 relA = uint256(aAmountIn) * uint256(bMinAmountOut);
-        uint256 relB = uint256(bAmountIn) * uint256(aMinAmountOut);
-        if (relA == relB) {
+        uint256 priceA = Math.mulDivUp(uint256(aAmountIn), baseScale, uint256(aMinAmountOut));
+        uint256 priceB = Math.mulDivUp(uint256(bAmountIn), baseScale, uint256(bMinAmountOut));
+        if (priceA == priceB) {
             return aId < bId;
         } else {
-            return relA > relB;
+            return priceA > priceB;
         }
     }
 }
@@ -73,7 +79,8 @@ library MaxPriorityQueue {
         bytes32 prev_,
         uint64 bidId_,
         uint96 amountIn_,
-        uint96 minAmountOut_
+        uint96 minAmountOut_,
+        uint256 baseScale_
     ) internal {
         // Check that minAmountOut is not zero to avoid division by zero
         require(minAmountOut_ > 0, "invalid minAmountOut");
@@ -88,13 +95,13 @@ library MaxPriorityQueue {
         require(contains(self, prev_), "prevKey not in queue");
 
         // Verify that the prev hint is higher priority than the new bid, otherwise revert
-        require(prev_.isHigherPriorityThan(key), "invalid insert position");
+        require(prev_.isHigherPriorityThan(key, baseScale_), "invalid insert position");
 
         // Iterate through the queue to find the correct position to insert the new bid
         // Best performance is achieved when the bid should be submitted between prevHint and its next bid
         // However, we allow for suboptimal hints to be provided to make the function more flexible
         bytes32 next = self.nextBid[prev_];
-        while (next.isHigherPriorityThan(key)) {
+        while (next.isHigherPriorityThan(key, baseScale_)) {
             prev_ = next;
             next = self.nextBid[next];
         }
