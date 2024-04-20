@@ -30,6 +30,8 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
     //  [X] it reverts
     // [X] when the auction module reverts
     //  [X] it reverts
+    // [X] when the paid and payout amounts are both set
+    //  [X] it transfers the quote and base tokens to the bidder, and calculates fees correctly
     // [X] when the payout is not set
     //  [X] it returns the bid amount to the bidders
     // [X] when the referrer is set
@@ -116,31 +118,6 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         );
     }
 
-    function _mockClaimBid(
-        address bidder_,
-        address referrer_,
-        uint256 paid_,
-        uint256 payout_
-    ) internal {
-        _bidClaims.push(
-            BatchAuction.BidClaim({
-                bidder: bidder_,
-                referrer: referrer_,
-                paid: paid_,
-                payout: payout_
-            })
-        );
-    }
-
-    modifier givenMockClaimBidIsSet() {
-        vm.mockCall(
-            address(_auctionModule),
-            abi.encodeWithSelector(BatchAuctionModule.claimBids.selector, _lotId, _bidIds),
-            abi.encode(_bidClaims, "")
-        );
-        _;
-    }
-
     modifier givenAuctionModuleReverts() {
         _mockAuctionModuleReverts();
         _;
@@ -168,8 +145,15 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
     }
 
     /// @dev    Assumes that any amounts are scaled to the current decimal scale
-    modifier givenPayoutIsNotSet(address bidder_, address referrer_, uint256 amountIn_) {
-        _mockClaimBid(bidder_, referrer_, amountIn_, 0);
+    modifier givenPayoutIsNotSet(
+        uint64 bidId_,
+        address bidder_,
+        address referrer_,
+        uint256 amountIn_
+    ) {
+        _batchAuctionModule.addBidClaim(
+            _lotId, bidId_, bidder_, referrer_, uint96(amountIn_), uint96(0), uint96(amountIn_)
+        );
 
         // Calculate fees
         (uint256 toReferrer, uint256 toProtocol) = _calculateFees(referrer_, 0);
@@ -177,11 +161,11 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         _expectedProtocolFee += toProtocol;
 
         // Set expected balances
-        _expectedAuctionHouseQuoteTokenBalance += 0; // No quote tokens are collected
+        _expectedAuctionHouseQuoteTokenBalance += 0; // any tokens are returned to the bidder
         _expectedBidderQuoteTokenBalance += bidder_ == _bidder ? amountIn_ : 0; // Returned to the bidder
         _expectedBidderTwoQuoteTokenBalance += bidder_ == _BIDDER_TWO ? amountIn_ : 0; // Returned to the bidder
 
-        _expectedAuctionHouseBaseTokenBalance -= 0;
+        _expectedAuctionHouseBaseTokenBalance -= 0; // no tokens are paid out, to be collected in claimProceeds()
         _expectedBidderBaseTokenBalance += 0;
         _expectedCuratorBaseTokenBalance += 0;
         _;
@@ -189,12 +173,15 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
 
     /// @dev    Assumes that any amounts are scaled to the current decimal scale
     modifier givenPayoutIsSet(
+        uint64 bidId_,
         address bidder_,
         address referrer_,
         uint256 amountIn_,
         uint256 payout_
     ) {
-        _mockClaimBid(bidder_, referrer_, amountIn_, payout_);
+        _batchAuctionModule.addBidClaim(
+            _lotId, bidId_, bidder_, referrer_, uint96(amountIn_), uint96(payout_), uint96(0)
+        );
 
         // Calculate fees
         (uint256 toReferrer, uint256 toProtocol) = _calculateFees(referrer_, amountIn_);
@@ -212,19 +199,52 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         _;
     }
 
+    /// @dev    Assumes that any amounts are scaled to the current decimal scale
+    modifier givenPayoutIsPartial(
+        uint64 bidId_,
+        address bidder_,
+        address referrer_,
+        uint256 amountIn_,
+        uint256 payout_,
+        uint256 refund_
+    ) {
+        _batchAuctionModule.addBidClaim(
+            _lotId, bidId_, bidder_, referrer_, uint96(amountIn_), uint96(payout_), uint96(refund_)
+        );
+
+        // Calculate fees
+        (uint256 toReferrer, uint256 toProtocol) = _calculateFees(referrer_, amountIn_ - refund_);
+        _expectedReferrerFee += toReferrer;
+        _expectedProtocolFee += toProtocol;
+
+        // Set expected balances
+        _expectedAuctionHouseQuoteTokenBalance += amountIn_ - refund_; // Payment to be collected in claimProceeds()
+        _expectedBidderQuoteTokenBalance += bidder_ == _bidder ? refund_ : 0;
+        _expectedBidderTwoQuoteTokenBalance += bidder_ == _BIDDER_TWO ? refund_ : 0;
+
+        _expectedAuctionHouseBaseTokenBalance -= payout_; // To be collected in claimProceeds()
+        _expectedBidderBaseTokenBalance += bidder_ == _bidder ? payout_ : 0;
+        _expectedBidderTwoBaseTokenBalance += bidder_ == _BIDDER_TWO ? payout_ : 0;
+        _expectedCuratorBaseTokenBalance += 0;
+        _;
+    }
+
     modifier givenLotSettlementIsMixed() {
         // Set the settlement data
         _batchAuctionModule.setLotSettlement(
+            _lotId, _scaleQuoteTokenAmount(_BID_AMOUNT), _scaleBaseTokenAmount(_BID_AMOUNT_OUT)
+        );
+
+        _auctionHouse.settle(_lotId);
+        _;
+    }
+
+    modifier givenLotSettlementIsPartialFill() {
+        // Set the settlement data
+        _batchAuctionModule.setLotSettlement(
             _lotId,
-            BatchAuction.Settlement({
-                totalIn: _scaleQuoteTokenAmount(_BID_AMOUNT),
-                totalOut: _scaleBaseTokenAmount(_BID_AMOUNT_OUT),
-                pfBidder: address(0),
-                pfReferrer: address(0),
-                pfRefund: 0,
-                pfPayout: 0,
-                auctionOutput: ""
-            })
+            _scaleQuoteTokenAmount(_BID_AMOUNT + _BID_AMOUNT / 2),
+            _scaleBaseTokenAmount(_BID_AMOUNT_OUT + _BID_AMOUNT_OUT)
         );
 
         _auctionHouse.settle(_lotId);
@@ -235,15 +255,8 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         // Set the settlement data
         _batchAuctionModule.setLotSettlement(
             _lotId,
-            BatchAuction.Settlement({
-                totalIn: _scaleQuoteTokenAmount(_BID_AMOUNT + _BID_AMOUNT),
-                totalOut: _scaleBaseTokenAmount(_BID_AMOUNT_OUT + _BID_AMOUNT_OUT),
-                pfBidder: address(0),
-                pfReferrer: address(0),
-                pfRefund: 0,
-                pfPayout: 0,
-                auctionOutput: ""
-            })
+            _scaleQuoteTokenAmount(_BID_AMOUNT + _BID_AMOUNT),
+            _scaleBaseTokenAmount(_BID_AMOUNT_OUT + _BID_AMOUNT_OUT)
         );
 
         _auctionHouse.settle(_lotId);
@@ -309,10 +322,10 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         givenCuratorIsSet
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
-        givenLotIsCreated
-        givenLotHasStarted
         givenReferrerFeeIsSet
         givenProtocolFeeIsSet
+        givenLotIsCreated
+        givenLotHasStarted
         givenBalancesAreSet
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
@@ -320,11 +333,10 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         givenBidderTwoHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenBidderTwoHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenBidCreated(_BIDDER_TWO, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
-        givenPayoutIsNotSet(_bidder, _REFERRER, _scaleQuoteTokenAmount(_BID_AMOUNT))
-        givenPayoutIsNotSet(_BIDDER_TWO, _REFERRER, _scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenPayoutIsNotSet(_bidIds[0], _bidder, _REFERRER, _scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenPayoutIsNotSet(_bidIds[1], _BIDDER_TWO, _REFERRER, _scaleQuoteTokenAmount(_BID_AMOUNT))
         givenLotIsConcluded
         givenLotSettlementIsNotSuccessful
-        givenMockClaimBidIsSet
     {
         // Call the function
         vm.prank(address(this));
@@ -345,10 +357,10 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         givenBaseTokenHasDecimals(13)
         givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
-        givenLotIsCreated
-        givenLotHasStarted
         givenReferrerFeeIsSet
         givenProtocolFeeIsSet
+        givenLotIsCreated
+        givenLotHasStarted
         givenBalancesAreSet
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
@@ -356,11 +368,10 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         givenBidderTwoHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenBidderTwoHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenBidCreated(_BIDDER_TWO, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
-        givenPayoutIsNotSet(_bidder, _REFERRER, _scaleQuoteTokenAmount(_BID_AMOUNT))
-        givenPayoutIsNotSet(_BIDDER_TWO, _REFERRER, _scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenPayoutIsNotSet(_bidIds[0], _bidder, _REFERRER, _scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenPayoutIsNotSet(_bidIds[1], _BIDDER_TWO, _REFERRER, _scaleQuoteTokenAmount(_BID_AMOUNT))
         givenLotIsConcluded
         givenLotSettlementIsNotSuccessful
-        givenMockClaimBidIsSet
     {
         // Call the function
         vm.prank(address(this));
@@ -381,10 +392,10 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         givenBaseTokenHasDecimals(17)
         givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
-        givenLotIsCreated
-        givenLotHasStarted
         givenReferrerFeeIsSet
         givenProtocolFeeIsSet
+        givenLotIsCreated
+        givenLotHasStarted
         givenBalancesAreSet
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
@@ -392,11 +403,10 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         givenBidderTwoHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenBidderTwoHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenBidCreated(_BIDDER_TWO, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
-        givenPayoutIsNotSet(_bidder, _REFERRER, _scaleQuoteTokenAmount(_BID_AMOUNT))
-        givenPayoutIsNotSet(_BIDDER_TWO, _REFERRER, _scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenPayoutIsNotSet(_bidIds[0], _bidder, _REFERRER, _scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenPayoutIsNotSet(_bidIds[1], _BIDDER_TWO, _REFERRER, _scaleQuoteTokenAmount(_BID_AMOUNT))
         givenLotIsConcluded
         givenLotSettlementIsNotSuccessful
-        givenMockClaimBidIsSet
     {
         // Call the function
         vm.prank(address(this));
@@ -415,10 +425,10 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         givenCuratorIsSet
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
-        givenLotIsCreated
-        givenLotHasStarted
         givenReferrerFeeIsSet
         givenProtocolFeeIsSet
+        givenLotIsCreated
+        givenLotHasStarted
         givenBalancesAreSet
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
@@ -426,11 +436,10 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         givenBidderTwoHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenBidderTwoHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenBidCreated(_BIDDER_TWO, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
-        givenPayoutIsNotSet(_bidder, _REFERRER, _scaleQuoteTokenAmount(_BID_AMOUNT))
-        givenPayoutIsNotSet(_BIDDER_TWO, _REFERRER, _scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenPayoutIsNotSet(_bidIds[0], _bidder, _REFERRER, _scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenPayoutIsNotSet(_bidIds[1], _BIDDER_TWO, _REFERRER, _scaleQuoteTokenAmount(_BID_AMOUNT))
         givenLotIsConcluded
         givenLotSettlementIsNotSuccessful
-        givenMockClaimBidIsSet
     {
         // Change the referrer fee
         _setReferrerFee(90);
@@ -453,10 +462,10 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         givenCuratorIsSet
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
-        givenLotIsCreated
-        givenLotHasStarted
         givenReferrerFeeIsSet
         givenProtocolFeeIsSet
+        givenLotIsCreated
+        givenLotHasStarted
         givenBalancesAreSet
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
@@ -464,11 +473,10 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         givenBidderTwoHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenBidderTwoHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenBidCreated(_BIDDER_TWO, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
-        givenPayoutIsNotSet(_bidder, _REFERRER, _scaleQuoteTokenAmount(_BID_AMOUNT))
-        givenPayoutIsNotSet(_BIDDER_TWO, _REFERRER, _scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenPayoutIsNotSet(_bidIds[0], _bidder, _REFERRER, _scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenPayoutIsNotSet(_bidIds[1], _BIDDER_TWO, _REFERRER, _scaleQuoteTokenAmount(_BID_AMOUNT))
         givenLotIsConcluded
         givenLotSettlementIsNotSuccessful
-        givenMockClaimBidIsSet
     {
         // Change the protocol fee
         _setProtocolFee(90);
@@ -491,10 +499,10 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         givenCuratorIsSet
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
-        givenLotIsCreated
-        givenLotHasStarted
         givenReferrerFeeIsSet
         givenProtocolFeeIsSet
+        givenLotIsCreated
+        givenLotHasStarted
         givenBalancesAreSet
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
@@ -503,12 +511,14 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         givenBidderTwoHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenBidCreated(_BIDDER_TWO, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
         givenPayoutIsSet(
+            _bidIds[0],
             _bidder,
             _REFERRER,
             _scaleQuoteTokenAmount(_BID_AMOUNT),
             _scaleBaseTokenAmount(_BID_AMOUNT_OUT)
         )
         givenPayoutIsSet(
+            _bidIds[1],
             _BIDDER_TWO,
             _REFERRER,
             _scaleQuoteTokenAmount(_BID_AMOUNT),
@@ -516,7 +526,6 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         )
         givenLotIsConcluded
         givenLotSettlementIsSuccessful
-        givenMockClaimBidIsSet
     {
         // Call the function
         vm.prank(address(this));
@@ -537,10 +546,10 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         givenBaseTokenHasDecimals(13)
         givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
-        givenLotIsCreated
-        givenLotHasStarted
         givenReferrerFeeIsSet
         givenProtocolFeeIsSet
+        givenLotIsCreated
+        givenLotHasStarted
         givenBalancesAreSet
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
@@ -549,12 +558,14 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         givenBidderTwoHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenBidCreated(_BIDDER_TWO, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
         givenPayoutIsSet(
+            _bidIds[0],
             _bidder,
             _REFERRER,
             _scaleQuoteTokenAmount(_BID_AMOUNT),
             _scaleBaseTokenAmount(_BID_AMOUNT_OUT)
         )
         givenPayoutIsSet(
+            _bidIds[1],
             _BIDDER_TWO,
             _REFERRER,
             _scaleQuoteTokenAmount(_BID_AMOUNT),
@@ -562,7 +573,6 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         )
         givenLotIsConcluded
         givenLotSettlementIsSuccessful
-        givenMockClaimBidIsSet
     {
         // Call the function
         vm.prank(address(this));
@@ -583,10 +593,10 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         givenBaseTokenHasDecimals(17)
         givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
-        givenLotIsCreated
-        givenLotHasStarted
         givenReferrerFeeIsSet
         givenProtocolFeeIsSet
+        givenLotIsCreated
+        givenLotHasStarted
         givenBalancesAreSet
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
@@ -595,12 +605,14 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         givenBidderTwoHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenBidCreated(_BIDDER_TWO, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
         givenPayoutIsSet(
+            _bidIds[0],
             _bidder,
             _REFERRER,
             _scaleQuoteTokenAmount(_BID_AMOUNT),
             _scaleBaseTokenAmount(_BID_AMOUNT_OUT)
         )
         givenPayoutIsSet(
+            _bidIds[1],
             _BIDDER_TWO,
             _REFERRER,
             _scaleQuoteTokenAmount(_BID_AMOUNT),
@@ -608,7 +620,6 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         )
         givenLotIsConcluded
         givenLotSettlementIsSuccessful
-        givenMockClaimBidIsSet
     {
         // Call the function
         vm.prank(address(this));
@@ -627,10 +638,10 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         givenCuratorIsSet
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
-        givenLotIsCreated
-        givenLotHasStarted
         givenReferrerFeeIsSet
         givenProtocolFeeIsSet
+        givenLotIsCreated
+        givenLotHasStarted
         givenBalancesAreSet
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
@@ -639,12 +650,14 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         givenBidderTwoHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenBidCreated(_BIDDER_TWO, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
         givenPayoutIsSet(
+            _bidIds[0],
             _bidder,
             _REFERRER,
             _scaleQuoteTokenAmount(_BID_AMOUNT),
             _scaleBaseTokenAmount(_BID_AMOUNT_OUT)
         )
         givenPayoutIsSet(
+            _bidIds[1],
             _BIDDER_TWO,
             _REFERRER,
             _scaleQuoteTokenAmount(_BID_AMOUNT),
@@ -652,7 +665,6 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         )
         givenLotIsConcluded
         givenLotSettlementIsSuccessful
-        givenMockClaimBidIsSet
     {
         // Change the referrer fee
         _setReferrerFee(90);
@@ -675,10 +687,10 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         givenCuratorIsSet
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
-        givenLotIsCreated
-        givenLotHasStarted
         givenReferrerFeeIsSet
         givenProtocolFeeIsSet
+        givenLotIsCreated
+        givenLotHasStarted
         givenBalancesAreSet
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
@@ -687,12 +699,14 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         givenBidderTwoHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenBidCreated(_BIDDER_TWO, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
         givenPayoutIsSet(
+            _bidIds[0],
             _bidder,
             _REFERRER,
             _scaleQuoteTokenAmount(_BID_AMOUNT),
             _scaleBaseTokenAmount(_BID_AMOUNT_OUT)
         )
         givenPayoutIsSet(
+            _bidIds[1],
             _BIDDER_TWO,
             _REFERRER,
             _scaleQuoteTokenAmount(_BID_AMOUNT),
@@ -700,7 +714,6 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         )
         givenLotIsConcluded
         givenLotSettlementIsSuccessful
-        givenMockClaimBidIsSet
     {
         // Change the protocol fee
         _setProtocolFee(90);
@@ -723,10 +736,10 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         givenCuratorIsSet
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
-        givenLotIsCreated
-        givenLotHasStarted
         givenReferrerFeeIsSet
         givenProtocolFeeIsSet
+        givenLotIsCreated
+        givenLotHasStarted
         givenBalancesAreSet
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
@@ -735,12 +748,14 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         givenBidderTwoHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenBidCreated(_BIDDER_TWO, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
         givenPayoutIsSet(
+            _bidIds[0],
             _bidder,
             address(0),
             _scaleQuoteTokenAmount(_BID_AMOUNT),
             _scaleBaseTokenAmount(_BID_AMOUNT_OUT)
         )
         givenPayoutIsSet(
+            _bidIds[1],
             _BIDDER_TWO,
             address(0),
             _scaleQuoteTokenAmount(_BID_AMOUNT),
@@ -748,7 +763,6 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         )
         givenLotIsConcluded
         givenLotSettlementIsSuccessful
-        givenMockClaimBidIsSet
     {
         // Call the function
         vm.prank(address(this));
@@ -769,10 +783,10 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         givenBaseTokenHasDecimals(13)
         givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
-        givenLotIsCreated
-        givenLotHasStarted
         givenReferrerFeeIsSet
         givenProtocolFeeIsSet
+        givenLotIsCreated
+        givenLotHasStarted
         givenBalancesAreSet
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
@@ -781,12 +795,14 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         givenBidderTwoHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenBidCreated(_BIDDER_TWO, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
         givenPayoutIsSet(
+            _bidIds[0],
             _bidder,
             address(0),
             _scaleQuoteTokenAmount(_BID_AMOUNT),
             _scaleBaseTokenAmount(_BID_AMOUNT_OUT)
         )
         givenPayoutIsSet(
+            _bidIds[1],
             _BIDDER_TWO,
             address(0),
             _scaleQuoteTokenAmount(_BID_AMOUNT),
@@ -794,7 +810,6 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         )
         givenLotIsConcluded
         givenLotSettlementIsSuccessful
-        givenMockClaimBidIsSet
     {
         // Call the function
         vm.prank(address(this));
@@ -815,10 +830,10 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         givenBaseTokenHasDecimals(17)
         givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
-        givenLotIsCreated
-        givenLotHasStarted
         givenReferrerFeeIsSet
         givenProtocolFeeIsSet
+        givenLotIsCreated
+        givenLotHasStarted
         givenBalancesAreSet
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
@@ -827,12 +842,14 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         givenBidderTwoHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenBidCreated(_BIDDER_TWO, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
         givenPayoutIsSet(
+            _bidIds[0],
             _bidder,
             address(0),
             _scaleQuoteTokenAmount(_BID_AMOUNT),
             _scaleBaseTokenAmount(_BID_AMOUNT_OUT)
         )
         givenPayoutIsSet(
+            _bidIds[1],
             _BIDDER_TWO,
             address(0),
             _scaleQuoteTokenAmount(_BID_AMOUNT),
@@ -840,7 +857,6 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         )
         givenLotIsConcluded
         givenLotSettlementIsSuccessful
-        givenMockClaimBidIsSet
     {
         // Call the function
         vm.prank(address(this));
@@ -859,9 +875,9 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         givenCuratorIsSet
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenReferrerFeeIsSet
         givenLotIsCreated
         givenLotHasStarted
-        givenReferrerFeeIsSet
         givenBalancesAreSet
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
@@ -870,12 +886,14 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         givenBidderTwoHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenBidCreated(_BIDDER_TWO, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
         givenPayoutIsSet(
+            _bidIds[0],
             _bidder,
             _REFERRER,
             _scaleQuoteTokenAmount(_BID_AMOUNT),
             _scaleBaseTokenAmount(_BID_AMOUNT_OUT)
         )
         givenPayoutIsSet(
+            _bidIds[1],
             _BIDDER_TWO,
             _REFERRER,
             _scaleQuoteTokenAmount(_BID_AMOUNT),
@@ -883,7 +901,6 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         )
         givenLotIsConcluded
         givenLotSettlementIsSuccessful
-        givenMockClaimBidIsSet
     {
         // Call the function
         vm.prank(address(this));
@@ -904,9 +921,9 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         givenBaseTokenHasDecimals(13)
         givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenReferrerFeeIsSet
         givenLotIsCreated
         givenLotHasStarted
-        givenReferrerFeeIsSet
         givenBalancesAreSet
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
@@ -915,12 +932,14 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         givenBidderTwoHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenBidCreated(_BIDDER_TWO, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
         givenPayoutIsSet(
+            _bidIds[0],
             _bidder,
             _REFERRER,
             _scaleQuoteTokenAmount(_BID_AMOUNT),
             _scaleBaseTokenAmount(_BID_AMOUNT_OUT)
         )
         givenPayoutIsSet(
+            _bidIds[1],
             _BIDDER_TWO,
             _REFERRER,
             _scaleQuoteTokenAmount(_BID_AMOUNT),
@@ -928,7 +947,6 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         )
         givenLotIsConcluded
         givenLotSettlementIsSuccessful
-        givenMockClaimBidIsSet
     {
         // Call the function
         vm.prank(address(this));
@@ -949,9 +967,9 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         givenBaseTokenHasDecimals(17)
         givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenReferrerFeeIsSet
         givenLotIsCreated
         givenLotHasStarted
-        givenReferrerFeeIsSet
         givenBalancesAreSet
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
@@ -960,12 +978,14 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         givenBidderTwoHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenBidCreated(_BIDDER_TWO, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
         givenPayoutIsSet(
+            _bidIds[0],
             _bidder,
             _REFERRER,
             _scaleQuoteTokenAmount(_BID_AMOUNT),
             _scaleBaseTokenAmount(_BID_AMOUNT_OUT)
         )
         givenPayoutIsSet(
+            _bidIds[1],
             _BIDDER_TWO,
             _REFERRER,
             _scaleQuoteTokenAmount(_BID_AMOUNT),
@@ -973,7 +993,6 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         )
         givenLotIsConcluded
         givenLotSettlementIsSuccessful
-        givenMockClaimBidIsSet
     {
         // Call the function
         vm.prank(address(this));
@@ -992,9 +1011,9 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         givenCuratorIsSet
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenProtocolFeeIsSet
         givenLotIsCreated
         givenLotHasStarted
-        givenProtocolFeeIsSet
         givenBalancesAreSet
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
@@ -1003,12 +1022,14 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         givenBidderTwoHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenBidCreated(_BIDDER_TWO, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
         givenPayoutIsSet(
+            _bidIds[0],
             _bidder,
             address(0),
             _scaleQuoteTokenAmount(_BID_AMOUNT),
             _scaleBaseTokenAmount(_BID_AMOUNT_OUT)
         )
         givenPayoutIsSet(
+            _bidIds[1],
             _BIDDER_TWO,
             address(0),
             _scaleQuoteTokenAmount(_BID_AMOUNT),
@@ -1016,7 +1037,6 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         )
         givenLotIsConcluded
         givenLotSettlementIsSuccessful
-        givenMockClaimBidIsSet
     {
         // Call the function
         vm.prank(address(this));
@@ -1037,9 +1057,9 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         givenBaseTokenHasDecimals(13)
         givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenProtocolFeeIsSet
         givenLotIsCreated
         givenLotHasStarted
-        givenProtocolFeeIsSet
         givenBalancesAreSet
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
@@ -1048,12 +1068,14 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         givenBidderTwoHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenBidCreated(_BIDDER_TWO, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
         givenPayoutIsSet(
+            _bidIds[0],
             _bidder,
             address(0),
             _scaleQuoteTokenAmount(_BID_AMOUNT),
             _scaleBaseTokenAmount(_BID_AMOUNT_OUT)
         )
         givenPayoutIsSet(
+            _bidIds[1],
             _BIDDER_TWO,
             address(0),
             _scaleQuoteTokenAmount(_BID_AMOUNT),
@@ -1061,7 +1083,6 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         )
         givenLotIsConcluded
         givenLotSettlementIsSuccessful
-        givenMockClaimBidIsSet
     {
         // Call the function
         vm.prank(address(this));
@@ -1082,9 +1103,9 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         givenBaseTokenHasDecimals(17)
         givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenProtocolFeeIsSet
         givenLotIsCreated
         givenLotHasStarted
-        givenProtocolFeeIsSet
         givenBalancesAreSet
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
@@ -1093,12 +1114,14 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         givenBidderTwoHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenBidCreated(_BIDDER_TWO, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
         givenPayoutIsSet(
+            _bidIds[0],
             _bidder,
             address(0),
             _scaleQuoteTokenAmount(_BID_AMOUNT),
             _scaleBaseTokenAmount(_BID_AMOUNT_OUT)
         )
         givenPayoutIsSet(
+            _bidIds[1],
             _BIDDER_TWO,
             address(0),
             _scaleQuoteTokenAmount(_BID_AMOUNT),
@@ -1106,7 +1129,6 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         )
         givenLotIsConcluded
         givenLotSettlementIsSuccessful
-        givenMockClaimBidIsSet
     {
         // Call the function
         vm.prank(address(this));
@@ -1135,12 +1157,14 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         givenBidderTwoHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenBidCreated(_BIDDER_TWO, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
         givenPayoutIsSet(
+            _bidIds[0],
             _bidder,
             address(0),
             _scaleQuoteTokenAmount(_BID_AMOUNT),
             _scaleBaseTokenAmount(_BID_AMOUNT_OUT)
         )
         givenPayoutIsSet(
+            _bidIds[1],
             _BIDDER_TWO,
             address(0),
             _scaleQuoteTokenAmount(_BID_AMOUNT),
@@ -1148,7 +1172,6 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         )
         givenLotIsConcluded
         givenLotSettlementIsSuccessful
-        givenMockClaimBidIsSet
     {
         // Call the function
         vm.prank(address(this));
@@ -1179,12 +1202,14 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         givenBidderTwoHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenBidCreated(_BIDDER_TWO, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
         givenPayoutIsSet(
+            _bidIds[0],
             _bidder,
             address(0),
             _scaleQuoteTokenAmount(_BID_AMOUNT),
             _scaleBaseTokenAmount(_BID_AMOUNT_OUT)
         )
         givenPayoutIsSet(
+            _bidIds[1],
             _BIDDER_TWO,
             address(0),
             _scaleQuoteTokenAmount(_BID_AMOUNT),
@@ -1192,7 +1217,6 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         )
         givenLotIsConcluded
         givenLotSettlementIsSuccessful
-        givenMockClaimBidIsSet
     {
         // Call the function
         vm.prank(address(this));
@@ -1223,12 +1247,14 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         givenBidderTwoHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenBidCreated(_BIDDER_TWO, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
         givenPayoutIsSet(
+            _bidIds[0],
             _bidder,
             address(0),
             _scaleQuoteTokenAmount(_BID_AMOUNT),
             _scaleBaseTokenAmount(_BID_AMOUNT_OUT)
         )
         givenPayoutIsSet(
+            _bidIds[1],
             _BIDDER_TWO,
             address(0),
             _scaleQuoteTokenAmount(_BID_AMOUNT),
@@ -1236,7 +1262,6 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         )
         givenLotIsConcluded
         givenLotSettlementIsSuccessful
-        givenMockClaimBidIsSet
     {
         // Call the function
         vm.prank(address(this));
@@ -1265,15 +1290,61 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         givenBidderTwoHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenBidCreated(_BIDDER_TWO, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
         givenPayoutIsSet(
+            _bidIds[0],
             _bidder,
             _REFERRER,
             _scaleQuoteTokenAmount(_BID_AMOUNT),
             _scaleBaseTokenAmount(_BID_AMOUNT_OUT)
         )
-        givenPayoutIsNotSet(_BIDDER_TWO, _REFERRER, _scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenPayoutIsNotSet(_bidIds[1], _BIDDER_TWO, _REFERRER, _scaleQuoteTokenAmount(_BID_AMOUNT))
         givenLotIsConcluded
         givenLotSettlementIsMixed
-        givenMockClaimBidIsSet
+    {
+        // Call the function
+        vm.prank(address(this));
+        _auctionHouse.claimBids(_lotId, _bidIds);
+
+        // Check the accrued fees
+        _assertAccruedFees();
+        _assertQuoteTokenBalances();
+        _assertBaseTokenBalances();
+    }
+
+    function test_givenPartialFill()
+        external
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenCuratorIsSet
+        givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenReferrerFeeIsSet
+        givenProtocolFeeIsSet
+        givenLotIsCreated
+        givenLotHasStarted
+        givenBalancesAreSet
+        givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
+        givenBidderTwoHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenBidderTwoHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
+        givenBidCreated(_BIDDER_TWO, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
+        givenPayoutIsSet(
+            _bidIds[0],
+            _bidder,
+            _REFERRER,
+            _scaleQuoteTokenAmount(_BID_AMOUNT),
+            _scaleBaseTokenAmount(_BID_AMOUNT_OUT)
+        )
+        givenPayoutIsPartial(
+            _bidIds[1],
+            _BIDDER_TWO,
+            _REFERRER,
+            _scaleQuoteTokenAmount(_BID_AMOUNT),
+            _scaleBaseTokenAmount(_BID_AMOUNT_OUT),
+            _scaleQuoteTokenAmount(_BID_AMOUNT / 2)
+        )
+        givenLotIsConcluded
+        givenLotSettlementIsPartialFill
     {
         // Call the function
         vm.prank(address(this));

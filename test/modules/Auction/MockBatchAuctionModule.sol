@@ -41,8 +41,7 @@ contract MockBatchAuctionModule is BatchAuctionModule {
     mapping(uint96 lotId => mapping(uint64 => Bid)) public bidData;
     mapping(uint96 lotId => mapping(uint64 => bool)) public bidCancelled;
     mapping(uint96 lotId => mapping(uint64 => bool)) public bidRefunded;
-
-    mapping(uint96 lotId => Settlement) public lotSettlements;
+    mapping(uint96 lotId => mapping(uint64 => BidClaim)) public bidClaims;
 
     mapping(uint96 lotId => LotStatus) public lotStatus;
     mapping(uint96 lotId => bool) public lotProceedsClaimed;
@@ -89,6 +88,7 @@ contract MockBatchAuctionModule is BatchAuctionModule {
     function _refundBid(
         uint96 lotId_,
         uint64 bidId_,
+        uint256 index_,
         address
     ) internal virtual override returns (uint256 refundAmount) {
         // Cancel the bid
@@ -99,47 +99,69 @@ contract MockBatchAuctionModule is BatchAuctionModule {
 
         // Remove from bid id array
         uint256 len = bidIds.length;
-        for (uint256 i = 0; i < len; i++) {
-            if (bidIds[i] == bidId_) {
-                bidIds[i] = bidIds[len - 1];
-                bidIds.pop();
-                break;
-            }
+        if (len != 0 && index_ < len) {
+            bidIds[index_] = bidIds[len - 1];
+            bidIds.pop();
         }
 
         return bidData[lotId_][bidId_].amount;
     }
 
+    function addBidClaim(
+        uint96 lotId_,
+        uint64 bidId_,
+        address bidder_,
+        address referrer_,
+        uint256 paid_,
+        uint256 payout_,
+        uint256 refund_
+    ) public {
+        BidClaim storage claim = bidClaims[lotId_][bidId_];
+        claim.bidder = bidder_;
+        claim.referrer = referrer_;
+        claim.paid = paid_;
+        claim.payout = payout_;
+        claim.refund = refund_;
+    }
+
     function _claimBids(
         uint96 lotId_,
         uint64[] calldata bidIds_
-    ) internal virtual override returns (BidClaim[] memory bidClaims, bytes memory auctionOutput) {}
+    )
+        internal
+        virtual
+        override
+        returns (BidClaim[] memory bidClaims_, bytes memory auctionOutput_)
+    {
+        uint256 len = bidIds_.length;
+        bidClaims_ = new BidClaim[](len);
 
-    function setLotSettlement(uint96 lotId_, Settlement calldata settlement_) external {
-        lotSettlements[lotId_] = settlement_;
+        for (uint256 i = 0; i < len; i++) {
+            uint64 bidId = bidIds_[i];
+            bidClaims_[i] = bidClaims[lotId_][bidId];
+        }
 
-        // Also update sold and purchased
-        Lot storage lot = lotData[lotId_];
-        lot.purchased = settlement_.totalIn;
-        lot.sold = settlement_.totalOut;
-
-        lotPartialPayout[lotId_] = settlement_.pfPayout;
+        return (bidClaims_, "");
     }
 
-    function _settle(uint96 lotId_) internal override returns (Settlement memory, bytes memory) {
+    function setLotSettlement(uint96 lotId_, uint256 totalIn_, uint256 totalOut_) external {
+        // Also update sold and purchased
+        Lot storage lot = lotData[lotId_];
+        lot.purchased = totalIn_;
+        lot.sold = totalOut_;
+    }
+
+    function _settle(uint96 lotId_) internal override returns (uint256, uint256, bytes memory) {
         // Update status
         lotStatus[lotId_] = LotStatus.Settled;
 
-        return (lotSettlements[lotId_], "");
+        return (lotData[lotId_].purchased, lotData[lotId_].sold, "");
     }
 
-    function _claimProceeds(uint96 lotId_) internal override returns (uint256, uint256, uint256) {
+    function _claimProceeds(uint96 lotId_) internal override {
         // Update claim status
         lotStatus[lotId_] = LotStatus.Settled;
         lotProceedsClaimed[lotId_] = true;
-
-        Lot storage lot = lotData[lotId_];
-        return (lot.purchased, lot.sold, lotPartialPayout[lotId_]);
     }
 
     function getBid(uint96 lotId_, uint64 bidId_) external view returns (Bid memory bid_) {
@@ -190,5 +212,25 @@ contract MockBatchAuctionModule is BatchAuctionModule {
         if (lotProceedsClaimed[lotId_]) {
             revert Auction.Auction_InvalidParams();
         }
+    }
+
+    function getNumBids(uint96) external view override returns (uint256) {
+        return bidIds.length;
+    }
+
+    function getBidIds(
+        uint96,
+        uint256 start_,
+        uint256 count_
+    ) external view override returns (uint64[] memory) {
+        uint256 len = bidIds.length;
+        uint256 end = start_ + count_ > len ? len : start_ + count_;
+
+        uint64[] memory ids = new uint64[](end - start_);
+        for (uint256 i = start_; i < end; i++) {
+            ids[i - start_] = bidIds[i];
+        }
+
+        return ids;
     }
 }
