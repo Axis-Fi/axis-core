@@ -281,8 +281,27 @@ abstract contract EmpaModuleTest is Test, Permit2User {
     }
 
     modifier givenBidIsRefunded(uint64 bidId_) {
+        // Find bid index
+
+        // Get number of bids from module
+        uint256 numBids = _module.getNumBids(_lotId);
+
+        // Retrieve bid IDs from the module
+        uint64[] memory bidIds = _module.getBidIds(_lotId, 0, numBids);
+
+        // Iterate through them to find the index of the bid
+        uint256 index = type(uint256).max;
+
+        uint256 len = bidIds.length;
+        for (uint256 i = 0; i < len; i++) {
+            if (bidIds[i] == bidId_) {
+                index = i;
+                break;
+            }
+        }
+
         vm.prank(address(_auctionHouse));
-        _module.refundBid(_lotId, bidId_, _BIDDER);
+        _module.refundBid(_lotId, bidId_, index, _BIDDER);
         _;
     }
 

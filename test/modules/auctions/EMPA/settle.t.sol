@@ -763,6 +763,9 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
 
             uint64 nextDecryptIndex = auctionData.nextDecryptIndex;
 
+            Auction.Lot memory lot = _module.getLot(_lotId);
+            uint256 baseScale = 10 ** lot.baseTokenDecimals;
+
             for (uint256 i = 0; i < (numBids < decryptsAtOnce ? numBids : decryptsAtOnce); i++) {
                 // Get the bidId to decrypt
                 uint64 bidId = _module.getBidIdAtIndex(_lotId, nextDecryptIndex + i);
@@ -790,7 +793,7 @@ contract EmpaModuleSettleTest is EmpaModuleTest {
                 // Iterate through the lot's decrypted bid from the queue start and find the correct position
                 // TODO: doesn't consider bids in this current batch and is brute-forcing to account for all situations
                 bytes32 prev = _QUEUE_START;
-                while (_module.getNextInQueue(_lotId, prev).isHigherPriorityThan(key)) {
+                while (_module.getNextInQueue(_lotId, prev).isHigherPriorityThan(key, baseScale)) {
                     prev = _module.getNextInQueue(_lotId, prev);
                 }
 

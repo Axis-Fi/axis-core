@@ -3,9 +3,12 @@ pragma solidity 0.8.19;
 
 import {Test} from "forge-std/Test.sol";
 import {BidEncoding} from "src/lib/MaxPriorityQueue.sol";
+import {FixedPointMathLib as Math} from "lib/solady/src/utils/FixedPointMathLib.sol";
 
 contract BidEncodingTest is Test {
     using BidEncoding for bytes32;
+
+    uint256 internal constant _BASE_SCALE = 1e18;
 
     // [X] encode
     //     [X] encodes the bidId, amountIn, and minAmountOut correctly into a bytes32
@@ -52,25 +55,27 @@ contract BidEncodingTest is Test {
         uint96 bAmountOut
     ) external pure {
         vm.assume(
-            uint256(aAmountIn) * uint256(bAmountOut) > uint256(bAmountIn) * uint256(aAmountOut)
+            aAmountOut != 0 && bAmountOut != 0
+                && Math.mulDivUp(uint256(aAmountIn), _BASE_SCALE, uint256(aAmountOut))
+                    > Math.mulDivUp(uint256(bAmountIn), _BASE_SCALE, uint256(bAmountOut))
         );
 
         bytes32 a = BidEncoding.encode(0, aAmountIn, aAmountOut);
         bytes32 b = BidEncoding.encode(1, bAmountIn, bAmountOut);
 
-        bool result = BidEncoding.isHigherPriorityThan(a, b);
+        bool result = BidEncoding.isHigherPriorityThan(a, b, _BASE_SCALE);
         assert(result);
 
         a = BidEncoding.encode(1, aAmountIn, aAmountOut);
         b = BidEncoding.encode(0, bAmountIn, bAmountOut);
 
-        result = BidEncoding.isHigherPriorityThan(a, b);
+        result = BidEncoding.isHigherPriorityThan(a, b, _BASE_SCALE);
         assert(result);
 
         a = BidEncoding.encode(0, aAmountIn, aAmountOut);
         b = BidEncoding.encode(0, bAmountIn, bAmountOut);
 
-        result = BidEncoding.isHigherPriorityThan(a, b);
+        result = BidEncoding.isHigherPriorityThan(a, b, _BASE_SCALE);
         assert(result);
     }
 
@@ -83,13 +88,13 @@ contract BidEncodingTest is Test {
         bytes32 a = BidEncoding.encode(0, aAmountIn, aAmountOut);
         bytes32 b = BidEncoding.encode(1, bAmountIn, bAmountOut);
 
-        bool result = BidEncoding.isHigherPriorityThan(a, b);
+        bool result = BidEncoding.isHigherPriorityThan(a, b, _BASE_SCALE);
         assert(result);
 
         a = BidEncoding.encode(1, aAmountIn, aAmountOut);
         b = BidEncoding.encode(0, bAmountIn, bAmountOut);
 
-        result = BidEncoding.isHigherPriorityThan(a, b);
+        result = BidEncoding.isHigherPriorityThan(a, b, _BASE_SCALE);
         assert(!result);
     }
 
@@ -100,25 +105,27 @@ contract BidEncodingTest is Test {
         uint96 bAmountOut
     ) external pure {
         vm.assume(
-            uint256(aAmountIn) * uint256(bAmountOut) < uint256(bAmountIn) * uint256(aAmountOut)
+            aAmountOut != 0 && bAmountOut != 0
+                && Math.mulDivUp(uint256(aAmountIn), _BASE_SCALE, uint256(aAmountOut))
+                    < Math.mulDivUp(uint256(bAmountIn), _BASE_SCALE, uint256(bAmountOut))
         );
 
         bytes32 a = BidEncoding.encode(0, aAmountIn, aAmountOut);
         bytes32 b = BidEncoding.encode(1, bAmountIn, bAmountOut);
 
-        bool result = BidEncoding.isHigherPriorityThan(a, b);
+        bool result = BidEncoding.isHigherPriorityThan(a, b, _BASE_SCALE);
         assert(!result);
 
         a = BidEncoding.encode(1, aAmountIn, aAmountOut);
         b = BidEncoding.encode(0, bAmountIn, bAmountOut);
 
-        result = BidEncoding.isHigherPriorityThan(a, b);
+        result = BidEncoding.isHigherPriorityThan(a, b, _BASE_SCALE);
         assert(!result);
 
         a = BidEncoding.encode(0, aAmountIn, aAmountOut);
         b = BidEncoding.encode(0, bAmountIn, bAmountOut);
 
-        result = BidEncoding.isHigherPriorityThan(a, b);
+        result = BidEncoding.isHigherPriorityThan(a, b, _BASE_SCALE);
         assert(!result);
     }
 }
