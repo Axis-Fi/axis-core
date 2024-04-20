@@ -88,6 +88,7 @@ contract MockBatchAuctionModule is BatchAuctionModule {
     function _refundBid(
         uint96 lotId_,
         uint64 bidId_,
+        uint256 index_,
         address
     ) internal virtual override returns (uint256 refundAmount) {
         // Cancel the bid
@@ -98,12 +99,9 @@ contract MockBatchAuctionModule is BatchAuctionModule {
 
         // Remove from bid id array
         uint256 len = bidIds.length;
-        for (uint256 i = 0; i < len; i++) {
-            if (bidIds[i] == bidId_) {
-                bidIds[i] = bidIds[len - 1];
-                bidIds.pop();
-                break;
-            }
+        if (len != 0 && index_ < len) {
+            bidIds[index_] = bidIds[len - 1];
+            bidIds.pop();
         }
 
         return bidData[lotId_][bidId_].amount;
@@ -214,5 +212,25 @@ contract MockBatchAuctionModule is BatchAuctionModule {
         if (lotProceedsClaimed[lotId_]) {
             revert Auction.Auction_InvalidParams();
         }
+    }
+
+    function getNumBids(uint96) external view override returns (uint256) {
+        return bidIds.length;
+    }
+
+    function getBidIds(
+        uint96,
+        uint256 start_,
+        uint256 count_
+    ) external view override returns (uint64[] memory) {
+        uint256 len = bidIds.length;
+        uint256 end = start_ + count_ > len ? len : start_ + count_;
+
+        uint64[] memory ids = new uint64[](end - start_);
+        for (uint256 i = start_; i < end; i++) {
+            ids[i - start_] = bidIds[i];
+        }
+
+        return ids;
     }
 }
