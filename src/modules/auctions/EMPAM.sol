@@ -562,11 +562,15 @@ contract EncryptedMarginalPriceAuctionModule is BatchAuctionModule {
             num_ = uint64(bidIds.length) - nextDecryptIndex;
         }
 
+        // Calculate base scale for use in queue insertion
+        // We do this once here instead of multiple times within the loop
+        uint256 baseScale = 10 ** lotData[lotId_].baseTokenDecimals;
+
         // Iterate over the provided number of bids, decrypt them, and then store them in the sorted bid queue
         // All submitted bids will be marked as decrypted, but only those with valid values will have the minAmountOut set and be stored in the sorted bid queue
         for (uint64 i; i < num_; i++) {
             // Decrypt the bid and store the data in the queue, if applicable
-            _decrypt(lotId_, bidIds[nextDecryptIndex + i], sortHints_[i]);
+            _decrypt(lotId_, bidIds[nextDecryptIndex + i], sortHints_[i], baseScale);
         }
 
         // Increment next decrypt index
@@ -616,7 +620,12 @@ contract EncryptedMarginalPriceAuctionModule is BatchAuctionModule {
     }
 
     /// @notice     Decrypts a bid and stores it in the sorted bid queue
-    function _decrypt(uint96 lotId_, uint64 bidId_, bytes32 sortHint_) internal {
+    function _decrypt(
+        uint96 lotId_,
+        uint64 bidId_,
+        bytes32 sortHint_,
+        uint256 baseScale_
+    ) internal {
         // Decrypt the message
         Bid storage bidData = bids[lotId_][bidId_];
         uint256 plaintext = decryptBid(lotId_, bidId_);
@@ -640,8 +649,10 @@ contract EncryptedMarginalPriceAuctionModule is BatchAuctionModule {
             );
             if (price < type(uint96).max && price >= uint256(auctionData[lotId_].minPrice)) {
                 // Store the decrypt in the sorted bid queue and set the min amount out on the bid
-                decryptedBids[lotId_].insert(sortHint_, bidId_, bidData.amount, amountOut);
-                bidData.minAmountOut = amountOut; // TODO should this be set regardless? Do we need it for claiming a refund?
+                decryptedBids[lotId_].insert(
+                    sortHint_, bidId_, bidData.amount, amountOut, baseScale_
+                );
+                bidData.minAmountOut = amountOut; // Only set when the bid is valid. Bids below min price will have minAmountOut = 0, which means they'll just claim a refund
             }
         }
 
