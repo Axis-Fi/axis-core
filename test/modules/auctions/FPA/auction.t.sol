@@ -4,7 +4,7 @@ pragma solidity 0.8.19;
 import {Module} from "src/modules/Modules.sol";
 import {Auction} from "src/modules/Auction.sol";
 import {FixedPriceAuctionModule} from "src/modules/auctions/FPAM.sol";
-import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
+import {FixedPointMathLib as Math} from "solmate/utils/FixedPointMathLib.sol";
 
 import {FpaModuleTest} from "test/modules/auctions/FPA/FPAModuleTest.sol";
 
@@ -72,7 +72,7 @@ contract FpaModuleAuctionTest is FpaModuleTest {
 
     function test_maxPayoutPercentIsLessThanMinimum_reverts(uint24 maxPayout_) public {
         uint24 maxPayout = uint24(bound(maxPayout_, 0, 1e3 - 1));
-        setMaxPayout(maxPayout);
+        _setMaxPayout(maxPayout);
 
         // Expect revert
         bytes memory err = abi.encodeWithSelector(Auction.Auction_InvalidParams.selector);
@@ -84,7 +84,7 @@ contract FpaModuleAuctionTest is FpaModuleTest {
 
     function test_maxPayoutPercentIsGreaterThanMaximum_reverts(uint24 maxPayout_) public {
         uint24 maxPayout = uint24(bound(maxPayout_, 1e5 + 1, type(uint24).max));
-        setMaxPayout(maxPayout);
+        _setMaxPayout(maxPayout);
 
         // Expect revert
         bytes memory err = abi.encodeWithSelector(Auction.Auction_InvalidParams.selector);
@@ -96,10 +96,10 @@ contract FpaModuleAuctionTest is FpaModuleTest {
 
     function test_maxPayoutPercent_fuzz(uint24 maxPayout_) public {
         uint24 maxPayout = uint24(bound(maxPayout_, 1e3, 1e5));
-        setMaxPayout(maxPayout);
+        _setMaxPayout(maxPayout);
 
         // Calculate the expected value
-        uint96 expectedMaxPayout = _mulDivDown(_LOT_CAPACITY, maxPayout, 1e5);
+        uint256 expectedMaxPayout = Math.mulDivDown(_LOT_CAPACITY, maxPayout, 1e5);
 
         // Call the function
         _createAuctionLot();
@@ -111,12 +111,10 @@ contract FpaModuleAuctionTest is FpaModuleTest {
 
     function test_capacityInQuote() public givenCapacityInQuote {
         // Calculate the expected value
-        uint96 expectedMaxPayoutInQuote =
-            _mulDivDown(_scaleQuoteTokenAmount(_LOT_CAPACITY), _fpaParams.maxPayoutPercent, 1e5);
-        uint96 expectedMaxPayout = _mulDivDown(
-            expectedMaxPayoutInQuote,
-            uint96(10) ** _baseTokenDecimals,
-            _scaleQuoteTokenAmount(_PRICE)
+        uint256 expectedMaxPayoutInQuote =
+            Math.mulDivDown(_scaleQuoteTokenAmount(_LOT_CAPACITY), _fpaParams.maxPayoutPercent, 1e5);
+        uint256 expectedMaxPayout = Math.mulDivDown(
+            expectedMaxPayoutInQuote, 10 ** _baseTokenDecimals, _scaleQuoteTokenAmount(_PRICE)
         );
 
         // Call the function
@@ -141,12 +139,10 @@ contract FpaModuleAuctionTest is FpaModuleTest {
         givenBaseTokenDecimals(13)
     {
         // Calculate the expected value
-        uint96 expectedMaxPayoutInQuote =
-            _mulDivDown(_scaleQuoteTokenAmount(_LOT_CAPACITY), _fpaParams.maxPayoutPercent, 1e5);
-        uint96 expectedMaxPayout = _mulDivDown(
-            expectedMaxPayoutInQuote,
-            uint96(10) ** _baseTokenDecimals,
-            _scaleQuoteTokenAmount(_PRICE)
+        uint256 expectedMaxPayoutInQuote =
+            Math.mulDivDown(_scaleQuoteTokenAmount(_LOT_CAPACITY), _fpaParams.maxPayoutPercent, 1e5);
+        uint256 expectedMaxPayout = Math.mulDivDown(
+            expectedMaxPayoutInQuote, 10 ** _baseTokenDecimals, _scaleQuoteTokenAmount(_PRICE)
         );
 
         // Call the function
@@ -171,12 +167,10 @@ contract FpaModuleAuctionTest is FpaModuleTest {
         givenBaseTokenDecimals(17)
     {
         // Calculate the expected value
-        uint96 expectedMaxPayoutInQuote =
-            _mulDivDown(_scaleQuoteTokenAmount(_LOT_CAPACITY), _fpaParams.maxPayoutPercent, 1e5);
-        uint96 expectedMaxPayout = _mulDivDown(
-            expectedMaxPayoutInQuote,
-            uint96(10) ** _baseTokenDecimals,
-            _scaleQuoteTokenAmount(_PRICE)
+        uint256 expectedMaxPayoutInQuote =
+            Math.mulDivDown(_scaleQuoteTokenAmount(_LOT_CAPACITY), _fpaParams.maxPayoutPercent, 1e5);
+        uint256 expectedMaxPayout = Math.mulDivDown(
+            expectedMaxPayoutInQuote, 10 ** _baseTokenDecimals, _scaleQuoteTokenAmount(_PRICE)
         );
 
         // Call the function
@@ -214,7 +208,7 @@ contract FpaModuleAuctionTest is FpaModuleTest {
         assertEq(auctionData.price, _scaleQuoteTokenAmount(_PRICE), "price");
         assertEq(
             auctionData.maxPayout,
-            _mulDivDown(_scaleBaseTokenAmount(_LOT_CAPACITY), _MAX_PAYOUT_PERCENT, 1e5),
+            Math.mulDivDown(_scaleBaseTokenAmount(_LOT_CAPACITY), _MAX_PAYOUT_PERCENT, 1e5),
             "maxPayout"
         );
     }
@@ -243,7 +237,7 @@ contract FpaModuleAuctionTest is FpaModuleTest {
         assertEq(auctionData.price, _scaleQuoteTokenAmount(_PRICE), "price");
         assertEq(
             auctionData.maxPayout,
-            _mulDivDown(_scaleBaseTokenAmount(_LOT_CAPACITY), _MAX_PAYOUT_PERCENT, 1e5),
+            Math.mulDivDown(_scaleBaseTokenAmount(_LOT_CAPACITY), _MAX_PAYOUT_PERCENT, 1e5),
             "maxPayout"
         );
     }
@@ -272,7 +266,7 @@ contract FpaModuleAuctionTest is FpaModuleTest {
         assertEq(auctionData.price, _scaleQuoteTokenAmount(_PRICE), "price");
         assertEq(
             auctionData.maxPayout,
-            _mulDivDown(_scaleBaseTokenAmount(_LOT_CAPACITY), _MAX_PAYOUT_PERCENT, 1e5),
+            Math.mulDivDown(_scaleBaseTokenAmount(_LOT_CAPACITY), _MAX_PAYOUT_PERCENT, 1e5),
             "maxPayout"
         );
     }

@@ -27,7 +27,7 @@ interface ICallback {
         address seller,
         address baseToken,
         address quoteToken,
-        uint96 capacity,
+        uint256 capacity,
         bool preFund,
         bytes calldata callbackData
     ) external returns (bytes4);
@@ -36,7 +36,7 @@ interface ICallback {
     /// @dev If the Callback is configured to receive tokens and the auction was prefunded, then the refund will be sent prior to the call.
     function onCancel(
         uint96 lotId,
-        uint96 refund,
+        uint256 refund,
         bool preFunded,
         bytes calldata callbackData
     ) external returns (bytes4);
@@ -45,7 +45,7 @@ interface ICallback {
     /// @dev If the Callback is configured to send tokens and the auction is to be prefunded, then the AuctionHouse will expect the curatorFee of base tokens to be sent back.
     function onCurate(
         uint96 lotId,
-        uint96 curatorFee,
+        uint256 curatorFee,
         bool preFund,
         bytes calldata callbackData
     ) external returns (bytes4);
@@ -58,8 +58,8 @@ interface ICallback {
     function onPurchase(
         uint96 lotId,
         address buyer,
-        uint96 amount,
-        uint96 payout,
+        uint256 amount,
+        uint256 payout,
         bool preFunded,
         bytes calldata callbackData
     ) external returns (bytes4);
@@ -71,7 +71,7 @@ interface ICallback {
         uint96 lotid,
         uint64 bidId,
         address buyer,
-        uint96 amount,
+        uint256 amount,
         bytes calldata callbackData
     ) external returns (bytes4);
 
@@ -79,8 +79,8 @@ interface ICallback {
     /// @dev If the Callback is configured to receive tokens, then the proceeds and/or refund will be sent prior to the call.
     function onClaimProceeds(
         uint96 lotId,
-        uint96 proceeds,
-        uint96 refund,
+        uint256 proceeds,
+        uint256 refund,
         bytes calldata callbackData
     ) external returns (bytes4);
 }

@@ -111,7 +111,7 @@ contract BaselinePreAsset is ERC20, BaseCallback, IPreAsset {
         address,
         address baseToken_,
         address quoteToken_,
-        uint96 capacity_,
+        uint256 capacity_,
         bool prefund_,
         bytes calldata
     ) internal override {
@@ -136,7 +136,7 @@ contract BaselinePreAsset is ERC20, BaseCallback, IPreAsset {
 
     function _onCancel(
         uint96 lotId_,
-        uint96 refund_,
+        uint256 refund_,
         bool prefunded_,
         bytes calldata
     ) internal override {
@@ -153,7 +153,7 @@ contract BaselinePreAsset is ERC20, BaseCallback, IPreAsset {
 
     function _onCurate(
         uint96 lotId_,
-        uint96 curatorFee_,
+        uint256 curatorFee_,
         bool prefund_,
         bytes calldata
     ) internal override {
@@ -170,8 +170,8 @@ contract BaselinePreAsset is ERC20, BaseCallback, IPreAsset {
     function _onPurchase(
         uint96,
         address,
-        uint96,
-        uint96,
+        uint256,
+        uint256,
         bool,
         bytes calldata
     ) internal pure override {
@@ -179,15 +179,15 @@ contract BaselinePreAsset is ERC20, BaseCallback, IPreAsset {
         revert Callback_NotImplemented();
     }
 
-    function _onBid(uint96, uint64, address, uint96, bytes calldata) internal pure override {
+    function _onBid(uint96, uint64, address, uint256, bytes calldata) internal pure override {
         // Not implemented
         revert Callback_NotImplemented();
     }
 
     function _onClaimProceeds(
         uint96 lotId_,
-        uint96 proceeds_,
-        uint96 refund_,
+        uint256 proceeds_,
+        uint256 refund_,
         bytes calldata callbackData
     ) internal override {
         // Validate the lot ID

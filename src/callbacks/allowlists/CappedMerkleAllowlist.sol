@@ -10,8 +10,8 @@ contract CappedMerkleAllowlist is MerkleAllowlist {
 
     // ========== STATE VARIABLES ========== //
 
-    mapping(uint96 => uint96) public lotBuyerLimit;
-    mapping(uint96 => mapping(address => uint96)) public lotBuyerSpent;
+    mapping(uint96 => uint256) public lotBuyerLimit;
+    mapping(uint96 => mapping(address => uint256)) public lotBuyerSpent;
 
     // ========== CONSTRUCTOR ========== //
 
@@ -39,12 +39,12 @@ contract CappedMerkleAllowlist is MerkleAllowlist {
         address,
         address,
         address,
-        uint96,
+        uint256,
         bool,
         bytes calldata callbackData_
     ) internal override {
         // Decode the merkle root from the callback data
-        (bytes32 merkleRoot, uint96 buyerLimit) = abi.decode(callbackData_, (bytes32, uint96));
+        (bytes32 merkleRoot, uint256 buyerLimit) = abi.decode(callbackData_, (bytes32, uint256));
 
         // Set the merkle root and lot buyer limit
         lotMerkleRoot[lotId_] = merkleRoot;
@@ -54,8 +54,8 @@ contract CappedMerkleAllowlist is MerkleAllowlist {
     function __onPurchase(
         uint96 lotId_,
         address buyer_,
-        uint96 amount_,
-        uint96,
+        uint256 amount_,
+        uint256,
         bool,
         bytes calldata
     ) internal override {
@@ -66,14 +66,14 @@ contract CappedMerkleAllowlist is MerkleAllowlist {
         uint96 lotId_,
         uint64,
         address buyer_,
-        uint96 amount_,
+        uint256 amount_,
         bytes calldata
     ) internal override {
         _canBuy(lotId_, buyer_, amount_);
     }
 
     // ========== INTERNAL FUNCTIONS ========== //
-    function _canBuy(uint96 lotId_, address buyer_, uint96 amount_) internal {
+    function _canBuy(uint96 lotId_, address buyer_, uint256 amount_) internal {
         // Check if the buyer has already spent their limit
         if (lotBuyerSpent[lotId_][buyer_] + amount_ > lotBuyerLimit[lotId_]) {
             revert Callback_ExceedsLimit();

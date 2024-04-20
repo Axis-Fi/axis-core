@@ -3,33 +3,34 @@ pragma solidity 0.8.19;
 
 // Libraries
 import {Test} from "forge-std/Test.sol";
+import {console2} from "forge-std/console2.sol";
 import {Point, ECIES} from "src/lib/ECIES.sol";
-import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
+import {FixedPointMathLib as Math} from "solady/utils/FixedPointMathLib.sol";
 
 // Mocks
 import {Permit2User} from "test/lib/permit2/Permit2User.sol";
 
 // Modules
-import {AuctionHouse} from "src/AuctionHouse.sol";
+import {BatchAuctionHouse} from "src/BatchAuctionHouse.sol";
 import {Auction} from "src/modules/Auction.sol";
 import {EncryptedMarginalPriceAuctionModule} from "src/modules/auctions/EMPAM.sol";
 
 abstract contract EmpaModuleTest is Test, Permit2User {
-    uint96 internal constant _BASE_SCALE = 1e18;
+    uint256 internal constant _BASE_SCALE = 1e18;
 
     address internal constant _PROTOCOL = address(0x2);
     address internal constant _BIDDER = address(0x3);
     address internal constant _REFERRER = address(0x4);
 
-    uint96 internal constant _LOT_CAPACITY = 10e18;
+    uint256 internal constant _LOT_CAPACITY = 10e18;
     uint48 internal constant _DURATION = 1 days;
-    uint96 internal constant _MIN_PRICE = 1e18;
+    uint256 internal constant _MIN_PRICE = 1e18;
     uint24 internal constant _MIN_FILL_PERCENT = 25_000; // 25%
-    uint24 internal constant _MIN_BID_PERCENT = 1000; // 1%
+    uint24 internal constant _MIN_BID_PERCENT = 40; // 0.04%
     /// @dev Re-calculated by _updateMinBidSize()
-    uint96 internal _minBidSize;
+    uint256 internal _minBidSize;
     /// @dev Re-calculated by _updateMinBidAmount()
-    uint96 internal _minBidAmount;
+    uint256 internal _minBidAmount;
 
     uint256 internal constant _AUCTION_PRIVATE_KEY = 112_233_445_566;
     Point internal _auctionPublicKey;
@@ -38,7 +39,7 @@ abstract contract EmpaModuleTest is Test, Permit2User {
     uint256 internal constant _BID_PRIVATE_KEY = 112_233_445_566_778;
     Point internal _bidPublicKey;
 
-    AuctionHouse internal _auctionHouse;
+    BatchAuctionHouse internal _auctionHouse;
     EncryptedMarginalPriceAuctionModule internal _module;
 
     // Input parameters (modifier via modifiers)
@@ -52,10 +53,13 @@ abstract contract EmpaModuleTest is Test, Permit2User {
     uint8 internal _quoteTokenDecimals = 18;
     uint8 internal _baseTokenDecimals = 18;
 
+    bytes32 internal constant _QUEUE_START =
+        bytes32(0x0000000000000000ffffffffffffffffffffffff000000000000000000000001);
+
     function setUp() public {
         vm.warp(1_000_000);
 
-        _auctionHouse = new AuctionHouse(address(this), _PROTOCOL, _permit2Address);
+        _auctionHouse = new BatchAuctionHouse(address(this), _PROTOCOL, _permit2Address);
         _module = new EncryptedMarginalPriceAuctionModule(address(_auctionHouse));
 
         _auctionPublicKey = ECIES.calcPubKey(Point(1, 2), _AUCTION_PRIVATE_KEY);
@@ -113,7 +117,7 @@ abstract contract EmpaModuleTest is Test, Permit2User {
         _;
     }
 
-    modifier givenLotCapacity(uint96 capacity_) {
+    modifier givenLotCapacity(uint256 capacity_) {
         _auctionParams.capacity = capacity_;
 
         _updateMinBidSize();
@@ -121,7 +125,7 @@ abstract contract EmpaModuleTest is Test, Permit2User {
         _;
     }
 
-    modifier givenMinimumPrice(uint96 price_) {
+    modifier givenMinimumPrice(uint256 price_) {
         _auctionDataParams.minPrice = price_;
 
         _auctionParams.implParams = abi.encode(_auctionDataParams);
@@ -149,13 +153,15 @@ abstract contract EmpaModuleTest is Test, Permit2User {
 
     function _updateMinBidSize() internal {
         // Calculate the minimum bid size
-        _minBidSize = _mulDivDown(_auctionParams.capacity, _MIN_BID_PERCENT, 1e5);
+        // Rounding consistent with EMPA
+        _minBidSize = Math.fullMulDivUp(_auctionParams.capacity, _MIN_BID_PERCENT, 1e5);
     }
 
     function _updateMinBidAmount() internal {
         // Calculate the minimum bid amount
+        // Rounding consistent with EMPA
         _minBidAmount =
-            _mulDivDown(_minBidSize, _auctionDataParams.minPrice, uint96(10 ** _baseTokenDecimals));
+            Math.fullMulDivUp(_minBidSize, _auctionDataParams.minPrice, 10 ** _baseTokenDecimals);
     }
 
     modifier givenMinimumBidPercentage(uint24 percentage_) {
@@ -175,9 +181,9 @@ abstract contract EmpaModuleTest is Test, Permit2User {
         _;
     }
 
-    function _createAuctionLot() internal returns (uint256 capacity) {
+    function _createAuctionLot() internal {
         vm.prank(address(_auctionHouse));
-        return _module.auction(_lotId, _auctionParams, _quoteTokenDecimals, _baseTokenDecimals);
+        _module.auction(_lotId, _auctionParams, _quoteTokenDecimals, _baseTokenDecimals);
     }
 
     modifier givenLotIsCreated() {
@@ -195,12 +201,12 @@ abstract contract EmpaModuleTest is Test, Permit2User {
         _;
     }
 
-    function _formatBid(uint128 amountOut_) internal pure returns (uint256) {
+    function _formatBid(uint256 amountOut_) internal pure returns (uint256) {
         uint256 formattedAmountOut;
         {
             uint128 subtracted;
             unchecked {
-                subtracted = amountOut_ - _BID_SEED;
+                subtracted = uint128(amountOut_) - _BID_SEED;
             }
             formattedAmountOut = uint256(bytes32(abi.encodePacked(_BID_SEED, subtracted)));
         }
@@ -211,15 +217,15 @@ abstract contract EmpaModuleTest is Test, Permit2User {
     function _encryptBid(
         uint96 lotId_,
         address bidder_,
-        uint96 amountIn_,
-        uint128 amountOut_,
-        uint256 auctionPrivateKey_
+        uint256 amountIn_,
+        uint256 amountOut_,
+        uint256 bidPrivateKey_
     ) internal view returns (uint256) {
         // Format the amount out
         uint256 formattedAmountOut = _formatBid(amountOut_);
 
-        Point memory sharedSecretKey = ECIES.calcPubKey(_bidPublicKey, auctionPrivateKey_); // TODO is the use of the private key here correct?
-        uint256 salt = uint256(keccak256(abi.encodePacked(lotId_, bidder_, amountIn_)));
+        Point memory sharedSecretKey = ECIES.calcPubKey(_auctionPublicKey, bidPrivateKey_);
+        uint256 salt = uint256(keccak256(abi.encodePacked(lotId_, bidder_, uint96(amountIn_))));
         uint256 symmetricKey = uint256(keccak256(abi.encodePacked(sharedSecretKey.x, salt)));
 
         return formattedAmountOut ^ symmetricKey;
@@ -228,16 +234,16 @@ abstract contract EmpaModuleTest is Test, Permit2User {
     function _encryptBid(
         uint96 lotId_,
         address bidder_,
-        uint96 amountIn_,
-        uint128 amountOut_
+        uint256 amountIn_,
+        uint256 amountOut_
     ) internal view returns (uint256) {
-        return _encryptBid(lotId_, bidder_, amountIn_, amountOut_, _AUCTION_PRIVATE_KEY); // TODO is the use of the private key here correct?
+        return _encryptBid(lotId_, bidder_, amountIn_, amountOut_, _BID_PRIVATE_KEY);
     }
 
     function _createBidData(
         address bidder_,
-        uint96 amountIn_,
-        uint96 amountOut_
+        uint256 amountIn_,
+        uint256 amountOut_
     ) internal view returns (bytes memory) {
         uint256 encryptedAmountOut = _encryptBid(_lotId, bidder_, amountIn_, amountOut_);
 
@@ -245,16 +251,16 @@ abstract contract EmpaModuleTest is Test, Permit2User {
     }
 
     function _createBidData(
-        uint96 amountIn_,
-        uint96 amountOut_
+        uint256 amountIn_,
+        uint256 amountOut_
     ) internal view returns (bytes memory) {
         return _createBidData(_BIDDER, amountIn_, amountOut_);
     }
 
     function _createBid(
         address bidder_,
-        uint96 amountIn_,
-        uint96 amountOut_
+        uint256 amountIn_,
+        uint256 amountOut_
     ) internal returns (uint64 bidId) {
         bytes memory bidData = _createBidData(bidder_, amountIn_, amountOut_);
 
@@ -265,18 +271,37 @@ abstract contract EmpaModuleTest is Test, Permit2User {
         return bidId;
     }
 
-    function _createBid(uint96 amountIn_, uint96 amountOut_) internal returns (uint64 bidId) {
+    function _createBid(uint256 amountIn_, uint256 amountOut_) internal returns (uint64 bidId) {
         return _createBid(_BIDDER, amountIn_, amountOut_);
     }
 
-    modifier givenBidIsCreated(uint96 amountIn_, uint96 amountOut_) {
+    modifier givenBidIsCreated(uint256 amountIn_, uint256 amountOut_) {
         _bidId = _createBid(amountIn_, amountOut_);
         _;
     }
 
     modifier givenBidIsRefunded(uint64 bidId_) {
+        // Find bid index
+
+        // Get number of bids from module
+        uint256 numBids = _module.getNumBids(_lotId);
+
+        // Retrieve bid IDs from the module
+        uint64[] memory bidIds = _module.getBidIds(_lotId, 0, numBids);
+
+        // Iterate through them to find the index of the bid
+        uint256 index = type(uint256).max;
+
+        uint256 len = bidIds.length;
+        for (uint256 i = 0; i < len; i++) {
+            if (bidIds[i] == bidId_) {
+                index = i;
+                break;
+            }
+        }
+
         vm.prank(address(_auctionHouse));
-        _module.refundBid(_lotId, bidId_, _BIDDER);
+        _module.refundBid(_lotId, bidId_, index, _BIDDER);
         _;
     }
 
@@ -290,7 +315,7 @@ abstract contract EmpaModuleTest is Test, Permit2User {
     }
 
     function _submitPrivateKey() internal {
-        _module.submitPrivateKey(_lotId, _AUCTION_PRIVATE_KEY, 0);
+        _module.submitPrivateKey(_lotId, _AUCTION_PRIVATE_KEY, 0, new bytes32[](0));
     }
 
     modifier givenPrivateKeyIsSubmitted() {
@@ -300,7 +325,21 @@ abstract contract EmpaModuleTest is Test, Permit2User {
 
     function _decryptLot() internal {
         EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
-        _module.decryptAndSortBids(_lotId, auctionData.nextBidId - 1);
+        uint256 numBids = auctionData.nextBidId - 1;
+        bytes32[] memory hints = new bytes32[](100);
+        for (uint256 i = 0; i < 100; i++) {
+            hints[i] = bytes32(0x0000000000000000ffffffffffffffffffffffff000000000000000000000001);
+        }
+        while (numBids > 0) {
+            uint256 gasStart = gasleft();
+            _module.decryptAndSortBids(_lotId, 100, hints);
+            console2.log("Gas used for decrypts: ", gasStart - gasleft());
+            if (numBids > 100) {
+                numBids -= 100;
+            } else {
+                numBids = 0;
+            }
+        }
     }
 
     modifier givenLotIsDecrypted() {
@@ -332,6 +371,11 @@ abstract contract EmpaModuleTest is Test, Permit2User {
         _;
     }
 
+    modifier givenLotSettlePeriodHasPassed() {
+        vm.warp(_start + _DURATION + 6 hours);
+        _;
+    }
+
     modifier givenLotProceedsAreClaimed() {
         vm.prank(address(_auctionHouse));
         _module.claimProceeds(_lotId);
@@ -340,26 +384,12 @@ abstract contract EmpaModuleTest is Test, Permit2User {
 
     // ======== Internal Functions ======== //
 
-    function _mulDivUp(uint96 mul1_, uint96 mul2_, uint96 div_) internal pure returns (uint96) {
-        uint256 product = FixedPointMathLib.mulDivUp(mul1_, mul2_, div_);
-        if (product > type(uint96).max) revert("overflow");
-
-        return uint96(product);
+    function _scaleQuoteTokenAmount(uint256 amount_) internal view returns (uint256) {
+        return Math.fullMulDiv(amount_, 10 ** _quoteTokenDecimals, _BASE_SCALE);
     }
 
-    function _mulDivDown(uint96 mul1_, uint96 mul2_, uint96 div_) internal pure returns (uint96) {
-        uint256 product = FixedPointMathLib.mulDivDown(mul1_, mul2_, div_);
-        if (product > type(uint96).max) revert("overflow");
-
-        return uint96(product);
-    }
-
-    function _scaleQuoteTokenAmount(uint96 amount_) internal view returns (uint96) {
-        return _mulDivUp(amount_, uint96(10 ** _quoteTokenDecimals), _BASE_SCALE);
-    }
-
-    function _scaleBaseTokenAmount(uint96 amount_) internal view returns (uint96) {
-        return _mulDivUp(amount_, uint96(10 ** _baseTokenDecimals), _BASE_SCALE);
+    function _scaleBaseTokenAmount(uint256 amount_) internal view returns (uint256) {
+        return Math.fullMulDiv(amount_, 10 ** _baseTokenDecimals, _BASE_SCALE);
     }
 
     function _getAuctionData(uint96 lotId_)
@@ -369,26 +399,28 @@ abstract contract EmpaModuleTest is Test, Permit2User {
     {
         (
             uint64 nextBidId_,
-            uint96 marginalPrice_,
-            uint96 minPrice_,
             uint64 nextDecryptIndex_,
-            uint96 minFilled_,
-            uint96 minBidSize_,
-            Auction.Status status_,
+            EncryptedMarginalPriceAuctionModule.LotStatus status_,
             uint64 marginalBidId_,
+            bool proceedsClaimed_,
+            uint256 marginalPrice_,
+            uint256 minPrice_,
+            uint256 minFilled_,
+            uint256 minBidSize_,
             Point memory publicKey_,
             uint256 privateKey_
         ) = _module.auctionData(lotId_);
 
         return EncryptedMarginalPriceAuctionModule.AuctionData({
             nextBidId: nextBidId_,
-            marginalPrice: marginalPrice_,
-            minPrice: minPrice_,
             nextDecryptIndex: nextDecryptIndex_,
-            minFilled: minFilled_,
-            minBidSize: minBidSize_,
             status: status_,
             marginalBidId: marginalBidId_,
+            proceedsClaimed: proceedsClaimed_,
+            marginalPrice: marginalPrice_,
+            minFilled: minFilled_,
+            minBidSize: minBidSize_,
+            minPrice: minPrice_,
             publicKey: publicKey_,
             privateKey: privateKey_,
             bidIds: new uint64[](0)
@@ -397,6 +429,14 @@ abstract contract EmpaModuleTest is Test, Permit2User {
 
     function _getAuctionLot(uint96 lotId_) internal view returns (Auction.Lot memory) {
         return _module.getLot(lotId_);
+    }
+
+    function _getPartialFill(uint96 lotId_)
+        internal
+        view
+        returns (EncryptedMarginalPriceAuctionModule.PartialFill memory)
+    {
+        return _module.getPartialFill(lotId_);
     }
 
     function _getBid(

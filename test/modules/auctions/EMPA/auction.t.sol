@@ -153,7 +153,11 @@ contract EmpaModuleAuctionTest is EmpaModuleTest {
         assertEq(
             auctionData.minBidSize, _scaleBaseTokenAmount(_LOT_CAPACITY) * _MIN_BID_PERCENT / 1e5
         );
-        assertEq(uint8(auctionData.status), uint8(Auction.Status.Created), "status");
+        assertEq(
+            uint8(auctionData.status),
+            uint8(EncryptedMarginalPriceAuctionModule.LotStatus.Created),
+            "status"
+        );
         assertEq(auctionData.publicKey.x, _auctionPublicKey.x);
         assertEq(auctionData.publicKey.y, _auctionPublicKey.y);
         assertEq(auctionData.privateKey, 0);
@@ -189,7 +193,11 @@ contract EmpaModuleAuctionTest is EmpaModuleTest {
         assertEq(
             auctionData.minBidSize, _scaleBaseTokenAmount(_LOT_CAPACITY) * _MIN_BID_PERCENT / 1e5
         );
-        assertEq(uint8(auctionData.status), uint8(Auction.Status.Created), "status");
+        assertEq(
+            uint8(auctionData.status),
+            uint8(EncryptedMarginalPriceAuctionModule.LotStatus.Created),
+            "status"
+        );
         assertEq(auctionData.publicKey.x, _auctionPublicKey.x);
         assertEq(auctionData.publicKey.y, _auctionPublicKey.y);
         assertEq(auctionData.privateKey, 0);
@@ -225,7 +233,11 @@ contract EmpaModuleAuctionTest is EmpaModuleTest {
         assertEq(
             auctionData.minBidSize, _scaleBaseTokenAmount(_LOT_CAPACITY) * _MIN_BID_PERCENT / 1e5
         );
-        assertEq(uint8(auctionData.status), uint8(Auction.Status.Created), "status");
+        assertEq(
+            uint8(auctionData.status),
+            uint8(EncryptedMarginalPriceAuctionModule.LotStatus.Created),
+            "status"
+        );
         assertEq(auctionData.publicKey.x, _auctionPublicKey.x);
         assertEq(auctionData.publicKey.y, _auctionPublicKey.y);
         assertEq(auctionData.privateKey, 0);

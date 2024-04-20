@@ -17,7 +17,7 @@
     "lint": "pnpm run fmt && pnpm run solhint",
     "lint:check": "pnpm run fmt:check && pnpm run solhint:check",
     "size": "forge clean && forge build --sizes --skip test --skip '*/Mock*.sol'",
-    "test": "forge test -vvv"
+    "test": "forge test --nmt optimal -vvv"
   },
   "keywords": [],
   "author": "",

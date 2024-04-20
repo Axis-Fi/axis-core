@@ -37,7 +37,7 @@ contract MerkleAllowlist is BaseCallback {
         address,
         address,
         address,
-        uint96,
+        uint256,
         bool,
         bytes calldata callbackData_
     ) internal virtual override {
@@ -48,12 +48,12 @@ contract MerkleAllowlist is BaseCallback {
         lotMerkleRoot[lotId_] = merkleRoot;
     }
 
-    function _onCancel(uint96, uint96, bool, bytes calldata) internal pure override {
+    function _onCancel(uint96, uint256, bool, bytes calldata) internal pure override {
         // Not implemented
         revert Callback_NotImplemented();
     }
 
-    function _onCurate(uint96, uint96, bool, bytes calldata) internal pure override {
+    function _onCurate(uint96, uint256, bool, bytes calldata) internal pure override {
         // Not implemented
         revert Callback_NotImplemented();
     }
@@ -61,8 +61,8 @@ contract MerkleAllowlist is BaseCallback {
     function _onPurchase(
         uint96 lotId_,
         address buyer_,
-        uint96 amount_,
-        uint96 payout_,
+        uint256 amount_,
+        uint256 payout_,
         bool prefunded_,
         bytes calldata callbackData_
     ) internal virtual override {
@@ -76,8 +76,8 @@ contract MerkleAllowlist is BaseCallback {
     function __onPurchase(
         uint96 lotId_,
         address buyer_,
-        uint96 amount_,
-        uint96 payout_,
+        uint256 amount_,
+        uint256 payout_,
         bool prefunded_,
         bytes calldata callbackData_
     ) internal virtual {}
@@ -86,7 +86,7 @@ contract MerkleAllowlist is BaseCallback {
         uint96 lotId_,
         uint64 bidId_,
         address buyer_,
-        uint96 amount_,
+        uint256 amount_,
         bytes calldata callbackData_
     ) internal virtual override {
         // Validate that the buyer is allowed to participate
@@ -100,11 +100,11 @@ contract MerkleAllowlist is BaseCallback {
         uint96 lotId_,
         uint64 bidId_,
         address buyer_,
-        uint96 amount_,
+        uint256 amount_,
         bytes calldata callbackData_
     ) internal virtual {}
 
-    function _onClaimProceeds(uint96, uint96, uint96, bytes calldata) internal pure override {
+    function _onClaimProceeds(uint96, uint256, uint256, bytes calldata) internal pure override {
         // Not implemented
         revert Callback_NotImplemented();
     }

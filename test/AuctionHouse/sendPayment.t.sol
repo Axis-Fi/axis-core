@@ -3,7 +3,7 @@ pragma solidity 0.8.19;
 
 import {Test} from "forge-std/Test.sol";
 
-import {MockCallback} from "test/AuctionHouse/MockCallback.sol";
+import {MockCallback} from "test/callbacks/MockCallback.sol";
 import {MockAuctionHouse} from "test/AuctionHouse/MockAuctionHouse.sol";
 import {MockFeeOnTransferERC20} from "test/lib/mocks/MockFeeOnTransferERC20.sol";
 import {Permit2User} from "test/lib/permit2/Permit2User.sol";
@@ -45,7 +45,6 @@ contract SendPaymentTest is Test, Permit2User {
 
     modifier givenAuctionHasCallback() {
         // // 00000000 - 0x00
-        // // cast create2 -s 00 -i $(cat ./bytecode/MockCallback00.bin)
         // bytes memory bytecode = abi.encodePacked(
         //     type(MockCallback).creationCode,
         //     abi.encode(address(_auctionHouse), Callbacks.Permissions({
@@ -65,7 +64,6 @@ contract SendPaymentTest is Test, Permit2User {
         // );
 
         // // 00000010 - 0x02
-        // // cast create2 -s 02 -i $(cat ./bytecode/MockCallback02.bin)
         // bytecode = abi.encodePacked(
         //     type(MockCallback).creationCode,
         //     abi.encode(address(_auctionHouse), Callbacks.Permissions({
@@ -87,10 +85,12 @@ contract SendPaymentTest is Test, Permit2User {
         bytes32 salt;
         if (_callbackReceiveQuoteTokens) {
             // 0x02
-            salt = bytes32(0x0eb83d1babeaf99f20b40a5d37914979c9d8120c3eadc8526ff5173904b27a5d);
+            // cast create2 -s 02 -i $(cat ./bytecode/MockCallback02.bin)
+            salt = bytes32(0x6ad7b200cf623f6efb04308a7446df797436efe1cfadf5200cc370c77246869c);
         } else {
             // 0x00
-            salt = bytes32(0xeab3e04b6bfc51305f2740fdc44218356a09e180cf22e0fef2ca1d452c0c19c2);
+            // cast create2 -s 00 -i $(cat ./bytecode/MockCallback00.bin)
+            salt = bytes32(0xda993d2837c1af99ead49c00ffc2c02a4c1b1188d0ec0b237882eb62ee89bebd);
         }
 
         vm.broadcast(); // required for CREATE2 address to work correctly. doesn't do anything in a test

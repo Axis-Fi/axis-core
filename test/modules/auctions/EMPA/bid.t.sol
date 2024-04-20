@@ -9,9 +9,11 @@ import {Point} from "src/lib/ECIES.sol";
 import {EmpaModuleTest} from "test/modules/auctions/EMPA/EMPAModuleTest.sol";
 
 contract EmpaModuleBidTest is EmpaModuleTest {
-    uint96 internal constant _BID_AMOUNT = 2e18;
-    uint96 internal constant _BID_AMOUNT_OUT = 1e18;
-    uint96 internal constant _BID_AMOUNT_BELOW_MIN = 1e16;
+    uint256 internal constant _BID_AMOUNT = 2e18;
+    uint256 internal constant _BID_AMOUNT_OUT = 1e18;
+    uint256 internal constant _BID_AMOUNT_BELOW_MIN = 1e15;
+
+    uint256 internal constant _LOT_CAPACITY_OVERFLOW = type(uint256).max - 10;
 
     // [X] when the caller is not the parent
     //  [X] it reverts
@@ -32,6 +34,8 @@ contract EmpaModuleBidTest is EmpaModuleTest {
     // [X] when the implied amount out is less than the minimum bid size
     //  [X] it reverts
     // [X] when the bid public key is invalid
+    //  [X] it reverts
+    // [X] when the bid amount is greater than uint96 max
     //  [X] it reverts
     // [X] it stores the bid data
 
@@ -228,6 +232,24 @@ contract EmpaModuleBidTest is EmpaModuleTest {
         _module.bid(_lotId, _BIDDER, _REFERRER, _BID_AMOUNT, bidData);
     }
 
+    function test_bidAmountGreaterThanUint96Max_reverts(uint256 amountIn_)
+        public
+        givenLotIsCreated
+        givenLotHasStarted
+    {
+        uint256 amountIn = bound(amountIn_, uint256(2 ** 96), type(uint256).max);
+
+        // Prepare the inputs
+        bytes memory bidData = _createBidData(amountIn, _BID_AMOUNT_OUT);
+
+        // Expect revert
+        vm.expectRevert();
+
+        // Call the function
+        vm.prank(address(_auctionHouse));
+        _module.bid(_lotId, _BIDDER, _REFERRER, amountIn, bidData);
+    }
+
     function test_success() public givenLotIsCreated givenLotHasStarted {
         uint256 encryptedAmountOut = _encryptBid(_lotId, _BIDDER, _BID_AMOUNT, _BID_AMOUNT_OUT);
 
@@ -254,5 +276,29 @@ contract EmpaModuleBidTest is EmpaModuleTest {
 
         EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
         assertEq(auctionData.nextBidId, 2, "nextBidId");
+    }
+
+    function test_givenMaximumLotCapacity_reverts()
+        public
+        givenMinimumPrice(1)
+        givenMinimumBidPercentage(100)
+        givenLotCapacity(_LOT_CAPACITY_OVERFLOW)
+        givenLotIsCreated
+        givenLotHasStarted
+    {
+        // Prepare the inputs
+        bytes memory bidData = _createBidData(1e22, type(uint256).max - 1e24);
+
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(Auction.Auction_AmountLessThanMinimum.selector);
+        vm.expectRevert(err);
+
+        // This test demonstrates that the capacity expended variable cannot overflow due to a high lot capacity and high bid amounts.
+        // For capacity expended to overflow uint256, the bid (n - 1) must be less than the lot capacity, and bid n must be greater than uint256 max.
+        // However, under such circumstances, the largest possible bid (uint96 max = 2^96 - 1 = 7.9228162514e28) would be less than the minimum bid amount (1.1579208924e57), so the capacity overflow is not possible.
+
+        // Call the function
+        vm.prank(address(_auctionHouse));
+        _module.bid(_lotId, _BIDDER, _REFERRER, _BID_AMOUNT_BELOW_MIN, bidData);
     }
 }

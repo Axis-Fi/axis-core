@@ -9,7 +9,7 @@ import {StringHelper} from "test/lib/String.sol";
 import {MockFeeOnTransferERC20} from "test/lib/mocks/MockFeeOnTransferERC20.sol";
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 
-import {AuctionHouse} from "src/AuctionHouse.sol";
+import {AtomicAuctionHouse} from "src/AtomicAuctionHouse.sol";
 import {Derivative} from "src/modules/Derivative.sol";
 import {LinearVesting} from "src/modules/derivatives/LinearVesting.sol";
 import {SoulboundCloneERC20} from "src/modules/derivatives/SoulboundCloneERC20.sol";
@@ -26,7 +26,7 @@ contract LinearVestingTest is Test, Permit2User {
     address internal _underlyingTokenAddress;
     uint8 internal _underlyingTokenDecimals = 18;
 
-    AuctionHouse internal _auctionHouse;
+    AtomicAuctionHouse internal _auctionHouse;
     LinearVesting internal _linearVesting;
 
     LinearVesting.VestingParams internal _vestingParams;
@@ -55,7 +55,7 @@ contract LinearVestingTest is Test, Permit2User {
             new MockFeeOnTransferERC20("Underlying", "UNDERLYING", _underlyingTokenDecimals);
         _underlyingTokenAddress = address(_underlyingToken);
 
-        _auctionHouse = new AuctionHouse(address(this), _PROTOCOL, _permit2Address);
+        _auctionHouse = new AtomicAuctionHouse(address(this), _PROTOCOL, _permit2Address);
         _linearVesting = new LinearVesting(address(_auctionHouse));
         _auctionHouse.installModule(_linearVesting);
 
@@ -112,6 +112,7 @@ contract LinearVestingTest is Test, Permit2User {
     }
 
     modifier whenExpiryTimestampIsBeforeCurrentTimestamp() {
+        _vestingParams.start = uint48(block.timestamp) - 2; // Otherwise it will complain about the start timestamp being after the expiry
         _vestingParams.expiry = uint48(block.timestamp) - 1;
         _vestingParamsBytes = abi.encode(_vestingParams);
         _;
@@ -246,7 +247,7 @@ contract LinearVestingTest is Test, Permit2User {
     // [X] when the start timestamp is before the current timestamp
     //  [X] it succeeds
     // [X] when the expiry timestamp is before the current timestamp
-    //  [X] it reverts
+    //  [X] it succeeds
     // [X] given the token is already deployed
     //  [X] given the wrapped token is already deployed
     //   [X] it returns the same token id and wrapped token address
@@ -330,16 +331,17 @@ contract LinearVestingTest is Test, Permit2User {
         assertTrue(wrappedAddress != address(0), "wrappedAddress mismatch");
     }
 
-    function test_deploy_expiryTimestampIsBeforeCurrentTimestamp_reverts()
+    function test_deploy_expiryTimestampIsBeforeCurrentTimestamp()
         public
         whenExpiryTimestampIsBeforeCurrentTimestamp
     {
-        // Expect revert
-        bytes memory err = abi.encodeWithSelector(LinearVesting.InvalidParams.selector);
-        vm.expectRevert(err);
-
         // Call
-        _linearVesting.deploy(_underlyingTokenAddress, _vestingParamsBytes, false);
+        (uint256 tokenId, address wrappedAddress) =
+            _linearVesting.deploy(_underlyingTokenAddress, _vestingParamsBytes, true);
+
+        // Check values
+        assertTrue(tokenId > 0, "tokenId mismatch");
+        assertTrue(wrappedAddress != address(0), "wrappedAddress mismatch");
     }
 
     function test_deploy_wrapped_derivativeDeployed_wrappedDerivativeDeployed()
@@ -601,9 +603,9 @@ contract LinearVestingTest is Test, Permit2User {
     // [X] when the start timestamp is after the expiry timestamp
     //  [X] it returns false
     // [X] when the start timestamp is before the current timestamp
-    //  [X] it returns false
+    //  [X] it returns true
     // [X] when the expiry timestamp is before the current timestamp
-    //  [X] it returns false
+    //  [X] it returns true
     // [X] it returns true
 
     function test_validate_incorrectParams_reverts() public givenVestingParamsAreInvalid {
@@ -672,7 +674,7 @@ contract LinearVestingTest is Test, Permit2User {
         bool isValid = _linearVesting.validate(_underlyingTokenAddress, _vestingParamsBytes);
 
         // Check values
-        assertFalse(isValid);
+        assertTrue(isValid);
     }
 
     function test_validate() public {
@@ -733,9 +735,9 @@ contract LinearVestingTest is Test, Permit2User {
     // [X] when the start timestamp is after the expiry timestamp
     //  [X] it reverts
     // [X] when the start timestamp is before the current timestamp
-    //  [X] it reverts
+    //  [X] it succeeds
     // [X] when the expiry timestamp is before the current timestamp
-    //  [X] it reverts
+    //  [X] it succeeds
     // [X] when the mint amount is 0
     //  [X] it reverts
     // [X] when the recipient is 0
@@ -844,31 +846,43 @@ contract LinearVestingTest is Test, Permit2User {
         assertEq(_linearVesting.balanceOf(_ALICE, tokenId), _AMOUNT, "balanceOf mismatch");
     }
 
-    function test_mint_params_expiryTimestampIsBeforeCurrentTimestamp_reverts()
+    function test_mint_params_expiryTimestampIsBeforeCurrentTimestamp()
         public
         whenExpiryTimestampIsBeforeCurrentTimestamp
+        givenParentHasUnderlyingTokenBalance(_AMOUNT)
     {
-        // Expect revert
-        bytes memory err = abi.encodeWithSelector(LinearVesting.InvalidParams.selector);
-        vm.expectRevert(err);
-
         // Call
         vm.prank(address(_auctionHouse));
-        _linearVesting.mint(_ALICE, _underlyingTokenAddress, _vestingParamsBytes, _AMOUNT, false);
+        (uint256 tokenId, address wrappedAddress, uint256 amountCreated) = _linearVesting.mint(
+            _ALICE, _underlyingTokenAddress, _vestingParamsBytes, _AMOUNT, false
+        );
+
+        // Check values
+        assertTrue(tokenId > 0, "tokenId mismatch");
+        assertTrue(wrappedAddress == address(0), "wrappedAddress mismatch");
+        assertEq(amountCreated, _AMOUNT, "amountCreated mismatch");
+        assertEq(_linearVesting.balanceOf(_ALICE, tokenId), _AMOUNT, "balanceOf mismatch");
     }
 
-    function test_mint_params_afterExpiry_reverts()
+    function test_mint_params_afterExpiry()
         public
         givenDerivativeIsDeployed
         givenAfterVestingExpiry
+        givenParentHasUnderlyingTokenBalance(_AMOUNT)
     {
-        // Expect revert
-        bytes memory err = abi.encodeWithSelector(LinearVesting.InvalidParams.selector);
-        vm.expectRevert(err);
-
         // Call
         vm.prank(address(_auctionHouse));
-        _linearVesting.mint(_ALICE, _underlyingTokenAddress, _vestingParamsBytes, _AMOUNT, false);
+        (uint256 tokenId, address wrappedAddress, uint256 amountCreated) = _linearVesting.mint(
+            _ALICE, _underlyingTokenAddress, _vestingParamsBytes, _AMOUNT, false
+        );
+
+        // Check values
+        assertTrue(tokenId > 0, "tokenId mismatch");
+        assertTrue(wrappedAddress == address(0), "wrappedAddress mismatch");
+        assertEq(amountCreated, _AMOUNT, "amountCreated mismatch");
+        assertEq(_linearVesting.balanceOf(_ALICE, tokenId), _AMOUNT, "balanceOf mismatch");
+        assertEq(_underlyingToken.balanceOf(_ALICE), 0, "underlying: balanceOf mismatch");
+        assertEq(_linearVesting.redeemable(_ALICE, tokenId), _AMOUNT, "redeemable mismatch");
     }
 
     function test_mint_params_mintAmountIsZero_reverts() public {
@@ -1140,6 +1154,8 @@ contract LinearVestingTest is Test, Permit2User {
     //  [X] it mints the derivative tokens and returns a redeemable amount of 0
     // [X] given it is after the vesting start
     //  [X] it mints the derivative tokens and returns the correct redeemable amount
+    // [X] given it is after the vesting expiry
+    //  [X] it mints the derivative tokens and returns the correct redeemable amount
     // [X] given the user has existing minted tokens
     //  [X] it mints the additional derivative tokens and returns the correct redeemable amount
     // [X] when wrapped is false
@@ -1152,20 +1168,6 @@ contract LinearVestingTest is Test, Permit2User {
     //  [X] it succeeds
 
     function test_mint_tokenId_whenTokenIdDoesNotExist_reverts() public {
-        // Expect revert
-        bytes memory err = abi.encodeWithSelector(LinearVesting.InvalidParams.selector);
-        vm.expectRevert(err);
-
-        // Call
-        vm.prank(address(_auctionHouse));
-        _linearVesting.mint(_ALICE, _derivativeTokenId, _AMOUNT, false);
-    }
-
-    function test_mint_tokenId_afterExpiry_reverts()
-        public
-        givenDerivativeIsDeployed
-        givenAfterVestingExpiry
-    {
         // Expect revert
         bytes memory err = abi.encodeWithSelector(LinearVesting.InvalidParams.selector);
         vm.expectRevert(err);
@@ -1276,6 +1278,28 @@ contract LinearVestingTest is Test, Permit2User {
         );
     }
 
+    function test_mint_tokenId_afterVestingExpiry()
+        public
+        givenParentHasUnderlyingTokenBalance(_AMOUNT)
+        givenDerivativeIsDeployed
+        givenAfterVestingExpiry
+    {
+        // Call
+        vm.prank(address(_auctionHouse));
+        (uint256 tokenId, address wrappedAddress, uint256 amountCreated) =
+            _linearVesting.mint(_ALICE, _derivativeTokenId, _AMOUNT, false);
+
+        // Check values
+        assertTrue(tokenId > 0, "tokenId mismatch");
+        assertTrue(wrappedAddress == address(0), "wrappedAddress mismatch");
+        assertEq(amountCreated, _AMOUNT, "amountCreated mismatch");
+        assertEq(
+            _linearVesting.balanceOf(_ALICE, tokenId), _AMOUNT, "derivative: balanceOf mismatch"
+        );
+        assertEq(_underlyingToken.balanceOf(_ALICE), 0, "underlying: balanceOf mismatch");
+        assertEq(_linearVesting.redeemable(_ALICE, tokenId), _AMOUNT, "redeemable mismatch");
+    }
+
     function test_mint_tokenId_givenExistingDerivativeTokens_afterVestingStart(uint48 elapsed_)
         public
         givenParentHasUnderlyingTokenBalance(_AMOUNT + _AMOUNT_TWO)
@@ -1316,6 +1340,43 @@ contract LinearVestingTest is Test, Permit2User {
             _linearVesting.redeemable(_ALICE, tokenId),
             expectedRedeemableAmount,
             "redeemable mismatch"
+        );
+    }
+
+    function test_mint_tokenId_givenExistingDerivativeTokens_afterVestingExpiry()
+        public
+        givenParentHasUnderlyingTokenBalance(_AMOUNT + _AMOUNT_TWO)
+        givenDerivativeIsDeployed
+    {
+        uint48 elapsedOne = uint48(10_000);
+
+        // Warp to the first checkpoint
+        vm.warp(_VESTING_START + elapsedOne);
+
+        // Call
+        vm.prank(address(_auctionHouse));
+        (uint256 tokenId,,) = _linearVesting.mint(_ALICE, _derivativeTokenId, _AMOUNT, false);
+
+        // Warp to after exiry
+        vm.warp(_VESTING_START + _VESTING_DURATION + 1);
+
+        // Mint more tokens
+        vm.prank(address(_auctionHouse));
+        (uint256 tokenIdTwo, address wrappedAddressTwo, uint256 amountCreatedTwo) =
+            _linearVesting.mint(_ALICE, _derivativeTokenId, _AMOUNT_TWO, false);
+
+        // Check values
+        assertEq(tokenId, tokenIdTwo, "tokenId mismatch");
+        assertTrue(wrappedAddressTwo == address(0), "wrappedAddress mismatch");
+        assertEq(amountCreatedTwo, _AMOUNT_TWO, "amountCreated mismatch");
+        assertEq(
+            _linearVesting.balanceOf(_ALICE, tokenId),
+            _AMOUNT + _AMOUNT_TWO,
+            "derivative: balanceOf mismatch"
+        );
+        assertEq(_underlyingToken.balanceOf(_ALICE), 0, "underlying: balanceOf mismatch");
+        assertEq(
+            _linearVesting.redeemable(_ALICE, tokenId), _AMOUNT + _AMOUNT_TWO, "redeemable mismatch"
         );
     }
 
