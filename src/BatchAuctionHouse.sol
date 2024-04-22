@@ -353,7 +353,7 @@ contract BatchAuctionHouse is IBatchAuctionHouse, AuctionHouse {
         external
         override
         nonReentrant
-        returns (uint256 totalIn_, uint256 totalOut_, bytes memory auctionOutput_)
+        returns (uint256 totalIn, uint256 totalOut, bytes memory auctionOutput)
     {
         // Validation
         _isLotValid(lotId_);
@@ -363,7 +363,7 @@ contract BatchAuctionHouse is IBatchAuctionHouse, AuctionHouse {
         BatchAuctionModule module = getBatchModuleForId(lotId_);
 
         // Settle the auction
-        (totalIn_, totalOut_, auctionOutput_) = module.settle(lotId_);
+        (totalIn, totalOut, auctionOutput) = module.settle(lotId_);
 
         // Emit event
         emit Settle(lotId_);

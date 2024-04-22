@@ -84,12 +84,12 @@ interface IBatchAuction is IAuction {
     ///             - Update the lot data
     ///
     /// @param      lotId_          The lot id
-    /// @return     totalIn_        Total amount of quote tokens from bids that were filled
-    /// @return     totalOut_       Total amount of base tokens paid out to winning bids
-    /// @return     auctionOutput_  Custom data returned by the auction module
+    /// @return     totalIn         Total amount of quote tokens from bids that were filled
+    /// @return     totalOut        Total amount of base tokens paid out to winning bids
+    /// @return     auctionOutput   Custom data returned by the auction module
     function settle(uint96 lotId_)
         external
-        returns (uint256 totalIn_, uint256 totalOut_, bytes memory auctionOutput_);
+        returns (uint256 totalIn, uint256 totalOut, bytes memory auctionOutput);
 
     /// @notice     Claim the seller proceeds from a settled auction lot
     /// @dev        The implementing function should handle the following:

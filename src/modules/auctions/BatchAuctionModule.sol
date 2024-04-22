@@ -13,7 +13,9 @@ import {AuctionModule} from "src/modules/Auction.sol";
 abstract contract BatchAuctionModule is IBatchAuction, AuctionModule {
     // ========== STATE VARIABLES ========== //
 
-    mapping(uint96 => bytes) public auctionOutput; // TODO resolve shadowing
+    /// @notice     Custom auction output for each lot
+    /// @dev        Stored during settlement
+    mapping(uint96 => bytes) public lotAuctionOutput;
 
     /// @inheritdoc IAuction
     function auctionType() external pure override returns (AuctionType) {
@@ -177,7 +179,7 @@ abstract contract BatchAuctionModule is IBatchAuction, AuctionModule {
         virtual
         override
         onlyInternal
-        returns (uint256 totalIn_, uint256 totalOut_, bytes memory auctionOutput_)
+        returns (uint256 totalIn, uint256 totalOut, bytes memory auctionOutput)
     {
         // Standard validation
         _revertIfLotInvalid(lotId_);
@@ -186,12 +188,12 @@ abstract contract BatchAuctionModule is IBatchAuction, AuctionModule {
         _revertIfLotSettled(lotId_);
 
         // Call implementation-specific logic
-        (totalIn_, totalOut_, auctionOutput_) = _settle(lotId_);
+        (totalIn, totalOut, auctionOutput) = _settle(lotId_);
 
         // Store sold and purchased amounts
-        lotData[lotId_].purchased = totalIn_;
-        lotData[lotId_].sold = totalOut_;
-        auctionOutput[lotId_] = auctionOutput_;
+        lotData[lotId_].purchased = totalIn;
+        lotData[lotId_].sold = totalOut;
+        lotAuctionOutput[lotId_] = auctionOutput;
     }
 
     /// @notice     Implementation-specific lot settlement logic
