@@ -14,7 +14,9 @@ import {Callbacks} from "src/lib/Callbacks.sol";
 import {ERC20} from "lib/solmate/src/tokens/ERC20.sol";
 import {ReentrancyGuard} from "lib/solmate/src/utils/ReentrancyGuard.sol";
 
-import {fromKeycode, fromVeecode, keycodeFromVeecode, Keycode, Veecode} from "src/modules/Keycode.sol";
+import {
+    fromKeycode, fromVeecode, keycodeFromVeecode, Keycode, Veecode
+} from "src/modules/Keycode.sol";
 import {Module, WithModules} from "src/modules/Modules.sol";
 import {FeeManager} from "src/bases/FeeManager.sol";
 
