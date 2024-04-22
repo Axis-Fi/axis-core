@@ -86,7 +86,7 @@ contract CappedMerkleAllowlistTest is Test, Permit2User {
 
         // cast create2 -s 90 -i $(cat ./bytecode/CappedMerkleAllowlistAtomic90.bin)
         bytes32 atomicSalt =
-            bytes32(0x5db3bd8b05821e018b021cc81d3821b6cfcef618cf381a8b57ca6c25dc78cebe);
+            bytes32(0x3e3ac6cda29dcc65284db9735cb9ce884b6e304d491e4e8f39453c6a89f32ff9);
         vm.broadcast();
         _atomicAllowlist = new CappedMerkleAllowlist{salt: atomicSalt}(
             address(_atomicAuctionHouse),
@@ -105,7 +105,7 @@ contract CappedMerkleAllowlistTest is Test, Permit2User {
 
         // cast create2 -s 88 -i $(cat ./bytecode/CappedMerkleAllowlistBatch88.bin)
         bytes32 batchSalt =
-            bytes32(0xa543148031e276980fecd29db676a7f102859bb8001b7348d2c136917cb1335e);
+            bytes32(0xe05ff3cd3bb8271d2cbac35c1fd3d47dbb29b34dba057fc5fdf6e9f363330ae8);
         vm.broadcast();
         _batchAllowlist = new CappedMerkleAllowlist{salt: batchSalt}(
             address(_batchAuctionHouse),

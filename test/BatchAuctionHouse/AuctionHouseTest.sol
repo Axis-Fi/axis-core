@@ -283,7 +283,7 @@ abstract contract BatchAuctionHouseTest is Test, Permit2User {
         //     vm.toString(bytecode)
         // );
 
-        bytes32 salt = bytes32(0xab409e3644183b07b66074dcc4ded2eade77e112f00923c945abeb0a54ad7f21);
+        bytes32 salt = bytes32(0x8c88ce8e249b9e61b04716ad8e3f2cd9499e04ee74887e241b2475dbc43edbdf);
         vm.startBroadcast(); // required for CREATE2 address to work correctly. doesn't do anything in a test
         _callback = new MockCallback{salt: salt}(
             address(_auctionHouse),
@@ -443,19 +443,19 @@ abstract contract BatchAuctionHouseTest is Test, Permit2User {
         if (_callbackSendBaseTokens && _callbackReceiveQuoteTokens) {
             // 11111111 = 0xFF
             // cast create2 -s FF -i $(cat ./bytecode/MockCallbackFF.bin)
-            salt = bytes32(0x12f9decc6e9994b5ee956d40b15ac31f5d7df398cd8d8971aa003ff1a8117d82);
+            salt = bytes32(0x3b0c221e4b9d354f38ec89ae7953b9ef3eeba1558cbdb8681f89caae1b3743ba);
         } else if (_callbackSendBaseTokens) {
             // 11111101 = 0xFD
             // cast create2 -s FD -i $(cat ./bytecode/MockCallbackFD.bin)
-            salt = bytes32(0xdd6c8844a047b1bd81ff3ac0fef1d9a4bfadd09c4e9d752bfcd30eacea0edb9f);
+            salt = bytes32(0xab91bacb109860cf27063eba0c732388096a66028f9732c1a9eaa1e7ef8216c3);
         } else if (_callbackReceiveQuoteTokens) {
             // 11111110 = 0xFE
             // cast create2 -s FE -i $(cat ./bytecode/MockCallbackFE.bin)
-            salt = bytes32(0x82bef9f35d8d575cf3d478aad654496e0c89d280a4dc9cdcf8f413383791e7fe);
+            salt = bytes32(0x9f579071c86104618c76a49154393dafd393c9fa8385022016c308e0a1c6e60c);
         } else {
             // 11111100 = 0xFC
             // cast create2 -s FC -i $(cat ./bytecode/MockCallbackFC.bin)
-            salt = bytes32(0xe85b3039d452b878784eb4adb8494cf4ac1f393af3f6c24a1961f99cb4100098);
+            salt = bytes32(0xd12f5bd70b44353b53874b978f1e53c7f772252e59f787c62885af1d5d2214af);
         }
 
         // Required for CREATE2 address to work correctly. doesn't do anything in a test
