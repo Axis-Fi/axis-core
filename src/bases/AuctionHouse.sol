@@ -5,6 +5,7 @@ pragma solidity 0.8.19;
 import {IAuction} from "src/interfaces/IAuction.sol";
 import {IAuctionHouse} from "src/interfaces/IAuctionHouse.sol";
 import {ICallback} from "src/interfaces/ICallback.sol";
+import {IFeeManager} from "src/interfaces/IFeeManager.sol";
 
 // Internal libraries
 import {Transfer} from "src/lib/Transfer.sol";
@@ -480,7 +481,8 @@ abstract contract AuctionHouse is IAuctionHouse, WithModules, ReentrancyGuard, F
 
     // ========== ADMIN FUNCTIONS ========== //
 
-    /// @inheritdoc FeeManager
+    /// @inheritdoc IFeeManager
+    /// @dev        Implemented in this contract as it required access to the `onlyOwner` modifier
     function setFee(Keycode auctionType_, FeeType type_, uint48 fee_) external override onlyOwner {
         // Check that the fee is a valid percentage
         if (fee_ > _FEE_DECIMALS) revert InvalidFee();
@@ -496,7 +498,8 @@ abstract contract AuctionHouse is IAuctionHouse, WithModules, ReentrancyGuard, F
         }
     }
 
-    /// @inheritdoc FeeManager
+    /// @inheritdoc IFeeManager
+    /// @dev        Implemented in this contract as it required access to the `onlyOwner` modifier
     function setProtocol(address protocol_) external override onlyOwner {
         _protocol = protocol_;
     }

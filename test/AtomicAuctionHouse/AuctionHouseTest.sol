@@ -1,13 +1,20 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.19;
 
+// Interfaces
 import {IAuction} from "src/interfaces/IAuction.sol";
 import {IAuctionHouse} from "src/interfaces/IAuctionHouse.sol";
+import {IAtomicAuctionHouse} from "src/interfaces/IAtomicAuctionHouse.sol";
+import {ICallback} from "src/interfaces/ICallback.sol";
+import {IFeeManager} from "src/interfaces/IFeeManager.sol";
 
-// Libraries
+// Internal libraries
+import {Callbacks} from "src/lib/Callbacks.sol";
+import {Transfer} from "src/lib/Transfer.sol";
+
+// External libraries
 import {Test} from "forge-std/Test.sol";
 import {ERC20} from "lib/solmate/src/tokens/ERC20.sol";
-import {Transfer} from "src/lib/Transfer.sol";
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 
 // Mocks
@@ -19,13 +26,10 @@ import {Permit2User} from "test/lib/permit2/Permit2User.sol";
 import {MockFeeOnTransferERC20} from "test/lib/mocks/MockFeeOnTransferERC20.sol";
 
 // Auctions
-import {IAtomicAuctionHouse} from "src/interfaces/IAtomicAuctionHouse.sol";
 import {AtomicAuctionHouse} from "src/AtomicAuctionHouse.sol";
 import {AuctionHouse} from "src/bases/AuctionHouse.sol";
 import {AuctionModule} from "src/modules/Auction.sol";
 import {FeeManager} from "src/bases/FeeManager.sol";
-import {ICallback} from "src/interfaces/ICallback.sol";
-import {Callbacks} from "src/lib/Callbacks.sol";
 
 import {Veecode, toKeycode, keycodeFromVeecode, Keycode} from "src/modules/Modules.sol";
 
@@ -533,7 +537,7 @@ abstract contract AtomicAuctionHouseTest is Test, Permit2User {
     modifier givenCuratorMaxFeeIsSet() {
         vm.prank(_OWNER);
         _auctionHouse.setFee(
-            _auctionModuleKeycode, FeeManager.FeeType.MaxCurator, _CURATOR_MAX_FEE_PERCENT
+            _auctionModuleKeycode, IFeeManager.FeeType.MaxCurator, _CURATOR_MAX_FEE_PERCENT
         );
         _;
     }
@@ -559,7 +563,7 @@ abstract contract AtomicAuctionHouseTest is Test, Permit2User {
 
     function _setProtocolFee(uint24 fee_) internal {
         vm.prank(_OWNER);
-        _auctionHouse.setFee(_auctionModuleKeycode, FeeManager.FeeType.Protocol, fee_);
+        _auctionHouse.setFee(_auctionModuleKeycode, IFeeManager.FeeType.Protocol, fee_);
         _protocolFeePercentActual = fee_;
     }
 
@@ -570,7 +574,7 @@ abstract contract AtomicAuctionHouseTest is Test, Permit2User {
 
     function _setReferrerFee(uint24 fee_) internal {
         vm.prank(_OWNER);
-        _auctionHouse.setFee(_auctionModuleKeycode, FeeManager.FeeType.Referrer, fee_);
+        _auctionHouse.setFee(_auctionModuleKeycode, IFeeManager.FeeType.Referrer, fee_);
         _referrerFeePercentActual = fee_;
     }
 

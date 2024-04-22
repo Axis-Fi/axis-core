@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: BSL-1.1
 pragma solidity 0.8.19;
 
+// Interfaces
+import {IFeeManager} from "src/interfaces/IFeeManager.sol";
+
 // Internal libraries
 import {Transfer} from "src/lib/Transfer.sol";
 
@@ -11,41 +14,9 @@ import {FixedPointMathLib as Math} from "lib/solmate/src/utils/FixedPointMathLib
 
 import {Keycode} from "src/modules/Keycode.sol";
 
-// TODO interface for FeeManager
-
 /// @title      FeeManager
 /// @notice     Defines fees for auctions and manages the collection and distribution of fees
-abstract contract FeeManager is ReentrancyGuard {
-    // ========== ERRORS ========== //
-
-    error InvalidFee();
-
-    // ========== DATA STRUCTURES ========== //
-
-    /// @notice     Collection of fees charged for a specific auction type in basis points (3 decimals).
-    /// @notice     Protocol and referrer fees are taken in the quoteToken and accumulate in the contract. These are set by the protocol.
-    /// @notice     Curator fees are taken in the payoutToken and are sent when the auction is settled / purchase is made. Curators can set these up to the configured maximum.
-    /// @dev        There are some situations where the fees may round down to zero if quantity of baseToken
-    ///             is < 1e5 wei (can happen with big price differences on small decimal tokens). This is purely
-    ///             a theoretical edge case, as the amount would not be practical.
-    ///
-    /// @param      protocol        Fee charged by the protocol
-    /// @param      referrer        Fee charged by the referrer
-    /// @param      maxCuratorFee   Maximum fee that a curator can charge
-    /// @param      curator         Fee charged by a specific curator
-    struct Fees {
-        uint48 protocol;
-        uint48 referrer;
-        uint48 maxCuratorFee;
-        mapping(address => uint48) curator;
-    }
-
-    enum FeeType {
-        Protocol,
-        Referrer,
-        MaxCurator
-    }
-
+abstract contract FeeManager is IFeeManager, ReentrancyGuard {
     // ========== STATE VARIABLES ========== //
 
     /// @notice     Fees are in basis points (3 decimals). 1% equals 1000.
@@ -69,7 +40,7 @@ abstract contract FeeManager is ReentrancyGuard {
 
     // ========== FEE CALCULATIONS ========== //
 
-    /// @notice     Calculates and allocates fees that are collected in the quote token
+    /// @inheritdoc IFeeManager
     function calculateQuoteFees(
         uint48 protocolFee_,
         uint48 referrerFee_,
@@ -105,11 +76,7 @@ abstract contract FeeManager is ReentrancyGuard {
 
     // ========== FEE MANAGEMENT ========== //
 
-    /// @notice     Sets the protocol fee, referrer fee, or max curator fee for a specific auction type
-    /// @notice     Access controlled: only owner
-    function setFee(Keycode auctionType_, FeeType type_, uint48 fee_) external virtual;
-
-    /// @notice     Sets the fee for a curator (the sender) for a specific auction type
+    /// @inheritdoc IFeeManager
     function setCuratorFee(Keycode auctionType_, uint48 fee_) external {
         // Check that the fee is less than the maximum
         if (fee_ > fees[auctionType_].maxCuratorFee) revert InvalidFee();
@@ -118,11 +85,30 @@ abstract contract FeeManager is ReentrancyGuard {
         fees[auctionType_].curator[msg.sender] = fee_;
     }
 
-    /// @notice     Claims the rewards for a specific token and the sender
+    /// @inheritdoc IFeeManager
+    function getFees(Keycode auctionType_)
+        external
+        view
+        override
+        returns (uint48 protocol, uint48 referrer, uint48 maxCuratorFee)
+    {
+        Fees storage fee = fees[auctionType_];
+        return (fee.protocol, fee.referrer, fee.maxCuratorFee);
+    }
+
+    /// @inheritdoc IFeeManager
+    function getCuratorFee(
+        Keycode auctionType_,
+        address curator_
+    ) external view override returns (uint48 curatorFee) {
+        return fees[auctionType_].curator[curator_];
+    }
+
+    // ========== REWARDS ========== //
+
+    /// @inheritdoc IFeeManager
     /// @dev        This function reverts if:
     ///             - re-entrancy is detected
-    ///
-    /// @param      token_  Token to claim rewards for
     function claimRewards(address token_) external nonReentrant {
         ERC20 token = ERC20(token_);
         uint256 amount = rewards[msg.sender][token];
@@ -131,9 +117,18 @@ abstract contract FeeManager is ReentrancyGuard {
         Transfer.transfer(token, msg.sender, amount, false);
     }
 
-    /// @notice     Sets the protocol address
-    /// @dev        Access controlled: only owner
-    ///
-    /// @param      protocol_  Address of the protocol
-    function setProtocol(address protocol_) external virtual;
+    /// @inheritdoc IFeeManager
+    function getRewards(
+        address recipient_,
+        address token_
+    ) external view override returns (uint256 reward) {
+        return rewards[recipient_][ERC20(token_)];
+    }
+
+    // ========== ADMIN FUNCTIONS ========== //
+
+    /// @inheritdoc IFeeManager
+    function getProtocol() public view returns (address) {
+        return _protocol;
+    }
 }
