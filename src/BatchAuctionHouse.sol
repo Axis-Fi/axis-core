@@ -2,7 +2,7 @@
 pragma solidity 0.8.19;
 
 // Interfaces
-import {IAuction} from "src/interfaces/IAuction.sol";
+import {IAuctionModule} from "src/interfaces/IAuctionModule.sol";
 import {ICallback} from "src/interfaces/ICallback.sol";
 
 // Internal libraries
@@ -155,13 +155,13 @@ contract BatchAuctionHouse is AuctionHouse, BatchRouter {
     function _auction(
         uint96 lotId_,
         RoutingParams calldata routing_,
-        IAuction.AuctionParams calldata params_
+        IAuctionModule.AuctionParams calldata params_
     ) internal override returns (bool performedCallback) {
         // Validation
 
         // Ensure the auction type is batch
         AuctionModule auctionModule = AuctionModule(_getLatestModuleIfActive(routing_.auctionType));
-        if (auctionModule.auctionType() != IAuction.AuctionType.Batch) revert InvalidParams();
+        if (auctionModule.auctionType() != IAuctionModule.AuctionType.Batch) revert InvalidParams();
 
         // Batch auctions must be pre-funded
 

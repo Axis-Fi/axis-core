@@ -11,7 +11,7 @@ import {Permit2User} from "test/lib/permit2/Permit2User.sol";
 
 // Auctions
 import {AtomicAuctionHouse} from "src/AtomicAuctionHouse.sol";
-import {IAuction} from "src/interfaces/IAuction.sol";
+import {IAuctionModule} from "src/interfaces/IAuctionModule.sol";
 import {IAuctionHouse} from "src/interfaces/IAuctionHouse.sol";
 import {ICallback} from "src/interfaces/ICallback.sol";
 
@@ -26,7 +26,7 @@ contract CancelTest is Test, Permit2User {
 
     AtomicAuctionHouse internal _auctionHouse;
     IAuctionHouse.RoutingParams internal _routingParams;
-    IAuction.AuctionParams internal _auctionParams;
+    IAuctionModule.AuctionParams internal _auctionParams;
 
     uint96 internal _lotId;
 
@@ -46,7 +46,7 @@ contract CancelTest is Test, Permit2User {
 
         _auctionHouse.installModule(_mockAuctionModule);
 
-        _auctionParams = IAuction.AuctionParams({
+        _auctionParams = IAuctionModule.AuctionParams({
             start: uint48(block.timestamp),
             duration: _DURATION,
             capacityInQuote: false,
@@ -88,7 +88,7 @@ contract CancelTest is Test, Permit2User {
     }
 
     function testReverts_whenLotIdInvalid() external {
-        bytes memory err = abi.encodeWithSelector(IAuction.Auction_InvalidLotId.selector, _lotId);
+        bytes memory err = abi.encodeWithSelector(IAuctionModule.Auction_InvalidLotId.selector, _lotId);
         vm.expectRevert(err);
 
         vm.prank(address(_auctionHouse));
@@ -101,7 +101,7 @@ contract CancelTest is Test, Permit2User {
         _mockAuctionModule.cancelAuction(_lotId);
 
         // Cancel again
-        bytes memory err = abi.encodeWithSelector(IAuction.Auction_MarketNotActive.selector, _lotId);
+        bytes memory err = abi.encodeWithSelector(IAuctionModule.Auction_MarketNotActive.selector, _lotId);
         vm.expectRevert(err);
 
         vm.prank(address(_auctionHouse));
@@ -115,7 +115,7 @@ contract CancelTest is Test, Permit2User {
         vm.warp(block.timestamp + _DURATION + conclusionElapsed);
 
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(IAuction.Auction_MarketNotActive.selector, _lotId);
+        bytes memory err = abi.encodeWithSelector(IAuctionModule.Auction_MarketNotActive.selector, _lotId);
         vm.expectRevert(err);
 
         vm.prank(address(_auctionHouse));
@@ -129,7 +129,7 @@ contract CancelTest is Test, Permit2User {
         _mockAuctionModule.cancelAuction(_lotId);
 
         // Get lot data from the module
-        IAuction.Lot memory lot = _mockAuctionModule.getLot(_lotId);
+        IAuctionModule.Lot memory lot = _mockAuctionModule.getLot(_lotId);
         assertEq(lot.conclusion, uint48(block.timestamp));
         assertEq(lot.capacity, 0);
 

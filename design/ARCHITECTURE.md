@@ -28,7 +28,7 @@ classDiagram
     +uint256 lotCounter
     +mapping[Keycode auctionType -> bool] typeSunset
     +mapping[uint256 lotId -> Routing] lotRouting
-    +auction(RoutingParams routing, IAuction.AuctionParams params) uint256
+    +auction(RoutingParams routing, IAuctionModule.AuctionParams params) uint256
     +cancel(uint256 lotId)
     +payoutFor(uint256 lotId) Routing
     +priceFor(uint256 lotId, uint256 amount) uint256
@@ -221,11 +221,11 @@ sequenceDiagram
   participant AuctionHouse
   participant AtomicAuctionModule
 
-  AuctionOwner->>AuctionHouse: Auctioneer.auction(RoutingParams routing, IAuction.AuctionParams params)
+  AuctionOwner->>AuctionHouse: Auctioneer.auction(RoutingParams routing, IAuctionModule.AuctionParams params)
   activate AuctionHouse
     AuctionHouse->>AuctionHouse: _getModuleIfInstalled(auctionType)
 
-    AuctionHouse->>AtomicAuctionModule: auction(uint256 id, IAuction.AuctionParams params)
+    AuctionHouse->>AtomicAuctionModule: auction(uint256 id, IAuctionModule.AuctionParams params)
     activate AtomicAuctionModule
       Note right of AtomicAuctionModule: validation, creates Lot record
       AtomicAuctionModule->>AtomicAuctionModule: _auction(uint256 id, Lot lot, bytes implParams)

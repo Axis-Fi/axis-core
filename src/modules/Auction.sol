@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: BSL-1.1
 pragma solidity 0.8.19;
 
-import {IAuction} from "src/interfaces/IAuction.sol";
+import {IAuctionModule} from "src/interfaces/IAuctionModule.sol";
 import {Module} from "src/modules/Modules.sol";
 
-abstract contract AuctionModule is IAuction, Module {
+abstract contract AuctionModule is IAuctionModule, Module {
     // ========= STATE ========== //
 
     /// @notice Minimum auction duration in seconds
@@ -28,7 +28,7 @@ abstract contract AuctionModule is IAuction, Module {
 
     // ========== AUCTION MANAGEMENT ========== //
 
-    /// @inheritdoc IAuction
+    /// @inheritdoc IAuctionModule
     /// @dev        If the start time is zero, the auction will have a start time of the current block timestamp.
     ///
     ///             This function handles the following:
@@ -118,7 +118,7 @@ abstract contract AuctionModule is IAuction, Module {
 
     // ========== AUCTION INFORMATION ========== //
 
-    /// @inheritdoc IAuction
+    /// @inheritdoc IAuctionModule
     /// @dev        A lot is active if:
     ///             - The lot has not concluded
     ///             - The lot has started
@@ -133,23 +133,23 @@ abstract contract AuctionModule is IAuction, Module {
         );
     }
 
-    /// @inheritdoc IAuction
+    /// @inheritdoc IAuctionModule
     function hasEnded(uint96 lotId_) public view override returns (bool) {
         return
             uint48(block.timestamp) >= lotData[lotId_].conclusion || lotData[lotId_].capacity == 0;
     }
 
-    /// @inheritdoc IAuction
+    /// @inheritdoc IAuctionModule
     function remainingCapacity(uint96 lotId_) external view override returns (uint256) {
         return lotData[lotId_].capacity;
     }
 
-    /// @inheritdoc IAuction
+    /// @inheritdoc IAuctionModule
     function capacityInQuote(uint96 lotId_) external view override returns (bool) {
         return lotData[lotId_].capacityInQuote;
     }
 
-    /// @inheritdoc IAuction
+    /// @inheritdoc IAuctionModule
     function getLot(uint96 lotId_) external view override returns (Lot memory) {
         return lotData[lotId_];
     }

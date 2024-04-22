@@ -9,7 +9,7 @@ import {Transfer} from "src/lib/Transfer.sol";
 import {MockAtomicAuctionModule} from "test/modules/Auction/MockAtomicAuctionModule.sol";
 import {MockERC20} from "lib/solmate/src/test/utils/mocks/MockERC20.sol";
 
-import {IAuction} from "src/interfaces/IAuction.sol";
+import {IAuctionModule} from "src/interfaces/IAuctionModule.sol";
 import {AuctionHouse} from "src/bases/AuctionHouse.sol";
 import {ICallback} from "src/interfaces/ICallback.sol";
 import {
@@ -265,7 +265,7 @@ contract BatchCreateAuctionTest is BatchAuctionHouseTest {
         assertEq(curation.curated, false, "curated mismatch");
 
         // Auction module also updated
-        IAuction.Lot memory lotData = _getLotData(_lotId);
+        IAuctionModule.Lot memory lotData = _getLotData(_lotId);
         assertEq(lotData.start, _startTime, "start mismatch");
 
         // Check balances
@@ -309,7 +309,7 @@ contract BatchCreateAuctionTest is BatchAuctionHouseTest {
         assertEq(address(routing.quoteToken), address(_quoteToken), "lot one: quote token mismatch");
         assertEq(routing.funding, _LOT_CAPACITY, "funding mismatch");
         assertEq(routing.seller, _SELLER, "seller mismatch");
-        IAuction.Lot memory lotData = _getLotData(lotIdOne);
+        IAuctionModule.Lot memory lotData = _getLotData(lotIdOne);
         assertEq(lotData.start, _startTime, "lot one: start mismatch");
 
         // Assert values for lot two

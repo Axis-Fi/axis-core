@@ -6,7 +6,7 @@ import {EncryptedMarginalPrice} from "src/modules/auctions/EMP.sol";
 import {LinearVesting} from "src/modules/derivatives/LinearVesting.sol";
 import {Point, ECIES} from "src/lib/ECIES.sol";
 import {AuctionHouse} from "src/bases/AuctionHouse.sol";
-import {IAuction} from "src/interfaces/IAuction.sol";
+import {IAuctionModule} from "src/interfaces/IAuctionModule.sol";
 
 import {keycodeFromVeecode, fromVeecode} from "src/modules/Modules.sol";
 
@@ -354,7 +354,7 @@ contract LinearVestingEMPAIntegrationTest is BatchAuctionHouseTest {
         );
 
         // Check the lot
-        IAuction.Lot memory lotData = _getLotData(_lotId);
+        IAuctionModule.Lot memory lotData = _getLotData(_lotId);
         assertEq(lotData.purchased, _BID_AMOUNT, "purchased");
         assertEq(lotData.sold, _BID_AMOUNT_OUT, "sold");
 
@@ -440,7 +440,7 @@ contract LinearVestingEMPAIntegrationTest is BatchAuctionHouseTest {
         );
 
         // Check the lot
-        IAuction.Lot memory lotData = _getLotData(_lotId);
+        IAuctionModule.Lot memory lotData = _getLotData(_lotId);
         assertEq(lotData.purchased, 10e18, "purchased");
         assertEq(lotData.sold, 10e18, "sold");
 

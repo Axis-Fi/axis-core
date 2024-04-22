@@ -6,7 +6,7 @@ import {Veecode, toKeycode, wrapVeecode} from "src/modules/Modules.sol";
 import {BatchAuction, BatchAuctionModule} from "src/modules/auctions/BatchAuctionModule.sol";
 
 // Auctions
-import {IAuction} from "src/interfaces/IAuction.sol";
+import {IAuctionModule} from "src/interfaces/IAuctionModule.sol";
 import {AuctionModule} from "src/modules/Auction.sol";
 
 contract MockBatchAuctionModule is BatchAuctionModule {
@@ -197,21 +197,21 @@ contract MockBatchAuctionModule is BatchAuctionModule {
     function _revertIfLotSettled(uint96 lotId_) internal view virtual override {
         // Check that the lot has not been settled
         if (lotStatus[lotId_] == LotStatus.Settled) {
-            revert IAuction.Auction_MarketNotActive(lotId_);
+            revert IAuctionModule.Auction_MarketNotActive(lotId_);
         }
     }
 
     function _revertIfLotNotSettled(uint96 lotId_) internal view virtual override {
         // Check that the lot has been settled
         if (lotStatus[lotId_] != LotStatus.Settled) {
-            revert IAuction.Auction_InvalidParams();
+            revert IAuctionModule.Auction_InvalidParams();
         }
     }
 
     function _revertIfLotProceedsClaimed(uint96 lotId_) internal view virtual override {
         // Check that the lot has not been claimed
         if (lotProceedsClaimed[lotId_]) {
-            revert IAuction.Auction_InvalidParams();
+            revert IAuctionModule.Auction_InvalidParams();
         }
     }
 

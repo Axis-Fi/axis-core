@@ -12,7 +12,7 @@ import {Permit2User} from "test/lib/permit2/Permit2User.sol";
 
 // Auctions
 import {AtomicAuctionHouse} from "src/AtomicAuctionHouse.sol";
-import {IAuction} from "src/interfaces/IAuction.sol";
+import {IAuctionModule} from "src/interfaces/IAuctionModule.sol";
 import {IAuctionHouse} from "src/interfaces/IAuctionHouse.sol";
 import {ICallback} from "src/interfaces/ICallback.sol";
 
@@ -27,7 +27,7 @@ contract AuctionTest is Test, Permit2User {
 
     AtomicAuctionHouse internal _auctionHouse;
     IAuctionHouse.RoutingParams internal _routingParams;
-    IAuction.AuctionParams internal _auctionParams;
+    IAuctionModule.AuctionParams internal _auctionParams;
 
     address internal constant _PROTOCOL = address(0x2);
     string internal _infoHash = "";
@@ -48,7 +48,7 @@ contract AuctionTest is Test, Permit2User {
 
         _auctionHouse.installModule(_mockAuctionModule);
 
-        _auctionParams = IAuction.AuctionParams({
+        _auctionParams = IAuctionModule.AuctionParams({
             start: uint48(block.timestamp),
             duration: uint48(1 days),
             capacityInQuote: false,
@@ -86,7 +86,7 @@ contract AuctionTest is Test, Permit2User {
 
         // Expect revert
         bytes memory err = abi.encodeWithSelector(
-            IAuction.Auction_InvalidStart.selector, _auctionParams.start, uint48(block.timestamp)
+            IAuctionModule.Auction_InvalidStart.selector, _auctionParams.start, uint48(block.timestamp)
         );
         vm.expectRevert(err);
 
@@ -101,7 +101,7 @@ contract AuctionTest is Test, Permit2User {
 
         // Expect revert
         bytes memory err = abi.encodeWithSelector(
-            IAuction.Auction_InvalidDuration.selector,
+            IAuctionModule.Auction_InvalidDuration.selector,
             _auctionParams.duration,
             _mockAuctionModule.minAuctionDuration()
         );
@@ -122,7 +122,7 @@ contract AuctionTest is Test, Permit2User {
         uint96 lotId = _auctionHouse.auction(_routingParams, _auctionParams, _infoHash);
 
         // Get lot data from the module
-        IAuction.Lot memory lot = _mockAuctionModule.getLot(lotId);
+        IAuctionModule.Lot memory lot = _mockAuctionModule.getLot(lotId);
         assertEq(lot.start, uint48(block.timestamp));
         assertEq(lot.conclusion, lot.start + _auctionParams.duration);
         assertEq(lot.capacityInQuote, _auctionParams.capacityInQuote);
@@ -140,7 +140,7 @@ contract AuctionTest is Test, Permit2User {
         uint96 lotId = _auctionHouse.auction(_routingParams, _auctionParams, _infoHash);
 
         // Get lot data from the module
-        IAuction.Lot memory lot = _mockAuctionModule.getLot(lotId);
+        IAuctionModule.Lot memory lot = _mockAuctionModule.getLot(lotId);
         assertEq(lot.start, uint48(block.timestamp)); // Sets to current timestamp
         assertEq(lot.conclusion, lot.start + _auctionParams.duration);
     }
@@ -154,7 +154,7 @@ contract AuctionTest is Test, Permit2User {
         uint96 lotId = _auctionHouse.auction(_routingParams, _auctionParams, _infoHash);
 
         // Get lot data from the module
-        IAuction.Lot memory lot = _mockAuctionModule.getLot(lotId);
+        IAuctionModule.Lot memory lot = _mockAuctionModule.getLot(lotId);
         assertEq(lot.conclusion, lot.start + _auctionParams.duration);
     }
 
@@ -167,7 +167,7 @@ contract AuctionTest is Test, Permit2User {
         uint96 lotId = _auctionHouse.auction(_routingParams, _auctionParams, _infoHash);
 
         // Get lot data from the module
-        IAuction.Lot memory lot = _mockAuctionModule.getLot(lotId);
+        IAuctionModule.Lot memory lot = _mockAuctionModule.getLot(lotId);
         assertEq(lot.start, _auctionParams.start);
         assertEq(lot.conclusion, lot.start + _auctionParams.duration);
     }

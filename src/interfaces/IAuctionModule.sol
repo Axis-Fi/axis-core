@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity >= 0.8.19;
 
-interface IAuction {
+interface IAuctionModule {
     // ========== ERRORS ========== //
 
     error Auction_MarketNotActive(uint96 lotId);

@@ -4,7 +4,7 @@ pragma solidity 0.8.19;
 import {console2} from "forge-std/console2.sol";
 
 import {Module} from "src/modules/Modules.sol";
-import {IAuction} from "src/interfaces/IAuction.sol";
+import {IAuctionModule} from "src/interfaces/IAuctionModule.sol";
 import {EncryptedMarginalPrice} from "src/modules/auctions/EMP.sol";
 import {BatchAuction} from "src/modules/auctions/BatchAuctionModule.sol";
 
@@ -43,7 +43,7 @@ contract EmpaModuleRefundBidTest is EmpTest {
 
     function test_invalidLotId_reverts() external {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(IAuction.Auction_InvalidLotId.selector, _lotId);
+        bytes memory err = abi.encodeWithSelector(IAuctionModule.Auction_InvalidLotId.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function
@@ -140,7 +140,7 @@ contract EmpaModuleRefundBidTest is EmpTest {
 
     function test_lotIsCancelled_reverts() external givenLotIsCreated givenLotIsCancelled {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(IAuction.Auction_MarketNotActive.selector, _lotId);
+        bytes memory err = abi.encodeWithSelector(IAuctionModule.Auction_MarketNotActive.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function
@@ -233,7 +233,7 @@ contract EmpaModuleRefundBidTest is EmpTest {
     {
         // Give a mismatched bid ID and index
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(IAuction.Auction_InvalidParams.selector);
+        bytes memory err = abi.encodeWithSelector(IAuctionModule.Auction_InvalidParams.selector);
         vm.expectRevert(err);
 
         // Call the function
@@ -250,7 +250,7 @@ contract EmpaModuleRefundBidTest is EmpTest {
         givenBidIsCreated(4e18, 1e18)
     {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(IAuction.Auction_InvalidParams.selector);
+        bytes memory err = abi.encodeWithSelector(IAuctionModule.Auction_InvalidParams.selector);
         vm.expectRevert(err);
 
         // Call the function

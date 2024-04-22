@@ -9,7 +9,7 @@ import {MockERC20} from "lib/solmate/src/test/utils/mocks/MockERC20.sol";
 import {MockBatchAuctionModule} from "test/modules/Auction/MockBatchAuctionModule.sol";
 
 import {AuctionHouse} from "src/bases/AuctionHouse.sol";
-import {IAuction} from "src/interfaces/IAuction.sol";
+import {IAuctionModule} from "src/interfaces/IAuctionModule.sol";
 import {ICallback} from "src/interfaces/ICallback.sol";
 import {
     Keycode,
@@ -225,7 +225,7 @@ contract AtomicCreateAuctionTest is AtomicAuctionHouseTest {
         assertEq(curation.curated, false, "curated mismatch");
 
         // Auction module also updated
-        IAuction.Lot memory lotData = _getLotData(_lotId);
+        IAuctionModule.Lot memory lotData = _getLotData(_lotId);
         assertEq(lotData.start, _startTime, "start mismatch");
     }
 
@@ -255,7 +255,7 @@ contract AtomicCreateAuctionTest is AtomicAuctionHouseTest {
         AuctionHouse.Routing memory routing = _getLotRouting(lotIdOne);
         assertEq(address(routing.baseToken), address(_baseToken), "lot one: base token mismatch");
         assertEq(address(routing.quoteToken), address(_quoteToken), "lot one: quote token mismatch");
-        IAuction.Lot memory lotData = _getLotData(lotIdOne);
+        IAuctionModule.Lot memory lotData = _getLotData(lotIdOne);
         assertEq(lotData.start, _startTime, "lot one: start mismatch");
 
         // Assert values for lot two

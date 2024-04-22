@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.19;
 
-import {IAuction} from "src/interfaces/IAuction.sol";
+import {IAuctionModule} from "src/interfaces/IAuctionModule.sol";
 import {IAuctionHouse} from "src/interfaces/IAuctionHouse.sol";
 
 // Libraries
@@ -76,7 +76,7 @@ abstract contract AtomicAuctionHouseTest is Test, Permit2User {
 
     // Parameters
     IAuctionHouse.RoutingParams internal _routingParams;
-    IAuction.AuctionParams internal _auctionParams;
+    IAuctionModule.AuctionParams internal _auctionParams;
     bytes internal _allowlistProof;
     bytes internal _permit2Data;
     bool internal _callbackSendBaseTokens;
@@ -109,7 +109,7 @@ abstract contract AtomicAuctionHouseTest is Test, Permit2User {
 
         _startTime = uint48(block.timestamp) + 1;
 
-        _auctionParams = IAuction.AuctionParams({
+        _auctionParams = IAuctionModule.AuctionParams({
             start: _startTime,
             duration: _duration,
             capacityInQuote: false,
@@ -603,7 +603,7 @@ abstract contract AtomicAuctionHouseTest is Test, Permit2User {
         });
     }
 
-    function _getLotData(uint96 lotId_) internal view returns (IAuction.Lot memory) {
+    function _getLotData(uint96 lotId_) internal view returns (IAuctionModule.Lot memory) {
         return _auctionModule.getLot(lotId_);
     }
 }

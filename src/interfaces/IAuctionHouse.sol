@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity >=0.8.19;
 
-import {IAuction} from "src/interfaces/IAuction.sol";
+import {IAuctionModule} from "src/interfaces/IAuctionModule.sol";
 import {ICallback} from "src/interfaces/ICallback.sol";
 
 import {Keycode} from "src/modules/Keycode.sol";
@@ -42,7 +42,7 @@ interface IAuctionHouse {
     /// @return     lotId       ID of the auction lot
     function auction(
         RoutingParams calldata routing_,
-        IAuction.AuctionParams calldata params_,
+        IAuctionModule.AuctionParams calldata params_,
         string calldata infoHash_
     ) external returns (uint96 lotId);
 

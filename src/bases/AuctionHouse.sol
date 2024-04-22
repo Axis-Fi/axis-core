@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BSL-1.1
 pragma solidity 0.8.19;
 
-import {IAuction} from "src/interfaces/IAuction.sol";
+import {IAuctionModule} from "src/interfaces/IAuctionModule.sol";
 import {IAuctionHouse} from "src/interfaces/IAuctionHouse.sol";
 
 import {ERC20} from "lib/solmate/src/tokens/ERC20.sol";
@@ -161,7 +161,7 @@ abstract contract AuctionHouse is IAuctionHouse, WithModules, ReentrancyGuard, F
     ///             - Re-entrancy is detected
     function auction(
         IAuctionHouse.RoutingParams calldata routing_,
-        IAuction.AuctionParams calldata params_,
+        IAuctionModule.AuctionParams calldata params_,
         string calldata infoHash_
     ) external nonReentrant returns (uint96 lotId) {
         // Check that the module for the auction type is valid
@@ -266,7 +266,7 @@ abstract contract AuctionHouse is IAuctionHouse, WithModules, ReentrancyGuard, F
     function _auction(
         uint96 lotId_,
         IAuctionHouse.RoutingParams calldata routing_,
-        IAuction.AuctionParams calldata params_
+        IAuctionModule.AuctionParams calldata params_
     ) internal virtual returns (bool performedCallback);
 
     /// @notice     Cancels an auction lot

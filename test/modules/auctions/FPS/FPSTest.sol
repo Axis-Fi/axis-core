@@ -10,7 +10,7 @@ import {Permit2User} from "test/lib/permit2/Permit2User.sol";
 
 // Modules
 import {AtomicAuctionHouse} from "src/AtomicAuctionHouse.sol";
-import {IAuction} from "src/interfaces/IAuction.sol";
+import {IAuctionModule} from "src/interfaces/IAuctionModule.sol";
 import {FixedPriceSale} from "src/modules/auctions/FPS.sol";
 
 abstract contract FpsTest is Test, Permit2User {
@@ -31,7 +31,7 @@ abstract contract FpsTest is Test, Permit2User {
     // Input parameters (modified by modifiers)
     uint48 internal _start;
     uint96 internal _lotId = type(uint96).max;
-    IAuction.AuctionParams internal _auctionParams;
+    IAuctionModule.AuctionParams internal _auctionParams;
     FixedPriceSale.FixedPriceParams internal _fpaParams;
 
     uint8 internal _quoteTokenDecimals = 18;
@@ -48,7 +48,7 @@ abstract contract FpsTest is Test, Permit2User {
         _fpaParams =
             FixedPriceSale.FixedPriceParams({price: _PRICE, maxPayoutPercent: _MAX_PAYOUT_PERCENT});
 
-        _auctionParams = IAuction.AuctionParams({
+        _auctionParams = IAuctionModule.AuctionParams({
             start: _start,
             duration: _DURATION,
             capacityInQuote: false,
@@ -179,7 +179,7 @@ abstract contract FpsTest is Test, Permit2User {
         return Math.mulDivDown(amount_, 10 ** _baseTokenDecimals, _BASE_SCALE);
     }
 
-    function _getAuctionLot(uint96 lotId_) internal view returns (IAuction.Lot memory) {
+    function _getAuctionLot(uint96 lotId_) internal view returns (IAuctionModule.Lot memory) {
         return _module.getLot(lotId_);
     }
 
