@@ -1,11 +1,17 @@
 // SPDX-License-Identifier: BSL-1.1
 pragma solidity 0.8.19;
 
+// Interfaces
 import {IAuctionModule} from "src/interfaces/IAuctionModule.sol";
 import {IAuctionHouse} from "src/interfaces/IAuctionHouse.sol";
+import {ICallback} from "src/interfaces/ICallback.sol";
 
-import {ERC20} from "lib/solmate/src/tokens/ERC20.sol";
+// Internal libraries
 import {Transfer} from "src/lib/Transfer.sol";
+import {Callbacks} from "src/lib/Callbacks.sol";
+
+// External libraries
+import {ERC20} from "lib/solmate/src/tokens/ERC20.sol";
 import {ReentrancyGuard} from "lib/solmate/src/utils/ReentrancyGuard.sol";
 
 import {
@@ -21,9 +27,6 @@ import {FeeManager} from "src/bases/FeeManager.sol";
 import {AuctionModule} from "src/modules/Auction.sol";
 
 import {DerivativeModule} from "src/modules/Derivative.sol";
-
-import {ICallback} from "src/interfaces/ICallback.sol";
-import {Callbacks} from "src/lib/Callbacks.sol";
 
 /// @title  AuctionHouse
 /// @notice The base AuctionHouse contract defines common structures and functions across auction types (atomic and batch).
