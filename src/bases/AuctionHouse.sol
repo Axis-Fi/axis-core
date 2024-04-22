@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: BSL-1.1
 pragma solidity 0.8.19;
 
+import {IAuction} from "src/interfaces/IAuction.sol";
+import {IAuctionHouse} from "src/interfaces/IAuctionHouse.sol";
+
 import {ERC20} from "lib/solmate/src/tokens/ERC20.sol";
 import {Transfer} from "src/lib/Transfer.sol";
 import {ReentrancyGuard} from "lib/solmate/src/utils/ReentrancyGuard.sol";
@@ -15,7 +18,7 @@ import {
 } from "src/modules/Modules.sol";
 import {FeeManager} from "src/bases/FeeManager.sol";
 
-import {Auction, AuctionModule} from "src/modules/Auction.sol";
+import {AuctionModule} from "src/modules/Auction.sol";
 
 import {DerivativeModule} from "src/modules/Derivative.sol";
 
@@ -28,7 +31,7 @@ import {Callbacks} from "src/lib/Callbacks.sol";
 ///         - Creating new auction lots
 ///         - Cancelling auction lots
 ///         - Storing information about how to handle inputs and outputs for auctions ("routing")
-abstract contract AuctionHouse is WithModules, ReentrancyGuard, FeeManager {
+abstract contract AuctionHouse is IAuctionHouse, WithModules, ReentrancyGuard, FeeManager {
     using Callbacks for ICallback;
 
     // ========= ERRORS ========= //
@@ -109,30 +112,6 @@ abstract contract AuctionHouse is WithModules, ReentrancyGuard, FeeManager {
         uint48 referrerFee; // 6 bytes
     }
 
-    /// @notice     Auction routing information provided as input parameters
-    /// @dev        After validation, this information is stored in the Routing struct
-    ///
-    /// @param      auctionType         Auction type, represented by the Keycode for the auction submodule
-    /// @param      baseToken           Token provided by seller
-    /// @param      quoteToken          Token to accept as payment
-    /// @param      curator             (optional) Address of the proposed curator
-    /// @param      callbacks           (optional) Callbacks implementation for extended functionality
-    /// @param      callbackData        (optional) abi-encoded data to be sent to the onCreate callback function
-    /// @param      derivativeType      (optional) Derivative type, represented by the Keycode for the derivative submodule
-    /// @param      derivativeParams    (optional) abi-encoded data to be used to create payout derivatives on a purchase. The format of this is dependent on the derivative module.
-    /// @param      wrapDerivative      (optional) Whether to wrap the derivative in a ERC20 token instead of the native ERC6909 format
-    struct RoutingParams {
-        Keycode auctionType;
-        ERC20 baseToken;
-        ERC20 quoteToken;
-        address curator;
-        ICallback callbacks;
-        bytes callbackData;
-        Keycode derivativeType;
-        bytes derivativeParams;
-        bool wrapDerivative;
-    }
-
     // ========== STATE ========== //
 
     /// @notice     Address of the Permit2 contract
@@ -159,7 +138,7 @@ abstract contract AuctionHouse is WithModules, ReentrancyGuard, FeeManager {
 
     // ========== AUCTION MANAGEMENT ========== //
 
-    /// @notice     Creates a new auction lot
+    /// @inheritdoc IAuctionHouse
     /// @dev        This function performs the following:
     ///             - Validates the auction parameters
     ///             - Validates the auction module
@@ -180,14 +159,9 @@ abstract contract AuctionHouse is WithModules, ReentrancyGuard, FeeManager {
     ///             - Validation for the optional specified derivative type fails
     ///             - Validation for the optional specified callbacks contract fails
     ///             - Re-entrancy is detected
-    ///
-    /// @param      routing_    Routing information for the auction lot
-    /// @param      params_     Auction parameters for the auction lot
-    /// @param      infoHash_   IPFS hash of the auction information
-    /// @return     lotId       ID of the auction lot
     function auction(
-        RoutingParams calldata routing_,
-        Auction.AuctionParams calldata params_,
+        IAuctionHouse.RoutingParams calldata routing_,
+        IAuction.AuctionParams calldata params_,
         string calldata infoHash_
     ) external nonReentrant returns (uint96 lotId) {
         // Check that the module for the auction type is valid
@@ -202,7 +176,11 @@ abstract contract AuctionHouse is WithModules, ReentrancyGuard, FeeManager {
         // Increment lot count and get ID
         lotId = lotCounter++;
 
+        // Store routing information
         Routing storage routing = lotRouting[lotId];
+        routing.seller = msg.sender;
+        routing.baseToken = ERC20(routing_.baseToken);
+        routing.quoteToken = ERC20(routing_.quoteToken);
 
         {
             // Load auction type module, this checks that it is installed.
@@ -211,8 +189,8 @@ abstract contract AuctionHouse is WithModules, ReentrancyGuard, FeeManager {
                 AuctionModule(_getLatestModuleIfActive(routing_.auctionType));
 
             // Confirm tokens are within the required decimal range
-            uint8 baseTokenDecimals = routing_.baseToken.decimals();
-            uint8 quoteTokenDecimals = routing_.quoteToken.decimals();
+            uint8 baseTokenDecimals = routing.baseToken.decimals();
+            uint8 quoteTokenDecimals = routing.quoteToken.decimals();
 
             if (
                 auctionModule.TYPE() != Module.Type.Auction || baseTokenDecimals < 6
@@ -223,11 +201,6 @@ abstract contract AuctionHouse is WithModules, ReentrancyGuard, FeeManager {
             auctionModule.auction(lotId, params_, quoteTokenDecimals, baseTokenDecimals);
             routing.auctionReference = auctionModule.VEECODE();
         }
-
-        // Store routing information
-        routing.seller = msg.sender;
-        routing.baseToken = routing_.baseToken;
-        routing.quoteToken = routing_.quoteToken;
 
         // Store fee information from params and snapshot fees for the lot
         {
@@ -292,8 +265,8 @@ abstract contract AuctionHouse is WithModules, ReentrancyGuard, FeeManager {
     /// @return     performedCallback   `true` if the implementing function calls the `onCreate` callback
     function _auction(
         uint96 lotId_,
-        RoutingParams calldata routing_,
-        Auction.AuctionParams calldata params_
+        IAuctionHouse.RoutingParams calldata routing_,
+        IAuction.AuctionParams calldata params_
     ) internal virtual returns (bool performedCallback);
 
     /// @notice     Cancels an auction lot
@@ -374,7 +347,7 @@ abstract contract AuctionHouse is WithModules, ReentrancyGuard, FeeManager {
     }
 
     function _onCreateCallback(
-        RoutingParams calldata routing_,
+        IAuctionHouse.RoutingParams calldata routing_,
         uint96 lotId_,
         uint256 capacity_,
         bool preFund_

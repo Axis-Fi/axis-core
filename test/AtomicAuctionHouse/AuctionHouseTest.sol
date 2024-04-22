@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.19;
 
+import {IAuction} from "src/interfaces/IAuction.sol";
+import {IAuctionHouse} from "src/interfaces/IAuctionHouse.sol";
+
 // Libraries
 import {Test} from "forge-std/Test.sol";
 import {ERC20} from "lib/solmate/src/tokens/ERC20.sol";
@@ -17,7 +20,7 @@ import {MockFeeOnTransferERC20} from "test/lib/mocks/MockFeeOnTransferERC20.sol"
 // Auctions
 import {AtomicAuctionHouse, AtomicRouter} from "src/AtomicAuctionHouse.sol";
 import {AuctionHouse} from "src/bases/AuctionHouse.sol";
-import {Auction, AuctionModule} from "src/modules/Auction.sol";
+import {AuctionModule} from "src/modules/Auction.sol";
 import {FeeManager} from "src/bases/FeeManager.sol";
 import {ICallback} from "src/interfaces/ICallback.sol";
 import {Callbacks} from "src/lib/Callbacks.sol";
@@ -72,8 +75,8 @@ abstract contract AtomicAuctionHouseTest is Test, Permit2User {
     bytes internal _derivativeParams = abi.encode("");
 
     // Parameters
-    AuctionHouse.RoutingParams internal _routingParams;
-    Auction.AuctionParams internal _auctionParams;
+    IAuctionHouse.RoutingParams internal _routingParams;
+    IAuction.AuctionParams internal _auctionParams;
     bytes internal _allowlistProof;
     bytes internal _permit2Data;
     bool internal _callbackSendBaseTokens;
@@ -106,7 +109,7 @@ abstract contract AtomicAuctionHouseTest is Test, Permit2User {
 
         _startTime = uint48(block.timestamp) + 1;
 
-        _auctionParams = Auction.AuctionParams({
+        _auctionParams = IAuction.AuctionParams({
             start: _startTime,
             duration: _duration,
             capacityInQuote: false,
@@ -114,10 +117,10 @@ abstract contract AtomicAuctionHouseTest is Test, Permit2User {
             implParams: abi.encode("")
         });
 
-        _routingParams = AuctionHouse.RoutingParams({
+        _routingParams = IAuctionHouse.RoutingParams({
             auctionType: toKeycode(""),
-            baseToken: _baseToken,
-            quoteToken: _quoteToken,
+            baseToken: address(_baseToken),
+            quoteToken: address(_quoteToken),
             curator: _CURATOR,
             callbacks: ICallback(address(0)),
             callbackData: abi.encode(""),
@@ -149,7 +152,7 @@ abstract contract AtomicAuctionHouseTest is Test, Permit2User {
         uint256 lotCapacity = _scaleBaseTokenAmount(_LOT_CAPACITY);
 
         // Update routing params
-        _routingParams.baseToken = _baseToken;
+        _routingParams.baseToken = address(_baseToken);
 
         // Update auction params
         _auctionParams.capacity = lotCapacity;
@@ -164,7 +167,7 @@ abstract contract AtomicAuctionHouseTest is Test, Permit2User {
         _quoteToken = new MockFeeOnTransferERC20("Quote Token", "QUOTE", decimals_);
 
         // Update routing params
-        _routingParams.quoteToken = _quoteToken;
+        _routingParams.quoteToken = address(_quoteToken);
     }
 
     modifier givenQuoteTokenHasDecimals(uint8 decimals_) {
@@ -600,7 +603,7 @@ abstract contract AtomicAuctionHouseTest is Test, Permit2User {
         });
     }
 
-    function _getLotData(uint96 lotId_) internal view returns (Auction.Lot memory) {
+    function _getLotData(uint96 lotId_) internal view returns (IAuction.Lot memory) {
         return _auctionModule.getLot(lotId_);
     }
 }

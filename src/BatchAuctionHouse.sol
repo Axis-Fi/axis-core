@@ -1,13 +1,20 @@
 // SPDX-License-Identifier: BSL-1.1
 pragma solidity 0.8.19;
 
+// Interfaces
+import {IAuction} from "src/interfaces/IAuction.sol";
+import {ICallback} from "src/interfaces/ICallback.sol";
+
+// Internal libraries
 import {Transfer} from "src/lib/Transfer.sol";
 
+// External libraries
+import {ERC20} from "solmate/tokens/ERC20.sol";
+
 import {AuctionHouse} from "src/bases/AuctionHouse.sol";
-import {Auction, AuctionModule} from "src/modules/Auction.sol";
+import {AuctionModule} from "src/modules/Auction.sol";
 import {BatchAuction, BatchAuctionModule} from "src/modules/auctions/BatchAuctionModule.sol";
 import {fromVeecode} from "src/modules/Modules.sol";
-import {ICallback} from "src/interfaces/ICallback.sol";
 import {Callbacks} from "src/lib/Callbacks.sol";
 
 /// @title      BatchRouter
@@ -148,13 +155,13 @@ contract BatchAuctionHouse is AuctionHouse, BatchRouter {
     function _auction(
         uint96 lotId_,
         RoutingParams calldata routing_,
-        Auction.AuctionParams calldata params_
+        IAuction.AuctionParams calldata params_
     ) internal override returns (bool performedCallback) {
         // Validation
 
         // Ensure the auction type is batch
         AuctionModule auctionModule = AuctionModule(_getLatestModuleIfActive(routing_.auctionType));
-        if (auctionModule.auctionType() != Auction.AuctionType.Batch) revert InvalidParams();
+        if (auctionModule.auctionType() != IAuction.AuctionType.Batch) revert InvalidParams();
 
         // Batch auctions must be pre-funded
 
@@ -164,23 +171,23 @@ contract BatchAuctionHouse is AuctionHouse, BatchRouter {
         // Store pre-funding information
         lotRouting[lotId_].funding = params_.capacity;
 
+        ERC20 baseToken = ERC20(routing_.baseToken);
+
         // Handle funding from callback or seller as configured
         if (routing_.callbacks.hasPermission(Callbacks.SEND_BASE_TOKENS_FLAG)) {
-            uint256 balanceBefore = routing_.baseToken.balanceOf(address(this));
+            uint256 balanceBefore = baseToken.balanceOf(address(this));
 
             // The onCreate callback should transfer the base token to this contract
             _onCreateCallback(routing_, lotId_, params_.capacity, true);
 
             // Check that the hook transferred the expected amount of base tokens
-            if (routing_.baseToken.balanceOf(address(this)) < balanceBefore + params_.capacity) {
+            if (baseToken.balanceOf(address(this)) < balanceBefore + params_.capacity) {
                 revert InvalidCallback();
             }
         }
         // Otherwise fallback to a standard ERC20 transfer and then call the onCreate callback
         else {
-            Transfer.transferFrom(
-                routing_.baseToken, msg.sender, address(this), params_.capacity, true
-            );
+            Transfer.transferFrom(baseToken, msg.sender, address(this), params_.capacity, true);
             _onCreateCallback(routing_, lotId_, params_.capacity, false);
         }
 

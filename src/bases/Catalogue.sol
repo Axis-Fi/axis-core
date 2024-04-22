@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity 0.8.19;
 
-import {Auction} from "src/modules/Auction.sol";
+import {AuctionModule} from "src/modules/Auction.sol";
 import {AuctionHouse} from "src/bases/AuctionHouse.sol";
 import {Veecode, fromVeecode} from "src/modules/Modules.sol";
 import {ERC20} from "lib/solmate/src/tokens/ERC20.sol";
@@ -60,21 +60,21 @@ abstract contract Catalogue {
     /// @notice    Returns whether the auction is currently accepting bids or purchases
     /// @dev       Auctions that have been created, but not yet started will return false
     function isLive(uint96 lotId_) public view returns (bool) {
-        Auction module = AuctionHouse(auctionHouse).getModuleForId(lotId_);
+        AuctionModule module = AuctionHouse(auctionHouse).getModuleForId(lotId_);
 
         // Get isLive from module
         return module.isLive(lotId_);
     }
 
     function hasEnded(uint96 lotId_) external view returns (bool) {
-        Auction module = AuctionHouse(auctionHouse).getModuleForId(lotId_);
+        AuctionModule module = AuctionHouse(auctionHouse).getModuleForId(lotId_);
 
         // Get hasEnded from module
         return module.hasEnded(lotId_);
     }
 
     function remainingCapacity(uint96 lotId_) external view returns (uint256) {
-        Auction module = AuctionHouse(auctionHouse).getModuleForId(lotId_);
+        AuctionModule module = AuctionHouse(auctionHouse).getModuleForId(lotId_);
 
         // Get remaining capacity from module
         return module.remainingCapacity(lotId_);

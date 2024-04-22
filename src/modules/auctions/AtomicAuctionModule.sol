@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSL-1.1
 pragma solidity 0.8.19;
 
+import {IAuction} from "src/interfaces/IAuction.sol";
 import {AuctionModule} from "src/modules/Auction.sol";
 
 abstract contract AtomicAuction {
@@ -40,7 +41,7 @@ abstract contract AtomicAuction {
 /// @title  Atomic Auction Module
 /// @notice A base contract for atomic auctions
 abstract contract AtomicAuctionModule is AtomicAuction, AuctionModule {
-    /// @inheritdoc AuctionModule
+    /// @inheritdoc IAuction
     function auctionType() external pure override returns (AuctionType) {
         return AuctionType.Atomic;
     }

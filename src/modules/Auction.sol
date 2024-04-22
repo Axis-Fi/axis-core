@@ -1,69 +1,10 @@
 // SPDX-License-Identifier: BSL-1.1
 pragma solidity 0.8.19;
 
+import {IAuction} from "src/interfaces/IAuction.sol";
 import {Module} from "src/modules/Modules.sol";
 
-abstract contract Auction {
-    // ========== ERRORS ========== //
-
-    error Auction_MarketNotActive(uint96 lotId);
-    error Auction_MarketActive(uint96 lotId);
-    error Auction_InvalidStart(uint48 start_, uint48 minimum_);
-    error Auction_InvalidDuration(uint48 duration_, uint48 minimum_);
-    error Auction_InvalidLotId(uint96 lotId);
-    error Auction_OnlyMarketOwner();
-    error Auction_AmountLessThanMinimum();
-    error Auction_InvalidParams();
-    error Auction_NotAuthorized();
-    error Auction_NotImplemented();
-    error Auction_InsufficientCapacity();
-
-    // ========== EVENTS ========== //
-
-    // ========== DATA STRUCTURES ========== //
-
-    /// @notice     Types of auctions
-    enum AuctionType {
-        Atomic,
-        Batch
-    }
-
-    /// @notice     Core data for an auction lot
-    ///
-    /// @param      start               The timestamp when the auction starts
-    /// @param      conclusion          The timestamp when the auction ends
-    /// @param      quoteTokenDecimals  The quote token decimals
-    /// @param      baseTokenDecimals   The base token decimals
-    /// @param      capacityInQuote     Whether or not the capacity is in quote tokens
-    /// @param      capacity            The capacity of the lot
-    /// @param      sold                The amount of base tokens sold
-    /// @param      purchased           The amount of quote tokens purchased
-    struct Lot {
-        uint48 start; // 6 +
-        uint48 conclusion; //
-        uint8 quoteTokenDecimals;
-        uint8 baseTokenDecimals;
-        bool capacityInQuote;
-        uint256 capacity;
-        uint256 sold;
-        uint256 purchased;
-    }
-
-    /// @notice     Parameters when creating an auction lot
-    ///
-    /// @param      start           The timestamp when the auction starts
-    /// @param      duration        The duration of the auction (in seconds)
-    /// @param      capacityInQuote Whether or not the capacity is in quote tokens
-    /// @param      capacity        The capacity of the lot
-    /// @param      implParams      Abi-encoded implementation-specific parameters
-    struct AuctionParams {
-        uint48 start;
-        uint48 duration;
-        bool capacityInQuote;
-        uint256 capacity;
-        bytes implParams;
-    }
-
+abstract contract AuctionModule is IAuction, Module {
     // ========= STATE ========== //
 
     /// @notice Minimum auction duration in seconds
@@ -76,71 +17,6 @@ abstract contract Auction {
     /// @notice General information pertaining to auction lots
     mapping(uint96 id => Lot lot) public lotData;
 
-    // ========== AUCTION MANAGEMENT ========== //
-
-    /// @notice     Create an auction lot
-    /// @dev        The implementing function should handle the following:
-    ///             - Validate the lot parameters
-    ///             - Store the lot data
-    ///
-    /// @param      lotId_                  The lot id
-    /// @param      params_                 The auction parameters
-    /// @param      quoteTokenDecimals_     The quote token decimals
-    /// @param      baseTokenDecimals_      The base token decimals
-    function auction(
-        uint96 lotId_,
-        AuctionParams memory params_,
-        uint8 quoteTokenDecimals_,
-        uint8 baseTokenDecimals_
-    ) external virtual;
-
-    /// @notice     Cancel an auction lot
-    /// @dev        The implementing function should handle the following:
-    ///             - Validate the lot parameters
-    ///             - Update the lot data
-    ///
-    /// @param      lotId_              The lot id
-    function cancelAuction(uint96 lotId_) external virtual;
-
-    // ========== AUCTION INFORMATION ========== //
-
-    /// @notice     Returns whether the auction is currently accepting bids or purchases
-    /// @dev        The implementing function should handle the following:
-    ///             - Return true if the lot is accepting bids/purchases
-    ///             - Return false if the lot has ended, been cancelled, or not started yet
-    ///
-    /// @param      lotId_  The lot id
-    /// @return     bool    Whether or not the lot is active
-    function isLive(uint96 lotId_) public view virtual returns (bool);
-
-    /// @notice     Returns whether the auction has ended
-    /// @dev        The implementing function should handle the following:
-    ///             - Return true if the lot is not accepting bids/purchases and will not at any point
-    ///             - Return false if the lot hasn't started or is actively accepting bids/purchases
-    ///
-    /// @param      lotId_  The lot id
-    /// @return     bool    Whether or not the lot is active
-    function hasEnded(uint96 lotId_) public view virtual returns (bool);
-
-    /// @notice     Get the remaining capacity of a lot
-    /// @dev        The implementing function should handle the following:
-    ///             - Return the remaining capacity of the lot
-    ///
-    /// @param      lotId_  The lot id
-    /// @return     uint96 The remaining capacity of the lot
-    function remainingCapacity(uint96 lotId_) external view virtual returns (uint256);
-
-    /// @notice     Get whether or not the capacity is in quote tokens
-    /// @dev        The implementing function should handle the following:
-    ///             - Return true if the capacity is in quote tokens
-    ///             - Return false if the capacity is in base tokens
-    ///
-    /// @param      lotId_  The lot id
-    /// @return     bool    Whether or not the capacity is in quote tokens
-    function capacityInQuote(uint96 lotId_) external view virtual returns (bool);
-}
-
-abstract contract AuctionModule is Auction, Module {
     // ========== CONSTRUCTOR ========== //
 
     constructor(address auctionHouse_) Module(auctionHouse_) {}
@@ -152,7 +28,7 @@ abstract contract AuctionModule is Auction, Module {
 
     // ========== AUCTION MANAGEMENT ========== //
 
-    /// @inheritdoc Auction
+    /// @inheritdoc IAuction
     /// @dev        If the start time is zero, the auction will have a start time of the current block timestamp.
     ///
     ///             This function handles the following:
@@ -242,7 +118,7 @@ abstract contract AuctionModule is Auction, Module {
 
     // ========== AUCTION INFORMATION ========== //
 
-    /// @inheritdoc Auction
+    /// @inheritdoc IAuction
     /// @dev        A lot is active if:
     ///             - The lot has not concluded
     ///             - The lot has started
@@ -257,31 +133,26 @@ abstract contract AuctionModule is Auction, Module {
         );
     }
 
-    /// @inheritdoc Auction
+    /// @inheritdoc IAuction
     function hasEnded(uint96 lotId_) public view override returns (bool) {
         return
             uint48(block.timestamp) >= lotData[lotId_].conclusion || lotData[lotId_].capacity == 0;
     }
 
-    /// @inheritdoc Auction
+    /// @inheritdoc IAuction
     function remainingCapacity(uint96 lotId_) external view override returns (uint256) {
         return lotData[lotId_].capacity;
     }
 
-    /// @inheritdoc Auction
+    /// @inheritdoc IAuction
     function capacityInQuote(uint96 lotId_) external view override returns (bool) {
         return lotData[lotId_].capacityInQuote;
     }
 
-    /// @notice    Get the lot data for a given lot ID
-    ///
-    /// @param     lotId_  The lot ID
-    function getLot(uint96 lotId_) external view returns (Lot memory) {
+    /// @inheritdoc IAuction
+    function getLot(uint96 lotId_) external view override returns (Lot memory) {
         return lotData[lotId_];
     }
-
-    /// @notice     Get the auction type
-    function auctionType() external pure virtual returns (AuctionType);
 
     // ========== ADMIN FUNCTIONS ========== //
 

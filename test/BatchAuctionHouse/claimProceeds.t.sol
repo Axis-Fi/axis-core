@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.19;
 
-import {Auction} from "src/modules/Auction.sol";
+import {IAuction} from "src/interfaces/IAuction.sol";
 import {AuctionHouse} from "src/bases/AuctionHouse.sol";
 import {BatchAuction} from "src/modules/auctions/BatchAuctionModule.sol";
 
@@ -212,7 +212,7 @@ contract BatchClaimProceedsTest is BatchAuctionHouseTest {
         givenLotIsConcluded
     {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(Auction.Auction_InvalidParams.selector);
+        bytes memory err = abi.encodeWithSelector(IAuction.Auction_InvalidParams.selector);
         vm.expectRevert(err);
 
         // Call function
@@ -236,7 +236,7 @@ contract BatchClaimProceedsTest is BatchAuctionHouseTest {
         givenLotProceedsAreClaimed
     {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(Auction.Auction_InvalidParams.selector);
+        bytes memory err = abi.encodeWithSelector(IAuction.Auction_InvalidParams.selector);
         vm.expectRevert(err);
 
         // Call function

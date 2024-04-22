@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.19;
 
-import {Auction} from "src/modules/Auction.sol";
+import {IAuction} from "src/interfaces/IAuction.sol";
 import {EncryptedMarginalPrice} from "src/modules/auctions/EMP.sol";
 import {FixedPointMathLib as Math} from "lib/solmate/src/utils/FixedPointMathLib.sol";
 
@@ -123,7 +123,7 @@ contract EmpaModuleClaimProceedsTest is EmpTest {
 
     function test_whenLotIdIsInvalid_reverts() public {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(Auction.Auction_InvalidLotId.selector, _lotId);
+        bytes memory err = abi.encodeWithSelector(IAuction.Auction_InvalidLotId.selector, _lotId);
         vm.expectRevert(err);
 
         // Call function

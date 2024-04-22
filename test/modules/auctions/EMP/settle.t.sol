@@ -4,7 +4,7 @@ pragma solidity 0.8.19;
 import {FixedPointMathLib as Math} from "solmate/utils/FixedPointMathLib.sol";
 
 import {Module} from "src/modules/Modules.sol";
-import {Auction} from "src/modules/Auction.sol";
+import {IAuction} from "src/interfaces/IAuction.sol";
 import {EncryptedMarginalPrice} from "src/modules/auctions/EMP.sol";
 import {BidEncoding} from "src/lib/MaxPriorityQueue.sol";
 
@@ -135,7 +135,7 @@ contract EmpaModuleSettleTest is EmpTest {
 
     function _assertLot() internal {
         // Check that the lot has been updated
-        Auction.Lot memory lotData = _getAuctionLot(_lotId);
+        IAuction.Lot memory lotData = _getAuctionLot(_lotId);
 
         assertEq(lotData.sold, _expectedTotalOut, "lot sold");
         assertEq(lotData.purchased, _expectedTotalIn, "lot purchased");
@@ -763,7 +763,7 @@ contract EmpaModuleSettleTest is EmpTest {
 
             uint64 nextDecryptIndex = auctionData.nextDecryptIndex;
 
-            Auction.Lot memory lot = _module.getLot(_lotId);
+            IAuction.Lot memory lot = _module.getLot(_lotId);
             uint256 baseScale = 10 ** lot.baseTokenDecimals;
 
             for (uint256 i = 0; i < (numBids < decryptsAtOnce ? numBids : decryptsAtOnce); i++) {
@@ -943,7 +943,7 @@ contract EmpaModuleSettleTest is EmpTest {
 
     function test_invalidLotId_reverts() external {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(Auction.Auction_InvalidLotId.selector, _lotId);
+        bytes memory err = abi.encodeWithSelector(IAuction.Auction_InvalidLotId.selector, _lotId);
         vm.expectRevert(err);
 
         // Call function
@@ -1012,7 +1012,7 @@ contract EmpaModuleSettleTest is EmpTest {
 
     function test_lotCancelled_reverts() external givenLotIsCreated givenLotIsCancelled {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(Auction.Auction_MarketNotActive.selector, _lotId);
+        bytes memory err = abi.encodeWithSelector(IAuction.Auction_MarketNotActive.selector, _lotId);
         vm.expectRevert(err);
 
         // Call function

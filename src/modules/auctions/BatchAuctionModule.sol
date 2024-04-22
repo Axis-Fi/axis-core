@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSL-1.1
 pragma solidity 0.8.19;
 
+import {IAuction} from "src/interfaces/IAuction.sol";
 import {AuctionModule} from "src/modules/Auction.sol";
 
 abstract contract BatchAuction {
@@ -109,7 +110,7 @@ abstract contract BatchAuction {
 /// @title  Batch Auction Module
 /// @notice A base contract for batch auctions
 abstract contract BatchAuctionModule is BatchAuction, AuctionModule {
-    /// @inheritdoc AuctionModule
+    /// @inheritdoc IAuction
     function auctionType() external pure override returns (AuctionType) {
         return AuctionType.Batch;
     }

@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.19;
 
+import {IAuction} from "src/interfaces/IAuction.sol";
+
 import {ERC20} from "solmate/tokens/ERC20.sol";
 import {Transfer} from "src/lib/Transfer.sol";
 
-import {Auction} from "src/modules/Auction.sol";
 import {AuctionHouse} from "src/bases/AuctionHouse.sol";
 import {ICallback} from "src/interfaces/ICallback.sol";
 
@@ -49,7 +50,7 @@ contract MockAuctionHouse is AuctionHouse {
     function _auction(
         uint96 lotId_,
         RoutingParams calldata routing_,
-        Auction.AuctionParams calldata params_
+        IAuction.AuctionParams calldata params_
     ) internal virtual override returns (bool performedCallback) {}
 
     function _cancel(
