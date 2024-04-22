@@ -28,7 +28,6 @@ import {MockFeeOnTransferERC20} from "test/lib/mocks/MockFeeOnTransferERC20.sol"
 // Auctions
 import {BatchAuctionHouse} from "src/BatchAuctionHouse.sol";
 import {AuctionModule} from "src/modules/Auction.sol";
-import {FeeManager} from "src/bases/FeeManager.sol";
 import {AuctionHouse} from "src/bases/AuctionHouse.sol";
 
 import {Veecode, toKeycode, keycodeFromVeecode, Keycode} from "src/modules/Modules.sol";

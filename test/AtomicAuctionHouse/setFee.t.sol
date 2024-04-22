@@ -12,7 +12,6 @@ import {MockAtomicAuctionModule} from "test/modules/Auction/MockAtomicAuctionMod
 import {Permit2User} from "test/lib/permit2/Permit2User.sol";
 
 // Auctions
-import {FeeManager} from "src/bases/FeeManager.sol";
 import {AtomicAuctionHouse} from "src/AtomicAuctionHouse.sol";
 
 // Modules
