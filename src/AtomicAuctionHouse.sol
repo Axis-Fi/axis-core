@@ -3,6 +3,7 @@ pragma solidity 0.8.19;
 
 // Interfaces
 import {IAuction} from "src/interfaces/IAuction.sol";
+import {IAtomicAuctionHouse} from "src/interfaces/IAtomicAuctionHouse.sol";
 import {ICallback} from "src/interfaces/ICallback.sol";
 
 // Internal libaries
@@ -16,48 +17,9 @@ import {AtomicAuctionModule} from "src/modules/auctions/AtomicAuctionModule.sol"
 
 import {Keycode, keycodeFromVeecode} from "src/modules/Keycode.sol";
 
-/// @title      AtomicRouter
-/// @notice     An interface to define the AtomicAuctionHouse's buyer-facing functions
-abstract contract AtomicRouter {
-    // ========== DATA STRUCTURES ========== //
-
-    /// @notice     Parameters used by the purchase function
-    /// @dev        This reduces the number of variables in scope for the purchase function
-    ///
-    /// @param      recipient           Address to receive payout
-    /// @param      referrer            Address of referrer
-    /// @param      lotId               Lot ID
-    /// @param      amount              Amount of quoteToken to purchase with (in native decimals)
-    /// @param      minAmountOut        Minimum amount of baseToken to receive
-    /// @param      auctionData         Custom data used by the auction module
-    /// @param      permit2Data_        Permit2 approval for the quoteToken
-    struct PurchaseParams {
-        address recipient;
-        address referrer;
-        uint96 lotId;
-        uint256 amount;
-        uint256 minAmountOut;
-        bytes auctionData;
-        bytes permit2Data;
-    }
-
-    // ========== ATOMIC AUCTIONS ========== //
-
-    /// @notice     Purchase a lot from an atomic auction
-    /// @notice     Permit2 is utilised to simplify token transfers
-    ///
-    /// @param      params_         Purchase parameters
-    /// @param      callbackData_   Custom data provided to the onPurchase callback
-    /// @return     payout          Amount of baseToken received by `recipient_` (in native decimals)
-    function purchase(
-        PurchaseParams memory params_,
-        bytes calldata callbackData_
-    ) external virtual returns (uint256 payout);
-}
-
 /// @title      AtomicAuctionHouse
 /// @notice     As its name implies, the AtomicAuctionHouse is where atomic auction lots are created and purchased. The core protocol logic is implemented here.
-contract AtomicAuctionHouse is AuctionHouse, AtomicRouter {
+contract AtomicAuctionHouse is IAtomicAuctionHouse, AuctionHouse {
     using Callbacks for ICallback;
 
     // ========== ERRORS ========== //
@@ -114,7 +76,7 @@ contract AtomicAuctionHouse is AuctionHouse, AtomicRouter {
 
     // ========== PURCHASE ========== //
 
-    /// @inheritdoc AtomicRouter
+    /// @inheritdoc IAtomicAuctionHouse
     /// @dev        This fuction handles the following:
     ///             1. Calculates the fees for the purchase
     ///             2. Obtains the payout from the auction module

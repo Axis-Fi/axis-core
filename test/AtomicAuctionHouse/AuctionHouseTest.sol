@@ -18,7 +18,8 @@ import {Permit2User} from "test/lib/permit2/Permit2User.sol";
 import {MockFeeOnTransferERC20} from "test/lib/mocks/MockFeeOnTransferERC20.sol";
 
 // Auctions
-import {AtomicAuctionHouse, AtomicRouter} from "src/AtomicAuctionHouse.sol";
+import {IAtomicAuctionHouse} from "src/interfaces/IAtomicAuctionHouse.sol";
+import {AtomicAuctionHouse} from "src/AtomicAuctionHouse.sol";
 import {AuctionHouse} from "src/bases/AuctionHouse.sol";
 import {AuctionModule} from "src/modules/Auction.sol";
 import {FeeManager} from "src/bases/FeeManager.sol";
@@ -473,7 +474,8 @@ abstract contract AtomicAuctionHouseTest is Test, Permit2User {
         bytes memory auctionData_,
         address referrer_
     ) internal returns (uint256) {
-        AtomicRouter.PurchaseParams memory purchaseParams = AtomicRouter.PurchaseParams({
+        IAtomicAuctionHouse.PurchaseParams memory purchaseParams = IAtomicAuctionHouse
+            .PurchaseParams({
             recipient: _bidder,
             referrer: referrer_,
             lotId: _lotId,

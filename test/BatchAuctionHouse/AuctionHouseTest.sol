@@ -15,7 +15,8 @@ import {Permit2User} from "test/lib/permit2/Permit2User.sol";
 import {MockFeeOnTransferERC20} from "test/lib/mocks/MockFeeOnTransferERC20.sol";
 
 // Auctions
-import {BatchAuctionHouse, BatchRouter} from "src/BatchAuctionHouse.sol";
+import {IBatchAuctionHouse} from "src/interfaces/IBatchAuctionHouse.sol";
+import {BatchAuctionHouse} from "src/BatchAuctionHouse.sol";
 import {IAuction} from "src/interfaces/IAuction.sol";
 import {IAuctionHouse} from "src/interfaces/IAuctionHouse.sol";
 import {AuctionModule} from "src/modules/Auction.sol";
@@ -489,7 +490,7 @@ abstract contract BatchAuctionHouseTest is Test, Permit2User {
         uint256 amount_,
         bytes memory auctionData_
     ) internal returns (uint64) {
-        BatchRouter.BidParams memory bidParams = BatchRouter.BidParams({
+        IBatchAuctionHouse.BidParams memory bidParams = IBatchAuctionHouse.BidParams({
             lotId: _lotId,
             referrer: _REFERRER,
             amount: amount_,

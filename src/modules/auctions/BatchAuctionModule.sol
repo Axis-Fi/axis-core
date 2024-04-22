@@ -13,7 +13,7 @@ import {AuctionModule} from "src/modules/Auction.sol";
 abstract contract BatchAuctionModule is IBatchAuction, AuctionModule {
     // ========== STATE VARIABLES ========== //
 
-    mapping(uint96 => bytes) public auctionOutput;
+    mapping(uint96 => bytes) public auctionOutput; // TODO resolve shadowing
 
     /// @inheritdoc IAuction
     function auctionType() external pure override returns (AuctionType) {

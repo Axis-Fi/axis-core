@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.19;
 
-import {BatchRouter} from "src/BatchAuctionHouse.sol";
+import {IBatchAuctionHouse} from "src/interfaces/IBatchAuctionHouse.sol";
 import {EncryptedMarginalPrice} from "src/modules/auctions/EMP.sol";
 import {LinearVesting} from "src/modules/derivatives/LinearVesting.sol";
 import {Point, ECIES} from "src/lib/ECIES.sol";
@@ -129,7 +129,7 @@ contract LinearVestingEMPAIntegrationTest is BatchAuctionHouseTest {
     ) internal returns (uint64 bidId) {
         bytes memory bidData = _createBidData(bidder_, amountIn_, amountOut_);
 
-        BatchRouter.BidParams memory bid = BatchRouter.BidParams({
+        IBatchAuctionHouse.BidParams memory bid = IBatchAuctionHouse.BidParams({
             lotId: _lotId,
             referrer: _REFERRER,
             amount: amountIn_,
