@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity >=0.8.0;
 
-/// @title  IAuctionModule
+/// @title  IAuction
 /// @notice Interface for all auction modules used in the Axis AuctionHouse
 /// @dev    This contract defines the external functions and data that are required for an auction module to be installed in an AuctionHouse.
 ///
@@ -12,7 +12,7 @@ pragma solidity >=0.8.0;
 ///
 ///         Data storage:
 ///         - Each auction lot will have common data that is stored using the `Lot` struct. Inheriting auction modules may store additional data outside of the struct.
-interface IAuctionModule {
+interface IAuction {
     // ========== ERRORS ========== //
 
     error Auction_MarketNotActive(uint96 lotId);

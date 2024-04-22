@@ -2,7 +2,7 @@
 pragma solidity 0.8.19;
 
 // Interfaces
-import {IAuctionModule} from "src/interfaces/IAuctionModule.sol";
+import {IAuction} from "src/interfaces/IAuction.sol";
 import {ICallback} from "src/interfaces/ICallback.sol";
 
 // Internal libaries
@@ -89,13 +89,13 @@ contract AtomicAuctionHouse is AuctionHouse, AtomicRouter {
     function _auction(
         uint96,
         RoutingParams calldata routing_,
-        IAuctionModule.AuctionParams calldata
+        IAuction.AuctionParams calldata
     ) internal view override returns (bool performedCallback) {
         // Validation
 
         // Ensure the auction type is atomic
         AuctionModule auctionModule = AuctionModule(_getLatestModuleIfActive(routing_.auctionType));
-        if (auctionModule.auctionType() != IAuctionModule.AuctionType.Atomic) revert InvalidParams();
+        if (auctionModule.auctionType() != IAuction.AuctionType.Atomic) revert InvalidParams();
 
         // Cannot be prefunded
 

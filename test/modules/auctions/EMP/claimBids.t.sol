@@ -5,7 +5,7 @@ import {FixedPointMathLib as Math} from "lib/solady/src/utils/FixedPointMathLib.
 import {console2} from "forge-std/console2.sol";
 
 import {Module} from "src/modules/Modules.sol";
-import {IAuctionModule} from "src/interfaces/IAuctionModule.sol";
+import {IAuction} from "src/interfaces/IAuction.sol";
 import {EncryptedMarginalPrice} from "src/modules/auctions/EMP.sol";
 import {BatchAuction} from "src/modules/auctions/BatchAuctionModule.sol";
 
@@ -80,7 +80,7 @@ contract EmpaModuleClaimBidsTest is EmpTest {
     //    [X] it returns the exact bid amount
 
     function test_invalidLotId_reverts() external {
-        bytes memory err = abi.encodeWithSelector(IAuctionModule.Auction_InvalidLotId.selector, _lotId);
+        bytes memory err = abi.encodeWithSelector(IAuction.Auction_InvalidLotId.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function

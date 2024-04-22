@@ -12,7 +12,7 @@ import {Permit2User} from "test/lib/permit2/Permit2User.sol";
 
 // Modules
 import {BatchAuctionHouse} from "src/BatchAuctionHouse.sol";
-import {IAuctionModule} from "src/interfaces/IAuctionModule.sol";
+import {IAuction} from "src/interfaces/IAuction.sol";
 import {EncryptedMarginalPrice} from "src/modules/auctions/EMP.sol";
 
 abstract contract EmpTest is Test, Permit2User {
@@ -44,7 +44,7 @@ abstract contract EmpTest is Test, Permit2User {
 
     // Input parameters (modifier via modifiers)
     uint48 internal _start;
-    IAuctionModule.AuctionParams internal _auctionParams;
+    IAuction.AuctionParams internal _auctionParams;
     EncryptedMarginalPrice.AuctionDataParams internal _auctionDataParams;
     uint96 internal _lotId = type(uint96).max;
     uint64 internal _bidId = type(uint64).max;
@@ -74,7 +74,7 @@ abstract contract EmpTest is Test, Permit2User {
             publicKey: _auctionPublicKey
         });
 
-        _auctionParams = IAuctionModule.AuctionParams({
+        _auctionParams = IAuction.AuctionParams({
             start: _start,
             duration: _DURATION,
             capacityInQuote: false,
@@ -427,7 +427,7 @@ abstract contract EmpTest is Test, Permit2User {
         });
     }
 
-    function _getAuctionLot(uint96 lotId_) internal view returns (IAuctionModule.Lot memory) {
+    function _getAuctionLot(uint96 lotId_) internal view returns (IAuction.Lot memory) {
         return _module.getLot(lotId_);
     }
 

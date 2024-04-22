@@ -2,7 +2,7 @@
 pragma solidity 0.8.19;
 
 // Interfaces
-import {IAuctionModule} from "src/interfaces/IAuctionModule.sol";
+import {IAuction} from "src/interfaces/IAuction.sol";
 import {IAuctionHouse} from "src/interfaces/IAuctionHouse.sol";
 import {ICallback} from "src/interfaces/ICallback.sol";
 
@@ -166,7 +166,7 @@ abstract contract AuctionHouse is IAuctionHouse, WithModules, ReentrancyGuard, F
     ///             - Re-entrancy is detected
     function auction(
         IAuctionHouse.RoutingParams calldata routing_,
-        IAuctionModule.AuctionParams calldata params_,
+        IAuction.AuctionParams calldata params_,
         string calldata infoHash_
     ) external nonReentrant returns (uint96 lotId) {
         // Check that the module for the auction type is valid
@@ -271,7 +271,7 @@ abstract contract AuctionHouse is IAuctionHouse, WithModules, ReentrancyGuard, F
     function _auction(
         uint96 lotId_,
         IAuctionHouse.RoutingParams calldata routing_,
-        IAuctionModule.AuctionParams calldata params_
+        IAuction.AuctionParams calldata params_
     ) internal virtual returns (bool performedCallback);
 
     /// @notice     Cancels an auction lot

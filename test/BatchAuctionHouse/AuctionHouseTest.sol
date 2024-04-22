@@ -16,7 +16,7 @@ import {MockFeeOnTransferERC20} from "test/lib/mocks/MockFeeOnTransferERC20.sol"
 
 // Auctions
 import {BatchAuctionHouse, BatchRouter} from "src/BatchAuctionHouse.sol";
-import {IAuctionModule} from "src/interfaces/IAuctionModule.sol";
+import {IAuction} from "src/interfaces/IAuction.sol";
 import {IAuctionHouse} from "src/interfaces/IAuctionHouse.sol";
 import {AuctionModule} from "src/modules/Auction.sol";
 import {FeeManager} from "src/bases/FeeManager.sol";
@@ -74,7 +74,7 @@ abstract contract BatchAuctionHouseTest is Test, Permit2User {
 
     // Parameters
     IAuctionHouse.RoutingParams internal _routingParams;
-    IAuctionModule.AuctionParams internal _auctionParams;
+    IAuction.AuctionParams internal _auctionParams;
     bytes internal _allowlistProof;
     bytes internal _permit2Data;
     bool internal _callbackSendBaseTokens;
@@ -107,7 +107,7 @@ abstract contract BatchAuctionHouseTest is Test, Permit2User {
 
         _startTime = uint48(block.timestamp) + 1;
 
-        _auctionParams = IAuctionModule.AuctionParams({
+        _auctionParams = IAuction.AuctionParams({
             start: _startTime,
             duration: _duration,
             capacityInQuote: false,
@@ -646,7 +646,7 @@ abstract contract BatchAuctionHouseTest is Test, Permit2User {
         });
     }
 
-    function _getLotData(uint96 lotId_) internal view returns (IAuctionModule.Lot memory) {
+    function _getLotData(uint96 lotId_) internal view returns (IAuction.Lot memory) {
         return _auctionModule.getLot(lotId_);
     }
 }

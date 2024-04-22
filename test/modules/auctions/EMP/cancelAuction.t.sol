@@ -2,7 +2,7 @@
 pragma solidity 0.8.19;
 
 import {Module} from "src/modules/Modules.sol";
-import {IAuctionModule} from "src/interfaces/IAuctionModule.sol";
+import {IAuction} from "src/interfaces/IAuction.sol";
 import {EncryptedMarginalPrice} from "src/modules/auctions/EMP.sol";
 
 import {EmpTest} from "test/modules/auctions/EMP/EMPTest.sol";
@@ -31,7 +31,7 @@ contract EmpaModuleCancelAuctionTest is EmpTest {
 
     function test_invalidLotId_reverts() public {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(IAuctionModule.Auction_InvalidLotId.selector, _lotId);
+        bytes memory err = abi.encodeWithSelector(IAuction.Auction_InvalidLotId.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function
@@ -45,7 +45,7 @@ contract EmpaModuleCancelAuctionTest is EmpTest {
         vm.warp(_start + _DURATION + conclusionElapsed);
 
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(IAuctionModule.Auction_MarketNotActive.selector, _lotId);
+        bytes memory err = abi.encodeWithSelector(IAuction.Auction_MarketNotActive.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function
@@ -54,7 +54,7 @@ contract EmpaModuleCancelAuctionTest is EmpTest {
 
     function test_auctionCancelled_reverts() public givenLotIsCreated givenLotIsCancelled {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(IAuctionModule.Auction_MarketNotActive.selector, _lotId);
+        bytes memory err = abi.encodeWithSelector(IAuction.Auction_MarketNotActive.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function
@@ -76,7 +76,7 @@ contract EmpaModuleCancelAuctionTest is EmpTest {
         _cancelAuctionLot();
 
         // Check the state
-        IAuctionModule.Lot memory lotData = _getAuctionLot(_lotId);
+        IAuction.Lot memory lotData = _getAuctionLot(_lotId);
         assertEq(lotData.conclusion, uint48(block.timestamp), "conclusion");
         assertEq(lotData.capacity, 0, "capacity");
 
