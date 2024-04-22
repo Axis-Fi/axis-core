@@ -9,7 +9,9 @@ import {MockFeeOnTransferERC20} from "test/lib/mocks/MockFeeOnTransferERC20.sol"
 import {Permit2User} from "test/lib/permit2/Permit2User.sol";
 import {Callbacks} from "src/lib/Callbacks.sol";
 
-contract SendPaymentTest is Test, Permit2User {
+import {WithSalts} from "test/lib/WithSalts.sol";
+
+contract SendPaymentTest is Test, Permit2User, WithSalts {
     MockAuctionHouse internal _auctionHouse;
 
     address internal constant _OWNER = address(0x1);
@@ -53,12 +55,10 @@ contract SendPaymentTest is Test, Permit2User {
         bytes32 salt;
         if (_callbackReceiveQuoteTokens) {
             // 0x02
-            // cast create2 -s 02 -i $(cat ./bytecode/MockCallback02.bin)
-            salt = bytes32(0x863a6797d519916b77dceaca32e96caa88d9a051b733d5fc7bda3deff50711c7);
+            salt = _getSalt("MockCallback02");
         } else {
             // 0x00
-            // cast create2 -s 00 -i $(cat ./bytecode/MockCallback00.bin)
-            salt = bytes32(0xe17f5acb70ff141e3f2b9f02a69fdde8f1262a4833888ea428cae3c65c869155);
+            salt = _getSalt("MockCallback00");
         }
 
         vm.broadcast(); // required for CREATE2 address to work correctly. doesn't do anything in a test

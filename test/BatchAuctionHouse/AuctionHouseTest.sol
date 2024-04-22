@@ -25,7 +25,9 @@ import {Callbacks} from "src/lib/Callbacks.sol";
 
 import {Veecode, toKeycode, keycodeFromVeecode, Keycode} from "src/modules/Modules.sol";
 
-abstract contract BatchAuctionHouseTest is Test, Permit2User {
+import {WithSalts} from "test/lib/WithSalts.sol";
+
+abstract contract BatchAuctionHouseTest is Test, Permit2User, WithSalts {
     MockFeeOnTransferERC20 internal _baseToken;
     MockFeeOnTransferERC20 internal _quoteToken;
 
@@ -262,9 +264,8 @@ abstract contract BatchAuctionHouseTest is Test, Permit2User {
     }
 
     modifier givenLotHasAllowlist() {
-        // // 10011000 = 0x98
-        // // cast create2 -s 98 -i $(cat ./bytecode/MockCallback98.bin)
-        bytes32 salt = bytes32(0x28f94bf4b9c2759d8d981381738edf2a10c85269da2898bd882b3c74c170bff7);
+        // 10011000 = 0x98
+        bytes32 salt = _getSalt("MockCallback98");
         vm.startBroadcast(); // required for CREATE2 address to work correctly. doesn't do anything in a test
         _callback = new MockCallback{salt: salt}(
             address(_auctionHouse),
@@ -345,20 +346,16 @@ abstract contract BatchAuctionHouseTest is Test, Permit2User {
         bytes32 salt;
         if (_callbackSendBaseTokens && _callbackReceiveQuoteTokens) {
             // 11111111 = 0xFF
-            // cast create2 -s FF -i $(cat ./bytecode/MockCallbackFF.bin)
-            salt = bytes32(0xa663ec4a199cd493cf911022e7124dfb6351527fd2ac19ce6402fcdbefb8d7dd);
+            salt = _getSalt("MockCallbackFF");
         } else if (_callbackSendBaseTokens) {
             // 11111101 = 0xFD
-            // cast create2 -s FD -i $(cat ./bytecode/MockCallbackFD.bin)
-            salt = bytes32(0x79c74147f2ad7c75e453e849edafbc0d316c440fbb584656b05ab66a4d31c973);
+            salt = _getSalt("MockCallbackFD");
         } else if (_callbackReceiveQuoteTokens) {
             // 11111110 = 0xFE
-            // cast create2 -s FE -i $(cat ./bytecode/MockCallbackFE.bin)
-            salt = bytes32(0xa9260169b3783c17412e0e5660b126978795f56bcc108af9505d636f44f5fe83);
+            salt = _getSalt("MockCallbackFE");
         } else {
             // 11111100 = 0xFC
-            // cast create2 -s FC -i $(cat ./bytecode/MockCallbackFC.bin)
-            salt = bytes32(0x75d6bb94489c66774c988be3bb700a0b3cec32b30fd545f69296325428c1507e);
+            salt = _getSalt("MockCallbackFC");
         }
 
         // Required for CREATE2 address to work correctly. doesn't do anything in a test

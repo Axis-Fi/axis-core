@@ -11,7 +11,9 @@ import {BaseCallback} from "src/callbacks/BaseCallback.sol";
 
 import {CappedMerkleAllowlist} from "src/callbacks/allowlists/CappedMerkleAllowlist.sol";
 
-contract CappedMerkleAllowlistBatchTest is Test, Permit2User {
+import {WithSalts} from "test/lib/WithSalts.sol";
+
+contract CappedMerkleAllowlistBatchTest is Test, Permit2User, WithSalts {
     using Callbacks for CappedMerkleAllowlist;
 
     address internal constant _OWNER = address(0x1);
@@ -47,9 +49,7 @@ contract CappedMerkleAllowlistBatchTest is Test, Permit2User {
         vm.store(address(_auctionHouse), bytes32(uint256(6)), bytes32(abi.encode(1))); // Reentrancy
         vm.store(address(_auctionHouse), bytes32(uint256(10)), bytes32(abi.encode(_PROTOCOL))); // Protocol
 
-        // cast create2 -s 88 -i $(cat ./bytecode/CappedMerkleAllowlistBatch88.bin)
-        bytes32 batchSalt =
-            bytes32(0xccfc4e41b314453a721bb9ad4c99c550a38c3f16aa9b2e1c3429a075eca8d361);
+        bytes32 batchSalt = _getSalt("CappedMerkleAllowlistBatch88");
         vm.broadcast();
         _allowlist = new CappedMerkleAllowlist{salt: batchSalt}(
             address(_auctionHouse),
