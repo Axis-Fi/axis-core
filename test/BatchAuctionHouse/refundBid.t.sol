@@ -3,7 +3,7 @@ pragma solidity 0.8.19;
 
 import {AuctionHouse} from "src/bases/AuctionHouse.sol";
 import {IAuction} from "src/interfaces/IAuction.sol";
-import {BatchAuction} from "src/modules/auctions/BatchAuctionModule.sol";
+import {IBatchAuction} from "src/interfaces/IBatchAuction.sol";
 
 import {BatchAuctionHouseTest} from "test/BatchAuctionHouse/AuctionHouseTest.sol";
 
@@ -70,7 +70,7 @@ contract BatchRefundBidTest is BatchAuctionHouseTest {
         givenLotHasStarted
     {
         bytes memory err =
-            abi.encodeWithSelector(BatchAuction.Auction_InvalidBidId.selector, _lotId, _bidId);
+            abi.encodeWithSelector(IBatchAuction.Auction_InvalidBidId.selector, _lotId, _bidId);
         vm.expectRevert(err);
 
         // Call the function
@@ -92,7 +92,7 @@ contract BatchRefundBidTest is BatchAuctionHouseTest {
         givenBidIsRefunded
     {
         bytes memory err =
-            abi.encodeWithSelector(BatchAuction.Auction_InvalidBidId.selector, _lotId, _bidId);
+            abi.encodeWithSelector(IBatchAuction.Auction_InvalidBidId.selector, _lotId, _bidId);
         vm.expectRevert(err);
 
         // Call the function
@@ -112,7 +112,7 @@ contract BatchRefundBidTest is BatchAuctionHouseTest {
         givenUserHasQuoteTokenAllowance(_BID_AMOUNT)
         givenBid(_BID_AMOUNT, _auctionDataParams)
     {
-        bytes memory err = abi.encodeWithSelector(BatchAuction.Auction_NotBidder.selector);
+        bytes memory err = abi.encodeWithSelector(IBatchAuction.Auction_NotBidder.selector);
         vm.expectRevert(err);
 
         // Call the function

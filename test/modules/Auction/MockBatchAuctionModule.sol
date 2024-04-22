@@ -3,7 +3,8 @@ pragma solidity 0.8.19;
 
 // Modules
 import {Veecode, toKeycode, wrapVeecode} from "src/modules/Modules.sol";
-import {BatchAuction, BatchAuctionModule} from "src/modules/auctions/BatchAuctionModule.sol";
+import {BatchAuctionModule} from "src/modules/auctions/BatchAuctionModule.sol";
+import {IBatchAuction} from "src/interfaces/IBatchAuction.sol";
 
 // Auctions
 import {IAuction} from "src/interfaces/IAuction.sol";
@@ -172,7 +173,7 @@ contract MockBatchAuctionModule is BatchAuctionModule {
     function _revertIfBidInvalid(uint96 lotId_, uint64 bidId_) internal view virtual override {
         // Check that the bid exists
         if (nextBidId <= bidId_) {
-            revert BatchAuction.Auction_InvalidBidId(lotId_, bidId_);
+            revert IBatchAuction.Auction_InvalidBidId(lotId_, bidId_);
         }
     }
 
@@ -183,14 +184,14 @@ contract MockBatchAuctionModule is BatchAuctionModule {
     ) internal view virtual override {
         // Check that the bidder is the owner of the bid
         if (bidData[lotId_][bidId_].bidder != caller_) {
-            revert BatchAuction.Auction_NotBidder();
+            revert IBatchAuction.Auction_NotBidder();
         }
     }
 
     function _revertIfBidClaimed(uint96 lotId_, uint64 bidId_) internal view virtual override {
         // Check that the bid has not been cancelled
         if (bidCancelled[lotId_][bidId_] == true) {
-            revert BatchAuction.Auction_InvalidBidId(lotId_, bidId_);
+            revert IBatchAuction.Auction_InvalidBidId(lotId_, bidId_);
         }
     }
 

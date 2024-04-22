@@ -4,6 +4,7 @@ pragma solidity 0.8.19;
 // Interfaces
 import {IAuction} from "src/interfaces/IAuction.sol";
 import {ICallback} from "src/interfaces/ICallback.sol";
+import {IBatchAuction} from "src/interfaces/IBatchAuction.sol";
 
 // Internal libraries
 import {Transfer} from "src/lib/Transfer.sol";
@@ -15,7 +16,7 @@ import {ERC20} from "solmate/tokens/ERC20.sol";
 // Auctions
 import {AuctionHouse} from "src/bases/AuctionHouse.sol";
 import {AuctionModule} from "src/modules/Auction.sol";
-import {BatchAuction, BatchAuctionModule} from "src/modules/auctions/BatchAuctionModule.sol";
+import {BatchAuctionModule} from "src/modules/auctions/BatchAuctionModule.sol";
 
 import {fromVeecode} from "src/modules/Modules.sol";
 
@@ -377,7 +378,7 @@ contract BatchAuctionHouse is AuctionHouse, BatchRouter {
 
         // Claim the bids on the auction module
         // The auction module is responsible for validating the bid and authorizing the caller
-        (BatchAuction.BidClaim[] memory bidClaims, bytes memory auctionOutput) =
+        (IBatchAuction.BidClaim[] memory bidClaims, bytes memory auctionOutput) =
             getBatchModuleForId(lotId_).claimBids(lotId_, bidIds_);
 
         // Load routing data for the lot
@@ -390,7 +391,7 @@ contract BatchAuctionHouse is AuctionHouse, BatchRouter {
         // Iterate through the bid claims and handle each one
         uint256 bidClaimsLen = bidClaims.length;
         for (uint256 i = 0; i < bidClaimsLen; i++) {
-            BatchAuction.BidClaim memory bidClaim = bidClaims[i];
+            IBatchAuction.BidClaim memory bidClaim = bidClaims[i];
 
             // If payout is greater than zero, then the bid was filled.
             // However, due to partial fills, there can be both a payout and a refund

@@ -6,7 +6,7 @@ import {console2} from "forge-std/console2.sol";
 import {Module} from "src/modules/Modules.sol";
 import {IAuction} from "src/interfaces/IAuction.sol";
 import {EncryptedMarginalPrice} from "src/modules/auctions/EMP.sol";
-import {BatchAuction} from "src/modules/auctions/BatchAuctionModule.sol";
+import {IBatchAuction} from "src/interfaces/IBatchAuction.sol";
 
 import {EmpTest} from "test/modules/auctions/EMP/EMPTest.sol";
 
@@ -54,7 +54,7 @@ contract EmpaModuleRefundBidTest is EmpTest {
     function test_invalidBidId_reverts() external givenLotIsCreated givenLotHasStarted {
         // Expect revert
         bytes memory err =
-            abi.encodeWithSelector(BatchAuction.Auction_InvalidBidId.selector, _lotId, _bidId);
+            abi.encodeWithSelector(IBatchAuction.Auction_InvalidBidId.selector, _lotId, _bidId);
         vm.expectRevert(err);
 
         // Call the function

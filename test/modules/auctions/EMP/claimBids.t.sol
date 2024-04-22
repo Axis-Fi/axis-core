@@ -7,7 +7,7 @@ import {console2} from "forge-std/console2.sol";
 import {Module} from "src/modules/Modules.sol";
 import {IAuction} from "src/interfaces/IAuction.sol";
 import {EncryptedMarginalPrice} from "src/modules/auctions/EMP.sol";
-import {BatchAuction} from "src/modules/auctions/BatchAuctionModule.sol";
+import {IBatchAuction} from "src/interfaces/IBatchAuction.sol";
 
 import {EmpTest} from "test/modules/auctions/EMP/EMPTest.sol";
 
@@ -96,7 +96,7 @@ contract EmpaModuleClaimBidsTest is EmpTest {
         givenLotIsSettled
     {
         bytes memory err =
-            abi.encodeWithSelector(BatchAuction.Auction_InvalidBidId.selector, _lotId, 1);
+            abi.encodeWithSelector(IBatchAuction.Auction_InvalidBidId.selector, _lotId, 1);
         vm.expectRevert(err);
 
         _bidIds.push(1);
@@ -118,7 +118,7 @@ contract EmpaModuleClaimBidsTest is EmpTest {
         givenLotIsSettled
     {
         bytes memory err =
-            abi.encodeWithSelector(BatchAuction.Auction_InvalidBidId.selector, _lotId, 2);
+            abi.encodeWithSelector(IBatchAuction.Auction_InvalidBidId.selector, _lotId, 2);
         vm.expectRevert(err);
 
         _bidIds.push(2);
@@ -215,17 +215,17 @@ contract EmpaModuleClaimBidsTest is EmpTest {
     {
         // Call the function
         vm.prank(address(_auctionHouse));
-        (BatchAuction.BidClaim[] memory bidClaims,) = _module.claimBids(_lotId, _bidIds);
+        (IBatchAuction.BidClaim[] memory bidClaims,) = _module.claimBids(_lotId, _bidIds);
 
         // Check the result
-        BatchAuction.BidClaim memory bidClaimOne = bidClaims[0];
+        IBatchAuction.BidClaim memory bidClaimOne = bidClaims[0];
         assertEq(bidClaimOne.bidder, _BIDDER, "bid one: bidder");
         assertEq(bidClaimOne.referrer, _REFERRER, "bid one: referrer");
         assertEq(bidClaimOne.paid, _BID_AMOUNT_UNSUCCESSFUL, "bid one: paid");
         assertEq(bidClaimOne.payout, 0, "bid one: payout");
         assertEq(bidClaimOne.refund, _BID_AMOUNT_UNSUCCESSFUL, "bid one: refund");
 
-        BatchAuction.BidClaim memory bidClaimTwo = bidClaims[1];
+        IBatchAuction.BidClaim memory bidClaimTwo = bidClaims[1];
         assertEq(bidClaimTwo.bidder, _BIDDER_TWO, "bid two: bidder");
         assertEq(bidClaimTwo.referrer, _REFERRER, "bid two: referrer");
         assertEq(bidClaimTwo.paid, _BID_AMOUNT_UNSUCCESSFUL, "bid two: paid");
@@ -264,17 +264,17 @@ contract EmpaModuleClaimBidsTest is EmpTest {
     {
         // Call the function
         vm.prank(address(_auctionHouse));
-        (BatchAuction.BidClaim[] memory bidClaims,) = _module.claimBids(_lotId, _bidIds);
+        (IBatchAuction.BidClaim[] memory bidClaims,) = _module.claimBids(_lotId, _bidIds);
 
         // Check the result
-        BatchAuction.BidClaim memory bidClaimOne = bidClaims[0];
+        IBatchAuction.BidClaim memory bidClaimOne = bidClaims[0];
         assertEq(bidClaimOne.bidder, _BIDDER, "bid one: bidder");
         assertEq(bidClaimOne.referrer, _REFERRER, "bid one: referrer");
         assertEq(bidClaimOne.paid, _BID_AMOUNT_UNSUCCESSFUL, "bid one: paid");
         assertEq(bidClaimOne.payout, 0, "bid one: payout");
         assertEq(bidClaimOne.refund, _BID_AMOUNT_UNSUCCESSFUL, "bid one: refund");
 
-        BatchAuction.BidClaim memory bidClaimTwo = bidClaims[1];
+        IBatchAuction.BidClaim memory bidClaimTwo = bidClaims[1];
         assertEq(bidClaimTwo.bidder, _BIDDER_TWO, "bid two: bidder");
         assertEq(bidClaimTwo.referrer, _REFERRER, "bid two: referrer");
         assertEq(bidClaimTwo.paid, _BID_AMOUNT_UNSUCCESSFUL, "bid two: paid");
@@ -316,17 +316,17 @@ contract EmpaModuleClaimBidsTest is EmpTest {
 
         // Call the function
         vm.prank(address(_auctionHouse));
-        (BatchAuction.BidClaim[] memory bidClaims,) = _module.claimBids(_lotId, _bidIds);
+        (IBatchAuction.BidClaim[] memory bidClaims,) = _module.claimBids(_lotId, _bidIds);
 
         // Check the result
-        BatchAuction.BidClaim memory bidClaimOne = bidClaims[0];
+        IBatchAuction.BidClaim memory bidClaimOne = bidClaims[0];
         assertEq(bidClaimOne.bidder, _BIDDER, "bid one: bidder");
         assertEq(bidClaimOne.referrer, _REFERRER, "bid one: referrer");
         assertEq(bidClaimOne.paid, bidAmountIn, "bid one: paid");
         assertEq(bidClaimOne.payout, 0, "bid one: payout");
         assertEq(bidClaimOne.refund, bidAmountIn, "bid one: refund");
 
-        BatchAuction.BidClaim memory bidClaimTwo = bidClaims[1];
+        IBatchAuction.BidClaim memory bidClaimTwo = bidClaims[1];
         assertEq(bidClaimTwo.bidder, _BIDDER_TWO, "bid two: bidder");
         assertEq(bidClaimTwo.referrer, _REFERRER, "bid two: referrer");
         assertEq(bidClaimTwo.paid, _BID_AMOUNT_UNSUCCESSFUL, "bid two: paid");
@@ -367,10 +367,10 @@ contract EmpaModuleClaimBidsTest is EmpTest {
     {
         // Call the function
         vm.prank(address(_auctionHouse));
-        (BatchAuction.BidClaim[] memory bidClaims,) = _module.claimBids(_lotId, _bidIds);
+        (IBatchAuction.BidClaim[] memory bidClaims,) = _module.claimBids(_lotId, _bidIds);
 
         // Check the result
-        BatchAuction.BidClaim memory bidClaimOne = bidClaims[0];
+        IBatchAuction.BidClaim memory bidClaimOne = bidClaims[0];
         assertEq(bidClaimOne.bidder, _BIDDER, "bid one: bidder");
         assertEq(bidClaimOne.referrer, _REFERRER, "bid one: referrer");
         assertEq(
@@ -381,7 +381,7 @@ contract EmpaModuleClaimBidsTest is EmpTest {
             bidClaimOne.refund, _scaleQuoteTokenAmount(_BID_AMOUNT_UNSUCCESSFUL), "bid one: refund"
         );
 
-        BatchAuction.BidClaim memory bidClaimTwo = bidClaims[1];
+        IBatchAuction.BidClaim memory bidClaimTwo = bidClaims[1];
         assertEq(bidClaimTwo.bidder, _BIDDER_TWO, "bid two: bidder");
         assertEq(bidClaimTwo.referrer, _REFERRER, "bid two: referrer");
         assertEq(
@@ -426,10 +426,10 @@ contract EmpaModuleClaimBidsTest is EmpTest {
     {
         // Call the function
         vm.prank(address(_auctionHouse));
-        (BatchAuction.BidClaim[] memory bidClaims,) = _module.claimBids(_lotId, _bidIds);
+        (IBatchAuction.BidClaim[] memory bidClaims,) = _module.claimBids(_lotId, _bidIds);
 
         // Check the result
-        BatchAuction.BidClaim memory bidClaimOne = bidClaims[0];
+        IBatchAuction.BidClaim memory bidClaimOne = bidClaims[0];
         assertEq(bidClaimOne.bidder, _BIDDER, "bid one: bidder");
         assertEq(bidClaimOne.referrer, _REFERRER, "bid one: referrer");
         assertEq(
@@ -440,7 +440,7 @@ contract EmpaModuleClaimBidsTest is EmpTest {
             bidClaimOne.refund, _scaleQuoteTokenAmount(_BID_AMOUNT_UNSUCCESSFUL), "bid one: refund"
         );
 
-        BatchAuction.BidClaim memory bidClaimTwo = bidClaims[1];
+        IBatchAuction.BidClaim memory bidClaimTwo = bidClaims[1];
         assertEq(bidClaimTwo.bidder, _BIDDER_TWO, "bid two: bidder");
         assertEq(bidClaimTwo.referrer, _REFERRER, "bid two: referrer");
         assertEq(
@@ -480,10 +480,10 @@ contract EmpaModuleClaimBidsTest is EmpTest {
     {
         // Call the function
         vm.prank(address(_auctionHouse));
-        (BatchAuction.BidClaim[] memory bidClaims,) = _module.claimBids(_lotId, _bidIds);
+        (IBatchAuction.BidClaim[] memory bidClaims,) = _module.claimBids(_lotId, _bidIds);
 
         // Check the result
-        BatchAuction.BidClaim memory bidClaimOne = bidClaims[0];
+        IBatchAuction.BidClaim memory bidClaimOne = bidClaims[0];
         assertEq(bidClaimOne.bidder, _BIDDER, "bid one: bidder");
         assertEq(bidClaimOne.referrer, _REFERRER, "bid one: referrer");
         assertEq(bidClaimOne.paid, _scaleQuoteTokenAmount(_BID_AMOUNT), "bid one: paid");
@@ -491,7 +491,7 @@ contract EmpaModuleClaimBidsTest is EmpTest {
         assertEq(bidClaimOne.payout, _scaleBaseTokenAmount(5e18), "bid one: payout");
         assertEq(bidClaimOne.refund, 0, "bid one: refund");
 
-        BatchAuction.BidClaim memory bidClaimTwo = bidClaims[1];
+        IBatchAuction.BidClaim memory bidClaimTwo = bidClaims[1];
         assertEq(bidClaimTwo.bidder, _BIDDER_TWO, "bid two: bidder");
         assertEq(bidClaimTwo.referrer, _REFERRER, "bid two: referrer");
         assertEq(bidClaimTwo.paid, _scaleQuoteTokenAmount(_BID_AMOUNT), "bid two: paid");
@@ -529,20 +529,20 @@ contract EmpaModuleClaimBidsTest is EmpTest {
     {
         // Call the function
         vm.prank(address(_auctionHouse));
-        (BatchAuction.BidClaim[] memory bidClaims,) = _module.claimBids(_lotId, _bidIds);
+        (IBatchAuction.BidClaim[] memory bidClaims,) = _module.claimBids(_lotId, _bidIds);
 
         // auction is settled at marginal price of 1.6, so payout is 8 / 1.6 = 5
         uint256 amountOut = 5e18;
 
         // Check the result
-        BatchAuction.BidClaim memory bidClaimOne = bidClaims[0];
+        IBatchAuction.BidClaim memory bidClaimOne = bidClaims[0];
         assertEq(bidClaimOne.bidder, _BIDDER, "bid one: bidder");
         assertEq(bidClaimOne.referrer, _REFERRER, "bid one: referrer");
         assertEq(bidClaimOne.paid, _scaleQuoteTokenAmount(_BID_AMOUNT), "bid one: paid");
         assertEq(bidClaimOne.payout, _scaleBaseTokenAmount(amountOut), "bid one: payout");
         assertEq(bidClaimOne.refund, 0, "bid one: refund");
 
-        BatchAuction.BidClaim memory bidClaimTwo = bidClaims[1];
+        IBatchAuction.BidClaim memory bidClaimTwo = bidClaims[1];
         assertEq(bidClaimTwo.bidder, _BIDDER_TWO, "bid two: bidder");
         assertEq(bidClaimTwo.referrer, _REFERRER, "bid two: referrer");
         assertEq(bidClaimTwo.paid, _scaleQuoteTokenAmount(_BID_AMOUNT), "bid two: paid");
@@ -580,20 +580,20 @@ contract EmpaModuleClaimBidsTest is EmpTest {
     {
         // Call the function
         vm.prank(address(_auctionHouse));
-        (BatchAuction.BidClaim[] memory bidClaims,) = _module.claimBids(_lotId, _bidIds);
+        (IBatchAuction.BidClaim[] memory bidClaims,) = _module.claimBids(_lotId, _bidIds);
 
         // auction is settled at marginal price of 1.6, so payout is 8 / 1.6 = 5
         uint256 amountOut = 5e18;
 
         // Check the result
-        BatchAuction.BidClaim memory bidClaimOne = bidClaims[0];
+        IBatchAuction.BidClaim memory bidClaimOne = bidClaims[0];
         assertEq(bidClaimOne.bidder, _BIDDER, "bid one: bidder");
         assertEq(bidClaimOne.referrer, _REFERRER, "bid one: referrer");
         assertEq(bidClaimOne.paid, _scaleQuoteTokenAmount(_BID_AMOUNT), "bid one: paid");
         assertEq(bidClaimOne.payout, _scaleBaseTokenAmount(amountOut), "bid one: payout");
         assertEq(bidClaimOne.refund, 0, "bid one: refund");
 
-        BatchAuction.BidClaim memory bidClaimTwo = bidClaims[1];
+        IBatchAuction.BidClaim memory bidClaimTwo = bidClaims[1];
         assertEq(bidClaimTwo.bidder, _BIDDER_TWO, "bid two: bidder");
         assertEq(bidClaimTwo.referrer, _REFERRER, "bid two: referrer");
         assertEq(bidClaimTwo.paid, _scaleQuoteTokenAmount(_BID_AMOUNT), "bid two: paid");
@@ -626,7 +626,7 @@ contract EmpaModuleClaimBidsTest is EmpTest {
     {
         // Call the function
         vm.prank(address(_auctionHouse));
-        (BatchAuction.BidClaim[] memory bidClaims,) = _module.claimBids(_lotId, _bidIds);
+        (IBatchAuction.BidClaim[] memory bidClaims,) = _module.claimBids(_lotId, _bidIds);
 
         // Calculate the expected amounts
         uint256 marginalPrice =
@@ -636,14 +636,14 @@ contract EmpaModuleClaimBidsTest is EmpTest {
         uint256 expectedAmountOutTwo = Math.mulDiv(_BID_AMOUNT, _BASE_SCALE, marginalPrice);
 
         // Check the result
-        BatchAuction.BidClaim memory bidClaimOne = bidClaims[0];
+        IBatchAuction.BidClaim memory bidClaimOne = bidClaims[0];
         assertEq(bidClaimOne.bidder, _BIDDER, "bid one: bidder");
         assertEq(bidClaimOne.referrer, _REFERRER, "bid one: referrer");
         assertEq(bidClaimOne.paid, 12e18 - 1, "bid one: paid");
         assertEq(bidClaimOne.payout, expectedAmountOutOne, "bid one: payout");
         assertEq(bidClaimOne.refund, 0, "bid one: refund");
 
-        BatchAuction.BidClaim memory bidClaimTwo = bidClaims[1];
+        IBatchAuction.BidClaim memory bidClaimTwo = bidClaims[1];
         assertEq(bidClaimTwo.bidder, _BIDDER_TWO, "bid two: bidder");
         assertEq(bidClaimTwo.referrer, _REFERRER, "bid two: referrer");
         assertEq(bidClaimTwo.paid, _BID_AMOUNT, "bid two: paid");
@@ -677,7 +677,7 @@ contract EmpaModuleClaimBidsTest is EmpTest {
     {
         // Call the function
         vm.prank(address(_auctionHouse));
-        (BatchAuction.BidClaim[] memory bidClaims,) = _module.claimBids(_lotId, _bidIds);
+        (IBatchAuction.BidClaim[] memory bidClaims,) = _module.claimBids(_lotId, _bidIds);
 
         // Calculate the expected amounts
         uint256 marginalPrice =
@@ -687,21 +687,21 @@ contract EmpaModuleClaimBidsTest is EmpTest {
         uint256 expectedAmountOutTwo = Math.mulDiv(_BID_AMOUNT, _BASE_SCALE, marginalPrice);
 
         // Check the result
-        BatchAuction.BidClaim memory bidClaimOne = bidClaims[0];
+        IBatchAuction.BidClaim memory bidClaimOne = bidClaims[0];
         assertEq(bidClaimOne.bidder, _BIDDER, "bid one: bidder");
         assertEq(bidClaimOne.referrer, _REFERRER, "bid one: referrer");
         assertEq(bidClaimOne.paid, 12e18 - 1, "bid one: paid");
         assertEq(bidClaimOne.payout, expectedAmountOutOne, "bid one: payout");
         assertEq(bidClaimOne.refund, 0, "bid one: refund");
 
-        BatchAuction.BidClaim memory bidClaimTwo = bidClaims[1];
+        IBatchAuction.BidClaim memory bidClaimTwo = bidClaims[1];
         assertEq(bidClaimTwo.bidder, _BIDDER_TWO, "bid two: bidder");
         assertEq(bidClaimTwo.referrer, _REFERRER, "bid two: referrer");
         assertEq(bidClaimTwo.paid, _BID_AMOUNT, "bid two: paid");
         assertEq(bidClaimTwo.payout, expectedAmountOutTwo, "bid two: payout");
         assertEq(bidClaimTwo.refund, 0, "bid two: refund");
 
-        BatchAuction.BidClaim memory bidClaimThree = bidClaims[2];
+        IBatchAuction.BidClaim memory bidClaimThree = bidClaims[2];
         assertEq(bidClaimThree.bidder, _BIDDER, "bid three: bidder");
         assertEq(bidClaimThree.referrer, _REFERRER, "bid three: referrer");
         assertEq(bidClaimThree.paid, 1e18, "bid three: paid");
@@ -753,17 +753,17 @@ contract EmpaModuleClaimBidsTest is EmpTest {
 
         // Call the function
         vm.prank(address(_auctionHouse));
-        (BatchAuction.BidClaim[] memory bidClaims,) = _module.claimBids(_lotId, _bidIds);
+        (IBatchAuction.BidClaim[] memory bidClaims,) = _module.claimBids(_lotId, _bidIds);
 
         // Check the result
-        BatchAuction.BidClaim memory bidClaimOne = bidClaims[0];
+        IBatchAuction.BidClaim memory bidClaimOne = bidClaims[0];
         assertEq(bidClaimOne.bidder, _BIDDER, "bid one: bidder");
         assertEq(bidClaimOne.referrer, _REFERRER, "bid one: referrer");
         assertEq(bidClaimOne.paid, bidAmountIn, "bid one: paid");
         assertEq(bidClaimOne.payout, expectedAmountOutOne, "bid one: payout");
         assertEq(bidClaimOne.refund, 0, "bid one: refund");
 
-        BatchAuction.BidClaim memory bidClaimTwo = bidClaims[1];
+        IBatchAuction.BidClaim memory bidClaimTwo = bidClaims[1];
         assertEq(bidClaimTwo.bidder, _BIDDER_TWO, "bid two: bidder");
         assertEq(bidClaimTwo.referrer, _REFERRER, "bid two: referrer");
         assertEq(bidClaimTwo.paid, _BID_AMOUNT, "bid two: paid");
@@ -810,17 +810,17 @@ contract EmpaModuleClaimBidsTest is EmpTest {
 
         // Call the function
         vm.prank(address(_auctionHouse));
-        (BatchAuction.BidClaim[] memory bidClaims,) = _module.claimBids(_lotId, _bidIds);
+        (IBatchAuction.BidClaim[] memory bidClaims,) = _module.claimBids(_lotId, _bidIds);
 
         // Check the result
-        BatchAuction.BidClaim memory bidClaimOne = bidClaims[0];
+        IBatchAuction.BidClaim memory bidClaimOne = bidClaims[0];
         assertEq(bidClaimOne.bidder, _BIDDER, "bid one: bidder");
         assertEq(bidClaimOne.referrer, _REFERRER, "bid one: referrer");
         assertEq(bidClaimOne.paid, bidAmountIn, "bid one: paid");
         assertEq(bidClaimOne.payout, expectedAmountOutOne, "bid one: payout");
         assertEq(bidClaimOne.refund, 0, "bid one: refund");
 
-        BatchAuction.BidClaim memory bidClaimTwo = bidClaims[1];
+        IBatchAuction.BidClaim memory bidClaimTwo = bidClaims[1];
         assertEq(bidClaimTwo.bidder, _BIDDER_TWO, "bid two: bidder");
         assertEq(bidClaimTwo.referrer, _REFERRER, "bid two: referrer");
         assertEq(bidClaimTwo.paid, _BID_AMOUNT, "bid two: paid");
@@ -856,10 +856,10 @@ contract EmpaModuleClaimBidsTest is EmpTest {
     {
         // Call the function
         vm.prank(address(_auctionHouse));
-        (BatchAuction.BidClaim[] memory bidClaims,) = _module.claimBids(_lotId, _bidIds);
+        (IBatchAuction.BidClaim[] memory bidClaims,) = _module.claimBids(_lotId, _bidIds);
 
         // Check the result
-        BatchAuction.BidClaim memory bidClaimOne = bidClaims[0];
+        IBatchAuction.BidClaim memory bidClaimOne = bidClaims[0];
         assertEq(bidClaimOne.bidder, _BIDDER, "bid one: bidder");
         assertEq(bidClaimOne.referrer, _REFERRER, "bid one: referrer");
         assertEq(bidClaimOne.paid, _scaleQuoteTokenAmount(_BID_AMOUNT), "bid one: paid");
@@ -867,7 +867,7 @@ contract EmpaModuleClaimBidsTest is EmpTest {
         assertEq(bidClaimOne.payout, _scaleBaseTokenAmount(_BID_AMOUNT), "bid one: payout");
         assertEq(bidClaimOne.refund, 0, "bid one: refund");
 
-        BatchAuction.BidClaim memory bidClaimTwo = bidClaims[1];
+        IBatchAuction.BidClaim memory bidClaimTwo = bidClaims[1];
         assertEq(bidClaimTwo.bidder, _BIDDER_TWO, "bid two: bidder");
         assertEq(bidClaimTwo.referrer, _REFERRER, "bid two: referrer");
         assertEq(
@@ -912,10 +912,10 @@ contract EmpaModuleClaimBidsTest is EmpTest {
 
         // Call the function
         vm.prank(address(_auctionHouse));
-        (BatchAuction.BidClaim[] memory bidClaims,) = _module.claimBids(_lotId, bidIds);
+        (IBatchAuction.BidClaim[] memory bidClaims,) = _module.claimBids(_lotId, bidIds);
 
         // Check the result
-        BatchAuction.BidClaim memory bidClaimOne = bidClaims[0];
+        IBatchAuction.BidClaim memory bidClaimOne = bidClaims[0];
         assertEq(bidClaimOne.bidder, _BIDDER, "bid one: bidder");
         assertEq(bidClaimOne.referrer, _REFERRER, "bid one: referrer");
         assertEq(bidClaimOne.paid, _scaleQuoteTokenAmount(_BID_AMOUNT), "bid one: paid");
@@ -962,10 +962,10 @@ contract EmpaModuleClaimBidsTest is EmpTest {
 
         // Call the function
         vm.prank(address(_auctionHouse));
-        (BatchAuction.BidClaim[] memory bidClaims,) = _module.claimBids(_lotId, bidIds);
+        (IBatchAuction.BidClaim[] memory bidClaims,) = _module.claimBids(_lotId, bidIds);
 
         // Check the result
-        BatchAuction.BidClaim memory bidClaim = bidClaims[0];
+        IBatchAuction.BidClaim memory bidClaim = bidClaims[0];
         assertEq(bidClaim.bidder, _BIDDER, "bidder");
         assertEq(bidClaim.referrer, _REFERRER, "referrer");
         assertEq(bidClaim.paid, _BID_PRICE_FOUR_AMOUNT, "paid");
@@ -1001,10 +1001,10 @@ contract EmpaModuleClaimBidsTest is EmpTest {
 
         // Call the function
         vm.prank(address(_auctionHouse));
-        (BatchAuction.BidClaim[] memory bidClaims,) = _module.claimBids(_lotId, bidIds);
+        (IBatchAuction.BidClaim[] memory bidClaims,) = _module.claimBids(_lotId, bidIds);
 
         // Check the result
-        BatchAuction.BidClaim memory bidClaim = bidClaims[0];
+        IBatchAuction.BidClaim memory bidClaim = bidClaims[0];
         assertEq(bidClaim.bidder, _BIDDER, "bidder");
         assertEq(bidClaim.referrer, _REFERRER, "referrer");
         assertEq(bidClaim.paid, _BID_PRICE_TWO_AMOUNT, "paid");
@@ -1040,10 +1040,10 @@ contract EmpaModuleClaimBidsTest is EmpTest {
 
         // Call the function
         vm.prank(address(_auctionHouse));
-        (BatchAuction.BidClaim[] memory bidClaims,) = _module.claimBids(_lotId, bidIds);
+        (IBatchAuction.BidClaim[] memory bidClaims,) = _module.claimBids(_lotId, bidIds);
 
         // Check the result
-        BatchAuction.BidClaim memory bidClaim = bidClaims[0];
+        IBatchAuction.BidClaim memory bidClaim = bidClaims[0];
         assertEq(bidClaim.bidder, _BIDDER, "bidder");
         assertEq(bidClaim.referrer, _REFERRER, "referrer");
         assertEq(bidClaim.paid, _BID_PRICE_TWO_AMOUNT, "paid");
@@ -1079,10 +1079,10 @@ contract EmpaModuleClaimBidsTest is EmpTest {
 
         // Call the function
         vm.prank(address(_auctionHouse));
-        (BatchAuction.BidClaim[] memory bidClaims,) = _module.claimBids(_lotId, bidIds);
+        (IBatchAuction.BidClaim[] memory bidClaims,) = _module.claimBids(_lotId, bidIds);
 
         // Check the result
-        BatchAuction.BidClaim memory bidClaim = bidClaims[0];
+        IBatchAuction.BidClaim memory bidClaim = bidClaims[0];
         assertEq(bidClaim.bidder, _BIDDER, "bidder");
         assertEq(bidClaim.referrer, _REFERRER, "referrer");
         assertEq(bidClaim.paid, _BID_PRICE_TWO_AMOUNT, "paid");
@@ -1119,10 +1119,10 @@ contract EmpaModuleClaimBidsTest is EmpTest {
 
         // Call the function
         vm.prank(address(_auctionHouse));
-        (BatchAuction.BidClaim[] memory bidClaims,) = _module.claimBids(_lotId, bidIds);
+        (IBatchAuction.BidClaim[] memory bidClaims,) = _module.claimBids(_lotId, bidIds);
 
         // Check the result
-        BatchAuction.BidClaim memory bidClaim = bidClaims[0];
+        IBatchAuction.BidClaim memory bidClaim = bidClaims[0];
         assertEq(bidClaim.bidder, _BIDDER, "bidder");
         assertEq(bidClaim.referrer, _REFERRER, "referrer");
         assertEq(bidClaim.paid, _BID_PRICE_TWO_AMOUNT, "paid");
@@ -1159,10 +1159,10 @@ contract EmpaModuleClaimBidsTest is EmpTest {
 
         // Call the function
         vm.prank(address(_auctionHouse));
-        (BatchAuction.BidClaim[] memory bidClaims,) = _module.claimBids(_lotId, bidIds);
+        (IBatchAuction.BidClaim[] memory bidClaims,) = _module.claimBids(_lotId, bidIds);
 
         // Check the result
-        BatchAuction.BidClaim memory bidClaim = bidClaims[0];
+        IBatchAuction.BidClaim memory bidClaim = bidClaims[0];
         assertEq(bidClaim.bidder, _BIDDER, "bidder");
         assertEq(bidClaim.referrer, _REFERRER, "referrer");
         assertEq(bidClaim.paid, _BID_PRICE_TWO_AMOUNT, "paid");
@@ -1199,10 +1199,10 @@ contract EmpaModuleClaimBidsTest is EmpTest {
 
         // Call the function
         vm.prank(address(_auctionHouse));
-        (BatchAuction.BidClaim[] memory bidClaims,) = _module.claimBids(_lotId, bidIds);
+        (IBatchAuction.BidClaim[] memory bidClaims,) = _module.claimBids(_lotId, bidIds);
 
         // Check the result
-        BatchAuction.BidClaim memory bidClaim = bidClaims[0];
+        IBatchAuction.BidClaim memory bidClaim = bidClaims[0];
         assertEq(bidClaim.bidder, _BIDDER, "bidder");
         assertEq(bidClaim.referrer, _REFERRER, "referrer");
         assertEq(bidClaim.paid, _BID_PRICE_TWO_AMOUNT, "paid");
@@ -1239,10 +1239,10 @@ contract EmpaModuleClaimBidsTest is EmpTest {
 
         // Call the function
         vm.prank(address(_auctionHouse));
-        (BatchAuction.BidClaim[] memory bidClaims,) = _module.claimBids(_lotId, bidIds);
+        (IBatchAuction.BidClaim[] memory bidClaims,) = _module.claimBids(_lotId, bidIds);
 
         // Check the result
-        BatchAuction.BidClaim memory bidClaim = bidClaims[0];
+        IBatchAuction.BidClaim memory bidClaim = bidClaims[0];
         assertEq(bidClaim.bidder, _BIDDER, "bidder");
         assertEq(bidClaim.referrer, _REFERRER, "referrer");
         assertEq(bidClaim.paid, _BID_AMOUNT_UNSUCCESSFUL, "paid");
@@ -1279,10 +1279,10 @@ contract EmpaModuleClaimBidsTest is EmpTest {
 
         // Call the function
         vm.prank(address(_auctionHouse));
-        (BatchAuction.BidClaim[] memory bidClaims,) = _module.claimBids(_lotId, bidIds);
+        (IBatchAuction.BidClaim[] memory bidClaims,) = _module.claimBids(_lotId, bidIds);
 
         // Check the result
-        BatchAuction.BidClaim memory bidClaim = bidClaims[0];
+        IBatchAuction.BidClaim memory bidClaim = bidClaims[0];
         assertEq(bidClaim.bidder, _BIDDER, "bidder");
         assertEq(bidClaim.referrer, _REFERRER, "referrer");
         assertEq(bidClaim.paid, _BID_AMOUNT_UNSUCCESSFUL, "paid");
@@ -1323,12 +1323,12 @@ contract EmpaModuleClaimBidsTest is EmpTest {
 
         // Claim bids
         vm.prank(address(_auctionHouse));
-        (BatchAuction.BidClaim[] memory bidClaims,) = _module.claimBids(_lotId, bidIds);
+        (IBatchAuction.BidClaim[] memory bidClaims,) = _module.claimBids(_lotId, bidIds);
 
         // Total up payouts
         uint256 capacityPaidOut;
         for (uint64 i; i < 6; i++) {
-            BatchAuction.BidClaim memory bidClaim = bidClaims[i];
+            IBatchAuction.BidClaim memory bidClaim = bidClaims[i];
             capacityPaidOut += bidClaim.payout;
             if (i > 0) {
                 console2.log("*****");

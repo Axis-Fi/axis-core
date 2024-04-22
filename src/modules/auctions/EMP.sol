@@ -1,15 +1,21 @@
 // SPDX-License-Identifier: BSL-1.1
 pragma solidity 0.8.19;
 
-/// Protocol dependencies
-import {AuctionModule} from "src/modules/Auction.sol";
-import {Veecode, toVeecode} from "src/modules/Modules.sol";
-import {BatchAuction, BatchAuctionModule} from "src/modules/auctions/BatchAuctionModule.sol";
+// Interfaces
+import {IBatchAuction} from "src/interfaces/IBatchAuction.sol";
 
-// Libraries
-import {FixedPointMathLib as Math} from "solady/utils/FixedPointMathLib.sol";
+// Internal libraries
 import {ECIES, Point} from "src/lib/ECIES.sol";
 import {MaxPriorityQueue, Queue} from "src/lib/MaxPriorityQueue.sol";
+
+// External libraries
+import {FixedPointMathLib as Math} from "solady/utils/FixedPointMathLib.sol";
+
+// Auctions
+import {AuctionModule} from "src/modules/Auction.sol";
+import {BatchAuctionModule} from "src/modules/auctions/BatchAuctionModule.sol";
+
+import {Veecode, toVeecode} from "src/modules/Modules.sol";
 
 /// @notice     Encrypted Marginal Price
 /// @dev        This batch auction module allows for bids to be encrypted off-chain, then stored, decrypted and settled on-chain.
@@ -304,7 +310,7 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
         return bidId;
     }
 
-    /// @inheritdoc BatchAuction
+    /// @inheritdoc IBatchAuction
     /// @dev        Implements a basic refundBid function that:
     ///             - Validates the lot and bid parameters
     ///             - Calls the implementation-specific function
