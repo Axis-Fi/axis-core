@@ -7,15 +7,17 @@ import {ICallback} from "src/interfaces/ICallback.sol";
 
 // Internal libraries
 import {Transfer} from "src/lib/Transfer.sol";
+import {Callbacks} from "src/lib/Callbacks.sol";
 
 // External libraries
 import {ERC20} from "solmate/tokens/ERC20.sol";
 
+// Auctions
 import {AuctionHouse} from "src/bases/AuctionHouse.sol";
 import {AuctionModule} from "src/modules/Auction.sol";
 import {BatchAuction, BatchAuctionModule} from "src/modules/auctions/BatchAuctionModule.sol";
+
 import {fromVeecode} from "src/modules/Modules.sol";
-import {Callbacks} from "src/lib/Callbacks.sol";
 
 /// @title      BatchRouter
 /// @notice     An interface to define the BatchAuctionHouse's buyer-facing functions

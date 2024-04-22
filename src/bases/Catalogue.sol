@@ -1,11 +1,17 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity 0.8.19;
 
+// Interfaces
+import {ICallback} from "src/interfaces/ICallback.sol";
+
+// External libraries
+import {ERC20} from "lib/solmate/src/tokens/ERC20.sol";
+
+import {Veecode, fromVeecode} from "src/modules/Keycode.sol";
+
+// Auctions
 import {AuctionModule} from "src/modules/Auction.sol";
 import {AuctionHouse} from "src/bases/AuctionHouse.sol";
-import {Veecode, fromVeecode} from "src/modules/Modules.sol";
-import {ERC20} from "lib/solmate/src/tokens/ERC20.sol";
-import {ICallback} from "src/interfaces/ICallback.sol";
 
 /// @notice Contract that provides view functions for auctions
 abstract contract Catalogue {

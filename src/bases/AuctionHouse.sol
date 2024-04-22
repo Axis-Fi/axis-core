@@ -18,7 +18,9 @@ import {
     fromKeycode,
     fromVeecode,
     Keycode,
-    Veecode,
+    Veecode
+} from "src/modules/Keycode.sol";
+import {
     Module,
     WithModules
 } from "src/modules/Modules.sol";

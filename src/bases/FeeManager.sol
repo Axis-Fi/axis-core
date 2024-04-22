@@ -1,12 +1,15 @@
 // SPDX-License-Identifier: BSL-1.1
 pragma solidity 0.8.19;
 
-import {ERC20} from "lib/solmate/src/tokens/ERC20.sol";
+// Internal libraries
 import {Transfer} from "src/lib/Transfer.sol";
+
+// External libraries
+import {ERC20} from "lib/solmate/src/tokens/ERC20.sol";
 import {ReentrancyGuard} from "lib/solmate/src/utils/ReentrancyGuard.sol";
 import {FixedPointMathLib as Math} from "lib/solmate/src/utils/FixedPointMathLib.sol";
 
-import {Keycode} from "src/modules/Modules.sol";
+import {Keycode} from "src/modules/Keycode.sol";
 
 /// @title      FeeManager
 /// @notice     Defines fees for auctions and manages the collection and distribution of fees

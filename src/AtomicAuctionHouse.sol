@@ -3,15 +3,18 @@ pragma solidity 0.8.19;
 
 // Interfaces
 import {IAuctionModule} from "src/interfaces/IAuctionModule.sol";
+import {ICallback} from "src/interfaces/ICallback.sol";
 
+// Internal libaries
 import {Transfer} from "src/lib/Transfer.sol";
+import {Callbacks} from "src/lib/Callbacks.sol";
 
+// Auction
 import {AuctionHouse} from "src/bases/AuctionHouse.sol";
 import {AuctionModule} from "src/modules/Auction.sol";
 import {AtomicAuctionModule} from "src/modules/auctions/AtomicAuctionModule.sol";
-import {Keycode, keycodeFromVeecode} from "src/modules/Modules.sol";
-import {ICallback} from "src/interfaces/ICallback.sol";
-import {Callbacks} from "src/lib/Callbacks.sol";
+
+import {Keycode, keycodeFromVeecode} from "src/modules/Keycode.sol";
 
 /// @title      AtomicRouter
 /// @notice     An interface to define the AtomicAuctionHouse's buyer-facing functions
