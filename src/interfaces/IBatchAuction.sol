@@ -16,7 +16,8 @@ interface IBatchAuction is IAuction {
 
     // ========== DATA STRUCTURES ========== //
 
-    /// @dev Only used in memory so doesn't need to be packed
+    /// @notice Contains data about a bidder's outcome from an auction
+    /// @dev    Only used in memory so doesn't need to be packed
     struct BidClaim {
         address bidder;
         address referrer;
@@ -37,6 +38,7 @@ interface IBatchAuction is IAuction {
     /// @param      referrer_       The referrer of the bid
     /// @param      amount_         The amount of quote tokens to bid
     /// @param      auctionData_    The auction-specific data
+    /// @return     bidId           The bid id
     function bid(
         uint96 lotId_,
         address bidder_,
@@ -55,7 +57,7 @@ interface IBatchAuction is IAuction {
     /// @param      bidId_      The bid id
     /// @param      index_      The index of the bid ID in the auction's bid list
     /// @param      caller_     The caller
-    /// @return     refund   The amount of quote tokens to refund
+    /// @return     refund      The amount of quote tokens to refund
     function refundBid(
         uint96 lotId_,
         uint64 bidId_,

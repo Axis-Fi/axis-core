@@ -30,14 +30,14 @@ interface IAtomicAuction is IAuction {
     // ========== VIEW FUNCTIONS ========== //
 
     /// @notice     Returns the payout for a given lot and amount
-    function payoutFor(uint96 lotId_, uint256 amount_) external view returns (uint256);
+    function payoutFor(uint96 lotId_, uint256 amount_) external view returns (uint256 payout);
 
     /// @notice     Returns the price for a given lot and payout
-    function priceFor(uint96 lotId_, uint256 payout_) external view returns (uint256);
+    function priceFor(uint96 lotId_, uint256 payout_) external view returns (uint256 price);
 
     /// @notice     Returns the max payout for a given lot
-    function maxPayout(uint96 lotId_) external view returns (uint256);
+    function maxPayout(uint96 lotId_) external view returns (uint256 payout);
 
     /// @notice     Returns the max amount of quote tokens that can be accepted for a given lot
-    function maxAmountAccepted(uint96 lotId_) external view returns (uint256);
+    function maxAmountAccepted(uint96 lotId_) external view returns (uint256 maxAmount);
 }
