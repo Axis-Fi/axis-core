@@ -1,46 +1,16 @@
 // SPDX-License-Identifier: BSL-1.1
 pragma solidity 0.8.19;
 
+// Interfaces
 import {IAuction} from "src/interfaces/IAuction.sol";
+import {IAtomicAuction} from "src/interfaces/IAtomicAuction.sol";
+
+// Auctions
 import {AuctionModule} from "src/modules/Auction.sol";
-
-abstract contract AtomicAuction {
-    // ========== ATOMIC AUCTIONS ========== //
-
-    /// @notice     Purchase tokens from an auction lot
-    /// @dev        The implementing function should handle the following:
-    ///             - Validate the purchase parameters
-    ///             - Store the purchase data
-    ///
-    /// @param      lotId_          The lot id
-    /// @param      amount_         The amount of quote tokens to purchase
-    /// @param      auctionData_    The auction-specific data
-    /// @return     payout          The amount of payout tokens to receive
-    /// @return     auctionOutput   The auction-specific output
-    function purchase(
-        uint96 lotId_,
-        uint256 amount_,
-        bytes calldata auctionData_
-    ) external virtual returns (uint256 payout, bytes memory auctionOutput);
-
-    // ========== VIEW FUNCTIONS ========== //
-
-    /// @notice     Returns the payout for a given lot and amount
-    function payoutFor(uint96 lotId_, uint256 amount_) public view virtual returns (uint256) {}
-
-    /// @notice     Returns the price for a given lot and payout
-    function priceFor(uint96 lotId_, uint256 payout_) public view virtual returns (uint256) {}
-
-    /// @notice     Returns the max payout for a given lot
-    function maxPayout(uint96 lotId_) public view virtual returns (uint256) {}
-
-    /// @notice     Returns the max amount of quote tokens that can be accepted for a given lot
-    function maxAmountAccepted(uint96 lotId_) public view virtual returns (uint256) {}
-}
 
 /// @title  Atomic Auction Module
 /// @notice A base contract for atomic auctions
-abstract contract AtomicAuctionModule is AtomicAuction, AuctionModule {
+abstract contract AtomicAuctionModule is IAtomicAuction, AuctionModule {
     /// @inheritdoc IAuction
     function auctionType() external pure override returns (AuctionType) {
         return AuctionType.Atomic;
@@ -48,7 +18,7 @@ abstract contract AtomicAuctionModule is AtomicAuction, AuctionModule {
 
     // ========== ATOMIC AUCTIONS ========== //
 
-    /// @inheritdoc AtomicAuction
+    /// @inheritdoc IAtomicAuction
     /// @dev        Implements a basic purchase function that:
     ///             - Validates the lot and purchase parameters
     ///             - Calls the implementation-specific function

@@ -6,7 +6,6 @@ pragma solidity >=0.8.0;
 /// @dev    This contract defines the external functions and data that are required for an auction module to be installed in an AuctionHouse.
 ///
 ///         The implementing contract should define the following additional areas:
-///         - Constructor to set the parent address on Module
 ///         - Any un-implemented functions
 ///         - State variables for storage and configuration
 ///
