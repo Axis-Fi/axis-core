@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity >=0.8.19;
 
+// Inspired by Default framework keycode management of dependencies and based on the Modules pattern
+
 /// @notice     5 byte/character identifier for the Module
 /// @dev        3-5 characters from A-Z
 type Keycode is bytes5;
