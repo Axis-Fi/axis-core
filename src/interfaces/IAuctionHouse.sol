@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-pragma solidity >=0.8.19;
+pragma solidity >=0.8.0;
 
 import {IAuctionModule} from "src/interfaces/IAuctionModule.sol";
 import {ICallback} from "src/interfaces/ICallback.sol";
 
 import {Keycode} from "src/modules/Keycode.sol";
 
+/// @title  IAuctionHouse
+/// @notice Interface for the Axis AuctionHouse contracts
 interface IAuctionHouse {
     // ========= DATA STRUCTURES ========== //
 
