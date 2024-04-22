@@ -11,6 +11,8 @@ import {FixedPointMathLib as Math} from "lib/solmate/src/utils/FixedPointMathLib
 
 import {Keycode} from "src/modules/Keycode.sol";
 
+// TODO interface for FeeManager
+
 /// @title      FeeManager
 /// @notice     Defines fees for auctions and manages the collection and distribution of fees
 abstract contract FeeManager is ReentrancyGuard {
