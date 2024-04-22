@@ -117,7 +117,7 @@ contract EmpaModuleSettleTest is EmpTest {
         assertEq(totalOut_, _expectedTotalOut, "totalOut");
         assertEq(auctionOutput_, _expectedAuctionOutput, "auctionOutput");
 
-        assertEq(auctionOutput_, _module.lotAuctionOutput(_lotId), "lotAuctionOutput");
+        assertEq(auctionOutput_, _module.lotAuctionOutput(_lotId));
 
         EncryptedMarginalPrice.AuctionData memory auctionData = _getAuctionData(_lotId);
         assertEq(auctionData.marginalBidId, _expectedMarginalBidId, "marginalBidId");

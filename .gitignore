@@ -13,3 +13,6 @@ docs/
 .env
 
 node_modules/
+
+# Bytecode
+bytecode/

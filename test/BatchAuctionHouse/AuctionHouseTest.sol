@@ -10,6 +10,7 @@ import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 // Mocks
 import {MockBatchAuctionModule} from "test/modules/Auction/MockBatchAuctionModule.sol";
 import {MockDerivativeModule} from "test/modules/derivatives/mocks/MockDerivativeModule.sol";
+import {MockCondenserModule} from "test/modules/Condenser/MockCondenserModule.sol";
 import {MockCallback} from "test/callbacks/MockCallback.sol";
 import {Permit2User} from "test/lib/permit2/Permit2User.sol";
 import {MockFeeOnTransferERC20} from "test/lib/mocks/MockFeeOnTransferERC20.sol";
@@ -39,6 +40,8 @@ abstract contract BatchAuctionHouseTest is Test, Permit2User {
     Keycode internal _batchAuctionModuleKeycode;
     MockDerivativeModule internal _derivativeModule;
     Keycode internal _derivativeModuleKeycode;
+    MockCondenserModule internal _condenserModule;
+    Keycode internal _condenserModuleKeycode;
     MockCallback internal _callback;
 
     uint256 internal constant _BASE_SCALE = 1e18;
@@ -105,6 +108,8 @@ abstract contract BatchAuctionHouseTest is Test, Permit2User {
         _batchAuctionModuleKeycode = keycodeFromVeecode(_batchAuctionModule.VEECODE());
         _derivativeModule = new MockDerivativeModule(address(_auctionHouse));
         _derivativeModuleKeycode = keycodeFromVeecode(_derivativeModule.VEECODE());
+        _condenserModule = new MockCondenserModule(address(_auctionHouse));
+        _condenserModuleKeycode = keycodeFromVeecode(_condenserModule.VEECODE());
 
         _startTime = uint48(block.timestamp) + 1;
 
@@ -204,6 +209,21 @@ abstract contract BatchAuctionHouseTest is Test, Permit2User {
         _;
     }
 
+    modifier whenCondenserModuleIsInstalled() {
+        vm.prank(_OWNER);
+        _auctionHouse.installModule(_condenserModule);
+        _;
+    }
+
+    modifier whenCondenserIsMapped() {
+        vm.startPrank(_OWNER);
+        _auctionHouse.setCondenser(
+            _batchAuctionModule.VEECODE(), _derivativeModule.VEECODE(), _condenserModule.VEECODE()
+        );
+        vm.stopPrank();
+        _;
+    }
+
     modifier givenLotIsCreated() {
         vm.prank(_SELLER);
         _lotId = _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
@@ -245,7 +265,7 @@ abstract contract BatchAuctionHouseTest is Test, Permit2User {
     }
 
     modifier givenLotHasAllowlist() {
-        // Allowlist callback supports onCreate, onPurchase, and onBid callbacks
+        // // Allowlist callback supports onCreate, onPurchase, and onBid callbacks
         // // 10011000 = 0x98
         // // cast create2 -s 98 -i $(cat ./bytecode/MockCallback98.bin)
         // bytes memory bytecode = abi.encodePacked(
@@ -266,7 +286,7 @@ abstract contract BatchAuctionHouseTest is Test, Permit2User {
         //     vm.toString(bytecode)
         // );
 
-        bytes32 salt = bytes32(0x01869ed52a30c61ffe6722cba9220cbfdf400af51b99cd80faf047638e284cf6);
+        bytes32 salt = bytes32(0xab409e3644183b07b66074dcc4ded2eade77e112f00923c945abeb0a54ad7f21);
         vm.startBroadcast(); // required for CREATE2 address to work correctly. doesn't do anything in a test
         _callback = new MockCallback{salt: salt}(
             address(_auctionHouse),
@@ -426,19 +446,19 @@ abstract contract BatchAuctionHouseTest is Test, Permit2User {
         if (_callbackSendBaseTokens && _callbackReceiveQuoteTokens) {
             // 11111111 = 0xFF
             // cast create2 -s FF -i $(cat ./bytecode/MockCallbackFF.bin)
-            salt = bytes32(0x80626a5c754883542e39df22122e14e1bb05b4420aeda8872feb43e62297cade);
+            salt = bytes32(0x12f9decc6e9994b5ee956d40b15ac31f5d7df398cd8d8971aa003ff1a8117d82);
         } else if (_callbackSendBaseTokens) {
             // 11111101 = 0xFD
             // cast create2 -s FD -i $(cat ./bytecode/MockCallbackFD.bin)
-            salt = bytes32(0xc577954dbde2d9dea179eec3f3ba190034b52f1ecd95d4438de964697824f39a);
+            salt = bytes32(0xdd6c8844a047b1bd81ff3ac0fef1d9a4bfadd09c4e9d752bfcd30eacea0edb9f);
         } else if (_callbackReceiveQuoteTokens) {
             // 11111110 = 0xFE
             // cast create2 -s FE -i $(cat ./bytecode/MockCallbackFE.bin)
-            salt = bytes32(0xee77df7d4de7979e577b01111b2c4669c6b254a738e149974c9e09af2caf614a);
+            salt = bytes32(0x82bef9f35d8d575cf3d478aad654496e0c89d280a4dc9cdcf8f413383791e7fe);
         } else {
             // 11111100 = 0xFC
             // cast create2 -s FC -i $(cat ./bytecode/MockCallbackFC.bin)
-            salt = bytes32(0x43f799d07cd115f9f606c396f86fef5a63965c94828c1f368b16d5b401d2e9dd);
+            salt = bytes32(0xe85b3039d452b878784eb4adb8494cf4ac1f393af3f6c24a1961f99cb4100098);
         }
 
         // Required for CREATE2 address to work correctly. doesn't do anything in a test

@@ -100,7 +100,8 @@ interface IBatchAuction is IAuction {
     /// @return     purchased       The amount of quote tokens purchased
     /// @return     sold            The amount of base tokens sold
     /// @return     capacity        The original capacity of the lot
+    /// @return     auctionOutput   Custom data returned by the auction module
     function claimProceeds(uint96 lotId_)
         external
-        returns (uint256 purchased, uint256 sold, uint256 capacity);
+        returns (uint256 purchased, uint256 sold, uint256 capacity, bytes memory auctionOutput);
 }

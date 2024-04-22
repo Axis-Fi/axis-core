@@ -203,13 +203,13 @@ abstract contract BatchAuctionModule is IBatchAuction, AuctionModule {
     ///             - Updating the lot data
     ///
     /// @param      lotId_          The lot ID
-    /// @return     totalIn_        The total amount of quote tokens that filled the auction
-    /// @return     totalOut_       The total amount of base tokens sold
-    /// @return     auctionOutput_  The auction-type specific output to be used with a condenser
+    /// @return     totalIn         The total amount of quote tokens that filled the auction
+    /// @return     totalOut        The total amount of base tokens sold
+    /// @return     auctionOutput   The auction-type specific output to be used with a condenser
     function _settle(uint96 lotId_)
         internal
         virtual
-        returns (uint256 totalIn_, uint256 totalOut_, bytes memory auctionOutput_);
+        returns (uint256 totalIn, uint256 totalOut, bytes memory auctionOutput);
 
     /// @inheritdoc IBatchAuction
     /// @dev        Implements a basic claimProceeds function that:
@@ -227,7 +227,7 @@ abstract contract BatchAuctionModule is IBatchAuction, AuctionModule {
         virtual
         override
         onlyInternal
-        returns (uint256 purchased, uint256 sold, uint256 capacity)
+        returns (uint256 purchased, uint256 sold, uint256 capacity, bytes memory auctionOutput)
     {
         // Standard validation
         _revertIfLotInvalid(lotId_);
@@ -241,7 +241,7 @@ abstract contract BatchAuctionModule is IBatchAuction, AuctionModule {
         Lot memory lot = lotData[lotId_];
 
         // Return the required data
-        return (lot.purchased, lot.sold, lot.capacity);
+        return (lot.purchased, lot.sold, lot.capacity, lotAuctionOutput[lotId_]);
     }
 
     /// @notice     Implementation-specific claim proceeds logic
