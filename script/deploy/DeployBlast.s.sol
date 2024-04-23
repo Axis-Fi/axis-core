@@ -32,7 +32,7 @@ contract DeployBlast is Deploy {
 
     // ========== AUCTIONHOUSE DEPLOYMENTS ========== //
 
-    function _deployAtomicAuctionHouse(bytes32 salt_) internal override {
+    function _deployAtomicAuctionHouse(bytes32 salt_) internal override returns (address) {
         // No args
 
         console2.log("Deploying BlastAtomicAuctionHouse");
@@ -49,9 +49,11 @@ contract DeployBlast is Deploy {
             _envOwner, _envProtocol, _envPermit2, _envBlast, _envWeth, _envUsdb
         );
         console2.log("    BlastAtomicAuctionHouse deployed at:", address(atomicAuctionHouse));
+
+        return address(atomicAuctionHouse);
     }
 
-    function _deployBatchAuctionHouse(bytes32 salt_) internal override {
+    function _deployBatchAuctionHouse(bytes32 salt_) internal override returns (address) {
         // No args
 
         console2.log("Deploying BlastBatchAuctionHouse");
@@ -68,6 +70,8 @@ contract DeployBlast is Deploy {
             _envOwner, _envProtocol, _envPermit2, _envBlast, _envWeth, _envUsdb
         );
         console2.log("    BlastBatchAuctionHouse deployed at:", address(batchAuctionHouse));
+
+        return address(batchAuctionHouse);
     }
 
     // ========== MODULE DEPLOYMENTS ========== //

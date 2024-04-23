@@ -130,9 +130,9 @@ contract Deploy is Script, WithEnvironment, WithSalts {
             bytes32 salt = saltMap[name];
 
             if (_isAtomicAuctionHouse(name)) {
-                _deployAtomicAuctionHouse(salt);
+                deployedTo[name] = _deployAtomicAuctionHouse(salt);
             } else {
-                _deployBatchAuctionHouse(salt);
+                deployedTo[name] = _deployBatchAuctionHouse(salt);
             }
         }
 
@@ -144,9 +144,9 @@ contract Deploy is Script, WithEnvironment, WithSalts {
             bytes32 salt = saltMap[name];
 
             if (_isAtomicAuctionHouse(name)) {
-                _deployAtomicAuctionHouse(salt);
+                deployedTo[name] = _deployAtomicAuctionHouse(salt);
             } else {
-                _deployBatchAuctionHouse(salt);
+                deployedTo[name] = _deployBatchAuctionHouse(salt);
             }
         }
 
@@ -224,7 +224,7 @@ contract Deploy is Script, WithEnvironment, WithSalts {
 
     // ========== AUCTIONHOUSE DEPLOYMENTS ========== //
 
-    function _deployAtomicAuctionHouse(bytes32 salt_) internal virtual {
+    function _deployAtomicAuctionHouse(bytes32 salt_) internal virtual returns (address) {
         // No args
 
         console2.log("Deploying AtomicAuctionHouse");
@@ -237,9 +237,11 @@ contract Deploy is Script, WithEnvironment, WithSalts {
         atomicAuctionHouse =
             new AtomicAuctionHouse{salt: salt_}(_envOwner, _envProtocol, _envPermit2);
         console2.log("    AtomicAuctionHouse deployed at:", address(atomicAuctionHouse));
+
+        return address(atomicAuctionHouse);
     }
 
-    function _deployBatchAuctionHouse(bytes32 salt_) internal virtual {
+    function _deployBatchAuctionHouse(bytes32 salt_) internal virtual returns (address) {
         // No args
 
         console2.log("Deploying BatchAuctionHouse");
@@ -251,6 +253,8 @@ contract Deploy is Script, WithEnvironment, WithSalts {
         vm.broadcast();
         batchAuctionHouse = new BatchAuctionHouse{salt: salt_}(_envOwner, _envProtocol, _envPermit2);
         console2.log("    BatchAuctionHouse deployed at:", address(batchAuctionHouse));
+
+        return address(batchAuctionHouse);
     }
 
     // ========== CATALOGUE DEPLOYMENTS ========== //
