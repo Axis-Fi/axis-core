@@ -38,7 +38,12 @@ contract EmpaModuleCancelAuctionTest is EmpaModuleTest {
         _cancelAuctionLot();
     }
 
-    function test_auctionConcluded_reverts() public givenLotIsCreated givenLotHasConcluded {
+    function test_auctionConcluded_reverts(uint48 conclusionElapsed_) public givenLotIsCreated {
+        uint48 conclusionElapsed = uint48(bound(conclusionElapsed_, 0, 1 days));
+
+        // Warp to the conclusion
+        vm.warp(_start + _DURATION + conclusionElapsed);
+
         // Expect revert
         bytes memory err = abi.encodeWithSelector(Auction.Auction_MarketNotActive.selector, _lotId);
         vm.expectRevert(err);
@@ -73,10 +78,15 @@ contract EmpaModuleCancelAuctionTest is EmpaModuleTest {
 
         // Check the state
         Auction.Lot memory lotData = _getAuctionLot(_lotId);
-        assertEq(lotData.conclusion, uint48(block.timestamp));
-        assertEq(lotData.capacity, 0);
+        assertEq(lotData.conclusion, uint48(block.timestamp), "conclusion");
+        assertEq(lotData.capacity, 0, "capacity");
 
         EncryptedMarginalPriceAuctionModule.AuctionData memory auctionData = _getAuctionData(_lotId);
-        assertEq(uint8(auctionData.status), uint8(Auction.Status.Claimed));
+        assertEq(
+            uint8(auctionData.status),
+            uint8(EncryptedMarginalPriceAuctionModule.LotStatus.Settled),
+            "status"
+        );
+        assertTrue(auctionData.proceedsClaimed, "proceedsClaimed");
     }
 }

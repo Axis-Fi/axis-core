@@ -21,7 +21,7 @@ contract TokenAllowlist is BaseCallback {
 
     struct TokenCheck {
         ITokenBalance token;
-        uint96 threshold;
+        uint256 threshold;
     }
 
     mapping(uint96 lotId => TokenCheck) public lotChecks;
@@ -52,7 +52,7 @@ contract TokenAllowlist is BaseCallback {
         address,
         address,
         address,
-        uint96,
+        uint256,
         bool,
         bytes calldata callbackData_
     ) internal override {
@@ -72,12 +72,12 @@ contract TokenAllowlist is BaseCallback {
         lotChecks[lotId_] = TokenCheck(token, threshold);
     }
 
-    function _onCancel(uint96, uint96, bool, bytes calldata) internal pure override {
+    function _onCancel(uint96, uint256, bool, bytes calldata) internal pure override {
         // Not implemented
         revert Callback_NotImplemented();
     }
 
-    function _onCurate(uint96, uint96, bool, bytes calldata) internal pure override {
+    function _onCurate(uint96, uint256, bool, bytes calldata) internal pure override {
         // Not implemented
         revert Callback_NotImplemented();
     }
@@ -85,8 +85,8 @@ contract TokenAllowlist is BaseCallback {
     function _onPurchase(
         uint96 lotId_,
         address buyer_,
-        uint96,
-        uint96,
+        uint256,
+        uint256,
         bool,
         bytes calldata
     ) internal view override {
@@ -97,13 +97,13 @@ contract TokenAllowlist is BaseCallback {
         uint96 lotId_,
         uint64,
         address buyer_,
-        uint96,
+        uint256,
         bytes calldata
     ) internal view override {
         _canParticipate(lotId_, buyer_);
     }
 
-    function _onClaimProceeds(uint96, uint96, uint96, bytes calldata) internal pure override {
+    function _onClaimProceeds(uint96, uint256, uint256, bytes calldata) internal pure override {
         // Not implemented
         revert Callback_NotImplemented();
     }
