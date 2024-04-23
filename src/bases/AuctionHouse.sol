@@ -236,7 +236,14 @@ abstract contract AuctionHouse is WithModules, ReentrancyGuard, FeeManager {
             lotFee.curated = false;
 
             Fees storage auctionFees = fees[routing_.auctionType];
-            lotFee.curatorFee = auctionFees.curator[routing_.curator];
+
+            // Check that the curator's configured fee does not exceed the protocol max
+            // If it does, set the fee to the max
+            uint48 maxCuratorFee = auctionFees.maxCuratorFee;
+            uint48 curatorFee = auctionFees.curator[routing_.curator];
+            lotFee.curatorFee = curatorFee > maxCuratorFee ? maxCuratorFee : curatorFee;
+
+            // Snapshot the protocol and referrer fees
             lotFee.protocolFee = auctionFees.protocol;
             lotFee.referrerFee = auctionFees.referrer;
         }

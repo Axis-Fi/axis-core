@@ -25,6 +25,11 @@ contract EmpaModuleRefundBidTest is EmpTest {
     //  [X] given it is within the settle period
     //   [X] it reverts
     //  [X] it refunds the bid amount and updates the bid status
+    // [ ] given the lot's private key has been submitted
+    //  [X] given it is within the settle period
+    //   [X] it reverts
+    //  [X] given it is after the settle period
+    //   [X] it reverts
     // [X] given the lot is decrypted
     //  [X] it reverts
     // [X] given the lot is settled
@@ -141,6 +146,45 @@ contract EmpaModuleRefundBidTest is EmpTest {
     function test_lotIsCancelled_reverts() external givenLotIsCreated givenLotIsCancelled {
         // Expect revert
         bytes memory err = abi.encodeWithSelector(Auction.Auction_MarketNotActive.selector, _lotId);
+        vm.expectRevert(err);
+
+        // Call the function
+        vm.prank(address(_auctionHouse));
+        _module.refundBid(_lotId, _bidId, 0, _BIDDER);
+    }
+
+    function test_keyIsSubmitted_withinSettlePeriod_reverts()
+        external
+        givenLotIsCreated
+        givenLotHasStarted
+        givenBidIsCreated(2e18, 1e18)
+        givenLotHasConcluded
+        givenPrivateKeyIsSubmitted
+    {
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(
+            EncryptedMarginalPriceAuctionModule.Auction_WrongState.selector, _lotId
+        );
+        vm.expectRevert(err);
+
+        // Call the function
+        vm.prank(address(_auctionHouse));
+        _module.refundBid(_lotId, _bidId, 0, _BIDDER);
+    }
+
+    function test_keyIsSubmitted_afterSettlePeriod_reverts()
+        external
+        givenLotIsCreated
+        givenLotHasStarted
+        givenBidIsCreated(2e18, 1e18)
+        givenLotHasConcluded
+        givenLotSettlePeriodHasPassed
+        givenPrivateKeyIsSubmitted
+    {
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(
+            EncryptedMarginalPriceAuctionModule.Auction_WrongState.selector, _lotId
+        );
         vm.expectRevert(err);
 
         // Call the function
