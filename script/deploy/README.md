@@ -32,8 +32,6 @@ Assuming that the developer wants to deploy an AtomicAuctionHouse at an address 
 
 The generated salt would be stored in `./script/salts.json`.
 
-There is also a Blast-specific script at `./script/deploy/auction_house_salts_blast.sh` that can be used.
-
 The salt key can then be added into the deployment-specific sequence file under `./script/deploy/sequences/`. For example:
 
 ```json

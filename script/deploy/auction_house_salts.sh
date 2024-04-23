@@ -40,20 +40,34 @@ fi
 echo "Using RPC at URL: $RPC_URL"
 echo "Using chain: $CHAIN"
 
-# Generate bytecode
-forge script ./script/deploy/AuctionHouseSalts.s.sol:AuctionHouseSalts --sig "generate(string)()" $CHAIN
+# If the chain contains "blast", use the Blast-specific contracts to generate bytecode
+if [[ $CHAIN == *"blast"* ]]
+then
+  echo "Using Blast-specific contracts"
+  forge script ./script/deploy/AuctionHouseSaltsBlast.s.sol:AuctionHouseSaltsBlast --sig "generate(string)()" $CHAIN
+
+    # Set the bytecode file
+    if [ "$MODE" == "atomic" ]
+    then
+        BYTECODE_FILE="BlastAtomicAuctionHouse"
+    else
+        BYTECODE_FILE="BlastBatchAuctionHouse"
+    fi
+else
+  echo "Using standard contracts"
+  forge script ./script/deploy/AuctionHouseSalts.s.sol:AuctionHouseSalts --sig "generate(string)()" $CHAIN
+
+    # Set the bytecode file
+    if [ "$MODE" == "atomic" ]
+    then
+        BYTECODE_FILE="AtomicAuctionHouse"
+    else
+        BYTECODE_FILE="BatchAuctionHouse"
+    fi
+fi
 
 # Generate salts
-# If the mode is atomic
-if [ "$MODE" == "atomic" ]
-then
-  echo ""
-  echo "AtomicAuctionHouse:"
-  echo "    Using PREFIX: $PREFIX"
-  ./script/deploy/salts.sh ./bytecode/AtomicAuctionHouse.bin $PREFIX $SALT_KEY
-else # If the mode is batch
-  echo ""
-  echo "BatchAuctionHouse:"
-  echo "    Using PREFIX: $PREFIX"
-  ./script/deploy/salts.sh ./bytecode/BatchAuctionHouse.bin $PREFIX $SALT_KEY
-fi
+echo ""
+echo "$BYTECODE_FILE:"
+echo "    Using PREFIX: $PREFIX"
+./script/deploy/salts.sh "./bytecode/$BYTECODE_FILE.bin" $PREFIX $SALT_KEY
