@@ -162,9 +162,8 @@ contract EmpaModuleRefundBidTest is EmpTest {
         givenPrivateKeyIsSubmitted
     {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(
-            EncryptedMarginalPriceAuctionModule.Auction_WrongState.selector, _lotId
-        );
+        bytes memory err =
+            abi.encodeWithSelector(EncryptedMarginalPrice.Auction_WrongState.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function
@@ -182,9 +181,8 @@ contract EmpaModuleRefundBidTest is EmpTest {
         givenPrivateKeyIsSubmitted
     {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(
-            EncryptedMarginalPriceAuctionModule.Auction_WrongState.selector, _lotId
-        );
+        bytes memory err =
+            abi.encodeWithSelector(EncryptedMarginalPrice.Auction_WrongState.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function
