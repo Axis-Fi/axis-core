@@ -1,12 +1,13 @@
 #!/bin/bash
 
 # Usage:
-# ./salts.sh <bytecode file> <prefix>
+# ./salts.sh <bytecode file> <prefix> <salt key>
 # The only output of the script will be the salt
 
 # Get command-line arguments
-BYTECODE_FILE=$1
-PREFIX=$2
+BYTECODE_FILE=$1 # Which bytecode to use
+PREFIX=$2 # Which prefix to search for
+SALT_KEY=$3 # What key to save the generated salt as
 
 # Check if BYTECODE_FILE is set
 if [ -z "$BYTECODE_FILE" ]
@@ -35,8 +36,11 @@ output=$(cast create2 -s $2 -i $(cat $1))
 # Get the first salt (as cast will often return the same salt multiple times)
 salt=$(echo "$output" | grep 'Salt: ' | head -n 1 | awk -F' ' '{print $2}')
 
-# Get the filename without extension
-salt_key=$(basename "$BYTECODE_FILE" .bin)
+# Get the filename without extension if $SALT_KEY is not set
+if [ -z "$SALT_KEY" ]
+then
+  SALT_KEY=$(basename "$BYTECODE_FILE" .bin)
+fi
 
 # Create the salts file if it does not exist or is empty
 salt_file="./script/salts.json"
@@ -45,5 +49,5 @@ if [ ! -f $salt_file ] || [ ! -s $salt_file ]; then
 fi
 
 # Set the salt in the salts file (and sort)
-jq -S --arg key "$salt_key" --arg value "$salt" '.[$key]=$value' $salt_file > ./script/salts.json.tmp && mv ./script/salts.json.tmp $salt_file
-echo "Wrote salt for key $salt_key to $salt_file"
+jq -S --arg key "$SALT_KEY" --arg value "$salt" '.[$key]=$value' $salt_file > ./script/salts.json.tmp && mv ./script/salts.json.tmp $salt_file
+echo "Wrote salt for key $SALT_KEY to $salt_file"
