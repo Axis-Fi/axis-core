@@ -2,6 +2,11 @@
 
 This document provides instructions on how to perform deployments using the available scripts.
 
+## Requirements
+
+- `forge`
+  - Ensure that the version is at least on or after `nightly-008922d5165c764859bc540d7298045eebf5bc60` (due to [foundry#7713](https://github.com/foundry-rs/foundry/pull/7713))
+
 ## Tasks
 
 ### Generating Test Salts
@@ -159,6 +164,12 @@ For example, the following command will deploy using the specified sequence file
 ```
 
 Following deployment, the addresses need to be manually added into `./script/env.json`.
+
+If any problems are faced during deployment (or verification), set the third boolean argument to `true` in order to resume the previous transaction. For example:
+
+```bash
+./script/deploy/deploy.sh ./script/deploy/sequences/auctionhouse-mainnet.json true true true
+```
 
 ##### Blast-Specific Version
 
