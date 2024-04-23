@@ -154,3 +154,11 @@ Example command:
 ```bash
 DEPLOY_SCRIPT="./script/deploy/DeployBlast.s.sol" DEPLOY_CONTRACT="DeployBlast" ./script/deploy/deploy.sh ./script/deploy/sequences/auctionhouse-mainnet.json true true
 ```
+
+#### Verification
+
+If the `verify` flag on `deploy.sh` is set, the contract should be verified automatically. This requires the following environment variables to be set on the command-line or in `.env`:
+
+- `ETHERSCAN_API_KEY`
+
+If deploying against a Tenderly fork and verifying, [follow the instructions](https://docs.tenderly.co/contract-verification).

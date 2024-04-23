@@ -7,14 +7,9 @@
 # CHAIN:              Chain name to deploy to. Corresponds to names in "./script/env.json".
 # DEPLOY_SCRIPT:      Path to the Forge deploy script. Defaults to "./script/deploy/Deploy.s.sol".
 # DEPLOY_CONTRACT:    Contract name in the deploy script. Defaults to "Deploy".
-# ETHERSCAN_KEY:      API key for Etherscan verification. Should be specified in .env.
+# ETHERSCAN_API_KEY:  API key for Etherscan verification. Should be specified in .env.
 # RPC_URL:            URL for the RPC node. Should be specified in .env.
 # VERIFIER_URL:       URL for the Etherscan API verifier. Should be specified when used on an unsupported chain.
-
-# TODOs
-# [X] Support alternative Etherscan URLs
-# [ ] Support Tenderly verification
-# [X] Override use of Deploy.s.sol:Deploy with a different script
 
 # Specify either of these variables to override the defaults
 DEPLOY_SCRIPT=${DEPLOY_SCRIPT:-"./script/deploy/Deploy.s.sol"}
@@ -68,14 +63,14 @@ fi
 VERIFY_FLAG=""
 if [ "$VERIFY" = "true" ] || [ "$VERIFY" = "TRUE" ]; then
 
-  # Check if ETHERSCAN_KEY is set
-  if [ -z "$ETHERSCAN_KEY" ]
+  # Check if ETHERSCAN_API_KEY is set
+  if [ -z "$ETHERSCAN_API_KEY" ]
   then
     echo "No Etherscan API key found. Provide the key in .env or disable verification."
     exit 1
   fi
 
-  VERIFY_FLAG="--verify --etherscan-api-key $ETHERSCAN_KEY"
+  VERIFY_FLAG="--verify --etherscan-api-key $ETHERSCAN_API_KEY"
   echo "Verification is enabled"
 else
   echo "Verification is disabled"
