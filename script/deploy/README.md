@@ -134,7 +134,7 @@ This function should take in the args and salt, in addition to the environment v
 To perform a deployment, run the following script:
 
 ```bash
-./script/deploy/deploy.sh <sequence file> <broadcast=false> <verify=false>
+./script/deploy/deploy.sh < sequence_file > [broadcast=false] [verify=false] [resume=false]
 ```
 
 For example, the following command will deploy using the specified sequence file, broadcast the changes and verify them using Etherscan:
@@ -143,7 +143,7 @@ For example, the following command will deploy using the specified sequence file
 ./script/deploy/deploy.sh ./script/deploy/sequences/auctionhouse-mainnet.json true true
 ```
 
-Following deployment, the addresses should be added into `./script/env.json`.
+Following deployment, the addresses need to be manually added into `./script/env.json`.
 
 ##### Blast-Specific Version
 
