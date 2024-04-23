@@ -1,18 +1,18 @@
 /// SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.19;
 
-import {Test} from "forge-std/Test.sol";
+import {Script} from "forge-std/Script.sol";
 import {console2} from "forge-std/console2.sol";
 import {stdJson} from "forge-std/StdJson.sol";
 
-contract WithSalts is Test {
+contract WithSalts is Script {
     using stdJson for string;
 
     string internal constant _saltsPath = "./script/salts.json";
     string internal _saltJson;
 
     /// @notice Gets the salt for a given key
-    /// @dev    If the key is not found, the function will revert
+    /// @dev    If the key is not found, the function will return `bytes32(0)`.
     ///
     /// @param  key_    The key to get the salt for
     /// @return         The salt for the given key
@@ -24,9 +24,6 @@ contract WithSalts is Test {
         }
 
         bytes32 salt = bytes32(vm.parseJson(_saltJson, string.concat(".", key_)));
-
-        // Revert if the salt is not set
-        require(salt != bytes32(0), string.concat("Salt not found for key:", key_));
 
         return salt;
     }

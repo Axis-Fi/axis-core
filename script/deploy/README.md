@@ -12,7 +12,7 @@ Many of the tests use salts to deploy callbacks at addresses with a specific pre
 ./script/deploy/test_salts.sh
 ```
 
-Copy the salt into the respective variable in the test files. Salts are grouped by test contract and the prefix (e.g. "98").
+The resulting salts will be written to the `./script/salts.json` file, which the test cases will read from.
 
 Notes:
 
@@ -24,17 +24,17 @@ For aesthetic reasons, the AuctionHouse contracts may need to be deployed at det
 
 For the AtomicAuctionHouse and BatchAuctionHouse, a specific script can be used to generate the addresses with a desired prefix.
 
-From the root directory, assuming that the AtomicAuctionHouse address should start with `0xAA` and the BatchAuctionHouse address should start with `0xBB`, the following command would be run:
+Assuming that the developer wants to deploy an AtomicAuctionHouse at an address that will start with `0xAA` and will be stored in the salts file using the key `AtomicAuctionHouseV1`, the following command would be run:
 
 ```bash
-./script/deploy/auction_house_salts.sh "AA" "BB"
+./script/deploy/auction_house_salts.sh atomic AA AtomicAuctionHouseV1
 ```
 
-The output would contain the contract-specific salts.
+The generated salt would be stored in `./script/salts.json`.
 
 There is also a Blast-specific script at `./script/deploy/auction_house_salts_blast.sh` that can be used.
 
-The salt can then be added into the deployment-specific sequence file under `./script/deploy/sequences/`. For example:
+The salt key can then be added into the deployment-specific sequence file under `./script/deploy/sequences/`. For example:
 
 ```json
 {
@@ -42,11 +42,13 @@ The salt can then be added into the deployment-specific sequence file under `./s
         {
             "name": "AtomicAuctionHouse",
             "args": {},
-            "salt": "0xe7797a9cbbf8b2b2f524066f88eb9567893ccde9d813e7a51d8e5c878bd64776"
+            "saltKey": "AtomicAuctionHouseV1"
         }
     ]
 }
 ```
+
+Provided the bytecode is the same, the same salt key can be used to deploy the contract at the same address on different chains.
 
 ### Generating Salts for Any Contract
 
@@ -90,7 +92,7 @@ The following steps need to be followed to generate the salt:
         {
             "name": "MockCallback",
             "args": {},
-            "salt": "0xe7797a9cbbf8b2b2f524066f88eb9567893ccde9d813e7a51d8e5c878bd64776"
+            "saltKey": "MockCallback98"
         }
     ]
 }
@@ -115,7 +117,7 @@ Notes:
 - Supported entry keys:
   - `name`: The `name` field corresponds to the function in `Deploy.s.sol` that will be used.
   - `args`: A dictionary, in alphabetical order, of arguments that will be provided to the deployment function.
-  - `salt`: A string that contains the salt in hexadecimal format that will be used to deploy the contract at a deterministic address.
+  - `saltKey`: An optional string that contains the key for the salt (located in `./script/salts.json`) that will be used to deploy the contract at a deterministic address.
   - `installAtomicAuctionHouse`: An optional boolean that indicates whether the module should be installed in the AtomicAuctionHouse contract.
   - `installBatchAuctionHouse`: An optional boolean that indicates whether the module should be installed in the BatchAuctionHouse contract.
 

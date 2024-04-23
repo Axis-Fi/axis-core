@@ -3,12 +3,12 @@
         {
             "name": "AtomicAuctionHouse",
             "args": {},
-            "salt": ""
+            "saltKey": "AtomicAuctionHouse"
         },
         {
             "name": "BatchAuctionHouse",
             "args": {},
-            "salt": ""
+            "saltKey": "AtomicAuctionHouse"
         },
         {
             "name": "AtomicCatalogue",

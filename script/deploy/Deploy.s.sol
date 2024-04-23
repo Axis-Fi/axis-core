@@ -5,6 +5,7 @@ pragma solidity 0.8.19;
 import {Script, console2} from "forge-std/Script.sol";
 import {stdJson} from "forge-std/StdJson.sol";
 import {WithEnvironment} from "script/deploy/WithEnvironment.s.sol";
+import {WithSalts} from "script/deploy/WithSalts.s.sol";
 
 // System contracts
 import {AtomicAuctionHouse} from "src/AtomicAuctionHouse.sol";
@@ -39,7 +40,7 @@ import {LinearVesting} from "src/modules/derivatives/LinearVesting.sol";
 
 // TODO read salts from salts.json
 
-contract Deploy is Script, WithEnvironment {
+contract Deploy is Script, WithEnvironment, WithSalts {
     using stdJson for string;
 
     bytes internal constant _ATOMIC_AUCTION_HOUSE_NAME = "AtomicAuctionHouse";
@@ -371,8 +372,14 @@ contract Deploy is Script, WithEnvironment {
         // due to changes with forge-std or a struct needs to be used
         argsMap[name_] = _readDataValue(data_, name_, "args");
 
-        // Parse and store salt
-        saltMap[name_] = bytes32(_readDataValue(data_, name_, "salt"));
+        // Parse and store salt key
+        string memory saltKey = _readStringValue(data_, name_, "saltKey");
+
+        // If the salt key is set, get the salt
+        if (bytes32(bytes(saltKey)) != bytes32(0)) {
+            console2.log("    Using salt key:", saltKey);
+            saltMap[name_] = _getSalt(saltKey);
+        }
 
         // Check if it should be installed in the AtomicAuctionHouse
         if (_readDataBoolean(data_, name_, "installAtomicAuctionHouse")) {
@@ -392,6 +399,21 @@ contract Deploy is Script, WithEnvironment {
     ) internal pure returns (bytes memory) {
         // This will return "0x" if the key doesn't exist
         return data_.parseRaw(string.concat(".sequence[?(@.name == '", name_, "')].", key_));
+    }
+
+    function _readStringValue(
+        string memory data_,
+        string memory name_,
+        string memory key_
+    ) internal pure returns (string memory) {
+        bytes memory dataValue = _readDataValue(data_, name_, key_);
+
+        // If the key is not set, return an empty string
+        if (dataValue.length == 0) {
+            return "";
+        }
+
+        return abi.decode(dataValue, (string));
     }
 
     function _readDataBoolean(
