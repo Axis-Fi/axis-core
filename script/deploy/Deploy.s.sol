@@ -372,8 +372,8 @@ contract Deploy is Script, WithEnvironment, WithSalts {
             vm.broadcast();
             dmAtomicLinearVesting = new LinearVesting(address(atomicAuctionHouse));
         } else {
-             vm.broadcast();
-           dmAtomicLinearVesting = new LinearVesting{salt: salt_}(address(atomicAuctionHouse));
+            vm.broadcast();
+            dmAtomicLinearVesting = new LinearVesting{salt: salt_}(address(atomicAuctionHouse));
         }
         console2.log("    LinearVesting (Atomic) deployed at:", address(dmAtomicLinearVesting));
 
