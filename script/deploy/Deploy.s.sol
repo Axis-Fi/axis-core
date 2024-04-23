@@ -38,8 +38,6 @@ import {LinearVesting} from "src/modules/derivatives/LinearVesting.sol";
 
 // TODO can we separate the base of the deploy system from the actual contracts to be deployed
 
-// TODO read salts from salts.json
-
 contract Deploy is Script, WithEnvironment, WithSalts {
     using stdJson for string;
 
