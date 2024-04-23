@@ -8,7 +8,7 @@
         {
             "name": "BatchAuctionHouse",
             "args": {},
-            "saltKey": "AtomicAuctionHouse"
+            "saltKey": "BatchAuctionHouse"
         },
         {
             "name": "AtomicCatalogue",
