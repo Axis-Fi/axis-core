@@ -44,7 +44,7 @@ contract MockAtomicAuctionModule is AtomicAuctionModule {
         // Handle decimals
         uint256 quoteTokenScale = 10 ** lotData[lotId_].quoteTokenDecimals;
         uint256 baseTokenScale = 10 ** lotData[lotId_].baseTokenDecimals;
-        uint256 adjustedAmount = amount_ * baseTokenScale / quoteTokenScale;
+        uint256 adjustedAmount = (amount_ * baseTokenScale) / quoteTokenScale;
 
         if (payoutData[lotId_] == 0) {
             payout = uint96(adjustedAmount);
@@ -67,4 +67,12 @@ contract MockAtomicAuctionModule is AtomicAuctionModule {
     function setPurchaseReverts(bool reverts_) external virtual {
         purchaseReverts = reverts_;
     }
+
+    function payoutFor(uint96 lotId_, uint256 amount_) external view override returns (uint256) {}
+
+    function priceFor(uint96 lotId_, uint256 payout_) external view override returns (uint256) {}
+
+    function maxPayout(uint96 lotId_) external view override returns (uint256) {}
+
+    function maxAmountAccepted(uint96 lotId_) external view override returns (uint256) {}
 }

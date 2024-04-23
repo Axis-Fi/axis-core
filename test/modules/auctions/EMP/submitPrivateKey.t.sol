@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.19;
 
-import {Auction} from "src/modules/Auction.sol";
+import {IAuction} from "src/interfaces/IAuction.sol";
 import {EncryptedMarginalPrice} from "src/modules/auctions/EMP.sol";
 
 import {EmpTest} from "test/modules/auctions/EMP/EMPTest.sol";
@@ -27,7 +27,7 @@ contract EmpaModuleSubmitPrivateKeyTest is EmpTest {
 
     function test_invalidLotId_reverts() external {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(Auction.Auction_InvalidLotId.selector, _lotId);
+        bytes memory err = abi.encodeWithSelector(IAuction.Auction_InvalidLotId.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function
@@ -48,7 +48,7 @@ contract EmpaModuleSubmitPrivateKeyTest is EmpTest {
 
     function test_lotHasNotStarted_reverts() external givenLotIsCreated {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(Auction.Auction_MarketNotActive.selector, _lotId);
+        bytes memory err = abi.encodeWithSelector(IAuction.Auction_MarketNotActive.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function
@@ -58,7 +58,7 @@ contract EmpaModuleSubmitPrivateKeyTest is EmpTest {
 
     function test_lotCancelled_reverts() external givenLotIsCreated givenLotIsCancelled {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(Auction.Auction_MarketNotActive.selector, _lotId);
+        bytes memory err = abi.encodeWithSelector(IAuction.Auction_MarketNotActive.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function

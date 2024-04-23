@@ -2,7 +2,7 @@
 pragma solidity 0.8.19;
 
 import {Module} from "src/modules/Modules.sol";
-import {Auction} from "src/modules/Auction.sol";
+import {IAuction} from "src/interfaces/IAuction.sol";
 import {FixedPriceSale} from "src/modules/auctions/FPS.sol";
 import {FixedPointMathLib as Math} from "solmate/utils/FixedPointMathLib.sol";
 
@@ -45,7 +45,7 @@ contract FpsPurchaseTest is FpsTest {
 
     function test_invalidLotId_reverts() public {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(Auction.Auction_InvalidLotId.selector, _lotId);
+        bytes memory err = abi.encodeWithSelector(IAuction.Auction_InvalidLotId.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function
@@ -54,7 +54,7 @@ contract FpsPurchaseTest is FpsTest {
 
     function test_auctionConcluded_reverts() public givenLotIsCreated givenLotHasConcluded {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(Auction.Auction_MarketNotActive.selector, _lotId);
+        bytes memory err = abi.encodeWithSelector(IAuction.Auction_MarketNotActive.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function
@@ -63,7 +63,7 @@ contract FpsPurchaseTest is FpsTest {
 
     function test_auctionCancelled_reverts() public givenLotIsCreated givenLotIsCancelled {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(Auction.Auction_MarketNotActive.selector, _lotId);
+        bytes memory err = abi.encodeWithSelector(IAuction.Auction_MarketNotActive.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function
@@ -72,7 +72,7 @@ contract FpsPurchaseTest is FpsTest {
 
     function test_auctionNotStarted_reverts() public givenLotIsCreated {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(Auction.Auction_MarketNotActive.selector, _lotId);
+        bytes memory err = abi.encodeWithSelector(IAuction.Auction_MarketNotActive.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function
@@ -88,7 +88,7 @@ contract FpsPurchaseTest is FpsTest {
         givenPurchase(_PURCHASE_AMOUNT, _PURCHASE_AMOUNT_OUT) // Payout 1, remaining capacity is 2 - 1 = 1
     {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(Auction.Auction_InsufficientCapacity.selector);
+        bytes memory err = abi.encodeWithSelector(IAuction.Auction_InsufficientCapacity.selector);
         vm.expectRevert(err);
 
         // Call the function
@@ -105,7 +105,7 @@ contract FpsPurchaseTest is FpsTest {
         givenPurchase(_PURCHASE_AMOUNT, _PURCHASE_AMOUNT_OUT) // Payout 1, remaining capacity is 3 - 2 = 1
     {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(Auction.Auction_InsufficientCapacity.selector);
+        bytes memory err = abi.encodeWithSelector(IAuction.Auction_InsufficientCapacity.selector);
         vm.expectRevert(err);
 
         // Call the function
@@ -218,7 +218,7 @@ contract FpsPurchaseTest is FpsTest {
         );
 
         // Assert the capacity, purchased and sold
-        Auction.Lot memory lot = _getAuctionLot(_lotId);
+        IAuction.Lot memory lot = _getAuctionLot(_lotId);
         assertEq(lot.capacity, _scaleBaseTokenAmount(_LOT_CAPACITY) - expectedSold, "capacity");
         assertEq(lot.purchased, _scaleQuoteTokenAmount(_PURCHASE_AMOUNT), "purchased");
         assertEq(lot.sold, expectedSold, "sold");
@@ -244,7 +244,7 @@ contract FpsPurchaseTest is FpsTest {
         );
 
         // Assert the capacity, purchased and sold
-        Auction.Lot memory lot = _getAuctionLot(_lotId);
+        IAuction.Lot memory lot = _getAuctionLot(_lotId);
         assertEq(lot.capacity, _scaleBaseTokenAmount(_LOT_CAPACITY) - expectedSold, "capacity");
         assertEq(lot.purchased, _scaleQuoteTokenAmount(_PURCHASE_AMOUNT), "purchased");
         assertEq(lot.sold, expectedSold, "sold");
@@ -270,7 +270,7 @@ contract FpsPurchaseTest is FpsTest {
         );
 
         // Assert the capacity, purchased and sold
-        Auction.Lot memory lot = _getAuctionLot(_lotId);
+        IAuction.Lot memory lot = _getAuctionLot(_lotId);
         assertEq(lot.capacity, _scaleBaseTokenAmount(_LOT_CAPACITY) - expectedSold, "capacity");
         assertEq(lot.purchased, _scaleQuoteTokenAmount(_PURCHASE_AMOUNT), "purchased");
         assertEq(lot.sold, expectedSold, "sold");
@@ -295,7 +295,7 @@ contract FpsPurchaseTest is FpsTest {
         );
 
         // Assert the capacity, purchased and sold
-        Auction.Lot memory lot = _getAuctionLot(_lotId);
+        IAuction.Lot memory lot = _getAuctionLot(_lotId);
         assertEq(
             lot.capacity,
             _scaleBaseTokenAmount(_LOT_CAPACITY) - _scaleQuoteTokenAmount(_PURCHASE_AMOUNT),

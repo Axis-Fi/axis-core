@@ -2,7 +2,7 @@
 pragma solidity 0.8.19;
 
 import {Module} from "src/modules/Modules.sol";
-import {Auction} from "src/modules/Auction.sol";
+import {IAuction} from "src/interfaces/IAuction.sol";
 import {FixedPriceSale} from "src/modules/auctions/FPS.sol";
 import {FixedPointMathLib as Math} from "solmate/utils/FixedPointMathLib.sol";
 
@@ -42,7 +42,7 @@ contract FpsCreateAuctionTest is FpsTest {
     {
         // Expect revert
         bytes memory err = abi.encodeWithSelector(
-            Auction.Auction_InvalidStart.selector, _auctionParams.start, uint48(block.timestamp)
+            IAuction.Auction_InvalidStart.selector, _auctionParams.start, uint48(block.timestamp)
         );
         vm.expectRevert(err);
 
@@ -53,7 +53,7 @@ contract FpsCreateAuctionTest is FpsTest {
     function test_durationLessThanMinimum_reverts() public givenDuration(uint48(8 hours)) {
         // Expect revert
         bytes memory err = abi.encodeWithSelector(
-            Auction.Auction_InvalidDuration.selector, _auctionParams.duration, uint48(1 days)
+            IAuction.Auction_InvalidDuration.selector, _auctionParams.duration, uint48(1 days)
         );
         vm.expectRevert(err);
 
@@ -63,7 +63,7 @@ contract FpsCreateAuctionTest is FpsTest {
 
     function test_fixedPriceIsZero_reverts() public givenPrice(0) {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(Auction.Auction_InvalidParams.selector);
+        bytes memory err = abi.encodeWithSelector(IAuction.Auction_InvalidParams.selector);
         vm.expectRevert(err);
 
         // Call the function
@@ -75,7 +75,7 @@ contract FpsCreateAuctionTest is FpsTest {
         _setMaxPayout(maxPayout);
 
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(Auction.Auction_InvalidParams.selector);
+        bytes memory err = abi.encodeWithSelector(IAuction.Auction_InvalidParams.selector);
         vm.expectRevert(err);
 
         // Call the function
@@ -87,7 +87,7 @@ contract FpsCreateAuctionTest is FpsTest {
         _setMaxPayout(maxPayout);
 
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(Auction.Auction_InvalidParams.selector);
+        bytes memory err = abi.encodeWithSelector(IAuction.Auction_InvalidParams.selector);
         vm.expectRevert(err);
 
         // Call the function
@@ -121,7 +121,7 @@ contract FpsCreateAuctionTest is FpsTest {
         _createAuctionLot();
 
         // Check the lot data
-        Auction.Lot memory lotData = _getAuctionLot(_lotId);
+        IAuction.Lot memory lotData = _getAuctionLot(_lotId);
         assertEq(lotData.quoteTokenDecimals, _quoteTokenDecimals, "quoteTokenDecimals");
         assertEq(lotData.baseTokenDecimals, _baseTokenDecimals, "baseTokenDecimals");
         assertEq(lotData.capacityInQuote, true, "capacityInQuote");
@@ -149,7 +149,7 @@ contract FpsCreateAuctionTest is FpsTest {
         _createAuctionLot();
 
         // Check the lot data
-        Auction.Lot memory lotData = _getAuctionLot(_lotId);
+        IAuction.Lot memory lotData = _getAuctionLot(_lotId);
         assertEq(lotData.quoteTokenDecimals, _quoteTokenDecimals, "quoteTokenDecimals");
         assertEq(lotData.baseTokenDecimals, _baseTokenDecimals, "baseTokenDecimals");
         assertEq(lotData.capacityInQuote, true, "capacityInQuote");
@@ -177,7 +177,7 @@ contract FpsCreateAuctionTest is FpsTest {
         _createAuctionLot();
 
         // Check the lot data
-        Auction.Lot memory lotData = _getAuctionLot(_lotId);
+        IAuction.Lot memory lotData = _getAuctionLot(_lotId);
         assertEq(lotData.quoteTokenDecimals, _quoteTokenDecimals, "quoteTokenDecimals");
         assertEq(lotData.baseTokenDecimals, _baseTokenDecimals, "baseTokenDecimals");
         assertEq(lotData.capacityInQuote, true, "capacityInQuote");
@@ -193,7 +193,7 @@ contract FpsCreateAuctionTest is FpsTest {
         _createAuctionLot();
 
         // Check the lot data
-        Auction.Lot memory lotData = _getAuctionLot(_lotId);
+        IAuction.Lot memory lotData = _getAuctionLot(_lotId);
         assertEq(lotData.start, _start, "start");
         assertEq(lotData.conclusion, _start + _DURATION, "conclusion");
         assertEq(lotData.quoteTokenDecimals, _quoteTokenDecimals, "quoteTokenDecimals");
@@ -222,7 +222,7 @@ contract FpsCreateAuctionTest is FpsTest {
         _createAuctionLot();
 
         // Check the lot data
-        Auction.Lot memory lotData = _getAuctionLot(_lotId);
+        IAuction.Lot memory lotData = _getAuctionLot(_lotId);
         assertEq(lotData.start, _start, "start");
         assertEq(lotData.conclusion, _start + _DURATION, "conclusion");
         assertEq(lotData.quoteTokenDecimals, _quoteTokenDecimals, "quoteTokenDecimals");
@@ -251,7 +251,7 @@ contract FpsCreateAuctionTest is FpsTest {
         _createAuctionLot();
 
         // Check the lot data
-        Auction.Lot memory lotData = _getAuctionLot(_lotId);
+        IAuction.Lot memory lotData = _getAuctionLot(_lotId);
         assertEq(lotData.start, _start, "start");
         assertEq(lotData.conclusion, _start + _DURATION, "conclusion");
         assertEq(lotData.quoteTokenDecimals, _quoteTokenDecimals, "quoteTokenDecimals");

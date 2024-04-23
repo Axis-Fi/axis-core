@@ -2,7 +2,7 @@
 pragma solidity 0.8.19;
 
 import {Module} from "src/modules/Modules.sol";
-import {Auction} from "src/modules/Auction.sol";
+import {IAuction} from "src/interfaces/IAuction.sol";
 
 import {FpsTest} from "test/modules/auctions/FPS/FPSTest.sol";
 
@@ -30,7 +30,7 @@ contract FpsCancelAuctionTest is FpsTest {
 
     function test_invalidLotId_reverts() public {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(Auction.Auction_InvalidLotId.selector, _lotId);
+        bytes memory err = abi.encodeWithSelector(IAuction.Auction_InvalidLotId.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function
@@ -44,7 +44,7 @@ contract FpsCancelAuctionTest is FpsTest {
         vm.warp(_start + _DURATION + conclusionElapsed);
 
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(Auction.Auction_MarketNotActive.selector, _lotId);
+        bytes memory err = abi.encodeWithSelector(IAuction.Auction_MarketNotActive.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function
@@ -53,7 +53,7 @@ contract FpsCancelAuctionTest is FpsTest {
 
     function test_auctionCancelled_reverts() public givenLotIsCreated givenLotIsCancelled {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(Auction.Auction_MarketNotActive.selector, _lotId);
+        bytes memory err = abi.encodeWithSelector(IAuction.Auction_MarketNotActive.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function
@@ -65,7 +65,7 @@ contract FpsCancelAuctionTest is FpsTest {
         _cancelAuctionLot();
 
         // Check the state
-        Auction.Lot memory lotData = _getAuctionLot(_lotId);
+        IAuction.Lot memory lotData = _getAuctionLot(_lotId);
         assertEq(lotData.conclusion, uint48(block.timestamp));
         assertEq(lotData.capacity, 0);
     }
@@ -75,7 +75,7 @@ contract FpsCancelAuctionTest is FpsTest {
         _cancelAuctionLot();
 
         // Check the state
-        Auction.Lot memory lotData = _getAuctionLot(_lotId);
+        IAuction.Lot memory lotData = _getAuctionLot(_lotId);
         assertEq(lotData.conclusion, uint48(block.timestamp));
         assertEq(lotData.capacity, 0);
     }
