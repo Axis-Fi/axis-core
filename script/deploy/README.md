@@ -129,6 +129,19 @@ For example, a deployment with `name` set to "AtomicLinearVesting" would require
 
 This function should take in the args and salt, in addition to the environment variables, and deploy the contract.
 
+Notes:
+
+- All of the deployment functions are wrapped with a call to `vm.startBroadcast()`, which will result in the transaction being broadcast (if enabled). There is no need to specify this within the deployment function.
+- If the salt is specified during contract deployment and the deployment is attempted again, there will be a collision error. This applies event if the salt is not defined (`bytes32(0)`). For this reason, the contract deployment code should check for a zero value. For example:
+
+```solidity
+        if (salt_ == bytes32(0)) {
+            amEmp = new EncryptedMarginalPrice(address(batchAuctionHouse));
+        } else {
+            amEmp = new EncryptedMarginalPrice{salt: salt_}(address(batchAuctionHouse));
+        }
+```
+
 #### Running the Deployment
 
 To perform a deployment, run the following script:
