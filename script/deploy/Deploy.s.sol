@@ -136,6 +136,13 @@ contract Deploy is Script, WithEnvironment, WithSalts {
             }
         }
 
+        // Exit if there are no more deployments
+        if (len == 1) {
+            // Save deployments to file
+            _saveDeployment(chain_);
+            return;
+        }
+
         // Both AuctionHouses can be deployed in the same script, in which case both the first and second sequence items should be the AuctionHouses
         bool indexOneIsAH = indexZeroIsAH && _isAtomicAuctionHouse(deployments[1])
             || _isBatchAuctionHouse(deployments[1]);
