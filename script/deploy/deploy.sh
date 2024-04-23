@@ -2,9 +2,17 @@
 
 # Usage:
 # ./deploy.sh <deploy-file> <broadcast=false> <verify=false>
+#
+# Environment variables:
+# CHAIN:              Chain name to deploy to. Corresponds to names in "./script/env.json".
+# DEPLOY_SCRIPT:      Path to the Forge deploy script. Defaults to "./script/deploy/Deploy.s.sol".
+# DEPLOY_CONTRACT:    Contract name in the deploy script. Defaults to "Deploy".
+# ETHERSCAN_KEY:      API key for Etherscan verification. Should be specified in .env.
+# RPC_URL:            URL for the RPC node. Should be specified in .env.
+# VERIFIER_URL:       URL for the Etherscan API verifier. Should be specified when used on an unsupported chain.
 
 # TODOs
-# [ ] Support alternative Etherscan URLs
+# [X] Support alternative Etherscan URLs
 # [ ] Support Tenderly verification
 # [X] Override use of Deploy.s.sol:Deploy with a different script
 
@@ -40,6 +48,10 @@ echo "Using deploy script and contract: $DEPLOY_SCRIPT:$DEPLOY_CONTRACT"
 echo "Using deployment configuration: $DEPLOY_FILE"
 echo "Using RPC at URL: $RPC_URL"
 echo "Using chain: $CHAIN"
+if [ -n "$VERIFIER_URL" ]; then
+  echo "Using verifier at URL: $VERIFIER_URL"
+fi
+echo "Deployer: $DEPLOYER_ADDRESS"
 echo ""
 
 # Set BROADCAST_FLAG based on BROADCAST
