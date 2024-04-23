@@ -129,13 +129,11 @@ contract Deploy is Script, WithEnvironment, WithSalts {
             string memory name = deployments[0];
             bytes32 salt = saltMap[name];
 
-            vm.startBroadcast();
             if (_isAtomicAuctionHouse(name)) {
                 deployedTo[name] = _deployAtomicAuctionHouse(salt);
             } else {
                 deployedTo[name] = _deployBatchAuctionHouse(salt);
             }
-            vm.stopBroadcast();
         }
 
         // Both AuctionHouses can be deployed in the same script, in which case both the first and second sequence items should be the AuctionHouses
@@ -145,13 +143,11 @@ contract Deploy is Script, WithEnvironment, WithSalts {
             string memory name = deployments[1];
             bytes32 salt = saltMap[name];
 
-            vm.startBroadcast();
             if (_isAtomicAuctionHouse(name)) {
                 deployedTo[name] = _deployAtomicAuctionHouse(salt);
             } else {
                 deployedTo[name] = _deployBatchAuctionHouse(salt);
             }
-            vm.stopBroadcast();
         }
 
         uint256 startingIndex = indexOneIsAH ? 2 : indexZeroIsAH ? 1 : 0;
@@ -166,8 +162,6 @@ contract Deploy is Script, WithEnvironment, WithSalts {
             bytes memory args = argsMap[name];
             bytes32 salt = saltMap[name];
 
-            vm.startBroadcast();
-
             // Call the deploy function for the contract
             (bool success, bytes memory data) =
                 address(this).call(abi.encodeWithSelector(selector, args, salt));
@@ -180,6 +174,7 @@ contract Deploy is Script, WithEnvironment, WithSalts {
             // For this to work, the deployer address must be the same as the owner of the AuctionHouse (`_envOwner`)
             if (installAtomicAuctionHouseMap[name]) {
                 console2.log("    Installing in AtomicAuctionHouse");
+                vm.broadcast();
                 atomicAuctionHouse.installModule(Module(deployedTo[name]));
             }
 
@@ -187,10 +182,9 @@ contract Deploy is Script, WithEnvironment, WithSalts {
             // For this to work, the deployer address must be the same as the owner of the AuctionHouse (`_envOwner`)
             if (installBatchAuctionHouseMap[name]) {
                 console2.log("    Installing in BatchAuctionHouse");
+                vm.broadcast();
                 batchAuctionHouse.installModule(Module(deployedTo[name]));
             }
-
-            vm.stopBroadcast();
         }
 
         // Save deployments to file
@@ -242,8 +236,10 @@ contract Deploy is Script, WithEnvironment, WithSalts {
         console2.log("    salt:", vm.toString(salt_));
 
         if (salt_ == bytes32(0)) {
+            vm.broadcast();
             atomicAuctionHouse = new AtomicAuctionHouse(_envOwner, _envProtocol, _envPermit2);
         } else {
+            vm.broadcast();
             atomicAuctionHouse =
                 new AtomicAuctionHouse{salt: salt_}(_envOwner, _envProtocol, _envPermit2);
         }
@@ -262,8 +258,10 @@ contract Deploy is Script, WithEnvironment, WithSalts {
         console2.log("    salt:", vm.toString(salt_));
 
         if (salt_ == bytes32(0)) {
+            vm.broadcast();
             batchAuctionHouse = new BatchAuctionHouse(_envOwner, _envProtocol, _envPermit2);
         } else {
+            vm.broadcast();
             batchAuctionHouse =
                 new BatchAuctionHouse{salt: salt_}(_envOwner, _envProtocol, _envPermit2);
         }
@@ -283,8 +281,10 @@ contract Deploy is Script, WithEnvironment, WithSalts {
 
         // Deploy the catalogue
         if (salt_ == bytes32(0)) {
+            vm.broadcast();
             atomicCatalogue = new AtomicCatalogue(address(atomicAuctionHouse));
         } else {
+            vm.broadcast();
             atomicCatalogue = new AtomicCatalogue{salt: salt_}(address(atomicAuctionHouse));
         }
         console2.log("    AtomicCatalogue deployed at:", address(atomicCatalogue));
@@ -301,8 +301,10 @@ contract Deploy is Script, WithEnvironment, WithSalts {
 
         // Deploy the catalogue
         if (salt_ == bytes32(0)) {
+            vm.broadcast();
             batchCatalogue = new BatchCatalogue(address(batchAuctionHouse));
         } else {
+            vm.broadcast();
             batchCatalogue = new BatchCatalogue{salt: salt_}(address(batchAuctionHouse));
         }
         console2.log("    BatchCatalogue deployed at:", address(batchCatalogue));
@@ -324,8 +326,10 @@ contract Deploy is Script, WithEnvironment, WithSalts {
 
         // Deploy the module
         if (salt_ == bytes32(0)) {
+            vm.broadcast();
             amEmp = new EncryptedMarginalPrice(address(batchAuctionHouse));
         } else {
+            vm.broadcast();
             amEmp = new EncryptedMarginalPrice{salt: salt_}(address(batchAuctionHouse));
         }
         console2.log("    EncryptedMarginalPrice deployed at:", address(amEmp));
@@ -342,8 +346,10 @@ contract Deploy is Script, WithEnvironment, WithSalts {
 
         // Deploy the module
         if (salt_ == bytes32(0)) {
+            vm.broadcast();
             amFps = new FixedPriceSale(address(atomicAuctionHouse));
         } else {
+            vm.broadcast();
             amFps = new FixedPriceSale{salt: salt_}(address(atomicAuctionHouse));
         }
         console2.log("    FixedPriceSale deployed at:", address(amFps));
@@ -363,9 +369,11 @@ contract Deploy is Script, WithEnvironment, WithSalts {
 
         // Deploy the module
         if (salt_ == bytes32(0)) {
+            vm.broadcast();
             dmAtomicLinearVesting = new LinearVesting(address(atomicAuctionHouse));
         } else {
-            dmAtomicLinearVesting = new LinearVesting{salt: salt_}(address(atomicAuctionHouse));
+             vm.broadcast();
+           dmAtomicLinearVesting = new LinearVesting{salt: salt_}(address(atomicAuctionHouse));
         }
         console2.log("    LinearVesting (Atomic) deployed at:", address(dmAtomicLinearVesting));
 
@@ -384,8 +392,10 @@ contract Deploy is Script, WithEnvironment, WithSalts {
 
         // Deploy the module
         if (salt_ == bytes32(0)) {
+            vm.broadcast();
             dmBatchLinearVesting = new LinearVesting(address(batchAuctionHouse));
         } else {
+            vm.broadcast();
             dmBatchLinearVesting = new LinearVesting{salt: salt_}(address(batchAuctionHouse));
         }
         console2.log("    LinearVesting (Batch) deployed at:", address(dmBatchLinearVesting));

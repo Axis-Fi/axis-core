@@ -131,13 +131,15 @@ This function should take in the args and salt, in addition to the environment v
 
 Notes:
 
-- All of the deployment functions are wrapped with a call to `vm.startBroadcast()`, which will result in the transaction being broadcast (if enabled). There is no need to specify this within the deployment function.
+- All contract deployments/actions must be pre-pended by a `vm.broadcast()` or `vm.startBroadcast()` call. A failure to do so will result in the action not being published to the chain.
 - If the salt is specified during contract deployment and the deployment is attempted again, there will be a collision error. This applies event if the salt is not defined (`bytes32(0)`). For this reason, the contract deployment code should check for a zero value. For example:
 
 ```solidity
         if (salt_ == bytes32(0)) {
+            vm.broadcast();
             amEmp = new EncryptedMarginalPrice(address(batchAuctionHouse));
         } else {
+            vm.broadcast();
             amEmp = new EncryptedMarginalPrice{salt: salt_}(address(batchAuctionHouse));
         }
 ```
