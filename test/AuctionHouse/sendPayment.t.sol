@@ -91,11 +91,11 @@ contract SendPaymentTest is Test, Permit2User {
         if (_callbackReceiveQuoteTokens) {
             // 0x02
             // cast create2 -s 02 -i $(cat ./bytecode/MockCallback02.bin)
-            salt = bytes32(0xcaf3843da7e869a4420ccc98ad4d763f7db30c5d8f4d8835aaac84922e527798);
+            salt = bytes32(0xeda9894e77efb0b535cb6eb82300bffcd783841ab5b74f76d389540f68024e27);
         } else {
             // 0x00
             // cast create2 -s 00 -i $(cat ./bytecode/MockCallback00.bin)
-            salt = bytes32(0x4960aebb0a8ba9056baf240a7d7817e9b284d3839b7189da701998added97a7f);
+            salt = bytes32(0x14055e975bfb177466001fa842ae8615d2f6a8a8eeec0704302a087681e37e99);
         }
 
         vm.broadcast(); // required for CREATE2 address to work correctly. doesn't do anything in a test

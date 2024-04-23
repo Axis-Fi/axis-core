@@ -8,6 +8,7 @@ import {ReentrancyGuard} from "lib/solmate/src/utils/ReentrancyGuard.sol";
 import {
     fromKeycode,
     fromVeecode,
+    keycodeFromVeecode,
     Keycode,
     Veecode,
     Module,
@@ -18,6 +19,7 @@ import {FeeManager} from "src/bases/FeeManager.sol";
 import {Auction, AuctionModule} from "src/modules/Auction.sol";
 
 import {DerivativeModule} from "src/modules/Derivative.sol";
+import {CondenserModule} from "src/modules/Condenser.sol";
 
 import {ICallback} from "src/interfaces/ICallback.sol";
 import {Callbacks} from "src/lib/Callbacks.sol";
@@ -147,6 +149,10 @@ abstract contract AuctionHouse is WithModules, ReentrancyGuard, FeeManager {
     /// @notice     Mapping of lot IDs to their fee information
     mapping(uint96 lotId => FeeData) public lotFees;
 
+    /// @notice     Mapping auction and derivative references to the condenser that is used to pass data between them
+    mapping(Veecode auctionRef => mapping(Veecode derivativeRef => Veecode condenserRef)) public
+        condensers;
+
     // ========== CONSTRUCTOR ========== //
 
     constructor(
@@ -267,6 +273,26 @@ abstract contract AuctionHouse is WithModules, ReentrancyGuard, FeeManager {
             routing.derivativeReference = derivativeModule.VEECODE();
             routing.derivativeParams = routing_.derivativeParams;
             routing.wrapDerivative = routing_.wrapDerivative;
+        }
+
+        // Condenser
+        {
+            // Get condenser reference
+            Veecode condenserRef = condensers[routing.auctionReference][routing.derivativeReference];
+
+            // Check that the module for the condenser type is valid
+            if (fromVeecode(condenserRef) != bytes7(0)) {
+                if (
+                    CondenserModule(_getModuleIfInstalled(condenserRef)).TYPE()
+                        != Module.Type.Condenser
+                ) revert InvalidParams();
+
+                // Check module status
+                Keycode moduleKeycode = keycodeFromVeecode(condenserRef);
+                if (getModuleStatus[moduleKeycode].sunset == true) {
+                    revert ModuleIsSunset(moduleKeycode);
+                }
+            }
         }
 
         // Validate callbacks address and store if provided
@@ -511,6 +537,42 @@ abstract contract AuctionHouse is WithModules, ReentrancyGuard, FeeManager {
         _protocol = protocol_;
     }
 
+    /// @notice     Sets the value of the Condenser for a given auction and derivative combination
+    /// @dev        To remove a condenser, set the value of `condenserRef_` to a blank Veecode
+    ///
+    ///             This function will revert if:
+    ///             - The caller is not the owner
+    ///             - `auctionRef_` or `derivativeRef_` are empty
+    ///             - `auctionRef_` does not belong to an auction module
+    ///             - `derivativeRef_` does not belong to a derivative module
+    ///             - `condenserRef_` does not belong to a condenser module
+    ///
+    /// @param      auctionRef_    The auction type
+    /// @param      derivativeRef_ The derivative type
+    /// @param      condenserRef_  The condenser type
+    function setCondenser(
+        Veecode auctionRef_,
+        Veecode derivativeRef_,
+        Veecode condenserRef_
+    ) external onlyOwner {
+        // Check that the auction type, derivative type, and condenser types are valid
+        if (
+            (AuctionModule(_getModuleIfInstalled(auctionRef_)).TYPE() != Module.Type.Auction)
+                || (
+                    DerivativeModule(_getModuleIfInstalled(derivativeRef_)).TYPE()
+                        != Module.Type.Derivative
+                )
+                || (
+                    fromVeecode(condenserRef_) != bytes7(0)
+                        && CondenserModule(_getModuleIfInstalled(condenserRef_)).TYPE()
+                            != Module.Type.Condenser
+                )
+        ) revert InvalidParams();
+
+        // Set the condenser reference
+        condensers[auctionRef_][derivativeRef_] = condenserRef_;
+    }
+
     // ========== TOKEN TRANSFERS ========== //
 
     /// @notice     Convenience function to collect payment of the quote token from the user
@@ -567,11 +629,12 @@ abstract contract AuctionHouse is WithModules, ReentrancyGuard, FeeManager {
     /// @param      recipient_      Address to receive payout
     /// @param      payoutAmount_   Amount of payoutToken to send (in native decimals)
     /// @param      routingParams_  Routing parameters for the lot
+    /// @param      auctionOutput_  Output data from the auction module
     function _sendPayout(
         address recipient_,
         uint256 payoutAmount_,
         Routing memory routingParams_,
-        bytes memory
+        bytes memory auctionOutput_
     ) internal {
         Veecode derivativeReference = routingParams_.derivativeReference;
         ERC20 baseToken = routingParams_.baseToken;
@@ -586,6 +649,19 @@ abstract contract AuctionHouse is WithModules, ReentrancyGuard, FeeManager {
             // We assume that the module type has been checked when the lot was created
             DerivativeModule module = DerivativeModule(_getModuleIfInstalled(derivativeReference));
 
+            bytes memory derivativeParams = routingParams_.derivativeParams;
+
+            // Lookup condenser module from combination of auction and derivative types
+            // If condenser specified, condense auction output and derivative params before sending to derivative module
+            Veecode condenserRef = condensers[routingParams_.auctionReference][derivativeReference];
+            if (fromVeecode(condenserRef) != bytes7("")) {
+                // Get condenser module
+                CondenserModule condenser = CondenserModule(_getModuleIfInstalled(condenserRef));
+
+                // Condense auction output and derivative params
+                derivativeParams = condenser.condense(auctionOutput_, derivativeParams);
+            }
+
             // Approve the module to transfer payout tokens when minting
             Transfer.approve(baseToken, address(module), payoutAmount_);
 
@@ -593,7 +669,7 @@ abstract contract AuctionHouse is WithModules, ReentrancyGuard, FeeManager {
             module.mint(
                 recipient_,
                 address(baseToken),
-                routingParams_.derivativeParams,
+                derivativeParams,
                 payoutAmount_,
                 routingParams_.wrapDerivative
             );

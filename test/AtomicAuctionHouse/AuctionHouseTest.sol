@@ -10,6 +10,7 @@ import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 // Mocks
 import {MockAtomicAuctionModule} from "test/modules/Auction/MockAtomicAuctionModule.sol";
 import {MockDerivativeModule} from "test/modules/derivatives/mocks/MockDerivativeModule.sol";
+import {MockCondenserModule} from "test/modules/Condenser/MockCondenserModule.sol";
 import {MockCallback} from "test/callbacks/MockCallback.sol";
 import {Permit2User} from "test/lib/permit2/Permit2User.sol";
 import {MockFeeOnTransferERC20} from "test/lib/mocks/MockFeeOnTransferERC20.sol";
@@ -37,6 +38,8 @@ abstract contract AtomicAuctionHouseTest is Test, Permit2User {
     Keycode internal _atomicAuctionModuleKeycode;
     MockDerivativeModule internal _derivativeModule;
     Keycode internal _derivativeModuleKeycode;
+    MockCondenserModule internal _condenserModule;
+    Keycode internal _condenserModuleKeycode;
     MockCallback internal _callback;
 
     uint256 internal constant _BASE_SCALE = 1e18;
@@ -103,6 +106,8 @@ abstract contract AtomicAuctionHouseTest is Test, Permit2User {
         _atomicAuctionModuleKeycode = keycodeFromVeecode(_atomicAuctionModule.VEECODE());
         _derivativeModule = new MockDerivativeModule(address(_auctionHouse));
         _derivativeModuleKeycode = keycodeFromVeecode(_derivativeModule.VEECODE());
+        _condenserModule = new MockCondenserModule(address(_auctionHouse));
+        _condenserModuleKeycode = keycodeFromVeecode(_condenserModule.VEECODE());
 
         _startTime = uint48(block.timestamp) + 1;
 
@@ -197,6 +202,21 @@ abstract contract AtomicAuctionHouseTest is Test, Permit2User {
         _;
     }
 
+    modifier whenCondenserModuleIsInstalled() {
+        vm.prank(_OWNER);
+        _auctionHouse.installModule(_condenserModule);
+        _;
+    }
+
+    modifier whenCondenserIsMapped() {
+        vm.startPrank(_OWNER);
+        _auctionHouse.setCondenser(
+            _atomicAuctionModule.VEECODE(), _derivativeModule.VEECODE(), _condenserModule.VEECODE()
+        );
+        vm.stopPrank();
+        _;
+    }
+
     modifier givenLotIsCreated() {
         vm.prank(_SELLER);
         _lotId = _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
@@ -249,7 +269,7 @@ abstract contract AtomicAuctionHouseTest is Test, Permit2User {
         //     vm.toString(bytecode)
         // );
 
-        bytes32 salt = bytes32(0x01869ed52a30c61ffe6722cba9220cbfdf400af51b99cd80faf047638e284cf6);
+        bytes32 salt = bytes32(0x8c88ce8e249b9e61b04716ad8e3f2cd9499e04ee74887e241b2475dbc43edbdf);
         vm.startBroadcast(); // required for CREATE2 address to work correctly. doesn't do anything in a test
         _callback = new MockCallback{salt: salt}(
             address(_auctionHouse),
@@ -405,19 +425,19 @@ abstract contract AtomicAuctionHouseTest is Test, Permit2User {
         if (_callbackSendBaseTokens && _callbackReceiveQuoteTokens) {
             // 11111111 = 0xFF
             // cast create2 -s FF -i $(cat ./bytecode/MockCallbackFF.bin)
-            salt = bytes32(0x80626a5c754883542e39df22122e14e1bb05b4420aeda8872feb43e62297cade);
+            salt = bytes32(0x3b0c221e4b9d354f38ec89ae7953b9ef3eeba1558cbdb8681f89caae1b3743ba);
         } else if (_callbackSendBaseTokens) {
             // 11111101 = 0xFD
             // cast create2 -s FD -i $(cat ./bytecode/MockCallbackFD.bin)
-            salt = bytes32(0xc577954dbde2d9dea179eec3f3ba190034b52f1ecd95d4438de964697824f39a);
+            salt = bytes32(0xab91bacb109860cf27063eba0c732388096a66028f9732c1a9eaa1e7ef8216c3);
         } else if (_callbackReceiveQuoteTokens) {
             // 11111110 = 0xFE
             // cast create2 -s FE -i $(cat ./bytecode/MockCallbackFE.bin)
-            salt = bytes32(0xee77df7d4de7979e577b01111b2c4669c6b254a738e149974c9e09af2caf614a);
+            salt = bytes32(0x9f579071c86104618c76a49154393dafd393c9fa8385022016c308e0a1c6e60c);
         } else {
             // 11111100 = 0xFC
             // cast create2 -s FC -i $(cat ./bytecode/MockCallbackFC.bin)
-            salt = bytes32(0x43f799d07cd115f9f606c396f86fef5a63965c94828c1f368b16d5b401d2e9dd);
+            salt = bytes32(0xd12f5bd70b44353b53874b978f1e53c7f772252e59f787c62885af1d5d2214af);
         }
 
         // Required for CREATE2 address to work correctly. doesn't do anything in a test
