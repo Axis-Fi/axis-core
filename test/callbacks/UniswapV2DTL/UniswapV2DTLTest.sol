@@ -19,14 +19,20 @@ import {LinearVesting} from "src/modules/derivatives/LinearVesting.sol";
 
 import {MockERC20} from "solmate/test/utils/mocks/MockERC20.sol";
 
-abstract contract UniswapV2DirectToLiquidityTest is Test, Permit2User {
+import {WithSalts} from "test/lib/WithSalts.sol";
+import {console2} from "forge-std/console2.sol";
+
+abstract contract UniswapV2DirectToLiquidityTest is Test, Permit2User, WithSalts {
     using Callbacks for UniswapV2DirectToLiquidity;
 
     address internal constant _OWNER = address(0x1);
-    address internal constant _PROTOCOL = address(0x2);
-    address internal constant _SELLER = address(0x3);
+    address internal constant _SELLER = address(0x2);
+    address internal constant _PROTOCOL = address(0x3);
     address internal constant _BUYER = address(0x4);
     address internal constant _NOT_SELLER = address(0x20);
+    address internal constant _AUCTION_HOUSE = address(0x000000000000000000000000000000000000000A);
+    address internal constant _UNISWAP_V2_FACTORY =
+        address(0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f);
 
     uint96 internal constant _LOT_CAPACITY = 10e18;
 
@@ -60,29 +66,23 @@ abstract contract UniswapV2DirectToLiquidityTest is Test, Permit2User {
 
         // Create an BatchAuctionHouse at a deterministic address, since it is used as input to callbacks
         BatchAuctionHouse auctionHouse = new BatchAuctionHouse(_OWNER, _PROTOCOL, _permit2Address);
-        _auctionHouse = BatchAuctionHouse(address(0x000000000000000000000000000000000000000A));
+        _auctionHouse = BatchAuctionHouse(_AUCTION_HOUSE);
         vm.etch(address(_auctionHouse), address(auctionHouse).code);
         vm.store(address(_auctionHouse), bytes32(uint256(0)), bytes32(abi.encode(_OWNER))); // Owner
         vm.store(address(_auctionHouse), bytes32(uint256(6)), bytes32(abi.encode(1))); // Reentrancy
         vm.store(address(_auctionHouse), bytes32(uint256(10)), bytes32(abi.encode(_PROTOCOL))); // Protocol
 
-        // // Uncomment to regenerate bytecode to mine new salts if the UniswapV2FactoryClone changes
-        // // cast create2 -s 00 -i $(cat ./bytecode/UniswapV2FactoryClone.bin)
-        // bytes memory bytecode = abi.encodePacked(type(UniswapV2FactoryClone).creationCode);
-        // vm.writeFile("./bytecode/UniswapV2FactoryClone.bin", vm.toString(bytecode));
-        _uniV2Factory = new UniswapV2FactoryClone{
-            salt: bytes32(0x911053989b82d03d4ebf250c9295372f0f07d0680da49ce333cb5aa9297dde95)
-        }();
+        // Create a UniswapV2Factory at a deterministic address
+        UniswapV2FactoryClone uniV2Factory = new UniswapV2FactoryClone();
+        _uniV2Factory = UniswapV2FactoryClone(_UNISWAP_V2_FACTORY);
+        vm.etch(address(_uniV2Factory), address(uniV2Factory).code);
+        // No storage slots to set
 
-        // // Uncomment to regenerate bytecode to mine new salts if the UniswapV2Router02 changes
-        // // cast create2 -s 00 -i $(cat ./bytecode/UniswapV2Router02.bin)
-        // bytes memory bytecode = abi.encodePacked(type(UniswapV2Router02).creationCode, abi.encode(
-        //         address(_uniV2Factory), address(0)
-        //     ));
-        // vm.writeFile("./bytecode/UniswapV2Router02.bin", vm.toString(bytecode));
+        // Create a UniswapV2Router at a deterministic address
         _uniV2Router = new UniswapV2Router02{
             salt: bytes32(0x035ba535d735a8e92093764ec05c30d49ab56cfd0d3da306185ab02b1fcac4f4)
         }(address(_uniV2Factory), address(0));
+        console2.log("UniswapV2Router address: {}", address(_uniV2Router)); // 0x095b215677db999c3A268c16A31b15A28B2e572F
 
         _linearVesting = new LinearVesting(address(_auctionHouse));
 
@@ -99,19 +99,13 @@ abstract contract UniswapV2DirectToLiquidityTest is Test, Permit2User {
     }
 
     modifier givenCallbackIsCreated() {
-        // // Uncomment to regenerate bytecode to mine new salts if the UniswapV2DirectToLiquidity changes
-        // // 11100110 = 0xE6
-        // // cast create2 -s E6 -i $(cat ./bytecode/UniswapV2DirectToLiquidityE6.bin)
-        // bytes memory bytecode = abi.encodePacked(
-        //     type(UniswapV2DirectToLiquidity).creationCode,
-        //     abi.encode(
-        //         address(_auctionHouse), _SELLER, address(_uniV2Factory), address(_uniV2Router)
-        //     )
-        // );
-        // vm.writeFile("./bytecode/UniswapV2DirectToLiquidityE6.bin", vm.toString(bytecode));
-
-        // E6
-        bytes32 salt = bytes32(0x42cfc1542fde46e79d5f8ce34bf510a0cce5ec1b6ba47422ad5da5236dfb8cda);
+        // Get the salt
+        bytes memory args = abi.encode(
+            address(_auctionHouse), _SELLER, address(_uniV2Factory), address(_uniV2Router)
+        );
+        bytes32 salt = _getSalt(
+            "UniswapV2DirectToLiquidity", type(UniswapV2DirectToLiquidity).creationCode, args
+        );
 
         // Required for CREATE2 address to work correctly. doesn't do anything in a test
         // Source: https://github.com/foundry-rs/foundry/issues/6402

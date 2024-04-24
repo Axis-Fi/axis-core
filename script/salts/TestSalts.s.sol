@@ -10,6 +10,8 @@ import {WithSalts} from "script/salts/WithSalts.s.sol";
 import {MockCallback} from "test/callbacks/MockCallback.sol";
 import {Callbacks} from "src/lib/Callbacks.sol";
 import {CappedMerkleAllowlist} from "src/callbacks/allowlists/CappedMerkleAllowlist.sol";
+import {UniswapV2DirectToLiquidity} from "src/callbacks/liquidity/UniswapV2DTL.sol";
+import {UniswapV3DirectToLiquidity} from "src/callbacks/liquidity/UniswapV3DTL.sol";
 
 contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts {
     // TODO shift into abstract contract that tests also inherit from
@@ -17,6 +19,13 @@ contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts {
     address internal constant _SELLER = address(0x2);
     address internal constant _PROTOCOL = address(0x3);
     address internal constant _AUCTION_HOUSE = address(0x000000000000000000000000000000000000000A);
+    address internal constant _UNISWAP_V2_FACTORY =
+        address(0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f);
+    address internal constant _UNISWAP_V2_ROUTER =
+        address(0x095b215677db999c3A268c16A31b15A28B2e572F);
+    address internal constant _UNISWAP_V3_FACTORY =
+        address(0x8e530929af28C6aE9d9B24bF18c4447D23caE14a);
+    address internal constant _GUNI_FACTORY = address(0x58Abf7Ea167B7234a3eFc4b043Cd6C9145f62f78);
 
     string internal constant _MOCK_CALLBACK = "MockCallback";
     string internal constant _CAPPED_MERKLE_ALLOWLIST = "CappedMerkleAllowlist";
@@ -31,6 +40,8 @@ contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts {
 
         _generateMockCallback();
         _generateCappedMerkleAllowlist();
+        _generateUniswapV2DTL();
+        _generateUniswapV3DTL();
     }
 
     function _generateMockCallback() internal {
@@ -203,5 +214,22 @@ contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts {
         );
         (bytecodePath, bytecodeHash) = _writeBytecode(_CAPPED_MERKLE_ALLOWLIST, contractCode, args);
         _setSalt(bytecodePath, "90", _CAPPED_MERKLE_ALLOWLIST, bytecodeHash);
+    }
+
+    function _generateUniswapV2DTL() internal {
+        bytes memory args =
+            abi.encode(_AUCTION_HOUSE, _SELLER, _UNISWAP_V2_FACTORY, _UNISWAP_V2_ROUTER);
+        bytes memory contractCode = type(UniswapV2DirectToLiquidity).creationCode;
+        (string memory bytecodePath, bytes32 bytecodeHash) =
+            _writeBytecode("UniswapV2DirectToLiquidity", contractCode, args);
+        _setSalt(bytecodePath, "E6", "UniswapV2DirectToLiquidity", bytecodeHash);
+    }
+
+    function _generateUniswapV3DTL() internal {
+        bytes memory args = abi.encode(_AUCTION_HOUSE, _SELLER, _UNISWAP_V3_FACTORY, _GUNI_FACTORY);
+        bytes memory contractCode = type(UniswapV3DirectToLiquidity).creationCode;
+        (string memory bytecodePath, bytes32 bytecodeHash) =
+            _writeBytecode("UniswapV3DirectToLiquidity", contractCode, args);
+        _setSalt(bytecodePath, "E6", "UniswapV3DirectToLiquidity", bytecodeHash);
     }
 }

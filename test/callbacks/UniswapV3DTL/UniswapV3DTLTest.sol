@@ -19,14 +19,18 @@ import {LinearVesting} from "src/modules/derivatives/LinearVesting.sol";
 
 import {MockERC20} from "solmate/test/utils/mocks/MockERC20.sol";
 
-abstract contract UniswapV3DirectToLiquidityTest is Test, Permit2User {
+import {WithSalts} from "test/lib/WithSalts.sol";
+import {console2} from "forge-std/console2.sol";
+
+abstract contract UniswapV3DirectToLiquidityTest is Test, Permit2User, WithSalts {
     using Callbacks for UniswapV3DirectToLiquidity;
 
     address internal constant _OWNER = address(0x1);
-    address internal constant _PROTOCOL = address(0x2);
-    address internal constant _SELLER = address(0x3);
+    address internal constant _SELLER = address(0x2);
+    address internal constant _PROTOCOL = address(0x3);
     address internal constant _BUYER = address(0x4);
     address internal constant _NOT_SELLER = address(0x20);
+    address internal constant _AUCTION_HOUSE = address(0x000000000000000000000000000000000000000A);
 
     uint96 internal constant _LOT_CAPACITY = 10e18;
 
@@ -61,28 +65,23 @@ abstract contract UniswapV3DirectToLiquidityTest is Test, Permit2User {
 
         // Create an AuctionHouse at a deterministic address, since it is used as input to callbacks
         BatchAuctionHouse auctionHouse = new BatchAuctionHouse(_OWNER, _PROTOCOL, _permit2Address);
-        _auctionHouse = BatchAuctionHouse(address(0x000000000000000000000000000000000000000A));
+        _auctionHouse = BatchAuctionHouse(_AUCTION_HOUSE);
         vm.etch(address(_auctionHouse), address(auctionHouse).code);
         vm.store(address(_auctionHouse), bytes32(uint256(0)), bytes32(abi.encode(_OWNER))); // Owner
         vm.store(address(_auctionHouse), bytes32(uint256(6)), bytes32(abi.encode(1))); // Reentrancy
         vm.store(address(_auctionHouse), bytes32(uint256(10)), bytes32(abi.encode(_PROTOCOL))); // Protocol
 
-        // // Uncomment to regenerate bytecode to mine new salts if the UniswapV3Factory changes
-        // // cast create2 -s 00 -i $(cat ./bytecode/UniswapV3Factory.bin)
-        // bytes memory bytecode = abi.encodePacked(type(UniswapV3Factory).creationCode);
-        // vm.writeFile("./bytecode/UniswapV3Factory.bin", vm.toString(bytecode));
+        // Create a UniswapV3Factory at a deterministic address
         _uniV3Factory = new UniswapV3Factory{
             salt: bytes32(0xbc65534283bdbbac4a95a3fb1933af63d55135566688dd54d1c55a626b1bc366)
         }();
+        // console2.log("UniswapV3Factory address: {}", address(_uniV3Factory)); // 0x8e530929af28C6aE9d9B24bF18c4447D23caE14a
 
-        // // Uncomment to regenerate bytecode to mine new salts if the GUniFactory changes
-        // // cast create2 -s 00 -i $(cat ./bytecode/GUniFactory.bin)
-        // bytes memory bytecode =
-        //     abi.encodePacked(type(GUniFactory).creationCode, abi.encode(address(_uniV3Factory)));
-        // vm.writeFile("./bytecode/GUniFactory.bin", vm.toString(bytecode));
+        // Create a GUniFactory at a deterministic address
         _gUniFactory = new GUniFactory{
             salt: bytes32(0x31d4bb3a2cd73df799deceac86fa252d040e24c2ea206f4172d74f72cfa34e4b)
         }(address(_uniV3Factory));
+        // console2.log("GUniFactory address: {}", address(_gUniFactory)); // 0x58Abf7Ea167B7234a3eFc4b043Cd6C9145f62f78
 
         // Initialize the GUniFactory
         address payable gelatoAddress = payable(address(0x10));
@@ -104,19 +103,13 @@ abstract contract UniswapV3DirectToLiquidityTest is Test, Permit2User {
     }
 
     modifier givenCallbackIsCreated() {
-        // // Uncomment to regenerate bytecode to mine new salts if the UniswapV3DirectToLiquidity changes
-        // // 11100110 = 0xE6
-        // // cast create2 -s E6 -i $(cat ./bytecode/UniswapV3DirectToLiquidityE6.bin)
-        // bytes memory bytecode = abi.encodePacked(
-        //     type(UniswapV3DirectToLiquidity).creationCode,
-        //     abi.encode(
-        //         address(_auctionHouse), _SELLER, address(_uniV3Factory), address(_gUniFactory)
-        //     )
-        // );
-        // vm.writeFile("./bytecode/UniswapV3DirectToLiquidityE6.bin", vm.toString(bytecode));
-
-        // E6
-        bytes32 salt = bytes32(0x358465c7d8c2987e16548aeb69c787df987230065f76dea6aeb1a007251e5ccf);
+        // Get the salt
+        bytes memory args = abi.encode(
+            address(_auctionHouse), _SELLER, address(_uniV3Factory), address(_gUniFactory)
+        );
+        bytes32 salt = _getSalt(
+            "UniswapV3DirectToLiquidity", type(UniswapV3DirectToLiquidity).creationCode, args
+        );
 
         // Required for CREATE2 address to work correctly. doesn't do anything in a test
         // Source: https://github.com/foundry-rs/foundry/issues/6402
