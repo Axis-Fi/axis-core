@@ -34,7 +34,7 @@ contract DeployBlast is Deploy {
 
     function _deployAtomicAuctionHouse() internal override returns (address) {
         // No args
-
+        console2.log("");
         console2.log("Deploying BlastAtomicAuctionHouse");
         console2.log("    owner:", _envOwner);
         console2.log("    permit2:", _envPermit2);
@@ -70,7 +70,7 @@ contract DeployBlast is Deploy {
 
     function _deployBatchAuctionHouse() internal override returns (address) {
         // No args
-
+        console2.log("");
         console2.log("Deploying BlastBatchAuctionHouse");
         console2.log("    owner:", _envOwner);
         console2.log("    permit2:", _envPermit2);
@@ -108,7 +108,7 @@ contract DeployBlast is Deploy {
 
     function deployEncryptedMarginalPrice(bytes memory) public override returns (address) {
         // No args used
-
+        console2.log("");
         console2.log("Deploying BlastEMP (Encrypted Marginal Price)");
         console2.log("    BatchAuctionHouse", address(batchAuctionHouse));
         console2.log("    blast:", _envBlast);
@@ -137,7 +137,7 @@ contract DeployBlast is Deploy {
 
     function deployFixedPriceSale(bytes memory) public override returns (address) {
         // No args used
-
+        console2.log("");
         console2.log("Deploying BlastFPS (Fixed Price Sale)");
         console2.log("    AtomicAuctionHouse", address(atomicAuctionHouse));
         console2.log("    blast:", _envBlast);
@@ -166,7 +166,7 @@ contract DeployBlast is Deploy {
 
     function deployAtomicLinearVesting(bytes memory) public override returns (address) {
         // No args used
-
+        console2.log("");
         console2.log("Deploying BlastLinearVesting (Atomic)");
         console2.log("    AtomicAuctionHouse", address(atomicAuctionHouse));
         console2.log("    blast:", _envBlast);
@@ -196,7 +196,7 @@ contract DeployBlast is Deploy {
 
     function deployBatchLinearVesting(bytes memory) public override returns (address) {
         // No args used
-
+        console2.log("");
         console2.log("Deploying LinearVesting (Batch)");
         console2.log("    BatchAuctionHouse", address(batchAuctionHouse));
         console2.log("    blast:", _envBlast);

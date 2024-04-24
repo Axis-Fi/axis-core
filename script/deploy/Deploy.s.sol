@@ -227,7 +227,7 @@ contract Deploy is Script, WithEnvironment, WithSalts {
 
     function _deployAtomicAuctionHouse() internal virtual returns (address) {
         // No args
-
+        console2.log("");
         console2.log("Deploying AtomicAuctionHouse");
         console2.log("    owner:", _envOwner);
         console2.log("    permit2:", _envPermit2);
@@ -257,7 +257,7 @@ contract Deploy is Script, WithEnvironment, WithSalts {
 
     function _deployBatchAuctionHouse() internal virtual returns (address) {
         // No args
-
+        console2.log("");
         console2.log("Deploying BatchAuctionHouse");
         console2.log("    owner:", _envOwner);
         console2.log("    permit2:", _envPermit2);
@@ -289,7 +289,7 @@ contract Deploy is Script, WithEnvironment, WithSalts {
 
     function deployAtomicCatalogue(bytes memory) public virtual returns (address) {
         // No args used
-
+        console2.log("");
         console2.log("Deploying AtomicCatalogue");
         console2.log("    AtomicAuctionHouse", address(atomicAuctionHouse));
 
@@ -317,7 +317,7 @@ contract Deploy is Script, WithEnvironment, WithSalts {
 
     function deployBatchCatalogue(bytes memory) public virtual returns (address) {
         // No args used
-
+        console2.log("");
         console2.log("Deploying BatchCatalogue");
         console2.log("    BatchAuctionHouse", address(batchAuctionHouse));
 
@@ -347,7 +347,7 @@ contract Deploy is Script, WithEnvironment, WithSalts {
 
     function deployEncryptedMarginalPrice(bytes memory) public virtual returns (address) {
         // No args used
-
+        console2.log("");
         console2.log("Deploying EncryptedMarginalPrice");
         console2.log("    BatchAuctionHouse", address(batchAuctionHouse));
 
@@ -375,7 +375,7 @@ contract Deploy is Script, WithEnvironment, WithSalts {
 
     function deployFixedPriceSale(bytes memory) public virtual returns (address) {
         // No args used
-
+        console2.log("");
         console2.log("Deploying FixedPriceSale");
         console2.log("    AtomicAuctionHouse", address(atomicAuctionHouse));
 
@@ -403,7 +403,7 @@ contract Deploy is Script, WithEnvironment, WithSalts {
 
     function deployAtomicLinearVesting(bytes memory) public virtual returns (address) {
         // No args used
-
+        console2.log("");
         console2.log("Deploying LinearVesting (Atomic)");
         console2.log("    AtomicAuctionHouse", address(atomicAuctionHouse));
 
@@ -431,7 +431,7 @@ contract Deploy is Script, WithEnvironment, WithSalts {
 
     function deployBatchLinearVesting(bytes memory) public virtual returns (address) {
         // No args used
-
+        console2.log("");
         console2.log("Deploying LinearVesting (Batch)");
         console2.log("    BatchAuctionHouse", address(batchAuctionHouse));
 
