@@ -105,7 +105,7 @@ abstract contract UniswapV3DirectToLiquidityTest is Test, Permit2User, WithSalts
     modifier givenCallbackIsCreated() {
         // Get the salt
         bytes memory args = abi.encode(
-            address(_auctionHouse), _SELLER, address(_uniV3Factory), address(_gUniFactory)
+            address(_auctionHouse), address(_uniV3Factory), address(_gUniFactory)
         );
         bytes32 salt = _getSalt(
             "UniswapV3DirectToLiquidity", type(UniswapV3DirectToLiquidity).creationCode, args
@@ -115,7 +115,7 @@ abstract contract UniswapV3DirectToLiquidityTest is Test, Permit2User, WithSalts
         // Source: https://github.com/foundry-rs/foundry/issues/6402
         vm.startBroadcast();
         _dtl = new UniswapV3DirectToLiquidity{salt: salt}(
-            address(_auctionHouse), _SELLER, address(_uniV3Factory), address(_gUniFactory)
+            address(_auctionHouse), address(_uniV3Factory), address(_gUniFactory)
         );
         vm.stopBroadcast();
 
@@ -203,8 +203,6 @@ abstract contract UniswapV3DirectToLiquidityTest is Test, Permit2User, WithSalts
         returns (BaseDirectToLiquidity.DTLConfiguration memory)
     {
         (
-            address baseToken_,
-            address quoteToken_,
             address recipient_,
             uint256 lotCapacity_,
             uint256 lotCuratorPayout_,
@@ -217,8 +215,6 @@ abstract contract UniswapV3DirectToLiquidityTest is Test, Permit2User, WithSalts
         ) = _dtl.lotConfiguration(lotId_);
 
         return BaseDirectToLiquidity.DTLConfiguration({
-            baseToken: baseToken_,
-            quoteToken: quoteToken_,
             recipient: recipient_,
             lotCapacity: lotCapacity_,
             lotCuratorPayout: lotCuratorPayout_,

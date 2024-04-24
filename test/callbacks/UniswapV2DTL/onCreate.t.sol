@@ -293,8 +293,6 @@ contract UniswapV2DirectToLiquidityOnCreateTest is UniswapV2DirectToLiquidityTes
 
         // Assert values
         BaseDirectToLiquidity.DTLConfiguration memory configuration = _getDTLConfiguration(_lotId);
-        assertEq(address(configuration.baseToken), address(_baseToken), "baseToken");
-        assertEq(address(configuration.quoteToken), address(_quoteToken), "quoteToken");
         assertEq(configuration.recipient, _SELLER, "recipient");
         assertEq(configuration.lotCapacity, _LOT_CAPACITY, "lotCapacity");
         assertEq(configuration.lotCuratorPayout, 0, "lotCuratorPayout");

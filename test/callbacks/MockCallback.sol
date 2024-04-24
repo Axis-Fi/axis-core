@@ -9,9 +9,8 @@ import {Callbacks} from "src/lib/Callbacks.sol";
 contract MockCallback is BaseCallback {
     constructor(
         address auctionHouse_,
-        Callbacks.Permissions memory permissions_,
-        address seller_
-    ) BaseCallback(auctionHouse_, permissions_, seller_) {}
+        Callbacks.Permissions memory permissions_
+    ) BaseCallback(auctionHouse_, permissions_) {}
 
     bool public onCreateReverts;
     bool public onCancelReverts;

@@ -630,7 +630,7 @@ contract CallbacksTest is Test {
         Callbacks.Permissions memory permissions_
     ) internal returns (ICallback) {
         vm.startBroadcast();
-        MockCallback callback = new MockCallback{salt: salt_}(_AUCTION_HOUSE, permissions_, _SELLER);
+        MockCallback callback = new MockCallback{salt: salt_}(_AUCTION_HOUSE, permissions_);
         vm.stopBroadcast();
 
         return callback;

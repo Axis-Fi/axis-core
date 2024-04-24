@@ -111,7 +111,7 @@ abstract contract UniswapV2DirectToLiquidityTest is Test, Permit2User, WithSalts
         // Source: https://github.com/foundry-rs/foundry/issues/6402
         vm.startBroadcast();
         _dtl = new UniswapV2DirectToLiquidity{salt: salt}(
-            address(_auctionHouse), _SELLER, address(_uniV2Factory), address(_uniV2Router)
+            address(_auctionHouse), address(_uniV2Factory), address(_uniV2Router)
         );
         vm.stopBroadcast();
 
@@ -193,8 +193,6 @@ abstract contract UniswapV2DirectToLiquidityTest is Test, Permit2User, WithSalts
         returns (BaseDirectToLiquidity.DTLConfiguration memory)
     {
         (
-            address baseToken_,
-            address quoteToken_,
             address recipient_,
             uint256 lotCapacity_,
             uint256 lotCuratorPayout_,
@@ -207,8 +205,6 @@ abstract contract UniswapV2DirectToLiquidityTest is Test, Permit2User, WithSalts
         ) = _dtl.lotConfiguration(lotId_);
 
         return BaseDirectToLiquidity.DTLConfiguration({
-            baseToken: baseToken_,
-            quoteToken: quoteToken_,
             recipient: recipient_,
             lotCapacity: lotCapacity_,
             lotCuratorPayout: lotCuratorPayout_,
