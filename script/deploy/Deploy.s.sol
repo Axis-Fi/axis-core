@@ -224,7 +224,11 @@ contract Deploy is Script, WithEnvironment, WithSalts {
         vm.writeLine(
             file,
             string.concat(
-                "\"", deployments[len - 1], "\": \"", vm.toString(deployedTo[deployments[len - 1]])
+                "\"",
+                deployments[len - 1],
+                "\": \"",
+                vm.toString(deployedTo[deployments[len - 1]]),
+                "\""
             )
         );
         vm.writeLine(file, "}");

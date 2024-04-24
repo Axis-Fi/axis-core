@@ -69,17 +69,24 @@ fi
 VERIFY_FLAG=""
 if [ "$VERIFY" = "true" ] || [ "$VERIFY" = "TRUE" ]; then
 
-  # Check if ETHERSCAN_API_KEY is set
-  if [ -z "$ETHERSCAN_API_KEY" ]
-  then
-    echo "No Etherscan API key found. Provide the key in .env or disable verification."
-    exit 1
-  fi
+  if [ -z "$VERIFIER" ] || [ "$VERIFIER" = "etherscan" ]; then
+    Check if ETHERSCAN_API_KEY is set
+    if [ -z "$ETHERSCAN_API_KEY" ]; then
+      echo "No Etherscan API key found. Provide the key in .env or disable verification."
+      exit 1
+    fi
 
-  if [ -n "$VERIFIER_URL" ]; then
-    VERIFY_FLAG="--verify --verifier-url $VERIFIER_URL --etherscan-api-key $ETHERSCAN_API_KEY"
+    if [ -n "$VERIFIER_URL" ]; then
+      VERIFY_FLAG="--verify --verifier-url $VERIFIER_URL --etherscan-api-key $ETHERSCAN_API_KEY"
+    else
+      VERIFY_FLAG="--verify --etherscan-api-key $ETHERSCAN_API_KEY"
+    fi
   else
-    VERIFY_FLAG="--verify --etherscan-api-key $ETHERSCAN_API_KEY"
+    if [ -n "$VERIFIER_URL" ]; then
+      VERIFY_FLAG="--verify --verifier $VERIFIER --verifier-url $VERIFIER_URL"
+    else
+      VERIFY_FLAG="--verify --verifier $VERIFIER"
+    fi
   fi
   echo "Verification is enabled"
 else
