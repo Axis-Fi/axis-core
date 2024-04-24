@@ -264,23 +264,22 @@ abstract contract BatchAuctionHouseTest is Test, Permit2User, WithSalts {
     }
 
     modifier givenLotHasAllowlist() {
-        // 10011000 = 0x98
-        bytes32 salt = _getSalt("MockCallback98");
+        // Get the salt
+        Callbacks.Permissions memory permissions = Callbacks.Permissions({
+            onCreate: true,
+            onCancel: false,
+            onCurate: false,
+            onPurchase: true,
+            onBid: true,
+            onClaimProceeds: false,
+            receiveQuoteTokens: false,
+            sendBaseTokens: false
+        });
+        bytes memory args = abi.encode(address(_auctionHouse), permissions, _SELLER);
+        bytes32 salt = _getSalt("MockCallback", type(MockCallback).creationCode, args);
+
         vm.startBroadcast(); // required for CREATE2 address to work correctly. doesn't do anything in a test
-        _callback = new MockCallback{salt: salt}(
-            address(_auctionHouse),
-            Callbacks.Permissions({
-                onCreate: true,
-                onCancel: false,
-                onCurate: false,
-                onPurchase: true,
-                onBid: true,
-                onClaimProceeds: false,
-                receiveQuoteTokens: false,
-                sendBaseTokens: false
-            }),
-            _SELLER
-        );
+        _callback = new MockCallback{salt: salt}(address(_auctionHouse), permissions, _SELLER);
         vm.stopBroadcast();
 
         _routingParams.callbacks = _callback;
@@ -342,39 +341,24 @@ abstract contract BatchAuctionHouseTest is Test, Permit2User, WithSalts {
     }
 
     modifier givenCallbackIsSet() {
-        // Set the salt based on which token flags are set
-        bytes32 salt;
-        if (_callbackSendBaseTokens && _callbackReceiveQuoteTokens) {
-            // 11111111 = 0xFF
-            salt = _getSalt("MockCallbackFF");
-        } else if (_callbackSendBaseTokens) {
-            // 11111101 = 0xFD
-            salt = _getSalt("MockCallbackFD");
-        } else if (_callbackReceiveQuoteTokens) {
-            // 11111110 = 0xFE
-            salt = _getSalt("MockCallbackFE");
-        } else {
-            // 11111100 = 0xFC
-            salt = _getSalt("MockCallbackFC");
-        }
+        // Get the salt
+        Callbacks.Permissions memory permissions = Callbacks.Permissions({
+            onCreate: true,
+            onCancel: true,
+            onCurate: true,
+            onPurchase: true,
+            onBid: true,
+            onClaimProceeds: true,
+            receiveQuoteTokens: _callbackReceiveQuoteTokens,
+            sendBaseTokens: _callbackSendBaseTokens
+        });
+        bytes memory args = abi.encode(address(_auctionHouse), permissions, _SELLER);
+        bytes32 salt = _getSalt("MockCallback", type(MockCallback).creationCode, args);
 
         // Required for CREATE2 address to work correctly. doesn't do anything in a test
         // Source: https://github.com/foundry-rs/foundry/issues/6402
         vm.startBroadcast();
-        _callback = new MockCallback{salt: salt}(
-            address(_auctionHouse),
-            Callbacks.Permissions({
-                onCreate: true,
-                onCancel: true,
-                onCurate: true,
-                onPurchase: true,
-                onBid: true,
-                onClaimProceeds: true,
-                receiveQuoteTokens: _callbackReceiveQuoteTokens,
-                sendBaseTokens: _callbackSendBaseTokens
-            }),
-            _SELLER
-        );
+        _callback = new MockCallback{salt: salt}(address(_auctionHouse), permissions, _SELLER);
         vm.stopBroadcast();
 
         _routingParams.callbacks = _callback;

@@ -8,25 +8,35 @@ import {stdJson} from "forge-std/StdJson.sol";
 contract WithSalts is Test {
     using stdJson for string;
 
-    string internal constant _saltsPath = "./script/salts.json";
+    string internal constant _saltsPath = "./script/salts/salts.json";
     string internal _saltJson;
 
     /// @notice Gets the salt for a given key
-    /// @dev    If the key is not found, the function will revert
+    /// @dev    If the key is not found, the function will return `bytes32(0)`.
     ///
-    /// @param  key_    The key to get the salt for
-    /// @return         The salt for the given key
-    function _getSalt(string memory key_) internal returns (bytes32) {
+    /// @param  contractName_   The contract to get the salt for
+    /// @param  contractCode_   The creation code of the contract
+    /// @param  args_           The abi-encoded constructor arguments to the contract
+    /// @return                 The salt for the given key
+    function _getSalt(
+        string memory contractName_,
+        bytes memory contractCode_,
+        bytes memory args_
+    ) internal returns (bytes32) {
         // Load salt file if needed
         if (bytes(_saltJson).length == 0) {
-            console2.log("Loaded salts file");
             _saltJson = vm.readFile(_saltsPath);
         }
 
-        bytes32 salt = bytes32(vm.parseJson(_saltJson, string.concat(".", key_)));
+        // Generate the bytecode hash
+        bytes memory bytecode = abi.encodePacked(contractCode_, args_);
+        bytes32 bytecodeHash = keccak256(bytecode);
 
-        // Revert if the salt is not set
-        require(salt != bytes32(0), string.concat("Salt not found for key:", key_));
+        bytes32 salt = bytes32(
+            vm.parseJson(
+                _saltJson, string.concat(".", contractName_, ".", vm.toString(bytecodeHash))
+            )
+        );
 
         return salt;
     }

@@ -49,22 +49,24 @@ contract CappedMerkleAllowlistBatchTest is Test, Permit2User, WithSalts {
         vm.store(address(_auctionHouse), bytes32(uint256(6)), bytes32(abi.encode(1))); // Reentrancy
         vm.store(address(_auctionHouse), bytes32(uint256(10)), bytes32(abi.encode(_PROTOCOL))); // Protocol
 
-        bytes32 batchSalt = _getSalt("CappedMerkleAllowlistBatch88");
+        // Get the salt
+        Callbacks.Permissions memory permissions = Callbacks.Permissions({
+            onCreate: true,
+            onCancel: false,
+            onCurate: false,
+            onPurchase: false,
+            onBid: true,
+            onClaimProceeds: false,
+            receiveQuoteTokens: false,
+            sendBaseTokens: false
+        });
+        bytes memory args = abi.encode(address(_auctionHouse), permissions, _SELLER);
+        bytes32 salt =
+            _getSalt("CappedMerkleAllowlist", type(CappedMerkleAllowlist).creationCode, args);
+
         vm.broadcast();
-        _allowlist = new CappedMerkleAllowlist{salt: batchSalt}(
-            address(_auctionHouse),
-            Callbacks.Permissions({
-                onCreate: true,
-                onCancel: false,
-                onCurate: false,
-                onPurchase: false,
-                onBid: true,
-                onClaimProceeds: false,
-                receiveQuoteTokens: false,
-                sendBaseTokens: false
-            }),
-            _SELLER
-        );
+        _allowlist =
+            new CappedMerkleAllowlist{salt: salt}(address(_auctionHouse), permissions, _SELLER);
 
         _merkleProof.push(
             bytes32(0x421df1fa259221d02aa4956eb0d35ace318ca24c0a33a64c1af96cf67cf245b6)
