@@ -23,11 +23,10 @@ Sequences are JSON files located under the `./script/deploy/sequences/` director
 
 Notes:
 
-- If an AuctionHouse-derived contract is to be deployed, it must be the first in order.
-- If a second AuctionHouse-derived contract is to be deployed, it must be the second in order.
+- AuctionHouse-derived contracts will be deployed first
 - Supported entry keys:
   - `name`: The `name` field corresponds to the function in `Deploy.s.sol` that will be used.
-  - `args`: A dictionary, in alphabetical order, of arguments that will be provided to the deployment function.
+  - `args`: An optional dictionary, in alphabetical order, of arguments that will be provided to the deployment function.
   - `installAtomicAuctionHouse`: An optional boolean that indicates whether the module should be installed in the AtomicAuctionHouse contract.
   - `installBatchAuctionHouse`: An optional boolean that indicates whether the module should be installed in the BatchAuctionHouse contract.
 

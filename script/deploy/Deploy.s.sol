@@ -69,6 +69,7 @@ contract Deploy is Script, WithEnvironment, WithSalts {
     mapping(string => bool) public installBatchAuctionHouseMap;
     string[] public deployments;
     mapping(string => address) public deployedTo;
+    uint256[] public auctionHouseIndexes;
 
     // ========== DEPLOY SYSTEM FUNCTIONS ========== //
 
@@ -121,11 +122,18 @@ contract Deploy is Script, WithEnvironment, WithSalts {
         uint256 len = deployments.length;
         require(len > 0, "No deployments");
 
-        // Check if an AuctionHouse is to be deployed
-        bool indexZeroIsAH =
-            _isAtomicAuctionHouse(deployments[0]) || _isBatchAuctionHouse(deployments[0]);
-        if (indexZeroIsAH) {
-            string memory name = deployments[0];
+        // Determine the indexes of any AuctionHouse deployments, as those need to be done first
+        for (uint256 i; i < len; i++) {
+            if (_isAuctionHouse(deployments[i])) {
+                auctionHouseIndexes.push(i);
+            }
+        }
+
+        // Deploy AuctionHouses first
+        uint256 ahLen = auctionHouseIndexes.length;
+        for (uint256 i; i < ahLen; i++) {
+            uint256 index = auctionHouseIndexes[i];
+            string memory name = deployments[index];
 
             if (_isAtomicAuctionHouse(name)) {
                 deployedTo[name] = _deployAtomicAuctionHouse();
@@ -133,31 +141,14 @@ contract Deploy is Script, WithEnvironment, WithSalts {
                 deployedTo[name] = _deployBatchAuctionHouse();
             }
         }
-
-        // Exit if there are no more deployments
-        if (len == 1) {
-            // Save deployments to file
-            _saveDeployment(chain_);
-            return;
-        }
-
-        // Both AuctionHouses can be deployed in the same script, in which case both the first and second sequence items should be the AuctionHouses
-        bool indexOneIsAH = indexZeroIsAH && _isAtomicAuctionHouse(deployments[1])
-            || _isBatchAuctionHouse(deployments[1]);
-        if (indexOneIsAH) {
-            string memory name = deployments[1];
-
-            if (_isAtomicAuctionHouse(name)) {
-                deployedTo[name] = _deployAtomicAuctionHouse();
-            } else {
-                deployedTo[name] = _deployBatchAuctionHouse();
-            }
-        }
-
-        uint256 startingIndex = indexOneIsAH ? 2 : indexZeroIsAH ? 1 : 0;
 
         // Iterate through deployments
-        for (uint256 i = startingIndex; i < len; i++) {
+        for (uint256 i; i < len; i++) {
+            // Skip if this deployment is an AuctionHouse
+            if (_isAuctionHouse(deployments[i])) {
+                continue;
+            }
+
             // Get deploy deploy args from contract name
             string memory name = deployments[i];
             // e.g. a deployment named EncryptedMarginalPrice would require the following function: deployEncryptedMarginalPrice(bytes)
@@ -440,6 +431,10 @@ contract Deploy is Script, WithEnvironment, WithSalts {
     function _isBatchAuctionHouse(string memory deploymentName) internal pure returns (bool) {
         return keccak256(bytes(deploymentName)) == keccak256(_BATCH_AUCTION_HOUSE_NAME)
             || keccak256(bytes(deploymentName)) == keccak256(_BLAST_BATCH_AUCTION_HOUSE_NAME);
+    }
+
+    function _isAuctionHouse(string memory deploymentName) internal pure returns (bool) {
+        return _isAtomicAuctionHouse(deploymentName) || _isBatchAuctionHouse(deploymentName);
     }
 
     function _configureDeployment(string memory data_, string memory name_) internal {
