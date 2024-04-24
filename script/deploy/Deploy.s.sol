@@ -86,6 +86,8 @@ contract Deploy is Script, WithEnvironment, WithSalts {
 
         // TODO can we automate assignment?
 
+        // TODO load existing deployed contracts from env.json (need to add an "axis" section under "current" for each chain)
+
         // Load deployment data
         string memory data = vm.readFile(deployFilePath_);
 
@@ -114,7 +116,11 @@ contract Deploy is Script, WithEnvironment, WithSalts {
         }
     }
 
-    function deploy(string calldata chain_, string calldata deployFilePath_) external {
+    function deploy(
+        string calldata chain_,
+        string calldata deployFilePath_,
+        bool saveDeployment
+    ) external {
         // Setup
         _setUp(chain_, deployFilePath_);
 
@@ -181,7 +187,7 @@ contract Deploy is Script, WithEnvironment, WithSalts {
         }
 
         // Save deployments to file
-        _saveDeployment(chain_);
+        if (saveDeployment) _saveDeployment(chain_);
     }
 
     function _saveDeployment(string memory chain_) internal {

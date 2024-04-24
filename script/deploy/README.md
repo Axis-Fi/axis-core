@@ -66,7 +66,7 @@ To perform a deployment, run the following script:
 For example, the following command will deploy using the specified sequence file, broadcast the changes and verify them using Etherscan:
 
 ```bash
-./script/deploy/deploy.sh ./script/deploy/sequences/auctionhouse-mainnet.json true true
+./script/deploy/deploy.sh ./script/deploy/sequences/origin.json true true
 ```
 
 Following deployment, the addresses need to be manually added into `./script/env.json`.
@@ -74,7 +74,7 @@ Following deployment, the addresses need to be manually added into `./script/env
 If any problems are faced during deployment (or verification), set the third boolean argument to `true` in order to resume the previous transaction. For example:
 
 ```bash
-./script/deploy/deploy.sh ./script/deploy/sequences/auctionhouse-mainnet.json true true true
+./script/deploy/deploy.sh ./script/deploy/sequences/origin.json true true true
 ```
 
 ##### Blast-Specific Version
@@ -84,7 +84,7 @@ Deploying on Blast requires an AuctionHouse with additional constructor argument
 Example command:
 
 ```bash
-CHAIN="blast-testnet" ./script/deploy/deploy.sh ./script/deploy/sequences/auctionhouse-mainnet.json true true
+CHAIN="blast-sepolia" ./script/deploy/deploy.sh ./script/deploy/sequences/origin.json true true
 ```
 
 #### Verification

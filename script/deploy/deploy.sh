@@ -92,7 +92,7 @@ else
 fi
 
 # Deploy using script
-forge script $DEPLOY_SCRIPT:$DEPLOY_CONTRACT --sig "deploy(string,string)()" $CHAIN $DEPLOY_FILE \
+forge script $DEPLOY_SCRIPT:$DEPLOY_CONTRACT --sig "deploy(string,string,bool)()" $CHAIN $DEPLOY_FILE $BROADCAST \
 --rpc-url $RPC_URL --private-key $DEPLOYER_PRIVATE_KEY --froms $DEPLOYER_ADDRESS --slow -vvv \
 $BROADCAST_FLAG \
 $VERIFY_FLAG \
