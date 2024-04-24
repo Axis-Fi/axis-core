@@ -4,13 +4,12 @@ pragma solidity 0.8.19;
 // Libraries
 import {BatchAuctionHouseTest} from "test/BatchAuctionHouse/AuctionHouseTest.sol";
 import {Transfer} from "src/lib/Transfer.sol";
-import {ERC20} from "solmate/tokens/ERC20.sol";
 
 // Mocks
 import {MockAtomicAuctionModule} from "test/modules/Auction/MockAtomicAuctionModule.sol";
 import {MockERC20} from "lib/solmate/src/test/utils/mocks/MockERC20.sol";
 
-import {Auction} from "src/modules/Auction.sol";
+import {IAuction} from "src/interfaces/IAuction.sol";
 import {AuctionHouse} from "src/bases/AuctionHouse.sol";
 import {ICallback} from "src/interfaces/ICallback.sol";
 import {
@@ -43,6 +42,7 @@ contract BatchCreateAuctionTest is BatchAuctionHouseTest {
     }
 
     modifier whenAtomicAuctionModuleIsInstalled() {
+        vm.prank(_OWNER);
         _auctionHouse.installModule(_atomicAuctionModule);
         _;
     }
@@ -61,6 +61,7 @@ contract BatchCreateAuctionTest is BatchAuctionHouseTest {
     // [X] given the curator fee would cause an overflow
     //  [X] it reverts
     // [X] creates the auction lot
+    // [X] creates multiple auction lots
 
     function test_whenModuleNotInstalled_reverts() external whenAuctionTypeIsBatch {
         bytes memory err = abi.encodeWithSelector(
@@ -113,6 +114,7 @@ contract BatchCreateAuctionTest is BatchAuctionHouseTest {
         whenBatchAuctionModuleIsInstalled
     {
         // Sunset the module, which prevents the creation of new auctions using that module
+        vm.prank(_OWNER);
         _auctionHouse.sunsetModule(_batchAuctionModuleKeycode);
 
         // Expect revert
@@ -136,7 +138,7 @@ contract BatchCreateAuctionTest is BatchAuctionHouseTest {
         MockERC20 token = new MockERC20("Token", "TOK", decimals);
 
         // Update routing params
-        _routingParams.baseToken = token;
+        _routingParams.baseToken = address(token);
 
         // Expect revert
         bytes memory err = abi.encodeWithSelector(AuctionHouse.InvalidParams.selector);
@@ -158,7 +160,7 @@ contract BatchCreateAuctionTest is BatchAuctionHouseTest {
         MockERC20 token = new MockERC20("Token", "TOK", decimals);
 
         // Update routing params
-        _routingParams.quoteToken = token;
+        _routingParams.quoteToken = address(token);
 
         // Expect revert
         bytes memory err = abi.encodeWithSelector(AuctionHouse.InvalidParams.selector);
@@ -173,7 +175,7 @@ contract BatchCreateAuctionTest is BatchAuctionHouseTest {
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
     {
-        _routingParams.baseToken = ERC20(address(0));
+        _routingParams.baseToken = address(0);
 
         // Expect revert
         bytes memory err = abi.encodeWithSelector(AuctionHouse.InvalidParams.selector);
@@ -188,7 +190,7 @@ contract BatchCreateAuctionTest is BatchAuctionHouseTest {
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
     {
-        _routingParams.quoteToken = ERC20(address(0));
+        _routingParams.quoteToken = address(0);
 
         // Expect revert
         bytes memory err = abi.encodeWithSelector(AuctionHouse.InvalidParams.selector);
@@ -263,7 +265,7 @@ contract BatchCreateAuctionTest is BatchAuctionHouseTest {
         assertEq(curation.curated, false, "curated mismatch");
 
         // Auction module also updated
-        Auction.Lot memory lotData = _getLotData(_lotId);
+        IAuction.Lot memory lotData = _getLotData(_lotId);
         assertEq(lotData.start, _startTime, "start mismatch");
 
         // Check balances
@@ -293,8 +295,8 @@ contract BatchCreateAuctionTest is BatchAuctionHouseTest {
         emit AuctionCreated(1, wrapVeecode(_routingParams.auctionType, 1), _INFO_HASH);
 
         // Modify the parameters
-        _routingParams.baseToken = _quoteToken;
-        _routingParams.quoteToken = _baseToken;
+        _routingParams.baseToken = address(_quoteToken);
+        _routingParams.quoteToken = address(_baseToken);
         _auctionParams.start = _startTime + 1;
 
         // Create the second auction
@@ -307,7 +309,7 @@ contract BatchCreateAuctionTest is BatchAuctionHouseTest {
         assertEq(address(routing.quoteToken), address(_quoteToken), "lot one: quote token mismatch");
         assertEq(routing.funding, _LOT_CAPACITY, "funding mismatch");
         assertEq(routing.seller, _SELLER, "seller mismatch");
-        Auction.Lot memory lotData = _getLotData(lotIdOne);
+        IAuction.Lot memory lotData = _getLotData(lotIdOne);
         assertEq(lotData.start, _startTime, "lot one: start mismatch");
 
         // Assert values for lot two
@@ -328,7 +330,7 @@ contract BatchCreateAuctionTest is BatchAuctionHouseTest {
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
     {
         // Update routing params
-        _routingParams.quoteToken = _baseToken;
+        _routingParams.quoteToken = address(_baseToken);
 
         // Create the auction
         vm.prank(_SELLER);
@@ -391,6 +393,7 @@ contract BatchCreateAuctionTest is BatchAuctionHouseTest {
         whenDerivativeModuleIsInstalled
     {
         // Sunset the module, which prevents the creation of new auctions using that module
+        vm.prank(_OWNER);
         _auctionHouse.sunsetModule(_derivativeModuleKeycode);
 
         // Expect revert
@@ -465,6 +468,67 @@ contract BatchCreateAuctionTest is BatchAuctionHouseTest {
         assertEq(
             routing.derivativeParams, abi.encode("derivative params"), "derivative params mismatch"
         );
+    }
+
+    // [X] condenser
+    //  [X] reverts when condenser type is sunset
+    //  [X] sets the condenser on the auction lot
+
+    function test_whenCondenserTypeIsSunset_reverts()
+        external
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        whenDerivativeTypeIsSet
+        whenDerivativeModuleIsInstalled
+        whenCondenserModuleIsInstalled
+        whenCondenserIsMapped
+    {
+        // Sunset the module, which prevents the creation of new auctions using that module
+        vm.prank(_OWNER);
+        _auctionHouse.sunsetModule(_condenserModuleKeycode);
+
+        // Expect revert
+        bytes memory err =
+            abi.encodeWithSelector(WithModules.ModuleIsSunset.selector, _condenserModuleKeycode);
+        vm.expectRevert(err);
+
+        vm.prank(_SELLER);
+        _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
+    }
+
+    function test_whenCondenserIsSet()
+        external
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        whenDerivativeTypeIsSet
+        whenDerivativeModuleIsInstalled
+        whenCondenserModuleIsInstalled
+        whenCondenserIsMapped
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
+    {
+        // Create the auction
+        vm.prank(_SELLER);
+        _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
+
+        // Won't revert
+    }
+
+    function test_whenCondenserIsNotSet()
+        external
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        whenDerivativeTypeIsSet
+        whenDerivativeModuleIsInstalled
+        whenCondenserModuleIsInstalled
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
+    {
+        // Create the auction
+        vm.prank(_SELLER);
+        _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
+
+        // Won't revert
     }
 
     // [X] callbacks

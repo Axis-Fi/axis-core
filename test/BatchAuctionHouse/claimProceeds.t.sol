@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.19;
 
-import {Auction} from "src/modules/Auction.sol";
+import {IAuction} from "src/interfaces/IAuction.sol";
 import {AuctionHouse} from "src/bases/AuctionHouse.sol";
-import {BatchAuction} from "src/modules/auctions/BatchAuctionModule.sol";
+import {IBatchAuction} from "src/interfaces/IBatchAuction.sol";
 
 import {MockBatchAuctionModule} from "test/modules/Auction/MockBatchAuctionModule.sol";
 
@@ -16,7 +16,7 @@ contract BatchClaimProceedsTest is BatchAuctionHouseTest {
     uint256 internal constant _BID_AMOUNT_PARTIAL_REFUND = 15e17;
     uint256 internal constant _BID_AMOUNT_OUT_PARTIAL_PAYOUT = 1e18;
 
-    BatchAuction.BidClaim[] internal _bidClaims;
+    IBatchAuction.BidClaim[] internal _bidClaims;
 
     function _assertQuoteTokenBalances(
         uint256 totalInLessFees,
@@ -212,7 +212,7 @@ contract BatchClaimProceedsTest is BatchAuctionHouseTest {
         givenLotIsConcluded
     {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(Auction.Auction_InvalidParams.selector);
+        bytes memory err = abi.encodeWithSelector(IAuction.Auction_InvalidParams.selector);
         vm.expectRevert(err);
 
         // Call function
@@ -236,7 +236,7 @@ contract BatchClaimProceedsTest is BatchAuctionHouseTest {
         givenLotProceedsAreClaimed
     {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(Auction.Auction_InvalidParams.selector);
+        bytes memory err = abi.encodeWithSelector(IAuction.Auction_InvalidParams.selector);
         vm.expectRevert(err);
 
         // Call function

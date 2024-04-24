@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.19;
 
+// Interfaces
+import {IFeeManager} from "src/interfaces/IFeeManager.sol";
+
 // Libraries
 import {Test} from "forge-std/Test.sol";
 
@@ -9,28 +12,31 @@ import {MockAtomicAuctionModule} from "test/modules/Auction/MockAtomicAuctionMod
 import {Permit2User} from "test/lib/permit2/Permit2User.sol";
 
 // Auctions
-import {FeeManager} from "src/bases/FeeManager.sol";
 import {AtomicAuctionHouse} from "src/AtomicAuctionHouse.sol";
 
 // Modules
-import {Keycode, toKeycode} from "src/modules/Modules.sol";
+import {Keycode, keycodeFromVeecode} from "src/modules/Modules.sol";
 
 contract AtomicSetFeeTest is Test, Permit2User {
     MockAtomicAuctionModule internal _mockAuctionModule;
 
     AtomicAuctionHouse internal _auctionHouse;
 
-    address internal immutable _PROTOCOL = address(0x2);
-    address internal immutable _CURATOR = address(0x3);
-    address internal immutable _REFERRER = address(0x4);
+    address internal constant _OWNER = address(0x1);
+    address internal constant _PROTOCOL = address(0x2);
+    address internal constant _CURATOR = address(0x4);
+    address internal constant _REFERRER = address(0x6);
 
-    Keycode internal _auctionKeycode = toKeycode("ATOM");
+    Keycode internal _auctionKeycode;
 
     uint48 internal constant _MAX_FEE = 1e5;
 
     function setUp() external {
-        _auctionHouse = new AtomicAuctionHouse(address(this), _PROTOCOL, _permit2Address);
+        _auctionHouse = new AtomicAuctionHouse(_OWNER, _PROTOCOL, _permit2Address);
         _mockAuctionModule = new MockAtomicAuctionModule(address(_auctionHouse));
+        _auctionKeycode = keycodeFromVeecode(_mockAuctionModule.VEECODE());
+
+        vm.prank(_OWNER);
         _auctionHouse.installModule(_mockAuctionModule);
     }
 
@@ -50,21 +56,23 @@ contract AtomicSetFeeTest is Test, Permit2User {
         vm.expectRevert("UNAUTHORIZED");
 
         vm.prank(_CURATOR);
-        _auctionHouse.setFee(_auctionKeycode, FeeManager.FeeType.Protocol, 100);
+        _auctionHouse.setFee(_auctionKeycode, IFeeManager.FeeType.Protocol, 100);
     }
 
     function test_maxFee_reverts() public {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(FeeManager.InvalidFee.selector);
+        bytes memory err = abi.encodeWithSelector(IFeeManager.InvalidFee.selector);
         vm.expectRevert(err);
 
-        _auctionHouse.setFee(_auctionKeycode, FeeManager.FeeType.Protocol, _MAX_FEE + 1);
+        vm.prank(_OWNER);
+        _auctionHouse.setFee(_auctionKeycode, IFeeManager.FeeType.Protocol, _MAX_FEE + 1);
     }
 
     function test_protocolFee(uint48 fee_) public {
         uint48 fee = uint48(bound(fee_, 0, _MAX_FEE));
 
-        _auctionHouse.setFee(_auctionKeycode, FeeManager.FeeType.Protocol, fee);
+        vm.prank(_OWNER);
+        _auctionHouse.setFee(_auctionKeycode, IFeeManager.FeeType.Protocol, fee);
 
         // Validate
         (uint48 protocolFee, uint48 referrerFee, uint48 maxCuratorFee) =
@@ -77,7 +85,8 @@ contract AtomicSetFeeTest is Test, Permit2User {
     function test_referrerFee(uint48 fee_) public {
         uint48 fee = uint48(bound(fee_, 0, _MAX_FEE));
 
-        _auctionHouse.setFee(_auctionKeycode, FeeManager.FeeType.Referrer, fee);
+        vm.prank(_OWNER);
+        _auctionHouse.setFee(_auctionKeycode, IFeeManager.FeeType.Referrer, fee);
 
         // Validate
         (uint48 protocolFee, uint48 referrerFee, uint48 maxCuratorFee) =
@@ -90,7 +99,8 @@ contract AtomicSetFeeTest is Test, Permit2User {
     function test_curatorFee(uint48 fee_) public {
         uint48 fee = uint48(bound(fee_, 0, _MAX_FEE));
 
-        _auctionHouse.setFee(_auctionKeycode, FeeManager.FeeType.MaxCurator, fee);
+        vm.prank(_OWNER);
+        _auctionHouse.setFee(_auctionKeycode, IFeeManager.FeeType.MaxCurator, fee);
 
         // Validate
         (uint48 protocolFee, uint48 referrerFee, uint48 maxCuratorFee) =

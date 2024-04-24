@@ -28,7 +28,7 @@ classDiagram
     +uint256 lotCounter
     +mapping[Keycode auctionType -> bool] typeSunset
     +mapping[uint256 lotId -> Routing] lotRouting
-    +auction(RoutingParams routing, Auction.AuctionParams params) uint256
+    +auction(RoutingParams routing, IAuction.AuctionParams params) uint256
     +cancel(uint256 lotId)
     +payoutFor(uint256 lotId) Routing
     +priceFor(uint256 lotId, uint256 amount) uint256
@@ -207,8 +207,8 @@ classDiagram
 
 ### TODOs
 
--   [ ] Add section for Auction and Derivative module implementations after we prioritize which ones to build first
--   [ ] Create a function or add return values so that a solver / user can determine the derivative token that a market will return (useful for then creating off-chain orders for that token). This also brings up a point about how certain auction view functions that rely solely on an amount need to be refactored for a multi-variate auction world, e.g. `payoutFor(uint256)` -> `payoutFor(uint256, bytes)`
+- [ ] Add section for Auction and Derivative module implementations after we prioritize which ones to build first
+- [ ] Create a function or add return values so that a solver / user can determine the derivative token that a market will return (useful for then creating off-chain orders for that token). This also brings up a point about how certain auction view functions that rely solely on an amount need to be refactored for a multi-variate auction world, e.g. `payoutFor(uint256)` -> `payoutFor(uint256, bytes)`
 
 ## Processes
 
@@ -221,11 +221,11 @@ sequenceDiagram
   participant AuctionHouse
   participant AtomicAuctionModule
 
-  AuctionOwner->>AuctionHouse: Auctioneer.auction(RoutingParams routing, Auction.AuctionParams params)
+  AuctionOwner->>AuctionHouse: Auctioneer.auction(RoutingParams routing, IAuction.AuctionParams params)
   activate AuctionHouse
     AuctionHouse->>AuctionHouse: _getModuleIfInstalled(auctionType)
 
-    AuctionHouse->>AtomicAuctionModule: auction(uint256 id, Auction.AuctionParams params)
+    AuctionHouse->>AtomicAuctionModule: auction(uint256 id, IAuction.AuctionParams params)
     activate AtomicAuctionModule
       Note right of AtomicAuctionModule: validation, creates Lot record
       AtomicAuctionModule->>AtomicAuctionModule: _auction(uint256 id, Lot lot, bytes implParams)

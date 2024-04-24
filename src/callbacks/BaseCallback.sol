@@ -132,7 +132,7 @@ abstract contract BaseCallback is ICallback, Owned {
         bytes calldata callbackData_
     ) external override onlyAuctionHouse onlyRegisteredLot(lotId_) returns (bytes4) {
         // Call implementation specific logic
-        // If prefunded, then the payout of base tokens will be sent back
+        // If not prefunded, the auction house will expect the payout_ to be sent
         _onPurchase(lotId_, buyer_, amount_, payout_, prefunded_, callbackData_);
 
         return this.onPurchase.selector;

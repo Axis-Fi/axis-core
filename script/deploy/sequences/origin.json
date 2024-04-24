@@ -1,0 +1,32 @@
+{
+    "sequence": [
+        {
+            "name": "AtomicAuctionHouse"
+        },
+        {
+            "name": "BatchAuctionHouse"
+        },
+        {
+            "name": "AtomicCatalogue"
+        },
+        {
+            "name": "BatchCatalogue"
+        },
+        {
+            "name": "EncryptedMarginalPrice",
+            "installBatchAuctionHouse": true
+        },
+        {
+            "name": "FixedPriceSale",
+            "installAtomicAuctionHouse": true
+        },
+        {
+            "name": "AtomicLinearVesting",
+            "installAtomicAuctionHouse": true
+        },
+        {
+            "name": "BatchLinearVesting",
+            "installBatchAuctionHouse": true
+        }
+    ]
+}

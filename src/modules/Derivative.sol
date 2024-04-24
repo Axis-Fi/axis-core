@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: BUSL-1.1
+// SPDX-License-Identifier: BSL-1.1
 pragma solidity 0.8.19;
 
 import {ERC6909} from "lib/solmate/src/tokens/ERC6909.sol";

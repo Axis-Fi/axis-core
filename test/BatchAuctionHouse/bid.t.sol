@@ -5,7 +5,7 @@ pragma solidity 0.8.19;
 import {MockBatchAuctionModule} from "test/modules/Auction/MockBatchAuctionModule.sol";
 
 // Auctions
-import {Auction} from "src/modules/Auction.sol";
+import {IAuction} from "src/interfaces/IAuction.sol";
 import {AuctionHouse} from "src/bases/AuctionHouse.sol";
 
 import {BatchAuctionHouseTest} from "test/BatchAuctionHouse/AuctionHouseTest.sol";
@@ -56,7 +56,7 @@ contract BatchBidTest is BatchAuctionHouseTest {
         givenLotIsCreated
         givenLotIsCancelled
     {
-        bytes memory err = abi.encodeWithSelector(Auction.Auction_MarketNotActive.selector, _lotId);
+        bytes memory err = abi.encodeWithSelector(IAuction.Auction_MarketNotActive.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function
@@ -72,7 +72,7 @@ contract BatchBidTest is BatchAuctionHouseTest {
         givenLotIsCreated
         givenLotIsConcluded
     {
-        bytes memory err = abi.encodeWithSelector(Auction.Auction_MarketNotActive.selector, _lotId);
+        bytes memory err = abi.encodeWithSelector(IAuction.Auction_MarketNotActive.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function
@@ -89,7 +89,7 @@ contract BatchBidTest is BatchAuctionHouseTest {
         givenLotIsConcluded
         givenLotIsSettled
     {
-        bytes memory err = abi.encodeWithSelector(Auction.Auction_MarketNotActive.selector, _lotId);
+        bytes memory err = abi.encodeWithSelector(IAuction.Auction_MarketNotActive.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function
@@ -107,7 +107,7 @@ contract BatchBidTest is BatchAuctionHouseTest {
         givenLotIsSettled
         givenLotProceedsAreClaimed
     {
-        bytes memory err = abi.encodeWithSelector(Auction.Auction_MarketNotActive.selector, _lotId);
+        bytes memory err = abi.encodeWithSelector(IAuction.Auction_MarketNotActive.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function

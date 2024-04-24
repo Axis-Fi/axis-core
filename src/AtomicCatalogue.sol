@@ -1,13 +1,16 @@
-/// SPDX-License-Identifier: APGL-3.0
+// SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity 0.8.19;
 
+// Interfaces
+import {IAtomicAuction} from "src/interfaces/IAtomicAuction.sol";
+
 import {Catalogue} from "src/bases/Catalogue.sol";
-import {AtomicAuction} from "src/modules/auctions/AtomicAuctionModule.sol";
 import {AuctionHouse} from "src/bases/AuctionHouse.sol";
 import {FeeManager} from "src/bases/FeeManager.sol";
-import {keycodeFromVeecode, Keycode} from "src/modules/Modules.sol";
 
-/// @notice Contract that provides view functions for atomic Auctions
+import {keycodeFromVeecode, Keycode} from "src/modules/Keycode.sol";
+
+/// @notice Contract that provides view functions for atomic auctions
 contract AtomicCatalogue is Catalogue {
     // ========== CONSTRUCTOR ========== //
 
@@ -15,9 +18,10 @@ contract AtomicCatalogue is Catalogue {
 
     // ========== ATOMIC AUCTION ========== //
 
+    /// @notice     Returns the payout for a given lot and amount
     function payoutFor(uint96 lotId_, uint256 amount_) external view returns (uint256) {
-        AtomicAuction module =
-            AtomicAuction(address(AuctionHouse(auctionHouse).getModuleForId(lotId_)));
+        IAtomicAuction module =
+            IAtomicAuction(address(AuctionHouse(auctionHouse).getModuleForId(lotId_)));
         AuctionHouse.Routing memory routing = getRouting(lotId_);
 
         // Get protocol fee from FeeManager
@@ -32,9 +36,10 @@ contract AtomicCatalogue is Catalogue {
         return module.payoutFor(lotId_, amount_ - uint96(toProtocol) - uint96(toReferrer));
     }
 
+    /// @notice     Returns the price for a given lot and payout
     function priceFor(uint96 lotId_, uint256 payout_) external view returns (uint256) {
-        AtomicAuction module =
-            AtomicAuction(address(AuctionHouse(auctionHouse).getModuleForId(lotId_)));
+        IAtomicAuction module =
+            IAtomicAuction(address(AuctionHouse(auctionHouse).getModuleForId(lotId_)));
         AuctionHouse.Routing memory routing = getRouting(lotId_);
 
         // Get price from module (in quote token units)
@@ -46,9 +51,10 @@ contract AtomicCatalogue is Catalogue {
         return price;
     }
 
+    /// @notice     Returns the max payout for a given lot
     function maxPayout(uint96 lotId_) external view returns (uint256) {
-        AtomicAuction module =
-            AtomicAuction(address(AuctionHouse(auctionHouse).getModuleForId(lotId_)));
+        IAtomicAuction module =
+            IAtomicAuction(address(AuctionHouse(auctionHouse).getModuleForId(lotId_)));
 
         // No fees need to be considered here since an amount is not provided
 
@@ -56,9 +62,10 @@ contract AtomicCatalogue is Catalogue {
         return module.maxPayout(lotId_);
     }
 
+    /// @notice     Returns the max amount accepted for a given lot
     function maxAmountAccepted(uint96 lotId_) external view returns (uint256) {
-        AtomicAuction module =
-            AtomicAuction(address(AuctionHouse(auctionHouse).getModuleForId(lotId_)));
+        IAtomicAuction module =
+            IAtomicAuction(address(AuctionHouse(auctionHouse).getModuleForId(lotId_)));
         AuctionHouse.Routing memory routing = getRouting(lotId_);
 
         // Get max amount accepted from module
