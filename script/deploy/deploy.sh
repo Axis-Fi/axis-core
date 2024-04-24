@@ -76,7 +76,11 @@ if [ "$VERIFY" = "true" ] || [ "$VERIFY" = "TRUE" ]; then
     exit 1
   fi
 
-  VERIFY_FLAG="--verify --etherscan-api-key $ETHERSCAN_API_KEY"
+  if [ -n "$VERIFIER_URL" ]; then
+    VERIFY_FLAG="--verify --verifier-url $VERIFIER_URL --etherscan-api-key $ETHERSCAN_API_KEY"
+  else
+    VERIFY_FLAG="--verify --etherscan-api-key $ETHERSCAN_API_KEY"
+  fi
   echo "Verification is enabled"
 else
   echo "Verification is disabled"
