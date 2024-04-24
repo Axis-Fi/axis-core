@@ -59,8 +59,7 @@ contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts {
                 onClaimProceeds: false,
                 receiveQuoteTokens: false,
                 sendBaseTokens: false
-            }),
-            _SELLER
+            })
         );
         bytes memory contractCode = type(MockCallback).creationCode;
         (string memory bytecodePath, bytes32 bytecodeHash) =
@@ -79,8 +78,7 @@ contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts {
                 onClaimProceeds: true,
                 receiveQuoteTokens: true,
                 sendBaseTokens: true
-            }),
-            _SELLER
+            })
         );
         (bytecodePath, bytecodeHash) = _writeBytecode(_MOCK_CALLBACK, contractCode, args);
         _setSalt(bytecodePath, "FF", _MOCK_CALLBACK, bytecodeHash);
@@ -97,8 +95,7 @@ contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts {
                 onClaimProceeds: true,
                 receiveQuoteTokens: false,
                 sendBaseTokens: true
-            }),
-            _SELLER
+            })
         );
         (bytecodePath, bytecodeHash) = _writeBytecode(_MOCK_CALLBACK, contractCode, args);
         _setSalt(bytecodePath, "FD", _MOCK_CALLBACK, bytecodeHash);
@@ -115,8 +112,7 @@ contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts {
                 onClaimProceeds: true,
                 receiveQuoteTokens: true,
                 sendBaseTokens: false
-            }),
-            _SELLER
+            })
         );
         (bytecodePath, bytecodeHash) = _writeBytecode(_MOCK_CALLBACK, contractCode, args);
         _setSalt(bytecodePath, "FE", _MOCK_CALLBACK, bytecodeHash);
@@ -133,8 +129,7 @@ contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts {
                 onClaimProceeds: true,
                 receiveQuoteTokens: false,
                 sendBaseTokens: false
-            }),
-            _SELLER
+            })
         );
         (bytecodePath, bytecodeHash) = _writeBytecode(_MOCK_CALLBACK, contractCode, args);
         _setSalt(bytecodePath, "FC", _MOCK_CALLBACK, bytecodeHash);
@@ -151,8 +146,7 @@ contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts {
                 onClaimProceeds: false,
                 receiveQuoteTokens: false,
                 sendBaseTokens: false
-            }),
-            _SELLER
+            })
         );
         (bytecodePath, bytecodeHash) = _writeBytecode(_MOCK_CALLBACK, contractCode, args);
         _setSalt(bytecodePath, "00", _MOCK_CALLBACK, bytecodeHash);
@@ -169,8 +163,7 @@ contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts {
                 onClaimProceeds: false,
                 receiveQuoteTokens: true,
                 sendBaseTokens: false
-            }),
-            _SELLER
+            })
         );
         (bytecodePath, bytecodeHash) = _writeBytecode(_MOCK_CALLBACK, contractCode, args);
         _setSalt(bytecodePath, "02", _MOCK_CALLBACK, bytecodeHash);
@@ -189,8 +182,7 @@ contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts {
                 onClaimProceeds: false,
                 receiveQuoteTokens: false,
                 sendBaseTokens: false
-            }),
-            _SELLER
+            })
         );
         bytes memory contractCode = type(CappedMerkleAllowlist).creationCode;
         (string memory bytecodePath, bytes32 bytecodeHash) =
@@ -209,16 +201,14 @@ contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts {
                 onClaimProceeds: false,
                 receiveQuoteTokens: false,
                 sendBaseTokens: false
-            }),
-            _SELLER
+            })
         );
         (bytecodePath, bytecodeHash) = _writeBytecode(_CAPPED_MERKLE_ALLOWLIST, contractCode, args);
         _setSalt(bytecodePath, "90", _CAPPED_MERKLE_ALLOWLIST, bytecodeHash);
     }
 
     function _generateUniswapV2DTL() internal {
-        bytes memory args =
-            abi.encode(_AUCTION_HOUSE, _SELLER, _UNISWAP_V2_FACTORY, _UNISWAP_V2_ROUTER);
+        bytes memory args = abi.encode(_AUCTION_HOUSE, _UNISWAP_V2_FACTORY, _UNISWAP_V2_ROUTER);
         bytes memory contractCode = type(UniswapV2DirectToLiquidity).creationCode;
         (string memory bytecodePath, bytes32 bytecodeHash) =
             _writeBytecode("UniswapV2DirectToLiquidity", contractCode, args);
@@ -226,7 +216,7 @@ contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts {
     }
 
     function _generateUniswapV3DTL() internal {
-        bytes memory args = abi.encode(_AUCTION_HOUSE, _SELLER, _UNISWAP_V3_FACTORY, _GUNI_FACTORY);
+        bytes memory args = abi.encode(_AUCTION_HOUSE, _UNISWAP_V3_FACTORY, _GUNI_FACTORY);
         bytes memory contractCode = type(UniswapV3DirectToLiquidity).creationCode;
         (string memory bytecodePath, bytes32 bytecodeHash) =
             _writeBytecode("UniswapV3DirectToLiquidity", contractCode, args);
