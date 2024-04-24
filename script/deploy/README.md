@@ -89,8 +89,6 @@ CHAIN="blast-sepolia" ./script/deploy/deploy.sh ./script/deploy/sequences/origin
 
 #### Verification
 
-If the `verify` flag on `deploy.sh` is set, the contract should be verified automatically. This requires the following environment variables to be set on the command-line or in `.env`:
-
-- `ETHERSCAN_API_KEY`
+If the `verify` flag on `deploy.sh` is set, the contract should be verified automatically. If `VERIFIER` is blank or `etherscan`, then `ETHERSCAN_API_KEY` must be set as an environment variable. Additionally, `VERIFIER_URL` can be used to set a custom verifier URL (by default it uses the one configurd in ethers-rs).
 
 If deploying against a Tenderly fork and verifying, [follow the instructions](https://docs.tenderly.co/contract-verification).
