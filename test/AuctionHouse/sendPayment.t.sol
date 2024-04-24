@@ -9,13 +9,15 @@ import {MockFeeOnTransferERC20} from "test/lib/mocks/MockFeeOnTransferERC20.sol"
 import {Permit2User} from "test/lib/permit2/Permit2User.sol";
 import {Callbacks} from "src/lib/Callbacks.sol";
 
-contract SendPaymentTest is Test, Permit2User {
+import {WithSalts} from "test/lib/WithSalts.sol";
+
+contract SendPaymentTest is Test, Permit2User, WithSalts {
     MockAuctionHouse internal _auctionHouse;
 
     address internal constant _OWNER = address(0x1);
-    address internal constant _PROTOCOL = address(0x2);
-    address internal constant _USER = address(0x3);
-    address internal constant _SELLER = address(0x4);
+    address internal constant _SELLER = address(0x2);
+    address internal constant _PROTOCOL = address(0x3);
+    address internal constant _USER = address(0x4);
 
     // Function parameters
     uint256 internal _paymentAmount = 1e18;
@@ -50,69 +52,22 @@ contract SendPaymentTest is Test, Permit2User {
     }
 
     modifier givenAuctionHasCallback() {
-        // // 00000000 - 0x00
-        // bytes memory bytecode = abi.encodePacked(
-        //     type(MockCallback).creationCode,
-        //     abi.encode(address(_auctionHouse), Callbacks.Permissions({
-        //         onCreate: false,
-        //         onCancel: false,
-        //         onCurate: false,
-        //         onPurchase: false,
-        //         onBid: false,
-        //         onClaimProceeds: false,
-        //         receiveQuoteTokens: false,
-        //         sendBaseTokens: false
-        //     }), _SELLER)
-        // );
-        // vm.writeFile(
-        //     "./bytecode/MockCallback00.bin",
-        //     vm.toString(bytecode)
-        // );
-        // // 00000010 - 0x02
-        // bytecode = abi.encodePacked(
-        //     type(MockCallback).creationCode,
-        //     abi.encode(address(_auctionHouse), Callbacks.Permissions({
-        //         onCreate: false,
-        //         onCancel: false,
-        //         onCurate: false,
-        //         onPurchase: false,
-        //         onBid: false,
-        //         onClaimProceeds: false,
-        //         receiveQuoteTokens: true,
-        //         sendBaseTokens: false
-        //     }), _SELLER)
-        // );
-        // vm.writeFile(
-        //     "./bytecode/MockCallback02.bin",
-        //     vm.toString(bytecode)
-        // );
-
-        bytes32 salt;
-        if (_callbackReceiveQuoteTokens) {
-            // 0x02
-            // cast create2 -s 02 -i $(cat ./bytecode/MockCallback02.bin)
-            salt = bytes32(0x8915e4d509f839b103f8fba9c53cadd1f113cebe4c32ee883e6ff1d5b369c3be);
-        } else {
-            // 0x00
-            // cast create2 -s 00 -i $(cat ./bytecode/MockCallback00.bin)
-            salt = bytes32(0xb070aa47e951bb2b5a28d353523a6bd2eca4588bd9d686e9ff5dd9319c185c46);
-        }
+        // Get the salt
+        Callbacks.Permissions memory permissions = Callbacks.Permissions({
+            onCreate: false,
+            onCancel: false,
+            onCurate: false,
+            onPurchase: false,
+            onBid: false,
+            onClaimProceeds: false,
+            receiveQuoteTokens: _callbackReceiveQuoteTokens,
+            sendBaseTokens: false
+        });
+        bytes memory args = abi.encode(address(_auctionHouse), permissions, _SELLER);
+        bytes32 salt = _getSalt("MockCallback", type(MockCallback).creationCode, args);
 
         vm.broadcast(); // required for CREATE2 address to work correctly. doesn't do anything in a test
-        _callback = new MockCallback{salt: salt}(
-            address(_auctionHouse),
-            Callbacks.Permissions({
-                onCreate: false,
-                onCancel: false,
-                onCurate: false,
-                onPurchase: false,
-                onBid: false,
-                onClaimProceeds: false,
-                receiveQuoteTokens: _callbackReceiveQuoteTokens,
-                sendBaseTokens: false
-            }),
-            _SELLER
-        );
+        _callback = new MockCallback{salt: salt}(address(_auctionHouse), permissions, _SELLER);
         _;
     }
 

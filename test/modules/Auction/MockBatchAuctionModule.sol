@@ -3,10 +3,12 @@ pragma solidity 0.8.19;
 
 // Modules
 import {Veecode, toKeycode, wrapVeecode} from "src/modules/Modules.sol";
-import {BatchAuction, BatchAuctionModule} from "src/modules/auctions/BatchAuctionModule.sol";
+import {BatchAuctionModule} from "src/modules/auctions/BatchAuctionModule.sol";
+import {IBatchAuction} from "src/interfaces/IBatchAuction.sol";
 
 // Auctions
-import {Auction, AuctionModule} from "src/modules/Auction.sol";
+import {IAuction} from "src/interfaces/IAuction.sol";
+import {AuctionModule} from "src/modules/Auction.sol";
 
 contract MockBatchAuctionModule is BatchAuctionModule {
     enum LotStatus {
@@ -171,7 +173,7 @@ contract MockBatchAuctionModule is BatchAuctionModule {
     function _revertIfBidInvalid(uint96 lotId_, uint64 bidId_) internal view virtual override {
         // Check that the bid exists
         if (nextBidId <= bidId_) {
-            revert BatchAuction.Auction_InvalidBidId(lotId_, bidId_);
+            revert IBatchAuction.Auction_InvalidBidId(lotId_, bidId_);
         }
     }
 
@@ -182,35 +184,35 @@ contract MockBatchAuctionModule is BatchAuctionModule {
     ) internal view virtual override {
         // Check that the bidder is the owner of the bid
         if (bidData[lotId_][bidId_].bidder != caller_) {
-            revert BatchAuction.Auction_NotBidder();
+            revert IBatchAuction.Auction_NotBidder();
         }
     }
 
     function _revertIfBidClaimed(uint96 lotId_, uint64 bidId_) internal view virtual override {
         // Check that the bid has not been cancelled
         if (bidCancelled[lotId_][bidId_] == true) {
-            revert BatchAuction.Auction_InvalidBidId(lotId_, bidId_);
+            revert IBatchAuction.Auction_InvalidBidId(lotId_, bidId_);
         }
     }
 
     function _revertIfLotSettled(uint96 lotId_) internal view virtual override {
         // Check that the lot has not been settled
         if (lotStatus[lotId_] == LotStatus.Settled) {
-            revert Auction.Auction_MarketNotActive(lotId_);
+            revert IAuction.Auction_MarketNotActive(lotId_);
         }
     }
 
     function _revertIfLotNotSettled(uint96 lotId_) internal view virtual override {
         // Check that the lot has been settled
         if (lotStatus[lotId_] != LotStatus.Settled) {
-            revert Auction.Auction_InvalidParams();
+            revert IAuction.Auction_InvalidParams();
         }
     }
 
     function _revertIfLotProceedsClaimed(uint96 lotId_) internal view virtual override {
         // Check that the lot has not been claimed
         if (lotProceedsClaimed[lotId_]) {
-            revert Auction.Auction_InvalidParams();
+            revert IAuction.Auction_InvalidParams();
         }
     }
 

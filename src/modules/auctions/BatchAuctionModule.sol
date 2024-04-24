@@ -1,122 +1,30 @@
 // SPDX-License-Identifier: BSL-1.1
 pragma solidity 0.8.19;
 
+// Interfaces
+import {IAuction} from "src/interfaces/IAuction.sol";
+import {IBatchAuction} from "src/interfaces/IBatchAuction.sol";
+
+// Auctions
 import {AuctionModule} from "src/modules/Auction.sol";
-
-abstract contract BatchAuction {
-    // ========== ERRORS ========== //
-
-    error Auction_InvalidBidId(uint96 lotId, uint96 bidId);
-    error Auction_NotBidder();
-
-    // ========== DATA STRUCTURES ========== //
-
-    /// @dev Only used in memory so doesn't need to be packed
-    struct BidClaim {
-        address bidder;
-        address referrer;
-        uint256 paid;
-        uint256 payout;
-        uint256 refund;
-    }
-
-    // ========== STATE VARIABLES ========== //
-
-    mapping(uint96 => bytes) public auctionOutput;
-
-    // ========== BATCH AUCTIONS ========== //
-
-    /// @notice     Bid on an auction lot
-    /// @dev        The implementing function should handle the following:
-    ///             - Validate the bid parameters
-    ///             - Store the bid data
-    ///
-    /// @param      lotId_          The lot id
-    /// @param      bidder_         The bidder of the purchased tokens
-    /// @param      referrer_       The referrer of the bid
-    /// @param      amount_         The amount of quote tokens to bid
-    /// @param      auctionData_    The auction-specific data
-    function bid(
-        uint96 lotId_,
-        address bidder_,
-        address referrer_,
-        uint256 amount_,
-        bytes calldata auctionData_
-    ) external virtual returns (uint64 bidId);
-
-    /// @notice     Refund a bid
-    /// @dev        The implementing function should handle the following:
-    ///             - Validate the bid parameters
-    ///             - Authorize `caller_`
-    ///             - Update the bid data
-    ///
-    /// @param      lotId_      The lot id
-    /// @param      bidId_      The bid id
-    /// @param      index_      The index of the bid ID in the auction's bid list
-    /// @param      caller_     The caller
-    /// @return     refund   The amount of quote tokens to refund
-    function refundBid(
-        uint96 lotId_,
-        uint64 bidId_,
-        uint256 index_,
-        address caller_
-    ) external virtual returns (uint256 refund);
-
-    /// @notice     Claim multiple bids
-    /// @dev        The implementing function should handle the following:
-    ///             - Validate the bid parameters
-    ///             - Update the bid data
-    ///
-    /// @param      lotId_          The lot id
-    /// @param      bidIds_         The bid ids
-    /// @return     bidClaims       The bid claim data
-    /// @return     auctionOutput   The auction-specific output
-    function claimBids(
-        uint96 lotId_,
-        uint64[] calldata bidIds_
-    ) external virtual returns (BidClaim[] memory bidClaims, bytes memory auctionOutput);
-
-    /// @notice     Settle a batch auction lot with on-chain storage and settlement
-    /// @dev        The implementing function should handle the following:
-    ///             - Validate the lot parameters
-    ///             - Determine the winning bids
-    ///             - Update the lot data
-    ///
-    /// @param      lotId_          The lot id
-    /// @return     totalIn_        Total amount of quote tokens from bids that were filled
-    /// @return     totalOut_       Total amount of base tokens paid out to winning bids
-    /// @return     auctionOutput_  Custom data returned by the auction module
-    function settle(uint96 lotId_)
-        external
-        virtual
-        returns (uint256 totalIn_, uint256 totalOut_, bytes memory auctionOutput_);
-
-    /// @notice     Claim the seller proceeds from a settled auction lot
-    /// @dev        The implementing function should handle the following:
-    ///             - Validate the lot parameters
-    ///             - Update the lot data
-    ///
-    /// @param      lotId_          The lot id
-    /// @return     purchased       The amount of quote tokens purchased
-    /// @return     sold            The amount of base tokens sold
-    /// @return     capacity        The original capacity of the lot
-    function claimProceeds(uint96 lotId_)
-        external
-        virtual
-        returns (uint256 purchased, uint256 sold, uint256 capacity);
-}
 
 /// @title  Batch Auction Module
 /// @notice A base contract for batch auctions
-abstract contract BatchAuctionModule is BatchAuction, AuctionModule {
-    /// @inheritdoc AuctionModule
+abstract contract BatchAuctionModule is IBatchAuction, AuctionModule {
+    // ========== STATE VARIABLES ========== //
+
+    /// @notice     Custom auction output for each lot
+    /// @dev        Stored during settlement
+    mapping(uint96 => bytes) public lotAuctionOutput;
+
+    /// @inheritdoc IAuction
     function auctionType() external pure override returns (AuctionType) {
         return AuctionType.Batch;
     }
 
     // ========== BATCH AUCTIONS ========== //
 
-    /// @inheritdoc BatchAuction
+    /// @inheritdoc IBatchAuction
     /// @dev        Implements a basic bid function that:
     ///             - Validates the lot and bid parameters
     ///             - Calls the implementation-specific function
@@ -164,7 +72,7 @@ abstract contract BatchAuctionModule is BatchAuction, AuctionModule {
         bytes calldata auctionData_
     ) internal virtual returns (uint64 bidId);
 
-    /// @inheritdoc BatchAuction
+    /// @inheritdoc IBatchAuction
     /// @dev        Implements a basic refundBid function that:
     ///             - Validates the lot and bid parameters
     ///             - Calls the implementation-specific function
@@ -212,7 +120,7 @@ abstract contract BatchAuctionModule is BatchAuction, AuctionModule {
         address caller_
     ) internal virtual returns (uint256 refund);
 
-    /// @inheritdoc BatchAuction
+    /// @inheritdoc IBatchAuction
     /// @dev        Implements a basic claimBids function that:
     ///             - Validates the lot and bid parameters
     ///             - Calls the implementation-specific function
@@ -254,7 +162,7 @@ abstract contract BatchAuctionModule is BatchAuction, AuctionModule {
         uint64[] calldata bidIds_
     ) internal virtual returns (BidClaim[] memory bidClaims, bytes memory auctionOutput);
 
-    /// @inheritdoc BatchAuction
+    /// @inheritdoc IBatchAuction
     /// @dev        Implements a basic settle function that:
     ///             - Validates the lot and bid parameters
     ///             - Calls the implementation-specific function
@@ -271,7 +179,7 @@ abstract contract BatchAuctionModule is BatchAuction, AuctionModule {
         virtual
         override
         onlyInternal
-        returns (uint256 totalIn_, uint256 totalOut_, bytes memory auctionOutput_)
+        returns (uint256 totalIn, uint256 totalOut, bytes memory auctionOutput)
     {
         // Standard validation
         _revertIfLotInvalid(lotId_);
@@ -280,12 +188,12 @@ abstract contract BatchAuctionModule is BatchAuction, AuctionModule {
         _revertIfLotSettled(lotId_);
 
         // Call implementation-specific logic
-        (totalIn_, totalOut_, auctionOutput_) = _settle(lotId_);
+        (totalIn, totalOut, auctionOutput) = _settle(lotId_);
 
         // Store sold and purchased amounts
-        lotData[lotId_].purchased = totalIn_;
-        lotData[lotId_].sold = totalOut_;
-        auctionOutput[lotId_] = auctionOutput_;
+        lotData[lotId_].purchased = totalIn;
+        lotData[lotId_].sold = totalOut;
+        lotAuctionOutput[lotId_] = auctionOutput;
     }
 
     /// @notice     Implementation-specific lot settlement logic
@@ -295,15 +203,15 @@ abstract contract BatchAuctionModule is BatchAuction, AuctionModule {
     ///             - Updating the lot data
     ///
     /// @param      lotId_          The lot ID
-    /// @return     totalIn_        The total amount of quote tokens that filled the auction
-    /// @return     totalOut_       The total amount of base tokens sold
-    /// @return     auctionOutput_  The auction-type specific output to be used with a condenser
+    /// @return     totalIn         The total amount of quote tokens that filled the auction
+    /// @return     totalOut        The total amount of base tokens sold
+    /// @return     auctionOutput   The auction-type specific output to be used with a condenser
     function _settle(uint96 lotId_)
         internal
         virtual
-        returns (uint256 totalIn_, uint256 totalOut_, bytes memory auctionOutput_);
+        returns (uint256 totalIn, uint256 totalOut, bytes memory auctionOutput);
 
-    /// @inheritdoc BatchAuction
+    /// @inheritdoc IBatchAuction
     /// @dev        Implements a basic claimProceeds function that:
     ///             - Validates the lot and bid parameters
     ///             - Calls the implementation-specific function
@@ -319,7 +227,7 @@ abstract contract BatchAuctionModule is BatchAuction, AuctionModule {
         virtual
         override
         onlyInternal
-        returns (uint256 purchased, uint256 sold, uint256 capacity)
+        returns (uint256 purchased, uint256 sold, uint256 capacity, bytes memory auctionOutput)
     {
         // Standard validation
         _revertIfLotInvalid(lotId_);
@@ -333,7 +241,7 @@ abstract contract BatchAuctionModule is BatchAuction, AuctionModule {
         Lot memory lot = lotData[lotId_];
 
         // Return the required data
-        return (lot.purchased, lot.sold, lot.capacity);
+        return (lot.purchased, lot.sold, lot.capacity, lotAuctionOutput[lotId_]);
     }
 
     /// @notice     Implementation-specific claim proceeds logic

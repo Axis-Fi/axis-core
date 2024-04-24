@@ -2,7 +2,7 @@
 pragma solidity 0.8.19;
 
 import {AuctionHouse} from "src/bases/AuctionHouse.sol";
-import {Auction} from "src/modules/Auction.sol";
+import {IAuction} from "src/interfaces/IAuction.sol";
 import {AtomicAuctionHouse} from "src/AtomicAuctionHouse.sol";
 
 import {MockDerivativeModule} from "test/modules/derivatives/mocks/MockDerivativeModule.sol";
@@ -278,7 +278,7 @@ contract AtomicPurchaseTest is AtomicAuctionHouseTest {
         givenSellerHasBaseTokenBalance(_amountOut)
     {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(Auction.Auction_MarketNotActive.selector, _lotId);
+        bytes memory err = abi.encodeWithSelector(IAuction.Auction_MarketNotActive.selector, _lotId);
         vm.expectRevert(err);
 
         // Purchase

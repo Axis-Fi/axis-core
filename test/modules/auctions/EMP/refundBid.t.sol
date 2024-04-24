@@ -4,9 +4,9 @@ pragma solidity 0.8.19;
 import {console2} from "forge-std/console2.sol";
 
 import {Module} from "src/modules/Modules.sol";
-import {Auction} from "src/modules/Auction.sol";
+import {IAuction} from "src/interfaces/IAuction.sol";
 import {EncryptedMarginalPrice} from "src/modules/auctions/EMP.sol";
-import {BatchAuction} from "src/modules/auctions/BatchAuctionModule.sol";
+import {IBatchAuction} from "src/interfaces/IBatchAuction.sol";
 
 import {EmpTest} from "test/modules/auctions/EMP/EMPTest.sol";
 
@@ -25,6 +25,11 @@ contract EmpaModuleRefundBidTest is EmpTest {
     //  [X] given it is within the settle period
     //   [X] it reverts
     //  [X] it refunds the bid amount and updates the bid status
+    // [ ] given the lot's private key has been submitted
+    //  [X] given it is within the settle period
+    //   [X] it reverts
+    //  [X] given it is after the settle period
+    //   [X] it reverts
     // [X] given the lot is decrypted
     //  [X] it reverts
     // [X] given the lot is settled
@@ -43,7 +48,7 @@ contract EmpaModuleRefundBidTest is EmpTest {
 
     function test_invalidLotId_reverts() external {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(Auction.Auction_InvalidLotId.selector, _lotId);
+        bytes memory err = abi.encodeWithSelector(IAuction.Auction_InvalidLotId.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function
@@ -54,7 +59,7 @@ contract EmpaModuleRefundBidTest is EmpTest {
     function test_invalidBidId_reverts() external givenLotIsCreated givenLotHasStarted {
         // Expect revert
         bytes memory err =
-            abi.encodeWithSelector(BatchAuction.Auction_InvalidBidId.selector, _lotId, _bidId);
+            abi.encodeWithSelector(IBatchAuction.Auction_InvalidBidId.selector, _lotId, _bidId);
         vm.expectRevert(err);
 
         // Call the function
@@ -140,7 +145,44 @@ contract EmpaModuleRefundBidTest is EmpTest {
 
     function test_lotIsCancelled_reverts() external givenLotIsCreated givenLotIsCancelled {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(Auction.Auction_MarketNotActive.selector, _lotId);
+        bytes memory err = abi.encodeWithSelector(IAuction.Auction_MarketNotActive.selector, _lotId);
+        vm.expectRevert(err);
+
+        // Call the function
+        vm.prank(address(_auctionHouse));
+        _module.refundBid(_lotId, _bidId, 0, _BIDDER);
+    }
+
+    function test_keyIsSubmitted_withinSettlePeriod_reverts()
+        external
+        givenLotIsCreated
+        givenLotHasStarted
+        givenBidIsCreated(2e18, 1e18)
+        givenLotHasConcluded
+        givenPrivateKeyIsSubmitted
+    {
+        // Expect revert
+        bytes memory err =
+            abi.encodeWithSelector(EncryptedMarginalPrice.Auction_WrongState.selector, _lotId);
+        vm.expectRevert(err);
+
+        // Call the function
+        vm.prank(address(_auctionHouse));
+        _module.refundBid(_lotId, _bidId, 0, _BIDDER);
+    }
+
+    function test_keyIsSubmitted_afterSettlePeriod_reverts()
+        external
+        givenLotIsCreated
+        givenLotHasStarted
+        givenBidIsCreated(2e18, 1e18)
+        givenLotHasConcluded
+        givenLotSettlePeriodHasPassed
+        givenPrivateKeyIsSubmitted
+    {
+        // Expect revert
+        bytes memory err =
+            abi.encodeWithSelector(EncryptedMarginalPrice.Auction_WrongState.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function
@@ -233,7 +275,7 @@ contract EmpaModuleRefundBidTest is EmpTest {
     {
         // Give a mismatched bid ID and index
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(Auction.Auction_InvalidParams.selector);
+        bytes memory err = abi.encodeWithSelector(IAuction.Auction_InvalidParams.selector);
         vm.expectRevert(err);
 
         // Call the function
@@ -250,7 +292,7 @@ contract EmpaModuleRefundBidTest is EmpTest {
         givenBidIsCreated(4e18, 1e18)
     {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(Auction.Auction_InvalidParams.selector);
+        bytes memory err = abi.encodeWithSelector(IAuction.Auction_InvalidParams.selector);
         vm.expectRevert(err);
 
         // Call the function

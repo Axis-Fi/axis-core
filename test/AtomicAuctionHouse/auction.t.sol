@@ -3,14 +3,13 @@ pragma solidity 0.8.19;
 
 // Libraries
 import {AtomicAuctionHouseTest} from "test/AtomicAuctionHouse/AuctionHouseTest.sol";
-import {ERC20} from "solmate/tokens/ERC20.sol";
 
 // Mocks
 import {MockERC20} from "lib/solmate/src/test/utils/mocks/MockERC20.sol";
 import {MockBatchAuctionModule} from "test/modules/Auction/MockBatchAuctionModule.sol";
 
 import {AuctionHouse} from "src/bases/AuctionHouse.sol";
-import {Auction} from "src/modules/Auction.sol";
+import {IAuction} from "src/interfaces/IAuction.sol";
 import {ICallback} from "src/interfaces/ICallback.sol";
 import {
     Keycode,
@@ -133,7 +132,7 @@ contract AtomicCreateAuctionTest is AtomicAuctionHouseTest {
         MockERC20 token = new MockERC20("Token", "TOK", decimals);
 
         // Update routing params
-        _routingParams.baseToken = token;
+        _routingParams.baseToken = address(token);
 
         // Expect revert
         bytes memory err = abi.encodeWithSelector(AuctionHouse.InvalidParams.selector);
@@ -155,7 +154,7 @@ contract AtomicCreateAuctionTest is AtomicAuctionHouseTest {
         MockERC20 token = new MockERC20("Token", "TOK", decimals);
 
         // Update routing params
-        _routingParams.quoteToken = token;
+        _routingParams.quoteToken = address(token);
 
         // Expect revert
         bytes memory err = abi.encodeWithSelector(AuctionHouse.InvalidParams.selector);
@@ -170,7 +169,7 @@ contract AtomicCreateAuctionTest is AtomicAuctionHouseTest {
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
     {
-        _routingParams.baseToken = ERC20(address(0));
+        _routingParams.baseToken = address(0);
 
         // Expect revert
         bytes memory err = abi.encodeWithSelector(AuctionHouse.InvalidParams.selector);
@@ -185,7 +184,7 @@ contract AtomicCreateAuctionTest is AtomicAuctionHouseTest {
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
     {
-        _routingParams.quoteToken = ERC20(address(0));
+        _routingParams.quoteToken = address(0);
 
         // Expect revert
         bytes memory err = abi.encodeWithSelector(AuctionHouse.InvalidParams.selector);
@@ -226,7 +225,7 @@ contract AtomicCreateAuctionTest is AtomicAuctionHouseTest {
         assertEq(curation.curated, false, "curated mismatch");
 
         // Auction module also updated
-        Auction.Lot memory lotData = _getLotData(_lotId);
+        IAuction.Lot memory lotData = _getLotData(_lotId);
         assertEq(lotData.start, _startTime, "start mismatch");
     }
 
@@ -244,8 +243,8 @@ contract AtomicCreateAuctionTest is AtomicAuctionHouseTest {
         emit AuctionCreated(1, wrapVeecode(_routingParams.auctionType, 1), _INFO_HASH);
 
         // Modify the parameters
-        _routingParams.baseToken = _quoteToken;
-        _routingParams.quoteToken = _baseToken;
+        _routingParams.baseToken = address(_quoteToken);
+        _routingParams.quoteToken = address(_baseToken);
         _auctionParams.start = _startTime + 1;
 
         // Create the second auction
@@ -256,7 +255,7 @@ contract AtomicCreateAuctionTest is AtomicAuctionHouseTest {
         AuctionHouse.Routing memory routing = _getLotRouting(lotIdOne);
         assertEq(address(routing.baseToken), address(_baseToken), "lot one: base token mismatch");
         assertEq(address(routing.quoteToken), address(_quoteToken), "lot one: quote token mismatch");
-        Auction.Lot memory lotData = _getLotData(lotIdOne);
+        IAuction.Lot memory lotData = _getLotData(lotIdOne);
         assertEq(lotData.start, _startTime, "lot one: start mismatch");
 
         // Assert values for lot two
@@ -273,7 +272,7 @@ contract AtomicCreateAuctionTest is AtomicAuctionHouseTest {
         whenAtomicAuctionModuleIsInstalled
     {
         // Update routing params
-        _routingParams.quoteToken = _baseToken;
+        _routingParams.quoteToken = address(_baseToken);
 
         // Create the auction
         vm.prank(_SELLER);
@@ -403,6 +402,63 @@ contract AtomicCreateAuctionTest is AtomicAuctionHouseTest {
         assertEq(
             routing.derivativeParams, abi.encode("derivative params"), "derivative params mismatch"
         );
+    }
+
+    // [X] condenser
+    //  [X] reverts when condenser type is sunset
+    //  [X] sets the condenser on the auction lot
+
+    function test_whenCondenserTypeIsSunset_reverts()
+        external
+        whenAuctionTypeIsAtomic
+        whenAtomicAuctionModuleIsInstalled
+        whenDerivativeTypeIsSet
+        whenDerivativeModuleIsInstalled
+        whenCondenserModuleIsInstalled
+        whenCondenserIsMapped
+    {
+        // Sunset the module, which prevents the creation of new auctions using that module
+        vm.prank(_OWNER);
+        _auctionHouse.sunsetModule(_condenserModuleKeycode);
+
+        // Expect revert
+        bytes memory err =
+            abi.encodeWithSelector(WithModules.ModuleIsSunset.selector, _condenserModuleKeycode);
+        vm.expectRevert(err);
+
+        vm.prank(_SELLER);
+        _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
+    }
+
+    function test_whenCondenserIsSet()
+        external
+        whenAuctionTypeIsAtomic
+        whenAtomicAuctionModuleIsInstalled
+        whenDerivativeTypeIsSet
+        whenDerivativeModuleIsInstalled
+        whenCondenserModuleIsInstalled
+        whenCondenserIsMapped
+    {
+        // Create the auction
+        vm.prank(_SELLER);
+        _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
+
+        // Won't revert
+    }
+
+    function test_whenCondenserIsNotSet()
+        external
+        whenAuctionTypeIsAtomic
+        whenAtomicAuctionModuleIsInstalled
+        whenDerivativeTypeIsSet
+        whenDerivativeModuleIsInstalled
+        whenCondenserModuleIsInstalled
+    {
+        // Create the auction
+        vm.prank(_SELLER);
+        _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
+
+        // Won't revert
     }
 
     // [X] callbacks

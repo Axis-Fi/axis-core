@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.19;
 
-import {Auction} from "src/modules/Auction.sol";
+import {IAuction} from "src/interfaces/IAuction.sol";
 import {EncryptedMarginalPrice} from "src/modules/auctions/EMP.sol";
 
 import {EmpTest} from "test/modules/auctions/EMP/EMPTest.sol";
@@ -53,7 +53,7 @@ contract EmpaModuleDecryptBidsTest is EmpTest {
     //  [X] it decrypts the remaining bids and updates the lot status
 
     function test_invalidLotId_reverts() external {
-        bytes memory err = abi.encodeWithSelector(Auction.Auction_InvalidLotId.selector, _lotId);
+        bytes memory err = abi.encodeWithSelector(IAuction.Auction_InvalidLotId.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function
@@ -61,7 +61,7 @@ contract EmpaModuleDecryptBidsTest is EmpTest {
     }
 
     function test_lotHasNotStarted_reverts() external givenLotIsCreated {
-        bytes memory err = abi.encodeWithSelector(Auction.Auction_MarketNotActive.selector, _lotId);
+        bytes memory err = abi.encodeWithSelector(IAuction.Auction_MarketNotActive.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function
@@ -140,7 +140,7 @@ contract EmpaModuleDecryptBidsTest is EmpTest {
 
     function test_givenLotIsCancelled_reverts() external givenLotIsCreated givenLotIsCancelled {
         // Call the function
-        bytes memory err = abi.encodeWithSelector(Auction.Auction_MarketNotActive.selector, _lotId);
+        bytes memory err = abi.encodeWithSelector(IAuction.Auction_MarketNotActive.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function
@@ -309,7 +309,7 @@ contract EmpaModuleDecryptBidsTest is EmpTest {
             hints[i] = _QUEUE_START;
         }
 
-        bytes memory err = abi.encodeWithSelector(Auction.Auction_InvalidParams.selector);
+        bytes memory err = abi.encodeWithSelector(IAuction.Auction_InvalidParams.selector);
         vm.expectRevert(err);
         _module.decryptAndSortBids(_lotId, 5, hints);
     }

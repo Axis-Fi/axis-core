@@ -1,15 +1,21 @@
 // SPDX-License-Identifier: BSL-1.1
 pragma solidity 0.8.19;
 
-/// Protocol dependencies
-import {AuctionModule} from "src/modules/Auction.sol";
-import {Veecode, toVeecode} from "src/modules/Modules.sol";
-import {BatchAuction, BatchAuctionModule} from "src/modules/auctions/BatchAuctionModule.sol";
+// Interfaces
+import {IBatchAuction} from "src/interfaces/IBatchAuction.sol";
 
-// Libraries
-import {FixedPointMathLib as Math} from "solady/utils/FixedPointMathLib.sol";
+// Internal libraries
 import {ECIES, Point} from "src/lib/ECIES.sol";
 import {MaxPriorityQueue, Queue} from "src/lib/MaxPriorityQueue.sol";
+
+// External libraries
+import {FixedPointMathLib as Math} from "solady/utils/FixedPointMathLib.sol";
+
+// Auctions
+import {AuctionModule} from "src/modules/Auction.sol";
+import {BatchAuctionModule} from "src/modules/auctions/BatchAuctionModule.sol";
+
+import {Veecode, toVeecode} from "src/modules/Modules.sol";
 
 /// @notice     Encrypted Marginal Price
 /// @dev        This batch auction module allows for bids to be encrypted off-chain, then stored, decrypted and settled on-chain.
@@ -304,7 +310,7 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
         return bidId;
     }
 
-    /// @inheritdoc BatchAuction
+    /// @inheritdoc IBatchAuction
     /// @dev        Implements a basic refundBid function that:
     ///             - Validates the lot and bid parameters
     ///             - Calls the implementation-specific function
@@ -334,7 +340,7 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
         _revertIfNotBidOwner(lotId_, bidId_, caller_);
         _revertIfBidClaimed(lotId_, bidId_);
         _revertIfDedicatedSettlePeriod(lotId_);
-        _revertIfLotDecrypted(lotId_);
+        _revertIfKeySubmitted(lotId_);
         _revertIfLotSettled(lotId_);
 
         // Call implementation-specific logic
@@ -692,6 +698,10 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
         return auctionData[lotId_].bidIds[index_];
     }
 
+    function getNumBidsInQueue(uint96 lotId_) external view returns (uint256) {
+        return decryptedBids[lotId_].getNumBids();
+    }
+
     // ========== SETTLEMENT ========== //
 
     /// @notice         Helper function to get the next bid from the queue and calculate the price
@@ -1041,9 +1051,9 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
         ) revert Auction_WrongState(lotId_);
     }
 
-    function _revertIfLotDecrypted(uint96 lotId_) internal view {
-        // Auction must not be decrypted
-        if (auctionData[lotId_].status == LotStatus.Decrypted) {
+    function _revertIfKeySubmitted(uint96 lotId_) internal view {
+        // Private key must not have been submitted yet
+        if (auctionData[lotId_].privateKey != 0) {
             revert Auction_WrongState(lotId_);
         }
     }

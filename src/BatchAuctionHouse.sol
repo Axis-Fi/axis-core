@@ -1,108 +1,29 @@
 // SPDX-License-Identifier: BSL-1.1
 pragma solidity 0.8.19;
 
-import {Transfer} from "src/lib/Transfer.sol";
-
-import {AuctionHouse} from "src/bases/AuctionHouse.sol";
-import {Auction, AuctionModule} from "src/modules/Auction.sol";
-import {BatchAuction, BatchAuctionModule} from "src/modules/auctions/BatchAuctionModule.sol";
-import {fromVeecode} from "src/modules/Modules.sol";
+// Interfaces
+import {IAuction} from "src/interfaces/IAuction.sol";
 import {ICallback} from "src/interfaces/ICallback.sol";
+import {IBatchAuction} from "src/interfaces/IBatchAuction.sol";
+import {IBatchAuctionHouse} from "src/interfaces/IBatchAuctionHouse.sol";
+
+// Internal libraries
+import {Transfer} from "src/lib/Transfer.sol";
 import {Callbacks} from "src/lib/Callbacks.sol";
 
-/// @title      BatchRouter
-/// @notice     An interface to define the BatchAuctionHouse's buyer-facing functions
-abstract contract BatchRouter {
-    // ========== DATA STRUCTURES ========== //
+// External libraries
+import {ERC20} from "solmate/tokens/ERC20.sol";
 
-    /// @notice     Parameters used by the bid function
-    /// @dev        This reduces the number of variables in scope for the bid function
-    ///
-    /// @param      lotId               Lot ID
-    /// @param      recipient           Address to receive payout
-    /// @param      referrer            Address of referrer
-    /// @param      amount              Amount of quoteToken to purchase with (in native decimals)
-    /// @param      auctionData         Custom data used by the auction module
-    /// @param      permit2Data_        Permit2 approval for the quoteToken (abi-encoded Permit2Approval struct)
-    struct BidParams {
-        uint96 lotId;
-        address referrer;
-        uint256 amount;
-        bytes auctionData;
-        bytes permit2Data;
-    }
+// Auctions
+import {AuctionHouse} from "src/bases/AuctionHouse.sol";
+import {AuctionModule} from "src/modules/Auction.sol";
+import {BatchAuctionModule} from "src/modules/auctions/BatchAuctionModule.sol";
 
-    // ========== BATCH AUCTIONS ========== //
-
-    /// @notice     Bid on a lot in a batch auction
-    /// @dev        The implementing function must perform the following:
-    ///             1. Validate the bid
-    ///             2. Store the bid
-    ///             3. Transfer the amount of quote token from the bidder
-    ///
-    /// @param      params_         Bid parameters
-    /// @param      callbackData_   Custom data provided to the onBid callback
-    /// @return     bidId           Bid ID
-    function bid(
-        BidParams memory params_,
-        bytes calldata callbackData_
-    ) external virtual returns (uint64 bidId);
-
-    /// @notice     Refund a bid on a lot in a batch auction
-    /// @dev        The implementing function must perform the following:
-    ///             1. Validate the bid
-    ///             2. Pass the request to the auction module to validate and update data
-    ///             3. Send the refund to the bidder
-    ///
-    /// @param      lotId_          Lot ID
-    /// @param      bidId_          Bid ID
-    /// @param      index_          Index of the bid in the auction's bid list
-    function refundBid(uint96 lotId_, uint64 bidId_, uint256 index_) external virtual;
-
-    /// @notice     Claim bid payouts and/or refunds after a batch auction has settled
-    /// @dev        The implementing function must perform the following:
-    ///             1. Validate the lot ID
-    ///             2. Pass the request to the auction module to validate and update bid data
-    ///             3. Send the refund and/or payout to the bidders
-    ///
-    /// @param      lotId_          Lot ID
-    /// @param      bidIds_         Bid IDs
-    function claimBids(uint96 lotId_, uint64[] calldata bidIds_) external virtual;
-
-    /// @notice     Settle a batch auction
-    /// @notice     This function is used for versions with on-chain storage of bids and settlement
-    /// @dev        The implementing function must perform the following:
-    ///             1. Validate the lot
-    ///             2. Pass the request to the auction module to calculate winning bids
-    ///             3. Collect the payout from the seller (if not pre-funded)
-    ///             4. If there is a partial fill, sends the refund and payout to the bidder
-    ///             5. Send the fees to the curator
-    ///
-    /// @param      lotId_          Lot ID
-    /// @return     totalIn_        Total amount of quote tokens from bids that were filled
-    /// @return     totalOut_       Total amount of base tokens paid out to winning bids
-    /// @return     auctionOutput_  Custom data returned by the auction module
-    function settle(uint96 lotId_)
-        external
-        virtual
-        returns (uint256 totalIn_, uint256 totalOut_, bytes memory auctionOutput_);
-
-    /// @notice     Claim the proceeds of a settled auction
-    /// @dev        The implementing function must perform the following:
-    ///             1. Validate the lot
-    ///             2. Pass the request to the auction module to get the proceeds data
-    ///             3. Send the proceeds (quote tokens) to the seller
-    ///             4. Refund any unused base tokens to the seller
-    ///             5. Allocate the curator fee (base tokens) to the curator
-    ///
-    /// @param      lotId_          Lot ID
-    /// @param      callbackData_   Custom data provided to the onClaimProceeds callback
-    function claimProceeds(uint96 lotId_, bytes calldata callbackData_) external virtual;
-}
+import {fromVeecode} from "src/modules/Keycode.sol";
 
 /// @title      BatchAuctionHouse
 /// @notice     As its name implies, the BatchAuctionHouse is where batch auctions are created, bid on, and settled. The core protocol logic is implemented here.
-contract BatchAuctionHouse is AuctionHouse, BatchRouter {
+contract BatchAuctionHouse is IBatchAuctionHouse, AuctionHouse {
     using Callbacks for ICallback;
 
     // ========== ERRORS ========== //
@@ -148,13 +69,13 @@ contract BatchAuctionHouse is AuctionHouse, BatchRouter {
     function _auction(
         uint96 lotId_,
         RoutingParams calldata routing_,
-        Auction.AuctionParams calldata params_
+        IAuction.AuctionParams calldata params_
     ) internal override returns (bool performedCallback) {
         // Validation
 
         // Ensure the auction type is batch
         AuctionModule auctionModule = AuctionModule(_getLatestModuleIfActive(routing_.auctionType));
-        if (auctionModule.auctionType() != Auction.AuctionType.Batch) revert InvalidParams();
+        if (auctionModule.auctionType() != IAuction.AuctionType.Batch) revert InvalidParams();
 
         // Batch auctions must be pre-funded
 
@@ -164,23 +85,23 @@ contract BatchAuctionHouse is AuctionHouse, BatchRouter {
         // Store pre-funding information
         lotRouting[lotId_].funding = params_.capacity;
 
+        ERC20 baseToken = ERC20(routing_.baseToken);
+
         // Handle funding from callback or seller as configured
         if (routing_.callbacks.hasPermission(Callbacks.SEND_BASE_TOKENS_FLAG)) {
-            uint256 balanceBefore = routing_.baseToken.balanceOf(address(this));
+            uint256 balanceBefore = baseToken.balanceOf(address(this));
 
             // The onCreate callback should transfer the base token to this contract
             _onCreateCallback(routing_, lotId_, params_.capacity, true);
 
             // Check that the hook transferred the expected amount of base tokens
-            if (routing_.baseToken.balanceOf(address(this)) < balanceBefore + params_.capacity) {
+            if (baseToken.balanceOf(address(this)) < balanceBefore + params_.capacity) {
                 revert InvalidCallback();
             }
         }
         // Otherwise fallback to a standard ERC20 transfer and then call the onCreate callback
         else {
-            Transfer.transferFrom(
-                routing_.baseToken, msg.sender, address(this), params_.capacity, true
-            );
+            Transfer.transferFrom(baseToken, msg.sender, address(this), params_.capacity, true);
             _onCreateCallback(routing_, lotId_, params_.capacity, false);
         }
 
@@ -273,7 +194,7 @@ contract BatchAuctionHouse is AuctionHouse, BatchRouter {
 
     // ========== BID, REFUND, CLAIM ========== //
 
-    /// @inheritdoc BatchRouter
+    /// @inheritdoc IBatchAuctionHouse
     /// @dev        This function performs the following:
     ///             - Validates the lot ID
     ///             - Records the bid on the auction module
@@ -320,7 +241,7 @@ contract BatchAuctionHouse is AuctionHouse, BatchRouter {
         return bidId;
     }
 
-    /// @inheritdoc BatchRouter
+    /// @inheritdoc IBatchAuctionHouse
     /// @dev        This function performs the following:
     ///             - Validates the lot ID
     ///             - Refunds the bid on the auction module
@@ -352,7 +273,7 @@ contract BatchAuctionHouse is AuctionHouse, BatchRouter {
         emit RefundBid(lotId_, bidId_, msg.sender);
     }
 
-    /// @inheritdoc BatchRouter
+    /// @inheritdoc IBatchAuctionHouse
     /// @dev        This function performs the following:
     ///             - Validates the lot ID
     ///             - Claims the bids on the auction module
@@ -368,7 +289,7 @@ contract BatchAuctionHouse is AuctionHouse, BatchRouter {
 
         // Claim the bids on the auction module
         // The auction module is responsible for validating the bid and authorizing the caller
-        (BatchAuction.BidClaim[] memory bidClaims, bytes memory auctionOutput) =
+        (IBatchAuction.BidClaim[] memory bidClaims, bytes memory auctionOutput) =
             getBatchModuleForId(lotId_).claimBids(lotId_, bidIds_);
 
         // Load routing data for the lot
@@ -381,7 +302,7 @@ contract BatchAuctionHouse is AuctionHouse, BatchRouter {
         // Iterate through the bid claims and handle each one
         uint256 bidClaimsLen = bidClaims.length;
         for (uint256 i = 0; i < bidClaimsLen; i++) {
-            BatchAuction.BidClaim memory bidClaim = bidClaims[i];
+            IBatchAuction.BidClaim memory bidClaim = bidClaims[i];
 
             // If payout is greater than zero, then the bid was filled.
             // However, due to partial fills, there can be both a payout and a refund
@@ -420,7 +341,7 @@ contract BatchAuctionHouse is AuctionHouse, BatchRouter {
         }
     }
 
-    /// @inheritdoc BatchRouter
+    /// @inheritdoc IBatchAuctionHouse
     /// @dev        This function handles the following:
     ///             - Settles the auction on the auction module
     ///
@@ -432,7 +353,7 @@ contract BatchAuctionHouse is AuctionHouse, BatchRouter {
         external
         override
         nonReentrant
-        returns (uint256 totalIn_, uint256 totalOut_, bytes memory auctionOutput_)
+        returns (uint256 totalIn, uint256 totalOut, bytes memory auctionOutput)
     {
         // Validation
         _isLotValid(lotId_);
@@ -442,13 +363,13 @@ contract BatchAuctionHouse is AuctionHouse, BatchRouter {
         BatchAuctionModule module = getBatchModuleForId(lotId_);
 
         // Settle the auction
-        (totalIn_, totalOut_, auctionOutput_) = module.settle(lotId_);
+        (totalIn, totalOut, auctionOutput) = module.settle(lotId_);
 
         // Emit event
         emit Settle(lotId_);
     }
 
-    /// @inheritdoc BatchRouter
+    /// @inheritdoc IBatchAuctionHouse
     /// @dev        This function handles the following:
     ///             - Validates the lot
     ///             - Calls the auction module to claim the proceeds
@@ -468,7 +389,7 @@ contract BatchAuctionHouse is AuctionHouse, BatchRouter {
         _isLotValid(lotId_);
 
         // Call auction module to validate and update data
-        (uint256 purchased_, uint256 sold_, uint256 capacity_) =
+        (uint256 purchased_, uint256 sold_, uint256 capacity_, bytes memory auctionOutput_) =
             getBatchModuleForId(lotId_).claimProceeds(lotId_);
 
         // Load data for the lot
@@ -476,8 +397,6 @@ contract BatchAuctionHouse is AuctionHouse, BatchRouter {
         FeeData storage feeData = lotFees[lotId_];
 
         // Calculate the curator fee and allocate the fees to be claimed
-        uint256 maxCuratorPayout =
-            _calculatePayoutFees(feeData.curated, feeData.curatorFee, capacity_);
         uint256 curatorPayout = _calculatePayoutFees(feeData.curated, feeData.curatorFee, sold_);
 
         // If the curator payout is not zero, allocate it
@@ -486,7 +405,7 @@ contract BatchAuctionHouse is AuctionHouse, BatchRouter {
             // Otherwise, allocate the fee using the internal rewards mechanism
             if (fromVeecode(routing.derivativeReference) != bytes7("")) {
                 // Mint the derivative to the curator
-                _sendPayout(feeData.curator, curatorPayout, routing, bytes(""));
+                _sendPayout(feeData.curator, curatorPayout, routing, auctionOutput_);
             } else {
                 // Allocate the curator fee to be claimed
                 rewards[feeData.curator][routing.baseToken] += curatorPayout;
@@ -519,7 +438,12 @@ contract BatchAuctionHouse is AuctionHouse, BatchRouter {
         // Additionally, bidders are able to claim before the seller, so the funding isn't the right value
         // to use for the refund. Therefore, we use capacity, which is not decremented when batch auctions
         // are settled, minus the amount sold. Then, we add any unearned curator payout.
-        uint256 prefundingRefund = capacity_ - sold_ + maxCuratorPayout - curatorPayout;
+        uint256 prefundingRefund;
+        {
+            uint256 maxCuratorPayout =
+                _calculatePayoutFees(feeData.curated, feeData.curatorFee, capacity_);
+            prefundingRefund = capacity_ - sold_ + maxCuratorPayout - curatorPayout;
+        }
         unchecked {
             routing.funding -= prefundingRefund;
         }

@@ -2,7 +2,7 @@
 pragma solidity 0.8.19;
 
 import {Module} from "src/modules/Modules.sol";
-import {Auction} from "src/modules/Auction.sol";
+import {IAuction} from "src/interfaces/IAuction.sol";
 import {EncryptedMarginalPrice} from "src/modules/auctions/EMP.sol";
 
 import {EmpTest} from "test/modules/auctions/EMP/EMPTest.sol";
@@ -43,7 +43,7 @@ contract EmpaModuleAuctionTest is EmpTest {
     {
         // Expect revert
         bytes memory err = abi.encodeWithSelector(
-            Auction.Auction_InvalidStart.selector, _auctionParams.start, uint48(block.timestamp)
+            IAuction.Auction_InvalidStart.selector, _auctionParams.start, uint48(block.timestamp)
         );
         vm.expectRevert(err);
 
@@ -54,7 +54,7 @@ contract EmpaModuleAuctionTest is EmpTest {
     function test_durationLessThanMinimum_reverts() public givenDuration(uint48(8 hours)) {
         // Expect revert
         bytes memory err = abi.encodeWithSelector(
-            Auction.Auction_InvalidDuration.selector, _auctionParams.duration, uint48(1 days)
+            IAuction.Auction_InvalidDuration.selector, _auctionParams.duration, uint48(1 days)
         );
         vm.expectRevert(err);
 
@@ -64,7 +64,7 @@ contract EmpaModuleAuctionTest is EmpTest {
 
     function test_minimumPriceIsZero_reverts() public givenMinimumPrice(0) {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(Auction.Auction_InvalidParams.selector);
+        bytes memory err = abi.encodeWithSelector(IAuction.Auction_InvalidParams.selector);
         vm.expectRevert(err);
 
         // Call the function
@@ -73,7 +73,7 @@ contract EmpaModuleAuctionTest is EmpTest {
 
     function test_minFillAboveMax_reverts() public givenMinimumFillPercentage(1e5 + 1) {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(Auction.Auction_InvalidParams.selector);
+        bytes memory err = abi.encodeWithSelector(IAuction.Auction_InvalidParams.selector);
         vm.expectRevert(err);
 
         // Call the function
@@ -82,7 +82,7 @@ contract EmpaModuleAuctionTest is EmpTest {
 
     function test_minBidAboveMin_reverts() public givenMinimumBidPercentage(1e5 + 1) {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(Auction.Auction_InvalidParams.selector);
+        bytes memory err = abi.encodeWithSelector(IAuction.Auction_InvalidParams.selector);
         vm.expectRevert(err);
 
         // Call the function
@@ -91,7 +91,7 @@ contract EmpaModuleAuctionTest is EmpTest {
 
     function test_minBidBelowMin_reverts() public givenMinimumBidPercentage(9) {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(Auction.Auction_InvalidParams.selector);
+        bytes memory err = abi.encodeWithSelector(IAuction.Auction_InvalidParams.selector);
         vm.expectRevert(err);
 
         // Call the function
@@ -100,7 +100,7 @@ contract EmpaModuleAuctionTest is EmpTest {
 
     function test_auctionPublicKeyIsInvalid_reverts() public givenAuctionPublicKeyIsInvalid {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(Auction.Auction_InvalidParams.selector);
+        bytes memory err = abi.encodeWithSelector(IAuction.Auction_InvalidParams.selector);
         vm.expectRevert(err);
 
         // Call the function
@@ -112,7 +112,7 @@ contract EmpaModuleAuctionTest is EmpTest {
         _createAuctionLot();
 
         // Assert state
-        Auction.Lot memory lotData = _getAuctionLot(_lotId);
+        IAuction.Lot memory lotData = _getAuctionLot(_lotId);
         assertEq(lotData.start, uint48(block.timestamp));
         assertEq(lotData.conclusion, uint48(block.timestamp + _auctionParams.duration));
     }
@@ -132,7 +132,7 @@ contract EmpaModuleAuctionTest is EmpTest {
         _createAuctionLot();
 
         // Assert state
-        Auction.Lot memory lotData = _getAuctionLot(_lotId);
+        IAuction.Lot memory lotData = _getAuctionLot(_lotId);
         assertEq(lotData.start, _auctionParams.start, "start");
         assertEq(lotData.conclusion, _auctionParams.start + _auctionParams.duration, "conclusion");
         assertEq(lotData.quoteTokenDecimals, _quoteTokenDecimals, "quoteTokenDecimals");
@@ -170,7 +170,7 @@ contract EmpaModuleAuctionTest is EmpTest {
         _createAuctionLot();
 
         // Assert state
-        Auction.Lot memory lotData = _getAuctionLot(_lotId);
+        IAuction.Lot memory lotData = _getAuctionLot(_lotId);
         assertEq(lotData.start, _auctionParams.start, "start");
         assertEq(lotData.conclusion, _auctionParams.start + _auctionParams.duration, "conclusion");
         assertEq(lotData.quoteTokenDecimals, _quoteTokenDecimals, "quoteTokenDecimals");
@@ -208,7 +208,7 @@ contract EmpaModuleAuctionTest is EmpTest {
         _createAuctionLot();
 
         // Assert state
-        Auction.Lot memory lotData = _getAuctionLot(_lotId);
+        IAuction.Lot memory lotData = _getAuctionLot(_lotId);
         assertEq(lotData.start, _auctionParams.start, "start");
         assertEq(lotData.conclusion, _auctionParams.start + _auctionParams.duration, "conclusion");
         assertEq(lotData.quoteTokenDecimals, _quoteTokenDecimals, "quoteTokenDecimals");

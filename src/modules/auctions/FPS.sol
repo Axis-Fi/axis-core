@@ -1,13 +1,16 @@
 // SPDX-License-Identifier: BSL-1.1
 pragma solidity 0.8.19;
 
+// Interfaces
+import {IAtomicAuction} from "src/interfaces/IAtomicAuction.sol";
+
 // Protocol dependencies
 import {Module} from "src/modules/Modules.sol";
 import {AuctionModule} from "src/modules/Auction.sol";
 import {Veecode, toVeecode} from "src/modules/Modules.sol";
-import {AtomicAuction, AtomicAuctionModule} from "src/modules/auctions/AtomicAuctionModule.sol";
+import {AtomicAuctionModule} from "src/modules/auctions/AtomicAuctionModule.sol";
 
-// Libraries
+// External libraries
 import {FixedPointMathLib as Math} from "lib/solmate/src/utils/FixedPointMathLib.sol";
 
 contract FixedPriceSale is AtomicAuctionModule {
@@ -136,26 +139,26 @@ contract FixedPriceSale is AtomicAuctionModule {
 
     // ========== VIEW FUNCTIONS ========== //
 
-    /// @inheritdoc AtomicAuction
+    /// @inheritdoc IAtomicAuction
     function payoutFor(uint96 lotId_, uint256 amount_) public view override returns (uint256) {
         return Math.mulDivDown(
             amount_, 10 ** lotData[lotId_].baseTokenDecimals, auctionData[lotId_].price
         );
     }
 
-    /// @inheritdoc AtomicAuction
+    /// @inheritdoc IAtomicAuction
     function priceFor(uint96 lotId_, uint256 payout_) public view override returns (uint256) {
         return Math.mulDivUp(
             payout_, auctionData[lotId_].price, 10 ** lotData[lotId_].baseTokenDecimals
         );
     }
 
-    /// @inheritdoc AtomicAuction
+    /// @inheritdoc IAtomicAuction
     function maxPayout(uint96 lotId_) public view override returns (uint256) {
         return auctionData[lotId_].maxPayout;
     }
 
-    /// @inheritdoc AtomicAuction
+    /// @inheritdoc IAtomicAuction
     function maxAmountAccepted(uint96 lotId_) public view override returns (uint256) {
         return Math.mulDivUp(
             auctionData[lotId_].maxPayout,
