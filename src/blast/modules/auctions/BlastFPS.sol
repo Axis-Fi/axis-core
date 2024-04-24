@@ -4,7 +4,7 @@ pragma solidity 0.8.19;
 import {FixedPriceSale} from "src/modules/auctions/FPS.sol";
 import {BlastGas} from "src/blast/modules/BlastGas.sol";
 
-contract BlastFPSale is FixedPriceSale, BlastGas {
+contract BlastFPS is FixedPriceSale, BlastGas {
     // ========== CONSTRUCTOR ========== //
 
     constructor(

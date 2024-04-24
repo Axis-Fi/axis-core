@@ -69,14 +69,25 @@ fi
 VERIFY_FLAG=""
 if [ "$VERIFY" = "true" ] || [ "$VERIFY" = "TRUE" ]; then
 
-  # Check if ETHERSCAN_API_KEY is set
-  if [ -z "$ETHERSCAN_API_KEY" ]
-  then
-    echo "No Etherscan API key found. Provide the key in .env or disable verification."
-    exit 1
-  fi
+  if [ -z "$VERIFIER" ] || [ "$VERIFIER" = "etherscan" ]; then
+    Check if ETHERSCAN_API_KEY is set
+    if [ -z "$ETHERSCAN_API_KEY" ]; then
+      echo "No Etherscan API key found. Provide the key in .env or disable verification."
+      exit 1
+    fi
 
-  VERIFY_FLAG="--verify --etherscan-api-key $ETHERSCAN_API_KEY"
+    if [ -n "$VERIFIER_URL" ]; then
+      VERIFY_FLAG="--verify --verifier-url $VERIFIER_URL --etherscan-api-key $ETHERSCAN_API_KEY"
+    else
+      VERIFY_FLAG="--verify --etherscan-api-key $ETHERSCAN_API_KEY"
+    fi
+  else
+    if [ -n "$VERIFIER_URL" ]; then
+      VERIFY_FLAG="--verify --verifier $VERIFIER --verifier-url $VERIFIER_URL"
+    else
+      VERIFY_FLAG="--verify --verifier $VERIFIER"
+    fi
+  fi
   echo "Verification is enabled"
 else
   echo "Verification is disabled"
@@ -92,7 +103,7 @@ else
 fi
 
 # Deploy using script
-forge script $DEPLOY_SCRIPT:$DEPLOY_CONTRACT --sig "deploy(string,string)()" $CHAIN $DEPLOY_FILE \
+forge script $DEPLOY_SCRIPT:$DEPLOY_CONTRACT --sig "deploy(string,string,bool)()" $CHAIN $DEPLOY_FILE $BROADCAST \
 --rpc-url $RPC_URL --private-key $DEPLOYER_PRIVATE_KEY --froms $DEPLOYER_ADDRESS --slow -vvv \
 $BROADCAST_FLAG \
 $VERIFY_FLAG \

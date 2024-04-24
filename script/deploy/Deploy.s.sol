@@ -86,6 +86,8 @@ contract Deploy is Script, WithEnvironment, WithSalts {
 
         // TODO can we automate assignment?
 
+        // TODO load existing deployed contracts from env.json (need to add an "axis" section under "current" for each chain)
+
         // Load deployment data
         string memory data = vm.readFile(deployFilePath_);
 
@@ -114,7 +116,11 @@ contract Deploy is Script, WithEnvironment, WithSalts {
         }
     }
 
-    function deploy(string calldata chain_, string calldata deployFilePath_) external {
+    function deploy(
+        string calldata chain_,
+        string calldata deployFilePath_,
+        bool saveDeployment
+    ) external {
         // Setup
         _setUp(chain_, deployFilePath_);
 
@@ -181,7 +187,7 @@ contract Deploy is Script, WithEnvironment, WithSalts {
         }
 
         // Save deployments to file
-        _saveDeployment(chain_);
+        if (saveDeployment) _saveDeployment(chain_);
     }
 
     function _saveDeployment(string memory chain_) internal {
@@ -206,7 +212,7 @@ contract Deploy is Script, WithEnvironment, WithSalts {
 
         // Iterate through the contracts that were deployed and write their addresses to the file
         uint256 len = deployments.length;
-        for (uint256 i; i < len; ++i) {
+        for (uint256 i; i < len - 1; ++i) {
             vm.writeLine(
                 file,
                 string.concat(
@@ -214,6 +220,17 @@ contract Deploy is Script, WithEnvironment, WithSalts {
                 )
             );
         }
+        // Write last deployment without a comma
+        vm.writeLine(
+            file,
+            string.concat(
+                "\"",
+                deployments[len - 1],
+                "\": \"",
+                vm.toString(deployedTo[deployments[len - 1]]),
+                "\""
+            )
+        );
         vm.writeLine(file, "}");
     }
 
@@ -221,15 +238,18 @@ contract Deploy is Script, WithEnvironment, WithSalts {
 
     function _deployAtomicAuctionHouse() internal virtual returns (address) {
         // No args
-
+        console2.log("");
         console2.log("Deploying AtomicAuctionHouse");
         console2.log("    owner:", _envOwner);
         console2.log("    permit2:", _envPermit2);
         console2.log("    protocol:", _envProtocol);
 
         // Get the salt
-        bytes32 salt_ =
-            _getSalt("AtomicAuctionHouse", abi.encode(_envOwner, _envProtocol, _envPermit2));
+        bytes32 salt_ = _getSalt(
+            "AtomicAuctionHouse",
+            type(AtomicAuctionHouse).creationCode,
+            abi.encode(_envOwner, _envProtocol, _envPermit2)
+        );
 
         if (salt_ == bytes32(0)) {
             vm.broadcast();
@@ -248,15 +268,18 @@ contract Deploy is Script, WithEnvironment, WithSalts {
 
     function _deployBatchAuctionHouse() internal virtual returns (address) {
         // No args
-
+        console2.log("");
         console2.log("Deploying BatchAuctionHouse");
         console2.log("    owner:", _envOwner);
         console2.log("    permit2:", _envPermit2);
         console2.log("    protocol:", _envProtocol);
 
         // Get the salt
-        bytes32 salt_ =
-            _getSalt("BatchAuctionHouse", abi.encode(_envOwner, _envProtocol, _envPermit2));
+        bytes32 salt_ = _getSalt(
+            "BatchAuctionHouse",
+            type(BatchAuctionHouse).creationCode,
+            abi.encode(_envOwner, _envProtocol, _envPermit2)
+        );
 
         if (salt_ == bytes32(0)) {
             vm.broadcast();
@@ -277,12 +300,16 @@ contract Deploy is Script, WithEnvironment, WithSalts {
 
     function deployAtomicCatalogue(bytes memory) public virtual returns (address) {
         // No args used
-
+        console2.log("");
         console2.log("Deploying AtomicCatalogue");
         console2.log("    AtomicAuctionHouse", address(atomicAuctionHouse));
 
         // Get the salt
-        bytes32 salt_ = _getSalt("AtomicCatalogue", abi.encode(address(atomicAuctionHouse)));
+        bytes32 salt_ = _getSalt(
+            "AtomicCatalogue",
+            type(AtomicCatalogue).creationCode,
+            abi.encode(address(atomicAuctionHouse))
+        );
 
         // Deploy the catalogue
         if (salt_ == bytes32(0)) {
@@ -301,12 +328,16 @@ contract Deploy is Script, WithEnvironment, WithSalts {
 
     function deployBatchCatalogue(bytes memory) public virtual returns (address) {
         // No args used
-
+        console2.log("");
         console2.log("Deploying BatchCatalogue");
         console2.log("    BatchAuctionHouse", address(batchAuctionHouse));
 
         // Get the salt
-        bytes32 salt_ = _getSalt("BatchCatalogue", abi.encode(address(batchAuctionHouse)));
+        bytes32 salt_ = _getSalt(
+            "BatchCatalogue",
+            type(BatchCatalogue).creationCode,
+            abi.encode(address(batchAuctionHouse))
+        );
 
         // Deploy the catalogue
         if (salt_ == bytes32(0)) {
@@ -327,12 +358,16 @@ contract Deploy is Script, WithEnvironment, WithSalts {
 
     function deployEncryptedMarginalPrice(bytes memory) public virtual returns (address) {
         // No args used
-
+        console2.log("");
         console2.log("Deploying EncryptedMarginalPrice");
         console2.log("    BatchAuctionHouse", address(batchAuctionHouse));
 
         // Get the salt
-        bytes32 salt_ = _getSalt("EncryptedMarginalPrice", abi.encode(address(batchAuctionHouse)));
+        bytes32 salt_ = _getSalt(
+            "EncryptedMarginalPrice",
+            type(EncryptedMarginalPrice).creationCode,
+            abi.encode(address(batchAuctionHouse))
+        );
 
         // Deploy the module
         if (salt_ == bytes32(0)) {
@@ -351,12 +386,16 @@ contract Deploy is Script, WithEnvironment, WithSalts {
 
     function deployFixedPriceSale(bytes memory) public virtual returns (address) {
         // No args used
-
+        console2.log("");
         console2.log("Deploying FixedPriceSale");
         console2.log("    AtomicAuctionHouse", address(atomicAuctionHouse));
 
         // Get the salt
-        bytes32 salt_ = _getSalt("FixedPriceSale", abi.encode(address(atomicAuctionHouse)));
+        bytes32 salt_ = _getSalt(
+            "FixedPriceSale",
+            type(FixedPriceSale).creationCode,
+            abi.encode(address(atomicAuctionHouse))
+        );
 
         // Deploy the module
         if (salt_ == bytes32(0)) {
@@ -375,12 +414,16 @@ contract Deploy is Script, WithEnvironment, WithSalts {
 
     function deployAtomicLinearVesting(bytes memory) public virtual returns (address) {
         // No args used
-
+        console2.log("");
         console2.log("Deploying LinearVesting (Atomic)");
         console2.log("    AtomicAuctionHouse", address(atomicAuctionHouse));
 
         // Get the salt
-        bytes32 salt_ = _getSalt("LinearVesting", abi.encode(address(atomicAuctionHouse)));
+        bytes32 salt_ = _getSalt(
+            "LinearVesting",
+            type(LinearVesting).creationCode,
+            abi.encode(address(atomicAuctionHouse))
+        );
 
         // Deploy the module
         if (salt_ == bytes32(0)) {
@@ -399,12 +442,16 @@ contract Deploy is Script, WithEnvironment, WithSalts {
 
     function deployBatchLinearVesting(bytes memory) public virtual returns (address) {
         // No args used
-
+        console2.log("");
         console2.log("Deploying LinearVesting (Batch)");
         console2.log("    BatchAuctionHouse", address(batchAuctionHouse));
 
         // Get the salt
-        bytes32 salt_ = _getSalt("LinearVesting", abi.encode(address(batchAuctionHouse)));
+        bytes32 salt_ = _getSalt(
+            "LinearVesting",
+            type(LinearVesting).creationCode,
+            abi.encode(address(batchAuctionHouse))
+        );
 
         // Deploy the module
         if (salt_ == bytes32(0)) {
