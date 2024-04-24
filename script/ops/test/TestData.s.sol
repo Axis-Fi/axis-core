@@ -6,6 +6,7 @@ import {Script, console2} from "forge-std/Script.sol";
 
 // System contracts
 import {AuctionHouse} from "src/bases/AuctionHouse.sol";
+import {IAuctionHouse} from "src/interfaces/IAuctionHouse.sol";
 import {toKeycode, toVeecode} from "src/modules/Modules.sol";
 import {EncryptedMarginalPrice} from "src/modules/auctions/EMP.sol";
 import {ECIES, Point} from "src/lib/ECIES.sol";
@@ -65,10 +66,10 @@ contract TestData is Script {
         baseToken.approve(address(auctionHouse), 1e24);
 
         // Create LSBBA auction with the provided public key
-        AuctionHouse.RoutingParams memory routingParams;
+        IAuctionHouse.RoutingParams memory routingParams;
         routingParams.auctionType = toKeycode("EMPAM");
-        routingParams.baseToken = baseToken;
-        routingParams.quoteToken = quoteToken;
+        routingParams.baseToken = address(baseToken);
+        routingParams.quoteToken = address(quoteToken);
         // No callbacks, allowlist, derivative, or other routing params needed
 
         EncryptedMarginalPrice.AuctionDataParams memory auctionDataParams;
