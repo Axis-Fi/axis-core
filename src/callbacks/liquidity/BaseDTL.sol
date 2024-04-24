@@ -83,9 +83,7 @@ abstract contract BaseDirectToLiquidity is BaseCallback {
 
     // ========== CONSTRUCTOR ========== //
 
-    constructor(
-        address auctionHouse_
-    )
+    constructor(address auctionHouse_)
         BaseCallback(
             auctionHouse_,
             Callbacks.Permissions({
@@ -303,11 +301,10 @@ abstract contract BaseDirectToLiquidity is BaseCallback {
         {
             ERC20 baseToken_;
             ERC20 quoteToken_;
-            (seller, baseToken_, quoteToken_, , , , , , ) = AuctionHouse(auctionHouse).lotRouting(lotId_);
+            (seller, baseToken_, quoteToken_,,,,,,) = AuctionHouse(auctionHouse).lotRouting(lotId_);
             baseToken = address(baseToken_);
             quoteToken = address(quoteToken_);
         }
-        
 
         uint256 baseTokensRequired;
         uint256 quoteTokensRequired;
@@ -348,8 +345,9 @@ abstract contract BaseDirectToLiquidity is BaseCallback {
         }
 
         // Mint and deposit into the pool
-        (ERC20 poolToken) =
-            _mintAndDeposit(lotId_, quoteToken, quoteTokensRequired, baseToken, baseTokensRequired, callbackData_);
+        (ERC20 poolToken) = _mintAndDeposit(
+            lotId_, quoteToken, quoteTokensRequired, baseToken, baseTokensRequired, callbackData_
+        );
         uint256 poolTokenQuantity = poolToken.balanceOf(address(this));
 
         // If vesting is enabled, create the vesting tokens

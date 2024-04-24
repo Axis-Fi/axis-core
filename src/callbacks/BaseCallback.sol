@@ -18,10 +18,7 @@ abstract contract BaseCallback is ICallback {
 
     // ========== CONSTRUCTOR ========== //
 
-    constructor(
-        address auctionHouse_,
-        Callbacks.Permissions memory permissions_
-    ) {
+    constructor(address auctionHouse_, Callbacks.Permissions memory permissions_) {
         // Validate the permissions against the deployed address
         Callbacks.validateCallbacksPermissions(this, permissions_);
 
