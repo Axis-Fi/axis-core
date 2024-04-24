@@ -20,7 +20,6 @@ import {LinearVesting} from "src/modules/derivatives/LinearVesting.sol";
 import {MockERC20} from "solmate/test/utils/mocks/MockERC20.sol";
 
 import {WithSalts} from "test/lib/WithSalts.sol";
-import {console2} from "forge-std/console2.sol";
 
 abstract contract UniswapV3DirectToLiquidityTest is Test, Permit2User, WithSalts {
     using Callbacks for UniswapV3DirectToLiquidity;
