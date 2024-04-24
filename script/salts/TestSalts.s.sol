@@ -2,7 +2,7 @@
 pragma solidity 0.8.19;
 
 // Scripting libraries
-import {Script, console2} from "lib/forge-std/src/Script.sol";
+import {Script} from "lib/forge-std/src/Script.sol";
 import {WithEnvironment} from "script/deploy/WithEnvironment.s.sol";
 import {Permit2User} from "test/lib/permit2/Permit2User.sol";
 import {WithSalts} from "script/salts/WithSalts.s.sol";
