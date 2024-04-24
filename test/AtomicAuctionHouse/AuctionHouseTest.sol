@@ -30,7 +30,7 @@ import {AtomicAuctionHouse} from "src/AtomicAuctionHouse.sol";
 import {AuctionHouse} from "src/bases/AuctionHouse.sol";
 import {AuctionModule} from "src/modules/Auction.sol";
 
-import {Veecode, toKeycode, keycodeFromVeecode, Keycode} from "src/modules/Modules.sol";
+import {Veecode, toKeycode, keycodeFromVeecode, Keycode} from "src/modules/Keycode.sol";
 
 import {WithSalts} from "test/lib/WithSalts.sol";
 
