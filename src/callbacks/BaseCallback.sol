@@ -1,12 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.19;
 
-import {Owned} from "lib/solmate/src/auth/Owned.sol";
-
 import {ICallback} from "src/interfaces/ICallback.sol";
 import {Callbacks} from "src/lib/Callbacks.sol";
 
-abstract contract BaseCallback is ICallback, Owned {
+abstract contract BaseCallback is ICallback {
     // ========== ERRORS ========== //
 
     error Callback_InvalidParams();
@@ -16,22 +14,19 @@ abstract contract BaseCallback is ICallback, Owned {
     // ========== STATE VARIABLES ========== //
 
     address public auctionHouse;
-    address public seller;
     mapping(uint96 => bool) public lotIdRegistered;
 
     // ========== CONSTRUCTOR ========== //
 
     constructor(
         address auctionHouse_,
-        Callbacks.Permissions memory permissions_,
-        address seller_
-    ) Owned(seller_) {
+        Callbacks.Permissions memory permissions_
+    ) {
         // Validate the permissions against the deployed address
         Callbacks.validateCallbacksPermissions(this, permissions_);
 
-        // Set the auction house and seller
+        // Set the auction house
         auctionHouse = auctionHouse_;
-        seller = seller_;
     }
 
     // ========== MODIFIERS ========== //
@@ -57,9 +52,6 @@ abstract contract BaseCallback is ICallback, Owned {
         bool prefund_,
         bytes calldata callbackData_
     ) external override onlyAuctionHouse returns (bytes4) {
-        // Validate the seller
-        if (seller_ != seller) revert Callback_NotAuthorized();
-
         // Validate the lot registration
         if (lotIdRegistered[lotId_]) revert Callback_InvalidParams();
 
@@ -186,10 +178,4 @@ abstract contract BaseCallback is ICallback, Owned {
         uint256 refund_,
         bytes calldata callbackData_
     ) internal virtual;
-
-    // ========== ADMIN FUNCTIONS ========= //
-
-    function setSeller(address seller_) external onlyOwner {
-        seller = seller_;
-    }
 }

@@ -28,9 +28,8 @@ contract CappedMerkleAllowlist is MerkleAllowlist {
 
     constructor(
         address auctionHouse_,
-        Callbacks.Permissions memory permissions_,
-        address seller_
-    ) MerkleAllowlist(auctionHouse_, permissions_, seller_) {}
+        Callbacks.Permissions memory permissions_
+    ) MerkleAllowlist(auctionHouse_, permissions_) {}
 
     // ========== CALLBACK FUNCTIONS ========== //
 
