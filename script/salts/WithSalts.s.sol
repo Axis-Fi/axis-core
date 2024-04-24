@@ -8,12 +8,12 @@ import {stdJson} from "forge-std/StdJson.sol";
 contract WithSalts is Script {
     using stdJson for string;
 
-    string internal constant _saltsPath = "./script/salts/salts.json";
-    string internal constant _bytecodeDir = "bytecode";
+    string internal constant _SALTS_PATH = "./script/salts/salts.json";
+    string internal constant _BYTECODE_DIR = "bytecode";
     string internal _saltJson;
 
     function _getBytecodeDirectory() internal pure returns (string memory) {
-        return string.concat("./", _bytecodeDir);
+        return string.concat("./", _BYTECODE_DIR);
     }
 
     function _getBytecodePath(string memory name_) internal pure returns (string memory) {
@@ -27,7 +27,7 @@ contract WithSalts is Script {
 
             string[] memory inputs = new string[](2);
             inputs[0] = "mkdir";
-            inputs[1] = _bytecodeDir;
+            inputs[1] = _BYTECODE_DIR;
 
             vm.ffi(inputs);
         }
@@ -57,7 +57,7 @@ contract WithSalts is Script {
     function _getSalt(string memory contractName_, bytes memory args_) internal returns (bytes32) {
         // Load salt file if needed
         if (bytes(_saltJson).length == 0) {
-            _saltJson = vm.readFile(_saltsPath);
+            _saltJson = vm.readFile(_SALTS_PATH);
         }
 
         bytes32 salt = bytes32(

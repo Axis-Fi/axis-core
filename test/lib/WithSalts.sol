@@ -2,13 +2,12 @@
 pragma solidity 0.8.19;
 
 import {Test} from "forge-std/Test.sol";
-import {console2} from "forge-std/console2.sol";
 import {stdJson} from "forge-std/StdJson.sol";
 
 contract WithSalts is Test {
     using stdJson for string;
 
-    string internal constant _saltsPath = "./script/salts/salts.json";
+    string internal constant _SALTS_PATH = "./script/salts/salts.json";
     string internal _saltJson;
 
     /// @notice Gets the salt for a given key
@@ -25,7 +24,7 @@ contract WithSalts is Test {
     ) internal returns (bytes32) {
         // Load salt file if needed
         if (bytes(_saltJson).length == 0) {
-            _saltJson = vm.readFile(_saltsPath);
+            _saltJson = vm.readFile(_SALTS_PATH);
         }
 
         // Generate the bytecode hash
