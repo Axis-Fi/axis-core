@@ -35,20 +35,24 @@ contract AuctionHouseSaltsBlast is Script, WithEnvironment, WithSalts {
         console2.log("USDB:", _envUsdb);
     }
 
-    function generate(string calldata chain_, string calldata prefix_) public {
+    function generate(string calldata chain_, string calldata prefix_, bool atomic_) public {
         _setUp(chain_);
 
         // Calculate salt for the BlastAtomicAuctionHouse
         bytes memory args =
             abi.encode(_envOwner, _envProtocol, _envPermit2, _envBlast, _envWeth, _envUsdb);
-        bytes memory contractCode = type(BlastAtomicAuctionHouse).creationCode;
-        (string memory bytecodePath, bytes32 bytecodeHash) =
-            _writeBytecode("BlastAtomicAuctionHouse", contractCode, args);
-        _setSalt(bytecodePath, prefix_, "BlastAtomicAuctionHouse", bytecodeHash);
 
-        // Calculate salt for the BlastBatchAuctionHouse
-        contractCode = type(BlastBatchAuctionHouse).creationCode;
-        (bytecodePath, bytecodeHash) = _writeBytecode("BlastBatchAuctionHouse", contractCode, args);
-        _setSalt(bytecodePath, prefix_, "BlastBatchAuctionHouse", bytecodeHash);
+        if (atomic_) {
+            bytes memory contractCode = type(BlastAtomicAuctionHouse).creationCode;
+            (string memory bytecodePath, bytes32 bytecodeHash) =
+                _writeBytecode("BlastAtomicAuctionHouse", contractCode, args);
+            _setSalt(bytecodePath, prefix_, "BlastAtomicAuctionHouse", bytecodeHash);
+        } else {
+            // Calculate salt for the BlastBatchAuctionHouse
+            bytes memory contractCode = type(BlastBatchAuctionHouse).creationCode;
+            (string memory bytecodePath, bytes32 bytecodeHash) =
+                _writeBytecode("BlastBatchAuctionHouse", contractCode, args);
+            _setSalt(bytecodePath, prefix_, "BlastBatchAuctionHouse", bytecodeHash);
+        }
     }
 }
