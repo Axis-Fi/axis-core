@@ -129,10 +129,8 @@ contract UniswapV3DirectToLiquidity is BaseDirectToLiquidity {
         // Decode the callback data
         OnClaimProceedsParams memory params = abi.decode(callbackData_, (OnClaimProceedsParams));
 
-        DTLConfiguration memory config = lotConfiguration[lotId_];
-
         // Extract the pool fee from the implParams
-        (uint24 poolFee) = abi.decode(config.implParams, (uint24));
+        (uint24 poolFee) = abi.decode(lotConfiguration[lotId_].implParams, (uint24));
 
         // Determine the ordering of tokens
         bool quoteTokenIsToken0 = quoteToken_ < baseToken_;
@@ -159,8 +157,6 @@ contract UniswapV3DirectToLiquidity is BaseDirectToLiquidity {
         {
             // Adjust the full-range ticks according to the tick spacing for the current fee
             int24 tickSpacing = uniV3Factory.feeAmountTickSpacing(poolFee);
-            int24 minTick = TickMath.MIN_TICK / tickSpacing * tickSpacing;
-            int24 maxTick = TickMath.MAX_TICK / tickSpacing * tickSpacing;
 
             // Create an unmanaged pool
             // The range of the position will not be changed after deployment
@@ -169,8 +165,8 @@ contract UniswapV3DirectToLiquidity is BaseDirectToLiquidity {
                 quoteTokenIsToken0 ? quoteToken_ : baseToken_,
                 quoteTokenIsToken0 ? baseToken_ : quoteToken_,
                 poolFee,
-                minTick,
-                maxTick
+                TickMath.MIN_TICK / tickSpacing * tickSpacing,
+                TickMath.MAX_TICK / tickSpacing * tickSpacing
             );
         }
 
