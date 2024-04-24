@@ -25,7 +25,6 @@ fi
 
 # Set flag for atomic or batch auction
 ATOMIC=$( if [ "$MODE" == "atomic" ]; then echo "true"; else echo "false"; fi )
-echo $ATOMIC
 
 # Check that the prefix is specified
 if [ -z "$PREFIX" ]
