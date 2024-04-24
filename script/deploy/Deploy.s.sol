@@ -212,7 +212,7 @@ contract Deploy is Script, WithEnvironment, WithSalts {
 
         // Iterate through the contracts that were deployed and write their addresses to the file
         uint256 len = deployments.length;
-        for (uint256 i; i < len; ++i) {
+        for (uint256 i; i < len - 1; ++i) {
             vm.writeLine(
                 file,
                 string.concat(
@@ -220,6 +220,13 @@ contract Deploy is Script, WithEnvironment, WithSalts {
                 )
             );
         }
+        // Write last deployment without a comma
+        vm.writeLine(
+            file,
+            string.concat(
+                "\"", deployments[len - 1], "\": \"", vm.toString(deployedTo[deployments[len - 1]])
+            )
+        );
         vm.writeLine(file, "}");
     }
 
