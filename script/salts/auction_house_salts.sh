@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Usage:
-# ./auction_house_salts.sh <atomic | batch> <prefix> <SALT_KEY>
+# ./auction_house_salts.sh <atomic | batch> <prefix>
 #
 # Expects the following environment variables:
 # CHAIN: The chain to deploy to, based on values from the ./script/env.json file.
@@ -30,13 +30,6 @@ then
   exit 1
 fi
 
-# Check that the salt key is specified
-if [ -z "$SALT_KEY" ]
-then
-  echo "No salt key specified. Provide the salt key after the command as argument 3."
-  exit 1
-fi
-
 echo "Using RPC at URL: $RPC_URL"
 echo "Using chain: $CHAIN"
 
@@ -44,7 +37,7 @@ echo "Using chain: $CHAIN"
 if [[ $CHAIN == *"blast"* ]]
 then
   echo "Using Blast-specific contracts"
-  forge script ./script/deploy/AuctionHouseSaltsBlast.s.sol:AuctionHouseSaltsBlast --sig "generate(string)()" $CHAIN
+  forge script ./script/salts/AuctionHouseSaltsBlast.s.sol:AuctionHouseSaltsBlast --sig "generate(string,string)()" $CHAIN $PREFIX
 
     # Set the bytecode file
     if [ "$MODE" == "atomic" ]
@@ -55,7 +48,7 @@ then
     fi
 else
   echo "Using standard contracts"
-  forge script ./script/deploy/AuctionHouseSalts.s.sol:AuctionHouseSalts --sig "generate(string)()" $CHAIN
+  forge script ./script/salts/AuctionHouseSalts.s.sol:AuctionHouseSalts --sig "generate(string,string)()" $CHAIN $PREFIX
 
     # Set the bytecode file
     if [ "$MODE" == "atomic" ]
@@ -65,9 +58,3 @@ else
         BYTECODE_FILE="BatchAuctionHouse"
     fi
 fi
-
-# Generate salts
-echo ""
-echo "$BYTECODE_FILE:"
-echo "    Using PREFIX: $PREFIX"
-./script/deploy/salts.sh "./bytecode/$BYTECODE_FILE.bin" $PREFIX $SALT_KEY

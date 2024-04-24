@@ -2,13 +2,11 @@
     "sequence": [
         {
             "name": "AtomicAuctionHouse",
-            "args": {},
-            "saltKey": "AtomicAuctionHouse"
+            "args": {}
         },
         {
             "name": "BatchAuctionHouse",
-            "args": {},
-            "saltKey": "BatchAuctionHouse"
+            "args": {}
         },
         {
             "name": "AtomicCatalogue",

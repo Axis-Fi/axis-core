@@ -4,11 +4,12 @@ pragma solidity 0.8.19;
 // Scripting libraries
 import {Script, console2} from "lib/forge-std/src/Script.sol";
 import {WithEnvironment} from "script/deploy/WithEnvironment.s.sol";
+import {WithSalts} from "script/salts/WithSalts.s.sol";
 
 import {BlastAtomicAuctionHouse} from "src/blast/BlastAtomicAuctionHouse.sol";
 import {BlastBatchAuctionHouse} from "src/blast/BlastBatchAuctionHouse.sol";
 
-contract AuctionHouseSaltsBlast is Script, WithEnvironment {
+contract AuctionHouseSaltsBlast is Script, WithEnvironment, WithSalts {
     address internal _envOwner;
     address internal _envPermit2;
     address internal _envProtocol;
@@ -34,27 +35,20 @@ contract AuctionHouseSaltsBlast is Script, WithEnvironment {
         console2.log("USDB:", _envUsdb);
     }
 
-    function generate(string calldata chain_) public {
+    function generate(string calldata chain_, string calldata prefix_) public {
         _setUp(chain_);
 
         // Calculate salt for the BlastAtomicAuctionHouse
-        bytes memory bytecode = abi.encodePacked(
-            type(BlastAtomicAuctionHouse).creationCode,
-            abi.encode(_envOwner, _envProtocol, _envPermit2, _envBlast, _envWeth, _envUsdb)
-        );
-        vm.writeFile("./bytecode/BlastAtomicAuctionHouse.bin", vm.toString(bytecode));
-        console2.log(
-            "BlastAtomicAuctionHouse bytecode written to ./bytecode/BlastAtomicAuctionHouse.bin"
-        );
+        bytes memory args =
+            abi.encode(_envOwner, _envProtocol, _envPermit2, _envBlast, _envWeth, _envUsdb);
+        bytes memory contractCode = type(BlastAtomicAuctionHouse).creationCode;
+        (string memory bytecodePath, bytes32 bytecodeHash) =
+            _writeBytecode("BlastAtomicAuctionHouse", contractCode, args);
+        _setSalt(bytecodePath, prefix_, "BlastAtomicAuctionHouse", bytecodeHash);
 
         // Calculate salt for the BlastBatchAuctionHouse
-        bytecode = abi.encodePacked(
-            type(BlastBatchAuctionHouse).creationCode,
-            abi.encode(_envOwner, _envProtocol, _envPermit2, _envBlast, _envWeth, _envUsdb)
-        );
-        vm.writeFile("./bytecode/BlastBatchAuctionHouse.bin", vm.toString(bytecode));
-        console2.log(
-            "BlastBatchAuctionHouse bytecode written to ./bytecode/BlastBatchAuctionHouse.bin"
-        );
+        contractCode = type(BlastBatchAuctionHouse).creationCode;
+        (bytecodePath, bytecodeHash) = _writeBytecode("BlastBatchAuctionHouse", contractCode, args);
+        _setSalt(bytecodePath, prefix_, "BlastBatchAuctionHouse", bytecodeHash);
     }
 }
