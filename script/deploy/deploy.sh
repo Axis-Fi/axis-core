@@ -5,15 +5,9 @@
 #
 # Environment variables:
 # CHAIN:              Chain name to deploy to. Corresponds to names in "./script/env.json".
-# DEPLOY_SCRIPT:      Path to the Forge deploy script. Defaults to "./script/deploy/Deploy.s.sol".
-# DEPLOY_CONTRACT:    Contract name in the deploy script. Defaults to "Deploy".
 # ETHERSCAN_API_KEY:  API key for Etherscan verification. Should be specified in .env.
 # RPC_URL:            URL for the RPC node. Should be specified in .env.
 # VERIFIER_URL:       URL for the Etherscan API verifier. Should be specified when used on an unsupported chain.
-
-# Specify either of these variables to override the defaults
-DEPLOY_SCRIPT=${DEPLOY_SCRIPT:-"./script/deploy/Deploy.s.sol"}
-DEPLOY_CONTRACT=${DEPLOY_CONTRACT:-"Deploy"}
 
 # Load environment variables, but respect overrides
 curenv=$(declare -p -x)
@@ -38,6 +32,18 @@ if [ ! -f "$DEPLOY_FILE" ]
 then
   echo "Deploy file ($DEPLOY_FILE) not found. Provide the correct relative path after the command."
   exit 1
+fi
+
+# Specify either of these variables to override the defaults
+DEPLOY_SCRIPT=${DEPLOY_SCRIPT:-"./script/deploy/Deploy.s.sol"}
+DEPLOY_CONTRACT=${DEPLOY_CONTRACT:-"Deploy"}
+
+# If the chain contains "blast", use the Blast-specific contracts to deploy
+if [[ $CHAIN == *"blast"* ]]
+then
+  echo "Using Blast-specific contracts"
+  DEPLOY_SCRIPT="./script/deploy/DeployBlast.s.sol"
+  DEPLOY_CONTRACT="DeployBlast"
 fi
 
 echo "Using deploy script and contract: $DEPLOY_SCRIPT:$DEPLOY_CONTRACT"

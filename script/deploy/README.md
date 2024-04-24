@@ -28,7 +28,6 @@ Notes:
 - Supported entry keys:
   - `name`: The `name` field corresponds to the function in `Deploy.s.sol` that will be used.
   - `args`: A dictionary, in alphabetical order, of arguments that will be provided to the deployment function.
-  - `saltKey`: An optional string that contains the key for the salt (located in `./script/salts.json`) that will be used to deploy the contract at a deterministic address.
   - `installAtomicAuctionHouse`: An optional boolean that indicates whether the module should be installed in the AtomicAuctionHouse contract.
   - `installBatchAuctionHouse`: An optional boolean that indicates whether the module should be installed in the BatchAuctionHouse contract.
 
@@ -36,7 +35,7 @@ Notes:
 
 First, support for the contract needs to be added in the deployment script, `./script/deploy/Deploy.s.sol`.
 
-This involves creating a function in the format of `function deploy<key>(bytes memory args_, bytes32 salt_) public virtual returns (address)`.
+This involves creating a function in the format of `function deploy<key>(bytes memory args_) public virtual returns (address)`.
 
 For example, a deployment with `name` set to "AtomicLinearVesting" would require a function to be present in `Deploy.s.sol` with the name `deployAtomicLinearVesting`.
 
@@ -81,12 +80,12 @@ If any problems are faced during deployment (or verification), set the third boo
 
 ##### Blast-Specific Version
 
-Deploying on Blast requires an AuctionHouse with additional constructor arguments. For this reason, the `DeployBlast.s.sol` contract script exists, which overrides the deployment behaviour of some contracts.
+Deploying on Blast requires an AuctionHouse with additional constructor arguments. For this reason, the `DeployBlast.s.sol` contract script exists, which overrides the deployment behaviour of some contracts. If the chain name contains blast, this deployment script will be used.
 
 Example command:
 
 ```bash
-DEPLOY_SCRIPT="./script/deploy/DeployBlast.s.sol" DEPLOY_CONTRACT="DeployBlast" ./script/deploy/deploy.sh ./script/deploy/sequences/auctionhouse-mainnet.json true true
+CHAIN="blast-testnet" ./script/deploy/deploy.sh ./script/deploy/sequences/auctionhouse-mainnet.json true true
 ```
 
 #### Verification
