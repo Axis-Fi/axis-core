@@ -29,7 +29,10 @@ library ECIES {
     /// @dev This is not as secure as modern key derivation functions, since hash-based keys are susceptible to dictionary attacks.
     ///      However, it is simple and cheap to implement, and is sufficient for our purposes.
     ///      The salt prevents duplication even if a shared secret is reused.
-    function deriveSymmetricKey(uint256 sharedSecret_, uint256 s1_) internal pure returns (uint256) {
+    function deriveSymmetricKey(
+        uint256 sharedSecret_,
+        uint256 s1_
+    ) internal pure returns (uint256) {
         return uint256(keccak256(abi.encodePacked(sharedSecret_, s1_)));
     }
 
