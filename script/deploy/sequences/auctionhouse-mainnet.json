@@ -1,39 +1,31 @@
 {
     "sequence": [
         {
-            "name": "AtomicAuctionHouse",
-            "args": {}
+            "name": "AtomicAuctionHouse"
         },
         {
-            "name": "BatchAuctionHouse",
-            "args": {}
+            "name": "BatchAuctionHouse"
         },
         {
-            "name": "AtomicCatalogue",
-            "args": {}
+            "name": "AtomicCatalogue"
         },
         {
-            "name": "BatchCatalogue",
-            "args": {}
+            "name": "BatchCatalogue"
         },
         {
             "name": "EncryptedMarginalPrice",
-            "args": {},
             "installBatchAuctionHouse": true
         },
         {
             "name": "FixedPriceSale",
-            "args": {},
             "installAtomicAuctionHouse": true
         },
         {
             "name": "AtomicLinearVesting",
-            "args": {},
             "installAtomicAuctionHouse": true
         },
         {
             "name": "BatchLinearVesting",
-            "args": {},
             "installBatchAuctionHouse": true
         }
     ]
