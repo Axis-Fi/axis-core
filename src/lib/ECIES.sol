@@ -20,16 +20,19 @@ struct Point {
 ///         This library assumes the curve used is y^2 = x^3 + 3, which has generator point (1, 2).
 /// @author Oighty
 library ECIES {
-    uint256 public constant GROUP_ORDER =
+    uint256 internal constant GROUP_ORDER =
         21_888_242_871_839_275_222_246_405_745_257_275_088_548_364_400_416_034_343_698_204_186_575_808_495_617;
-    uint256 public constant FIELD_MODULUS =
+    uint256 internal constant FIELD_MODULUS =
         21_888_242_871_839_275_222_246_405_745_257_275_088_696_311_157_297_823_662_689_037_894_645_226_208_583;
 
     /// @notice We use a hash function to derive a symmetric key from the shared secret and a provided salt.
     /// @dev This is not as secure as modern key derivation functions, since hash-based keys are susceptible to dictionary attacks.
     ///      However, it is simple and cheap to implement, and is sufficient for our purposes.
     ///      The salt prevents duplication even if a shared secret is reused.
-    function deriveSymmetricKey(uint256 sharedSecret_, uint256 s1_) public pure returns (uint256) {
+    function deriveSymmetricKey(
+        uint256 sharedSecret_,
+        uint256 s1_
+    ) internal pure returns (uint256) {
         return uint256(keccak256(abi.encodePacked(sharedSecret_, s1_)));
     }
 
@@ -37,7 +40,7 @@ library ECIES {
     function recoverSharedSecret(
         Point memory ciphertextPubKey_,
         uint256 privateKey_
-    ) public view returns (uint256) {
+    ) internal view returns (uint256) {
         // Validate public key is on the curve
         if (!isOnBn128(ciphertextPubKey_)) revert("Invalid public key.");
 
@@ -61,7 +64,7 @@ library ECIES {
         Point memory ciphertextPubKey_,
         uint256 privateKey_,
         uint256 salt_
-    ) public view returns (uint256 message_) {
+    ) internal view returns (uint256 message_) {
         // Calculate the shared secret
         // Validates the ciphertext public key is on the curve and the private key is valid
         uint256 sharedSecret = recoverSharedSecret(ciphertextPubKey_, privateKey_);
@@ -85,7 +88,7 @@ library ECIES {
         Point memory recipientPubKey_,
         uint256 privateKey_,
         uint256 salt_
-    ) public view returns (uint256 ciphertext_, Point memory messagePubKey_) {
+    ) internal view returns (uint256 ciphertext_, Point memory messagePubKey_) {
         // Create the message public key using the provided private key
         // Validates the private key is valid
         messagePubKey_ = calcPubKey(Point(1, 2), privateKey_);
@@ -107,7 +110,7 @@ library ECIES {
     function calcPubKey(
         Point memory generator_,
         uint256 privateKey_
-    ) public view returns (Point memory) {
+    ) internal view returns (Point memory) {
         // Validate generator is on the curve
         if (!isOnBn128(generator_)) revert("Invalid generator point.");
 
@@ -128,7 +131,7 @@ library ECIES {
 
     /// @notice Checks whether a point is on the alt_bn128 curve.
     /// @param  p - The point to check (consists of x and y coordinates).
-    function isOnBn128(Point memory p) public pure returns (bool) {
+    function isOnBn128(Point memory p) internal pure returns (bool) {
         // check if the provided point is on the bn128 curve y**2 = x**3 + 3, which has generator point (1, 2)
         return _fieldmul(p.y, p.y) == _fieldadd(_fieldmul(p.x, _fieldmul(p.x, p.x)), 3);
     }
@@ -140,7 +143,7 @@ library ECIES {
     /// 3. Not the point at infinity (0, 0)
     /// 4. The x coordinate is less than the field modulus
     /// 5. The y coordinate is less than the field modulus
-    function isValid(Point memory p) public pure returns (bool) {
+    function isValid(Point memory p) internal pure returns (bool) {
         return isOnBn128(p) && !(p.x == 1 && p.y == 2) && !(p.x == 0 && p.y == 0)
             && (p.x < FIELD_MODULUS) && (p.y < FIELD_MODULUS);
     }

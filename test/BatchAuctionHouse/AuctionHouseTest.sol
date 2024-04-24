@@ -30,9 +30,11 @@ import {BatchAuctionHouse} from "src/BatchAuctionHouse.sol";
 import {AuctionModule} from "src/modules/Auction.sol";
 import {AuctionHouse} from "src/bases/AuctionHouse.sol";
 
-import {Veecode, toKeycode, keycodeFromVeecode, Keycode} from "src/modules/Modules.sol";
+import {Veecode, toKeycode, keycodeFromVeecode, Keycode} from "src/modules/Keycode.sol";
 
-abstract contract BatchAuctionHouseTest is Test, Permit2User {
+import {WithSalts} from "test/lib/WithSalts.sol";
+
+abstract contract BatchAuctionHouseTest is Test, Permit2User, WithSalts {
     MockFeeOnTransferERC20 internal _baseToken;
     MockFeeOnTransferERC20 internal _quoteToken;
 
@@ -269,43 +271,22 @@ abstract contract BatchAuctionHouseTest is Test, Permit2User {
     }
 
     modifier givenLotHasAllowlist() {
-        // // Allowlist callback supports onCreate, onPurchase, and onBid callbacks
-        // // 10011000 = 0x98
-        // // cast create2 -s 98 -i $(cat ./bytecode/MockCallback98.bin)
-        // bytes memory bytecode = abi.encodePacked(
-        //     type(MockCallback).creationCode,
-        //     abi.encode(address(_auctionHouse), Callbacks.Permissions({
-        //         onCreate: true,
-        //         onCancel: false,
-        //         onCurate: false,
-        //         onPurchase: true,
-        //         onBid: true,
-        //         onClaimProceeds: false,
-        //         receiveQuoteTokens: false,
-        //         sendBaseTokens: false
-        //     }), _SELLER)
-        // );
-        // vm.writeFile(
-        //     "./bytecode/MockCallback98.bin",
-        //     vm.toString(bytecode)
-        // );
+        // Get the salt
+        Callbacks.Permissions memory permissions = Callbacks.Permissions({
+            onCreate: true,
+            onCancel: false,
+            onCurate: false,
+            onPurchase: true,
+            onBid: true,
+            onClaimProceeds: false,
+            receiveQuoteTokens: false,
+            sendBaseTokens: false
+        });
+        bytes memory args = abi.encode(address(_auctionHouse), permissions, _SELLER);
+        bytes32 salt = _getSalt("MockCallback", type(MockCallback).creationCode, args);
 
-        bytes32 salt = bytes32(0x95d8e749cf79ebaeab8be7d210248a5bf561b4a027f0a9a4d394475bc5fe304e);
         vm.startBroadcast(); // required for CREATE2 address to work correctly. doesn't do anything in a test
-        _callback = new MockCallback{salt: salt}(
-            address(_auctionHouse),
-            Callbacks.Permissions({
-                onCreate: true,
-                onCancel: false,
-                onCurate: false,
-                onPurchase: true,
-                onBid: true,
-                onClaimProceeds: false,
-                receiveQuoteTokens: false,
-                sendBaseTokens: false
-            }),
-            _SELLER
-        );
+        _callback = new MockCallback{salt: salt}(address(_auctionHouse), permissions, _SELLER);
         vm.stopBroadcast();
 
         _routingParams.callbacks = _callback;
@@ -367,121 +348,24 @@ abstract contract BatchAuctionHouseTest is Test, Permit2User {
     }
 
     modifier givenCallbackIsSet() {
-        // // Uncomment to regenerate bytecode to mine new salts if the MockCallback changes
-        // // 11111111 = 0xFF
-        // bytes memory bytecode = abi.encodePacked(
-        //     type(MockCallback).creationCode,
-        //     abi.encode(
-        //         address(_auctionHouse),
-        //         Callbacks.Permissions({
-        //             onCreate: true,
-        //             onCancel: true,
-        //             onCurate: true,
-        //             onPurchase: true,
-        //             onBid: true,
-        //             onClaimProceeds: true,
-        //             receiveQuoteTokens: true,
-        //             sendBaseTokens: true
-        //         }),
-        //         _SELLER
-        //     )
-        // );
-        // vm.writeFile(
-        //     "./bytecode/MockCallbackFF.bin",
-        //     vm.toString(bytecode)
-        // );
-        // // 11111101 = 0xFD
-        // bytecode = abi.encodePacked(
-        //     type(MockCallback).creationCode,
-        //     abi.encode(address(_auctionHouse), Callbacks.Permissions({
-        //         onCreate: true,
-        //         onCancel: true,
-        //         onCurate: true,
-        //         onPurchase: true,
-        //         onBid: true,
-        //         onClaimProceeds: true,
-        //         receiveQuoteTokens: false,
-        //         sendBaseTokens: true
-        //     }), _SELLER)
-        // );
-        // vm.writeFile(
-        //     "./bytecode/MockCallbackFD.bin",
-        //     vm.toString(bytecode)
-        // );
-        // // 11111110 = 0xFE
-        // bytecode = abi.encodePacked(
-        //     type(MockCallback).creationCode,
-        //     abi.encode(address(_auctionHouse), Callbacks.Permissions({
-        //         onCreate: true,
-        //         onCancel: true,
-        //         onCurate: true,
-        //         onPurchase: true,
-        //         onBid: true,
-        //         onClaimProceeds: true,
-        //         receiveQuoteTokens: true,
-        //         sendBaseTokens: false
-        //     }), _SELLER)
-        // );
-        // vm.writeFile(
-        //     "./bytecode/MockCallbackFE.bin",
-        //     vm.toString(bytecode)
-        // );
-        // // 11111100 = 0xFC
-        // bytecode = abi.encodePacked(
-        //     type(MockCallback).creationCode,
-        //     abi.encode(address(_auctionHouse), Callbacks.Permissions({
-        //         onCreate: true,
-        //         onCancel: true,
-        //         onCurate: true,
-        //         onPurchase: true,
-        //         onBid: true,
-        //         onClaimProceeds: true,
-        //         receiveQuoteTokens: false,
-        //         sendBaseTokens: false
-        //     }), _SELLER)
-        // );
-        // vm.writeFile(
-        //     "./bytecode/MockCallbackFC.bin",
-        //     vm.toString(bytecode)
-        // );
-
-        // Set the salt based on which token flags are set
-        bytes32 salt;
-        if (_callbackSendBaseTokens && _callbackReceiveQuoteTokens) {
-            // 11111111 = 0xFF
-            // cast create2 -s FF -i $(cat ./bytecode/MockCallbackFF.bin)
-            salt = bytes32(0x90706383cff5701e8edc45060dc1eb2b7ba937155bd7f8bebb8b01b6e73e9b39);
-        } else if (_callbackSendBaseTokens) {
-            // 11111101 = 0xFD
-            // cast create2 -s FD -i $(cat ./bytecode/MockCallbackFD.bin)
-            salt = bytes32(0x668bb11e07a2e39dfeed716b2c4d82bc59ab6ed9c83759cbf65c78357bc3f9af);
-        } else if (_callbackReceiveQuoteTokens) {
-            // 11111110 = 0xFE
-            // cast create2 -s FE -i $(cat ./bytecode/MockCallbackFE.bin)
-            salt = bytes32(0x84502c6233c5eec313faa61a306d02a69aaa6c1c494f91a3d14fdcf4150d5bdc);
-        } else {
-            // 11111100 = 0xFC
-            // cast create2 -s FC -i $(cat ./bytecode/MockCallbackFC.bin)
-            salt = bytes32(0x141550def6aaf536eeb584ed1c11731fa1467fdc28b3509fb2407c3812c90631);
-        }
+        // Get the salt
+        Callbacks.Permissions memory permissions = Callbacks.Permissions({
+            onCreate: true,
+            onCancel: true,
+            onCurate: true,
+            onPurchase: true,
+            onBid: true,
+            onClaimProceeds: true,
+            receiveQuoteTokens: _callbackReceiveQuoteTokens,
+            sendBaseTokens: _callbackSendBaseTokens
+        });
+        bytes memory args = abi.encode(address(_auctionHouse), permissions, _SELLER);
+        bytes32 salt = _getSalt("MockCallback", type(MockCallback).creationCode, args);
 
         // Required for CREATE2 address to work correctly. doesn't do anything in a test
         // Source: https://github.com/foundry-rs/foundry/issues/6402
         vm.startBroadcast();
-        _callback = new MockCallback{salt: salt}(
-            address(_auctionHouse),
-            Callbacks.Permissions({
-                onCreate: true,
-                onCancel: true,
-                onCurate: true,
-                onPurchase: true,
-                onBid: true,
-                onClaimProceeds: true,
-                receiveQuoteTokens: _callbackReceiveQuoteTokens,
-                sendBaseTokens: _callbackSendBaseTokens
-            }),
-            _SELLER
-        );
+        _callback = new MockCallback{salt: salt}(address(_auctionHouse), permissions, _SELLER);
         vm.stopBroadcast();
 
         _routingParams.callbacks = _callback;
