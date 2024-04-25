@@ -88,6 +88,7 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
     /// @param         minBidSize          The minimum size of a bid
     /// @param         publicKey           The public key used to encrypt bids (a point on the alt_bn128 curve from the generator point (1,2))
     /// @param         privateKey          The private key used to decrypt bids (not provided until after the auction ends)
+    /// @param         processedAmountIn   The total amount in from bids processed so far (during settlement)
     /// @param         bidIds              The list of bid IDs to decrypt in order of submission, excluding cancelled bids
     struct AuctionData {
         uint64 nextBidId; // 8 +

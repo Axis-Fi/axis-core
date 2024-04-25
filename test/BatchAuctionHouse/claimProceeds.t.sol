@@ -110,7 +110,7 @@ contract BatchClaimProceedsTest is BatchAuctionHouseTest {
             _lotId, _scaleQuoteTokenAmount(_BID_AMOUNT), _scaleBaseTokenAmount(_BID_AMOUNT_OUT)
         );
 
-        _auctionHouse.settle(_lotId);
+        _auctionHouse.settle(_lotId, 100_000);
         _;
     }
 
@@ -122,7 +122,7 @@ contract BatchClaimProceedsTest is BatchAuctionHouseTest {
             _scaleBaseTokenAmount(_BID_AMOUNT_OUT * 5)
         );
 
-        _auctionHouse.settle(_lotId);
+        _auctionHouse.settle(_lotId, 100_000);
         _;
     }
 
@@ -135,13 +135,13 @@ contract BatchClaimProceedsTest is BatchAuctionHouseTest {
             _scaleBaseTokenAmount(_LOT_CAPACITY)
         );
 
-        _auctionHouse.settle(_lotId);
+        _auctionHouse.settle(_lotId, 100_000);
         _;
     }
 
     modifier givenLotSettlementIsNotSuccessful() {
         // Payout tokens will be returned to the seller
-        _auctionHouse.settle(_lotId);
+        _auctionHouse.settle(_lotId, 100_000);
         _;
     }
 

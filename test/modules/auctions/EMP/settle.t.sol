@@ -105,7 +105,7 @@ contract EmpaModuleSettleTest is EmpTest {
         returns (uint256 totalIn_, uint256 totalOut_, bytes memory auctionOutput_)
     {
         vm.prank(address(_auctionHouse));
-        (totalIn_, totalOut_, auctionOutput_) = _module.settle(_lotId);
+        (totalIn_, totalOut_, auctionOutput_) = _module.settle(_lotId, 100_000);
     }
 
     function _assertSettlement(
@@ -1053,7 +1053,7 @@ contract EmpaModuleSettleTest is EmpTest {
         vm.expectRevert(err);
 
         // Call function
-        _module.settle(_lotId);
+        _module.settle(_lotId, 100_000);
     }
 
     function test_bidsLessThanMinimumFilled()
