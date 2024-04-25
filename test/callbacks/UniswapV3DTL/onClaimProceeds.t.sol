@@ -13,6 +13,7 @@ import {SqrtPriceMath} from "src/lib/uniswap-v3/SqrtPriceMath.sol";
 import {TickMath} from "uniswap-v3-core/libraries/TickMath.sol";
 
 // G-UNI
+import {GUniFactory} from "g-uni-v1-core/GUniFactory.sol";
 import {GUniPool} from "g-uni-v1-core/GUniPool.sol";
 
 // AuctionHouse
@@ -20,6 +21,8 @@ import {LinearVesting} from "src/modules/derivatives/LinearVesting.sol";
 import {BaseCallback} from "src/callbacks/BaseCallback.sol";
 import {BaseDirectToLiquidity} from "src/callbacks/liquidity/BaseDTL.sol";
 import {UniswapV3DirectToLiquidity} from "src/callbacks/liquidity/UniswapV3DTL.sol";
+
+import {console2} from "forge-std/console2.sol";
 
 contract UniswapV3DirectToLiquidityOnClaimProceedsTest is UniswapV3DirectToLiquidityTest {
     uint96 internal constant _PROCEEDS = 20e18;
@@ -237,6 +240,8 @@ contract UniswapV3DirectToLiquidityOnClaimProceedsTest is UniswapV3DirectToLiqui
         // The proceeds utilisation percent scales the quote tokens and base tokens linearly
         _quoteTokensToDeposit = _proceeds * _dtlCreateParams.proceedsUtilisationPercent / 1e5;
         _baseTokensToDeposit = _capacityUtilised * _dtlCreateParams.proceedsUtilisationPercent / 1e5;
+        console2.log("quoteTokensToDeposit", _quoteTokensToDeposit);
+        console2.log("baseTokensToDeposit", _baseTokensToDeposit);
 
         _sqrtPriceX96 = _calculateSqrtPriceX96(_quoteTokensToDeposit, _baseTokensToDeposit);
         _;
@@ -300,16 +305,44 @@ contract UniswapV3DirectToLiquidityOnClaimProceedsTest is UniswapV3DirectToLiqui
     }
 
     modifier whenCustomTickRangeIsSet() {
-        int24 tickLower;
-        int24 tickUpper;
-
         // Calculate the tick range based on the quote and base tokens
-        tickLower = TickMath.getTickAtSqrtRatio(_sqrtPriceX96);
-        tickUpper = tickLower + 10; // Ensures that the tick will be different, given tick spacing requirements
+        int24 desiredTick = TickMath.getTickAtSqrtRatio(_sqrtPriceX96);
+        // Ensures that the tick will be different, given tick spacing requirements
+        int24 tickLower = desiredTick - 5;
+        int24 tickUpper = desiredTick + 5;
 
         _customTicks = true;
         _tickLower = tickLower;
         _tickUpper = tickUpper;
+        _;
+    }
+
+    modifier givenPoolHasDeposit() {
+        int24 tickSpacing = _uniV3Factory.feeAmountTickSpacing(_poolFee);
+
+        // Create a GUniPool
+        bool quoteTokenIsToken0 = address(_quoteToken) < address(_baseToken);
+        address poolTokenAddress = _gUniFactory.createPool(
+            quoteTokenIsToken0 ? address(_quoteToken) : address(_baseToken),
+            quoteTokenIsToken0 ? address(_baseToken) : address(_quoteToken),
+            _poolFee,
+            TickMath.MIN_TICK / tickSpacing * tickSpacing,
+            TickMath.MAX_TICK / tickSpacing * tickSpacing
+        );
+
+        // Calculate amount required
+        GUniPool poolToken = GUniPool(poolTokenAddress);
+        (uint256 amount0Actual, uint256 amount1Actual, uint256 poolTokenQuantity) = poolToken
+            .getMintAmounts(quoteTokenIsToken0 ? 3e18 : 1e18, quoteTokenIsToken0 ? 1e18 : 3e18);
+
+        // Mint the required tokens in a different ratio
+        _quoteToken.mint(address(this), quoteTokenIsToken0 ? amount0Actual : amount1Actual);
+        _baseToken.mint(address(this), quoteTokenIsToken0 ? amount1Actual : amount0Actual);
+
+        // Mint
+        _quoteToken.approve(address(poolTokenAddress), amount0Actual);
+        _baseToken.approve(address(poolTokenAddress), amount1Actual);
+        poolToken.mint(poolTokenQuantity, address(this));
         _;
     }
 
@@ -797,5 +830,48 @@ contract UniswapV3DirectToLiquidityOnClaimProceedsTest is UniswapV3DirectToLiqui
         vm.expectRevert(err);
 
         _performCallback();
+    }
+
+    function test_givenPoolIsCreatedAndInitialized_whenCustomTicks()
+        public
+        givenCallbackIsCreated
+        givenOnCreate
+        setCallbackParameters(_PROCEEDS, _REFUND)
+        givenPoolIsCreatedAndInitialized(_SQRT_PRICE_X96_OVERRIDE)
+        givenAddressHasQuoteTokenBalance(_dtlAddress, _proceeds)
+        givenAddressHasBaseTokenBalance(_SELLER, _capacityUtilised)
+        givenAddressHasBaseTokenAllowance(_SELLER, _dtlAddress, _capacityUtilised)
+        whenCustomTickRangeIsSet
+    {
+        _performCallback();
+
+        _assertPoolState(_SQRT_PRICE_X96_OVERRIDE);
+        _assertLpTokenBalance();
+        _assertVestingTokenBalance();
+        _assertQuoteTokenBalance();
+        _assertBaseTokenBalance();
+        _assertApprovals();
+    }
+
+    function test_givenPoolIsCreatedAndInitialized_givenPoolHasDeposit_whenCustomTicks()
+        public
+        givenCallbackIsCreated
+        givenOnCreate
+        setCallbackParameters(_PROCEEDS, _REFUND)
+        givenPoolIsCreatedAndInitialized(_SQRT_PRICE_X96_OVERRIDE)
+        givenAddressHasQuoteTokenBalance(_dtlAddress, _proceeds)
+        givenAddressHasBaseTokenBalance(_SELLER, _capacityUtilised)
+        givenAddressHasBaseTokenAllowance(_SELLER, _dtlAddress, _capacityUtilised)
+        whenCustomTickRangeIsSet
+        givenPoolHasDeposit
+    {
+        _performCallback();
+
+        _assertPoolState(_SQRT_PRICE_X96_OVERRIDE);
+        _assertLpTokenBalance();
+        _assertVestingTokenBalance();
+        _assertQuoteTokenBalance();
+        _assertBaseTokenBalance();
+        _assertApprovals();
     }
 }
