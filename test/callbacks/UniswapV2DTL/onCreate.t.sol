@@ -9,17 +9,21 @@ import {BaseDirectToLiquidity} from "src/callbacks/liquidity/BaseDTL.sol";
 contract UniswapV2DirectToLiquidityOnCreateTest is UniswapV2DirectToLiquidityTest {
     // ============ Modifiers ============ //
 
-    function _performCallback() internal {
+    function _performCallback(address seller_) internal {
         vm.prank(address(_auctionHouse));
         _dtl.onCreate(
             _lotId,
-            _SELLER,
+            seller_,
             address(_baseToken),
             address(_quoteToken),
             _LOT_CAPACITY,
             false,
             abi.encode(_dtlCreateParams)
         );
+    }
+
+    function _performCallback() internal {
+        _performCallback(_SELLER);
     }
 
     // ============ Assertions ============ //
@@ -40,6 +44,7 @@ contract UniswapV2DirectToLiquidityOnCreateTest is UniswapV2DirectToLiquidityTes
 
     function _assertBaseTokenBalances() internal {
         assertEq(_baseToken.balanceOf(_SELLER), 0, "seller balance");
+        assertEq(_baseToken.balanceOf(_NOT_SELLER), 0, "not seller balance");
         assertEq(_baseToken.balanceOf(_dtlAddress), 0, "dtl balance");
     }
 
@@ -73,8 +78,8 @@ contract UniswapV2DirectToLiquidityOnCreateTest is UniswapV2DirectToLiquidityTes
     //  [X] it reverts
     // [X] when the recipient is not the seller
     //  [X] it records the recipient
-    // [ ] when multiple lots are created
-    //  [ ] it registers each lot
+    // [X] when multiple lots are created
+    //  [X] it registers each lot
     // [X] it registers the lot
 
     function test_whenCallbackDataIsIncorrect_reverts() public givenCallbackIsCreated {
@@ -296,6 +301,35 @@ contract UniswapV2DirectToLiquidityOnCreateTest is UniswapV2DirectToLiquidityTes
         // Assert values
         BaseDirectToLiquidity.DTLConfiguration memory configuration = _getDTLConfiguration(_lotId);
         assertEq(configuration.recipient, _SELLER, "recipient");
+        assertEq(configuration.lotCapacity, _LOT_CAPACITY, "lotCapacity");
+        assertEq(configuration.lotCuratorPayout, 0, "lotCuratorPayout");
+        assertEq(
+            configuration.proceedsUtilisationPercent,
+            _dtlCreateParams.proceedsUtilisationPercent,
+            "proceedsUtilisationPercent"
+        );
+        assertEq(configuration.vestingStart, 0, "vestingStart");
+        assertEq(configuration.vestingExpiry, 0, "vestingExpiry");
+        assertEq(address(configuration.linearVestingModule), address(0), "linearVestingModule");
+        assertEq(configuration.active, true, "active");
+        assertEq(configuration.implParams, _dtlCreateParams.implParams, "implParams");
+
+        // Assert balances
+        _assertBaseTokenBalances();
+    }
+
+    function test_succeeds_multiple() public givenCallbackIsCreated {
+        // Lot one
+        _performCallback();
+
+        // Lot two
+        _dtlCreateParams.recipient = _NOT_SELLER;
+        _lotId = 2;
+        _performCallback(_NOT_SELLER);
+
+        // Assert values
+        BaseDirectToLiquidity.DTLConfiguration memory configuration = _getDTLConfiguration(_lotId);
+        assertEq(configuration.recipient, _NOT_SELLER, "recipient");
         assertEq(configuration.lotCapacity, _LOT_CAPACITY, "lotCapacity");
         assertEq(configuration.lotCuratorPayout, 0, "lotCuratorPayout");
         assertEq(

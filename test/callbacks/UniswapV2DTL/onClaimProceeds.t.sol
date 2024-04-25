@@ -144,16 +144,20 @@ contract UniswapV2DirectToLiquidityOnClaimProceedsTest is UniswapV2DirectToLiqui
 
     // ========== Modifiers ========== //
 
-    function _performCallback() internal {
+    function _performCallback(uint96 lotId_) internal {
         vm.prank(address(_auctionHouse));
         _dtl.onClaimProceeds(
-            _lotId,
+            lotId_,
             _proceeds,
             _refund,
             abi.encode(
                 UniswapV2DirectToLiquidity.OnClaimProceedsParams({maxSlippage: _maxSlippage})
             )
         );
+    }
+
+    function _performCallback() internal {
+        _performCallback(_lotId);
     }
 
     function _createPool() internal returns (address) {
@@ -288,8 +292,8 @@ contract UniswapV2DirectToLiquidityOnClaimProceedsTest is UniswapV2DirectToLiqui
     //  [X] it mints the vesting tokens to the seller
     // [X] given the recipient is not the seller
     //  [X] it mints the LP token to the recipient
-    // [ ] when multiple lots are created
-    //  [ ] it performs actions on the correct pool
+    // [X] when multiple lots are created
+    //  [X] it performs actions on the correct pool
     // [X] it creates and initializes the pool, creates a pool token, deposits into the pool token, transfers the LP token to the seller and transfers any excess back to the seller
 
     function test_givenPoolIsCreated()
@@ -640,6 +644,27 @@ contract UniswapV2DirectToLiquidityOnClaimProceedsTest is UniswapV2DirectToLiqui
         givenAddressHasBaseTokenAllowance(_SELLER, _dtlAddress, _capacityUtilised)
     {
         _performCallback();
+
+        _assertLpTokenBalance();
+        _assertVestingTokenBalance();
+        _assertQuoteTokenBalance();
+        _assertBaseTokenBalance();
+        _assertApprovals();
+    }
+
+    function test_success_multiple()
+        public
+        givenCallbackIsCreated
+        givenOnCreate
+        setCallbackParameters(_PROCEEDS, _REFUND)
+        givenAddressHasQuoteTokenBalance(_dtlAddress, _proceeds)
+        givenAddressHasBaseTokenBalance(_NOT_SELLER, _capacityUtilised)
+        givenAddressHasBaseTokenAllowance(_NOT_SELLER, _dtlAddress, _capacityUtilised)
+    {
+        // Create second lot
+        uint96 lotIdTwo = _createLot(_NOT_SELLER);
+
+        _performCallback(lotIdTwo);
 
         _assertLpTokenBalance();
         _assertVestingTokenBalance();

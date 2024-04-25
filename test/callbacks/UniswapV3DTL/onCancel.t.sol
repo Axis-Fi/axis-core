@@ -11,17 +11,17 @@ contract UniswapV3DirectToLiquidityOnCancelTest is UniswapV3DirectToLiquidityTes
 
     // ============ Modifiers ============ //
 
-    function _performCallback() internal {
+    function _performCallback(uint96 lotId_) internal {
         vm.prank(address(_auctionHouse));
-        _dtl.onCancel(_lotId, _REFUND_AMOUNT, false, abi.encode(""));
+        _dtl.onCancel(lotId_, _REFUND_AMOUNT, false, abi.encode(""));
     }
 
     // ============ Tests ============ //
 
     // [X] when the lot has not been registered
     //  [X] it reverts
-    // [ ] when multiple lots are created
-    //  [ ] it marks the correct lot as inactive
+    // [X] when multiple lots are created
+    //  [X] it marks the correct lot as inactive
     // [X] it marks the lot as inactive
 
     function test_whenLotNotRegistered_reverts() public givenCallbackIsCreated {
@@ -30,12 +30,12 @@ contract UniswapV3DirectToLiquidityOnCancelTest is UniswapV3DirectToLiquidityTes
         vm.expectRevert(err);
 
         // Call the function
-        _performCallback();
+        _performCallback(_lotId);
     }
 
     function test_success() public givenCallbackIsCreated givenOnCreate {
         // Call the function
-        _performCallback();
+        _performCallback(_lotId);
 
         // Check the values
         BaseDirectToLiquidity.DTLConfiguration memory configuration = _getDTLConfiguration(_lotId);
@@ -44,5 +44,28 @@ contract UniswapV3DirectToLiquidityOnCancelTest is UniswapV3DirectToLiquidityTes
         // Check the balances
         assertEq(_baseToken.balanceOf(_dtlAddress), 0, "base token balance");
         assertEq(_baseToken.balanceOf(_SELLER), 0, "seller base token balance");
+        assertEq(_baseToken.balanceOf(_NOT_SELLER), 0, "not seller base token balance");
+    }
+
+    function test_success_multiple() public givenCallbackIsCreated givenOnCreate {
+        uint96 lotIdOne = _lotId;
+
+        // Create a second lot and cancel it
+        uint96 lotIdTwo = _createLot(_NOT_SELLER);
+        _performCallback(lotIdTwo);
+
+        // Check the values
+        BaseDirectToLiquidity.DTLConfiguration memory configurationOne =
+            _getDTLConfiguration(lotIdOne);
+        assertEq(configurationOne.active, true, "lot one: active");
+
+        BaseDirectToLiquidity.DTLConfiguration memory configurationTwo =
+            _getDTLConfiguration(lotIdTwo);
+        assertEq(configurationTwo.active, false, "lot two: active");
+
+        // Check the balances
+        assertEq(_baseToken.balanceOf(_dtlAddress), 0, "base token balance");
+        assertEq(_baseToken.balanceOf(_SELLER), 0, "seller base token balance");
+        assertEq(_baseToken.balanceOf(_NOT_SELLER), 0, "not seller base token balance");
     }
 }

@@ -155,10 +155,10 @@ abstract contract UniswapV3DirectToLiquidityTest is Test, Permit2User, WithSalts
         _;
     }
 
-    modifier givenOnCreate() {
+    function _createLot(address seller_) internal returns (uint96 lotId) {
         // Mint and approve the capacity to the owner
-        _baseToken.mint(_SELLER, _LOT_CAPACITY);
-        vm.prank(_SELLER);
+        _baseToken.mint(seller_, _LOT_CAPACITY);
+        vm.prank(seller_);
         _baseToken.approve(address(_auctionHouse), _LOT_CAPACITY);
 
         // Prep the lot arguments
@@ -183,8 +183,12 @@ abstract contract UniswapV3DirectToLiquidityTest is Test, Permit2User, WithSalts
         });
 
         // Create a new lot
-        vm.prank(_SELLER);
-        _lotId = _auctionHouse.auction(routingParams, auctionParams, "");
+        vm.prank(seller_);
+        return _auctionHouse.auction(routingParams, auctionParams, "");
+    }
+
+    modifier givenOnCreate() {
+        _lotId = _createLot(_SELLER);
         _;
     }
 
