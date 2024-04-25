@@ -100,9 +100,8 @@ abstract contract UniswapV2DirectToLiquidityTest is Test, Permit2User, WithSalts
 
     modifier givenCallbackIsCreated() {
         // Get the salt
-        bytes memory args = abi.encode(
-            address(_auctionHouse), address(_uniV2Factory), address(_uniV2Router)
-        );
+        bytes memory args =
+            abi.encode(address(_auctionHouse), address(_uniV2Factory), address(_uniV2Router));
         bytes32 salt = _getSalt(
             "UniswapV2DirectToLiquidity", type(UniswapV2DirectToLiquidity).creationCode, args
         );
