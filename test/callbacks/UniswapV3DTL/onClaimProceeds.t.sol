@@ -353,9 +353,9 @@ contract UniswapV3DirectToLiquidityOnClaimProceedsTest is UniswapV3DirectToLiqui
         // Expect revert
         bytes memory err = abi.encodeWithSelector(
             UniswapV3DirectToLiquidity.Callback_Slippage.selector,
-            address(_quoteToken),
-            3_999_999_999_999_999_999, // Hardcoded
-            19_998_000_000_000_000_000 // Hardcoded
+            address(_baseToken),
+            7_999_999_999_999_999_999, // Hardcoded
+            9_999_000_000_000_000_000 // Hardcoded
         );
         vm.expectRevert(err);
 
