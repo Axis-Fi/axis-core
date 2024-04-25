@@ -307,7 +307,7 @@ contract UniswapV2DirectToLiquidityOnCreateTest is UniswapV2DirectToLiquidityTes
         assertEq(configuration.vestingExpiry, 0, "vestingExpiry");
         assertEq(address(configuration.linearVestingModule), address(0), "linearVestingModule");
         assertEq(configuration.active, true, "active");
-        assertEq(abi.encode(""), configuration.implParams, "implParams");
+        assertEq(configuration.implParams, _dtlCreateParams.implParams, "implParams");
 
         // Assert balances
         _assertBaseTokenBalances();

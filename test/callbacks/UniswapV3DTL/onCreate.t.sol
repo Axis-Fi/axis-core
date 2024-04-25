@@ -331,6 +331,7 @@ contract UniswapV3DirectToLiquidityOnCreateTest is UniswapV3DirectToLiquidityTes
 
         (uint24 configurationPoolFee) = abi.decode(configuration.implParams, (uint24));
         assertEq(configurationPoolFee, _poolFee, "poolFee");
+        assertEq(configuration.implParams, _dtlCreateParams.implParams, "implParams");
 
         // Assert balances
         _assertBaseTokenBalances();
