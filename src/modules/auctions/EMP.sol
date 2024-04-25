@@ -119,6 +119,7 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
         uint64 marginalBidId;
         uint256 totalAmountIn;
         uint256 capacityExpended;
+        bool finished;
     }
 
     /// @notice        Struct containing partial fill data for a lot
@@ -757,6 +758,12 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
             uint256 lastPrice;
             uint64 lastBidId;
             uint256 numBids = queue.getNumBids();
+            if (numBids == 0) {
+                // If there are no bids, then we return early
+                // This shouldn't be encountered unless there are truly zero bids in the auction
+                result.finished = true;
+                return result;
+            }
             bool last = numBids <= num_;
             numBids = numBids > num_ ? num_ : numBids;
             for (uint256 i = 0; i < numBids; i++) {
@@ -797,6 +804,7 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
                     // marginal bid id can be zero, there are no bids at the marginal price
 
                     // Exit the outer loop
+                    result.finished = true;
                     break;
                 }
 
@@ -819,6 +827,7 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
                     // This will normally equal `capacity`, except when rounding would cause the the capacity expended to be slightly less than `capacity`
                     result.capacityExpended =
                         Math.fullMulDiv(result.totalAmountIn, baseScale, result.marginalPrice); // updated based on the marginal price
+                    result.finished = true;
                     break;
                 }
 
@@ -838,6 +847,7 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
                 if (result.capacityExpended >= capacity) {
                     result.marginalPrice = price;
                     result.marginalBidId = bidId;
+                    result.finished = true;
                     break;
                 }
 
@@ -865,6 +875,7 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
                     result.capacityExpended =
                         Math.fullMulDiv(result.totalAmountIn, baseScale, result.marginalPrice);
                     // marginal bid id can be zero, there are no bids at the marginal price
+                    result.finished = true;
                 }
             }
         }
@@ -905,7 +916,7 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
         MarginalPriceResult memory result = _getLotMarginalPrice(lotId_, num_);
 
         // If the marginal price has been found, settle the auction
-        if (result.marginalPrice > 0) {
+        if (result.finished) {
             // Cache capacity and scaling values
             // Capacity is always in base token units for this auction type
             uint256 capacity = lotData[lotId_].capacity;
