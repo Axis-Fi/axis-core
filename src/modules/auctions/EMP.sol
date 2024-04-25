@@ -102,8 +102,7 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
         uint256 minBidSize; // 32 - slot 5
         Point publicKey; // 64 - slots 6 and 7
         uint256 privateKey; // 32 - slot 8
-        uint256 processedAmountIn; // 32 - slot 9
-        uint64[] bidIds; // slots 10+
+        uint64[] bidIds; // slots 9+
     }
 
     struct AuctionDataParams {
@@ -120,6 +119,11 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
         uint256 totalAmountIn;
         uint256 capacityExpended;
         bool finished;
+    }
+
+    struct Settlement {
+        uint256 processedAmountIn;
+        uint256 lastPrice;
     }
 
     /// @notice        Struct containing partial fill data for a lot
@@ -148,6 +152,9 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
     /// @notice     Partial fill data for a lot
     /// @dev        Each EMPA can have at most one partial fill
     mapping(uint96 lotId => PartialFill) internal _lotPartialFill;
+
+    /// @notice     Partial settlement data stored between settle transactions
+    mapping(uint96 lotId => Settlement) internal _lotSettlement;
 
     /// @notice     General information about bids on a lot
     mapping(uint96 lotId => mapping(uint64 bidId => Bid)) public bids;
@@ -749,13 +756,14 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
         uint256 baseScale = 10 ** lotData[lotId_].baseTokenDecimals;
         AuctionData memory lotAuctionData = auctionData[lotId_];
 
-        // Initialize amount in with previously calculated value
-        result.totalAmountIn = lotAuctionData.processedAmountIn;
-
         // Iterate over bid queue (sorted in descending price) to calculate the marginal clearing price of the auction
         {
+            // Initialize amount in with previously calculated value
+            result.totalAmountIn = _lotSettlement[lotId_].processedAmountIn;
+            uint256 lastPrice = _lotSettlement[lotId_].lastPrice;
+
             Queue storage queue = decryptedBids[lotId_];
-            uint256 lastPrice;
+
             uint64 lastBidId;
             uint256 numBids = queue.getNumBids();
             if (numBids == 0) {
@@ -907,20 +915,24 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
         override
         returns (uint256 totalIn_, uint256 totalOut_, bytes memory auctionOutput_)
     {
-        // Settle the auction
         // Check that auction is in the right state for settlement
         if (auctionData[lotId_].status != LotStatus.Decrypted) {
             revert Auction_WrongState(lotId_);
         }
 
+        // Get the marginal price for the auction. It may require multiple transactions to avoid the gas limit.
+        // If the calculation is complete, then the result.finished value will be true.
         MarginalPriceResult memory result = _getLotMarginalPrice(lotId_, num_);
+
+        // Cache base scaling value
+        uint256 baseScale = 10 ** lotData[lotId_].baseTokenDecimals;
 
         // If the marginal price has been found, settle the auction
         if (result.finished) {
-            // Cache capacity and scaling values
+            // Cache capacity
             // Capacity is always in base token units for this auction type
             uint256 capacity = lotData[lotId_].capacity;
-            uint256 baseScale = 10 ** lotData[lotId_].baseTokenDecimals;
+
             AuctionData memory lotAuctionData = auctionData[lotId_];
 
             // Determine if the auction can be filled, if so settle the auction, otherwise refund the seller
@@ -977,8 +989,10 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
                 // totalIn and totalOut are not set since the auction does not clear
             }
         } else {
-            // Not all bids have been processed. Store the amount in so far for use in the next settle call.
-            auctionData[lotId_].processedAmountIn = result.totalAmountIn;
+            // Not all bids have been processed. Store the amount in so far and the last price for use in the next settle call.
+            _lotSettlement[lotId_].processedAmountIn = result.totalAmountIn;
+            _lotSettlement[lotId_].lastPrice =
+                Math.fullMulDivUp(result.totalAmountIn, baseScale, result.capacityExpended);
 
             // We don't change the auction status so it can be iteratively settled
 

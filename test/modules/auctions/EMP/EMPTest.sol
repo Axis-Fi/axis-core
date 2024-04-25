@@ -408,8 +408,7 @@ abstract contract EmpTest is Test, Permit2User {
             uint256 minFilled_,
             uint256 minBidSize_,
             Point memory publicKey_,
-            uint256 privateKey_,
-            uint256 processedAmountIn_
+            uint256 privateKey_
         ) = _module.auctionData(lotId_);
 
         return EncryptedMarginalPrice.AuctionData({
@@ -424,7 +423,6 @@ abstract contract EmpTest is Test, Permit2User {
             minPrice: minPrice_,
             publicKey: publicKey_,
             privateKey: privateKey_,
-            processedAmountIn: processedAmountIn_,
             bidIds: new uint64[](0)
         });
     }
