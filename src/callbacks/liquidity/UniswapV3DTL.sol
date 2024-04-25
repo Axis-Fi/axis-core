@@ -26,6 +26,9 @@ import {BaseDirectToLiquidity} from "src/callbacks/liquidity/BaseDTL.sol";
 ///             An important risk to consider: if the auction's base token is available and liquid, a third-party
 ///             could front-run the auction by creating the pool before the auction ends. This would allow them to
 ///             manipulate the price of the pool and potentially profit from the eventual deposit of the auction proceeds.
+///             However, the impact of this can be mitigated by either of the following:
+///             - Specifying acceptable slippage in the callback data to `onClaimProceeds()`.
+///             - Specifying the tick range in the callback data to `onClaimProceeds()`, which would result in the proceeds being deposited into that range only and reducing slippage. For example, specify a narrower tick range around the price of the base token.
 ///
 /// @dev        As a general rule, this callback contract does not retain balances of tokens between calls.
 ///             Transfers are performed within the same function that requires the balance.
@@ -42,8 +45,14 @@ contract UniswapV3DirectToLiquidity is BaseDirectToLiquidity {
     /// @dev        This will be encoded in the `callbackData_` parameter
     ///
     /// @param      maxSlippage             The maximum slippage allowed when adding liquidity (in terms of `MAX_PERCENT`)
+    /// @param      customTicks             Whether to use custom ticks for the Uniswap V3 position, otherwise full-range
+    /// @param      tickLower               The lower tick of the desired Uniswap V3 position
+    /// @param      tickUpper               The upper tick of the desired Uniswap V3 position
     struct OnClaimProceedsParams {
         uint24 maxSlippage;
+        bool customTicks;
+        int24 tickLower;
+        int24 tickUpper;
     }
 
     // ========== STATE VARIABLES ========== //
@@ -119,6 +128,9 @@ contract UniswapV3DirectToLiquidity is BaseDirectToLiquidity {
     ///             The assumptions are:
     ///             - the callback has `quoteTokenAmount_` quantity of quote tokens (as `receiveQuoteTokens` flag is set)
     ///             - the callback has `baseTokenAmount_` quantity of base tokens
+    ///
+    ///             This function reverts if:
+    ///             - The ticks specified in the callback data are not valid
     function _mintAndDeposit(
         uint96 lotId_,
         uint256 quoteTokenAmount_,
@@ -127,6 +139,12 @@ contract UniswapV3DirectToLiquidity is BaseDirectToLiquidity {
     ) internal virtual override returns (ERC20 poolToken) {
         // Decode the callback data
         OnClaimProceedsParams memory params = abi.decode(callbackData_, (OnClaimProceedsParams));
+
+        // Validate
+        // Revert if the lower tick is greater than the upper tick
+        if (params.customTicks && params.tickLower > params.tickUpper) {
+            revert Callback_InvalidParams();
+        }
 
         DTLConfiguration memory config = lotConfiguration[lotId_];
 
@@ -156,10 +174,12 @@ contract UniswapV3DirectToLiquidity is BaseDirectToLiquidity {
         // Deploy the pool token
         address poolTokenAddress;
         {
-            // Adjust the full-range ticks according to the tick spacing for the current fee
+            // Adjust the specified ticks according to the tick spacing for the current fee
             int24 tickSpacing = uniV3Factory.feeAmountTickSpacing(poolFee);
-            int24 minTick = TickMath.MIN_TICK / tickSpacing * tickSpacing;
-            int24 maxTick = TickMath.MAX_TICK / tickSpacing * tickSpacing;
+            int24 lowerTick = (params.customTicks ? params.tickLower : TickMath.MIN_TICK)
+                / tickSpacing * tickSpacing;
+            int24 upperTick = (params.customTicks ? params.tickUpper : TickMath.MAX_TICK)
+                / tickSpacing * tickSpacing;
 
             // Create an unmanaged pool
             // The range of the position will not be changed after deployment
@@ -168,8 +188,8 @@ contract UniswapV3DirectToLiquidity is BaseDirectToLiquidity {
                 quoteTokenIsToken0 ? config.quoteToken : config.baseToken,
                 quoteTokenIsToken0 ? config.baseToken : config.quoteToken,
                 poolFee,
-                minTick,
-                maxTick
+                lowerTick,
+                upperTick
             );
         }
 

@@ -10,12 +10,14 @@ import {ERC20} from "solmate/tokens/ERC20.sol";
 // Uniswap
 import {IUniswapV3Pool} from "uniswap-v3-core/interfaces/IUniswapV3Pool.sol";
 import {SqrtPriceMath} from "src/lib/uniswap-v3/SqrtPriceMath.sol";
+import {TickMath} from "uniswap-v3-core/libraries/TickMath.sol";
 
 // G-UNI
 import {GUniPool} from "g-uni-v1-core/GUniPool.sol";
 
 // AuctionHouse
 import {LinearVesting} from "src/modules/derivatives/LinearVesting.sol";
+import {BaseCallback} from "src/callbacks/BaseCallback.sol";
 import {BaseDirectToLiquidity} from "src/callbacks/liquidity/BaseDTL.sol";
 import {UniswapV3DirectToLiquidity} from "src/callbacks/liquidity/UniswapV3DTL.sol";
 
@@ -35,6 +37,10 @@ contract UniswapV3DirectToLiquidityOnClaimProceedsTest is UniswapV3DirectToLiqui
 
     /// @dev Set via `setCallbackParameters` modifier
     uint160 internal _sqrtPriceX96;
+
+    bool internal _customTicks;
+    int24 internal _tickLower;
+    int24 internal _tickUpper;
 
     // ========== Internal functions ========== //
 
@@ -98,6 +104,14 @@ contract UniswapV3DirectToLiquidityOnClaimProceedsTest is UniswapV3DirectToLiqui
             linearVestingExpectedBalance,
             "linear vesting: LP token balance"
         );
+
+        // Assert the tick range of the position
+        int24 tickLower = _customTicks ? _tickLower : TickMath.MIN_TICK;
+        int24 tickUpper = _customTicks ? _tickUpper : TickMath.MAX_TICK;
+
+        int24 tickSpacing = _uniV3Factory.feeAmountTickSpacing(_poolFee);
+        assertEq(pool.lowerTick(), tickLower / tickSpacing * tickSpacing, "tick lower");
+        assertEq(pool.upperTick(), tickUpper / tickSpacing * tickSpacing, "tick upper");
     }
 
     function _assertVestingTokenBalance() internal {
@@ -166,7 +180,12 @@ contract UniswapV3DirectToLiquidityOnClaimProceedsTest is UniswapV3DirectToLiqui
             _proceeds,
             _refund,
             abi.encode(
-                UniswapV3DirectToLiquidity.OnClaimProceedsParams({maxSlippage: _maxSlippage})
+                UniswapV3DirectToLiquidity.OnClaimProceedsParams({
+                    maxSlippage: _maxSlippage,
+                    customTicks: _customTicks,
+                    tickLower: _tickLower,
+                    tickUpper: _tickUpper
+                })
             )
         );
     }
@@ -273,6 +292,27 @@ contract UniswapV3DirectToLiquidityOnClaimProceedsTest is UniswapV3DirectToLiqui
         _;
     }
 
+    modifier whenTickRange(int24 tickLower_, int24 tickUpper_) {
+        _customTicks = true;
+        _tickLower = tickLower_;
+        _tickUpper = tickUpper_;
+        _;
+    }
+
+    modifier whenCustomTickRangeIsSet() {
+        int24 tickLower;
+        int24 tickUpper;
+
+        // Calculate the tick range based on the quote and base tokens
+        tickLower = TickMath.getTickAtSqrtRatio(_sqrtPriceX96);
+        tickUpper = tickLower + 10; // Ensures that the tick will be different, given tick spacing requirements
+
+        _customTicks = true;
+        _tickLower = tickLower;
+        _tickUpper = tickUpper;
+        _;
+    }
+
     // ========== Tests ========== //
 
     // [X] given the pool is created
@@ -297,6 +337,11 @@ contract UniswapV3DirectToLiquidityOnClaimProceedsTest is UniswapV3DirectToLiqui
     //  [X] it mints the vesting tokens to the seller
     // [X] given the recipient is not the seller
     //  [X] it mints the LP token to the recipient
+    // [X] when custom ticks is true
+    //  [X] when the lower tick is higher than the upper tick
+    //   [X] it reverts
+    //  [X] when the lower and upper ticks are specified
+    //   [X] it sets the tick range correctly
     // [X] it creates and initializes the pool, creates a pool token, deposits into the pool token, transfers the LP token to the seller and transfers any excess back to the seller
 
     function test_givenPoolIsCreated()
@@ -715,5 +760,42 @@ contract UniswapV3DirectToLiquidityOnClaimProceedsTest is UniswapV3DirectToLiqui
         _assertQuoteTokenBalance();
         _assertBaseTokenBalance();
         _assertApprovals();
+    }
+
+    function test_whenCustomTicks()
+        public
+        givenCallbackIsCreated
+        givenOnCreate
+        setCallbackParameters(_PROCEEDS, _REFUND)
+        givenAddressHasQuoteTokenBalance(_dtlAddress, _proceeds)
+        givenAddressHasBaseTokenBalance(_SELLER, _capacityUtilised)
+        givenAddressHasBaseTokenAllowance(_SELLER, _dtlAddress, _capacityUtilised)
+        whenCustomTickRangeIsSet
+    {
+        _performCallback();
+
+        _assertPoolState(_sqrtPriceX96);
+        _assertLpTokenBalance();
+        _assertVestingTokenBalance();
+        _assertQuoteTokenBalance();
+        _assertBaseTokenBalance();
+        _assertApprovals();
+    }
+
+    function test_whenCustomTicks_lowerTickHigher_reverts()
+        public
+        givenCallbackIsCreated
+        givenOnCreate
+        setCallbackParameters(_PROCEEDS, _REFUND)
+        givenAddressHasQuoteTokenBalance(_dtlAddress, _proceeds)
+        givenAddressHasBaseTokenBalance(_SELLER, _capacityUtilised)
+        givenAddressHasBaseTokenAllowance(_SELLER, _dtlAddress, _capacityUtilised)
+        whenTickRange(100, -100)
+    {
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(BaseCallback.Callback_InvalidParams.selector);
+        vm.expectRevert(err);
+
+        _performCallback();
     }
 }
