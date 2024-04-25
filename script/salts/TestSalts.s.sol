@@ -16,8 +16,6 @@ import {UniswapV3DirectToLiquidity} from "src/callbacks/liquidity/UniswapV3DTL.s
 contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts {
     // TODO shift into abstract contract that tests also inherit from
     address internal constant _OWNER = address(0x1);
-    address internal constant _SELLER = address(0x2);
-    address internal constant _PROTOCOL = address(0x3);
     address internal constant _AUCTION_HOUSE = address(0x000000000000000000000000000000000000000A);
     address internal constant _UNISWAP_V2_FACTORY =
         address(0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f);
@@ -167,6 +165,210 @@ contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts {
         );
         (bytecodePath, bytecodeHash) = _writeBytecode(_MOCK_CALLBACK, contractCode, args);
         _setSalt(bytecodePath, "02", _MOCK_CALLBACK, bytecodeHash);
+
+        // 10000000 = 0x80
+        args = abi.encode(
+            _AUCTION_HOUSE,
+            Callbacks.Permissions({
+                onCreate: true,
+                onCancel: false,
+                onCurate: false,
+                onPurchase: false,
+                onBid: false,
+                onClaimProceeds: false,
+                receiveQuoteTokens: false,
+                sendBaseTokens: false
+            })
+        );
+        (bytecodePath, bytecodeHash) = _writeBytecode(_MOCK_CALLBACK, contractCode, args);
+        _setSalt(bytecodePath, "80", _MOCK_CALLBACK, bytecodeHash);
+
+        // 01000000 = 0x40
+        args = abi.encode(
+            _AUCTION_HOUSE,
+            Callbacks.Permissions({
+                onCreate: false,
+                onCancel: true,
+                onCurate: false,
+                onPurchase: false,
+                onBid: false,
+                onClaimProceeds: false,
+                receiveQuoteTokens: false,
+                sendBaseTokens: false
+            })
+        );
+        (bytecodePath, bytecodeHash) = _writeBytecode(_MOCK_CALLBACK, contractCode, args);
+        _setSalt(bytecodePath, "40", _MOCK_CALLBACK, bytecodeHash);
+
+        // 00100000 = 0x20
+        args = abi.encode(
+            _AUCTION_HOUSE,
+            Callbacks.Permissions({
+                onCreate: false,
+                onCancel: false,
+                onCurate: true,
+                onPurchase: false,
+                onBid: false,
+                onClaimProceeds: false,
+                receiveQuoteTokens: false,
+                sendBaseTokens: false
+            })
+        );
+        (bytecodePath, bytecodeHash) = _writeBytecode(_MOCK_CALLBACK, contractCode, args);
+        _setSalt(bytecodePath, "20", _MOCK_CALLBACK, bytecodeHash);
+
+        // 00010000 = 0x10
+        args = abi.encode(
+            _AUCTION_HOUSE,
+            Callbacks.Permissions({
+                onCreate: false,
+                onCancel: false,
+                onCurate: false,
+                onPurchase: true,
+                onBid: false,
+                onClaimProceeds: false,
+                receiveQuoteTokens: false,
+                sendBaseTokens: false
+            })
+        );
+        (bytecodePath, bytecodeHash) = _writeBytecode(_MOCK_CALLBACK, contractCode, args);
+        _setSalt(bytecodePath, "10", _MOCK_CALLBACK, bytecodeHash);
+
+        // 00001000 = 0x08
+        args = abi.encode(
+            _AUCTION_HOUSE,
+            Callbacks.Permissions({
+                onCreate: false,
+                onCancel: false,
+                onCurate: false,
+                onPurchase: false,
+                onBid: true,
+                onClaimProceeds: false,
+                receiveQuoteTokens: false,
+                sendBaseTokens: false
+            })
+        );
+        (bytecodePath, bytecodeHash) = _writeBytecode(_MOCK_CALLBACK, contractCode, args);
+        _setSalt(bytecodePath, "08", _MOCK_CALLBACK, bytecodeHash);
+
+        // 00000100 = 0x04
+        args = abi.encode(
+            _AUCTION_HOUSE,
+            Callbacks.Permissions({
+                onCreate: false,
+                onCancel: false,
+                onCurate: false,
+                onPurchase: false,
+                onBid: false,
+                onClaimProceeds: true,
+                receiveQuoteTokens: false,
+                sendBaseTokens: false
+            })
+        );
+        (bytecodePath, bytecodeHash) = _writeBytecode(_MOCK_CALLBACK, contractCode, args);
+        _setSalt(bytecodePath, "04", _MOCK_CALLBACK, bytecodeHash);
+
+        // 00000010 = 0x02
+        args = abi.encode(
+            _AUCTION_HOUSE,
+            Callbacks.Permissions({
+                onCreate: false,
+                onCancel: false,
+                onCurate: false,
+                onPurchase: false,
+                onBid: false,
+                onClaimProceeds: false,
+                receiveQuoteTokens: true,
+                sendBaseTokens: false
+            })
+        );
+        (bytecodePath, bytecodeHash) = _writeBytecode(_MOCK_CALLBACK, contractCode, args);
+        _setSalt(bytecodePath, "02", _MOCK_CALLBACK, bytecodeHash);
+
+        // 00000001 = 0x01
+        args = abi.encode(
+            _AUCTION_HOUSE,
+            Callbacks.Permissions({
+                onCreate: false,
+                onCancel: false,
+                onCurate: false,
+                onPurchase: false,
+                onBid: false,
+                onClaimProceeds: false,
+                receiveQuoteTokens: false,
+                sendBaseTokens: true
+            })
+        );
+        (bytecodePath, bytecodeHash) = _writeBytecode(_MOCK_CALLBACK, contractCode, args);
+        _setSalt(bytecodePath, "01", _MOCK_CALLBACK, bytecodeHash);
+
+        // 10000001 = 0x81
+        args = abi.encode(
+            _AUCTION_HOUSE,
+            Callbacks.Permissions({
+                onCreate: true,
+                onCancel: false,
+                onCurate: false,
+                onPurchase: false,
+                onBid: false,
+                onClaimProceeds: false,
+                receiveQuoteTokens: false,
+                sendBaseTokens: true
+            })
+        );
+        (bytecodePath, bytecodeHash) = _writeBytecode(_MOCK_CALLBACK, contractCode, args);
+        _setSalt(bytecodePath, "81", _MOCK_CALLBACK, bytecodeHash);
+
+        // 00100001 = 0x21
+        args = abi.encode(
+            _AUCTION_HOUSE,
+            Callbacks.Permissions({
+                onCreate: false,
+                onCancel: false,
+                onCurate: true,
+                onPurchase: false,
+                onBid: false,
+                onClaimProceeds: false,
+                receiveQuoteTokens: false,
+                sendBaseTokens: true
+            })
+        );
+        (bytecodePath, bytecodeHash) = _writeBytecode(_MOCK_CALLBACK, contractCode, args);
+        _setSalt(bytecodePath, "21", _MOCK_CALLBACK, bytecodeHash);
+
+        // 10100001 = 0xA1
+        args = abi.encode(
+            _AUCTION_HOUSE,
+            Callbacks.Permissions({
+                onCreate: true,
+                onCancel: false,
+                onCurate: true,
+                onPurchase: false,
+                onBid: false,
+                onClaimProceeds: false,
+                receiveQuoteTokens: false,
+                sendBaseTokens: true
+            })
+        );
+        (bytecodePath, bytecodeHash) = _writeBytecode(_MOCK_CALLBACK, contractCode, args);
+        _setSalt(bytecodePath, "A1", _MOCK_CALLBACK, bytecodeHash);
+
+        // 00010001 = 0x11
+        args = abi.encode(
+            _AUCTION_HOUSE,
+            Callbacks.Permissions({
+                onCreate: false,
+                onCancel: false,
+                onCurate: false,
+                onPurchase: true,
+                onBid: false,
+                onClaimProceeds: false,
+                receiveQuoteTokens: false,
+                sendBaseTokens: true
+            })
+        );
+        (bytecodePath, bytecodeHash) = _writeBytecode(_MOCK_CALLBACK, contractCode, args);
+        _setSalt(bytecodePath, "11", _MOCK_CALLBACK, bytecodeHash);
     }
 
     function _generateCappedMerkleAllowlist() internal {
