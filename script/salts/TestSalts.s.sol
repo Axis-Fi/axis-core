@@ -16,8 +16,6 @@ import {UniswapV3DirectToLiquidity} from "src/callbacks/liquidity/UniswapV3DTL.s
 contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts {
     // TODO shift into abstract contract that tests also inherit from
     address internal constant _OWNER = address(0x1);
-    address internal constant _SELLER = address(0x2);
-    address internal constant _PROTOCOL = address(0x3);
     address internal constant _AUCTION_HOUSE = address(0x000000000000000000000000000000000000000A);
     address internal constant _UNISWAP_V2_FACTORY =
         address(0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f);
@@ -35,16 +33,19 @@ contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts {
         _createBytecodeDirectory();
     }
 
-    function generate(string calldata chain_) public {
+    function generate(string calldata chain_, string calldata saltKey_) public {
         _setUp(chain_);
 
-        _generateMockCallback();
-        _generateCappedMerkleAllowlist();
-        _generateUniswapV2DTL();
-        _generateUniswapV3DTL();
+        // For the given salt key, call the appropriate selector
+        // e.g. a salt key named MockCallback would require the following function: generateMockCallback()
+        bytes4 selector = bytes4(keccak256(bytes(string.concat("generate", saltKey_, "()"))));
+
+        // Call the generate function for the salt key
+        (bool success,) = address(this).call(abi.encodeWithSelector(selector));
+        require(success, string.concat("Failed to generate ", saltKey_));
     }
 
-    function _generateMockCallback() internal {
+    function generateMockCallback() public {
         // Allowlist callback supports onCreate, onPurchase, and onBid callbacks
         // 10011000 = 0x98
         // cast create2 -s 98 -i $(cat ./bytecode/MockCallback98.bin)
@@ -59,8 +60,7 @@ contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts {
                 onClaimProceeds: false,
                 receiveQuoteTokens: false,
                 sendBaseTokens: false
-            }),
-            _SELLER
+            })
         );
         bytes memory contractCode = type(MockCallback).creationCode;
         (string memory bytecodePath, bytes32 bytecodeHash) =
@@ -79,8 +79,7 @@ contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts {
                 onClaimProceeds: true,
                 receiveQuoteTokens: true,
                 sendBaseTokens: true
-            }),
-            _SELLER
+            })
         );
         (bytecodePath, bytecodeHash) = _writeBytecode(_MOCK_CALLBACK, contractCode, args);
         _setSalt(bytecodePath, "FF", _MOCK_CALLBACK, bytecodeHash);
@@ -97,8 +96,7 @@ contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts {
                 onClaimProceeds: true,
                 receiveQuoteTokens: false,
                 sendBaseTokens: true
-            }),
-            _SELLER
+            })
         );
         (bytecodePath, bytecodeHash) = _writeBytecode(_MOCK_CALLBACK, contractCode, args);
         _setSalt(bytecodePath, "FD", _MOCK_CALLBACK, bytecodeHash);
@@ -115,8 +113,7 @@ contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts {
                 onClaimProceeds: true,
                 receiveQuoteTokens: true,
                 sendBaseTokens: false
-            }),
-            _SELLER
+            })
         );
         (bytecodePath, bytecodeHash) = _writeBytecode(_MOCK_CALLBACK, contractCode, args);
         _setSalt(bytecodePath, "FE", _MOCK_CALLBACK, bytecodeHash);
@@ -133,8 +130,7 @@ contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts {
                 onClaimProceeds: true,
                 receiveQuoteTokens: false,
                 sendBaseTokens: false
-            }),
-            _SELLER
+            })
         );
         (bytecodePath, bytecodeHash) = _writeBytecode(_MOCK_CALLBACK, contractCode, args);
         _setSalt(bytecodePath, "FC", _MOCK_CALLBACK, bytecodeHash);
@@ -151,8 +147,7 @@ contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts {
                 onClaimProceeds: false,
                 receiveQuoteTokens: false,
                 sendBaseTokens: false
-            }),
-            _SELLER
+            })
         );
         (bytecodePath, bytecodeHash) = _writeBytecode(_MOCK_CALLBACK, contractCode, args);
         _setSalt(bytecodePath, "00", _MOCK_CALLBACK, bytecodeHash);
@@ -169,14 +164,217 @@ contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts {
                 onClaimProceeds: false,
                 receiveQuoteTokens: true,
                 sendBaseTokens: false
-            }),
-            _SELLER
+            })
         );
         (bytecodePath, bytecodeHash) = _writeBytecode(_MOCK_CALLBACK, contractCode, args);
         _setSalt(bytecodePath, "02", _MOCK_CALLBACK, bytecodeHash);
+
+        // 10000000 = 0x80
+        args = abi.encode(
+            _AUCTION_HOUSE,
+            Callbacks.Permissions({
+                onCreate: true,
+                onCancel: false,
+                onCurate: false,
+                onPurchase: false,
+                onBid: false,
+                onClaimProceeds: false,
+                receiveQuoteTokens: false,
+                sendBaseTokens: false
+            })
+        );
+        (bytecodePath, bytecodeHash) = _writeBytecode(_MOCK_CALLBACK, contractCode, args);
+        _setSalt(bytecodePath, "80", _MOCK_CALLBACK, bytecodeHash);
+
+        // 01000000 = 0x40
+        args = abi.encode(
+            _AUCTION_HOUSE,
+            Callbacks.Permissions({
+                onCreate: false,
+                onCancel: true,
+                onCurate: false,
+                onPurchase: false,
+                onBid: false,
+                onClaimProceeds: false,
+                receiveQuoteTokens: false,
+                sendBaseTokens: false
+            })
+        );
+        (bytecodePath, bytecodeHash) = _writeBytecode(_MOCK_CALLBACK, contractCode, args);
+        _setSalt(bytecodePath, "40", _MOCK_CALLBACK, bytecodeHash);
+
+        // 00100000 = 0x20
+        args = abi.encode(
+            _AUCTION_HOUSE,
+            Callbacks.Permissions({
+                onCreate: false,
+                onCancel: false,
+                onCurate: true,
+                onPurchase: false,
+                onBid: false,
+                onClaimProceeds: false,
+                receiveQuoteTokens: false,
+                sendBaseTokens: false
+            })
+        );
+        (bytecodePath, bytecodeHash) = _writeBytecode(_MOCK_CALLBACK, contractCode, args);
+        _setSalt(bytecodePath, "20", _MOCK_CALLBACK, bytecodeHash);
+
+        // 00010000 = 0x10
+        args = abi.encode(
+            _AUCTION_HOUSE,
+            Callbacks.Permissions({
+                onCreate: false,
+                onCancel: false,
+                onCurate: false,
+                onPurchase: true,
+                onBid: false,
+                onClaimProceeds: false,
+                receiveQuoteTokens: false,
+                sendBaseTokens: false
+            })
+        );
+        (bytecodePath, bytecodeHash) = _writeBytecode(_MOCK_CALLBACK, contractCode, args);
+        _setSalt(bytecodePath, "10", _MOCK_CALLBACK, bytecodeHash);
+
+        // 00001000 = 0x08
+        args = abi.encode(
+            _AUCTION_HOUSE,
+            Callbacks.Permissions({
+                onCreate: false,
+                onCancel: false,
+                onCurate: false,
+                onPurchase: false,
+                onBid: true,
+                onClaimProceeds: false,
+                receiveQuoteTokens: false,
+                sendBaseTokens: false
+            })
+        );
+        (bytecodePath, bytecodeHash) = _writeBytecode(_MOCK_CALLBACK, contractCode, args);
+        _setSalt(bytecodePath, "08", _MOCK_CALLBACK, bytecodeHash);
+
+        // 00000100 = 0x04
+        args = abi.encode(
+            _AUCTION_HOUSE,
+            Callbacks.Permissions({
+                onCreate: false,
+                onCancel: false,
+                onCurate: false,
+                onPurchase: false,
+                onBid: false,
+                onClaimProceeds: true,
+                receiveQuoteTokens: false,
+                sendBaseTokens: false
+            })
+        );
+        (bytecodePath, bytecodeHash) = _writeBytecode(_MOCK_CALLBACK, contractCode, args);
+        _setSalt(bytecodePath, "04", _MOCK_CALLBACK, bytecodeHash);
+
+        // 00000010 = 0x02
+        args = abi.encode(
+            _AUCTION_HOUSE,
+            Callbacks.Permissions({
+                onCreate: false,
+                onCancel: false,
+                onCurate: false,
+                onPurchase: false,
+                onBid: false,
+                onClaimProceeds: false,
+                receiveQuoteTokens: true,
+                sendBaseTokens: false
+            })
+        );
+        (bytecodePath, bytecodeHash) = _writeBytecode(_MOCK_CALLBACK, contractCode, args);
+        _setSalt(bytecodePath, "02", _MOCK_CALLBACK, bytecodeHash);
+
+        // 00000001 = 0x01
+        args = abi.encode(
+            _AUCTION_HOUSE,
+            Callbacks.Permissions({
+                onCreate: false,
+                onCancel: false,
+                onCurate: false,
+                onPurchase: false,
+                onBid: false,
+                onClaimProceeds: false,
+                receiveQuoteTokens: false,
+                sendBaseTokens: true
+            })
+        );
+        (bytecodePath, bytecodeHash) = _writeBytecode(_MOCK_CALLBACK, contractCode, args);
+        _setSalt(bytecodePath, "01", _MOCK_CALLBACK, bytecodeHash);
+
+        // 10000001 = 0x81
+        args = abi.encode(
+            _AUCTION_HOUSE,
+            Callbacks.Permissions({
+                onCreate: true,
+                onCancel: false,
+                onCurate: false,
+                onPurchase: false,
+                onBid: false,
+                onClaimProceeds: false,
+                receiveQuoteTokens: false,
+                sendBaseTokens: true
+            })
+        );
+        (bytecodePath, bytecodeHash) = _writeBytecode(_MOCK_CALLBACK, contractCode, args);
+        _setSalt(bytecodePath, "81", _MOCK_CALLBACK, bytecodeHash);
+
+        // 00100001 = 0x21
+        args = abi.encode(
+            _AUCTION_HOUSE,
+            Callbacks.Permissions({
+                onCreate: false,
+                onCancel: false,
+                onCurate: true,
+                onPurchase: false,
+                onBid: false,
+                onClaimProceeds: false,
+                receiveQuoteTokens: false,
+                sendBaseTokens: true
+            })
+        );
+        (bytecodePath, bytecodeHash) = _writeBytecode(_MOCK_CALLBACK, contractCode, args);
+        _setSalt(bytecodePath, "21", _MOCK_CALLBACK, bytecodeHash);
+
+        // 10100001 = 0xA1
+        args = abi.encode(
+            _AUCTION_HOUSE,
+            Callbacks.Permissions({
+                onCreate: true,
+                onCancel: false,
+                onCurate: true,
+                onPurchase: false,
+                onBid: false,
+                onClaimProceeds: false,
+                receiveQuoteTokens: false,
+                sendBaseTokens: true
+            })
+        );
+        (bytecodePath, bytecodeHash) = _writeBytecode(_MOCK_CALLBACK, contractCode, args);
+        _setSalt(bytecodePath, "A1", _MOCK_CALLBACK, bytecodeHash);
+
+        // 00010001 = 0x11
+        args = abi.encode(
+            _AUCTION_HOUSE,
+            Callbacks.Permissions({
+                onCreate: false,
+                onCancel: false,
+                onCurate: false,
+                onPurchase: true,
+                onBid: false,
+                onClaimProceeds: false,
+                receiveQuoteTokens: false,
+                sendBaseTokens: true
+            })
+        );
+        (bytecodePath, bytecodeHash) = _writeBytecode(_MOCK_CALLBACK, contractCode, args);
+        _setSalt(bytecodePath, "11", _MOCK_CALLBACK, bytecodeHash);
     }
 
-    function _generateCappedMerkleAllowlist() internal {
+    function generateCappedMerkleAllowlist() public {
         // 10001000 = 0x88
         bytes memory args = abi.encode(
             _AUCTION_HOUSE,
@@ -189,8 +387,7 @@ contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts {
                 onClaimProceeds: false,
                 receiveQuoteTokens: false,
                 sendBaseTokens: false
-            }),
-            _SELLER
+            })
         );
         bytes memory contractCode = type(CappedMerkleAllowlist).creationCode;
         (string memory bytecodePath, bytes32 bytecodeHash) =
@@ -209,24 +406,22 @@ contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts {
                 onClaimProceeds: false,
                 receiveQuoteTokens: false,
                 sendBaseTokens: false
-            }),
-            _SELLER
+            })
         );
         (bytecodePath, bytecodeHash) = _writeBytecode(_CAPPED_MERKLE_ALLOWLIST, contractCode, args);
         _setSalt(bytecodePath, "90", _CAPPED_MERKLE_ALLOWLIST, bytecodeHash);
     }
 
-    function _generateUniswapV2DTL() internal {
-        bytes memory args =
-            abi.encode(_AUCTION_HOUSE, _SELLER, _UNISWAP_V2_FACTORY, _UNISWAP_V2_ROUTER);
+    function generateUniswapV2DirectToLiquidity() public {
+        bytes memory args = abi.encode(_AUCTION_HOUSE, _UNISWAP_V2_FACTORY, _UNISWAP_V2_ROUTER);
         bytes memory contractCode = type(UniswapV2DirectToLiquidity).creationCode;
         (string memory bytecodePath, bytes32 bytecodeHash) =
             _writeBytecode("UniswapV2DirectToLiquidity", contractCode, args);
         _setSalt(bytecodePath, "E6", "UniswapV2DirectToLiquidity", bytecodeHash);
     }
 
-    function _generateUniswapV3DTL() internal {
-        bytes memory args = abi.encode(_AUCTION_HOUSE, _SELLER, _UNISWAP_V3_FACTORY, _GUNI_FACTORY);
+    function generateUniswapV3DirectToLiquidity() public {
+        bytes memory args = abi.encode(_AUCTION_HOUSE, _UNISWAP_V3_FACTORY, _GUNI_FACTORY);
         bytes memory contractCode = type(UniswapV3DirectToLiquidity).creationCode;
         (string memory bytecodePath, bytes32 bytecodeHash) =
             _writeBytecode("UniswapV3DirectToLiquidity", contractCode, args);

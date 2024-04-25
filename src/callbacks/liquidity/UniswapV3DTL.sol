@@ -60,10 +60,9 @@ contract UniswapV3DirectToLiquidity is BaseDirectToLiquidity {
 
     constructor(
         address auctionHouse_,
-        address seller_,
         address uniV3Factory_,
         address gUniFactory_
-    ) BaseDirectToLiquidity(auctionHouse_, seller_) {
+    ) BaseDirectToLiquidity(auctionHouse_) {
         if (uniV3Factory_ == address(0)) {
             revert Callback_Params_InvalidAddress();
         }
@@ -121,33 +120,33 @@ contract UniswapV3DirectToLiquidity is BaseDirectToLiquidity {
     ///             - the callback has `baseTokenAmount_` quantity of base tokens
     function _mintAndDeposit(
         uint96 lotId_,
+        address quoteToken_,
         uint256 quoteTokenAmount_,
+        address baseToken_,
         uint256 baseTokenAmount_,
         bytes memory callbackData_
     ) internal virtual override returns (ERC20 poolToken) {
         // Decode the callback data
         OnClaimProceedsParams memory params = abi.decode(callbackData_, (OnClaimProceedsParams));
 
-        DTLConfiguration memory config = lotConfiguration[lotId_];
-
         // Extract the pool fee from the implParams
-        (uint24 poolFee) = abi.decode(config.implParams, (uint24));
+        (uint24 poolFee) = abi.decode(lotConfiguration[lotId_].implParams, (uint24));
 
         // Determine the ordering of tokens
-        bool quoteTokenIsToken0 = config.quoteToken < config.baseToken;
+        bool quoteTokenIsToken0 = quoteToken_ < baseToken_;
 
         // Create and initialize the pool if necessary
         {
             // Determine sqrtPriceX96
             uint160 sqrtPriceX96 = SqrtPriceMath.getSqrtPriceX96(
-                config.quoteToken, config.baseToken, quoteTokenAmount_, baseTokenAmount_
+                quoteToken_, baseToken_, quoteTokenAmount_, baseTokenAmount_
             );
 
             // If the pool already exists and is initialized, it will have no effect
             // Please see the risks section in the contract documentation for more information
             _createAndInitializePoolIfNecessary(
-                quoteTokenIsToken0 ? config.quoteToken : config.baseToken,
-                quoteTokenIsToken0 ? config.baseToken : config.quoteToken,
+                quoteTokenIsToken0 ? quoteToken_ : baseToken_,
+                quoteTokenIsToken0 ? baseToken_ : quoteToken_,
                 poolFee,
                 sqrtPriceX96
             );
@@ -158,18 +157,16 @@ contract UniswapV3DirectToLiquidity is BaseDirectToLiquidity {
         {
             // Adjust the full-range ticks according to the tick spacing for the current fee
             int24 tickSpacing = uniV3Factory.feeAmountTickSpacing(poolFee);
-            int24 minTick = TickMath.MIN_TICK / tickSpacing * tickSpacing;
-            int24 maxTick = TickMath.MAX_TICK / tickSpacing * tickSpacing;
 
             // Create an unmanaged pool
             // The range of the position will not be changed after deployment
             // Fees will also be collected at the time of withdrawal
             poolTokenAddress = gUniFactory.createPool(
-                quoteTokenIsToken0 ? config.quoteToken : config.baseToken,
-                quoteTokenIsToken0 ? config.baseToken : config.quoteToken,
+                quoteTokenIsToken0 ? quoteToken_ : baseToken_,
+                quoteTokenIsToken0 ? baseToken_ : quoteToken_,
                 poolFee,
-                minTick,
-                maxTick
+                TickMath.MIN_TICK / tickSpacing * tickSpacing,
+                TickMath.MAX_TICK / tickSpacing * tickSpacing
             );
         }
 
@@ -191,11 +188,11 @@ contract UniswapV3DirectToLiquidity is BaseDirectToLiquidity {
                 // Ensures that `quoteTokenRequired` (as specified by GUniPool) is within the slippage range from the actual quote token amount
                 uint256 lower = _getAmountWithSlippage(quoteTokenAmount_, params.maxSlippage);
                 if (quoteTokenRequired < lower) {
-                    revert Callback_Slippage(config.quoteToken, quoteTokenRequired, lower);
+                    revert Callback_Slippage(quoteToken_, quoteTokenRequired, lower);
                 }
 
                 // Approve the vault to spend the tokens
-                ERC20(config.quoteToken).approve(address(poolTokenAddress), quoteTokenRequired);
+                ERC20(quoteToken_).approve(address(poolTokenAddress), quoteTokenRequired);
             }
             {
                 uint256 baseTokenRequired = quoteTokenIsToken0 ? amount1Actual : amount0Actual;
@@ -203,11 +200,11 @@ contract UniswapV3DirectToLiquidity is BaseDirectToLiquidity {
                 // Ensures that `baseTokenRequired` (as specified by GUniPool) is within the slippage range from the actual base token amount
                 uint256 lower = _getAmountWithSlippage(baseTokenAmount_, params.maxSlippage);
                 if (baseTokenRequired < lower) {
-                    revert Callback_Slippage(config.baseToken, baseTokenRequired, lower);
+                    revert Callback_Slippage(baseToken_, baseTokenRequired, lower);
                 }
 
                 // Approve the vault to spend the tokens
-                ERC20(config.baseToken).approve(address(poolTokenAddress), baseTokenRequired);
+                ERC20(baseToken_).approve(address(poolTokenAddress), baseTokenRequired);
             }
 
             // Mint the LP tokens

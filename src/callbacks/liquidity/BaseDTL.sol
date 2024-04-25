@@ -37,8 +37,6 @@ abstract contract BaseDirectToLiquidity is BaseCallback {
 
     /// @notice     Configuration for the DTL callback
     ///
-    /// @param      baseToken                   The base token address
-    /// @param      quoteToken                  The quote token address
     /// @param      recipient                   The recipient of the LP tokens
     /// @param      lotCapacity                 The capacity of the lot
     /// @param      lotCuratorPayout            The maximum curator payout of the lot
@@ -49,8 +47,6 @@ abstract contract BaseDirectToLiquidity is BaseCallback {
     /// @param      active                      Whether the lot is active
     /// @param      implParams                  The implementation-specific parameters
     struct DTLConfiguration {
-        address baseToken;
-        address quoteToken;
         address recipient;
         uint256 lotCapacity;
         uint256 lotCuratorPayout;
@@ -87,10 +83,7 @@ abstract contract BaseDirectToLiquidity is BaseCallback {
 
     // ========== CONSTRUCTOR ========== //
 
-    constructor(
-        address auctionHouse_,
-        address seller_
-    )
+    constructor(address auctionHouse_)
         BaseCallback(
             auctionHouse_,
             Callbacks.Permissions({
@@ -102,8 +95,7 @@ abstract contract BaseDirectToLiquidity is BaseCallback {
                 onClaimProceeds: true,
                 receiveQuoteTokens: true,
                 sendBaseTokens: false
-            }),
-            seller_
+            })
         )
     {}
 
@@ -177,8 +169,6 @@ abstract contract BaseDirectToLiquidity is BaseCallback {
 
         // Store the configuration
         lotConfiguration[lotId_] = DTLConfiguration({
-            baseToken: baseToken_,
-            quoteToken: quoteToken_,
             recipient: params.recipient,
             lotCapacity: capacity_,
             lotCuratorPayout: 0,
@@ -305,6 +295,16 @@ abstract contract BaseDirectToLiquidity is BaseCallback {
         bytes calldata callbackData_
     ) internal virtual override onlyIfLotExists(lotId_) {
         DTLConfiguration memory config = lotConfiguration[lotId_];
+        address seller;
+        address baseToken;
+        address quoteToken;
+        {
+            ERC20 baseToken_;
+            ERC20 quoteToken_;
+            (seller, baseToken_, quoteToken_,,,,,,) = AuctionHouse(AUCTION_HOUSE).lotRouting(lotId_);
+            baseToken = address(baseToken_);
+            quoteToken = address(quoteToken_);
+        }
 
         uint256 baseTokensRequired;
         uint256 quoteTokensRequired;
@@ -334,19 +334,20 @@ abstract contract BaseDirectToLiquidity is BaseCallback {
         // Ensure the required tokens are present before minting
         {
             // Check that sufficient balance exists
-            uint256 baseTokenBalance = ERC20(config.baseToken).balanceOf(seller);
+            uint256 baseTokenBalance = ERC20(baseToken).balanceOf(seller);
             if (baseTokenBalance < baseTokensRequired) {
                 revert Callback_InsufficientBalance(
-                    config.baseToken, seller, baseTokensRequired, baseTokenBalance
+                    baseToken, seller, baseTokensRequired, baseTokenBalance
                 );
             }
 
-            ERC20(config.baseToken).safeTransferFrom(seller, address(this), baseTokensRequired);
+            ERC20(baseToken).safeTransferFrom(seller, address(this), baseTokensRequired);
         }
 
         // Mint and deposit into the pool
-        (ERC20 poolToken) =
-            _mintAndDeposit(lotId_, quoteTokensRequired, baseTokensRequired, callbackData_);
+        (ERC20 poolToken) = _mintAndDeposit(
+            lotId_, quoteToken, quoteTokensRequired, baseToken, baseTokensRequired, callbackData_
+        );
         uint256 poolTokenQuantity = poolToken.balanceOf(address(this));
 
         // If vesting is enabled, create the vesting tokens
@@ -370,17 +371,17 @@ abstract contract BaseDirectToLiquidity is BaseCallback {
 
         // Send any remaining quote tokens to the seller
         {
-            uint256 quoteTokenBalance = ERC20(config.quoteToken).balanceOf(address(this));
+            uint256 quoteTokenBalance = ERC20(quoteToken).balanceOf(address(this));
             if (quoteTokenBalance > 0) {
-                ERC20(config.quoteToken).safeTransfer(seller, quoteTokenBalance);
+                ERC20(quoteToken).safeTransfer(seller, quoteTokenBalance);
             }
         }
 
         // Send any remaining base tokens to the seller
         {
-            uint256 baseTokenBalance = ERC20(config.baseToken).balanceOf(address(this));
+            uint256 baseTokenBalance = ERC20(baseToken).balanceOf(address(this));
             if (baseTokenBalance > 0) {
-                ERC20(config.baseToken).safeTransfer(seller, baseTokenBalance);
+                ERC20(baseToken).safeTransfer(seller, baseTokenBalance);
             }
         }
     }
@@ -395,13 +396,17 @@ abstract contract BaseDirectToLiquidity is BaseCallback {
     ///             - Return the ERC20 pool token
     ///
     /// @param      lotId_              The lot ID
+    /// @param      quoteToken_         The quote token address
     /// @param      quoteTokenAmount_   The amount of quote tokens to deposit
+    /// @param      baseToken_          The base token address
     /// @param      baseTokenAmount_    The amount of base tokens to deposit
     /// @param      callbackData_       Implementation-specific data
     /// @return     poolToken           The ERC20 pool token
     function _mintAndDeposit(
         uint96 lotId_,
+        address quoteToken_,
         uint256 quoteTokenAmount_,
+        address baseToken_,
         uint256 baseTokenAmount_,
         bytes memory callbackData_
     ) internal virtual returns (ERC20 poolToken);
@@ -409,7 +414,7 @@ abstract contract BaseDirectToLiquidity is BaseCallback {
     // ========== MODIFIERS ========== //
 
     modifier onlyIfLotDoesNotExist(uint96 lotId_) {
-        if (lotConfiguration[lotId_].baseToken != address(0)) {
+        if (lotConfiguration[lotId_].recipient != address(0)) {
             revert Callback_InvalidParams();
         }
         _;
@@ -443,7 +448,7 @@ abstract contract BaseDirectToLiquidity is BaseCallback {
     }
 
     function _getLatestLinearVestingModule() internal view returns (address) {
-        AuctionHouse auctionHouseContract = AuctionHouse(auctionHouse);
+        AuctionHouse auctionHouseContract = AuctionHouse(AUCTION_HOUSE);
         Keycode moduleKeycode = Keycode.wrap(LINEAR_VESTING_KEYCODE);
 
         // Get the module status

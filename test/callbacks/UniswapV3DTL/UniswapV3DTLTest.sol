@@ -5,6 +5,8 @@ import {Test} from "forge-std/Test.sol";
 import {Callbacks} from "src/lib/Callbacks.sol";
 import {Permit2User} from "test/lib/permit2/Permit2User.sol";
 
+import {IAuction} from "src/interfaces/IAuction.sol";
+import {IAuctionHouse} from "src/interfaces/IAuctionHouse.sol";
 import {BatchAuctionHouse} from "src/BatchAuctionHouse.sol";
 
 import {GUniFactory} from "g-uni-v1-core/GUniFactory.sol";
@@ -16,6 +18,9 @@ import {UniswapV3Factory} from "test/lib/uniswap-v3/UniswapV3Factory.sol";
 import {BaseDirectToLiquidity} from "src/callbacks/liquidity/BaseDTL.sol";
 import {UniswapV3DirectToLiquidity} from "src/callbacks/liquidity/UniswapV3DTL.sol";
 import {LinearVesting} from "src/modules/derivatives/LinearVesting.sol";
+import {MockBatchAuctionModule} from "test/modules/Auction/MockBatchAuctionModule.sol";
+
+import {keycodeFromVeecode, toKeycode} from "src/modules/Keycode.sol";
 
 import {MockERC20} from "solmate/test/utils/mocks/MockERC20.sol";
 
@@ -44,6 +49,7 @@ abstract contract UniswapV3DirectToLiquidityTest is Test, Permit2User, WithSalts
     IUniswapV3Factory internal _uniV3Factory;
     GUniFactory internal _gUniFactory;
     LinearVesting internal _linearVesting;
+    MockBatchAuctionModule internal _batchAuctionModule;
 
     MockERC20 internal _quoteToken;
     MockERC20 internal _baseToken;
@@ -75,13 +81,13 @@ abstract contract UniswapV3DirectToLiquidityTest is Test, Permit2User, WithSalts
         _uniV3Factory = new UniswapV3Factory{
             salt: bytes32(0xbc65534283bdbbac4a95a3fb1933af63d55135566688dd54d1c55a626b1bc366)
         }();
-        console2.log("UniswapV3Factory address: {}", address(_uniV3Factory)); // 0x8e530929af28C6aE9d9B24bF18c4447D23caE14a
+        console2.log("UniswapV3Factory address: {}", address(_uniV3Factory)); // 0x5573DCDCc96692D24938F4E440d99EFC3d7EDA04
 
         // Create a GUniFactory at a deterministic address
         _gUniFactory = new GUniFactory{
             salt: bytes32(0x31d4bb3a2cd73df799deceac86fa252d040e24c2ea206f4172d74f72cfa34e4b)
         }(address(_uniV3Factory));
-        console2.log("GUniFactory address: {}", address(_gUniFactory)); // 0x58Abf7Ea167B7234a3eFc4b043Cd6C9145f62f78
+        console2.log("GUniFactory address: {}", address(_gUniFactory)); // 0xe6b8030b2fd30ea9198D3F39AEeD4f448A2704f0
 
         // Initialize the GUniFactory
         address payable gelatoAddress = payable(address(0x10));
@@ -89,6 +95,11 @@ abstract contract UniswapV3DirectToLiquidityTest is Test, Permit2User, WithSalts
         _gUniFactory.initialize(address(poolImplementation), address(0), address(this));
 
         _linearVesting = new LinearVesting(address(_auctionHouse));
+        _batchAuctionModule = new MockBatchAuctionModule(address(_auctionHouse));
+
+        // Install a mock batch auction module
+        vm.prank(_OWNER);
+        _auctionHouse.installModule(_batchAuctionModule);
 
         _quoteToken = new MockERC20("Quote Token", "QT", 18);
         _baseToken = new MockERC20("Base Token", "BT", 18);
@@ -104,9 +115,8 @@ abstract contract UniswapV3DirectToLiquidityTest is Test, Permit2User, WithSalts
 
     modifier givenCallbackIsCreated() {
         // Get the salt
-        bytes memory args = abi.encode(
-            address(_auctionHouse), _SELLER, address(_uniV3Factory), address(_gUniFactory)
-        );
+        bytes memory args =
+            abi.encode(address(_auctionHouse), address(_uniV3Factory), address(_gUniFactory));
         bytes32 salt = _getSalt(
             "UniswapV3DirectToLiquidity", type(UniswapV3DirectToLiquidity).creationCode, args
         );
@@ -115,7 +125,7 @@ abstract contract UniswapV3DirectToLiquidityTest is Test, Permit2User, WithSalts
         // Source: https://github.com/foundry-rs/foundry/issues/6402
         vm.startBroadcast();
         _dtl = new UniswapV3DirectToLiquidity{salt: salt}(
-            address(_auctionHouse), _SELLER, address(_uniV3Factory), address(_gUniFactory)
+            address(_auctionHouse), address(_uniV3Factory), address(_gUniFactory)
         );
         vm.stopBroadcast();
 
@@ -145,17 +155,40 @@ abstract contract UniswapV3DirectToLiquidityTest is Test, Permit2User, WithSalts
         _;
     }
 
+    function _createLot(address seller_) internal returns (uint96 lotId) {
+        // Mint and approve the capacity to the owner
+        _baseToken.mint(seller_, _LOT_CAPACITY);
+        vm.prank(seller_);
+        _baseToken.approve(address(_auctionHouse), _LOT_CAPACITY);
+
+        // Prep the lot arguments
+        IAuctionHouse.RoutingParams memory routingParams = IAuctionHouse.RoutingParams({
+            auctionType: keycodeFromVeecode(_batchAuctionModule.VEECODE()),
+            baseToken: address(_baseToken),
+            quoteToken: address(_quoteToken),
+            curator: address(0),
+            callbacks: _dtl,
+            callbackData: abi.encode(_dtlCreateParams),
+            derivativeType: toKeycode(""),
+            derivativeParams: abi.encode(""),
+            wrapDerivative: false
+        });
+
+        IAuction.AuctionParams memory auctionParams = IAuction.AuctionParams({
+            start: uint48(block.timestamp) + 1,
+            duration: 1 days,
+            capacityInQuote: false,
+            capacity: _LOT_CAPACITY,
+            implParams: abi.encode("")
+        });
+
+        // Create a new lot
+        vm.prank(seller_);
+        return _auctionHouse.auction(routingParams, auctionParams, "");
+    }
+
     modifier givenOnCreate() {
-        vm.prank(address(_auctionHouse));
-        _dtl.onCreate(
-            _lotId,
-            _SELLER,
-            address(_baseToken),
-            address(_quoteToken),
-            _LOT_CAPACITY,
-            false,
-            abi.encode(_dtlCreateParams)
-        );
+        _lotId = _createLot(_SELLER);
         _;
     }
 
@@ -203,8 +236,6 @@ abstract contract UniswapV3DirectToLiquidityTest is Test, Permit2User, WithSalts
         returns (BaseDirectToLiquidity.DTLConfiguration memory)
     {
         (
-            address baseToken_,
-            address quoteToken_,
             address recipient_,
             uint256 lotCapacity_,
             uint256 lotCuratorPayout_,
@@ -217,8 +248,6 @@ abstract contract UniswapV3DirectToLiquidityTest is Test, Permit2User, WithSalts
         ) = _dtl.lotConfiguration(lotId_);
 
         return BaseDirectToLiquidity.DTLConfiguration({
-            baseToken: baseToken_,
-            quoteToken: quoteToken_,
             recipient: recipient_,
             lotCapacity: lotCapacity_,
             lotCuratorPayout: lotCuratorPayout_,

@@ -268,11 +268,11 @@ abstract contract AtomicAuctionHouseTest is Test, Permit2User, WithSalts {
             receiveQuoteTokens: false,
             sendBaseTokens: false
         });
-        bytes memory args = abi.encode(address(_auctionHouse), permissions, _SELLER);
+        bytes memory args = abi.encode(address(_auctionHouse), permissions);
         bytes32 salt = _getSalt("MockCallback", type(MockCallback).creationCode, args);
 
         vm.startBroadcast(); // required for CREATE2 address to work correctly. doesn't do anything in a test
-        _callback = new MockCallback{salt: salt}(address(_auctionHouse), permissions, _SELLER);
+        _callback = new MockCallback{salt: salt}(address(_auctionHouse), permissions);
         vm.stopBroadcast();
 
         _routingParams.callbacks = _callback;
@@ -345,13 +345,13 @@ abstract contract AtomicAuctionHouseTest is Test, Permit2User, WithSalts {
             receiveQuoteTokens: _callbackReceiveQuoteTokens,
             sendBaseTokens: _callbackSendBaseTokens
         });
-        bytes memory args = abi.encode(address(_auctionHouse), permissions, _SELLER);
+        bytes memory args = abi.encode(address(_auctionHouse), permissions);
         bytes32 salt = _getSalt("MockCallback", type(MockCallback).creationCode, args);
 
         // Required for CREATE2 address to work correctly. doesn't do anything in a test
         // Source: https://github.com/foundry-rs/foundry/issues/6402
         vm.startBroadcast(); // required for CREATE2 address to work correctly. doesn't do anything in a test
-        _callback = new MockCallback{salt: salt}(address(_auctionHouse), permissions, _SELLER);
+        _callback = new MockCallback{salt: salt}(address(_auctionHouse), permissions);
         vm.stopBroadcast();
 
         _routingParams.callbacks = _callback;

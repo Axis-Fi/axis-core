@@ -36,10 +36,9 @@ contract UniswapV2DirectToLiquidity is BaseDirectToLiquidity {
 
     constructor(
         address auctionHouse_,
-        address seller_,
         address uniswapV2Factory_,
         address uniswapV2Router_
-    ) BaseDirectToLiquidity(auctionHouse_, seller_) {
+    ) BaseDirectToLiquidity(auctionHouse_) {
         if (uniswapV2Factory_ == address(0)) {
             revert Callback_Params_InvalidAddress();
         }
@@ -79,21 +78,21 @@ contract UniswapV2DirectToLiquidity is BaseDirectToLiquidity {
     ///             - Creates the pool if necessary
     ///             - Deposits the tokens into the pool
     function _mintAndDeposit(
-        uint96 lotId_,
+        uint96,
+        address quoteToken_,
         uint256 quoteTokenAmount_,
+        address baseToken_,
         uint256 baseTokenAmount_,
         bytes memory callbackData_
     ) internal virtual override returns (ERC20 poolToken) {
         // Decode the callback data
         OnClaimProceedsParams memory params = abi.decode(callbackData_, (OnClaimProceedsParams));
 
-        DTLConfiguration memory config = lotConfiguration[lotId_];
-
         // Create and initialize the pool if necessary
         // Token orientation is irrelevant
-        address pairAddress = uniV2Factory.getPair(config.baseToken, config.quoteToken);
+        address pairAddress = uniV2Factory.getPair(baseToken_, quoteToken_);
         if (pairAddress == address(0)) {
-            pairAddress = uniV2Factory.createPair(config.baseToken, config.quoteToken);
+            pairAddress = uniV2Factory.createPair(baseToken_, quoteToken_);
         }
 
         // Calculate the minimum amount out for each token
@@ -101,13 +100,13 @@ contract UniswapV2DirectToLiquidity is BaseDirectToLiquidity {
         uint256 baseTokenAmountMin = _getAmountWithSlippage(baseTokenAmount_, params.maxSlippage);
 
         // Approve the router to spend the tokens
-        ERC20(config.quoteToken).approve(address(uniV2Router), quoteTokenAmount_);
-        ERC20(config.baseToken).approve(address(uniV2Router), baseTokenAmount_);
+        ERC20(quoteToken_).approve(address(uniV2Router), quoteTokenAmount_);
+        ERC20(baseToken_).approve(address(uniV2Router), baseTokenAmount_);
 
         // Deposit into the pool
         uniV2Router.addLiquidity(
-            config.quoteToken,
-            config.baseToken,
+            quoteToken_,
+            baseToken_,
             quoteTokenAmount_,
             baseTokenAmount_,
             quoteTokenAmountMin,
@@ -118,8 +117,8 @@ contract UniswapV2DirectToLiquidity is BaseDirectToLiquidity {
 
         // Remove any dangling approvals
         // This is necessary, since the router may not spend all available tokens
-        ERC20(config.quoteToken).approve(address(uniV2Router), 0);
-        ERC20(config.baseToken).approve(address(uniV2Router), 0);
+        ERC20(quoteToken_).approve(address(uniV2Router), 0);
+        ERC20(baseToken_).approve(address(uniV2Router), 0);
 
         return ERC20(pairAddress);
     }

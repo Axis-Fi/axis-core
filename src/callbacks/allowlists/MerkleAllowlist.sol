@@ -26,9 +26,8 @@ contract MerkleAllowlist is BaseCallback {
 
     constructor(
         address auctionHouse_,
-        Callbacks.Permissions memory permissions_,
-        address seller_
-    ) BaseCallback(auctionHouse_, permissions_, seller_) {}
+        Callbacks.Permissions memory permissions_
+    ) BaseCallback(auctionHouse_, permissions_) {}
 
     // ========== CALLBACK FUNCTIONS ========== //
 

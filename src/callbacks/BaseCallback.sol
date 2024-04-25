@@ -1,12 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.19;
 
-import {Owned} from "lib/solmate/src/auth/Owned.sol";
-
+// Interfaces
 import {ICallback} from "src/interfaces/ICallback.sol";
+
+// Internal libraries
 import {Callbacks} from "src/lib/Callbacks.sol";
 
-abstract contract BaseCallback is ICallback, Owned {
+/// @title  BaseCallback
+/// @notice This contract implements standard behaviours for callbacks to the Axis auction system.
+///         Developers can extend this contract to implement custom logic for their callbacks.
+abstract contract BaseCallback is ICallback {
     // ========== ERRORS ========== //
 
     error Callback_InvalidParams();
@@ -15,29 +19,26 @@ abstract contract BaseCallback is ICallback, Owned {
 
     // ========== STATE VARIABLES ========== //
 
-    address public auctionHouse;
-    address public seller;
+    /// @notice The AuctionHouse that this callback is linked to
+    address public immutable AUCTION_HOUSE;
+
+    /// @notice Records lot ids against their registration status
     mapping(uint96 => bool) public lotIdRegistered;
 
     // ========== CONSTRUCTOR ========== //
 
-    constructor(
-        address auctionHouse_,
-        Callbacks.Permissions memory permissions_,
-        address seller_
-    ) Owned(seller_) {
+    constructor(address auctionHouse_, Callbacks.Permissions memory permissions_) {
         // Validate the permissions against the deployed address
         Callbacks.validateCallbacksPermissions(this, permissions_);
 
-        // Set the auction house and seller
-        auctionHouse = auctionHouse_;
-        seller = seller_;
+        // Set the auction house
+        AUCTION_HOUSE = auctionHouse_;
     }
 
     // ========== MODIFIERS ========== //
 
     modifier onlyAuctionHouse() {
-        if (msg.sender != auctionHouse) revert Callback_NotAuthorized();
+        if (msg.sender != AUCTION_HOUSE) revert Callback_NotAuthorized();
         _;
     }
 
@@ -48,6 +49,7 @@ abstract contract BaseCallback is ICallback, Owned {
 
     // ========== CALLBACK FUNCTIONS ========== //
 
+    /// @inheritdoc ICallback
     function onCreate(
         uint96 lotId_,
         address seller_,
@@ -57,9 +59,6 @@ abstract contract BaseCallback is ICallback, Owned {
         bool prefund_,
         bytes calldata callbackData_
     ) external override onlyAuctionHouse returns (bytes4) {
-        // Validate the seller
-        if (seller_ != seller) revert Callback_NotAuthorized();
-
         // Validate the lot registration
         if (lotIdRegistered[lotId_]) revert Callback_InvalidParams();
 
@@ -83,6 +82,7 @@ abstract contract BaseCallback is ICallback, Owned {
         bytes calldata callbackData_
     ) internal virtual;
 
+    /// @inheritdoc ICallback
     function onCancel(
         uint96 lotId_,
         uint256 refund_,
@@ -103,6 +103,7 @@ abstract contract BaseCallback is ICallback, Owned {
         bytes calldata callbackData_
     ) internal virtual;
 
+    /// @inheritdoc ICallback
     function onCurate(
         uint96 lotId_,
         uint256 curatorFee_,
@@ -123,6 +124,7 @@ abstract contract BaseCallback is ICallback, Owned {
         bytes calldata callbackData_
     ) internal virtual;
 
+    /// @inheritdoc ICallback
     function onPurchase(
         uint96 lotId_,
         address buyer_,
@@ -147,6 +149,7 @@ abstract contract BaseCallback is ICallback, Owned {
         bytes calldata callbackData_
     ) internal virtual;
 
+    /// @inheritdoc ICallback
     function onBid(
         uint96 lotId_,
         uint64 bidId,
@@ -168,6 +171,7 @@ abstract contract BaseCallback is ICallback, Owned {
         bytes calldata callbackData_
     ) internal virtual;
 
+    /// @inheritdoc ICallback
     function onClaimProceeds(
         uint96 lotId_,
         uint256 proceeds_,
@@ -186,10 +190,4 @@ abstract contract BaseCallback is ICallback, Owned {
         uint256 refund_,
         bytes calldata callbackData_
     ) internal virtual;
-
-    // ========== ADMIN FUNCTIONS ========= //
-
-    function setSeller(address seller_) external onlyOwner {
-        seller = seller_;
-    }
 }
