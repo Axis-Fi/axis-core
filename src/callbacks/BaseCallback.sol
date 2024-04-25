@@ -1,9 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.19;
 
+// Interfaces
 import {ICallback} from "src/interfaces/ICallback.sol";
+
+// Internal libraries
 import {Callbacks} from "src/lib/Callbacks.sol";
 
+/// @title  BaseCallback
+/// @notice This contract implements standard behaviours for callbacks to the Axis auction system.
+///         Developers can extend this contract to implement custom logic for their callbacks.
 abstract contract BaseCallback is ICallback {
     // ========== ERRORS ========== //
 
@@ -13,7 +19,10 @@ abstract contract BaseCallback is ICallback {
 
     // ========== STATE VARIABLES ========== //
 
-    address public auctionHouse;
+    /// @notice The AuctionHouse that this callback is linked to
+    address public immutable AUCTION_HOUSE;
+
+    /// @notice Records lot ids against their registration status
     mapping(uint96 => bool) public lotIdRegistered;
 
     // ========== CONSTRUCTOR ========== //
@@ -23,13 +32,13 @@ abstract contract BaseCallback is ICallback {
         Callbacks.validateCallbacksPermissions(this, permissions_);
 
         // Set the auction house
-        auctionHouse = auctionHouse_;
+        AUCTION_HOUSE = auctionHouse_;
     }
 
     // ========== MODIFIERS ========== //
 
     modifier onlyAuctionHouse() {
-        if (msg.sender != auctionHouse) revert Callback_NotAuthorized();
+        if (msg.sender != AUCTION_HOUSE) revert Callback_NotAuthorized();
         _;
     }
 
@@ -40,6 +49,7 @@ abstract contract BaseCallback is ICallback {
 
     // ========== CALLBACK FUNCTIONS ========== //
 
+    /// @inheritdoc ICallback
     function onCreate(
         uint96 lotId_,
         address seller_,
@@ -72,6 +82,7 @@ abstract contract BaseCallback is ICallback {
         bytes calldata callbackData_
     ) internal virtual;
 
+    /// @inheritdoc ICallback
     function onCancel(
         uint96 lotId_,
         uint256 refund_,
@@ -92,6 +103,7 @@ abstract contract BaseCallback is ICallback {
         bytes calldata callbackData_
     ) internal virtual;
 
+    /// @inheritdoc ICallback
     function onCurate(
         uint96 lotId_,
         uint256 curatorFee_,
@@ -112,6 +124,7 @@ abstract contract BaseCallback is ICallback {
         bytes calldata callbackData_
     ) internal virtual;
 
+    /// @inheritdoc ICallback
     function onPurchase(
         uint96 lotId_,
         address buyer_,
@@ -136,6 +149,7 @@ abstract contract BaseCallback is ICallback {
         bytes calldata callbackData_
     ) internal virtual;
 
+    /// @inheritdoc ICallback
     function onBid(
         uint96 lotId_,
         uint64 bidId,
@@ -157,6 +171,7 @@ abstract contract BaseCallback is ICallback {
         bytes calldata callbackData_
     ) internal virtual;
 
+    /// @inheritdoc ICallback
     function onClaimProceeds(
         uint96 lotId_,
         uint256 proceeds_,

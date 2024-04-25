@@ -301,7 +301,7 @@ abstract contract BaseDirectToLiquidity is BaseCallback {
         {
             ERC20 baseToken_;
             ERC20 quoteToken_;
-            (seller, baseToken_, quoteToken_,,,,,,) = AuctionHouse(auctionHouse).lotRouting(lotId_);
+            (seller, baseToken_, quoteToken_,,,,,,) = AuctionHouse(AUCTION_HOUSE).lotRouting(lotId_);
             baseToken = address(baseToken_);
             quoteToken = address(quoteToken_);
         }
@@ -448,7 +448,7 @@ abstract contract BaseDirectToLiquidity is BaseCallback {
     }
 
     function _getLatestLinearVestingModule() internal view returns (address) {
-        AuctionHouse auctionHouseContract = AuctionHouse(auctionHouse);
+        AuctionHouse auctionHouseContract = AuctionHouse(AUCTION_HOUSE);
         Keycode moduleKeycode = Keycode.wrap(LINEAR_VESTING_KEYCODE);
 
         // Get the module status

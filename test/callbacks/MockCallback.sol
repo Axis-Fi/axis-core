@@ -62,7 +62,7 @@ contract MockCallback is BaseCallback {
             }
 
             // Transfer the base tokens to the auction house
-            ERC20(baseToken_).transfer(address(auctionHouse), capacity_);
+            ERC20(baseToken_).transfer(address(AUCTION_HOUSE), capacity_);
         }
     }
 
@@ -92,7 +92,7 @@ contract MockCallback is BaseCallback {
             }
 
             // Transfer the base tokens to the auction house
-            ERC20(lotTokens[lotId_].baseToken).transfer(address(auctionHouse), curatorFee_);
+            ERC20(lotTokens[lotId_].baseToken).transfer(address(AUCTION_HOUSE), curatorFee_);
         }
     }
 
@@ -123,7 +123,7 @@ contract MockCallback is BaseCallback {
             }
 
             // Transfer the base tokens to the auction house
-            ERC20(lotTokens[lotId_].baseToken).transfer(address(auctionHouse), payout_);
+            ERC20(lotTokens[lotId_].baseToken).transfer(address(AUCTION_HOUSE), payout_);
         }
     }
 
