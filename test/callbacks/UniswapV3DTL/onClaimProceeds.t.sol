@@ -319,7 +319,7 @@ contract UniswapV3DirectToLiquidityOnClaimProceedsTest is UniswapV3DirectToLiqui
         _assertApprovals();
     }
 
-    function test_givenPoolIsCreatedAndInitialized()
+    function test_givenPoolIsCreatedAndInitialized_givenMaxSlippage()
         public
         givenCallbackIsCreated
         givenOnCreate
@@ -328,7 +328,7 @@ contract UniswapV3DirectToLiquidityOnClaimProceedsTest is UniswapV3DirectToLiqui
         givenAddressHasQuoteTokenBalance(_dtlAddress, _proceeds)
         givenAddressHasBaseTokenBalance(_SELLER, _capacityUtilised)
         givenAddressHasBaseTokenAllowance(_SELLER, _dtlAddress, _capacityUtilised)
-        givenMaxSlippage(21_000) // 21%
+        givenMaxSlippage(81_000) // 81%
     {
         _performCallback();
 
@@ -338,6 +338,28 @@ contract UniswapV3DirectToLiquidityOnClaimProceedsTest is UniswapV3DirectToLiqui
         _assertQuoteTokenBalance();
         _assertBaseTokenBalance();
         _assertApprovals();
+    }
+
+    function test_givenPoolIsCreatedAndInitialized_reverts()
+        public
+        givenCallbackIsCreated
+        givenOnCreate
+        setCallbackParameters(_PROCEEDS, _REFUND)
+        givenPoolIsCreatedAndInitialized(_SQRT_PRICE_X96_OVERRIDE)
+        givenAddressHasQuoteTokenBalance(_dtlAddress, _proceeds)
+        givenAddressHasBaseTokenBalance(_SELLER, _capacityUtilised)
+        givenAddressHasBaseTokenAllowance(_SELLER, _dtlAddress, _capacityUtilised)
+    {
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(
+            UniswapV3DirectToLiquidity.Callback_Slippage.selector,
+            address(_quoteToken),
+            3_999_999_999_999_999_999, // Hardcoded
+            19_998_000_000_000_000_000 // Hardcoded
+        );
+        vm.expectRevert(err);
+
+        _performCallback();
     }
 
     function test_givenProceedsUtilisationPercent_fuzz(uint24 percent_)
