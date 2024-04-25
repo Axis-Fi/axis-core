@@ -35,7 +35,6 @@ Two auctions are initially implemented:
 - Encrypted Marginal Price Auction (see ./design/EMPA.md for spec), a sealed-bid batch auction
 - Fixed Price Auction, simple atomic auction to sell tokens at a fixed price. The CappedMerkleAllowlist callback implementation provides a way to do allowlisted, capped sales at a fixed price for a token.
 
-
 ## Developer Guide
 
 Axis is built in Solidity using Foundry as the development and test environment. The following commands are available for development:
@@ -55,6 +54,7 @@ forge build
 ### Test
 
 To test the ECIES library, a Rust crate is provided which allows FFI calls to compare the encryption and decryption operations with a reference implementation. This must be built first for those tests to pass. Rust should be installed.
+
 ```shell
 cd crates/ecies && cargo build && cd ../..
 ```
