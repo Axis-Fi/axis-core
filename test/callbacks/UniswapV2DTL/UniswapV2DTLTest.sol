@@ -82,7 +82,7 @@ abstract contract UniswapV2DirectToLiquidityTest is Test, Permit2User, WithSalts
         _uniV2Router = new UniswapV2Router02{
             salt: bytes32(0x035ba535d735a8e92093764ec05c30d49ab56cfd0d3da306185ab02b1fcac4f4)
         }(address(_uniV2Factory), address(0));
-        console2.log("UniswapV2Router address: {}", address(_uniV2Router)); // 0x095b215677db999c3A268c16A31b15A28B2e572F
+        console2.log("UniswapV2Router address: {}", address(_uniV2Router)); // 0x584A2a1F5eCdCDcB6c0616cd280a7Db89239872B
 
         _linearVesting = new LinearVesting(address(_auctionHouse));
 
@@ -101,7 +101,7 @@ abstract contract UniswapV2DirectToLiquidityTest is Test, Permit2User, WithSalts
     modifier givenCallbackIsCreated() {
         // Get the salt
         bytes memory args = abi.encode(
-            address(_auctionHouse), _SELLER, address(_uniV2Factory), address(_uniV2Router)
+            address(_auctionHouse), address(_uniV2Factory), address(_uniV2Router)
         );
         bytes32 salt = _getSalt(
             "UniswapV2DirectToLiquidity", type(UniswapV2DirectToLiquidity).creationCode, args
