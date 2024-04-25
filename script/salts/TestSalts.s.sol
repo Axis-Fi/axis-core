@@ -33,16 +33,19 @@ contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts {
         _createBytecodeDirectory();
     }
 
-    function generate(string calldata chain_) public {
+    function generate(string calldata chain_, string calldata saltKey_) public {
         _setUp(chain_);
 
-        _generateMockCallback();
-        _generateCappedMerkleAllowlist();
-        _generateUniswapV2DTL();
-        _generateUniswapV3DTL();
+        // For the given salt key, call the appropriate selector
+        // e.g. a salt key named MockCallback would require the following function: generateMockCallback()
+        bytes4 selector = bytes4(keccak256(bytes(string.concat("generate", saltKey_, "()"))));
+
+        // Call the generate function for the salt key
+        (bool success,) = address(this).call(abi.encodeWithSelector(selector));
+        require(success, string.concat("Failed to generate ", saltKey_));
     }
 
-    function _generateMockCallback() internal {
+    function generateMockCallback() public {
         // Allowlist callback supports onCreate, onPurchase, and onBid callbacks
         // 10011000 = 0x98
         // cast create2 -s 98 -i $(cat ./bytecode/MockCallback98.bin)
@@ -371,7 +374,7 @@ contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts {
         _setSalt(bytecodePath, "11", _MOCK_CALLBACK, bytecodeHash);
     }
 
-    function _generateCappedMerkleAllowlist() internal {
+    function generateCappedMerkleAllowlist() public {
         // 10001000 = 0x88
         bytes memory args = abi.encode(
             _AUCTION_HOUSE,
@@ -409,7 +412,7 @@ contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts {
         _setSalt(bytecodePath, "90", _CAPPED_MERKLE_ALLOWLIST, bytecodeHash);
     }
 
-    function _generateUniswapV2DTL() internal {
+    function generateUniswapV2DirectToLiquidity() public {
         bytes memory args = abi.encode(_AUCTION_HOUSE, _UNISWAP_V2_FACTORY, _UNISWAP_V2_ROUTER);
         bytes memory contractCode = type(UniswapV2DirectToLiquidity).creationCode;
         (string memory bytecodePath, bytes32 bytecodeHash) =
@@ -417,7 +420,7 @@ contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts {
         _setSalt(bytecodePath, "E6", "UniswapV2DirectToLiquidity", bytecodeHash);
     }
 
-    function _generateUniswapV3DTL() internal {
+    function generateUniswapV3DirectToLiquidity() public {
         bytes memory args = abi.encode(_AUCTION_HOUSE, _UNISWAP_V3_FACTORY, _GUNI_FACTORY);
         bytes memory contractCode = type(UniswapV3DirectToLiquidity).creationCode;
         (string memory bytecodePath, bytes32 bytecodeHash) =
