@@ -78,7 +78,7 @@ contract UniswapV2DirectToLiquidity is BaseDirectToLiquidity {
     ///             - Creates the pool if necessary
     ///             - Deposits the tokens into the pool
     function _mintAndDeposit(
-        uint96 lotId_,
+        uint96,
         address quoteToken_,
         uint256 quoteTokenAmount_,
         address baseToken_,
