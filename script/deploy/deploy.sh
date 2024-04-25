@@ -70,7 +70,7 @@ VERIFY_FLAG=""
 if [ "$VERIFY" = "true" ] || [ "$VERIFY" = "TRUE" ]; then
 
   if [ -z "$VERIFIER" ] || [ "$VERIFIER" = "etherscan" ]; then
-    Check if ETHERSCAN_API_KEY is set
+    # Check if ETHERSCAN_API_KEY is set
     if [ -z "$ETHERSCAN_API_KEY" ]; then
       echo "No Etherscan API key found. Provide the key in .env or disable verification."
       exit 1
