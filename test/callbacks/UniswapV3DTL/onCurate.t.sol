@@ -43,7 +43,9 @@ contract UniswapV3DirectToLiquidityOnCurateTest is UniswapV3DirectToLiquidityTes
         assertEq(_baseToken.balanceOf(_dtlAddress), 0, "base token balance");
         assertEq(_baseToken.balanceOf(_SELLER), 0, "seller base token balance");
         assertEq(
-            _baseToken.balanceOf(address(_auctionHouse)), 0, "auction house base token balance"
+            _baseToken.balanceOf(address(_auctionHouse)),
+            _LOT_CAPACITY,
+            "auction house base token balance"
         );
     }
 }
