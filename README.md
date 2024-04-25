@@ -35,6 +35,12 @@ Two auctions are initially implemented:
 
 Axis is built in Solidity using Foundry as the development and test environment. The following commands are available for development:
 
+### First-Run
+
+```shell
+pnpm run full-install
+```
+
 ### Build
 
 ```shell
