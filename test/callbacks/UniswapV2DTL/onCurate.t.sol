@@ -20,6 +20,8 @@ contract UniswapV2DirectToLiquidityOnCurateTest is UniswapV2DirectToLiquidityTes
 
     // [X] when the lot has not been registered
     //  [X] it reverts
+    // [ ] when multiple lots are created
+    //  [ ] it marks the correct lot as inactive
     // [X] it registers the curator payout
 
     function test_whenLotNotRegistered_reverts() public givenCallbackIsCreated {

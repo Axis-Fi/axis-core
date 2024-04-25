@@ -76,6 +76,8 @@ contract UniswapV3DirectToLiquidityOnCreateTest is UniswapV3DirectToLiquidityTes
     //  [X] it reverts
     // [X] when the recipient is not the seller
     //  [X] it records the recipient
+    // [ ] when multiple lots are created
+    //  [ ] it registers each lot
     // [X] it registers the lot
 
     function test_whenCallbackDataIsIncorrect_reverts() public givenCallbackIsCreated {

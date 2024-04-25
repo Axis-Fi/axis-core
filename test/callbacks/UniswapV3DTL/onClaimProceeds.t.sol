@@ -297,6 +297,8 @@ contract UniswapV3DirectToLiquidityOnClaimProceedsTest is UniswapV3DirectToLiqui
     //  [X] it mints the vesting tokens to the seller
     // [X] given the recipient is not the seller
     //  [X] it mints the LP token to the recipient
+    // [ ] when multiple lots are created
+    //  [ ] it performs actions on the correct pool
     // [X] it creates and initializes the pool, creates a pool token, deposits into the pool token, transfers the LP token to the seller and transfers any excess back to the seller
 
     function test_givenPoolIsCreated()

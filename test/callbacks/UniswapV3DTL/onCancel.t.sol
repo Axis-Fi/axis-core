@@ -20,6 +20,8 @@ contract UniswapV3DirectToLiquidityOnCancelTest is UniswapV3DirectToLiquidityTes
 
     // [X] when the lot has not been registered
     //  [X] it reverts
+    // [ ] when multiple lots are created
+    //  [ ] it marks the correct lot as inactive
     // [X] it marks the lot as inactive
 
     function test_whenLotNotRegistered_reverts() public givenCallbackIsCreated {
