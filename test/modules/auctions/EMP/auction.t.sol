@@ -80,7 +80,10 @@ contract EmpaModuleAuctionTest is EmpTest {
         _createAuctionLot();
     }
 
-    function test_minBidAboveMin_reverts() public givenMinimumBidPercentage(1e5 + 1) {
+    function test_minBidSizeAboveMax_reverts()
+        public
+        givenMinimumBidSize(uint256(type(uint96).max) + 1)
+    {
         // Expect revert
         bytes memory err = abi.encodeWithSelector(IAuction.Auction_InvalidParams.selector);
         vm.expectRevert(err);
@@ -89,7 +92,7 @@ contract EmpaModuleAuctionTest is EmpTest {
         _createAuctionLot();
     }
 
-    function test_minBidBelowMin_reverts() public givenMinimumBidPercentage(9) {
+    function test_minBidSizeZero_reverts() public givenMinimumBidSize(0) {
         // Expect revert
         bytes memory err = abi.encodeWithSelector(IAuction.Auction_InvalidParams.selector);
         vm.expectRevert(err);
@@ -150,9 +153,7 @@ contract EmpaModuleAuctionTest is EmpTest {
         assertEq(
             auctionData.minFilled, _scaleBaseTokenAmount(_LOT_CAPACITY) * _MIN_FILL_PERCENT / 1e5
         );
-        assertEq(
-            auctionData.minBidSize, _scaleBaseTokenAmount(_LOT_CAPACITY) * _MIN_BID_PERCENT / 1e5
-        );
+        assertEq(auctionData.minBidSize, _scaleQuoteTokenAmount(_MIN_BID_SIZE), "minBidSize");
         assertEq(
             uint8(auctionData.status), uint8(EncryptedMarginalPrice.LotStatus.Created), "status"
         );
@@ -188,9 +189,7 @@ contract EmpaModuleAuctionTest is EmpTest {
         assertEq(
             auctionData.minFilled, _scaleBaseTokenAmount(_LOT_CAPACITY) * _MIN_FILL_PERCENT / 1e5
         );
-        assertEq(
-            auctionData.minBidSize, _scaleBaseTokenAmount(_LOT_CAPACITY) * _MIN_BID_PERCENT / 1e5
-        );
+        assertEq(auctionData.minBidSize, _scaleQuoteTokenAmount(_MIN_BID_SIZE), "minBidSize");
         assertEq(
             uint8(auctionData.status), uint8(EncryptedMarginalPrice.LotStatus.Created), "status"
         );
@@ -226,9 +225,7 @@ contract EmpaModuleAuctionTest is EmpTest {
         assertEq(
             auctionData.minFilled, _scaleBaseTokenAmount(_LOT_CAPACITY) * _MIN_FILL_PERCENT / 1e5
         );
-        assertEq(
-            auctionData.minBidSize, _scaleBaseTokenAmount(_LOT_CAPACITY) * _MIN_BID_PERCENT / 1e5
-        );
+        assertEq(auctionData.minBidSize, _scaleQuoteTokenAmount(_MIN_BID_SIZE), "minBidSize");
         assertEq(
             uint8(auctionData.status), uint8(EncryptedMarginalPrice.LotStatus.Created), "status"
         );

@@ -153,10 +153,6 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
 
     // ========== STATE VARIABLES ========== //
 
-    /// @notice     Constant for percentages
-    /// @dev        1% = 1_000 or 1e3. 100% = 100_000 or 1e5.
-    uint24 internal constant _MIN_BID_PERCENT = 40; // 0.04% or a max of 2,500 winning bids
-
     /// @notice     Time period after auction conclusion where bidders cannot refund bids
     uint48 public dedicatedSettlePeriod;
 
@@ -225,8 +221,10 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
         // minFillPercent must be less than or equal to 100%
         if (implParams.minFillPercent > _ONE_HUNDRED_PERCENT) revert Auction_InvalidParams();
 
-        // minBidSize must be less than or equal to the max uint96 value
-        if (implParams.minBidSize > type(uint96).max) revert Auction_InvalidParams();
+        // minBidSize must be less than or equal to the max uint96 value and not zero
+        if (implParams.minBidSize > type(uint96).max || implParams.minBidSize == 0) {
+            revert Auction_InvalidParams();
+        }
 
         // publicKey must be a valid point for the encryption library
         if (!ECIES.isValid(implParams.publicKey)) revert Auction_InvalidParams();

@@ -73,9 +73,9 @@ contract TestData is Script {
         // No callbacks, allowlist, derivative, or other routing params needed
 
         EncryptedMarginalPrice.AuctionDataParams memory auctionDataParams;
-        auctionDataParams.minPrice = 2e18; // 3 quote tokens per base token
+        auctionDataParams.minPrice = 2e18; // 2 quote tokens per base token
         auctionDataParams.minFillPercent = uint24(10_000); // 10%
-        auctionDataParams.minBidPercent = uint24(4000); // 4%
+        auctionDataParams.minBidSize = 2e17; // 0.2 quote tokens
         auctionDataParams.publicKey = publicKey;
         bytes memory implParams = abi.encode(auctionDataParams);
 

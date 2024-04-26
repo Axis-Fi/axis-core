@@ -26,11 +26,7 @@ abstract contract EmpTest is Test, Permit2User {
     uint48 internal constant _DURATION = 1 days;
     uint256 internal constant _MIN_PRICE = 1e18;
     uint24 internal constant _MIN_FILL_PERCENT = 25_000; // 25%
-    uint24 internal constant _MIN_BID_PERCENT = 40; // 0.04%
-    /// @dev Re-calculated by _updateMinBidSize()
-    uint256 internal _minBidSize;
-    /// @dev Re-calculated by _updateMinBidAmount()
-    uint256 internal _minBidAmount;
+    uint256 internal constant _MIN_BID_SIZE = 1e15; // 0.001 quote tokens
 
     uint256 internal constant _AUCTION_PRIVATE_KEY = 112_233_445_566;
     Point internal _auctionPublicKey;
@@ -70,7 +66,7 @@ abstract contract EmpTest is Test, Permit2User {
         _auctionDataParams = EncryptedMarginalPrice.AuctionDataParams({
             minPrice: _MIN_PRICE,
             minFillPercent: _MIN_FILL_PERCENT,
-            minBidPercent: _MIN_BID_PERCENT,
+            minBidSize: _MIN_BID_SIZE,
             publicKey: _auctionPublicKey
         });
 
@@ -81,9 +77,6 @@ abstract contract EmpTest is Test, Permit2User {
             capacity: _LOT_CAPACITY,
             implParams: abi.encode(_auctionDataParams)
         });
-
-        _updateMinBidSize();
-        _updateMinBidAmount();
     }
 
     // ======== Modifiers ======== //
@@ -92,10 +85,9 @@ abstract contract EmpTest is Test, Permit2User {
         _quoteTokenDecimals = decimals_;
 
         _auctionDataParams.minPrice = _scaleQuoteTokenAmount(_MIN_PRICE);
+        _auctionDataParams.minBidSize = _scaleQuoteTokenAmount(_MIN_BID_SIZE);
 
         _auctionParams.implParams = abi.encode(_auctionDataParams);
-
-        _updateMinBidAmount();
     }
 
     modifier givenQuoteTokenDecimals(uint8 decimals_) {
@@ -107,9 +99,6 @@ abstract contract EmpTest is Test, Permit2User {
         _baseTokenDecimals = decimals_;
 
         _auctionParams.capacity = _scaleBaseTokenAmount(_LOT_CAPACITY);
-
-        _updateMinBidSize();
-        _updateMinBidAmount();
     }
 
     modifier givenBaseTokenDecimals(uint8 decimals_) {
@@ -119,9 +108,6 @@ abstract contract EmpTest is Test, Permit2User {
 
     modifier givenLotCapacity(uint256 capacity_) {
         _auctionParams.capacity = capacity_;
-
-        _updateMinBidSize();
-        _updateMinBidAmount();
         _;
     }
 
@@ -130,7 +116,6 @@ abstract contract EmpTest is Test, Permit2User {
 
         _auctionParams.implParams = abi.encode(_auctionDataParams);
 
-        _updateMinBidAmount();
         _;
     }
 
@@ -151,26 +136,10 @@ abstract contract EmpTest is Test, Permit2User {
         _;
     }
 
-    function _updateMinBidSize() internal {
-        // Calculate the minimum bid size
-        // Rounding consistent with EMPA
-        _minBidSize = Math.fullMulDivUp(_auctionParams.capacity, _MIN_BID_PERCENT, 1e5);
-    }
-
-    function _updateMinBidAmount() internal {
-        // Calculate the minimum bid amount
-        // Rounding consistent with EMPA
-        _minBidAmount =
-            Math.fullMulDivUp(_minBidSize, _auctionDataParams.minPrice, 10 ** _baseTokenDecimals);
-    }
-
-    modifier givenMinimumBidPercentage(uint24 percentage_) {
-        _auctionDataParams.minBidPercent = percentage_;
+    modifier givenMinimumBidSize(uint256 amount_) {
+        _auctionDataParams.minBidSize = amount_;
 
         _auctionParams.implParams = abi.encode(_auctionDataParams);
-
-        _updateMinBidSize();
-        _updateMinBidAmount();
         _;
     }
 

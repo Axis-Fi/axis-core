@@ -11,7 +11,7 @@ import {EmpTest} from "test/modules/auctions/EMP/EMPTest.sol";
 contract EmpaModuleBidTest is EmpTest {
     uint256 internal constant _BID_AMOUNT = 2e18;
     uint256 internal constant _BID_AMOUNT_OUT = 1e18;
-    uint256 internal constant _BID_AMOUNT_BELOW_MIN = 1e15;
+    uint256 internal constant _BID_AMOUNT_BELOW_MIN = 1e14;
 
     uint256 internal constant _LOT_CAPACITY_OVERFLOW = type(uint256).max - 10;
 
@@ -154,7 +154,7 @@ contract EmpaModuleBidTest is EmpTest {
         _module.bid(_lotId, _BIDDER, _REFERRER, _BID_AMOUNT, bidData);
     }
 
-    function test_amountOutLessThanMinimumBidSize_reverts()
+    function test_amountLessThanMinimumBidSize_reverts()
         public
         givenLotIsCreated
         givenLotHasStarted
@@ -171,7 +171,7 @@ contract EmpaModuleBidTest is EmpTest {
         _module.bid(_lotId, _BIDDER, _REFERRER, _BID_AMOUNT_BELOW_MIN, bidData);
     }
 
-    function test_amountOutLessThanMinimumBidSize_quoteTokenDecimalsLarger_reverts()
+    function test_amountLessThanMinimumBidSize_quoteTokenDecimalsLarger_reverts()
         public
         givenQuoteTokenDecimals(17)
         givenBaseTokenDecimals(13)
@@ -194,7 +194,7 @@ contract EmpaModuleBidTest is EmpTest {
         );
     }
 
-    function test_amountOutLessThanMinimumBidSize_quoteTokenDecimalsSmaller_reverts()
+    function test_amountLessThanMinimumBidSize_quoteTokenDecimalsSmaller_reverts()
         public
         givenQuoteTokenDecimals(13)
         givenBaseTokenDecimals(17)
@@ -274,10 +274,10 @@ contract EmpaModuleBidTest is EmpTest {
         assertEq(auctionData.nextBidId, 2, "nextBidId");
     }
 
+    // TODO this fails now because min bid size is decoupled from capacity.
     function test_givenMaximumLotCapacity_reverts()
         public
         givenMinimumPrice(1)
-        givenMinimumBidPercentage(100)
         givenLotCapacity(_LOT_CAPACITY_OVERFLOW)
         givenLotIsCreated
         givenLotHasStarted
@@ -295,6 +295,6 @@ contract EmpaModuleBidTest is EmpTest {
 
         // Call the function
         vm.prank(address(_auctionHouse));
-        _module.bid(_lotId, _BIDDER, _REFERRER, _BID_AMOUNT_BELOW_MIN, bidData);
+        _module.bid(_lotId, _BIDDER, _REFERRER, 1e22, bidData);
     }
 }

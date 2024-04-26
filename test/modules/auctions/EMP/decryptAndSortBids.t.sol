@@ -10,8 +10,8 @@ contract EmpaModuleDecryptBidsTest is EmpTest {
     uint256 internal constant _BID_AMOUNT = 2e18;
     uint256 internal constant _BID_AMOUNT_OUT = 1e18;
 
-    uint96 internal constant _BID_AMOUNT_SMALL = 1e16;
-    uint96 internal constant _BID_AMOUNT_OUT_SMALL = 1e15;
+    uint256 internal constant _BID_AMOUNT_SMALL = 1e16;
+    uint256 internal constant _BID_AMOUNT_OUT_SMALL = 1e15;
 
     // [X] when the lot id is invalid
     //  [X] it reverts
@@ -261,7 +261,7 @@ contract EmpaModuleDecryptBidsTest is EmpTest {
     function test_givenSmallestPossibleMarginalPrice()
         external
         givenMinimumPrice(1)
-        givenMinimumBidPercentage(100)
+        givenMinimumBidSize(1)
         givenBaseTokenDecimals(6)
         givenLotIsCreated
         givenLotHasStarted
@@ -338,118 +338,6 @@ contract EmpaModuleDecryptBidsTest is EmpTest {
         EncryptedMarginalPrice.AuctionData memory auctionData = _getAuctionData(_lotId);
         assertEq(auctionData.nextDecryptIndex, 1);
         assertEq(uint8(auctionData.status), uint8(EncryptedMarginalPrice.LotStatus.Decrypted));
-    }
-
-    function test_belowMinimumBidSize()
-        external
-        givenLotIsCreated
-        givenLotHasStarted
-        givenBidIsCreated(_BID_AMOUNT_SMALL, _BID_AMOUNT_OUT_SMALL)
-        givenLotHasConcluded
-        givenPrivateKeyIsSubmitted
-    {
-        // Call the function
-        bytes32[] memory hints = new bytes32[](1);
-        hints[0] = _QUEUE_START;
-        _module.decryptAndSortBids(_lotId, 1, hints);
-
-        // Check the bid state
-        EncryptedMarginalPrice.Bid memory bidData = _getBid(_lotId, _bidId);
-        assertEq(bidData.minAmountOut, 0, "minAmountOut");
-        assertEq(
-            uint8(bidData.status), uint8(EncryptedMarginalPrice.BidStatus.Decrypted), "bid status"
-        );
-
-        // Check the bid queue
-        uint256 numBids = _module.decryptedBids(_lotId);
-        assertEq(numBids, 0, "decryptedBids");
-
-        // Check the auction state
-        EncryptedMarginalPrice.AuctionData memory auctionData = _getAuctionData(_lotId);
-        assertEq(auctionData.nextDecryptIndex, 1, "nextDecryptIndex");
-        assertEq(
-            uint8(auctionData.status),
-            uint8(EncryptedMarginalPrice.LotStatus.Decrypted),
-            "auction status"
-        );
-    }
-
-    function test_belowMinimumBidSize_quoteTokenDecimalsLarger()
-        external
-        givenQuoteTokenDecimals(17)
-        givenBaseTokenDecimals(13)
-        givenLotIsCreated
-        givenLotHasStarted
-        givenBidIsCreated(
-            _scaleQuoteTokenAmount(_BID_AMOUNT_SMALL),
-            _scaleBaseTokenAmount(_BID_AMOUNT_OUT_SMALL)
-        )
-        givenLotHasConcluded
-        givenPrivateKeyIsSubmitted
-    {
-        // Call the function
-        bytes32[] memory hints = new bytes32[](1);
-        hints[0] = _QUEUE_START;
-        _module.decryptAndSortBids(_lotId, 1, hints);
-
-        // Check the bid state
-        EncryptedMarginalPrice.Bid memory bidData = _getBid(_lotId, _bidId);
-        assertEq(bidData.minAmountOut, 0, "minAmountOut");
-        assertEq(
-            uint8(bidData.status), uint8(EncryptedMarginalPrice.BidStatus.Decrypted), "bid status"
-        );
-
-        // Check the bid queue
-        uint256 numBids = _module.decryptedBids(_lotId);
-        assertEq(numBids, 0, "decryptedBids");
-
-        // Check the auction state
-        EncryptedMarginalPrice.AuctionData memory auctionData = _getAuctionData(_lotId);
-        assertEq(auctionData.nextDecryptIndex, 1, "nextDecryptIndex");
-        assertEq(
-            uint8(auctionData.status),
-            uint8(EncryptedMarginalPrice.LotStatus.Decrypted),
-            "auction status"
-        );
-    }
-
-    function test_belowMinimumBidSize_quoteTokenDecimalsSmaller()
-        external
-        givenQuoteTokenDecimals(13)
-        givenBaseTokenDecimals(17)
-        givenLotIsCreated
-        givenLotHasStarted
-        givenBidIsCreated(
-            _scaleQuoteTokenAmount(_BID_AMOUNT_SMALL),
-            _scaleBaseTokenAmount(_BID_AMOUNT_OUT_SMALL)
-        )
-        givenLotHasConcluded
-        givenPrivateKeyIsSubmitted
-    {
-        // Call the function
-        bytes32[] memory hints = new bytes32[](1);
-        hints[0] = _QUEUE_START;
-        _module.decryptAndSortBids(_lotId, 1, hints);
-
-        // Check the bid state
-        EncryptedMarginalPrice.Bid memory bidData = _getBid(_lotId, _bidId);
-        assertEq(bidData.minAmountOut, 0, "minAmountOut");
-        assertEq(
-            uint8(bidData.status), uint8(EncryptedMarginalPrice.BidStatus.Decrypted), "bid status"
-        );
-
-        // Check the bid queue
-        uint256 numBids = _module.decryptedBids(_lotId);
-        assertEq(numBids, 0, "decryptedBids");
-
-        // Check the auction state
-        EncryptedMarginalPrice.AuctionData memory auctionData = _getAuctionData(_lotId);
-        assertEq(auctionData.nextDecryptIndex, 1, "nextDecryptIndex");
-        assertEq(
-            uint8(auctionData.status),
-            uint8(EncryptedMarginalPrice.LotStatus.Decrypted),
-            "auction status"
-        );
     }
 
     function test_noBids()
