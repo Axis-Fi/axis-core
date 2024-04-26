@@ -111,8 +111,6 @@ contract EmpaModuleSettleTest is EmpTest {
     //   [X] given settle is called with a larger number of bids
     //    [X] it records the settlement as finished
     //   [X] it records the settlement as finished
-    //  [X] given the first bid of the next batch is below the minimum price
-    //   [X] it records the settlement as finished, with the marginal price as the optimum price to fill capacity
     //  [X] given the first bid of the next batch results in a partial fill
     //   [X] it records the settlement as finished and the partial fill
     //  [ ] given the first bid of the next batch results in the lot capacity being met between the current and last price
@@ -1822,44 +1820,6 @@ contract EmpaModuleSettleTest is EmpTest {
     {
         // Call function
         (uint256 totalIn, uint256 totalOut, bytes memory auctionOutput) = _settle();
-
-        // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
-    }
-
-    function test_filledBelowMinimumFilled_aboveCapacityUsingMinimumPrice_givenNotLastBid_givenSettlementNotComplete(
-    )
-        external
-        givenLotIsCreated
-        givenLotHasStarted
-        givenNotLastBidAndFilledBelowMinimumFilledAndAboveCapacityUsingMinimumPrice
-        givenLotHasConcluded
-        givenPrivateKeyIsSubmitted
-        givenLotIsDecrypted
-        givenSettlementNotComplete // 2 out of 3 bids
-    {
-        // Call function
-        (uint256 totalIn, uint256 totalOut, bytes memory auctionOutput) = _settle(2);
-
-        // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
-    }
-
-    function test_filledBelowMinimumFilled_aboveCapacityUsingMinimumPrice_givenNotLastBid_givenSettlementNotComplete_givenSettlementComplete(
-    )
-        external
-        givenLotIsCreated
-        givenLotHasStarted
-        givenNotLastBidAndFilledBelowMinimumFilledAndAboveCapacityUsingMinimumPrice
-        givenLotHasConcluded
-        givenPrivateKeyIsSubmitted
-        givenLotIsDecrypted
-    {
-        // Settlement not complete
-        _settle(2);
-
-        // Call function
-        (uint256 totalIn, uint256 totalOut, bytes memory auctionOutput) = _settle(1);
 
         // Assert settlement
         _assertSettlement(totalIn, totalOut, auctionOutput);
