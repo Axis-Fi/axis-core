@@ -115,8 +115,8 @@ contract EmpaModuleSettleTest is EmpTest {
     //   [X] it records the settlement as finished and the partial fill
     //  [X] given the first bid of the next batch results in the lot capacity being met between the current and last price
     //   [X] it records the settlement as finished and marks the last bid as the marginal price, marginal bid id is the last bid
-    //  [ ] given the next batch doesn't reach capacity above minimum price
-    //   [ ] it records settlement as finished with the marginal price as the minimum price
+    //  [X] given the next batch doesn't reach capacity above minimum price
+    //   [X] it records settlement as finished with the marginal price as the minimum price
 
     function _settle(uint256 bidNum_)
         internal
