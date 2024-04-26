@@ -1775,6 +1775,7 @@ contract EmpaModuleSettleTest is EmpTest {
 
     function test_filledBelowMinimumFilled_aboveCapacityUsingMinimumPrice_givenNotLastBid()
         external
+        givenMinimumPrice(_scaleQuoteTokenAmount(1e17))
         givenLotIsCreated
         givenLotHasStarted
         givenNotLastBidAndFilledBelowMinimumFilledAndAboveCapacityUsingMinimumPrice
@@ -1794,6 +1795,7 @@ contract EmpaModuleSettleTest is EmpTest {
         external
         givenQuoteTokenDecimals(17)
         givenBaseTokenDecimals(13)
+        givenMinimumPrice(_scaleQuoteTokenAmount(1e17))
         givenLotIsCreated
         givenLotHasStarted
         givenNotLastBidAndFilledBelowMinimumFilledAndAboveCapacityUsingMinimumPrice
@@ -1813,6 +1815,7 @@ contract EmpaModuleSettleTest is EmpTest {
         external
         givenQuoteTokenDecimals(13)
         givenBaseTokenDecimals(17)
+        givenMinimumPrice(_scaleQuoteTokenAmount(1e17))
         givenLotIsCreated
         givenLotHasStarted
         givenNotLastBidAndFilledBelowMinimumFilledAndAboveCapacityUsingMinimumPrice
@@ -1830,6 +1833,7 @@ contract EmpaModuleSettleTest is EmpTest {
     function test_filledBelowMinimumFilled_aboveCapacityUsingMinimumPrice_givenNotLastBid_givenSettlementNotComplete(
     )
         external
+        givenMinimumPrice(_scaleQuoteTokenAmount(1e17))
         givenLotIsCreated
         givenLotHasStarted
         givenNotLastBidAndFilledBelowMinimumFilledAndAboveCapacityUsingMinimumPrice
@@ -1848,6 +1852,7 @@ contract EmpaModuleSettleTest is EmpTest {
     function test_filledBelowMinimumFilled_aboveCapacityUsingMinimumPrice_givenNotLastBid_givenSettlementNotComplete_givenSettlementComplete(
     )
         external
+        givenMinimumPrice(_scaleQuoteTokenAmount(1e17))
         givenLotIsCreated
         givenLotHasStarted
         givenNotLastBidAndFilledBelowMinimumFilledAndAboveCapacityUsingMinimumPrice
