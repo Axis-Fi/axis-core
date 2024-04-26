@@ -530,20 +530,16 @@ contract Deploy is Script, WithEnvironment, WithSalts {
             abi.encode(address(atomicAuctionHouse), uniswapV2Factory, uniswapV2Router)
         );
 
-        // Deploy the module
-        if (salt_ == bytes32(0)) {
-            vm.broadcast();
-            cbAtomicUniswapV2Dtl = new UniswapV2DirectToLiquidity(
-                address(atomicAuctionHouse), uniswapV2Factory, uniswapV2Router
-            );
-        } else {
-            console2.log("    salt:", vm.toString(salt_));
+        // Revert if the salt is not set
+        require(salt_ != bytes32(0), "Salt not set");
 
-            vm.broadcast();
-            cbAtomicUniswapV2Dtl = new UniswapV2DirectToLiquidity{salt: salt_}(
-                address(atomicAuctionHouse), uniswapV2Factory, uniswapV2Router
-            );
-        }
+        // Deploy the module
+        console2.log("    salt:", vm.toString(salt_));
+
+        vm.broadcast();
+        cbAtomicUniswapV2Dtl = new UniswapV2DirectToLiquidity{salt: salt_}(
+            address(atomicAuctionHouse), uniswapV2Factory, uniswapV2Router
+        );
         console2.log(
             "    UniswapV2DirectToLiquidity (Atomic) deployed at:", address(cbAtomicUniswapV2Dtl)
         );
@@ -569,20 +565,16 @@ contract Deploy is Script, WithEnvironment, WithSalts {
             abi.encode(address(batchAuctionHouse), uniswapV2Factory, uniswapV2Router)
         );
 
-        // Deploy the module
-        if (salt_ == bytes32(0)) {
-            vm.broadcast();
-            cbBatchUniswapV2Dtl = new UniswapV2DirectToLiquidity(
-                address(batchAuctionHouse), uniswapV2Factory, uniswapV2Router
-            );
-        } else {
-            console2.log("    salt:", vm.toString(salt_));
+        // Revert if the salt is not set
+        require(salt_ != bytes32(0), "Salt not set");
 
-            vm.broadcast();
-            cbBatchUniswapV2Dtl = new UniswapV2DirectToLiquidity{salt: salt_}(
-                address(batchAuctionHouse), uniswapV2Factory, uniswapV2Router
-            );
-        }
+        // Deploy the module
+        console2.log("    salt:", vm.toString(salt_));
+
+        vm.broadcast();
+        cbBatchUniswapV2Dtl = new UniswapV2DirectToLiquidity{salt: salt_}(
+            address(batchAuctionHouse), uniswapV2Factory, uniswapV2Router
+        );
         console2.log(
             "    UniswapV2DirectToLiquidity (Batch) deployed at:", address(cbBatchUniswapV2Dtl)
         );
@@ -608,20 +600,16 @@ contract Deploy is Script, WithEnvironment, WithSalts {
             abi.encode(address(atomicAuctionHouse), uniswapV3Factory, gUniFactory)
         );
 
-        // Deploy the module
-        if (salt_ == bytes32(0)) {
-            vm.broadcast();
-            cbAtomicUniswapV3Dtl = new UniswapV3DirectToLiquidity(
-                address(atomicAuctionHouse), uniswapV3Factory, gUniFactory
-            );
-        } else {
-            console2.log("    salt:", vm.toString(salt_));
+        // Revert if the salt is not set
+        require(salt_ != bytes32(0), "Salt not set");
 
-            vm.broadcast();
-            cbAtomicUniswapV3Dtl = new UniswapV3DirectToLiquidity{salt: salt_}(
-                address(atomicAuctionHouse), uniswapV3Factory, gUniFactory
-            );
-        }
+        // Deploy the module
+        console2.log("    salt:", vm.toString(salt_));
+
+        vm.broadcast();
+        cbAtomicUniswapV3Dtl = new UniswapV3DirectToLiquidity{salt: salt_}(
+            address(atomicAuctionHouse), uniswapV3Factory, gUniFactory
+        );
         console2.log(
             "    UniswapV3DirectToLiquidity (Atomic) deployed at:", address(cbAtomicUniswapV3Dtl)
         );
@@ -647,20 +635,16 @@ contract Deploy is Script, WithEnvironment, WithSalts {
             abi.encode(address(batchAuctionHouse), uniswapV3Factory, gUniFactory)
         );
 
-        // Deploy the module
-        if (salt_ == bytes32(0)) {
-            vm.broadcast();
-            cbBatchUniswapV3Dtl = new UniswapV3DirectToLiquidity(
-                address(batchAuctionHouse), uniswapV3Factory, gUniFactory
-            );
-        } else {
-            console2.log("    salt:", vm.toString(salt_));
+        // Revert if the salt is not set
+        require(salt_ != bytes32(0), "Salt not set");
 
-            vm.broadcast();
-            cbBatchUniswapV3Dtl = new UniswapV3DirectToLiquidity{salt: salt_}(
-                address(batchAuctionHouse), uniswapV3Factory, gUniFactory
-            );
-        }
+        // Deploy the module
+        console2.log("    salt:", vm.toString(salt_));
+
+        vm.broadcast();
+        cbBatchUniswapV3Dtl = new UniswapV3DirectToLiquidity{salt: salt_}(
+            address(batchAuctionHouse), uniswapV3Factory, gUniFactory
+        );
         console2.log(
             "    UniswapV3DirectToLiquidity (Batch) deployed at:", address(cbBatchUniswapV3Dtl)
         );
