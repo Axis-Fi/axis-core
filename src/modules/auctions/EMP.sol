@@ -118,6 +118,7 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
     /// @param  marginalBidId       The ID of the marginal bid (marking that bids following it are not filled). Set only if the marginal price has been determined and there is a need for this to be set.
     /// @param  totalAmountIn       The total amount in from bids processed so far. This should always be set, regardless of the settlement outcome.
     /// @param  capacityExpended    The total capacity expended from bids processed so far. This should always be set, regardless of the settlement outcome.
+    /// @param  finished            Whether settlement has been completed.
     struct MarginalPriceResult {
         uint256 marginalPrice;
         uint64 marginalBidId;
