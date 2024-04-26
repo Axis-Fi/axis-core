@@ -114,7 +114,9 @@ contract EmpaModuleSettleTest is EmpTest {
     //  [X] given the first bid of the next batch results in a partial fill
     //   [X] it records the settlement as finished and the partial fill
     //  [X] given the first bid of the next batch results in the lot capacity being met between the current and last price
-    //   [X] it records the settlement as finished and marks the last bid as the marginal price
+    //   [X] it records the settlement as finished and marks the last bid as the marginal price, marginal bid id is the last bid
+    //  [ ] given the next batch doesn't reach capacity above minimum price
+    //   [ ] it records settlement as finished with the marginal price as the minimum price
 
     function _settle(uint256 bidNum_)
         internal
@@ -419,6 +421,34 @@ contract EmpaModuleSettleTest is EmpTest {
 
         uint256 bidAmountInTotal = _scaleQuoteTokenAmount(_BID_PRICE_TWO_SIZE_TWO_AMOUNT * 4);
         uint256 bidAmountOutTotal = _scaleBaseTokenAmount(_LOT_CAPACITY);
+
+        _expectedTotalIn = bidAmountInTotal;
+        _expectedTotalOut = bidAmountOutTotal;
+
+        // No partial fill
+        _;
+    }
+
+    modifier givenMarginalPriceLessThanMinAndBelowCapacity() {
+        // Capacity: 2 + 2 >= 2.5 minimum && < 10 capacity
+        _createBid(
+            _scaleQuoteTokenAmount(_BID_PRICE_TWO_SIZE_TWO_AMOUNT),
+            _scaleBaseTokenAmount(_BID_PRICE_TWO_SIZE_TWO_AMOUNT_OUT)
+        );
+        _createBid(
+            _scaleQuoteTokenAmount(_BID_PRICE_TWO_SIZE_TWO_AMOUNT),
+            _scaleBaseTokenAmount(_BID_PRICE_TWO_SIZE_TWO_AMOUNT_OUT)
+        );
+
+        // Marginal price is minimum price since: (4+4)/10 = 0.8 < 1
+        _expectedMarginalPrice = _scaleQuoteTokenAmount(_MIN_PRICE);
+
+        // Output
+        // Bid one: 4 / 1 = 4 out
+        // Bid two: 4 / 1 = 4 out
+
+        uint256 bidAmountInTotal = _scaleQuoteTokenAmount(_BID_PRICE_TWO_SIZE_TWO_AMOUNT * 2);
+        uint256 bidAmountOutTotal = _scaleBaseTokenAmount(8e18);
 
         _expectedTotalIn = bidAmountInTotal;
         _expectedTotalOut = bidAmountOutTotal;
@@ -954,6 +984,42 @@ contract EmpaModuleSettleTest is EmpTest {
 
         // Partial fill
         // None
+        _;
+    }
+
+    modifier givenMarginalPriceRoundingThenPartialFill() {
+        _createBid(
+            _scaleQuoteTokenAmount(12e18 - 1), // 11999999999999999999
+            _scaleBaseTokenAmount(4e18)
+        );
+        _createBid(_scaleQuoteTokenAmount(8e18), _scaleBaseTokenAmount(4e18));
+        // This will be considered, as capacity expended (9999999999999999999) is not greater than capacity (10e18)
+        _createBid(
+            _scaleQuoteTokenAmount(_BID_PRICE_TWO_AMOUNT),
+            _scaleBaseTokenAmount(_BID_PRICE_TWO_AMOUNT_OUT)
+        );
+
+        // Total amount in: 11999999999999999999 + 8e18 + 1e18 = 21e18-1
+        // Marginal price: 2
+        _expectedMarginalPrice = _scaleQuoteTokenAmount(2e18);
+        _expectedMarginalBidId = 3; // Otherwise bid 2 will not be able to claim
+
+        // Output
+        // Bid one: (12e18 - 1) / 2 = 6e18-1 out
+        // Bid two: 8 / 2 = 4 out
+        // Bid three: 0 out as it will round down to 0
+
+        uint256 bidAmountInSuccess = _scaleQuoteTokenAmount(12e18 - 1 + 8e18 + 2);
+        uint256 bidAmountOutSuccess = _scaleBaseTokenAmount(_LOT_CAPACITY);
+
+        _expectedTotalIn = bidAmountInSuccess;
+        _expectedTotalOut = bidAmountOutSuccess;
+
+        // Partial fill
+        _expectedPartialFillBidder = _BIDDER;
+        _expectedPartialFillReferrer = _REFERRER;
+        _expectedPartialFillRefund = _BID_PRICE_TWO_AMOUNT - 2;
+        _expectedPartialFillPayout = 1;
         _;
     }
 
@@ -2073,6 +2139,48 @@ contract EmpaModuleSettleTest is EmpTest {
         _assertLot();
     }
 
+    function test_givenBidsAreAboveMinimumAndBelowCapacity_givenSettlementNotComplete_givenSettlementCompletes(
+    )
+        external
+        givenLotIsCreated
+        givenLotHasStarted
+        givenBidsAreAboveMinimumAndBelowCapacity
+        givenLotHasConcluded
+        givenPrivateKeyIsSubmitted
+        givenLotIsDecrypted
+    {
+        // Settle with a smaller batch
+        _settle(3);
+
+        // Call function
+        (uint256 totalIn, uint256 totalOut, bytes memory auctionOutput) = _settle(1);
+
+        // Assert settlement
+        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertLot();
+    }
+
+    function test_givenMarginalPriceLessThanMinAndBelowCapacity_givenSettlementNotComplete_givenSettlementCompletes(
+    )
+        external
+        givenLotIsCreated
+        givenLotHasStarted
+        givenMarginalPriceLessThanMinAndBelowCapacity
+        givenLotHasConcluded
+        givenPrivateKeyIsSubmitted
+        givenLotIsDecrypted
+    {
+        // Settle with a smaller batch
+        _settle(1);
+
+        // Call function
+        (uint256 totalIn, uint256 totalOut, bytes memory auctionOutput) = _settle(1);
+
+        // Assert settlement
+        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertLot();
+    }
+
     function test_givenLotIsOverSubscribedOnFirstBid()
         external
         givenLotIsCreated
@@ -2285,6 +2393,28 @@ contract EmpaModuleSettleTest is EmpTest {
         (uint256 totalIn, uint256 totalOut, bytes memory auctionOutput) = _settle();
 
         // Assert settlement
+        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertLot();
+    }
+
+    function test_givenMarginalPriceRoundingThenPartialFill()
+        external
+        givenLotIsCreated
+        givenLotHasStarted
+        givenMarginalPriceRoundingThenPartialFill
+        givenLotHasConcluded
+        givenPrivateKeyIsSubmitted
+        givenLotIsDecrypted
+    {
+        // Call function
+        (uint256 totalIn, uint256 totalOut, bytes memory auctionOutput) = _settle();
+
+        // Assert settlement
+        EncryptedMarginalPrice.AuctionData memory auctionData = _getAuctionData(_lotId);
+        assertEq(auctionData.marginalPrice, _expectedMarginalPrice, "marginalPrice");
+        assertEq(
+            uint8(auctionData.status), uint8(EncryptedMarginalPrice.LotStatus.Settled), "status"
+        );
         _assertSettlement(totalIn, totalOut, auctionOutput);
         _assertLot();
     }

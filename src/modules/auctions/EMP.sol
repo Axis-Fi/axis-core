@@ -813,6 +813,7 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
                         Math.fullMulDivUp(result.totalAmountIn, baseScale, capacity);
 
                     // If the marginal price is re-calculated and is the same as the previous, we need to set the marginal bid id, otherwise the previous bid will not be able to claim.
+                    // This only happens due to rounding. Generally, the auction would settle on the previous loop if this case is true.
                     if (lastPrice == result.marginalPrice) {
                         result.marginalBidId = lastBidId;
                     } else {
