@@ -77,16 +77,24 @@ contract Deploy is Script, WithEnvironment, WithSalts {
         _loadEnv(chain_);
 
         // Cache required variables
-        _envOwner = _envAddress("OWNER");
+        _envOwner = _envAddress("axis.OWNER");
         console2.log("Owner:", _envOwner);
-        _envPermit2 = _envAddress("PERMIT2");
+        _envPermit2 = _envAddress("axis.PERMIT2");
         console2.log("Permit2:", _envPermit2);
-        _envProtocol = _envAddress("PROTOCOL");
+        _envProtocol = _envAddress("axis.PROTOCOL");
         console2.log("Protocol:", _envProtocol);
 
-        // TODO can we automate assignment?
+        // Cache deployed contracts
+        atomicAuctionHouse = AtomicAuctionHouse(_envAddress("axis.AtomicAuctionHouse"));
+        batchAuctionHouse = BatchAuctionHouse(_envAddress("axis.BatchAuctionHouse"));
+        atomicCatalogue = AtomicCatalogue(_envAddress("axis.AtomicCatalogue"));
+        batchCatalogue = BatchCatalogue(_envAddress("axis.BatchCatalogue"));
+        amEmp = EncryptedMarginalPrice(_envAddress("axis.EncryptedMarginalPrice"));
+        amFps = FixedPriceSale(_envAddress("axis.FixedPriceSale"));
+        dmAtomicLinearVesting = LinearVesting(_envAddress("axis.AtomicLinearVesting"));
+        dmBatchLinearVesting = LinearVesting(_envAddress("axis.BatchLinearVesting"));
 
-        // TODO load existing deployed contracts from env.json (need to add an "axis" section under "current" for each chain)
+        // TODO can we automate assignment of contract addresses into a map?
 
         // Load deployment data
         string memory data = vm.readFile(deployFilePath_);

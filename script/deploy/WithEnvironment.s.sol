@@ -20,6 +20,7 @@ abstract contract WithEnvironment is Script {
     }
 
     function _envAddress(string memory key_) internal view returns (address) {
+        // TODO consider returning address(0) if not found
         return env.readAddress(string.concat(".current.", chain, ".", key_));
     }
 }
