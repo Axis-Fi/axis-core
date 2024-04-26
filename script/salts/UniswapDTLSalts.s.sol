@@ -10,6 +10,8 @@ import {UniswapV2DirectToLiquidity} from "src/callbacks/liquidity/UniswapV2DTL.s
 import {UniswapV3DirectToLiquidity} from "src/callbacks/liquidity/UniswapV3DTL.sol";
 
 contract UniswapDTLSalts is Script, WithEnvironment, WithSalts {
+    string internal _ADDRESS_PREFIX = "E6";
+
     address internal _envUniswapV2Factory;
     address internal _envUniswapV2Router;
     address internal _envUniswapV3Factory;
@@ -56,8 +58,6 @@ contract UniswapDTLSalts is Script, WithEnvironment, WithSalts {
         }
     }
 
-    // TODO set prefix
-
     function _generateV2(bool atomic_) internal {
         if (atomic_) {
             // Calculate salt for the UniswapV2DirectToLiquidity
@@ -67,7 +67,7 @@ contract UniswapDTLSalts is Script, WithEnvironment, WithSalts {
                 contractCode,
                 abi.encode(_envAtomicAuctionHouse, _envUniswapV2Factory, _envUniswapV2Router)
             );
-            _setSalt(bytecodePath, prefix_, "UniswapV2DirectToLiquidity", bytecodeHash);
+            _setSalt(bytecodePath, _ADDRESS_PREFIX, "UniswapV2DirectToLiquidity", bytecodeHash);
         } else {
             // Calculate salt for the UniswapV2DirectToLiquidity
             bytes memory contractCode = type(UniswapV2DirectToLiquidity).creationCode;
@@ -76,7 +76,7 @@ contract UniswapDTLSalts is Script, WithEnvironment, WithSalts {
                 contractCode,
                 abi.encode(_envBatchAuctionHouse, _envUniswapV2Factory, _envUniswapV2Router)
             );
-            _setSalt(bytecodePath, prefix_, "UniswapV2DirectToLiquidity", bytecodeHash);
+            _setSalt(bytecodePath, _ADDRESS_PREFIX, "UniswapV2DirectToLiquidity", bytecodeHash);
         }
     }
 
@@ -89,7 +89,7 @@ contract UniswapDTLSalts is Script, WithEnvironment, WithSalts {
                 contractCode,
                 abi.encode(_envAtomicAuctionHouse, _envUniswapV3Factory, _envGUniFactory)
             );
-            _setSalt(bytecodePath, prefix_, "UniswapV3DirectToLiquidity", bytecodeHash);
+            _setSalt(bytecodePath, _ADDRESS_PREFIX, "UniswapV3DirectToLiquidity", bytecodeHash);
         } else {
             // Calculate salt for the UniswapV3DirectToLiquidity
             bytes memory contractCode = type(UniswapV3DirectToLiquidity).creationCode;
@@ -98,7 +98,7 @@ contract UniswapDTLSalts is Script, WithEnvironment, WithSalts {
                 contractCode,
                 abi.encode(_envBatchAuctionHouse, _envUniswapV3Factory, _envGUniFactory)
             );
-            _setSalt(bytecodePath, prefix_, "UniswapV3DirectToLiquidity", bytecodeHash);
+            _setSalt(bytecodePath, _ADDRESS_PREFIX, "UniswapV3DirectToLiquidity", bytecodeHash);
         }
     }
 }
