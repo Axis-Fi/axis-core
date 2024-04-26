@@ -130,7 +130,7 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
     ///
     /// @param  processedAmountIn   The total amount in from bids processed so far (during settlement)
     /// @param  lastPrice           The last price processed during settlement
-    struct Settlement {
+    struct PartialSettlement {
         uint256 processedAmountIn;
         uint256 lastPrice;
     }
@@ -162,8 +162,8 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
     /// @dev        Each EMPA can have at most one partial fill
     mapping(uint96 lotId => PartialFill) internal _lotPartialFill;
 
-    /// @notice     Partial settlement data stored between settle transactions
-    mapping(uint96 lotId => Settlement) internal _lotSettlement;
+    /// @notice     Partial settlement data stored between settlement batches
+    mapping(uint96 lotId => PartialSettlement) internal _lotPartialSettlement;
 
     /// @notice     General information about bids on a lot
     mapping(uint96 lotId => mapping(uint64 bidId => Bid)) public bids;
@@ -767,12 +767,12 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
 
         // Iterate over bid queue (sorted in descending price) to calculate the marginal clearing price of the auction
         {
-            uint256 lastPrice = _lotSettlement[lotId_].lastPrice;
+            uint256 lastPrice = _lotPartialSettlement[lotId_].lastPrice;
             // Initialize mandatory values in result
-            result.totalAmountIn = _lotSettlement[lotId_].processedAmountIn;
+            result.totalAmountIn = _lotPartialSettlement[lotId_].processedAmountIn;
             result.capacityExpended = lastPrice == 0
                 ? 0
-                : Math.fullMulDiv(_lotSettlement[lotId_].processedAmountIn, baseScale, lastPrice);
+                : Math.fullMulDiv(_lotPartialSettlement[lotId_].processedAmountIn, baseScale, lastPrice);
 
             Queue storage queue = decryptedBids[lotId_];
 
@@ -1002,8 +1002,8 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
             }
         } else {
             // Not all bids have been processed. Store the amount in so far and the last price for use in the next settle call.
-            _lotSettlement[lotId_].processedAmountIn = result.totalAmountIn;
-            _lotSettlement[lotId_].lastPrice =
+            _lotPartialSettlement[lotId_].processedAmountIn = result.totalAmountIn;
+            _lotPartialSettlement[lotId_].lastPrice =
                 Math.fullMulDivUp(result.totalAmountIn, baseScale, result.capacityExpended);
 
             // We don't change the auction status so it can be iteratively settled
