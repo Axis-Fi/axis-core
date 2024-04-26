@@ -104,7 +104,7 @@ contract EmpaModuleSettleTest is EmpTest {
     //  [X] it returns the amounts in and out, with the marginal price is the price at which the lot capacity is exhausted, and a partial fill for the lowest winning bid
     // [X] given settle is called with a zero number of bids
     //  [X] the settlement remains in progress
-    // [ ] given a batch has finished and bids remain
+    // [X] given a batch has finished and bids remain
     //  [X] given the next batch reaches capacity
     //   [X] given settle is called again
     //    [X] it reverts
@@ -113,8 +113,8 @@ contract EmpaModuleSettleTest is EmpTest {
     //   [X] it records the settlement as finished
     //  [X] given the first bid of the next batch results in a partial fill
     //   [X] it records the settlement as finished and the partial fill
-    //  [ ] given the first bid of the next batch results in the lot capacity being met between the current and last price
-    //   [ ] it records the settlement as finished and marks the last bid as the marginal price
+    //  [X] given the first bid of the next batch results in the lot capacity being met between the current and last price
+    //   [X] it records the settlement as finished and marks the last bid as the marginal price
 
     function _settle(uint256 bidNum_)
         internal
@@ -1649,6 +1649,24 @@ contract EmpaModuleSettleTest is EmpTest {
     }
 
     function test_marginalPriceBetweenBids_givenNotLastBid_givenSettlementNotComplete()
+        external
+        givenLotIsCreated
+        givenLotHasStarted
+        givenLotMarginalPriceBetweenBidsAndNotLastBid
+        givenLotHasConcluded
+        givenPrivateKeyIsSubmitted
+        givenLotIsDecrypted
+        givenSettlementNotComplete // 1 out of 2
+    {
+        // Call function
+        (uint256 totalIn, uint256 totalOut, bytes memory auctionOutput) = _settle(2);
+
+        // Assert settlement
+        _assertSettlement(totalIn, totalOut, auctionOutput);
+    }
+
+    function test_marginalPriceBetweenBids_givenNotLastBid_givenSettlementNotComplete_givenSettlementCompletes(
+    )
         external
         givenLotIsCreated
         givenLotHasStarted
