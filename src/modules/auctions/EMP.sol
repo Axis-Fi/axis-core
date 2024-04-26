@@ -82,7 +82,6 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
     /// @param         nextDecryptIndex    The index of the next bid to decrypt
     /// @param         status              The status of the auction
     /// @param         marginalBidId       The ID of the marginal bid (marking that bids following it are not filled)
-    /// @param         proceedsClaimed     Whether the proceeds have been claimed
     /// @param         marginalPrice       The marginal price of the auction (determined at settlement, blank before)
     /// @param         minFilled           The minimum amount of the lot that must be filled
     /// @param         minBidSize          The minimum size of a bid in quote tokens
@@ -93,8 +92,7 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
         uint64 nextBidId; // 8 +
         uint64 nextDecryptIndex; // 8 +
         LotStatus status; // 1 +
-        uint64 marginalBidId; // 8 +
-        bool proceedsClaimed; // 1 = 26 - end of slot 1
+        uint64 marginalBidId; // 8  = 25 - end of slot 1
         uint256 marginalPrice; // 32 - slot 2
         uint256 minPrice; // 32 - slot 3
         uint256 minFilled; // 32 - slot 4
@@ -181,8 +179,8 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
         // Set the minimum auction duration to 1 day initially
         minAuctionDuration = 1 days;
 
-        // Set the dedicated settle period to 6 hours initially
-        dedicatedSettlePeriod = 6 hours;
+        // Set the dedicated settle period to 1 day initially
+        dedicatedSettlePeriod = 1 days;
     }
 
     function VEECODE() public pure override returns (Veecode) {
@@ -260,7 +258,6 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
 
         // Set auction status to settled so that bids can be refunded
         auctionData[lotId_].status = LotStatus.Settled;
-        auctionData[lotId_].proceedsClaimed = true;
     }
 
     // ========== BID ========== //
@@ -890,7 +887,7 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
     )
         internal
         override
-        returns (uint256 totalIn_, uint256 totalOut_, bytes memory auctionOutput_)
+        returns (uint256 totalIn_, uint256 totalOut_, bool finished, bytes memory auctionOutput_)
     {
         // Check that auction is in the right state for settlement
         if (auctionData[lotId_].status != LotStatus.Decrypted) {
@@ -916,7 +913,7 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
 
             // totalIn and totalOut are not set since the auction has not settled yet
 
-            return (totalIn_, totalOut_, auctionOutput_);
+            return (totalIn_, totalOut_, result.finished, auctionOutput_);
         }
 
         // Else the marginal price has been found, settle the auction
@@ -982,15 +979,7 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
         totalIn_ = result.totalAmountIn;
         totalOut_ = result.capacityExpended > capacity ? capacity : result.capacityExpended;
 
-        return (totalIn_, totalOut_, auctionOutput_);
-    }
-
-    /// @inheritdoc BatchAuctionModule
-    /// @dev        This function performs the following:
-    ///             - Updates the auction data to mark the proceeds as claimed
-    function _claimProceeds(uint96 lotId_) internal override {
-        // Update the claim status
-        auctionData[lotId_].proceedsClaimed = true;
+        return (totalIn_, totalOut_, result.finished, auctionOutput_);
     }
 
     // ========== AUCTION INFORMATION ========== //
@@ -1108,14 +1097,6 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
             uint48(block.timestamp) >= conclusion
                 && uint48(block.timestamp) < conclusion + dedicatedSettlePeriod
         ) {
-            revert Auction_WrongState(lotId_);
-        }
-    }
-
-    /// @inheritdoc BatchAuctionModule
-    function _revertIfLotProceedsClaimed(uint96 lotId_) internal view override {
-        // Auction must not have proceeds claimed
-        if (auctionData[lotId_].proceedsClaimed) {
             revert Auction_WrongState(lotId_);
         }
     }

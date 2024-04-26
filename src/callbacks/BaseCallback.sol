@@ -168,19 +168,19 @@ abstract contract BaseCallback is ICallback, Owned {
         bytes calldata callbackData_
     ) internal virtual;
 
-    function onClaimProceeds(
+    function onSettle(
         uint96 lotId_,
         uint256 proceeds_,
         uint256 refund_,
         bytes calldata callbackData_
     ) external override onlyAuctionHouse onlyRegisteredLot(lotId_) returns (bytes4) {
         // Call implementation specific logic
-        _onClaimProceeds(lotId_, proceeds_, refund_, callbackData_);
+        _onSettle(lotId_, proceeds_, refund_, callbackData_);
 
-        return this.onClaimProceeds.selector;
+        return this.onSettle.selector;
     }
 
-    function _onClaimProceeds(
+    function _onSettle(
         uint96 lotId_,
         uint256 proceeds_,
         uint256 refund_,

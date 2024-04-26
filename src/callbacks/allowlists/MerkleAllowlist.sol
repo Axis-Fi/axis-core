@@ -19,7 +19,7 @@ contract MerkleAllowlist is BaseCallback {
     // onCurate: false
     // onPurchase: true
     // onBid: true
-    // onClaimProceeds: false
+    // onSettle: false
     // receiveQuoteTokens: false
     // sendBaseTokens: false
     // Contract prefix should be: 10011000 = 0x98
@@ -104,7 +104,7 @@ contract MerkleAllowlist is BaseCallback {
         bytes calldata callbackData_
     ) internal virtual {}
 
-    function _onClaimProceeds(uint96, uint256, uint256, bytes calldata) internal pure override {
+    function _onSettle(uint96, uint256, uint256, bytes calldata) internal pure override {
         // Not implemented
         revert Callback_NotImplemented();
     }

@@ -60,7 +60,7 @@ abstract contract DirectToLiquidity is BaseCallback {
         revert Callback_NotImplemented();
     }
 
-    function _onClaimProceeds(
+    function _onSettle(
         uint96 lotId_,
         uint256 proceeds_,
         uint256 refund_,
