@@ -116,12 +116,14 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
     ///
     /// @param  marginalPrice       The marginal price of the auction. Set only if the marginal price has been determined.
     /// @param  marginalBidId       The ID of the marginal bid (marking that bids following it are not filled). Set only if the marginal price has been determined and there is a need for this to be set.
+    /// @param  lastBidId           The ID of the last bid processed during the marginal price calculation. This should always be set, regardless of the settlement outcome.
     /// @param  totalAmountIn       The total amount in from bids processed so far. This should always be set, regardless of the settlement outcome.
     /// @param  capacityExpended    The total capacity expended from bids processed so far. This should always be set, regardless of the settlement outcome.
     /// @param  finished            Whether settlement has been completed.
     struct MarginalPriceResult {
         uint256 marginalPrice;
         uint64 marginalBidId;
+        uint64 lastBidId;
         uint256 totalAmountIn;
         uint256 capacityExpended;
         bool finished;
@@ -131,9 +133,11 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
     ///
     /// @param  processedAmountIn   The total amount in from bids processed so far (during settlement)
     /// @param  lastPrice           The last price processed during settlement
+    /// @param  lastBidId           The ID of the last bid processed during settlement
     struct PartialSettlement {
         uint256 processedAmountIn;
         uint256 lastPrice;
+        uint64 lastBidId;
     }
 
     /// @notice        Struct containing partial fill data for a lot
@@ -777,7 +781,7 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
 
             Queue storage queue = decryptedBids[lotId_];
 
-            uint64 lastBidId;
+            uint64 lastBidId = _lotPartialSettlement[lotId_].lastBidId;
             uint256 numBids = queue.getNumBids();
             if (numBids == 0) {
                 // If there are no bids, then we return early
@@ -796,6 +800,9 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
 
                 // Get bid info
                 (uint64 bidId, uint256 amountIn, uint256 price) = _getNextBid(queue, baseScale);
+
+                // Set the last bid id processed for use in the next settle call (if needed)
+                result.lastBidId = bidId;
 
                 // If the price is below the minimum price, then determine a marginal price from the previous bids with the knowledge that no other bids will be considered
                 // This will also handle a zero price returned from `_getNextBid()`, since `minPrice` is always greater than zero
@@ -942,10 +949,11 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
 
         // If the settlement was not finished
         if (result.finished == false) {
-            // Not all bids have been processed. Store the amount in so far and the last price for use in the next settle call.
+            // Not all bids have been processed. Store the amount in so far, the last bid id processed, and the last price for use in the next settle call.
             _lotPartialSettlement[lotId_].processedAmountIn = result.totalAmountIn;
             _lotPartialSettlement[lotId_].lastPrice =
                 Math.fullMulDivUp(result.totalAmountIn, baseScale, result.capacityExpended);
+            _lotPartialSettlement[lotId_].lastBidId = result.lastBidId;
 
             // We don't change the auction status so it can be iteratively settled
 
