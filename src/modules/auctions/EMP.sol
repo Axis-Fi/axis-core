@@ -804,38 +804,6 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
                 // Set the last bid id processed for use in the next settle call (if needed)
                 result.lastBidId = bidId;
 
-                // If the price is below the minimum price, then determine a marginal price from the previous bids with the knowledge that no other bids will be considered
-                // This will also handle a zero price returned from `_getNextBid()`, since `minPrice` is always greater than zero
-                if (price < lotAuctionData.minPrice) {
-                    // We know that the lastPrice was not sufficient to fill capacity or the loop would have exited
-                    // We check if minimum price can result in a fill. If so, find the exact marginal price between last price and minimum price
-                    // If not, we set the marginal price to the minimum price. Whether the capacity filled meets the minimum filled will be checked later in the settlement process.
-                    if (
-                        lotAuctionData.minPrice == 0
-                            || Math.fullMulDiv(result.totalAmountIn, baseScale, lotAuctionData.minPrice)
-                                >= capacity
-                    ) {
-                        result.marginalPrice =
-                            Math.fullMulDivUp(result.totalAmountIn, baseScale, capacity);
-                    } else {
-                        result.marginalPrice = lotAuctionData.minPrice; // note this cannot be zero since it is checked above
-                    }
-
-                    // If the marginal price is re-calculated and is the same as the previous, we need to set the marginal bid id, otherwise the previous bid will not be able to claim.
-                    if (lastPrice == result.marginalPrice) {
-                        result.marginalBidId = lastBidId;
-                    }
-
-                    // Update capacity expended with the new marginal price
-                    result.capacityExpended =
-                        Math.fullMulDiv(result.totalAmountIn, baseScale, result.marginalPrice);
-                    // marginal bid id can be zero, there are no bids at the marginal price
-
-                    // Exit the outer loop
-                    result.finished = true;
-                    break;
-                }
-
                 // Check if the auction can clear with the existing bids at a price between current price and last price
                 // There will be no partial fills because we select the price that exactly fills the capacity
                 // Note: totalAmountIn here has not had the current bid added to it
