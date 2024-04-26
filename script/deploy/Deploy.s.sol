@@ -240,6 +240,8 @@ contract Deploy is Script, WithEnvironment, WithSalts {
             )
         );
         vm.writeLine(file, "}");
+
+        // TODO update env.json?
     }
 
     // ========== AUCTIONHOUSE DEPLOYMENTS ========== //
