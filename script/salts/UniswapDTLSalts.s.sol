@@ -9,7 +9,7 @@ import {WithSalts} from "script/salts/WithSalts.s.sol";
 import {UniswapV2DirectToLiquidity} from "src/callbacks/liquidity/UniswapV2DTL.sol";
 import {UniswapV3DirectToLiquidity} from "src/callbacks/liquidity/UniswapV3DTL.sol";
 
-contract AuctionHouseSalts is Script, WithEnvironment, WithSalts {
+contract UniswapDTLSalts is Script, WithEnvironment, WithSalts {
     address internal _envUniswapV2Factory;
     address internal _envUniswapV2Router;
     address internal _envUniswapV3Factory;
@@ -55,6 +55,8 @@ contract AuctionHouseSalts is Script, WithEnvironment, WithSalts {
             revert("Invalid Uniswap version: 2 or 3");
         }
     }
+
+    // TODO set prefix
 
     function _generateV2(bool atomic_) internal {
         if (atomic_) {
