@@ -939,68 +939,8 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
         // Cache base scaling value
         uint256 baseScale = 10 ** lotData[lotId_].baseTokenDecimals;
 
-        // If the marginal price has been found, settle the auction
-        if (result.finished) {
-            // Cache capacity
-            // Capacity is always in base token units for this auction type
-            uint256 capacity = lotData[lotId_].capacity;
-
-            AuctionData memory lotAuctionData = auctionData[lotId_];
-
-            // Determine if the auction can be filled, if so settle the auction, otherwise refund the seller
-            // We set the status as settled either way to denote this function has been executed
-            auctionData[lotId_].status = LotStatus.Settled;
-            // Auction cannot be settled if the total filled is less than the minimum filled
-            // or if the marginal price is less than the minimum price
-            if (
-                result.capacityExpended >= auctionData[lotId_].minFilled
-                    && result.marginalPrice >= lotAuctionData.minPrice
-            ) {
-                // Auction can be settled at the marginal price if we reach this point
-                auctionData[lotId_].marginalPrice = result.marginalPrice;
-                auctionData[lotId_].marginalBidId = result.marginalBidId;
-
-                // If capacity expended is greater than capacity, then the marginal bid is partially filled
-                // Set refund and payout for the bid so it can be handled during claim
-                if (result.capacityExpended > capacity) {
-                    // Load routing and bid data
-                    Bid storage bidData = bids[lotId_][result.marginalBidId];
-
-                    // Calculate the payout and refund amounts
-                    uint256 fullFill =
-                        Math.mulDiv(uint256(bidData.amount), baseScale, result.marginalPrice);
-                    uint256 excess = result.capacityExpended - capacity;
-
-                    // Store the settlement data for use with partial fills
-                    // refund casting logic:
-                    // bidData.amount is a uint96.
-                    // excess must be less than fullFill because some of the
-                    // bid's capacity must be filled at the marginal price.
-                    // Therefore, bidData.amount * excess / fullFill < bidData.amount < 2^96
-                    // Using a uint96 for refund saves a storage slot since it can be
-                    // packed with the bid ID in the PartialFill struct.
-                    PartialFill memory pf = PartialFill({
-                        bidId: result.marginalBidId,
-                        refund: uint96(Math.mulDiv(uint256(bidData.amount), excess, fullFill)),
-                        payout: fullFill - excess
-                    });
-                    _lotPartialFill[lotId_] = pf;
-
-                    // Reduce the total amount in by the refund amount
-                    result.totalAmountIn -= pf.refund;
-                }
-
-                // Set settlement data
-                totalIn_ = result.totalAmountIn;
-                totalOut_ = result.capacityExpended > capacity ? capacity : result.capacityExpended;
-            } else {
-                // Auction cannot be settled if we reach this point
-                // Marginal price is set as the max uint256 for the auction so the system knows all bids should be refunded
-                auctionData[lotId_].marginalPrice = type(uint256).max;
-
-                // totalIn and totalOut are not set since the auction does not clear
-            }
-        } else {
+        // If the settlement was not finished
+        if (result.finished == false) {
             // Not all bids have been processed. Store the amount in so far and the last price for use in the next settle call.
             _lotPartialSettlement[lotId_].processedAmountIn = result.totalAmountIn;
             _lotPartialSettlement[lotId_].lastPrice =
@@ -1009,7 +949,72 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
             // We don't change the auction status so it can be iteratively settled
 
             // totalIn and totalOut are not set since the auction has not settled yet
+
+            return (totalIn_, totalOut_, auctionOutput_);
         }
+
+        // Else the marginal price has been found, settle the auction
+        // Cache capacity
+        // Capacity is always in base token units for this auction type
+        uint256 capacity = lotData[lotId_].capacity;
+
+        AuctionData memory lotAuctionData = auctionData[lotId_];
+
+        // Determine if the auction can be filled, if so settle the auction, otherwise refund the seller
+        // We set the status as settled either way to denote this function has been executed
+        auctionData[lotId_].status = LotStatus.Settled;
+
+        // Auction cannot be settled if the total filled is less than the minimum filled
+        // or if the marginal price is less than the minimum price
+        if (
+            result.capacityExpended < auctionData[lotId_].minFilled
+                || result.marginalPrice < lotAuctionData.minPrice
+        ) {
+            // Auction cannot be settled if we reach this point
+            // Marginal price is set as the max uint256 for the auction so the system knows all bids should be refunded
+            auctionData[lotId_].marginalPrice = type(uint256).max;
+
+            // totalIn and totalOut are not set since the auction does not clear
+
+            return (totalIn_, totalOut_, auctionOutput_);
+        }
+
+        // Auction can be settled at the marginal price if we reach this point
+        auctionData[lotId_].marginalPrice = result.marginalPrice;
+        auctionData[lotId_].marginalBidId = result.marginalBidId;
+
+        // If capacity expended is greater than capacity, then the marginal bid is partially filled
+        // Set refund and payout for the bid so it can be handled during claim
+        if (result.capacityExpended > capacity) {
+            // Load routing and bid data
+            Bid storage bidData = bids[lotId_][result.marginalBidId];
+
+            // Calculate the payout and refund amounts
+            uint256 fullFill = Math.mulDiv(uint256(bidData.amount), baseScale, result.marginalPrice);
+            uint256 excess = result.capacityExpended - capacity;
+
+            // Store the settlement data for use with partial fills
+            // refund casting logic:
+            // bidData.amount is a uint96.
+            // excess must be less than fullFill because some of the
+            // bid's capacity must be filled at the marginal price.
+            // Therefore, bidData.amount * excess / fullFill < bidData.amount < 2^96
+            // Using a uint96 for refund saves a storage slot since it can be
+            // packed with the bid ID in the PartialFill struct.
+            PartialFill memory pf = PartialFill({
+                bidId: result.marginalBidId,
+                refund: uint96(Math.mulDiv(uint256(bidData.amount), excess, fullFill)),
+                payout: fullFill - excess
+            });
+            _lotPartialFill[lotId_] = pf;
+
+            // Reduce the total amount in by the refund amount
+            result.totalAmountIn -= pf.refund;
+        }
+
+        // Set settlement data
+        totalIn_ = result.totalAmountIn;
+        totalOut_ = result.capacityExpended > capacity ? capacity : result.capacityExpended;
 
         return (totalIn_, totalOut_, auctionOutput_);
     }
