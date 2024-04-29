@@ -182,7 +182,7 @@ contract CallbacksTest is Test {
         );
     }
 
-    function _onClaimProceedsSalt() internal returns (bytes32, Callbacks.Permissions memory) {
+    function _onSettleSalt() internal returns (bytes32, Callbacks.Permissions memory) {
         Callbacks.Permissions memory permissions = Callbacks.Permissions({
             onCreate: false,
             onCancel: false,
@@ -397,7 +397,7 @@ contract CallbacksTest is Test {
     // [X] onCurate is true
     // [X] onPurchase is true
     // [X] onBid is true
-    // [X] onClaimProceeds is true
+    // [X] onSettle is true
     // [X] receiveQuoteTokens is true
     // [X] sendBaseTokens is true
 
@@ -502,7 +502,7 @@ contract CallbacksTest is Test {
             permissions_.onBid
         );
 
-        // onClaimProceeds
+        // onSettle
         _assertValidateCallbacksPermission(
             callback_,
             Callbacks.Permissions({
@@ -593,8 +593,8 @@ contract CallbacksTest is Test {
         _assertValidateCallbacksPermissions(callback, permissions);
     }
 
-    function test_validateCallbacksPermissions_onClaimProceeds() public {
-        (bytes32 salt, Callbacks.Permissions memory permissions) = _onClaimProceedsSalt();
+    function test_validateCallbacksPermissions_onSettle() public {
+        (bytes32 salt, Callbacks.Permissions memory permissions) = _onSettleSalt();
         ICallback callback = _createCallback(salt, permissions);
 
         _assertValidateCallbacksPermissions(callback, permissions);
@@ -732,8 +732,8 @@ contract CallbacksTest is Test {
         assertEq(callback.hasPermission(Callbacks.SEND_BASE_TOKENS_FLAG), false, "sendBaseTokens");
     }
 
-    function test_hasPermission_onClaimProceeds() public {
-        (bytes32 salt, Callbacks.Permissions memory permissions) = _onClaimProceedsSalt();
+    function test_hasPermission_onSettle() public {
+        (bytes32 salt, Callbacks.Permissions memory permissions) = _onSettleSalt();
         ICallback callback = _createCallback(salt, permissions);
 
         assertEq(callback.hasPermission(Callbacks.ON_CREATE_FLAG), false, "onCreate");
@@ -844,8 +844,8 @@ contract CallbacksTest is Test {
         assertEq(callback.isValidCallbacksAddress(), true, "invalid");
     }
 
-    function test_isValidCallbacksAddress_onClaimProceeds() public {
-        (bytes32 salt, Callbacks.Permissions memory permissions) = _onClaimProceedsSalt();
+    function test_isValidCallbacksAddress_onSettle() public {
+        (bytes32 salt, Callbacks.Permissions memory permissions) = _onSettleSalt();
         ICallback callback = _createCallback(salt, permissions);
 
         assertEq(callback.isValidCallbacksAddress(), true, "invalid");

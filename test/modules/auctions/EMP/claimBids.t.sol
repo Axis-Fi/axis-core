@@ -195,56 +195,6 @@ contract EmpaModuleClaimBidsTest is EmpTest {
         _module.claimBids(_lotId, _bidIds);
     }
 
-    // function test_givenClaimProceeds_unsuccessfulBid()
-    //     external
-    //     givenLotIsCreated
-    //     givenLotHasStarted
-    //     givenBidIsCreated(
-    //         _scaleQuoteTokenAmount(_BID_AMOUNT_UNSUCCESSFUL),
-    //         _scaleBaseTokenAmount(_BID_AMOUNT_OUT_UNSUCCESSFUL)
-    //     )
-    //     givenBidIsCreatedByBidderTwo(
-    //         _scaleQuoteTokenAmount(_BID_AMOUNT_UNSUCCESSFUL),
-    //         _scaleBaseTokenAmount(_BID_AMOUNT_OUT_UNSUCCESSFUL)
-    //     )
-    //     givenLotHasConcluded
-    //     givenPrivateKeyIsSubmitted
-    //     givenLotIsDecrypted
-    //     givenLotIsSettled
-    //     givenLotProceedsAreClaimed
-    // {
-    //     // Call the function
-    //     vm.prank(address(_auctionHouse));
-    //     (IBatchAuction.BidClaim[] memory bidClaims,) = _module.claimBids(_lotId, _bidIds);
-
-    //     // Check the result
-    //     IBatchAuction.BidClaim memory bidClaimOne = bidClaims[0];
-    //     assertEq(bidClaimOne.bidder, _BIDDER, "bid one: bidder");
-    //     assertEq(bidClaimOne.referrer, _REFERRER, "bid one: referrer");
-    //     assertEq(bidClaimOne.paid, _BID_AMOUNT_UNSUCCESSFUL, "bid one: paid");
-    //     assertEq(bidClaimOne.payout, 0, "bid one: payout");
-    //     assertEq(bidClaimOne.refund, _BID_AMOUNT_UNSUCCESSFUL, "bid one: refund");
-
-    //     IBatchAuction.BidClaim memory bidClaimTwo = bidClaims[1];
-    //     assertEq(bidClaimTwo.bidder, _BIDDER_TWO, "bid two: bidder");
-    //     assertEq(bidClaimTwo.referrer, _REFERRER, "bid two: referrer");
-    //     assertEq(bidClaimTwo.paid, _BID_AMOUNT_UNSUCCESSFUL, "bid two: paid");
-    //     assertEq(bidClaimTwo.payout, 0, "bid two: payout");
-    //     assertEq(bidClaimTwo.refund, _BID_AMOUNT_UNSUCCESSFUL, "bid two: refund");
-
-    //     assertEq(bidClaims.length, 2, "bid count");
-
-    //     // Check the bid status
-    //     EncryptedMarginalPrice.Bid memory bidOne = _getBid(_lotId, _bidIds[0]);
-    //     assertEq(
-    //         uint8(bidOne.status), uint8(EncryptedMarginalPrice.BidStatus.Claimed), "bid one: status"
-    //     );
-    //     EncryptedMarginalPrice.Bid memory bidTwo = _getBid(_lotId, _bidIds[1]);
-    //     assertEq(
-    //         uint8(bidTwo.status), uint8(EncryptedMarginalPrice.BidStatus.Claimed), "bid two: status"
-    //     );
-    // }
-
     function test_unsuccessfulBid()
         external
         givenLotIsCreated

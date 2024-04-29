@@ -39,8 +39,6 @@ contract BatchAuctionHouse is IBatchAuctionHouse, AuctionHouse {
 
     event ClaimBid(uint96 indexed lotId, uint96 indexed bidId, address indexed bidder);
 
-    event ClaimProceeds(uint96 indexed lotId, address indexed seller);
-
     event Settle(uint96 indexed lotId);
 
     // ========== STATE VARIABLES ========== //
@@ -399,7 +397,7 @@ contract BatchAuctionHouse is IBatchAuctionHouse, AuctionHouse {
         }
 
         // Send payment in bulk to the address dictated by the callbacks address
-        // If the callbacks contract is configured to receive quote tokens, send the quote tokens to the callbacks contract and call the onClaimProceeds callback
+        // If the callbacks contract is configured to receive quote tokens, send the quote tokens to the callbacks contract and call the onSettle callback
         // If not, send the quote tokens to the seller and call the onSettle callback
         _sendPayment(routing.seller, totalInLessFees, routing.quoteToken, routing.callbacks);
 

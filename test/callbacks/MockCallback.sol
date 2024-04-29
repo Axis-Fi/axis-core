@@ -18,7 +18,7 @@ contract MockCallback is BaseCallback {
     bool public onCurateReverts;
     bool public onPurchaseReverts;
     bool public onBidReverts;
-    bool public onClaimProceedsReverts;
+    bool public onSettleReverts;
 
     uint48 public onCreateMultiplier;
     uint48 public onCurateMultiplier;
@@ -148,7 +148,7 @@ contract MockCallback is BaseCallback {
     }
 
     function _onSettle(uint96 lotId_, uint256, uint256, bytes calldata) internal virtual override {
-        if (onClaimProceedsReverts) {
+        if (onSettleReverts) {
             revert("revert");
         }
 
@@ -175,8 +175,8 @@ contract MockCallback is BaseCallback {
         onBidReverts = reverts_;
     }
 
-    function setOnClaimProceedsReverts(bool reverts_) external {
-        onClaimProceedsReverts = reverts_;
+    function setOnSettleReverts(bool reverts_) external {
+        onSettleReverts = reverts_;
     }
 
     function setOnCreateMultiplier(uint48 multiplier_) external {
