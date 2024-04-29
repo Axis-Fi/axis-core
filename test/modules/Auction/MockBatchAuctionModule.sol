@@ -59,9 +59,7 @@ contract MockBatchAuctionModule is BatchAuctionModule {
 
     function _auction(uint96, Lot memory, bytes memory) internal virtual override {}
 
-    function _cancelAuction(uint96 id_) internal override {
-        //
-    }
+    function _cancelAuction(uint96 id_) internal override {}
 
     function _bid(
         uint96 lotId_,
