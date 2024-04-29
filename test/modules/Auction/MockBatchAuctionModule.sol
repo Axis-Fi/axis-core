@@ -47,7 +47,7 @@ contract MockBatchAuctionModule is BatchAuctionModule {
 
     mapping(uint96 lotId => LotStatus) public lotStatus;
 
-    mapping(uint96 => bool) public settled;
+    mapping(uint96 => bool) public settlementFinished;
 
     constructor(address _owner) AuctionModule(_owner) {
         minAuctionDuration = 1 days;
@@ -145,11 +145,18 @@ contract MockBatchAuctionModule is BatchAuctionModule {
         return (bidClaims_, "");
     }
 
-    function setLotSettlement(uint96 lotId_, uint256 totalIn_, uint256 totalOut_) external {
+    function setLotSettlement(
+        uint96 lotId_,
+        uint256 totalIn_,
+        uint256 totalOut_,
+        bool finished_
+    ) external {
         // Also update sold and purchased
         Lot storage lot = lotData[lotId_];
         lot.purchased = totalIn_;
         lot.sold = totalOut_;
+
+        settlementFinished[lotId_] = finished_;
     }
 
     /// @inheritdoc BatchAuctionModule
@@ -162,9 +169,11 @@ contract MockBatchAuctionModule is BatchAuctionModule {
         returns (uint256 totalIn, uint256 totalOut, bool finished, bytes memory auctionOutput)
     {
         // Update status
-        lotStatus[lotId_] = LotStatus.Settled;
+        if (settlementFinished[lotId_] == true) {
+            lotStatus[lotId_] = LotStatus.Settled;
+        }
 
-        return (lotData[lotId_].purchased, lotData[lotId_].sold, true, "");
+        return (lotData[lotId_].purchased, lotData[lotId_].sold, settlementFinished[lotId_], "");
     }
 
     function getBid(uint96 lotId_, uint64 bidId_) external view returns (Bid memory bid_) {

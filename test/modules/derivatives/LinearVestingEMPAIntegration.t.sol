@@ -363,9 +363,7 @@ contract LinearVestingEMPAIntegrationTest is BatchAuctionHouseTest {
 
         // Check the balances
         assertEq(_quoteToken.balanceOf(_bidder), 0, "quote token: bidder");
-        assertEq(
-            _quoteToken.balanceOf(address(_auctionHouse)), _BID_AMOUNT, "quote token: auction house"
-        ); // Bid amount
+        assertEq(_quoteToken.balanceOf(address(_auctionHouse)), 0, "quote token: auction house"); // Transferred to seller
 
         assertEq(_baseToken.balanceOf(_bidder), 0, "base token: bidder");
         assertEq(_baseToken.balanceOf(address(_auctionHouse)), 10e18, "base token: auction house"); // Base tokens to be claimed + unused capacity
@@ -449,7 +447,11 @@ contract LinearVestingEMPAIntegrationTest is BatchAuctionHouseTest {
 
         // Check the balances
         assertEq(_quoteToken.balanceOf(_bidder), 0, "quote token: bidder"); // Not refunded until claimed
-        assertEq(_quoteToken.balanceOf(address(_auctionHouse)), 12e18, "quote token: auction house"); // Includes all bids submitted until proceeds or refunds claimed
+        assertEq(
+            _quoteToken.balanceOf(address(_auctionHouse)),
+            12e18 - 10e18,
+            "quote token: auction house"
+        ); // Bid refunds
 
         assertEq(_baseToken.balanceOf(_bidder), 0, "base token: bidder");
         assertEq(_baseToken.balanceOf(address(_auctionHouse)), 10e18, "base token: auction house"); // Not distributed until claimed

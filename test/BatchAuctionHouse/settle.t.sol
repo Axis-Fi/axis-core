@@ -13,11 +13,13 @@ contract BatchSettleTest is BatchAuctionHouseTest {
     bytes internal constant _ON_SETTLE_CALLBACK_PARAMS = "";
 
     uint256 internal _expectedAuctionHouseQuoteTokenBalance;
+    uint256 internal _expectedSellerQuoteTokenBalance;
 
     uint256 internal _expectedAuctionHouseBaseTokenBalance;
+    uint256 internal _expectedSellerBaseTokenBalance;
 
-    uint256 internal _expectedDerivativeBaseTokenBalance;
     uint256 internal _expectedCuratorBaseTokenRewards;
+
     bool internal _lotSettles;
 
     // ======== Modifiers ======== //
@@ -29,20 +31,23 @@ contract BatchSettleTest is BatchAuctionHouseTest {
             _expectedAuctionHouseBaseTokenBalance,
             "base token: auction house balance"
         );
-        assertEq(_baseToken.balanceOf(_SELLER), 0, "base token: seller balance");
+        assertEq(
+            _baseToken.balanceOf(_SELLER),
+            _expectedSellerBaseTokenBalance,
+            "base token: seller balance"
+        );
         assertEq(_baseToken.balanceOf(_bidder), 0, "base token: bidder balance");
         assertEq(_baseToken.balanceOf(_REFERRER), 0, "base token: referrer balance");
         assertEq(_baseToken.balanceOf(_CURATOR), 0, "base token: curator balance");
         assertEq(_baseToken.balanceOf(_PROTOCOL), 0, "base token: protocol balance");
-        assertEq(
-            _baseToken.balanceOf(address(_derivativeModule)),
-            _expectedDerivativeBaseTokenBalance,
-            "base token: derivative balance"
-        );
 
         // Check routing
         AuctionHouse.Routing memory lotRouting = _getLotRouting(_lotId);
-        assertEq(lotRouting.funding, _expectedAuctionHouseBaseTokenBalance, "funding");
+        assertEq(
+            lotRouting.funding,
+            _expectedAuctionHouseBaseTokenBalance - _expectedCuratorBaseTokenRewards,
+            "funding"
+        ); // Curator fee has been allocated and is removed from the funding amount
     }
 
     function _assertQuoteTokenBalances() internal {
@@ -52,7 +57,11 @@ contract BatchSettleTest is BatchAuctionHouseTest {
             _expectedAuctionHouseQuoteTokenBalance,
             "quote token: auction house balance"
         );
-        assertEq(_quoteToken.balanceOf(_SELLER), 0, "quote token: seller balance");
+        assertEq(
+            _quoteToken.balanceOf(_SELLER),
+            _expectedSellerQuoteTokenBalance,
+            "quote token: seller balance"
+        );
         assertEq(_quoteToken.balanceOf(_bidder), 0, "quote token: bidder balance");
         assertEq(_quoteToken.balanceOf(_REFERRER), 0, "quote token: referrer balance");
         assertEq(_quoteToken.balanceOf(_CURATOR), 0, "quote token: curator balance");
@@ -61,21 +70,27 @@ contract BatchSettleTest is BatchAuctionHouseTest {
 
     function _assertAccruedFees() internal {
         // Check accrued quote token fees have not yet been set
-        assertEq(_auctionHouse.rewards(_REFERRER, _quoteToken), 0, "referrer fee");
-        assertEq(_auctionHouse.rewards(_CURATOR, _quoteToken), 0, "curator fee"); // Always 0
-        assertEq(_auctionHouse.rewards(_PROTOCOL, _quoteToken), 0, "protocol fee");
+        assertEq(_auctionHouse.rewards(_REFERRER, _quoteToken), 0, "quote token: referrer fee");
+        assertEq(_auctionHouse.rewards(_PROTOCOL, _quoteToken), 0, "quote token: protocol fee");
+        assertEq(_auctionHouse.rewards(_CURATOR, _quoteToken), 0, "quote token: curator fee");
+
+        // Check base token fees
+        assertEq(_auctionHouse.rewards(_REFERRER, _baseToken), 0, "base token: referrer fee");
+        assertEq(_auctionHouse.rewards(_PROTOCOL, _baseToken), 0, "base token: protocol fee");
+        assertEq(
+            _auctionHouse.rewards(_CURATOR, _baseToken),
+            _expectedCuratorBaseTokenRewards,
+            "base token: curator fee"
+        );
     }
 
     function _mockSettlement(
         uint256 totalIn_,
         uint256 totalOut_,
-        bytes memory auctionOutput_
+        bool finished_,
+        bytes memory
     ) internal {
-        vm.mockCall(
-            address(_auctionModule),
-            abi.encodeWithSelector(BatchAuctionModule.settle.selector, _lotId),
-            abi.encode(totalIn_, totalOut_, auctionOutput_)
-        );
+        _batchAuctionModule.setLotSettlement(_lotId, totalIn_, totalOut_, finished_);
     }
 
     modifier givenAuctionModuleReverts() {
@@ -98,17 +113,25 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         uint256 pfFilledAmount = _scaleQuoteTokenAmount(4e18) - pfRefundAmount;
         uint256 totalInFilled = totalIn - pfRefundAmount;
 
-        _mockSettlement(totalInFilled, totalOut, "");
+        _concludeLot();
+
+        _mockSettlement(totalInFilled, totalOut, true, "");
 
         // Calculate fees
         uint256 prefundedCuratorFees = _curatorApproved ? _curatorMaxPotentialFee : 0;
+        uint256 curatorPayout = _calculateCuratorFee(totalOut);
+        (,, uint256 totalQuoteTokenFees) = _calculateFees(_REFERRER, totalInFilled);
 
         // Set up expected values
         // Quote token
-        _expectedAuctionHouseQuoteTokenBalance = totalIn; // To be claimed by seller
+        _expectedAuctionHouseQuoteTokenBalance = pfRefundAmount + totalQuoteTokenFees; // To be claimed by bidder + rewards
+        _expectedSellerQuoteTokenBalance = totalInFilled - totalQuoteTokenFees; // Transferred to seller
 
         // Base token
-        _expectedAuctionHouseBaseTokenBalance = scaledLotCapacity + prefundedCuratorFees; // Entire capacity and potential curator fees are kept in the AuctionHouse
+        _expectedAuctionHouseBaseTokenBalance = scaledLotCapacity + curatorPayout; // To be claimed be bidders and curator
+        _expectedSellerBaseTokenBalance = prefundedCuratorFees - curatorPayout; // Unused curator fee refunded
+
+        _expectedCuratorBaseTokenRewards = curatorPayout;
 
         _lotSettles = true;
         _;
@@ -119,17 +142,26 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         uint256 totalOut = _scaleBaseTokenAmount(5e18); // 50% filled
         uint256 scaledLotCapacity = _scaleBaseTokenAmount(_LOT_CAPACITY);
 
-        _mockSettlement(totalIn, totalOut, "");
+        _concludeLot();
+
+        _mockSettlement(totalIn, totalOut, true, "");
 
         // Calculate fees
         uint256 prefundedCuratorFees = _curatorApproved ? _curatorMaxPotentialFee : 0;
+        uint256 curatorPayout = _calculateCuratorFee(totalOut);
+        (,, uint256 totalQuoteTokenFees) = _calculateFees(_REFERRER, totalIn);
 
         // Set up expected values
         // Quote token
-        _expectedAuctionHouseQuoteTokenBalance = totalIn;
+        _expectedAuctionHouseQuoteTokenBalance = totalQuoteTokenFees; // Rewards
+        _expectedSellerQuoteTokenBalance = totalIn - totalQuoteTokenFees; // Transferred to seller
 
         // Base token
-        _expectedAuctionHouseBaseTokenBalance = scaledLotCapacity + prefundedCuratorFees; // To be claimed by bidders, seller, and curator
+        _expectedAuctionHouseBaseTokenBalance = totalOut + curatorPayout; // To be claimed be bidders and curator
+        _expectedSellerBaseTokenBalance =
+            scaledLotCapacity - totalOut + prefundedCuratorFees - curatorPayout; // Unused capacity and curator fee refunded
+
+        _expectedCuratorBaseTokenRewards = curatorPayout;
 
         _lotSettles = true;
         _;
@@ -140,17 +172,26 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         uint256 totalOut = _scaleBaseTokenAmount(_LOT_CAPACITY);
         uint256 scaledLotCapacity = _scaleBaseTokenAmount(_LOT_CAPACITY);
 
-        _mockSettlement(totalIn, totalOut, "");
+        _concludeLot();
+
+        _mockSettlement(totalIn, totalOut, true, "");
 
         // Calculate fees
         uint256 prefundedCuratorFees = _curatorApproved ? _curatorMaxPotentialFee : 0;
+        uint256 curatorPayout = _calculateCuratorFee(totalOut);
+        (,, uint256 totalQuoteTokenFees) = _calculateFees(_REFERRER, totalIn);
 
         // Set up expected values
         // Quote token
-        _expectedAuctionHouseQuoteTokenBalance = totalIn;
+        _expectedAuctionHouseQuoteTokenBalance = totalQuoteTokenFees; // Rewards
+        _expectedSellerQuoteTokenBalance = totalIn - totalQuoteTokenFees; // Transferred to seller
 
         // Base token
-        _expectedAuctionHouseBaseTokenBalance = scaledLotCapacity + prefundedCuratorFees; // To be claimed by bidders, seller, and curator
+        _expectedAuctionHouseBaseTokenBalance = totalOut + curatorPayout; // To be claimed be bidders and curator
+        _expectedSellerBaseTokenBalance =
+            scaledLotCapacity - totalOut + prefundedCuratorFees - curatorPayout; // Unused capacity and curator fee refunded
+
+        _expectedCuratorBaseTokenRewards = curatorPayout;
 
         _lotSettles = true;
         _;
@@ -161,17 +202,25 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         uint256 totalOut = 0;
         uint256 scaledLotCapacity = _scaleBaseTokenAmount(_LOT_CAPACITY);
 
-        _mockSettlement(totalIn, totalOut, "");
+        _concludeLot();
+
+        _mockSettlement(totalIn, totalOut, true, "");
 
         // Calculate fees
         uint256 prefundedCuratorFees = _curatorApproved ? _curatorMaxPotentialFee : 0;
+        uint256 curatorPayout = _calculateCuratorFee(totalOut);
+        (,, uint256 totalQuoteTokenFees) = _calculateFees(_REFERRER, totalIn);
 
         // Set up expected values
         // Quote token
         _expectedAuctionHouseQuoteTokenBalance = _scaleQuoteTokenAmount(_BID_AMOUNT_TOTAL); // To be claimed by bidders
+        _expectedSellerQuoteTokenBalance = 0; // Nothing transferred
 
         // Base token
-        _expectedAuctionHouseBaseTokenBalance = scaledLotCapacity + prefundedCuratorFees; // To be claimed by seller
+        _expectedAuctionHouseBaseTokenBalance = 0;
+        _expectedSellerBaseTokenBalance = scaledLotCapacity + prefundedCuratorFees; // Refunded to seller
+
+        _expectedCuratorBaseTokenRewards = 0; // No curator fees allocated
 
         _lotSettles = false;
         _;

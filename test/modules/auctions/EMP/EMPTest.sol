@@ -341,7 +341,7 @@ abstract contract EmpTest is Test, Permit2User {
     }
 
     modifier givenLotSettlePeriodHasPassed() {
-        vm.warp(_start + _DURATION + 6 hours);
+        vm.warp(_start + _DURATION + 1 days);
         _;
     }
 

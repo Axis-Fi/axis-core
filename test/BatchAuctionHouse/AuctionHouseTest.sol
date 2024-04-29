@@ -154,6 +154,34 @@ abstract contract BatchAuctionHouseTest is Test, Permit2User, WithSalts {
         return FixedPointMathLib.mulDivDown(amount_, 10 ** _baseToken.decimals(), _BASE_SCALE);
     }
 
+    function _calculateFees(
+        address referrer_,
+        uint256 amountIn_
+    ) internal view returns (uint256 toReferrer, uint256 toProtocol, uint256 totalFees) {
+        bool hasReferrer = referrer_ != address(0);
+
+        uint256 referrerFee = uint256(amountIn_) * _referrerFeePercentActual / 1e5;
+
+        // If the referrer is not set, the referrer fee is allocated to the protocol
+        toReferrer = hasReferrer ? referrerFee : 0;
+        toProtocol =
+            uint256(amountIn_) * _protocolFeePercentActual / 1e5 + (hasReferrer ? 0 : referrerFee);
+
+        return (toReferrer, toProtocol, toReferrer + toProtocol);
+    }
+
+    function _calculateCuratorFee(uint256 amountOut_)
+        internal
+        view
+        returns (uint256 curatorPayout_)
+    {
+        if (_curatorApproved == false) {
+            return 0;
+        }
+
+        return amountOut_ * _curatorFeePercentActual / 1e5;
+    }
+
     // ===== Modifiers ===== //
 
     modifier givenLotHasCapacity(uint96 capacity_) {
