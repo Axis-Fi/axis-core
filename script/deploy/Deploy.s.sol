@@ -525,7 +525,7 @@ contract Deploy is Script, WithEnvironment, WithSalts {
 
         // Get the salt
         bytes32 salt_ = _getSalt(
-            "AtomicUniswapV2DirectToLiquidity",
+            "UniswapV2DirectToLiquidity",
             type(UniswapV2DirectToLiquidity).creationCode,
             abi.encode(address(atomicAuctionHouse), uniswapV2Factory, uniswapV2Router)
         );
@@ -560,7 +560,7 @@ contract Deploy is Script, WithEnvironment, WithSalts {
 
         // Get the salt
         bytes32 salt_ = _getSalt(
-            "BatchUniswapV2DirectToLiquidity",
+            "UniswapV2DirectToLiquidity",
             type(UniswapV2DirectToLiquidity).creationCode,
             abi.encode(address(batchAuctionHouse), uniswapV2Factory, uniswapV2Router)
         );
@@ -595,7 +595,7 @@ contract Deploy is Script, WithEnvironment, WithSalts {
 
         // Get the salt
         bytes32 salt_ = _getSalt(
-            "AtomicUniswapV3DirectToLiquidity",
+            "UniswapV3DirectToLiquidity",
             type(UniswapV3DirectToLiquidity).creationCode,
             abi.encode(address(atomicAuctionHouse), uniswapV3Factory, gUniFactory)
         );
@@ -630,7 +630,7 @@ contract Deploy is Script, WithEnvironment, WithSalts {
 
         // Get the salt
         bytes32 salt_ = _getSalt(
-            "BatchUniswapV3DirectToLiquidity",
+            "UniswapV3DirectToLiquidity",
             type(UniswapV3DirectToLiquidity).creationCode,
             abi.encode(address(batchAuctionHouse), uniswapV3Factory, gUniFactory)
         );
