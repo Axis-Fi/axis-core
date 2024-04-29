@@ -371,16 +371,44 @@ contract BatchAuctionHouse is IBatchAuctionHouse, AuctionHouse {
 
         // Settle the auction
         uint256 capacity;
-        bool finished;
-        (totalIn, totalOut, capacity, finished, auctionOutput) = module.settle(lotId_, num_);
+        {
+            bool finished;
+            (totalIn, totalOut, capacity, finished, auctionOutput) = module.settle(lotId_, num_);
+
+            // Return early if not finished
+            if (finished == false) {
+                return (totalIn, totalOut, auctionOutput);
+            }
+        }
 
         // If the settlement is complete, then proceed with payouts, refunds, and callbacks
-        // TODO return early
-        if (finished) {
-            // Load data for the lot
-            Routing storage routing = lotRouting[lotId_];
-            FeeData storage feeData = lotFees[lotId_];
+        // Load data for the lot
+        Routing storage routing = lotRouting[lotId_];
+        FeeData storage feeData = lotFees[lotId_];
 
+        // Calculate the referrer and protocol fees for the amount in
+        // Fees are not allocated until the user claims their payout so that we don't have to iterate through them here
+        // If a referrer is not set, that portion of the fee defaults to the protocol
+        uint256 totalInLessFees;
+        {
+            (, uint256 toProtocol) =
+                calculateQuoteFees(feeData.protocolFee, feeData.referrerFee, false, totalIn);
+            unchecked {
+                totalInLessFees = totalIn - toProtocol;
+            }
+        }
+
+        // Send payment in bulk to the address dictated by the callbacks address
+        // If the callbacks contract is configured to receive quote tokens, send the quote tokens to the callbacks contract and call the onClaimProceeds callback
+        // If not, send the quote tokens to the seller and call the onSettle callback
+        _sendPayment(routing.seller, totalInLessFees, routing.quoteToken, routing.callbacks);
+
+        // Refund any unused capacity and curator fees to the address dictated by the callbacks address
+        // Additionally, bidders are able to claim before the seller, so the funding isn't the right value
+        // to use for the refund. Therefore, we use capacity, which is not decremented when batch auctions
+        // are settled, minus the amount sold. Then, we add any unearned curator payout.
+        uint256 prefundingRefund;
+        {
             // Calculate the curator fee and allocate the fees to be claimed
             uint256 curatorPayout =
                 _calculatePayoutFees(feeData.curated, feeData.curatorFee, totalOut);
@@ -403,51 +431,27 @@ contract BatchAuctionHouse is IBatchAuctionHouse, AuctionHouse {
                 }
             }
 
-            // Calculate the referrer and protocol fees for the amount in
-            // Fees are not allocated until the user claims their payout so that we don't have to iterate through them here
-            // If a referrer is not set, that portion of the fee defaults to the protocol
-            uint256 totalInLessFees;
-            {
-                (, uint256 toProtocol) =
-                    calculateQuoteFees(feeData.protocolFee, feeData.referrerFee, false, totalIn);
-                unchecked {
-                    totalInLessFees = totalIn - toProtocol;
-                }
-            }
-
-            // Send payment in bulk to the address dictated by the callbacks address
-            // If the callbacks contract is configured to receive quote tokens, send the quote tokens to the callbacks contract and call the onClaimProceeds callback
-            // If not, send the quote tokens to the seller and call the onSettle callback
-            _sendPayment(routing.seller, totalInLessFees, routing.quoteToken, routing.callbacks);
-
-            // Refund any unused capacity and curator fees to the address dictated by the callbacks address
-            // Additionally, bidders are able to claim before the seller, so the funding isn't the right value
-            // to use for the refund. Therefore, we use capacity, which is not decremented when batch auctions
-            // are settled, minus the amount sold. Then, we add any unearned curator payout.
-            uint256 prefundingRefund;
-            {
-                uint256 maxCuratorPayout =
-                    _calculatePayoutFees(feeData.curated, feeData.curatorFee, capacity);
-                prefundingRefund = capacity - totalOut + maxCuratorPayout - curatorPayout;
-            }
-            unchecked {
-                routing.funding -= prefundingRefund;
-            }
-            Transfer.transfer(
-                routing.baseToken,
-                _getAddressGivenCallbackBaseTokenFlag(routing.callbacks, routing.seller),
-                prefundingRefund,
-                false
-            );
-
-            // Call the onSettle callback
-            Callbacks.onSettle(
-                routing.callbacks, lotId_, totalInLessFees, prefundingRefund, callbackData_
-            );
-
-            // Emit event
-            emit Settle(lotId_);
+            uint256 maxCuratorPayout =
+                _calculatePayoutFees(feeData.curated, feeData.curatorFee, capacity);
+            prefundingRefund = capacity - totalOut + maxCuratorPayout - curatorPayout;
         }
+        unchecked {
+            routing.funding -= prefundingRefund;
+        }
+        Transfer.transfer(
+            routing.baseToken,
+            _getAddressGivenCallbackBaseTokenFlag(routing.callbacks, routing.seller),
+            prefundingRefund,
+            false
+        );
+
+        // Call the onSettle callback
+        Callbacks.onSettle(
+            routing.callbacks, lotId_, totalInLessFees, prefundingRefund, callbackData_
+        );
+
+        // Emit event
+        emit Settle(lotId_);
     }
 
     // ========== INTERNAL FUNCTIONS ========== //

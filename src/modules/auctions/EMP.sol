@@ -887,7 +887,7 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
     )
         internal
         override
-        returns (uint256 totalIn_, uint256 totalOut_, bool finished, bytes memory auctionOutput_)
+        returns (uint256 totalIn_, uint256 totalOut_, bool, bytes memory auctionOutput_)
     {
         // Check that auction is in the right state for settlement
         if (auctionData[lotId_].status != LotStatus.Decrypted) {
@@ -921,8 +921,6 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
         // Capacity is always in base token units for this auction type
         uint256 capacity = lotData[lotId_].capacity;
 
-        AuctionData memory lotAuctionData = auctionData[lotId_];
-
         // Determine if the auction can be filled, if so settle the auction, otherwise refund the seller
         // We set the status as settled either way to denote this function has been executed
         auctionData[lotId_].status = LotStatus.Settled;
@@ -931,7 +929,7 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
         // or if the marginal price is less than the minimum price
         if (
             result.capacityExpended < auctionData[lotId_].minFilled
-                || result.marginalPrice < lotAuctionData.minPrice
+                || result.marginalPrice < auctionData[lotId_].minPrice
         ) {
             // Auction cannot be settled if we reach this point
             // Marginal price is set as the max uint256 for the auction so the system knows all bids should be refunded
