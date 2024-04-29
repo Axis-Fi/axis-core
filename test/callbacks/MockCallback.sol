@@ -9,9 +9,8 @@ import {Callbacks} from "src/lib/Callbacks.sol";
 contract MockCallback is BaseCallback {
     constructor(
         address auctionHouse_,
-        Callbacks.Permissions memory permissions_,
-        address seller_
-    ) BaseCallback(auctionHouse_, permissions_, seller_) {}
+        Callbacks.Permissions memory permissions_
+    ) BaseCallback(auctionHouse_, permissions_) {}
 
     bool public onCreateReverts;
     bool public onCancelReverts;
@@ -63,7 +62,7 @@ contract MockCallback is BaseCallback {
             }
 
             // Transfer the base tokens to the auction house
-            ERC20(baseToken_).transfer(address(auctionHouse), capacity_);
+            ERC20(baseToken_).transfer(address(AUCTION_HOUSE), capacity_);
         }
     }
 
@@ -93,7 +92,7 @@ contract MockCallback is BaseCallback {
             }
 
             // Transfer the base tokens to the auction house
-            ERC20(lotTokens[lotId_].baseToken).transfer(address(auctionHouse), curatorFee_);
+            ERC20(lotTokens[lotId_].baseToken).transfer(address(AUCTION_HOUSE), curatorFee_);
         }
     }
 
@@ -124,7 +123,7 @@ contract MockCallback is BaseCallback {
             }
 
             // Transfer the base tokens to the auction house
-            ERC20(lotTokens[lotId_].baseToken).transfer(address(auctionHouse), payout_);
+            ERC20(lotTokens[lotId_].baseToken).transfer(address(AUCTION_HOUSE), payout_);
         }
     }
 
