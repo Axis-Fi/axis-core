@@ -11,6 +11,18 @@ import {IUniswapV2Router02} from "src/lib/uniswap-v2/IUniswapV2Router02.sol";
 // Callbacks
 import {BaseDirectToLiquidity} from "src/callbacks/liquidity/BaseDTL.sol";
 
+/// @title      UniswapV2DirectToLiquidity
+/// @notice     This Callback contract deposits the proceeds from a batch auction into a Uniswap V2 pool
+///             in order to create liquidity immediately.
+///
+///             The LP tokens are transferred to `DTLConfiguration.recipient`, or can optionally vest to the auction seller.
+///
+///             An important risk to consider: if the auction's base token is available and liquid, a third-party
+///             could front-run the auction by creating the pool before the auction ends. This would allow them to
+///             manipulate the price of the pool and potentially profit from the eventual deposit of the auction proceeds.
+///
+/// @dev        As a general rule, this callback contract does not retain balances of tokens between calls.
+///             Transfers are performed within the same function that requires the balance.
 contract UniswapV2DirectToLiquidity is BaseDirectToLiquidity {
     // ========== STRUCTS ========== //
 

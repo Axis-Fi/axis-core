@@ -21,7 +21,9 @@ import {BaseDirectToLiquidity} from "src/callbacks/liquidity/BaseDTL.sol";
 /// @notice     This Callback contract deposits the proceeds from a batch auction into a Uniswap V3 pool
 ///             in order to create liquidity immediately.
 ///
-///             The LP tokens can optionally vest to the auction seller.
+///             The Uniswap V3 position is tokenised as an ERC-20 using [G-UNI](https://github.com/gelatodigital/g-uni-v1-core).
+///
+///             The LP tokens are transferred to `DTLConfiguration.recipient`, or can optionally vest to the auction seller.
 ///
 ///             An important risk to consider: if the auction's base token is available and liquid, a third-party
 ///             could front-run the auction by creating the pool before the auction ends. This would allow them to
