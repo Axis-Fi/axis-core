@@ -239,16 +239,33 @@ contract BatchSettleTest is BatchAuctionHouseTest {
     //  [X] it reverts
     // [X] when the auction does not settle
     //  [X] when curated is true
-    //   [X] it does not transfer the capacity and curator fee to the seller
-    //  [X] it does not transfer the capacity to the seller
+    //   [X] it transfers the lot capacity and prepaid curator payout to the seller
+    //  [X] it transfers the lot capacity to the seller
     // [X] when there is a partial fill
-    //  [X] it completes settlement
-    // [X] when capacity is not filled
     //  [X] when curated is true
-    //   [X] it completes settlement
+    //   [X] it transfers the proceeds to the seller, and allocates the curator payout
+    //  [X] it transfers the proceeds to the seller
+    // [ ] when settlement is not finished
+    //  [ ] no transfers or allocations are made
+    // [X] when under capacity
+    //  [X] when curated is true
+    //   [X] it transfers the remaining lot capacity and curator payout to the seller, and allocates the curator payout
+    //  [ ] given the auction callback has the send base tokens flag
+    //   [ ] it refunds the base tokens to the callback
+    //  [X] it transfers the remaining lot capacity to the seller
+    // [ ] when protocol fees are set
+    //  [ ] it transfers the proceeds - protocol fees to the seller, and allocates the protocol fees
+    // [ ] when referrer fees are set
+    //  [ ] when protocol fees are set
+    //   [ ] it transfers the proceeds - protocol fees - referrer fees to the seller, and allocates the protocol fees and referrer fees
+    //  [ ] it transfers the proceeds - referrer fees to the seller, and allocates the referrer fees
+    // [ ] given the auction callback has the receive quote tokens flag
+    //  [ ] it sends the quote tokens to the callback
+    // [ ] given the auction callback has the onSettle flag
+    //  [ ] it calls the callback
     // [X] when curated is true
-    //  [X] it completes settlement
-    // [X] it completes settlement
+    //  [X] it transfers the remaining lot capacity and curator payout to the seller, and allocates the curator payout
+    // [X] it transfers the remaining lot capacity to the seller
 
     function test_whenLotIdIsInvalid_reverts() public {
         // Expect revert
