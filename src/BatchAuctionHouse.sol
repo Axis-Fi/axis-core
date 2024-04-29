@@ -41,6 +41,8 @@ contract BatchAuctionHouse is IBatchAuctionHouse, AuctionHouse {
 
     event Settle(uint96 indexed lotId);
 
+    event Abort(uint96 indexed lotId);
+
     // ========== STATE VARIABLES ========== //
 
     // ========== CONSTRUCTOR ========== //
@@ -450,6 +452,32 @@ contract BatchAuctionHouse is IBatchAuctionHouse, AuctionHouse {
 
         // Emit event
         emit Settle(lotId_);
+    }
+
+    function abort(uint96 lotId_) external override nonReentrant {
+        // Validation
+        _isLotValid(lotId_);
+
+        // Call the abort function on the auction module to update the auction state
+        getBatchModuleForId(lotId_).abort(lotId_);
+
+        // Cache the funding value to use as the refund and set the funding to 0
+        Routing storage routing = lotRouting[lotId_];
+        uint256 refund = routing.funding;
+        if (refund == 0) revert InsufficientFunding();
+        routing.funding = 0;
+
+        // Send the base token refund to the seller or callbacks contract
+        Transfer.transfer(
+            lotRouting[lotId_].baseToken,
+            _getAddressGivenCallbackBaseTokenFlag(
+                lotRouting[lotId_].callbacks, lotRouting[lotId_].seller
+            ),
+            refund,
+            false
+        );
+
+        emit Abort(lotId_);
     }
 
     // ========== INTERNAL FUNCTIONS ========== //

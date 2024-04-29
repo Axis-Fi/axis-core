@@ -176,6 +176,11 @@ contract MockBatchAuctionModule is BatchAuctionModule {
         return (lotData[lotId_].purchased, lotData[lotId_].sold, settlementFinished[lotId_], "");
     }
 
+    function _abort(uint96 lotId_) internal override {
+        // Update status
+        lotStatus[lotId_] = LotStatus.Settled;
+    }
+
     function getBid(uint96 lotId_, uint64 bidId_) external view returns (Bid memory bid_) {
         bid_ = bidData[lotId_][bidId_];
     }

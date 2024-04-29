@@ -84,4 +84,14 @@ interface IBatchAuctionHouse is IAuctionHouse {
         uint256 num_,
         bytes calldata callbackData_
     ) external returns (uint256 totalIn, uint256 totalOut, bytes memory auctionOutput);
+
+    /// @notice    Abort a batch auction that cannot be settled, refunding the seller and allowing bidders to claim refunds
+    /// @dev       This function can be called by anyone. Care should be taken to ensure proper logic is in place to prevent calling when not desired.
+    /// @dev       The implementing function should handle the following:
+    ///            1. Validate the lot
+    ///            2. Pass the request to the auction module to update the lot data
+    ///            3. Refund the seller
+    ///
+    /// @param     lotId_    The lot id
+    function abort(uint96 lotId_) external;
 }

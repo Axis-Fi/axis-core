@@ -104,4 +104,12 @@ interface IBatchAuction is IAuction {
             bool finished,
             bytes memory auctionOutput
         );
+
+    /// @notice    Abort a batch auction that cannot be settled, refunding the seller and allowing bidders to claim refunds
+    /// @dev       The implementing function should handle the following:
+    ///            - Validate the lot is in the correct state
+    ///            - Set the auction in a state that allows bidders to claim refunds
+    ///
+    /// @param     lotId_    The lot id
+    function abort(uint96 lotId_) external;
 }

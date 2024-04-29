@@ -229,6 +229,26 @@ abstract contract BatchAuctionModule is IBatchAuction, AuctionModule {
         virtual
         returns (uint256 totalIn, uint256 totalOut, bool finished, bytes memory auctionOutput);
 
+    /// @inheritdoc IBatchAuction
+    function abort(uint96 lotId_) external virtual override onlyInternal {
+        // Standard validation
+        _revertIfLotInvalid(lotId_);
+        _revertIfBeforeLotStart(lotId_);
+        _revertIfLotActive(lotId_);
+        _revertIfLotSettled(lotId_);
+
+        // Call implementation-specific logic
+        _abort(lotId_);
+    }
+
+    /// @notice     Implementation-specific lot settlement logic
+    /// @dev        Auction modules should override this to perform any additional logic, such as:
+    ///             - Validating the auction-specific parameters
+    ///             - Updating auction-specific data
+    ///
+    /// @param      lotId_  The lot ID
+    function _abort(uint96 lotId_) internal virtual;
+
     // ========== MODIFIERS ========== //
 
     /// @notice     Checks that the lot represented by `lotId_` is not settled
