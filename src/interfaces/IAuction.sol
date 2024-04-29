@@ -25,6 +25,7 @@ interface IAuction {
     error Auction_NotAuthorized();
     error Auction_NotImplemented();
     error Auction_InsufficientCapacity();
+    error Auction_MarketNotConcluded(uint96 lotId);
 
     // ========== DATA STRUCTURES ========== //
 

@@ -187,6 +187,14 @@ abstract contract AuctionModule is IAuction, Module {
     }
 
     /// @notice     Checks that the lot represented by `lotId_` has not concluded
+    /// @dev        Should revert if the lot has not concluded
+    function _revertIfBeforeLotConcluded(uint96 lotId_) internal view virtual {
+        if (uint48(block.timestamp) < lotData[lotId_].conclusion && lotData[lotId_].capacity > 0) {
+            revert Auction_MarketNotConcluded(lotId_);
+        }
+    }
+
+    /// @notice     Checks that the lot represented by `lotId_` has not concluded
     /// @dev        Should revert if the lot has concluded
     function _revertIfLotConcluded(uint96 lotId_) internal view virtual {
         // Beyond the conclusion time

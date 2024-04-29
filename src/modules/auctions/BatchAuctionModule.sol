@@ -233,8 +233,7 @@ abstract contract BatchAuctionModule is IBatchAuction, AuctionModule {
     function abort(uint96 lotId_) external virtual override onlyInternal {
         // Standard validation
         _revertIfLotInvalid(lotId_);
-        _revertIfBeforeLotStart(lotId_);
-        _revertIfLotActive(lotId_);
+        _revertIfBeforeLotConcluded(lotId_);
         _revertIfLotSettled(lotId_);
 
         // Call implementation-specific logic
