@@ -35,6 +35,10 @@
     "0xbfff19493690ba86e62e9a7fc735feed7ee454c87084c64938fab181b3b0a292": "0x8fcc3eff8ac2070cc7d91c63582e69ad1398d382bce9813629f60e4ba207124a",
     "0xda43b3d8d49dbfb3a006bcc448e9f0d5e0acccbf7f2a19ddf5966c04ac3084f0": "0xb6a46a4b00f61a69a6da27f480f683217c66dfc35c572f1f7eada6739d3308dd"
   },
-  "UniswapV2DirectToLiquidity": {},
-  "UniswapV3DirectToLiquidity": {}
+  "UniswapV2DirectToLiquidity": {
+    "0x97682f9d75ff4ce0f882120de22afb6d7dc30a5f7bf6116734f3ae4e606206e8": "0x29de0e299a571c089d033442c2cf5db906d5f2b7770414e7eeec1d3328188672"
+  },
+  "UniswapV3DirectToLiquidity": {
+    "0x898056793261dacd70fdd5cdfbec4706249c3ef3945870a48df7d289212a5cee": "0x2740a8d582a62650a37aaff067bd49dd1661712da43224da6a163a66b07a92f4"
+  }
 }
