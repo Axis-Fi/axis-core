@@ -21,6 +21,10 @@ import {FixedPriceSale} from "src/modules/auctions/FPS.sol";
 // Derivative modules
 import {LinearVesting} from "src/modules/derivatives/LinearVesting.sol";
 
+// Callbacks
+import {UniswapV2DirectToLiquidity} from "src/callbacks/liquidity/UniswapV2DTL.sol";
+import {UniswapV3DirectToLiquidity} from "src/callbacks/liquidity/UniswapV3DTL.sol";
+
 // TODO would it be better to create a system to generate scripts from the sequences instead of having to add them manually to this master script?
 // See the RBS sim bash scripts for how I did this before
 // Is this desirable? Writing scripts in Solidity is supposed to be a good thing
@@ -63,6 +67,16 @@ contract Deploy is Script, WithEnvironment, WithSalts {
     LinearVesting public dmAtomicLinearVesting;
     LinearVesting public dmBatchLinearVesting;
 
+    UniswapV2DirectToLiquidity public cbAtomicUniswapV2Dtl;
+    UniswapV2DirectToLiquidity public cbBatchUniswapV2Dtl;
+    UniswapV3DirectToLiquidity public cbAtomicUniswapV3Dtl;
+    UniswapV3DirectToLiquidity public cbBatchUniswapV3Dtl;
+
+    address public uniswapV2Factory;
+    address public uniswapV2Router;
+    address public uniswapV3Factory;
+    address public gUniFactory;
+
     // Deploy system storage
     mapping(string => bytes) public argsMap;
     mapping(string => bool) public installAtomicAuctionHouseMap;
@@ -77,16 +91,42 @@ contract Deploy is Script, WithEnvironment, WithSalts {
         _loadEnv(chain_);
 
         // Cache required variables
-        _envOwner = _envAddress("OWNER");
+        _envOwner = _envAddress("axis.OWNER");
         console2.log("Owner:", _envOwner);
-        _envPermit2 = _envAddress("PERMIT2");
+        _envPermit2 = _envAddress("axis.PERMIT2");
         console2.log("Permit2:", _envPermit2);
-        _envProtocol = _envAddress("PROTOCOL");
+        _envProtocol = _envAddress("axis.PROTOCOL");
         console2.log("Protocol:", _envProtocol);
 
-        // TODO can we automate assignment?
+        // Cache deployed contracts
+        atomicAuctionHouse = AtomicAuctionHouse(_envAddress("axis.AtomicAuctionHouse"));
+        batchAuctionHouse = BatchAuctionHouse(_envAddress("axis.BatchAuctionHouse"));
+        atomicCatalogue = AtomicCatalogue(_envAddress("axis.AtomicCatalogue"));
+        batchCatalogue = BatchCatalogue(_envAddress("axis.BatchCatalogue"));
+        amEmp = EncryptedMarginalPrice(_envAddress("axis.EncryptedMarginalPrice"));
+        amFps = FixedPriceSale(_envAddress("axis.FixedPriceSale"));
+        dmAtomicLinearVesting = LinearVesting(_envAddress("axis.AtomicLinearVesting"));
+        dmBatchLinearVesting = LinearVesting(_envAddress("axis.BatchLinearVesting"));
+        cbAtomicUniswapV2Dtl =
+            UniswapV2DirectToLiquidity(_envAddress("axis.AtomicUniswapV2DirectToLiquidity"));
+        cbBatchUniswapV2Dtl =
+            UniswapV2DirectToLiquidity(_envAddress("axis.BatchUniswapV2DirectToLiquidity"));
+        cbAtomicUniswapV3Dtl =
+            UniswapV3DirectToLiquidity(_envAddress("axis.AtomicUniswapV3DirectToLiquidity"));
+        cbBatchUniswapV3Dtl =
+            UniswapV3DirectToLiquidity(_envAddress("axis.BatchUniswapV3DirectToLiquidity"));
 
-        // TODO load existing deployed contracts from env.json (need to add an "axis" section under "current" for each chain)
+        // Cache Uniswap V2 contracts
+        uniswapV2Factory = _envAddress("uniswapV2.factory");
+        uniswapV2Router = _envAddress("uniswapV2.router");
+
+        // Cache Uniswap V3 contracts
+        uniswapV3Factory = _envAddress("uniswapV3.factory");
+
+        // Cache GUni contracts
+        gUniFactory = _envAddress("gUni.factory");
+
+        // TODO can we automate assignment of contract addresses into a map?
 
         // Load deployment data
         string memory data = vm.readFile(deployFilePath_);
@@ -232,6 +272,8 @@ contract Deploy is Script, WithEnvironment, WithSalts {
             )
         );
         vm.writeLine(file, "}");
+
+        // TODO update env.json?
     }
 
     // ========== AUCTIONHOUSE DEPLOYMENTS ========== //
@@ -466,6 +508,148 @@ contract Deploy is Script, WithEnvironment, WithSalts {
         console2.log("    LinearVesting (Batch) deployed at:", address(dmBatchLinearVesting));
 
         return address(dmBatchLinearVesting);
+    }
+
+    // ========== MODULE DEPLOYMENTS ========== //
+
+    function deployAtomicUniswapV2DirectToLiquidity(bytes memory) public returns (address) {
+        // No args used
+        console2.log("");
+        console2.log("Deploying UniswapV2DirectToLiquidity (Atomic)");
+        console2.log("    AtomicAuctionHouse", address(atomicAuctionHouse));
+
+        // Assert
+        require(address(atomicAuctionHouse) != address(0), "AtomicAuctionHouse not deployed");
+        require(uniswapV2Factory != address(0), "UniswapV2Factory not set");
+        require(uniswapV2Router != address(0), "UniswapV2Router not set");
+
+        // Get the salt
+        bytes32 salt_ = _getSalt(
+            "UniswapV2DirectToLiquidity",
+            type(UniswapV2DirectToLiquidity).creationCode,
+            abi.encode(address(atomicAuctionHouse), uniswapV2Factory, uniswapV2Router)
+        );
+
+        // Revert if the salt is not set
+        require(salt_ != bytes32(0), "Salt not set");
+
+        // Deploy the module
+        console2.log("    salt:", vm.toString(salt_));
+
+        vm.broadcast();
+        cbAtomicUniswapV2Dtl = new UniswapV2DirectToLiquidity{salt: salt_}(
+            address(atomicAuctionHouse), uniswapV2Factory, uniswapV2Router
+        );
+        console2.log(
+            "    UniswapV2DirectToLiquidity (Atomic) deployed at:", address(cbAtomicUniswapV2Dtl)
+        );
+
+        return address(cbAtomicUniswapV2Dtl);
+    }
+
+    function deployBatchUniswapV2DirectToLiquidity(bytes memory) public returns (address) {
+        // No args used
+        console2.log("");
+        console2.log("Deploying UniswapV2DirectToLiquidity (Batch)");
+        console2.log("    BatchAuctionHouse", address(batchAuctionHouse));
+
+        // Assert
+        require(address(batchAuctionHouse) != address(0), "BatchAuctionHouse not deployed");
+        require(uniswapV2Factory != address(0), "UniswapV2Factory not set");
+        require(uniswapV2Router != address(0), "UniswapV2Router not set");
+
+        // Get the salt
+        bytes32 salt_ = _getSalt(
+            "UniswapV2DirectToLiquidity",
+            type(UniswapV2DirectToLiquidity).creationCode,
+            abi.encode(address(batchAuctionHouse), uniswapV2Factory, uniswapV2Router)
+        );
+
+        // Revert if the salt is not set
+        require(salt_ != bytes32(0), "Salt not set");
+
+        // Deploy the module
+        console2.log("    salt:", vm.toString(salt_));
+
+        vm.broadcast();
+        cbBatchUniswapV2Dtl = new UniswapV2DirectToLiquidity{salt: salt_}(
+            address(batchAuctionHouse), uniswapV2Factory, uniswapV2Router
+        );
+        console2.log(
+            "    UniswapV2DirectToLiquidity (Batch) deployed at:", address(cbBatchUniswapV2Dtl)
+        );
+
+        return address(cbBatchUniswapV2Dtl);
+    }
+
+    function deployAtomicUniswapV3DirectToLiquidity(bytes memory) public returns (address) {
+        // No args used
+        console2.log("");
+        console2.log("Deploying UniswapV3DirectToLiquidity (Atomic)");
+        console2.log("    AtomicAuctionHouse", address(atomicAuctionHouse));
+
+        // Assert
+        require(address(atomicAuctionHouse) != address(0), "AtomicAuctionHouse not deployed");
+        require(uniswapV3Factory != address(0), "UniswapV3Factory not set");
+        require(gUniFactory != address(0), "GUniFactory not set");
+
+        // Get the salt
+        bytes32 salt_ = _getSalt(
+            "UniswapV3DirectToLiquidity",
+            type(UniswapV3DirectToLiquidity).creationCode,
+            abi.encode(address(atomicAuctionHouse), uniswapV3Factory, gUniFactory)
+        );
+
+        // Revert if the salt is not set
+        require(salt_ != bytes32(0), "Salt not set");
+
+        // Deploy the module
+        console2.log("    salt:", vm.toString(salt_));
+
+        vm.broadcast();
+        cbAtomicUniswapV3Dtl = new UniswapV3DirectToLiquidity{salt: salt_}(
+            address(atomicAuctionHouse), uniswapV3Factory, gUniFactory
+        );
+        console2.log(
+            "    UniswapV3DirectToLiquidity (Atomic) deployed at:", address(cbAtomicUniswapV3Dtl)
+        );
+
+        return address(cbAtomicUniswapV3Dtl);
+    }
+
+    function deployBatchUniswapV3DirectToLiquidity(bytes memory) public returns (address) {
+        // No args used
+        console2.log("");
+        console2.log("Deploying UniswapV3DirectToLiquidity (Batch)");
+        console2.log("    BatchAuctionHouse", address(batchAuctionHouse));
+
+        // Assert
+        require(address(batchAuctionHouse) != address(0), "BatchAuctionHouse not deployed");
+        require(uniswapV3Factory != address(0), "UniswapV3Factory not set");
+        require(gUniFactory != address(0), "GUniFactory not set");
+
+        // Get the salt
+        bytes32 salt_ = _getSalt(
+            "UniswapV3DirectToLiquidity",
+            type(UniswapV3DirectToLiquidity).creationCode,
+            abi.encode(address(batchAuctionHouse), uniswapV3Factory, gUniFactory)
+        );
+
+        // Revert if the salt is not set
+        require(salt_ != bytes32(0), "Salt not set");
+
+        // Deploy the module
+        console2.log("    salt:", vm.toString(salt_));
+
+        vm.broadcast();
+        cbBatchUniswapV3Dtl = new UniswapV3DirectToLiquidity{salt: salt_}(
+            address(batchAuctionHouse), uniswapV3Factory, gUniFactory
+        );
+        console2.log(
+            "    UniswapV3DirectToLiquidity (Batch) deployed at:", address(cbBatchUniswapV3Dtl)
+        );
+
+        return address(cbBatchUniswapV3Dtl);
     }
 
     // ========== HELPER FUNCTIONS ========== //
