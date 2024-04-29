@@ -72,12 +72,14 @@ interface IBatchAuctionHouse is IAuctionHouse {
     ///             5. Send the fees to the curator
     ///
     /// @param      lotId_          Lot ID
+    /// @param      num_            Number of bids to settle in this pass (capped at the remaining number if more is provided)
     /// @return     totalIn         Total amount of quote tokens from bids that were filled
     /// @return     totalOut        Total amount of base tokens paid out to winning bids
     /// @return     auctionOutput   Custom data returned by the auction module
-    function settle(uint96 lotId_)
-        external
-        returns (uint256 totalIn, uint256 totalOut, bytes memory auctionOutput);
+    function settle(
+        uint96 lotId_,
+        uint256 num_
+    ) external returns (uint256 totalIn, uint256 totalOut, bytes memory auctionOutput);
 
     /// @notice     Claim the proceeds of a settled auction
     /// @dev        The implementing function must perform the following:

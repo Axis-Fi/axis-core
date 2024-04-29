@@ -262,7 +262,7 @@ abstract contract BatchAuctionHouseTest is Test, Permit2User, WithSalts {
 
     function _settleLot() internal {
         vm.prank(_SELLER);
-        _auctionHouse.settle(_lotId);
+        _auctionHouse.settle(_lotId, 100_000);
     }
 
     modifier givenLotIsSettled() {

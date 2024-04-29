@@ -153,7 +153,10 @@ contract MockBatchAuctionModule is BatchAuctionModule {
         lot.sold = totalOut_;
     }
 
-    function _settle(uint96 lotId_) internal override returns (uint256, uint256, bytes memory) {
+    function _settle(
+        uint96 lotId_,
+        uint256
+    ) internal override returns (uint256, uint256, bytes memory) {
         // Update status
         lotStatus[lotId_] = LotStatus.Settled;
 

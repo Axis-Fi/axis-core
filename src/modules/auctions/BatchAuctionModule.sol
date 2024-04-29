@@ -174,7 +174,10 @@ abstract contract BatchAuctionModule is IBatchAuction, AuctionModule {
     ///             - The lot is active
     ///             - The lot has already been settled
     ///             - The caller is not an internal module
-    function settle(uint96 lotId_)
+    function settle(
+        uint96 lotId_,
+        uint256 num_
+    )
         external
         virtual
         override
@@ -188,7 +191,7 @@ abstract contract BatchAuctionModule is IBatchAuction, AuctionModule {
         _revertIfLotSettled(lotId_);
 
         // Call implementation-specific logic
-        (totalIn, totalOut, auctionOutput) = _settle(lotId_);
+        (totalIn, totalOut, auctionOutput) = _settle(lotId_, num_);
 
         // Store sold and purchased amounts
         lotData[lotId_].purchased = totalIn;
@@ -203,13 +206,14 @@ abstract contract BatchAuctionModule is IBatchAuction, AuctionModule {
     ///             - Updating the lot data
     ///
     /// @param      lotId_          The lot ID
+    /// @param      num_            The number of bids to settle in this pass (capped at the remaining number if more is provided)
     /// @return     totalIn         The total amount of quote tokens that filled the auction
     /// @return     totalOut        The total amount of base tokens sold
     /// @return     auctionOutput   The auction-type specific output to be used with a condenser
-    function _settle(uint96 lotId_)
-        internal
-        virtual
-        returns (uint256 totalIn, uint256 totalOut, bytes memory auctionOutput);
+    function _settle(
+        uint96 lotId_,
+        uint256 num_
+    ) internal virtual returns (uint256 totalIn, uint256 totalOut, bytes memory auctionOutput);
 
     /// @inheritdoc IBatchAuction
     /// @dev        Implements a basic claimProceeds function that:

@@ -349,7 +349,10 @@ contract BatchAuctionHouse is IBatchAuctionHouse, AuctionHouse {
     ///             - The lot ID is invalid
     ///             - The auction module reverts when settling the auction
     ///             - Re-entrancy is detected
-    function settle(uint96 lotId_)
+    function settle(
+        uint96 lotId_,
+        uint256 num_
+    )
         external
         override
         nonReentrant
@@ -363,7 +366,7 @@ contract BatchAuctionHouse is IBatchAuctionHouse, AuctionHouse {
         BatchAuctionModule module = getBatchModuleForId(lotId_);
 
         // Settle the auction
-        (totalIn, totalOut, auctionOutput) = module.settle(lotId_);
+        (totalIn, totalOut, auctionOutput) = module.settle(lotId_, num_);
 
         // Emit event
         emit Settle(lotId_);

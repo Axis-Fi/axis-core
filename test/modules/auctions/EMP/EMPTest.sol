@@ -349,7 +349,7 @@ abstract contract EmpTest is Test, Permit2User {
 
     function _settleLot() internal {
         vm.prank(address(_auctionHouse));
-        _module.settle(_lotId);
+        _module.settle(_lotId, 100_000);
     }
 
     modifier givenLotIsSettled() {
