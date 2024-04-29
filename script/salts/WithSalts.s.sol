@@ -80,6 +80,16 @@ contract WithSalts is Script {
         return salt;
     }
 
+    /// @notice Same as `_setSalt()`, but prefixes the salt key with "Test_" so they are co-located and separate from production salts.
+    function _setTestSalt(
+        string memory bytecodePath_,
+        string memory prefix_,
+        string memory saltKey_,
+        bytes32 bytecodeHash_
+    ) internal {
+        _setSalt(bytecodePath_, prefix_, string.concat("Test_", saltKey_), bytecodeHash_);
+    }
+
     /// @notice Calls a script to generate and write the salt for a given bytecode
     ///
     /// @param  bytecodePath_   The path to the bytecode

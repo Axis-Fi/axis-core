@@ -283,7 +283,7 @@ abstract contract BatchAuctionHouseTest is Test, Permit2User, WithSalts {
             sendBaseTokens: false
         });
         bytes memory args = abi.encode(address(_auctionHouse), permissions);
-        bytes32 salt = _getSalt("MockCallback", type(MockCallback).creationCode, args);
+        bytes32 salt = _getTestSalt("MockCallback", type(MockCallback).creationCode, args);
 
         vm.startBroadcast(); // required for CREATE2 address to work correctly. doesn't do anything in a test
         _callback = new MockCallback{salt: salt}(address(_auctionHouse), permissions);
@@ -360,7 +360,7 @@ abstract contract BatchAuctionHouseTest is Test, Permit2User, WithSalts {
             sendBaseTokens: _callbackSendBaseTokens
         });
         bytes memory args = abi.encode(address(_auctionHouse), permissions);
-        bytes32 salt = _getSalt("MockCallback", type(MockCallback).creationCode, args);
+        bytes32 salt = _getTestSalt("MockCallback", type(MockCallback).creationCode, args);
 
         // Required for CREATE2 address to work correctly. doesn't do anything in a test
         // Source: https://github.com/foundry-rs/foundry/issues/6402

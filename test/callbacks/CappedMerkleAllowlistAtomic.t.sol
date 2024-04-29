@@ -62,7 +62,7 @@ contract CappedMerkleAllowlistAtomicTest is Test, Permit2User, WithSalts {
         });
         bytes memory args = abi.encode(address(_auctionHouse), permissions);
         bytes32 salt =
-            _getSalt("CappedMerkleAllowlist", type(CappedMerkleAllowlist).creationCode, args);
+            _getTestSalt("CappedMerkleAllowlist", type(CappedMerkleAllowlist).creationCode, args);
 
         vm.broadcast();
         _allowlist = new CappedMerkleAllowlist{salt: salt}(address(_auctionHouse), permissions);

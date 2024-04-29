@@ -65,7 +65,7 @@ contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts {
         bytes memory contractCode = type(MockCallback).creationCode;
         (string memory bytecodePath, bytes32 bytecodeHash) =
             _writeBytecode(_MOCK_CALLBACK, contractCode, args);
-        _setSalt(bytecodePath, "98", _MOCK_CALLBACK, bytecodeHash);
+        _setTestSalt(bytecodePath, "98", _MOCK_CALLBACK, bytecodeHash);
 
         // 11111111 = 0xFF
         args = abi.encode(
@@ -82,7 +82,7 @@ contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts {
             })
         );
         (bytecodePath, bytecodeHash) = _writeBytecode(_MOCK_CALLBACK, contractCode, args);
-        _setSalt(bytecodePath, "FF", _MOCK_CALLBACK, bytecodeHash);
+        _setTestSalt(bytecodePath, "FF", _MOCK_CALLBACK, bytecodeHash);
 
         // 11111101 = 0xFD
         args = abi.encode(
@@ -99,7 +99,7 @@ contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts {
             })
         );
         (bytecodePath, bytecodeHash) = _writeBytecode(_MOCK_CALLBACK, contractCode, args);
-        _setSalt(bytecodePath, "FD", _MOCK_CALLBACK, bytecodeHash);
+        _setTestSalt(bytecodePath, "FD", _MOCK_CALLBACK, bytecodeHash);
 
         // 11111110 = 0xFE
         args = abi.encode(
@@ -116,7 +116,7 @@ contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts {
             })
         );
         (bytecodePath, bytecodeHash) = _writeBytecode(_MOCK_CALLBACK, contractCode, args);
-        _setSalt(bytecodePath, "FE", _MOCK_CALLBACK, bytecodeHash);
+        _setTestSalt(bytecodePath, "FE", _MOCK_CALLBACK, bytecodeHash);
 
         // 11111100 = 0xFC
         args = abi.encode(
@@ -133,7 +133,7 @@ contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts {
             })
         );
         (bytecodePath, bytecodeHash) = _writeBytecode(_MOCK_CALLBACK, contractCode, args);
-        _setSalt(bytecodePath, "FC", _MOCK_CALLBACK, bytecodeHash);
+        _setTestSalt(bytecodePath, "FC", _MOCK_CALLBACK, bytecodeHash);
 
         // 00000000 - 0x00
         args = abi.encode(
@@ -150,7 +150,7 @@ contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts {
             })
         );
         (bytecodePath, bytecodeHash) = _writeBytecode(_MOCK_CALLBACK, contractCode, args);
-        _setSalt(bytecodePath, "00", _MOCK_CALLBACK, bytecodeHash);
+        _setTestSalt(bytecodePath, "00", _MOCK_CALLBACK, bytecodeHash);
 
         // 00000010 - 0x02
         args = abi.encode(
@@ -167,7 +167,7 @@ contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts {
             })
         );
         (bytecodePath, bytecodeHash) = _writeBytecode(_MOCK_CALLBACK, contractCode, args);
-        _setSalt(bytecodePath, "02", _MOCK_CALLBACK, bytecodeHash);
+        _setTestSalt(bytecodePath, "02", _MOCK_CALLBACK, bytecodeHash);
 
         // 10000000 = 0x80
         args = abi.encode(
@@ -184,7 +184,7 @@ contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts {
             })
         );
         (bytecodePath, bytecodeHash) = _writeBytecode(_MOCK_CALLBACK, contractCode, args);
-        _setSalt(bytecodePath, "80", _MOCK_CALLBACK, bytecodeHash);
+        _setTestSalt(bytecodePath, "80", _MOCK_CALLBACK, bytecodeHash);
 
         // 01000000 = 0x40
         args = abi.encode(
@@ -201,7 +201,7 @@ contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts {
             })
         );
         (bytecodePath, bytecodeHash) = _writeBytecode(_MOCK_CALLBACK, contractCode, args);
-        _setSalt(bytecodePath, "40", _MOCK_CALLBACK, bytecodeHash);
+        _setTestSalt(bytecodePath, "40", _MOCK_CALLBACK, bytecodeHash);
 
         // 00100000 = 0x20
         args = abi.encode(
@@ -218,7 +218,7 @@ contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts {
             })
         );
         (bytecodePath, bytecodeHash) = _writeBytecode(_MOCK_CALLBACK, contractCode, args);
-        _setSalt(bytecodePath, "20", _MOCK_CALLBACK, bytecodeHash);
+        _setTestSalt(bytecodePath, "20", _MOCK_CALLBACK, bytecodeHash);
 
         // 00010000 = 0x10
         args = abi.encode(
@@ -235,7 +235,7 @@ contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts {
             })
         );
         (bytecodePath, bytecodeHash) = _writeBytecode(_MOCK_CALLBACK, contractCode, args);
-        _setSalt(bytecodePath, "10", _MOCK_CALLBACK, bytecodeHash);
+        _setTestSalt(bytecodePath, "10", _MOCK_CALLBACK, bytecodeHash);
 
         // 00001000 = 0x08
         args = abi.encode(
@@ -252,7 +252,7 @@ contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts {
             })
         );
         (bytecodePath, bytecodeHash) = _writeBytecode(_MOCK_CALLBACK, contractCode, args);
-        _setSalt(bytecodePath, "08", _MOCK_CALLBACK, bytecodeHash);
+        _setTestSalt(bytecodePath, "08", _MOCK_CALLBACK, bytecodeHash);
 
         // 00000100 = 0x04
         args = abi.encode(
@@ -269,7 +269,7 @@ contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts {
             })
         );
         (bytecodePath, bytecodeHash) = _writeBytecode(_MOCK_CALLBACK, contractCode, args);
-        _setSalt(bytecodePath, "04", _MOCK_CALLBACK, bytecodeHash);
+        _setTestSalt(bytecodePath, "04", _MOCK_CALLBACK, bytecodeHash);
 
         // 00000010 = 0x02
         args = abi.encode(
@@ -286,7 +286,7 @@ contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts {
             })
         );
         (bytecodePath, bytecodeHash) = _writeBytecode(_MOCK_CALLBACK, contractCode, args);
-        _setSalt(bytecodePath, "02", _MOCK_CALLBACK, bytecodeHash);
+        _setTestSalt(bytecodePath, "02", _MOCK_CALLBACK, bytecodeHash);
 
         // 00000001 = 0x01
         args = abi.encode(
@@ -303,7 +303,7 @@ contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts {
             })
         );
         (bytecodePath, bytecodeHash) = _writeBytecode(_MOCK_CALLBACK, contractCode, args);
-        _setSalt(bytecodePath, "01", _MOCK_CALLBACK, bytecodeHash);
+        _setTestSalt(bytecodePath, "01", _MOCK_CALLBACK, bytecodeHash);
 
         // 10000001 = 0x81
         args = abi.encode(
@@ -320,7 +320,7 @@ contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts {
             })
         );
         (bytecodePath, bytecodeHash) = _writeBytecode(_MOCK_CALLBACK, contractCode, args);
-        _setSalt(bytecodePath, "81", _MOCK_CALLBACK, bytecodeHash);
+        _setTestSalt(bytecodePath, "81", _MOCK_CALLBACK, bytecodeHash);
 
         // 00100001 = 0x21
         args = abi.encode(
@@ -337,7 +337,7 @@ contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts {
             })
         );
         (bytecodePath, bytecodeHash) = _writeBytecode(_MOCK_CALLBACK, contractCode, args);
-        _setSalt(bytecodePath, "21", _MOCK_CALLBACK, bytecodeHash);
+        _setTestSalt(bytecodePath, "21", _MOCK_CALLBACK, bytecodeHash);
 
         // 10100001 = 0xA1
         args = abi.encode(
@@ -354,7 +354,7 @@ contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts {
             })
         );
         (bytecodePath, bytecodeHash) = _writeBytecode(_MOCK_CALLBACK, contractCode, args);
-        _setSalt(bytecodePath, "A1", _MOCK_CALLBACK, bytecodeHash);
+        _setTestSalt(bytecodePath, "A1", _MOCK_CALLBACK, bytecodeHash);
 
         // 00010001 = 0x11
         args = abi.encode(
@@ -371,7 +371,7 @@ contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts {
             })
         );
         (bytecodePath, bytecodeHash) = _writeBytecode(_MOCK_CALLBACK, contractCode, args);
-        _setSalt(bytecodePath, "11", _MOCK_CALLBACK, bytecodeHash);
+        _setTestSalt(bytecodePath, "11", _MOCK_CALLBACK, bytecodeHash);
     }
 
     function generateCappedMerkleAllowlist() public {
@@ -392,7 +392,7 @@ contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts {
         bytes memory contractCode = type(CappedMerkleAllowlist).creationCode;
         (string memory bytecodePath, bytes32 bytecodeHash) =
             _writeBytecode(_CAPPED_MERKLE_ALLOWLIST, contractCode, args);
-        _setSalt(bytecodePath, "88", _CAPPED_MERKLE_ALLOWLIST, bytecodeHash);
+        _setTestSalt(bytecodePath, "88", _CAPPED_MERKLE_ALLOWLIST, bytecodeHash);
 
         // 10010000 = 0x90
         args = abi.encode(
@@ -409,7 +409,7 @@ contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts {
             })
         );
         (bytecodePath, bytecodeHash) = _writeBytecode(_CAPPED_MERKLE_ALLOWLIST, contractCode, args);
-        _setSalt(bytecodePath, "90", _CAPPED_MERKLE_ALLOWLIST, bytecodeHash);
+        _setTestSalt(bytecodePath, "90", _CAPPED_MERKLE_ALLOWLIST, bytecodeHash);
     }
 
     function generateUniswapV2DirectToLiquidity() public {
@@ -417,7 +417,7 @@ contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts {
         bytes memory contractCode = type(UniswapV2DirectToLiquidity).creationCode;
         (string memory bytecodePath, bytes32 bytecodeHash) =
             _writeBytecode("UniswapV2DirectToLiquidity", contractCode, args);
-        _setSalt(bytecodePath, "E6", "UniswapV2DirectToLiquidity", bytecodeHash);
+        _setTestSalt(bytecodePath, "E6", "UniswapV2DirectToLiquidity", bytecodeHash);
     }
 
     function generateUniswapV3DirectToLiquidity() public {
@@ -425,6 +425,6 @@ contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts {
         bytes memory contractCode = type(UniswapV3DirectToLiquidity).creationCode;
         (string memory bytecodePath, bytes32 bytecodeHash) =
             _writeBytecode("UniswapV3DirectToLiquidity", contractCode, args);
-        _setSalt(bytecodePath, "E6", "UniswapV3DirectToLiquidity", bytecodeHash);
+        _setTestSalt(bytecodePath, "E6", "UniswapV3DirectToLiquidity", bytecodeHash);
     }
 }

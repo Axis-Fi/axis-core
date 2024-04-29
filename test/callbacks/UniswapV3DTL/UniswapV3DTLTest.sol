@@ -117,7 +117,7 @@ abstract contract UniswapV3DirectToLiquidityTest is Test, Permit2User, WithSalts
         // Get the salt
         bytes memory args =
             abi.encode(address(_auctionHouse), address(_uniV3Factory), address(_gUniFactory));
-        bytes32 salt = _getSalt(
+        bytes32 salt = _getTestSalt(
             "UniswapV3DirectToLiquidity", type(UniswapV3DirectToLiquidity).creationCode, args
         );
 

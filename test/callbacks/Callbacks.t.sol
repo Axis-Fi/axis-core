@@ -19,7 +19,7 @@ contract CallbacksTest is Test, WithSalts {
         returns (bytes32)
     {
         bytes memory args = abi.encode(_AUCTION_HOUSE, permissions_);
-        return _getSalt("MockCallback", type(MockCallback).creationCode, args);
+        return _getTestSalt("MockCallback", type(MockCallback).creationCode, args);
     }
 
     function _allFalseSalt() internal returns (bytes32, Callbacks.Permissions memory) {
