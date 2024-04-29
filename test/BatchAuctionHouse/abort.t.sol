@@ -17,15 +17,20 @@ contract BatchAbortTest is BatchAuctionHouseTest {
     // [X] when the lot is active
     //    [X] it reverts
     // [X] when the lot is cancelled
-    //    [X] it reverts
+    //    [X] when before the lot start
+    //        [X] it reverts
+    //    [X] when in the lot's active period
+    //        [X] it reverts
+    //    [X] when after the lot's active period
+    //        [X] it reverts
     // [X] when the lot is settled
     //    [X] it reverts
-    // [ ] when a callback is configured that sends base tokens
-    //    [ ] it sends the refund to the callback
-    // [ ] when a callback is not configured
-    //    [ ] it sends the refund to the seller
-    // [ ] when a callback is configured that doesn't send base tokens
-    //    [ ] it sends the refund to the seller
+    // [X] when a callback is configured that sends base tokens
+    //    [X] it sends the refund to the callback
+    // [X] when a callback is not configured
+    //    [X] it sends the refund to the seller
+    // [X] when a callback is configured that doesn't send base tokens
+    //    [X] it sends the refund to the seller
 
     modifier givenLotSettlementFinished() {
         // Set the settlement data
@@ -53,22 +58,6 @@ contract BatchAbortTest is BatchAuctionHouseTest {
         _auctionHouse.abort(1);
     }
 
-    // // TODO is it possible to reach this with funding == 0?
-    // function test_abort_whenFundingIsZero_reverts() public
-    //     whenAuctionTypeIsBatch
-    //     whenBatchAuctionModuleIsInstalled
-    //     givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
-    //     givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
-    //     givenLotIsCreated
-    //     givenLotIsCancelled
-    // {
-    //     // We cancel the lot to set the funding to zero
-
-    //     bytes memory err = abi.encodeWithSelector(BatchAuctionHouse.InsufficientFunding.selector, _lotId);
-    //     vm.expectRevert(err);
-    //     _auctionHouse.abort(_lotId);
-    // }
-
     function test_abort_whenLotHasNotStarted_reverts()
         public
         whenAuctionTypeIsBatch
@@ -77,7 +66,8 @@ contract BatchAbortTest is BatchAuctionHouseTest {
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenLotIsCreated
     {
-        bytes memory err = abi.encodeWithSelector(IAuction.Auction_MarketNotActive.selector, _lotId);
+        bytes memory err =
+            abi.encodeWithSelector(IAuction.Auction_MarketNotConcluded.selector, _lotId);
         vm.expectRevert(err);
         _auctionHouse.abort(_lotId);
     }
@@ -91,7 +81,8 @@ contract BatchAbortTest is BatchAuctionHouseTest {
         givenLotIsCreated
         givenLotHasStarted
     {
-        bytes memory err = abi.encodeWithSelector(IAuction.Auction_MarketActive.selector, _lotId);
+        bytes memory err =
+            abi.encodeWithSelector(IAuction.Auction_MarketNotConcluded.selector, _lotId);
         vm.expectRevert(err);
         _auctionHouse.abort(_lotId);
     }
@@ -105,13 +96,12 @@ contract BatchAbortTest is BatchAuctionHouseTest {
         givenLotIsCreated
         givenLotIsCancelled
     {
-        bytes memory err = abi.encodeWithSelector(IAuction.Auction_MarketNotActive.selector, _lotId);
+        bytes memory err = abi.encodeWithSelector(BatchAuctionHouse.InsufficientFunding.selector);
         vm.expectRevert(err);
         _auctionHouse.abort(_lotId);
 
         // Move timestamp forward to during the lot's active period
         vm.warp(_startTime + 1);
-        err = abi.encodeWithSelector(BatchAuctionHouse.InsufficientFunding.selector);
         vm.expectRevert(err);
         _auctionHouse.abort(_lotId);
 
