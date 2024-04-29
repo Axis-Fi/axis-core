@@ -14,9 +14,11 @@ contract BatchSettleTest is BatchAuctionHouseTest {
 
     uint256 internal _expectedAuctionHouseQuoteTokenBalance;
     uint256 internal _expectedSellerQuoteTokenBalance;
+    uint256 internal _expectedCallbackQuoteTokenBalance;
 
     uint256 internal _expectedAuctionHouseBaseTokenBalance;
     uint256 internal _expectedSellerBaseTokenBalance;
+    uint256 internal _expectedCallbackBaseTokenBalance;
 
     uint256 internal _expectedCuratorBaseTokenRewards;
 
@@ -35,6 +37,11 @@ contract BatchSettleTest is BatchAuctionHouseTest {
             _baseToken.balanceOf(_SELLER),
             _expectedSellerBaseTokenBalance,
             "base token: seller balance"
+        );
+        assertEq(
+            _baseToken.balanceOf(address(_callback)),
+            _expectedCallbackBaseTokenBalance,
+            "base token: callback balance"
         );
         assertEq(_baseToken.balanceOf(_bidder), 0, "base token: bidder balance");
         assertEq(_baseToken.balanceOf(_REFERRER), 0, "base token: referrer balance");
@@ -61,6 +68,11 @@ contract BatchSettleTest is BatchAuctionHouseTest {
             _quoteToken.balanceOf(_SELLER),
             _expectedSellerQuoteTokenBalance,
             "quote token: seller balance"
+        );
+        assertEq(
+            _quoteToken.balanceOf(address(_callback)),
+            _expectedCallbackQuoteTokenBalance,
+            "quote token: callback balance"
         );
         assertEq(_quoteToken.balanceOf(_bidder), 0, "quote token: bidder balance");
         assertEq(_quoteToken.balanceOf(_REFERRER), 0, "quote token: referrer balance");
@@ -125,11 +137,13 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         // Set up expected values
         // Quote token
         _expectedAuctionHouseQuoteTokenBalance = pfRefundAmount + totalQuoteTokenFees; // To be claimed by bidder + rewards
-        _expectedSellerQuoteTokenBalance = totalInFilled - totalQuoteTokenFees; // Transferred to seller
+        _expectedSellerQuoteTokenBalance = _callbackReceiveQuoteTokens ? 0 : totalInFilled - totalQuoteTokenFees; // Transferred to seller if callback doesn't receive quote tokens
+        _expectedCallbackQuoteTokenBalance = _callbackReceiveQuoteTokens ? totalInFilled - totalQuoteTokenFees : 0; // Transferred to callback if it receives quote tokens
 
         // Base token
         _expectedAuctionHouseBaseTokenBalance = scaledLotCapacity + curatorPayout; // To be claimed be bidders and curator
-        _expectedSellerBaseTokenBalance = prefundedCuratorFees - curatorPayout; // Unused curator fee refunded
+        _expectedSellerBaseTokenBalance = _callbackSendBaseTokens ? 0 : prefundedCuratorFees - curatorPayout; // Transferred to seller if callback doesn't send base tokens
+        _expectedCallbackBaseTokenBalance = _callbackSendBaseTokens ? prefundedCuratorFees - curatorPayout : 0; // Transferred to callback if it sends base tokens
 
         _expectedCuratorBaseTokenRewards = curatorPayout;
 
@@ -154,12 +168,14 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         // Set up expected values
         // Quote token
         _expectedAuctionHouseQuoteTokenBalance = totalQuoteTokenFees; // Rewards
-        _expectedSellerQuoteTokenBalance = totalIn - totalQuoteTokenFees; // Transferred to seller
+        _expectedSellerQuoteTokenBalance = _callbackReceiveQuoteTokens ? 0 : totalIn - totalQuoteTokenFees; // Transferred to seller if callback doesn't receive quote tokens
+        _expectedCallbackQuoteTokenBalance = _callbackReceiveQuoteTokens ? totalIn - totalQuoteTokenFees : 0; // Transferred to callback if it receives quote tokens
 
         // Base token
         _expectedAuctionHouseBaseTokenBalance = totalOut + curatorPayout; // To be claimed be bidders and curator
         _expectedSellerBaseTokenBalance =
-            scaledLotCapacity - totalOut + prefundedCuratorFees - curatorPayout; // Unused capacity and curator fee refunded
+            _callbackSendBaseTokens ? 0 : scaledLotCapacity - totalOut + prefundedCuratorFees - curatorPayout; // Transferred to seller if callback doesn't send base tokens
+        _expectedCallbackBaseTokenBalance = _callbackSendBaseTokens ? scaledLotCapacity - totalOut + prefundedCuratorFees - curatorPayout : 0; // Transferred to callback if it sends base tokens
 
         _expectedCuratorBaseTokenRewards = curatorPayout;
 
@@ -184,12 +200,14 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         // Set up expected values
         // Quote token
         _expectedAuctionHouseQuoteTokenBalance = totalQuoteTokenFees; // Rewards
-        _expectedSellerQuoteTokenBalance = totalIn - totalQuoteTokenFees; // Transferred to seller
+        _expectedSellerQuoteTokenBalance = _callbackReceiveQuoteTokens ? 0 : totalIn - totalQuoteTokenFees; // Transferred to seller if callback doesn't receive quote tokens
+        _expectedCallbackQuoteTokenBalance = _callbackReceiveQuoteTokens ? totalIn - totalQuoteTokenFees : 0; // Transferred to callback if it receives quote tokens
 
         // Base token
         _expectedAuctionHouseBaseTokenBalance = totalOut + curatorPayout; // To be claimed be bidders and curator
         _expectedSellerBaseTokenBalance =
-            scaledLotCapacity - totalOut + prefundedCuratorFees - curatorPayout; // Unused capacity and curator fee refunded
+            _callbackSendBaseTokens ? 0 : scaledLotCapacity - totalOut + prefundedCuratorFees - curatorPayout; // Transferred to seller if callback doesn't send base tokens
+        _expectedCallbackBaseTokenBalance = _callbackSendBaseTokens ? scaledLotCapacity - totalOut + prefundedCuratorFees - curatorPayout : 0; // Transferred to callback if it sends base tokens
 
         _expectedCuratorBaseTokenRewards = curatorPayout;
 
@@ -226,6 +244,33 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         _;
     }
 
+    modifier givenLotSettlementNotFinished() {
+        uint256 totalIn = 0;
+        uint256 totalOut = 0;
+        uint256 scaledLotCapacity = _scaleBaseTokenAmount(_LOT_CAPACITY);
+
+        _concludeLot();
+
+        _mockSettlement(totalIn, totalOut, false, "");
+
+        // Calculate fees
+        uint256 prefundedCuratorFees = _curatorApproved ? _curatorMaxPotentialFee : 0;
+        uint256 curatorPayout = _calculateCuratorFee(totalOut);
+        (,, uint256 totalQuoteTokenFees) = _calculateFees(_REFERRER, totalIn);
+
+        // Set up expected values
+        // Quote token
+        _expectedAuctionHouseQuoteTokenBalance = _scaleQuoteTokenAmount(_BID_AMOUNT_TOTAL); // To be claimed by bidders
+        _expectedSellerQuoteTokenBalance = 0;
+
+        // Base token
+        _expectedAuctionHouseBaseTokenBalance = scaledLotCapacity + prefundedCuratorFees;
+        _expectedSellerBaseTokenBalance = 0;
+
+        _expectedCuratorBaseTokenRewards = 0;
+        _;
+    }
+
     modifier givenAuctionHouseHasQuoteTokenBalance(uint256 amount_) {
         _quoteToken.mint(address(_auctionHouse), amount_);
         _;
@@ -237,6 +282,10 @@ contract BatchSettleTest is BatchAuctionHouseTest {
     //  [X] it reverts
     // [X] when the auction module reverts
     //  [X] it reverts
+    // [X] when settlement is not finished
+    //  [X] no transfers or allocations are made
+    // [ ] when settlement is finished
+    //  [ ] it sets the lot as settled
     // [X] when the auction does not settle
     //  [X] when curated is true
     //   [X] it transfers the lot capacity and prepaid curator payout to the seller
@@ -245,27 +294,32 @@ contract BatchSettleTest is BatchAuctionHouseTest {
     //  [X] when curated is true
     //   [X] it transfers the proceeds to the seller, and allocates the curator payout
     //  [X] it transfers the proceeds to the seller
-    // [ ] when settlement is not finished
-    //  [ ] no transfers or allocations are made
     // [X] when under capacity
     //  [X] when curated is true
     //   [X] it transfers the remaining lot capacity and curator payout to the seller, and allocates the curator payout
-    //  [ ] given the auction callback has the send base tokens flag
-    //   [ ] it refunds the base tokens to the callback
+    //  [X] given the auction callback has the send base tokens flag
+    //   [X] it refunds the base tokens to the callback
     //  [X] it transfers the remaining lot capacity to the seller
-    // [ ] when protocol fees are set
-    //  [ ] it transfers the proceeds - protocol fees to the seller, and allocates the protocol fees
-    // [ ] when referrer fees are set
-    //  [ ] when protocol fees are set
-    //   [ ] it transfers the proceeds - protocol fees - referrer fees to the seller, and allocates the protocol fees and referrer fees
-    //  [ ] it transfers the proceeds - referrer fees to the seller, and allocates the referrer fees
-    // [ ] given the auction callback has the receive quote tokens flag
-    //  [ ] it sends the quote tokens to the callback
+    // [X] when protocol fees are set
+    //  [X] it transfers the proceeds - protocol fees to the seller
+    // [X] when referrer fees are set
+    //  [X] when protocol fees are set
+    //   [X] it transfers the proceeds - protocol fees - referrer fees to the seller
+    //  [X] it transfers the proceeds - referrer fees to the seller
+    // [X] given the auction callback has the receive quote tokens flag
+    //  [X] it sends the quote tokens to the callback
     // [ ] given the auction callback has the onSettle flag
     //  [ ] it calls the callback
     // [X] when curated is true
     //  [X] it transfers the remaining lot capacity and curator payout to the seller, and allocates the curator payout
     // [X] it transfers the remaining lot capacity to the seller
+    // [ ] when the callback reverts
+    //  [ ] it reverts
+    // [ ] when the quote token transfer to the seller fails
+    //  [ ] it reverts
+    // [ ] when a callback receives quote tokens
+    //  [ ] when the quote token transfer to the callback fails
+    //   [ ] it reverts
 
     function test_whenLotIdIsInvalid_reverts() public {
         // Expect revert
@@ -291,6 +345,36 @@ contract BatchSettleTest is BatchAuctionHouseTest {
 
         // Call function
         _auctionHouse.settle(_lotId, _SETTLE_BATCH_SIZE, _ON_SETTLE_CALLBACK_PARAMS);
+    }
+
+    function test_whenSettlementDoesNotFinish()
+        public
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenCuratorIsSet
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenCuratorMaxFeeIsSet
+        givenCuratorFeeIsSet
+        givenProtocolFeeIsSet
+        givenReferrerFeeIsSet
+        givenLotIsCreated
+        givenLotHasStarted
+        givenSellerHasBaseTokenBalance(_curatorMaxPotentialFee)
+        givenSellerHasBaseTokenAllowance(_curatorMaxPotentialFee)
+        givenCuratorHasApproved
+        givenAuctionHouseHasQuoteTokenBalance(_BID_AMOUNT_TOTAL)
+        givenLotIsConcluded
+        givenLotSettlementNotFinished
+    {
+
+        // Call function
+        _auctionHouse.settle(_lotId, _SETTLE_BATCH_SIZE, _ON_SETTLE_CALLBACK_PARAMS);
+
+        // Check balances
+        _assertBaseTokenBalances();
+        _assertQuoteTokenBalances();
+        _assertAccruedFees();
     }
 
     // ======== prefunded ======== //
@@ -687,6 +771,164 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         _assertAccruedFees();
     }
 
+    function test_partialFill_callbackSendBaseTokens_curated()
+        public
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenCallbackHasSendBaseTokensFlag
+        givenCallbackIsSet
+        givenCallbackHasBaseTokenBalance(_LOT_CAPACITY)
+        givenCallbackHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenCuratorIsSet
+        givenCuratorMaxFeeIsSet
+        givenCuratorFeeIsSet
+        givenProtocolFeeIsSet
+        givenReferrerFeeIsSet
+        givenLotIsCreated
+        givenCallbackHasBaseTokenBalance(_curatorMaxPotentialFee)
+        givenCallbackHasBaseTokenAllowance(_curatorMaxPotentialFee)
+        givenCuratorHasApproved
+        givenLotHasPartialFill
+        givenAuctionHouseHasQuoteTokenBalance(_BID_AMOUNT_TOTAL)
+    {
+        // Call function
+        _auctionHouse.settle(_lotId, _SETTLE_BATCH_SIZE, _ON_SETTLE_CALLBACK_PARAMS);
+
+        // Check balances
+        _assertBaseTokenBalances();
+        _assertQuoteTokenBalances();
+        _assertAccruedFees();
+    }
+
+    function test_partialFill_callbackSendBaseTokens_notCurated()
+        public
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenCallbackHasSendBaseTokensFlag
+        givenCallbackIsSet
+        givenCallbackHasBaseTokenBalance(_LOT_CAPACITY)
+        givenCallbackHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenProtocolFeeIsSet
+        givenReferrerFeeIsSet
+        givenLotIsCreated
+        givenLotHasPartialFill
+        givenAuctionHouseHasQuoteTokenBalance(_BID_AMOUNT_TOTAL)
+    {
+        // Call function
+        _auctionHouse.settle(_lotId, _SETTLE_BATCH_SIZE, _ON_SETTLE_CALLBACK_PARAMS);
+
+        // Check balances
+        _assertBaseTokenBalances();
+        _assertQuoteTokenBalances();
+        _assertAccruedFees();
+    }
+
+    function test_partialFill_callbackReceiveQuoteTokens_curated()
+        public
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenCallbackHasReceiveQuoteTokensFlag
+        givenCallbackIsSet
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenCuratorIsSet
+        givenCuratorMaxFeeIsSet
+        givenCuratorFeeIsSet
+        givenProtocolFeeIsSet
+        givenReferrerFeeIsSet
+        givenLotIsCreated
+        givenSellerHasBaseTokenBalance(_curatorMaxPotentialFee)
+        givenSellerHasBaseTokenAllowance(_curatorMaxPotentialFee)
+        givenCuratorHasApproved
+        givenLotHasPartialFill
+        givenAuctionHouseHasQuoteTokenBalance(_BID_AMOUNT_TOTAL)
+    {
+        // Call function
+        _auctionHouse.settle(_lotId, _SETTLE_BATCH_SIZE, _ON_SETTLE_CALLBACK_PARAMS);
+
+        // Check balances
+        _assertBaseTokenBalances();
+        _assertQuoteTokenBalances();
+        _assertAccruedFees();
+    }
+
+    function test_partialFill_callbackReceivesQuoteTokens_notCurated()
+        public
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenCallbackHasReceiveQuoteTokensFlag
+        givenCallbackIsSet
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenProtocolFeeIsSet
+        givenReferrerFeeIsSet
+        givenLotIsCreated
+        givenLotHasPartialFill
+        givenAuctionHouseHasQuoteTokenBalance(_BID_AMOUNT_TOTAL)
+    {
+        // Call function
+        _auctionHouse.settle(_lotId, _SETTLE_BATCH_SIZE, _ON_SETTLE_CALLBACK_PARAMS);
+
+        // Check balances
+        _assertBaseTokenBalances();
+        _assertQuoteTokenBalances();
+        _assertAccruedFees();
+    }
+
+    function test_partialFill_callbackSendsAndReceives_curated()
+        public
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenCallbackHasSendBaseTokensFlag
+        givenCallbackHasReceiveQuoteTokensFlag
+        givenCallbackIsSet
+        givenCallbackHasBaseTokenBalance(_LOT_CAPACITY)
+        givenCallbackHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenCuratorIsSet
+        givenCuratorMaxFeeIsSet
+        givenCuratorFeeIsSet
+        givenProtocolFeeIsSet
+        givenReferrerFeeIsSet
+        givenLotIsCreated
+        givenCallbackHasBaseTokenBalance(_curatorMaxPotentialFee)
+        givenCallbackHasBaseTokenAllowance(_curatorMaxPotentialFee)
+        givenCuratorHasApproved
+        givenLotHasPartialFill
+        givenAuctionHouseHasQuoteTokenBalance(_BID_AMOUNT_TOTAL)
+    {
+        // Call function
+        _auctionHouse.settle(_lotId, _SETTLE_BATCH_SIZE, _ON_SETTLE_CALLBACK_PARAMS);
+
+        // Check balances
+        _assertBaseTokenBalances();
+        _assertQuoteTokenBalances();
+        _assertAccruedFees();
+    }
+
+    function test_partialFill_callbackSendsAndReceives_notCurated()
+        public
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenCallbackHasReceiveQuoteTokensFlag
+        givenCallbackHasSendBaseTokensFlag
+        givenCallbackIsSet
+        givenCallbackHasBaseTokenBalance(_LOT_CAPACITY)
+        givenCallbackHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenProtocolFeeIsSet
+        givenReferrerFeeIsSet
+        givenLotIsCreated
+        givenLotHasPartialFill
+        givenAuctionHouseHasQuoteTokenBalance(_BID_AMOUNT_TOTAL)
+    {
+        // Call function
+        _auctionHouse.settle(_lotId, _SETTLE_BATCH_SIZE, _ON_SETTLE_CALLBACK_PARAMS);
+
+        // Check balances
+        _assertBaseTokenBalances();
+        _assertQuoteTokenBalances();
+        _assertAccruedFees();
+    }
+
     function test_underCapacity_curated()
         public
         whenAuctionTypeIsBatch
@@ -862,6 +1104,164 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         givenLotIsCreated
         givenLotIsUnderCapacity
         givenAuctionHouseHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT_TOTAL))
+    {
+        // Call function
+        _auctionHouse.settle(_lotId, _SETTLE_BATCH_SIZE, _ON_SETTLE_CALLBACK_PARAMS);
+
+        // Check balances
+        _assertBaseTokenBalances();
+        _assertQuoteTokenBalances();
+        _assertAccruedFees();
+    }
+
+    function test_underCapacity_callbackSendBaseTokens_curated()
+        public
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenCallbackHasSendBaseTokensFlag
+        givenCallbackIsSet
+        givenCallbackHasBaseTokenBalance(_LOT_CAPACITY)
+        givenCallbackHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenCuratorIsSet
+        givenCuratorMaxFeeIsSet
+        givenCuratorFeeIsSet
+        givenProtocolFeeIsSet
+        givenReferrerFeeIsSet
+        givenLotIsCreated
+        givenCallbackHasBaseTokenBalance(_curatorMaxPotentialFee)
+        givenCallbackHasBaseTokenAllowance(_curatorMaxPotentialFee)
+        givenCuratorHasApproved
+        givenLotIsUnderCapacity
+        givenAuctionHouseHasQuoteTokenBalance(_BID_AMOUNT_TOTAL)
+    {
+        // Call function
+        _auctionHouse.settle(_lotId, _SETTLE_BATCH_SIZE, _ON_SETTLE_CALLBACK_PARAMS);
+
+        // Check balances
+        _assertBaseTokenBalances();
+        _assertQuoteTokenBalances();
+        _assertAccruedFees();
+    }
+
+    function test_underCapacity_callbackSendBaseTokens_notCurated()
+        public
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenCallbackHasSendBaseTokensFlag
+        givenCallbackIsSet
+        givenCallbackHasBaseTokenBalance(_LOT_CAPACITY)
+        givenCallbackHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenProtocolFeeIsSet
+        givenReferrerFeeIsSet
+        givenLotIsCreated
+        givenLotIsUnderCapacity
+        givenAuctionHouseHasQuoteTokenBalance(_BID_AMOUNT_TOTAL)
+    {
+        // Call function
+        _auctionHouse.settle(_lotId, _SETTLE_BATCH_SIZE, _ON_SETTLE_CALLBACK_PARAMS);
+
+        // Check balances
+        _assertBaseTokenBalances();
+        _assertQuoteTokenBalances();
+        _assertAccruedFees();
+    }
+
+    function test_underCapacity_callbackReceiveQuoteTokens_curated()
+        public
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenCallbackHasReceiveQuoteTokensFlag
+        givenCallbackIsSet
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenCuratorIsSet
+        givenCuratorMaxFeeIsSet
+        givenCuratorFeeIsSet
+        givenProtocolFeeIsSet
+        givenReferrerFeeIsSet
+        givenLotIsCreated
+        givenSellerHasBaseTokenBalance(_curatorMaxPotentialFee)
+        givenSellerHasBaseTokenAllowance(_curatorMaxPotentialFee)
+        givenCuratorHasApproved
+        givenLotIsUnderCapacity
+        givenAuctionHouseHasQuoteTokenBalance(_BID_AMOUNT_TOTAL)
+    {
+        // Call function
+        _auctionHouse.settle(_lotId, _SETTLE_BATCH_SIZE, _ON_SETTLE_CALLBACK_PARAMS);
+
+        // Check balances
+        _assertBaseTokenBalances();
+        _assertQuoteTokenBalances();
+        _assertAccruedFees();
+    }
+
+    function test_underCapacity_callbackReceivesQuoteTokens_notCurated()
+        public
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenCallbackHasReceiveQuoteTokensFlag
+        givenCallbackIsSet
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenProtocolFeeIsSet
+        givenReferrerFeeIsSet
+        givenLotIsCreated
+        givenLotIsUnderCapacity
+        givenAuctionHouseHasQuoteTokenBalance(_BID_AMOUNT_TOTAL)
+    {
+        // Call function
+        _auctionHouse.settle(_lotId, _SETTLE_BATCH_SIZE, _ON_SETTLE_CALLBACK_PARAMS);
+
+        // Check balances
+        _assertBaseTokenBalances();
+        _assertQuoteTokenBalances();
+        _assertAccruedFees();
+    }
+
+    function test_underCapacity_callbackSendsAndReceives_curated()
+        public
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenCallbackHasSendBaseTokensFlag
+        givenCallbackHasReceiveQuoteTokensFlag
+        givenCallbackIsSet
+        givenCallbackHasBaseTokenBalance(_LOT_CAPACITY)
+        givenCallbackHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenCuratorIsSet
+        givenCuratorMaxFeeIsSet
+        givenCuratorFeeIsSet
+        givenProtocolFeeIsSet
+        givenReferrerFeeIsSet
+        givenLotIsCreated
+        givenCallbackHasBaseTokenBalance(_curatorMaxPotentialFee)
+        givenCallbackHasBaseTokenAllowance(_curatorMaxPotentialFee)
+        givenCuratorHasApproved
+        givenLotIsUnderCapacity
+        givenAuctionHouseHasQuoteTokenBalance(_BID_AMOUNT_TOTAL)
+    {
+        // Call function
+        _auctionHouse.settle(_lotId, _SETTLE_BATCH_SIZE, _ON_SETTLE_CALLBACK_PARAMS);
+
+        // Check balances
+        _assertBaseTokenBalances();
+        _assertQuoteTokenBalances();
+        _assertAccruedFees();
+    }
+
+    function test_underCapacity_callbackSendsAndReceives_notCurated()
+        public
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenCallbackHasReceiveQuoteTokensFlag
+        givenCallbackHasSendBaseTokensFlag
+        givenCallbackIsSet
+        givenCallbackHasBaseTokenBalance(_LOT_CAPACITY)
+        givenCallbackHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenProtocolFeeIsSet
+        givenReferrerFeeIsSet
+        givenLotIsCreated
+        givenLotIsUnderCapacity
+        givenAuctionHouseHasQuoteTokenBalance(_BID_AMOUNT_TOTAL)
     {
         // Call function
         _auctionHouse.settle(_lotId, _SETTLE_BATCH_SIZE, _ON_SETTLE_CALLBACK_PARAMS);
@@ -1281,6 +1681,164 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         givenCuratorHasApproved
         givenLotCapacityIsFilled
         givenAuctionHouseHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT_TOTAL))
+    {
+        // Call function
+        _auctionHouse.settle(_lotId, _SETTLE_BATCH_SIZE, _ON_SETTLE_CALLBACK_PARAMS);
+
+        // Check balances
+        _assertBaseTokenBalances();
+        _assertQuoteTokenBalances();
+        _assertAccruedFees();
+    }
+
+    function test_capacityFilled_callbackSendBaseTokens_curated()
+        public
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenCallbackHasSendBaseTokensFlag
+        givenCallbackIsSet
+        givenCallbackHasBaseTokenBalance(_LOT_CAPACITY)
+        givenCallbackHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenCuratorIsSet
+        givenCuratorMaxFeeIsSet
+        givenCuratorFeeIsSet
+        givenProtocolFeeIsSet
+        givenReferrerFeeIsSet
+        givenLotIsCreated
+        givenCallbackHasBaseTokenBalance(_curatorMaxPotentialFee)
+        givenCallbackHasBaseTokenAllowance(_curatorMaxPotentialFee)
+        givenCuratorHasApproved
+        givenLotCapacityIsFilled
+        givenAuctionHouseHasQuoteTokenBalance(_BID_AMOUNT_TOTAL)
+    {
+        // Call function
+        _auctionHouse.settle(_lotId, _SETTLE_BATCH_SIZE, _ON_SETTLE_CALLBACK_PARAMS);
+
+        // Check balances
+        _assertBaseTokenBalances();
+        _assertQuoteTokenBalances();
+        _assertAccruedFees();
+    }
+
+    function test_capacityFilled_callbackSendBaseTokens_notCurated()
+        public
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenCallbackHasSendBaseTokensFlag
+        givenCallbackIsSet
+        givenCallbackHasBaseTokenBalance(_LOT_CAPACITY)
+        givenCallbackHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenProtocolFeeIsSet
+        givenReferrerFeeIsSet
+        givenLotIsCreated
+        givenLotCapacityIsFilled
+        givenAuctionHouseHasQuoteTokenBalance(_BID_AMOUNT_TOTAL)
+    {
+        // Call function
+        _auctionHouse.settle(_lotId, _SETTLE_BATCH_SIZE, _ON_SETTLE_CALLBACK_PARAMS);
+
+        // Check balances
+        _assertBaseTokenBalances();
+        _assertQuoteTokenBalances();
+        _assertAccruedFees();
+    }
+
+    function test_capacityFilled_callbackReceiveQuoteTokens_curated()
+        public
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenCallbackHasReceiveQuoteTokensFlag
+        givenCallbackIsSet
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenCuratorIsSet
+        givenCuratorMaxFeeIsSet
+        givenCuratorFeeIsSet
+        givenProtocolFeeIsSet
+        givenReferrerFeeIsSet
+        givenLotIsCreated
+        givenSellerHasBaseTokenBalance(_curatorMaxPotentialFee)
+        givenSellerHasBaseTokenAllowance(_curatorMaxPotentialFee)
+        givenCuratorHasApproved
+        givenLotCapacityIsFilled
+        givenAuctionHouseHasQuoteTokenBalance(_BID_AMOUNT_TOTAL)
+    {
+        // Call function
+        _auctionHouse.settle(_lotId, _SETTLE_BATCH_SIZE, _ON_SETTLE_CALLBACK_PARAMS);
+
+        // Check balances
+        _assertBaseTokenBalances();
+        _assertQuoteTokenBalances();
+        _assertAccruedFees();
+    }
+
+    function test_capacityFilled_callbackReceivesQuoteTokens_notCurated()
+        public
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenCallbackHasReceiveQuoteTokensFlag
+        givenCallbackIsSet
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenProtocolFeeIsSet
+        givenReferrerFeeIsSet
+        givenLotIsCreated
+        givenLotCapacityIsFilled
+        givenAuctionHouseHasQuoteTokenBalance(_BID_AMOUNT_TOTAL)
+    {
+        // Call function
+        _auctionHouse.settle(_lotId, _SETTLE_BATCH_SIZE, _ON_SETTLE_CALLBACK_PARAMS);
+
+        // Check balances
+        _assertBaseTokenBalances();
+        _assertQuoteTokenBalances();
+        _assertAccruedFees();
+    }
+
+    function test_capacityFilled_callbackSendsAndReceives_curated()
+        public
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenCallbackHasSendBaseTokensFlag
+        givenCallbackHasReceiveQuoteTokensFlag
+        givenCallbackIsSet
+        givenCallbackHasBaseTokenBalance(_LOT_CAPACITY)
+        givenCallbackHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenCuratorIsSet
+        givenCuratorMaxFeeIsSet
+        givenCuratorFeeIsSet
+        givenProtocolFeeIsSet
+        givenReferrerFeeIsSet
+        givenLotIsCreated
+        givenCallbackHasBaseTokenBalance(_curatorMaxPotentialFee)
+        givenCallbackHasBaseTokenAllowance(_curatorMaxPotentialFee)
+        givenCuratorHasApproved
+        givenLotCapacityIsFilled
+        givenAuctionHouseHasQuoteTokenBalance(_BID_AMOUNT_TOTAL)
+    {
+        // Call function
+        _auctionHouse.settle(_lotId, _SETTLE_BATCH_SIZE, _ON_SETTLE_CALLBACK_PARAMS);
+
+        // Check balances
+        _assertBaseTokenBalances();
+        _assertQuoteTokenBalances();
+        _assertAccruedFees();
+    }
+
+    function test_capacityFilled_callbackSendsAndReceives_notCurated()
+        public
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenCallbackHasReceiveQuoteTokensFlag
+        givenCallbackHasSendBaseTokensFlag
+        givenCallbackIsSet
+        givenCallbackHasBaseTokenBalance(_LOT_CAPACITY)
+        givenCallbackHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenProtocolFeeIsSet
+        givenReferrerFeeIsSet
+        givenLotIsCreated
+        givenLotCapacityIsFilled
+        givenAuctionHouseHasQuoteTokenBalance(_BID_AMOUNT_TOTAL)
     {
         // Call function
         _auctionHouse.settle(_lotId, _SETTLE_BATCH_SIZE, _ON_SETTLE_CALLBACK_PARAMS);
