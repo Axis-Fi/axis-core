@@ -121,22 +121,22 @@ contract EmpaModuleDecryptBidsTest is EmpTest {
         _module.decryptAndSortBids(_lotId, 0, new bytes32[](0));
     }
 
-    function test_givenLotProceedsAreClaimed_reverts()
-        external
-        givenLotIsCreated
-        givenLotHasConcluded
-        givenPrivateKeyIsSubmitted
-        givenLotIsSettled
-        givenLotProceedsAreClaimed
-    {
-        // Call the function
-        bytes memory err =
-            abi.encodeWithSelector(EncryptedMarginalPrice.Auction_WrongState.selector, _lotId);
-        vm.expectRevert(err);
+    // function test_givenLotProceedsAreClaimed_reverts()
+    //     external
+    //     givenLotIsCreated
+    //     givenLotHasConcluded
+    //     givenPrivateKeyIsSubmitted
+    //     givenLotIsSettled
+    //     givenLotProceedsAreClaimed
+    // {
+    //     // Call the function
+    //     bytes memory err =
+    //         abi.encodeWithSelector(EncryptedMarginalPrice.Auction_WrongState.selector, _lotId);
+    //     vm.expectRevert(err);
 
-        // Call the function
-        _module.decryptAndSortBids(_lotId, 0, new bytes32[](0));
-    }
+    //     // Call the function
+    //     _module.decryptAndSortBids(_lotId, 0, new bytes32[](0));
+    // }
 
     function test_givenLotIsCancelled_reverts() external givenLotIsCreated givenLotIsCancelled {
         // Call the function

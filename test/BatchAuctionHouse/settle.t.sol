@@ -8,6 +8,9 @@ import {BatchAuctionHouseTest} from "test/BatchAuctionHouse/AuctionHouseTest.sol
 
 contract BatchSettleTest is BatchAuctionHouseTest {
     uint256 internal constant _BID_AMOUNT_TOTAL = 20e18;
+    uint256 internal constant _SETTLE_BATCH_SIZE = 100_000;
+
+    bytes internal constant _ON_SETTLE_CALLBACK_PARAMS = "";
 
     uint256 internal _expectedAuctionHouseQuoteTokenBalance;
 
@@ -204,7 +207,7 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         vm.expectRevert(err);
 
         // Call function
-        _auctionHouse.settle(_lotId, 100_000);
+        _auctionHouse.settle(_lotId, _SETTLE_BATCH_SIZE, _ON_SETTLE_CALLBACK_PARAMS);
     }
 
     function test_whenAuctionModuleReverts()
@@ -221,7 +224,7 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         vm.expectRevert("revert");
 
         // Call function
-        _auctionHouse.settle(_lotId, 100_000);
+        _auctionHouse.settle(_lotId, _SETTLE_BATCH_SIZE, _ON_SETTLE_CALLBACK_PARAMS);
     }
 
     // ======== prefunded ======== //
@@ -245,7 +248,7 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         givenAuctionHouseHasQuoteTokenBalance(_BID_AMOUNT_TOTAL)
     {
         // Call function
-        _auctionHouse.settle(_lotId, 100_000);
+        _auctionHouse.settle(_lotId, _SETTLE_BATCH_SIZE, _ON_SETTLE_CALLBACK_PARAMS);
 
         // Check balances
         _assertBaseTokenBalances();
@@ -274,7 +277,7 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         givenAuctionHouseHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT_TOTAL))
     {
         // Call function
-        _auctionHouse.settle(_lotId, 100_000);
+        _auctionHouse.settle(_lotId, _SETTLE_BATCH_SIZE, _ON_SETTLE_CALLBACK_PARAMS);
 
         // Check balances
         _assertBaseTokenBalances();
@@ -303,7 +306,7 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         givenAuctionHouseHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT_TOTAL))
     {
         // Call function
-        _auctionHouse.settle(_lotId, 100_000);
+        _auctionHouse.settle(_lotId, _SETTLE_BATCH_SIZE, _ON_SETTLE_CALLBACK_PARAMS);
 
         // Check balances
         _assertBaseTokenBalances();
@@ -327,7 +330,7 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         givenAuctionHouseHasQuoteTokenBalance(_BID_AMOUNT_TOTAL)
     {
         // Call function
-        _auctionHouse.settle(_lotId, 100_000);
+        _auctionHouse.settle(_lotId, _SETTLE_BATCH_SIZE, _ON_SETTLE_CALLBACK_PARAMS);
 
         // Check balances
         _assertBaseTokenBalances();
@@ -351,7 +354,7 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         givenAuctionHouseHasQuoteTokenBalance(_BID_AMOUNT_TOTAL)
     {
         // Call function
-        _auctionHouse.settle(_lotId, 100_000);
+        _auctionHouse.settle(_lotId, _SETTLE_BATCH_SIZE, _ON_SETTLE_CALLBACK_PARAMS);
 
         // Check balances
         _assertBaseTokenBalances();
@@ -377,7 +380,7 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         givenAuctionHouseHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT_TOTAL))
     {
         // Call function
-        _auctionHouse.settle(_lotId, 100_000);
+        _auctionHouse.settle(_lotId, _SETTLE_BATCH_SIZE, _ON_SETTLE_CALLBACK_PARAMS);
 
         // Check balances
         _assertBaseTokenBalances();
@@ -403,7 +406,7 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         givenAuctionHouseHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT_TOTAL))
     {
         // Call function
-        _auctionHouse.settle(_lotId, 100_000);
+        _auctionHouse.settle(_lotId, _SETTLE_BATCH_SIZE, _ON_SETTLE_CALLBACK_PARAMS);
 
         // Check balances
         _assertBaseTokenBalances();
@@ -430,7 +433,7 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         givenAuctionHouseHasQuoteTokenBalance(_BID_AMOUNT_TOTAL)
     {
         // Call function
-        _auctionHouse.settle(_lotId, 100_000);
+        _auctionHouse.settle(_lotId, _SETTLE_BATCH_SIZE, _ON_SETTLE_CALLBACK_PARAMS);
 
         // Check balances
         _assertBaseTokenBalances();
@@ -459,7 +462,7 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         givenAuctionHouseHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT_TOTAL))
     {
         // Call function
-        _auctionHouse.settle(_lotId, 100_000);
+        _auctionHouse.settle(_lotId, _SETTLE_BATCH_SIZE, _ON_SETTLE_CALLBACK_PARAMS);
 
         // Check balances
         _assertBaseTokenBalances();
@@ -488,7 +491,7 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         givenAuctionHouseHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT_TOTAL))
     {
         // Call function
-        _auctionHouse.settle(_lotId, 100_000);
+        _auctionHouse.settle(_lotId, _SETTLE_BATCH_SIZE, _ON_SETTLE_CALLBACK_PARAMS);
 
         // Check balances
         _assertBaseTokenBalances();
@@ -512,7 +515,7 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         givenAuctionHouseHasQuoteTokenBalance(_BID_AMOUNT_TOTAL)
     {
         // Call function
-        _auctionHouse.settle(_lotId, 100_000);
+        _auctionHouse.settle(_lotId, _SETTLE_BATCH_SIZE, _ON_SETTLE_CALLBACK_PARAMS);
 
         // Check balances
         _assertBaseTokenBalances();
@@ -542,7 +545,7 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         _setCuratorFee(80);
 
         // Call function
-        _auctionHouse.settle(_lotId, 100_000);
+        _auctionHouse.settle(_lotId, _SETTLE_BATCH_SIZE, _ON_SETTLE_CALLBACK_PARAMS);
 
         // Check balances
         // Assertions are not updated with the curator fee, so the test will fail if the new curator fee is used by the AuctionHouse
@@ -564,7 +567,7 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         givenAuctionHouseHasQuoteTokenBalance(_BID_AMOUNT_TOTAL)
     {
         // Call function
-        _auctionHouse.settle(_lotId, 100_000);
+        _auctionHouse.settle(_lotId, _SETTLE_BATCH_SIZE, _ON_SETTLE_CALLBACK_PARAMS);
 
         // Check balances
         _assertBaseTokenBalances();
@@ -587,7 +590,7 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         givenAuctionHouseHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT_TOTAL))
     {
         // Call function
-        _auctionHouse.settle(_lotId, 100_000);
+        _auctionHouse.settle(_lotId, _SETTLE_BATCH_SIZE, _ON_SETTLE_CALLBACK_PARAMS);
 
         // Check balances
         _assertBaseTokenBalances();
@@ -610,7 +613,7 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         givenAuctionHouseHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT_TOTAL))
     {
         // Call function
-        _auctionHouse.settle(_lotId, 100_000);
+        _auctionHouse.settle(_lotId, _SETTLE_BATCH_SIZE, _ON_SETTLE_CALLBACK_PARAMS);
 
         // Check balances
         _assertBaseTokenBalances();
@@ -637,7 +640,7 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         givenAuctionHouseHasQuoteTokenBalance(_BID_AMOUNT_TOTAL)
     {
         // Call function
-        _auctionHouse.settle(_lotId, 100_000);
+        _auctionHouse.settle(_lotId, _SETTLE_BATCH_SIZE, _ON_SETTLE_CALLBACK_PARAMS);
 
         // Check balances
         _assertBaseTokenBalances();
@@ -666,7 +669,7 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         givenAuctionHouseHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT_TOTAL))
     {
         // Call function
-        _auctionHouse.settle(_lotId, 100_000);
+        _auctionHouse.settle(_lotId, _SETTLE_BATCH_SIZE, _ON_SETTLE_CALLBACK_PARAMS);
 
         // Check balances
         _assertBaseTokenBalances();
@@ -695,7 +698,7 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         givenAuctionHouseHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT_TOTAL))
     {
         // Call function
-        _auctionHouse.settle(_lotId, 100_000);
+        _auctionHouse.settle(_lotId, _SETTLE_BATCH_SIZE, _ON_SETTLE_CALLBACK_PARAMS);
 
         // Check balances
         _assertBaseTokenBalances();
@@ -719,7 +722,7 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         givenAuctionHouseHasQuoteTokenBalance(_BID_AMOUNT_TOTAL)
     {
         // Call function
-        _auctionHouse.settle(_lotId, 100_000);
+        _auctionHouse.settle(_lotId, _SETTLE_BATCH_SIZE, _ON_SETTLE_CALLBACK_PARAMS);
 
         // Check balances
         _assertBaseTokenBalances();
@@ -743,7 +746,7 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         givenAuctionHouseHasQuoteTokenBalance(_BID_AMOUNT_TOTAL)
     {
         // Call function
-        _auctionHouse.settle(_lotId, 100_000);
+        _auctionHouse.settle(_lotId, _SETTLE_BATCH_SIZE, _ON_SETTLE_CALLBACK_PARAMS);
 
         // Check balances
         _assertBaseTokenBalances();
@@ -769,7 +772,7 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         givenAuctionHouseHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT_TOTAL))
     {
         // Call function
-        _auctionHouse.settle(_lotId, 100_000);
+        _auctionHouse.settle(_lotId, _SETTLE_BATCH_SIZE, _ON_SETTLE_CALLBACK_PARAMS);
 
         // Check balances
         _assertBaseTokenBalances();
@@ -795,7 +798,7 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         givenAuctionHouseHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT_TOTAL))
     {
         // Call function
-        _auctionHouse.settle(_lotId, 100_000);
+        _auctionHouse.settle(_lotId, _SETTLE_BATCH_SIZE, _ON_SETTLE_CALLBACK_PARAMS);
 
         // Check balances
         _assertBaseTokenBalances();
@@ -822,7 +825,7 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         givenAuctionHouseHasQuoteTokenBalance(_BID_AMOUNT_TOTAL)
     {
         // Call function
-        _auctionHouse.settle(_lotId, 100_000);
+        _auctionHouse.settle(_lotId, _SETTLE_BATCH_SIZE, _ON_SETTLE_CALLBACK_PARAMS);
 
         // Check balances
         _assertBaseTokenBalances();
@@ -851,7 +854,7 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         givenAuctionHouseHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT_TOTAL))
     {
         // Call function
-        _auctionHouse.settle(_lotId, 100_000);
+        _auctionHouse.settle(_lotId, _SETTLE_BATCH_SIZE, _ON_SETTLE_CALLBACK_PARAMS);
 
         // Check balances
         _assertBaseTokenBalances();
@@ -880,7 +883,7 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         givenAuctionHouseHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT_TOTAL))
     {
         // Call function
-        _auctionHouse.settle(_lotId, 100_000);
+        _auctionHouse.settle(_lotId, _SETTLE_BATCH_SIZE, _ON_SETTLE_CALLBACK_PARAMS);
 
         // Check balances
         _assertBaseTokenBalances();
@@ -904,7 +907,7 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         givenAuctionHouseHasQuoteTokenBalance(_BID_AMOUNT_TOTAL)
     {
         // Call function
-        _auctionHouse.settle(_lotId, 100_000);
+        _auctionHouse.settle(_lotId, _SETTLE_BATCH_SIZE, _ON_SETTLE_CALLBACK_PARAMS);
 
         // Check balances
         _assertBaseTokenBalances();
@@ -925,7 +928,7 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         givenAuctionHouseHasQuoteTokenBalance(_BID_AMOUNT_TOTAL)
     {
         // Call function
-        _auctionHouse.settle(_lotId, 100_000);
+        _auctionHouse.settle(_lotId, _SETTLE_BATCH_SIZE, _ON_SETTLE_CALLBACK_PARAMS);
 
         // Check balances
         _assertBaseTokenBalances();
@@ -948,7 +951,7 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         givenAuctionHouseHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT_TOTAL))
     {
         // Call function
-        _auctionHouse.settle(_lotId, 100_000);
+        _auctionHouse.settle(_lotId, _SETTLE_BATCH_SIZE, _ON_SETTLE_CALLBACK_PARAMS);
 
         // Check balances
         _assertBaseTokenBalances();
@@ -971,7 +974,7 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         givenAuctionHouseHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT_TOTAL))
     {
         // Call function
-        _auctionHouse.settle(_lotId, 100_000);
+        _auctionHouse.settle(_lotId, _SETTLE_BATCH_SIZE, _ON_SETTLE_CALLBACK_PARAMS);
 
         // Check balances
         _assertBaseTokenBalances();
@@ -997,7 +1000,7 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         givenAuctionHouseHasQuoteTokenBalance(_BID_AMOUNT_TOTAL)
     {
         // Call function
-        _auctionHouse.settle(_lotId, 100_000);
+        _auctionHouse.settle(_lotId, _SETTLE_BATCH_SIZE, _ON_SETTLE_CALLBACK_PARAMS);
 
         // Check balances
         _assertBaseTokenBalances();
@@ -1025,7 +1028,7 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         givenAuctionHouseHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT_TOTAL))
     {
         // Call function
-        _auctionHouse.settle(_lotId, 100_000);
+        _auctionHouse.settle(_lotId, _SETTLE_BATCH_SIZE, _ON_SETTLE_CALLBACK_PARAMS);
 
         // Check balances
         _assertBaseTokenBalances();
@@ -1053,7 +1056,7 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         givenAuctionHouseHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT_TOTAL))
     {
         // Call function
-        _auctionHouse.settle(_lotId, 100_000);
+        _auctionHouse.settle(_lotId, _SETTLE_BATCH_SIZE, _ON_SETTLE_CALLBACK_PARAMS);
 
         // Check balances
         _assertBaseTokenBalances();
@@ -1079,7 +1082,7 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         givenAuctionHouseHasQuoteTokenBalance(_BID_AMOUNT_TOTAL)
     {
         // Call function
-        _auctionHouse.settle(_lotId, 100_000);
+        _auctionHouse.settle(_lotId, _SETTLE_BATCH_SIZE, _ON_SETTLE_CALLBACK_PARAMS);
 
         // Check balances
         _assertBaseTokenBalances();
@@ -1107,7 +1110,7 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         givenAuctionHouseHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT_TOTAL))
     {
         // Call function
-        _auctionHouse.settle(_lotId, 100_000);
+        _auctionHouse.settle(_lotId, _SETTLE_BATCH_SIZE, _ON_SETTLE_CALLBACK_PARAMS);
 
         // Check balances
         _assertBaseTokenBalances();
@@ -1135,7 +1138,7 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         givenAuctionHouseHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT_TOTAL))
     {
         // Call function
-        _auctionHouse.settle(_lotId, 100_000);
+        _auctionHouse.settle(_lotId, _SETTLE_BATCH_SIZE, _ON_SETTLE_CALLBACK_PARAMS);
 
         // Check balances
         _assertBaseTokenBalances();
@@ -1160,7 +1163,7 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         givenAuctionHouseHasQuoteTokenBalance(_BID_AMOUNT_TOTAL)
     {
         // Call function
-        _auctionHouse.settle(_lotId, 100_000);
+        _auctionHouse.settle(_lotId, _SETTLE_BATCH_SIZE, _ON_SETTLE_CALLBACK_PARAMS);
 
         // Check balances
         _assertBaseTokenBalances();
@@ -1187,7 +1190,7 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         givenAuctionHouseHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT_TOTAL))
     {
         // Call function
-        _auctionHouse.settle(_lotId, 100_000);
+        _auctionHouse.settle(_lotId, _SETTLE_BATCH_SIZE, _ON_SETTLE_CALLBACK_PARAMS);
 
         // Check balances
         _assertBaseTokenBalances();
@@ -1214,7 +1217,7 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         givenAuctionHouseHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT_TOTAL))
     {
         // Call function
-        _auctionHouse.settle(_lotId, 100_000);
+        _auctionHouse.settle(_lotId, _SETTLE_BATCH_SIZE, _ON_SETTLE_CALLBACK_PARAMS);
 
         // Check balances
         _assertBaseTokenBalances();

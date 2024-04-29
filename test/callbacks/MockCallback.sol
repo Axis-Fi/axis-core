@@ -147,12 +147,7 @@ contract MockCallback is BaseCallback {
         lotBid[lotId_] = true;
     }
 
-    function _onClaimProceeds(
-        uint96 lotId_,
-        uint256,
-        uint256,
-        bytes calldata
-    ) internal virtual override {
+    function _onSettle(uint96 lotId_, uint256, uint256, bytes calldata) internal virtual override {
         if (onClaimProceedsReverts) {
             revert("revert");
         }

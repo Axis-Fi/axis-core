@@ -262,7 +262,7 @@ abstract contract BatchAuctionHouseTest is Test, Permit2User, WithSalts {
 
     function _settleLot() internal {
         vm.prank(_SELLER);
-        _auctionHouse.settle(_lotId, 100_000);
+        _auctionHouse.settle(_lotId, 100_000, bytes(""));
     }
 
     modifier givenLotIsSettled() {
@@ -278,7 +278,7 @@ abstract contract BatchAuctionHouseTest is Test, Permit2User, WithSalts {
             onCurate: false,
             onPurchase: true,
             onBid: true,
-            onClaimProceeds: false,
+            onSettle: false,
             receiveQuoteTokens: false,
             sendBaseTokens: false
         });
@@ -355,7 +355,7 @@ abstract contract BatchAuctionHouseTest is Test, Permit2User, WithSalts {
             onCurate: true,
             onPurchase: true,
             onBid: true,
-            onClaimProceeds: true,
+            onSettle: true,
             receiveQuoteTokens: _callbackReceiveQuoteTokens,
             sendBaseTokens: _callbackSendBaseTokens
         });
@@ -481,12 +481,6 @@ abstract contract BatchAuctionHouseTest is Test, Permit2User, WithSalts {
 
     modifier givenReferrerFeeIsSet() {
         _setReferrerFee(_REFERRER_FEE_PERCENT);
-        _;
-    }
-
-    modifier givenLotProceedsAreClaimed() {
-        vm.prank(_SELLER);
-        _auctionHouse.claimProceeds(_lotId, bytes(""));
         _;
     }
 

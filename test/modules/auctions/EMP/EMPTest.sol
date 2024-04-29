@@ -345,12 +345,6 @@ abstract contract EmpTest is Test, Permit2User {
         _;
     }
 
-    modifier givenLotProceedsAreClaimed() {
-        vm.prank(address(_auctionHouse));
-        _module.claimProceeds(_lotId);
-        _;
-    }
-
     // ======== Internal Functions ======== //
 
     function _scaleQuoteTokenAmount(uint256 amount_) internal view returns (uint256) {
@@ -371,7 +365,6 @@ abstract contract EmpTest is Test, Permit2User {
             uint64 nextDecryptIndex_,
             EncryptedMarginalPrice.LotStatus status_,
             uint64 marginalBidId_,
-            bool proceedsClaimed_,
             uint256 marginalPrice_,
             uint256 minPrice_,
             uint256 minFilled_,
@@ -385,7 +378,6 @@ abstract contract EmpTest is Test, Permit2User {
             nextDecryptIndex: nextDecryptIndex_,
             status: status_,
             marginalBidId: marginalBidId_,
-            proceedsClaimed: proceedsClaimed_,
             marginalPrice: marginalPrice_,
             minFilled: minFilled_,
             minBidSize: minBidSize_,

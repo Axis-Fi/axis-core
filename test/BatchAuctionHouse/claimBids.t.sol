@@ -13,6 +13,8 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
 
     address internal constant _BIDDER_TWO = address(0x20);
 
+    bytes internal constant _ON_SETTLE_CALLBACK_PARAMS = "";
+
     IBatchAuction.BidClaim[] internal _bidClaims;
 
     uint256 internal _expectedBidderQuoteTokenBalance;
@@ -236,7 +238,7 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
             _lotId, _scaleQuoteTokenAmount(_BID_AMOUNT), _scaleBaseTokenAmount(_BID_AMOUNT_OUT)
         );
 
-        _auctionHouse.settle(_lotId, 100_000);
+        _auctionHouse.settle(_lotId, 100_000, _ON_SETTLE_CALLBACK_PARAMS);
         _;
     }
 
@@ -248,7 +250,7 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
             _scaleBaseTokenAmount(_BID_AMOUNT_OUT + _BID_AMOUNT_OUT)
         );
 
-        _auctionHouse.settle(_lotId, 100_000);
+        _auctionHouse.settle(_lotId, 100_000, _ON_SETTLE_CALLBACK_PARAMS);
         _;
     }
 
@@ -260,13 +262,13 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
             _scaleBaseTokenAmount(_BID_AMOUNT_OUT + _BID_AMOUNT_OUT)
         );
 
-        _auctionHouse.settle(_lotId, 100_000);
+        _auctionHouse.settle(_lotId, 100_000, _ON_SETTLE_CALLBACK_PARAMS);
         _;
     }
 
     modifier givenLotSettlementIsNotSuccessful() {
         // Payout tokens will be returned to the seller
-        _auctionHouse.settle(_lotId, 100_000);
+        _auctionHouse.settle(_lotId, 100_000, _ON_SETTLE_CALLBACK_PARAMS);
         _;
     }
 

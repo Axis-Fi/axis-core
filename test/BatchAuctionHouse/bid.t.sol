@@ -96,23 +96,23 @@ contract BatchBidTest is BatchAuctionHouseTest {
         _createBid(_BID_AMOUNT, _bidAuctionData);
     }
 
-    function test_givenLotProceedsHaveBeenClaimed_reverts()
-        external
-        whenAuctionTypeIsBatch
-        whenBatchAuctionModuleIsInstalled
-        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
-        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
-        givenLotIsCreated
-        givenLotIsConcluded
-        givenLotIsSettled
-        givenLotProceedsAreClaimed
-    {
-        bytes memory err = abi.encodeWithSelector(IAuction.Auction_MarketNotActive.selector, _lotId);
-        vm.expectRevert(err);
+    // function test_givenLotProceedsHaveBeenClaimed_reverts()
+    //     external
+    //     whenAuctionTypeIsBatch
+    //     whenBatchAuctionModuleIsInstalled
+    //     givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+    //     givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
+    //     givenLotIsCreated
+    //     givenLotIsConcluded
+    //     givenLotIsSettled
+    //     givenLotProceedsAreClaimed
+    // {
+    //     bytes memory err = abi.encodeWithSelector(IAuction.Auction_MarketNotActive.selector, _lotId);
+    //     vm.expectRevert(err);
 
-        // Call the function
-        _createBid(_BID_AMOUNT, _bidAuctionData);
-    }
+    //     // Call the function
+    //     _createBid(_BID_AMOUNT, _bidAuctionData);
+    // }
 
     function test_incorrectAllowlistProof_reverts()
         external

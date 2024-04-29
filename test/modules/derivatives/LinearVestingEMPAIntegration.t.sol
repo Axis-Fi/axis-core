@@ -224,7 +224,6 @@ contract LinearVestingEMPAIntegrationTest is BatchAuctionHouseTest {
         assertEq(
             uint8(auctionData.status), uint8(EncryptedMarginalPrice.LotStatus.Settled), "status"
         );
-        assertTrue(auctionData.proceedsClaimed, "proceedsClaimed");
 
         // Check balances
         assertEq(_baseToken.balanceOf(_SELLER), _LOT_CAPACITY, "seller balance");
@@ -466,48 +465,48 @@ contract LinearVestingEMPAIntegrationTest is BatchAuctionHouseTest {
     // claimProceeds
     // [X] quote tokens are sent to the seller, curator payout is minted and excess capacity is returned to the seller
 
-    function test_claimProceeds()
-        external
-        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
-        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
-        givenAuctionTypeIsEMPA
-        givenDerivativeTypeIsLinearVesting
-        givenLotIsCreated
-        givenLotHasStarted
-        givenUserHasQuoteTokenBalance(_BID_AMOUNT)
-        givenUserHasQuoteTokenAllowance(_BID_AMOUNT)
-        givenBidIsCreated(_BID_AMOUNT, _BID_AMOUNT_OUT)
-        givenLotIsConcluded
-        givenPrivateKeyIsSubmitted
-        givenLotIsDecrypted
-        givenLotIsSettled
-        givenLotProceedsAreClaimed
-    {
-        // Check the auction state
-        EncryptedMarginalPrice.AuctionData memory auctionData = _empaModule.getAuctionData(_lotId);
-        assertEq(
-            uint8(auctionData.status), uint8(EncryptedMarginalPrice.LotStatus.Settled), "status"
-        );
-        assertTrue(auctionData.proceedsClaimed, "proceedsClaimed");
+    // function test_claimProceeds()
+    //     external
+    //     givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+    //     givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
+    //     givenAuctionTypeIsEMPA
+    //     givenDerivativeTypeIsLinearVesting
+    //     givenLotIsCreated
+    //     givenLotHasStarted
+    //     givenUserHasQuoteTokenBalance(_BID_AMOUNT)
+    //     givenUserHasQuoteTokenAllowance(_BID_AMOUNT)
+    //     givenBidIsCreated(_BID_AMOUNT, _BID_AMOUNT_OUT)
+    //     givenLotIsConcluded
+    //     givenPrivateKeyIsSubmitted
+    //     givenLotIsDecrypted
+    //     givenLotIsSettled
+    //     givenLotProceedsAreClaimed
+    // {
+    //     // Check the auction state
+    //     EncryptedMarginalPrice.AuctionData memory auctionData = _empaModule.getAuctionData(_lotId);
+    //     assertEq(
+    //         uint8(auctionData.status), uint8(EncryptedMarginalPrice.LotStatus.Settled), "status"
+    //     );
+    //     assertTrue(auctionData.proceedsClaimed, "proceedsClaimed");
 
-        // Get derivative token id
-        uint256 derivativeTokenId =
-            _linearVestingModule.computeId(address(_baseToken), abi.encode(_linearVestingParams));
+    //     // Get derivative token id
+    //     uint256 derivativeTokenId =
+    //         _linearVestingModule.computeId(address(_baseToken), abi.encode(_linearVestingParams));
 
-        // Check the balances
-        assertEq(_quoteToken.balanceOf(_SELLER), _BID_AMOUNT, "seller balance");
-        assertEq(_baseToken.balanceOf(_SELLER), _LOT_CAPACITY - _BID_AMOUNT_OUT, "seller balance");
-        assertEq(
-            _baseToken.balanceOf(address(_linearVestingModule)),
-            _curatorMaxPotentialFee,
-            "linear vesting balance"
-        );
-        assertEq(
-            _linearVestingModule.balanceOf(_CURATOR, derivativeTokenId),
-            _curatorMaxPotentialFee,
-            "derivative: curator"
-        );
-    }
+    //     // Check the balances
+    //     assertEq(_quoteToken.balanceOf(_SELLER), _BID_AMOUNT, "seller balance");
+    //     assertEq(_baseToken.balanceOf(_SELLER), _LOT_CAPACITY - _BID_AMOUNT_OUT, "seller balance");
+    //     assertEq(
+    //         _baseToken.balanceOf(address(_linearVestingModule)),
+    //         _curatorMaxPotentialFee,
+    //         "linear vesting balance"
+    //     );
+    //     assertEq(
+    //         _linearVestingModule.balanceOf(_CURATOR, derivativeTokenId),
+    //         _curatorMaxPotentialFee,
+    //         "derivative: curator"
+    //     );
+    // }
 
     // claimBid
     // [X] when the bid is a partial fill

@@ -21,7 +21,7 @@ contract CallbacksTest is Test {
             onCurate: false,
             onPurchase: false,
             onBid: false,
-            onClaimProceeds: false,
+            onSettle: false,
             receiveQuoteTokens: false,
             sendBaseTokens: false
         });
@@ -49,7 +49,7 @@ contract CallbacksTest is Test {
             onCurate: false,
             onPurchase: false,
             onBid: false,
-            onClaimProceeds: false,
+            onSettle: false,
             receiveQuoteTokens: false,
             sendBaseTokens: false
         });
@@ -77,7 +77,7 @@ contract CallbacksTest is Test {
             onCurate: false,
             onPurchase: false,
             onBid: false,
-            onClaimProceeds: false,
+            onSettle: false,
             receiveQuoteTokens: false,
             sendBaseTokens: false
         });
@@ -105,7 +105,7 @@ contract CallbacksTest is Test {
             onCurate: true,
             onPurchase: false,
             onBid: false,
-            onClaimProceeds: false,
+            onSettle: false,
             receiveQuoteTokens: false,
             sendBaseTokens: false
         });
@@ -133,7 +133,7 @@ contract CallbacksTest is Test {
             onCurate: false,
             onPurchase: true,
             onBid: false,
-            onClaimProceeds: false,
+            onSettle: false,
             receiveQuoteTokens: false,
             sendBaseTokens: false
         });
@@ -161,7 +161,7 @@ contract CallbacksTest is Test {
             onCurate: false,
             onPurchase: false,
             onBid: true,
-            onClaimProceeds: false,
+            onSettle: false,
             receiveQuoteTokens: false,
             sendBaseTokens: false
         });
@@ -189,7 +189,7 @@ contract CallbacksTest is Test {
             onCurate: false,
             onPurchase: false,
             onBid: false,
-            onClaimProceeds: true,
+            onSettle: true,
             receiveQuoteTokens: false,
             sendBaseTokens: false
         });
@@ -217,7 +217,7 @@ contract CallbacksTest is Test {
             onCurate: false,
             onPurchase: false,
             onBid: false,
-            onClaimProceeds: false,
+            onSettle: false,
             receiveQuoteTokens: true,
             sendBaseTokens: false
         });
@@ -245,7 +245,7 @@ contract CallbacksTest is Test {
             onCurate: false,
             onPurchase: false,
             onBid: false,
-            onClaimProceeds: false,
+            onSettle: false,
             receiveQuoteTokens: false,
             sendBaseTokens: true
         });
@@ -276,7 +276,7 @@ contract CallbacksTest is Test {
             onCurate: false,
             onPurchase: false,
             onBid: false,
-            onClaimProceeds: false,
+            onSettle: false,
             receiveQuoteTokens: false,
             sendBaseTokens: true
         });
@@ -307,7 +307,7 @@ contract CallbacksTest is Test {
             onCurate: true,
             onPurchase: false,
             onBid: false,
-            onClaimProceeds: false,
+            onSettle: false,
             receiveQuoteTokens: false,
             sendBaseTokens: true
         });
@@ -338,7 +338,7 @@ contract CallbacksTest is Test {
             onCurate: true,
             onPurchase: false,
             onBid: false,
-            onClaimProceeds: false,
+            onSettle: false,
             receiveQuoteTokens: false,
             sendBaseTokens: true
         });
@@ -369,7 +369,7 @@ contract CallbacksTest is Test {
             onCurate: false,
             onPurchase: true,
             onBid: false,
-            onClaimProceeds: false,
+            onSettle: false,
             receiveQuoteTokens: false,
             sendBaseTokens: true
         });
@@ -431,7 +431,7 @@ contract CallbacksTest is Test {
                 onCurate: false,
                 onPurchase: false,
                 onBid: false,
-                onClaimProceeds: false,
+                onSettle: false,
                 receiveQuoteTokens: false,
                 sendBaseTokens: false
             }),
@@ -447,7 +447,7 @@ contract CallbacksTest is Test {
                 onCurate: false,
                 onPurchase: false,
                 onBid: false,
-                onClaimProceeds: false,
+                onSettle: false,
                 receiveQuoteTokens: false,
                 sendBaseTokens: false
             }),
@@ -463,7 +463,7 @@ contract CallbacksTest is Test {
                 onCurate: true,
                 onPurchase: false,
                 onBid: false,
-                onClaimProceeds: false,
+                onSettle: false,
                 receiveQuoteTokens: false,
                 sendBaseTokens: false
             }),
@@ -479,7 +479,7 @@ contract CallbacksTest is Test {
                 onCurate: false,
                 onPurchase: true,
                 onBid: false,
-                onClaimProceeds: false,
+                onSettle: false,
                 receiveQuoteTokens: false,
                 sendBaseTokens: false
             }),
@@ -495,7 +495,7 @@ contract CallbacksTest is Test {
                 onCurate: false,
                 onPurchase: false,
                 onBid: true,
-                onClaimProceeds: false,
+                onSettle: false,
                 receiveQuoteTokens: false,
                 sendBaseTokens: false
             }),
@@ -511,11 +511,11 @@ contract CallbacksTest is Test {
                 onCurate: false,
                 onPurchase: false,
                 onBid: false,
-                onClaimProceeds: true,
+                onSettle: true,
                 receiveQuoteTokens: false,
                 sendBaseTokens: false
             }),
-            permissions_.onClaimProceeds
+            permissions_.onSettle
         );
 
         // receiveQuoteTokens
@@ -527,7 +527,7 @@ contract CallbacksTest is Test {
                 onCurate: false,
                 onPurchase: false,
                 onBid: false,
-                onClaimProceeds: false,
+                onSettle: false,
                 receiveQuoteTokens: true,
                 sendBaseTokens: false
             }),
@@ -543,7 +543,7 @@ contract CallbacksTest is Test {
                 onCurate: false,
                 onPurchase: false,
                 onBid: false,
-                onClaimProceeds: false,
+                onSettle: false,
                 receiveQuoteTokens: false,
                 sendBaseTokens: true
             }),
@@ -645,7 +645,7 @@ contract CallbacksTest is Test {
         assertEq(callback.hasPermission(Callbacks.ON_CURATE_FLAG), false, "onCurate");
         assertEq(callback.hasPermission(Callbacks.ON_PURCHASE_FLAG), false, "onPurchase");
         assertEq(callback.hasPermission(Callbacks.ON_BID_FLAG), false, "onBid");
-        assertEq(callback.hasPermission(Callbacks.ON_CLAIM_PROCEEDS_FLAG), false, "onClaimProceeds");
+        assertEq(callback.hasPermission(Callbacks.ON_SETTLE_FLAG), false, "onSettle");
         assertEq(
             callback.hasPermission(Callbacks.RECEIVE_QUOTE_TOKENS_FLAG), false, "receiveQuoteTokens"
         );
@@ -661,7 +661,7 @@ contract CallbacksTest is Test {
         assertEq(callback.hasPermission(Callbacks.ON_CURATE_FLAG), false, "onCurate");
         assertEq(callback.hasPermission(Callbacks.ON_PURCHASE_FLAG), false, "onPurchase");
         assertEq(callback.hasPermission(Callbacks.ON_BID_FLAG), false, "onBid");
-        assertEq(callback.hasPermission(Callbacks.ON_CLAIM_PROCEEDS_FLAG), false, "onClaimProceeds");
+        assertEq(callback.hasPermission(Callbacks.ON_SETTLE_FLAG), false, "onSettle");
         assertEq(
             callback.hasPermission(Callbacks.RECEIVE_QUOTE_TOKENS_FLAG), false, "receiveQuoteTokens"
         );
@@ -677,7 +677,7 @@ contract CallbacksTest is Test {
         assertEq(callback.hasPermission(Callbacks.ON_CURATE_FLAG), false, "onCurate");
         assertEq(callback.hasPermission(Callbacks.ON_PURCHASE_FLAG), false, "onPurchase");
         assertEq(callback.hasPermission(Callbacks.ON_BID_FLAG), false, "onBid");
-        assertEq(callback.hasPermission(Callbacks.ON_CLAIM_PROCEEDS_FLAG), false, "onClaimProceeds");
+        assertEq(callback.hasPermission(Callbacks.ON_SETTLE_FLAG), false, "onSettle");
         assertEq(
             callback.hasPermission(Callbacks.RECEIVE_QUOTE_TOKENS_FLAG), false, "receiveQuoteTokens"
         );
@@ -693,7 +693,7 @@ contract CallbacksTest is Test {
         assertEq(callback.hasPermission(Callbacks.ON_CURATE_FLAG), true, "onCurate");
         assertEq(callback.hasPermission(Callbacks.ON_PURCHASE_FLAG), false, "onPurchase");
         assertEq(callback.hasPermission(Callbacks.ON_BID_FLAG), false, "onBid");
-        assertEq(callback.hasPermission(Callbacks.ON_CLAIM_PROCEEDS_FLAG), false, "onClaimProceeds");
+        assertEq(callback.hasPermission(Callbacks.ON_SETTLE_FLAG), false, "onSettle");
         assertEq(
             callback.hasPermission(Callbacks.RECEIVE_QUOTE_TOKENS_FLAG), false, "receiveQuoteTokens"
         );
@@ -709,7 +709,7 @@ contract CallbacksTest is Test {
         assertEq(callback.hasPermission(Callbacks.ON_CURATE_FLAG), false, "onCurate");
         assertEq(callback.hasPermission(Callbacks.ON_PURCHASE_FLAG), true, "onPurchase");
         assertEq(callback.hasPermission(Callbacks.ON_BID_FLAG), false, "onBid");
-        assertEq(callback.hasPermission(Callbacks.ON_CLAIM_PROCEEDS_FLAG), false, "onClaimProceeds");
+        assertEq(callback.hasPermission(Callbacks.ON_SETTLE_FLAG), false, "onSettle");
         assertEq(
             callback.hasPermission(Callbacks.RECEIVE_QUOTE_TOKENS_FLAG), false, "receiveQuoteTokens"
         );
@@ -725,7 +725,7 @@ contract CallbacksTest is Test {
         assertEq(callback.hasPermission(Callbacks.ON_CURATE_FLAG), false, "onCurate");
         assertEq(callback.hasPermission(Callbacks.ON_PURCHASE_FLAG), false, "onPurchase");
         assertEq(callback.hasPermission(Callbacks.ON_BID_FLAG), true, "onBid");
-        assertEq(callback.hasPermission(Callbacks.ON_CLAIM_PROCEEDS_FLAG), false, "onClaimProceeds");
+        assertEq(callback.hasPermission(Callbacks.ON_SETTLE_FLAG), false, "onSettle");
         assertEq(
             callback.hasPermission(Callbacks.RECEIVE_QUOTE_TOKENS_FLAG), false, "receiveQuoteTokens"
         );
@@ -741,7 +741,7 @@ contract CallbacksTest is Test {
         assertEq(callback.hasPermission(Callbacks.ON_CURATE_FLAG), false, "onCurate");
         assertEq(callback.hasPermission(Callbacks.ON_PURCHASE_FLAG), false, "onPurchase");
         assertEq(callback.hasPermission(Callbacks.ON_BID_FLAG), false, "onBid");
-        assertEq(callback.hasPermission(Callbacks.ON_CLAIM_PROCEEDS_FLAG), true, "onClaimProceeds");
+        assertEq(callback.hasPermission(Callbacks.ON_SETTLE_FLAG), true, "onSettle");
         assertEq(
             callback.hasPermission(Callbacks.RECEIVE_QUOTE_TOKENS_FLAG), false, "receiveQuoteTokens"
         );
@@ -757,7 +757,7 @@ contract CallbacksTest is Test {
         assertEq(callback.hasPermission(Callbacks.ON_CURATE_FLAG), false, "onCurate");
         assertEq(callback.hasPermission(Callbacks.ON_PURCHASE_FLAG), false, "onPurchase");
         assertEq(callback.hasPermission(Callbacks.ON_BID_FLAG), false, "onBid");
-        assertEq(callback.hasPermission(Callbacks.ON_CLAIM_PROCEEDS_FLAG), false, "onClaimProceeds");
+        assertEq(callback.hasPermission(Callbacks.ON_SETTLE_FLAG), false, "onSettle");
         assertEq(
             callback.hasPermission(Callbacks.RECEIVE_QUOTE_TOKENS_FLAG), true, "receiveQuoteTokens"
         );
@@ -773,7 +773,7 @@ contract CallbacksTest is Test {
         assertEq(callback.hasPermission(Callbacks.ON_CURATE_FLAG), false, "onCurate");
         assertEq(callback.hasPermission(Callbacks.ON_PURCHASE_FLAG), false, "onPurchase");
         assertEq(callback.hasPermission(Callbacks.ON_BID_FLAG), false, "onBid");
-        assertEq(callback.hasPermission(Callbacks.ON_CLAIM_PROCEEDS_FLAG), false, "onClaimProceeds");
+        assertEq(callback.hasPermission(Callbacks.ON_SETTLE_FLAG), false, "onSettle");
         assertEq(
             callback.hasPermission(Callbacks.RECEIVE_QUOTE_TOKENS_FLAG), false, "receiveQuoteTokens"
         );

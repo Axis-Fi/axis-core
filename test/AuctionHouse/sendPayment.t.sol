@@ -59,7 +59,7 @@ contract SendPaymentTest is Test, Permit2User, WithSalts {
             onCurate: false,
             onPurchase: false,
             onBid: false,
-            onClaimProceeds: false,
+            onSettle: false,
             receiveQuoteTokens: _callbackReceiveQuoteTokens,
             sendBaseTokens: false
         });

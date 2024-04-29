@@ -375,6 +375,7 @@ contract BatchAuctionHouse is IBatchAuctionHouse, AuctionHouse {
         (totalIn, totalOut, capacity, finished, auctionOutput) = module.settle(lotId_, num_);
 
         // If the settlement is complete, then proceed with payouts, refunds, and callbacks
+        // TODO return early
         if (finished) {
             // Load data for the lot
             Routing storage routing = lotRouting[lotId_];

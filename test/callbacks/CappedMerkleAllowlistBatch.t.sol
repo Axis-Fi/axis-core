@@ -56,7 +56,7 @@ contract CappedMerkleAllowlistBatchTest is Test, Permit2User, WithSalts {
             onCurate: false,
             onPurchase: false,
             onBid: true,
-            onClaimProceeds: false,
+            onSettle: false,
             receiveQuoteTokens: false,
             sendBaseTokens: false
         });

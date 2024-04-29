@@ -46,7 +46,6 @@ contract MockBatchAuctionModule is BatchAuctionModule {
     mapping(uint96 lotId => mapping(uint64 => BidClaim)) public bidClaims;
 
     mapping(uint96 lotId => LotStatus) public lotStatus;
-    mapping(uint96 lotId => bool) public lotProceedsClaimed;
 
     mapping(uint96 => bool) public settled;
 
@@ -153,20 +152,19 @@ contract MockBatchAuctionModule is BatchAuctionModule {
         lot.sold = totalOut_;
     }
 
+    /// @inheritdoc BatchAuctionModule
     function _settle(
         uint96 lotId_,
         uint256
-    ) internal override returns (uint256, uint256, bytes memory) {
+    )
+        internal
+        override
+        returns (uint256 totalIn, uint256 totalOut, bool finished, bytes memory auctionOutput)
+    {
         // Update status
         lotStatus[lotId_] = LotStatus.Settled;
 
-        return (lotData[lotId_].purchased, lotData[lotId_].sold, "");
-    }
-
-    function _claimProceeds(uint96 lotId_) internal override {
-        // Update claim status
-        lotStatus[lotId_] = LotStatus.Settled;
-        lotProceedsClaimed[lotId_] = true;
+        return (lotData[lotId_].purchased, lotData[lotId_].sold, true, "");
     }
 
     function getBid(uint96 lotId_, uint64 bidId_) external view returns (Bid memory bid_) {
@@ -208,13 +206,6 @@ contract MockBatchAuctionModule is BatchAuctionModule {
     function _revertIfLotNotSettled(uint96 lotId_) internal view virtual override {
         // Check that the lot has been settled
         if (lotStatus[lotId_] != LotStatus.Settled) {
-            revert IAuction.Auction_InvalidParams();
-        }
-    }
-
-    function _revertIfLotProceedsClaimed(uint96 lotId_) internal view virtual override {
-        // Check that the lot has not been claimed
-        if (lotProceedsClaimed[lotId_]) {
             revert IAuction.Auction_InvalidParams();
         }
     }

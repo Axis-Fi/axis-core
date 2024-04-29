@@ -109,25 +109,25 @@ contract EmpaModuleBidTest is EmpTest {
         _module.bid(_lotId, _BIDDER, _REFERRER, _BID_AMOUNT, bidData);
     }
 
-    function test_lotProceedsClaimed_reverts()
-        public
-        givenLotIsCreated
-        givenLotHasConcluded
-        givenPrivateKeyIsSubmitted
-        givenLotIsSettled
-        givenLotProceedsAreClaimed
-    {
-        // Prepare the inputs
-        bytes memory bidData = _createBidData(_BID_AMOUNT, _BID_AMOUNT_OUT);
+    // function test_lotProceedsClaimed_reverts()
+    //     public
+    //     givenLotIsCreated
+    //     givenLotHasConcluded
+    //     givenPrivateKeyIsSubmitted
+    //     givenLotIsSettled
+    //     givenLotProceedsAreClaimed
+    // {
+    //     // Prepare the inputs
+    //     bytes memory bidData = _createBidData(_BID_AMOUNT, _BID_AMOUNT_OUT);
 
-        // Expect revert
-        bytes memory err = abi.encodeWithSelector(IAuction.Auction_MarketNotActive.selector, _lotId);
-        vm.expectRevert(err);
+    //     // Expect revert
+    //     bytes memory err = abi.encodeWithSelector(IAuction.Auction_MarketNotActive.selector, _lotId);
+    //     vm.expectRevert(err);
 
-        // Call the function
-        vm.prank(address(_auctionHouse));
-        _module.bid(_lotId, _BIDDER, _REFERRER, _BID_AMOUNT, bidData);
-    }
+    //     // Call the function
+    //     vm.prank(address(_auctionHouse));
+    //     _module.bid(_lotId, _BIDDER, _REFERRER, _BID_AMOUNT, bidData);
+    // }
 
     function test_lotCancelled_reverts() public givenLotIsCreated givenLotIsCancelled {
         // Prepare the inputs

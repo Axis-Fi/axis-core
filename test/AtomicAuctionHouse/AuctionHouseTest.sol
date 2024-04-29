@@ -264,7 +264,7 @@ abstract contract AtomicAuctionHouseTest is Test, Permit2User, WithSalts {
             onCurate: false,
             onPurchase: true,
             onBid: true,
-            onClaimProceeds: false,
+            onSettle: false,
             receiveQuoteTokens: false,
             sendBaseTokens: false
         });
@@ -341,7 +341,7 @@ abstract contract AtomicAuctionHouseTest is Test, Permit2User, WithSalts {
             onCurate: true,
             onPurchase: true,
             onBid: true,
-            onClaimProceeds: true,
+            onSettle: true,
             receiveQuoteTokens: _callbackReceiveQuoteTokens,
             sendBaseTokens: _callbackSendBaseTokens
         });

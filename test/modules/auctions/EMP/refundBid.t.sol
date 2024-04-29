@@ -229,26 +229,26 @@ contract EmpaModuleRefundBidTest is EmpTest {
         _module.refundBid(_lotId, _bidId, 0, _BIDDER);
     }
 
-    function test_lotProceedsClaimed_reverts()
-        external
-        givenLotIsCreated
-        givenLotHasStarted
-        givenBidIsCreated(2e18, 1e18)
-        givenLotHasConcluded
-        givenPrivateKeyIsSubmitted
-        givenLotIsDecrypted
-        givenLotIsSettled
-        givenLotProceedsAreClaimed
-    {
-        // Expect revert
-        bytes memory err =
-            abi.encodeWithSelector(EncryptedMarginalPrice.Auction_WrongState.selector, _lotId);
-        vm.expectRevert(err);
+    // function test_lotProceedsClaimed_reverts()
+    //     external
+    //     givenLotIsCreated
+    //     givenLotHasStarted
+    //     givenBidIsCreated(2e18, 1e18)
+    //     givenLotHasConcluded
+    //     givenPrivateKeyIsSubmitted
+    //     givenLotIsDecrypted
+    //     givenLotIsSettled
+    //     givenLotProceedsAreClaimed
+    // {
+    //     // Expect revert
+    //     bytes memory err =
+    //         abi.encodeWithSelector(EncryptedMarginalPrice.Auction_WrongState.selector, _lotId);
+    //     vm.expectRevert(err);
 
-        // Call the function
-        vm.prank(address(_auctionHouse));
-        _module.refundBid(_lotId, _bidId, 0, _BIDDER);
-    }
+    //     // Call the function
+    //     vm.prank(address(_auctionHouse));
+    //     _module.refundBid(_lotId, _bidId, 0, _BIDDER);
+    // }
 
     function test_callerIsNotParent_reverts()
         external

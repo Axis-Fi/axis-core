@@ -84,6 +84,5 @@ contract EmpaModuleCancelAuctionTest is EmpTest {
         assertEq(
             uint8(auctionData.status), uint8(EncryptedMarginalPrice.LotStatus.Settled), "status"
         );
-        assertTrue(auctionData.proceedsClaimed, "proceedsClaimed");
     }
 }

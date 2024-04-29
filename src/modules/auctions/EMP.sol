@@ -939,7 +939,7 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
 
             // totalIn and totalOut are not set since the auction does not clear
 
-            return (totalIn_, totalOut_, auctionOutput_);
+            return (totalIn_, totalOut_, result.finished, auctionOutput_);
         }
 
         // Auction can be settled at the marginal price if we reach this point
