@@ -95,5 +95,13 @@ interface IBatchAuction is IAuction {
     function settle(
         uint96 lotId_,
         uint256 num_
-    ) external returns (uint256 totalIn, uint256 totalOut, uint256 capacity, bool finished, bytes memory auctionOutput);
+    )
+        external
+        returns (
+            uint256 totalIn,
+            uint256 totalOut,
+            uint256 capacity,
+            bool finished,
+            bytes memory auctionOutput
+        );
 }

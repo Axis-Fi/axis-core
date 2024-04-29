@@ -182,7 +182,13 @@ abstract contract BatchAuctionModule is IBatchAuction, AuctionModule {
         virtual
         override
         onlyInternal
-        returns (uint256 totalIn, uint256 totalOut, uint256 capacity, bool finished, bytes memory auctionOutput)
+        returns (
+            uint256 totalIn,
+            uint256 totalOut,
+            uint256 capacity,
+            bool finished,
+            bytes memory auctionOutput
+        )
     {
         // Standard validation
         _revertIfLotInvalid(lotId_);
@@ -218,7 +224,10 @@ abstract contract BatchAuctionModule is IBatchAuction, AuctionModule {
     function _settle(
         uint96 lotId_,
         uint256 num_
-    ) internal virtual returns (uint256 totalIn, uint256 totalOut, bool finished, bytes memory auctionOutput);
+    )
+        internal
+        virtual
+        returns (uint256 totalIn, uint256 totalOut, bool finished, bytes memory auctionOutput);
 
     // ========== MODIFIERS ========== //
 

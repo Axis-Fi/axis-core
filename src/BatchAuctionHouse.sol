@@ -381,7 +381,8 @@ contract BatchAuctionHouse is IBatchAuctionHouse, AuctionHouse {
             FeeData storage feeData = lotFees[lotId_];
 
             // Calculate the curator fee and allocate the fees to be claimed
-            uint256 curatorPayout = _calculatePayoutFees(feeData.curated, feeData.curatorFee, totalOut);
+            uint256 curatorPayout =
+                _calculatePayoutFees(feeData.curated, feeData.curatorFee, totalOut);
 
             // If the curator payout is not zero, allocate it
             if (curatorPayout > 0) {
