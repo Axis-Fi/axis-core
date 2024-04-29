@@ -11,7 +11,7 @@ import {EmpTest} from "test/modules/auctions/EMP/EMPTest.sol";
 contract EmpaModuleBidTest is EmpTest {
     uint256 internal constant _BID_AMOUNT = 2e18;
     uint256 internal constant _BID_AMOUNT_OUT = 1e18;
-    uint256 internal constant _BID_AMOUNT_BELOW_MIN = 1e15;
+    uint256 internal constant _BID_AMOUNT_BELOW_MIN = 1e14;
 
     uint256 internal constant _LOT_CAPACITY_OVERFLOW = type(uint256).max - 10;
 
@@ -154,7 +154,7 @@ contract EmpaModuleBidTest is EmpTest {
         _module.bid(_lotId, _BIDDER, _REFERRER, _BID_AMOUNT, bidData);
     }
 
-    function test_amountOutLessThanMinimumBidSize_reverts()
+    function test_amountLessThanMinimumBidSize_reverts()
         public
         givenLotIsCreated
         givenLotHasStarted
@@ -171,7 +171,7 @@ contract EmpaModuleBidTest is EmpTest {
         _module.bid(_lotId, _BIDDER, _REFERRER, _BID_AMOUNT_BELOW_MIN, bidData);
     }
 
-    function test_amountOutLessThanMinimumBidSize_quoteTokenDecimalsLarger_reverts()
+    function test_amountLessThanMinimumBidSize_quoteTokenDecimalsLarger_reverts()
         public
         givenQuoteTokenDecimals(17)
         givenBaseTokenDecimals(13)
@@ -194,7 +194,7 @@ contract EmpaModuleBidTest is EmpTest {
         );
     }
 
-    function test_amountOutLessThanMinimumBidSize_quoteTokenDecimalsSmaller_reverts()
+    function test_amountLessThanMinimumBidSize_quoteTokenDecimalsSmaller_reverts()
         public
         givenQuoteTokenDecimals(13)
         givenBaseTokenDecimals(17)
@@ -272,29 +272,5 @@ contract EmpaModuleBidTest is EmpTest {
 
         EncryptedMarginalPrice.AuctionData memory auctionData = _getAuctionData(_lotId);
         assertEq(auctionData.nextBidId, 2, "nextBidId");
-    }
-
-    function test_givenMaximumLotCapacity_reverts()
-        public
-        givenMinimumPrice(1)
-        givenMinimumBidPercentage(100)
-        givenLotCapacity(_LOT_CAPACITY_OVERFLOW)
-        givenLotIsCreated
-        givenLotHasStarted
-    {
-        // Prepare the inputs
-        bytes memory bidData = _createBidData(1e22, type(uint256).max - 1e24);
-
-        // Expect revert
-        bytes memory err = abi.encodeWithSelector(IAuction.Auction_AmountLessThanMinimum.selector);
-        vm.expectRevert(err);
-
-        // This test demonstrates that the capacity expended variable cannot overflow due to a high lot capacity and high bid amounts.
-        // For capacity expended to overflow uint256, the bid (n - 1) must be less than the lot capacity, and bid n must be greater than uint256 max.
-        // However, under such circumstances, the largest possible bid (uint96 max = 2^96 - 1 = 7.9228162514e28) would be less than the minimum bid amount (1.1579208924e57), so the capacity overflow is not possible.
-
-        // Call the function
-        vm.prank(address(_auctionHouse));
-        _module.bid(_lotId, _BIDDER, _REFERRER, _BID_AMOUNT_BELOW_MIN, bidData);
     }
 }

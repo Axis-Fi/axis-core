@@ -26,7 +26,7 @@ contract LinearVestingEMPAIntegrationTest is BatchAuctionHouseTest {
     EncryptedMarginalPrice.AuctionDataParams internal _auctionDataParams;
     uint256 internal constant _MIN_PRICE = 1e18;
     uint24 internal constant _MIN_FILL_PERCENT = 25_000; // 25%
-    uint24 internal constant _MIN_BID_PERCENT = 1000; // 1%
+    uint256 internal constant _MIN_BID_SIZE = 1e17; // 0.1 quote tokens
 
     LinearVesting.VestingParams internal _linearVestingParams;
     uint48 internal constant _VESTING_START = 1_704_882_344; // 2024-01-10
@@ -58,7 +58,7 @@ contract LinearVestingEMPAIntegrationTest is BatchAuctionHouseTest {
         _auctionDataParams = EncryptedMarginalPrice.AuctionDataParams({
             minPrice: _MIN_PRICE,
             minFillPercent: _MIN_FILL_PERCENT,
-            minBidPercent: _MIN_BID_PERCENT,
+            minBidSize: _MIN_BID_SIZE,
             publicKey: _auctionPublicKey
         });
         _auctionParams.implParams = abi.encode(_auctionDataParams);

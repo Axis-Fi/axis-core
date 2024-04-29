@@ -855,10 +855,7 @@ contract EmpaModuleSettleTest is EmpTest {
                 uint256 price = Math.mulDivUp(uint256(bid.amount), _BASE_SCALE, amountOut);
 
                 // Determine if the bid should be inserted into the queue
-                if (
-                    amountOut == 0 || amountOut < _minBidSize || price < _MIN_PRICE
-                        || price > type(uint96).max
-                ) {
+                if (amountOut == 0 || price < _MIN_PRICE || price > type(uint96).max) {
                     // Skip this bid
                     continue;
                 }

@@ -85,7 +85,7 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
     /// @param         proceedsClaimed     Whether the proceeds have been claimed
     /// @param         marginalPrice       The marginal price of the auction (determined at settlement, blank before)
     /// @param         minFilled           The minimum amount of the lot that must be filled
-    /// @param         minBidSize          The minimum size of a bid
+    /// @param         minBidSize          The minimum size of a bid in quote tokens
     /// @param         publicKey           The public key used to encrypt bids (a point on the alt_bn128 curve from the generator point (1,2))
     /// @param         privateKey          The private key used to decrypt bids (not provided until after the auction ends)
     /// @param         bidIds              The list of bid IDs to decrypt in order of submission, excluding cancelled bids
@@ -104,10 +104,16 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
         uint64[] bidIds; // slots 9+
     }
 
+    /// @notice         Parameters that are used to set auction-specific data
+    ///
+    /// @param          minPrice            The minimum price (in quote tokens) that a bid must fulfill
+    /// @param          minFillPercent      The minimum percentage of capacity that the lot must fill in order to settle
+    /// @param          minBidSize          The minimum size of a bid in quote tokens
+    /// @param          publicKey           The public key used to encrypt bids
     struct AuctionDataParams {
         uint256 minPrice;
         uint24 minFillPercent;
-        uint24 minBidPercent;
+        uint256 minBidSize;
         Point publicKey;
     }
 
@@ -152,10 +158,6 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
     }
 
     // ========== STATE VARIABLES ========== //
-
-    /// @notice     Constant for percentages
-    /// @dev        1% = 1_000 or 1e3. 100% = 100_000 or 1e5.
-    uint24 internal constant _MIN_BID_PERCENT = 40; // 0.04% or a max of 2,500 winning bids
 
     /// @notice     Time period after auction conclusion where bidders cannot refund bids
     uint48 public dedicatedSettlePeriod;
@@ -211,7 +213,7 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
     ///             - The parameters cannot be decoded into the correct format
     ///             - The minimum price is zero
     ///             - The minimum fill percent is greater than 100%
-    ///             - The minimum bid percent is less than the minimum or greater than 100%
+    ///             - The minimum bid size is zero or greater than the max uint96 value
     ///             - The public key is not valid
     function _auction(uint96 lotId_, Lot memory lot_, bytes memory params_) internal override {
         // Decode implementation params
@@ -225,11 +227,8 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
         // minFillPercent must be less than or equal to 100%
         if (implParams.minFillPercent > _ONE_HUNDRED_PERCENT) revert Auction_InvalidParams();
 
-        // minBidPercent must be greater than or equal to the global min and less than or equal to 100%
-        if (
-            implParams.minBidPercent < _MIN_BID_PERCENT
-                || implParams.minBidPercent > _ONE_HUNDRED_PERCENT
-        ) {
+        // minBidSize must be less than or equal to the max uint96 value and not zero
+        if (implParams.minBidSize > type(uint96).max || implParams.minBidSize == 0) {
             revert Auction_InvalidParams();
         }
 
@@ -242,8 +241,7 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
         // We round up to be conservative with the minimums
         data.minFilled =
             Math.fullMulDivUp(lot_.capacity, implParams.minFillPercent, _ONE_HUNDRED_PERCENT);
-        data.minBidSize =
-            Math.fullMulDivUp(lot_.capacity, implParams.minBidPercent, _ONE_HUNDRED_PERCENT);
+        data.minBidSize = implParams.minBidSize;
         data.publicKey = implParams.publicKey;
         data.nextBidId = 1;
 
@@ -306,13 +304,8 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
         // Amount must be less than the max uint96 value for casting
         if (amount_ > type(uint96).max) revert Auction_InvalidParams();
 
-        // Amount must be at least the minimum bid size at the minimum price
-        uint256 minAmount = Math.mulDiv(
-            uint256(auctionData[lotId_].minBidSize),
-            uint256(auctionData[lotId_].minPrice),
-            10 ** lotData[lotId_].baseTokenDecimals
-        );
-        if (amount_ < minAmount) revert Auction_AmountLessThanMinimum();
+        // Amount must be at least the minimum bid size
+        if (amount_ < auctionData[lotId_].minBidSize) revert Auction_AmountLessThanMinimum();
 
         // Check that the bid public key is a valid point for the encryption library
         if (!ECIES.isValid(bidPubKey)) revert Auction_InvalidKey();
@@ -691,8 +684,9 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
         // Set bid status to decrypted
         bidData.status = BidStatus.Decrypted;
 
-        // Only store the decrypt if the amount out is greater than or equal to the minimum bid size
-        if (amountOut > 0 && amountOut >= auctionData[lotId_].minBidSize) {
+        // Only store the decrypt if the amount out is greater than or equal to zero (meaning the amount out was in range)
+        // The size of the bid is checked against a minimum bid size in quote tokens on submission
+        if (amountOut > 0) {
             // Only store the decrypt if the price does not overflow and is at least the minimum price
             // We don't need to check for a zero bid price, because the smallest possible bid price is 1, due to the use of mulDivUp
             // 1 * 10^6 / type(uint96).max = 1

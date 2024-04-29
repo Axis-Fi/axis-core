@@ -430,7 +430,8 @@ contract EmpaModuleRefundBidTest is EmpTest {
         givenLotIsCreated
         givenLotHasStarted
     {
-        uint256 bidAmount = bound(bidAmount_, _minBidAmount, type(uint96).max);
+        uint256 bidAmount =
+            bound(bidAmount_, _scaleQuoteTokenAmount(_MIN_BID_SIZE), type(uint96).max);
 
         // Create the bid
         _bidId = _createBid(bidAmount, 1e18);
@@ -450,7 +451,8 @@ contract EmpaModuleRefundBidTest is EmpTest {
         givenLotIsCreated
         givenLotHasStarted
     {
-        uint256 bidAmount = bound(bidAmount_, _minBidAmount, type(uint96).max);
+        uint256 bidAmount =
+            bound(bidAmount_, _scaleQuoteTokenAmount(_MIN_BID_SIZE), type(uint96).max);
 
         // Create the bid
         _bidId = _createBid(bidAmount, 1e18);
@@ -470,7 +472,8 @@ contract EmpaModuleRefundBidTest is EmpTest {
         givenLotIsCreated
         givenLotHasStarted
     {
-        uint256 bidAmount = bound(bidAmount_, _minBidAmount, type(uint96).max);
+        uint256 bidAmount =
+            bound(bidAmount_, _scaleQuoteTokenAmount(_MIN_BID_SIZE), type(uint96).max);
 
         // Create the bid
         _bidId = _createBid(bidAmount, 1e18);
