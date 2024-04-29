@@ -23,11 +23,11 @@ contract EmpaModuleBidTest is EmpTest {
     //  [X] it reverts
     // [X] when the lot has concluded
     //  [X] it reverts
+    // [ ] when the lot is in the settlement period
+    //  [ ] it reverts
     // [X] when the lot has been settled
     //  [X] it reverts
     // [X] when the lot has been cancelled
-    //  [X] it reverts
-    // [X] when the lot proceeds have been claimed
     //  [X] it reverts
     // [X] when the auction data is in an invalid format
     //  [X] it reverts
@@ -108,26 +108,6 @@ contract EmpaModuleBidTest is EmpTest {
         vm.prank(address(_auctionHouse));
         _module.bid(_lotId, _BIDDER, _REFERRER, _BID_AMOUNT, bidData);
     }
-
-    // function test_lotProceedsClaimed_reverts()
-    //     public
-    //     givenLotIsCreated
-    //     givenLotHasConcluded
-    //     givenPrivateKeyIsSubmitted
-    //     givenLotIsSettled
-    //     givenLotProceedsAreClaimed
-    // {
-    //     // Prepare the inputs
-    //     bytes memory bidData = _createBidData(_BID_AMOUNT, _BID_AMOUNT_OUT);
-
-    //     // Expect revert
-    //     bytes memory err = abi.encodeWithSelector(IAuction.Auction_MarketNotActive.selector, _lotId);
-    //     vm.expectRevert(err);
-
-    //     // Call the function
-    //     vm.prank(address(_auctionHouse));
-    //     _module.bid(_lotId, _BIDDER, _REFERRER, _BID_AMOUNT, bidData);
-    // }
 
     function test_lotCancelled_reverts() public givenLotIsCreated givenLotIsCancelled {
         // Prepare the inputs

@@ -25,7 +25,7 @@ contract EmpaModuleRefundBidTest is EmpTest {
     //  [X] given it is within the settle period
     //   [X] it reverts
     //  [X] it refunds the bid amount and updates the bid status
-    // [ ] given the lot's private key has been submitted
+    // [X] given the lot's private key has been submitted
     //  [X] given it is within the settle period
     //   [X] it reverts
     //  [X] given it is after the settle period
@@ -228,27 +228,6 @@ contract EmpaModuleRefundBidTest is EmpTest {
         vm.prank(address(_auctionHouse));
         _module.refundBid(_lotId, _bidId, 0, _BIDDER);
     }
-
-    // function test_lotProceedsClaimed_reverts()
-    //     external
-    //     givenLotIsCreated
-    //     givenLotHasStarted
-    //     givenBidIsCreated(2e18, 1e18)
-    //     givenLotHasConcluded
-    //     givenPrivateKeyIsSubmitted
-    //     givenLotIsDecrypted
-    //     givenLotIsSettled
-    //     givenLotProceedsAreClaimed
-    // {
-    //     // Expect revert
-    //     bytes memory err =
-    //         abi.encodeWithSelector(EncryptedMarginalPrice.Auction_WrongState.selector, _lotId);
-    //     vm.expectRevert(err);
-
-    //     // Call the function
-    //     vm.prank(address(_auctionHouse));
-    //     _module.refundBid(_lotId, _bidId, 0, _BIDDER);
-    // }
 
     function test_callerIsNotParent_reverts()
         external
