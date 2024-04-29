@@ -14,7 +14,6 @@ eval "$curenv"
 # Get command-line arguments
 MODE=$1
 PREFIX=$2
-SALT_KEY=$3
 
 # Check that the mode is "atomic" or "batch"
 if [ "$MODE" != "atomic" ] && [ "$MODE" != "batch" ]
