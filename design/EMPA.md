@@ -316,13 +316,30 @@ sequenceDiagram
   UI-->User: Display transaction result and update auction status
 ```
 
-### Auction Settlement Part 2: Evaluate Winners
+### Auction Settlement Part 2: Evaluate Winners and Distribute Proceeds
 
-The final step to settle an auction is to evaluate the sorted, decrypted bids to determine the marginal price for the auction and distribute funds to the winners. If the auction did not reach the minimum price or minimum fill capacity, then the auction is settled without winners, and users can claim refunds. If there are winners, the settlement is stored for later. The settlement function is open and can be called by anyone after the decryption process is complete.
+The final step to settle an auction is to determining the winning bids.
+
+This includes:
+
+- Evaluating the winning bids
+- Sending the proceeds (quote tokens) to the seller
+- Sending the payout (base tokens) to the curator
+  - If there is no derivative, the curator payout is allocated and can be later claimed through `claimRewards()`.
+  - Otherwise if there is a derivative, the required number of derivative tokens are minted to the curator. This involves a transfer from the BatchAuctionHouse to the derivative module.
+- Refunding any unused payout (base tokens) to the seller
+
+Winning bids are determined in the following manner:
+
+Evaluate the sorted, decrypted bids to determine the marginal price for the auction and distribute funds to the winners. If the auction did not reach the minimum price or minimum fill capacity, then the auction is settled without winners, and users can claim refunds. If there are winners, the settlement is stored for later. The settlement function is open and can be called by anyone after the decryption process is complete.
 
 What could cause a loss of funds?
 
-- ✅ As of [#140](https://github.com/Axis-Fi/moonraker/pull/140), there are no transfers in the `settle()` function, which greatly reduces the scenarios that could result in funds being bricked.
+- ✅ Revert from fee-on-transfer quote token: this is already checked during bidding when transferring the quote token from the bidder to the BatchAuctionHouse.
+- ✅ Revert from fee-on-transfer base token: this is already checked during auction creation when transferring the base token from the seller to the BatchAuctionHouse.
+- ✅ Revert-on-zero quote/base token: the transfer amount is checked before calling `transfer()`
+- ❌ Seller or callback on blacklist: if the seller or callback is added to the quote or base token's blacklist after the auction is created and funded, the transfer of the quote or base tokens would fail. However, this would not result in a permanent loss of the bidders' funds, as the `abort()` function on `IBatchAuctionHouse` can be used as an escape hatch.
+- ✅ Curator on blacklist: there are no direct transfers to the curator in this function, so it would not be affected.
 - ✅ Due to filtering in the decryption stage, bids are guaranteed to be within the bounds of `uint96` and have a derived price that is also within the bounds of `uint96`.
 - ✅ Overflow in summation variables: the variables that track the sum of quote tokens in and base tokens out could overflow if there are enough bids. This is mitigated by using `uint256` for the summation variables.
 
@@ -333,6 +350,8 @@ sequenceDiagram
   participant UI
   participant BatchAuctionHouse
   participant EMPA
+  participant DerivativeModule
+  participant Seller
 
   User->>UI: Navigate to Auction page
   UI-->User: Display auction status
@@ -355,63 +374,19 @@ sequenceDiagram
           EMPA-->BatchAuctionHouse: Return settlement output to BatchAuctionHouse
       deactivate EMPA
       BatchAuctionHouse->>BatchAuctionHouse: Cache the protocol and referrer fee rates
+      BatchAuctionHouse->>Seller: Transfer quote token proceeds to seller (or callback) (minus fees)
+      Note right of BatchAuctionHouse: The remaining base tokens are the prefunded capacity and curator payout, minus any pending bid claims
+      BatchAuctionHouse->>Seller: Transfer remaining base tokens to seller (or callback)
+      alt seller specified onSettle callback
+        BatchAuctionHouse->>Seller: Call onSettle callback
+        Seller->>Seller: Execute callback logic
+      end
+      alt derivative is defined
+        BatchAuctionHouse->>DerivativeModule: mint payout to curator as derivative
+      else
+        BatchAuctionHouse->>BatchAuctionHouse: allocate base token rewards for curator
+      end
       BatchAuctionHouse-->UI: Return transaction result
-  deactivate BatchAuctionHouse
-  UI-->User: Display transaction result and update auction status
-```
-
-## Seller Claims Proceeds
-
-After settlement, the seller of the auction can claim the proceeds. This involves sending the proceeds (quote tokens) to the seller, and refunding any unused base token capacity.
-
-Additionally, the curator payout is handled in one of two ways:
-
-- If there is no derivative, the curator payout is allocated and can be later claimed through `claimRewards()`.
-- Otherwise if there is a derivative, the required number of derivative tokens are minted to the curator. This involves a transfer from the BatchAuctionHouse to the derivative module.
-
-What could cause a loss of funds?
-
-- ✅ Revert from fee-on-transfer quote token: this is already checked during bidding when transferring the quote token from the bidder to the BatchAuctionHouse.
-- ✅ Revert from fee-on-transfer base token: this is already checked during auction creation when transferring the base token from the seller to the BatchAuctionHouse.
-- ✅ Revert-on-zero quote/base token: the transfer amount is checked before calling `transfer()`
-- ❌ Seller or callback on blacklist: if the seller or callback is added to the quote or base token's blacklist after the auction is created and funded, the transfer of the quote or base tokens would fail.
-- ✅ Curator on blacklist: there are no direct transfers to the curator in this function, so it would not be affected.
-
-```mermaid
-sequenceDiagram
-  autoNumber
-  participant User
-  participant UI
-  participant BatchAuctionHouse
-  participant EMPA
-  participant DerivativeModule
-  participant Seller
-
-  User->>UI: Navigate to Auction page
-  UI-->User: Display auction status
-  User->>UI: Click "Claim Proceeds" button
-  UI-->User: Display transaction for signing
-  User->>UI: Sign transaction to claim auction proceeds
-  UI->>BatchAuctionHouse: Send transaction to blockchain
-  activate BatchAuctionHouse
-    BatchAuctionHouse->>BatchAuctionHouse: Validate auction status
-    BatchAuctionHouse->>EMPA: Call claimProceeds(lotId)
-    activate EMPA
-      Note over EMPA: The auction must have been settled, and the proceeds not yet claimed
-      EMPA->>EMPA: Validate auction status
-    deactivate EMPA
-    BatchAuctionHouse->>Seller: Transfer quote token proceeds to seller (or callback) (minus fees)
-    Note right of BatchAuctionHouse: The remaining base tokens are the prefunded capacity and curator payout, minus any pending bid claims
-    BatchAuctionHouse->>Seller: Transfer remaining base tokens to seller (or callback)
-    alt seller specified callback for proceeds
-      BatchAuctionHouse->>Seller: Call onClaimProceeds callback
-      Seller->>Seller: Execute callback logic
-    end
-    alt derivative is defined
-      BatchAuctionHouse->>DerivativeModule: mint payout to curator as derivative
-    else
-      BatchAuctionHouse->>BatchAuctionHouse: allocate base token rewards for curator
-    end
   deactivate BatchAuctionHouse
   UI-->User: Display transaction result and update auction status
 ```
