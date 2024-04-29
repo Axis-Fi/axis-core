@@ -102,6 +102,12 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
         uint64[] bidIds; // slots 9+
     }
 
+    /// @notice         Parameters that are used to set auction-specific data
+    ///
+    /// @param          minPrice            The minimum price (in quote tokens) that a bid must fulfill
+    /// @param          minFillPercent      The minimum percentage of capacity that the lot must fill in order to settle
+    /// @param          minBidSize          The minimum size of a bid in quote tokens
+    /// @param          publicKey           The public key used to encrypt bids
     struct AuctionDataParams {
         uint256 minPrice;
         uint24 minFillPercent;
@@ -205,7 +211,7 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
     ///             - The parameters cannot be decoded into the correct format
     ///             - The minimum price is zero
     ///             - The minimum fill percent is greater than 100%
-    ///             - The minimum bid size is greater than the max uint96 value
+    ///             - The minimum bid size is zero or greater than the max uint96 value
     ///             - The public key is not valid
     function _auction(uint96 lotId_, Lot memory lot_, bytes memory params_) internal override {
         // Decode implementation params

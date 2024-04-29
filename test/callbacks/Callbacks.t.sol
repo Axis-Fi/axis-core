@@ -7,14 +7,23 @@ import {ICallback} from "src/interfaces/ICallback.sol";
 import {MockCallback} from "test/callbacks/MockCallback.sol";
 
 import {Test} from "forge-std/Test.sol";
+import {WithSalts} from "test/lib/WithSalts.sol";
 
-contract CallbacksTest is Test {
+contract CallbacksTest is Test, WithSalts {
     using Callbacks for ICallback;
 
-    address internal constant _AUCTION_HOUSE = address(0x1);
-    address internal constant _SELLER = address(0x2);
+    address internal constant _AUCTION_HOUSE = address(0x000000000000000000000000000000000000000A);
+
+    function _getMockCallbackSalt(Callbacks.Permissions memory permissions_)
+        internal
+        returns (bytes32)
+    {
+        bytes memory args = abi.encode(_AUCTION_HOUSE, permissions_);
+        return _getTestSalt("MockCallback", type(MockCallback).creationCode, args);
+    }
 
     function _allFalseSalt() internal returns (bytes32, Callbacks.Permissions memory) {
+        // 00000000 - 0x00
         Callbacks.Permissions memory permissions = Callbacks.Permissions({
             onCreate: false,
             onCancel: false,
@@ -26,23 +35,11 @@ contract CallbacksTest is Test {
             sendBaseTokens: false
         });
 
-        // // 00000000 = 0x00
-        // // cast create2 -s 00 -i $(cat ./bytecode/MockCallback00.bin)
-        // bytes memory bytecode = abi.encodePacked(
-        //     type(MockCallback).creationCode,
-        //     abi.encode(_AUCTION_HOUSE, permissions, _SELLER)
-        // );
-        // vm.writeFile(
-        //     "./bytecode/MockCallback00.bin",
-        //     vm.toString(bytecode)
-        // );
-
-        return (
-            bytes32(0x6274afc3961fb1fd4c1fc9ea6b09fee8682f3834d237bfbe08f18dd482f859e5), permissions
-        );
+        return (_getMockCallbackSalt(permissions), permissions);
     }
 
     function _onCreateSalt() internal returns (bytes32, Callbacks.Permissions memory) {
+        // 10000000 = 0x80
         Callbacks.Permissions memory permissions = Callbacks.Permissions({
             onCreate: true,
             onCancel: false,
@@ -54,23 +51,11 @@ contract CallbacksTest is Test {
             sendBaseTokens: false
         });
 
-        // // 10000000 = 0x80
-        // // cast create2 -s 80 -i $(cat ./bytecode/MockCallback80.bin)
-        // bytes memory bytecode = abi.encodePacked(
-        //     type(MockCallback).creationCode,
-        //     abi.encode(_AUCTION_HOUSE, permissions, _SELLER)
-        // );
-        // vm.writeFile(
-        //     "./bytecode/MockCallback80.bin",
-        //     vm.toString(bytecode)
-        // );
-
-        return (
-            bytes32(0xc950537943697bd7a8b1ea4f9d5dee17ead88f1941822672cd7ba50f6a48346b), permissions
-        );
+        return (_getMockCallbackSalt(permissions), permissions);
     }
 
     function _onCancelSalt() internal returns (bytes32, Callbacks.Permissions memory) {
+        // 01000000 = 0x40
         Callbacks.Permissions memory permissions = Callbacks.Permissions({
             onCreate: false,
             onCancel: true,
@@ -82,23 +67,11 @@ contract CallbacksTest is Test {
             sendBaseTokens: false
         });
 
-        // // 01000000 = 0x40
-        // // cast create2 -s 40 -i $(cat ./bytecode/MockCallback40.bin)
-        // bytes memory bytecode = abi.encodePacked(
-        //     type(MockCallback).creationCode,
-        //     abi.encode(_AUCTION_HOUSE, permissions, _SELLER)
-        // );
-        // vm.writeFile(
-        //     "./bytecode/MockCallback40.bin",
-        //     vm.toString(bytecode)
-        // );
-
-        return (
-            bytes32(0xcffeb355ea15c46babdec92cc6744d0ead33efd4fdf52708a1adc815e7295864), permissions
-        );
+        return (_getMockCallbackSalt(permissions), permissions);
     }
 
     function _onCurateSalt() internal returns (bytes32, Callbacks.Permissions memory) {
+        // 00100000 = 0x20
         Callbacks.Permissions memory permissions = Callbacks.Permissions({
             onCreate: false,
             onCancel: false,
@@ -110,23 +83,11 @@ contract CallbacksTest is Test {
             sendBaseTokens: false
         });
 
-        // // 00100000 = 0x20
-        // // cast create2 -s 20 -i $(cat ./bytecode/MockCallback20.bin)
-        // bytes memory bytecode = abi.encodePacked(
-        //     type(MockCallback).creationCode,
-        //     abi.encode(_AUCTION_HOUSE, permissions, _SELLER)
-        // );
-        // vm.writeFile(
-        //     "./bytecode/MockCallback20.bin",
-        //     vm.toString(bytecode)
-        // );
-
-        return (
-            bytes32(0xfc1a363591cfc7264e926cde5d34c9d8089cb0657680cb5888e3dfd44733e699), permissions
-        );
+        return (_getMockCallbackSalt(permissions), permissions);
     }
 
     function _onPurchaseSalt() internal returns (bytes32, Callbacks.Permissions memory) {
+        // 00010000 = 0x10
         Callbacks.Permissions memory permissions = Callbacks.Permissions({
             onCreate: false,
             onCancel: false,
@@ -138,23 +99,11 @@ contract CallbacksTest is Test {
             sendBaseTokens: false
         });
 
-        // // 00010000 = 0x10
-        // // cast create2 -s 10 -i $(cat ./bytecode/MockCallback10.bin)
-        // bytes memory bytecode = abi.encodePacked(
-        //     type(MockCallback).creationCode,
-        //     abi.encode(_AUCTION_HOUSE, permissions, _SELLER)
-        // );
-        // vm.writeFile(
-        //     "./bytecode/MockCallback10.bin",
-        //     vm.toString(bytecode)
-        // );
-
-        return (
-            bytes32(0x953c7dd5dc479cf1b0b0178e10ec218436ed4e738234a5b88d70b8fd4d7ad4d8), permissions
-        );
+        return (_getMockCallbackSalt(permissions), permissions);
     }
 
     function _onBidSalt() internal returns (bytes32, Callbacks.Permissions memory) {
+        // 00001000 = 0x08
         Callbacks.Permissions memory permissions = Callbacks.Permissions({
             onCreate: false,
             onCancel: false,
@@ -166,20 +115,7 @@ contract CallbacksTest is Test {
             sendBaseTokens: false
         });
 
-        // // 00001000 = 0x08
-        // // cast create2 -s 08 -i $(cat ./bytecode/MockCallback08.bin)
-        // bytes memory bytecode = abi.encodePacked(
-        //     type(MockCallback).creationCode,
-        //     abi.encode(_AUCTION_HOUSE, permissions, _SELLER)
-        // );
-        // vm.writeFile(
-        //     "./bytecode/MockCallback08.bin",
-        //     vm.toString(bytecode)
-        // );
-
-        return (
-            bytes32(0xd466651502b03fc17fe2da3ae976e2704eb4ba6cc1f8773797c6d126e19236f7), permissions
-        );
+        return (_getMockCallbackSalt(permissions), permissions);
     }
 
     function _onSettleSalt() internal returns (bytes32, Callbacks.Permissions memory) {
@@ -194,23 +130,11 @@ contract CallbacksTest is Test {
             sendBaseTokens: false
         });
 
-        // // 00000100 = 0x04
-        // // cast create2 -s 04 -i $(cat ./bytecode/MockCallback04.bin)
-        // bytes memory bytecode = abi.encodePacked(
-        //     type(MockCallback).creationCode,
-        //     abi.encode(_AUCTION_HOUSE, permissions, _SELLER)
-        // );
-        // vm.writeFile(
-        //     "./bytecode/MockCallback04.bin",
-        //     vm.toString(bytecode)
-        // );
-
-        return (
-            bytes32(0x21885aedd62feb2a6500b3a5ac4f8e54fae00c959070c3f45bce4828e7d3d9c9), permissions
-        );
+        return (_getMockCallbackSalt(permissions), permissions);
     }
 
     function _receiveQuoteTokensSalt() internal returns (bytes32, Callbacks.Permissions memory) {
+        // 00000010 = 0x02
         Callbacks.Permissions memory permissions = Callbacks.Permissions({
             onCreate: false,
             onCancel: false,
@@ -222,23 +146,11 @@ contract CallbacksTest is Test {
             sendBaseTokens: false
         });
 
-        // // 00000010 = 0x02
-        // // cast create2 -s 02 -i $(cat ./bytecode/MockCallback02.bin)
-        // bytes memory bytecode = abi.encodePacked(
-        //     type(MockCallback).creationCode,
-        //     abi.encode(_AUCTION_HOUSE, permissions, _SELLER)
-        // );
-        // vm.writeFile(
-        //     "./bytecode/MockCallback02.bin",
-        //     vm.toString(bytecode)
-        // );
-
-        return (
-            bytes32(0xe9922fa3f41d7ba26a8bc3be2865413fa6912f5434f21ebc2f380a0cc34d78c5), permissions
-        );
+        return (_getMockCallbackSalt(permissions), permissions);
     }
 
     function _sendBaseTokensSalt() internal returns (bytes32, Callbacks.Permissions memory) {
+        // 00000001 = 0x01
         Callbacks.Permissions memory permissions = Callbacks.Permissions({
             onCreate: false,
             onCancel: false,
@@ -250,26 +162,14 @@ contract CallbacksTest is Test {
             sendBaseTokens: true
         });
 
-        // // 00000001 = 0x01
-        // // cast create2 -s 01 -i $(cat ./bytecode/MockCallback01.bin)
-        // bytes memory bytecode = abi.encodePacked(
-        //     type(MockCallback).creationCode,
-        //     abi.encode(_AUCTION_HOUSE, permissions, _SELLER)
-        // );
-        // vm.writeFile(
-        //     "./bytecode/MockCallback01.bin",
-        //     vm.toString(bytecode)
-        // );
-
-        return (
-            bytes32(0x3f7e7126965c5f52a65d963ad59b2817e87f47da8546d247f8f4da68bc193faf), permissions
-        );
+        return (_getMockCallbackSalt(permissions), permissions);
     }
 
     function _sendBaseTokens_onCreateSalt()
         internal
         returns (bytes32, Callbacks.Permissions memory)
     {
+        // 10000001 = 0x81
         Callbacks.Permissions memory permissions = Callbacks.Permissions({
             onCreate: true,
             onCancel: false,
@@ -281,26 +181,14 @@ contract CallbacksTest is Test {
             sendBaseTokens: true
         });
 
-        // // 10000001 = 0x81
-        // // cast create2 -s 81 -i $(cat ./bytecode/MockCallback81.bin)
-        // bytes memory bytecode = abi.encodePacked(
-        //     type(MockCallback).creationCode,
-        //     abi.encode(_AUCTION_HOUSE, permissions, _SELLER)
-        // );
-        // vm.writeFile(
-        //     "./bytecode/MockCallback81.bin",
-        //     vm.toString(bytecode)
-        // );
-
-        return (
-            bytes32(0xc1c22ca901065122c85e4591b8623252bf9dd0d643b60ec265f6087cf5ebf401), permissions
-        );
+        return (_getMockCallbackSalt(permissions), permissions);
     }
 
     function _sendBaseTokens_onCurateSalt()
         internal
         returns (bytes32, Callbacks.Permissions memory)
     {
+        // 00100001 = 0x21
         Callbacks.Permissions memory permissions = Callbacks.Permissions({
             onCreate: false,
             onCancel: false,
@@ -312,26 +200,14 @@ contract CallbacksTest is Test {
             sendBaseTokens: true
         });
 
-        // // 00100001 = 0x21
-        // // cast create2 -s 21 -i $(cat ./bytecode/MockCallback21.bin)
-        // bytes memory bytecode = abi.encodePacked(
-        //     type(MockCallback).creationCode,
-        //     abi.encode(_AUCTION_HOUSE, permissions, _SELLER)
-        // );
-        // vm.writeFile(
-        //     "./bytecode/MockCallback21.bin",
-        //     vm.toString(bytecode)
-        // );
-
-        return (
-            bytes32(0x55d3cd48197db867bfa6af6e5b4fbbfa0409474280b65c20167439a9bb7517ef), permissions
-        );
+        return (_getMockCallbackSalt(permissions), permissions);
     }
 
     function _sendBaseTokens_onCreate_onCurateSalt()
         internal
         returns (bytes32, Callbacks.Permissions memory)
     {
+        // 10100001 = 0xA1
         Callbacks.Permissions memory permissions = Callbacks.Permissions({
             onCreate: true,
             onCancel: false,
@@ -343,26 +219,14 @@ contract CallbacksTest is Test {
             sendBaseTokens: true
         });
 
-        // // 10100001 = 0xA1
-        // // cast create2 -s A1 -i $(cat ./bytecode/MockCallbackA1.bin)
-        // bytes memory bytecode = abi.encodePacked(
-        //     type(MockCallback).creationCode,
-        //     abi.encode(_AUCTION_HOUSE, permissions, _SELLER)
-        // );
-        // vm.writeFile(
-        //     "./bytecode/MockCallbackA1.bin",
-        //     vm.toString(bytecode)
-        // );
-
-        return (
-            bytes32(0xd159fcd099011fac21f0862cc529408a6c71b33de5b30ad7f5ec23cccb427074), permissions
-        );
+        return (_getMockCallbackSalt(permissions), permissions);
     }
 
     function _sendBaseTokens_onPurchaseSalt()
         internal
         returns (bytes32, Callbacks.Permissions memory)
     {
+        // 00010001 = 0x11
         Callbacks.Permissions memory permissions = Callbacks.Permissions({
             onCreate: false,
             onCancel: false,
@@ -374,20 +238,7 @@ contract CallbacksTest is Test {
             sendBaseTokens: true
         });
 
-        // // 00010001 = 0x11
-        // // cast create2 -s 11 -i $(cat ./bytecode/MockCallback11.bin)
-        // bytes memory bytecode = abi.encodePacked(
-        //     type(MockCallback).creationCode,
-        //     abi.encode(_AUCTION_HOUSE, permissions, _SELLER)
-        // );
-        // vm.writeFile(
-        //     "./bytecode/MockCallback11.bin",
-        //     vm.toString(bytecode)
-        // );
-
-        return (
-            bytes32(0x4c8bc75484e126bddb16f2d35bbff0e5dd93997899b06646f3f18cabf6371a58), permissions
-        );
+        return (_getMockCallbackSalt(permissions), permissions);
     }
 
     // validateCallbacksPermissions
@@ -630,7 +481,7 @@ contract CallbacksTest is Test {
         Callbacks.Permissions memory permissions_
     ) internal returns (ICallback) {
         vm.startBroadcast();
-        MockCallback callback = new MockCallback{salt: salt_}(_AUCTION_HOUSE, permissions_, _SELLER);
+        MockCallback callback = new MockCallback{salt: salt_}(_AUCTION_HOUSE, permissions_);
         vm.stopBroadcast();
 
         return callback;

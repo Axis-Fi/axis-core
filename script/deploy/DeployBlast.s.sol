@@ -22,11 +22,11 @@ contract DeployBlast is Deploy {
         super._setUp(chain_, deployFilePath_);
 
         // Cache required variables
-        _envBlast = _envAddress("BLAST");
+        _envBlast = _envAddress("axis.BLAST");
         console2.log("Blast:", _envBlast);
-        _envWeth = _envAddress("BLAST_WETH");
+        _envWeth = _envAddress("axis.BLAST_WETH");
         console2.log("WETH:", _envWeth);
-        _envUsdb = _envAddress("BLAST_USDB");
+        _envUsdb = _envAddress("axis.BLAST_USDB");
         console2.log("USDB:", _envUsdb);
     }
 
