@@ -360,24 +360,22 @@ contract BatchAuctionHouse is IBatchAuctionHouse, AuctionHouse {
         external
         override
         nonReentrant
-        returns (uint256 totalIn, uint256 totalOut, bytes memory auctionOutput)
+        returns (uint256 totalIn, uint256 totalOut, bool finished, bytes memory auctionOutput)
     {
         // Validation
         _isLotValid(lotId_);
 
-        // Settle the lot on the auction module and get the winning bids
-        // Reverts if the auction cannot be settled yet
-        BatchAuctionModule module = getBatchModuleForId(lotId_);
-
         // Settle the auction
         uint256 capacity;
         {
-            bool finished;
+            // Settle the lot on the auction module and get the winning bids
+            // Reverts if the auction cannot be settled yet
+            BatchAuctionModule module = getBatchModuleForId(lotId_);
             (totalIn, totalOut, capacity, finished, auctionOutput) = module.settle(lotId_, num_);
 
             // Return early if not finished
             if (finished == false) {
-                return (totalIn, totalOut, auctionOutput);
+                return (totalIn, totalOut, finished, auctionOutput);
             }
         }
 

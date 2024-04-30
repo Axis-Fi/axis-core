@@ -78,12 +78,15 @@ interface IBatchAuctionHouse is IAuctionHouse {
     /// @param      callbackData_   Custom data provided to the onSettle callback
     /// @return     totalIn         Total amount of quote tokens from bids that were filled
     /// @return     totalOut        Total amount of base tokens paid out to winning bids
+    /// @return     finished        Boolean indicating if the settlement was completed
     /// @return     auctionOutput   Custom data returned by the auction module
     function settle(
         uint96 lotId_,
         uint256 num_,
         bytes calldata callbackData_
-    ) external returns (uint256 totalIn, uint256 totalOut, bytes memory auctionOutput);
+    )
+        external
+        returns (uint256 totalIn, uint256 totalOut, bool finished, bytes memory auctionOutput);
 
     /// @notice    Abort a batch auction that cannot be settled, refunding the seller and allowing bidders to claim refunds
     /// @dev       This function can be called by anyone. Care should be taken to ensure proper logic is in place to prevent calling when not desired.
