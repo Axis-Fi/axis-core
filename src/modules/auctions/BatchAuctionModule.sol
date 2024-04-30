@@ -230,6 +230,14 @@ abstract contract BatchAuctionModule is IBatchAuction, AuctionModule {
         returns (uint256 totalIn, uint256 totalOut, bool finished, bytes memory auctionOutput);
 
     /// @inheritdoc IBatchAuction
+    /// @dev        Implements a basic abort function that:
+    ///             - Validates the lot id and state
+    ///             - Calls the implementation-specific function
+    ///
+    ///             This function reverts if:
+    ///             - The lot id is invalid
+    ///             - The lot has not concluded
+    ///             - The lot is settled (after which it cannot be aborted)
     function abort(uint96 lotId_) external virtual override onlyInternal {
         // Standard validation
         _revertIfLotInvalid(lotId_);

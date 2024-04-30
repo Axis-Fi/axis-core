@@ -986,6 +986,18 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
         return (totalIn_, totalOut_, result.finished, auctionOutput_);
     }
 
+    /// @inheritdoc BatchAuctionModule
+    /// @dev        This function performs the following:
+    ///             - Validates state
+    ///             - Sets the lot status to Settled
+    ///             - Sets the marginal price to the maximum value
+    ///
+    ///             This function assumes:
+    ///             - The lot ID has been validated
+    ///             - The auction is not settled
+    ///
+    ///             This function reverts if:
+    ///             - The dedicated settle period has not passed
     function _abort(uint96 lotId_) internal override {
         // Validate that the dedicated settle period has passed
         _revertIfDedicatedSettlePeriod(lotId_);
@@ -993,7 +1005,7 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
         // Set the auction status to settled
         auctionData[lotId_].status = LotStatus.Settled;
 
-        // Set the marginal price to the maximum value
+        // Set the marginal price to the maximum value, so that all bids will be refunded
         auctionData[lotId_].marginalPrice = type(uint256).max;
     }
 
