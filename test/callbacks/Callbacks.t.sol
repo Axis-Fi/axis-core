@@ -30,7 +30,7 @@ contract CallbacksTest is Test, WithSalts {
             onCurate: false,
             onPurchase: false,
             onBid: false,
-            onClaimProceeds: false,
+            onSettle: false,
             receiveQuoteTokens: false,
             sendBaseTokens: false
         });
@@ -46,7 +46,7 @@ contract CallbacksTest is Test, WithSalts {
             onCurate: false,
             onPurchase: false,
             onBid: false,
-            onClaimProceeds: false,
+            onSettle: false,
             receiveQuoteTokens: false,
             sendBaseTokens: false
         });
@@ -62,7 +62,7 @@ contract CallbacksTest is Test, WithSalts {
             onCurate: false,
             onPurchase: false,
             onBid: false,
-            onClaimProceeds: false,
+            onSettle: false,
             receiveQuoteTokens: false,
             sendBaseTokens: false
         });
@@ -78,7 +78,7 @@ contract CallbacksTest is Test, WithSalts {
             onCurate: true,
             onPurchase: false,
             onBid: false,
-            onClaimProceeds: false,
+            onSettle: false,
             receiveQuoteTokens: false,
             sendBaseTokens: false
         });
@@ -94,7 +94,7 @@ contract CallbacksTest is Test, WithSalts {
             onCurate: false,
             onPurchase: true,
             onBid: false,
-            onClaimProceeds: false,
+            onSettle: false,
             receiveQuoteTokens: false,
             sendBaseTokens: false
         });
@@ -110,7 +110,7 @@ contract CallbacksTest is Test, WithSalts {
             onCurate: false,
             onPurchase: false,
             onBid: true,
-            onClaimProceeds: false,
+            onSettle: false,
             receiveQuoteTokens: false,
             sendBaseTokens: false
         });
@@ -118,15 +118,14 @@ contract CallbacksTest is Test, WithSalts {
         return (_getMockCallbackSalt(permissions), permissions);
     }
 
-    function _onClaimProceedsSalt() internal returns (bytes32, Callbacks.Permissions memory) {
-        // 00000100 = 0x04
+    function _onSettleSalt() internal returns (bytes32, Callbacks.Permissions memory) {
         Callbacks.Permissions memory permissions = Callbacks.Permissions({
             onCreate: false,
             onCancel: false,
             onCurate: false,
             onPurchase: false,
             onBid: false,
-            onClaimProceeds: true,
+            onSettle: true,
             receiveQuoteTokens: false,
             sendBaseTokens: false
         });
@@ -142,7 +141,7 @@ contract CallbacksTest is Test, WithSalts {
             onCurate: false,
             onPurchase: false,
             onBid: false,
-            onClaimProceeds: false,
+            onSettle: false,
             receiveQuoteTokens: true,
             sendBaseTokens: false
         });
@@ -158,7 +157,7 @@ contract CallbacksTest is Test, WithSalts {
             onCurate: false,
             onPurchase: false,
             onBid: false,
-            onClaimProceeds: false,
+            onSettle: false,
             receiveQuoteTokens: false,
             sendBaseTokens: true
         });
@@ -177,7 +176,7 @@ contract CallbacksTest is Test, WithSalts {
             onCurate: false,
             onPurchase: false,
             onBid: false,
-            onClaimProceeds: false,
+            onSettle: false,
             receiveQuoteTokens: false,
             sendBaseTokens: true
         });
@@ -196,7 +195,7 @@ contract CallbacksTest is Test, WithSalts {
             onCurate: true,
             onPurchase: false,
             onBid: false,
-            onClaimProceeds: false,
+            onSettle: false,
             receiveQuoteTokens: false,
             sendBaseTokens: true
         });
@@ -215,7 +214,7 @@ contract CallbacksTest is Test, WithSalts {
             onCurate: true,
             onPurchase: false,
             onBid: false,
-            onClaimProceeds: false,
+            onSettle: false,
             receiveQuoteTokens: false,
             sendBaseTokens: true
         });
@@ -234,7 +233,7 @@ contract CallbacksTest is Test, WithSalts {
             onCurate: false,
             onPurchase: true,
             onBid: false,
-            onClaimProceeds: false,
+            onSettle: false,
             receiveQuoteTokens: false,
             sendBaseTokens: true
         });
@@ -249,7 +248,7 @@ contract CallbacksTest is Test, WithSalts {
     // [X] onCurate is true
     // [X] onPurchase is true
     // [X] onBid is true
-    // [X] onClaimProceeds is true
+    // [X] onSettle is true
     // [X] receiveQuoteTokens is true
     // [X] sendBaseTokens is true
 
@@ -283,7 +282,7 @@ contract CallbacksTest is Test, WithSalts {
                 onCurate: false,
                 onPurchase: false,
                 onBid: false,
-                onClaimProceeds: false,
+                onSettle: false,
                 receiveQuoteTokens: false,
                 sendBaseTokens: false
             }),
@@ -299,7 +298,7 @@ contract CallbacksTest is Test, WithSalts {
                 onCurate: false,
                 onPurchase: false,
                 onBid: false,
-                onClaimProceeds: false,
+                onSettle: false,
                 receiveQuoteTokens: false,
                 sendBaseTokens: false
             }),
@@ -315,7 +314,7 @@ contract CallbacksTest is Test, WithSalts {
                 onCurate: true,
                 onPurchase: false,
                 onBid: false,
-                onClaimProceeds: false,
+                onSettle: false,
                 receiveQuoteTokens: false,
                 sendBaseTokens: false
             }),
@@ -331,7 +330,7 @@ contract CallbacksTest is Test, WithSalts {
                 onCurate: false,
                 onPurchase: true,
                 onBid: false,
-                onClaimProceeds: false,
+                onSettle: false,
                 receiveQuoteTokens: false,
                 sendBaseTokens: false
             }),
@@ -347,14 +346,14 @@ contract CallbacksTest is Test, WithSalts {
                 onCurate: false,
                 onPurchase: false,
                 onBid: true,
-                onClaimProceeds: false,
+                onSettle: false,
                 receiveQuoteTokens: false,
                 sendBaseTokens: false
             }),
             permissions_.onBid
         );
 
-        // onClaimProceeds
+        // onSettle
         _assertValidateCallbacksPermission(
             callback_,
             Callbacks.Permissions({
@@ -363,11 +362,11 @@ contract CallbacksTest is Test, WithSalts {
                 onCurate: false,
                 onPurchase: false,
                 onBid: false,
-                onClaimProceeds: true,
+                onSettle: true,
                 receiveQuoteTokens: false,
                 sendBaseTokens: false
             }),
-            permissions_.onClaimProceeds
+            permissions_.onSettle
         );
 
         // receiveQuoteTokens
@@ -379,7 +378,7 @@ contract CallbacksTest is Test, WithSalts {
                 onCurate: false,
                 onPurchase: false,
                 onBid: false,
-                onClaimProceeds: false,
+                onSettle: false,
                 receiveQuoteTokens: true,
                 sendBaseTokens: false
             }),
@@ -395,7 +394,7 @@ contract CallbacksTest is Test, WithSalts {
                 onCurate: false,
                 onPurchase: false,
                 onBid: false,
-                onClaimProceeds: false,
+                onSettle: false,
                 receiveQuoteTokens: false,
                 sendBaseTokens: true
             }),
@@ -445,8 +444,8 @@ contract CallbacksTest is Test, WithSalts {
         _assertValidateCallbacksPermissions(callback, permissions);
     }
 
-    function test_validateCallbacksPermissions_onClaimProceeds() public {
-        (bytes32 salt, Callbacks.Permissions memory permissions) = _onClaimProceedsSalt();
+    function test_validateCallbacksPermissions_onSettle() public {
+        (bytes32 salt, Callbacks.Permissions memory permissions) = _onSettleSalt();
         ICallback callback = _createCallback(salt, permissions);
 
         _assertValidateCallbacksPermissions(callback, permissions);
@@ -497,7 +496,7 @@ contract CallbacksTest is Test, WithSalts {
         assertEq(callback.hasPermission(Callbacks.ON_CURATE_FLAG), false, "onCurate");
         assertEq(callback.hasPermission(Callbacks.ON_PURCHASE_FLAG), false, "onPurchase");
         assertEq(callback.hasPermission(Callbacks.ON_BID_FLAG), false, "onBid");
-        assertEq(callback.hasPermission(Callbacks.ON_CLAIM_PROCEEDS_FLAG), false, "onClaimProceeds");
+        assertEq(callback.hasPermission(Callbacks.ON_SETTLE_FLAG), false, "onSettle");
         assertEq(
             callback.hasPermission(Callbacks.RECEIVE_QUOTE_TOKENS_FLAG), false, "receiveQuoteTokens"
         );
@@ -513,7 +512,7 @@ contract CallbacksTest is Test, WithSalts {
         assertEq(callback.hasPermission(Callbacks.ON_CURATE_FLAG), false, "onCurate");
         assertEq(callback.hasPermission(Callbacks.ON_PURCHASE_FLAG), false, "onPurchase");
         assertEq(callback.hasPermission(Callbacks.ON_BID_FLAG), false, "onBid");
-        assertEq(callback.hasPermission(Callbacks.ON_CLAIM_PROCEEDS_FLAG), false, "onClaimProceeds");
+        assertEq(callback.hasPermission(Callbacks.ON_SETTLE_FLAG), false, "onSettle");
         assertEq(
             callback.hasPermission(Callbacks.RECEIVE_QUOTE_TOKENS_FLAG), false, "receiveQuoteTokens"
         );
@@ -529,7 +528,7 @@ contract CallbacksTest is Test, WithSalts {
         assertEq(callback.hasPermission(Callbacks.ON_CURATE_FLAG), false, "onCurate");
         assertEq(callback.hasPermission(Callbacks.ON_PURCHASE_FLAG), false, "onPurchase");
         assertEq(callback.hasPermission(Callbacks.ON_BID_FLAG), false, "onBid");
-        assertEq(callback.hasPermission(Callbacks.ON_CLAIM_PROCEEDS_FLAG), false, "onClaimProceeds");
+        assertEq(callback.hasPermission(Callbacks.ON_SETTLE_FLAG), false, "onSettle");
         assertEq(
             callback.hasPermission(Callbacks.RECEIVE_QUOTE_TOKENS_FLAG), false, "receiveQuoteTokens"
         );
@@ -545,7 +544,7 @@ contract CallbacksTest is Test, WithSalts {
         assertEq(callback.hasPermission(Callbacks.ON_CURATE_FLAG), true, "onCurate");
         assertEq(callback.hasPermission(Callbacks.ON_PURCHASE_FLAG), false, "onPurchase");
         assertEq(callback.hasPermission(Callbacks.ON_BID_FLAG), false, "onBid");
-        assertEq(callback.hasPermission(Callbacks.ON_CLAIM_PROCEEDS_FLAG), false, "onClaimProceeds");
+        assertEq(callback.hasPermission(Callbacks.ON_SETTLE_FLAG), false, "onSettle");
         assertEq(
             callback.hasPermission(Callbacks.RECEIVE_QUOTE_TOKENS_FLAG), false, "receiveQuoteTokens"
         );
@@ -561,7 +560,7 @@ contract CallbacksTest is Test, WithSalts {
         assertEq(callback.hasPermission(Callbacks.ON_CURATE_FLAG), false, "onCurate");
         assertEq(callback.hasPermission(Callbacks.ON_PURCHASE_FLAG), true, "onPurchase");
         assertEq(callback.hasPermission(Callbacks.ON_BID_FLAG), false, "onBid");
-        assertEq(callback.hasPermission(Callbacks.ON_CLAIM_PROCEEDS_FLAG), false, "onClaimProceeds");
+        assertEq(callback.hasPermission(Callbacks.ON_SETTLE_FLAG), false, "onSettle");
         assertEq(
             callback.hasPermission(Callbacks.RECEIVE_QUOTE_TOKENS_FLAG), false, "receiveQuoteTokens"
         );
@@ -577,15 +576,15 @@ contract CallbacksTest is Test, WithSalts {
         assertEq(callback.hasPermission(Callbacks.ON_CURATE_FLAG), false, "onCurate");
         assertEq(callback.hasPermission(Callbacks.ON_PURCHASE_FLAG), false, "onPurchase");
         assertEq(callback.hasPermission(Callbacks.ON_BID_FLAG), true, "onBid");
-        assertEq(callback.hasPermission(Callbacks.ON_CLAIM_PROCEEDS_FLAG), false, "onClaimProceeds");
+        assertEq(callback.hasPermission(Callbacks.ON_SETTLE_FLAG), false, "onSettle");
         assertEq(
             callback.hasPermission(Callbacks.RECEIVE_QUOTE_TOKENS_FLAG), false, "receiveQuoteTokens"
         );
         assertEq(callback.hasPermission(Callbacks.SEND_BASE_TOKENS_FLAG), false, "sendBaseTokens");
     }
 
-    function test_hasPermission_onClaimProceeds() public {
-        (bytes32 salt, Callbacks.Permissions memory permissions) = _onClaimProceedsSalt();
+    function test_hasPermission_onSettle() public {
+        (bytes32 salt, Callbacks.Permissions memory permissions) = _onSettleSalt();
         ICallback callback = _createCallback(salt, permissions);
 
         assertEq(callback.hasPermission(Callbacks.ON_CREATE_FLAG), false, "onCreate");
@@ -593,7 +592,7 @@ contract CallbacksTest is Test, WithSalts {
         assertEq(callback.hasPermission(Callbacks.ON_CURATE_FLAG), false, "onCurate");
         assertEq(callback.hasPermission(Callbacks.ON_PURCHASE_FLAG), false, "onPurchase");
         assertEq(callback.hasPermission(Callbacks.ON_BID_FLAG), false, "onBid");
-        assertEq(callback.hasPermission(Callbacks.ON_CLAIM_PROCEEDS_FLAG), true, "onClaimProceeds");
+        assertEq(callback.hasPermission(Callbacks.ON_SETTLE_FLAG), true, "onSettle");
         assertEq(
             callback.hasPermission(Callbacks.RECEIVE_QUOTE_TOKENS_FLAG), false, "receiveQuoteTokens"
         );
@@ -609,7 +608,7 @@ contract CallbacksTest is Test, WithSalts {
         assertEq(callback.hasPermission(Callbacks.ON_CURATE_FLAG), false, "onCurate");
         assertEq(callback.hasPermission(Callbacks.ON_PURCHASE_FLAG), false, "onPurchase");
         assertEq(callback.hasPermission(Callbacks.ON_BID_FLAG), false, "onBid");
-        assertEq(callback.hasPermission(Callbacks.ON_CLAIM_PROCEEDS_FLAG), false, "onClaimProceeds");
+        assertEq(callback.hasPermission(Callbacks.ON_SETTLE_FLAG), false, "onSettle");
         assertEq(
             callback.hasPermission(Callbacks.RECEIVE_QUOTE_TOKENS_FLAG), true, "receiveQuoteTokens"
         );
@@ -625,7 +624,7 @@ contract CallbacksTest is Test, WithSalts {
         assertEq(callback.hasPermission(Callbacks.ON_CURATE_FLAG), false, "onCurate");
         assertEq(callback.hasPermission(Callbacks.ON_PURCHASE_FLAG), false, "onPurchase");
         assertEq(callback.hasPermission(Callbacks.ON_BID_FLAG), false, "onBid");
-        assertEq(callback.hasPermission(Callbacks.ON_CLAIM_PROCEEDS_FLAG), false, "onClaimProceeds");
+        assertEq(callback.hasPermission(Callbacks.ON_SETTLE_FLAG), false, "onSettle");
         assertEq(
             callback.hasPermission(Callbacks.RECEIVE_QUOTE_TOKENS_FLAG), false, "receiveQuoteTokens"
         );
@@ -696,8 +695,8 @@ contract CallbacksTest is Test, WithSalts {
         assertEq(callback.isValidCallbacksAddress(), true, "invalid");
     }
 
-    function test_isValidCallbacksAddress_onClaimProceeds() public {
-        (bytes32 salt, Callbacks.Permissions memory permissions) = _onClaimProceedsSalt();
+    function test_isValidCallbacksAddress_onSettle() public {
+        (bytes32 salt, Callbacks.Permissions memory permissions) = _onSettleSalt();
         ICallback callback = _createCallback(salt, permissions);
 
         assertEq(callback.isValidCallbacksAddress(), true, "invalid");

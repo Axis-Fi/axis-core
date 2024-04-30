@@ -56,7 +56,7 @@ contract CappedMerkleAllowlistAtomicTest is Test, Permit2User, WithSalts {
             onCurate: false,
             onPurchase: true,
             onBid: false,
-            onClaimProceeds: false,
+            onSettle: false,
             receiveQuoteTokens: false,
             sendBaseTokens: false
         });

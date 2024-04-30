@@ -8,7 +8,7 @@ import {Point} from "src/lib/ECIES.sol";
 
 import {EmpTest} from "test/modules/auctions/EMP/EMPTest.sol";
 
-contract EmpaModuleBidTest is EmpTest {
+contract EmpBidTest is EmpTest {
     uint256 internal constant _BID_AMOUNT = 2e18;
     uint256 internal constant _BID_AMOUNT_OUT = 1e18;
     uint256 internal constant _BID_AMOUNT_BELOW_MIN = 1e14;
@@ -23,11 +23,13 @@ contract EmpaModuleBidTest is EmpTest {
     //  [X] it reverts
     // [X] when the lot has concluded
     //  [X] it reverts
+    // [X] when the lot is in the settlement period
+    //  [X] it reverts
     // [X] when the lot has been settled
     //  [X] it reverts
-    // [X] when the lot has been cancelled
+    // [X] when the lot has been aborted
     //  [X] it reverts
-    // [X] when the lot proceeds have been claimed
+    // [X] when the lot has been cancelled
     //  [X] it reverts
     // [X] when the auction data is in an invalid format
     //  [X] it reverts
@@ -90,6 +92,24 @@ contract EmpaModuleBidTest is EmpTest {
         _module.bid(_lotId, _BIDDER, _REFERRER, _BID_AMOUNT, bidData);
     }
 
+    function test_lotInSettlePeriod_reverts()
+        public
+        givenLotIsCreated
+        givenLotHasConcluded
+        givenDuringLotSettlePeriod
+    {
+        // Prepare the inputs
+        bytes memory bidData = _createBidData(_BID_AMOUNT, _BID_AMOUNT_OUT);
+
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(IAuction.Auction_MarketNotActive.selector, _lotId);
+        vm.expectRevert(err);
+
+        // Call the function
+        vm.prank(address(_auctionHouse));
+        _module.bid(_lotId, _BIDDER, _REFERRER, _BID_AMOUNT, bidData);
+    }
+
     function test_lotSettled_reverts()
         public
         givenLotIsCreated
@@ -109,13 +129,11 @@ contract EmpaModuleBidTest is EmpTest {
         _module.bid(_lotId, _BIDDER, _REFERRER, _BID_AMOUNT, bidData);
     }
 
-    function test_lotProceedsClaimed_reverts()
+    function test_lotAborted_reverts()
         public
         givenLotIsCreated
-        givenLotHasConcluded
-        givenPrivateKeyIsSubmitted
-        givenLotIsSettled
-        givenLotProceedsAreClaimed
+        givenLotSettlePeriodHasPassed
+        givenLotIsAborted
     {
         // Prepare the inputs
         bytes memory bidData = _createBidData(_BID_AMOUNT, _BID_AMOUNT_OUT);

@@ -12,7 +12,7 @@ import {EmpTest} from "test/modules/auctions/EMP/EMPTest.sol";
 
 import {console2} from "forge-std/console2.sol";
 
-contract EmpaModuleSettleTest is EmpTest {
+contract EmpSettleTest is EmpTest {
     using BidEncoding for bytes32;
 
     uint256 internal constant _BID_PRICE_BELOW_ONE_AMOUNT = 1e18;
@@ -57,13 +57,16 @@ contract EmpaModuleSettleTest is EmpTest {
     //   [X] it reverts
     // [X] when the lot has been settled already
     //   [X] it reverts
+    // [X] when the lot has been aborted
+    //   [X] it reverts
     // [X] given the lot has been cancelled
-    //  [X] it reverts
-    // [X] when the lot proceeds have been claimed
     //  [X] it reverts
     // [X] when the caller is not the parent
     //   [X] it reverts
-
+    // [X] when during the settle period
+    //   [X] it settles
+    // [X] when the settle period has passed
+    //   [X] it settles
     // [X] when the filled amount is less than the lot minimum
     //  [X] it handles different token decimals
     //  [X] it returns no amounts in and out, and no partial fill
@@ -120,15 +123,28 @@ contract EmpaModuleSettleTest is EmpTest {
 
     function _settle(uint256 bidNum_)
         internal
-        returns (uint256 totalIn_, uint256 totalOut_, bytes memory auctionOutput_)
+        returns (
+            uint256 totalIn_,
+            uint256 totalOut_,
+            uint256 capacity_,
+            bool finished_,
+            bytes memory auctionOutput_
+        )
     {
         vm.prank(address(_auctionHouse));
-        (totalIn_, totalOut_, auctionOutput_) = _module.settle(_lotId, bidNum_);
+        (totalIn_, totalOut_, capacity_, finished_, auctionOutput_) =
+            _module.settle(_lotId, bidNum_);
     }
 
     function _settle()
         internal
-        returns (uint256 totalIn_, uint256 totalOut_, bytes memory auctionOutput_)
+        returns (
+            uint256 totalIn_,
+            uint256 totalOut_,
+            uint256 capacity_,
+            bool finished_,
+            bytes memory auctionOutput_
+        )
     {
         return _settle(_BID_NUM);
     }
@@ -136,6 +152,8 @@ contract EmpaModuleSettleTest is EmpTest {
     function _assertSettlement(
         uint256 totalIn_,
         uint256 totalOut_,
+        uint256 capacity_,
+        bool finished_,
         bytes memory auctionOutput_
     ) internal {
         // Output is only set if settlement is completed
@@ -143,6 +161,8 @@ contract EmpaModuleSettleTest is EmpTest {
         // Check settlement output
         assertEq(totalIn_, _expectedSettlementComplete ? _expectedTotalIn : 0, "totalIn");
         assertEq(totalOut_, _expectedSettlementComplete ? _expectedTotalOut : 0, "totalOut");
+        assertEq(capacity_, _scaleBaseTokenAmount(_LOT_CAPACITY), "capacity");
+        assertEq(finished_, _expectedSettlementComplete, "finished");
         assertEq(
             auctionOutput_,
             _expectedSettlementComplete ? _expectedAuctionOutput : bytes(""),
@@ -1128,29 +1148,27 @@ contract EmpaModuleSettleTest is EmpTest {
         _settle();
     }
 
-    function test_lotCancelled_reverts() external givenLotIsCreated givenLotIsCancelled {
+    function test_lotAborted_reverts()
+        external
+        givenLotIsCreated
+        givenLotHasStarted
+        givenBidIsCreated(_BID_PRICE_TWO_SIZE_TWO_AMOUNT, _BID_PRICE_TWO_SIZE_TWO_AMOUNT_OUT)
+        givenLotHasConcluded
+        givenLotSettlePeriodHasPassed
+        givenLotIsAborted
+    {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(IAuction.Auction_MarketNotActive.selector, _lotId);
+        bytes memory err =
+            abi.encodeWithSelector(EncryptedMarginalPrice.Auction_WrongState.selector, _lotId);
         vm.expectRevert(err);
 
         // Call function
         _settle();
     }
 
-    function test_lotProceedsAreClaimed_reverts()
-        external
-        givenLotIsCreated
-        givenLotHasStarted
-        givenBidIsCreated(_BID_PRICE_TWO_SIZE_TWO_AMOUNT, _BID_PRICE_TWO_SIZE_TWO_AMOUNT_OUT)
-        givenLotHasConcluded
-        givenPrivateKeyIsSubmitted
-        givenLotIsDecrypted
-        givenLotIsSettled
-        givenLotProceedsAreClaimed
-    {
+    function test_lotCancelled_reverts() external givenLotIsCreated givenLotIsCancelled {
         // Expect revert
-        bytes memory err =
-            abi.encodeWithSelector(EncryptedMarginalPrice.Auction_WrongState.selector, _lotId);
+        bytes memory err = abi.encodeWithSelector(IAuction.Auction_MarketNotActive.selector, _lotId);
         vm.expectRevert(err);
 
         // Call function
@@ -1184,7 +1202,13 @@ contract EmpaModuleSettleTest is EmpTest {
         givenLotIsDecrypted
     {
         // Call function
-        (uint256 totalIn, uint256 totalOut, bytes memory auctionOutput) = _settle();
+        (
+            uint256 totalIn,
+            uint256 totalOut,
+            uint256 capacity,
+            bool finished,
+            bytes memory auctionOutput
+        ) = _settle();
 
         // Validate auction data
         EncryptedMarginalPrice.AuctionData memory auctionData = _getAuctionData(_lotId);
@@ -1194,7 +1218,7 @@ contract EmpaModuleSettleTest is EmpTest {
         );
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
         _assertLot();
     }
 
@@ -1210,7 +1234,13 @@ contract EmpaModuleSettleTest is EmpTest {
         givenLotIsDecrypted
     {
         // Call function
-        (uint256 totalIn, uint256 totalOut, bytes memory auctionOutput) = _settle();
+        (
+            uint256 totalIn,
+            uint256 totalOut,
+            uint256 capacity,
+            bool finished,
+            bytes memory auctionOutput
+        ) = _settle();
 
         // Validate auction data
         EncryptedMarginalPrice.AuctionData memory auctionData = _getAuctionData(_lotId);
@@ -1220,7 +1250,7 @@ contract EmpaModuleSettleTest is EmpTest {
         );
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
         _assertLot();
     }
 
@@ -1236,7 +1266,13 @@ contract EmpaModuleSettleTest is EmpTest {
         givenLotIsDecrypted
     {
         // Call function
-        (uint256 totalIn, uint256 totalOut, bytes memory auctionOutput) = _settle();
+        (
+            uint256 totalIn,
+            uint256 totalOut,
+            uint256 capacity,
+            bool finished,
+            bytes memory auctionOutput
+        ) = _settle();
 
         // Validate auction data
         EncryptedMarginalPrice.AuctionData memory auctionData = _getAuctionData(_lotId);
@@ -1246,7 +1282,7 @@ contract EmpaModuleSettleTest is EmpTest {
         );
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
         _assertLot();
     }
 
@@ -1260,7 +1296,13 @@ contract EmpaModuleSettleTest is EmpTest {
         givenLotIsDecrypted
     {
         // Call function
-        (uint256 totalIn, uint256 totalOut, bytes memory auctionOutput) = _settle();
+        (
+            uint256 totalIn,
+            uint256 totalOut,
+            uint256 capacity,
+            bool finished,
+            bytes memory auctionOutput
+        ) = _settle();
 
         // Validate auction data
         EncryptedMarginalPrice.AuctionData memory auctionData = _getAuctionData(_lotId);
@@ -1270,7 +1312,7 @@ contract EmpaModuleSettleTest is EmpTest {
         );
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
         _assertLot();
     }
 
@@ -1286,7 +1328,13 @@ contract EmpaModuleSettleTest is EmpTest {
         givenLotIsDecrypted
     {
         // Call function
-        (uint256 totalIn, uint256 totalOut, bytes memory auctionOutput) = _settle();
+        (
+            uint256 totalIn,
+            uint256 totalOut,
+            uint256 capacity,
+            bool finished,
+            bytes memory auctionOutput
+        ) = _settle();
 
         // Validate auction data
         EncryptedMarginalPrice.AuctionData memory auctionData = _getAuctionData(_lotId);
@@ -1296,7 +1344,7 @@ contract EmpaModuleSettleTest is EmpTest {
         );
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
         _assertLot();
     }
 
@@ -1312,7 +1360,13 @@ contract EmpaModuleSettleTest is EmpTest {
         givenLotIsDecrypted
     {
         // Call function
-        (uint256 totalIn, uint256 totalOut, bytes memory auctionOutput) = _settle();
+        (
+            uint256 totalIn,
+            uint256 totalOut,
+            uint256 capacity,
+            bool finished,
+            bytes memory auctionOutput
+        ) = _settle();
 
         // Validate auction data
         EncryptedMarginalPrice.AuctionData memory auctionData = _getAuctionData(_lotId);
@@ -1322,7 +1376,69 @@ contract EmpaModuleSettleTest is EmpTest {
         );
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
+        _assertLot();
+    }
+
+    function test_duringSettlePeriod()
+        external
+        givenLotIsCreated
+        givenLotHasStarted
+        givenBidsAreAboveMinimumAndBelowCapacity
+        givenLotHasConcluded
+        givenDuringLotSettlePeriod
+        givenPrivateKeyIsSubmitted
+        givenLotIsDecrypted
+    {
+        // Call function
+        (
+            uint256 totalIn,
+            uint256 totalOut,
+            uint256 capacity,
+            bool finished,
+            bytes memory auctionOutput
+        ) = _settle();
+
+        // Validate auction data
+        EncryptedMarginalPrice.AuctionData memory auctionData = _getAuctionData(_lotId);
+        assertEq(auctionData.marginalPrice, _expectedMarginalPrice, "marginalPrice");
+        assertEq(
+            uint8(auctionData.status), uint8(EncryptedMarginalPrice.LotStatus.Settled), "status"
+        );
+
+        // Assert settlement
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
+        _assertLot();
+    }
+
+    function test_afterSettlePeriod()
+        external
+        givenLotIsCreated
+        givenLotHasStarted
+        givenBidsAreAboveMinimumAndBelowCapacity
+        givenLotHasConcluded
+        givenLotSettlePeriodHasPassed
+        givenPrivateKeyIsSubmitted
+        givenLotIsDecrypted
+    {
+        // Call function
+        (
+            uint256 totalIn,
+            uint256 totalOut,
+            uint256 capacity,
+            bool finished,
+            bytes memory auctionOutput
+        ) = _settle();
+
+        // Validate auction data
+        EncryptedMarginalPrice.AuctionData memory auctionData = _getAuctionData(_lotId);
+        assertEq(auctionData.marginalPrice, _expectedMarginalPrice, "marginalPrice");
+        assertEq(
+            uint8(auctionData.status), uint8(EncryptedMarginalPrice.LotStatus.Settled), "status"
+        );
+
+        // Assert settlement
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
         _assertLot();
     }
 
@@ -1336,7 +1452,13 @@ contract EmpaModuleSettleTest is EmpTest {
         givenLotIsDecrypted
     {
         // Call function
-        (uint256 totalIn, uint256 totalOut, bytes memory auctionOutput) = _settle();
+        (
+            uint256 totalIn,
+            uint256 totalOut,
+            uint256 capacity,
+            bool finished,
+            bytes memory auctionOutput
+        ) = _settle();
 
         // Validate auction data
         EncryptedMarginalPrice.AuctionData memory auctionData = _getAuctionData(_lotId);
@@ -1346,7 +1468,7 @@ contract EmpaModuleSettleTest is EmpTest {
         );
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
         _assertLot();
     }
 
@@ -1362,7 +1484,13 @@ contract EmpaModuleSettleTest is EmpTest {
         givenLotIsDecrypted
     {
         // Call function
-        (uint256 totalIn, uint256 totalOut, bytes memory auctionOutput) = _settle();
+        (
+            uint256 totalIn,
+            uint256 totalOut,
+            uint256 capacity,
+            bool finished,
+            bytes memory auctionOutput
+        ) = _settle();
 
         // Validate auction data
         EncryptedMarginalPrice.AuctionData memory auctionData = _getAuctionData(_lotId);
@@ -1372,7 +1500,7 @@ contract EmpaModuleSettleTest is EmpTest {
         );
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
         _assertLot();
     }
 
@@ -1388,7 +1516,13 @@ contract EmpaModuleSettleTest is EmpTest {
         givenLotIsDecrypted
     {
         // Call function
-        (uint256 totalIn, uint256 totalOut, bytes memory auctionOutput) = _settle();
+        (
+            uint256 totalIn,
+            uint256 totalOut,
+            uint256 capacity,
+            bool finished,
+            bytes memory auctionOutput
+        ) = _settle();
 
         // Validate auction data
         EncryptedMarginalPrice.AuctionData memory auctionData = _getAuctionData(_lotId);
@@ -1398,7 +1532,7 @@ contract EmpaModuleSettleTest is EmpTest {
         );
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
         _assertLot();
     }
 
@@ -1412,7 +1546,13 @@ contract EmpaModuleSettleTest is EmpTest {
         givenLotIsDecrypted
     {
         // Call function
-        (uint256 totalIn, uint256 totalOut, bytes memory auctionOutput) = _settle();
+        (
+            uint256 totalIn,
+            uint256 totalOut,
+            uint256 capacity,
+            bool finished,
+            bytes memory auctionOutput
+        ) = _settle();
 
         // Validate auction data
         EncryptedMarginalPrice.AuctionData memory auctionData = _getAuctionData(_lotId);
@@ -1422,7 +1562,7 @@ contract EmpaModuleSettleTest is EmpTest {
         );
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
         _assertLot();
     }
 
@@ -1438,7 +1578,13 @@ contract EmpaModuleSettleTest is EmpTest {
         givenLotIsDecrypted
     {
         // Call function
-        (uint256 totalIn, uint256 totalOut, bytes memory auctionOutput) = _settle();
+        (
+            uint256 totalIn,
+            uint256 totalOut,
+            uint256 capacity,
+            bool finished,
+            bytes memory auctionOutput
+        ) = _settle();
 
         // Validate auction data
         EncryptedMarginalPrice.AuctionData memory auctionData = _getAuctionData(_lotId);
@@ -1448,7 +1594,7 @@ contract EmpaModuleSettleTest is EmpTest {
         );
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
         _assertLot();
     }
 
@@ -1464,7 +1610,13 @@ contract EmpaModuleSettleTest is EmpTest {
         givenLotIsDecrypted
     {
         // Call function
-        (uint256 totalIn, uint256 totalOut, bytes memory auctionOutput) = _settle();
+        (
+            uint256 totalIn,
+            uint256 totalOut,
+            uint256 capacity,
+            bool finished,
+            bytes memory auctionOutput
+        ) = _settle();
 
         // Validate auction data
         EncryptedMarginalPrice.AuctionData memory auctionData = _getAuctionData(_lotId);
@@ -1474,7 +1626,7 @@ contract EmpaModuleSettleTest is EmpTest {
         );
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
         _assertLot();
     }
 
@@ -1489,7 +1641,13 @@ contract EmpaModuleSettleTest is EmpTest {
     {
         // Call function
         uint256 gasBefore = gasleft();
-        (uint256 totalIn, uint256 totalOut, bytes memory auctionOutput) = _settle();
+        (
+            uint256 totalIn,
+            uint256 totalOut,
+            uint256 capacity,
+            bool finished,
+            bytes memory auctionOutput
+        ) = _settle();
         uint256 gasAfter = gasleft();
         console2.log("gas used", gasBefore - gasAfter);
 
@@ -1501,7 +1659,7 @@ contract EmpaModuleSettleTest is EmpTest {
         );
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
     }
 
     function test_largeNumberBidsBelowMinPrice_gasUsage()
@@ -1515,7 +1673,13 @@ contract EmpaModuleSettleTest is EmpTest {
     {
         // Call function
         uint256 gasBefore = gasleft();
-        (uint256 totalIn, uint256 totalOut, bytes memory auctionOutput) = _settle();
+        (
+            uint256 totalIn,
+            uint256 totalOut,
+            uint256 capacity,
+            bool finished,
+            bytes memory auctionOutput
+        ) = _settle();
         console2.log("Total gas used for settlement:", gasBefore - gasleft());
 
         // Validate auction data
@@ -1526,7 +1690,7 @@ contract EmpaModuleSettleTest is EmpTest {
         );
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
     }
 
     function test_largeNumberOfFilledBids_gasUsage()
@@ -1540,7 +1704,13 @@ contract EmpaModuleSettleTest is EmpTest {
     {
         // Call function
         uint256 gasBefore = gasleft();
-        (uint256 totalIn, uint256 totalOut, bytes memory auctionOutput) = _settle();
+        (
+            uint256 totalIn,
+            uint256 totalOut,
+            uint256 capacity,
+            bool finished,
+            bytes memory auctionOutput
+        ) = _settle();
         console2.log("Total gas used for settlement:", gasBefore - gasleft());
 
         // Validate auction data
@@ -1551,7 +1721,7 @@ contract EmpaModuleSettleTest is EmpTest {
         );
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
     }
 
     function test_largeNumberOfFilledBids_optimalDecryption_gasUsage()
@@ -1565,7 +1735,13 @@ contract EmpaModuleSettleTest is EmpTest {
     {
         // Call function
         uint256 gasBefore = gasleft();
-        (uint256 totalIn, uint256 totalOut, bytes memory auctionOutput) = _settle();
+        (
+            uint256 totalIn,
+            uint256 totalOut,
+            uint256 capacity,
+            bool finished,
+            bytes memory auctionOutput
+        ) = _settle();
         console2.log("Total gas used for settlement:", gasBefore - gasleft());
 
         // Validate auction data
@@ -1576,7 +1752,7 @@ contract EmpaModuleSettleTest is EmpTest {
         );
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
     }
 
     function test_smallNumberOfFilledBids_gasUsage()
@@ -1590,7 +1766,13 @@ contract EmpaModuleSettleTest is EmpTest {
     {
         // Call function
         uint256 gasBefore = gasleft();
-        (uint256 totalIn, uint256 totalOut, bytes memory auctionOutput) = _settle();
+        (
+            uint256 totalIn,
+            uint256 totalOut,
+            uint256 capacity,
+            bool finished,
+            bytes memory auctionOutput
+        ) = _settle();
         uint256 gasAfter = gasleft();
         console2.log("Total gas used for settlement:", gasBefore - gasAfter);
 
@@ -1602,7 +1784,7 @@ contract EmpaModuleSettleTest is EmpTest {
         );
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
     }
 
     function test_marginalPriceBetweenBids_givenLastBid()
@@ -1615,10 +1797,16 @@ contract EmpaModuleSettleTest is EmpTest {
         givenLotIsDecrypted
     {
         // Call function
-        (uint256 totalIn, uint256 totalOut, bytes memory auctionOutput) = _settle();
+        (
+            uint256 totalIn,
+            uint256 totalOut,
+            uint256 capacity,
+            bool finished,
+            bytes memory auctionOutput
+        ) = _settle();
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
         _assertLot();
     }
 
@@ -1634,10 +1822,16 @@ contract EmpaModuleSettleTest is EmpTest {
         givenLotIsDecrypted
     {
         // Call function
-        (uint256 totalIn, uint256 totalOut, bytes memory auctionOutput) = _settle();
+        (
+            uint256 totalIn,
+            uint256 totalOut,
+            uint256 capacity,
+            bool finished,
+            bytes memory auctionOutput
+        ) = _settle();
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
         _assertLot();
     }
 
@@ -1653,10 +1847,16 @@ contract EmpaModuleSettleTest is EmpTest {
         givenLotIsDecrypted
     {
         // Call function
-        (uint256 totalIn, uint256 totalOut, bytes memory auctionOutput) = _settle();
+        (
+            uint256 totalIn,
+            uint256 totalOut,
+            uint256 capacity,
+            bool finished,
+            bytes memory auctionOutput
+        ) = _settle();
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
     }
 
     function test_marginalPriceBetweenBids_givenNotLastBid()
@@ -1669,10 +1869,16 @@ contract EmpaModuleSettleTest is EmpTest {
         givenLotIsDecrypted
     {
         // Call function
-        (uint256 totalIn, uint256 totalOut, bytes memory auctionOutput) = _settle();
+        (
+            uint256 totalIn,
+            uint256 totalOut,
+            uint256 capacity,
+            bool finished,
+            bytes memory auctionOutput
+        ) = _settle();
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
     }
 
     function test_marginalPriceBetweenBids_givenNotLastBid_quoteTokenDecimalsLarger()
@@ -1687,10 +1893,16 @@ contract EmpaModuleSettleTest is EmpTest {
         givenLotIsDecrypted
     {
         // Call function
-        (uint256 totalIn, uint256 totalOut, bytes memory auctionOutput) = _settle();
+        (
+            uint256 totalIn,
+            uint256 totalOut,
+            uint256 capacity,
+            bool finished,
+            bytes memory auctionOutput
+        ) = _settle();
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
     }
 
     function test_marginalPriceBetweenBids_givenNotLastBid_quoteTokenDecimalsSmaller()
@@ -1705,10 +1917,16 @@ contract EmpaModuleSettleTest is EmpTest {
         givenLotIsDecrypted
     {
         // Call function
-        (uint256 totalIn, uint256 totalOut, bytes memory auctionOutput) = _settle();
+        (
+            uint256 totalIn,
+            uint256 totalOut,
+            uint256 capacity,
+            bool finished,
+            bytes memory auctionOutput
+        ) = _settle();
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
     }
 
     function test_marginalPriceBetweenBids_givenNotLastBid_givenSettlementNotComplete()
@@ -1722,10 +1940,16 @@ contract EmpaModuleSettleTest is EmpTest {
         givenSettlementNotComplete // 1 out of 2
     {
         // Call function
-        (uint256 totalIn, uint256 totalOut, bytes memory auctionOutput) = _settle(2);
+        (
+            uint256 totalIn,
+            uint256 totalOut,
+            uint256 capacity,
+            bool finished,
+            bytes memory auctionOutput
+        ) = _settle(2);
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
     }
 
     function test_marginalPriceBetweenBids_givenNotLastBid_givenSettlementNotComplete_givenSettlementCompletes(
@@ -1742,10 +1966,16 @@ contract EmpaModuleSettleTest is EmpTest {
         _settle(2);
 
         // Call function
-        (uint256 totalIn, uint256 totalOut, bytes memory auctionOutput) = _settle(1);
+        (
+            uint256 totalIn,
+            uint256 totalOut,
+            uint256 capacity,
+            bool finished,
+            bytes memory auctionOutput
+        ) = _settle(1);
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
     }
 
     function test_notLastBid_aboveMinimumFilled()
@@ -1758,10 +1988,16 @@ contract EmpaModuleSettleTest is EmpTest {
         givenLotIsDecrypted
     {
         // Call function
-        (uint256 totalIn, uint256 totalOut, bytes memory auctionOutput) = _settle();
+        (
+            uint256 totalIn,
+            uint256 totalOut,
+            uint256 capacity,
+            bool finished,
+            bytes memory auctionOutput
+        ) = _settle();
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
     }
 
     function test_notLastBid_aboveMinimumFilled_quoteTokenDecimalsLarger()
@@ -1776,10 +2012,16 @@ contract EmpaModuleSettleTest is EmpTest {
         givenLotIsDecrypted
     {
         // Call function
-        (uint256 totalIn, uint256 totalOut, bytes memory auctionOutput) = _settle();
+        (
+            uint256 totalIn,
+            uint256 totalOut,
+            uint256 capacity,
+            bool finished,
+            bytes memory auctionOutput
+        ) = _settle();
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
     }
 
     function test_notLastBid_aboveMinimumFilled_quoteTokenDecimalsSmaller()
@@ -1794,10 +2036,16 @@ contract EmpaModuleSettleTest is EmpTest {
         givenLotIsDecrypted
     {
         // Call function
-        (uint256 totalIn, uint256 totalOut, bytes memory auctionOutput) = _settle();
+        (
+            uint256 totalIn,
+            uint256 totalOut,
+            uint256 capacity,
+            bool finished,
+            bytes memory auctionOutput
+        ) = _settle();
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
     }
 
     function test_lastBid_aboveMinimumFilled()
@@ -1810,10 +2058,16 @@ contract EmpaModuleSettleTest is EmpTest {
         givenLotIsDecrypted
     {
         // Call function
-        (uint256 totalIn, uint256 totalOut, bytes memory auctionOutput) = _settle();
+        (
+            uint256 totalIn,
+            uint256 totalOut,
+            uint256 capacity,
+            bool finished,
+            bytes memory auctionOutput
+        ) = _settle();
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
     }
 
     function test_lastBid_aboveMinimumFilled_quoteTokenDecimalsLarger()
@@ -1828,10 +2082,16 @@ contract EmpaModuleSettleTest is EmpTest {
         givenLotIsDecrypted
     {
         // Call function
-        (uint256 totalIn, uint256 totalOut, bytes memory auctionOutput) = _settle();
+        (
+            uint256 totalIn,
+            uint256 totalOut,
+            uint256 capacity,
+            bool finished,
+            bytes memory auctionOutput
+        ) = _settle();
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
     }
 
     function test_lastBid_aboveMinimumFilled_quoteTokenDecimalsSmaller()
@@ -1846,10 +2106,16 @@ contract EmpaModuleSettleTest is EmpTest {
         givenLotIsDecrypted
     {
         // Call function
-        (uint256 totalIn, uint256 totalOut, bytes memory auctionOutput) = _settle();
+        (
+            uint256 totalIn,
+            uint256 totalOut,
+            uint256 capacity,
+            bool finished,
+            bytes memory auctionOutput
+        ) = _settle();
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
     }
 
     function test_filledBelowMinimumFilled_aboveCapacityUsingMinimumPrice_givenNotLastBid()
@@ -1862,10 +2128,16 @@ contract EmpaModuleSettleTest is EmpTest {
         givenLotIsDecrypted
     {
         // Call function
-        (uint256 totalIn, uint256 totalOut, bytes memory auctionOutput) = _settle();
+        (
+            uint256 totalIn,
+            uint256 totalOut,
+            uint256 capacity,
+            bool finished,
+            bytes memory auctionOutput
+        ) = _settle();
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
     }
 
     function test_filledBelowMinimumFilled_aboveCapacityUsingMinimumPrice_givenNotLastBid_quoteTokenDecimalsLarger(
@@ -1881,10 +2153,16 @@ contract EmpaModuleSettleTest is EmpTest {
         givenLotIsDecrypted
     {
         // Call function
-        (uint256 totalIn, uint256 totalOut, bytes memory auctionOutput) = _settle();
+        (
+            uint256 totalIn,
+            uint256 totalOut,
+            uint256 capacity,
+            bool finished,
+            bytes memory auctionOutput
+        ) = _settle();
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
     }
 
     function test_filledBelowMinimumFilled_aboveCapacityUsingMinimumPrice_givenNotLastBid_quoteTokenDecimalsSmaller(
@@ -1900,10 +2178,16 @@ contract EmpaModuleSettleTest is EmpTest {
         givenLotIsDecrypted
     {
         // Call function
-        (uint256 totalIn, uint256 totalOut, bytes memory auctionOutput) = _settle();
+        (
+            uint256 totalIn,
+            uint256 totalOut,
+            uint256 capacity,
+            bool finished,
+            bytes memory auctionOutput
+        ) = _settle();
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
     }
 
     function test_filledBelowMinimumFilled_aboveCapacityUsingMinimumPrice_givenLastBid()
@@ -1916,10 +2200,16 @@ contract EmpaModuleSettleTest is EmpTest {
         givenLotIsDecrypted
     {
         // Call function
-        (uint256 totalIn, uint256 totalOut, bytes memory auctionOutput) = _settle();
+        (
+            uint256 totalIn,
+            uint256 totalOut,
+            uint256 capacity,
+            bool finished,
+            bytes memory auctionOutput
+        ) = _settle();
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
     }
 
     function test_filledBelowMinimumFilled_aboveCapacityUsingMinimumPrice_givenLastBid_quoteTokenDecimalsLarger(
@@ -1935,10 +2225,16 @@ contract EmpaModuleSettleTest is EmpTest {
         givenLotIsDecrypted
     {
         // Call function
-        (uint256 totalIn, uint256 totalOut, bytes memory auctionOutput) = _settle();
+        (
+            uint256 totalIn,
+            uint256 totalOut,
+            uint256 capacity,
+            bool finished,
+            bytes memory auctionOutput
+        ) = _settle();
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
     }
 
     function test_filledBelowMinimumFilled_aboveCapacityUsingMinimumPrice_givenLastBid_quoteTokenDecimalsSmaller(
@@ -1954,10 +2250,16 @@ contract EmpaModuleSettleTest is EmpTest {
         givenLotIsDecrypted
     {
         // Call function
-        (uint256 totalIn, uint256 totalOut, bytes memory auctionOutput) = _settle();
+        (
+            uint256 totalIn,
+            uint256 totalOut,
+            uint256 capacity,
+            bool finished,
+            bytes memory auctionOutput
+        ) = _settle();
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
         _assertLot();
     }
 
@@ -1971,10 +2273,16 @@ contract EmpaModuleSettleTest is EmpTest {
         givenLotIsDecrypted
     {
         // Call function
-        (uint256 totalIn, uint256 totalOut, bytes memory auctionOutput) = _settle();
+        (
+            uint256 totalIn,
+            uint256 totalOut,
+            uint256 capacity,
+            bool finished,
+            bytes memory auctionOutput
+        ) = _settle();
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
         _assertLot();
     }
 
@@ -1990,10 +2298,16 @@ contract EmpaModuleSettleTest is EmpTest {
         givenLotIsDecrypted
     {
         // Call function
-        (uint256 totalIn, uint256 totalOut, bytes memory auctionOutput) = _settle();
+        (
+            uint256 totalIn,
+            uint256 totalOut,
+            uint256 capacity,
+            bool finished,
+            bytes memory auctionOutput
+        ) = _settle();
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
         _assertLot();
     }
 
@@ -2009,10 +2323,16 @@ contract EmpaModuleSettleTest is EmpTest {
         givenLotIsDecrypted
     {
         // Call function
-        (uint256 totalIn, uint256 totalOut, bytes memory auctionOutput) = _settle();
+        (
+            uint256 totalIn,
+            uint256 totalOut,
+            uint256 capacity,
+            bool finished,
+            bytes memory auctionOutput
+        ) = _settle();
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
         _assertLot();
     }
 
@@ -2027,10 +2347,16 @@ contract EmpaModuleSettleTest is EmpTest {
         givenSettlementNotComplete // Batch size of 4 instead of 5
     {
         // Call function
-        (uint256 totalIn, uint256 totalOut, bytes memory auctionOutput) = _settle(4);
+        (
+            uint256 totalIn,
+            uint256 totalOut,
+            uint256 capacity,
+            bool finished,
+            bytes memory auctionOutput
+        ) = _settle(4);
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
         _assertLot();
     }
 
@@ -2045,13 +2371,19 @@ contract EmpaModuleSettleTest is EmpTest {
         givenSettlementNotComplete // Batch size of 4 instead of 5
     {
         // Call function
-        (uint256 totalIn, uint256 totalOut, bytes memory auctionOutput) = _settle(4);
+        (
+            uint256 totalIn,
+            uint256 totalOut,
+            uint256 capacity,
+            bool finished,
+            bytes memory auctionOutput
+        ) = _settle(4);
 
         // Call with zero bids, should still be incomplete
         _settle(0);
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
         _assertLot();
     }
 
@@ -2068,10 +2400,16 @@ contract EmpaModuleSettleTest is EmpTest {
         _settle(4);
 
         // Call with more than actual bids, should complete
-        (uint256 totalIn, uint256 totalOut, bytes memory auctionOutput) = _settle(10);
+        (
+            uint256 totalIn,
+            uint256 totalOut,
+            uint256 capacity,
+            bool finished,
+            bytes memory auctionOutput
+        ) = _settle(10);
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
         _assertLot();
     }
 
@@ -2088,10 +2426,16 @@ contract EmpaModuleSettleTest is EmpTest {
         _settle(4);
 
         // Call function
-        (uint256 totalIn, uint256 totalOut, bytes memory auctionOutput) = _settle(1);
+        (
+            uint256 totalIn,
+            uint256 totalOut,
+            uint256 capacity,
+            bool finished,
+            bytes memory auctionOutput
+        ) = _settle(1);
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
         _assertLot();
     }
 
@@ -2129,10 +2473,16 @@ contract EmpaModuleSettleTest is EmpTest {
         givenLotIsDecrypted
     {
         // Call function
-        (uint256 totalIn, uint256 totalOut, bytes memory auctionOutput) = _settle(5);
+        (
+            uint256 totalIn,
+            uint256 totalOut,
+            uint256 capacity,
+            bool finished,
+            bytes memory auctionOutput
+        ) = _settle(5);
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
         _assertLot();
     }
 
@@ -2150,10 +2500,16 @@ contract EmpaModuleSettleTest is EmpTest {
         _settle(3);
 
         // Call function
-        (uint256 totalIn, uint256 totalOut, bytes memory auctionOutput) = _settle(1);
+        (
+            uint256 totalIn,
+            uint256 totalOut,
+            uint256 capacity,
+            bool finished,
+            bytes memory auctionOutput
+        ) = _settle(1);
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
         _assertLot();
     }
 
@@ -2171,10 +2527,16 @@ contract EmpaModuleSettleTest is EmpTest {
         _settle(1);
 
         // Call function
-        (uint256 totalIn, uint256 totalOut, bytes memory auctionOutput) = _settle(1);
+        (
+            uint256 totalIn,
+            uint256 totalOut,
+            uint256 capacity,
+            bool finished,
+            bytes memory auctionOutput
+        ) = _settle(1);
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
         _assertLot();
     }
 
@@ -2188,10 +2550,16 @@ contract EmpaModuleSettleTest is EmpTest {
         givenLotIsDecrypted
     {
         // Call function
-        (uint256 totalIn, uint256 totalOut, bytes memory auctionOutput) = _settle();
+        (
+            uint256 totalIn,
+            uint256 totalOut,
+            uint256 capacity,
+            bool finished,
+            bytes memory auctionOutput
+        ) = _settle();
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
         _assertLot();
     }
 
@@ -2207,10 +2575,16 @@ contract EmpaModuleSettleTest is EmpTest {
         givenLotIsDecrypted
     {
         // Call function
-        (uint256 totalIn, uint256 totalOut, bytes memory auctionOutput) = _settle();
+        (
+            uint256 totalIn,
+            uint256 totalOut,
+            uint256 capacity,
+            bool finished,
+            bytes memory auctionOutput
+        ) = _settle();
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
         _assertLot();
     }
 
@@ -2226,10 +2600,16 @@ contract EmpaModuleSettleTest is EmpTest {
         givenLotIsDecrypted
     {
         // Call function
-        (uint256 totalIn, uint256 totalOut, bytes memory auctionOutput) = _settle();
+        (
+            uint256 totalIn,
+            uint256 totalOut,
+            uint256 capacity,
+            bool finished,
+            bytes memory auctionOutput
+        ) = _settle();
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
         _assertLot();
     }
 
@@ -2243,10 +2623,16 @@ contract EmpaModuleSettleTest is EmpTest {
         givenLotIsDecrypted
     {
         // Call function
-        (uint256 totalIn, uint256 totalOut, bytes memory auctionOutput) = _settle();
+        (
+            uint256 totalIn,
+            uint256 totalOut,
+            uint256 capacity,
+            bool finished,
+            bytes memory auctionOutput
+        ) = _settle();
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
         _assertLot();
     }
 
@@ -2262,10 +2648,16 @@ contract EmpaModuleSettleTest is EmpTest {
         givenLotIsDecrypted
     {
         // Call function
-        (uint256 totalIn, uint256 totalOut, bytes memory auctionOutput) = _settle();
+        (
+            uint256 totalIn,
+            uint256 totalOut,
+            uint256 capacity,
+            bool finished,
+            bytes memory auctionOutput
+        ) = _settle();
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
         _assertLot();
     }
 
@@ -2281,10 +2673,16 @@ contract EmpaModuleSettleTest is EmpTest {
         givenLotIsDecrypted
     {
         // Call function
-        (uint256 totalIn, uint256 totalOut, bytes memory auctionOutput) = _settle();
+        (
+            uint256 totalIn,
+            uint256 totalOut,
+            uint256 capacity,
+            bool finished,
+            bytes memory auctionOutput
+        ) = _settle();
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
         _assertLot();
     }
 
@@ -2299,10 +2697,16 @@ contract EmpaModuleSettleTest is EmpTest {
         givenSettlementNotComplete // 1 out of 2 bids
     {
         // Call function
-        (uint256 totalIn, uint256 totalOut, bytes memory auctionOutput) = _settle(1);
+        (
+            uint256 totalIn,
+            uint256 totalOut,
+            uint256 capacity,
+            bool finished,
+            bytes memory auctionOutput
+        ) = _settle(1);
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
         _assertLot();
     }
 
@@ -2319,10 +2723,16 @@ contract EmpaModuleSettleTest is EmpTest {
         _settle(1);
 
         // Call function
-        (uint256 totalIn, uint256 totalOut, bytes memory auctionOutput) = _settle(1);
+        (
+            uint256 totalIn,
+            uint256 totalOut,
+            uint256 capacity,
+            bool finished,
+            bytes memory auctionOutput
+        ) = _settle(1);
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
         _assertLot();
     }
 
@@ -2336,10 +2746,16 @@ contract EmpaModuleSettleTest is EmpTest {
         givenLotIsDecrypted
     {
         // Call function
-        (uint256 totalIn, uint256 totalOut, bytes memory auctionOutput) = _settle();
+        (
+            uint256 totalIn,
+            uint256 totalOut,
+            uint256 capacity,
+            bool finished,
+            bytes memory auctionOutput
+        ) = _settle();
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
         _assertLot();
     }
 
@@ -2353,10 +2769,16 @@ contract EmpaModuleSettleTest is EmpTest {
         givenLotIsDecrypted
     {
         // Call function
-        (uint256 totalIn, uint256 totalOut, bytes memory auctionOutput) = _settle();
+        (
+            uint256 totalIn,
+            uint256 totalOut,
+            uint256 capacity,
+            bool finished,
+            bytes memory auctionOutput
+        ) = _settle();
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
         _assertLot();
     }
 
@@ -2370,10 +2792,16 @@ contract EmpaModuleSettleTest is EmpTest {
         givenLotIsDecrypted
     {
         // Call function
-        (uint256 totalIn, uint256 totalOut, bytes memory auctionOutput) = _settle();
+        (
+            uint256 totalIn,
+            uint256 totalOut,
+            uint256 capacity,
+            bool finished,
+            bytes memory auctionOutput
+        ) = _settle();
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
         _assertLot();
     }
 
@@ -2387,10 +2815,16 @@ contract EmpaModuleSettleTest is EmpTest {
         givenLotIsDecrypted
     {
         // Call function
-        (uint256 totalIn, uint256 totalOut, bytes memory auctionOutput) = _settle();
+        (
+            uint256 totalIn,
+            uint256 totalOut,
+            uint256 capacity,
+            bool finished,
+            bytes memory auctionOutput
+        ) = _settle();
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
         _assertLot();
     }
 
@@ -2404,7 +2838,13 @@ contract EmpaModuleSettleTest is EmpTest {
         givenLotIsDecrypted
     {
         // Call function
-        (uint256 totalIn, uint256 totalOut, bytes memory auctionOutput) = _settle();
+        (
+            uint256 totalIn,
+            uint256 totalOut,
+            uint256 capacity,
+            bool finished,
+            bytes memory auctionOutput
+        ) = _settle();
 
         // Assert settlement
         EncryptedMarginalPrice.AuctionData memory auctionData = _getAuctionData(_lotId);
@@ -2412,7 +2852,7 @@ contract EmpaModuleSettleTest is EmpTest {
         assertEq(
             uint8(auctionData.status), uint8(EncryptedMarginalPrice.LotStatus.Settled), "status"
         );
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
         _assertLot();
     }
 
@@ -2426,10 +2866,16 @@ contract EmpaModuleSettleTest is EmpTest {
         givenLotIsDecrypted
     {
         // Call function
-        (uint256 totalIn, uint256 totalOut, bytes memory auctionOutput) = _settle();
+        (
+            uint256 totalIn,
+            uint256 totalOut,
+            uint256 capacity,
+            bool finished,
+            bytes memory auctionOutput
+        ) = _settle();
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
         _assertLot();
     }
 }

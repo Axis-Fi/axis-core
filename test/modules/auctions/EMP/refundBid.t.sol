@@ -10,7 +10,7 @@ import {IBatchAuction} from "src/interfaces/IBatchAuction.sol";
 
 import {EmpTest} from "test/modules/auctions/EMP/EMPTest.sol";
 
-contract EmpaModuleRefundBidTest is EmpTest {
+contract EmpRefundBidTest is EmpTest {
     // [X] when the lot id is invalid
     //  [X] it reverts
     // [X] when the bid id is invalid
@@ -25,7 +25,7 @@ contract EmpaModuleRefundBidTest is EmpTest {
     //  [X] given it is within the settle period
     //   [X] it reverts
     //  [X] it refunds the bid amount and updates the bid status
-    // [ ] given the lot's private key has been submitted
+    // [X] given the lot's private key has been submitted
     //  [X] given it is within the settle period
     //   [X] it reverts
     //  [X] given it is after the settle period
@@ -34,7 +34,7 @@ contract EmpaModuleRefundBidTest is EmpTest {
     //  [X] it reverts
     // [X] given the lot is settled
     //  [X] it reverts
-    // [X] given the lot proceeds have been claimed
+    // [X] when the lot has been aborted
     //  [X] it reverts
     // [X] when the caller is not the parent
     //  [X] it reverts
@@ -229,16 +229,14 @@ contract EmpaModuleRefundBidTest is EmpTest {
         _module.refundBid(_lotId, _bidId, 0, _BIDDER);
     }
 
-    function test_lotProceedsClaimed_reverts()
+    function test_lotIsAborted_reverts()
         external
         givenLotIsCreated
         givenLotHasStarted
         givenBidIsCreated(2e18, 1e18)
         givenLotHasConcluded
-        givenPrivateKeyIsSubmitted
-        givenLotIsDecrypted
-        givenLotIsSettled
-        givenLotProceedsAreClaimed
+        givenLotSettlePeriodHasPassed
+        givenLotIsAborted
     {
         // Expect revert
         bytes memory err =

@@ -7,6 +7,8 @@ contract MockFeeOnTransferERC20 is MockERC20 {
     uint256 public transferFee;
     bool public revertOnZero;
 
+    mapping(address => bool) public blacklist;
+
     constructor(
         string memory name_,
         string memory symbol_,
@@ -26,6 +28,10 @@ contract MockFeeOnTransferERC20 is MockERC20 {
             revert("MockFeeOnTransferERC20: amount is zero");
         }
 
+        if (blacklist[recipient_]) {
+            revert("blacklist");
+        }
+
         uint256 fee = amount_ * transferFee / 10_000;
         return super.transfer(recipient_, amount_ - fee);
     }
@@ -39,7 +45,15 @@ contract MockFeeOnTransferERC20 is MockERC20 {
             revert("MockFeeOnTransferERC20: amount is zero");
         }
 
+        if (blacklist[recipient_]) {
+            revert("blacklist");
+        }
+
         uint256 fee = amount_ * transferFee / 10_000;
         return super.transferFrom(sender_, recipient_, amount_ - fee);
+    }
+
+    function setBlacklist(address account_, bool value_) external {
+        blacklist[account_] = value_;
     }
 }

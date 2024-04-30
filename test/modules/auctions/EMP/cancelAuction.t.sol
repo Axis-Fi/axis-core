@@ -7,7 +7,7 @@ import {EncryptedMarginalPrice} from "src/modules/auctions/EMP.sol";
 
 import {EmpTest} from "test/modules/auctions/EMP/EMPTest.sol";
 
-contract EmpaModuleCancelAuctionTest is EmpTest {
+contract EmpCancelAuctionTest is EmpTest {
     // [X] when the caller is not the parent
     //  [X] it reverts
     // [X] when the lot id is invalid
@@ -15,6 +15,10 @@ contract EmpaModuleCancelAuctionTest is EmpTest {
     // [X] when the auction has concluded
     //  [X] it reverts
     // [X] when the auction has been cancelled
+    //  [X] it reverts
+    // [X] when the auction has been aborted
+    //  [X] it reverts
+    // [X] when the auction has been settled
     //  [X] it reverts
     // [X] when the auction has started
     //  [X] it reverts
@@ -61,6 +65,35 @@ contract EmpaModuleCancelAuctionTest is EmpTest {
         _cancelAuctionLot();
     }
 
+    function test_auctionAborted_reverts()
+        public
+        givenLotIsCreated
+        givenLotSettlePeriodHasPassed
+        givenLotIsAborted
+    {
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(IAuction.Auction_MarketNotActive.selector, _lotId);
+        vm.expectRevert(err);
+
+        // Call the function
+        _cancelAuctionLot();
+    }
+
+    function test_auctionSettled_reverts()
+        public
+        givenLotIsCreated
+        givenLotHasConcluded
+        givenPrivateKeyIsSubmitted
+        givenLotIsSettled
+    {
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(IAuction.Auction_MarketNotActive.selector, _lotId);
+        vm.expectRevert(err);
+
+        // Call the function
+        _cancelAuctionLot();
+    }
+
     function test_auctionStarted_reverts() public givenLotIsCreated givenLotHasStarted {
         // Expect revert
         bytes memory err =
@@ -84,6 +117,5 @@ contract EmpaModuleCancelAuctionTest is EmpTest {
         assertEq(
             uint8(auctionData.status), uint8(EncryptedMarginalPrice.LotStatus.Settled), "status"
         );
-        assertTrue(auctionData.proceedsClaimed, "proceedsClaimed");
     }
 }

@@ -67,29 +67,34 @@ interface IBatchAuctionHouse is IAuctionHouse {
     /// @dev        The implementing function must perform the following:
     ///             1. Validate the lot
     ///             2. Pass the request to the auction module to calculate winning bids
-    ///             3. Collect the payout from the seller (if not pre-funded)
-    ///             4. If there is a partial fill, sends the refund and payout to the bidder
-    ///             5. Send the fees to the curator
+    ///             If settlement is completed:
+    ///             3. Send the proceeds (quote tokens) to the seller
+    ///             4. Execute the onSettle callback
+    ///             5. Refund any unused base tokens to the seller
+    ///             6. Allocate the curator fee (base tokens) to the curator
     ///
     /// @param      lotId_          Lot ID
     /// @param      num_            Number of bids to settle in this pass (capped at the remaining number if more is provided)
+    /// @param      callbackData_   Custom data provided to the onSettle callback
     /// @return     totalIn         Total amount of quote tokens from bids that were filled
     /// @return     totalOut        Total amount of base tokens paid out to winning bids
+    /// @return     finished        Boolean indicating if the settlement was completed
     /// @return     auctionOutput   Custom data returned by the auction module
     function settle(
         uint96 lotId_,
-        uint256 num_
-    ) external returns (uint256 totalIn, uint256 totalOut, bytes memory auctionOutput);
+        uint256 num_,
+        bytes calldata callbackData_
+    )
+        external
+        returns (uint256 totalIn, uint256 totalOut, bool finished, bytes memory auctionOutput);
 
-    /// @notice     Claim the proceeds of a settled auction
-    /// @dev        The implementing function must perform the following:
-    ///             1. Validate the lot
-    ///             2. Pass the request to the auction module to get the proceeds data
-    ///             3. Send the proceeds (quote tokens) to the seller
-    ///             4. Refund any unused base tokens to the seller
-    ///             5. Allocate the curator fee (base tokens) to the curator
+    /// @notice    Abort a batch auction that cannot be settled, refunding the seller and allowing bidders to claim refunds
+    /// @dev       This function can be called by anyone. Care should be taken to ensure proper logic is in place to prevent calling when not desired.
+    /// @dev       The implementing function should handle the following:
+    ///            1. Validate the lot
+    ///            2. Pass the request to the auction module to update the lot data
+    ///            3. Refund the seller
     ///
-    /// @param      lotId_          Lot ID
-    /// @param      callbackData_   Custom data provided to the onClaimProceeds callback
-    function claimProceeds(uint96 lotId_, bytes calldata callbackData_) external;
+    /// @param     lotId_    The lot id
+    function abort(uint96 lotId_) external;
 }

@@ -97,7 +97,7 @@ contract BaselinePreAsset is ERC20, BaseCallback, IPreAsset {
     // onCurate: true
     // onPurchase: false
     // onBid: false
-    // onClaimProceeds: true
+    // onSettle: true
     // receiveQuoteTokens: true
     // sendBaseTokens: true
     // Contract prefix should be: 11100111 = 0xE7
@@ -180,7 +180,7 @@ contract BaselinePreAsset is ERC20, BaseCallback, IPreAsset {
         revert Callback_NotImplemented();
     }
 
-    function _onClaimProceeds(
+    function _onSettle(
         uint96 lotId_,
         uint256 proceeds_,
         uint256 refund_,

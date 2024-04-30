@@ -6,7 +6,7 @@ import {EncryptedMarginalPrice} from "src/modules/auctions/EMP.sol";
 
 import {EmpTest} from "test/modules/auctions/EMP/EMPTest.sol";
 
-contract EmpaModuleDecryptBidsTest is EmpTest {
+contract EmpDecryptBidsTest is EmpTest {
     uint256 internal constant _BID_AMOUNT = 2e18;
     uint256 internal constant _BID_AMOUNT_OUT = 1e18;
 
@@ -27,7 +27,7 @@ contract EmpaModuleDecryptBidsTest is EmpTest {
     //  [X] it reverts
     // [X] given the lot has been settled
     //  [X] it reverts
-    // [X] given the lot proceeds have been claimed
+    // [X] given the lot has been aborted
     //  [X] it reverts
     // [X] when the number of bids to decrypt is larger than the number of bids
     //  [X] it succeeds
@@ -121,13 +121,12 @@ contract EmpaModuleDecryptBidsTest is EmpTest {
         _module.decryptAndSortBids(_lotId, 0, new bytes32[](0));
     }
 
-    function test_givenLotProceedsAreClaimed_reverts()
+    function test_givenLotIsAborted_reverts()
         external
         givenLotIsCreated
         givenLotHasConcluded
-        givenPrivateKeyIsSubmitted
-        givenLotIsSettled
-        givenLotProceedsAreClaimed
+        givenLotSettlePeriodHasPassed
+        givenLotIsAborted
     {
         // Call the function
         bytes memory err =

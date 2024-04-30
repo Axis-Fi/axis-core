@@ -89,23 +89,27 @@ interface IBatchAuction is IAuction {
     /// @param      num_            The number of winning bids to settle (capped at the remaining number if more is provided)
     /// @return     totalIn         Total amount of quote tokens from bids that were filled
     /// @return     totalOut        Total amount of base tokens paid out to winning bids
+    /// @return     capacity        The original capacity of the lot
+    /// @return     finished        Whether the settlement is finished
     /// @return     auctionOutput   Custom data returned by the auction module
     function settle(
         uint96 lotId_,
         uint256 num_
-    ) external returns (uint256 totalIn, uint256 totalOut, bytes memory auctionOutput);
-
-    /// @notice     Claim the seller proceeds from a settled auction lot
-    /// @dev        The implementing function should handle the following:
-    ///             - Validate the lot parameters
-    ///             - Update the lot data
-    ///
-    /// @param      lotId_          The lot id
-    /// @return     purchased       The amount of quote tokens purchased
-    /// @return     sold            The amount of base tokens sold
-    /// @return     capacity        The original capacity of the lot
-    /// @return     auctionOutput   Custom data returned by the auction module
-    function claimProceeds(uint96 lotId_)
+    )
         external
-        returns (uint256 purchased, uint256 sold, uint256 capacity, bytes memory auctionOutput);
+        returns (
+            uint256 totalIn,
+            uint256 totalOut,
+            uint256 capacity,
+            bool finished,
+            bytes memory auctionOutput
+        );
+
+    /// @notice    Abort a batch auction that cannot be settled, refunding the seller and allowing bidders to claim refunds
+    /// @dev       The implementing function should handle the following:
+    ///            - Validate the lot is in the correct state
+    ///            - Set the auction in a state that allows bidders to claim refunds
+    ///
+    /// @param     lotId_    The lot id
+    function abort(uint96 lotId_) external;
 }

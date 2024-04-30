@@ -82,7 +82,6 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
     /// @param         nextDecryptIndex    The index of the next bid to decrypt
     /// @param         status              The status of the auction
     /// @param         marginalBidId       The ID of the marginal bid (marking that bids following it are not filled)
-    /// @param         proceedsClaimed     Whether the proceeds have been claimed
     /// @param         marginalPrice       The marginal price of the auction (determined at settlement, blank before)
     /// @param         minFilled           The minimum amount of the lot that must be filled
     /// @param         minBidSize          The minimum size of a bid in quote tokens
@@ -93,8 +92,7 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
         uint64 nextBidId; // 8 +
         uint64 nextDecryptIndex; // 8 +
         LotStatus status; // 1 +
-        uint64 marginalBidId; // 8 +
-        bool proceedsClaimed; // 1 = 26 - end of slot 1
+        uint64 marginalBidId; // 8  = 25 - end of slot 1
         uint256 marginalPrice; // 32 - slot 2
         uint256 minPrice; // 32 - slot 3
         uint256 minFilled; // 32 - slot 4
@@ -187,8 +185,8 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
         // Set the minimum auction duration to 1 day initially
         minAuctionDuration = 1 days;
 
-        // Set the dedicated settle period to 6 hours initially
-        dedicatedSettlePeriod = 6 hours;
+        // Set the dedicated settle period to 1 day initially
+        dedicatedSettlePeriod = 1 days;
     }
 
     function VEECODE() public pure override returns (Veecode) {
@@ -266,7 +264,6 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
 
         // Set auction status to settled so that bids can be refunded
         auctionData[lotId_].status = LotStatus.Settled;
-        auctionData[lotId_].proceedsClaimed = true;
     }
 
     // ========== BID ========== //
@@ -509,6 +506,7 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
     ///                 - The lot is not active
     ///                 - The lot has not concluded
     ///                 - The private key has already been submitted
+    ///                 - The lot has been settled (cancelled, settled or aborted)
     ///                 - The private key is invalid for the public key
     ///
     /// @param          lotId_          The lot ID of the auction to submit the private key for
@@ -525,6 +523,7 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
         _revertIfLotInvalid(lotId_);
         _revertIfLotActive(lotId_);
         _revertIfBeforeLotStart(lotId_);
+        _revertIfLotSettled(lotId_);
 
         // Revert if the private key has already been verified and set
         if (auctionData[lotId_].privateKey != 0) revert Auction_WrongState(lotId_);
@@ -896,7 +895,7 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
     )
         internal
         override
-        returns (uint256 totalIn_, uint256 totalOut_, bytes memory auctionOutput_)
+        returns (uint256 totalIn_, uint256 totalOut_, bool, bytes memory auctionOutput_)
     {
         // Check that auction is in the right state for settlement
         if (auctionData[lotId_].status != LotStatus.Decrypted) {
@@ -922,15 +921,13 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
 
             // totalIn and totalOut are not set since the auction has not settled yet
 
-            return (totalIn_, totalOut_, auctionOutput_);
+            return (totalIn_, totalOut_, result.finished, auctionOutput_);
         }
 
         // Else the marginal price has been found, settle the auction
         // Cache capacity
         // Capacity is always in base token units for this auction type
         uint256 capacity = lotData[lotId_].capacity;
-
-        AuctionData memory lotAuctionData = auctionData[lotId_];
 
         // Determine if the auction can be filled, if so settle the auction, otherwise refund the seller
         // We set the status as settled either way to denote this function has been executed
@@ -940,7 +937,7 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
         // or if the marginal price is less than the minimum price
         if (
             result.capacityExpended < auctionData[lotId_].minFilled
-                || result.marginalPrice < lotAuctionData.minPrice
+                || result.marginalPrice < auctionData[lotId_].minPrice
         ) {
             // Auction cannot be settled if we reach this point
             // Marginal price is set as the max uint256 for the auction so the system knows all bids should be refunded
@@ -948,7 +945,7 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
 
             // totalIn and totalOut are not set since the auction does not clear
 
-            return (totalIn_, totalOut_, auctionOutput_);
+            return (totalIn_, totalOut_, result.finished, auctionOutput_);
         }
 
         // Auction can be settled at the marginal price if we reach this point
@@ -988,15 +985,30 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
         totalIn_ = result.totalAmountIn;
         totalOut_ = result.capacityExpended > capacity ? capacity : result.capacityExpended;
 
-        return (totalIn_, totalOut_, auctionOutput_);
+        return (totalIn_, totalOut_, result.finished, auctionOutput_);
     }
 
     /// @inheritdoc BatchAuctionModule
     /// @dev        This function performs the following:
-    ///             - Updates the auction data to mark the proceeds as claimed
-    function _claimProceeds(uint96 lotId_) internal override {
-        // Update the claim status
-        auctionData[lotId_].proceedsClaimed = true;
+    ///             - Validates state
+    ///             - Sets the lot status to Settled
+    ///             - Sets the marginal price to the maximum value
+    ///
+    ///             This function assumes:
+    ///             - The lot ID has been validated
+    ///             - The auction is not settled
+    ///
+    ///             This function reverts if:
+    ///             - The dedicated settle period has not passed
+    function _abort(uint96 lotId_) internal override {
+        // Validate that the dedicated settle period has passed
+        _revertIfDedicatedSettlePeriod(lotId_);
+
+        // Set the auction status to settled
+        auctionData[lotId_].status = LotStatus.Settled;
+
+        // Set the marginal price to the maximum value, so that all bids will be refunded
+        auctionData[lotId_].marginalPrice = type(uint256).max;
     }
 
     // ========== AUCTION INFORMATION ========== //
@@ -1114,14 +1126,6 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
             uint48(block.timestamp) >= conclusion
                 && uint48(block.timestamp) < conclusion + dedicatedSettlePeriod
         ) {
-            revert Auction_WrongState(lotId_);
-        }
-    }
-
-    /// @inheritdoc BatchAuctionModule
-    function _revertIfLotProceedsClaimed(uint96 lotId_) internal view override {
-        // Auction must not have proceeds claimed
-        if (auctionData[lotId_].proceedsClaimed) {
             revert Auction_WrongState(lotId_);
         }
     }

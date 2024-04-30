@@ -92,7 +92,7 @@ abstract contract BaseDirectToLiquidity is BaseCallback {
                 onCurate: true,
                 onPurchase: false,
                 onBid: false,
-                onClaimProceeds: true,
+                onSettle: true,
                 receiveQuoteTokens: true,
                 sendBaseTokens: false
             })
@@ -288,7 +288,7 @@ abstract contract BaseDirectToLiquidity is BaseCallback {
     /// @param      proceeds_       The proceeds from the auction
     /// @param      refund_         The refund from the auction
     /// @param      callbackData_   Implementation-specific data
-    function _onClaimProceeds(
+    function _onSettle(
         uint96 lotId_,
         uint256 proceeds_,
         uint256 refund_,

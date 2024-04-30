@@ -182,7 +182,13 @@ abstract contract BatchAuctionModule is IBatchAuction, AuctionModule {
         virtual
         override
         onlyInternal
-        returns (uint256 totalIn, uint256 totalOut, bytes memory auctionOutput)
+        returns (
+            uint256 totalIn,
+            uint256 totalOut,
+            uint256 capacity,
+            bool finished,
+            bytes memory auctionOutput
+        )
     {
         // Standard validation
         _revertIfLotInvalid(lotId_);
@@ -190,13 +196,17 @@ abstract contract BatchAuctionModule is IBatchAuction, AuctionModule {
         _revertIfLotActive(lotId_);
         _revertIfLotSettled(lotId_);
 
+        Lot storage lot = lotData[lotId_];
+
         // Call implementation-specific logic
-        (totalIn, totalOut, auctionOutput) = _settle(lotId_, num_);
+        (totalIn, totalOut, finished, auctionOutput) = _settle(lotId_, num_);
 
         // Store sold and purchased amounts
         lotData[lotId_].purchased = totalIn;
         lotData[lotId_].sold = totalOut;
         lotAuctionOutput[lotId_] = auctionOutput;
+
+        return (totalIn, totalOut, lot.capacity, finished, auctionOutput);
     }
 
     /// @notice     Implementation-specific lot settlement logic
@@ -209,52 +219,46 @@ abstract contract BatchAuctionModule is IBatchAuction, AuctionModule {
     /// @param      num_            The number of bids to settle in this pass (capped at the remaining number if more is provided)
     /// @return     totalIn         The total amount of quote tokens that filled the auction
     /// @return     totalOut        The total amount of base tokens sold
+    /// @return     finished        Whether the settlement is finished
     /// @return     auctionOutput   The auction-type specific output to be used with a condenser
     function _settle(
         uint96 lotId_,
         uint256 num_
-    ) internal virtual returns (uint256 totalIn, uint256 totalOut, bytes memory auctionOutput);
+    )
+        internal
+        virtual
+        returns (uint256 totalIn, uint256 totalOut, bool finished, bytes memory auctionOutput);
 
     /// @inheritdoc IBatchAuction
-    /// @dev        Implements a basic claimProceeds function that:
-    ///             - Validates the lot and bid parameters
+    /// @dev        Implements a basic abort function that:
+    ///             - Validates the lot id and state
     ///             - Calls the implementation-specific function
+    ///
+    ///             The abort function allows anyone to abort the lot after the conclusion time has passed. This can be useful if the lot is unable to be settled, or if the seller is unwilling to settle the lot.
     ///
     ///             This function reverts if:
     ///             - The lot id is invalid
-    ///             - The lot is not settled
-    ///             - The lot proceeds have already been claimed
-    ///             - The lot is cancelled
-    ///             - The caller is not an internal module
-    function claimProceeds(uint96 lotId_)
-        external
-        virtual
-        override
-        onlyInternal
-        returns (uint256 purchased, uint256 sold, uint256 capacity, bytes memory auctionOutput)
-    {
+    ///             - The lot has not concluded
+    ///             - The lot is settled (after which it cannot be aborted)
+    function abort(uint96 lotId_) external virtual override onlyInternal {
         // Standard validation
         _revertIfLotInvalid(lotId_);
-        _revertIfLotProceedsClaimed(lotId_);
-        _revertIfLotNotSettled(lotId_);
+        _revertIfBeforeLotConcluded(lotId_);
+        _revertIfLotSettled(lotId_);
 
         // Call implementation-specific logic
-        _claimProceeds(lotId_);
-
-        // Get the lot data
-        Lot memory lot = lotData[lotId_];
-
-        // Return the required data
-        return (lot.purchased, lot.sold, lot.capacity, lotAuctionOutput[lotId_]);
+        _abort(lotId_);
     }
 
-    /// @notice     Implementation-specific claim proceeds logic
+    /// @notice     Implementation-specific lot settlement logic
     /// @dev        Auction modules should override this to perform any additional logic, such as:
     ///             - Validating the auction-specific parameters
-    ///             - Updating the lot data
+    ///             - Updating auction-specific data
     ///
-    /// @param      lotId_          The lot ID
-    function _claimProceeds(uint96 lotId_) internal virtual;
+    ///             Note that the standard `abort()` function will allow for aborting the lot immediately after conclusion. Auction modules should implement a grace period to allow for settlement without the risk of another party calling `abort()`.
+    ///
+    /// @param      lotId_  The lot ID
+    function _abort(uint96 lotId_) internal virtual;
 
     // ========== MODIFIERS ========== //
 
@@ -271,13 +275,6 @@ abstract contract BatchAuctionModule is IBatchAuction, AuctionModule {
     ///
     /// @param      lotId_  The lot ID
     function _revertIfLotNotSettled(uint96 lotId_) internal view virtual;
-
-    /// @notice     Checks if the lot represented by `lotId_` has had its proceeds claimed
-    /// @dev        Should revert if the lot proceeds have been claimed
-    ///             Inheriting contracts must override this to implement custom logic
-    ///
-    /// @param      lotId_  The lot ID
-    function _revertIfLotProceedsClaimed(uint96 lotId_) internal view virtual;
 
     /// @notice     Checks that the lot and bid combination is valid
     /// @dev        Should revert if the bid is invalid

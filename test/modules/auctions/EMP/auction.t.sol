@@ -7,7 +7,7 @@ import {EncryptedMarginalPrice} from "src/modules/auctions/EMP.sol";
 
 import {EmpTest} from "test/modules/auctions/EMP/EMPTest.sol";
 
-contract EmpaModuleAuctionTest is EmpTest {
+contract EmpCreateAuctionTest is EmpTest {
     // [X] when the caller is not the parent
     //  [X] it reverts
     // [X] when the start time is in the past

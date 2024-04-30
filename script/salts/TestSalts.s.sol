@@ -57,7 +57,7 @@ contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts {
                 onCurate: false,
                 onPurchase: true,
                 onBid: true,
-                onClaimProceeds: false,
+                onSettle: false,
                 receiveQuoteTokens: false,
                 sendBaseTokens: false
             })
@@ -76,7 +76,7 @@ contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts {
                 onCurate: true,
                 onPurchase: true,
                 onBid: true,
-                onClaimProceeds: true,
+                onSettle: true,
                 receiveQuoteTokens: true,
                 sendBaseTokens: true
             })
@@ -93,7 +93,7 @@ contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts {
                 onCurate: true,
                 onPurchase: true,
                 onBid: true,
-                onClaimProceeds: true,
+                onSettle: true,
                 receiveQuoteTokens: false,
                 sendBaseTokens: true
             })
@@ -110,7 +110,7 @@ contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts {
                 onCurate: true,
                 onPurchase: true,
                 onBid: true,
-                onClaimProceeds: true,
+                onSettle: true,
                 receiveQuoteTokens: true,
                 sendBaseTokens: false
             })
@@ -127,7 +127,7 @@ contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts {
                 onCurate: true,
                 onPurchase: true,
                 onBid: true,
-                onClaimProceeds: true,
+                onSettle: true,
                 receiveQuoteTokens: false,
                 sendBaseTokens: false
             })
@@ -144,7 +144,7 @@ contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts {
                 onCurate: false,
                 onPurchase: false,
                 onBid: false,
-                onClaimProceeds: false,
+                onSettle: false,
                 receiveQuoteTokens: false,
                 sendBaseTokens: false
             })
@@ -161,7 +161,7 @@ contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts {
                 onCurate: false,
                 onPurchase: false,
                 onBid: false,
-                onClaimProceeds: false,
+                onSettle: false,
                 receiveQuoteTokens: true,
                 sendBaseTokens: false
             })
@@ -178,7 +178,7 @@ contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts {
                 onCurate: false,
                 onPurchase: false,
                 onBid: false,
-                onClaimProceeds: false,
+                onSettle: false,
                 receiveQuoteTokens: false,
                 sendBaseTokens: false
             })
@@ -195,7 +195,7 @@ contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts {
                 onCurate: false,
                 onPurchase: false,
                 onBid: false,
-                onClaimProceeds: false,
+                onSettle: false,
                 receiveQuoteTokens: false,
                 sendBaseTokens: false
             })
@@ -212,7 +212,7 @@ contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts {
                 onCurate: true,
                 onPurchase: false,
                 onBid: false,
-                onClaimProceeds: false,
+                onSettle: false,
                 receiveQuoteTokens: false,
                 sendBaseTokens: false
             })
@@ -229,7 +229,7 @@ contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts {
                 onCurate: false,
                 onPurchase: true,
                 onBid: false,
-                onClaimProceeds: false,
+                onSettle: false,
                 receiveQuoteTokens: false,
                 sendBaseTokens: false
             })
@@ -246,7 +246,7 @@ contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts {
                 onCurate: false,
                 onPurchase: false,
                 onBid: true,
-                onClaimProceeds: false,
+                onSettle: false,
                 receiveQuoteTokens: false,
                 sendBaseTokens: false
             })
@@ -263,7 +263,7 @@ contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts {
                 onCurate: false,
                 onPurchase: false,
                 onBid: false,
-                onClaimProceeds: true,
+                onSettle: true,
                 receiveQuoteTokens: false,
                 sendBaseTokens: false
             })
@@ -280,7 +280,7 @@ contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts {
                 onCurate: false,
                 onPurchase: false,
                 onBid: false,
-                onClaimProceeds: false,
+                onSettle: false,
                 receiveQuoteTokens: true,
                 sendBaseTokens: false
             })
@@ -297,7 +297,7 @@ contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts {
                 onCurate: false,
                 onPurchase: false,
                 onBid: false,
-                onClaimProceeds: false,
+                onSettle: false,
                 receiveQuoteTokens: false,
                 sendBaseTokens: true
             })
@@ -314,7 +314,7 @@ contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts {
                 onCurate: false,
                 onPurchase: false,
                 onBid: false,
-                onClaimProceeds: false,
+                onSettle: false,
                 receiveQuoteTokens: false,
                 sendBaseTokens: true
             })
@@ -331,7 +331,7 @@ contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts {
                 onCurate: true,
                 onPurchase: false,
                 onBid: false,
-                onClaimProceeds: false,
+                onSettle: false,
                 receiveQuoteTokens: false,
                 sendBaseTokens: true
             })
@@ -348,7 +348,7 @@ contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts {
                 onCurate: true,
                 onPurchase: false,
                 onBid: false,
-                onClaimProceeds: false,
+                onSettle: false,
                 receiveQuoteTokens: false,
                 sendBaseTokens: true
             })
@@ -365,7 +365,7 @@ contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts {
                 onCurate: false,
                 onPurchase: true,
                 onBid: false,
-                onClaimProceeds: false,
+                onSettle: false,
                 receiveQuoteTokens: false,
                 sendBaseTokens: true
             })
@@ -384,7 +384,7 @@ contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts {
                 onCurate: false,
                 onPurchase: false,
                 onBid: true,
-                onClaimProceeds: false,
+                onSettle: false,
                 receiveQuoteTokens: false,
                 sendBaseTokens: false
             })
@@ -403,7 +403,7 @@ contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts {
                 onCurate: false,
                 onPurchase: true,
                 onBid: false,
-                onClaimProceeds: false,
+                onSettle: false,
                 receiveQuoteTokens: false,
                 sendBaseTokens: false
             })

@@ -335,19 +335,24 @@ abstract contract EmpTest is Test, Permit2User {
         _;
     }
 
+    modifier givenLotIsAborted() {
+        vm.prank(address(_auctionHouse));
+        _module.abort(_lotId);
+        _;
+    }
+
     modifier givenLotHasStarted() {
         vm.warp(_start + 1);
         _;
     }
 
     modifier givenLotSettlePeriodHasPassed() {
-        vm.warp(_start + _DURATION + 6 hours);
+        vm.warp(_start + _DURATION + _module.dedicatedSettlePeriod());
         _;
     }
 
-    modifier givenLotProceedsAreClaimed() {
-        vm.prank(address(_auctionHouse));
-        _module.claimProceeds(_lotId);
+    modifier givenDuringLotSettlePeriod() {
+        vm.warp(_start + _DURATION + _module.dedicatedSettlePeriod() - 1);
         _;
     }
 
@@ -371,7 +376,6 @@ abstract contract EmpTest is Test, Permit2User {
             uint64 nextDecryptIndex_,
             EncryptedMarginalPrice.LotStatus status_,
             uint64 marginalBidId_,
-            bool proceedsClaimed_,
             uint256 marginalPrice_,
             uint256 minPrice_,
             uint256 minFilled_,
@@ -385,7 +389,6 @@ abstract contract EmpTest is Test, Permit2User {
             nextDecryptIndex: nextDecryptIndex_,
             status: status_,
             marginalBidId: marginalBidId_,
-            proceedsClaimed: proceedsClaimed_,
             marginalPrice: marginalPrice_,
             minFilled: minFilled_,
             minBidSize: minBidSize_,

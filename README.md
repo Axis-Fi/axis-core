@@ -20,7 +20,7 @@ Auctions and Derivatives are implemented in separate Module contracts which are 
 
 ### Callbacks
 
-Axis implements a callbacks design to allow for flexibility with external integrations during an auction. Inspired heavily by UniswapV4 hooks, callbacks allow for inserting custom logic at various points during an auction including, `onCreate`, `onCancel`, `onCurate`, `onPurchase`, `onBid`, and `onClaimProceeds`. Additionally, the callbacks can optionally be used to receive quote token proceeds from the auction and direct them as desired or source the base tokens that need to be paid out dynamically.
+Axis implements a callbacks design to allow for flexibility with external integrations during an auction. Inspired heavily by UniswapV4 hooks, callbacks allow for inserting custom logic at various points during an auction including, `onCreate`, `onCancel`, `onCurate`, `onPurchase`, `onBid`, and `onSettle`. Additionally, the callbacks can optionally be used to receive quote token proceeds from the auction and direct them as desired or source the base tokens that need to be paid out dynamically.
 
 ### Auction Types
 
@@ -32,8 +32,8 @@ Batch Auctions refer to the more familiar auction format of collecting bids from
 
 Two auctions are initially implemented:
 
-- Encrypted Marginal Price Auction (see ./design/EMPA.md for spec), a sealed-bid batch auction
-- Fixed Price Auction, simple atomic auction to sell tokens at a fixed price. The CappedMerkleAllowlist callback implementation provides a way to do allowlisted, capped sales at a fixed price for a token.
+- Encrypted Marginal Price Auction (see ./design/EMP.md for spec), a sealed-bid batch auction
+- Fixed Price Auction, simple atomic auction to sell tokens at a fixed price. The `CappedMerkleAllowlist` callback implementation provides a way to do allowlisted, capped sales at a fixed price for a token.
 
 ## Developer Guide
 
@@ -56,7 +56,7 @@ forge build
 To test the ECIES library, a Rust crate is provided which allows FFI calls to compare the encryption and decryption operations with a reference implementation. This must be built first for those tests to pass. Rust should be installed.
 
 ```shell
-cd crates/ecies && cargo build && cd ../..
+pnpm run build:ecies-cli
 ```
 
 Then, the test suite can be run with:
@@ -73,11 +73,16 @@ Combines `forge fmt` and `solhint`
 pnpm run lint
 ```
 
+To run linting on all files (including tests and scripts):
+
+```shell
+pnpm run lint:all
+```
+
 ### Scripts
 
 Scripts are written in Solidity using Foundry and are divided into `deploy`, `salts` and `ops` scripts. Specific scripts are written for individual actions and can be found in the `scripts` directory along with shell scripts to run them.
 
 ### Deployments
 
-Deployments are listed in the Axis documentation.
-TODO add link
+Deployments are listed in the [Axis documentation](https://docs.axis.finance/references/03-technical/).

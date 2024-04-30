@@ -154,6 +154,34 @@ abstract contract BatchAuctionHouseTest is Test, Permit2User, WithSalts {
         return FixedPointMathLib.mulDivDown(amount_, 10 ** _baseToken.decimals(), _BASE_SCALE);
     }
 
+    function _calculateFees(
+        address referrer_,
+        uint256 amountIn_
+    ) internal view returns (uint256 toReferrer, uint256 toProtocol, uint256 totalFees) {
+        bool hasReferrer = referrer_ != address(0);
+
+        uint256 referrerFee = uint256(amountIn_) * _referrerFeePercentActual / 1e5;
+
+        // If the referrer is not set, the referrer fee is allocated to the protocol
+        toReferrer = hasReferrer ? referrerFee : 0;
+        toProtocol =
+            uint256(amountIn_) * _protocolFeePercentActual / 1e5 + (hasReferrer ? 0 : referrerFee);
+
+        return (toReferrer, toProtocol, toReferrer + toProtocol);
+    }
+
+    function _calculateCuratorFee(uint256 amountOut_)
+        internal
+        view
+        returns (uint256 curatorPayout_)
+    {
+        if (_curatorApproved == false) {
+            return 0;
+        }
+
+        return amountOut_ * _curatorFeePercentActual / 1e5;
+    }
+
     // ===== Modifiers ===== //
 
     modifier givenLotHasCapacity(uint96 capacity_) {
@@ -262,7 +290,7 @@ abstract contract BatchAuctionHouseTest is Test, Permit2User, WithSalts {
 
     function _settleLot() internal {
         vm.prank(_SELLER);
-        _auctionHouse.settle(_lotId, 100_000);
+        _auctionHouse.settle(_lotId, 100_000, bytes(""));
     }
 
     modifier givenLotIsSettled() {
@@ -278,7 +306,7 @@ abstract contract BatchAuctionHouseTest is Test, Permit2User, WithSalts {
             onCurate: false,
             onPurchase: true,
             onBid: true,
-            onClaimProceeds: false,
+            onSettle: false,
             receiveQuoteTokens: false,
             sendBaseTokens: false
         });
@@ -355,7 +383,7 @@ abstract contract BatchAuctionHouseTest is Test, Permit2User, WithSalts {
             onCurate: true,
             onPurchase: true,
             onBid: true,
-            onClaimProceeds: true,
+            onSettle: true,
             receiveQuoteTokens: _callbackReceiveQuoteTokens,
             sendBaseTokens: _callbackSendBaseTokens
         });
@@ -390,6 +418,11 @@ abstract contract BatchAuctionHouseTest is Test, Permit2User, WithSalts {
     modifier givenCallbackHasBaseTokenAllowance(uint256 amount_) {
         vm.prank(address(_callback));
         _baseToken.approve(address(_auctionHouse), amount_);
+        _;
+    }
+
+    modifier givenOnSettleCallbackReverts() {
+        _callback.setOnSettleReverts(true);
         _;
     }
 
@@ -484,12 +517,6 @@ abstract contract BatchAuctionHouseTest is Test, Permit2User, WithSalts {
         _;
     }
 
-    modifier givenLotProceedsAreClaimed() {
-        vm.prank(_SELLER);
-        _auctionHouse.claimProceeds(_lotId, bytes(""));
-        _;
-    }
-
     modifier givenBidIsClaimed(uint64 bidId_) {
         uint64[] memory bids = new uint64[](1);
         bids[0] = bidId_;
@@ -504,8 +531,18 @@ abstract contract BatchAuctionHouseTest is Test, Permit2User, WithSalts {
         _;
     }
 
+    modifier givenRecipientIsOnBaseTokenBlacklist(address recipient_) {
+        _baseToken.setBlacklist(recipient_, true);
+        _;
+    }
+
     modifier givenQuoteTokenIsRevertOnZero() {
         _quoteToken.setRevertOnZero(true);
+        _;
+    }
+
+    modifier givenRecipientIsOnQuoteTokenBlacklist(address recipient_) {
+        _quoteToken.setBlacklist(recipient_, true);
         _;
     }
 

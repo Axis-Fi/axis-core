@@ -21,7 +21,7 @@ contract CappedMerkleAllowlist is MerkleAllowlist {
     // onCurate: false
     // onPurchase: true
     // onBid: true
-    // onClaimProceeds: false
+    // onSettle: false
     // receiveQuoteTokens: false
     // sendBaseTokens: false
     // Contract prefix should be: 10011000 = 0x98
