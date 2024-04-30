@@ -28,7 +28,7 @@ salt_tmp_file="./script/salts/salts.json.tmp"
 # Clear the salts for the specified salt key
 if [ -f $salt_file ]; then
     echo "Clearing old values for salt key: $SALT_KEY"
-    jq "del(.\"$SALT_KEY\")" $salt_file > $salt_tmp_file && mv $salt_tmp_file $salt_file
+    jq "del(.\"Test_$SALT_KEY\")" $salt_file > $salt_tmp_file && mv $salt_tmp_file $salt_file
 fi
 
 # Generate bytecode
