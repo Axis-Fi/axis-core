@@ -4,7 +4,6 @@ pragma solidity 0.8.19;
 import {AuctionHouse} from "src/bases/AuctionHouse.sol";
 import {BatchAuctionHouse} from "src/BatchAuctionHouse.sol";
 import {IAuction} from "src/interfaces/IAuction.sol";
-import {BatchAuctionModule} from "src/modules/auctions/BatchAuctionModule.sol";
 
 import {BatchAuctionHouseTest} from "test/BatchAuctionHouse/AuctionHouseTest.sol";
 

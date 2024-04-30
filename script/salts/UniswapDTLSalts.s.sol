@@ -10,7 +10,7 @@ import {UniswapV2DirectToLiquidity} from "src/callbacks/liquidity/UniswapV2DTL.s
 import {UniswapV3DirectToLiquidity} from "src/callbacks/liquidity/UniswapV3DTL.sol";
 
 contract UniswapDTLSalts is Script, WithEnvironment, WithSalts {
-    string internal _ADDRESS_PREFIX = "E6";
+    string internal constant _ADDRESS_PREFIX = "E6";
 
     address internal _envUniswapV2Factory;
     address internal _envUniswapV2Router;
