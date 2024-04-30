@@ -27,7 +27,7 @@ contract EmpaModuleDecryptBidsTest is EmpTest {
     //  [X] it reverts
     // [X] given the lot has been settled
     //  [X] it reverts
-    // [X] given the lot proceeds have been claimed
+    // [X] given the lot has been aborted
     //  [X] it reverts
     // [X] when the number of bids to decrypt is larger than the number of bids
     //  [X] it succeeds
@@ -121,22 +121,21 @@ contract EmpaModuleDecryptBidsTest is EmpTest {
         _module.decryptAndSortBids(_lotId, 0, new bytes32[](0));
     }
 
-    // function test_givenLotProceedsAreClaimed_reverts()
-    //     external
-    //     givenLotIsCreated
-    //     givenLotHasConcluded
-    //     givenPrivateKeyIsSubmitted
-    //     givenLotIsSettled
-    //     givenLotProceedsAreClaimed
-    // {
-    //     // Call the function
-    //     bytes memory err =
-    //         abi.encodeWithSelector(EncryptedMarginalPrice.Auction_WrongState.selector, _lotId);
-    //     vm.expectRevert(err);
+    function test_givenLotIsAborted_reverts()
+        external
+        givenLotIsCreated
+        givenLotHasConcluded
+        givenLotSettlePeriodHasPassed
+        givenLotIsAborted
+    {
+        // Call the function
+        bytes memory err =
+            abi.encodeWithSelector(EncryptedMarginalPrice.Auction_WrongState.selector, _lotId);
+        vm.expectRevert(err);
 
-    //     // Call the function
-    //     _module.decryptAndSortBids(_lotId, 0, new bytes32[](0));
-    // }
+        // Call the function
+        _module.decryptAndSortBids(_lotId, 0, new bytes32[](0));
+    }
 
     function test_givenLotIsCancelled_reverts() external givenLotIsCreated givenLotIsCancelled {
         // Call the function

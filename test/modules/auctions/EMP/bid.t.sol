@@ -23,9 +23,11 @@ contract EmpaModuleBidTest is EmpTest {
     //  [X] it reverts
     // [X] when the lot has concluded
     //  [X] it reverts
-    // [ ] when the lot is in the settlement period
-    //  [ ] it reverts
+    // [X] when the lot is in the settlement period
+    //  [X] it reverts
     // [X] when the lot has been settled
+    //  [X] it reverts
+    // [X] when the lot has been aborted
     //  [X] it reverts
     // [X] when the lot has been cancelled
     //  [X] it reverts
@@ -90,12 +92,48 @@ contract EmpaModuleBidTest is EmpTest {
         _module.bid(_lotId, _BIDDER, _REFERRER, _BID_AMOUNT, bidData);
     }
 
+    function test_lotInSettlePeriod_reverts()
+        public
+        givenLotIsCreated
+        givenLotHasConcluded
+        givenDuringLotSettlePeriod
+    {
+        // Prepare the inputs
+        bytes memory bidData = _createBidData(_BID_AMOUNT, _BID_AMOUNT_OUT);
+
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(IAuction.Auction_MarketNotActive.selector, _lotId);
+        vm.expectRevert(err);
+
+        // Call the function
+        vm.prank(address(_auctionHouse));
+        _module.bid(_lotId, _BIDDER, _REFERRER, _BID_AMOUNT, bidData);
+    }
+
     function test_lotSettled_reverts()
         public
         givenLotIsCreated
         givenLotHasConcluded
         givenPrivateKeyIsSubmitted
         givenLotIsSettled
+    {
+        // Prepare the inputs
+        bytes memory bidData = _createBidData(_BID_AMOUNT, _BID_AMOUNT_OUT);
+
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(IAuction.Auction_MarketNotActive.selector, _lotId);
+        vm.expectRevert(err);
+
+        // Call the function
+        vm.prank(address(_auctionHouse));
+        _module.bid(_lotId, _BIDDER, _REFERRER, _BID_AMOUNT, bidData);
+    }
+
+    function test_lotAborted_reverts()
+        public
+        givenLotIsCreated
+        givenLotSettlePeriodHasPassed
+        givenLotIsAborted
     {
         // Prepare the inputs
         bytes memory bidData = _createBidData(_BID_AMOUNT, _BID_AMOUNT_OUT);

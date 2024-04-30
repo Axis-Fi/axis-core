@@ -16,6 +16,10 @@ contract EmpaModuleCancelAuctionTest is EmpTest {
     //  [X] it reverts
     // [X] when the auction has been cancelled
     //  [X] it reverts
+    // [X] when the auction has been aborted
+    //  [X] it reverts
+    // [X] when the auction has been settled
+    //  [X] it reverts
     // [X] when the auction has started
     //  [X] it reverts
     // [X] it updates the conclusion, capacity and status
@@ -53,6 +57,35 @@ contract EmpaModuleCancelAuctionTest is EmpTest {
     }
 
     function test_auctionCancelled_reverts() public givenLotIsCreated givenLotIsCancelled {
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(IAuction.Auction_MarketNotActive.selector, _lotId);
+        vm.expectRevert(err);
+
+        // Call the function
+        _cancelAuctionLot();
+    }
+
+    function test_auctionAborted_reverts()
+        public
+        givenLotIsCreated
+        givenLotSettlePeriodHasPassed
+        givenLotIsAborted
+    {
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(IAuction.Auction_MarketNotActive.selector, _lotId);
+        vm.expectRevert(err);
+
+        // Call the function
+        _cancelAuctionLot();
+    }
+
+    function test_auctionSettled_reverts()
+        public
+        givenLotIsCreated
+        givenLotHasConcluded
+        givenPrivateKeyIsSubmitted
+        givenLotIsSettled
+    {
         // Expect revert
         bytes memory err = abi.encodeWithSelector(IAuction.Auction_MarketNotActive.selector, _lotId);
         vm.expectRevert(err);

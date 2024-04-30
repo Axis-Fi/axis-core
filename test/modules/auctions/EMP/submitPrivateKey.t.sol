@@ -19,6 +19,8 @@ contract EmpaModuleSubmitPrivateKeyTest is EmpTest {
     //  [X] it reverts
     // [X] when the public key is not derived from the private key
     //  [X] it reverts
+    // [ ] given the lot has been aborted
+    //  [ ] it reverts
     // [X] when the caller is not the parent
     //  [X] it succeeds
     // [X] when the number of bids to decrypt is specified

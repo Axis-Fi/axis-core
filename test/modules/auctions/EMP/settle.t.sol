@@ -57,13 +57,16 @@ contract EmpaModuleSettleTest is EmpTest {
     //   [X] it reverts
     // [X] when the lot has been settled already
     //   [X] it reverts
+    // [X] when the lot has been aborted
+    //   [X] it reverts
     // [X] given the lot has been cancelled
-    //  [X] it reverts
-    // [X] when the lot proceeds have been claimed
     //  [X] it reverts
     // [X] when the caller is not the parent
     //   [X] it reverts
-
+    // [X] when during the settle period
+    //   [X] it settles
+    // [X] when the settle period has passed
+    //   [X] it settles
     // [X] when the filled amount is less than the lot minimum
     //  [X] it handles different token decimals
     //  [X] it returns no amounts in and out, and no partial fill
@@ -1145,6 +1148,24 @@ contract EmpaModuleSettleTest is EmpTest {
         _settle();
     }
 
+    function test_lotAborted_reverts()
+        external
+        givenLotIsCreated
+        givenLotHasStarted
+        givenBidIsCreated(_BID_PRICE_TWO_SIZE_TWO_AMOUNT, _BID_PRICE_TWO_SIZE_TWO_AMOUNT_OUT)
+        givenLotHasConcluded
+        givenLotSettlePeriodHasPassed
+        givenLotIsAborted
+    {
+        // Expect revert
+        bytes memory err =
+            abi.encodeWithSelector(EncryptedMarginalPrice.Auction_WrongState.selector, _lotId);
+        vm.expectRevert(err);
+
+        // Call function
+        _settle();
+    }
+
     function test_lotCancelled_reverts() external givenLotIsCreated givenLotIsCancelled {
         // Expect revert
         bytes memory err = abi.encodeWithSelector(IAuction.Auction_MarketNotActive.selector, _lotId);
@@ -1153,26 +1174,6 @@ contract EmpaModuleSettleTest is EmpTest {
         // Call function
         _settle();
     }
-
-    // function test_lotProceedsAreClaimed_reverts()
-    //     external
-    //     givenLotIsCreated
-    //     givenLotHasStarted
-    //     givenBidIsCreated(_BID_PRICE_TWO_SIZE_TWO_AMOUNT, _BID_PRICE_TWO_SIZE_TWO_AMOUNT_OUT)
-    //     givenLotHasConcluded
-    //     givenPrivateKeyIsSubmitted
-    //     givenLotIsDecrypted
-    //     givenLotIsSettled
-    //     givenLotProceedsAreClaimed
-    // {
-    //     // Expect revert
-    //     bytes memory err =
-    //         abi.encodeWithSelector(EncryptedMarginalPrice.Auction_WrongState.selector, _lotId);
-    //     vm.expectRevert(err);
-
-    //     // Call function
-    //     _settle();
-    // }
 
     function test_callerNotParent_reverts()
         external
@@ -1355,6 +1356,68 @@ contract EmpaModuleSettleTest is EmpTest {
         givenLotHasStarted
         givenAllBidsAreBelowMinimumPrice
         givenLotHasConcluded
+        givenPrivateKeyIsSubmitted
+        givenLotIsDecrypted
+    {
+        // Call function
+        (
+            uint256 totalIn,
+            uint256 totalOut,
+            uint256 capacity,
+            bool finished,
+            bytes memory auctionOutput
+        ) = _settle();
+
+        // Validate auction data
+        EncryptedMarginalPrice.AuctionData memory auctionData = _getAuctionData(_lotId);
+        assertEq(auctionData.marginalPrice, _expectedMarginalPrice, "marginalPrice");
+        assertEq(
+            uint8(auctionData.status), uint8(EncryptedMarginalPrice.LotStatus.Settled), "status"
+        );
+
+        // Assert settlement
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
+        _assertLot();
+    }
+
+    function test_duringSettlePeriod()
+        external
+        givenLotIsCreated
+        givenLotHasStarted
+        givenBidsAreAboveMinimumAndBelowCapacity
+        givenLotHasConcluded
+        givenDuringLotSettlePeriod
+        givenPrivateKeyIsSubmitted
+        givenLotIsDecrypted
+    {
+        // Call function
+        (
+            uint256 totalIn,
+            uint256 totalOut,
+            uint256 capacity,
+            bool finished,
+            bytes memory auctionOutput
+        ) = _settle();
+
+        // Validate auction data
+        EncryptedMarginalPrice.AuctionData memory auctionData = _getAuctionData(_lotId);
+        assertEq(auctionData.marginalPrice, _expectedMarginalPrice, "marginalPrice");
+        assertEq(
+            uint8(auctionData.status), uint8(EncryptedMarginalPrice.LotStatus.Settled), "status"
+        );
+
+        // Assert settlement
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
+        _assertLot();
+    }
+
+    function test_afterSettlePeriod()
+        external
+        givenLotIsCreated
+        givenLotHasStarted
+        givenBidsAreAboveMinimumAndBelowCapacity
+        givenLotHasConcluded
+        givenLotSettlePeriodHasPassed
         givenPrivateKeyIsSubmitted
         givenLotIsDecrypted
     {

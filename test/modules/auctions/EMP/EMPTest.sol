@@ -335,13 +335,24 @@ abstract contract EmpTest is Test, Permit2User {
         _;
     }
 
+    modifier givenLotIsAborted() {
+        vm.prank(address(_auctionHouse));
+        _module.abort(_lotId);
+        _;
+    }
+
     modifier givenLotHasStarted() {
         vm.warp(_start + 1);
         _;
     }
 
     modifier givenLotSettlePeriodHasPassed() {
-        vm.warp(_start + _DURATION + 1 days);
+        vm.warp(_start + _DURATION + _module.dedicatedSettlePeriod());
+        _;
+    }
+
+    modifier givenDuringLotSettlePeriod() {
+        vm.warp(_start + _DURATION + _module.dedicatedSettlePeriod() - 1);
         _;
     }
 

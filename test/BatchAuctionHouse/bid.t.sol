@@ -24,8 +24,6 @@ contract BatchBidTest is BatchAuctionHouseTest {
     //  [X] it reverts
     // [X] given the auction is settled
     //  [X] it reverts
-    // [X] given the auction proceeds have been claimed
-    //  [X] it reverts
     // [X] given the auction has an allowlist
     //  [X] reverts if the sender is not on the allowlist
     //  [X] it succeeds
@@ -95,24 +93,6 @@ contract BatchBidTest is BatchAuctionHouseTest {
         // Call the function
         _createBid(_BID_AMOUNT, _bidAuctionData);
     }
-
-    // function test_givenLotProceedsHaveBeenClaimed_reverts()
-    //     external
-    //     whenAuctionTypeIsBatch
-    //     whenBatchAuctionModuleIsInstalled
-    //     givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
-    //     givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
-    //     givenLotIsCreated
-    //     givenLotIsConcluded
-    //     givenLotIsSettled
-    //     givenLotProceedsAreClaimed
-    // {
-    //     bytes memory err = abi.encodeWithSelector(IAuction.Auction_MarketNotActive.selector, _lotId);
-    //     vm.expectRevert(err);
-
-    //     // Call the function
-    //     _createBid(_BID_AMOUNT, _bidAuctionData);
-    // }
 
     function test_incorrectAllowlistProof_reverts()
         external

@@ -34,7 +34,7 @@ contract EmpaModuleRefundBidTest is EmpTest {
     //  [X] it reverts
     // [X] given the lot is settled
     //  [X] it reverts
-    // [X] given the lot proceeds have been claimed
+    // [X] when the lot has been aborted
     //  [X] it reverts
     // [X] when the caller is not the parent
     //  [X] it reverts
@@ -218,6 +218,25 @@ contract EmpaModuleRefundBidTest is EmpTest {
         givenPrivateKeyIsSubmitted
         givenLotIsDecrypted
         givenLotIsSettled
+    {
+        // Expect revert
+        bytes memory err =
+            abi.encodeWithSelector(EncryptedMarginalPrice.Auction_WrongState.selector, _lotId);
+        vm.expectRevert(err);
+
+        // Call the function
+        vm.prank(address(_auctionHouse));
+        _module.refundBid(_lotId, _bidId, 0, _BIDDER);
+    }
+
+    function test_lotIsAborted_reverts()
+        external
+        givenLotIsCreated
+        givenLotHasStarted
+        givenBidIsCreated(2e18, 1e18)
+        givenLotHasConcluded
+        givenLotSettlePeriodHasPassed
+        givenLotIsAborted
     {
         // Expect revert
         bytes memory err =
