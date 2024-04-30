@@ -2,6 +2,7 @@
 pragma solidity 0.8.19;
 
 import {IAuction} from "src/interfaces/IAuction.sol";
+import {IBatchAuction} from "src/interfaces/IBatchAuction.sol";
 import {EncryptedMarginalPrice} from "src/modules/auctions/EMP.sol";
 
 import {EmpTest} from "test/modules/auctions/EMP/EMPTest.sol";
@@ -85,9 +86,20 @@ contract EmpAbortTest is EmpTest {
         givenLotIsCreated
         givenLotIsCancelled
     {
-        // Expect revert
+        // Initially after cancelling the auction is in the dedicated settle period because the conclusion timestamp is updated to the current time
         bytes memory err =
-            abi.encodeWithSelector(EncryptedMarginalPrice.Auction_WrongState.selector, _lotId);
+            abi.encodeWithSelector(IBatchAuction.Auction_DedicatedSettlePeriod.selector, _lotId);
+        vm.expectRevert(err);
+
+        // Call the function
+        vm.prank(address(_auctionHouse));
+        _module.abort(_lotId);
+
+        // Warp past the dedicated settle period
+        vm.warp(block.timestamp + _settlePeriod + 1);
+
+        // Expect revert
+        err = abi.encodeWithSelector(EncryptedMarginalPrice.Auction_WrongState.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function
@@ -101,9 +113,21 @@ contract EmpAbortTest is EmpTest {
         givenLotIsCancelled
         givenLotHasStarted
     {
-        // Expect revert
+        // Initially after cancelling the auction is in the dedicated settle period because the conclusion timestamp is updated to the current time
+        // The start time isn't more than the settle period past the cancellation, so it still reverts with the dedicated settle period error
         bytes memory err =
-            abi.encodeWithSelector(EncryptedMarginalPrice.Auction_WrongState.selector, _lotId);
+            abi.encodeWithSelector(IBatchAuction.Auction_DedicatedSettlePeriod.selector, _lotId);
+        vm.expectRevert(err);
+
+        // Call the function
+        vm.prank(address(_auctionHouse));
+        _module.abort(_lotId);
+
+        // Warp past the dedicated settle period
+        vm.warp(block.timestamp + _settlePeriod + 1);
+
+        // Expect revert
+        err = abi.encodeWithSelector(EncryptedMarginalPrice.Auction_WrongState.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function
@@ -135,7 +159,7 @@ contract EmpAbortTest is EmpTest {
     {
         // Expect revert
         bytes memory err =
-            abi.encodeWithSelector(EncryptedMarginalPrice.Auction_WrongState.selector, _lotId);
+            abi.encodeWithSelector(IBatchAuction.Auction_DedicatedSettlePeriod.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function
@@ -153,7 +177,7 @@ contract EmpAbortTest is EmpTest {
     {
         // Expect revert
         bytes memory err =
-            abi.encodeWithSelector(EncryptedMarginalPrice.Auction_WrongState.selector, _lotId);
+            abi.encodeWithSelector(IBatchAuction.Auction_DedicatedSettlePeriod.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function
@@ -172,7 +196,7 @@ contract EmpAbortTest is EmpTest {
     {
         // Expect revert
         bytes memory err =
-            abi.encodeWithSelector(EncryptedMarginalPrice.Auction_WrongState.selector, _lotId);
+            abi.encodeWithSelector(IBatchAuction.Auction_DedicatedSettlePeriod.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function
@@ -192,7 +216,7 @@ contract EmpAbortTest is EmpTest {
     {
         // Expect revert
         bytes memory err =
-            abi.encodeWithSelector(EncryptedMarginalPrice.Auction_WrongState.selector, _lotId);
+            abi.encodeWithSelector(IBatchAuction.Auction_DedicatedSettlePeriod.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function

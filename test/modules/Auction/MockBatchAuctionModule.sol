@@ -51,6 +51,7 @@ contract MockBatchAuctionModule is BatchAuctionModule {
 
     constructor(address _owner) AuctionModule(_owner) {
         minAuctionDuration = 1 days;
+        dedicatedSettlePeriod = 1 days;
     }
 
     function VEECODE() public pure virtual override returns (Veecode) {

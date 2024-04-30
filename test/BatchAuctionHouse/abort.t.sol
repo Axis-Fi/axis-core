@@ -4,6 +4,7 @@ pragma solidity 0.8.19;
 import {AuctionHouse} from "src/bases/AuctionHouse.sol";
 import {BatchAuctionHouse} from "src/BatchAuctionHouse.sol";
 import {IAuction} from "src/interfaces/IAuction.sol";
+import {IBatchAuction} from "src/interfaces/IBatchAuction.sol";
 
 import {BatchAuctionHouseTest} from "test/BatchAuctionHouse/AuctionHouseTest.sol";
 
@@ -15,6 +16,8 @@ contract BatchAbortTest is BatchAuctionHouseTest {
     //    [X] it reverts
     // [X] when the lot is active
     //    [X] it reverts
+    // [X] when the lot is in the dedicated settle period
+    //    [X] it reverts
     // [X] when the lot is cancelled
     //    [X] when before the lot start
     //        [X] it reverts
@@ -24,12 +27,13 @@ contract BatchAbortTest is BatchAuctionHouseTest {
     //        [X] it reverts
     // [X] when the lot is settled
     //    [X] it reverts
-    // [X] when a callback is configured that sends base tokens
-    //    [X] it sends the refund to the callback
-    // [X] when a callback is not configured
-    //    [X] it sends the refund to the seller
-    // [X] when a callback is configured that doesn't send base tokens
-    //    [X] it sends the refund to the seller
+    // [X] when the lot is past the dedicated settle period
+    //   [X] when a callback is configured that sends base tokens
+    //      [X] it sends the refund to the callback
+    //   [X] when a callback is not configured
+    //      [X] it sends the refund to the seller
+    //   [X] when a callback is configured that doesn't send base tokens
+    //      [X] it sends the refund to the seller
 
     modifier givenLotSettlementFinished() {
         // Set the settlement data
@@ -86,6 +90,21 @@ contract BatchAbortTest is BatchAuctionHouseTest {
         _auctionHouse.abort(_lotId);
     }
 
+    function test_abort_whenLotInDedicatedSettlePeriod_reverts()
+        public
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenLotIsCreated
+        givenLotIsConcluded
+    {
+        bytes memory err =
+            abi.encodeWithSelector(IBatchAuction.Auction_DedicatedSettlePeriod.selector, _lotId);
+        vm.expectRevert(err);
+        _auctionHouse.abort(_lotId);
+    }
+
     function test_abort_whenLotIsCancelled_reverts()
         public
         whenAuctionTypeIsBatch
@@ -95,17 +114,15 @@ contract BatchAbortTest is BatchAuctionHouseTest {
         givenLotIsCreated
         givenLotIsCancelled
     {
-        bytes memory err = abi.encodeWithSelector(BatchAuctionHouse.InsufficientFunding.selector);
+        bytes memory err =
+            abi.encodeWithSelector(IBatchAuction.Auction_DedicatedSettlePeriod.selector, _lotId); // technically in the settle period because the lot is cancelled which updates the conclusion
         vm.expectRevert(err);
         _auctionHouse.abort(_lotId);
 
-        // Move timestamp forward to during the lot's active period
-        vm.warp(_startTime + 1);
-        vm.expectRevert(err);
-        _auctionHouse.abort(_lotId);
+        // Move timestamp forward to after the lot's dedicated settle period
+        vm.warp(block.timestamp + _settlePeriod + 1);
 
-        // Move timestamp forward to after the lot's active period
-        vm.warp(_startTime + _duration + 1);
+        err = abi.encodeWithSelector(BatchAuctionHouse.InsufficientFunding.selector);
         vm.expectRevert(err);
         _auctionHouse.abort(_lotId);
     }
@@ -124,6 +141,27 @@ contract BatchAbortTest is BatchAuctionHouseTest {
         givenLotIsConcluded
         givenLotSettlementFinished
     {
+        bytes memory err =
+            abi.encodeWithSelector(IBatchAuction.Auction_DedicatedSettlePeriod.selector, _lotId);
+        vm.expectRevert(err);
+        _auctionHouse.abort(_lotId);
+    }
+
+    function test_abort_whenLotIsSettled_whenSettlePeriodHasPassed_reverts()
+        public
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenLotIsCreated
+        givenLotHasStarted
+        givenUserHasQuoteTokenBalance(_LOT_CAPACITY)
+        givenUserHasQuoteTokenAllowance(_LOT_CAPACITY)
+        givenBidCreated(_bidder, _LOT_CAPACITY, "")
+        givenLotIsConcluded
+        givenLotIsPastSettlePeriod
+        givenLotSettlementFinished
+    {
         bytes memory err = abi.encodeWithSelector(IAuction.Auction_MarketNotActive.selector, _lotId);
         vm.expectRevert(err);
         _auctionHouse.abort(_lotId);
@@ -140,6 +178,7 @@ contract BatchAbortTest is BatchAuctionHouseTest {
         givenLotIsCreated
         givenLotHasStarted
         givenLotIsConcluded
+        givenLotIsPastSettlePeriod
     {
         uint256 startSellerBalance = _baseToken.balanceOf(_SELLER);
         uint256 startCallbackBalance = _baseToken.balanceOf(address(_callback));
@@ -162,6 +201,7 @@ contract BatchAbortTest is BatchAuctionHouseTest {
         givenLotIsCreated
         givenLotHasStarted
         givenLotIsConcluded
+        givenLotIsPastSettlePeriod
     {
         uint256 startSellerBalance = _baseToken.balanceOf(_SELLER);
         uint256 startCallbackBalance = _baseToken.balanceOf(address(_callback));
@@ -183,6 +223,7 @@ contract BatchAbortTest is BatchAuctionHouseTest {
         givenLotIsCreated
         givenLotHasStarted
         givenLotIsConcluded
+        givenLotIsPastSettlePeriod
     {
         uint256 startSellerBalance = _baseToken.balanceOf(_SELLER);
 
