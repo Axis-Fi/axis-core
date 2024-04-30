@@ -137,13 +137,17 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         // Set up expected values
         // Quote token
         _expectedAuctionHouseQuoteTokenBalance = pfRefundAmount + totalQuoteTokenFees; // To be claimed by bidder + rewards
-        _expectedSellerQuoteTokenBalance = _callbackReceiveQuoteTokens ? 0 : totalInFilled - totalQuoteTokenFees; // Transferred to seller if callback doesn't receive quote tokens
-        _expectedCallbackQuoteTokenBalance = _callbackReceiveQuoteTokens ? totalInFilled - totalQuoteTokenFees : 0; // Transferred to callback if it receives quote tokens
+        _expectedSellerQuoteTokenBalance =
+            _callbackReceiveQuoteTokens ? 0 : totalInFilled - totalQuoteTokenFees; // Transferred to seller if callback doesn't receive quote tokens
+        _expectedCallbackQuoteTokenBalance =
+            _callbackReceiveQuoteTokens ? totalInFilled - totalQuoteTokenFees : 0; // Transferred to callback if it receives quote tokens
 
         // Base token
         _expectedAuctionHouseBaseTokenBalance = scaledLotCapacity + curatorPayout; // To be claimed be bidders and curator
-        _expectedSellerBaseTokenBalance = _callbackSendBaseTokens ? 0 : prefundedCuratorFees - curatorPayout; // Transferred to seller if callback doesn't send base tokens
-        _expectedCallbackBaseTokenBalance = _callbackSendBaseTokens ? prefundedCuratorFees - curatorPayout : 0; // Transferred to callback if it sends base tokens
+        _expectedSellerBaseTokenBalance =
+            _callbackSendBaseTokens ? 0 : prefundedCuratorFees - curatorPayout; // Transferred to seller if callback doesn't send base tokens
+        _expectedCallbackBaseTokenBalance =
+            _callbackSendBaseTokens ? prefundedCuratorFees - curatorPayout : 0; // Transferred to callback if it sends base tokens
 
         _expectedCuratorBaseTokenRewards = curatorPayout;
 
@@ -168,14 +172,19 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         // Set up expected values
         // Quote token
         _expectedAuctionHouseQuoteTokenBalance = totalQuoteTokenFees; // Rewards
-        _expectedSellerQuoteTokenBalance = _callbackReceiveQuoteTokens ? 0 : totalIn - totalQuoteTokenFees; // Transferred to seller if callback doesn't receive quote tokens
-        _expectedCallbackQuoteTokenBalance = _callbackReceiveQuoteTokens ? totalIn - totalQuoteTokenFees : 0; // Transferred to callback if it receives quote tokens
+        _expectedSellerQuoteTokenBalance =
+            _callbackReceiveQuoteTokens ? 0 : totalIn - totalQuoteTokenFees; // Transferred to seller if callback doesn't receive quote tokens
+        _expectedCallbackQuoteTokenBalance =
+            _callbackReceiveQuoteTokens ? totalIn - totalQuoteTokenFees : 0; // Transferred to callback if it receives quote tokens
 
         // Base token
         _expectedAuctionHouseBaseTokenBalance = totalOut + curatorPayout; // To be claimed be bidders and curator
-        _expectedSellerBaseTokenBalance =
-            _callbackSendBaseTokens ? 0 : scaledLotCapacity - totalOut + prefundedCuratorFees - curatorPayout; // Transferred to seller if callback doesn't send base tokens
-        _expectedCallbackBaseTokenBalance = _callbackSendBaseTokens ? scaledLotCapacity - totalOut + prefundedCuratorFees - curatorPayout : 0; // Transferred to callback if it sends base tokens
+        _expectedSellerBaseTokenBalance = _callbackSendBaseTokens
+            ? 0
+            : scaledLotCapacity - totalOut + prefundedCuratorFees - curatorPayout; // Transferred to seller if callback doesn't send base tokens
+        _expectedCallbackBaseTokenBalance = _callbackSendBaseTokens
+            ? scaledLotCapacity - totalOut + prefundedCuratorFees - curatorPayout
+            : 0; // Transferred to callback if it sends base tokens
 
         _expectedCuratorBaseTokenRewards = curatorPayout;
 
@@ -200,14 +209,19 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         // Set up expected values
         // Quote token
         _expectedAuctionHouseQuoteTokenBalance = totalQuoteTokenFees; // Rewards
-        _expectedSellerQuoteTokenBalance = _callbackReceiveQuoteTokens ? 0 : totalIn - totalQuoteTokenFees; // Transferred to seller if callback doesn't receive quote tokens
-        _expectedCallbackQuoteTokenBalance = _callbackReceiveQuoteTokens ? totalIn - totalQuoteTokenFees : 0; // Transferred to callback if it receives quote tokens
+        _expectedSellerQuoteTokenBalance =
+            _callbackReceiveQuoteTokens ? 0 : totalIn - totalQuoteTokenFees; // Transferred to seller if callback doesn't receive quote tokens
+        _expectedCallbackQuoteTokenBalance =
+            _callbackReceiveQuoteTokens ? totalIn - totalQuoteTokenFees : 0; // Transferred to callback if it receives quote tokens
 
         // Base token
         _expectedAuctionHouseBaseTokenBalance = totalOut + curatorPayout; // To be claimed be bidders and curator
-        _expectedSellerBaseTokenBalance =
-            _callbackSendBaseTokens ? 0 : scaledLotCapacity - totalOut + prefundedCuratorFees - curatorPayout; // Transferred to seller if callback doesn't send base tokens
-        _expectedCallbackBaseTokenBalance = _callbackSendBaseTokens ? scaledLotCapacity - totalOut + prefundedCuratorFees - curatorPayout : 0; // Transferred to callback if it sends base tokens
+        _expectedSellerBaseTokenBalance = _callbackSendBaseTokens
+            ? 0
+            : scaledLotCapacity - totalOut + prefundedCuratorFees - curatorPayout; // Transferred to seller if callback doesn't send base tokens
+        _expectedCallbackBaseTokenBalance = _callbackSendBaseTokens
+            ? scaledLotCapacity - totalOut + prefundedCuratorFees - curatorPayout
+            : 0; // Transferred to callback if it sends base tokens
 
         _expectedCuratorBaseTokenRewards = curatorPayout;
 
@@ -367,7 +381,6 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         givenLotIsConcluded
         givenLotSettlementNotFinished
     {
-
         // Call function
         _auctionHouse.settle(_lotId, _SETTLE_BATCH_SIZE, _ON_SETTLE_CALLBACK_PARAMS);
 
