@@ -76,7 +76,6 @@ contract AtomicAuctionHouse is IAtomicAuctionHouse, AuctionHouse {
 
     // ========== PURCHASE ========== //
 
-    /// @inheritdoc IAtomicAuctionHouse
     /// @dev        This fuction handles the following:
     ///             1. Calculates the fees for the purchase
     ///             2. Obtains the payout from the auction module
@@ -97,10 +96,10 @@ contract AtomicAuctionHouse is IAtomicAuctionHouse, AuctionHouse {
     ///             - Any of the callbacks fail
     ///             - Any of the token transfers fail
     ///             - Re-entrancy is detected
-    function purchase(
+    function _purchase(
         PurchaseParams memory params_,
         bytes calldata callbackData_
-    ) public override nonReentrant returns (uint256 payoutAmount) {
+    ) internal returns (uint256 payoutAmount) {
         _isLotValid(params_.lotId);
 
         // Load routing data for the lot
@@ -204,6 +203,14 @@ contract AtomicAuctionHouse is IAtomicAuctionHouse, AuctionHouse {
     }
 
     /// @inheritdoc IAtomicAuctionHouse
+    function purchase(
+        PurchaseParams memory params_,
+        bytes calldata callbackData_
+    ) external override nonReentrant returns (uint256 payoutAmount) {
+        payoutAmount = _purchase(params_, callbackData_);
+    }
+
+    /// @inheritdoc IAtomicAuctionHouse
     function multiPurchase(
         PurchaseParams[] memory params_,
         bytes[] calldata callbackData_
@@ -215,7 +222,7 @@ contract AtomicAuctionHouse is IAtomicAuctionHouse, AuctionHouse {
         uint256 len = params_.length;
         payoutAmounts = new uint256[](len);
         for (uint256 i; i < len; i++) {
-            payoutAmounts[i] = purchase(params_[i], callbackData_[i]);
+            payoutAmounts[i] = _purchase(params_[i], callbackData_[i]);
         }
     }
 
