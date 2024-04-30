@@ -157,9 +157,6 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
 
     // ========== STATE VARIABLES ========== //
 
-    /// @notice     Time period after auction conclusion where bidders cannot refund bids
-    uint48 public dedicatedSettlePeriod;
-
     /// @notice     Auction-specific data for a lot
     mapping(uint96 lotId => AuctionData) public auctionData;
 
@@ -1001,9 +998,6 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
     ///             This function reverts if:
     ///             - The dedicated settle period has not passed
     function _abort(uint96 lotId_) internal override {
-        // Validate that the dedicated settle period has passed
-        _revertIfDedicatedSettlePeriod(lotId_);
-
         // Set the auction status to settled
         auctionData[lotId_].status = LotStatus.Settled;
 
@@ -1076,15 +1070,6 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
         return result;
     }
 
-    // ========== ADMIN CONFIGURATION ========== //
-
-    function setDedicatedSettlePeriod(uint48 period_) external onlyParent {
-        // Dedicated settle period cannot be more than 7 days
-        if (period_ > 7 days) revert Auction_InvalidParams();
-
-        dedicatedSettlePeriod = period_;
-    }
-
     // ========== VALIDATION ========== //
 
     /// @inheritdoc AuctionModule
@@ -1115,17 +1100,6 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
     function _revertIfLotNotSettled(uint96 lotId_) internal view override {
         // Auction must be settled
         if (auctionData[lotId_].status != LotStatus.Settled) {
-            revert Auction_WrongState(lotId_);
-        }
-    }
-
-    function _revertIfDedicatedSettlePeriod(uint96 lotId_) internal view {
-        // Auction must not be in the dedicated settle period
-        uint48 conclusion = lotData[lotId_].conclusion;
-        if (
-            uint48(block.timestamp) >= conclusion
-                && uint48(block.timestamp) < conclusion + dedicatedSettlePeriod
-        ) {
             revert Auction_WrongState(lotId_);
         }
     }

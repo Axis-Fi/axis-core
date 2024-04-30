@@ -40,6 +40,7 @@ abstract contract EmpTest is Test, Permit2User {
 
     // Input parameters (modifier via modifiers)
     uint48 internal _start;
+    uint48 internal _settlePeriod;
     IAuction.AuctionParams internal _auctionParams;
     EncryptedMarginalPrice.AuctionDataParams internal _auctionDataParams;
     uint96 internal _lotId = type(uint96).max;
@@ -62,6 +63,7 @@ abstract contract EmpTest is Test, Permit2User {
         _bidPublicKey = ECIES.calcPubKey(Point(1, 2), _BID_PRIVATE_KEY);
 
         _start = uint48(block.timestamp) + 1;
+        _settlePeriod = _module.dedicatedSettlePeriod();
 
         _auctionDataParams = EncryptedMarginalPrice.AuctionDataParams({
             minPrice: _MIN_PRICE,

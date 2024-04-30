@@ -135,7 +135,7 @@ contract EmpRefundBidTest is EmpTest {
 
         // Expect revert
         bytes memory err =
-            abi.encodeWithSelector(EncryptedMarginalPrice.Auction_WrongState.selector, _lotId);
+            abi.encodeWithSelector(IBatchAuction.Auction_DedicatedSettlePeriod.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function
@@ -163,7 +163,7 @@ contract EmpRefundBidTest is EmpTest {
     {
         // Expect revert
         bytes memory err =
-            abi.encodeWithSelector(EncryptedMarginalPrice.Auction_WrongState.selector, _lotId);
+            abi.encodeWithSelector(IBatchAuction.Auction_DedicatedSettlePeriod.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function
@@ -190,7 +190,7 @@ contract EmpRefundBidTest is EmpTest {
         _module.refundBid(_lotId, _bidId, 0, _BIDDER);
     }
 
-    function test_lotIsDecrypted_reverts()
+    function test_lotIsDecrypted_withinSettlePeriod_reverts()
         external
         givenLotIsCreated
         givenLotHasStarted
@@ -198,6 +198,26 @@ contract EmpRefundBidTest is EmpTest {
         givenLotHasConcluded
         givenPrivateKeyIsSubmitted
         givenLotIsDecrypted
+    {
+        // Expect revert
+        bytes memory err =
+            abi.encodeWithSelector(IBatchAuction.Auction_DedicatedSettlePeriod.selector, _lotId);
+        vm.expectRevert(err);
+
+        // Call the function
+        vm.prank(address(_auctionHouse));
+        _module.refundBid(_lotId, _bidId, 0, _BIDDER);
+    }
+
+    function test_lotIsDecrypted_afterSettlePeriod_reverts()
+        external
+        givenLotIsCreated
+        givenLotHasStarted
+        givenBidIsCreated(2e18, 1e18)
+        givenLotHasConcluded
+        givenPrivateKeyIsSubmitted
+        givenLotIsDecrypted
+        givenLotSettlePeriodHasPassed
     {
         // Expect revert
         bytes memory err =
@@ -209,7 +229,7 @@ contract EmpRefundBidTest is EmpTest {
         _module.refundBid(_lotId, _bidId, 0, _BIDDER);
     }
 
-    function test_lotIsSettled_reverts()
+    function test_lotIsSettled_withinSettlePeriod_reverts()
         external
         givenLotIsCreated
         givenLotHasStarted
@@ -218,6 +238,27 @@ contract EmpRefundBidTest is EmpTest {
         givenPrivateKeyIsSubmitted
         givenLotIsDecrypted
         givenLotIsSettled
+    {
+        // Expect revert
+        bytes memory err =
+            abi.encodeWithSelector(IBatchAuction.Auction_DedicatedSettlePeriod.selector, _lotId);
+        vm.expectRevert(err);
+
+        // Call the function
+        vm.prank(address(_auctionHouse));
+        _module.refundBid(_lotId, _bidId, 0, _BIDDER);
+    }
+
+    function test_lotIsSettled_afterSettlePeriod_reverts()
+        external
+        givenLotIsCreated
+        givenLotHasStarted
+        givenBidIsCreated(2e18, 1e18)
+        givenLotHasConcluded
+        givenPrivateKeyIsSubmitted
+        givenLotIsDecrypted
+        givenLotIsSettled
+        givenLotSettlePeriodHasPassed
     {
         // Expect revert
         bytes memory err =

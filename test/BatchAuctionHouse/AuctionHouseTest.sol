@@ -77,6 +77,7 @@ abstract contract BatchAuctionHouseTest is Test, Permit2User, WithSalts {
     // Input to parameters
     uint48 internal _startTime;
     uint48 internal _duration = 1 days;
+    uint48 internal _settlePeriod;
     /// @dev    Needs to be updated if the base token scale is changed
     uint256 internal constant _LOT_CAPACITY = 10e18;
     string internal constant _INFO_HASH = "info hash";
@@ -117,6 +118,7 @@ abstract contract BatchAuctionHouseTest is Test, Permit2User, WithSalts {
         _condenserModule = new MockCondenserModule(address(_auctionHouse));
         _condenserModuleKeycode = keycodeFromVeecode(_condenserModule.VEECODE());
 
+        _settlePeriod = _batchAuctionModule.dedicatedSettlePeriod();
         _startTime = uint48(block.timestamp) + 1;
 
         _auctionParams = IAuction.AuctionParams({
@@ -285,6 +287,15 @@ abstract contract BatchAuctionHouseTest is Test, Permit2User, WithSalts {
 
     modifier givenLotIsConcluded() {
         _concludeLot();
+        _;
+    }
+
+    function _pastSettlePeriod() internal {
+        vm.warp(_startTime + _duration + _settlePeriod + 1);
+    }
+
+    modifier givenLotIsPastSettlePeriod() {
+        _pastSettlePeriod();
         _;
     }
 
