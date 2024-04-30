@@ -421,6 +421,11 @@ abstract contract BatchAuctionHouseTest is Test, Permit2User, WithSalts {
         _;
     }
 
+    modifier givenOnSettleCallbackReverts() {
+        _callback.setOnSettleReverts(true);
+        _;
+    }
+
     function _createBid(
         address bidder_,
         uint256 amount_,
@@ -526,8 +531,18 @@ abstract contract BatchAuctionHouseTest is Test, Permit2User, WithSalts {
         _;
     }
 
+    modifier givenRecipientIsOnBaseTokenBlacklist(address recipient_) {
+        _baseToken.setBlacklist(recipient_, true);
+        _;
+    }
+
     modifier givenQuoteTokenIsRevertOnZero() {
         _quoteToken.setRevertOnZero(true);
+        _;
+    }
+
+    modifier givenRecipientIsOnQuoteTokenBlacklist(address recipient_) {
+        _quoteToken.setBlacklist(recipient_, true);
         _;
     }
 

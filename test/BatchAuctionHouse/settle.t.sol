@@ -4,6 +4,7 @@ pragma solidity 0.8.19;
 import {AuctionHouse} from "src/bases/AuctionHouse.sol";
 import {BatchAuctionModule} from "src/modules/auctions/BatchAuctionModule.sol";
 
+import {MockBatchAuctionModule} from "test/modules/Auction/MockBatchAuctionModule.sol";
 import {BatchAuctionHouseTest} from "test/BatchAuctionHouse/AuctionHouseTest.sol";
 
 contract BatchSettleTest is BatchAuctionHouseTest {
@@ -23,6 +24,7 @@ contract BatchSettleTest is BatchAuctionHouseTest {
     uint256 internal _expectedCuratorBaseTokenRewards;
 
     bool internal _lotSettles;
+    bool internal _lotSettlementFinished;
 
     // ======== Modifiers ======== //
 
@@ -96,6 +98,24 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         );
     }
 
+    function _assertState() internal {
+        // Check the lot status
+        assertEq(
+            uint8(_batchAuctionModule.lotStatus(_lotId)),
+            _lotSettlementFinished
+                ? uint8(MockBatchAuctionModule.LotStatus.Settled)
+                : uint8(MockBatchAuctionModule.LotStatus.Created),
+            "lot status"
+        );
+
+        // Check callback state if set
+        if (address(_routingParams.callbacks) != address(0)) {
+            assertEq(
+                _callback.lotSettled(_lotId), _lotSettlementFinished, "callback: onSettle called"
+            );
+        }
+    }
+
     function _mockSettlement(
         uint256 totalIn_,
         uint256 totalOut_,
@@ -127,7 +147,8 @@ contract BatchSettleTest is BatchAuctionHouseTest {
 
         _concludeLot();
 
-        _mockSettlement(totalInFilled, totalOut, true, "");
+        _lotSettlementFinished = true;
+        _mockSettlement(totalInFilled, totalOut, _lotSettlementFinished, "");
 
         // Calculate fees
         uint256 prefundedCuratorFees = _curatorApproved ? _curatorMaxPotentialFee : 0;
@@ -162,7 +183,8 @@ contract BatchSettleTest is BatchAuctionHouseTest {
 
         _concludeLot();
 
-        _mockSettlement(totalIn, totalOut, true, "");
+        _lotSettlementFinished = true;
+        _mockSettlement(totalIn, totalOut, _lotSettlementFinished, "");
 
         // Calculate fees
         uint256 prefundedCuratorFees = _curatorApproved ? _curatorMaxPotentialFee : 0;
@@ -199,7 +221,8 @@ contract BatchSettleTest is BatchAuctionHouseTest {
 
         _concludeLot();
 
-        _mockSettlement(totalIn, totalOut, true, "");
+        _lotSettlementFinished = true;
+        _mockSettlement(totalIn, totalOut, _lotSettlementFinished, "");
 
         // Calculate fees
         uint256 prefundedCuratorFees = _curatorApproved ? _curatorMaxPotentialFee : 0;
@@ -236,7 +259,8 @@ contract BatchSettleTest is BatchAuctionHouseTest {
 
         _concludeLot();
 
-        _mockSettlement(totalIn, totalOut, true, "");
+        _lotSettlementFinished = true;
+        _mockSettlement(totalIn, totalOut, _lotSettlementFinished, "");
 
         // Calculate fees
         uint256 prefundedCuratorFees = _curatorApproved ? _curatorMaxPotentialFee : 0;
@@ -265,7 +289,8 @@ contract BatchSettleTest is BatchAuctionHouseTest {
 
         _concludeLot();
 
-        _mockSettlement(totalIn, totalOut, false, "");
+        _lotSettlementFinished = false;
+        _mockSettlement(totalIn, totalOut, _lotSettlementFinished, "");
 
         // Calculate fees
         uint256 prefundedCuratorFees = _curatorApproved ? _curatorMaxPotentialFee : 0;
@@ -298,8 +323,8 @@ contract BatchSettleTest is BatchAuctionHouseTest {
     //  [X] it reverts
     // [X] when settlement is not finished
     //  [X] no transfers or allocations are made
-    // [ ] when settlement is finished
-    //  [ ] it sets the lot as settled
+    // [X] when settlement is finished
+    //  [X] it sets the lot as settled
     // [X] when the auction does not settle
     //  [X] when curated is true
     //   [X] it transfers the lot capacity and prepaid curator payout to the seller
@@ -321,19 +346,18 @@ contract BatchSettleTest is BatchAuctionHouseTest {
     //   [X] it transfers the proceeds - protocol fees - referrer fees to the seller
     //  [X] it transfers the proceeds - referrer fees to the seller
     // [X] given the auction callback has the receive quote tokens flag
+    //  [X] when the quote token transfer to the callback fails
+    //   [X] it reverts
     //  [X] it sends the quote tokens to the callback
-    // [ ] given the auction callback has the onSettle flag
-    //  [ ] it calls the callback
+    // [X] given the auction callback has the onSettle flag
+    //  [X] it calls the callback
     // [X] when curated is true
     //  [X] it transfers the remaining lot capacity and curator payout to the seller, and allocates the curator payout
     // [X] it transfers the remaining lot capacity to the seller
-    // [ ] when the callback reverts
-    //  [ ] it reverts
-    // [ ] when the quote token transfer to the seller fails
-    //  [ ] it reverts
-    // [ ] when a callback receives quote tokens
-    //  [ ] when the quote token transfer to the callback fails
-    //   [ ] it reverts
+    // [X] when the callback reverts
+    //  [X] it reverts
+    // [X] when the quote token transfer to the seller fails
+    //  [X] it reverts
 
     function test_whenLotIdIsInvalid_reverts() public {
         // Expect revert
@@ -388,9 +412,8 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         _assertBaseTokenBalances();
         _assertQuoteTokenBalances();
         _assertAccruedFees();
+        _assertState();
     }
-
-    // ======== prefunded ======== //
 
     function test_notSettled_curated()
         public
@@ -417,6 +440,7 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         _assertBaseTokenBalances();
         _assertQuoteTokenBalances();
         _assertAccruedFees();
+        _assertState();
     }
 
     function test_notSettled_curated_quoteTokenDecimalsLarger()
@@ -446,6 +470,7 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         _assertBaseTokenBalances();
         _assertQuoteTokenBalances();
         _assertAccruedFees();
+        _assertState();
     }
 
     function test_notSettled_curated_quoteTokenDecimalsSmaller()
@@ -475,6 +500,7 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         _assertBaseTokenBalances();
         _assertQuoteTokenBalances();
         _assertAccruedFees();
+        _assertState();
     }
 
     function test_notSettled_curated_curatorFeeNotSet()
@@ -499,6 +525,7 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         _assertBaseTokenBalances();
         _assertQuoteTokenBalances();
         _assertAccruedFees();
+        _assertState();
     }
 
     function test_notSettled_notCurated()
@@ -523,6 +550,7 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         _assertBaseTokenBalances();
         _assertQuoteTokenBalances();
         _assertAccruedFees();
+        _assertState();
     }
 
     function test_notSettled_notCurated_quoteTokenDecimalsLarger()
@@ -549,6 +577,7 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         _assertBaseTokenBalances();
         _assertQuoteTokenBalances();
         _assertAccruedFees();
+        _assertState();
     }
 
     function test_notSettled_notCurated_quoteTokenDecimalsSmaller()
@@ -575,6 +604,7 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         _assertBaseTokenBalances();
         _assertQuoteTokenBalances();
         _assertAccruedFees();
+        _assertState();
     }
 
     function test_partialFill_curated()
@@ -602,6 +632,7 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         _assertBaseTokenBalances();
         _assertQuoteTokenBalances();
         _assertAccruedFees();
+        _assertState();
     }
 
     function test_partialFill_curated_quoteTokenDecimalsLarger()
@@ -631,6 +662,7 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         _assertBaseTokenBalances();
         _assertQuoteTokenBalances();
         _assertAccruedFees();
+        _assertState();
     }
 
     function test_partialFill_curated_quoteTokenDecimalsSmaller()
@@ -660,6 +692,7 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         _assertBaseTokenBalances();
         _assertQuoteTokenBalances();
         _assertAccruedFees();
+        _assertState();
     }
 
     function test_partialFill_curated_curatorFeeNotSet()
@@ -684,6 +717,7 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         _assertBaseTokenBalances();
         _assertQuoteTokenBalances();
         _assertAccruedFees();
+        _assertState();
     }
 
     function test_partialFill_curated_givenCuratorFeeIsChanged()
@@ -715,6 +749,7 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         _assertBaseTokenBalances();
         _assertQuoteTokenBalances();
         _assertAccruedFees();
+        _assertState();
     }
 
     function test_partialFill_notCurated()
@@ -736,6 +771,7 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         _assertBaseTokenBalances();
         _assertQuoteTokenBalances();
         _assertAccruedFees();
+        _assertState();
     }
 
     function test_partialFill_notCurated_quoteTokenDecimalsLarger()
@@ -759,6 +795,7 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         _assertBaseTokenBalances();
         _assertQuoteTokenBalances();
         _assertAccruedFees();
+        _assertState();
     }
 
     function test_partialFill_notCurated_quoteTokenDecimalsSmaller()
@@ -782,6 +819,7 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         _assertBaseTokenBalances();
         _assertQuoteTokenBalances();
         _assertAccruedFees();
+        _assertState();
     }
 
     function test_partialFill_callbackSendBaseTokens_curated()
@@ -811,6 +849,7 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         _assertBaseTokenBalances();
         _assertQuoteTokenBalances();
         _assertAccruedFees();
+        _assertState();
     }
 
     function test_partialFill_callbackSendBaseTokens_notCurated()
@@ -834,6 +873,7 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         _assertBaseTokenBalances();
         _assertQuoteTokenBalances();
         _assertAccruedFees();
+        _assertState();
     }
 
     function test_partialFill_callbackReceiveQuoteTokens_curated()
@@ -863,6 +903,7 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         _assertBaseTokenBalances();
         _assertQuoteTokenBalances();
         _assertAccruedFees();
+        _assertState();
     }
 
     function test_partialFill_callbackReceivesQuoteTokens_notCurated()
@@ -886,6 +927,7 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         _assertBaseTokenBalances();
         _assertQuoteTokenBalances();
         _assertAccruedFees();
+        _assertState();
     }
 
     function test_partialFill_callbackSendsAndReceives_curated()
@@ -916,6 +958,7 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         _assertBaseTokenBalances();
         _assertQuoteTokenBalances();
         _assertAccruedFees();
+        _assertState();
     }
 
     function test_partialFill_callbackSendsAndReceives_notCurated()
@@ -940,6 +983,28 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         _assertBaseTokenBalances();
         _assertQuoteTokenBalances();
         _assertAccruedFees();
+        _assertState();
+    }
+
+    function test_partialFill_callback_reverts()
+        public
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenCallbackIsSet
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenProtocolFeeIsSet
+        givenReferrerFeeIsSet
+        givenLotIsCreated
+        givenLotHasPartialFill
+        givenAuctionHouseHasQuoteTokenBalance(_BID_AMOUNT_TOTAL)
+        givenOnSettleCallbackReverts
+    {
+        // Expect revert
+        vm.expectRevert("revert");
+
+        // Call function
+        _auctionHouse.settle(_lotId, _SETTLE_BATCH_SIZE, _ON_SETTLE_CALLBACK_PARAMS);
     }
 
     function test_underCapacity_curated()
@@ -967,6 +1032,7 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         _assertBaseTokenBalances();
         _assertQuoteTokenBalances();
         _assertAccruedFees();
+        _assertState();
     }
 
     function test_underCapacity_curated_quoteTokenDecimalsLarger()
@@ -996,6 +1062,7 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         _assertBaseTokenBalances();
         _assertQuoteTokenBalances();
         _assertAccruedFees();
+        _assertState();
     }
 
     function test_underCapacity_curated_quoteTokenDecimalsSmaller()
@@ -1025,6 +1092,7 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         _assertBaseTokenBalances();
         _assertQuoteTokenBalances();
         _assertAccruedFees();
+        _assertState();
     }
 
     function test_underCapacity_curated_curatorFeeNotSet()
@@ -1049,6 +1117,7 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         _assertBaseTokenBalances();
         _assertQuoteTokenBalances();
         _assertAccruedFees();
+        _assertState();
     }
 
     function test_underCapacity_notCurated()
@@ -1073,6 +1142,7 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         _assertBaseTokenBalances();
         _assertQuoteTokenBalances();
         _assertAccruedFees();
+        _assertState();
     }
 
     function test_underCapacity_notCurated_quoteTokenDecimalsLarger()
@@ -1099,6 +1169,7 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         _assertBaseTokenBalances();
         _assertQuoteTokenBalances();
         _assertAccruedFees();
+        _assertState();
     }
 
     function test_underCapacity_notCurated_quoteTokenDecimalsSmaller()
@@ -1125,6 +1196,7 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         _assertBaseTokenBalances();
         _assertQuoteTokenBalances();
         _assertAccruedFees();
+        _assertState();
     }
 
     function test_underCapacity_callbackSendBaseTokens_curated()
@@ -1154,6 +1226,7 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         _assertBaseTokenBalances();
         _assertQuoteTokenBalances();
         _assertAccruedFees();
+        _assertState();
     }
 
     function test_underCapacity_callbackSendBaseTokens_notCurated()
@@ -1177,6 +1250,7 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         _assertBaseTokenBalances();
         _assertQuoteTokenBalances();
         _assertAccruedFees();
+        _assertState();
     }
 
     function test_underCapacity_callbackReceiveQuoteTokens_curated()
@@ -1206,6 +1280,7 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         _assertBaseTokenBalances();
         _assertQuoteTokenBalances();
         _assertAccruedFees();
+        _assertState();
     }
 
     function test_underCapacity_callbackReceivesQuoteTokens_notCurated()
@@ -1229,6 +1304,7 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         _assertBaseTokenBalances();
         _assertQuoteTokenBalances();
         _assertAccruedFees();
+        _assertState();
     }
 
     function test_underCapacity_callbackSendsAndReceives_curated()
@@ -1259,6 +1335,7 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         _assertBaseTokenBalances();
         _assertQuoteTokenBalances();
         _assertAccruedFees();
+        _assertState();
     }
 
     function test_underCapacity_callbackSendsAndReceives_notCurated()
@@ -1283,6 +1360,7 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         _assertBaseTokenBalances();
         _assertQuoteTokenBalances();
         _assertAccruedFees();
+        _assertState();
     }
 
     function test_capacityFilled_curated()
@@ -1310,6 +1388,7 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         _assertBaseTokenBalances();
         _assertQuoteTokenBalances();
         _assertAccruedFees();
+        _assertState();
     }
 
     function test_capacityFilled_curated_quoteTokenDecimalsLarger()
@@ -1339,6 +1418,7 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         _assertBaseTokenBalances();
         _assertQuoteTokenBalances();
         _assertAccruedFees();
+        _assertState();
     }
 
     function test_capacityFilled_curated_quoteTokenDecimalsSmaller()
@@ -1368,6 +1448,7 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         _assertBaseTokenBalances();
         _assertQuoteTokenBalances();
         _assertAccruedFees();
+        _assertState();
     }
 
     function test_capacityFilled_curated_curatorFeeNotSet()
@@ -1392,6 +1473,7 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         _assertBaseTokenBalances();
         _assertQuoteTokenBalances();
         _assertAccruedFees();
+        _assertState();
     }
 
     function test_capacityFilled_notCurated()
@@ -1413,6 +1495,7 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         _assertBaseTokenBalances();
         _assertQuoteTokenBalances();
         _assertAccruedFees();
+        _assertState();
     }
 
     function test_capacityFilled_notCurated_quoteTokenDecimalsLarger()
@@ -1436,6 +1519,7 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         _assertBaseTokenBalances();
         _assertQuoteTokenBalances();
         _assertAccruedFees();
+        _assertState();
     }
 
     function test_capacityFilled_notCurated_quoteTokenDecimalsSmaller()
@@ -1459,6 +1543,28 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         _assertBaseTokenBalances();
         _assertQuoteTokenBalances();
         _assertAccruedFees();
+        _assertState();
+    }
+
+    function test_capacityFilled_quoteTokenTransferReverts()
+        public
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenProtocolFeeIsSet
+        givenReferrerFeeIsSet
+        givenLotIsCreated
+        givenLotCapacityIsFilled
+        givenAuctionHouseHasQuoteTokenBalance(_BID_AMOUNT_TOTAL)
+        givenRecipientIsOnQuoteTokenBlacklist(_SELLER)
+    {
+        // Expect revert
+        // The raw "blacklist" revert is swallowed by safeTransfer
+        vm.expectRevert("TRANSFER_FAILED");
+
+        // Call function
+        _auctionHouse.settle(_lotId, _SETTLE_BATCH_SIZE, _ON_SETTLE_CALLBACK_PARAMS);
     }
 
     function test_capacityFilled_protocolFeeNotSet()
@@ -1485,6 +1591,7 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         _assertBaseTokenBalances();
         _assertQuoteTokenBalances();
         _assertAccruedFees();
+        _assertState();
     }
 
     function test_capacityFilled_protocolFeeNotSet_quoteTokenDecimalsLarger()
@@ -1513,6 +1620,7 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         _assertBaseTokenBalances();
         _assertQuoteTokenBalances();
         _assertAccruedFees();
+        _assertState();
     }
 
     function test_capacityFilled_protocolFeeNotSet_quoteTokenDecimalsSmaller()
@@ -1541,6 +1649,7 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         _assertBaseTokenBalances();
         _assertQuoteTokenBalances();
         _assertAccruedFees();
+        _assertState();
     }
 
     function test_capacityFilled_referrerFeeNotSet()
@@ -1567,6 +1676,7 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         _assertBaseTokenBalances();
         _assertQuoteTokenBalances();
         _assertAccruedFees();
+        _assertState();
     }
 
     function test_capacityFilled_referrerFeeNotSet_quoteTokenDecimalsLarger()
@@ -1595,6 +1705,7 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         _assertBaseTokenBalances();
         _assertQuoteTokenBalances();
         _assertAccruedFees();
+        _assertState();
     }
 
     function test_capacityFilled_referrerFeeNotSet_quoteTokenDecimalsSmaller()
@@ -1623,6 +1734,7 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         _assertBaseTokenBalances();
         _assertQuoteTokenBalances();
         _assertAccruedFees();
+        _assertState();
     }
 
     function test_capacityFilled_protocolFeeNotSet_referrerFeeNotSet()
@@ -1648,6 +1760,7 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         _assertBaseTokenBalances();
         _assertQuoteTokenBalances();
         _assertAccruedFees();
+        _assertState();
     }
 
     function test_capacityFilled_protocolFeeNotSet_referrerFeeNotSet_quoteTokenDecimalsLarger()
@@ -1675,6 +1788,7 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         _assertBaseTokenBalances();
         _assertQuoteTokenBalances();
         _assertAccruedFees();
+        _assertState();
     }
 
     function test_capacityFilled_protocolFeeNotSet_referrerFeeNotSet_quoteTokenDecimalsSmaller()
@@ -1702,6 +1816,7 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         _assertBaseTokenBalances();
         _assertQuoteTokenBalances();
         _assertAccruedFees();
+        _assertState();
     }
 
     function test_capacityFilled_callbackSendBaseTokens_curated()
@@ -1731,6 +1846,7 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         _assertBaseTokenBalances();
         _assertQuoteTokenBalances();
         _assertAccruedFees();
+        _assertState();
     }
 
     function test_capacityFilled_callbackSendBaseTokens_notCurated()
@@ -1754,6 +1870,7 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         _assertBaseTokenBalances();
         _assertQuoteTokenBalances();
         _assertAccruedFees();
+        _assertState();
     }
 
     function test_capacityFilled_callbackReceiveQuoteTokens_curated()
@@ -1783,6 +1900,7 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         _assertBaseTokenBalances();
         _assertQuoteTokenBalances();
         _assertAccruedFees();
+        _assertState();
     }
 
     function test_capacityFilled_callbackReceivesQuoteTokens_notCurated()
@@ -1806,6 +1924,30 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         _assertBaseTokenBalances();
         _assertQuoteTokenBalances();
         _assertAccruedFees();
+        _assertState();
+    }
+
+    function test_capacityFilled_callbackReceivesQuoteTokens_quoteTokenTransferReverts()
+        public
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenCallbackHasReceiveQuoteTokensFlag
+        givenCallbackIsSet
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenProtocolFeeIsSet
+        givenReferrerFeeIsSet
+        givenLotIsCreated
+        givenLotCapacityIsFilled
+        givenAuctionHouseHasQuoteTokenBalance(_BID_AMOUNT_TOTAL)
+        givenRecipientIsOnQuoteTokenBlacklist(address(_callback))
+    {
+        // Expect revert
+        // The raw "blacklist" revert is swallowed by safeTransfer
+        vm.expectRevert("TRANSFER_FAILED");
+
+        // Call function
+        _auctionHouse.settle(_lotId, _SETTLE_BATCH_SIZE, _ON_SETTLE_CALLBACK_PARAMS);
     }
 
     function test_capacityFilled_callbackSendsAndReceives_curated()
@@ -1836,6 +1978,7 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         _assertBaseTokenBalances();
         _assertQuoteTokenBalances();
         _assertAccruedFees();
+        _assertState();
     }
 
     function test_capacityFilled_callbackSendsAndReceives_notCurated()
@@ -1860,5 +2003,6 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         _assertBaseTokenBalances();
         _assertQuoteTokenBalances();
         _assertAccruedFees();
+        _assertState();
     }
 }
