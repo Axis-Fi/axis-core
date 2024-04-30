@@ -212,7 +212,7 @@ contract MockBatchAuctionModule is BatchAuctionModule {
     function _revertIfLotSettled(uint96 lotId_) internal view virtual override {
         // Check that the lot has not been settled
         if (lotStatus[lotId_] == LotStatus.Settled) {
-            revert IAuction.Auction_MarketNotActive(lotId_);
+            revert IAuction.Auction_LotNotActive(lotId_);
         }
     }
 

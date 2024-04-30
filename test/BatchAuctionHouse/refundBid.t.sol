@@ -52,7 +52,7 @@ contract BatchRefundBidTest is BatchAuctionHouseTest {
         givenBid(_BID_AMOUNT, _auctionDataParams)
         givenLotIsConcluded
     {
-        bytes memory err = abi.encodeWithSelector(IAuction.Auction_MarketNotActive.selector, _lotId);
+        bytes memory err = abi.encodeWithSelector(IAuction.Auction_LotNotActive.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function

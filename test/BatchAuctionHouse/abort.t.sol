@@ -69,8 +69,7 @@ contract BatchAbortTest is BatchAuctionHouseTest {
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenLotIsCreated
     {
-        bytes memory err =
-            abi.encodeWithSelector(IAuction.Auction_MarketNotConcluded.selector, _lotId);
+        bytes memory err = abi.encodeWithSelector(IAuction.Auction_LotNotConcluded.selector, _lotId);
         vm.expectRevert(err);
         _auctionHouse.abort(_lotId);
     }
@@ -84,8 +83,7 @@ contract BatchAbortTest is BatchAuctionHouseTest {
         givenLotIsCreated
         givenLotHasStarted
     {
-        bytes memory err =
-            abi.encodeWithSelector(IAuction.Auction_MarketNotConcluded.selector, _lotId);
+        bytes memory err = abi.encodeWithSelector(IAuction.Auction_LotNotConcluded.selector, _lotId);
         vm.expectRevert(err);
         _auctionHouse.abort(_lotId);
     }
@@ -162,7 +160,7 @@ contract BatchAbortTest is BatchAuctionHouseTest {
         givenLotIsPastSettlePeriod
         givenLotSettlementFinished
     {
-        bytes memory err = abi.encodeWithSelector(IAuction.Auction_MarketNotActive.selector, _lotId);
+        bytes memory err = abi.encodeWithSelector(IAuction.Auction_LotNotActive.selector, _lotId);
         vm.expectRevert(err);
         _auctionHouse.abort(_lotId);
     }

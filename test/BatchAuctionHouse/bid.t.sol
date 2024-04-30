@@ -54,7 +54,7 @@ contract BatchBidTest is BatchAuctionHouseTest {
         givenLotIsCreated
         givenLotIsCancelled
     {
-        bytes memory err = abi.encodeWithSelector(IAuction.Auction_MarketNotActive.selector, _lotId);
+        bytes memory err = abi.encodeWithSelector(IAuction.Auction_LotNotActive.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function
@@ -70,7 +70,7 @@ contract BatchBidTest is BatchAuctionHouseTest {
         givenLotIsCreated
         givenLotIsConcluded
     {
-        bytes memory err = abi.encodeWithSelector(IAuction.Auction_MarketNotActive.selector, _lotId);
+        bytes memory err = abi.encodeWithSelector(IAuction.Auction_LotNotActive.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function
@@ -87,7 +87,7 @@ contract BatchBidTest is BatchAuctionHouseTest {
         givenLotIsConcluded
         givenLotIsSettled
     {
-        bytes memory err = abi.encodeWithSelector(IAuction.Auction_MarketNotActive.selector, _lotId);
+        bytes memory err = abi.encodeWithSelector(IAuction.Auction_LotNotActive.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function

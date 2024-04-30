@@ -278,7 +278,7 @@ contract AtomicPurchaseTest is AtomicAuctionHouseTest {
         givenSellerHasBaseTokenBalance(_amountOut)
     {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(IAuction.Auction_MarketNotActive.selector, _lotId);
+        bytes memory err = abi.encodeWithSelector(IAuction.Auction_LotNotActive.selector, _lotId);
         vm.expectRevert(err);
 
         // Purchase

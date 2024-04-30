@@ -61,7 +61,7 @@ contract EmpDecryptBidsTest is EmpTest {
     }
 
     function test_lotHasNotStarted_reverts() external givenLotIsCreated {
-        bytes memory err = abi.encodeWithSelector(IAuction.Auction_MarketNotActive.selector, _lotId);
+        bytes memory err = abi.encodeWithSelector(IAuction.Auction_LotNotActive.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function
@@ -139,7 +139,7 @@ contract EmpDecryptBidsTest is EmpTest {
 
     function test_givenLotIsCancelled_reverts() external givenLotIsCreated givenLotIsCancelled {
         // Call the function
-        bytes memory err = abi.encodeWithSelector(IAuction.Auction_MarketNotActive.selector, _lotId);
+        bytes memory err = abi.encodeWithSelector(IAuction.Auction_LotNotActive.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function

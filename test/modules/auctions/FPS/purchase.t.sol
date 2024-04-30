@@ -54,7 +54,7 @@ contract FpsPurchaseTest is FpsTest {
 
     function test_auctionConcluded_reverts() public givenLotIsCreated givenLotHasConcluded {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(IAuction.Auction_MarketNotActive.selector, _lotId);
+        bytes memory err = abi.encodeWithSelector(IAuction.Auction_LotNotActive.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function
@@ -63,7 +63,7 @@ contract FpsPurchaseTest is FpsTest {
 
     function test_auctionCancelled_reverts() public givenLotIsCreated givenLotIsCancelled {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(IAuction.Auction_MarketNotActive.selector, _lotId);
+        bytes memory err = abi.encodeWithSelector(IAuction.Auction_LotNotActive.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function
@@ -72,7 +72,7 @@ contract FpsPurchaseTest is FpsTest {
 
     function test_auctionNotStarted_reverts() public givenLotIsCreated {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(IAuction.Auction_MarketNotActive.selector, _lotId);
+        bytes memory err = abi.encodeWithSelector(IAuction.Auction_LotNotActive.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function

@@ -71,7 +71,7 @@ contract BatchCancelAuctionTest is BatchAuctionHouseTest {
         givenLotIsCreated
         givenLotIsConcluded
     {
-        bytes memory err = abi.encodeWithSelector(IAuction.Auction_MarketNotActive.selector, _lotId);
+        bytes memory err = abi.encodeWithSelector(IAuction.Auction_LotNotActive.selector, _lotId);
         vm.expectRevert(err);
 
         vm.prank(_SELLER);
@@ -88,7 +88,7 @@ contract BatchCancelAuctionTest is BatchAuctionHouseTest {
         givenLotIsCancelled
     {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(IAuction.Auction_MarketNotActive.selector, _lotId);
+        bytes memory err = abi.encodeWithSelector(IAuction.Auction_LotNotActive.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function

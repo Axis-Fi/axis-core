@@ -71,7 +71,7 @@ contract EmpBidTest is EmpTest {
         bytes memory bidData = _createBidData(_BID_AMOUNT, _BID_AMOUNT_OUT);
 
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(IAuction.Auction_MarketNotActive.selector, _lotId);
+        bytes memory err = abi.encodeWithSelector(IAuction.Auction_LotNotActive.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function
@@ -84,7 +84,7 @@ contract EmpBidTest is EmpTest {
         bytes memory bidData = _createBidData(_BID_AMOUNT, _BID_AMOUNT_OUT);
 
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(IAuction.Auction_MarketNotActive.selector, _lotId);
+        bytes memory err = abi.encodeWithSelector(IAuction.Auction_LotNotActive.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function
@@ -102,7 +102,7 @@ contract EmpBidTest is EmpTest {
         bytes memory bidData = _createBidData(_BID_AMOUNT, _BID_AMOUNT_OUT);
 
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(IAuction.Auction_MarketNotActive.selector, _lotId);
+        bytes memory err = abi.encodeWithSelector(IAuction.Auction_LotNotActive.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function
@@ -121,7 +121,7 @@ contract EmpBidTest is EmpTest {
         bytes memory bidData = _createBidData(_BID_AMOUNT, _BID_AMOUNT_OUT);
 
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(IAuction.Auction_MarketNotActive.selector, _lotId);
+        bytes memory err = abi.encodeWithSelector(IAuction.Auction_LotNotActive.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function
@@ -139,7 +139,7 @@ contract EmpBidTest is EmpTest {
         bytes memory bidData = _createBidData(_BID_AMOUNT, _BID_AMOUNT_OUT);
 
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(IAuction.Auction_MarketNotActive.selector, _lotId);
+        bytes memory err = abi.encodeWithSelector(IAuction.Auction_LotNotActive.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function
@@ -152,7 +152,7 @@ contract EmpBidTest is EmpTest {
         bytes memory bidData = _createBidData(_BID_AMOUNT, _BID_AMOUNT_OUT);
 
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(IAuction.Auction_MarketNotActive.selector, _lotId);
+        bytes memory err = abi.encodeWithSelector(IAuction.Auction_LotNotActive.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function

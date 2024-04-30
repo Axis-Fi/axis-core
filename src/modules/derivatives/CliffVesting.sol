@@ -106,7 +106,7 @@ pragma solidity 0.8.19;
 
 // function convertsTo(bytes memory data, uint256 amount) external view override returns (uint256) {}
 
-// function derivativeForMarket(uint256 id_) external view override returns (bytes memory) {}
+// function derivativeForLot(uint256 id_) external view override returns (bytes memory) {}
 
 // // ========== INTERNAL FUNCTIONS ========== //
 

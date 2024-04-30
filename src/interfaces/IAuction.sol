@@ -14,18 +14,18 @@ pragma solidity >=0.8.0;
 interface IAuction {
     // ========== ERRORS ========== //
 
-    error Auction_MarketNotActive(uint96 lotId);
-    error Auction_MarketActive(uint96 lotId);
+    error Auction_LotNotActive(uint96 lotId);
+    error Auction_LotActive(uint96 lotId);
     error Auction_InvalidStart(uint48 start_, uint48 minimum_);
     error Auction_InvalidDuration(uint48 duration_, uint48 minimum_);
     error Auction_InvalidLotId(uint96 lotId);
-    error Auction_OnlyMarketOwner();
+    error Auction_OnlyLotOwner();
     error Auction_AmountLessThanMinimum();
     error Auction_InvalidParams();
     error Auction_NotAuthorized();
     error Auction_NotImplemented();
     error Auction_InsufficientCapacity();
-    error Auction_MarketNotConcluded(uint96 lotId);
+    error Auction_LotNotConcluded(uint96 lotId);
 
     // ========== DATA STRUCTURES ========== //
 

@@ -61,8 +61,7 @@ contract EmpAbortTest is EmpTest {
 
     function test_abort_whenLotHasNotStarted_reverts() public givenLotIsCreated {
         // Expect revert
-        bytes memory err =
-            abi.encodeWithSelector(IAuction.Auction_MarketNotConcluded.selector, _lotId);
+        bytes memory err = abi.encodeWithSelector(IAuction.Auction_LotNotConcluded.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function
@@ -72,8 +71,7 @@ contract EmpAbortTest is EmpTest {
 
     function test_abort_whenLotActive_reverts() public givenLotIsCreated givenLotHasStarted {
         // Expect revert
-        bytes memory err =
-            abi.encodeWithSelector(IAuction.Auction_MarketNotConcluded.selector, _lotId);
+        bytes memory err = abi.encodeWithSelector(IAuction.Auction_LotNotConcluded.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function
