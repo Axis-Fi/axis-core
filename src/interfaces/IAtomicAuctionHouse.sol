@@ -40,4 +40,15 @@ interface IAtomicAuctionHouse is IAuctionHouse {
         PurchaseParams memory params_,
         bytes calldata callbackData_
     ) external returns (uint256 payout);
+
+    /// @notice     Purchase from multiple lots in a single transaction
+    /// @notice     Permit2 is utilised to simplify token transfers
+    ///
+    /// @param      params_         Array of purchase parameters
+    /// @param      callbackData_   Array of custom data provided to the onPurchase callbacks
+    /// @return     payouts         Array of amounts of baseTokens received by `recipient_` (in native decimals)
+    function multiPurchase(
+        PurchaseParams[] memory params_,
+        bytes[] calldata callbackData_
+    ) external returns (uint256[] memory payouts);
 }

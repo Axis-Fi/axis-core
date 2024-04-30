@@ -100,7 +100,7 @@ contract AtomicAuctionHouse is IAtomicAuctionHouse, AuctionHouse {
     function purchase(
         PurchaseParams memory params_,
         bytes calldata callbackData_
-    ) external override nonReentrant returns (uint256 payoutAmount) {
+    ) public override nonReentrant returns (uint256 payoutAmount) {
         _isLotValid(params_.lotId);
 
         // Load routing data for the lot
@@ -201,6 +201,22 @@ contract AtomicAuctionHouse is IAtomicAuctionHouse, AuctionHouse {
 
         // Emit event
         emit Purchase(params_.lotId, msg.sender, params_.referrer, params_.amount, payoutAmount);
+    }
+
+    /// @inheritdoc IAtomicAuctionHouse
+    function multiPurchase(
+        PurchaseParams[] memory params_,
+        bytes[] calldata callbackData_
+    ) external override nonReentrant returns (uint256[] memory payoutAmounts) {
+        // Check that the arrays are the same length
+        if (params_.length != callbackData_.length) revert InvalidParams();
+
+        // Iterate through and make each purchase
+        uint256 len = params_.length;
+        payoutAmounts = new uint256[](len);
+        for (uint256 i; i < len; i++) {
+            payoutAmounts[i] = purchase(params_[i], callbackData_[i]);
+        }
     }
 
     // ========== CURATION ========== //
