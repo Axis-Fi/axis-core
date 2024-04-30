@@ -38,7 +38,7 @@ contract MockCallback is BaseCallback {
     mapping(uint96 => bool) public lotCurated;
     mapping(uint96 => bool) public lotPurchased;
     mapping(uint96 => bool) public lotBid;
-    mapping(uint96 => bool) public lotClaimedProceeds;
+    mapping(uint96 => bool) public lotSettled;
 
     function _onCreate(
         uint96 lotId_,
@@ -151,7 +151,7 @@ contract MockCallback is BaseCallback {
             revert("revert");
         }
 
-        lotClaimedProceeds[lotId_] = true;
+        lotSettled[lotId_] = true;
     }
 
     function setOnCreateReverts(bool reverts_) external {
