@@ -7,10 +7,10 @@ import {Script, console2} from "forge-std/Script.sol";
 // System contracts
 import {BatchAuctionHouse} from "src/BatchAuctionHouse.sol";
 import {IAuctionHouse} from "src/interfaces/IAuctionHouse.sol";
+import {IBatchAuctionHouse} from "src/interfaces/IBatchAuctionHouse.sol";
 import {toKeycode, toVeecode} from "src/modules/Modules.sol";
 import {EncryptedMarginalPrice} from "src/modules/auctions/EMP.sol";
 import {ECIES, Point} from "src/lib/ECIES.sol";
-import {uint2str} from "src/lib/Uint2Str.sol";
 
 // Generic contracts
 import {MockERC20, ERC20} from "lib/solmate/src/test/utils/mocks/MockERC20.sol";
@@ -101,45 +101,59 @@ contract TestData is Script {
         auctionHouse.cancel(lotId, bytes(""));
     }
 
-    // function placeBid(uint96 lotId, uint256 amount, uint256 minAmountOut) public {
-    //     auctionHouse = AuctionHouse(vm.envAddress("AUCTION_HOUSE"));
-    //     EMPAM module = EMPAM(address(auctionHouse.getModuleForVeecode(toVeecode("01EMPAM"))));
+    function placeBid(uint96 lotId, uint96 amount, uint128 minAmountOut) public {
+        auctionHouse = BatchAuctionHouse(vm.envAddress("AUCTION_HOUSE"));
+        EncryptedMarginalPrice module =
+            EncryptedMarginalPrice(address(auctionHouse.getModuleForVeecode(toVeecode("01EMPA"))));
 
-    //     // Get the public key modulus for the lot
-    //     (,,,,,, bytes memory publicKeyModulus) = module.auctionData(lotId);
+        // Get the public key modulus for the lot
+        (,,,,,,,,, Point memory publicKey,) = module.auctionData(lotId);
 
-    //     bytes memory encryptedAmountOut = RSAOAEP.encrypt(
-    //         abi.encodePacked(minAmountOut),
-    //         abi.encodePacked(uint2str(uint256(lotId))),
-    //         abi.encodePacked(uint24(0x10001)),
-    //         publicKeyModulus,
-    //         keccak256(
-    //             abi.encodePacked(
-    //                 "TESTSEED", "NOTFORPRODUCTION", msg.sender, lotId, amount, minAmountOut
-    //             )
-    //         )
-    //     );
+        // Get a random value to use as the bid private key (not secure but fine for testing)
+        uint256 bidPrivKey;
+        {
+            string[] memory inputs = new string[](3);
+            inputs[0] = "bash";
+            inputs[1] = "-c";
+            inputs[2] = string.concat("echo $RANDOM | cast to-uint256");
 
-    //     Router.BidParams memory bidParams = Router.BidParams({
-    //         lotId: lotId,
-    //         recipient: msg.sender,
-    //         referrer: address(0),
-    //         amount: amount,
-    //         auctionData: encryptedAmountOut,
-    //         allowlistProof: bytes(""),
-    //         permit2Data: bytes("")
-    //     });
+            bidPrivKey = abi.decode(vm.ffi(inputs), (uint256));
+        }
 
-    //     // Get quote token and approve the auction house
-    //     (,,, ERC20 qt,,,,,,) = auctionHouse.lotRouting(lotId);
+        // Use the bid private key to create a seed to mask the bid amount out with
+        uint128 seed = uint128(uint256(keccak256(abi.encodePacked(bidPrivKey))));
 
-    //     vm.startBroadcast();
-    //     qt.approve(address(auctionHouse), amount);
+        uint256 message;
+        unchecked {
+            message = uint256(minAmountOut - seed);
+        }
 
-    //     // Submit bid and emit ID
-    //     uint96 bidId = auctionHouse.bid(bidParams);
-    //     console2.log("Bid placed with ID: ", bidId);
+        // Calculate the salt for the bid
+        uint256 salt = uint256(keccak256(abi.encodePacked(lotId, msg.sender, amount)));
 
-    //     vm.stopBroadcast();
-    // }
+        // Encrypt the amount out using the ECIES library
+        (uint256 encryptedAmountOut, Point memory bidPubKey) =
+            ECIES.encrypt(message, publicKey, bidPrivKey, salt);
+
+        // Construct bid parameters
+        IBatchAuctionHouse.BidParams memory bidParams = IBatchAuctionHouse.BidParams({
+            lotId: lotId,
+            referrer: address(0),
+            amount: amount,
+            auctionData: abi.encode(encryptedAmountOut, bidPubKey),
+            permit2Data: bytes("")
+        });
+
+        // Get quote token and approve the auction house
+        (,, ERC20 qt,,,,,,) = auctionHouse.lotRouting(lotId);
+
+        vm.startBroadcast();
+        qt.approve(address(auctionHouse), amount);
+
+        // Submit bid and emit ID
+        uint96 bidId = auctionHouse.bid(bidParams, bytes(""));
+        console2.log("Bid placed with ID: ", bidId);
+
+        vm.stopBroadcast();
+    }
 }
