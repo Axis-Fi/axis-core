@@ -25,22 +25,24 @@ contract EmpAbortTest is EmpTest {
     //        [X] it reverts
     //    [X] when after lot conclusion
     //        [X] it reverts
-    // [ ] when the lot is in the dedicated settle period
-    //    [ ] it reverts
-    //    [ ] when the lot's private key is submitted
-    //        [ ] it reverts
-    //    [ ] when the lot is decrypted
-    //        [ ] it reverts
-    //    [X] when the lot is settled
-    //        [X] it reverts
-    // [ ] when the lot is past the dedicated settle period
-    //    [ ] it sets the lot status to settled and marginal price to max value
-    //    [ ] when the lot's private key is submitted
-    //        [ ] it sets the lot status to settled and marginal price to max value
-    //    [ ] when the lot is decrypted
-    //        [ ] it sets the lot status to settled and marginal price to max value
-    //    [ ] when the lot is settled
-    //        [ ] it reverts
+    // [X] when the lot is in the dedicated settle period
+    //  [X] when the lot's private key is submitted
+    //   [X] it reverts
+    //  [X] when the lot is decrypted
+    //   [X] it reverts
+    //  [X] when the lot is settled
+    //   [X] it reverts
+    //  [X] it reverts
+    // [X] when the lot is past the dedicated settle period
+    //  [X] when the lot's private key is submitted
+    //   [X] it sets the lot status to settled and marginal price to max value
+    //  [X] when the lot is decrypted
+    //   [X] it sets the lot status to settled and marginal price to max value
+    //  [X] when the lot is settled
+    //   [X] it reverts
+    //  [X] it sets the lot status to settled and marginal price to max value
+    // [X] when the lot is aborted
+    //  [X] it reverts
 
     function test_abort_whenLotIdIsNotValid_reverts() public {
         // No lots are created
@@ -269,6 +271,25 @@ contract EmpAbortTest is EmpTest {
         givenPrivateKeyIsSubmitted
         givenLotIsDecrypted
         givenLotIsSettled
+    {
+        // Expect revert
+        bytes memory err =
+            abi.encodeWithSelector(EncryptedMarginalPrice.Auction_WrongState.selector, _lotId);
+        vm.expectRevert(err);
+
+        // Call the function
+        vm.prank(address(_auctionHouse));
+        _module.abort(_lotId);
+    }
+
+    function test_abort_whenAborted_reverts()
+        public
+        givenLotIsCreated
+        givenLotHasStarted
+        givenBidIsCreated(_scaleQuoteTokenAmount(_BID_AMOUNT), _scaleBaseTokenAmount(_BID_AMOUNT_OUT))
+        givenLotHasConcluded
+        givenLotSettlePeriodHasPassed
+        givenLotIsAborted
     {
         // Expect revert
         bytes memory err =
