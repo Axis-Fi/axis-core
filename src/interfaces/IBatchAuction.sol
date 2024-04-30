@@ -11,6 +11,7 @@ import {IAuction} from "src/interfaces/IAuction.sol";
 interface IBatchAuction is IAuction {
     // ========== ERRORS ========== //
 
+    error Auction_DedicatedSettlePeriod(uint96 lotId);
     error Auction_InvalidBidId(uint96 lotId, uint96 bidId);
     error Auction_NotBidder();
 

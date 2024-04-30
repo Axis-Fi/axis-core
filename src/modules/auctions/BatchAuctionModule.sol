@@ -13,6 +13,9 @@ import {AuctionModule} from "src/modules/Auction.sol";
 abstract contract BatchAuctionModule is IBatchAuction, AuctionModule {
     // ========== STATE VARIABLES ========== //
 
+    /// @notice     Time period after auction conclusion where bidders cannot refund bids
+    uint48 public dedicatedSettlePeriod;
+
     /// @notice     Custom auction output for each lot
     /// @dev        Stored during settlement
     mapping(uint96 => bytes) public lotAuctionOutput;
@@ -244,6 +247,7 @@ abstract contract BatchAuctionModule is IBatchAuction, AuctionModule {
         // Standard validation
         _revertIfLotInvalid(lotId_);
         _revertIfBeforeLotConcluded(lotId_);
+        _revertIfDedicatedSettlePeriod(lotId_);
         _revertIfLotSettled(lotId_);
 
         // Call implementation-specific logic
@@ -259,6 +263,15 @@ abstract contract BatchAuctionModule is IBatchAuction, AuctionModule {
     ///
     /// @param      lotId_  The lot ID
     function _abort(uint96 lotId_) internal virtual;
+
+    // ========== ADMIN CONFIGURATION ========== //
+
+    function setDedicatedSettlePeriod(uint48 period_) external onlyParent {
+        // Dedicated settle period cannot be more than 7 days
+        if (period_ > 7 days) revert Auction_InvalidParams();
+
+        dedicatedSettlePeriod = period_;
+    }
 
     // ========== MODIFIERS ========== //
 
@@ -304,6 +317,17 @@ abstract contract BatchAuctionModule is IBatchAuction, AuctionModule {
     /// @param      lotId_      The lot ID
     /// @param      bidId_      The bid ID
     function _revertIfBidClaimed(uint96 lotId_, uint64 bidId_) internal view virtual;
+
+    function _revertIfDedicatedSettlePeriod(uint96 lotId_) internal view {
+        // Auction must not be in the dedicated settle period
+        uint48 conclusion = lotData[lotId_].conclusion;
+        if (
+            uint48(block.timestamp) >= conclusion
+                && uint48(block.timestamp) < conclusion + dedicatedSettlePeriod
+        ) {
+            revert Auction_DedicatedSettlePeriod(lotId_);
+        }
+    }
 
     // ========== VIEW FUNCTIONS ========== //
 
