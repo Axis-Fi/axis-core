@@ -454,6 +454,11 @@ contract BatchAuctionHouse is IBatchAuctionHouse, AuctionHouse {
         emit Settle(lotId_);
     }
 
+    /// @inheritdoc IBatchAuctionHouse
+    /// @dev        This function handles the following:
+    ///             - Validates the lot id
+    ///             - Aborts the auction on the auction module
+    ///             - Refunds prefunding (in base tokens) to the seller
     function abort(uint96 lotId_) external override nonReentrant {
         // Validation
         _isLotValid(lotId_);
