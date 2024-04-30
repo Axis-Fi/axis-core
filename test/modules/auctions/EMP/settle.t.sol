@@ -149,6 +149,8 @@ contract EmpaModuleSettleTest is EmpTest {
     function _assertSettlement(
         uint256 totalIn_,
         uint256 totalOut_,
+        uint256 capacity_,
+        bool finished_,
         bytes memory auctionOutput_
     ) internal {
         // Output is only set if settlement is completed
@@ -156,6 +158,8 @@ contract EmpaModuleSettleTest is EmpTest {
         // Check settlement output
         assertEq(totalIn_, _expectedSettlementComplete ? _expectedTotalIn : 0, "totalIn");
         assertEq(totalOut_, _expectedSettlementComplete ? _expectedTotalOut : 0, "totalOut");
+        assertEq(capacity_, _scaleBaseTokenAmount(_LOT_CAPACITY), "capacity");
+        assertEq(finished_, _expectedSettlementComplete, "finished");
         assertEq(
             auctionOutput_,
             _expectedSettlementComplete ? _expectedAuctionOutput : bytes(""),
@@ -1187,8 +1191,6 @@ contract EmpaModuleSettleTest is EmpTest {
         _module.settle(_lotId, _BID_NUM);
     }
 
-    // TODO assert capacity and finished values
-
     function test_bidsLessThanMinimumFilled()
         external
         givenLotIsCreated
@@ -1215,7 +1217,7 @@ contract EmpaModuleSettleTest is EmpTest {
         );
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
         _assertLot();
     }
 
@@ -1247,7 +1249,7 @@ contract EmpaModuleSettleTest is EmpTest {
         );
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
         _assertLot();
     }
 
@@ -1279,7 +1281,7 @@ contract EmpaModuleSettleTest is EmpTest {
         );
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
         _assertLot();
     }
 
@@ -1309,7 +1311,7 @@ contract EmpaModuleSettleTest is EmpTest {
         );
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
         _assertLot();
     }
 
@@ -1341,7 +1343,7 @@ contract EmpaModuleSettleTest is EmpTest {
         );
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
         _assertLot();
     }
 
@@ -1373,7 +1375,7 @@ contract EmpaModuleSettleTest is EmpTest {
         );
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
         _assertLot();
     }
 
@@ -1403,7 +1405,7 @@ contract EmpaModuleSettleTest is EmpTest {
         );
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
         _assertLot();
     }
 
@@ -1435,7 +1437,7 @@ contract EmpaModuleSettleTest is EmpTest {
         );
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
         _assertLot();
     }
 
@@ -1467,7 +1469,7 @@ contract EmpaModuleSettleTest is EmpTest {
         );
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
         _assertLot();
     }
 
@@ -1497,7 +1499,7 @@ contract EmpaModuleSettleTest is EmpTest {
         );
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
         _assertLot();
     }
 
@@ -1529,7 +1531,7 @@ contract EmpaModuleSettleTest is EmpTest {
         );
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
         _assertLot();
     }
 
@@ -1561,7 +1563,7 @@ contract EmpaModuleSettleTest is EmpTest {
         );
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
         _assertLot();
     }
 
@@ -1594,7 +1596,7 @@ contract EmpaModuleSettleTest is EmpTest {
         );
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
     }
 
     function test_largeNumberBidsBelowMinPrice_gasUsage()
@@ -1625,7 +1627,7 @@ contract EmpaModuleSettleTest is EmpTest {
         );
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
     }
 
     function test_largeNumberOfFilledBids_gasUsage()
@@ -1656,7 +1658,7 @@ contract EmpaModuleSettleTest is EmpTest {
         );
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
     }
 
     function test_largeNumberOfFilledBids_optimalDecryption_gasUsage()
@@ -1687,7 +1689,7 @@ contract EmpaModuleSettleTest is EmpTest {
         );
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
     }
 
     function test_smallNumberOfFilledBids_gasUsage()
@@ -1719,7 +1721,7 @@ contract EmpaModuleSettleTest is EmpTest {
         );
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
     }
 
     function test_marginalPriceBetweenBids_givenLastBid()
@@ -1741,7 +1743,7 @@ contract EmpaModuleSettleTest is EmpTest {
         ) = _settle();
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
         _assertLot();
     }
 
@@ -1766,7 +1768,7 @@ contract EmpaModuleSettleTest is EmpTest {
         ) = _settle();
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
         _assertLot();
     }
 
@@ -1791,7 +1793,7 @@ contract EmpaModuleSettleTest is EmpTest {
         ) = _settle();
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
     }
 
     function test_marginalPriceBetweenBids_givenNotLastBid()
@@ -1813,7 +1815,7 @@ contract EmpaModuleSettleTest is EmpTest {
         ) = _settle();
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
     }
 
     function test_marginalPriceBetweenBids_givenNotLastBid_quoteTokenDecimalsLarger()
@@ -1837,7 +1839,7 @@ contract EmpaModuleSettleTest is EmpTest {
         ) = _settle();
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
     }
 
     function test_marginalPriceBetweenBids_givenNotLastBid_quoteTokenDecimalsSmaller()
@@ -1861,7 +1863,7 @@ contract EmpaModuleSettleTest is EmpTest {
         ) = _settle();
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
     }
 
     function test_marginalPriceBetweenBids_givenNotLastBid_givenSettlementNotComplete()
@@ -1884,7 +1886,7 @@ contract EmpaModuleSettleTest is EmpTest {
         ) = _settle(2);
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
     }
 
     function test_marginalPriceBetweenBids_givenNotLastBid_givenSettlementNotComplete_givenSettlementCompletes(
@@ -1910,7 +1912,7 @@ contract EmpaModuleSettleTest is EmpTest {
         ) = _settle(1);
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
     }
 
     function test_notLastBid_aboveMinimumFilled()
@@ -1932,7 +1934,7 @@ contract EmpaModuleSettleTest is EmpTest {
         ) = _settle();
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
     }
 
     function test_notLastBid_aboveMinimumFilled_quoteTokenDecimalsLarger()
@@ -1956,7 +1958,7 @@ contract EmpaModuleSettleTest is EmpTest {
         ) = _settle();
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
     }
 
     function test_notLastBid_aboveMinimumFilled_quoteTokenDecimalsSmaller()
@@ -1980,7 +1982,7 @@ contract EmpaModuleSettleTest is EmpTest {
         ) = _settle();
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
     }
 
     function test_lastBid_aboveMinimumFilled()
@@ -2002,7 +2004,7 @@ contract EmpaModuleSettleTest is EmpTest {
         ) = _settle();
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
     }
 
     function test_lastBid_aboveMinimumFilled_quoteTokenDecimalsLarger()
@@ -2026,7 +2028,7 @@ contract EmpaModuleSettleTest is EmpTest {
         ) = _settle();
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
     }
 
     function test_lastBid_aboveMinimumFilled_quoteTokenDecimalsSmaller()
@@ -2050,7 +2052,7 @@ contract EmpaModuleSettleTest is EmpTest {
         ) = _settle();
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
     }
 
     function test_filledBelowMinimumFilled_aboveCapacityUsingMinimumPrice_givenNotLastBid()
@@ -2072,7 +2074,7 @@ contract EmpaModuleSettleTest is EmpTest {
         ) = _settle();
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
     }
 
     function test_filledBelowMinimumFilled_aboveCapacityUsingMinimumPrice_givenNotLastBid_quoteTokenDecimalsLarger(
@@ -2097,7 +2099,7 @@ contract EmpaModuleSettleTest is EmpTest {
         ) = _settle();
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
     }
 
     function test_filledBelowMinimumFilled_aboveCapacityUsingMinimumPrice_givenNotLastBid_quoteTokenDecimalsSmaller(
@@ -2122,7 +2124,7 @@ contract EmpaModuleSettleTest is EmpTest {
         ) = _settle();
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
     }
 
     function test_filledBelowMinimumFilled_aboveCapacityUsingMinimumPrice_givenLastBid()
@@ -2144,7 +2146,7 @@ contract EmpaModuleSettleTest is EmpTest {
         ) = _settle();
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
     }
 
     function test_filledBelowMinimumFilled_aboveCapacityUsingMinimumPrice_givenLastBid_quoteTokenDecimalsLarger(
@@ -2169,7 +2171,7 @@ contract EmpaModuleSettleTest is EmpTest {
         ) = _settle();
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
     }
 
     function test_filledBelowMinimumFilled_aboveCapacityUsingMinimumPrice_givenLastBid_quoteTokenDecimalsSmaller(
@@ -2194,7 +2196,7 @@ contract EmpaModuleSettleTest is EmpTest {
         ) = _settle();
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
         _assertLot();
     }
 
@@ -2217,7 +2219,7 @@ contract EmpaModuleSettleTest is EmpTest {
         ) = _settle();
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
         _assertLot();
     }
 
@@ -2242,7 +2244,7 @@ contract EmpaModuleSettleTest is EmpTest {
         ) = _settle();
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
         _assertLot();
     }
 
@@ -2267,7 +2269,7 @@ contract EmpaModuleSettleTest is EmpTest {
         ) = _settle();
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
         _assertLot();
     }
 
@@ -2291,7 +2293,7 @@ contract EmpaModuleSettleTest is EmpTest {
         ) = _settle(4);
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
         _assertLot();
     }
 
@@ -2318,7 +2320,7 @@ contract EmpaModuleSettleTest is EmpTest {
         _settle(0);
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
         _assertLot();
     }
 
@@ -2344,7 +2346,7 @@ contract EmpaModuleSettleTest is EmpTest {
         ) = _settle(10);
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
         _assertLot();
     }
 
@@ -2370,7 +2372,7 @@ contract EmpaModuleSettleTest is EmpTest {
         ) = _settle(1);
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
         _assertLot();
     }
 
@@ -2417,7 +2419,7 @@ contract EmpaModuleSettleTest is EmpTest {
         ) = _settle(5);
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
         _assertLot();
     }
 
@@ -2444,7 +2446,7 @@ contract EmpaModuleSettleTest is EmpTest {
         ) = _settle(1);
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
         _assertLot();
     }
 
@@ -2471,7 +2473,7 @@ contract EmpaModuleSettleTest is EmpTest {
         ) = _settle(1);
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
         _assertLot();
     }
 
@@ -2494,7 +2496,7 @@ contract EmpaModuleSettleTest is EmpTest {
         ) = _settle();
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
         _assertLot();
     }
 
@@ -2519,7 +2521,7 @@ contract EmpaModuleSettleTest is EmpTest {
         ) = _settle();
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
         _assertLot();
     }
 
@@ -2544,7 +2546,7 @@ contract EmpaModuleSettleTest is EmpTest {
         ) = _settle();
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
         _assertLot();
     }
 
@@ -2567,7 +2569,7 @@ contract EmpaModuleSettleTest is EmpTest {
         ) = _settle();
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
         _assertLot();
     }
 
@@ -2592,7 +2594,7 @@ contract EmpaModuleSettleTest is EmpTest {
         ) = _settle();
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
         _assertLot();
     }
 
@@ -2617,7 +2619,7 @@ contract EmpaModuleSettleTest is EmpTest {
         ) = _settle();
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
         _assertLot();
     }
 
@@ -2641,7 +2643,7 @@ contract EmpaModuleSettleTest is EmpTest {
         ) = _settle(1);
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
         _assertLot();
     }
 
@@ -2667,7 +2669,7 @@ contract EmpaModuleSettleTest is EmpTest {
         ) = _settle(1);
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
         _assertLot();
     }
 
@@ -2690,7 +2692,7 @@ contract EmpaModuleSettleTest is EmpTest {
         ) = _settle();
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
         _assertLot();
     }
 
@@ -2713,7 +2715,7 @@ contract EmpaModuleSettleTest is EmpTest {
         ) = _settle();
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
         _assertLot();
     }
 
@@ -2736,7 +2738,7 @@ contract EmpaModuleSettleTest is EmpTest {
         ) = _settle();
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
         _assertLot();
     }
 
@@ -2759,7 +2761,7 @@ contract EmpaModuleSettleTest is EmpTest {
         ) = _settle();
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
         _assertLot();
     }
 
@@ -2787,7 +2789,7 @@ contract EmpaModuleSettleTest is EmpTest {
         assertEq(
             uint8(auctionData.status), uint8(EncryptedMarginalPrice.LotStatus.Settled), "status"
         );
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
         _assertLot();
     }
 
@@ -2810,7 +2812,7 @@ contract EmpaModuleSettleTest is EmpTest {
         ) = _settle();
 
         // Assert settlement
-        _assertSettlement(totalIn, totalOut, auctionOutput);
+        _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
         _assertLot();
     }
 }
