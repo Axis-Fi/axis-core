@@ -506,6 +506,7 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
     ///                 - The lot is not active
     ///                 - The lot has not concluded
     ///                 - The private key has already been submitted
+    ///                 - The lot has been settled (cancelled, settled or aborted)
     ///                 - The private key is invalid for the public key
     ///
     /// @param          lotId_          The lot ID of the auction to submit the private key for
@@ -522,6 +523,7 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
         _revertIfLotInvalid(lotId_);
         _revertIfLotActive(lotId_);
         _revertIfBeforeLotStart(lotId_);
+        _revertIfLotSettled(lotId_);
 
         // Revert if the private key has already been verified and set
         if (auctionData[lotId_].privateKey != 0) revert Auction_WrongState(lotId_);
