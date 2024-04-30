@@ -8,7 +8,7 @@ import {Point} from "src/lib/ECIES.sol";
 
 import {EmpTest} from "test/modules/auctions/EMP/EMPTest.sol";
 
-contract EmpaModuleBidTest is EmpTest {
+contract EmpBidTest is EmpTest {
     uint256 internal constant _BID_AMOUNT = 2e18;
     uint256 internal constant _BID_AMOUNT_OUT = 1e18;
     uint256 internal constant _BID_AMOUNT_BELOW_MIN = 1e14;

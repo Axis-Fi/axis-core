@@ -10,7 +10,7 @@ import {IBatchAuction} from "src/interfaces/IBatchAuction.sol";
 
 import {EmpTest} from "test/modules/auctions/EMP/EMPTest.sol";
 
-contract EmpaModuleRefundBidTest is EmpTest {
+contract EmpRefundBidTest is EmpTest {
     // [X] when the lot id is invalid
     //  [X] it reverts
     // [X] when the bid id is invalid

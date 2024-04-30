@@ -12,7 +12,7 @@ import {EmpTest} from "test/modules/auctions/EMP/EMPTest.sol";
 
 import {console2} from "forge-std/console2.sol";
 
-contract EmpaModuleSettleTest is EmpTest {
+contract EmpSettleTest is EmpTest {
     using BidEncoding for bytes32;
 
     uint256 internal constant _BID_PRICE_BELOW_ONE_AMOUNT = 1e18;

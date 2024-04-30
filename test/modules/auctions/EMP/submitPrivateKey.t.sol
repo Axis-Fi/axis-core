@@ -6,7 +6,7 @@ import {EncryptedMarginalPrice} from "src/modules/auctions/EMP.sol";
 
 import {EmpTest} from "test/modules/auctions/EMP/EMPTest.sol";
 
-contract EmpaModuleSubmitPrivateKeyTest is EmpTest {
+contract EmpSubmitPrivateKeyTest is EmpTest {
     // [X] when the lot id is invalid
     //  [X] it reverts
     // [X] when the lot is active

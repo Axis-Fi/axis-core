@@ -11,7 +11,7 @@ import {IBatchAuction} from "src/interfaces/IBatchAuction.sol";
 
 import {EmpTest} from "test/modules/auctions/EMP/EMPTest.sol";
 
-contract EmpaModuleClaimBidsTest is EmpTest {
+contract EmpClaimBidsTest is EmpTest {
     uint256 internal constant _BID_AMOUNT = 8e18;
     uint256 internal constant _BID_AMOUNT_OUT = 4e18;
 
