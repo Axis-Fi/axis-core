@@ -21,7 +21,7 @@ cd lib/forge-std/ && git checkout v1.7.1  && cd ../..
 
 echo ""
 echo "prb-math"
-cd lib/prb-math/ && git checkout v4.0.2 && cd ../..
+cd lib/prb-math/ && git checkout main && cd ../..
 
 echo ""
 echo "solady"
