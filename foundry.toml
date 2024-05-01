@@ -6,6 +6,8 @@ fs_permissions = [{access = "read-write", path = "./bytecode/"}, {access = "read
 ffi = true
 solc_version = "0.8.19"
 evm_version = "paris"
+verbosity = 3
+no-match-test = "optimal"
 
 [fuzz]
 runs = 1024
