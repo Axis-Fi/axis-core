@@ -22,7 +22,7 @@ contract GradualDutchAuction is AtomicAuctionModule {
     struct AuctionData {
         uint256 equilibriumPrice; // price at which the auction is balanced
         uint256 minimumPrice; // minimum price for the auction
-        uint48 lastAuctionStart;
+        uint256 lastAuctionStart; // time that the last un-purchased auction started, may be in the future
         UD60x18 decayConstant; // speed at which the price decays, as UD60x18.
         UD60x18 emissionsRate; // number of tokens released per second, as UD60x18. Calculated as capacity / duration.
     }
@@ -71,6 +71,8 @@ contract GradualDutchAuction is AtomicAuctionModule {
         // TODO do we need to set tighter bounds on this?
         if (params.decayConstant == ZERO) revert Auction_InvalidParams();
 
+        // TODO other validation checks?
+
         // Calculate emissions rate
         UD60x18 duration = convert(uint256(lot_.conclusion - lot_.start));
         UD60x18 emissionsRate =
@@ -82,6 +84,7 @@ contract GradualDutchAuction is AtomicAuctionModule {
         data.minimumPrice = params.minimumPrice;
         data.decayConstant = params.decayConstant;
         data.emissionsRate = emissionsRate;
+        data.lastAuctionStart = uint256(lot_.start);
     }
 
     // Do not need to do anything extra here
@@ -95,7 +98,7 @@ contract GradualDutchAuction is AtomicAuctionModule {
         bytes calldata
     ) internal override returns (uint256 payout, bytes memory auctionOutput) {
         // Calculate the payout and emissions
-        uint48 secondsOfEmissions;
+        uint256 secondsOfEmissions;
         (payout, secondsOfEmissions) = _payoutAndEmissionsFor(lotId_, amount_);
 
         // Update last auction start with seconds of emissions
@@ -201,7 +204,7 @@ contract GradualDutchAuction is AtomicAuctionModule {
     function _payoutAndEmissionsFor(
         uint96 lotId_,
         uint256 amount_
-    ) internal view returns (uint256, uint48) {
+    ) internal view returns (uint256, uint256) {
         Lot memory lot = lotData[lotId_];
         AuctionData memory auction = auctionData[lotId_];
 
@@ -218,9 +221,8 @@ contract GradualDutchAuction is AtomicAuctionModule {
             // Calculate the exponential factor
             // TODO lastAuctionStart may be greater than block.timestamp if the auction is ahead of schedule
             // Need to handle this case
-            UD60x18 ekt = auction.decayConstant.mul(
-                convert(block.timestamp - uint256(auction.lastAuctionStart))
-            ).exp();
+            UD60x18 ekt =
+                auction.decayConstant.mul(convert(block.timestamp - auction.lastAuctionStart)).exp();
 
             // Calculate the logarithm
             // Operand is guaranteed to be >= 1, so the result is positive
@@ -244,9 +246,8 @@ contract GradualDutchAuction is AtomicAuctionModule {
             // TODO lastAuctionStart may be greater than block.timestamp if the auction is ahead of schedule
             // Need to handle this case
             UD60x18 c = q0.sub(qm).div(
-                auction.decayConstant.mul(
-                    convert(block.timestamp - uint256(auction.lastAuctionStart))
-                ).exp().mul(qm)
+                auction.decayConstant.mul(convert(block.timestamp - auction.lastAuctionStart)).exp()
+                    .mul(qm)
             );
 
             // Calculate the third term: W(C e^(k * Q / qm + C))
@@ -269,13 +270,7 @@ contract GradualDutchAuction is AtomicAuctionModule {
         }
 
         // Calculate seconds of emissions from payout
-        // TODO need to think about overflows on this cast
-        // emissionsRate has a max based on the minimum auction duration
-        // another way to arrange the equations is that s = (f + c - w) / k
-        // it can be a precursor to the payout calculation
-        // however, this doesn't solve the overflow problem
-        // my hunch is that T being less than auction duration may be helpful in determining a bound
-        uint48 secondsOfEmissions = uint48(payout.div(auction.emissionsRate).intoUint256());
+        uint256 secondsOfEmissions = payout.div(auction.emissionsRate).intoUint256();
 
         // Scale payout to payout token decimals and return
         return (payout.intoUint256().mulDiv(10 ** lot.baseTokenDecimals, uUNIT), secondsOfEmissions);
