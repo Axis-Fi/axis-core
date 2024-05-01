@@ -12,11 +12,11 @@ import {BaseCallback} from "src/callbacks/BaseCallback.sol";
 import {CappedMerkleAllowlist} from "src/callbacks/allowlists/CappedMerkleAllowlist.sol";
 
 import {WithSalts} from "test/lib/WithSalts.sol";
+import {TestSaltConstants} from "script/salts/TestSaltConstants.sol";
 
-contract CappedMerkleAllowlistBatchTest is Test, Permit2User, WithSalts {
+contract CappedMerkleAllowlistBatchTest is Test, Permit2User, WithSalts, TestSaltConstants {
     using Callbacks for CappedMerkleAllowlist;
 
-    address internal constant _OWNER = address(0x1);
     address internal constant _SELLER = address(0x2);
     address internal constant _PROTOCOL = address(0x3);
     address internal constant _BUYER = address(0x4);
@@ -43,7 +43,7 @@ contract CappedMerkleAllowlistBatchTest is Test, Permit2User, WithSalts {
     function setUp() public {
         // Create an AuctionHouse at a deterministic address, since it is used as input to callbacks
         BatchAuctionHouse auctionHouse = new BatchAuctionHouse(_OWNER, _PROTOCOL, _permit2Address);
-        _auctionHouse = BatchAuctionHouse(address(0x000000000000000000000000000000000000000A));
+        _auctionHouse = BatchAuctionHouse(_AUCTION_HOUSE);
         vm.etch(address(_auctionHouse), address(auctionHouse).code);
         vm.store(address(_auctionHouse), bytes32(uint256(0)), bytes32(abi.encode(_OWNER))); // Owner
         vm.store(address(_auctionHouse), bytes32(uint256(6)), bytes32(abi.encode(1))); // Reentrancy

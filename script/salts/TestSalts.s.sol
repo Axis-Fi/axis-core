@@ -7,23 +7,15 @@ import {WithEnvironment} from "script/deploy/WithEnvironment.s.sol";
 import {Permit2User} from "test/lib/permit2/Permit2User.sol";
 import {WithSalts} from "script/salts/WithSalts.s.sol";
 
+import {TestSaltConstants} from "script/salts/TestSaltConstants.sol";
 import {MockCallback} from "test/callbacks/MockCallback.sol";
 import {Callbacks} from "src/lib/Callbacks.sol";
 import {CappedMerkleAllowlist} from "src/callbacks/allowlists/CappedMerkleAllowlist.sol";
 import {UniswapV2DirectToLiquidity} from "src/callbacks/liquidity/UniswapV2DTL.sol";
 import {UniswapV3DirectToLiquidity} from "src/callbacks/liquidity/UniswapV3DTL.sol";
 
-contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts {
-    // TODO shift into abstract contract that tests also inherit from
-    address internal constant _OWNER = address(0x1);
-    address internal constant _AUCTION_HOUSE = address(0x000000000000000000000000000000000000000A);
-    address internal constant _UNISWAP_V2_FACTORY =
-        address(0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f);
-    address internal constant _UNISWAP_V2_ROUTER =
-        address(0x584A2a1F5eCdCDcB6c0616cd280a7Db89239872B);
-    address internal constant _UNISWAP_V3_FACTORY =
-        address(0x5573DCDCc96692D24938F4E440d99EFC3d7EDA04);
-    address internal constant _GUNI_FACTORY = address(0xe6b8030b2fd30ea9198D3F39AEeD4f448A2704f0);
+contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts, TestSaltConstants {
+    // See TestSaltConstants for UniV2 and UniV3 factory and router addresses
 
     string internal constant _MOCK_CALLBACK = "MockCallback";
     string internal constant _CAPPED_MERKLE_ALLOWLIST = "CappedMerkleAllowlist";

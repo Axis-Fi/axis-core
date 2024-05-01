@@ -26,16 +26,15 @@ import {MockERC20} from "solmate/test/utils/mocks/MockERC20.sol";
 
 import {WithSalts} from "test/lib/WithSalts.sol";
 import {console2} from "forge-std/console2.sol";
+import {TestSaltConstants} from "script/salts/TestSaltConstants.sol";
 
-abstract contract UniswapV3DirectToLiquidityTest is Test, Permit2User, WithSalts {
+abstract contract UniswapV3DirectToLiquidityTest is Test, Permit2User, WithSalts, TestSaltConstants {
     using Callbacks for UniswapV3DirectToLiquidity;
 
-    address internal constant _OWNER = address(0x1);
     address internal constant _SELLER = address(0x2);
     address internal constant _PROTOCOL = address(0x3);
     address internal constant _BUYER = address(0x4);
     address internal constant _NOT_SELLER = address(0x20);
-    address internal constant _AUCTION_HOUSE = address(0x000000000000000000000000000000000000000A);
 
     uint96 internal constant _LOT_CAPACITY = 10e18;
 
@@ -81,13 +80,19 @@ abstract contract UniswapV3DirectToLiquidityTest is Test, Permit2User, WithSalts
         _uniV3Factory = new UniswapV3Factory{
             salt: bytes32(0xbc65534283bdbbac4a95a3fb1933af63d55135566688dd54d1c55a626b1bc366)
         }();
-        console2.log("UniswapV3Factory address: {}", address(_uniV3Factory)); // 0x5573DCDCc96692D24938F4E440d99EFC3d7EDA04
+        if (address(_uniV3Factory) != _UNISWAP_V3_FACTORY) {
+            console2.log("UniswapV3Factory address has changed to %s. Update the address in TestSaltConstants and re-generate test salts.", address(_uniV3Factory));
+            revert("UniswapV3Factory address has changed. See logs.");
+        }
 
         // Create a GUniFactory at a deterministic address
         _gUniFactory = new GUniFactory{
             salt: bytes32(0x31d4bb3a2cd73df799deceac86fa252d040e24c2ea206f4172d74f72cfa34e4b)
         }(address(_uniV3Factory));
-        console2.log("GUniFactory address: {}", address(_gUniFactory)); // 0xe6b8030b2fd30ea9198D3F39AEeD4f448A2704f0
+        if (address(_gUniFactory) != _GUNI_FACTORY) {
+            console2.log("GUniFactory address has changed to %s. Update the address in TestSaltConstants and re-generate test salts.", address(_gUniFactory));
+            revert("UniswapV2Router address has changed. See logs.");
+        }
 
         // Initialize the GUniFactory
         address payable gelatoAddress = payable(address(0x10));

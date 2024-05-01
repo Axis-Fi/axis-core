@@ -33,8 +33,9 @@ import {AuctionHouse} from "src/bases/AuctionHouse.sol";
 import {Veecode, toKeycode, keycodeFromVeecode, Keycode} from "src/modules/Keycode.sol";
 
 import {WithSalts} from "test/lib/WithSalts.sol";
+import {TestSaltConstants} from "script/salts/TestSaltConstants.sol";
 
-abstract contract BatchAuctionHouseTest is Test, Permit2User, WithSalts {
+abstract contract BatchAuctionHouseTest is Test, Permit2User, WithSalts, TestSaltConstants {
     MockFeeOnTransferERC20 internal _baseToken;
     MockFeeOnTransferERC20 internal _quoteToken;
 
@@ -52,7 +53,6 @@ abstract contract BatchAuctionHouseTest is Test, Permit2User, WithSalts {
 
     uint256 internal constant _BASE_SCALE = 1e18;
 
-    address internal constant _OWNER = address(0x1);
     address internal constant _SELLER = address(0x2);
     address internal constant _PROTOCOL = address(0x3);
     address internal constant _CURATOR = address(0x4);
@@ -105,7 +105,7 @@ abstract contract BatchAuctionHouseTest is Test, Permit2User, WithSalts {
 
         // Create a BatchAuctionHouse at a deterministic address, since it is used as input to callbacks
         BatchAuctionHouse auctionHouse = new BatchAuctionHouse(_OWNER, _PROTOCOL, _permit2Address);
-        _auctionHouse = BatchAuctionHouse(address(0x000000000000000000000000000000000000000A));
+        _auctionHouse = BatchAuctionHouse(_AUCTION_HOUSE);
         vm.etch(address(_auctionHouse), address(auctionHouse).code);
         vm.store(address(_auctionHouse), bytes32(uint256(0)), bytes32(abi.encode(_OWNER))); // Owner
         vm.store(address(_auctionHouse), bytes32(uint256(6)), bytes32(abi.encode(1))); // Reentrancy
