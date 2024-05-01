@@ -22,3 +22,6 @@
 [submodule "lib/uniswap-v2-core"]
 	path = lib/uniswap-v2-core
 	url = https://github.com/uniswap/v2-core
+[submodule "lib/prb-math"]
+	path = lib/prb-math
+	url = https://github.com/Oighty/prb-math
