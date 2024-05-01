@@ -140,27 +140,37 @@ contract GradualDutchAuction is AtomicAuctionModule {
         uint256 baseTokenScale = 10 ** lot.baseTokenDecimals;
         UD60x18 payout = ud(payout_.mulDiv(uUNIT, baseTokenScale));
 
-        // Calculate time since last auction start
-        // TODO handle case where lastAuctionStart is greater than block.timestamp
-        UD60x18 timeSinceLastAuctionStart =
-            convert(block.timestamp - uint256(auction.lastAuctionStart));
-
-        // Subtract the minimum price from the equilibrium price
+        // Calculate the first numerator factor: (q0 - qm)
         // In the auction creation, we checked that the equilibrium price is greater than the minimum price
-        // Scale the result to 18 decimals, set as numerator factor 1
+        // Scale the result to 18 decimals
         uint256 quoteTokenScale = 10 ** lot.quoteTokenDecimals;
-        UD60x18 num1 =
+        UD60x18 priceDiff =
             ud((auction.equilibriumPrice - auction.minimumPrice).fullMulDiv(uUNIT, quoteTokenScale));
 
         // Calculate the second numerator factor: e^((k*P)/r) - 1
-        UD60x18 num2 = auction.decayConstant.mul(payout).div(auction.emissionsRate).exp().sub(UNIT);
+        UD60x18 ekpr = auction.decayConstant.mul(payout).div(auction.emissionsRate).exp().sub(UNIT);
 
-        // Calculate the denominator: ke^(k*T)
-        UD60x18 denominator =
-            auction.decayConstant.mul(timeSinceLastAuctionStart).exp().mul(auction.decayConstant);
+        // Handle cases of T being positive or negative
+        UD60x18 result;
+        if (block.timestamp >= auction.lastAuctionStart) {
+            // T is positive
+            // Calculate the denominator: ke^(k*T)
+            UD60x18 kekt = auction.decayConstant.mul(
+                convert(block.timestamp - auction.lastAuctionStart)
+            ).exp().mul(auction.decayConstant);
 
-        // Calculate first term
-        UD60x18 result = num1.mul(num2).div(denominator);
+            // Calculate the first term in the formula
+            result = priceDiff.mul(ekpr).div(kekt);
+        } else {
+            // T is negative: flip the e^(k * T) term to the numerator
+
+            // Calculate the exponential: e^(k*T)
+            UD60x18 ekt =
+                auction.decayConstant.mul(convert(auction.lastAuctionStart - block.timestamp)).exp();
+
+            // Calculate the first term in the formula
+            result = priceDiff.mul(ekpr).mul(ekt).div(auction.decayConstant);
+        }
 
         // If minimum price is zero, then the first term is the result, otherwise we add the second term
         if (auction.minimumPrice > 0) {
@@ -218,15 +228,29 @@ contract GradualDutchAuction is AtomicAuctionModule {
         // Factors are calculated in a certain order to avoid precision loss
         UD60x18 payout;
         if (auction.minimumPrice == 0) {
-            // Calculate the exponential factor
-            // TODO lastAuctionStart may be greater than block.timestamp if the auction is ahead of schedule
-            // Need to handle this case
-            UD60x18 ekt =
-                auction.decayConstant.mul(convert(block.timestamp - auction.lastAuctionStart)).exp();
+            UD60x18 logFactor;
+            if (block.timestamp >= auction.lastAuctionStart) {
+                // T is positive
+                // Calculate the exponential factor
+                UD60x18 ekt = auction.decayConstant.mul(
+                    convert(block.timestamp - auction.lastAuctionStart)
+                ).exp();
 
-            // Calculate the logarithm
-            // Operand is guaranteed to be >= 1, so the result is positive
-            UD60x18 logFactor = amount.mul(auction.decayConstant).mul(ekt).div(q0).add(UNIT).ln();
+                // Calculate the logarithm
+                // Operand is guaranteed to be >= 1, so the result is positive
+                logFactor = amount.mul(auction.decayConstant).mul(ekt).div(q0).add(UNIT).ln();
+            } else {
+                // T is negative: flip the e^(k * T) term to the denominator
+
+                // Calculate the exponential factor
+                UD60x18 ekt = auction.decayConstant.mul(
+                    convert(auction.lastAuctionStart - block.timestamp)
+                ).exp();
+
+                // Calculate the logarithm
+                // Operand is guaranteed to be >= 1, so the result is positive
+                logFactor = amount.mul(auction.decayConstant).div(ekt.mul(q0)).add(UNIT).ln();
+            }
 
             // Calculate the payout
             payout = auction.emissionsRate.mul(logFactor).div(auction.decayConstant);
@@ -243,12 +267,20 @@ contract GradualDutchAuction is AtomicAuctionModule {
             UD60x18 f = auction.decayConstant.mul(amount).div(qm);
 
             // Calculate second term aka C: (q0 - qm)/(qm * e^(k * T))
-            // TODO lastAuctionStart may be greater than block.timestamp if the auction is ahead of schedule
-            // Need to handle this case
-            UD60x18 c = q0.sub(qm).div(
-                auction.decayConstant.mul(convert(block.timestamp - auction.lastAuctionStart)).exp()
-                    .mul(qm)
-            );
+            UD60x18 c;
+            if (block.timestamp >= auction.lastAuctionStart) {
+                // T is positive
+                c = q0.sub(qm).div(
+                    auction.decayConstant.mul(convert(block.timestamp - auction.lastAuctionStart))
+                        .exp().mul(qm)
+                );
+            } else {
+                // T is negative: flip the e^(k * T) term to the numerator
+                c = q0.sub(qm).mul(
+                    auction.decayConstant.mul(convert(auction.lastAuctionStart - block.timestamp))
+                        .exp()
+                ).div(qm);
+            }
 
             // Calculate the third term: W(C e^(k * Q / qm + C))
             UD60x18 w = c.add(f).exp().mul(c).productLn();
