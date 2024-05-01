@@ -28,7 +28,12 @@ import {WithSalts} from "test/lib/WithSalts.sol";
 import {console2} from "forge-std/console2.sol";
 import {TestSaltConstants} from "script/salts/TestSaltConstants.sol";
 
-abstract contract UniswapV2DirectToLiquidityTest is Test, Permit2User, WithSalts, TestSaltConstants {
+abstract contract UniswapV2DirectToLiquidityTest is
+    Test,
+    Permit2User,
+    WithSalts,
+    TestSaltConstants
+{
     using Callbacks for UniswapV2DirectToLiquidity;
 
     address internal constant _SELLER = address(0x2);
@@ -86,7 +91,10 @@ abstract contract UniswapV2DirectToLiquidityTest is Test, Permit2User, WithSalts
             salt: bytes32(0x035ba535d735a8e92093764ec05c30d49ab56cfd0d3da306185ab02b1fcac4f4)
         }(address(_uniV2Factory), address(0));
         if (address(_uniV2Router) != _UNISWAP_V2_ROUTER) {
-            console2.log("UniswapV2Router address has changed to %s. Update the address in TestSaltConstants and re-generate test salts.", address(_uniV2Router));
+            console2.log(
+                "UniswapV2Router address has changed to %s. Update the address in TestSaltConstants and re-generate test salts.",
+                address(_uniV2Router)
+            );
             revert("UniswapV2Router address has changed. See logs.");
         }
 

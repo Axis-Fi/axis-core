@@ -28,7 +28,12 @@ import {WithSalts} from "test/lib/WithSalts.sol";
 import {console2} from "forge-std/console2.sol";
 import {TestSaltConstants} from "script/salts/TestSaltConstants.sol";
 
-abstract contract UniswapV3DirectToLiquidityTest is Test, Permit2User, WithSalts, TestSaltConstants {
+abstract contract UniswapV3DirectToLiquidityTest is
+    Test,
+    Permit2User,
+    WithSalts,
+    TestSaltConstants
+{
     using Callbacks for UniswapV3DirectToLiquidity;
 
     address internal constant _SELLER = address(0x2);
@@ -81,7 +86,10 @@ abstract contract UniswapV3DirectToLiquidityTest is Test, Permit2User, WithSalts
             salt: bytes32(0xbc65534283bdbbac4a95a3fb1933af63d55135566688dd54d1c55a626b1bc366)
         }();
         if (address(_uniV3Factory) != _UNISWAP_V3_FACTORY) {
-            console2.log("UniswapV3Factory address has changed to %s. Update the address in TestSaltConstants and re-generate test salts.", address(_uniV3Factory));
+            console2.log(
+                "UniswapV3Factory address has changed to %s. Update the address in TestSaltConstants and re-generate test salts.",
+                address(_uniV3Factory)
+            );
             revert("UniswapV3Factory address has changed. See logs.");
         }
 
@@ -90,7 +98,10 @@ abstract contract UniswapV3DirectToLiquidityTest is Test, Permit2User, WithSalts
             salt: bytes32(0x31d4bb3a2cd73df799deceac86fa252d040e24c2ea206f4172d74f72cfa34e4b)
         }(address(_uniV3Factory));
         if (address(_gUniFactory) != _GUNI_FACTORY) {
-            console2.log("GUniFactory address has changed to %s. Update the address in TestSaltConstants and re-generate test salts.", address(_gUniFactory));
+            console2.log(
+                "GUniFactory address has changed to %s. Update the address in TestSaltConstants and re-generate test salts.",
+                address(_gUniFactory)
+            );
             revert("UniswapV2Router address has changed. See logs.");
         }
 
