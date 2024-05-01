@@ -114,7 +114,7 @@ contract GradualDutchAuction is AtomicAuctionModule {
     // where k is the decay constant, q0 is the initial price, and qm is the minimum price
     // Integrating this function from the last auction start time for a particular number of tokens,
     // gives the multiplier for the token price to determine amount of quote tokens required to purchase:
-    // Q(T) = ((q0 - qm) * (e^(k*P) - 1)) / ke^(k*T) + (qm * P) / r
+    // Q(T) = ((q0 - qm) * (e^((k*P)/r) - 1)) / ke^(k*T) + (qm * P) / r
     // where T is the time since the last auction start, P is the number of payout tokens to purchase,
     // and r is the emissions rate (number of tokens released per second).
     //
@@ -122,17 +122,23 @@ contract GradualDutchAuction is AtomicAuctionModule {
     // q(t) = q0 * e^(-k*t)
     // Integrating this function from the last auction start time for a particular number of tokens,
     // gives the multiplier for the token price to determine amount of quote tokens required to purchase:
-    // Q(T) = (q0 * (e^(k*P) - 1)) / ke^(k*T)
+    // Q(T) = (q0 * (e^((k*P)/r) - 1)) / ke^(k*T)
     // where T is the time since the last auction start, P is the number of payout tokens to purchase.
     function priceFor(uint96 lotId_, uint256 payout_) public view override returns (uint256) {
         Lot memory lot = lotData[lotId_];
         AuctionData memory auction = auctionData[lotId_];
+
+        // Check that payout does not exceed remaining capacity
+        if (payout_ > lot.capacity) {
+            revert Auction_InsufficientCapacity();
+        }
 
         // Convert payout to UD60x18. We scale first to 18 decimals from the payout token decimals
         uint256 baseTokenScale = 10 ** lot.baseTokenDecimals;
         UD60x18 payout = ud(payout_.mulDiv(uUNIT, baseTokenScale));
 
         // Calculate time since last auction start
+        // TODO handle case where lastAuctionStart is greater than block.timestamp
         UD60x18 timeSinceLastAuctionStart =
             convert(block.timestamp - uint256(auction.lastAuctionStart));
 
@@ -143,10 +149,10 @@ contract GradualDutchAuction is AtomicAuctionModule {
         UD60x18 num1 =
             ud((auction.equilibriumPrice - auction.minimumPrice).fullMulDiv(uUNIT, quoteTokenScale));
 
-        // Calculate the second numerator factor
-        UD60x18 num2 = auction.decayConstant.mul(payout).exp().sub(UNIT);
+        // Calculate the second numerator factor: e^((k*P)/r) - 1
+        UD60x18 num2 = auction.decayConstant.mul(payout).div(auction.emissionsRate).exp().sub(UNIT);
 
-        // Calculate the denominator
+        // Calculate the denominator: ke^(k*T)
         UD60x18 denominator =
             auction.decayConstant.mul(timeSinceLastAuctionStart).exp().mul(auction.decayConstant);
 
@@ -161,11 +167,6 @@ contract GradualDutchAuction is AtomicAuctionModule {
 
         // Scale price back to quote token decimals
         uint256 amount = result.intoUint256().fullMulDiv(quoteTokenScale, uUNIT);
-
-        // Check that amount in or payout do not exceed remaining capacity
-        if (lot.capacityInQuote ? amount > lot.capacity : payout_ > lot.capacity) {
-            revert Auction_InsufficientCapacity();
-        }
 
         return amount;
     }
@@ -215,6 +216,8 @@ contract GradualDutchAuction is AtomicAuctionModule {
         UD60x18 payout;
         if (auction.minimumPrice == 0) {
             // Calculate the exponential factor
+            // TODO lastAuctionStart may be greater than block.timestamp if the auction is ahead of schedule
+            // Need to handle this case
             UD60x18 ekt = auction.decayConstant.mul(
                 convert(block.timestamp - uint256(auction.lastAuctionStart))
             ).exp();
@@ -226,6 +229,11 @@ contract GradualDutchAuction is AtomicAuctionModule {
             // Calculate the payout
             payout = auction.emissionsRate.mul(logFactor).div(auction.decayConstant);
         } else {
+            // TODO think about refactoring to avoid precision loss
+
+            // TODO do we check if amount divided by minimum price is greater than capacity?
+            // May help with some overflow situations below.
+
             // Convert minimum price to 18 decimals
             UD60x18 qm = ud(auction.minimumPrice.mulDiv(uUNIT, quoteTokenScale));
 
@@ -233,6 +241,8 @@ contract GradualDutchAuction is AtomicAuctionModule {
             UD60x18 f = auction.decayConstant.mul(amount).div(qm);
 
             // Calculate second term aka C: (q0 - qm)/(qm * e^(k * T))
+            // TODO lastAuctionStart may be greater than block.timestamp if the auction is ahead of schedule
+            // Need to handle this case
             UD60x18 c = q0.sub(qm).div(
                 auction.decayConstant.mul(
                     convert(block.timestamp - uint256(auction.lastAuctionStart))
@@ -248,7 +258,7 @@ contract GradualDutchAuction is AtomicAuctionModule {
             //
             // Proof:
             // 1. k > 0, Q >= 0, qm > 0 => f >= 0
-            // 2. q0 > qm, qm > 0, k >= 0, T >= 0 => c >= 0
+            // 2. q0 > qm, qm > 0 => c >= 0
             // 3. f + c = W((f + c) * e^(f + c))
             // 4. 1 & 2 => f + c >= 0, f + c >= f, f + c >= c
             // 5. W(x) is monotonically increasing for x >= 0
@@ -260,7 +270,11 @@ contract GradualDutchAuction is AtomicAuctionModule {
 
         // Calculate seconds of emissions from payout
         // TODO need to think about overflows on this cast
-        // emissionsRate has a floor based on the minimum auction duration
+        // emissionsRate has a max based on the minimum auction duration
+        // another way to arrange the equations is that s = (f + c - w) / k
+        // it can be a precursor to the payout calculation
+        // however, this doesn't solve the overflow problem
+        // my hunch is that T being less than auction duration may be helpful in determining a bound
         uint48 secondsOfEmissions = uint48(payout.div(auction.emissionsRate).intoUint256());
 
         // Scale payout to payout token decimals and return
