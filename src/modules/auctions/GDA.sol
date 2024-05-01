@@ -1,9 +1,6 @@
 // SPDX-License-Identifier: BSL-1.1
 pragma solidity 0.8.19;
 
-// Interfaces
-import {IAtomicAuction} from "src/interfaces/IAtomicAuction.sol";
-
 // Protocol dependencies
 import {Module} from "src/modules/Modules.sol";
 import {AuctionModule} from "src/modules/Auction.sol";
@@ -30,10 +27,31 @@ contract GradualDutchAuction is AtomicAuctionModule {
     struct GDAParams {
         uint256 equilibriumPrice;
         uint256 minimumPrice;
-        UD60x18 decayConstant;
+        uint256 decayPercentFirstPeriod; // target decay percent over the first decay period of an auction (steepest part of the curve)
+        uint256 decayPeriod; // period over which the target decay percent is reached
     }
 
     // ========== STATE VARIABLES ========== //
+
+    // Decay percent over the first period must be at most 99% and at least 1%
+    // We use 18 decimals so we don't have to convert it to use as a UD60x18
+    uint256 internal constant MIN_DECAY_PERCENT = 1e16; // 1%
+    uint256 internal constant MAX_DECAY_PERCENT = 99e16; // 99%
+
+    // Decay period must be greater than or equal to 1 hour and less than or equal to 1 week
+    // A minimum of 1 hour means that the maximum value for the decay constant is determined by:
+    // MAX_LN_OUTPUT = 135_999146549453176925
+    // MAX_LN_OUTPUT / 3600 = 0_037777540708181438
+    // A maximum of 1 week means that the minimum value for the decay constant is determined by:
+    // MIN_LN_OUTPUT = ln(1/0.99) = 0_010050335853501441
+    // MIN_LN_OUTPUT / 604800 = 0_000000016617618805
+    // We use these bounds to prove that various calculations won't overflow below
+    // TODO: implement the above
+    // TODO should we be able to update the min and max periods?
+    uint48 internal constant MIN_DECAY_PERIOD = 1 hours;
+    uint48 internal constant MAX_DECAY_PERIOD = 1 weeks;
+    UD60x18 internal constant MAX_DECAY_CONSTANT = UD60x18(37_777_540_708_181_438);
+    UD60x18 internal constant MIN_DECAY_CONSTANT = UD60x18(16_617_618_805);
 
     mapping(uint256 id => AuctionData data) public auctionData;
 
@@ -66,10 +84,37 @@ contract GradualDutchAuction is AtomicAuctionModule {
 
         // Minimum price can be zero, but the equations default back to the basic GDA implementation
 
-        // Validate the decay constant
-        // Cannot be zero
-        // TODO do we need to set tighter bounds on this?
-        if (params.decayConstant == ZERO) revert Auction_InvalidParams();
+        // Validate the decay parameters and calculate the decay constant
+        // k = ln((q0 - qm) / (q1 - qm)) / dp
+        // require q0 > q1 > qm
+        // q1 = q0 * (1 - d1)
+        // => 100% > d1 > 0%
+        if (params.decayPercentFirstPeriod >= uUNIT || params.decayPercentFirstPeriod < uUNIT / 100)
+        {
+            revert Auction_InvalidParams();
+        }
+
+        // Decay period must be between the set bounds
+        if (params.decayPeriod < MIN_DECAY_PERIOD || params.decayPeriod > MAX_DECAY_PERIOD) {
+            revert Auction_InvalidParams();
+        }
+
+        UD60x18 decayConstant;
+        {
+            uint256 quoteTokenScale = 10 ** lot_.quoteTokenDecimals;
+            UD60x18 q0 = ud(params.equilibriumPrice.fullMulDiv(uUNIT, quoteTokenScale));
+            UD60x18 q1 = q0.mul(UNIT - ud(params.decayPercentFirstPeriod)).div(UNIT);
+            UD60x18 qm = ud(params.minimumPrice.fullMulDiv(uUNIT, quoteTokenScale));
+
+            // Check that q0 > q1 > qm
+            // This ensures that the operand for the logarithm is positive
+            if (q0 <= q1 || q1 <= qm) {
+                revert Auction_InvalidParams();
+            }
+
+            // Calculate the decay constant
+            decayConstant = (q0 - qm).div(q1 - qm).ln().div(convert(params.decayPeriod));
+        }
 
         // TODO other validation checks?
 
@@ -82,7 +127,7 @@ contract GradualDutchAuction is AtomicAuctionModule {
         AuctionData storage data = auctionData[lotId_];
         data.equilibriumPrice = params.equilibriumPrice;
         data.minimumPrice = params.minimumPrice;
-        data.decayConstant = params.decayConstant;
+        data.decayConstant = decayConstant;
         data.emissionsRate = emissionsRate;
         data.lastAuctionStart = uint256(lot_.start);
     }
@@ -140,7 +185,7 @@ contract GradualDutchAuction is AtomicAuctionModule {
         uint256 baseTokenScale = 10 ** lot.baseTokenDecimals;
         UD60x18 payout = ud(payout_.mulDiv(uUNIT, baseTokenScale));
 
-        // Calculate the first numerator factor: (q0 - qm)
+        // Calculate the first numerator factor: (q0 - qm), if qm is zero, this is q0
         // In the auction creation, we checked that the equilibrium price is greater than the minimum price
         // Scale the result to 18 decimals
         uint256 quoteTokenScale = 10 ** lot.quoteTokenDecimals;
@@ -257,11 +302,20 @@ contract GradualDutchAuction is AtomicAuctionModule {
         } else {
             // TODO think about refactoring to avoid precision loss
 
-            // TODO do we check if amount divided by minimum price is greater than capacity?
-            // May help with some overflow situations below.
+            {
+                // Check that the amount / minPrice is not greater than the max payout (i.e. remaining capacity)
+                uint256 minPrice = auction.minimumPrice;
+                uint256 payoutAtMinPrice = FixedPointMathLib.fullMulDiv(
+                    amount_, 10 ** lotData[lotId_].baseTokenDecimals, minPrice
+                );
+                if (payoutAtMinPrice > maxPayout(lotId_)) {
+                    revert Auction_InsufficientCapacity();
+                }
+            }
 
             // Convert minimum price to 18 decimals
-            UD60x18 qm = ud(auction.minimumPrice.mulDiv(uUNIT, quoteTokenScale));
+            // Can't overflow because quoteTokenScale <= uUNIT
+            UD60x18 qm = ud(auction.minimumPrice.fullMulDiv(uUNIT, quoteTokenScale));
 
             // Calculate first term:  (k * Q) / qm
             UD60x18 f = auction.decayConstant.mul(amount).div(qm);
@@ -308,7 +362,7 @@ contract GradualDutchAuction is AtomicAuctionModule {
         return (payout.intoUint256().mulDiv(10 ** lot.baseTokenDecimals, uUNIT), secondsOfEmissions);
     }
 
-    function maxPayout(uint96 lotId_) external view override returns (uint256) {
+    function maxPayout(uint96 lotId_) public view override returns (uint256) {
         // The max payout is the remaining capacity of the lot
         return lotData[lotId_].capacity;
     }
