@@ -215,7 +215,12 @@ contract BatchAuctionHouse is IBatchAuctionHouse, AuctionHouse {
         // Record the bid on the auction module
         // The module will determine if the bid is valid - minimum bid size, minimum price, auction status, etc
         bidId = getBatchModuleForId(params_.lotId).bid(
-            params_.lotId, msg.sender, params_.referrer, params_.amount, params_.auctionData
+            params_.lotId,
+            msg.sender,
+            params_.recipient,
+            params_.referrer,
+            params_.amount,
+            params_.auctionData
         );
 
         // Transfer the quote token from the bidder
@@ -324,8 +329,8 @@ contract BatchAuctionHouse is IBatchAuctionHouse, AuctionHouse {
                     routing.funding -= bidClaim.payout;
                 }
 
-                // Send the payout to the bidder
-                _sendPayout(bidClaim.bidder, bidClaim.payout, routing, auctionOutput);
+                // Send the payout to the recipient
+                _sendPayout(bidClaim.recipient, bidClaim.payout, routing, auctionOutput);
             }
 
             if (bidClaim.refund > 0) {

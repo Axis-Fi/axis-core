@@ -54,17 +54,19 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
 
     /// @notice        Core data for a bid
     ///
-    /// @param         status              The status of the bid
     /// @param         bidder              The address of the bidder
     /// @param         amount              The amount of the bid
     /// @param         minAmountOut        The minimum amount out (not set until the bid is decrypted)
     /// @param         referrer            The address of the referrer
+    /// @param         recipient           The address of the recipient
+    /// @param         status              The status of the bid
     struct Bid {
         address bidder; // 20 +
         uint96 amount; // 12 = 32 - end of slot 1
         uint96 minAmountOut; // 12 +
-        address referrer; // 20 = 32 - end of slot 2
-        BidStatus status; // 1 - slot 3
+        address recipient; // 20 = 32 - end of slot 2
+        address referrer; // 20 +
+        BidStatus status; // 1 = 21 - end of slot 3
     }
 
     /// @notice        Struct containing data for an encrypted bid
@@ -285,6 +287,7 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
     function _bid(
         uint96 lotId_,
         address bidder_,
+        address recipient_,
         address referrer_,
         uint256 amount_,
         bytes calldata auctionData_
@@ -309,6 +312,7 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
         Bid storage userBid = bids[lotId_][bidId];
         userBid.bidder = bidder_;
         userBid.amount = uint96(amount_);
+        userBid.recipient = recipient_;
         userBid.referrer = referrer_;
         userBid.status = BidStatus.Submitted;
 
@@ -423,8 +427,9 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
         // Set the bid status to claimed
         bidData.status = BidStatus.Claimed;
 
-        // Load the referrer and bidder
+        // Load the bidder, recipient, and referrer
         bidClaim.bidder = bidData.bidder;
+        bidClaim.recipient = bidData.recipient;
         bidClaim.referrer = bidData.referrer;
 
         // Calculate the bid price

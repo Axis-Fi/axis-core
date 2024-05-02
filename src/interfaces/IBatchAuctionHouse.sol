@@ -19,6 +19,7 @@ interface IBatchAuctionHouse is IAuctionHouse {
     /// @param      permit2Data_        Permit2 approval for the quoteToken (abi-encoded Permit2Approval struct)
     struct BidParams {
         uint96 lotId;
+        address recipient;
         address referrer;
         uint256 amount;
         bytes auctionData;

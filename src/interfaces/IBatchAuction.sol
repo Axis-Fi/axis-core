@@ -21,6 +21,7 @@ interface IBatchAuction is IAuction {
     /// @dev    Only used in memory so doesn't need to be packed
     struct BidClaim {
         address bidder;
+        address recipient;
         address referrer;
         uint256 paid;
         uint256 payout;
@@ -43,6 +44,7 @@ interface IBatchAuction is IAuction {
     function bid(
         uint96 lotId_,
         address bidder_,
+        address recipient_,
         address referrer_,
         uint256 amount_,
         bytes calldata auctionData_
