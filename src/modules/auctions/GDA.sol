@@ -50,8 +50,8 @@ contract GradualDutchAuction is AtomicAuctionModule {
     // TODO should we be able to update the min and max periods?
     uint48 internal constant MIN_DECAY_PERIOD = 1 hours;
     uint48 internal constant MAX_DECAY_PERIOD = 1 weeks;
-    UD60x18 internal constant MAX_DECAY_CONSTANT = UD60x18(37_777_540_708_181_438);
-    UD60x18 internal constant MIN_DECAY_CONSTANT = UD60x18(16_617_618_805);
+    UD60x18 internal constant MAX_DECAY_CONSTANT = UD60x18.wrap(uint256(37_777_540_708_181_438));
+    UD60x18 internal constant MIN_DECAY_CONSTANT = UD60x18.wrap(uint256(16_617_618_805));
 
     mapping(uint256 id => AuctionData data) public auctionData;
 
