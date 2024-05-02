@@ -45,6 +45,8 @@ import {UniswapV3DirectToLiquidity} from "src/callbacks/liquidity/UniswapV3DTL.s
 contract Deploy is Script, WithEnvironment, WithSalts {
     using stdJson for string;
 
+    string internal constant _PREFIX_AXIS = "axis";
+
     bytes internal constant _ATOMIC_AUCTION_HOUSE_NAME = "AtomicAuctionHouse";
     bytes internal constant _BATCH_AUCTION_HOUSE_NAME = "BatchAuctionHouse";
     bytes internal constant _BLAST_ATOMIC_AUCTION_HOUSE_NAME = "BlastAtomicAuctionHouse";
@@ -117,9 +119,9 @@ contract Deploy is Script, WithEnvironment, WithSalts {
             string memory name = deployments[index];
 
             if (_isAtomicAuctionHouse(name)) {
-                deployedTo[string.concat("axis.", name)] = _deployAtomicAuctionHouse();
+                deployedTo[string.concat(_PREFIX_AXIS, ".", name)] = _deployAtomicAuctionHouse();
             } else {
-                deployedTo[string.concat("axis.", name)] = _deployBatchAuctionHouse();
+                deployedTo[string.concat(_PREFIX_AXIS, ".", name)] = _deployBatchAuctionHouse();
             }
         }
 
@@ -142,8 +144,9 @@ contract Deploy is Script, WithEnvironment, WithSalts {
             require(success, string.concat("Failed to deploy ", deployments[i]));
 
             // Store the deployed contract address for logging
-            // TODO get deployment key for non-axis deployments
-            deployedTo[string.concat("axis.", name)] = abi.decode(data, (address));
+            (address deploymentAddress, string memory keyPrefix) =
+                abi.decode(data, (address, string));
+            deployedTo[string.concat(keyPrefix, ".", name)] = deploymentAddress;
 
             // If required, install in the AtomicAuctionHouse
             // For this to work, the deployer address must be the same as the owner of the AuctionHouse (`_envOwner`)
@@ -290,7 +293,7 @@ contract Deploy is Script, WithEnvironment, WithSalts {
 
     // ========== CATALOGUE DEPLOYMENTS ========== //
 
-    function deployAtomicCatalogue(bytes memory) public virtual returns (address) {
+    function deployAtomicCatalogue(bytes memory) public virtual returns (address, string memory) {
         // No args used
         console2.log("");
         console2.log("Deploying AtomicCatalogue");
@@ -316,10 +319,10 @@ contract Deploy is Script, WithEnvironment, WithSalts {
         console2.log("");
         console2.log("    AtomicCatalogue deployed at:", address(atomicCatalogue));
 
-        return address(atomicCatalogue);
+        return (address(atomicCatalogue), _PREFIX_AXIS);
     }
 
-    function deployBatchCatalogue(bytes memory) public virtual returns (address) {
+    function deployBatchCatalogue(bytes memory) public virtual returns (address, string memory) {
         // No args used
         console2.log("");
         console2.log("Deploying BatchCatalogue");
@@ -345,12 +348,16 @@ contract Deploy is Script, WithEnvironment, WithSalts {
         console2.log("");
         console2.log("    BatchCatalogue deployed at:", address(batchCatalogue));
 
-        return address(batchCatalogue);
+        return (address(batchCatalogue), _PREFIX_AXIS);
     }
 
     // ========== MODULE DEPLOYMENTS ========== //
 
-    function deployEncryptedMarginalPrice(bytes memory) public virtual returns (address) {
+    function deployEncryptedMarginalPrice(bytes memory)
+        public
+        virtual
+        returns (address, string memory)
+    {
         // No args used
         console2.log("");
         console2.log("Deploying EncryptedMarginalPrice");
@@ -378,10 +385,10 @@ contract Deploy is Script, WithEnvironment, WithSalts {
         console2.log("");
         console2.log("    EncryptedMarginalPrice deployed at:", address(amEmp));
 
-        return address(amEmp);
+        return (address(amEmp), _PREFIX_AXIS);
     }
 
-    function deployFixedPriceSale(bytes memory) public virtual returns (address) {
+    function deployFixedPriceSale(bytes memory) public virtual returns (address, string memory) {
         // No args used
         console2.log("");
         console2.log("Deploying FixedPriceSale");
@@ -407,10 +414,14 @@ contract Deploy is Script, WithEnvironment, WithSalts {
         console2.log("");
         console2.log("    FixedPriceSale deployed at:", address(amFps));
 
-        return address(amFps);
+        return (address(amFps), _PREFIX_AXIS);
     }
 
-    function deployAtomicLinearVesting(bytes memory) public virtual returns (address) {
+    function deployAtomicLinearVesting(bytes memory)
+        public
+        virtual
+        returns (address, string memory)
+    {
         // No args used
         console2.log("");
         console2.log("Deploying LinearVesting (Atomic)");
@@ -436,10 +447,14 @@ contract Deploy is Script, WithEnvironment, WithSalts {
         console2.log("");
         console2.log("    LinearVesting (Atomic) deployed at:", address(dmAtomicLinearVesting));
 
-        return address(dmAtomicLinearVesting);
+        return (address(dmAtomicLinearVesting), _PREFIX_AXIS);
     }
 
-    function deployBatchLinearVesting(bytes memory) public virtual returns (address) {
+    function deployBatchLinearVesting(bytes memory)
+        public
+        virtual
+        returns (address, string memory)
+    {
         // No args used
         console2.log("");
         console2.log("Deploying LinearVesting (Batch)");
@@ -465,12 +480,15 @@ contract Deploy is Script, WithEnvironment, WithSalts {
         console2.log("");
         console2.log("    LinearVesting (Batch) deployed at:", address(dmBatchLinearVesting));
 
-        return address(dmBatchLinearVesting);
+        return (address(dmBatchLinearVesting), _PREFIX_AXIS);
     }
 
     // ========== MODULE DEPLOYMENTS ========== //
 
-    function deployAtomicUniswapV2DirectToLiquidity(bytes memory) public returns (address) {
+    function deployAtomicUniswapV2DirectToLiquidity(bytes memory)
+        public
+        returns (address, string memory)
+    {
         // No args used
         console2.log("");
         console2.log("Deploying UniswapV2DirectToLiquidity (Atomic)");
@@ -501,10 +519,13 @@ contract Deploy is Script, WithEnvironment, WithSalts {
             "    UniswapV2DirectToLiquidity (Atomic) deployed at:", address(cbAtomicUniswapV2Dtl)
         );
 
-        return address(cbAtomicUniswapV2Dtl);
+        return (address(cbAtomicUniswapV2Dtl), _PREFIX_AXIS);
     }
 
-    function deployBatchUniswapV2DirectToLiquidity(bytes memory) public returns (address) {
+    function deployBatchUniswapV2DirectToLiquidity(bytes memory)
+        public
+        returns (address, string memory)
+    {
         // No args used
         console2.log("");
         console2.log("Deploying UniswapV2DirectToLiquidity (Batch)");
@@ -535,10 +556,13 @@ contract Deploy is Script, WithEnvironment, WithSalts {
             "    UniswapV2DirectToLiquidity (Batch) deployed at:", address(cbBatchUniswapV2Dtl)
         );
 
-        return address(cbBatchUniswapV2Dtl);
+        return (address(cbBatchUniswapV2Dtl), _PREFIX_AXIS);
     }
 
-    function deployAtomicUniswapV3DirectToLiquidity(bytes memory) public returns (address) {
+    function deployAtomicUniswapV3DirectToLiquidity(bytes memory)
+        public
+        returns (address, string memory)
+    {
         // No args used
         console2.log("");
         console2.log("Deploying UniswapV3DirectToLiquidity (Atomic)");
@@ -569,10 +593,13 @@ contract Deploy is Script, WithEnvironment, WithSalts {
             "    UniswapV3DirectToLiquidity (Atomic) deployed at:", address(cbAtomicUniswapV3Dtl)
         );
 
-        return address(cbAtomicUniswapV3Dtl);
+        return (address(cbAtomicUniswapV3Dtl), _PREFIX_AXIS);
     }
 
-    function deployBatchUniswapV3DirectToLiquidity(bytes memory) public returns (address) {
+    function deployBatchUniswapV3DirectToLiquidity(bytes memory)
+        public
+        returns (address, string memory)
+    {
         // No args used
         console2.log("");
         console2.log("Deploying UniswapV3DirectToLiquidity (Batch)");
@@ -603,7 +630,7 @@ contract Deploy is Script, WithEnvironment, WithSalts {
             "    UniswapV3DirectToLiquidity (Batch) deployed at:", address(cbBatchUniswapV3Dtl)
         );
 
-        return address(cbBatchUniswapV3Dtl);
+        return (address(cbBatchUniswapV3Dtl), _PREFIX_AXIS);
     }
 
     // ========== HELPER FUNCTIONS ========== //
