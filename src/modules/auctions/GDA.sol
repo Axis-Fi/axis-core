@@ -8,7 +8,9 @@ import {Veecode, toVeecode} from "src/modules/Modules.sol";
 import {AtomicAuctionModule} from "src/modules/auctions/AtomicAuctionModule.sol";
 
 // External libraries
-import {UD60x18, ud, convert, ZERO, UNIT, uUNIT} from "lib/prb-math/src/UD60x18.sol";
+import {
+    UD60x18, ud, convert, ZERO, UNIT, uUNIT, EXP_MAX_INPUT
+} from "lib/prb-math/src/UD60x18.sol";
 import {FixedPointMathLib} from "lib/solady/src/utils/FixedPointMathLib.sol";
 
 /// @notice Continuous Gradual Dutch Auction (GDA) module with exponential decay and a minimum price.
@@ -21,7 +23,7 @@ contract GradualDutchAuction is AtomicAuctionModule {
         uint256 minimumPrice; // minimum price for the auction
         uint256 lastAuctionStart; // time that the last un-purchased auction started, may be in the future
         UD60x18 decayConstant; // speed at which the price decays, as UD60x18.
-        UD60x18 emissionsRate; // number of tokens released per second, as UD60x18. Calculated as capacity / duration.
+        UD60x18 emissionsRate; // number of tokens released per day, as UD60x18. Calculated as capacity / duration.
     }
 
     struct GDAParams {
@@ -32,26 +34,34 @@ contract GradualDutchAuction is AtomicAuctionModule {
     }
 
     // ========== STATE VARIABLES ========== //
+    // TODO instead of converting all times to fixed point days, we could just use seconds and not convert to 1e18. It
+    // It could problems with the decay constant being too large though
+    UD60x18 internal constant ONE_DAY = UD60x18.wrap(1 days);
 
-    // Decay percent over the first period must be at most 99% and at least 1%
+    // Decay target over the first period must fit within these bounds
     // We use 18 decimals so we don't have to convert it to use as a UD60x18
-    uint256 internal constant MIN_DECAY_PERCENT = 1e16; // 1%
-    uint256 internal constant MAX_DECAY_PERCENT = 99e16; // 99%
+    uint256 internal constant MIN_DECAY_TARGET = 1e16; // 1%
+    uint256 internal constant MAX_DECAY_TARGET = 50e16; // 50%
 
-    // Decay period must be greater than or equal to 1 hour and less than or equal to 1 week
-    // A minimum of 1 hour means that the maximum value for the decay constant is determined by:
-    // MAX_LN_OUTPUT = 135_999146549453176925
-    // MAX_LN_OUTPUT / 3600 = 0_037777540708181438
-    // A maximum of 1 week means that the minimum value for the decay constant is determined by:
+    // Decay period must be greater than or equal to 1 day and less than or equal to 1 week
+    // A minimum value of q1 = q0 * 0.01 and a min period of 1 day means:
+    // MAX_LN_OUTPUT = ln(1/0.5) = 0_693147180559945309
+    // MAX_LN_OUTPUT / 1 = 0_693147180559945309
+    // A maximum value of q1 = q0 * 0.99 and a max period of 7 days means:
     // MIN_LN_OUTPUT = ln(1/0.99) = 0_010050335853501441
-    // MIN_LN_OUTPUT / 604800 = 0_000000016617618805
+    // MIN_LN_OUTPUT / 7 = 0_001435762264785920
+
     // We use these bounds to prove that various calculations won't overflow below
     // TODO: implement the above
     // TODO should we be able to update the min and max periods?
-    uint48 internal constant MIN_DECAY_PERIOD = 1 hours;
+    uint48 internal constant MIN_DECAY_PERIOD = 1 days;
     uint48 internal constant MAX_DECAY_PERIOD = 1 weeks;
-    UD60x18 internal constant MAX_DECAY_CONSTANT = UD60x18.wrap(uint256(37_777_540_708_181_438));
-    UD60x18 internal constant MIN_DECAY_CONSTANT = UD60x18.wrap(uint256(16_617_618_805));
+    UD60x18 internal constant MAX_DECAY_CONSTANT = UD60x18.wrap(uint256(693_147_180_559_945_309));
+    UD60x18 internal constant MIN_DECAY_CONSTANT = UD60x18.wrap(uint256(1_435_762_264_785_920));
+
+    // These bounds imply a max auction duration of 192 days to avoid overflow of some of the exponential calculations
+    // TODO dynamically calculate based on params? this isn't hard and fast if the decay constant is less than the max
+    UD60x18 internal constant MAX_AUCTION_DURATION = UD60x18.wrap(192e18);
 
     mapping(uint256 id => AuctionData data) public auctionData;
 
@@ -80,6 +90,7 @@ contract GradualDutchAuction is AtomicAuctionModule {
         }
 
         // Capacity must be in base token
+        // TODO can we allow capacity in quote token? Mostly effects emissions rate
         if (lot_.capacityInQuote) revert Auction_InvalidParams();
 
         // Minimum price can be zero, but the equations default back to the basic GDA implementation
@@ -88,7 +99,7 @@ contract GradualDutchAuction is AtomicAuctionModule {
         // k = ln((q0 - qm) / (q1 - qm)) / dp
         // require q0 > q1 > qm
         // q1 = q0 * (1 - d1)
-        if (params.decayTarget > MAX_DECAY_PERCENT || params.decayTarget < MIN_DECAY_PERCENT) {
+        if (params.decayTarget > MAX_DECAY_TARGET || params.decayTarget < MIN_DECAY_TARGET) {
             revert Auction_InvalidParams();
         }
 
@@ -116,8 +127,17 @@ contract GradualDutchAuction is AtomicAuctionModule {
 
         // TODO other validation checks?
 
-        // Calculate emissions rate
-        UD60x18 duration = convert(uint256(lot_.conclusion - lot_.start));
+        // Calculate duration of the auction in days
+        UD60x18 duration = convert(uint256(lot_.conclusion - lot_.start)).div(ONE_DAY);
+
+        // The duration must be less than the max exponential input divided by the decay constant
+        // in order for the exponential operations to not overflow. The lowest this value can be
+        // is 192 days if the decay constant is at it's maximum value
+        if (duration > EXP_MAX_INPUT.div(decayConstant)) {
+            revert Auction_InvalidParams();
+        }
+
+        // Calculate emissions rate as number of tokens released per day
         UD60x18 emissionsRate =
             ud(lot_.capacity.fullMulDiv(uUNIT, 10 ** lot_.baseTokenDecimals)).div(duration);
 
@@ -155,7 +175,7 @@ contract GradualDutchAuction is AtomicAuctionModule {
 
     // ========== VIEW FUNCTIONS ========== //
 
-    // For Continuos GDAs with exponential decay, the price of a given token t seconds after being emitted is:
+    // For Continuous GDAs with exponential decay, the price of a given token t seconds after being emitted is:
     // q(t) = (q0 - qm) * e^(-k*t) + qm
     // where k is the decay constant, q0 is the initial price, and qm is the minimum price
     // Integrating this function from the last auction start time for a particular number of tokens,
@@ -191,6 +211,7 @@ contract GradualDutchAuction is AtomicAuctionModule {
             ud((auction.equilibriumPrice - auction.minimumPrice).fullMulDiv(uUNIT, quoteTokenScale));
 
         // Calculate the second numerator factor: e^((k*P)/r) - 1
+        // This cannot exceed the max exponential input due to the bounds imbosed on auction creation
         UD60x18 ekpr = auction.decayConstant.mul(payout).div(auction.emissionsRate).exp().sub(UNIT);
 
         // Handle cases of T being positive or negative
@@ -198,8 +219,10 @@ contract GradualDutchAuction is AtomicAuctionModule {
         if (block.timestamp >= auction.lastAuctionStart) {
             // T is positive
             // Calculate the denominator: ke^(k*T)
+            // This cannot exceed the max exponential input due to the bounds imbosed on auction creation
+            // Current time - last auction start is guaranteed to be < duration. If not, the auction is over.
             UD60x18 kekt = auction.decayConstant.mul(
-                convert(block.timestamp - auction.lastAuctionStart)
+                convert(block.timestamp - auction.lastAuctionStart).div(ONE_DAY)
             ).exp().mul(auction.decayConstant);
 
             // Calculate the first term in the formula
@@ -208,8 +231,11 @@ contract GradualDutchAuction is AtomicAuctionModule {
             // T is negative: flip the e^(k * T) term to the numerator
 
             // Calculate the exponential: e^(k*T)
-            UD60x18 ekt =
-                auction.decayConstant.mul(convert(auction.lastAuctionStart - block.timestamp)).exp();
+            // This cannot exceed the max exponential input due to the bounds imbosed on auction creation
+            // last auction start - current time is guaranteed to be < duration. If not, the auction is over.
+            UD60x18 ekt = auction.decayConstant.mul(
+                convert(auction.lastAuctionStart - block.timestamp).div(ONE_DAY)
+            ).exp();
 
             // Calculate the first term in the formula
             result = priceDiff.mul(ekpr).mul(ekt).div(auction.decayConstant);
@@ -266,7 +292,7 @@ contract GradualDutchAuction is AtomicAuctionModule {
         UD60x18 q0 = ud(auction.equilibriumPrice.fullMulDiv(uUNIT, quoteTokenScale));
 
         // Scale amount to 18 decimals
-        UD60x18 amount = ud(amount_.mulDiv(uUNIT, quoteTokenScale));
+        UD60x18 amount = ud(amount_.fullMulDiv(uUNIT, quoteTokenScale));
 
         // Factors are calculated in a certain order to avoid precision loss
         UD60x18 payout;
@@ -275,8 +301,10 @@ contract GradualDutchAuction is AtomicAuctionModule {
             if (block.timestamp >= auction.lastAuctionStart) {
                 // T is positive
                 // Calculate the exponential factor
+                // This cannot exceed the max exponential input due to the bounds imbosed on auction creation
+                // Current time - last auction start is guaranteed to be < duration. If not, the auction is over.
                 UD60x18 ekt = auction.decayConstant.mul(
-                    convert(block.timestamp - auction.lastAuctionStart)
+                    convert(block.timestamp - auction.lastAuctionStart).div(ONE_DAY)
                 ).exp();
 
                 // Calculate the logarithm
@@ -286,6 +314,8 @@ contract GradualDutchAuction is AtomicAuctionModule {
                 // T is negative: flip the e^(k * T) term to the denominator
 
                 // Calculate the exponential factor
+                // This cannot exceed the max exponential input due to the bounds imbosed on auction creation
+                // last auction start - current time is guaranteed to be < duration. If not, the auction is over.
                 UD60x18 ekt = auction.decayConstant.mul(
                     convert(auction.lastAuctionStart - block.timestamp)
                 ).exp();
@@ -322,12 +352,18 @@ contract GradualDutchAuction is AtomicAuctionModule {
             UD60x18 c;
             if (block.timestamp >= auction.lastAuctionStart) {
                 // T is positive
+                // This cannot exceed the max exponential input due to the bounds imbosed on auction creation
+                // Current time - last auction start is guaranteed to be < duration. If not, the auction is over.
+                // TODO determine bounds to prevent overflow on multiplication and division
                 c = q0.sub(qm).div(
                     auction.decayConstant.mul(convert(block.timestamp - auction.lastAuctionStart))
                         .exp().mul(qm)
                 );
             } else {
                 // T is negative: flip the e^(k * T) term to the numerator
+                // This cannot exceed the max exponential input due to the bounds imbosed on auction creation
+                // last auction start - current time is guaranteed to be < duration. If not, the auction is over.
+                // TODO determine bounds to prevent overflow on multiplication and division
                 c = q0.sub(qm).mul(
                     auction.decayConstant.mul(convert(auction.lastAuctionStart - block.timestamp))
                         .exp()
