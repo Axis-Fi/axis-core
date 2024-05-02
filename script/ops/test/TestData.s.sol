@@ -5,18 +5,23 @@ pragma solidity 0.8.19;
 import {Script, console2} from "forge-std/Script.sol";
 
 // System contracts
+import {AuctionHouse} from "src/bases/AuctionHouse.sol";
 import {BatchAuctionHouse} from "src/BatchAuctionHouse.sol";
+import {AtomicAuctionHouse} from "src/AtomicAuctionHouse.sol";
 import {IAuctionHouse} from "src/interfaces/IAuctionHouse.sol";
+import {IFeeManager} from "src/interfaces/IFeeManager.sol";
 import {IBatchAuctionHouse} from "src/interfaces/IBatchAuctionHouse.sol";
-import {toKeycode, toVeecode} from "src/modules/Modules.sol";
+import {IAtomicAuctionHouse} from "src/interfaces/IAtomicAuctionHouse.sol";
+import {Keycode, toKeycode, toVeecode} from "src/modules/Modules.sol";
 import {EncryptedMarginalPrice} from "src/modules/auctions/EMP.sol";
+import {FixedPriceSale} from "src/modules/auctions/FPS.sol";
 import {ECIES, Point} from "src/lib/ECIES.sol";
 
 // Generic contracts
 import {MockERC20, ERC20} from "lib/solmate/src/test/utils/mocks/MockERC20.sol";
 
 contract TestData is Script {
-    BatchAuctionHouse public auctionHouse;
+    AuctionHouse public auctionHouse;
     MockERC20 public quoteToken;
     MockERC20 public baseToken;
 
@@ -50,7 +55,7 @@ contract TestData is Script {
         address buyer
     ) public returns (uint96) {
         // Load addresses from .env
-        auctionHouse = BatchAuctionHouse(vm.envAddress("AUCTION_HOUSE"));
+        auctionHouse = AuctionHouse(vm.envAddress("BATCH_AUCTION_HOUSE"));
 
         Point memory publicKey = Point(pubKeyX, pubKeyY);
 
@@ -65,12 +70,15 @@ contract TestData is Script {
         // Approve auction house for base token since it will be pre-funded
         baseToken.approve(address(auctionHouse), 1e24);
 
-        // Create LSBBA auction with the provided public key
+        // Create EMP auction with the provided public key
         IAuctionHouse.RoutingParams memory routingParams;
         routingParams.auctionType = toKeycode("EMPA");
         routingParams.baseToken = address(baseToken);
         routingParams.quoteToken = address(quoteToken);
-        // No callbacks, allowlist, derivative, or other routing params needed
+        routingParams.derivativeType = toKeycode("LIV");
+        routingParams.derivativeParams =
+            abi.encode(uint48(block.timestamp + 1 days), uint48(block.timestamp + 6 days));
+        // No callback
 
         EncryptedMarginalPrice.AuctionDataParams memory auctionDataParams;
         auctionDataParams.minPrice = 2e18; // 3 quote tokens per base token
@@ -95,14 +103,57 @@ contract TestData is Script {
         return lotId;
     }
 
+    function createFixedPriceSale(uint256 price) public returns (uint96) {
+        // Load addresses from .env
+        auctionHouse = AuctionHouse(vm.envAddress("ATOMIC_AUCTION_HOUSE"));
+
+        vm.startBroadcast();
+
+        quoteToken = MockERC20(address(0x532cEd32173222d5D51Ac908e39EA2824d334607));
+        baseToken = MockERC20(address(0x8e5a555bcaB474C91dcA326bE3DFdDa7e30c3765));
+
+        // Approve auction house for base token since it will be pre-funded
+        baseToken.approve(address(auctionHouse), 1e24);
+
+        // Create EMP auction with the provided public key
+        IAuctionHouse.RoutingParams memory routingParams;
+        routingParams.auctionType = toKeycode("FPSA");
+        routingParams.baseToken = address(baseToken);
+        routingParams.quoteToken = address(quoteToken);
+        routingParams.derivativeType = toKeycode("LIV");
+        routingParams.derivativeParams =
+            abi.encode(uint48(block.timestamp + 1 days), uint48(block.timestamp + 6 days));
+        // No callback
+
+        FixedPriceSale.FixedPriceParams memory auctionDataParams;
+        auctionDataParams.price = price;
+        auctionDataParams.maxPayoutPercent = uint24(10_000); // 10%
+        bytes memory implParams = abi.encode(auctionDataParams);
+
+        EncryptedMarginalPrice.AuctionParams memory auctionParams;
+        auctionParams.start = uint48(0); // immediately
+        auctionParams.duration = uint48(5 * 86_400); // 5 days
+        // capaity is in base token
+        auctionParams.capacity = 1000e18; // 100 base tokens
+        auctionParams.implParams = implParams;
+
+        string memory infoHash = "";
+
+        uint96 lotId = auctionHouse.auction(routingParams, auctionParams, infoHash);
+
+        vm.stopBroadcast();
+
+        return lotId;
+    }
+
     function cancelAuction(uint96 lotId) public {
-        auctionHouse = BatchAuctionHouse(vm.envAddress("AUCTION_HOUSE"));
+        auctionHouse = AuctionHouse(vm.envAddress("BATCH_AUCTION_HOUSE"));
         vm.broadcast();
         auctionHouse.cancel(lotId, bytes(""));
     }
 
     function placeBid(uint96 lotId, uint96 amount, uint128 minAmountOut) public {
-        auctionHouse = BatchAuctionHouse(vm.envAddress("AUCTION_HOUSE"));
+        auctionHouse = AuctionHouse(vm.envAddress("BATCH_AUCTION_HOUSE"));
         EncryptedMarginalPrice module =
             EncryptedMarginalPrice(address(auctionHouse.getModuleForVeecode(toVeecode("01EMPA"))));
 
@@ -151,9 +202,59 @@ contract TestData is Script {
         qt.approve(address(auctionHouse), amount);
 
         // Submit bid and emit ID
-        uint96 bidId = auctionHouse.bid(bidParams, bytes(""));
+        uint96 bidId = BatchAuctionHouse(address(auctionHouse)).bid(bidParams, bytes(""));
         console2.log("Bid placed with ID: ", bidId);
 
+        vm.stopBroadcast();
+    }
+
+    function submitPrivateKey(
+        uint96 lotId,
+        uint256 privKey,
+        uint64 num,
+        bytes32[] calldata hints
+    ) public {
+        auctionHouse = AuctionHouse(vm.envAddress("BATCH_AUCTION_HOUSE"));
+        EncryptedMarginalPrice module =
+            EncryptedMarginalPrice(address(auctionHouse.getModuleForVeecode(toVeecode("01EMPA"))));
+
+        // Submit the private key, num of decrypts and hints to the auction
+        vm.broadcast();
+        module.submitPrivateKey(lotId, privKey, num, hints);
+    }
+
+    function decryptAndSortBids(uint96 lotId, uint64 num, bytes32[] calldata hints) public {
+        auctionHouse = AuctionHouse(vm.envAddress("BATCH_AUCTION_HOUSE"));
+        EncryptedMarginalPrice module =
+            EncryptedMarginalPrice(address(auctionHouse.getModuleForVeecode(toVeecode("01EMPA"))));
+
+        // Decrypt and sort the bids
+        vm.broadcast();
+        module.decryptAndSortBids(lotId, num, hints);
+    }
+
+    function setFees(
+        string memory auctionType_,
+        uint48 protocolFee,
+        uint48 referrerFee,
+        uint48 maxCuratorFee
+    ) public {
+        bytes5 auctionType = bytes5(bytes(auctionType_));
+
+        if (auctionType == bytes5("EMPA")) {
+            auctionHouse = AuctionHouse(vm.envAddress("BATCH_AUCTION_HOUSE"));
+        } else if (auctionType == bytes5("FPSA")) {
+            auctionHouse = AuctionHouse(vm.envAddress("ATOMIC_AUCTION_HOUSE"));
+        } else {
+            revert("Invalid auction type");
+        }
+
+        Keycode auctionKeycode = toKeycode(auctionType);
+
+        vm.startBroadcast();
+        auctionHouse.setFee(auctionKeycode, IFeeManager.FeeType.Protocol, protocolFee);
+        auctionHouse.setFee(auctionKeycode, IFeeManager.FeeType.Referrer, referrerFee);
+        auctionHouse.setFee(auctionKeycode, IFeeManager.FeeType.MaxCurator, maxCuratorFee);
         vm.stopBroadcast();
     }
 }
