@@ -11,11 +11,12 @@ import {AtomicAuctionModule} from "src/modules/auctions/AtomicAuctionModule.sol"
 import {
     UD60x18, ud, convert, ZERO, UNIT, uUNIT, EXP_MAX_INPUT
 } from "lib/prb-math/src/UD60x18.sol";
+import "lib/prb-math/src/Common.sol" as PRBMath;
 import {FixedPointMathLib} from "lib/solady/src/utils/FixedPointMathLib.sol";
 
 /// @notice Continuous Gradual Dutch Auction (GDA) module with exponential decay and a minimum price.
 contract GradualDutchAuction is AtomicAuctionModule {
-    using FixedPointMathLib for uint256;
+    using {PRBMath.mulDiv} for uint256;
 
     /// @notice Auction pricing data
     struct AuctionData {
@@ -108,9 +109,9 @@ contract GradualDutchAuction is AtomicAuctionModule {
         UD60x18 decayConstant;
         {
             uint256 quoteTokenScale = 10 ** lot_.quoteTokenDecimals;
-            UD60x18 q0 = ud(params.equilibriumPrice.fullMulDiv(uUNIT, quoteTokenScale));
+            UD60x18 q0 = ud(params.equilibriumPrice.mulDiv(uUNIT, quoteTokenScale));
             UD60x18 q1 = q0.mul(UNIT - ud(params.decayTarget)).div(UNIT);
-            UD60x18 qm = ud(params.minimumPrice.fullMulDiv(uUNIT, quoteTokenScale));
+            UD60x18 qm = ud(params.minimumPrice.mulDiv(uUNIT, quoteTokenScale));
 
             // Check that q0 > q1 > qm
             // This ensures that the operand for the logarithm is positive
@@ -136,7 +137,7 @@ contract GradualDutchAuction is AtomicAuctionModule {
 
         // Calculate emissions rate as number of tokens released per day
         UD60x18 emissionsRate =
-            ud(lot_.capacity.fullMulDiv(uUNIT, 10 ** lot_.baseTokenDecimals)).div(duration);
+            ud(lot_.capacity.mulDiv(uUNIT, 10 ** lot_.baseTokenDecimals)).div(duration);
 
         // Store auction data
         AuctionData storage data = auctionData[lotId_];
@@ -205,10 +206,13 @@ contract GradualDutchAuction is AtomicAuctionModule {
         // Scale the result to 18 decimals
         uint256 quoteTokenScale = 10 ** lot.quoteTokenDecimals;
         UD60x18 priceDiff =
-            ud((auction.equilibriumPrice - auction.minimumPrice).fullMulDiv(uUNIT, quoteTokenScale));
+            ud((auction.equilibriumPrice - auction.minimumPrice).mulDiv(uUNIT, quoteTokenScale));
 
         // Calculate the second numerator factor: e^((k*P)/r) - 1
         // This cannot exceed the max exponential input due to the bounds imbosed on auction creation
+        // emissions rate = initial capacity / duration
+        // payout must be less then or equal to initial capacity
+        // therefore, the resulting exponent is at most decay constant * duration
         UD60x18 ekpr = auction.decayConstant.mul(payout).div(auction.emissionsRate).exp().sub(UNIT);
 
         // Handle cases of T being positive or negative
@@ -245,7 +249,7 @@ contract GradualDutchAuction is AtomicAuctionModule {
         }
 
         // Scale price back to quote token decimals
-        uint256 amount = result.intoUint256().fullMulDiv(quoteTokenScale, uUNIT);
+        uint256 amount = result.intoUint256().mulDiv(quoteTokenScale, uUNIT);
 
         return amount;
     }
@@ -286,10 +290,10 @@ contract GradualDutchAuction is AtomicAuctionModule {
 
         // Get quote token scale and convert equilibrium price to 18 decimals
         uint256 quoteTokenScale = 10 ** lot.quoteTokenDecimals;
-        UD60x18 q0 = ud(auction.equilibriumPrice.fullMulDiv(uUNIT, quoteTokenScale));
+        UD60x18 q0 = ud(auction.equilibriumPrice.mulDiv(uUNIT, quoteTokenScale));
 
         // Scale amount to 18 decimals
-        UD60x18 amount = ud(amount_.fullMulDiv(uUNIT, quoteTokenScale));
+        UD60x18 amount = ud(amount_.mulDiv(uUNIT, quoteTokenScale));
 
         // Factors are calculated in a certain order to avoid precision loss
         UD60x18 payout;
@@ -330,7 +334,7 @@ contract GradualDutchAuction is AtomicAuctionModule {
             {
                 // Check that the amount / minPrice is not greater than the max payout (i.e. remaining capacity)
                 uint256 minPrice = auction.minimumPrice;
-                uint256 payoutAtMinPrice = FixedPointMathLib.fullMulDiv(
+                uint256 payoutAtMinPrice = FixedPointMathLib.mulDiv(
                     amount_, 10 ** lotData[lotId_].baseTokenDecimals, minPrice
                 );
                 if (payoutAtMinPrice > maxPayout(lotId_)) {
@@ -340,7 +344,7 @@ contract GradualDutchAuction is AtomicAuctionModule {
 
             // Convert minimum price to 18 decimals
             // Can't overflow because quoteTokenScale <= uUNIT
-            UD60x18 qm = ud(auction.minimumPrice.fullMulDiv(uUNIT, quoteTokenScale));
+            UD60x18 qm = ud(auction.minimumPrice.mulDiv(uUNIT, quoteTokenScale));
 
             // Calculate first term:  (k * Q) / qm
             UD60x18 f = auction.decayConstant.mul(amount).div(qm);
