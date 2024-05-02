@@ -444,6 +444,7 @@ abstract contract BatchAuctionHouseTest is Test, Permit2User, WithSalts {
     ) internal returns (uint64) {
         IBatchAuctionHouse.BidParams memory bidParams = IBatchAuctionHouse.BidParams({
             lotId: _lotId,
+            bidder: bidder_,
             referrer: _REFERRER,
             amount: amount_,
             auctionData: auctionData_,
