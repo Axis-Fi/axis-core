@@ -237,11 +237,13 @@ abstract contract BatchAuctionModule is IBatchAuction, AuctionModule {
     ///             - Validates the lot id and state
     ///             - Calls the implementation-specific function
     ///
-    ///             The abort function allows anyone to abort the lot after the conclusion time has passed. This can be useful if the lot is unable to be settled, or if the seller is unwilling to settle the lot.
+    ///             The abort function allows anyone to abort the lot after the conclusion and settlement time has passed.
+    ///             This can be useful if the lot is unable to be settled, or if the seller is unwilling to settle the lot.
     ///
     ///             This function reverts if:
     ///             - The lot id is invalid
     ///             - The lot has not concluded
+    ///             - The lot is in the dedicated settle period
     ///             - The lot is settled (after which it cannot be aborted)
     function abort(uint96 lotId_) external virtual override onlyInternal {
         // Standard validation
@@ -258,8 +260,6 @@ abstract contract BatchAuctionModule is IBatchAuction, AuctionModule {
     /// @dev        Auction modules should override this to perform any additional logic, such as:
     ///             - Validating the auction-specific parameters
     ///             - Updating auction-specific data
-    ///
-    ///             Note that the standard `abort()` function will allow for aborting the lot immediately after conclusion. Auction modules should implement a grace period to allow for settlement without the risk of another party calling `abort()`.
     ///
     /// @param      lotId_  The lot ID
     function _abort(uint96 lotId_) internal virtual;
