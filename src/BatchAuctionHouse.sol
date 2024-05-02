@@ -212,18 +212,20 @@ contract BatchAuctionHouse is IBatchAuctionHouse, AuctionHouse {
     ) external override nonReentrant returns (uint64 bidId) {
         _isLotValid(params_.lotId);
 
+        // Set bidder to msg.sender if blank
+        address bidder = params_.bidder == address(0) ? msg.sender : params_.bidder;
+
         // Record the bid on the auction module
         // The module will determine if the bid is valid - minimum bid size, minimum price, auction status, etc
         bidId = getBatchModuleForId(params_.lotId).bid(
-            params_.lotId,
-            msg.sender,
-            params_.recipient,
-            params_.referrer,
-            params_.amount,
-            params_.auctionData
+            params_.lotId, bidder, params_.referrer, params_.amount, params_.auctionData
         );
 
-        // Transfer the quote token from the bidder
+        // Transfer the quote token from the caller
+        // Note this transfers from the caller, not the bidder.
+        // It allows for "bid on behalf of" functionality,
+        // but if you bid for someone else, they will get the
+        // payout and refund while you will pay initially.
         _collectPayment(
             params_.amount,
             lotRouting[params_.lotId].quoteToken,
@@ -235,13 +237,13 @@ contract BatchAuctionHouse is IBatchAuctionHouse, AuctionHouse {
             lotRouting[params_.lotId].callbacks,
             params_.lotId,
             bidId,
-            msg.sender,
+            bidder,
             params_.amount,
             callbackData_
         );
 
         // Emit event
-        emit Bid(params_.lotId, bidId, msg.sender, params_.amount);
+        emit Bid(params_.lotId, bidId, bidder, params_.amount);
 
         return bidId;
     }
@@ -329,8 +331,8 @@ contract BatchAuctionHouse is IBatchAuctionHouse, AuctionHouse {
                     routing.funding -= bidClaim.payout;
                 }
 
-                // Send the payout to the recipient
-                _sendPayout(bidClaim.recipient, bidClaim.payout, routing, auctionOutput);
+                // Send the payout to the bidder
+                _sendPayout(bidClaim.bidder, bidClaim.payout, routing, auctionOutput);
             }
 
             if (bidClaim.refund > 0) {

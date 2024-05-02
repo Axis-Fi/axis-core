@@ -41,7 +41,6 @@ abstract contract BatchAuctionModule is IBatchAuction, AuctionModule {
     function bid(
         uint96 lotId_,
         address bidder_,
-        address recipient_,
         address referrer_,
         uint256 amount_,
         bytes calldata auctionData_
@@ -53,7 +52,7 @@ abstract contract BatchAuctionModule is IBatchAuction, AuctionModule {
         _revertIfLotSettled(lotId_);
 
         // Call implementation-specific logic
-        return _bid(lotId_, bidder_, recipient_, referrer_, amount_, auctionData_);
+        return _bid(lotId_, bidder_, referrer_, amount_, auctionData_);
     }
 
     /// @notice     Implementation-specific bid logic
@@ -64,7 +63,6 @@ abstract contract BatchAuctionModule is IBatchAuction, AuctionModule {
     ///
     /// @param      lotId_          The lot ID
     /// @param      bidder_         The bidder of the purchased tokens
-    /// @param      recipient_      The address designated by the bidder to receive the payout
     /// @param      referrer_       The referrer of the bid
     /// @param      amount_         The amount of quote tokens to bid
     /// @param      auctionData_    The auction-specific data
@@ -72,7 +70,6 @@ abstract contract BatchAuctionModule is IBatchAuction, AuctionModule {
     function _bid(
         uint96 lotId_,
         address bidder_,
-        address recipient_,
         address referrer_,
         uint256 amount_,
         bytes calldata auctionData_

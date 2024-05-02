@@ -12,14 +12,14 @@ interface IBatchAuctionHouse is IAuctionHouse {
     /// @dev        This reduces the number of variables in scope for the bid function
     ///
     /// @param      lotId               Lot ID
-    /// @param      recipient           Address to receive payout
+    /// @param      bidder              Address to receive refunds and payouts (if different from msg.sender)
     /// @param      referrer            Address of referrer
     /// @param      amount              Amount of quoteToken to purchase with (in native decimals)
     /// @param      auctionData         Custom data used by the auction module
     /// @param      permit2Data_        Permit2 approval for the quoteToken (abi-encoded Permit2Approval struct)
     struct BidParams {
         uint96 lotId;
-        address recipient;
+        address bidder;
         address referrer;
         uint256 amount;
         bytes auctionData;
