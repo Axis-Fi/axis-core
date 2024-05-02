@@ -43,6 +43,12 @@ contract GradualDutchAuction is AtomicAuctionModule {
     uint256 internal constant MIN_DECAY_TARGET = 1e16; // 1%
     uint256 internal constant MAX_DECAY_TARGET = 50e16; // 50%
 
+    // Bounds for the decay period, which establishes the bounds for the decay constant
+    // If a you want a longer or shorter period for the target, you can find another point on the curve that is in this range
+    // and calculate the decay target for that point as your input
+    uint48 internal constant MIN_DECAY_PERIOD = 1 days;
+    uint48 internal constant MAX_DECAY_PERIOD = 1 weeks;
+
     // Decay period must be greater than or equal to 1 day and less than or equal to 1 week
     // A minimum value of q1 = q0 * 0.01 and a min period of 1 day means:
     // MAX_LN_OUTPUT = ln(1/0.5) = 0_693147180559945309
@@ -51,17 +57,8 @@ contract GradualDutchAuction is AtomicAuctionModule {
     // MIN_LN_OUTPUT = ln(1/0.99) = 0_010050335853501441
     // MIN_LN_OUTPUT / 7 = 0_001435762264785920
 
-    // We use these bounds to prove that various calculations won't overflow below
-    // TODO: implement the above
-    // TODO should we be able to update the min and max periods?
-    uint48 internal constant MIN_DECAY_PERIOD = 1 days;
-    uint48 internal constant MAX_DECAY_PERIOD = 1 weeks;
-    UD60x18 internal constant MAX_DECAY_CONSTANT = UD60x18.wrap(uint256(693_147_180_559_945_309));
-    UD60x18 internal constant MIN_DECAY_CONSTANT = UD60x18.wrap(uint256(1_435_762_264_785_920));
-
-    // These bounds imply a max auction duration of 192 days to avoid overflow of some of the exponential calculations
-    // TODO dynamically calculate based on params? this isn't hard and fast if the decay constant is less than the max
-    UD60x18 internal constant MAX_AUCTION_DURATION = UD60x18.wrap(192e18);
+    // UD60x18 internal constant MAX_DECAY_CONSTANT = UD60x18.wrap(uint256(693_147_180_559_945_309));
+    // UD60x18 internal constant MIN_DECAY_CONSTANT = UD60x18.wrap(uint256(1_435_762_264_785_920));
 
     mapping(uint256 id => AuctionData data) public auctionData;
 
