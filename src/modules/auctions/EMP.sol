@@ -63,7 +63,7 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
         address bidder; // 20 +
         uint96 amount; // 12 = 32 - end of slot 1
         uint96 minAmountOut; // 12 +
-        address referrer; // 20 = end of slot 2
+        address referrer; // 20 = 32 - end of slot 2
         BidStatus status; // 1 = slot 3
     }
 

@@ -13,6 +13,8 @@ import {BatchAuctionHouseTest} from "test/BatchAuctionHouse/AuctionHouseTest.sol
 contract BatchBidTest is BatchAuctionHouseTest {
     uint256 internal constant _BID_AMOUNT = 1e18;
 
+    address internal constant _SENDER = address(0x26);
+
     bytes internal _bidAuctionData = abi.encode("");
 
     // bid
@@ -36,6 +38,15 @@ contract BatchBidTest is BatchAuctionHouseTest {
     // [X] given the auction has callbacks
     //  [X] it calls the callback
     // [X] it records the bid
+    // [X] when the bidder param is not the sender
+    //  [X] when the bidder param is the zero address
+    //    [X] it treats the sender as the bidder
+    //    [X] when a callback is set
+    //      [X] it sends the sender to the onBid callback
+    //  [X] when the bidder param is not the zero address
+    //    [X] it treats the bidder param as the bidder
+    //    [X] when a callback is set
+    //      [X] it sends the bidder param to the onBid callback
 
     function test_whenLotIdIsInvalid_reverts() external {
         bytes memory err = abi.encodeWithSelector(AuctionHouse.InvalidLotId.selector, _lotId);
@@ -502,5 +513,143 @@ contract BatchBidTest is BatchAuctionHouseTest {
         // Check the balances
         assertEq(_quoteToken.balanceOf(_CURATOR), 0, "curator: quote token balance mismatch");
         assertEq(_baseToken.balanceOf(_CURATOR), 0, "curator: base token balance mismatch");
+    }
+
+    function test_whenBidderIsZeroAddress()
+        external
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenLotIsCreated
+        givenLotHasStarted
+    {
+        _sendUserQuoteTokenBalance(_SENDER, _BID_AMOUNT);
+        _approveUserQuoteTokenAllowance(_SENDER, _BID_AMOUNT);
+
+        // Cache sender balance
+        uint256 senderBalance = _quoteToken.balanceOf(_SENDER);
+
+        // Call the function
+        uint64 bidId = _createBid(_SENDER, address(0), _BID_AMOUNT, _bidAuctionData);
+
+        // Check the bid
+        MockBatchAuctionModule.Bid memory bid = _batchAuctionModule.getBid(_lotId, bidId);
+        assertEq(bid.bidder, _SENDER, "bidder mismatch");
+        assertEq(bid.referrer, _REFERRER, "referrer mismatch");
+        assertEq(bid.amount, _BID_AMOUNT, "amount mismatch");
+        assertEq(bid.minAmountOut, 0, "minAmountOut mismatch");
+
+        // Check that the sender's token balance was reduced
+        assertEq(
+            _quoteToken.balanceOf(_SENDER), senderBalance - _BID_AMOUNT, "sender balance mismatch"
+        );
+    }
+
+    function test_whenBidderIsZeroAddress_whenCallbackIsSet()
+        external
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenCallbackIsSet
+        givenLotIsCreated
+        givenLotHasStarted
+    {
+        _sendUserQuoteTokenBalance(_SENDER, _BID_AMOUNT);
+        _approveUserQuoteTokenAllowance(_SENDER, _BID_AMOUNT);
+
+        // Cache sender balance
+        uint256 senderBalance = _quoteToken.balanceOf(_SENDER);
+
+        // Call the function
+        uint64 bidId = _createBid(_SENDER, address(0), _BID_AMOUNT, _bidAuctionData);
+
+        // Check the bid
+        MockBatchAuctionModule.Bid memory bid = _batchAuctionModule.getBid(_lotId, bidId);
+        assertEq(bid.bidder, _SENDER, "bidder mismatch");
+        assertEq(bid.referrer, _REFERRER, "referrer mismatch");
+        assertEq(bid.amount, _BID_AMOUNT, "amount mismatch");
+        assertEq(bid.minAmountOut, 0, "minAmountOut mismatch");
+
+        // Check that the sender's token balance was reduced
+        assertEq(
+            _quoteToken.balanceOf(_SENDER), senderBalance - _BID_AMOUNT, "sender balance mismatch"
+        );
+
+        // Check that the callback was called and the bidder was sent to the callback
+        assertEq(_callback.lotBid(_lotId), true, "lotBid");
+        assertEq(_callback.bidder(_lotId, bidId), _SENDER, "bidder mismatch");
+    }
+
+    function test_whenBidderIsNotZeroAddress()
+        external
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenLotIsCreated
+        givenLotHasStarted
+    {
+        _sendUserQuoteTokenBalance(_SENDER, _BID_AMOUNT);
+        _approveUserQuoteTokenAllowance(_SENDER, _BID_AMOUNT);
+
+        // Cache balances
+        uint256 senderBalance = _quoteToken.balanceOf(_SENDER);
+        uint256 bidderBalance = _quoteToken.balanceOf(_bidder);
+
+        // Call the function
+        uint64 bidId = _createBid(_SENDER, _bidder, _BID_AMOUNT, _bidAuctionData);
+
+        // Check the bid
+        MockBatchAuctionModule.Bid memory bid = _batchAuctionModule.getBid(_lotId, bidId);
+        assertEq(bid.bidder, _bidder, "bidder mismatch");
+        assertEq(bid.referrer, _REFERRER, "referrer mismatch");
+        assertEq(bid.amount, _BID_AMOUNT, "amount mismatch");
+        assertEq(bid.minAmountOut, 0, "minAmountOut mismatch");
+
+        // Check that the sender's token balance was reduced and the bidder's was not
+        assertEq(
+            _quoteToken.balanceOf(_SENDER), senderBalance - _BID_AMOUNT, "sender balance mismatch"
+        );
+        assertEq(_quoteToken.balanceOf(_bidder), bidderBalance, "bidder balance mismatch");
+    }
+
+    function test_whenBidderIsNotZeroAddress_whenCallbackIsSet()
+        external
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenCallbackIsSet
+        givenLotIsCreated
+        givenLotHasStarted
+    {
+        _sendUserQuoteTokenBalance(_SENDER, _BID_AMOUNT);
+        _approveUserQuoteTokenAllowance(_SENDER, _BID_AMOUNT);
+
+        // Cache balances
+        uint256 senderBalance = _quoteToken.balanceOf(_SENDER);
+        uint256 bidderBalance = _quoteToken.balanceOf(_bidder);
+
+        // Call the function
+        uint64 bidId = _createBid(_SENDER, _bidder, _BID_AMOUNT, _bidAuctionData);
+
+        // Check the bid
+        MockBatchAuctionModule.Bid memory bid = _batchAuctionModule.getBid(_lotId, bidId);
+        assertEq(bid.bidder, _bidder, "bidder mismatch");
+        assertEq(bid.referrer, _REFERRER, "referrer mismatch");
+        assertEq(bid.amount, _BID_AMOUNT, "amount mismatch");
+        assertEq(bid.minAmountOut, 0, "minAmountOut mismatch");
+
+        // Check that the sender's token balance was reduced and the bidder's was not
+        assertEq(
+            _quoteToken.balanceOf(_SENDER), senderBalance - _BID_AMOUNT, "sender balance mismatch"
+        );
+        assertEq(_quoteToken.balanceOf(_bidder), bidderBalance, "bidder balance mismatch");
+
+        // Check that the callback was called and the bidder was sent to the callback
+        assertEq(_callback.lotBid(_lotId), true, "lotBid");
+        assertEq(_callback.bidder(_lotId, bidId), _bidder, "bidder mismatch");
     }
 }
