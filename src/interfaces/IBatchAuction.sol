@@ -36,6 +36,7 @@ interface IBatchAuction is IAuction {
     ///
     /// @param      lotId_          The lot id
     /// @param      bidder_         The bidder of the purchased tokens
+    /// @param      referrer_       The referrer of the bid
     /// @param      amount_         The amount of quote tokens to bid
     /// @param      auctionData_    The auction-specific data
     /// @return     bidId           The bid id
