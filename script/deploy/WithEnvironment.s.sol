@@ -23,4 +23,14 @@ abstract contract WithEnvironment is Script {
         // TODO consider returning address(0) if not found
         return env.readAddress(string.concat(".current.", chain, ".", key_));
     }
+
+    function _envAddressNotZero(string memory key_) internal view returns (address) {
+        address addr = _envAddress(key_);
+        require(
+            addr != address(0), string.concat("WithEnvironment: key '", key_, "' has zero address")
+        );
+
+        console2.log("    %s: %s", key_, addr);
+        return addr;
+    }
 }
