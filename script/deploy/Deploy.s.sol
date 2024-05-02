@@ -117,13 +117,11 @@ contract Deploy is Script, WithEnvironment, WithSalts {
             string memory name = deployments[index];
 
             if (_isAtomicAuctionHouse(name)) {
-                deployedTo[name] = _deployAtomicAuctionHouse();
+                deployedTo[string.concat("axis.", name)] = _deployAtomicAuctionHouse();
             } else {
-                deployedTo[name] = _deployBatchAuctionHouse();
+                deployedTo[string.concat("axis.", name)] = _deployBatchAuctionHouse();
             }
         }
-
-        // TODO need to get the addresses if just deployed
 
         // Iterate through deployments
         for (uint256 i; i < len; i++) {
@@ -144,14 +142,17 @@ contract Deploy is Script, WithEnvironment, WithSalts {
             require(success, string.concat("Failed to deploy ", deployments[i]));
 
             // Store the deployed contract address for logging
-            deployedTo[name] = abi.decode(data, (address));
+            // TODO get deployment key for non-axis deployments
+            deployedTo[string.concat("axis.", name)] = abi.decode(data, (address));
 
             // If required, install in the AtomicAuctionHouse
             // For this to work, the deployer address must be the same as the owner of the AuctionHouse (`_envOwner`)
             if (installAtomicAuctionHouseMap[name]) {
+                console2.log("");
                 AtomicAuctionHouse atomicAuctionHouse =
-                    AtomicAuctionHouse(_envAddressNotZero("axis.AtomicAuctionHouse"));
+                    AtomicAuctionHouse(_getAddressNotZero("axis.AtomicAuctionHouse"));
 
+                console2.log("");
                 console2.log("    Installing in AtomicAuctionHouse");
                 vm.broadcast();
                 atomicAuctionHouse.installModule(Module(deployedTo[name]));
@@ -160,9 +161,11 @@ contract Deploy is Script, WithEnvironment, WithSalts {
             // If required, install in the BatchAuctionHouse
             // For this to work, the deployer address must be the same as the owner of the AuctionHouse (`_envOwner`)
             if (installBatchAuctionHouseMap[name]) {
+                console2.log("");
                 BatchAuctionHouse batchAuctionHouse =
-                    BatchAuctionHouse(_envAddressNotZero("axis.BatchAuctionHouse"));
+                    BatchAuctionHouse(_getAddressNotZero("axis.BatchAuctionHouse"));
 
+                console2.log("");
                 console2.log("    Installing in BatchAuctionHouse");
                 vm.broadcast();
                 batchAuctionHouse.installModule(Module(deployedTo[name]));
@@ -226,9 +229,9 @@ contract Deploy is Script, WithEnvironment, WithSalts {
         console2.log("");
         console2.log("Deploying AtomicAuctionHouse");
 
-        address owner = _envAddressNotZero("axis.OWNER");
-        address permit2 = _envAddressNotZero("axis.PERMIT2");
-        address protocol = _envAddressNotZero("axis.PROTOCOL");
+        address owner = _getAddressNotZero("axis.OWNER");
+        address permit2 = _getAddressNotZero("axis.PERMIT2");
+        address protocol = _getAddressNotZero("axis.PROTOCOL");
 
         // Get the salt
         bytes32 salt_ = _getSalt(
@@ -247,6 +250,7 @@ contract Deploy is Script, WithEnvironment, WithSalts {
             vm.broadcast();
             atomicAuctionHouse = new AtomicAuctionHouse{salt: salt_}(owner, protocol, permit2);
         }
+        console2.log("");
         console2.log("    AtomicAuctionHouse deployed at:", address(atomicAuctionHouse));
 
         return address(atomicAuctionHouse);
@@ -257,9 +261,9 @@ contract Deploy is Script, WithEnvironment, WithSalts {
         console2.log("");
         console2.log("Deploying BatchAuctionHouse");
 
-        address owner = _envAddressNotZero("axis.OWNER");
-        address permit2 = _envAddressNotZero("axis.PERMIT2");
-        address protocol = _envAddressNotZero("axis.PROTOCOL");
+        address owner = _getAddressNotZero("axis.OWNER");
+        address permit2 = _getAddressNotZero("axis.PERMIT2");
+        address protocol = _getAddressNotZero("axis.PROTOCOL");
 
         // Get the salt
         bytes32 salt_ = _getSalt(
@@ -278,6 +282,7 @@ contract Deploy is Script, WithEnvironment, WithSalts {
             vm.broadcast();
             batchAuctionHouse = new BatchAuctionHouse{salt: salt_}(owner, protocol, permit2);
         }
+        console2.log("");
         console2.log("    BatchAuctionHouse deployed at:", address(batchAuctionHouse));
 
         return address(batchAuctionHouse);
@@ -290,7 +295,7 @@ contract Deploy is Script, WithEnvironment, WithSalts {
         console2.log("");
         console2.log("Deploying AtomicCatalogue");
 
-        address atomicAuctionHouse = _envAddressNotZero("axis.AtomicAuctionHouse");
+        address atomicAuctionHouse = _getAddressNotZero("axis.AtomicAuctionHouse");
 
         // Get the salt
         bytes32 salt_ = _getSalt(
@@ -308,6 +313,7 @@ contract Deploy is Script, WithEnvironment, WithSalts {
             vm.broadcast();
             atomicCatalogue = new AtomicCatalogue{salt: salt_}(atomicAuctionHouse);
         }
+        console2.log("");
         console2.log("    AtomicCatalogue deployed at:", address(atomicCatalogue));
 
         return address(atomicCatalogue);
@@ -318,7 +324,7 @@ contract Deploy is Script, WithEnvironment, WithSalts {
         console2.log("");
         console2.log("Deploying BatchCatalogue");
 
-        address batchAuctionHouse = _envAddressNotZero("axis.BatchAuctionHouse");
+        address batchAuctionHouse = _getAddressNotZero("axis.BatchAuctionHouse");
 
         // Get the salt
         bytes32 salt_ = _getSalt(
@@ -336,6 +342,7 @@ contract Deploy is Script, WithEnvironment, WithSalts {
             vm.broadcast();
             batchCatalogue = new BatchCatalogue{salt: salt_}(batchAuctionHouse);
         }
+        console2.log("");
         console2.log("    BatchCatalogue deployed at:", address(batchCatalogue));
 
         return address(batchCatalogue);
@@ -348,7 +355,7 @@ contract Deploy is Script, WithEnvironment, WithSalts {
         console2.log("");
         console2.log("Deploying EncryptedMarginalPrice");
 
-        address batchAuctionHouse = _envAddressNotZero("axis.BatchAuctionHouse");
+        address batchAuctionHouse = _getAddressNotZero("axis.BatchAuctionHouse");
 
         // Get the salt
         bytes32 salt_ = _getSalt(
@@ -368,6 +375,7 @@ contract Deploy is Script, WithEnvironment, WithSalts {
             vm.broadcast();
             amEmp = new EncryptedMarginalPrice{salt: salt_}(batchAuctionHouse);
         }
+        console2.log("");
         console2.log("    EncryptedMarginalPrice deployed at:", address(amEmp));
 
         return address(amEmp);
@@ -378,7 +386,7 @@ contract Deploy is Script, WithEnvironment, WithSalts {
         console2.log("");
         console2.log("Deploying FixedPriceSale");
 
-        address atomicAuctionHouse = _envAddressNotZero("axis.AtomicAuctionHouse");
+        address atomicAuctionHouse = _getAddressNotZero("axis.AtomicAuctionHouse");
 
         // Get the salt
         bytes32 salt_ = _getSalt(
@@ -396,6 +404,7 @@ contract Deploy is Script, WithEnvironment, WithSalts {
             vm.broadcast();
             amFps = new FixedPriceSale{salt: salt_}(atomicAuctionHouse);
         }
+        console2.log("");
         console2.log("    FixedPriceSale deployed at:", address(amFps));
 
         return address(amFps);
@@ -406,7 +415,7 @@ contract Deploy is Script, WithEnvironment, WithSalts {
         console2.log("");
         console2.log("Deploying LinearVesting (Atomic)");
 
-        address atomicAuctionHouse = _envAddressNotZero("axis.AtomicAuctionHouse");
+        address atomicAuctionHouse = _getAddressNotZero("axis.AtomicAuctionHouse");
 
         // Get the salt
         bytes32 salt_ = _getSalt(
@@ -424,6 +433,7 @@ contract Deploy is Script, WithEnvironment, WithSalts {
             vm.broadcast();
             dmAtomicLinearVesting = new LinearVesting{salt: salt_}(atomicAuctionHouse);
         }
+        console2.log("");
         console2.log("    LinearVesting (Atomic) deployed at:", address(dmAtomicLinearVesting));
 
         return address(dmAtomicLinearVesting);
@@ -434,7 +444,7 @@ contract Deploy is Script, WithEnvironment, WithSalts {
         console2.log("");
         console2.log("Deploying LinearVesting (Batch)");
 
-        address batchAuctionHouse = _envAddressNotZero("axis.BatchAuctionHouse");
+        address batchAuctionHouse = _getAddressNotZero("axis.BatchAuctionHouse");
 
         // Get the salt
         bytes32 salt_ = _getSalt(
@@ -452,6 +462,7 @@ contract Deploy is Script, WithEnvironment, WithSalts {
             vm.broadcast();
             dmBatchLinearVesting = new LinearVesting{salt: salt_}(batchAuctionHouse);
         }
+        console2.log("");
         console2.log("    LinearVesting (Batch) deployed at:", address(dmBatchLinearVesting));
 
         return address(dmBatchLinearVesting);
@@ -464,9 +475,9 @@ contract Deploy is Script, WithEnvironment, WithSalts {
         console2.log("");
         console2.log("Deploying UniswapV2DirectToLiquidity (Atomic)");
 
-        address atomicAuctionHouse = _envAddressNotZero("axis.AtomicAuctionHouse");
-        address uniswapV2Factory = _envAddressNotZero("uniswapV2.factory");
-        address uniswapV2Router = _envAddressNotZero("uniswapV2.router");
+        address atomicAuctionHouse = _getAddressNotZero("axis.AtomicAuctionHouse");
+        address uniswapV2Factory = _getAddressNotZero("uniswapV2.factory");
+        address uniswapV2Router = _getAddressNotZero("uniswapV2.router");
 
         // Get the salt
         bytes32 salt_ = _getSalt(
@@ -485,6 +496,7 @@ contract Deploy is Script, WithEnvironment, WithSalts {
         UniswapV2DirectToLiquidity cbAtomicUniswapV2Dtl = new UniswapV2DirectToLiquidity{
             salt: salt_
         }(atomicAuctionHouse, uniswapV2Factory, uniswapV2Router);
+        console2.log("");
         console2.log(
             "    UniswapV2DirectToLiquidity (Atomic) deployed at:", address(cbAtomicUniswapV2Dtl)
         );
@@ -497,9 +509,9 @@ contract Deploy is Script, WithEnvironment, WithSalts {
         console2.log("");
         console2.log("Deploying UniswapV2DirectToLiquidity (Batch)");
 
-        address batchAuctionHouse = _envAddressNotZero("axis.BatchAuctionHouse");
-        address uniswapV2Factory = _envAddressNotZero("uniswapV2.factory");
-        address uniswapV2Router = _envAddressNotZero("uniswapV2.router");
+        address batchAuctionHouse = _getAddressNotZero("axis.BatchAuctionHouse");
+        address uniswapV2Factory = _getAddressNotZero("uniswapV2.factory");
+        address uniswapV2Router = _getAddressNotZero("uniswapV2.router");
 
         // Get the salt
         bytes32 salt_ = _getSalt(
@@ -518,6 +530,7 @@ contract Deploy is Script, WithEnvironment, WithSalts {
         UniswapV2DirectToLiquidity cbBatchUniswapV2Dtl = new UniswapV2DirectToLiquidity{salt: salt_}(
             batchAuctionHouse, uniswapV2Factory, uniswapV2Router
         );
+        console2.log("");
         console2.log(
             "    UniswapV2DirectToLiquidity (Batch) deployed at:", address(cbBatchUniswapV2Dtl)
         );
@@ -530,9 +543,9 @@ contract Deploy is Script, WithEnvironment, WithSalts {
         console2.log("");
         console2.log("Deploying UniswapV3DirectToLiquidity (Atomic)");
 
-        address atomicAuctionHouse = _envAddressNotZero("axis.AtomicAuctionHouse");
-        address uniswapV3Factory = _envAddressNotZero("uniswapV3.factory");
-        address gUniFactory = _envAddressNotZero("gUni.factory");
+        address atomicAuctionHouse = _getAddressNotZero("axis.AtomicAuctionHouse");
+        address uniswapV3Factory = _getAddressNotZero("uniswapV3.factory");
+        address gUniFactory = _getAddressNotZero("gUni.factory");
 
         // Get the salt
         bytes32 salt_ = _getSalt(
@@ -551,6 +564,7 @@ contract Deploy is Script, WithEnvironment, WithSalts {
         UniswapV3DirectToLiquidity cbAtomicUniswapV3Dtl = new UniswapV3DirectToLiquidity{
             salt: salt_
         }(atomicAuctionHouse, uniswapV3Factory, gUniFactory);
+        console2.log("");
         console2.log(
             "    UniswapV3DirectToLiquidity (Atomic) deployed at:", address(cbAtomicUniswapV3Dtl)
         );
@@ -563,9 +577,9 @@ contract Deploy is Script, WithEnvironment, WithSalts {
         console2.log("");
         console2.log("Deploying UniswapV3DirectToLiquidity (Batch)");
 
-        address batchAuctionHouse = _envAddressNotZero("axis.BatchAuctionHouse");
-        address uniswapV3Factory = _envAddressNotZero("uniswapV3.factory");
-        address gUniFactory = _envAddressNotZero("gUni.factory");
+        address batchAuctionHouse = _getAddressNotZero("axis.BatchAuctionHouse");
+        address uniswapV3Factory = _getAddressNotZero("uniswapV3.factory");
+        address gUniFactory = _getAddressNotZero("gUni.factory");
 
         // Get the salt
         bytes32 salt_ = _getSalt(
@@ -584,6 +598,7 @@ contract Deploy is Script, WithEnvironment, WithSalts {
         UniswapV3DirectToLiquidity cbBatchUniswapV3Dtl = new UniswapV3DirectToLiquidity{salt: salt_}(
             batchAuctionHouse, uniswapV3Factory, gUniFactory
         );
+        console2.log("");
         console2.log(
             "    UniswapV3DirectToLiquidity (Batch) deployed at:", address(cbBatchUniswapV3Dtl)
         );
@@ -624,6 +639,27 @@ contract Deploy is Script, WithEnvironment, WithSalts {
         if (_readDataBoolean(data_, name_, "installBatchAuctionHouse")) {
             installBatchAuctionHouseMap[name_] = true;
         }
+    }
+
+    /// @notice Get an address for a given key
+    /// @dev    This variant will first check for the key in the
+    ///         addresses from the current deployment sequence (stored in `deployedTo`),
+    ///         followed by the contents of `env.json`.
+    ///
+    ///         If no value is found for the key, or it is the zero address, the function will revert.
+    ///
+    /// @param  key_    Key to look for
+    /// @return address Returns the address
+    function _getAddressNotZero(string memory key_) internal view returns (address) {
+        // Get from the deployed addresses first
+        address deployedAddress = deployedTo[key_];
+
+        if (deployedAddress != address(0)) {
+            console2.log("    %s: %s (from deployment addresses)", key_, deployedAddress);
+            return deployedAddress;
+        }
+
+        return _envAddressNotZero(key_);
     }
 
     function _readDataValue(

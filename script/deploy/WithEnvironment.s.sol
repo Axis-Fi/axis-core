@@ -30,7 +30,7 @@ abstract contract WithEnvironment is Script {
             addr != address(0), string.concat("WithEnvironment: key '", key_, "' has zero address")
         );
 
-        console2.log("    %s: %s", key_, addr);
+        console2.log("    %s: %s (from env.json)", key_, addr);
         return addr;
     }
 }
