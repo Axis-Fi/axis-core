@@ -27,7 +27,7 @@ contract GradualDutchAuction is AtomicAuctionModule {
     struct GDAParams {
         uint256 equilibriumPrice;
         uint256 minimumPrice;
-        uint256 decayPercentFirstPeriod; // target decay percent over the first decay period of an auction (steepest part of the curve)
+        uint256 decayTarget; // target decay percent over the first decay period of an auction (steepest part of the curve)
         uint256 decayPeriod; // period over which the target decay percent is reached
     }
 
@@ -88,9 +88,7 @@ contract GradualDutchAuction is AtomicAuctionModule {
         // k = ln((q0 - qm) / (q1 - qm)) / dp
         // require q0 > q1 > qm
         // q1 = q0 * (1 - d1)
-        // => 100% > d1 > 0%
-        if (params.decayPercentFirstPeriod >= uUNIT || params.decayPercentFirstPeriod < uUNIT / 100)
-        {
+        if (params.decayTarget > MAX_DECAY_PERCENT || params.decayTarget < MIN_DECAY_PERCENT) {
             revert Auction_InvalidParams();
         }
 
@@ -103,7 +101,7 @@ contract GradualDutchAuction is AtomicAuctionModule {
         {
             uint256 quoteTokenScale = 10 ** lot_.quoteTokenDecimals;
             UD60x18 q0 = ud(params.equilibriumPrice.fullMulDiv(uUNIT, quoteTokenScale));
-            UD60x18 q1 = q0.mul(UNIT - ud(params.decayPercentFirstPeriod)).div(UNIT);
+            UD60x18 q1 = q0.mul(UNIT - ud(params.decayTarget)).div(UNIT);
             UD60x18 qm = ud(params.minimumPrice.fullMulDiv(uUNIT, quoteTokenScale));
 
             // Check that q0 > q1 > qm
