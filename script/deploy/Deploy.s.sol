@@ -240,8 +240,8 @@ contract Deploy is Script, WithEnvironment, WithSalts {
 
             string[] memory inputs = new string[](3);
             inputs[0] = "./script/deploy/write_deployment.sh";
-            inputs[1] = string.concat("'", "current", ".", chain_, ".", key, "'");
-            inputs[2] = string.concat("'", vm.toString(value), "'");
+            inputs[1] = string.concat("current", ".", chain_, ".", key);
+            inputs[2] = vm.toString(value);
 
             vm.ffi(inputs);
         }
