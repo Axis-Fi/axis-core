@@ -364,14 +364,22 @@ abstract contract BatchAuctionHouseTest is Test, Permit2User, WithSalts {
         _;
     }
 
+    function _sendUserQuoteTokenBalance(address user_, uint256 amount_) internal {
+        _quoteToken.mint(user_, amount_);
+    }
+
+    function _approveUserQuoteTokenAllowance(address user_, uint256 amount_) internal {
+        vm.prank(user_);
+        _quoteToken.approve(address(_auctionHouse), amount_);
+    }
+
     modifier givenUserHasQuoteTokenBalance(uint256 amount_) {
-        _quoteToken.mint(_bidder, amount_);
+        _sendUserQuoteTokenBalance(_bidder, amount_);
         _;
     }
 
     modifier givenUserHasQuoteTokenAllowance(uint256 amount_) {
-        vm.prank(_bidder);
-        _quoteToken.approve(address(_auctionHouse), amount_);
+        _approveUserQuoteTokenAllowance(_bidder, amount_);
         _;
     }
 
@@ -438,12 +446,34 @@ abstract contract BatchAuctionHouseTest is Test, Permit2User, WithSalts {
     }
 
     function _createBid(
+        address caller_,
         address bidder_,
         uint256 amount_,
         bytes memory auctionData_
     ) internal returns (uint64) {
         IBatchAuctionHouse.BidParams memory bidParams = IBatchAuctionHouse.BidParams({
             lotId: _lotId,
+            bidder: bidder_,
+            referrer: _REFERRER,
+            amount: amount_,
+            auctionData: auctionData_,
+            permit2Data: _permit2Data
+        });
+
+        vm.prank(caller_);
+        _bidId = _auctionHouse.bid(bidParams, _allowlistProof);
+
+        return _bidId;
+    }
+
+    function _createBid(
+        address bidder_,
+        uint256 amount_,
+        bytes memory auctionData_
+    ) internal returns (uint64) {
+        IBatchAuctionHouse.BidParams memory bidParams = IBatchAuctionHouse.BidParams({
+            lotId: _lotId,
+            bidder: bidder_,
             referrer: _REFERRER,
             amount: amount_,
             auctionData: auctionData_,

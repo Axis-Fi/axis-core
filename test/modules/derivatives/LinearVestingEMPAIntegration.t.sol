@@ -131,6 +131,7 @@ contract LinearVestingEMPAIntegrationTest is BatchAuctionHouseTest {
 
         IBatchAuctionHouse.BidParams memory bid = IBatchAuctionHouse.BidParams({
             lotId: _lotId,
+            bidder: bidder_,
             referrer: _REFERRER,
             amount: amountIn_,
             auctionData: bidData,

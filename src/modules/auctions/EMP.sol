@@ -54,11 +54,11 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
 
     /// @notice        Core data for a bid
     ///
-    /// @param         status              The status of the bid
     /// @param         bidder              The address of the bidder
     /// @param         amount              The amount of the bid
     /// @param         minAmountOut        The minimum amount out (not set until the bid is decrypted)
     /// @param         referrer            The address of the referrer
+    /// @param         status              The status of the bid
     struct Bid {
         address bidder; // 20 +
         uint96 amount; // 12 = 32 - end of slot 1
@@ -423,7 +423,7 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
         // Set the bid status to claimed
         bidData.status = BidStatus.Claimed;
 
-        // Load the referrer and bidder
+        // Load the bidder and referrer addresses
         bidClaim.bidder = bidData.bidder;
         bidClaim.referrer = bidData.referrer;
 
