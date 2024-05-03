@@ -255,8 +255,8 @@ contract Deploy is Script, WithEnvironment, WithSalts {
         console2.log("Deploying AtomicAuctionHouse");
 
         address owner = _getAddressNotZero("axis.OWNER");
-        address permit2 = _getAddressNotZero("axis.PERMIT2");
         address protocol = _getAddressNotZero("axis.PROTOCOL");
+        address permit2 = _getAddressNotZero("axis.PERMIT2");
 
         // Get the salt
         bytes32 salt_ = _getSalt(
@@ -287,8 +287,8 @@ contract Deploy is Script, WithEnvironment, WithSalts {
         console2.log("Deploying BatchAuctionHouse");
 
         address owner = _getAddressNotZero("axis.OWNER");
-        address permit2 = _getAddressNotZero("axis.PERMIT2");
         address protocol = _getAddressNotZero("axis.PROTOCOL");
+        address permit2 = _getAddressNotZero("axis.PERMIT2");
 
         // Get the salt
         bytes32 salt_ = _getSalt(
