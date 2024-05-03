@@ -25,23 +25,8 @@ import {LinearVesting} from "src/modules/derivatives/LinearVesting.sol";
 import {UniswapV2DirectToLiquidity} from "src/callbacks/liquidity/UniswapV2DTL.sol";
 import {UniswapV3DirectToLiquidity} from "src/callbacks/liquidity/UniswapV3DTL.sol";
 
-// TODO would it be better to create a system to generate scripts from the sequences instead of having to add them manually to this master script?
-// See the RBS sim bash scripts for how I did this before
-// Is this desirable? Writing scripts in Solidity is supposed to be a good thing
-// The problem is the invocation of the scripts is a pain with the CLI, although this has largely been solved in the batch scripting system by passing in the contract name and function to call
-// However, it's still a bit of a pain to write new scripts each time you need to deploy something new. There is a lot of setup if you need to reference existing contracts
-
-// Idea
-// CLI system that generates deploy scripts from a sequence file
-// The sequence file would be a JSON file that lists the contracts to be deployed in order, has the paths, args, salts, etc.
-// Two step: generate and run
-// Could generate and review it before running it
-// It also could initialize a local deploy system in an existing forge project
-// This would provide the dependency management that is useful for declarative deployment systems
-// Can probably extend to regular sequential scripts and batch scripts as well
-
-// TODO can we separate the base of the deploy system from the actual contracts to be deployed
-
+/// @notice Declarative deployment script that reads a deployment sequence (with constructor args)
+///         and a configured environment file to deploy and install contracts in the Axis protocol.
 contract Deploy is Script, WithEnvironment, WithSalts {
     using stdJson for string;
 

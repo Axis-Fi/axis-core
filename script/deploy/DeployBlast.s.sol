@@ -12,6 +12,8 @@ import {BlastLinearVesting} from "src/blast/modules/derivatives/BlastLinearVesti
 
 import {Deploy} from "script/deploy/Deploy.s.sol";
 
+/// @notice Declarative deploy script that uses contracts specific to the Blast L2 chain.
+///         See Deploy.s.sol for more information on the Deploy contract.
 contract DeployBlast is Deploy {
     // ========== AUCTIONHOUSE DEPLOYMENTS ========== //
 
