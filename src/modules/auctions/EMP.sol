@@ -849,7 +849,7 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
                     if (
                         lotAuctionData.minPrice == 0
                             || Math.mulDiv(result.totalAmountIn, baseScale, lotAuctionData.minPrice)
-                                >= capacity
+                                > capacity
                     ) {
                         result.marginalPrice =
                             Math.mulDivUp(result.totalAmountIn, baseScale, capacity);
