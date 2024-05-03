@@ -53,12 +53,14 @@ contract Deploy is Script, WithEnvironment, WithSalts {
     bytes internal constant _BLAST_BATCH_AUCTION_HOUSE_NAME = "BlasBatchAuctionHouse";
 
     // Deploy system storage
+    uint256[] public auctionHouseIndexes;
     mapping(string => bytes) public argsMap;
     mapping(string => bool) public installAtomicAuctionHouseMap;
     mapping(string => bool) public installBatchAuctionHouseMap;
     string[] public deployments;
+
+    string[] public deployedToKeys;
     mapping(string => address) public deployedTo;
-    uint256[] public auctionHouseIndexes;
 
     // ========== DEPLOY SYSTEM FUNCTIONS ========== //
 
@@ -117,11 +119,13 @@ contract Deploy is Script, WithEnvironment, WithSalts {
         for (uint256 i; i < ahLen; i++) {
             uint256 index = auctionHouseIndexes[i];
             string memory name = deployments[index];
+            string memory deploymentKey = string.concat(_PREFIX_AXIS, ".", name);
+            deployedToKeys.push(deploymentKey);
 
             if (_isAtomicAuctionHouse(name)) {
-                deployedTo[string.concat(_PREFIX_AXIS, ".", name)] = _deployAtomicAuctionHouse();
+                deployedTo[deploymentKey] = _deployAtomicAuctionHouse();
             } else {
-                deployedTo[string.concat(_PREFIX_AXIS, ".", name)] = _deployBatchAuctionHouse();
+                deployedTo[deploymentKey] = _deployBatchAuctionHouse();
             }
         }
 
@@ -146,7 +150,10 @@ contract Deploy is Script, WithEnvironment, WithSalts {
             // Store the deployed contract address for logging
             (address deploymentAddress, string memory keyPrefix) =
                 abi.decode(data, (address, string));
-            deployedTo[string.concat(keyPrefix, ".", name)] = deploymentAddress;
+            string memory deployedToKey = string.concat(keyPrefix, ".", name);
+
+            deployedToKeys.push(deployedToKey);
+            deployedTo[deployedToKey] = deploymentAddress;
 
             // If required, install in the AtomicAuctionHouse
             // For this to work, the deployer address must be the same as the owner of the AuctionHouse (`_envOwner`)
@@ -158,7 +165,7 @@ contract Deploy is Script, WithEnvironment, WithSalts {
                 console2.log("");
                 console2.log("    Installing in AtomicAuctionHouse");
                 vm.broadcast();
-                atomicAuctionHouse.installModule(Module(deployedTo[name]));
+                atomicAuctionHouse.installModule(Module(deploymentAddress));
             }
 
             // If required, install in the BatchAuctionHouse
@@ -171,7 +178,7 @@ contract Deploy is Script, WithEnvironment, WithSalts {
                 console2.log("");
                 console2.log("    Installing in BatchAuctionHouse");
                 vm.broadcast();
-                batchAuctionHouse.installModule(Module(deployedTo[name]));
+                batchAuctionHouse.installModule(Module(deploymentAddress));
             }
         }
 
@@ -200,12 +207,12 @@ contract Deploy is Script, WithEnvironment, WithSalts {
         vm.writeLine(file, "{");
 
         // Iterate through the contracts that were deployed and write their addresses to the file
-        uint256 len = deployments.length;
+        uint256 len = deployedToKeys.length;
         for (uint256 i; i < len - 1; ++i) {
             vm.writeLine(
                 file,
                 string.concat(
-                    "\"", deployments[i], "\": \"", vm.toString(deployedTo[deployments[i]]), "\","
+                    "\"", deployedToKeys[i], "\": \"", vm.toString(deployedTo[deployedToKeys[i]]), "\","
                 )
             );
         }
@@ -214,15 +221,26 @@ contract Deploy is Script, WithEnvironment, WithSalts {
             file,
             string.concat(
                 "\"",
-                deployments[len - 1],
+                deployedToKeys[len - 1],
                 "\": \"",
-                vm.toString(deployedTo[deployments[len - 1]]),
+                vm.toString(deployedTo[deployedToKeys[len - 1]]),
                 "\""
             )
         );
         vm.writeLine(file, "}");
 
-        // TODO update env.json?
+        // Update the env.json file
+        for (uint256 i; i < len; ++i) {
+            string memory key = deployedToKeys[i];
+            address value = deployedTo[key];
+
+            string[] memory inputs = new string[](3);
+            inputs[0] = "./script/deploy/write_deployment.sh";
+            inputs[1] = string.concat("'", "current", ".", chain_, ".", key, "'");
+            inputs[2] = string.concat("'", vm.toString(value), "'");
+
+            vm.ffi(inputs);
+        }
     }
 
     // ========== AUCTIONHOUSE DEPLOYMENTS ========== //
