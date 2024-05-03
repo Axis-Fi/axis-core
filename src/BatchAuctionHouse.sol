@@ -198,7 +198,7 @@ contract BatchAuctionHouse is IBatchAuctionHouse, AuctionHouse {
     /// @dev        This function performs the following:
     ///             - Validates the lot ID
     ///             - Records the bid on the auction module
-    ///             - Transfers the quote token from the bidder
+    ///             - Transfers the quote token from the caller
     ///             - Calls the onBid callback
     ///
     ///             This function reverts if:
@@ -237,7 +237,7 @@ contract BatchAuctionHouse is IBatchAuctionHouse, AuctionHouse {
             lotRouting[params_.lotId].callbacks,
             params_.lotId,
             bidId,
-            bidder,
+            bidder, // Bidder is the buyer, should also be checked against any allowlist, if applicable
             params_.amount,
             callbackData_
         );
