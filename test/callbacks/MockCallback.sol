@@ -39,6 +39,8 @@ contract MockCallback is BaseCallback {
     mapping(uint96 => bool) public lotPurchased;
     mapping(uint96 => bool) public lotBid;
     mapping(uint96 => bool) public lotSettled;
+    mapping(uint96 => address[]) public buyers;
+    mapping(uint96 => mapping(uint64 => address)) public bidder;
 
     function _onCreate(
         uint96 lotId_,
@@ -114,6 +116,7 @@ contract MockCallback is BaseCallback {
         }
 
         lotPurchased[lotId_] = true;
+        buyers[lotId_].push(buyer_);
 
         if (prefunded_) {
             // Do nothing, as tokens have already been transferred
@@ -129,7 +132,7 @@ contract MockCallback is BaseCallback {
 
     function _onBid(
         uint96 lotId_,
-        uint64,
+        uint64 bidId_,
         address buyer_,
         uint256,
         bytes calldata callbackData_
@@ -144,6 +147,7 @@ contract MockCallback is BaseCallback {
         }
 
         lotBid[lotId_] = true;
+        bidder[lotId_][bidId_] = buyer_;
     }
 
     function _onSettle(uint96 lotId_, uint256, uint256, bytes calldata) internal virtual override {
