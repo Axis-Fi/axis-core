@@ -121,6 +121,7 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
     /// @param  marginalPrice       The marginal price of the auction. Set only if the marginal price has been determined.
     /// @param  marginalBidId       The ID of the marginal bid (marking that bids following it are not filled). Set only if the marginal price has been determined and there is a need for this to be set.
     /// @param  lastBidId           The ID of the last bid processed during the marginal price calculation. This should always be set, regardless of the settlement outcome.
+    /// @param  lastBidPrice        The price of the last bid that was processed. This should always be set, regardless of the settlement outcome.
     /// @param  totalAmountIn       The total amount in from bids processed so far. This should always be set, regardless of the settlement outcome.
     /// @param  capacityExpended    The total capacity expended from bids processed so far. This should always be set, regardless of the settlement outcome.
     /// @param  finished            Whether settlement has been completed.
@@ -128,6 +129,7 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
         uint256 marginalPrice;
         uint64 marginalBidId;
         uint64 lastBidId;
+        uint256 lastBidPrice;
         uint256 totalAmountIn;
         uint256 capacityExpended;
         bool finished;
@@ -793,6 +795,7 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
 
                 // Set the last bid id processed for use in the next settle call (if needed)
                 result.lastBidId = bidId;
+                result.lastBidPrice = price;
 
                 // Check if the auction can clear with the existing bids at a price between current price and last price
                 // There will be no partial fills because we select the price that exactly fills the capacity
@@ -910,8 +913,7 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
         if (result.finished == false) {
             // Not all bids have been processed. Store the amount in so far, the last bid id processed, and the last price for use in the next settle call.
             _lotPartialSettlement[lotId_].processedAmountIn = result.totalAmountIn;
-            _lotPartialSettlement[lotId_].lastPrice =
-                Math.fullMulDivUp(result.totalAmountIn, baseScale, result.capacityExpended);
+            _lotPartialSettlement[lotId_].lastPrice = result.lastBidPrice;
             _lotPartialSettlement[lotId_].lastBidId = result.lastBidId;
 
             // We don't change the auction status so it can be iteratively settled
