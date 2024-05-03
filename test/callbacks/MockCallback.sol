@@ -39,6 +39,7 @@ contract MockCallback is BaseCallback {
     mapping(uint96 => bool) public lotPurchased;
     mapping(uint96 => bool) public lotBid;
     mapping(uint96 => bool) public lotSettled;
+    mapping(uint96 => address[]) public buyers;
     mapping(uint96 => mapping(uint64 => address)) public bidder;
 
     function _onCreate(
@@ -115,6 +116,7 @@ contract MockCallback is BaseCallback {
         }
 
         lotPurchased[lotId_] = true;
+        buyers[lotId_].push(buyer_);
 
         if (prefunded_) {
             // Do nothing, as tokens have already been transferred

@@ -12,7 +12,7 @@ interface IBatchAuctionHouse is IAuctionHouse {
     /// @dev        This reduces the number of variables in scope for the bid function
     ///
     /// @param      lotId               Lot ID
-    /// @param      bidder              Address to receive refunds and payouts (if different from msg.sender)
+    /// @param      bidder              Address to receive refunds and payouts (if not zero address)
     /// @param      referrer            Address of referrer
     /// @param      amount              Amount of quoteToken to purchase with (in native decimals)
     /// @param      auctionData         Custom data used by the auction module

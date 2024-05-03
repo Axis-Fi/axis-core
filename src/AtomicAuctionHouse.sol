@@ -102,6 +102,9 @@ contract AtomicAuctionHouse is IAtomicAuctionHouse, AuctionHouse {
     ) internal returns (uint256 payoutAmount) {
         _isLotValid(params_.lotId);
 
+        // Set recipient to msg.sender if blank
+        address recipient = params_.recipient == address(0) ? msg.sender : params_.recipient;
+
         // Load routing data for the lot
         Routing storage routing = lotRouting[params_.lotId];
 
@@ -132,7 +135,11 @@ contract AtomicAuctionHouse is IAtomicAuctionHouse, AuctionHouse {
         // @dev Moved the slippage check from the auction to the AuctionHouse to allow different routing and purchase logic
         if (payoutAmount < params_.minAmountOut) revert AmountLessThanMinimum();
 
-        // Collect payment from the purchaser
+        // Transfer the quote token from the caller
+        // Note this transfers from the caller, not the recipient
+        // It allows for "purchase on behalf of" functionality,
+        // but if you purchase for someone else, they will get the
+        // payout, while you will pay.
         _collectPayment(
             params_.amount, routing.quoteToken, Transfer.decodePermit2Approval(params_.permit2Data)
         );
@@ -152,7 +159,7 @@ contract AtomicAuctionHouse is IAtomicAuctionHouse, AuctionHouse {
             Callbacks.onPurchase(
                 routing.callbacks,
                 params_.lotId,
-                msg.sender,
+                recipient, // Recipient is the buyer, should also be checked against any allowlist, if applicable
                 amountLessFees,
                 payoutAmount + curatorFeePayout,
                 false, // Not prefunded. The onPurchase callback is expected to transfer the base tokens
@@ -182,7 +189,7 @@ contract AtomicAuctionHouse is IAtomicAuctionHouse, AuctionHouse {
             Callbacks.onPurchase(
                 routing.callbacks,
                 params_.lotId,
-                msg.sender,
+                recipient, // Recipient is the buyer, should also be checked against any allowlist, if applicable
                 amountLessFees,
                 payoutAmount + curatorFeePayout,
                 true, // Already prefunded
@@ -191,7 +198,7 @@ contract AtomicAuctionHouse is IAtomicAuctionHouse, AuctionHouse {
         }
 
         // Send payout to recipient
-        _sendPayout(params_.recipient, payoutAmount, routing, auctionOutput);
+        _sendPayout(recipient, payoutAmount, routing, auctionOutput);
 
         // Send curator fee to curator
         if (curatorFeePayout > 0) {
@@ -199,7 +206,7 @@ contract AtomicAuctionHouse is IAtomicAuctionHouse, AuctionHouse {
         }
 
         // Emit event
-        emit Purchase(params_.lotId, msg.sender, params_.referrer, params_.amount, payoutAmount);
+        emit Purchase(params_.lotId, recipient, params_.referrer, params_.amount, payoutAmount);
     }
 
     /// @inheritdoc IAtomicAuctionHouse

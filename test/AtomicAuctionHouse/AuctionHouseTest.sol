@@ -311,14 +311,22 @@ abstract contract AtomicAuctionHouseTest is Test, Permit2User, WithSalts {
         _;
     }
 
+    function _sendUserQuoteTokenBalance(address user_, uint256 amount_) internal {
+        _quoteToken.mint(user_, amount_);
+    }
+
+    function _approveUserQuoteTokenAllowance(address user_, uint256 amount_) internal {
+        vm.prank(user_);
+        _quoteToken.approve(address(_auctionHouse), amount_);
+    }
+
     modifier givenUserHasQuoteTokenBalance(uint256 amount_) {
-        _quoteToken.mint(_bidder, amount_);
+        _sendUserQuoteTokenBalance(_bidder, amount_);
         _;
     }
 
     modifier givenUserHasQuoteTokenAllowance(uint256 amount_) {
-        vm.prank(_bidder);
-        _quoteToken.approve(address(_auctionHouse), amount_);
+        _approveUserQuoteTokenAllowance(_bidder, amount_);
         _;
     }
 
@@ -377,6 +385,31 @@ abstract contract AtomicAuctionHouseTest is Test, Permit2User, WithSalts {
         vm.prank(address(_callback));
         _baseToken.approve(address(_auctionHouse), amount_);
         _;
+    }
+
+    function _createPurchase(
+        address caller_,
+        address recipient_,
+        uint256 amount_,
+        uint256 minAmountOut_,
+        bytes memory auctionData_,
+        address referrer_
+    ) internal returns (uint256) {
+        IAtomicAuctionHouse.PurchaseParams memory purchaseParams = IAtomicAuctionHouse
+            .PurchaseParams({
+            recipient: recipient_,
+            referrer: referrer_,
+            lotId: _lotId,
+            amount: amount_,
+            minAmountOut: minAmountOut_,
+            auctionData: auctionData_,
+            permit2Data: _permit2Data
+        });
+
+        vm.prank(caller_);
+        uint256 payout = _auctionHouse.purchase(purchaseParams, _allowlistProof);
+
+        return payout;
     }
 
     function _createPurchase(
