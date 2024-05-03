@@ -848,11 +848,11 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
                     // If not, we set the marginal price to the minimum price. Whether the capacity filled meets the minimum filled will be checked later in the settlement process
                     if (
                         lotAuctionData.minPrice == 0
-                            || Math.mulDiv(result.totalAmountIn, baseScale, lotAuctionData.minPrice)
-                                >= capacity
+                            || Math.fullMulDiv(result.totalAmountIn, baseScale, lotAuctionData.minPrice)
+                                > capacity
                     ) {
                         result.marginalPrice =
-                            Math.mulDivUp(result.totalAmountIn, baseScale, capacity);
+                            Math.fullMulDivUp(result.totalAmountIn, baseScale, capacity);
                     } else {
                         result.marginalPrice = lotAuctionData.minPrice;
                     }
