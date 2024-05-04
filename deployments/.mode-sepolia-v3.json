@@ -1,0 +1,10 @@
+{
+  "AtomicAuctionHouse": "0xAA0000003E38C00379513d73FFbcEAFafcF1bB4C",
+  "BatchAuctionHouse": "0xBA000000878cD72315d797b6de67b151Ae547038",
+  "AtomicCatalogue": "0xc20918b09dE9708d2A7997dfFc3c5ACB34d4a15b",
+  "BatchCatalogue": "0xCaAE490470305a9d6f58b026cdD36cc747F8F0b9",
+  "EncryptedMarginalPrice": "0x0e4996960731Fec8E7C9DBbD51383fC71174DD88",
+  "FixedPriceSale": "0x4a7D9A72C29C6f1e74Ce6a972c5CAD1b1B00dff9",
+  "AtomicLinearVesting": "0xE03E5bF70E04dB487bCa3A36beEFccd7b6be582F",
+  "BatchLinearVesting": "0x3A327c856AF41EcF4d783975CE38f669dEeaB298"
+}
