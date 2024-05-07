@@ -683,6 +683,7 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
         return auctionData[lotId_].bidIds[index_];
     }
 
+    /// @notice     Returns the number of decrypted bids remaining in the queue
     function getNumBidsInQueue(uint96 lotId_) external view returns (uint256) {
         return decryptedBids[lotId_].getNumBids();
     }
