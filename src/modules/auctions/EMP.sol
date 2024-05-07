@@ -15,7 +15,7 @@ import {FixedPointMathLib as Math} from "solady/utils/FixedPointMathLib.sol";
 import {AuctionModule} from "src/modules/Auction.sol";
 import {BatchAuctionModule} from "src/modules/auctions/BatchAuctionModule.sol";
 
-import {Veecode, toVeecode} from "src/modules/Modules.sol";
+import {Module, Veecode, toVeecode} from "src/modules/Modules.sol";
 
 /// @notice     Encrypted Marginal Price
 /// @dev        This batch auction module allows for bids to be encrypted off-chain, then stored, decrypted and settled on-chain.
@@ -1045,11 +1045,28 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
         return auctionData[lotId_];
     }
 
-    function getPartialFill(uint96 lotId_) external view returns (PartialFill memory) {
+    /// @notice Returns the `PartialFill` data for an auction lot
+    /// @dev    For ease of use, this function determines if a partial fill exists.
+    ///
+    ///         This function reverts if:
+    ///         - The lot ID is invalid
+    ///         - The lot is not settled
+    ///
+    /// @param  lotId_          The lot ID
+    /// @return hasPartialFill  True if a partial fill exists
+    /// @return partialFill     The `PartialFill` data
+    function getPartialFill(uint96 lotId_)
+        external
+        view
+        returns (bool hasPartialFill, PartialFill memory partialFill)
+    {
         _revertIfLotInvalid(lotId_);
         _revertIfLotNotSettled(lotId_);
 
-        return _lotPartialFill[lotId_];
+        partialFill = _lotPartialFill[lotId_];
+        hasPartialFill = partialFill.bidId != 0;
+
+        return (hasPartialFill, partialFill);
     }
 
     /// @inheritdoc BatchAuctionModule
