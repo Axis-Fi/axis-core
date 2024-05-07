@@ -15,6 +15,16 @@ contract BatchCatalogue is Catalogue {
 
     // ========== RETRIEVING BIDS ========== //
 
+    /// @notice Get the number of bids for a lot
+    ///
+    /// @param  lotId_  The lot ID
+    /// @return         The number of bids
+    function getNumBids(uint96 lotId_) public view returns (uint256) {
+        BatchAuctionModule module = BatchAuctionHouse(auctionHouse).getBatchModuleForId(lotId_);
+
+        return module.getNumBids(lotId_);
+    }
+
     /// @notice Get a range of bids for a batch auction, based on their current stored order
     /// @dev    This function is used to iterate through bids offline to find indexes for removing a bid
     ///
