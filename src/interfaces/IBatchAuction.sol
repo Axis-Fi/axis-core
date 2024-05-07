@@ -19,6 +19,12 @@ interface IBatchAuction is IAuction {
 
     /// @notice Contains data about a bidder's outcome from an auction
     /// @dev    Only used in memory so doesn't need to be packed
+    ///
+    /// @param  bidder   The bidder
+    /// @param  referrer The referrer
+    /// @param  paid     The amount of quote tokens paid (including any refunded tokens)
+    /// @param  payout   The amount of base tokens paid out
+    /// @param  refund   The amount of quote tokens refunded
     struct BidClaim {
         address bidder;
         address referrer;

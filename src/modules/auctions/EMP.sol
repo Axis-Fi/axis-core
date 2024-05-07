@@ -15,7 +15,7 @@ import {FixedPointMathLib as Math} from "solady/utils/FixedPointMathLib.sol";
 import {AuctionModule} from "src/modules/Auction.sol";
 import {BatchAuctionModule} from "src/modules/auctions/BatchAuctionModule.sol";
 
-import {Veecode, toVeecode} from "src/modules/Modules.sol";
+import {Module, Veecode, toVeecode} from "src/modules/Modules.sol";
 
 /// @notice     Encrypted Marginal Price
 /// @dev        This batch auction module allows for bids to be encrypted off-chain, then stored, decrypted and settled on-chain.
@@ -25,12 +25,14 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
     using MaxPriorityQueue for Queue;
 
     // ========== ERRORS ========== //
+
     error Auction_InvalidKey();
     error Auction_WrongState(uint96 lotId);
     error Bid_WrongState(uint96 lotId, uint64 bidId);
     error NotPermitted(address caller);
 
     // ========== EVENTS ========== //
+
     event BidDecrypted(
         uint96 indexed lotId, uint64 indexed bidId, uint96 amountIn, uint96 amountOut
     );
@@ -188,11 +190,10 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
         dedicatedSettlePeriod = 1 days;
     }
 
+    /// @inheritdoc Module
     function VEECODE() public pure override returns (Veecode) {
         return toVeecode("01EMPA");
     }
-
-    // ========== MODIFIERS ========== //
 
     // ========== AUCTION ========== //
 
@@ -425,40 +426,8 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
         // Set the bid status to claimed
         bidData.status = BidStatus.Claimed;
 
-        // Load the bidder and referrer addresses
-        bidClaim.bidder = bidData.bidder;
-        bidClaim.referrer = bidData.referrer;
-
-        // Calculate the bid price
-        uint256 baseScale = 10 ** lotData[lotId_].baseTokenDecimals;
-        uint256 price = bidData.minAmountOut == 0
-            ? 0 // Set price to zero for this bid since it was invalid
-            : Math.mulDivUp(bidData.amount, baseScale, bidData.minAmountOut);
-
-        uint256 marginalPrice = auctionData[lotId_].marginalPrice;
-
-        // If the bidId matches the partial fill for the lot, assign the stored data.
-        // Otherwise,
-        // If the bid price is greater than the marginal price, the bid is filled.
-        // If the bid price is equal to the marginal price and the bid was submitted before or is the marginal bid, the bid is filled.
-        // Auctions that do not meet capacity or price thresholds to settle will have their marginal price set at the maximum uint96
-        // and there will be no partial fill. Therefore, all bids will be refunded.
-        if (_lotPartialFill[lotId_].bidId == bidId_) {
-            bidClaim.paid = bidData.amount;
-            bidClaim.payout = _lotPartialFill[lotId_].payout;
-            bidClaim.refund = _lotPartialFill[lotId_].refund;
-        } else if (
-            price > marginalPrice
-                || (price == marginalPrice && bidId_ <= auctionData[lotId_].marginalBidId)
-        ) {
-            // Payout is calculated using the marginal price of the auction
-            bidClaim.paid = bidData.amount;
-            bidClaim.payout = Math.mulDiv(bidClaim.paid, baseScale, marginalPrice);
-        } else {
-            // Bidder is refunded the paid amount and receives no payout
-            bidClaim.paid = bidData.amount;
-            bidClaim.refund = bidData.amount;
-        }
+        // Get the BidClaim
+        bidClaim = _getBidClaim(lotId_, bidId_);
 
         return (bidClaim, auctionOutput_);
     }
@@ -714,6 +683,7 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
         return auctionData[lotId_].bidIds[index_];
     }
 
+    /// @notice     Returns the number of decrypted bids remaining in the queue
     function getNumBidsInQueue(uint96 lotId_) external view returns (uint256) {
         return decryptedBids[lotId_].getNumBids();
     }
@@ -1009,6 +979,15 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
 
     // ========== AUCTION INFORMATION ========== //
 
+    /// @notice Returns the `Bid` and `EncryptedBid` data for a given lot and bid ID
+    /// @dev    This function reverts if:
+    ///         - The lot ID is invalid
+    ///         - The bid ID is invalid
+    ///
+    /// @param  lotId_          The lot ID
+    /// @param  bidId_          The bid ID
+    /// @return bid             The `Bid` data
+    /// @return encryptedBid    The `EncryptedBid` data
     function getBid(
         uint96 lotId_,
         uint64 bidId_
@@ -1019,6 +998,12 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
         return (bids[lotId_][bidId_], encryptedBids[lotId_][bidId_]);
     }
 
+    /// @notice Returns the `AuctionData` data for an auction lot
+    /// @dev    This function reverts if:
+    ///         - The lot ID is invalid
+    ///
+    /// @param  lotId_          The lot ID
+    /// @return auctionData_    The `AuctionData`
     function getAuctionData(uint96 lotId_)
         external
         view
@@ -1029,19 +1014,42 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
         return auctionData[lotId_];
     }
 
-    function getPartialFill(uint96 lotId_) external view returns (PartialFill memory) {
+    /// @notice Returns the `PartialFill` data for an auction lot
+    /// @dev    For ease of use, this function determines if a partial fill exists.
+    ///
+    ///         This function reverts if:
+    ///         - The lot ID is invalid
+    ///         - The lot is not settled
+    ///
+    /// @param  lotId_          The lot ID
+    /// @return hasPartialFill  True if a partial fill exists
+    /// @return partialFill     The `PartialFill` data
+    function getPartialFill(uint96 lotId_)
+        external
+        view
+        returns (bool hasPartialFill, PartialFill memory partialFill)
+    {
         _revertIfLotInvalid(lotId_);
         _revertIfLotNotSettled(lotId_);
 
-        return _lotPartialFill[lotId_];
+        partialFill = _lotPartialFill[lotId_];
+        hasPartialFill = partialFill.bidId != 0;
+
+        return (hasPartialFill, partialFill);
     }
 
+    /// @inheritdoc BatchAuctionModule
+    /// @dev        This function reverts if:
+    ///             - The lot ID is invalid
     function getNumBids(uint96 lotId_) external view override returns (uint256) {
         _revertIfLotInvalid(lotId_);
 
         return auctionData[lotId_].bidIds.length;
     }
 
+    /// @inheritdoc BatchAuctionModule
+    /// @dev        This function reverts if:
+    ///             - The lot ID is invalid
     function getBidIds(
         uint96 lotId_,
         uint256 startIndex_,
@@ -1070,6 +1078,75 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
         }
 
         return result;
+    }
+
+    /// @notice Returns the `BidClaim` data for a given lot and bid ID
+    /// @dev    This function assumes:
+    ///         - The lot ID has been validated
+    ///         - The bid ID has been validated
+    ///
+    /// @param  lotId_          The lot ID
+    /// @param  bidId_          The bid ID
+    /// @return bidClaim        The `BidClaim` data
+    function _getBidClaim(
+        uint96 lotId_,
+        uint64 bidId_
+    ) internal view returns (BidClaim memory bidClaim) {
+        // Load bid data
+        Bid memory bidData = bids[lotId_][bidId_];
+
+        // Load the bidder and referrer addresses
+        bidClaim.bidder = bidData.bidder;
+        bidClaim.referrer = bidData.referrer;
+
+        // Calculate the bid price
+        uint256 baseScale = 10 ** lotData[lotId_].baseTokenDecimals;
+        uint256 price = bidData.minAmountOut == 0
+            ? 0 // Set price to zero for this bid since it was invalid
+            : Math.mulDivUp(bidData.amount, baseScale, bidData.minAmountOut);
+
+        uint256 marginalPrice = auctionData[lotId_].marginalPrice;
+
+        // If the bidId matches the partial fill for the lot, assign the stored data.
+        // Otherwise,
+        // If the bid price is greater than the marginal price, the bid is filled.
+        // If the bid price is equal to the marginal price and the bid was submitted before or is the marginal bid, the bid is filled.
+        // Auctions that do not meet capacity or price thresholds to settle will have their marginal price set at the maximum uint96
+        // and there will be no partial fill. Therefore, all bids will be refunded.
+        if (_lotPartialFill[lotId_].bidId == bidId_) {
+            bidClaim.paid = bidData.amount;
+            bidClaim.payout = _lotPartialFill[lotId_].payout;
+            bidClaim.refund = _lotPartialFill[lotId_].refund;
+        } else if (
+            price > marginalPrice
+                || (price == marginalPrice && bidId_ <= auctionData[lotId_].marginalBidId)
+        ) {
+            // Payout is calculated using the marginal price of the auction
+            bidClaim.paid = bidData.amount;
+            bidClaim.payout = Math.mulDiv(bidClaim.paid, baseScale, marginalPrice);
+        } else {
+            // Bidder is refunded the paid amount and receives no payout
+            bidClaim.paid = bidData.amount;
+            bidClaim.refund = bidData.amount;
+        }
+
+        return bidClaim;
+    }
+
+    /// @inheritdoc BatchAuctionModule
+    /// @dev        This function reverts if:
+    ///             - The lot ID is invalid
+    ///             - The lot is not settled (since there would be no claim)
+    ///             - The bid ID is invalid
+    function getBidClaim(
+        uint96 lotId_,
+        uint64 bidId_
+    ) external view override returns (BidClaim memory bidClaim) {
+        _revertIfLotInvalid(lotId_);
+        _revertIfLotNotSettled(lotId_);
+        _revertIfBidInvalid(lotId_, bidId_);
+
+        return _getBidClaim(lotId_, bidId_);
     }
 
     // ========== VALIDATION ========== //

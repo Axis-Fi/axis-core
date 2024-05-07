@@ -410,7 +410,9 @@ abstract contract EmpTest is Test, Permit2User {
         view
         returns (EncryptedMarginalPrice.PartialFill memory)
     {
-        return _module.getPartialFill(lotId_);
+        (, EncryptedMarginalPrice.PartialFill memory partialFill) = _module.getPartialFill(lotId_);
+
+        return partialFill;
     }
 
     function _getBid(
