@@ -348,4 +348,15 @@ abstract contract BatchAuctionModule is IBatchAuction, AuctionModule {
         uint256 start_,
         uint256 count_
     ) external view virtual returns (uint64[] memory);
+
+    /// @notice Get the claim data for a bid
+    /// @notice This provides information on the outcome of a bid, independent of the claim status
+    ///
+    /// @param  lotId_  The lot ID
+    /// @param  bidId_  The bid ID
+    /// @return         The bid claim data
+    function getBidClaim(
+        uint96 lotId_,
+        uint64 bidId_
+    ) external view virtual returns (BidClaim memory);
 }
