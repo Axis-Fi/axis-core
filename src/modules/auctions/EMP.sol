@@ -1135,12 +1135,14 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
     /// @inheritdoc BatchAuctionModule
     /// @dev        This function reverts if:
     ///             - The lot ID is invalid
+    ///             - The lot is not settled (since there would be no claim)
     ///             - The bid ID is invalid
     function getBidClaim(
         uint96 lotId_,
         uint64 bidId_
     ) external view override returns (BidClaim memory bidClaim) {
         _revertIfLotInvalid(lotId_);
+        _revertIfLotNotSettled(lotId_);
         _revertIfBidInvalid(lotId_, bidId_);
 
         return _getBidClaim(lotId_, bidId_);
