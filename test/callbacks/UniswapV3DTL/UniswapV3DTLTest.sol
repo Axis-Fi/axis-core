@@ -78,16 +78,18 @@ abstract contract UniswapV3DirectToLiquidityTest is Test, Permit2User, WithSalts
         vm.store(address(_auctionHouse), bytes32(uint256(10)), bytes32(abi.encode(_PROTOCOL))); // Protocol
 
         // Create a UniswapV3Factory at a deterministic address
+        vm.startBroadcast();
         _uniV3Factory = new UniswapV3Factory{
             salt: bytes32(0xbc65534283bdbbac4a95a3fb1933af63d55135566688dd54d1c55a626b1bc366)
         }();
-        console2.log("UniswapV3Factory address: {}", address(_uniV3Factory)); // 0x5573DCDCc96692D24938F4E440d99EFC3d7EDA04
+        console2.log("UniswapV3Factory address: ", address(_uniV3Factory)); // 0x43de928116768b88F8BF8f768b3de90A0Aaf9551
 
         // Create a GUniFactory at a deterministic address
         _gUniFactory = new GUniFactory{
             salt: bytes32(0x31d4bb3a2cd73df799deceac86fa252d040e24c2ea206f4172d74f72cfa34e4b)
         }(address(_uniV3Factory));
-        console2.log("GUniFactory address: {}", address(_gUniFactory)); // 0xe6b8030b2fd30ea9198D3F39AEeD4f448A2704f0
+        console2.log("GUniFactory address: ", address(_gUniFactory)); // 0xc46b184e5521Cb87Fc5288Ff49D978A4BE4B055c
+        vm.stopBroadcast();
 
         // Initialize the GUniFactory
         address payable gelatoAddress = payable(address(0x10));
