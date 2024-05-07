@@ -331,8 +331,18 @@ abstract contract BatchAuctionModule is IBatchAuction, AuctionModule {
 
     // ========== VIEW FUNCTIONS ========== //
 
+    /// @notice Get the number of bids for a lot
+    ///
+    /// @param  lotId_  The lot ID
+    /// @return         The number of bids
     function getNumBids(uint96 lotId_) external view virtual returns (uint256);
 
+    /// @notice Get the bid IDs from the given index
+    ///
+    /// @param  lotId_  The lot ID
+    /// @param  start_  The index to start retrieving bid IDs from
+    /// @param  count_  The number of bids to retrieve
+    /// @return         The bid IDs
     function getBidIds(
         uint96 lotId_,
         uint256 start_,

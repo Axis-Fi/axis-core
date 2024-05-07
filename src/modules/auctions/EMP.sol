@@ -25,12 +25,14 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
     using MaxPriorityQueue for Queue;
 
     // ========== ERRORS ========== //
+
     error Auction_InvalidKey();
     error Auction_WrongState(uint96 lotId);
     error Bid_WrongState(uint96 lotId, uint64 bidId);
     error NotPermitted(address caller);
 
     // ========== EVENTS ========== //
+
     event BidDecrypted(
         uint96 indexed lotId, uint64 indexed bidId, uint96 amountIn, uint96 amountOut
     );
@@ -188,11 +190,10 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
         dedicatedSettlePeriod = 1 days;
     }
 
+    /// @inheritdoc Module
     function VEECODE() public pure override returns (Veecode) {
         return toVeecode("01EMPA");
     }
-
-    // ========== MODIFIERS ========== //
 
     // ========== AUCTION ========== //
 
@@ -1009,6 +1010,15 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
 
     // ========== AUCTION INFORMATION ========== //
 
+    /// @notice Returns the `Bid` and `EncryptedBid` data for a given lot and bid ID
+    /// @dev    This function reverts if:
+    ///         - The lot ID is invalid
+    ///         - The bid ID is invalid
+    ///
+    /// @param  lotId_          The lot ID
+    /// @param  bidId_          The bid ID
+    /// @return bid             The `Bid` data
+    /// @return encryptedBid    The `EncryptedBid` data
     function getBid(
         uint96 lotId_,
         uint64 bidId_
@@ -1019,6 +1029,12 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
         return (bids[lotId_][bidId_], encryptedBids[lotId_][bidId_]);
     }
 
+    /// @notice Returns the `AuctionData` data for an auction lot
+    /// @dev    This function reverts if:
+    ///         - The lot ID is invalid
+    ///
+    /// @param  lotId_          The lot ID
+    /// @return auctionData_    The `AuctionData`
     function getAuctionData(uint96 lotId_)
         external
         view
@@ -1036,12 +1052,18 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
         return _lotPartialFill[lotId_];
     }
 
+    /// @inheritdoc BatchAuctionModule
+    /// @dev        This function reverts if:
+    ///             - The lot ID is invalid
     function getNumBids(uint96 lotId_) external view override returns (uint256) {
         _revertIfLotInvalid(lotId_);
 
         return auctionData[lotId_].bidIds.length;
     }
 
+    /// @inheritdoc BatchAuctionModule
+    /// @dev        This function reverts if:
+    ///             - The lot ID is invalid
     function getBidIds(
         uint96 lotId_,
         uint256 startIndex_,
