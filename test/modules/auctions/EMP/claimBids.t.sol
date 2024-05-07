@@ -80,6 +80,8 @@ contract EmpClaimBidsTest is EmpTest {
     //    [X] it returns the exact bid amount
     // [X] given the lot has been aborted
     //  [X] all bids are refunded
+    // [X] given the bid could not be decrypted
+    //  [X] it refunds the bid
 
     function test_invalidLotId_reverts() external {
         bytes memory err = abi.encodeWithSelector(IAuction.Auction_InvalidLotId.selector, _lotId);
@@ -1571,6 +1573,65 @@ contract EmpClaimBidsTest is EmpTest {
         assertEq(bidClaimOneView.paid, bidClaim.paid, "bid one: paid");
         assertEq(bidClaimOneView.payout, bidClaim.payout, "bid one: payout");
         assertEq(bidClaimOneView.refund, bidClaim.refund, "bid one: refund");
+    }
+
+    function test_givenBidNotDecrypted()
+        external
+        givenLotIsCreated
+        givenLotHasStarted
+        givenBidIsCreated(_BID_AMOUNT, _BID_AMOUNT_OUT)
+        givenBidIsCreated(type(uint96).max, 1e17) // Will cause the price to overflow
+        givenLotHasConcluded
+        givenPrivateKeyIsSubmitted
+        givenLotIsDecrypted
+        givenLotIsSettled
+    {
+        // Call the function
+        vm.prank(address(_auctionHouse));
+        (IBatchAuction.BidClaim[] memory bidClaims,) = _module.claimBids(_lotId, _bidIds);
+
+        // Check the result
+        IBatchAuction.BidClaim memory bidClaimOne = bidClaims[0];
+        assertEq(bidClaimOne.bidder, _BIDDER, "bid one: bidder");
+        assertEq(bidClaimOne.referrer, _REFERRER, "bid one: referrer");
+        assertEq(bidClaimOne.paid, _scaleQuoteTokenAmount(_BID_AMOUNT), "bid one: paid");
+        // auction is settled at minimum price of 1, so payout = paid (scaled to the correct decimals)
+        assertEq(bidClaimOne.payout, _scaleBaseTokenAmount(_BID_AMOUNT), "bid one: payout");
+        assertEq(bidClaimOne.refund, 0, "bid one: refund");
+
+        IBatchAuction.BidClaim memory bidClaimTwo = bidClaims[1];
+        assertEq(bidClaimTwo.bidder, _BIDDER, "bid two: bidder");
+        assertEq(bidClaimTwo.referrer, _REFERRER, "bid two: referrer");
+        assertEq(bidClaimTwo.paid, type(uint96).max, "bid two: paid");
+        assertEq(bidClaimTwo.payout, 0, "bid two: payout");
+        assertEq(bidClaimTwo.refund, type(uint96).max, "bid two: refund");
+
+        assertEq(bidClaims.length, 2, "bid claims length");
+
+        // Check the bid status
+        EncryptedMarginalPrice.Bid memory bidOne = _getBid(_lotId, _bidIds[0]);
+        assertEq(
+            uint8(bidOne.status), uint8(EncryptedMarginalPrice.BidStatus.Claimed), "bid one: status"
+        );
+        EncryptedMarginalPrice.Bid memory bidTwo = _getBid(_lotId, _bidIds[1]);
+        assertEq(
+            uint8(bidTwo.status), uint8(EncryptedMarginalPrice.BidStatus.Claimed), "bid two: status"
+        );
+
+        // Check that the BidClaim data matches
+        IBatchAuction.BidClaim memory bidClaimOneView = _module.getBidClaim(_lotId, _bidIds[0]);
+        assertEq(bidClaimOneView.bidder, bidClaimOne.bidder, "bid one: bidder");
+        assertEq(bidClaimOneView.referrer, bidClaimOne.referrer, "bid one: referrer");
+        assertEq(bidClaimOneView.paid, bidClaimOne.paid, "bid one: paid");
+        assertEq(bidClaimOneView.payout, bidClaimOne.payout, "bid one: payout");
+        assertEq(bidClaimOneView.refund, bidClaimOne.refund, "bid one: refund");
+
+        IBatchAuction.BidClaim memory bidClaimTwoView = _module.getBidClaim(_lotId, _bidIds[1]);
+        assertEq(bidClaimTwoView.bidder, bidClaimTwo.bidder, "bid two: bidder");
+        assertEq(bidClaimTwoView.referrer, bidClaimTwo.referrer, "bid two: referrer");
+        assertEq(bidClaimTwoView.paid, bidClaimTwo.paid, "bid two: paid");
+        assertEq(bidClaimTwoView.payout, bidClaimTwo.payout, "bid two: payout");
+        assertEq(bidClaimTwoView.refund, bidClaimTwo.refund, "bid two: refund");
     }
 
     function test_below_price_precision_totalCorrect()
