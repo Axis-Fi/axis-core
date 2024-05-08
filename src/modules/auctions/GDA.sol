@@ -8,9 +8,7 @@ import {Veecode, toVeecode} from "src/modules/Modules.sol";
 import {AtomicAuctionModule} from "src/modules/auctions/AtomicAuctionModule.sol";
 
 // External libraries
-import {
-    UD60x18, ud, convert, ZERO, UNIT, uUNIT, EXP_MAX_INPUT
-} from "lib/prb-math/src/UD60x18.sol";
+import {UD60x18, ud, convert, UNIT, uUNIT, EXP_MAX_INPUT} from "lib/prb-math/src/UD60x18.sol";
 import "lib/prb-math/src/Common.sol" as PRBMath;
 import {FixedPointMathLib} from "lib/solady/src/utils/FixedPointMathLib.sol";
 
@@ -20,24 +18,23 @@ contract GradualDutchAuction is AtomicAuctionModule {
 
     /// @notice Auction pricing data
     struct AuctionData {
-        uint256 equilibriumPrice; // price at which the auction is balanced
-        uint256 minimumPrice; // minimum price for the auction
+        uint256 equilibriumPrice; // initial price of one base token, where capacity and time are balanced
+        uint256 minimumPrice; // minimum price for one base token
         uint256 lastAuctionStart; // time that the last un-purchased auction started, may be in the future
         UD60x18 decayConstant; // speed at which the price decays, as UD60x18.
         UD60x18 emissionsRate; // number of tokens released per day, as UD60x18. Calculated as capacity / duration.
     }
 
     struct GDAParams {
-        uint256 equilibriumPrice;
-        uint256 minimumPrice;
+        uint256 equilibriumPrice; // initial price of one base token, where capacity and time are balanced
+        uint256 minimumPrice; // minimum price for one base token
         uint256 decayTarget; // target decay percent over the first decay period of an auction (steepest part of the curve)
         uint256 decayPeriod; // period over which the target decay percent is reached
     }
 
     // ========== STATE VARIABLES ========== //
-    // TODO instead of converting all times to fixed point days, we could just use seconds and not convert to 1e18. It
-    // It could problems with the decay constant being too large though
-    UD60x18 internal constant ONE_DAY = UD60x18.wrap(1 days);
+    /* solhint-disable private-vars-leading-underscore */
+    UD60x18 internal constant ONE_DAY = UD60x18.wrap(1 days * uUNIT);
 
     // Decay target over the first period must fit within these bounds
     // We use 18 decimals so we don't have to convert it to use as a UD60x18
@@ -58,16 +55,15 @@ contract GradualDutchAuction is AtomicAuctionModule {
     // MIN_LN_OUTPUT = ln(1/0.99) = 0_010050335853501441
     // MIN_LN_OUTPUT / 7 = 0_001435762264785920
 
-    // UD60x18 internal constant MAX_DECAY_CONSTANT = UD60x18.wrap(uint256(693_147_180_559_945_309));
-    // UD60x18 internal constant MIN_DECAY_CONSTANT = UD60x18.wrap(uint256(1_435_762_264_785_920));
+    /* solhint-enable private-vars-leading-underscore */
 
     mapping(uint256 id => AuctionData data) public auctionData;
 
     // ========== SETUP ========== //
 
     constructor(address auctionHouse_) AuctionModule(auctionHouse_) {
-        // TODO think about appropriate minimum for auction duration
-        minAuctionDuration = 1 days;
+        // Initially setting the minimum GDA duration to 1 hour
+        minAuctionDuration = 1 hours;
     }
 
     /// @inheritdoc Module
@@ -88,7 +84,6 @@ contract GradualDutchAuction is AtomicAuctionModule {
         }
 
         // Capacity must be in base token
-        // TODO can we allow capacity in quote token? Mostly effects emissions rate
         if (lot_.capacityInQuote) revert Auction_InvalidParams();
 
         // Minimum price can be zero, but the equations default back to the basic GDA implementation
@@ -298,6 +293,7 @@ contract GradualDutchAuction is AtomicAuctionModule {
         // Factors are calculated in a certain order to avoid precision loss
         UD60x18 payout;
         if (auction.minimumPrice == 0) {
+            // Auction does not have a minimum price
             UD60x18 logFactor;
             if (block.timestamp >= auction.lastAuctionStart) {
                 // T is positive
@@ -329,8 +325,7 @@ contract GradualDutchAuction is AtomicAuctionModule {
             // Calculate the payout
             payout = auction.emissionsRate.mul(logFactor).div(auction.decayConstant);
         } else {
-            // TODO think about refactoring to avoid precision loss
-
+            // Auction has a minimum price
             {
                 // Check that the amount / minPrice is not greater than the max payout (i.e. remaining capacity)
                 uint256 minPrice = auction.minimumPrice;
@@ -355,20 +350,20 @@ contract GradualDutchAuction is AtomicAuctionModule {
                 // T is positive
                 // This cannot exceed the max exponential input due to the bounds imbosed on auction creation
                 // Current time - last auction start is guaranteed to be < duration. If not, the auction is over.
-                // TODO determine bounds to prevent overflow on multiplication and division
-                c = q0.sub(qm).div(
+                // We have to divide twice to avoid multipling the exponential result by qm, which could overflow.
+                c = q0.sub(qm).div(qm).div(
                     auction.decayConstant.mul(convert(block.timestamp - auction.lastAuctionStart))
-                        .exp().mul(qm)
+                        .exp()
                 );
             } else {
                 // T is negative: flip the e^(k * T) term to the numerator
                 // This cannot exceed the max exponential input due to the bounds imbosed on auction creation
                 // last auction start - current time is guaranteed to be < duration. If not, the auction is over.
-                // TODO determine bounds to prevent overflow on multiplication and division
-                c = q0.sub(qm).mul(
+                // We divide before multiplying here to avoid reduce the odds of an intermediate result overflowing.
+                c = q0.sub(qm).div(qm).mul(
                     auction.decayConstant.mul(convert(auction.lastAuctionStart - block.timestamp))
                         .exp()
-                ).div(qm);
+                );
             }
 
             // Calculate the third term: W(C e^(k * Q / qm + C))
