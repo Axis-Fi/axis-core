@@ -10,7 +10,7 @@ import {MockFeeOnTransferERC20} from "test/lib/mocks/MockFeeOnTransferERC20.sol"
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 
 import {AtomicAuctionHouse} from "src/AtomicAuctionHouse.sol";
-import {Derivative} from "src/modules/Derivative.sol";
+import {IDerivative} from "src/interfaces/IDerivative.sol";
 import {LinearVesting} from "src/modules/derivatives/LinearVesting.sol";
 import {SoulboundCloneERC20} from "src/modules/derivatives/SoulboundCloneERC20.sol";
 
@@ -357,7 +357,7 @@ contract LinearVestingTest is Test, Permit2User {
         assertEq(wrappedAddress, _derivativeWrappedAddress, "derivative wrapped address");
 
         // Check token metadata
-        Derivative.Token memory tokenMetadata = _linearVesting.getTokenMetadata(tokenId);
+        IDerivative.Token memory tokenMetadata = _linearVesting.getTokenMetadata(tokenId);
         assertEq(tokenMetadata.exists, true, "tokenMetadata exists");
         assertEq(tokenMetadata.wrapped, wrappedAddress, "tokenMetadata wrapped");
         assertEq(
@@ -386,7 +386,7 @@ contract LinearVestingTest is Test, Permit2User {
         assertTrue(wrappedAddress != address(0), "derivative wrapped address");
 
         // Check token metadata
-        Derivative.Token memory tokenMetadata = _linearVesting.getTokenMetadata(tokenId);
+        IDerivative.Token memory tokenMetadata = _linearVesting.getTokenMetadata(tokenId);
         assertEq(tokenMetadata.exists, true, "tokenMetadata exists");
         assertEq(tokenMetadata.wrapped, wrappedAddress, "tokenMetadata wrapped");
         assertEq(
@@ -433,7 +433,7 @@ contract LinearVestingTest is Test, Permit2User {
         assertEq(wrappedDerivative.owner(), address(_linearVesting), "wrapped derivative owner");
 
         // Check token metadata
-        Derivative.Token memory tokenMetadata = _linearVesting.getTokenMetadata(tokenId);
+        IDerivative.Token memory tokenMetadata = _linearVesting.getTokenMetadata(tokenId);
         assertEq(tokenMetadata.exists, true, "tokenMetadata exists");
         assertEq(tokenMetadata.wrapped, wrappedAddress, "tokenMetadata wrapped");
         assertEq(
@@ -459,7 +459,7 @@ contract LinearVestingTest is Test, Permit2User {
         assertTrue(wrappedAddress == address(0), "wrapped address");
 
         // Check token metadata
-        Derivative.Token memory tokenMetadata = _linearVesting.getTokenMetadata(tokenId);
+        IDerivative.Token memory tokenMetadata = _linearVesting.getTokenMetadata(tokenId);
         assertEq(tokenMetadata.exists, true, "tokenMetadata exists");
         assertEq(tokenMetadata.wrapped, address(0), "tokenMetadata wrapped address");
         assertEq(
@@ -2179,7 +2179,7 @@ contract LinearVestingTest is Test, Permit2User {
         _linearVesting.wrap(_derivativeTokenId, wrapAmount);
 
         // Get the token metadata
-        Derivative.Token memory tokenMetadata = _linearVesting.getTokenMetadata(_derivativeTokenId);
+        IDerivative.Token memory tokenMetadata = _linearVesting.getTokenMetadata(_derivativeTokenId);
 
         // Check values
         assertEq(
@@ -2413,7 +2413,7 @@ contract LinearVestingTest is Test, Permit2User {
 
     function test_reclaim_reverts() public {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(Derivative.Derivative_NotImplemented.selector);
+        bytes memory err = abi.encodeWithSelector(IDerivative.Derivative_NotImplemented.selector);
         vm.expectRevert(err);
 
         // Call
@@ -2464,7 +2464,7 @@ contract LinearVestingTest is Test, Permit2User {
 
     function test_exerciseCost_reverts() public {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(Derivative.Derivative_NotImplemented.selector);
+        bytes memory err = abi.encodeWithSelector(IDerivative.Derivative_NotImplemented.selector);
         vm.expectRevert(err);
 
         // Call
@@ -2476,7 +2476,7 @@ contract LinearVestingTest is Test, Permit2User {
 
     function test_convertsTo_reverts() public {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(Derivative.Derivative_NotImplemented.selector);
+        bytes memory err = abi.encodeWithSelector(IDerivative.Derivative_NotImplemented.selector);
         vm.expectRevert(err);
 
         // Call
@@ -2488,7 +2488,7 @@ contract LinearVestingTest is Test, Permit2User {
 
     function test_transform_reverts() public {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(Derivative.Derivative_NotImplemented.selector);
+        bytes memory err = abi.encodeWithSelector(IDerivative.Derivative_NotImplemented.selector);
         vm.expectRevert(err);
 
         // Call
@@ -2500,7 +2500,7 @@ contract LinearVestingTest is Test, Permit2User {
 
     function test_exercise_reverts() public {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(Derivative.Derivative_NotImplemented.selector);
+        bytes memory err = abi.encodeWithSelector(IDerivative.Derivative_NotImplemented.selector);
         vm.expectRevert(err);
 
         // Call
