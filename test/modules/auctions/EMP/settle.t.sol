@@ -805,9 +805,9 @@ contract EmpSettleTest is EmpTest {
     }
 
     modifier givenLargeNumberOfFilledBids() {
-        // Create 2500 bids that will fill capacity
-        for (uint256 i; i < 2500; i++) {
-            _createBid(8e15, 4e15);
+        // Create 5000 bids that will fill capacity
+        for (uint256 i; i < 5000; i++) {
+            _createBid(4e15, 2e15);
         }
 
         // Create more bids that will not be filled
@@ -818,7 +818,7 @@ contract EmpSettleTest is EmpTest {
 
         // Marginal price: 2
         _expectedMarginalPrice = _scaleQuoteTokenAmount(2 * _BASE_SCALE);
-        _expectedMarginalBidId = 2500;
+        _expectedMarginalBidId = 5000;
 
         _expectedTotalIn = 10 * 2e18;
         _expectedTotalOut = 10 * 1e18;
@@ -850,7 +850,7 @@ contract EmpSettleTest is EmpTest {
         // Assumes that no bids are cancelled so numBids == auctionData.bidIds.length
         EncryptedMarginalPrice.AuctionData memory auctionData = _getAuctionData(_lotId);
         uint256 numBids = auctionData.nextBidId - 1;
-        uint256 decryptsAtOnce = 20;
+        uint256 decryptsAtOnce = 100;
         bytes32[] memory hints = new bytes32[](decryptsAtOnce);
         uint256 totalDecryptGas;
         while (numBids > 0) {
