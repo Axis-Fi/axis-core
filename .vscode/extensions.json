@@ -1,6 +1,9 @@
 {
   "recommendations": [
     "bierner.markdown-mermaid",
-    "bpruitt-goddard.mermaid-markdown-syntax-highlighting"
+    "bpruitt-goddard.mermaid-markdown-syntax-highlighting",
+    "gruntfuggly.todo-tree",
+    "nomicfoundation.hardhat-solidity",
+    "tamasfe.even-better-toml"
   ]
 }
