@@ -53,4 +53,12 @@ interface IAuctionHouse {
     /// @param      lotId_          ID of the auction lot
     /// @param      callbackData_   (optional) abi-encoded data to be sent to the onCancel callback function
     function cancel(uint96 lotId_, bytes calldata callbackData_) external;
+
+    // ========== AUCTION INFORMATION ========== //
+
+    /// @notice     Gets the module for a given lot ID
+    ///
+    /// @param      lotId_  ID of the auction lot
+    /// @return     module  The auction module
+    function getModuleForId(uint96 lotId_) external view returns (IAuction module);
 }

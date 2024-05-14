@@ -3,6 +3,7 @@ pragma solidity 0.8.19;
 
 // Interfaces
 import {ICallback} from "src/interfaces/ICallback.sol";
+import {IAuction} from "src/interfaces/IAuction.sol";
 
 // External libraries
 import {ERC20} from "lib/solmate/src/tokens/ERC20.sol";
@@ -10,7 +11,6 @@ import {ERC20} from "lib/solmate/src/tokens/ERC20.sol";
 import {Veecode, fromVeecode} from "src/modules/Keycode.sol";
 
 // Auctions
-import {AuctionModule} from "src/modules/Auction.sol";
 import {AuctionHouse} from "src/bases/AuctionHouse.sol";
 
 /// @notice Contract that provides view functions for auctions
@@ -66,21 +66,21 @@ abstract contract Catalogue {
     /// @notice    Returns whether the auction is currently accepting bids or purchases
     /// @dev       Auctions that have been created, but not yet started will return false
     function isLive(uint96 lotId_) public view returns (bool) {
-        AuctionModule module = AuctionHouse(auctionHouse).getModuleForId(lotId_);
+        IAuction module = AuctionHouse(auctionHouse).getModuleForId(lotId_);
 
         // Get isLive from module
         return module.isLive(lotId_);
     }
 
     function hasEnded(uint96 lotId_) external view returns (bool) {
-        AuctionModule module = AuctionHouse(auctionHouse).getModuleForId(lotId_);
+        IAuction module = AuctionHouse(auctionHouse).getModuleForId(lotId_);
 
         // Get hasEnded from module
         return module.hasEnded(lotId_);
     }
 
     function remainingCapacity(uint96 lotId_) external view returns (uint256) {
-        AuctionModule module = AuctionHouse(auctionHouse).getModuleForId(lotId_);
+        IAuction module = AuctionHouse(auctionHouse).getModuleForId(lotId_);
 
         // Get remaining capacity from module
         return module.remainingCapacity(lotId_);

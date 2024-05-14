@@ -366,13 +366,11 @@ abstract contract AuctionHouse is IAuctionHouse, WithModules, ReentrancyGuard, F
         return AuctionModule(_getModuleIfInstalled(lotRouting[lotId_].auctionReference));
     }
 
-    /// @notice     Gets the module for a given lot ID
+    /// @inheritdoc IAuctionHouse
     /// @dev        The function reverts if:
     ///             - The lot ID is invalid
     ///             - The module for the auction type is not installed
-    ///
-    /// @param      lotId_      ID of the auction lot
-    function getModuleForId(uint96 lotId_) external view returns (AuctionModule) {
+    function getModuleForId(uint96 lotId_) external view override returns (IAuction) {
         _isLotValid(lotId_);
 
         return _getModuleForId(lotId_);
