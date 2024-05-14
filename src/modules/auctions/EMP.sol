@@ -40,13 +40,6 @@ contract EncryptedMarginalPrice is BatchAuctionModule, IEncryptedMarginalPrice {
 
     // ========== DATA STRUCTURES ========== //
 
-    /// @notice     The status of an auction lot
-    enum LotStatus {
-        Created,
-        Decrypted,
-        Settled
-    }
-
     /// @notice     The status of a bid
     /// @dev        Bid status will also be set to claimed if the bid is cancelled/refunded
     enum BidStatus {
@@ -77,32 +70,6 @@ contract EncryptedMarginalPrice is BatchAuctionModule, IEncryptedMarginalPrice {
     struct EncryptedBid {
         uint256 encryptedAmountOut;
         Point bidPubKey;
-    }
-
-    /// @notice        Struct containing auction-specific data
-    ///
-    /// @param         nextBidId           The ID of the next bid to be submitted
-    /// @param         nextDecryptIndex    The index of the next bid to decrypt
-    /// @param         status              The status of the auction
-    /// @param         marginalBidId       The ID of the marginal bid (marking that bids following it are not filled)
-    /// @param         marginalPrice       The marginal price of the auction (determined at settlement, blank before)
-    /// @param         minFilled           The minimum amount of the lot that must be filled
-    /// @param         minBidSize          The minimum size of a bid in quote tokens
-    /// @param         publicKey           The public key used to encrypt bids (a point on the alt_bn128 curve from the generator point (1,2))
-    /// @param         privateKey          The private key used to decrypt bids (not provided until after the auction ends)
-    /// @param         bidIds              The list of bid IDs to decrypt in order of submission, excluding cancelled bids
-    struct AuctionData {
-        uint64 nextBidId; // 8 +
-        uint64 nextDecryptIndex; // 8 +
-        LotStatus status; // 1 +
-        uint64 marginalBidId; // 8  = 25 - end of slot 1
-        uint256 marginalPrice; // 32 - slot 2
-        uint256 minPrice; // 32 - slot 3
-        uint256 minFilled; // 32 - slot 4
-        uint256 minBidSize; // 32 - slot 5
-        Point publicKey; // 64 - slots 6 and 7
-        uint256 privateKey; // 32 - slot 8
-        uint64[] bidIds; // slots 9+
     }
 
     /// @notice Stuct containing the marginal price result
@@ -990,15 +957,13 @@ contract EncryptedMarginalPrice is BatchAuctionModule, IEncryptedMarginalPrice {
         return (bids[lotId_][bidId_], encryptedBids[lotId_][bidId_]);
     }
 
-    /// @notice Returns the `AuctionData` data for an auction lot
-    /// @dev    This function reverts if:
-    ///         - The lot ID is invalid
-    ///
-    /// @param  lotId_          The lot ID
-    /// @return auctionData_    The `AuctionData`
+    /// @inheritdoc IEncryptedMarginalPrice
+    /// @dev        This function reverts if:
+    ///             - The lot ID is invalid
     function getAuctionData(uint96 lotId_)
         external
         view
+        override
         returns (AuctionData memory auctionData_)
     {
         _revertIfLotInvalid(lotId_);

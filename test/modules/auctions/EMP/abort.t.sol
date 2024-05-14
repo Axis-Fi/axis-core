@@ -4,6 +4,7 @@ pragma solidity 0.8.19;
 import {IAuction} from "src/interfaces/IAuction.sol";
 import {IBatchAuction} from "src/interfaces/IBatchAuction.sol";
 import {EncryptedMarginalPrice} from "src/modules/auctions/EMP.sol";
+import {IEncryptedMarginalPrice} from "src/interfaces/modules/auctions/IEncryptedMarginalPrice.sol";
 
 import {EmpTest} from "test/modules/auctions/EMP/EMPTest.sol";
 
@@ -237,7 +238,7 @@ contract EmpAbortTest is EmpTest {
         // Check the lot status
         EncryptedMarginalPrice.AuctionData memory auctionData = _getAuctionData(_lotId);
 
-        assertEq(uint8(auctionData.status), uint8(EncryptedMarginalPrice.LotStatus.Settled));
+        assertEq(uint8(auctionData.status), uint8(IEncryptedMarginalPrice.LotStatus.Settled));
         assertEq(auctionData.marginalPrice, type(uint256).max);
     }
 
@@ -257,7 +258,7 @@ contract EmpAbortTest is EmpTest {
         // Check the lot status
         EncryptedMarginalPrice.AuctionData memory auctionData = _getAuctionData(_lotId);
 
-        assertEq(uint8(auctionData.status), uint8(EncryptedMarginalPrice.LotStatus.Settled));
+        assertEq(uint8(auctionData.status), uint8(IEncryptedMarginalPrice.LotStatus.Settled));
         assertEq(auctionData.marginalPrice, type(uint256).max);
     }
 
@@ -278,7 +279,7 @@ contract EmpAbortTest is EmpTest {
         // Check the lot status
         EncryptedMarginalPrice.AuctionData memory auctionData = _getAuctionData(_lotId);
 
-        assertEq(uint8(auctionData.status), uint8(EncryptedMarginalPrice.LotStatus.Settled));
+        assertEq(uint8(auctionData.status), uint8(IEncryptedMarginalPrice.LotStatus.Settled));
         assertEq(auctionData.marginalPrice, type(uint256).max);
     }
 

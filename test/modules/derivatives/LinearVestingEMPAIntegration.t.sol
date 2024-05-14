@@ -224,7 +224,7 @@ contract LinearVestingEMPAIntegrationTest is BatchAuctionHouseTest {
         // Check the auction data
         EncryptedMarginalPrice.AuctionData memory auctionData = _empaModule.getAuctionData(_lotId);
         assertEq(
-            uint8(auctionData.status), uint8(EncryptedMarginalPrice.LotStatus.Settled), "status"
+            uint8(auctionData.status), uint8(IEncryptedMarginalPrice.LotStatus.Settled), "status"
         );
 
         // Check balances
@@ -318,7 +318,7 @@ contract LinearVestingEMPAIntegrationTest is BatchAuctionHouseTest {
         // Check the auction
         EncryptedMarginalPrice.AuctionData memory auctionData = _empaModule.getAuctionData(_lotId);
         assertEq(
-            uint8(auctionData.status), uint8(EncryptedMarginalPrice.LotStatus.Decrypted), "status"
+            uint8(auctionData.status), uint8(IEncryptedMarginalPrice.LotStatus.Decrypted), "status"
         );
 
         // Check the bid
@@ -351,7 +351,7 @@ contract LinearVestingEMPAIntegrationTest is BatchAuctionHouseTest {
         // Check the auction
         EncryptedMarginalPrice.AuctionData memory auctionData = _empaModule.getAuctionData(_lotId);
         assertEq(
-            uint8(auctionData.status), uint8(EncryptedMarginalPrice.LotStatus.Settled), "status"
+            uint8(auctionData.status), uint8(IEncryptedMarginalPrice.LotStatus.Settled), "status"
         );
 
         // Check the lot
@@ -412,7 +412,7 @@ contract LinearVestingEMPAIntegrationTest is BatchAuctionHouseTest {
         // Check the auction
         EncryptedMarginalPrice.AuctionData memory auctionData = _empaModule.getAuctionData(_lotId);
         assertEq(
-            uint8(auctionData.status), uint8(EncryptedMarginalPrice.LotStatus.Settled), "status"
+            uint8(auctionData.status), uint8(IEncryptedMarginalPrice.LotStatus.Settled), "status"
         );
 
         // Get derivative token id

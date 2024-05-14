@@ -3,6 +3,7 @@ pragma solidity 0.8.19;
 
 import {IAuction} from "src/interfaces/IAuction.sol";
 import {EncryptedMarginalPrice} from "src/modules/auctions/EMP.sol";
+import {IEncryptedMarginalPrice} from "src/interfaces/modules/auctions/IEncryptedMarginalPrice.sol";
 
 import {EmpTest} from "test/modules/auctions/EMP/EMPTest.sol";
 
@@ -180,7 +181,7 @@ contract EmpDecryptBidsTest is EmpTest {
         assertEq(auctionData.nextDecryptIndex, 1, "nextDecryptIndex");
         assertEq(
             uint8(auctionData.status),
-            uint8(EncryptedMarginalPrice.LotStatus.Decrypted),
+            uint8(IEncryptedMarginalPrice.LotStatus.Decrypted),
             "auction status"
         );
     }
@@ -218,7 +219,7 @@ contract EmpDecryptBidsTest is EmpTest {
         assertEq(auctionData.nextDecryptIndex, 1, "nextDecryptIndex");
         assertEq(
             uint8(auctionData.status),
-            uint8(EncryptedMarginalPrice.LotStatus.Decrypted),
+            uint8(IEncryptedMarginalPrice.LotStatus.Decrypted),
             "auction status"
         );
     }
@@ -252,7 +253,7 @@ contract EmpDecryptBidsTest is EmpTest {
         assertEq(auctionData.nextDecryptIndex, 1, "nextDecryptIndex");
         assertEq(
             uint8(auctionData.status),
-            uint8(EncryptedMarginalPrice.LotStatus.Decrypted),
+            uint8(IEncryptedMarginalPrice.LotStatus.Decrypted),
             "auction status"
         );
     }
@@ -289,7 +290,7 @@ contract EmpDecryptBidsTest is EmpTest {
         assertEq(auctionData.nextDecryptIndex, 1, "nextDecryptIndex");
         assertEq(
             uint8(auctionData.status),
-            uint8(EncryptedMarginalPrice.LotStatus.Decrypted),
+            uint8(IEncryptedMarginalPrice.LotStatus.Decrypted),
             "auction status"
         );
     }
@@ -336,7 +337,7 @@ contract EmpDecryptBidsTest is EmpTest {
         // Check the auction state
         EncryptedMarginalPrice.AuctionData memory auctionData = _getAuctionData(_lotId);
         assertEq(auctionData.nextDecryptIndex, 1);
-        assertEq(uint8(auctionData.status), uint8(EncryptedMarginalPrice.LotStatus.Decrypted));
+        assertEq(uint8(auctionData.status), uint8(IEncryptedMarginalPrice.LotStatus.Decrypted));
     }
 
     function test_noBids()
@@ -351,7 +352,7 @@ contract EmpDecryptBidsTest is EmpTest {
         EncryptedMarginalPrice.AuctionData memory auctionData = _getAuctionData(_lotId);
         assertEq(
             uint8(auctionData.status),
-            uint8(EncryptedMarginalPrice.LotStatus.Decrypted),
+            uint8(IEncryptedMarginalPrice.LotStatus.Decrypted),
             "auction status"
         );
     }
@@ -392,7 +393,7 @@ contract EmpDecryptBidsTest is EmpTest {
         assertEq(auctionData.nextDecryptIndex, 1, "nextDecryptIndex");
         assertEq(
             uint8(auctionData.status),
-            uint8(EncryptedMarginalPrice.LotStatus.Created),
+            uint8(IEncryptedMarginalPrice.LotStatus.Created),
             "auction status"
         );
     }
@@ -436,7 +437,7 @@ contract EmpDecryptBidsTest is EmpTest {
         assertEq(auctionData.nextDecryptIndex, 2, "nextDecryptIndex");
         assertEq(
             uint8(auctionData.status),
-            uint8(EncryptedMarginalPrice.LotStatus.Decrypted),
+            uint8(IEncryptedMarginalPrice.LotStatus.Decrypted),
             "auction status"
         );
     }

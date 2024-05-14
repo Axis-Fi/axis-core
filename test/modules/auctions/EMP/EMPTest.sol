@@ -382,7 +382,7 @@ abstract contract EmpTest is Test, Permit2User {
         (
             uint64 nextBidId_,
             uint64 nextDecryptIndex_,
-            EncryptedMarginalPrice.LotStatus status_,
+            IEncryptedMarginalPrice.LotStatus status_,
             uint64 marginalBidId_,
             uint256 marginalPrice_,
             uint256 minPrice_,
@@ -392,7 +392,7 @@ abstract contract EmpTest is Test, Permit2User {
             uint256 privateKey_
         ) = _module.auctionData(lotId_);
 
-        return EncryptedMarginalPrice.AuctionData({
+        return IEncryptedMarginalPrice.AuctionData({
             nextBidId: nextBidId_,
             nextDecryptIndex: nextDecryptIndex_,
             status: status_,
