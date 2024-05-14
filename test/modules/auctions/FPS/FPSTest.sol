@@ -12,6 +12,7 @@ import {Permit2User} from "test/lib/permit2/Permit2User.sol";
 import {AtomicAuctionHouse} from "src/AtomicAuctionHouse.sol";
 import {IAuction} from "src/interfaces/IAuction.sol";
 import {FixedPriceSale} from "src/modules/auctions/FPS.sol";
+import {IFixedPriceSale} from "src/interfaces/modules/auctions/IFixedPriceSale.sol";
 
 abstract contract FpsTest is Test, Permit2User {
     uint256 internal constant _BASE_SCALE = 1e18;
@@ -32,7 +33,7 @@ abstract contract FpsTest is Test, Permit2User {
     uint48 internal _start;
     uint96 internal _lotId = type(uint96).max;
     IAuction.AuctionParams internal _auctionParams;
-    FixedPriceSale.FixedPriceParams internal _fpaParams;
+    FixedPriceSale.AuctionDataParams internal _fpaParams;
 
     uint8 internal _quoteTokenDecimals = 18;
     uint8 internal _baseTokenDecimals = 18;
@@ -45,8 +46,10 @@ abstract contract FpsTest is Test, Permit2User {
 
         _start = uint48(block.timestamp) + 1;
 
-        _fpaParams =
-            FixedPriceSale.FixedPriceParams({price: _PRICE, maxPayoutPercent: _MAX_PAYOUT_PERCENT});
+        _fpaParams = IFixedPriceSale.AuctionDataParams({
+            price: _PRICE,
+            maxPayoutPercent: _MAX_PAYOUT_PERCENT
+        });
 
         _auctionParams = IAuction.AuctionParams({
             start: _start,
@@ -160,8 +163,11 @@ abstract contract FpsTest is Test, Permit2User {
     }
 
     function _createPurchase(uint256 amount_, uint256 minAmountOut_) internal {
+        IFixedPriceSale.PurchaseParams memory purchaseParams =
+            IFixedPriceSale.PurchaseParams({minAmountOut: minAmountOut_});
+
         vm.prank(address(_auctionHouse));
-        _module.purchase(_lotId, amount_, abi.encode(minAmountOut_));
+        _module.purchase(_lotId, amount_, abi.encode(purchaseParams));
     }
 
     modifier givenPurchase(uint256 amount_, uint256 minAmountOut_) {
