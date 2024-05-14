@@ -637,11 +637,6 @@ contract EncryptedMarginalPrice is BatchAuctionModule, IEncryptedMarginalPrice {
         return decryptedBids[lotId_].getNext(key_);
     }
 
-    /// @notice     Returns the bid id at the specified index
-    function getBidIdAtIndex(uint96 lotId_, uint256 index_) external view returns (uint64) {
-        return auctionData[lotId_].bidIds[index_];
-    }
-
     /// @notice     Returns the number of decrypted bids remaining in the queue
     function getNumBidsInQueue(uint96 lotId_) external view returns (uint256) {
         return decryptedBids[lotId_].getNumBids();
@@ -995,7 +990,7 @@ contract EncryptedMarginalPrice is BatchAuctionModule, IEncryptedMarginalPrice {
         return (hasPartialFill, partialFill);
     }
 
-    /// @inheritdoc BatchAuctionModule
+    /// @inheritdoc IBatchAuction
     /// @dev        This function reverts if:
     ///             - The lot ID is invalid
     function getNumBids(uint96 lotId_) external view override returns (uint256) {
@@ -1004,7 +999,7 @@ contract EncryptedMarginalPrice is BatchAuctionModule, IEncryptedMarginalPrice {
         return auctionData[lotId_].bidIds.length;
     }
 
-    /// @inheritdoc BatchAuctionModule
+    /// @inheritdoc IBatchAuction
     /// @dev        This function reverts if:
     ///             - The lot ID is invalid
     function getBidIds(
@@ -1090,7 +1085,15 @@ contract EncryptedMarginalPrice is BatchAuctionModule, IEncryptedMarginalPrice {
         return bidClaim;
     }
 
-    /// @inheritdoc BatchAuctionModule
+    /// @inheritdoc IBatchAuction
+    function getBidIdAtIndex(
+        uint96 lotId_,
+        uint256 index_
+    ) external view override returns (uint64) {
+        return auctionData[lotId_].bidIds[index_];
+    }
+
+    /// @inheritdoc IBatchAuction
     /// @dev        This function reverts if:
     ///             - The lot ID is invalid
     ///             - The lot is not settled (since there would be no claim)

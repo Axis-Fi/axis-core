@@ -328,35 +328,4 @@ abstract contract BatchAuctionModule is IBatchAuction, AuctionModule {
             revert Auction_DedicatedSettlePeriod(lotId_);
         }
     }
-
-    // ========== VIEW FUNCTIONS ========== //
-
-    /// @notice Get the number of bids for a lot
-    ///
-    /// @param  lotId_  The lot ID
-    /// @return         The number of bids
-    function getNumBids(uint96 lotId_) external view virtual returns (uint256);
-
-    /// @notice Get the bid IDs from the given index
-    ///
-    /// @param  lotId_  The lot ID
-    /// @param  start_  The index to start retrieving bid IDs from
-    /// @param  count_  The number of bids to retrieve
-    /// @return         The bid IDs
-    function getBidIds(
-        uint96 lotId_,
-        uint256 start_,
-        uint256 count_
-    ) external view virtual returns (uint64[] memory);
-
-    /// @notice Get the claim data for a bid
-    /// @notice This provides information on the outcome of a bid, independent of the claim status
-    ///
-    /// @param  lotId_  The lot ID
-    /// @param  bidId_  The bid ID
-    /// @return         The bid claim data
-    function getBidClaim(
-        uint96 lotId_,
-        uint64 bidId_
-    ) external view virtual returns (BidClaim memory);
 }

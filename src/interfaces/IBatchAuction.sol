@@ -33,7 +33,7 @@ interface IBatchAuction is IAuction {
         uint256 refund;
     }
 
-    // ========== BATCH AUCTIONS ========== //
+    // ========== BATCH OPERATIONS ========== //
 
     /// @notice     Bid on an auction lot
     /// @dev        The implementing function should handle the following:
@@ -119,4 +119,39 @@ interface IBatchAuction is IAuction {
     ///
     /// @param     lotId_    The lot id
     function abort(uint96 lotId_) external;
+
+    // ========== VIEW FUNCTIONS ========== //
+
+    /// @notice Get the number of bids for a lot
+    ///
+    /// @param  lotId_  The lot ID
+    /// @return         The number of bids
+    function getNumBids(uint96 lotId_) external view returns (uint256);
+
+    /// @notice Get the bid IDs from the given index
+    ///
+    /// @param  lotId_  The lot ID
+    /// @param  start_  The index to start retrieving bid IDs from
+    /// @param  count_  The number of bids to retrieve
+    /// @return         The bid IDs
+    function getBidIds(
+        uint96 lotId_,
+        uint256 start_,
+        uint256 count_
+    ) external view returns (uint64[] memory);
+
+    /// @notice Get the bid ID at the given index
+    ///
+    /// @param  lotId_  The lot ID
+    /// @param  index_  The index
+    /// @return         The bid ID
+    function getBidIdAtIndex(uint96 lotId_, uint256 index_) external view returns (uint64);
+
+    /// @notice Get the claim data for a bid
+    /// @notice This provides information on the outcome of a bid, independent of the claim status
+    ///
+    /// @param  lotId_  The lot ID
+    /// @param  bidId_  The bid ID
+    /// @return         The bid claim data
+    function getBidClaim(uint96 lotId_, uint64 bidId_) external view returns (BidClaim memory);
 }

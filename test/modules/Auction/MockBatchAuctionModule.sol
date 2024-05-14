@@ -243,6 +243,10 @@ contract MockBatchAuctionModule is BatchAuctionModule {
         return ids;
     }
 
+    function getBidIdAtIndex(uint96, uint256 index_) external view override returns (uint64) {
+        return bidIds[index_];
+    }
+
     function getBidClaim(
         uint96 lotId_,
         uint64 bidId_
