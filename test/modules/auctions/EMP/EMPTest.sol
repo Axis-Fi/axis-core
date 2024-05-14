@@ -14,6 +14,7 @@ import {Permit2User} from "test/lib/permit2/Permit2User.sol";
 import {BatchAuctionHouse} from "src/BatchAuctionHouse.sol";
 import {IAuction} from "src/interfaces/IAuction.sol";
 import {EncryptedMarginalPrice} from "src/modules/auctions/EMP.sol";
+import {IEncryptedMarginalPrice} from "src/interfaces/modules/auctions/IEncryptedMarginalPrice.sol";
 
 abstract contract EmpTest is Test, Permit2User {
     uint256 internal constant _BASE_SCALE = 1e18;
@@ -65,7 +66,7 @@ abstract contract EmpTest is Test, Permit2User {
         _start = uint48(block.timestamp) + 1;
         _settlePeriod = _module.dedicatedSettlePeriod();
 
-        _auctionDataParams = EncryptedMarginalPrice.AuctionDataParams({
+        _auctionDataParams = IEncryptedMarginalPrice.AuctionDataParams({
             minPrice: _MIN_PRICE,
             minFillPercent: _MIN_FILL_PERCENT,
             minBidSize: _MIN_BID_SIZE,
@@ -218,7 +219,13 @@ abstract contract EmpTest is Test, Permit2User {
     ) internal view returns (bytes memory) {
         uint256 encryptedAmountOut = _encryptBid(_lotId, bidder_, amountIn_, amountOut_);
 
-        return abi.encode(encryptedAmountOut, _bidPublicKey);
+        IEncryptedMarginalPrice.BidParams memory bidParams =
+            IEncryptedMarginalPrice.BidParams({
+                encryptedAmountOut: encryptedAmountOut,
+                bidPublicKey: _bidPublicKey
+            });
+
+        return abi.encode(bidParams);
     }
 
     function _createBidData(

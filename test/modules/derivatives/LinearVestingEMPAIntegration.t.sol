@@ -7,6 +7,7 @@ import {LinearVesting} from "src/modules/derivatives/LinearVesting.sol";
 import {Point, ECIES} from "src/lib/ECIES.sol";
 import {AuctionHouse} from "src/bases/AuctionHouse.sol";
 import {IAuction} from "src/interfaces/IAuction.sol";
+import {IEncryptedMarginalPrice} from "src/interfaces/modules/auctions/IEncryptedMarginalPrice.sol";
 
 import {keycodeFromVeecode, fromVeecode} from "src/modules/Modules.sol";
 
@@ -55,7 +56,7 @@ contract LinearVestingEMPAIntegrationTest is BatchAuctionHouseTest {
         _auctionPublicKey = ECIES.calcPubKey(Point(1, 2), _AUCTION_PRIVATE_KEY);
         _bidPublicKey = ECIES.calcPubKey(Point(1, 2), _BID_PRIVATE_KEY);
 
-        _auctionDataParams = EncryptedMarginalPrice.AuctionDataParams({
+        _auctionDataParams = IEncryptedMarginalPrice.AuctionDataParams({
             minPrice: _MIN_PRICE,
             minFillPercent: _MIN_FILL_PERCENT,
             minBidSize: _MIN_BID_SIZE,

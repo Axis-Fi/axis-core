@@ -3,6 +3,7 @@ pragma solidity 0.8.19;
 
 // Interfaces
 import {IBatchAuction} from "src/interfaces/IBatchAuction.sol";
+import {IEncryptedMarginalPrice} from "src/interfaces/modules/auctions/IEncryptedMarginalPrice.sol";
 
 // Internal libraries
 import {ECIES, Point} from "src/lib/ECIES.sol";
@@ -21,7 +22,7 @@ import {Module, Veecode, toVeecode} from "src/modules/Modules.sol";
 /// @dev        This batch auction module allows for bids to be encrypted off-chain, then stored, decrypted and settled on-chain.
 ///
 ///             Note that the maximum bid amount is bounded by uint96.
-contract EncryptedMarginalPrice is BatchAuctionModule {
+contract EncryptedMarginalPrice is BatchAuctionModule, IEncryptedMarginalPrice {
     using MaxPriorityQueue for Queue;
 
     // ========== ERRORS ========== //
@@ -104,18 +105,6 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
         uint64[] bidIds; // slots 9+
     }
 
-    /// @notice         Parameters that are used to set auction-specific data
-    ///
-    /// @param          minPrice            The minimum price (in quote tokens) that a bid must fulfill
-    /// @param          minFillPercent      The minimum percentage of capacity that the lot must fill in order to settle
-    /// @param          minBidSize          The minimum size of a bid in quote tokens
-    /// @param          publicKey           The public key used to encrypt bids
-    struct AuctionDataParams {
-        uint256 minPrice;
-        uint24 minFillPercent;
-        uint256 minBidSize;
-        Point publicKey;
-    }
 
     /// @notice Stuct containing the marginal price result
     /// @dev    Memory only, no need to pack
@@ -285,6 +274,7 @@ contract EncryptedMarginalPrice is BatchAuctionModule {
     ///             - The amount is greater than the max uint96 value
     ///             - The amount is less than the minimum bid size for the lot
     ///             - The bid public key is not valid
+    /// @param      auctionData_    ABI-encoded data of type `IEncryptedMarginalPrice.BidParams`
     function _bid(
         uint96 lotId_,
         address bidder_,
