@@ -105,7 +105,6 @@ contract EncryptedMarginalPrice is BatchAuctionModule, IEncryptedMarginalPrice {
         uint64[] bidIds; // slots 9+
     }
 
-
     /// @notice Stuct containing the marginal price result
     /// @dev    Memory only, no need to pack
     ///
@@ -202,6 +201,8 @@ contract EncryptedMarginalPrice is BatchAuctionModule, IEncryptedMarginalPrice {
     ///             - The minimum fill percent is greater than 100%
     ///             - The minimum bid size is zero or greater than the max uint96 value
     ///             - The public key is not valid
+    ///
+    /// @param      params_    ABI-encoded data of type `IEncryptedMarginalPrice.AuctionDataParams`
     function _auction(uint96 lotId_, Lot memory lot_, bytes memory params_) internal override {
         // Decode implementation params
         AuctionDataParams memory implParams = abi.decode(params_, (AuctionDataParams));
@@ -274,6 +275,7 @@ contract EncryptedMarginalPrice is BatchAuctionModule, IEncryptedMarginalPrice {
     ///             - The amount is greater than the max uint96 value
     ///             - The amount is less than the minimum bid size for the lot
     ///             - The bid public key is not valid
+    ///
     /// @param      auctionData_    ABI-encoded data of type `IEncryptedMarginalPrice.BidParams`
     function _bid(
         uint96 lotId_,

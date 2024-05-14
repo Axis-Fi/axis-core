@@ -219,11 +219,10 @@ abstract contract EmpTest is Test, Permit2User {
     ) internal view returns (bytes memory) {
         uint256 encryptedAmountOut = _encryptBid(_lotId, bidder_, amountIn_, amountOut_);
 
-        IEncryptedMarginalPrice.BidParams memory bidParams =
-            IEncryptedMarginalPrice.BidParams({
-                encryptedAmountOut: encryptedAmountOut,
-                bidPublicKey: _bidPublicKey
-            });
+        IEncryptedMarginalPrice.BidParams memory bidParams = IEncryptedMarginalPrice.BidParams({
+            encryptedAmountOut: encryptedAmountOut,
+            bidPublicKey: _bidPublicKey
+        });
 
         return abi.encode(bidParams);
     }
