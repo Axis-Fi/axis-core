@@ -134,6 +134,14 @@ abstract contract AuctionModule is IAuction, Module {
     }
 
     /// @inheritdoc IAuction
+    function isUpcoming(uint96 lotId_) public view override returns (bool) {
+        return (
+            lotData[lotId_].capacity != 0 && uint48(block.timestamp) < lotData[lotId_].conclusion
+                && uint48(block.timestamp) < lotData[lotId_].start
+        );
+    }
+
+    /// @inheritdoc IAuction
     function hasEnded(uint96 lotId_) public view override returns (bool) {
         return
             uint48(block.timestamp) >= lotData[lotId_].conclusion || lotData[lotId_].capacity == 0;

@@ -108,6 +108,15 @@ interface IAuction {
     /// @return     bool    Whether or not the lot is active
     function isLive(uint96 lotId_) external view returns (bool);
 
+    /// @notice     Returns whether the auction is upcoming
+    /// @dev        The implementing function should handle the following:
+    ///             - Return true if the lot has not started yet AND has not been cancelled
+    ///             - Return false if the lot is active, has ended, or was cancelled
+    ///
+    /// @param      lotId_  The lot id
+    /// @return     bool    Whether or not the lot is upcoming
+    function isUpcoming(uint96 lotId_) external view returns (bool);
+
     /// @notice     Returns whether the auction has ended
     /// @dev        The implementing function should handle the following:
     ///             - Return true if the lot is not accepting bids/purchases and will not at any point
