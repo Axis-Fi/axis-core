@@ -40,4 +40,11 @@ interface ILinearVesting {
         uint48 start;
         uint48 expiry;
     }
+
+    // ========== VIEW FUNCTIONS ========== //
+
+    /// @notice     Get the vesting parameters for a derivative token
+    ///
+    /// @param      tokenId The ID of the derivative token
+    function getTokenVestingParams(uint256 tokenId) external view returns (VestingParams memory);
 }

@@ -9,8 +9,6 @@ interface IDerivative {
 
     error Derivative_NotImplemented();
 
-    // ========== EVENTS ========== //
-
     // ========== DATA STRUCTURES ========== //
 
     /// @notice     Metadata for a derivative token
@@ -109,6 +107,13 @@ interface IDerivative {
     /// @param      amount      The amount of derivative tokens to exercise
     function exercise(uint256 tokenId_, uint256 amount) external;
 
+    /// @notice     Determines the cost to exercise a derivative token in the quoted token
+    /// @dev        Used for options or other derivatives with convertible options, e.g. Rage vesting.
+    ///
+    /// @param      tokenId_    The ID of the derivative token to exercise
+    /// @param      amount      The amount of derivative tokens to exercise
+    function exerciseCost(uint256 tokenId_, uint256 amount) external view returns (uint256);
+
     /// @notice     Reclaim posted collateral for a derivative token which can no longer be exercised
     /// @notice     Access controlled: only callable by the derivative issuer via the auction house.
     ///
@@ -148,12 +153,6 @@ interface IDerivative {
     ) external view returns (bool);
 
     // ========== DERIVATIVE INFORMATION ========== //
-
-    // TODO view function to format implementation specific token data correctly and return to user
-
-    function exerciseCost(bytes memory data, uint256 amount) external view returns (uint256);
-
-    function convertsTo(bytes memory data, uint256 amount) external view returns (uint256);
 
     /// @notice     Compute a unique token ID, given the parameters for the derivative
     ///

@@ -2467,19 +2467,7 @@ contract LinearVestingTest is Test, Permit2User {
         vm.expectRevert(err);
 
         // Call
-        _linearVesting.exerciseCost(bytes(""), _derivativeTokenId);
-    }
-
-    // convertsTo
-    // [X] it reverts
-
-    function test_convertsTo_reverts() public {
-        // Expect revert
-        bytes memory err = abi.encodeWithSelector(IDerivative.Derivative_NotImplemented.selector);
-        vm.expectRevert(err);
-
-        // Call
-        _linearVesting.convertsTo(bytes(""), _derivativeTokenId);
+        _linearVesting.exerciseCost(_derivativeTokenId, _AMOUNT);
     }
 
     // transform

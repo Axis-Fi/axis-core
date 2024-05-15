@@ -369,6 +369,12 @@ contract LinearVesting is DerivativeModule, ILinearVesting {
 
     /// @inheritdoc IDerivative
     /// @dev        Not implemented
+    function exerciseCost(uint256, uint256) external view virtual override returns (uint256) {
+        revert Derivative_NotImplemented();
+    }
+
+    /// @inheritdoc IDerivative
+    /// @dev        Not implemented
     function reclaim(uint256) external virtual override {
         revert IDerivative.Derivative_NotImplemented();
     }
@@ -383,10 +389,7 @@ contract LinearVesting is DerivativeModule, ILinearVesting {
     /// @dev        This function will revert if:
     ///             - The derivative token with `tokenId_` has not been deployed
     ///             - `amount_` is 0
-    function wrap(
-        uint256 tokenId_,
-        uint256 amount_
-    ) external virtual override onlyValidTokenId(tokenId_) {
+    function wrap(uint256 tokenId_, uint256 amount_) external override onlyValidTokenId(tokenId_) {
         if (amount_ == 0) revert InvalidParams();
 
         if (balanceOf[msg.sender][tokenId_] < amount_) revert InsufficientBalance();
@@ -412,7 +415,7 @@ contract LinearVesting is DerivativeModule, ILinearVesting {
     function unwrap(
         uint256 tokenId_,
         uint256 amount_
-    ) external virtual override onlyValidTokenId(tokenId_) onlyDeployedWrapped(tokenId_) {
+    ) external override onlyValidTokenId(tokenId_) onlyDeployedWrapped(tokenId_) {
         if (amount_ == 0) revert InvalidParams();
 
         Token storage token = tokenMetadata[tokenId_];
@@ -466,23 +469,40 @@ contract LinearVesting is DerivativeModule, ILinearVesting {
     function validate(
         address underlyingToken_,
         bytes memory params_
-    ) public view virtual override returns (bool) {
+    ) public view override returns (bool) {
         // Decode the parameters
         VestingParams memory data = _decodeVestingParams(params_);
 
         return _validate(underlyingToken_, data);
     }
 
-    /// @inheritdoc IDerivative
-    /// @dev        Not implemented
-    function exerciseCost(bytes memory, uint256) external view virtual override returns (uint256) {
-        revert IDerivative.Derivative_NotImplemented();
+    // ========== VIEW FUNCTIONS ========== //
+
+    function getTokenVestingParams(uint256 tokenId_)
+        external
+        view
+        onlyValidTokenId(tokenId_)
+        returns (VestingParams memory)
+    {
+        return abi.decode(tokenMetadata[tokenId_].data, (VestingParams));
     }
 
     /// @inheritdoc IDerivative
-    function convertsTo(bytes memory, uint256) external view virtual override returns (uint256) {
-        revert Derivative_NotImplemented();
+    ///
+    /// @param      params_     The abi-encoded `VestingParams` for the derivative token
+    function computeId(
+        address underlyingToken_,
+        bytes memory params_
+    ) external pure virtual override returns (uint256) {
+        // Decode the parameters
+        VestingParams memory data = _decodeVestingParams(params_);
+        ERC20 underlyingToken = ERC20(underlyingToken_);
+
+        // Compute the ID
+        return _computeId(underlyingToken, data.start, data.expiry);
     }
+
+    // ========== INTERNAL HELPER FUNCTIONS ========== //
 
     /// @notice     Decodes the ABI-encoded `VestingParams` for a derivative token
     /// @dev        This function will revert if the parameters are not the correct length
@@ -511,21 +531,6 @@ contract LinearVesting is DerivativeModule, ILinearVesting {
         return uint256(
             keccak256(abi.encodePacked(VEECODE(), keccak256(abi.encode(base_, start_, expiry_))))
         );
-    }
-
-    /// @inheritdoc IDerivative
-    ///
-    /// @param      params_     The abi-encoded `VestingParams` for the derivative token
-    function computeId(
-        address underlyingToken_,
-        bytes memory params_
-    ) external pure virtual override returns (uint256) {
-        // Decode the parameters
-        VestingParams memory data = _decodeVestingParams(params_);
-        ERC20 underlyingToken = ERC20(underlyingToken_);
-
-        // Compute the ID
-        return _computeId(underlyingToken, data.start, data.expiry);
     }
 
     /// @notice     Computes the name and symbol of a derivative token
@@ -634,7 +639,6 @@ contract LinearVesting is DerivativeModule, ILinearVesting {
     function name(uint256 tokenId_)
         public
         view
-        virtual
         override
         onlyValidTokenId(tokenId_)
         returns (string memory)
@@ -652,7 +656,6 @@ contract LinearVesting is DerivativeModule, ILinearVesting {
     function symbol(uint256 tokenId_)
         public
         view
-        virtual
         override
         onlyValidTokenId(tokenId_)
         returns (string memory)
@@ -670,7 +673,6 @@ contract LinearVesting is DerivativeModule, ILinearVesting {
     function decimals(uint256 tokenId_)
         public
         view
-        virtual
         override
         onlyValidTokenId(tokenId_)
         returns (uint8)
