@@ -39,7 +39,7 @@ contract LinearVestingTest is Test, Permit2User {
     uint256 internal constant _AMOUNT = 1e18;
     uint256 internal constant _AMOUNT_TWO = 2e18;
 
-    uint256 internal constant _VESTING_DATA_LEN = 96; // length + 1 slot for expiry + 1 slot for start
+    uint256 internal constant _VESTING_DATA_LEN = 64; // 1 slot for expiry + 1 slot for start
 
     uint256 internal _derivativeTokenId;
     address internal _derivativeWrappedAddress;
@@ -371,7 +371,6 @@ contract LinearVestingTest is Test, Permit2User {
             abi.decode(tokenMetadata.data, (ILinearVesting.VestingData));
         assertEq(vestingData.start, _VESTING_START, "vesting start");
         assertEq(vestingData.expiry, _VESTING_EXPIRY, "vesting expiry");
-        assertEq(address(vestingData.baseToken), _underlyingTokenAddress, "vesting base token");
     }
 
     function test_deploy_wrapped_derivativeDeployed_wrappedDerivativeNotDeployed()
@@ -400,7 +399,6 @@ contract LinearVestingTest is Test, Permit2User {
             abi.decode(tokenMetadata.data, (ILinearVesting.VestingData));
         assertEq(vestingData.start, _VESTING_START, "vesting start");
         assertEq(vestingData.expiry, _VESTING_EXPIRY, "vesting expiry");
-        assertEq(address(vestingData.baseToken), _underlyingTokenAddress, "vesting base token");
     }
 
     function test_deploy_wrapped() public {
@@ -447,7 +445,6 @@ contract LinearVestingTest is Test, Permit2User {
             abi.decode(tokenMetadata.data, (ILinearVesting.VestingData));
         assertEq(vestingData.start, _VESTING_START, "vesting start");
         assertEq(vestingData.expiry, _VESTING_EXPIRY, "vesting expiry");
-        assertEq(address(vestingData.baseToken), _underlyingTokenAddress, "vesting base token");
     }
 
     function test_deploy_notWrapped() public {
@@ -473,7 +470,6 @@ contract LinearVestingTest is Test, Permit2User {
             abi.decode(tokenMetadata.data, (ILinearVesting.VestingData));
         assertEq(vestingData.start, _VESTING_START, "vesting start");
         assertEq(vestingData.expiry, _VESTING_EXPIRY, "vesting expiry");
-        assertEq(address(vestingData.baseToken), _underlyingTokenAddress, "vesting base token");
     }
 
     function test_deploy_notParent() public {
