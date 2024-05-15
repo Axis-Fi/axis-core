@@ -10,7 +10,7 @@ import {MockFeeOnTransferERC20} from "test/lib/mocks/MockFeeOnTransferERC20.sol"
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 
 import {AtomicAuctionHouse} from "src/AtomicAuctionHouse.sol";
-import {IDerivative} from "src/interfaces/IDerivative.sol";
+import {IDerivative} from "src/interfaces/modules/IDerivative.sol";
 import {ILinearVesting} from "src/interfaces/modules/derivatives/ILinearVesting.sol";
 import {LinearVesting} from "src/modules/derivatives/LinearVesting.sol";
 import {SoulboundCloneERC20} from "src/modules/derivatives/SoulboundCloneERC20.sol";

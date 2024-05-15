@@ -3,7 +3,7 @@ pragma solidity 0.8.19;
 
 // Interfaces
 import {ICallback} from "src/interfaces/ICallback.sol";
-import {IAuction} from "src/interfaces/IAuction.sol";
+import {IAuction} from "src/interfaces/modules/IAuction.sol";
 import {IAuctionHouse} from "src/interfaces/IAuctionHouse.sol";
 import {ICatalogue} from "src/interfaces/ICatalogue.sol";
 

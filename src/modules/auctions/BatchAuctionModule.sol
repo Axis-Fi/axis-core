@@ -2,8 +2,8 @@
 pragma solidity 0.8.19;
 
 // Interfaces
-import {IAuction} from "src/interfaces/IAuction.sol";
-import {IBatchAuction} from "src/interfaces/IBatchAuction.sol";
+import {IAuction} from "src/interfaces/modules/IAuction.sol";
+import {IBatchAuction} from "src/interfaces/modules/IBatchAuction.sol";
 
 // Auctions
 import {AuctionModule} from "src/modules/Auction.sol";

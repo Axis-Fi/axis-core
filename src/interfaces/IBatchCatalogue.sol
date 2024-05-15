@@ -2,7 +2,7 @@
 pragma solidity >=0.8.0;
 
 import {ICatalogue} from "src/interfaces/ICatalogue.sol";
-import {IBatchAuction} from "src/interfaces/IBatchAuction.sol";
+import {IBatchAuction} from "src/interfaces/modules/IBatchAuction.sol";
 
 interface IBatchCatalogue is ICatalogue {
     /// @notice Get the number of bids for a lot

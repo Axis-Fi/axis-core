@@ -2,7 +2,7 @@
 pragma solidity 0.8.19;
 
 // Interfaces
-import {IAtomicAuction} from "src/interfaces/IAtomicAuction.sol";
+import {IAtomicAuction} from "src/interfaces/modules/IAtomicAuction.sol";
 import {IFixedPriceSale} from "src/interfaces/modules/auctions/IFixedPriceSale.sol";
 
 // Protocol dependencies

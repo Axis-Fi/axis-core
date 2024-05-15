@@ -4,10 +4,10 @@ pragma solidity 0.8.19;
 // Modules
 import {Veecode, toKeycode, wrapVeecode} from "src/modules/Modules.sol";
 import {BatchAuctionModule} from "src/modules/auctions/BatchAuctionModule.sol";
-import {IBatchAuction} from "src/interfaces/IBatchAuction.sol";
+import {IBatchAuction} from "src/interfaces/modules/IBatchAuction.sol";
 
 // Auctions
-import {IAuction} from "src/interfaces/IAuction.sol";
+import {IAuction} from "src/interfaces/modules/IAuction.sol";
 import {AuctionModule} from "src/modules/Auction.sol";
 
 contract MockBatchAuctionModule is BatchAuctionModule {

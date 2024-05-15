@@ -2,7 +2,7 @@
 pragma solidity 0.8.19;
 
 // Interfaces
-import {IAtomicAuction} from "src/interfaces/IAtomicAuction.sol";
+import {IAtomicAuction} from "src/interfaces/modules/IAtomicAuction.sol";
 import {IAuctionHouse} from "src/interfaces/IAuctionHouse.sol";
 import {IFeeManager} from "src/interfaces/IFeeManager.sol";
 import {IAtomicCatalogue} from "src/interfaces/IAtomicCatalogue.sol";

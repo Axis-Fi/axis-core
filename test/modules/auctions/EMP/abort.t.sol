@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.19;
 
-import {IAuction} from "src/interfaces/IAuction.sol";
-import {IBatchAuction} from "src/interfaces/IBatchAuction.sol";
+import {IAuction} from "src/interfaces/modules/IAuction.sol";
+import {IBatchAuction} from "src/interfaces/modules/IBatchAuction.sol";
 import {EncryptedMarginalPrice} from "src/modules/auctions/EMP.sol";
 import {IEncryptedMarginalPrice} from "src/interfaces/modules/auctions/IEncryptedMarginalPrice.sol";
 

@@ -2,7 +2,7 @@
 pragma solidity 0.8.19;
 
 import {IAuctionHouse} from "src/interfaces/IAuctionHouse.sol";
-import {IAuction} from "src/interfaces/IAuction.sol";
+import {IAuction} from "src/interfaces/modules/IAuction.sol";
 import {AtomicAuctionHouse} from "src/AtomicAuctionHouse.sol";
 
 import {MockDerivativeModule} from "test/modules/derivatives/mocks/MockDerivativeModule.sol";

@@ -2,9 +2,9 @@
 pragma solidity >=0.8.0;
 
 // Interfaces
-import {IAuction} from "src/interfaces/IAuction.sol";
+import {IAuction} from "src/interfaces/modules/IAuction.sol";
 import {ICallback} from "src/interfaces/ICallback.sol";
-import {IDerivative} from "src/interfaces/IDerivative.sol";
+import {IDerivative} from "src/interfaces/modules/IDerivative.sol";
 
 // External dependencies
 import {ERC20} from "lib/solmate/src/tokens/ERC20.sol";

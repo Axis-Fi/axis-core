@@ -2,10 +2,10 @@
 pragma solidity 0.8.19;
 
 // Interfaces
-import {IAuction} from "src/interfaces/IAuction.sol";
+import {IAuction} from "src/interfaces/modules/IAuction.sol";
 import {IAuctionHouse} from "src/interfaces/IAuctionHouse.sol";
 import {ICallback} from "src/interfaces/ICallback.sol";
-import {IDerivative} from "src/interfaces/IDerivative.sol";
+import {IDerivative} from "src/interfaces/modules/IDerivative.sol";
 import {IFeeManager} from "src/interfaces/IFeeManager.sol";
 
 // Internal libraries

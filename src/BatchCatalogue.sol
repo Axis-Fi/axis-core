@@ -4,7 +4,7 @@ pragma solidity 0.8.19;
 // Interfaces
 import {IAuctionHouse} from "src/interfaces/IAuctionHouse.sol";
 import {IBatchCatalogue} from "src/interfaces/IBatchCatalogue.sol";
-import {IBatchAuction} from "src/interfaces/IBatchAuction.sol";
+import {IBatchAuction} from "src/interfaces/modules/IBatchAuction.sol";
 
 // Base contracts
 import {Catalogue} from "src/bases/Catalogue.sol";

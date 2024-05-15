@@ -10,7 +10,7 @@ import {Permit2User} from "test/lib/permit2/Permit2User.sol";
 
 // Modules
 import {AtomicAuctionHouse} from "src/AtomicAuctionHouse.sol";
-import {IAuction} from "src/interfaces/IAuction.sol";
+import {IAuction} from "src/interfaces/modules/IAuction.sol";
 import {FixedPriceSale} from "src/modules/auctions/FPS.sol";
 import {IFixedPriceSale} from "src/interfaces/modules/auctions/IFixedPriceSale.sol";
 

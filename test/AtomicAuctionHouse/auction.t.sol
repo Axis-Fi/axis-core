@@ -9,7 +9,7 @@ import {MockERC20} from "lib/solmate/src/test/utils/mocks/MockERC20.sol";
 import {MockBatchAuctionModule} from "test/modules/Auction/MockBatchAuctionModule.sol";
 
 import {IAuctionHouse} from "src/interfaces/IAuctionHouse.sol";
-import {IAuction} from "src/interfaces/IAuction.sol";
+import {IAuction} from "src/interfaces/modules/IAuction.sol";
 import {ICallback} from "src/interfaces/ICallback.sol";
 import {
     Keycode,

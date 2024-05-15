@@ -9,7 +9,7 @@ import {Timestamp} from "src/lib/Timestamp.sol";
 import {ERC6909Metadata} from "src/lib/ERC6909Metadata.sol";
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 
-import {IDerivative} from "src/interfaces/IDerivative.sol";
+import {IDerivative} from "src/interfaces/modules/IDerivative.sol";
 import {ILinearVesting} from "src/interfaces/modules/derivatives/ILinearVesting.sol";
 import {DerivativeModule} from "src/modules/Derivative.sol";
 import {Module, Veecode, toKeycode, wrapVeecode} from "src/modules/Modules.sol";
