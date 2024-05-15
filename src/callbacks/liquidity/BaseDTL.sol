@@ -10,6 +10,7 @@ import {BaseCallback} from "src/callbacks/BaseCallback.sol";
 import {Callbacks} from "src/lib/Callbacks.sol";
 
 // AuctionHouse
+import {ILinearVesting} from "src/interfaces/modules/derivatives/ILinearVesting.sol";
 import {LinearVesting} from "src/modules/derivatives/LinearVesting.sol";
 import {AuctionHouse} from "src/bases/AuctionHouse.sol";
 import {Keycode, wrapVeecode} from "src/modules/Modules.sol";
@@ -467,6 +468,6 @@ abstract contract BaseDirectToLiquidity is BaseCallback {
         uint48 start_,
         uint48 expiry_
     ) internal pure returns (bytes memory) {
-        return abi.encode(LinearVesting.VestingParams({start: start_, expiry: expiry_}));
+        return abi.encode(ILinearVesting.VestingParams({start: start_, expiry: expiry_}));
     }
 }

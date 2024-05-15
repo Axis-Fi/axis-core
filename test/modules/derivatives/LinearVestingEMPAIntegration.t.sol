@@ -3,6 +3,7 @@ pragma solidity 0.8.19;
 
 import {IBatchAuctionHouse} from "src/interfaces/IBatchAuctionHouse.sol";
 import {EncryptedMarginalPrice} from "src/modules/auctions/EMP.sol";
+import {ILinearVesting} from "src/interfaces/modules/derivatives/ILinearVesting.sol";
 import {LinearVesting} from "src/modules/derivatives/LinearVesting.sol";
 import {Point, ECIES} from "src/lib/ECIES.sol";
 import {AuctionHouse} from "src/bases/AuctionHouse.sol";
@@ -29,7 +30,7 @@ contract LinearVestingEMPAIntegrationTest is BatchAuctionHouseTest {
     uint24 internal constant _MIN_FILL_PERCENT = 25_000; // 25%
     uint256 internal constant _MIN_BID_SIZE = 1e17; // 0.1 quote tokens
 
-    LinearVesting.VestingParams internal _linearVestingParams;
+    ILinearVesting.VestingParams internal _linearVestingParams;
     uint48 internal constant _VESTING_START = 1_704_882_344; // 2024-01-10
     uint48 internal constant _VESTING_EXPIRY = 1_705_055_144; // 2024-01-12
     uint48 internal constant _VESTING_DURATION = _VESTING_EXPIRY - _VESTING_START;
@@ -77,7 +78,7 @@ contract LinearVestingEMPAIntegrationTest is BatchAuctionHouseTest {
         _routingParams.derivativeType = keycodeFromVeecode(_linearVestingModule.VEECODE());
 
         _linearVestingParams =
-            LinearVesting.VestingParams({start: _VESTING_START, expiry: _VESTING_EXPIRY});
+            ILinearVesting.VestingParams({start: _VESTING_START, expiry: _VESTING_EXPIRY});
         _routingParams.derivativeParams = abi.encode(_linearVestingParams);
         _;
     }
