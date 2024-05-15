@@ -10,7 +10,6 @@ import {AtomicAuctionModule} from "src/modules/auctions/AtomicAuctionModule.sol"
 // External libraries
 import {UD60x18, ud, convert, UNIT, uUNIT, EXP_MAX_INPUT} from "lib/prb-math/src/UD60x18.sol";
 import "lib/prb-math/src/Common.sol" as PRBMath;
-import {FixedPointMathLib} from "lib/solady/src/utils/FixedPointMathLib.sol";
 
 /// @notice Continuous Gradual Dutch Auction (GDA) module with exponential decay and a minimum price.
 contract GradualDutchAuction is AtomicAuctionModule {
@@ -329,9 +328,8 @@ contract GradualDutchAuction is AtomicAuctionModule {
             {
                 // Check that the amount / minPrice is not greater than the max payout (i.e. remaining capacity)
                 uint256 minPrice = auction.minimumPrice;
-                uint256 payoutAtMinPrice = FixedPointMathLib.mulDiv(
-                    amount_, 10 ** lotData[lotId_].baseTokenDecimals, minPrice
-                );
+                uint256 payoutAtMinPrice =
+                    amount_.mulDiv(10 ** lotData[lotId_].baseTokenDecimals, minPrice);
                 if (payoutAtMinPrice > maxPayout(lotId_)) {
                     revert Auction_InsufficientCapacity();
                 }
