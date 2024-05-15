@@ -15,24 +15,6 @@ import {AtomicAuctionModule} from "src/modules/auctions/AtomicAuctionModule.sol"
 import {FixedPointMathLib as Math} from "lib/solmate/src/utils/FixedPointMathLib.sol";
 
 contract FixedPriceSale is AtomicAuctionModule, IFixedPriceSale {
-    // ========== ERRORS ========== //
-
-    error Auction_InsufficientPayout();
-    error Auction_PayoutGreaterThanMax();
-
-    // ========== EVENTS ========== //
-
-    // ========== DATA STRUCTURES ========== //
-
-    /// @notice             Auction-specific data for a lot
-    ///
-    /// @param price        The fixed price of the lot
-    /// @param maxPayout    The maximum payout per purchase, in terms of the base token
-    struct AuctionData {
-        uint256 price;
-        uint256 maxPayout;
-    }
-
     // ========== STATE VARIABLES ========== //
 
     /// @notice     Auction-specific data for a lot

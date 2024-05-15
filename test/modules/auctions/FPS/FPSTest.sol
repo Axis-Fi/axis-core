@@ -196,6 +196,6 @@ abstract contract FpsTest is Test, Permit2User {
     {
         (uint256 price_, uint256 maxPayout_) = _module.auctionData(lotId_);
 
-        return FixedPriceSale.AuctionData({price: price_, maxPayout: maxPayout_});
+        return IFixedPriceSale.AuctionData({price: price_, maxPayout: maxPayout_});
     }
 }
