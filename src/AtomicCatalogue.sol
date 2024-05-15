@@ -5,12 +5,13 @@ pragma solidity 0.8.19;
 import {IAtomicAuction} from "src/interfaces/IAtomicAuction.sol";
 import {IAuctionHouse} from "src/interfaces/IAuctionHouse.sol";
 import {IFeeManager} from "src/interfaces/IFeeManager.sol";
+import {IAtomicCatalogue} from "src/interfaces/IAtomicCatalogue.sol";
 
 // Base contracts
 import {Catalogue} from "src/bases/Catalogue.sol";
 
-/// @notice Contract that provides view functions for atomic auctions
-contract AtomicCatalogue is Catalogue {
+/// @notice Contract that provides view and aggregation functions for atomic auctions without having to know the specific auction module address
+contract AtomicCatalogue is IAtomicCatalogue, Catalogue {
     // ========== CONSTRUCTOR ========== //
 
     constructor(address auctionHouse_) Catalogue(auctionHouse_) {}
