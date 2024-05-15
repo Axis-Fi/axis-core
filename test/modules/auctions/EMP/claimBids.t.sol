@@ -6,6 +6,7 @@ import {console2} from "forge-std/console2.sol";
 
 import {Module} from "src/modules/Modules.sol";
 import {IAuction} from "src/interfaces/IAuction.sol";
+import {IEncryptedMarginalPrice} from "src/interfaces/modules/auctions/IEncryptedMarginalPrice.sol";
 import {EncryptedMarginalPrice} from "src/modules/auctions/EMP.sol";
 import {IBatchAuction} from "src/interfaces/IBatchAuction.sol";
 
@@ -148,7 +149,7 @@ contract EmpClaimBidsTest is EmpTest {
         givenBidIsClaimed(_bidId)
     {
         bytes memory err =
-            abi.encodeWithSelector(EncryptedMarginalPrice.Bid_WrongState.selector, _lotId, _bidId);
+            abi.encodeWithSelector(IEncryptedMarginalPrice.Bid_WrongState.selector, _lotId, _bidId);
         vm.expectRevert(err);
 
         // Call the function
@@ -170,7 +171,7 @@ contract EmpClaimBidsTest is EmpTest {
         givenLotIsDecrypted
     {
         bytes memory err =
-            abi.encodeWithSelector(EncryptedMarginalPrice.Auction_WrongState.selector, _lotId);
+            abi.encodeWithSelector(IEncryptedMarginalPrice.Auction_WrongState.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function

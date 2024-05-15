@@ -6,6 +6,19 @@ import {Point} from "src/lib/ECIES.sol";
 /// @notice Interface for encrypted marginal price (batch) auctions
 /// @dev    This contract does not inherit from `BatchAuctionModule` in order to avoid conflicts. Implementing contracts should inherit from both `BatchAuctionModule` and this interface.
 interface IEncryptedMarginalPrice {
+    // ========== ERRORS ========== //
+
+    error Auction_InvalidKey();
+    error Auction_WrongState(uint96 lotId);
+    error Bid_WrongState(uint96 lotId, uint64 bidId);
+    error NotPermitted(address caller);
+
+    // ========== EVENTS ========== //
+
+    event BidDecrypted(
+        uint96 indexed lotId, uint64 indexed bidId, uint96 amountIn, uint96 amountOut
+    );
+
     // ========== DATA STRUCTURES ========== //
 
     /// @notice         Parameters that are used to set auction-specific data

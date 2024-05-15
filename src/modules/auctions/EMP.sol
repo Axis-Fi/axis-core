@@ -25,19 +25,6 @@ import {Module, Veecode, toVeecode} from "src/modules/Modules.sol";
 contract EncryptedMarginalPrice is BatchAuctionModule, IEncryptedMarginalPrice {
     using MaxPriorityQueue for Queue;
 
-    // ========== ERRORS ========== //
-
-    error Auction_InvalidKey();
-    error Auction_WrongState(uint96 lotId);
-    error Bid_WrongState(uint96 lotId, uint64 bidId);
-    error NotPermitted(address caller);
-
-    // ========== EVENTS ========== //
-
-    event BidDecrypted(
-        uint96 indexed lotId, uint64 indexed bidId, uint96 amountIn, uint96 amountOut
-    );
-
     // ========== DATA STRUCTURES ========== //
 
     /// @notice     The status of a bid
