@@ -128,8 +128,9 @@ contract AtomicAuctionHouse is IAtomicAuctionHouse, AuctionHouse {
 
         // Send purchase to auction house and get payout plus any extra output
         bytes memory auctionOutput;
-        (payoutAmount, auctionOutput) = AtomicAuctionModule(address(_getModuleForId(params_.lotId)))
-            .purchase(params_.lotId, amountLessFees, params_.auctionData);
+        (payoutAmount, auctionOutput) = AtomicAuctionModule(
+            address(_getAuctionModuleForId(params_.lotId))
+        ).purchase(params_.lotId, amountLessFees, params_.auctionData);
 
         // Check that payout is at least minimum amount out
         // @dev Moved the slippage check from the auction to the AuctionHouse to allow different routing and purchase logic

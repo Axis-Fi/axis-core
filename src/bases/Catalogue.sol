@@ -66,21 +66,21 @@ abstract contract Catalogue {
     /// @notice    Returns whether the auction is currently accepting bids or purchases
     /// @dev       Auctions that have been created, but not yet started will return false
     function isLive(uint96 lotId_) public view returns (bool) {
-        IAuction module = AuctionHouse(auctionHouse).getModuleForId(lotId_);
+        IAuction module = AuctionHouse(auctionHouse).getAuctionModuleForId(lotId_);
 
         // Get isLive from module
         return module.isLive(lotId_);
     }
 
     function hasEnded(uint96 lotId_) external view returns (bool) {
-        IAuction module = AuctionHouse(auctionHouse).getModuleForId(lotId_);
+        IAuction module = AuctionHouse(auctionHouse).getAuctionModuleForId(lotId_);
 
         // Get hasEnded from module
         return module.hasEnded(lotId_);
     }
 
     function remainingCapacity(uint96 lotId_) external view returns (uint256) {
-        IAuction module = AuctionHouse(auctionHouse).getModuleForId(lotId_);
+        IAuction module = AuctionHouse(auctionHouse).getAuctionModuleForId(lotId_);
 
         // Get remaining capacity from module
         return module.remainingCapacity(lotId_);

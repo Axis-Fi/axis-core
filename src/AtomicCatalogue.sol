@@ -21,7 +21,7 @@ contract AtomicCatalogue is Catalogue {
     /// @notice     Returns the payout for a given lot and amount
     function payoutFor(uint96 lotId_, uint256 amount_) external view returns (uint256) {
         IAtomicAuction module =
-            IAtomicAuction(address(AuctionHouse(auctionHouse).getModuleForId(lotId_)));
+            IAtomicAuction(address(AuctionHouse(auctionHouse).getAuctionModuleForId(lotId_)));
         AuctionHouse.Routing memory routing = getRouting(lotId_);
 
         // Get protocol fee from FeeManager
@@ -39,7 +39,7 @@ contract AtomicCatalogue is Catalogue {
     /// @notice     Returns the price for a given lot and payout
     function priceFor(uint96 lotId_, uint256 payout_) external view returns (uint256) {
         IAtomicAuction module =
-            IAtomicAuction(address(AuctionHouse(auctionHouse).getModuleForId(lotId_)));
+            IAtomicAuction(address(AuctionHouse(auctionHouse).getAuctionModuleForId(lotId_)));
         AuctionHouse.Routing memory routing = getRouting(lotId_);
 
         // Get price from module (in quote token units)
@@ -54,7 +54,7 @@ contract AtomicCatalogue is Catalogue {
     /// @notice     Returns the max payout for a given lot
     function maxPayout(uint96 lotId_) external view returns (uint256) {
         IAtomicAuction module =
-            IAtomicAuction(address(AuctionHouse(auctionHouse).getModuleForId(lotId_)));
+            IAtomicAuction(address(AuctionHouse(auctionHouse).getAuctionModuleForId(lotId_)));
 
         // No fees need to be considered here since an amount is not provided
 
@@ -65,7 +65,7 @@ contract AtomicCatalogue is Catalogue {
     /// @notice     Returns the max amount accepted for a given lot
     function maxAmountAccepted(uint96 lotId_) external view returns (uint256) {
         IAtomicAuction module =
-            IAtomicAuction(address(AuctionHouse(auctionHouse).getModuleForId(lotId_)));
+            IAtomicAuction(address(AuctionHouse(auctionHouse).getAuctionModuleForId(lotId_)));
         AuctionHouse.Routing memory routing = getRouting(lotId_);
 
         // Get max amount accepted from module

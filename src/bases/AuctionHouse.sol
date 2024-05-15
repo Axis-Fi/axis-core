@@ -5,6 +5,7 @@ pragma solidity 0.8.19;
 import {IAuction} from "src/interfaces/IAuction.sol";
 import {IAuctionHouse} from "src/interfaces/IAuctionHouse.sol";
 import {ICallback} from "src/interfaces/ICallback.sol";
+import {IDerivative} from "src/interfaces/IDerivative.sol";
 import {IFeeManager} from "src/interfaces/IFeeManager.sol";
 
 // Internal libraries
@@ -15,6 +16,7 @@ import {Callbacks} from "src/lib/Callbacks.sol";
 import {ERC20} from "lib/solmate/src/tokens/ERC20.sol";
 import {ReentrancyGuard} from "lib/solmate/src/utils/ReentrancyGuard.sol";
 
+// Internal dependencies
 import {
     fromKeycode, fromVeecode, keycodeFromVeecode, Keycode, Veecode
 } from "src/modules/Keycode.sol";
@@ -22,7 +24,6 @@ import {Module, WithModules} from "src/modules/Modules.sol";
 import {FeeManager} from "src/bases/FeeManager.sol";
 
 import {AuctionModule} from "src/modules/Auction.sol";
-
 import {DerivativeModule} from "src/modules/Derivative.sol";
 import {CondenserModule} from "src/modules/Condenser.sol";
 
@@ -326,7 +327,7 @@ abstract contract AuctionHouse is IAuctionHouse, WithModules, ReentrancyGuard, F
         if (msg.sender != routing.seller) revert NotPermitted(msg.sender);
 
         // Cancel the auction on the module
-        _getModuleForId(lotId_).cancelAuction(lotId_);
+        _getAuctionModuleForId(lotId_).cancelAuction(lotId_);
 
         // Call the implementation logic
         bool performedCallback = _cancel(lotId_, callbackData_);
@@ -353,6 +354,28 @@ abstract contract AuctionHouse is IAuctionHouse, WithModules, ReentrancyGuard, F
         bytes calldata callbackData_
     ) internal virtual returns (bool performedCallback);
 
+    // ========== VIEW FUNCTIONS ========== //
+
+    /// @inheritdoc IAuctionHouse
+    /// @dev        The function reverts if:
+    ///             - The lot ID is invalid
+    ///             - The module for the auction type is not installed
+    function getAuctionModuleForId(uint96 lotId_) external view override returns (IAuction) {
+        _isLotValid(lotId_);
+
+        return _getAuctionModuleForId(lotId_);
+    }
+
+    /// @inheritdoc IAuctionHouse
+    /// @dev        The function reverts if:
+    ///             - The lot ID is invalid
+    ///             - The module for the derivative type is not installed
+    function getDerivativeModuleForId(uint96 lotId_) external view override returns (IDerivative) {
+        _isLotValid(lotId_);
+
+        return _getDerivativeModuleForId(lotId_);
+    }
+
     // ========== INTERNAL HELPER FUNCTIONS ========== //
 
     /// @notice         Gets the module for a given lot ID
@@ -361,19 +384,20 @@ abstract contract AuctionHouse is IAuctionHouse, WithModules, ReentrancyGuard, F
     ///
     /// @param lotId_   ID of the auction lot
     /// @return         AuctionModule
-    function _getModuleForId(uint96 lotId_) internal view returns (AuctionModule) {
+    function _getAuctionModuleForId(uint96 lotId_) internal view returns (AuctionModule) {
         // Load module, will revert if not installed
         return AuctionModule(_getModuleIfInstalled(lotRouting[lotId_].auctionReference));
     }
 
-    /// @inheritdoc IAuctionHouse
-    /// @dev        The function reverts if:
-    ///             - The lot ID is invalid
-    ///             - The module for the auction type is not installed
-    function getModuleForId(uint96 lotId_) external view override returns (IAuction) {
-        _isLotValid(lotId_);
-
-        return _getModuleForId(lotId_);
+    /// @notice         Gets the module for a given lot ID
+    /// @dev            The function assumes:
+    ///                 - The lot ID is valid
+    ///
+    /// @param lotId_   ID of the auction lot
+    /// @return         DerivativeModule
+    function _getDerivativeModuleForId(uint96 lotId_) internal view returns (DerivativeModule) {
+        // Load module, will revert if not installed. Also reverts if no derivative is specified.
+        return DerivativeModule(_getModuleIfInstalled(lotRouting[lotId_].derivativeReference));
     }
 
     function _onCreateCallback(
@@ -441,7 +465,7 @@ abstract contract AuctionHouse is IAuctionHouse, WithModules, ReentrancyGuard, F
         // Check that the caller is the proposed curator
         if (msg.sender != feeData.curator) revert NotPermitted(msg.sender);
 
-        AuctionModule module = _getModuleForId(lotId_);
+        AuctionModule module = _getAuctionModuleForId(lotId_);
 
         // Check that the curator has not already approved the auction
         // Check that the auction has not ended or been cancelled

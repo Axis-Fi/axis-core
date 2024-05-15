@@ -493,6 +493,6 @@ contract BatchAuctionHouse is IBatchAuctionHouse, AuctionHouse {
     // ========== INTERNAL FUNCTIONS ========== //
 
     function getBatchModuleForId(uint96 lotId_) public view returns (BatchAuctionModule) {
-        return BatchAuctionModule(address(_getModuleForId(lotId_)));
+        return BatchAuctionModule(address(_getAuctionModuleForId(lotId_)));
     }
 }

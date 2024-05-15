@@ -3,6 +3,7 @@ pragma solidity >=0.8.0;
 
 import {IAuction} from "src/interfaces/IAuction.sol";
 import {ICallback} from "src/interfaces/ICallback.sol";
+import {IDerivative} from "src/interfaces/IDerivative.sol";
 
 import {Keycode} from "src/modules/Keycode.sol";
 
@@ -56,9 +57,16 @@ interface IAuctionHouse {
 
     // ========== AUCTION INFORMATION ========== //
 
-    /// @notice     Gets the module for a given lot ID
+    /// @notice     Gets the auction module for a given lot ID
     ///
     /// @param      lotId_  ID of the auction lot
     /// @return     module  The auction module
-    function getModuleForId(uint96 lotId_) external view returns (IAuction module);
+    function getAuctionModuleForId(uint96 lotId_) external view returns (IAuction module);
+
+    /// @notice     Gets the derivative module for a given lot ID
+    /// @dev        Will revert if the lot does not have a derivative module
+    ///
+    /// @param      lotId_  ID of the auction lot
+    /// @return     module  The derivative module
+    function getDerivativeModuleForId(uint96 lotId_) external view returns (IDerivative module);
 }
