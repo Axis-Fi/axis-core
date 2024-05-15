@@ -146,14 +146,13 @@ contract LinearVesting is DerivativeModule, ILinearVesting {
 
         // Transfer collateral token to this contract
         {
-            VestingData memory data = abi.decode(token_.data, (VestingData));
-            ERC20 baseToken = ERC20(data.baseToken);
+            ERC20 baseToken = ERC20(token_.underlyingToken);
             uint256 balanceBefore = baseToken.balanceOf(address(this));
             baseToken.safeTransferFrom(msg.sender, address(this), amount_);
 
             // Ensure the correct amount was transferred
             if (baseToken.balanceOf(address(this)) < balanceBefore + amount_) {
-                revert UnsupportedToken(data.baseToken);
+                revert UnsupportedToken(token_.underlyingToken);
             }
         }
 
@@ -274,9 +273,7 @@ contract LinearVesting is DerivativeModule, ILinearVesting {
         }
 
         // Transfer the underlying token to the owner
-        VestingData memory vestingData = abi.decode(tokenData.data, (VestingData));
-        ERC20 baseToken = ERC20(vestingData.baseToken);
-        baseToken.safeTransfer(user_, amount_);
+        ERC20(tokenData.underlyingToken).safeTransfer(user_, amount_);
 
         // Emit event
         emit Redeemed(tokenId_, user_, amount_);
@@ -330,7 +327,7 @@ contract LinearVesting is DerivativeModule, ILinearVesting {
     ) public view virtual override onlyValidTokenId(tokenId_) returns (uint256) {
         // Get the vesting data
         Token storage token = tokenMetadata[tokenId_];
-        VestingData memory data = abi.decode(token.data, (VestingData));
+        VestingParams memory data = abi.decode(token.data, (VestingParams));
 
         // If before the start time, 0
         if (block.timestamp <= data.start) return 0;
@@ -574,13 +571,7 @@ contract LinearVesting is DerivativeModule, ILinearVesting {
             // Store derivative data
             token.exists = true;
             token.underlyingToken = underlyingToken_;
-            token.data = abi.encode(
-                VestingData({
-                    start: params_.start,
-                    expiry: params_.expiry,
-                    baseToken: underlyingToken_
-                })
-            ); // Store this so that the tokenId can be used as a lookup
+            token.data = abi.encode(VestingParams({start: params_.start, expiry: params_.expiry})); // Store this so that the tokenId can be used as a lookup
 
             tokenMetadata[tokenId_] = token;
 
@@ -612,8 +603,8 @@ contract LinearVesting is DerivativeModule, ILinearVesting {
             if (_IMPLEMENTATION == address(0)) revert InvalidParams();
 
             // Get the parameters
-            VestingData memory data = abi.decode(token_.data, (VestingData));
-            ERC20 baseToken = ERC20(data.baseToken);
+            VestingParams memory data = abi.decode(token_.data, (VestingParams));
+            ERC20 baseToken = ERC20(token_.underlyingToken);
 
             // Deploy the wrapped implementation
             (string memory name_, string memory symbol_) =
@@ -624,7 +615,7 @@ contract LinearVesting is DerivativeModule, ILinearVesting {
                 uint8(baseToken.decimals()), // Decimals
                 uint64(data.expiry), // Expiry timestamp
                 address(this), // Owner
-                data.baseToken // Underlying
+                token_.underlyingToken // Underlying
             );
             token_.wrapped = _IMPLEMENTATION.clone3(wrappedTokenData, bytes32(tokenId_));
 
@@ -649,9 +640,9 @@ contract LinearVesting is DerivativeModule, ILinearVesting {
         returns (string memory)
     {
         Token storage token = tokenMetadata[tokenId_];
-        VestingData memory data = abi.decode(token.data, (VestingData));
+        VestingParams memory data = abi.decode(token.data, (VestingParams));
 
-        (string memory name_,) = _computeNameAndSymbol(ERC20(data.baseToken), data.expiry);
+        (string memory name_,) = _computeNameAndSymbol(ERC20(token.underlyingToken), data.expiry);
         return name_;
     }
 
@@ -667,9 +658,9 @@ contract LinearVesting is DerivativeModule, ILinearVesting {
         returns (string memory)
     {
         Token storage token = tokenMetadata[tokenId_];
-        VestingData memory data = abi.decode(token.data, (VestingData));
+        VestingParams memory data = abi.decode(token.data, (VestingParams));
 
-        (, string memory symbol_) = _computeNameAndSymbol(ERC20(data.baseToken), data.expiry);
+        (, string memory symbol_) = _computeNameAndSymbol(ERC20(token.underlyingToken), data.expiry);
         return symbol_;
     }
 
@@ -685,8 +676,7 @@ contract LinearVesting is DerivativeModule, ILinearVesting {
         returns (uint8)
     {
         Token storage token = tokenMetadata[tokenId_];
-        VestingData memory data = abi.decode(token.data, (VestingData));
 
-        return ERC20(data.baseToken).decimals();
+        return ERC20(token.underlyingToken).decimals();
     }
 }

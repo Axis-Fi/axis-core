@@ -32,18 +32,7 @@ interface ILinearVesting {
 
     // ========== DATA STRUCTURES ========== //
 
-    /// @notice     Stores the parameters for a particular derivative
-    ///
-    /// @param      start       The timestamp at which the vesting starts
-    /// @param      expiry      The timestamp at which the vesting expires
-    /// @param      baseToken   The address of the base token
-    struct VestingData {
-        uint48 start;
-        uint48 expiry;
-        address baseToken;
-    }
-
-    /// @notice     Stores the parameters for a particular derivative
+    /// @notice     Format for the vesting data, stored in `Token.data`
     ///
     /// @param      start       The timestamp at which the vesting starts
     /// @param      expiry      The timestamp at which the vesting expires
