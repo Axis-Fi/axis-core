@@ -7,14 +7,14 @@ import {Module} from "src/modules/Modules.sol";
 abstract contract AuctionModule is IAuction, Module {
     // ========= STATE ========== //
 
-    /// @notice Minimum auction duration in seconds
-    uint48 public minAuctionDuration;
-
     /// @notice Constant for percentages
     /// @dev    1% = 1_000 or 1e3. 100% = 100_000 or 1e5.
     uint48 internal constant _ONE_HUNDRED_PERCENT = 100_000;
 
-    /// @notice General information pertaining to auction lots
+    /// @inheritdoc IAuction
+    uint48 public minAuctionDuration;
+
+    /// @inheritdoc IAuction
     mapping(uint96 id => Lot lot) public lotData;
 
     // ========== CONSTRUCTOR ========== //

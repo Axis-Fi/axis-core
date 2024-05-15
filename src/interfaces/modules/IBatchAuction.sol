@@ -33,6 +33,15 @@ interface IBatchAuction is IAuction {
         uint256 refund;
     }
 
+    // ========== STATE VARIABLES ========== //
+
+    /// @notice     Time period after auction conclusion where bidders cannot refund bids
+    function dedicatedSettlePeriod() external view returns (uint48);
+
+    /// @notice     Custom auction output for each lot
+    /// @dev        Stored during settlement
+    function lotAuctionOutput(uint96) external view returns (bytes memory);
+
     // ========== BATCH OPERATIONS ========== //
 
     /// @notice     Bid on an auction lot

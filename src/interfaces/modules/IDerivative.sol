@@ -26,6 +26,13 @@ interface IDerivative {
         bytes data;
     }
 
+    // ========== STATE VARIABLES ========== //
+
+    function tokenMetadata(uint256)
+        external
+        view
+        returns (bool exists, address wrapped, address underlyingToken, bytes memory data);
+
     // ========== DERIVATIVE MANAGEMENT ========== //
 
     /// @notice     Deploy a new derivative token. Optionally, deploys an ERC20 wrapper for composability.

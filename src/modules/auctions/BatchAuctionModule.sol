@@ -13,11 +13,10 @@ import {AuctionModule} from "src/modules/Auction.sol";
 abstract contract BatchAuctionModule is IBatchAuction, AuctionModule {
     // ========== STATE VARIABLES ========== //
 
-    /// @notice     Time period after auction conclusion where bidders cannot refund bids
+    /// @inheritdoc IBatchAuction
     uint48 public dedicatedSettlePeriod;
 
-    /// @notice     Custom auction output for each lot
-    /// @dev        Stored during settlement
+    /// @inheritdoc IBatchAuction
     mapping(uint96 => bytes) public lotAuctionOutput;
 
     /// @inheritdoc IAuction
