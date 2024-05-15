@@ -63,6 +63,54 @@ interface IEncryptedMarginalPrice {
         uint64[] bidIds; // slots 9+
     }
 
+    // ========== DECRYPTION ========== //
+
+    /// @notice Submits the private key for the auction lot and decrypts an initial number of bids
+    ///         It does not require gating. If the seller wishes to limit who can call, they can simply not reveal the key to anyone else.
+    ///         On the other hand, if a key management service is used, then anyone can call it once the key is revealed.
+    ///
+    /// @param  lotId_      The lot ID of the auction to submit the private key for
+    /// @param  privateKey_ The ECIES private key to decrypt the bids
+    /// @param  num_        The number of bids to decrypt after submitting the private key (passed to `_decryptAndSortBids()`)
+    /// @param  sortHints_  The sort hints for the bid decryption (passed to `_decryptAndSortBids()`)
+    function submitPrivateKey(
+        uint96 lotId_,
+        uint256 privateKey_,
+        uint64 num_,
+        bytes32[] calldata sortHints_
+    ) external;
+
+    /// @notice Decrypts a batch of bids and sorts them by price in descending order
+    ///
+    /// @param  lotId_      The lot ID
+    /// @param  num_        The number of bids to decrypt and sort
+    /// @param  sortHints_  The sort hints for the bids
+    function decryptAndSortBids(
+        uint96 lotId_,
+        uint64 num_,
+        bytes32[] calldata sortHints_
+    ) external;
+
+    /// @notice     Returns the decrypted amountOut of a single bid without altering contract state
+    ///
+    /// @param      lotId_      The lot ID of the auction to decrypt the bid for
+    /// @param      bidId_      The bid ID to decrypt
+    /// @return     amountOut   The decrypted amount out
+    function decryptBid(uint96 lotId_, uint64 bidId_) external view returns (uint256 amountOut);
+
+    /// @notice     Returns the bid after `key_` in the queue
+    ///
+    /// @param      lotId_  The lot ID
+    /// @param      key_    The key to search for
+    /// @return     nextKey The key of the next bid in the queue
+    function getNextInQueue(uint96 lotId_, bytes32 key_) external view returns (bytes32 nextKey);
+
+    /// @notice     Returns the number of decrypted bids remaining in the queue
+    ///
+    /// @param      lotId_  The lot ID
+    /// @return     numBids The number of decrypted bids remaining in the queue
+    function getNumBidsInQueue(uint96 lotId_) external view returns (uint256 numBids);
+
     // ========== AUCTION INFORMATION ========== //
 
     /// @notice Returns the `AuctionData` data for an auction lot

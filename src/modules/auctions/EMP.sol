@@ -424,28 +424,20 @@ contract EncryptedMarginalPrice is BatchAuctionModule, IEncryptedMarginalPrice {
 
     // ========== DECRYPTION ========== //
 
-    /// @notice         Submits the private key for the auction lot and decrypts an initial number of bids
-    ///                 It does not require gating. If the seller wishes to limit who can call, they can simply not reveal the key to anyone else.
-    ///                 On the other hand, if a key management service is used, then anyone can call it once the key is revealed.
-    ///
-    ///                 This function reverts if:
-    ///                 - The lot ID is invalid
-    ///                 - The lot is not active
-    ///                 - The lot has not concluded
-    ///                 - The private key has already been submitted
-    ///                 - The lot has been settled (cancelled, settled or aborted)
-    ///                 - The private key is invalid for the public key
-    ///
-    /// @param          lotId_          The lot ID of the auction to submit the private key for
-    /// @param          privateKey_     The ECIES private key to decrypt the bids
-    /// @param          num_            The number of bids to decrypt after submitting the private key (passed to `_decryptAndSortBids()`)
-    /// @param          sortHints_      The sort hints for the bid decryption (passed to `_decryptAndSortBids()`)
+    /// @inheritdoc IEncryptedMarginalPrice
+    /// @dev        This function reverts if:
+    ///             - The lot ID is invalid
+    ///             - The lot is not active
+    ///             - The lot has not concluded
+    ///             - The private key has already been submitted
+    ///             - The lot has been settled (cancelled, settled or aborted)
+    ///             - The private key is invalid for the public key
     function submitPrivateKey(
         uint96 lotId_,
         uint256 privateKey_,
         uint64 num_,
         bytes32[] calldata sortHints_
-    ) external {
+    ) external override {
         // Validation
         _revertIfLotInvalid(lotId_);
         _revertIfLotActive(lotId_);
@@ -468,32 +460,28 @@ contract EncryptedMarginalPrice is BatchAuctionModule, IEncryptedMarginalPrice {
         _decryptAndSortBids(lotId_, num_, sortHints_);
     }
 
-    /// @notice         Decrypts a batch of bids and sorts them by price in descending order
-    /// @dev            This function handles the following:
-    ///                 - Performs state validation
-    ///                 - Iterates over the encrypted bids:
-    ///                     - Decrypts the bid
-    ///                     - Ignores if the bid is incorrectly encrypted
-    ///                     - Does not add to the sorted bid queue if the decrypted amount out is less than the minimum bid size or overflows
-    ///                     - Otherwise, adds to the sorted bid queue for use during settlement
-    ///                 - Determines the next decrypt index
-    ///                 - Sets the auction status to decrypted if all bids have been decrypted
+    /// @inheritdoc IEncryptedMarginalPrice
+    /// @dev        This function handles the following:
+    ///             - Performs state validation
+    ///             - Iterates over the encrypted bids:
+    ///                 - Decrypts the bid
+    ///                 - Ignores if the bid is incorrectly encrypted
+    ///                 - Does not add to the sorted bid queue if the decrypted amount out is less than the minimum bid size or overflows
+    ///                 - Otherwise, adds to the sorted bid queue for use during settlement
+    ///             - Determines the next decrypt index
+    ///             - Sets the auction status to decrypted if all bids have been decrypted
     ///
-    ///                 This function reverts if:
-    ///                 - The lot ID is invalid
-    ///                 - The lot has not started
-    ///                 - The lot is active
-    ///                 - The private key has not been provided
-    ///                 - `num_` and `sortHints_` have different lengths
-    ///
-    /// @param          lotId_          The lot ID of the auction to decrypt bids for
-    /// @param          num_            The number of bids to decrypt. Reduced to the number remaining if greater
-    /// @param          sortHints_      The sort hints for the bid decryption
+    ///             This function reverts if:
+    ///             - The lot ID is invalid
+    ///             - The lot has not started
+    ///             - The lot is active
+    ///             - The private key has not been provided
+    ///             - `num_` and `sortHints_` have different lengths
     function decryptAndSortBids(
         uint96 lotId_,
         uint64 num_,
         bytes32[] calldata sortHints_
-    ) external {
+    ) external override {
         // Check that lotId is valid
         _revertIfLotInvalid(lotId_);
         _revertIfBeforeLotStart(lotId_);
@@ -547,17 +535,16 @@ contract EncryptedMarginalPrice is BatchAuctionModule, IEncryptedMarginalPrice {
         }
     }
 
-    /// @notice     Returns the decrypted amountOut of a single bid
+    /// @inheritdoc IEncryptedMarginalPrice
     /// @dev        This function does not alter the state of the contract, but provides a way to peek at the decrypted bid
     ///
     ///             This function reverts if:
     ///             - The lot ID is invalid
     ///             - The private key has not been provided
-    ///
-    /// @param      lotId_      The lot ID of the auction to decrypt the bid for
-    /// @param      bidId_      The bid ID to decrypt
-    /// @return     amountOut   The decrypted amount out
-    function decryptBid(uint96 lotId_, uint64 bidId_) public view returns (uint256 amountOut) {
+    function decryptBid(
+        uint96 lotId_,
+        uint64 bidId_
+    ) public view override returns (uint256 amountOut) {
         // Load the private key
         uint256 privateKey = auctionData[lotId_].privateKey;
 
@@ -632,13 +619,13 @@ contract EncryptedMarginalPrice is BatchAuctionModule, IEncryptedMarginalPrice {
         emit BidDecrypted(lotId_, bidId_, bidData.amount, amountOut);
     }
 
-    /// @notice     Returns the bid after `key_` in the queue
-    function getNextInQueue(uint96 lotId_, bytes32 key_) external view returns (bytes32) {
+    /// @inheritdoc IEncryptedMarginalPrice
+    function getNextInQueue(uint96 lotId_, bytes32 key_) external view override returns (bytes32) {
         return decryptedBids[lotId_].getNext(key_);
     }
 
-    /// @notice     Returns the number of decrypted bids remaining in the queue
-    function getNumBidsInQueue(uint96 lotId_) external view returns (uint256) {
+    /// @inheritdoc IEncryptedMarginalPrice
+    function getNumBidsInQueue(uint96 lotId_) external view override returns (uint256) {
         return decryptedBids[lotId_].getNumBids();
     }
 
