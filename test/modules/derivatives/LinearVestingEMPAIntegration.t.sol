@@ -6,7 +6,7 @@ import {EncryptedMarginalPrice} from "src/modules/auctions/EMP.sol";
 import {ILinearVesting} from "src/interfaces/modules/derivatives/ILinearVesting.sol";
 import {LinearVesting} from "src/modules/derivatives/LinearVesting.sol";
 import {Point, ECIES} from "src/lib/ECIES.sol";
-import {AuctionHouse} from "src/bases/AuctionHouse.sol";
+import {IAuctionHouse} from "src/interfaces/IAuctionHouse.sol";
 import {IAuction} from "src/interfaces/IAuction.sol";
 import {IEncryptedMarginalPrice} from "src/interfaces/modules/auctions/IEncryptedMarginalPrice.sol";
 
@@ -188,7 +188,7 @@ contract LinearVestingEMPAIntegrationTest is BatchAuctionHouseTest {
         givenLotIsCreated
     {
         // Check the routing parameters
-        AuctionHouse.Routing memory lotRouting = _getLotRouting(_lotId);
+        IAuctionHouse.Routing memory lotRouting = _getLotRouting(_lotId);
         assertEq(
             fromVeecode(lotRouting.auctionReference),
             fromVeecode(_empaModule.VEECODE()),

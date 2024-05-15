@@ -4,14 +4,13 @@ pragma solidity 0.8.19;
 // Interfaces
 import {ICallback} from "src/interfaces/ICallback.sol";
 import {IAuction} from "src/interfaces/IAuction.sol";
+import {IAuctionHouse} from "src/interfaces/IAuctionHouse.sol";
 
 // External libraries
 import {ERC20} from "lib/solmate/src/tokens/ERC20.sol";
 
+// Internal dependencies
 import {Veecode, fromVeecode} from "src/modules/Keycode.sol";
-
-// Auctions
-import {AuctionHouse} from "src/bases/AuctionHouse.sol";
 
 /// @notice Contract that provides view functions for auctions
 abstract contract Catalogue {
@@ -19,7 +18,7 @@ abstract contract Catalogue {
     error InvalidParams();
 
     // ========== STATE VARIABLES ========== //
-    /// @notice Address of the AuctionHouse contract
+    /// @notice Address of the IAuctionHouse contract
     address public auctionHouse;
 
     /// @notice     Fees are in basis points (3 decimals). 1% equals 1000.
@@ -37,7 +36,7 @@ abstract contract Catalogue {
     ///
     /// @param      lotId_  ID of the auction lot
     /// @return     routing Routing information for the auction lot
-    function getRouting(uint96 lotId_) public view returns (AuctionHouse.Routing memory) {
+    function getRouting(uint96 lotId_) public view returns (IAuctionHouse.Routing memory) {
         (
             address seller,
             ERC20 baseToken,
@@ -48,9 +47,9 @@ abstract contract Catalogue {
             Veecode derivativeReference,
             bool wrapDerivative,
             bytes memory derivativeParams
-        ) = AuctionHouse(auctionHouse).lotRouting(lotId_);
+        ) = IAuctionHouse(auctionHouse).lotRouting(lotId_);
 
-        return AuctionHouse.Routing({
+        return IAuctionHouse.Routing({
             auctionReference: auctionReference,
             seller: seller,
             baseToken: baseToken,
@@ -66,21 +65,21 @@ abstract contract Catalogue {
     /// @notice    Returns whether the auction is currently accepting bids or purchases
     /// @dev       Auctions that have been created, but not yet started will return false
     function isLive(uint96 lotId_) public view returns (bool) {
-        IAuction module = AuctionHouse(auctionHouse).getAuctionModuleForId(lotId_);
+        IAuction module = IAuctionHouse(auctionHouse).getAuctionModuleForId(lotId_);
 
         // Get isLive from module
         return module.isLive(lotId_);
     }
 
     function hasEnded(uint96 lotId_) external view returns (bool) {
-        IAuction module = AuctionHouse(auctionHouse).getAuctionModuleForId(lotId_);
+        IAuction module = IAuctionHouse(auctionHouse).getAuctionModuleForId(lotId_);
 
         // Get hasEnded from module
         return module.hasEnded(lotId_);
     }
 
     function remainingCapacity(uint96 lotId_) external view returns (uint256) {
-        IAuction module = AuctionHouse(auctionHouse).getAuctionModuleForId(lotId_);
+        IAuction module = IAuctionHouse(auctionHouse).getAuctionModuleForId(lotId_);
 
         // Get remaining capacity from module
         return module.remainingCapacity(lotId_);
@@ -89,7 +88,7 @@ abstract contract Catalogue {
     // ========== RETRIEVING AUCTIONS ========== //
 
     function getMaxLotId() public view returns (uint96) {
-        return AuctionHouse(auctionHouse).lotCounter() - 1;
+        return IAuctionHouse(auctionHouse).lotCounter() - 1;
     }
 
     function _validateRange(uint96 startId_, uint96 count_) internal view returns (uint256 count) {

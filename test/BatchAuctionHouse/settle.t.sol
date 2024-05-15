@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.19;
 
-import {AuctionHouse} from "src/bases/AuctionHouse.sol";
+import {IAuctionHouse} from "src/interfaces/IAuctionHouse.sol";
 import {BatchAuctionModule} from "src/modules/auctions/BatchAuctionModule.sol";
 
 import {MockBatchAuctionModule} from "test/modules/Auction/MockBatchAuctionModule.sol";
@@ -51,7 +51,7 @@ contract BatchSettleTest is BatchAuctionHouseTest {
         assertEq(_baseToken.balanceOf(_PROTOCOL), 0, "base token: protocol balance");
 
         // Check routing
-        AuctionHouse.Routing memory lotRouting = _getLotRouting(_lotId);
+        IAuctionHouse.Routing memory lotRouting = _getLotRouting(_lotId);
         assertEq(
             lotRouting.funding,
             _expectedAuctionHouseBaseTokenBalance - _expectedCuratorBaseTokenRewards,
@@ -365,7 +365,7 @@ contract BatchSettleTest is BatchAuctionHouseTest {
 
     function test_whenLotIdIsInvalid_reverts() public {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(AuctionHouse.InvalidLotId.selector, _lotId);
+        bytes memory err = abi.encodeWithSelector(IAuctionHouse.InvalidLotId.selector, _lotId);
         vm.expectRevert(err);
 
         // Call function

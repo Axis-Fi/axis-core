@@ -505,7 +505,7 @@ abstract contract AtomicAuctionHouseTest is Test, Permit2User, WithSalts {
 
     // ===== Helpers ===== //
 
-    function _getLotRouting(uint96 lotId_) internal view returns (AuctionHouse.Routing memory) {
+    function _getLotRouting(uint96 lotId_) internal view returns (IAuctionHouse.Routing memory) {
         (
             address seller_,
             ERC20 baseToken_,
@@ -518,7 +518,7 @@ abstract contract AtomicAuctionHouseTest is Test, Permit2User, WithSalts {
             bytes memory derivativeParams_
         ) = _auctionHouse.lotRouting(lotId_);
 
-        return AuctionHouse.Routing({
+        return IAuctionHouse.Routing({
             auctionReference: auctionReference_,
             seller: seller_,
             baseToken: baseToken_,
@@ -531,7 +531,7 @@ abstract contract AtomicAuctionHouseTest is Test, Permit2User, WithSalts {
         });
     }
 
-    function _getLotFees(uint96 lotId_) internal view returns (AuctionHouse.FeeData memory) {
+    function _getLotFees(uint96 lotId_) internal view returns (IAuctionHouse.FeeData memory) {
         (
             address curator_,
             bool curated_,
@@ -540,7 +540,7 @@ abstract contract AtomicAuctionHouseTest is Test, Permit2User, WithSalts {
             uint48 referrerFee_
         ) = _auctionHouse.lotFees(lotId_);
 
-        return AuctionHouse.FeeData({
+        return IAuctionHouse.FeeData({
             curator: curator_,
             curated: curated_,
             curatorFee: curatorFee_,

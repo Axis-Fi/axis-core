@@ -14,7 +14,7 @@ import {MockWrappedDerivative} from "test/lib/mocks/MockWrappedDerivative.sol";
 
 import {ERC20} from "solmate/tokens/ERC20.sol";
 import {ICallback} from "src/interfaces/ICallback.sol";
-import {AuctionHouse} from "src/bases/AuctionHouse.sol";
+import {IAuctionHouse} from "src/interfaces/IAuctionHouse.sol";
 
 import {Veecode, toVeecode} from "src/modules/Modules.sol";
 
@@ -46,7 +46,7 @@ contract SendPayoutTest is Test, Permit2User {
     uint256 internal _auctionOutputMultiplier;
     bytes internal _auctionOutput;
 
-    AuctionHouse.Routing internal _routingParams;
+    IAuctionHouse.Routing internal _routingParams;
 
     function setUp() public {
         // Set reasonable starting block
@@ -84,7 +84,7 @@ contract SendPayoutTest is Test, Permit2User {
         _auctionOutput =
             abi.encode(MockAtomicAuctionModule.Output({multiplier: _auctionOutputMultiplier})); // Does nothing unless the condenser is set
 
-        _routingParams = AuctionHouse.Routing({
+        _routingParams = IAuctionHouse.Routing({
             auctionReference: _mockAuctionModule.VEECODE(),
             seller: _SELLER,
             baseToken: _payoutToken,
