@@ -367,8 +367,8 @@ contract LinearVestingTest is Test, Permit2User {
         assertEq(tokenMetadata.data.length, _VESTING_DATA_LEN, "tokenMetadata data length");
 
         // Check implementation data
-        ILinearVesting.VestingData memory vestingData =
-            abi.decode(tokenMetadata.data, (ILinearVesting.VestingData));
+        ILinearVesting.VestingParams memory vestingData =
+            abi.decode(tokenMetadata.data, (ILinearVesting.VestingParams));
         assertEq(vestingData.start, _VESTING_START, "vesting start");
         assertEq(vestingData.expiry, _VESTING_EXPIRY, "vesting expiry");
     }
@@ -395,8 +395,8 @@ contract LinearVestingTest is Test, Permit2User {
         assertEq(tokenMetadata.data.length, _VESTING_DATA_LEN, "tokenMetadata data length");
 
         // Check implementation data
-        ILinearVesting.VestingData memory vestingData =
-            abi.decode(tokenMetadata.data, (ILinearVesting.VestingData));
+        ILinearVesting.VestingParams memory vestingData =
+            abi.decode(tokenMetadata.data, (ILinearVesting.VestingParams));
         assertEq(vestingData.start, _VESTING_START, "vesting start");
         assertEq(vestingData.expiry, _VESTING_EXPIRY, "vesting expiry");
     }
@@ -441,8 +441,8 @@ contract LinearVestingTest is Test, Permit2User {
         assertEq(tokenMetadata.data.length, _VESTING_DATA_LEN, "tokenMetadata data length");
 
         // Check implementation data
-        ILinearVesting.VestingData memory vestingData =
-            abi.decode(tokenMetadata.data, (ILinearVesting.VestingData));
+        ILinearVesting.VestingParams memory vestingData =
+            abi.decode(tokenMetadata.data, (ILinearVesting.VestingParams));
         assertEq(vestingData.start, _VESTING_START, "vesting start");
         assertEq(vestingData.expiry, _VESTING_EXPIRY, "vesting expiry");
     }
@@ -466,8 +466,8 @@ contract LinearVestingTest is Test, Permit2User {
         assertEq(tokenMetadata.data.length, _VESTING_DATA_LEN, "tokenMetadata data length");
 
         // Check implementation data
-        ILinearVesting.VestingData memory vestingData =
-            abi.decode(tokenMetadata.data, (ILinearVesting.VestingData));
+        ILinearVesting.VestingParams memory vestingData =
+            abi.decode(tokenMetadata.data, (ILinearVesting.VestingParams));
         assertEq(vestingData.start, _VESTING_START, "vesting start");
         assertEq(vestingData.expiry, _VESTING_EXPIRY, "vesting expiry");
     }

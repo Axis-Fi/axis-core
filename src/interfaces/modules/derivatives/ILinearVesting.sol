@@ -36,15 +36,6 @@ interface ILinearVesting {
     ///
     /// @param      start       The timestamp at which the vesting starts
     /// @param      expiry      The timestamp at which the vesting expires
-    struct VestingData {
-        uint48 start;
-        uint48 expiry;
-    }
-
-    /// @notice     Stores the parameters for a particular derivative
-    ///
-    /// @param      start       The timestamp at which the vesting starts
-    /// @param      expiry      The timestamp at which the vesting expires
     struct VestingParams {
         uint48 start;
         uint48 expiry;
