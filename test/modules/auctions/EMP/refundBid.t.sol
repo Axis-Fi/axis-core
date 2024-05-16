@@ -4,9 +4,10 @@ pragma solidity 0.8.19;
 import {console2} from "forge-std/console2.sol";
 
 import {Module} from "src/modules/Modules.sol";
-import {IAuction} from "src/interfaces/IAuction.sol";
+import {IAuction} from "src/interfaces/modules/IAuction.sol";
+import {IEncryptedMarginalPrice} from "src/interfaces/modules/auctions/IEncryptedMarginalPrice.sol";
 import {EncryptedMarginalPrice} from "src/modules/auctions/EMP.sol";
-import {IBatchAuction} from "src/interfaces/IBatchAuction.sol";
+import {IBatchAuction} from "src/interfaces/modules/IBatchAuction.sol";
 
 import {EmpTest} from "test/modules/auctions/EMP/EMPTest.sol";
 
@@ -75,7 +76,7 @@ contract EmpRefundBidTest is EmpTest {
     {
         // Expect revert
         bytes memory err =
-            abi.encodeWithSelector(EncryptedMarginalPrice.NotPermitted.selector, address(this));
+            abi.encodeWithSelector(IEncryptedMarginalPrice.NotPermitted.selector, address(this));
         vm.expectRevert(err);
 
         // Call the function
@@ -92,7 +93,7 @@ contract EmpRefundBidTest is EmpTest {
     {
         // Expect revert
         bytes memory err =
-            abi.encodeWithSelector(EncryptedMarginalPrice.Bid_WrongState.selector, _lotId, _bidId);
+            abi.encodeWithSelector(IEncryptedMarginalPrice.Bid_WrongState.selector, _lotId, _bidId);
         vm.expectRevert(err);
 
         // Call the function
@@ -114,7 +115,7 @@ contract EmpRefundBidTest is EmpTest {
         // Assert the bid status
         EncryptedMarginalPrice.Bid memory bidData = _getBid(_lotId, _bidId);
         assertEq(
-            uint8(bidData.status), uint8(EncryptedMarginalPrice.BidStatus.Claimed), "bid status"
+            uint8(bidData.status), uint8(IEncryptedMarginalPrice.BidStatus.Claimed), "bid status"
         );
 
         // Assert the refund amount
@@ -182,7 +183,7 @@ contract EmpRefundBidTest is EmpTest {
     {
         // Expect revert
         bytes memory err =
-            abi.encodeWithSelector(EncryptedMarginalPrice.Auction_WrongState.selector, _lotId);
+            abi.encodeWithSelector(IEncryptedMarginalPrice.Auction_WrongState.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function
@@ -221,7 +222,7 @@ contract EmpRefundBidTest is EmpTest {
     {
         // Expect revert
         bytes memory err =
-            abi.encodeWithSelector(EncryptedMarginalPrice.Auction_WrongState.selector, _lotId);
+            abi.encodeWithSelector(IEncryptedMarginalPrice.Auction_WrongState.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function
@@ -262,7 +263,7 @@ contract EmpRefundBidTest is EmpTest {
     {
         // Expect revert
         bytes memory err =
-            abi.encodeWithSelector(EncryptedMarginalPrice.Auction_WrongState.selector, _lotId);
+            abi.encodeWithSelector(IEncryptedMarginalPrice.Auction_WrongState.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function
@@ -281,7 +282,7 @@ contract EmpRefundBidTest is EmpTest {
     {
         // Expect revert
         bytes memory err =
-            abi.encodeWithSelector(EncryptedMarginalPrice.Auction_WrongState.selector, _lotId);
+            abi.encodeWithSelector(IEncryptedMarginalPrice.Auction_WrongState.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function
@@ -352,7 +353,7 @@ contract EmpRefundBidTest is EmpTest {
         // Assert the bid status
         EncryptedMarginalPrice.Bid memory bidData = _getBid(_lotId, _bidId);
         assertEq(
-            uint8(bidData.status), uint8(EncryptedMarginalPrice.BidStatus.Claimed), "bid status"
+            uint8(bidData.status), uint8(IEncryptedMarginalPrice.BidStatus.Claimed), "bid status"
         );
 
         // Assert the refund amount
@@ -374,7 +375,7 @@ contract EmpRefundBidTest is EmpTest {
         // Assert the bid status
         EncryptedMarginalPrice.Bid memory bidData = _getBid(_lotId, 1);
         assertEq(
-            uint8(bidData.status), uint8(EncryptedMarginalPrice.BidStatus.Claimed), "bid status"
+            uint8(bidData.status), uint8(IEncryptedMarginalPrice.BidStatus.Claimed), "bid status"
         );
 
         // Assert the refund amount
@@ -396,7 +397,7 @@ contract EmpRefundBidTest is EmpTest {
         // Assert the bid status
         EncryptedMarginalPrice.Bid memory bidData = _getBid(_lotId, 2);
         assertEq(
-            uint8(bidData.status), uint8(EncryptedMarginalPrice.BidStatus.Claimed), "bid status"
+            uint8(bidData.status), uint8(IEncryptedMarginalPrice.BidStatus.Claimed), "bid status"
         );
 
         // Assert the refund amount
@@ -418,7 +419,7 @@ contract EmpRefundBidTest is EmpTest {
         // Assert the bid status
         EncryptedMarginalPrice.Bid memory bidData = _getBid(_lotId, 3);
         assertEq(
-            uint8(bidData.status), uint8(EncryptedMarginalPrice.BidStatus.Claimed), "bid status"
+            uint8(bidData.status), uint8(IEncryptedMarginalPrice.BidStatus.Claimed), "bid status"
         );
 
         // Assert the refund amount
@@ -439,7 +440,7 @@ contract EmpRefundBidTest is EmpTest {
 
         EncryptedMarginalPrice.Bid memory bidData1 = _getBid(_lotId, 1);
         assertEq(
-            uint8(bidData1.status), uint8(EncryptedMarginalPrice.BidStatus.Claimed), "bid status 1"
+            uint8(bidData1.status), uint8(IEncryptedMarginalPrice.BidStatus.Claimed), "bid status 1"
         );
 
         // The third bid should now be in the 0 index because it was swapped with the ejected bid
@@ -447,7 +448,7 @@ contract EmpRefundBidTest is EmpTest {
         uint256 refundAmount3 = _module.refundBid(_lotId, 3, 0, _BIDDER);
         EncryptedMarginalPrice.Bid memory bidData3 = _getBid(_lotId, 3);
         assertEq(
-            uint8(bidData3.status), uint8(EncryptedMarginalPrice.BidStatus.Claimed), "bid status 3"
+            uint8(bidData3.status), uint8(IEncryptedMarginalPrice.BidStatus.Claimed), "bid status 3"
         );
 
         // The second bid should now be in the 0 index because it was swapped with the ejected bid
@@ -455,7 +456,7 @@ contract EmpRefundBidTest is EmpTest {
         uint256 refundAmount2 = _module.refundBid(_lotId, 2, 0, _BIDDER);
         EncryptedMarginalPrice.Bid memory bidData2 = _getBid(_lotId, 2);
         assertEq(
-            uint8(bidData2.status), uint8(EncryptedMarginalPrice.BidStatus.Claimed), "bid status 2"
+            uint8(bidData2.status), uint8(IEncryptedMarginalPrice.BidStatus.Claimed), "bid status 2"
         );
 
         // Assert the refund amount

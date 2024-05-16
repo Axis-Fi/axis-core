@@ -2,8 +2,9 @@
 pragma solidity 0.8.19;
 
 import {Module} from "src/modules/Modules.sol";
-import {IAuction} from "src/interfaces/IAuction.sol";
+import {IAuction} from "src/interfaces/modules/IAuction.sol";
 import {EncryptedMarginalPrice} from "src/modules/auctions/EMP.sol";
+import {IEncryptedMarginalPrice} from "src/interfaces/modules/auctions/IEncryptedMarginalPrice.sol";
 
 import {EmpTest} from "test/modules/auctions/EMP/EMPTest.sol";
 
@@ -97,7 +98,7 @@ contract EmpCancelAuctionTest is EmpTest {
     function test_auctionStarted_reverts() public givenLotIsCreated givenLotHasStarted {
         // Expect revert
         bytes memory err =
-            abi.encodeWithSelector(EncryptedMarginalPrice.Auction_WrongState.selector, _lotId);
+            abi.encodeWithSelector(IEncryptedMarginalPrice.Auction_WrongState.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function
@@ -115,7 +116,7 @@ contract EmpCancelAuctionTest is EmpTest {
 
         EncryptedMarginalPrice.AuctionData memory auctionData = _getAuctionData(_lotId);
         assertEq(
-            uint8(auctionData.status), uint8(EncryptedMarginalPrice.LotStatus.Settled), "status"
+            uint8(auctionData.status), uint8(IEncryptedMarginalPrice.LotStatus.Settled), "status"
         );
     }
 }

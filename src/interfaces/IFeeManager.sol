@@ -30,6 +30,7 @@ interface IFeeManager {
         mapping(address => uint48) curator;
     }
 
+    /// @notice     Defines the type of fee to set
     enum FeeType {
         Protocol,
         Referrer,
@@ -39,6 +40,13 @@ interface IFeeManager {
     // ========== FEE CALCULATIONS ========== //
 
     /// @notice     Calculates and allocates fees that are collected in the quote token
+    ///
+    /// @param      protocolFee_  Fee charged by the protocol
+    /// @param      referrerFee_  Fee charged by the referrer
+    /// @param      hasReferrer_  Whether the auction has a referrer
+    /// @param      amount_       Amount to calculate fees for
+    /// @return     toReferrer    Amount to send to the referrer
+    /// @return     toProtocol    Amount to send to the protocol
     function calculateQuoteFees(
         uint48 protocolFee_,
         uint48 referrerFee_,
@@ -49,6 +57,9 @@ interface IFeeManager {
     // ========== FEE MANAGEMENT ========== //
 
     /// @notice     Sets the fee for a curator (the sender) for a specific auction type
+    ///
+    /// @param      auctionType_ Auction type to set fees for
+    /// @param      fee_         Fee to charge
     function setCuratorFee(Keycode auctionType_, uint48 fee_) external;
 
     /// @notice     Gets the fees for a specific auction type
@@ -93,6 +104,10 @@ interface IFeeManager {
 
     /// @notice     Sets the protocol fee, referrer fee, or max curator fee for a specific auction type
     /// @notice     Access controlled: only owner
+    ///
+    /// @param      auctionType_  Auction type to set fees for
+    /// @param      type_         Type of fee to set
+    /// @param      fee_          Fee to charge
     function setFee(Keycode auctionType_, FeeType type_, uint48 fee_) external;
 
     /// @notice     Sets the protocol address

@@ -2,8 +2,9 @@
 pragma solidity 0.8.19;
 
 import {Module} from "src/modules/Modules.sol";
-import {IAuction} from "src/interfaces/IAuction.sol";
+import {IAuction} from "src/interfaces/modules/IAuction.sol";
 import {EncryptedMarginalPrice} from "src/modules/auctions/EMP.sol";
+import {IEncryptedMarginalPrice} from "src/interfaces/modules/auctions/IEncryptedMarginalPrice.sol";
 
 import {EmpTest} from "test/modules/auctions/EMP/EMPTest.sol";
 
@@ -155,7 +156,7 @@ contract EmpCreateAuctionTest is EmpTest {
         );
         assertEq(auctionData.minBidSize, _scaleQuoteTokenAmount(_MIN_BID_SIZE), "minBidSize");
         assertEq(
-            uint8(auctionData.status), uint8(EncryptedMarginalPrice.LotStatus.Created), "status"
+            uint8(auctionData.status), uint8(IEncryptedMarginalPrice.LotStatus.Created), "status"
         );
         assertEq(auctionData.publicKey.x, _auctionPublicKey.x);
         assertEq(auctionData.publicKey.y, _auctionPublicKey.y);
@@ -191,7 +192,7 @@ contract EmpCreateAuctionTest is EmpTest {
         );
         assertEq(auctionData.minBidSize, _scaleQuoteTokenAmount(_MIN_BID_SIZE), "minBidSize");
         assertEq(
-            uint8(auctionData.status), uint8(EncryptedMarginalPrice.LotStatus.Created), "status"
+            uint8(auctionData.status), uint8(IEncryptedMarginalPrice.LotStatus.Created), "status"
         );
         assertEq(auctionData.publicKey.x, _auctionPublicKey.x);
         assertEq(auctionData.publicKey.y, _auctionPublicKey.y);
@@ -227,7 +228,7 @@ contract EmpCreateAuctionTest is EmpTest {
         );
         assertEq(auctionData.minBidSize, _scaleQuoteTokenAmount(_MIN_BID_SIZE), "minBidSize");
         assertEq(
-            uint8(auctionData.status), uint8(EncryptedMarginalPrice.LotStatus.Created), "status"
+            uint8(auctionData.status), uint8(IEncryptedMarginalPrice.LotStatus.Created), "status"
         );
         assertEq(auctionData.publicKey.x, _auctionPublicKey.x);
         assertEq(auctionData.publicKey.y, _auctionPublicKey.y);

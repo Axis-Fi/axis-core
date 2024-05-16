@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.19;
 
-import {AuctionHouse} from "src/bases/AuctionHouse.sol";
+import {IAuctionHouse} from "src/interfaces/IAuctionHouse.sol";
 import {BatchAuctionHouse} from "src/BatchAuctionHouse.sol";
-import {IAuction} from "src/interfaces/IAuction.sol";
-import {IBatchAuction} from "src/interfaces/IBatchAuction.sol";
+import {IAuction} from "src/interfaces/modules/IAuction.sol";
+import {IBatchAuction} from "src/interfaces/modules/IBatchAuction.sol";
 
 import {BatchAuctionHouseTest} from "test/BatchAuctionHouse/AuctionHouseTest.sol";
 
@@ -51,12 +51,12 @@ contract BatchAbortTest is BatchAuctionHouseTest {
     function test_abort_whenLotIdIsNotValid_reverts() public {
         // No lots are created
 
-        bytes memory err = abi.encodeWithSelector(AuctionHouse.InvalidLotId.selector, 0);
+        bytes memory err = abi.encodeWithSelector(IAuctionHouse.InvalidLotId.selector, 0);
         vm.expectRevert(err);
         _auctionHouse.abort(0);
 
         // try a non-zero value too
-        err = abi.encodeWithSelector(AuctionHouse.InvalidLotId.selector, 1);
+        err = abi.encodeWithSelector(IAuctionHouse.InvalidLotId.selector, 1);
         vm.expectRevert(err);
         _auctionHouse.abort(1);
     }

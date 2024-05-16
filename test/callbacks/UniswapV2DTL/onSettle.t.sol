@@ -11,7 +11,7 @@ import {ERC20} from "solmate/tokens/ERC20.sol";
 import {IUniswapV2Pair} from "uniswap-v2-core/interfaces/IUniswapV2Pair.sol";
 
 // AuctionHouse
-import {LinearVesting} from "src/modules/derivatives/LinearVesting.sol";
+import {ILinearVesting} from "src/interfaces/modules/derivatives/ILinearVesting.sol";
 import {BaseDirectToLiquidity} from "src/callbacks/liquidity/BaseDTL.sol";
 import {UniswapV2DirectToLiquidity} from "src/callbacks/liquidity/UniswapV2DTL.sol";
 
@@ -44,7 +44,7 @@ contract UniswapV2DirectToLiquidityOnSettleTest is UniswapV2DirectToLiquidityTes
         return _linearVesting.computeId(
             pool,
             abi.encode(
-                LinearVesting.VestingParams({
+                ILinearVesting.VestingParams({
                     start: _dtlCreateParams.vestingStart,
                     expiry: _dtlCreateParams.vestingExpiry
                 })
@@ -100,7 +100,7 @@ contract UniswapV2DirectToLiquidityOnSettleTest is UniswapV2DirectToLiquidityTes
         (, address wrappedVestingTokenAddress) = _linearVesting.deploy(
             pool,
             abi.encode(
-                LinearVesting.VestingParams({
+                ILinearVesting.VestingParams({
                     start: _dtlCreateParams.vestingStart,
                     expiry: _dtlCreateParams.vestingExpiry
                 })

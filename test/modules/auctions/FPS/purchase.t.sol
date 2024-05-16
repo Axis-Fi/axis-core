@@ -2,8 +2,8 @@
 pragma solidity 0.8.19;
 
 import {Module} from "src/modules/Modules.sol";
-import {IAuction} from "src/interfaces/IAuction.sol";
-import {FixedPriceSale} from "src/modules/auctions/FPS.sol";
+import {IAuction} from "src/interfaces/modules/IAuction.sol";
+import {IFixedPriceSale} from "src/interfaces/modules/auctions/IFixedPriceSale.sol";
 import {FixedPointMathLib as Math} from "solmate/utils/FixedPointMathLib.sol";
 
 import {FpsTest} from "test/modules/auctions/FPS/FPSTest.sol";
@@ -119,7 +119,7 @@ contract FpsPurchaseTest is FpsTest {
     {
         // Expect revert
         bytes memory err =
-            abi.encodeWithSelector(FixedPriceSale.Auction_PayoutGreaterThanMax.selector);
+            abi.encodeWithSelector(IFixedPriceSale.Auction_PayoutGreaterThanMax.selector);
         vm.expectRevert(err);
 
         // Call the function
@@ -135,7 +135,7 @@ contract FpsPurchaseTest is FpsTest {
     {
         // Expect revert
         bytes memory err =
-            abi.encodeWithSelector(FixedPriceSale.Auction_PayoutGreaterThanMax.selector);
+            abi.encodeWithSelector(IFixedPriceSale.Auction_PayoutGreaterThanMax.selector);
         vm.expectRevert(err);
 
         // Call the function
@@ -151,7 +151,7 @@ contract FpsPurchaseTest is FpsTest {
     {
         // Expect revert
         bytes memory err =
-            abi.encodeWithSelector(FixedPriceSale.Auction_PayoutGreaterThanMax.selector);
+            abi.encodeWithSelector(IFixedPriceSale.Auction_PayoutGreaterThanMax.selector);
         vm.expectRevert(err);
 
         // Call the function
@@ -165,7 +165,7 @@ contract FpsPurchaseTest is FpsTest {
     {
         // Expect revert
         bytes memory err =
-            abi.encodeWithSelector(FixedPriceSale.Auction_InsufficientPayout.selector);
+            abi.encodeWithSelector(IFixedPriceSale.Auction_InsufficientPayout.selector);
         vm.expectRevert(err);
 
         // Call the function
@@ -181,7 +181,7 @@ contract FpsPurchaseTest is FpsTest {
     {
         // Expect revert
         bytes memory err =
-            abi.encodeWithSelector(FixedPriceSale.Auction_InsufficientPayout.selector);
+            abi.encodeWithSelector(IFixedPriceSale.Auction_InsufficientPayout.selector);
         vm.expectRevert(err);
 
         // Call the function
@@ -197,7 +197,7 @@ contract FpsPurchaseTest is FpsTest {
     {
         // Expect revert
         bytes memory err =
-            abi.encodeWithSelector(FixedPriceSale.Auction_InsufficientPayout.selector);
+            abi.encodeWithSelector(IFixedPriceSale.Auction_InsufficientPayout.selector);
         vm.expectRevert(err);
 
         // Call the function

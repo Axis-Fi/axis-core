@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.19;
 
-import {AuctionHouse} from "src/bases/AuctionHouse.sol";
-import {IAuction} from "src/interfaces/IAuction.sol";
+import {IAuctionHouse} from "src/interfaces/IAuctionHouse.sol";
+import {IAuction} from "src/interfaces/modules/IAuction.sol";
 import {AtomicAuctionHouse} from "src/AtomicAuctionHouse.sol";
 
 import {MockDerivativeModule} from "test/modules/derivatives/mocks/MockDerivativeModule.sol";
@@ -247,7 +247,7 @@ contract AtomicPurchaseTest is AtomicAuctionHouseTest {
 
     function _assertPrefunding() internal {
         // Check funding amount
-        AuctionHouse.Routing memory routing = _getLotRouting(_lotId);
+        IAuctionHouse.Routing memory routing = _getLotRouting(_lotId);
         assertEq(routing.funding, 0, "mismatch on funding");
     }
 
@@ -263,7 +263,7 @@ contract AtomicPurchaseTest is AtomicAuctionHouseTest {
 
     function test_whenLotIdIsInvalid_reverts() external {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(AuctionHouse.InvalidLotId.selector, _lotId);
+        bytes memory err = abi.encodeWithSelector(IAuctionHouse.InvalidLotId.selector, _lotId);
         vm.expectRevert(err);
 
         // Purchase

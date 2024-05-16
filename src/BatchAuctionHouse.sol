@@ -2,9 +2,9 @@
 pragma solidity 0.8.19;
 
 // Interfaces
-import {IAuction} from "src/interfaces/IAuction.sol";
+import {IAuction} from "src/interfaces/modules/IAuction.sol";
 import {ICallback} from "src/interfaces/ICallback.sol";
-import {IBatchAuction} from "src/interfaces/IBatchAuction.sol";
+import {IBatchAuction} from "src/interfaces/modules/IBatchAuction.sol";
 import {IBatchAuctionHouse} from "src/interfaces/IBatchAuctionHouse.sol";
 
 // Internal libraries
@@ -130,7 +130,7 @@ contract BatchAuctionHouse is IBatchAuctionHouse, AuctionHouse {
 
         // Transfer the base tokens to the appropriate contract
         Transfer.transfer(
-            routing.baseToken,
+            ERC20(routing.baseToken),
             _getAddressGivenCallbackBaseTokenFlag(routing.callbacks, routing.seller),
             funding,
             false
@@ -166,22 +166,24 @@ contract BatchAuctionHouse is IBatchAuctionHouse, AuctionHouse {
         // Increment the funding
         routing.funding += curatorFeePayout_;
 
+        ERC20 baseToken = ERC20(routing.baseToken);
+
         // If the callbacks contract is configured to send base tokens, then source the fee from the callbacks contract
         // Otherwise, transfer from the auction owner
         if (Callbacks.hasPermission(routing.callbacks, Callbacks.SEND_BASE_TOKENS_FLAG)) {
-            uint256 balanceBefore = routing.baseToken.balanceOf(address(this));
+            uint256 balanceBefore = baseToken.balanceOf(address(this));
 
             // The onCurate callback is expected to transfer the base tokens
             Callbacks.onCurate(routing.callbacks, lotId_, curatorFeePayout_, true, callbackData_);
 
             // Check that the callback transferred the expected amount of base tokens
-            if (routing.baseToken.balanceOf(address(this)) < balanceBefore + curatorFeePayout_) {
+            if (baseToken.balanceOf(address(this)) < balanceBefore + curatorFeePayout_) {
                 revert InvalidCallback();
             }
         } else {
             // Don't need to check for fee on transfer here because it was checked on auction creation
             Transfer.transferFrom(
-                routing.baseToken, routing.seller, address(this), curatorFeePayout_, false
+                baseToken, routing.seller, address(this), curatorFeePayout_, false
             );
 
             // Call the onCurate callback
@@ -228,7 +230,7 @@ contract BatchAuctionHouse is IBatchAuctionHouse, AuctionHouse {
         // payout and refund while you will pay initially.
         _collectPayment(
             params_.amount,
-            lotRouting[params_.lotId].quoteToken,
+            ERC20(lotRouting[params_.lotId].quoteToken),
             Transfer.decodePermit2Approval(params_.permit2Data)
         );
 
@@ -268,7 +270,7 @@ contract BatchAuctionHouse is IBatchAuctionHouse, AuctionHouse {
         // Transfer the quote token to the bidder
         // The ownership of the bid has already been verified by the auction module
         Transfer.transfer(
-            lotRouting[lotId_].quoteToken,
+            ERC20(lotRouting[lotId_].quoteToken),
             msg.sender,
             // Refund the bid on the auction module
             // The auction module is responsible for validating the bid and authorizing the caller
@@ -301,6 +303,7 @@ contract BatchAuctionHouse is IBatchAuctionHouse, AuctionHouse {
 
         // Load routing data for the lot
         Routing storage routing = lotRouting[lotId_];
+        ERC20 quoteToken = ERC20(routing.quoteToken);
 
         // Load fee data
         uint48 protocolFee = lotFees[lotId_].protocolFee;
@@ -322,7 +325,7 @@ contract BatchAuctionHouse is IBatchAuctionHouse, AuctionHouse {
                     referrerFee,
                     bidClaim.referrer,
                     routing.seller,
-                    routing.quoteToken,
+                    quoteToken,
                     bidClaim.paid - bidClaim.refund // refund is included in paid
                 );
 
@@ -340,7 +343,7 @@ contract BatchAuctionHouse is IBatchAuctionHouse, AuctionHouse {
                 // If the bid was not filled, the refund should be the full amount paid
                 // If the bid was partially filled, the refund should be the difference
                 // between the paid amount and the filled amount
-                Transfer.transfer(routing.quoteToken, bidClaim.bidder, bidClaim.refund, false);
+                Transfer.transfer(quoteToken, bidClaim.bidder, bidClaim.refund, false);
             }
 
             // Emit event
@@ -406,7 +409,7 @@ contract BatchAuctionHouse is IBatchAuctionHouse, AuctionHouse {
         // Send payment in bulk to the address dictated by the callbacks address
         // If the callbacks contract is configured to receive quote tokens, send the quote tokens to the callbacks contract and call the onSettle callback
         // If not, send the quote tokens to the seller and call the onSettle callback
-        _sendPayment(routing.seller, totalInLessFees, routing.quoteToken, routing.callbacks);
+        _sendPayment(routing.seller, totalInLessFees, ERC20(routing.quoteToken), routing.callbacks);
 
         // Refund any unused capacity and curator fees to the address dictated by the callbacks address
         // Additionally, bidders are able to claim before the seller, so the funding isn't the right value
@@ -427,7 +430,7 @@ contract BatchAuctionHouse is IBatchAuctionHouse, AuctionHouse {
                     _sendPayout(feeData.curator, curatorPayout, routing, auctionOutput);
                 } else {
                     // Allocate the curator fee to be claimed
-                    rewards[feeData.curator][routing.baseToken] += curatorPayout;
+                    rewards[feeData.curator][ERC20(routing.baseToken)] += curatorPayout;
                 }
 
                 // Decrease the funding amount
@@ -444,7 +447,7 @@ contract BatchAuctionHouse is IBatchAuctionHouse, AuctionHouse {
             routing.funding -= prefundingRefund;
         }
         Transfer.transfer(
-            routing.baseToken,
+            ERC20(routing.baseToken),
             _getAddressGivenCallbackBaseTokenFlag(routing.callbacks, routing.seller),
             prefundingRefund,
             false
@@ -479,7 +482,7 @@ contract BatchAuctionHouse is IBatchAuctionHouse, AuctionHouse {
 
         // Send the base token refund to the seller or callbacks contract
         Transfer.transfer(
-            lotRouting[lotId_].baseToken,
+            ERC20(lotRouting[lotId_].baseToken),
             _getAddressGivenCallbackBaseTokenFlag(
                 lotRouting[lotId_].callbacks, lotRouting[lotId_].seller
             ),
@@ -493,6 +496,6 @@ contract BatchAuctionHouse is IBatchAuctionHouse, AuctionHouse {
     // ========== INTERNAL FUNCTIONS ========== //
 
     function getBatchModuleForId(uint96 lotId_) public view returns (BatchAuctionModule) {
-        return BatchAuctionModule(address(_getModuleForId(lotId_)));
+        return BatchAuctionModule(address(_getAuctionModuleForId(lotId_)));
     }
 }

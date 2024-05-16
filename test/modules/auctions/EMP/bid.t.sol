@@ -2,7 +2,8 @@
 pragma solidity 0.8.19;
 
 import {Module} from "src/modules/Modules.sol";
-import {IAuction} from "src/interfaces/IAuction.sol";
+import {IAuction} from "src/interfaces/modules/IAuction.sol";
+import {IEncryptedMarginalPrice} from "src/interfaces/modules/auctions/IEncryptedMarginalPrice.sol";
 import {EncryptedMarginalPrice} from "src/modules/auctions/EMP.sol";
 import {Point} from "src/lib/ECIES.sol";
 
@@ -242,7 +243,7 @@ contract EmpBidTest is EmpTest {
 
         // Expect revert
         bytes memory err =
-            abi.encodeWithSelector(EncryptedMarginalPrice.Auction_InvalidKey.selector);
+            abi.encodeWithSelector(IEncryptedMarginalPrice.Auction_InvalidKey.selector);
         vm.expectRevert(err);
 
         // Call the function
@@ -280,7 +281,9 @@ contract EmpBidTest is EmpTest {
         assertEq(bidData.amount, _BID_AMOUNT, "amount");
         assertEq(bidData.minAmountOut, 0, "amountOut");
         assertEq(bidData.referrer, _REFERRER, "referrer");
-        assertEq(uint8(bidData.status), uint8(EncryptedMarginalPrice.BidStatus.Submitted), "status");
+        assertEq(
+            uint8(bidData.status), uint8(IEncryptedMarginalPrice.BidStatus.Submitted), "status"
+        );
 
         EncryptedMarginalPrice.EncryptedBid memory encryptedBidData =
             _getEncryptedBid(_lotId, bidId);

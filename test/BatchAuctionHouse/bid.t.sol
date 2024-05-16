@@ -5,8 +5,8 @@ pragma solidity 0.8.19;
 import {MockBatchAuctionModule} from "test/modules/Auction/MockBatchAuctionModule.sol";
 
 // Auctions
-import {IAuction} from "src/interfaces/IAuction.sol";
-import {AuctionHouse} from "src/bases/AuctionHouse.sol";
+import {IAuction} from "src/interfaces/modules/IAuction.sol";
+import {IAuctionHouse} from "src/interfaces/IAuctionHouse.sol";
 
 import {BatchAuctionHouseTest} from "test/BatchAuctionHouse/AuctionHouseTest.sol";
 
@@ -49,7 +49,7 @@ contract BatchBidTest is BatchAuctionHouseTest {
     //      [X] it sends the bidder param to the onBid callback
 
     function test_whenLotIdIsInvalid_reverts() external {
-        bytes memory err = abi.encodeWithSelector(AuctionHouse.InvalidLotId.selector, _lotId);
+        bytes memory err = abi.encodeWithSelector(IAuctionHouse.InvalidLotId.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function

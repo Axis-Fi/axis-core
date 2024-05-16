@@ -2,7 +2,7 @@
 pragma solidity 0.8.19;
 
 // Interfaces
-import {IAuction} from "src/interfaces/IAuction.sol";
+import {IAuction} from "src/interfaces/modules/IAuction.sol";
 import {IAuctionHouse} from "src/interfaces/IAuctionHouse.sol";
 import {IBatchAuctionHouse} from "src/interfaces/IBatchAuctionHouse.sol";
 import {ICallback} from "src/interfaces/ICallback.sol";
@@ -14,7 +14,6 @@ import {Transfer} from "src/lib/Transfer.sol";
 
 // External libraries
 import {Test} from "forge-std/Test.sol";
-import {ERC20} from "lib/solmate/src/tokens/ERC20.sol";
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 
 // Mocks
@@ -28,7 +27,6 @@ import {MockFeeOnTransferERC20} from "test/lib/mocks/MockFeeOnTransferERC20.sol"
 // Auctions
 import {BatchAuctionHouse} from "src/BatchAuctionHouse.sol";
 import {AuctionModule} from "src/modules/Auction.sol";
-import {AuctionHouse} from "src/bases/AuctionHouse.sol";
 
 import {Veecode, toKeycode, keycodeFromVeecode, Keycode} from "src/modules/Keycode.sol";
 
@@ -589,11 +587,11 @@ abstract contract BatchAuctionHouseTest is Test, Permit2User, WithSalts {
 
     // ===== Helpers ===== //
 
-    function _getLotRouting(uint96 lotId_) internal view returns (AuctionHouse.Routing memory) {
+    function _getLotRouting(uint96 lotId_) internal view returns (IAuctionHouse.Routing memory) {
         (
             address seller_,
-            ERC20 baseToken_,
-            ERC20 quoteToken_,
+            address baseToken_,
+            address quoteToken_,
             Veecode auctionReference_,
             uint256 funding_,
             ICallback callback_,
@@ -602,7 +600,7 @@ abstract contract BatchAuctionHouseTest is Test, Permit2User, WithSalts {
             bytes memory derivativeParams_
         ) = _auctionHouse.lotRouting(lotId_);
 
-        return AuctionHouse.Routing({
+        return IAuctionHouse.Routing({
             auctionReference: auctionReference_,
             seller: seller_,
             baseToken: baseToken_,
@@ -615,7 +613,7 @@ abstract contract BatchAuctionHouseTest is Test, Permit2User, WithSalts {
         });
     }
 
-    function _getLotFees(uint96 lotId_) internal view returns (AuctionHouse.FeeData memory) {
+    function _getLotFees(uint96 lotId_) internal view returns (IAuctionHouse.FeeData memory) {
         (
             address curator_,
             bool curated_,
@@ -624,7 +622,7 @@ abstract contract BatchAuctionHouseTest is Test, Permit2User, WithSalts {
             uint48 referrerFee_
         ) = _auctionHouse.lotFees(lotId_);
 
-        return AuctionHouse.FeeData({
+        return IAuctionHouse.FeeData({
             curator: curator_,
             curated: curated_,
             curatorFee: curatorFee_,

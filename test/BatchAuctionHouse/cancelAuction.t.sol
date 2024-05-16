@@ -2,8 +2,8 @@
 pragma solidity 0.8.19;
 
 // Auctions
-import {IAuction} from "src/interfaces/IAuction.sol";
-import {AuctionHouse} from "src/bases/AuctionHouse.sol";
+import {IAuction} from "src/interfaces/modules/IAuction.sol";
+import {IAuctionHouse} from "src/interfaces/IAuctionHouse.sol";
 
 import {BatchAuctionHouseTest} from "test/BatchAuctionHouse/AuctionHouseTest.sol";
 
@@ -31,7 +31,8 @@ contract BatchCancelAuctionTest is BatchAuctionHouseTest {
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenLotIsCreated
     {
-        bytes memory err = abi.encodeWithSelector(AuctionHouse.NotPermitted.selector, address(this));
+        bytes memory err =
+            abi.encodeWithSelector(IAuctionHouse.NotPermitted.selector, address(this));
         vm.expectRevert(err);
 
         _auctionHouse.cancel(_lotId, bytes(""));
@@ -47,7 +48,7 @@ contract BatchCancelAuctionTest is BatchAuctionHouseTest {
     {
         vm.assume(user_ != _SELLER);
 
-        bytes memory err = abi.encodeWithSelector(AuctionHouse.NotPermitted.selector, user_);
+        bytes memory err = abi.encodeWithSelector(IAuctionHouse.NotPermitted.selector, user_);
         vm.expectRevert(err);
 
         vm.prank(user_);
@@ -55,7 +56,7 @@ contract BatchCancelAuctionTest is BatchAuctionHouseTest {
     }
 
     function test_whenLotIdInvalid_reverts() external {
-        bytes memory err = abi.encodeWithSelector(AuctionHouse.InvalidLotId.selector, _lotId);
+        bytes memory err = abi.encodeWithSelector(IAuctionHouse.InvalidLotId.selector, _lotId);
         vm.expectRevert(err);
 
         vm.prank(_SELLER);
@@ -120,7 +121,7 @@ contract BatchCancelAuctionTest is BatchAuctionHouseTest {
         );
 
         // Check routing
-        AuctionHouse.Routing memory lotRouting = _getLotRouting(_lotId);
+        IAuctionHouse.Routing memory lotRouting = _getLotRouting(_lotId);
         assertEq(lotRouting.funding, 0, "mismatch on funding");
     }
 
@@ -149,7 +150,7 @@ contract BatchCancelAuctionTest is BatchAuctionHouseTest {
         );
 
         // Check routing
-        AuctionHouse.Routing memory lotRouting = _getLotRouting(_lotId);
+        IAuctionHouse.Routing memory lotRouting = _getLotRouting(_lotId);
         assertEq(lotRouting.funding, 0, "mismatch on funding");
 
         // Check the callback
@@ -183,7 +184,7 @@ contract BatchCancelAuctionTest is BatchAuctionHouseTest {
         assertEq(_baseToken.balanceOf(_SELLER), 0, "base token: seller balance mismatch");
 
         // Check routing
-        AuctionHouse.Routing memory lotRouting = _getLotRouting(_lotId);
+        IAuctionHouse.Routing memory lotRouting = _getLotRouting(_lotId);
         assertEq(lotRouting.funding, 0, "mismatch on funding");
 
         // Check the callback
@@ -228,7 +229,7 @@ contract BatchCancelAuctionTest is BatchAuctionHouseTest {
         );
 
         // Check funding amount
-        AuctionHouse.Routing memory lotRouting = _getLotRouting(_lotId);
+        IAuctionHouse.Routing memory lotRouting = _getLotRouting(_lotId);
         assertEq(lotRouting.funding, 0, "mismatch on funding");
     }
 
@@ -268,7 +269,7 @@ contract BatchCancelAuctionTest is BatchAuctionHouseTest {
         );
 
         // Check funding amount
-        AuctionHouse.Routing memory lotRouting = _getLotRouting(_lotId);
+        IAuctionHouse.Routing memory lotRouting = _getLotRouting(_lotId);
         assertEq(lotRouting.funding, 0, "mismatch on funding");
     }
 }

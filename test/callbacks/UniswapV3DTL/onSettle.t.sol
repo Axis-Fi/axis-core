@@ -15,7 +15,7 @@ import {SqrtPriceMath} from "src/lib/uniswap-v3/SqrtPriceMath.sol";
 import {GUniPool} from "g-uni-v1-core/GUniPool.sol";
 
 // AuctionHouse
-import {LinearVesting} from "src/modules/derivatives/LinearVesting.sol";
+import {ILinearVesting} from "src/interfaces/modules/derivatives/ILinearVesting.sol";
 import {BaseDirectToLiquidity} from "src/callbacks/liquidity/BaseDTL.sol";
 import {UniswapV3DirectToLiquidity} from "src/callbacks/liquidity/UniswapV3DTL.sol";
 
@@ -52,7 +52,7 @@ contract UniswapV3DirectToLiquidityOnSettleTest is UniswapV3DirectToLiquidityTes
         return _linearVesting.computeId(
             pool,
             abi.encode(
-                LinearVesting.VestingParams({
+                ILinearVesting.VestingParams({
                     start: _dtlCreateParams.vestingStart,
                     expiry: _dtlCreateParams.vestingExpiry
                 })
@@ -113,7 +113,7 @@ contract UniswapV3DirectToLiquidityOnSettleTest is UniswapV3DirectToLiquidityTes
         (, address wrappedVestingTokenAddress) = _linearVesting.deploy(
             pool,
             abi.encode(
-                LinearVesting.VestingParams({
+                ILinearVesting.VestingParams({
                     start: _dtlCreateParams.vestingStart,
                     expiry: _dtlCreateParams.vestingExpiry
                 })

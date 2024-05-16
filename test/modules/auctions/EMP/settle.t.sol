@@ -4,8 +4,9 @@ pragma solidity 0.8.19;
 import {FixedPointMathLib as Math} from "solmate/utils/FixedPointMathLib.sol";
 
 import {Module} from "src/modules/Modules.sol";
-import {IAuction} from "src/interfaces/IAuction.sol";
+import {IAuction} from "src/interfaces/modules/IAuction.sol";
 import {EncryptedMarginalPrice} from "src/modules/auctions/EMP.sol";
+import {IEncryptedMarginalPrice} from "src/interfaces/modules/auctions/IEncryptedMarginalPrice.sol";
 import {BidEncoding} from "src/lib/MaxPriorityQueue.sol";
 
 import {EmpTest} from "test/modules/auctions/EMP/EMPTest.sol";
@@ -180,8 +181,8 @@ contract EmpSettleTest is EmpTest {
             uint8(auctionData.status),
             uint8(
                 _expectedSettlementComplete
-                    ? EncryptedMarginalPrice.LotStatus.Settled
-                    : EncryptedMarginalPrice.LotStatus.Decrypted
+                    ? IEncryptedMarginalPrice.LotStatus.Settled
+                    : IEncryptedMarginalPrice.LotStatus.Decrypted
             ),
             "status"
         );
@@ -1091,7 +1092,7 @@ contract EmpSettleTest is EmpTest {
     function test_lotHasNotConcluded_reverts() external givenLotIsCreated givenLotHasStarted {
         // Expect revert
         bytes memory err =
-            abi.encodeWithSelector(EncryptedMarginalPrice.Auction_WrongState.selector, _lotId);
+            abi.encodeWithSelector(IEncryptedMarginalPrice.Auction_WrongState.selector, _lotId);
         vm.expectRevert(err);
 
         // Call function
@@ -1105,7 +1106,7 @@ contract EmpSettleTest is EmpTest {
     {
         // Expect revert
         bytes memory err =
-            abi.encodeWithSelector(EncryptedMarginalPrice.Auction_WrongState.selector, _lotId);
+            abi.encodeWithSelector(IEncryptedMarginalPrice.Auction_WrongState.selector, _lotId);
         vm.expectRevert(err);
 
         // Call function
@@ -1122,7 +1123,7 @@ contract EmpSettleTest is EmpTest {
     {
         // Expect revert
         bytes memory err =
-            abi.encodeWithSelector(EncryptedMarginalPrice.Auction_WrongState.selector, _lotId);
+            abi.encodeWithSelector(IEncryptedMarginalPrice.Auction_WrongState.selector, _lotId);
         vm.expectRevert(err);
 
         // Call function
@@ -1141,7 +1142,7 @@ contract EmpSettleTest is EmpTest {
     {
         // Expect revert
         bytes memory err =
-            abi.encodeWithSelector(EncryptedMarginalPrice.Auction_WrongState.selector, _lotId);
+            abi.encodeWithSelector(IEncryptedMarginalPrice.Auction_WrongState.selector, _lotId);
         vm.expectRevert(err);
 
         // Call function
@@ -1159,7 +1160,7 @@ contract EmpSettleTest is EmpTest {
     {
         // Expect revert
         bytes memory err =
-            abi.encodeWithSelector(EncryptedMarginalPrice.Auction_WrongState.selector, _lotId);
+            abi.encodeWithSelector(IEncryptedMarginalPrice.Auction_WrongState.selector, _lotId);
         vm.expectRevert(err);
 
         // Call function
@@ -1214,7 +1215,7 @@ contract EmpSettleTest is EmpTest {
         EncryptedMarginalPrice.AuctionData memory auctionData = _getAuctionData(_lotId);
         assertEq(auctionData.marginalPrice, _expectedMarginalPrice, "marginalPrice");
         assertEq(
-            uint8(auctionData.status), uint8(EncryptedMarginalPrice.LotStatus.Settled), "status"
+            uint8(auctionData.status), uint8(IEncryptedMarginalPrice.LotStatus.Settled), "status"
         );
 
         // Assert settlement
@@ -1246,7 +1247,7 @@ contract EmpSettleTest is EmpTest {
         EncryptedMarginalPrice.AuctionData memory auctionData = _getAuctionData(_lotId);
         assertEq(auctionData.marginalPrice, _expectedMarginalPrice, "marginalPrice");
         assertEq(
-            uint8(auctionData.status), uint8(EncryptedMarginalPrice.LotStatus.Settled), "status"
+            uint8(auctionData.status), uint8(IEncryptedMarginalPrice.LotStatus.Settled), "status"
         );
 
         // Assert settlement
@@ -1278,7 +1279,7 @@ contract EmpSettleTest is EmpTest {
         EncryptedMarginalPrice.AuctionData memory auctionData = _getAuctionData(_lotId);
         assertEq(auctionData.marginalPrice, _expectedMarginalPrice, "marginalPrice");
         assertEq(
-            uint8(auctionData.status), uint8(EncryptedMarginalPrice.LotStatus.Settled), "status"
+            uint8(auctionData.status), uint8(IEncryptedMarginalPrice.LotStatus.Settled), "status"
         );
 
         // Assert settlement
@@ -1308,7 +1309,7 @@ contract EmpSettleTest is EmpTest {
         EncryptedMarginalPrice.AuctionData memory auctionData = _getAuctionData(_lotId);
         assertEq(auctionData.marginalPrice, _expectedMarginalPrice, "marginalPrice");
         assertEq(
-            uint8(auctionData.status), uint8(EncryptedMarginalPrice.LotStatus.Settled), "status"
+            uint8(auctionData.status), uint8(IEncryptedMarginalPrice.LotStatus.Settled), "status"
         );
 
         // Assert settlement
@@ -1340,7 +1341,7 @@ contract EmpSettleTest is EmpTest {
         EncryptedMarginalPrice.AuctionData memory auctionData = _getAuctionData(_lotId);
         assertEq(auctionData.marginalPrice, _expectedMarginalPrice, "marginalPrice");
         assertEq(
-            uint8(auctionData.status), uint8(EncryptedMarginalPrice.LotStatus.Settled), "status"
+            uint8(auctionData.status), uint8(IEncryptedMarginalPrice.LotStatus.Settled), "status"
         );
 
         // Assert settlement
@@ -1372,7 +1373,7 @@ contract EmpSettleTest is EmpTest {
         EncryptedMarginalPrice.AuctionData memory auctionData = _getAuctionData(_lotId);
         assertEq(auctionData.marginalPrice, _expectedMarginalPrice, "marginalPrice");
         assertEq(
-            uint8(auctionData.status), uint8(EncryptedMarginalPrice.LotStatus.Settled), "status"
+            uint8(auctionData.status), uint8(IEncryptedMarginalPrice.LotStatus.Settled), "status"
         );
 
         // Assert settlement
@@ -1403,7 +1404,7 @@ contract EmpSettleTest is EmpTest {
         EncryptedMarginalPrice.AuctionData memory auctionData = _getAuctionData(_lotId);
         assertEq(auctionData.marginalPrice, _expectedMarginalPrice, "marginalPrice");
         assertEq(
-            uint8(auctionData.status), uint8(EncryptedMarginalPrice.LotStatus.Settled), "status"
+            uint8(auctionData.status), uint8(IEncryptedMarginalPrice.LotStatus.Settled), "status"
         );
 
         // Assert settlement
@@ -1434,7 +1435,7 @@ contract EmpSettleTest is EmpTest {
         EncryptedMarginalPrice.AuctionData memory auctionData = _getAuctionData(_lotId);
         assertEq(auctionData.marginalPrice, _expectedMarginalPrice, "marginalPrice");
         assertEq(
-            uint8(auctionData.status), uint8(EncryptedMarginalPrice.LotStatus.Settled), "status"
+            uint8(auctionData.status), uint8(IEncryptedMarginalPrice.LotStatus.Settled), "status"
         );
 
         // Assert settlement
@@ -1464,7 +1465,7 @@ contract EmpSettleTest is EmpTest {
         EncryptedMarginalPrice.AuctionData memory auctionData = _getAuctionData(_lotId);
         assertEq(auctionData.marginalPrice, _expectedMarginalPrice, "marginalPrice");
         assertEq(
-            uint8(auctionData.status), uint8(EncryptedMarginalPrice.LotStatus.Settled), "status"
+            uint8(auctionData.status), uint8(IEncryptedMarginalPrice.LotStatus.Settled), "status"
         );
 
         // Assert settlement
@@ -1496,7 +1497,7 @@ contract EmpSettleTest is EmpTest {
         EncryptedMarginalPrice.AuctionData memory auctionData = _getAuctionData(_lotId);
         assertEq(auctionData.marginalPrice, _expectedMarginalPrice, "marginalPrice");
         assertEq(
-            uint8(auctionData.status), uint8(EncryptedMarginalPrice.LotStatus.Settled), "status"
+            uint8(auctionData.status), uint8(IEncryptedMarginalPrice.LotStatus.Settled), "status"
         );
 
         // Assert settlement
@@ -1528,7 +1529,7 @@ contract EmpSettleTest is EmpTest {
         EncryptedMarginalPrice.AuctionData memory auctionData = _getAuctionData(_lotId);
         assertEq(auctionData.marginalPrice, _expectedMarginalPrice, "marginalPrice");
         assertEq(
-            uint8(auctionData.status), uint8(EncryptedMarginalPrice.LotStatus.Settled), "status"
+            uint8(auctionData.status), uint8(IEncryptedMarginalPrice.LotStatus.Settled), "status"
         );
 
         // Assert settlement
@@ -1558,7 +1559,7 @@ contract EmpSettleTest is EmpTest {
         EncryptedMarginalPrice.AuctionData memory auctionData = _getAuctionData(_lotId);
         assertEq(auctionData.marginalPrice, _expectedMarginalPrice, "marginalPrice");
         assertEq(
-            uint8(auctionData.status), uint8(EncryptedMarginalPrice.LotStatus.Settled), "status"
+            uint8(auctionData.status), uint8(IEncryptedMarginalPrice.LotStatus.Settled), "status"
         );
 
         // Assert settlement
@@ -1590,7 +1591,7 @@ contract EmpSettleTest is EmpTest {
         EncryptedMarginalPrice.AuctionData memory auctionData = _getAuctionData(_lotId);
         assertEq(auctionData.marginalPrice, _expectedMarginalPrice, "marginalPrice");
         assertEq(
-            uint8(auctionData.status), uint8(EncryptedMarginalPrice.LotStatus.Settled), "status"
+            uint8(auctionData.status), uint8(IEncryptedMarginalPrice.LotStatus.Settled), "status"
         );
 
         // Assert settlement
@@ -1622,7 +1623,7 @@ contract EmpSettleTest is EmpTest {
         EncryptedMarginalPrice.AuctionData memory auctionData = _getAuctionData(_lotId);
         assertEq(auctionData.marginalPrice, _expectedMarginalPrice, "marginalPrice");
         assertEq(
-            uint8(auctionData.status), uint8(EncryptedMarginalPrice.LotStatus.Settled), "status"
+            uint8(auctionData.status), uint8(IEncryptedMarginalPrice.LotStatus.Settled), "status"
         );
 
         // Assert settlement
@@ -1655,7 +1656,7 @@ contract EmpSettleTest is EmpTest {
         EncryptedMarginalPrice.AuctionData memory auctionData = _getAuctionData(_lotId);
         assertEq(auctionData.marginalPrice, _expectedMarginalPrice, "marginalPrice");
         assertEq(
-            uint8(auctionData.status), uint8(EncryptedMarginalPrice.LotStatus.Settled), "status"
+            uint8(auctionData.status), uint8(IEncryptedMarginalPrice.LotStatus.Settled), "status"
         );
 
         // Assert settlement
@@ -1686,7 +1687,7 @@ contract EmpSettleTest is EmpTest {
         EncryptedMarginalPrice.AuctionData memory auctionData = _getAuctionData(_lotId);
         assertEq(auctionData.marginalPrice, _expectedMarginalPrice, "marginalPrice");
         assertEq(
-            uint8(auctionData.status), uint8(EncryptedMarginalPrice.LotStatus.Settled), "status"
+            uint8(auctionData.status), uint8(IEncryptedMarginalPrice.LotStatus.Settled), "status"
         );
 
         // Assert settlement
@@ -1717,7 +1718,7 @@ contract EmpSettleTest is EmpTest {
         EncryptedMarginalPrice.AuctionData memory auctionData = _getAuctionData(_lotId);
         assertEq(auctionData.marginalPrice, _expectedMarginalPrice, "marginalPrice");
         assertEq(
-            uint8(auctionData.status), uint8(EncryptedMarginalPrice.LotStatus.Settled), "status"
+            uint8(auctionData.status), uint8(IEncryptedMarginalPrice.LotStatus.Settled), "status"
         );
 
         // Assert settlement
@@ -1748,7 +1749,7 @@ contract EmpSettleTest is EmpTest {
         EncryptedMarginalPrice.AuctionData memory auctionData = _getAuctionData(_lotId);
         assertEq(auctionData.marginalPrice, _expectedMarginalPrice, "marginalPrice");
         assertEq(
-            uint8(auctionData.status), uint8(EncryptedMarginalPrice.LotStatus.Settled), "status"
+            uint8(auctionData.status), uint8(IEncryptedMarginalPrice.LotStatus.Settled), "status"
         );
 
         // Assert settlement
@@ -1780,7 +1781,7 @@ contract EmpSettleTest is EmpTest {
         EncryptedMarginalPrice.AuctionData memory auctionData = _getAuctionData(_lotId);
         assertEq(auctionData.marginalPrice, _expectedMarginalPrice, "marginalPrice");
         assertEq(
-            uint8(auctionData.status), uint8(EncryptedMarginalPrice.LotStatus.Settled), "status"
+            uint8(auctionData.status), uint8(IEncryptedMarginalPrice.LotStatus.Settled), "status"
         );
 
         // Assert settlement
@@ -2457,7 +2458,7 @@ contract EmpSettleTest is EmpTest {
 
         // Expect revert with wrong state
         bytes memory err =
-            abi.encodeWithSelector(EncryptedMarginalPrice.Auction_WrongState.selector, _lotId);
+            abi.encodeWithSelector(IEncryptedMarginalPrice.Auction_WrongState.selector, _lotId);
         vm.expectRevert(err);
 
         _settle(1);
@@ -2850,7 +2851,7 @@ contract EmpSettleTest is EmpTest {
         EncryptedMarginalPrice.AuctionData memory auctionData = _getAuctionData(_lotId);
         assertEq(auctionData.marginalPrice, _expectedMarginalPrice, "marginalPrice");
         assertEq(
-            uint8(auctionData.status), uint8(EncryptedMarginalPrice.LotStatus.Settled), "status"
+            uint8(auctionData.status), uint8(IEncryptedMarginalPrice.LotStatus.Settled), "status"
         );
         _assertSettlement(totalIn, totalOut, capacity, finished, auctionOutput);
         _assertLot();

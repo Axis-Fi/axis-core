@@ -2,9 +2,12 @@
 pragma solidity 0.8.19;
 
 // Interfaces
-import {IAuction} from "src/interfaces/IAuction.sol";
+import {IAuction} from "src/interfaces/modules/IAuction.sol";
 import {IAtomicAuctionHouse} from "src/interfaces/IAtomicAuctionHouse.sol";
 import {ICallback} from "src/interfaces/ICallback.sol";
+
+// External libraries
+import {ERC20} from "lib/solmate/src/tokens/ERC20.sol";
 
 // Internal libaries
 import {Transfer} from "src/lib/Transfer.sol";
@@ -118,7 +121,7 @@ contract AtomicAuctionHouse is IAtomicAuctionHouse, AuctionHouse {
                 fees[auctionKeycode].referrer,
                 params_.referrer,
                 routing.seller,
-                routing.quoteToken,
+                ERC20(routing.quoteToken),
                 params_.amount
             );
             unchecked {
@@ -128,8 +131,9 @@ contract AtomicAuctionHouse is IAtomicAuctionHouse, AuctionHouse {
 
         // Send purchase to auction house and get payout plus any extra output
         bytes memory auctionOutput;
-        (payoutAmount, auctionOutput) = AtomicAuctionModule(address(_getModuleForId(params_.lotId)))
-            .purchase(params_.lotId, amountLessFees, params_.auctionData);
+        (payoutAmount, auctionOutput) = AtomicAuctionModule(
+            address(_getAuctionModuleForId(params_.lotId))
+        ).purchase(params_.lotId, amountLessFees, params_.auctionData);
 
         // Check that payout is at least minimum amount out
         // @dev Moved the slippage check from the auction to the AuctionHouse to allow different routing and purchase logic
@@ -141,11 +145,13 @@ contract AtomicAuctionHouse is IAtomicAuctionHouse, AuctionHouse {
         // but if you purchase for someone else, they will get the
         // payout, while you will pay.
         _collectPayment(
-            params_.amount, routing.quoteToken, Transfer.decodePermit2Approval(params_.permit2Data)
+            params_.amount,
+            ERC20(routing.quoteToken),
+            Transfer.decodePermit2Approval(params_.permit2Data)
         );
 
         // Send payment, this function handles routing of the quote tokens correctly
-        _sendPayment(routing.seller, amountLessFees, routing.quoteToken, routing.callbacks);
+        _sendPayment(routing.seller, amountLessFees, ERC20(routing.quoteToken), routing.callbacks);
 
         // Calculate the curator fee (if applicable)
         uint256 curatorFeePayout = _calculatePayoutFees(
@@ -154,7 +160,7 @@ contract AtomicAuctionHouse is IAtomicAuctionHouse, AuctionHouse {
 
         // If callbacks contract is configured to send base tokens, then source the payout from the callbacks contract
         if (Callbacks.hasPermission(routing.callbacks, Callbacks.SEND_BASE_TOKENS_FLAG)) {
-            uint256 balanceBefore = routing.baseToken.balanceOf(address(this));
+            uint256 balanceBefore = ERC20(routing.baseToken).balanceOf(address(this));
 
             Callbacks.onPurchase(
                 routing.callbacks,
@@ -168,7 +174,7 @@ contract AtomicAuctionHouse is IAtomicAuctionHouse, AuctionHouse {
 
             // Check that the mid hook transferred the expected amount of payout tokens
             if (
-                routing.baseToken.balanceOf(address(this))
+                ERC20(routing.baseToken).balanceOf(address(this))
                     < balanceBefore + payoutAmount + curatorFeePayout
             ) {
                 revert InvalidCallback();
@@ -178,7 +184,7 @@ contract AtomicAuctionHouse is IAtomicAuctionHouse, AuctionHouse {
         // Still call the onPurchase callback to allow for custom logic
         else {
             Transfer.transferFrom(
-                routing.baseToken,
+                ERC20(routing.baseToken),
                 routing.seller,
                 address(this),
                 payoutAmount + curatorFeePayout,

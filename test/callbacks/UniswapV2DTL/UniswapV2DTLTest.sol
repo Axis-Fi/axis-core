@@ -5,7 +5,7 @@ import {Test} from "forge-std/Test.sol";
 import {Callbacks} from "src/lib/Callbacks.sol";
 import {Permit2User} from "test/lib/permit2/Permit2User.sol";
 
-import {IAuction} from "src/interfaces/IAuction.sol";
+import {IAuction} from "src/interfaces/modules/IAuction.sol";
 import {IAuctionHouse} from "src/interfaces/IAuctionHouse.sol";
 import {BatchAuctionHouse} from "src/BatchAuctionHouse.sol";
 

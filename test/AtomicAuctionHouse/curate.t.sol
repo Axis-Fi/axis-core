@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.19;
 
-import {AuctionHouse} from "src/bases/AuctionHouse.sol";
+import {IAuctionHouse} from "src/interfaces/IAuctionHouse.sol";
 
 import {AtomicAuctionHouseTest} from "test/AtomicAuctionHouse/AuctionHouseTest.sol";
 
@@ -40,7 +40,7 @@ contract AtomicCurateTest is AtomicAuctionHouseTest {
 
     function test_whenLotIdIsInvalid() public {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(AuctionHouse.InvalidLotId.selector, _lotId);
+        bytes memory err = abi.encodeWithSelector(IAuctionHouse.InvalidLotId.selector, _lotId);
         vm.expectRevert(err);
 
         // Call
@@ -58,7 +58,7 @@ contract AtomicCurateTest is AtomicAuctionHouseTest {
         givenLotHasStarted
     {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(AuctionHouse.NotPermitted.selector, _CURATOR);
+        bytes memory err = abi.encodeWithSelector(IAuctionHouse.NotPermitted.selector, _CURATOR);
         vm.expectRevert(err);
 
         // Call
@@ -75,7 +75,7 @@ contract AtomicCurateTest is AtomicAuctionHouseTest {
         givenLotHasStarted
     {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(AuctionHouse.NotPermitted.selector, _SELLER);
+        bytes memory err = abi.encodeWithSelector(IAuctionHouse.NotPermitted.selector, _SELLER);
         vm.expectRevert(err);
 
         // Call
@@ -94,7 +94,7 @@ contract AtomicCurateTest is AtomicAuctionHouseTest {
         givenLotHasStarted
     {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(AuctionHouse.InvalidState.selector);
+        bytes memory err = abi.encodeWithSelector(IAuctionHouse.InvalidState.selector);
         vm.expectRevert(err);
 
         // Curate again
@@ -111,7 +111,7 @@ contract AtomicCurateTest is AtomicAuctionHouseTest {
         givenLotIsConcluded
     {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(AuctionHouse.InvalidState.selector);
+        bytes memory err = abi.encodeWithSelector(IAuctionHouse.InvalidState.selector);
         vm.expectRevert(err);
 
         // Call
@@ -128,7 +128,7 @@ contract AtomicCurateTest is AtomicAuctionHouseTest {
         givenLotIsCancelled
     {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(AuctionHouse.InvalidState.selector);
+        bytes memory err = abi.encodeWithSelector(IAuctionHouse.InvalidState.selector);
         vm.expectRevert(err);
 
         // Call
@@ -149,7 +149,7 @@ contract AtomicCurateTest is AtomicAuctionHouseTest {
         _auctionHouse.curate(_lotId, bytes(""));
 
         // Verify
-        AuctionHouse.FeeData memory curation = _getLotFees(_lotId);
+        IAuctionHouse.FeeData memory curation = _getLotFees(_lotId);
         assertEq(curation.curator, _CURATOR, "curator");
         assertEq(curation.curated, true, "curated");
         assertEq(curation.curatorFee, _CURATOR_FEE_PERCENT, "curator fee");
@@ -160,7 +160,7 @@ contract AtomicCurateTest is AtomicAuctionHouseTest {
         assertEq(_baseToken.balanceOf(_CURATOR), 0, "base token: curator");
 
         // Check routing
-        AuctionHouse.Routing memory lotRouting = _getLotRouting(_lotId);
+        IAuctionHouse.Routing memory lotRouting = _getLotRouting(_lotId);
         assertEq(lotRouting.funding, 0, "funding");
     }
 
@@ -180,7 +180,7 @@ contract AtomicCurateTest is AtomicAuctionHouseTest {
         _auctionHouse.curate(_lotId, bytes(""));
 
         // Verify
-        AuctionHouse.FeeData memory curation = _getLotFees(_lotId);
+        IAuctionHouse.FeeData memory curation = _getLotFees(_lotId);
         assertEq(curation.curator, _CURATOR, "curator");
         assertEq(curation.curated, true, "curated");
         assertEq(curation.curatorFee, _CURATOR_FEE_PERCENT, "curatorFee"); // Original value from time of creation
@@ -191,7 +191,7 @@ contract AtomicCurateTest is AtomicAuctionHouseTest {
         assertEq(_baseToken.balanceOf(_CURATOR), 0, "curator");
 
         // Check routing
-        AuctionHouse.Routing memory lotRouting = _getLotRouting(_lotId);
+        IAuctionHouse.Routing memory lotRouting = _getLotRouting(_lotId);
         assertEq(lotRouting.funding, 0, "funding");
     }
 
@@ -207,7 +207,7 @@ contract AtomicCurateTest is AtomicAuctionHouseTest {
         _auctionHouse.curate(_lotId, bytes(""));
 
         // Verify
-        AuctionHouse.FeeData memory curation = _getLotFees(_lotId);
+        IAuctionHouse.FeeData memory curation = _getLotFees(_lotId);
         assertEq(curation.curator, _CURATOR, "curator");
         assertEq(curation.curated, true, "curated");
         assertEq(curation.curatorFee, 0);
@@ -218,7 +218,7 @@ contract AtomicCurateTest is AtomicAuctionHouseTest {
         assertEq(_baseToken.balanceOf(_CURATOR), 0, "base token: curator");
 
         // Check routing
-        AuctionHouse.Routing memory lotRouting = _getLotRouting(_lotId);
+        IAuctionHouse.Routing memory lotRouting = _getLotRouting(_lotId);
         assertEq(lotRouting.funding, 0, "funding");
     }
 
@@ -236,7 +236,7 @@ contract AtomicCurateTest is AtomicAuctionHouseTest {
         _auctionHouse.curate(_lotId, bytes(""));
 
         // Verify
-        AuctionHouse.FeeData memory curation = _getLotFees(_lotId);
+        IAuctionHouse.FeeData memory curation = _getLotFees(_lotId);
         assertEq(curation.curator, _CURATOR, "curator");
         assertEq(curation.curated, true, "curated");
         assertEq(curation.curatorFee, _CURATOR_FEE_PERCENT, "curator fee");
@@ -247,7 +247,7 @@ contract AtomicCurateTest is AtomicAuctionHouseTest {
         assertEq(_baseToken.balanceOf(_CURATOR), 0, "base token: curator");
 
         // Check routing
-        AuctionHouse.Routing memory lotRouting = _getLotRouting(_lotId);
+        IAuctionHouse.Routing memory lotRouting = _getLotRouting(_lotId);
         assertEq(lotRouting.funding, 0, "funding");
 
         // Check callback
@@ -268,7 +268,7 @@ contract AtomicCurateTest is AtomicAuctionHouseTest {
         _auctionHouse.curate(_lotId, bytes(""));
 
         // Verify
-        AuctionHouse.FeeData memory curation = _getLotFees(_lotId);
+        IAuctionHouse.FeeData memory curation = _getLotFees(_lotId);
         assertEq(curation.curator, _CURATOR, "curator");
         assertEq(curation.curated, true, "curated");
         assertEq(curation.curatorFee, _CURATOR_FEE_PERCENT, "curator fee");
@@ -279,7 +279,7 @@ contract AtomicCurateTest is AtomicAuctionHouseTest {
         assertEq(_baseToken.balanceOf(_CURATOR), 0, "base token: curator");
 
         // Check routing
-        AuctionHouse.Routing memory lotRouting = _getLotRouting(_lotId);
+        IAuctionHouse.Routing memory lotRouting = _getLotRouting(_lotId);
         assertEq(lotRouting.funding, 0, "funding");
     }
 
@@ -302,7 +302,7 @@ contract AtomicCurateTest is AtomicAuctionHouseTest {
         _auctionHouse.curate(_lotId, bytes(""));
 
         // Verify
-        AuctionHouse.FeeData memory curation = _getLotFees(_lotId);
+        IAuctionHouse.FeeData memory curation = _getLotFees(_lotId);
         assertEq(curation.curator, _CURATOR, "curator");
         assertEq(curation.curated, true, "curated");
         assertEq(curation.curatorFee, _CURATOR_FEE_PERCENT, "curator fee"); // Does not change
@@ -313,7 +313,7 @@ contract AtomicCurateTest is AtomicAuctionHouseTest {
         assertEq(_baseToken.balanceOf(_CURATOR), 0, "base token: curator");
 
         // Check routing
-        AuctionHouse.Routing memory lotRouting = _getLotRouting(_lotId);
+        IAuctionHouse.Routing memory lotRouting = _getLotRouting(_lotId);
         assertEq(lotRouting.funding, 0, "funding");
     }
 }

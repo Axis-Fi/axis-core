@@ -9,7 +9,9 @@ import {Timestamp} from "src/lib/Timestamp.sol";
 import {ERC6909Metadata} from "src/lib/ERC6909Metadata.sol";
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 
-import {Derivative, DerivativeModule} from "src/modules/Derivative.sol";
+import {IDerivative} from "src/interfaces/modules/IDerivative.sol";
+import {ILinearVesting} from "src/interfaces/modules/derivatives/ILinearVesting.sol";
+import {DerivativeModule} from "src/modules/Derivative.sol";
 import {Module, Veecode, toKeycode, wrapVeecode} from "src/modules/Modules.sol";
 import {SoulboundCloneERC20} from "src/modules/derivatives/SoulboundCloneERC20.sol";
 
@@ -21,63 +23,15 @@ import {SoulboundCloneERC20} from "src/modules/derivatives/SoulboundCloneERC20.s
 ///
 ///             The start timestamp enables vesting tokens to have a cliff, after which vesting commences.
 /// @author     Axis Finance
-contract LinearVesting is DerivativeModule {
+contract LinearVesting is DerivativeModule, ILinearVesting {
     using SafeTransferLib for ERC20;
     using ClonesWithImmutableArgs for address;
     using Timestamp for uint48;
     using FixedPointMathLib for uint256;
 
-    // ========== EVENTS ========== //
-
-    event DerivativeCreated(
-        uint256 indexed tokenId, uint48 start, uint48 expiry, address baseToken
-    );
-
-    event WrappedDerivativeCreated(uint256 indexed tokenId, address wrappedToken);
-
-    event Wrapped(
-        uint256 indexed tokenId, address indexed owner, uint256 amount, address wrappedToken
-    );
-
-    event Unwrapped(
-        uint256 indexed tokenId, address indexed owner, uint256 amount, address wrappedToken
-    );
-
-    event Redeemed(uint256 indexed tokenId, address indexed owner, uint256 amount);
-
-    // ========== ERRORS ========== //
-
-    error BrokenInvariant();
-    error InsufficientBalance();
-    error NotPermitted();
-    error InvalidParams();
-    error UnsupportedToken(address token_);
-
-    // ========== DATA STRUCTURES ========== //
-
-    /// @notice     Stores the parameters for a particular derivative
-    ///
-    /// @param      start       The timestamp at which the vesting starts
-    /// @param      expiry      The timestamp at which the vesting expires
-    /// @param      baseToken   The address of the token to vest
-    struct VestingData {
-        uint48 start;
-        uint48 expiry;
-        ERC20 baseToken;
-    }
-
-    /// @notice     Stores the parameters for a particular derivative
-    ///
-    /// @param      start       The timestamp at which the vesting starts
-    /// @param      expiry      The timestamp at which the vesting expires
-    struct VestingParams {
-        uint48 start;
-        uint48 expiry;
-    }
+    // ========== STATE VARIABLES ========== //
 
     uint256 internal immutable _VESTING_PARAMS_LEN = 64;
-
-    // ========== STATE VARIABLES ========== //
 
     /// @notice     Stores the clonable implementation of the wrapped derivative token
     address internal immutable _IMPLEMENTATION;
@@ -143,7 +97,7 @@ contract LinearVesting is DerivativeModule {
 
     // ========== DERIVATIVE MANAGEMENT ========== //
 
-    /// @inheritdoc Derivative
+    /// @inheritdoc IDerivative
     /// @dev        This function performs the following:
     ///             - Validates the parameters
     ///             - Deploys the derivative token if it does not already exist
@@ -151,12 +105,6 @@ contract LinearVesting is DerivativeModule {
     ///             This function reverts if:
     ///             - The parameters are in an invalid format
     ///             - The parameters fail validation
-    ///
-    /// @param      underlyingToken_    The address of the underlying token
-    /// @param      params_             The abi-encoded `VestingParams` for the derivative token
-    /// @param      wrapped_            Whether or not to wrap the derivative token
-    /// @return     tokenId_            The ID of the derivative token
-    /// @return     wrappedAddress_     The address of the wrapped derivative token (if applicable)
     function deploy(
         address underlyingToken_,
         bytes memory params_,
@@ -198,13 +146,13 @@ contract LinearVesting is DerivativeModule {
 
         // Transfer collateral token to this contract
         {
-            VestingData memory data = abi.decode(token_.data, (VestingData));
-            uint256 balanceBefore = data.baseToken.balanceOf(address(this));
-            data.baseToken.safeTransferFrom(msg.sender, address(this), amount_);
+            ERC20 baseToken = ERC20(token_.underlyingToken);
+            uint256 balanceBefore = baseToken.balanceOf(address(this));
+            baseToken.safeTransferFrom(msg.sender, address(this), amount_);
 
             // Ensure the correct amount was transferred
-            if (data.baseToken.balanceOf(address(this)) < balanceBefore + amount_) {
-                revert UnsupportedToken(address(data.baseToken));
+            if (baseToken.balanceOf(address(this)) < balanceBefore + amount_) {
+                revert UnsupportedToken(token_.underlyingToken);
             }
         }
 
@@ -220,7 +168,7 @@ contract LinearVesting is DerivativeModule {
         }
     }
 
-    /// @inheritdoc Derivative
+    /// @inheritdoc IDerivative
     /// @dev        This function performs the following:
     ///             - Validates the parameters
     ///             - Deploys the derivative token if it does not already exist
@@ -232,15 +180,6 @@ contract LinearVesting is DerivativeModule {
     ///             - `amount_` is 0
     ///
     ///             A derivative token can be minted after vesting expiry, which prevents mitigates problems with auctions that settle late.
-    ///
-    /// @param      to_                 The address of the recipient of the derivative token
-    /// @param      underlyingToken_    The address of the underlying token
-    /// @param      params_             The abi-encoded `VestingParams` for the derivative token
-    /// @param      amount_             The amount of the derivative token to mint
-    /// @param      wrapped_            Whether or not to wrap the derivative token
-    /// @return     tokenId_            The ID of the derivative token
-    /// @return     wrappedAddress_     The address of the wrapped derivative token (if applicable)
-    /// @return     amountCreated_      The amount of the derivative token that was minted
     function mint(
         address to_,
         address underlyingToken_,
@@ -275,7 +214,7 @@ contract LinearVesting is DerivativeModule {
         return (tokenId_, token.wrapped, amount_);
     }
 
-    /// @inheritdoc Derivative
+    /// @inheritdoc IDerivative
     /// @dev        This function performs the following:
     ///             - Mints the derivative token to the recipient
     ///
@@ -284,14 +223,6 @@ contract LinearVesting is DerivativeModule {
     ///             - The amount to mint is 0
     ///
     ///             A derivative token can be minted after vesting expiry, which prevents mitigates problems with auctions that settle late.
-    ///
-    /// @param      to_                 The address of the recipient of the derivative token
-    /// @param      tokenId_            The ID of the derivative token
-    /// @param      amount_             The amount of the derivative token to mint
-    /// @param      wrapped_            Whether or not to wrap the derivative token
-    /// @return     uint256             The ID of the derivative token
-    /// @return     adress              The address of the wrapped derivative token (if applicable)
-    /// @return     uint256             The amount of the derivative token that was minted
     function mint(
         address to_,
         uint256 tokenId_,
@@ -342,14 +273,13 @@ contract LinearVesting is DerivativeModule {
         }
 
         // Transfer the underlying token to the owner
-        VestingData memory vestingData = abi.decode(tokenData.data, (VestingData));
-        vestingData.baseToken.safeTransfer(user_, amount_);
+        ERC20(tokenData.underlyingToken).safeTransfer(user_, amount_);
 
         // Emit event
         emit Redeemed(tokenId_, user_, amount_);
     }
 
-    /// @inheritdoc Derivative
+    /// @inheritdoc IDerivative
     function redeemMax(uint256 tokenId_) external virtual override onlyValidTokenId(tokenId_) {
         // Determine the redeemable amount
         uint256 redeemableAmount = redeemable(msg.sender, tokenId_);
@@ -361,7 +291,7 @@ contract LinearVesting is DerivativeModule {
         _redeem(tokenId_, msg.sender, redeemableAmount);
     }
 
-    /// @inheritdoc Derivative
+    /// @inheritdoc IDerivative
     /// @dev        This function reverts if:
     ///             - `amount_` is 0
     ///             - The redeemable amount is less than `amount_`
@@ -382,7 +312,7 @@ contract LinearVesting is DerivativeModule {
         _redeem(tokenId_, msg.sender, amount_);
     }
 
-    /// @notice     Returns the amount of vested tokens that can be redeemed for the underlying base token
+    /// @inheritdoc IDerivative
     /// @dev        The redeemable amount is computed as:
     ///             - The amount of tokens that have vested
     ///               - x: number of vestable tokens
@@ -391,17 +321,13 @@ contract LinearVesting is DerivativeModule {
     ///               - T: expiry timestamp
     ///               - Vested = x * (t - s) / (T - s)
     ///             - Minus the amount of tokens that have already been redeemed
-    ///
-    /// @param      owner_      The address of the owner of the derivative token
-    /// @param      tokenId_    The ID of the derivative token
-    /// @return     uint256     The amount of tokens that can be redeemed
     function redeemable(
         address owner_,
         uint256 tokenId_
     ) public view virtual override onlyValidTokenId(tokenId_) returns (uint256) {
         // Get the vesting data
         Token storage token = tokenMetadata[tokenId_];
-        VestingData memory data = abi.decode(token.data, (VestingData));
+        VestingParams memory data = abi.decode(token.data, (VestingParams));
 
         // If before the start time, 0
         if (block.timestamp <= data.start) return 0;
@@ -435,32 +361,35 @@ contract LinearVesting is DerivativeModule {
         return vested;
     }
 
-    /// @inheritdoc Derivative
+    /// @inheritdoc IDerivative
     /// @dev        Not implemented
     function exercise(uint256, uint256) external virtual override {
-        revert Derivative.Derivative_NotImplemented();
+        revert IDerivative.Derivative_NotImplemented();
     }
 
-    /// @inheritdoc Derivative
+    /// @inheritdoc IDerivative
+    /// @dev        Not implemented
+    function exerciseCost(uint256, uint256) external view virtual override returns (uint256) {
+        revert Derivative_NotImplemented();
+    }
+
+    /// @inheritdoc IDerivative
     /// @dev        Not implemented
     function reclaim(uint256) external virtual override {
-        revert Derivative.Derivative_NotImplemented();
+        revert IDerivative.Derivative_NotImplemented();
     }
 
-    /// @inheritdoc Derivative
+    /// @inheritdoc IDerivative
     /// @dev        Not implemented
     function transform(uint256, address, uint256) external virtual override {
-        revert Derivative.Derivative_NotImplemented();
+        revert IDerivative.Derivative_NotImplemented();
     }
 
-    /// @inheritdoc Derivative
+    /// @inheritdoc IDerivative
     /// @dev        This function will revert if:
     ///             - The derivative token with `tokenId_` has not been deployed
     ///             - `amount_` is 0
-    function wrap(
-        uint256 tokenId_,
-        uint256 amount_
-    ) external virtual override onlyValidTokenId(tokenId_) {
+    function wrap(uint256 tokenId_, uint256 amount_) external override onlyValidTokenId(tokenId_) {
         if (amount_ == 0) revert InvalidParams();
 
         if (balanceOf[msg.sender][tokenId_] < amount_) revert InsufficientBalance();
@@ -478,7 +407,7 @@ contract LinearVesting is DerivativeModule {
         emit Wrapped(tokenId_, msg.sender, amount_, token.wrapped);
     }
 
-    /// @inheritdoc Derivative
+    /// @inheritdoc IDerivative
     /// @dev        This function will revert if:
     ///             - The derivative token with `tokenId_` has not been deployed
     ///             - A wrapped derivative for `tokenId_` has not been deployed
@@ -486,7 +415,7 @@ contract LinearVesting is DerivativeModule {
     function unwrap(
         uint256 tokenId_,
         uint256 amount_
-    ) external virtual override onlyValidTokenId(tokenId_) onlyDeployedWrapped(tokenId_) {
+    ) external override onlyValidTokenId(tokenId_) onlyDeployedWrapped(tokenId_) {
         if (amount_ == 0) revert InvalidParams();
 
         Token storage token = tokenMetadata[tokenId_];
@@ -534,29 +463,47 @@ contract LinearVesting is DerivativeModule {
         return true;
     }
 
-    /// @inheritdoc Derivative
+    /// @inheritdoc IDerivative
     ///
     /// @param      params_     The abi-encoded `VestingParams` for the derivative token
     function validate(
         address underlyingToken_,
         bytes memory params_
-    ) public view virtual override returns (bool) {
+    ) public pure override returns (bool) {
         // Decode the parameters
         VestingParams memory data = _decodeVestingParams(params_);
 
         return _validate(underlyingToken_, data);
     }
 
-    /// @inheritdoc Derivative
-    /// @dev        Not implemented
-    function exerciseCost(bytes memory, uint256) external view virtual override returns (uint256) {
-        revert Derivative.Derivative_NotImplemented();
+    // ========== VIEW FUNCTIONS ========== //
+
+    /// @inheritdoc ILinearVesting
+    function getTokenVestingParams(uint256 tokenId_)
+        external
+        view
+        onlyValidTokenId(tokenId_)
+        returns (VestingParams memory)
+    {
+        return abi.decode(tokenMetadata[tokenId_].data, (VestingParams));
     }
 
-    /// @inheritdoc Derivative
-    function convertsTo(bytes memory, uint256) external view virtual override returns (uint256) {
-        revert Derivative_NotImplemented();
+    /// @inheritdoc IDerivative
+    ///
+    /// @param      params_     The abi-encoded `VestingParams` for the derivative token
+    function computeId(
+        address underlyingToken_,
+        bytes memory params_
+    ) external pure virtual override returns (uint256) {
+        // Decode the parameters
+        VestingParams memory data = _decodeVestingParams(params_);
+        ERC20 underlyingToken = ERC20(underlyingToken_);
+
+        // Compute the ID
+        return _computeId(underlyingToken, data.start, data.expiry);
     }
+
+    // ========== INTERNAL HELPER FUNCTIONS ========== //
 
     /// @notice     Decodes the ABI-encoded `VestingParams` for a derivative token
     /// @dev        This function will revert if the parameters are not the correct length
@@ -585,21 +532,6 @@ contract LinearVesting is DerivativeModule {
         return uint256(
             keccak256(abi.encodePacked(VEECODE(), keccak256(abi.encode(base_, start_, expiry_))))
         );
-    }
-
-    /// @inheritdoc Derivative
-    ///
-    /// @param      params_     The abi-encoded `VestingParams` for the derivative token
-    function computeId(
-        address underlyingToken_,
-        bytes memory params_
-    ) external pure virtual override returns (uint256) {
-        // Decode the parameters
-        VestingParams memory data = _decodeVestingParams(params_);
-        ERC20 underlyingToken = ERC20(underlyingToken_);
-
-        // Compute the ID
-        return _computeId(underlyingToken, data.start, data.expiry);
     }
 
     /// @notice     Computes the name and symbol of a derivative token
@@ -645,13 +577,7 @@ contract LinearVesting is DerivativeModule {
             // Store derivative data
             token.exists = true;
             token.underlyingToken = underlyingToken_;
-            token.data = abi.encode(
-                VestingData({
-                    start: params_.start,
-                    expiry: params_.expiry,
-                    baseToken: underlyingToken
-                })
-            ); // Store this so that the tokenId can be used as a lookup
+            token.data = abi.encode(VestingParams({start: params_.start, expiry: params_.expiry})); // Store this so that the tokenId can be used as a lookup
 
             tokenMetadata[tokenId_] = token;
 
@@ -683,18 +609,19 @@ contract LinearVesting is DerivativeModule {
             if (_IMPLEMENTATION == address(0)) revert InvalidParams();
 
             // Get the parameters
-            VestingData memory data = abi.decode(token_.data, (VestingData));
+            VestingParams memory data = abi.decode(token_.data, (VestingParams));
+            ERC20 baseToken = ERC20(token_.underlyingToken);
 
             // Deploy the wrapped implementation
             (string memory name_, string memory symbol_) =
-                _computeNameAndSymbol(data.baseToken, data.expiry);
+                _computeNameAndSymbol(baseToken, data.expiry);
             bytes memory wrappedTokenData = abi.encodePacked(
                 bytes32(bytes(name_)), // Name
                 bytes32(bytes(symbol_)), // Smybol
-                uint8(data.baseToken.decimals()), // Decimals
+                uint8(baseToken.decimals()), // Decimals
                 uint64(data.expiry), // Expiry timestamp
                 address(this), // Owner
-                address(data.baseToken) // Underlying
+                token_.underlyingToken // Underlying
             );
             token_.wrapped = _IMPLEMENTATION.clone3(wrappedTokenData, bytes32(tokenId_));
 
@@ -713,15 +640,14 @@ contract LinearVesting is DerivativeModule {
     function name(uint256 tokenId_)
         public
         view
-        virtual
         override
         onlyValidTokenId(tokenId_)
         returns (string memory)
     {
         Token storage token = tokenMetadata[tokenId_];
-        VestingData memory data = abi.decode(token.data, (VestingData));
+        VestingParams memory data = abi.decode(token.data, (VestingParams));
 
-        (string memory name_,) = _computeNameAndSymbol(data.baseToken, data.expiry);
+        (string memory name_,) = _computeNameAndSymbol(ERC20(token.underlyingToken), data.expiry);
         return name_;
     }
 
@@ -731,15 +657,14 @@ contract LinearVesting is DerivativeModule {
     function symbol(uint256 tokenId_)
         public
         view
-        virtual
         override
         onlyValidTokenId(tokenId_)
         returns (string memory)
     {
         Token storage token = tokenMetadata[tokenId_];
-        VestingData memory data = abi.decode(token.data, (VestingData));
+        VestingParams memory data = abi.decode(token.data, (VestingParams));
 
-        (, string memory symbol_) = _computeNameAndSymbol(data.baseToken, data.expiry);
+        (, string memory symbol_) = _computeNameAndSymbol(ERC20(token.underlyingToken), data.expiry);
         return symbol_;
     }
 
@@ -749,14 +674,12 @@ contract LinearVesting is DerivativeModule {
     function decimals(uint256 tokenId_)
         public
         view
-        virtual
         override
         onlyValidTokenId(tokenId_)
         returns (uint8)
     {
         Token storage token = tokenMetadata[tokenId_];
-        VestingData memory data = abi.decode(token.data, (VestingData));
 
-        return data.baseToken.decimals();
+        return ERC20(token.underlyingToken).decimals();
     }
 }
