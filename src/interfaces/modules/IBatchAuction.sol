@@ -40,7 +40,9 @@ interface IBatchAuction is IAuction {
 
     /// @notice     Custom auction output for each lot
     /// @dev        Stored during settlement
-    function lotAuctionOutput(uint96) external view returns (bytes memory);
+    ///
+    /// @param      lotId   The lot ID
+    function lotAuctionOutput(uint96 lotId) external view returns (bytes memory);
 
     // ========== BATCH OPERATIONS ========== //
 
@@ -134,33 +136,36 @@ interface IBatchAuction is IAuction {
     /// @notice Get the number of bids for a lot
     ///
     /// @param  lotId_  The lot ID
-    /// @return         The number of bids
-    function getNumBids(uint96 lotId_) external view returns (uint256);
+    /// @return numBids The number of bids
+    function getNumBids(uint96 lotId_) external view returns (uint256 numBids);
 
     /// @notice Get the bid IDs from the given index
     ///
     /// @param  lotId_  The lot ID
     /// @param  start_  The index to start retrieving bid IDs from
     /// @param  count_  The number of bids to retrieve
-    /// @return         The bid IDs
+    /// @return bidIds  The bid IDs
     function getBidIds(
         uint96 lotId_,
         uint256 start_,
         uint256 count_
-    ) external view returns (uint64[] memory);
+    ) external view returns (uint64[] memory bidIds);
 
     /// @notice Get the bid ID at the given index
     ///
     /// @param  lotId_  The lot ID
     /// @param  index_  The index
-    /// @return         The bid ID
-    function getBidIdAtIndex(uint96 lotId_, uint256 index_) external view returns (uint64);
+    /// @return bidId   The bid ID
+    function getBidIdAtIndex(uint96 lotId_, uint256 index_) external view returns (uint64 bidId);
 
     /// @notice Get the claim data for a bid
     /// @notice This provides information on the outcome of a bid, independent of the claim status
     ///
     /// @param  lotId_  The lot ID
     /// @param  bidId_  The bid ID
-    /// @return         The bid claim data
-    function getBidClaim(uint96 lotId_, uint64 bidId_) external view returns (BidClaim memory);
+    /// @return bidClaim    The bid claim data
+    function getBidClaim(
+        uint96 lotId_,
+        uint64 bidId_
+    ) external view returns (BidClaim memory bidClaim);
 }

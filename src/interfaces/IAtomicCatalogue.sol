@@ -23,12 +23,12 @@ interface IAtomicCatalogue is ICatalogue {
     /// @notice     Returns the max payout for a given lot
     ///
     /// @param      lotId_      ID of the auction lot
-    /// @return     maxPayout   The maximum amount of baseToken (in native decimals) that can be received by the buyer
-    function maxPayout(uint96 lotId_) external view returns (uint256 maxPayout);
+    /// @return     payout      The maximum amount of baseToken (in native decimals) that can be received by the buyer
+    function maxPayout(uint96 lotId_) external view returns (uint256 payout);
 
     /// @notice     Returns the max amount accepted for a given lot
     ///
     /// @param      lotId_      ID of the auction lot
-    /// @return     maxAmountAccepted   The maximum amount of quoteToken (in native decimals) that can be accepted by the auction
-    function maxAmountAccepted(uint96 lotId_) external view returns (uint256 maxAmountAccepted);
+    /// @return     maxAmount   The maximum amount of quoteToken (in native decimals) that can be accepted by the auction
+    function maxAmountAccepted(uint96 lotId_) external view returns (uint256 maxAmount);
 }
