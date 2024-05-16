@@ -26,7 +26,14 @@ interface IDerivative {
 
     // ========== STATE VARIABLES ========== //
 
-    function tokenMetadata(uint256)
+    /// @notice The metadata for a derivative token
+    ///
+    /// @param  tokenId         The ID of the derivative token
+    /// @return exists          True if the token has been deployed
+    /// @return wrapped         True if an ERC20-wrapped derivative has been deployed
+    /// @return underlyingToken The address of the underlying token
+    /// @return data            Implementation-specific data
+    function tokenMetadata(uint256 tokenId)
         external
         view
         returns (bool exists, address wrapped, address underlyingToken, bytes memory data);
@@ -97,8 +104,8 @@ interface IDerivative {
     ///
     /// @param      owner_      The owner of the derivative token
     /// @param      tokenId_    The ID of the derivative token
-    /// @return     amount_     The amount of redeemable tokens
-    function redeemable(address owner_, uint256 tokenId_) external view returns (uint256);
+    /// @return     amount      The amount of redeemable tokens
+    function redeemable(address owner_, uint256 tokenId_) external view returns (uint256 amount);
 
     /// @notice     Exercise a conversion of the derivative token per the specific implementation logic
     /// @dev        Used for options or other derivatives with convertible options, e.g. Rage vesting.
@@ -112,7 +119,8 @@ interface IDerivative {
     ///
     /// @param      tokenId_    The ID of the derivative token to exercise
     /// @param      amount      The amount of derivative tokens to exercise
-    function exerciseCost(uint256 tokenId_, uint256 amount) external view returns (uint256);
+    /// @return     cost        The cost to exercise the derivative token
+    function exerciseCost(uint256 tokenId_, uint256 amount) external view returns (uint256 cost);
 
     /// @notice     Reclaim posted collateral for a derivative token which can no longer be exercised
     /// @notice     Access controlled: only callable by the derivative issuer via the auction house.
@@ -146,11 +154,11 @@ interface IDerivative {
     ///
     /// @param      underlyingToken_    The address of the underlying token
     /// @param      params_             The params to validate
-    /// @return     bool                Whether or not the params are valid
+    /// @return     isValid             Whether or not the params are valid
     function validate(
         address underlyingToken_,
         bytes memory params_
-    ) external view returns (bool);
+    ) external view returns (bool isValid);
 
     // ========== DERIVATIVE INFORMATION ========== //
 
@@ -158,15 +166,15 @@ interface IDerivative {
     ///
     /// @param      underlyingToken_    The address of the underlying token
     /// @param      params_             The parameters for the derivative
-    /// @return     tokenId_            The unique token ID
+    /// @return     tokenId             The unique token ID
     function computeId(
         address underlyingToken_,
         bytes memory params_
-    ) external pure returns (uint256);
+    ) external pure returns (uint256 tokenId);
 
     /// @notice     Get the metadata for a derivative token
     ///
     /// @param      tokenId     The ID of the derivative token
-    /// @return     Token       The metadata for the derivative token
-    function getTokenMetadata(uint256 tokenId) external view returns (Token memory);
+    /// @return     tokenData   The metadata for the derivative token
+    function getTokenMetadata(uint256 tokenId) external view returns (Token memory tokenData);
 }

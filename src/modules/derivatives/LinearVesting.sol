@@ -478,6 +478,7 @@ contract LinearVesting is DerivativeModule, ILinearVesting {
 
     // ========== VIEW FUNCTIONS ========== //
 
+    /// @inheritdoc ILinearVesting
     function getTokenVestingParams(uint256 tokenId_)
         external
         view

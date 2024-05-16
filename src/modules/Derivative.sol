@@ -12,7 +12,7 @@ import {IDerivative} from "src/interfaces/modules/IDerivative.sol";
 abstract contract DerivativeModule is IDerivative, ERC6909, ERC6909Metadata, Module {
     // ========== STATE VARIABLES ========== //
 
-    /// @notice     The metadata for each derivative token
+    /// @inheritdoc IDerivative
     mapping(uint256 tokenId => Token metadata) public tokenMetadata;
 
     // ========== DERIVATIVE INFORMATION ========== //
