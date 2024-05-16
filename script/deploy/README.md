@@ -34,11 +34,11 @@ Notes:
 
 First, support for the contract needs to be added in the deployment script, `./script/deploy/Deploy.s.sol`.
 
-This involves creating a function in the format of `function deploy<key>(bytes memory args_) public virtual returns (address)`.
+This involves creating a function in the format of `function deploy<key>(bytes memory args_) public virtual returns (address, string memory)`.
 
 For example, a deployment with `name` set to "AtomicLinearVesting" would require a function to be present in `Deploy.s.sol` with the name `deployAtomicLinearVesting`.
 
-This function should take in the args and salt, in addition to the environment variables, and deploy the contract.
+This function should take in the args and salt, in addition to the environment variables, and deploy the contract. It should return the address of the deployed contract, and a string representing the prefix under which the deployed address will be stored. For example, with a returned string of `axis` for a deployment with name `AtomicLinearVesting`, the address would be stored under the `axis.AtomicLinearVesting` key.
 
 Notes:
 
@@ -66,7 +66,7 @@ To perform a deployment, run the following script:
 For example, the following command will deploy using the specified sequence file, broadcast the changes and verify them using Etherscan:
 
 ```bash
-./script/deploy/deploy.sh ./script/deploy/sequences/auctionhouse-mainnet.json true true
+./script/deploy/deploy.sh ./script/deploy/sequences/origin.json true true
 ```
 
 Following deployment, the addresses need to be manually added into `./script/env.json`.
@@ -74,7 +74,7 @@ Following deployment, the addresses need to be manually added into `./script/env
 If any problems are faced during deployment (or verification), set the third boolean argument to `true` in order to resume the previous transaction. For example:
 
 ```bash
-./script/deploy/deploy.sh ./script/deploy/sequences/auctionhouse-mainnet.json true true true
+./script/deploy/deploy.sh ./script/deploy/sequences/origin.json true true true
 ```
 
 ##### Blast-Specific Version
@@ -84,13 +84,11 @@ Deploying on Blast requires an AuctionHouse with additional constructor argument
 Example command:
 
 ```bash
-CHAIN="blast-testnet" ./script/deploy/deploy.sh ./script/deploy/sequences/auctionhouse-mainnet.json true true
+CHAIN="blast-sepolia" ./script/deploy/deploy.sh ./script/deploy/sequences/origin.json true true
 ```
 
 #### Verification
 
-If the `verify` flag on `deploy.sh` is set, the contract should be verified automatically. This requires the following environment variables to be set on the command-line or in `.env`:
-
-- `ETHERSCAN_API_KEY`
+If the `verify` flag on `deploy.sh` is set, the contract should be verified automatically. If `VERIFIER` is blank or `etherscan`, then `ETHERSCAN_API_KEY` must be set as an environment variable. Additionally, `VERIFIER_URL` can be used to set a custom verifier URL (by default it uses the one configurd in ethers-rs).
 
 If deploying against a Tenderly fork and verifying, [follow the instructions](https://docs.tenderly.co/contract-verification).

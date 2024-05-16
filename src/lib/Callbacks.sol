@@ -20,7 +20,7 @@ library Callbacks {
     uint256 internal constant ON_CURATE_FLAG = 1 << 157;
     uint256 internal constant ON_PURCHASE_FLAG = 1 << 156;
     uint256 internal constant ON_BID_FLAG = 1 << 155;
-    uint256 internal constant ON_CLAIM_PROCEEDS_FLAG = 1 << 154;
+    uint256 internal constant ON_SETTLE_FLAG = 1 << 154;
     uint256 internal constant RECEIVE_QUOTE_TOKENS_FLAG = 1 << 153;
     uint256 internal constant SEND_BASE_TOKENS_FLAG = 1 << 152;
 
@@ -30,7 +30,7 @@ library Callbacks {
         bool onCurate;
         bool onPurchase;
         bool onBid;
-        bool onClaimProceeds;
+        bool onSettle;
         bool receiveQuoteTokens;
         bool sendBaseTokens;
     }
@@ -59,7 +59,7 @@ library Callbacks {
                 || permissions.onCurate != self.hasPermission(ON_CURATE_FLAG)
                 || permissions.onPurchase != self.hasPermission(ON_PURCHASE_FLAG)
                 || permissions.onBid != self.hasPermission(ON_BID_FLAG)
-                || permissions.onClaimProceeds != self.hasPermission(ON_CLAIM_PROCEEDS_FLAG)
+                || permissions.onSettle != self.hasPermission(ON_SETTLE_FLAG)
                 || permissions.receiveQuoteTokens != self.hasPermission(RECEIVE_QUOTE_TOKENS_FLAG)
                 || permissions.sendBaseTokens != self.hasPermission(SEND_BASE_TOKENS_FLAG)
         ) {
@@ -205,18 +205,18 @@ library Callbacks {
         }
     }
 
-    /// @notice calls onClaimProceeds callback if permissioned and validates return value
-    function onClaimProceeds(
+    /// @notice calls onSettle callback if permissioned and validates return value
+    function onSettle(
         ICallback self,
         uint96 lotId,
         uint256 proceeds,
         uint256 refund,
         bytes calldata callbackData
     ) internal {
-        if (self.hasPermission(ON_CLAIM_PROCEEDS_FLAG)) {
+        if (self.hasPermission(ON_SETTLE_FLAG)) {
             self.callback(
                 abi.encodeWithSelector(
-                    ICallback.onClaimProceeds.selector, lotId, proceeds, refund, callbackData
+                    ICallback.onSettle.selector, lotId, proceeds, refund, callbackData
                 )
             );
         }

@@ -14,17 +14,18 @@ pragma solidity >=0.8.0;
 interface IAuction {
     // ========== ERRORS ========== //
 
-    error Auction_MarketNotActive(uint96 lotId);
-    error Auction_MarketActive(uint96 lotId);
+    error Auction_LotNotActive(uint96 lotId);
+    error Auction_LotActive(uint96 lotId);
     error Auction_InvalidStart(uint48 start_, uint48 minimum_);
     error Auction_InvalidDuration(uint48 duration_, uint48 minimum_);
     error Auction_InvalidLotId(uint96 lotId);
-    error Auction_OnlyMarketOwner();
+    error Auction_OnlyLotOwner();
     error Auction_AmountLessThanMinimum();
     error Auction_InvalidParams();
     error Auction_NotAuthorized();
     error Auction_NotImplemented();
     error Auction_InsufficientCapacity();
+    error Auction_LotNotConcluded(uint96 lotId);
 
     // ========== DATA STRUCTURES ========== //
 
@@ -61,14 +62,37 @@ interface IAuction {
     /// @param      purchased           The amount of quote tokens purchased
     struct Lot {
         uint48 start; // 6 +
-        uint48 conclusion; //
-        uint8 quoteTokenDecimals;
-        uint8 baseTokenDecimals;
-        bool capacityInQuote;
-        uint256 capacity;
-        uint256 sold;
-        uint256 purchased;
+        uint48 conclusion; // 6 +
+        uint8 quoteTokenDecimals; // 1 +
+        uint8 baseTokenDecimals; // 1 +
+        bool capacityInQuote; // 1 = 15 - end of slot 1
+        uint256 capacity; // 32 - slot 2
+        uint256 sold; // 32 - slot 3
+        uint256 purchased; // 32 - slot 4
     }
+
+    // ========== STATE VARIABLES ========== //
+
+    /// @notice Minimum auction duration in seconds
+    function minAuctionDuration() external view returns (uint48);
+
+    /// @notice General information pertaining to auction lots
+    /// @dev    See the `Lot` struct for more information on the return values
+    ///
+    /// @param  lotId   The lot ID
+    function lotData(uint96 lotId)
+        external
+        view
+        returns (
+            uint48 start,
+            uint48 conclusion,
+            uint8 quoteTokenDecimals,
+            uint8 baseTokenDecimals,
+            bool capacityInQuote,
+            uint256 capacity,
+            uint256 sold,
+            uint256 purchased
+        );
 
     // ========== AUCTION MANAGEMENT ========== //
 
@@ -106,6 +130,15 @@ interface IAuction {
     /// @param      lotId_  The lot id
     /// @return     bool    Whether or not the lot is active
     function isLive(uint96 lotId_) external view returns (bool);
+
+    /// @notice     Returns whether the auction is upcoming
+    /// @dev        The implementing function should handle the following:
+    ///             - Return true if the lot has not started yet AND has not been cancelled
+    ///             - Return false if the lot is active, has ended, or was cancelled
+    ///
+    /// @param      lotId_  The lot id
+    /// @return     bool    Whether or not the lot is upcoming
+    function isUpcoming(uint96 lotId_) external view returns (bool);
 
     /// @notice     Returns whether the auction has ended
     /// @dev        The implementing function should handle the following:

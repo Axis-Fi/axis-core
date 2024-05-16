@@ -77,13 +77,9 @@ contract BaselinePreAsset is ERC20, BaseCallback, IPreAsset {
         string memory preAssetSymbol_,
         address auctionHouse_,
         Callbacks.Permissions memory permissions_,
-        address seller_,
         address reserve_,
         address baselineFactory_
-    )
-        ERC20(preAssetName_, preAssetSymbol_, 18)
-        BaseCallback(auctionHouse_, permissions_, seller_)
-    {
+    ) ERC20(preAssetName_, preAssetSymbol_, 18) BaseCallback(auctionHouse_, permissions_) {
         // Check that the reserve token has 18 decimals
         if (ERC20(reserve_).decimals() != 18) revert Callback_InvalidParams();
 
@@ -103,7 +99,7 @@ contract BaselinePreAsset is ERC20, BaseCallback, IPreAsset {
     // onCurate: true
     // onPurchase: false
     // onBid: false
-    // onClaimProceeds: true
+    // onSettle: true
     // receiveQuoteTokens: true
     // sendBaseTokens: true
     // Contract prefix should be: 11100111 = 0xE7
@@ -242,7 +238,7 @@ contract BaselinePreAsset is ERC20, BaseCallback, IPreAsset {
     ///                 - The reported proceeds received are less than the reserve balance
     ///                 - The BAsset is not set
     ///                 - The BAsset's Baseline factory is not consistent with `BASELINE_FACTORY`
-    function _onClaimProceeds(
+    function _onSettle(
         uint96 lotId_,
         uint256 proceeds_,
         uint256 refund_,

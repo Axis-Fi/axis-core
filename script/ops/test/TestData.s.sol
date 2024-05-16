@@ -5,7 +5,7 @@ pragma solidity 0.8.19;
 import {Script, console2} from "forge-std/Script.sol";
 
 // System contracts
-import {AuctionHouse} from "src/bases/AuctionHouse.sol";
+import {BatchAuctionHouse} from "src/BatchAuctionHouse.sol";
 import {IAuctionHouse} from "src/interfaces/IAuctionHouse.sol";
 import {toKeycode, toVeecode} from "src/modules/Modules.sol";
 import {EncryptedMarginalPrice} from "src/modules/auctions/EMP.sol";
@@ -16,7 +16,7 @@ import {uint2str} from "src/lib/Uint2Str.sol";
 import {MockERC20, ERC20} from "lib/solmate/src/test/utils/mocks/MockERC20.sol";
 
 contract TestData is Script {
-    AuctionHouse public auctionHouse;
+    BatchAuctionHouse public auctionHouse;
     MockERC20 public quoteToken;
     MockERC20 public baseToken;
 
@@ -50,7 +50,7 @@ contract TestData is Script {
         address buyer
     ) public returns (uint96) {
         // Load addresses from .env
-        auctionHouse = AuctionHouse(vm.envAddress("AUCTION_HOUSE"));
+        auctionHouse = BatchAuctionHouse(vm.envAddress("AUCTION_HOUSE"));
 
         Point memory publicKey = Point(pubKeyX, pubKeyY);
 
@@ -67,15 +67,15 @@ contract TestData is Script {
 
         // Create LSBBA auction with the provided public key
         IAuctionHouse.RoutingParams memory routingParams;
-        routingParams.auctionType = toKeycode("EMPAM");
+        routingParams.auctionType = toKeycode("EMPA");
         routingParams.baseToken = address(baseToken);
         routingParams.quoteToken = address(quoteToken);
         // No callbacks, allowlist, derivative, or other routing params needed
 
         EncryptedMarginalPrice.AuctionDataParams memory auctionDataParams;
-        auctionDataParams.minPrice = 2e18; // 3 quote tokens per base token
+        auctionDataParams.minPrice = 2e18; // 2 quote tokens per base token
         auctionDataParams.minFillPercent = uint24(10_000); // 10%
-        auctionDataParams.minBidPercent = uint24(4000); // 4%
+        auctionDataParams.minBidSize = 2e17; // 0.2 quote tokens
         auctionDataParams.publicKey = publicKey;
         bytes memory implParams = abi.encode(auctionDataParams);
 
@@ -96,7 +96,7 @@ contract TestData is Script {
     }
 
     function cancelAuction(uint96 lotId) public {
-        auctionHouse = AuctionHouse(vm.envAddress("AUCTION_HOUSE"));
+        auctionHouse = BatchAuctionHouse(vm.envAddress("AUCTION_HOUSE"));
         vm.broadcast();
         auctionHouse.cancel(lotId, bytes(""));
     }

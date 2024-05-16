@@ -1,3 +1,6 @@
 lib/**
 src/modules/Modules.sol
+src/modules/Keycode.sol
 src/lib/**
+test/lib/uniswap-v2/*.sol
+test/lib/uniswap-v3/*.sol

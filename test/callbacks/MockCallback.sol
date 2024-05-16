@@ -9,16 +9,15 @@ import {Callbacks} from "src/lib/Callbacks.sol";
 contract MockCallback is BaseCallback {
     constructor(
         address auctionHouse_,
-        Callbacks.Permissions memory permissions_,
-        address seller_
-    ) BaseCallback(auctionHouse_, permissions_, seller_) {}
+        Callbacks.Permissions memory permissions_
+    ) BaseCallback(auctionHouse_, permissions_) {}
 
     bool public onCreateReverts;
     bool public onCancelReverts;
     bool public onCurateReverts;
     bool public onPurchaseReverts;
     bool public onBidReverts;
-    bool public onClaimProceedsReverts;
+    bool public onSettleReverts;
 
     uint48 public onCreateMultiplier;
     uint48 public onCurateMultiplier;
@@ -39,7 +38,9 @@ contract MockCallback is BaseCallback {
     mapping(uint96 => bool) public lotCurated;
     mapping(uint96 => bool) public lotPurchased;
     mapping(uint96 => bool) public lotBid;
-    mapping(uint96 => bool) public lotClaimedProceeds;
+    mapping(uint96 => bool) public lotSettled;
+    mapping(uint96 => address[]) public buyers;
+    mapping(uint96 => mapping(uint64 => address)) public bidder;
 
     function _onCreate(
         uint96 lotId_,
@@ -63,7 +64,7 @@ contract MockCallback is BaseCallback {
             }
 
             // Transfer the base tokens to the auction house
-            ERC20(baseToken_).transfer(address(auctionHouse), capacity_);
+            ERC20(baseToken_).transfer(address(AUCTION_HOUSE), capacity_);
         }
     }
 
@@ -93,7 +94,7 @@ contract MockCallback is BaseCallback {
             }
 
             // Transfer the base tokens to the auction house
-            ERC20(lotTokens[lotId_].baseToken).transfer(address(auctionHouse), curatorFee_);
+            ERC20(lotTokens[lotId_].baseToken).transfer(address(AUCTION_HOUSE), curatorFee_);
         }
     }
 
@@ -115,6 +116,7 @@ contract MockCallback is BaseCallback {
         }
 
         lotPurchased[lotId_] = true;
+        buyers[lotId_].push(buyer_);
 
         if (prefunded_) {
             // Do nothing, as tokens have already been transferred
@@ -124,13 +126,13 @@ contract MockCallback is BaseCallback {
             }
 
             // Transfer the base tokens to the auction house
-            ERC20(lotTokens[lotId_].baseToken).transfer(address(auctionHouse), payout_);
+            ERC20(lotTokens[lotId_].baseToken).transfer(address(AUCTION_HOUSE), payout_);
         }
     }
 
     function _onBid(
         uint96 lotId_,
-        uint64,
+        uint64 bidId_,
         address buyer_,
         uint256,
         bytes calldata callbackData_
@@ -145,19 +147,15 @@ contract MockCallback is BaseCallback {
         }
 
         lotBid[lotId_] = true;
+        bidder[lotId_][bidId_] = buyer_;
     }
 
-    function _onClaimProceeds(
-        uint96 lotId_,
-        uint256,
-        uint256,
-        bytes calldata
-    ) internal virtual override {
-        if (onClaimProceedsReverts) {
+    function _onSettle(uint96 lotId_, uint256, uint256, bytes calldata) internal virtual override {
+        if (onSettleReverts) {
             revert("revert");
         }
 
-        lotClaimedProceeds[lotId_] = true;
+        lotSettled[lotId_] = true;
     }
 
     function setOnCreateReverts(bool reverts_) external {
@@ -180,8 +178,8 @@ contract MockCallback is BaseCallback {
         onBidReverts = reverts_;
     }
 
-    function setOnClaimProceedsReverts(bool reverts_) external {
-        onClaimProceedsReverts = reverts_;
+    function setOnSettleReverts(bool reverts_) external {
+        onSettleReverts = reverts_;
     }
 
     function setOnCreateMultiplier(uint48 multiplier_) external {

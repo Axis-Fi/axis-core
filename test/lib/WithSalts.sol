@@ -11,13 +11,15 @@ contract WithSalts is Test {
     string internal _saltJson;
 
     /// @notice Gets the salt for a given key
-    /// @dev    If the key is not found, the function will return `bytes32(0)`.
+    /// @dev    Test salts are read from underneath the ".test" prefix.
+    ///
+    ///         If the key is not found, the function will return `bytes32(0)`.
     ///
     /// @param  contractName_   The contract to get the salt for
     /// @param  contractCode_   The creation code of the contract
     /// @param  args_           The abi-encoded constructor arguments to the contract
     /// @return                 The salt for the given key
-    function _getSalt(
+    function _getTestSalt(
         string memory contractName_,
         bytes memory contractCode_,
         bytes memory args_
@@ -33,7 +35,7 @@ contract WithSalts is Test {
 
         bytes32 salt = bytes32(
             vm.parseJson(
-                _saltJson, string.concat(".", contractName_, ".", vm.toString(bytecodeHash))
+                _saltJson, string.concat(".Test_", contractName_, ".", vm.toString(bytecodeHash))
             )
         );
 

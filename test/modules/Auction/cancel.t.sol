@@ -11,7 +11,7 @@ import {Permit2User} from "test/lib/permit2/Permit2User.sol";
 
 // Auctions
 import {AtomicAuctionHouse} from "src/AtomicAuctionHouse.sol";
-import {IAuction} from "src/interfaces/IAuction.sol";
+import {IAuction} from "src/interfaces/modules/IAuction.sol";
 import {IAuctionHouse} from "src/interfaces/IAuctionHouse.sol";
 import {ICallback} from "src/interfaces/ICallback.sol";
 
@@ -101,7 +101,7 @@ contract CancelTest is Test, Permit2User {
         _mockAuctionModule.cancelAuction(_lotId);
 
         // Cancel again
-        bytes memory err = abi.encodeWithSelector(IAuction.Auction_MarketNotActive.selector, _lotId);
+        bytes memory err = abi.encodeWithSelector(IAuction.Auction_LotNotActive.selector, _lotId);
         vm.expectRevert(err);
 
         vm.prank(address(_auctionHouse));
@@ -115,7 +115,7 @@ contract CancelTest is Test, Permit2User {
         vm.warp(block.timestamp + _DURATION + conclusionElapsed);
 
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(IAuction.Auction_MarketNotActive.selector, _lotId);
+        bytes memory err = abi.encodeWithSelector(IAuction.Auction_LotNotActive.selector, _lotId);
         vm.expectRevert(err);
 
         vm.prank(address(_auctionHouse));

@@ -252,7 +252,7 @@ sequenceDiagram
 
   activate AuctionHouse
     Buyer->>AuctionHouse: purchase(address recipient, address referrer, uint256 auctionId, uint256 amount, uint256 minAmountOut, bytes approval)
-    AuctionHouse->>AuctionHouse: _getModuleForId(uint256 auctionId)
+    AuctionHouse->>AuctionHouse: _getAuctionModuleForId(uint256 auctionId)
 
     Note over AuctionHouse: purchase
 
@@ -302,7 +302,7 @@ sequenceDiagram
 
   activate AuctionHouse
     Buyer->>AuctionHouse: purchase(address recipient, address referrer, uint256 auctionId, uint256 amount, uint256 minAmountOut, bytes approval)
-    AuctionHouse->>AuctionHouse: _getModuleForId(uint256 auctionId)
+    AuctionHouse->>AuctionHouse: _getAuctionModuleForId(uint256 auctionId)
 
     Note over AuctionHouse: purchase
 
@@ -380,7 +380,7 @@ sequenceDiagram
   activate AuctionHouse
     AuctionOwner->>AuctionHouse: close(uint256 id)
 
-    AuctionHouse->>AuctionHouse: _getModuleForId(id)
+    AuctionHouse->>AuctionHouse: _getAuctionModuleForId(id)
 
     AuctionHouse->>AuctionHouse: lotRouting(id)
 
@@ -406,7 +406,7 @@ sequenceDiagram
 
   activate AuctionHouse
     Buyer->>AuctionHouse: bid(address recipient_, address referrer_, uint256 id_, uint256 amount_, uint256 minAmountOut_, bytes calldata auctionData_, bytes calldata approval_)
-    AuctionHouse->>AuctionHouse: _getModuleForId(uint256 auctionId)
+    AuctionHouse->>AuctionHouse: _getAuctionModuleForId(uint256 auctionId)
 
     activate BatchAuctionModule
       AuctionHouse->>BatchAuctionModule: bid(address recipient_, address referrer_, uint256 id_, uint256 amount_, uint256 minAmountOut_, bytes calldata auctionData_, bytes calldata approval_)
@@ -429,7 +429,7 @@ sequenceDiagram
 
   activate AuctionHouse
     AuctionOwner->>AuctionHouse: settle(uint256 auctionId)
-    AuctionHouse->>AuctionHouse: _getModuleForId(uint256 auctionId)
+    AuctionHouse->>AuctionHouse: _getAuctionModuleForId(uint256 auctionId)
 
     activate BatchAuctionModule
       AuctionHouse->>BatchAuctionModule: settle(auctionId)

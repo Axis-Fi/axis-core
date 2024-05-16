@@ -45,7 +45,7 @@ then
 fi
 
 # Generate salt using cast create2
-output=$(cast create2 -s $2 -i $(cat $1))
+output=$(cast create2 -c -s $2 -i $(cat $1))
 
 # Get the first salt (as cast will often return the same salt multiple times)
 salt=$(echo "$output" | grep 'Salt: ' | head -n 1 | awk -F' ' '{print $2}')

@@ -12,8 +12,9 @@ import {Permit2User} from "test/lib/permit2/Permit2User.sol";
 
 // Modules
 import {BatchAuctionHouse} from "src/BatchAuctionHouse.sol";
-import {IAuction} from "src/interfaces/IAuction.sol";
+import {IAuction} from "src/interfaces/modules/IAuction.sol";
 import {EncryptedMarginalPrice} from "src/modules/auctions/EMP.sol";
+import {IEncryptedMarginalPrice} from "src/interfaces/modules/auctions/IEncryptedMarginalPrice.sol";
 
 abstract contract EmpTest is Test, Permit2User {
     uint256 internal constant _BASE_SCALE = 1e18;
@@ -26,11 +27,7 @@ abstract contract EmpTest is Test, Permit2User {
     uint48 internal constant _DURATION = 1 days;
     uint256 internal constant _MIN_PRICE = 1e18;
     uint24 internal constant _MIN_FILL_PERCENT = 25_000; // 25%
-    uint24 internal constant _MIN_BID_PERCENT = 40; // 0.04%
-    /// @dev Re-calculated by _updateMinBidSize()
-    uint256 internal _minBidSize;
-    /// @dev Re-calculated by _updateMinBidAmount()
-    uint256 internal _minBidAmount;
+    uint256 internal constant _MIN_BID_SIZE = 1e15; // 0.001 quote tokens
 
     uint256 internal constant _AUCTION_PRIVATE_KEY = 112_233_445_566;
     Point internal _auctionPublicKey;
@@ -44,6 +41,7 @@ abstract contract EmpTest is Test, Permit2User {
 
     // Input parameters (modifier via modifiers)
     uint48 internal _start;
+    uint48 internal _settlePeriod;
     IAuction.AuctionParams internal _auctionParams;
     EncryptedMarginalPrice.AuctionDataParams internal _auctionDataParams;
     uint96 internal _lotId = type(uint96).max;
@@ -66,11 +64,12 @@ abstract contract EmpTest is Test, Permit2User {
         _bidPublicKey = ECIES.calcPubKey(Point(1, 2), _BID_PRIVATE_KEY);
 
         _start = uint48(block.timestamp) + 1;
+        _settlePeriod = _module.dedicatedSettlePeriod();
 
-        _auctionDataParams = EncryptedMarginalPrice.AuctionDataParams({
+        _auctionDataParams = IEncryptedMarginalPrice.AuctionDataParams({
             minPrice: _MIN_PRICE,
             minFillPercent: _MIN_FILL_PERCENT,
-            minBidPercent: _MIN_BID_PERCENT,
+            minBidSize: _MIN_BID_SIZE,
             publicKey: _auctionPublicKey
         });
 
@@ -81,9 +80,6 @@ abstract contract EmpTest is Test, Permit2User {
             capacity: _LOT_CAPACITY,
             implParams: abi.encode(_auctionDataParams)
         });
-
-        _updateMinBidSize();
-        _updateMinBidAmount();
     }
 
     // ======== Modifiers ======== //
@@ -92,10 +88,9 @@ abstract contract EmpTest is Test, Permit2User {
         _quoteTokenDecimals = decimals_;
 
         _auctionDataParams.minPrice = _scaleQuoteTokenAmount(_MIN_PRICE);
+        _auctionDataParams.minBidSize = _scaleQuoteTokenAmount(_MIN_BID_SIZE);
 
         _auctionParams.implParams = abi.encode(_auctionDataParams);
-
-        _updateMinBidAmount();
     }
 
     modifier givenQuoteTokenDecimals(uint8 decimals_) {
@@ -107,9 +102,6 @@ abstract contract EmpTest is Test, Permit2User {
         _baseTokenDecimals = decimals_;
 
         _auctionParams.capacity = _scaleBaseTokenAmount(_LOT_CAPACITY);
-
-        _updateMinBidSize();
-        _updateMinBidAmount();
     }
 
     modifier givenBaseTokenDecimals(uint8 decimals_) {
@@ -119,9 +111,6 @@ abstract contract EmpTest is Test, Permit2User {
 
     modifier givenLotCapacity(uint256 capacity_) {
         _auctionParams.capacity = capacity_;
-
-        _updateMinBidSize();
-        _updateMinBidAmount();
         _;
     }
 
@@ -130,7 +119,6 @@ abstract contract EmpTest is Test, Permit2User {
 
         _auctionParams.implParams = abi.encode(_auctionDataParams);
 
-        _updateMinBidAmount();
         _;
     }
 
@@ -151,26 +139,10 @@ abstract contract EmpTest is Test, Permit2User {
         _;
     }
 
-    function _updateMinBidSize() internal {
-        // Calculate the minimum bid size
-        // Rounding consistent with EMPA
-        _minBidSize = Math.fullMulDivUp(_auctionParams.capacity, _MIN_BID_PERCENT, 1e5);
-    }
-
-    function _updateMinBidAmount() internal {
-        // Calculate the minimum bid amount
-        // Rounding consistent with EMPA
-        _minBidAmount =
-            Math.fullMulDivUp(_minBidSize, _auctionDataParams.minPrice, 10 ** _baseTokenDecimals);
-    }
-
-    modifier givenMinimumBidPercentage(uint24 percentage_) {
-        _auctionDataParams.minBidPercent = percentage_;
+    modifier givenMinimumBidSize(uint256 amount_) {
+        _auctionDataParams.minBidSize = amount_;
 
         _auctionParams.implParams = abi.encode(_auctionDataParams);
-
-        _updateMinBidSize();
-        _updateMinBidAmount();
         _;
     }
 
@@ -247,7 +219,12 @@ abstract contract EmpTest is Test, Permit2User {
     ) internal view returns (bytes memory) {
         uint256 encryptedAmountOut = _encryptBid(_lotId, bidder_, amountIn_, amountOut_);
 
-        return abi.encode(encryptedAmountOut, _bidPublicKey);
+        IEncryptedMarginalPrice.BidParams memory bidParams = IEncryptedMarginalPrice.BidParams({
+            encryptedAmountOut: encryptedAmountOut,
+            bidPublicKey: _bidPublicKey
+        });
+
+        return abi.encode(bidParams);
     }
 
     function _createBidData(
@@ -349,7 +326,7 @@ abstract contract EmpTest is Test, Permit2User {
 
     function _settleLot() internal {
         vm.prank(address(_auctionHouse));
-        _module.settle(_lotId);
+        _module.settle(_lotId, 100_000);
     }
 
     modifier givenLotIsSettled() {
@@ -366,19 +343,24 @@ abstract contract EmpTest is Test, Permit2User {
         _;
     }
 
+    modifier givenLotIsAborted() {
+        vm.prank(address(_auctionHouse));
+        _module.abort(_lotId);
+        _;
+    }
+
     modifier givenLotHasStarted() {
         vm.warp(_start + 1);
         _;
     }
 
     modifier givenLotSettlePeriodHasPassed() {
-        vm.warp(_start + _DURATION + 6 hours);
+        vm.warp(_start + _DURATION + _module.dedicatedSettlePeriod());
         _;
     }
 
-    modifier givenLotProceedsAreClaimed() {
-        vm.prank(address(_auctionHouse));
-        _module.claimProceeds(_lotId);
+    modifier givenDuringLotSettlePeriod() {
+        vm.warp(_start + _DURATION + _module.dedicatedSettlePeriod() - 1);
         _;
     }
 
@@ -400,9 +382,8 @@ abstract contract EmpTest is Test, Permit2User {
         (
             uint64 nextBidId_,
             uint64 nextDecryptIndex_,
-            EncryptedMarginalPrice.LotStatus status_,
+            IEncryptedMarginalPrice.LotStatus status_,
             uint64 marginalBidId_,
-            bool proceedsClaimed_,
             uint256 marginalPrice_,
             uint256 minPrice_,
             uint256 minFilled_,
@@ -411,12 +392,11 @@ abstract contract EmpTest is Test, Permit2User {
             uint256 privateKey_
         ) = _module.auctionData(lotId_);
 
-        return EncryptedMarginalPrice.AuctionData({
+        return IEncryptedMarginalPrice.AuctionData({
             nextBidId: nextBidId_,
             nextDecryptIndex: nextDecryptIndex_,
             status: status_,
             marginalBidId: marginalBidId_,
-            proceedsClaimed: proceedsClaimed_,
             marginalPrice: marginalPrice_,
             minFilled: minFilled_,
             minBidSize: minBidSize_,
@@ -436,7 +416,9 @@ abstract contract EmpTest is Test, Permit2User {
         view
         returns (EncryptedMarginalPrice.PartialFill memory)
     {
-        return _module.getPartialFill(lotId_);
+        (, EncryptedMarginalPrice.PartialFill memory partialFill) = _module.getPartialFill(lotId_);
+
+        return partialFill;
     }
 
     function _getBid(
@@ -451,7 +433,7 @@ abstract contract EmpTest is Test, Permit2User {
             EncryptedMarginalPrice.BidStatus status_
         ) = _module.bids(lotId_, bidId_);
 
-        return EncryptedMarginalPrice.Bid({
+        return IEncryptedMarginalPrice.Bid({
             bidder: bidder_,
             amount: amount_,
             minAmountOut: minAmountOut_,
@@ -467,7 +449,7 @@ abstract contract EmpTest is Test, Permit2User {
         (uint256 encryptedAmountOut_, Point memory publicKey_) =
             _module.encryptedBids(lotId_, bidId_);
 
-        return EncryptedMarginalPrice.EncryptedBid({
+        return IEncryptedMarginalPrice.EncryptedBid({
             encryptedAmountOut: encryptedAmountOut_,
             bidPubKey: publicKey_
         });

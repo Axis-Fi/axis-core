@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity >=0.8.0;
 
-import {IAuction} from "src/interfaces/IAuction.sol";
+import {IAuction} from "src/interfaces/modules/IAuction.sol";
 
 /// @title  IBatchAuction
 /// @notice Interface for batch auctions
@@ -11,6 +11,7 @@ import {IAuction} from "src/interfaces/IAuction.sol";
 interface IBatchAuction is IAuction {
     // ========== ERRORS ========== //
 
+    error Auction_DedicatedSettlePeriod(uint96 lotId);
     error Auction_InvalidBidId(uint96 lotId, uint96 bidId);
     error Auction_NotBidder();
 
@@ -18,6 +19,12 @@ interface IBatchAuction is IAuction {
 
     /// @notice Contains data about a bidder's outcome from an auction
     /// @dev    Only used in memory so doesn't need to be packed
+    ///
+    /// @param  bidder   The bidder
+    /// @param  referrer The referrer
+    /// @param  paid     The amount of quote tokens paid (including any refunded tokens)
+    /// @param  payout   The amount of base tokens paid out
+    /// @param  refund   The amount of quote tokens refunded
     struct BidClaim {
         address bidder;
         address referrer;
@@ -26,7 +33,18 @@ interface IBatchAuction is IAuction {
         uint256 refund;
     }
 
-    // ========== BATCH AUCTIONS ========== //
+    // ========== STATE VARIABLES ========== //
+
+    /// @notice     Time period after auction conclusion where bidders cannot refund bids
+    function dedicatedSettlePeriod() external view returns (uint48);
+
+    /// @notice     Custom auction output for each lot
+    /// @dev        Stored during settlement
+    ///
+    /// @param      lotId   The lot ID
+    function lotAuctionOutput(uint96 lotId) external view returns (bytes memory);
+
+    // ========== BATCH OPERATIONS ========== //
 
     /// @notice     Bid on an auction lot
     /// @dev        The implementing function should handle the following:
@@ -86,24 +104,68 @@ interface IBatchAuction is IAuction {
     ///             - Update the lot data
     ///
     /// @param      lotId_          The lot id
+    /// @param      num_            The number of winning bids to settle (capped at the remaining number if more is provided)
     /// @return     totalIn         Total amount of quote tokens from bids that were filled
     /// @return     totalOut        Total amount of base tokens paid out to winning bids
-    /// @return     auctionOutput   Custom data returned by the auction module
-    function settle(uint96 lotId_)
-        external
-        returns (uint256 totalIn, uint256 totalOut, bytes memory auctionOutput);
-
-    /// @notice     Claim the seller proceeds from a settled auction lot
-    /// @dev        The implementing function should handle the following:
-    ///             - Validate the lot parameters
-    ///             - Update the lot data
-    ///
-    /// @param      lotId_          The lot id
-    /// @return     purchased       The amount of quote tokens purchased
-    /// @return     sold            The amount of base tokens sold
     /// @return     capacity        The original capacity of the lot
+    /// @return     finished        Whether the settlement is finished
     /// @return     auctionOutput   Custom data returned by the auction module
-    function claimProceeds(uint96 lotId_)
+    function settle(
+        uint96 lotId_,
+        uint256 num_
+    )
         external
-        returns (uint256 purchased, uint256 sold, uint256 capacity, bytes memory auctionOutput);
+        returns (
+            uint256 totalIn,
+            uint256 totalOut,
+            uint256 capacity,
+            bool finished,
+            bytes memory auctionOutput
+        );
+
+    /// @notice    Abort a batch auction that cannot be settled, refunding the seller and allowing bidders to claim refunds
+    /// @dev       The implementing function should handle the following:
+    ///            - Validate the lot is in the correct state
+    ///            - Set the auction in a state that allows bidders to claim refunds
+    ///
+    /// @param     lotId_    The lot id
+    function abort(uint96 lotId_) external;
+
+    // ========== VIEW FUNCTIONS ========== //
+
+    /// @notice Get the number of bids for a lot
+    ///
+    /// @param  lotId_  The lot ID
+    /// @return numBids The number of bids
+    function getNumBids(uint96 lotId_) external view returns (uint256 numBids);
+
+    /// @notice Get the bid IDs from the given index
+    ///
+    /// @param  lotId_  The lot ID
+    /// @param  start_  The index to start retrieving bid IDs from
+    /// @param  count_  The number of bids to retrieve
+    /// @return bidIds  The bid IDs
+    function getBidIds(
+        uint96 lotId_,
+        uint256 start_,
+        uint256 count_
+    ) external view returns (uint64[] memory bidIds);
+
+    /// @notice Get the bid ID at the given index
+    ///
+    /// @param  lotId_  The lot ID
+    /// @param  index_  The index
+    /// @return bidId   The bid ID
+    function getBidIdAtIndex(uint96 lotId_, uint256 index_) external view returns (uint64 bidId);
+
+    /// @notice Get the claim data for a bid
+    /// @notice This provides information on the outcome of a bid, independent of the claim status
+    ///
+    /// @param  lotId_  The lot ID
+    /// @param  bidId_  The bid ID
+    /// @return bidClaim    The bid claim data
+    function getBidClaim(
+        uint96 lotId_,
+        uint64 bidId_
+    ) external view returns (BidClaim memory bidClaim);
 }

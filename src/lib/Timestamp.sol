@@ -5,7 +5,7 @@ import {uint2str} from "src/lib/Uint2Str.sol";
 
 library Timestamp {
     function toPaddedString(uint48 timestamp)
-        public
+        internal
         pure
         returns (string memory, string memory, string memory)
     {

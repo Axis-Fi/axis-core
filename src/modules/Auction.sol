@@ -1,20 +1,20 @@
 // SPDX-License-Identifier: BSL-1.1
 pragma solidity 0.8.19;
 
-import {IAuction} from "src/interfaces/IAuction.sol";
+import {IAuction} from "src/interfaces/modules/IAuction.sol";
 import {Module} from "src/modules/Modules.sol";
 
 abstract contract AuctionModule is IAuction, Module {
     // ========= STATE ========== //
 
-    /// @notice Minimum auction duration in seconds
-    uint48 public minAuctionDuration;
-
     /// @notice Constant for percentages
     /// @dev    1% = 1_000 or 1e3. 100% = 100_000 or 1e5.
     uint48 internal constant _ONE_HUNDRED_PERCENT = 100_000;
 
-    /// @notice General information pertaining to auction lots
+    /// @inheritdoc IAuction
+    uint48 public minAuctionDuration;
+
+    /// @inheritdoc IAuction
     mapping(uint96 id => Lot lot) public lotData;
 
     // ========== CONSTRUCTOR ========== //
@@ -134,6 +134,14 @@ abstract contract AuctionModule is IAuction, Module {
     }
 
     /// @inheritdoc IAuction
+    function isUpcoming(uint96 lotId_) public view override returns (bool) {
+        return (
+            lotData[lotId_].capacity != 0 && uint48(block.timestamp) < lotData[lotId_].conclusion
+                && uint48(block.timestamp) < lotData[lotId_].start
+        );
+    }
+
+    /// @inheritdoc IAuction
     function hasEnded(uint96 lotId_) public view override returns (bool) {
         return
             uint48(block.timestamp) >= lotData[lotId_].conclusion || lotData[lotId_].capacity == 0;
@@ -177,13 +185,21 @@ abstract contract AuctionModule is IAuction, Module {
     /// @notice     Checks that the lot represented by `lotId_` has not started
     /// @dev        Should revert if the lot has not started
     function _revertIfBeforeLotStart(uint96 lotId_) internal view virtual {
-        if (uint48(block.timestamp) < lotData[lotId_].start) revert Auction_MarketNotActive(lotId_);
+        if (uint48(block.timestamp) < lotData[lotId_].start) revert Auction_LotNotActive(lotId_);
     }
 
     /// @notice     Checks that the lot represented by `lotId_` has started
     /// @dev        Should revert if the lot has started
     function _revertIfLotStarted(uint96 lotId_) internal view virtual {
-        if (uint48(block.timestamp) >= lotData[lotId_].start) revert Auction_MarketActive(lotId_);
+        if (uint48(block.timestamp) >= lotData[lotId_].start) revert Auction_LotActive(lotId_);
+    }
+
+    /// @notice     Checks that the lot represented by `lotId_` has not concluded
+    /// @dev        Should revert if the lot has not concluded
+    function _revertIfBeforeLotConcluded(uint96 lotId_) internal view virtual {
+        if (uint48(block.timestamp) < lotData[lotId_].conclusion && lotData[lotId_].capacity > 0) {
+            revert Auction_LotNotConcluded(lotId_);
+        }
     }
 
     /// @notice     Checks that the lot represented by `lotId_` has not concluded
@@ -191,11 +207,11 @@ abstract contract AuctionModule is IAuction, Module {
     function _revertIfLotConcluded(uint96 lotId_) internal view virtual {
         // Beyond the conclusion time
         if (uint48(block.timestamp) >= lotData[lotId_].conclusion) {
-            revert Auction_MarketNotActive(lotId_);
+            revert Auction_LotNotActive(lotId_);
         }
 
         // Capacity is sold-out, or cancelled
-        if (lotData[lotId_].capacity == 0) revert Auction_MarketNotActive(lotId_);
+        if (lotData[lotId_].capacity == 0) revert Auction_LotNotActive(lotId_);
     }
 
     /// @notice     Checks that the lot represented by `lotId_` is active
@@ -204,7 +220,7 @@ abstract contract AuctionModule is IAuction, Module {
     ///
     /// @param      lotId_  The lot ID
     function _revertIfLotInactive(uint96 lotId_) internal view virtual {
-        if (!isLive(lotId_)) revert Auction_MarketNotActive(lotId_);
+        if (!isLive(lotId_)) revert Auction_LotNotActive(lotId_);
     }
 
     /// @notice     Checks that the lot represented by `lotId_` is active
@@ -213,6 +229,6 @@ abstract contract AuctionModule is IAuction, Module {
     ///
     /// @param      lotId_  The lot ID
     function _revertIfLotActive(uint96 lotId_) internal view virtual {
-        if (isLive(lotId_)) revert Auction_MarketActive(lotId_);
+        if (isLive(lotId_)) revert Auction_LotActive(lotId_);
     }
 }

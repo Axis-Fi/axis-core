@@ -52,9 +52,14 @@ contract WithSalts is Script {
     /// @dev    If the key is not found, the function will return `bytes32(0)`.
     ///
     /// @param  contractName_   The contract to get the salt for
-    /// @param  args_           The abi-encoded constructor arguments to the contract
+    /// @param  creationCode_   The creation code of the contract
+    /// @param  contractArgs_   The abi-encoded constructor arguments to the contract
     /// @return                 The salt for the given key
-    function _getSalt(string memory contractName_, bytes memory args_) internal returns (bytes32) {
+    function _getSalt(
+        string memory contractName_,
+        bytes memory creationCode_,
+        bytes memory contractArgs_
+    ) internal returns (bytes32) {
         // Load salt file if needed
         if (bytes(_saltJson).length == 0) {
             _saltJson = vm.readFile(_SALTS_PATH);
@@ -62,11 +67,27 @@ contract WithSalts is Script {
 
         bytes32 salt = bytes32(
             vm.parseJson(
-                _saltJson, string.concat(".", contractName_, ".", vm.toString(keccak256(args_)))
+                _saltJson,
+                string.concat(
+                    ".",
+                    contractName_,
+                    ".",
+                    vm.toString(keccak256(abi.encodePacked(creationCode_, contractArgs_)))
+                )
             )
         );
 
         return salt;
+    }
+
+    /// @notice Same as `_setSalt()`, but prefixes the salt key with "Test_" so they are co-located and separate from production salts.
+    function _setTestSalt(
+        string memory bytecodePath_,
+        string memory prefix_,
+        string memory saltKey_,
+        bytes32 bytecodeHash_
+    ) internal {
+        _setSalt(bytecodePath_, prefix_, string.concat("Test_", saltKey_), bytecodeHash_);
     }
 
     /// @notice Calls a script to generate and write the salt for a given bytecode

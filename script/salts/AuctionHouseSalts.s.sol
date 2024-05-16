@@ -19,27 +19,31 @@ contract AuctionHouseSalts is Script, WithEnvironment, WithSalts {
         _createBytecodeDirectory();
 
         // Cache required variables
-        _envOwner = _envAddress("OWNER");
+        _envOwner = _envAddressNotZero("axis.OWNER");
         console2.log("Owner:", _envOwner);
-        _envPermit2 = _envAddress("PERMIT2");
+        _envPermit2 = _envAddressNotZero("axis.PERMIT2");
         console2.log("Permit2:", _envPermit2);
-        _envProtocol = _envAddress("PROTOCOL");
+        _envProtocol = _envAddressNotZero("axis.PROTOCOL");
         console2.log("Protocol:", _envProtocol);
     }
 
-    function generate(string calldata chain_, string calldata prefix_) public {
+    function generate(string calldata chain_, string calldata prefix_, bool atomic_) public {
         _setUp(chain_);
 
-        // Calculate salt for the AtomicAuctionHouse
         bytes memory args = abi.encode(_envOwner, _envProtocol, _envPermit2);
-        bytes memory contractCode = type(AtomicAuctionHouse).creationCode;
-        (string memory bytecodePath, bytes32 bytecodeHash) =
-            _writeBytecode("AtomicAuctionHouse", contractCode, args);
-        _setSalt(bytecodePath, prefix_, "AtomicAuctionHouse", bytecodeHash);
 
-        // Calculate salt for the BatchAuctionHouse
-        contractCode = type(BatchAuctionHouse).creationCode;
-        (bytecodePath, bytecodeHash) = _writeBytecode("BatchAuctionHouse", contractCode, args);
-        _setSalt(bytecodePath, prefix_, "BatchAuctionHouse", bytecodeHash);
+        if (atomic_) {
+            // Calculate salt for the AtomicAuctionHouse
+            bytes memory contractCode = type(AtomicAuctionHouse).creationCode;
+            (string memory bytecodePath, bytes32 bytecodeHash) =
+                _writeBytecode("AtomicAuctionHouse", contractCode, args);
+            _setSalt(bytecodePath, prefix_, "AtomicAuctionHouse", bytecodeHash);
+        } else {
+            // Calculate salt for the BatchAuctionHouse
+            bytes memory contractCode = type(BatchAuctionHouse).creationCode;
+            (string memory bytecodePath, bytes32 bytecodeHash) =
+                _writeBytecode("BatchAuctionHouse", contractCode, args);
+            _setSalt(bytecodePath, prefix_, "BatchAuctionHouse", bytecodeHash);
+        }
     }
 }

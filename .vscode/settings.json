@@ -1,0 +1,10 @@
+{
+  "cSpell.words": [
+    "ECIES",
+    "IPFS",
+    "keypairs"
+  ],
+  "[json]": {
+    "editor.tabSize": 2
+  }
+}

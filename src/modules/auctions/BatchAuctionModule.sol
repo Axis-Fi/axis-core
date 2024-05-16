@@ -2,8 +2,8 @@
 pragma solidity 0.8.19;
 
 // Interfaces
-import {IAuction} from "src/interfaces/IAuction.sol";
-import {IBatchAuction} from "src/interfaces/IBatchAuction.sol";
+import {IAuction} from "src/interfaces/modules/IAuction.sol";
+import {IBatchAuction} from "src/interfaces/modules/IBatchAuction.sol";
 
 // Auctions
 import {AuctionModule} from "src/modules/Auction.sol";
@@ -13,8 +13,10 @@ import {AuctionModule} from "src/modules/Auction.sol";
 abstract contract BatchAuctionModule is IBatchAuction, AuctionModule {
     // ========== STATE VARIABLES ========== //
 
-    /// @notice     Custom auction output for each lot
-    /// @dev        Stored during settlement
+    /// @inheritdoc IBatchAuction
+    uint48 public dedicatedSettlePeriod;
+
+    /// @inheritdoc IBatchAuction
     mapping(uint96 => bytes) public lotAuctionOutput;
 
     /// @inheritdoc IAuction
@@ -174,12 +176,21 @@ abstract contract BatchAuctionModule is IBatchAuction, AuctionModule {
     ///             - The lot is active
     ///             - The lot has already been settled
     ///             - The caller is not an internal module
-    function settle(uint96 lotId_)
+    function settle(
+        uint96 lotId_,
+        uint256 num_
+    )
         external
         virtual
         override
         onlyInternal
-        returns (uint256 totalIn, uint256 totalOut, bytes memory auctionOutput)
+        returns (
+            uint256 totalIn,
+            uint256 totalOut,
+            uint256 capacity,
+            bool finished,
+            bytes memory auctionOutput
+        )
     {
         // Standard validation
         _revertIfLotInvalid(lotId_);
@@ -187,13 +198,17 @@ abstract contract BatchAuctionModule is IBatchAuction, AuctionModule {
         _revertIfLotActive(lotId_);
         _revertIfLotSettled(lotId_);
 
+        Lot storage lot = lotData[lotId_];
+
         // Call implementation-specific logic
-        (totalIn, totalOut, auctionOutput) = _settle(lotId_);
+        (totalIn, totalOut, finished, auctionOutput) = _settle(lotId_, num_);
 
         // Store sold and purchased amounts
         lotData[lotId_].purchased = totalIn;
         lotData[lotId_].sold = totalOut;
         lotAuctionOutput[lotId_] = auctionOutput;
+
+        return (totalIn, totalOut, lot.capacity, finished, auctionOutput);
     }
 
     /// @notice     Implementation-specific lot settlement logic
@@ -203,54 +218,59 @@ abstract contract BatchAuctionModule is IBatchAuction, AuctionModule {
     ///             - Updating the lot data
     ///
     /// @param      lotId_          The lot ID
+    /// @param      num_            The number of bids to settle in this pass (capped at the remaining number if more is provided)
     /// @return     totalIn         The total amount of quote tokens that filled the auction
     /// @return     totalOut        The total amount of base tokens sold
+    /// @return     finished        Whether the settlement is finished
     /// @return     auctionOutput   The auction-type specific output to be used with a condenser
-    function _settle(uint96 lotId_)
+    function _settle(
+        uint96 lotId_,
+        uint256 num_
+    )
         internal
         virtual
-        returns (uint256 totalIn, uint256 totalOut, bytes memory auctionOutput);
+        returns (uint256 totalIn, uint256 totalOut, bool finished, bytes memory auctionOutput);
 
     /// @inheritdoc IBatchAuction
-    /// @dev        Implements a basic claimProceeds function that:
-    ///             - Validates the lot and bid parameters
+    /// @dev        Implements a basic abort function that:
+    ///             - Validates the lot id and state
     ///             - Calls the implementation-specific function
+    ///
+    ///             The abort function allows anyone to abort the lot after the conclusion and settlement time has passed.
+    ///             This can be useful if the lot is unable to be settled, or if the seller is unwilling to settle the lot.
     ///
     ///             This function reverts if:
     ///             - The lot id is invalid
-    ///             - The lot is not settled
-    ///             - The lot proceeds have already been claimed
-    ///             - The lot is cancelled
-    ///             - The caller is not an internal module
-    function claimProceeds(uint96 lotId_)
-        external
-        virtual
-        override
-        onlyInternal
-        returns (uint256 purchased, uint256 sold, uint256 capacity, bytes memory auctionOutput)
-    {
+    ///             - The lot has not concluded
+    ///             - The lot is in the dedicated settle period
+    ///             - The lot is settled (after which it cannot be aborted)
+    function abort(uint96 lotId_) external virtual override onlyInternal {
         // Standard validation
         _revertIfLotInvalid(lotId_);
-        _revertIfLotProceedsClaimed(lotId_);
-        _revertIfLotNotSettled(lotId_);
+        _revertIfBeforeLotConcluded(lotId_);
+        _revertIfDedicatedSettlePeriod(lotId_);
+        _revertIfLotSettled(lotId_);
 
         // Call implementation-specific logic
-        _claimProceeds(lotId_);
-
-        // Get the lot data
-        Lot memory lot = lotData[lotId_];
-
-        // Return the required data
-        return (lot.purchased, lot.sold, lot.capacity, lotAuctionOutput[lotId_]);
+        _abort(lotId_);
     }
 
-    /// @notice     Implementation-specific claim proceeds logic
+    /// @notice     Implementation-specific lot settlement logic
     /// @dev        Auction modules should override this to perform any additional logic, such as:
     ///             - Validating the auction-specific parameters
-    ///             - Updating the lot data
+    ///             - Updating auction-specific data
     ///
-    /// @param      lotId_          The lot ID
-    function _claimProceeds(uint96 lotId_) internal virtual;
+    /// @param      lotId_  The lot ID
+    function _abort(uint96 lotId_) internal virtual;
+
+    // ========== ADMIN CONFIGURATION ========== //
+
+    function setDedicatedSettlePeriod(uint48 period_) external onlyParent {
+        // Dedicated settle period cannot be more than 7 days
+        if (period_ > 7 days) revert Auction_InvalidParams();
+
+        dedicatedSettlePeriod = period_;
+    }
 
     // ========== MODIFIERS ========== //
 
@@ -267,13 +287,6 @@ abstract contract BatchAuctionModule is IBatchAuction, AuctionModule {
     ///
     /// @param      lotId_  The lot ID
     function _revertIfLotNotSettled(uint96 lotId_) internal view virtual;
-
-    /// @notice     Checks if the lot represented by `lotId_` has had its proceeds claimed
-    /// @dev        Should revert if the lot proceeds have been claimed
-    ///             Inheriting contracts must override this to implement custom logic
-    ///
-    /// @param      lotId_  The lot ID
-    function _revertIfLotProceedsClaimed(uint96 lotId_) internal view virtual;
 
     /// @notice     Checks that the lot and bid combination is valid
     /// @dev        Should revert if the bid is invalid
@@ -304,13 +317,14 @@ abstract contract BatchAuctionModule is IBatchAuction, AuctionModule {
     /// @param      bidId_      The bid ID
     function _revertIfBidClaimed(uint96 lotId_, uint64 bidId_) internal view virtual;
 
-    // ========== VIEW FUNCTIONS ========== //
-
-    function getNumBids(uint96 lotId_) external view virtual returns (uint256);
-
-    function getBidIds(
-        uint96 lotId_,
-        uint256 start_,
-        uint256 count_
-    ) external view virtual returns (uint64[] memory);
+    function _revertIfDedicatedSettlePeriod(uint96 lotId_) internal view {
+        // Auction must not be in the dedicated settle period
+        uint48 conclusion = lotData[lotId_].conclusion;
+        if (
+            uint48(block.timestamp) >= conclusion
+                && uint48(block.timestamp) < conclusion + dedicatedSettlePeriod
+        ) {
+            revert Auction_DedicatedSettlePeriod(lotId_);
+        }
+    }
 }

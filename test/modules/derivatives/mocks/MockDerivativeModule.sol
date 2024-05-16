@@ -123,13 +123,8 @@ contract MockDerivativeModule is DerivativeModule {
     function unwrap(uint256 tokenId_, uint256 amount_) external virtual override {}
 
     function exerciseCost(
-        bytes memory data,
-        uint256 amount
-    ) external view virtual override returns (uint256) {}
-
-    function convertsTo(
-        bytes memory data,
-        uint256 amount
+        uint256 tokenId_,
+        uint256 amount_
     ) external view virtual override returns (uint256) {}
 
     function computeId(

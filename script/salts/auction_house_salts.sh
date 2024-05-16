@@ -14,7 +14,6 @@ eval "$curenv"
 # Get command-line arguments
 MODE=$1
 PREFIX=$2
-SALT_KEY=$3
 
 # Check that the mode is "atomic" or "batch"
 if [ "$MODE" != "atomic" ] && [ "$MODE" != "batch" ]
@@ -22,6 +21,9 @@ then
   echo "Invalid mode specified. Provide 'atomic' or 'batch' after the command as argument 1."
   exit 1
 fi
+
+# Set flag for atomic or batch auction
+ATOMIC=$( if [ "$MODE" == "atomic" ]; then echo "true"; else echo "false"; fi )
 
 # Check that the prefix is specified
 if [ -z "$PREFIX" ]
@@ -37,10 +39,10 @@ echo "Using chain: $CHAIN"
 if [[ $CHAIN == *"blast"* ]]
 then
   echo "Using Blast-specific contracts"
-  forge script ./script/salts/AuctionHouseSaltsBlast.s.sol:AuctionHouseSaltsBlast --sig "generate(string,string)()" $CHAIN $PREFIX
+  forge script ./script/salts/AuctionHouseSaltsBlast.s.sol:AuctionHouseSaltsBlast --sig "generate(string,string,bool)()" $CHAIN $PREFIX $ATOMIC
 
     # Set the bytecode file
-    if [ "$MODE" == "atomic" ]
+    if [ $ATOMIC ]
     then
         BYTECODE_FILE="BlastAtomicAuctionHouse"
     else
@@ -48,10 +50,10 @@ then
     fi
 else
   echo "Using standard contracts"
-  forge script ./script/salts/AuctionHouseSalts.s.sol:AuctionHouseSalts --sig "generate(string,string)()" $CHAIN $PREFIX
+  forge script ./script/salts/AuctionHouseSalts.s.sol:AuctionHouseSalts --sig "generate(string,string,bool)()" $CHAIN $PREFIX $ATOMIC
 
     # Set the bytecode file
-    if [ "$MODE" == "atomic" ]
+    if [ $ATOMIC ]
     then
         BYTECODE_FILE="AtomicAuctionHouse"
     else
