@@ -48,5 +48,8 @@ interface ILinearVesting {
     ///
     /// @param      tokenId         The ID of the derivative token
     /// @return     vestingParams   The vesting parameters
-    function getTokenVestingParams(uint256 tokenId) external view returns (VestingParams memory vestingParams);
+    function getTokenVestingParams(uint256 tokenId)
+        external
+        view
+        returns (VestingParams memory vestingParams);
 }
