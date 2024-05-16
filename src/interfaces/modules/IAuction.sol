@@ -77,7 +77,10 @@ interface IAuction {
     function minAuctionDuration() external view returns (uint48);
 
     /// @notice General information pertaining to auction lots
-    function lotData(uint96)
+    /// @dev    See the `Lot` struct for more information on the return values
+    ///
+    /// @param  lotId   The lot ID
+    function lotData(uint96 lotId)
         external
         view
         returns (
