@@ -7,9 +7,6 @@ import {IAuction} from "src/interfaces/modules/IAuction.sol";
 import {IAuctionHouse} from "src/interfaces/IAuctionHouse.sol";
 import {ICatalogue} from "src/interfaces/ICatalogue.sol";
 
-// External libraries
-import {ERC20} from "lib/solmate/src/tokens/ERC20.sol";
-
 // Internal dependencies
 import {
     Keycode, keycodeFromVeecode, fromKeycode, Veecode, fromVeecode

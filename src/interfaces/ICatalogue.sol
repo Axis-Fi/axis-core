@@ -48,71 +48,121 @@ interface ICatalogue {
     /// @notice    ID of the last lot that was created
     function getMaxLotId() external view returns (uint96);
 
-    /// @notice    Returns array of lot IDs for auctions created by a specific seller within the provided range.
+    /// @notice     Returns array of lot IDs for auctions created by a specific seller within the provided range.
+    ///
+    /// @param      seller_     Address of the seller
+    /// @param      startId_    Lot ID to start from
+    /// @param      count_      Number of lots to process in this batch
+    /// @return     lotIds      Array of lot IDs
     function getAuctionsBySeller(
         address seller_,
         uint96 startId_,
         uint96 count_
-    ) external view returns (uint96[] memory);
+    ) external view returns (uint96[] memory lotIds);
 
-    /// @notice    Returns array of lot IDs for auctions that have requested a specific curator within the provided range.
+    /// @notice     Returns array of lot IDs for auctions that have requested a specific curator within the provided range.
+    ///             Lots are returned even if the curator has not approved the curation request.
+    ///
+    /// @param      curator_    Address of the curator
+    /// @param      startId_    Lot ID to start from
+    /// @param      count_      Number of lots to process in this batch
+    /// @return     lotIds      Array of lot IDs
     function getAuctionsByRequestedCurator(
         address curator_,
         uint96 startId_,
         uint96 count_
-    ) external view returns (uint96[] memory);
+    ) external view returns (uint96[] memory lotIds);
 
-    /// @notice    Returns array of lot IDs for auctions that are curated by a specific curator within the provided range.
+    /// @notice     Returns array of lot IDs for auctions that are curated by a specific curator within the provided range.
+    ///             Lots are returned only if the curator has approved the curation request.
+    ///
+    /// @param      curator_    Address of the curator
+    /// @param      startId_    Lot ID to start from
+    /// @param      count_      Number of lots to process in this batch
+    /// @return     lotIds      Array of lot IDs
     function getAuctionsByCurator(
         address curator_,
         uint96 startId_,
         uint96 count_
-    ) external view returns (uint96[] memory);
+    ) external view returns (uint96[] memory lotIds);
 
-    /// @notice    Returns array of lot IDs for auctions that have a specific quote token within the provided range.
+    /// @notice     Returns array of lot IDs for auctions that have a specific quote token within the provided range.
+    ///
+    /// @param      quoteToken_ Address of the quote token
+    /// @param      startId_    Lot ID to start from
+    /// @param      count_      Number of lots to process in this batch
+    /// @return     lotIds      Array of lot IDs
     function getAuctionsByQuoteToken(
         address quoteToken_,
         uint96 startId_,
         uint96 count_
-    ) external view returns (uint96[] memory);
+    ) external view returns (uint96[] memory lotIds);
 
-    /// @notice    Returns array of lot IDs for auctions that have a specific base token within the provided range.
+    /// @notice     Returns array of lot IDs for auctions that have a specific base token within the provided range.
+    ///
+    /// @param      baseToken_  Address of the base token
+    /// @param      startId_    Lot ID to start from
+    /// @param      count_      Number of lots to process in this batch
+    /// @return     lotIds      Array of lot IDs
     function getAuctionsByBaseToken(
         address baseToken_,
         uint96 startId_,
         uint96 count_
-    ) external view returns (uint96[] memory);
+    ) external view returns (uint96[] memory lotIds);
 
     /// @notice    Returns array of lot IDs for auctions on a specific auction module within the provided range.
+    ///
+    /// @param      auctionReference_   Versioned keycode for the auction module
+    /// @param      startId_            Lot ID to start from
+    /// @param      count_              Number of lots to process in this batch
+    /// @return     lotIds              Array of lot IDs
     function getAuctionsByModule(
         Veecode auctionReference_,
         uint96 startId_,
         uint96 count_
-    ) external view returns (uint96[] memory);
+    ) external view returns (uint96[] memory lotIds);
 
     /// @notice    Returns array of lot IDs for auctions that have a specific type within the provided range.
+    ///
+    /// @param      auctionFormat_  Un-versioned keycode for the auction format
+    /// @param      startId_        Lot ID to start from
+    /// @param      count_          Number of lots to process in this batch
+    /// @return     lotIds          Array of lot IDs
     function getAuctionsByFormat(
         Keycode auctionFormat_,
         uint96 startId_,
         uint96 count_
-    ) external view returns (uint96[] memory);
+    ) external view returns (uint96[] memory lotIds);
 
-    /// @notice    Returns array of lot IDs for auctions that have a specific derivative within the provided range.
+    /// @notice     Returns array of lot IDs for auctions that have a specific derivative within the provided range.
+    ///
+    /// @param      derivativeReference_    Versioned keycode for the derivative module
+    /// @param      startId_                Lot ID to start from
+    /// @param      count_                  Number of lots to process in this batch
+    /// @return     lotIds                  Array of lot IDs
     function getAuctionsByDerivative(
         Veecode derivativeReference_,
         uint96 startId_,
         uint96 count_
-    ) external view returns (uint96[] memory);
+    ) external view returns (uint96[] memory lotIds);
 
-    /// @notice    Returns array of lot IDs for auctions that are currently live for bidding/purchasing within the provided range.
+    /// @notice     Returns array of lot IDs for auctions that are currently live for bidding/purchasing within the provided range.
+    ///
+    /// @param      startId_    Lot ID to start from
+    /// @param      count_      Number of lots to process in this batch
+    /// @return     lotIds      Array of lot IDs
     function getLiveAuctions(
         uint96 startId_,
         uint96 count_
-    ) external view returns (uint96[] memory);
+    ) external view returns (uint96[] memory lotIds);
 
-    /// @notice    Returns array of lot IDs for auctions that have not started yet within the provided range.
+    /// @notice     Returns array of lot IDs for auctions that have not started yet within the provided range.
+    ///
+    /// @param      startId_    Lot ID to start from
+    /// @param      count_      Number of lots to process in this batch
+    /// @return     lotIds      Array of lot IDs
     function getUpcomingAuctions(
         uint96 startId_,
         uint96 count_
-    ) external view returns (uint96[] memory);
+    ) external view returns (uint96[] memory lotIds);
 }
