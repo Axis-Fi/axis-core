@@ -107,8 +107,8 @@ abstract contract AuctionHouse is IAuctionHouse, WithModules, ReentrancyGuard, F
         // Store routing information
         Routing storage routing = lotRouting[lotId];
         routing.seller = msg.sender;
-        routing.baseToken = ERC20(routing_.baseToken);
-        routing.quoteToken = ERC20(routing_.quoteToken);
+        routing.baseToken = routing_.baseToken;
+        routing.quoteToken = routing_.quoteToken;
 
         {
             // Load auction type module, this checks that it is installed.
@@ -117,8 +117,8 @@ abstract contract AuctionHouse is IAuctionHouse, WithModules, ReentrancyGuard, F
                 AuctionModule(_getLatestModuleIfActive(routing_.auctionType));
 
             // Confirm tokens are within the required decimal range
-            uint8 baseTokenDecimals = routing.baseToken.decimals();
-            uint8 quoteTokenDecimals = routing.quoteToken.decimals();
+            uint8 baseTokenDecimals = ERC20(routing.baseToken).decimals();
+            uint8 quoteTokenDecimals = ERC20(routing.quoteToken).decimals();
 
             if (
                 auctionModule.TYPE() != Module.Type.Auction || baseTokenDecimals < 6
@@ -555,7 +555,7 @@ abstract contract AuctionHouse is IAuctionHouse, WithModules, ReentrancyGuard, F
         bytes memory auctionOutput_
     ) internal {
         Veecode derivativeReference = routingParams_.derivativeReference;
-        ERC20 baseToken = routingParams_.baseToken;
+        ERC20 baseToken = ERC20(routingParams_.baseToken);
 
         // If no derivative, then the payout is sent directly to the recipient
         if (fromVeecode(derivativeReference) == bytes7("")) {

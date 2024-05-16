@@ -87,8 +87,8 @@ contract SendPayoutTest is Test, Permit2User {
         _routingParams = IAuctionHouse.Routing({
             auctionReference: _mockAuctionModule.VEECODE(),
             seller: _SELLER,
-            baseToken: _payoutToken,
-            quoteToken: _quoteToken,
+            baseToken: address(_payoutToken),
+            quoteToken: address(_quoteToken),
             callbacks: ICallback(address(0)),
             derivativeReference: _derivativeReference,
             derivativeParams: _derivativeParams,

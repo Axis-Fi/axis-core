@@ -508,8 +508,8 @@ abstract contract AtomicAuctionHouseTest is Test, Permit2User, WithSalts {
     function _getLotRouting(uint96 lotId_) internal view returns (IAuctionHouse.Routing memory) {
         (
             address seller_,
-            ERC20 baseToken_,
-            ERC20 quoteToken_,
+            address baseToken_,
+            address quoteToken_,
             Veecode auctionReference_,
             uint256 funding_,
             ICallback callback_,

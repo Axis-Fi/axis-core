@@ -37,8 +37,8 @@ abstract contract Catalogue is ICatalogue {
     function getRouting(uint96 lotId_) public view returns (IAuctionHouse.Routing memory) {
         (
             address seller,
-            ERC20 baseToken,
-            ERC20 quoteToken,
+            address baseToken,
+            address quoteToken,
             Veecode auctionReference,
             uint256 funding,
             ICallback callbacks,

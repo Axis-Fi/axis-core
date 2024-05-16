@@ -6,9 +6,6 @@ import {IAuction} from "src/interfaces/modules/IAuction.sol";
 import {ICallback} from "src/interfaces/ICallback.sol";
 import {IDerivative} from "src/interfaces/modules/IDerivative.sol";
 
-// External dependencies
-import {ERC20} from "lib/solmate/src/tokens/ERC20.sol";
-
 // Internal dependencies
 import {Keycode, Veecode} from "src/modules/Keycode.sol";
 
@@ -74,8 +71,8 @@ interface IAuctionHouse {
     /// @notice     Auction routing information for a lot
     ///
     /// @param      seller              Lot seller
-    /// @param      baseToken           Token provided by seller
-    /// @param      quoteToken          Token to accept as payment
+    /// @param      baseToken           ERC20 token provided by seller
+    /// @param      quoteToken          ERC20 token to accept as payment
     /// @param      auctionReference    Auction module, represented by its Veecode
     /// @param      funding             The amount of base tokens in funding remaining
     /// @param      callbacks           (optional) Callbacks implementation for extended functionality
@@ -84,8 +81,8 @@ interface IAuctionHouse {
     /// @param      derivativeParams    (optional) abi-encoded data to be used to create payout derivatives on a purchase
     struct Routing {
         address seller; // 20 bytes
-        ERC20 baseToken; // 20 bytes
-        ERC20 quoteToken; // 20 bytes
+        address baseToken; // 20 bytes
+        address quoteToken; // 20 bytes
         Veecode auctionReference; // 7 bytes
         uint256 funding; // 32 bytes
         ICallback callbacks; // 20 bytes

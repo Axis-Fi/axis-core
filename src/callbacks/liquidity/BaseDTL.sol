@@ -300,11 +300,7 @@ abstract contract BaseDirectToLiquidity is BaseCallback {
         address baseToken;
         address quoteToken;
         {
-            ERC20 baseToken_;
-            ERC20 quoteToken_;
-            (seller, baseToken_, quoteToken_,,,,,,) = AuctionHouse(AUCTION_HOUSE).lotRouting(lotId_);
-            baseToken = address(baseToken_);
-            quoteToken = address(quoteToken_);
+            (seller, baseToken, quoteToken,,,,,,) = AuctionHouse(AUCTION_HOUSE).lotRouting(lotId_);
         }
 
         uint256 baseTokensRequired;
