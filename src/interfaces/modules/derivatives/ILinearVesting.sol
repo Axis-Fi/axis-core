@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity >=0.8.0;
 
+/// @title  ILinearVesting
 /// @notice Interface for a linear vesting derivative
 /// @dev    This contract does not inherit from `IDerivative` in order to avoid conflicts. Implementing contracts should inherit from both `DerivativeModule` (or `IDerivative`) and this interface.
 interface ILinearVesting {
@@ -45,6 +46,7 @@ interface ILinearVesting {
 
     /// @notice     Get the vesting parameters for a derivative token
     ///
-    /// @param      tokenId The ID of the derivative token
-    function getTokenVestingParams(uint256 tokenId) external view returns (VestingParams memory);
+    /// @param      tokenId         The ID of the derivative token
+    /// @return     vestingParams   The vesting parameters
+    function getTokenVestingParams(uint256 tokenId) external view returns (VestingParams memory vestingParams);
 }

@@ -469,7 +469,7 @@ contract LinearVesting is DerivativeModule, ILinearVesting {
     function validate(
         address underlyingToken_,
         bytes memory params_
-    ) public view override returns (bool) {
+    ) public pure override returns (bool) {
         // Decode the parameters
         VestingParams memory data = _decodeVestingParams(params_);
 
