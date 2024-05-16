@@ -4,6 +4,8 @@ pragma solidity >=0.8.0;
 import {IAuctionHouse} from "src/interfaces/IAuctionHouse.sol";
 import {Keycode, Veecode} from "src/modules/Keycode.sol";
 
+/// @title      ICatalogue
+/// @notice     Interface for the Catalogue contract, which provides view functions for auctions
 interface ICatalogue {
     // ========== ERRORS ========== //
 

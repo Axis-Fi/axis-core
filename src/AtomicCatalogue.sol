@@ -18,7 +18,7 @@ contract AtomicCatalogue is IAtomicCatalogue, Catalogue {
 
     // ========== ATOMIC AUCTION ========== //
 
-    /// @notice     Returns the payout for a given lot and amount
+    /// @inheritdoc IAtomicCatalogue
     function payoutFor(uint96 lotId_, uint256 amount_) external view returns (uint256) {
         IAtomicAuction module =
             IAtomicAuction(address(IAuctionHouse(auctionHouse).getAuctionModuleForId(lotId_)));
@@ -34,7 +34,7 @@ contract AtomicCatalogue is IAtomicCatalogue, Catalogue {
         return module.payoutFor(lotId_, amount_ - uint96(toProtocol) - uint96(toReferrer));
     }
 
-    /// @notice     Returns the price for a given lot and payout
+    /// @inheritdoc IAtomicCatalogue
     function priceFor(uint96 lotId_, uint256 payout_) external view returns (uint256) {
         IAtomicAuction module =
             IAtomicAuction(address(IAuctionHouse(auctionHouse).getAuctionModuleForId(lotId_)));
@@ -48,7 +48,7 @@ contract AtomicCatalogue is IAtomicCatalogue, Catalogue {
         return price;
     }
 
-    /// @notice     Returns the max payout for a given lot
+    /// @inheritdoc IAtomicCatalogue
     function maxPayout(uint96 lotId_) external view returns (uint256) {
         IAtomicAuction module =
             IAtomicAuction(address(IAuctionHouse(auctionHouse).getAuctionModuleForId(lotId_)));
@@ -59,7 +59,7 @@ contract AtomicCatalogue is IAtomicCatalogue, Catalogue {
         return module.maxPayout(lotId_);
     }
 
-    /// @notice     Returns the max amount accepted for a given lot
+    /// @inheritdoc IAtomicCatalogue
     function maxAmountAccepted(uint96 lotId_) external view returns (uint256) {
         IAtomicAuction module =
             IAtomicAuction(address(IAuctionHouse(auctionHouse).getAuctionModuleForId(lotId_)));
