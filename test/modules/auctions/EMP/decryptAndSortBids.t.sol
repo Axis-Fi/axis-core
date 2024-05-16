@@ -169,7 +169,7 @@ contract EmpDecryptBidsTest is EmpTest {
         EncryptedMarginalPrice.Bid memory bidData = _getBid(_lotId, _bidId);
         assertEq(bidData.minAmountOut, 0, "minAmountOut");
         assertEq(
-            uint8(bidData.status), uint8(EncryptedMarginalPrice.BidStatus.Decrypted), "bid status"
+            uint8(bidData.status), uint8(IEncryptedMarginalPrice.BidStatus.Decrypted), "bid status"
         );
 
         // Check the bid queue
@@ -207,7 +207,7 @@ contract EmpDecryptBidsTest is EmpTest {
         EncryptedMarginalPrice.Bid memory bidData = _getBid(_lotId, _bidId);
         assertEq(bidData.minAmountOut, 0, "minAmountOut");
         assertEq(
-            uint8(bidData.status), uint8(EncryptedMarginalPrice.BidStatus.Decrypted), "bid status"
+            uint8(bidData.status), uint8(IEncryptedMarginalPrice.BidStatus.Decrypted), "bid status"
         );
 
         // Check the bid queue
@@ -241,7 +241,7 @@ contract EmpDecryptBidsTest is EmpTest {
         EncryptedMarginalPrice.Bid memory bidData = _getBid(_lotId, _bidId);
         assertEq(bidData.minAmountOut, 0, "minAmountOut");
         assertEq(
-            uint8(bidData.status), uint8(EncryptedMarginalPrice.BidStatus.Decrypted), "bid status"
+            uint8(bidData.status), uint8(IEncryptedMarginalPrice.BidStatus.Decrypted), "bid status"
         );
 
         // Check the bid queue
@@ -278,7 +278,7 @@ contract EmpDecryptBidsTest is EmpTest {
         EncryptedMarginalPrice.Bid memory bidData = _getBid(_lotId, _bidId);
         assertEq(bidData.minAmountOut, type(uint96).max, "minAmountOut");
         assertEq(
-            uint8(bidData.status), uint8(EncryptedMarginalPrice.BidStatus.Decrypted), "bid status"
+            uint8(bidData.status), uint8(IEncryptedMarginalPrice.BidStatus.Decrypted), "bid status"
         );
 
         // Check the bid queue
@@ -332,7 +332,7 @@ contract EmpDecryptBidsTest is EmpTest {
         // Check the bid state
         EncryptedMarginalPrice.Bid memory bidData = _getBid(_lotId, _bidId);
         assertEq(bidData.minAmountOut, _BID_AMOUNT_OUT);
-        assertEq(uint8(bidData.status), uint8(EncryptedMarginalPrice.BidStatus.Decrypted));
+        assertEq(uint8(bidData.status), uint8(IEncryptedMarginalPrice.BidStatus.Decrypted));
 
         // Check the auction state
         EncryptedMarginalPrice.AuctionData memory auctionData = _getAuctionData(_lotId);
@@ -376,7 +376,7 @@ contract EmpDecryptBidsTest is EmpTest {
         assertEq(bidDataOne.minAmountOut, _BID_AMOUNT_OUT, "bid one: minAmountOut");
         assertEq(
             uint8(bidDataOne.status),
-            uint8(EncryptedMarginalPrice.BidStatus.Decrypted),
+            uint8(IEncryptedMarginalPrice.BidStatus.Decrypted),
             "bid one: status"
         );
 
@@ -384,7 +384,7 @@ contract EmpDecryptBidsTest is EmpTest {
         assertEq(bidDataTwo.minAmountOut, 0, "bid two: minAmountOut");
         assertEq(
             uint8(bidDataTwo.status),
-            uint8(EncryptedMarginalPrice.BidStatus.Submitted),
+            uint8(IEncryptedMarginalPrice.BidStatus.Submitted),
             "bid two: status"
         );
 
@@ -420,7 +420,7 @@ contract EmpDecryptBidsTest is EmpTest {
         assertEq(bidDataOne.minAmountOut, _BID_AMOUNT_OUT, "bid one: minAmountOut");
         assertEq(
             uint8(bidDataOne.status),
-            uint8(EncryptedMarginalPrice.BidStatus.Decrypted),
+            uint8(IEncryptedMarginalPrice.BidStatus.Decrypted),
             "bid one: status"
         );
 
@@ -428,7 +428,7 @@ contract EmpDecryptBidsTest is EmpTest {
         assertEq(bidDataTwo.minAmountOut, _BID_AMOUNT_OUT, "bid two: minAmountOut");
         assertEq(
             uint8(bidDataTwo.status),
-            uint8(EncryptedMarginalPrice.BidStatus.Decrypted),
+            uint8(IEncryptedMarginalPrice.BidStatus.Decrypted),
             "bid two: status"
         );
 

@@ -27,38 +27,6 @@ contract EncryptedMarginalPrice is BatchAuctionModule, IEncryptedMarginalPrice {
 
     // ========== DATA STRUCTURES ========== //
 
-    /// @notice     The status of a bid
-    /// @dev        Bid status will also be set to claimed if the bid is cancelled/refunded
-    enum BidStatus {
-        Submitted,
-        Decrypted,
-        Claimed
-    }
-
-    /// @notice        Core data for a bid
-    ///
-    /// @param         bidder              The address of the bidder
-    /// @param         amount              The amount of the bid
-    /// @param         minAmountOut        The minimum amount out (not set until the bid is decrypted)
-    /// @param         referrer            The address of the referrer
-    /// @param         status              The status of the bid
-    struct Bid {
-        address bidder; // 20 +
-        uint96 amount; // 12 = 32 - end of slot 1
-        uint96 minAmountOut; // 12 +
-        address referrer; // 20 = 32 - end of slot 2
-        BidStatus status; // 1 - slot 3
-    }
-
-    /// @notice        Struct containing data for an encrypted bid
-    ///
-    /// @param         encryptedAmountOut  The encrypted amount out, the bid amount is encrypted with a symmetric key that can be derived from the bidPubKey using the private key for the provided auction public key on the alt_bn128 curve
-    /// @param         bidPubKey           The alt_bn128 public key used to encrypt the amount out (see bid() for more details)
-    struct EncryptedBid {
-        uint256 encryptedAmountOut;
-        Point bidPubKey;
-    }
-
     /// @notice Stuct containing the marginal price result
     /// @dev    Memory only, no need to pack
     ///
@@ -90,36 +58,31 @@ contract EncryptedMarginalPrice is BatchAuctionModule, IEncryptedMarginalPrice {
         uint64 lastBidId;
     }
 
-    /// @notice        Struct containing partial fill data for a lot
-    ///
-    /// @param         bidId        The ID of the bid
-    /// @param         refund       The amount to refund to the bidder
-    /// @param         payout       The amount to payout to the bidder
-    struct PartialFill {
-        uint64 bidId; // 8 +
-        uint96 refund; // 12 = 20 - end of slot 1
-        uint256 payout; // 32 - slot 2
-    }
-
     // ========== STATE VARIABLES ========== //
 
     /// @notice     Auction-specific data for a lot
+    /// @dev        Access via `getAuctionData()`
     mapping(uint96 lotId => AuctionData) public auctionData;
 
     /// @notice     Partial fill data for a lot
     /// @dev        Each EMPA can have at most one partial fill
+    ///             Access via `getPartialFill()`
     mapping(uint96 lotId => PartialFill) internal _lotPartialFill;
 
     /// @notice     Partial settlement data stored between settlement batches
+    /// @dev        Only used internally, does not need a public accessor
     mapping(uint96 lotId => PartialSettlement) internal _lotPartialSettlement;
 
     /// @notice     General information about bids on a lot
+    /// @dev        Access via `getBid()`
     mapping(uint96 lotId => mapping(uint64 bidId => Bid)) public bids;
 
     /// @notice     Data for encryption information for a specific bid
+    /// @dev        Access via `getBid()`
     mapping(uint96 lotId => mapping(uint64 bidId => EncryptedBid)) public encryptedBids; // each encrypted amount is 4 slots (length + 3 slots)
 
     /// @notice     Queue of decrypted bids for a lot (populated on decryption)
+    /// @dev        Access elements via `getNextInQueue()`
     mapping(uint96 lotId => Queue) public decryptedBids;
 
     // ========== SETUP ========== //
@@ -907,15 +870,10 @@ contract EncryptedMarginalPrice is BatchAuctionModule, IEncryptedMarginalPrice {
 
     // ========== AUCTION INFORMATION ========== //
 
-    /// @notice Returns the `Bid` and `EncryptedBid` data for a given lot and bid ID
-    /// @dev    This function reverts if:
-    ///         - The lot ID is invalid
-    ///         - The bid ID is invalid
-    ///
-    /// @param  lotId_          The lot ID
-    /// @param  bidId_          The bid ID
-    /// @return bid             The `Bid` data
-    /// @return encryptedBid    The `EncryptedBid` data
+    /// @inheritdoc IEncryptedMarginalPrice
+    /// @dev        This function reverts if:
+    ///             - The lot ID is invalid
+    ///             - The bid ID is invalid
     function getBid(
         uint96 lotId_,
         uint64 bidId_
@@ -940,16 +898,12 @@ contract EncryptedMarginalPrice is BatchAuctionModule, IEncryptedMarginalPrice {
         return auctionData[lotId_];
     }
 
-    /// @notice Returns the `PartialFill` data for an auction lot
-    /// @dev    For ease of use, this function determines if a partial fill exists.
+    /// @inheritdoc IEncryptedMarginalPrice
+    /// @dev        For ease of use, this function determines if a partial fill exists.
     ///
-    ///         This function reverts if:
-    ///         - The lot ID is invalid
-    ///         - The lot is not settled
-    ///
-    /// @param  lotId_          The lot ID
-    /// @return hasPartialFill  True if a partial fill exists
-    /// @return partialFill     The `PartialFill` data
+    ///             This function reverts if:
+    ///             - The lot ID is invalid
+    ///             - The lot is not settled
     function getPartialFill(uint96 lotId_)
         external
         view
@@ -1094,6 +1048,7 @@ contract EncryptedMarginalPrice is BatchAuctionModule, IEncryptedMarginalPrice {
         ) revert Auction_WrongState(lotId_);
     }
 
+    /// @notice Reverts if the private key has been submitted for the lot
     function _revertIfKeySubmitted(uint96 lotId_) internal view {
         // Private key must not have been submitted yet
         if (auctionData[lotId_].privateKey != 0) {

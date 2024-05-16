@@ -241,11 +241,15 @@ contract EmpClaimBidsTest is EmpTest {
         // Check the bid status
         EncryptedMarginalPrice.Bid memory bidOne = _getBid(_lotId, _bidIds[0]);
         assertEq(
-            uint8(bidOne.status), uint8(EncryptedMarginalPrice.BidStatus.Claimed), "bid one: status"
+            uint8(bidOne.status),
+            uint8(IEncryptedMarginalPrice.BidStatus.Claimed),
+            "bid one: status"
         );
         EncryptedMarginalPrice.Bid memory bidTwo = _getBid(_lotId, _bidIds[1]);
         assertEq(
-            uint8(bidTwo.status), uint8(EncryptedMarginalPrice.BidStatus.Claimed), "bid two: status"
+            uint8(bidTwo.status),
+            uint8(IEncryptedMarginalPrice.BidStatus.Claimed),
+            "bid two: status"
         );
 
         // Check that the BidClaim data matches
@@ -308,11 +312,15 @@ contract EmpClaimBidsTest is EmpTest {
         // Check the bid status
         EncryptedMarginalPrice.Bid memory bidOne = _getBid(_lotId, _bidIds[0]);
         assertEq(
-            uint8(bidOne.status), uint8(EncryptedMarginalPrice.BidStatus.Claimed), "bid one: status"
+            uint8(bidOne.status),
+            uint8(IEncryptedMarginalPrice.BidStatus.Claimed),
+            "bid one: status"
         );
         EncryptedMarginalPrice.Bid memory bidTwo = _getBid(_lotId, _bidIds[1]);
         assertEq(
-            uint8(bidTwo.status), uint8(EncryptedMarginalPrice.BidStatus.Claimed), "bid two: status"
+            uint8(bidTwo.status),
+            uint8(IEncryptedMarginalPrice.BidStatus.Claimed),
+            "bid two: status"
         );
 
         // Check that the BidClaim data matches
@@ -382,11 +390,15 @@ contract EmpClaimBidsTest is EmpTest {
         // Check the bid status
         EncryptedMarginalPrice.Bid memory bidOne = _getBid(_lotId, _bidIds[0]);
         assertEq(
-            uint8(bidOne.status), uint8(EncryptedMarginalPrice.BidStatus.Claimed), "bid one: status"
+            uint8(bidOne.status),
+            uint8(IEncryptedMarginalPrice.BidStatus.Claimed),
+            "bid one: status"
         );
         EncryptedMarginalPrice.Bid memory bidTwo = _getBid(_lotId, _bidIds[1]);
         assertEq(
-            uint8(bidTwo.status), uint8(EncryptedMarginalPrice.BidStatus.Claimed), "bid two: status"
+            uint8(bidTwo.status),
+            uint8(IEncryptedMarginalPrice.BidStatus.Claimed),
+            "bid two: status"
         );
 
         // Check that the BidClaim data matches
@@ -456,11 +468,15 @@ contract EmpClaimBidsTest is EmpTest {
         // Check the bid status
         EncryptedMarginalPrice.Bid memory bidOne = _getBid(_lotId, _bidIds[0]);
         assertEq(
-            uint8(bidOne.status), uint8(EncryptedMarginalPrice.BidStatus.Claimed), "bid one: status"
+            uint8(bidOne.status),
+            uint8(IEncryptedMarginalPrice.BidStatus.Claimed),
+            "bid one: status"
         );
         EncryptedMarginalPrice.Bid memory bidTwo = _getBid(_lotId, _bidIds[1]);
         assertEq(
-            uint8(bidTwo.status), uint8(EncryptedMarginalPrice.BidStatus.Claimed), "bid two: status"
+            uint8(bidTwo.status),
+            uint8(IEncryptedMarginalPrice.BidStatus.Claimed),
+            "bid two: status"
         );
 
         // Check that the BidClaim data matches
@@ -518,11 +534,15 @@ contract EmpClaimBidsTest is EmpTest {
         // Check the bid status
         EncryptedMarginalPrice.Bid memory bidOne = _getBid(_lotId, _bidIds[0]);
         assertEq(
-            uint8(bidOne.status), uint8(EncryptedMarginalPrice.BidStatus.Claimed), "bid one: status"
+            uint8(bidOne.status),
+            uint8(IEncryptedMarginalPrice.BidStatus.Claimed),
+            "bid one: status"
         );
         EncryptedMarginalPrice.Bid memory bidTwo = _getBid(_lotId, _bidIds[1]);
         assertEq(
-            uint8(bidTwo.status), uint8(EncryptedMarginalPrice.BidStatus.Claimed), "bid two: status"
+            uint8(bidTwo.status),
+            uint8(IEncryptedMarginalPrice.BidStatus.Claimed),
+            "bid two: status"
         );
 
         // Check that the BidClaim data matches
@@ -584,11 +604,15 @@ contract EmpClaimBidsTest is EmpTest {
         // Check the bid status
         EncryptedMarginalPrice.Bid memory bidOne = _getBid(_lotId, _bidIds[0]);
         assertEq(
-            uint8(bidOne.status), uint8(EncryptedMarginalPrice.BidStatus.Claimed), "bid one: status"
+            uint8(bidOne.status),
+            uint8(IEncryptedMarginalPrice.BidStatus.Claimed),
+            "bid one: status"
         );
         EncryptedMarginalPrice.Bid memory bidTwo = _getBid(_lotId, _bidIds[1]);
         assertEq(
-            uint8(bidTwo.status), uint8(EncryptedMarginalPrice.BidStatus.Claimed), "bid two: status"
+            uint8(bidTwo.status),
+            uint8(IEncryptedMarginalPrice.BidStatus.Claimed),
+            "bid two: status"
         );
 
         // Check that the BidClaim data matches
@@ -650,11 +674,15 @@ contract EmpClaimBidsTest is EmpTest {
         // Check the bid status
         EncryptedMarginalPrice.Bid memory bidOne = _getBid(_lotId, _bidIds[0]);
         assertEq(
-            uint8(bidOne.status), uint8(EncryptedMarginalPrice.BidStatus.Claimed), "bid one: status"
+            uint8(bidOne.status),
+            uint8(IEncryptedMarginalPrice.BidStatus.Claimed),
+            "bid one: status"
         );
         EncryptedMarginalPrice.Bid memory bidTwo = _getBid(_lotId, _bidIds[1]);
         assertEq(
-            uint8(bidTwo.status), uint8(EncryptedMarginalPrice.BidStatus.Claimed), "bid two: status"
+            uint8(bidTwo.status),
+            uint8(IEncryptedMarginalPrice.BidStatus.Claimed),
+            "bid two: status"
         );
 
         // Check that the BidClaim data matches
@@ -710,11 +738,15 @@ contract EmpClaimBidsTest is EmpTest {
         // Check the bid status
         EncryptedMarginalPrice.Bid memory bidOne = _getBid(_lotId, _bidIds[0]);
         assertEq(
-            uint8(bidOne.status), uint8(EncryptedMarginalPrice.BidStatus.Claimed), "bid one: status"
+            uint8(bidOne.status),
+            uint8(IEncryptedMarginalPrice.BidStatus.Claimed),
+            "bid one: status"
         );
         EncryptedMarginalPrice.Bid memory bidTwo = _getBid(_lotId, _bidIds[1]);
         assertEq(
-            uint8(bidTwo.status), uint8(EncryptedMarginalPrice.BidStatus.Claimed), "bid two: status"
+            uint8(bidTwo.status),
+            uint8(IEncryptedMarginalPrice.BidStatus.Claimed),
+            "bid two: status"
         );
 
         // Check that the BidClaim data matches
@@ -775,11 +807,15 @@ contract EmpClaimBidsTest is EmpTest {
         // Check the bid status
         EncryptedMarginalPrice.Bid memory bidOne = _getBid(_lotId, _bidIds[0]);
         assertEq(
-            uint8(bidOne.status), uint8(EncryptedMarginalPrice.BidStatus.Claimed), "bid one: status"
+            uint8(bidOne.status),
+            uint8(IEncryptedMarginalPrice.BidStatus.Claimed),
+            "bid one: status"
         );
         EncryptedMarginalPrice.Bid memory bidTwo = _getBid(_lotId, _bidIds[1]);
         assertEq(
-            uint8(bidTwo.status), uint8(EncryptedMarginalPrice.BidStatus.Claimed), "bid two: status"
+            uint8(bidTwo.status),
+            uint8(IEncryptedMarginalPrice.BidStatus.Claimed),
+            "bid two: status"
         );
 
         // Check that the BidClaim data matches
@@ -848,16 +884,20 @@ contract EmpClaimBidsTest is EmpTest {
         // Check the bid status
         EncryptedMarginalPrice.Bid memory bidOne = _getBid(_lotId, _bidIds[0]);
         assertEq(
-            uint8(bidOne.status), uint8(EncryptedMarginalPrice.BidStatus.Claimed), "bid one: status"
+            uint8(bidOne.status),
+            uint8(IEncryptedMarginalPrice.BidStatus.Claimed),
+            "bid one: status"
         );
         EncryptedMarginalPrice.Bid memory bidTwo = _getBid(_lotId, _bidIds[1]);
         assertEq(
-            uint8(bidTwo.status), uint8(EncryptedMarginalPrice.BidStatus.Claimed), "bid two: status"
+            uint8(bidTwo.status),
+            uint8(IEncryptedMarginalPrice.BidStatus.Claimed),
+            "bid two: status"
         );
         EncryptedMarginalPrice.Bid memory bidThree = _getBid(_lotId, _bidIds[2]);
         assertEq(
             uint8(bidThree.status),
-            uint8(EncryptedMarginalPrice.BidStatus.Claimed),
+            uint8(IEncryptedMarginalPrice.BidStatus.Claimed),
             "bid three: status"
         );
 
@@ -932,11 +972,15 @@ contract EmpClaimBidsTest is EmpTest {
         // Check the bid status
         EncryptedMarginalPrice.Bid memory bidOne = _getBid(_lotId, _bidIds[0]);
         assertEq(
-            uint8(bidOne.status), uint8(EncryptedMarginalPrice.BidStatus.Claimed), "bid one: status"
+            uint8(bidOne.status),
+            uint8(IEncryptedMarginalPrice.BidStatus.Claimed),
+            "bid one: status"
         );
         EncryptedMarginalPrice.Bid memory bidTwo = _getBid(_lotId, _bidIds[1]);
         assertEq(
-            uint8(bidTwo.status), uint8(EncryptedMarginalPrice.BidStatus.Claimed), "bid two: status"
+            uint8(bidTwo.status),
+            uint8(IEncryptedMarginalPrice.BidStatus.Claimed),
+            "bid two: status"
         );
 
         // Check that the BidClaim data matches
@@ -1004,11 +1048,15 @@ contract EmpClaimBidsTest is EmpTest {
         // Check the bid status
         EncryptedMarginalPrice.Bid memory bidOne = _getBid(_lotId, _bidIds[0]);
         assertEq(
-            uint8(bidOne.status), uint8(EncryptedMarginalPrice.BidStatus.Claimed), "bid one: status"
+            uint8(bidOne.status),
+            uint8(IEncryptedMarginalPrice.BidStatus.Claimed),
+            "bid one: status"
         );
         EncryptedMarginalPrice.Bid memory bidTwo = _getBid(_lotId, _bidIds[1]);
         assertEq(
-            uint8(bidTwo.status), uint8(EncryptedMarginalPrice.BidStatus.Claimed), "bid two: status"
+            uint8(bidTwo.status),
+            uint8(IEncryptedMarginalPrice.BidStatus.Claimed),
+            "bid two: status"
         );
 
         // Check that the BidClaim data matches
@@ -1070,11 +1118,15 @@ contract EmpClaimBidsTest is EmpTest {
         // Check the bid status
         EncryptedMarginalPrice.Bid memory bidOne = _getBid(_lotId, _bidIds[0]);
         assertEq(
-            uint8(bidOne.status), uint8(EncryptedMarginalPrice.BidStatus.Claimed), "bid one: status"
+            uint8(bidOne.status),
+            uint8(IEncryptedMarginalPrice.BidStatus.Claimed),
+            "bid one: status"
         );
         EncryptedMarginalPrice.Bid memory bidTwo = _getBid(_lotId, _bidIds[1]);
         assertEq(
-            uint8(bidTwo.status), uint8(EncryptedMarginalPrice.BidStatus.Claimed), "bid two: status"
+            uint8(bidTwo.status),
+            uint8(IEncryptedMarginalPrice.BidStatus.Claimed),
+            "bid two: status"
         );
 
         // Check that the BidClaim data matches
@@ -1130,12 +1182,14 @@ contract EmpClaimBidsTest is EmpTest {
         // Check the bid status
         EncryptedMarginalPrice.Bid memory bidOne = _getBid(_lotId, 1);
         assertEq(
-            uint8(bidOne.status), uint8(EncryptedMarginalPrice.BidStatus.Claimed), "bid one: status"
+            uint8(bidOne.status),
+            uint8(IEncryptedMarginalPrice.BidStatus.Claimed),
+            "bid one: status"
         );
         EncryptedMarginalPrice.Bid memory bidTwo = _getBid(_lotId, 2);
         assertEq(
             uint8(bidTwo.status),
-            uint8(EncryptedMarginalPrice.BidStatus.Decrypted),
+            uint8(IEncryptedMarginalPrice.BidStatus.Decrypted),
             "bid two: status"
         );
 
@@ -1184,7 +1238,7 @@ contract EmpClaimBidsTest is EmpTest {
 
         // Check the bid status
         EncryptedMarginalPrice.Bid memory bid = _getBid(_lotId, bidId);
-        assertEq(uint8(bid.status), uint8(EncryptedMarginalPrice.BidStatus.Claimed), "status");
+        assertEq(uint8(bid.status), uint8(IEncryptedMarginalPrice.BidStatus.Claimed), "status");
 
         // Check that the BidClaim data matches
         IBatchAuction.BidClaim memory bidClaimOneView = _module.getBidClaim(_lotId, bidIds[0]);
@@ -1231,7 +1285,7 @@ contract EmpClaimBidsTest is EmpTest {
 
         // Check the bid status
         EncryptedMarginalPrice.Bid memory bid = _getBid(_lotId, bidId);
-        assertEq(uint8(bid.status), uint8(EncryptedMarginalPrice.BidStatus.Claimed), "status");
+        assertEq(uint8(bid.status), uint8(IEncryptedMarginalPrice.BidStatus.Claimed), "status");
 
         // Check that the BidClaim data matches
         IBatchAuction.BidClaim memory bidClaimOneView = _module.getBidClaim(_lotId, bidIds[0]);
@@ -1278,7 +1332,7 @@ contract EmpClaimBidsTest is EmpTest {
 
         // Check the bid status
         EncryptedMarginalPrice.Bid memory bid = _getBid(_lotId, bidId);
-        assertEq(uint8(bid.status), uint8(EncryptedMarginalPrice.BidStatus.Claimed), "status");
+        assertEq(uint8(bid.status), uint8(IEncryptedMarginalPrice.BidStatus.Claimed), "status");
 
         // Check that the BidClaim data matches
         IBatchAuction.BidClaim memory bidClaimOneView = _module.getBidClaim(_lotId, bidIds[0]);
@@ -1325,7 +1379,7 @@ contract EmpClaimBidsTest is EmpTest {
 
         // Check the bid status
         EncryptedMarginalPrice.Bid memory bid = _getBid(_lotId, bidId);
-        assertEq(uint8(bid.status), uint8(EncryptedMarginalPrice.BidStatus.Claimed), "status");
+        assertEq(uint8(bid.status), uint8(IEncryptedMarginalPrice.BidStatus.Claimed), "status");
 
         // Check that the BidClaim data matches
         IBatchAuction.BidClaim memory bidClaimOneView = _module.getBidClaim(_lotId, bidIds[0]);
@@ -1373,7 +1427,7 @@ contract EmpClaimBidsTest is EmpTest {
 
         // Check the bid status
         EncryptedMarginalPrice.Bid memory bid = _getBid(_lotId, bidId);
-        assertEq(uint8(bid.status), uint8(EncryptedMarginalPrice.BidStatus.Claimed), "status");
+        assertEq(uint8(bid.status), uint8(IEncryptedMarginalPrice.BidStatus.Claimed), "status");
 
         // Check that the BidClaim data matches
         IBatchAuction.BidClaim memory bidClaimOneView = _module.getBidClaim(_lotId, bidIds[0]);
@@ -1421,7 +1475,7 @@ contract EmpClaimBidsTest is EmpTest {
 
         // Check the bid status
         EncryptedMarginalPrice.Bid memory bid = _getBid(_lotId, bidId);
-        assertEq(uint8(bid.status), uint8(EncryptedMarginalPrice.BidStatus.Claimed), "status");
+        assertEq(uint8(bid.status), uint8(IEncryptedMarginalPrice.BidStatus.Claimed), "status");
 
         // Check that the BidClaim data matches
         IBatchAuction.BidClaim memory bidClaimOneView = _module.getBidClaim(_lotId, bidIds[0]);
@@ -1469,7 +1523,7 @@ contract EmpClaimBidsTest is EmpTest {
 
         // Check the bid status
         EncryptedMarginalPrice.Bid memory bid = _getBid(_lotId, bidId);
-        assertEq(uint8(bid.status), uint8(EncryptedMarginalPrice.BidStatus.Claimed), "status");
+        assertEq(uint8(bid.status), uint8(IEncryptedMarginalPrice.BidStatus.Claimed), "status");
 
         // Check that the BidClaim data matches
         IBatchAuction.BidClaim memory bidClaimOneView = _module.getBidClaim(_lotId, bidIds[0]);
@@ -1517,7 +1571,7 @@ contract EmpClaimBidsTest is EmpTest {
 
         // Check the bid status
         EncryptedMarginalPrice.Bid memory bid = _getBid(_lotId, bidId);
-        assertEq(uint8(bid.status), uint8(EncryptedMarginalPrice.BidStatus.Claimed), "status");
+        assertEq(uint8(bid.status), uint8(IEncryptedMarginalPrice.BidStatus.Claimed), "status");
 
         // Check that the BidClaim data matches
         IBatchAuction.BidClaim memory bidClaimOneView = _module.getBidClaim(_lotId, bidIds[0]);
@@ -1565,7 +1619,7 @@ contract EmpClaimBidsTest is EmpTest {
 
         // Check the bid status
         EncryptedMarginalPrice.Bid memory bid = _getBid(_lotId, bidId);
-        assertEq(uint8(bid.status), uint8(EncryptedMarginalPrice.BidStatus.Claimed), "status");
+        assertEq(uint8(bid.status), uint8(IEncryptedMarginalPrice.BidStatus.Claimed), "status");
 
         // Check that the BidClaim data matches
         IBatchAuction.BidClaim memory bidClaimOneView = _module.getBidClaim(_lotId, bidIds[0]);
@@ -1612,11 +1666,15 @@ contract EmpClaimBidsTest is EmpTest {
         // Check the bid status
         EncryptedMarginalPrice.Bid memory bidOne = _getBid(_lotId, _bidIds[0]);
         assertEq(
-            uint8(bidOne.status), uint8(EncryptedMarginalPrice.BidStatus.Claimed), "bid one: status"
+            uint8(bidOne.status),
+            uint8(IEncryptedMarginalPrice.BidStatus.Claimed),
+            "bid one: status"
         );
         EncryptedMarginalPrice.Bid memory bidTwo = _getBid(_lotId, _bidIds[1]);
         assertEq(
-            uint8(bidTwo.status), uint8(EncryptedMarginalPrice.BidStatus.Claimed), "bid two: status"
+            uint8(bidTwo.status),
+            uint8(IEncryptedMarginalPrice.BidStatus.Claimed),
+            "bid two: status"
         );
 
         // Check that the BidClaim data matches

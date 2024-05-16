@@ -433,7 +433,7 @@ abstract contract EmpTest is Test, Permit2User {
             EncryptedMarginalPrice.BidStatus status_
         ) = _module.bids(lotId_, bidId_);
 
-        return EncryptedMarginalPrice.Bid({
+        return IEncryptedMarginalPrice.Bid({
             bidder: bidder_,
             amount: amount_,
             minAmountOut: minAmountOut_,
@@ -449,7 +449,7 @@ abstract contract EmpTest is Test, Permit2User {
         (uint256 encryptedAmountOut_, Point memory publicKey_) =
             _module.encryptedBids(lotId_, bidId_);
 
-        return EncryptedMarginalPrice.EncryptedBid({
+        return IEncryptedMarginalPrice.EncryptedBid({
             encryptedAmountOut: encryptedAmountOut_,
             bidPubKey: publicKey_
         });

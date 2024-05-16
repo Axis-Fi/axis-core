@@ -3,6 +3,7 @@ pragma solidity >=0.8.0;
 
 import {Point} from "src/lib/ECIES.sol";
 
+/// @title  IEncryptedMarginalPrice
 /// @notice Interface for encrypted marginal price (batch) auctions
 /// @dev    This contract does not inherit from `BatchAuctionModule` in order to avoid conflicts. Implementing contracts should inherit from both `BatchAuctionModule` and this interface.
 interface IEncryptedMarginalPrice {
@@ -50,6 +51,14 @@ interface IEncryptedMarginalPrice {
         Settled
     }
 
+    /// @notice     The status of a bid
+    /// @dev        Bid status will also be set to claimed if the bid is cancelled/refunded
+    enum BidStatus {
+        Submitted,
+        Decrypted,
+        Claimed
+    }
+
     /// @notice        Struct containing auction-specific data
     ///
     /// @param         nextBidId           The ID of the next bid to be submitted
@@ -74,6 +83,41 @@ interface IEncryptedMarginalPrice {
         Point publicKey; // 64 - slots 6 and 7
         uint256 privateKey; // 32 - slot 8
         uint64[] bidIds; // slots 9+
+    }
+
+    /// @notice        Core data for a bid
+    ///
+    /// @param         bidder              The address of the bidder
+    /// @param         amount              The amount of the bid
+    /// @param         minAmountOut        The minimum amount out (not set until the bid is decrypted)
+    /// @param         referrer            The address of the referrer
+    /// @param         status              The status of the bid
+    struct Bid {
+        address bidder; // 20 +
+        uint96 amount; // 12 = 32 - end of slot 1
+        uint96 minAmountOut; // 12 +
+        address referrer; // 20 = 32 - end of slot 2
+        BidStatus status; // 1 - slot 3
+    }
+
+    /// @notice        Struct containing data for an encrypted bid
+    ///
+    /// @param         encryptedAmountOut  The encrypted amount out, the bid amount is encrypted with a symmetric key that can be derived from the bidPubKey using the private key for the provided auction public key on the alt_bn128 curve
+    /// @param         bidPubKey           The alt_bn128 public key used to encrypt the amount out (see bid() for more details)
+    struct EncryptedBid {
+        uint256 encryptedAmountOut;
+        Point bidPubKey;
+    }
+
+    /// @notice        Struct containing partial fill data for a lot
+    ///
+    /// @param         bidId        The ID of the bid
+    /// @param         refund       The amount to refund to the bidder
+    /// @param         payout       The amount to payout to the bidder
+    struct PartialFill {
+        uint64 bidId; // 8 +
+        uint96 refund; // 12 = 20 - end of slot 1
+        uint256 payout; // 32 - slot 2
     }
 
     // ========== DECRYPTION ========== //
@@ -126,6 +170,17 @@ interface IEncryptedMarginalPrice {
 
     // ========== AUCTION INFORMATION ========== //
 
+    /// @notice Returns the `Bid` and `EncryptedBid` data for a given lot and bid ID
+    ///
+    /// @param  lotId_          The lot ID
+    /// @param  bidId_          The bid ID
+    /// @return bid             The `Bid` data
+    /// @return encryptedBid    The `EncryptedBid` data
+    function getBid(
+        uint96 lotId_,
+        uint64 bidId_
+    ) external view returns (Bid memory bid, EncryptedBid memory encryptedBid);
+
     /// @notice Returns the `AuctionData` data for an auction lot
     ///
     /// @param  lotId_          The lot ID
@@ -134,4 +189,14 @@ interface IEncryptedMarginalPrice {
         external
         view
         returns (AuctionData memory auctionData_);
+
+    /// @notice Returns the `PartialFill` data for an auction lot
+    ///
+    /// @param  lotId_          The lot ID
+    /// @return hasPartialFill  True if a partial fill exists
+    /// @return partialFill     The `PartialFill` data
+    function getPartialFill(uint96 lotId_)
+        external
+        view
+        returns (bool hasPartialFill, PartialFill memory partialFill);
 }
