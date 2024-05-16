@@ -14,10 +14,12 @@ import {AtomicAuctionModule} from "src/modules/auctions/AtomicAuctionModule.sol"
 // External libraries
 import {FixedPointMathLib as Math} from "lib/solmate/src/utils/FixedPointMathLib.sol";
 
+/// @title  FixedPriceSale
+/// @notice A module for creating fixed price sale (atomic) auctions
 contract FixedPriceSale is AtomicAuctionModule, IFixedPriceSale {
     // ========== STATE VARIABLES ========== //
 
-    /// @notice     Auction-specific data for a lot
+    /// @inheritdoc IFixedPriceSale
     mapping(uint96 lotId => AuctionData) public auctionData;
 
     // ========== SETUP ========== //
