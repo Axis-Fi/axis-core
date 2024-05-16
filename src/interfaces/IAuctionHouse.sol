@@ -138,19 +138,48 @@ interface IAuctionHouse {
 
     // ========== AUCTION INFORMATION ========== //
 
-    /// @notice     Counter for auction lots
-    function lotCounter() external view returns (uint96);
+    /// @notice     The counter tracks the total number of auction lots
+    function lotCounter() external view returns (uint96 lotCount);
 
     /// @notice     Mapping of lot IDs to their routing information
+    /// @dev        See the `Routing` struct for more information
+    ///
+    /// @param      lotId   ID of the auction lot
     function lotRouting(uint96 lotId)
         external
         view
-        returns (address, ERC20, ERC20, Veecode, uint256, ICallback, Veecode, bool, bytes memory);
+        returns (
+            address seller,
+            address baseToken,
+            address quoteToken,
+            Veecode auctionReference,
+            uint256 funding,
+            ICallback callbacks,
+            Veecode derivativeReference,
+            bool wrapDerivative,
+            bytes memory derivativeParams
+        );
 
     /// @notice     Mapping of lot IDs to their fee information
-    function lotFees(uint96 lotId) external view returns (address, bool, uint48, uint48, uint48);
+    /// @dev        See the `FeeData` struct for more information
+    ///
+    /// @param      lotId   ID of the auction lot
+    function lotFees(uint96 lotId)
+        external
+        view
+        returns (
+            address curator,
+            bool curated,
+            uint48 curatorFee,
+            uint48 protocolFee,
+            uint48 referrerFee
+        );
 
     /// @notice     Mapping auction and derivative references to the condenser that is used to pass data between them
+    ///
+    /// @param      auctionRef      Versioned keycode for the auction module
+    /// @param      derivativeRef   Versioned keycode for the derivative module
+    /// @return     condenserRef    Versioned keycode for the condenser module
     function condensers(
         Veecode auctionRef,
         Veecode derivativeRef
