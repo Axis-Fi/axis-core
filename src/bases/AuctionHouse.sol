@@ -361,9 +361,7 @@ abstract contract AuctionHouse is IAuctionHouse, WithModules, ReentrancyGuard, F
 
     // ========== CURATION ========== //
 
-    /// @notice     Accept curation request for a lot.
-    /// @notice     If the curator wishes to charge a fee, it must be set before this function is called.
-    /// @notice     Access controlled. Must be proposed curator for lot.
+    /// @inheritdoc IAuctionHouse
     /// @dev        This function performs the following:
     ///             - Checks that the lot ID is valid
     ///             - Checks that the caller is the proposed curator
@@ -377,9 +375,7 @@ abstract contract AuctionHouse is IAuctionHouse, WithModules, ReentrancyGuard, F
     ///             - The caller is not the proposed curator
     ///             - The auction has ended or is already curated
     ///             - Re-entrancy is detected
-    ///
-    /// @param     lotId_       Lot ID
-    function curate(uint96 lotId_, bytes calldata callbackData_) external nonReentrant {
+    function curate(uint96 lotId_, bytes calldata callbackData_) external override nonReentrant {
         _isLotValid(lotId_);
 
         FeeData storage feeData = lotFees[lotId_];

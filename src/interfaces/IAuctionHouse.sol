@@ -133,6 +133,14 @@ interface IAuctionHouse {
     /// @param      callbackData_   (optional) abi-encoded data to be sent to the onCancel callback function
     function cancel(uint96 lotId_, bytes calldata callbackData_) external;
 
+    /// @notice     Accept curation request for a lot.
+    /// @notice     If the curator wishes to charge a fee, it must be set before this function is called.
+    /// @notice     Access controlled. Must be proposed curator for lot.
+    ///
+    /// @param      lotId_           Lot ID
+    /// @param      callbackData_    (optional) abi-encoded data to be sent to the onCurate callback function
+    function curate(uint96 lotId_, bytes calldata callbackData_) external;
+
     // ========== AUCTION INFORMATION ========== //
 
     /// @notice     The counter tracks the total number of auction lots
