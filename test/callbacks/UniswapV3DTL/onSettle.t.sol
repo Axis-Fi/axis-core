@@ -16,7 +16,6 @@ import {GUniPool} from "g-uni-v1-core/GUniPool.sol";
 
 // AuctionHouse
 import {ILinearVesting} from "src/interfaces/modules/derivatives/ILinearVesting.sol";
-import {LinearVesting} from "src/modules/derivatives/LinearVesting.sol";
 import {BaseDirectToLiquidity} from "src/callbacks/liquidity/BaseDTL.sol";
 import {UniswapV3DirectToLiquidity} from "src/callbacks/liquidity/UniswapV3DTL.sol";
 

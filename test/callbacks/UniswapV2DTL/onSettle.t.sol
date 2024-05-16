@@ -12,7 +12,6 @@ import {IUniswapV2Pair} from "uniswap-v2-core/interfaces/IUniswapV2Pair.sol";
 
 // AuctionHouse
 import {ILinearVesting} from "src/interfaces/modules/derivatives/ILinearVesting.sol";
-import {LinearVesting} from "src/modules/derivatives/LinearVesting.sol";
 import {BaseDirectToLiquidity} from "src/callbacks/liquidity/BaseDTL.sol";
 import {UniswapV2DirectToLiquidity} from "src/callbacks/liquidity/UniswapV2DTL.sol";
 

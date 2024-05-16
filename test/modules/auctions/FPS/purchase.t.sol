@@ -4,7 +4,6 @@ pragma solidity 0.8.19;
 import {Module} from "src/modules/Modules.sol";
 import {IAuction} from "src/interfaces/modules/IAuction.sol";
 import {IFixedPriceSale} from "src/interfaces/modules/auctions/IFixedPriceSale.sol";
-import {FixedPriceSale} from "src/modules/auctions/FPS.sol";
 import {FixedPointMathLib as Math} from "solmate/utils/FixedPointMathLib.sol";
 
 import {FpsTest} from "test/modules/auctions/FPS/FPSTest.sol";
