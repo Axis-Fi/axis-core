@@ -39,7 +39,7 @@ contract MockAtomicAuctionModule is AtomicAuctionModule {
     ) internal override returns (uint256 payout, bytes memory auctionOutput) {
         if (purchaseReverts) revert("error");
 
-        if (cancelled[lotId_]) revert Auction_MarketNotActive(lotId_);
+        if (cancelled[lotId_]) revert Auction_LotNotActive(lotId_);
 
         // Handle decimals
         uint256 quoteTokenScale = 10 ** lotData[lotId_].quoteTokenDecimals;

@@ -9,8 +9,8 @@ import {Transfer} from "src/lib/Transfer.sol";
 import {MockAtomicAuctionModule} from "test/modules/Auction/MockAtomicAuctionModule.sol";
 import {MockERC20} from "lib/solmate/src/test/utils/mocks/MockERC20.sol";
 
-import {IAuction} from "src/interfaces/IAuction.sol";
-import {AuctionHouse} from "src/bases/AuctionHouse.sol";
+import {IAuction} from "src/interfaces/modules/IAuction.sol";
+import {IAuctionHouse} from "src/interfaces/IAuctionHouse.sol";
 import {ICallback} from "src/interfaces/ICallback.sol";
 import {
     Veecode,
@@ -82,7 +82,7 @@ contract BatchCreateAuctionTest is BatchAuctionHouseTest {
         // Set the auction type to a derivative module
         _routingParams.auctionType = _derivativeModuleKeycode;
 
-        bytes memory err = abi.encodeWithSelector(AuctionHouse.InvalidParams.selector);
+        bytes memory err = abi.encodeWithSelector(IAuctionHouse.InvalidParams.selector);
         vm.expectRevert(err);
 
         vm.prank(_SELLER);
@@ -101,7 +101,7 @@ contract BatchCreateAuctionTest is BatchAuctionHouseTest {
         // Set the auction type to an atomic auction module
         _routingParams.auctionType = _atomicAuctionModuleKeycode;
 
-        bytes memory err = abi.encodeWithSelector(AuctionHouse.InvalidParams.selector);
+        bytes memory err = abi.encodeWithSelector(IAuctionHouse.InvalidParams.selector);
         vm.expectRevert(err);
 
         vm.prank(_SELLER);
@@ -141,7 +141,7 @@ contract BatchCreateAuctionTest is BatchAuctionHouseTest {
         _routingParams.baseToken = address(token);
 
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(AuctionHouse.InvalidParams.selector);
+        bytes memory err = abi.encodeWithSelector(IAuctionHouse.InvalidParams.selector);
         vm.expectRevert(err);
 
         vm.prank(_SELLER);
@@ -163,7 +163,7 @@ contract BatchCreateAuctionTest is BatchAuctionHouseTest {
         _routingParams.quoteToken = address(token);
 
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(AuctionHouse.InvalidParams.selector);
+        bytes memory err = abi.encodeWithSelector(IAuctionHouse.InvalidParams.selector);
         vm.expectRevert(err);
 
         vm.prank(_SELLER);
@@ -178,7 +178,7 @@ contract BatchCreateAuctionTest is BatchAuctionHouseTest {
         _routingParams.baseToken = address(0);
 
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(AuctionHouse.InvalidParams.selector);
+        bytes memory err = abi.encodeWithSelector(IAuctionHouse.InvalidParams.selector);
         vm.expectRevert(err);
 
         vm.prank(_SELLER);
@@ -193,7 +193,7 @@ contract BatchCreateAuctionTest is BatchAuctionHouseTest {
         _routingParams.quoteToken = address(0);
 
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(AuctionHouse.InvalidParams.selector);
+        bytes memory err = abi.encodeWithSelector(IAuctionHouse.InvalidParams.selector);
         vm.expectRevert(err);
 
         vm.prank(_SELLER);
@@ -216,7 +216,7 @@ contract BatchCreateAuctionTest is BatchAuctionHouseTest {
         _lotId = _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
 
         // Assert values
-        AuctionHouse.Routing memory routing = _getLotRouting(_lotId);
+        IAuctionHouse.Routing memory routing = _getLotRouting(_lotId);
         assertEq(routing.funding, type(uint96).max, "funding mismatch");
 
         // Check balances
@@ -244,7 +244,7 @@ contract BatchCreateAuctionTest is BatchAuctionHouseTest {
         _lotId = _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
 
         // Assert values
-        AuctionHouse.Routing memory routing = _getLotRouting(_lotId);
+        IAuctionHouse.Routing memory routing = _getLotRouting(_lotId);
         assertEq(
             fromVeecode(routing.auctionReference),
             fromVeecode(wrapVeecode(_routingParams.auctionType, 1)),
@@ -260,7 +260,7 @@ contract BatchCreateAuctionTest is BatchAuctionHouseTest {
         assertEq(routing.funding, _LOT_CAPACITY, "funding mismatch");
 
         // Curation updated
-        AuctionHouse.FeeData memory curation = _getLotFees(_lotId);
+        IAuctionHouse.FeeData memory curation = _getLotFees(_lotId);
         assertEq(curation.curator, _CURATOR, "curator mismatch");
         assertEq(curation.curated, false, "curated mismatch");
 
@@ -304,7 +304,7 @@ contract BatchCreateAuctionTest is BatchAuctionHouseTest {
         uint96 lotIdTwo = _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
 
         // Assert values for lot one
-        AuctionHouse.Routing memory routing = _getLotRouting(lotIdOne);
+        IAuctionHouse.Routing memory routing = _getLotRouting(lotIdOne);
         assertEq(address(routing.baseToken), address(_baseToken), "lot one: base token mismatch");
         assertEq(address(routing.quoteToken), address(_quoteToken), "lot one: quote token mismatch");
         assertEq(routing.funding, _LOT_CAPACITY, "funding mismatch");
@@ -337,7 +337,7 @@ contract BatchCreateAuctionTest is BatchAuctionHouseTest {
         _lotId = _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
 
         // Assert values
-        AuctionHouse.Routing memory routing = _getLotRouting(_lotId);
+        IAuctionHouse.Routing memory routing = _getLotRouting(_lotId);
         assertEq(address(routing.baseToken), address(_baseToken), "base token mismatch");
         assertEq(address(routing.quoteToken), address(_baseToken), "quote token mismatch");
     }
@@ -378,7 +378,7 @@ contract BatchCreateAuctionTest is BatchAuctionHouseTest {
         _routingParams.derivativeType = _atomicAuctionModuleKeycode;
 
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(AuctionHouse.InvalidParams.selector);
+        bytes memory err = abi.encodeWithSelector(IAuctionHouse.InvalidParams.selector);
         vm.expectRevert(err);
 
         vm.prank(_SELLER);
@@ -434,7 +434,7 @@ contract BatchCreateAuctionTest is BatchAuctionHouseTest {
         _lotId = _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
 
         // Assert values
-        AuctionHouse.Routing memory routing = _getLotRouting(_lotId);
+        IAuctionHouse.Routing memory routing = _getLotRouting(_lotId);
         assertEq(
             fromVeecode(routing.derivativeReference),
             fromVeecode(_derivativeModule.VEECODE()),
@@ -459,7 +459,7 @@ contract BatchCreateAuctionTest is BatchAuctionHouseTest {
         _lotId = _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
 
         // Assert values
-        AuctionHouse.Routing memory routing = _getLotRouting(_lotId);
+        IAuctionHouse.Routing memory routing = _getLotRouting(_lotId);
         assertEq(
             fromVeecode(routing.derivativeReference),
             fromVeecode(_derivativeModule.VEECODE()),
@@ -544,7 +544,7 @@ contract BatchCreateAuctionTest is BatchAuctionHouseTest {
         _routingParams.callbacks = ICallback(address(0x10));
 
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(AuctionHouse.InvalidParams.selector);
+        bytes memory err = abi.encodeWithSelector(IAuctionHouse.InvalidParams.selector);
         vm.expectRevert(err);
 
         vm.prank(_SELLER);
@@ -564,7 +564,7 @@ contract BatchCreateAuctionTest is BatchAuctionHouseTest {
         _lotId = _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
 
         // Assert values
-        AuctionHouse.Routing memory routing = _getLotRouting(_lotId);
+        IAuctionHouse.Routing memory routing = _getLotRouting(_lotId);
         assertEq(address(routing.callbacks), address(_callback), "callback mismatch");
 
         // Check that the callback was called
@@ -612,7 +612,7 @@ contract BatchCreateAuctionTest is BatchAuctionHouseTest {
         whenAuctionCapacityInQuote
     {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(AuctionHouse.InvalidParams.selector);
+        bytes memory err = abi.encodeWithSelector(IAuctionHouse.InvalidParams.selector);
         vm.expectRevert(err);
 
         vm.prank(_SELLER);
@@ -629,7 +629,7 @@ contract BatchCreateAuctionTest is BatchAuctionHouseTest {
         givenOnCreateCallbackBreaksInvariant
     {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(AuctionHouse.InvalidCallback.selector);
+        bytes memory err = abi.encodeWithSelector(IAuctionHouse.InvalidCallback.selector);
         vm.expectRevert(err);
 
         vm.prank(_SELLER);
@@ -646,7 +646,7 @@ contract BatchCreateAuctionTest is BatchAuctionHouseTest {
         givenBaseTokenTakesFeeOnTransfer
     {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(AuctionHouse.InvalidCallback.selector);
+        bytes memory err = abi.encodeWithSelector(IAuctionHouse.InvalidCallback.selector);
         vm.expectRevert(err);
 
         vm.prank(_SELLER);
@@ -666,7 +666,7 @@ contract BatchCreateAuctionTest is BatchAuctionHouseTest {
         _lotId = _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
 
         // Check the funding status
-        AuctionHouse.Routing memory routing = _getLotRouting(_lotId);
+        IAuctionHouse.Routing memory routing = _getLotRouting(_lotId);
         assertEq(routing.funding, _LOT_CAPACITY, "funding mismatch");
 
         // Check balances
@@ -699,7 +699,7 @@ contract BatchCreateAuctionTest is BatchAuctionHouseTest {
         _lotId = _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
 
         // Check the funding status
-        AuctionHouse.Routing memory routing = _getLotRouting(_lotId);
+        IAuctionHouse.Routing memory routing = _getLotRouting(_lotId);
         assertEq(routing.funding, _scaleBaseTokenAmount(_LOT_CAPACITY), "funding mismatch");
 
         // Check balances
@@ -731,7 +731,7 @@ contract BatchCreateAuctionTest is BatchAuctionHouseTest {
         _lotId = _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
 
         // Check the funding status
-        AuctionHouse.Routing memory routing = _getLotRouting(_lotId);
+        IAuctionHouse.Routing memory routing = _getLotRouting(_lotId);
         assertEq(routing.funding, _scaleBaseTokenAmount(_LOT_CAPACITY), "funding mismatch");
 
         // Check balances
@@ -807,7 +807,7 @@ contract BatchCreateAuctionTest is BatchAuctionHouseTest {
         _lotId = _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
 
         // Check the funding status
-        AuctionHouse.Routing memory routing = _getLotRouting(_lotId);
+        IAuctionHouse.Routing memory routing = _getLotRouting(_lotId);
         assertEq(routing.funding, _LOT_CAPACITY, "funding mismatch");
 
         // Check balances
@@ -887,7 +887,7 @@ contract BatchCreateAuctionTest is BatchAuctionHouseTest {
         _lotId = _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
 
         // Check the funding status
-        AuctionHouse.Routing memory routing = _getLotRouting(_lotId);
+        IAuctionHouse.Routing memory routing = _getLotRouting(_lotId);
         assertEq(routing.funding, _scaleBaseTokenAmount(_LOT_CAPACITY), "funding mismatch");
 
         // Check balances
@@ -899,7 +899,7 @@ contract BatchCreateAuctionTest is BatchAuctionHouseTest {
         );
 
         // Check that the fees have been cached
-        AuctionHouse.FeeData memory feeData = _getLotFees(_lotId);
+        IAuctionHouse.FeeData memory feeData = _getLotFees(_lotId);
         assertEq(feeData.protocolFee, _protocolFeePercentActual, "protocol fee");
         assertEq(feeData.referrerFee, _referrerFeePercentActual, "referrer fee");
         assertEq(feeData.curatorFee, _curatorFeePercentActual, "curator fee");
@@ -926,7 +926,7 @@ contract BatchCreateAuctionTest is BatchAuctionHouseTest {
         _lotId = _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
 
         // Check the funding status
-        AuctionHouse.Routing memory routing = _getLotRouting(_lotId);
+        IAuctionHouse.Routing memory routing = _getLotRouting(_lotId);
         assertEq(routing.funding, _scaleBaseTokenAmount(_LOT_CAPACITY), "funding mismatch");
 
         // Check balances
@@ -938,7 +938,7 @@ contract BatchCreateAuctionTest is BatchAuctionHouseTest {
         );
 
         // Check that the fees have been cached
-        AuctionHouse.FeeData memory feeData = _getLotFees(_lotId);
+        IAuctionHouse.FeeData memory feeData = _getLotFees(_lotId);
         assertEq(feeData.protocolFee, _protocolFeePercentActual, "protocol fee");
         assertEq(feeData.referrerFee, _referrerFeePercentActual, "referrer fee");
         assertEq(feeData.curatorFee, _curatorFeePercentActual, "curator fee");

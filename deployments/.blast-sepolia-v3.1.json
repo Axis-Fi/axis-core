@@ -1,0 +1,10 @@
+{
+"axis.AtomicAuctionHouse": "0xAA0000E35F2042621ff29B2f3d0F89665f896502",
+"axis.BatchAuctionHouse": "0xBA00001Bd857EFd2dF10Da01DFe3a97CFa836Cc9",
+"axis.AtomicCatalogue": "0x5Ec85e475B3BeDE1280907B0ac568b406fBC543A",
+"axis.BatchCatalogue": "0x7F6Af3993d64cbC3A97617C98A2BCe03c1f5Ec30",
+"axis.EncryptedMarginalPrice": "0x96B52Ab3e5CAc0BbF49Be5039F2f9ef5d53bD322",
+"axis.FixedPriceSale": "0x3661B7704F7032103B3122C7796B5E03fAC715b5",
+"axis.AtomicLinearVesting": "0x8270f3e8D874De8b974A0Bf928abDFf92171B1b2",
+"axis.BatchLinearVesting": "0xFb1B55504E6f996D192f1F1B8fDfD4E987355552"
+}

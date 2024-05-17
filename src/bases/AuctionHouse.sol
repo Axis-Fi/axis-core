@@ -2,9 +2,10 @@
 pragma solidity 0.8.19;
 
 // Interfaces
-import {IAuction} from "src/interfaces/IAuction.sol";
+import {IAuction} from "src/interfaces/modules/IAuction.sol";
 import {IAuctionHouse} from "src/interfaces/IAuctionHouse.sol";
 import {ICallback} from "src/interfaces/ICallback.sol";
+import {IDerivative} from "src/interfaces/modules/IDerivative.sol";
 import {IFeeManager} from "src/interfaces/IFeeManager.sol";
 
 // Internal libraries
@@ -15,6 +16,7 @@ import {Callbacks} from "src/lib/Callbacks.sol";
 import {ERC20} from "lib/solmate/src/tokens/ERC20.sol";
 import {ReentrancyGuard} from "lib/solmate/src/utils/ReentrancyGuard.sol";
 
+// Internal dependencies
 import {
     fromKeycode, fromVeecode, keycodeFromVeecode, Keycode, Veecode
 } from "src/modules/Keycode.sol";
@@ -22,7 +24,6 @@ import {Module, WithModules} from "src/modules/Modules.sol";
 import {FeeManager} from "src/bases/FeeManager.sol";
 
 import {AuctionModule} from "src/modules/Auction.sol";
-
 import {DerivativeModule} from "src/modules/Derivative.sol";
 import {CondenserModule} from "src/modules/Condenser.sol";
 
@@ -35,99 +36,21 @@ import {CondenserModule} from "src/modules/Condenser.sol";
 abstract contract AuctionHouse is IAuctionHouse, WithModules, ReentrancyGuard, FeeManager {
     using Callbacks for ICallback;
 
-    // ========= ERRORS ========= //
-
-    error InvalidParams();
-    error InvalidLotId(uint96 id_);
-    error InvalidState();
-    error InvalidCallback();
-
-    /// @notice     Used when the caller is not permitted to perform that action
-    error NotPermitted(address caller_);
-
-    // ========= EVENTS ========= //
-
-    /// @notice         Emitted when a new auction lot is created
-    ///
-    /// @param          lotId       ID of the auction lot
-    /// @param          auctionRef  Auction module, represented by its Veecode
-    /// @param          infoHash    IPFS hash of the auction information
-    event AuctionCreated(uint96 indexed lotId, Veecode indexed auctionRef, string infoHash);
-
-    /// @notice         Emitted when an auction lot is cancelled
-    ///
-    /// @param          lotId       ID of the auction lot
-    /// @param          auctionRef  Auction module, represented by its Veecode
-    event AuctionCancelled(uint96 indexed lotId, Veecode indexed auctionRef);
-
-    /// @notice         Emitted when a curator accepts curation of an auction lot
-    ///
-    /// @param          lotId       ID of the auction lot
-    /// @param          curator     Address of the curator
-    event Curated(uint96 indexed lotId, address indexed curator);
-
-    // ========= DATA STRUCTURES ========== //
-
-    /// @notice     Auction routing information for a lot
-    ///
-    /// @param      seller              Lot seller
-    /// @param      baseToken           Token provided by seller
-    /// @param      quoteToken          Token to accept as payment
-    /// @param      auctionReference    Auction module, represented by its Veecode
-    /// @param      funding             The amount of base tokens in funding remaining
-    /// @param      callbacks           (optional) Callbacks implementation for extended functionality
-    /// @param      derivativeReference (optional) Derivative module, represented by its Veecode
-    /// @param      wrapDerivative      (optional) Whether to wrap the derivative in a ERC20 token instead of the native ERC6909 format
-    /// @param      derivativeParams    (optional) abi-encoded data to be used to create payout derivatives on a purchase
-    struct Routing {
-        address seller; // 20 bytes
-        ERC20 baseToken; // 20 bytes
-        ERC20 quoteToken; // 20 bytes
-        Veecode auctionReference; // 7 bytes
-        uint256 funding; // 32 bytes
-        ICallback callbacks; // 20 bytes
-        Veecode derivativeReference; // 7 bytes
-        bool wrapDerivative; // 1 byte
-        bytes derivativeParams;
-    }
-
-    /// @notice     Fee information for a lot
-    /// @dev        This is split into a separate struct, otherwise the Routing struct would be too large
-    ///             and would throw a "stack too deep" error.
-    ///
-    ///             Fee information is set at the time of auction creation, in order to prevent subsequent inflation.
-    ///             The fees are cached in order to prevent:
-    ///             - Reducing the amount of base tokens available for payout to the winning bidders
-    ///             - Reducing the amount of quote tokens available for payment to the seller
-    ///
-    /// @param      curator     Address of the proposed curator
-    /// @param      curated     Whether the curator has approved the auction
-    /// @param      curatorFee  The fee charged by the curator
-    /// @param      protocolFee The fee charged by the protocol
-    /// @param      referrerFee The fee charged by the referrer
-    struct FeeData {
-        address curator; // 20 bytes
-        bool curated; // 1 byte
-        uint48 curatorFee; // 6 bytes
-        uint48 protocolFee; // 6 bytes
-        uint48 referrerFee; // 6 bytes
-    }
-
     // ========== STATE ========== //
 
     /// @notice     Address of the Permit2 contract
     address internal immutable _PERMIT2;
 
-    /// @notice     Counter for auction lots
+    /// @inheritdoc IAuctionHouse
     uint96 public lotCounter;
 
-    /// @notice     Mapping of lot IDs to their auction type (represented by the Keycode for the auction submodule)
+    /// @inheritdoc IAuctionHouse
     mapping(uint96 lotId => Routing) public lotRouting;
 
-    /// @notice     Mapping of lot IDs to their fee information
+    /// @inheritdoc IAuctionHouse
     mapping(uint96 lotId => FeeData) public lotFees;
 
-    /// @notice     Mapping auction and derivative references to the condenser that is used to pass data between them
+    /// @inheritdoc IAuctionHouse
     mapping(Veecode auctionRef => mapping(Veecode derivativeRef => Veecode condenserRef)) public
         condensers;
 
@@ -184,8 +107,8 @@ abstract contract AuctionHouse is IAuctionHouse, WithModules, ReentrancyGuard, F
         // Store routing information
         Routing storage routing = lotRouting[lotId];
         routing.seller = msg.sender;
-        routing.baseToken = ERC20(routing_.baseToken);
-        routing.quoteToken = ERC20(routing_.quoteToken);
+        routing.baseToken = routing_.baseToken;
+        routing.quoteToken = routing_.quoteToken;
 
         {
             // Load auction type module, this checks that it is installed.
@@ -194,8 +117,8 @@ abstract contract AuctionHouse is IAuctionHouse, WithModules, ReentrancyGuard, F
                 AuctionModule(_getLatestModuleIfActive(routing_.auctionType));
 
             // Confirm tokens are within the required decimal range
-            uint8 baseTokenDecimals = routing.baseToken.decimals();
-            uint8 quoteTokenDecimals = routing.quoteToken.decimals();
+            uint8 baseTokenDecimals = ERC20(routing.baseToken).decimals();
+            uint8 quoteTokenDecimals = ERC20(routing.quoteToken).decimals();
 
             if (
                 auctionModule.TYPE() != Module.Type.Auction || baseTokenDecimals < 6
@@ -326,7 +249,7 @@ abstract contract AuctionHouse is IAuctionHouse, WithModules, ReentrancyGuard, F
         if (msg.sender != routing.seller) revert NotPermitted(msg.sender);
 
         // Cancel the auction on the module
-        _getModuleForId(lotId_).cancelAuction(lotId_);
+        _getAuctionModuleForId(lotId_).cancelAuction(lotId_);
 
         // Call the implementation logic
         bool performedCallback = _cancel(lotId_, callbackData_);
@@ -353,6 +276,28 @@ abstract contract AuctionHouse is IAuctionHouse, WithModules, ReentrancyGuard, F
         bytes calldata callbackData_
     ) internal virtual returns (bool performedCallback);
 
+    // ========== VIEW FUNCTIONS ========== //
+
+    /// @inheritdoc IAuctionHouse
+    /// @dev        The function reverts if:
+    ///             - The lot ID is invalid
+    ///             - The module for the auction type is not installed
+    function getAuctionModuleForId(uint96 lotId_) external view override returns (IAuction) {
+        _isLotValid(lotId_);
+
+        return _getAuctionModuleForId(lotId_);
+    }
+
+    /// @inheritdoc IAuctionHouse
+    /// @dev        The function reverts if:
+    ///             - The lot ID is invalid
+    ///             - The module for the derivative type is not installed
+    function getDerivativeModuleForId(uint96 lotId_) external view override returns (IDerivative) {
+        _isLotValid(lotId_);
+
+        return _getDerivativeModuleForId(lotId_);
+    }
+
     // ========== INTERNAL HELPER FUNCTIONS ========== //
 
     /// @notice         Gets the module for a given lot ID
@@ -361,21 +306,20 @@ abstract contract AuctionHouse is IAuctionHouse, WithModules, ReentrancyGuard, F
     ///
     /// @param lotId_   ID of the auction lot
     /// @return         AuctionModule
-    function _getModuleForId(uint96 lotId_) internal view returns (AuctionModule) {
+    function _getAuctionModuleForId(uint96 lotId_) internal view returns (AuctionModule) {
         // Load module, will revert if not installed
         return AuctionModule(_getModuleIfInstalled(lotRouting[lotId_].auctionReference));
     }
 
-    /// @notice     Gets the module for a given lot ID
-    /// @dev        The function reverts if:
-    ///             - The lot ID is invalid
-    ///             - The module for the auction type is not installed
+    /// @notice         Gets the module for a given lot ID
+    /// @dev            The function assumes:
+    ///                 - The lot ID is valid
     ///
-    /// @param      lotId_      ID of the auction lot
-    function getModuleForId(uint96 lotId_) external view returns (AuctionModule) {
-        _isLotValid(lotId_);
-
-        return _getModuleForId(lotId_);
+    /// @param lotId_   ID of the auction lot
+    /// @return         DerivativeModule
+    function _getDerivativeModuleForId(uint96 lotId_) internal view returns (DerivativeModule) {
+        // Load module, will revert if not installed. Also reverts if no derivative is specified.
+        return DerivativeModule(_getModuleIfInstalled(lotRouting[lotId_].derivativeReference));
     }
 
     function _onCreateCallback(
@@ -417,9 +361,7 @@ abstract contract AuctionHouse is IAuctionHouse, WithModules, ReentrancyGuard, F
 
     // ========== CURATION ========== //
 
-    /// @notice     Accept curation request for a lot.
-    /// @notice     If the curator wishes to charge a fee, it must be set before this function is called.
-    /// @notice     Access controlled. Must be proposed curator for lot.
+    /// @inheritdoc IAuctionHouse
     /// @dev        This function performs the following:
     ///             - Checks that the lot ID is valid
     ///             - Checks that the caller is the proposed curator
@@ -433,9 +375,7 @@ abstract contract AuctionHouse is IAuctionHouse, WithModules, ReentrancyGuard, F
     ///             - The caller is not the proposed curator
     ///             - The auction has ended or is already curated
     ///             - Re-entrancy is detected
-    ///
-    /// @param     lotId_       Lot ID
-    function curate(uint96 lotId_, bytes calldata callbackData_) external nonReentrant {
+    function curate(uint96 lotId_, bytes calldata callbackData_) external override nonReentrant {
         _isLotValid(lotId_);
 
         FeeData storage feeData = lotFees[lotId_];
@@ -443,7 +383,7 @@ abstract contract AuctionHouse is IAuctionHouse, WithModules, ReentrancyGuard, F
         // Check that the caller is the proposed curator
         if (msg.sender != feeData.curator) revert NotPermitted(msg.sender);
 
-        AuctionModule module = _getModuleForId(lotId_);
+        AuctionModule module = _getAuctionModuleForId(lotId_);
 
         // Check that the curator has not already approved the auction
         // Check that the auction has not ended or been cancelled
@@ -611,7 +551,7 @@ abstract contract AuctionHouse is IAuctionHouse, WithModules, ReentrancyGuard, F
         bytes memory auctionOutput_
     ) internal {
         Veecode derivativeReference = routingParams_.derivativeReference;
-        ERC20 baseToken = routingParams_.baseToken;
+        ERC20 baseToken = ERC20(routingParams_.baseToken);
 
         // If no derivative, then the payout is sent directly to the recipient
         if (fromVeecode(derivativeReference) == bytes7("")) {

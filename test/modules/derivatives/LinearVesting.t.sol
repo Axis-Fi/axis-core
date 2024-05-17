@@ -10,7 +10,8 @@ import {MockFeeOnTransferERC20} from "test/lib/mocks/MockFeeOnTransferERC20.sol"
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 
 import {AtomicAuctionHouse} from "src/AtomicAuctionHouse.sol";
-import {Derivative} from "src/modules/Derivative.sol";
+import {IDerivative} from "src/interfaces/modules/IDerivative.sol";
+import {ILinearVesting} from "src/interfaces/modules/derivatives/ILinearVesting.sol";
 import {LinearVesting} from "src/modules/derivatives/LinearVesting.sol";
 import {SoulboundCloneERC20} from "src/modules/derivatives/SoulboundCloneERC20.sol";
 
@@ -29,7 +30,7 @@ contract LinearVestingTest is Test, Permit2User {
     AtomicAuctionHouse internal _auctionHouse;
     LinearVesting internal _linearVesting;
 
-    LinearVesting.VestingParams internal _vestingParams;
+    ILinearVesting.VestingParams internal _vestingParams;
     bytes internal _vestingParamsBytes;
     uint48 internal constant _VESTING_START = 1_704_882_344; // 2024-01-10
     uint48 internal constant _VESTING_EXPIRY = 1_705_055_144; // 2024-01-12
@@ -38,7 +39,7 @@ contract LinearVestingTest is Test, Permit2User {
     uint256 internal constant _AMOUNT = 1e18;
     uint256 internal constant _AMOUNT_TWO = 2e18;
 
-    uint256 internal constant _VESTING_DATA_LEN = 96; // length + 1 slot for expiry + 1 slot for start
+    uint256 internal constant _VESTING_DATA_LEN = 64; // 1 slot for expiry + 1 slot for start
 
     uint256 internal _derivativeTokenId;
     address internal _derivativeWrappedAddress;
@@ -60,7 +61,7 @@ contract LinearVestingTest is Test, Permit2User {
         _auctionHouse.installModule(_linearVesting);
 
         _vestingParams =
-            LinearVesting.VestingParams({start: _VESTING_START, expiry: _VESTING_EXPIRY});
+            ILinearVesting.VestingParams({start: _VESTING_START, expiry: _VESTING_EXPIRY});
         _vestingParamsBytes = abi.encode(_vestingParams);
 
         _wrappedDerivativeTokenName = "Underlying 2024-01-12";
@@ -269,7 +270,7 @@ contract LinearVestingTest is Test, Permit2User {
 
     function test_deploy_underlyingTokenIsZero_reverts() public whenUnderlyingTokenIsZero {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(LinearVesting.InvalidParams.selector);
+        bytes memory err = abi.encodeWithSelector(ILinearVesting.InvalidParams.selector);
         vm.expectRevert(err);
 
         // Call
@@ -278,7 +279,7 @@ contract LinearVestingTest is Test, Permit2User {
 
     function test_deploy_startTimestampIsZero_reverts() public whenStartTimestampIsZero {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(LinearVesting.InvalidParams.selector);
+        bytes memory err = abi.encodeWithSelector(ILinearVesting.InvalidParams.selector);
         vm.expectRevert(err);
 
         // Call
@@ -287,7 +288,7 @@ contract LinearVestingTest is Test, Permit2User {
 
     function test_deploy_expiryTimestampIsZero_reverts() public whenExpiryTimestampIsZero {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(LinearVesting.InvalidParams.selector);
+        bytes memory err = abi.encodeWithSelector(ILinearVesting.InvalidParams.selector);
         vm.expectRevert(err);
 
         // Call
@@ -299,7 +300,7 @@ contract LinearVestingTest is Test, Permit2User {
         whenStartAndExpiryTimestampsAreTheSame
     {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(LinearVesting.InvalidParams.selector);
+        bytes memory err = abi.encodeWithSelector(ILinearVesting.InvalidParams.selector);
         vm.expectRevert(err);
 
         // Call
@@ -311,7 +312,7 @@ contract LinearVestingTest is Test, Permit2User {
         whenStartTimestampIsAfterExpiryTimestamp
     {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(LinearVesting.InvalidParams.selector);
+        bytes memory err = abi.encodeWithSelector(ILinearVesting.InvalidParams.selector);
         vm.expectRevert(err);
 
         // Call
@@ -357,7 +358,7 @@ contract LinearVestingTest is Test, Permit2User {
         assertEq(wrappedAddress, _derivativeWrappedAddress, "derivative wrapped address");
 
         // Check token metadata
-        Derivative.Token memory tokenMetadata = _linearVesting.getTokenMetadata(tokenId);
+        IDerivative.Token memory tokenMetadata = _linearVesting.getTokenMetadata(tokenId);
         assertEq(tokenMetadata.exists, true, "tokenMetadata exists");
         assertEq(tokenMetadata.wrapped, wrappedAddress, "tokenMetadata wrapped");
         assertEq(
@@ -366,11 +367,10 @@ contract LinearVestingTest is Test, Permit2User {
         assertEq(tokenMetadata.data.length, _VESTING_DATA_LEN, "tokenMetadata data length");
 
         // Check implementation data
-        LinearVesting.VestingData memory vestingData =
-            abi.decode(tokenMetadata.data, (LinearVesting.VestingData));
+        ILinearVesting.VestingParams memory vestingData =
+            abi.decode(tokenMetadata.data, (ILinearVesting.VestingParams));
         assertEq(vestingData.start, _VESTING_START, "vesting start");
         assertEq(vestingData.expiry, _VESTING_EXPIRY, "vesting expiry");
-        assertEq(address(vestingData.baseToken), _underlyingTokenAddress, "vesting base token");
     }
 
     function test_deploy_wrapped_derivativeDeployed_wrappedDerivativeNotDeployed()
@@ -386,7 +386,7 @@ contract LinearVestingTest is Test, Permit2User {
         assertTrue(wrappedAddress != address(0), "derivative wrapped address");
 
         // Check token metadata
-        Derivative.Token memory tokenMetadata = _linearVesting.getTokenMetadata(tokenId);
+        IDerivative.Token memory tokenMetadata = _linearVesting.getTokenMetadata(tokenId);
         assertEq(tokenMetadata.exists, true, "tokenMetadata exists");
         assertEq(tokenMetadata.wrapped, wrappedAddress, "tokenMetadata wrapped");
         assertEq(
@@ -395,11 +395,10 @@ contract LinearVestingTest is Test, Permit2User {
         assertEq(tokenMetadata.data.length, _VESTING_DATA_LEN, "tokenMetadata data length");
 
         // Check implementation data
-        LinearVesting.VestingData memory vestingData =
-            abi.decode(tokenMetadata.data, (LinearVesting.VestingData));
+        ILinearVesting.VestingParams memory vestingData =
+            abi.decode(tokenMetadata.data, (ILinearVesting.VestingParams));
         assertEq(vestingData.start, _VESTING_START, "vesting start");
         assertEq(vestingData.expiry, _VESTING_EXPIRY, "vesting expiry");
-        assertEq(address(vestingData.baseToken), _underlyingTokenAddress, "vesting base token");
     }
 
     function test_deploy_wrapped() public {
@@ -433,7 +432,7 @@ contract LinearVestingTest is Test, Permit2User {
         assertEq(wrappedDerivative.owner(), address(_linearVesting), "wrapped derivative owner");
 
         // Check token metadata
-        Derivative.Token memory tokenMetadata = _linearVesting.getTokenMetadata(tokenId);
+        IDerivative.Token memory tokenMetadata = _linearVesting.getTokenMetadata(tokenId);
         assertEq(tokenMetadata.exists, true, "tokenMetadata exists");
         assertEq(tokenMetadata.wrapped, wrappedAddress, "tokenMetadata wrapped");
         assertEq(
@@ -442,11 +441,10 @@ contract LinearVestingTest is Test, Permit2User {
         assertEq(tokenMetadata.data.length, _VESTING_DATA_LEN, "tokenMetadata data length");
 
         // Check implementation data
-        LinearVesting.VestingData memory vestingData =
-            abi.decode(tokenMetadata.data, (LinearVesting.VestingData));
+        ILinearVesting.VestingParams memory vestingData =
+            abi.decode(tokenMetadata.data, (ILinearVesting.VestingParams));
         assertEq(vestingData.start, _VESTING_START, "vesting start");
         assertEq(vestingData.expiry, _VESTING_EXPIRY, "vesting expiry");
-        assertEq(address(vestingData.baseToken), _underlyingTokenAddress, "vesting base token");
     }
 
     function test_deploy_notWrapped() public {
@@ -459,7 +457,7 @@ contract LinearVestingTest is Test, Permit2User {
         assertTrue(wrappedAddress == address(0), "wrapped address");
 
         // Check token metadata
-        Derivative.Token memory tokenMetadata = _linearVesting.getTokenMetadata(tokenId);
+        IDerivative.Token memory tokenMetadata = _linearVesting.getTokenMetadata(tokenId);
         assertEq(tokenMetadata.exists, true, "tokenMetadata exists");
         assertEq(tokenMetadata.wrapped, address(0), "tokenMetadata wrapped address");
         assertEq(
@@ -468,11 +466,10 @@ contract LinearVestingTest is Test, Permit2User {
         assertEq(tokenMetadata.data.length, _VESTING_DATA_LEN, "tokenMetadata data length");
 
         // Check implementation data
-        LinearVesting.VestingData memory vestingData =
-            abi.decode(tokenMetadata.data, (LinearVesting.VestingData));
+        ILinearVesting.VestingParams memory vestingData =
+            abi.decode(tokenMetadata.data, (ILinearVesting.VestingParams));
         assertEq(vestingData.start, _VESTING_START, "vesting start");
         assertEq(vestingData.expiry, _VESTING_EXPIRY, "vesting expiry");
-        assertEq(address(vestingData.baseToken), _underlyingTokenAddress, "vesting base token");
     }
 
     function test_deploy_notParent() public {
@@ -610,7 +607,7 @@ contract LinearVestingTest is Test, Permit2User {
 
     function test_validate_incorrectParams_reverts() public givenVestingParamsAreInvalid {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(LinearVesting.InvalidParams.selector);
+        bytes memory err = abi.encodeWithSelector(ILinearVesting.InvalidParams.selector);
         vm.expectRevert(err);
 
         // Call
@@ -694,7 +691,7 @@ contract LinearVestingTest is Test, Permit2User {
 
     function test_computeId_incorrectParams_reverts() public givenVestingParamsAreInvalid {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(LinearVesting.InvalidParams.selector);
+        bytes memory err = abi.encodeWithSelector(ILinearVesting.InvalidParams.selector);
         vm.expectRevert(err);
 
         // Call
@@ -774,7 +771,7 @@ contract LinearVestingTest is Test, Permit2User {
 
     function test_mint_params_underlyingTokenIsZero_reverts() public whenUnderlyingTokenIsZero {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(LinearVesting.InvalidParams.selector);
+        bytes memory err = abi.encodeWithSelector(ILinearVesting.InvalidParams.selector);
         vm.expectRevert(err);
 
         // Call
@@ -784,7 +781,7 @@ contract LinearVestingTest is Test, Permit2User {
 
     function test_mint_params_startTimestampIsZero_reverts() public whenStartTimestampIsZero {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(LinearVesting.InvalidParams.selector);
+        bytes memory err = abi.encodeWithSelector(ILinearVesting.InvalidParams.selector);
         vm.expectRevert(err);
 
         // Call
@@ -794,7 +791,7 @@ contract LinearVestingTest is Test, Permit2User {
 
     function test_mint_params_expiryTimestampIsZero_reverts() public whenExpiryTimestampIsZero {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(LinearVesting.InvalidParams.selector);
+        bytes memory err = abi.encodeWithSelector(ILinearVesting.InvalidParams.selector);
         vm.expectRevert(err);
 
         // Call
@@ -807,7 +804,7 @@ contract LinearVestingTest is Test, Permit2User {
         whenStartAndExpiryTimestampsAreTheSame
     {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(LinearVesting.InvalidParams.selector);
+        bytes memory err = abi.encodeWithSelector(ILinearVesting.InvalidParams.selector);
         vm.expectRevert(err);
 
         // Call
@@ -820,7 +817,7 @@ contract LinearVestingTest is Test, Permit2User {
         whenStartTimestampIsAfterExpiryTimestamp
     {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(LinearVesting.InvalidParams.selector);
+        bytes memory err = abi.encodeWithSelector(ILinearVesting.InvalidParams.selector);
         vm.expectRevert(err);
 
         // Call
@@ -887,7 +884,7 @@ contract LinearVestingTest is Test, Permit2User {
 
     function test_mint_params_mintAmountIsZero_reverts() public {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(LinearVesting.InvalidParams.selector);
+        bytes memory err = abi.encodeWithSelector(ILinearVesting.InvalidParams.selector);
         vm.expectRevert(err);
 
         // Call
@@ -926,8 +923,9 @@ contract LinearVestingTest is Test, Permit2User {
         givenDerivativeIsDeployed
     {
         // Expect revert
-        bytes memory err =
-            abi.encodeWithSelector(LinearVesting.UnsupportedToken.selector, _underlyingTokenAddress);
+        bytes memory err = abi.encodeWithSelector(
+            ILinearVesting.UnsupportedToken.selector, _underlyingTokenAddress
+        );
         vm.expectRevert(err);
 
         // Call
@@ -1169,7 +1167,7 @@ contract LinearVestingTest is Test, Permit2User {
 
     function test_mint_tokenId_whenTokenIdDoesNotExist_reverts() public {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(LinearVesting.InvalidParams.selector);
+        bytes memory err = abi.encodeWithSelector(ILinearVesting.InvalidParams.selector);
         vm.expectRevert(err);
 
         // Call
@@ -1179,7 +1177,7 @@ contract LinearVestingTest is Test, Permit2User {
 
     function test_mint_tokenId_whenMintAmountIsZero_reverts() public givenDerivativeIsDeployed {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(LinearVesting.InvalidParams.selector);
+        bytes memory err = abi.encodeWithSelector(ILinearVesting.InvalidParams.selector);
         vm.expectRevert(err);
 
         // Call
@@ -1216,8 +1214,9 @@ contract LinearVestingTest is Test, Permit2User {
         givenDerivativeIsDeployed
     {
         // Expect revert
-        bytes memory err =
-            abi.encodeWithSelector(LinearVesting.UnsupportedToken.selector, _underlyingTokenAddress);
+        bytes memory err = abi.encodeWithSelector(
+            ILinearVesting.UnsupportedToken.selector, _underlyingTokenAddress
+        );
         vm.expectRevert(err);
 
         // Call
@@ -1475,7 +1474,7 @@ contract LinearVestingTest is Test, Permit2User {
 
     function test_redeem_givenTokenIdDoesNotExist_reverts() public {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(LinearVesting.InvalidParams.selector);
+        bytes memory err = abi.encodeWithSelector(ILinearVesting.InvalidParams.selector);
         vm.expectRevert(err);
 
         // Call
@@ -1485,7 +1484,7 @@ contract LinearVestingTest is Test, Permit2User {
 
     function test_redeem_givenRedeemAmountIsZero_reverts() public givenDerivativeIsDeployed {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(LinearVesting.InvalidParams.selector);
+        bytes memory err = abi.encodeWithSelector(ILinearVesting.InvalidParams.selector);
         vm.expectRevert(err);
 
         // Call
@@ -1503,7 +1502,7 @@ contract LinearVestingTest is Test, Permit2User {
         vm.warp(_VESTING_START + elapsed);
 
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(LinearVesting.InsufficientBalance.selector);
+        bytes memory err = abi.encodeWithSelector(ILinearVesting.InsufficientBalance.selector);
         vm.expectRevert(err);
 
         // Call
@@ -1517,7 +1516,7 @@ contract LinearVestingTest is Test, Permit2User {
         givenAliceHasDerivativeTokens(_AMOUNT)
     {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(LinearVesting.InsufficientBalance.selector);
+        bytes memory err = abi.encodeWithSelector(ILinearVesting.InsufficientBalance.selector);
         vm.expectRevert(err);
 
         // Call
@@ -1610,7 +1609,7 @@ contract LinearVestingTest is Test, Permit2User {
 
     function test_redeemMax_givenTokenIdDoesNotExist_reverts() public {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(LinearVesting.InvalidParams.selector);
+        bytes memory err = abi.encodeWithSelector(ILinearVesting.InvalidParams.selector);
         vm.expectRevert(err);
 
         // Call
@@ -1623,7 +1622,7 @@ contract LinearVestingTest is Test, Permit2User {
         givenDerivativeIsDeployed
     {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(LinearVesting.InsufficientBalance.selector);
+        bytes memory err = abi.encodeWithSelector(ILinearVesting.InsufficientBalance.selector);
         vm.expectRevert(err);
 
         // Call
@@ -1748,7 +1747,7 @@ contract LinearVestingTest is Test, Permit2User {
 
     function test_redeemable_givenTokenIdDoesNotExist_reverts() public {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(LinearVesting.InvalidParams.selector);
+        bytes memory err = abi.encodeWithSelector(ILinearVesting.InvalidParams.selector);
         vm.expectRevert(err);
 
         // Call
@@ -2136,7 +2135,7 @@ contract LinearVestingTest is Test, Permit2User {
 
     function test_wrap_givenTokenIdDoesNotExist_reverts() public {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(LinearVesting.InvalidParams.selector);
+        bytes memory err = abi.encodeWithSelector(ILinearVesting.InvalidParams.selector);
         vm.expectRevert(err);
 
         // Call
@@ -2150,7 +2149,7 @@ contract LinearVestingTest is Test, Permit2User {
         givenAliceHasDerivativeTokens(_AMOUNT)
     {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(LinearVesting.InvalidParams.selector);
+        bytes memory err = abi.encodeWithSelector(ILinearVesting.InvalidParams.selector);
         vm.expectRevert(err);
 
         // Call
@@ -2179,7 +2178,7 @@ contract LinearVestingTest is Test, Permit2User {
         _linearVesting.wrap(_derivativeTokenId, wrapAmount);
 
         // Get the token metadata
-        Derivative.Token memory tokenMetadata = _linearVesting.getTokenMetadata(_derivativeTokenId);
+        IDerivative.Token memory tokenMetadata = _linearVesting.getTokenMetadata(_derivativeTokenId);
 
         // Check values
         assertEq(
@@ -2231,7 +2230,7 @@ contract LinearVestingTest is Test, Permit2User {
 
     function test_unwrap_givenTokenIdDoesNotExist_reverts() public {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(LinearVesting.InvalidParams.selector);
+        bytes memory err = abi.encodeWithSelector(ILinearVesting.InvalidParams.selector);
         vm.expectRevert(err);
 
         // Call
@@ -2245,7 +2244,7 @@ contract LinearVestingTest is Test, Permit2User {
         givenAliceHasWrappedDerivativeTokens(_AMOUNT)
     {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(LinearVesting.InvalidParams.selector);
+        bytes memory err = abi.encodeWithSelector(ILinearVesting.InvalidParams.selector);
         vm.expectRevert(err);
 
         // Call
@@ -2255,7 +2254,7 @@ contract LinearVestingTest is Test, Permit2User {
 
     function test_unwrap_givenWrappedTokenNotDeployed() public {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(LinearVesting.InvalidParams.selector);
+        bytes memory err = abi.encodeWithSelector(ILinearVesting.InvalidParams.selector);
         vm.expectRevert(err);
 
         // Call
@@ -2306,7 +2305,7 @@ contract LinearVestingTest is Test, Permit2User {
 
     function test_name_givenTokenIdDoesNotExist_reverts() public {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(LinearVesting.InvalidParams.selector);
+        bytes memory err = abi.encodeWithSelector(ILinearVesting.InvalidParams.selector);
         vm.expectRevert(err);
 
         // Call
@@ -2328,7 +2327,7 @@ contract LinearVestingTest is Test, Permit2User {
 
     function test_symbol_givenTokenIdDoesNotExist_reverts() public {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(LinearVesting.InvalidParams.selector);
+        bytes memory err = abi.encodeWithSelector(ILinearVesting.InvalidParams.selector);
         vm.expectRevert(err);
 
         // Call
@@ -2350,7 +2349,7 @@ contract LinearVestingTest is Test, Permit2User {
 
     function test_decimals_givenTokenIdDoesNotExist_reverts() public {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(LinearVesting.InvalidParams.selector);
+        bytes memory err = abi.encodeWithSelector(ILinearVesting.InvalidParams.selector);
         vm.expectRevert(err);
 
         // Call
@@ -2413,7 +2412,7 @@ contract LinearVestingTest is Test, Permit2User {
 
     function test_reclaim_reverts() public {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(Derivative.Derivative_NotImplemented.selector);
+        bytes memory err = abi.encodeWithSelector(IDerivative.Derivative_NotImplemented.selector);
         vm.expectRevert(err);
 
         // Call
@@ -2425,7 +2424,7 @@ contract LinearVestingTest is Test, Permit2User {
 
     function test_transfer_reverts() public {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(LinearVesting.NotPermitted.selector);
+        bytes memory err = abi.encodeWithSelector(ILinearVesting.NotPermitted.selector);
         vm.expectRevert(err);
 
         // Call
@@ -2438,7 +2437,7 @@ contract LinearVestingTest is Test, Permit2User {
 
     function test_transferFrom_reverts() public {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(LinearVesting.NotPermitted.selector);
+        bytes memory err = abi.encodeWithSelector(ILinearVesting.NotPermitted.selector);
         vm.expectRevert(err);
 
         // Call
@@ -2451,7 +2450,7 @@ contract LinearVestingTest is Test, Permit2User {
 
     function test_approve_reverts() public {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(LinearVesting.NotPermitted.selector);
+        bytes memory err = abi.encodeWithSelector(ILinearVesting.NotPermitted.selector);
         vm.expectRevert(err);
 
         // Call
@@ -2464,23 +2463,11 @@ contract LinearVestingTest is Test, Permit2User {
 
     function test_exerciseCost_reverts() public {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(Derivative.Derivative_NotImplemented.selector);
+        bytes memory err = abi.encodeWithSelector(IDerivative.Derivative_NotImplemented.selector);
         vm.expectRevert(err);
 
         // Call
-        _linearVesting.exerciseCost(bytes(""), _derivativeTokenId);
-    }
-
-    // convertsTo
-    // [X] it reverts
-
-    function test_convertsTo_reverts() public {
-        // Expect revert
-        bytes memory err = abi.encodeWithSelector(Derivative.Derivative_NotImplemented.selector);
-        vm.expectRevert(err);
-
-        // Call
-        _linearVesting.convertsTo(bytes(""), _derivativeTokenId);
+        _linearVesting.exerciseCost(_derivativeTokenId, _AMOUNT);
     }
 
     // transform
@@ -2488,7 +2475,7 @@ contract LinearVestingTest is Test, Permit2User {
 
     function test_transform_reverts() public {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(Derivative.Derivative_NotImplemented.selector);
+        bytes memory err = abi.encodeWithSelector(IDerivative.Derivative_NotImplemented.selector);
         vm.expectRevert(err);
 
         // Call
@@ -2500,7 +2487,7 @@ contract LinearVestingTest is Test, Permit2User {
 
     function test_exercise_reverts() public {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(Derivative.Derivative_NotImplemented.selector);
+        bytes memory err = abi.encodeWithSelector(IDerivative.Derivative_NotImplemented.selector);
         vm.expectRevert(err);
 
         // Call

@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.19;
 
-import {IAuction} from "src/interfaces/IAuction.sol";
+import {IAuction} from "src/interfaces/modules/IAuction.sol";
+import {IEncryptedMarginalPrice} from "src/interfaces/modules/auctions/IEncryptedMarginalPrice.sol";
 import {EncryptedMarginalPrice} from "src/modules/auctions/EMP.sol";
 
 import {EmpTest} from "test/modules/auctions/EMP/EMPTest.sol";
 
-contract EmpaModuleSubmitPrivateKeyTest is EmpTest {
+contract EmpSubmitPrivateKeyTest is EmpTest {
     // [X] when the lot id is invalid
     //  [X] it reverts
     // [X] when the lot is active
@@ -18,6 +19,8 @@ contract EmpaModuleSubmitPrivateKeyTest is EmpTest {
     // [X] given the private key has already been submitted
     //  [X] it reverts
     // [X] when the public key is not derived from the private key
+    //  [X] it reverts
+    // [X] given the lot has been aborted
     //  [X] it reverts
     // [X] when the caller is not the parent
     //  [X] it succeeds
@@ -38,7 +41,7 @@ contract EmpaModuleSubmitPrivateKeyTest is EmpTest {
     function test_lotIsActive_reverts() external givenLotIsCreated givenLotHasStarted {
         // Expect revert
         bytes memory err =
-            abi.encodeWithSelector(EncryptedMarginalPrice.Auction_WrongState.selector, _lotId);
+            abi.encodeWithSelector(IEncryptedMarginalPrice.Auction_WrongState.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function
@@ -48,7 +51,7 @@ contract EmpaModuleSubmitPrivateKeyTest is EmpTest {
 
     function test_lotHasNotStarted_reverts() external givenLotIsCreated {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(IAuction.Auction_MarketNotActive.selector, _lotId);
+        bytes memory err = abi.encodeWithSelector(IAuction.Auction_LotNotActive.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function
@@ -58,7 +61,7 @@ contract EmpaModuleSubmitPrivateKeyTest is EmpTest {
 
     function test_lotCancelled_reverts() external givenLotIsCreated givenLotIsCancelled {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(IAuction.Auction_MarketNotActive.selector, _lotId);
+        bytes memory err = abi.encodeWithSelector(IAuction.Auction_LotNotActive.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function
@@ -74,7 +77,7 @@ contract EmpaModuleSubmitPrivateKeyTest is EmpTest {
     {
         // Expect revert
         bytes memory err =
-            abi.encodeWithSelector(EncryptedMarginalPrice.Auction_WrongState.selector, _lotId);
+            abi.encodeWithSelector(IEncryptedMarginalPrice.Auction_WrongState.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function
@@ -89,12 +92,29 @@ contract EmpaModuleSubmitPrivateKeyTest is EmpTest {
     {
         // Expect revert
         bytes memory err =
-            abi.encodeWithSelector(EncryptedMarginalPrice.Auction_InvalidKey.selector);
+            abi.encodeWithSelector(IEncryptedMarginalPrice.Auction_InvalidKey.selector);
         vm.expectRevert(err);
 
         // Call the function
         vm.prank(address(_auctionHouse));
         _module.submitPrivateKey(_lotId, uint256(1), 0, new bytes32[](0));
+    }
+
+    function test_lotAborted_reverts()
+        external
+        givenLotIsCreated
+        givenLotHasConcluded
+        givenLotSettlePeriodHasPassed
+        givenLotIsAborted
+    {
+        // Expect revert
+        bytes memory err =
+            abi.encodeWithSelector(IEncryptedMarginalPrice.Auction_WrongState.selector, _lotId);
+        vm.expectRevert(err);
+
+        // Call the function
+        vm.prank(address(_auctionHouse));
+        _module.submitPrivateKey(_lotId, _AUCTION_PRIVATE_KEY, 0, new bytes32[](0));
     }
 
     function test_success()
@@ -115,7 +135,7 @@ contract EmpaModuleSubmitPrivateKeyTest is EmpTest {
         // Assert that the bids are not decrypted
         EncryptedMarginalPrice.Bid memory bidData = _getBid(_lotId, 1);
         assertEq(
-            uint8(bidData.status), uint8(EncryptedMarginalPrice.BidStatus.Submitted), "bid status"
+            uint8(bidData.status), uint8(IEncryptedMarginalPrice.BidStatus.Submitted), "bid status"
         );
     }
 
@@ -136,7 +156,7 @@ contract EmpaModuleSubmitPrivateKeyTest is EmpTest {
         // Assert that the bids are not decrypted
         EncryptedMarginalPrice.Bid memory bidData = _getBid(_lotId, 1);
         assertEq(
-            uint8(bidData.status), uint8(EncryptedMarginalPrice.BidStatus.Submitted), "bid status"
+            uint8(bidData.status), uint8(IEncryptedMarginalPrice.BidStatus.Submitted), "bid status"
         );
     }
 
@@ -160,7 +180,7 @@ contract EmpaModuleSubmitPrivateKeyTest is EmpTest {
         // Assert that the bids are not decrypted
         EncryptedMarginalPrice.Bid memory bidData = _getBid(_lotId, 1);
         assertEq(
-            uint8(bidData.status), uint8(EncryptedMarginalPrice.BidStatus.Decrypted), "bid status"
+            uint8(bidData.status), uint8(IEncryptedMarginalPrice.BidStatus.Decrypted), "bid status"
         );
     }
 }

@@ -2,12 +2,13 @@
 pragma solidity 0.8.19;
 
 import {Module} from "src/modules/Modules.sol";
-import {IAuction} from "src/interfaces/IAuction.sol";
+import {IAuction} from "src/interfaces/modules/IAuction.sol";
 import {EncryptedMarginalPrice} from "src/modules/auctions/EMP.sol";
+import {IEncryptedMarginalPrice} from "src/interfaces/modules/auctions/IEncryptedMarginalPrice.sol";
 
 import {EmpTest} from "test/modules/auctions/EMP/EMPTest.sol";
 
-contract EmpaModuleAuctionTest is EmpTest {
+contract EmpCreateAuctionTest is EmpTest {
     // [X] when the caller is not the parent
     //  [X] it reverts
     // [X] when the start time is in the past
@@ -80,7 +81,10 @@ contract EmpaModuleAuctionTest is EmpTest {
         _createAuctionLot();
     }
 
-    function test_minBidAboveMin_reverts() public givenMinimumBidPercentage(1e5 + 1) {
+    function test_minBidSizeAboveMax_reverts()
+        public
+        givenMinimumBidSize(uint256(type(uint96).max) + 1)
+    {
         // Expect revert
         bytes memory err = abi.encodeWithSelector(IAuction.Auction_InvalidParams.selector);
         vm.expectRevert(err);
@@ -89,7 +93,7 @@ contract EmpaModuleAuctionTest is EmpTest {
         _createAuctionLot();
     }
 
-    function test_minBidBelowMin_reverts() public givenMinimumBidPercentage(9) {
+    function test_minBidSizeZero_reverts() public givenMinimumBidSize(0) {
         // Expect revert
         bytes memory err = abi.encodeWithSelector(IAuction.Auction_InvalidParams.selector);
         vm.expectRevert(err);
@@ -150,11 +154,9 @@ contract EmpaModuleAuctionTest is EmpTest {
         assertEq(
             auctionData.minFilled, _scaleBaseTokenAmount(_LOT_CAPACITY) * _MIN_FILL_PERCENT / 1e5
         );
+        assertEq(auctionData.minBidSize, _scaleQuoteTokenAmount(_MIN_BID_SIZE), "minBidSize");
         assertEq(
-            auctionData.minBidSize, _scaleBaseTokenAmount(_LOT_CAPACITY) * _MIN_BID_PERCENT / 1e5
-        );
-        assertEq(
-            uint8(auctionData.status), uint8(EncryptedMarginalPrice.LotStatus.Created), "status"
+            uint8(auctionData.status), uint8(IEncryptedMarginalPrice.LotStatus.Created), "status"
         );
         assertEq(auctionData.publicKey.x, _auctionPublicKey.x);
         assertEq(auctionData.publicKey.y, _auctionPublicKey.y);
@@ -188,11 +190,9 @@ contract EmpaModuleAuctionTest is EmpTest {
         assertEq(
             auctionData.minFilled, _scaleBaseTokenAmount(_LOT_CAPACITY) * _MIN_FILL_PERCENT / 1e5
         );
+        assertEq(auctionData.minBidSize, _scaleQuoteTokenAmount(_MIN_BID_SIZE), "minBidSize");
         assertEq(
-            auctionData.minBidSize, _scaleBaseTokenAmount(_LOT_CAPACITY) * _MIN_BID_PERCENT / 1e5
-        );
-        assertEq(
-            uint8(auctionData.status), uint8(EncryptedMarginalPrice.LotStatus.Created), "status"
+            uint8(auctionData.status), uint8(IEncryptedMarginalPrice.LotStatus.Created), "status"
         );
         assertEq(auctionData.publicKey.x, _auctionPublicKey.x);
         assertEq(auctionData.publicKey.y, _auctionPublicKey.y);
@@ -226,11 +226,9 @@ contract EmpaModuleAuctionTest is EmpTest {
         assertEq(
             auctionData.minFilled, _scaleBaseTokenAmount(_LOT_CAPACITY) * _MIN_FILL_PERCENT / 1e5
         );
+        assertEq(auctionData.minBidSize, _scaleQuoteTokenAmount(_MIN_BID_SIZE), "minBidSize");
         assertEq(
-            auctionData.minBidSize, _scaleBaseTokenAmount(_LOT_CAPACITY) * _MIN_BID_PERCENT / 1e5
-        );
-        assertEq(
-            uint8(auctionData.status), uint8(EncryptedMarginalPrice.LotStatus.Created), "status"
+            uint8(auctionData.status), uint8(IEncryptedMarginalPrice.LotStatus.Created), "status"
         );
         assertEq(auctionData.publicKey.x, _auctionPublicKey.x);
         assertEq(auctionData.publicKey.y, _auctionPublicKey.y);

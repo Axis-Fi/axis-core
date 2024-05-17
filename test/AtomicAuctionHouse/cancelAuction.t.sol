@@ -2,8 +2,8 @@
 pragma solidity 0.8.19;
 
 // Auctions
-import {IAuction} from "src/interfaces/IAuction.sol";
-import {AuctionHouse} from "src/bases/AuctionHouse.sol";
+import {IAuction} from "src/interfaces/modules/IAuction.sol";
+import {IAuctionHouse} from "src/interfaces/IAuctionHouse.sol";
 
 import {AtomicAuctionHouseTest} from "test/AtomicAuctionHouse/AuctionHouseTest.sol";
 
@@ -40,7 +40,8 @@ contract AtomicCancelAuctionTest is AtomicAuctionHouseTest {
         whenAtomicAuctionModuleIsInstalled
         givenLotIsCreated
     {
-        bytes memory err = abi.encodeWithSelector(AuctionHouse.NotPermitted.selector, address(this));
+        bytes memory err =
+            abi.encodeWithSelector(IAuctionHouse.NotPermitted.selector, address(this));
         vm.expectRevert(err);
 
         _auctionHouse.cancel(_lotId, bytes(""));
@@ -54,7 +55,7 @@ contract AtomicCancelAuctionTest is AtomicAuctionHouseTest {
     {
         vm.assume(user_ != _SELLER);
 
-        bytes memory err = abi.encodeWithSelector(AuctionHouse.NotPermitted.selector, user_);
+        bytes memory err = abi.encodeWithSelector(IAuctionHouse.NotPermitted.selector, user_);
         vm.expectRevert(err);
 
         vm.prank(user_);
@@ -62,7 +63,7 @@ contract AtomicCancelAuctionTest is AtomicAuctionHouseTest {
     }
 
     function testReverts_whenLotIdInvalid() external {
-        bytes memory err = abi.encodeWithSelector(AuctionHouse.InvalidLotId.selector, _lotId);
+        bytes memory err = abi.encodeWithSelector(IAuctionHouse.InvalidLotId.selector, _lotId);
         vm.expectRevert(err);
 
         vm.prank(_SELLER);
@@ -76,7 +77,7 @@ contract AtomicCancelAuctionTest is AtomicAuctionHouseTest {
         givenLotIsCreated
         givenLotIsConcluded
     {
-        bytes memory err = abi.encodeWithSelector(IAuction.Auction_MarketNotActive.selector, _lotId);
+        bytes memory err = abi.encodeWithSelector(IAuction.Auction_LotNotActive.selector, _lotId);
         vm.expectRevert(err);
 
         vm.prank(_SELLER);
@@ -91,7 +92,7 @@ contract AtomicCancelAuctionTest is AtomicAuctionHouseTest {
         givenLotIsCancelled
     {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(IAuction.Auction_MarketNotActive.selector, _lotId);
+        bytes memory err = abi.encodeWithSelector(IAuction.Auction_LotNotActive.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function
@@ -137,7 +138,7 @@ contract AtomicCancelAuctionTest is AtomicAuctionHouseTest {
         assertFalse(_atomicAuctionModule.isLive(_lotId), "after cancellation: isLive mismatch");
 
         // Check routing
-        AuctionHouse.Routing memory lotRouting = _getLotRouting(_lotId);
+        IAuctionHouse.Routing memory lotRouting = _getLotRouting(_lotId);
         assertEq(lotRouting.funding, 0, "mismatch on funding");
     }
 
@@ -161,7 +162,7 @@ contract AtomicCancelAuctionTest is AtomicAuctionHouseTest {
         assertEq(lot.capacity, 0);
 
         // Check routing
-        AuctionHouse.Routing memory lotRouting = _getLotRouting(_lotId);
+        IAuctionHouse.Routing memory lotRouting = _getLotRouting(_lotId);
         assertEq(lotRouting.funding, 0, "mismatch on funding");
     }
 
@@ -187,7 +188,7 @@ contract AtomicCancelAuctionTest is AtomicAuctionHouseTest {
         assertEq(lot.capacity, 0);
 
         // Check routing
-        AuctionHouse.Routing memory lotRouting = _getLotRouting(_lotId);
+        IAuctionHouse.Routing memory lotRouting = _getLotRouting(_lotId);
         assertEq(lotRouting.funding, 0, "mismatch on funding");
 
         // Check balances
@@ -222,7 +223,7 @@ contract AtomicCancelAuctionTest is AtomicAuctionHouseTest {
         assertFalse(_atomicAuctionModule.isLive(_lotId), "after cancellation: isLive mismatch");
 
         // Check routing
-        AuctionHouse.Routing memory lotRouting = _getLotRouting(_lotId);
+        IAuctionHouse.Routing memory lotRouting = _getLotRouting(_lotId);
         assertEq(lotRouting.funding, 0, "mismatch on funding");
 
         // Check the callback

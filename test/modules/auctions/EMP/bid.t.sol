@@ -2,16 +2,17 @@
 pragma solidity 0.8.19;
 
 import {Module} from "src/modules/Modules.sol";
-import {IAuction} from "src/interfaces/IAuction.sol";
+import {IAuction} from "src/interfaces/modules/IAuction.sol";
+import {IEncryptedMarginalPrice} from "src/interfaces/modules/auctions/IEncryptedMarginalPrice.sol";
 import {EncryptedMarginalPrice} from "src/modules/auctions/EMP.sol";
 import {Point} from "src/lib/ECIES.sol";
 
 import {EmpTest} from "test/modules/auctions/EMP/EMPTest.sol";
 
-contract EmpaModuleBidTest is EmpTest {
+contract EmpBidTest is EmpTest {
     uint256 internal constant _BID_AMOUNT = 2e18;
     uint256 internal constant _BID_AMOUNT_OUT = 1e18;
-    uint256 internal constant _BID_AMOUNT_BELOW_MIN = 1e15;
+    uint256 internal constant _BID_AMOUNT_BELOW_MIN = 1e14;
 
     uint256 internal constant _LOT_CAPACITY_OVERFLOW = type(uint256).max - 10;
 
@@ -23,11 +24,13 @@ contract EmpaModuleBidTest is EmpTest {
     //  [X] it reverts
     // [X] when the lot has concluded
     //  [X] it reverts
+    // [X] when the lot is in the settlement period
+    //  [X] it reverts
     // [X] when the lot has been settled
     //  [X] it reverts
-    // [X] when the lot has been cancelled
+    // [X] when the lot has been aborted
     //  [X] it reverts
-    // [X] when the lot proceeds have been claimed
+    // [X] when the lot has been cancelled
     //  [X] it reverts
     // [X] when the auction data is in an invalid format
     //  [X] it reverts
@@ -69,7 +72,7 @@ contract EmpaModuleBidTest is EmpTest {
         bytes memory bidData = _createBidData(_BID_AMOUNT, _BID_AMOUNT_OUT);
 
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(IAuction.Auction_MarketNotActive.selector, _lotId);
+        bytes memory err = abi.encodeWithSelector(IAuction.Auction_LotNotActive.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function
@@ -82,7 +85,25 @@ contract EmpaModuleBidTest is EmpTest {
         bytes memory bidData = _createBidData(_BID_AMOUNT, _BID_AMOUNT_OUT);
 
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(IAuction.Auction_MarketNotActive.selector, _lotId);
+        bytes memory err = abi.encodeWithSelector(IAuction.Auction_LotNotActive.selector, _lotId);
+        vm.expectRevert(err);
+
+        // Call the function
+        vm.prank(address(_auctionHouse));
+        _module.bid(_lotId, _BIDDER, _REFERRER, _BID_AMOUNT, bidData);
+    }
+
+    function test_lotInSettlePeriod_reverts()
+        public
+        givenLotIsCreated
+        givenLotHasConcluded
+        givenDuringLotSettlePeriod
+    {
+        // Prepare the inputs
+        bytes memory bidData = _createBidData(_BID_AMOUNT, _BID_AMOUNT_OUT);
+
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(IAuction.Auction_LotNotActive.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function
@@ -101,7 +122,7 @@ contract EmpaModuleBidTest is EmpTest {
         bytes memory bidData = _createBidData(_BID_AMOUNT, _BID_AMOUNT_OUT);
 
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(IAuction.Auction_MarketNotActive.selector, _lotId);
+        bytes memory err = abi.encodeWithSelector(IAuction.Auction_LotNotActive.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function
@@ -109,19 +130,17 @@ contract EmpaModuleBidTest is EmpTest {
         _module.bid(_lotId, _BIDDER, _REFERRER, _BID_AMOUNT, bidData);
     }
 
-    function test_lotProceedsClaimed_reverts()
+    function test_lotAborted_reverts()
         public
         givenLotIsCreated
-        givenLotHasConcluded
-        givenPrivateKeyIsSubmitted
-        givenLotIsSettled
-        givenLotProceedsAreClaimed
+        givenLotSettlePeriodHasPassed
+        givenLotIsAborted
     {
         // Prepare the inputs
         bytes memory bidData = _createBidData(_BID_AMOUNT, _BID_AMOUNT_OUT);
 
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(IAuction.Auction_MarketNotActive.selector, _lotId);
+        bytes memory err = abi.encodeWithSelector(IAuction.Auction_LotNotActive.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function
@@ -134,7 +153,7 @@ contract EmpaModuleBidTest is EmpTest {
         bytes memory bidData = _createBidData(_BID_AMOUNT, _BID_AMOUNT_OUT);
 
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(IAuction.Auction_MarketNotActive.selector, _lotId);
+        bytes memory err = abi.encodeWithSelector(IAuction.Auction_LotNotActive.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function
@@ -154,7 +173,7 @@ contract EmpaModuleBidTest is EmpTest {
         _module.bid(_lotId, _BIDDER, _REFERRER, _BID_AMOUNT, bidData);
     }
 
-    function test_amountOutLessThanMinimumBidSize_reverts()
+    function test_amountLessThanMinimumBidSize_reverts()
         public
         givenLotIsCreated
         givenLotHasStarted
@@ -171,7 +190,7 @@ contract EmpaModuleBidTest is EmpTest {
         _module.bid(_lotId, _BIDDER, _REFERRER, _BID_AMOUNT_BELOW_MIN, bidData);
     }
 
-    function test_amountOutLessThanMinimumBidSize_quoteTokenDecimalsLarger_reverts()
+    function test_amountLessThanMinimumBidSize_quoteTokenDecimalsLarger_reverts()
         public
         givenQuoteTokenDecimals(17)
         givenBaseTokenDecimals(13)
@@ -194,7 +213,7 @@ contract EmpaModuleBidTest is EmpTest {
         );
     }
 
-    function test_amountOutLessThanMinimumBidSize_quoteTokenDecimalsSmaller_reverts()
+    function test_amountLessThanMinimumBidSize_quoteTokenDecimalsSmaller_reverts()
         public
         givenQuoteTokenDecimals(13)
         givenBaseTokenDecimals(17)
@@ -224,7 +243,7 @@ contract EmpaModuleBidTest is EmpTest {
 
         // Expect revert
         bytes memory err =
-            abi.encodeWithSelector(EncryptedMarginalPrice.Auction_InvalidKey.selector);
+            abi.encodeWithSelector(IEncryptedMarginalPrice.Auction_InvalidKey.selector);
         vm.expectRevert(err);
 
         // Call the function
@@ -262,7 +281,9 @@ contract EmpaModuleBidTest is EmpTest {
         assertEq(bidData.amount, _BID_AMOUNT, "amount");
         assertEq(bidData.minAmountOut, 0, "amountOut");
         assertEq(bidData.referrer, _REFERRER, "referrer");
-        assertEq(uint8(bidData.status), uint8(EncryptedMarginalPrice.BidStatus.Submitted), "status");
+        assertEq(
+            uint8(bidData.status), uint8(IEncryptedMarginalPrice.BidStatus.Submitted), "status"
+        );
 
         EncryptedMarginalPrice.EncryptedBid memory encryptedBidData =
             _getEncryptedBid(_lotId, bidId);
@@ -272,29 +293,5 @@ contract EmpaModuleBidTest is EmpTest {
 
         EncryptedMarginalPrice.AuctionData memory auctionData = _getAuctionData(_lotId);
         assertEq(auctionData.nextBidId, 2, "nextBidId");
-    }
-
-    function test_givenMaximumLotCapacity_reverts()
-        public
-        givenMinimumPrice(1)
-        givenMinimumBidPercentage(100)
-        givenLotCapacity(_LOT_CAPACITY_OVERFLOW)
-        givenLotIsCreated
-        givenLotHasStarted
-    {
-        // Prepare the inputs
-        bytes memory bidData = _createBidData(1e22, type(uint256).max - 1e24);
-
-        // Expect revert
-        bytes memory err = abi.encodeWithSelector(IAuction.Auction_AmountLessThanMinimum.selector);
-        vm.expectRevert(err);
-
-        // This test demonstrates that the capacity expended variable cannot overflow due to a high lot capacity and high bid amounts.
-        // For capacity expended to overflow uint256, the bid (n - 1) must be less than the lot capacity, and bid n must be greater than uint256 max.
-        // However, under such circumstances, the largest possible bid (uint96 max = 2^96 - 1 = 7.9228162514e28) would be less than the minimum bid amount (1.1579208924e57), so the capacity overflow is not possible.
-
-        // Call the function
-        vm.prank(address(_auctionHouse));
-        _module.bid(_lotId, _BIDDER, _REFERRER, _BID_AMOUNT_BELOW_MIN, bidData);
     }
 }

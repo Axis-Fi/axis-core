@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.19;
 
-import {AuctionHouse} from "src/bases/AuctionHouse.sol";
-import {IAuction} from "src/interfaces/IAuction.sol";
-import {IBatchAuction} from "src/interfaces/IBatchAuction.sol";
+import {IAuctionHouse} from "src/interfaces/IAuctionHouse.sol";
+import {IAuction} from "src/interfaces/modules/IAuction.sol";
+import {IBatchAuction} from "src/interfaces/modules/IBatchAuction.sol";
 
 import {BatchAuctionHouseTest} from "test/BatchAuctionHouse/AuctionHouseTest.sol";
 
@@ -31,7 +31,7 @@ contract BatchRefundBidTest is BatchAuctionHouseTest {
     // [X] it cancels the bid and transfers the quote tokens back to the bidder
 
     function test_invalidLotId_reverts() external {
-        bytes memory err = abi.encodeWithSelector(AuctionHouse.InvalidLotId.selector, _lotId);
+        bytes memory err = abi.encodeWithSelector(IAuctionHouse.InvalidLotId.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function
@@ -52,7 +52,7 @@ contract BatchRefundBidTest is BatchAuctionHouseTest {
         givenBid(_BID_AMOUNT, _auctionDataParams)
         givenLotIsConcluded
     {
-        bytes memory err = abi.encodeWithSelector(IAuction.Auction_MarketNotActive.selector, _lotId);
+        bytes memory err = abi.encodeWithSelector(IAuction.Auction_LotNotActive.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function

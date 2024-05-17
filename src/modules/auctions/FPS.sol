@@ -2,7 +2,8 @@
 pragma solidity 0.8.19;
 
 // Interfaces
-import {IAtomicAuction} from "src/interfaces/IAtomicAuction.sol";
+import {IAtomicAuction} from "src/interfaces/modules/IAtomicAuction.sol";
+import {IFixedPriceSale} from "src/interfaces/modules/auctions/IFixedPriceSale.sol";
 
 // Protocol dependencies
 import {Module} from "src/modules/Modules.sol";
@@ -13,37 +14,12 @@ import {AtomicAuctionModule} from "src/modules/auctions/AtomicAuctionModule.sol"
 // External libraries
 import {FixedPointMathLib as Math} from "lib/solmate/src/utils/FixedPointMathLib.sol";
 
-contract FixedPriceSale is AtomicAuctionModule {
-    // ========== ERRORS ========== //
-
-    error Auction_InsufficientPayout();
-    error Auction_PayoutGreaterThanMax();
-
-    // ========== EVENTS ========== //
-
-    // ========== DATA STRUCTURES ========== //
-
-    /// @notice             Auction-specific data for a lot
-    ///
-    /// @param price        The fixed price of the lot
-    /// @param maxPayout    The maximum payout per purchase, in terms of the base token
-    struct AuctionData {
-        uint256 price;
-        uint256 maxPayout;
-    }
-
-    /// @notice                     Parameters for a fixed price auction
-    ///
-    /// @param price                The fixed price of the lot
-    /// @param maxPayoutPercent     The maximum payout per purchase, as a percentage of the capacity
-    struct FixedPriceParams {
-        uint256 price;
-        uint24 maxPayoutPercent;
-    }
-
+/// @title  FixedPriceSale
+/// @notice A module for creating fixed price sale (atomic) auctions
+contract FixedPriceSale is AtomicAuctionModule, IFixedPriceSale {
     // ========== STATE VARIABLES ========== //
 
-    /// @notice     Auction-specific data for a lot
+    /// @inheritdoc IFixedPriceSale
     mapping(uint96 lotId => AuctionData) public auctionData;
 
     // ========== SETUP ========== //
@@ -69,9 +45,11 @@ contract FixedPriceSale is AtomicAuctionModule {
     ///             - The parameters cannot be decoded into the correct format
     ///             - The price is zero
     ///             - The max payout percent is greater than 100% or less than 1%
+    ///
+    /// @param      params_    ABI-encoded data of type `IFixedPriceSale.AuctionDataParams`
     function _auction(uint96 lotId_, Lot memory lot_, bytes memory params_) internal override {
         // Decode the auction params
-        FixedPriceParams memory auctionParams = abi.decode(params_, (FixedPriceParams));
+        AuctionDataParams memory auctionParams = abi.decode(params_, (AuctionDataParams));
 
         // Validate the price is not zero
         if (auctionParams.price == 0) revert Auction_InvalidParams();
@@ -115,6 +93,8 @@ contract FixedPriceSale is AtomicAuctionModule {
     ///             This function reverts if:
     ///             - The payout is less than the minAmountOut specified by the purchaser
     ///             - The payout is greater than the max payout
+    ///
+    /// @param      auctionData_    ABI-encoded data of type `IFixedPriceSale.PurchaseParams`
     function _purchase(
         uint96 lotId_,
         uint256 amount_,

@@ -34,16 +34,15 @@ contract TokenAllowlist is BaseCallback {
     // onCurate: false
     // onPurchase: true
     // onBid: true
-    // onClaimProceeds: false
+    // onSettle: false
     // receiveQuoteTokens: false
     // sendBaseTokens: false
     // Contract prefix should be: 10011000 = 0x98
 
     constructor(
         address auctionHouse_,
-        Callbacks.Permissions memory permissions_,
-        address seller_
-    ) BaseCallback(auctionHouse_, permissions_, seller_) {}
+        Callbacks.Permissions memory permissions_
+    ) BaseCallback(auctionHouse_, permissions_) {}
 
     // ========== CALLBACK FUNCTIONS ========== //
 
@@ -103,7 +102,7 @@ contract TokenAllowlist is BaseCallback {
         _canParticipate(lotId_, buyer_);
     }
 
-    function _onClaimProceeds(uint96, uint256, uint256, bytes calldata) internal pure override {
+    function _onSettle(uint96, uint256, uint256, bytes calldata) internal pure override {
         // Not implemented
         revert Callback_NotImplemented();
     }

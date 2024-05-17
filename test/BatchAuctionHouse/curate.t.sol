@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.19;
 
-import {AuctionHouse} from "src/bases/AuctionHouse.sol";
+import {IAuctionHouse} from "src/interfaces/IAuctionHouse.sol";
 
 import {BatchAuctionHouseTest} from "test/BatchAuctionHouse/AuctionHouseTest.sol";
 
@@ -48,7 +48,7 @@ contract BatchCurateTest is BatchAuctionHouseTest {
 
     function test_whenLotIdIsInvalid() public {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(AuctionHouse.InvalidLotId.selector, _lotId);
+        bytes memory err = abi.encodeWithSelector(IAuctionHouse.InvalidLotId.selector, _lotId);
         vm.expectRevert(err);
 
         // Call
@@ -70,7 +70,7 @@ contract BatchCurateTest is BatchAuctionHouseTest {
         givenLotHasStarted
     {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(AuctionHouse.NotPermitted.selector, _CURATOR);
+        bytes memory err = abi.encodeWithSelector(IAuctionHouse.NotPermitted.selector, _CURATOR);
         vm.expectRevert(err);
 
         // Call
@@ -89,7 +89,7 @@ contract BatchCurateTest is BatchAuctionHouseTest {
         givenLotHasStarted
     {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(AuctionHouse.NotPermitted.selector, _SELLER);
+        bytes memory err = abi.encodeWithSelector(IAuctionHouse.NotPermitted.selector, _SELLER);
         vm.expectRevert(err);
 
         // Call
@@ -112,7 +112,7 @@ contract BatchCurateTest is BatchAuctionHouseTest {
         givenLotHasStarted
     {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(AuctionHouse.InvalidState.selector);
+        bytes memory err = abi.encodeWithSelector(IAuctionHouse.InvalidState.selector);
         vm.expectRevert(err);
 
         // Curate again
@@ -133,7 +133,7 @@ contract BatchCurateTest is BatchAuctionHouseTest {
         givenLotIsConcluded
     {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(AuctionHouse.InvalidState.selector);
+        bytes memory err = abi.encodeWithSelector(IAuctionHouse.InvalidState.selector);
         vm.expectRevert(err);
 
         // Call
@@ -154,7 +154,7 @@ contract BatchCurateTest is BatchAuctionHouseTest {
         givenLotIsCancelled
     {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(AuctionHouse.InvalidState.selector);
+        bytes memory err = abi.encodeWithSelector(IAuctionHouse.InvalidState.selector);
         vm.expectRevert(err);
 
         // Call
@@ -179,7 +179,7 @@ contract BatchCurateTest is BatchAuctionHouseTest {
         _auctionHouse.curate(_lotId, bytes(""));
 
         // Verify
-        AuctionHouse.FeeData memory curation = _getLotFees(_lotId);
+        IAuctionHouse.FeeData memory curation = _getLotFees(_lotId);
         assertEq(curation.curator, _CURATOR, "curator");
         assertEq(curation.curated, true, "curated");
         assertEq(curation.curatorFee, _CURATOR_FEE_PERCENT, "curator fee");
@@ -194,7 +194,7 @@ contract BatchCurateTest is BatchAuctionHouseTest {
         assertEq(_baseToken.balanceOf(_CURATOR), 0, "base token: curator");
 
         // Check routing
-        AuctionHouse.Routing memory lotRouting = _getLotRouting(_lotId);
+        IAuctionHouse.Routing memory lotRouting = _getLotRouting(_lotId);
         assertEq(lotRouting.funding, _LOT_CAPACITY + _curatorMaxPotentialFee, "funding");
     }
 
@@ -221,7 +221,7 @@ contract BatchCurateTest is BatchAuctionHouseTest {
         _auctionHouse.curate(_lotId, bytes(""));
 
         // Verify
-        AuctionHouse.FeeData memory curation = _getLotFees(_lotId);
+        IAuctionHouse.FeeData memory curation = _getLotFees(_lotId);
         assertEq(curation.curator, _CURATOR, "curator");
         assertEq(curation.curated, true, "curated");
         assertEq(curation.curatorFee, _CURATOR_FEE_PERCENT, "curator fee");
@@ -236,7 +236,7 @@ contract BatchCurateTest is BatchAuctionHouseTest {
         assertEq(_baseToken.balanceOf(_CURATOR), 0, "base token: curator");
 
         // Check routing
-        AuctionHouse.Routing memory lotRouting = _getLotRouting(_lotId);
+        IAuctionHouse.Routing memory lotRouting = _getLotRouting(_lotId);
         assertEq(lotRouting.funding, _LOT_CAPACITY + curatorMaxPotentialFeeOld, "funding");
     }
 
@@ -258,7 +258,7 @@ contract BatchCurateTest is BatchAuctionHouseTest {
         _auctionHouse.curate(_lotId, bytes(""));
 
         // Verify
-        AuctionHouse.FeeData memory curation = _getLotFees(_lotId);
+        IAuctionHouse.FeeData memory curation = _getLotFees(_lotId);
         assertEq(curation.curator, _CURATOR, "curator");
         assertEq(curation.curated, true, "curated");
         assertEq(curation.curatorFee, _CURATOR_FEE_PERCENT, "curator fee");
@@ -273,7 +273,7 @@ contract BatchCurateTest is BatchAuctionHouseTest {
         assertEq(_baseToken.balanceOf(_CURATOR), 0, "base token: curator balance mismatch");
 
         // Check routing
-        AuctionHouse.Routing memory lotRouting = _getLotRouting(_lotId);
+        IAuctionHouse.Routing memory lotRouting = _getLotRouting(_lotId);
         assertEq(lotRouting.funding, _LOT_CAPACITY + _curatorMaxPotentialFee, "funding");
     }
 
@@ -304,7 +304,7 @@ contract BatchCurateTest is BatchAuctionHouseTest {
         _auctionHouse.curate(_lotId, bytes(""));
 
         // Verify
-        AuctionHouse.FeeData memory curation = _getLotFees(_lotId);
+        IAuctionHouse.FeeData memory curation = _getLotFees(_lotId);
         assertEq(curation.curator, _CURATOR, "curator");
         assertEq(curation.curated, true, "curated");
         assertEq(curation.curatorFee, _CURATOR_FEE_PERCENT, "curator fee");
@@ -319,7 +319,7 @@ contract BatchCurateTest is BatchAuctionHouseTest {
         assertEq(_baseToken.balanceOf(_CURATOR), 0, "base token: curator balance mismatch");
 
         // Check routing
-        AuctionHouse.Routing memory lotRouting = _getLotRouting(_lotId);
+        IAuctionHouse.Routing memory lotRouting = _getLotRouting(_lotId);
         assertEq(lotRouting.funding, _LOT_CAPACITY + curatorMaxPotentialFeeOld, "funding");
     }
 
@@ -343,7 +343,7 @@ contract BatchCurateTest is BatchAuctionHouseTest {
         _auctionHouse.curate(_lotId, bytes(""));
 
         // Verify
-        AuctionHouse.FeeData memory curation = _getLotFees(_lotId);
+        IAuctionHouse.FeeData memory curation = _getLotFees(_lotId);
         assertEq(curation.curator, _CURATOR, "curator");
         assertEq(curation.curated, true, "curated");
         assertEq(curation.curatorFee, _CURATOR_FEE_PERCENT, "curator fee");
@@ -358,7 +358,7 @@ contract BatchCurateTest is BatchAuctionHouseTest {
         assertEq(_baseToken.balanceOf(_CURATOR), 0, "base token: curator balance mismatch");
 
         // Check routing
-        AuctionHouse.Routing memory lotRouting = _getLotRouting(_lotId);
+        IAuctionHouse.Routing memory lotRouting = _getLotRouting(_lotId);
         assertEq(
             lotRouting.funding,
             _scaleBaseTokenAmount(_LOT_CAPACITY) + _curatorMaxPotentialFee,
@@ -386,7 +386,7 @@ contract BatchCurateTest is BatchAuctionHouseTest {
         _auctionHouse.curate(_lotId, bytes(""));
 
         // Verify
-        AuctionHouse.FeeData memory curation = _getLotFees(_lotId);
+        IAuctionHouse.FeeData memory curation = _getLotFees(_lotId);
         assertEq(curation.curator, _CURATOR, "curator");
         assertEq(curation.curated, true, "curated");
         assertEq(curation.curatorFee, _CURATOR_FEE_PERCENT, "curator fee");
@@ -401,7 +401,7 @@ contract BatchCurateTest is BatchAuctionHouseTest {
         assertEq(_baseToken.balanceOf(_CURATOR), 0, "base token: curator balance mismatch");
 
         // Check routing
-        AuctionHouse.Routing memory lotRouting = _getLotRouting(_lotId);
+        IAuctionHouse.Routing memory lotRouting = _getLotRouting(_lotId);
         assertEq(
             lotRouting.funding,
             _scaleBaseTokenAmount(_LOT_CAPACITY) + _curatorMaxPotentialFee,
@@ -426,7 +426,7 @@ contract BatchCurateTest is BatchAuctionHouseTest {
         _auctionHouse.curate(_lotId, bytes(""));
 
         // Verify
-        AuctionHouse.FeeData memory curation = _getLotFees(_lotId);
+        IAuctionHouse.FeeData memory curation = _getLotFees(_lotId);
         assertEq(curation.curator, _CURATOR, "curator");
         assertEq(curation.curated, true, "curated");
         assertEq(curation.curatorFee, 0);
@@ -441,7 +441,7 @@ contract BatchCurateTest is BatchAuctionHouseTest {
         assertEq(_baseToken.balanceOf(_CURATOR), 0, "base token: curator balance mismatch");
 
         // Check routing
-        AuctionHouse.Routing memory lotRouting = _getLotRouting(_lotId);
+        IAuctionHouse.Routing memory lotRouting = _getLotRouting(_lotId);
         assertEq(lotRouting.funding, _LOT_CAPACITY + 0, "funding");
     }
 
@@ -464,7 +464,7 @@ contract BatchCurateTest is BatchAuctionHouseTest {
         _auctionHouse.curate(_lotId, bytes(""));
 
         // Verify
-        AuctionHouse.FeeData memory curation = _getLotFees(_lotId);
+        IAuctionHouse.FeeData memory curation = _getLotFees(_lotId);
         assertEq(curation.curator, _CURATOR, "curator");
         assertEq(curation.curated, true, "curated");
         assertEq(curation.curatorFee, _CURATOR_FEE_PERCENT, "curator fee");
@@ -479,7 +479,7 @@ contract BatchCurateTest is BatchAuctionHouseTest {
         assertEq(_baseToken.balanceOf(_CURATOR), 0, "base token: curator balance mismatch");
 
         // Check routing
-        AuctionHouse.Routing memory lotRouting = _getLotRouting(_lotId);
+        IAuctionHouse.Routing memory lotRouting = _getLotRouting(_lotId);
         assertEq(lotRouting.funding, _LOT_CAPACITY + _curatorMaxPotentialFee, "funding");
 
         // Check callback
@@ -506,7 +506,7 @@ contract BatchCurateTest is BatchAuctionHouseTest {
         _auctionHouse.curate(_lotId, bytes(""));
 
         // Verify
-        AuctionHouse.FeeData memory curation = _getLotFees(_lotId);
+        IAuctionHouse.FeeData memory curation = _getLotFees(_lotId);
         assertEq(curation.curator, _CURATOR, "curator");
         assertEq(curation.curated, true, "curated");
         assertEq(curation.curatorFee, _CURATOR_FEE_PERCENT, "curator fee");
@@ -524,7 +524,7 @@ contract BatchCurateTest is BatchAuctionHouseTest {
         assertEq(_baseToken.balanceOf(_CURATOR), 0, "base token: curator balance mismatch");
 
         // Check routing
-        AuctionHouse.Routing memory lotRouting = _getLotRouting(_lotId);
+        IAuctionHouse.Routing memory lotRouting = _getLotRouting(_lotId);
         assertEq(lotRouting.funding, _LOT_CAPACITY + _curatorMaxPotentialFee, "funding");
 
         // Check callback
@@ -548,7 +548,7 @@ contract BatchCurateTest is BatchAuctionHouseTest {
         givenOnCurateCallbackBreaksInvariant
     {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(AuctionHouse.InvalidCallback.selector);
+        bytes memory err = abi.encodeWithSelector(IAuctionHouse.InvalidCallback.selector);
         vm.expectRevert(err);
 
         // Curate
@@ -587,7 +587,7 @@ contract BatchCurateTest is BatchAuctionHouseTest {
         assertEq(_baseToken.balanceOf(_CURATOR), 0, "base token: curator balance mismatch");
 
         // Check routing
-        AuctionHouse.Routing memory lotRouting = _getLotRouting(_lotId);
+        IAuctionHouse.Routing memory lotRouting = _getLotRouting(_lotId);
         assertEq(lotRouting.funding, type(uint96).max + _curatorMaxPotentialFee, "funding");
     }
 }

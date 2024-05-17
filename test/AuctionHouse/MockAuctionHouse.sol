@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.19;
 
-import {IAuction} from "src/interfaces/IAuction.sol";
+import {IAuction} from "src/interfaces/modules/IAuction.sol";
+import {IAuctionHouse} from "src/interfaces/IAuctionHouse.sol";
 
 import {ERC20} from "solmate/tokens/ERC20.sol";
 import {Transfer} from "src/lib/Transfer.sol";
@@ -39,7 +40,7 @@ contract MockAuctionHouse is AuctionHouse {
     function sendPayout(
         address recipient_,
         uint256 payoutAmount_,
-        AuctionHouse.Routing memory routingParams_,
+        IAuctionHouse.Routing memory routingParams_,
         bytes memory auctionOutput_
     ) external {
         return _sendPayout(recipient_, payoutAmount_, routingParams_, auctionOutput_);

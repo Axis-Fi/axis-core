@@ -12,55 +12,41 @@ import {BlastLinearVesting} from "src/blast/modules/derivatives/BlastLinearVesti
 
 import {Deploy} from "script/deploy/Deploy.s.sol";
 
+/// @notice Declarative deploy script that uses contracts specific to the Blast L2 chain.
+///         See Deploy.s.sol for more information on the Deploy contract.
 contract DeployBlast is Deploy {
-    // Blast-specific environment variables
-    address internal _envBlast;
-    address internal _envWeth;
-    address internal _envUsdb;
-
-    function _setUp(string calldata chain_, string calldata deployFilePath_) internal override {
-        super._setUp(chain_, deployFilePath_);
-
-        // Cache required variables
-        _envBlast = _envAddress("BLAST");
-        console2.log("Blast:", _envBlast);
-        _envWeth = _envAddress("BLAST_WETH");
-        console2.log("WETH:", _envWeth);
-        _envUsdb = _envAddress("BLAST_USDB");
-        console2.log("USDB:", _envUsdb);
-    }
-
     // ========== AUCTIONHOUSE DEPLOYMENTS ========== //
 
     function _deployAtomicAuctionHouse() internal override returns (address) {
         // No args
         console2.log("");
         console2.log("Deploying BlastAtomicAuctionHouse");
-        console2.log("    owner:", _envOwner);
-        console2.log("    permit2:", _envPermit2);
-        console2.log("    protocol:", _envProtocol);
-        console2.log("    blast:", _envBlast);
-        console2.log("    weth:", _envWeth);
-        console2.log("    usdb:", _envUsdb);
+
+        address owner = _getAddressNotZero("axis.OWNER");
+        address protocol = _getAddressNotZero("axis.PROTOCOL");
+        address permit2 = _getAddressNotZero("axis.PERMIT2");
+        address blast = _getAddressNotZero("blast.blast");
+        address blastWeth = _getAddressNotZero("blast.weth");
+        address blastUsdb = _getAddressNotZero("blast.usdb");
 
         // Get the salt
         bytes32 salt_ = _getSalt(
             "BlastAtomicAuctionHouse",
             type(BlastAtomicAuctionHouse).creationCode,
-            abi.encode(_envOwner, _envProtocol, _envPermit2, _envBlast, _envWeth, _envUsdb)
+            abi.encode(owner, protocol, permit2, blast, blastWeth, blastUsdb)
         );
 
+        BlastAtomicAuctionHouse atomicAuctionHouse;
         if (salt_ == bytes32(0)) {
             vm.broadcast();
-            atomicAuctionHouse = new BlastAtomicAuctionHouse(
-                _envOwner, _envProtocol, _envPermit2, _envBlast, _envWeth, _envUsdb
-            );
+            atomicAuctionHouse =
+                new BlastAtomicAuctionHouse(owner, protocol, permit2, blast, blastWeth, blastUsdb);
         } else {
             console2.log("    salt:", vm.toString(salt_));
 
             vm.broadcast();
             atomicAuctionHouse = new BlastAtomicAuctionHouse{salt: salt_}(
-                _envOwner, _envProtocol, _envPermit2, _envBlast, _envWeth, _envUsdb
+                owner, protocol, permit2, blast, blastWeth, blastUsdb
             );
         }
         console2.log("    BlastAtomicAuctionHouse deployed at:", address(atomicAuctionHouse));
@@ -72,31 +58,32 @@ contract DeployBlast is Deploy {
         // No args
         console2.log("");
         console2.log("Deploying BlastBatchAuctionHouse");
-        console2.log("    owner:", _envOwner);
-        console2.log("    permit2:", _envPermit2);
-        console2.log("    protocol:", _envProtocol);
-        console2.log("    blast:", _envBlast);
-        console2.log("    weth:", _envWeth);
-        console2.log("    usdb:", _envUsdb);
+
+        address owner = _getAddressNotZero("axis.OWNER");
+        address protocol = _getAddressNotZero("axis.PROTOCOL");
+        address permit2 = _getAddressNotZero("axis.PERMIT2");
+        address blast = _getAddressNotZero("blast.blast");
+        address blastWeth = _getAddressNotZero("blast.weth");
+        address blastUsdb = _getAddressNotZero("blast.usdb");
 
         // Get the salt
         bytes32 salt_ = _getSalt(
             "BlastBatchAuctionHouse",
             type(BlastBatchAuctionHouse).creationCode,
-            abi.encode(_envOwner, _envProtocol, _envPermit2, _envBlast, _envWeth, _envUsdb)
+            abi.encode(owner, protocol, permit2, blast, blastWeth, blastUsdb)
         );
 
+        BlastBatchAuctionHouse batchAuctionHouse;
         if (salt_ == bytes32(0)) {
             vm.broadcast();
-            batchAuctionHouse = new BlastBatchAuctionHouse(
-                _envOwner, _envProtocol, _envPermit2, _envBlast, _envWeth, _envUsdb
-            );
+            batchAuctionHouse =
+                new BlastBatchAuctionHouse(owner, protocol, permit2, blast, blastWeth, blastUsdb);
         } else {
             console2.log("    salt:", vm.toString(salt_));
 
             vm.broadcast();
             batchAuctionHouse = new BlastBatchAuctionHouse{salt: salt_}(
-                _envOwner, _envProtocol, _envPermit2, _envBlast, _envWeth, _envUsdb
+                owner, protocol, permit2, blast, blastWeth, blastUsdb
             );
         }
         console2.log("    BlastBatchAuctionHouse deployed at:", address(batchAuctionHouse));
@@ -106,121 +93,133 @@ contract DeployBlast is Deploy {
 
     // ========== MODULE DEPLOYMENTS ========== //
 
-    function deployEncryptedMarginalPrice(bytes memory) public override returns (address) {
+    function deployEncryptedMarginalPrice(bytes memory)
+        public
+        override
+        returns (address, string memory)
+    {
         // No args used
         console2.log("");
         console2.log("Deploying BlastEMP (Encrypted Marginal Price)");
-        console2.log("    BatchAuctionHouse", address(batchAuctionHouse));
-        console2.log("    blast:", _envBlast);
+
+        address batchAuctionHouse = _getAddressNotZero("axis.BatchAuctionHouse");
+        address blast = _getAddressNotZero("blast.blast");
 
         // Get the salt
-        bytes32 salt_ = _getSalt(
-            "BlastEMP",
-            type(BlastEMP).creationCode,
-            abi.encode(address(batchAuctionHouse), _envBlast)
-        );
+        bytes32 salt_ =
+            _getSalt("BlastEMP", type(BlastEMP).creationCode, abi.encode(batchAuctionHouse, blast));
 
         // Deploy the module
+        BlastEMP amEmp;
         if (salt_ == bytes32(0)) {
             vm.broadcast();
-            amEmp = new BlastEMP(address(batchAuctionHouse), _envBlast);
+            amEmp = new BlastEMP(batchAuctionHouse, blast);
         } else {
             console2.log("    salt:", vm.toString(salt_));
 
             vm.broadcast();
-            amEmp = new BlastEMP{salt: salt_}(address(batchAuctionHouse), _envBlast);
+            amEmp = new BlastEMP{salt: salt_}(batchAuctionHouse, blast);
         }
         console2.log("    BlastEMP deployed at:", address(amEmp));
 
-        return address(amEmp);
+        return (address(amEmp), _PREFIX_AXIS);
     }
 
-    function deployFixedPriceSale(bytes memory) public override returns (address) {
+    function deployFixedPriceSale(bytes memory) public override returns (address, string memory) {
         // No args used
         console2.log("");
         console2.log("Deploying BlastFPS (Fixed Price Sale)");
-        console2.log("    AtomicAuctionHouse", address(atomicAuctionHouse));
-        console2.log("    blast:", _envBlast);
+
+        address atomicAuctionHouse = _getAddressNotZero("axis.AtomicAuctionHouse");
+        address blast = _getAddressNotZero("blast.blast");
 
         // Get the salt
-        bytes32 salt_ = _getSalt(
-            "BlastFPS",
-            type(BlastFPS).creationCode,
-            abi.encode(address(atomicAuctionHouse), _envBlast)
-        );
+        bytes32 salt_ =
+            _getSalt("BlastFPS", type(BlastFPS).creationCode, abi.encode(atomicAuctionHouse, blast));
 
         // Deploy the module
+        BlastFPS amFps;
         if (salt_ == bytes32(0)) {
             vm.broadcast();
-            amFps = new BlastFPS(address(atomicAuctionHouse), _envBlast);
+            amFps = new BlastFPS(atomicAuctionHouse, blast);
         } else {
             console2.log("    salt:", vm.toString(salt_));
 
             vm.broadcast();
-            amFps = new BlastFPS{salt: salt_}(address(atomicAuctionHouse), _envBlast);
+            amFps = new BlastFPS{salt: salt_}(atomicAuctionHouse, blast);
         }
         console2.log("    BlastFPS deployed at:", address(amFps));
 
-        return address(amFps);
+        return (address(amFps), _PREFIX_AXIS);
     }
 
-    function deployAtomicLinearVesting(bytes memory) public override returns (address) {
+    function deployAtomicLinearVesting(bytes memory)
+        public
+        override
+        returns (address, string memory)
+    {
         // No args used
         console2.log("");
         console2.log("Deploying BlastLinearVesting (Atomic)");
-        console2.log("    AtomicAuctionHouse", address(atomicAuctionHouse));
-        console2.log("    blast:", _envBlast);
+
+        address atomicAuctionHouse = _getAddressNotZero("axis.AtomicAuctionHouse");
+        address blast = _getAddressNotZero("blast.blast");
 
         // Get the salt
         bytes32 salt_ = _getSalt(
             "BlastLinearVesting",
             type(BlastLinearVesting).creationCode,
-            abi.encode(address(atomicAuctionHouse), _envBlast)
+            abi.encode(atomicAuctionHouse, blast)
         );
 
         // Deploy the module
+        BlastLinearVesting dmAtomicLinearVesting;
         if (salt_ == bytes32(0)) {
             vm.broadcast();
-            dmAtomicLinearVesting = new BlastLinearVesting(address(atomicAuctionHouse), _envBlast);
+            dmAtomicLinearVesting = new BlastLinearVesting(atomicAuctionHouse, blast);
         } else {
             console2.log("    salt:", vm.toString(salt_));
 
             vm.broadcast();
-            dmAtomicLinearVesting =
-                new BlastLinearVesting{salt: salt_}(address(atomicAuctionHouse), _envBlast);
+            dmAtomicLinearVesting = new BlastLinearVesting{salt: salt_}(atomicAuctionHouse, blast);
         }
         console2.log("    LinearVesting (Atomic) deployed at:", address(dmAtomicLinearVesting));
 
-        return address(dmAtomicLinearVesting);
+        return (address(dmAtomicLinearVesting), _PREFIX_AXIS);
     }
 
-    function deployBatchLinearVesting(bytes memory) public override returns (address) {
+    function deployBatchLinearVesting(bytes memory)
+        public
+        override
+        returns (address, string memory)
+    {
         // No args used
         console2.log("");
         console2.log("Deploying LinearVesting (Batch)");
-        console2.log("    BatchAuctionHouse", address(batchAuctionHouse));
-        console2.log("    blast:", _envBlast);
+
+        address batchAuctionHouse = _getAddressNotZero("axis.BatchAuctionHouse");
+        address blast = _getAddressNotZero("blast.blast");
 
         // Get the salt
         bytes32 salt_ = _getSalt(
             "BlastLinearVesting",
             type(BlastLinearVesting).creationCode,
-            abi.encode(address(batchAuctionHouse), _envBlast)
+            abi.encode(batchAuctionHouse, blast)
         );
 
         // Deploy the module
+        BlastLinearVesting dmBatchLinearVesting;
         if (salt_ == bytes32(0)) {
             vm.broadcast();
-            dmBatchLinearVesting = new BlastLinearVesting(address(batchAuctionHouse), _envBlast);
+            dmBatchLinearVesting = new BlastLinearVesting(batchAuctionHouse, blast);
         } else {
             console2.log("    salt:", vm.toString(salt_));
 
             vm.broadcast();
-            dmBatchLinearVesting =
-                new BlastLinearVesting{salt: salt_}(address(batchAuctionHouse), _envBlast);
+            dmBatchLinearVesting = new BlastLinearVesting{salt: salt_}(batchAuctionHouse, blast);
         }
         console2.log("    LinearVesting (Batch) deployed at:", address(dmBatchLinearVesting));
 
-        return address(dmBatchLinearVesting);
+        return (address(dmBatchLinearVesting), _PREFIX_AXIS);
     }
 }

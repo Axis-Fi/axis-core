@@ -1,0 +1,22 @@
+{
+  "sequence": [
+      {
+          "name": "AtomicCappedMerkleAllowlist"
+      },
+      {
+          "name": "BatchCappedMerkleAllowlist"
+      },
+      {
+          "name": "AtomicMerkleAllowlist"
+      },
+      {
+          "name": "BatchMerkleAllowlist"
+      },
+      {
+          "name": "AtomicTokenAllowlist"
+      },
+      {
+          "name": "BatchTokenAllowlist"
+      }
+  ]
+}

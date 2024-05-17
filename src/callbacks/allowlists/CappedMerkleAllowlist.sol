@@ -21,16 +21,15 @@ contract CappedMerkleAllowlist is MerkleAllowlist {
     // onCurate: false
     // onPurchase: true
     // onBid: true
-    // onClaimProceeds: false
+    // onSettle: false
     // receiveQuoteTokens: false
     // sendBaseTokens: false
     // Contract prefix should be: 10011000 = 0x98
 
     constructor(
         address auctionHouse_,
-        Callbacks.Permissions memory permissions_,
-        address seller_
-    ) MerkleAllowlist(auctionHouse_, permissions_, seller_) {}
+        Callbacks.Permissions memory permissions_
+    ) MerkleAllowlist(auctionHouse_, permissions_) {}
 
     // ========== CALLBACK FUNCTIONS ========== //
 

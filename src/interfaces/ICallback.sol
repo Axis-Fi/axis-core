@@ -13,7 +13,7 @@ interface ICallback {
     ///     Bit 3: onCurate
     ///     Bit 4: onPurchase
     ///     Bit 5: onBid
-    ///     Bit 6: onClaimProceeds
+    ///     Bit 6: onSettle
     ///     Bit 7: Receives quote tokens
     ///     Bit 8: Sends base tokens (and receives them if refunded)
 
@@ -106,14 +106,14 @@ interface ICallback {
         bytes calldata callbackData
     ) external returns (bytes4);
 
-    /// @notice Called when the seller claims their proceeds from the auction.
+    /// @notice Called when a batch auction is settled.
     /// @dev    If the Callback is configured to receive tokens, then the proceeds and/or refund will be sent prior to the call.
     ///
     /// @param  lotId         The ID of the lot
     /// @param  proceeds      The proceeds amount
     /// @param  refund        The refund amount
     /// @param  callbackData  Custom data provided by the seller
-    function onClaimProceeds(
+    function onSettle(
         uint96 lotId,
         uint256 proceeds,
         uint256 refund,

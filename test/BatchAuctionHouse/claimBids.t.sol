@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.19;
 
-import {AuctionHouse} from "src/bases/AuctionHouse.sol";
-import {IBatchAuction} from "src/interfaces/IBatchAuction.sol";
+import {IAuctionHouse} from "src/interfaces/IAuctionHouse.sol";
+import {IBatchAuction} from "src/interfaces/modules/IBatchAuction.sol";
 import {BatchAuctionModule} from "src/modules/auctions/BatchAuctionModule.sol";
 
 import {BatchAuctionHouseTest} from "test/BatchAuctionHouse/AuctionHouseTest.sol";
@@ -12,6 +12,8 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
     uint256 internal constant _BID_AMOUNT_OUT = 2e18;
 
     address internal constant _BIDDER_TWO = address(0x20);
+
+    bytes internal constant _ON_SETTLE_CALLBACK_PARAMS = "";
 
     IBatchAuction.BidClaim[] internal _bidClaims;
 
@@ -85,7 +87,7 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         );
         assertEq(_baseToken.balanceOf(_PROTOCOL), 0, "base token: protocol balance");
 
-        AuctionHouse.Routing memory routing = _getLotRouting(_lotId);
+        IAuctionHouse.Routing memory routing = _getLotRouting(_lotId);
         assertEq(routing.funding, _expectedAuctionHouseBaseTokenBalance, "funding");
     }
 
@@ -124,27 +126,6 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         _;
     }
 
-    function _calculateFees(
-        address referrer_,
-        uint256 amountIn_
-    ) internal view returns (uint256 toReferrer, uint256 toProtocol) {
-        bool hasReferrer = referrer_ != address(0);
-
-        uint256 referrerFee = uint256(amountIn_) * _referrerFeePercentActual / 1e5;
-
-        // If the referrer is not set, the referrer fee is allocated to the protocol
-        toReferrer = hasReferrer ? referrerFee : 0;
-        toProtocol =
-            uint256(amountIn_) * _protocolFeePercentActual / 1e5 + (hasReferrer ? 0 : referrerFee);
-
-        return (toReferrer, toProtocol);
-    }
-
-    modifier givenBalancesAreSet() {
-        _expectedAuctionHouseBaseTokenBalance = _scaleBaseTokenAmount(_LOT_CAPACITY);
-        _;
-    }
-
     /// @dev    Assumes that any amounts are scaled to the current decimal scale
     modifier givenPayoutIsNotSet(
         uint64 bidId_,
@@ -157,7 +138,7 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         );
 
         // Calculate fees
-        (uint256 toReferrer, uint256 toProtocol) = _calculateFees(referrer_, 0);
+        (uint256 toReferrer, uint256 toProtocol,) = _calculateFees(referrer_, 0);
         _expectedReferrerFee += toReferrer;
         _expectedProtocolFee += toProtocol;
 
@@ -166,7 +147,6 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         _expectedBidderQuoteTokenBalance += bidder_ == _bidder ? amountIn_ : 0; // Returned to the bidder
         _expectedBidderTwoQuoteTokenBalance += bidder_ == _BIDDER_TWO ? amountIn_ : 0; // Returned to the bidder
 
-        _expectedAuctionHouseBaseTokenBalance -= 0; // no tokens are paid out, to be collected in claimProceeds()
         _expectedBidderBaseTokenBalance += 0;
         _expectedCuratorBaseTokenBalance += 0;
         _;
@@ -185,15 +165,14 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         );
 
         // Calculate fees
-        (uint256 toReferrer, uint256 toProtocol) = _calculateFees(referrer_, amountIn_);
+        (uint256 toReferrer, uint256 toProtocol,) = _calculateFees(referrer_, amountIn_);
         _expectedReferrerFee += toReferrer;
         _expectedProtocolFee += toProtocol;
 
         // Set expected balances
-        _expectedAuctionHouseQuoteTokenBalance += amountIn_; // Payment to be collected in claimProceeds()
+        _expectedAuctionHouseQuoteTokenBalance += toReferrer + toProtocol;
         _expectedBidderQuoteTokenBalance += 0;
 
-        _expectedAuctionHouseBaseTokenBalance -= payout_; // To be collected in claimProceeds()
         _expectedBidderBaseTokenBalance += bidder_ == _bidder ? payout_ : 0;
         _expectedBidderTwoBaseTokenBalance += bidder_ == _BIDDER_TWO ? payout_ : 0;
         _expectedCuratorBaseTokenBalance += 0;
@@ -214,16 +193,16 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         );
 
         // Calculate fees
-        (uint256 toReferrer, uint256 toProtocol) = _calculateFees(referrer_, amountIn_ - refund_);
+        (uint256 toReferrer, uint256 toProtocol, uint256 totalFees) =
+            _calculateFees(referrer_, amountIn_ - refund_);
         _expectedReferrerFee += toReferrer;
         _expectedProtocolFee += toProtocol;
 
         // Set expected balances
-        _expectedAuctionHouseQuoteTokenBalance += amountIn_ - refund_; // Payment to be collected in claimProceeds()
+        _expectedAuctionHouseQuoteTokenBalance += totalFees;
         _expectedBidderQuoteTokenBalance += bidder_ == _bidder ? refund_ : 0;
         _expectedBidderTwoQuoteTokenBalance += bidder_ == _BIDDER_TWO ? refund_ : 0;
 
-        _expectedAuctionHouseBaseTokenBalance -= payout_; // To be collected in claimProceeds()
         _expectedBidderBaseTokenBalance += bidder_ == _bidder ? payout_ : 0;
         _expectedBidderTwoBaseTokenBalance += bidder_ == _BIDDER_TWO ? payout_ : 0;
         _expectedCuratorBaseTokenBalance += 0;
@@ -233,10 +212,13 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
     modifier givenLotSettlementIsMixed() {
         // Set the settlement data
         _batchAuctionModule.setLotSettlement(
-            _lotId, _scaleQuoteTokenAmount(_BID_AMOUNT), _scaleBaseTokenAmount(_BID_AMOUNT_OUT)
+            _lotId,
+            _scaleQuoteTokenAmount(_BID_AMOUNT),
+            _scaleBaseTokenAmount(_BID_AMOUNT_OUT),
+            true
         );
 
-        _auctionHouse.settle(_lotId);
+        _auctionHouse.settle(_lotId, 100_000, _ON_SETTLE_CALLBACK_PARAMS);
         _;
     }
 
@@ -245,10 +227,11 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         _batchAuctionModule.setLotSettlement(
             _lotId,
             _scaleQuoteTokenAmount(_BID_AMOUNT + _BID_AMOUNT / 2),
-            _scaleBaseTokenAmount(_BID_AMOUNT_OUT + _BID_AMOUNT_OUT)
+            _scaleBaseTokenAmount(_BID_AMOUNT_OUT + _BID_AMOUNT_OUT),
+            true
         );
 
-        _auctionHouse.settle(_lotId);
+        _auctionHouse.settle(_lotId, 100_000, _ON_SETTLE_CALLBACK_PARAMS);
         _;
     }
 
@@ -257,16 +240,20 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         _batchAuctionModule.setLotSettlement(
             _lotId,
             _scaleQuoteTokenAmount(_BID_AMOUNT + _BID_AMOUNT),
-            _scaleBaseTokenAmount(_BID_AMOUNT_OUT + _BID_AMOUNT_OUT)
+            _scaleBaseTokenAmount(_BID_AMOUNT_OUT + _BID_AMOUNT_OUT),
+            true
         );
 
-        _auctionHouse.settle(_lotId);
+        _auctionHouse.settle(_lotId, 100_000, _ON_SETTLE_CALLBACK_PARAMS);
         _;
     }
 
     modifier givenLotSettlementIsNotSuccessful() {
+        // Set the settlement data
+        _batchAuctionModule.setLotSettlement(_lotId, 0, 0, true);
+
         // Payout tokens will be returned to the seller
-        _auctionHouse.settle(_lotId);
+        _auctionHouse.settle(_lotId, 100_000, _ON_SETTLE_CALLBACK_PARAMS);
         _;
     }
 
@@ -284,7 +271,7 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
     // ============ Tests ============
 
     function test_invalidLotId_reverts() external {
-        bytes memory err = abi.encodeWithSelector(AuctionHouse.InvalidLotId.selector, _lotId);
+        bytes memory err = abi.encodeWithSelector(IAuctionHouse.InvalidLotId.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function
@@ -327,7 +314,6 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         givenProtocolFeeIsSet
         givenLotIsCreated
         givenLotHasStarted
-        givenBalancesAreSet
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
@@ -362,7 +348,6 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         givenProtocolFeeIsSet
         givenLotIsCreated
         givenLotHasStarted
-        givenBalancesAreSet
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
@@ -397,7 +382,6 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         givenProtocolFeeIsSet
         givenLotIsCreated
         givenLotHasStarted
-        givenBalancesAreSet
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
@@ -430,7 +414,6 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         givenProtocolFeeIsSet
         givenLotIsCreated
         givenLotHasStarted
-        givenBalancesAreSet
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
@@ -467,7 +450,6 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         givenProtocolFeeIsSet
         givenLotIsCreated
         givenLotHasStarted
-        givenBalancesAreSet
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
@@ -504,7 +486,6 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         givenProtocolFeeIsSet
         givenLotIsCreated
         givenLotHasStarted
-        givenBalancesAreSet
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
@@ -551,7 +532,6 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         givenProtocolFeeIsSet
         givenLotIsCreated
         givenLotHasStarted
-        givenBalancesAreSet
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
@@ -598,7 +578,6 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         givenProtocolFeeIsSet
         givenLotIsCreated
         givenLotHasStarted
-        givenBalancesAreSet
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
@@ -643,7 +622,6 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         givenProtocolFeeIsSet
         givenLotIsCreated
         givenLotHasStarted
-        givenBalancesAreSet
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
@@ -692,7 +670,6 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         givenProtocolFeeIsSet
         givenLotIsCreated
         givenLotHasStarted
-        givenBalancesAreSet
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
@@ -741,7 +718,6 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         givenProtocolFeeIsSet
         givenLotIsCreated
         givenLotHasStarted
-        givenBalancesAreSet
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
@@ -788,7 +764,6 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         givenProtocolFeeIsSet
         givenLotIsCreated
         givenLotHasStarted
-        givenBalancesAreSet
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
@@ -835,7 +810,6 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         givenProtocolFeeIsSet
         givenLotIsCreated
         givenLotHasStarted
-        givenBalancesAreSet
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
@@ -879,7 +853,6 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         givenReferrerFeeIsSet
         givenLotIsCreated
         givenLotHasStarted
-        givenBalancesAreSet
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
@@ -925,7 +898,6 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         givenReferrerFeeIsSet
         givenLotIsCreated
         givenLotHasStarted
-        givenBalancesAreSet
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
@@ -971,7 +943,6 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         givenReferrerFeeIsSet
         givenLotIsCreated
         givenLotHasStarted
-        givenBalancesAreSet
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
@@ -1015,7 +986,6 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         givenProtocolFeeIsSet
         givenLotIsCreated
         givenLotHasStarted
-        givenBalancesAreSet
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
@@ -1061,7 +1031,6 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         givenProtocolFeeIsSet
         givenLotIsCreated
         givenLotHasStarted
-        givenBalancesAreSet
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
@@ -1107,7 +1076,6 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         givenProtocolFeeIsSet
         givenLotIsCreated
         givenLotHasStarted
-        givenBalancesAreSet
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
@@ -1150,7 +1118,6 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenLotIsCreated
         givenLotHasStarted
-        givenBalancesAreSet
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
@@ -1195,7 +1162,6 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenLotIsCreated
         givenLotHasStarted
-        givenBalancesAreSet
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
@@ -1240,7 +1206,6 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenLotIsCreated
         givenLotHasStarted
-        givenBalancesAreSet
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
@@ -1283,7 +1248,6 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenLotIsCreated
         givenLotHasStarted
-        givenBalancesAreSet
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
@@ -1322,7 +1286,6 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         givenProtocolFeeIsSet
         givenLotIsCreated
         givenLotHasStarted
-        givenBalancesAreSet
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
         givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")

@@ -59,15 +59,15 @@ contract SendPaymentTest is Test, Permit2User, WithSalts {
             onCurate: false,
             onPurchase: false,
             onBid: false,
-            onClaimProceeds: false,
+            onSettle: false,
             receiveQuoteTokens: _callbackReceiveQuoteTokens,
             sendBaseTokens: false
         });
-        bytes memory args = abi.encode(address(_auctionHouse), permissions, _SELLER);
-        bytes32 salt = _getSalt("MockCallback", type(MockCallback).creationCode, args);
+        bytes memory args = abi.encode(address(_auctionHouse), permissions);
+        bytes32 salt = _getTestSalt("MockCallback", type(MockCallback).creationCode, args);
 
         vm.broadcast(); // required for CREATE2 address to work correctly. doesn't do anything in a test
-        _callback = new MockCallback{salt: salt}(address(_auctionHouse), permissions, _SELLER);
+        _callback = new MockCallback{salt: salt}(address(_auctionHouse), permissions);
         _;
     }
 
