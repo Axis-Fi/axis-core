@@ -91,6 +91,16 @@ contract BaselineAxisLaunch is BaseCallback, Policy, Owned {
     // solhint-disable-next-line private-vars-leading-underscore
     uint48 internal constant ONE_HUNDRED_PERCENT = 100_000;
 
+    /// @notice The # of ticks required for the liquidity premium to double in size
+    /// @dev    Source: https://github.com/0xBaseline/baseline-v2/blob/0eb04f6db1045b5079ed99609ec01d8bb0d2b43a/script/DeployDev.s.sol#L56
+    uint256 internal constant _TICK_PREMIUM_FACTOR = 4800e18;
+
+    /// @notice The maximum allowable liquidity premium as a factor of anchor liquidity.
+    /// @dev    i.e. a max liquidity premium of 1e18 means the premium cannot be greater than 1x the anchor liquidity.
+    ///
+    ///         Source: https://github.com/0xBaseline/baseline-v2/blob/0eb04f6db1045b5079ed99609ec01d8bb0d2b43a/script/DeployDev.s.sol#L52
+    uint256 internal constant _MAX_LIQUIDITY_PREMIUM = 3e18;
+
     // ========== CONSTRUCTOR ========== //
 
     constructor(
@@ -419,11 +429,20 @@ contract BaselineAxisLaunch is BaseCallback, Policy, Owned {
 
     // ========== BASELINE POOL INTERACTIONS ========== //
 
+    /// @dev    Source: https://github.com/0xBaseline/baseline-v2/blob/0eb04f6db1045b5079ed99609ec01d8bb0d2b43a/src/policies/MarketMaking.sol#L353
+    /// @return liquidityPremium    The premium for the liquidity (in 18 decimals)
+    function _getLiquidityPremium() internal view returns (uint256 liquidityPremium) {
+        (, int24 activeTick,,,,,) = BPOOL.pool().slot0();
+        liquidityPremium =
+            uint256(uint24(activeTick - BPOOL.floorTick())).divWad(_TICK_PREMIUM_FACTOR);
+    }
+
     // Copied from BaselineV2/initializeProtocol.sol
     function _deployLiquidity(
         uint256 _initialReservesF,
         uint256 _initialReservesA
     ) internal returns (uint256 bAssetsDeployed, uint256 reservesDeployed) {
+        // Reproduces much of this function: https://github.com/0xBaseline/baseline-v2/blob/0eb04f6db1045b5079ed99609ec01d8bb0d2b43a/src/policies/InitializeProtocol.sol#L126
         (uint256 floorBAssetsAdded, uint256 floorReservesAdded) =
             BPOOL.addReservesTo(Range.FLOOR, _initialReservesF);
         (uint256 anchorBAssetsAdded, uint256 anchorReservesAdded) =
@@ -432,22 +451,22 @@ contract BaselineAxisLaunch is BaseCallback, Policy, Owned {
         // scale the discovery liquidity based on the new anchor liquidity
         uint128 liquidityA = BPOOL.getPositionLiquidity(Range.ANCHOR);
 
-        (, int24 activeTick,,,,,) = BPOOL.pool().slot0();
-        uint256 liquidityPremium = uint256(uint24(activeTick - BPOOL.floorTick())).divWad(4812); // initial liquidity premium
-        // TODO document magic number
-
-        // TODO document formula
+        // Calculate the leverage factor
         uint256 totalCollateral = CREDT.totalCollateralized();
-        uint256 leverageFactor = 1e18 + (totalCollateral / (bAsset.totalSupply() - totalCollateral));
-        // TODO check that scale is correct
+        uint256 leverageFactor =
+            1e18 + totalCollateral.divWad(bAsset.totalSupply() - totalCollateral);
 
-        // TODO document formula
-        uint128 extraLiquidityA =
-            uint128(uint256(liquidityA).mulWad(liquidityPremium).mulWad(leverageFactor));
+        // Calculate the current liquidity premium and cap it
+        uint256 liquidityPremium = _getLiquidityPremium().mulWad(leverageFactor);
+        liquidityPremium =
+            liquidityPremium > _MAX_LIQUIDITY_PREMIUM ? _MAX_LIQUIDITY_PREMIUM : liquidityPremium;
+
+        // Calculate the surplus liquidity
+        uint128 surplusLiquidityA = uint128(uint256(liquidityA).mulWad(liquidityPremium));
 
         // supply new bAssets to the top of the range at a ratio based on the premium
         (uint256 discoveryBAssetsAdded, uint256 discoveryReservesAdded) =
-            BPOOL.addLiquidityTo(Range.DISCOVERY, liquidityA + extraLiquidityA);
+            BPOOL.addLiquidityTo(Range.DISCOVERY, liquidityA + surplusLiquidityA);
 
         // verify solvency
         if (calculateTotalCapacity() < initialCirculatingSupply) revert Insolvent();
@@ -460,11 +479,10 @@ contract BaselineAxisLaunch is BaseCallback, Policy, Owned {
 
     // Copied from BaselineV2/initializeProtocol.sol
     function calculateTotalCapacity() public view returns (uint256 capacity_) {
+        // Sourced from: https://github.com/0xBaseline/baseline-v2/blob/0eb04f6db1045b5079ed99609ec01d8bb0d2b43a/src/policies/InitializeProtocol.sol#L193
         PositionData memory floor = BPOOL.getPositionData(Range.FLOOR);
         PositionData memory anchor = BPOOL.getPositionData(Range.ANCHOR);
         PositionData memory disc = BPOOL.getPositionData(Range.DISCOVERY);
-
-        // TODO document formula
 
         (uint160 sqrtPriceA,,,,,,) = BPOOL.pool().slot0();
         uint160 floorSqrtPriceU = sqrtPriceA < floor.sqrtPriceU ? sqrtPriceA : floor.sqrtPriceU;
