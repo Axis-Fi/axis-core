@@ -343,7 +343,6 @@ contract BaselineAxisLaunch is BaseCallback, Policy {
     ///
     ///                 This function reverts if:
     ///                 - `lotId_` is not the same as the stored `lotId`
-    ///                 - The curator fee in the Auction House is non-zero
     function _onCurate(
         uint96 lotId_,
         uint256 curatorFee_,
@@ -353,10 +352,8 @@ contract BaselineAxisLaunch is BaseCallback, Policy {
         // Validate the lot ID
         if (lotId_ != lotId) revert Callback_InvalidParams();
 
-        // Require that the curator fee in the Auction House is zero
-        if (curatorFee_ > 0) revert Callback_InvalidParams();
-
-        if (prefunded_) {
+        // If the auction is prefunded and the curator fee is non-zero
+        if (prefunded_ && curatorFee_ > 0) {
             // Mint the required amount of bAsset tokens to the AuctionHouse
             BPOOL.mint(msg.sender, curatorFee_);
             initialCirculatingSupply += curatorFee_;
