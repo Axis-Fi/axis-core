@@ -55,6 +55,7 @@ contract BaselineAxisLaunch is BaseCallback, Policy {
 
     // ========== DATA STRUCTURES ========== //
 
+    // TODO consider splitting into different structs for FPS vs EMP
     struct CreateData {
         int24 initFloorTick;
         int24 initActiveTick;
@@ -347,6 +348,13 @@ contract BaselineAxisLaunch is BaseCallback, Policy {
     }
 
     /// @inheritdoc     BaseCallback
+    /// @dev            This function performs the following:
+    ///                 -
+    ///
+    ///                 It has the following assumptions:
+    ///                 - BaseCallback has already validated the lot ID
+    ///                 - The AuctionHouse has already sent the correct amount of quote tokens (reserves)
+    ///                 - The AuctionHouse expects the callback function to send the correct amount of base tokens (bAssets)
     function _onPurchase(
         uint96 lotId_,
         address buyer_,
@@ -379,6 +387,12 @@ contract BaselineAxisLaunch is BaseCallback, Policy {
 
         // Deploy the reserves to the Baseline pool
         _deployLiquidity(floorReserves, anchorReserves);
+
+        // Decrease the reserve balance by the amount of reserves deployed
+        // TODO use values from _deployLiquidity
+        reserveBalance -= amount_;
+
+        // TODO what happens to the reserves left over?
     }
 
     // Override with allowlist functionality
@@ -412,6 +426,7 @@ contract BaselineAxisLaunch is BaseCallback, Policy {
     ///                 This function has the following assumptions:
     ///                 - BaseCallback has already validated the lot ID
     ///                 - The AuctionHouse has already sent the correct amount of quote tokens (proceeds)
+    ///                 - The AuctionHouse is pre-funded, so does not require additional base tokens (bAssets) to be supplied
     ///
     ///                 This function reverts if:
     ///                 - `lotId_` is not the same as the stored `lotId`
@@ -435,7 +450,12 @@ contract BaselineAxisLaunch is BaseCallback, Policy {
         if (auctionComplete) revert Callback_AlreadyComplete();
 
         // Validate that the callback received the correct amount of proceeds
-        if (proceeds_ < RESERVE.balanceOf(address(this))) revert Callback_MissingFunds();
+        // As this is a single-use contract, reserve balance is 0 prior
+        if (proceeds_ > RESERVE.balanceOf(address(this))) revert Callback_MissingFunds();
+
+        // Validate that the callback received the correct amount of base tokens as a refund
+        // As this is a single-use contract, bAsset balance is 0 prior
+        if (refund_ > bAsset.balanceOf(address(this))) revert Callback_MissingFunds();
 
         // Set the auction as complete
         auctionComplete = true;
@@ -444,8 +464,9 @@ contract BaselineAxisLaunch is BaseCallback, Policy {
         initialCirculatingSupply -= refund_;
 
         // Calculate the clearing price in quote tokens per base token
-        // TODO discuss with baseline team
+        // TODO assumption of decimal scale
         uint256 clearingPrice = (proceeds_ * 1e18) / initialCirculatingSupply;
+        // TODO discuss with baseline team
         initFloorTick = 0; // TODO calculate from clearing price
         initActiveTick = 0; // TODO calculate from clearing price
 
@@ -462,37 +483,52 @@ contract BaselineAxisLaunch is BaseCallback, Policy {
 
         // Deploy the reserves to the Baseline pool
         _deployLiquidity(floorReserves, anchorReserves);
+
+        // TODO what happens to the reserves left over?
     }
 
     // ========== BASELINE POOL INTERACTIONS ========== //
 
     function _deployLiquidity(uint256 _initialReservesF, uint256 _initialReservesA) internal {
-        BPOOL.manageReservesFor(Range.FLOOR, Action.ADD, _initialReservesF);
-        BPOOL.manageReservesFor(Range.ANCHOR, Action.ADD, _initialReservesA);
+        // TODO shift to addReservesTo: https://github.com/0xBaseline/baseline-v2/blob/rmliq/src/modules/BPOOL.v1.sol#138
+        (uint256 floorBAssetsAdded, uint256 floorReservesAdded) =
+            BPOOL.manageReservesFor(Range.FLOOR, Action.ADD, _initialReservesF);
+        (uint256 anchorBAssetsAdded, uint256 anchorReservesAdded) =
+            BPOOL.manageReservesFor(Range.ANCHOR, Action.ADD, _initialReservesA);
 
         // scale the discovery liquidity based on the new anchor liquidity
         uint128 liquidityA = BPOOL.getPositionLiquidity(Range.ANCHOR);
 
         (, int24 activeTick,,,,,) = BPOOL.pool().slot0();
         uint256 liquidityPremium = uint256(uint24(activeTick - BPOOL.floorTick())).divWad(4812); // initial liquidity premium
+        // TODO document magic number
 
+        // TODO document formula
         uint256 totalCollateral = CREDT.totalCollateralized();
         uint256 leverageFactor = 1e18 + (totalCollateral / (bAsset.totalSupply() - totalCollateral));
+        // TODO check that scale is correct
 
+        // TODO document formula
         uint128 extraLiquidityA =
             uint128(uint256(liquidityA).mulWad(liquidityPremium).mulWad(leverageFactor));
 
         // supply new bAssets to the top of the range at a ratio based on the premium
-        BPOOL.manageLiquidityFor(Range.DISCOVERY, Action.ADD, liquidityA + extraLiquidityA);
+        // TODO shift to addLiquidityTo: https://github.com/0xBaseline/baseline-v2/blob/rmliq/src/modules/BPOOL.v1.sol#163
+        (uint256 discoveryBAssetsAdded, uint256 discoveryReservesAdded) =
+            BPOOL.manageLiquidityFor(Range.DISCOVERY, Action.ADD, liquidityA + extraLiquidityA);
 
         // verify solvency
         if (calculateTotalCapacity() < initialCirculatingSupply) revert Insolvent();
+
+        // TODO return reserves deployed
     }
 
     function calculateTotalCapacity() public view returns (uint256 capacity_) {
         PositionData memory floor = BPOOL.getPositionData(Range.FLOOR);
         PositionData memory anchor = BPOOL.getPositionData(Range.ANCHOR);
         PositionData memory disc = BPOOL.getPositionData(Range.DISCOVERY);
+
+        // TODO document formula
 
         (uint160 sqrtPriceA,,,,,,) = BPOOL.pool().slot0();
         uint160 floorSqrtPriceU = sqrtPriceA < floor.sqrtPriceU ? sqrtPriceA : floor.sqrtPriceU;
