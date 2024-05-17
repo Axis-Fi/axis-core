@@ -35,6 +35,7 @@ import {LiquidityAmounts} from "lib/uniswap-v3-periphery/contracts/libraries/Liq
 import {TimeslotLib} from "src/callbacks/liquidity/BaselineV2/lib/TimeslotLib.sol";
 
 // Other libraries
+import {Owned} from "lib/solmate/src/auth/Owned.sol";
 import {FixedPointMathLib} from "lib/solady/src/utils/FixedPointMathLib.sol";
 import {Transfer} from "src/lib/Transfer.sol";
 
@@ -43,7 +44,7 @@ import {Transfer} from "src/lib/Transfer.sol";
 ///
 /// @dev        This contract combines Baseline's InitializeProtocol Policy and Axis' Callback functionality to build an Axis auction callback specific to Baseline V2 token launches
 ///             It is designed to be used with a single auction and Baseline pool
-contract BaselineAxisLaunch is BaseCallback, Policy {
+contract BaselineAxisLaunch is BaseCallback, Policy, Owned {
     using FixedPointMathLib for uint256;
     using TimeslotLib for uint256;
 
@@ -107,7 +108,7 @@ contract BaselineAxisLaunch is BaseCallback, Policy {
         Callbacks.Permissions memory permissions_,
         address baselineKernel_,
         address reserve_
-    ) BaseCallback(auctionHouse_, permissions_) Policy(Kernel(baselineKernel_)) {
+    ) BaseCallback(auctionHouse_, permissions_) Policy(Kernel(baselineKernel_)) Owned(msg.sender) {
         // Set lot ID to max uint(96) initially
         lotId = type(uint96).max;
 
@@ -370,7 +371,12 @@ contract BaselineAxisLaunch is BaseCallback, Policy {
 
     /// @inheritdoc     BaseCallback
     /// @dev            This function performs the following:
-    ///                 -
+    ///                 - Validates that sufficient quote tokens (reserve) have been transferred by the AuctionHouse
+    ///                 - Calls the `__onPurchase()` callback used by the allowlist
+    ///                 - If not prefunded, mints `payout_` amount of bAsset tokens to the AuctionHouse
+    ///                 - Deploys liquidity to the Baseline pool
+    ///
+    ///                 Note that there may be reserve assets left over after liquidity deployment, which must be manually withdrawn by the owner using `withdrawReserves()`
     ///
     ///                 It has the following assumptions:
     ///                 - BaseCallback has already validated the lot ID
@@ -411,8 +417,6 @@ contract BaselineAxisLaunch is BaseCallback, Policy {
 
         // Decrease the reserve balance by the amount of reserves deployed (since it may be different to the `floorReserves` and `anchorReserves`)
         reserveBalance -= reservesDeployed;
-
-        // TODO what happens to the reserves left over?
     }
 
     // Override with allowlist functionality
@@ -442,6 +446,8 @@ contract BaselineAxisLaunch is BaseCallback, Policy {
     ///                 - Burns any refunded bAsset tokens
     ///                 - Calculates the deployment parameters for the Baseline pool
     ///                 - Deploys the Baseline pool
+    ///
+    ///                 Note that there may be reserve assets left over after liquidity deployment, which must be manually withdrawn by the owner using `withdrawReserves()`
     ///
     ///                 This function has the following assumptions:
     ///                 - BaseCallback has already validated the lot ID
@@ -486,6 +492,7 @@ contract BaselineAxisLaunch is BaseCallback, Policy {
         // Calculate the clearing price in quote tokens per base token
         uint256 clearingPrice =
             (proceeds_ * (uint256(10) ** BPOOL.decimals())) / initialCirculatingSupply;
+
         // TODO discuss with baseline team
         initFloorTick = 0; // TODO calculate from clearing price
         initActiveTick = 0; // TODO calculate from clearing price
@@ -503,8 +510,6 @@ contract BaselineAxisLaunch is BaseCallback, Policy {
 
         // Deploy the reserves to the Baseline pool
         _deployLiquidity(floorReserves, anchorReserves);
-
-        // TODO what happens to the reserves left over?
     }
 
     // ========== BASELINE POOL INTERACTIONS ========== //
@@ -592,5 +597,19 @@ contract BaselineAxisLaunch is BaseCallback, Policy {
                 disc.liquidity
             );
         }
+    }
+
+    // ========== OWNER FUNCTIONS ========== //
+
+    /// @notice Withdraws any remaining reserve tokens from the contract
+    /// @dev    This is access-controlled to the owner
+    ///
+    /// @return withdrawnAmount The amount of reserve tokens withdrawn
+    function withdrawReserves() external onlyOwner returns (uint256 withdrawnAmount) {
+        withdrawnAmount = RESERVE.balanceOf(address(this));
+
+        Transfer.transfer(RESERVE, owner, withdrawnAmount, false);
+
+        return withdrawnAmount;
     }
 }
