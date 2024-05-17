@@ -167,15 +167,9 @@ contract FixedPriceBatch is BatchAuctionModule, IFixedPriceBatch {
                 data.totalBidAmount -= refund;
             }
 
-            // End the auction and settle the lot since no more bids can be submitted
-            // This is atypical ordering, but allows claims to be made immediately without another transaction to settle
+            // End the auction
+            // We don't settle here to preserve callback and storage interactions associated with calling "settle"
             lotData[lotId_].conclusion = uint48(block.timestamp);
-            _settle(lotId_, 0); // we could use the return variables, but we know that they are the same as totalBidAmount and the capacity since this path is only invoked when the auction sells out
-
-            // Set the lot values that are typically set in BatchAuctionModule.settle
-            lotData[lotId_].purchased = data.totalBidAmount;
-            lotData[lotId_].sold = lot.capacity;
-            // There is no auction output, so we don't need to set it
         }
     }
 
