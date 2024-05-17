@@ -484,8 +484,8 @@ contract BaselineAxisLaunch is BaseCallback, Policy {
         initialCirculatingSupply -= refund_;
 
         // Calculate the clearing price in quote tokens per base token
-        // TODO assumption of decimal scale
-        uint256 clearingPrice = (proceeds_ * 1e18) / initialCirculatingSupply;
+        uint256 clearingPrice =
+            (proceeds_ * (uint256(10) ** BPOOL.decimals())) / initialCirculatingSupply;
         // TODO discuss with baseline team
         initFloorTick = 0; // TODO calculate from clearing price
         initActiveTick = 0; // TODO calculate from clearing price

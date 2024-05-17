@@ -72,4 +72,7 @@ interface IBPOOLv1 {
         returns (PositionData memory positionData_);
 
     function getPositionLiquidity(Range _range) external view returns (uint128 liquidity_);
+
+    /// @dev    BPOOL inherits from solmate ERC20
+    function decimals() external view returns (uint8);
 }
