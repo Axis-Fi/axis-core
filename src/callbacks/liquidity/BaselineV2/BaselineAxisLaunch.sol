@@ -13,6 +13,8 @@ import {
     toKeycode as toAxisKeycode
 } from "src/modules/Keycode.sol";
 import {Module as AxisModule} from "src/modules/Modules.sol";
+import {DerivativeModule} from "src/modules/Derivative.sol";
+import {ILinearVesting} from "src/interfaces/modules/derivatives/ILinearVesting.sol";
 
 // Baseline dependencies
 import {
@@ -173,7 +175,7 @@ contract BaselineAxisLaunch is BaseCallback, Policy {
     /// @dev            This function performs the following:
     ///                 - Performs validation
     ///                 - Sets the lot ID
-    ///                 - Mints the required preAsset tokens to the AuctionHouse
+    ///                 - Mints the required bAsset tokens to the AuctionHouse
     ///
     ///                 This function reverts if:
     ///                 - `baseToken_` is not the same as `bAsset`
@@ -244,12 +246,28 @@ contract BaselineAxisLaunch is BaseCallback, Policy {
             }
 
             // Check that the auction has linear vesting enabled, so that buyers cannot front-run the pool deposits
-            // TODO check that the vesting starts at the end of the auction
+            DerivativeModule derivativeModule = DerivativeModule(
+                address(IAuctionHouse(AUCTION_HOUSE).getDerivativeModuleForId(lotId))
+            );
             if (
-                keycodeFromVeecode(
-                    IAuctionHouse(AUCTION_HOUSE).getAuctionModuleForId(lotId).VEECODE()
-                ) != toAxisKeycode("LIV")
+                fromAxisKeycode(keycodeFromVeecode(derivativeModule.VEECODE()))
+                    != fromAxisKeycode(toAxisKeycode("LIV"))
             ) {
+                revert Callback_InvalidParams();
+            }
+
+            // Grab the conclusion time of the auction
+            (, uint48 lotConclusion,,,,,,) =
+                IAuctionHouse(AUCTION_HOUSE).getAuctionModuleForId(lotId).lotData(lotId);
+
+            // Grab the vesting params from the lot's Routing data
+            (,,,,,,,, bytes memory derivativeParams) =
+                IAuctionHouse(AUCTION_HOUSE).lotRouting(lotId);
+            ILinearVesting.VestingParams memory vestingParams =
+                abi.decode(derivativeParams, (ILinearVesting.VestingParams));
+
+            // Check that the vesting starts after the conclusion of the auction
+            if (vestingParams.start <= lotConclusion) {
                 revert Callback_InvalidParams();
             }
 
@@ -286,11 +304,11 @@ contract BaselineAxisLaunch is BaseCallback, Policy {
     /// @inheritdoc     BaseCallback
     /// @dev            This function performs the following:
     ///                 - Performs validation
-    ///                 - Burns the refunded preAsset tokens
+    ///                 - Burns the refunded bAsset tokens
     ///
     ///                 This function has the following assumptions:
     ///                 - BaseCallback has already validated the lot ID
-    ///                 - The AuctionHouse has already sent the correct amount of preAsset tokens
+    ///                 - The AuctionHouse has already sent the correct amount of bAsset tokens
     ///
     ///                 This function reverts if:
     ///                 - `lotId_` is not the same as the stored `lotId`
@@ -305,8 +323,10 @@ contract BaselineAxisLaunch is BaseCallback, Policy {
 
         // Burn the refunded tokens, if prefunded
         if (prefunded_) {
+            // Verify that the callback received the correct amount of bAsset tokens
+            if (bAsset.balanceOf(address(this)) < refund_) revert Callback_MissingFunds();
+
             // Send tokens to BPOOL and then burn
-            // TODO verify this is correct
             initialCirculatingSupply -= refund_;
             Transfer.transfer(bAsset, address(BPOOL), refund_, false);
             BPOOL.burnAllBAssetsInContract();
@@ -316,25 +336,31 @@ contract BaselineAxisLaunch is BaseCallback, Policy {
     /// @inheritdoc     BaseCallback
     /// @dev            This function performs the following:
     ///                 - Performs validation
-    ///                 - Mints the required amount of preAsset tokens to the AuctionHouse for paying the curator fee
+    ///                 - Mints the required amount of bAsset tokens to the AuctionHouse for paying the curator fee
     ///
     ///                 This function has the following assumptions:
     ///                 - BaseCallback has already validated the lot ID
     ///
     ///                 This function reverts if:
     ///                 - `lotId_` is not the same as the stored `lotId`
-    ///                 - `prefund_` is false
+    ///                 - The curator fee in the Auction House is non-zero
     function _onCurate(
         uint96 lotId_,
         uint256 curatorFee_,
-        bool,
+        bool prefunded_,
         bytes calldata
-    ) internal view override {
+    ) internal override {
         // Validate the lot ID
         if (lotId_ != lotId) revert Callback_InvalidParams();
 
         // Require that the curator fee in the Auction House is zero
         if (curatorFee_ > 0) revert Callback_InvalidParams();
+
+        if (prefunded_) {
+            // Mint the required amount of bAsset tokens to the AuctionHouse
+            BPOOL.mint(msg.sender, curatorFee_);
+            initialCirculatingSupply += curatorFee_;
+        }
 
         // TODO could support external curator fee with CREDT
         // Steps:
@@ -343,8 +369,6 @@ contract BaselineAxisLaunch is BaseCallback, Policy {
         // 3. a. If prefunded, issue credit to them here for the entire curator fee (based on capacity)
         // 3. b. If not prefunded, issue credit to them in the onPurchase function
         // 4. In onSettle, decrease the credit if there is a refund.
-
-        // TODO mint capacity for curator fee if prefunded
     }
 
     /// @inheritdoc     BaseCallback
@@ -386,11 +410,10 @@ contract BaselineAxisLaunch is BaseCallback, Policy {
         uint256 anchorReserves = amount_ - floorReserves;
 
         // Deploy the reserves to the Baseline pool
-        _deployLiquidity(floorReserves, anchorReserves);
+        (, uint256 reservesDeployed) = _deployLiquidity(floorReserves, anchorReserves);
 
-        // Decrease the reserve balance by the amount of reserves deployed
-        // TODO use values from _deployLiquidity
-        reserveBalance -= amount_;
+        // Decrease the reserve balance by the amount of reserves deployed (since it may be different to the `floorReserves` and `anchorReserves`)
+        reserveBalance -= reservesDeployed;
 
         // TODO what happens to the reserves left over?
     }
@@ -419,7 +442,7 @@ contract BaselineAxisLaunch is BaseCallback, Policy {
     /// @dev            This function performs the following:
     ///                 - Performs validation
     ///                 - Sets the auction as complete
-    ///                 - Burns any refunded preAsset tokens
+    ///                 - Burns any refunded bAsset tokens
     ///                 - Calculates the deployment parameters for the Baseline pool
     ///                 - Deploys the Baseline pool
     ///
@@ -470,7 +493,7 @@ contract BaselineAxisLaunch is BaseCallback, Policy {
         initFloorTick = 0; // TODO calculate from clearing price
         initActiveTick = 0; // TODO calculate from clearing price
 
-        // Burn any refunded preAsset tokens that were sent from the auction house
+        // Burn any refunded bAsset tokens that were sent from the auction house
         Transfer.transfer(bAsset, address(BPOOL), refund_, false);
         BPOOL.burnAllBAssetsInContract();
 
@@ -489,7 +512,10 @@ contract BaselineAxisLaunch is BaseCallback, Policy {
 
     // ========== BASELINE POOL INTERACTIONS ========== //
 
-    function _deployLiquidity(uint256 _initialReservesF, uint256 _initialReservesA) internal {
+    function _deployLiquidity(
+        uint256 _initialReservesF,
+        uint256 _initialReservesA
+    ) internal returns (uint256 bAssetsDeployed, uint256 reservesDeployed) {
         // TODO shift to addReservesTo: https://github.com/0xBaseline/baseline-v2/blob/rmliq/src/modules/BPOOL.v1.sol#138
         (uint256 floorBAssetsAdded, uint256 floorReservesAdded) =
             BPOOL.manageReservesFor(Range.FLOOR, Action.ADD, _initialReservesF);
@@ -520,7 +546,10 @@ contract BaselineAxisLaunch is BaseCallback, Policy {
         // verify solvency
         if (calculateTotalCapacity() < initialCirculatingSupply) revert Insolvent();
 
-        // TODO return reserves deployed
+        return (
+            floorBAssetsAdded + anchorBAssetsAdded + discoveryBAssetsAdded,
+            floorReservesAdded + anchorReservesAdded + discoveryReservesAdded
+        );
     }
 
     function calculateTotalCapacity() public view returns (uint256 capacity_) {
