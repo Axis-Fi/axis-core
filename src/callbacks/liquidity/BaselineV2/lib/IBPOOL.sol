@@ -7,11 +7,6 @@ enum Range {
     DISCOVERY
 }
 
-enum Action {
-    ADD,
-    REMOVE
-}
-
 struct PositionData {
     uint256 bAssets;
     uint256 reserves;
@@ -23,6 +18,7 @@ struct PositionData {
 import {IUniswapV3Pool} from "lib/uniswap-v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 
 /// @title  Baseline's UniswapV3 Liquidity Pool Management Module
+/// @dev    Imported at commit f071544
 interface IBPOOLv1 {
     //============================================================================================//
     //                                       CORE FUNCTIONS                                       //
@@ -44,17 +40,15 @@ interface IBPOOLv1 {
     // Setup the pool (can only be called once, subsequent calls will revert on factory.createPool and pool.initialze)
     function initializePool(int24 _initialFloorTick, int24 _initialActiveTick) external;
 
-    function manageReservesFor(
+    function addReservesTo(
         Range _range,
-        Action _action,
         uint256 _reserves
-    ) external returns (uint256 bAssetDelta_, uint256 reserveDelta_);
+    ) external returns (uint256 bAssetsAdded_, uint256 reservesAdded_);
 
-    function manageLiquidityFor(
+    function addLiquidityTo(
         Range _range,
-        Action _action,
         uint128 _liquidity
-    ) external returns (uint256 bAssetsDelta_, uint256 reservesDelta_);
+    ) external returns (uint256 bAssetsAdded_, uint256 reservesAdded_);
 
     // Mints a set fee to the brs based on the circulating supply.
     function mint(address _to, uint256 _amount) external;
@@ -64,6 +58,14 @@ interface IBPOOLv1 {
     function burnAllBAssetsInContract() external;
 
     // ========= PUBLIC READ FUNCTIONS ========= //
+
+    function getBaselineValue() external view returns (uint256);
+
+    // returns the number of ticks between the active tick and the floor
+    function getTickPremium() external view returns (uint256 tickPremium_);
+
+    // Returns the lower and upper tick values for a specified range
+    function getTickBoundaries(Range _range) external view returns (int24 lower_, int24 upper_);
 
     // Returns the lower and upper tick values as well as the liquidity amount for a given range
     function getPositionData(Range _range)

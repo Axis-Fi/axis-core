@@ -24,12 +24,7 @@ import {
     toKeycode as toBaselineKeycode,
     Permissions as BaselinePermissions
 } from "src/callbacks/liquidity/BaselineV2/lib/Kernel.sol";
-import {
-    Range,
-    PositionData,
-    Action,
-    IBPOOLv1
-} from "src/callbacks/liquidity/BaselineV2/lib/IBPOOL.sol";
+import {Range, PositionData, IBPOOLv1} from "src/callbacks/liquidity/BaselineV2/lib/IBPOOL.sol";
 import {ICREDTv1} from "src/callbacks/liquidity/BaselineV2/lib/ICREDT.sol";
 import {LiquidityAmounts} from "lib/uniswap-v3-periphery/contracts/libraries/LiquidityAmounts.sol";
 import {TimeslotLib} from "src/callbacks/liquidity/BaselineV2/lib/TimeslotLib.sol";
@@ -153,8 +148,8 @@ contract BaselineAxisLaunch is BaseCallback, Policy, Owned {
 
         requests = new BaselinePermissions[](5);
         requests[0] = BaselinePermissions(bpool, BPOOL.initializePool.selector);
-        requests[1] = BaselinePermissions(bpool, BPOOL.manageReservesFor.selector);
-        requests[2] = BaselinePermissions(bpool, BPOOL.manageLiquidityFor.selector);
+        requests[1] = BaselinePermissions(bpool, BPOOL.addReservesTo.selector);
+        requests[2] = BaselinePermissions(bpool, BPOOL.addLiquidityTo.selector);
         requests[3] = BaselinePermissions(bpool, BPOOL.burnAllBAssetsInContract.selector);
         requests[4] = BaselinePermissions(bpool, BPOOL.mint.selector);
     }
@@ -518,11 +513,10 @@ contract BaselineAxisLaunch is BaseCallback, Policy, Owned {
         uint256 _initialReservesF,
         uint256 _initialReservesA
     ) internal returns (uint256 bAssetsDeployed, uint256 reservesDeployed) {
-        // TODO shift to addReservesTo: https://github.com/0xBaseline/baseline-v2/blob/rmliq/src/modules/BPOOL.v1.sol#138
         (uint256 floorBAssetsAdded, uint256 floorReservesAdded) =
-            BPOOL.manageReservesFor(Range.FLOOR, Action.ADD, _initialReservesF);
+            BPOOL.addReservesTo(Range.FLOOR, _initialReservesF);
         (uint256 anchorBAssetsAdded, uint256 anchorReservesAdded) =
-            BPOOL.manageReservesFor(Range.ANCHOR, Action.ADD, _initialReservesA);
+            BPOOL.addReservesTo(Range.ANCHOR, _initialReservesA);
 
         // scale the discovery liquidity based on the new anchor liquidity
         uint128 liquidityA = BPOOL.getPositionLiquidity(Range.ANCHOR);
@@ -541,9 +535,8 @@ contract BaselineAxisLaunch is BaseCallback, Policy, Owned {
             uint128(uint256(liquidityA).mulWad(liquidityPremium).mulWad(leverageFactor));
 
         // supply new bAssets to the top of the range at a ratio based on the premium
-        // TODO shift to addLiquidityTo: https://github.com/0xBaseline/baseline-v2/blob/rmliq/src/modules/BPOOL.v1.sol#163
         (uint256 discoveryBAssetsAdded, uint256 discoveryReservesAdded) =
-            BPOOL.manageLiquidityFor(Range.DISCOVERY, Action.ADD, liquidityA + extraLiquidityA);
+            BPOOL.addLiquidityTo(Range.DISCOVERY, liquidityA + extraLiquidityA);
 
         // verify solvency
         if (calculateTotalCapacity() < initialCirculatingSupply) revert Insolvent();
