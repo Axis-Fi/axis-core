@@ -9,7 +9,8 @@ import {IAuctionHouse} from "src/interfaces/IAuctionHouse.sol";
 import {
     Keycode as AxisKeycode,
     keycodeFromVeecode,
-    fromKeycode as fromAxisKeycode
+    fromKeycode as fromAxisKeycode,
+    toKeycode as toAxisKeycode
 } from "src/modules/Keycode.sol";
 import {Module as AxisModule} from "src/modules/Modules.sol";
 
@@ -85,6 +86,7 @@ contract BaselineAxisLaunch is BaseCallback, Policy {
     // Axis Auction Variables
 
     /// @notice Lot ID of the auction for the baseline market. This callback only supports one lot.
+    /// @dev    This value is initialised with the uint96 max value to indicate that it has not been set yet.
     uint96 public lotId;
 
     /// @notice The Axis Keycode corresponding to the auction format (module family) that the auction is using
@@ -173,9 +175,13 @@ contract BaselineAxisLaunch is BaseCallback, Policy {
     ///                 - Mints the required preAsset tokens to the AuctionHouse
     ///
     ///                 This function reverts if:
-    ///                 - `baseToken_` is not the pre asset (this contract)
-    ///                 - `quoteToken_` is not the reserve
+    ///                 - `baseToken_` is not the same as `bAsset`
+    ///                 - `quoteToken_` is not the same as `RESERVE`
     ///                 - `lotId` is already set
+    ///                 - `CreateData.percentReservesFloor` is less than 0% or greater than 100%
+    ///                 - The auction format is not supported
+    ///                 - The auction format is FPS and the tick parameters are not set
+    ///                 - The auction format is FPS and the auction does not have linear vesting enabled
     function _onCreate(
         uint96 lotId_,
         address seller_,
@@ -226,6 +232,7 @@ contract BaselineAxisLaunch is BaseCallback, Policy {
 
             // Mint the capacity of baseline tokens to the auction house
             BPOOL.mint(msg.sender, capacity_);
+            initialCirculatingSupply += capacity_;
         }
         // Case 2: Fixed Price Sale Atomic Auction
         else if (fromAxisKeycode(auctionFormat) == bytes5("FPSA")) {
@@ -235,7 +242,17 @@ contract BaselineAxisLaunch is BaseCallback, Policy {
                 revert Callback_InvalidParams();
             }
 
-            // TODO do we need to check that floor tick is less than checkpoint tick?
+            // Check that the auction has linear vesting enabled, so that buyers cannot front-run the pool deposits
+            // TODO check that the vesting starts at the end of the auction
+            if (
+                keycodeFromVeecode(
+                    IAuctionHouse(AUCTION_HOUSE).getAuctionModuleForId(lotId).VEECODE()
+                ) != toAxisKeycode("LIV")
+            ) {
+                revert Callback_InvalidParams();
+            }
+
+            // No need to check if the floor tick is less than the active tick, as the BPOOL module will do so.
 
             // Initialize the Baseline pool with the provided tick data, since we know it ahead of time.
             // This also allows us to deposit liquidity into the pool on each purchase.
@@ -276,7 +293,6 @@ contract BaselineAxisLaunch is BaseCallback, Policy {
     ///
     ///                 This function reverts if:
     ///                 - `lotId_` is not the same as the stored `lotId`
-    ///                 - `prefunded_` is false
     function _onCancel(
         uint96 lotId_,
         uint256 refund_,
@@ -326,6 +342,8 @@ contract BaselineAxisLaunch is BaseCallback, Policy {
         // 3. a. If prefunded, issue credit to them here for the entire curator fee (based on capacity)
         // 3. b. If not prefunded, issue credit to them in the onPurchase function
         // 4. In onSettle, decrease the credit if there is a refund.
+
+        // TODO mint capacity for curator fee if prefunded
     }
 
     /// @inheritdoc     BaseCallback
