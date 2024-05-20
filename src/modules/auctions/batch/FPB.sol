@@ -104,6 +104,22 @@ contract FixedPriceBatch is BatchAuctionModule, IFixedPriceBatch {
 
     // ========== BID ========== //
 
+    function _calculatePartialFill(
+        uint64 bidId_,
+        uint256 totalBidAmount_,
+        uint256 bidAmount_,
+        uint256 baseScale_,
+        uint256 price_
+    ) internal pure returns (PartialFill memory) {
+        // Calculate the new payout from the remaining capacity
+        uint256 payout = Math.fullMulDiv(totalBidAmount_ - bidAmount_, baseScale_, price_);
+        uint256 refund = bidAmount_ - Math.fullMulDivUp(payout, price_, baseScale_); // TODO rounding up to prevent refund from being too large, check this
+        // TODO use same logic as EMP.settle?
+        // We can cast refund to uint96 because it is less than amount_ which is less than type(uint96).max
+
+        return (PartialFill({bidId: bidId_, refund: uint96(refund), payout: payout}));
+    }
+
     /// @inheritdoc BatchAuctionModule
     /// @dev        This function performs the following:
     ///             - Validates inputs
@@ -130,7 +146,7 @@ contract FixedPriceBatch is BatchAuctionModule, IFixedPriceBatch {
         if (amount_ == 0 || amount_ > type(uint96).max) revert Auction_InvalidParams();
 
         // Load the lot and auction data
-        Lot memory lot = lotData[lotId_];
+        uint256 lotCapacity = lotData[lotId_].capacity;
         AuctionData storage data = _auctionData[lotId_];
 
         // Get the bid ID and increment the next bid ID
@@ -155,25 +171,18 @@ contract FixedPriceBatch is BatchAuctionModule, IFixedPriceBatch {
         uint256 newFilledCapacity = Math.fullMulDiv(data.totalBidAmount, baseScale, data.price);
 
         // If the new filled capacity is less than the lot capacity, the auction continues
-        if (newFilledCapacity < lot.capacity) {
+        if (newFilledCapacity < lotCapacity) {
             return bidId;
         }
 
         // If partial fill, then calculate new payout and refund
-        if (newFilledCapacity > lot.capacity) {
-            // Calculate the new payout from the remaining capacity
-            // TODO use same logic as EMP.settle?
-            uint256 payout =
-                lot.capacity - Math.fullMulDiv(data.totalBidAmount - amount_, baseScale, data.price);
-            uint256 refund = amount_ - Math.fullMulDivUp(payout, data.price, baseScale); // TODO rounding up to prevent refund from being too large, check this
-
+        if (newFilledCapacity > lotCapacity) {
             // Store the partial fill
-            // We can cast refund to uint96 because it is less than amount_ which is less than type(uint96).max
             _lotPartialFill[lotId_] =
-                PartialFill({bidId: bidId, refund: uint96(refund), payout: payout});
+                _calculatePartialFill(bidId, data.totalBidAmount, amount_, baseScale, data.price);
 
             // Decrement the total bid amount by the refund
-            data.totalBidAmount -= refund;
+            data.totalBidAmount -= _lotPartialFill[lotId_].refund;
         }
 
         // End the auction

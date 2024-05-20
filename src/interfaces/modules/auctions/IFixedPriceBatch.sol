@@ -29,7 +29,7 @@ interface IFixedPriceBatch is IBatchAuction {
     /// @notice Parameters for a fixed price auction
     ///
     /// @param  price            The fixed price of the lot
-    /// @param  minFillPercent   The minimum percentage of the lot that must be filled in order to settle
+    /// @param  minFillPercent   The minimum percentage of the lot that must be filled in order to settle (100% = 1e5)
     struct AuctionDataParams {
         uint256 price;
         uint24 minFillPercent;
