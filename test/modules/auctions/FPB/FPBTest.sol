@@ -90,8 +90,12 @@ abstract contract FpbTest is Test, Permit2User {
         _;
     }
 
-    modifier givenLotCapacity(uint256 capacity_) {
+    function _setCapacity(uint256 capacity_) internal {
         _auctionParams.capacity = capacity_;
+    }
+
+    modifier givenLotCapacity(uint256 capacity_) {
+        _setCapacity(capacity_);
         _;
     }
 
@@ -115,9 +119,23 @@ abstract contract FpbTest is Test, Permit2User {
         _;
     }
 
-    modifier givenPrice(uint256 price_) {
+    function _setPrice(uint256 price_) internal {
         _fpbParams.price = price_;
         _auctionParams.implParams = abi.encode(_fpbParams);
+    }
+
+    modifier givenPrice(uint256 price_) {
+        _setPrice(price_);
+        _;
+    }
+
+    function _setMinFillPercent(uint24 minFillPercent_) internal {
+        _fpbParams.minFillPercent = minFillPercent_;
+        _auctionParams.implParams = abi.encode(_fpbParams);
+    }
+
+    modifier givenMinFillPercent(uint24 minFillPercent_) {
+        _setMinFillPercent(minFillPercent_);
         _;
     }
 
