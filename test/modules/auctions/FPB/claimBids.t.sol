@@ -5,7 +5,6 @@ import {Module} from "src/modules/Modules.sol";
 import {IAuction} from "src/interfaces/modules/IAuction.sol";
 import {IBatchAuction} from "src/interfaces/modules/IBatchAuction.sol";
 import {IFixedPriceBatch} from "src/interfaces/modules/auctions/IFixedPriceBatch.sol";
-import {FixedPriceBatch} from "src/modules/auctions/batch/FPB.sol";
 
 import {FpbTest} from "test/modules/auctions/FPB/FPBTest.sol";
 
