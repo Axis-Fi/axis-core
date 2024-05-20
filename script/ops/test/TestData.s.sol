@@ -8,7 +8,7 @@ import {Script, console2} from "forge-std/Script.sol";
 import {BatchAuctionHouse} from "src/BatchAuctionHouse.sol";
 import {IAuctionHouse} from "src/interfaces/IAuctionHouse.sol";
 import {toKeycode, toVeecode} from "src/modules/Modules.sol";
-import {EncryptedMarginalPrice} from "src/modules/auctions/batch/EMP.sol";
+import {EncryptedMarginalPrice} from "src/modules/auctions/batch/EMP/EMP.sol";
 import {ECIES, Point} from "src/lib/ECIES.sol";
 import {uint2str} from "src/lib/Uint2Str.sol";
 

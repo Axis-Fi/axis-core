@@ -43,12 +43,13 @@ struct Queue {
     mapping(bytes32 => bytes32) nextBid;
 }
 
-/// @notice     This library implements a max priority queue using a linked list.
+/// @notice     This library implements a max priority queue using a linked list specific to the EMP auction.
 ///             We can achieve ~O(1) insertion by providing optimal hints for the insert position.
 ///             The linked list design automatically gives us O(1) removal of the max bid.
 library MaxPriorityQueue {
     using BidEncoding for bytes32;
 
+    /* solhint-disable private-vars-leading-underscore */
     // represents the highest possibly priority bid in the queue
     // Bid Id: 0, amountIn: 2^96 - 1, minAmountOut: 1 => price is 2^96 - 1 quote tokens per base token
     bytes32 internal constant QUEUE_START =
@@ -57,6 +58,7 @@ library MaxPriorityQueue {
     // Bid Id: 2^64 - 1, amountIn: 0, minAmountOut: 1 => price is 0 quote tokens per base token
     bytes32 internal constant QUEUE_END =
         0xffffffffffffffff000000000000000000000000000000000000000000000001;
+    /* solhint-enable private-vars-leading-underscore */
 
     // ========== INITIALIZE ========== //
 

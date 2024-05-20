@@ -16,7 +16,7 @@ import {Module} from "src/modules/Modules.sol";
 import {Callbacks} from "src/lib/Callbacks.sol";
 
 // Auction modules
-import {EncryptedMarginalPrice} from "src/modules/auctions/batch/EMP.sol";
+import {EncryptedMarginalPrice} from "src/modules/auctions/batch/EMP/EMP.sol";
 import {FixedPriceSale} from "src/modules/auctions/atomic/FPS.sol";
 
 // Derivative modules

@@ -7,7 +7,7 @@ import {IEncryptedMarginalPrice} from "src/interfaces/modules/auctions/IEncrypte
 
 // Internal libraries
 import {ECIES, Point} from "src/lib/ECIES.sol";
-import {MaxPriorityQueue, Queue} from "src/lib/MaxPriorityQueue.sol";
+import {MaxPriorityQueue, Queue} from "src/modules/auctions/batch/EMP/MaxPriorityQueue.sol";
 
 // External libraries
 import {FixedPointMathLib as Math} from "solady/utils/FixedPointMathLib.sol";

@@ -2,7 +2,7 @@
 pragma solidity 0.8.19;
 
 import {Test} from "forge-std/Test.sol";
-import {BidEncoding} from "src/lib/MaxPriorityQueue.sol";
+import {BidEncoding} from "src/modules/auctions/batch/EMP/MaxPriorityQueue.sol";
 import {FixedPointMathLib as Math} from "lib/solady/src/utils/FixedPointMathLib.sol";
 
 contract BidEncodingTest is Test {
