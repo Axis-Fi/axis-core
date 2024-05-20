@@ -31,6 +31,7 @@ import {TickMath} from "lib/uniswap-v3-core/contracts/libraries/TickMath.sol";
 import {Owned} from "lib/solmate/src/auth/Owned.sol";
 import {FixedPointMathLib} from "lib/solady/src/utils/FixedPointMathLib.sol";
 import {Transfer} from "src/lib/Transfer.sol";
+import {SqrtPriceMath} from "src/lib/uniswap-v3/SqrtPriceMath.sol";
 
 /// @notice     Axis auction callback to initialize a Baseline token using proceeds from an auction.
 ///
@@ -401,16 +402,14 @@ contract BaselineAxisLaunch is BaseCallback, Policy, Owned {
 
         // If EMP Batch Auction, we need to calculate tick values and initialize the pool
         if (fromAxisKeycode(auctionFormat) == bytes5("EMPA")) {
-            // Calculate the clearing price as an 18 decimal fixed point number
-            uint256 clearingPrice = (proceeds_ * (uint256(10) ** bAsset.decimals()) * 1e18)
-                / (initialCirculatingSupply * (uint256(10) ** RESERVE.decimals()));
-
-            // Calculate sqrtPriceX96 from the clearing price
-            uint256 sqrtPriceX96 = FixedPointMathLib.sqrt(clearingPrice) << 96;
+            // Calculate sqrtPriceX96 for the clearing price
+            // The library function will handle ordering the tokens correctly
+            uint160 sqrtPriceX96 = SqrtPriceMath.getSqrtPriceX96(
+                address(RESERVE), address(bAsset), proceeds_, initialCirculatingSupply
+            );
 
             // TODO need to discuss with baseline team on how to determine floor and active ticks from price.
-            // TODO can this be cast to uint160?
-            int24 initFloorTick = TickMath.getTickAtSqrtRatio(uint160(sqrtPriceX96));
+            int24 initFloorTick = TickMath.getTickAtSqrtRatio(sqrtPriceX96);
             int24 initActiveTick = 0; // TODO calculate from clearing price
 
             // Initialize the Baseline pool with the calculated tick data
