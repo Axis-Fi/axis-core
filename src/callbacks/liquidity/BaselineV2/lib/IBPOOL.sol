@@ -1,24 +1,30 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 pragma solidity >=0.8.0;
 
+import {IUniswapV3Pool} from "lib/uniswap-v3-core/contracts/interfaces/IUniswapV3Pool.sol";
+
 enum Range {
     FLOOR,
     ANCHOR,
     DISCOVERY
 }
 
-struct PositionData {
-    uint256 bAssets;
-    uint256 reserves;
+struct Ticks {
+    int24 lower;
+    int24 upper;
+}
+
+struct Position {
     uint128 liquidity;
     uint160 sqrtPriceL;
     uint160 sqrtPriceU;
+    uint256 bAssets;
+    uint256 reserves;
+    uint256 capacity;
 }
 
-import {IUniswapV3Pool} from "lib/uniswap-v3-core/contracts/interfaces/IUniswapV3Pool.sol";
-
 /// @title  Baseline's UniswapV3 Liquidity Pool Management Module
-/// @dev    Imported at commit f071544
+/// @dev    Imported at commit 88bb34b23b1627207e4c8d3fcd9efad22332eb5f
 interface IBPOOLv1 {
     //============================================================================================//
     //                                       CORE FUNCTIONS                                       //
@@ -26,54 +32,83 @@ interface IBPOOLv1 {
 
     // ========= STATE VIEW FUNCTIONS ========== //
 
-    function UPPER_LP_TICK_SPACINGS() external view returns (int24);
     function TICK_SPACING() external view returns (int24);
 
     function reserve() external view returns (address);
     function pool() external view returns (IUniswapV3Pool);
 
-    function floorTick() external view returns (int24);
-    function checkpointTick() external view returns (int24);
+    function getTicks(Range range_) external view returns (Ticks memory);
+
+    function getLiquidity(Range range_) external view returns (uint128);
 
     // ========= PERMISSIONED WRITE FUNCTIONS ========= //
 
-    // Setup the pool (can only be called once, subsequent calls will revert on factory.createPool and pool.initialze)
-    function initializePool(int24 _initialFloorTick, int24 _initialActiveTick) external;
+    /// @notice Setup the pool (can only be called once, subsequent calls will revert on factory.createPool and pool.initialze)
+    function initializePool(int24 _activeTick) external returns (IUniswapV3Pool);
 
     function addReservesTo(
         Range _range,
         uint256 _reserves
-    ) external returns (uint256 bAssetsAdded_, uint256 reservesAdded_);
+    ) external returns (uint256 bAssetsAdded_, uint256 reservesAdded_, uint128 liquidityFinal_);
 
     function addLiquidityTo(
         Range _range,
         uint128 _liquidity
-    ) external returns (uint256 bAssetsAdded_, uint256 reservesAdded_);
+    ) external returns (uint256 bAssetsAdded_, uint256 reservesAdded_, uint128 liquidityFinal_);
 
-    // Mints a set fee to the brs based on the circulating supply.
+    function removeAllFrom(Range _range)
+        external
+        returns (
+            uint256 bAssetsRemoved_,
+            uint256 bAssetFees_,
+            uint256 reservesRemoved_,
+            uint256 reserveFees_
+        );
+
+    function setTicks(Range _range, int24 _lower, int24 _upper) external;
+
+    /// @notice Mints a set fee to the brs based on the circulating supply.
     function mint(address _to, uint256 _amount) external;
 
-    // Burns excess bAssets not used in the pool POL.
-    // No need to discount collateralizedBAssets because it's in a separate contract now.
+    /// @notice Burns excess bAssets not used in the pool POL.
+    /// @dev    No need to discount collateralizedBAssets because it's in a separate contract now.
     function burnAllBAssetsInContract() external;
 
     // ========= PUBLIC READ FUNCTIONS ========= //
 
+    /// @notice Returns the price at the lower tick of the floor position
     function getBaselineValue() external view returns (uint256);
 
-    // returns the number of ticks between the active tick and the floor
-    function getTickPremium() external view returns (uint256 tickPremium_);
+    /// @notice Returns the closest tick spacing boundary above the active tick
+    ///         Formerly "upperAnchorTick"
+    function getActiveTS() external view returns (int24 activeTS_);
 
-    // Returns the lower and upper tick values for a specified range
-    function getTickBoundaries(Range _range) external view returns (int24 lower_, int24 upper_);
+    /// @notice  Wrapper for liquidity data struct
+    function getPosition(Range _range) external view returns (Position memory position_);
 
-    // Returns the lower and upper tick values as well as the liquidity amount for a given range
-    function getPositionData(Range _range)
-        external
-        view
-        returns (PositionData memory positionData_);
+    function getBalancesForLiquidity(
+        uint160 _sqrtPriceL,
+        uint160 _sqrtPriceU,
+        uint128 _liquidity
+    ) external view returns (uint256 bAssets_, uint256 reserves_);
 
-    function getPositionLiquidity(Range _range) external view returns (uint128 liquidity_);
+    function getLiquidityForReserves(
+        uint160 _sqrtPriceL,
+        uint160 _sqrtPriceU,
+        uint256 _reserves
+    ) external view returns (uint128 liquidity_);
+
+    function getCapacityForLiquidity(
+        uint160 _sqrtPriceL,
+        uint160 _sqrtPriceU,
+        uint128 _liquidity
+    ) external view returns (uint256 capacity_);
+
+    function getCapacityForReserves(
+        uint160 _sqrtPriceL,
+        uint160 _sqrtPriceU,
+        uint256 _reserves
+    ) external view returns (uint256 capacity_);
 
     /// @dev    BPOOL inherits from solmate ERC20
     function decimals() external view returns (uint8);

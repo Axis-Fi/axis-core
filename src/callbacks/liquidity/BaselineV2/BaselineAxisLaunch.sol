@@ -21,7 +21,7 @@ import {
     toKeycode as toBaselineKeycode,
     Permissions as BaselinePermissions
 } from "src/callbacks/liquidity/BaselineV2/lib/Kernel.sol";
-import {Range, PositionData, IBPOOLv1} from "src/callbacks/liquidity/BaselineV2/lib/IBPOOL.sol";
+import {Range, Position, IBPOOLv1} from "src/callbacks/liquidity/BaselineV2/lib/IBPOOL.sol";
 import {ICREDTv1} from "src/callbacks/liquidity/BaselineV2/lib/ICREDT.sol";
 import {LiquidityAmounts} from "lib/uniswap-v3-periphery/contracts/libraries/LiquidityAmounts.sol";
 import {TimeslotLib} from "src/callbacks/liquidity/BaselineV2/lib/TimeslotLib.sol";
@@ -241,10 +241,20 @@ contract BaselineAxisLaunch is BaseCallback, Policy, Owned {
                 revert Callback_InvalidParams();
             }
 
-            // No need to check if the floor tick is less than the active tick, as the BPOOL module will do so.
+            // The floor tick must be less than the active tick
+            if (cbData.initFloorTick >= cbData.initActiveTick) {
+                revert Callback_InvalidParams();
+            }
 
             // Initialize the Baseline pool with the provided tick data, since we know it ahead of time.
-            BPOOL.initializePool(cbData.initFloorTick, cbData.initActiveTick);
+            BPOOL.initializePool(cbData.initActiveTick);
+
+            int24 tickSpacing = BPOOL.TICK_SPACING();
+            int24 activeWithTickSpacing = BPOOL.getActiveTS();
+            BPOOL.setTicks(Range.FLOOR, cbData.initFloorTick, cbData.initFloorTick + tickSpacing);
+            BPOOL.setTicks(Range.ANCHOR, cbData.initFloorTick + tickSpacing, activeWithTickSpacing);
+
+            // The discovery tick will be set in the onSettle function
         }
         // No other supported formats
         else {
@@ -413,7 +423,14 @@ contract BaselineAxisLaunch is BaseCallback, Policy, Owned {
             int24 initActiveTick = 0; // TODO calculate from clearing price
 
             // Initialize the Baseline pool with the calculated tick data
-            BPOOL.initializePool(initFloorTick, initActiveTick);
+            BPOOL.initializePool(initActiveTick);
+
+            int24 tickSpacing = BPOOL.TICK_SPACING();
+            int24 activeWithTickSpacing = BPOOL.getActiveTS();
+            BPOOL.setTicks(Range.FLOOR, initFloorTick, initFloorTick + tickSpacing);
+            BPOOL.setTicks(Range.ANCHOR, initFloorTick + tickSpacing, activeWithTickSpacing);
+
+            // The discovery tick will be set in `_deployLiquidity()`
         }
 
         // Calculate the reserves to deploy in each range
@@ -428,44 +445,17 @@ contract BaselineAxisLaunch is BaseCallback, Policy, Owned {
 
     // ========== BASELINE POOL INTERACTIONS ========== //
 
-    /// @dev    Source: https://github.com/0xBaseline/baseline-v2/blob/0eb04f6db1045b5079ed99609ec01d8bb0d2b43a/src/policies/MarketMaking.sol#L353
-    /// @return liquidityPremium    The premium for the liquidity (in 18 decimals)
-    function _getLiquidityPremium() internal view returns (uint256 liquidityPremium) {
-        (, int24 activeTick,,,,,) = BPOOL.pool().slot0();
-        liquidityPremium =
-            uint256(uint24(activeTick - BPOOL.floorTick())).divWad(_TICK_PREMIUM_FACTOR);
-    }
-
-    // Copied from BaselineV2/initializeProtocol.sol
+    /// @dev    Reproduces much of this function: https://github.com/0xBaseline/baseline-v2/blob/88bb34b23b1627207e4c8d3fcd9efad22332eb5f/src/policies/BaselineInit.sol#L166
     function _deployLiquidity(
         uint256 _initialReservesF,
         uint256 _initialReservesA
     ) internal returns (uint256 bAssetsDeployed, uint256 reservesDeployed) {
-        // Reproduces much of this function: https://github.com/0xBaseline/baseline-v2/blob/0eb04f6db1045b5079ed99609ec01d8bb0d2b43a/src/policies/InitializeProtocol.sol#L126
-        (uint256 floorBAssetsAdded, uint256 floorReservesAdded) =
+        (uint256 floorBAssetsAdded, uint256 floorReservesAdded,) =
             BPOOL.addReservesTo(Range.FLOOR, _initialReservesF);
-        (uint256 anchorBAssetsAdded, uint256 anchorReservesAdded) =
+        (uint256 anchorBAssetsAdded, uint256 anchorReservesAdded,) =
             BPOOL.addReservesTo(Range.ANCHOR, _initialReservesA);
-
-        // scale the discovery liquidity based on the new anchor liquidity
-        uint128 liquidityA = BPOOL.getPositionLiquidity(Range.ANCHOR);
-
-        // Calculate the leverage factor
-        uint256 totalCollateral = CREDT.totalCollateralized();
-        uint256 leverageFactor =
-            1e18 + totalCollateral.divWad(bAsset.totalSupply() - totalCollateral);
-
-        // Calculate the current liquidity premium and cap it
-        uint256 liquidityPremium = _getLiquidityPremium().mulWad(leverageFactor);
-        liquidityPremium =
-            liquidityPremium > _MAX_LIQUIDITY_PREMIUM ? _MAX_LIQUIDITY_PREMIUM : liquidityPremium;
-
-        // Calculate the surplus liquidity
-        uint128 surplusLiquidityA = uint128(uint256(liquidityA).mulWad(liquidityPremium));
-
-        // supply new bAssets to the top of the range at a ratio based on the premium
-        (uint256 discoveryBAssetsAdded, uint256 discoveryReservesAdded) =
-            BPOOL.addLiquidityTo(Range.DISCOVERY, liquidityA + surplusLiquidityA);
+        (uint256 discoveryBAssetsAdded, uint256 discoveryReservesAdded,) =
+            BPOOL.addLiquidityTo(Range.DISCOVERY, BPOOL.getLiquidity(Range.ANCHOR) * 11 / 10);
 
         // verify solvency
         if (calculateTotalCapacity() < initialCirculatingSupply) revert Insolvent();
@@ -476,13 +466,13 @@ contract BaselineAxisLaunch is BaseCallback, Policy, Owned {
         );
     }
 
-    // Copied from BaselineV2/initializeProtocol.sol
+    /// @dev    Reproduces much of this function: https://github.com/0xBaseline/baseline-v2/blob/88bb34b23b1627207e4c8d3fcd9efad22332eb5f/src/policies/BaselineInit.sol#L166
     function calculateTotalCapacity() public view returns (uint256 capacity_) {
-        // Sourced from: https://github.com/0xBaseline/baseline-v2/blob/0eb04f6db1045b5079ed99609ec01d8bb0d2b43a/src/policies/InitializeProtocol.sol#L193
-        PositionData memory floor = BPOOL.getPositionData(Range.FLOOR);
-        PositionData memory anchor = BPOOL.getPositionData(Range.ANCHOR);
-        PositionData memory disc = BPOOL.getPositionData(Range.DISCOVERY);
+        Position memory floor = BPOOL.getPosition(Range.FLOOR);
+        Position memory anchor = BPOOL.getPosition(Range.ANCHOR);
+        Position memory disc = BPOOL.getPosition(Range.DISCOVERY);
 
+        // TODO consider if this should be using the updated logic: https://github.com/0xBaseline/baseline-v2/blob/88bb34b23b1627207e4c8d3fcd9efad22332eb5f/src/policies/BaselineInit.sol#L194
         (uint160 sqrtPriceA,,,,,,) = BPOOL.pool().slot0();
         uint160 floorSqrtPriceU = sqrtPriceA < floor.sqrtPriceU ? sqrtPriceA : floor.sqrtPriceU;
 
