@@ -24,12 +24,12 @@ contract BALwithAllocatedAllowlist is BaselineAxisLaunch {
     // onCreate: true
     // onCancel: true
     // onCurate: true
-    // onPurchase: true
+    // onPurchase: false
     // onBid: true
     // onSettle: true
     // receiveQuoteTokens: true
     // sendBaseTokens: true
-    // Contract prefix should be: 11111111 = 0xFF
+    // Contract prefix should be: 11101111 = 0xEF
 
     constructor(
         address auctionHouse_,
