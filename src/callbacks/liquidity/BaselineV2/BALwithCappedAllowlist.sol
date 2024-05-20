@@ -5,7 +5,6 @@ import {BALwithAllowlist} from "src/callbacks/liquidity/BaselineV2/BALwithAllowl
 import {Callbacks} from "src/lib/Callbacks.sol";
 
 /// @notice Capped allowlist version of the Baseline Axis Launch callback
-/// @dev This contract only supports atomic auctions (i.e. Fixed Price Sale), unlike the regular allowlist version
 contract BALwithCappedAllowlist is BALwithAllowlist {
     // ========== ERRORS ========== //
     error Callback_ExceedsLimit();
@@ -21,12 +20,12 @@ contract BALwithCappedAllowlist is BALwithAllowlist {
     // onCreate: true
     // onCancel: true
     // onCurate: true
-    // onPurchase: true
-    // onBid: false
-    // onSettle: false
+    // onPurchase: false
+    // onBid: true
+    // onSettle: true
     // receiveQuoteTokens: true
     // sendBaseTokens: true
-    // Contract prefix should be: 11110011 = 0xF3
+    // Contract prefix should be: 11101111 = 0xEF
 
     constructor(
         address auctionHouse_,
@@ -57,23 +56,15 @@ contract BALwithCappedAllowlist is BALwithAllowlist {
         buyerLimit = buyerLimit_;
     }
 
-    function ___onPurchase(
+    function __onBid(
         uint96,
+        uint64,
         address buyer_,
         uint256 amount_,
-        uint256,
-        bool,
         bytes calldata
     ) internal override {
+        // Validate that the buyer is allowed to participate
         _canBuy(buyer_, amount_);
-    }
-
-    function _onBid(uint96, uint64, address, uint256, bytes calldata) internal pure override {
-        revert Callback_NotImplemented();
-    }
-
-    function _onSettle(uint96, uint256, uint256, bytes calldata) internal pure override {
-        revert Callback_NotImplemented();
     }
 
     // ========== INTERNAL FUNCTIONS ========== //

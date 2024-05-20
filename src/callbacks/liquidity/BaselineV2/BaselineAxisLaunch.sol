@@ -9,12 +9,9 @@ import {IAuctionHouse} from "src/interfaces/IAuctionHouse.sol";
 import {
     Keycode as AxisKeycode,
     keycodeFromVeecode,
-    fromKeycode as fromAxisKeycode,
-    toKeycode as toAxisKeycode
+    fromKeycode as fromAxisKeycode
 } from "src/modules/Keycode.sol";
 import {Module as AxisModule} from "src/modules/Modules.sol";
-import {DerivativeModule} from "src/modules/Derivative.sol";
-import {ILinearVesting} from "src/interfaces/modules/derivatives/ILinearVesting.sol";
 
 // Baseline dependencies
 import {
@@ -53,10 +50,9 @@ contract BaselineAxisLaunch is BaseCallback, Policy, Owned {
 
     // ========== DATA STRUCTURES ========== //
 
-    // TODO consider splitting into different structs for FPS vs EMP
     struct CreateData {
-        int24 initFloorTick;
-        int24 initActiveTick;
+        int24 initFloorTick; // only used for fixed price sales
+        int24 initActiveTick; // only used for fixed price sales
         uint48 percentReservesFloor; // Percent with 3 decimals of precision, e.g. 100% = 100_000 and 1% = 1_000
         bytes allowlistParams;
     }
@@ -78,8 +74,6 @@ contract BaselineAxisLaunch is BaseCallback, Policy, Owned {
     uint256 public reserveBalance;
 
     // Config
-    int24 public initFloorTick;
-    int24 public initActiveTick;
     uint48 public percentReservesFloor;
 
     // Axis Auction Variables
@@ -160,12 +154,12 @@ contract BaselineAxisLaunch is BaseCallback, Policy, Owned {
     // onCreate: true
     // onCancel: true
     // onCurate: true
-    // onPurchase: true
+    // onPurchase: false
     // onBid: true
     // onSettle: true
     // receiveQuoteTokens: true
     // sendBaseTokens: true
-    // Contract prefix should be: 11111111 = 0xFF
+    // Contract prefix should be: 11101111 = 0xEF
 
     /// @inheritdoc     BaseCallback
     /// @dev            This function performs the following:
@@ -224,67 +218,34 @@ contract BaselineAxisLaunch is BaseCallback, Policy, Owned {
 
         // Case 1: EMP Batch Auction
         if (fromAxisKeycode(auctionFormat) == bytes5("EMPA")) {
-            // Auction must be prefunded, this can't fail because it's checked in the AH as well, but including for completeness
-            if (!prefund_) revert Callback_InvalidParams();
-
             // We disregard the initFloorTick and initActiveTick for EMPA auctions since it will be determined by the clearing price
-
-            // Mint the capacity of baseline tokens to the auction house
-            BPOOL.mint(msg.sender, capacity_);
-            initialCirculatingSupply += capacity_;
+            // Therefore, this is a no-op.
         }
-        // Case 2: Fixed Price Sale Atomic Auction
-        else if (fromAxisKeycode(auctionFormat) == bytes5("FPSA")) {
+        // Case 2: Fixed Price Batch Auction
+        else if (fromAxisKeycode(auctionFormat) == bytes5("FPBA")) {
             // Baseline pool must be initialized now with the correct tick parameters
             // They should have been passed into the callback data
             if (cbData.initFloorTick == 0 || cbData.initActiveTick == 0) {
                 revert Callback_InvalidParams();
             }
 
-            // Check that the auction has linear vesting enabled, so that buyers cannot front-run the pool deposits
-            DerivativeModule derivativeModule = DerivativeModule(
-                address(IAuctionHouse(AUCTION_HOUSE).getDerivativeModuleForId(lotId))
-            );
-            if (
-                fromAxisKeycode(keycodeFromVeecode(derivativeModule.VEECODE()))
-                    != fromAxisKeycode(toAxisKeycode("LIV"))
-            ) {
-                revert Callback_InvalidParams();
-            }
-
-            // Grab the conclusion time of the auction
-            (, uint48 lotConclusion,,,,,,) =
-                IAuctionHouse(AUCTION_HOUSE).getAuctionModuleForId(lotId).lotData(lotId);
-
-            // Grab the vesting params from the lot's Routing data
-            (,,,,,,,, bytes memory derivativeParams) =
-                IAuctionHouse(AUCTION_HOUSE).lotRouting(lotId);
-            ILinearVesting.VestingParams memory vestingParams =
-                abi.decode(derivativeParams, (ILinearVesting.VestingParams));
-
-            // Check that the vesting starts after the conclusion of the auction
-            if (vestingParams.start <= lotConclusion) {
-                revert Callback_InvalidParams();
-            }
-
             // No need to check if the floor tick is less than the active tick, as the BPOOL module will do so.
 
             // Initialize the Baseline pool with the provided tick data, since we know it ahead of time.
-            // This also allows us to deposit liquidity into the pool on each purchase.
-            // Note: Because of this, any FPS auction using this callback should require payouts to vest
-            // until the auction concludes to avoid trading from affecting the tick values.
             BPOOL.initializePool(cbData.initFloorTick, cbData.initActiveTick);
-
-            // If auction is prefunded, we need to mint the capacity of baseline tokens to the auction house
-            if (prefund_) {
-                BPOOL.mint(msg.sender, capacity_);
-                initialCirculatingSupply += capacity_;
-            }
         }
         // No other supported formats
         else {
             revert Callback_InvalidParams();
         }
+
+        // Auction must be prefunded for batch auctions (which is the only type supported with this callback),
+        // this can't fail because it's checked in the AH as well, but including for completeness
+        if (!prefund_) revert Callback_InvalidParams();
+
+        // Mint the capacity of baseline tokens to the auction house to prefund the auction
+        BPOOL.mint(msg.sender, capacity_);
+        initialCirculatingSupply += capacity_;
     }
 
     function __onCreate(
@@ -308,25 +269,18 @@ contract BaselineAxisLaunch is BaseCallback, Policy, Owned {
     ///
     ///                 This function reverts if:
     ///                 - `lotId_` is not the same as the stored `lotId`
-    function _onCancel(
-        uint96 lotId_,
-        uint256 refund_,
-        bool prefunded_,
-        bytes calldata
-    ) internal override {
+    function _onCancel(uint96 lotId_, uint256 refund_, bool, bytes calldata) internal override {
         // Validate the lot ID
         if (lotId_ != lotId) revert Callback_InvalidParams();
 
-        // Burn the refunded tokens, if prefunded
-        if (prefunded_) {
-            // Verify that the callback received the correct amount of bAsset tokens
-            if (bAsset.balanceOf(address(this)) < refund_) revert Callback_MissingFunds();
+        // Burn any refunded tokens (all auctions are prefunded)
+        // Verify that the callback received the correct amount of bAsset tokens
+        if (bAsset.balanceOf(address(this)) < refund_) revert Callback_MissingFunds();
 
-            // Send tokens to BPOOL and then burn
-            initialCirculatingSupply -= refund_;
-            Transfer.transfer(bAsset, address(BPOOL), refund_, false);
-            BPOOL.burnAllBAssetsInContract();
-        }
+        // Send tokens to BPOOL and then burn
+        initialCirculatingSupply -= refund_;
+        Transfer.transfer(bAsset, address(BPOOL), refund_, false);
+        BPOOL.burnAllBAssetsInContract();
     }
 
     /// @inheritdoc     BaseCallback
@@ -342,18 +296,15 @@ contract BaselineAxisLaunch is BaseCallback, Policy, Owned {
     function _onCurate(
         uint96 lotId_,
         uint256 curatorFee_,
-        bool prefunded_,
+        bool,
         bytes calldata
-    ) internal override {
+    ) internal view override {
         // Validate the lot ID
         if (lotId_ != lotId) revert Callback_InvalidParams();
 
-        // If the auction is prefunded and the curator fee is non-zero
-        if (prefunded_ && curatorFee_ > 0) {
-            // Mint the required amount of bAsset tokens to the AuctionHouse
-            BPOOL.mint(msg.sender, curatorFee_);
-            initialCirculatingSupply += curatorFee_;
-        }
+        // Require that the curator fee in the Auction House is zero
+        // We do this to not dilute the buyer's backing (and therefore the price that the Baseline pool is initialized at)
+        if (curatorFee_ > 0) revert Callback_InvalidParams();
 
         // TODO could support external curator fee with CREDT
         // Steps:
@@ -364,65 +315,17 @@ contract BaselineAxisLaunch is BaseCallback, Policy, Owned {
         // 4. In onSettle, decrease the credit if there is a refund.
     }
 
-    /// @inheritdoc     BaseCallback
-    /// @dev            This function performs the following:
-    ///                 - Validates that sufficient quote tokens (reserve) have been transferred by the AuctionHouse
-    ///                 - Calls the `__onPurchase()` callback used by the allowlist
-    ///                 - If not prefunded, mints `payout_` amount of bAsset tokens to the AuctionHouse
-    ///                 - Deploys liquidity to the Baseline pool
-    ///
-    ///                 Note that there may be reserve assets left over after liquidity deployment, which must be manually withdrawn by the owner using `withdrawReserves()`
-    ///
-    ///                 It has the following assumptions:
-    ///                 - BaseCallback has already validated the lot ID
-    ///                 - The AuctionHouse has already sent the correct amount of quote tokens (reserves)
-    ///                 - The AuctionHouse expects the callback function to send the correct amount of base tokens (bAssets)
+    // Not implemented since atomic auctions are not supported
     function _onPurchase(
-        uint96 lotId_,
-        address buyer_,
-        uint256 amount_,
-        uint256 payout_,
-        bool prefunded_,
-        bytes calldata callbackData_
-    ) internal override {
-        // Verify that the callback received at least the amount of reserves expected
-        uint256 newBalance = RESERVE.balanceOf(address(this));
-        if (newBalance < reserveBalance + amount_) revert Callback_MissingFunds();
-
-        // Update the reserve balance
-        reserveBalance = newBalance;
-
-        // This contract can be extended with an allowlist for the auction
-        // Call a lower-level function where this information can be used
-        // We do this before token interactions to conform to CEI
-        __onPurchase(lotId_, buyer_, amount_, payout_, prefunded_, callbackData_);
-
-        // If not prefunded, the auction house will expect the payout_ to be sent
-        if (!prefunded_ && payout_ > 0) {
-            BPOOL.mint(msg.sender, payout_);
-            initialCirculatingSupply += payout_;
-        }
-
-        // Calculate the reserves to deploy in each range
-        uint256 floorReserves = (amount_ * percentReservesFloor) / ONE_HUNDRED_PERCENT;
-        uint256 anchorReserves = amount_ - floorReserves;
-
-        // Deploy the reserves to the Baseline pool
-        (, uint256 reservesDeployed) = _deployLiquidity(floorReserves, anchorReserves);
-
-        // Decrease the reserve balance by the amount of reserves deployed (since it may be different to the `floorReserves` and `anchorReserves`)
-        reserveBalance -= reservesDeployed;
+        uint96,
+        address,
+        uint256,
+        uint256,
+        bool,
+        bytes calldata
+    ) internal pure override {
+        revert Callback_NotImplemented();
     }
-
-    // Override with allowlist functionality
-    function __onPurchase(
-        uint96 lotId_,
-        address buyer_,
-        uint256 amount_,
-        uint256 payout_,
-        bool prefunded_,
-        bytes calldata callbackData_
-    ) internal virtual {}
 
     // No logic is needed for this function here, but it can be overridden
     // by a lower-level contract to provide allowlist functionality
@@ -464,9 +367,6 @@ contract BaselineAxisLaunch is BaseCallback, Policy, Owned {
         // Validate the lot ID
         if (lotId_ != lotId) revert Callback_InvalidParams();
 
-        // Validate that the auction format is EMPA (only supported batch auction)
-        if (fromAxisKeycode(auctionFormat) != bytes5("EMPA")) revert Callback_InvalidParams();
-
         // Validate that the auction is not already complete
         if (auctionComplete) revert Callback_AlreadyComplete();
 
@@ -484,20 +384,24 @@ contract BaselineAxisLaunch is BaseCallback, Policy, Owned {
         // Subtract refund from initial supply
         initialCirculatingSupply -= refund_;
 
-        // Calculate the clearing price in quote tokens per base token
-        uint256 clearingPrice =
-            (proceeds_ * (uint256(10) ** BPOOL.decimals())) / initialCirculatingSupply;
-
-        // TODO discuss with baseline team
-        initFloorTick = 0; // TODO calculate from clearing price
-        initActiveTick = 0; // TODO calculate from clearing price
-
         // Burn any refunded bAsset tokens that were sent from the auction house
         Transfer.transfer(bAsset, address(BPOOL), refund_, false);
         BPOOL.burnAllBAssetsInContract();
 
-        // Initialize the Baseline pool with the calculated tick data
-        BPOOL.initializePool(initFloorTick, initActiveTick);
+        // If EMP Batch Auction, we need to calculate tick values and initialize the pool
+        if (fromAxisKeycode(auctionFormat) == bytes5("EMPA")) {
+            // Calculate the clearing price in quote tokens per base token
+            uint256 clearingPrice =
+                (proceeds_ * (uint256(10) ** BPOOL.decimals())) / initialCirculatingSupply;
+
+            // TODO discuss with baseline team
+            // We have to burn extra bTokens above before initializing the pool
+            uint24 initFloorTick = 0; // TODO calculate from clearing price
+            uint24 initActiveTick = 0; // TODO calculate from clearing price
+
+            // Initialize the Baseline pool with the calculated tick data
+            BPOOL.initializePool(int24(initFloorTick), int24(initActiveTick));
+        }
 
         // Calculate the reserves to deploy in each range
         uint256 floorReserves = (proceeds_ * percentReservesFloor) / ONE_HUNDRED_PERCENT;
@@ -509,6 +413,7 @@ contract BaselineAxisLaunch is BaseCallback, Policy, Owned {
 
     // ========== BASELINE POOL INTERACTIONS ========== //
 
+    // Copied from BaselineV2/initializeProtocol.sol
     function _deployLiquidity(
         uint256 _initialReservesF,
         uint256 _initialReservesA
@@ -547,6 +452,7 @@ contract BaselineAxisLaunch is BaseCallback, Policy, Owned {
         );
     }
 
+    // Copied from BaselineV2/initializeProtocol.sol
     function calculateTotalCapacity() public view returns (uint256 capacity_) {
         PositionData memory floor = BPOOL.getPositionData(Range.FLOOR);
         PositionData memory anchor = BPOOL.getPositionData(Range.ANCHOR);

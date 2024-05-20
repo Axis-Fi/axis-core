@@ -49,40 +49,27 @@ contract BALwithAllowlist is BaselineAxisLaunch {
         merkleRoot = merkleRoot_;
     }
 
-    function __onPurchase(
-        uint96 lotId_,
-        address buyer_,
-        uint256 amount_,
-        uint256 payout_,
-        bool prefunded_,
-        bytes calldata callbackData_
-    ) internal override {
-        // Validate that the buyer is allowed to participate
-        _canParticipate(buyer_, callbackData_);
-
-        // Call any additional implementation-specific logic
-        ___onPurchase(lotId_, buyer_, amount_, payout_, prefunded_, callbackData_);
-    }
-
-    function ___onPurchase(
-        uint96 lotId_,
-        address buyer_,
-        uint256 amount_,
-        uint256 payout_,
-        bool prefunded_,
-        bytes calldata callbackData_
-    ) internal virtual {}
-
     function _onBid(
-        uint96,
-        uint64,
+        uint96 lotId_,
+        uint64 bidId_,
         address buyer_,
-        uint256,
+        uint256 amount_,
         bytes calldata callbackData_
     ) internal virtual override {
         // Validate that the buyer is allowed to participate
         _canParticipate(buyer_, callbackData_);
+
+        // Call any additional implementation-specific logic
+        __onBid(lotId_, bidId_, buyer_, amount_, callbackData_);
     }
+
+    function __onBid(
+        uint96 lotId_,
+        uint64 bidId_,
+        address buyer_,
+        uint256 amount_,
+        bytes calldata callbackData_
+    ) internal virtual {}
 
     // ========== INTERNAL FUNCTIONS ========== //
 
