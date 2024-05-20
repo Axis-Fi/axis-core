@@ -1,6 +1,7 @@
 lib/**
 src/modules/Modules.sol
 src/modules/Keycode.sol
+src/callbacks/liquidity/BaselineV2/lib/**
 src/lib/**
 test/lib/uniswap-v2/*.sol
 test/lib/uniswap-v3/*.sol
