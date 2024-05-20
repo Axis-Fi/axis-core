@@ -172,7 +172,7 @@ abstract contract FpbTest is Test, Permit2User {
         _module.bid(_lotId, _BIDDER, _REFERRER, amount_, abi.encode(""));
     }
 
-    modifier givenBid(uint256 amount_) {
+    modifier givenBidIsCreated(uint256 amount_) {
         _createBid(amount_);
         _;
     }
@@ -204,6 +204,25 @@ abstract contract FpbTest is Test, Permit2User {
 
     modifier givenDuringLotSettlePeriod() {
         vm.warp(_start + _DURATION + _module.dedicatedSettlePeriod() - 1);
+        _;
+    }
+
+    function _refundBid(uint64 bidId_) internal returns (uint256 refundAmount) {
+        vm.prank(address(_auctionHouse));
+        return _module.refundBid(_lotId, bidId_, 0, _BIDDER);
+    }
+
+    modifier givenBidIsRefunded(uint64 bidId_) {
+        _refundBid(bidId_);
+        _;
+    }
+
+    modifier givenBidIsClaimed(uint64 bidId_) {
+        uint64[] memory bidIds = new uint64[](1);
+        bidIds[0] = bidId_;
+
+        vm.prank(address(_auctionHouse));
+        _module.claimBids(_lotId, bidIds);
         _;
     }
 
