@@ -6,8 +6,8 @@ import {console2} from "forge-std/Script.sol";
 // System contracts
 import {BlastAtomicAuctionHouse} from "src/blast/BlastAtomicAuctionHouse.sol";
 import {BlastBatchAuctionHouse} from "src/blast/BlastBatchAuctionHouse.sol";
-import {BlastEMP} from "src/blast/modules/auctions/BlastEMP.sol";
-import {BlastFPS} from "src/blast/modules/auctions/BlastFPS.sol";
+import {BlastEMP} from "src/blast/modules/auctions/batch/BlastEMP.sol";
+import {BlastFPS} from "src/blast/modules/auctions/atomic/BlastFPS.sol";
 import {BlastLinearVesting} from "src/blast/modules/derivatives/BlastLinearVesting.sol";
 
 import {Deploy} from "script/deploy/Deploy.s.sol";

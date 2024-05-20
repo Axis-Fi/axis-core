@@ -2,7 +2,7 @@
 pragma solidity 0.8.19;
 
 import {IBatchAuctionHouse} from "src/interfaces/IBatchAuctionHouse.sol";
-import {EncryptedMarginalPrice} from "src/modules/auctions/EMP.sol";
+import {EncryptedMarginalPrice} from "src/modules/auctions/batch/EMP.sol";
 import {ILinearVesting} from "src/interfaces/modules/derivatives/ILinearVesting.sol";
 import {LinearVesting} from "src/modules/derivatives/LinearVesting.sol";
 import {Point, ECIES} from "src/lib/ECIES.sol";
