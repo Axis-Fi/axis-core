@@ -148,8 +148,12 @@ abstract contract FpbTest is Test, Permit2User {
         _;
     }
 
-    modifier givenLotHasStarted() {
+    function _startLot() internal {
         vm.warp(_start + 1);
+    }
+
+    modifier givenLotHasStarted() {
+        _startLot();
         _;
     }
 
@@ -189,8 +193,12 @@ abstract contract FpbTest is Test, Permit2User {
         _;
     }
 
-    modifier givenLotSettlePeriodHasPassed() {
+    function _warpAfterSettlePeriod() internal {
         vm.warp(_start + _DURATION + _module.dedicatedSettlePeriod());
+    }
+
+    modifier givenLotSettlePeriodHasPassed() {
+        _warpAfterSettlePeriod();
         _;
     }
 

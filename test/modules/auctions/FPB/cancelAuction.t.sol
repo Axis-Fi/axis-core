@@ -96,7 +96,8 @@ contract FpbCancelAuctionTest is FpbTest {
 
     function test_auctionStarted_reverts() public givenLotIsCreated givenLotHasStarted {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(IFixedPriceBatch.Auction_WrongState.selector, _lotId);
+        bytes memory err =
+            abi.encodeWithSelector(IFixedPriceBatch.Auction_WrongState.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function
