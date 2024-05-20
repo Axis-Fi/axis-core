@@ -31,6 +31,7 @@ contract FpbClaimBidsTest is FpbTest {
     //   [X] it returns the payout and refund amounts and updates the bid status
     //  [X] it returns the refund amount and updates the bid status
     // [X] it returns the refund amount and updates the bid status
+    // [X] it returns the bid claims for multiple bids
 
     function test_notParent_reverts()
         public
@@ -245,6 +246,44 @@ contract FpbClaimBidsTest is FpbTest {
         // Check the bid state
         IFixedPriceBatch.Bid memory bidData = _module.getBid(_lotId, 1);
         assertEq(uint8(bidData.status), uint8(IFixedPriceBatch.BidStatus.Submitted), "status");
+
+        IFixedPriceBatch.Bid memory bidDataTwo = _module.getBid(_lotId, 2);
+        assertEq(uint8(bidDataTwo.status), uint8(IFixedPriceBatch.BidStatus.Claimed), "status");
+    }
+
+    function test_multipleBids()
+        public
+        givenLotIsCreated
+        givenLotHasStarted
+        givenBidIsCreated(6e18)
+        givenBidIsCreated(8e18)
+        givenLotHasConcluded
+        givenLotIsSettled
+    {
+        // Claim both bids
+        uint64[] memory bidIds = new uint64[](2);
+        bidIds[0] = 1;
+        bidIds[1] = 2;
+
+        vm.prank(address(_auctionHouse));
+        (IBatchAuction.BidClaim[] memory bidClaims,) = _module.claimBids(_lotId, bidIds);
+
+        // Check values
+        assertEq(bidClaims.length, 2, "bidClaims length");
+
+        IBatchAuction.BidClaim memory bidClaim = bidClaims[0];
+        assertEq(bidClaim.paid, 6e18, "paid");
+        assertEq(bidClaim.refund, 0, "refund");
+        assertEq(bidClaim.payout, 3e18, "payout"); // 6/2
+
+        IBatchAuction.BidClaim memory bidClaimTwo = bidClaims[1];
+        assertEq(bidClaimTwo.paid, 8e18, "paid");
+        assertEq(bidClaimTwo.refund, 0, "refund");
+        assertEq(bidClaimTwo.payout, 4e18, "payout"); // 8/2
+
+        // Check the bid state
+        IFixedPriceBatch.Bid memory bidData = _module.getBid(_lotId, 1);
+        assertEq(uint8(bidData.status), uint8(IFixedPriceBatch.BidStatus.Claimed), "status");
 
         IFixedPriceBatch.Bid memory bidDataTwo = _module.getBid(_lotId, 2);
         assertEq(uint8(bidDataTwo.status), uint8(IFixedPriceBatch.BidStatus.Claimed), "status");
