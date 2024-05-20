@@ -25,6 +25,7 @@ import {Range, PositionData, IBPOOLv1} from "src/callbacks/liquidity/BaselineV2/
 import {ICREDTv1} from "src/callbacks/liquidity/BaselineV2/lib/ICREDT.sol";
 import {LiquidityAmounts} from "lib/uniswap-v3-periphery/contracts/libraries/LiquidityAmounts.sol";
 import {TimeslotLib} from "src/callbacks/liquidity/BaselineV2/lib/TimeslotLib.sol";
+import {TickMath} from "lib/uniswap-v3-core/contracts/libraries/TickMath.sol";
 
 // Other libraries
 import {Owned} from "lib/solmate/src/auth/Owned.sol";
@@ -390,20 +391,25 @@ contract BaselineAxisLaunch is BaseCallback, Policy, Owned {
 
         // If EMP Batch Auction, we need to calculate tick values and initialize the pool
         if (fromAxisKeycode(auctionFormat) == bytes5("EMPA")) {
-            // Calculate the clearing price in quote tokens per base token
-            uint256 clearingPrice =
-                (proceeds_ * (uint256(10) ** BPOOL.decimals())) / initialCirculatingSupply;
+            // Calculate the clearing price as an 18 decimal fixed point number
+            uint256 clearingPrice = (proceeds_ * (uint256(10) ** bAsset.decimals()) * 1e18)
+                / (initialCirculatingSupply * (uint256(10) ** RESERVE.decimals()));
 
-            // TODO discuss with baseline team
-            // We have to burn extra bTokens above before initializing the pool
-            uint24 initFloorTick = 0; // TODO calculate from clearing price
-            uint24 initActiveTick = 0; // TODO calculate from clearing price
+            // Calculate sqrtPriceX96 from the clearing price
+            uint256 sqrtPriceX96 = FixedPointMathLib.sqrt(clearingPrice) << 96;
+
+            // TODO need to discuss with baseline team on how to determine floor and active ticks from price.
+            // TODO can this be cast to uint160?
+            int24 initFloorTick = TickMath.getTickAtSqrtRatio(uint160(sqrtPriceX96));
+            int24 initActiveTick = 0; // TODO calculate from clearing price
 
             // Initialize the Baseline pool with the calculated tick data
             BPOOL.initializePool(initFloorTick, initActiveTick);
         }
 
         // Calculate the reserves to deploy in each range
+        // TODO per above, probably need to calculate the percent in each range based on the
+        // desired initial premium instead of providing directly.
         uint256 floorReserves = (proceeds_ * percentReservesFloor) / ONE_HUNDRED_PERCENT;
         uint256 anchorReserves = proceeds_ - floorReserves;
 
