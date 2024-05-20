@@ -400,7 +400,7 @@ contract BaselineAxisLaunch is BaseCallback, Policy, Owned {
             uint24 initActiveTick = 0; // TODO calculate from clearing price
 
             // Initialize the Baseline pool with the calculated tick data
-            BPOOL.initializePool(int24(initFloorTick), int24(initActiveTick));
+            BPOOL.initializePool(initFloorTick, initActiveTick);
         }
 
         // Calculate the reserves to deploy in each range
