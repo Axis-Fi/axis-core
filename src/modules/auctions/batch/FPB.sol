@@ -14,6 +14,8 @@ import {BatchAuctionModule} from "src/modules/auctions/BatchAuctionModule.sol";
 
 import {Module, Veecode, toVeecode} from "src/modules/Modules.sol";
 
+/// @title  FixedPriceBatch
+/// @notice A module for creating fixed price batch auctions
 contract FixedPriceBatch is BatchAuctionModule, IFixedPriceBatch {
     // ========== STATE VARIABLES ========== //
 
@@ -55,8 +57,9 @@ contract FixedPriceBatch is BatchAuctionModule, IFixedPriceBatch {
     ///             This function reverts if:
     ///             - The parameters cannot be decoded into the correct format
     ///             - The price is zero
+    ///             - The minimum fill percentage is greater than 100%
     ///
-    /// @param      params_    ABI-encoded data of type `uint256`
+    /// @param      params_    ABI-encoded data of type `AuctionDataParams`
     function _auction(uint96 lotId_, Lot memory lot_, bytes memory params_) internal override {
         // Decode the auction params
         AuctionDataParams memory params = abi.decode(params_, (AuctionDataParams));
@@ -70,8 +73,8 @@ contract FixedPriceBatch is BatchAuctionModule, IFixedPriceBatch {
         // Set the auction data
         AuctionData storage data = _auctionData[lotId_];
         data.price = params.price;
+        data.nextBidId = 1;
         // data.status = LotStatus.Created; // Set by default
-        // data.nextBidId = 0; // Set by default
         // data.totalBidAmount = 0; // Set by default
         // We round up to be conservative with the minimums
         data.minFilled =
@@ -101,6 +104,26 @@ contract FixedPriceBatch is BatchAuctionModule, IFixedPriceBatch {
 
     // ========== BID ========== //
 
+    function _calculatePartialFill(
+        uint64 bidId_,
+        uint256 capacity_,
+        uint256 capacityExpended_,
+        uint96 bidAmount_,
+        uint256 baseScale_,
+        uint256 price_
+    ) internal pure returns (PartialFill memory) {
+        // Calculate the bid payout if it were fully filled
+        uint256 fullFill = Math.fullMulDiv(bidAmount_, baseScale_, price_);
+        uint256 excess = capacityExpended_ - capacity_;
+
+        // Refund will be within the bounds of uint96
+        // bidAmount is uint96, excess < fullFill, so bidAmount * excess / fullFill < bidAmount < uint96 max
+        uint96 refund = uint96(Math.fullMulDiv(bidAmount_, excess, fullFill));
+        uint256 payout = fullFill - excess;
+
+        return (PartialFill({bidId: bidId_, refund: refund, payout: payout}));
+    }
+
     /// @inheritdoc BatchAuctionModule
     /// @dev        This function performs the following:
     ///             - Validates inputs
@@ -122,21 +145,24 @@ contract FixedPriceBatch is BatchAuctionModule, IFixedPriceBatch {
         address referrer_,
         uint256 amount_,
         bytes calldata
-    ) internal override returns (uint64 bidId) {
+    ) internal override returns (uint64) {
         // Amount cannot be zero or greater than the maximum uint96
         if (amount_ == 0 || amount_ > type(uint96).max) revert Auction_InvalidParams();
 
         // Load the lot and auction data
-        Lot memory lot = lotData[lotId_];
+        uint256 lotCapacity = lotData[lotId_].capacity;
         AuctionData storage data = _auctionData[lotId_];
 
         // Get the bid ID and increment the next bid ID
-        bidId = data.nextBidId++;
+        uint64 bidId = data.nextBidId++;
+
+        // Has already been checked to be in bounds
+        uint96 amount96 = uint96(amount_);
 
         // Store the bid
         _bids[lotId_][bidId] = Bid({
             bidder: bidder_,
-            amount: uint96(amount_),
+            amount: amount96,
             referrer: referrer_,
             status: BidStatus.Submitted
         });
@@ -150,29 +176,41 @@ contract FixedPriceBatch is BatchAuctionModule, IFixedPriceBatch {
         // If not, then the payout is calculated at the full amount and the auction proceeds
         uint256 baseScale = 10 ** lotData[lotId_].baseTokenDecimals;
         uint256 newFilledCapacity = Math.fullMulDiv(data.totalBidAmount, baseScale, data.price);
-        if (newFilledCapacity >= lot.capacity) {
-            // If partial fill, then calculate new payout and refund
-            if (newFilledCapacity > lot.capacity) {
-                // Calculate the new payout from the remaining capacity
-                uint256 payout = lot.capacity
-                    - Math.fullMulDiv(data.totalBidAmount - amount_, baseScale, data.price);
-                uint256 refund = amount_ - Math.fullMulDivUp(payout, data.price, baseScale); // TODO rounding up to prevent refund from being too large, check this
 
-                // Store the partial fill
-                // We can cast refund to uint96 because it is less than amount_ which is less than type(uint96).max
-                _lotPartialFill[lotId_] =
-                    PartialFill({bidId: bidId, refund: uint96(refund), payout: payout});
-
-                // Decrement the total bid amount by the refund
-                data.totalBidAmount -= refund;
-            }
-
-            // End the auction
-            // We don't settle here to preserve callback and storage interactions associated with calling "settle"
-            lotData[lotId_].conclusion = uint48(block.timestamp);
+        // If the new filled capacity is less than the lot capacity, the auction continues
+        if (newFilledCapacity < lotCapacity) {
+            return bidId;
         }
+
+        // If partial fill, then calculate new payout and refund
+        if (newFilledCapacity > lotCapacity) {
+            // Store the partial fill
+            _lotPartialFill[lotId_] = _calculatePartialFill(
+                bidId, lotCapacity, newFilledCapacity, amount96, baseScale, data.price
+            );
+
+            // Decrement the total bid amount by the refund
+            data.totalBidAmount -= _lotPartialFill[lotId_].refund;
+        }
+
+        // End the auction
+        // We don't settle here to preserve callback and storage interactions associated with calling "settle"
+        lotData[lotId_].conclusion = uint48(block.timestamp);
+
+        return bidId;
     }
 
+    /// @inheritdoc BatchAuctionModule
+    /// @dev        This function performs the following:
+    ///             - Marks the bid as claimed
+    ///             - Returns the amount to be refunded
+    ///
+    ///             This function assumes:
+    ///             - The lot ID has been validated
+    ///             - The bid ID has been validated
+    ///             - The caller has been authorized
+    ///             - The auction is active
+    ///             - The bid has not been refunded
     function _refundBid(
         uint96 lotId_,
         uint64 bidId_,
@@ -193,6 +231,21 @@ contract FixedPriceBatch is BatchAuctionModule, IFixedPriceBatch {
         refund = bid.amount;
     }
 
+    /// @inheritdoc BatchAuctionModule
+    /// @dev        This function performs the following:
+    ///             - Validates the bid
+    ///             - Marks the bid as claimed
+    ///             - Calculates the payout and refund
+    ///
+    ///             This function assumes:
+    ///             - The lot ID has been validated
+    ///             - The caller has been authorized
+    ///             - The auction has concluded
+    ///             - The auction is not settled
+    ///
+    ///             This function reverts if:
+    ///             - The bid ID is invalid
+    ///             - The bid has already been claimed
     function _claimBids(
         uint96 lotId_,
         uint64[] calldata bidIds_
@@ -216,6 +269,21 @@ contract FixedPriceBatch is BatchAuctionModule, IFixedPriceBatch {
 
     // ========== SETTLEMENT ========== //
 
+    /// @inheritdoc BatchAuctionModule
+    /// @dev        This function performs the following:
+    ///             - Sets the auction status to settled
+    ///             - Calculates the filled capacity
+    ///             - If the filled capacity is less than the minimum filled capacity, the auction does not clear
+    ///             - If the filled capacity is greater than or equal to the minimum filled capacity, the auction clears
+    ///             - Returns the total in, total out, and whether the auction is finished
+    ///
+    ///             This function assumes:
+    ///             - The lot ID has been validated
+    ///             - The auction has concluded
+    ///             - The auction is not settled
+    ///
+    ///             This function reverts if:
+    ///             - None
     function _settle(
         uint96 lotId_,
         uint256
@@ -251,6 +319,17 @@ contract FixedPriceBatch is BatchAuctionModule, IFixedPriceBatch {
         finished_ = true;
     }
 
+    /// @inheritdoc BatchAuctionModule
+    /// @dev        This function performs the following:
+    ///             - Sets the auction status to Settled
+    ///
+    ///             This function assumes:
+    ///             - The lot ID has been validated
+    ///             - The auction is not settled
+    ///             - The dedicated settle period has not passed
+    ///
+    ///             This function reverts if:
+    ///             - None
     function _abort(uint96 lotId_) internal override {
         // Set the auction status to settled
         _auctionData[lotId_].status = LotStatus.Settled;
