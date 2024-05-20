@@ -3,6 +3,7 @@ pragma solidity 0.8.19;
 
 import {IBatchAuction} from "src/interfaces/modules/IBatchAuction.sol";
 
+/// @notice Interface for fixed price batch auctions
 interface IFixedPriceBatch is IBatchAuction {
     // ========== ERRORS ========== //
 
@@ -25,11 +26,23 @@ interface IFixedPriceBatch is IBatchAuction {
         Claimed
     }
 
+    /// @notice Parameters for a fixed price auction
+    ///
+    /// @param  price            The fixed price of the lot
+    /// @param  minFillPercent   The minimum percentage of the lot that must be filled in order to settle
     struct AuctionDataParams {
         uint256 price;
         uint24 minFillPercent;
     }
 
+    /// @notice Core data for an auction lot
+    ///
+    /// @param  price              The price of the lot
+    /// @param  status             The status of the lot
+    /// @param  nextBidId          The ID of the next bid
+    /// @param  settlementCleared  True if the settlement has been cleared
+    /// @param  totalBidAmount     The total amount of all bids
+    /// @param  minFilled          The minimum amount of the lot that must be filled in order to settle
     struct AuctionData {
         uint256 price; // 32 - slot 1
         LotStatus status; // 1 +
