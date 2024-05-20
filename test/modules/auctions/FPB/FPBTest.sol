@@ -173,6 +173,32 @@ abstract contract FpbTest is Test, Permit2User {
         _;
     }
 
+    modifier givenLotIsAborted() {
+        vm.prank(address(_auctionHouse));
+        _module.abort(_lotId);
+        _;
+    }
+
+    function _settleLot() internal {
+        vm.prank(address(_auctionHouse));
+        _module.settle(_lotId, 100_000);
+    }
+
+    modifier givenLotIsSettled() {
+        _settleLot();
+        _;
+    }
+
+    modifier givenLotSettlePeriodHasPassed() {
+        vm.warp(_start + _DURATION + _module.dedicatedSettlePeriod());
+        _;
+    }
+
+    modifier givenDuringLotSettlePeriod() {
+        vm.warp(_start + _DURATION + _module.dedicatedSettlePeriod() - 1);
+        _;
+    }
+
     // ======== Internal Functions ======== //
 
     function _scaleQuoteTokenAmount(uint256 amount_) internal view returns (uint256) {

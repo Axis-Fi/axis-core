@@ -22,7 +22,7 @@ contract FpbCreateAuctionTest is FpbTest {
     //  [X] it reverts
     // [X] when the start time is 0
     //  [X] it sets it to the current block timestamp
-    // [ ] it sets the price and minFilled
+    // [X] it sets the price and minFilled
 
     function test_notParent_reverts() public {
         // Expect revert
