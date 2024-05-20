@@ -159,12 +159,12 @@ contract FpbBidTest is FpbTest {
 
         IFixedPriceBatch.AuctionData memory auctionData = _module.getAuctionData(_lotId);
         assertEq(uint8(auctionData.status), uint8(IFixedPriceBatch.LotStatus.Created), "status");
-        assertEq(auctionData.nextBidId, 2, "nextBidId");
+        assertEq(auctionData.nextBidId, 3, "nextBidId");
         assertEq(auctionData.settlementCleared, false, "settlementCleared"); // Not settled yet
         assertEq(auctionData.totalBidAmount, 20e18, "totalBidAmount");
 
         // Assert bid one
-        IFixedPriceBatch.Bid memory bidData = _module.getBid(_lotId, 0);
+        IFixedPriceBatch.Bid memory bidData = _module.getBid(_lotId, 1);
         assertEq(bidData.bidder, _BIDDER, "bid one: bidder");
         assertEq(bidData.referrer, _REFERRER, "bid one: referrer");
         assertEq(bidData.amount, 10e18, "bid one: amount");
@@ -173,7 +173,7 @@ contract FpbBidTest is FpbTest {
         );
 
         // Assert bid two
-        bidData = _module.getBid(_lotId, 1);
+        bidData = _module.getBid(_lotId, 2);
         assertEq(bidData.bidder, _BIDDER, "bid two: bidder");
         assertEq(bidData.referrer, _REFERRER, "bid two: referrer");
         assertEq(bidData.amount, 10e18, "bid two: amount");
@@ -208,12 +208,12 @@ contract FpbBidTest is FpbTest {
 
         IFixedPriceBatch.AuctionData memory auctionData = _module.getAuctionData(_lotId);
         assertEq(uint8(auctionData.status), uint8(IFixedPriceBatch.LotStatus.Created), "status");
-        assertEq(auctionData.nextBidId, 2, "nextBidId");
+        assertEq(auctionData.nextBidId, 3, "nextBidId");
         assertEq(auctionData.settlementCleared, false, "settlementCleared"); // Not settled yet
         assertEq(auctionData.totalBidAmount, 20e18, "totalBidAmount"); // Excludes refund
 
         // Assert bid one
-        IFixedPriceBatch.Bid memory bidData = _module.getBid(_lotId, 0);
+        IFixedPriceBatch.Bid memory bidData = _module.getBid(_lotId, 1);
         assertEq(bidData.bidder, _BIDDER, "bid one: bidder");
         assertEq(bidData.referrer, _REFERRER, "bid one: referrer");
         assertEq(bidData.amount, 10e18, "bid one: amount");
@@ -222,7 +222,7 @@ contract FpbBidTest is FpbTest {
         );
 
         // Assert bid two
-        bidData = _module.getBid(_lotId, 1);
+        bidData = _module.getBid(_lotId, 2);
         assertEq(bidData.bidder, _BIDDER, "bid two: bidder");
         assertEq(bidData.referrer, _REFERRER, "bid two: referrer");
         assertEq(bidData.amount, 12e18, "bid two: amount");
@@ -238,7 +238,7 @@ contract FpbBidTest is FpbTest {
         (bool hasPartialFill, IFixedPriceBatch.PartialFill memory partialFill) =
             _module.getPartialFill(_lotId);
         assertEq(hasPartialFill, true, "hasPartialFill");
-        assertEq(partialFill.bidId, 1, "partialFill: bidId");
+        assertEq(partialFill.bidId, 2, "partialFill: bidId");
         assertEq(partialFill.refund, 2e18, "partialFill: refund");
         assertEq(partialFill.payout, 5e18, "partialFill: payout");
     }
@@ -254,12 +254,12 @@ contract FpbBidTest is FpbTest {
 
         IFixedPriceBatch.AuctionData memory auctionData = _module.getAuctionData(_lotId);
         assertEq(uint8(auctionData.status), uint8(IFixedPriceBatch.LotStatus.Created), "status");
-        assertEq(auctionData.nextBidId, 1, "nextBidId");
+        assertEq(auctionData.nextBidId, 2, "nextBidId");
         assertEq(auctionData.settlementCleared, false, "settlementCleared"); // Not settled yet
         assertEq(auctionData.totalBidAmount, 20e18, "totalBidAmount"); // Excludes refund
 
         // Assert bid one
-        IFixedPriceBatch.Bid memory bidData = _module.getBid(_lotId, 0);
+        IFixedPriceBatch.Bid memory bidData = _module.getBid(_lotId, 1);
         assertEq(bidData.bidder, _BIDDER, "bid one: bidder");
         assertEq(bidData.referrer, _REFERRER, "bid one: referrer");
         assertEq(bidData.amount, 22e18, "bid one: amount");
@@ -275,7 +275,7 @@ contract FpbBidTest is FpbTest {
         (bool hasPartialFill, IFixedPriceBatch.PartialFill memory partialFill) =
             _module.getPartialFill(_lotId);
         assertEq(hasPartialFill, true, "hasPartialFill");
-        assertEq(partialFill.bidId, 0, "partialFill: bidId");
+        assertEq(partialFill.bidId, 1, "partialFill: bidId");
         assertEq(partialFill.refund, 2e18, "partialFill: refund");
         assertEq(partialFill.payout, 10e18, "partialFill: payout");
     }
@@ -291,12 +291,12 @@ contract FpbBidTest is FpbTest {
 
         IFixedPriceBatch.AuctionData memory auctionData = _module.getAuctionData(_lotId);
         assertEq(uint8(auctionData.status), uint8(IFixedPriceBatch.LotStatus.Created), "status");
-        assertEq(auctionData.nextBidId, 1, "nextBidId");
+        assertEq(auctionData.nextBidId, 2, "nextBidId");
         assertEq(auctionData.settlementCleared, false, "settlementCleared"); // Not settled yet
         assertEq(auctionData.totalBidAmount, 10e18, "totalBidAmount");
 
         // Assert bid one
-        IFixedPriceBatch.Bid memory bidData = _module.getBid(_lotId, 0);
+        IFixedPriceBatch.Bid memory bidData = _module.getBid(_lotId, 1);
         assertEq(bidData.bidder, _BIDDER, "bid one: bidder");
         assertEq(bidData.referrer, _REFERRER, "bid one: referrer");
         assertEq(bidData.amount, 10e18, "bid one: amount");
@@ -330,7 +330,7 @@ contract FpbBidTest is FpbTest {
         (bool hasPartialFill, IFixedPriceBatch.PartialFill memory partialFill) =
             _module.getPartialFill(_lotId);
         assertEq(hasPartialFill, true, "hasPartialFill");
-        assertEq(partialFill.bidId, 0, "partialFill: bidId");
+        assertEq(partialFill.bidId, 1, "partialFill: bidId");
         assertEq(partialFill.refund, bidAmount - maxBidAmount, "partialFill: refund");
         assertEq(partialFill.payout, 10e18, "partialFill: payout");
     }

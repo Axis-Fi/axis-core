@@ -73,8 +73,8 @@ contract FixedPriceBatch is BatchAuctionModule, IFixedPriceBatch {
         // Set the auction data
         AuctionData storage data = _auctionData[lotId_];
         data.price = params.price;
+        data.nextBidId = 1;
         // data.status = LotStatus.Created; // Set by default
-        // data.nextBidId = 0; // Set by default
         // data.totalBidAmount = 0; // Set by default
         // We round up to be conservative with the minimums
         data.minFilled =
@@ -106,18 +106,22 @@ contract FixedPriceBatch is BatchAuctionModule, IFixedPriceBatch {
 
     function _calculatePartialFill(
         uint64 bidId_,
-        uint256 totalBidAmount_,
-        uint256 bidAmount_,
+        uint256 capacity_,
+        uint256 capacityExpended_,
+        uint96 bidAmount_,
         uint256 baseScale_,
         uint256 price_
     ) internal pure returns (PartialFill memory) {
-        // Calculate the new payout from the remaining capacity
-        uint256 payout = Math.fullMulDiv(totalBidAmount_ - bidAmount_, baseScale_, price_);
-        uint256 refund = bidAmount_ - Math.fullMulDivUp(payout, price_, baseScale_); // TODO rounding up to prevent refund from being too large, check this
-        // TODO use same logic as EMP.settle?
-        // We can cast refund to uint96 because it is less than amount_ which is less than type(uint96).max
+        // Calculate the bid payout if it were fully filled
+        uint256 fullFill = Math.fullMulDiv(bidAmount_, baseScale_, price_);
+        uint256 excess = capacityExpended_ - capacity_;
 
-        return (PartialFill({bidId: bidId_, refund: uint96(refund), payout: payout}));
+        // Refund will be within the bounds of uint96
+        // bidAmount is uint96, excess < fullFill, so bidAmount * excess / fullFill < bidAmount < uint96 max
+        uint96 refund = uint96(Math.fullMulDiv(bidAmount_, excess, fullFill));
+        uint256 payout = fullFill - excess;
+
+        return (PartialFill({bidId: bidId_, refund: refund, payout: payout}));
     }
 
     /// @inheritdoc BatchAuctionModule
@@ -152,10 +156,13 @@ contract FixedPriceBatch is BatchAuctionModule, IFixedPriceBatch {
         // Get the bid ID and increment the next bid ID
         uint64 bidId = data.nextBidId++;
 
+        // Has already been checked to be in bounds
+        uint96 amount96 = uint96(amount_);
+
         // Store the bid
         _bids[lotId_][bidId] = Bid({
             bidder: bidder_,
-            amount: uint96(amount_), // Has already been checked to be in bounds
+            amount: amount96,
             referrer: referrer_,
             status: BidStatus.Submitted
         });
@@ -178,8 +185,9 @@ contract FixedPriceBatch is BatchAuctionModule, IFixedPriceBatch {
         // If partial fill, then calculate new payout and refund
         if (newFilledCapacity > lotCapacity) {
             // Store the partial fill
-            _lotPartialFill[lotId_] =
-                _calculatePartialFill(bidId, data.totalBidAmount, amount_, baseScale, data.price);
+            _lotPartialFill[lotId_] = _calculatePartialFill(
+                bidId, lotCapacity, newFilledCapacity, amount96, baseScale, data.price
+            );
 
             // Decrement the total bid amount by the refund
             data.totalBidAmount -= _lotPartialFill[lotId_].refund;

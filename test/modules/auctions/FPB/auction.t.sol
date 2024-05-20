@@ -114,7 +114,7 @@ contract FpbCreateAuctionTest is FpbTest {
         IFixedPriceBatch.AuctionData memory auctionData = _module.getAuctionData(_lotId);
         assertEq(auctionData.price, price, "price");
         assertEq(uint8(auctionData.status), uint8(IFixedPriceBatch.LotStatus.Created), "status");
-        assertEq(auctionData.nextBidId, 0, "nextBidId");
+        assertEq(auctionData.nextBidId, 1, "nextBidId");
         assertEq(auctionData.settlementCleared, false, "settlementCleared");
         assertEq(auctionData.totalBidAmount, 0, "totalBidAmount");
         assertEq(auctionData.minFilled, minFilled, "minFilled");
