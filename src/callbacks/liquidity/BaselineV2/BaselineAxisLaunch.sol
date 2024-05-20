@@ -108,16 +108,6 @@ contract BaselineAxisLaunch is BaseCallback, Policy, Owned {
     // solhint-disable-next-line private-vars-leading-underscore
     uint48 internal constant ONE_HUNDRED_PERCENT = 100_000;
 
-    /// @notice The # of ticks required for the liquidity premium to double in size
-    /// @dev    Source: https://github.com/0xBaseline/baseline-v2/blob/0eb04f6db1045b5079ed99609ec01d8bb0d2b43a/script/DeployDev.s.sol#L56
-    uint256 internal constant _TICK_PREMIUM_FACTOR = 4800e18;
-
-    /// @notice The maximum allowable liquidity premium as a factor of anchor liquidity.
-    /// @dev    i.e. a max liquidity premium of 1e18 means the premium cannot be greater than 1x the anchor liquidity.
-    ///
-    ///         Source: https://github.com/0xBaseline/baseline-v2/blob/0eb04f6db1045b5079ed99609ec01d8bb0d2b43a/script/DeployDev.s.sol#L52
-    uint256 internal constant _MAX_LIQUIDITY_PREMIUM = 3e18;
-
     // ========== CONSTRUCTOR ========== //
 
     constructor(
