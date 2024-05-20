@@ -65,7 +65,8 @@ contract FpbRefundBidTest is FpbTest {
         givenBidIsCreated(1e18)
     {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(IFixedPriceBatch.NotPermitted.selector, address(this));
+        bytes memory err =
+            abi.encodeWithSelector(IFixedPriceBatch.NotPermitted.selector, address(this));
         vm.expectRevert(err);
 
         // Call the function

@@ -11,6 +11,7 @@ import {Permit2User} from "test/lib/permit2/Permit2User.sol";
 // Modules
 import {BatchAuctionHouse} from "src/BatchAuctionHouse.sol";
 import {IAuction} from "src/interfaces/modules/IAuction.sol";
+import {IBatchAuction} from "src/interfaces/modules/IBatchAuction.sol";
 import {FixedPriceBatch} from "src/modules/auctions/batch/FPB.sol";
 import {IFixedPriceBatch} from "src/interfaces/modules/auctions/IFixedPriceBatch.sol";
 
@@ -215,6 +216,17 @@ abstract contract FpbTest is Test, Permit2User {
     modifier givenBidIsRefunded(uint64 bidId_) {
         _refundBid(bidId_);
         _;
+    }
+
+    function _claimBid(uint64 bidId_)
+        internal
+        returns (IBatchAuction.BidClaim[] memory bidClaims, bytes memory auctionOutput)
+    {
+        uint64[] memory bidIds = new uint64[](1);
+        bidIds[0] = bidId_;
+
+        vm.prank(address(_auctionHouse));
+        return _module.claimBids(_lotId, bidIds);
     }
 
     modifier givenBidIsClaimed(uint64 bidId_) {
