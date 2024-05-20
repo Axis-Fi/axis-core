@@ -284,7 +284,7 @@ contract EncryptedMarginalPrice is BatchAuctionModule, IEncryptedMarginalPrice {
     ///             - The bid ID has been validated
     ///             - The caller has been authorized
     ///             - The auction is active
-    ///             - The bid has already been refunded
+    ///             - The bid has not been refunded
     function _refundBid(
         uint96 lotId_,
         uint64 bidId_,
@@ -350,6 +350,7 @@ contract EncryptedMarginalPrice is BatchAuctionModule, IEncryptedMarginalPrice {
     ///             This function assumes:
     ///             - The lot ID has been validated
     ///             - The caller has been authorized
+    ///             - The auction has concluded
     ///             - The auction is not settled
     ///
     ///             This function reverts if:
@@ -857,9 +858,10 @@ contract EncryptedMarginalPrice is BatchAuctionModule, IEncryptedMarginalPrice {
     ///             This function assumes:
     ///             - The lot ID has been validated
     ///             - The auction is not settled
+    ///             - The dedicated settle period has not passed
     ///
     ///             This function reverts if:
-    ///             - The dedicated settle period has not passed
+    ///             - None
     function _abort(uint96 lotId_) internal override {
         // Set the auction status to settled
         auctionData[lotId_].status = LotStatus.Settled;
