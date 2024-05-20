@@ -7,7 +7,8 @@ import {BaselineAxisLaunch} from "src/callbacks/liquidity/BaselineV2/BaselineAxi
 import {Callbacks} from "src/lib/Callbacks.sol";
 
 /// @notice Allocated allowlist version of the Baseline Axis Launch callback.
-/// @dev The merkle tree is expected to have both an address and an amount of quote tokens they can spend in each leaf.
+/// @notice This version allows for each address in the Merkle tree to have a per-address amount of quote tokens they can spend.
+/// @dev    The merkle tree is expected to have both an address and an amount of quote tokens they can spend in each leaf.
 contract BALwithAllocatedAllowlist is BaselineAxisLaunch {
     // ========== ERRORS ========== //
     error Callback_ExceedsLimit();

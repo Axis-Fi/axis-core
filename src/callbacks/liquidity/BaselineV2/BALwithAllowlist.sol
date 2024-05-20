@@ -6,6 +6,8 @@ import {MerkleProofLib} from "lib/solady/src/utils/MerkleProofLib.sol";
 import {BaselineAxisLaunch} from "src/callbacks/liquidity/BaselineV2/BaselineAxisLaunch.sol";
 import {Callbacks} from "src/lib/Callbacks.sol";
 
+/// @notice Allowlist version of the Baseline Axis Launch callback.
+/// @notice This version allows for a merkle tree to be used to determine which addresses are allowed to participate.
 contract BALwithAllowlist is BaselineAxisLaunch {
     // ========== STATE VARIABLES ========== //
 
