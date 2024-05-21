@@ -351,14 +351,6 @@ contract BaselineAxisLaunch is BaseCallback, Policy, Owned {
         // Require that the curator fee in the Auction House is zero
         // We do this to not dilute the buyer's backing (and therefore the price that the Baseline pool is initialized at)
         if (curatorFee_ > 0) revert Callback_InvalidParams();
-
-        // TODO could support external curator fee with CREDT
-        // Steps:
-        // 1. Add a curator fee percent to the CreateData struct and store locally
-        // 2. Store the curator address locally here
-        // 3. a. If prefunded, issue credit to them here for the entire curator fee (based on capacity)
-        // 3. b. If not prefunded, issue credit to them in the onPurchase function
-        // 4. In onSettle, decrease the credit if there is a refund.
     }
 
     // Not implemented since atomic auctions are not supported
