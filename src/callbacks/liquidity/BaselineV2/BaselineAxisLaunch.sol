@@ -22,8 +22,7 @@ import {
     toKeycode as toBaselineKeycode,
     Permissions as BaselinePermissions
 } from "src/callbacks/liquidity/BaselineV2/lib/Kernel.sol";
-import {Range, Position, IBPOOLv1} from "src/callbacks/liquidity/BaselineV2/lib/IBPOOL.sol";
-import {ICREDTv1} from "src/callbacks/liquidity/BaselineV2/lib/ICREDT.sol";
+import {Range, IBPOOLv1} from "src/callbacks/liquidity/BaselineV2/lib/IBPOOL.sol";
 import {TimeslotLib} from "src/callbacks/liquidity/BaselineV2/lib/TimeslotLib.sol";
 import {TickMath} from "lib/uniswap-v3-core/contracts/libraries/TickMath.sol";
 import {FixedPoint96} from "lib/uniswap-v3-core/contracts/libraries/FixedPoint96.sol";
@@ -68,10 +67,8 @@ contract BaselineAxisLaunch is BaseCallback, Policy, Owned {
     // ========== STATE VARIABLES ========== //
 
     // Baseline Modules
-    /* solhint-disable-next-lin var-name-mixedcase */
+    // solhint-disable-next-line var-name-mixedcase
     IBPOOLv1 public BPOOL;
-    ICREDTv1 public CREDT;
-    /* solhint-enable var-name-mixedcase */
 
     // Pool variables
     ERC20 public immutable RESERVE;
@@ -118,23 +115,17 @@ contract BaselineAxisLaunch is BaseCallback, Policy, Owned {
         returns (BaselineKeycode[] memory dependencies)
     {
         BaselineKeycode bpool = toBaselineKeycode("BPOOL");
-        BaselineKeycode credt = toBaselineKeycode("CREDT");
 
         // Populate the dependencies array
-        dependencies = new BaselineKeycode[](2);
+        dependencies = new BaselineKeycode[](1);
         dependencies[0] = bpool;
-        dependencies[1] = credt;
 
         // Set local values
         BPOOL = IBPOOLv1(getModuleAddress(bpool));
         bAsset = ERC20(address(BPOOL));
-        CREDT = ICREDTv1(getModuleAddress(credt));
 
         // Require that the BPOOL's reserve token be the same as the callback's reserve token
         if (address(BPOOL.reserve()) != address(RESERVE)) revert InvalidModule();
-
-        // Require CREDT bAsset equal to BPOOL bAsset
-        if (address(CREDT.bAsset()) != address(bAsset)) revert InvalidModule();
     }
 
     /// @inheritdoc Policy
