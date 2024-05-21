@@ -113,6 +113,8 @@ contract BaselineAxisLaunch is BaseCallback, Policy, Owned {
     /// @notice The Axis Keycode corresponding to the auction format (module family) that the auction is using
     AxisKeycode public auctionFormat;
 
+    /// @notice Indicates whether the auction is complete
+    /// @dev    This is used to prevent the callback from being called multiple times. It is set in the `onSettle()` callback.
     bool public auctionComplete;
 
     // solhint-disable-next-line private-vars-leading-underscore
@@ -135,6 +137,7 @@ contract BaselineAxisLaunch is BaseCallback, Policy, Owned {
 
     // ========== POLICY FUNCTIONS ========== //
 
+    /// @inheritdoc Policy
     function configureDependencies()
         external
         override
@@ -160,6 +163,7 @@ contract BaselineAxisLaunch is BaseCallback, Policy, Owned {
         if (address(CREDT.bAsset()) != address(bAsset)) revert InvalidModule();
     }
 
+    /// @inheritdoc Policy
     function requestPermissions()
         external
         view
@@ -368,7 +372,8 @@ contract BaselineAxisLaunch is BaseCallback, Policy, Owned {
         if (curatorFee_ > 0) revert Callback_InvalidParams();
     }
 
-    // Not implemented since atomic auctions are not supported
+    /// @inheritdoc BaseCallback
+    /// @dev        Not implemented since atomic auctions are not supported
     function _onPurchase(
         uint96,
         address,
@@ -380,8 +385,8 @@ contract BaselineAxisLaunch is BaseCallback, Policy, Owned {
         revert Callback_NotImplemented();
     }
 
-    // No logic is needed for this function here, but it can be overridden
-    // by a lower-level contract to provide allowlist functionality
+    /// @inheritdoc BaseCallback
+    /// @dev        No logic is needed for this function here, but it can be overridden by a lower-level contract to provide allowlist functionality
     function _onBid(
         uint96 lotId_,
         uint64 bidId,
