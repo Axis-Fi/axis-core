@@ -7,11 +7,13 @@ import {WithEnvironment} from "script/deploy/WithEnvironment.s.sol";
 import {Permit2User} from "test/lib/permit2/Permit2User.sol";
 import {WithSalts} from "script/salts/WithSalts.s.sol";
 
+import {MockERC20} from "lib/solmate/src/test/utils/mocks/MockERC20.sol";
 import {MockCallback} from "test/callbacks/MockCallback.sol";
 import {Callbacks} from "src/lib/Callbacks.sol";
 import {CappedMerkleAllowlist} from "src/callbacks/allowlists/CappedMerkleAllowlist.sol";
 import {UniswapV2DirectToLiquidity} from "src/callbacks/liquidity/UniswapV2DTL.sol";
 import {UniswapV3DirectToLiquidity} from "src/callbacks/liquidity/UniswapV3DTL.sol";
+import {BaselineAxisLaunch} from "src/callbacks/liquidity/BaselineV2/BaselineAxisLaunch.sol";
 
 contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts {
     // TODO shift into abstract contract that tests also inherit from
@@ -24,6 +26,7 @@ contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts {
     address internal constant _UNISWAP_V3_FACTORY =
         address(0x43de928116768b88F8BF8f768b3de90A0Aaf9551);
     address internal constant _GUNI_FACTORY = address(0xc46b184e5521Cb87Fc5288Ff49D978A4BE4B055c);
+    address internal constant _BASELINE_KERNEL = address(0xBB);
 
     string internal constant _MOCK_CALLBACK = "MockCallback";
     string internal constant _CAPPED_MERKLE_ALLOWLIST = "CappedMerkleAllowlist";
@@ -426,5 +429,37 @@ contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts {
         (string memory bytecodePath, bytes32 bytecodeHash) =
             _writeBytecode("UniswapV3DirectToLiquidity", contractCode, args);
         _setTestSalt(bytecodePath, "E6", "UniswapV3DirectToLiquidity", bytecodeHash);
+    }
+
+    function generateBaselineAxisLaunch() public {
+        // Generate a salt for a MockERC20 quote token
+        bytes memory qtArgs = abi.encode("Quote Token", "QT", 18);
+        bytes memory qtContractCode = type(MockERC20).creationCode;
+        (string memory qtBytecodePath, bytes32 qtBytecodeHash) =
+            _writeBytecode("QuoteToken", qtContractCode, qtArgs);
+        _setTestSalt(qtBytecodePath, "AA", "QuoteToken", qtBytecodeHash);
+
+        // Get the address of the quote token
+        MockERC20 quoteToken = new MockERC20{salt: qtBytecodeHash}("Quote Token", "QT", 18);
+
+        // Callback permissions
+        Callbacks.Permissions memory permissions = Callbacks.Permissions({
+            onCreate: true,
+            onCancel: true,
+            onCurate: true,
+            onPurchase: false,
+            onBid: true,
+            onSettle: true,
+            receiveQuoteTokens: true,
+            sendBaseTokens: true
+        });
+
+        // Get the salt
+        bytes memory callbackArgs =
+            abi.encode(_AUCTION_HOUSE, permissions, _BASELINE_KERNEL, address(quoteToken));
+        (string memory callbackBytecodePath, bytes32 callbackBytecodeHash) = _writeBytecode(
+            "BaselineAxisLaunch", type(BaselineAxisLaunch).creationCode, callbackArgs
+        );
+        _setTestSalt(callbackBytecodePath, "EF", "BaselineAxisLaunch", callbackBytecodeHash);
     }
 }
