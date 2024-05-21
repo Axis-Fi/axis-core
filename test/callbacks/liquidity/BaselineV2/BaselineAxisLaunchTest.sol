@@ -55,13 +55,8 @@ abstract contract BaselineAxisLaunchTest is Test, Permit2User, WithSalts {
     MockBPOOL internal _baseToken;
 
     // Inputs
-    BaselineAxisLaunch.CreateData internal _createData = BaselineAxisLaunch.CreateData({
-        initAnchorTick: 0,
-        percentReservesFloor: 0,
-        anchorTickWidth: 0,
-        discoveryTickWidth: 0,
-        allowlistParams: abi.encode("")
-    });
+    BaselineAxisLaunch.CreateData internal _createData =
+        BaselineAxisLaunch.CreateData({discoveryTickWidth: 0, allowlistParams: abi.encode("")});
 
     function setUp() public {
         // Set reasonable timestamp
