@@ -483,11 +483,11 @@ contract BaselineAxisLaunch is BaseCallback, Policy, Owned {
 
         // Emit an event
         {
-            Ticks memory floorTicks = BPOOL.getTicks(Range.FLOOR);
-            Ticks memory anchorTicks = BPOOL.getTicks(Range.ANCHOR);
+            (int24 floorTickLower, int24 floorTickUpper) = BPOOL.getTicks(Range.FLOOR);
+            (, int24 anchorTickUpper) = BPOOL.getTicks(Range.ANCHOR);
 
             emit LiquidityDeployed(
-                floorTicks.lower, floorTicks.upper, anchorTicks.upper, floorReserves, anchorReserves
+                floorTickLower, floorTickUpper, anchorTickUpper, floorReserves, anchorReserves
             );
         }
     }

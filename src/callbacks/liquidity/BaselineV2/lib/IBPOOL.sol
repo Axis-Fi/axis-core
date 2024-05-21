@@ -2,6 +2,7 @@
 pragma solidity >=0.8.0;
 
 import {IUniswapV3Pool} from "lib/uniswap-v3-core/contracts/interfaces/IUniswapV3Pool.sol";
+import {ERC20} from "lib/solmate/src/tokens/ERC20.sol";
 
 enum Range {
     FLOOR,
@@ -34,10 +35,10 @@ interface IBPOOLv1 {
 
     function TICK_SPACING() external view returns (int24);
 
-    function reserve() external view returns (address);
+    function reserve() external view returns (ERC20);
     function pool() external view returns (IUniswapV3Pool);
 
-    function getTicks(Range range_) external view returns (Ticks memory);
+    function getTicks(Range range_) external view returns (int24 tickLower, int24 tickUpper);
 
     function getLiquidity(Range range_) external view returns (uint128);
 
@@ -109,7 +110,4 @@ interface IBPOOLv1 {
         uint160 _sqrtPriceU,
         uint256 _reserves
     ) external view returns (uint256 capacity_);
-
-    /// @dev    BPOOL inherits from solmate ERC20
-    function decimals() external view returns (uint8);
 }
