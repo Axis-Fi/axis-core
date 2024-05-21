@@ -35,6 +35,8 @@ abstract contract BaselineAxisLaunchTest is Test, Permit2User, WithSalts {
     address internal constant _AUCTION_HOUSE = address(0x000000000000000000000000000000000000000A);
 
     uint96 internal constant _LOT_CAPACITY = 10e18;
+    uint96 internal constant _REFUND_AMOUNT = 2e18;
+    uint256 internal constant _PROCEEDS_AMOUNT = 20e18;
 
     uint48 internal constant _START = 1_000_000;
 
@@ -175,6 +177,26 @@ abstract contract BaselineAxisLaunchTest is Test, Permit2User, WithSalts {
 
     modifier givenOnCreate() {
         _onCreate();
+        _;
+    }
+
+    function onCancel() internal {
+        vm.prank(address(_auctionHouse));
+        _dtl.onCancel(_lotId, _REFUND_AMOUNT, true, abi.encode(""));
+    }
+
+    modifier givenOnCancel() {
+        onCancel();
+        _;
+    }
+
+    function onSettle() internal {
+        vm.prank(address(_auctionHouse));
+        _dtl.onSettle(_lotId, _PROCEEDS_AMOUNT, _REFUND_AMOUNT, abi.encode(""));
+    }
+
+    modifier givenOnSettle() {
+        onSettle();
         _;
     }
 

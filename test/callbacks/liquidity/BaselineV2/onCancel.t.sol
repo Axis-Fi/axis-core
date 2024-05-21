@@ -7,14 +7,7 @@ import {BaselineAxisLaunchTest} from
 import {BaseCallback} from "src/callbacks/BaseCallback.sol";
 
 contract BaselineOnCancelTest is BaselineAxisLaunchTest {
-    uint96 internal constant _REFUND_AMOUNT = 2e18;
-
     // ============ Modifiers ============ //
-
-    function _performCallback() internal {
-        vm.prank(address(_auctionHouse));
-        _dtl.onCancel(_lotId, _REFUND_AMOUNT, true, abi.encode(""));
-    }
 
     // ============ Assertions ============ //
 

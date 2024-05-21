@@ -7,15 +7,7 @@ import {BaselineAxisLaunchTest} from
 import {BaseCallback} from "src/callbacks/BaseCallback.sol";
 
 contract BaselineOnSettleTest is BaselineAxisLaunchTest {
-    uint256 internal constant _PROCEEDS_AMOUNT = 20e18;
-    uint256 internal constant _REFUND_AMOUNT = 2e18;
-
     // ============ Modifiers ============ //
-
-    function _performCallback() internal {
-        vm.prank(address(_auctionHouse));
-        _dtl.onSettle(_lotId, _PROCEEDS_AMOUNT, _REFUND_AMOUNT, abi.encode(""));
-    }
 
     // ============ Assertions ============ //
 
