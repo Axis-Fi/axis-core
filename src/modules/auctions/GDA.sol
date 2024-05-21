@@ -28,7 +28,7 @@ contract GradualDutchAuction is AtomicAuctionModule {
         uint256 equilibriumPrice; // initial price of one base token, where capacity and time are balanced
         uint256 minimumPrice; // minimum price for one base token
         uint256 decayTarget; // target decay percent over the first decay period of an auction (steepest part of the curve)
-        uint256 decayPeriod; // period over which the target decay percent is reached
+        uint256 decayPeriod; // period over which the target decay percent is reached, in seconds
     }
 
     // ========== STATE VARIABLES ========== //
@@ -118,7 +118,7 @@ contract GradualDutchAuction is AtomicAuctionModule {
             }
 
             // Calculate the decay constant
-            decayConstant = (q0 - qm).div(q1 - qm).ln().div(convert(params.decayPeriod));
+            decayConstant = (q0 - qm).div(q1 - qm).ln().div(convert(params.decayPeriod).div(ONE_DAY));
         }
 
         // TODO other validation checks?
@@ -127,8 +127,8 @@ contract GradualDutchAuction is AtomicAuctionModule {
         UD60x18 duration = convert(uint256(lot_.conclusion - lot_.start)).div(ONE_DAY);
 
         // The duration must be less than the max exponential input divided by the decay constant
-        // in order for the exponential operations to not overflow. The lowest this value can be
-        // is 192 days if the decay constant is at it's maximum value
+        // in order for the exponential operations to not overflow. See the minimum and maximum
+        // constant calculations for more information.
         if (duration > EXP_MAX_INPUT.div(decayConstant)) {
             revert Auction_InvalidParams();
         }
