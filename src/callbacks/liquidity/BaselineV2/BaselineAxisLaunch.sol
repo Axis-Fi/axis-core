@@ -110,9 +110,6 @@ contract BaselineAxisLaunch is BaseCallback, Policy, Owned {
     /// @dev    This value is initialised with the uint96 max value to indicate that it has not been set yet.
     uint96 public lotId;
 
-    /// @notice The Axis Keycode corresponding to the auction format (module family) that the auction is using
-    AxisKeycode public auctionFormat;
-
     /// @notice Indicates whether the auction is complete
     /// @dev    This is used to prevent the callback from being called multiple times. It is set in the `onSettle()` callback.
     bool public auctionComplete;
@@ -246,13 +243,22 @@ contract BaselineAxisLaunch is BaseCallback, Policy, Owned {
             revert Callback_InvalidParams();
         }
 
+        // Auction must be prefunded for batch auctions (which is the only type supported with this callback),
+        // this can't fail because it's checked in the AH as well, but including for completeness
+        if (!prefund_) revert Callback_InvalidParams();
+
         // Set the lot ID
         lotId = lotId_;
 
-        // Get the auction format and store locally
-        auctionFormat = keycodeFromVeecode(
+        // Get the auction format
+        AxisKeycode auctionFormat = keycodeFromVeecode(
             AxisModule(address(IAuctionHouse(AUCTION_HOUSE).getAuctionModuleForId(lotId))).VEECODE()
         );
+
+        // Only supports Fixed Price Batch Auctions initially
+        if (fromAxisKeycode(auctionFormat) != bytes5("FPBA")) {
+            revert Callback_InvalidParams();
+        }
 
         // Set the configuration
         percentReservesFloor = cbData.percentReservesFloor;
@@ -266,45 +272,27 @@ contract BaselineAxisLaunch is BaseCallback, Policy, Owned {
             lotId_, seller_, baseToken_, quoteToken_, capacity_, prefund_, cbData.allowlistParams
         );
 
-        // Case 1: EMP Batch Auction
-        if (fromAxisKeycode(auctionFormat) == bytes5("EMPA")) {
-            // We disregard the initAnchorTick for EMPA auctions since it will be determined by the clearing price
-            // Therefore, this is a no-op.
-        }
-        // Case 2: Fixed Price Batch Auction
-        else if (fromAxisKeycode(auctionFormat) == bytes5("FPBA")) {
-            // Baseline pool must be initialized now with the correct tick parameters
-            // They should have been passed into the callback data
-            if (cbData.initAnchorTick == 0) {
-                revert Callback_InvalidParams();
-            }
-
-            int24 tickSpacing = BPOOL.TICK_SPACING();
-
-            (
-                int24 floorTickLower,
-                int24 floorTickUpper,
-                int24 anchorTickUpper,
-                int24 discoveryTickUpper
-            ) = _calculateTicks(
-                cbData.initAnchorTick, tickSpacing, anchorTickWidth, discoveryTickWidth
-            );
-
-            // Initialize the Baseline pool with the provided tick data, since we know it ahead of time.
-            BPOOL.initializePool(anchorTickUpper);
-
-            BPOOL.setTicks(Range.FLOOR, floorTickLower, floorTickUpper);
-            BPOOL.setTicks(Range.ANCHOR, floorTickUpper, anchorTickUpper);
-            BPOOL.setTicks(Range.DISCOVERY, anchorTickUpper, discoveryTickUpper);
-        }
-        // No other supported formats
-        else {
+        // Baseline pool must be initialized now with the correct tick parameters
+        // They should have been passed into the callback data
+        if (cbData.initAnchorTick == 0) {
             revert Callback_InvalidParams();
         }
 
-        // Auction must be prefunded for batch auctions (which is the only type supported with this callback),
-        // this can't fail because it's checked in the AH as well, but including for completeness
-        if (!prefund_) revert Callback_InvalidParams();
+        int24 tickSpacing = BPOOL.TICK_SPACING();
+
+        (
+            int24 floorTickLower,
+            int24 floorTickUpper,
+            int24 anchorTickUpper,
+            int24 discoveryTickUpper
+        ) = _calculateTicks(cbData.initAnchorTick, tickSpacing, anchorTickWidth, discoveryTickWidth);
+
+        // Initialize the Baseline pool with the provided tick data, since we know it ahead of time.
+        BPOOL.initializePool(anchorTickUpper);
+
+        BPOOL.setTicks(Range.FLOOR, floorTickLower, floorTickUpper);
+        BPOOL.setTicks(Range.ANCHOR, floorTickUpper, anchorTickUpper);
+        BPOOL.setTicks(Range.DISCOVERY, anchorTickUpper, discoveryTickUpper);
 
         // Mint the capacity of baseline tokens to the auction house to prefund the auction
         BPOOL.mint(msg.sender, capacity_);
@@ -445,32 +433,6 @@ contract BaselineAxisLaunch is BaseCallback, Policy, Owned {
         // Burn any refunded bAsset tokens that were sent from the auction house
         Transfer.transfer(bAsset, address(BPOOL), refund_, false);
         BPOOL.burnAllBAssetsInContract();
-
-        // If EMP Batch Auction, we need to calculate tick values and initialize the pool
-        if (fromAxisKeycode(auctionFormat) == bytes5("EMPA")) {
-            // Calculate sqrtPriceX96 for the clearing price
-            // The library function will handle ordering the tokens correctly
-            uint160 sqrtPriceX96 = SqrtPriceMath.getSqrtPriceX96(
-                address(RESERVE), address(bAsset), proceeds_, initialCirculatingSupply
-            );
-            int24 initAnchorTick = TickMath.getTickAtSqrtRatio(sqrtPriceX96);
-
-            (
-                int24 floorTickLower,
-                int24 floorTickUpper,
-                int24 anchorTickUpper,
-                int24 discoveryTickUpper
-            ) = _calculateTicks(
-                initAnchorTick, BPOOL.TICK_SPACING(), anchorTickWidth, discoveryTickWidth
-            );
-
-            // Initialize the Baseline pool with the calculated tick data
-            BPOOL.initializePool(anchorTickUpper);
-
-            BPOOL.setTicks(Range.FLOOR, floorTickLower, floorTickUpper);
-            BPOOL.setTicks(Range.ANCHOR, floorTickUpper, anchorTickUpper);
-            BPOOL.setTicks(Range.DISCOVERY, anchorTickUpper, discoveryTickUpper);
-        }
 
         // Calculate the reserves to deploy in each range
         // TODO per above, probably need to calculate the percent in each range based on the
