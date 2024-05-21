@@ -3,7 +3,7 @@ pragma solidity 0.8.19;
 
 // Libraries
 import {Test} from "forge-std/Test.sol";
-import {UD60x18} from "lib/prb-math/src/UD60x18.sol";
+import {UD60x18, uUNIT} from "lib/prb-math/src/UD60x18.sol";
 import "lib/prb-math/src/Common.sol" as PRBMath;
 
 // Mocks
@@ -13,6 +13,7 @@ import {Permit2User} from "test/lib/permit2/Permit2User.sol";
 import {AtomicAuctionHouse} from "src/AtomicAuctionHouse.sol";
 import {IAuction} from "src/interfaces/IAuction.sol";
 import {GradualDutchAuction} from "src/modules/auctions/GDA.sol";
+
 
 abstract contract GdaTest is Test, Permit2User {
     using {PRBMath.mulDiv} for uint256;
@@ -29,6 +30,7 @@ abstract contract GdaTest is Test, Permit2User {
     uint256 internal constant _MIN_PRICE = 2e18;
     uint256 internal constant _DECAY_TARGET = 10e16; // 10%
     uint256 internal constant _DECAY_PERIOD = 1 days;
+    UD60x18 internal constant _ONE_DAY = UD60x18.wrap(1 days * uUNIT);
 
     AtomicAuctionHouse internal _auctionHouse;
     GradualDutchAuction internal _module;
@@ -135,9 +137,10 @@ abstract contract GdaTest is Test, Permit2User {
         _;
     }
 
-    function givenDecayTarget(uint256 decayTarget_) internal {
+    modifier givenDecayTarget(uint256 decayTarget_) {
         _gdaParams.decayTarget = decayTarget_;
         _auctionParams.implParams = abi.encode(_gdaParams);
+        _;
     }
 
     modifier givenDecayPeriod(uint256 decayPeriod_) {
