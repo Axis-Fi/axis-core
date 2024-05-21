@@ -319,10 +319,7 @@ contract EncryptedDerivativeValue is BatchAuctionModule, IEncryptedDerivativeVal
     ///             - The caller has been authorized
     ///             - The auction is not settled
     ///             - The bid has not already been claimed
-    function _claimBid(
-        uint96 lotId_,
-        uint64 bidId_
-    ) internal returns (BidClaim memory bidClaim, bytes memory auctionOutput_) {
+    function _claimBid(uint96 lotId_, uint64 bidId_) internal returns (BidClaim memory bidClaim) {
         // Load bid data
         Bid storage bidData = bids[lotId_][bidId_];
 
@@ -332,7 +329,7 @@ contract EncryptedDerivativeValue is BatchAuctionModule, IEncryptedDerivativeVal
         // Get the BidClaim
         bidClaim = _getBidClaim(lotId_, bidId_);
 
-        return (bidClaim, auctionOutput_);
+        return bidClaim;
     }
 
     /// @inheritdoc BatchAuctionModule
@@ -361,8 +358,10 @@ contract EncryptedDerivativeValue is BatchAuctionModule, IEncryptedDerivativeVal
             _revertIfBidInvalid(lotId_, bidIds_[i]);
             _revertIfBidClaimed(lotId_, bidIds_[i]);
 
-            (bidClaims[i],) = _claimBid(lotId_, bidIds_[i]);
+            bidClaims[i] = _claimBid(lotId_, bidIds_[i]);
         }
+
+        auctionOutput_ = lotAuctionOutput[lotId_];
 
         return (bidClaims, auctionOutput_);
     }
@@ -689,6 +688,8 @@ contract EncryptedDerivativeValue is BatchAuctionModule, IEncryptedDerivativeVal
 
             // totalIn and totalOut are not set since the auction has not settled yet
 
+            // auctionOutput is not set yet since the auction has not settled
+
             return (totalIn_, totalOut_, result.finished, auctionOutput_);
         }
 
@@ -710,6 +711,7 @@ contract EncryptedDerivativeValue is BatchAuctionModule, IEncryptedDerivativeVal
             // Auction cannot be settled if we reach this point
             // Marginal value is set as the max uint128 for the auction so the system knows all bids should be refunded
             auctionData[lotId_].marginalValue = type(uint128).max;
+            auctionOutput_ = abi.encode(auctionData[lotId_].marginalValue);
 
             // totalIn and totalOut are not set since the auction does not clear
 
@@ -753,6 +755,7 @@ contract EncryptedDerivativeValue is BatchAuctionModule, IEncryptedDerivativeVal
         // Set settlement data
         totalIn_ = result.totalAmountIn;
         totalOut_ = result.capacityExpended > capacity ? capacity : result.capacityExpended;
+        auctionOutput_ = abi.encode(result.marginalValue);
 
         return (totalIn_, totalOut_, result.finished, auctionOutput_);
     }
