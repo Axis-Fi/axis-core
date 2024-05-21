@@ -54,13 +54,13 @@ contract BaselineAxisLaunch is BaseCallback, Policy, Owned {
 
     /// @notice Data struct for the onCreate callback
     ///
-    /// @param  initFloorTick           The initial floor tick for the Baseline pool. Only used for fixed price sales.
+    /// @param  initAnchorTick           The initial anchor tick that the Baseline pool will be initialised at. Only used for fixed price sales.
     /// @param  percentReservesFloor    The percent of reserves to deploy in the floor range. The remainder will be deployed in the anchor range. (3 decimals of precision, e.g. 100% = 100_000 and 1% = 1_000)
     /// @param  anchorTickWidth         The width of the anchor tick range, as a multiple of the pool tick spacing. Stored as uint24 to prevent the anchor tick from being lower than the floor tick.
     /// @param  discoveryTickWidth      The width of the discovery tick range, as a multiple of the pool tick spacing. Stored as uint24 to prevent the discovery tick from being lower than the anchor tick.
     /// @param  allowlistParams         Additional parameters for an allowlist, passed to `__onCreate()` for further processing
     struct CreateData {
-        int24 initFloorTick;
+        int24 initAnchorTick;
         uint48 percentReservesFloor;
         uint24 anchorTickWidth;
         uint24 discoveryTickWidth;
@@ -251,26 +251,32 @@ contract BaselineAxisLaunch is BaseCallback, Policy, Owned {
 
         // Case 1: EMP Batch Auction
         if (fromAxisKeycode(auctionFormat) == bytes5("EMPA")) {
-            // We disregard the initFloorTick and initActiveTick for EMPA auctions since it will be determined by the clearing price
+            // We disregard the initAnchorTick for EMPA auctions since it will be determined by the clearing price
             // Therefore, this is a no-op.
         }
         // Case 2: Fixed Price Batch Auction
         else if (fromAxisKeycode(auctionFormat) == bytes5("FPBA")) {
             // Baseline pool must be initialized now with the correct tick parameters
             // They should have been passed into the callback data
-            if (cbData.initFloorTick == 0) {
+            if (cbData.initAnchorTick == 0) {
                 revert Callback_InvalidParams();
             }
 
             int24 tickSpacing = BPOOL.TICK_SPACING();
 
-            (int24 floorTickUpper, int24 anchorTickUpper, int24 discoveryTickUpper) =
-            _calculateTicks(cbData.initFloorTick, tickSpacing, anchorTickWidth, discoveryTickWidth);
+            (
+                int24 floorTickLower,
+                int24 floorTickUpper,
+                int24 anchorTickUpper,
+                int24 discoveryTickUpper
+            ) = _calculateTicks(
+                cbData.initAnchorTick, tickSpacing, anchorTickWidth, discoveryTickWidth
+            );
 
             // Initialize the Baseline pool with the provided tick data, since we know it ahead of time.
             BPOOL.initializePool(anchorTickUpper);
 
-            BPOOL.setTicks(Range.FLOOR, cbData.initFloorTick, floorTickUpper);
+            BPOOL.setTicks(Range.FLOOR, floorTickLower, floorTickUpper);
             BPOOL.setTicks(Range.ANCHOR, floorTickUpper, anchorTickUpper);
             BPOOL.setTicks(Range.DISCOVERY, anchorTickUpper, discoveryTickUpper);
         }
@@ -435,15 +441,21 @@ contract BaselineAxisLaunch is BaseCallback, Policy, Owned {
             uint160 sqrtPriceX96 = SqrtPriceMath.getSqrtPriceX96(
                 address(RESERVE), address(bAsset), proceeds_, initialCirculatingSupply
             );
-            int24 initFloorTick = TickMath.getTickAtSqrtRatio(sqrtPriceX96);
+            int24 initAnchorTick = TickMath.getTickAtSqrtRatio(sqrtPriceX96);
 
-            (int24 floorTickUpper, int24 anchorTickUpper, int24 discoveryTickUpper) =
-                _calculateTicks(initFloorTick, BPOOL.TICK_SPACING(), 1, discoveryTickWidth);
+            (
+                int24 floorTickLower,
+                int24 floorTickUpper,
+                int24 anchorTickUpper,
+                int24 discoveryTickUpper
+            ) = _calculateTicks(
+                initAnchorTick, BPOOL.TICK_SPACING(), anchorTickWidth, discoveryTickWidth
+            );
 
             // Initialize the Baseline pool with the calculated tick data
             BPOOL.initializePool(anchorTickUpper);
 
-            BPOOL.setTicks(Range.FLOOR, initFloorTick, floorTickUpper);
+            BPOOL.setTicks(Range.FLOOR, floorTickLower, floorTickUpper);
             BPOOL.setTicks(Range.ANCHOR, floorTickUpper, anchorTickUpper);
             BPOOL.setTicks(Range.DISCOVERY, anchorTickUpper, discoveryTickUpper);
         }
@@ -536,26 +548,38 @@ contract BaselineAxisLaunch is BaseCallback, Policy, Owned {
         return adjustedTick;
     }
 
-    /// @notice Calculates the upper tick for the floor, anchor and discovery ranges
+    /// @notice Calculates tick ranges, given the upper boundary of the anchor tick
     /// @dev    As the ranges are stacked upon each other, the ticks are rounded to the nearest tick spacing in order to avoid gaps or overlaps
     function _calculateTicks(
-        int24 floorTick_,
+        int24 anchorTick_,
         int24 tickSpacing,
         uint24 anchorTickWidth_,
         uint24 discoveryTickWidth_
-    ) internal pure returns (int24 floorTickUpper_, int24 anchorTick_, int24 discoveryTick_) {
-        // Calculate the upper tick of the floor range
-        int24 floorTickUpper = _roundTick(floorTick_ + tickSpacing, tickSpacing);
+    )
+        internal
+        pure
+        returns (
+            int24 floorTickLower,
+            int24 floorTickUpper,
+            int24 anchorTickUpper,
+            int24 discoveryTickUpper
+        )
+    {
+        // Round the anchor tick to get the upper tick of the anchor range
+        anchorTickUpper = _roundTick(anchorTick_, tickSpacing);
 
-        // Calculate the anchor tick
-        int24 anchorTickUpper =
-            _roundTick(floorTickUpper + int24(anchorTickWidth_) * tickSpacing, tickSpacing);
+        // Floor tick upper is the lower tick of the anchor range
+        floorTickUpper =
+            _roundTick(anchorTickUpper - int24(anchorTickWidth_) * tickSpacing, tickSpacing);
+
+        // Floor tick lower is 1 tick spacing lower than floorTickUpper
+        floorTickLower = _roundTick(floorTickUpper - tickSpacing, tickSpacing);
 
         // Calculate the discovery tick
-        int24 discoveryTickUpper =
+        discoveryTickUpper =
             _roundTick(anchorTickUpper + int24(discoveryTickWidth_) * tickSpacing, tickSpacing);
 
-        return (floorTickUpper, anchorTickUpper, discoveryTickUpper);
+        return (floorTickLower, floorTickUpper, anchorTickUpper, discoveryTickUpper);
     }
 
     // ========== OWNER FUNCTIONS ========== //
