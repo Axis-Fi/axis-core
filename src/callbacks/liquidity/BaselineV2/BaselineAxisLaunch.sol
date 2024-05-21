@@ -189,12 +189,11 @@ contract BaselineAxisLaunch is BaseCallback, Policy, Owned {
     // sendBaseTokens: true
     // Contract prefix should be: 11101111 = 0xEF
 
-    // TODO update function documentation
-
     /// @inheritdoc     BaseCallback
     /// @dev            This function performs the following:
     ///                 - Performs validation
-    ///                 - Sets the lot ID
+    ///                 - Sets the `lotId`, `percentReservesFloor`, `anchorTickWidth`, and `discoveryTickWidth` variables
+    ///                 - Calls the allowlist callback
     ///                 - Mints the required bAsset tokens to the AuctionHouse
     ///
     ///                 This function reverts if:
@@ -202,9 +201,11 @@ contract BaselineAxisLaunch is BaseCallback, Policy, Owned {
     ///                 - `quoteToken_` is not the same as `RESERVE`
     ///                 - `lotId` is already set
     ///                 - `CreateData.percentReservesFloor` is less than 0% or greater than 100%
+    ///                 - `CreateData.anchorTickWidth` is 0
+    ///                 - `CreateData.discoveryTickWidth` is 0
     ///                 - The auction format is not supported
-    ///                 - The auction format is FPS and the tick parameters are not set
-    ///                 - The auction format is FPS and the auction does not have linear vesting enabled
+    ///                 - FPB auction format: `CreateData.initAnchorTick` is 0
+    ///                 - The auction is not prefunded
     function _onCreate(
         uint96 lotId_,
         address seller_,
@@ -328,6 +329,7 @@ contract BaselineAxisLaunch is BaseCallback, Policy, Owned {
     ///
     ///                 This function reverts if:
     ///                 - `lotId_` is not the same as the stored `lotId`
+    ///                 - Sufficient quantity of `bAsset` have not been sent to the callback
     function _onCancel(uint96 lotId_, uint256 refund_, bool, bytes calldata) internal override {
         // Validate the lot ID
         if (lotId_ != lotId) revert Callback_InvalidParams();
@@ -345,13 +347,13 @@ contract BaselineAxisLaunch is BaseCallback, Policy, Owned {
     /// @inheritdoc     BaseCallback
     /// @dev            This function performs the following:
     ///                 - Performs validation
-    ///                 - Mints the required amount of bAsset tokens to the AuctionHouse for paying the curator fee
     ///
     ///                 This function has the following assumptions:
     ///                 - BaseCallback has already validated the lot ID
     ///
     ///                 This function reverts if:
     ///                 - `lotId_` is not the same as the stored `lotId`
+    ///                 - The curator fee is non-zero
     function _onCurate(
         uint96 lotId_,
         uint256 curatorFee_,
@@ -394,7 +396,8 @@ contract BaselineAxisLaunch is BaseCallback, Policy, Owned {
     ///                 - Sets the auction as complete
     ///                 - Burns any refunded bAsset tokens
     ///                 - Calculates the deployment parameters for the Baseline pool
-    ///                 - Deploys the Baseline pool
+    ///                 - EMP auction format: calculates the ticks based on the clearing price
+    ///                 - Deploys reserves into the Baseline pool
     ///
     ///                 Note that there may be reserve assets left over after liquidity deployment, which must be manually withdrawn by the owner using `withdrawReserves()`
     ///
@@ -407,8 +410,7 @@ contract BaselineAxisLaunch is BaseCallback, Policy, Owned {
     ///                 - `lotId_` is not the same as the stored `lotId`
     ///                 - The auction is already complete
     ///                 - The reported proceeds received are less than the reserve balance
-    ///                 - The BAsset is not set
-    ///                 - The BAsset's Baseline factory is not consistent with `BASELINE_FACTORY`
+    ///                 - The reported refund received is less than the bAsset balance
     function _onSettle(
         uint96 lotId_,
         uint256 proceeds_,
