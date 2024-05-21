@@ -21,7 +21,7 @@ import {
     toKeycode as toBaselineKeycode,
     Permissions as BaselinePermissions
 } from "src/callbacks/liquidity/BaselineV2/lib/Kernel.sol";
-import {Range, Position, IBPOOLv1} from "src/callbacks/liquidity/BaselineV2/lib/IBPOOL.sol";
+import {Range, Position, Ticks, IBPOOLv1} from "src/callbacks/liquidity/BaselineV2/lib/IBPOOL.sol";
 import {ICREDTv1} from "src/callbacks/liquidity/BaselineV2/lib/ICREDT.sol";
 import {LiquidityAmounts} from "lib/uniswap-v3-periphery/contracts/libraries/LiquidityAmounts.sol";
 import {TimeslotLib} from "src/callbacks/liquidity/BaselineV2/lib/TimeslotLib.sol";
@@ -49,6 +49,16 @@ contract BaselineAxisLaunch is BaseCallback, Policy, Owned {
 
     error InvalidModule();
     error Insolvent();
+
+    // ========== EVENTS ========== //
+
+    event LiquidityDeployed(
+        int24 floorTickLower,
+        int24 floorTickUpper,
+        int24 anchorTickUpper,
+        uint256 floorReserves,
+        uint256 anchorReserves
+    );
 
     // ========== DATA STRUCTURES ========== //
 
@@ -179,6 +189,8 @@ contract BaselineAxisLaunch is BaseCallback, Policy, Owned {
     // sendBaseTokens: true
     // Contract prefix should be: 11101111 = 0xEF
 
+    // TODO update function documentation
+
     /// @inheritdoc     BaseCallback
     /// @dev            This function performs the following:
     ///                 - Performs validation
@@ -294,6 +306,7 @@ contract BaselineAxisLaunch is BaseCallback, Policy, Owned {
         initialCirculatingSupply += capacity_;
     }
 
+    /// @notice Override this function to implement allowlist functionality
     function __onCreate(
         uint96 lotId_,
         address seller_,
@@ -460,6 +473,16 @@ contract BaselineAxisLaunch is BaseCallback, Policy, Owned {
 
         // Deploy the reserves to the Baseline pool
         _deployLiquidity(floorReserves, anchorReserves);
+
+        // Emit an event
+        {
+            Ticks memory floorTicks = BPOOL.getTicks(Range.FLOOR);
+            Ticks memory anchorTicks = BPOOL.getTicks(Range.ANCHOR);
+
+            emit LiquidityDeployed(
+                floorTicks.lower, floorTicks.upper, anchorTicks.upper, floorReserves, anchorReserves
+            );
+        }
     }
 
     // ========== BASELINE POOL INTERACTIONS ========== //
@@ -468,21 +491,15 @@ contract BaselineAxisLaunch is BaseCallback, Policy, Owned {
     function _deployLiquidity(
         uint256 _initialReservesF,
         uint256 _initialReservesA
-    ) internal returns (uint256 bAssetsDeployed, uint256 reservesDeployed) {
-        (uint256 floorBAssetsAdded, uint256 floorReservesAdded,) =
-            BPOOL.addReservesTo(Range.FLOOR, _initialReservesF);
-        (uint256 anchorBAssetsAdded, uint256 anchorReservesAdded,) =
-            BPOOL.addReservesTo(Range.ANCHOR, _initialReservesA);
-        (uint256 discoveryBAssetsAdded, uint256 discoveryReservesAdded,) =
-            BPOOL.addLiquidityTo(Range.DISCOVERY, BPOOL.getLiquidity(Range.ANCHOR) * 11 / 10);
+    ) internal returns (uint256 floorReservesAdded, uint256 anchorReservesAdded) {
+        (, floorReservesAdded,) = BPOOL.addReservesTo(Range.FLOOR, _initialReservesF);
+        (, anchorReservesAdded,) = BPOOL.addReservesTo(Range.ANCHOR, _initialReservesA);
+        BPOOL.addLiquidityTo(Range.DISCOVERY, BPOOL.getLiquidity(Range.ANCHOR) * 11 / 10);
 
         // verify solvency
         if (calculateTotalCapacity() < initialCirculatingSupply) revert Insolvent();
 
-        return (
-            floorBAssetsAdded + anchorBAssetsAdded + discoveryBAssetsAdded,
-            floorReservesAdded + anchorReservesAdded + discoveryReservesAdded
-        );
+        return (floorReservesAdded, anchorReservesAdded);
     }
 
     /// @dev    Reproduces much of this function: https://github.com/0xBaseline/baseline-v2/blob/88bb34b23b1627207e4c8d3fcd9efad22332eb5f/src/policies/BaselineInit.sol#L166
