@@ -43,16 +43,18 @@ contract GradualDutchAuction is AtomicAuctionModule {
     // Bounds for the decay period, which establishes the bounds for the decay constant
     // If a you want a longer or shorter period for the target, you can find another point on the curve that is in this range
     // and calculate the decay target for that point as your input
-    uint48 internal constant MIN_DECAY_PERIOD = 1 days;
+    uint48 internal constant MIN_DECAY_PERIOD = 1 hours;
     uint48 internal constant MAX_DECAY_PERIOD = 1 weeks;
 
-    // Decay period must be greater than or equal to 1 day and less than or equal to 1 week
-    // A minimum value of q1 = q0 * 0.01 and a min period of 1 day means:
+    // Decay period must be greater than or equal to 1 hours and less than or equal to 1 week
+    // A minimum value of q1 = q0 * 0.01 and a min period of 1 hours means:
     // MAX_LN_OUTPUT = ln(1/0.5) = 0_693147180559945309
-    // MAX_LN_OUTPUT / 1 = 0_693147180559945309
+    // MAX_LN_OUTPUT * 24 = 16_635532333438687426
+    // -> implies a max duration of 8 days in the worst case (decaying 50% over an hour)
     // A maximum value of q1 = q0 * 0.99 and a max period of 7 days means:
     // MIN_LN_OUTPUT = ln(1/0.99) = 0_010050335853501441
     // MIN_LN_OUTPUT / 7 = 0_001435762264785920
+    // -> implies a max duration of ~52 years in the best case (decaying 1% over a week)
 
     /* solhint-enable private-vars-leading-underscore */
 
@@ -77,8 +79,8 @@ contract GradualDutchAuction is AtomicAuctionModule {
         GDAParams memory params = abi.decode(params_, (GDAParams));
 
         // Validate parameters
-        // Equilibrium Price must not be zero and greater than minimum price (which can be zero)
-        if (params.equilibriumPrice == 0 || params.equilibriumPrice <= params.minimumPrice) {
+        // Equilibrium Price must not be zero
+        if (params.equilibriumPrice == 0) {
             revert Auction_InvalidParams();
         }
 
@@ -108,8 +110,10 @@ contract GradualDutchAuction is AtomicAuctionModule {
             UD60x18 qm = ud(params.minimumPrice.mulDiv(uUNIT, quoteTokenScale));
 
             // Check that q0 > q1 > qm
+            // Don't need to check q0 > q1 since:
+            //   decayTarget >= 1e16 => q1 <= q0 * 0.99 => q0 > q1
             // This ensures that the operand for the logarithm is positive
-            if (q0 <= q1 || q1 <= qm) {
+            if (q1 <= qm) {
                 revert Auction_InvalidParams();
             }
 
