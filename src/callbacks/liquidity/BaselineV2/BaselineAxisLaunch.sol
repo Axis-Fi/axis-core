@@ -21,7 +21,7 @@ import {
     toKeycode as toBaselineKeycode,
     Permissions as BaselinePermissions
 } from "src/callbacks/liquidity/BaselineV2/lib/Kernel.sol";
-import {Range, Position, Ticks, IBPOOLv1} from "src/callbacks/liquidity/BaselineV2/lib/IBPOOL.sol";
+import {Range, Position, IBPOOLv1} from "src/callbacks/liquidity/BaselineV2/lib/IBPOOL.sol";
 import {ICREDTv1} from "src/callbacks/liquidity/BaselineV2/lib/ICREDT.sol";
 import {LiquidityAmounts} from "lib/uniswap-v3-periphery/contracts/libraries/LiquidityAmounts.sol";
 import {TimeslotLib} from "src/callbacks/liquidity/BaselineV2/lib/TimeslotLib.sol";
