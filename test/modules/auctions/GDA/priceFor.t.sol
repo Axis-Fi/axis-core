@@ -14,17 +14,20 @@ import {console2} from "lib/forge-std/src/console2.sol";
 contract GdaPriceForTest is GdaTest {
     using {PRBMath.mulDiv} for uint256;
 
-    // [ ] when the lot ID is invalid
-    //   [ ] it reverts
-    // [ ] when payout is greater than remaining capacity
-    //   [ ] it reverts
-    // [ ] when minimum price is zero
-    //   [ ] it calculates the price correctly
-    // [ ] when minimum price is greater than zero
-    //   [ ] it calculates the price correctly
-    // [ ] when payout is zero
-    //   [ ] it returns zero
-    //
+    // [X] when the lot ID is invalid
+    //   [X] it reverts
+    // [X] when payout is greater than remaining capacity
+    //   [X] it reverts
+    // [X when minimum price is zero
+    //   [X] it calculates the price correctly
+    // [X] when minimum price is greater than zero
+    //   [X] it calculates the price correctly
+    // [X] when payout is zero
+    //   [X] it returns zero
+    // [X] when large, reasonable values are used
+    //   [X] it does not overflow
+    // TODO can we fuzz this better? maybe use some external calculations to compare the values?
+    // Otherwise, we're just recreating the same calculations here and not really validating anything
 
     function testFuzz_lotIdInvalid_reverts(uint96 lotId_) public {
         // No lots have been created so all lots are invalid
@@ -92,5 +95,59 @@ contract GdaPriceForTest is GdaTest {
         console2.log("Expected price:", expectedPrice);
 
         assertApproxEqRel(price, expectedPrice, 1e14); // 0.01%, TODO is this good enough? Seems like it slightly underestimates
+    }
+
+    function test_minPriceNonZero_lastAuctionStartInFuture() public givenLotIsCreated {
+        // We don't start the auction so the lastAuctionStart is 1 second ahead of the current time.
+        // 1 seconds worth of tokens should be slightly more than the initial price.
+        uint256 payout = _LOT_CAPACITY / _DURATION; // 1 seconds worth of tokens
+        console2.log("1 second of token emissions:", payout);
+
+        uint256 price = _module.priceFor(_lotId, payout);
+        console2.log("Price for payout at beginning:", price);
+
+        uint256 expectedPrice = _INITIAL_PRICE.mulDiv(payout, _BASE_SCALE);
+        console2.log("Expected price:", expectedPrice);
+
+        assertGe(price, expectedPrice);
+    }
+
+    function test_minPriceNonZero_lastAuctionStartInPast() public givenLotIsCreated {
+        vm.warp(_start + 1);
+        //lastAuctionStart is 1 second behind the current time.
+        // 1 seconds worth of tokens should be slightly less than the initial price.
+        uint256 payout = _LOT_CAPACITY / _DURATION; // 1 seconds worth of tokens
+        console2.log("1 second of token emissions:", payout);
+
+        uint256 price = _module.priceFor(_lotId, payout);
+        console2.log("Price for payout at beginning:", price);
+
+        uint256 expectedPrice = _INITIAL_PRICE.mulDiv(payout, _BASE_SCALE);
+        console2.log("Expected price:", expectedPrice);
+
+        assertLe(price, expectedPrice);
+    }
+
+    function testFuzz_minPriceZero_noOverflows(uint256 payout_)
+        public
+        givenLotCapacity(1e75) // very large number, but not quite max (which overflows)
+        givenMinPrice(0)
+        givenLotIsCreated
+        givenLotHasStarted
+    {
+        vm.assume(payout_ <= _LOT_CAPACITY);
+
+        _module.priceFor(_lotId, payout_);
+    }
+
+    function testFuzz_minPriceNonZero_noOverflows(uint256 payout_)
+        public
+        givenLotCapacity(1e75) // very large number, but not quite max (which overflows)
+        givenLotIsCreated
+        givenLotHasStarted
+    {
+        vm.assume(payout_ <= _LOT_CAPACITY);
+
+        _module.priceFor(_lotId, payout_);
     }
 }
