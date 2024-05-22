@@ -43,27 +43,15 @@ contract BaselineOnCreateTest is BaselineAxisLaunchTest {
     //  [ ] it reverts
     // [ ] when the quote token is not the reserve
     //  [ ] it reverts
-    // [ ] when the percentReservesFloor is 0
-    //  [ ] it reverts
-    // [ ] when the percentReservesFloor is > 100%
-    //  [ ] it reverts
-    // [ ] when the anchorTickWidth is 0
-    //  [ ] it reverts
     // [ ] when the discoveryTickWidth is 0
     //  [ ] it reverts
-    // [ ] when the auction format is not EMP or FPB
+    // [ ] when the auction format is not FPB
     //  [ ] it reverts
     // [ ] when the auction is not prefunded
     //  [ ] it reverts
-    // [ ] when the auction format is FPB
-    //  [ ] when the initAnchorTick is 0
-    //   [ ] it reverts
-    //  [ ] when the initAnchorTick is not a multiple of the tick spacing
-    //   [ ] it rounds to the nearest multiple of the tick spacing
-    //  [ ] when the anchorTickWidth is narrow
-    //   [ ] it correctly sets the floor ticks to not overlap with the anchor ticks
-    //  [ ] when the discoveryTickWidth is narrow
-    //   [ ] it correctly sets the discovery ticks to not overlap with the anchor ticks
-    //  [ ] it performs the standard behaviour, plus initializes the pool and sets the range ticks
-    // [ ] it transfers the base token to the auction house, updates circulating supply, sets the state variables
+    // [ ] when the tick spacing is narrow
+    //  [ ] the ticks do not overlap
+    // [ ] when the discoveryTickWidth is less than the tick spacing
+    //  [ ] it correctly sets the discovery ticks to not overlap with the other ranges
+    // [ ] it transfers the base token to the auction house, updates circulating supply, sets the state variables, initializes the pool and sets the range ticks
 }
