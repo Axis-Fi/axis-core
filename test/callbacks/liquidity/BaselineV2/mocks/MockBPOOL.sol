@@ -19,7 +19,7 @@ contract MockBPOOL is IBPOOLv1, ERC20 {
 
     mapping(Range => uint256) public _rangeReserves;
 
-    int24 internal _activeTick;
+    int24 public activeTick;
 
     constructor(
         string memory name_,
@@ -38,7 +38,7 @@ contract MockBPOOL is IBPOOLv1, ERC20 {
     function getLiquidity(Range range_) external view override returns (uint128) {}
 
     function initializePool(int24 activeTick_) external override returns (IUniswapV3Pool) {
-        _activeTick = activeTick_;
+        activeTick = activeTick_;
 
         return pool;
     }
@@ -95,7 +95,7 @@ contract MockBPOOL is IBPOOLv1, ERC20 {
     function getBaselineValue() external view override returns (uint256) {}
 
     function getActiveTS() external view override returns (int24 activeTS_) {
-        return (_activeTick / TICK_SPACING) * TICK_SPACING;
+        return (activeTick / TICK_SPACING) * TICK_SPACING;
     }
 
     function getPosition(Range _range) external view override returns (Position memory position_) {}

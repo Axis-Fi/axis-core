@@ -250,7 +250,7 @@ contract BaselineAxisLaunch is BaseCallback, Policy, Owned {
         // - The active tick is the upper floor tick
         // - There is no anchor (width of the anchor tick range is 0)
         // - The discovery range is set to the active tick plus the discovery tick width
-        BPOOL.setTicks(Range.FLOOR, activeTick - tickSpacing, activeTick);
+        BPOOL.setTicks(Range.FLOOR, activeTick - tickSpacing, activeTick); // TODO check this - should be 200 ticks in width?
         BPOOL.setTicks(Range.ANCHOR, activeTick, activeTick);
         BPOOL.setTicks(
             Range.DISCOVERY, activeTick, activeTick + tickSpacing * cbData.discoveryTickWidth

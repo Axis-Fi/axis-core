@@ -6,8 +6,9 @@ import {Script} from "lib/forge-std/src/Script.sol";
 import {WithEnvironment} from "script/deploy/WithEnvironment.s.sol";
 import {Permit2User} from "test/lib/permit2/Permit2User.sol";
 import {WithSalts} from "script/salts/WithSalts.s.sol";
+import {console2} from "forge-std/console2.sol";
 
-import {MockERC20} from "lib/solmate/src/test/utils/mocks/MockERC20.sol";
+import {MockERC20} from "solmate/test/utils/mocks/MockERC20.sol";
 import {MockCallback} from "test/callbacks/MockCallback.sol";
 import {Callbacks} from "src/lib/Callbacks.sol";
 import {CappedMerkleAllowlist} from "src/callbacks/allowlists/CappedMerkleAllowlist.sol";
@@ -439,8 +440,12 @@ contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts {
             _writeBytecode("QuoteToken", qtContractCode, qtArgs);
         _setTestSalt(qtBytecodePath, "AA", "QuoteToken", qtBytecodeHash);
 
+        // Fetch the salt that was set
+        bytes32 quoteTokenSalt = _getSalt("Test_QuoteToken", qtContractCode, qtArgs);
+
         // Get the address of the quote token
-        MockERC20 quoteToken = new MockERC20{salt: qtBytecodeHash}("Quote Token", "QT", 18);
+        MockERC20 quoteToken = new MockERC20{salt: quoteTokenSalt}("Quote Token", "QT", 18); // 0xb6C49a15EB27119035e3825A9940e565cBBA5422
+        console2.log("Quote Token address: ", address(quoteToken));
 
         // Callback permissions
         Callbacks.Permissions memory permissions = Callbacks.Permissions({

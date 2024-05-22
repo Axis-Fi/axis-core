@@ -16,11 +16,18 @@ import {IAuction} from "src/interfaces/modules/IAuction.sol";
 import {IAuctionHouse} from "src/interfaces/IAuctionHouse.sol";
 import {BatchAuctionHouse} from "src/BatchAuctionHouse.sol";
 import {EncryptedMarginalPrice} from "src/modules/auctions/batch/EMP.sol";
+import {IFixedPriceBatch} from "src/interfaces/modules/auctions/IFixedPriceBatch.sol";
 import {FixedPriceBatch} from "src/modules/auctions/batch/FPB.sol";
 
 // Callbacks
 import {Callbacks} from "src/lib/Callbacks.sol";
 import {BaselineAxisLaunch} from "src/callbacks/liquidity/BaselineV2/BaselineAxisLaunch.sol";
+
+// Baseline
+import {
+    Kernel,
+    toKeycode as toBaselineKeycode
+} from "src/callbacks/liquidity/BaselineV2/lib/Kernel.sol";
 
 abstract contract BaselineAxisLaunchTest is Test, Permit2User, WithSalts {
     using Callbacks for BaselineAxisLaunch;
@@ -29,14 +36,16 @@ abstract contract BaselineAxisLaunchTest is Test, Permit2User, WithSalts {
     address internal constant _SELLER = address(0x2);
     address internal constant _PROTOCOL = address(0x3);
     address internal constant _BUYER = address(0x4);
-    address internal constant _BASELINE_KERNEL = address(0xBB);
-    address internal constant _BASELINE_RESERVE = address(0xBC);
     address internal constant _NOT_SELLER = address(0x20);
     address internal constant _AUCTION_HOUSE = address(0x000000000000000000000000000000000000000A);
+    address internal constant _BASELINE_KERNEL = address(0xBB);
+    address internal constant _QUOTE_TOKEN = address(0xb6C49a15EB27119035e3825A9940e565cBBA5422);
 
     uint96 internal constant _LOT_CAPACITY = 10e18;
     uint96 internal constant _REFUND_AMOUNT = 2e18;
-    uint256 internal constant _PROCEEDS_AMOUNT = 20e18;
+    uint256 internal constant _PROCEEDS_AMOUNT = 24e18;
+    int24 internal constant _DISCOVERY_TICK_WIDTH = 500;
+    uint256 internal constant _FIXED_PRICE = 3e18;
 
     uint48 internal constant _START = 1_000_000;
 
@@ -49,14 +58,18 @@ abstract contract BaselineAxisLaunchTest is Test, Permit2User, WithSalts {
     address internal _dtlAddress;
     IUniswapV3Factory internal _uniV3Factory;
 
+    int24 internal _tickSpacing;
+
     IAuction internal _auctionModule;
 
     MockERC20 internal _quoteToken;
     MockBPOOL internal _baseToken;
 
     // Inputs
-    BaselineAxisLaunch.CreateData internal _createData =
-        BaselineAxisLaunch.CreateData({discoveryTickWidth: 0, allowlistParams: abi.encode("")});
+    BaselineAxisLaunch.CreateData internal _createData = BaselineAxisLaunch.CreateData({
+        discoveryTickWidth: _DISCOVERY_TICK_WIDTH,
+        allowlistParams: abi.encode("")
+    });
 
     function setUp() public {
         // Set reasonable timestamp
@@ -75,21 +88,51 @@ abstract contract BaselineAxisLaunchTest is Test, Permit2User, WithSalts {
         _uniV3Factory = new UniswapV3Factory{
             salt: bytes32(0xbc65534283bdbbac4a95a3fb1933af63d55135566688dd54d1c55a626b1bc366)
         }();
-        console2.log("UniswapV3Factory address: ", address(_uniV3Factory)); // 0x43de928116768b88F8BF8f768b3de90A0Aaf9551
+        vm.stopBroadcast();
+        if (address(_uniV3Factory) != address(0x43de928116768b88F8BF8f768b3de90A0Aaf9551)) {
+            console2.log("UniswapV3Factory address: ", address(_uniV3Factory));
+            revert("UniswapV3Factory address mismatch");
+        }
 
         // Create auction modules
         _empModule = new EncryptedMarginalPrice(address(_auctionHouse));
         _fpbModule = new FixedPriceBatch(address(_auctionHouse));
+
+        // Default auction module is FPB
+        _auctionModule = _fpbModule;
+        _mockGetAuctionModuleForId();
 
         // Create the quote token at a deterministic address
         bytes32 quoteTokenSalt = _getTestSalt(
             "QuoteToken", type(MockERC20).creationCode, abi.encode("Quote Token", "QT", 18)
         );
         _quoteToken = new MockERC20{salt: quoteTokenSalt}("Quote Token", "QT", 18);
+        if (address(_quoteToken) != _QUOTE_TOKEN) {
+            console2.log("Quote Token address: ", address(_quoteToken));
+            revert("Quote Token address mismatch");
+        }
 
         // Set base token to BPOOL
         _baseToken =
-            new MockBPOOL("Base Token", "BT", 18, address(_uniV3Factory), address(_quoteToken), 500);
+            new MockBPOOL("Base Token", "BT", 18, address(_uniV3Factory), _QUOTE_TOKEN, 3000);
+        _tickSpacing = _uniV3Factory.feeAmountTickSpacing(3000);
+
+        // Create a dummy auction in the module
+        IFixedPriceBatch.AuctionDataParams memory fpbParams = IFixedPriceBatch.AuctionDataParams({
+            price: _FIXED_PRICE,
+            minFillPercent: 5e4 // 50%
+        });
+
+        IAuction.AuctionParams memory auctionParams = IAuction.AuctionParams({
+            start: _START,
+            duration: 1 days,
+            capacityInQuote: false,
+            capacity: _LOT_CAPACITY,
+            implParams: abi.encode(fpbParams)
+        });
+
+        vm.prank(address(_auctionHouse));
+        _fpbModule.auction(_lotId, auctionParams, 18, 18);
     }
 
     // ========== MODIFIERS ========== //
@@ -109,7 +152,7 @@ abstract contract BaselineAxisLaunchTest is Test, Permit2User, WithSalts {
 
         // Get the salt
         bytes memory args =
-            abi.encode(address(_auctionHouse), permissions, _BASELINE_KERNEL, address(_quoteToken));
+            abi.encode(address(_auctionHouse), permissions, _BASELINE_KERNEL, _QUOTE_TOKEN);
         bytes32 salt =
             _getTestSalt("BaselineAxisLaunch", type(BaselineAxisLaunch).creationCode, args);
 
@@ -117,11 +160,15 @@ abstract contract BaselineAxisLaunchTest is Test, Permit2User, WithSalts {
         // Source: https://github.com/foundry-rs/foundry/issues/6402
         vm.startBroadcast();
         _dtl = new BaselineAxisLaunch{salt: salt}(
-            address(_auctionHouse), permissions, _BASELINE_KERNEL, address(_quoteToken)
+            address(_auctionHouse), permissions, _BASELINE_KERNEL, _QUOTE_TOKEN
         );
         vm.stopBroadcast();
 
         _dtlAddress = address(_dtl);
+
+        // Call configureDependencies to set everything that's needed
+        _mockBaselineGetModuleForKeycode();
+        _dtl.configureDependencies();
         _;
     }
 
@@ -149,11 +196,7 @@ abstract contract BaselineAxisLaunchTest is Test, Permit2User, WithSalts {
 
     modifier givenAuctionFormatIsEmp() {
         _auctionModule = _empModule;
-        _;
-    }
-
-    modifier givenAuctionFormatIsFpb() {
-        _auctionModule = _fpbModule;
+        _mockGetAuctionModuleForId();
         _;
     }
 
@@ -165,7 +208,7 @@ abstract contract BaselineAxisLaunchTest is Test, Permit2User, WithSalts {
             address(_baseToken),
             address(_quoteToken),
             _LOT_CAPACITY,
-            false,
+            true,
             abi.encode(_createData)
         );
     }
@@ -195,6 +238,15 @@ abstract contract BaselineAxisLaunchTest is Test, Permit2User, WithSalts {
         _;
     }
 
+    modifier givenBPoolFeeTier(uint24 feeTier_) {
+        // Create a new mock BPOOL with the given fee tier
+        _baseToken = new MockBPOOL(
+            "Base Token", "BT", 18, address(_uniV3Factory), address(_quoteToken), feeTier_
+        );
+        _tickSpacing = _uniV3Factory.feeAmountTickSpacing(feeTier_);
+        _;
+    }
+
     // ========== MOCKS ========== //
 
     function _mockGetAuctionModuleForId() internal {
@@ -202,6 +254,16 @@ abstract contract BaselineAxisLaunchTest is Test, Permit2User, WithSalts {
             address(_auctionHouse),
             abi.encodeWithSelector(IAuctionHouse.getAuctionModuleForId.selector, _lotId),
             abi.encode(address(_auctionModule))
+        );
+    }
+
+    function _mockBaselineGetModuleForKeycode() internal {
+        vm.mockCall(
+            _BASELINE_KERNEL,
+            abi.encodeWithSelector(
+                bytes4(keccak256("getModuleForKeycode(bytes5)")), toBaselineKeycode("BPOOL")
+            ),
+            abi.encode(address(_baseToken))
         );
     }
 }
