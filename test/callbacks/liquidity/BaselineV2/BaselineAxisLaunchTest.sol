@@ -10,6 +10,8 @@ import {MockERC20} from "solmate/test/utils/mocks/MockERC20.sol";
 import {MockBPOOL} from "test/callbacks/liquidity/BaselineV2/mocks/MockBPOOL.sol";
 import {IUniswapV3Factory} from "uniswap-v3-core/interfaces/IUniswapV3Factory.sol";
 import {UniswapV3Factory} from "test/lib/uniswap-v3/UniswapV3Factory.sol";
+import {ComputeAddress} from "test/lib/ComputeAddress.sol";
+import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 
 // Axis core
 import {IAuction} from "src/interfaces/modules/IAuction.sol";
@@ -46,6 +48,10 @@ abstract contract BaselineAxisLaunchTest is Test, Permit2User, WithSalts {
     uint256 internal constant _PROCEEDS_AMOUNT = 24e18;
     int24 internal constant _DISCOVERY_TICK_WIDTH = 500;
     uint256 internal constant _FIXED_PRICE = 3e18;
+    uint24 internal constant _FEE_TIER = 3000;
+    uint256 internal constant _BASE_SCALE = 1e18;
+    uint8 internal _quoteTokenDecimals = 18;
+    uint8 internal _baseTokenDecimals = 18;
 
     uint48 internal constant _START = 1_000_000;
 
@@ -112,15 +118,27 @@ abstract contract BaselineAxisLaunchTest is Test, Permit2User, WithSalts {
             "QuoteToken", type(MockERC20).creationCode, abi.encode("Quote Token", "QT", 18)
         );
         _quoteToken = new MockERC20{salt: quoteTokenSalt}("Quote Token", "QT", 18);
+        _quoteTokenDecimals = 18;
         if (address(_quoteToken) != _QUOTE_TOKEN) {
             console2.log("Quote Token address: ", address(_quoteToken));
             revert("Quote Token address mismatch");
         }
 
+        // Generate a salt so that the base token address is higher than the quote token
+        bytes32 baseTokenSalt = ComputeAddress.generateSalt(
+            _QUOTE_TOKEN,
+            true,
+            type(MockBPOOL).creationCode,
+            abi.encode("Base Token", "BT", 18, address(_uniV3Factory), _QUOTE_TOKEN, _FEE_TIER),
+            address(this)
+        );
+
         // Set base token to BPOOL
-        _baseToken =
-            new MockBPOOL("Base Token", "BT", 18, address(_uniV3Factory), _QUOTE_TOKEN, 3000);
-        _tickSpacing = _uniV3Factory.feeAmountTickSpacing(3000);
+        _baseToken = new MockBPOOL{salt: baseTokenSalt}(
+            "Base Token", "BT", 18, address(_uniV3Factory), _QUOTE_TOKEN, 3000
+        );
+        _baseTokenDecimals = 18;
+        _tickSpacing = _uniV3Factory.feeAmountTickSpacing(_FEE_TIER);
     }
 
     // ========== MODIFIERS ========== //
@@ -172,12 +190,12 @@ abstract contract BaselineAxisLaunchTest is Test, Permit2User, WithSalts {
             start: _START,
             duration: 1 days,
             capacityInQuote: false,
-            capacity: _LOT_CAPACITY,
+            capacity: _scaleBaseTokenAmount(_LOT_CAPACITY),
             implParams: abi.encode(_fpbParams)
         });
 
         vm.prank(address(_auctionHouse));
-        _fpbModule.auction(_lotId, auctionParams, 18, 18);
+        _fpbModule.auction(_lotId, auctionParams, _quoteTokenDecimals, _baseTokenDecimals);
         _;
     }
 
@@ -188,7 +206,7 @@ abstract contract BaselineAxisLaunchTest is Test, Permit2User, WithSalts {
             _SELLER,
             address(_baseToken),
             address(_quoteToken),
-            _LOT_CAPACITY,
+            _scaleBaseTokenAmount(_LOT_CAPACITY),
             true,
             abi.encode(_createData)
         );
@@ -201,7 +219,7 @@ abstract contract BaselineAxisLaunchTest is Test, Permit2User, WithSalts {
 
     function onCancel() internal {
         vm.prank(address(_auctionHouse));
-        _dtl.onCancel(_lotId, _REFUND_AMOUNT, true, abi.encode(""));
+        _dtl.onCancel(_lotId, _scaleBaseTokenAmount(_REFUND_AMOUNT), true, abi.encode(""));
     }
 
     modifier givenOnCancel() {
@@ -211,7 +229,9 @@ abstract contract BaselineAxisLaunchTest is Test, Permit2User, WithSalts {
 
     function onSettle() internal {
         vm.prank(address(_auctionHouse));
-        _dtl.onSettle(_lotId, _PROCEEDS_AMOUNT, _REFUND_AMOUNT, abi.encode(""));
+        _dtl.onSettle(
+            _lotId, _PROCEEDS_AMOUNT, _scaleBaseTokenAmount(_REFUND_AMOUNT), abi.encode("")
+        );
     }
 
     modifier givenOnSettle() {
@@ -220,11 +240,47 @@ abstract contract BaselineAxisLaunchTest is Test, Permit2User, WithSalts {
     }
 
     modifier givenBPoolFeeTier(uint24 feeTier_) {
-        // Create a new mock BPOOL with the given fee tier
-        _baseToken = new MockBPOOL(
-            "Base Token", "BT", 18, address(_uniV3Factory), address(_quoteToken), feeTier_
+        // Generate a salt so that the base token address is higher than the quote token
+        bytes32 baseTokenSalt = ComputeAddress.generateSalt(
+            _QUOTE_TOKEN,
+            true,
+            type(MockBPOOL).creationCode,
+            abi.encode("Base Token", "BT", 18, address(_uniV3Factory), _QUOTE_TOKEN, feeTier_),
+            address(this)
         );
+
+        // Create a new mock BPOOL with the given fee tier
+        _baseToken =
+            new MockBPOOL("Base Token", "BT", 18, address(_uniV3Factory), _QUOTE_TOKEN, feeTier_);
         _tickSpacing = _uniV3Factory.feeAmountTickSpacing(feeTier_);
+        _;
+    }
+
+    modifier givenBaseTokenAddressLower() {
+        // Generate a salt so that the base token address is lower than the quote token
+        bytes32 baseTokenSalt = ComputeAddress.generateSalt(
+            _QUOTE_TOKEN,
+            false,
+            type(MockBPOOL).creationCode,
+            abi.encode("Base Token", "BT", 18, address(_uniV3Factory), _QUOTE_TOKEN, _FEE_TIER),
+            address(this)
+        );
+
+        // Create a new mock BPOOL with the given address
+        _baseToken = new MockBPOOL{salt: baseTokenSalt}(
+            "Base Token", "BT", 18, address(_uniV3Factory), _QUOTE_TOKEN, _FEE_TIER
+        );
+        _tickSpacing = _uniV3Factory.feeAmountTickSpacing(_FEE_TIER);
+        _;
+    }
+
+    modifier givenBaseTokenDecimals(uint8 decimals_) {
+        // Create a new mock BPOOL with the given decimals
+        _baseToken = new MockBPOOL(
+            "Base Token", "BT", decimals_, address(_uniV3Factory), _QUOTE_TOKEN, _FEE_TIER
+        );
+        _baseTokenDecimals = decimals_;
+        _tickSpacing = _uniV3Factory.feeAmountTickSpacing(_FEE_TIER);
         _;
     }
 
@@ -236,6 +292,10 @@ abstract contract BaselineAxisLaunchTest is Test, Permit2User, WithSalts {
     modifier givenDiscoveryTickWidth(int24 discoveryTickWidth_) {
         _createData.discoveryTickWidth = discoveryTickWidth_;
         _;
+    }
+
+    function _scaleBaseTokenAmount(uint256 amount_) internal view returns (uint256) {
+        return FixedPointMathLib.mulDivDown(amount_, 10 ** _baseTokenDecimals, _BASE_SCALE);
     }
 
     // ========== MOCKS ========== //
