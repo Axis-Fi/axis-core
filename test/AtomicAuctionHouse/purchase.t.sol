@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.19;
 
-import {AuctionHouse} from "src/bases/AuctionHouse.sol";
-import {IAuction} from "src/interfaces/IAuction.sol";
+import {IAuctionHouse} from "src/interfaces/IAuctionHouse.sol";
+import {IAuction} from "src/interfaces/modules/IAuction.sol";
 import {AtomicAuctionHouse} from "src/AtomicAuctionHouse.sol";
 
 import {MockDerivativeModule} from "test/modules/derivatives/mocks/MockDerivativeModule.sol";
@@ -12,6 +12,8 @@ import {AtomicAuctionHouseTest} from "test/AtomicAuctionHouse/AuctionHouseTest.s
 contract AtomicPurchaseTest is AtomicAuctionHouseTest {
     uint256 internal constant _AMOUNT_IN = 2e18;
     uint256 internal constant _PAYOUT_MULTIPLIER = 50_000; // 50%
+
+    address internal constant _SENDER = address(0x26);
 
     /// @dev Set by whenPayoutMultiplierIsSet
     uint256 internal _amountOut;
@@ -245,7 +247,7 @@ contract AtomicPurchaseTest is AtomicAuctionHouseTest {
 
     function _assertPrefunding() internal {
         // Check funding amount
-        AuctionHouse.Routing memory routing = _getLotRouting(_lotId);
+        IAuctionHouse.Routing memory routing = _getLotRouting(_lotId);
         assertEq(routing.funding, 0, "mismatch on funding");
     }
 
@@ -261,7 +263,7 @@ contract AtomicPurchaseTest is AtomicAuctionHouseTest {
 
     function test_whenLotIdIsInvalid_reverts() external {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(AuctionHouse.InvalidLotId.selector, _lotId);
+        bytes memory err = abi.encodeWithSelector(IAuctionHouse.InvalidLotId.selector, _lotId);
         vm.expectRevert(err);
 
         // Purchase
@@ -1616,5 +1618,246 @@ contract AtomicPurchaseTest is AtomicAuctionHouseTest {
         _assertDerivativeTokenBalances();
         _assertAccruedFees();
         _assertPrefunding();
+    }
+
+    // [X] when the recipient is not the sender
+    //  [X] when the recipient is the zero address
+    //   [X] it treats sender as the recipient
+    //   [X] when a callback is set
+    //    [X] when the callback has the send base tokens flag
+    //     [X] it sends the sender to the onPurchase callback
+    //    [X] it sends the sender to the onPurchase callback
+    //  [X] when the recipient is not the zero address
+    //   [X] it treats the recipient param as the recipient
+    //   [X] when a callback is set
+    //    [X] when the callback has the send base tokens flag
+    //     [X] it sends the recipient to the onPurchase callback
+    //    [X] it sends the recipient to the onPurchase callback
+
+    function test_whenSenderIsNotRecipient_whenRecipientIsZeroAddress()
+        external
+        whenAuctionTypeIsAtomic
+        whenAtomicAuctionModuleIsInstalled
+        givenLotIsCreated
+        givenLotHasStarted
+        whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
+        givenBalancesAreCalculated(_AMOUNT_IN, _amountOut)
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
+    {
+        // Fund the sender
+        _sendUserQuoteTokenBalance(_SENDER, _AMOUNT_IN);
+        _approveUserQuoteTokenAllowance(_SENDER, _AMOUNT_IN);
+
+        // Cache sender balance
+        uint256 senderBalance = _quoteToken.balanceOf(_SENDER);
+
+        // Call the function
+        _createPurchase(
+            _SENDER, address(0), _AMOUNT_IN, _amountOut, _purchaseAuctionData, _REFERRER
+        );
+
+        // Quote token balances
+        assertEq(_quoteToken.balanceOf(_SENDER), senderBalance - _AMOUNT_IN, "quote token: sender");
+
+        // Base token balances
+        assertEq(
+            _baseToken.balanceOf(_SENDER), _expectedBidderBaseTokenBalance, "base token: sender"
+        );
+        assertEq(_baseToken.balanceOf(_RECIPIENT), 0, "base token: recipient");
+    }
+
+    function test_whenSenderIsNotRecipient_whenRecipientIsZeroAddress_givenCallbackIsSet()
+        external
+        whenAuctionTypeIsAtomic
+        whenAtomicAuctionModuleIsInstalled
+        givenCallbackIsSet
+        givenLotIsCreated
+        givenLotHasStarted
+        whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
+        givenBalancesAreCalculated(_AMOUNT_IN, _amountOut)
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
+    {
+        // Fund the sender
+        _sendUserQuoteTokenBalance(_SENDER, _AMOUNT_IN);
+        _approveUserQuoteTokenAllowance(_SENDER, _AMOUNT_IN);
+
+        // Cache sender balance
+        uint256 senderBalance = _quoteToken.balanceOf(_SENDER);
+
+        // Call the function
+        _createPurchase(
+            _SENDER, address(0), _AMOUNT_IN, _amountOut, _purchaseAuctionData, _REFERRER
+        );
+
+        // Quote token balances
+        assertEq(_quoteToken.balanceOf(_SENDER), senderBalance - _AMOUNT_IN, "quote token: sender");
+
+        // Base token balances
+        assertEq(
+            _baseToken.balanceOf(_SENDER), _expectedBidderBaseTokenBalance, "base token: sender"
+        );
+        assertEq(_baseToken.balanceOf(_RECIPIENT), 0, "base token: recipient");
+
+        // Check that the callback was called, and the sender was passed as the buyer
+        assertEq(_callback.lotPurchased(_lotId), true, "lotPurchased");
+        assertEq(_callback.buyers(_lotId, 0), _SENDER, "buyers[0]");
+    }
+
+    function test_whenSenderIsNotRecipient_whenRecipientIsZeroAddress_givenCallbackIsSet_givenCallbackSendBaseTokensFlag(
+    )
+        external
+        whenAuctionTypeIsAtomic
+        whenAtomicAuctionModuleIsInstalled
+        givenCallbackHasSendBaseTokensFlag
+        givenCallbackIsSet
+        givenLotIsCreated
+        givenLotHasStarted
+        whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
+        givenBalancesAreCalculated(_AMOUNT_IN, _amountOut)
+        givenCallbackHasBaseTokenBalance(_LOT_CAPACITY)
+        givenCallbackHasBaseTokenAllowance(_LOT_CAPACITY)
+    {
+        // Fund the sender
+        _sendUserQuoteTokenBalance(_SENDER, _AMOUNT_IN);
+        _approveUserQuoteTokenAllowance(_SENDER, _AMOUNT_IN);
+
+        // Cache sender balance
+        uint256 senderBalance = _quoteToken.balanceOf(_SENDER);
+
+        // Call the function
+        _createPurchase(
+            _SENDER, address(0), _AMOUNT_IN, _amountOut, _purchaseAuctionData, _REFERRER
+        );
+
+        // Quote token balances
+        assertEq(_quoteToken.balanceOf(_SENDER), senderBalance - _AMOUNT_IN, "quote token: sender");
+
+        // Base token balances
+        assertEq(
+            _baseToken.balanceOf(_SENDER), _expectedBidderBaseTokenBalance, "base token: sender"
+        );
+        assertEq(_baseToken.balanceOf(_RECIPIENT), 0, "base token: recipient");
+
+        // Check that the callback was called, and the sender was passed as the buyer
+        assertEq(_callback.lotPurchased(_lotId), true, "lotPurchased");
+        assertEq(_callback.buyers(_lotId, 0), _SENDER, "buyers[0]");
+    }
+
+    function test_whenSenderIsNotRecipient()
+        external
+        whenAuctionTypeIsAtomic
+        whenAtomicAuctionModuleIsInstalled
+        givenLotIsCreated
+        givenLotHasStarted
+        whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
+        givenBalancesAreCalculated(_AMOUNT_IN, _amountOut)
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
+    {
+        // Fund the sender
+        _sendUserQuoteTokenBalance(_SENDER, _AMOUNT_IN);
+        _approveUserQuoteTokenAllowance(_SENDER, _AMOUNT_IN);
+
+        // Cache sender balance
+        uint256 senderBalance = _quoteToken.balanceOf(_SENDER);
+
+        // Call the function
+        _createPurchase(
+            _SENDER, _RECIPIENT, _AMOUNT_IN, _amountOut, _purchaseAuctionData, _REFERRER
+        );
+
+        // Quote token balances
+        assertEq(_quoteToken.balanceOf(_SENDER), senderBalance - _AMOUNT_IN, "quote token: sender");
+
+        // Base token balances
+        assertEq(_baseToken.balanceOf(_SENDER), 0, "base token: sender");
+        assertEq(
+            _baseToken.balanceOf(_RECIPIENT),
+            _expectedBidderBaseTokenBalance,
+            "base token: recipient"
+        );
+    }
+
+    function test_whenSenderIsNotRecipient_givenCallbackIsSet()
+        external
+        whenAuctionTypeIsAtomic
+        whenAtomicAuctionModuleIsInstalled
+        givenCallbackIsSet
+        givenLotIsCreated
+        givenLotHasStarted
+        whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
+        givenBalancesAreCalculated(_AMOUNT_IN, _amountOut)
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
+    {
+        // Fund the sender
+        _sendUserQuoteTokenBalance(_SENDER, _AMOUNT_IN);
+        _approveUserQuoteTokenAllowance(_SENDER, _AMOUNT_IN);
+
+        // Cache sender balance
+        uint256 senderBalance = _quoteToken.balanceOf(_SENDER);
+
+        // Call the function
+        _createPurchase(
+            _SENDER, _RECIPIENT, _AMOUNT_IN, _amountOut, _purchaseAuctionData, _REFERRER
+        );
+
+        // Quote token balances
+        assertEq(_quoteToken.balanceOf(_SENDER), senderBalance - _AMOUNT_IN, "quote token: sender");
+
+        // Base token balances
+        assertEq(_baseToken.balanceOf(_SENDER), 0, "base token: sender");
+        assertEq(
+            _baseToken.balanceOf(_RECIPIENT),
+            _expectedBidderBaseTokenBalance,
+            "base token: recipient"
+        );
+
+        // Check that the callback was called, and the recipient was passed as the buyer
+        assertEq(_callback.lotPurchased(_lotId), true, "lotPurchased");
+        assertEq(_callback.buyers(_lotId, 0), _RECIPIENT, "buyers[0]");
+    }
+
+    function test_whenSenderIsNotRecipient_givenCallbackIsSet_givenCallbackSendBaseTokensFlag()
+        external
+        whenAuctionTypeIsAtomic
+        whenAtomicAuctionModuleIsInstalled
+        givenCallbackHasSendBaseTokensFlag
+        givenCallbackIsSet
+        givenLotIsCreated
+        givenLotHasStarted
+        whenPayoutMultiplierIsSet(_PAYOUT_MULTIPLIER)
+        givenBalancesAreCalculated(_AMOUNT_IN, _amountOut)
+        givenCallbackHasBaseTokenBalance(_LOT_CAPACITY)
+        givenCallbackHasBaseTokenAllowance(_LOT_CAPACITY)
+    {
+        // Fund the sender
+        _sendUserQuoteTokenBalance(_SENDER, _AMOUNT_IN);
+        _approveUserQuoteTokenAllowance(_SENDER, _AMOUNT_IN);
+
+        // Cache sender balance
+        uint256 senderBalance = _quoteToken.balanceOf(_SENDER);
+
+        // Call the function
+        _createPurchase(
+            _SENDER, _RECIPIENT, _AMOUNT_IN, _amountOut, _purchaseAuctionData, _REFERRER
+        );
+
+        // Quote token balances
+        assertEq(_quoteToken.balanceOf(_SENDER), senderBalance - _AMOUNT_IN, "quote token: sender");
+
+        // Base token balances
+        assertEq(_baseToken.balanceOf(_SENDER), 0, "base token: sender");
+        assertEq(
+            _baseToken.balanceOf(_RECIPIENT),
+            _expectedBidderBaseTokenBalance,
+            "base token: recipient"
+        );
+
+        // Check that the callback was called, and the recipient was passed as the buyer
+        assertEq(_callback.lotPurchased(_lotId), true, "lotPurchased");
+        assertEq(_callback.buyers(_lotId, 0), _RECIPIENT, "buyers[0]");
     }
 }

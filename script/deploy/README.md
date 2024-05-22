@@ -34,11 +34,11 @@ Notes:
 
 First, support for the contract needs to be added in the deployment script, `./script/deploy/Deploy.s.sol`.
 
-This involves creating a function in the format of `function deploy<key>(bytes memory args_) public virtual returns (address)`.
+This involves creating a function in the format of `function deploy<key>(bytes memory args_) public virtual returns (address, string memory)`.
 
 For example, a deployment with `name` set to "AtomicLinearVesting" would require a function to be present in `Deploy.s.sol` with the name `deployAtomicLinearVesting`.
 
-This function should take in the args and salt, in addition to the environment variables, and deploy the contract.
+This function should take in the args and salt, in addition to the environment variables, and deploy the contract. It should return the address of the deployed contract, and a string representing the prefix under which the deployed address will be stored. For example, with a returned string of `axis` for a deployment with name `AtomicLinearVesting`, the address would be stored under the `axis.AtomicLinearVesting` key.
 
 Notes:
 

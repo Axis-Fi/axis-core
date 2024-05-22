@@ -4,10 +4,10 @@ pragma solidity 0.8.19;
 // Modules
 import {Veecode, toKeycode, wrapVeecode} from "src/modules/Modules.sol";
 import {BatchAuctionModule} from "src/modules/auctions/BatchAuctionModule.sol";
-import {IBatchAuction} from "src/interfaces/IBatchAuction.sol";
+import {IBatchAuction} from "src/interfaces/modules/IBatchAuction.sol";
 
 // Auctions
-import {IAuction} from "src/interfaces/IAuction.sol";
+import {IAuction} from "src/interfaces/modules/IAuction.sol";
 import {AuctionModule} from "src/modules/Auction.sol";
 
 contract MockBatchAuctionModule is BatchAuctionModule {
@@ -241,5 +241,16 @@ contract MockBatchAuctionModule is BatchAuctionModule {
         }
 
         return ids;
+    }
+
+    function getBidIdAtIndex(uint96, uint256 index_) external view override returns (uint64) {
+        return bidIds[index_];
+    }
+
+    function getBidClaim(
+        uint96 lotId_,
+        uint64 bidId_
+    ) external view override returns (BidClaim memory claim_) {
+        claim_ = bidClaims[lotId_][bidId_];
     }
 }

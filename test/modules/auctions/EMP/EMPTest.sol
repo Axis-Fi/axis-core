@@ -12,8 +12,9 @@ import {Permit2User} from "test/lib/permit2/Permit2User.sol";
 
 // Modules
 import {BatchAuctionHouse} from "src/BatchAuctionHouse.sol";
-import {IAuction} from "src/interfaces/IAuction.sol";
-import {EncryptedMarginalPrice} from "src/modules/auctions/EMP.sol";
+import {IAuction} from "src/interfaces/modules/IAuction.sol";
+import {EncryptedMarginalPrice} from "src/modules/auctions/batch/EMP.sol";
+import {IEncryptedMarginalPrice} from "src/interfaces/modules/auctions/IEncryptedMarginalPrice.sol";
 
 abstract contract EmpTest is Test, Permit2User {
     uint256 internal constant _BASE_SCALE = 1e18;
@@ -65,7 +66,7 @@ abstract contract EmpTest is Test, Permit2User {
         _start = uint48(block.timestamp) + 1;
         _settlePeriod = _module.dedicatedSettlePeriod();
 
-        _auctionDataParams = EncryptedMarginalPrice.AuctionDataParams({
+        _auctionDataParams = IEncryptedMarginalPrice.AuctionDataParams({
             minPrice: _MIN_PRICE,
             minFillPercent: _MIN_FILL_PERCENT,
             minBidSize: _MIN_BID_SIZE,
@@ -218,7 +219,12 @@ abstract contract EmpTest is Test, Permit2User {
     ) internal view returns (bytes memory) {
         uint256 encryptedAmountOut = _encryptBid(_lotId, bidder_, amountIn_, amountOut_);
 
-        return abi.encode(encryptedAmountOut, _bidPublicKey);
+        IEncryptedMarginalPrice.BidParams memory bidParams = IEncryptedMarginalPrice.BidParams({
+            encryptedAmountOut: encryptedAmountOut,
+            bidPublicKey: _bidPublicKey
+        });
+
+        return abi.encode(bidParams);
     }
 
     function _createBidData(
@@ -376,7 +382,7 @@ abstract contract EmpTest is Test, Permit2User {
         (
             uint64 nextBidId_,
             uint64 nextDecryptIndex_,
-            EncryptedMarginalPrice.LotStatus status_,
+            IEncryptedMarginalPrice.LotStatus status_,
             uint64 marginalBidId_,
             uint256 marginalPrice_,
             uint256 minPrice_,
@@ -386,7 +392,7 @@ abstract contract EmpTest is Test, Permit2User {
             uint256 privateKey_
         ) = _module.auctionData(lotId_);
 
-        return EncryptedMarginalPrice.AuctionData({
+        return IEncryptedMarginalPrice.AuctionData({
             nextBidId: nextBidId_,
             nextDecryptIndex: nextDecryptIndex_,
             status: status_,
@@ -410,7 +416,9 @@ abstract contract EmpTest is Test, Permit2User {
         view
         returns (EncryptedMarginalPrice.PartialFill memory)
     {
-        return _module.getPartialFill(lotId_);
+        (, EncryptedMarginalPrice.PartialFill memory partialFill) = _module.getPartialFill(lotId_);
+
+        return partialFill;
     }
 
     function _getBid(
@@ -425,7 +433,7 @@ abstract contract EmpTest is Test, Permit2User {
             EncryptedMarginalPrice.BidStatus status_
         ) = _module.bids(lotId_, bidId_);
 
-        return EncryptedMarginalPrice.Bid({
+        return IEncryptedMarginalPrice.Bid({
             bidder: bidder_,
             amount: amount_,
             minAmountOut: minAmountOut_,
@@ -441,7 +449,7 @@ abstract contract EmpTest is Test, Permit2User {
         (uint256 encryptedAmountOut_, Point memory publicKey_) =
             _module.encryptedBids(lotId_, bidId_);
 
-        return EncryptedMarginalPrice.EncryptedBid({
+        return IEncryptedMarginalPrice.EncryptedBid({
             encryptedAmountOut: encryptedAmountOut_,
             bidPubKey: publicKey_
         });

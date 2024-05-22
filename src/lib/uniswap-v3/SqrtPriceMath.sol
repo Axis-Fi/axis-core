@@ -19,7 +19,7 @@ library SqrtPriceMath {
         address tokenB,
         uint256 amountA,
         uint256 amountB
-    ) external pure returns (uint160 sqrtPriceX96) {
+    ) internal pure returns (uint160 sqrtPriceX96) {
         (uint256 amount0, uint256 amount1) =
             tokenA < tokenB ? (amountA, amountB) : (amountB, amountA);
 

@@ -13,7 +13,7 @@ import {MockCondenserModule} from "test/modules/Condenser/MockCondenserModule.so
 import {Permit2User} from "test/lib/permit2/Permit2User.sol";
 
 // Auctions
-import {AuctionHouse} from "src/bases/AuctionHouse.sol";
+import {IAuctionHouse} from "src/interfaces/IAuctionHouse.sol";
 import {InvalidVeecode, keycodeFromVeecode} from "src/modules/Modules.sol";
 
 // Modules
@@ -120,7 +120,7 @@ contract SetCondenserTest is Test, Permit2User {
         whenDerivativeModuleIsInstalled
         whenCondenserModuleIsInstalled
     {
-        bytes memory err = abi.encodeWithSelector(AuctionHouse.InvalidParams.selector);
+        bytes memory err = abi.encodeWithSelector(IAuctionHouse.InvalidParams.selector);
         vm.expectRevert(err);
 
         vm.prank(_OWNER);
@@ -142,7 +142,7 @@ contract SetCondenserTest is Test, Permit2User {
         whenDerivativeModuleIsInstalled
         whenCondenserModuleIsInstalled
     {
-        bytes memory err = abi.encodeWithSelector(AuctionHouse.InvalidParams.selector);
+        bytes memory err = abi.encodeWithSelector(IAuctionHouse.InvalidParams.selector);
         vm.expectRevert(err);
 
         vm.prank(_OWNER);
@@ -168,7 +168,7 @@ contract SetCondenserTest is Test, Permit2User {
         whenDerivativeModuleIsInstalled
         whenCondenserModuleIsInstalled
     {
-        bytes memory err = abi.encodeWithSelector(AuctionHouse.InvalidParams.selector);
+        bytes memory err = abi.encodeWithSelector(IAuctionHouse.InvalidParams.selector);
         vm.expectRevert(err);
 
         vm.prank(_OWNER);

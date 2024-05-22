@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.19;
 
-import {IAuction} from "src/interfaces/IAuction.sol";
-import {IBatchAuction} from "src/interfaces/IBatchAuction.sol";
-import {EncryptedMarginalPrice} from "src/modules/auctions/EMP.sol";
+import {IAuction} from "src/interfaces/modules/IAuction.sol";
+import {IBatchAuction} from "src/interfaces/modules/IBatchAuction.sol";
+import {EncryptedMarginalPrice} from "src/modules/auctions/batch/EMP.sol";
+import {IEncryptedMarginalPrice} from "src/interfaces/modules/auctions/IEncryptedMarginalPrice.sol";
 
 import {EmpTest} from "test/modules/auctions/EMP/EMPTest.sol";
 
@@ -97,7 +98,7 @@ contract EmpAbortTest is EmpTest {
         vm.warp(block.timestamp + _settlePeriod + 1);
 
         // Expect revert
-        err = abi.encodeWithSelector(EncryptedMarginalPrice.Auction_WrongState.selector, _lotId);
+        err = abi.encodeWithSelector(IEncryptedMarginalPrice.Auction_WrongState.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function
@@ -125,7 +126,7 @@ contract EmpAbortTest is EmpTest {
         vm.warp(block.timestamp + _settlePeriod + 1);
 
         // Expect revert
-        err = abi.encodeWithSelector(EncryptedMarginalPrice.Auction_WrongState.selector, _lotId);
+        err = abi.encodeWithSelector(IEncryptedMarginalPrice.Auction_WrongState.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function
@@ -141,7 +142,7 @@ contract EmpAbortTest is EmpTest {
     {
         // Expect revert
         bytes memory err =
-            abi.encodeWithSelector(EncryptedMarginalPrice.Auction_WrongState.selector, _lotId);
+            abi.encodeWithSelector(IEncryptedMarginalPrice.Auction_WrongState.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function
@@ -237,7 +238,7 @@ contract EmpAbortTest is EmpTest {
         // Check the lot status
         EncryptedMarginalPrice.AuctionData memory auctionData = _getAuctionData(_lotId);
 
-        assertEq(uint8(auctionData.status), uint8(EncryptedMarginalPrice.LotStatus.Settled));
+        assertEq(uint8(auctionData.status), uint8(IEncryptedMarginalPrice.LotStatus.Settled));
         assertEq(auctionData.marginalPrice, type(uint256).max);
     }
 
@@ -257,7 +258,7 @@ contract EmpAbortTest is EmpTest {
         // Check the lot status
         EncryptedMarginalPrice.AuctionData memory auctionData = _getAuctionData(_lotId);
 
-        assertEq(uint8(auctionData.status), uint8(EncryptedMarginalPrice.LotStatus.Settled));
+        assertEq(uint8(auctionData.status), uint8(IEncryptedMarginalPrice.LotStatus.Settled));
         assertEq(auctionData.marginalPrice, type(uint256).max);
     }
 
@@ -278,7 +279,7 @@ contract EmpAbortTest is EmpTest {
         // Check the lot status
         EncryptedMarginalPrice.AuctionData memory auctionData = _getAuctionData(_lotId);
 
-        assertEq(uint8(auctionData.status), uint8(EncryptedMarginalPrice.LotStatus.Settled));
+        assertEq(uint8(auctionData.status), uint8(IEncryptedMarginalPrice.LotStatus.Settled));
         assertEq(auctionData.marginalPrice, type(uint256).max);
     }
 
@@ -295,7 +296,7 @@ contract EmpAbortTest is EmpTest {
     {
         // Expect revert
         bytes memory err =
-            abi.encodeWithSelector(EncryptedMarginalPrice.Auction_WrongState.selector, _lotId);
+            abi.encodeWithSelector(IEncryptedMarginalPrice.Auction_WrongState.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function
@@ -314,7 +315,7 @@ contract EmpAbortTest is EmpTest {
     {
         // Expect revert
         bytes memory err =
-            abi.encodeWithSelector(EncryptedMarginalPrice.Auction_WrongState.selector, _lotId);
+            abi.encodeWithSelector(IEncryptedMarginalPrice.Auction_WrongState.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function

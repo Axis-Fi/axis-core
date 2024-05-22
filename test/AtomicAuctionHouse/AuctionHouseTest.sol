@@ -2,7 +2,7 @@
 pragma solidity 0.8.19;
 
 // Interfaces
-import {IAuction} from "src/interfaces/IAuction.sol";
+import {IAuction} from "src/interfaces/modules/IAuction.sol";
 import {IAuctionHouse} from "src/interfaces/IAuctionHouse.sol";
 import {IAtomicAuctionHouse} from "src/interfaces/IAtomicAuctionHouse.sol";
 import {ICallback} from "src/interfaces/ICallback.sol";
@@ -14,7 +14,6 @@ import {Transfer} from "src/lib/Transfer.sol";
 
 // External libraries
 import {Test} from "forge-std/Test.sol";
-import {ERC20} from "lib/solmate/src/tokens/ERC20.sol";
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 
 // Mocks
@@ -27,7 +26,6 @@ import {MockFeeOnTransferERC20} from "test/lib/mocks/MockFeeOnTransferERC20.sol"
 
 // Auctions
 import {AtomicAuctionHouse} from "src/AtomicAuctionHouse.sol";
-import {AuctionHouse} from "src/bases/AuctionHouse.sol";
 import {AuctionModule} from "src/modules/Auction.sol";
 
 import {Veecode, toKeycode, keycodeFromVeecode, Keycode} from "src/modules/Keycode.sol";
@@ -311,14 +309,22 @@ abstract contract AtomicAuctionHouseTest is Test, Permit2User, WithSalts, TestSa
         _;
     }
 
+    function _sendUserQuoteTokenBalance(address user_, uint256 amount_) internal {
+        _quoteToken.mint(user_, amount_);
+    }
+
+    function _approveUserQuoteTokenAllowance(address user_, uint256 amount_) internal {
+        vm.prank(user_);
+        _quoteToken.approve(address(_auctionHouse), amount_);
+    }
+
     modifier givenUserHasQuoteTokenBalance(uint256 amount_) {
-        _quoteToken.mint(_bidder, amount_);
+        _sendUserQuoteTokenBalance(_bidder, amount_);
         _;
     }
 
     modifier givenUserHasQuoteTokenAllowance(uint256 amount_) {
-        vm.prank(_bidder);
-        _quoteToken.approve(address(_auctionHouse), amount_);
+        _approveUserQuoteTokenAllowance(_bidder, amount_);
         _;
     }
 
@@ -377,6 +383,31 @@ abstract contract AtomicAuctionHouseTest is Test, Permit2User, WithSalts, TestSa
         vm.prank(address(_callback));
         _baseToken.approve(address(_auctionHouse), amount_);
         _;
+    }
+
+    function _createPurchase(
+        address caller_,
+        address recipient_,
+        uint256 amount_,
+        uint256 minAmountOut_,
+        bytes memory auctionData_,
+        address referrer_
+    ) internal returns (uint256) {
+        IAtomicAuctionHouse.PurchaseParams memory purchaseParams = IAtomicAuctionHouse
+            .PurchaseParams({
+            recipient: recipient_,
+            referrer: referrer_,
+            lotId: _lotId,
+            amount: amount_,
+            minAmountOut: minAmountOut_,
+            auctionData: auctionData_,
+            permit2Data: _permit2Data
+        });
+
+        vm.prank(caller_);
+        uint256 payout = _auctionHouse.purchase(purchaseParams, _allowlistProof);
+
+        return payout;
     }
 
     function _createPurchase(
@@ -472,11 +503,11 @@ abstract contract AtomicAuctionHouseTest is Test, Permit2User, WithSalts, TestSa
 
     // ===== Helpers ===== //
 
-    function _getLotRouting(uint96 lotId_) internal view returns (AuctionHouse.Routing memory) {
+    function _getLotRouting(uint96 lotId_) internal view returns (IAuctionHouse.Routing memory) {
         (
             address seller_,
-            ERC20 baseToken_,
-            ERC20 quoteToken_,
+            address baseToken_,
+            address quoteToken_,
             Veecode auctionReference_,
             uint256 funding_,
             ICallback callback_,
@@ -485,7 +516,7 @@ abstract contract AtomicAuctionHouseTest is Test, Permit2User, WithSalts, TestSa
             bytes memory derivativeParams_
         ) = _auctionHouse.lotRouting(lotId_);
 
-        return AuctionHouse.Routing({
+        return IAuctionHouse.Routing({
             auctionReference: auctionReference_,
             seller: seller_,
             baseToken: baseToken_,
@@ -498,7 +529,7 @@ abstract contract AtomicAuctionHouseTest is Test, Permit2User, WithSalts, TestSa
         });
     }
 
-    function _getLotFees(uint96 lotId_) internal view returns (AuctionHouse.FeeData memory) {
+    function _getLotFees(uint96 lotId_) internal view returns (IAuctionHouse.FeeData memory) {
         (
             address curator_,
             bool curated_,
@@ -507,7 +538,7 @@ abstract contract AtomicAuctionHouseTest is Test, Permit2User, WithSalts, TestSa
             uint48 referrerFee_
         ) = _auctionHouse.lotFees(lotId_);
 
-        return AuctionHouse.FeeData({
+        return IAuctionHouse.FeeData({
             curator: curator_,
             curated: curated_,
             curatorFee: curatorFee_,

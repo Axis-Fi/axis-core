@@ -11,7 +11,7 @@ interface IAtomicAuctionHouse is IAuctionHouse {
     /// @notice     Parameters used by the purchase function
     /// @dev        This reduces the number of variables in scope for the purchase function
     ///
-    /// @param      recipient           Address to receive payout
+    /// @param      recipient           Address to receive payout (if not zero address)
     /// @param      referrer            Address of referrer
     /// @param      lotId               Lot ID
     /// @param      amount              Amount of quoteToken to purchase with (in native decimals)
