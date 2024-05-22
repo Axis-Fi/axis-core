@@ -29,7 +29,7 @@ abstract contract GdaTest is Test, Permit2User {
     uint256 internal constant _INITIAL_PRICE = 5e18;
     uint256 internal constant _MIN_PRICE = 2e18;
     uint256 internal constant _DECAY_TARGET = 10e16; // 10%
-    uint256 internal constant _DECAY_PERIOD = 1 days;
+    uint256 internal constant _DECAY_PERIOD = 12 hours;
     UD60x18 internal constant _ONE_DAY = UD60x18.wrap(1 days * uUNIT);
 
     AtomicAuctionHouse internal _auctionHouse;
@@ -159,7 +159,7 @@ abstract contract GdaTest is Test, Permit2User {
     }
 
     modifier givenLotHasStarted() {
-        vm.warp(_start + 1);
+        vm.warp(_start);
         _;
     }
 
