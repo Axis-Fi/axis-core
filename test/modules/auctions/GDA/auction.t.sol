@@ -3,7 +3,7 @@ pragma solidity 0.8.19;
 
 import {Module} from "src/modules/Modules.sol";
 import {IAuction} from "src/interfaces/IAuction.sol";
-// import {GradualDutchAuction} from "src/modules/auctions/GDA.sol";
+import {GradualDutchAuction} from "src/modules/auctions/GDA.sol";
 
 import {UD60x18, ud, convert, UNIT, uUNIT, EXP_MAX_INPUT} from "lib/prb-math/src/UD60x18.sol";
 import "lib/prb-math/src/Common.sol" as PRBMath;
@@ -33,12 +33,12 @@ contract GdaCreateAuctionTest is GdaTest {
     //  [X] it reverts
     // [X] when the capacity is in quote token
     //  [X] it reverts
-    // [ ] when duration is greater than the max exp input divided by the calculated decay constant
-    //  [ ] it reverts
-    // [ ] when the inputs are all valid
-    //  [ ] it stores the auction data
-    // [ ] when the token decimals differ
-    //  [ ] it handles the calculations correctly
+    // [X] when duration is greater than the max exp input divided by the calculated decay constant
+    //  [X] it reverts
+    // [X] when the inputs are all valid
+    //  [X] it stores the auction data
+    // [X] when the token decimals differ
+    //  [X] it handles the calculations correctly
 
     function test_notParent_reverts() public {
         // Expect revert
@@ -170,6 +170,8 @@ contract GdaCreateAuctionTest is GdaTest {
         // Normalize the inputs
         uint256 decayTarget = uint256(decayTarget_ % 50 == 0 ? 50 : decayTarget_ % 50) * 1e16;
         uint256 decayPeriod = uint256(decayHours_ % 168 == 0 ? 168 : decayHours_ % 168) * 1 hours;
+        console2.log("Decay target:", decayTarget);
+        console2.log("Decay period:", decayPeriod);
 
         // Calculate the decay constant
         // q1 > qm here because qm < q0 * 0.50, which is the max decay target
@@ -178,14 +180,23 @@ contract GdaCreateAuctionTest is GdaTest {
         UD60x18 q1 = q0.mul(UNIT - ud(decayTarget)).div(UNIT);
         UD60x18 qm = ud(_gdaParams.minimumPrice.mulDiv(uUNIT, quoteTokenScale));
 
+        console2.log("q0:", q0.unwrap());
+        console2.log("q1:", q1.unwrap());
+        console2.log("qm:", qm.unwrap());
+
         // Calculate the decay constant
         UD60x18 decayConstant = (q0 - qm).div(q1 - qm).ln().div(convert(decayPeriod).div(_ONE_DAY));
+        console2.log("Decay constant:", decayConstant.unwrap());
 
         // Calculate the maximum duration in seconds
         uint256 maxDuration = convert(EXP_MAX_INPUT.div(decayConstant).mul(_ONE_DAY));
         console2.log("Max duration:", maxDuration);
 
-        // Set the duration parameter to the max duration plus 1
+        // Set the decay target and decay period to the fuzzed values
+        // Set duration to the max duration plus 1
+        _gdaParams.decayTarget = decayTarget;
+        _gdaParams.decayPeriod = decayPeriod;
+        _auctionParams.implParams = abi.encode(_gdaParams);
         _auctionParams.duration = uint48(maxDuration + 1);
 
         // Expect revert
@@ -194,5 +205,93 @@ contract GdaCreateAuctionTest is GdaTest {
 
         // Call the function
         _createAuctionLot();
+    }
+
+    function testFuzz_durationEqualMaxExpInputDividedByDecayConstant_succeeds(uint8 decayTarget_, uint8 decayHours_) public {
+        // Normalize the inputs
+        uint256 decayTarget = uint256(decayTarget_ % 50 == 0 ? 50 : decayTarget_ % 50) * 1e16;
+        uint256 decayPeriod = uint256(decayHours_ % 168 == 0 ? 168 : decayHours_ % 168) * 1 hours;
+        console2.log("Decay target:", decayTarget);
+        console2.log("Decay period:", decayPeriod);
+
+        // Calculate the decay constant
+        // q1 > qm here because qm < q0 * 0.50, which is the max decay target
+        uint256 quoteTokenScale = 10 ** _quoteTokenDecimals;
+        UD60x18 q0 = ud(_gdaParams.equilibriumPrice.mulDiv(uUNIT, quoteTokenScale));
+        UD60x18 q1 = q0.mul(UNIT - ud(decayTarget)).div(UNIT);
+        UD60x18 qm = ud(_gdaParams.minimumPrice.mulDiv(uUNIT, quoteTokenScale));
+
+        console2.log("q0:", q0.unwrap());
+        console2.log("q1:", q1.unwrap());
+        console2.log("qm:", qm.unwrap());
+
+        // Calculate the decay constant
+        UD60x18 decayConstant = (q0 - qm).div(q1 - qm).ln().div(convert(decayPeriod).div(_ONE_DAY));
+        console2.log("Decay constant:", decayConstant.unwrap());
+
+        // Calculate the maximum duration in seconds
+        uint256 maxDuration = convert(EXP_MAX_INPUT.div(decayConstant).mul(_ONE_DAY));
+        console2.log("Max duration:", maxDuration);
+
+        // Set the decay target and decay period to the fuzzed values
+        // Set duration to the max duration
+        _gdaParams.decayTarget = decayTarget;
+        _gdaParams.decayPeriod = decayPeriod;
+        _auctionParams.implParams = abi.encode(_gdaParams);
+        _auctionParams.duration = uint48(maxDuration);
+
+        // Call the function
+        _createAuctionLot();
+    }
+
+    function _assertAuctionData() internal {
+        // Calculate the decay constant from the input parameters
+        uint256 quoteTokenScale = 10 ** _quoteTokenDecimals;
+        UD60x18 q0 = ud(_gdaParams.equilibriumPrice.mulDiv(uUNIT, quoteTokenScale));
+        UD60x18 q1 = q0.mul(UNIT - ud(_gdaParams.decayTarget)).div(UNIT);
+        UD60x18 qm = ud(_gdaParams.minimumPrice.mulDiv(uUNIT, quoteTokenScale));
+        UD60x18 decayConstant = (q0 - qm).div(q1 - qm).ln().div(convert(_gdaParams.decayPeriod).div(_ONE_DAY));
+
+        // Calculate the emissions rate
+        UD60x18 duration = convert(uint256(_auctionParams.duration)).div(_ONE_DAY);
+        UD60x18 emissionsRate = ud(_auctionParams.capacity.mulDiv(uUNIT, 10 ** _baseTokenDecimals)).div(duration);
+
+        // Check the auction data
+        GradualDutchAuction.AuctionData memory auctionData = _module.getAuctionData(_lotId);
+        assertEq(auctionData.equilibriumPrice, _gdaParams.equilibriumPrice);
+        assertEq(auctionData.minimumPrice, _gdaParams.minimumPrice);
+        assertEq(auctionData.lastAuctionStart, _auctionParams.start);
+        assertEq(auctionData.decayConstant, decayConstant);
+        assertEq(auctionData.emissionsRate, emissionsRate);
+    }
+
+    function test_allInputsValid_storesAuctionData() public {
+        // Call the function
+        _createAuctionLot();
+
+        // Check the auction data
+        _assertAuctionData();
+    }
+
+    function test_quoteTokensDecimalsSmaller() 
+        public
+        givenQuoteTokenDecimals(9)
+    {
+        // Call the function
+        _createAuctionLot();
+
+        // Check the auction data
+        _assertAuctionData();
+    }
+
+    function test_quoteTokensDecimalsLarger() 
+        public
+        givenBaseTokenDecimals(9)
+    {
+        // Call the function
+        _createAuctionLot();
+
+        // Check the auction data
+        _assertAuctionData();
     }
 }
