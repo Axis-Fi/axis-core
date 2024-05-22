@@ -25,12 +25,12 @@ import {
 import {Range, IBPOOLv1} from "src/callbacks/liquidity/BaselineV2/lib/IBPOOL.sol";
 import {TimeslotLib} from "src/callbacks/liquidity/BaselineV2/lib/TimeslotLib.sol";
 import {TickMath} from "lib/uniswap-v3-core/contracts/libraries/TickMath.sol";
-import {FixedPoint96} from "lib/uniswap-v3-core/contracts/libraries/FixedPoint96.sol";
 
 // Other libraries
 import {Owned} from "lib/solmate/src/auth/Owned.sol";
 import {FixedPointMathLib} from "lib/solady/src/utils/FixedPointMathLib.sol";
 import {Transfer} from "src/lib/Transfer.sol";
+import {SqrtPriceMath} from "src/lib/uniswap-v3/SqrtPriceMath.sol";
 
 /// @notice     Axis auction callback to initialize a Baseline token using proceeds from an auction.
 ///
@@ -225,26 +225,32 @@ contract BaselineAxisLaunch is BaseCallback, Policy, Owned {
             lotId_, seller_, baseToken_, quoteToken_, capacity_, prefund_, cbData.allowlistParams
         );
 
-        // Get the fixed price from the auction module
-        // This value is in the number of reserve tokens per baseline token
-        uint256 auctionPrice = IFixedPriceBatch(
-            address(IAuctionHouse(AUCTION_HOUSE).getAuctionModuleForId(lotId_))
-        ).getAuctionData(lotId_).price;
-
-        // Get the tick spacing from the Baseline pool
-        int24 tickSpacing = BPOOL.TICK_SPACING();
-
         // Calculate the initial active tick from the auction price without rounding
-        // TODO make sure the price is in the correct format for this calculation
-        // TODO can we safely cast this?
-        int24 activeTick =
-            TickMath.getTickAtSqrtRatio(uint160(auctionPrice.sqrt().mulWad(FixedPoint96.Q96)));
+        int24 activeTick;
+        {
+            IFixedPriceBatch auctionModule = IFixedPriceBatch(
+                address(IAuctionHouse(AUCTION_HOUSE).getAuctionModuleForId(lotId_))
+            );
+
+            // Get the fixed price from the auction module
+            // This value is in the number of reserve tokens per baseline token
+            uint256 auctionPrice = auctionModule.getAuctionData(lotId_).price;
+            (,,, uint8 baseTokenDecimals,,,,) = auctionModule.lotData(lotId_);
+
+            uint160 sqrtPriceX96 = SqrtPriceMath.getSqrtPriceX96(
+                address(RESERVE), address(bAsset), auctionPrice, 10 ** baseTokenDecimals
+            );
+            activeTick = TickMath.getTickAtSqrtRatio(sqrtPriceX96);
+        }
 
         // Initialize the Baseline pool at the tick determined by the auction price
         BPOOL.initializePool(activeTick);
 
         // Get the updated active tick from the Baseline pool, which handles rounding and edge cases
         activeTick = BPOOL.getActiveTS();
+
+        // Get the tick spacing from the Baseline pool
+        int24 tickSpacing = BPOOL.TICK_SPACING();
 
         // Set the ticks for the Baseline pool initially with the following assumptions:
         // - The active tick is the upper floor tick

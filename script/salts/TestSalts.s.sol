@@ -444,7 +444,7 @@ contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts {
         bytes32 quoteTokenSalt = _getSalt("Test_QuoteToken", qtContractCode, qtArgs);
 
         // Get the address of the quote token
-        MockERC20 quoteToken = new MockERC20{salt: quoteTokenSalt}("Quote Token", "QT", 18); // 0xb6C49a15EB27119035e3825A9940e565cBBA5422
+        MockERC20 quoteToken = new MockERC20{salt: quoteTokenSalt}("Quote Token", "QT", 18); // 0x4f78701103D7A875CFFA7342B768aAb0361dA879
         console2.log("Quote Token address: ", address(quoteToken));
 
         // Callback permissions

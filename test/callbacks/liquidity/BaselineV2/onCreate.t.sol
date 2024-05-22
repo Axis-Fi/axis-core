@@ -42,8 +42,11 @@ contract BaselineOnCreateTest is BaselineAxisLaunchTest {
     // ============ Helper Functions ============ //
 
     function _getFixedPriceTick() internal view returns (int24) {
-        uint160 fixedPriceSqrtPriceX96 =
-            SqrtPriceMath.getSqrtPriceX96(address(_quoteToken), address(_baseToken), _fpbParams.price, 1); // Maintains the ratio of the fixed price
+        // TODO hard-code expected tick?
+
+        uint160 fixedPriceSqrtPriceX96 = SqrtPriceMath.getSqrtPriceX96(
+            address(_quoteToken), address(_baseToken), _fpbParams.price, 1e18
+        ); // Maintains the ratio where the price is the number of quote tokens per base token
         return TickMath.getTickAtSqrtRatio(fixedPriceSqrtPriceX96);
     }
 
@@ -73,9 +76,14 @@ contract BaselineOnCreateTest is BaselineAxisLaunchTest {
     //  [X] the ticks do not overlap
     // [X] when the auction fixed price is very high
     //  [X] it correctly sets the active tick
+    // [ ] when the auction fixed price is very low
+    //  [ ] it correctly sets the active tick
     // [X] when the discoveryTickWidth is small
     //  [X] it correctly sets the discovery ticks to not overlap with the other ranges
     // [X] it transfers the base token to the auction house, updates circulating supply, sets the state variables, initializes the pool and sets the tick ranges
+
+    // TODO decimals
+    // TODO token ordering
 
     function test_callbackDataIncorrect() public givenCallbackIsCreated givenAuctionisCreated {
         // Expect revert
@@ -157,7 +165,8 @@ contract BaselineOnCreateTest is BaselineAxisLaunchTest {
 
     function test_invalidDiscoveryTickWidth(int24 discoveryTickWidth_)
         public
-        givenCallbackIsCreated givenAuctionisCreated
+        givenCallbackIsCreated
+        givenAuctionisCreated
     {
         int24 discoveryTickWidth = int24(bound(discoveryTickWidth_, type(int24).min, 0));
         _createData.discoveryTickWidth = discoveryTickWidth;
@@ -172,7 +181,8 @@ contract BaselineOnCreateTest is BaselineAxisLaunchTest {
     function test_givenAuctionFormatNotFixedPriceBatch()
         public
         givenCallbackIsCreated
-        givenAuctionFormatIsEmp givenAuctionisCreated
+        givenAuctionFormatIsEmp
+        givenAuctionisCreated
     {
         // Expect revert
         _expectInvalidParams();
@@ -238,7 +248,12 @@ contract BaselineOnCreateTest is BaselineAxisLaunchTest {
         );
     }
 
-    function test_tickSpacingNarrow() public givenBPoolFeeTier(500) givenCallbackIsCreated givenAuctionisCreated {
+    function test_tickSpacingNarrow()
+        public
+        givenBPoolFeeTier(500)
+        givenCallbackIsCreated
+        givenAuctionisCreated
+    {
         // Perform the call
         _onCreate();
 
@@ -269,7 +284,12 @@ contract BaselineOnCreateTest is BaselineAxisLaunchTest {
         );
     }
 
-    function test_auctionHighPrice() public givenCallbackIsCreated givenFixedPrice(type(uint256).max) givenAuctionisCreated {
+    function test_auctionHighPrice()
+        public
+        givenCallbackIsCreated
+        givenFixedPrice(type(uint256).max)
+        givenAuctionisCreated
+    {
         // Perform the call
         _onCreate();
 
@@ -300,7 +320,12 @@ contract BaselineOnCreateTest is BaselineAxisLaunchTest {
         );
     }
 
-    function test_narrowDiscoveryTickWidth() public givenCallbackIsCreated givenAuctionisCreated givenDiscoveryTickWidth(1) {
+    function test_narrowDiscoveryTickWidth()
+        public
+        givenCallbackIsCreated
+        givenAuctionisCreated
+        givenDiscoveryTickWidth(1)
+    {
         // Perform the call
         _onCreate();
 
@@ -325,9 +350,7 @@ contract BaselineOnCreateTest is BaselineAxisLaunchTest {
         (int24 discoveryTickLower, int24 discoveryTickUpper) = _baseToken.getTicks(Range.DISCOVERY);
         assertEq(discoveryTickLower, activeTickWithRounding, "discovery tick lower");
         assertEq(
-            discoveryTickUpper,
-            activeTickWithRounding + 1 * _tickSpacing,
-            "discovery tick upper"
+            discoveryTickUpper, activeTickWithRounding + 1 * _tickSpacing, "discovery tick upper"
         );
     }
 }

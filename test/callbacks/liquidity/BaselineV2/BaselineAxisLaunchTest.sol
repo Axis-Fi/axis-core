@@ -39,7 +39,7 @@ abstract contract BaselineAxisLaunchTest is Test, Permit2User, WithSalts {
     address internal constant _NOT_SELLER = address(0x20);
     address internal constant _AUCTION_HOUSE = address(0x000000000000000000000000000000000000000A);
     address internal constant _BASELINE_KERNEL = address(0xBB);
-    address internal constant _QUOTE_TOKEN = address(0xb6C49a15EB27119035e3825A9940e565cBBA5422);
+    address internal constant _QUOTE_TOKEN = address(0x4f78701103D7A875CFFA7342B768aAb0361dA879);
 
     uint96 internal constant _LOT_CAPACITY = 10e18;
     uint96 internal constant _REFUND_AMOUNT = 2e18;
