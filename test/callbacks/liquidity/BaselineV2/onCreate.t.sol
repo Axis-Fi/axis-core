@@ -42,12 +42,25 @@ contract BaselineOnCreateTest is BaselineAxisLaunchTest {
     // ============ Helper Functions ============ //
 
     function _getFixedPriceTick() internal view returns (int24) {
-        // TODO hard-code expected tick?
+        // Calculation source: https://blog.uniswap.org/uniswap-v3-math-primer#how-does-tick-and-tick-spacing-relate-to-sqrtpricex96
 
-        uint160 fixedPriceSqrtPriceX96 = SqrtPriceMath.getSqrtPriceX96(
-            address(_quoteToken), address(_baseToken), _fpbParams.price, 1e18
-        ); // Maintains the ratio where the price is the number of quote tokens per base token
-        return TickMath.getTickAtSqrtRatio(fixedPriceSqrtPriceX96);
+        // When the quote token is token1:
+        // Price = 3e18
+        // SqrtPriceX96 = sqrt(3e18 * 2^192 / 1e18)
+        //              = 1.3722720287e29
+        // Tick = log((1.3722720287e29 / 2^96)^2) / log(1.0001)
+        //      = 10986 (rounded down)
+        if (address(_quoteToken) > address(_baseToken)) {
+            return 10986;
+        }
+
+        // When the quote token is token0
+        // Price = 3e18
+        // SqrtPriceX96 = sqrt(1e18 * 2^192 / 3e18)
+        //              = 4.574240096e28
+        // Tick = log((4.574240096e28 / 2^96)^2) / log(1.0001)
+        //      = -10987 (rounded down)
+        return -10987;
     }
 
     function _roundToTickSpacing(int24 tick) internal view returns (int24) {
