@@ -43,7 +43,7 @@ contract BaselineOnCreateTest is BaselineAxisLaunchTest {
 
     function _getFixedPriceTick() internal view returns (int24) {
         uint160 fixedPriceSqrtPriceX96 =
-            SqrtPriceMath.getSqrtPriceX96(address(_quoteToken), address(_baseToken), 30e18, 10e18); // Maintains the ratio of _FIXED_PRICE
+            SqrtPriceMath.getSqrtPriceX96(address(_quoteToken), address(_baseToken), _fpbParams.price, 1); // Maintains the ratio of the fixed price
         return TickMath.getTickAtSqrtRatio(fixedPriceSqrtPriceX96);
     }
 
@@ -69,17 +69,17 @@ contract BaselineOnCreateTest is BaselineAxisLaunchTest {
     //  [X] it reverts
     // [X] when the auction is not prefunded
     //  [X] it reverts
-    // [ ] when the tick spacing is narrow
-    //  [ ] the ticks do not overlap
-    // [ ] when the auction fixed price is very high
-    //  [ ] it correctly sets the active tick
-    // [ ] when the discoveryTickWidth is less than the tick spacing
-    //  [ ] it correctly sets the discovery ticks to not overlap with the other ranges
+    // [X] when the tick spacing is narrow
+    //  [X] the ticks do not overlap
+    // [X] when the auction fixed price is very high
+    //  [X] it correctly sets the active tick
+    // [X] when the discoveryTickWidth is small
+    //  [X] it correctly sets the discovery ticks to not overlap with the other ranges
     // [X] it transfers the base token to the auction house, updates circulating supply, sets the state variables, initializes the pool and sets the tick ranges
 
-    function test_callbackDataIncorrect() public givenCallbackIsCreated {
+    function test_callbackDataIncorrect() public givenCallbackIsCreated givenAuctionisCreated {
         // Expect revert
-        _expectInvalidParams();
+        vm.expectRevert();
 
         // Perform the call
         vm.prank(address(_auctionHouse));
@@ -94,7 +94,7 @@ contract BaselineOnCreateTest is BaselineAxisLaunchTest {
         );
     }
 
-    function test_notAuctionHouse() public givenCallbackIsCreated {
+    function test_notAuctionHouse() public givenCallbackIsCreated givenAuctionisCreated {
         // Expect revert
         _expectNotAuthorized();
 
@@ -110,7 +110,7 @@ contract BaselineOnCreateTest is BaselineAxisLaunchTest {
         );
     }
 
-    function test_lotAlreadyRegistered() public givenCallbackIsCreated {
+    function test_lotAlreadyRegistered() public givenCallbackIsCreated givenAuctionisCreated {
         // Perform callback
         _onCreate();
 
@@ -121,7 +121,7 @@ contract BaselineOnCreateTest is BaselineAxisLaunchTest {
         _onCreate();
     }
 
-    function test_baseTokenNotBPool() public givenCallbackIsCreated {
+    function test_baseTokenNotBPool() public givenCallbackIsCreated givenAuctionisCreated {
         // Expect revert
         _expectInvalidParams();
 
@@ -138,7 +138,7 @@ contract BaselineOnCreateTest is BaselineAxisLaunchTest {
         );
     }
 
-    function test_quoteTokenNotReserve() public givenCallbackIsCreated {
+    function test_quoteTokenNotReserve() public givenCallbackIsCreated givenAuctionisCreated {
         // Expect revert
         _expectInvalidParams();
 
@@ -157,7 +157,7 @@ contract BaselineOnCreateTest is BaselineAxisLaunchTest {
 
     function test_invalidDiscoveryTickWidth(int24 discoveryTickWidth_)
         public
-        givenCallbackIsCreated
+        givenCallbackIsCreated givenAuctionisCreated
     {
         int24 discoveryTickWidth = int24(bound(discoveryTickWidth_, type(int24).min, 0));
         _createData.discoveryTickWidth = discoveryTickWidth;
@@ -172,7 +172,7 @@ contract BaselineOnCreateTest is BaselineAxisLaunchTest {
     function test_givenAuctionFormatNotFixedPriceBatch()
         public
         givenCallbackIsCreated
-        givenAuctionFormatIsEmp
+        givenAuctionFormatIsEmp givenAuctionisCreated
     {
         // Expect revert
         _expectInvalidParams();
@@ -181,7 +181,7 @@ contract BaselineOnCreateTest is BaselineAxisLaunchTest {
         _onCreate();
     }
 
-    function test_auctionNotPrefunded() public givenCallbackIsCreated {
+    function test_auctionNotPrefunded() public givenCallbackIsCreated givenAuctionisCreated {
         // Expect revert
         _expectInvalidParams();
 
@@ -198,12 +198,7 @@ contract BaselineOnCreateTest is BaselineAxisLaunchTest {
         );
     }
 
-    function test_success() public givenCallbackIsCreated {
-        console2.log("bAsset", address(_dtl.bAsset()));
-        console2.log("reserve", address(_dtl.RESERVE()));
-        console2.log("baseToken", address(_baseToken));
-        console2.log("quoteToken", address(_quoteToken));
-
+    function test_success() public givenCallbackIsCreated givenAuctionisCreated {
         // Perform the call
         _onCreate();
 
@@ -239,6 +234,99 @@ contract BaselineOnCreateTest is BaselineAxisLaunchTest {
         assertEq(
             discoveryTickUpper,
             activeTickWithRounding + _DISCOVERY_TICK_WIDTH * _tickSpacing,
+            "discovery tick upper"
+        );
+    }
+
+    function test_tickSpacingNarrow() public givenBPoolFeeTier(500) givenCallbackIsCreated givenAuctionisCreated {
+        // Perform the call
+        _onCreate();
+
+        // The pool should be initialised with the tick equivalent to the auction's fixed price
+        int24 fixedPriceTick = _getFixedPriceTick();
+        assertEq(_baseToken.activeTick(), fixedPriceTick, "active tick");
+
+        // Calculate the active tick with rounding
+        int24 activeTickWithRounding = _roundToTickSpacing(fixedPriceTick);
+
+        // Anchor range should be 0 width and equal to activeTickWithRounding
+        (int24 anchorTickLower, int24 anchorTickUpper) = _baseToken.getTicks(Range.ANCHOR);
+        assertEq(anchorTickLower, activeTickWithRounding, "anchor tick lower");
+        assertEq(anchorTickUpper, activeTickWithRounding, "anchor tick upper");
+
+        // Floor range should be the width of the tick spacing and below the active tick
+        (int24 floorTickLower, int24 floorTickUpper) = _baseToken.getTicks(Range.FLOOR);
+        assertEq(floorTickLower, activeTickWithRounding - _tickSpacing, "floor tick lower");
+        assertEq(floorTickUpper, activeTickWithRounding, "floor tick upper");
+
+        // Discovery range should be the width of discoveryTickWidth * tick spacing and above the active tick
+        (int24 discoveryTickLower, int24 discoveryTickUpper) = _baseToken.getTicks(Range.DISCOVERY);
+        assertEq(discoveryTickLower, activeTickWithRounding, "discovery tick lower");
+        assertEq(
+            discoveryTickUpper,
+            activeTickWithRounding + _DISCOVERY_TICK_WIDTH * _tickSpacing,
+            "discovery tick upper"
+        );
+    }
+
+    function test_auctionHighPrice() public givenCallbackIsCreated givenFixedPrice(type(uint256).max) givenAuctionisCreated {
+        // Perform the call
+        _onCreate();
+
+        // The pool should be initialised with the tick equivalent to the auction's fixed price
+        int24 fixedPriceTick = _getFixedPriceTick();
+        assertEq(_baseToken.activeTick(), fixedPriceTick, "active tick");
+
+        // Calculate the active tick with rounding
+        int24 activeTickWithRounding = _roundToTickSpacing(fixedPriceTick);
+
+        // Anchor range should be 0 width and equal to activeTickWithRounding
+        (int24 anchorTickLower, int24 anchorTickUpper) = _baseToken.getTicks(Range.ANCHOR);
+        assertEq(anchorTickLower, activeTickWithRounding, "anchor tick lower");
+        assertEq(anchorTickUpper, activeTickWithRounding, "anchor tick upper");
+
+        // Floor range should be the width of the tick spacing and below the active tick
+        (int24 floorTickLower, int24 floorTickUpper) = _baseToken.getTicks(Range.FLOOR);
+        assertEq(floorTickLower, activeTickWithRounding - _tickSpacing, "floor tick lower");
+        assertEq(floorTickUpper, activeTickWithRounding, "floor tick upper");
+
+        // Discovery range should be the width of discoveryTickWidth * tick spacing and above the active tick
+        (int24 discoveryTickLower, int24 discoveryTickUpper) = _baseToken.getTicks(Range.DISCOVERY);
+        assertEq(discoveryTickLower, activeTickWithRounding, "discovery tick lower");
+        assertEq(
+            discoveryTickUpper,
+            activeTickWithRounding + _DISCOVERY_TICK_WIDTH * _tickSpacing,
+            "discovery tick upper"
+        );
+    }
+
+    function test_narrowDiscoveryTickWidth() public givenCallbackIsCreated givenAuctionisCreated givenDiscoveryTickWidth(1) {
+        // Perform the call
+        _onCreate();
+
+        // The pool should be initialised with the tick equivalent to the auction's fixed price
+        int24 fixedPriceTick = _getFixedPriceTick();
+        assertEq(_baseToken.activeTick(), fixedPriceTick, "active tick");
+
+        // Calculate the active tick with rounding
+        int24 activeTickWithRounding = _roundToTickSpacing(fixedPriceTick);
+
+        // Anchor range should be 0 width and equal to activeTickWithRounding
+        (int24 anchorTickLower, int24 anchorTickUpper) = _baseToken.getTicks(Range.ANCHOR);
+        assertEq(anchorTickLower, activeTickWithRounding, "anchor tick lower");
+        assertEq(anchorTickUpper, activeTickWithRounding, "anchor tick upper");
+
+        // Floor range should be the width of the tick spacing and below the active tick
+        (int24 floorTickLower, int24 floorTickUpper) = _baseToken.getTicks(Range.FLOOR);
+        assertEq(floorTickLower, activeTickWithRounding - _tickSpacing, "floor tick lower");
+        assertEq(floorTickUpper, activeTickWithRounding, "floor tick upper");
+
+        // Discovery range should be the width of discoveryTickWidth * tick spacing and above the active tick
+        (int24 discoveryTickLower, int24 discoveryTickUpper) = _baseToken.getTicks(Range.DISCOVERY);
+        assertEq(discoveryTickLower, activeTickWithRounding, "discovery tick lower");
+        assertEq(
+            discoveryTickUpper,
+            activeTickWithRounding + 1 * _tickSpacing,
             "discovery tick upper"
         );
     }

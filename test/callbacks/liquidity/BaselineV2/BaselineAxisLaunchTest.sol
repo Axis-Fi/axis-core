@@ -66,6 +66,11 @@ abstract contract BaselineAxisLaunchTest is Test, Permit2User, WithSalts {
     MockBPOOL internal _baseToken;
 
     // Inputs
+    IFixedPriceBatch.AuctionDataParams internal _fpbParams = IFixedPriceBatch.AuctionDataParams({
+        price: _FIXED_PRICE,
+        minFillPercent: 5e4 // 50%
+    });
+
     BaselineAxisLaunch.CreateData internal _createData = BaselineAxisLaunch.CreateData({
         discoveryTickWidth: _DISCOVERY_TICK_WIDTH,
         allowlistParams: abi.encode("")
@@ -116,23 +121,6 @@ abstract contract BaselineAxisLaunchTest is Test, Permit2User, WithSalts {
         _baseToken =
             new MockBPOOL("Base Token", "BT", 18, address(_uniV3Factory), _QUOTE_TOKEN, 3000);
         _tickSpacing = _uniV3Factory.feeAmountTickSpacing(3000);
-
-        // Create a dummy auction in the module
-        IFixedPriceBatch.AuctionDataParams memory fpbParams = IFixedPriceBatch.AuctionDataParams({
-            price: _FIXED_PRICE,
-            minFillPercent: 5e4 // 50%
-        });
-
-        IAuction.AuctionParams memory auctionParams = IAuction.AuctionParams({
-            start: _START,
-            duration: 1 days,
-            capacityInQuote: false,
-            capacity: _LOT_CAPACITY,
-            implParams: abi.encode(fpbParams)
-        });
-
-        vm.prank(address(_auctionHouse));
-        _fpbModule.auction(_lotId, auctionParams, 18, 18);
     }
 
     // ========== MODIFIERS ========== //
@@ -172,31 +160,24 @@ abstract contract BaselineAxisLaunchTest is Test, Permit2User, WithSalts {
         _;
     }
 
-    modifier givenAddressHasQuoteTokenBalance(address address_, uint256 amount_) {
-        _quoteToken.mint(address_, amount_);
-        _;
-    }
-
-    modifier givenAddressHasBaseTokenBalance(address address_, uint256 amount_) {
-        _baseToken.mint(address_, amount_);
-        _;
-    }
-
-    modifier givenAddressHasQuoteTokenAllowance(address owner_, address spender_, uint256 amount_) {
-        vm.prank(owner_);
-        _quoteToken.approve(spender_, amount_);
-        _;
-    }
-
-    modifier givenAddressHasBaseTokenAllowance(address owner_, address spender_, uint256 amount_) {
-        vm.prank(owner_);
-        _baseToken.approve(spender_, amount_);
-        _;
-    }
-
     modifier givenAuctionFormatIsEmp() {
         _auctionModule = _empModule;
         _mockGetAuctionModuleForId();
+        _;
+    }
+
+    modifier givenAuctionisCreated() {
+        // Create a dummy auction in the module
+        IAuction.AuctionParams memory auctionParams = IAuction.AuctionParams({
+            start: _START,
+            duration: 1 days,
+            capacityInQuote: false,
+            capacity: _LOT_CAPACITY,
+            implParams: abi.encode(_fpbParams)
+        });
+
+        vm.prank(address(_auctionHouse));
+        _fpbModule.auction(_lotId, auctionParams, 18, 18);
         _;
     }
 
@@ -244,6 +225,16 @@ abstract contract BaselineAxisLaunchTest is Test, Permit2User, WithSalts {
             "Base Token", "BT", 18, address(_uniV3Factory), address(_quoteToken), feeTier_
         );
         _tickSpacing = _uniV3Factory.feeAmountTickSpacing(feeTier_);
+        _;
+    }
+
+    modifier givenFixedPrice(uint256 fixedPrice_) {
+        _fpbParams.price = fixedPrice_;
+        _;
+    }
+
+    modifier givenDiscoveryTickWidth(int24 discoveryTickWidth_) {
+        _createData.discoveryTickWidth = discoveryTickWidth_;
         _;
     }
 
