@@ -421,13 +421,6 @@ contract BaselineAxisLaunch is BaseCallback, Policy, Owned {
         }
     }
 
-    // ========== BASELINE POOL INTERACTIONS ========== //
-
-    function _deployLiquidity(uint256 _initialReservesF)
-        internal
-        returns (uint256 floorReservesAdded)
-    {}
-
     // ========== OWNER FUNCTIONS ========== //
 
     /// @notice Withdraws any remaining reserve tokens from the contract
