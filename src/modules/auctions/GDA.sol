@@ -6,30 +6,15 @@ import {Module} from "src/modules/Modules.sol";
 import {AuctionModule} from "src/modules/Auction.sol";
 import {Veecode, toVeecode} from "src/modules/Modules.sol";
 import {AtomicAuctionModule} from "src/modules/auctions/AtomicAuctionModule.sol";
+import {IGradualDutchAuction} from "src/interfaces/modules/auctions/IGradualDutchAuction.sol";
 
 // External libraries
 import {UD60x18, ud, convert, UNIT, uUNIT, EXP_MAX_INPUT} from "lib/prb-math/src/UD60x18.sol";
 import "lib/prb-math/src/Common.sol" as PRBMath;
 
 /// @notice Continuous Gradual Dutch Auction (GDA) module with exponential decay and a minimum price.
-contract GradualDutchAuction is AtomicAuctionModule {
+contract GradualDutchAuction is IGradualDutchAuction, AtomicAuctionModule {
     using {PRBMath.mulDiv} for uint256;
-
-    /// @notice Auction pricing data
-    struct AuctionData {
-        uint256 equilibriumPrice; // initial price of one base token, where capacity and time are balanced
-        uint256 minimumPrice; // minimum price for one base token
-        uint256 lastAuctionStart; // time that the last un-purchased auction started, may be in the future
-        UD60x18 decayConstant; // speed at which the price decays, as UD60x18.
-        UD60x18 emissionsRate; // number of tokens released per day, as UD60x18. Calculated as capacity / duration.
-    }
-
-    struct GDAParams {
-        uint256 equilibriumPrice; // initial price of one base token, where capacity and time are balanced
-        uint256 minimumPrice; // minimum price for one base token
-        uint256 decayTarget; // target decay percent over the first decay period of an auction (steepest part of the curve)
-        uint256 decayPeriod; // period over which the target decay percent is reached, in seconds
-    }
 
     // ========== STATE VARIABLES ========== //
     /* solhint-disable private-vars-leading-underscore */
@@ -58,7 +43,7 @@ contract GradualDutchAuction is AtomicAuctionModule {
 
     /* solhint-enable private-vars-leading-underscore */
 
-    mapping(uint256 id => AuctionData data) public auctionData;
+    mapping(uint96 lotId => AuctionData data) public auctionData;
 
     // ========== SETUP ========== //
 
@@ -118,7 +103,8 @@ contract GradualDutchAuction is AtomicAuctionModule {
             }
 
             // Calculate the decay constant
-            decayConstant = (q0 - qm).div(q1 - qm).ln().div(convert(params.decayPeriod).div(ONE_DAY));
+            decayConstant =
+                (q0 - qm).div(q1 - qm).ln().div(convert(params.decayPeriod).div(ONE_DAY));
         }
 
         // TODO other validation checks?

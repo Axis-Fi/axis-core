@@ -2,8 +2,8 @@
 pragma solidity 0.8.19;
 
 import {Module} from "src/modules/Modules.sol";
-import {IAuction} from "src/interfaces/IAuction.sol";
-import {GradualDutchAuction} from "src/modules/auctions/GDA.sol";
+import {IAuction} from "src/interfaces/modules/IAuction.sol";
+import {IGradualDutchAuction} from "src/interfaces/modules/auctions/IGradualDutchAuction.sol";
 
 import {UD60x18, ud, convert, UNIT, uUNIT, EXP_MAX_INPUT} from "lib/prb-math/src/UD60x18.sol";
 import "lib/prb-math/src/Common.sol" as PRBMath;
@@ -166,7 +166,10 @@ contract GdaCreateAuctionTest is GdaTest {
         _createAuctionLot();
     }
 
-    function testFuzz_durationGreaterThanMaxExpInputDividedByDecayConstant_reverts(uint8 decayTarget_, uint8 decayHours_) public {
+    function testFuzz_durationGreaterThanMaxExpInputDividedByDecayConstant_reverts(
+        uint8 decayTarget_,
+        uint8 decayHours_
+    ) public {
         // Normalize the inputs
         uint256 decayTarget = uint256(decayTarget_ % 50 == 0 ? 50 : decayTarget_ % 50) * 1e16;
         uint256 decayPeriod = uint256(decayHours_ % 168 == 0 ? 168 : decayHours_ % 168) * 1 hours;
@@ -207,7 +210,10 @@ contract GdaCreateAuctionTest is GdaTest {
         _createAuctionLot();
     }
 
-    function testFuzz_durationEqualMaxExpInputDividedByDecayConstant_succeeds(uint8 decayTarget_, uint8 decayHours_) public {
+    function testFuzz_durationEqualMaxExpInputDividedByDecayConstant_succeeds(
+        uint8 decayTarget_,
+        uint8 decayHours_
+    ) public {
         // Normalize the inputs
         uint256 decayTarget = uint256(decayTarget_ % 50 == 0 ? 50 : decayTarget_ % 50) * 1e16;
         uint256 decayPeriod = uint256(decayHours_ % 168 == 0 ? 168 : decayHours_ % 168) * 1 hours;
@@ -250,19 +256,21 @@ contract GdaCreateAuctionTest is GdaTest {
         UD60x18 q0 = ud(_gdaParams.equilibriumPrice.mulDiv(uUNIT, quoteTokenScale));
         UD60x18 q1 = q0.mul(UNIT - ud(_gdaParams.decayTarget)).div(UNIT);
         UD60x18 qm = ud(_gdaParams.minimumPrice.mulDiv(uUNIT, quoteTokenScale));
-        UD60x18 decayConstant = (q0 - qm).div(q1 - qm).ln().div(convert(_gdaParams.decayPeriod).div(_ONE_DAY));
+        UD60x18 decayConstant =
+            (q0 - qm).div(q1 - qm).ln().div(convert(_gdaParams.decayPeriod).div(_ONE_DAY));
 
         // Calculate the emissions rate
         UD60x18 duration = convert(uint256(_auctionParams.duration)).div(_ONE_DAY);
-        UD60x18 emissionsRate = ud(_auctionParams.capacity.mulDiv(uUNIT, 10 ** _baseTokenDecimals)).div(duration);
+        UD60x18 emissionsRate =
+            ud(_auctionParams.capacity.mulDiv(uUNIT, 10 ** _baseTokenDecimals)).div(duration);
 
         // Check the auction data
-        GradualDutchAuction.AuctionData memory auctionData = _module.getAuctionData(_lotId);
+        IGradualDutchAuction.AuctionData memory auctionData = _getAuctionData(_lotId);
         assertEq(auctionData.equilibriumPrice, _gdaParams.equilibriumPrice);
         assertEq(auctionData.minimumPrice, _gdaParams.minimumPrice);
         assertEq(auctionData.lastAuctionStart, _auctionParams.start);
-        assertEq(auctionData.decayConstant, decayConstant);
-        assertEq(auctionData.emissionsRate, emissionsRate);
+        assertEq(auctionData.decayConstant.unwrap(), decayConstant.unwrap());
+        assertEq(auctionData.emissionsRate.unwrap(), emissionsRate.unwrap());
     }
 
     function test_allInputsValid_storesAuctionData() public {
@@ -273,10 +281,7 @@ contract GdaCreateAuctionTest is GdaTest {
         _assertAuctionData();
     }
 
-    function test_quoteTokensDecimalsSmaller() 
-        public
-        givenQuoteTokenDecimals(9)
-    {
+    function test_quoteTokensDecimalsSmaller() public givenQuoteTokenDecimals(9) {
         // Call the function
         _createAuctionLot();
 
@@ -284,10 +289,7 @@ contract GdaCreateAuctionTest is GdaTest {
         _assertAuctionData();
     }
 
-    function test_quoteTokensDecimalsLarger() 
-        public
-        givenBaseTokenDecimals(9)
-    {
+    function test_quoteTokensDecimalsLarger() public givenBaseTokenDecimals(9) {
         // Call the function
         _createAuctionLot();
 

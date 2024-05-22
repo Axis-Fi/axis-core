@@ -11,9 +11,9 @@ import {Permit2User} from "test/lib/permit2/Permit2User.sol";
 
 // Modules
 import {AtomicAuctionHouse} from "src/AtomicAuctionHouse.sol";
-import {IAuction} from "src/interfaces/IAuction.sol";
+import {IAuction} from "src/interfaces/modules/IAuction.sol";
+import {IGradualDutchAuction} from "src/interfaces/modules/auctions/IGradualDutchAuction.sol";
 import {GradualDutchAuction} from "src/modules/auctions/GDA.sol";
-
 
 abstract contract GdaTest is Test, Permit2User {
     using {PRBMath.mulDiv} for uint256;
@@ -52,7 +52,7 @@ abstract contract GdaTest is Test, Permit2User {
 
         _start = uint48(block.timestamp) + 1;
 
-        _gdaParams = GradualDutchAuction.GDAParams({
+        _gdaParams = IGradualDutchAuction.GDAParams({
             equilibriumPrice: _INITIAL_PRICE,
             minimumPrice: _MIN_PRICE,
             decayTarget: _DECAY_TARGET,
@@ -200,7 +200,7 @@ abstract contract GdaTest is Test, Permit2User {
     function _getAuctionData(uint96 lotId_)
         internal
         view
-        returns (GradualDutchAuction.AuctionData memory)
+        returns (IGradualDutchAuction.AuctionData memory)
     {
         (
             uint256 eqPrice,
@@ -210,7 +210,7 @@ abstract contract GdaTest is Test, Permit2User {
             UD60x18 emissionsRate
         ) = _module.auctionData(lotId_);
 
-        return GradualDutchAuction.AuctionData({
+        return IGradualDutchAuction.AuctionData({
             equilibriumPrice: eqPrice,
             minimumPrice: minPrice,
             lastAuctionStart: lastAuctionStart,
