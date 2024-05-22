@@ -103,8 +103,9 @@ abstract contract UniswapV3DirectToLiquidityTest is
                 "GUniFactory address has changed to %s. Update the address in TestSaltConstants and re-generate test salts.",
                 address(_gUniFactory)
             );
-            revert("UniswapV2Router address has changed. See logs.");
+            revert("GUniFactory address has changed. See logs.");
         }
+        vm.stopBroadcast();
 
         // Initialize the GUniFactory
         address payable gelatoAddress = payable(address(0x10));

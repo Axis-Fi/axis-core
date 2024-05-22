@@ -10,6 +10,6 @@ abstract contract TestSaltConstants {
     address internal constant _UNISWAP_V2_ROUTER =
         address(0x1EBC400fd43aC56937d4e14B8495B0f021e7c876);
     address internal constant _UNISWAP_V3_FACTORY =
-        address(0xE70b554757175BAb9eD3245C7f2b387ef09889Bd);
-    address internal constant _GUNI_FACTORY = address(0x6c4f6A2E6b9AFB0406919979cE3570741BCb866A);
+        address(0x7F1bb763E9acE13Ad3488E3d48D4AE1cde6E9604);
+    address internal constant _GUNI_FACTORY = address(0x2Bc907bF89D72479e6b6A38CC89fdE71672ba90e);
 }
