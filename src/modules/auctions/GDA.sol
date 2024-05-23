@@ -9,8 +9,12 @@ import {AtomicAuctionModule} from "src/modules/auctions/AtomicAuctionModule.sol"
 import {IGradualDutchAuction} from "src/interfaces/modules/auctions/IGradualDutchAuction.sol";
 
 // External libraries
-import {UD60x18, ud, convert, UNIT, uUNIT, EXP_MAX_INPUT} from "lib/prb-math/src/UD60x18.sol";
+import {
+    UD60x18, ud, convert, UNIT, uUNIT, EXP_MAX_INPUT, ZERO
+} from "lib/prb-math/src/UD60x18.sol";
 import "lib/prb-math/src/Common.sol" as PRBMath;
+
+import {console2} from "lib/forge-std/src/console2.sol";
 
 /// @notice Continuous Gradual Dutch Auction (GDA) module with exponential decay and a minimum price.
 contract GradualDutchAuction is IGradualDutchAuction, AtomicAuctionModule {
@@ -93,6 +97,9 @@ contract GradualDutchAuction is IGradualDutchAuction, AtomicAuctionModule {
             UD60x18 q0 = ud(params.equilibriumPrice.mulDiv(uUNIT, quoteTokenScale));
             UD60x18 q1 = q0.mul(UNIT - ud(params.decayTarget)).div(UNIT);
             UD60x18 qm = ud(params.minimumPrice.mulDiv(uUNIT, quoteTokenScale));
+            console2.log("q0:", q0.unwrap());
+            console2.log("q1:", q1.unwrap());
+            console2.log("qm:", qm.unwrap());
 
             // Check that q0 > q1 > qm
             // Don't need to check q0 > q1 since:
@@ -105,12 +112,14 @@ contract GradualDutchAuction is IGradualDutchAuction, AtomicAuctionModule {
             // Calculate the decay constant
             decayConstant =
                 (q0 - qm).div(q1 - qm).ln().div(convert(params.decayPeriod).div(ONE_DAY));
+            console2.log("decay constant:", decayConstant.unwrap());
         }
 
         // TODO other validation checks?
 
         // Calculate duration of the auction in days
         UD60x18 duration = convert(uint256(lot_.conclusion - lot_.start)).div(ONE_DAY);
+        console2.log("duration:", duration.unwrap());
 
         // The duration must be less than the max exponential input divided by the decay constant
         // in order for the exponential operations to not overflow. See the minimum and maximum
@@ -122,6 +131,7 @@ contract GradualDutchAuction is IGradualDutchAuction, AtomicAuctionModule {
         // Calculate emissions rate as number of tokens released per day
         UD60x18 emissionsRate =
             ud(lot_.capacity.mulDiv(uUNIT, 10 ** lot_.baseTokenDecimals)).div(duration);
+        console2.log("emissions rate:", emissionsRate.unwrap());
 
         // Store auction data
         AuctionData storage data = auctionData[lotId_];
@@ -158,21 +168,25 @@ contract GradualDutchAuction is IGradualDutchAuction, AtomicAuctionModule {
     // ========== VIEW FUNCTIONS ========== //
 
     // For Continuous GDAs with exponential decay, the price of a given token t seconds after being emitted is:
-    // q(t) = (q0 - qm) * e^(-k*t) + qm
+    // q(t) = r * (q0 - qm) * e^(-k*t) + qm
     // where k is the decay constant, q0 is the initial price, and qm is the minimum price
     // Integrating this function from the last auction start time for a particular number of tokens,
     // gives the multiplier for the token price to determine amount of quote tokens required to purchase:
-    // Q(T) = ((q0 - qm) * (e^((k*P)/r) - 1)) / ke^(k*T) + (qm * P) / r
+    // Q(T) = (r * (q0 - qm) * (e^((k*P)/r) - 1)) / ke^(k*T) + (qm * P)
     // where T is the time since the last auction start, P is the number of payout tokens to purchase,
     // and r is the emissions rate (number of tokens released per second).
     //
     // If qm is 0, then the equation simplifies to:
-    // q(t) = q0 * e^(-k*t)
+    // q(t) = r * q0 * e^(-k*t)
     // Integrating this function from the last auction start time for a particular number of tokens,
     // gives the multiplier for the token price to determine amount of quote tokens required to purchase:
-    // Q(T) = (q0 * (e^((k*P)/r) - 1)) / ke^(k*T)
+    // Q(T) = (r * q0 * (e^((k*P)/r) - 1)) / ke^(k*T)
     // where T is the time since the last auction start, P is the number of payout tokens to purchase.
     function priceFor(uint96 lotId_, uint256 payout_) public view override returns (uint256) {
+        // Lot ID must be valid
+        _revertIfLotInvalid(lotId_);
+
+        // Get lot and auction data
         Lot memory lot = lotData[lotId_];
         AuctionData memory auction = auctionData[lotId_];
 
@@ -189,8 +203,9 @@ contract GradualDutchAuction is IGradualDutchAuction, AtomicAuctionModule {
         // In the auction creation, we checked that the equilibrium price is greater than the minimum price
         // Scale the result to 18 decimals
         uint256 quoteTokenScale = 10 ** lot.quoteTokenDecimals;
-        UD60x18 priceDiff =
-            ud((auction.equilibriumPrice - auction.minimumPrice).mulDiv(uUNIT, quoteTokenScale));
+        UD60x18 priceDiff = ud(
+            (auction.equilibriumPrice - auction.minimumPrice).mulDiv(uUNIT, quoteTokenScale)
+        ).mul(auction.emissionsRate);
 
         // Calculate the second numerator factor: e^((k*P)/r) - 1
         // This cannot exceed the max exponential input due to the bounds imbosed on auction creation
@@ -219,8 +234,8 @@ contract GradualDutchAuction is IGradualDutchAuction, AtomicAuctionModule {
             // This cannot exceed the max exponential input due to the bounds imbosed on auction creation
             // last auction start - current time is guaranteed to be < duration. If not, the auction is over.
             UD60x18 ekt = auction.decayConstant.mul(
-                convert(auction.lastAuctionStart - block.timestamp).div(ONE_DAY)
-            ).exp();
+                convert(auction.lastAuctionStart - block.timestamp)
+            ).div(ONE_DAY).exp();
 
             // Calculate the first term in the formula
             result = priceDiff.mul(ekpr).mul(ekt).div(auction.decayConstant);
@@ -229,7 +244,7 @@ contract GradualDutchAuction is IGradualDutchAuction, AtomicAuctionModule {
         // If minimum price is zero, then the first term is the result, otherwise we add the second term
         if (auction.minimumPrice > 0) {
             UD60x18 minPrice = ud(auction.minimumPrice.mulDiv(uUNIT, quoteTokenScale));
-            result = result + minPrice.mul(payout).div(auction.emissionsRate);
+            result = result + minPrice.mul(payout);
         }
 
         // Scale price back to quote token decimals
@@ -239,6 +254,9 @@ contract GradualDutchAuction is IGradualDutchAuction, AtomicAuctionModule {
     }
 
     function payoutFor(uint96 lotId_, uint256 amount_) public view override returns (uint256) {
+        // Lot ID must be valid
+        _revertIfLotInvalid(lotId_);
+
         // Calculate the payout and emissions
         uint256 payout;
         (payout,) = _payoutAndEmissionsFor(lotId_, amount_);
@@ -254,13 +272,13 @@ contract GradualDutchAuction is IGradualDutchAuction, AtomicAuctionModule {
     // Two cases:
     //
     // 1. Minimum price is zero
-    // P = (r * ln((Q * k * e^(k*T) / q0) + 1)) / k
+    // P = (r * ln((Q * k * e^(k*T) / (r * q0)) + 1)) / k
     // where P is the number of payout tokens, Q is the number of quote tokens,
     // r is the emissions rate, k is the decay constant, q0 is the equilibrium price of the auction,
     // and T is the time since the last auction start
     //
     // 2. Minimum price is not zero
-    // P = (r * (k * Q / qm + C - W(C e^(k * Q / qm + C)))) / k
+    // P = (r * ((k * Q) / (r * qm) + C - W(C e^((k * Q) / (r * qm) + C)))) / k
     // where P is the number of payout tokens, Q is the number of quote tokens,
     // r is the emissions rate, k is the decay constant, qm is the minimum price of the auction,
     // q0 is the equilibrium price of the auction, T is the time since the last auction start,
@@ -295,7 +313,9 @@ contract GradualDutchAuction is IGradualDutchAuction, AtomicAuctionModule {
 
                 // Calculate the logarithm
                 // Operand is guaranteed to be >= 1, so the result is positive
-                logFactor = amount.mul(auction.decayConstant).mul(ekt).div(q0).add(UNIT).ln();
+                logFactor = amount.mul(auction.decayConstant).mul(ekt).div(
+                    auction.emissionsRate.mul(q0)
+                ).add(UNIT).ln();
             } else {
                 // T is negative: flip the e^(k * T) term to the denominator
 
@@ -308,7 +328,9 @@ contract GradualDutchAuction is IGradualDutchAuction, AtomicAuctionModule {
 
                 // Calculate the logarithm
                 // Operand is guaranteed to be >= 1, so the result is positive
-                logFactor = amount.mul(auction.decayConstant).div(ekt.mul(q0)).add(UNIT).ln();
+                logFactor = amount.mul(auction.decayConstant).div(
+                    ekt.mul(auction.emissionsRate).mul(q0)
+                ).add(UNIT).ln();
             }
 
             // Calculate the payout
@@ -320,7 +342,7 @@ contract GradualDutchAuction is IGradualDutchAuction, AtomicAuctionModule {
                 uint256 minPrice = auction.minimumPrice;
                 uint256 payoutAtMinPrice =
                     amount_.mulDiv(10 ** lotData[lotId_].baseTokenDecimals, minPrice);
-                if (payoutAtMinPrice > maxPayout(lotId_)) {
+                if (payoutAtMinPrice > lotData[lotId_].capacity) {
                     revert Auction_InsufficientCapacity();
                 }
             }
@@ -329,8 +351,9 @@ contract GradualDutchAuction is IGradualDutchAuction, AtomicAuctionModule {
             // Can't overflow because quoteTokenScale <= uUNIT
             UD60x18 qm = ud(auction.minimumPrice.mulDiv(uUNIT, quoteTokenScale));
 
-            // Calculate first term:  (k * Q) / qm
-            UD60x18 f = auction.decayConstant.mul(amount).div(qm);
+            // Calculate first term aka F:  (k * Q) / (r * qm)
+            UD60x18 f = auction.decayConstant.mul(amount).div(auction.emissionsRate.mul(qm));
+            console2.log("first term:", f.unwrap());
 
             // Calculate second term aka C: (q0 - qm)/(qm * e^(k * T))
             UD60x18 c;
@@ -340,8 +363,9 @@ contract GradualDutchAuction is IGradualDutchAuction, AtomicAuctionModule {
                 // Current time - last auction start is guaranteed to be < duration. If not, the auction is over.
                 // We have to divide twice to avoid multipling the exponential result by qm, which could overflow.
                 c = q0.sub(qm).div(qm).div(
-                    auction.decayConstant.mul(convert(block.timestamp - auction.lastAuctionStart))
-                        .exp()
+                    auction.decayConstant.mul(
+                        convert(block.timestamp - auction.lastAuctionStart).div(ONE_DAY)
+                    ).exp()
                 );
             } else {
                 // T is negative: flip the e^(k * T) term to the numerator
@@ -349,20 +373,25 @@ contract GradualDutchAuction is IGradualDutchAuction, AtomicAuctionModule {
                 // last auction start - current time is guaranteed to be < duration. If not, the auction is over.
                 // We divide before multiplying here to avoid reduce the odds of an intermediate result overflowing.
                 c = q0.sub(qm).div(qm).mul(
-                    auction.decayConstant.mul(convert(auction.lastAuctionStart - block.timestamp))
-                        .exp()
+                    auction.decayConstant.mul(
+                        convert(auction.lastAuctionStart - block.timestamp).div(ONE_DAY)
+                    ).exp()
                 );
             }
+            console2.log("second term:", c.unwrap());
 
-            // Calculate the third term: W(C e^(k * Q / qm + C))
-            UD60x18 w = c.add(f).exp().mul(c).productLn();
+            // Calculate the third term: W(C e^(F + C))
+            // 86 wei is the maximum error (TODO that I have found so far)
+            // for the lambert-W approximation,
+            // this makes sure the estimate is conservative
+            UD60x18 w = c.add(f).exp().mul(c).productLn() + ud(86);
+            console2.log("third term:", w.unwrap());
 
-            // Calculate payout
-            // The intermediate term (f + c - w) cannot underflow because
+            // Without error correction, the intermediate term (f + c - w) cannot underflow because
             // firstTerm + c - thirdTerm >= 0 for all amounts >= 0.
             //
             // Proof:
-            // 1. k > 0, Q >= 0, qm > 0 => f >= 0
+            // 1. k > 0, Q >= 0, r > 0, qm > 0 => f >= 0
             // 2. q0 > qm, qm > 0 => c >= 0
             // 3. f + c = W((f + c) * e^(f + c))
             // 4. 1 & 2 => f + c >= 0, f + c >= f, f + c >= c
@@ -370,23 +399,35 @@ contract GradualDutchAuction is IGradualDutchAuction, AtomicAuctionModule {
             // 6. 4 & 5 => W((f + c) * e^(f + c)) >= W(c * e^(f + c))
             // 7. 3 & 6 => f + c >= W(c * e^(f + c))
             // QED
-            payout = auction.emissionsRate.mul(f.add(c).sub(w)).div(auction.decayConstant);
+            //
+            // However, it is possible since we add a small correction to w.
+            // Therefore, we check for underflow on the term and set a floor at 0.
+            UD60x18 fcw = w > f.add(c) ? ZERO : f.add(c).sub(w);
+            payout = auction.emissionsRate.mul(fcw).div(auction.decayConstant);
+            console2.log("sum of terms:", fcw.unwrap());
+            console2.log("emissions rate:", auction.emissionsRate.unwrap());
+            console2.log("decay constant:", auction.decayConstant.unwrap());
+            console2.log("payout:", payout.unwrap());
         }
 
         // Calculate seconds of emissions from payout
-        uint256 secondsOfEmissions = payout.div(auction.emissionsRate).intoUint256();
+        uint256 secondsOfEmissions = convert(payout.div(auction.emissionsRate.mul(ONE_DAY)));
 
         // Scale payout to payout token decimals and return
         return (payout.intoUint256().mulDiv(10 ** lot.baseTokenDecimals, uUNIT), secondsOfEmissions);
     }
 
     function maxPayout(uint96 lotId_) public view override returns (uint256) {
+        // Lot ID must be valid
+        _revertIfLotInvalid(lotId_);
+
         // The max payout is the remaining capacity of the lot
         return lotData[lotId_].capacity;
     }
 
     function maxAmountAccepted(uint96 lotId_) external view override returns (uint256) {
         // The max amount accepted is the price to purchase the remaining capacity of the lot
+        // This function checks if the lot ID is valid
         return priceFor(lotId_, lotData[lotId_].capacity);
     }
 }
