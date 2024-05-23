@@ -16,6 +16,8 @@ contract BALwithAllocatedAllowlist is BaselineAxisLaunch {
     // ========== DATA STRUCTURES ========== //
 
     /// @notice The parameters for creating an allocated allowlist
+    /// @dev    The merkle tree from which the merkle root is generated is expected to be made up of leaves with the following structure:
+    ///         keccak256(abi.encodePacked(address, uint256))
     struct AllocatedAllowlistCreateParams {
         bytes32 merkleRoot;
     }
@@ -54,6 +56,8 @@ contract BALwithAllocatedAllowlist is BaselineAxisLaunch {
     // ========== CALLBACK FUNCTIONS ========== //
 
     /// @inheritdoc BaselineAxisLaunch
+    /// @dev        This function reverts if:
+    ///             - `allowlistData_` is not of the correct length
     ///
     /// @param      allowlistData_ abi-encoded AllocatedAllowlistCreateParams
     function __onCreate(
