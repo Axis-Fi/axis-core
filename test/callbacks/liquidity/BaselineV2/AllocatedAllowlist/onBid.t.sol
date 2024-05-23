@@ -69,7 +69,7 @@ contract BaselineAllocatedAllowlistOnBidTest is BaselineAllocatedAllowlistTest {
     //  [X] it reverts
     // [X] it updates the spent amount with the bid amount
 
-    function test_parametersInvalid()
+    function test_parametersInvalid_reverts()
         public
         givenCallbackIsCreated
         givenAuctionIsCreated
@@ -84,7 +84,7 @@ contract BaselineAllocatedAllowlistOnBidTest is BaselineAllocatedAllowlistTest {
         _dtl.onBid(_lotId, _BID_ID, _BUYER, 5e18, abi.encode(uint256(20), bytes("something")));
     }
 
-    function test_merkleProofInvalid()
+    function test_merkleProofInvalid_reverts()
         public
         givenCallbackIsCreated
         givenAuctionIsCreated
@@ -101,7 +101,7 @@ contract BaselineAllocatedAllowlistOnBidTest is BaselineAllocatedAllowlistTest {
         _onBid(5e18);
     }
 
-    function test_buyerNotInMerkleTree()
+    function test_buyerNotInMerkleTree_reverts()
         public
         givenCallbackIsCreated
         givenAuctionIsCreated
@@ -119,7 +119,7 @@ contract BaselineAllocatedAllowlistOnBidTest is BaselineAllocatedAllowlistTest {
         _dtl.onBid(_lotId, _BID_ID, address(0x55), 5e18, abi.encode(_bidParams));
     }
 
-    function test_buyerLimitSpent()
+    function test_buyerLimitSpent_reverts()
         public
         givenCallbackIsCreated
         givenAuctionIsCreated
@@ -140,7 +140,7 @@ contract BaselineAllocatedAllowlistOnBidTest is BaselineAllocatedAllowlistTest {
         _onBid(1e18);
     }
 
-    function test_buyerZeroLimit()
+    function test_buyerZeroLimit_reverts()
         public
         givenCallbackIsCreated
         givenAuctionIsCreated
@@ -159,7 +159,7 @@ contract BaselineAllocatedAllowlistOnBidTest is BaselineAllocatedAllowlistTest {
         _dtl.onBid(_lotId, _BID_ID, _NOT_SELLER, 5e18, abi.encode(_bidParams));
     }
 
-    function test_noBids_aboveLimit()
+    function test_noBids_aboveLimit_reverts()
         public
         givenCallbackIsCreated
         givenAuctionIsCreated
@@ -193,7 +193,7 @@ contract BaselineAllocatedAllowlistOnBidTest is BaselineAllocatedAllowlistTest {
         assertEq(BALwithAllocatedAllowlist(address(_dtl)).buyerSpent(_BUYER), 4e18, "buyer spent");
     }
 
-    function test_remainingLimit_aboveLimit()
+    function test_remainingLimit_aboveLimit_reverts()
         public
         givenCallbackIsCreated
         givenAuctionIsCreated

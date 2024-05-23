@@ -19,7 +19,11 @@ contract BaselineAllocatedAllowlistOnCreateTest is BaselineAllocatedAllowlistTes
     //  [X] it reverts
     // [X] it decodes and stores the merkle root
 
-    function test_allowlistParamsIncorrect() public givenCallbackIsCreated givenAuctionIsCreated {
+    function test_allowlistParamsIncorrect_reverts()
+        public
+        givenCallbackIsCreated
+        givenAuctionIsCreated
+    {
         // Set the allowlist parameters to be an incorrect format
         _createData.allowlistParams = abi.encode(uint256(20), bytes32("hello"));
 
@@ -31,7 +35,7 @@ contract BaselineAllocatedAllowlistOnCreateTest is BaselineAllocatedAllowlistTes
         _onCreate();
     }
 
-    function test_success()
+    function test_success_reverts()
         public
         givenCallbackIsCreated
         givenAuctionIsCreated
