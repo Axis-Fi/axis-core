@@ -30,6 +30,7 @@ import {
     Kernel,
     toKeycode as toBaselineKeycode
 } from "src/callbacks/liquidity/BaselineV2/lib/Kernel.sol";
+import {Range} from "src/callbacks/liquidity/BaselineV2/lib/IBPOOL.sol";
 
 abstract contract BaselineAxisLaunchTest is Test, Permit2User, WithSalts {
     using Callbacks for BaselineAxisLaunch;
@@ -220,13 +221,13 @@ abstract contract BaselineAxisLaunchTest is Test, Permit2User, WithSalts {
         _;
     }
 
-    function onCancel() internal {
+    function _onCancel() internal {
         vm.prank(address(_auctionHouse));
-        _dtl.onCancel(_lotId, _scaleBaseTokenAmount(_REFUND_AMOUNT), true, abi.encode(""));
+        _dtl.onCancel(_lotId, _scaleBaseTokenAmount(_LOT_CAPACITY), true, abi.encode(""));
     }
 
     modifier givenOnCancel() {
-        onCancel();
+        _onCancel();
         _;
     }
 
@@ -304,6 +305,16 @@ abstract contract BaselineAxisLaunchTest is Test, Permit2User, WithSalts {
 
     function _scaleBaseTokenAmount(uint256 amount_) internal view returns (uint256) {
         return FixedPointMathLib.mulDivDown(amount_, 10 ** _baseTokenDecimals, _BASE_SCALE);
+    }
+
+    modifier givenAddressHasBaseTokenBalance(address account_, uint256 amount_) {
+        _baseToken.mint(account_, amount_);
+        _;
+    }
+
+    modifier givenAddressHasQuoteTokenBalance(address account_, uint256 amount_) {
+        _quoteToken.mint(account_, amount_);
+        _;
     }
 
     // ========== MOCKS ========== //

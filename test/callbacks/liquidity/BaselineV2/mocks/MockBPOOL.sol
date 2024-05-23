@@ -98,7 +98,16 @@ contract MockBPOOL is IBPOOLv1, ERC20 {
         return (activeTick / TICK_SPACING) * TICK_SPACING;
     }
 
-    function getPosition(Range _range) external view override returns (Position memory position_) {}
+    function getPosition(Range range_) external view override returns (Position memory position) {
+        return Position({
+            liquidity: 0,
+            sqrtPriceL: 0,
+            sqrtPriceU: 0,
+            bAssets: 0,
+            reserves: _rangeReserves[range_],
+            capacity: _rangeReserves[range_]
+        });
+    }
 
     function getBalancesForLiquidity(
         uint160 _sqrtPriceL,

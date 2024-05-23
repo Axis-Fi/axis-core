@@ -292,14 +292,21 @@ contract BaselineAxisLaunch is BaseCallback, Policy, Owned {
     ///
     ///                 This function reverts if:
     ///                 - `lotId_` is not the same as the stored `lotId`
+    ///                 - The auction is already complete
     ///                 - Sufficient quantity of `bAsset` have not been sent to the callback
     function _onCancel(uint96 lotId_, uint256 refund_, bool, bytes calldata) internal override {
         // Validate the lot ID
         if (lotId_ != lotId) revert Callback_InvalidParams();
 
+        // Validate that the lot is not already settled or cancelled
+        if (auctionComplete) revert Callback_AlreadyComplete();
+
         // Burn any refunded tokens (all auctions are prefunded)
         // Verify that the callback received the correct amount of bAsset tokens
         if (bAsset.balanceOf(address(this)) < refund_) revert Callback_MissingFunds();
+
+        // Set the auction lot to be cancelled
+        auctionComplete = true;
 
         // Send tokens to BPOOL and then burn
         initialCirculatingSupply -= refund_;
@@ -408,6 +415,10 @@ contract BaselineAxisLaunch is BaseCallback, Policy, Owned {
         BPOOL.burnAllBAssetsInContract();
 
         //// Step 2: Deploy liquidity to the Baseline pool ////
+
+        // Approve spending of the reserve token
+        // There should not be any dangling approvals left
+        Transfer.approve(RESERVE, address(BPOOL), proceeds_);
 
         // Add all of the proceeds to the Floor range
         BPOOL.addReservesTo(Range.FLOOR, proceeds_);
