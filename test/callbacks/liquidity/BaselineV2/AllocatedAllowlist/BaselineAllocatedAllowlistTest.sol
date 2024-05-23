@@ -27,8 +27,9 @@ contract BaselineAllocatedAllowlistTest is BaselineAxisLaunchTest {
         });
 
         // Get the salt
-        bytes memory args =
-            abi.encode(address(_auctionHouse), permissions, _BASELINE_KERNEL, _BASELINE_QUOTE_TOKEN);
+        bytes memory args = abi.encode(
+            address(_auctionHouse), permissions, _BASELINE_KERNEL, _BASELINE_QUOTE_TOKEN, _OWNER
+        );
         bytes32 salt = _getTestSalt(
             "BaselineAllocatedAllowlist", type(BALwithAllocatedAllowlist).creationCode, args
         );
@@ -37,7 +38,7 @@ contract BaselineAllocatedAllowlistTest is BaselineAxisLaunchTest {
         // Source: https://github.com/foundry-rs/foundry/issues/6402
         vm.startBroadcast();
         _dtl = new BALwithAllocatedAllowlist{salt: salt}(
-            address(_auctionHouse), permissions, _BASELINE_KERNEL, _BASELINE_QUOTE_TOKEN
+            address(_auctionHouse), permissions, _BASELINE_KERNEL, _BASELINE_QUOTE_TOKEN, _OWNER
         );
         vm.stopBroadcast();
 

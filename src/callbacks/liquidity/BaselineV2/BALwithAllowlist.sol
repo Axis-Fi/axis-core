@@ -30,8 +30,9 @@ contract BALwithAllowlist is BaselineAxisLaunch {
         address auctionHouse_,
         Callbacks.Permissions memory permissions_,
         address baselineKernel_,
-        address reserve_
-    ) BaselineAxisLaunch(auctionHouse_, permissions_, baselineKernel_, reserve_) {}
+        address reserve_,
+        address owner_
+    ) BaselineAxisLaunch(auctionHouse_, permissions_, baselineKernel_, reserve_, owner_) {}
 
     // ========== CALLBACK FUNCTIONS ========== //
 

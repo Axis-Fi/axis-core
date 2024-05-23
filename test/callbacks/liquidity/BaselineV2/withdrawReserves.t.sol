@@ -7,9 +7,48 @@ import {BaselineAxisLaunchTest} from
 contract BaselineWithdrawReservesTest is BaselineAxisLaunchTest {
     // ============ Tests ============ //
 
-    // [ ] when the caller is not the owner
-    //  [ ] it reverts
-    // [ ] when there are no reserves
-    //  [ ] it returns 0
-    // [ ] it transfers the reserves to the owner
+    // [X] when the caller is not the owner
+    //  [X] it reverts
+    // [X] when there are no reserves
+    //  [X] it returns 0
+    // [X] it transfers the reserves to the owner
+
+    function test_notOwner_reverts()
+        public
+        givenCallbackIsCreated
+        givenAddressHasBaseTokenBalance(_dtlAddress, 1e18)
+    {
+        // Expect revert
+        vm.expectRevert("UNAUTHORIZED");
+
+        // Perform callback
+        vm.prank(_BUYER);
+        _dtl.withdrawReserves();
+    }
+
+    function test_noReserves_returnsZero() public givenCallbackIsCreated {
+        // Perform callback
+        vm.prank(_OWNER);
+        uint256 reserves = _dtl.withdrawReserves();
+
+        // Assert reserves
+        assertEq(reserves, 0, "reserves withdrawn");
+    }
+
+    function test_success()
+        public
+        givenCallbackIsCreated
+        givenAddressHasQuoteTokenBalance(_dtlAddress, 1e18)
+    {
+        // Perform callback
+        vm.prank(_OWNER);
+        uint256 reserves = _dtl.withdrawReserves();
+
+        // Assert reserves
+        assertEq(reserves, 1e18, "reserves withdrawn");
+
+        // Assert quote token balances
+        assertEq(_quoteToken.balanceOf(_dtlAddress), 0, "quote token: callback");
+        assertEq(_quoteToken.balanceOf(_OWNER), 1e18, "quote token: this");
+    }
 }

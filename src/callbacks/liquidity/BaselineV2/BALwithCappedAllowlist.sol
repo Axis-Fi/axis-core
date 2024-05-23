@@ -32,8 +32,9 @@ contract BALwithCappedAllowlist is BALwithAllowlist {
         address auctionHouse_,
         Callbacks.Permissions memory permissions_,
         address baselineKernel_,
-        address reserve_
-    ) BALwithAllowlist(auctionHouse_, permissions_, baselineKernel_, reserve_) {}
+        address reserve_,
+        address owner_
+    ) BALwithAllowlist(auctionHouse_, permissions_, baselineKernel_, reserve_, owner_) {}
 
     // ========== CALLBACK FUNCTIONS ========== //
 

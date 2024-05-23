@@ -468,7 +468,7 @@ contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts {
 
         // Get the salt
         bytes memory callbackArgs =
-            abi.encode(_AUCTION_HOUSE, permissions, _BASELINE_KERNEL, _BASELINE_QUOTE_TOKEN);
+            abi.encode(_AUCTION_HOUSE, permissions, _BASELINE_KERNEL, _BASELINE_QUOTE_TOKEN, _OWNER);
         (string memory callbackBytecodePath, bytes32 callbackBytecodeHash) = _writeBytecode(
             "BaselineAxisLaunch", type(BaselineAxisLaunch).creationCode, callbackArgs
         );
@@ -490,7 +490,7 @@ contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts {
 
         // Get the salt
         bytes memory callbackArgs =
-            abi.encode(_AUCTION_HOUSE, permissions, _BASELINE_KERNEL, _BASELINE_QUOTE_TOKEN);
+            abi.encode(_AUCTION_HOUSE, permissions, _BASELINE_KERNEL, _BASELINE_QUOTE_TOKEN, _OWNER);
         (string memory callbackBytecodePath, bytes32 callbackBytecodeHash) = _writeBytecode(
             "BaselineAllocatedAllowlist", type(BALwithAllocatedAllowlist).creationCode, callbackArgs
         );

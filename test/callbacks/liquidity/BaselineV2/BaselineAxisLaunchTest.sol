@@ -161,8 +161,9 @@ abstract contract BaselineAxisLaunchTest is Test, Permit2User, WithSalts {
         });
 
         // Get the salt
-        bytes memory args =
-            abi.encode(address(_auctionHouse), permissions, _BASELINE_KERNEL, _BASELINE_QUOTE_TOKEN);
+        bytes memory args = abi.encode(
+            address(_auctionHouse), permissions, _BASELINE_KERNEL, _BASELINE_QUOTE_TOKEN, _OWNER
+        );
         bytes32 salt =
             _getTestSalt("BaselineAxisLaunch", type(BaselineAxisLaunch).creationCode, args);
 
@@ -170,7 +171,7 @@ abstract contract BaselineAxisLaunchTest is Test, Permit2User, WithSalts {
         // Source: https://github.com/foundry-rs/foundry/issues/6402
         vm.startBroadcast();
         _dtl = new BaselineAxisLaunch{salt: salt}(
-            address(_auctionHouse), permissions, _BASELINE_KERNEL, _BASELINE_QUOTE_TOKEN
+            address(_auctionHouse), permissions, _BASELINE_KERNEL, _BASELINE_QUOTE_TOKEN, _OWNER
         );
         vm.stopBroadcast();
 

@@ -93,12 +93,20 @@ contract BaselineAxisLaunch is BaseCallback, Policy, Owned {
 
     // ========== CONSTRUCTOR ========== //
 
+    /// @notice Constructor for BaselineAxisLaunch
+    ///
+    /// @param  auctionHouse_   The AuctionHouse the callback is paired with
+    /// @param  permissions_    Callback permissions
+    /// @param  baselineKernel_ Address of the Baseline kernel
+    /// @param  reserve_        Address of the reserve token. This should match the quote token for the auction lot.
+    /// @param  owner_          Address of the owner of this policy. Will be permitted to perform admin functions. This is explicitly required, as `msg.sender` cannot be used due to the use of CREATE2 for deployment.
     constructor(
         address auctionHouse_,
         Callbacks.Permissions memory permissions_,
         address baselineKernel_,
-        address reserve_
-    ) BaseCallback(auctionHouse_, permissions_) Policy(Kernel(baselineKernel_)) Owned(msg.sender) {
+        address reserve_,
+        address owner_
+    ) BaseCallback(auctionHouse_, permissions_) Policy(Kernel(baselineKernel_)) Owned(owner_) {
         // Set lot ID to max uint(96) initially so it doesn't reference a lot
         lotId = type(uint96).max;
 
