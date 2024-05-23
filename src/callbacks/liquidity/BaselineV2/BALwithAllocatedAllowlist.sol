@@ -13,6 +13,19 @@ contract BALwithAllocatedAllowlist is BaselineAxisLaunch {
     // ========== ERRORS ========== //
     error Callback_ExceedsLimit();
 
+    // ========== DATA STRUCTURES ========== //
+
+    /// @notice The parameters for creating an allocated allowlist
+    struct AllocatedAllowlistCreateParams {
+        bytes32 merkleRoot;
+    }
+
+    /// @notice The parameters for bidding with an allocated allowlist
+    struct AllocatedAllowlistBidParams {
+        bytes32[] proof;
+        uint256 allocatedAmount;
+    }
+
     // ========== STATE VARIABLES ========== //
 
     bytes32 public merkleRoot;
@@ -40,6 +53,9 @@ contract BALwithAllocatedAllowlist is BaselineAxisLaunch {
 
     // ========== CALLBACK FUNCTIONS ========== //
 
+    /// @inheritdoc BaselineAxisLaunch
+    ///
+    /// @param      allowlistData_ abi-encoded AllocatedAllowlistCreateParams
     function __onCreate(
         uint96,
         address,
@@ -49,13 +65,20 @@ contract BALwithAllocatedAllowlist is BaselineAxisLaunch {
         bool,
         bytes memory allowlistData_
     ) internal virtual override {
+        // Check that the parameters are of the correct length
+        if (allowlistData_.length != 32) {
+            revert Callback_InvalidParams();
+        }
+
         // Decode the merkle root from the callback data
-        (bytes32 merkleRoot_) = abi.decode(allowlistData_, (bytes32));
+        AllocatedAllowlistCreateParams memory allowlistParams =
+            abi.decode(allowlistData_, (AllocatedAllowlistCreateParams));
 
         // Set the merkle root and buyer limit
-        merkleRoot = merkleRoot_;
+        merkleRoot = allowlistParams.merkleRoot;
     }
 
+    /// @inheritdoc BaselineAxisLaunch
     function _onBid(
         uint96 lotId_,
         uint64 bidId_,
@@ -73,6 +96,7 @@ contract BALwithAllocatedAllowlist is BaselineAxisLaunch {
         __onBid(lotId_, bidId_, buyer_, amount_, callbackData_);
     }
 
+    /// @notice Override this function to implement additional functionality
     function __onBid(
         uint96 lotId_,
         uint64 bidId_,
@@ -89,19 +113,19 @@ contract BALwithAllocatedAllowlist is BaselineAxisLaunch {
         bytes calldata callbackData_
     ) internal view returns (uint256) {
         // Decode the merkle proof from the callback data
-        (bytes32[] memory proof, uint256 allocatedAmount) =
-            abi.decode(callbackData_, (bytes32[], uint256));
+        AllocatedAllowlistBidParams memory bidParams =
+            abi.decode(callbackData_, (AllocatedAllowlistBidParams));
 
         // Get the leaf for the buyer
-        bytes32 leaf = keccak256(abi.encodePacked(buyer_, allocatedAmount));
+        bytes32 leaf = keccak256(abi.encodePacked(buyer_, bidParams.allocatedAmount));
 
         // Validate the merkle proof
-        if (!MerkleProofLib.verify(proof, merkleRoot, leaf)) {
+        if (!MerkleProofLib.verify(bidParams.proof, merkleRoot, leaf)) {
             revert Callback_NotAuthorized();
         }
 
         // Return the allocated amount for the buyer
-        return allocatedAmount;
+        return bidParams.allocatedAmount;
     }
 
     // ========== INTERNAL FUNCTIONS ========== //

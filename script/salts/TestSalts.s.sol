@@ -15,6 +15,8 @@ import {CappedMerkleAllowlist} from "src/callbacks/allowlists/CappedMerkleAllowl
 import {UniswapV2DirectToLiquidity} from "src/callbacks/liquidity/UniswapV2DTL.sol";
 import {UniswapV3DirectToLiquidity} from "src/callbacks/liquidity/UniswapV3DTL.sol";
 import {BaselineAxisLaunch} from "src/callbacks/liquidity/BaselineV2/BaselineAxisLaunch.sol";
+import {BALwithAllocatedAllowlist} from
+    "src/callbacks/liquidity/BaselineV2/BALwithAllocatedAllowlist.sol";
 
 contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts {
     // TODO shift into abstract contract that tests also inherit from
@@ -471,5 +473,27 @@ contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts {
             "BaselineAxisLaunch", type(BaselineAxisLaunch).creationCode, callbackArgs
         );
         _setTestSalt(callbackBytecodePath, "EF", "BaselineAxisLaunch", callbackBytecodeHash);
+    }
+
+    function generateBaselineAllocatedAllowlist() public {
+        // Callback permissions
+        Callbacks.Permissions memory permissions = Callbacks.Permissions({
+            onCreate: true,
+            onCancel: true,
+            onCurate: true,
+            onPurchase: false,
+            onBid: true,
+            onSettle: true,
+            receiveQuoteTokens: true,
+            sendBaseTokens: true
+        });
+
+        // Get the salt
+        bytes memory callbackArgs =
+            abi.encode(_AUCTION_HOUSE, permissions, _BASELINE_KERNEL, _BASELINE_QUOTE_TOKEN);
+        (string memory callbackBytecodePath, bytes32 callbackBytecodeHash) = _writeBytecode(
+            "BaselineAllocatedAllowlist", type(BALwithAllocatedAllowlist).creationCode, callbackArgs
+        );
+        _setTestSalt(callbackBytecodePath, "EF", "BaselineAllocatedAllowlist", callbackBytecodeHash);
     }
 }

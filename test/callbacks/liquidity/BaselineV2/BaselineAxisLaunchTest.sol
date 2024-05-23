@@ -146,7 +146,7 @@ abstract contract BaselineAxisLaunchTest is Test, Permit2User, WithSalts {
 
     // ========== MODIFIERS ========== //
 
-    modifier givenCallbackIsCreated() {
+    modifier givenCallbackIsCreated() virtual {
         // Callback permissions
         Callbacks.Permissions memory permissions = Callbacks.Permissions({
             onCreate: true,
