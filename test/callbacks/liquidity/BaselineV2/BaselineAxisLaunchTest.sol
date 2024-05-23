@@ -187,7 +187,7 @@ abstract contract BaselineAxisLaunchTest is Test, Permit2User, WithSalts {
         _;
     }
 
-    modifier givenAuctionisCreated() {
+    modifier givenAuctionIsCreated() {
         // Create a dummy auction in the module
         IAuction.AuctionParams memory auctionParams = IAuction.AuctionParams({
             start: _START,

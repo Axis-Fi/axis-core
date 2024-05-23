@@ -155,7 +155,7 @@ contract BaselineOnCreateTest is BaselineAxisLaunchTest {
     //  [X] it correctly sets the discovery ticks to not overlap with the other ranges
     // [X] it transfers the base token to the auction house, updates circulating supply, sets the state variables, initializes the pool and sets the tick ranges
 
-    function test_callbackDataIncorrect() public givenCallbackIsCreated givenAuctionisCreated {
+    function test_callbackDataIncorrect() public givenCallbackIsCreated givenAuctionIsCreated {
         // Expect revert
         vm.expectRevert();
 
@@ -172,7 +172,7 @@ contract BaselineOnCreateTest is BaselineAxisLaunchTest {
         );
     }
 
-    function test_notAuctionHouse() public givenCallbackIsCreated givenAuctionisCreated {
+    function test_notAuctionHouse() public givenCallbackIsCreated givenAuctionIsCreated {
         // Expect revert
         _expectNotAuthorized();
 
@@ -188,7 +188,7 @@ contract BaselineOnCreateTest is BaselineAxisLaunchTest {
         );
     }
 
-    function test_lotAlreadyRegistered() public givenCallbackIsCreated givenAuctionisCreated {
+    function test_lotAlreadyRegistered() public givenCallbackIsCreated givenAuctionIsCreated {
         // Perform callback
         _onCreate();
 
@@ -199,7 +199,7 @@ contract BaselineOnCreateTest is BaselineAxisLaunchTest {
         _onCreate();
     }
 
-    function test_baseTokenNotBPool() public givenCallbackIsCreated givenAuctionisCreated {
+    function test_baseTokenNotBPool() public givenCallbackIsCreated givenAuctionIsCreated {
         // Expect revert
         _expectInvalidParams();
 
@@ -216,7 +216,7 @@ contract BaselineOnCreateTest is BaselineAxisLaunchTest {
         );
     }
 
-    function test_quoteTokenNotReserve() public givenCallbackIsCreated givenAuctionisCreated {
+    function test_quoteTokenNotReserve() public givenCallbackIsCreated givenAuctionIsCreated {
         // Expect revert
         _expectInvalidParams();
 
@@ -236,7 +236,7 @@ contract BaselineOnCreateTest is BaselineAxisLaunchTest {
     function test_invalidDiscoveryTickWidth(int24 discoveryTickWidth_)
         public
         givenCallbackIsCreated
-        givenAuctionisCreated
+        givenAuctionIsCreated
     {
         int24 discoveryTickWidth = int24(bound(discoveryTickWidth_, type(int24).min, 0));
         _createData.discoveryTickWidth = discoveryTickWidth;
@@ -252,7 +252,7 @@ contract BaselineOnCreateTest is BaselineAxisLaunchTest {
         public
         givenCallbackIsCreated
         givenAuctionFormatIsEmp
-        givenAuctionisCreated
+        givenAuctionIsCreated
     {
         // Expect revert
         _expectInvalidParams();
@@ -261,7 +261,7 @@ contract BaselineOnCreateTest is BaselineAxisLaunchTest {
         _onCreate();
     }
 
-    function test_auctionNotPrefunded() public givenCallbackIsCreated givenAuctionisCreated {
+    function test_auctionNotPrefunded() public givenCallbackIsCreated givenAuctionIsCreated {
         // Expect revert
         _expectInvalidParams();
 
@@ -278,7 +278,7 @@ contract BaselineOnCreateTest is BaselineAxisLaunchTest {
         );
     }
 
-    function test_success() public givenCallbackIsCreated givenAuctionisCreated {
+    function test_success() public givenCallbackIsCreated givenAuctionIsCreated {
         // Perform the call
         _onCreate();
 
@@ -322,7 +322,7 @@ contract BaselineOnCreateTest is BaselineAxisLaunchTest {
         public
         givenBPoolFeeTier(500)
         givenCallbackIsCreated
-        givenAuctionisCreated
+        givenAuctionIsCreated
     {
         // Perform the call
         _onCreate();
@@ -358,7 +358,7 @@ contract BaselineOnCreateTest is BaselineAxisLaunchTest {
         public
         givenCallbackIsCreated
         givenFixedPrice(type(uint256).max)
-        givenAuctionisCreated
+        givenAuctionIsCreated
     {
         // Perform the call
         _onCreate();
@@ -393,7 +393,7 @@ contract BaselineOnCreateTest is BaselineAxisLaunchTest {
     function test_narrowDiscoveryTickWidth()
         public
         givenCallbackIsCreated
-        givenAuctionisCreated
+        givenAuctionIsCreated
         givenDiscoveryTickWidth(1)
     {
         // Perform the call
@@ -428,7 +428,7 @@ contract BaselineOnCreateTest is BaselineAxisLaunchTest {
         public
         givenBaseTokenAddressLower
         givenCallbackIsCreated
-        givenAuctionisCreated
+        givenAuctionIsCreated
     {
         // Perform the call
         _onCreate();
@@ -473,7 +473,7 @@ contract BaselineOnCreateTest is BaselineAxisLaunchTest {
         public
         givenBaseTokenDecimals(19)
         givenCallbackIsCreated
-        givenAuctionisCreated
+        givenAuctionIsCreated
     {
         // Perform the call
         _onCreate();
@@ -522,7 +522,7 @@ contract BaselineOnCreateTest is BaselineAxisLaunchTest {
         public
         givenBaseTokenDecimals(17)
         givenCallbackIsCreated
-        givenAuctionisCreated
+        givenAuctionIsCreated
     {
         // Perform the call
         _onCreate();
