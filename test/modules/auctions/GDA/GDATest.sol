@@ -25,7 +25,7 @@ abstract contract GdaTest is Test, Permit2User {
     address internal constant _REFERRER = address(0x4);
 
     uint256 internal constant _LOT_CAPACITY = 10e18;
-    uint48 internal constant _DURATION = 1 days;
+    uint48 internal constant _DURATION = 2 days;
     uint256 internal constant _INITIAL_PRICE = 5e18;
     uint256 internal constant _MIN_PRICE = 2e18;
     uint256 internal constant _DECAY_TARGET = 10e16; // 10%

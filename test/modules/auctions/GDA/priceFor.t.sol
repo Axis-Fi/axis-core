@@ -20,10 +20,16 @@ contract GdaPriceForTest is GdaTest {
     //   [X] it reverts
     // [X when minimum price is zero
     //   [X] it calculates the price correctly
+    //   [X] when last auction start is in the future
+    //     [X] it calculates the price correctly
+    //   [X] when last auction start is in the past
+    //     [X] it calculates the price correctly
     // [X] when minimum price is greater than zero
     //   [X] it calculates the price correctly
-    // [X] when payout is zero
-    //   [X] it returns zero
+    //   [X] when last auction start is in the future
+    //     [X] it calculates the price correctly
+    //   [X] when last auction start is in the past
+    //     [X] it calculates the price correctly
     // [X] when large, reasonable values are used
     //   [X] it does not overflow
     // TODO can we fuzz this better? maybe use some external calculations to compare the values?
