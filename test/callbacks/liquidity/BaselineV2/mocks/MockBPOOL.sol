@@ -17,7 +17,7 @@ contract MockBPOOL is IBPOOLv1, ERC20 {
 
     mapping(Range => Ticks) public getTicks;
 
-    mapping(Range => uint256) public _rangeReserves;
+    mapping(Range => uint256) public rangeReserves;
 
     int24 public activeTick;
 
@@ -53,7 +53,7 @@ contract MockBPOOL is IBPOOLv1, ERC20 {
     {
         reserve.transferFrom(msg.sender, address(this), _reserves);
 
-        _rangeReserves[_range] += _reserves;
+        rangeReserves[_range] += _reserves;
 
         return (0, _reserves, 0);
     }
@@ -104,8 +104,8 @@ contract MockBPOOL is IBPOOLv1, ERC20 {
             sqrtPriceL: 0,
             sqrtPriceU: 0,
             bAssets: 0,
-            reserves: _rangeReserves[range_],
-            capacity: _rangeReserves[range_]
+            reserves: rangeReserves[range_],
+            capacity: rangeReserves[range_]
         });
     }
 

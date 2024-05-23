@@ -231,7 +231,7 @@ abstract contract BaselineAxisLaunchTest is Test, Permit2User, WithSalts {
         _;
     }
 
-    function onSettle() internal {
+    function _onSettle() internal {
         vm.prank(address(_auctionHouse));
         _dtl.onSettle(
             _lotId, _PROCEEDS_AMOUNT, _scaleBaseTokenAmount(_REFUND_AMOUNT), abi.encode("")
@@ -239,7 +239,7 @@ abstract contract BaselineAxisLaunchTest is Test, Permit2User, WithSalts {
     }
 
     modifier givenOnSettle() {
-        onSettle();
+        _onSettle();
         _;
     }
 
