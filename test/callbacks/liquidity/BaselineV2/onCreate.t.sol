@@ -41,26 +41,80 @@ contract BaselineOnCreateTest is BaselineAxisLaunchTest {
 
     // ============ Helper Functions ============ //
 
+    /// @notice Returns the tick equivalent to the fixed price of the auction
+    /// @dev    This function contains pre-calculated tick values, to prevent the implementation and tests using the same library.
+    ///
+    ///         This function also handles a set number of decimal permutations.
     function _getFixedPriceTick() internal view returns (int24) {
         // Calculation source: https://blog.uniswap.org/uniswap-v3-math-primer#how-does-tick-and-tick-spacing-relate-to-sqrtpricex96
 
-        // When the quote token is token1:
-        // Price = 3e18
-        // SqrtPriceX96 = sqrt(3e18 * 2^192 / 1e18)
-        //              = 1.3722720287e29
-        // Tick = log((1.3722720287e29 / 2^96)^2) / log(1.0001)
-        //      = 10986 (rounded down)
+        // Quote token is token1
         if (address(_quoteToken) > address(_baseToken)) {
-            return 10_986;
+            if (_quoteTokenDecimals == 18 && _baseTokenDecimals == 18) {
+                // Fixed price = 3e18
+                // SqrtPriceX96 = sqrt(3e18 * 2^192 / 1e18)
+                //              = 1.3722720287e29
+                // Tick = log((1.3722720287e29 / 2^96)^2) / log(1.0001)
+                //      = 10,986.672184372 (rounded down)
+                // Price = 1.0001^10986 / (10^(18-18)) = 2.9997983618
+                return 10_986;
+            }
+
+            if (_quoteTokenDecimals == 18 && _baseTokenDecimals == 17) {
+                // Fixed price = 3e18
+                // SqrtPriceX96 = sqrt(3e18 * 2^192 / 1e17)
+                //              = 4.3395051823e29
+                // Tick = log((4.3395051823e29 / 2^96)^2) / log(1.0001)
+                //      = 34,013.6743980767 (rounded down)
+                // Price = 1.0001^34013 / (10^(18-17)) = 2.9997977008
+                return 34_013;
+            }
+
+            if (_quoteTokenDecimals == 18 && _baseTokenDecimals == 19) {
+                // Fixed price = 3e18
+                // SqrtPriceX96 = sqrt(3e18 * 2^192 / 1e19)
+                //              = 4.3395051799e28
+                // Tick = log((4.3395051799e28 / 2^96)^2) / log(1.0001)
+                //      = -12,040.3300194873 (rounded down)
+                // Price = 1.0001^-12041 / (10^(18-19)) = 2.9997990227
+                return -12_041;
+            }
+
+            revert("Unsupported decimal permutation");
         }
 
-        // When the quote token is token0
-        // Price = 3e18
-        // SqrtPriceX96 = sqrt(1e18 * 2^192 / 3e18)
-        //              = 4.574240096e28
-        // Tick = log((4.574240096e28 / 2^96)^2) / log(1.0001)
-        //      = -10987 (rounded down)
-        return -10_987;
+        // Quote token is token0
+        if (_quoteTokenDecimals == 18 && _baseTokenDecimals == 18) {
+            // Fixed price = 3e18
+            // SqrtPriceX96 = sqrt(1e18 * 2^192 / 3e18)
+            //              = 4.574240096e28
+            // Tick = log((4.574240096e28 / 2^96)^2) / log(1.0001)
+            //      = -10,986.6721814657 (rounded down)
+            // Price = 1.0001^-10987 / (10^(18-18)) = 0.3333224068 = 0.3 base token per 1 quote token
+            return -10_987;
+        }
+
+        if (_quoteTokenDecimals == 18 && _baseTokenDecimals == 17) {
+            // Fixed price = 3e18
+            // SqrtPriceX96 = sqrt(1e17 * 2^192 / 3e18)
+            //              = 1.4465017266e28
+            // Tick = log((1.4465017266e28 / 2^96)^2) / log(1.0001)
+            //      = -34,013.6743872434 (rounded down)
+            // Price = 1.0001^-34014 / (10^(17-18)) = 0.3333224803 = 0.3 base token per 1 quote token
+            return -34_014;
+        }
+
+        if (_quoteTokenDecimals == 18 && _baseTokenDecimals == 19) {
+            // Fixed price = 3e18
+            // SqrtPriceX96 = sqrt(1e19 * 2^192 / 3e18)
+            //              = 1.4465017267e29
+            // Tick = log((1.4465017267e29 / 2^96)^2) / log(1.0001)
+            //      = 12,040.3300206416 (rounded down)
+            // Price = 1.0001^12040 / (10^(19-18)) = 0.3333223334 = 0.3 base token per 1 quote token
+            return 12_040;
+        }
+
+        revert("Unsupported decimal permutation");
     }
 
     function _roundToTickSpacing(int24 tick) internal view returns (int24) {

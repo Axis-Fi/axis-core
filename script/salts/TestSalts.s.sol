@@ -28,6 +28,8 @@ contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts {
         address(0x43de928116768b88F8BF8f768b3de90A0Aaf9551);
     address internal constant _GUNI_FACTORY = address(0xc46b184e5521Cb87Fc5288Ff49D978A4BE4B055c);
     address internal constant _BASELINE_KERNEL = address(0xBB);
+    address internal constant _BASELINE_QUOTE_TOKEN =
+        address(0xe9d3A46B2a5813eAED0ab1E2B955c29038545FbD);
 
     string internal constant _MOCK_CALLBACK = "MockCallback";
     string internal constant _CAPPED_MERKLE_ALLOWLIST = "CappedMerkleAllowlist";
@@ -432,7 +434,7 @@ contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts {
         _setTestSalt(bytecodePath, "E6", "UniswapV3DirectToLiquidity", bytecodeHash);
     }
 
-    function generateBaselineAxisLaunch() public {
+    function generateBaselineQuoteToken() public {
         // Generate a salt for a MockERC20 quote token
         bytes memory qtArgs = abi.encode("Quote Token", "QT", 18);
         bytes memory qtContractCode = type(MockERC20).creationCode;
@@ -444,9 +446,12 @@ contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts {
         bytes32 quoteTokenSalt = _getSalt("Test_QuoteToken", qtContractCode, qtArgs);
 
         // Get the address of the quote token
-        MockERC20 quoteToken = new MockERC20{salt: quoteTokenSalt}("Quote Token", "QT", 18); // 0x4f78701103D7A875CFFA7342B768aAb0361dA879
+        // Update the `_BASELINE_QUOTE_TOKEN` constants with this value
+        MockERC20 quoteToken = new MockERC20{salt: quoteTokenSalt}("Quote Token", "QT", 18);
         console2.log("Quote Token address: ", address(quoteToken));
+    }
 
+    function generateBaselineAxisLaunch() public {
         // Callback permissions
         Callbacks.Permissions memory permissions = Callbacks.Permissions({
             onCreate: true,
@@ -461,7 +466,7 @@ contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts {
 
         // Get the salt
         bytes memory callbackArgs =
-            abi.encode(_AUCTION_HOUSE, permissions, _BASELINE_KERNEL, address(quoteToken));
+            abi.encode(_AUCTION_HOUSE, permissions, _BASELINE_KERNEL, _BASELINE_QUOTE_TOKEN);
         (string memory callbackBytecodePath, bytes32 callbackBytecodeHash) = _writeBytecode(
             "BaselineAxisLaunch", type(BaselineAxisLaunch).creationCode, callbackArgs
         );

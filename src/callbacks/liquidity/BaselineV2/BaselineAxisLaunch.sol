@@ -237,6 +237,9 @@ contract BaselineAxisLaunch is BaseCallback, Policy, Owned {
             uint256 auctionPrice = auctionModule.getAuctionData(lotId_).price;
             (,,, uint8 baseTokenDecimals,,,,) = auctionModule.lotData(lotId_);
 
+            // Calculate the active tick from the auction price
+            // `getSqrtPriceX96` handles token ordering
+            // The resulting tick will incorporate any differences in decimals between the tokens
             uint160 sqrtPriceX96 = SqrtPriceMath.getSqrtPriceX96(
                 address(RESERVE), address(bAsset), auctionPrice, 10 ** baseTokenDecimals
             );

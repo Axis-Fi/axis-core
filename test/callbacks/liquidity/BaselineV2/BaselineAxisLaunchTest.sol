@@ -41,7 +41,8 @@ abstract contract BaselineAxisLaunchTest is Test, Permit2User, WithSalts {
     address internal constant _NOT_SELLER = address(0x20);
     address internal constant _AUCTION_HOUSE = address(0x000000000000000000000000000000000000000A);
     address internal constant _BASELINE_KERNEL = address(0xBB);
-    address internal constant _QUOTE_TOKEN = address(0x4f78701103D7A875CFFA7342B768aAb0361dA879);
+    address internal constant _BASELINE_QUOTE_TOKEN =
+        address(0xe9d3A46B2a5813eAED0ab1E2B955c29038545FbD);
 
     uint96 internal constant _LOT_CAPACITY = 10e18;
     uint96 internal constant _REFUND_AMOUNT = 2e18;
@@ -119,23 +120,25 @@ abstract contract BaselineAxisLaunchTest is Test, Permit2User, WithSalts {
         );
         _quoteToken = new MockERC20{salt: quoteTokenSalt}("Quote Token", "QT", 18);
         _quoteTokenDecimals = 18;
-        if (address(_quoteToken) != _QUOTE_TOKEN) {
+        if (address(_quoteToken) != _BASELINE_QUOTE_TOKEN) {
             console2.log("Quote Token address: ", address(_quoteToken));
             revert("Quote Token address mismatch");
         }
 
         // Generate a salt so that the base token address is higher than the quote token
         bytes32 baseTokenSalt = ComputeAddress.generateSalt(
-            _QUOTE_TOKEN,
+            _BASELINE_QUOTE_TOKEN,
             true,
             type(MockBPOOL).creationCode,
-            abi.encode("Base Token", "BT", 18, address(_uniV3Factory), _QUOTE_TOKEN, _FEE_TIER),
+            abi.encode(
+                "Base Token", "BT", 18, address(_uniV3Factory), _BASELINE_QUOTE_TOKEN, _FEE_TIER
+            ),
             address(this)
         );
 
         // Set base token to BPOOL
         _baseToken = new MockBPOOL{salt: baseTokenSalt}(
-            "Base Token", "BT", 18, address(_uniV3Factory), _QUOTE_TOKEN, 3000
+            "Base Token", "BT", 18, address(_uniV3Factory), _BASELINE_QUOTE_TOKEN, 3000
         );
         _baseTokenDecimals = 18;
         _tickSpacing = _uniV3Factory.feeAmountTickSpacing(_FEE_TIER);
@@ -158,7 +161,7 @@ abstract contract BaselineAxisLaunchTest is Test, Permit2User, WithSalts {
 
         // Get the salt
         bytes memory args =
-            abi.encode(address(_auctionHouse), permissions, _BASELINE_KERNEL, _QUOTE_TOKEN);
+            abi.encode(address(_auctionHouse), permissions, _BASELINE_KERNEL, _BASELINE_QUOTE_TOKEN);
         bytes32 salt =
             _getTestSalt("BaselineAxisLaunch", type(BaselineAxisLaunch).creationCode, args);
 
@@ -166,7 +169,7 @@ abstract contract BaselineAxisLaunchTest is Test, Permit2User, WithSalts {
         // Source: https://github.com/foundry-rs/foundry/issues/6402
         vm.startBroadcast();
         _dtl = new BaselineAxisLaunch{salt: salt}(
-            address(_auctionHouse), permissions, _BASELINE_KERNEL, _QUOTE_TOKEN
+            address(_auctionHouse), permissions, _BASELINE_KERNEL, _BASELINE_QUOTE_TOKEN
         );
         vm.stopBroadcast();
 
@@ -242,16 +245,19 @@ abstract contract BaselineAxisLaunchTest is Test, Permit2User, WithSalts {
     modifier givenBPoolFeeTier(uint24 feeTier_) {
         // Generate a salt so that the base token address is higher than the quote token
         bytes32 baseTokenSalt = ComputeAddress.generateSalt(
-            _QUOTE_TOKEN,
+            _BASELINE_QUOTE_TOKEN,
             true,
             type(MockBPOOL).creationCode,
-            abi.encode("Base Token", "BT", 18, address(_uniV3Factory), _QUOTE_TOKEN, feeTier_),
+            abi.encode(
+                "Base Token", "BT", 18, address(_uniV3Factory), _BASELINE_QUOTE_TOKEN, feeTier_
+            ),
             address(this)
         );
 
         // Create a new mock BPOOL with the given fee tier
-        _baseToken =
-            new MockBPOOL("Base Token", "BT", 18, address(_uniV3Factory), _QUOTE_TOKEN, feeTier_);
+        _baseToken = new MockBPOOL(
+            "Base Token", "BT", 18, address(_uniV3Factory), _BASELINE_QUOTE_TOKEN, feeTier_
+        );
         _tickSpacing = _uniV3Factory.feeAmountTickSpacing(feeTier_);
         _;
     }
@@ -259,16 +265,18 @@ abstract contract BaselineAxisLaunchTest is Test, Permit2User, WithSalts {
     modifier givenBaseTokenAddressLower() {
         // Generate a salt so that the base token address is lower than the quote token
         bytes32 baseTokenSalt = ComputeAddress.generateSalt(
-            _QUOTE_TOKEN,
+            _BASELINE_QUOTE_TOKEN,
             false,
             type(MockBPOOL).creationCode,
-            abi.encode("Base Token", "BT", 18, address(_uniV3Factory), _QUOTE_TOKEN, _FEE_TIER),
+            abi.encode(
+                "Base Token", "BT", 18, address(_uniV3Factory), _BASELINE_QUOTE_TOKEN, _FEE_TIER
+            ),
             address(this)
         );
 
         // Create a new mock BPOOL with the given address
         _baseToken = new MockBPOOL{salt: baseTokenSalt}(
-            "Base Token", "BT", 18, address(_uniV3Factory), _QUOTE_TOKEN, _FEE_TIER
+            "Base Token", "BT", 18, address(_uniV3Factory), _BASELINE_QUOTE_TOKEN, _FEE_TIER
         );
         _tickSpacing = _uniV3Factory.feeAmountTickSpacing(_FEE_TIER);
         _;
@@ -277,7 +285,7 @@ abstract contract BaselineAxisLaunchTest is Test, Permit2User, WithSalts {
     modifier givenBaseTokenDecimals(uint8 decimals_) {
         // Create a new mock BPOOL with the given decimals
         _baseToken = new MockBPOOL(
-            "Base Token", "BT", decimals_, address(_uniV3Factory), _QUOTE_TOKEN, _FEE_TIER
+            "Base Token", "BT", decimals_, address(_uniV3Factory), _BASELINE_QUOTE_TOKEN, _FEE_TIER
         );
         _baseTokenDecimals = decimals_;
         _tickSpacing = _uniV3Factory.feeAmountTickSpacing(_FEE_TIER);
