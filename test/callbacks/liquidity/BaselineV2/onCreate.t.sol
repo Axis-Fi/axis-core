@@ -373,14 +373,85 @@ contract BaselineOnCreateTest is BaselineAxisLaunchTest {
     function test_auctionHighPrice()
         public
         givenCallbackIsCreated
-        givenFixedPrice(type(uint256).max)
+        givenFixedPrice(3e56)
         givenAuctionIsCreated
     {
         // Perform the call
         _onCreate();
 
+        // Assert base token balances
+        _assertBaseTokenBalances();
+
+        // Lot ID is set
+        assertEq(_dtl.lotId(), _lotId, "lot ID");
+
+        // Check circulating supply
+        assertEq(_dtl.initialCirculatingSupply(), _LOT_CAPACITY, "circulating supply");
+
+        // Calculation for the maximum price
+        // By default, quote token is token0
+        // Minimum sqrtPriceX96 = MIN_SQRT_RATIO = 4_295_128_739
+        // 4_295_128_739^2 = 1e18 * 2^192 / amount0
+        // amount0 = 1e18 * 2^192 / 4_295_128_739^2 = 3.402567867e56 ~= 3e56
+
+        // SqrtPriceX96 = sqrt(1e18 * 2^192 / 3e56)
+        //              = 4,574,240,095.5009932534
+        // Tick = log((4,574,240,095.5009932534 / 2^96)^2) / log(1.0001)
+        //      = -886,012.7559071901 (rounded down)
+        // Price = 1.0001^-886013 / (10^(18-18)) = 0
+        int24 fixedPriceTick = -886_013;
+        assertEq(_baseToken.activeTick(), fixedPriceTick, "active tick");
+
+        // Calculate the active tick with rounding
+        int24 activeTickWithRounding = _roundToTickSpacing(fixedPriceTick);
+
+        // Anchor range should be 0 width and equal to activeTickWithRounding
+        (int24 anchorTickLower, int24 anchorTickUpper) = _baseToken.getTicks(Range.ANCHOR);
+        assertEq(anchorTickLower, activeTickWithRounding, "anchor tick lower");
+        assertEq(anchorTickUpper, activeTickWithRounding, "anchor tick upper");
+
+        // Floor range should be the width of the tick spacing and below the active tick
+        (int24 floorTickLower, int24 floorTickUpper) = _baseToken.getTicks(Range.FLOOR);
+        assertEq(floorTickLower, activeTickWithRounding - _tickSpacing, "floor tick lower");
+        assertEq(floorTickUpper, activeTickWithRounding, "floor tick upper");
+
+        // Discovery range should be the width of discoveryTickWidth * tick spacing and above the active tick
+        (int24 discoveryTickLower, int24 discoveryTickUpper) = _baseToken.getTicks(Range.DISCOVERY);
+        assertEq(discoveryTickLower, activeTickWithRounding, "discovery tick lower");
+        assertEq(
+            discoveryTickUpper,
+            activeTickWithRounding + _DISCOVERY_TICK_WIDTH * _tickSpacing,
+            "discovery tick upper"
+        );
+    }
+
+    function test_auctionLowPrice()
+        public
+        givenCallbackIsCreated
+        givenFixedPrice(1)
+        givenAuctionIsCreated
+    {
+        // Perform the call
+        _onCreate();
+
+        // Assert base token balances
+        _assertBaseTokenBalances();
+
+        // Lot ID is set
+        assertEq(_dtl.lotId(), _lotId, "lot ID");
+
+        // Check circulating supply
+        assertEq(_dtl.initialCirculatingSupply(), _LOT_CAPACITY, "circulating supply");
+
         // The pool should be initialised with the tick equivalent to the auction's fixed price
-        int24 fixedPriceTick = _getFixedPriceTick();
+        // By default, quote token is token0
+        // Fixed price = 1
+        // SqrtPriceX96 = sqrt(1e18 * 2^192 / 1)
+        //              = 7.9228162514e37
+        // Tick = log((7.9228162514e37 / 2^96)^2) / log(1.0001)
+        //      = 414,486.0396584532 (rounded down)
+        // Price = 1.0001^414486 / (10^(18-18)) = 9.9999603427e17
+        int24 fixedPriceTick = 414_486;
         assertEq(_baseToken.activeTick(), fixedPriceTick, "active tick");
 
         // Calculate the active tick with rounding
