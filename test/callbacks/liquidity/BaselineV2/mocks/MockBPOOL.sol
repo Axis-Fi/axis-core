@@ -5,6 +5,7 @@ import {IBPOOLv1, Range, Position, Ticks} from "src/callbacks/liquidity/Baseline
 import {ERC20} from "solmate/tokens/ERC20.sol";
 import {IUniswapV3Pool} from "lib/uniswap-v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import {IUniswapV3Factory} from "lib/uniswap-v3-core/contracts/interfaces/IUniswapV3Factory.sol";
+import {TickMath} from "lib/uniswap-v3-core/contracts/libraries/TickMath.sol";
 
 contract MockBPOOL is IBPOOLv1, ERC20 {
     int24 public immutable TICK_SPACING;
@@ -38,6 +39,12 @@ contract MockBPOOL is IBPOOLv1, ERC20 {
     function getLiquidity(Range range_) external view override returns (uint128) {}
 
     function initializePool(int24 activeTick_) external override returns (IUniswapV3Pool) {
+        // Create the pool
+        pool = IUniswapV3Pool(factory.createPool(address(this), address(reserve), FEE_TIER));
+
+        // Set the initial active tick
+        pool.initialize(TickMath.getSqrtRatioAtTick(activeTick_));
+
         activeTick = activeTick_;
 
         return pool;
@@ -55,6 +62,9 @@ contract MockBPOOL is IBPOOLv1, ERC20 {
 
         rangeReserves[_range] += _reserves;
 
+        // Mimic the Uniswap V3 callback transferring into the pool
+        reserve.transfer(address(pool), _reserves);
+
         return (0, _reserves, 0);
     }
 
@@ -65,7 +75,9 @@ contract MockBPOOL is IBPOOLv1, ERC20 {
         external
         override
         returns (uint256 bAssetsAdded_, uint256 reservesAdded_, uint128 liquidityFinal_)
-    {}
+    {
+        // TODO Mimic minting bAssets into the pool
+    }
 
     function removeAllFrom(Range _range)
         external

@@ -142,17 +142,13 @@ contract BaselineOnSettleTest is BaselineAxisLaunchTest {
         assertEq(_quoteToken.balanceOf(_dtlAddress), 0, "quote token: callback");
         assertEq(_quoteToken.balanceOf(address(_quoteToken)), 0, "quote token: contract");
         assertEq(
-            _baseToken.balanceOf(address(_baseToken.pool())), _PROCEEDS_AMOUNT, "quote token: pool"
+            _quoteToken.balanceOf(address(_baseToken.pool())), _PROCEEDS_AMOUNT, "quote token: pool"
         );
 
         // Assert base token balances
         assertEq(_baseToken.balanceOf(_dtlAddress), 0, "base token: callback");
         assertEq(_baseToken.balanceOf(address(_baseToken)), 0, "base token: contract");
-        assertEq(
-            _baseToken.balanceOf(address(_baseToken.pool())),
-            _dtl.initialCirculatingSupply(),
-            "base token: pool"
-        );
+        assertEq(_baseToken.balanceOf(address(_baseToken.pool())), 0, "base token: pool"); // No liquidity in the anchor range, so no base token in the discovery range
 
         // Circulating supply
         assertEq(
