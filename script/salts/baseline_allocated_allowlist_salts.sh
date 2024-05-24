@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Usage:
-# ./baseline_allocated_allowlist_salts.sh <kernel> <owner> <reserve token>
+# ./baseline_allocated_allowlist_salts.sh --kernel <kernel> --owner <owner> --reserveToken <reserve token>
 #
 # Expects the following environment variables:
 # CHAIN: The chain to deploy to, based on values from the ./script/env.json file.
@@ -11,36 +11,43 @@ curenv=$(declare -p -x)
 source .env
 eval "$curenv"
 
-# Get command-line arguments
-KERNEL=$1
-OWNER=$2
-RESERVE_TOKEN=$3
+# Iterate through named arguments
+# Source: https://unix.stackexchange.com/a/388038
+while [ $# -gt 0 ]; do
+
+   if [[ $1 == *"--"* ]]; then
+        v="${1/--/}"
+        declare $v="$2"
+   fi
+
+  shift
+done
 
 # Check that the kernel is a 40-byte address with a 0x prefix
-if [[ ! "$KERNEL" =~ ^0x[0-9a-fA-F]{40}$ ]]
+if [[ ! "$kernel" =~ ^0x[0-9a-fA-F]{40}$ ]]
 then
-  echo "Invalid kernel address specified. Provide a 40-byte address with a 0x prefix as argument 2."
+  echo "Invalid kernel address specified. Provide a 40-byte address with a 0x prefix after the --kernel flag."
   exit 1
 fi
 
 # Check that the owner is a 40-byte address with a 0x prefix
-if [[ ! "$OWNER" =~ ^0x[0-9a-fA-F]{40}$ ]]
+if [[ ! "$owner" =~ ^0x[0-9a-fA-F]{40}$ ]]
 then
-  echo "Invalid owner address specified. Provide a 40-byte address with a 0x prefix as argument 3."
+  echo "Invalid owner address specified. Provide a 40-byte address with a 0x prefix after the --owner flag."
   exit 1
 fi
 
 # Check that the reserve token is a 40-byte address with a 0x prefix
-if [[ ! "$RESERVE_TOKEN" =~ ^0x[0-9a-fA-F]{40}$ ]]
+if [[ ! "$reserveToken" =~ ^0x[0-9a-fA-F]{40}$ ]]
 then
-  echo "Invalid reserve token address specified. Provide a 40-byte address with a 0x prefix as argument 4."
+  echo "Invalid reserve token address specified. Provide a 40-byte address with a 0x prefix after the --reserveToken flag."
   exit 1
 fi
 
 echo "Using RPC at URL: $RPC_URL"
 echo "Using chain: $CHAIN"
-echo "Using kernel: $KERNEL"
-echo "Using owner: $OWNER"
-echo "Using reserve token: $RESERVE_TOKEN"
+echo "Using kernel: $kernel"
+echo "Using owner: $owner"
+echo "Using reserve token: $reserveToken"
 
-forge script ./script/salts/BaselineAllocatedAllowlistSalts.s.sol:BaselineAllocatedAllowlistSalts --sig "generate(string,string,string,string)()" $CHAIN $KERNEL $OWNER $RESERVE_TOKEN
+forge script ./script/salts/BaselineAllocatedAllowlistSalts.s.sol:BaselineAllocatedAllowlistSalts --sig "generate(string,string,string,string)()" $CHAIN $kernel $owner $reserveToken

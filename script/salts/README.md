@@ -56,7 +56,7 @@ These addresses should match the arguments in the deployment sequence file.
 The following script can then be run:
 
 ```bash
-CHAIN=<chain-name> ./script/salts/baseline_allocated_allowlist_salts.sh <baseline-kernel> <baseline-owner> <reserve-token>
+CHAIN=<chain-name> ./script/salts/baseline_allocated_allowlist_salts.sh --kernel <kernel> --owner <owner> --reserveToken <reserveToken>
 ```
 
 ### Generating Salts for Any Contract
