@@ -26,7 +26,7 @@ done
 # Check that the mode is "atomic" or "batch"
 if [ "$type" != "atomic" ] && [ "$type" != "batch" ]
 then
-  echo "Invalid auction type specified. Provide 'atomic' or 'batch' after the --type argument."
+  echo "Invalid auction type specified. Provide 'atomic' or 'batch' after the --type flag."
   exit 1
 fi
 
@@ -36,7 +36,7 @@ ATOMIC=$( if [ "$type" == "atomic" ]; then echo "true"; else echo "false"; fi )
 # Check that the prefix is specified
 if [ -z "$prefix" ]
 then
-  echo "No search prefix specified. Provide the prefix after the --prefix argument."
+  echo "No search prefix specified. Provide the prefix after the --prefix flag."
   exit 1
 fi
 
