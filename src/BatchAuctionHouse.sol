@@ -462,11 +462,50 @@ contract BatchAuctionHouse is IBatchAuctionHouse, AuctionHouse {
         emit Settle(lotId_);
     }
 
+    /// @notice Calls the `onCancel()` callback
+    /// @dev    This function is written to circumvent a limitation in solidity that
+    ///         prevents calling internal functions from within a try/catch block.
+    ///         It is inspired by: https://ethereum.stackexchange.com/a/148922
+    ///
+    ///         This function reverts if:
+    ///         - The caller is not this contract
+    ///
+    /// @param  lotId_        The lot ID to cancel
+    /// @param  refund_       The amount to refund
+    /// @param  callbackData_ The callback data to pass to the `onCancel` callback
+    function attemptOnCancel(
+        uint96 lotId_,
+        uint256 refund_,
+        bytes calldata callbackData_
+    ) external {
+        // This function needs to be external in order to wrap it in a try/catch block,
+        // but should only be called by this contract
+        if (msg.sender != address(this)) revert NotPermitted(msg.sender);
+
+        Callbacks.onCancel(
+            lotRouting[lotId_].callbacks,
+            lotId_,
+            refund_,
+            lotRouting[lotId_].callbacks.hasPermission(Callbacks.SEND_BASE_TOKENS_FLAG),
+            callbackData_
+        );
+    }
+
     /// @inheritdoc IBatchAuctionHouse
     /// @dev        This function handles the following:
     ///             - Validates the lot id
     ///             - Aborts the auction on the auction module
     ///             - Refunds prefunding (in base tokens) to the seller
+    ///             - Calls the onCancel callback
+    ///
+    ///             This function reverts if:
+    ///             - The lot ID is invalid
+    ///             - The auction module reverts when aborting the auction
+    ///             - The refund amount is zero
+    ///
+    ///             Note that this function will not revert if the `onCancel` callback reverts.
+    ///
+    /// @param      lotId_   The lot ID to abort
     function abort(uint96 lotId_) external override nonReentrant {
         // Validation
         _isLotValid(lotId_);
@@ -489,6 +528,18 @@ contract BatchAuctionHouse is IBatchAuctionHouse, AuctionHouse {
             refund,
             false
         );
+
+        // If there is a callback configured, call the onCancel callback
+        // This is necessary as an auction lot configured with a callback that
+        // sends base tokens will have the base tokens sent to the callback contract.
+        // Calling onCancel offers the opportunity for the auction owner to handle
+        // the refund of the base tokens.
+        try this.attemptOnCancel(lotId_, refund, abi.encode("")) {
+            // Do nothing
+        } catch {
+            // If there is an error, ignore it.
+            // This prevents an auction owner from blocking an abort by reverting in the callback
+        }
 
         emit Abort(lotId_);
     }
