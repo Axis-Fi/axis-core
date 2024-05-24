@@ -2,7 +2,6 @@
 pragma solidity 0.8.19;
 
 import {BALwithAllowlist} from "src/callbacks/liquidity/BaselineV2/BALwithAllowlist.sol";
-import {Callbacks} from "src/lib/Callbacks.sol";
 
 /// @notice Capped allowlist version of the Baseline Axis Launch callback.
 /// @notice This version allows for each address in the Merkle tree to have a standard amount of quote tokens they can spend.
@@ -30,11 +29,10 @@ contract BALwithCappedAllowlist is BALwithAllowlist {
 
     constructor(
         address auctionHouse_,
-        Callbacks.Permissions memory permissions_,
         address baselineKernel_,
         address reserve_,
         address owner_
-    ) BALwithAllowlist(auctionHouse_, permissions_, baselineKernel_, reserve_, owner_) {}
+    ) BALwithAllowlist(auctionHouse_, baselineKernel_, reserve_, owner_) {}
 
     // ========== CALLBACK FUNCTIONS ========== //
 

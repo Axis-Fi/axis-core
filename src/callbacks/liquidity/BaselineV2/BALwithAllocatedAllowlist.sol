@@ -4,9 +4,8 @@ pragma solidity 0.8.19;
 import {MerkleProofLib} from "lib/solady/src/utils/MerkleProofLib.sol";
 
 import {BaselineAxisLaunch} from "src/callbacks/liquidity/BaselineV2/BaselineAxisLaunch.sol";
-import {Callbacks} from "src/lib/Callbacks.sol";
 
-/// @notice Allocated allowlist version of the Baseline Axis Launch callback.
+/// @notice Allocated allowlist version of the Baseline Axis Launch callback for batch auctions.
 /// @notice This version allows for each address in the Merkle tree to have a per-address amount of quote tokens they can spend.
 /// @dev    The merkle tree is expected to have both an address and an amount of quote tokens they can spend in each leaf.
 contract BALwithAllocatedAllowlist is BaselineAxisLaunch {
@@ -48,11 +47,10 @@ contract BALwithAllocatedAllowlist is BaselineAxisLaunch {
 
     constructor(
         address auctionHouse_,
-        Callbacks.Permissions memory permissions_,
         address baselineKernel_,
         address reserve_,
         address owner_
-    ) BaselineAxisLaunch(auctionHouse_, permissions_, baselineKernel_, reserve_, owner_) {}
+    ) BaselineAxisLaunch(auctionHouse_, baselineKernel_, reserve_, owner_) {}
 
     // ========== CALLBACK FUNCTIONS ========== //
 

@@ -454,21 +454,9 @@ contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts {
     }
 
     function generateBaselineAxisLaunch() public {
-        // Callback permissions
-        Callbacks.Permissions memory permissions = Callbacks.Permissions({
-            onCreate: true,
-            onCancel: true,
-            onCurate: true,
-            onPurchase: false,
-            onBid: true,
-            onSettle: true,
-            receiveQuoteTokens: true,
-            sendBaseTokens: true
-        });
-
         // Get the salt
         bytes memory callbackArgs =
-            abi.encode(_AUCTION_HOUSE, permissions, _BASELINE_KERNEL, _BASELINE_QUOTE_TOKEN, _OWNER);
+            abi.encode(_AUCTION_HOUSE, _BASELINE_KERNEL, _BASELINE_QUOTE_TOKEN, _OWNER);
         (string memory callbackBytecodePath, bytes32 callbackBytecodeHash) = _writeBytecode(
             "BaselineAxisLaunch", type(BaselineAxisLaunch).creationCode, callbackArgs
         );
@@ -476,21 +464,9 @@ contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts {
     }
 
     function generateBaselineAllocatedAllowlist() public {
-        // Callback permissions
-        Callbacks.Permissions memory permissions = Callbacks.Permissions({
-            onCreate: true,
-            onCancel: true,
-            onCurate: true,
-            onPurchase: false,
-            onBid: true,
-            onSettle: true,
-            receiveQuoteTokens: true,
-            sendBaseTokens: true
-        });
-
         // Get the salt
         bytes memory callbackArgs =
-            abi.encode(_AUCTION_HOUSE, permissions, _BASELINE_KERNEL, _BASELINE_QUOTE_TOKEN, _OWNER);
+            abi.encode(_AUCTION_HOUSE, _BASELINE_KERNEL, _BASELINE_QUOTE_TOKEN, _OWNER);
         (string memory callbackBytecodePath, bytes32 callbackBytecodeHash) = _writeBytecode(
             "BaselineAllocatedAllowlist", type(BALwithAllocatedAllowlist).creationCode, callbackArgs
         );

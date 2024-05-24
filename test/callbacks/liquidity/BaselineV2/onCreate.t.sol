@@ -143,8 +143,8 @@ contract BaselineOnCreateTest is BaselineAxisLaunchTest {
     //  [X] the ticks do not overlap
     // [X] when the auction fixed price is very high
     //  [X] it correctly sets the active tick
-    // [ ] when the auction fixed price is very low
-    //  [ ] it correctly sets the active tick
+    // [X] when the auction fixed price is very low
+    //  [X] it correctly sets the active tick
     // [X] when the base token address is lower than the quote token address
     //  [X] it correctly sets the active tick
     // [X] when the quote token decimals are higher than the base token decimals

@@ -32,9 +32,7 @@ import {FixedPointMathLib} from "lib/solady/src/utils/FixedPointMathLib.sol";
 import {Transfer} from "src/lib/Transfer.sol";
 import {SqrtPriceMath} from "src/lib/uniswap-v3/SqrtPriceMath.sol";
 
-/// @notice     Axis auction callback to initialize a Baseline token using proceeds from an auction.
-///
-///
+/// @notice     Axis auction callback to initialize a Baseline token using proceeds from a batch auction.
 /// @dev        This contract combines Baseline's InitializeProtocol Policy and Axis' Callback functionality to build an Axis auction callback specific to Baseline V2 token launches
 ///             It is designed to be used with a single auction and Baseline pool
 contract BaselineAxisLaunch is BaseCallback, Policy, Owned {
@@ -96,17 +94,31 @@ contract BaselineAxisLaunch is BaseCallback, Policy, Owned {
     /// @notice Constructor for BaselineAxisLaunch
     ///
     /// @param  auctionHouse_   The AuctionHouse the callback is paired with
-    /// @param  permissions_    Callback permissions
     /// @param  baselineKernel_ Address of the Baseline kernel
     /// @param  reserve_        Address of the reserve token. This should match the quote token for the auction lot.
     /// @param  owner_          Address of the owner of this policy. Will be permitted to perform admin functions. This is explicitly required, as `msg.sender` cannot be used due to the use of CREATE2 for deployment.
     constructor(
         address auctionHouse_,
-        Callbacks.Permissions memory permissions_,
         address baselineKernel_,
         address reserve_,
         address owner_
-    ) BaseCallback(auctionHouse_, permissions_) Policy(Kernel(baselineKernel_)) Owned(owner_) {
+    )
+        BaseCallback(
+            auctionHouse_,
+            Callbacks.Permissions({
+                onCreate: true,
+                onCancel: true,
+                onCurate: true,
+                onPurchase: false,
+                onBid: true,
+                onSettle: true,
+                receiveQuoteTokens: true,
+                sendBaseTokens: true
+            })
+        )
+        Policy(Kernel(baselineKernel_))
+        Owned(owner_)
+    {
         // Set lot ID to max uint(96) initially so it doesn't reference a lot
         lotId = type(uint96).max;
 
