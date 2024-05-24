@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Usage:
-# ./deploy.sh <deploy-file> <broadcast=false> <verify=false> <save=false> <resume=false>
+# ./deploy.sh --deployFile <deploy-file> --broadcast <false> --verify <false> --save <true> --resume <false>
 #
 # Environment variables:
 # CHAIN:              Chain name to deploy to. Corresponds to names in "./script/env.json".
@@ -14,12 +14,24 @@ curenv=$(declare -p -x)
 source .env
 eval "$curenv"
 
-# Get command-line arguments
-DEPLOY_FILE=$1
-BROADCAST=${2:-false}
-VERIFY=${3:-false}
-SAVE=${4:-true}
-RESUME=${5:-false}
+# Iterate through named arguments
+# Source: https://unix.stackexchange.com/a/388038
+while [ $# -gt 0 ]; do
+
+   if [[ $1 == *"--"* ]]; then
+        v="${1/--/}"
+        declare $v="$2"
+   fi
+
+  shift
+done
+
+# Apply defaults to command-line arguments
+DEPLOY_FILE=$deployFile
+BROADCAST=${broadcast:-false}
+VERIFY=${verify:-false}
+SAVE=${save:-true}
+RESUME=${resume:-false}
 
 # Check if DEPLOY_FILE is set
 if [ -z "$DEPLOY_FILE" ]
