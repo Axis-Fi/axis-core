@@ -60,7 +60,7 @@ Notes:
 To perform a deployment, run the following script:
 
 ```bash
-./script/deploy/deploy.sh < sequence_file > [broadcast=false] [verify=false] [resume=false]
+./script/deploy/deploy.sh < sequence_file > [broadcast=false] [verify=false] [save=true] [resume=false]
 ```
 
 For example, the following command will deploy using the specified sequence file, broadcast the changes and verify them using Etherscan:
@@ -69,12 +69,18 @@ For example, the following command will deploy using the specified sequence file
 ./script/deploy/deploy.sh ./script/deploy/sequences/origin.json true true
 ```
 
-Following deployment, the addresses need to be manually added into `./script/env.json`.
+It will also save the deployment addresses to a file and update `env.json`.
 
-If any problems are faced during deployment (or verification), set the third boolean argument to `true` in order to resume the previous transaction. For example:
+To not save the deployment addresses, set the third boolean argument to `false`. For example:
 
 ```bash
-./script/deploy/deploy.sh ./script/deploy/sequences/origin.json true true true
+./script/deploy/deploy.sh ./script/deploy/sequences/origin.json true false
+```
+
+If any problems are faced during deployment (or verification), set the fourth boolean argument to `true` in order to resume the previous transaction. For example:
+
+```bash
+./script/deploy/deploy.sh ./script/deploy/sequences/origin.json true true true true
 ```
 
 ##### Blast-Specific Version

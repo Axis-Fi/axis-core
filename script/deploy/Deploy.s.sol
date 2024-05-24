@@ -934,7 +934,6 @@ contract Deploy is Script, WithEnvironment, WithSalts {
         console2.log("");
         console2.log("    BaselineAllocatedAllowlist (Batch) deployed at:", address(batchAllowlist));
 
-        // TODO return value on whether to save the address
         return (address(batchAllowlist), _PREFIX_AXIS);
     }
 

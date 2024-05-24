@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Usage:
-# ./deploy.sh <deploy-file> <broadcast=false> <verify=false> <resume=false>
+# ./deploy.sh <deploy-file> <broadcast=false> <verify=false> <save=false> <resume=false>
 #
 # Environment variables:
 # CHAIN:              Chain name to deploy to. Corresponds to names in "./script/env.json".
@@ -18,7 +18,8 @@ eval "$curenv"
 DEPLOY_FILE=$1
 BROADCAST=${2:-false}
 VERIFY=${3:-false}
-RESUME=${4:-false}
+SAVE=${4:-true}
+RESUME=${5:-false}
 
 # Check if DEPLOY_FILE is set
 if [ -z "$DEPLOY_FILE" ]
@@ -31,6 +32,12 @@ fi
 if [ ! -f "$DEPLOY_FILE" ]
 then
   echo "Deploy file ($DEPLOY_FILE) not found. Provide the correct relative path after the command."
+  exit 1
+fi
+
+# Validate if SAVE is "true" or "false", otherwise throw an error
+if [ "$SAVE" != "true" ] && [ "$SAVE" != "false" ]; then
+  echo "Invalid value for SAVE. Use 'true' or 'false'."
   exit 1
 fi
 
@@ -60,9 +67,9 @@ echo ""
 BROADCAST_FLAG=""
 if [ "$BROADCAST" = "true" ] || [ "$BROADCAST" = "TRUE" ]; then
   BROADCAST_FLAG="--broadcast"
-  echo "Broadcasting is enabled"
+  echo "Broadcast: enabled"
 else
-  echo "Broadcasting is disabled"
+  echo "Broadcast: disabled"
 fi
 
 # Set VERIFY_FLAG based on VERIFY
@@ -88,22 +95,29 @@ if [ "$VERIFY" = "true" ] || [ "$VERIFY" = "TRUE" ]; then
       VERIFY_FLAG="--verify --verifier $VERIFIER"
     fi
   fi
-  echo "Verification is enabled"
+  echo "Verification: enabled"
 else
-  echo "Verification is disabled"
+  echo "Verification: disabled"
+fi
+
+# Report if SAVE is enabled
+if [ "$SAVE" = "true" ]; then
+  echo "Save deployment: enabled"
+else
+  echo "Save deployment: disabled"
 fi
 
 # Set RESUME_FLAG based on RESUME
 RESUME_FLAG=""
 if [ "$RESUME" = "true" ] || [ "$RESUME" = "TRUE" ]; then
   RESUME_FLAG="--resume"
-  echo "Resuming is enabled"
+  echo "Resume: enabled"
 else
-  echo "Resuming is disabled"
+  echo "Resume: disabled"
 fi
 
 # Deploy using script
-forge script $DEPLOY_SCRIPT:$DEPLOY_CONTRACT --sig "deploy(string,string,bool)()" $CHAIN $DEPLOY_FILE $BROADCAST \
+forge script $DEPLOY_SCRIPT:$DEPLOY_CONTRACT --sig "deploy(string,string,bool)()" $CHAIN $DEPLOY_FILE $SAVE \
 --rpc-url $RPC_URL --private-key $DEPLOYER_PRIVATE_KEY --froms $DEPLOYER_ADDRESS --slow -vvv \
 $BROADCAST_FLAG \
 $VERIFY_FLAG \
