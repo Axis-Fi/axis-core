@@ -1,0 +1,12 @@
+{
+  "sequence": [
+    {
+      "name": "BatchBaselineAllocatedAllowlist",
+      "args": {
+        "baselineKernel": "0x0000000000000000000000000000000000000001",
+        "baselineOwner": "0xB47C8e4bEb28af80eDe5E5bF474927b110Ef2c0e",
+        "reserveToken": "0x0000000000000000000000000000000000000002"
+      }
+    }
+  ]
+}

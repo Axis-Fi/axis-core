@@ -2,6 +2,9 @@
   "AtomicAuctionHouse": {
     "0xc34e46cfceb1e62d804e8197ba829a150e216e433ee21a68b96f1edd3abd4dd9": "0x87bc14fda5bd97c7e883ae1227f30462125ebcf6800a34d10f39af4ac46e84b9"
   },
+  "BaselineAllocatedAllowlist": {
+    "0x249ef4ba17af6080e52c99328406715e2e3789a8e9d5c73bea2bedd25359e774": "0x650c2e1305020fb84acc81b9a556ca18f1b2cdc329fe7d3d69e3e5cc603305c6"
+  },
   "BatchAuctionHouse": {
     "0x4c4d86f9737bd18dab3f6dc74d2f5c610b7169459c90a457e0e126ed42ae3bba": "0xbe4a9dc1b73685497c6104df59c2a3d2c1c5039bd48b1b25e9c0a029f3744311"
   },
