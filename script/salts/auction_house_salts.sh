@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Usage:
-# ./auction_house_salts.sh <atomic | batch> <prefix>
+# ./auction_house_salts.sh --type <atomic | batch> --prefix <prefix>
 #
 # Expects the following environment variables:
 # CHAIN: The chain to deploy to, based on values from the ./script/env.json file.
@@ -11,24 +11,32 @@ curenv=$(declare -p -x)
 source .env
 eval "$curenv"
 
-# Get command-line arguments
-MODE=$1
-PREFIX=$2
+# Iterate through named arguments
+# Source: https://unix.stackexchange.com/a/388038
+while [ $# -gt 0 ]; do
+
+   if [[ $1 == *"--"* ]]; then
+        v="${1/--/}"
+        declare $v="$2"
+   fi
+
+  shift
+done
 
 # Check that the mode is "atomic" or "batch"
-if [ "$MODE" != "atomic" ] && [ "$MODE" != "batch" ]
+if [ "$type" != "atomic" ] && [ "$type" != "batch" ]
 then
-  echo "Invalid mode specified. Provide 'atomic' or 'batch' after the command as argument 1."
+  echo "Invalid auction type specified. Provide 'atomic' or 'batch' after the --type argument."
   exit 1
 fi
 
 # Set flag for atomic or batch auction
-ATOMIC=$( if [ "$MODE" == "atomic" ]; then echo "true"; else echo "false"; fi )
+ATOMIC=$( if [ "$type" == "atomic" ]; then echo "true"; else echo "false"; fi )
 
 # Check that the prefix is specified
-if [ -z "$PREFIX" ]
+if [ -z "$prefix" ]
 then
-  echo "No search prefix specified. Provide the prefix after the command as argument 1."
+  echo "No search prefix specified. Provide the prefix after the --prefix argument."
   exit 1
 fi
 
@@ -39,7 +47,7 @@ echo "Using chain: $CHAIN"
 if [[ $CHAIN == *"blast"* ]]
 then
   echo "Using Blast-specific contracts"
-  forge script ./script/salts/AuctionHouseSaltsBlast.s.sol:AuctionHouseSaltsBlast --sig "generate(string,string,bool)()" $CHAIN $PREFIX $ATOMIC
+  forge script ./script/salts/AuctionHouseSaltsBlast.s.sol:AuctionHouseSaltsBlast --sig "generate(string,string,bool)()" $CHAIN $prefix $ATOMIC
 
     # Set the bytecode file
     if [ $ATOMIC ]
@@ -50,7 +58,7 @@ then
     fi
 else
   echo "Using standard contracts"
-  forge script ./script/salts/AuctionHouseSalts.s.sol:AuctionHouseSalts --sig "generate(string,string,bool)()" $CHAIN $PREFIX $ATOMIC
+  forge script ./script/salts/AuctionHouseSalts.s.sol:AuctionHouseSalts --sig "generate(string,string,bool)()" $CHAIN $prefix $ATOMIC
 
     # Set the bytecode file
     if [ $ATOMIC ]
