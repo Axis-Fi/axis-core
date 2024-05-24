@@ -19,7 +19,9 @@ contract GdaCreateAuctionTest is GdaTest {
     //  [X] it reverts
     // [X] when the duration is less than the globally configured minimum
     //  [X] it reverts
-    // [X] when the equilibrium price is 0
+    // [X] when the equilibrium price is less than 1000
+    //  [X] it reverts
+    // [X] when the equilibrium price is greater than the max uint128 value
     //  [X] it reverts
     // [X] when the minimum price is greater than or equal to the decay target price
     //  [X] it reverts
@@ -32,6 +34,10 @@ contract GdaCreateAuctionTest is GdaTest {
     // [X] when the decay period is greater than the maximum
     //  [X] it reverts
     // [X] when the capacity is in quote token
+    //  [X] it reverts
+    // [X] when capacity is less than the duration (in seconds)
+    //  [X] it reverts
+    // [X] when capacity is greater than the max uint128 value
     //  [X] it reverts
     // [X] when duration is greater than the max exp input divided by the calculated decay constant
     //  [X] it reverts
@@ -74,7 +80,50 @@ contract GdaCreateAuctionTest is GdaTest {
         _createAuctionLot();
     }
 
-    function test_equilibriumPriceIsZero_reverts() public givenEquilibriumPrice(0) {
+    function test_equilibriumPriceIsLessThanMin_reverts(uint16 price_)
+        public
+        givenEquilibriumPrice(uint256(price_) % 1000)
+    {
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(IAuction.Auction_InvalidParams.selector);
+        vm.expectRevert(err);
+
+        // Call the function
+        _createAuctionLot();
+    }
+
+    function test_equilibriumPriceGreaterThanMax_reverts(uint256 price_)
+        public
+        givenEquilibriumPrice(price_)
+    {
+        vm.assume(price_ > type(uint128).max);
+
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(IAuction.Auction_InvalidParams.selector);
+        vm.expectRevert(err);
+
+        // Call the function
+        _createAuctionLot();
+    }
+
+    function test_capacityLessThanDuration_reverts(uint256 capacity_)
+        public
+        givenLotCapacity(capacity_ % _DURATION)
+    {
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(IAuction.Auction_InvalidParams.selector);
+        vm.expectRevert(err);
+
+        // Call the function
+        _createAuctionLot();
+    }
+
+    function test_capacityGreaterThanMax_reverts(uint256 capacity_)
+        public
+        givenLotCapacity(capacity_)
+    {
+        vm.assume(capacity_ > type(uint128).max);
+
         // Expect revert
         bytes memory err = abi.encodeWithSelector(IAuction.Auction_InvalidParams.selector);
         vm.expectRevert(err);

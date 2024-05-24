@@ -134,26 +134,153 @@ contract GdaPriceForTest is GdaTest {
         assertLe(price, expectedPrice);
     }
 
-    function testFuzz_minPriceZero_noOverflows(uint256 payout_)
-        public
-        givenLotCapacity(1e75) // very large number, but not quite max (which overflows)
-        givenMinPrice(0)
-        givenLotIsCreated
-        givenLotHasStarted
-    {
-        vm.assume(payout_ <= _LOT_CAPACITY);
+    function testFuzz_minPriceZero_noOverflows(
+        uint128 capacity_,
+        uint128 payout_
+    ) public givenLotCapacity(uint256(capacity_)) givenMinPrice(0) {
+        vm.assume(capacity_ >= _DURATION);
+        vm.assume(payout_ <= capacity_);
+        _createAuctionLot();
+
+        vm.warp(_start);
 
         _module.priceFor(_lotId, payout_);
     }
 
-    function testFuzz_minPriceNonZero_noOverflows(uint256 payout_)
+    function testFuzz_minPriceNonZero_noOverflows(
+        uint128 capacity_,
+        uint128 payout_
+    ) public givenLotCapacity(uint256(capacity_)) {
+        vm.assume(capacity_ >= _DURATION);
+        vm.assume(payout_ <= capacity_);
+        _createAuctionLot();
+
+        vm.warp(_start);
+
+        _module.priceFor(_lotId, payout_);
+    }
+
+    function testFuzz_minPriceZero_varyingSetup(
+        uint128 capacity_,
+        uint128 price_
+    )
         public
-        givenLotCapacity(1e75) // very large number, but not quite max (which overflows)
+        givenLotCapacity(uint256(capacity_))
+        givenEquilibriumPrice(uint256(price_))
+        givenMinPrice(0)
+    {
+        vm.assume(capacity_ >= _DURATION);
+        vm.assume(price_ >= 1000);
+        _createAuctionLot();
+
+        vm.warp(_start);
+
+        console2.log("Capacity:", capacity_);
+        console2.log("Price:", price_);
+
+        uint256 payout = _auctionParams.capacity / _DURATION; // 1 seconds worth of tokens
+        console2.log("Payout:", payout);
+        uint256 price = _module.priceFor(_lotId, payout);
+        uint256 expectedPrice = _gdaParams.equilibriumPrice.mulDiv(payout, _BASE_SCALE);
+        // assertApproxEqAbs(price, expectedPrice, 1e18); TODO how to think about these bounds? some extremes have large errors
+
+        vm.warp(_start + _DECAY_PERIOD);
+        price = _module.priceFor(_lotId, payout);
+        expectedPrice = expectedPrice.mulDiv(uUNIT - _gdaParams.decayTarget, uUNIT);
+        // assertApproxEqAbs(price, expectedPrice, 1e18);
+    }
+
+    function testFuzz_minPriceNonZero_varyingSetup(
+        uint128 capacity_,
+        uint128 price_
+    ) public givenLotCapacity(uint256(capacity_)) givenEquilibriumPrice(uint256(price_)) {
+        vm.assume(capacity_ >= _DURATION);
+        uint256 decayedPrice = uint256(price_).mulDiv(uUNIT - _gdaParams.decayTarget, uUNIT);
+        vm.assume(decayedPrice > _gdaParams.minimumPrice); // must have room for decay
+        _createAuctionLot();
+
+        vm.warp(_start);
+
+        console2.log("Capacity:", capacity_);
+        console2.log("Price:", price_);
+
+        uint256 payout = _auctionParams.capacity / _DURATION; // 1 seconds worth of tokens
+        console2.log("Payout:", payout);
+        uint256 price = _module.priceFor(_lotId, payout);
+        uint256 expectedPrice = _gdaParams.equilibriumPrice.mulDiv(payout, _BASE_SCALE);
+        // assertApproxEqAbs(price, expectedPrice, 1e18); TODO how to think about these bounds? some extremes have large errors
+
+        vm.warp(_start + _DECAY_PERIOD);
+        price = _module.priceFor(_lotId, payout);
+        expectedPrice = expectedPrice.mulDiv(uUNIT - _gdaParams.decayTarget, uUNIT);
+        // assertApproxEqAbs(price, expectedPrice, 1e18);
+    }
+
+    function testFuzz_minPriceZero_varyingTimesteps(uint48 timestep_)
+        public
+        givenMinPrice(0)
         givenLotIsCreated
         givenLotHasStarted
     {
-        vm.assume(payout_ <= _LOT_CAPACITY);
+        // Warp to the timestep
+        uint48 timestep = timestep_ % _DURATION;
+        console2.log("Warping to timestep:", timestep);
+        vm.warp(_start + timestep);
 
-        _module.priceFor(_lotId, payout_);
+        // Calculated the expected price of the oldest auction at the timestep
+        IGradualDutchAuction.AuctionData memory data = _getAuctionData(_lotId);
+        UD60x18 q0 = ud(_INITIAL_PRICE.mulDiv(uUNIT, 10 ** _quoteTokenDecimals));
+        UD60x18 r = data.emissionsRate;
+        UD60x18 k = data.decayConstant;
+        UD60x18 t = convert(timestep).div(_ONE_DAY);
+        UD60x18 qt = q0.mul(r).div(k.mul(t).exp());
+        console2.log("Expected price at timestep:", qt.unwrap());
+
+        // Set payout to 1 seconds worth of tokens
+        uint256 payout = _LOT_CAPACITY / _DURATION;
+
+        // Calculate the price
+        uint256 price = _module.priceFor(_lotId, payout);
+
+        // Calculate the expected price (qt divided by 1 day)
+        uint256 expectedPrice = qt.intoUint256().mulDiv(10 ** _quoteTokenDecimals, uUNIT) / 1 days;
+
+        // The price should be conservative (greater than or equal to the expected price)
+        assertGe(price, expectedPrice);
+        assertApproxEqRel(price, expectedPrice, 1e14); // 0.01%
+    }
+
+    function testFuzz_minPriceNonZero_varyingTimesteps(uint48 timestep_)
+        public
+        givenLotIsCreated
+        givenLotHasStarted
+    {
+        // Warp to the timestep
+        uint48 timestep = timestep_ % _DURATION;
+        console2.log("Warping to timestep:", timestep);
+        vm.warp(_start + timestep);
+
+        // Calculated the expected price of the oldest auction at the timestep
+        IGradualDutchAuction.AuctionData memory data = _getAuctionData(_lotId);
+        UD60x18 q0 = ud(_INITIAL_PRICE.mulDiv(uUNIT, 10 ** _quoteTokenDecimals));
+        UD60x18 qm = ud(_MIN_PRICE.mulDiv(uUNIT, 10 ** _quoteTokenDecimals));
+        UD60x18 r = data.emissionsRate;
+        UD60x18 k = data.decayConstant;
+        UD60x18 t = convert(timestep).div(_ONE_DAY);
+        UD60x18 qt = (q0 - qm).div(k.mul(t).exp()).add(qm).mul(r);
+        console2.log("Expected price at timestep:", qt.unwrap());
+
+        // Set payout to 1 seconds worth of tokens
+        uint256 payout = _LOT_CAPACITY / _DURATION;
+
+        // Calculate the price
+        uint256 price = _module.priceFor(_lotId, payout);
+
+        // Calculate the expected price (qt divided by 1 day)
+        uint256 expectedPrice = qt.intoUint256().mulDiv(10 ** _quoteTokenDecimals, uUNIT) / 1 days;
+
+        // The price should be conservative (greater than or equal to the expected price)
+        assertGe(price, expectedPrice);
+        assertApproxEqRel(price, expectedPrice, 1e14); // 0.01%
     }
 }
