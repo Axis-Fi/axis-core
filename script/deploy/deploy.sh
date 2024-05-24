@@ -36,20 +36,20 @@ RESUME=${resume:-false}
 # Check if DEPLOY_FILE is set
 if [ -z "$DEPLOY_FILE" ]
 then
-  echo "No deploy file specified. Provide the relative path after the command."
+  echo "No deploy file specified. Provide the relative path after the --deployFile flag."
   exit 1
 fi
 
 # Check if DEPLOY_FILE exists
 if [ ! -f "$DEPLOY_FILE" ]
 then
-  echo "Deploy file ($DEPLOY_FILE) not found. Provide the correct relative path after the command."
+  echo "Deploy file ($DEPLOY_FILE) not found. Provide the correct relative path after the --deployFile flag."
   exit 1
 fi
 
 # Validate if SAVE is "true" or "false", otherwise throw an error
 if [ "$SAVE" != "true" ] && [ "$SAVE" != "false" ]; then
-  echo "Invalid value for SAVE. Use 'true' or 'false'."
+  echo "Invalid value for --save. Use 'true' or 'false'."
   exit 1
 fi
 
