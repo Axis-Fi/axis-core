@@ -390,10 +390,10 @@ contract GradualDutchAuction is IGradualDutchAuction, AtomicAuctionModule {
             console2.log("second term:", c.unwrap());
 
             // Calculate the third term: W(C e^(F + C))
-            // 150 wei is the maximum error (TODO that I have found so far)
-            // for the lambert-W approximation,
-            // this makes sure the estimate is conservative
-            UD60x18 w = c.add(f).exp().mul(c).productLn() + ud(150);
+            // 17 wei is the maximum error for values in the
+            // range of possible values for the lambert-W approximation,
+            // this makes sure the estimate is conservative.
+            UD60x18 w = c.add(f).exp().mul(c).productLn() + ud(17);
             console2.log("third term:", w.unwrap());
 
             // Without error correction, the intermediate term (f + c - w) cannot underflow because
