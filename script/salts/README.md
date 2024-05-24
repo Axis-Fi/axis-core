@@ -33,7 +33,7 @@ For the AtomicAuctionHouse and BatchAuctionHouse, a specific script can be used 
 Assuming that the developer wants to deploy an AtomicAuctionHouse at an address that will start with `0xAA`, the following command would be run:
 
 ```bash
-./script/deploy/auction_house_salts.sh atomic AA
+./script/salts/auction_house_salts.sh atomic AA
 ```
 
 The generated salt would be stored in `./script/salts/salts.json` under the key `AtomicAuctionHouse` and a hash of the bytecode. Provided the bytecode is the same, the same salt can be used to deploy the contract at the same address on different chains.
