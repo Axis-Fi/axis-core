@@ -7,13 +7,12 @@ import {Script, console2} from "forge-std/Script.sol";
 // System contracts
 import {BatchAuctionHouse} from "src/BatchAuctionHouse.sol";
 import {IAuctionHouse} from "src/interfaces/IAuctionHouse.sol";
-import {toKeycode, toVeecode} from "src/modules/Modules.sol";
+import {toKeycode} from "src/modules/Modules.sol";
 import {EncryptedMarginalPrice} from "src/modules/auctions/batch/EMP.sol";
-import {ECIES, Point} from "src/lib/ECIES.sol";
-import {uint2str} from "src/lib/Uint2Str.sol";
+import {Point} from "src/lib/ECIES.sol";
 
 // Generic contracts
-import {MockERC20, ERC20} from "lib/solmate/src/test/utils/mocks/MockERC20.sol";
+import {MockERC20} from "lib/solmate/src/test/utils/mocks/MockERC20.sol";
 
 contract TestData is Script {
     BatchAuctionHouse public auctionHouse;
@@ -46,16 +45,12 @@ contract TestData is Script {
 
     function createAuction(
         uint256 pubKeyX,
-        uint256 pubKeyY,
-        address buyer
+        uint256 pubKeyY
     ) public returns (uint96) {
         // Load addresses from .env
         auctionHouse = BatchAuctionHouse(vm.envAddress("AUCTION_HOUSE"));
 
         Point memory publicKey = Point(pubKeyX, pubKeyY);
-
-        // // Deploy test tokens and store addresses
-        // deployTestTokens(msg.sender, buyer);
 
         vm.startBroadcast();
 
@@ -65,7 +60,7 @@ contract TestData is Script {
         // Approve auction house for base token since it will be pre-funded
         baseToken.approve(address(auctionHouse), 1e24);
 
-        // Create LSBBA auction with the provided public key
+        // Create EMP auction with the provided public key
         IAuctionHouse.RoutingParams memory routingParams;
         routingParams.auctionType = toKeycode("EMPA");
         routingParams.baseToken = address(baseToken);
