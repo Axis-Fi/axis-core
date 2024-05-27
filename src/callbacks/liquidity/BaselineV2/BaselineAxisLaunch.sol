@@ -157,12 +157,13 @@ contract BaselineAxisLaunch is BaseCallback, Policy, Owned {
     {
         BaselineKeycode bpool = toBaselineKeycode("BPOOL");
 
-        requests = new BaselinePermissions[](5);
+        requests = new BaselinePermissions[](6);
         requests[0] = BaselinePermissions(bpool, BPOOL.initializePool.selector);
         requests[1] = BaselinePermissions(bpool, BPOOL.addReservesTo.selector);
         requests[2] = BaselinePermissions(bpool, BPOOL.addLiquidityTo.selector);
         requests[3] = BaselinePermissions(bpool, BPOOL.burnAllBAssetsInContract.selector);
         requests[4] = BaselinePermissions(bpool, BPOOL.mint.selector);
+        requests[5] = BaselinePermissions(bpool, BPOOL.setTicks.selector);
     }
 
     // ========== CALLBACK FUNCTIONS ========== //
