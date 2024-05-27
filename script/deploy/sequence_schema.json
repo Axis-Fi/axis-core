@@ -31,7 +31,8 @@
             "description": "Arguments to pass to the module's deploy function",
             "uniqueItems": true,
             "additionalProperties": {
-              "type": ["integer", "string"]
+              "type": ["integer", "string"],
+              "pattern": "^0x[0-9a-fA-F]{40}$"
             }
           }
         },
