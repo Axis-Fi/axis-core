@@ -978,6 +978,8 @@ contract Deploy is Script, WithEnvironment, WithSalts {
             BaselineKernelActions.ActivatePolicy, address(batchAllowlist)
         );
 
+        console2.log("    Policy activated in Baseline Kernel");
+
         return (address(batchAllowlist), _PREFIX_AXIS);
     }
 
