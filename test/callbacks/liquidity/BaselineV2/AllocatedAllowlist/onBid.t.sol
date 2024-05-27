@@ -13,9 +13,7 @@ contract BaselineAllocatedAllowlistOnBidTest is BaselineAllocatedAllowlistTest {
     // cast to-uint256 5000000000000000000 = 0x0000000000000000000000000000000000000000000000004563918244f40000
     // Then concatenated with the address
     // cast concat-hex "0x0000000000000000000000000000000000000004" "0x0000000000000000000000000000000000000000000000004563918244f40000"
-    // Then hashed with keccak256
-    // cast keccak 0x00000000000000000000000000000000000000040000000000000000000000000000000000000000000000004563918244f40000 = 0x48371c09b043f1a28e5b80a2b295dcedc7e596fa1faacf355af6611b4d4eddc3
-    // The hashed values can then be entered as leaves here: https://lab.miguelmota.com/merkletreejs/example/
+    // The concatenated values can then be entered as leaves here: https://lab.miguelmota.com/merkletreejs/example/
 
     // Values:
     // 0x0000000000000000000000000000000000000004, 5e18
