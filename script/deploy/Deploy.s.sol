@@ -18,6 +18,7 @@ import {Callbacks} from "src/lib/Callbacks.sol";
 // Auction modules
 import {EncryptedMarginalPrice} from "src/modules/auctions/batch/EMP.sol";
 import {FixedPriceSale} from "src/modules/auctions/atomic/FPS.sol";
+import {FixedPriceBatch} from "src/modules/auctions/batch/FPB.sol";
 
 // Derivative modules
 import {LinearVesting} from "src/modules/derivatives/LinearVesting.sol";
@@ -362,7 +363,7 @@ contract Deploy is Script, WithEnvironment, WithSalts {
         return (address(batchCatalogue), _PREFIX_AXIS);
     }
 
-    // ========== MODULE DEPLOYMENTS ========== //
+    // ========== AUCTION MODULE DEPLOYMENTS ========== //
 
     function deployEncryptedMarginalPrice(bytes memory)
         public
@@ -427,6 +428,37 @@ contract Deploy is Script, WithEnvironment, WithSalts {
 
         return (address(amFps), _PREFIX_AXIS);
     }
+
+    function deployFixedPriceBatch(bytes memory) public virtual returns (address, string memory) {
+        // No args used
+        console2.log("");
+        console2.log("Deploying FixedPriceBatch");
+
+        address batchAuctionHouse = _getAddressNotZero("axis.BatchAuctionHouse");
+
+        // Get the salt
+        bytes32 salt_ = _getSalt(
+            "FixedPriceBatch", type(FixedPriceBatch).creationCode, abi.encode(batchAuctionHouse)
+        );
+
+        // Deploy the module
+        FixedPriceBatch amFpb;
+        if (salt_ == bytes32(0)) {
+            vm.broadcast();
+            amFpb = new FixedPriceBatch(batchAuctionHouse);
+        } else {
+            console2.log("    salt:", vm.toString(salt_));
+
+            vm.broadcast();
+            amFpb = new FixedPriceBatch{salt: salt_}(batchAuctionHouse);
+        }
+        console2.log("");
+        console2.log("    FixedPriceBatch deployed at:", address(amFpb));
+
+        return (address(amFpb), _PREFIX_AXIS);
+    }
+
+    // ========== DERIVATIVE MODULE DEPLOYMENTS ========== //
 
     function deployAtomicLinearVesting(bytes memory)
         public

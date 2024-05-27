@@ -21,6 +21,10 @@
             "installAtomicAuctionHouse": true
         },
         {
+            "name": "FixedPriceBatch",
+            "installBatchAuctionHouse": true
+        },
+        {
             "name": "AtomicLinearVesting",
             "installAtomicAuctionHouse": true
         },
