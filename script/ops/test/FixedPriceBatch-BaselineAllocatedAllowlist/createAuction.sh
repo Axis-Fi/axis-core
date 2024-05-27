@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Usage:
-# ./createBaselineFixedPriceBatchAuction.sh --quoteToken <address> --baseToken <address> --callback <address>
+# ./createAuction.sh --quoteToken <address> --baseToken <address> --callback <address>
 #
 # Expects the following environment variables:
 # CHAIN: The chain to deploy to, based on values from the ./script/env.json file.

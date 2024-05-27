@@ -6,15 +6,18 @@ import {Script, console2} from "forge-std/Script.sol";
 import {WithEnvironment} from "script/deploy/WithEnvironment.s.sol";
 
 // System contracts
+import {IBatchAuctionHouse} from "src/interfaces/IBatchAuctionHouse.sol";
 import {BatchAuctionHouse} from "src/BatchAuctionHouse.sol";
 import {IAuctionHouse} from "src/interfaces/IAuctionHouse.sol";
 import {toKeycode} from "src/modules/Modules.sol";
 import {ICallback} from "src/interfaces/ICallback.sol";
 import {IFixedPriceBatch} from "src/interfaces/modules/auctions/IFixedPriceBatch.sol";
 import {BaselineAxisLaunch} from "src/callbacks/liquidity/BaselineV2/BaselineAxisLaunch.sol";
-import {BALwithAllocatedAllowlist} from "src/callbacks/liquidity/BaselineV2/BALwithAllocatedAllowlist.sol";
+import {BALwithAllocatedAllowlist} from
+    "src/callbacks/liquidity/BaselineV2/BALwithAllocatedAllowlist.sol";
 
 // Generic contracts
+import {ERC20} from "lib/solmate/src/tokens/ERC20.sol";
 import {MockERC20} from "lib/solmate/src/test/utils/mocks/MockERC20.sol";
 
 contract TestData is Script, WithEnvironment {
@@ -47,14 +50,14 @@ contract TestData is Script, WithEnvironment {
         routingParams.baseToken = baseToken_;
         routingParams.quoteToken = quoteToken_;
         routingParams.callbacks = ICallback(callback_);
-        routingParams.callbackData = abi.encode(BaselineAxisLaunch.CreateData({
-            discoveryTickWidth: 100,
-            allowlistParams: abi.encode(
-                BALwithAllocatedAllowlist.AllocatedAllowlistCreateParams({
-                    merkleRoot: merkleRoot
-                })
-            )
-        }));
+        routingParams.callbackData = abi.encode(
+            BaselineAxisLaunch.CreateData({
+                discoveryTickWidth: 100,
+                allowlistParams: abi.encode(
+                    BALwithAllocatedAllowlist.AllocatedAllowlistCreateParams({merkleRoot: merkleRoot})
+                )
+            })
+        );
 
         IFixedPriceBatch.AuctionDataParams memory auctionDataParams;
         auctionDataParams.price = 1e18; // 1 quote tokens per base token
@@ -89,45 +92,47 @@ contract TestData is Script, WithEnvironment {
         auctionHouse.cancel(lotId_, bytes(""));
     }
 
-    // function placeBid(uint96 lotId, uint256 amount, uint256 minAmountOut) public {
-    //     auctionHouse = AuctionHouse(vm.envAddress("AUCTION_HOUSE"));
-    //     EMPAM module = EMPAM(address(auctionHouse.getModuleForVeecode(toVeecode("01EMPAM"))));
+    function placeBid(
+        string calldata chain_,
+        uint96 lotId_,
+        uint256 amount_,
+        bytes32 merkleProof_,
+        uint256 allocatedAmount_
+    ) public {
+        _loadEnv(chain_);
+        auctionHouse = BatchAuctionHouse(_envAddressNotZero("axis.BatchAuctionHouse"));
 
-    //     // Get the public key modulus for the lot
-    //     (,,,,,, bytes memory publicKeyModulus) = module.auctionData(lotId);
+        // Approve spending of the quote token
+        {
+            (,, address quoteTokenAddress,,,,,,) = auctionHouse.lotRouting(lotId_);
 
-    //     bytes memory encryptedAmountOut = RSAOAEP.encrypt(
-    //         abi.encodePacked(minAmountOut),
-    //         abi.encodePacked(uint2str(uint256(lotId))),
-    //         abi.encodePacked(uint24(0x10001)),
-    //         publicKeyModulus,
-    //         keccak256(
-    //             abi.encodePacked(
-    //                 "TESTSEED", "NOTFORPRODUCTION", msg.sender, lotId, amount, minAmountOut
-    //             )
-    //         )
-    //     );
+            vm.broadcast();
+            ERC20(quoteTokenAddress).approve(address(auctionHouse), amount_);
 
-    //     Router.BidParams memory bidParams = Router.BidParams({
-    //         lotId: lotId,
-    //         recipient: msg.sender,
-    //         referrer: address(0),
-    //         amount: amount,
-    //         auctionData: encryptedAmountOut,
-    //         allowlistProof: bytes(""),
-    //         permit2Data: bytes("")
-    //     });
+            console2.log("Approved spending of quote token by BatchAuctionHouse");
+        }
 
-    //     // Get quote token and approve the auction house
-    //     (,,, ERC20 qt,,,,,,) = auctionHouse.lotRouting(lotId);
+        bytes32[] memory allowlistProof = new bytes32[](1);
+        allowlistProof[0] = merkleProof_;
 
-    //     vm.startBroadcast();
-    //     qt.approve(address(auctionHouse), amount);
+        vm.broadcast();
+        uint64 bidId = auctionHouse.bid(
+            IBatchAuctionHouse.BidParams({
+                lotId: lotId_,
+                bidder: msg.sender,
+                referrer: address(0),
+                amount: amount_,
+                auctionData: abi.encode(""),
+                permit2Data: bytes("")
+            }),
+            abi.encode(
+                BALwithAllocatedAllowlist.AllocatedAllowlistBidParams({
+                    proof: allowlistProof,
+                    allocatedAmount: allocatedAmount_
+                })
+            )
+        );
 
-    //     // Submit bid and emit ID
-    //     uint96 bidId = auctionHouse.bid(bidParams);
-    //     console2.log("Bid placed with ID: ", bidId);
-
-    //     vm.stopBroadcast();
-    // }
+        console2.log("Bid placed with ID: ", bidId);
+    }
 }
