@@ -11,11 +11,11 @@
     - You will need to provide the kernel, owner, and reserveToken
 5. Generate the Merkle root
 6. Create the auction
-    - You will need to provide the quote token, base token, BaselineAllocatedAllowlist address and merkle root
+    - You will need to provide the quote token, base token, BaselineAllocatedAllowlist address and Merkle root
 
 ## To Settle an Auction
 
-Assumes you are using a Tendlery Virtual Testnet
+Assumes you are using a Tenderly Virtual Testnet
 
 1. Warp to the timestamp after the auction conclusion
 
