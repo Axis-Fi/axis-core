@@ -390,7 +390,10 @@ contract BaselineAxisLaunch is BaseCallback, Policy, Owned {
     ///                 - EMP auction format: calculates the ticks based on the clearing price
     ///                 - Deploys reserves into the Baseline pool
     ///
-    ///                 Note that there may be reserve assets left over after liquidity deployment, which must be manually withdrawn by the owner using `withdrawReserves()`
+    ///                 Note that there may be reserve assets left over after liquidity deployment, which must be manually withdrawn by the owner using `withdrawReserves()`.
+    ///
+    ///                 Next steps:
+    ///                 - Activate the market making and credit facility policies in the Baseline stack, which cannot be enabled before the auction is settled and the pool is initialized
     ///
     ///                 This function has the following assumptions:
     ///                 - BaseCallback has already validated the lot ID

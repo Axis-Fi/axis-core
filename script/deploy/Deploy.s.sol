@@ -32,6 +32,9 @@ import {TokenAllowlist} from "src/callbacks/allowlists/TokenAllowlist.sol";
 import {BALwithAllocatedAllowlist} from
     "src/callbacks/liquidity/BaselineV2/BALwithAllocatedAllowlist.sol";
 
+// Baseline
+import {Kernel as BaselineKernel, Actions as BaselineKernelActions} from "src/callbacks/liquidity/BaselineV2/lib/Kernel.sol";
+
 /// @notice Declarative deployment script that reads a deployment sequence (with constructor args)
 ///         and a configured environment file to deploy and install contracts in the Axis protocol.
 contract Deploy is Script, WithEnvironment, WithSalts {
@@ -965,6 +968,10 @@ contract Deploy is Script, WithEnvironment, WithSalts {
         );
         console2.log("");
         console2.log("    BaselineAllocatedAllowlist (Batch) deployed at:", address(batchAllowlist));
+
+        // Install the module as a policy in the Baseline kernel
+        vm.broadcast();
+        BaselineKernel(baselineKernel).executeAction(BaselineKernelActions.ActivatePolicy, address(batchAllowlist));
 
         return (address(batchAllowlist), _PREFIX_AXIS);
     }
