@@ -140,6 +140,8 @@ contract TestData is Script, WithEnvironment {
         _loadEnv(chain_);
         auctionHouse = BatchAuctionHouse(_envAddressNotZero("axis.BatchAuctionHouse"));
 
+        console2.log("Timestamp is", block.timestamp);
+
         vm.broadcast();
         auctionHouse.settle(lotId_, 100, abi.encode(""));
 
