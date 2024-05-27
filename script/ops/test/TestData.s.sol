@@ -43,10 +43,7 @@ contract TestData is Script {
         MockERC20(token).mint(receiver, 1e24);
     }
 
-    function createAuction(
-        uint256 pubKeyX,
-        uint256 pubKeyY
-    ) public returns (uint96) {
+    function createAuction(uint256 pubKeyX, uint256 pubKeyY) public returns (uint96) {
         // Load addresses from .env
         auctionHouse = BatchAuctionHouse(vm.envAddress("AUCTION_HOUSE"));
 
