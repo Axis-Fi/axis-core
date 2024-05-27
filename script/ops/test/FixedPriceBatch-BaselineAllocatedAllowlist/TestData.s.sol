@@ -136,10 +136,7 @@ contract TestData is Script, WithEnvironment {
         console2.log("Bid placed with ID: ", bidId);
     }
 
-    function settleAuction(
-        string calldata chain_,
-        uint96 lotId_
-    ) public {
+    function settleAuction(string calldata chain_, uint96 lotId_) public {
         _loadEnv(chain_);
         auctionHouse = BatchAuctionHouse(_envAddressNotZero("axis.BatchAuctionHouse"));
 
