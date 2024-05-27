@@ -79,6 +79,6 @@ else
 fi
 
 # Create auction
-forge script ./script/ops/test/TestData.s.sol:TestData --sig "createBaselineFixedPriceBatchAuction(string,address,address,address,bytes32)()" $CHAIN $quoteToken $baseToken $callback $allowlistMerkleRoot \
+forge script ./script/ops/test/FixedPriceBatch-BaselineAllocatedAllowlist/TestData.s.sol:TestData --sig "createAuction(string,address,address,address,bytes32)()" $CHAIN $quoteToken $baseToken $callback $allowlistMerkleRoot \
 --rpc-url $RPC_URL --private-key $DEPLOYER_PRIVATE_KEY --froms $DEPLOYER_ADDRESS --slow -vvvv \
 $BROADCAST_FLAG
