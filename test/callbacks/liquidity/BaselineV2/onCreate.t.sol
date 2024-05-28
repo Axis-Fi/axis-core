@@ -335,6 +335,9 @@ contract BaselineOnCreateTest is BaselineAxisLaunchTest {
         assertEq(floorTickLower, activeTickWithRounding - _tickSpacing, "floor tick lower");
         assertEq(floorTickUpper, activeTickWithRounding, "floor tick upper");
 
+        // Floor lower tick should not be the same as the active tick
+        assertNotEq(floorTickLower, _baseToken.activeTick(), "floor tick lower != active tick");
+
         // Discovery range should be the width of discoveryTickWidth * tick spacing and above the active tick
         (int24 discoveryTickLower, int24 discoveryTickUpper) = _baseToken.getTicks(Range.DISCOVERY);
         assertEq(discoveryTickLower, activeTickWithRounding, "discovery tick lower");
@@ -371,6 +374,9 @@ contract BaselineOnCreateTest is BaselineAxisLaunchTest {
         (int24 floorTickLower, int24 floorTickUpper) = _baseToken.getTicks(Range.FLOOR);
         assertEq(floorTickLower, activeTickWithRounding - _tickSpacing, "floor tick lower");
         assertEq(floorTickUpper, activeTickWithRounding, "floor tick upper");
+
+        // Floor lower tick should not be the same as the active tick
+        assertNotEq(floorTickLower, _baseToken.activeTick(), "floor tick lower != active tick");
 
         // Discovery range should be the width of discoveryTickWidth * tick spacing and above the active tick
         (int24 discoveryTickLower, int24 discoveryTickUpper) = _baseToken.getTicks(Range.DISCOVERY);
@@ -428,6 +434,9 @@ contract BaselineOnCreateTest is BaselineAxisLaunchTest {
         assertEq(floorTickLower, activeTickWithRounding - _tickSpacing, "floor tick lower");
         assertEq(floorTickUpper, activeTickWithRounding, "floor tick upper");
 
+        // Floor lower tick should not be the same as the active tick
+        assertNotEq(floorTickLower, _baseToken.activeTick(), "floor tick lower != active tick");
+
         // Discovery range should be the width of discoveryTickWidth * tick spacing and above the active tick
         (int24 discoveryTickLower, int24 discoveryTickUpper) = _baseToken.getTicks(Range.DISCOVERY);
         assertEq(discoveryTickLower, activeTickWithRounding, "discovery tick lower");
@@ -481,6 +490,9 @@ contract BaselineOnCreateTest is BaselineAxisLaunchTest {
         assertEq(floorTickLower, activeTickWithRounding - _tickSpacing, "floor tick lower");
         assertEq(floorTickUpper, activeTickWithRounding, "floor tick upper");
 
+        // Floor lower tick should not be the same as the active tick
+        assertNotEq(floorTickLower, _baseToken.activeTick(), "floor tick lower != active tick");
+
         // Discovery range should be the width of discoveryTickWidth * tick spacing and above the active tick
         (int24 discoveryTickLower, int24 discoveryTickUpper) = _baseToken.getTicks(Range.DISCOVERY);
         assertEq(discoveryTickLower, activeTickWithRounding, "discovery tick lower");
@@ -517,6 +529,9 @@ contract BaselineOnCreateTest is BaselineAxisLaunchTest {
         (int24 floorTickLower, int24 floorTickUpper) = _baseToken.getTicks(Range.FLOOR);
         assertEq(floorTickLower, activeTickWithRounding - _tickSpacing, "floor tick lower");
         assertEq(floorTickUpper, activeTickWithRounding, "floor tick upper");
+
+        // Floor lower tick should not be the same as the active tick
+        assertNotEq(floorTickLower, _baseToken.activeTick(), "floor tick lower != active tick");
 
         // Discovery range should be the width of discoveryTickWidth * tick spacing and above the active tick
         (int24 discoveryTickLower, int24 discoveryTickUpper) = _baseToken.getTicks(Range.DISCOVERY);
@@ -561,6 +576,9 @@ contract BaselineOnCreateTest is BaselineAxisLaunchTest {
         (int24 floorTickLower, int24 floorTickUpper) = _baseToken.getTicks(Range.FLOOR);
         assertEq(floorTickLower, activeTickWithRounding - _tickSpacing, "floor tick lower");
         assertEq(floorTickUpper, activeTickWithRounding, "floor tick upper");
+
+        // Floor lower tick should not be the same as the active tick
+        assertNotEq(floorTickLower, _baseToken.activeTick(), "floor tick lower != active tick");
 
         // Discovery range should be the width of discoveryTickWidth * tick spacing and above the active tick
         (int24 discoveryTickLower, int24 discoveryTickUpper) = _baseToken.getTicks(Range.DISCOVERY);
@@ -612,6 +630,9 @@ contract BaselineOnCreateTest is BaselineAxisLaunchTest {
         assertEq(floorTickLower, activeTickWithRounding - _tickSpacing, "floor tick lower");
         assertEq(floorTickUpper, activeTickWithRounding, "floor tick upper");
 
+        // Floor lower tick should not be the same as the active tick
+        assertNotEq(floorTickLower, _baseToken.activeTick(), "floor tick lower != active tick");
+
         // Discovery range should be the width of discoveryTickWidth * tick spacing and above the active tick
         (int24 discoveryTickLower, int24 discoveryTickUpper) = _baseToken.getTicks(Range.DISCOVERY);
         assertEq(discoveryTickLower, activeTickWithRounding, "discovery tick lower");
@@ -661,6 +682,9 @@ contract BaselineOnCreateTest is BaselineAxisLaunchTest {
         (int24 floorTickLower, int24 floorTickUpper) = _baseToken.getTicks(Range.FLOOR);
         assertEq(floorTickLower, activeTickWithRounding - _tickSpacing, "floor tick lower");
         assertEq(floorTickUpper, activeTickWithRounding, "floor tick upper");
+
+        // Floor lower tick should not be the same as the active tick
+        assertNotEq(floorTickLower, _baseToken.activeTick(), "floor tick lower != active tick");
 
         // Discovery range should be the width of discoveryTickWidth * tick spacing and above the active tick
         (int24 discoveryTickLower, int24 discoveryTickUpper) = _baseToken.getTicks(Range.DISCOVERY);
