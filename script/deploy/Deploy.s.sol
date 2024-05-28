@@ -363,7 +363,7 @@ contract Deploy is Script, WithEnvironment, WithSalts {
         return (address(batchCatalogue), _PREFIX_AXIS);
     }
 
-    // ========== MODULE DEPLOYMENTS ========== //
+    // ========== AUCTION MODULE DEPLOYMENTS ========== //
 
     function deployEncryptedMarginalPrice(bytes memory)
         public
@@ -457,6 +457,8 @@ contract Deploy is Script, WithEnvironment, WithSalts {
 
         return (address(amFpb), _PREFIX_AXIS);
     }
+
+    // ========== DERIVATIVE MODULE DEPLOYMENTS ========== //
 
     function deployAtomicLinearVesting(bytes memory)
         public
