@@ -323,7 +323,7 @@ contract BaselineOnCreateTest is BaselineAxisLaunchTest {
         // Calculate the active tick with rounding
         int24 activeTickWithRounding = _roundToTickSpacing(fixedPriceTick);
 
-        assertEq(_baseToken.activeTick(), activeTickWithRounding, "active tick");
+        assertEq(_baseToken.activeTick(), fixedPriceTick, "active tick");
 
         // Anchor range should be 0 width and equal to activeTickWithRounding
         (int24 anchorTickLower, int24 anchorTickUpper) = _baseToken.getTicks(Range.ANCHOR);
@@ -363,7 +363,7 @@ contract BaselineOnCreateTest is BaselineAxisLaunchTest {
         // Calculate the active tick with rounding
         int24 activeTickWithRounding = _roundToTickSpacing(fixedPriceTick);
 
-        assertEq(_baseToken.activeTick(), activeTickWithRounding, "active tick");
+        assertEq(_baseToken.activeTick(), fixedPriceTick, "active tick");
 
         // Anchor range should be 0 width and equal to activeTickWithRounding
         (int24 anchorTickLower, int24 anchorTickUpper) = _baseToken.getTicks(Range.ANCHOR);
@@ -422,7 +422,7 @@ contract BaselineOnCreateTest is BaselineAxisLaunchTest {
         // Calculate the active tick with rounding
         int24 activeTickWithRounding = _roundToTickSpacing(fixedPriceTick);
 
-        assertEq(_baseToken.activeTick(), activeTickWithRounding, "active tick");
+        assertEq(_baseToken.activeTick(), fixedPriceTick, "active tick");
 
         // Anchor range should be 0 width and equal to activeTickWithRounding
         (int24 anchorTickLower, int24 anchorTickUpper) = _baseToken.getTicks(Range.ANCHOR);
@@ -478,7 +478,7 @@ contract BaselineOnCreateTest is BaselineAxisLaunchTest {
         // Calculate the active tick with rounding
         int24 activeTickWithRounding = _roundToTickSpacing(fixedPriceTick);
 
-        assertEq(_baseToken.activeTick(), activeTickWithRounding, "active tick");
+        assertEq(_baseToken.activeTick(), fixedPriceTick, "active tick");
 
         // Anchor range should be 0 width and equal to activeTickWithRounding
         (int24 anchorTickLower, int24 anchorTickUpper) = _baseToken.getTicks(Range.ANCHOR);
@@ -518,7 +518,7 @@ contract BaselineOnCreateTest is BaselineAxisLaunchTest {
         // Calculate the active tick with rounding
         int24 activeTickWithRounding = _roundToTickSpacing(fixedPriceTick);
 
-        assertEq(_baseToken.activeTick(), activeTickWithRounding, "active tick");
+        assertEq(_baseToken.activeTick(), fixedPriceTick, "active tick");
 
         // Anchor range should be 0 width and equal to activeTickWithRounding
         (int24 anchorTickLower, int24 anchorTickUpper) = _baseToken.getTicks(Range.ANCHOR);
@@ -565,7 +565,7 @@ contract BaselineOnCreateTest is BaselineAxisLaunchTest {
         // Calculate the active tick with rounding
         int24 activeTickWithRounding = _roundToTickSpacing(fixedPriceTick);
 
-        assertEq(_baseToken.activeTick(), activeTickWithRounding, "active tick");
+        assertEq(_baseToken.activeTick(), fixedPriceTick, "active tick");
 
         // Anchor range should be 0 width and equal to activeTickWithRounding
         (int24 anchorTickLower, int24 anchorTickUpper) = _baseToken.getTicks(Range.ANCHOR);
@@ -618,7 +618,7 @@ contract BaselineOnCreateTest is BaselineAxisLaunchTest {
         // Calculate the active tick with rounding
         int24 activeTickWithRounding = _roundToTickSpacing(fixedPriceTick);
 
-        assertEq(_baseToken.activeTick(), activeTickWithRounding, "active tick");
+        assertEq(_baseToken.activeTick(), fixedPriceTick, "active tick");
 
         // Anchor range should be 0 width and equal to activeTickWithRounding
         (int24 anchorTickLower, int24 anchorTickUpper) = _baseToken.getTicks(Range.ANCHOR);
@@ -671,7 +671,7 @@ contract BaselineOnCreateTest is BaselineAxisLaunchTest {
         // Calculate the active tick with rounding
         int24 activeTickWithRounding = _roundToTickSpacing(fixedPriceTick);
 
-        assertEq(_baseToken.activeTick(), activeTickWithRounding, "active tick");
+        assertEq(_baseToken.activeTick(), fixedPriceTick, "active tick");
 
         // Anchor range should be 0 width and equal to activeTickWithRounding
         (int24 anchorTickLower, int24 anchorTickUpper) = _baseToken.getTicks(Range.ANCHOR);
@@ -719,32 +719,27 @@ contract BaselineOnCreateTest is BaselineAxisLaunchTest {
         assertEq(_dtl.initialCirculatingSupply(), _LOT_CAPACITY, "circulating supply");
 
         // The pool should be initialised with the tick equivalent to the auction's fixed price (1e18), which is 0
-        // However, with adjustment due to tick spacing, it becomes 200
-        assertEq(_baseToken.activeTick(), 200, "active tick");
+        assertEq(_baseToken.activeTick(), 0, "active tick");
 
-        // Calculate the active tick with rounding
-        int24 activeTickWithRounding = _roundToTickSpacing(0);
-        assertEq(activeTickWithRounding, _tickSpacing, "active tick with rounding");
-
-        // Anchor range should be 0 width and equal to activeTickWithRounding
+        // Anchor range should be 0 width and equal to active tick
         (int24 anchorTickLower, int24 anchorTickUpper) = _baseToken.getTicks(Range.ANCHOR);
-        assertEq(anchorTickLower, activeTickWithRounding, "anchor tick lower");
-        assertEq(anchorTickUpper, activeTickWithRounding, "anchor tick upper");
+        assertEq(anchorTickLower, 0, "anchor tick lower");
+        assertEq(anchorTickUpper, 0, "anchor tick upper");
 
         // Floor range should be the width of the tick spacing and below the active tick
         (int24 floorTickLower, int24 floorTickUpper) = _baseToken.getTicks(Range.FLOOR);
-        assertEq(floorTickLower, activeTickWithRounding - _tickSpacing, "floor tick lower");
-        assertEq(floorTickUpper, activeTickWithRounding, "floor tick upper");
+        assertEq(floorTickLower, -200, "floor tick lower");
+        assertEq(floorTickUpper, 0, "floor tick upper");
 
         // Floor lower tick should not be the same as the active tick
         assertNotEq(floorTickLower, _baseToken.activeTick(), "floor tick lower != active tick");
 
         // Discovery range should be the width of discoveryTickWidth * tick spacing and above the active tick
         (int24 discoveryTickLower, int24 discoveryTickUpper) = _baseToken.getTicks(Range.DISCOVERY);
-        assertEq(discoveryTickLower, activeTickWithRounding, "discovery tick lower");
+        assertEq(discoveryTickLower, 0, "discovery tick lower");
         assertEq(
             discoveryTickUpper,
-            activeTickWithRounding + _DISCOVERY_TICK_WIDTH * _tickSpacing,
+            0 + _DISCOVERY_TICK_WIDTH * _tickSpacing,
             "discovery tick upper"
         );
     }

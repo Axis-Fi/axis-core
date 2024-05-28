@@ -265,25 +265,41 @@ contract BaselineAxisLaunch is BaseCallback, Policy, Owned {
                 address(RESERVE), address(bAsset), auctionPrice, 10 ** baseTokenDecimals
             );
             activeTick = TickMath.getTickAtSqrtRatio(sqrtPriceX96);
-
-            // To avoid a situation where the pool's active tick is the same as the floor range's lower tick (which is possible due to rounding and tick spacing, and would cause a revert upon settlement), we pre-emptively do the rounding here.
-            activeTick = _roundTickToSpacing(activeTick, BPOOL.TICK_SPACING());
         }
 
         // Initialize the Baseline pool at the tick determined by the auction price
         BPOOL.initializePool(activeTick);
 
-        // Get the tick spacing from the Baseline pool
         int24 tickSpacing = BPOOL.TICK_SPACING();
 
         // Set the ticks for the Baseline pool initially with the following assumptions:
-        // - The active tick is the upper floor tick
+        // - The floor range is 1 tick spacing wide
+        // - The floor range contains the active tick
+        // - The floor range lower tick is not equal to the active tick
         // - There is no anchor (width of the anchor tick range is 0)
-        // - The discovery range is set to the active tick plus the discovery tick width
-        BPOOL.setTicks(Range.FLOOR, activeTick - tickSpacing, activeTick);
-        BPOOL.setTicks(Range.ANCHOR, activeTick, activeTick);
+        // - The discovery range is set to the active tick plus the discoveryTickWidth multiplied by the tick spacing
+        int24 activeTickUpperBoundary;
+        {
+            // Initially, the active tick upper boundary is the active tick rounded up
+            activeTickUpperBoundary = BPOOL.getActiveTS();
+
+            // Round down the active tick to the nearest tick spacing
+            int24 floorTickLower = _roundDownTickToSpacing(activeTick, tickSpacing);
+
+            // Check that the floor lower tick is not the same as the active tick
+            // If so, adjust the floor lower tick to be one tick spacing lower and adjust the active tick upper boundary accordingly
+            if (floorTickLower == activeTick) {
+                floorTickLower -= tickSpacing;
+                activeTickUpperBoundary -= tickSpacing;
+            }
+
+            BPOOL.setTicks(Range.FLOOR, floorTickLower, activeTickUpperBoundary);
+        }
+        BPOOL.setTicks(Range.ANCHOR, activeTickUpperBoundary, activeTickUpperBoundary);
         BPOOL.setTicks(
-            Range.DISCOVERY, activeTick, activeTick + tickSpacing * cbData.discoveryTickWidth
+            Range.DISCOVERY,
+            activeTickUpperBoundary,
+            activeTickUpperBoundary + tickSpacing * cbData.discoveryTickWidth
         );
 
         // Mint the capacity of baseline tokens to the auction house to prefund the auction
@@ -468,19 +484,12 @@ contract BaselineAxisLaunch is BaseCallback, Policy, Owned {
     // ========== HELPER FUNCTIONS ========== //
 
     /// @notice Rounds the provided tick to the nearest tick spacing
-    /// @dev    This function mimics the behaviour of BPOOL.getActiveTS() in handling edge cases.
+    /// @dev    This function behaves differently to BPOOL.getActiveTS() in handling edge cases.
     ///
     /// @param  tick        The tick to round
     /// @param  tickSpacing The tick spacing to round to
-    function _roundTickToSpacing(int24 tick, int24 tickSpacing) internal pure returns (int24) {
-        int24 adjustedTick = (tick / tickSpacing) * tickSpacing;
-
-        // Properly handle negative numbers and edge cases
-        if (adjustedTick >= 0 || adjustedTick % tickSpacing == 0) {
-            adjustedTick += tickSpacing;
-        }
-
-        return adjustedTick;
+    function _roundDownTickToSpacing(int24 tick, int24 tickSpacing) internal pure returns (int24) {
+        return (tick / tickSpacing) * tickSpacing;
     }
 
     // ========== OWNER FUNCTIONS ========== //
