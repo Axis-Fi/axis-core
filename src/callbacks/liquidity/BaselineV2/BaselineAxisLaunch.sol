@@ -265,13 +265,13 @@ contract BaselineAxisLaunch is BaseCallback, Policy, Owned {
                 address(RESERVE), address(bAsset), auctionPrice, 10 ** baseTokenDecimals
             );
             activeTick = TickMath.getTickAtSqrtRatio(sqrtPriceX96);
+
+            // To avoid a situation where the pool's active tick is the same as the floor range's lower tick (which is possible due to rounding and tick spacing, and would cause a revert upon settlement), we pre-emptively do the rounding here.
+            activeTick = _roundTickToSpacing(activeTick, BPOOL.TICK_SPACING());
         }
 
         // Initialize the Baseline pool at the tick determined by the auction price
         BPOOL.initializePool(activeTick);
-
-        // Get the updated active tick from the Baseline pool, which handles rounding and edge cases
-        activeTick = BPOOL.getActiveTS();
 
         // Get the tick spacing from the Baseline pool
         int24 tickSpacing = BPOOL.TICK_SPACING();
@@ -280,7 +280,7 @@ contract BaselineAxisLaunch is BaseCallback, Policy, Owned {
         // - The active tick is the upper floor tick
         // - There is no anchor (width of the anchor tick range is 0)
         // - The discovery range is set to the active tick plus the discovery tick width
-        BPOOL.setTicks(Range.FLOOR, activeTick - tickSpacing, activeTick); // TODO check this - should be 200 ticks in width?
+        BPOOL.setTicks(Range.FLOOR, activeTick - tickSpacing, activeTick);
         BPOOL.setTicks(Range.ANCHOR, activeTick, activeTick);
         BPOOL.setTicks(
             Range.DISCOVERY, activeTick, activeTick + tickSpacing * cbData.discoveryTickWidth
@@ -463,6 +463,24 @@ contract BaselineAxisLaunch is BaseCallback, Policy, Owned {
             (int24 floorTickLower, int24 floorTickUpper) = BPOOL.getTicks(Range.FLOOR);
             emit LiquidityDeployed(floorTickLower, floorTickUpper, BPOOL.getLiquidity(Range.FLOOR));
         }
+    }
+
+    // ========== HELPER FUNCTIONS ========== //
+
+    /// @notice Rounds the provided tick to the nearest tick spacing
+    /// @dev    This function mimics the behaviour of BPOOL.getActiveTS() in handling edge cases.
+    ///
+    /// @param  tick        The tick to round
+    /// @param  tickSpacing The tick spacing to round to
+    function _roundTickToSpacing(int24 tick, int24 tickSpacing) internal pure returns (int24) {
+        int24 adjustedTick = (tick / tickSpacing) * tickSpacing;
+
+        // Properly handle negative numbers and edge cases
+        if (adjustedTick >= 0 || adjustedTick % tickSpacing == 0) {
+            adjustedTick += tickSpacing;
+        }
+
+        return adjustedTick;
     }
 
     // ========== OWNER FUNCTIONS ========== //
