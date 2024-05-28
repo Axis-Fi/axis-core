@@ -5,7 +5,9 @@ import {Module} from "src/modules/Modules.sol";
 import {IAuction} from "src/interfaces/modules/IAuction.sol";
 import {IGradualDutchAuction} from "src/interfaces/modules/auctions/IGradualDutchAuction.sol";
 
-import {UD60x18, ud, convert, UNIT, uUNIT, ZERO, EXP_MAX_INPUT} from "lib/prb-math/src/UD60x18.sol";
+import {
+    UD60x18, ud, convert, UNIT, uUNIT, ZERO, EXP_MAX_INPUT
+} from "lib/prb-math/src/UD60x18.sol";
 import "lib/prb-math/src/Common.sol" as PRBMath;
 
 import {GdaTest} from "test/modules/auctions/GDA/GDATest.sol";
@@ -247,7 +249,8 @@ contract GdaPayoutForTest is GdaTest {
         vm.assume(price_ >= 1e9);
         vm.assume(capacity_ >= 1e9);
         UD60x18 q0 = ud(uint256(price_).mulDiv(uUNIT, 10 ** _quoteTokenDecimals));
-        UD60x18 r = ud(uint256(capacity_).mulDiv(uUNIT, 10 ** _baseTokenDecimals).mulDiv(1 days, _DURATION));
+        UD60x18 r =
+            ud(uint256(capacity_).mulDiv(uUNIT, 10 ** _baseTokenDecimals).mulDiv(1 days, _DURATION));
         vm.assume(q0.mul(r) > ZERO);
         _createAuctionLot();
 
@@ -264,7 +267,9 @@ contract GdaPayoutForTest is GdaTest {
         // assertApproxEqRel(payout, expectedPayout, 1e16); //TODO how to think about these bounds? some extremes have large errors
 
         vm.warp(_start + _DECAY_PERIOD);
-        amount = _gdaParams.equilibriumPrice.mulDiv(uUNIT - _gdaParams.decayTarget, uUNIT).mulDiv(expectedPayout, _BASE_SCALE);
+        amount = _gdaParams.equilibriumPrice.mulDiv(uUNIT - _gdaParams.decayTarget, uUNIT).mulDiv(
+            expectedPayout, _BASE_SCALE
+        );
         payout = _module.payoutFor(_lotId, amount);
         assertLe(payout, expectedPayout);
         // assertApproxEqRel(payout, expectedPayout, 1e16);
@@ -286,7 +291,11 @@ contract GdaPayoutForTest is GdaTest {
         vm.assume(uint256(price_) * 9 / 10 > _gdaParams.minimumPrice); // must have clearance for the decay target
         // vm.assume(minPrice_ >= price_ / 2); // requirement when min price is not zero
         UD60x18 q0 = ud(uint256(price_).mulDiv(uUNIT, 10 ** _quoteTokenDecimals));
-        UD60x18 r = ud(uint256(capacity_).mulDiv(uUNIT, 10 ** _baseTokenDecimals).mulDiv(1 days, _auctionParams.duration));
+        UD60x18 r = ud(
+            uint256(capacity_).mulDiv(uUNIT, 10 ** _baseTokenDecimals).mulDiv(
+                1 days, _auctionParams.duration
+            )
+        );
         vm.assume(q0.mul(r) > ZERO);
         _createAuctionLot();
 
@@ -303,7 +312,9 @@ contract GdaPayoutForTest is GdaTest {
         // assertApproxEqRel(payout, expectedPayout, 1e16); //TODO how to think about these bounds? some extremes have large errors
 
         vm.warp(_start + _auctionParams.duration);
-        amount = _gdaParams.equilibriumPrice.mulDiv(uUNIT - _gdaParams.decayTarget, uUNIT).mulDiv(expectedPayout, _BASE_SCALE);
+        amount = _gdaParams.equilibriumPrice.mulDiv(uUNIT - _gdaParams.decayTarget, uUNIT).mulDiv(
+            expectedPayout, _BASE_SCALE
+        );
         payout = _module.payoutFor(_lotId, amount);
         assertLe(payout, expectedPayout);
         // assertApproxEqRel(payout, expectedPayout, 1e16);

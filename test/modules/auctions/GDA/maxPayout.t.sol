@@ -20,9 +20,10 @@ contract GdaMaxPayoutTest is GdaTest {
         _module.maxPayout(lotId_);
     }
 
-    function testFuzz_maxPayout_success(
-        uint128 capacity_
-    ) public givenLotCapacity(uint256(capacity_)) {
+    function testFuzz_maxPayout_success(uint128 capacity_)
+        public
+        givenLotCapacity(uint256(capacity_))
+    {
         vm.assume(capacity_ >= 1e9);
         _createAuctionLot();
 
@@ -31,9 +32,7 @@ contract GdaMaxPayoutTest is GdaTest {
         assertEq(expectedMaxPayout, maxPayout);
     }
 
-    function testFuzz_maxPayout_minPriceZero_success(
-        uint128 capacity_
-    )
+    function testFuzz_maxPayout_minPriceZero_success(uint128 capacity_)
         public
         givenLotCapacity(uint256(capacity_))
         givenMinPrice(0)
