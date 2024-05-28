@@ -10,7 +10,14 @@ import {IGradualDutchAuction} from "src/interfaces/modules/auctions/IGradualDutc
 
 // External libraries
 import {
-    UD60x18, ud, convert, UNIT, uUNIT, EXP_MAX_INPUT, ZERO, HALF_UNIT, MAX_UD60x18
+    UD60x18,
+    ud,
+    convert,
+    UNIT,
+    uUNIT,
+    EXP_MAX_INPUT,
+    ZERO,
+    HALF_UNIT
 } from "lib/prb-math/src/UD60x18.sol";
 import "lib/prb-math/src/Common.sol" as PRBMath;
 
@@ -27,7 +34,7 @@ contract GradualDutchAuction is IGradualDutchAuction, AtomicAuctionModule {
     // Decay target over the first period must fit within these bounds
     // We use 18 decimals so we don't have to convert it to use as a UD60x18
     uint256 internal constant MIN_DECAY_TARGET = 1e16; // 1%
-    uint256 internal constant MAX_DECAY_TARGET = 49e16; // 49%
+    uint256 internal constant MAX_DECAY_TARGET = 40e16; // 40%
 
     // Bounds for the decay period, which establishes the bounds for the decay constant
     // If a you want a longer or shorter period for the target, you can find another point on the curve that is in this range
@@ -35,20 +42,58 @@ contract GradualDutchAuction is IGradualDutchAuction, AtomicAuctionModule {
     uint48 internal constant MIN_DECAY_PERIOD = 6 hours;
     uint48 internal constant MAX_DECAY_PERIOD = 1 weeks;
 
-    // Decay period must be greater than or equal to 1 day and less than or equal to 1 week
-    // A minimum value of q1 = q0 * 0.01 and a min period of 1 day means:
-    // MAX_LN_OUTPUT = ln(1/0.51) = 0_673344553263765596
-    // MAX_DECAY_CONSTANT = MAX_LN_OUTPUT * 24 = 16_160269278330374304
-    // -> For auctions without a min price, implies a max duration of 8 days in the worst case (decaying 49% over an hour)
-    // -> For auctions with a min price, implies a max duration of 0.302 days (7.25 hours) in the worst case (decaying 49% over an hour)
-    // A maximum value of q1 = q0 * 0.99 and a max period of 7 days means:
-    // MIN_LN_OUTPUT = ln(1/0.99) = 0_010050335853501441
-    // MIN_LN_OUTPUT / 7 = 0_001435762264785920
-    // -> For auctions without a min price, implies a max duration of ~52 years in the best case (decaying 1% over a week)
-    // -> For auctions with a min price, implies a max duration of ~9 years in the best case (decaying 1% over a week)
-
-    // Precomputed: ln(133.084258667509499440) = 4.890982451446117211 using the PRBMath ln function (off by 10 wei)
-    UD60x18 internal constant LN_OF_EXP_MAX_INPUT = UD60x18.wrap(4_890982451446117211);
+    // The constants above provide boundaries for decay constant used in the price and payout calculations.
+    // There are two variants of the calculations, one for auctions with a minimum price and one without.
+    // We use the above bounds to calculate maximum and minimum values for the decay constant under both scenarios.
+    // The formula to compute the decay constant is:
+    // ln((q0 - qm) / (q1 - qm)) / dp
+    // where q0 is the equilibrium price, q1 = q0 * (1 - K) is the target price, qm is the minimum price,
+    // dp is the decay period (in days), and K is the decay target.
+    //
+    // Generally, the maximum value is achieved with the
+    // - largest allowable decay target
+    // - smallest allowable decay period
+    // - highest allowable min price (if applicable)
+    //
+    // Conversely, the minimum value is achieved with the
+    // - smallest allowable decay target
+    // - the largest allowable decay period
+    // - lowest allowable min price (if applicable)
+    //
+    // We are mostly concerned with the maximum value, since it implies a limit for the duration of the auction with that configuration.
+    // The above constants were chosen to optimize flexibility while ensuring adequate auction durations are available for use cases.
+    //
+    // 1. Without a minimum price
+    // We must bound the duration for an auction without a min price
+    // to the maximum exponential input divided by the decay constant.
+    // d_max = E / k
+    //
+    // Maximum decay constant: K = 40%, dp = 6 hours
+    // k_max = ln((1.0 - 0)/(0.6 - 0)) / (1/4) = 2.043302495063962733
+    // d_max = E / k_max = 133.084258667509499440 / 2.043302495063962733 = 65.132 (days)
+    //
+    // Minimum decay constant: K = 1%, dp = 1 week
+    // k_min = ln((1.0 - 0)/(0.99 - 0)) / 7 = 0.001435762264785920
+    // d_max = E / k_min = 133.084258667509499440 / 0.001435762264785920 = 92692 days = ~253 years
+    //
+    // 2. With a minimum price
+    // We must bound the duration for an auction with a min price
+    // to the natural logarithm of the maximum exponential input divided by the decay constant.
+    // This is a much smaller number than the above, and our main constraint.
+    // d_max = ln(E - 1) / k
+    //
+    // Maximum decay constant (worst case): K = 40%, dp = 6 hours, qm = 0.5q0
+    // (we restrict qm to be atleast 10% of q0 less than q1)
+    // k_max = ln((1.0 - 0.5)/(0.6 - 0.5)) / (1/4) = 6.437751649736401498
+    // d_max = ln(E - 1) / k_max = 4.883440042183455484 / 6.437751649736401498 = 0.759 (days) = ~18 hours
+    //
+    // Minimum decay constant (best case): K = 1%, dp = 1 week, qm = 0.5q0
+    // k_min = ln((1.0 - 0.5)/(0.99 - 0.5)) / 7 = 0.002886101045359921
+    // d_max = ln(E - 1) / k_min = 4.883440042183455484 / 0.002886101045359921 = 1692 days = ~4.6 years
+    //
+    // The maximum input for the productLn function is EXP_MAX_INPUT - UNIT. Therefore, we must restrict
+    // Precomputed: ln(133.084258667509499440 - 1) = 4.883440042183455484 using the PRBMath ln function (7 wei less than actual)
+    UD60x18 internal constant LN_OF_PRODUCT_LN_MAX = UD60x18.wrap(4_883_440_042_183_455_484);
 
     /* solhint-enable private-vars-leading-underscore */
 
@@ -83,61 +128,53 @@ contract GradualDutchAuction is IGradualDutchAuction, AtomicAuctionModule {
         // - 10^9 base tokens when base decimals are 18.
         // - 10^5 base tokens when base decimals are 9.
         // - 10^3 base tokens when base decimals are 6.
+        //
+        // Additionally, we set a ceiling of uint128 max for the price and capacity.
+        // 2^128 - 1 / 10^18 = 34.028*10^38 / 10^18 = max price 34.028*10^20
+        // quote tokens per base token when quote token decimals
+        // or base tokens to be sold when decimals are 18.
         {
             int8 priceDecimals = _getValueDecimals(params.equilibriumPrice, lot_.quoteTokenDecimals);
             int8 capacityDecimals = _getValueDecimals(lot_.capacity, lot_.baseTokenDecimals);
 
-            uint8 halfQuoteDecimals = lot_.quoteTokenDecimals % 2 == 0 ? lot_.quoteTokenDecimals / 2 : lot_.quoteTokenDecimals / 2 + 1;
-            uint8 halfBaseDecimals = lot_.baseTokenDecimals % 2 == 0 ? lot_.baseTokenDecimals / 2 : lot_.baseTokenDecimals / 2 + 1;
+            uint8 halfQuoteDecimals = lot_.quoteTokenDecimals % 2 == 0
+                ? lot_.quoteTokenDecimals / 2
+                : lot_.quoteTokenDecimals / 2 + 1;
+            uint8 halfBaseDecimals = lot_.baseTokenDecimals % 2 == 0
+                ? lot_.baseTokenDecimals / 2
+                : lot_.baseTokenDecimals / 2 + 1;
 
-            if (priceDecimals < - int8(halfQuoteDecimals)
-                || capacityDecimals < - int8(halfBaseDecimals)) {
-                revert Auction_InvalidParams();
+            if (
+                priceDecimals < -int8(halfQuoteDecimals)
+                    || params.equilibriumPrice > type(uint128).max
+            ) {
+                revert GDA_InvalidParams(0);
             }
 
-            // Also validate the minimum price if it is not zero
-            if (params.minimumPrice > 0) {
-                int8 minPriceDecimals = _getValueDecimals(params.minimumPrice, lot_.quoteTokenDecimals);
-                if (minPriceDecimals < - int8(halfQuoteDecimals)) {
-                    revert Auction_InvalidParams();
-                }
+            // We also do not allow capacity to be in quote tokens
+            if (
+                lot_.capacityInQuote || capacityDecimals < -int8(halfBaseDecimals)
+                    || lot_.capacity > type(uint128).max
+            ) {
+                revert GDA_InvalidParams(1);
             }
+
+            // Minimum price can be zero, but the equations default back to the basic GDA implementation
+            // If non-zero, its bounds are validated below.
         }
-
-        // Equilibrium Price less than u128 max
-        // This sets a fairly high ceiling:
-        // 2^128 - 1 / 10^18 = 34.028*10^38 / 10^18 = max price 34.028*10^20
-        // quote tokens per base token when quote token decimals are 18.
-        if (params.equilibriumPrice > type(uint128).max) {
-            revert Auction_InvalidParams();
-        }
-
-        // Capacity must be in base token
-        if (lot_.capacityInQuote) revert Auction_InvalidParams();
-
-        // Capacity must at least as large as the auction duration so that the emissions rate is not zero
-        // and no larger than u128 max to avoid various math errors
-        if (
-            lot_.capacity < uint256(lot_.conclusion - lot_.start)
-                || lot_.capacity > type(uint128).max
-        ) {
-            revert Auction_InvalidParams();
-        }
-
-        // Minimum price can be zero, but the equations default back to the basic GDA implementation
 
         // Validate the decay parameters and calculate the decay constant
         // k = ln((q0 - qm) / (q1 - qm)) / dp
         // require q0 > q1 > qm
         // q1 = q0 * (1 - d1)
         if (params.decayTarget > MAX_DECAY_TARGET || params.decayTarget < MIN_DECAY_TARGET) {
-            revert Auction_InvalidParams();
+            revert GDA_InvalidParams(2);
         }
 
         // Decay period must be between the set bounds
         // These bounds also ensure the decay constant is not zero
         if (params.decayPeriod < MIN_DECAY_PERIOD || params.decayPeriod > MAX_DECAY_PERIOD) {
-            revert Auction_InvalidParams();
+            revert GDA_InvalidParams(3);
         }
 
         UD60x18 decayConstant;
@@ -152,23 +189,37 @@ contract GradualDutchAuction is IGradualDutchAuction, AtomicAuctionModule {
             console2.log("q1:", q1.unwrap());
             console2.log("qm:", qm.unwrap());
 
-            // Check that q0 > 0.99q0 >= q1 > 0.99q1 => qm
+            // If qm is not zero, then we require q0 > 0.99q0 >= q1 = q0(1-K) > q0(1-K-0.1) >= qm >= 0.5q0
             // Don't need to check q0 > 0.99q0 >= q1 since:
             //   decayTarget >= 1e16 => q0 * 0.99 >= q1
-            // This ensures that the operand for the logarithm is positive
-            // We enforce a minimum difference for q1 and qm as well to avoid small dividends.
-            if (q1 - qm < ud(1e16)) {
-                revert Auction_InvalidParams();
+            // We require the ordering of the prices to ensure the decay constant can be
+            // calculated (i.e. the operand in the logarithm is positive and greater than 1).
+            // We require the minimum price to be at least half of the equilibrium price to
+            // avoid overflows in exponential functions during the auction.
+            // It is also a sane default.
+            // Another piece of the second check is done during a purchase to make sure that the amount
+            // provided does not exceed the price of the remaining capacity.
+
+            if (
+                qm > ZERO
+                    && (q0.mul(UNIT - ud(params.decayTarget + 10e16)) < qm || qm < q0.mul(HALF_UNIT))
+            ) {
+                revert GDA_InvalidParams(4);
             }
 
-            // If qm is not zero, then we require that it be not less than half of q0
-            // This is to ensure that we do not exceed the maximum input for the exponential function
-            // It is also a sane default.
-            // Another piece of this check is done during a purchase to make sure that the amount
-            // provided is does not exceed the price of the capacity.
-            if (qm > ZERO && qm < q0.mul(HALF_UNIT)) {
-                revert Auction_InvalidParams();
-            }
+            // More simply, the above checks and the decay bounds create an "allowable" range for qm:
+            // K is the decay target. q0(1-K) = q1.
+            // If K is 40%, then the only valid qm is 0.5*q0 (or zero).
+            //
+            //                      |   valid qm  |
+            // |----------|---------|-------------|
+            // q0       q0(1-K)  q0(0.9-K)      0.5*q0
+            //
+            // While this may seem like strict bounds, it is possible to choose the decay target
+            // and period to affect a wider range of qm.
+            // For example, if you want to set a decay target of 20% per day, then your max qm would be 30% below q0.
+            // However, you can achieve rougly the same goal by setting a decay target of 5% every 6 hours,
+            // which would allow a qm up to 15% below q0.
 
             // Calculate the decay constant
             decayConstant =
@@ -186,12 +237,12 @@ contract GradualDutchAuction is IGradualDutchAuction, AtomicAuctionModule {
         // in order for the exponential operations to not overflow. See the minimum and maximum
         // constant calculations for more information.
         if (qm == ZERO && duration > EXP_MAX_INPUT.div(decayConstant)) {
-            revert Auction_InvalidParams();
+            revert GDA_InvalidParams(5);
         }
         // In the case of a non-zero min price, the duration must be less than the natural logarithm
         // of the max input divided by the decay constant to avoid overflows in the operand of the W function.
-        if (qm > ZERO && duration > LN_OF_EXP_MAX_INPUT.div(decayConstant)) {
-            revert Auction_InvalidParams();
+        if (qm > ZERO && duration > LN_OF_PRODUCT_LN_MAX.div(decayConstant)) {
+            revert GDA_InvalidParams(6);
         }
 
         // Calculate emissions rate as number of tokens released per day
@@ -203,11 +254,11 @@ contract GradualDutchAuction is IGradualDutchAuction, AtomicAuctionModule {
         // if qm is zero, then q0 * r > 0
         // if qm is not zero, then qm * r > 0, which also implies the other.
         if (qm == ZERO && q0.mul(emissionsRate) == ZERO) {
-            revert Auction_InvalidParams();
+            revert GDA_InvalidParams(7);
         }
 
         if (qm > ZERO && qm.mul(emissionsRate) == ZERO) {
-            revert Auction_InvalidParams();
+            revert GDA_InvalidParams(8);
         }
 
         // Store auction data
@@ -470,15 +521,12 @@ contract GradualDutchAuction is IGradualDutchAuction, AtomicAuctionModule {
             // 17 wei is the maximum error for values in the
             // range of possible values for the lambert-W approximation,
             // this makes sure the estimate is conservative.
-            // 
-            // We prevent overflow in the operand of the W function via the duration < LN_OF_EXP_MAX_INPUT / decayConstant check.
+            //
+            // We prevent overflow in the operand of the W function via the duration < LN_OF_PRODUCT_LN_MAX / decayConstant check.
             // This means that e^(f + c) will always be < EXP_MAX_INPUT / c.
-            // We check for overflow before adding the error correction.
-            UD60x18 w = c.add(f).exp().mul(c).productLn();
-            {
-                UD60x18 err = ud(17);
-                w = w > MAX_UD60x18.sub(err) ? MAX_UD60x18 : w.add(err);
-            }
+            // We do not need to check for overflow before adding the error correction term
+            // since the maximum value returned from the lambert-W function is ~131*10^18
+            UD60x18 w = c.add(f).exp().mul(c).productLn() + ud(17);
             console2.log("third term:", w.unwrap());
 
             // Without error correction, the intermediate term (f + c - w) cannot underflow because

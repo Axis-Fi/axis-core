@@ -6,6 +6,10 @@ import {IAtomicAuction} from "src/interfaces/modules/IAtomicAuction.sol";
 
 /// @notice Interface for gradual dutch (atomic) auctions
 interface IGradualDutchAuction is IAtomicAuction {
+    // ========== ERRORS ========== //
+
+    error GDA_InvalidParams(uint256 step); // the step tells you where the error occurred
+
     // ========== DATA STRUCTURES ========== //
 
     /// @notice Auction pricing data
