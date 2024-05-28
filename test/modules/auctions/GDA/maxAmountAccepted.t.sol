@@ -6,6 +6,7 @@ import {uUNIT} from "lib/prb-math/src/UD60x18.sol";
 import "lib/prb-math/src/Common.sol" as PRBMath;
 
 import {GdaTest} from "test/modules/auctions/GDA/GDATest.sol";
+import {console2} from "lib/forge-std/src/console2.sol";
 
 contract GdaMaxAmountAcceptedTest is GdaTest {
     using {PRBMath.mulDiv} for uint256;
@@ -20,13 +21,22 @@ contract GdaMaxAmountAcceptedTest is GdaTest {
         _module.maxAmountAccepted(lotId_);
     }
 
-    function testFuzz_maxAmountAccepted_success(
+    function testFuzz_maxAmountAccepted_minPriceNonZero_success(
         uint128 capacity_,
         uint128 price_
-    ) public givenLotCapacity(uint256(capacity_)) givenEquilibriumPrice(uint256(price_)) {
-        vm.assume(capacity_ >= _DURATION);
-        uint256 decayedPrice = uint256(price_).mulDiv(uUNIT - _gdaParams.decayTarget, uUNIT);
-        vm.assume(decayedPrice > _gdaParams.minimumPrice); // must have room for decay
+    )
+        public
+        givenDuration(1 days)
+        givenLotCapacity(uint256(capacity_))
+        givenEquilibriumPrice(uint256(price_))
+        givenMinPrice((uint256(price_) / 2) + (price_ % 2 == 0 ? 0 : 1))
+    {
+        vm.assume(
+            capacity_ >= 10 ** ((_baseTokenDecimals / 2) + (_baseTokenDecimals % 2 == 0 ? 0 : 1))
+        );
+        vm.assume(
+            price_ >= 2 * 10 ** ((_quoteTokenDecimals / 2) + (_quoteTokenDecimals % 2 == 0 ? 0 : 1))
+        );
         _createAuctionLot();
 
         uint256 maxAmountAccepted = _module.maxAmountAccepted(_lotId);
@@ -39,12 +49,117 @@ contract GdaMaxAmountAcceptedTest is GdaTest {
         uint128 price_
     )
         public
+        givenDuration(1 days)
         givenLotCapacity(uint256(capacity_))
         givenEquilibriumPrice(uint256(price_))
         givenMinPrice(0)
     {
-        vm.assume(capacity_ >= _DURATION);
-        vm.assume(price_ >= 1e3);
+        console2.log(
+            "price floor:",
+            10 ** ((_quoteTokenDecimals / 2) + (_quoteTokenDecimals % 2 == 0 ? 0 : 1))
+        );
+        vm.assume(
+            capacity_ >= 10 ** ((_baseTokenDecimals / 2) + (_baseTokenDecimals % 2 == 0 ? 0 : 1))
+        );
+        vm.assume(
+            price_ >= 10 ** ((_quoteTokenDecimals / 2) + (_quoteTokenDecimals % 2 == 0 ? 0 : 1))
+        );
+        _createAuctionLot();
+
+        uint256 maxAmountAccepted = _module.maxAmountAccepted(_lotId);
+        uint256 expectedAmount = _module.priceFor(_lotId, capacity_);
+        assertEq(expectedAmount, maxAmountAccepted);
+    }
+
+    function testFuzz_maxAmountAccepted_minPriceNonZero_quoteDecimalsSmaller_success(
+        uint128 capacity_,
+        uint128 price_
+    )
+        public
+        givenDuration(1 days)
+        givenQuoteTokenDecimals(6)
+        givenLotCapacity(uint256(capacity_))
+        givenEquilibriumPrice(uint256(price_))
+        givenMinPrice((uint256(price_) / 2) + (price_ % 2 == 0 ? 0 : 1))
+    {
+        vm.assume(
+            capacity_ >= 10 ** ((_baseTokenDecimals / 2) + (_baseTokenDecimals % 2 == 0 ? 0 : 1))
+        );
+        vm.assume(
+            price_ >= 2 * 10 ** ((_quoteTokenDecimals / 2) + (_quoteTokenDecimals % 2 == 0 ? 0 : 1))
+        );
+        _createAuctionLot();
+
+        uint256 maxAmountAccepted = _module.maxAmountAccepted(_lotId);
+        uint256 expectedAmount = _module.priceFor(_lotId, capacity_);
+        assertEq(expectedAmount, maxAmountAccepted);
+    }
+
+    function testFuzz_maxAmountAccepted_minPriceZero_quoteDecimalsSmaller_success(
+        uint128 capacity_,
+        uint128 price_
+    )
+        public
+        givenDuration(1 days)
+        givenQuoteTokenDecimals(6)
+        givenLotCapacity(uint256(capacity_))
+        givenEquilibriumPrice(uint256(price_))
+        givenMinPrice(0)
+    {
+        vm.assume(
+            capacity_ >= 10 ** ((_baseTokenDecimals / 2) + (_baseTokenDecimals % 2 == 0 ? 0 : 1))
+        );
+        vm.assume(
+            price_ >= 10 ** ((_quoteTokenDecimals / 2) + (_quoteTokenDecimals % 2 == 0 ? 0 : 1))
+        );
+        _createAuctionLot();
+
+        uint256 maxAmountAccepted = _module.maxAmountAccepted(_lotId);
+        uint256 expectedAmount = _module.priceFor(_lotId, capacity_);
+        assertEq(expectedAmount, maxAmountAccepted);
+    }
+
+    function testFuzz_maxAmountAccepted_minPriceNonZero_quoteDecimalsLarger_success(
+        uint128 capacity_,
+        uint128 price_
+    )
+        public
+        givenDuration(1 days)
+        givenBaseTokenDecimals(6)
+        givenLotCapacity(uint256(capacity_))
+        givenEquilibriumPrice(uint256(price_))
+        givenMinPrice((uint256(price_) / 2) + (price_ % 2 == 0 ? 0 : 1))
+    {
+        vm.assume(
+            capacity_ >= 10 ** ((_baseTokenDecimals / 2) + (_baseTokenDecimals % 2 == 0 ? 0 : 1))
+        );
+        vm.assume(
+            price_ >= 2 * 10 ** ((_quoteTokenDecimals / 2) + (_quoteTokenDecimals % 2 == 0 ? 0 : 1))
+        );
+        _createAuctionLot();
+
+        uint256 maxAmountAccepted = _module.maxAmountAccepted(_lotId);
+        uint256 expectedAmount = _module.priceFor(_lotId, capacity_);
+        assertEq(expectedAmount, maxAmountAccepted);
+    }
+
+    function testFuzz_maxAmountAccepted_minPriceZero_quoteDecimalsLarger_success(
+        uint128 capacity_,
+        uint128 price_
+    )
+        public
+        givenDuration(1 days)
+        givenBaseTokenDecimals(6)
+        givenLotCapacity(uint256(capacity_))
+        givenEquilibriumPrice(uint256(price_))
+        givenMinPrice(0)
+    {
+        vm.assume(
+            capacity_ >= 10 ** ((_baseTokenDecimals / 2) + (_baseTokenDecimals % 2 == 0 ? 0 : 1))
+        );
+        vm.assume(
+            price_ >= 10 ** ((_quoteTokenDecimals / 2) + (_quoteTokenDecimals % 2 == 0 ? 0 : 1))
+        );
         _createAuctionLot();
 
         uint256 maxAmountAccepted = _module.maxAmountAccepted(_lotId);
