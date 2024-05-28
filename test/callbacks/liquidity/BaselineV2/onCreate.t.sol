@@ -118,7 +118,14 @@ contract BaselineOnCreateTest is BaselineAxisLaunchTest {
     }
 
     function _roundToTickSpacing(int24 tick) internal view returns (int24) {
-        return (tick / _tickSpacing) * _tickSpacing;
+        int24 activeTick = (tick / _tickSpacing) * _tickSpacing;
+
+        // Properly handle negative numbers and edge cases
+        if (activeTick >= 0 || activeTick % _tickSpacing == 0) {
+            activeTick += _tickSpacing;
+        }
+
+        return activeTick;
     }
 
     // ============ Tests ============ //
@@ -646,6 +653,58 @@ contract BaselineOnCreateTest is BaselineAxisLaunchTest {
         (int24 floorTickLower, int24 floorTickUpper) = _baseToken.getTicks(Range.FLOOR);
         assertEq(floorTickLower, activeTickWithRounding - _tickSpacing, "floor tick lower");
         assertEq(floorTickUpper, activeTickWithRounding, "floor tick upper");
+
+        // Discovery range should be the width of discoveryTickWidth * tick spacing and above the active tick
+        (int24 discoveryTickLower, int24 discoveryTickUpper) = _baseToken.getTicks(Range.DISCOVERY);
+        assertEq(discoveryTickLower, activeTickWithRounding, "discovery tick lower");
+        assertEq(
+            discoveryTickUpper,
+            activeTickWithRounding + _DISCOVERY_TICK_WIDTH * _tickSpacing,
+            "discovery tick upper"
+        );
+    }
+
+    function test_activeTickRounded()
+        public
+        givenBPoolFeeTier(10_000)
+        givenCallbackIsCreated
+        givenFixedPrice(1e18)
+        givenAuctionIsCreated
+    {
+        // Perform the call
+        _onCreate();
+
+        // Check that the callback owner is correct
+        assertEq(_dtl.owner(), _OWNER, "owner");
+
+        // Assert base token balances
+        _assertBaseTokenBalances();
+
+        // Lot ID is set
+        assertEq(_dtl.lotId(), _lotId, "lot ID");
+
+        // Check circulating supply
+        assertEq(_dtl.initialCirculatingSupply(), _LOT_CAPACITY, "circulating supply");
+
+        // The pool should be initialised with the tick equivalent to the auction's fixed price (1e18), which is 0
+        assertEq(_baseToken.activeTick(), 0, "active tick");
+
+        // Calculate the active tick with rounding
+        int24 activeTickWithRounding = _roundToTickSpacing(0);
+        assertEq(activeTickWithRounding, _tickSpacing, "active tick with rounding");
+
+        // Anchor range should be 0 width and equal to activeTickWithRounding
+        (int24 anchorTickLower, int24 anchorTickUpper) = _baseToken.getTicks(Range.ANCHOR);
+        assertEq(anchorTickLower, activeTickWithRounding, "anchor tick lower");
+        assertEq(anchorTickUpper, activeTickWithRounding, "anchor tick upper");
+
+        // Floor range should be the width of the tick spacing and below the active tick
+        (int24 floorTickLower, int24 floorTickUpper) = _baseToken.getTicks(Range.FLOOR);
+        assertEq(floorTickLower, activeTickWithRounding - _tickSpacing, "floor tick lower");
+        assertEq(floorTickUpper, activeTickWithRounding, "floor tick upper");
+
+        // Floor lower tick should not be the same as the original active tick
+        assertNotEq(floorTickLower, 0, "floor tick lower");
 
         // Discovery range should be the width of discoveryTickWidth * tick spacing and above the active tick
         (int24 discoveryTickLower, int24 discoveryTickUpper) = _baseToken.getTicks(Range.DISCOVERY);
