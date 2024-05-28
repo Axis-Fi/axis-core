@@ -23,6 +23,13 @@ while [ $# -gt 0 ]; do
   shift
 done
 
+# Check that the CHAIN environment variable is set
+if [ -z "$CHAIN" ]
+then
+  echo "CHAIN environment variable is not set. Please set it in the .env file or provide it as an environment variable."
+  exit 1
+fi
+
 # Check that the mode is "atomic" or "batch"
 if [ "$type" != "atomic" ] && [ "$type" != "batch" ]
 then

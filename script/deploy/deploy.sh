@@ -33,6 +33,13 @@ VERIFY=${verify:-false}
 SAVE=${save:-true}
 RESUME=${resume:-false}
 
+# Check that the CHAIN environment variable is set
+if [ -z "$CHAIN" ]
+then
+  echo "CHAIN environment variable is not set. Please set it in the .env file or provide it as an environment variable."
+  exit 1
+fi
+
 # Check if DEPLOY_FILE is set
 if [ -z "$DEPLOY_FILE" ]
 then

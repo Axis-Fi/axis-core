@@ -23,6 +23,13 @@ while [ $# -gt 0 ]; do
   shift
 done
 
+# Check that the CHAIN environment variable is set
+if [ -z "$CHAIN" ]
+then
+  echo "CHAIN environment variable is not set. Please set it in the .env file or provide it as an environment variable."
+  exit 1
+fi
+
 # Check that the version is 2 or 3
 if [ "$version" != "2" ] && [ "$version" != "3" ]
 then

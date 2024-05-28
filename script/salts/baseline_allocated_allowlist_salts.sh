@@ -23,6 +23,13 @@ while [ $# -gt 0 ]; do
   shift
 done
 
+# Check that the CHAIN environment variable is set
+if [ -z "$CHAIN" ]
+then
+  echo "CHAIN environment variable is not set. Please set it in the .env file or provide it as an environment variable."
+  exit 1
+fi
+
 # Check that the kernel is a 40-byte address with a 0x prefix
 if [[ ! "$kernel" =~ ^0x[0-9a-fA-F]{40}$ ]]
 then
