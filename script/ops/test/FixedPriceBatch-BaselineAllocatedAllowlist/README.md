@@ -19,10 +19,5 @@
 
 Assumes you are using a Tenderly Virtual Testnet
 
-1. Warp to the timestamp after the auction conclusion
-
-    ```bash
-    cast rpc evm_setNextBlockTimestamp '["<TIMESTAMP>"]' --raw --rpc-url <RPC>
-    ```
-
+1. Warp to the timestamp after the auction conclusion using the warp script
 2. Run the settle auction script
