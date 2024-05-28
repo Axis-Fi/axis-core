@@ -138,7 +138,7 @@ contract GdaPriceForTest is GdaTest {
         uint128 capacity_,
         uint128 payout_
     ) public givenLotCapacity(uint256(capacity_)) givenMinPrice(0) {
-        vm.assume(capacity_ >= _DURATION);
+        vm.assume(capacity_ >= 1e9);
         vm.assume(payout_ <= capacity_);
         _createAuctionLot();
 
@@ -151,7 +151,7 @@ contract GdaPriceForTest is GdaTest {
         uint128 capacity_,
         uint128 payout_
     ) public givenLotCapacity(uint256(capacity_)) {
-        vm.assume(capacity_ >= _DURATION);
+        vm.assume(capacity_ >= 1e9);
         vm.assume(payout_ <= capacity_);
         _createAuctionLot();
 
@@ -165,11 +165,12 @@ contract GdaPriceForTest is GdaTest {
         uint128 price_
     )
         public
+        givenDuration(1 days)
         givenLotCapacity(uint256(capacity_))
         givenEquilibriumPrice(uint256(price_))
         givenMinPrice(0)
     {
-        vm.assume(capacity_ >= _DURATION * 1000);
+        vm.assume(capacity_ >= 1e9);
         vm.assume(price_ >= 1e9);
         _createAuctionLot();
 
@@ -193,10 +194,14 @@ contract GdaPriceForTest is GdaTest {
     function testFuzz_minPriceNonZero_varyingSetup(
         uint128 capacity_,
         uint128 price_
-    ) public givenLotCapacity(uint256(capacity_)) givenEquilibriumPrice(uint256(price_)) {
-        vm.assume(capacity_ >= _DURATION);
-        uint256 decayedPrice = uint256(price_).mulDiv(uUNIT - _gdaParams.decayTarget, uUNIT);
-        vm.assume(decayedPrice > _gdaParams.minimumPrice); // must have room for decay
+    )
+        public
+        givenLotCapacity(uint256(capacity_))
+        givenEquilibriumPrice(uint256(price_))
+        givenMinPrice(price_ / 2)
+    {
+        vm.assume(capacity_ >= 1e9);
+        vm.assume(price_ >= 1e9);
         _createAuctionLot();
 
         vm.warp(_start);

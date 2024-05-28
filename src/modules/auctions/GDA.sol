@@ -359,7 +359,13 @@ contract GradualDutchAuction is IGradualDutchAuction, AtomicAuctionModule {
             console2.log("kekt:", kekt.unwrap());
 
             // Calculate the first term in the formula
-            result = priceDiff.mul(ekpr).div(kekt);
+            // We convert this to a uint256 and manually perform the mulDiv
+            // to avoid precision loss from the division by 10^18 in the first
+            // multiplication operation.
+            // Since we are multiplying and then dividing, the extra 10^18s
+            // are cancelled out.
+            // result = priceDiff.mul(ekpr).div(kekt);
+            result = ud(priceDiff.intoUint256().mulDiv(ekpr.intoUint256(), kekt.intoUint256()));
             console2.log("result:", result.unwrap());
         } else {
             // T is negative: flip the e^(k * T) term to the numerator
@@ -373,6 +379,8 @@ contract GradualDutchAuction is IGradualDutchAuction, AtomicAuctionModule {
             console2.log("ekt:", ekt.unwrap());
 
             // Calculate the first term in the formula
+            // TODO should we manually calculate this to avoid precision loss?
+            // A little bit trickier to make sure we avoid overflow here.
             result = priceDiff.mul(ekpr).mul(ekt).div(auction.decayConstant);
             console2.log("result:", result.unwrap());
         }
@@ -386,6 +394,9 @@ contract GradualDutchAuction is IGradualDutchAuction, AtomicAuctionModule {
 
         // Scale price back to quote token decimals
         uint256 amount = result.intoUint256().mulDiv(quoteTokenScale, uUNIT);
+
+        // TODO do we need to add an error correction term here?
+        // Various results are slightly lower than expected.
 
         return amount;
     }
