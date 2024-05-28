@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Usage:
-# ./deploy.sh --deployFile <deploy-file> --broadcast <false> --verify <false> --save <true> --resume <false>
+# ./deploy.sh --deployFile <deploy-file> --broadcast <false> --verify <false> --save <true> --resume <false> --envFile <.env>
 #
 # Environment variables:
 # CHAIN:              Chain name to deploy to. Corresponds to names in "./script/env.json".
@@ -9,22 +9,25 @@
 # RPC_URL:            URL for the RPC node. Should be specified in .env.
 # VERIFIER_URL:       URL for the Etherscan API verifier. Should be specified when used on an unsupported chain.
 
-# Load environment variables, but respect overrides
-curenv=$(declare -p -x)
-source .env
-eval "$curenv"
-
 # Iterate through named arguments
 # Source: https://unix.stackexchange.com/a/388038
 while [ $# -gt 0 ]; do
-
-   if [[ $1 == *"--"* ]]; then
-        v="${1/--/}"
-        declare $v="$2"
-   fi
+  if [[ $1 == *"--"* ]]; then
+    v="${1/--/}"
+    declare $v="$2"
+  fi
 
   shift
 done
+
+# Get the name of the .env file or use the default
+ENV_FILE=${envFile:-".env"}
+echo "Sourcing environment variables from $ENV_FILE"
+
+# Load environment file
+set -a  # Automatically export all variables
+source $ENV_FILE
+set +a  # Disable automatic export
 
 # Apply defaults to command-line arguments
 DEPLOY_FILE=$deployFile
@@ -74,8 +77,8 @@ fi
 
 echo "Using deploy script and contract: $DEPLOY_SCRIPT:$DEPLOY_CONTRACT"
 echo "Using deployment configuration: $DEPLOY_FILE"
-echo "Using RPC at URL: $RPC_URL"
 echo "Using chain: $CHAIN"
+echo "Using RPC at URL: $RPC_URL"
 if [ -n "$VERIFIER_URL" ]; then
   echo "Using verifier at URL: $VERIFIER_URL"
 fi

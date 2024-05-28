@@ -1,27 +1,30 @@
 #!/bin/bash
 
 # Usage:
-# ./auction_house_salts.sh --type <atomic | batch> --prefix <prefix>
+# ./auction_house_salts.sh --type <atomic | batch> --prefix <prefix> --envFile <.env>
 #
 # Expects the following environment variables:
 # CHAIN: The chain to deploy to, based on values from the ./script/env.json file.
 
-# Load environment variables, but respect overrides
-curenv=$(declare -p -x)
-source .env
-eval "$curenv"
-
 # Iterate through named arguments
 # Source: https://unix.stackexchange.com/a/388038
 while [ $# -gt 0 ]; do
-
-   if [[ $1 == *"--"* ]]; then
-        v="${1/--/}"
-        declare $v="$2"
-   fi
+  if [[ $1 == *"--"* ]]; then
+    v="${1/--/}"
+    declare $v="$2"
+  fi
 
   shift
 done
+
+# Get the name of the .env file or use the default
+ENV_FILE=${envFile:-".env"}
+echo "Sourcing environment variables from $ENV_FILE"
+
+# Load environment file
+set -a  # Automatically export all variables
+source $ENV_FILE
+set +a  # Disable automatic export
 
 # Check that the CHAIN environment variable is set
 if [ -z "$CHAIN" ]
@@ -47,8 +50,8 @@ then
   exit 1
 fi
 
-echo "Using RPC at URL: $RPC_URL"
 echo "Using chain: $CHAIN"
+echo "Using RPC at URL: $RPC_URL"
 
 # If the chain contains "blast", use the Blast-specific contracts to generate bytecode
 if [[ $CHAIN == *"blast"* ]]

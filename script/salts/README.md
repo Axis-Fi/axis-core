@@ -9,13 +9,13 @@ This document provides instructions on how to generate and use salts for CREATE2
 Many of the tests use salts to deploy callbacks at addresses with a specific prefix. Changes to the state variables in the test contract can require the re-generation of the salt. To do so, perform the following:
 
 ```bash
-./script/salts/test_salts.sh <SALT_KEY>
+./script/salts/test_salts.sh --saltKey <SALT_KEY>
 ```
 
 For example, if re-generating salts for the `MockCallback` contract, make the following call:
 
 ```bash
-./script/salts/test_salts.sh MockCallback
+./script/salts/test_salts.sh --saltKey MockCallback
 ```
 
 The resulting salts will be written to the `./script/salts/salts.json` file, which the test cases will read from.
