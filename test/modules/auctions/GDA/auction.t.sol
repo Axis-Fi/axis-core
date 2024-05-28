@@ -19,7 +19,7 @@ contract GdaCreateAuctionTest is GdaTest {
     //  [X] it reverts
     // [X] when the duration is less than the globally configured minimum
     //  [X] it reverts
-    // [X] when the equilibrium price is less than 1000
+    // [X] when the equilibrium price is less than 10^(quotetoken decimals / 2)
     //  [X] it reverts
     // [X] when the equilibrium price is greater than the max uint128 value
     //  [X] it reverts
@@ -39,7 +39,9 @@ contract GdaCreateAuctionTest is GdaTest {
     //  [X] it reverts
     // [X] when capacity is greater than the max uint128 value
     //  [X] it reverts
-    // [X] when duration is greater than the max exp input divided by the calculated decay constant
+    // [X] when min price is nonzero and duration is greater than the ln of the max exp input divided by the calculated decay constant
+    //  [X] it reverts
+    // [X] when min price is zero and duration is greater than the max exp input divided by the calculated decay constant
     //  [X] it reverts
     // [X] when the inputs are all valid
     //  [X] it stores the auction data
@@ -80,9 +82,9 @@ contract GdaCreateAuctionTest is GdaTest {
         _createAuctionLot();
     }
 
-    function test_equilibriumPriceIsLessThanMin_reverts(uint16 price_)
+    function test_equilibriumPriceIsLessThanMin_reverts(uint128 price_)
         public
-        givenEquilibriumPrice(uint256(price_) % 1000)
+        givenEquilibriumPrice(uint256(price_) % 1e9)
     {
         // Expect revert
         bytes memory err = abi.encodeWithSelector(IAuction.Auction_InvalidParams.selector);
@@ -132,7 +134,7 @@ contract GdaCreateAuctionTest is GdaTest {
         _createAuctionLot();
     }
 
-    function test_minPriceGreaterThanDecayTargePrice_reverts()
+    function test_minPriceGreaterThanDecayTargetPrice_reverts()
         public
         givenMinPrice(4e18)
         givenDecayTarget(25e16) // 25% decay from 5e18 is 3.75e18
@@ -145,7 +147,7 @@ contract GdaCreateAuctionTest is GdaTest {
         _createAuctionLot();
     }
 
-    function test_minPriceEqualToDecayTargePrice_reverts()
+    function test_minPriceEqualToDecayTargetPrice_reverts()
         public
         givenMinPrice(4e18)
         givenDecayTarget(20e16) // 20% decay from 5e18 is 4e18
@@ -172,7 +174,7 @@ contract GdaCreateAuctionTest is GdaTest {
 
     function test_decayTargetGreaterThanMaximum_reverts()
         public
-        givenDecayTarget(50e16 + 1) // slightly more than 50%
+        givenDecayTarget(49e16 + 1) // slightly more than 49%
     {
         // Expect revert
         bytes memory err = abi.encodeWithSelector(IAuction.Auction_InvalidParams.selector);
@@ -220,7 +222,7 @@ contract GdaCreateAuctionTest is GdaTest {
         uint8 decayHours_
     ) public {
         // Normalize the inputs
-        uint256 decayTarget = uint256(decayTarget_ % 50 == 0 ? 50 : decayTarget_ % 50) * 1e16;
+        uint256 decayTarget = uint256(decayTarget_ % 49 == 0 ? 49 : decayTarget_ % 49) * 1e16;
         uint256 decayPeriod = uint256(decayHours_ % 168 == 0 ? 168 : decayHours_ % 168) * 1 hours;
         console2.log("Decay target:", decayTarget);
         console2.log("Decay period:", decayPeriod);
@@ -259,12 +261,53 @@ contract GdaCreateAuctionTest is GdaTest {
         _createAuctionLot();
     }
 
-    function testFuzz_durationEqualMaxExpInputDividedByDecayConstant_succeeds(
+    function testFuzz_minPriceNonZero_durationEqualLnMaxExpInputDividedByDecayConstant_succeeds(
         uint8 decayTarget_,
         uint8 decayHours_
     ) public {
         // Normalize the inputs
-        uint256 decayTarget = uint256(decayTarget_ % 50 == 0 ? 50 : decayTarget_ % 50) * 1e16;
+        uint256 decayTarget = uint256(decayTarget_ % 49 == 0 ? 49 : decayTarget_ % 49) * 1e16;
+        uint256 decayPeriod = uint256(decayHours_ % 168 == 0 ? 168 : decayHours_ % 168) * 1 hours;
+        console2.log("Decay target:", decayTarget);
+        console2.log("Decay period:", decayPeriod);
+
+        // Calculate the decay constant
+        // q1 > qm here because qm < q0 * 0.50, which is the max decay target
+        uint256 quoteTokenScale = 10 ** _quoteTokenDecimals;
+        UD60x18 q0 = ud(_gdaParams.equilibriumPrice.mulDiv(uUNIT, quoteTokenScale));
+        UD60x18 q1 = q0.mul(UNIT - ud(decayTarget)).div(UNIT);
+        UD60x18 qm = ud(_gdaParams.minimumPrice.mulDiv(uUNIT, quoteTokenScale));
+
+        console2.log("q0:", q0.unwrap());
+        console2.log("q1:", q1.unwrap());
+        console2.log("qm:", qm.unwrap());
+
+        // Calculate the decay constant
+        UD60x18 decayConstant = (q0 - qm).div(q1 - qm).ln().div(convert(decayPeriod).div(_ONE_DAY));
+        console2.log("Decay constant:", decayConstant.unwrap());
+
+        // Calculate the maximum duration in seconds
+        uint256 maxDuration = convert(LN_OF_EXP_MAX_INPUT.div(decayConstant).mul(_ONE_DAY));
+        console2.log("Max duration:", maxDuration);
+
+        // Set the decay target and decay period to the fuzzed values
+        // Set duration to the max duration
+        _gdaParams.decayTarget = decayTarget;
+        _gdaParams.decayPeriod = decayPeriod;
+        _auctionParams.implParams = abi.encode(_gdaParams);
+        _auctionParams.duration = uint48(maxDuration);
+
+        // Call the function
+        _createAuctionLot();
+    }
+
+     function testFuzz_minPriceZero_durationEqualMaxExpInputDividedByDecayConstant_succeeds(
+        uint8 decayTarget_,
+        uint8 decayHours_
+    ) public givenMinPrice(0)
+    {
+        // Normalize the inputs
+        uint256 decayTarget = uint256(decayTarget_ % 49 == 0 ? 49 : decayTarget_ % 49) * 1e16;
         uint256 decayPeriod = uint256(decayHours_ % 168 == 0 ? 168 : decayHours_ % 168) * 1 hours;
         console2.log("Decay target:", decayTarget);
         console2.log("Decay period:", decayPeriod);

@@ -27,10 +27,11 @@ abstract contract GdaTest is Test, Permit2User {
     uint256 internal constant _LOT_CAPACITY = 10e18;
     uint48 internal constant _DURATION = 2 days;
     uint256 internal constant _INITIAL_PRICE = 5e18;
-    uint256 internal constant _MIN_PRICE = 2e18;
+    uint256 internal constant _MIN_PRICE = 25e17;
     uint256 internal constant _DECAY_TARGET = 10e16; // 10%
     uint256 internal constant _DECAY_PERIOD = 12 hours;
     UD60x18 internal constant _ONE_DAY = UD60x18.wrap(1 days * uUNIT);
+    UD60x18 internal constant LN_OF_EXP_MAX_INPUT = UD60x18.wrap(4_890982451446117211);
 
     AtomicAuctionHouse internal _auctionHouse;
     GradualDutchAuction internal _module;

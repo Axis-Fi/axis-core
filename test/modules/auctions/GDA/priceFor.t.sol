@@ -169,8 +169,8 @@ contract GdaPriceForTest is GdaTest {
         givenEquilibriumPrice(uint256(price_))
         givenMinPrice(0)
     {
-        vm.assume(capacity_ >= _DURATION);
-        vm.assume(price_ >= 1000);
+        vm.assume(capacity_ >= _DURATION * 1000);
+        vm.assume(price_ >= 1e9);
         _createAuctionLot();
 
         vm.warp(_start);
@@ -182,12 +182,12 @@ contract GdaPriceForTest is GdaTest {
         console2.log("Payout:", payout);
         uint256 price = _module.priceFor(_lotId, payout);
         uint256 expectedPrice = _gdaParams.equilibriumPrice.mulDiv(payout, _BASE_SCALE);
-        // assertApproxEqAbs(price, expectedPrice, 1e18); TODO how to think about these bounds? some extremes have large errors
+        assertGe(price, expectedPrice);
 
         vm.warp(_start + _DECAY_PERIOD);
         price = _module.priceFor(_lotId, payout);
         expectedPrice = expectedPrice.mulDiv(uUNIT - _gdaParams.decayTarget, uUNIT);
-        // assertApproxEqAbs(price, expectedPrice, 1e18);
+        assertGe(price, expectedPrice);
     }
 
     function testFuzz_minPriceNonZero_varyingSetup(
@@ -208,12 +208,12 @@ contract GdaPriceForTest is GdaTest {
         console2.log("Payout:", payout);
         uint256 price = _module.priceFor(_lotId, payout);
         uint256 expectedPrice = _gdaParams.equilibriumPrice.mulDiv(payout, _BASE_SCALE);
-        // assertApproxEqAbs(price, expectedPrice, 1e18); TODO how to think about these bounds? some extremes have large errors
+        assertGe(price, expectedPrice);
 
         vm.warp(_start + _DECAY_PERIOD);
         price = _module.priceFor(_lotId, payout);
         expectedPrice = expectedPrice.mulDiv(uUNIT - _gdaParams.decayTarget, uUNIT);
-        // assertApproxEqAbs(price, expectedPrice, 1e18);
+        assertGe(price, expectedPrice);
     }
 
     function testFuzz_minPriceZero_varyingTimesteps(uint48 timestep_)

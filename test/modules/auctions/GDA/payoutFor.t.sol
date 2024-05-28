@@ -5,7 +5,7 @@ import {Module} from "src/modules/Modules.sol";
 import {IAuction} from "src/interfaces/modules/IAuction.sol";
 import {IGradualDutchAuction} from "src/interfaces/modules/auctions/IGradualDutchAuction.sol";
 
-import {UD60x18, ud, convert, UNIT, uUNIT, EXP_MAX_INPUT} from "lib/prb-math/src/UD60x18.sol";
+import {UD60x18, ud, convert, UNIT, uUNIT, ZERO, EXP_MAX_INPUT} from "lib/prb-math/src/UD60x18.sol";
 import "lib/prb-math/src/Common.sol" as PRBMath;
 
 import {GdaTest} from "test/modules/auctions/GDA/GDATest.sol";
@@ -233,6 +233,80 @@ contract GdaPayoutForTest is GdaTest {
         vm.warp(_start);
 
         _module.payoutFor(_lotId, amount_);
+    }
+
+    function testFuzz_minPriceZero_varyingSetup(
+        uint128 capacity_,
+        uint128 price_
+    )
+        public
+        givenLotCapacity(uint256(capacity_))
+        givenEquilibriumPrice(uint256(price_))
+        givenMinPrice(0)
+    {
+        vm.assume(price_ >= 1e9);
+        vm.assume(capacity_ >= 1e9);
+        UD60x18 q0 = ud(uint256(price_).mulDiv(uUNIT, 10 ** _quoteTokenDecimals));
+        UD60x18 r = ud(uint256(capacity_).mulDiv(uUNIT, 10 ** _baseTokenDecimals).mulDiv(1 days, _DURATION));
+        vm.assume(q0.mul(r) > ZERO);
+        _createAuctionLot();
+
+        vm.warp(_start);
+
+        console2.log("Capacity:", capacity_);
+        console2.log("Price:", price_);
+
+        uint256 expectedPayout = _auctionParams.capacity / _DURATION;
+        uint256 amount = _gdaParams.equilibriumPrice.mulDiv(expectedPayout, _BASE_SCALE);
+        console2.log("Amount:", amount);
+        uint256 payout = _module.payoutFor(_lotId, amount);
+        assertLe(payout, expectedPayout);
+        // assertApproxEqRel(payout, expectedPayout, 1e16); //TODO how to think about these bounds? some extremes have large errors
+
+        vm.warp(_start + _DECAY_PERIOD);
+        amount = _gdaParams.equilibriumPrice.mulDiv(uUNIT - _gdaParams.decayTarget, uUNIT).mulDiv(expectedPayout, _BASE_SCALE);
+        payout = _module.payoutFor(_lotId, amount);
+        assertLe(payout, expectedPayout);
+        // assertApproxEqRel(payout, expectedPayout, 1e16);
+    }
+
+    function testFuzz_minPriceNonZero_varyingSetup(
+        uint128 capacity_,
+        uint128 price_,
+        uint128 minPrice_
+    )
+        public
+        givenLotCapacity(uint256(capacity_))
+        givenEquilibriumPrice(uint256(price_))
+        givenMinPrice(minPrice_ < price_ / 2 ? uint256(price_ / 2) : uint256(minPrice_))
+        givenDuration(1 days)
+    {
+        vm.assume(capacity_ >= 1e9);
+        vm.assume(minPrice_ >= 1e9);
+        vm.assume(uint256(price_) * 9 / 10 > _gdaParams.minimumPrice); // must have clearance for the decay target
+        // vm.assume(minPrice_ >= price_ / 2); // requirement when min price is not zero
+        UD60x18 q0 = ud(uint256(price_).mulDiv(uUNIT, 10 ** _quoteTokenDecimals));
+        UD60x18 r = ud(uint256(capacity_).mulDiv(uUNIT, 10 ** _baseTokenDecimals).mulDiv(1 days, _auctionParams.duration));
+        vm.assume(q0.mul(r) > ZERO);
+        _createAuctionLot();
+
+        vm.warp(_start);
+
+        console2.log("Capacity:", capacity_);
+        console2.log("Price:", price_);
+
+        uint256 expectedPayout = _auctionParams.capacity / _auctionParams.duration;
+        uint256 amount = _gdaParams.equilibriumPrice.mulDiv(expectedPayout, _BASE_SCALE);
+        console2.log("Amount:", amount);
+        uint256 payout = _module.payoutFor(_lotId, amount);
+        assertLe(payout, expectedPayout);
+        // assertApproxEqRel(payout, expectedPayout, 1e16); //TODO how to think about these bounds? some extremes have large errors
+
+        vm.warp(_start + _auctionParams.duration);
+        amount = _gdaParams.equilibriumPrice.mulDiv(uUNIT - _gdaParams.decayTarget, uUNIT).mulDiv(expectedPayout, _BASE_SCALE);
+        payout = _module.payoutFor(_lotId, amount);
+        assertLe(payout, expectedPayout);
+        // assertApproxEqRel(payout, expectedPayout, 1e16);
     }
 
     function testFuzz_minPriceZero_varyingTimesteps(uint48 timestep_)

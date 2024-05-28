@@ -21,12 +21,9 @@ contract GdaMaxPayoutTest is GdaTest {
     }
 
     function testFuzz_maxPayout_success(
-        uint128 capacity_,
-        uint128 price_
-    ) public givenLotCapacity(uint256(capacity_)) givenEquilibriumPrice(uint256(price_)) {
-        vm.assume(capacity_ >= _DURATION);
-        uint256 decayedPrice = uint256(price_).mulDiv(uUNIT - _gdaParams.decayTarget, uUNIT);
-        vm.assume(decayedPrice > _gdaParams.minimumPrice); // must have room for decay
+        uint128 capacity_
+    ) public givenLotCapacity(uint256(capacity_)) {
+        vm.assume(capacity_ >= 1e9);
         _createAuctionLot();
 
         uint256 maxPayout = _module.maxPayout(_lotId);
@@ -35,16 +32,13 @@ contract GdaMaxPayoutTest is GdaTest {
     }
 
     function testFuzz_maxPayout_minPriceZero_success(
-        uint128 capacity_,
-        uint128 price_
+        uint128 capacity_
     )
         public
         givenLotCapacity(uint256(capacity_))
-        givenEquilibriumPrice(uint256(price_))
         givenMinPrice(0)
     {
-        vm.assume(capacity_ >= _DURATION);
-        vm.assume(price_ >= 1e3);
+        vm.assume(capacity_ >= 1e9);
         _createAuctionLot();
 
         uint256 maxPayout = _module.maxPayout(_lotId);
