@@ -22,7 +22,7 @@
     "solhint:all": "solhint --fix --config ./.solhint.json 'src/**/*.sol' 'test/**/*.sol' 'script/**/*.sol'",
     "solhint:check": "solhint --config ./.solhint.json 'src/**/*.sol'",
     "solhint": "solhint --fix --config ./.solhint.json 'src/**/*.sol'",
-    "test": "forge test"
+    "test": "forge test -vvv"
   },
   "keywords": [],
   "author": "",
