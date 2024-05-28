@@ -738,9 +738,7 @@ contract BaselineOnCreateTest is BaselineAxisLaunchTest {
         (int24 discoveryTickLower, int24 discoveryTickUpper) = _baseToken.getTicks(Range.DISCOVERY);
         assertEq(discoveryTickLower, 0, "discovery tick lower");
         assertEq(
-            discoveryTickUpper,
-            0 + _DISCOVERY_TICK_WIDTH * _tickSpacing,
-            "discovery tick upper"
+            discoveryTickUpper, 0 + _DISCOVERY_TICK_WIDTH * _tickSpacing, "discovery tick upper"
         );
     }
 }
