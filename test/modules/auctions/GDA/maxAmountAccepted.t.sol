@@ -27,18 +27,14 @@ contract GdaMaxAmountAcceptedTest is GdaTest {
     )
         public
         givenDuration(1 days)
-        givenLotCapacity(uint256(capacity_))
-        givenEquilibriumPrice(uint256(price_))
-        givenMinPrice((uint256(price_) / 2) + (price_ % 2 == 0 ? 0 : 1))
+        givenLotCapacity(capacity_)
+        givenEquilibriumPrice(price_)
+        givenMinIsHalfPrice(price_)
+        validateCapacity
+        validatePrice
+        validatePriceTimesEmissionsRate
+        givenLotIsCreated
     {
-        vm.assume(
-            capacity_ >= 10 ** ((_baseTokenDecimals / 2) + (_baseTokenDecimals % 2 == 0 ? 0 : 1))
-        );
-        vm.assume(
-            price_ >= 2 * 10 ** ((_quoteTokenDecimals / 2) + (_quoteTokenDecimals % 2 == 0 ? 0 : 1))
-        );
-        _createAuctionLot();
-
         uint256 maxAmountAccepted = _module.maxAmountAccepted(_lotId);
         uint256 expectedAmount = _module.priceFor(_lotId, capacity_);
         assertEq(expectedAmount, maxAmountAccepted);
@@ -50,22 +46,14 @@ contract GdaMaxAmountAcceptedTest is GdaTest {
     )
         public
         givenDuration(1 days)
-        givenLotCapacity(uint256(capacity_))
-        givenEquilibriumPrice(uint256(price_))
+        givenLotCapacity(capacity_)
+        givenEquilibriumPrice(price_)
         givenMinPrice(0)
+        validateCapacity
+        validatePrice
+        validatePriceTimesEmissionsRate
+        givenLotIsCreated
     {
-        console2.log(
-            "price floor:",
-            10 ** ((_quoteTokenDecimals / 2) + (_quoteTokenDecimals % 2 == 0 ? 0 : 1))
-        );
-        vm.assume(
-            capacity_ >= 10 ** ((_baseTokenDecimals / 2) + (_baseTokenDecimals % 2 == 0 ? 0 : 1))
-        );
-        vm.assume(
-            price_ >= 10 ** ((_quoteTokenDecimals / 2) + (_quoteTokenDecimals % 2 == 0 ? 0 : 1))
-        );
-        _createAuctionLot();
-
         uint256 maxAmountAccepted = _module.maxAmountAccepted(_lotId);
         uint256 expectedAmount = _module.priceFor(_lotId, capacity_);
         assertEq(expectedAmount, maxAmountAccepted);
@@ -78,18 +66,14 @@ contract GdaMaxAmountAcceptedTest is GdaTest {
         public
         givenDuration(1 days)
         givenQuoteTokenDecimals(6)
-        givenLotCapacity(uint256(capacity_))
-        givenEquilibriumPrice(uint256(price_))
-        givenMinPrice((uint256(price_) / 2) + (price_ % 2 == 0 ? 0 : 1))
+        givenLotCapacity(capacity_)
+        givenEquilibriumPrice(price_)
+        givenMinIsHalfPrice(price_)
+        validateCapacity
+        validatePrice
+        validatePriceTimesEmissionsRate
+        givenLotIsCreated
     {
-        vm.assume(
-            capacity_ >= 10 ** ((_baseTokenDecimals / 2) + (_baseTokenDecimals % 2 == 0 ? 0 : 1))
-        );
-        vm.assume(
-            price_ >= 2 * 10 ** ((_quoteTokenDecimals / 2) + (_quoteTokenDecimals % 2 == 0 ? 0 : 1))
-        );
-        _createAuctionLot();
-
         uint256 maxAmountAccepted = _module.maxAmountAccepted(_lotId);
         uint256 expectedAmount = _module.priceFor(_lotId, capacity_);
         assertEq(expectedAmount, maxAmountAccepted);
@@ -102,18 +86,14 @@ contract GdaMaxAmountAcceptedTest is GdaTest {
         public
         givenDuration(1 days)
         givenQuoteTokenDecimals(6)
-        givenLotCapacity(uint256(capacity_))
-        givenEquilibriumPrice(uint256(price_))
+        givenLotCapacity(capacity_)
+        givenEquilibriumPrice(price_)
         givenMinPrice(0)
+        validateCapacity
+        validatePrice
+        validatePriceTimesEmissionsRate
+        givenLotIsCreated
     {
-        vm.assume(
-            capacity_ >= 10 ** ((_baseTokenDecimals / 2) + (_baseTokenDecimals % 2 == 0 ? 0 : 1))
-        );
-        vm.assume(
-            price_ >= 10 ** ((_quoteTokenDecimals / 2) + (_quoteTokenDecimals % 2 == 0 ? 0 : 1))
-        );
-        _createAuctionLot();
-
         uint256 maxAmountAccepted = _module.maxAmountAccepted(_lotId);
         uint256 expectedAmount = _module.priceFor(_lotId, capacity_);
         assertEq(expectedAmount, maxAmountAccepted);
@@ -126,18 +106,14 @@ contract GdaMaxAmountAcceptedTest is GdaTest {
         public
         givenDuration(1 days)
         givenBaseTokenDecimals(6)
-        givenLotCapacity(uint256(capacity_))
-        givenEquilibriumPrice(uint256(price_))
-        givenMinPrice((uint256(price_) / 2) + (price_ % 2 == 0 ? 0 : 1))
+        givenLotCapacity(capacity_)
+        givenEquilibriumPrice(price_)
+        givenMinIsHalfPrice(price_)
+        validateCapacity
+        validatePrice
+        validatePriceTimesEmissionsRate
+        givenLotIsCreated
     {
-        vm.assume(
-            capacity_ >= 10 ** ((_baseTokenDecimals / 2) + (_baseTokenDecimals % 2 == 0 ? 0 : 1))
-        );
-        vm.assume(
-            price_ >= 2 * 10 ** ((_quoteTokenDecimals / 2) + (_quoteTokenDecimals % 2 == 0 ? 0 : 1))
-        );
-        _createAuctionLot();
-
         uint256 maxAmountAccepted = _module.maxAmountAccepted(_lotId);
         uint256 expectedAmount = _module.priceFor(_lotId, capacity_);
         assertEq(expectedAmount, maxAmountAccepted);
@@ -150,18 +126,14 @@ contract GdaMaxAmountAcceptedTest is GdaTest {
         public
         givenDuration(1 days)
         givenBaseTokenDecimals(6)
-        givenLotCapacity(uint256(capacity_))
-        givenEquilibriumPrice(uint256(price_))
+        givenLotCapacity(capacity_)
+        givenEquilibriumPrice(price_)
         givenMinPrice(0)
+        validateCapacity
+        validatePrice
+        validatePriceTimesEmissionsRate
+        givenLotIsCreated
     {
-        vm.assume(
-            capacity_ >= 10 ** ((_baseTokenDecimals / 2) + (_baseTokenDecimals % 2 == 0 ? 0 : 1))
-        );
-        vm.assume(
-            price_ >= 10 ** ((_quoteTokenDecimals / 2) + (_quoteTokenDecimals % 2 == 0 ? 0 : 1))
-        );
-        _createAuctionLot();
-
         uint256 maxAmountAccepted = _module.maxAmountAccepted(_lotId);
         uint256 expectedAmount = _module.priceFor(_lotId, capacity_);
         assertEq(expectedAmount, maxAmountAccepted);

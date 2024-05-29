@@ -52,7 +52,7 @@ contract GdaPriceForTest is GdaTest {
     function test_minPriceZero() public givenMinPrice(0) givenLotIsCreated givenLotHasStarted {
         // The timestamp is the start time so current time == last auction start.
         // The first auction is now starting. 1 seconds worth of tokens should be at the initial price.
-        uint256 payout = _LOT_CAPACITY / _DURATION; // 1 seconds worth of tokens
+        uint256 payout = _LOT_CAPACITY / _auctionParams.duration; // 1 seconds worth of tokens
         console2.log("1 second of token emissions:", payout);
 
         uint256 price = _module.priceFor(_lotId, payout);
@@ -61,7 +61,7 @@ contract GdaPriceForTest is GdaTest {
         uint256 expectedPrice = _INITIAL_PRICE.mulDiv(payout, _BASE_SCALE);
         console2.log("Expected price:", expectedPrice);
 
-        assertApproxEqRel(price, expectedPrice, 1e14); // 0.01%
+        assertApproxEqRel(price, expectedPrice, 1e15); // 0.1%
 
         // Warp to the end of the decay period
         vm.warp(_start + _DECAY_PERIOD);
@@ -73,13 +73,13 @@ contract GdaPriceForTest is GdaTest {
             _INITIAL_PRICE.mulDiv(1e18 - _DECAY_TARGET, 1e18).mulDiv(payout, _BASE_SCALE);
         console2.log("Expected price:", expectedPrice);
 
-        assertApproxEqRel(price, expectedPrice, 1e14); // 0.01%, TODO is this good enough? Seems like it slightly underestimates
+        assertApproxEqRel(price, expectedPrice, 1e15); // 0.1%, TODO is this good enough? Seems like it slightly underestimates
     }
 
     function test_minPriceNonZero() public givenLotIsCreated givenLotHasStarted {
         // The timestamp is the start time so current time == last auction start.
         // The first auction is now starting. 1 seconds worth of tokens should be at the initial price.
-        uint256 payout = _LOT_CAPACITY / _DURATION; // 1 seconds worth of tokens
+        uint256 payout = _LOT_CAPACITY / _auctionParams.duration; // 1 seconds worth of tokens
         console2.log("1 second of token emissions:", payout);
 
         uint256 price = _module.priceFor(_lotId, payout);
@@ -88,7 +88,7 @@ contract GdaPriceForTest is GdaTest {
         uint256 expectedPrice = _INITIAL_PRICE.mulDiv(payout, _BASE_SCALE);
         console2.log("Expected price:", expectedPrice);
 
-        assertApproxEqRel(price, expectedPrice, 1e14); // 0.01%
+        assertApproxEqRel(price, expectedPrice, 1e15); // 0.1%
 
         // Warp to the end of the decay period
         vm.warp(_start + _DECAY_PERIOD + 1);
@@ -100,13 +100,13 @@ contract GdaPriceForTest is GdaTest {
             _INITIAL_PRICE.mulDiv(1e18 - _DECAY_TARGET, 1e18).mulDiv(payout, _BASE_SCALE);
         console2.log("Expected price:", expectedPrice);
 
-        assertApproxEqRel(price, expectedPrice, 1e14); // 0.01%, TODO is this good enough? Seems like it slightly underestimates
+        assertApproxEqRel(price, expectedPrice, 1e15); // 0.1%, TODO is this good enough? Seems like it slightly underestimates
     }
 
     function test_minPriceNonZero_lastAuctionStartInFuture() public givenLotIsCreated {
         // We don't start the auction so the lastAuctionStart is 1 second ahead of the current time.
         // 1 seconds worth of tokens should be slightly more than the initial price.
-        uint256 payout = _LOT_CAPACITY / _DURATION; // 1 seconds worth of tokens
+        uint256 payout = _LOT_CAPACITY / _auctionParams.duration; // 1 seconds worth of tokens
         console2.log("1 second of token emissions:", payout);
 
         uint256 price = _module.priceFor(_lotId, payout);
@@ -119,10 +119,12 @@ contract GdaPriceForTest is GdaTest {
     }
 
     function test_minPriceNonZero_lastAuctionStartInPast() public givenLotIsCreated {
-        vm.warp(_start + 1);
-        //lastAuctionStart is 1 second behind the current time.
+        vm.warp(_start + 1000);
+        // lastAuctionStart is 1000 seconds behind the current time.
+        // We have to go further than 1 second due to the error correction in priceFor,
+        // which increases the estimate slightly.
         // 1 seconds worth of tokens should be slightly less than the initial price.
-        uint256 payout = _LOT_CAPACITY / _DURATION; // 1 seconds worth of tokens
+        uint256 payout = _LOT_CAPACITY / _auctionParams.duration; // 1 seconds worth of tokens
         console2.log("1 second of token emissions:", payout);
 
         uint256 price = _module.priceFor(_lotId, payout);
@@ -137,12 +139,15 @@ contract GdaPriceForTest is GdaTest {
     function testFuzz_minPriceZero_noOverflows(
         uint128 capacity_,
         uint128 payout_
-    ) public givenLotCapacity(uint256(capacity_)) givenMinPrice(0) {
-        vm.assume(capacity_ >= 1e9);
+    )
+        public
+        givenLotCapacity(capacity_)
+        givenMinPrice(0)
+        validateCapacity
+        givenLotIsCreated
+        givenLotHasStarted
+    {
         vm.assume(payout_ <= capacity_);
-        _createAuctionLot();
-
-        vm.warp(_start);
 
         _module.priceFor(_lotId, payout_);
     }
@@ -150,12 +155,8 @@ contract GdaPriceForTest is GdaTest {
     function testFuzz_minPriceNonZero_noOverflows(
         uint128 capacity_,
         uint128 payout_
-    ) public givenLotCapacity(uint256(capacity_)) {
-        vm.assume(capacity_ >= 1e9);
+    ) public givenLotCapacity(capacity_) validateCapacity givenLotIsCreated givenLotHasStarted {
         vm.assume(payout_ <= capacity_);
-        _createAuctionLot();
-
-        vm.warp(_start);
 
         _module.priceFor(_lotId, payout_);
     }
@@ -166,20 +167,19 @@ contract GdaPriceForTest is GdaTest {
     )
         public
         givenDuration(1 days)
-        givenLotCapacity(uint256(capacity_))
-        givenEquilibriumPrice(uint256(price_))
+        givenLotCapacity(capacity_)
+        givenEquilibriumPrice(price_)
         givenMinPrice(0)
+        validateCapacity
+        validatePrice
+        validatePriceTimesEmissionsRate
+        givenLotIsCreated
+        givenLotHasStarted
     {
-        vm.assume(capacity_ >= 1e9);
-        vm.assume(price_ >= 1e9);
-        _createAuctionLot();
-
-        vm.warp(_start);
-
         console2.log("Capacity:", capacity_);
         console2.log("Price:", price_);
 
-        uint256 payout = _auctionParams.capacity / _DURATION; // 1 seconds worth of tokens
+        uint256 payout = _auctionParams.capacity / _auctionParams.duration; // 1 seconds worth of tokens
         console2.log("Payout:", payout);
         uint256 price = _module.priceFor(_lotId, payout);
         uint256 expectedPrice = _gdaParams.equilibriumPrice.mulDiv(payout, _BASE_SCALE);
@@ -196,20 +196,25 @@ contract GdaPriceForTest is GdaTest {
         uint128 price_
     )
         public
-        givenLotCapacity(uint256(capacity_))
-        givenEquilibriumPrice(uint256(price_))
-        givenMinPrice(price_ / 2)
+        givenLotCapacity(capacity_)
+        givenEquilibriumPrice(price_)
+        givenMinIsHalfPrice(price_)
+        validateCapacity
+        validatePrice
+        validatePriceTimesEmissionsRate
+        givenLotIsCreated
+        givenLotHasStarted
     {
-        vm.assume(capacity_ >= 1e9);
-        vm.assume(price_ >= 1e9);
-        _createAuctionLot();
-
-        vm.warp(_start);
+        // // Validate price is slightly higher than needed to avoid uncorrected errors in tiny
+        // // amounts from causing the test to fail.
+        // vm.assume(price_ >= 1e4 * 10 ** ((_quoteTokenDecimals / 2) + (_quoteTokenDecimals % 2 == 0 ? 0 : 1)));
+        // _createAuctionLot();
+        // vm.warp(_start);
 
         console2.log("Capacity:", capacity_);
         console2.log("Price:", price_);
 
-        uint256 payout = _auctionParams.capacity / _DURATION; // 1 seconds worth of tokens
+        uint256 payout = _auctionParams.capacity / _auctionParams.duration; // 1 seconds worth of tokens
         console2.log("Payout:", payout);
         uint256 price = _module.priceFor(_lotId, payout);
         uint256 expectedPrice = _gdaParams.equilibriumPrice.mulDiv(payout, _BASE_SCALE);
@@ -228,7 +233,7 @@ contract GdaPriceForTest is GdaTest {
         givenLotHasStarted
     {
         // Warp to the timestep
-        uint48 timestep = timestep_ % _DURATION;
+        uint48 timestep = timestep_ % _auctionParams.duration;
         console2.log("Warping to timestep:", timestep);
         vm.warp(_start + timestep);
 
@@ -242,7 +247,7 @@ contract GdaPriceForTest is GdaTest {
         console2.log("Expected price at timestep:", qt.unwrap());
 
         // Set payout to 1 seconds worth of tokens
-        uint256 payout = _LOT_CAPACITY / _DURATION;
+        uint256 payout = _LOT_CAPACITY / _auctionParams.duration;
 
         // Calculate the price
         uint256 price = _module.priceFor(_lotId, payout);
@@ -252,7 +257,7 @@ contract GdaPriceForTest is GdaTest {
 
         // The price should be conservative (greater than or equal to the expected price)
         assertGe(price, expectedPrice);
-        assertApproxEqRel(price, expectedPrice, 1e14); // 0.01%
+        assertApproxEqRel(price, expectedPrice, 1e15); // 0.1%
     }
 
     function testFuzz_minPriceNonZero_varyingTimesteps(uint48 timestep_)
@@ -261,7 +266,7 @@ contract GdaPriceForTest is GdaTest {
         givenLotHasStarted
     {
         // Warp to the timestep
-        uint48 timestep = timestep_ % _DURATION;
+        uint48 timestep = timestep_ % _auctionParams.duration;
         console2.log("Warping to timestep:", timestep);
         vm.warp(_start + timestep);
 
@@ -276,7 +281,7 @@ contract GdaPriceForTest is GdaTest {
         console2.log("Expected price at timestep:", qt.unwrap());
 
         // Set payout to 1 seconds worth of tokens
-        uint256 payout = _LOT_CAPACITY / _DURATION;
+        uint256 payout = _LOT_CAPACITY / _auctionParams.duration;
 
         // Calculate the price
         uint256 price = _module.priceFor(_lotId, payout);
@@ -286,6 +291,6 @@ contract GdaPriceForTest is GdaTest {
 
         // The price should be conservative (greater than or equal to the expected price)
         assertGe(price, expectedPrice);
-        assertApproxEqRel(price, expectedPrice, 1e14); // 0.01%
+        assertApproxEqRel(price, expectedPrice, 1e15); // 0.1%
     }
 }

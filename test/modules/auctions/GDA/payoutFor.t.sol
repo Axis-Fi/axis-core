@@ -214,12 +214,15 @@ contract GdaPayoutForTest is GdaTest {
     function testFuzz_minPriceZero_noOverflows(
         uint128 capacity_,
         uint128 amount_
-    ) public givenLotCapacity(uint256(capacity_)) givenMinPrice(0) {
-        vm.assume(capacity_ >= _DURATION);
-        _createAuctionLot();
+    )
+        public
+        givenLotCapacity(capacity_)
+        givenMinPrice(0)
+        validateCapacity
+        givenLotIsCreated
+        givenLotHasStarted
+    {
         vm.assume(amount_ <= _module.maxAmountAccepted(_lotId));
-
-        vm.warp(_start);
 
         _module.payoutFor(_lotId, amount_);
     }
@@ -227,12 +230,8 @@ contract GdaPayoutForTest is GdaTest {
     function testFuzz_minPriceNonZero_noOverflows(
         uint128 capacity_,
         uint128 amount_
-    ) public givenLotCapacity(uint256(capacity_)) {
-        vm.assume(capacity_ >= _DURATION);
-        _createAuctionLot();
+    ) public givenLotCapacity(capacity_) validateCapacity givenLotIsCreated givenLotHasStarted {
         vm.assume(amount_ <= _module.maxAmountAccepted(_lotId));
-
-        vm.warp(_start);
 
         _module.payoutFor(_lotId, amount_);
     }
@@ -242,20 +241,15 @@ contract GdaPayoutForTest is GdaTest {
         uint128 price_
     )
         public
-        givenLotCapacity(uint256(capacity_))
-        givenEquilibriumPrice(uint256(price_))
+        givenLotCapacity(capacity_)
+        givenEquilibriumPrice(price_)
         givenMinPrice(0)
+        validateCapacity
+        validatePrice
+        validatePriceTimesEmissionsRate
+        givenLotIsCreated
+        givenLotHasStarted
     {
-        vm.assume(price_ >= 1e9);
-        vm.assume(capacity_ >= 1e9);
-        UD60x18 q0 = ud(uint256(price_).mulDiv(uUNIT, 10 ** _quoteTokenDecimals));
-        UD60x18 r =
-            ud(uint256(capacity_).mulDiv(uUNIT, 10 ** _baseTokenDecimals).mulDiv(1 days, _DURATION));
-        vm.assume(q0.mul(r) > ZERO);
-        _createAuctionLot();
-
-        vm.warp(_start);
-
         console2.log("Capacity:", capacity_);
         console2.log("Price:", price_);
 
@@ -281,26 +275,16 @@ contract GdaPayoutForTest is GdaTest {
         uint128 minPrice_
     )
         public
-        givenLotCapacity(uint256(capacity_))
-        givenEquilibriumPrice(uint256(price_))
-        givenMinPrice(minPrice_ < price_ / 2 ? uint256(price_ / 2) : uint256(minPrice_))
-        givenDuration(1 days)
+        givenLotCapacity(capacity_)
+        givenEquilibriumPrice(price_)
+        givenMinPrice(minPrice_)
+        validateCapacity
+        validatePrice
+        validateMinPrice
+        validatePriceTimesEmissionsRate
+        givenLotIsCreated
+        givenLotHasStarted
     {
-        vm.assume(capacity_ >= 1e9);
-        vm.assume(minPrice_ >= 1e9);
-        vm.assume(uint256(price_) * 9 / 10 > _gdaParams.minimumPrice); // must have clearance for the decay target
-        // vm.assume(minPrice_ >= price_ / 2); // requirement when min price is not zero
-        UD60x18 q0 = ud(uint256(price_).mulDiv(uUNIT, 10 ** _quoteTokenDecimals));
-        UD60x18 r = ud(
-            uint256(capacity_).mulDiv(uUNIT, 10 ** _baseTokenDecimals).mulDiv(
-                1 days, _auctionParams.duration
-            )
-        );
-        vm.assume(q0.mul(r) > ZERO);
-        _createAuctionLot();
-
-        vm.warp(_start);
-
         console2.log("Capacity:", capacity_);
         console2.log("Price:", price_);
 

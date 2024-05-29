@@ -395,9 +395,14 @@ contract GradualDutchAuction is IGradualDutchAuction, AtomicAuctionModule {
         // Scale price back to quote token decimals
         uint256 amount = result.intoUint256().mulDiv(quoteTokenScale, uUNIT);
 
-        // TODO do we need to add an error correction term here?
-        // Various results are slightly lower than expected.
-
+        // TODO? Add 0.01% to correct for errors and have a conservative estimate
+        // Problem: this makes maxAmountAccepted return values that are too high and revert purchases
+        // We do not use this for calculation input/output amounts during purchase
+        // Therefore, it doesn't need to be exact.
+        // Since it can/will be used off-chain to estimate the amount of quote tokens
+        // required to purchase a certain number of tokens, it's better to be
+        // conservative so that slippage amounts can be set appropriately.
+        // return (amount * (1e4 + 1)) / 1e4;
         return amount;
     }
 

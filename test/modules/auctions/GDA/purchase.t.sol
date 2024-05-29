@@ -41,8 +41,8 @@ contract GdaPurchaseTest is GdaTest {
     //  [X] it reverts
     // [X] when there is insufficient capacity
     //  [X] it reverts
-    // [ ] when the amount is more than the max amount accepted
-    //  [ ] it reverts
+    // [X] when the amount is more than the max amount accepted
+    //  [X] it reverts
     // [X] when the token decimals are different
     //  [X] it handles the purchase correctly
     // [X] it updates the capacity, purchased, sold, and last auction start
@@ -228,30 +228,90 @@ contract GdaPurchaseTest is GdaTest {
     function testFuzz_minPriceNonZero_varyingSetup(
         uint256 amount_,
         uint128 capacity_,
-        uint128 price_,
-        uint128 minPrice_
+        uint128 price_
     )
         public
-        givenLotCapacity(uint256(capacity_))
-        givenEquilibriumPrice(uint256(price_))
-        givenMinPrice(minPrice_ < price_ / 2 ? uint256(price_ / 2) : uint256(minPrice_))
+        givenLotCapacity(capacity_)
+        givenEquilibriumPrice(price_)
+        givenMinIsHalfPrice(price_)
+        validateCapacity
+        validatePrice
+        validatePriceTimesEmissionsRate
+        givenLotIsCreated
+        givenLotHasStarted
     {
-        vm.assume(capacity_ >= 1e9);
-        vm.assume(_gdaParams.minimumPrice >= 1e9);
-        _auctionParams.duration = uint48(1 days);
-        vm.assume(uint256(price_) * 9 / 10 > _gdaParams.minimumPrice); // must have clearance for the decay target
-        // vm.assume(minPrice_ >= price_ / 2); // requirement when min price is not zero
-        UD60x18 q0 = ud(uint256(price_).mulDiv(uUNIT, 10 ** _quoteTokenDecimals));
-        UD60x18 r = ud(
-            uint256(capacity_).mulDiv(uUNIT, 10 ** _baseTokenDecimals).mulDiv(
-                1 days, _auctionParams.duration
-            )
-        );
-        vm.assume(q0.mul(r) > ZERO);
-        _createAuctionLot();
+        console2.log("Capacity:", capacity_);
+        console2.log("Price:", price_);
 
-        vm.warp(_start);
+        // Normalize the amount
+        uint256 maxAmountAccepted = _module.maxAmountAccepted(_lotId);
+        uint256 amount = amount_ % (maxAmountAccepted + 1);
 
+        // Calculate expected values
+        uint256 expectedPayout = _module.payoutFor(_lotId, amount);
+
+        // Call the function
+        _createPurchase(amount, expectedPayout);
+
+        // Assert the capacity, purchased and sold
+        IAuction.Lot memory lot = _getAuctionLot(_lotId);
+        assertEq(lot.capacity, uint256(capacity_) - expectedPayout, "capacity");
+        assertEq(lot.purchased, amount, "purchased");
+        assertEq(lot.sold, expectedPayout, "sold");
+    }
+
+    function testFuzz_minPriceNonZero_varyingSetup_quoteDecimalsSmaller(
+        uint256 amount_,
+        uint128 capacity_,
+        uint128 price_
+    )
+        public
+        givenQuoteTokenDecimals(6)
+        givenLotCapacity(capacity_)
+        givenEquilibriumPrice(price_)
+        givenMinIsHalfPrice(price_)
+        validateCapacity
+        validatePrice
+        validatePriceTimesEmissionsRate
+        givenLotIsCreated
+        givenLotHasStarted
+    {
+        console2.log("Capacity:", capacity_);
+        console2.log("Price:", price_);
+
+        // Normalize the amount
+        uint256 maxAmountAccepted = _module.maxAmountAccepted(_lotId);
+        uint256 amount = amount_ % (maxAmountAccepted + 1);
+
+        // Calculate expected values
+        uint256 expectedPayout = _module.payoutFor(_lotId, amount);
+
+        // Call the function
+        _createPurchase(amount, expectedPayout);
+
+        // Assert the capacity, purchased and sold
+        IAuction.Lot memory lot = _getAuctionLot(_lotId);
+        assertEq(lot.capacity, uint256(capacity_) - expectedPayout, "capacity");
+        assertEq(lot.purchased, amount, "purchased");
+        assertEq(lot.sold, expectedPayout, "sold");
+    }
+
+    function testFuzz_minPriceNonZero_varyingSetup_quoteDecimalsLarger(
+        uint256 amount_,
+        uint128 capacity_,
+        uint128 price_
+    )
+        public
+        givenBaseTokenDecimals(6)
+        givenLotCapacity(capacity_)
+        givenEquilibriumPrice(price_)
+        givenMinIsHalfPrice(price_)
+        validateCapacity
+        validatePrice
+        validatePriceTimesEmissionsRate
+        givenLotIsCreated
+        givenLotHasStarted
+    {
         console2.log("Capacity:", capacity_);
         console2.log("Price:", price_);
 
@@ -374,29 +434,21 @@ contract GdaPurchaseTest is GdaTest {
         uint128 price_
     )
         public
-        givenLotCapacity(uint256(capacity_))
-        givenEquilibriumPrice(uint256(price_))
+        givenLotCapacity(capacity_)
+        givenEquilibriumPrice(price_)
         givenMinPrice(0)
+        validateCapacity
+        validatePrice
+        validatePriceTimesEmissionsRate
+        givenLotIsCreated
+        givenLotHasStarted
     {
-        vm.assume(price_ >= 1e9);
-        vm.assume(capacity_ >= 1e9);
-        UD60x18 q0 = ud(uint256(price_).mulDiv(uUNIT, 10 ** _quoteTokenDecimals));
-        UD60x18 r =
-            ud(uint256(capacity_).mulDiv(uUNIT, 10 ** _baseTokenDecimals).mulDiv(1 days, _DURATION));
-        vm.assume(q0.mul(r) > ZERO);
-        _createAuctionLot();
-
-        vm.warp(_start);
-
         console2.log("Capacity:", capacity_);
         console2.log("Price:", price_);
 
         // Normalize the amount
         uint256 maxAmountAccepted = _module.maxAmountAccepted(_lotId);
         uint256 amount = amount_ % (maxAmountAccepted + 1);
-
-        // Warp to start
-        vm.warp(_start);
 
         // Calculate expected values
         uint256 expectedPayout = _module.payoutFor(_lotId, amount);
@@ -418,29 +470,21 @@ contract GdaPurchaseTest is GdaTest {
     )
         public
         givenQuoteTokenDecimals(6)
-        givenLotCapacity(uint256(capacity_))
-        givenEquilibriumPrice(uint256(price_))
+        givenLotCapacity(capacity_)
+        givenEquilibriumPrice(price_)
         givenMinPrice(0)
+        validateCapacity
+        validatePrice
+        validatePriceTimesEmissionsRate
+        givenLotIsCreated
+        givenLotHasStarted
     {
-        vm.assume(price_ >= 1e3);
-        vm.assume(capacity_ >= 1e9);
-        UD60x18 q0 = ud(uint256(price_).mulDiv(uUNIT, 10 ** _quoteTokenDecimals));
-        UD60x18 r =
-            ud(uint256(capacity_).mulDiv(uUNIT, 10 ** _baseTokenDecimals).mulDiv(1 days, _DURATION));
-        vm.assume(q0.mul(r) > ZERO);
-        _createAuctionLot();
-
-        vm.warp(_start);
-
         console2.log("Capacity:", capacity_);
         console2.log("Price:", price_);
 
         // Normalize the amount
         uint256 maxAmountAccepted = _module.maxAmountAccepted(_lotId);
         uint256 amount = amount_ % (maxAmountAccepted + 1);
-
-        // Warp to start
-        vm.warp(_start);
 
         // Calculate expected values
         uint256 expectedPayout = _module.payoutFor(_lotId, amount);
@@ -462,29 +506,21 @@ contract GdaPurchaseTest is GdaTest {
     )
         public
         givenBaseTokenDecimals(6)
-        givenLotCapacity(uint256(capacity_))
-        givenEquilibriumPrice(uint256(price_))
+        givenLotCapacity(capacity_)
+        givenEquilibriumPrice(price_)
         givenMinPrice(0)
+        validateCapacity
+        validatePrice
+        validatePriceTimesEmissionsRate
+        givenLotIsCreated
+        givenLotHasStarted
     {
-        vm.assume(price_ >= 1e9);
-        vm.assume(capacity_ >= 1e3);
-        UD60x18 q0 = ud(uint256(price_).mulDiv(uUNIT, 10 ** _quoteTokenDecimals));
-        UD60x18 r =
-            ud(uint256(capacity_).mulDiv(uUNIT, 10 ** _baseTokenDecimals).mulDiv(1 days, _DURATION));
-        vm.assume(q0.mul(r) > ZERO);
-        _createAuctionLot();
-
-        vm.warp(_start);
-
         console2.log("Capacity:", capacity_);
         console2.log("Price:", price_);
 
         // Normalize the amount
         uint256 maxAmountAccepted = _module.maxAmountAccepted(_lotId);
         uint256 amount = amount_ % (maxAmountAccepted + 1);
-
-        // Warp to start
-        vm.warp(_start);
 
         // Calculate expected values
         uint256 expectedPayout = _module.payoutFor(_lotId, amount);

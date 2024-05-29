@@ -84,7 +84,7 @@ contract GdaCreateAuctionTest is GdaTest {
 
     function test_equilibriumPriceIsLessThanMin_reverts(uint128 price_)
         public
-        givenEquilibriumPrice(uint256(price_) % 1e9)
+        givenEquilibriumPrice(price_ % 1e9)
     {
         // Expect revert
         bytes memory err =
@@ -95,11 +95,10 @@ contract GdaCreateAuctionTest is GdaTest {
         _createAuctionLot();
     }
 
-    function test_equilibriumPriceGreaterThanMax_reverts(uint256 price_)
-        public
-        givenEquilibriumPrice(price_)
-    {
+    function test_equilibriumPriceGreaterThanMax_reverts(uint256 price_) public {
         vm.assume(price_ > type(uint128).max);
+        _gdaParams.equilibriumPrice = price_;
+        _auctionParams.implParams = abi.encode(_gdaParams);
 
         // Expect revert
         bytes memory err =
@@ -120,7 +119,7 @@ contract GdaCreateAuctionTest is GdaTest {
         _createAuctionLot();
     }
 
-    function test_capacityLessThanMin_reverts(uint256 capacity_)
+    function test_capacityLessThanMin_reverts(uint128 capacity_)
         public
         givenLotCapacity(capacity_ % 1e9)
     {
@@ -133,11 +132,9 @@ contract GdaCreateAuctionTest is GdaTest {
         _createAuctionLot();
     }
 
-    function test_capacityGreaterThanMax_reverts(uint256 capacity_)
-        public
-        givenLotCapacity(capacity_)
-    {
+    function test_capacityGreaterThanMax_reverts(uint256 capacity_) public {
         vm.assume(capacity_ > type(uint128).max);
+        _auctionParams.capacity = capacity_;
 
         // Expect revert
         bytes memory err =

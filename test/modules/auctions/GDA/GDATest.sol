@@ -3,7 +3,7 @@ pragma solidity 0.8.19;
 
 // Libraries
 import {Test} from "forge-std/Test.sol";
-import {UD60x18, uUNIT} from "lib/prb-math/src/UD60x18.sol";
+import {UD60x18, ud, uUNIT, ZERO} from "lib/prb-math/src/UD60x18.sol";
 import "lib/prb-math/src/Common.sol" as PRBMath;
 
 // Mocks
@@ -126,15 +126,63 @@ abstract contract GdaTest is Test, Permit2User {
         _;
     }
 
-    modifier givenEquilibriumPrice(uint256 price_) {
-        _gdaParams.equilibriumPrice = price_;
+    modifier givenEquilibriumPrice(uint128 price_) {
+        _gdaParams.equilibriumPrice = uint256(price_);
         _auctionParams.implParams = abi.encode(_gdaParams);
         _;
     }
 
-    modifier givenMinPrice(uint256 minPrice_) {
-        _gdaParams.minimumPrice = minPrice_;
+    modifier givenMinPrice(uint128 minPrice_) {
+        _gdaParams.minimumPrice = uint256(minPrice_);
         _auctionParams.implParams = abi.encode(_gdaParams);
+        _;
+    }
+
+    modifier givenMinIsHalfPrice(uint128 price_) {
+        _gdaParams.minimumPrice = (uint256(price_) / 2) + (price_ % 2 == 0 ? 0 : 1);
+        _auctionParams.implParams = abi.encode(_gdaParams);
+        _;
+    }
+
+    modifier validateCapacity() {
+        vm.assume(
+            _auctionParams.capacity
+                >= 10 ** ((_baseTokenDecimals / 2) + (_baseTokenDecimals % 2 == 0 ? 0 : 1))
+        );
+        _;
+    }
+
+    modifier validatePrice() {
+        vm.assume(
+            _gdaParams.equilibriumPrice
+                >= 10 ** ((_quoteTokenDecimals / 2) + (_quoteTokenDecimals % 2 == 0 ? 0 : 1))
+        );
+        _;
+    }
+
+    modifier validateMinPrice() {
+        vm.assume(
+            _gdaParams.minimumPrice >= _gdaParams.equilibriumPrice / 2
+                && _gdaParams.minimumPrice
+                    <= _gdaParams.equilibriumPrice.mulDiv(uUNIT - (_gdaParams.decayTarget + 10e16), uUNIT)
+        );
+        _;
+    }
+
+    modifier validatePriceTimesEmissionsRate() {
+        UD60x18 r = ud(
+            _auctionParams.capacity.mulDiv(uUNIT, 10 ** _baseTokenDecimals).mulDiv(
+                1 days, _auctionParams.duration
+            )
+        );
+
+        if (_gdaParams.minimumPrice == 0) {
+            UD60x18 q0 = ud(_gdaParams.equilibriumPrice.mulDiv(uUNIT, 10 ** _quoteTokenDecimals));
+            vm.assume(q0.mul(r) > ZERO);
+        } else {
+            UD60x18 qm = ud(_gdaParams.minimumPrice.mulDiv(uUNIT, 10 ** _quoteTokenDecimals));
+            vm.assume(qm.mul(r) > ZERO);
+        }
         _;
     }
 
