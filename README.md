@@ -65,6 +65,14 @@ Then, the test suite can be run with:
 pnpm run test
 ```
 
+Or:
+
+```shell
+forge test
+```
+
+This command usually performs faster than the `pnpm` command.
+
 ### Format
 
 Combines `forge fmt` and `solhint`
