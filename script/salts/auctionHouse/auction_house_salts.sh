@@ -39,7 +39,7 @@ echo "Using chain: $CHAIN"
 if [[ $CHAIN == *"blast"* ]]
 then
   echo "Using Blast-specific contracts"
-  forge script ./script/salts/AuctionHouseSaltsBlast.s.sol:AuctionHouseSaltsBlast --sig "generate(string,string,bool)()" $CHAIN $PREFIX $ATOMIC
+  forge script ./script/salts/auctionHouse/AuctionHouseSaltsBlast.s.sol:AuctionHouseSaltsBlast --sig "generate(string,string,bool)()" $CHAIN $PREFIX $ATOMIC
 
     # Set the bytecode file
     if [ $ATOMIC ]
@@ -50,7 +50,7 @@ then
     fi
 else
   echo "Using standard contracts"
-  forge script ./script/salts/AuctionHouseSalts.s.sol:AuctionHouseSalts --sig "generate(string,string,bool)()" $CHAIN $PREFIX $ATOMIC
+  forge script ./script/salts/auctionHouse/AuctionHouseSalts.s.sol:AuctionHouseSalts --sig "generate(string,string,bool)()" $CHAIN $PREFIX $ATOMIC
 
     # Set the bytecode file
     if [ $ATOMIC ]

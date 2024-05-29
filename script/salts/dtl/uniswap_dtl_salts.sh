@@ -37,4 +37,4 @@ echo "Using chain: $CHAIN"
 echo "Using Uniswap version: $VERSION"
 echo "Using variant: $MODE"
 
-forge script ./script/salts/UniswapDTLSalts.s.sol:UniswapDTLSalts --sig "generate(string,string,bool)()" $CHAIN $VERSION $ATOMIC
+forge script ./script/salts/dtl/UniswapDTLSalts.s.sol:UniswapDTLSalts --sig "generate(string,string,bool)()" $CHAIN $VERSION $ATOMIC
