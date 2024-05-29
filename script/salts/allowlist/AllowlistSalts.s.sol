@@ -22,9 +22,9 @@ contract AllowlistSalts is Script, WithEnvironment, WithSalts {
         _createBytecodeDirectory();
 
         // Cache auction houses
-        _envAtomicAuctionHouse = _envAddressNotZero("axis.AtomicAuctionHouse");
+        _envAtomicAuctionHouse = _envAddress("axis.AtomicAuctionHouse");
         console2.log("AtomicAuctionHouse:", _envAtomicAuctionHouse);
-        _envBatchAuctionHouse = _envAddressNotZero("axis.BatchAuctionHouse");
+        _envBatchAuctionHouse = _envAddress("axis.BatchAuctionHouse");
         console2.log("BatchAuctionHouse:", _envBatchAuctionHouse);
     }
 
