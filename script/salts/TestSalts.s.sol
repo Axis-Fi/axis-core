@@ -17,22 +17,12 @@ import {UniswapV3DirectToLiquidity} from "src/callbacks/liquidity/UniswapV3DTL.s
 import {BaselineAxisLaunch} from "src/callbacks/liquidity/BaselineV2/BaselineAxisLaunch.sol";
 import {BALwithAllocatedAllowlist} from
     "src/callbacks/liquidity/BaselineV2/BALwithAllocatedAllowlist.sol";
+import {UniswapV3Factory} from "test/lib/uniswap-v3/UniswapV3Factory.sol";
+import {GUniFactory} from "lib/g-uni-v1-core/contracts/GUniFactory.sol";
 
-contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts {
-    // TODO shift into abstract contract that tests also inherit from
-    address internal constant _OWNER = address(0x1);
-    address internal constant _AUCTION_HOUSE = address(0x000000000000000000000000000000000000000A);
-    address internal constant _UNISWAP_V2_FACTORY =
-        address(0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f);
-    address internal constant _UNISWAP_V2_ROUTER =
-        address(0x584A2a1F5eCdCDcB6c0616cd280a7Db89239872B);
-    address internal constant _UNISWAP_V3_FACTORY =
-        address(0x43de928116768b88F8BF8f768b3de90A0Aaf9551);
-    address internal constant _GUNI_FACTORY = address(0xc46b184e5521Cb87Fc5288Ff49D978A4BE4B055c);
-    address internal constant _BASELINE_KERNEL = address(0xBB);
-    address internal constant _BASELINE_QUOTE_TOKEN =
-        address(0xe9d3A46B2a5813eAED0ab1E2B955c29038545FbD);
+import {TestConstants} from "test/Constants.sol";
 
+contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts, TestConstants {
     string internal constant _MOCK_CALLBACK = "MockCallback";
     string internal constant _CAPPED_MERKLE_ALLOWLIST = "CappedMerkleAllowlist";
 
@@ -436,19 +426,60 @@ contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts {
         _setTestSalt(bytecodePath, "E6", "UniswapV3DirectToLiquidity", bytecodeHash);
     }
 
+    function generateGUniFactory() public {
+        // Generate a salt for a GUniFactory
+        bytes memory args = abi.encode(_UNISWAP_V3_FACTORY);
+        bytes memory contractCode = type(GUniFactory).creationCode;
+        (string memory bytecodePath, bytes32 bytecodeHash) =
+            _writeBytecode("GUniFactory", contractCode, args);
+        _setTestSaltWithDeployer(bytecodePath, "AA", "GUniFactory", bytecodeHash, _CREATE2_DEPLOYER);
+
+        // Fetch the salt that was set
+        bytes32 gUniFactorySalt = _getSalt("Test_GUniFactory", contractCode, args);
+
+        // Get the address of the GUniFactory
+        // Update the `_GUNI_FACTORY` constant with this value
+        vm.prank(_CREATE2_DEPLOYER);
+        GUniFactory gUniFactory = new GUniFactory{salt: gUniFactorySalt}(_UNISWAP_V3_FACTORY);
+        console2.log("GUniFactory address: ", address(gUniFactory));
+    }
+
+    function generateUniswapV3Factory() public {
+        // Generate a salt for a GUniFactory
+        bytes memory args = abi.encode();
+        bytes memory contractCode = type(UniswapV3Factory).creationCode;
+        (string memory bytecodePath, bytes32 bytecodeHash) =
+            _writeBytecode("UniswapV3Factory", contractCode, args);
+        _setTestSaltWithDeployer(
+            bytecodePath, "AA", "UniswapV3Factory", bytecodeHash, _CREATE2_DEPLOYER
+        );
+
+        // Fetch the salt that was set
+        bytes32 uniswapV3FactorySalt = _getSalt("Test_UniswapV3Factory", contractCode, args);
+
+        // Get the address of the UniswapV3Factory
+        // Update the `_UNISWAP_V3_FACTORY` constant with this value
+        vm.prank(_CREATE2_DEPLOYER);
+        UniswapV3Factory uniswapV3Factory = new UniswapV3Factory{salt: uniswapV3FactorySalt}();
+        console2.log("UniswapV3Factory address: ", address(uniswapV3Factory));
+    }
+
     function generateBaselineQuoteToken() public {
         // Generate a salt for a MockERC20 quote token
         bytes memory qtArgs = abi.encode("Quote Token", "QT", 18);
         bytes memory qtContractCode = type(MockERC20).creationCode;
         (string memory qtBytecodePath, bytes32 qtBytecodeHash) =
             _writeBytecode("QuoteToken", qtContractCode, qtArgs);
-        _setTestSalt(qtBytecodePath, "AA", "QuoteToken", qtBytecodeHash);
+        _setTestSaltWithDeployer(
+            qtBytecodePath, "AA", "QuoteToken", qtBytecodeHash, _CREATE2_DEPLOYER
+        );
 
         // Fetch the salt that was set
         bytes32 quoteTokenSalt = _getSalt("Test_QuoteToken", qtContractCode, qtArgs);
 
         // Get the address of the quote token
         // Update the `_BASELINE_QUOTE_TOKEN` constants with this value
+        vm.prank(_CREATE2_DEPLOYER);
         MockERC20 quoteToken = new MockERC20{salt: quoteTokenSalt}("Quote Token", "QT", 18);
         console2.log("Quote Token address: ", address(quoteToken));
     }

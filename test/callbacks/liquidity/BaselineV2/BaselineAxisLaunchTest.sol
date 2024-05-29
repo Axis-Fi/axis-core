@@ -12,6 +12,7 @@ import {IUniswapV3Factory} from "uniswap-v3-core/interfaces/IUniswapV3Factory.so
 import {UniswapV3Factory} from "test/lib/uniswap-v3/UniswapV3Factory.sol";
 import {ComputeAddress} from "test/lib/ComputeAddress.sol";
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
+import {TestConstants} from "test/Constants.sol";
 
 // Axis core
 import {IAuction} from "src/interfaces/modules/IAuction.sol";
@@ -32,18 +33,13 @@ import {
 } from "src/callbacks/liquidity/BaselineV2/lib/Kernel.sol";
 import {Range} from "src/callbacks/liquidity/BaselineV2/lib/IBPOOL.sol";
 
-abstract contract BaselineAxisLaunchTest is Test, Permit2User, WithSalts {
+abstract contract BaselineAxisLaunchTest is Test, Permit2User, WithSalts, TestConstants {
     using Callbacks for BaselineAxisLaunch;
 
-    address internal constant _OWNER = address(0x1);
     address internal constant _SELLER = address(0x2);
     address internal constant _PROTOCOL = address(0x3);
     address internal constant _BUYER = address(0x4);
     address internal constant _NOT_SELLER = address(0x20);
-    address internal constant _AUCTION_HOUSE = address(0x000000000000000000000000000000000000000A);
-    address internal constant _BASELINE_KERNEL = address(0xBB);
-    address internal constant _BASELINE_QUOTE_TOKEN =
-        address(0xe9d3A46B2a5813eAED0ab1E2B955c29038545FbD);
 
     uint96 internal constant _LOT_CAPACITY = 10e18;
     uint96 internal constant _REFUND_AMOUNT = 2e18;
@@ -98,11 +94,11 @@ abstract contract BaselineAxisLaunchTest is Test, Permit2User, WithSalts {
 
         // Create a UniswapV3Factory at a deterministic address
         vm.startBroadcast();
-        _uniV3Factory = new UniswapV3Factory{
-            salt: bytes32(0xbc65534283bdbbac4a95a3fb1933af63d55135566688dd54d1c55a626b1bc366)
-        }();
+        bytes32 uniswapV3Salt =
+            _getTestSalt("UniswapV3Factory", type(UniswapV3Factory).creationCode, abi.encode());
+        _uniV3Factory = new UniswapV3Factory{salt: uniswapV3Salt}();
         vm.stopBroadcast();
-        if (address(_uniV3Factory) != address(0x43de928116768b88F8BF8f768b3de90A0Aaf9551)) {
+        if (address(_uniV3Factory) != _UNISWAP_V3_FACTORY) {
             console2.log("UniswapV3Factory address: ", address(_uniV3Factory));
             revert("UniswapV3Factory address mismatch");
         }
@@ -119,6 +115,7 @@ abstract contract BaselineAxisLaunchTest is Test, Permit2User, WithSalts {
         bytes32 quoteTokenSalt = _getTestSalt(
             "QuoteToken", type(MockERC20).creationCode, abi.encode("Quote Token", "QT", 18)
         );
+        vm.prank(_CREATE2_DEPLOYER);
         _quoteToken = new MockERC20{salt: quoteTokenSalt}("Quote Token", "QT", 18);
         _quoteTokenDecimals = 18;
         if (address(_quoteToken) != _BASELINE_QUOTE_TOKEN) {
