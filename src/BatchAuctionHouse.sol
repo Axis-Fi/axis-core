@@ -462,35 +462,6 @@ contract BatchAuctionHouse is IBatchAuctionHouse, AuctionHouse {
         emit Settle(lotId_);
     }
 
-    /// @notice Calls the `onCancel()` callback
-    /// @dev    This function is written to circumvent a limitation in solidity that
-    ///         prevents calling internal functions from within a try/catch block.
-    ///         It is inspired by: https://ethereum.stackexchange.com/a/148922
-    ///
-    ///         This function reverts if:
-    ///         - The caller is not this contract
-    ///
-    /// @param  lotId_        The lot ID to cancel
-    /// @param  refund_       The amount to refund
-    /// @param  callbackData_ The callback data to pass to the `onCancel` callback
-    function attemptOnCancel(
-        uint96 lotId_,
-        uint256 refund_,
-        bytes calldata callbackData_
-    ) external {
-        // This function needs to be external in order to wrap it in a try/catch block,
-        // but should only be called by this contract
-        if (msg.sender != address(this)) revert NotPermitted(msg.sender);
-
-        Callbacks.onCancel(
-            lotRouting[lotId_].callbacks,
-            lotId_,
-            refund_,
-            lotRouting[lotId_].callbacks.hasPermission(Callbacks.SEND_BASE_TOKENS_FLAG),
-            callbackData_
-        );
-    }
-
     /// @inheritdoc IBatchAuctionHouse
     /// @dev        This function handles the following:
     ///             - Validates the lot id
@@ -534,11 +505,20 @@ contract BatchAuctionHouse is IBatchAuctionHouse, AuctionHouse {
         // sends base tokens will have the base tokens sent to the callback contract.
         // Calling onCancel offers the opportunity for the auction owner to handle
         // the refund of the base tokens.
-        try this.attemptOnCancel(lotId_, refund, abi.encode("")) {
-            // Do nothing
-        } catch {
-            // If there is an error, ignore it.
+        if (lotRouting[lotId_].callbacks != ICallback(address(0))) {
+            // Assemble the calldata
+            bytes memory onCancelCalldata = abi.encodeWithSelector(
+                ICallback.onCancel.selector,
+                lotId_,
+                refund,
+                lotRouting[lotId_].callbacks.hasPermission(Callbacks.SEND_BASE_TOKENS_FLAG),
+                abi.encode("")
+            );
+
+            // Call the onCancel callback, but ignore the return value
+            // As it is a low-level call, it will not revert on failure
             // This prevents an auction owner from blocking an abort by reverting in the callback
+            address(lotRouting[lotId_].callbacks).call(onCancelCalldata);
         }
 
         emit Abort(lotId_);

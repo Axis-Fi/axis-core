@@ -266,45 +266,4 @@ contract BatchAbortTest is BatchAuctionHouseTest {
         // Check the balance of the seller
         assertEq(_baseToken.balanceOf(_SELLER), startSellerBalance + _LOT_CAPACITY);
     }
-
-    function test_attemptOnCancel_notContract()
-        public
-        whenAuctionTypeIsBatch
-        whenBatchAuctionModuleIsInstalled
-        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
-        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
-        givenCallbackIsSet
-        givenLotIsCreated
-        givenLotHasStarted
-        givenLotIsConcluded
-        givenLotIsPastSettlePeriod
-    {
-        // Expect revert
-        bytes memory err =
-            abi.encodeWithSelector(IAuctionHouse.NotPermitted.selector, address(this));
-        vm.expectRevert(err);
-
-        // Call function
-        _auctionHouse.attemptOnCancel(_lotId, _LOT_CAPACITY, abi.encode(""));
-    }
-
-    function test_attemptOnCancel()
-        public
-        whenAuctionTypeIsBatch
-        whenBatchAuctionModuleIsInstalled
-        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
-        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
-        givenCallbackIsSet
-        givenLotIsCreated
-        givenLotHasStarted
-        givenLotIsConcluded
-        givenLotIsPastSettlePeriod
-    {
-        // Call function
-        vm.prank(address(_auctionHouse));
-        _auctionHouse.attemptOnCancel(_lotId, _LOT_CAPACITY, abi.encode(""));
-
-        // Check that the callback was called
-        assertEq(_callback.lotCancelled(_lotId), true, "onCancel");
-    }
 }
