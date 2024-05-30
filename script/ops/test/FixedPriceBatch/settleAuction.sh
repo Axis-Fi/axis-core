@@ -58,6 +58,6 @@ else
 fi
 
 # Create auction
-forge script ./script/ops/test/FixedPriceBatch-BaselineAllocatedAllowlist/TestData.s.sol:TestData --sig "settleAuction(string,uint96)()" $CHAIN $lotId \
+forge script ./script/ops/test/FixedPriceBatch/TestData.s.sol:TestData --sig "settleAuction(string,uint96)()" $CHAIN $lotId \
 --rpc-url $RPC_URL --private-key $DEPLOYER_PRIVATE_KEY --froms $DEPLOYER_ADDRESS --slow -vvvv \
 $BROADCAST_FLAG

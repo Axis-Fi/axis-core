@@ -82,6 +82,6 @@ else
 fi
 
 # Create auction
-forge script ./script/ops/test/FixedPriceBatch-BaselineAllocatedAllowlist/TestData.s.sol:TestData --sig "placeBid(string,uint96,uint256,bytes32,uint256)()" $CHAIN $lotId $amount $merkleProof $allocatedAmount \
+forge script ./script/ops/test/FixedPriceBatch/TestData.s.sol:TestData --sig "placeBid(string,uint96,uint256,bytes32,uint256)()" $CHAIN $lotId $amount $merkleProof $allocatedAmount \
 --rpc-url $RPC_URL --private-key $DEPLOYER_PRIVATE_KEY --froms $DEPLOYER_ADDRESS --slow -vvvv \
 $BROADCAST_FLAG
