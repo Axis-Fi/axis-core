@@ -55,4 +55,4 @@ echo "Using RPC at URL: $RPC_URL"
 echo "Using Uniswap version: $version"
 echo "Using auction type: $type"
 
-forge script ./script/salts/dtl/UniswapDTLSalts.s.sol:UniswapDTLSalts --sig "generate(string,string,bool)()" $CHAIN $version $ATOMIC
+forge script ./script/salts/dtl-uniswap/UniswapDTLSalts.s.sol:UniswapDTLSalts --sig "generate(string,string,bool)()" $CHAIN $version $ATOMIC

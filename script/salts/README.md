@@ -64,7 +64,7 @@ CHAIN=<chain-name> ./script/salts/baseline_allocated_allowlist_salts.sh --kernel
 Assuming that the developer wants to deploy a Uniswap V3 direct to liquidity callback for atomic auctions, the following command would be run:
 
 ```bash
-./script/salts/uniswap_dtl_salts.sh --type atomic --version 3
+./script/salts/dtl-uniswap/uniswap_dtl_salts.sh --type atomic --version 3
 ```
 
 ### Generating Salts for Any Contract
