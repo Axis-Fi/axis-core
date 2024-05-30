@@ -12,6 +12,7 @@ import {IAuctionHouse} from "src/interfaces/IAuctionHouse.sol";
 import {toKeycode} from "src/modules/Modules.sol";
 import {ICallback} from "src/interfaces/ICallback.sol";
 import {IFixedPriceBatch} from "src/interfaces/modules/auctions/IFixedPriceBatch.sol";
+import {IAuction} from "src/interfaces/modules/IAuction.sol";
 import {BaselineAxisLaunch} from "src/callbacks/liquidity/BaselineV2/BaselineAxisLaunch.sol";
 import {BALwithAllocatedAllowlist} from
     "src/callbacks/liquidity/BaselineV2/BALwithAllocatedAllowlist.sol";
@@ -90,7 +91,10 @@ contract TestData is Script, WithEnvironment {
         vm.stopBroadcast();
 
         console2.log("Fixed Price Batch auction created with lot ID: ", lotId);
-        console2.log("Auction ends at timestamp", block.timestamp + duration);
+
+        // Get the conclusion timestamp from the auction
+        (,uint48 conclusion,,,,,,) = IAuction(address(auctionHouse.getBatchModuleForId(lotId))).lotData(lotId);
+        console2.log("Auction ends at timestamp", conclusion);
 
         return lotId;
     }
