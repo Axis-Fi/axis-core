@@ -10,18 +10,33 @@ import {BaselineAxisLaunch} from "src/callbacks/liquidity/BaselineV2/BaselineAxi
 /// @dev    The merkle tree is expected to have both an address and an amount of quote tokens they can spend in each leaf.
 contract BALwithAllocatedAllowlist is BaselineAxisLaunch {
     // ========== ERRORS ========== //
+
+    /// @notice Error message when the bid amount exceeds the limit assigned to a buyer
     error Callback_ExceedsLimit();
+
+    /// @notice Error message when the callback state does not support the action
+    error Callback_InvalidState();
+
+    // ========== EVENTS ========== //
+
+    /// @notice Emitted when the merkle root is set
+    event MerkleRootSet(bytes32 merkleRoot);
 
     // ========== DATA STRUCTURES ========== //
 
     /// @notice The parameters for creating an allocated allowlist
     /// @dev    The merkle tree from which the merkle root is generated is expected to be made up of leaves with the following structure:
     ///         keccak256(abi.encodePacked(address, uint256))
+    ///
+    /// @param  merkleRoot The root of the merkle tree. Can be updated later by the owner using `setMerkleRoot()`.
     struct AllocatedAllowlistCreateParams {
         bytes32 merkleRoot;
     }
 
     /// @notice The parameters for bidding with an allocated allowlist
+    ///
+    /// @param  proof           The merkle proof for the buyer
+    /// @param  allocatedAmount The total amount the buyer is allowed to spend
     struct AllocatedAllowlistBidParams {
         bytes32[] proof;
         uint256 allocatedAmount;
@@ -29,7 +44,10 @@ contract BALwithAllocatedAllowlist is BaselineAxisLaunch {
 
     // ========== STATE VARIABLES ========== //
 
+    /// @notice The root of the merkle tree that represents the allowlist
     bytes32 public merkleRoot;
+
+    /// @notice Tracks the cumulative amount spent by a buyer
     mapping(address => uint256) public buyerSpent;
 
     // ========== CONSTRUCTOR ========== //
@@ -131,7 +149,6 @@ contract BALwithAllocatedAllowlist is BaselineAxisLaunch {
         return bidParams.allocatedAmount;
     }
 
-    // ========== INTERNAL FUNCTIONS ========== //
     function _canBuy(address buyer_, uint256 amount_, uint256 allocatedAmount_) internal {
         // Check if the buyer has already spent their limit
         if (buyerSpent[buyer_] + amount_ > allocatedAmount_) {
@@ -140,5 +157,36 @@ contract BALwithAllocatedAllowlist is BaselineAxisLaunch {
 
         // Update the buyer spent amount
         buyerSpent[buyer_] += amount_;
+    }
+
+    // ========== ADMIN FUNCTIONS ========== //
+
+    /// @notice Sets the merkle root for the allowlist
+    ///         This function can be called by the owner to update the merkle root after `onCreate()`.
+    /// @dev    This function performs the following:
+    ///         - Performs validation
+    ///         - Sets the merkle root
+    ///         - Emits a MerkleRootSet event
+    ///
+    ///         This function reverts if:
+    ///         - The caller is not the owner
+    ///         - The auction has not been registered
+    ///         - The auction has been completed
+    ///
+    /// @param  merkleRoot_ The new merkle root
+    function setMerkleRoot(bytes32 merkleRoot_) external onlyOwner {
+        // Revert if onCreate has not been called
+        if (lotId == type(uint96).max) {
+            revert Callback_InvalidState();
+        }
+
+        // Revert if the auction has been completed already
+        if (auctionComplete) {
+            revert Callback_InvalidState();
+        }
+
+        merkleRoot = merkleRoot_;
+
+        emit MerkleRootSet(merkleRoot_);
     }
 }
