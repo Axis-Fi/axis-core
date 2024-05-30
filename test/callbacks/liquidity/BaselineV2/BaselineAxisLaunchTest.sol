@@ -27,11 +27,7 @@ import {Callbacks} from "src/lib/Callbacks.sol";
 import {BaselineAxisLaunch} from "src/callbacks/liquidity/BaselineV2/BaselineAxisLaunch.sol";
 
 // Baseline
-import {
-    Kernel,
-    toKeycode as toBaselineKeycode
-} from "src/callbacks/liquidity/BaselineV2/lib/Kernel.sol";
-import {Range} from "src/callbacks/liquidity/BaselineV2/lib/IBPOOL.sol";
+import {toKeycode as toBaselineKeycode} from "src/callbacks/liquidity/BaselineV2/lib/Kernel.sol";
 
 abstract contract BaselineAxisLaunchTest is Test, Permit2User, WithSalts, TestConstants {
     using Callbacks for BaselineAxisLaunch;

@@ -3,8 +3,6 @@ pragma solidity 0.8.19;
 
 import {BaselineAxisLaunchTest} from
     "test/callbacks/liquidity/BaselineV2/BaselineAxisLaunchTest.sol";
-import {SqrtPriceMath} from "src/lib/uniswap-v3/SqrtPriceMath.sol";
-import {TickMath} from "lib/uniswap-v3-core/contracts/libraries/TickMath.sol";
 
 import {BaseCallback} from "src/callbacks/BaseCallback.sol";
 import {Range} from "src/callbacks/liquidity/BaselineV2/lib/IBPOOL.sol";
