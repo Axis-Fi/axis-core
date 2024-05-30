@@ -51,4 +51,4 @@ if [ -f $salt_file ]; then
 fi
 
 # Generate bytecode
-forge script ./script/salts/TestSalts.s.sol:TestSalts --sig "generate(string,string)()" $CHAIN $saltKey
+forge script ./script/salts/test/TestSalts.s.sol:TestSalts --sig "generate(string,string)()" $CHAIN $saltKey

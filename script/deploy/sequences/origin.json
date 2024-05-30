@@ -1,13 +1,7 @@
 {
     "sequence": [
         {
-            "name": "AtomicAuctionHouse"
-        },
-        {
             "name": "BatchAuctionHouse"
-        },
-        {
-            "name": "AtomicCatalogue"
         },
         {
             "name": "BatchCatalogue"
@@ -17,16 +11,8 @@
             "installBatchAuctionHouse": true
         },
         {
-            "name": "FixedPriceSale",
-            "installAtomicAuctionHouse": true
-        },
-        {
             "name": "FixedPriceBatch",
             "installBatchAuctionHouse": true
-        },
-        {
-            "name": "AtomicLinearVesting",
-            "installAtomicAuctionHouse": true
         },
         {
             "name": "BatchLinearVesting",
