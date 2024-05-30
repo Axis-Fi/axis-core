@@ -93,7 +93,8 @@ contract TestData is Script, WithEnvironment {
         console2.log("Fixed Price Batch auction created with lot ID: ", lotId);
 
         // Get the conclusion timestamp from the auction
-        (,uint48 conclusion,,,,,,) = IAuction(address(auctionHouse.getBatchModuleForId(lotId))).lotData(lotId);
+        (, uint48 conclusion,,,,,,) =
+            IAuction(address(auctionHouse.getBatchModuleForId(lotId))).lotData(lotId);
         console2.log("Auction ends at timestamp", conclusion);
 
         return lotId;
