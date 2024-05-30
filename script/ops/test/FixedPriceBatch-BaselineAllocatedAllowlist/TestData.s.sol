@@ -42,22 +42,32 @@ contract TestData is Script, WithEnvironment {
 
         vm.startBroadcast();
 
-        // No spending approval necessary, since the callback will handle it
-
         // Create Fixed Price Batch auction
         IAuctionHouse.RoutingParams memory routingParams;
         routingParams.auctionType = toKeycode("FPBA");
         routingParams.baseToken = baseToken_;
         routingParams.quoteToken = quoteToken_;
         routingParams.callbacks = ICallback(callback_);
-        routingParams.callbackData = abi.encode(
-            BaselineAxisLaunch.CreateData({
-                discoveryTickWidth: 100,
-                allowlistParams: abi.encode(
-                    BALwithAllocatedAllowlist.AllocatedAllowlistCreateParams({merkleRoot: merkleRoot})
-                )
-            })
-        );
+        if (callback_ != address(0)) {
+            console2.log("Setting callback parameters");
+            routingParams.callbackData = abi.encode(
+                BaselineAxisLaunch.CreateData({
+                    discoveryTickWidth: 100,
+                    allowlistParams: abi.encode(
+                        BALwithAllocatedAllowlist.AllocatedAllowlistCreateParams({
+                            merkleRoot: merkleRoot
+                        })
+                    )
+                })
+            );
+
+            // No spending approval necessary, since the callback will handle it
+        } else {
+            console2.log("Callback disabled");
+
+            // Approve spending of the base token
+            ERC20(baseToken_).approve(address(auctionHouse), 10e18);
+        }
 
         IFixedPriceBatch.AuctionDataParams memory auctionDataParams;
         auctionDataParams.price = 1e18; // 1 quote tokens per base token
