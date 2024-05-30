@@ -60,4 +60,4 @@ echo "Using kernel: $kernel"
 echo "Using owner: $owner"
 echo "Using reserve token: $reserveToken"
 
-forge script ./script/salts/BaselineAllocatedAllowlistSalts.s.sol:BaselineAllocatedAllowlistSalts --sig "generate(string,string,string,string)()" $CHAIN $kernel $owner $reserveToken
+forge script ./script/salts/dtl-baseline/BaselineAllocatedAllowlistSalts.s.sol:BaselineAllocatedAllowlistSalts --sig "generate(string,string,string,string)()" $CHAIN $kernel $owner $reserveToken
