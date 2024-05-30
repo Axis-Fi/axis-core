@@ -72,6 +72,16 @@ abstract contract BaseCallback is ICallback {
         return this.onCreate.selector;
     }
 
+    /// @notice Implementation-specifc logic for the onCreate callback
+    /// @dev    This function should be overridden by the inheriting contract to implement custom logic. It is called at the end of the `onCreate()` callback function.
+    ///
+    /// @param  lotId_        The lot ID
+    /// @param  seller_       The seller of the lot
+    /// @param  baseToken_    The base token of the lot
+    /// @param  quoteToken_   The quote token of the lot
+    /// @param  capacity_     The capacity of the lot
+    /// @param  prefund_      Whether the lot is prefunded
+    /// @param  callbackData_ Additional data for the callback
     function _onCreate(
         uint96 lotId_,
         address seller_,
@@ -96,6 +106,13 @@ abstract contract BaseCallback is ICallback {
         return this.onCancel.selector;
     }
 
+    /// @notice Implementation-specifc logic for the onCancel callback
+    /// @dev    This function should be overridden by the inheriting contract to implement custom logic. It is called at the end of the `onCancel()` callback function.
+    ///
+    /// @param  lotId_        The lot ID
+    /// @param  refund_       The refund amount
+    /// @param  prefunded_    Whether the lot was prefunded
+    /// @param  callbackData_ Additional data for the callback
     function _onCancel(
         uint96 lotId_,
         uint256 refund_,
@@ -117,6 +134,13 @@ abstract contract BaseCallback is ICallback {
         return this.onCurate.selector;
     }
 
+    /// @notice Implementation-specifc logic for the onCurate callback
+    /// @dev    This function should be overridden by the inheriting contract to implement custom logic. It is called at the end of the `onCurate()` callback function.
+    ///
+    /// @param  lotId_        The lot ID
+    /// @param  curatorFee_   The curator fee
+    /// @param  prefund_      Whether the lot is prefunded
+    /// @param  callbackData_ Additional data for the callback
     function _onCurate(
         uint96 lotId_,
         uint256 curatorFee_,
@@ -140,6 +164,14 @@ abstract contract BaseCallback is ICallback {
         return this.onPurchase.selector;
     }
 
+    /// @notice Implementation-specifc logic for the onPurchase callback
+    /// @dev    This function should be overridden by the inheriting contract to implement custom logic. It is called at the end of the `onPurchase()` callback function.
+    /// @param  lotId_        The lot ID
+    /// @param  buyer_        The buyer submitting the bid
+    /// @param  amount_       The amount of the bid
+    /// @param  payout_       The payout amount
+    /// @param  prefunded_    Whether the lot was prefunded
+    /// @param  callbackData_ Additional data for the callback
     function _onPurchase(
         uint96 lotId_,
         address buyer_,
@@ -163,6 +195,14 @@ abstract contract BaseCallback is ICallback {
         return this.onBid.selector;
     }
 
+    /// @notice Implementation-specifc logic for the onBid callback
+    /// @dev    This function should be overridden by the inheriting contract to implement custom logic. It is called at the end of the `onBid()` callback function.
+    ///
+    /// @param  lotId_        The lot ID
+    /// @param  bidId         The bid ID
+    /// @param  buyer_        The buyer submitting the bid
+    /// @param  amount_       The bid amount
+    /// @param  callbackData_ Additional data for the callback
     function _onBid(
         uint96 lotId_,
         uint64 bidId,
@@ -171,6 +211,7 @@ abstract contract BaseCallback is ICallback {
         bytes calldata callbackData_
     ) internal virtual;
 
+    /// @inheritdoc ICallback
     function onSettle(
         uint96 lotId_,
         uint256 proceeds_,
@@ -183,6 +224,13 @@ abstract contract BaseCallback is ICallback {
         return this.onSettle.selector;
     }
 
+    /// @notice Implementation-specifc logic for the onSettle callback
+    /// @dev    This function should be overridden by the inheriting contract to implement custom logic. It is called at the end of the `onSettle()` callback function.
+    ///
+    /// @param  lotId_        The lot ID
+    /// @param  proceeds_     The proceeds from the sale
+    /// @param  refund_       The refund amount
+    /// @param  callbackData_ Additional data for the callback
     function _onSettle(
         uint96 lotId_,
         uint256 proceeds_,
