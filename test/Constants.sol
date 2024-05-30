@@ -9,11 +9,11 @@ abstract contract TestConstants {
     address internal constant _UNISWAP_V2_ROUTER =
         address(0x584A2a1F5eCdCDcB6c0616cd280a7Db89239872B);
     address internal constant _UNISWAP_V3_FACTORY =
-        address(0xAAD7BEa01E58E31458De2B02f41fFc676Eaa25De);
-    address internal constant _GUNI_FACTORY = address(0xAA02456e20BB6840c05DA9359420b9467E5BC504);
+        address(0xAA5112f28f20a28907a1754927c556dADE865ed4);
+    address internal constant _GUNI_FACTORY = address(0xAA9E05BB6ee2880a5c6127F486BCb4D624863dD6);
     address internal constant _BASELINE_KERNEL = address(0xBB);
     address internal constant _BASELINE_QUOTE_TOKEN =
-        address(0xAA28371dF86cA8FAAd96a3999f7b20C0d80A2835);
+        address(0xAA58516d932C482469914260268EEA7611BF0eb4);
     address internal constant _CREATE2_DEPLOYER =
         address(0x4e59b44847b379578588920cA78FbF26c0B4956C);
 }
