@@ -19,6 +19,7 @@ import {BALwithAllocatedAllowlist} from
     "src/callbacks/liquidity/BaselineV2/BALwithAllocatedAllowlist.sol";
 import {UniswapV3Factory} from "test/lib/uniswap-v3/UniswapV3Factory.sol";
 import {GUniFactory} from "lib/g-uni-v1-core/contracts/GUniFactory.sol";
+import {UniswapV2Router02} from "uniswap-v2-periphery/UniswapV2Router02.sol";
 
 import {TestConstants} from "test/Constants.sol";
 
@@ -408,6 +409,24 @@ contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts, TestConst
         );
         (bytecodePath, bytecodeHash) = _writeBytecode(_CAPPED_MERKLE_ALLOWLIST, contractCode, args);
         _setTestSalt(bytecodePath, "90", _CAPPED_MERKLE_ALLOWLIST, bytecodeHash);
+    }
+
+    function generateUniswapV2Router() public {
+        bytes memory args = abi.encode(_UNISWAP_V2_FACTORY, address(0));
+        bytes memory contractCode = type(UniswapV2Router02).creationCode;
+        (string memory bytecodePath, bytes32 bytecodeHash) =
+            _writeBytecode("UniswapV2Router", contractCode, args);
+        _setTestSalt(bytecodePath, "AA", "UniswapV2Router", bytecodeHash);
+
+        // Fetch the salt that was set
+        bytes32 uniswapV2RouterSalt = _getSalt("Test_UniswapV2Router", contractCode, args);
+
+        // Get the address of the UniswapV2Router
+        // Update the `_UNISWAP_V2_ROUTER` constant with this value
+        vm.prank(_CREATE2_DEPLOYER);
+        UniswapV2Router02 uniswapV2Router =
+            new UniswapV2Router02{salt: uniswapV2RouterSalt}(_UNISWAP_V2_FACTORY, address(0));
+        console2.log("UniswapV2Router address: ", address(uniswapV2Router));
     }
 
     function generateUniswapV2DirectToLiquidity() public {

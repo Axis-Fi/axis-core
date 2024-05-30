@@ -25,19 +25,16 @@ import {keycodeFromVeecode, toKeycode} from "src/modules/Keycode.sol";
 import {MockERC20} from "solmate/test/utils/mocks/MockERC20.sol";
 
 import {WithSalts} from "test/lib/WithSalts.sol";
+import {TestConstants} from "test/Constants.sol";
 import {console2} from "forge-std/console2.sol";
 
-abstract contract UniswapV2DirectToLiquidityTest is Test, Permit2User, WithSalts {
+abstract contract UniswapV2DirectToLiquidityTest is Test, Permit2User, WithSalts, TestConstants {
     using Callbacks for UniswapV2DirectToLiquidity;
 
-    address internal constant _OWNER = address(0x1);
     address internal constant _SELLER = address(0x2);
     address internal constant _PROTOCOL = address(0x3);
     address internal constant _BUYER = address(0x4);
     address internal constant _NOT_SELLER = address(0x20);
-    address internal constant _AUCTION_HOUSE = address(0x000000000000000000000000000000000000000A);
-    address internal constant _UNISWAP_V2_FACTORY =
-        address(0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f);
 
     uint96 internal constant _LOT_CAPACITY = 10e18;
 
@@ -85,10 +82,19 @@ abstract contract UniswapV2DirectToLiquidityTest is Test, Permit2User, WithSalts
         // No storage slots to set
 
         // Create a UniswapV2Router at a deterministic address
-        _uniV2Router = new UniswapV2Router02{
-            salt: bytes32(0x035ba535d735a8e92093764ec05c30d49ab56cfd0d3da306185ab02b1fcac4f4)
-        }(address(_uniV2Factory), address(0));
-        console2.log("UniswapV2Router address: {}", address(_uniV2Router)); // 0x584A2a1F5eCdCDcB6c0616cd280a7Db89239872B
+        vm.startBroadcast();
+        bytes32 uniswapV2RouterSalt = _getTestSalt(
+            "UniswapV2Router",
+            type(UniswapV2Router02).creationCode,
+            abi.encode(address(_uniV2Factory), address(0))
+        );
+        _uniV2Router =
+            new UniswapV2Router02{salt: uniswapV2RouterSalt}(address(_uniV2Factory), address(0));
+        vm.stopBroadcast();
+        if (address(_uniV2Router) != _UNISWAP_V2_ROUTER) {
+            console2.log("UniswapV2Router address: {}", address(_uniV2Router));
+            revert("UniswapV2Router address mismatch");
+        }
 
         _linearVesting = new LinearVesting(address(_auctionHouse));
         _batchAuctionModule = new MockBatchAuctionModule(address(_auctionHouse));
