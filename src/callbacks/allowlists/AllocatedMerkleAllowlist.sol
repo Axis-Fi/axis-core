@@ -9,7 +9,7 @@ import {Callbacks} from "src/lib/Callbacks.sol";
 
 /// @title  AllocatedMerkleAllowlist
 /// @notice This contract extends the MerkleAllowlist contract to implement a merkle tree-based allowlist for buyers to participate in an auction.
-///         In this implementation, each buyer has a purchase limit allocated to them.
+///         In this implementation, each buyer has an individual purchase limit that is set.
 contract AllocatedMerkleAllowlist is MerkleAllowlist {
     // ========== ERRORS ========== //
 
@@ -44,6 +44,8 @@ contract AllocatedMerkleAllowlist is MerkleAllowlist {
     /// @inheritdoc BaseCallback
     /// @dev        This function performs the following:
     ///             - Calls the `_onBuy()` function to validate the buyer's purchase
+    ///
+    /// @param      callbackData_   abi-encoded data: (bytes32[], uint256) representing the merkle proof and allocated amount
     function _onPurchase(
         uint96 lotId_,
         address buyer_,
@@ -58,6 +60,8 @@ contract AllocatedMerkleAllowlist is MerkleAllowlist {
     /// @inheritdoc BaseCallback
     /// @dev        This function performs the following:
     ///             - Calls the `_onBuy()` function to validate the buyer's bid
+    ///
+    /// @param      callbackData_   abi-encoded data: (bytes32[], uint256) representing the proof and allocated amount
     function _onBid(
         uint96 lotId_,
         uint64,

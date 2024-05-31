@@ -54,7 +54,7 @@ contract MerkleAllowlist is BaseCallback {
     ///             - The callback data is of an invalid length
     ///
     /// @param      lotId_          The id of the lot
-    /// @param      callbackData_   abi-encoded callback data - a single bytes32 value representing the merkle root
+    /// @param      callbackData_   abi-encoded data: (bytes32) representing the merkle root
     function _onCreate(
         uint96 lotId_,
         address,
@@ -98,6 +98,8 @@ contract MerkleAllowlist is BaseCallback {
     ///
     ///             This function reverts if:
     ///             - The buyer is not allowed to participate
+    ///
+    /// @param      callbackData_   abi-encoded data: (bytes32[]) representing the merkle proof
     function _onPurchase(
         uint96 lotId_,
         address buyer_,
@@ -138,6 +140,8 @@ contract MerkleAllowlist is BaseCallback {
     ///
     ///             This function reverts if:
     ///             - The buyer is not allowed to participate
+    ///
+    /// @param      callbackData_   abi-encoded data: (bytes32[]) representing the merkle proof
     function _onBid(
         uint96 lotId_,
         uint64 bidId_,
