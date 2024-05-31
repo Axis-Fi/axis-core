@@ -67,7 +67,7 @@ contract AllocatedMerkleAllowlist is MerkleAllowlist {
         bytes calldata callbackData_
     ) internal {
         // Validate that the buyer is allowed to participate
-        
+
         // Decode the merkle proof and allocated amount from buyer submitted callback data
         (bytes32[] memory proof, uint256 allocatedAmount) =
             abi.decode(callbackData_, (bytes32[], uint256));
