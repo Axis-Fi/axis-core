@@ -20,7 +20,7 @@ contract AllocatedMerkleAllowlist is BaseCallback {
     // ========== EVENTS ========== //
 
     /// @notice Emitted when the merkle root is set
-    event MerkleRootSet(bytes32 merkleRoot);
+    event MerkleRootSet(uint96 lotId, bytes32 merkleRoot);
 
     // ========== STATE VARIABLES ========== //
 
@@ -185,6 +185,6 @@ contract AllocatedMerkleAllowlist is BaseCallback {
         // Set the new merkle root and emit an event
         lotMerkleRoot[lotId_] = merkleRoot_;
 
-        emit MerkleRootSet(merkleRoot_);
+        emit MerkleRootSet(lotId_, merkleRoot_);
     }
 }
