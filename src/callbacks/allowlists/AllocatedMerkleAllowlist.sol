@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.19;
 
-import {MerkleProofLib} from "lib/solady/src/utils/MerkleProofLib.sol";
+import {MerkleProof} from "lib/openzeppelin-contracts/contracts/utils/cryptography/MerkleProof.sol";
 
 import {MerkleAllowlist} from "src/callbacks/allowlists/MerkleAllowlist.sol";
 import {Callbacks} from "src/lib/Callbacks.sol";
@@ -67,16 +67,16 @@ contract AllocatedMerkleAllowlist is MerkleAllowlist {
         bytes calldata callbackData_
     ) internal {
         // Validate that the buyer is allowed to participate
-        
+
         // Decode the merkle proof and allocated amount from buyer submitted callback data
         (bytes32[] memory proof, uint256 allocatedAmount) =
             abi.decode(callbackData_, (bytes32[], uint256));
 
         // Get the leaf for the buyer
-        bytes32 leaf = keccak256(abi.encodePacked(buyer_, allocatedAmount));
+        bytes32 leaf = keccak256(bytes.concat(keccak256(abi.encode(buyer_, allocatedAmount))));
 
         // Validate the merkle proof
-        if (!MerkleProofLib.verify(proof, lotMerkleRoot[lotId_], leaf)) {
+        if (!MerkleProof.verify(proof, lotMerkleRoot[lotId_], leaf)) {
             revert Callback_NotAuthorized();
         }
 
