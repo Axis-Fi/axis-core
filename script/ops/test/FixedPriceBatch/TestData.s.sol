@@ -54,11 +54,7 @@ contract TestData is Script, WithEnvironment {
             routingParams.callbackData = abi.encode(
                 BaselineAxisLaunch.CreateData({
                     discoveryTickWidth: 100,
-                    allowlistParams: abi.encode(
-                        BALwithAllocatedAllowlist.AllocatedAllowlistCreateParams({
-                            merkleRoot: merkleRoot
-                        })
-                    )
+                    allowlistParams: abi.encode(merkleRoot)
                 })
             );
 
@@ -140,12 +136,7 @@ contract TestData is Script, WithEnvironment {
                 auctionData: abi.encode(""),
                 permit2Data: bytes("")
             }),
-            abi.encode(
-                BALwithAllocatedAllowlist.AllocatedAllowlistBidParams({
-                    proof: allowlistProof,
-                    allocatedAmount: allocatedAmount_
-                })
-            )
+            abi.encode(allowlistProof, allocatedAmount_)
         );
 
         console2.log("Bid placed with ID: ", bidId);

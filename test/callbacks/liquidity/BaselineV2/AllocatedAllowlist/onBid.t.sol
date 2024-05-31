@@ -9,22 +9,20 @@ import {BALwithAllocatedAllowlist} from
     "src/callbacks/liquidity/BaselineV2/BALwithAllocatedAllowlist.sol";
 
 contract BaselineAllocatedAllowlistOnBidTest is BaselineAllocatedAllowlistTest {
-    // Number values need to be converted to hex
-    // cast to-uint256 5000000000000000000 = 0x0000000000000000000000000000000000000000000000004563918244f40000
-    // Then concatenated with the address
-    // cast concat-hex "0x0000000000000000000000000000000000000004" "0x0000000000000000000000000000000000000000000000004563918244f40000"
-    // The concatenated values can then be entered as leaves here: https://lab.miguelmota.com/merkletreejs/example/
+    // Use the @openzeppelin/merkle-tree package or the scripts in axis-utils to generate the merkle tree
 
     // Values:
     // 0x0000000000000000000000000000000000000004, 5e18
     // 0x0000000000000000000000000000000000000020, 0
     bytes32 internal constant _MERKLE_ROOT =
-        0x31d4f5b0409c3135a0fafee5c3d0d55f60dc000c375a08253792018af634c7f8;
+        0x0fdc3942d9af344db31ff2e80c06bc4e558dc967ca5b4d421d741870f5ea40df;
     bytes32 internal constant _BUYER_MERKLE_PROOF =
-        0xa74918dea25af42011aa97c6f1afcb94b1677e783fad462fe50b7436df9d5d38;
+        0x2eac7b0cadd960cd4457012a5e232aa3532d9365ba6df63c1b5a9c7846f77760;
     bytes32 internal constant _NOT_SELLER_MERKLE_PROOF =
-        0x48371c09b043f1a28e5b80a2b295dcedc7e596fa1faacf355af6611b4d4eddc3;
-    BALwithAllocatedAllowlist.AllocatedAllowlistBidParams internal _bidParams;
+        0xe0a73973cd60d8cbabb978d1f3c983065148b388619b9176d3d30e47c16d4fd5;
+
+    bytes32[] internal _proof;
+    uint256 internal _allocatedAmount;
 
     uint64 internal constant _BID_ID = 1;
 
@@ -34,19 +32,19 @@ contract BaselineAllocatedAllowlistOnBidTest is BaselineAllocatedAllowlistTest {
         bytes32[] memory proof = new bytes32[](1);
         proof[0] = merkleProof_;
 
-        _bidParams.proof = proof;
+        _proof = proof;
         _;
     }
 
     modifier givenMerkleAllocatedAmount(uint256 allocatedAmount_) {
-        _bidParams.allocatedAmount = allocatedAmount_;
+        _allocatedAmount = allocatedAmount_;
         _;
     }
 
     function _onBid(uint256 bidAmount_) internal {
         // Call the callback
         vm.prank(address(_auctionHouse));
-        _dtl.onBid(_lotId, _BID_ID, _BUYER, bidAmount_, abi.encode(_bidParams));
+        _dtl.onBid(_lotId, _BID_ID, _BUYER, bidAmount_, abi.encode(_proof, _allocatedAmount));
     }
 
     // ========== TESTS ========== //
@@ -116,7 +114,7 @@ contract BaselineAllocatedAllowlistOnBidTest is BaselineAllocatedAllowlistTest {
 
         // Call the callback
         vm.prank(address(_auctionHouse));
-        _dtl.onBid(_lotId, _BID_ID, address(0x55), 5e18, abi.encode(_bidParams));
+        _dtl.onBid(_lotId, _BID_ID, address(0x55), 5e18, abi.encode(_proof, _allocatedAmount));
     }
 
     function test_buyerLimitSpent_reverts()
@@ -156,7 +154,7 @@ contract BaselineAllocatedAllowlistOnBidTest is BaselineAllocatedAllowlistTest {
 
         // Call the callback
         vm.prank(address(_auctionHouse));
-        _dtl.onBid(_lotId, _BID_ID, _NOT_SELLER, 5e18, abi.encode(_bidParams));
+        _dtl.onBid(_lotId, _BID_ID, _NOT_SELLER, 5e18, abi.encode(_proof, _allocatedAmount));
     }
 
     function test_noBids_aboveLimit_reverts()

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.19;
 
-import {MerkleProofLib} from "lib/solady/src/utils/MerkleProofLib.sol";
+import {MerkleProof} from "lib/openzeppelin-contracts/contracts/utils/cryptography/MerkleProof.sol";
 
 import {BaselineAxisLaunch} from "src/callbacks/liquidity/BaselineV2/BaselineAxisLaunch.sol";
 
@@ -22,29 +22,11 @@ contract BALwithAllocatedAllowlist is BaselineAxisLaunch {
     /// @notice Emitted when the merkle root is set
     event MerkleRootSet(bytes32 merkleRoot);
 
-    // ========== DATA STRUCTURES ========== //
-
-    /// @notice The parameters for creating an allocated allowlist
-    /// @dev    The merkle tree from which the merkle root is generated is expected to be made up of leaves with the following structure:
-    ///         keccak256(abi.encodePacked(address, uint256))
-    ///
-    /// @param  merkleRoot The root of the merkle tree. Can be updated later by the owner using `setMerkleRoot()`.
-    struct AllocatedAllowlistCreateParams {
-        bytes32 merkleRoot;
-    }
-
-    /// @notice The parameters for bidding with an allocated allowlist
-    ///
-    /// @param  proof           The merkle proof for the buyer
-    /// @param  allocatedAmount The total amount the buyer is allowed to spend
-    struct AllocatedAllowlistBidParams {
-        bytes32[] proof;
-        uint256 allocatedAmount;
-    }
-
     // ========== STATE VARIABLES ========== //
 
     /// @notice The root of the merkle tree that represents the allowlist
+    /// @dev    The merkle tree should adhere to the format specified in the OpenZeppelin MerkleProof library at https://github.com/OpenZeppelin/merkle-tree
+    ///         In particular, leaf values (such as `(address)` or `(address,uint256)`) should be double-hashed.
     bytes32 public merkleRoot;
 
     /// @notice Tracks the cumulative amount spent by a buyer
@@ -76,7 +58,7 @@ contract BALwithAllocatedAllowlist is BaselineAxisLaunch {
     /// @dev        This function reverts if:
     ///             - `allowlistData_` is not of the correct length
     ///
-    /// @param      allowlistData_ abi-encoded AllocatedAllowlistCreateParams
+    /// @param      allowlistData_ abi-encoded data: (bytes32) representing the merkle root
     function __onCreate(
         uint96,
         address,
@@ -92,14 +74,15 @@ contract BALwithAllocatedAllowlist is BaselineAxisLaunch {
         }
 
         // Decode the merkle root from the callback data
-        AllocatedAllowlistCreateParams memory allowlistParams =
-            abi.decode(allowlistData_, (AllocatedAllowlistCreateParams));
+        bytes32 merkleRootParams = abi.decode(allowlistData_, (bytes32));
 
         // Set the merkle root and buyer limit
-        merkleRoot = allowlistParams.merkleRoot;
+        merkleRoot = merkleRootParams;
     }
 
     /// @inheritdoc BaselineAxisLaunch
+    ///
+    /// @param      callbackData_   abi-encoded data: (bytes32[], uint256) representing the merkle proof and allocated amount
     function _onBid(
         uint96 lotId_,
         uint64 bidId_,
@@ -134,19 +117,19 @@ contract BALwithAllocatedAllowlist is BaselineAxisLaunch {
         bytes calldata callbackData_
     ) internal view returns (uint256) {
         // Decode the merkle proof from the callback data
-        AllocatedAllowlistBidParams memory bidParams =
-            abi.decode(callbackData_, (AllocatedAllowlistBidParams));
+        (bytes32[] memory proof, uint256 allocatedAmount) =
+            abi.decode(callbackData_, (bytes32[], uint256));
 
         // Get the leaf for the buyer
-        bytes32 leaf = keccak256(abi.encodePacked(buyer_, bidParams.allocatedAmount));
+        bytes32 leaf = keccak256(bytes.concat(keccak256(abi.encode(buyer_, allocatedAmount))));
 
         // Validate the merkle proof
-        if (!MerkleProofLib.verify(bidParams.proof, merkleRoot, leaf)) {
+        if (!MerkleProof.verify(proof, merkleRoot, leaf)) {
             revert Callback_NotAuthorized();
         }
 
         // Return the allocated amount for the buyer
-        return bidParams.allocatedAmount;
+        return allocatedAmount;
     }
 
     function _canBuy(address buyer_, uint256 amount_, uint256 allocatedAmount_) internal {
