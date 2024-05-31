@@ -4,8 +4,12 @@ pragma solidity 0.8.19;
 import {MerkleProof} from "lib/openzeppelin-contracts/contracts/utils/cryptography/MerkleProof.sol";
 
 import {MerkleAllowlist} from "src/callbacks/allowlists/MerkleAllowlist.sol";
+import {BaseCallback} from "src/callbacks/BaseCallback.sol";
 import {Callbacks} from "src/lib/Callbacks.sol";
 
+/// @title  AllocatedMerkleAllowlist
+/// @notice This contract extends the MerkleAllowlist contract to implement a merkle tree-based allowlist for buyers to participate in an auction.
+///         In this implementation, each buyer has a purchase limit allocated to them.
 contract AllocatedMerkleAllowlist is MerkleAllowlist {
     // ========== ERRORS ========== //
 
@@ -37,6 +41,9 @@ contract AllocatedMerkleAllowlist is MerkleAllowlist {
 
     // ========== CALLBACK FUNCTIONS ========== //
 
+    /// @inheritdoc BaseCallback
+    /// @dev        This function performs the following:
+    ///             - Calls the `_onBuy()` function to validate the buyer's purchase
     function _onPurchase(
         uint96 lotId_,
         address buyer_,
@@ -48,6 +55,9 @@ contract AllocatedMerkleAllowlist is MerkleAllowlist {
         _onBuy(lotId_, buyer_, amount_, callbackData_);
     }
 
+    /// @inheritdoc BaseCallback
+    /// @dev        This function performs the following:
+    ///             - Calls the `_onBuy()` function to validate the buyer's bid
     function _onBid(
         uint96 lotId_,
         uint64,
