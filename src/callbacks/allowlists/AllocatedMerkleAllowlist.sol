@@ -14,9 +14,6 @@ contract AllocatedMerkleAllowlist is BaseCallback {
     /// @notice Error message when the bid amount exceeds the limit assigned to a buyer
     error Callback_ExceedsLimit();
 
-    /// @notice Error message when the callback state does not support the action
-    error Callback_InvalidState();
-
     // ========== EVENTS ========== //
 
     /// @notice Emitted when the merkle root is set
