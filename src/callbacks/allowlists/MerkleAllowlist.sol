@@ -6,10 +6,18 @@ import {MerkleProofLib} from "lib/solady/src/utils/MerkleProofLib.sol";
 import {BaseCallback} from "src/callbacks/BaseCallback.sol";
 import {Callbacks} from "src/lib/Callbacks.sol";
 
+import {IAuctionHouse} from "src/interfaces/IAuctionHouse.sol";
+
 contract MerkleAllowlist is BaseCallback {
+    // ========== EVENTS ========== //
+
+    /// @notice Emitted when the merkle root is set
+    event MerkleRootSet(uint96 lotId, bytes32 merkleRoot);
+
     // ========== STATE VARIABLES ========== //
 
-    mapping(uint96 => bytes32) public lotMerkleRoot;
+    /// @notice The root of the merkle tree that represents the allowlist for a lot
+    mapping(uint96 lotId => bytes32 merkleRoot) public lotMerkleRoot;
 
     // ========== CONSTRUCTOR ========== //
 
@@ -40,6 +48,11 @@ contract MerkleAllowlist is BaseCallback {
         bool,
         bytes calldata callbackData_
     ) internal virtual override {
+        // Check that the parameters are of the correct length
+        if (callbackData_.length != 32) {
+            revert Callback_InvalidParams();
+        }
+
         // Decode the merkle root from the callback data
         bytes32 merkleRoot = abi.decode(callbackData_, (bytes32));
 
@@ -125,5 +138,34 @@ contract MerkleAllowlist is BaseCallback {
         if (!MerkleProofLib.verify(proof, lotMerkleRoot[lotId_], leaf)) {
             revert Callback_NotAuthorized();
         }
+    }
+
+    // ========== ADMIN FUNCTIONS ========== //
+
+    /// @notice Sets the merkle root for the allowlist
+    ///         This function can be called by the lot's seller to update the merkle root after `onCreate()`.
+    /// @dev    This function performs the following:
+    ///         - Performs validation
+    ///         - Sets the merkle root
+    ///         - Emits a MerkleRootSet event
+    ///
+    ///         This function reverts if:
+    ///         - The caller is not the lot's seller
+    ///         - The auction has not been registered
+    ///
+    /// @param  merkleRoot_ The new merkle root
+    function setMerkleRoot(uint96 lotId_, bytes32 merkleRoot_) external onlyRegisteredLot(lotId_) {
+        // We check that the lot is registered on this callback
+
+        // Check that the caller is the lot's seller
+        (address seller,,,,,,,,) = IAuctionHouse(AUCTION_HOUSE).lotRouting(lotId_);
+        if (msg.sender != seller) {
+            revert Callback_NotAuthorized();
+        }
+
+        // Set the new merkle root and emit an event
+        lotMerkleRoot[lotId_] = merkleRoot_;
+
+        emit MerkleRootSet(lotId_, merkleRoot_);
     }
 }
