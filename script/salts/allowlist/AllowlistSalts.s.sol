@@ -9,6 +9,7 @@ import {WithSalts} from "script/salts/WithSalts.s.sol";
 import {MerkleAllowlist} from "src/callbacks/allowlists/MerkleAllowlist.sol";
 import {CappedMerkleAllowlist} from "src/callbacks/allowlists/CappedMerkleAllowlist.sol";
 import {TokenAllowlist} from "src/callbacks/allowlists/TokenAllowlist.sol";
+import {AllocatedMerkleAllowlist} from "src/callbacks/allowlists/AllocatedMerkleAllowlist.sol";
 import {Callbacks} from "src/lib/Callbacks.sol";
 
 contract AllowlistSalts is Script, WithEnvironment, WithSalts {
@@ -68,6 +69,12 @@ contract AllowlistSalts is Script, WithEnvironment, WithSalts {
         // 10011000 = 0x98
         contractCode = type(TokenAllowlist).creationCode;
         saltKey = "TokenAllowlist";
+        (bytecodePath, bytecodeHash) = _writeBytecode(saltKey, contractCode, args);
+        _setSalt(bytecodePath, prefix, saltKey, bytecodeHash);
+
+        // Allocated Allowlist
+        contractCode = type(AllocatedMerkleAllowlist).creationCode;
+        saltKey = "AllocatedMerkleAllowlist";
         (bytecodePath, bytecodeHash) = _writeBytecode(saltKey, contractCode, args);
         _setSalt(bytecodePath, prefix, saltKey, bytecodeHash);
     }

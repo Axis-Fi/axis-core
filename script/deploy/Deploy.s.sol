@@ -29,6 +29,7 @@ import {UniswapV3DirectToLiquidity} from "src/callbacks/liquidity/UniswapV3DTL.s
 import {CappedMerkleAllowlist} from "src/callbacks/allowlists/CappedMerkleAllowlist.sol";
 import {MerkleAllowlist} from "src/callbacks/allowlists/MerkleAllowlist.sol";
 import {TokenAllowlist} from "src/callbacks/allowlists/TokenAllowlist.sol";
+import {AllocatedMerkleAllowlist} from "src/callbacks/allowlists/AllocatedMerkleAllowlist.sol";
 
 /// @notice Declarative deployment script that reads a deployment sequence (with constructor args)
 ///         and a configured environment file to deploy and install contracts in the Axis protocol.
@@ -919,6 +920,84 @@ contract Deploy is Script, WithEnvironment, WithSalts {
         console2.log("    TokenAllowlist (Batch) deployed at:", address(cbBatchTokenAllowlist));
 
         return (address(cbBatchTokenAllowlist), _PREFIX_AXIS);
+    }
+
+    function deployAtomicAllocatedMerkleAllowlist(bytes memory) public returns (address, string memory) {
+        // No args used
+        console2.log("");
+        console2.log("Deploying AllocatedMerkleAllowlist (Atomic)");
+
+        address atomicAuctionHouse = _getAddressNotZero("axis.AtomicAuctionHouse");
+        Callbacks.Permissions memory permissions = Callbacks.Permissions({
+            onCreate: true,
+            onCancel: false,
+            onCurate: false,
+            onPurchase: true,
+            onBid: true,
+            onSettle: false,
+            receiveQuoteTokens: false,
+            sendBaseTokens: false
+        });
+
+        // Get the salt
+        bytes32 salt_ = _getSalt(
+            "AllocatedMerkleAllowlist",
+            type(AllocatedMerkleAllowlist).creationCode,
+            abi.encode(atomicAuctionHouse, permissions)
+        );
+
+        // Revert if the salt is not set
+        require(salt_ != bytes32(0), "Salt not set");
+
+        // Deploy the module
+        console2.log("    salt:", vm.toString(salt_));
+
+        vm.broadcast();
+        AllocatedMerkleAllowlist cbAtomicAllocatedMerkleAllowlist =
+            new AllocatedMerkleAllowlist{salt: salt_}(atomicAuctionHouse, permissions);
+        console2.log("");
+        console2.log("    AllocatedMerkleAllowlist (Atomic) deployed at:", address(cbAtomicAllocatedMerkleAllowlist));
+
+        return (address(cbAtomicAllocatedMerkleAllowlist), _PREFIX_AXIS);
+    }
+
+    function deployBatchAllocatedMerkleAllowlist(bytes memory) public returns (address, string memory) {
+        // No args used
+        console2.log("");
+        console2.log("Deploying AllocatedMerkleAllowlist (Batch)");
+
+        address batchAuctionHouse = _getAddressNotZero("axis.BatchAuctionHouse");
+        Callbacks.Permissions memory permissions = Callbacks.Permissions({
+            onCreate: true,
+            onCancel: false,
+            onCurate: false,
+            onPurchase: true,
+            onBid: true,
+            onSettle: false,
+            receiveQuoteTokens: false,
+            sendBaseTokens: false
+        });
+
+        // Get the salt
+        bytes32 salt_ = _getSalt(
+            "AllocatedMerkleAllowlist",
+            type(AllocatedMerkleAllowlist).creationCode,
+            abi.encode(batchAuctionHouse, permissions)
+        );
+
+        // Revert if the salt is not set
+        require(salt_ != bytes32(0), "Salt not set");
+
+        // Deploy the module
+        console2.log("    salt:", vm.toString(salt_));
+
+        vm.broadcast();
+        AllocatedMerkleAllowlist cbBatchAllocatedMerkleAllowlist =
+            new AllocatedMerkleAllowlist{salt: salt_}(batchAuctionHouse, permissions);
+        console2.log("");
+        console2.log("    AllocatedMerkleAllowlist (Batch) deployed at:", address(cbBatchAllocatedMerkleAllowlist));
+
+        return (address(cbBatchAllocatedMerkleAllowlist), _PREFIX_AXIS);
     }
 
     // ========== HELPER FUNCTIONS ========== //
