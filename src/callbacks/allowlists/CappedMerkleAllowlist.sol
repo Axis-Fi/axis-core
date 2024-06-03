@@ -2,15 +2,24 @@
 pragma solidity 0.8.19;
 
 import {MerkleAllowlist} from "src/callbacks/allowlists/MerkleAllowlist.sol";
+import {BaseCallback} from "src/callbacks/BaseCallback.sol";
 import {Callbacks} from "src/lib/Callbacks.sol";
 
+/// @title  CappedMerkleAllowlist
+/// @notice This contract extends the MerkleAllowlist contract to implement a merkle tree-based allowlist for buyers to participate in an auction.
+///         In this implementation, each buyer has a purchase limit that is set for all buyers in an auction lot.
 contract CappedMerkleAllowlist is MerkleAllowlist {
     // ========== ERRORS ========== //
+
+    /// @notice Error message when the bid amount exceeds the limit assigned to a buyer
     error Callback_ExceedsLimit();
 
     // ========== STATE VARIABLES ========== //
 
+    /// @notice Stores the purchase limit for each lot
     mapping(uint96 => uint256) public lotBuyerLimit;
+
+    /// @notice Tracks the cumulative amount spent by a buyer on a lot
     mapping(uint96 => mapping(address => uint256)) public lotBuyerSpent;
 
     // ========== CONSTRUCTOR ========== //
@@ -33,6 +42,9 @@ contract CappedMerkleAllowlist is MerkleAllowlist {
 
     // ========== CALLBACK FUNCTIONS ========== //
 
+    /// @inheritdoc BaseCallback
+    ///
+    /// @param callbackData_    abi-encoded data: (bytes32, uint256) representing the merkle root and buyer limit
     function _onCreate(
         uint96 lotId_,
         address,
@@ -48,8 +60,10 @@ contract CappedMerkleAllowlist is MerkleAllowlist {
         // Set the merkle root and lot buyer limit
         lotMerkleRoot[lotId_] = merkleRoot;
         lotBuyerLimit[lotId_] = buyerLimit;
+        emit MerkleRootSet(lotId_, merkleRoot);
     }
 
+    /// @inheritdoc MerkleAllowlist
     function __onPurchase(
         uint96 lotId_,
         address buyer_,
@@ -61,6 +75,7 @@ contract CappedMerkleAllowlist is MerkleAllowlist {
         _canBuy(lotId_, buyer_, amount_);
     }
 
+    /// @inheritdoc MerkleAllowlist
     function __onBid(
         uint96 lotId_,
         uint64,
@@ -72,6 +87,7 @@ contract CappedMerkleAllowlist is MerkleAllowlist {
     }
 
     // ========== INTERNAL FUNCTIONS ========== //
+
     function _canBuy(uint96 lotId_, address buyer_, uint256 amount_) internal {
         // Check if the buyer has already spent their limit
         if (lotBuyerSpent[lotId_][buyer_] + amount_ > lotBuyerLimit[lotId_]) {

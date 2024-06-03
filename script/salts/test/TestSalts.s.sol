@@ -10,6 +10,7 @@ import {WithSalts} from "script/salts/WithSalts.s.sol";
 import {MockCallback} from "test/callbacks/MockCallback.sol";
 import {Callbacks} from "src/lib/Callbacks.sol";
 import {CappedMerkleAllowlist} from "src/callbacks/allowlists/CappedMerkleAllowlist.sol";
+import {AllocatedMerkleAllowlist} from "src/callbacks/allowlists/AllocatedMerkleAllowlist.sol";
 import {UniswapV2DirectToLiquidity} from "src/callbacks/liquidity/UniswapV2DTL.sol";
 import {UniswapV3DirectToLiquidity} from "src/callbacks/liquidity/UniswapV3DTL.sol";
 
@@ -27,6 +28,7 @@ contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts {
 
     string internal constant _MOCK_CALLBACK = "MockCallback";
     string internal constant _CAPPED_MERKLE_ALLOWLIST = "CappedMerkleAllowlist";
+    string internal constant _ALLOCATED_MERKLE_ALLOWLIST = "AllocatedMerkleAllowlist";
 
     function _setUp(string calldata chain_) internal {
         _loadEnv(chain_);
@@ -410,6 +412,45 @@ contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts {
         );
         (bytecodePath, bytecodeHash) = _writeBytecode(_CAPPED_MERKLE_ALLOWLIST, contractCode, args);
         _setTestSalt(bytecodePath, "90", _CAPPED_MERKLE_ALLOWLIST, bytecodeHash);
+    }
+
+    function generateAllocatedMerkleAllowlist() public {
+        // 10001000 = 0x88
+        bytes memory args = abi.encode(
+            _AUCTION_HOUSE,
+            Callbacks.Permissions({
+                onCreate: true,
+                onCancel: false,
+                onCurate: false,
+                onPurchase: false,
+                onBid: true,
+                onSettle: false,
+                receiveQuoteTokens: false,
+                sendBaseTokens: false
+            })
+        );
+        bytes memory contractCode = type(AllocatedMerkleAllowlist).creationCode;
+        (string memory bytecodePath, bytes32 bytecodeHash) =
+            _writeBytecode(_ALLOCATED_MERKLE_ALLOWLIST, contractCode, args);
+        _setTestSalt(bytecodePath, "88", _ALLOCATED_MERKLE_ALLOWLIST, bytecodeHash);
+
+        // 10010000 = 0x90
+        args = abi.encode(
+            _AUCTION_HOUSE,
+            Callbacks.Permissions({
+                onCreate: true,
+                onCancel: false,
+                onCurate: false,
+                onPurchase: true,
+                onBid: false,
+                onSettle: false,
+                receiveQuoteTokens: false,
+                sendBaseTokens: false
+            })
+        );
+        (bytecodePath, bytecodeHash) =
+            _writeBytecode(_ALLOCATED_MERKLE_ALLOWLIST, contractCode, args);
+        _setTestSalt(bytecodePath, "90", _ALLOCATED_MERKLE_ALLOWLIST, bytecodeHash);
     }
 
     function generateUniswapV2DirectToLiquidity() public {
