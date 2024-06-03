@@ -135,7 +135,7 @@ contract TestData is Script {
 
         return lotId;
     }
-    
+
     function cancelAuction(uint96 lotId) public {
         auctionHouse = BatchAuctionHouse(vm.envAddress("AUCTION_HOUSE"));
         vm.broadcast();

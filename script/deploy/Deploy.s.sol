@@ -922,7 +922,10 @@ contract Deploy is Script, WithEnvironment, WithSalts {
         return (address(cbBatchTokenAllowlist), _PREFIX_AXIS);
     }
 
-    function deployAtomicAllocatedMerkleAllowlist(bytes memory) public returns (address, string memory) {
+    function deployAtomicAllocatedMerkleAllowlist(bytes memory)
+        public
+        returns (address, string memory)
+    {
         // No args used
         console2.log("");
         console2.log("Deploying AllocatedMerkleAllowlist (Atomic)");
@@ -956,12 +959,18 @@ contract Deploy is Script, WithEnvironment, WithSalts {
         AllocatedMerkleAllowlist cbAtomicAllocatedMerkleAllowlist =
             new AllocatedMerkleAllowlist{salt: salt_}(atomicAuctionHouse, permissions);
         console2.log("");
-        console2.log("    AllocatedMerkleAllowlist (Atomic) deployed at:", address(cbAtomicAllocatedMerkleAllowlist));
+        console2.log(
+            "    AllocatedMerkleAllowlist (Atomic) deployed at:",
+            address(cbAtomicAllocatedMerkleAllowlist)
+        );
 
         return (address(cbAtomicAllocatedMerkleAllowlist), _PREFIX_AXIS);
     }
 
-    function deployBatchAllocatedMerkleAllowlist(bytes memory) public returns (address, string memory) {
+    function deployBatchAllocatedMerkleAllowlist(bytes memory)
+        public
+        returns (address, string memory)
+    {
         // No args used
         console2.log("");
         console2.log("Deploying AllocatedMerkleAllowlist (Batch)");
@@ -995,7 +1004,10 @@ contract Deploy is Script, WithEnvironment, WithSalts {
         AllocatedMerkleAllowlist cbBatchAllocatedMerkleAllowlist =
             new AllocatedMerkleAllowlist{salt: salt_}(batchAuctionHouse, permissions);
         console2.log("");
-        console2.log("    AllocatedMerkleAllowlist (Batch) deployed at:", address(cbBatchAllocatedMerkleAllowlist));
+        console2.log(
+            "    AllocatedMerkleAllowlist (Batch) deployed at:",
+            address(cbBatchAllocatedMerkleAllowlist)
+        );
 
         return (address(cbBatchAllocatedMerkleAllowlist), _PREFIX_AXIS);
     }
