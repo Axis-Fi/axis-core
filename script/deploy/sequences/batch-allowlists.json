@@ -8,6 +8,9 @@
       },
       {
           "name": "BatchTokenAllowlist"
+      },
+      {
+           "name": "BatchAllocatedMerkleAllowlist"
       }
   ]
 }

@@ -1,5 +1,7 @@
 {
-"axis.BatchCappedMerkleAllowlist": "0x98316f91B751d1ae41Fd668440db05Dc644b8112",
-"axis.BatchMerkleAllowlist": "0x985AFB4b65Fa7f47c53CF4a44a1d6D8ad59Bf6F8",
-"axis.BatchTokenAllowlist": "0x986fB5ac838e7DB6857c171d7ac846Fc875c306B"
+  "axis.BatchCappedMerkleAllowlist": "0x98CcB00c5F9854517DA6ED466b3B391fEF501542",
+  "axis.BatchMerkleAllowlist": "0x98408652D32571BEd7e357D1402A1A8c27B879e7",
+  "axis.BatchTokenAllowlist": "0x980110C58Ace1FD0422E5c27c7d4e248a547Ec7D",
+  "axis.BatchAllocatedMerkleAllowlist": "0x98469eF36DDD7bEAF28EDbd3fE2F57bD18A4BF2c"
 }
+  
