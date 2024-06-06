@@ -467,6 +467,16 @@ contract BatchAuctionHouse is IBatchAuctionHouse, AuctionHouse {
     ///             - Validates the lot id
     ///             - Aborts the auction on the auction module
     ///             - Refunds prefunding (in base tokens) to the seller
+    ///             - Calls the onCancel callback
+    ///
+    ///             This function reverts if:
+    ///             - The lot ID is invalid
+    ///             - The auction module reverts when aborting the auction
+    ///             - The refund amount is zero
+    ///
+    ///             Note that this function will not revert if the `onCancel` callback reverts.
+    ///
+    /// @param      lotId_   The lot ID to abort
     function abort(uint96 lotId_) external override nonReentrant {
         // Validation
         _isLotValid(lotId_);
@@ -489,6 +499,27 @@ contract BatchAuctionHouse is IBatchAuctionHouse, AuctionHouse {
             refund,
             false
         );
+
+        // If there is a callback configured, call the onCancel callback
+        // This is necessary as an auction lot configured with a callback that
+        // sends base tokens will have the base tokens sent to the callback contract.
+        // Calling onCancel offers the opportunity for the auction owner to handle
+        // the refund of the base tokens.
+        if (lotRouting[lotId_].callbacks != ICallback(address(0))) {
+            // Assemble the calldata
+            bytes memory onCancelCalldata = abi.encodeWithSelector(
+                ICallback.onCancel.selector,
+                lotId_,
+                refund,
+                lotRouting[lotId_].callbacks.hasPermission(Callbacks.SEND_BASE_TOKENS_FLAG),
+                abi.encode("")
+            );
+
+            // Call the onCancel callback, but ignore the return value
+            // As it is a low-level call, it will not revert on failure
+            // This prevents an auction owner from blocking an abort by reverting in the callback
+            address(lotRouting[lotId_].callbacks).call(onCancelCalldata);
+        }
 
         emit Abort(lotId_);
     }

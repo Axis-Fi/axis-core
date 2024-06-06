@@ -28,11 +28,14 @@ contract BatchAbortTest is BatchAuctionHouseTest {
     // [X] when the lot is settled
     //    [X] it reverts
     // [X] when the lot is past the dedicated settle period
-    //   [X] when a callback is configured that sends base tokens
-    //      [X] it sends the refund to the callback
+    //   [X] when a callback is configured
+    //    [X] when the callback sends base tokens
+    //       [X] it sends the refund to the callback, and calls the cancel() callback
+    //    [X] when the callback doesn't send base tokens
+    //       [X] it sends the refund to the seller, and calls the cancel() callback
+    //    [X] when the callback reverts
+    //       [X] it does not revert
     //   [X] when a callback is not configured
-    //      [X] it sends the refund to the seller
-    //   [X] when a callback is configured that doesn't send base tokens
     //      [X] it sends the refund to the seller
 
     modifier givenLotSettlementFinished() {
@@ -187,6 +190,9 @@ contract BatchAbortTest is BatchAuctionHouseTest {
         // Check the balances of the seller and the callback
         assertEq(_baseToken.balanceOf(_SELLER), startSellerBalance);
         assertEq(_baseToken.balanceOf(address(_callback)), startCallbackBalance + _LOT_CAPACITY);
+
+        // Check that the callback was called
+        assertEq(_callback.lotCancelled(_lotId), true, "onCancel");
     }
 
     function test_abort_whenCallbackDoesntSendBaseTokens()
@@ -203,6 +209,35 @@ contract BatchAbortTest is BatchAuctionHouseTest {
     {
         uint256 startSellerBalance = _baseToken.balanceOf(_SELLER);
         uint256 startCallbackBalance = _baseToken.balanceOf(address(_callback));
+
+        // Abort the lot
+        _auctionHouse.abort(_lotId);
+
+        // Check the balances of the seller and the callback
+        assertEq(_baseToken.balanceOf(_SELLER), startSellerBalance + _LOT_CAPACITY);
+        assertEq(_baseToken.balanceOf(address(_callback)), startCallbackBalance);
+
+        // Check that the callback was called
+        assertEq(_callback.lotCancelled(_lotId), true, "onCancel");
+    }
+
+    function test_abort_whenCallbackReverts()
+        public
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenCallbackIsSet
+        givenLotIsCreated
+        givenLotHasStarted
+        givenLotIsConcluded
+        givenLotIsPastSettlePeriod
+    {
+        uint256 startSellerBalance = _baseToken.balanceOf(_SELLER);
+        uint256 startCallbackBalance = _baseToken.balanceOf(address(_callback));
+
+        // Set the callback to revert
+        _callback.setOnCancelReverts(true);
 
         // Abort the lot
         _auctionHouse.abort(_lotId);
