@@ -3,7 +3,7 @@ pragma solidity 0.8.19;
 
 import {IAuction} from "src/interfaces/modules/IAuction.sol";
 import {IBatchAuction} from "src/interfaces/modules/IBatchAuction.sol";
-import {EncryptedMarginalPrice} from "src/modules/auctions/batch/EMP.sol";
+import {EncryptedMarginalPrice} from "src/modules/auctions/batch/EMP/EMP.sol";
 import {IEncryptedMarginalPrice} from "src/interfaces/modules/auctions/IEncryptedMarginalPrice.sol";
 
 import {EmpTest} from "test/modules/auctions/EMP/EMPTest.sol";
