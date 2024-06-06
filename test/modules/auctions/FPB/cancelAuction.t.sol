@@ -3,12 +3,11 @@ pragma solidity 0.8.19;
 
 import {Module} from "src/modules/Modules.sol";
 import {IAuction} from "src/interfaces/modules/IAuction.sol";
-import {EncryptedMarginalPrice} from "src/modules/auctions/batch/EMP.sol";
-import {IEncryptedMarginalPrice} from "src/interfaces/modules/auctions/IEncryptedMarginalPrice.sol";
+import {IFixedPriceBatch} from "src/interfaces/modules/auctions/IFixedPriceBatch.sol";
 
-import {EmpTest} from "test/modules/auctions/EMP/EMPTest.sol";
+import {FpbTest} from "test/modules/auctions/FPB/FPBTest.sol";
 
-contract EmpCancelAuctionTest is EmpTest {
+contract FpbCancelAuctionTest is FpbTest {
     // [X] when the caller is not the parent
     //  [X] it reverts
     // [X] when the lot id is invalid
@@ -84,7 +83,6 @@ contract EmpCancelAuctionTest is EmpTest {
         public
         givenLotIsCreated
         givenLotHasConcluded
-        givenPrivateKeyIsSubmitted
         givenLotIsSettled
     {
         // Expect revert
@@ -98,7 +96,7 @@ contract EmpCancelAuctionTest is EmpTest {
     function test_auctionStarted_reverts() public givenLotIsCreated givenLotHasStarted {
         // Expect revert
         bytes memory err =
-            abi.encodeWithSelector(IEncryptedMarginalPrice.Auction_WrongState.selector, _lotId);
+            abi.encodeWithSelector(IFixedPriceBatch.Auction_WrongState.selector, _lotId);
         vm.expectRevert(err);
 
         // Call the function
@@ -109,14 +107,12 @@ contract EmpCancelAuctionTest is EmpTest {
         // Call the function
         _cancelAuctionLot();
 
-        // Check the state
-        IAuction.Lot memory lotData = _getAuctionLot(_lotId);
+        // Assert state
+        IAuction.Lot memory lotData = _module.getLot(_lotId);
         assertEq(lotData.conclusion, uint48(block.timestamp), "conclusion");
         assertEq(lotData.capacity, 0, "capacity");
 
-        EncryptedMarginalPrice.AuctionData memory auctionData = _getAuctionData(_lotId);
-        assertEq(
-            uint8(auctionData.status), uint8(IEncryptedMarginalPrice.LotStatus.Settled), "status"
-        );
+        IFixedPriceBatch.AuctionData memory auctionData = _module.getAuctionData(_lotId);
+        assertEq(uint8(auctionData.status), uint8(IFixedPriceBatch.LotStatus.Settled), "status");
     }
 }

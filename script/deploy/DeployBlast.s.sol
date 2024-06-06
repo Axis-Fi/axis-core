@@ -6,8 +6,9 @@ import {console2} from "forge-std/Script.sol";
 // System contracts
 import {BlastAtomicAuctionHouse} from "src/blast/BlastAtomicAuctionHouse.sol";
 import {BlastBatchAuctionHouse} from "src/blast/BlastBatchAuctionHouse.sol";
-import {BlastEMP} from "src/blast/modules/auctions/BlastEMP.sol";
-import {BlastFPS} from "src/blast/modules/auctions/BlastFPS.sol";
+import {BlastEMP} from "src/blast/modules/auctions/batch/BlastEMP.sol";
+import {BlastFPS} from "src/blast/modules/auctions/atomic/BlastFPS.sol";
+import {BlastFPB} from "src/blast/modules/auctions/batch/BlastFPB.sol";
 import {BlastLinearVesting} from "src/blast/modules/derivatives/BlastLinearVesting.sol";
 
 import {Deploy} from "script/deploy/Deploy.s.sol";
@@ -151,6 +152,34 @@ contract DeployBlast is Deploy {
         console2.log("    BlastFPS deployed at:", address(amFps));
 
         return (address(amFps), _PREFIX_AXIS);
+    }
+
+    function deployFixedPriceBatch(bytes memory) public override returns (address, string memory) {
+        // No args used
+        console2.log("");
+        console2.log("Deploying BlastFPB (Fixed Price Batch)");
+
+        address batchAuctionHouse = _getAddressNotZero("axis.BatchAuctionHouse");
+        address blast = _getAddressNotZero("blast.blast");
+
+        // Get the salt
+        bytes32 salt_ =
+            _getSalt("BlastFPB", type(BlastFPB).creationCode, abi.encode(batchAuctionHouse, blast));
+
+        // Deploy the module
+        BlastFPB amFpb;
+        if (salt_ == bytes32(0)) {
+            vm.broadcast();
+            amFpb = new BlastFPB(batchAuctionHouse, blast);
+        } else {
+            console2.log("    salt:", vm.toString(salt_));
+
+            vm.broadcast();
+            amFpb = new BlastFPB{salt: salt_}(batchAuctionHouse, blast);
+        }
+        console2.log("    BlastFPB deployed at:", address(amFpb));
+
+        return (address(amFpb), _PREFIX_AXIS);
     }
 
     function deployAtomicLinearVesting(bytes memory)
