@@ -1,0 +1,7 @@
+{
+"axis.BatchAuctionHouse": "0xBA0000733C2d497dE92ae18A09DefB9aAbb8c5C8",
+"axis.BatchCatalogue": "0xb5a822eaA5803Ac5b8Ed2DC4De3D5916b3F46605",
+"axis.EncryptedMarginalPrice": "0x30c356DFBAc808BC62c860A9B285f024b40dF1fc",
+"axis.FixedPriceBatch": "0x13B299062c5E613C304145D78dA733bF9711DfC9",
+"axis.BatchLinearVesting": "0xA9AEAe1d42bbfa591F4a06945a895d75011bE6e8"
+}
