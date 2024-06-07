@@ -70,7 +70,7 @@ export const getAddresses = (network: string): Addresses => {
         DAI: "",
         USDC: "",
         UniswapV3Factory: "0x792edAdE80af5fC680d96a2eD80A44247D2Cf6Fd",
-        GUniFactory: "",
+        GUniFactory: "0xCa5eb015d7A527337109798524470e215346A617",
         GUniImplementation: "0x08B87749b379f5BCA1d74A7B3d4e9f3DeD41C706",
       }
     default:

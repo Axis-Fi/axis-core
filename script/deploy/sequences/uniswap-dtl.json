@@ -1,13 +1,7 @@
 {
     "sequence": [
         {
-            "name": "AtomicUniswapV2DirectToLiquidity"
-        },
-        {
             "name": "BatchUniswapV2DirectToLiquidity"
-        },
-        {
-            "name": "AtomicUniswapV3DirectToLiquidity"
         },
         {
             "name": "BatchUniswapV3DirectToLiquidity"
