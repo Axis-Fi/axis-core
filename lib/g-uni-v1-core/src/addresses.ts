@@ -61,6 +61,18 @@ export const getAddresses = (network: string): Addresses => {
         GUniFactory: "",
         GUniImplementation: "",
       };
+    case "axisBlast":
+      return {        
+        Gelato: "0xB47C8e4bEb28af80eDe5E5bF474927b110Ef2c0e",
+        Swapper: "",
+        GelatoDevMultiSig: "0xB47C8e4bEb28af80eDe5E5bF474927b110Ef2c0e",
+        WETH: "",
+        DAI: "",
+        USDC: "",
+        UniswapV3Factory: "0x792edAdE80af5fC680d96a2eD80A44247D2Cf6Fd",
+        GUniFactory: "",
+        GUniImplementation: "0x08B87749b379f5BCA1d74A7B3d4e9f3DeD41C706",
+      }
     default:
       throw new Error(`No addresses for Network: ${network}`);
   }

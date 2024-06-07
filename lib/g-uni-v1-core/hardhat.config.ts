@@ -12,12 +12,10 @@ import "./lib/uniswap";
 // Process Env Variables
 import * as dotenv from "dotenv";
 dotenv.config({ path: __dirname + "/.env" });
-const ALCHEMY_ID = process.env.ALCHEMY_ID;
-const DEPLOYER_PK_MAINNET = process.env.DEPLOYER_PK_MAINNET;
 const DEPLOYER_PK = process.env.DEPLOYER_PK;
 
 const config: HardhatUserConfig = {
-  defaultNetwork: "hardhat",
+  defaultNetwork: "axisBlast",
 
   // hardhat-deploy
   namedAccounts: {
@@ -26,31 +24,16 @@ const config: HardhatUserConfig = {
     },
   },
 
-  etherscan: {
-    apiKey: process.env.ETHERSCAN_API_KEY,
-  },
+  // etherscan: {
+  //   apiKey: process.env.ETHERSCAN_API_KEY,
+  // },
 
   networks: {
-    mainnet: {
-      accounts: DEPLOYER_PK_MAINNET ? [DEPLOYER_PK_MAINNET] : [],
-      chainId: 1,
-      url: `https://eth-mainnet.alchemyapi.io/v2/${ALCHEMY_ID}`,
-    },
-    polygon: {
-      accounts: DEPLOYER_PK_MAINNET ? [DEPLOYER_PK_MAINNET] : [],
-      chainId: 137,
-      url: `https://polygon-mainnet.g.alchemy.com/v2/${ALCHEMY_ID}`,
-    },
-    optimism: {
-      accounts: DEPLOYER_PK_MAINNET ? [DEPLOYER_PK_MAINNET] : [],
-      chainId: 10,
-      url: `https://opt-mainnet.g.alchemy.com/v2/${ALCHEMY_ID}`,
-    },
-    goerli: {
+    axisBlast: {
       accounts: DEPLOYER_PK ? [DEPLOYER_PK] : [],
-      chainId: 5,
-      url: `https://eth-goerli.alchemyapi.io/v2/${ALCHEMY_ID}`,
-    },
+      chainId: 6226,
+      url: "https://virtual.blast.rpc.tenderly.co/32f586c8-355a-4898-bf37-4a5de650777e"
+    }
   },
 
   solidity: {
@@ -62,7 +45,7 @@ const config: HardhatUserConfig = {
         },
       },
       {
-        version: "0.8.4",
+        version: "0.8.19",
         settings: {
           optimizer: { enabled: true, runs: 1 },
         },
