@@ -16,9 +16,20 @@ interface IEncryptedMarginalPrice {
 
     // ========== EVENTS ========== //
 
+    /// @notice Emitted when a bid is decrypted
+    ///
+    /// @param  lotId       The lot ID
+    /// @param  bidId       The bid ID
+    /// @param  amountIn    The amount in
+    /// @param  amountOut   The amount out
     event BidDecrypted(
         uint96 indexed lotId, uint64 indexed bidId, uint96 amountIn, uint96 amountOut
     );
+
+    /// @notice Emitted when the private key for an auction lot is submitted
+    ///
+    /// @param  lotId       The lot ID
+    event PrivateKeySubmitted(uint96 indexed lotId);
 
     // ========== DATA STRUCTURES ========== //
 
