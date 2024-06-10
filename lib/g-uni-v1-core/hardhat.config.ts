@@ -12,10 +12,8 @@ import "./lib/uniswap";
 // Process Env Variables
 import * as dotenv from "dotenv";
 dotenv.config({ path: __dirname + "/.env" });
-const DEPLOYER_PK = process.env.DEPLOYER_PK;
 
 const config: HardhatUserConfig = {
-  defaultNetwork: "axisBlast",
 
   // hardhat-deploy
   namedAccounts: {
@@ -29,11 +27,31 @@ const config: HardhatUserConfig = {
   // },
 
   networks: {
-    axisBlast: {
-      accounts: DEPLOYER_PK ? [DEPLOYER_PK] : [],
-      chainId: 6226,
-      url: "https://virtual.blast.rpc.tenderly.co/32f586c8-355a-4898-bf37-4a5de650777e"
-    }
+    anvil: {
+      chainId: 31337,
+      url: "http://localhost:8545",
+      accounts: [process.env.ANVIL_PRIVATE_KEY ?? ""]
+    },
+    blastSepolia: {
+      chainId: 168587773,
+      url: process.env.BLAST_SEPOLIA_RPC,
+      accounts: [process.env.DEPLOYER_PRIVATE_KEY ?? ""]
+    },
+    arbitrumSepolia: {
+      chainId: 421614,
+      url: process.env.ARBITRUM_SEPOLIA_RPC,
+      accounts: [process.env.DEPLOYER_PRIVATE_KEY ?? ""]
+    },
+    modeSepolia: {
+      chainId: 919,
+      url: process.env.MODE_SEPOLIA_RPC,
+      accounts: [process.env.DEPLOYER_PRIVATE_KEY ?? ""]
+    },
+    baseSepolia: {
+      chainId: 84532,
+      url: process.env.BASE_SEPOLIA_RPC,
+      accounts: [process.env.DEPLOYER_PRIVATE_KEY ?? ""]
+    },
   },
 
   solidity: {
