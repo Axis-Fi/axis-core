@@ -150,9 +150,7 @@ contract UniswapV2DirectToLiquidityOnSettleTest is UniswapV2DirectToLiquidityTes
             lotId_,
             _proceeds,
             _refund,
-            abi.encode(
-                UniswapV2DirectToLiquidity.OnClaimProceedsParams({maxSlippage: _maxSlippage})
-            )
+            abi.encode(UniswapV2DirectToLiquidity.OnSettleParams({maxSlippage: _maxSlippage}))
         );
     }
 

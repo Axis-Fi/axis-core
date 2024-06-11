@@ -40,11 +40,11 @@ contract UniswapV3DirectToLiquidity is BaseDirectToLiquidity {
 
     // ========== STRUCTS ========== //
 
-    /// @notice     Parameters for the onClaimProceeds callback
+    /// @notice     Parameters for the onSettle callback
     /// @dev        This will be encoded in the `callbackData_` parameter
     ///
     /// @param      maxSlippage             The maximum slippage allowed when adding liquidity (in terms of `MAX_PERCENT`)
-    struct OnClaimProceedsParams {
+    struct OnSettleParams {
         uint24 maxSlippage;
     }
 
@@ -129,7 +129,7 @@ contract UniswapV3DirectToLiquidity is BaseDirectToLiquidity {
         bytes memory callbackData_
     ) internal virtual override returns (ERC20 poolToken) {
         // Decode the callback data
-        OnClaimProceedsParams memory params = abi.decode(callbackData_, (OnClaimProceedsParams));
+        OnSettleParams memory params = abi.decode(callbackData_, (OnSettleParams));
 
         // Extract the pool fee from the implParams
         (uint24 poolFee) = abi.decode(lotConfiguration[lotId_].implParams, (uint24));
