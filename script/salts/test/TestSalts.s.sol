@@ -21,10 +21,10 @@ contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts {
     address internal constant _UNISWAP_V2_FACTORY =
         address(0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f);
     address internal constant _UNISWAP_V2_ROUTER =
-        address(0x584A2a1F5eCdCDcB6c0616cd280a7Db89239872B);
+        address(0x48a34D8572aC949eFDa3f70263499DdE1F160A26);
     address internal constant _UNISWAP_V3_FACTORY =
-        address(0x43de928116768b88F8BF8f768b3de90A0Aaf9551);
-    address internal constant _GUNI_FACTORY = address(0xc46b184e5521Cb87Fc5288Ff49D978A4BE4B055c);
+        address(0x42c8cc563856b148EBcD98cc26BdC2ebD7C4F8C8);
+    address internal constant _GUNI_FACTORY = address(0x804962b4bB9981E4bE47BEE57Fbfe5E603C48F7a);
 
     string internal constant _MOCK_CALLBACK = "MockCallback";
     string internal constant _CAPPED_MERKLE_ALLOWLIST = "CappedMerkleAllowlist";
