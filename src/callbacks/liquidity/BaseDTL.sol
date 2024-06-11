@@ -128,7 +128,7 @@ abstract contract BaseDirectToLiquidity is BaseCallback {
         uint256 capacity_,
         bool prefund_,
         bytes calldata callbackData_
-    ) internal virtual override onlyIfLotDoesNotExist(lotId_) {
+    ) internal virtual override {
         // Decode callback data into the params
         OnCreateParams memory params = abi.decode(callbackData_, (OnCreateParams));
 
@@ -218,12 +218,7 @@ abstract contract BaseDirectToLiquidity is BaseCallback {
     ///             - The lot is not registered
     ///
     /// @param      lotId_          The lot ID
-    function _onCancel(
-        uint96 lotId_,
-        uint256,
-        bool,
-        bytes calldata
-    ) internal override onlyIfLotExists(lotId_) {
+    function _onCancel(uint96 lotId_, uint256, bool, bytes calldata) internal override {
         // Mark the lot as inactive to prevent further actions
         DTLConfiguration storage config = lotConfiguration[lotId_];
         config.active = false;
@@ -243,7 +238,7 @@ abstract contract BaseDirectToLiquidity is BaseCallback {
         uint256 curatorPayout_,
         bool,
         bytes calldata
-    ) internal override onlyIfLotExists(lotId_) {
+    ) internal override {
         // Update the funding
         DTLConfiguration storage config = lotConfiguration[lotId_];
         config.lotCuratorPayout = curatorPayout_;
@@ -294,7 +289,7 @@ abstract contract BaseDirectToLiquidity is BaseCallback {
         uint256 proceeds_,
         uint256 refund_,
         bytes calldata callbackData_
-    ) internal virtual override onlyIfLotExists(lotId_) {
+    ) internal virtual override {
         DTLConfiguration memory config = lotConfiguration[lotId_];
         address seller;
         address baseToken;
@@ -407,22 +402,6 @@ abstract contract BaseDirectToLiquidity is BaseCallback {
         uint256 baseTokenAmount_,
         bytes memory callbackData_
     ) internal virtual returns (ERC20 poolToken);
-
-    // ========== MODIFIERS ========== //
-
-    modifier onlyIfLotDoesNotExist(uint96 lotId_) {
-        if (lotConfiguration[lotId_].recipient != address(0)) {
-            revert Callback_InvalidParams();
-        }
-        _;
-    }
-
-    modifier onlyIfLotExists(uint96 lotId_) {
-        if (!lotConfiguration[lotId_].active) {
-            revert Callback_InvalidParams();
-        }
-        _;
-    }
 
     // ========== INTERNAL FUNCTIONS ========== //
 

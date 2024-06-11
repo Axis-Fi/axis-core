@@ -88,7 +88,7 @@ abstract contract UniswapV2DirectToLiquidityTest is Test, Permit2User, WithSalts
         _uniV2Router = new UniswapV2Router02{
             salt: bytes32(0x035ba535d735a8e92093764ec05c30d49ab56cfd0d3da306185ab02b1fcac4f4)
         }(address(_uniV2Factory), address(0));
-        console2.log("UniswapV2Router address: {}", address(_uniV2Router)); // 0x584A2a1F5eCdCDcB6c0616cd280a7Db89239872B
+        console2.log("UniswapV2Router address: {}", address(_uniV2Router)); // 0x48a34D8572aC949eFDa3f70263499DdE1F160A26
 
         _linearVesting = new LinearVesting(address(_auctionHouse));
         _batchAuctionModule = new MockBatchAuctionModule(address(_auctionHouse));

@@ -16,8 +16,9 @@ import {Module} from "src/modules/Modules.sol";
 import {Callbacks} from "src/lib/Callbacks.sol";
 
 // Auction modules
-import {EncryptedMarginalPrice} from "src/modules/auctions/EMP.sol";
-import {FixedPriceSale} from "src/modules/auctions/FPS.sol";
+import {EncryptedMarginalPrice} from "src/modules/auctions/batch/EMP.sol";
+import {FixedPriceSale} from "src/modules/auctions/atomic/FPS.sol";
+import {FixedPriceBatch} from "src/modules/auctions/batch/FPB.sol";
 
 // Derivative modules
 import {LinearVesting} from "src/modules/derivatives/LinearVesting.sol";
@@ -28,6 +29,7 @@ import {UniswapV3DirectToLiquidity} from "src/callbacks/liquidity/UniswapV3DTL.s
 import {CappedMerkleAllowlist} from "src/callbacks/allowlists/CappedMerkleAllowlist.sol";
 import {MerkleAllowlist} from "src/callbacks/allowlists/MerkleAllowlist.sol";
 import {TokenAllowlist} from "src/callbacks/allowlists/TokenAllowlist.sol";
+import {AllocatedMerkleAllowlist} from "src/callbacks/allowlists/AllocatedMerkleAllowlist.sol";
 
 /// @notice Declarative deployment script that reads a deployment sequence (with constructor args)
 ///         and a configured environment file to deploy and install contracts in the Axis protocol.
@@ -362,7 +364,7 @@ contract Deploy is Script, WithEnvironment, WithSalts {
         return (address(batchCatalogue), _PREFIX_AXIS);
     }
 
-    // ========== MODULE DEPLOYMENTS ========== //
+    // ========== AUCTION MODULE DEPLOYMENTS ========== //
 
     function deployEncryptedMarginalPrice(bytes memory)
         public
@@ -427,6 +429,37 @@ contract Deploy is Script, WithEnvironment, WithSalts {
 
         return (address(amFps), _PREFIX_AXIS);
     }
+
+    function deployFixedPriceBatch(bytes memory) public virtual returns (address, string memory) {
+        // No args used
+        console2.log("");
+        console2.log("Deploying FixedPriceBatch");
+
+        address batchAuctionHouse = _getAddressNotZero("axis.BatchAuctionHouse");
+
+        // Get the salt
+        bytes32 salt_ = _getSalt(
+            "FixedPriceBatch", type(FixedPriceBatch).creationCode, abi.encode(batchAuctionHouse)
+        );
+
+        // Deploy the module
+        FixedPriceBatch amFpb;
+        if (salt_ == bytes32(0)) {
+            vm.broadcast();
+            amFpb = new FixedPriceBatch(batchAuctionHouse);
+        } else {
+            console2.log("    salt:", vm.toString(salt_));
+
+            vm.broadcast();
+            amFpb = new FixedPriceBatch{salt: salt_}(batchAuctionHouse);
+        }
+        console2.log("");
+        console2.log("    FixedPriceBatch deployed at:", address(amFpb));
+
+        return (address(amFpb), _PREFIX_AXIS);
+    }
+
+    // ========== DERIVATIVE MODULE DEPLOYMENTS ========== //
 
     function deployAtomicLinearVesting(bytes memory)
         public
@@ -887,6 +920,96 @@ contract Deploy is Script, WithEnvironment, WithSalts {
         console2.log("    TokenAllowlist (Batch) deployed at:", address(cbBatchTokenAllowlist));
 
         return (address(cbBatchTokenAllowlist), _PREFIX_AXIS);
+    }
+
+    function deployAtomicAllocatedMerkleAllowlist(bytes memory)
+        public
+        returns (address, string memory)
+    {
+        // No args used
+        console2.log("");
+        console2.log("Deploying AllocatedMerkleAllowlist (Atomic)");
+
+        address atomicAuctionHouse = _getAddressNotZero("axis.AtomicAuctionHouse");
+        Callbacks.Permissions memory permissions = Callbacks.Permissions({
+            onCreate: true,
+            onCancel: false,
+            onCurate: false,
+            onPurchase: true,
+            onBid: true,
+            onSettle: false,
+            receiveQuoteTokens: false,
+            sendBaseTokens: false
+        });
+
+        // Get the salt
+        bytes32 salt_ = _getSalt(
+            "AllocatedMerkleAllowlist",
+            type(AllocatedMerkleAllowlist).creationCode,
+            abi.encode(atomicAuctionHouse, permissions)
+        );
+
+        // Revert if the salt is not set
+        require(salt_ != bytes32(0), "Salt not set");
+
+        // Deploy the module
+        console2.log("    salt:", vm.toString(salt_));
+
+        vm.broadcast();
+        AllocatedMerkleAllowlist cbAtomicAllocatedMerkleAllowlist =
+            new AllocatedMerkleAllowlist{salt: salt_}(atomicAuctionHouse, permissions);
+        console2.log("");
+        console2.log(
+            "    AllocatedMerkleAllowlist (Atomic) deployed at:",
+            address(cbAtomicAllocatedMerkleAllowlist)
+        );
+
+        return (address(cbAtomicAllocatedMerkleAllowlist), _PREFIX_AXIS);
+    }
+
+    function deployBatchAllocatedMerkleAllowlist(bytes memory)
+        public
+        returns (address, string memory)
+    {
+        // No args used
+        console2.log("");
+        console2.log("Deploying AllocatedMerkleAllowlist (Batch)");
+
+        address batchAuctionHouse = _getAddressNotZero("axis.BatchAuctionHouse");
+        Callbacks.Permissions memory permissions = Callbacks.Permissions({
+            onCreate: true,
+            onCancel: false,
+            onCurate: false,
+            onPurchase: true,
+            onBid: true,
+            onSettle: false,
+            receiveQuoteTokens: false,
+            sendBaseTokens: false
+        });
+
+        // Get the salt
+        bytes32 salt_ = _getSalt(
+            "AllocatedMerkleAllowlist",
+            type(AllocatedMerkleAllowlist).creationCode,
+            abi.encode(batchAuctionHouse, permissions)
+        );
+
+        // Revert if the salt is not set
+        require(salt_ != bytes32(0), "Salt not set");
+
+        // Deploy the module
+        console2.log("    salt:", vm.toString(salt_));
+
+        vm.broadcast();
+        AllocatedMerkleAllowlist cbBatchAllocatedMerkleAllowlist =
+            new AllocatedMerkleAllowlist{salt: salt_}(batchAuctionHouse, permissions);
+        console2.log("");
+        console2.log(
+            "    AllocatedMerkleAllowlist (Batch) deployed at:",
+            address(cbBatchAllocatedMerkleAllowlist)
+        );
+
+        return (address(cbBatchAllocatedMerkleAllowlist), _PREFIX_AXIS);
     }
 
     // ========== HELPER FUNCTIONS ========== //

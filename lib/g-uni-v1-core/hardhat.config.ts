@@ -12,12 +12,8 @@ import "./lib/uniswap";
 // Process Env Variables
 import * as dotenv from "dotenv";
 dotenv.config({ path: __dirname + "/.env" });
-const ALCHEMY_ID = process.env.ALCHEMY_ID;
-const DEPLOYER_PK_MAINNET = process.env.DEPLOYER_PK_MAINNET;
-const DEPLOYER_PK = process.env.DEPLOYER_PK;
 
 const config: HardhatUserConfig = {
-  defaultNetwork: "hardhat",
 
   // hardhat-deploy
   namedAccounts: {
@@ -26,30 +22,35 @@ const config: HardhatUserConfig = {
     },
   },
 
-  etherscan: {
-    apiKey: process.env.ETHERSCAN_API_KEY,
-  },
+  // etherscan: {
+  //   apiKey: process.env.ETHERSCAN_API_KEY,
+  // },
 
   networks: {
-    mainnet: {
-      accounts: DEPLOYER_PK_MAINNET ? [DEPLOYER_PK_MAINNET] : [],
-      chainId: 1,
-      url: `https://eth-mainnet.alchemyapi.io/v2/${ALCHEMY_ID}`,
+    anvil: {
+      chainId: 31337,
+      url: "http://localhost:8545",
+      accounts: [process.env.ANVIL_PRIVATE_KEY ?? ""]
     },
-    polygon: {
-      accounts: DEPLOYER_PK_MAINNET ? [DEPLOYER_PK_MAINNET] : [],
-      chainId: 137,
-      url: `https://polygon-mainnet.g.alchemy.com/v2/${ALCHEMY_ID}`,
+    blastSepolia: {
+      chainId: 168587773,
+      url: process.env.BLAST_SEPOLIA_RPC,
+      accounts: [process.env.DEPLOYER_PRIVATE_KEY ?? ""]
     },
-    optimism: {
-      accounts: DEPLOYER_PK_MAINNET ? [DEPLOYER_PK_MAINNET] : [],
-      chainId: 10,
-      url: `https://opt-mainnet.g.alchemy.com/v2/${ALCHEMY_ID}`,
+    arbitrumSepolia: {
+      chainId: 421614,
+      url: process.env.ARBITRUM_SEPOLIA_RPC,
+      accounts: [process.env.DEPLOYER_PRIVATE_KEY ?? ""]
     },
-    goerli: {
-      accounts: DEPLOYER_PK ? [DEPLOYER_PK] : [],
-      chainId: 5,
-      url: `https://eth-goerli.alchemyapi.io/v2/${ALCHEMY_ID}`,
+    modeSepolia: {
+      chainId: 919,
+      url: process.env.MODE_SEPOLIA_RPC,
+      accounts: [process.env.DEPLOYER_PRIVATE_KEY ?? ""]
+    },
+    baseSepolia: {
+      chainId: 84532,
+      url: process.env.BASE_SEPOLIA_RPC,
+      accounts: [process.env.DEPLOYER_PRIVATE_KEY ?? ""]
     },
   },
 
@@ -62,7 +63,7 @@ const config: HardhatUserConfig = {
         },
       },
       {
-        version: "0.8.4",
+        version: "0.8.19",
         settings: {
           optimizer: { enabled: true, runs: 1 },
         },

@@ -34,10 +34,9 @@ contract CappedMerkleAllowlistBatchTest is Test, Permit2User, WithSalts {
     CappedMerkleAllowlist internal _allowlist;
 
     uint256 internal constant _BUYER_LIMIT = 1e18;
-    // Generated from: https://lab.miguelmota.com/merkletreejs/example/
     // Includes _BUYER, _BUYER_TWO but not _BUYER_THREE
     bytes32 internal constant _MERKLE_ROOT =
-        0x40e51f1c845d99162de6c210a9eaff4729f433ac605be8f3cde6d2e0afa44aeb;
+        0xc92348ba87c65979cc4f264810321a35efa64e795075908af2c507a22d4da472;
     bytes32[] internal _merkleProof;
 
     function setUp() public {
@@ -68,11 +67,8 @@ contract CappedMerkleAllowlistBatchTest is Test, Permit2User, WithSalts {
         _allowlist = new CappedMerkleAllowlist{salt: salt}(address(_auctionHouse), permissions);
 
         _merkleProof.push(
-            bytes32(0x421df1fa259221d02aa4956eb0d35ace318ca24c0a33a64c1af96cf67cf245b6)
+            bytes32(0x16db2e4b9f8dc120de98f8491964203ba76de27b27b29c2d25f85a325cd37477)
         ); // Corresponds to _BUYER
-            // _merkleProof.push(
-            //     bytes32(0xa876da518a393dbd067dc72abfa08d475ed6447fca96d92ec3f9e7eba503ca61)
-            // ); // Corresponds to _BUYER_TWO
     }
 
     modifier givenBatchOnCreate() {

@@ -1,0 +1,16 @@
+{
+  "sequence": [
+      {
+          "name": "BatchCappedMerkleAllowlist"
+      },
+      {
+          "name": "BatchMerkleAllowlist"
+      },
+      {
+          "name": "BatchTokenAllowlist"
+      },
+      {
+           "name": "BatchAllocatedMerkleAllowlist"
+      }
+  ]
+}

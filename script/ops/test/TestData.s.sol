@@ -8,9 +8,10 @@ import {Script, console2} from "forge-std/Script.sol";
 import {BatchAuctionHouse} from "src/BatchAuctionHouse.sol";
 import {IAuctionHouse} from "src/interfaces/IAuctionHouse.sol";
 import {toKeycode, toVeecode} from "src/modules/Modules.sol";
-import {EncryptedMarginalPrice} from "src/modules/auctions/EMP.sol";
+import {EncryptedMarginalPrice} from "src/modules/auctions/batch/EMP.sol";
 import {ECIES, Point} from "src/lib/ECIES.sol";
 import {uint2str} from "src/lib/Uint2Str.sol";
+import {FixedPriceBatch} from "src/modules/auctions/batch/FPB.sol";
 
 // Generic contracts
 import {MockERC20, ERC20} from "lib/solmate/src/test/utils/mocks/MockERC20.sol";
@@ -80,6 +81,46 @@ contract TestData is Script {
         bytes memory implParams = abi.encode(auctionDataParams);
 
         EncryptedMarginalPrice.AuctionParams memory auctionParams;
+        auctionParams.start = uint48(0); // immediately
+        auctionParams.duration = uint48(86_400); // 1 day
+        // capaity is in base token
+        auctionParams.capacity = 100e18; // 100 base tokens
+        auctionParams.implParams = implParams;
+
+        string memory infoHash = "";
+
+        uint96 lotId = auctionHouse.auction(routingParams, auctionParams, infoHash);
+
+        vm.stopBroadcast();
+
+        return lotId;
+    }
+
+    function createFPBAuction() public returns (uint96) {
+        // Load addresses from .env
+        auctionHouse = BatchAuctionHouse(vm.envAddress("AUCTION_HOUSE"));
+
+        vm.startBroadcast();
+
+        quoteToken = MockERC20(address(0x47F12ccE28D1A2ac9184777fa8a993C6067Df728));
+        baseToken = MockERC20(address(0x914e2477Cb36273db3E4c6c6D4cefF1B75aC1Db0));
+
+        // Approve auction house for base token since it will be pre-funded
+        baseToken.approve(address(auctionHouse), 1e24);
+
+        // Create LSBBA auction with the provided public key
+        IAuctionHouse.RoutingParams memory routingParams;
+        routingParams.auctionType = toKeycode("FPBA");
+        routingParams.baseToken = address(baseToken);
+        routingParams.quoteToken = address(quoteToken);
+        // No callbacks, allowlist, derivative, or other routing params needed
+
+        FixedPriceBatch.AuctionDataParams memory auctionDataParams;
+        auctionDataParams.price = 5e18; // 5 quote tokens per base token
+        auctionDataParams.minFillPercent = uint24(10_000); // 10%
+        bytes memory implParams = abi.encode(auctionDataParams);
+
+        FixedPriceBatch.AuctionParams memory auctionParams;
         auctionParams.start = uint48(0); // immediately
         auctionParams.duration = uint48(86_400); // 1 day
         // capaity is in base token

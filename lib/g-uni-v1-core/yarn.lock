@@ -883,11 +883,6 @@
     "@ethersproject/properties" "^5.5.0"
     "@ethersproject/strings" "^5.5.0"
 
-"@gelatonetwork/core@1.6.0":
-  version "1.6.0"
-  resolved "https://registry.yarnpkg.com/@gelatonetwork/core/-/core-1.6.0.tgz#be8426359768da8b16d2352cb3497c1693b39ae8"
-  integrity sha512-ORAPbcGOwl1qyLwGLdAsIySx/xTWasi3J9o+LjvtIn8vKXuLVF+LwPmFbMPrc58FPWAkeJdQERtSoo3VprlBjQ==
-
 "@nodelib/fs.scandir@2.1.4":
   version "2.1.4"
   resolved "https://registry.yarnpkg.com/@nodelib/fs.scandir/-/fs.scandir-2.1.4.tgz#d4b3549a5db5de2683e0c1071ab4f140904bbf69"
@@ -935,7 +930,7 @@
     "@types/sinon-chai" "^3.2.3"
     "@types/web3" "1.0.19"
 
-"@openzeppelin/contracts-upgradeable@^4.1.0":
+"@openzeppelin/contracts-upgradeable@4.1.0":
   version "4.1.0"
   resolved "https://registry.yarnpkg.com/@openzeppelin/contracts-upgradeable/-/contracts-upgradeable-4.1.0.tgz#36a6113ceeda278ae14f740280e5388161dfd383"
   integrity sha512-QZSvbYqNpU/x60vARhq/jghh97VWjml3NAlKfu4u1XehvpEBbHVXJyKTBSZtZY7jviG305jOczEisnN8VeOMcw==
