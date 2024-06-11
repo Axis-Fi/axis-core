@@ -7,28 +7,15 @@ import {WithEnvironment} from "script/deploy/WithEnvironment.s.sol";
 import {Permit2User} from "test/lib/permit2/Permit2User.sol";
 import {WithSalts} from "script/salts/WithSalts.s.sol";
 
-import {MockCallback} from "test/callbacks/MockCallback.sol";
+import {MockCallback} from "test/lib/mocks/MockCallback.sol";
 import {Callbacks} from "src/lib/Callbacks.sol";
-import {CappedMerkleAllowlist} from "src/callbacks/allowlists/CappedMerkleAllowlist.sol";
-import {AllocatedMerkleAllowlist} from "src/callbacks/allowlists/AllocatedMerkleAllowlist.sol";
-import {UniswapV2DirectToLiquidity} from "src/callbacks/liquidity/UniswapV2DTL.sol";
-import {UniswapV3DirectToLiquidity} from "src/callbacks/liquidity/UniswapV3DTL.sol";
 
 contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts {
     // TODO shift into abstract contract that tests also inherit from
     address internal constant _OWNER = address(0x1);
     address internal constant _AUCTION_HOUSE = address(0x000000000000000000000000000000000000000A);
-    address internal constant _UNISWAP_V2_FACTORY =
-        address(0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f);
-    address internal constant _UNISWAP_V2_ROUTER =
-        address(0x584A2a1F5eCdCDcB6c0616cd280a7Db89239872B);
-    address internal constant _UNISWAP_V3_FACTORY =
-        address(0x43de928116768b88F8BF8f768b3de90A0Aaf9551);
-    address internal constant _GUNI_FACTORY = address(0xc46b184e5521Cb87Fc5288Ff49D978A4BE4B055c);
 
     string internal constant _MOCK_CALLBACK = "MockCallback";
-    string internal constant _CAPPED_MERKLE_ALLOWLIST = "CappedMerkleAllowlist";
-    string internal constant _ALLOCATED_MERKLE_ALLOWLIST = "AllocatedMerkleAllowlist";
 
     function _setUp(string calldata chain_) internal {
         _loadEnv(chain_);
@@ -374,98 +361,5 @@ contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts {
         );
         (bytecodePath, bytecodeHash) = _writeBytecode(_MOCK_CALLBACK, contractCode, args);
         _setTestSalt(bytecodePath, "11", _MOCK_CALLBACK, bytecodeHash);
-    }
-
-    function generateCappedMerkleAllowlist() public {
-        // 10001000 = 0x88
-        bytes memory args = abi.encode(
-            _AUCTION_HOUSE,
-            Callbacks.Permissions({
-                onCreate: true,
-                onCancel: false,
-                onCurate: false,
-                onPurchase: false,
-                onBid: true,
-                onSettle: false,
-                receiveQuoteTokens: false,
-                sendBaseTokens: false
-            })
-        );
-        bytes memory contractCode = type(CappedMerkleAllowlist).creationCode;
-        (string memory bytecodePath, bytes32 bytecodeHash) =
-            _writeBytecode(_CAPPED_MERKLE_ALLOWLIST, contractCode, args);
-        _setTestSalt(bytecodePath, "88", _CAPPED_MERKLE_ALLOWLIST, bytecodeHash);
-
-        // 10010000 = 0x90
-        args = abi.encode(
-            _AUCTION_HOUSE,
-            Callbacks.Permissions({
-                onCreate: true,
-                onCancel: false,
-                onCurate: false,
-                onPurchase: true,
-                onBid: false,
-                onSettle: false,
-                receiveQuoteTokens: false,
-                sendBaseTokens: false
-            })
-        );
-        (bytecodePath, bytecodeHash) = _writeBytecode(_CAPPED_MERKLE_ALLOWLIST, contractCode, args);
-        _setTestSalt(bytecodePath, "90", _CAPPED_MERKLE_ALLOWLIST, bytecodeHash);
-    }
-
-    function generateAllocatedMerkleAllowlist() public {
-        // 10001000 = 0x88
-        bytes memory args = abi.encode(
-            _AUCTION_HOUSE,
-            Callbacks.Permissions({
-                onCreate: true,
-                onCancel: false,
-                onCurate: false,
-                onPurchase: false,
-                onBid: true,
-                onSettle: false,
-                receiveQuoteTokens: false,
-                sendBaseTokens: false
-            })
-        );
-        bytes memory contractCode = type(AllocatedMerkleAllowlist).creationCode;
-        (string memory bytecodePath, bytes32 bytecodeHash) =
-            _writeBytecode(_ALLOCATED_MERKLE_ALLOWLIST, contractCode, args);
-        _setTestSalt(bytecodePath, "88", _ALLOCATED_MERKLE_ALLOWLIST, bytecodeHash);
-
-        // 10010000 = 0x90
-        args = abi.encode(
-            _AUCTION_HOUSE,
-            Callbacks.Permissions({
-                onCreate: true,
-                onCancel: false,
-                onCurate: false,
-                onPurchase: true,
-                onBid: false,
-                onSettle: false,
-                receiveQuoteTokens: false,
-                sendBaseTokens: false
-            })
-        );
-        (bytecodePath, bytecodeHash) =
-            _writeBytecode(_ALLOCATED_MERKLE_ALLOWLIST, contractCode, args);
-        _setTestSalt(bytecodePath, "90", _ALLOCATED_MERKLE_ALLOWLIST, bytecodeHash);
-    }
-
-    function generateUniswapV2DirectToLiquidity() public {
-        bytes memory args = abi.encode(_AUCTION_HOUSE, _UNISWAP_V2_FACTORY, _UNISWAP_V2_ROUTER);
-        bytes memory contractCode = type(UniswapV2DirectToLiquidity).creationCode;
-        (string memory bytecodePath, bytes32 bytecodeHash) =
-            _writeBytecode("UniswapV2DirectToLiquidity", contractCode, args);
-        _setTestSalt(bytecodePath, "E6", "UniswapV2DirectToLiquidity", bytecodeHash);
-    }
-
-    function generateUniswapV3DirectToLiquidity() public {
-        bytes memory args = abi.encode(_AUCTION_HOUSE, _UNISWAP_V3_FACTORY, _GUNI_FACTORY);
-        bytes memory contractCode = type(UniswapV3DirectToLiquidity).creationCode;
-        (string memory bytecodePath, bytes32 bytecodeHash) =
-            _writeBytecode("UniswapV3DirectToLiquidity", contractCode, args);
-        _setTestSalt(bytecodePath, "E6", "UniswapV3DirectToLiquidity", bytecodeHash);
     }
 }

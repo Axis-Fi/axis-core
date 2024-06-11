@@ -4,7 +4,7 @@ pragma solidity ^0.8.19;
 import {Callbacks} from "src/lib/Callbacks.sol";
 import {ICallback} from "src/interfaces/ICallback.sol";
 
-import {MockCallback} from "test/callbacks/MockCallback.sol";
+import {MockCallback} from "test/lib/mocks/MockCallback.sol";
 
 import {Test} from "forge-std/Test.sol";
 import {WithSalts} from "test/lib/WithSalts.sol";

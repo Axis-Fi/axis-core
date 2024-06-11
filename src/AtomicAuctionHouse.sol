@@ -7,7 +7,7 @@ import {IAtomicAuctionHouse} from "src/interfaces/IAtomicAuctionHouse.sol";
 import {ICallback} from "src/interfaces/ICallback.sol";
 
 // External libraries
-import {ERC20} from "lib/solmate/src/tokens/ERC20.sol";
+import {ERC20} from "solmate/tokens/ERC20.sol";
 
 // Internal libaries
 import {Transfer} from "src/lib/Transfer.sol";

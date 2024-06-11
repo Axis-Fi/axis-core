@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity 0.8.19;
 
-import {ERC20} from "lib/solmate/src/tokens/ERC20.sol";
-import {SafeTransferLib} from "lib/solmate/src/utils/SafeTransferLib.sol";
+import {ERC20} from "solmate/tokens/ERC20.sol";
+import {SafeTransferLib} from "solmate/utils/SafeTransferLib.sol";
 import {IPermit2} from "src/lib/permit2/interfaces/IPermit2.sol";
 
 library Transfer {

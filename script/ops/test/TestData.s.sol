@@ -14,7 +14,7 @@ import {uint2str} from "src/lib/Uint2Str.sol";
 import {FixedPriceBatch} from "src/modules/auctions/batch/FPB.sol";
 
 // Generic contracts
-import {MockERC20, ERC20} from "lib/solmate/src/test/utils/mocks/MockERC20.sol";
+import {MockERC20, ERC20} from "solmate/test/utils/mocks/MockERC20.sol";
 
 contract TestData is Script {
     BatchAuctionHouse public auctionHouse;
