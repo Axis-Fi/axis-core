@@ -20,7 +20,7 @@ import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 import {MockBatchAuctionModule} from "test/modules/Auction/MockBatchAuctionModule.sol";
 import {MockDerivativeModule} from "test/modules/derivatives/mocks/MockDerivativeModule.sol";
 import {MockCondenserModule} from "test/modules/Condenser/MockCondenserModule.sol";
-import {MockCallback} from "test/callbacks/MockCallback.sol";
+import {MockCallback} from "test/lib/mocks/MockCallback.sol";
 import {Permit2User} from "test/lib/permit2/Permit2User.sol";
 import {MockFeeOnTransferERC20} from "test/lib/mocks/MockFeeOnTransferERC20.sol";
 
