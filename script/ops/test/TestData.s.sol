@@ -30,9 +30,11 @@ contract TestData is Script {
 
         // Mint quote tokens to buyer
         quoteToken.mint(buyer, 1e25);
+        console2.log("Minted 1e25 quote tokens to buyer");
 
         // Mint base tokens to seller
         baseToken.mint(seller, 1e25);
+        console2.log("Minted 1e25 base tokens to seller");
 
         vm.stopBroadcast();
     }
