@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Usage:
-# ./createAuction.sh --quoteToken <address> --baseToken <address> --callback <address> --envFile <.env>
+# ./createAuction.sh --quoteToken <address> --baseToken <address> --callback <address> --envFile <.env> --broadcast <false>
 #
 # Expects the following environment variables:
 # CHAIN: The chain to deploy to, based on values from the ./script/env.json file.

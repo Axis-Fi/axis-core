@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Usage:
-# ./placeBid.sh --lotId <uint96> --amount <uint256> --envFile <.env>
+# ./placeBid.sh --lotId <uint96> --amount <uint256> --envFile <.env> --broadcast <false>
 #
 # Expects the following environment variables:
 # CHAIN: The chain to deploy to, based on values from the ./script/env.json file.

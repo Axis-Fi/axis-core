@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Usage:
-# ./settleAuction.sh --lotId <uint96> --envFile <.env>
+# ./settleAuction.sh --lotId <uint96> --envFile <.env> --broadcast <false>
 #
 # Expects the following environment variables:
 # CHAIN: The chain to deploy to, based on values from the ./script/env.json file.
