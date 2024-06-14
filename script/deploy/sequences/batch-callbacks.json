@@ -1,0 +1,22 @@
+{
+  "sequence": [
+      {
+          "name": "BatchCappedMerkleAllowlist"
+      },
+      {
+          "name": "BatchMerkleAllowlist"
+      },
+      {
+          "name": "BatchTokenAllowlist"
+      },
+      {
+           "name": "BatchAllocatedMerkleAllowlist"
+      },
+      {
+        "name": "BatchUniswapV2DirectToLiquidity"
+      },
+      {
+          "name": "BatchUniswapV3DirectToLiquidity"
+      }
+  ]
+}
