@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Usage:
-# ./deployTokens.sh --seller <seller> --buyer <buyer> --envFile <.env>
+# ./deployTokens.sh --seller <seller> --buyer <buyer> --envFile <.env> --broadcast <false>
 
 # Iterate through named arguments
 # Source: https://unix.stackexchange.com/a/388038
