@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Usage:
-# ./deploy.sh <deploy-file> <broadcast=false> <verify=false> <resume=false>
+# ./deploy.sh --deployFile <deploy-file> --broadcast <false> --verify <false> --save <true> --resume <false> --envFile <.env>
 #
 # Environment variables:
 # CHAIN:              Chain name to deploy to. Corresponds to names in "./script/env.json".
@@ -9,28 +9,57 @@
 # RPC_URL:            URL for the RPC node. Should be specified in .env.
 # VERIFIER_URL:       URL for the Etherscan API verifier. Should be specified when used on an unsupported chain.
 
-# Load environment variables, but respect overrides
-curenv=$(declare -p -x)
-source .env
-eval "$curenv"
+# Iterate through named arguments
+# Source: https://unix.stackexchange.com/a/388038
+while [ $# -gt 0 ]; do
+  if [[ $1 == *"--"* ]]; then
+    v="${1/--/}"
+    declare $v="$2"
+  fi
 
-# Get command-line arguments
-DEPLOY_FILE=$1
-BROADCAST=${2:-false}
-VERIFY=${3:-false}
-RESUME=${4:-false}
+  shift
+done
+
+# Get the name of the .env file or use the default
+ENV_FILE=${envFile:-".env"}
+echo "Sourcing environment variables from $ENV_FILE"
+
+# Load environment file
+set -a  # Automatically export all variables
+source $ENV_FILE
+set +a  # Disable automatic export
+
+# Apply defaults to command-line arguments
+DEPLOY_FILE=$deployFile
+BROADCAST=${broadcast:-false}
+VERIFY=${verify:-false}
+SAVE=${save:-true}
+RESUME=${resume:-false}
+
+# Check that the CHAIN environment variable is set
+if [ -z "$CHAIN" ]
+then
+  echo "CHAIN environment variable is not set. Please set it in the .env file or provide it as an environment variable."
+  exit 1
+fi
 
 # Check if DEPLOY_FILE is set
 if [ -z "$DEPLOY_FILE" ]
 then
-  echo "No deploy file specified. Provide the relative path after the command."
+  echo "No deploy file specified. Provide the relative path after the --deployFile flag."
   exit 1
 fi
 
 # Check if DEPLOY_FILE exists
 if [ ! -f "$DEPLOY_FILE" ]
 then
-  echo "Deploy file ($DEPLOY_FILE) not found. Provide the correct relative path after the command."
+  echo "Deploy file ($DEPLOY_FILE) not found. Provide the correct relative path after the --deployFile flag."
+  exit 1
+fi
+
+# Validate if SAVE is "true" or "false", otherwise throw an error
+if [ "$SAVE" != "true" ] && [ "$SAVE" != "false" ]; then
+  echo "Invalid value for --save. Use 'true' or 'false'."
   exit 1
 fi
 
@@ -48,8 +77,8 @@ fi
 
 echo "Using deploy script and contract: $DEPLOY_SCRIPT:$DEPLOY_CONTRACT"
 echo "Using deployment configuration: $DEPLOY_FILE"
-echo "Using RPC at URL: $RPC_URL"
 echo "Using chain: $CHAIN"
+echo "Using RPC at URL: $RPC_URL"
 if [ -n "$VERIFIER_URL" ]; then
   echo "Using verifier at URL: $VERIFIER_URL"
 fi
@@ -60,9 +89,9 @@ echo ""
 BROADCAST_FLAG=""
 if [ "$BROADCAST" = "true" ] || [ "$BROADCAST" = "TRUE" ]; then
   BROADCAST_FLAG="--broadcast"
-  echo "Broadcasting is enabled"
+  echo "Broadcast: enabled"
 else
-  echo "Broadcasting is disabled"
+  echo "Broadcast: disabled"
 fi
 
 # Set VERIFY_FLAG based on VERIFY
@@ -88,22 +117,29 @@ if [ "$VERIFY" = "true" ] || [ "$VERIFY" = "TRUE" ]; then
       VERIFY_FLAG="--verify --verifier $VERIFIER"
     fi
   fi
-  echo "Verification is enabled"
+  echo "Verification: enabled"
 else
-  echo "Verification is disabled"
+  echo "Verification: disabled"
+fi
+
+# Report if SAVE is enabled
+if [ "$SAVE" = "true" ]; then
+  echo "Save deployment: enabled"
+else
+  echo "Save deployment: disabled"
 fi
 
 # Set RESUME_FLAG based on RESUME
 RESUME_FLAG=""
 if [ "$RESUME" = "true" ] || [ "$RESUME" = "TRUE" ]; then
   RESUME_FLAG="--resume"
-  echo "Resuming is enabled"
+  echo "Resume: enabled"
 else
-  echo "Resuming is disabled"
+  echo "Resume: disabled"
 fi
 
 # Deploy using script
-forge script $DEPLOY_SCRIPT:$DEPLOY_CONTRACT --sig "deploy(string,string,bool)()" $CHAIN $DEPLOY_FILE $BROADCAST \
+forge script $DEPLOY_SCRIPT:$DEPLOY_CONTRACT --sig "deploy(string,string,bool)()" $CHAIN $DEPLOY_FILE $SAVE \
 --rpc-url $RPC_URL --private-key $DEPLOYER_PRIVATE_KEY --froms $DEPLOYER_ADDRESS --slow -vvv \
 $BROADCAST_FLAG \
 $VERIFY_FLAG \
