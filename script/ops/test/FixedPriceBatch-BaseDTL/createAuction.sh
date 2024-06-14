@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Usage:
-# ./createAuction.sh --quoteToken <address> --baseToken <address> --callback <address> --envFile <.env> --broadcast <false>
+# ./createAuction.sh --quoteToken <address> --baseToken <address> --callback <address> --poolFee <uint24> --envFile <.env> --broadcast <false>
 #
 # Expects the following environment variables:
 # CHAIN: The chain to deploy to, based on values from the ./script/env.json file.
@@ -57,11 +57,18 @@ then
   exit 1
 fi
 
+# If the pool fee is not set, set it to 0
+if [ -z "$poolFee" ]
+then
+  poolFee=0
+fi
+
 echo "Using chain: $CHAIN"
 echo "Using RPC at URL: $RPC_URL"
 echo "Using quote token: $quoteToken"
 echo "Using base token: $baseToken"
 echo "Using callback: $callback"
+echo "Using pool fee (Uniswap V3 only): $poolFee"
 echo "Deployer: $DEPLOYER_ADDRESS"
 
 # Set BROADCAST_FLAG based on BROADCAST
@@ -74,6 +81,6 @@ else
 fi
 
 # Create auction
-forge script ./script/ops/test/FixedPriceBatch-BaseDTL/TestData.s.sol:TestData --sig "createAuction(string,address,address,address)()" $CHAIN $quoteToken $baseToken $callback \
+forge script ./script/ops/test/FixedPriceBatch-BaseDTL/TestData.s.sol:TestData --sig "createAuction(string,address,address,address,uint24)()" $CHAIN $quoteToken $baseToken $callback $poolFee \
 --rpc-url $RPC_URL --private-key $DEPLOYER_PRIVATE_KEY --froms $DEPLOYER_ADDRESS --slow -vvvv \
 $BROADCAST_FLAG

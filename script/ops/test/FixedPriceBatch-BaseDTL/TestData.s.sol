@@ -35,7 +35,8 @@ contract TestData is Script, WithEnvironment {
         string calldata chain_,
         address quoteToken_,
         address baseToken_,
-        address callback_
+        address callback_,
+        uint24 uniswapV3PoolFee_
     ) public returns (uint96) {
         // Load addresses from .env
         _loadEnv(chain_);
@@ -51,13 +52,20 @@ contract TestData is Script, WithEnvironment {
         routingParams.callbacks = ICallback(callback_);
         if (callback_ != address(0)) {
             console2.log("Callback enabled");
+
+            bytes memory callbackImplParams = abi.encode("");
+            if (uniswapV3PoolFee_ > 0) {
+                console2.log("Setting Uniswap V3 pool fee to", uniswapV3PoolFee_);
+                callbackImplParams = abi.encode(uniswapV3PoolFee_);
+            }
+
             routingParams.callbackData = abi.encode(
                 BaseDirectToLiquidity.OnCreateParams({
                     proceedsUtilisationPercent: 50_000, // 50%
                     vestingStart: 0,
                     vestingExpiry: 0,
                     recipient: msg.sender,
-                    implParams: abi.encode("")
+                    implParams: callbackImplParams
                 })
             );
 
