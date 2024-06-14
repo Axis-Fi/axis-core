@@ -57,19 +57,11 @@ then
   exit 1
 fi
 
-# Check that the allowlist merkle root is defined and is a bytes32 string
-if [[ ! "$allowlistMerkleRoot" =~ ^0x[a-fA-F0-9]{64}$ ]]
-then
-  echo "Invalid allowlist merkle root specified. Provide the bytes32 string after the --allowlistMerkleRoot flag."
-  exit 1
-fi
-
 echo "Using chain: $CHAIN"
 echo "Using RPC at URL: $RPC_URL"
 echo "Using quote token: $quoteToken"
 echo "Using base token: $baseToken"
 echo "Using callback: $callback"
-echo "Using allowlist merkle root: $allowlistMerkleRoot"
 echo "Deployer: $DEPLOYER_ADDRESS"
 
 # Set BROADCAST_FLAG based on BROADCAST
@@ -82,6 +74,6 @@ else
 fi
 
 # Create auction
-forge script ./script/ops/test/FixedPriceBatch/TestData.s.sol:TestData --sig "createAuction(string,address,address,address,bytes32)()" $CHAIN $quoteToken $baseToken $callback $allowlistMerkleRoot \
+forge script ./script/ops/test/FixedPriceBatch-BaseDTL/TestData.s.sol:TestData --sig "createAuction(string,address,address,address)()" $CHAIN $quoteToken $baseToken $callback \
 --rpc-url $RPC_URL --private-key $DEPLOYER_PRIVATE_KEY --froms $DEPLOYER_ADDRESS --slow -vvvv \
 $BROADCAST_FLAG
