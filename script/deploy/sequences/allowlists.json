@@ -17,6 +17,12 @@
       },
       {
           "name": "BatchTokenAllowlist"
+      },
+      {
+        "name": "AtomicAllocatedMerkleAllowlist"
+      },
+      {
+        "name": "BatchAllocatedMerkleAllowlist"
       }
   ]
 }

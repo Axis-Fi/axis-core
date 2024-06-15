@@ -1,0 +1,721 @@
+{
+  "address": "0x04974BcFC715c148818724d9Caab3Fe8d0391b8b",
+  "abi": [
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "previousAdmin",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "newAdmin",
+          "type": "address"
+        }
+      ],
+      "name": "ProxyAdminTransferred",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "previousImplementation",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "newImplementation",
+          "type": "address"
+        }
+      ],
+      "name": "ProxyImplementationUpdated",
+      "type": "event"
+    },
+    {
+      "stateMutability": "payable",
+      "type": "fallback"
+    },
+    {
+      "inputs": [],
+      "name": "proxyAdmin",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes4",
+          "name": "id",
+          "type": "bytes4"
+        }
+      ],
+      "name": "supportsInterface",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "newAdmin",
+          "type": "address"
+        }
+      ],
+      "name": "transferProxyAdmin",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "newImplementation",
+          "type": "address"
+        }
+      ],
+      "name": "upgradeTo",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "newImplementation",
+          "type": "address"
+        },
+        {
+          "internalType": "bytes",
+          "name": "data",
+          "type": "bytes"
+        }
+      ],
+      "name": "upgradeToAndCall",
+      "outputs": [],
+      "stateMutability": "payable",
+      "type": "function"
+    },
+    {
+      "stateMutability": "payable",
+      "type": "receive"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "previousManager",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "newManager",
+          "type": "address"
+        }
+      ],
+      "name": "OwnershipTransferred",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "uniPool",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "manager",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "pool",
+          "type": "address"
+        }
+      ],
+      "name": "PoolCreated",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "previosGelatoDeployer",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "newGelatoDeployer",
+          "type": "address"
+        }
+      ],
+      "name": "UpdateGelatoDeployer",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "previousImplementation",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "newImplementation",
+          "type": "address"
+        }
+      ],
+      "name": "UpdatePoolImplementation",
+      "type": "event"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "tokenA",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "tokenB",
+          "type": "address"
+        },
+        {
+          "internalType": "uint24",
+          "name": "uniFee",
+          "type": "uint24"
+        },
+        {
+          "internalType": "uint16",
+          "name": "managerFee",
+          "type": "uint16"
+        },
+        {
+          "internalType": "int24",
+          "name": "lowerTick",
+          "type": "int24"
+        },
+        {
+          "internalType": "int24",
+          "name": "upperTick",
+          "type": "int24"
+        }
+      ],
+      "name": "createManagedPool",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "pool",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "tokenA",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "tokenB",
+          "type": "address"
+        },
+        {
+          "internalType": "uint24",
+          "name": "uniFee",
+          "type": "uint24"
+        },
+        {
+          "internalType": "int24",
+          "name": "lowerTick",
+          "type": "int24"
+        },
+        {
+          "internalType": "int24",
+          "name": "upperTick",
+          "type": "int24"
+        }
+      ],
+      "name": "createPool",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "pool",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "factory",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "gelatoDeployer",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "getDeployers",
+      "outputs": [
+        {
+          "internalType": "address[]",
+          "name": "",
+          "type": "address[]"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "getGelatoPools",
+      "outputs": [
+        {
+          "internalType": "address[]",
+          "name": "",
+          "type": "address[]"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "deployer",
+          "type": "address"
+        }
+      ],
+      "name": "getPools",
+      "outputs": [
+        {
+          "internalType": "address[]",
+          "name": "",
+          "type": "address[]"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "pool",
+          "type": "address"
+        }
+      ],
+      "name": "getProxyAdmin",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "token0",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "token1",
+          "type": "address"
+        }
+      ],
+      "name": "getTokenName",
+      "outputs": [
+        {
+          "internalType": "string",
+          "name": "",
+          "type": "string"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_implementation",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "_gelatoDeployer",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "_manager_",
+          "type": "address"
+        }
+      ],
+      "name": "initialize",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "pool",
+          "type": "address"
+        }
+      ],
+      "name": "isPoolImmutable",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address[]",
+          "name": "pools",
+          "type": "address[]"
+        }
+      ],
+      "name": "makePoolsImmutable",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "manager",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "numDeployers",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "numPools",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "result",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "deployer",
+          "type": "address"
+        }
+      ],
+      "name": "numPools",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "poolImplementation",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "renounceOwnership",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "nextGelatoDeployer",
+          "type": "address"
+        }
+      ],
+      "name": "setGelatoDeployer",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "nextImplementation",
+          "type": "address"
+        }
+      ],
+      "name": "setPoolImplementation",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "newOwner",
+          "type": "address"
+        }
+      ],
+      "name": "transferOwnership",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address[]",
+          "name": "pools",
+          "type": "address[]"
+        }
+      ],
+      "name": "upgradePools",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address[]",
+          "name": "pools",
+          "type": "address[]"
+        },
+        {
+          "internalType": "bytes[]",
+          "name": "datas",
+          "type": "bytes[]"
+        }
+      ],
+      "name": "upgradePoolsAndCall",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "version",
+      "outputs": [
+        {
+          "internalType": "string",
+          "name": "",
+          "type": "string"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "implementationAddress",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "adminAddress",
+          "type": "address"
+        },
+        {
+          "internalType": "bytes",
+          "name": "data",
+          "type": "bytes"
+        }
+      ],
+      "stateMutability": "payable",
+      "type": "constructor"
+    }
+  ],
+  "transactionHash": "0x29025b7246215a4b4c5da6f6dbc324c3bc1f03b3e5f28228c07755e3baaf131c",
+  "receipt": {
+    "to": null,
+    "from": "0xB47C8e4bEb28af80eDe5E5bF474927b110Ef2c0e",
+    "contractAddress": "0x04974BcFC715c148818724d9Caab3Fe8d0391b8b",
+    "transactionIndex": 6,
+    "gasUsed": "551510",
+    "logsBloom": "0x00100000000020000000000000000000000000000000000000000000000000000000000000000000200400000000000000000000000100000000000000000000000000000000000000000000000008000000000000000008000000000200000000000000020000000000000000000800000000002000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000020010000000000000000000400008000000000000001000000000000000000000000",
+    "blockHash": "0x1ab87b9371d9cea1d2ff5b61e96d7bf33f9a806f3eb8ffb09b9103bf905be9dc",
+    "transactionHash": "0x29025b7246215a4b4c5da6f6dbc324c3bc1f03b3e5f28228c07755e3baaf131c",
+    "logs": [
+      {
+        "transactionIndex": 6,
+        "blockNumber": 11136393,
+        "transactionHash": "0x29025b7246215a4b4c5da6f6dbc324c3bc1f03b3e5f28228c07755e3baaf131c",
+        "address": "0x04974BcFC715c148818724d9Caab3Fe8d0391b8b",
+        "topics": [
+          "0x5570d70a002632a7b0b3c9304cc89efb62d8da9eca0dbd7752c83b7379068296",
+          "0x0000000000000000000000000000000000000000000000000000000000000000",
+          "0x000000000000000000000000b1e9e16a40321fe06cfd797619c345c143d11aa7"
+        ],
+        "data": "0x",
+        "logIndex": 8,
+        "blockHash": "0x1ab87b9371d9cea1d2ff5b61e96d7bf33f9a806f3eb8ffb09b9103bf905be9dc"
+      },
+      {
+        "transactionIndex": 6,
+        "blockNumber": 11136393,
+        "transactionHash": "0x29025b7246215a4b4c5da6f6dbc324c3bc1f03b3e5f28228c07755e3baaf131c",
+        "address": "0x04974BcFC715c148818724d9Caab3Fe8d0391b8b",
+        "topics": [
+          "0xdf435d422321da6b195902d70fc417c06a32f88379c20dd8f2a8da07088cec29",
+          "0x0000000000000000000000000000000000000000000000000000000000000000",
+          "0x000000000000000000000000b47c8e4beb28af80ede5e5bf474927b110ef2c0e"
+        ],
+        "data": "0x",
+        "logIndex": 9,
+        "blockHash": "0x1ab87b9371d9cea1d2ff5b61e96d7bf33f9a806f3eb8ffb09b9103bf905be9dc"
+      }
+    ],
+    "blockNumber": 11136393,
+    "cumulativeGasUsed": "1167576",
+    "status": 1,
+    "byzantium": true
+  },
+  "args": [
+    "0xB1e9E16a40321Fe06Cfd797619C345c143D11Aa7",
+    "0xB47C8e4bEb28af80eDe5E5bF474927b110Ef2c0e",
+    "0xc0c53b8b000000000000000000000000b1e9e16a40321fe06cfd797619c345c143d11aa7000000000000000000000000b47c8e4beb28af80ede5e5bf474927b110ef2c0e000000000000000000000000b47c8e4beb28af80ede5e5bf474927b110ef2c0e"
+  ],
+  "solcInputHash": "f1f932b5297d788fce5c0abb03e1e395",
+  "metadata": "{\"compiler\":{\"version\":\"0.8.19+commit.7dd6d404\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"implementationAddress\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"adminAddress\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"stateMutability\":\"payable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"previousAdmin\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"newAdmin\",\"type\":\"address\"}],\"name\":\"ProxyAdminTransferred\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"previousImplementation\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"newImplementation\",\"type\":\"address\"}],\"name\":\"ProxyImplementationUpdated\",\"type\":\"event\"},{\"stateMutability\":\"payable\",\"type\":\"fallback\"},{\"inputs\":[],\"name\":\"proxyAdmin\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes4\",\"name\":\"id\",\"type\":\"bytes4\"}],\"name\":\"supportsInterface\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newAdmin\",\"type\":\"address\"}],\"name\":\"transferProxyAdmin\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newImplementation\",\"type\":\"address\"}],\"name\":\"upgradeTo\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newImplementation\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"upgradeToAndCall\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"stateMutability\":\"payable\",\"type\":\"receive\"}],\"devdoc\":{\"kind\":\"dev\",\"methods\":{},\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{},\"notice\":\"Proxy implementing EIP173 for ownership management\",\"version\":1}},\"settings\":{\"compilationTarget\":{\"contracts/vendor/proxy/EIP173Proxy.sol\":\"EIP173Proxy\"},\"evmVersion\":\"paris\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\",\"useLiteralContent\":true},\"optimizer\":{\"enabled\":true,\"runs\":1},\"remappings\":[]},\"sources\":{\"contracts/vendor/proxy/EIP173Proxy.sol\":{\"content\":\"// SPDX-License-Identifier: GPL-3.0\\npragma solidity 0.8.19;\\n\\nimport \\\"./Proxy.sol\\\";\\n\\ninterface ERC165 {\\n    function supportsInterface(bytes4 id) external view returns (bool);\\n}\\n\\n///@notice Proxy implementing EIP173 for ownership management\\ncontract EIP173Proxy is Proxy {\\n    // ////////////////////////// EVENTS ///////////////////////////////////////////////////////////////////////\\n\\n    event ProxyAdminTransferred(\\n        address indexed previousAdmin,\\n        address indexed newAdmin\\n    );\\n\\n    // /////////////////////// CONSTRUCTOR //////////////////////////////////////////////////////////////////////\\n\\n    constructor(\\n        address implementationAddress,\\n        address adminAddress,\\n        bytes memory data\\n    ) payable {\\n        _setImplementation(implementationAddress, data);\\n        _setProxyAdmin(adminAddress);\\n    }\\n\\n    // ///////////////////// EXTERNAL ///////////////////////////////////////////////////////////////////////////\\n\\n    function proxyAdmin() external view returns (address) {\\n        return _proxyAdmin();\\n    }\\n\\n    function supportsInterface(bytes4 id) external view returns (bool) {\\n        if (id == 0x01ffc9a7 || id == 0x7f5828d0) {\\n            return true;\\n        }\\n        if (id == 0xFFFFFFFF) {\\n            return false;\\n        }\\n\\n        ERC165 implementation;\\n        // solhint-disable-next-line security/no-inline-assembly\\n        assembly {\\n            implementation := sload(\\n                0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc\\n            )\\n        }\\n\\n        // Technically this is not standard compliant as ERC-165 require 30,000 gas which that call cannot ensure\\n        // because it is itself inside `supportsInterface` that might only get 30,000 gas.\\n        // In practise this is unlikely to be an issue.\\n        try implementation.supportsInterface(id) returns (bool support) {\\n            return support;\\n        } catch {\\n            return false;\\n        }\\n    }\\n\\n    function transferProxyAdmin(address newAdmin) external onlyProxyAdmin {\\n        _setProxyAdmin(newAdmin);\\n    }\\n\\n    function upgradeTo(address newImplementation) external onlyProxyAdmin {\\n        _setImplementation(newImplementation, \\\"\\\");\\n    }\\n\\n    function upgradeToAndCall(address newImplementation, bytes calldata data)\\n        external\\n        payable\\n        onlyProxyAdmin\\n    {\\n        _setImplementation(newImplementation, data);\\n    }\\n\\n    // /////////////////////// MODIFIERS ////////////////////////////////////////////////////////////////////////\\n\\n    modifier onlyProxyAdmin() {\\n        require(msg.sender == _proxyAdmin(), \\\"NOT_AUTHORIZED\\\");\\n        _;\\n    }\\n\\n    // ///////////////////////// INTERNAL //////////////////////////////////////////////////////////////////////\\n\\n    function _proxyAdmin() internal view returns (address adminAddress) {\\n        // solhint-disable-next-line security/no-inline-assembly\\n        assembly {\\n            adminAddress := sload(\\n                0xb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d6103\\n            )\\n        }\\n    }\\n\\n    function _setProxyAdmin(address newAdmin) internal {\\n        address previousAdmin = _proxyAdmin();\\n        // solhint-disable-next-line security/no-inline-assembly\\n        assembly {\\n            sstore(\\n                0xb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d6103,\\n                newAdmin\\n            )\\n        }\\n        emit ProxyAdminTransferred(previousAdmin, newAdmin);\\n    }\\n}\\n\",\"keccak256\":\"0x3e2e1473604e7e42e99f77ad5e5d8eb8a3b6d0e63c154a9c6d9a223190372070\",\"license\":\"GPL-3.0\"},\"contracts/vendor/proxy/Proxy.sol\":{\"content\":\"// SPDX-License-Identifier: GPL-3.0\\npragma solidity 0.8.19;\\n\\n// EIP-1967\\nabstract contract Proxy {\\n    // /////////////////////// EVENTS ///////////////////////////////////////////////////////////////////////////\\n\\n    event ProxyImplementationUpdated(\\n        address indexed previousImplementation,\\n        address indexed newImplementation\\n    );\\n\\n    // ///////////////////// EXTERNAL ///////////////////////////////////////////////////////////////////////////\\n\\n    // prettier-ignore\\n    receive() external payable virtual {\\n        revert(\\\"ETHER_REJECTED\\\"); // explicit reject by default\\n    }\\n\\n    fallback() external payable {\\n        _fallback();\\n    }\\n\\n    // ///////////////////////// INTERNAL //////////////////////////////////////////////////////////////////////\\n\\n    function _fallback() internal {\\n        // solhint-disable-next-line security/no-inline-assembly\\n        assembly {\\n            let implementationAddress := sload(\\n                0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc\\n            )\\n            calldatacopy(0x0, 0x0, calldatasize())\\n            let success := delegatecall(\\n                gas(),\\n                implementationAddress,\\n                0x0,\\n                calldatasize(),\\n                0,\\n                0\\n            )\\n            let retSz := returndatasize()\\n            returndatacopy(0, 0, retSz)\\n            switch success\\n                case 0 {\\n                    revert(0, retSz)\\n                }\\n                default {\\n                    return(0, retSz)\\n                }\\n        }\\n    }\\n\\n    function _setImplementation(address newImplementation, bytes memory data)\\n        internal\\n    {\\n        address previousImplementation;\\n        // solhint-disable-next-line security/no-inline-assembly\\n        assembly {\\n            previousImplementation := sload(\\n                0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc\\n            )\\n        }\\n\\n        // solhint-disable-next-line security/no-inline-assembly\\n        assembly {\\n            sstore(\\n                0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc,\\n                newImplementation\\n            )\\n        }\\n\\n        emit ProxyImplementationUpdated(\\n            previousImplementation,\\n            newImplementation\\n        );\\n\\n        if (data.length > 0) {\\n            (bool success, ) = newImplementation.delegatecall(data);\\n            if (!success) {\\n                assembly {\\n                    // This assembly ensure the revert contains the exact string data\\n                    let returnDataSize := returndatasize()\\n                    returndatacopy(0, 0, returnDataSize)\\n                    revert(0, returnDataSize)\\n                }\\n            }\\n        }\\n    }\\n}\\n\",\"keccak256\":\"0x5fd4f538f92f377d4e7b09fe8d5387eb1d5ff5ac95869c969be5049ae23439ba\",\"license\":\"GPL-3.0\"}},\"version\":1}",
+  "bytecode": "0x6080604052604051610992380380610992833981016040819052610022916101de565b61002c838261003d565b61003582610119565b5050506102ca565b7f360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc8054908390556040516001600160a01b0380851691908316907f5570d70a002632a7b0b3c9304cc89efb62d8da9eca0dbd7752c83b737906829690600090a3815115610114576000836001600160a01b0316836040516100be91906102ae565b600060405180830381855af49150503d80600081146100f9576040519150601f19603f3d011682016040523d82523d6000602084013e6100fe565b606091505b5050905080610112573d806000803e806000fd5b505b505050565b60006101316000805160206109728339815191525490565b90508160008051602061097283398151915255816001600160a01b0316816001600160a01b03167fdf435d422321da6b195902d70fc417c06a32f88379c20dd8f2a8da07088cec2960405160405180910390a35050565b80516001600160a01b038116811461019f57600080fd5b919050565b634e487b7160e01b600052604160045260246000fd5b60005b838110156101d55781810151838201526020016101bd565b50506000910152565b6000806000606084860312156101f357600080fd5b6101fc84610188565b925061020a60208501610188565b60408501519092506001600160401b038082111561022757600080fd5b818601915086601f83011261023b57600080fd5b81518181111561024d5761024d6101a4565b604051601f8201601f19908116603f01168101908382118183101715610275576102756101a4565b8160405282815289602084870101111561028e57600080fd5b61029f8360208301602088016101ba565b80955050505050509250925092565b600082516102c08184602087016101ba565b9190910192915050565b610699806102d96000396000f3fe60806040526004361061004e5760003560e01c806301ffc9a71461009b5780633659cfe6146100d05780633e47158c146100f05780634f1ef2861461011d5780638356ca4f1461013057610091565b366100915760405162461bcd60e51b815260206004820152600e60248201526d115512115497d491529150d5115160921b60448201526064015b60405180910390fd5b610099610150565b005b3480156100a757600080fd5b506100bb6100b63660046104c7565b610189565b60405190151581526020015b60405180910390f35b3480156100dc57600080fd5b506100996100eb36600461050d565b61026f565b3480156100fc57600080fd5b506101056102c3565b6040516001600160a01b0390911681526020016100c7565b61009961012b366004610528565b6102d2565b34801561013c57600080fd5b5061009961014b36600461050d565b61034f565b6000805160206106448339815191525460003681823780813683855af491503d8082833e82801561017f578183f35b8183fd5b50505050565b60006301ffc9a760e01b6001600160e01b0319831614806101ba57506307f5828d60e41b6001600160e01b03198316145b156101c757506001919050565b6001600160e01b031980831690036101e157506000919050565b600080516020610644833981519152546040516301ffc9a760e01b81526001600160e01b0319841660048201526001600160a01b038216906301ffc9a790602401602060405180830381865afa92505050801561025b575060408051601f3d908101601f19168201909252610258918101906105aa565b60015b6102685750600092915050565b9392505050565b610277610390565b6001600160a01b0316336001600160a01b0316146102a75760405162461bcd60e51b8152600401610088906105cc565b6102c081604051806020016040528060008152506103a3565b50565b60006102cd610390565b905090565b6102da610390565b6001600160a01b0316336001600160a01b03161461030a5760405162461bcd60e51b8152600401610088906105cc565b61034a8383838080601f0160208091040260200160405190810160405280939291908181526020018383808284376000920191909152506103a392505050565b505050565b610357610390565b6001600160a01b0316336001600160a01b0316146103875760405162461bcd60e51b8152600401610088906105cc565b6102c081610466565b6000805160206106248339815191525490565b6000805160206106448339815191528054908390556040516001600160a01b0380851691908316907f5570d70a002632a7b0b3c9304cc89efb62d8da9eca0dbd7752c83b737906829690600090a381511561034a576000836001600160a01b03168360405161041291906105f4565b600060405180830381855af49150503d806000811461044d576040519150601f19603f3d011682016040523d82523d6000602084013e610452565b606091505b5050905080610183573d806000803e806000fd5b6000610470610390565b90508160008051602061062483398151915255816001600160a01b0316816001600160a01b03167fdf435d422321da6b195902d70fc417c06a32f88379c20dd8f2a8da07088cec2960405160405180910390a35050565b6000602082840312156104d957600080fd5b81356001600160e01b03198116811461026857600080fd5b80356001600160a01b038116811461050857600080fd5b919050565b60006020828403121561051f57600080fd5b610268826104f1565b60008060006040848603121561053d57600080fd5b610546846104f1565b925060208401356001600160401b038082111561056257600080fd5b818601915086601f83011261057657600080fd5b81358181111561058557600080fd5b87602082850101111561059757600080fd5b6020830194508093505050509250925092565b6000602082840312156105bc57600080fd5b8151801515811461026857600080fd5b6020808252600e908201526d1393d517d055551213d49256915160921b604082015260600190565b6000825160005b8181101561061557602081860181015185830152016105fb565b50600092019182525091905056feb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d6103360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbca2646970667358221220f8092c6d4e38cdaacdb3c899e6c75d21baaeaba76b22f353673f931b1f0f8a9b64736f6c63430008130033b53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d6103",
+  "deployedBytecode": "0x60806040526004361061004e5760003560e01c806301ffc9a71461009b5780633659cfe6146100d05780633e47158c146100f05780634f1ef2861461011d5780638356ca4f1461013057610091565b366100915760405162461bcd60e51b815260206004820152600e60248201526d115512115497d491529150d5115160921b60448201526064015b60405180910390fd5b610099610150565b005b3480156100a757600080fd5b506100bb6100b63660046104c7565b610189565b60405190151581526020015b60405180910390f35b3480156100dc57600080fd5b506100996100eb36600461050d565b61026f565b3480156100fc57600080fd5b506101056102c3565b6040516001600160a01b0390911681526020016100c7565b61009961012b366004610528565b6102d2565b34801561013c57600080fd5b5061009961014b36600461050d565b61034f565b6000805160206106448339815191525460003681823780813683855af491503d8082833e82801561017f578183f35b8183fd5b50505050565b60006301ffc9a760e01b6001600160e01b0319831614806101ba57506307f5828d60e41b6001600160e01b03198316145b156101c757506001919050565b6001600160e01b031980831690036101e157506000919050565b600080516020610644833981519152546040516301ffc9a760e01b81526001600160e01b0319841660048201526001600160a01b038216906301ffc9a790602401602060405180830381865afa92505050801561025b575060408051601f3d908101601f19168201909252610258918101906105aa565b60015b6102685750600092915050565b9392505050565b610277610390565b6001600160a01b0316336001600160a01b0316146102a75760405162461bcd60e51b8152600401610088906105cc565b6102c081604051806020016040528060008152506103a3565b50565b60006102cd610390565b905090565b6102da610390565b6001600160a01b0316336001600160a01b03161461030a5760405162461bcd60e51b8152600401610088906105cc565b61034a8383838080601f0160208091040260200160405190810160405280939291908181526020018383808284376000920191909152506103a392505050565b505050565b610357610390565b6001600160a01b0316336001600160a01b0316146103875760405162461bcd60e51b8152600401610088906105cc565b6102c081610466565b6000805160206106248339815191525490565b6000805160206106448339815191528054908390556040516001600160a01b0380851691908316907f5570d70a002632a7b0b3c9304cc89efb62d8da9eca0dbd7752c83b737906829690600090a381511561034a576000836001600160a01b03168360405161041291906105f4565b600060405180830381855af49150503d806000811461044d576040519150601f19603f3d011682016040523d82523d6000602084013e610452565b606091505b5050905080610183573d806000803e806000fd5b6000610470610390565b90508160008051602061062483398151915255816001600160a01b0316816001600160a01b03167fdf435d422321da6b195902d70fc417c06a32f88379c20dd8f2a8da07088cec2960405160405180910390a35050565b6000602082840312156104d957600080fd5b81356001600160e01b03198116811461026857600080fd5b80356001600160a01b038116811461050857600080fd5b919050565b60006020828403121561051f57600080fd5b610268826104f1565b60008060006040848603121561053d57600080fd5b610546846104f1565b925060208401356001600160401b038082111561056257600080fd5b818601915086601f83011261057657600080fd5b81358181111561058557600080fd5b87602082850101111561059757600080fd5b6020830194508093505050509250925092565b6000602082840312156105bc57600080fd5b8151801515811461026857600080fd5b6020808252600e908201526d1393d517d055551213d49256915160921b604082015260600190565b6000825160005b8181101561061557602081860181015185830152016105fb565b50600092019182525091905056feb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d6103360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbca2646970667358221220f8092c6d4e38cdaacdb3c899e6c75d21baaeaba76b22f353673f931b1f0f8a9b64736f6c63430008130033",
+  "execute": {
+    "methodName": "initialize",
+    "args": [
+      "0xB1e9E16a40321Fe06Cfd797619C345c143D11Aa7",
+      "0xB47C8e4bEb28af80eDe5E5bF474927b110Ef2c0e",
+      "0xB47C8e4bEb28af80eDe5E5bF474927b110Ef2c0e"
+    ]
+  },
+  "implementation": "0xB1e9E16a40321Fe06Cfd797619C345c143D11Aa7",
+  "devdoc": {
+    "kind": "dev",
+    "methods": {},
+    "version": 1
+  },
+  "userdoc": {
+    "kind": "user",
+    "methods": {},
+    "notice": "Proxy implementing EIP173 for ownership management",
+    "version": 1
+  },
+  "storageLayout": {
+    "storage": [],
+    "types": null
+  }
+}

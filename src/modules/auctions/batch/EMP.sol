@@ -409,6 +409,8 @@ contract EncryptedMarginalPrice is BatchAuctionModule, IEncryptedMarginalPrice {
 
         // Decrypt and sort bids
         _decryptAndSortBids(lotId_, num_, sortHints_);
+
+        emit PrivateKeySubmitted(lotId_);
     }
 
     /// @inheritdoc IEncryptedMarginalPrice

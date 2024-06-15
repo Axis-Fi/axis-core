@@ -6,6 +6,7 @@ import {IAuction} from "src/interfaces/modules/IAuction.sol";
 import {IFixedPriceBatch} from "src/interfaces/modules/auctions/IFixedPriceBatch.sol";
 
 import {FpbTest} from "test/modules/auctions/FPB/FPBTest.sol";
+import {console2} from "lib/forge-std/src/console2.sol";
 
 contract FpbSettleTest is FpbTest {
     // [X] when the caller is not the parent
@@ -180,5 +181,41 @@ contract FpbSettleTest is FpbTest {
         assertEq(uint8(auctionData.status), uint8(IFixedPriceBatch.LotStatus.Settled), "status");
         assertEq(auctionData.settlementCleared, false, "settlementCleared");
         assertEq(auctionData.totalBidAmount, 6e18, "totalBidAmount");
+    }
+
+    // Added per ethersky's review (issue 201) to avoid a rounding issue which prevents settlement
+    function test_settle_doesNotBrick()
+        public
+        givenPrice(2e18)
+        givenMinFillPercent(100e3)
+        givenLotCapacity(10e18)
+        givenLotIsCreated
+        givenLotHasStarted
+    {
+        vm.prank(address(_auctionHouse));
+        _module.bid(_lotId, _BIDDER, _REFERRER, 2e19 - 1, abi.encode(""));
+
+        IFixedPriceBatch.AuctionData memory auctionData_before = _module.getAuctionData(_lotId);
+        IAuction.Lot memory lot_before = _module.getLot(_lotId);
+        console2.log("totalBidAmount before    ==>  ", auctionData_before.totalBidAmount);
+        console2.log("conclusion before        ==>  ", lot_before.conclusion);
+
+        vm.prank(address(_auctionHouse));
+        _module.bid(_lotId, _BIDDER, _REFERRER, 1e18 + 1, abi.encode(""));
+
+        IFixedPriceBatch.AuctionData memory auctionData_after = _module.getAuctionData(_lotId);
+        IAuction.Lot memory lot_after = _module.getLot(_lotId);
+
+        console2.log("totalBidAmount after     ==>  ", auctionData_after.totalBidAmount);
+        console2.log("conclusion after         ==>  ", lot_after.conclusion);
+        assertLt(lot_after.conclusion, lot_before.conclusion);
+
+        vm.prank(address(_auctionHouse));
+        _module.settle(_lotId, 100_000);
+
+        IFixedPriceBatch.AuctionData memory auctionData_final = _module.getAuctionData(_lotId);
+
+        console2.log("settlementCleared final  ==>  ", auctionData_final.settlementCleared);
+        assert(auctionData_final.settlementCleared);
     }
 }

@@ -191,6 +191,15 @@ contract FixedPriceBatch is BatchAuctionModule, IFixedPriceBatch {
 
             // Decrement the total bid amount by the refund
             data.totalBidAmount -= _lotPartialFill[lotId_].refund;
+
+            // Calculate the updated filled capacity
+            uint256 filledCapacity = Math.fullMulDiv(data.totalBidAmount, baseScale, data.price);
+
+            // Compare this with minimum filled and update if needed
+            // We do this to ensure that slight rounding errors do not cause
+            // the auction to not clear when the capacity is actually filled
+            // This generally can only happen when the min fill is 100%
+            if (filledCapacity < data.minFilled) data.minFilled = filledCapacity;
         }
 
         // End the auction

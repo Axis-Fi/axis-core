@@ -35,9 +35,9 @@ contract UniswapDTLSalts is Script, WithEnvironment, WithSalts {
         console2.log("GUniFactory:", _envGUniFactory);
 
         // Cache auction houses
-        _envAtomicAuctionHouse = _envAddressNotZero("axis.AtomicAuctionHouse");
+        _envAtomicAuctionHouse = _envAddress("axis.AtomicAuctionHouse");
         console2.log("AtomicAuctionHouse:", _envAtomicAuctionHouse);
-        _envBatchAuctionHouse = _envAddressNotZero("axis.BatchAuctionHouse");
+        _envBatchAuctionHouse = _envAddress("axis.BatchAuctionHouse");
         console2.log("BatchAuctionHouse:", _envBatchAuctionHouse);
     }
 
