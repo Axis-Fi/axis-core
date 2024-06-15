@@ -27,6 +27,8 @@ contract BaselineOnSettleTest is BaselineAxisLaunchTest {
     //  [X] it reverts
     // [X] when insufficient refund is sent to the callback
     //  [X] it reverts
+    // [ ] when the percent in floor reserves changes
+    //  [ ] it adds reserves to the floor and anchor ranges in the correct proportions
     // [X] it burns refunded base tokens, updates the circulating supply, marks the auction as completed and deploys the reserves into the Baseline pool
 
     function test_lotNotRegistered_reverts()

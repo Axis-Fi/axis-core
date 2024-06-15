@@ -55,9 +55,13 @@ contract BaselineAxisLaunch is BaseCallback, Policy, Owned {
 
     /// @notice Data struct for the onCreate callback
     ///
+    /// @param  floorReservesPercent    The percentage of the proceeds to allocate to the floor range. The remainder will be allocated to the anchor range. (100% = `ONE_HUNDRED_PERCENT`)
+    /// @param  anchorTickWidth         The width of the anchor tick range, as a multiple of the pool tick spacing.
     /// @param  discoveryTickWidth      The width of the discovery tick range, as a multiple of the pool tick spacing.
     /// @param  allowlistParams         Additional parameters for an allowlist, passed to `__onCreate()` for further processing
     struct CreateData {
+        uint24 floorReservesPercent;
+        int24 anchorTickWidth;
         int24 discoveryTickWidth;
         bytes allowlistParams;
     }
@@ -274,10 +278,11 @@ contract BaselineAxisLaunch is BaseCallback, Policy, Owned {
 
         // Set the ticks for the Baseline pool initially with the following assumptions:
         // - The floor range is 1 tick spacing wide
-        // - The floor range contains the active tick
-        // - The floor range lower tick is not equal to the active tick
-        // - There is no anchor (width of the anchor tick range is 0)
-        // - The discovery range is set to the active tick plus the discoveryTickWidth multiplied by the tick spacing
+        // - The anchor range is `anchorTickWidth` tick spacings wide, above the floor range
+        // - The discovery range is `discoveryTickWidth` tick spacings wide, above the anchor range
+        // - The anchor range contains the active tick
+        // - The anchor range upper tick is the active tick rounded up to the nearest tick spacing
+        // - The other range boundaries are calculated accordingly
         int24 activeTickUpperBoundary;
         {
             // Initially, the active tick upper boundary is the active tick rounded up
@@ -459,6 +464,8 @@ contract BaselineAxisLaunch is BaseCallback, Policy, Owned {
         // Approve spending of the reserve token
         // There should not be any dangling approvals left
         Transfer.approve(RESERVE, address(BPOOL), proceeds_);
+
+        // TODO add proceeds to the anchor and floor ranges
 
         // Add all of the proceeds to the Floor range
         BPOOL.addReservesTo(Range.FLOOR, proceeds_);

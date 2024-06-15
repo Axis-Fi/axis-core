@@ -138,12 +138,18 @@ contract BaselineOnCreateTest is BaselineAxisLaunchTest {
     //  [X] it reverts
     // [X] when the quote token is not the reserve
     //  [X] it reverts
+    // [ ] when the floorReservesPercent is not between 0 and 100
+    //  [ ] it reverts
+    // [ ] when the anchorTickWidth is <= 0
+    //  [ ] it reverts
     // [X] when the discoveryTickWidth is <= 0
     //  [X] it reverts
     // [X] when the auction format is not FPB
     //  [X] it reverts
     // [X] when the auction is not prefunded
     //  [X] it reverts
+    // [ ] when the floorReservesPercent is 0-100
+    //  [ ] it correctly records the allocation
     // [X] when the tick spacing is narrow
     //  [X] the ticks do not overlap
     // [X] when the auction fixed price is very high
@@ -156,6 +162,8 @@ contract BaselineOnCreateTest is BaselineAxisLaunchTest {
     //  [X] it correctly sets the active tick
     // [X] when the quote token decimals are lower than the base token decimals
     //  [X] it correctly sets the active tick
+    // [ ] when the anchorTickWidth is small
+    //  [ ] it correctly sets the anchor ticks to not overlap with the other ranges
     // [X] when the discoveryTickWidth is small
     //  [X] it correctly sets the discovery ticks to not overlap with the other ranges
     // [X] it transfers the base token to the auction house, updates circulating supply, sets the state variables, initializes the pool and sets the tick ranges
