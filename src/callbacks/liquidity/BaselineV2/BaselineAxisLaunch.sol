@@ -90,6 +90,10 @@ contract BaselineAxisLaunch is BaseCallback, Policy, Owned {
     /// @dev    This is used to prevent the callback from being called multiple times. It is set in the `onSettle()` callback.
     bool public auctionComplete;
 
+    /// @notice The percentage of the proceeds to allocate to the floor range
+    /// @dev    This value is set in the `onCreate()` callback.
+    uint24 public floorReservesPercent;
+
     // solhint-disable-next-line private-vars-leading-underscore
     uint48 internal constant ONE_HUNDRED_PERCENT = 100_000;
 
