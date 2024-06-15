@@ -19,6 +19,7 @@ contract MockBPOOL is IBPOOLv1, ERC20 {
     mapping(Range => Ticks) public getTicks;
 
     mapping(Range => uint256) public rangeReserves;
+    mapping(Range => uint128) public rangeLiquidity;
 
     int24 public activeTick;
 
@@ -36,7 +37,15 @@ contract MockBPOOL is IBPOOLv1, ERC20 {
         TICK_SPACING = factory.feeAmountTickSpacing(feeTier_);
     }
 
-    function getLiquidity(Range range_) external view override returns (uint128) {}
+    function getLiquidity(Range range_) external view override returns (uint128) {
+        // If the reserves are 0, the liquidity is 0
+        if (rangeReserves[range_] == 0) {
+            return 0;
+        }
+
+        // If the reserves are not 0, the liquidity is a non-zero value
+        return 1;
+    }
 
     function initializePool(int24 activeTick_) external override returns (IUniswapV3Pool) {
         // Create the pool
@@ -76,7 +85,9 @@ contract MockBPOOL is IBPOOLv1, ERC20 {
         override
         returns (uint256 bAssetsAdded_, uint256 reservesAdded_, uint128 liquidityFinal_)
     {
-        // TODO Mimic minting bAssets into the pool
+        rangeLiquidity[_range] += _liquidity;
+
+        return (0, 0, rangeLiquidity[_range]);
     }
 
     function removeAllFrom(Range _range)

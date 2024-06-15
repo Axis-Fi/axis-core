@@ -175,6 +175,11 @@ contract BaselineOnSettleTest is BaselineAxisLaunchTest {
             "reserves: anchor"
         );
         assertEq(_baseToken.rangeReserves(Range.DISCOVERY), 0, "reserves: discovery");
+
+        // Liquidity
+        assertEq(_baseToken.rangeLiquidity(Range.FLOOR), 0, "liquidity: floor");
+        assertEq(_baseToken.rangeLiquidity(Range.ANCHOR), 0, "liquidity: anchor");
+        assertGt(_baseToken.rangeLiquidity(Range.DISCOVERY), 0, "liquidity: discovery");
     }
 
     function test_floorReservesPercent_fuzz(uint24 floorReservesPercent_)
@@ -229,5 +234,10 @@ contract BaselineOnSettleTest is BaselineAxisLaunchTest {
             "reserves: anchor"
         );
         assertEq(_baseToken.rangeReserves(Range.DISCOVERY), 0, "reserves: discovery");
+
+        // Liquidity
+        assertEq(_baseToken.rangeLiquidity(Range.FLOOR), 0, "liquidity: floor");
+        assertEq(_baseToken.rangeLiquidity(Range.ANCHOR), 0, "liquidity: anchor");
+        assertGt(_baseToken.rangeLiquidity(Range.DISCOVERY), 0, "liquidity: discovery");
     }
 }
