@@ -1,51 +1,62 @@
 #!/bin/bash
 
 # Usage:
-# ./write_salt.sh <bytecode file> <prefix> <salt key> <bytecode hash>
+# ./write_salt.sh --bytecode <bytecode file> --prefix <prefix> --saltKey <salt key> --bytecodeHash <bytecode hash> [--deployer <deployer>]
 
-# Get command-line arguments
-BYTECODE_FILE=$1 # Which bytecode to use
-PREFIX=$2 # Which prefix to search for
-SALT_KEY=$3 # What key to save the generated salt as
-BYTECODE_HASH=$4 # Hash of the bytecode to the contract
+# Iterate through named arguments
+# Source: https://unix.stackexchange.com/a/388038
+while [ $# -gt 0 ]; do
+  if [[ $1 == *"--"* ]]; then
+    v="${1/--/}"
+    declare $v="$2"
+  fi
 
-# Check if BYTECODE_FILE is set
-if [ -z "$BYTECODE_FILE" ]
+  shift
+done
+
+# Check if bytecodeFile is set
+if [ -z "$bytecodeFile" ]
 then
   echo "No bytecode file specified. Provide the relative path after the command."
   exit 1
 fi
 
-# Check if BYTECODE_FILE exists
-if [ ! -f "$BYTECODE_FILE" ]
+# Check if bytecodeFile exists
+if [ ! -f "$bytecodeFile" ]
 then
-  echo "Bytecode file ($BYTECODE_FILE) not found. Provide the correct relative path after the command."
+  echo "Bytecode file ($bytecodeFile) not found. Provide the correct relative path after the command."
   exit 1
 fi
 
-# Check if PREFIX is set
-if [ -z "$PREFIX" ]
+# Check if prefix is set
+if [ -z "$prefix" ]
 then
   echo "No prefix specified. Provide the prefix after the bytecode file."
   exit 1
 fi
 
-# Check if SALT_KEY is set
-if [ -z "$SALT_KEY" ]
+# Check if saltKey is set
+if [ -z "$saltKey" ]
 then
   echo "No salt key specified. Provide the salt key after the prefix."
   exit 1
 fi
 
-# Check if BYTECODE_HASH is set
-if [ -z "$BYTECODE_HASH" ]
+# Check if bytecodeHash is set
+if [ -z "$bytecodeHash" ]
 then
   echo "No args hash specified. Provide the args hash after the salt key."
   exit 1
 fi
 
+DEPLOYER_FLAG=""
+if [ ! -z "$deployer" ]
+then
+  DEPLOYER_FLAG="--deployer $deployer"
+fi
+
 # Generate salt using cast create2
-output=$(cast create2 -c -s $2 -i $(cat $1))
+output=$(cast create2 --case-sensitive --starts-with $prefix --init-code $(cat $bytecodeFile) $DEPLOYER_FLAG)
 
 # Get the first salt (as cast will often return the same salt multiple times)
 salt=$(echo "$output" | grep 'Salt: ' | head -n 1 | awk -F' ' '{print $2}')
@@ -61,9 +72,9 @@ fi
 # jq will replace existing salts for the same key and args hash, or add new entries
 # It will write in the format of:
 # {
-#   "<SALT_KEY>": {
-#     "<BYTECODE_HASH>": "<SALT>"
+#   "<saltKey>": {
+#     "<bytecodeHash>": "<SALT>"
 #   }
 # }
-jq -S --arg contract "$SALT_KEY" --arg hash "$BYTECODE_HASH" --arg salt "$salt" '.[$contract] += { $hash: $salt }' $salt_file > $salt_tmp_file && mv $salt_tmp_file $salt_file
-echo "Wrote salt for key $SALT_KEY to $salt_file"
+jq -S --arg contract "$saltKey" --arg hash "$bytecodeHash" --arg salt "$salt" '.[$contract] += { $hash: $salt }' $salt_file > $salt_tmp_file && mv $salt_tmp_file $salt_file
+echo "Wrote salt for key $saltKey to $salt_file"
