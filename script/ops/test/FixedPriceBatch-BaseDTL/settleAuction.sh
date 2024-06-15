@@ -1,7 +1,10 @@
 #!/bin/bash
 
 # Usage:
-# ./deployTokens.sh --seller <seller> --buyer <buyer> --envFile <.env> --broadcast <false>
+# ./settleAuction.sh --lotId <uint96> --envFile <.env> --broadcast <false>
+#
+# Expects the following environment variables:
+# CHAIN: The chain to deploy to, based on values from the ./script/env.json file.
 
 # Iterate through named arguments
 # Source: https://unix.stackexchange.com/a/388038
@@ -26,24 +29,23 @@ set +a  # Disable automatic export
 # Apply defaults to command-line arguments
 BROADCAST=${broadcast:-false}
 
-# Check that the seller is defined and is an address
-if [[ ! "$seller" =~ ^0x[a-fA-F0-9]{40}$ ]]
+# Check that the CHAIN is defined
+if [ -z "$CHAIN" ]
 then
-  echo "Invalid seller specified. Provide the address after the --seller flag."
+  echo "No chain specified. Set the CHAIN environment variable."
   exit 1
 fi
 
-# Check that the buyer is defined and is an address
-if [[ ! "$buyer" =~ ^0x[a-fA-F0-9]{40}$ ]]
+# Check that the lotId is defined and is an integer
+if [[ ! "$lotId" =~ ^[0-9]+$ ]]
 then
-  echo "Invalid buyer specified. Provide the address after the --buyer flag."
+  echo "Invalid lotId specified. Provide the integer value after the --lotId flag."
   exit 1
 fi
 
 echo "Using chain: $CHAIN"
 echo "Using RPC at URL: $RPC_URL"
-echo "Seller: $seller"
-echo "Buyer: $buyer"
+echo "Lot ID: $lotId"
 echo "Deployer: $DEPLOYER_ADDRESS"
 
 # Set BROADCAST_FLAG based on BROADCAST
@@ -55,12 +57,7 @@ else
   echo "Broadcast: disabled"
 fi
 
-echo "RPC: $RPC_URL"
-echo "Deployer: $DEPLOYER_ADDRESS"
-echo "Seller: $1"
-echo "Buyer: $2"
-
 # Create auction
-forge script ./script/ops/test/TestData.s.sol:TestData --sig "deployTestTokens(address,address)()" $seller $buyer \
---rpc-url $RPC_URL --private-key $DEPLOYER_PRIVATE_KEY --froms $DEPLOYER_ADDRESS --slow -vvv \
+forge script ./script/ops/test/FixedPriceBatch-BaseDTL/TestData.s.sol:TestData --sig "settleAuction(string,uint96)()" $CHAIN $lotId \
+--rpc-url $RPC_URL --private-key $DEPLOYER_PRIVATE_KEY --froms $DEPLOYER_ADDRESS --slow -vvvv \
 $BROADCAST_FLAG
