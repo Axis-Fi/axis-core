@@ -7,8 +7,11 @@ import {BaselineAxisLaunchTest} from
 import {BaseCallback} from "src/callbacks/BaseCallback.sol";
 import {BaselineAxisLaunch} from "src/callbacks/liquidity/BaselineV2/BaselineAxisLaunch.sol";
 import {Range} from "src/callbacks/liquidity/BaselineV2/lib/IBPOOL.sol";
+import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 
 contract BaselineOnSettleTest is BaselineAxisLaunchTest {
+    using FixedPointMathLib for uint256;
+
     // ============ Modifiers ============ //
 
     // ============ Assertions ============ //
@@ -27,8 +30,8 @@ contract BaselineOnSettleTest is BaselineAxisLaunchTest {
     //  [X] it reverts
     // [X] when insufficient refund is sent to the callback
     //  [X] it reverts
-    // [ ] when the percent in floor reserves changes
-    //  [ ] it adds reserves to the floor and anchor ranges in the correct proportions
+    // [X] when the percent in floor reserves changes
+    //  [X] it adds reserves to the floor and anchor ranges in the correct proportions
     // [X] it burns refunded base tokens, updates the circulating supply, marks the auction as completed and deploys the reserves into the Baseline pool
 
     function test_lotNotRegistered_reverts()
@@ -161,8 +164,70 @@ contract BaselineOnSettleTest is BaselineAxisLaunchTest {
         assertEq(_dtl.auctionComplete(), true, "auction completed");
 
         // Reserves deployed into the pool
-        assertEq(_baseToken.rangeReserves(Range.FLOOR), _PROCEEDS_AMOUNT, "reserves: floor");
-        assertEq(_baseToken.rangeReserves(Range.ANCHOR), 0, "reserves: anchor");
+        assertEq(
+            _baseToken.rangeReserves(Range.FLOOR),
+            _PROCEEDS_AMOUNT.mulDivDown(_FLOOR_RESERVES_PERCENT, 1e5),
+            "reserves: floor"
+        );
+        assertEq(
+            _baseToken.rangeReserves(Range.ANCHOR),
+            _PROCEEDS_AMOUNT.mulDivDown(1e5 - _FLOOR_RESERVES_PERCENT, 1e5),
+            "reserves: anchor"
+        );
+        assertEq(_baseToken.rangeReserves(Range.DISCOVERY), 0, "reserves: discovery");
+    }
+
+    function test_floorReservesPercent_fuzz(uint24 floorReservesPercent_)
+        public
+        givenCallbackIsCreated
+        givenAuctionIsCreated
+    {
+        uint24 floorReservesPercent = uint24(bound(floorReservesPercent_, 0, 1e5));
+
+        // Update the callback parameters
+        _createData.floorReservesPercent = floorReservesPercent;
+
+        // Call onCreate
+        _onCreate();
+
+        // Mint tokens
+        _quoteToken.mint(_dtlAddress, _PROCEEDS_AMOUNT);
+        _baseToken.mint(_dtlAddress, _REFUND_AMOUNT);
+
+        // Perform callback
+        _onSettle();
+
+        // Assert quote token balances
+        assertEq(_quoteToken.balanceOf(_dtlAddress), 0, "quote token: callback");
+        assertEq(_quoteToken.balanceOf(address(_quoteToken)), 0, "quote token: contract");
+        assertEq(
+            _quoteToken.balanceOf(address(_baseToken.pool())), _PROCEEDS_AMOUNT, "quote token: pool"
+        );
+
+        // Assert base token balances
+        assertEq(_baseToken.balanceOf(_dtlAddress), 0, "base token: callback");
+        assertEq(_baseToken.balanceOf(address(_baseToken)), 0, "base token: contract");
+        assertEq(_baseToken.balanceOf(address(_baseToken.pool())), 0, "base token: pool"); // No liquidity in the anchor range, so no base token in the discovery range
+
+        // Circulating supply
+        assertEq(
+            _dtl.initialCirculatingSupply(), _LOT_CAPACITY - _REFUND_AMOUNT, "circulating supply"
+        );
+
+        // Auction marked as complete
+        assertEq(_dtl.auctionComplete(), true, "auction completed");
+
+        // Reserves deployed into the pool
+        assertEq(
+            _baseToken.rangeReserves(Range.FLOOR),
+            _PROCEEDS_AMOUNT.mulDivDown(floorReservesPercent, 1e5),
+            "reserves: floor"
+        );
+        assertEq(
+            _baseToken.rangeReserves(Range.ANCHOR),
+            _PROCEEDS_AMOUNT.mulDivDown(1e5 - floorReservesPercent, 1e5),
+            "reserves: anchor"
+        );
         assertEq(_baseToken.rangeReserves(Range.DISCOVERY), 0, "reserves: discovery");
     }
 }

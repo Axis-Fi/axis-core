@@ -480,13 +480,18 @@ contract BaselineAxisLaunch is BaseCallback, Policy, Owned {
         // There should not be any dangling approvals left
         Transfer.approve(RESERVE, address(BPOOL), proceeds_);
 
-        // TODO add proceeds to the anchor and floor ranges
+        // Add the configured percentage of the proceeds to the Floor range
+        uint256 floorReserves = proceeds_ * floorReservesPercent / ONE_HUNDRED_PERCENT;
+        BPOOL.addReservesTo(Range.FLOOR, floorReserves);
 
-        // Add all of the proceeds to the Floor range
-        BPOOL.addReservesTo(Range.FLOOR, proceeds_);
+        // Add the remainder of the proceeds to the Anchor range
+        BPOOL.addReservesTo(Range.ANCHOR, proceeds_ - floorReserves);
 
         // Add proportional liquidity to the Discovery range
-        BPOOL.addLiquidityTo(Range.DISCOVERY, BPOOL.getLiquidity(Range.FLOOR) * 11 / 10);
+        BPOOL.addLiquidityTo(
+            Range.DISCOVERY,
+            (BPOOL.getLiquidity(Range.FLOOR) + BPOOL.getLiquidity(Range.ANCHOR)) * 11 / 10
+        );
 
         //// Step 3: Verify Solvency ////
         uint256 totalCapacity = BPOOL.getPosition(Range.FLOOR).capacity

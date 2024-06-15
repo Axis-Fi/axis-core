@@ -522,8 +522,6 @@ contract BaselineOnCreateTest is BaselineAxisLaunchTest {
         _assertTicks(fixedPriceTick);
     }
 
-    // TODO check on whether ordering is opinionated
-
     function test_baseTokenAddressLower()
         public
         givenBaseTokenAddressLower
