@@ -225,8 +225,18 @@ contract BaselineAxisLaunch is BaseCallback, Policy, Owned {
         // Decode the provided callback data (must be correctly formatted even if not using parts of it)
         CreateData memory cbData = abi.decode(callbackData_, (CreateData));
 
-        // Validate the discovery tick width is at least 1 tick spacing
+        // Validate that the anchor tick width is at least 1 tick spacing
+        if (cbData.anchorTickWidth <= 0) {
+            revert Callback_InvalidParams();
+        }
+
+        // Validate that the discovery tick width is at least 1 tick spacing
         if (cbData.discoveryTickWidth <= 0) {
+            revert Callback_InvalidParams();
+        }
+
+        // Validate that the floor reserves percent is between 0% and 100%
+        if (cbData.floorReservesPercent > ONE_HUNDRED_PERCENT) {
             revert Callback_InvalidParams();
         }
 
@@ -236,6 +246,9 @@ contract BaselineAxisLaunch is BaseCallback, Policy, Owned {
 
         // Set the lot ID
         lotId = lotId_;
+
+        // Set the floor reserves percent
+        floorReservesPercent = cbData.floorReservesPercent;
 
         // Get the auction format
         AxisKeycode auctionFormat = keycodeFromVeecode(
@@ -287,29 +300,27 @@ contract BaselineAxisLaunch is BaseCallback, Policy, Owned {
         // - The anchor range contains the active tick
         // - The anchor range upper tick is the active tick rounded up to the nearest tick spacing
         // - The other range boundaries are calculated accordingly
-        int24 activeTickUpperBoundary;
         {
-            // Initially, the active tick upper boundary is the active tick rounded up
-            activeTickUpperBoundary = BPOOL.getActiveTS();
+            // Initially, the anchor range upper is the active tick rounded up
+            int24 anchorRangeUpper = _roundUpTickToSpacing(activeTick, tickSpacing);
 
-            // Round down the active tick to the nearest tick spacing
-            int24 floorTickLower = _roundDownTickToSpacing(activeTick, tickSpacing);
+            // Anchor range lower is the anchor tick width below the anchor range upper
+            int24 anchorRangeLower = anchorRangeUpper - cbData.anchorTickWidth * tickSpacing;
 
-            // Check that the floor lower tick is not the same as the active tick
-            // If so, adjust the floor lower tick to be one tick spacing lower and adjust the active tick upper boundary accordingly
-            if (floorTickLower == activeTick) {
-                floorTickLower -= tickSpacing;
-                activeTickUpperBoundary -= tickSpacing;
-            }
+            // Set the anchor range
+            BPOOL.setTicks(Range.ANCHOR, anchorRangeLower, anchorRangeUpper);
 
-            BPOOL.setTicks(Range.FLOOR, floorTickLower, activeTickUpperBoundary);
+            // Set the floor range
+            // Floor range lower is the anchor range lower minus one tick spacing
+            BPOOL.setTicks(Range.FLOOR, anchorRangeLower - tickSpacing, anchorRangeLower);
+
+            // Set the discovery range
+            BPOOL.setTicks(
+                Range.DISCOVERY,
+                anchorRangeUpper,
+                anchorRangeUpper + tickSpacing * cbData.discoveryTickWidth
+            );
         }
-        BPOOL.setTicks(Range.ANCHOR, activeTickUpperBoundary, activeTickUpperBoundary);
-        BPOOL.setTicks(
-            Range.DISCOVERY,
-            activeTickUpperBoundary,
-            activeTickUpperBoundary + tickSpacing * cbData.discoveryTickWidth
-        );
 
         // Mint the capacity of baseline tokens to the auction house to prefund the auction
         BPOOL.mint(msg.sender, capacity_);
@@ -494,13 +505,19 @@ contract BaselineAxisLaunch is BaseCallback, Policy, Owned {
 
     // ========== HELPER FUNCTIONS ========== //
 
-    /// @notice Rounds the provided tick to the nearest tick spacing
-    /// @dev    This function behaves differently to BPOOL.getActiveTS() in handling edge cases.
+    /// @notice Rounds up the provided tick to the nearest tick spacing
+    /// @dev    This function behaves differently to BPOOL.getActiveTS() in handling edge cases. In particular, if the tick is equal to the rounded tick, it will not be adjusted.
     ///
-    /// @param  tick        The tick to round
-    /// @param  tickSpacing The tick spacing to round to
-    function _roundDownTickToSpacing(int24 tick, int24 tickSpacing) internal pure returns (int24) {
-        return (tick / tickSpacing) * tickSpacing;
+    /// @param  tick_           The tick to round
+    /// @param  tickSpacing_    The tick spacing to round to
+    function _roundUpTickToSpacing(int24 tick_, int24 tickSpacing_) internal pure returns (int24) {
+        int24 roundedTick = (tick_ / tickSpacing_) * tickSpacing_;
+
+        if (tick_ > roundedTick) {
+            roundedTick += tickSpacing_;
+        }
+
+        return roundedTick;
     }
 
     // ========== OWNER FUNCTIONS ========== //

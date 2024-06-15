@@ -199,8 +199,8 @@ contract BaselineOnCreateTest is BaselineAxisLaunchTest {
     //  [X] it correctly sets the active tick
     // [X] when the quote token decimals are lower than the base token decimals
     //  [X] it correctly sets the active tick
-    // [ ] when the anchorTickWidth is small
-    //  [ ] it correctly sets the anchor ticks to not overlap with the other ranges
+    // [X] when the anchorTickWidth is small
+    //  [X] it correctly sets the anchor ticks to not overlap with the other ranges
     // [X] when the discoveryTickWidth is small
     //  [X] it correctly sets the discovery ticks to not overlap with the other ranges
     // [X] it transfers the base token to the auction house, updates circulating supply, sets the state variables, initializes the pool and sets the tick ranges
@@ -488,6 +488,21 @@ contract BaselineOnCreateTest is BaselineAxisLaunchTest {
         //      = 414,486.0396584532 (rounded down)
         // Price = 1.0001^414486 / (10^(18-18)) = 9.9999603427e17
         int24 fixedPriceTick = 414_486;
+
+        _assertTicks(fixedPriceTick);
+    }
+
+    function test_narrowAnchorTickWidth()
+        public
+        givenCallbackIsCreated
+        givenAuctionIsCreated
+        givenAnchorTickWidth(1)
+    {
+        // Perform the call
+        _onCreate();
+
+        // The pool should be initialised with the tick equivalent to the auction's fixed price
+        int24 fixedPriceTick = _getFixedPriceTick();
 
         _assertTicks(fixedPriceTick);
     }
