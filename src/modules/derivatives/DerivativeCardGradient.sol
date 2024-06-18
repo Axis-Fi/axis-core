@@ -55,16 +55,29 @@ contract DerivativeCardDark {
                     svg.prop('width', '280'),
                     svg.prop('height', '490'),
                     svg.prop('fill', "url('#orangeRedGradient')"),
+                    svg.prop('stroke', 'none'),
+                    svg.prop('rx', '20'),
+                    svg.prop('ry', '20')
+                ),
+                utils.NULL
+            ),
+            svg.rect(
+                string.concat(
+                    svg.prop('x', '15'),
+                    svg.prop('y', '15'),
+                    svg.prop('width', '260'),
+                    svg.prop('height', '470'),
+                    svg.prop('fill', 'none'),
                     svg.prop('stroke', 'black'),
-                    svg.prop('rx', '10'),
-                    svg.prop('ry', '10')
+                    svg.prop('rx', '20'),
+                    svg.prop('ry', '20')
                 ),
                 utils.NULL
             ),
             svg.text(
                 string.concat(
                     svg.prop('x', '145'),
-                    svg.prop('y', '40'),
+                    svg.prop('y', '45'),
                     svg.prop('font-size', '20'),
                     svg.prop('text-anchor', 'middle'),
                     TEXT_STYLE
