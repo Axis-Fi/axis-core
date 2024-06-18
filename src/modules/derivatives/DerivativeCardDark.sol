@@ -3,18 +3,22 @@ pragma solidity 0.8.19;
 
 import {svg, utils} from "src/lib/SVG.sol";
 
-contract DerivativeCard {
+contract DerivativeCardDark {
 
     struct Info {
         string derivativeType;
         string baseAssetSymbol;
         string quoteAssetSymbol;
+        string tokenId;
+        string tokenAddress;
+        string erc20Address;
         Property[] properties;
     }
 
     struct Property {
         string key;
-        string value;
+        string stringValue;
+        uint256 value;
     }
 
     struct Colors {
@@ -28,6 +32,8 @@ contract DerivativeCard {
     }
 
     string internal constant STROKE = 'stroke="#000" stroke-miterlimit="10" stroke-width="4px" ';
+    string internal constant TEXT_STYLE= 'font-family="\'Menlo\', monospace" fill="white"';
+
     Colors internal colors;
 
     constructor() {
@@ -45,14 +51,14 @@ contract DerivativeCard {
     function render(Info memory tokenInfo) internal view returns (string memory) {
         return string.concat(
             '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 290 500">',
-            svg.el('defs', utils.NULL, string.concat(fullGradient(), fullVertGradient(), blueGreenGradient(), orangeRedGradient())),
+            svg.el('defs', utils.NULL, string.concat(fullGradient(), fullRadialGradient(), blueGreenGradient(), orangeRedGradient())),
             svg.rect(
                 string.concat(
                     svg.prop('x', '5'),
                     svg.prop('y', '5'),
                     svg.prop('width', '280'),
                     svg.prop('height', '490'),
-                    svg.prop('fill', 'black'),
+                    svg.prop('fill', 'rgb(30, 30, 30)'),
                     svg.prop('rx', '10'),
                     svg.prop('ry', '10')
                 ),
@@ -61,67 +67,105 @@ contract DerivativeCard {
             svg.text(
                 string.concat(
                     svg.prop('x', '145'),
-                    svg.prop('y', '30'),
-                    svg.prop('fill', 'white'),
+                    svg.prop('y', '40'),
                     svg.prop('font-size', '20'),
-                    svg.prop('font-family', "\'Courier New\', monospace"),
-                    svg.prop('text-anchor', 'middle')
+                    svg.prop('text-anchor', 'middle'),
+                    TEXT_STYLE
                 ),
                 tokenInfo.derivativeType
             ),
             svg.text(
                 string.concat(
                     svg.prop('x', '145'),
-                    svg.prop('y', '90'),
-                    svg.prop('fill', 'white'),
+                    svg.prop('y', '100'),
                     svg.prop('font-size', '56'),
-                    svg.prop('font-family', "\'Courier New\', monospace"),
-                    svg.prop('text-anchor', 'middle')
+                    svg.prop('text-anchor', 'middle'),
+                    // svg.prop('font-family', 'Menlo, monospace'),
+                    // svg.prop('fill', "url('#orangeRedGradient')")
+                    TEXT_STYLE
                 ),
                 tokenInfo.baseAssetSymbol
             ),
-            progressBar(100),
+            progressBar(tokenInfo.properties[0].value, tokenInfo.properties[1].value),
+            svg.text(
+                string.concat(
+                    svg.prop('x', '60'),
+                    svg.prop('y', '200'),
+                    svg.prop('font-size', '12'),
+                    svg.prop('text-anchor', 'middle'),
+                    TEXT_STYLE
+                ),
+                tokenInfo.properties[0].stringValue
+            ),
+            svg.text(
+                string.concat(
+                    svg.prop('x', '230'),
+                    svg.prop('y', '200'),
+                    svg.prop('font-size', '12'),
+                    svg.prop('text-anchor', 'middle'),
+                    TEXT_STYLE
+                ),
+                tokenInfo.properties[1].stringValue
+            ),
             svg.g(
                 string.concat(
-                    svg.prop('transform', 'translate(96, 200) scale(0.1)')
+                    svg.prop('transform', 'translate(72, 240) scale(0.15)')
                 ),
                 logo()
             ),
+            // svg.text(
+            //     string.concat(
+            //         svg.prop('x', '20'),
+            //         svg.prop('y', '360'),
+            //         svg.prop('font-size', '16'),
+            //         svg.prop('text-anchor', 'left'),
+            //         TEXT_STYLE
+            //     ),
+            //     string.concat(
+            //         tokenInfo.properties[0].key,
+            //         ': ',
+            //         tokenInfo.properties[0].stringValue
+            //     )
+            // ),
+            // svg.text(
+            //     string.concat(
+            //         svg.prop('x', '20'),
+            //         svg.prop('y', '390'),
+            //         svg.prop('font-size', '16'),
+            //         svg.prop('text-anchor', 'left'),
+            //         TEXT_STYLE
+            //     ),
+            //     string.concat(
+            //         tokenInfo.properties[1].key,
+            //         ': ',
+            //         tokenInfo.properties[1].stringValue
+            //     )
+            // ),
+            // svg.g(
+            //     string.concat(
+            //         svg.prop('transform', 'translate(80, 430) scale(0.05)')
+            //     ),
+            //     wordmark()
+            // ),
             svg.text(
                 string.concat(
-                    svg.prop('x', '20'),
-                    svg.prop('y', '350'),
-                    svg.prop('fill', 'white'),
-                    svg.prop('font-size', '16'),
-                    svg.prop('font-family', "\'Courier New\', monospace"),
-                    svg.prop('text-anchor', 'left')
+                    svg.prop('x', '145'),
+                    svg.prop('y', '460'),
+                    svg.prop('font-size', '10'),
+                    svg.prop('text-anchor', 'middle'),
+                    TEXT_STYLE
                 ),
-                string.concat(
-                    tokenInfo.properties[0].key,
-                    ': ',
-                    tokenInfo.properties[0].value
-                )
+                tokenInfo.tokenAddress
             ),
             svg.text(
                 string.concat(
-                    svg.prop('x', '20'),
-                    svg.prop('y', '380'),
-                    svg.prop('fill', 'white'),
-                    svg.prop('font-size', '16'),
-                    svg.prop('font-family', "\'Courier New\', monospace"),
-                    svg.prop('text-anchor', 'left')
+                    svg.prop('x', '145'),
+                    svg.prop('y', '480'),
+                    svg.prop('font-size', '10'),
+                    svg.prop('text-anchor', 'middle'),
+                    TEXT_STYLE
                 ),
-                string.concat(
-                    tokenInfo.properties[1].key,
-                    ': ',
-                    tokenInfo.properties[1].value
-                )
-            ),
-            svg.g(
-                string.concat(
-                    svg.prop('transform', 'translate(80, 430) scale(0.05)')
-                ),
-                wordmark()
+                string.concat('ID: ', tokenInfo.tokenId)
             ),
             '</svg>'
         );
@@ -130,7 +174,7 @@ contract DerivativeCard {
     function logo() internal pure returns (string memory) {
         return svg.path(
             string.concat(
-                svg.prop('fill' , "url('#fullVertGradient')"),
+                svg.prop('fill' , "url('#fullRadialGradient')"),
                 STROKE,
                 svg.prop('d', 'M0.34668 818.666L20.3467 852.666L474.347 590.666V838.666H513.347V590.666L966.347 852.666L986.347 818.666L532.347 556.666L746.347 433.666L726.347 399.666L513.347 522.666L514.347 0.665527H474.347V522.666L260.347 399.666L240.347 433.666L454.347 556.666L0.34668 818.666Z')
             ),
@@ -194,35 +238,35 @@ contract DerivativeCard {
         );
     }
 
-    function fullVertGradient() internal view returns (string memory) {
-        return svg.linearGradient(
+    function fullRadialGradient() internal view returns (string memory) {
+        return svg.radialGradient(
             string.concat(
-                svg.prop('id', 'fullVertGradient'),
-                svg.prop('gradientTransform', 'rotate(90)')
+                svg.prop('id', 'fullRadialGradient'),
+                svg.prop('gradientTransform', 'translate(0,0.15)')
             ),
             string.concat(
                 svg.gradientStop(
-                    8,
+                    2,
                     colors.blue,
                     utils.NULL
                 ),
                 svg.gradientStop(
-                    20,
+                    10,
                     colors.lightBlue,
                     utils.NULL
                 ),
                 svg.gradientStop(
-                    42,
+                    32,
                     colors.green,
                     utils.NULL
                 ),
                 svg.gradientStop(
-                    59,
+                    49,
                     colors.yellowGreen,
                     utils.NULL
                 ),
                 svg.gradientStop(
-                    65,
+                    52,
                     colors.yellow,
                     utils.NULL
                 ),
@@ -287,31 +331,36 @@ contract DerivativeCard {
         );
     }
 
-    function progressBar(uint256 _progress) internal view returns (string memory) {
+    function progressBar(uint256 start, uint256 end) internal view returns (string memory) {
+        uint256 currentTime = 1717200000 + 60 * 86400; // block.timestamp;
 
-        uint256 len = 168 * _progress / 100;
+        bool started = start <= currentTime;
+        
+        uint256 progress = started ? (currentTime - start) * 100 / (end - start) : 0;
+        // progress can be at most 100
+        progress = progress > 100 ? 100 : progress;
+
+        uint256 len = (168 * progress) / 100;
 
         string memory startBar = svg.line(
             string.concat(
                 svg.prop('x1', '60'),
-                svg.prop('y1', '135'),
+                svg.prop('y1', '155'),
                 svg.prop('x2', '60'),
-                svg.prop('y2', '155'),
-                svg.prop('stroke', colors.blue),
+                svg.prop('y2', '175'),
+                svg.prop('stroke', started ? colors.blue : 'grey'),
                 svg.prop('stroke-width', '6')
             ),
             utils.NULL
         );
 
-        string memory endBarColor = _progress == 100 ? colors.green : 'grey';
-
         string memory endBar = svg.line(
             string.concat(
                 svg.prop('x1', '230'),
-                svg.prop('y1', '135'),
+                svg.prop('y1', '155'),
                 svg.prop('x2', '230'),
-                svg.prop('y2', '155'),
-                svg.prop('stroke', endBarColor),
+                svg.prop('y2', '175'),
+                svg.prop('stroke', progress == 100 ? colors.green : 'grey'),
                 svg.prop('stroke-width', '6')
             ),
             utils.NULL
@@ -320,10 +369,10 @@ contract DerivativeCard {
 
         string memory progressLine = svg.line(
             string.concat(
-                svg.prop('x1', '63'),
-                svg.prop('y1', '145'),
+                svg.prop('x1', '62'),
+                svg.prop('y1', '165'),
                 svg.prop('x2', utils.uint2str(62 + len)),
-                svg.prop('y2', '145'),
+                svg.prop('y2', '165'),
                 svg.prop('stroke', "url('#blueGreenGradient')"),
                 svg.prop('stroke-width', '6')
             ),
@@ -333,11 +382,21 @@ contract DerivativeCard {
         string memory shadowLine = svg.line(
             string.concat(
                 svg.prop('x1', '63'),
-                svg.prop('y1', '145'),
+                svg.prop('y1', '165'),
                 svg.prop('x2', '230'),
-                svg.prop('y2', '145'),
+                svg.prop('y2', '165'),
                 svg.prop('stroke', 'grey'),
                 svg.prop('stroke-width', '4')
+            ),
+            utils.NULL
+        );
+
+        string memory progressCircle = svg.circle(
+            string.concat(
+                svg.prop('cx', utils.uint2str(62 + len)),
+                svg.prop('cy', '165'),
+                svg.prop('r', '6'),
+                svg.prop('fill', "url('#blueGreenGradient')")
             ),
             utils.NULL
         );
@@ -348,21 +407,25 @@ contract DerivativeCard {
                 startBar,
                 shadowLine,
                 progressLine,
-                endBar
+                endBar,
+                progress < 5 || progress > 95 ? '' : progressCircle
             )
         );
     }
 
     function example() external view returns (string memory) {
         Property[] memory properties = new Property[](2);
-        properties[0] = Property({key: "Vesting Start", value: "2024-07-01"});
-        properties[1] = Property({key: "Vesting End", value: "2024-09-01"});
+        properties[0] = Property({key: "Vesting Start", stringValue: "2024-06-01", value: 1717200000});
+        properties[1] = Property({key: "Vesting End", stringValue: "2024-09-01", value: 1725148800});
 
 
         Info memory info = Info({
-            derivativeType: "Linear Vesting Token",
+            derivativeType: "Linear Vesting",
             baseAssetSymbol: "XYZ",
             quoteAssetSymbol: "",
+            tokenId: "123456",
+            tokenAddress: "0x1234567890123456789012345678901234567890",
+            erc20Address: "0xfedcba0987654321fedcba0987654321fedcba09",
             properties: properties
         });
 
