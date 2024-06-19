@@ -26,7 +26,12 @@ contract BaselineOnCurateTest is BaselineAxisLaunchTest {
     //  [X] it reverts
     // [X] it does nothing
 
-    function test_lotNotRegistered_reverts() public givenCallbackIsCreated givenAuctionIsCreated {
+    function test_lotNotRegistered_reverts()
+        public
+        givenBPoolIsCreated
+        givenCallbackIsCreated
+        givenAuctionIsCreated
+    {
         // Expect revert
         bytes memory err = abi.encodeWithSelector(BaseCallback.Callback_NotAuthorized.selector);
         vm.expectRevert(err);
@@ -37,6 +42,7 @@ contract BaselineOnCurateTest is BaselineAxisLaunchTest {
 
     function test_notAuctionHouse_reverts()
         public
+        givenBPoolIsCreated
         givenCallbackIsCreated
         givenAuctionIsCreated
         givenOnCreate
@@ -51,6 +57,7 @@ contract BaselineOnCurateTest is BaselineAxisLaunchTest {
 
     function test_curatorFeeNonZero_reverts(uint256 curatorFee_)
         public
+        givenBPoolIsCreated
         givenCallbackIsCreated
         givenAuctionIsCreated
         givenOnCreate
@@ -67,6 +74,7 @@ contract BaselineOnCurateTest is BaselineAxisLaunchTest {
 
     function test_curatorFeeZero()
         public
+        givenBPoolIsCreated
         givenCallbackIsCreated
         givenAuctionIsCreated
         givenOnCreate

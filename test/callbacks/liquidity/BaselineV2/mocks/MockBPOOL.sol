@@ -43,6 +43,7 @@ contract MockBPOOL is IBPOOLv1, ERC20 {
 
         // Set the initial active tick
         pool.initialize(TickMath.getSqrtRatioAtTick(initialActiveTick_));
+        activeTick = initialActiveTick_;
     }
 
     function getLiquidity(Range range_) external view override returns (uint128) {

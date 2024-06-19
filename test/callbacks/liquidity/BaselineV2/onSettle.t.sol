@@ -36,6 +36,7 @@ contract BaselineOnSettleTest is BaselineAxisLaunchTest {
 
     function test_lotNotRegistered_reverts()
         public
+        givenBPoolIsCreated
         givenCallbackIsCreated
         givenAuctionIsCreated
         givenAddressHasQuoteTokenBalance(_dtlAddress, _PROCEEDS_AMOUNT)
@@ -51,6 +52,7 @@ contract BaselineOnSettleTest is BaselineAxisLaunchTest {
 
     function test_notAuctionHouse_reverts()
         public
+        givenBPoolIsCreated
         givenCallbackIsCreated
         givenAuctionIsCreated
         givenOnCreate
@@ -69,6 +71,7 @@ contract BaselineOnSettleTest is BaselineAxisLaunchTest {
 
     function test_lotAlreadySettled_reverts()
         public
+        givenBPoolIsCreated
         givenCallbackIsCreated
         givenAuctionIsCreated
         givenOnCreate
@@ -87,6 +90,7 @@ contract BaselineOnSettleTest is BaselineAxisLaunchTest {
 
     function test_lotAlreadyCancelled_reverts()
         public
+        givenBPoolIsCreated
         givenCallbackIsCreated
         givenAuctionIsCreated
         givenOnCreate
@@ -104,6 +108,7 @@ contract BaselineOnSettleTest is BaselineAxisLaunchTest {
 
     function test_insufficientProceeds_reverts()
         public
+        givenBPoolIsCreated
         givenCallbackIsCreated
         givenAuctionIsCreated
         givenOnCreate
@@ -119,6 +124,7 @@ contract BaselineOnSettleTest is BaselineAxisLaunchTest {
 
     function test_insufficientRefund_reverts()
         public
+        givenBPoolIsCreated
         givenCallbackIsCreated
         givenAuctionIsCreated
         givenOnCreate
@@ -134,6 +140,7 @@ contract BaselineOnSettleTest is BaselineAxisLaunchTest {
 
     function test_success()
         public
+        givenBPoolIsCreated
         givenCallbackIsCreated
         givenAuctionIsCreated
         givenOnCreate
@@ -184,6 +191,7 @@ contract BaselineOnSettleTest is BaselineAxisLaunchTest {
 
     function test_floorReservesPercent_fuzz(uint24 floorReservesPercent_)
         public
+        givenBPoolIsCreated
         givenCallbackIsCreated
         givenAuctionIsCreated
     {

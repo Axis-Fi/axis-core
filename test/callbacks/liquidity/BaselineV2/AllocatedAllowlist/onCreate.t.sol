@@ -21,6 +21,7 @@ contract BaselineAllocatedAllowlistOnCreateTest is BaselineAllocatedAllowlistTes
 
     function test_allowlistParamsIncorrect_reverts()
         public
+        givenBPoolIsCreated
         givenCallbackIsCreated
         givenAuctionIsCreated
     {
@@ -37,6 +38,7 @@ contract BaselineAllocatedAllowlistOnCreateTest is BaselineAllocatedAllowlistTes
 
     function test_success_reverts()
         public
+        givenBPoolIsCreated
         givenCallbackIsCreated
         givenAuctionIsCreated
         givenAllowlistParams(_MERKLE_ROOT)

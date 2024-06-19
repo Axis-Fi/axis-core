@@ -32,6 +32,7 @@ contract BaselineAllocatedAllowlistSetMerkleRootTest is BaselineAllocatedAllowli
 
     function test_notOwner_reverts()
         public
+        givenBPoolIsCreated
         givenCallbackIsCreated
         givenAuctionIsCreated
         givenAllowlistParams(_MERKLE_ROOT)
@@ -46,6 +47,7 @@ contract BaselineAllocatedAllowlistSetMerkleRootTest is BaselineAllocatedAllowli
 
     function test_auctionNotRegistered_reverts()
         public
+        givenBPoolIsCreated
         givenCallbackIsCreated
         givenAuctionIsCreated
         givenAllowlistParams(_MERKLE_ROOT)
@@ -61,6 +63,7 @@ contract BaselineAllocatedAllowlistSetMerkleRootTest is BaselineAllocatedAllowli
 
     function test_auctionCompleted_reverts()
         public
+        givenBPoolIsCreated
         givenCallbackIsCreated
         givenAuctionIsCreated
         givenAllowlistParams(_MERKLE_ROOT)
@@ -80,6 +83,7 @@ contract BaselineAllocatedAllowlistSetMerkleRootTest is BaselineAllocatedAllowli
 
     function test_success()
         public
+        givenBPoolIsCreated
         givenCallbackIsCreated
         givenAuctionIsCreated
         givenAllowlistParams(_MERKLE_ROOT)

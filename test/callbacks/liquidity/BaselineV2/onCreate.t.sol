@@ -4,6 +4,7 @@ pragma solidity 0.8.19;
 import {BaselineAxisLaunchTest} from
     "test/callbacks/liquidity/BaselineV2/BaselineAxisLaunchTest.sol";
 
+import {BaselineAxisLaunch} from "src/callbacks/liquidity/BaselineV2/BaselineAxisLaunch.sol";
 import {BaseCallback} from "src/callbacks/BaseCallback.sol";
 import {Range} from "src/callbacks/liquidity/BaselineV2/lib/IBPOOL.sol";
 
@@ -185,6 +186,8 @@ contract BaselineOnCreateTest is BaselineAxisLaunchTest {
     //  [X] it reverts
     // [X] when the auction is not prefunded
     //  [X] it reverts
+    // [X] when the auction price does not match the pool active tick
+    //  [X] it reverts
     // [X] when the floorReservesPercent is 0-100%
     //  [X] it correctly records the allocation
     // [X] when the tick spacing is narrow
@@ -207,6 +210,7 @@ contract BaselineOnCreateTest is BaselineAxisLaunchTest {
 
     function test_callbackDataIncorrect_reverts()
         public
+        givenBPoolIsCreated
         givenCallbackIsCreated
         givenAuctionIsCreated
     {
@@ -226,7 +230,12 @@ contract BaselineOnCreateTest is BaselineAxisLaunchTest {
         );
     }
 
-    function test_notAuctionHouse_reverts() public givenCallbackIsCreated givenAuctionIsCreated {
+    function test_notAuctionHouse_reverts()
+        public
+        givenBPoolIsCreated
+        givenCallbackIsCreated
+        givenAuctionIsCreated
+    {
         // Expect revert
         _expectNotAuthorized();
 
@@ -244,6 +253,7 @@ contract BaselineOnCreateTest is BaselineAxisLaunchTest {
 
     function test_lotAlreadyRegistered_reverts()
         public
+        givenBPoolIsCreated
         givenCallbackIsCreated
         givenAuctionIsCreated
     {
@@ -257,9 +267,19 @@ contract BaselineOnCreateTest is BaselineAxisLaunchTest {
         _onCreate();
     }
 
-    function test_baseTokenNotBPool_reverts() public givenCallbackIsCreated givenAuctionIsCreated {
+    function test_baseTokenNotBPool_reverts()
+        public
+        givenBPoolIsCreated
+        givenCallbackIsCreated
+        givenAuctionIsCreated
+    {
         // Expect revert
-        _expectInvalidParams();
+        bytes memory err = abi.encodeWithSelector(
+            BaselineAxisLaunch.Callback_Params_BAssetTokenMismatch.selector,
+            address(_quoteToken),
+            address(_baseToken)
+        );
+        vm.expectRevert(err);
 
         // Perform the call
         vm.prank(address(_auctionHouse));
@@ -276,11 +296,17 @@ contract BaselineOnCreateTest is BaselineAxisLaunchTest {
 
     function test_quoteTokenNotReserve_reverts()
         public
+        givenBPoolIsCreated
         givenCallbackIsCreated
         givenAuctionIsCreated
     {
         // Expect revert
-        _expectInvalidParams();
+        bytes memory err = abi.encodeWithSelector(
+            BaselineAxisLaunch.Callback_Params_ReserveTokenMismatch.selector,
+            address(_baseToken),
+            address(_quoteToken)
+        );
+        vm.expectRevert(err);
 
         // Perform the call
         vm.prank(address(_auctionHouse));
@@ -297,6 +323,7 @@ contract BaselineOnCreateTest is BaselineAxisLaunchTest {
 
     function test_floorReservesPercentInvalid_reverts(uint24 floorReservesPercent_)
         public
+        givenBPoolIsCreated
         givenCallbackIsCreated
         givenAuctionIsCreated
     {
@@ -305,7 +332,10 @@ contract BaselineOnCreateTest is BaselineAxisLaunchTest {
         _createData.floorReservesPercent = floorReservesPercent;
 
         // Expect revert
-        _expectInvalidParams();
+        bytes memory err = abi.encodeWithSelector(
+            BaselineAxisLaunch.Callback_Params_InvalidFloorReservesPercent.selector
+        );
+        vm.expectRevert(err);
 
         // Perform the call
         _onCreate();
@@ -313,6 +343,7 @@ contract BaselineOnCreateTest is BaselineAxisLaunchTest {
 
     function test_anchorTickWidthInvalid_reverts(int24 anchorTickWidth_)
         public
+        givenBPoolIsCreated
         givenCallbackIsCreated
         givenAuctionIsCreated
     {
@@ -320,7 +351,10 @@ contract BaselineOnCreateTest is BaselineAxisLaunchTest {
         _createData.anchorTickWidth = anchorTickWidth;
 
         // Expect revert
-        _expectInvalidParams();
+        bytes memory err = abi.encodeWithSelector(
+            BaselineAxisLaunch.Callback_Params_InvalidAnchorTickWidth.selector
+        );
+        vm.expectRevert(err);
 
         // Perform the call
         _onCreate();
@@ -328,6 +362,7 @@ contract BaselineOnCreateTest is BaselineAxisLaunchTest {
 
     function test_discoveryTickWidthInvalid_reverts(int24 discoveryTickWidth_)
         public
+        givenBPoolIsCreated
         givenCallbackIsCreated
         givenAuctionIsCreated
     {
@@ -335,7 +370,10 @@ contract BaselineOnCreateTest is BaselineAxisLaunchTest {
         _createData.discoveryTickWidth = discoveryTickWidth;
 
         // Expect revert
-        _expectInvalidParams();
+        bytes memory err = abi.encodeWithSelector(
+            BaselineAxisLaunch.Callback_Params_InvalidDiscoveryTickWidth.selector
+        );
+        vm.expectRevert(err);
 
         // Perform the call
         _onCreate();
@@ -343,12 +381,16 @@ contract BaselineOnCreateTest is BaselineAxisLaunchTest {
 
     function test_givenAuctionFormatNotFixedPriceBatch_reverts()
         public
+        givenBPoolIsCreated
         givenCallbackIsCreated
         givenAuctionFormatIsEmp
         givenAuctionIsCreated
     {
         // Expect revert
-        _expectInvalidParams();
+        bytes memory err = abi.encodeWithSelector(
+            BaselineAxisLaunch.Callback_Params_UnsupportedAuctionFormat.selector
+        );
+        vm.expectRevert(err);
 
         // Perform the call
         _onCreate();
@@ -356,11 +398,15 @@ contract BaselineOnCreateTest is BaselineAxisLaunchTest {
 
     function test_auctionNotPrefunded_reverts()
         public
+        givenBPoolIsCreated
         givenCallbackIsCreated
         givenAuctionIsCreated
     {
         // Expect revert
-        _expectInvalidParams();
+        bytes memory err = abi.encodeWithSelector(
+            BaselineAxisLaunch.Callback_Params_UnsupportedAuctionFormat.selector
+        );
+        vm.expectRevert(err);
 
         // Perform the call
         vm.prank(address(_auctionHouse));
@@ -375,7 +421,31 @@ contract BaselineOnCreateTest is BaselineAxisLaunchTest {
         );
     }
 
-    function test_success() public givenCallbackIsCreated givenAuctionIsCreated {
+    function test_auctionPriceDoesNotMatchPoolActiveTick_reverts()
+        public
+        givenBPoolIsCreated // BPOOL will have an active tick of _FIXED_PRICE
+        givenCallbackIsCreated
+        givenFixedPrice(2e18)
+        givenAuctionIsCreated // Has to be after the fixed price is set
+    {
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(
+            BaselineAxisLaunch.Callback_Params_PoolTickMismatch.selector,
+            _getTickFromPrice(2e18, _baseTokenDecimals, _isBaseTokenAddressLower),
+            _baseToken.activeTick()
+        );
+        vm.expectRevert(err);
+
+        // Perform the call
+        _onCreate();
+    }
+
+    function test_success()
+        public
+        givenBPoolIsCreated
+        givenCallbackIsCreated
+        givenAuctionIsCreated
+    {
         // Perform the call
         _onCreate();
 
@@ -399,6 +469,7 @@ contract BaselineOnCreateTest is BaselineAxisLaunchTest {
 
     function test_floorReservesPercent(uint24 floorReservesPercent_)
         public
+        givenBPoolIsCreated
         givenCallbackIsCreated
         givenAuctionIsCreated
     {
@@ -415,6 +486,7 @@ contract BaselineOnCreateTest is BaselineAxisLaunchTest {
     function test_tickSpacingNarrow()
         public
         givenBPoolFeeTier(500)
+        givenBPoolIsCreated
         givenCallbackIsCreated
         givenAuctionIsCreated
     {
@@ -429,8 +501,9 @@ contract BaselineOnCreateTest is BaselineAxisLaunchTest {
 
     function test_auctionHighPrice()
         public
-        givenCallbackIsCreated
         givenFixedPrice(3e56)
+        givenBPoolIsCreated
+        givenCallbackIsCreated
         givenAuctionIsCreated
     {
         // Perform the call
@@ -463,8 +536,9 @@ contract BaselineOnCreateTest is BaselineAxisLaunchTest {
 
     function test_auctionLowPrice()
         public
-        givenCallbackIsCreated
         givenFixedPrice(1)
+        givenBPoolIsCreated
+        givenCallbackIsCreated
         givenAuctionIsCreated
     {
         // Perform the call
@@ -494,6 +568,7 @@ contract BaselineOnCreateTest is BaselineAxisLaunchTest {
 
     function test_narrowAnchorTickWidth()
         public
+        givenBPoolIsCreated
         givenCallbackIsCreated
         givenAuctionIsCreated
         givenAnchorTickWidth(1)
@@ -509,6 +584,7 @@ contract BaselineOnCreateTest is BaselineAxisLaunchTest {
 
     function test_narrowDiscoveryTickWidth()
         public
+        givenBPoolIsCreated
         givenCallbackIsCreated
         givenAuctionIsCreated
         givenDiscoveryTickWidth(1)
@@ -525,6 +601,7 @@ contract BaselineOnCreateTest is BaselineAxisLaunchTest {
     function test_baseTokenAddressLower()
         public
         givenBaseTokenAddressLower
+        givenBPoolIsCreated
         givenCallbackIsCreated
         givenAuctionIsCreated
     {
@@ -549,6 +626,7 @@ contract BaselineOnCreateTest is BaselineAxisLaunchTest {
     function test_baseTokenDecimalsHigher()
         public
         givenBaseTokenDecimals(19)
+        givenBPoolIsCreated
         givenCallbackIsCreated
         givenAuctionIsCreated
     {
@@ -577,6 +655,7 @@ contract BaselineOnCreateTest is BaselineAxisLaunchTest {
     function test_baseTokenDecimalsLower()
         public
         givenBaseTokenDecimals(17)
+        givenBPoolIsCreated
         givenCallbackIsCreated
         givenAuctionIsCreated
     {
@@ -605,8 +684,9 @@ contract BaselineOnCreateTest is BaselineAxisLaunchTest {
     function test_activeTickRounded()
         public
         givenBPoolFeeTier(10_000)
-        givenCallbackIsCreated
         givenFixedPrice(1e18)
+        givenBPoolIsCreated
+        givenCallbackIsCreated
         givenAuctionIsCreated
     {
         // Perform the call

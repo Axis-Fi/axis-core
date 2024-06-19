@@ -28,6 +28,7 @@ contract BaselineOnCancelTest is BaselineAxisLaunchTest {
 
     function test_lotNotRegistered_reverts()
         public
+        givenBPoolIsCreated
         givenCallbackIsCreated
         givenAuctionIsCreated
         givenAddressHasBaseTokenBalance(_dtlAddress, _LOT_CAPACITY)
@@ -42,6 +43,7 @@ contract BaselineOnCancelTest is BaselineAxisLaunchTest {
 
     function test_notAuctionHouse_reverts()
         public
+        givenBPoolIsCreated
         givenCallbackIsCreated
         givenAuctionIsCreated
         givenOnCreate
@@ -57,6 +59,7 @@ contract BaselineOnCancelTest is BaselineAxisLaunchTest {
 
     function test_lotAlreadyCancelled_reverts()
         public
+        givenBPoolIsCreated
         givenCallbackIsCreated
         givenAuctionIsCreated
         givenOnCreate
@@ -74,6 +77,7 @@ contract BaselineOnCancelTest is BaselineAxisLaunchTest {
 
     function test_lotAlreadySettled_reverts()
         public
+        givenBPoolIsCreated
         givenCallbackIsCreated
         givenAuctionIsCreated
         givenOnCreate
@@ -92,6 +96,7 @@ contract BaselineOnCancelTest is BaselineAxisLaunchTest {
 
     function test_insufficientRefund_reverts()
         public
+        givenBPoolIsCreated
         givenCallbackIsCreated
         givenAuctionIsCreated
         givenOnCreate
@@ -106,6 +111,7 @@ contract BaselineOnCancelTest is BaselineAxisLaunchTest {
 
     function test_success()
         public
+        givenBPoolIsCreated
         givenCallbackIsCreated
         givenAuctionIsCreated
         givenOnCreate

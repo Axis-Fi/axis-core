@@ -69,6 +69,7 @@ contract BaselineAllocatedAllowlistOnBidTest is BaselineAllocatedAllowlistTest {
 
     function test_parametersInvalid_reverts()
         public
+        givenBPoolIsCreated
         givenCallbackIsCreated
         givenAuctionIsCreated
         givenAllowlistParams(_MERKLE_ROOT)
@@ -84,6 +85,7 @@ contract BaselineAllocatedAllowlistOnBidTest is BaselineAllocatedAllowlistTest {
 
     function test_merkleProofInvalid_reverts()
         public
+        givenBPoolIsCreated
         givenCallbackIsCreated
         givenAuctionIsCreated
         givenAllowlistParams(_MERKLE_ROOT)
@@ -101,6 +103,7 @@ contract BaselineAllocatedAllowlistOnBidTest is BaselineAllocatedAllowlistTest {
 
     function test_buyerNotInMerkleTree_reverts()
         public
+        givenBPoolIsCreated
         givenCallbackIsCreated
         givenAuctionIsCreated
         givenAllowlistParams(_MERKLE_ROOT)
@@ -119,6 +122,7 @@ contract BaselineAllocatedAllowlistOnBidTest is BaselineAllocatedAllowlistTest {
 
     function test_buyerLimitSpent_reverts()
         public
+        givenBPoolIsCreated
         givenCallbackIsCreated
         givenAuctionIsCreated
         givenAllowlistParams(_MERKLE_ROOT)
@@ -140,6 +144,7 @@ contract BaselineAllocatedAllowlistOnBidTest is BaselineAllocatedAllowlistTest {
 
     function test_buyerZeroLimit_reverts()
         public
+        givenBPoolIsCreated
         givenCallbackIsCreated
         givenAuctionIsCreated
         givenAllowlistParams(_MERKLE_ROOT)
@@ -159,6 +164,7 @@ contract BaselineAllocatedAllowlistOnBidTest is BaselineAllocatedAllowlistTest {
 
     function test_noBids_aboveLimit_reverts()
         public
+        givenBPoolIsCreated
         givenCallbackIsCreated
         givenAuctionIsCreated
         givenAllowlistParams(_MERKLE_ROOT)
@@ -177,6 +183,7 @@ contract BaselineAllocatedAllowlistOnBidTest is BaselineAllocatedAllowlistTest {
 
     function test_noBids_belowLimit()
         public
+        givenBPoolIsCreated
         givenCallbackIsCreated
         givenAuctionIsCreated
         givenAllowlistParams(_MERKLE_ROOT)
@@ -193,6 +200,7 @@ contract BaselineAllocatedAllowlistOnBidTest is BaselineAllocatedAllowlistTest {
 
     function test_remainingLimit_aboveLimit_reverts()
         public
+        givenBPoolIsCreated
         givenCallbackIsCreated
         givenAuctionIsCreated
         givenAllowlistParams(_MERKLE_ROOT)
@@ -214,6 +222,7 @@ contract BaselineAllocatedAllowlistOnBidTest is BaselineAllocatedAllowlistTest {
 
     function test_remainingLimit_belowLimit()
         public
+        givenBPoolIsCreated
         givenCallbackIsCreated
         givenAuctionIsCreated
         givenAllowlistParams(_MERKLE_ROOT)

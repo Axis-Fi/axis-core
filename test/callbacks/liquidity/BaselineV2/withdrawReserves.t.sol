@@ -15,6 +15,7 @@ contract BaselineWithdrawReservesTest is BaselineAxisLaunchTest {
 
     function test_notOwner_reverts()
         public
+        givenBPoolIsCreated
         givenCallbackIsCreated
         givenAddressHasBaseTokenBalance(_dtlAddress, 1e18)
     {
@@ -26,7 +27,7 @@ contract BaselineWithdrawReservesTest is BaselineAxisLaunchTest {
         _dtl.withdrawReserves();
     }
 
-    function test_noReserves_returnsZero() public givenCallbackIsCreated {
+    function test_noReserves_returnsZero() public givenBPoolIsCreated givenCallbackIsCreated {
         // Perform callback
         vm.prank(_OWNER);
         uint256 reserves = _dtl.withdrawReserves();
@@ -37,6 +38,7 @@ contract BaselineWithdrawReservesTest is BaselineAxisLaunchTest {
 
     function test_success()
         public
+        givenBPoolIsCreated
         givenCallbackIsCreated
         givenAddressHasQuoteTokenBalance(_dtlAddress, 1e18)
     {

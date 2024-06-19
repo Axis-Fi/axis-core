@@ -23,7 +23,6 @@ import {
     Permissions as BaselinePermissions
 } from "src/callbacks/liquidity/BaselineV2/lib/Kernel.sol";
 import {Range, IBPOOLv1} from "src/callbacks/liquidity/BaselineV2/lib/IBPOOL.sol";
-import {TimeslotLib} from "src/callbacks/liquidity/BaselineV2/lib/TimeslotLib.sol";
 import {TickMath} from "lib/uniswap-v3-core/contracts/libraries/TickMath.sol";
 
 // Other libraries
@@ -37,14 +36,40 @@ import {SqrtPriceMath} from "src/lib/uniswap-v3/SqrtPriceMath.sol";
 ///             It is designed to be used with a single auction and Baseline pool
 contract BaselineAxisLaunch is BaseCallback, Policy, Owned {
     using FixedPointMathLib for uint256;
-    using TimeslotLib for uint256;
 
     // ========== ERRORS ========== //
 
+    /// @notice The address of the base token (passed in the `onCreate` callback) does not match the address of the bAsset that the callback was initialized with
+    error Callback_Params_BAssetTokenMismatch(address baseToken_, address bAsset_);
+
+    /// @notice The address of the quote token (passed in the `onCreate` callback) does not match the address of the reserve that the callback was initialized with
+    error Callback_Params_ReserveTokenMismatch(address quoteToken_, address reserve_);
+
+    /// @notice The auction price and the pool active tick do not match
+    error Callback_Params_PoolTickMismatch(int24 auctionTick_, int24 poolTick_);
+
+    /// @notice The auction format is not supported
+    error Callback_Params_UnsupportedAuctionFormat();
+
+    /// @notice The anchor tick width is invalid
+    error Callback_Params_InvalidAnchorTickWidth();
+
+    /// @notice The discovery tick width is invalid
+    error Callback_Params_InvalidDiscoveryTickWidth();
+
+    /// @notice The floor reserves percent is invalid
+    error Callback_Params_InvalidFloorReservesPercent();
+
+    /// @notice The auction tied to this callbacks contract has already been completed
     error Callback_AlreadyComplete();
+
+    /// @notice The required funds were not sent to this callbacks contract
     error Callback_MissingFunds();
 
+    /// @notice The BPOOL reserve token does not match the configured `RESERVE` address
     error InvalidModule();
+
+    /// @notice Deploying reserves and liquidity would result in the Baseline pool being insolvent
     error Insolvent();
 
     // ========== EVENTS ========== //
@@ -165,13 +190,12 @@ contract BaselineAxisLaunch is BaseCallback, Policy, Owned {
     {
         BaselineKeycode bpool = toBaselineKeycode("BPOOL");
 
-        requests = new BaselinePermissions[](6);
-        requests[0] = BaselinePermissions(bpool, BPOOL.initializePool.selector);
-        requests[1] = BaselinePermissions(bpool, BPOOL.addReservesTo.selector);
-        requests[2] = BaselinePermissions(bpool, BPOOL.addLiquidityTo.selector);
-        requests[3] = BaselinePermissions(bpool, BPOOL.burnAllBAssetsInContract.selector);
-        requests[4] = BaselinePermissions(bpool, BPOOL.mint.selector);
-        requests[5] = BaselinePermissions(bpool, BPOOL.setTicks.selector);
+        requests = new BaselinePermissions[](5);
+        requests[0] = BaselinePermissions(bpool, BPOOL.addReservesTo.selector);
+        requests[1] = BaselinePermissions(bpool, BPOOL.addLiquidityTo.selector);
+        requests[2] = BaselinePermissions(bpool, BPOOL.burnAllBAssetsInContract.selector);
+        requests[3] = BaselinePermissions(bpool, BPOOL.mint.selector);
+        requests[4] = BaselinePermissions(bpool, BPOOL.setTicks.selector);
     }
 
     // ========== CALLBACK FUNCTIONS ========== //
@@ -198,12 +222,12 @@ contract BaselineAxisLaunch is BaseCallback, Policy, Owned {
     ///                 - `baseToken_` is not the same as `bAsset`
     ///                 - `quoteToken_` is not the same as `RESERVE`
     ///                 - `lotId` is already set
-    ///                 - `CreateData.percentReservesFloor` is less than 0% or greater than 100%
+    ///                 - `CreateData.floorReservesPercent` is less than 0% or greater than 100%
     ///                 - `CreateData.anchorTickWidth` is 0
     ///                 - `CreateData.discoveryTickWidth` is 0
     ///                 - The auction format is not supported
-    ///                 - FPB auction format: `CreateData.initAnchorTick` is 0
     ///                 - The auction is not prefunded
+    ///                 - The active tick of the Baseline pool (from `baseToken_`) is not the same as the tick corresponding to the auction price
     function _onCreate(
         uint96 lotId_,
         address seller_,
@@ -215,8 +239,11 @@ contract BaselineAxisLaunch is BaseCallback, Policy, Owned {
     ) internal override {
         // Validate the base token is the baseline token
         // and the quote token is the reserve
-        if (baseToken_ != address(bAsset) || quoteToken_ != address(RESERVE)) {
-            revert Callback_InvalidParams();
+        if (baseToken_ != address(bAsset)) {
+            revert Callback_Params_BAssetTokenMismatch(baseToken_, address(bAsset));
+        }
+        if (quoteToken_ != address(RESERVE)) {
+            revert Callback_Params_ReserveTokenMismatch(quoteToken_, address(RESERVE));
         }
 
         // Validate that the lot ID is not already set
@@ -227,22 +254,22 @@ contract BaselineAxisLaunch is BaseCallback, Policy, Owned {
 
         // Validate that the anchor tick width is at least 1 tick spacing
         if (cbData.anchorTickWidth <= 0) {
-            revert Callback_InvalidParams();
+            revert Callback_Params_InvalidAnchorTickWidth();
         }
 
         // Validate that the discovery tick width is at least 1 tick spacing
         if (cbData.discoveryTickWidth <= 0) {
-            revert Callback_InvalidParams();
+            revert Callback_Params_InvalidDiscoveryTickWidth();
         }
 
         // Validate that the floor reserves percent is between 0% and 100%
         if (cbData.floorReservesPercent > ONE_HUNDRED_PERCENT) {
-            revert Callback_InvalidParams();
+            revert Callback_Params_InvalidFloorReservesPercent();
         }
 
         // Auction must be prefunded for batch auctions (which is the only type supported with this callback),
         // this can't fail because it's checked in the AH as well, but including for completeness
-        if (!prefund_) revert Callback_InvalidParams();
+        if (!prefund_) revert Callback_Params_UnsupportedAuctionFormat();
 
         // Set the lot ID
         lotId = lotId_;
@@ -257,7 +284,7 @@ contract BaselineAxisLaunch is BaseCallback, Policy, Owned {
 
         // Only supports Fixed Price Batch Auctions initially
         if (fromAxisKeycode(auctionFormat) != bytes5("FPBA")) {
-            revert Callback_InvalidParams();
+            revert Callback_Params_UnsupportedAuctionFormat();
         }
 
         // This contract can be extended with an allowlist for the auction
@@ -286,10 +313,14 @@ contract BaselineAxisLaunch is BaseCallback, Policy, Owned {
                 address(RESERVE), address(bAsset), auctionPrice, 10 ** baseTokenDecimals
             );
             activeTick = TickMath.getTickAtSqrtRatio(sqrtPriceX96);
-        }
 
-        // Initialize the Baseline pool at the tick determined by the auction price
-        BPOOL.initializePool(activeTick);
+            // Check that the pool is initialized at the active tick
+            // This is to ensure that the pool is initialized at the auction price
+            (, int24 poolCurrentTick,,,,,) = BPOOL.pool().slot0();
+            if (poolCurrentTick != activeTick) {
+                revert Callback_Params_PoolTickMismatch(activeTick, poolCurrentTick);
+            }
+        }
 
         int24 tickSpacing = BPOOL.TICK_SPACING();
 
