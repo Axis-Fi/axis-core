@@ -29,12 +29,20 @@ contract MockBPOOL is IBPOOLv1, ERC20 {
         uint8 decimals_,
         address factory_,
         address reserve_,
-        uint24 feeTier_
+        uint24 feeTier_,
+        int24 initialActiveTick_
     ) ERC20(name_, symbol_, decimals_) {
         factory = IUniswapV3Factory(factory_);
         reserve = ERC20(reserve_);
         FEE_TIER = feeTier_;
         TICK_SPACING = factory.feeAmountTickSpacing(feeTier_);
+
+        // This mimics the behaviour of the real BPOOLv1 module
+        // Create the pool
+        pool = IUniswapV3Pool(factory.createPool(address(this), address(reserve), FEE_TIER));
+
+        // Set the initial active tick
+        pool.initialize(TickMath.getSqrtRatioAtTick(initialActiveTick_));
     }
 
     function getLiquidity(Range range_) external view override returns (uint128) {
@@ -45,18 +53,6 @@ contract MockBPOOL is IBPOOLv1, ERC20 {
 
         // If the reserves are not 0, the liquidity is a non-zero value
         return 1;
-    }
-
-    function initializePool(int24 activeTick_) external override returns (IUniswapV3Pool) {
-        // Create the pool
-        pool = IUniswapV3Pool(factory.createPool(address(this), address(reserve), FEE_TIER));
-
-        // Set the initial active tick
-        pool.initialize(TickMath.getSqrtRatioAtTick(activeTick_));
-
-        activeTick = activeTick_;
-
-        return pool;
     }
 
     function addReservesTo(
@@ -151,13 +147,15 @@ contract MockBPOOL is IBPOOLv1, ERC20 {
     function getLiquidityForReserves(
         uint160 _sqrtPriceL,
         uint160 _sqrtPriceU,
-        uint256 _reserves
+        uint256 _reserves,
+        uint160 _sqrtPriceA
     ) external view override returns (uint128 liquidity_) {}
 
     function getCapacityForLiquidity(
         uint160 _sqrtPriceL,
         uint160 _sqrtPriceU,
-        uint128 _liquidity
+        uint128 _liquidity,
+        uint160 _sqrtPriceA
     ) external view override returns (uint256 capacity_) {}
 
     function getCapacityForReserves(

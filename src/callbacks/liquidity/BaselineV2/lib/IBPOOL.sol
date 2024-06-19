@@ -44,9 +44,6 @@ interface IBPOOLv1 {
 
     // ========= PERMISSIONED WRITE FUNCTIONS ========= //
 
-    /// @notice Setup the pool (can only be called once, subsequent calls will revert on factory.createPool and pool.initialze)
-    function initializePool(int24 _activeTick) external returns (IUniswapV3Pool);
-
     function addReservesTo(
         Range _range,
         uint256 _reserves
@@ -96,13 +93,15 @@ interface IBPOOLv1 {
     function getLiquidityForReserves(
         uint160 _sqrtPriceL,
         uint160 _sqrtPriceU,
-        uint256 _reserves
+        uint256 _reserves,
+        uint160 _sqrtPriceA
     ) external view returns (uint128 liquidity_);
 
     function getCapacityForLiquidity(
         uint160 _sqrtPriceL,
         uint160 _sqrtPriceU,
-        uint128 _liquidity
+        uint128 _liquidity,
+        uint160 _sqrtPriceA
     ) external view returns (uint256 capacity_);
 
     function getCapacityForReserves(
