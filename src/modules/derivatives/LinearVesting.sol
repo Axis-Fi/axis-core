@@ -14,6 +14,7 @@ import {ILinearVesting} from "src/interfaces/modules/derivatives/ILinearVesting.
 import {DerivativeModule} from "src/modules/Derivative.sol";
 import {Module, Veecode, toKeycode, wrapVeecode} from "src/modules/Modules.sol";
 import {SoulboundCloneERC20} from "src/modules/derivatives/SoulboundCloneERC20.sol";
+import {LinearVestingCard} from "src/modules/derivatives/LinearVestingCard.sol";
 
 /// @title      LinearVesting
 /// @notice     A derivative module that allows for the creation of linearly vesting tokens
@@ -23,7 +24,7 @@ import {SoulboundCloneERC20} from "src/modules/derivatives/SoulboundCloneERC20.s
 ///
 ///             The start timestamp enables vesting tokens to have a cliff, after which vesting commences.
 /// @author     Axis Finance
-contract LinearVesting is DerivativeModule, ILinearVesting {
+contract LinearVesting is DerivativeModule, ILinearVesting, LinearVestingCard {
     using SafeTransferLib for ERC20;
     using ClonesWithImmutableArgs for address;
     using Timestamp for uint48;
@@ -42,6 +43,7 @@ contract LinearVesting is DerivativeModule, ILinearVesting {
     // ========== MODULE SETUP ========== //
 
     constructor(address parent_) Module(parent_) {
+        // LinearVestingCard()
         // Deploy the clone implementation
         _IMPLEMENTATION = address(new SoulboundCloneERC20());
     }
@@ -681,5 +683,43 @@ contract LinearVesting is DerivativeModule, ILinearVesting {
         Token storage token = tokenMetadata[tokenId_];
 
         return ERC20(token.underlyingToken).decimals();
+    }
+
+    // ========== ERC6909 CONTENT EXTENSION ========== //
+
+    /// @inheritdoc ERC6909Metadata
+    /// @dev        This function reverts if:
+    ///             - The token ID does not exist
+    function tokenURI(uint256 tokenId_)
+        public
+        view
+        override
+        onlyValidTokenId(tokenId_)
+        returns (string memory)
+    {
+        Token storage token = tokenMetadata[tokenId_];
+        VestingParams memory data = abi.decode(token.data, (VestingParams));
+
+        // Get the underlying token symbol
+        string memory _symbol = ERC20(token.underlyingToken).symbol();
+
+        // Create token info for rendering token card
+        Info memory info = Info({
+            tokenId: tokenId_,
+            baseAssetSymbol: _symbol,
+            start: data.start,
+            expiry: data.expiry
+        });
+
+        // Return the token URI
+        return string.concat(
+            '{"name": "',
+            name(tokenId_),
+            '", "description": "Linear Vesting ',
+            _symbol,
+            '", "image": "data:image/svg+xml;utf8,',
+            render(info),
+            '"}'
+        );
     }
 }

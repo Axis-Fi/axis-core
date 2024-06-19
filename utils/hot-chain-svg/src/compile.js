@@ -12,10 +12,10 @@ function getSolcInput(source) {
     },
     settings: {
       optimizer: {
-        enabled: false,
-        runs: 1,
+        enabled: true,
+        runs: 200,
       },
-      evmVersion: 'london',
+      evmVersion: 'paris',
       outputSelection: {
         '*': {
           '*': ['abi', 'evm.bytecode'],

@@ -6,33 +6,24 @@ pragma solidity ^0.8.12;
 // Core utils used extensively to format CSS and numbers.
 library utils {
     // used to simulate empty strings
-    string internal constant NULL = '';
+    string internal constant NULL = "";
 
     // formats a CSS variable line. includes a semicolon for formatting.
-    function setCssVar(string memory _key, string memory _val)
-        internal
-        pure
-        returns (string memory)
-    {
-        return string.concat('--', _key, ':', _val, ';');
+    function setCssVar(
+        string memory _key,
+        string memory _val
+    ) internal pure returns (string memory) {
+        return string.concat("--", _key, ":", _val, ";");
     }
 
     // formats getting a css variable
-    function getCssVar(string memory _key)
-        internal
-        pure
-        returns (string memory)
-    {
-        return string.concat('var(--', _key, ')');
+    function getCssVar(string memory _key) internal pure returns (string memory) {
+        return string.concat("var(--", _key, ")");
     }
 
     // formats getting a def URL
-    function getDefURL(string memory _id)
-        internal
-        pure
-        returns (string memory)
-    {
-        return string.concat('url(#', _id, ')');
+    function getDefURL(string memory _id) internal pure returns (string memory) {
+        return string.concat("url(#", _id, ")");
     }
 
     // formats rgba white with a specified opacity / alpha
@@ -52,63 +43,53 @@ library utils {
         uint256 _b,
         uint256 _a
     ) internal pure returns (string memory) {
-        string memory formattedA = _a < 100
-            ? string.concat('0.', utils.uint2str(_a))
-            : '1';
-        return
-            string.concat(
-                'rgba(',
-                utils.uint2str(_r),
-                ',',
-                utils.uint2str(_g),
-                ',',
-                utils.uint2str(_b),
-                ',',
-                formattedA,
-                ')'
-            );
+        string memory formattedA = _a < 100 ? string.concat("0.", utils.uint2str(_a)) : "1";
+        return string.concat(
+            "rgba(",
+            utils.uint2str(_r),
+            ",",
+            utils.uint2str(_g),
+            ",",
+            utils.uint2str(_b),
+            ",",
+            formattedA,
+            ")"
+        );
     }
 
     // checks if two strings are equal
-    function stringsEqual(string memory _a, string memory _b)
-        internal
-        pure
-        returns (bool)
-    {
-        return
-            keccak256(abi.encodePacked(_a)) == keccak256(abi.encodePacked(_b));
+    function stringsEqual(string memory _a, string memory _b) internal pure returns (bool) {
+        return keccak256(abi.encodePacked(_a)) == keccak256(abi.encodePacked(_b));
     }
 
     // returns the length of a string in characters
-    function utfStringLength(string memory _str)
-        internal
-        pure
-        returns (uint256 length)
-    {
+    function utfStringLength(string memory _str) internal pure returns (uint256 length) {
         uint256 i = 0;
         bytes memory string_rep = bytes(_str);
 
         while (i < string_rep.length) {
-            if (string_rep[i] >> 7 == 0) i += 1;
-            else if (string_rep[i] >> 5 == bytes1(uint8(0x6))) i += 2;
-            else if (string_rep[i] >> 4 == bytes1(uint8(0xE))) i += 3;
-            else if (string_rep[i] >> 3 == bytes1(uint8(0x1E)))
+            if (string_rep[i] >> 7 == 0) {
+                i += 1;
+            } else if (string_rep[i] >> 5 == bytes1(uint8(0x6))) {
+                i += 2;
+            } else if (string_rep[i] >> 4 == bytes1(uint8(0xE))) {
+                i += 3;
+            } else if (string_rep[i] >> 3 == bytes1(uint8(0x1E))) {
                 i += 4;
-                //For safety
-            else i += 1;
+            }
+            //For safety
+            else {
+                i += 1;
+            }
 
             length++;
         }
     }
 
     // converts an unsigned integer to a string
-    function uint2str(uint256 _i)
-        internal
-        pure
-        returns (string memory _uintAsString)
-    {
+    function uint2str(uint256 _i) internal pure returns (string memory _uintAsString) {
         if (_i == 0) {
-            return '0';
+            return "0";
         }
         uint256 j = _i;
         uint256 len;
@@ -133,113 +114,91 @@ library utils {
 // onchain SVG's with a simple, web-like API.
 library svg {
     /* MAIN ELEMENTS */
-    function g(string memory _props, string memory _children)
-        internal
-        pure
-        returns (string memory)
-    {
-        return el('g', _props, _children);
+    function g(
+        string memory _props,
+        string memory _children
+    ) internal pure returns (string memory) {
+        return el("g", _props, _children);
     }
 
-    function path(string memory _props, string memory _children)
-        internal
-        pure
-        returns (string memory)
-    {
-        return el('path', _props, _children);
+    function path(
+        string memory _props,
+        string memory _children
+    ) internal pure returns (string memory) {
+        return el("path", _props, _children);
     }
 
-    function text(string memory _props, string memory _children)
-        internal
-        pure
-        returns (string memory)
-    {
-        return el('text', _props, _children);
+    function text(
+        string memory _props,
+        string memory _children
+    ) internal pure returns (string memory) {
+        return el("text", _props, _children);
     }
 
-    function line(string memory _props, string memory _children)
-        internal
-        pure
-        returns (string memory)
-    {
-        return el('line', _props, _children);
+    function line(
+        string memory _props,
+        string memory _children
+    ) internal pure returns (string memory) {
+        return el("line", _props, _children);
     }
 
-    function circle(string memory _props, string memory _children)
-        internal
-        pure
-        returns (string memory)
-    {
-        return el('circle', _props, _children);
+    function circle(
+        string memory _props,
+        string memory _children
+    ) internal pure returns (string memory) {
+        return el("circle", _props, _children);
     }
 
-    function circle(string memory _props)
-        internal
-        pure
-        returns (string memory)
-    {
-        return el('circle', _props);
+    function circle(string memory _props) internal pure returns (string memory) {
+        return el("circle", _props);
     }
 
-    function ellipse(string memory _props, string memory _children)
-        internal
-        pure
-        returns (string memory)
-    {
-        return el('ellipse', _props, _children);
+    function ellipse(
+        string memory _props,
+        string memory _children
+    ) internal pure returns (string memory) {
+        return el("ellipse", _props, _children);
     }
 
     function ellipse(string memory _props) internal pure returns (string memory) {
-        return el('ellipse', _props);
+        return el("ellipse", _props);
     }
 
-    function rect(string memory _props, string memory _children)
-        internal
-        pure
-        returns (string memory)
-    {
-        return el('rect', _props, _children);
+    function rect(
+        string memory _props,
+        string memory _children
+    ) internal pure returns (string memory) {
+        return el("rect", _props, _children);
     }
 
-    function rect(string memory _props)
-        internal
-        pure
-        returns (string memory)
-    {
-        return el('rect', _props);
+    function rect(string memory _props) internal pure returns (string memory) {
+        return el("rect", _props);
     }
 
-    function filter(string memory _props, string memory _children)
-        internal
-        pure
-        returns (string memory)
-    {
-        return el('filter', _props, _children);
+    function filter(
+        string memory _props,
+        string memory _children
+    ) internal pure returns (string memory) {
+        return el("filter", _props, _children);
     }
 
-    function cdata(string memory _content)
-        internal
-        pure
-        returns (string memory)
-    {
-        return string.concat('<![CDATA[', _content, ']]>');
+    function cdata(string memory _content) internal pure returns (string memory) {
+        return string.concat("<![CDATA[", _content, "]]>");
     }
 
     /* GRADIENTS */
-    function radialGradient(string memory _props, string memory _children)
-        internal
-        pure
-        returns (string memory)
-    {
-        return el('radialGradient', _props, _children);
+    function radialGradient(
+        string memory _props,
+        string memory _children
+    ) internal pure returns (string memory) {
+        return el("radialGradient", _props, _children);
     }
 
-    function linearGradient(string memory _props, string memory _children)
-        internal
-        pure
-        returns (string memory)
-    {
-        return el('linearGradient', _props, _children);
+    function linearGradient(
+        string memory _props,
+        string memory _children
+    ) internal pure returns (string memory) {
+        return el("linearGradient", _props, _children);
     }
 
     function gradientStop(
@@ -247,37 +206,27 @@ library svg {
         string memory stopColor,
         string memory _props
     ) internal pure returns (string memory) {
-        return
-            el(
-                'stop',
-                string.concat(
-                    prop('stop-color', stopColor),
-                    ' ',
-                    prop('offset', string.concat(utils.uint2str(offset), '%')),
-                    ' ',
-                    _props
-                )
-            );
+        return el(
+            "stop",
+            string.concat(
+                prop("stop-color", stopColor),
+                " ",
+                prop("offset", string.concat(utils.uint2str(offset), "%")),
+                " ",
+                _props
+            )
+        );
     }
 
-    function animateTransform(string memory _props)
-        internal
-        pure
-        returns (string memory)
-    {
-        return el('animateTransform', _props);
+    function animateTransform(string memory _props) internal pure returns (string memory) {
+        return el("animateTransform", _props);
     }
 
-    function image(string memory _href, string memory _props)
-        internal
-        pure
-        returns (string memory)
-    {
-        return
-            el(
-                'image',
-                string.concat(prop('href', _href), ' ', _props)
-            );
+    function image(
+        string memory _href,
+        string memory _props
+    ) internal pure returns (string memory) {
+        return el("image", string.concat(prop("href", _href), " ", _props));
     }
 
     /* COMMON */
@@ -287,41 +236,16 @@ library svg {
         string memory _props,
         string memory _children
     ) internal pure returns (string memory) {
-        return
-            string.concat(
-                '<',
-                _tag,
-                ' ',
-                _props,
-                '>',
-                _children,
-                '</',
-                _tag,
-                '>'
-            );
+        return string.concat("<", _tag, " ", _props, ">", _children, "</", _tag, ">");
     }
 
     // A generic element, can be used to construct any SVG (or HTML) element without children
-    function el(
-        string memory _tag,
-        string memory _props
-    ) internal pure returns (string memory) {
-        return
-            string.concat(
-                '<',
-                _tag,
-                ' ',
-                _props,
-                '/>'
-            );
+    function el(string memory _tag, string memory _props) internal pure returns (string memory) {
+        return string.concat("<", _tag, " ", _props, "/>");
     }
 
     // an SVG attribute
-    function prop(string memory _key, string memory _val)
-        internal
-        pure
-        returns (string memory)
-    {
-        return string.concat(_key, '=', '"', _val, '" ');
+    function prop(string memory _key, string memory _val) internal pure returns (string memory) {
+        return string.concat(_key, "=", '"', _val, '" ');
     }
 }
