@@ -1,14 +1,13 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.19;
 
-import {BaselineCappedAllowlistTest} from
-    "test/callbacks/liquidity/BaselineV2/CappedAllowlist/BaselineCappedAllowlistTest.sol";
+import {BaselineAllowlistTest} from
+    "test/callbacks/liquidity/BaselineV2/Allowlist/BaselineAllowlistTest.sol";
 
 import {BaseCallback} from "src/callbacks/BaseCallback.sol";
-import {BALwithCappedAllowlist} from "src/callbacks/liquidity/BaselineV2/BALwithCappedAllowlist.sol";
 import {BALwithAllowlist} from "src/callbacks/liquidity/BaselineV2/BALwithAllowlist.sol";
 
-contract BaselineCappedAllowlistSetMerkleRootTest is BaselineCappedAllowlistTest {
+contract BaselineAllowlistSetMerkleRootTest is BaselineAllowlistTest {
     /// @dev This doesn't need to be valid at the moment
     bytes32 internal constant _MERKLE_ROOT =
         0x1234567890123456789012345678901234567890123456789012345678901234;
@@ -17,7 +16,7 @@ contract BaselineCappedAllowlistSetMerkleRootTest is BaselineCappedAllowlistTest
 
     function _setMerkleRoot() internal {
         vm.prank(_OWNER);
-        BALwithCappedAllowlist(address(_dtl)).setMerkleRoot(_NEW_MERKLE_ROOT);
+        BALwithAllowlist(address(_dtl)).setMerkleRoot(_NEW_MERKLE_ROOT);
     }
 
     // ========== TESTS ========== //
@@ -35,14 +34,14 @@ contract BaselineCappedAllowlistSetMerkleRootTest is BaselineCappedAllowlistTest
         givenBPoolIsCreated
         givenCallbackIsCreated
         givenAuctionIsCreated
-        givenAllowlistParams(_MERKLE_ROOT, _BUYER_LIMIT)
+        givenAllowlistParams(_MERKLE_ROOT)
         givenOnCreate
     {
         // Expect revert
         vm.expectRevert("UNAUTHORIZED");
 
         // Call the callback
-        BALwithCappedAllowlist(address(_dtl)).setMerkleRoot(_NEW_MERKLE_ROOT);
+        BALwithAllowlist(address(_dtl)).setMerkleRoot(_NEW_MERKLE_ROOT);
     }
 
     function test_auctionNotRegistered_reverts()
@@ -50,7 +49,7 @@ contract BaselineCappedAllowlistSetMerkleRootTest is BaselineCappedAllowlistTest
         givenBPoolIsCreated
         givenCallbackIsCreated
         givenAuctionIsCreated
-        givenAllowlistParams(_MERKLE_ROOT, _BUYER_LIMIT)
+        givenAllowlistParams(_MERKLE_ROOT)
     {
         // Expect revert
         bytes memory err = abi.encodeWithSelector(BALwithAllowlist.Callback_InvalidState.selector);
@@ -65,7 +64,7 @@ contract BaselineCappedAllowlistSetMerkleRootTest is BaselineCappedAllowlistTest
         givenBPoolIsCreated
         givenCallbackIsCreated
         givenAuctionIsCreated
-        givenAllowlistParams(_MERKLE_ROOT, _BUYER_LIMIT)
+        givenAllowlistParams(_MERKLE_ROOT)
         givenOnCreate
         givenAddressHasQuoteTokenBalance(_dtlAddress, _PROCEEDS_AMOUNT)
         givenAddressHasBaseTokenBalance(_dtlAddress, _REFUND_AMOUNT)
@@ -84,15 +83,13 @@ contract BaselineCappedAllowlistSetMerkleRootTest is BaselineCappedAllowlistTest
         givenBPoolIsCreated
         givenCallbackIsCreated
         givenAuctionIsCreated
-        givenAllowlistParams(_MERKLE_ROOT, _BUYER_LIMIT)
+        givenAllowlistParams(_MERKLE_ROOT)
         givenOnCreate
     {
         // Call the callback
         _setMerkleRoot();
 
         // Check the merkle root is updated
-        assertEq(
-            BALwithCappedAllowlist(address(_dtl)).merkleRoot(), _NEW_MERKLE_ROOT, "merkle root"
-        );
+        assertEq(BALwithAllowlist(address(_dtl)).merkleRoot(), _NEW_MERKLE_ROOT, "merkle root");
     }
 }

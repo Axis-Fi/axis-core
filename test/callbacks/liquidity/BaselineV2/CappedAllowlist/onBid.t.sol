@@ -5,15 +5,14 @@ import {BaselineCappedAllowlistTest} from
     "test/callbacks/liquidity/BaselineV2/CappedAllowlist/BaselineCappedAllowlistTest.sol";
 
 import {BaseCallback} from "src/callbacks/BaseCallback.sol";
-import {BALwithCappedAllowlist} from
-    "src/callbacks/liquidity/BaselineV2/BALwithCappedAllowlist.sol";
+import {BALwithCappedAllowlist} from "src/callbacks/liquidity/BaselineV2/BALwithCappedAllowlist.sol";
 
 contract BaselineCappedAllowlistOnBidTest is BaselineCappedAllowlistTest {
     // Use the @openzeppelin/merkle-tree package or the scripts in axis-utils to generate the merkle tree
 
     // Values:
-    // 0x0000000000000000000000000000000000000004, 5e18
-    // 0x0000000000000000000000000000000000000020, 0
+    // 0x0000000000000000000000000000000000000004
+    // 0x0000000000000000000000000000000000000005
     bytes32 internal constant _MERKLE_ROOT =
         0xc92348ba87c65979cc4f264810321a35efa64e795075908af2c507a22d4da472;
     bytes32 internal constant _BUYER_MERKLE_PROOF =
@@ -22,7 +21,6 @@ contract BaselineCappedAllowlistOnBidTest is BaselineCappedAllowlistTest {
         0xc167b0e3c82238f4f2d1a50a8b3a44f96311d77b148c30dc0ef863e1a060dcb6;
 
     bytes32[] internal _proof;
-    uint256 internal _allocatedAmount;
 
     uint64 internal constant _BID_ID = 1;
 
@@ -108,7 +106,7 @@ contract BaselineCappedAllowlistOnBidTest is BaselineCappedAllowlistTest {
 
         // Call the callback
         vm.prank(address(_auctionHouse));
-        _dtl.onBid(_lotId, _BID_ID, address(0x55), 5e18, abi.encode(_proof, _allocatedAmount));
+        _dtl.onBid(_lotId, _BID_ID, address(0x55), 5e18, abi.encode(_proof));
     }
 
     function test_buyerLimitSpent_reverts()

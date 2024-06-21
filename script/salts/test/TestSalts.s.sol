@@ -570,9 +570,8 @@ contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts, TestConst
         // Get the salt
         bytes memory callbackArgs =
             abi.encode(_AUCTION_HOUSE, _BASELINE_KERNEL, _BASELINE_QUOTE_TOKEN, _OWNER);
-        (string memory callbackBytecodePath, bytes32 callbackBytecodeHash) = _writeBytecode(
-            "BaselineAllowlist", type(BALwithAllowlist).creationCode, callbackArgs
-        );
+        (string memory callbackBytecodePath, bytes32 callbackBytecodeHash) =
+            _writeBytecode("BaselineAllowlist", type(BALwithAllowlist).creationCode, callbackArgs);
         _setTestSalt(callbackBytecodePath, "EF", "BaselineAllowlist", callbackBytecodeHash);
     }
 
