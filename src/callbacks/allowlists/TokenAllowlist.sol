@@ -24,6 +24,7 @@ contract TokenAllowlist is BaseCallback {
         uint256 threshold;
     }
 
+    /// @notice Stores the token and balance threshold for each lot
     mapping(uint96 lotId => TokenCheck) public lotChecks;
 
     // ========== CONSTRUCTOR ========== //
@@ -46,6 +47,13 @@ contract TokenAllowlist is BaseCallback {
 
     // ========== CALLBACK FUNCTIONS ========== //
 
+    /// @inheritdoc BaseCallback
+    /// @dev        This function reverts if:
+    ///             - `callbackData_` is not of the correct length
+    ///             - The token contract is not a contract
+    ///             - The token contract does not have an ERC20 balanceOf function
+    ///
+    /// @param      callbackData_    abi-encoded data: (ITokenBalance, uint96) representing the token contract and balance threshold
     function _onCreate(
         uint96 lotId_,
         address,
@@ -55,6 +63,11 @@ contract TokenAllowlist is BaseCallback {
         bool,
         bytes calldata callbackData_
     ) internal override {
+        // Check that the parameters are of the correct length
+        if (callbackData_.length != 64) {
+            revert Callback_InvalidParams();
+        }
+
         // Decode the params to get the token contract and balance threshold
         (ITokenBalance token, uint96 threshold) = abi.decode(callbackData_, (ITokenBalance, uint96));
 
@@ -71,16 +84,23 @@ contract TokenAllowlist is BaseCallback {
         lotChecks[lotId_] = TokenCheck(token, threshold);
     }
 
+    /// @inheritdoc BaseCallback
+    /// @dev        Not implemented
     function _onCancel(uint96, uint256, bool, bytes calldata) internal pure override {
         // Not implemented
         revert Callback_NotImplemented();
     }
 
+    /// @inheritdoc BaseCallback
+    /// @dev        Not implemented
     function _onCurate(uint96, uint256, bool, bytes calldata) internal pure override {
         // Not implemented
         revert Callback_NotImplemented();
     }
 
+    /// @inheritdoc BaseCallback
+    /// @dev        This function reverts if:
+    ///             - The buyer's balance is below the threshold
     function _onPurchase(
         uint96 lotId_,
         address buyer_,
@@ -92,6 +112,9 @@ contract TokenAllowlist is BaseCallback {
         _canParticipate(lotId_, buyer_);
     }
 
+    /// @inheritdoc BaseCallback
+    /// @dev        This function reverts if:
+    ///             - The buyer's balance is below the threshold
     function _onBid(
         uint96 lotId_,
         uint64,
@@ -102,6 +125,8 @@ contract TokenAllowlist is BaseCallback {
         _canParticipate(lotId_, buyer_);
     }
 
+    /// @inheritdoc BaseCallback
+    /// @dev        Not implemented
     function _onSettle(uint96, uint256, uint256, bytes calldata) internal pure override {
         // Not implemented
         revert Callback_NotImplemented();
