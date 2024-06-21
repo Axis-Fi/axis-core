@@ -36,7 +36,7 @@ contract BaselineAllocatedAllowlistOnCreateTest is BaselineAllocatedAllowlistTes
         _onCreate();
     }
 
-    function test_success_reverts()
+    function test_success()
         public
         givenBPoolIsCreated
         givenCallbackIsCreated
