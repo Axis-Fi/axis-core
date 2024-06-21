@@ -56,6 +56,11 @@ contract BALwithCappedAllowlist is BALwithAllowlist {
         bool,
         bytes memory allowlistData_
     ) internal override {
+        // Check that the parameters are of the correct length
+        if (allowlistData_.length != 64) {
+            revert Callback_InvalidParams();
+        }
+
         // Decode the merkle root from the callback data
         (bytes32 merkleRoot_, uint256 buyerLimit_) = abi.decode(allowlistData_, (bytes32, uint256));
 
