@@ -133,8 +133,7 @@ contract AllocatedMerkleAllowlistBatchTest is Test, Permit2User, WithSalts {
 
     function test_onCreate_allowlistParametersIncorrectFormat_reverts() public {
         // Expect revert
-        bytes memory err = abi.encodeWithSelector(BaseCallback.Callback_InvalidParams.selector);
-        vm.expectRevert(err);
+        vm.expectRevert();
 
         vm.prank(address(_auctionHouse));
         _allowlist.onCreate(

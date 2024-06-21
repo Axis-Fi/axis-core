@@ -54,11 +54,6 @@ contract CappedMerkleAllowlist is MerkleAllowlist {
         bool,
         bytes calldata callbackData_
     ) internal override {
-        // Check that the parameters are of the correct length
-        if (callbackData_.length != 64) {
-            revert Callback_InvalidParams();
-        }
-
         // Decode the merkle root from the callback data
         (bytes32 merkleRoot, uint256 buyerLimit) = abi.decode(callbackData_, (bytes32, uint256));
 
