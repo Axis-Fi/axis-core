@@ -78,6 +78,7 @@ contract BALwithAllocatedAllowlist is BaselineAxisLaunch {
 
         // Set the merkle root and buyer limit
         merkleRoot = merkleRootParams;
+        emit MerkleRootSet(merkleRoot);
     }
 
     /// @inheritdoc BaselineAxisLaunch
@@ -100,7 +101,13 @@ contract BALwithAllocatedAllowlist is BaselineAxisLaunch {
         __onBid(lotId_, bidId_, buyer_, amount_, callbackData_);
     }
 
-    /// @notice Override this function to implement additional functionality
+    /// @notice Override this function to implement additional functionality for the `onBid` callback
+    ///
+    /// @param  lotId_          The ID of the lot
+    /// @param  bidId_          The ID of the bid
+    /// @param  buyer_          The address of the buyer
+    /// @param  amount_         The amount of quote tokens
+    /// @param  callbackData_   The callback data
     function __onBid(
         uint96 lotId_,
         uint64 bidId_,
