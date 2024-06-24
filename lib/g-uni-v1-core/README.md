@@ -157,3 +157,15 @@ Set up environment variables:
     ```
 
 Note that these scripts will not deploy to a particular chain if there have been no changes to the contracts since the last deployment on that chain. To override this, pass the `--reset` flag.
+
+## Verification
+
+1. Verify the contracts:
+
+    ```shell
+    HARDHAT_NETWORK="<chain name>" yarn run verify
+    ```
+
+    - If hardhat reports that a network is not supported, specify the API url using `--api-url <url>`
+
+NOTE: The GUniFactory contract will require additional steps to enable it to be viewed as a proxy.
