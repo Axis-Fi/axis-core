@@ -83,7 +83,7 @@ export const getAddresses = (network: string): Addresses => {
         USDC: "",
         UniswapV3Factory: "0x84fF29e6321c9dd328B8B383b08dd2815b121243",
         GUniFactory: "0xED28E5230E934cf9C843C08818D0639176040297",
-        GUniImplementation: "0x7B19Fe2Fc328d3843973D20a4cb0b5b785b02b8E",
+        GUniImplementation: "0xdde18C0c3B637F4BA02f5567a671F5e28b7404e7",
       };
     case "arbitrumSepolia":
       return {        
@@ -95,7 +95,7 @@ export const getAddresses = (network: string): Addresses => {
         USDC: "",
         UniswapV3Factory: "0x2dCC5a88A861FB73613153F82CF801cd09E72a5F",
         GUniFactory: "0x39AC4439e6CB9427C073259e5742529cE46DD663",
-        GUniImplementation: "0x90608F57161aC771b28fb0adCd2434cfa1463201",
+        GUniImplementation: "0xF3e2578C66071a637F06cc02b1c11DeC0784C1A6",
       };
     case "modeSepolia":
       return {        
@@ -107,7 +107,7 @@ export const getAddresses = (network: string): Addresses => {
         USDC: "",
         UniswapV3Factory: "0x0f88f3f5108eB3BD1A2D411E9a1fD41997811D88",
         GUniFactory: "0x2dCC5a88A861FB73613153F82CF801cd09E72a5F",
-        GUniImplementation: "0x909F26919989167d051312fBB0a1Df4CD93Bf70b",
+        GUniImplementation: "0xe1B83edA3399A2c9B8265215EA21042C9b918dc5",
       };
     case "baseSepolia":
       return {        
@@ -119,7 +119,7 @@ export const getAddresses = (network: string): Addresses => {
         USDC: "",
         UniswapV3Factory: "0x4752ba5DBc23f44D87826276BF6Fd6b1C372aD24",
         GUniFactory: "0x04974BcFC715c148818724d9Caab3Fe8d0391b8b",
-        GUniImplementation: "0xB1e9E16a40321Fe06Cfd797619C345c143D11Aa7",
+        GUniImplementation: "0xF5c31d08a71c854A9f607A5992456dBC31B11e16",
       };
     default:
       throw new Error(`No addresses for Network: ${network}`);
