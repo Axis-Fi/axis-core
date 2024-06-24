@@ -128,3 +128,30 @@ Arguments:
 yarn
 
 yarn test
+
+## Setup
+
+```shell
+yarn install
+```
+
+Set up environment variables:
+
+- Copy `.env.example` to `.env`
+- Fill out environment variables
+
+## Deployment
+
+First, deploy the GUniPool, as that will serve as input to the GUniFactory:
+
+```shell
+HARDHAT_NETWORK="<chain name>" yarn run deploy:pool
+```
+
+TODO: need to copy/paste pool address?
+
+Then, deploy the GUniFactory:
+
+```shell
+yarn run deploy:factory
+```
