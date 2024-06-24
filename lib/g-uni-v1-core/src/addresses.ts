@@ -62,7 +62,7 @@ export const getAddresses = (network: string): Addresses => {
         GUniImplementation: "",
       };
     case "anvil":
-      return {        
+      return {
         Gelato: "0x0000000000000000000000000000000000000000",
         Swapper: "",
         GelatoDevMultiSig: "0x0000000000000000000000000000000000000000",
@@ -74,7 +74,7 @@ export const getAddresses = (network: string): Addresses => {
         GUniImplementation: "",
       };
     case "blastSepolia":
-      return {        
+      return {
         Gelato: "0xB47C8e4bEb28af80eDe5E5bF474927b110Ef2c0e",
         Swapper: "",
         GelatoDevMultiSig: "0xB47C8e4bEb28af80eDe5E5bF474927b110Ef2c0e",
@@ -86,19 +86,19 @@ export const getAddresses = (network: string): Addresses => {
         GUniImplementation: "0xdde18C0c3B637F4BA02f5567a671F5e28b7404e7",
       };
     case "arbitrumSepolia":
-      return {        
+      return {
         Gelato: "0xB47C8e4bEb28af80eDe5E5bF474927b110Ef2c0e",
         Swapper: "",
         GelatoDevMultiSig: "0xB47C8e4bEb28af80eDe5E5bF474927b110Ef2c0e",
         WETH: "",
         DAI: "",
         USDC: "",
-        UniswapV3Factory: "0x2dCC5a88A861FB73613153F82CF801cd09E72a5F",
-        GUniFactory: "0x39AC4439e6CB9427C073259e5742529cE46DD663",
-        GUniImplementation: "0xF3e2578C66071a637F06cc02b1c11DeC0784C1A6",
+        UniswapV3Factory: "0x248AB79Bbb9bC29bB72f7Cd42F17e054Fc40188e",
+        GUniFactory: "0x7f502e91182338F19CB6F4B02B33B33feD1c5000",
+        GUniImplementation: "0xCE7427a94bc9B8A90E2C8d91cB0247D779819437",
       };
     case "modeSepolia":
-      return {        
+      return {
         Gelato: "0xB47C8e4bEb28af80eDe5E5bF474927b110Ef2c0e",
         Swapper: "",
         GelatoDevMultiSig: "0xB47C8e4bEb28af80eDe5E5bF474927b110Ef2c0e",
@@ -110,7 +110,7 @@ export const getAddresses = (network: string): Addresses => {
         GUniImplementation: "0xe1B83edA3399A2c9B8265215EA21042C9b918dc5",
       };
     case "baseSepolia":
-      return {        
+      return {
         Gelato: "0xB47C8e4bEb28af80eDe5E5bF474927b110Ef2c0e",
         Swapper: "",
         GelatoDevMultiSig: "0xB47C8e4bEb28af80eDe5E5bF474927b110Ef2c0e",
