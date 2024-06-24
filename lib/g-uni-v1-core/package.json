@@ -4,7 +4,7 @@
     "build": "yarn compile && npx tsc",
     "compile": "npx hardhat compile",
     "clean": "rm -rf dist && npx hardhat clean",
-    "deploy": "npx hardhat deploy ",
+    "deploy:pool": "npx hardhat deploy --deploy-scripts deploy/pool/ --write true",
     "format": "prettier --write .",
     "format:check": "prettier --check '*/**/*.{js,sol,json,md,ts}'",
     "lint": "eslint --cache . && yarn lint:sol",

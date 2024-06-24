@@ -1,8 +1,8 @@
 import { deployments, getNamedAccounts } from "hardhat";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { DeployFunction } from "hardhat-deploy/types";
-import { getAddresses } from "../src/addresses";
-import { isZeroAddress } from "./address";
+import { getAddresses } from "../../src/addresses";
+import { isZeroAddress } from "../address";
 
 const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   if (
