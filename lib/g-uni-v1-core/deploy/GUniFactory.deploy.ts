@@ -31,7 +31,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     throw new Error("GUniImplementation (pool implementation) address not set");
   }
 
-  await deploy("GUniFactory", {
+  const result = await deploy("GUniFactory", {
     from: deployer,
     proxy: {
       proxyContract: "EIP173Proxy",
@@ -50,7 +50,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     args: [addresses.UniswapV3Factory],
   });
 
-  console.log("Deployment of GUniFactory complete");
+  console.log("GUniFactory deployed to:", result.address);
 };
 
 func.skip = async (hre: HardhatRuntimeEnvironment) => {

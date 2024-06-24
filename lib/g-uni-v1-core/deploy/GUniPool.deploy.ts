@@ -28,12 +28,12 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     throw new Error("Deployer address not set");
   }
 
-  await deploy("GUniPool", {
+  const result = await deploy("GUniPool", {
     from: deployer,
     args: [addresses.Gelato],
   });
 
-  console.log("Deployment of GUniPool complete");
+  console.log("GUniPool deployed to:", result.address);
 };
 
 func.skip = async (hre: HardhatRuntimeEnvironment) => {

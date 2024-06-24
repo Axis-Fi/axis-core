@@ -142,18 +142,18 @@ Set up environment variables:
 
 ## Deployment
 
-First, deploy the GUniPool, as that will serve as input to the GUniFactory:
+1. Ensure that the `Gelato`, `GelatoDevMultiSig` and `UniswapV3Factory` addresses are set in `src/addresses.ts` for the target chain.
+1. Deploy the GUniPool, as that will serve as input to the GUniFactory:
 
-```shell
-HARDHAT_NETWORK="<chain name>" yarn run deploy:pool
-```
+    ```shell
+    HARDHAT_NETWORK="<chain name>" yarn run deploy:pool
+    ```
 
-TODO: need to copy/paste pool address?
+1. Copy the address of the GUniPool (output to the terminal) into the value of the `GUniImplementation` key in `src/addresses.ts` for the target chain.
+1. Deploy the GUniFactory:
 
-Then, deploy the GUniFactory:
-
-```shell
-yarn run deploy:factory
-```
+    ```shell
+    HARDHAT_NETWORK="<chain name>" yarn run deploy:factory
+    ```
 
 Note that these scripts will not deploy to a particular chain if there have been no changes to the contracts since the last deployment on that chain. To override this, pass the `--reset` flag.
