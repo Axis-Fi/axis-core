@@ -34,22 +34,22 @@ const config: HardhatUserConfig = {
     },
     blastSepolia: {
       chainId: 168587773,
-      url: process.env.BLAST_SEPOLIA_RPC,
+      url: process.env.BLAST_SEPOLIA_RPC || "https://sepolia.blast.io",
       accounts: [process.env.DEPLOYER_PRIVATE_KEY ?? ""]
     },
     arbitrumSepolia: {
       chainId: 421614,
-      url: process.env.ARBITRUM_SEPOLIA_RPC,
+      url: process.env.ARBITRUM_SEPOLIA_RPC || "https://sepolia-rollup.arbitrum.io/rpc",
       accounts: [process.env.DEPLOYER_PRIVATE_KEY ?? ""]
     },
     modeSepolia: {
       chainId: 919,
-      url: process.env.MODE_SEPOLIA_RPC,
+      url: process.env.MODE_SEPOLIA_RPC || "https://sepolia.mode.network",
       accounts: [process.env.DEPLOYER_PRIVATE_KEY ?? ""]
     },
     baseSepolia: {
       chainId: 84532,
-      url: process.env.BASE_SEPOLIA_RPC,
+      url: process.env.BASE_SEPOLIA_RPC || "https://sepolia.base.org",
       accounts: [process.env.DEPLOYER_PRIVATE_KEY ?? ""]
     },
   },
