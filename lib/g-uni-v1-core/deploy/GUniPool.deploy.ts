@@ -32,6 +32,8 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     from: deployer,
     args: [addresses.Gelato],
   });
+
+  console.log("Deployment of GUniPool complete");
 };
 
 func.skip = async (hre: HardhatRuntimeEnvironment) => {

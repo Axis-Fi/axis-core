@@ -49,6 +49,8 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     },
     args: [addresses.UniswapV3Factory],
   });
+
+  console.log("Deployment of GUniFactory complete");
 };
 
 func.skip = async (hre: HardhatRuntimeEnvironment) => {

@@ -155,3 +155,5 @@ Then, deploy the GUniFactory:
 ```shell
 yarn run deploy:factory
 ```
+
+Note that these scripts will not deploy to a particular chain if there have been no changes to the contracts since the last deployment on that chain. To override this, pass the `--reset` flag.
