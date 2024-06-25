@@ -209,4 +209,6 @@ contract MockDerivativeModule is DerivativeModule {
     function symbol(uint256 tokenId_) public view virtual override returns (string memory) {}
 
     function decimals(uint256 tokenId_) public view virtual override returns (uint8) {}
+
+    function tokenURI(uint256 tokenId_) public view virtual override returns (string memory) {}
 }
