@@ -315,7 +315,7 @@ contract BaselineAxisLaunch is BaseCallback, Policy, Owned {
             activeTick = TickMath.getTickAtSqrtRatio(sqrtPriceX96);
 
             // Check that the pool is initialized at the active tick
-            // This is to ensure that the pool is initialized at the auction price
+            // This is to ensure that the pool is initialized at the tick closest to the auction price
             (, int24 poolCurrentTick,,,,,) = BPOOL.pool().slot0();
             if (poolCurrentTick != activeTick) {
                 revert Callback_Params_PoolTickMismatch(activeTick, poolCurrentTick);
@@ -519,10 +519,7 @@ contract BaselineAxisLaunch is BaseCallback, Policy, Owned {
         BPOOL.addReservesTo(Range.ANCHOR, proceeds_ - floorReserves);
 
         // Add proportional liquidity to the Discovery range
-        BPOOL.addLiquidityTo(
-            Range.DISCOVERY,
-            (BPOOL.getLiquidity(Range.FLOOR) + BPOOL.getLiquidity(Range.ANCHOR)) * 11 / 10
-        );
+        BPOOL.addLiquidityTo(Range.DISCOVERY, BPOOL.getLiquidity(Range.ANCHOR) * 11 / 10);
 
         //// Step 3: Verify Solvency ////
         uint256 totalCapacity = BPOOL.getPosition(Range.FLOOR).capacity
