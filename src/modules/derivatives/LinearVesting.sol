@@ -42,8 +42,7 @@ contract LinearVesting is DerivativeModule, ILinearVesting, LinearVestingCard {
 
     // ========== MODULE SETUP ========== //
 
-    constructor(address parent_) Module(parent_) {
-        // LinearVestingCard()
+    constructor(address parent_) Module(parent_) LinearVestingCard() {
         // Deploy the clone implementation
         _IMPLEMENTATION = address(new SoulboundCloneERC20());
     }
@@ -712,14 +711,16 @@ contract LinearVesting is DerivativeModule, ILinearVesting, LinearVestingCard {
         });
 
         // Return the token URI
+        // solhint-disable quotes
         return string.concat(
             '{"name": "',
             name(tokenId_),
             '", "description": "Linear Vesting ',
             _symbol,
             '", "image": "data:image/svg+xml;utf8,',
-            render(info),
+            _render(info),
             '"}'
         );
+        // solhint-enable quotes
     }
 }
