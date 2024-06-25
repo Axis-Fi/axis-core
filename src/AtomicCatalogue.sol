@@ -31,7 +31,7 @@ contract AtomicCatalogue is IAtomicCatalogue, Catalogue {
             IFeeManager(auctionHouse).calculateQuoteFees(protocolFee, referrerFee, true, amount_);
 
         // Get payout from module
-        return module.payoutFor(lotId_, amount_ - uint96(toProtocol) - uint96(toReferrer));
+        return module.payoutFor(lotId_, amount_ - toProtocol - toReferrer);
     }
 
     /// @inheritdoc IAtomicCatalogue
