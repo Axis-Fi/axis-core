@@ -90,10 +90,10 @@ abstract contract FeeManager is IFeeManager, ReentrancyGuard {
         external
         view
         override
-        returns (uint48 protocol, uint48 referrer, uint48 maxCuratorFee)
+        returns (uint48 protocol, uint48 maxReferrerFee, uint48 maxCuratorFee)
     {
         Fees storage fee = fees[auctionType_];
-        return (fee.protocol, fee.referrer, fee.maxCuratorFee);
+        return (fee.protocol, fee.maxReferrerFee, fee.maxCuratorFee);
     }
 
     /// @inheritdoc IFeeManager

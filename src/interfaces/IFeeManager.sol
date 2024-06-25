@@ -20,12 +20,12 @@ interface IFeeManager {
     ///             a theoretical edge case, as the amount would not be practical.
     ///
     /// @param      protocol        Fee charged by the protocol
-    /// @param      referrer        Fee charged by the referrer
+    /// @param      maxReferrerFee  Maximum fee that can be paid to a referrer
     /// @param      maxCuratorFee   Maximum fee that a curator can charge
     /// @param      curator         Fee charged by a specific curator
     struct Fees {
         uint48 protocol;
-        uint48 referrer;
+        uint48 maxReferrerFee;
         uint48 maxCuratorFee;
         mapping(address => uint48) curator;
     }
@@ -33,7 +33,7 @@ interface IFeeManager {
     /// @notice     Defines the type of fee to set
     enum FeeType {
         Protocol,
-        Referrer,
+        MaxReferrer,
         MaxCurator
     }
 
@@ -64,14 +64,14 @@ interface IFeeManager {
 
     /// @notice     Gets the fees for a specific auction type
     ///
-    /// @param      auctionType_  Auction type to get fees for
-    /// @return     protocol      Fee charged by the protocol
-    /// @return     referrer      Fee charged by the referrer
-    /// @return     maxCuratorFee Maximum fee that a curator can charge
+    /// @param      auctionType_   Auction type to get fees for
+    /// @return     protocol       Fee charged by the protocol
+    /// @return     maxReferrerFee  Maximum fee that can be paid to a referrer
+    /// @return     maxCuratorFee  Maximum fee that a curator can charge
     function getFees(Keycode auctionType_)
         external
         view
-        returns (uint48 protocol, uint48 referrer, uint48 maxCuratorFee);
+        returns (uint48 protocol, uint48 maxReferrerFee, uint48 maxCuratorFee);
 
     /// @notice     Gets the fee for a specific auction type and curator
     ///
