@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Usage:
-# ./deployTokens.sh --seller <seller> --buyer <buyer> --envFile <.env> --broadcast <false> --verify <false>
+# ./deployTokens.sh --seller <seller> --buyer <buyer> --envFile <.env> --broadcast <false> --verify <false> --resume <false>
 
 # Iterate through named arguments
 # Source: https://unix.stackexchange.com/a/388038
@@ -26,6 +26,7 @@ set +a  # Disable automatic export
 # Apply defaults to command-line arguments
 BROADCAST=${broadcast:-false}
 VERIFY=${verify:-false}
+RESUME=${resume:-false}
 
 # Check that the seller is defined and is an address
 if [[ ! "$seller" =~ ^0x[a-fA-F0-9]{40}$ ]]
@@ -87,8 +88,18 @@ else
   echo "Verification: disabled"
 fi
 
+# Set RESUME_FLAG based on RESUME
+RESUME_FLAG=""
+if [ "$RESUME" = "true" ] || [ "$RESUME" = "TRUE" ]; then
+  RESUME_FLAG="--resume"
+  echo "Resume: enabled"
+else
+  echo "Resume: disabled"
+fi
+
 # Create auction
 forge script ./script/ops/test/TestData.s.sol:TestData --sig "deployTestTokens(address,address)()" $seller $buyer \
 --rpc-url $RPC_URL --private-key $DEPLOYER_PRIVATE_KEY --froms $DEPLOYER_ADDRESS --slow -vvv \
 $BROADCAST_FLAG \
-$VERIFY_FLAG
+$VERIFY_FLAG \
+$RESUME_FLAG
