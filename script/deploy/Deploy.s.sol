@@ -30,6 +30,14 @@ import {CappedMerkleAllowlist} from "src/callbacks/allowlists/CappedMerkleAllowl
 import {MerkleAllowlist} from "src/callbacks/allowlists/MerkleAllowlist.sol";
 import {TokenAllowlist} from "src/callbacks/allowlists/TokenAllowlist.sol";
 import {AllocatedMerkleAllowlist} from "src/callbacks/allowlists/AllocatedMerkleAllowlist.sol";
+import {BALwithAllocatedAllowlist} from
+    "src/callbacks/liquidity/BaselineV2/BALwithAllocatedAllowlist.sol";
+
+// Baseline
+import {
+    Kernel as BaselineKernel,
+    Actions as BaselineKernelActions
+} from "src/callbacks/liquidity/BaselineV2/lib/Kernel.sol";
 
 /// @notice Declarative deployment script that reads a deployment sequence (with constructor args)
 ///         and a configured environment file to deploy and install contracts in the Axis protocol.
@@ -1010,6 +1018,60 @@ contract Deploy is Script, WithEnvironment, WithSalts {
         );
 
         return (address(cbBatchAllocatedMerkleAllowlist), _PREFIX_AXIS);
+    }
+
+    function deployBatchBaselineAllocatedAllowlist(bytes memory args_)
+        public
+        returns (address, string memory)
+    {
+        // Decode arguments
+        (address baselineKernel, address baselineOwner, address reserveToken) =
+            abi.decode(args_, (address, address, address));
+
+        // Validate arguments
+        require(baselineKernel != address(0), "baselineKernel not set");
+        require(baselineOwner != address(0), "baselineOwner not set");
+        require(reserveToken != address(0), "reserveToken not set");
+
+        console2.log("");
+        console2.log("Deploying BaselineAllocatedAllowlist (Batch)");
+        console2.log("    Kernel", baselineKernel);
+        console2.log("    Owner", baselineOwner);
+        console2.log("    ReserveToken", reserveToken);
+
+        address batchAuctionHouse = _getAddressNotZero("axis.BatchAuctionHouse");
+
+        // Get the salt
+        // This supports an arbitrary salt key, which can be set in the deployment sequence
+        // This is required as each callback is single-use
+        bytes32 salt_ = _getSalt(
+            "BaselineAllocatedAllowlist",
+            type(BALwithAllocatedAllowlist).creationCode,
+            abi.encode(batchAuctionHouse, baselineKernel, reserveToken, baselineOwner)
+        );
+
+        // Revert if the salt is not set
+        require(salt_ != bytes32(0), "Salt not set");
+
+        // Deploy the module
+        console2.log("    salt:", vm.toString(salt_));
+
+        vm.broadcast();
+        BALwithAllocatedAllowlist batchAllowlist = new BALwithAllocatedAllowlist{salt: salt_}(
+            batchAuctionHouse, baselineKernel, reserveToken, baselineOwner
+        );
+        console2.log("");
+        console2.log("    BaselineAllocatedAllowlist (Batch) deployed at:", address(batchAllowlist));
+
+        // Install the module as a policy in the Baseline kernel
+        vm.broadcast();
+        BaselineKernel(baselineKernel).executeAction(
+            BaselineKernelActions.ActivatePolicy, address(batchAllowlist)
+        );
+
+        console2.log("    Policy activated in Baseline Kernel");
+
+        return (address(batchAllowlist), _PREFIX_AXIS);
     }
 
     // ========== HELPER FUNCTIONS ========== //

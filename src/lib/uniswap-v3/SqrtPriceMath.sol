@@ -1,11 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
-import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
-import {FullMath} from "uniswap-v3-core/libraries/FullMath.sol";
+import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
 
 /// @notice     Library to calculate sqrtPriceX96 from token amounts
 library SqrtPriceMath {
+    uint160 internal constant MIN_SQRT_RATIO = 4_295_128_739;
+    uint160 internal constant MAX_SQRT_RATIO =
+        1_461_446_703_485_210_103_287_273_052_203_988_822_378_723_970_342;
+
     /// @notice     Calculates the sqrtPriceX96 from the token amounts
     /// @dev        The order of the tokens is irrelevant, as the values will be re-ordered.
     ///
@@ -27,11 +30,13 @@ library SqrtPriceMath {
         // SqrtPriceX96 = sqrt(amount1/amount0) * 2^96
         //              = sqrt(amount1 * 2^192 / amount0)
 
-        // Use Uniswap's FullMath.mulDiv to prevent a phantom overflow
-        uint256 ratioX192 = FullMath.mulDiv(amount1, 2 ** 192, amount0);
+        // Use fullMulDiv to prevent a phantom overflow
+        // If amount1 is too high, this will revert
+        uint256 ratioX192 = FixedPointMathLib.fullMulDiv(amount1, 2 ** 192, amount0);
         uint256 sqrtPriceX96Temp = FixedPointMathLib.sqrt(ratioX192);
 
-        if (sqrtPriceX96Temp > type(uint160).max) revert("overflow");
+        if (sqrtPriceX96Temp < MIN_SQRT_RATIO) revert("underflow");
+        if (sqrtPriceX96Temp > MAX_SQRT_RATIO) revert("overflow");
 
         sqrtPriceX96 = uint160(sqrtPriceX96Temp);
     }

@@ -13,9 +13,9 @@ import {toKeycode} from "src/modules/Modules.sol";
 import {ICallback} from "src/interfaces/ICallback.sol";
 import {IFixedPriceBatch} from "src/interfaces/modules/auctions/IFixedPriceBatch.sol";
 import {IAuction} from "src/interfaces/modules/IAuction.sol";
-// import {BaselineAxisLaunch} from "src/callbacks/liquidity/BaselineV2/BaselineAxisLaunch.sol";
-// import {BALwithAllocatedAllowlist} from
-//     "src/callbacks/liquidity/BaselineV2/BALwithAllocatedAllowlist.sol";
+import {BaselineAxisLaunch} from "src/callbacks/liquidity/BaselineV2/BaselineAxisLaunch.sol";
+import {BALwithAllocatedAllowlist} from
+    "src/callbacks/liquidity/BaselineV2/BALwithAllocatedAllowlist.sol";
 
 // Generic contracts
 import {ERC20} from "lib/solmate/src/tokens/ERC20.sol";
@@ -51,12 +51,14 @@ contract TestData is Script, WithEnvironment {
         routingParams.callbacks = ICallback(callback_);
         if (callback_ != address(0)) {
             console2.log("Setting callback parameters");
-            // routingParams.callbackData = abi.encode(
-            //     BaselineAxisLaunch.CreateData({
-            //         discoveryTickWidth: 100,
-            //         allowlistParams: abi.encode(merkleRoot)
-            //     })
-            // );
+            routingParams.callbackData = abi.encode(
+                BaselineAxisLaunch.CreateData({
+                    floorReservesPercent: 50_000, // 50%
+                    anchorTickWidth: 3,
+                    discoveryTickWidth: 100,
+                    allowlistParams: abi.encode(merkleRoot)
+                })
+            );
 
             // No spending approval necessary, since the callback will handle it
         } else {

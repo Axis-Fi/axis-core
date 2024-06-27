@@ -16,9 +16,12 @@ import {AllocatedMerkleAllowlist} from "src/callbacks/allowlists/AllocatedMerkle
 import {TokenAllowlist} from "src/callbacks/allowlists/TokenAllowlist.sol";
 import {UniswapV2DirectToLiquidity} from "src/callbacks/liquidity/UniswapV2DTL.sol";
 import {UniswapV3DirectToLiquidity} from "src/callbacks/liquidity/UniswapV3DTL.sol";
-// import {BaselineAxisLaunch} from "src/callbacks/liquidity/BaselineV2/BaselineAxisLaunch.sol";
-// import {BALwithAllocatedAllowlist} from
-//     "src/callbacks/liquidity/BaselineV2/BALwithAllocatedAllowlist.sol";
+import {BaselineAxisLaunch} from "src/callbacks/liquidity/BaselineV2/BaselineAxisLaunch.sol";
+import {BALwithAllocatedAllowlist} from
+    "src/callbacks/liquidity/BaselineV2/BALwithAllocatedAllowlist.sol";
+import {BALwithAllowlist} from "src/callbacks/liquidity/BaselineV2/BALwithAllowlist.sol";
+import {BALwithCappedAllowlist} from "src/callbacks/liquidity/BaselineV2/BALwithCappedAllowlist.sol";
+import {BALwithTokenAllowlist} from "src/callbacks/liquidity/BaselineV2/BALwithTokenAllowlist.sol";
 import {UniswapV3Factory} from "test/lib/uniswap-v3/UniswapV3Factory.sol";
 import {GUniFactory} from "lib/g-uni-v1-core/contracts/GUniFactory.sol";
 import {UniswapV2Router02} from "uniswap-v2-periphery/UniswapV2Router02.sol";
@@ -564,43 +567,72 @@ contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts, TestConst
         console2.log("UniswapV3Factory address: ", address(uniswapV3Factory));
     }
 
-    // function generateBaselineQuoteToken() public {
-    //     // Generate a salt for a MockERC20 quote token
-    //     bytes memory qtArgs = abi.encode("Quote Token", "QT", 18);
-    //     bytes memory qtContractCode = type(MockERC20).creationCode;
-    //     (string memory qtBytecodePath, bytes32 qtBytecodeHash) =
-    //         _writeBytecode("QuoteToken", qtContractCode, qtArgs);
-    //     _setTestSaltWithDeployer(
-    //         qtBytecodePath, "AA", "QuoteToken", qtBytecodeHash, _CREATE2_DEPLOYER
-    //     );
+    function generateBaselineQuoteToken() public {
+        // Generate a salt for a MockERC20 quote token
+        bytes memory qtArgs = abi.encode("Quote Token", "QT", 18);
+        bytes memory qtContractCode = type(MockERC20).creationCode;
+        (string memory qtBytecodePath, bytes32 qtBytecodeHash) =
+            _writeBytecode("QuoteToken", qtContractCode, qtArgs);
+        _setTestSaltWithDeployer(
+            qtBytecodePath, "AA", "QuoteToken", qtBytecodeHash, _CREATE2_DEPLOYER
+        );
 
-    //     // Fetch the salt that was set
-    //     bytes32 quoteTokenSalt = _getSalt("Test_QuoteToken", qtContractCode, qtArgs);
+        // Fetch the salt that was set
+        bytes32 quoteTokenSalt = _getSalt("Test_QuoteToken", qtContractCode, qtArgs);
 
-    //     // Get the address of the quote token
-    //     // Update the `_BASELINE_QUOTE_TOKEN` constants with this value
-    //     vm.prank(_CREATE2_DEPLOYER);
-    //     MockERC20 quoteToken = new MockERC20{salt: quoteTokenSalt}("Quote Token", "QT", 18);
-    //     console2.log("Quote Token address: ", address(quoteToken));
-    // }
+        // Get the address of the quote token
+        // Update the `_BASELINE_QUOTE_TOKEN` constants with this value
+        vm.prank(_CREATE2_DEPLOYER);
+        MockERC20 quoteToken = new MockERC20{salt: quoteTokenSalt}("Quote Token", "QT", 18);
+        console2.log("Quote Token address: ", address(quoteToken));
+    }
 
-    // function generateBaselineAxisLaunch() public {
-    //     // Get the salt
-    //     bytes memory callbackArgs =
-    //         abi.encode(_AUCTION_HOUSE, _BASELINE_KERNEL, _BASELINE_QUOTE_TOKEN, _OWNER);
-    //     (string memory callbackBytecodePath, bytes32 callbackBytecodeHash) = _writeBytecode(
-    //         "BaselineAxisLaunch", type(BaselineAxisLaunch).creationCode, callbackArgs
-    //     );
-    //     _setTestSalt(callbackBytecodePath, "EF", "BaselineAxisLaunch", callbackBytecodeHash);
-    // }
+    function generateBaselineAxisLaunch() public {
+        // Get the salt
+        bytes memory callbackArgs =
+            abi.encode(_AUCTION_HOUSE, _BASELINE_KERNEL, _BASELINE_QUOTE_TOKEN, _OWNER);
+        (string memory callbackBytecodePath, bytes32 callbackBytecodeHash) = _writeBytecode(
+            "BaselineAxisLaunch", type(BaselineAxisLaunch).creationCode, callbackArgs
+        );
+        _setTestSalt(callbackBytecodePath, "EF", "BaselineAxisLaunch", callbackBytecodeHash);
+    }
 
-    // function generateBaselineAllocatedAllowlist() public {
-    //     // Get the salt
-    //     bytes memory callbackArgs =
-    //         abi.encode(_AUCTION_HOUSE, _BASELINE_KERNEL, _BASELINE_QUOTE_TOKEN, _OWNER);
-    //     (string memory callbackBytecodePath, bytes32 callbackBytecodeHash) = _writeBytecode(
-    //         "BaselineAllocatedAllowlist", type(BALwithAllocatedAllowlist).creationCode, callbackArgs
-    //     );
-    //     _setTestSalt(callbackBytecodePath, "EF", "BaselineAllocatedAllowlist", callbackBytecodeHash);
-    // }
+    function generateBaselineAllocatedAllowlist() public {
+        // Get the salt
+        bytes memory callbackArgs =
+            abi.encode(_AUCTION_HOUSE, _BASELINE_KERNEL, _BASELINE_QUOTE_TOKEN, _OWNER);
+        (string memory callbackBytecodePath, bytes32 callbackBytecodeHash) = _writeBytecode(
+            "BaselineAllocatedAllowlist", type(BALwithAllocatedAllowlist).creationCode, callbackArgs
+        );
+        _setTestSalt(callbackBytecodePath, "EF", "BaselineAllocatedAllowlist", callbackBytecodeHash);
+    }
+
+    function generateBaselineAllowlist() public {
+        // Get the salt
+        bytes memory callbackArgs =
+            abi.encode(_AUCTION_HOUSE, _BASELINE_KERNEL, _BASELINE_QUOTE_TOKEN, _OWNER);
+        (string memory callbackBytecodePath, bytes32 callbackBytecodeHash) =
+            _writeBytecode("BaselineAllowlist", type(BALwithAllowlist).creationCode, callbackArgs);
+        _setTestSalt(callbackBytecodePath, "EF", "BaselineAllowlist", callbackBytecodeHash);
+    }
+
+    function generateBaselineCappedAllowlist() public {
+        // Get the salt
+        bytes memory callbackArgs =
+            abi.encode(_AUCTION_HOUSE, _BASELINE_KERNEL, _BASELINE_QUOTE_TOKEN, _OWNER);
+        (string memory callbackBytecodePath, bytes32 callbackBytecodeHash) = _writeBytecode(
+            "BaselineCappedAllowlist", type(BALwithCappedAllowlist).creationCode, callbackArgs
+        );
+        _setTestSalt(callbackBytecodePath, "EF", "BaselineCappedAllowlist", callbackBytecodeHash);
+    }
+
+    function generateBaselineTokenAllowlist() public {
+        // Get the salt
+        bytes memory callbackArgs =
+            abi.encode(_AUCTION_HOUSE, _BASELINE_KERNEL, _BASELINE_QUOTE_TOKEN, _OWNER);
+        (string memory callbackBytecodePath, bytes32 callbackBytecodeHash) = _writeBytecode(
+            "BaselineTokenAllowlist", type(BALwithTokenAllowlist).creationCode, callbackArgs
+        );
+        _setTestSalt(callbackBytecodePath, "EF", "BaselineTokenAllowlist", callbackBytecodeHash);
+    }
 }
