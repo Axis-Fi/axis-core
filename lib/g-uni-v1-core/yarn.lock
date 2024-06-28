@@ -5120,10 +5120,10 @@ har-validator@~5.1.3:
     ajv "^6.12.3"
     har-schema "^2.0.0"
 
-hardhat-deploy@0.9.14:
-  version "0.9.14"
-  resolved "https://registry.yarnpkg.com/hardhat-deploy/-/hardhat-deploy-0.9.14.tgz#88c07497efd14cfca6f9fed1574f0bad65f0a8a0"
-  integrity sha512-mCwXeXdqtrQN8dL1gOnoGUh0z9Jylfsh56UNVZJC0c8AhjlwjLPgGE3pzNmMuyy88pj9OX4qo53X57bW2W7NJQ==
+hardhat-deploy@0.10.0:
+  version "0.10.0"
+  resolved "https://registry.yarnpkg.com/hardhat-deploy/-/hardhat-deploy-0.10.0.tgz#6b98790010dd3f1f362c4ad45207e43c8511eadd"
+  integrity sha512-C6p0IvdK2CK0fIsdUK0dM+nuhCmDvuL8fi19RUPeSMMfl7BityJArAzVbJt5f68VJ3CZRMa5WV7aSc8M8sNHvg==
   dependencies:
     "@ethersproject/abi" "^5.4.0"
     "@ethersproject/abstract-signer" "^5.4.1"

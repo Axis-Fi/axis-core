@@ -2,6 +2,7 @@ import { deployments, getNamedAccounts } from "hardhat";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { DeployFunction } from "hardhat-deploy/types";
 import { getAddresses } from "../src/addresses";
+import { isZeroAddress } from "./address";
 
 const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   if (
@@ -19,10 +20,20 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   const { deployer } = await getNamedAccounts();
   const addresses = getAddresses(hre.network.name);
 
-  await deploy("GUniPool", {
+  // Validate input addresses
+  if (isZeroAddress(addresses.Gelato)) {
+    throw new Error("Gelato address not set");
+  }
+  if (isZeroAddress(deployer)) {
+    throw new Error("Deployer address not set");
+  }
+
+  const result = await deploy("GUniPool", {
     from: deployer,
     args: [addresses.Gelato],
   });
+
+  console.log("GUniPool deployed to:", result.address);
 };
 
 func.skip = async (hre: HardhatRuntimeEnvironment) => {
