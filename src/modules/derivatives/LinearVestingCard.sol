@@ -3,8 +3,7 @@ pragma solidity 0.8.19;
 
 import {svg} from "src/lib/SVG.sol";
 import {Timestamp} from "src/lib/Timestamp.sol";
-// import {LibString} from "lib/solady/src/utils/LibString.sol";
-import {Strings as LibString} from "lib/openzeppelin-contracts/contracts/utils/Strings.sol";
+import {Strings} from "lib/openzeppelin-contracts/contracts/utils/Strings.sol";
 
 contract LinearVestingCard {
     // solhint-disable quotes
@@ -13,9 +12,11 @@ contract LinearVestingCard {
 
     struct Info {
         uint256 tokenId;
-        string baseAssetSymbol;
+        address baseToken;
+        string baseTokenSymbol;
         uint48 start;
         uint48 expiry;
+        uint256 supply;
     }
 
     // ========== STATE VARIABLES ========== //
@@ -36,7 +37,32 @@ contract LinearVestingCard {
     // ========== CONSTRUCTOR ========== //
 
     constructor() {
-        _addrString = LibString.toHexString(address(this));
+        _addrString = Strings.toHexString(address(this));
+    }
+
+    // ========== ATTRIBUTES ========== //
+
+    function _attributes(Info memory tokenInfo) internal view returns (string memory) {
+        return string.concat(
+            '[{"trait_type":"Token ID","value":"',
+            Strings.toString(tokenInfo.tokenId),
+            '"},',
+            '{"trait_type":"Base Token","value":"',
+            Strings.toHexString(tokenInfo.baseToken),
+            '"},',
+            '{"trait_type":"Base Token Symbol", "value":"',
+            tokenInfo.baseTokenSymbol,
+            '"},',
+            '{"trait_type":"Vesting Start","display_type":"date","value":"',
+            Strings.toString(tokenInfo.start),
+            '"},',
+            '{"trait_type":"Vesting End","display_type":"date","value":"',
+            Strings.toString(tokenInfo.expiry),
+            '"},',
+            '{"trait_type":"Total Supply","value":"',
+            Strings.toString(tokenInfo.supply),
+            '"}]'
+        );
     }
 
     // ========== RENDERER ========== //
@@ -60,7 +86,7 @@ contract LinearVestingCard {
                 'x="8" y="8" width="274" height="484" fill="none" stroke="url(#fullGradient)" stroke-width="2" rx="20" ry="20"',
                 _NULL
             ),
-            _title(tokenInfo.baseAssetSymbol),
+            _title(tokenInfo.baseTokenSymbol),
             _progressBar(uint256(tokenInfo.start), uint256(tokenInfo.expiry)),
             _progressLabels(tokenInfo.start, tokenInfo.expiry),
             _logo(),
@@ -99,7 +125,7 @@ contract LinearVestingCard {
             svg.text(string.concat('x="145" y="460" font-size="10" ', _TEXT_STYLE), _addrString),
             svg.text(
                 string.concat('x="145" y="480" font-size="10" ', _TEXT_STYLE),
-                string.concat("ID: ", LibString.toString(tokenId))
+                string.concat("ID: ", Strings.toString(tokenId))
             )
         );
     }
@@ -137,7 +163,7 @@ contract LinearVestingCard {
         }
 
         uint256 len = (168 * progress) / 100;
-        string memory current = LibString.toString(62 + len);
+        string memory current = Strings.toString(62 + len);
 
         string memory progressLine = svg.line(
             string.concat(
@@ -179,9 +205,9 @@ contract LinearVestingCard {
                 "animate",
                 string.concat(
                     'attributeName="x" values="62;',
-                    LibString.toString(62 + len - 16),
+                    Strings.toString(62 + len - 16),
                     ';" dur="',
-                    LibString.toString(((5 * len) / 168) + 1),
+                    Strings.toString(((5 * len) / 168) + 1),
                     's" repeatCount="indefinite"'
                 ),
                 _NULL
@@ -200,33 +226,19 @@ contract LinearVestingCard {
 
     // ========== COLOR GRADIENTS ========== //
 
-    function _fullGradientStops() internal view returns (string memory) {
+    function _fullGradientStops() internal pure returns (string memory) {
         return string.concat(
-            '<stop offset="2" stop-color="',
-            _COLOR_BLUE,
-            '"/>',
-            '<stop offset="10" stop-color="',
-            _COLOR_LIGHT_BLUE,
-            '"/>',
-            '<stop offset="32" stop-color="',
-            _COLOR_GREEN,
-            '"/>',
-            '<stop offset="49" stop-color="',
-            _COLOR_YELLOW_GREEN,
-            '"/>',
-            '<stop offset="52" stop-color="',
-            _COLOR_YELLOW,
-            '"/>',
-            '<stop offset="79" stop-color="',
-            _COLOR_ORANGE,
-            '"/>',
-            '<stop offset="100" stop-color="',
-            _COLOR_RED,
-            '"/>'
+            svg.gradientStop(2, _COLOR_BLUE, _NULL),
+            svg.gradientStop(10, _COLOR_LIGHT_BLUE, _NULL),
+            svg.gradientStop(32, _COLOR_GREEN, _NULL),
+            svg.gradientStop(49, _COLOR_YELLOW_GREEN, _NULL),
+            svg.gradientStop(52, _COLOR_YELLOW, _NULL),
+            svg.gradientStop(79, _COLOR_ORANGE, _NULL),
+            svg.gradientStop(100, _COLOR_RED, _NULL)
         );
     }
 
-    function _fullGradientReverseStops() internal view returns (string memory) {
+    function _fullGradientReverseStops() internal pure returns (string memory) {
         return string.concat(
             svg.gradientStop(2, _COLOR_RED, _NULL),
             svg.gradientStop(21, _COLOR_ORANGE, _NULL),
@@ -236,37 +248,14 @@ contract LinearVestingCard {
             svg.gradientStop(90, _COLOR_LIGHT_BLUE, _NULL),
             svg.gradientStop(100, _COLOR_BLUE, _NULL)
         );
-        return string.concat(
-            '<stop offset="2" stop-color="',
-            _COLOR_RED,
-            '"/>',
-            '<stop offset="21" stop-color="',
-            _COLOR_ORANGE,
-            '"/>',
-            '<stop offset="48" stop-color="',
-            _COLOR_YELLOW,
-            '"/>',
-            '<stop offset="51" stop-color="',
-            _COLOR_YELLOW_GREEN,
-            '"/>',
-            '<stop offset="68" stop-color="',
-            _COLOR_GREEN,
-            '"/>',
-            '<stop offset="90" stop-color="',
-            _COLOR_LIGHT_BLUE,
-            '"/>',
-            '<stop offset="100" stop-color="',
-            _COLOR_BLUE,
-            '"/>'
-        );
     }
 
-    function _fullGradient() internal view returns (string memory) {
+    function _fullGradient() internal pure returns (string memory) {
         return
             svg.linearGradient(string.concat(svg.prop("id", "fullGradient")), _fullGradientStops());
     }
 
-    function _fullGradient90() internal view returns (string memory) {
+    function _fullGradient90() internal pure returns (string memory) {
         return svg.linearGradient(
             string.concat(
                 svg.prop("id", "fullGradient90"), svg.prop("gradientTransform", "rotate(90)")
@@ -275,7 +264,7 @@ contract LinearVestingCard {
         );
     }
 
-    function _fullGradientReverse90() internal view returns (string memory) {
+    function _fullGradientReverse90() internal pure returns (string memory) {
         return svg.linearGradient(
             string.concat(
                 svg.prop("id", "fullGradientReverse90"), svg.prop("gradientTransform", "rotate(90)")
@@ -284,21 +273,15 @@ contract LinearVestingCard {
         );
     }
 
-    function _blueGreenGradient() internal view returns (string memory) {
+    function _blueGreenGradient() internal pure returns (string memory) {
         return svg.linearGradient(
             string.concat(
                 svg.prop("id", "blueGreenGradient"), svg.prop("gradientUnits", "userSpaceOnUse")
             ),
             string.concat(
-                '<stop offset="20" stop-color="',
-                _COLOR_BLUE,
-                '"/>',
-                '<stop offset="40" stop-color="',
-                _COLOR_LIGHT_BLUE,
-                '"/>',
-                '<stop offset="60" stop-color="',
-                _COLOR_GREEN,
-                '"/>'
+                svg.gradientStop(20, _COLOR_BLUE, _NULL),
+                svg.gradientStop(40, _COLOR_LIGHT_BLUE, _NULL),
+                svg.gradientStop(60, _COLOR_GREEN, _NULL)
             )
         );
     }
@@ -325,7 +308,8 @@ contract LinearVestingCard {
     //
     // function example() external view returns (string memory) {
     //     Info memory info = Info({
-    //         baseAssetSymbol: "XYZ",
+    //         baseToken: address(0x1234567890123456789012345678901234567890),
+    //         baseTokenSymbol: "XYZ",
     //         tokenId: 123_456,
     //         start: 1_717_200_000, // 2024-06-01
     //         expiry: 1_725_148_800 // 2024-09-01
