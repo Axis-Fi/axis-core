@@ -36,7 +36,7 @@ contract AuctionTest is Test, Permit2User {
     uint8 internal constant _QUOTE_TOKEN_DECIMALS = 18;
     uint8 internal constant _BASE_TOKEN_DECIMALS = 18;
 
-    uint48 internal constant _REFERRER_FEE = 1_00;
+    uint48 internal constant _REFERRER_FEE = 100;
 
     function setUp() external {
         // Ensure the block timestamp is a sane value
@@ -51,7 +51,7 @@ contract AuctionTest is Test, Permit2User {
 
         _auctionHouse.installModule(_mockAuctionModule);
 
-        _auctionHouse.setFee(_mockAuctionModuleKeycode, IFeeManager.FeeType.MaxReferrer, 10_00);
+        _auctionHouse.setFee(_mockAuctionModuleKeycode, IFeeManager.FeeType.MaxReferrer, 1000);
 
         _auctionParams = IAuction.AuctionParams({
             start: uint48(block.timestamp),

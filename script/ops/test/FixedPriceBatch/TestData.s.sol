@@ -68,7 +68,7 @@ contract TestData is Script, WithEnvironment {
 
         IFixedPriceBatch.AuctionDataParams memory auctionDataParams;
         auctionDataParams.price = 1e18; // 1 quote tokens per base token
-        auctionDataParams.minFillPercent = uint24(10_00); // 10%
+        auctionDataParams.minFillPercent = uint24(1000); // 10%
         bytes memory implParams = abi.encode(auctionDataParams);
 
         uint48 duration = 86_400; // 1 day

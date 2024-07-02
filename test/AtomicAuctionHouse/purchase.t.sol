@@ -11,7 +11,7 @@ import {AtomicAuctionHouseTest} from "test/AtomicAuctionHouse/AuctionHouseTest.s
 
 contract AtomicPurchaseTest is AtomicAuctionHouseTest {
     uint256 internal constant _AMOUNT_IN = 2e18;
-    uint256 internal constant _PAYOUT_MULTIPLIER = 50_00; // 50%
+    uint256 internal constant _PAYOUT_MULTIPLIER = 5000; // 50%
 
     address internal constant _SENDER = address(0x26);
 
@@ -314,7 +314,7 @@ contract AtomicPurchaseTest is AtomicAuctionHouseTest {
         givenUserHasQuoteTokenBalance(_AMOUNT_IN)
         givenUserHasQuoteTokenAllowance(_AMOUNT_IN)
         givenFeesAreCalculated(_AMOUNT_IN)
-        whenPayoutMultiplierIsSet(90_00)
+        whenPayoutMultiplierIsSet(9000)
         givenSellerHasBaseTokenBalance(_amountOut)
         givenSellerHasBaseTokenAllowance(_amountOut)
     {

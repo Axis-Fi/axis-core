@@ -10,7 +10,7 @@ import {AtomicAuctionHouseTest} from "test/AtomicAuctionHouse/AuctionHouseTest.s
 contract AtomicCancelAuctionTest is AtomicAuctionHouseTest {
     uint256 internal constant _PURCHASE_AMOUNT = 2e18;
     uint256 internal constant _PURCHASE_AMOUNT_OUT = 1e18;
-    uint32 internal constant _PAYOUT_MULTIPLIER = 50_00; // 50%
+    uint32 internal constant _PAYOUT_MULTIPLIER = 5000; // 50%
 
     bytes internal _purchaseAuctionData = abi.encode("");
 

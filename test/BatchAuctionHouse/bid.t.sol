@@ -371,7 +371,7 @@ contract BatchBidTest is BatchAuctionHouseTest {
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
         givenMaxReferrerFeeIsSet
-        givenReferrerFee(1_00)
+        givenReferrerFee(100)
         givenLotIsCreated
         givenLotHasStarted
         givenUserHasQuoteTokenBalance(_BID_AMOUNT)

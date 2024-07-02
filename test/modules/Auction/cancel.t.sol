@@ -34,7 +34,7 @@ contract CancelTest is Test, Permit2User {
     address internal constant _SELLER = address(0x1);
     address internal constant _PROTOCOL = address(0x2);
     uint48 internal constant _DURATION = 1 days;
-    uint48 internal constant _REFERRER_FEE = 1_00;
+    uint48 internal constant _REFERRER_FEE = 100;
 
     string internal _infoHash = "";
 
@@ -48,7 +48,7 @@ contract CancelTest is Test, Permit2User {
 
         _auctionHouse.installModule(_mockAuctionModule);
 
-        _auctionHouse.setFee(_mockAuctionModuleKeycode, IFeeManager.FeeType.MaxReferrer, 10_00);
+        _auctionHouse.setFee(_mockAuctionModuleKeycode, IFeeManager.FeeType.MaxReferrer, 1000);
 
         _auctionParams = IAuction.AuctionParams({
             start: uint48(block.timestamp),

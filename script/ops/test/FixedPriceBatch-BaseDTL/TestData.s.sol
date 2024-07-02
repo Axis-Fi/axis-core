@@ -61,7 +61,7 @@ contract TestData is Script, WithEnvironment {
 
             routingParams.callbackData = abi.encode(
                 BaseDirectToLiquidity.OnCreateParams({
-                    proceedsUtilisationPercent: 50_00, // 50%
+                    proceedsUtilisationPercent: 5000, // 50%
                     vestingStart: 0,
                     vestingExpiry: 0,
                     recipient: msg.sender,
@@ -80,7 +80,7 @@ contract TestData is Script, WithEnvironment {
 
         IFixedPriceBatch.AuctionDataParams memory auctionDataParams;
         auctionDataParams.price = 2e18; // 2 quote tokens per base token
-        auctionDataParams.minFillPercent = uint24(10_00); // 10%
+        auctionDataParams.minFillPercent = uint24(1000); // 10%
         bytes memory implParams = abi.encode(auctionDataParams);
 
         uint48 duration = 86_400; // 1 day

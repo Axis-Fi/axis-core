@@ -111,8 +111,9 @@ contract FpsCreateAuctionTest is FpsTest {
 
     function test_capacityInQuote() public givenCapacityInQuote {
         // Calculate the expected value
-        uint256 expectedMaxPayoutInQuote =
-            Math.mulDivDown(_scaleQuoteTokenAmount(_LOT_CAPACITY), _fpaParams.maxPayoutPercent, 100e2);
+        uint256 expectedMaxPayoutInQuote = Math.mulDivDown(
+            _scaleQuoteTokenAmount(_LOT_CAPACITY), _fpaParams.maxPayoutPercent, 100e2
+        );
         uint256 expectedMaxPayout = Math.mulDivDown(
             expectedMaxPayoutInQuote, 10 ** _baseTokenDecimals, _scaleQuoteTokenAmount(_PRICE)
         );
@@ -139,8 +140,9 @@ contract FpsCreateAuctionTest is FpsTest {
         givenBaseTokenDecimals(13)
     {
         // Calculate the expected value
-        uint256 expectedMaxPayoutInQuote =
-            Math.mulDivDown(_scaleQuoteTokenAmount(_LOT_CAPACITY), _fpaParams.maxPayoutPercent, 100e2);
+        uint256 expectedMaxPayoutInQuote = Math.mulDivDown(
+            _scaleQuoteTokenAmount(_LOT_CAPACITY), _fpaParams.maxPayoutPercent, 100e2
+        );
         uint256 expectedMaxPayout = Math.mulDivDown(
             expectedMaxPayoutInQuote, 10 ** _baseTokenDecimals, _scaleQuoteTokenAmount(_PRICE)
         );
@@ -167,8 +169,9 @@ contract FpsCreateAuctionTest is FpsTest {
         givenBaseTokenDecimals(17)
     {
         // Calculate the expected value
-        uint256 expectedMaxPayoutInQuote =
-            Math.mulDivDown(_scaleQuoteTokenAmount(_LOT_CAPACITY), _fpaParams.maxPayoutPercent, 100e2);
+        uint256 expectedMaxPayoutInQuote = Math.mulDivDown(
+            _scaleQuoteTokenAmount(_LOT_CAPACITY), _fpaParams.maxPayoutPercent, 100e2
+        );
         uint256 expectedMaxPayout = Math.mulDivDown(
             expectedMaxPayoutInQuote, 10 ** _baseTokenDecimals, _scaleQuoteTokenAmount(_PRICE)
         );

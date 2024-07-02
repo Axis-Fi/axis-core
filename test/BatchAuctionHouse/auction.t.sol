@@ -235,7 +235,7 @@ contract BatchCreateAuctionTest is BatchAuctionHouseTest {
         whenBatchAuctionModuleIsInstalled
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
-        givenMaxReferrerFeeIsSet()
+        givenMaxReferrerFeeIsSet
         givenProtocolFeeIsSet
         givenReferrerFee(_REFERRER_MAX_FEE_PERCENT + 1)
     {
