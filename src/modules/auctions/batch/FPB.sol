@@ -57,7 +57,7 @@ contract FixedPriceBatch is BatchAuctionModule, IFixedPriceBatch {
     ///             This function reverts if:
     ///             - The parameters cannot be decoded into the correct format
     ///             - The price is zero
-    ///             - The minimum fill percentage is greater than 100%
+    ///             - The minimum fill percentage is greater than 
     ///
     /// @param      params_    ABI-encoded data of type `AuctionDataParams`
     function _auction(uint96 lotId_, Lot memory lot_, bytes memory params_) internal override {

@@ -41,7 +41,7 @@ abstract contract BaseDirectToLiquidity is BaseCallback {
     /// @param      recipient                   The recipient of the LP tokens
     /// @param      lotCapacity                 The capacity of the lot
     /// @param      lotCuratorPayout            The maximum curator payout of the lot
-    /// @param      proceedsUtilisationPercent  The percentage of the proceeds to deposit into the pool
+    /// @param      proceedsUtilisationPercent  The percentage of the proceeds to deposit into the pool, in basis points (1% = 100)
     /// @param      vestingStart                The start of the vesting period for the LP tokens (0 if disabled)
     /// @param      vestingExpiry               The end of the vesting period for the LP tokens (0 if disabled)
     /// @param      linearVestingModule         The LinearVesting module for the LP tokens (only set if linear vesting is enabled)
@@ -76,7 +76,7 @@ abstract contract BaseDirectToLiquidity is BaseCallback {
 
     // ========== STATE VARIABLES ========== //
 
-    uint24 public constant MAX_PERCENT = 1e5;
+    uint24 public constant ONE_HUNDRED_PERCENT = 100e2;
     bytes5 public constant LINEAR_VESTING_KEYCODE = 0x4c49560000; // "LIV"
 
     /// @notice     Maps the lot id to the DTL configuration
@@ -136,10 +136,10 @@ abstract contract BaseDirectToLiquidity is BaseCallback {
         // Proceeds utilisation
         if (
             params.proceedsUtilisationPercent == 0
-                || params.proceedsUtilisationPercent > MAX_PERCENT
+                || params.proceedsUtilisationPercent > ONE_HUNDRED_PERCENT
         ) {
             revert Callback_Params_PercentOutOfBounds(
-                params.proceedsUtilisationPercent, 1, MAX_PERCENT
+                params.proceedsUtilisationPercent, 1, ONE_HUNDRED_PERCENT
             );
         }
 
@@ -311,9 +311,9 @@ abstract contract BaseDirectToLiquidity is BaseCallback {
                 // 11 refund
                 // Utilisation = 1 - 11/110 = 90%
                 uint256 utilisationPercent =
-                    1e5 - refund_ * 1e5 / (config.lotCapacity + config.lotCuratorPayout);
+                    100e2 - refund_ * 100e2 / (config.lotCapacity + config.lotCuratorPayout);
 
-                capacityUtilised = (config.lotCapacity * utilisationPercent) / MAX_PERCENT;
+                capacityUtilised = (config.lotCapacity * utilisationPercent) / ONE_HUNDRED_PERCENT;
             }
 
             // Calculate the base tokens required to create the pool
@@ -409,18 +409,18 @@ abstract contract BaseDirectToLiquidity is BaseCallback {
         uint256 amount_,
         uint24 slippage_
     ) internal pure returns (uint256) {
-        if (slippage_ > MAX_PERCENT) {
-            revert Callback_Params_PercentOutOfBounds(slippage_, 0, MAX_PERCENT);
+        if (slippage_ > ONE_HUNDRED_PERCENT) {
+            revert Callback_Params_PercentOutOfBounds(slippage_, 0, ONE_HUNDRED_PERCENT);
         }
 
-        return (amount_ * (MAX_PERCENT - slippage_)) / MAX_PERCENT;
+        return (amount_ * (ONE_HUNDRED_PERCENT - slippage_)) / ONE_HUNDRED_PERCENT;
     }
 
     function _tokensRequiredForPool(
         uint256 amount_,
         uint24 proceedsUtilisationPercent_
     ) internal pure returns (uint256) {
-        return (amount_ * proceedsUtilisationPercent_) / MAX_PERCENT;
+        return (amount_ * proceedsUtilisationPercent_) / ONE_HUNDRED_PERCENT;
     }
 
     function _getLatestLinearVestingModule() internal view returns (address) {

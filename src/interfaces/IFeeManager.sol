@@ -16,7 +16,7 @@ interface IFeeManager {
     /// @notice     Protocol and referrer fees are taken in the quoteToken and accumulate in the contract. These are set by the protocol.
     /// @notice     Curator fees are taken in the payoutToken and are sent when the auction is settled / purchase is made. Curators can set these up to the configured maximum.
     /// @dev        There are some situations where the fees may round down to zero if quantity of baseToken
-    ///             is < 1e5 wei (can happen with big price differences on small decimal tokens). This is purely
+    ///             is < 100e2 wei (can happen with big price differences on small decimal tokens). This is purely
     ///             a theoretical edge case, as the amount would not be practical.
     ///
     /// @param      protocol        Fee charged by the protocol

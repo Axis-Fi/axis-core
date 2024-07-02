@@ -61,7 +61,7 @@ contract TestData is Script, WithEnvironment {
 
             routingParams.callbackData = abi.encode(
                 BaseDirectToLiquidity.OnCreateParams({
-                    proceedsUtilisationPercent: 50_000, // 50%
+                    proceedsUtilisationPercent: 50_00, // 50%
                     vestingStart: 0,
                     vestingExpiry: 0,
                     recipient: msg.sender,
@@ -80,7 +80,7 @@ contract TestData is Script, WithEnvironment {
 
         IFixedPriceBatch.AuctionDataParams memory auctionDataParams;
         auctionDataParams.price = 2e18; // 2 quote tokens per base token
-        auctionDataParams.minFillPercent = uint24(10_000); // 10%
+        auctionDataParams.minFillPercent = uint24(10_00); // 10%
         bytes memory implParams = abi.encode(auctionDataParams);
 
         uint48 duration = 86_400; // 1 day
@@ -152,7 +152,7 @@ contract TestData is Script, WithEnvironment {
         console2.log("Timestamp is", block.timestamp);
 
         bytes memory callbackData =
-            abi.encode(UniswapV2DirectToLiquidity.OnSettleParams({maxSlippage: 500})); // 0.5%
+            abi.encode(UniswapV2DirectToLiquidity.OnSettleParams({maxSlippage: 50})); // 0.5%
 
         vm.broadcast();
         auctionHouse.settle(lotId_, 100, callbackData);
