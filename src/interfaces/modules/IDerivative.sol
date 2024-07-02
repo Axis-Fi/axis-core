@@ -14,13 +14,15 @@ interface IDerivative {
     /// @notice     Metadata for a derivative token
     ///
     /// @param      exists          True if the token has been deployed
-    /// @param      wrapped         True if an ERC20-wrapped derivative has been deployed
+    /// @param      wrapped         Non-zero if an ERC20-wrapped derivative has been deployed
     /// @param      underlyingToken The address of the underlying token
+    /// @param      supply          The total supply of the derivative token
     /// @param      data            Implementation-specific data
     struct Token {
         bool exists;
         address wrapped;
         address underlyingToken;
+        uint256 supply;
         bytes data;
     }
 
@@ -30,13 +32,20 @@ interface IDerivative {
     ///
     /// @param  tokenId         The ID of the derivative token
     /// @return exists          True if the token has been deployed
-    /// @return wrapped         True if an ERC20-wrapped derivative has been deployed
+    /// @return wrapped         Non-zero if an ERC20-wrapped derivative has been deployed
     /// @return underlyingToken The address of the underlying token
+    /// @return supply          The total supply of the derivative token
     /// @return data            Implementation-specific data
     function tokenMetadata(uint256 tokenId)
         external
         view
-        returns (bool exists, address wrapped, address underlyingToken, bytes memory data);
+        returns (
+            bool exists,
+            address wrapped,
+            address underlyingToken,
+            uint256 supply,
+            bytes memory data
+        );
 
     // ========== DERIVATIVE MANAGEMENT ========== //
 

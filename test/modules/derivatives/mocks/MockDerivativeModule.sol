@@ -211,4 +211,6 @@ contract MockDerivativeModule is DerivativeModule {
     function decimals(uint256 tokenId_) public view virtual override returns (uint8) {}
 
     function tokenURI(uint256 tokenId_) public view virtual override returns (string memory) {}
+
+    function totalSupply(uint256 tokenId_) public view virtual override returns (uint256) {}
 }
