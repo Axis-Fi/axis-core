@@ -61,14 +61,17 @@ abstract contract AtomicAuctionHouseTest is Test, Permit2User, WithSalts {
     address internal _bidder;
     uint256 internal _bidderKey;
 
-    uint24 internal constant _CURATOR_MAX_FEE_PERCENT = 100;
+    uint24 internal constant _CURATOR_MAX_FEE_PERCENT = 1_00;
     uint24 internal constant _CURATOR_FEE_PERCENT = 90;
     uint24 internal _curatorFeePercentActual;
 
-    uint24 internal constant _PROTOCOL_FEE_PERCENT = 100;
-    uint24 internal constant _REFERRER_FEE_PERCENT = 105;
-    uint24 internal _protocolFeePercentActual;
+    uint24 internal constant _PROTOCOL_FEE_PERCENT = 1_00;
+    uint24 internal constant _REFERRER_FEE_PERCENT = 1_05;
+    uint24 internal constant _REFERRER_MAX_FEE_PERCENT = 10_00;
     uint24 internal _referrerFeePercentActual;
+
+    uint24 internal _protocolFeePercentActual;
+    uint24 internal _maxReferrerFeePercentActual;
 
     uint256 internal _curatorMaxPotentialFee;
     bool internal _curatorApproved;
@@ -130,6 +133,7 @@ abstract contract AtomicAuctionHouseTest is Test, Permit2User, WithSalts {
             auctionType: toKeycode(""),
             baseToken: address(_baseToken),
             quoteToken: address(_quoteToken),
+            referrerFee: 0, // Default to 0
             curator: _CURATOR,
             callbacks: ICallback(address(0)),
             callbackData: abi.encode(""),
@@ -460,11 +464,37 @@ abstract contract AtomicAuctionHouseTest is Test, Permit2User, WithSalts {
         _;
     }
 
+    function _setMaxReferrerFee(uint24 fee_) internal {
+        vm.prank(_OWNER);
+        _auctionHouse.setFee(_auctionModuleKeycode, IFeeManager.FeeType.MaxReferrer, fee_);
+        _maxReferrerFeePercentActual = fee_;
+    }
+
+    modifier givenMaxReferrerFeeIsSet() {
+        _setMaxReferrerFee(_REFERRER_MAX_FEE_PERCENT);
+        _;
+    }
+
+    function _setReferrerFee(uint24 fee_) internal {
+        _referrerFeePercentActual = fee_;
+        _routingParams.referrerFee = fee_;
+    }
+
+    modifier givenReferrerFee(uint24 fee_) {
+        _setReferrerFee(fee_);
+        _;
+    }
+
+    modifier givenReferrerFeeIsSet() {
+        _setReferrerFee(_REFERRER_FEE_PERCENT);
+        _;
+    }
+
     function _setCuratorFee(uint24 fee_) internal {
         vm.prank(_CURATOR);
         _auctionHouse.setCuratorFee(_auctionModuleKeycode, fee_);
         _curatorFeePercentActual = fee_;
-        _curatorMaxPotentialFee = _curatorFeePercentActual * _LOT_CAPACITY / 1e5;
+        _curatorMaxPotentialFee = _curatorFeePercentActual * _LOT_CAPACITY / 100e2;
     }
 
     modifier givenCuratorFeeIsSet() {
@@ -487,17 +517,6 @@ abstract contract AtomicAuctionHouseTest is Test, Permit2User, WithSalts {
 
     modifier givenProtocolFeeIsSet() {
         _setProtocolFee(_PROTOCOL_FEE_PERCENT);
-        _;
-    }
-
-    function _setReferrerFee(uint24 fee_) internal {
-        vm.prank(_OWNER);
-        _auctionHouse.setFee(_auctionModuleKeycode, IFeeManager.FeeType.Referrer, fee_);
-        _referrerFeePercentActual = fee_;
-    }
-
-    modifier givenReferrerFeeIsSet() {
-        _setReferrerFee(_REFERRER_FEE_PERCENT);
         _;
     }
 

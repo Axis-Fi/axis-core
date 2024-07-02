@@ -29,7 +29,7 @@ contract UniswapV2DirectToLiquidityOnSettleTest is UniswapV2DirectToLiquidityTes
     uint96 internal _baseTokensToDeposit;
     uint96 internal _curatorPayout;
 
-    uint24 internal _maxSlippage = 10; // 0.01%
+    uint24 internal _maxSlippage = 1; // 0.01%
 
     // ========== Internal functions ========== //
 
@@ -176,18 +176,18 @@ contract UniswapV2DirectToLiquidityOnSettleTest is UniswapV2DirectToLiquidityTes
         // However, curator payouts are linear to the capacity utilised
         // Calculate the percent utilisation
         uint96 capacityUtilisationPercent =
-            1e5 - uint96(FixedPointMathLib.mulDivDown(_refund, 1e5, _LOT_CAPACITY + _curatorPayout));
-        _capacityUtilised = _LOT_CAPACITY * capacityUtilisationPercent / 1e5;
+            100e2 - uint96(FixedPointMathLib.mulDivDown(_refund, 100e2, _LOT_CAPACITY + _curatorPayout));
+        _capacityUtilised = _LOT_CAPACITY * capacityUtilisationPercent / 100e2;
 
         // The proceeds utilisation percent scales the quote tokens and base tokens linearly
-        _quoteTokensToDeposit = _proceeds * _dtlCreateParams.proceedsUtilisationPercent / 1e5;
-        _baseTokensToDeposit = _capacityUtilised * _dtlCreateParams.proceedsUtilisationPercent / 1e5;
+        _quoteTokensToDeposit = _proceeds * _dtlCreateParams.proceedsUtilisationPercent / 100e2;
+        _baseTokensToDeposit = _capacityUtilised * _dtlCreateParams.proceedsUtilisationPercent / 100e2;
         _;
     }
 
     modifier givenUnboundedProceedsUtilisationPercent(uint24 percent_) {
         // Bound the percent
-        uint24 percent = uint24(bound(percent_, 1, 1e5));
+        uint24 percent = uint24(bound(percent_, 1, 100e2));
 
         // Set the value on the DTL
         _dtlCreateParams.proceedsUtilisationPercent = percent;
@@ -420,7 +420,7 @@ contract UniswapV2DirectToLiquidityOnSettleTest is UniswapV2DirectToLiquidityTes
         givenAddressHasQuoteTokenBalance(_dtlAddress, _proceeds)
         givenAddressHasBaseTokenBalance(_SELLER, _baseTokensToDeposit)
         givenAddressHasBaseTokenAllowance(_SELLER, _dtlAddress, _baseTokensToDeposit)
-        givenMaxSlippage(5000) // 5%
+        givenMaxSlippage(500) // 5%
     {
         _performCallback();
 
@@ -458,7 +458,7 @@ contract UniswapV2DirectToLiquidityOnSettleTest is UniswapV2DirectToLiquidityTes
         givenAddressHasQuoteTokenBalance(_dtlAddress, _proceeds)
         givenAddressHasBaseTokenBalance(_SELLER, _baseTokensToDeposit)
         givenAddressHasBaseTokenAllowance(_SELLER, _dtlAddress, _baseTokensToDeposit)
-        givenMaxSlippage(5000) // 5%
+        givenMaxSlippage(500) // 5%
     {
         _performCallback();
 

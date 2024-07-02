@@ -359,17 +359,19 @@ contract BatchBidTest is BatchAuctionHouseTest {
         );
     }
 
-    // [X] given there is no referrer fee set for the auction type
+    // [X] given the referrer fee for the auction is zero
     //  [X] the referrer fee is not accrued
-    // [X] the referrer fee is not accrued
+    // [X] given the referrer fee for the auction is not zero
+    //  [X] the referrer fee is not accrued (doesn't happen until the bid is claimed)
 
-    function test_givenReferrerFeeIsSet()
+    function test_givenReferrerFeeIsNonZero()
         external
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
-        givenReferrerFeeIsSet
+        givenMaxReferrerFeeIsSet
+        givenReferrerFee(1_00)
         givenLotIsCreated
         givenLotHasStarted
         givenUserHasQuoteTokenBalance(_BID_AMOUNT)
@@ -403,12 +405,14 @@ contract BatchBidTest is BatchAuctionHouseTest {
         );
     }
 
-    function test_givenReferrerFeeIsNotSet()
+    function test_givenReferrerFeeIsZero()
         external
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenMaxReferrerFeeIsSet
+        givenReferrerFee(0)
         givenLotIsCreated
         givenLotHasStarted
         givenUserHasQuoteTokenBalance(_BID_AMOUNT)

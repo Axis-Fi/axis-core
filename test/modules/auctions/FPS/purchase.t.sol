@@ -82,7 +82,7 @@ contract FpsPurchaseTest is FpsTest {
     function test_whenCapacityIsInsufficient_reverts()
         public
         givenLotCapacity(2e18)
-        givenMaxPayout(1e5)
+        givenMaxPayout(100e2)
         givenLotIsCreated
         givenLotHasStarted
         givenPurchase(_PURCHASE_AMOUNT, _PURCHASE_AMOUNT_OUT) // Payout 1, remaining capacity is 2 - 1 = 1
@@ -99,7 +99,7 @@ contract FpsPurchaseTest is FpsTest {
         public
         givenCapacityInQuote
         givenLotCapacity(3e18)
-        givenMaxPayout(1e5)
+        givenMaxPayout(100e2)
         givenLotIsCreated
         givenLotHasStarted
         givenPurchase(_PURCHASE_AMOUNT, _PURCHASE_AMOUNT_OUT) // Payout 1, remaining capacity is 3 - 2 = 1

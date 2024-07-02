@@ -29,7 +29,7 @@ contract UniswapV3DirectToLiquidityOnSettleTest is UniswapV3DirectToLiquidityTes
     uint96 internal _quoteTokensToDeposit;
     uint96 internal _baseTokensToDeposit;
     uint96 internal _curatorPayout;
-    uint24 internal _maxSlippage = 10; // 0.01%
+    uint24 internal _maxSlippage = 1; // 0.01%
 
     uint160 internal constant _SQRT_PRICE_X96_OVERRIDE = 125_270_724_187_523_965_593_206_000_000; // Different to what is normally calculated
 
@@ -214,12 +214,12 @@ contract UniswapV3DirectToLiquidityOnSettleTest is UniswapV3DirectToLiquidityTes
         // However, curator payouts are linear to the capacity utilised
         // Calculate the percent utilisation
         uint96 capacityUtilisationPercent =
-            1e5 - uint96(FixedPointMathLib.mulDivDown(_refund, 1e5, _LOT_CAPACITY + _curatorPayout));
-        _capacityUtilised = _LOT_CAPACITY * capacityUtilisationPercent / 1e5;
+            100e2 - uint96(FixedPointMathLib.mulDivDown(_refund, 100e2, _LOT_CAPACITY + _curatorPayout));
+        _capacityUtilised = _LOT_CAPACITY * capacityUtilisationPercent / 100e2;
 
         // The proceeds utilisation percent scales the quote tokens and base tokens linearly
-        _quoteTokensToDeposit = _proceeds * _dtlCreateParams.proceedsUtilisationPercent / 1e5;
-        _baseTokensToDeposit = _capacityUtilised * _dtlCreateParams.proceedsUtilisationPercent / 1e5;
+        _quoteTokensToDeposit = _proceeds * _dtlCreateParams.proceedsUtilisationPercent / 100e2;
+        _baseTokensToDeposit = _capacityUtilised * _dtlCreateParams.proceedsUtilisationPercent / 100e2;
 
         _sqrtPriceX96 = _calculateSqrtPriceX96(_quoteTokensToDeposit, _baseTokensToDeposit);
         _;
@@ -227,7 +227,7 @@ contract UniswapV3DirectToLiquidityOnSettleTest is UniswapV3DirectToLiquidityTes
 
     modifier givenUnboundedProceedsUtilisationPercent(uint24 percent_) {
         // Bound the percent
-        uint24 percent = uint24(bound(percent_, 1, 1e5));
+        uint24 percent = uint24(bound(percent_, 1, 100e2));
 
         // Set the value on the DTL
         _dtlCreateParams.proceedsUtilisationPercent = percent;
@@ -332,7 +332,7 @@ contract UniswapV3DirectToLiquidityOnSettleTest is UniswapV3DirectToLiquidityTes
         givenAddressHasQuoteTokenBalance(_dtlAddress, _proceeds)
         givenAddressHasBaseTokenBalance(_SELLER, _capacityUtilised)
         givenAddressHasBaseTokenAllowance(_SELLER, _dtlAddress, _capacityUtilised)
-        givenMaxSlippage(81_000) // 81%
+        givenMaxSlippage(81_00) // 81%
     {
         _performCallback();
 
@@ -457,7 +457,7 @@ contract UniswapV3DirectToLiquidityOnSettleTest is UniswapV3DirectToLiquidityTes
         setCallbackParameters(_PROCEEDS, _REFUND)
         givenPoolHasDepositLowerPrice
         givenPoolIsCreatedAndInitialized(_sqrtPriceX96)
-        givenMaxSlippage(51_000) // 51%
+        givenMaxSlippage(51_00) // 51%
         givenAddressHasQuoteTokenBalance(_dtlAddress, _proceeds)
         givenAddressHasBaseTokenBalance(_SELLER, _baseTokensToDeposit)
         givenAddressHasBaseTokenAllowance(_SELLER, _dtlAddress, _baseTokensToDeposit)
@@ -479,7 +479,7 @@ contract UniswapV3DirectToLiquidityOnSettleTest is UniswapV3DirectToLiquidityTes
         setCallbackParameters(_PROCEEDS, _REFUND)
         givenPoolHasDepositHigherPrice
         givenPoolIsCreatedAndInitialized(_sqrtPriceX96)
-        givenMaxSlippage(51_000) // 51%
+        givenMaxSlippage(51_00) // 51%
         givenAddressHasQuoteTokenBalance(_dtlAddress, _proceeds)
         givenAddressHasBaseTokenBalance(_SELLER, _baseTokensToDeposit)
         givenAddressHasBaseTokenAllowance(_SELLER, _dtlAddress, _baseTokensToDeposit)
@@ -499,7 +499,7 @@ contract UniswapV3DirectToLiquidityOnSettleTest is UniswapV3DirectToLiquidityTes
         givenCallbackIsCreated
         givenOnCreate
         setCallbackParameters(_PROCEEDS, _REFUND)
-        givenMaxSlippage(100) // 0.01%
+        givenMaxSlippage(1) // 0.01%
         givenAddressHasQuoteTokenBalance(_dtlAddress, _proceeds)
         givenAddressHasBaseTokenBalance(_SELLER, _baseTokensToDeposit)
         givenAddressHasBaseTokenAllowance(_SELLER, _dtlAddress, _baseTokensToDeposit)

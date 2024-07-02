@@ -71,7 +71,7 @@ contract FpsCreateAuctionTest is FpsTest {
     }
 
     function test_maxPayoutPercentIsLessThanMinimum_reverts(uint24 maxPayout_) public {
-        uint24 maxPayout = uint24(bound(maxPayout_, 0, 1e3 - 1));
+        uint24 maxPayout = uint24(bound(maxPayout_, 0, 1e2 - 1));
         _setMaxPayout(maxPayout);
 
         // Expect revert
@@ -83,7 +83,7 @@ contract FpsCreateAuctionTest is FpsTest {
     }
 
     function test_maxPayoutPercentIsGreaterThanMaximum_reverts(uint24 maxPayout_) public {
-        uint24 maxPayout = uint24(bound(maxPayout_, 1e5 + 1, type(uint24).max));
+        uint24 maxPayout = uint24(bound(maxPayout_, 100e2 + 1, type(uint24).max));
         _setMaxPayout(maxPayout);
 
         // Expect revert
@@ -95,11 +95,11 @@ contract FpsCreateAuctionTest is FpsTest {
     }
 
     function test_maxPayoutPercent_fuzz(uint24 maxPayout_) public {
-        uint24 maxPayout = uint24(bound(maxPayout_, 1e3, 1e5));
+        uint24 maxPayout = uint24(bound(maxPayout_, 1e2, 100e2));
         _setMaxPayout(maxPayout);
 
         // Calculate the expected value
-        uint256 expectedMaxPayout = Math.mulDivDown(_LOT_CAPACITY, maxPayout, 1e5);
+        uint256 expectedMaxPayout = Math.mulDivDown(_LOT_CAPACITY, maxPayout, 100e2);
 
         // Call the function
         _createAuctionLot();
@@ -112,7 +112,7 @@ contract FpsCreateAuctionTest is FpsTest {
     function test_capacityInQuote() public givenCapacityInQuote {
         // Calculate the expected value
         uint256 expectedMaxPayoutInQuote =
-            Math.mulDivDown(_scaleQuoteTokenAmount(_LOT_CAPACITY), _fpaParams.maxPayoutPercent, 1e5);
+            Math.mulDivDown(_scaleQuoteTokenAmount(_LOT_CAPACITY), _fpaParams.maxPayoutPercent, 100e2);
         uint256 expectedMaxPayout = Math.mulDivDown(
             expectedMaxPayoutInQuote, 10 ** _baseTokenDecimals, _scaleQuoteTokenAmount(_PRICE)
         );
@@ -140,7 +140,7 @@ contract FpsCreateAuctionTest is FpsTest {
     {
         // Calculate the expected value
         uint256 expectedMaxPayoutInQuote =
-            Math.mulDivDown(_scaleQuoteTokenAmount(_LOT_CAPACITY), _fpaParams.maxPayoutPercent, 1e5);
+            Math.mulDivDown(_scaleQuoteTokenAmount(_LOT_CAPACITY), _fpaParams.maxPayoutPercent, 100e2);
         uint256 expectedMaxPayout = Math.mulDivDown(
             expectedMaxPayoutInQuote, 10 ** _baseTokenDecimals, _scaleQuoteTokenAmount(_PRICE)
         );
@@ -168,7 +168,7 @@ contract FpsCreateAuctionTest is FpsTest {
     {
         // Calculate the expected value
         uint256 expectedMaxPayoutInQuote =
-            Math.mulDivDown(_scaleQuoteTokenAmount(_LOT_CAPACITY), _fpaParams.maxPayoutPercent, 1e5);
+            Math.mulDivDown(_scaleQuoteTokenAmount(_LOT_CAPACITY), _fpaParams.maxPayoutPercent, 100e2);
         uint256 expectedMaxPayout = Math.mulDivDown(
             expectedMaxPayoutInQuote, 10 ** _baseTokenDecimals, _scaleQuoteTokenAmount(_PRICE)
         );
@@ -208,7 +208,7 @@ contract FpsCreateAuctionTest is FpsTest {
         assertEq(auctionData.price, _scaleQuoteTokenAmount(_PRICE), "price");
         assertEq(
             auctionData.maxPayout,
-            Math.mulDivDown(_scaleBaseTokenAmount(_LOT_CAPACITY), _MAX_PAYOUT_PERCENT, 1e5),
+            Math.mulDivDown(_scaleBaseTokenAmount(_LOT_CAPACITY), _MAX_PAYOUT_PERCENT, 100e2),
             "maxPayout"
         );
     }
@@ -237,7 +237,7 @@ contract FpsCreateAuctionTest is FpsTest {
         assertEq(auctionData.price, _scaleQuoteTokenAmount(_PRICE), "price");
         assertEq(
             auctionData.maxPayout,
-            Math.mulDivDown(_scaleBaseTokenAmount(_LOT_CAPACITY), _MAX_PAYOUT_PERCENT, 1e5),
+            Math.mulDivDown(_scaleBaseTokenAmount(_LOT_CAPACITY), _MAX_PAYOUT_PERCENT, 100e2),
             "maxPayout"
         );
     }
@@ -266,7 +266,7 @@ contract FpsCreateAuctionTest is FpsTest {
         assertEq(auctionData.price, _scaleQuoteTokenAmount(_PRICE), "price");
         assertEq(
             auctionData.maxPayout,
-            Math.mulDivDown(_scaleBaseTokenAmount(_LOT_CAPACITY), _MAX_PAYOUT_PERCENT, 1e5),
+            Math.mulDivDown(_scaleBaseTokenAmount(_LOT_CAPACITY), _MAX_PAYOUT_PERCENT, 100e2),
             "maxPayout"
         );
     }
