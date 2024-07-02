@@ -145,10 +145,11 @@ abstract contract AuctionHouse is IAuctionHouse, WithModules, ReentrancyGuard, F
             lotFee.curatorFee = curatorFee > maxCuratorFee ? maxCuratorFee : curatorFee;
 
             // Check that the referrer fee does not exceed the max.
-            // If it does, set the fee to the max.
-            lotFee.referrerFee = routing_.referrerFee > auctionFees.maxReferrerFee
-                ? auctionFees.maxReferrerFee
-                : routing_.referrerFee;
+            // If it does, revert. We revert here since the value is provided by the submitter
+            // and can be changed whereas the curator fee above is set by someone else.
+            // Otherwise, set the value.
+            if (routing_.referrerFee > auctionFees.maxReferrerFee) revert InvalidParams();
+            lotFee.referrerFee = routing_.referrerFee;
 
             // Snapshot the protocol fee
             lotFee.protocolFee = auctionFees.protocol;
