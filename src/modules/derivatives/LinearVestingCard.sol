@@ -42,7 +42,7 @@ contract LinearVestingCard {
 
     // ========== ATTRIBUTES ========== //
 
-    function _attributes(Info memory tokenInfo) internal view returns (string memory) {
+    function _attributes(Info memory tokenInfo) internal pure returns (string memory) {
         return string.concat(
             '[{"trait_type":"Token ID","value":"',
             Strings.toString(tokenInfo.tokenId),
