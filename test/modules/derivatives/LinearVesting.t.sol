@@ -3,6 +3,7 @@ pragma solidity 0.8.19;
 
 // Libraries
 import {Test} from "forge-std/Test.sol";
+import {console2} from "forge-std/console2.sol";
 
 import {Permit2User} from "test/lib/permit2/Permit2User.sol";
 import {StringHelper} from "test/lib/String.sol";
@@ -53,7 +54,7 @@ contract LinearVestingTest is Test, Permit2User {
         vm.warp(_VESTING_START - 1);
 
         _underlyingToken =
-            new MockFeeOnTransferERC20("Underlying", "UNDERLYING", _underlyingTokenDecimals);
+            new MockFeeOnTransferERC20("Underlying", "UNDY", _underlyingTokenDecimals);
         _underlyingTokenAddress = address(_underlyingToken);
 
         _auctionHouse = new AtomicAuctionHouse(address(this), _PROTOCOL, _permit2Address);
@@ -65,7 +66,7 @@ contract LinearVestingTest is Test, Permit2User {
         _vestingParamsBytes = abi.encode(_vestingParams);
 
         _wrappedDerivativeTokenName = "Underlying 2024-01-12";
-        _wrappedDerivativeTokenSymbol = "UNDERLYING 2024-01-12";
+        _wrappedDerivativeTokenSymbol = "UNDY 2024-01-12";
         _wrappedDerivativeTokenNameLength = bytes(_wrappedDerivativeTokenName).length;
         _wrappedDerivativeTokenSymbolLength = bytes(_wrappedDerivativeTokenSymbol).length;
     }
@@ -2542,5 +2543,78 @@ contract LinearVestingTest is Test, Permit2User {
 
         // Call
         _linearVesting.exercise(_derivativeTokenId, _AMOUNT);
+    }
+
+    // tokenURI
+    // [X] given the vesting period hasn't started
+    //    [X] the progress bar is grey (verified externally)
+    // [X] given the vesting period has just started
+    //    [X] the progress bar has blue green gradient at the left bar (verified externally)
+    // [X] given the vesting period is halfway through
+    //    [X] the progress bar has blue green gradient in the middle and a circle showing current point (verified externally)
+    // [X] given the vesting period has ended
+    //    [X] the progress bar is fully blue green gradient (verified externally)
+
+    function test_tokenURI_beforeStart()
+        public
+        givenDerivativeIsDeployed
+        givenAliceHasDerivativeTokens(_AMOUNT)
+    {
+        // Call
+        string memory tokenURI = _linearVesting.tokenURI(_derivativeTokenId);
+
+        console2.log("beforeStart: ", tokenURI);
+    }
+
+    function test_tokenURI_atStart()
+        public
+        givenDerivativeIsDeployed
+        givenAliceHasDerivativeTokens(_AMOUNT)
+    {
+        vm.warp(_VESTING_START);
+
+        // Call
+        string memory tokenURI = _linearVesting.tokenURI(_derivativeTokenId);
+
+        console2.log("atStart: ", tokenURI);
+    }
+
+    function test_tokenURI_halfway()
+        public
+        givenDerivativeIsDeployed
+        givenAliceHasDerivativeTokens(_AMOUNT)
+    {
+        vm.warp(_VESTING_START + _VESTING_DURATION / 2);
+
+        // Call
+        string memory tokenURI = _linearVesting.tokenURI(_derivativeTokenId);
+
+        console2.log("halfway: ", tokenURI);
+    }
+
+    function test_tokenURI_atEnd()
+        public
+        givenDerivativeIsDeployed
+        givenAliceHasDerivativeTokens(_AMOUNT)
+    {
+        vm.warp(_VESTING_START + _VESTING_DURATION);
+
+        // Call
+        string memory tokenURI = _linearVesting.tokenURI(_derivativeTokenId);
+
+        console2.log("atEnd: ", tokenURI);
+    }
+
+    function test_tokenURI_afterEnd()
+        public
+        givenDerivativeIsDeployed
+        givenAliceHasDerivativeTokens(_AMOUNT)
+    {
+        vm.warp(_VESTING_START + _VESTING_DURATION * 2);
+
+        // Call
+        string memory tokenURI = _linearVesting.tokenURI(_derivativeTokenId);
+
+        console2.log("afterEnd: ", tokenURI);
     }
 }
