@@ -52,6 +52,11 @@ const config: HardhatUserConfig = {
       url: process.env.BASE_SEPOLIA_RPC,
       accounts: [process.env.DEPLOYER_PRIVATE_KEY ?? ""]
     },
+    mantleSepolia: {
+      chainId: 5003,
+      url: process.env.MANTLE_SEPOLIA_RPC,
+      accounts: [process.env.DEPLOYER_PRIVATE_KEY ?? ""]
+    }
   },
 
   solidity: {
