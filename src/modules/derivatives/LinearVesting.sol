@@ -8,6 +8,7 @@ import {ClonesWithImmutableArgs} from "src/lib/clones/ClonesWithImmutableArgs.so
 import {Timestamp} from "src/lib/Timestamp.sol";
 import {ERC6909Metadata} from "src/lib/ERC6909Metadata.sol";
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
+import {Base64} from "lib/openzeppelin-contracts/contracts/utils/Base64.sol";
 
 import {IDerivative} from "src/interfaces/modules/IDerivative.sol";
 import {ILinearVesting} from "src/interfaces/modules/derivatives/ILinearVesting.sol";
@@ -733,16 +734,22 @@ contract LinearVesting is DerivativeModule, ILinearVesting, LinearVestingCard {
         // Return the token URI
         // solhint-disable quotes
         return string.concat(
-            "data:application/json;utf8,",
-            '{"name": "',
-            name(tokenId_),
-            '", "description": "',
-            _symbol,
-            ' Soulbound Linear Vesting Derivative Token. Powered by Axis.", "attributes": ',
-            _attributes(info),
-            ', "image": "data:image/svg+xml;utf8,',
-            _render(info),
-            '"}'
+            "data:application/json;base64,",
+            Base64.encode(
+                bytes(
+                    string.concat(
+                        '{"name": "',
+                        name(tokenId_),
+                        '", "description": "',
+                        _symbol,
+                        ' Soulbound Linear Vesting Derivative Token. Powered by Axis.", "attributes": ',
+                        _attributes(info),
+                        ', "image": "data:image/svg+xml;base64,',
+                        Base64.encode(bytes(_render(info))),
+                        '"}'
+                    )
+                )
+            )
         );
         // solhint-enable quotes
     }

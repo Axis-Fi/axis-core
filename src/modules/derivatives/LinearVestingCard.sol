@@ -124,8 +124,8 @@ contract LinearVestingCard {
         return string.concat(
             svg.text(string.concat('x="145" y="460" font-size="10" ', _TEXT_STYLE), _addrString),
             svg.text(
-                string.concat('x="145" y="480" font-size="10" ', _TEXT_STYLE),
-                string.concat("ID: ", Strings.toString(tokenId))
+                string.concat('x="145" y="480" font-size="6" ', _TEXT_STYLE),
+                string.concat("ID: ", Strings.toHexString(tokenId))
             )
         );
     }
@@ -139,7 +139,7 @@ contract LinearVestingCard {
         {
             bool started = start <= currentTime;
 
-            progress = started ? (currentTime - start) * 100 / (end - start) : 0;
+            progress = started ? ((currentTime - start) * 100) / (end - start) : 0;
             // progress can be at most 100
             progress = progress > 100 ? 100 : progress;
 
@@ -220,7 +220,7 @@ contract LinearVestingCard {
 
         return string.concat(
             svg.text(string.concat('x="60" y="200" font-size="12" ', _TEXT_STYLE), start),
-            svg.text(string.concat('x="230" y="200" font-size="12"', _TEXT_STYLE), expiry)
+            svg.text(string.concat('x="230" y="200" font-size="12" ', _TEXT_STYLE), expiry)
         );
     }
 
