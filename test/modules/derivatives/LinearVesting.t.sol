@@ -125,7 +125,7 @@ contract LinearVestingTest is Test, Permit2User {
         _vestingParamsBytes = abi.encode(_vestingParams);
 
         _wrappedDerivativeTokenName = "Underlying 2024-01-14";
-        _wrappedDerivativeTokenSymbol = "UNDERLYING 2024-01-14";
+        _wrappedDerivativeTokenSymbol = "UNDY 2024-01-14";
         _wrappedDerivativeTokenNameLength = bytes(_wrappedDerivativeTokenName).length;
         _wrappedDerivativeTokenSymbolLength = bytes(_wrappedDerivativeTokenSymbol).length;
         _;
