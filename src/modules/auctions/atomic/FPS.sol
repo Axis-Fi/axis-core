@@ -56,7 +56,7 @@ contract FixedPriceSale is AtomicAuctionModule, IFixedPriceSale {
 
         // Validate the max payout percent is between 1% and 100%
         if (
-            auctionParams.maxPayoutPercent < 1e3
+            auctionParams.maxPayoutPercent < 1e2
                 || auctionParams.maxPayoutPercent > _ONE_HUNDRED_PERCENT
         ) revert Auction_InvalidParams();
 

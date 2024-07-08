@@ -43,7 +43,7 @@ contract UniswapV3DirectToLiquidity is BaseDirectToLiquidity {
     /// @notice     Parameters for the onSettle callback
     /// @dev        This will be encoded in the `callbackData_` parameter
     ///
-    /// @param      maxSlippage             The maximum slippage allowed when adding liquidity (in terms of `MAX_PERCENT`)
+    /// @param      maxSlippage             The maximum slippage allowed when adding liquidity (in terms of `ONE_HUNDRED_PERCENT`)
     struct OnSettleParams {
         uint24 maxSlippage;
     }

@@ -7,8 +7,8 @@ contract AtomicSetProtocolTest is AtomicAuctionHouseTest {
     address internal immutable _NEW_PROTOCOL = address(0x7);
 
     uint96 internal constant _AMOUNT_IN = 1e18;
-    uint96 internal _amountInReferrerFee = _AMOUNT_IN * _REFERRER_FEE_PERCENT / 1e5;
-    uint96 internal _amountInProtocolFee = _AMOUNT_IN * _PROTOCOL_FEE_PERCENT / 1e5;
+    uint96 internal _amountInReferrerFee = _AMOUNT_IN * _REFERRER_FEE_PERCENT / 100e2;
+    uint96 internal _amountInProtocolFee = _AMOUNT_IN * _PROTOCOL_FEE_PERCENT / 100e2;
     uint96 internal _amountInLessFee = _AMOUNT_IN - _amountInReferrerFee - _amountInProtocolFee;
     // 1:1 exchange rate
     uint96 internal _amountOut = _amountInLessFee;
@@ -42,6 +42,7 @@ contract AtomicSetProtocolTest is AtomicAuctionHouseTest {
         public
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
+        givenMaxReferrerFeeIsSet
         givenReferrerFeeIsSet
         givenProtocolFeeIsSet
         givenLotIsCreated

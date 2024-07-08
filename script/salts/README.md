@@ -9,13 +9,13 @@ This document provides instructions on how to generate and use salts for CREATE2
 Many of the tests use salts to deploy callbacks at addresses with a specific prefix. Changes to the state variables in the test contract can require the re-generation of the salt. To do so, perform the following:
 
 ```bash
-./script/salts/test/test_salts.sh <SALT_KEY>
+./script/salts/test/test_salts.sh --saltKey <SALT_KEY>
 ```
 
 For example, if re-generating salts for the `MockCallback` contract, make the following call:
 
 ```bash
-./script/salts/test/test_salts.sh MockCallback
+./script/salts/test/test_salts.sh --saltKey MockCallback
 ```
 
 The resulting salts will be written to the `./script/salts/salts.json` file, which the test cases will read from.
@@ -33,10 +33,39 @@ For the AtomicAuctionHouse and BatchAuctionHouse, a specific script can be used 
 Assuming that the developer wants to deploy an AtomicAuctionHouse at an address that will start with `0xAA`, the following command would be run:
 
 ```bash
-./script/salts/auctionHouse/auction_house_salts.sh atomic AA
+./script/salts/auctionHouse/auction_house_salts.sh --type atomic --prefix AA
 ```
 
 The generated salt would be stored in `./script/salts/salts.json` under the key `AtomicAuctionHouse` and a hash of the bytecode. Provided the bytecode is the same, the same salt can be used to deploy the contract at the same address on different chains.
+
+### Generating Salts for Baseline Allocated Allowlist
+
+The Baseline Allocated Allowlist is a single-use Callbacks contract that enables the owner of a fixed-price batch auction to:
+
+- deploy the proceeds using Baseline
+- specify a bid limit for each address
+
+To generate a salt for a specific callback deployment, the following addresses are needed:
+
+- Baseline kernel
+- Owner of the Baseline deployment (which will have the ability to withdraw reserves)
+- Reserve (quote) token
+
+These addresses should match the arguments in the deployment sequence file.
+
+The following script can then be run:
+
+```bash
+./script/salts/dtl-baseline/baseline_allocated_allowlist_salts.sh --kernel <kernel> --owner <owner> --reserveToken <reserveToken>
+```
+
+### Generating Salts for Uniswap Direct to Liquidity
+
+Assuming that the developer wants to deploy a Uniswap V3 direct to liquidity callback for atomic auctions, the following command would be run:
+
+```bash
+./script/salts/dtl-uniswap/uniswap_dtl_salts.sh --type atomic --version 3
+```
 
 ### Generating Salts for Any Contract
 

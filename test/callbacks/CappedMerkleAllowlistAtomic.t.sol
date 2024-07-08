@@ -91,6 +91,8 @@ contract CappedMerkleAllowlistAtomicTest is Test, Permit2User, WithSalts {
     }
 
     // onCreate
+    // [X] when the allowlist parameters are in an incorrect format
+    //  [X] it reverts
     // [X] if the caller is not the auction house
     //  [X] it reverts
     // [X] if the seller is not the seller for the allowlist
@@ -98,6 +100,23 @@ contract CappedMerkleAllowlistAtomicTest is Test, Permit2User, WithSalts {
     // [X] if the lot is already registered
     //  [X] it reverts
     // [X] it sets the merkle root and buyer limit
+
+    function test_onCreate_allowlistParametersIncorrectFormat_reverts() public {
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(BaseCallback.Callback_InvalidParams.selector);
+        vm.expectRevert(err);
+
+        vm.prank(address(_auctionHouse));
+        _allowlist.onCreate(
+            _lotId,
+            _SELLER,
+            _BASE_TOKEN,
+            _QUOTE_TOKEN,
+            _LOT_CAPACITY,
+            false,
+            abi.encode(_MERKLE_ROOT, _BUYER_LIMIT, uint256(20))
+        );
+    }
 
     function test_onCreate_callerNotAuctionHouse_reverts() public {
         // Expect revert

@@ -27,7 +27,7 @@ contract LinearVestingEMPAIntegrationTest is BatchAuctionHouseTest {
 
     EncryptedMarginalPrice.AuctionDataParams internal _auctionDataParams;
     uint256 internal constant _MIN_PRICE = 1e18;
-    uint24 internal constant _MIN_FILL_PERCENT = 25_000; // 25%
+    uint24 internal constant _MIN_FILL_PERCENT = 25e2; // 25%
     uint256 internal constant _MIN_BID_SIZE = 1e17; // 0.1 quote tokens
 
     ILinearVesting.VestingParams internal _linearVestingParams;
