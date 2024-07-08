@@ -130,7 +130,7 @@ contract UniswapV3DirectToLiquidityOnCreateTest is UniswapV3DirectToLiquidityTes
     {
         // Expect revert
         bytes memory err = abi.encodeWithSelector(
-            BaseDirectToLiquidity.Callback_Params_PercentOutOfBounds.selector, 0, 1, 1e5
+            BaseDirectToLiquidity.Callback_Params_PercentOutOfBounds.selector, 0, 1, 100e2
         );
         vm.expectRevert(err);
 
@@ -140,11 +140,11 @@ contract UniswapV3DirectToLiquidityOnCreateTest is UniswapV3DirectToLiquidityTes
     function test_whenProceedsUtilisationIsGreaterThan100Percent_reverts()
         public
         givenCallbackIsCreated
-        givenProceedsUtilisationPercent(1e5 + 1)
+        givenProceedsUtilisationPercent(100e2 + 1)
     {
         // Expect revert
         bytes memory err = abi.encodeWithSelector(
-            BaseDirectToLiquidity.Callback_Params_PercentOutOfBounds.selector, 1e5 + 1, 1, 1e5
+            BaseDirectToLiquidity.Callback_Params_PercentOutOfBounds.selector, 100e2 + 1, 1, 100e2
         );
         vm.expectRevert(err);
 

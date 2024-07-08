@@ -144,9 +144,15 @@ abstract contract AuctionHouse is IAuctionHouse, WithModules, ReentrancyGuard, F
             uint48 curatorFee = auctionFees.curator[routing_.curator];
             lotFee.curatorFee = curatorFee > maxCuratorFee ? maxCuratorFee : curatorFee;
 
-            // Snapshot the protocol and referrer fees
+            // Check that the referrer fee does not exceed the max.
+            // If it does, revert. We revert here since the value is provided by the submitter
+            // and can be changed whereas the curator fee above is set by someone else.
+            // Otherwise, set the value.
+            if (routing_.referrerFee > auctionFees.maxReferrerFee) revert InvalidParams();
+            lotFee.referrerFee = routing_.referrerFee;
+
+            // Snapshot the protocol fee
             lotFee.protocolFee = auctionFees.protocol;
-            lotFee.referrerFee = auctionFees.referrer;
         }
 
         // Derivative
@@ -435,11 +441,13 @@ abstract contract AuctionHouse is IAuctionHouse, WithModules, ReentrancyGuard, F
         if (fee_ > _FEE_DECIMALS) revert InvalidFee();
 
         // Set fee based on type
-        // Or a combination of protocol and referrer fee since they are both in the quoteToken?
+        // Protocol and max referrer fee cannot exceed 100%
         if (type_ == FeeType.Protocol) {
+            if (fee_ + fees[auctionType_].maxReferrerFee > _FEE_DECIMALS) revert InvalidFee();
             fees[auctionType_].protocol = fee_;
-        } else if (type_ == FeeType.Referrer) {
-            fees[auctionType_].referrer = fee_;
+        } else if (type_ == FeeType.MaxReferrer) {
+            if (fee_ + fees[auctionType_].protocol > _FEE_DECIMALS) revert InvalidFee();
+            fees[auctionType_].maxReferrerFee = fee_;
         } else if (type_ == FeeType.MaxCurator) {
             fees[auctionType_].maxCuratorFee = fee_;
         }

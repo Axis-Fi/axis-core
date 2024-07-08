@@ -51,6 +51,7 @@ interface IAuctionHouse {
     /// @param      baseToken           Token provided by seller. Declared as an address to avoid dependency hell.
     /// @param      quoteToken          Token to accept as payment. Declared as an address to avoid dependency hell.
     /// @param      curator             (optional) Address of the proposed curator
+    /// @param      referrerFee         (optional) Percent of bid/purchase amount received paid to a referrer in basis points, i.e. 1% = 100.
     /// @param      callbacks           (optional) Callbacks implementation for extended functionality
     /// @param      callbackData        (optional) abi-encoded data to be sent to the onCreate callback function
     /// @param      derivativeType      (optional) Derivative type, represented by the Keycode for the derivative submodule
@@ -61,6 +62,7 @@ interface IAuctionHouse {
         address baseToken;
         address quoteToken;
         address curator;
+        uint48 referrerFee;
         ICallback callbacks;
         bytes callbackData;
         Keycode derivativeType;

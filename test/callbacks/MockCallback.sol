@@ -60,7 +60,7 @@ contract MockCallback is BaseCallback {
 
         if (prefund_) {
             if (onCreateMultiplier > 0) {
-                capacity_ = uint96(uint256(capacity_) * onCreateMultiplier / 1e5);
+                capacity_ = uint96(uint256(capacity_) * onCreateMultiplier / 100e2);
             }
 
             // Transfer the base tokens to the auction house
@@ -90,7 +90,7 @@ contract MockCallback is BaseCallback {
 
         if (prefund_) {
             if (onCurateMultiplier > 0) {
-                curatorFee_ = uint96(uint256(curatorFee_) * onCurateMultiplier / 1e5);
+                curatorFee_ = uint96(uint256(curatorFee_) * onCurateMultiplier / 100e2);
             }
 
             // Transfer the base tokens to the auction house
@@ -122,7 +122,7 @@ contract MockCallback is BaseCallback {
             // Do nothing, as tokens have already been transferred
         } else {
             if (onPurchaseMultiplier > 0) {
-                payout_ = uint96(uint256(payout_) * onPurchaseMultiplier / 1e5);
+                payout_ = uint96(uint256(payout_) * onPurchaseMultiplier / 100e2);
             }
 
             // Transfer the base tokens to the auction house

@@ -19,8 +19,8 @@ import {Keycode} from "src/modules/Keycode.sol";
 abstract contract FeeManager is IFeeManager, ReentrancyGuard {
     // ========== STATE VARIABLES ========== //
 
-    /// @notice     Fees are in basis points (3 decimals). 1% equals 1000.
-    uint48 internal constant _FEE_DECIMALS = 1e5;
+    /// @notice     Fees are in basis points (hundredths of a percent). 1% equals 100.
+    uint48 internal constant _FEE_DECIMALS = 100e2;
 
     /// @notice     Address the protocol receives fees at
     address internal _protocol;
@@ -90,10 +90,10 @@ abstract contract FeeManager is IFeeManager, ReentrancyGuard {
         external
         view
         override
-        returns (uint48 protocol, uint48 referrer, uint48 maxCuratorFee)
+        returns (uint48 protocol, uint48 maxReferrerFee, uint48 maxCuratorFee)
     {
         Fees storage fee = fees[auctionType_];
-        return (fee.protocol, fee.referrer, fee.maxCuratorFee);
+        return (fee.protocol, fee.maxReferrerFee, fee.maxCuratorFee);
     }
 
     /// @inheritdoc IFeeManager
