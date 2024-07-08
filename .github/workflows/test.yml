@@ -50,7 +50,6 @@ jobs:
         run: cd crates/ecies-cli && cargo build && cd ../..
 
       - name: Repo Install Script
-        uses: actions/checkout@v4
         run: |
           chmod +x ./install.sh
           ./install.sh
