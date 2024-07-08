@@ -21,4 +21,11 @@ abstract contract DerivativeModule is IDerivative, ERC6909, ERC6909Metadata, Mod
     function getTokenMetadata(uint256 tokenId) external view virtual returns (Token memory) {
         return tokenMetadata[tokenId];
     }
+
+    // ========== ERC6909 TOKEN SUPPLY EXTENSION ========== //
+
+    /// @inheritdoc ERC6909Metadata
+    function totalSupply(uint256 tokenId) public view virtual override returns (uint256) {
+        return tokenMetadata[tokenId].supply;
+    }
 }
