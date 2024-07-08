@@ -273,7 +273,7 @@ contract EmpClaimBidsTest is EmpTest {
         givenLotIsCreated
         givenLotHasStarted
     {
-        uint256 minFillAmount = _MIN_FILL_PERCENT * _LOT_CAPACITY / 1e5;
+        uint256 minFillAmount = _MIN_FILL_PERCENT * _LOT_CAPACITY / 100e2;
         // Bound the amounts
         uint256 bidAmountIn = bound(bidAmountIn_, 1e18, minFillAmount - 1); // Ensures that it cannot settle even at minimum price
         uint256 bidAmountOut = 1e18; // at minimum price

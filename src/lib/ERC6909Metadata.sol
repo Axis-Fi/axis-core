@@ -19,4 +19,16 @@ abstract contract ERC6909Metadata {
     /// @param      tokenId_    The ID of the token
     /// @return     uint8       The number of decimals used by the token
     function decimals(uint256 tokenId_) public view virtual returns (uint8);
+
+    /// @notice     Returns the URI of the token
+    ///
+    /// @param      tokenId_    The ID of the token
+    /// @return     string      The URI of the token
+    function tokenURI(uint256 tokenId_) public view virtual returns (string memory);
+
+    /// @notice     Returns the total supply of the token
+    ///
+    /// @param      tokenId_    The ID of the token
+    /// @return     uint256     The total supply of the token
+    function totalSupply(uint256 tokenId_) public view virtual returns (uint256);
 }

@@ -121,6 +121,18 @@ export const getAddresses = (network: string): Addresses => {
         GUniFactory: "0x04974BcFC715c148818724d9Caab3Fe8d0391b8b",
         GUniImplementation: "0xF5c31d08a71c854A9f607A5992456dBC31B11e16",
       };
+    case "mantleSepolia":
+      return {
+        Gelato: "0xB47C8e4bEb28af80eDe5E5bF474927b110Ef2c0e",
+        Swapper: "",
+        GelatoDevMultiSig: "0xB47C8e4bEb28af80eDe5E5bF474927b110Ef2c0e",
+        WETH: "",
+        DAI: "",
+        USDC: "",
+        UniswapV3Factory: "0xE292cF4e316191CbFEbD74909356DF3cd9455e96",
+        GUniFactory: "0x08B87749b379f5BCA1d74A7B3d4e9f3DeD41C706",
+        GUniImplementation: "0xE292cF4e316191CbFEbD74909356DF3cd9455e96",
+      };
     default:
       throw new Error(`No addresses for Network: ${network}`);
   }

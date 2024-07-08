@@ -15,6 +15,7 @@ import {AtomicAuctionHouse} from "src/AtomicAuctionHouse.sol";
 import {IAuction} from "src/interfaces/modules/IAuction.sol";
 import {IAuctionHouse} from "src/interfaces/IAuctionHouse.sol";
 import {ICallback} from "src/interfaces/ICallback.sol";
+import {IFeeManager} from "src/interfaces/IFeeManager.sol";
 
 // Modules
 import {toKeycode, Module, Keycode, keycodeFromVeecode} from "src/modules/Modules.sol";
@@ -35,6 +36,8 @@ contract AuctionTest is Test, Permit2User {
     uint8 internal constant _QUOTE_TOKEN_DECIMALS = 18;
     uint8 internal constant _BASE_TOKEN_DECIMALS = 18;
 
+    uint48 internal constant _REFERRER_FEE = 100;
+
     function setUp() external {
         // Ensure the block timestamp is a sane value
         vm.warp(1_000_000);
@@ -48,6 +51,8 @@ contract AuctionTest is Test, Permit2User {
 
         _auctionHouse.installModule(_mockAuctionModule);
 
+        _auctionHouse.setFee(_mockAuctionModuleKeycode, IFeeManager.FeeType.MaxReferrer, 1000);
+
         _auctionParams = IAuction.AuctionParams({
             start: uint48(block.timestamp),
             duration: uint48(1 days),
@@ -60,6 +65,7 @@ contract AuctionTest is Test, Permit2User {
             auctionType: _mockAuctionModuleKeycode,
             baseToken: address(_baseToken),
             quoteToken: address(_quoteToken),
+            referrerFee: _REFERRER_FEE,
             curator: address(0),
             callbacks: ICallback(address(0)),
             callbackData: abi.encode(""),

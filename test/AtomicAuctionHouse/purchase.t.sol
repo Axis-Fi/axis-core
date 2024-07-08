@@ -11,7 +11,7 @@ import {AtomicAuctionHouseTest} from "test/AtomicAuctionHouse/AuctionHouseTest.s
 
 contract AtomicPurchaseTest is AtomicAuctionHouseTest {
     uint256 internal constant _AMOUNT_IN = 2e18;
-    uint256 internal constant _PAYOUT_MULTIPLIER = 50_000; // 50%
+    uint256 internal constant _PAYOUT_MULTIPLIER = 5000; // 50%
 
     address internal constant _SENDER = address(0x26);
 
@@ -57,8 +57,8 @@ contract AtomicPurchaseTest is AtomicAuctionHouseTest {
         amountInLessFees = amountInLessFees * _BASE_SCALE / (10 ** _quoteToken.decimals());
 
         // Set the amount out
-        _amountOut = _scaleBaseTokenAmount((amountInLessFees * multiplier_) / 1e5);
-        _curatorFeeActual = (_amountOut * _curatorFeePercentActual) / 1e5;
+        _amountOut = _scaleBaseTokenAmount((amountInLessFees * multiplier_) / 100e2);
+        _curatorFeeActual = (_amountOut * _curatorFeePercentActual) / 100e2;
         _;
     }
 
@@ -80,21 +80,21 @@ contract AtomicPurchaseTest is AtomicAuctionHouseTest {
     }
 
     modifier givenFeesAreCalculated(uint256 amountIn_) {
-        _expectedReferrerFeesAllocated = (amountIn_ * _referrerFeePercentActual) / 1e5;
-        _expectedProtocolFeesAllocated = (amountIn_ * _protocolFeePercentActual) / 1e5;
+        _expectedReferrerFeesAllocated = (amountIn_ * _referrerFeePercentActual) / 100e2;
+        _expectedProtocolFeesAllocated = (amountIn_ * _protocolFeePercentActual) / 100e2;
         _;
     }
 
     modifier givenFeesAreCalculatedNoReferrer(uint256 amountIn_) {
         _expectedReferrerFeesAllocated = 0;
         _expectedProtocolFeesAllocated =
-            (amountIn_ * (_protocolFeePercentActual + _referrerFeePercentActual)) / 1e5;
+            (amountIn_ * (_protocolFeePercentActual + _referrerFeePercentActual)) / 100e2;
         _;
     }
 
     modifier givenBalancesAreCalculated(uint256 amountIn_, uint256 amountOut_) {
         // Determine curator fee
-        uint256 curatorFee = _curatorApproved ? (amountOut_ * _curatorFeePercentActual) / 1e5 : 0;
+        uint256 curatorFee = _curatorApproved ? (amountOut_ * _curatorFeePercentActual) / 100e2 : 0;
         bool hasDerivativeToken = _derivativeTokenId != type(uint256).max;
         bool hasCallback = address(_routingParams.callbacks) != address(0);
         uint256 scaledLotCapacity = _scaleBaseTokenAmount(_LOT_CAPACITY);
@@ -308,12 +308,13 @@ contract AtomicPurchaseTest is AtomicAuctionHouseTest {
         external
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
+        givenProtocolFeeIsSet
         givenLotIsCreated
         givenLotHasStarted
         givenUserHasQuoteTokenBalance(_AMOUNT_IN)
         givenUserHasQuoteTokenAllowance(_AMOUNT_IN)
         givenFeesAreCalculated(_AMOUNT_IN)
-        whenPayoutMultiplierIsSet(90_000)
+        whenPayoutMultiplierIsSet(9000)
         givenSellerHasBaseTokenBalance(_amountOut)
         givenSellerHasBaseTokenAllowance(_amountOut)
     {
@@ -360,6 +361,7 @@ contract AtomicPurchaseTest is AtomicAuctionHouseTest {
         givenLotHasAllowlist
         whenAllowlistProofIsCorrect
         givenProtocolFeeIsSet
+        givenMaxReferrerFeeIsSet
         givenReferrerFeeIsSet
         givenLotIsCreated
         givenLotHasStarted
@@ -393,6 +395,7 @@ contract AtomicPurchaseTest is AtomicAuctionHouseTest {
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
         givenProtocolFeeIsSet
+        givenMaxReferrerFeeIsSet
         givenReferrerFeeIsSet
         givenLotIsCreated
         givenLotHasStarted
@@ -422,6 +425,7 @@ contract AtomicPurchaseTest is AtomicAuctionHouseTest {
         givenQuoteTokenHasDecimals(17)
         givenBaseTokenHasDecimals(13)
         givenProtocolFeeIsSet
+        givenMaxReferrerFeeIsSet
         givenReferrerFeeIsSet
         givenLotIsCreated
         givenLotHasStarted
@@ -451,6 +455,7 @@ contract AtomicPurchaseTest is AtomicAuctionHouseTest {
         givenQuoteTokenHasDecimals(13)
         givenBaseTokenHasDecimals(17)
         givenProtocolFeeIsSet
+        givenMaxReferrerFeeIsSet
         givenReferrerFeeIsSet
         givenLotIsCreated
         givenLotHasStarted
@@ -478,6 +483,7 @@ contract AtomicPurchaseTest is AtomicAuctionHouseTest {
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
         givenProtocolFeeIsSet
+        givenMaxReferrerFeeIsSet
         givenReferrerFeeIsSet
         givenLotIsCreated
         givenLotHasStarted
@@ -507,6 +513,7 @@ contract AtomicPurchaseTest is AtomicAuctionHouseTest {
         givenQuoteTokenHasDecimals(17)
         givenBaseTokenHasDecimals(13)
         givenProtocolFeeIsSet
+        givenMaxReferrerFeeIsSet
         givenReferrerFeeIsSet
         givenLotIsCreated
         givenLotHasStarted
@@ -536,6 +543,7 @@ contract AtomicPurchaseTest is AtomicAuctionHouseTest {
         givenQuoteTokenHasDecimals(13)
         givenBaseTokenHasDecimals(17)
         givenProtocolFeeIsSet
+        givenMaxReferrerFeeIsSet
         givenReferrerFeeIsSet
         givenLotIsCreated
         givenLotHasStarted
@@ -574,6 +582,7 @@ contract AtomicPurchaseTest is AtomicAuctionHouseTest {
         givenCallbackHasSendBaseTokensFlag
         givenCallbackIsSet
         givenProtocolFeeIsSet
+        givenMaxReferrerFeeIsSet
         givenReferrerFeeIsSet
         givenLotIsCreated
         givenLotHasStarted
@@ -607,6 +616,7 @@ contract AtomicPurchaseTest is AtomicAuctionHouseTest {
         givenCallbackHasSendBaseTokensFlag
         givenCallbackIsSet
         givenProtocolFeeIsSet
+        givenMaxReferrerFeeIsSet
         givenReferrerFeeIsSet
         givenLotIsCreated
         givenLotHasStarted
@@ -640,6 +650,7 @@ contract AtomicPurchaseTest is AtomicAuctionHouseTest {
         givenCallbackHasSendBaseTokensFlag
         givenCallbackIsSet
         givenProtocolFeeIsSet
+        givenMaxReferrerFeeIsSet
         givenReferrerFeeIsSet
         givenLotIsCreated
         givenLotHasStarted
@@ -671,6 +682,7 @@ contract AtomicPurchaseTest is AtomicAuctionHouseTest {
         givenCallbackHasReceiveQuoteTokensFlag
         givenCallbackIsSet
         givenProtocolFeeIsSet
+        givenMaxReferrerFeeIsSet
         givenReferrerFeeIsSet
         givenLotIsCreated
         givenLotHasStarted
@@ -701,6 +713,7 @@ contract AtomicPurchaseTest is AtomicAuctionHouseTest {
         whenAtomicAuctionModuleIsInstalled
         givenCallbackIsSet
         givenProtocolFeeIsSet
+        givenMaxReferrerFeeIsSet
         givenReferrerFeeIsSet
         givenLotIsCreated
         givenLotHasStarted
@@ -730,6 +743,7 @@ contract AtomicPurchaseTest is AtomicAuctionHouseTest {
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
         givenProtocolFeeIsSet
+        givenMaxReferrerFeeIsSet
         givenReferrerFeeIsSet
         givenLotIsCreated
         givenLotHasStarted
@@ -759,6 +773,7 @@ contract AtomicPurchaseTest is AtomicAuctionHouseTest {
         givenQuoteTokenHasDecimals(17)
         givenBaseTokenHasDecimals(13)
         givenProtocolFeeIsSet
+        givenMaxReferrerFeeIsSet
         givenReferrerFeeIsSet
         givenLotIsCreated
         givenLotHasStarted
@@ -788,6 +803,7 @@ contract AtomicPurchaseTest is AtomicAuctionHouseTest {
         givenQuoteTokenHasDecimals(13)
         givenBaseTokenHasDecimals(17)
         givenProtocolFeeIsSet
+        givenMaxReferrerFeeIsSet
         givenReferrerFeeIsSet
         givenLotIsCreated
         givenLotHasStarted
@@ -824,6 +840,7 @@ contract AtomicPurchaseTest is AtomicAuctionHouseTest {
         givenDerivativeParamsAreSet
         givenDerivativeIsDeployed
         givenProtocolFeeIsSet
+        givenMaxReferrerFeeIsSet
         givenReferrerFeeIsSet
         givenLotIsCreated
         givenLotHasStarted
@@ -857,6 +874,7 @@ contract AtomicPurchaseTest is AtomicAuctionHouseTest {
         givenDerivativeParamsAreSet
         givenDerivativeIsDeployed
         givenProtocolFeeIsSet
+        givenMaxReferrerFeeIsSet
         givenReferrerFeeIsSet
         givenLotIsCreated
         givenLotHasStarted
@@ -890,6 +908,7 @@ contract AtomicPurchaseTest is AtomicAuctionHouseTest {
         givenDerivativeParamsAreSet
         givenDerivativeIsDeployed
         givenProtocolFeeIsSet
+        givenMaxReferrerFeeIsSet
         givenReferrerFeeIsSet
         givenLotIsCreated
         givenLotHasStarted
@@ -920,6 +939,7 @@ contract AtomicPurchaseTest is AtomicAuctionHouseTest {
         external
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
+        givenMaxReferrerFeeIsSet
         givenReferrerFeeIsSet
         givenLotIsCreated
         givenLotHasStarted
@@ -948,6 +968,7 @@ contract AtomicPurchaseTest is AtomicAuctionHouseTest {
         whenAtomicAuctionModuleIsInstalled
         givenQuoteTokenHasDecimals(17)
         givenBaseTokenHasDecimals(13)
+        givenMaxReferrerFeeIsSet
         givenReferrerFeeIsSet
         givenLotIsCreated
         givenLotHasStarted
@@ -976,6 +997,7 @@ contract AtomicPurchaseTest is AtomicAuctionHouseTest {
         whenAtomicAuctionModuleIsInstalled
         givenQuoteTokenHasDecimals(13)
         givenBaseTokenHasDecimals(17)
+        givenMaxReferrerFeeIsSet
         givenReferrerFeeIsSet
         givenLotIsCreated
         givenLotHasStarted
@@ -1003,6 +1025,7 @@ contract AtomicPurchaseTest is AtomicAuctionHouseTest {
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
         givenProtocolFeeIsSet
+        givenMaxReferrerFeeIsSet
         givenReferrerFeeIsSet
         givenLotIsCreated
         givenLotHasStarted
@@ -1032,6 +1055,7 @@ contract AtomicPurchaseTest is AtomicAuctionHouseTest {
         givenQuoteTokenHasDecimals(17)
         givenBaseTokenHasDecimals(13)
         givenProtocolFeeIsSet
+        givenMaxReferrerFeeIsSet
         givenReferrerFeeIsSet
         givenLotIsCreated
         givenLotHasStarted
@@ -1061,6 +1085,7 @@ contract AtomicPurchaseTest is AtomicAuctionHouseTest {
         givenQuoteTokenHasDecimals(13)
         givenBaseTokenHasDecimals(17)
         givenProtocolFeeIsSet
+        givenMaxReferrerFeeIsSet
         givenReferrerFeeIsSet
         givenLotIsCreated
         givenLotHasStarted
@@ -1091,8 +1116,8 @@ contract AtomicPurchaseTest is AtomicAuctionHouseTest {
         external
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
-        givenLotIsCreated
         givenProtocolFeeIsSet
+        givenLotIsCreated
         givenLotHasStarted
         givenUserHasQuoteTokenBalance(_AMOUNT_IN)
         givenUserHasQuoteTokenAllowance(_AMOUNT_IN)
@@ -1119,8 +1144,8 @@ contract AtomicPurchaseTest is AtomicAuctionHouseTest {
         whenAtomicAuctionModuleIsInstalled
         givenQuoteTokenHasDecimals(17)
         givenBaseTokenHasDecimals(13)
-        givenLotIsCreated
         givenProtocolFeeIsSet
+        givenLotIsCreated
         givenLotHasStarted
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_AMOUNT_IN))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_AMOUNT_IN))
@@ -1147,8 +1172,8 @@ contract AtomicPurchaseTest is AtomicAuctionHouseTest {
         whenAtomicAuctionModuleIsInstalled
         givenQuoteTokenHasDecimals(13)
         givenBaseTokenHasDecimals(17)
-        givenLotIsCreated
         givenProtocolFeeIsSet
+        givenLotIsCreated
         givenLotHasStarted
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_AMOUNT_IN))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_AMOUNT_IN))
@@ -1173,9 +1198,10 @@ contract AtomicPurchaseTest is AtomicAuctionHouseTest {
         external
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
-        givenLotIsCreated
+        givenMaxReferrerFeeIsSet
         givenReferrerFeeIsSet
         givenProtocolFeeIsSet
+        givenLotIsCreated
         givenLotHasStarted
         givenUserHasQuoteTokenBalance(_AMOUNT_IN)
         givenUserHasQuoteTokenAllowance(_AMOUNT_IN)
@@ -1202,9 +1228,10 @@ contract AtomicPurchaseTest is AtomicAuctionHouseTest {
         whenAtomicAuctionModuleIsInstalled
         givenQuoteTokenHasDecimals(17)
         givenBaseTokenHasDecimals(13)
-        givenLotIsCreated
+        givenMaxReferrerFeeIsSet
         givenReferrerFeeIsSet
         givenProtocolFeeIsSet
+        givenLotIsCreated
         givenLotHasStarted
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_AMOUNT_IN))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_AMOUNT_IN))
@@ -1231,9 +1258,10 @@ contract AtomicPurchaseTest is AtomicAuctionHouseTest {
         whenAtomicAuctionModuleIsInstalled
         givenQuoteTokenHasDecimals(13)
         givenBaseTokenHasDecimals(17)
-        givenLotIsCreated
+        givenMaxReferrerFeeIsSet
         givenReferrerFeeIsSet
         givenProtocolFeeIsSet
+        givenLotIsCreated
         givenLotHasStarted
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_AMOUNT_IN))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_AMOUNT_IN))
@@ -1258,9 +1286,8 @@ contract AtomicPurchaseTest is AtomicAuctionHouseTest {
         external
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
-        givenLotIsCreated
-        givenReferrerFeeIsSet
         givenProtocolFeeIsSet
+        givenLotIsCreated
         givenLotHasStarted
         givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_AMOUNT_IN))
         givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_AMOUNT_IN))
@@ -1299,6 +1326,7 @@ contract AtomicPurchaseTest is AtomicAuctionHouseTest {
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
         givenProtocolFeeIsSet
+        givenMaxReferrerFeeIsSet
         givenReferrerFeeIsSet
         givenLotIsCreated
         givenLotHasStarted
@@ -1327,6 +1355,7 @@ contract AtomicPurchaseTest is AtomicAuctionHouseTest {
         whenAtomicAuctionModuleIsInstalled
         givenCuratorIsSet
         givenProtocolFeeIsSet
+        givenMaxReferrerFeeIsSet
         givenReferrerFeeIsSet
         givenLotIsCreated
         givenLotHasStarted
@@ -1357,6 +1386,7 @@ contract AtomicPurchaseTest is AtomicAuctionHouseTest {
         givenCuratorMaxFeeIsSet
         givenCuratorFeeIsSet
         givenProtocolFeeIsSet
+        givenMaxReferrerFeeIsSet
         givenReferrerFeeIsSet
         givenLotIsCreated
         givenLotHasStarted
@@ -1388,6 +1418,7 @@ contract AtomicPurchaseTest is AtomicAuctionHouseTest {
         givenQuoteTokenHasDecimals(17)
         givenBaseTokenHasDecimals(13)
         givenProtocolFeeIsSet
+        givenMaxReferrerFeeIsSet
         givenReferrerFeeIsSet
         givenCuratorMaxFeeIsSet
         givenCuratorFeeIsSet
@@ -1421,6 +1452,7 @@ contract AtomicPurchaseTest is AtomicAuctionHouseTest {
         givenQuoteTokenHasDecimals(13)
         givenBaseTokenHasDecimals(17)
         givenProtocolFeeIsSet
+        givenMaxReferrerFeeIsSet
         givenReferrerFeeIsSet
         givenCuratorMaxFeeIsSet
         givenCuratorFeeIsSet
@@ -1452,6 +1484,7 @@ contract AtomicPurchaseTest is AtomicAuctionHouseTest {
         whenAtomicAuctionModuleIsInstalled
         givenCuratorIsSet
         givenProtocolFeeIsSet
+        givenMaxReferrerFeeIsSet
         givenReferrerFeeIsSet
         givenCuratorMaxFeeIsSet
         givenLotIsCreated
@@ -1482,6 +1515,7 @@ contract AtomicPurchaseTest is AtomicAuctionHouseTest {
         whenAtomicAuctionModuleIsInstalled
         givenCuratorIsSet
         givenProtocolFeeIsSet
+        givenMaxReferrerFeeIsSet
         givenReferrerFeeIsSet
         givenCuratorMaxFeeIsSet
         givenCuratorFeeIsSet
@@ -1521,6 +1555,7 @@ contract AtomicPurchaseTest is AtomicAuctionHouseTest {
         givenDerivativeIsDeployed
         givenCuratorIsSet
         givenProtocolFeeIsSet
+        givenMaxReferrerFeeIsSet
         givenReferrerFeeIsSet
         givenCuratorMaxFeeIsSet
         givenCuratorFeeIsSet
@@ -1558,6 +1593,7 @@ contract AtomicPurchaseTest is AtomicAuctionHouseTest {
         givenDerivativeIsDeployed
         givenCuratorIsSet
         givenProtocolFeeIsSet
+        givenMaxReferrerFeeIsSet
         givenReferrerFeeIsSet
         givenCuratorMaxFeeIsSet
         givenCuratorFeeIsSet
@@ -1595,6 +1631,7 @@ contract AtomicPurchaseTest is AtomicAuctionHouseTest {
         givenDerivativeIsDeployed
         givenCuratorIsSet
         givenProtocolFeeIsSet
+        givenMaxReferrerFeeIsSet
         givenReferrerFeeIsSet
         givenCuratorMaxFeeIsSet
         givenCuratorFeeIsSet

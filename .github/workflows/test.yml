@@ -14,18 +14,18 @@ jobs:
     name: Foundry project
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-        with:
-          submodules: recursive
+      - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v2
+      - name: Install Node.js
+        uses: actions/setup-node@v2
 
-      - uses: pnpm/action-setup@v2
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
         with:
             version: 8
 
-      - name: Install Node dependencies
-        run: pnpm install
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
 
       # From: https://www.uffizzi.com/blog/optimizing-rust-builds-for-faster-github-actions-pipelines
       - name: Install Rust
@@ -51,8 +51,11 @@ jobs:
       - name: Build local ecies-cli for use with testing
         run: cd crates/ecies-cli && cargo build && cd ../..
 
-      - name: Install Foundry
-        uses: foundry-rs/foundry-toolchain@v1
+      - name: Repo Install Script
+        run: |
+          chmod +x ./install.sh
+          ./install.sh
+        shell: bash
 
       - name: Run lint check
         run: pnpm run lint:check
