@@ -12,6 +12,7 @@ docs/
 # Dotenv file
 .env
 .env.*
+!.env.example
 
 node_modules/
 
