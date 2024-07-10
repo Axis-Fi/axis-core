@@ -77,7 +77,7 @@ contract AtomicAuctionHouse is IAtomicAuctionHouse, AuctionHouse {
 
     // ========== PURCHASE ========== //
 
-    /// @dev        This fuction handles the following:
+    /// @dev        This function handles the following:
     ///             1. Calculates the fees for the purchase
     ///             2. Obtains the payout from the auction module
     ///             3. Transfers the purchase amount (quote token) from the caller
