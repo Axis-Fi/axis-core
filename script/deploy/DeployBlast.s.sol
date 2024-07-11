@@ -23,12 +23,12 @@ contract DeployBlast is Deploy {
         console2.log("");
         console2.log("Deploying BlastAtomicAuctionHouse");
 
-        address owner = _getAddressNotZero("axis.OWNER");
-        address protocol = _getAddressNotZero("axis.PROTOCOL");
-        address permit2 = _getAddressNotZero("axis.PERMIT2");
-        address blast = _getAddressNotZero("blast.blast");
-        address blastWeth = _getAddressNotZero("blast.weth");
-        address blastUsdb = _getAddressNotZero("blast.usdb");
+        address owner = _getAddressNotZero("constants.axis.OWNER");
+        address protocol = _getAddressNotZero("constants.axis.PROTOCOL");
+        address permit2 = _getAddressNotZero("constants.axis.PERMIT2");
+        address blast = _getAddressNotZero("constants.blast.blast");
+        address blastWeth = _getAddressNotZero("constants.blast.weth");
+        address blastUsdb = _getAddressNotZero("constants.blast.usdb");
 
         // Get the salt
         bytes32 salt_ = _getSalt(
@@ -60,12 +60,12 @@ contract DeployBlast is Deploy {
         console2.log("");
         console2.log("Deploying BlastBatchAuctionHouse");
 
-        address owner = _getAddressNotZero("axis.OWNER");
-        address protocol = _getAddressNotZero("axis.PROTOCOL");
-        address permit2 = _getAddressNotZero("axis.PERMIT2");
-        address blast = _getAddressNotZero("blast.blast");
-        address blastWeth = _getAddressNotZero("blast.weth");
-        address blastUsdb = _getAddressNotZero("blast.usdb");
+        address owner = _getAddressNotZero("constants.axis.OWNER");
+        address protocol = _getAddressNotZero("constants.axis.PROTOCOL");
+        address permit2 = _getAddressNotZero("constants.axis.PERMIT2");
+        address blast = _getAddressNotZero("constants.blast.blast");
+        address blastWeth = _getAddressNotZero("constants.blast.weth");
+        address blastUsdb = _getAddressNotZero("constants.blast.usdb");
 
         // Get the salt
         bytes32 salt_ = _getSalt(
@@ -103,8 +103,8 @@ contract DeployBlast is Deploy {
         console2.log("");
         console2.log("Deploying BlastEMP (Encrypted Marginal Price)");
 
-        address batchAuctionHouse = _getAddressNotZero("axis.BatchAuctionHouse");
-        address blast = _getAddressNotZero("blast.blast");
+        address batchAuctionHouse = _getAddressNotZero("deployments.BatchAuctionHouse");
+        address blast = _getAddressNotZero("constants.blast.blast");
 
         // Get the salt
         bytes32 salt_ =
@@ -123,7 +123,7 @@ contract DeployBlast is Deploy {
         }
         console2.log("    BlastEMP deployed at:", address(amEmp));
 
-        return (address(amEmp), _PREFIX_AXIS);
+        return (address(amEmp), _PREFIX_AUCTION_MODULES);
     }
 
     function deployFixedPriceSale(bytes memory) public override returns (address, string memory) {
@@ -131,8 +131,8 @@ contract DeployBlast is Deploy {
         console2.log("");
         console2.log("Deploying BlastFPS (Fixed Price Sale)");
 
-        address atomicAuctionHouse = _getAddressNotZero("axis.AtomicAuctionHouse");
-        address blast = _getAddressNotZero("blast.blast");
+        address atomicAuctionHouse = _getAddressNotZero("deployments.AtomicAuctionHouse");
+        address blast = _getAddressNotZero("constants.blast.blast");
 
         // Get the salt
         bytes32 salt_ =
@@ -151,7 +151,7 @@ contract DeployBlast is Deploy {
         }
         console2.log("    BlastFPS deployed at:", address(amFps));
 
-        return (address(amFps), _PREFIX_AXIS);
+        return (address(amFps), _PREFIX_AUCTION_MODULES);
     }
 
     function deployFixedPriceBatch(bytes memory) public override returns (address, string memory) {
@@ -159,8 +159,8 @@ contract DeployBlast is Deploy {
         console2.log("");
         console2.log("Deploying BlastFPB (Fixed Price Batch)");
 
-        address batchAuctionHouse = _getAddressNotZero("axis.BatchAuctionHouse");
-        address blast = _getAddressNotZero("blast.blast");
+        address batchAuctionHouse = _getAddressNotZero("deployments.BatchAuctionHouse");
+        address blast = _getAddressNotZero("constants.blast.blast");
 
         // Get the salt
         bytes32 salt_ =
@@ -179,7 +179,7 @@ contract DeployBlast is Deploy {
         }
         console2.log("    BlastFPB deployed at:", address(amFpb));
 
-        return (address(amFpb), _PREFIX_AXIS);
+        return (address(amFpb), _PREFIX_AUCTION_MODULES);
     }
 
     function deployAtomicLinearVesting(bytes memory)
@@ -191,8 +191,8 @@ contract DeployBlast is Deploy {
         console2.log("");
         console2.log("Deploying BlastLinearVesting (Atomic)");
 
-        address atomicAuctionHouse = _getAddressNotZero("axis.AtomicAuctionHouse");
-        address blast = _getAddressNotZero("blast.blast");
+        address atomicAuctionHouse = _getAddressNotZero("deployments.AtomicAuctionHouse");
+        address blast = _getAddressNotZero("constants.blast.blast");
 
         // Get the salt
         bytes32 salt_ = _getSalt(
@@ -214,7 +214,7 @@ contract DeployBlast is Deploy {
         }
         console2.log("    LinearVesting (Atomic) deployed at:", address(dmAtomicLinearVesting));
 
-        return (address(dmAtomicLinearVesting), _PREFIX_AXIS);
+        return (address(dmAtomicLinearVesting), _PREFIX_DERIVATIVE_MODULES);
     }
 
     function deployBatchLinearVesting(bytes memory)
@@ -226,8 +226,8 @@ contract DeployBlast is Deploy {
         console2.log("");
         console2.log("Deploying LinearVesting (Batch)");
 
-        address batchAuctionHouse = _getAddressNotZero("axis.BatchAuctionHouse");
-        address blast = _getAddressNotZero("blast.blast");
+        address batchAuctionHouse = _getAddressNotZero("deployments.BatchAuctionHouse");
+        address blast = _getAddressNotZero("constants.blast.blast");
 
         // Get the salt
         bytes32 salt_ = _getSalt(
@@ -249,6 +249,6 @@ contract DeployBlast is Deploy {
         }
         console2.log("    LinearVesting (Batch) deployed at:", address(dmBatchLinearVesting));
 
-        return (address(dmBatchLinearVesting), _PREFIX_AXIS);
+        return (address(dmBatchLinearVesting), _PREFIX_DERIVATIVE_MODULES);
     }
 }

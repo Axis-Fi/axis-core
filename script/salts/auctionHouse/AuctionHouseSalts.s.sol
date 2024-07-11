@@ -19,11 +19,11 @@ contract AuctionHouseSalts is Script, WithEnvironment, WithSalts {
         _createBytecodeDirectory();
 
         // Cache required variables
-        _envOwner = _envAddressNotZero("axis.OWNER");
+        _envOwner = _envAddressNotZero("constants.axis.OWNER");
         console2.log("Owner:", _envOwner);
-        _envPermit2 = _envAddressNotZero("axis.PERMIT2");
+        _envPermit2 = _envAddressNotZero("constants.axis.PERMIT2");
         console2.log("Permit2:", _envPermit2);
-        _envProtocol = _envAddressNotZero("axis.PROTOCOL");
+        _envProtocol = _envAddressNotZero("constants.axis.PROTOCOL");
         console2.log("Protocol:", _envProtocol);
     }
 
