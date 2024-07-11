@@ -12,8 +12,9 @@ import {AtomicAuctionHouse} from "src/AtomicAuctionHouse.sol";
 import {BatchAuctionHouse} from "src/BatchAuctionHouse.sol";
 import {AtomicCatalogue} from "src/AtomicCatalogue.sol";
 import {BatchCatalogue} from "src/BatchCatalogue.sol";
-import {Module} from "src/modules/Modules.sol";
+import {Module, Keycode, keycodeFromVeecode} from "src/modules/Modules.sol";
 import {Callbacks} from "src/lib/Callbacks.sol";
+import {IFeeManager} from "src/interfaces/IFeeManager.sol";
 
 // Auction modules
 import {EncryptedMarginalPrice} from "src/modules/auctions/batch/EMP.sol";
@@ -51,6 +52,7 @@ contract Deploy is Script, WithEnvironment, WithSalts {
     mapping(string => bytes) public argsMap;
     mapping(string => bool) public installAtomicAuctionHouseMap;
     mapping(string => bool) public installBatchAuctionHouseMap;
+    mapping(string => uint48[2]) public maxFeesMap; // [maxReferrerFee, maxCuratorFee]
     string[] public deployments;
 
     string[] public deployedToKeys;
@@ -149,9 +151,11 @@ contract Deploy is Script, WithEnvironment, WithSalts {
             deployedToKeys.push(deployedToKey);
             deployedTo[deployedToKey] = deploymentAddress;
 
-            // If required, install in the AtomicAuctionHouse
+            // If required, install in the AtomicAuctionHouse and initialize max fees
             // For this to work, the deployer address must be the same as the owner of the AuctionHouse (`_envOwner`)
             if (installAtomicAuctionHouseMap[name]) {
+                Module module = Module(deploymentAddress);
+
                 console2.log("");
                 AtomicAuctionHouse atomicAuctionHouse =
                     AtomicAuctionHouse(_getAddressNotZero("deployments.AtomicAuctionHouse"));
@@ -159,12 +163,36 @@ contract Deploy is Script, WithEnvironment, WithSalts {
                 console2.log("");
                 console2.log("    Installing in AtomicAuctionHouse");
                 vm.broadcast();
-                atomicAuctionHouse.installModule(Module(deploymentAddress));
+                atomicAuctionHouse.installModule(module);
+
+                // Check if module is an auction module, if so, set max fees if required
+                if (module.TYPE() == Module.Type.Auction) {
+                    // Get keycode
+                    Keycode keycode = keycodeFromVeecode(module.VEECODE());
+
+                    // If required, set max fees
+                    uint48[2] memory maxFees = maxFeesMap[name];
+                    if (maxFees[0] != 0 || maxFees[1] != 0) {
+                        console2.log("");
+                        console2.log("    Setting max fees");
+                        vm.broadcast();
+                        atomicAuctionHouse.setFee(
+                            keycode, IFeeManager.FeeType.MaxReferrer, maxFees[0]
+                        );
+
+                        vm.broadcast();
+                        atomicAuctionHouse.setFee(
+                            keycode, IFeeManager.FeeType.MaxCurator, maxFees[1]
+                        );
+                    }
+                }
             }
 
             // If required, install in the BatchAuctionHouse
             // For this to work, the deployer address must be the same as the owner of the AuctionHouse (`_envOwner`)
             if (installBatchAuctionHouseMap[name]) {
+                Module module = Module(deploymentAddress);
+
                 console2.log("");
                 BatchAuctionHouse batchAuctionHouse =
                     BatchAuctionHouse(_getAddressNotZero("deployments.BatchAuctionHouse"));
@@ -172,7 +200,29 @@ contract Deploy is Script, WithEnvironment, WithSalts {
                 console2.log("");
                 console2.log("    Installing in BatchAuctionHouse");
                 vm.broadcast();
-                batchAuctionHouse.installModule(Module(deploymentAddress));
+                batchAuctionHouse.installModule(module);
+
+                // Check if module is an auction module, if so, set max fees if required
+                if (module.TYPE() == Module.Type.Auction) {
+                    // Get keycode
+                    Keycode keycode = keycodeFromVeecode(module.VEECODE());
+
+                    // If required, set max fees
+                    uint48[2] memory maxFees = maxFeesMap[name];
+                    if (maxFees[0] != 0 || maxFees[1] != 0) {
+                        console2.log("");
+                        console2.log("    Setting max fees");
+                        vm.broadcast();
+                        batchAuctionHouse.setFee(
+                            keycode, IFeeManager.FeeType.MaxReferrer, maxFees[0]
+                        );
+
+                        vm.broadcast();
+                        batchAuctionHouse.setFee(
+                            keycode, IFeeManager.FeeType.MaxCurator, maxFees[1]
+                        );
+                    }
+                }
             }
         }
 
@@ -1047,6 +1097,21 @@ contract Deploy is Script, WithEnvironment, WithSalts {
         // Check if it should be installed in the BatchAuctionHouse
         if (_readDataBoolean(data_, name_, "installBatchAuctionHouse")) {
             installBatchAuctionHouseMap[name_] = true;
+        }
+
+        // Check if max fees need to be initialized
+        uint48[2] memory maxFees;
+        bytes memory maxReferrerFee = _readDataValue(data_, name_, "maxReferrerFee");
+        bytes memory maxCuratorFee = _readDataValue(data_, name_, "maxCuratorFee");
+        maxFees[0] = maxReferrerFee.length > 0
+            ? abi.decode(_readDataValue(data_, name_, "maxReferrerFee"), (uint48))
+            : 0;
+        maxFees[1] = maxCuratorFee.length > 0
+            ? abi.decode(_readDataValue(data_, name_, "maxCuratorFee"), (uint48))
+            : 0;
+
+        if (maxFees[0] != 0 || maxFees[1] != 0) {
+            maxFeesMap[name_] = maxFees;
         }
     }
 
