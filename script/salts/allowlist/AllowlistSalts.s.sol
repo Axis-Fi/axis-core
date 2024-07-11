@@ -27,8 +27,7 @@ contract AllowlistSalts is Script, WithEnvironment, WithSalts {
         if (atomic_) {
             auctionHouse = _envAddress("deployments.AtomicAuctionHouse");
             console2.log("AtomicAuctionHouse:", auctionHouse);
-        }
-        else {
+        } else {
             auctionHouse = _envAddress("deployments.BatchAuctionHouse");
             console2.log("BatchAuctionHouse:", auctionHouse);
         }
