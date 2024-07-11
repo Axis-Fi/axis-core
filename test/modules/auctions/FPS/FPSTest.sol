@@ -23,7 +23,7 @@ abstract contract FpsTest is Test, Permit2User {
 
     uint256 internal constant _LOT_CAPACITY = 10e18;
     uint48 internal constant _DURATION = 1 days;
-    uint24 internal constant _MAX_PAYOUT_PERCENT = 5e4; // 50%
+    uint24 internal constant _MAX_PAYOUT_PERCENT = 50e2; // 50%
     uint256 internal constant _PRICE = 2e18;
 
     AtomicAuctionHouse internal _auctionHouse;

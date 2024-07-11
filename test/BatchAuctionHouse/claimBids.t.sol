@@ -310,6 +310,7 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         givenCuratorIsSet
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenMaxReferrerFeeIsSet
         givenReferrerFeeIsSet
         givenProtocolFeeIsSet
         givenLotIsCreated
@@ -344,6 +345,7 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         givenBaseTokenHasDecimals(13)
         givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenMaxReferrerFeeIsSet
         givenReferrerFeeIsSet
         givenProtocolFeeIsSet
         givenLotIsCreated
@@ -378,6 +380,7 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         givenBaseTokenHasDecimals(17)
         givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenMaxReferrerFeeIsSet
         givenReferrerFeeIsSet
         givenProtocolFeeIsSet
         givenLotIsCreated
@@ -398,42 +401,6 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         _auctionHouse.claimBids(_lotId, _bidIds);
 
         // Check the accrued fees
-        _assertAccruedFees();
-        _assertQuoteTokenBalances();
-        _assertBaseTokenBalances();
-    }
-
-    function test_givenNoPayout_givenReferrerFeeIsChanged()
-        external
-        whenAuctionTypeIsBatch
-        whenBatchAuctionModuleIsInstalled
-        givenCuratorIsSet
-        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
-        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
-        givenReferrerFeeIsSet
-        givenProtocolFeeIsSet
-        givenLotIsCreated
-        givenLotHasStarted
-        givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
-        givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
-        givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
-        givenBidderTwoHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
-        givenBidderTwoHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
-        givenBidCreated(_BIDDER_TWO, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
-        givenPayoutIsNotSet(_bidIds[0], _bidder, _REFERRER, _scaleQuoteTokenAmount(_BID_AMOUNT))
-        givenPayoutIsNotSet(_bidIds[1], _BIDDER_TWO, _REFERRER, _scaleQuoteTokenAmount(_BID_AMOUNT))
-        givenLotIsConcluded
-        givenLotSettlementIsNotSuccessful
-    {
-        // Change the referrer fee
-        _setReferrerFee(90);
-
-        // Call the function
-        vm.prank(address(this));
-        _auctionHouse.claimBids(_lotId, _bidIds);
-
-        // Check the accrued fees
-        // Assertions are not updated with the new fee, so the test will fail if the new fee is used by the AuctionHouse
         _assertAccruedFees();
         _assertQuoteTokenBalances();
         _assertBaseTokenBalances();
@@ -446,6 +413,7 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         givenCuratorIsSet
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenMaxReferrerFeeIsSet
         givenReferrerFeeIsSet
         givenProtocolFeeIsSet
         givenLotIsCreated
@@ -482,6 +450,7 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         givenCuratorIsSet
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenMaxReferrerFeeIsSet
         givenReferrerFeeIsSet
         givenProtocolFeeIsSet
         givenLotIsCreated
@@ -528,6 +497,7 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         givenBaseTokenHasDecimals(13)
         givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenMaxReferrerFeeIsSet
         givenReferrerFeeIsSet
         givenProtocolFeeIsSet
         givenLotIsCreated
@@ -574,6 +544,7 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         givenBaseTokenHasDecimals(17)
         givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenMaxReferrerFeeIsSet
         givenReferrerFeeIsSet
         givenProtocolFeeIsSet
         givenLotIsCreated
@@ -606,54 +577,6 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         _auctionHouse.claimBids(_lotId, _bidIds);
 
         // Check the accrued fees
-        _assertAccruedFees();
-        _assertQuoteTokenBalances();
-        _assertBaseTokenBalances();
-    }
-
-    function test_givenPayout_givenReferrerFeeIsChanged()
-        external
-        whenAuctionTypeIsBatch
-        whenBatchAuctionModuleIsInstalled
-        givenCuratorIsSet
-        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
-        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
-        givenReferrerFeeIsSet
-        givenProtocolFeeIsSet
-        givenLotIsCreated
-        givenLotHasStarted
-        givenUserHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
-        givenUserHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
-        givenBidCreated(_bidder, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
-        givenBidderTwoHasQuoteTokenBalance(_scaleQuoteTokenAmount(_BID_AMOUNT))
-        givenBidderTwoHasQuoteTokenAllowance(_scaleQuoteTokenAmount(_BID_AMOUNT))
-        givenBidCreated(_BIDDER_TWO, _scaleQuoteTokenAmount(_BID_AMOUNT), "")
-        givenPayoutIsSet(
-            _bidIds[0],
-            _bidder,
-            _REFERRER,
-            _scaleQuoteTokenAmount(_BID_AMOUNT),
-            _scaleBaseTokenAmount(_BID_AMOUNT_OUT)
-        )
-        givenPayoutIsSet(
-            _bidIds[1],
-            _BIDDER_TWO,
-            _REFERRER,
-            _scaleQuoteTokenAmount(_BID_AMOUNT),
-            _scaleBaseTokenAmount(_BID_AMOUNT_OUT)
-        )
-        givenLotIsConcluded
-        givenLotSettlementIsSuccessful
-    {
-        // Change the referrer fee
-        _setReferrerFee(90);
-
-        // Call the function
-        vm.prank(address(this));
-        _auctionHouse.claimBids(_lotId, _bidIds);
-
-        // Check the accrued fees
-        // Assertions are not updated with the new fee, so the test will fail if the new fee is used by the AuctionHouse
         _assertAccruedFees();
         _assertQuoteTokenBalances();
         _assertBaseTokenBalances();
@@ -666,6 +589,7 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         givenCuratorIsSet
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenMaxReferrerFeeIsSet
         givenReferrerFeeIsSet
         givenProtocolFeeIsSet
         givenLotIsCreated
@@ -714,6 +638,7 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         givenCuratorIsSet
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenMaxReferrerFeeIsSet
         givenReferrerFeeIsSet
         givenProtocolFeeIsSet
         givenLotIsCreated
@@ -760,6 +685,7 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         givenBaseTokenHasDecimals(13)
         givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenMaxReferrerFeeIsSet
         givenReferrerFeeIsSet
         givenProtocolFeeIsSet
         givenLotIsCreated
@@ -806,6 +732,7 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         givenBaseTokenHasDecimals(17)
         givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenMaxReferrerFeeIsSet
         givenReferrerFeeIsSet
         givenProtocolFeeIsSet
         givenLotIsCreated
@@ -850,6 +777,7 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         givenCuratorIsSet
         givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
         givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenMaxReferrerFeeIsSet
         givenReferrerFeeIsSet
         givenLotIsCreated
         givenLotHasStarted
@@ -895,6 +823,7 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         givenBaseTokenHasDecimals(13)
         givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenMaxReferrerFeeIsSet
         givenReferrerFeeIsSet
         givenLotIsCreated
         givenLotHasStarted
@@ -940,6 +869,7 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         givenBaseTokenHasDecimals(17)
         givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenMaxReferrerFeeIsSet
         givenReferrerFeeIsSet
         givenLotIsCreated
         givenLotHasStarted
@@ -1282,6 +1212,7 @@ contract BatchClaimBidsTest is BatchAuctionHouseTest {
         givenCuratorIsSet
         givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
+        givenMaxReferrerFeeIsSet
         givenReferrerFeeIsSet
         givenProtocolFeeIsSet
         givenLotIsCreated

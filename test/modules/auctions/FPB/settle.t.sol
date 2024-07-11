@@ -187,7 +187,7 @@ contract FpbSettleTest is FpbTest {
     function test_settle_doesNotBrick()
         public
         givenPrice(2e18)
-        givenMinFillPercent(100e3)
+        givenMinFillPercent(100e2)
         givenLotCapacity(10e18)
         givenLotIsCreated
         givenLotHasStarted

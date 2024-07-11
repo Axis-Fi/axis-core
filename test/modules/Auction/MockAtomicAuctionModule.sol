@@ -49,7 +49,7 @@ contract MockAtomicAuctionModule is AtomicAuctionModule {
         if (payoutData[lotId_] == 0) {
             payout = uint96(adjustedAmount);
         } else {
-            payout = uint96((payoutData[lotId_] * adjustedAmount) / 1e5);
+            payout = uint96((payoutData[lotId_] * adjustedAmount) / 100e2);
         }
 
         // Reduce capacity

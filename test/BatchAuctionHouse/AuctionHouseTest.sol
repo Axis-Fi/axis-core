@@ -66,8 +66,11 @@ abstract contract BatchAuctionHouseTest is Test, Permit2User, WithSalts {
 
     uint24 internal constant _PROTOCOL_FEE_PERCENT = 100;
     uint24 internal constant _REFERRER_FEE_PERCENT = 105;
-    uint24 internal _protocolFeePercentActual;
+    uint24 internal constant _REFERRER_MAX_FEE_PERCENT = 1000;
     uint24 internal _referrerFeePercentActual;
+
+    uint24 internal _protocolFeePercentActual;
+    uint24 internal _maxReferrerFeePercentActual;
 
     uint256 internal _curatorMaxPotentialFee;
     bool internal _curatorApproved;
@@ -131,6 +134,7 @@ abstract contract BatchAuctionHouseTest is Test, Permit2User, WithSalts {
             auctionType: toKeycode(""),
             baseToken: address(_baseToken),
             quoteToken: address(_quoteToken),
+            referrerFee: 0, // not set by default
             curator: _CURATOR,
             callbacks: ICallback(address(0)),
             callbackData: abi.encode(""),
@@ -160,12 +164,12 @@ abstract contract BatchAuctionHouseTest is Test, Permit2User, WithSalts {
     ) internal view returns (uint256 toReferrer, uint256 toProtocol, uint256 totalFees) {
         bool hasReferrer = referrer_ != address(0);
 
-        uint256 referrerFee = uint256(amountIn_) * _referrerFeePercentActual / 1e5;
+        uint256 referrerFee = uint256(amountIn_) * _referrerFeePercentActual / 100e2;
 
         // If the referrer is not set, the referrer fee is allocated to the protocol
         toReferrer = hasReferrer ? referrerFee : 0;
         toProtocol =
-            uint256(amountIn_) * _protocolFeePercentActual / 1e5 + (hasReferrer ? 0 : referrerFee);
+            uint256(amountIn_) * _protocolFeePercentActual / 100e2 + (hasReferrer ? 0 : referrerFee);
 
         return (toReferrer, toProtocol, toReferrer + toProtocol);
     }
@@ -179,7 +183,7 @@ abstract contract BatchAuctionHouseTest is Test, Permit2User, WithSalts {
             return 0;
         }
 
-        return amountOut_ * _curatorFeePercentActual / 1e5;
+        return amountOut_ * _curatorFeePercentActual / 100e2;
     }
 
     // ===== Modifiers ===== //
@@ -515,11 +519,37 @@ abstract contract BatchAuctionHouseTest is Test, Permit2User, WithSalts {
         _;
     }
 
+    function _setMaxReferrerFee(uint24 fee_) internal {
+        vm.prank(_OWNER);
+        _auctionHouse.setFee(_auctionModuleKeycode, IFeeManager.FeeType.MaxReferrer, fee_);
+        _maxReferrerFeePercentActual = fee_;
+    }
+
+    modifier givenMaxReferrerFeeIsSet() {
+        _setMaxReferrerFee(_REFERRER_MAX_FEE_PERCENT);
+        _;
+    }
+
+    function _setReferrerFee(uint24 fee_) internal {
+        _referrerFeePercentActual = fee_;
+        _routingParams.referrerFee = fee_;
+    }
+
+    modifier givenReferrerFee(uint24 fee_) {
+        _setReferrerFee(fee_);
+        _;
+    }
+
+    modifier givenReferrerFeeIsSet() {
+        _setReferrerFee(_REFERRER_FEE_PERCENT);
+        _;
+    }
+
     function _setCuratorFee(uint24 fee_) internal {
         vm.prank(_CURATOR);
         _auctionHouse.setCuratorFee(_auctionModuleKeycode, fee_);
         _curatorFeePercentActual = fee_;
-        _curatorMaxPotentialFee = _curatorFeePercentActual * _auctionParams.capacity / 1e5;
+        _curatorMaxPotentialFee = _curatorFeePercentActual * _auctionParams.capacity / 100e2;
     }
 
     modifier givenCuratorFeeIsSet() {
@@ -542,17 +572,6 @@ abstract contract BatchAuctionHouseTest is Test, Permit2User, WithSalts {
 
     modifier givenProtocolFeeIsSet() {
         _setProtocolFee(_PROTOCOL_FEE_PERCENT);
-        _;
-    }
-
-    function _setReferrerFee(uint24 fee_) internal {
-        vm.prank(_OWNER);
-        _auctionHouse.setFee(_auctionModuleKeycode, IFeeManager.FeeType.Referrer, fee_);
-        _referrerFeePercentActual = fee_;
-    }
-
-    modifier givenReferrerFeeIsSet() {
-        _setReferrerFee(_REFERRER_FEE_PERCENT);
         _;
     }
 

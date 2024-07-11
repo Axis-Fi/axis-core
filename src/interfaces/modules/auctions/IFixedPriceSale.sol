@@ -14,7 +14,7 @@ interface IFixedPriceSale {
     /// @notice                     Parameters for a fixed price auction
     ///
     /// @param price                The fixed price of the lot
-    /// @param maxPayoutPercent     The maximum payout per purchase, as a percentage of the capacity (100% = 1e5)
+    /// @param maxPayoutPercent     The maximum payout per purchase, as a percentage of the capacity (100% = 100e2 = 1e4)
     struct AuctionDataParams {
         uint256 price;
         uint24 maxPayoutPercent;

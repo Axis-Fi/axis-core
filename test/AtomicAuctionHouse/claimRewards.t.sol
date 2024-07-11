@@ -5,8 +5,8 @@ import {AtomicAuctionHouseTest} from "test/AtomicAuctionHouse/AuctionHouseTest.s
 
 contract AtomicClaimRewardsTest is AtomicAuctionHouseTest {
     uint256 internal constant _AMOUNT_IN = 1e18;
-    uint256 internal _amountInReferrerFee = (_AMOUNT_IN * _REFERRER_FEE_PERCENT) / 1e5;
-    uint256 internal _amountInProtocolFee = (_AMOUNT_IN * _PROTOCOL_FEE_PERCENT) / 1e5;
+    uint256 internal _amountInReferrerFee = (_AMOUNT_IN * _REFERRER_FEE_PERCENT) / 100e2;
+    uint256 internal _amountInProtocolFee = (_AMOUNT_IN * _PROTOCOL_FEE_PERCENT) / 100e2;
     uint256 internal _amountInLessFee = _AMOUNT_IN - _amountInReferrerFee - _amountInProtocolFee;
     // 1:1 exchange rate
     uint256 internal _amountOut = _amountInLessFee;
@@ -28,6 +28,7 @@ contract AtomicClaimRewardsTest is AtomicAuctionHouseTest {
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
         givenProtocolFeeIsSet
+        givenMaxReferrerFeeIsSet
         givenReferrerFeeIsSet
         givenLotIsCreated
         givenLotHasStarted
@@ -56,6 +57,7 @@ contract AtomicClaimRewardsTest is AtomicAuctionHouseTest {
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
         givenProtocolFeeIsSet
+        givenMaxReferrerFeeIsSet
         givenReferrerFeeIsSet
         givenLotIsCreated
         givenLotHasStarted
@@ -84,6 +86,7 @@ contract AtomicClaimRewardsTest is AtomicAuctionHouseTest {
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
         givenProtocolFeeIsSet
+        givenMaxReferrerFeeIsSet
         givenReferrerFeeIsSet
         givenLotIsCreated
         givenLotHasStarted
@@ -112,6 +115,7 @@ contract AtomicClaimRewardsTest is AtomicAuctionHouseTest {
         whenAuctionTypeIsAtomic
         whenAtomicAuctionModuleIsInstalled
         givenProtocolFeeIsSet
+        givenMaxReferrerFeeIsSet
         givenReferrerFeeIsSet
         givenLotIsCreated
         givenLotHasStarted

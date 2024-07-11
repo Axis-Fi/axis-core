@@ -72,7 +72,7 @@ contract EmpCreateAuctionTest is EmpTest {
         _createAuctionLot();
     }
 
-    function test_minFillAboveMax_reverts() public givenMinimumFillPercentage(1e5 + 1) {
+    function test_minFillAboveMax_reverts() public givenMinimumFillPercentage(100e2 + 1) {
         // Expect revert
         bytes memory err = abi.encodeWithSelector(IAuction.Auction_InvalidParams.selector);
         vm.expectRevert(err);
@@ -152,7 +152,7 @@ contract EmpCreateAuctionTest is EmpTest {
         assertEq(auctionData.minPrice, _scaleQuoteTokenAmount(_MIN_PRICE), "minPrice");
         assertEq(auctionData.nextDecryptIndex, 0, "nextDecryptIndex");
         assertEq(
-            auctionData.minFilled, _scaleBaseTokenAmount(_LOT_CAPACITY) * _MIN_FILL_PERCENT / 1e5
+            auctionData.minFilled, _scaleBaseTokenAmount(_LOT_CAPACITY) * _MIN_FILL_PERCENT / 100e2
         );
         assertEq(auctionData.minBidSize, _scaleQuoteTokenAmount(_MIN_BID_SIZE), "minBidSize");
         assertEq(
@@ -188,7 +188,7 @@ contract EmpCreateAuctionTest is EmpTest {
         assertEq(auctionData.minPrice, _scaleQuoteTokenAmount(_MIN_PRICE), "minPrice");
         assertEq(auctionData.nextDecryptIndex, 0, "nextDecryptIndex");
         assertEq(
-            auctionData.minFilled, _scaleBaseTokenAmount(_LOT_CAPACITY) * _MIN_FILL_PERCENT / 1e5
+            auctionData.minFilled, _scaleBaseTokenAmount(_LOT_CAPACITY) * _MIN_FILL_PERCENT / 100e2
         );
         assertEq(auctionData.minBidSize, _scaleQuoteTokenAmount(_MIN_BID_SIZE), "minBidSize");
         assertEq(
@@ -224,7 +224,7 @@ contract EmpCreateAuctionTest is EmpTest {
         assertEq(auctionData.minPrice, _scaleQuoteTokenAmount(_MIN_PRICE), "minPrice");
         assertEq(auctionData.nextDecryptIndex, 0, "nextDecryptIndex");
         assertEq(
-            auctionData.minFilled, _scaleBaseTokenAmount(_LOT_CAPACITY) * _MIN_FILL_PERCENT / 1e5
+            auctionData.minFilled, _scaleBaseTokenAmount(_LOT_CAPACITY) * _MIN_FILL_PERCENT / 100e2
         );
         assertEq(auctionData.minBidSize, _scaleQuoteTokenAmount(_MIN_BID_SIZE), "minBidSize");
         assertEq(

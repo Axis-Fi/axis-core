@@ -66,7 +66,7 @@ contract FpbCreateAuctionTest is FpbTest {
         _createAuctionLot();
     }
 
-    function test_minFillPercentageGreaterThan100_reverts() public givenMinFillPercent(1e5 + 1) {
+    function test_minFillPercentageGreaterThan100_reverts() public givenMinFillPercent(100e2 + 1) {
         // Expect revert
         bytes memory err = abi.encodeWithSelector(IAuction.Auction_InvalidParams.selector);
         vm.expectRevert(err);
@@ -92,14 +92,14 @@ contract FpbCreateAuctionTest is FpbTest {
         _setCapacity(capacity);
         uint256 price = bound(price_, 1, type(uint256).max);
         _setPrice(price);
-        uint24 minFillPercent = uint24(bound(minFillPercent_, 0, 1e5));
+        uint24 minFillPercent = uint24(bound(minFillPercent_, 0, 100e2));
         _setMinFillPercent(minFillPercent);
 
         // Call the function
         _createAuctionLot();
 
         // Round up to be conservative
-        uint256 minFilled = Math.fullMulDivUp(capacity, minFillPercent, 1e5);
+        uint256 minFilled = Math.fullMulDivUp(capacity, minFillPercent, 100e2);
 
         // Assert state
         IAuction.Lot memory lotData = _module.getLot(_lotId);

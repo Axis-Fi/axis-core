@@ -58,6 +58,7 @@ contract BatchCreateAuctionTest is BatchAuctionHouseTest {
     // [X] reverts when base token is 0
     // [X] reverts when quote token is 0
     // [X] reverts when the auction type is not batch
+    // [ ] reverts when the referrer fee is greater than the max referrer fee for the auction type
     // [X] given the curator fee would cause an overflow
     //  [X] it reverts
     // [X] creates the auction lot
@@ -226,6 +227,24 @@ contract BatchCreateAuctionTest is BatchAuctionHouseTest {
             type(uint96).max,
             "auction house balance mismatch"
         );
+    }
+
+    function test_whenReferrerFeeGreaterThanMax_reverts()
+        external
+        whenAuctionTypeIsBatch
+        whenBatchAuctionModuleIsInstalled
+        givenSellerHasBaseTokenBalance(_LOT_CAPACITY)
+        givenSellerHasBaseTokenAllowance(_LOT_CAPACITY)
+        givenMaxReferrerFeeIsSet
+        givenProtocolFeeIsSet
+        givenReferrerFee(_REFERRER_MAX_FEE_PERCENT + 1)
+    {
+        // Expect revert
+        bytes memory err = abi.encodeWithSelector(IAuctionHouse.InvalidParams.selector);
+        vm.expectRevert(err);
+
+        vm.prank(_SELLER);
+        _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
     }
 
     function test_success()
@@ -877,6 +896,7 @@ contract BatchCreateAuctionTest is BatchAuctionHouseTest {
         givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenProtocolFeeIsSet
+        givenMaxReferrerFeeIsSet
         givenReferrerFeeIsSet
         givenCuratorIsSet
         givenCuratorMaxFeeIsSet
@@ -916,6 +936,7 @@ contract BatchCreateAuctionTest is BatchAuctionHouseTest {
         givenSellerHasBaseTokenBalance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenSellerHasBaseTokenAllowance(_scaleBaseTokenAmount(_LOT_CAPACITY))
         givenProtocolFeeIsSet
+        givenMaxReferrerFeeIsSet
         givenReferrerFeeIsSet
         givenCuratorIsSet
         givenCuratorMaxFeeIsSet

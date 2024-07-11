@@ -60,21 +60,27 @@ Notes:
 To perform a deployment, run the following script:
 
 ```bash
-./script/deploy/deploy.sh < sequence_file > [broadcast=false] [verify=false] [resume=false]
+./script/deploy/deploy.sh --deployFile <file> --broadcast <true | false> --verify <true | false> --save <true | false> --resume <true | false>
 ```
 
 For example, the following command will deploy using the specified sequence file, broadcast the changes and verify them using Etherscan:
 
 ```bash
-./script/deploy/deploy.sh ./script/deploy/sequences/origin.json true true
+./script/deploy/deploy.sh --deployFile ./script/deploy/sequences/origin.json --broadcast true --verify true
 ```
 
-Following deployment, the addresses need to be manually added into `./script/env.json`.
+It will also save the deployment addresses to a file and update `env.json`.
 
-If any problems are faced during deployment (or verification), set the third boolean argument to `true` in order to resume the previous transaction. For example:
+To not save the deployment addresses, set the `--save` argument to `false`. For example:
 
 ```bash
-./script/deploy/deploy.sh ./script/deploy/sequences/origin.json true true true
+./script/deploy/deploy.sh --deployFile ./script/deploy/sequences/origin.json --broadcast true --verify true --save false
+```
+
+If any problems are faced during deployment (or verification), set the `--resume` argument to `true` in order to resume the previous transaction. For example:
+
+```bash
+./script/deploy/deploy.sh --deployFile ./script/deploy/sequences/origin.json --broadcast true --verify true --save true --resume true
 ```
 
 ##### Blast-Specific Version
@@ -84,7 +90,7 @@ Deploying on Blast requires an AuctionHouse with additional constructor argument
 Example command:
 
 ```bash
-CHAIN="blast-sepolia" ./script/deploy/deploy.sh ./script/deploy/sequences/origin.json true true
+CHAIN="blast-sepolia" ./script/deploy/deploy.sh --deployFile ./script/deploy/sequences/origin.json --broadcast true --verify true
 ```
 
 #### Verification
@@ -92,3 +98,18 @@ CHAIN="blast-sepolia" ./script/deploy/deploy.sh ./script/deploy/sequences/origin
 If the `verify` flag on `deploy.sh` is set, the contract should be verified automatically. If `VERIFIER` is blank or `etherscan`, then `ETHERSCAN_API_KEY` must be set as an environment variable. Additionally, `VERIFIER_URL` can be used to set a custom verifier URL (by default it uses the one configurd in ethers-rs).
 
 If deploying against a Tenderly fork and verifying, [follow the instructions](https://docs.tenderly.co/contract-verification).
+
+## External Dependencies
+
+Note that for each chain Axis is to be deployed on, if the Uniswap V3 DTL callback is to be used, a deployment of G-UNI will be required.
+
+Apart from first-party deployments, the `script/env.json` file contains the addresses of third-party dependencies. These have been sourced from the following locations:
+
+- [Uniswap V2](https://github.com/Uniswap/docs/blob/65d3f21e6cb2879b0672ad791563de0e54fcc089/docs/contracts/v2/reference/smart-contracts/08-deployment-addresses.md)
+  - Exceptions
+    - Arbitrum Sepolia, Base Sepolia, Blast Sepolia and Mode Sepolia are custom deployments, due to the unavailability of the Uniswap V2 contracts.
+- [Uniswap V3](https://github.com/Uniswap/docs/tree/65d3f21e6cb2879b0672ad791563de0e54fcc089/docs/contracts/v3/reference/deployments)
+  - Exceptions
+    - Arbitrum Sepolia and Blast Sepolia are custom deployments by Axis Finance alongside the G-UNI deployment.
+- G-UNI
+  - All of the addresses mentioned are custom deployments by Axis Finance. This is because the addresses from the deployments recorded in the [g-uni-v1-core repository](https://github.com/gelatodigital/g-uni-v1-core/tree/bea63422e2155242b051896b635508b7a99d2a1a/deployments) point to proxies, which have since been upgraded to point to Arrakis contracts that have different interfaces.

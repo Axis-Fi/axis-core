@@ -2,6 +2,7 @@ import { deployments, getNamedAccounts } from "hardhat";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { DeployFunction } from "hardhat-deploy/types";
 import { getAddresses } from "../src/addresses";
+import { isZeroAddress } from "./address";
 
 const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   if (
@@ -19,7 +20,18 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   const { deployer } = await getNamedAccounts();
   const addresses = getAddresses(hre.network.name);
 
-  await deploy("GUniFactory", {
+  // Validate input addresses
+  if (isZeroAddress(addresses.UniswapV3Factory)) {
+    throw new Error("UniswapV3Factory address not set");
+  }
+  if (isZeroAddress(addresses.GelatoDevMultiSig)) {
+    throw new Error("GelatoDevMultiSig address not set");
+  }
+  if (isZeroAddress(addresses.GUniImplementation)) {
+    throw new Error("GUniImplementation (pool implementation) address not set");
+  }
+
+  const result = await deploy("GUniFactory", {
     from: deployer,
     proxy: {
       proxyContract: "EIP173Proxy",
@@ -37,6 +49,8 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     },
     args: [addresses.UniswapV3Factory],
   });
+
+  console.log("GUniFactory deployed to:", result.address);
 };
 
 func.skip = async (hre: HardhatRuntimeEnvironment) => {

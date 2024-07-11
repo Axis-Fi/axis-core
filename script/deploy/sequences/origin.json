@@ -8,11 +8,15 @@
         },
         {
             "name": "EncryptedMarginalPrice",
-            "installBatchAuctionHouse": true
+            "installBatchAuctionHouse": true,
+            "maxReferrerFee": 1000,
+            "maxCuratorFee": 1000
         },
         {
             "name": "FixedPriceBatch",
-            "installBatchAuctionHouse": true
+            "installBatchAuctionHouse": true,
+            "maxReferrerFee": 1000,
+            "maxCuratorFee": 1000
         },
         {
             "name": "BatchLinearVesting",
