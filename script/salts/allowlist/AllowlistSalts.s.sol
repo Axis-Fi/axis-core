@@ -15,24 +15,23 @@ import {Callbacks} from "src/lib/Callbacks.sol";
 contract AllowlistSalts is Script, WithEnvironment, WithSalts {
     string internal constant _ADDRESS_PREFIX = "98";
 
-    address internal _envAtomicAuctionHouse;
-    address internal _envBatchAuctionHouse;
-
     function _setUp(string calldata chain_) internal {
         _loadEnv(chain_);
         _createBytecodeDirectory();
-
-        // Cache auction houses
-        _envAtomicAuctionHouse = _envAddress("deployments.AtomicAuctionHouse");
-        console2.log("AtomicAuctionHouse:", _envAtomicAuctionHouse);
-        _envBatchAuctionHouse = _envAddress("deployments.BatchAuctionHouse");
-        console2.log("BatchAuctionHouse:", _envBatchAuctionHouse);
     }
 
     function generate(string calldata chain_, bool atomic_) public {
         _setUp(chain_);
 
-        address auctionHouse = atomic_ ? _envAtomicAuctionHouse : _envBatchAuctionHouse;
+        address auctionHouse;
+        if (atomic_) {
+            auctionHouse = _envAddress("deployments.AtomicAuctionHouse");
+            console2.log("AtomicAuctionHouse:", auctionHouse);
+        }
+        else {
+            auctionHouse = _envAddress("deployments.BatchAuctionHouse");
+            console2.log("BatchAuctionHouse:", auctionHouse);
+        }
 
         // All of these allowlists have the same permissions and constructor args
         string memory prefix = "98";
