@@ -21,17 +21,17 @@ contract AuctionHouseSaltsBlast is Script, WithEnvironment, WithSalts {
         _loadEnv(chain_);
 
         // Cache required variables
-        _envOwner = _envAddressNotZero("axis.OWNER");
+        _envOwner = _envAddressNotZero("constants.axis.OWNER");
         console2.log("Owner:", _envOwner);
-        _envPermit2 = _envAddressNotZero("axis.PERMIT2");
+        _envPermit2 = _envAddressNotZero("constants.axis.PERMIT2");
         console2.log("Permit2:", _envPermit2);
-        _envProtocol = _envAddressNotZero("axis.PROTOCOL");
+        _envProtocol = _envAddressNotZero("constants.axis.PROTOCOL");
         console2.log("Protocol:", _envProtocol);
-        _envBlast = _envAddressNotZero("blast.blast");
+        _envBlast = _envAddressNotZero("constants.blast.blast");
         console2.log("Blast:", _envBlast);
-        _envWeth = _envAddressNotZero("blast.weth");
+        _envWeth = _envAddressNotZero("constants.blast.weth");
         console2.log("WETH:", _envWeth);
-        _envUsdb = _envAddressNotZero("blast.usdb");
+        _envUsdb = _envAddressNotZero("constants.blast.usdb");
         console2.log("USDB:", _envUsdb);
     }
 

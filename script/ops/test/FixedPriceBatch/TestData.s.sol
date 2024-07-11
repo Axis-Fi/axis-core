@@ -39,7 +39,7 @@ contract TestData is Script, WithEnvironment {
     ) public returns (uint96) {
         // Load addresses from .env
         _loadEnv(chain_);
-        auctionHouse = BatchAuctionHouse(_envAddressNotZero("axis.BatchAuctionHouse"));
+        auctionHouse = BatchAuctionHouse(_envAddressNotZero("deployments.BatchAuctionHouse"));
 
         vm.startBroadcast();
 
@@ -98,7 +98,7 @@ contract TestData is Script, WithEnvironment {
 
     function cancelAuction(string calldata chain_, uint96 lotId_) public {
         _loadEnv(chain_);
-        auctionHouse = BatchAuctionHouse(_envAddressNotZero("axis.BatchAuctionHouse"));
+        auctionHouse = BatchAuctionHouse(_envAddressNotZero("deployments.BatchAuctionHouse"));
         vm.broadcast();
         auctionHouse.cancel(lotId_, bytes(""));
     }
@@ -111,7 +111,7 @@ contract TestData is Script, WithEnvironment {
         uint256 allocatedAmount_
     ) public {
         _loadEnv(chain_);
-        auctionHouse = BatchAuctionHouse(_envAddressNotZero("axis.BatchAuctionHouse"));
+        auctionHouse = BatchAuctionHouse(_envAddressNotZero("deployments.BatchAuctionHouse"));
 
         // Approve spending of the quote token
         {
@@ -144,7 +144,7 @@ contract TestData is Script, WithEnvironment {
 
     function settleAuction(string calldata chain_, uint96 lotId_) public {
         _loadEnv(chain_);
-        auctionHouse = BatchAuctionHouse(_envAddressNotZero("axis.BatchAuctionHouse"));
+        auctionHouse = BatchAuctionHouse(_envAddressNotZero("deployments.BatchAuctionHouse"));
 
         console2.log("Timestamp is", block.timestamp);
 

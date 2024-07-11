@@ -36,12 +36,15 @@ import {AllocatedMerkleAllowlist} from "src/callbacks/allowlists/AllocatedMerkle
 contract Deploy is Script, WithEnvironment, WithSalts {
     using stdJson for string;
 
-    string internal constant _PREFIX_AXIS = "axis";
+    string internal constant _PREFIX_DEPLOYMENT_ROOT = "deployments";
+    string internal constant _PREFIX_CALLBACKS = "deployments.callbacks";
+    string internal constant _PREFIX_AUCTION_MODULES = "deployments.auctionModules";
+    string internal constant _PREFIX_DERIVATIVE_MODULES = "deployments.derivativeModules";
 
     bytes internal constant _ATOMIC_AUCTION_HOUSE_NAME = "AtomicAuctionHouse";
     bytes internal constant _BATCH_AUCTION_HOUSE_NAME = "BatchAuctionHouse";
     bytes internal constant _BLAST_ATOMIC_AUCTION_HOUSE_NAME = "BlastAtomicAuctionHouse";
-    bytes internal constant _BLAST_BATCH_AUCTION_HOUSE_NAME = "BlasBatchAuctionHouse";
+    bytes internal constant _BLAST_BATCH_AUCTION_HOUSE_NAME = "BlastBatchAuctionHouse";
 
     // Deploy system storage
     uint256[] public auctionHouseIndexes;
@@ -110,7 +113,7 @@ contract Deploy is Script, WithEnvironment, WithSalts {
         for (uint256 i; i < ahLen; i++) {
             uint256 index = auctionHouseIndexes[i];
             string memory name = deployments[index];
-            string memory deploymentKey = string.concat(_PREFIX_AXIS, ".", name);
+            string memory deploymentKey = string.concat(_PREFIX_DEPLOYMENT_ROOT, ".", name);
             deployedToKeys.push(deploymentKey);
 
             if (_isAtomicAuctionHouse(name)) {
@@ -151,7 +154,7 @@ contract Deploy is Script, WithEnvironment, WithSalts {
             if (installAtomicAuctionHouseMap[name]) {
                 console2.log("");
                 AtomicAuctionHouse atomicAuctionHouse =
-                    AtomicAuctionHouse(_getAddressNotZero("axis.AtomicAuctionHouse"));
+                    AtomicAuctionHouse(_getAddressNotZero("deployments.AtomicAuctionHouse"));
 
                 console2.log("");
                 console2.log("    Installing in AtomicAuctionHouse");
@@ -164,7 +167,7 @@ contract Deploy is Script, WithEnvironment, WithSalts {
             if (installBatchAuctionHouseMap[name]) {
                 console2.log("");
                 BatchAuctionHouse batchAuctionHouse =
-                    BatchAuctionHouse(_getAddressNotZero("axis.BatchAuctionHouse"));
+                    BatchAuctionHouse(_getAddressNotZero("deployments.BatchAuctionHouse"));
 
                 console2.log("");
                 console2.log("    Installing in BatchAuctionHouse");
@@ -245,9 +248,9 @@ contract Deploy is Script, WithEnvironment, WithSalts {
         console2.log("");
         console2.log("Deploying AtomicAuctionHouse");
 
-        address owner = _getAddressNotZero("axis.OWNER");
-        address protocol = _getAddressNotZero("axis.PROTOCOL");
-        address permit2 = _getAddressNotZero("axis.PERMIT2");
+        address owner = _getAddressNotZero("constants.axis.OWNER");
+        address protocol = _getAddressNotZero("constants.axis.PROTOCOL");
+        address permit2 = _getAddressNotZero("constants.axis.PERMIT2");
 
         // Get the salt
         bytes32 salt_ = _getSalt(
@@ -277,9 +280,9 @@ contract Deploy is Script, WithEnvironment, WithSalts {
         console2.log("");
         console2.log("Deploying BatchAuctionHouse");
 
-        address owner = _getAddressNotZero("axis.OWNER");
-        address protocol = _getAddressNotZero("axis.PROTOCOL");
-        address permit2 = _getAddressNotZero("axis.PERMIT2");
+        address owner = _getAddressNotZero("constants.axis.OWNER");
+        address protocol = _getAddressNotZero("constants.axis.PROTOCOL");
+        address permit2 = _getAddressNotZero("constants.axis.PERMIT2");
 
         // Get the salt
         bytes32 salt_ = _getSalt(
@@ -311,7 +314,7 @@ contract Deploy is Script, WithEnvironment, WithSalts {
         console2.log("");
         console2.log("Deploying AtomicCatalogue");
 
-        address atomicAuctionHouse = _getAddressNotZero("axis.AtomicAuctionHouse");
+        address atomicAuctionHouse = _getAddressNotZero("deployments.AtomicAuctionHouse");
 
         // Get the salt
         bytes32 salt_ = _getSalt(
@@ -332,7 +335,7 @@ contract Deploy is Script, WithEnvironment, WithSalts {
         console2.log("");
         console2.log("    AtomicCatalogue deployed at:", address(atomicCatalogue));
 
-        return (address(atomicCatalogue), _PREFIX_AXIS);
+        return (address(atomicCatalogue), _PREFIX_DEPLOYMENT_ROOT);
     }
 
     function deployBatchCatalogue(bytes memory) public virtual returns (address, string memory) {
@@ -340,7 +343,7 @@ contract Deploy is Script, WithEnvironment, WithSalts {
         console2.log("");
         console2.log("Deploying BatchCatalogue");
 
-        address batchAuctionHouse = _getAddressNotZero("axis.BatchAuctionHouse");
+        address batchAuctionHouse = _getAddressNotZero("deployments.BatchAuctionHouse");
 
         // Get the salt
         bytes32 salt_ = _getSalt(
@@ -361,7 +364,7 @@ contract Deploy is Script, WithEnvironment, WithSalts {
         console2.log("");
         console2.log("    BatchCatalogue deployed at:", address(batchCatalogue));
 
-        return (address(batchCatalogue), _PREFIX_AXIS);
+        return (address(batchCatalogue), _PREFIX_DEPLOYMENT_ROOT);
     }
 
     // ========== AUCTION MODULE DEPLOYMENTS ========== //
@@ -375,7 +378,7 @@ contract Deploy is Script, WithEnvironment, WithSalts {
         console2.log("");
         console2.log("Deploying EncryptedMarginalPrice");
 
-        address batchAuctionHouse = _getAddressNotZero("axis.BatchAuctionHouse");
+        address batchAuctionHouse = _getAddressNotZero("deployments.BatchAuctionHouse");
 
         // Get the salt
         bytes32 salt_ = _getSalt(
@@ -398,7 +401,7 @@ contract Deploy is Script, WithEnvironment, WithSalts {
         console2.log("");
         console2.log("    EncryptedMarginalPrice deployed at:", address(amEmp));
 
-        return (address(amEmp), _PREFIX_AXIS);
+        return (address(amEmp), _PREFIX_AUCTION_MODULES);
     }
 
     function deployFixedPriceSale(bytes memory) public virtual returns (address, string memory) {
@@ -406,7 +409,7 @@ contract Deploy is Script, WithEnvironment, WithSalts {
         console2.log("");
         console2.log("Deploying FixedPriceSale");
 
-        address atomicAuctionHouse = _getAddressNotZero("axis.AtomicAuctionHouse");
+        address atomicAuctionHouse = _getAddressNotZero("deployments.AtomicAuctionHouse");
 
         // Get the salt
         bytes32 salt_ = _getSalt(
@@ -427,7 +430,7 @@ contract Deploy is Script, WithEnvironment, WithSalts {
         console2.log("");
         console2.log("    FixedPriceSale deployed at:", address(amFps));
 
-        return (address(amFps), _PREFIX_AXIS);
+        return (address(amFps), _PREFIX_AUCTION_MODULES);
     }
 
     function deployFixedPriceBatch(bytes memory) public virtual returns (address, string memory) {
@@ -435,7 +438,7 @@ contract Deploy is Script, WithEnvironment, WithSalts {
         console2.log("");
         console2.log("Deploying FixedPriceBatch");
 
-        address batchAuctionHouse = _getAddressNotZero("axis.BatchAuctionHouse");
+        address batchAuctionHouse = _getAddressNotZero("deployments.BatchAuctionHouse");
 
         // Get the salt
         bytes32 salt_ = _getSalt(
@@ -456,7 +459,7 @@ contract Deploy is Script, WithEnvironment, WithSalts {
         console2.log("");
         console2.log("    FixedPriceBatch deployed at:", address(amFpb));
 
-        return (address(amFpb), _PREFIX_AXIS);
+        return (address(amFpb), _PREFIX_AUCTION_MODULES);
     }
 
     // ========== DERIVATIVE MODULE DEPLOYMENTS ========== //
@@ -470,7 +473,7 @@ contract Deploy is Script, WithEnvironment, WithSalts {
         console2.log("");
         console2.log("Deploying LinearVesting (Atomic)");
 
-        address atomicAuctionHouse = _getAddressNotZero("axis.AtomicAuctionHouse");
+        address atomicAuctionHouse = _getAddressNotZero("deployments.AtomicAuctionHouse");
 
         // Get the salt
         bytes32 salt_ = _getSalt(
@@ -491,7 +494,7 @@ contract Deploy is Script, WithEnvironment, WithSalts {
         console2.log("");
         console2.log("    LinearVesting (Atomic) deployed at:", address(dmAtomicLinearVesting));
 
-        return (address(dmAtomicLinearVesting), _PREFIX_AXIS);
+        return (address(dmAtomicLinearVesting), _PREFIX_DERIVATIVE_MODULES);
     }
 
     function deployBatchLinearVesting(bytes memory)
@@ -503,7 +506,7 @@ contract Deploy is Script, WithEnvironment, WithSalts {
         console2.log("");
         console2.log("Deploying LinearVesting (Batch)");
 
-        address batchAuctionHouse = _getAddressNotZero("axis.BatchAuctionHouse");
+        address batchAuctionHouse = _getAddressNotZero("deployments.BatchAuctionHouse");
 
         // Get the salt
         bytes32 salt_ = _getSalt(
@@ -524,7 +527,7 @@ contract Deploy is Script, WithEnvironment, WithSalts {
         console2.log("");
         console2.log("    LinearVesting (Batch) deployed at:", address(dmBatchLinearVesting));
 
-        return (address(dmBatchLinearVesting), _PREFIX_AXIS);
+        return (address(dmBatchLinearVesting), _PREFIX_DERIVATIVE_MODULES);
     }
 
     // ========== MODULE DEPLOYMENTS ========== //
@@ -537,9 +540,9 @@ contract Deploy is Script, WithEnvironment, WithSalts {
         console2.log("");
         console2.log("Deploying UniswapV2DirectToLiquidity (Atomic)");
 
-        address atomicAuctionHouse = _getAddressNotZero("axis.AtomicAuctionHouse");
-        address uniswapV2Factory = _getAddressNotZero("uniswapV2.factory");
-        address uniswapV2Router = _getAddressNotZero("uniswapV2.router");
+        address atomicAuctionHouse = _getAddressNotZero("deployments.AtomicAuctionHouse");
+        address uniswapV2Factory = _getAddressNotZero("constants.uniswapV2.factory");
+        address uniswapV2Router = _getAddressNotZero("constants.uniswapV2.router");
 
         // Get the salt
         bytes32 salt_ = _getSalt(
@@ -563,7 +566,7 @@ contract Deploy is Script, WithEnvironment, WithSalts {
             "    UniswapV2DirectToLiquidity (Atomic) deployed at:", address(cbAtomicUniswapV2Dtl)
         );
 
-        return (address(cbAtomicUniswapV2Dtl), _PREFIX_AXIS);
+        return (address(cbAtomicUniswapV2Dtl), _PREFIX_CALLBACKS);
     }
 
     function deployBatchUniswapV2DirectToLiquidity(bytes memory)
@@ -574,9 +577,9 @@ contract Deploy is Script, WithEnvironment, WithSalts {
         console2.log("");
         console2.log("Deploying UniswapV2DirectToLiquidity (Batch)");
 
-        address batchAuctionHouse = _getAddressNotZero("axis.BatchAuctionHouse");
-        address uniswapV2Factory = _getAddressNotZero("uniswapV2.factory");
-        address uniswapV2Router = _getAddressNotZero("uniswapV2.router");
+        address batchAuctionHouse = _getAddressNotZero("deployments.BatchAuctionHouse");
+        address uniswapV2Factory = _getAddressNotZero("constants.uniswapV2.factory");
+        address uniswapV2Router = _getAddressNotZero("constants.uniswapV2.router");
 
         // Get the salt
         bytes32 salt_ = _getSalt(
@@ -600,7 +603,7 @@ contract Deploy is Script, WithEnvironment, WithSalts {
             "    UniswapV2DirectToLiquidity (Batch) deployed at:", address(cbBatchUniswapV2Dtl)
         );
 
-        return (address(cbBatchUniswapV2Dtl), _PREFIX_AXIS);
+        return (address(cbBatchUniswapV2Dtl), _PREFIX_CALLBACKS);
     }
 
     function deployAtomicUniswapV3DirectToLiquidity(bytes memory)
@@ -611,9 +614,9 @@ contract Deploy is Script, WithEnvironment, WithSalts {
         console2.log("");
         console2.log("Deploying UniswapV3DirectToLiquidity (Atomic)");
 
-        address atomicAuctionHouse = _getAddressNotZero("axis.AtomicAuctionHouse");
-        address uniswapV3Factory = _getAddressNotZero("uniswapV3.factory");
-        address gUniFactory = _getAddressNotZero("gUni.factory");
+        address atomicAuctionHouse = _getAddressNotZero("deployments.AtomicAuctionHouse");
+        address uniswapV3Factory = _getAddressNotZero("constants.uniswapV3.factory");
+        address gUniFactory = _getAddressNotZero("constants.gUni.factory");
 
         // Get the salt
         bytes32 salt_ = _getSalt(
@@ -637,7 +640,7 @@ contract Deploy is Script, WithEnvironment, WithSalts {
             "    UniswapV3DirectToLiquidity (Atomic) deployed at:", address(cbAtomicUniswapV3Dtl)
         );
 
-        return (address(cbAtomicUniswapV3Dtl), _PREFIX_AXIS);
+        return (address(cbAtomicUniswapV3Dtl), _PREFIX_CALLBACKS);
     }
 
     function deployBatchUniswapV3DirectToLiquidity(bytes memory)
@@ -648,9 +651,9 @@ contract Deploy is Script, WithEnvironment, WithSalts {
         console2.log("");
         console2.log("Deploying UniswapV3DirectToLiquidity (Batch)");
 
-        address batchAuctionHouse = _getAddressNotZero("axis.BatchAuctionHouse");
-        address uniswapV3Factory = _getAddressNotZero("uniswapV3.factory");
-        address gUniFactory = _getAddressNotZero("gUni.factory");
+        address batchAuctionHouse = _getAddressNotZero("deployments.BatchAuctionHouse");
+        address uniswapV3Factory = _getAddressNotZero("constants.uniswapV3.factory");
+        address gUniFactory = _getAddressNotZero("constants.gUni.factory");
 
         // Get the salt
         bytes32 salt_ = _getSalt(
@@ -674,7 +677,7 @@ contract Deploy is Script, WithEnvironment, WithSalts {
             "    UniswapV3DirectToLiquidity (Batch) deployed at:", address(cbBatchUniswapV3Dtl)
         );
 
-        return (address(cbBatchUniswapV3Dtl), _PREFIX_AXIS);
+        return (address(cbBatchUniswapV3Dtl), _PREFIX_CALLBACKS);
     }
 
     function deployAtomicCappedMerkleAllowlist(bytes memory)
@@ -685,7 +688,7 @@ contract Deploy is Script, WithEnvironment, WithSalts {
         console2.log("");
         console2.log("Deploying CappedMerkleAllowlist (Atomic)");
 
-        address atomicAuctionHouse = _getAddressNotZero("axis.AtomicAuctionHouse");
+        address atomicAuctionHouse = _getAddressNotZero("deployments.AtomicAuctionHouse");
         Callbacks.Permissions memory permissions = Callbacks.Permissions({
             onCreate: true,
             onCancel: false,
@@ -719,7 +722,7 @@ contract Deploy is Script, WithEnvironment, WithSalts {
             address(cbAtomicCappedMerkleAllowlist)
         );
 
-        return (address(cbAtomicCappedMerkleAllowlist), _PREFIX_AXIS);
+        return (address(cbAtomicCappedMerkleAllowlist), _PREFIX_CALLBACKS);
     }
 
     function deployBatchCappedMerkleAllowlist(bytes memory)
@@ -730,7 +733,7 @@ contract Deploy is Script, WithEnvironment, WithSalts {
         console2.log("");
         console2.log("Deploying CappedMerkleAllowlist (Batch)");
 
-        address batchAuctionHouse = _getAddressNotZero("axis.BatchAuctionHouse");
+        address batchAuctionHouse = _getAddressNotZero("deployments.BatchAuctionHouse");
         Callbacks.Permissions memory permissions = Callbacks.Permissions({
             onCreate: true,
             onCancel: false,
@@ -763,7 +766,7 @@ contract Deploy is Script, WithEnvironment, WithSalts {
             "    CappedMerkleAllowlist (Batch) deployed at:", address(cbBatchCappedMerkleAllowlist)
         );
 
-        return (address(cbBatchCappedMerkleAllowlist), _PREFIX_AXIS);
+        return (address(cbBatchCappedMerkleAllowlist), _PREFIX_CALLBACKS);
     }
 
     function deployAtomicMerkleAllowlist(bytes memory) public returns (address, string memory) {
@@ -771,7 +774,7 @@ contract Deploy is Script, WithEnvironment, WithSalts {
         console2.log("");
         console2.log("Deploying MerkleAllowlist (Atomic)");
 
-        address atomicAuctionHouse = _getAddressNotZero("axis.AtomicAuctionHouse");
+        address atomicAuctionHouse = _getAddressNotZero("deployments.AtomicAuctionHouse");
         Callbacks.Permissions memory permissions = Callbacks.Permissions({
             onCreate: true,
             onCancel: false,
@@ -802,7 +805,7 @@ contract Deploy is Script, WithEnvironment, WithSalts {
         console2.log("");
         console2.log("    MerkleAllowlist (Atomic) deployed at:", address(cbAtomicMerkleAllowlist));
 
-        return (address(cbAtomicMerkleAllowlist), _PREFIX_AXIS);
+        return (address(cbAtomicMerkleAllowlist), _PREFIX_CALLBACKS);
     }
 
     function deployBatchMerkleAllowlist(bytes memory) public returns (address, string memory) {
@@ -810,7 +813,7 @@ contract Deploy is Script, WithEnvironment, WithSalts {
         console2.log("");
         console2.log("Deploying MerkleAllowlist (Batch)");
 
-        address batchAuctionHouse = _getAddressNotZero("axis.BatchAuctionHouse");
+        address batchAuctionHouse = _getAddressNotZero("deployments.BatchAuctionHouse");
         Callbacks.Permissions memory permissions = Callbacks.Permissions({
             onCreate: true,
             onCancel: false,
@@ -841,7 +844,7 @@ contract Deploy is Script, WithEnvironment, WithSalts {
         console2.log("");
         console2.log("    MerkleAllowlist (Batch) deployed at:", address(cbBatchMerkleAllowlist));
 
-        return (address(cbBatchMerkleAllowlist), _PREFIX_AXIS);
+        return (address(cbBatchMerkleAllowlist), _PREFIX_CALLBACKS);
     }
 
     function deployAtomicTokenAllowlist(bytes memory) public returns (address, string memory) {
@@ -849,7 +852,7 @@ contract Deploy is Script, WithEnvironment, WithSalts {
         console2.log("");
         console2.log("Deploying TokenAllowlist (Atomic)");
 
-        address atomicAuctionHouse = _getAddressNotZero("axis.AtomicAuctionHouse");
+        address atomicAuctionHouse = _getAddressNotZero("deployments.AtomicAuctionHouse");
         Callbacks.Permissions memory permissions = Callbacks.Permissions({
             onCreate: true,
             onCancel: false,
@@ -880,7 +883,7 @@ contract Deploy is Script, WithEnvironment, WithSalts {
         console2.log("");
         console2.log("    TokenAllowlist (Atomic) deployed at:", address(cbAtomicTokenAllowlist));
 
-        return (address(cbAtomicTokenAllowlist), _PREFIX_AXIS);
+        return (address(cbAtomicTokenAllowlist), _PREFIX_CALLBACKS);
     }
 
     function deployBatchTokenAllowlist(bytes memory) public returns (address, string memory) {
@@ -888,7 +891,7 @@ contract Deploy is Script, WithEnvironment, WithSalts {
         console2.log("");
         console2.log("Deploying TokenAllowlist (Batch)");
 
-        address batchAuctionHouse = _getAddressNotZero("axis.BatchAuctionHouse");
+        address batchAuctionHouse = _getAddressNotZero("deployments.BatchAuctionHouse");
         Callbacks.Permissions memory permissions = Callbacks.Permissions({
             onCreate: true,
             onCancel: false,
@@ -919,7 +922,7 @@ contract Deploy is Script, WithEnvironment, WithSalts {
         console2.log("");
         console2.log("    TokenAllowlist (Batch) deployed at:", address(cbBatchTokenAllowlist));
 
-        return (address(cbBatchTokenAllowlist), _PREFIX_AXIS);
+        return (address(cbBatchTokenAllowlist), _PREFIX_CALLBACKS);
     }
 
     function deployAtomicAllocatedMerkleAllowlist(bytes memory)
@@ -930,7 +933,7 @@ contract Deploy is Script, WithEnvironment, WithSalts {
         console2.log("");
         console2.log("Deploying AllocatedMerkleAllowlist (Atomic)");
 
-        address atomicAuctionHouse = _getAddressNotZero("axis.AtomicAuctionHouse");
+        address atomicAuctionHouse = _getAddressNotZero("deployments.AtomicAuctionHouse");
         Callbacks.Permissions memory permissions = Callbacks.Permissions({
             onCreate: true,
             onCancel: false,
@@ -964,7 +967,7 @@ contract Deploy is Script, WithEnvironment, WithSalts {
             address(cbAtomicAllocatedMerkleAllowlist)
         );
 
-        return (address(cbAtomicAllocatedMerkleAllowlist), _PREFIX_AXIS);
+        return (address(cbAtomicAllocatedMerkleAllowlist), _PREFIX_CALLBACKS);
     }
 
     function deployBatchAllocatedMerkleAllowlist(bytes memory)
@@ -975,7 +978,7 @@ contract Deploy is Script, WithEnvironment, WithSalts {
         console2.log("");
         console2.log("Deploying AllocatedMerkleAllowlist (Batch)");
 
-        address batchAuctionHouse = _getAddressNotZero("axis.BatchAuctionHouse");
+        address batchAuctionHouse = _getAddressNotZero("deployments.BatchAuctionHouse");
         Callbacks.Permissions memory permissions = Callbacks.Permissions({
             onCreate: true,
             onCancel: false,
@@ -1009,7 +1012,7 @@ contract Deploy is Script, WithEnvironment, WithSalts {
             address(cbBatchAllocatedMerkleAllowlist)
         );
 
-        return (address(cbBatchAllocatedMerkleAllowlist), _PREFIX_AXIS);
+        return (address(cbBatchAllocatedMerkleAllowlist), _PREFIX_CALLBACKS);
     }
 
     // ========== HELPER FUNCTIONS ========== //
