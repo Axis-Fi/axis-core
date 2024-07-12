@@ -16,14 +16,6 @@ echo ""
 echo "*** Restoring submodule commits"
 # Lock the submodules to specific commits
 echo ""
-echo "openzeppelin-contracts"
-cd lib/openzeppelin-contracts && git checkout d6b63a48ba440ad8d551383697db6e5b0ef84137 && cd ../..
-
-echo ""
-echo "openzeppelin-contracts-upgradeable"
-cd lib/openzeppelin-contracts-upgradeable && git checkout dda4972793c55bfdae604e8ef3388352e3e34bf1 && cd ../..
-
-echo ""
 echo "uniswap-v2-core"
 cd lib/uniswap-v2-core && git checkout v1.0.1 && cd ../..
 
