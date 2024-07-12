@@ -36,7 +36,7 @@ interface IEncryptedMarginalPrice {
     /// @notice         Parameters that are used to set auction-specific data
     ///
     /// @param          minPrice            The minimum price (in quote tokens) that a bid must fulfill
-    /// @param          minFillPercent      The minimum percentage of capacity that the lot must fill in order to settle. Maximum value = 100_000 = 1e5.
+    /// @param          minFillPercent      The minimum percentage of capacity that the lot must fill in order to settle. Maximum value = 10000 = 100e2.
     /// @param          minBidSize          The minimum size of a bid in quote tokens
     /// @param          publicKey           The public key used to encrypt bids
     struct AuctionDataParams {

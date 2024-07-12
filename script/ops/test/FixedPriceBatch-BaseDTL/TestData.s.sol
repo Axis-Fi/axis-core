@@ -40,7 +40,7 @@ contract TestData is Script, WithEnvironment {
     ) public returns (uint96) {
         // Load addresses from .env
         _loadEnv(chain_);
-        auctionHouse = BatchAuctionHouse(_envAddressNotZero("axis.BatchAuctionHouse"));
+        auctionHouse = BatchAuctionHouse(_envAddressNotZero("deployments.BatchAuctionHouse"));
 
         vm.startBroadcast();
 
@@ -61,7 +61,7 @@ contract TestData is Script, WithEnvironment {
 
             routingParams.callbackData = abi.encode(
                 BaseDirectToLiquidity.OnCreateParams({
-                    proceedsUtilisationPercent: 50_000, // 50%
+                    proceedsUtilisationPercent: 5000, // 50%
                     vestingStart: 0,
                     vestingExpiry: 0,
                     recipient: msg.sender,
@@ -80,7 +80,7 @@ contract TestData is Script, WithEnvironment {
 
         IFixedPriceBatch.AuctionDataParams memory auctionDataParams;
         auctionDataParams.price = 2e18; // 2 quote tokens per base token
-        auctionDataParams.minFillPercent = uint24(10_000); // 10%
+        auctionDataParams.minFillPercent = uint24(1000); // 10%
         bytes memory implParams = abi.encode(auctionDataParams);
 
         uint48 duration = 86_400; // 1 day
@@ -110,14 +110,14 @@ contract TestData is Script, WithEnvironment {
 
     function cancelAuction(string calldata chain_, uint96 lotId_) public {
         _loadEnv(chain_);
-        auctionHouse = BatchAuctionHouse(_envAddressNotZero("axis.BatchAuctionHouse"));
+        auctionHouse = BatchAuctionHouse(_envAddressNotZero("deployments.BatchAuctionHouse"));
         vm.broadcast();
         auctionHouse.cancel(lotId_, bytes(""));
     }
 
     function placeBid(string calldata chain_, uint96 lotId_, uint256 amount_) public {
         _loadEnv(chain_);
-        auctionHouse = BatchAuctionHouse(_envAddressNotZero("axis.BatchAuctionHouse"));
+        auctionHouse = BatchAuctionHouse(_envAddressNotZero("deployments.BatchAuctionHouse"));
 
         // Approve spending of the quote token
         {
@@ -147,12 +147,12 @@ contract TestData is Script, WithEnvironment {
 
     function settleAuction(string calldata chain_, uint96 lotId_) public {
         _loadEnv(chain_);
-        auctionHouse = BatchAuctionHouse(_envAddressNotZero("axis.BatchAuctionHouse"));
+        auctionHouse = BatchAuctionHouse(_envAddressNotZero("deployments.BatchAuctionHouse"));
 
         console2.log("Timestamp is", block.timestamp);
 
         bytes memory callbackData =
-            abi.encode(UniswapV2DirectToLiquidity.OnSettleParams({maxSlippage: 500})); // 0.5%
+            abi.encode(UniswapV2DirectToLiquidity.OnSettleParams({maxSlippage: 50})); // 0.5%
 
         vm.broadcast();
         auctionHouse.settle(lotId_, 100, callbackData);

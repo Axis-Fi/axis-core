@@ -33,7 +33,7 @@ fi
 # Check if saltKey is specified
 if [ -z "$saltKey" ]
 then
-  echo "No salt key specified. Provide the salt key after the --key flag."
+  echo "No salt key specified. Provide the salt key after the --saltKey flag."
   exit 1
 fi
 

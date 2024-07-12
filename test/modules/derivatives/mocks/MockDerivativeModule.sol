@@ -93,6 +93,8 @@ contract MockDerivativeModule is DerivativeModule {
         }
         // Otherwise mint as normal
         else {
+            // Increment the supply
+            tokenMetadata[tokenId].supply += amount_;
             derivativeToken.mint(to_, tokenId, outputAmount);
         }
 
@@ -209,4 +211,8 @@ contract MockDerivativeModule is DerivativeModule {
     function symbol(uint256 tokenId_) public view virtual override returns (string memory) {}
 
     function decimals(uint256 tokenId_) public view virtual override returns (uint8) {}
+
+    function tokenURI(uint256 tokenId_) public view virtual override returns (string memory) {}
+
+    function totalSupply(uint256 tokenId_) public view virtual override returns (uint256) {}
 }

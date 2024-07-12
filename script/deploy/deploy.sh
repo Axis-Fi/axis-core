@@ -144,3 +144,6 @@ forge script $DEPLOY_SCRIPT:$DEPLOY_CONTRACT --sig "deploy(string,string,bool)()
 $BROADCAST_FLAG \
 $VERIFY_FLAG \
 $RESUME_FLAG
+
+# Insert for Mantle deployments
+# -g 4000000 --with-gas-price 20000000 --priority-gas-price 10000000 \

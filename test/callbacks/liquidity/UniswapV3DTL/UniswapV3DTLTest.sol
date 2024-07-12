@@ -57,7 +57,7 @@ abstract contract UniswapV3DirectToLiquidityTest is Test, Permit2User, WithSalts
     uint24 internal _poolFee = 500;
     BaseDirectToLiquidity.OnCreateParams internal _dtlCreateParams = BaseDirectToLiquidity
         .OnCreateParams({
-        proceedsUtilisationPercent: 1e5,
+        proceedsUtilisationPercent: 100e2,
         vestingStart: 0,
         vestingExpiry: 0,
         recipient: _SELLER,
@@ -176,6 +176,7 @@ abstract contract UniswapV3DirectToLiquidityTest is Test, Permit2User, WithSalts
             auctionType: keycodeFromVeecode(_batchAuctionModule.VEECODE()),
             baseToken: address(_baseToken),
             quoteToken: address(_quoteToken),
+            referrerFee: 0, // No referrer fee
             curator: address(0),
             callbacks: _dtl,
             callbackData: abi.encode(_dtlCreateParams),

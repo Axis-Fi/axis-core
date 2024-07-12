@@ -26,7 +26,7 @@ abstract contract EmpTest is Test, Permit2User {
     uint256 internal constant _LOT_CAPACITY = 10e18;
     uint48 internal constant _DURATION = 1 days;
     uint256 internal constant _MIN_PRICE = 1e18;
-    uint24 internal constant _MIN_FILL_PERCENT = 25_000; // 25%
+    uint24 internal constant _MIN_FILL_PERCENT = 25e2; // 25%
     uint256 internal constant _MIN_BID_SIZE = 1e15; // 0.001 quote tokens
 
     uint256 internal constant _AUCTION_PRIVATE_KEY = 112_233_445_566;

@@ -17,28 +17,19 @@ contract UniswapDTLSalts is Script, WithEnvironment, WithSalts {
     address internal _envUniswapV3Factory;
     address internal _envGUniFactory;
 
-    address internal _envAtomicAuctionHouse;
-    address internal _envBatchAuctionHouse;
-
     function _setUp(string calldata chain_) internal {
         _loadEnv(chain_);
         _createBytecodeDirectory();
 
         // Cache Uniswap factories
-        _envUniswapV2Factory = _envAddressNotZero("uniswapV2.factory");
+        _envUniswapV2Factory = _envAddressNotZero("constants.uniswapV2.factory");
         console2.log("UniswapV2Factory:", _envUniswapV2Factory);
-        _envUniswapV2Router = _envAddressNotZero("uniswapV2.router");
+        _envUniswapV2Router = _envAddressNotZero("constants.uniswapV2.router");
         console2.log("UniswapV2Router:", _envUniswapV2Router);
-        _envUniswapV3Factory = _envAddressNotZero("uniswapV3.factory");
+        _envUniswapV3Factory = _envAddressNotZero("constants.uniswapV3.factory");
         console2.log("UniswapV3Factory:", _envUniswapV3Factory);
-        _envGUniFactory = _envAddressNotZero("gUni.factory");
+        _envGUniFactory = _envAddressNotZero("constants.gUni.factory");
         console2.log("GUniFactory:", _envGUniFactory);
-
-        // Cache auction houses
-        _envAtomicAuctionHouse = _envAddress("axis.AtomicAuctionHouse");
-        console2.log("AtomicAuctionHouse:", _envAtomicAuctionHouse);
-        _envBatchAuctionHouse = _envAddress("axis.BatchAuctionHouse");
-        console2.log("BatchAuctionHouse:", _envBatchAuctionHouse);
     }
 
     function generate(
@@ -60,6 +51,9 @@ contract UniswapDTLSalts is Script, WithEnvironment, WithSalts {
 
     function _generateV2(bool atomic_) internal {
         if (atomic_) {
+            address _envAtomicAuctionHouse = _envAddressNotZero("deployments.AtomicAuctionHouse");
+            console2.log("AtomicAuctionHouse:", _envAtomicAuctionHouse);
+
             // Calculate salt for the UniswapV2DirectToLiquidity
             bytes memory contractCode = type(UniswapV2DirectToLiquidity).creationCode;
             (string memory bytecodePath, bytes32 bytecodeHash) = _writeBytecode(
@@ -69,6 +63,9 @@ contract UniswapDTLSalts is Script, WithEnvironment, WithSalts {
             );
             _setSalt(bytecodePath, _ADDRESS_PREFIX, "UniswapV2DirectToLiquidity", bytecodeHash);
         } else {
+            address _envBatchAuctionHouse = _envAddressNotZero("deployments.BatchAuctionHouse");
+            console2.log("BatchAuctionHouse:", _envBatchAuctionHouse);
+
             // Calculate salt for the UniswapV2DirectToLiquidity
             bytes memory contractCode = type(UniswapV2DirectToLiquidity).creationCode;
             (string memory bytecodePath, bytes32 bytecodeHash) = _writeBytecode(
@@ -82,6 +79,9 @@ contract UniswapDTLSalts is Script, WithEnvironment, WithSalts {
 
     function _generateV3(bool atomic_) internal {
         if (atomic_) {
+            address _envAtomicAuctionHouse = _envAddressNotZero("deployments.AtomicAuctionHouse");
+            console2.log("AtomicAuctionHouse:", _envAtomicAuctionHouse);
+
             // Calculate salt for the UniswapV3DirectToLiquidity
             bytes memory contractCode = type(UniswapV3DirectToLiquidity).creationCode;
             (string memory bytecodePath, bytes32 bytecodeHash) = _writeBytecode(
@@ -91,6 +91,9 @@ contract UniswapDTLSalts is Script, WithEnvironment, WithSalts {
             );
             _setSalt(bytecodePath, _ADDRESS_PREFIX, "UniswapV3DirectToLiquidity", bytecodeHash);
         } else {
+            address _envBatchAuctionHouse = _envAddressNotZero("deployments.BatchAuctionHouse");
+            console2.log("BatchAuctionHouse:", _envBatchAuctionHouse);
+
             // Calculate salt for the UniswapV3DirectToLiquidity
             bytes memory contractCode = type(UniswapV3DirectToLiquidity).creationCode;
             (string memory bytecodePath, bytes32 bytecodeHash) = _writeBytecode(

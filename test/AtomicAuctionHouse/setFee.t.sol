@@ -29,7 +29,7 @@ contract AtomicSetFeeTest is Test, Permit2User {
 
     Keycode internal _auctionKeycode;
 
-    uint48 internal constant _MAX_FEE = 1e5;
+    uint48 internal constant _MAX_FEE = 100e2;
 
     function setUp() external {
         _auctionHouse = new AtomicAuctionHouse(_OWNER, _PROTOCOL, _permit2Address);
@@ -75,24 +75,24 @@ contract AtomicSetFeeTest is Test, Permit2User {
         _auctionHouse.setFee(_auctionKeycode, IFeeManager.FeeType.Protocol, fee);
 
         // Validate
-        (uint48 protocolFee, uint48 referrerFee, uint48 maxCuratorFee) =
+        (uint48 protocolFee, uint48 maxReferrerFee, uint48 maxCuratorFee) =
             _auctionHouse.fees(_auctionKeycode);
         assertEq(protocolFee, fee);
-        assertEq(referrerFee, 0);
+        assertEq(maxReferrerFee, 0);
         assertEq(maxCuratorFee, 0);
     }
 
-    function test_referrerFee(uint48 fee_) public {
+    function test_maxReferrerFee(uint48 fee_) public {
         uint48 fee = uint48(bound(fee_, 0, _MAX_FEE));
 
         vm.prank(_OWNER);
-        _auctionHouse.setFee(_auctionKeycode, IFeeManager.FeeType.Referrer, fee);
+        _auctionHouse.setFee(_auctionKeycode, IFeeManager.FeeType.MaxReferrer, fee);
 
         // Validate
-        (uint48 protocolFee, uint48 referrerFee, uint48 maxCuratorFee) =
+        (uint48 protocolFee, uint48 maxReferrerFee, uint48 maxCuratorFee) =
             _auctionHouse.fees(_auctionKeycode);
         assertEq(protocolFee, 0);
-        assertEq(referrerFee, fee);
+        assertEq(maxReferrerFee, fee);
         assertEq(maxCuratorFee, 0);
     }
 
@@ -103,10 +103,10 @@ contract AtomicSetFeeTest is Test, Permit2User {
         _auctionHouse.setFee(_auctionKeycode, IFeeManager.FeeType.MaxCurator, fee);
 
         // Validate
-        (uint48 protocolFee, uint48 referrerFee, uint48 maxCuratorFee) =
+        (uint48 protocolFee, uint48 maxReferrerFee, uint48 maxCuratorFee) =
             _auctionHouse.fees(_auctionKeycode);
         assertEq(protocolFee, 0);
-        assertEq(referrerFee, 0);
+        assertEq(maxReferrerFee, 0);
         assertEq(maxCuratorFee, fee);
     }
 }
