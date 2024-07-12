@@ -4,6 +4,3 @@
 [submodule "lib/uniswap-v3-core"]
 	path = lib/uniswap-v3-core
 	url = https://github.com/uniswap/v3-core
-[submodule "lib/uniswap-v2-core"]
-	path = lib/uniswap-v2-core
-	url = https://github.com/uniswap/v2-core

@@ -16,10 +16,6 @@ echo ""
 echo "*** Restoring submodule commits"
 # Lock the submodules to specific commits
 echo ""
-echo "uniswap-v2-core"
-cd lib/uniswap-v2-core && git checkout v1.0.1 && cd ../..
-
-echo ""
 echo "uniswap-v3-core"
 cd lib/uniswap-v3-core && git checkout 6562c52e8f75f0c10f9deaf44861847585fc8129 && cd ../..
 

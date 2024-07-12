@@ -28,3 +28,9 @@ name = "@openzeppelin-contracts-upgradeable"
 version = "4.9.2"
 source = "https://soldeer-revisions.s3.amazonaws.com/@openzeppelin-contracts-upgradeable/4_9_2_22-01-2024_13:15:04_contracts-upgradeable.zip"
 checksum = "33a161bf7799dcac1475d2470615b56a8f9a9387cb8eef921b49816dbbc61c2b"
+
+[[dependencies]]
+name = "@uniswap-v2-core"
+version = "1.0.1"
+source = "https://soldeer-revisions.s3.amazonaws.com/@uniswap-v2-core/1_0_1_22-01-2024_13:18:30_v2-core.zip"
+checksum = "efebb89237048771c19f52d3ce87ec4d0c591279bf1977c49f9e70e5fff530f0"

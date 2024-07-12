@@ -33,3 +33,4 @@ solmate = { version = "6.7.0" }
 solady = { version = "0.0.124" }
 "@openzeppelin-contracts" = { version = "4.9.2" }
 "@openzeppelin-contracts-upgradeable" = { version = "4.9.2" }
+"@uniswap-v2-core" = { version = "1.0.1" }

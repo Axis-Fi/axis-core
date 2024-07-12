@@ -1,6 +1,6 @@
 pragma solidity >=0.6.6;
 
-import "uniswap-v2-core/interfaces/IUniswapV2Factory.sol";
+import "@uniswap-v2-core-1.0.1/interfaces/IUniswapV2Factory.sol";
 import './libraries/TransferHelper.sol';
 
 import './interfaces/IUniswapV2Router02.sol';
