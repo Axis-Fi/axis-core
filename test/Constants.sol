@@ -13,7 +13,7 @@ abstract contract TestConstants {
     address internal constant _GUNI_FACTORY = address(0xAA6180e11cf2118E9e9D766D67Bb8Bb9959DF17B);
     address internal constant _BASELINE_KERNEL = address(0xBB);
     address internal constant _BASELINE_QUOTE_TOKEN =
-        address(0xAA35Ed8EbB48Ab6582F2aF7E0FF6819119fEdCb8);
+        address(0xAACC4536c68BFC5d915F646B42905296AA20CCcC);
     address internal constant _CREATE2_DEPLOYER =
         address(0x4e59b44847b379578588920cA78FbF26c0B4956C);
 }
