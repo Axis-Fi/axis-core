@@ -5,14 +5,12 @@ import {Test} from "forge-std/Test.sol";
 import {Callbacks} from "src/lib/Callbacks.sol";
 import {Permit2User} from "test/lib/permit2/Permit2User.sol";
 
-import {IAuctionHouse} from "src/interfaces/IAuctionHouse.sol";
 import {AtomicAuctionHouse} from "src/AtomicAuctionHouse.sol";
 
 import {BaseCallback} from "src/callbacks/BaseCallback.sol";
 
 import {TokenAllowlist, ITokenBalance} from "src/callbacks/allowlists/TokenAllowlist.sol";
 
-import {toVeecode} from "src/modules/Keycode.sol";
 import {WithSalts} from "test/lib/WithSalts.sol";
 import {TestConstants} from "test/Constants.sol";
 import {MockERC20} from "solmate/test/utils/mocks/MockERC20.sol";
