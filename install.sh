@@ -16,10 +16,6 @@ echo ""
 echo "*** Restoring submodule commits"
 # Lock the submodules to specific commits
 echo ""
-echo "prb-math"
-cd lib/prb-math/ && git checkout 9dc06519f3b9f1659fec7d396da634fe690f660c && cd ../..
-
-echo ""
 echo "solady"
 cd lib/solady/ && git checkout v0.0.124 && cd ../..
 

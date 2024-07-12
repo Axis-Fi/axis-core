@@ -4,9 +4,6 @@
 [submodule "lib/solmate"]
 	path = lib/solmate
 	url = https://github.com/transmissions11/solmate
-[submodule "lib/prb-math"]
-	path = lib/prb-math
-	url = https://github.com/PaulRBerg/prb-math
 [submodule "lib/uniswap-v3-periphery"]
 	path = lib/uniswap-v3-periphery
 	url = https://github.com/uniswap/v3-periphery
