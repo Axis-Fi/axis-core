@@ -53,7 +53,7 @@ contract TestData is Script, WithEnvironment {
             console2.log("Setting callback parameters");
             routingParams.callbackData = abi.encode(
                 BaselineAxisLaunch.CreateData({
-                    floorReservesPercent: 50_000, // 50%
+                    floorReservesPercent: 50e2, // 50%
                     anchorTickWidth: 3,
                     discoveryTickWidth: 100,
                     allowlistParams: abi.encode(merkleRoot)

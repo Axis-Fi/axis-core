@@ -173,12 +173,12 @@ contract BaselineOnSettleTest is BaselineAxisLaunchTest {
         // Reserves deployed into the pool
         assertEq(
             _baseToken.rangeReserves(Range.FLOOR),
-            _PROCEEDS_AMOUNT.mulDivDown(_FLOOR_RESERVES_PERCENT, 1e5),
+            _PROCEEDS_AMOUNT.mulDivDown(_FLOOR_RESERVES_PERCENT, _ONE_HUNDRED_PERCENT),
             "reserves: floor"
         );
         assertEq(
             _baseToken.rangeReserves(Range.ANCHOR),
-            _PROCEEDS_AMOUNT.mulDivDown(1e5 - _FLOOR_RESERVES_PERCENT, 1e5),
+            _PROCEEDS_AMOUNT.mulDivDown(_ONE_HUNDRED_PERCENT - _FLOOR_RESERVES_PERCENT, _ONE_HUNDRED_PERCENT),
             "reserves: anchor"
         );
         assertEq(_baseToken.rangeReserves(Range.DISCOVERY), 0, "reserves: discovery");
@@ -195,7 +195,7 @@ contract BaselineOnSettleTest is BaselineAxisLaunchTest {
         givenCallbackIsCreated
         givenAuctionIsCreated
     {
-        uint24 floorReservesPercent = uint24(bound(floorReservesPercent_, 0, 1e5));
+        uint24 floorReservesPercent = uint24(bound(floorReservesPercent_, 0, _ONE_HUNDRED_PERCENT));
 
         // Update the callback parameters
         _createData.floorReservesPercent = floorReservesPercent;
@@ -233,12 +233,12 @@ contract BaselineOnSettleTest is BaselineAxisLaunchTest {
         // Reserves deployed into the pool
         assertEq(
             _baseToken.rangeReserves(Range.FLOOR),
-            _PROCEEDS_AMOUNT.mulDivDown(floorReservesPercent, 1e5),
+            _PROCEEDS_AMOUNT.mulDivDown(floorReservesPercent, _ONE_HUNDRED_PERCENT),
             "reserves: floor"
         );
         assertEq(
             _baseToken.rangeReserves(Range.ANCHOR),
-            _PROCEEDS_AMOUNT.mulDivDown(1e5 - floorReservesPercent, 1e5),
+            _PROCEEDS_AMOUNT.mulDivDown(_ONE_HUNDRED_PERCENT - floorReservesPercent, _ONE_HUNDRED_PERCENT),
             "reserves: anchor"
         );
         assertEq(_baseToken.rangeReserves(Range.DISCOVERY), 0, "reserves: discovery");

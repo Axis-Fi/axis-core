@@ -328,7 +328,7 @@ contract BaselineOnCreateTest is BaselineAxisLaunchTest {
         givenAuctionIsCreated
     {
         uint24 floorReservesPercent =
-            uint24(bound(floorReservesPercent_, 1e5 + 1, type(uint24).max));
+            uint24(bound(floorReservesPercent_, _ONE_HUNDRED_PERCENT + 1, type(uint24).max));
         _createData.floorReservesPercent = floorReservesPercent;
 
         // Expect revert
@@ -473,7 +473,7 @@ contract BaselineOnCreateTest is BaselineAxisLaunchTest {
         givenCallbackIsCreated
         givenAuctionIsCreated
     {
-        uint24 floorReservesPercent = uint24(bound(floorReservesPercent_, 0, 1e5));
+        uint24 floorReservesPercent = uint24(bound(floorReservesPercent_, 0, _ONE_HUNDRED_PERCENT));
         _createData.floorReservesPercent = floorReservesPercent;
 
         // Perform the call

@@ -80,7 +80,7 @@ contract BaselineAxisLaunch is BaseCallback, Policy, Owned {
 
     /// @notice Data struct for the onCreate callback
     ///
-    /// @param  floorReservesPercent    The percentage of the proceeds to allocate to the floor range. The remainder will be allocated to the anchor range. (100% = `ONE_HUNDRED_PERCENT`)
+    /// @param  floorReservesPercent    The percentage of the proceeds to allocate to the floor range, in basis points (1% = 100). The remainder will be allocated to the anchor range.
     /// @param  anchorTickWidth         The width of the anchor tick range, as a multiple of the pool tick spacing.
     /// @param  discoveryTickWidth      The width of the discovery tick range, as a multiple of the pool tick spacing.
     /// @param  allowlistParams         Additional parameters for an allowlist, passed to `__onCreate()` for further processing
@@ -120,7 +120,7 @@ contract BaselineAxisLaunch is BaseCallback, Policy, Owned {
     uint24 public floorReservesPercent;
 
     // solhint-disable-next-line private-vars-leading-underscore
-    uint48 internal constant ONE_HUNDRED_PERCENT = 100_000;
+    uint48 internal constant ONE_HUNDRED_PERCENT = 100e2;
 
     // ========== CONSTRUCTOR ========== //
 

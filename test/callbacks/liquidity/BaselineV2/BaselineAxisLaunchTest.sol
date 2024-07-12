@@ -39,12 +39,14 @@ abstract contract BaselineAxisLaunchTest is Test, Permit2User, WithSalts, TestCo
     address internal constant _BUYER = address(0x4);
     address internal constant _NOT_SELLER = address(0x20);
 
+    uint24 internal constant _ONE_HUNDRED_PERCENT = 100e2;
+
     uint96 internal constant _LOT_CAPACITY = 10e18;
     uint96 internal constant _REFUND_AMOUNT = 2e18;
     uint256 internal constant _PROCEEDS_AMOUNT = 24e18;
     int24 internal constant _ANCHOR_TICK_WIDTH = 3;
     int24 internal constant _DISCOVERY_TICK_WIDTH = 500;
-    uint24 internal constant _FLOOR_RESERVES_PERCENT = 5e4; // 50%
+    uint24 internal constant _FLOOR_RESERVES_PERCENT = 50e2; // 50%
     uint256 internal constant _FIXED_PRICE = 3e18;
     uint24 internal constant _FEE_TIER = 3000;
     uint256 internal constant _BASE_SCALE = 1e18;
@@ -76,7 +78,7 @@ abstract contract BaselineAxisLaunchTest is Test, Permit2User, WithSalts, TestCo
     // Inputs
     IFixedPriceBatch.AuctionDataParams internal _fpbParams = IFixedPriceBatch.AuctionDataParams({
         price: _FIXED_PRICE,
-        minFillPercent: 5e4 // 50%
+        minFillPercent: 50e2 // 50%
     });
 
     BaselineAxisLaunch.CreateData internal _createData = BaselineAxisLaunch.CreateData({
