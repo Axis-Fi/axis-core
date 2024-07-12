@@ -10,9 +10,13 @@ abstract contract ERC6909 {
 
     event OperatorSet(address indexed owner, address indexed operator, bool approved);
 
-    event Approval(address indexed owner, address indexed spender, uint256 indexed id, uint256 amount);
+    event Approval(
+        address indexed owner, address indexed spender, uint256 indexed id, uint256 amount
+    );
 
-    event Transfer(address caller, address indexed from, address indexed to, uint256 indexed id, uint256 amount);
+    event Transfer(
+        address caller, address indexed from, address indexed to, uint256 indexed id, uint256 amount
+    );
 
     /*//////////////////////////////////////////////////////////////
                              ERC6909 STORAGE
@@ -28,11 +32,7 @@ abstract contract ERC6909 {
                               ERC6909 LOGIC
     //////////////////////////////////////////////////////////////*/
 
-    function transfer(
-        address receiver,
-        uint256 id,
-        uint256 amount
-    ) public virtual returns (bool) {
+    function transfer(address receiver, uint256 id, uint256 amount) public virtual returns (bool) {
         balanceOf[msg.sender][id] -= amount;
 
         balanceOf[receiver][id] += amount;
@@ -62,11 +62,7 @@ abstract contract ERC6909 {
         return true;
     }
 
-    function approve(
-        address spender,
-        uint256 id,
-        uint256 amount
-    ) public virtual returns (bool) {
+    function approve(address spender, uint256 id, uint256 amount) public virtual returns (bool) {
         allowance[msg.sender][spender][id] = amount;
 
         emit Approval(msg.sender, spender, id, amount);
@@ -87,30 +83,21 @@ abstract contract ERC6909 {
     //////////////////////////////////////////////////////////////*/
 
     function supportsInterface(bytes4 interfaceId) public view virtual returns (bool) {
-        return
-            interfaceId == 0x01ffc9a7 || // ERC165 Interface ID for ERC165
-            interfaceId == 0x0f632fb3; // ERC165 Interface ID for ERC6909
+        return interfaceId == 0x01ffc9a7 // ERC165 Interface ID for ERC165
+            || interfaceId == 0x0f632fb3; // ERC165 Interface ID for ERC6909
     }
 
     /*//////////////////////////////////////////////////////////////
                         INTERNAL MINT/BURN LOGIC
     //////////////////////////////////////////////////////////////*/
 
-    function _mint(
-        address receiver,
-        uint256 id,
-        uint256 amount
-    ) internal virtual {
+    function _mint(address receiver, uint256 id, uint256 amount) internal virtual {
         balanceOf[receiver][id] += amount;
 
         emit Transfer(msg.sender, address(0), receiver, id, amount);
     }
 
-    function _burn(
-        address sender,
-        uint256 id,
-        uint256 amount
-    ) internal virtual {
+    function _burn(address sender, uint256 id, uint256 amount) internal virtual {
         balanceOf[sender][id] -= amount;
 
         emit Transfer(msg.sender, sender, address(0), id, amount);
