@@ -16,10 +16,6 @@ echo ""
 echo "*** Restoring submodule commits"
 # Lock the submodules to specific commits
 echo ""
-echo "solady"
-cd lib/solady/ && git checkout v0.0.124 && cd ../..
-
-echo ""
 echo "openzeppelin-contracts"
 cd lib/openzeppelin-contracts && git checkout d6b63a48ba440ad8d551383697db6e5b0ef84137 && cd ../..
 

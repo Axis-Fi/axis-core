@@ -30,3 +30,4 @@ ignore = [
 [dependencies]
 forge-std = { version = "1.9.1" }
 solmate = { version = "6.7.0" }
+solady = { version = "0.0.124" }

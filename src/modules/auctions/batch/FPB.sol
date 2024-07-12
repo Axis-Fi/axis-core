@@ -6,7 +6,7 @@ import {IBatchAuction} from "src/interfaces/modules/IBatchAuction.sol";
 import {IFixedPriceBatch} from "src/interfaces/modules/auctions/IFixedPriceBatch.sol";
 
 // External libraries
-import {FixedPointMathLib as Math} from "solady/utils/FixedPointMathLib.sol";
+import {FixedPointMathLib as Math} from "@solady-0.0.124/utils/FixedPointMathLib.sol";
 
 // Auctions
 import {AuctionModule} from "src/modules/Auction.sol";

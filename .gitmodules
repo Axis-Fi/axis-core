@@ -1,6 +1,3 @@
-[submodule "lib/solady"]
-	path = lib/solady
-	url = https://github.com/vectorized/solady
 [submodule "lib/uniswap-v3-periphery"]
 	path = lib/uniswap-v3-periphery
 	url = https://github.com/uniswap/v3-periphery

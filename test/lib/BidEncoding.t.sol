@@ -3,7 +3,7 @@ pragma solidity 0.8.19;
 
 import {Test} from "@forge-std-1.9.1/Test.sol";
 import {BidEncoding} from "src/lib/MaxPriorityQueue.sol";
-import {FixedPointMathLib as Math} from "lib/solady/src/utils/FixedPointMathLib.sol";
+import {FixedPointMathLib as Math} from "@solady-0.0.124/utils/FixedPointMathLib.sol";
 
 contract BidEncodingTest is Test {
     using BidEncoding for bytes32;

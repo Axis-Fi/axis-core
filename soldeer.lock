@@ -10,3 +10,9 @@ name = "solmate"
 version = "6.7.0"
 source = "https://soldeer-revisions.s3.amazonaws.com/solmate/6_7_0_22-01-2024_13:21:00_solmate.zip"
 checksum = "dd0f08cdaaaad1de0ac45993d4959351ba89c2d9325a0b5df5570357064f2c33"
+
+[[dependencies]]
+name = "solady"
+version = "0.0.124"
+source = "https://soldeer-revisions.s3.amazonaws.com/solady/0_0_124_22-01-2024_13:28:04_solady.zip"
+checksum = "9342385eaad08f9bb5408be0b41b241dd2b974c001f7da8c3b1ac552b52ce16b"
