@@ -20,10 +20,6 @@ echo "solady"
 cd lib/solady/ && git checkout v0.0.124 && cd ../..
 
 echo ""
-echo "solmate"
-cd lib/solmate/ && git checkout c892309933b25c03d32b1b0d674df7ae292ba925 && cd ../..
-
-echo ""
 echo "openzeppelin-contracts"
 cd lib/openzeppelin-contracts && git checkout d6b63a48ba440ad8d551383697db6e5b0ef84137 && cd ../..
 
