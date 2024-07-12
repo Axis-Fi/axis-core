@@ -13,6 +13,10 @@ echo "*** Running forge install"
 forge install
 
 echo ""
+echo "*** Installing soldeer dependencies"
+forge soldeer update
+
+echo ""
 echo "*** Restoring submodule commits"
 # Lock the submodules to specific commits
 echo ""
