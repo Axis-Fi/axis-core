@@ -7,7 +7,7 @@ import {
 } from "contracts/lib/Initializable.sol";
 import {
     EnumerableSet
-} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+} from "@openzeppelin-contracts-4.9.2/utils/structs/EnumerableSet.sol";
 
 // solhint-disable-next-line max-states-count
 contract GUniFactoryStorage is

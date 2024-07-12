@@ -12,10 +12,10 @@ import {EIP173Proxy} from "./vendor/proxy/EIP173Proxy.sol";
 import {IEIP173Proxy} from "./interfaces/IEIP173Proxy.sol";
 import {
     IERC20Metadata
-} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+} from "@openzeppelin-contracts-4.9.2/token/ERC20/extensions/IERC20Metadata.sol";
 import {
     EnumerableSet
-} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+} from "@openzeppelin-contracts-4.9.2/utils/structs/EnumerableSet.sol";
 
 contract GUniFactory is GUniFactoryStorage, IGUniFactory {
     using EnumerableSet for EnumerableSet.AddressSet;

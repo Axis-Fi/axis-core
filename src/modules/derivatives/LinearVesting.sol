@@ -8,7 +8,7 @@ import {ClonesWithImmutableArgs} from "src/lib/clones/ClonesWithImmutableArgs.so
 import {Timestamp} from "src/lib/Timestamp.sol";
 import {ERC6909Metadata} from "src/lib/ERC6909Metadata.sol";
 import {FixedPointMathLib} from "@solmate-6.7.0/utils/FixedPointMathLib.sol";
-import {Base64} from "lib/openzeppelin-contracts/contracts/utils/Base64.sol";
+import {Base64} from "@openzeppelin-contracts-4.9.2/utils/Base64.sol";
 
 import {IDerivative} from "src/interfaces/modules/IDerivative.sol";
 import {ILinearVesting} from "src/interfaces/modules/derivatives/ILinearVesting.sol";

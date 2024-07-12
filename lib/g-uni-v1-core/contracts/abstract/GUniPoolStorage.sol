@@ -6,13 +6,13 @@ import {OwnableUninitialized} from "./OwnableUninitialized.sol";
 import {
     IUniswapV3Pool
 } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC20} from "@openzeppelin-contracts-4.9.2/token/ERC20/IERC20.sol";
 import {
     ReentrancyGuardUpgradeable
-} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+} from "@openzeppelin-contracts-upgradeable-4.9.2/security/ReentrancyGuardUpgradeable.sol";
 import {
     ERC20Upgradeable
-} from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
+} from "@openzeppelin-contracts-upgradeable-4.9.2/token/ERC20/ERC20Upgradeable.sol";
 
 /// @dev Single Global upgradeable state var storage base: APPEND ONLY
 /// @dev Add all inherited contracts with state vars here: APPEND ONLY

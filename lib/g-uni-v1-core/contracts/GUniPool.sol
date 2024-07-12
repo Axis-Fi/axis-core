@@ -15,8 +15,8 @@ import {TickMath} from "./vendor/uniswap/TickMath.sol";
 import {
     IERC20,
     SafeERC20
-} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+} from "@openzeppelin-contracts-4.9.2/token/ERC20/utils/SafeERC20.sol";
+import {SafeCast} from "@openzeppelin-contracts-4.9.2/utils/math/SafeCast.sol";
 import {
     FullMath,
     LiquidityAmounts
