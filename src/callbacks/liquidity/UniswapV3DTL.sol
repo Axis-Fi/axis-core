@@ -2,7 +2,7 @@
 pragma solidity ^0.8.19;
 
 // Libraries
-import {ERC20} from "solmate/tokens/ERC20.sol";
+import {ERC20} from "@solmate-6.7.0/tokens/ERC20.sol";
 import {SqrtPriceMath} from "src/lib/uniswap-v3/SqrtPriceMath.sol";
 
 // Uniswap

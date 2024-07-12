@@ -4,8 +4,8 @@ pragma solidity 0.8.19;
 import {UniswapV3DirectToLiquidityTest} from "./UniswapV3DTLTest.sol";
 
 // Libraries
-import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
-import {ERC20} from "solmate/tokens/ERC20.sol";
+import {FixedPointMathLib} from "@solmate-6.7.0/utils/FixedPointMathLib.sol";
+import {ERC20} from "@solmate-6.7.0/tokens/ERC20.sol";
 
 // Uniswap
 import {IUniswapV3Pool} from "uniswap-v3-core/interfaces/IUniswapV3Pool.sol";

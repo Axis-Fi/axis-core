@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BSL-1.1
 pragma solidity 0.8.19;
 
-import {ERC6909} from "lib/solmate/src/tokens/ERC6909.sol";
+import {ERC6909} from "src/lib/ERC6909.sol";
 import {ERC6909Metadata} from "src/lib/ERC6909Metadata.sol";
 import {Module} from "src/modules/Modules.sol";
 import {IDerivative} from "src/interfaces/modules/IDerivative.sol";

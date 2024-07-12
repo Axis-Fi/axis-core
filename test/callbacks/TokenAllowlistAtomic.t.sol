@@ -13,7 +13,7 @@ import {TokenAllowlist, ITokenBalance} from "src/callbacks/allowlists/TokenAllow
 
 import {WithSalts} from "test/lib/WithSalts.sol";
 import {TestConstants} from "test/Constants.sol";
-import {MockERC20} from "solmate/test/utils/mocks/MockERC20.sol";
+import {MockERC20} from "@solmate-6.7.0/test/utils/mocks/MockERC20.sol";
 
 contract TokenAllowlistAtomicTest is Test, Permit2User, WithSalts, TestConstants {
     using Callbacks for TokenAllowlist;

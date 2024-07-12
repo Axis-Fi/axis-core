@@ -12,7 +12,7 @@ import {EncryptedMarginalPrice} from "src/modules/auctions/batch/EMP.sol";
 import {Point} from "src/lib/ECIES.sol";
 
 // Generic contracts
-import {MockERC20} from "lib/solmate/src/test/utils/mocks/MockERC20.sol";
+import {MockERC20} from "@solmate-6.7.0/test/utils/mocks/MockERC20.sol";
 
 contract TestData is Script {
     BatchAuctionHouse public auctionHouse;

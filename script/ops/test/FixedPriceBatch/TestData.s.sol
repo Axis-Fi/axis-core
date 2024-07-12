@@ -18,8 +18,8 @@ import {IAuction} from "src/interfaces/modules/IAuction.sol";
 //     "src/callbacks/liquidity/BaselineV2/BALwithAllocatedAllowlist.sol";
 
 // Generic contracts
-import {ERC20} from "lib/solmate/src/tokens/ERC20.sol";
-import {MockERC20} from "lib/solmate/src/test/utils/mocks/MockERC20.sol";
+import {ERC20} from "@solmate-6.7.0/tokens/ERC20.sol";
+import {MockERC20} from "@solmate-6.7.0/test/utils/mocks/MockERC20.sol";
 
 contract TestData is Script, WithEnvironment {
     BatchAuctionHouse public auctionHouse;

@@ -12,7 +12,7 @@ import {MockFeeOnTransferERC20} from "test/lib/mocks/MockFeeOnTransferERC20.sol"
 import {Permit2User} from "test/lib/permit2/Permit2User.sol";
 import {MockWrappedDerivative} from "test/lib/mocks/MockWrappedDerivative.sol";
 
-import {ERC20} from "solmate/tokens/ERC20.sol";
+import {ERC20} from "@solmate-6.7.0/tokens/ERC20.sol";
 import {ICallback} from "src/interfaces/ICallback.sol";
 import {IAuctionHouse} from "src/interfaces/IAuctionHouse.sol";
 

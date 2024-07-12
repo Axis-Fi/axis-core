@@ -8,7 +8,7 @@ import {console2} from "@forge-std-1.9.1/console2.sol";
 import {Permit2User} from "test/lib/permit2/Permit2User.sol";
 import {StringHelper} from "test/lib/String.sol";
 import {MockFeeOnTransferERC20} from "test/lib/mocks/MockFeeOnTransferERC20.sol";
-import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
+import {FixedPointMathLib} from "@solmate-6.7.0/utils/FixedPointMathLib.sol";
 
 import {AtomicAuctionHouse} from "src/AtomicAuctionHouse.sol";
 import {IDerivative} from "src/interfaces/modules/IDerivative.sol";

@@ -2,8 +2,8 @@
 pragma solidity 0.8.19;
 
 import {ClonesWithImmutableArgs} from "src/lib/clones/ClonesWithImmutableArgs.sol";
-import {SafeTransferLib} from "solmate/utils/SafeTransferLib.sol";
-import {ERC20} from "solmate/tokens/ERC20.sol";
+import {SafeTransferLib} from "@solmate-6.7.0/utils/SafeTransferLib.sol";
+import {ERC20} from "@solmate-6.7.0/tokens/ERC20.sol";
 
 // Modules
 import {Module, Veecode, toKeycode, wrapVeecode} from "src/modules/Modules.sol";
@@ -11,7 +11,7 @@ import {Module, Veecode, toKeycode, wrapVeecode} from "src/modules/Modules.sol";
 // Auctions
 import {DerivativeModule} from "src/modules/Derivative.sol";
 
-import {MockERC6909} from "solmate/test/utils/mocks/MockERC6909.sol";
+import {MockERC6909} from "test/lib/mocks/MockERC6909.sol";
 import {MockWrappedDerivative} from "test/lib/mocks/MockWrappedDerivative.sol";
 
 contract MockDerivativeModule is DerivativeModule {
