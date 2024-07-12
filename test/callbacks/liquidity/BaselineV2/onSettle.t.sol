@@ -178,7 +178,9 @@ contract BaselineOnSettleTest is BaselineAxisLaunchTest {
         );
         assertEq(
             _baseToken.rangeReserves(Range.ANCHOR),
-            _PROCEEDS_AMOUNT.mulDivDown(_ONE_HUNDRED_PERCENT - _FLOOR_RESERVES_PERCENT, _ONE_HUNDRED_PERCENT),
+            _PROCEEDS_AMOUNT.mulDivDown(
+                _ONE_HUNDRED_PERCENT - _FLOOR_RESERVES_PERCENT, _ONE_HUNDRED_PERCENT
+            ),
             "reserves: anchor"
         );
         assertEq(_baseToken.rangeReserves(Range.DISCOVERY), 0, "reserves: discovery");
@@ -238,7 +240,9 @@ contract BaselineOnSettleTest is BaselineAxisLaunchTest {
         );
         assertEq(
             _baseToken.rangeReserves(Range.ANCHOR),
-            _PROCEEDS_AMOUNT.mulDivDown(_ONE_HUNDRED_PERCENT - floorReservesPercent, _ONE_HUNDRED_PERCENT),
+            _PROCEEDS_AMOUNT.mulDivDown(
+                _ONE_HUNDRED_PERCENT - floorReservesPercent, _ONE_HUNDRED_PERCENT
+            ),
             "reserves: anchor"
         );
         assertEq(_baseToken.rangeReserves(Range.DISCOVERY), 0, "reserves: discovery");
