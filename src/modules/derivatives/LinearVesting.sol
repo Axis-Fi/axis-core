@@ -74,13 +74,13 @@ contract LinearVesting is DerivativeModule, ILinearVesting, LinearVestingCard {
 
     // ========== TRANSFER ========== //
 
-    /// @inheritdoc ERC6909
+    /// @notice     Transfers are disabled
     /// @dev        Vesting tokens are soulbound/not transferable
     function transfer(address, uint256, uint256) public virtual override returns (bool) {
         revert NotPermitted();
     }
 
-    /// @inheritdoc ERC6909
+    /// @notice     Transfers are disabled
     /// @dev        Vesting tokens are soulbound/not transferable
     function transferFrom(
         address,
@@ -91,7 +91,7 @@ contract LinearVesting is DerivativeModule, ILinearVesting, LinearVestingCard {
         revert NotPermitted();
     }
 
-    /// @inheritdoc ERC6909
+    /// @notice     Transfers are disabled
     /// @dev        Vesting tokens are soulbound/not transferable
     function approve(address, uint256, uint256) public virtual override returns (bool) {
         revert NotPermitted();
