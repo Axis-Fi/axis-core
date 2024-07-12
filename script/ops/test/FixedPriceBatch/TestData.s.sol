@@ -2,7 +2,7 @@
 pragma solidity 0.8.19;
 
 // Scripting libraries
-import {Script, console2} from "forge-std/Script.sol";
+import {Script, console2} from "@forge-std-1.9.1/Script.sol";
 import {WithEnvironment} from "script/deploy/WithEnvironment.s.sol";
 
 // System contracts

@@ -2,8 +2,8 @@
 pragma solidity 0.8.19;
 
 // Testing Libraries
-import {Test} from "forge-std/Test.sol";
-import {console2} from "forge-std/console2.sol";
+import {Test} from "@forge-std-1.9.1/Test.sol";
+import {console2} from "@forge-std-1.9.1/console2.sol";
 import {ECIESFFITest} from "./ECIES_FFI.sol";
 
 // ECIES

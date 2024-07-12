@@ -6,7 +6,7 @@ import {ICallback} from "src/interfaces/ICallback.sol";
 
 import {MockCallback} from "test/callbacks/MockCallback.sol";
 
-import {Test} from "forge-std/Test.sol";
+import {Test} from "@forge-std-1.9.1/Test.sol";
 import {WithSalts} from "test/lib/WithSalts.sol";
 
 contract CallbacksTest is Test, WithSalts {

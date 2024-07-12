@@ -6,7 +6,7 @@ import {IAuction} from "src/interfaces/modules/IAuction.sol";
 import {IFixedPriceBatch} from "src/interfaces/modules/auctions/IFixedPriceBatch.sol";
 
 import {FpbTest} from "test/modules/auctions/FPB/FPBTest.sol";
-import {console2} from "lib/forge-std/src/console2.sol";
+import {console2} from "@forge-std-1.9.1/console2.sol";
 
 contract FpbSettleTest is FpbTest {
     // [X] when the caller is not the parent

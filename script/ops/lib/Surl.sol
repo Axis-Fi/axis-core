@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
-import {Vm} from "forge-std/Vm.sol";
+import {Vm} from "@forge-std-1.9.1/Vm.sol";
 
 library Surl {
     Vm constant vm = Vm(address(bytes20(uint160(uint256(keccak256("hevm cheat code"))))));

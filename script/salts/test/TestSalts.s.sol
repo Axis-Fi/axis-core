@@ -2,11 +2,11 @@
 pragma solidity 0.8.19;
 
 // Scripting libraries
-import {Script} from "lib/forge-std/src/Script.sol";
+import {Script} from "@forge-std-1.9.1/Script.sol";
 import {WithEnvironment} from "script/deploy/WithEnvironment.s.sol";
 import {Permit2User} from "test/lib/permit2/Permit2User.sol";
 import {WithSalts} from "script/salts/WithSalts.s.sol";
-import {console2} from "forge-std/console2.sol";
+import {console2} from "@forge-std-1.9.1/console2.sol";
 
 import {MockERC20} from "solmate/test/utils/mocks/MockERC20.sol";
 import {MockCallback} from "test/callbacks/MockCallback.sol";

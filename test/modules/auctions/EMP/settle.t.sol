@@ -11,7 +11,7 @@ import {BidEncoding} from "src/lib/MaxPriorityQueue.sol";
 
 import {EmpTest} from "test/modules/auctions/EMP/EMPTest.sol";
 
-import {console2} from "forge-std/console2.sol";
+import {console2} from "@forge-std-1.9.1/console2.sol";
 
 contract EmpSettleTest is EmpTest {
     using BidEncoding for bytes32;

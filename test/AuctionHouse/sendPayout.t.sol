@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.19;
 
-import {Test} from "forge-std/Test.sol";
+import {Test} from "@forge-std-1.9.1/Test.sol";
 import {Transfer} from "src/lib/Transfer.sol";
 
 import {MockAuctionHouse} from "test/AuctionHouse/MockAuctionHouse.sol";

@@ -1,7 +1,7 @@
 /// SPDX-License-Identifier: AGPL-3.0
 pragma solidity 0.8.19;
 
-import {Test} from "forge-std/Test.sol";
+import {Test} from "@forge-std-1.9.1/Test.sol";
 
 import {IPermit2} from "src/lib/permit2/interfaces/IPermit2.sol";
 import {Permit2Clone} from "test/lib/permit2/Permit2Clone.sol";

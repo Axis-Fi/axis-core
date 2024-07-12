@@ -1,9 +1,9 @@
 /// SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.19;
 
-import {Script} from "forge-std/Script.sol";
-import {console2} from "forge-std/console2.sol";
-import {stdJson} from "forge-std/StdJson.sol";
+import {Script} from "@forge-std-1.9.1/Script.sol";
+import {console2} from "@forge-std-1.9.1/console2.sol";
+import {stdJson} from "@forge-std-1.9.1/StdJson.sol";
 
 contract WithSalts is Script {
     using stdJson for string;
