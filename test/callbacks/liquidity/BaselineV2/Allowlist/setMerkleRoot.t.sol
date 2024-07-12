@@ -4,7 +4,6 @@ pragma solidity 0.8.19;
 import {BaselineAllowlistTest} from
     "test/callbacks/liquidity/BaselineV2/Allowlist/BaselineAllowlistTest.sol";
 
-import {BaseCallback} from "src/callbacks/BaseCallback.sol";
 import {BALwithAllowlist} from "src/callbacks/liquidity/BaselineV2/BALwithAllowlist.sol";
 
 contract BaselineAllowlistSetMerkleRootTest is BaselineAllowlistTest {

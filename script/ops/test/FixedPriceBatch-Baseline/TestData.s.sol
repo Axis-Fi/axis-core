@@ -14,8 +14,6 @@ import {ICallback} from "src/interfaces/ICallback.sol";
 import {IFixedPriceBatch} from "src/interfaces/modules/auctions/IFixedPriceBatch.sol";
 import {IAuction} from "src/interfaces/modules/IAuction.sol";
 import {BaselineAxisLaunch} from "src/callbacks/liquidity/BaselineV2/BaselineAxisLaunch.sol";
-import {BALwithAllocatedAllowlist} from
-    "src/callbacks/liquidity/BaselineV2/BALwithAllocatedAllowlist.sol";
 
 // Generic contracts
 import {ERC20} from "lib/solmate/src/tokens/ERC20.sol";

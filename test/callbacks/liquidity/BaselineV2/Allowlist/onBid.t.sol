@@ -5,7 +5,6 @@ import {BaselineAllowlistTest} from
     "test/callbacks/liquidity/BaselineV2/Allowlist/BaselineAllowlistTest.sol";
 
 import {BaseCallback} from "src/callbacks/BaseCallback.sol";
-import {BALwithAllowlist} from "src/callbacks/liquidity/BaselineV2/BALwithAllowlist.sol";
 
 contract BaselineAllowlistOnBidTest is BaselineAllowlistTest {
     // Use the @openzeppelin/merkle-tree package or the scripts in axis-utils to generate the merkle tree

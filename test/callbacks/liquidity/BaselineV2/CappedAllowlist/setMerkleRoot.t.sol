@@ -4,7 +4,6 @@ pragma solidity 0.8.19;
 import {BaselineCappedAllowlistTest} from
     "test/callbacks/liquidity/BaselineV2/CappedAllowlist/BaselineCappedAllowlistTest.sol";
 
-import {BaseCallback} from "src/callbacks/BaseCallback.sol";
 import {BALwithCappedAllowlist} from "src/callbacks/liquidity/BaselineV2/BALwithCappedAllowlist.sol";
 import {BALwithAllowlist} from "src/callbacks/liquidity/BaselineV2/BALwithAllowlist.sol";
 

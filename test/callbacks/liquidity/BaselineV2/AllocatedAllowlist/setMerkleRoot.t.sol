@@ -4,7 +4,6 @@ pragma solidity 0.8.19;
 import {BaselineAllocatedAllowlistTest} from
     "test/callbacks/liquidity/BaselineV2/AllocatedAllowlist/BaselineAllocatedAllowlistTest.sol";
 
-import {BaseCallback} from "src/callbacks/BaseCallback.sol";
 import {BALwithAllocatedAllowlist} from
     "src/callbacks/liquidity/BaselineV2/BALwithAllocatedAllowlist.sol";
 

@@ -5,10 +5,6 @@ import {BaselineTokenAllowlistTest} from
     "test/callbacks/liquidity/BaselineV2/TokenAllowlist/BaselineTokenAllowlistTest.sol";
 
 import {BaseCallback} from "src/callbacks/BaseCallback.sol";
-import {
-    BALwithTokenAllowlist,
-    ITokenBalance
-} from "src/callbacks/liquidity/BaselineV2/BALwithTokenAllowlist.sol";
 
 contract BaselineTokenAllowlistOnBidTest is BaselineTokenAllowlistTest {
     uint64 internal constant _BID_ID = 1;
