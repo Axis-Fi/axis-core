@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity >=0.8.0;
 
-import {IAuction} from "src/interfaces/modules/IAuction.sol";
+import "src/interfaces/modules/IAuction.sol";
 
 /// @title  IAtomicAuction
 /// @notice Interface for atomic auctions

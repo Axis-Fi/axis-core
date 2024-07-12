@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity >=0.8.0;
 
-import {ICatalogue} from "src/interfaces/ICatalogue.sol";
+import "src/interfaces/ICatalogue.sol";
 
 /// @title  IAtomicCatalogue
 /// @notice Interface for the AtomicCatalogue contract, which provides view functions for atomic auctions
