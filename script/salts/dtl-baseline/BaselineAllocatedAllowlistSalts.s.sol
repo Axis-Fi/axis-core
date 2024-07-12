@@ -19,7 +19,7 @@ contract BaselineAllocatedAllowlistSalts is Script, WithEnvironment, WithSalts {
         _createBytecodeDirectory();
 
         // Cache auction houses
-        _envBatchAuctionHouse = _envAddressNotZero("axis.BatchAuctionHouse");
+        _envBatchAuctionHouse = _envAddressNotZero("deployments.BatchAuctionHouse");
         console2.log("BatchAuctionHouse:", _envBatchAuctionHouse);
     }
 

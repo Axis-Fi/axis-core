@@ -1092,7 +1092,7 @@ contract Deploy is Script, WithEnvironment, WithSalts {
         console2.log("    Owner", baselineOwner);
         console2.log("    ReserveToken", reserveToken);
 
-        address batchAuctionHouse = _getAddressNotZero("axis.BatchAuctionHouse");
+        address batchAuctionHouse = _getAddressNotZero("deployments.BatchAuctionHouse");
 
         // Get the salt
         // This supports an arbitrary salt key, which can be set in the deployment sequence
@@ -1124,7 +1124,7 @@ contract Deploy is Script, WithEnvironment, WithSalts {
 
         console2.log("    Policy activated in Baseline Kernel");
 
-        return (address(batchAllowlist), _PREFIX_AXIS);
+        return (address(batchAllowlist), _PREFIX_CALLBACKS);
     }
 
     // ========== HELPER FUNCTIONS ========== //
