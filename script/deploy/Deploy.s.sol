@@ -31,8 +31,11 @@ import {CappedMerkleAllowlist} from "src/callbacks/allowlists/CappedMerkleAllowl
 import {MerkleAllowlist} from "src/callbacks/allowlists/MerkleAllowlist.sol";
 import {TokenAllowlist} from "src/callbacks/allowlists/TokenAllowlist.sol";
 import {AllocatedMerkleAllowlist} from "src/callbacks/allowlists/AllocatedMerkleAllowlist.sol";
+import {BALwithAllowlist} from "src/callbacks/liquidity/BaselineV2/BALwithAllowlist.sol";
 import {BALwithAllocatedAllowlist} from
     "src/callbacks/liquidity/BaselineV2/BALwithAllocatedAllowlist.sol";
+import {BALwithCappedAllowlist} from "src/callbacks/liquidity/BaselineV2/BALwithCappedAllowlist.sol";
+import {BALwithTokenAllowlist} from "src/callbacks/liquidity/BaselineV2/BALwithTokenAllowlist.sol";
 
 // Baseline
 import {
@@ -1115,6 +1118,168 @@ contract Deploy is Script, WithEnvironment, WithSalts {
         );
         console2.log("");
         console2.log("    BaselineAllocatedAllowlist (Batch) deployed at:", address(batchAllowlist));
+
+        // Install the module as a policy in the Baseline kernel
+        vm.broadcast();
+        BaselineKernel(baselineKernel).executeAction(
+            BaselineKernelActions.ActivatePolicy, address(batchAllowlist)
+        );
+
+        console2.log("    Policy activated in Baseline Kernel");
+
+        return (address(batchAllowlist), _PREFIX_CALLBACKS);
+    }
+
+    function deployBatchBaselineAllowlist(bytes memory args_)
+        public
+        returns (address, string memory)
+    {
+        // Decode arguments
+        (address baselineKernel, address baselineOwner, address reserveToken) =
+            abi.decode(args_, (address, address, address));
+
+        // Validate arguments
+        require(baselineKernel != address(0), "baselineKernel not set");
+        require(baselineOwner != address(0), "baselineOwner not set");
+        require(reserveToken != address(0), "reserveToken not set");
+
+        console2.log("");
+        console2.log("Deploying BaselineAllowlist (Batch)");
+        console2.log("    Kernel", baselineKernel);
+        console2.log("    Owner", baselineOwner);
+        console2.log("    ReserveToken", reserveToken);
+
+        address batchAuctionHouse = _getAddressNotZero("deployments.BatchAuctionHouse");
+
+        // Get the salt
+        // This supports an arbitrary salt key, which can be set in the deployment sequence
+        // This is required as each callback is single-use
+        bytes32 salt_ = _getSalt(
+            "BaselineAllowlist",
+            type(BALwithAllowlist).creationCode,
+            abi.encode(batchAuctionHouse, baselineKernel, reserveToken, baselineOwner)
+        );
+
+        // Revert if the salt is not set
+        require(salt_ != bytes32(0), "Salt not set");
+
+        // Deploy the module
+        console2.log("    salt:", vm.toString(salt_));
+
+        vm.broadcast();
+        BALwithAllowlist batchAllowlist = new BALwithAllowlist{salt: salt_}(
+            batchAuctionHouse, baselineKernel, reserveToken, baselineOwner
+        );
+        console2.log("");
+        console2.log("    BaselineAllowlist (Batch) deployed at:", address(batchAllowlist));
+
+        // Install the module as a policy in the Baseline kernel
+        vm.broadcast();
+        BaselineKernel(baselineKernel).executeAction(
+            BaselineKernelActions.ActivatePolicy, address(batchAllowlist)
+        );
+
+        console2.log("    Policy activated in Baseline Kernel");
+
+        return (address(batchAllowlist), _PREFIX_CALLBACKS);
+    }
+
+    function deployBatchBaselineCappedAllowlist(bytes memory args_)
+        public
+        returns (address, string memory)
+    {
+        // Decode arguments
+        (address baselineKernel, address baselineOwner, address reserveToken) =
+            abi.decode(args_, (address, address, address));
+
+        // Validate arguments
+        require(baselineKernel != address(0), "baselineKernel not set");
+        require(baselineOwner != address(0), "baselineOwner not set");
+        require(reserveToken != address(0), "reserveToken not set");
+
+        console2.log("");
+        console2.log("Deploying BaselineCappedAllowlist (Batch)");
+        console2.log("    Kernel", baselineKernel);
+        console2.log("    Owner", baselineOwner);
+        console2.log("    ReserveToken", reserveToken);
+
+        address batchAuctionHouse = _getAddressNotZero("deployments.BatchAuctionHouse");
+
+        // Get the salt
+        // This supports an arbitrary salt key, which can be set in the deployment sequence
+        // This is required as each callback is single-use
+        bytes32 salt_ = _getSalt(
+            "BaselineCappedAllowlist",
+            type(BALwithCappedAllowlist).creationCode,
+            abi.encode(batchAuctionHouse, baselineKernel, reserveToken, baselineOwner)
+        );
+
+        // Revert if the salt is not set
+        require(salt_ != bytes32(0), "Salt not set");
+
+        // Deploy the module
+        console2.log("    salt:", vm.toString(salt_));
+
+        vm.broadcast();
+        BALwithCappedAllowlist batchAllowlist = new BALwithCappedAllowlist{salt: salt_}(
+            batchAuctionHouse, baselineKernel, reserveToken, baselineOwner
+        );
+        console2.log("");
+        console2.log("    BaselineCappedAllowlist (Batch) deployed at:", address(batchAllowlist));
+
+        // Install the module as a policy in the Baseline kernel
+        vm.broadcast();
+        BaselineKernel(baselineKernel).executeAction(
+            BaselineKernelActions.ActivatePolicy, address(batchAllowlist)
+        );
+
+        console2.log("    Policy activated in Baseline Kernel");
+
+        return (address(batchAllowlist), _PREFIX_CALLBACKS);
+    }
+
+    function deployBatchBaselineTokenAllowlist(bytes memory args_)
+        public
+        returns (address, string memory)
+    {
+        // Decode arguments
+        (address baselineKernel, address baselineOwner, address reserveToken) =
+            abi.decode(args_, (address, address, address));
+
+        // Validate arguments
+        require(baselineKernel != address(0), "baselineKernel not set");
+        require(baselineOwner != address(0), "baselineOwner not set");
+        require(reserveToken != address(0), "reserveToken not set");
+
+        console2.log("");
+        console2.log("Deploying BaselineTokenAllowlist (Batch)");
+        console2.log("    Kernel", baselineKernel);
+        console2.log("    Owner", baselineOwner);
+        console2.log("    ReserveToken", reserveToken);
+
+        address batchAuctionHouse = _getAddressNotZero("deployments.BatchAuctionHouse");
+
+        // Get the salt
+        // This supports an arbitrary salt key, which can be set in the deployment sequence
+        // This is required as each callback is single-use
+        bytes32 salt_ = _getSalt(
+            "BaselineTokenAllowlist",
+            type(BALwithTokenAllowlist).creationCode,
+            abi.encode(batchAuctionHouse, baselineKernel, reserveToken, baselineOwner)
+        );
+
+        // Revert if the salt is not set
+        require(salt_ != bytes32(0), "Salt not set");
+
+        // Deploy the module
+        console2.log("    salt:", vm.toString(salt_));
+
+        vm.broadcast();
+        BALwithTokenAllowlist batchAllowlist = new BALwithTokenAllowlist{salt: salt_}(
+            batchAuctionHouse, baselineKernel, reserveToken, baselineOwner
+        );
+        console2.log("");
+        console2.log("    BaselineTokenAllowlist (Batch) deployed at:", address(batchAllowlist));
 
         // Install the module as a policy in the Baseline kernel
         vm.broadcast();
