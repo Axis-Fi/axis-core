@@ -113,3 +113,5 @@ pnpm run publish <version>
 ```
 
 On first run, this requires authentication with soldeer: `soldeer login`
+
+The [CHANGELOG](CHANGELOG.md) file should also be updated.
