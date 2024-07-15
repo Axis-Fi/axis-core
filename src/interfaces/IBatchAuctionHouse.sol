@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity >=0.8.0;
 
-import {IAuctionHouse} from "src/interfaces/IAuctionHouse.sol";
+import "src/interfaces/IAuctionHouse.sol";
 
 /// @title      IBatchAuctionHouse
 /// @notice     An interface to define the BatchAuctionHouse's buyer-facing functions

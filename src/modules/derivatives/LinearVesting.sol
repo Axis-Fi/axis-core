@@ -2,7 +2,6 @@
 pragma solidity 0.8.19;
 
 import {ERC20} from "@solmate-6.7.0/tokens/ERC20.sol";
-import {ERC6909} from "src/lib/ERC6909.sol";
 import {SafeTransferLib} from "@solmate-6.7.0/utils/SafeTransferLib.sol";
 import {ClonesWithImmutableArgs} from "src/lib/clones/ClonesWithImmutableArgs.sol";
 import {Timestamp} from "src/lib/Timestamp.sol";
@@ -74,13 +73,13 @@ contract LinearVesting is DerivativeModule, ILinearVesting, LinearVestingCard {
 
     // ========== TRANSFER ========== //
 
-    /// @inheritdoc ERC6909
+    /// @notice     Transfers are disabled
     /// @dev        Vesting tokens are soulbound/not transferable
     function transfer(address, uint256, uint256) public virtual override returns (bool) {
         revert NotPermitted();
     }
 
-    /// @inheritdoc ERC6909
+    /// @notice     Transfers are disabled
     /// @dev        Vesting tokens are soulbound/not transferable
     function transferFrom(
         address,
@@ -91,7 +90,7 @@ contract LinearVesting is DerivativeModule, ILinearVesting, LinearVestingCard {
         revert NotPermitted();
     }
 
-    /// @inheritdoc ERC6909
+    /// @notice     Transfers are disabled
     /// @dev        Vesting tokens are soulbound/not transferable
     function approve(address, uint256, uint256) public virtual override returns (bool) {
         revert NotPermitted();
