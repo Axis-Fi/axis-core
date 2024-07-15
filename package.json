@@ -17,6 +17,7 @@
     "lint:check": "pnpm run fmt:check && pnpm run solhint:check",
     "lint": "pnpm run fmt && pnpm run solhint",
     "postinstall": "./script/install.sh",
+    "publish": "./script/publish.sh",
     "salts": "./script/salts/write_salt.sh",
     "size": "forge clean && forge build --sizes --skip test --skip '*/Mock*.sol'",
     "solhint:all": "solhint --fix --config ./.solhint.json 'src/**/*.sol' 'test/**/*.sol' 'script/**/*.sol'",
