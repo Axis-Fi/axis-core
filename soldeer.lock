@@ -1,23 +1,5 @@
 
 [[dependencies]]
-name = "forge-std"
-version = "1.9.1"
-source = "https://soldeer-revisions.s3.amazonaws.com/forge-std/v1_9_1_03-07-2024_14:44:59_forge-std-v1.9.1.zip"
-checksum = "110b35ad3604d91a919c521c71206c18cd07b29c750bd90b5cbbaf37288c9636"
-
-[[dependencies]]
-name = "solmate"
-version = "6.7.0"
-source = "https://soldeer-revisions.s3.amazonaws.com/solmate/6_7_0_22-01-2024_13:21:00_solmate.zip"
-checksum = "dd0f08cdaaaad1de0ac45993d4959351ba89c2d9325a0b5df5570357064f2c33"
-
-[[dependencies]]
-name = "solady"
-version = "0.0.124"
-source = "https://soldeer-revisions.s3.amazonaws.com/solady/0_0_124_22-01-2024_13:28:04_solady.zip"
-checksum = "9342385eaad08f9bb5408be0b41b241dd2b974c001f7da8c3b1ac552b52ce16b"
-
-[[dependencies]]
 name = "@openzeppelin-contracts"
 version = "4.9.2"
 source = "https://soldeer-revisions.s3.amazonaws.com/@openzeppelin-contracts/4_9_2_22-01-2024_13:13:52_contracts.zip"
@@ -40,3 +22,21 @@ name = "@uniswap-v3-core"
 version = "1.0.1-solc-0.8-simulate"
 source = "https://soldeer-revisions.s3.amazonaws.com/@uniswap-v3-core/1_0_1-solc-0_8-simulate_22-01-2024_13:19:52_v3-core.zip"
 checksum = "566fc479fe846f41b211a0ddd66f875cd37e2ccb86b3fc4f7fa18bd55266ec7d"
+
+[[dependencies]]
+name = "forge-std"
+version = "1.9.1"
+source = "https://soldeer-revisions.s3.amazonaws.com/forge-std/v1_9_1_03-07-2024_14:44:59_forge-std-v1.9.1.zip"
+checksum = "110b35ad3604d91a919c521c71206c18cd07b29c750bd90b5cbbaf37288c9636"
+
+[[dependencies]]
+name = "solady"
+version = "0.0.124"
+source = "https://soldeer-revisions.s3.amazonaws.com/solady/0_0_124_22-01-2024_13:28:04_solady.zip"
+checksum = "9342385eaad08f9bb5408be0b41b241dd2b974c001f7da8c3b1ac552b52ce16b"
+
+[[dependencies]]
+name = "solmate"
+version = "6.7.0"
+source = "git@github.com:transmissions11/solmate.git"
+checksum = "97bdb2003b70382996a79a406813f76417b1cf90"

@@ -29,7 +29,7 @@ ignore = [
 
 [dependencies]
 forge-std = { version = "1.9.1" }
-solmate = { version = "6.7.0" }
+solmate = { version = "6.7.0", url = "git@github.com:transmissions11/solmate.git", commit = "c892309933b25c03d32b1b0d674df7ae292ba925" }
 solady = { version = "0.0.124" }
 "@openzeppelin-contracts" = { version = "4.9.2" }
 "@openzeppelin-contracts-upgradeable" = { version = "4.9.2" }
