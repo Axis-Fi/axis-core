@@ -96,4 +96,10 @@ Scripts are written in Solidity using Foundry and are divided into `deploy`, `sa
 
 ### Deployments
 
-Deployments are listed in the [Axis documentation](https://docs.axis.finance/references/03-technical/).
+Deployments are listed in the [env.json file](/script/env.json) and periodically updated in the [Axis documentation](https://axis.finance/developer/reference/contract-addresses).
+
+### Dependencies
+
+[soldeer](https://soldeer.xyz/) is used as the dependency manager, as it solves many of the problems inherent in forge's use of git submodules.
+
+This requires the `soldeer` CLI tool to be installed, which the [install script](#first-run) handles.
