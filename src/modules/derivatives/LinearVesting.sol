@@ -497,6 +497,16 @@ contract LinearVesting is DerivativeModule, ILinearVesting, LinearVestingCard {
 
     // ========== VIEW FUNCTIONS ========== //
 
+    function _getTokenMetadata(uint256 tokenId_)
+        internal
+        view
+        returns (ERC20, VestingParams memory)
+    {
+        Token storage token = tokenMetadata[tokenId_];
+
+        return (ERC20(token.underlyingToken), abi.decode(token.data, (VestingParams)));
+    }
+
     /// @inheritdoc ILinearVesting
     function getTokenVestingParams(uint256 tokenId_)
         external
@@ -663,10 +673,10 @@ contract LinearVesting is DerivativeModule, ILinearVesting, LinearVestingCard {
         onlyValidTokenId(tokenId_)
         returns (string memory)
     {
-        Token storage token = tokenMetadata[tokenId_];
-        VestingParams memory data = abi.decode(token.data, (VestingParams));
+        // Get the token data
+        (ERC20 underlyingToken, VestingParams memory data) = _getTokenMetadata(tokenId_);
 
-        (string memory name_,) = _computeNameAndSymbol(ERC20(token.underlyingToken), data.expiry);
+        (string memory name_,) = _computeNameAndSymbol(underlyingToken, data.expiry);
         return name_;
     }
 
@@ -680,10 +690,10 @@ contract LinearVesting is DerivativeModule, ILinearVesting, LinearVestingCard {
         onlyValidTokenId(tokenId_)
         returns (string memory)
     {
-        Token storage token = tokenMetadata[tokenId_];
-        VestingParams memory data = abi.decode(token.data, (VestingParams));
+        // Get the token data
+        (ERC20 underlyingToken, VestingParams memory data) = _getTokenMetadata(tokenId_);
 
-        (, string memory symbol_) = _computeNameAndSymbol(ERC20(token.underlyingToken), data.expiry);
+        (, string memory symbol_) = _computeNameAndSymbol(underlyingToken, data.expiry);
         return symbol_;
     }
 
@@ -697,9 +707,10 @@ contract LinearVesting is DerivativeModule, ILinearVesting, LinearVestingCard {
         onlyValidTokenId(tokenId_)
         returns (uint8)
     {
-        Token storage token = tokenMetadata[tokenId_];
+        // Get the token data
+        (ERC20 underlyingToken,) = _getTokenMetadata(tokenId_);
 
-        return ERC20(token.underlyingToken).decimals();
+        return underlyingToken.decimals();
     }
 
     // ========== ERC6909 CONTENT EXTENSION ========== //
@@ -714,16 +725,16 @@ contract LinearVesting is DerivativeModule, ILinearVesting, LinearVestingCard {
         onlyValidTokenId(tokenId_)
         returns (string memory)
     {
-        Token storage token = tokenMetadata[tokenId_];
-        VestingParams memory data = abi.decode(token.data, (VestingParams));
+        // Get the token data
+        (ERC20 underlyingToken, VestingParams memory data) = _getTokenMetadata(tokenId_);
 
         // Get the underlying token symbol
-        string memory _symbol = ERC20(token.underlyingToken).symbol();
+        string memory _symbol = underlyingToken.symbol();
 
         // Create token info for rendering token card
         Info memory info = Info({
             tokenId: tokenId_,
-            baseToken: token.underlyingToken,
+            baseToken: address(underlyingToken),
             baseTokenSymbol: _symbol,
             start: data.start,
             expiry: data.expiry,
