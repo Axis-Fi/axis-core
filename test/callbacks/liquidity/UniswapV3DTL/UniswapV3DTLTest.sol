@@ -11,7 +11,8 @@ import {BatchAuctionHouse} from "src/BatchAuctionHouse.sol";
 
 import {GUniFactory} from "g-uni-v1-core/GUniFactory.sol";
 import {GUniPool} from "g-uni-v1-core/GUniPool.sol";
-import {IUniswapV3Factory} from "@uniswap-v3-core-1.0.1-solc-0.8-simulate/interfaces/IUniswapV3Factory.sol";
+import {IUniswapV3Factory} from
+    "@uniswap-v3-core-1.0.1-solc-0.8-simulate/interfaces/IUniswapV3Factory.sol";
 
 import {UniswapV3Factory} from "test/lib/uniswap-v3/UniswapV3Factory.sol";
 
