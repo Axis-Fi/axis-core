@@ -22,7 +22,7 @@ jobs:
       - name: Install pnpm
         uses: pnpm/action-setup@v4
         with:
-            version: 8
+            version: 9
 
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
@@ -48,23 +48,24 @@ jobs:
       - name: Run sccache-cache
         uses: mozilla-actions/sccache-action@v0.0.3
 
-      - name: Build local ecies-cli for use with testing
-        run: cd crates/ecies-cli && cargo build && cd ../..
-
-      - name: Repo Install Script
+      - name: Install Dependencies
         run: |
-          chmod +x ./install.sh
-          ./install.sh
+          pnpm install
         shell: bash
 
       - name: Run lint check
         run: pnpm run lint:check
 
-      - name: Run Forge build
+      - name: Build Solidity Contracts
         run: |
           forge --version
           forge build
         id: build
+
+      - name: Build ECIES CLI
+        run: |
+          pnpm run build:ecies-cli
+        id: build-ecies-cli
 
       - name: Run Forge tests
         run: |

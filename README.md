@@ -42,7 +42,7 @@ Axis is built in Solidity using Foundry as the development and test environment.
 ### First-Run
 
 ```shell
-pnpm run full-install
+pnpm install
 ```
 
 ### Build
