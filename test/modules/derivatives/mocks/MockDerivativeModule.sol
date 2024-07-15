@@ -11,7 +11,7 @@ import {Module, Veecode, toKeycode, wrapVeecode} from "src/modules/Modules.sol";
 // Auctions
 import {DerivativeModule} from "src/modules/Derivative.sol";
 
-import {MockERC6909} from "test/lib/mocks/MockERC6909.sol";
+import {MockERC6909} from "@solmate-6.7.0/test/utils/mocks/MockERC6909.sol";
 import {MockWrappedDerivative} from "test/lib/mocks/MockWrappedDerivative.sol";
 
 contract MockDerivativeModule is DerivativeModule {
