@@ -26,7 +26,7 @@ then
 fi
 
 # Update the version number in the package.json file
-# npm version $1
+npm version $1
 
 # Push the new version to soldeer
-soldeer push axis-core~v$1 --dry-run
+soldeer push axis-core~v$1
