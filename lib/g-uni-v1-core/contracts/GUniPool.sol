@@ -3,14 +3,14 @@ pragma solidity 0.8.19;
 
 import {
     IUniswapV3MintCallback
-} from "@uniswap/v3-core/contracts/interfaces/callback/IUniswapV3MintCallback.sol";
+} from "@uniswap-v3-core-1.0.1-solc-0.8-simulate/interfaces/callback/IUniswapV3MintCallback.sol";
 import {
     IUniswapV3SwapCallback
-} from "@uniswap/v3-core/contracts/interfaces/callback/IUniswapV3SwapCallback.sol";
+} from "@uniswap-v3-core-1.0.1-solc-0.8-simulate/interfaces/callback/IUniswapV3SwapCallback.sol";
 import {GUniPoolStorage} from "./abstract/GUniPoolStorage.sol";
 import {
     IUniswapV3Pool
-} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
+} from "@uniswap-v3-core-1.0.1-solc-0.8-simulate/interfaces/IUniswapV3Pool.sol";
 import {TickMath} from "./vendor/uniswap/TickMath.sol";
 import {
     IERC20,

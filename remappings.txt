@@ -1,7 +1,3 @@
-ds-test/=lib/forge-std/lib/ds-test/src/
-uniswap-v3-core/=lib/uniswap-v3-core/contracts/
-uniswap-v3-periphery/=lib/uniswap-v3-periphery/contracts/
-@uniswap/v3-core/=lib/uniswap-v3-core/
 g-uni-v1-core/=lib/g-uni-v1-core/contracts/
 @forge-std-1.9.1=dependencies/forge-std-1.9.1/src
 @solmate-6.7.0=dependencies/solmate-6.7.0/src
@@ -9,3 +5,4 @@ g-uni-v1-core/=lib/g-uni-v1-core/contracts/
 @openzeppelin-contracts-4.9.2=dependencies/@openzeppelin-contracts-4.9.2
 @openzeppelin-contracts-upgradeable-4.9.2=dependencies/@openzeppelin-contracts-upgradeable-4.9.2
 @uniswap-v2-core-1.0.1=dependencies/@uniswap-v2-core-1.0.1/contracts
+@uniswap-v3-core-1.0.1-solc-0.8-simulate=dependencies/@uniswap-v3-core-1.0.1-solc-0.8-simulate/contracts

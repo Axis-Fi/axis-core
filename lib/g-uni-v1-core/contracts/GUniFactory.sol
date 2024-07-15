@@ -3,7 +3,7 @@ pragma solidity 0.8.19;
 
 import {
     IUniswapV3Factory
-} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
+} from "@uniswap-v3-core-1.0.1-solc-0.8-simulate/interfaces/IUniswapV3Factory.sol";
 import {IUniswapV3TickSpacing} from "./interfaces/IUniswapV3TickSpacing.sol";
 import {IGUniFactory} from "./interfaces/IGUniFactory.sol";
 import {IGUniPoolStorage} from "./interfaces/IGUniPoolStorage.sol";

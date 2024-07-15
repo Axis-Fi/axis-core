@@ -5,7 +5,7 @@ import {Gelatofied} from "./Gelatofied.sol";
 import {OwnableUninitialized} from "./OwnableUninitialized.sol";
 import {
     IUniswapV3Pool
-} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
+} from "@uniswap-v3-core-1.0.1-solc-0.8-simulate/interfaces/IUniswapV3Pool.sol";
 import {IERC20} from "@openzeppelin-contracts-4.9.2/token/ERC20/IERC20.sol";
 import {
     ReentrancyGuardUpgradeable
