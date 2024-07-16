@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity >=0.8.0;
 
-import "./ICatalogue.sol";
-import "./modules/IBatchAuction.sol";
+import {ICatalogue} from "./ICatalogue.sol";
+import {IBatchAuction} from "./modules/IBatchAuction.sol";
 
 /// @title  IBatchCatalogue
 /// @notice Interface for the BatchCatalogue contract, which provides view functions for batch auctions

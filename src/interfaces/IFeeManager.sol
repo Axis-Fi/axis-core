@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity >=0.8.0;
 
-import "../modules/Keycode.sol";
+import {Keycode} from "../modules/Keycode.sol";
 
 /// @title      IFeeManager
 /// @notice     Defines the interface to interact with auction fees

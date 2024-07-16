@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity >=0.8.0;
 
-import "./IAuctionHouse.sol";
+import {IAuctionHouse} from "./IAuctionHouse.sol";
+
+import {Keycode, Veecode} from "../modules/Keycode.sol";
 
 /// @title      ICatalogue
 /// @notice     Interface for the Catalogue contract, which provides view functions for auctions
