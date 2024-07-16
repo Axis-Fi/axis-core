@@ -15,8 +15,8 @@ import {IFixedPriceBatch} from "src/interfaces/modules/auctions/IFixedPriceBatch
 import {IAuction} from "src/interfaces/modules/IAuction.sol";
 
 // Callbacks
-import {BaseDirectToLiquidity} from "src/callbacks/liquidity/BaseDTL.sol";
-import {UniswapV2DirectToLiquidity} from "src/callbacks/liquidity/UniswapV2DTL.sol";
+// import {BaseDirectToLiquidity} from "src/callbacks/liquidity/BaseDTL.sol";
+// import {UniswapV2DirectToLiquidity} from "src/callbacks/liquidity/UniswapV2DTL.sol";
 
 // Generic contracts
 import {ERC20} from "@solmate-6.7.0/tokens/ERC20.sol";
@@ -60,13 +60,14 @@ contract TestData is Script, WithEnvironment {
             }
 
             routingParams.callbackData = abi.encode(
-                BaseDirectToLiquidity.OnCreateParams({
-                    proceedsUtilisationPercent: 5000, // 50%
-                    vestingStart: 0,
-                    vestingExpiry: 0,
-                    recipient: msg.sender,
-                    implParams: callbackImplParams
-                })
+                ""
+                // BaseDirectToLiquidity.OnCreateParams({
+                //     proceedsUtilisationPercent: 5000, // 50%
+                //     vestingStart: 0,
+                //     vestingExpiry: 0,
+                //     recipient: msg.sender,
+                //     implParams: callbackImplParams
+                // })
             );
 
             // Approve spending of the base token by the callback (for deposit into the liquidity pool)
@@ -151,8 +152,9 @@ contract TestData is Script, WithEnvironment {
 
         console2.log("Timestamp is", block.timestamp);
 
-        bytes memory callbackData =
-            abi.encode(UniswapV2DirectToLiquidity.OnSettleParams({maxSlippage: 50})); // 0.5%
+        // bytes memory callbackData =
+            // abi.encode(UniswapV2DirectToLiquidity.OnSettleParams({maxSlippage: 50})); // 0.5%
+        bytes memory callbackData = abi.encode("");
 
         vm.broadcast();
         auctionHouse.settle(lotId_, 100, callbackData);
