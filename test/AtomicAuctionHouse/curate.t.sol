@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.19;
 
-import {IAuctionHouse} from "src/interfaces/IAuctionHouse.sol";
+import {IAuctionHouse} from "../../src/interfaces/IAuctionHouse.sol";
 
-import {AtomicAuctionHouseTest} from "test/AtomicAuctionHouse/AuctionHouseTest.sol";
+import {AtomicAuctionHouseTest} from "./AuctionHouseTest.sol";
 
 contract AtomicCurateTest is AtomicAuctionHouseTest {
     // ===== Modifiers ===== //

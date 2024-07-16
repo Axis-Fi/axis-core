@@ -7,7 +7,7 @@ import {console2} from "@forge-std-1.9.1/console2.sol";
 import {ECIESFFITest} from "./ECIES_FFI.sol";
 
 // ECIES
-import {Point, ECIES} from "src/lib/ECIES.sol";
+import {Point, ECIES} from "../../../src/lib/ECIES.sol";
 
 contract ECIESDecryptTest is Test {
     // [X] when the bid public key is invalid

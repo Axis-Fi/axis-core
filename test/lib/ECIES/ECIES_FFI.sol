@@ -5,7 +5,7 @@ pragma solidity 0.8.19;
 import {Test} from "@forge-std-1.9.1/Test.sol";
 
 // ECIES
-import {Point} from "src/lib/ECIES.sol";
+import {Point} from "../../../src/lib/ECIES.sol";
 
 abstract contract ECIESFFITest is Test {
     string internal constant _EXECUTABLE = "./crates/ecies-cli/target/debug/ecies-cli";

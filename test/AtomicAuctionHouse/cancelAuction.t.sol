@@ -2,10 +2,10 @@
 pragma solidity 0.8.19;
 
 // Auctions
-import {IAuction} from "src/interfaces/modules/IAuction.sol";
-import {IAuctionHouse} from "src/interfaces/IAuctionHouse.sol";
+import {IAuction} from "../../src/interfaces/modules/IAuction.sol";
+import {IAuctionHouse} from "../../src/interfaces/IAuctionHouse.sol";
 
-import {AtomicAuctionHouseTest} from "test/AtomicAuctionHouse/AuctionHouseTest.sol";
+import {AtomicAuctionHouseTest} from "./AuctionHouseTest.sol";
 
 contract AtomicCancelAuctionTest is AtomicAuctionHouseTest {
     uint256 internal constant _PURCHASE_AMOUNT = 2e18;

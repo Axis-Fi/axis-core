@@ -4,25 +4,25 @@ pragma solidity 0.8.19;
 // Scripting libraries
 import {Script, console2} from "@forge-std-1.9.1/Script.sol";
 import {stdJson} from "@forge-std-1.9.1/StdJson.sol";
-import {WithEnvironment} from "script/deploy/WithEnvironment.s.sol";
-import {WithSalts} from "script/salts/WithSalts.s.sol";
+import {WithEnvironment} from "./WithEnvironment.s.sol";
+import {WithSalts} from "../salts/WithSalts.s.sol";
 
 // System contracts
-import {AtomicAuctionHouse} from "src/AtomicAuctionHouse.sol";
-import {BatchAuctionHouse} from "src/BatchAuctionHouse.sol";
-import {AtomicCatalogue} from "src/AtomicCatalogue.sol";
-import {BatchCatalogue} from "src/BatchCatalogue.sol";
-import {Module, Keycode, keycodeFromVeecode} from "src/modules/Modules.sol";
-import {Callbacks} from "src/lib/Callbacks.sol";
-import {IFeeManager} from "src/interfaces/IFeeManager.sol";
+import {AtomicAuctionHouse} from "../../src/AtomicAuctionHouse.sol";
+import {BatchAuctionHouse} from "../../src/BatchAuctionHouse.sol";
+import {AtomicCatalogue} from "../../src/AtomicCatalogue.sol";
+import {BatchCatalogue} from "../../src/BatchCatalogue.sol";
+import {Module, Keycode, keycodeFromVeecode} from "../../src/modules/Modules.sol";
+import {Callbacks} from "../../src/lib/Callbacks.sol";
+import {IFeeManager} from "../../src/interfaces/IFeeManager.sol";
 
 // Auction modules
-import {EncryptedMarginalPrice} from "src/modules/auctions/batch/EMP.sol";
-import {FixedPriceSale} from "src/modules/auctions/atomic/FPS.sol";
-import {FixedPriceBatch} from "src/modules/auctions/batch/FPB.sol";
+import {EncryptedMarginalPrice} from "../../src/modules/auctions/batch/EMP.sol";
+import {FixedPriceSale} from "../../src/modules/auctions/atomic/FPS.sol";
+import {FixedPriceBatch} from "../../src/modules/auctions/batch/FPB.sol";
 
 // Derivative modules
-import {LinearVesting} from "src/modules/derivatives/LinearVesting.sol";
+import {LinearVesting} from "../../src/modules/derivatives/LinearVesting.sol";
 
 /// @notice Declarative deployment script that reads a deployment sequence (with constructor args)
 ///         and a configured environment file to deploy and install contracts in the Axis protocol.

@@ -2,20 +2,20 @@
 pragma solidity 0.8.19;
 
 // Interfaces
-import {IFeeManager} from "src/interfaces/IFeeManager.sol";
+import {IFeeManager} from "../../src/interfaces/IFeeManager.sol";
 
 // Libraries
 import {Test} from "@forge-std-1.9.1/Test.sol";
 
 // Mocks
-import {MockAtomicAuctionModule} from "test/modules/Auction/MockAtomicAuctionModule.sol";
-import {Permit2User} from "test/lib/permit2/Permit2User.sol";
+import {MockAtomicAuctionModule} from "../modules/Auction/MockAtomicAuctionModule.sol";
+import {Permit2User} from "../lib/permit2/Permit2User.sol";
 
 // Auctions
-import {AtomicAuctionHouse} from "src/AtomicAuctionHouse.sol";
+import {AtomicAuctionHouse} from "../../src/AtomicAuctionHouse.sol";
 
 // Modules
-import {Keycode, keycodeFromVeecode} from "src/modules/Modules.sol";
+import {Keycode, keycodeFromVeecode} from "../../src/modules/Modules.sol";
 
 contract AtomicSetFeeTest is Test, Permit2User {
     MockAtomicAuctionModule internal _mockAuctionModule;

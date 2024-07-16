@@ -4,17 +4,18 @@ pragma solidity 0.8.19;
 // Libraries
 import {Test} from "@forge-std-1.9.1/Test.sol";
 import {console2} from "@forge-std-1.9.1/console2.sol";
-import {Point, ECIES} from "src/lib/ECIES.sol";
+import {Point, ECIES} from "../../../../src/lib/ECIES.sol";
 import {FixedPointMathLib as Math} from "@solady-0.0.124/utils/FixedPointMathLib.sol";
 
 // Mocks
-import {Permit2User} from "test/lib/permit2/Permit2User.sol";
+import {Permit2User} from "../../../lib/permit2/Permit2User.sol";
 
 // Modules
-import {BatchAuctionHouse} from "src/BatchAuctionHouse.sol";
-import {IAuction} from "src/interfaces/modules/IAuction.sol";
-import {EncryptedMarginalPrice} from "src/modules/auctions/batch/EMP.sol";
-import {IEncryptedMarginalPrice} from "src/interfaces/modules/auctions/IEncryptedMarginalPrice.sol";
+import {BatchAuctionHouse} from "../../../../src/BatchAuctionHouse.sol";
+import {IAuction} from "../../../../src/interfaces/modules/IAuction.sol";
+import {EncryptedMarginalPrice} from "../../../../src/modules/auctions/batch/EMP.sol";
+import {IEncryptedMarginalPrice} from
+    "../../../../src/interfaces/modules/auctions/IEncryptedMarginalPrice.sol";
 
 abstract contract EmpTest is Test, Permit2User {
     uint256 internal constant _BASE_SCALE = 1e18;

@@ -6,7 +6,7 @@ import {Test} from "@forge-std-1.9.1/Test.sol";
 // import {console2} from "@forge-std-1.9.1/console2.sol";
 
 // ECIES
-import {Point, ECIES} from "src/lib/ECIES.sol";
+import {Point, ECIES} from "../../../src/lib/ECIES.sol";
 
 contract ECIESisValidTest is Test {
     // [X] when the public key is not on the curve y^2 = x^3 + 3

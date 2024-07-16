@@ -2,10 +2,10 @@
 pragma solidity 0.8.19;
 
 // Auctions
-import {IAuction} from "src/interfaces/modules/IAuction.sol";
-import {IAuctionHouse} from "src/interfaces/IAuctionHouse.sol";
+import {IAuction} from "../../src/interfaces/modules/IAuction.sol";
+import {IAuctionHouse} from "../../src/interfaces/IAuctionHouse.sol";
 
-import {BatchAuctionHouseTest} from "test/BatchAuctionHouse/AuctionHouseTest.sol";
+import {BatchAuctionHouseTest} from "./AuctionHouseTest.sol";
 
 contract BatchCancelAuctionTest is BatchAuctionHouseTest {
     // cancel

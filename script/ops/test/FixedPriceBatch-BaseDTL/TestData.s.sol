@@ -3,20 +3,20 @@ pragma solidity 0.8.19;
 
 // Scripting libraries
 import {Script, console2} from "@forge-std-1.9.1/Script.sol";
-import {WithEnvironment} from "script/deploy/WithEnvironment.s.sol";
+import {WithEnvironment} from "../../../deploy/WithEnvironment.s.sol";
 
 // System contracts
-import {IBatchAuctionHouse} from "src/interfaces/IBatchAuctionHouse.sol";
-import {BatchAuctionHouse} from "src/BatchAuctionHouse.sol";
-import {IAuctionHouse} from "src/interfaces/IAuctionHouse.sol";
-import {toKeycode} from "src/modules/Modules.sol";
-import {ICallback} from "src/interfaces/ICallback.sol";
-import {IFixedPriceBatch} from "src/interfaces/modules/auctions/IFixedPriceBatch.sol";
-import {IAuction} from "src/interfaces/modules/IAuction.sol";
+import {IBatchAuctionHouse} from "../../../../src/interfaces/IBatchAuctionHouse.sol";
+import {BatchAuctionHouse} from "../../../../src/BatchAuctionHouse.sol";
+import {IAuctionHouse} from "../../../../src/interfaces/IAuctionHouse.sol";
+import {toKeycode} from "../../../../src/modules/Modules.sol";
+import {ICallback} from "../../../../src/interfaces/ICallback.sol";
+import {IFixedPriceBatch} from "../../../../src/interfaces/modules/auctions/IFixedPriceBatch.sol";
+import {IAuction} from "../../../../src/interfaces/modules/IAuction.sol";
 
 // Callbacks
-// import {BaseDirectToLiquidity} from "src/callbacks/liquidity/BaseDTL.sol";
-// import {UniswapV2DirectToLiquidity} from "src/callbacks/liquidity/UniswapV2DTL.sol";
+// import {BaseDirectToLiquidity} from "../../../../src/callbacks/liquidity/BaseDTL.sol";
+// import {UniswapV2DirectToLiquidity} from "../../../../src/callbacks/liquidity/UniswapV2DTL.sol";
 
 // Generic contracts
 import {ERC20} from "@solmate-6.7.0/tokens/ERC20.sol";

@@ -3,16 +3,16 @@ pragma solidity 0.8.19;
 
 // Scripting libraries
 import {Script} from "@forge-std-1.9.1/Script.sol";
-import {WithEnvironment} from "script/deploy/WithEnvironment.s.sol";
-import {Permit2User} from "test/lib/permit2/Permit2User.sol";
-import {WithSalts} from "script/salts/WithSalts.s.sol";
+import {WithEnvironment} from "../../deploy/WithEnvironment.s.sol";
+import {Permit2User} from "../../../test/lib/permit2/Permit2User.sol";
+import {WithSalts} from "../WithSalts.s.sol";
 import {console2} from "@forge-std-1.9.1/console2.sol";
 
 import {MockERC20} from "@solmate-6.7.0/test/utils/mocks/MockERC20.sol";
-import {MockCallback} from "test/callbacks/MockCallback.sol";
-import {Callbacks} from "src/lib/Callbacks.sol";
+import {MockCallback} from "../../../test/callbacks/MockCallback.sol";
+import {Callbacks} from "../../../src/lib/Callbacks.sol";
 
-import {TestConstants} from "test/Constants.sol";
+import {TestConstants} from "../../../test/Constants.sol";
 
 contract TestSalts is Script, WithEnvironment, Permit2User, WithSalts, TestConstants {
     string internal constant _MOCK_CALLBACK = "MockCallback";

@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.19;
 
-import {Callbacks} from "src/lib/Callbacks.sol";
-import {ICallback} from "src/interfaces/ICallback.sol";
+import {Callbacks} from "../../src/lib/Callbacks.sol";
+import {ICallback} from "../../src/interfaces/ICallback.sol";
 
-import {MockCallback} from "test/callbacks/MockCallback.sol";
+import {MockCallback} from "./MockCallback.sol";
 
 import {Test} from "@forge-std-1.9.1/Test.sol";
-import {WithSalts} from "test/lib/WithSalts.sol";
+import {WithSalts} from "../lib/WithSalts.sol";
 
 contract CallbacksTest is Test, WithSalts {
     using Callbacks for ICallback;

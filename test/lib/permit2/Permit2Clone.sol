@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.19;
 
-import {IPermit2} from "src/lib/permit2/interfaces/IPermit2.sol";
+import {IPermit2} from "../../../src/lib/permit2/interfaces/IPermit2.sol";
 
 // Local bytecode clone of the canonical Permit2 contract deployed to mainnet.
 contract Permit2Clone is IPermit2 {

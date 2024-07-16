@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.19;
 
-import {AtomicAuctionHouseTest} from "test/AtomicAuctionHouse/AuctionHouseTest.sol";
+import {AtomicAuctionHouseTest} from "./AuctionHouseTest.sol";
 
 contract AtomicClaimRewardsTest is AtomicAuctionHouseTest {
     uint256 internal constant _AMOUNT_IN = 1e18;

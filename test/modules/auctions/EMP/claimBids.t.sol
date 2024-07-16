@@ -4,13 +4,14 @@ pragma solidity 0.8.19;
 import {FixedPointMathLib as Math} from "@solady-0.0.124/utils/FixedPointMathLib.sol";
 import {console2} from "@forge-std-1.9.1/console2.sol";
 
-import {Module} from "src/modules/Modules.sol";
-import {IAuction} from "src/interfaces/modules/IAuction.sol";
-import {IEncryptedMarginalPrice} from "src/interfaces/modules/auctions/IEncryptedMarginalPrice.sol";
-import {EncryptedMarginalPrice} from "src/modules/auctions/batch/EMP.sol";
-import {IBatchAuction} from "src/interfaces/modules/IBatchAuction.sol";
+import {Module} from "../../../../src/modules/Modules.sol";
+import {IAuction} from "../../../../src/interfaces/modules/IAuction.sol";
+import {IEncryptedMarginalPrice} from
+    "../../../../src/interfaces/modules/auctions/IEncryptedMarginalPrice.sol";
+import {EncryptedMarginalPrice} from "../../../../src/modules/auctions/batch/EMP.sol";
+import {IBatchAuction} from "../../../../src/interfaces/modules/IBatchAuction.sol";
 
-import {EmpTest} from "test/modules/auctions/EMP/EMPTest.sol";
+import {EmpTest} from "./EMPTest.sol";
 
 contract EmpClaimBidsTest is EmpTest {
     uint256 internal constant _BID_AMOUNT = 8e18;

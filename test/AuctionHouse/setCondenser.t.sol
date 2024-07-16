@@ -6,18 +6,20 @@ import {Test} from "@forge-std-1.9.1/Test.sol";
 
 // Mocks
 import {MockERC20} from "@solmate-6.7.0/test/utils/mocks/MockERC20.sol";
-import {MockAuctionHouse} from "test/AuctionHouse/MockAuctionHouse.sol";
-import {MockAtomicAuctionModule} from "test/modules/Auction/MockAtomicAuctionModule.sol";
-import {MockDerivativeModule} from "test/modules/derivatives/mocks/MockDerivativeModule.sol";
-import {MockCondenserModule} from "test/modules/Condenser/MockCondenserModule.sol";
-import {Permit2User} from "test/lib/permit2/Permit2User.sol";
+import {MockAuctionHouse} from "./MockAuctionHouse.sol";
+import {MockAtomicAuctionModule} from "../modules/Auction/MockAtomicAuctionModule.sol";
+import {MockDerivativeModule} from "../modules/derivatives/mocks/MockDerivativeModule.sol";
+import {MockCondenserModule} from "../modules/Condenser/MockCondenserModule.sol";
+import {Permit2User} from "../lib/permit2/Permit2User.sol";
 
 // Auctions
-import {IAuctionHouse} from "src/interfaces/IAuctionHouse.sol";
-import {InvalidVeecode, keycodeFromVeecode} from "src/modules/Modules.sol";
+import {IAuctionHouse} from "../../src/interfaces/IAuctionHouse.sol";
+import {InvalidVeecode, keycodeFromVeecode} from "../../src/modules/Modules.sol";
 
 // Modules
-import {toKeycode, Veecode, toVeecode, fromVeecode, WithModules} from "src/modules/Modules.sol";
+import {
+    toKeycode, Veecode, toVeecode, fromVeecode, WithModules
+} from "../../src/modules/Modules.sol";
 
 contract SetCondenserTest is Test, Permit2User {
     MockERC20 internal _baseToken;

@@ -5,11 +5,11 @@ pragma solidity 0.8.19;
 import {Test} from "@forge-std-1.9.1/Test.sol";
 
 // Mocks
-import {MockWithModules} from "test/modules/Modules/MockWithModules.sol";
-import {MockModuleV1, MockModuleV2} from "test/modules/Modules/MockModule.sol";
+import {MockWithModules} from "./MockWithModules.sol";
+import {MockModuleV1, MockModuleV2} from "./MockModule.sol";
 
 // Contracts
-import {WithModules, toKeycode} from "src/modules/Modules.sol";
+import {WithModules, toKeycode} from "../../../src/modules/Modules.sol";
 
 contract GetModuleStatusTest is Test {
     WithModules internal _withModules;

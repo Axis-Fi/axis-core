@@ -1,18 +1,19 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.19;
 
-import {IBatchAuctionHouse} from "src/interfaces/IBatchAuctionHouse.sol";
-import {EncryptedMarginalPrice} from "src/modules/auctions/batch/EMP.sol";
-import {ILinearVesting} from "src/interfaces/modules/derivatives/ILinearVesting.sol";
-import {LinearVesting} from "src/modules/derivatives/LinearVesting.sol";
-import {Point, ECIES} from "src/lib/ECIES.sol";
-import {IAuctionHouse} from "src/interfaces/IAuctionHouse.sol";
-import {IAuction} from "src/interfaces/modules/IAuction.sol";
-import {IEncryptedMarginalPrice} from "src/interfaces/modules/auctions/IEncryptedMarginalPrice.sol";
+import {IBatchAuctionHouse} from "../../../src/interfaces/IBatchAuctionHouse.sol";
+import {EncryptedMarginalPrice} from "../../../src/modules/auctions/batch/EMP.sol";
+import {ILinearVesting} from "../../../src/interfaces/modules/derivatives/ILinearVesting.sol";
+import {LinearVesting} from "../../../src/modules/derivatives/LinearVesting.sol";
+import {Point, ECIES} from "../../../src/lib/ECIES.sol";
+import {IAuctionHouse} from "../../../src/interfaces/IAuctionHouse.sol";
+import {IAuction} from "../../../src/interfaces/modules/IAuction.sol";
+import {IEncryptedMarginalPrice} from
+    "../../../src/interfaces/modules/auctions/IEncryptedMarginalPrice.sol";
 
-import {keycodeFromVeecode, fromVeecode} from "src/modules/Modules.sol";
+import {keycodeFromVeecode, fromVeecode} from "../../../src/modules/Modules.sol";
 
-import {BatchAuctionHouseTest} from "test/BatchAuctionHouse/AuctionHouseTest.sol";
+import {BatchAuctionHouseTest} from "../../BatchAuctionHouse/AuctionHouseTest.sol";
 
 contract LinearVestingEMPAIntegrationTest is BatchAuctionHouseTest {
     EncryptedMarginalPrice internal _empaModule;
