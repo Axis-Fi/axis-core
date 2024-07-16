@@ -246,6 +246,8 @@ library svg {
 
     // an SVG attribute
     function prop(string memory _key, string memory _val) internal pure returns (string memory) {
+        // solhint-disable quotes
         return string.concat(_key, "=", '"', _val, '" ');
+        // solhint-enable quotes
     }
 }
