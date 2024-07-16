@@ -7,7 +7,7 @@ pragma solidity >=0.7.0 <0.9.0;
 // 🧩 MODULES
 //import {Script, console2, StdChains, stdJson, stdMath, StdStorage, stdStorageSafe, VmSafe} from "@forge-std-1.9.1/Script.sol";
 import {Script} from "@forge-std-1.9.1/Script.sol";
-import {stdJson} from "@forge-std-1.9.1/stdJson.sol";
+import {stdJson} from "@forge-std-1.9.1/StdJson.sol";
 import {console2} from "@forge-std-1.9.1/console2.sol";
 
 import {Surl} from "./Surl.sol";
