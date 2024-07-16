@@ -3,7 +3,8 @@ pragma solidity 0.8.19;
 
 import {ERC20} from "@solmate-6.7.0/tokens/ERC20.sol";
 import {SafeTransferLib} from "@solmate-6.7.0/utils/SafeTransferLib.sol";
-import {ClonesWithImmutableArgs} from "src/lib/clones/ClonesWithImmutableArgs.sol";
+import {ClonesWithImmutableArgs} from
+    "@clones-with-immutable-args-1.1.2/ClonesWithImmutableArgs.sol";
 import {Timestamp} from "src/lib/Timestamp.sol";
 import {ERC6909Metadata} from "src/lib/ERC6909Metadata.sol";
 import {FixedPointMathLib} from "@solmate-6.7.0/utils/FixedPointMathLib.sol";

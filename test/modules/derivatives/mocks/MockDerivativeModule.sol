@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.19;
 
-import {ClonesWithImmutableArgs} from "src/lib/clones/ClonesWithImmutableArgs.sol";
+import {ClonesWithImmutableArgs} from
+    "@clones-with-immutable-args-1.1.2/ClonesWithImmutableArgs.sol";
 import {SafeTransferLib} from "@solmate-6.7.0/utils/SafeTransferLib.sol";
 import {ERC20} from "@solmate-6.7.0/tokens/ERC20.sol";
 

@@ -3,7 +3,8 @@ pragma solidity 0.8.19;
 
 // Libraries
 import {Test} from "@forge-std-1.9.1/Test.sol";
-import {ClonesWithImmutableArgs} from "src/lib/clones/ClonesWithImmutableArgs.sol";
+import {ClonesWithImmutableArgs} from
+    "@clones-with-immutable-args-1.1.2/ClonesWithImmutableArgs.sol";
 import {StringHelper} from "test/lib/String.sol";
 
 import {SoulboundCloneERC20} from "src/modules/derivatives/SoulboundCloneERC20.sol";

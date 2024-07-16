@@ -1,11 +1,6 @@
 #!/bin/bash
 
 echo ""
-echo "*** Installing soldeer"
-cargo install soldeer
-echo "    Done"
-
-echo ""
 echo "*** Setting up submodules"
 git submodule init
 git submodule update
@@ -18,7 +13,7 @@ echo "    Done"
 
 echo ""
 echo "*** Installing soldeer dependencies"
-soldeer install
+forge soldeer update
 echo "    Done"
 
 echo ""

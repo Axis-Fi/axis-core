@@ -100,9 +100,7 @@ Deployments are listed in the [env.json file](/script/env.json) and periodically
 
 ### Dependencies
 
-[soldeer](https://soldeer.xyz/) is used as the dependency manager, as it solves many of the problems inherent in forge's use of git submodules.
-
-This requires the `soldeer` CLI tool to be installed, which the [install script](#first-run) handles. The minimum supported version is 0.2.18.
+[soldeer](https://soldeer.xyz/) is used as the dependency manager, as it solves many of the problems inherent in forge's use of git submodules. Soldeer is integrated into `forge`, so should not require any additional installations.
 
 ### Packaging
 
