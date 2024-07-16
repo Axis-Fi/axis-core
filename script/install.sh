@@ -13,7 +13,7 @@ echo "    Done"
 
 echo ""
 echo "*** Installing soldeer dependencies"
-forge soldeer update
+rm -rf dependencies/* && forge soldeer update
 echo "    Done"
 
 echo ""

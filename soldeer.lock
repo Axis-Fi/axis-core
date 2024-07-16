@@ -43,6 +43,6 @@ checksum = "566fc479fe846f41b211a0ddd66f875cd37e2ccb86b3fc4f7fa18bd55266ec7d"
 
 [[dependencies]]
 name = "clones-with-immutable-args"
-version = "1.1.2"
+version = "1.1.1"
 source = "git@github.com:wighawag/clones-with-immutable-args.git"
-checksum = "196f1ecc6485c1bf2d41677fa01d3df4927ff9ce"
+checksum = "f5ca191afea933d50a36d101009b5644dc28bc99"
