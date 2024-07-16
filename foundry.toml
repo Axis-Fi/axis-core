@@ -32,7 +32,4 @@ forge-std = { version = "1.9.1" }
 solmate = { version = "6.7.0", url = "git@github.com:transmissions11/solmate.git", commit = "c892309933b25c03d32b1b0d674df7ae292ba925" }
 solady = { version = "0.0.124" }
 "@openzeppelin-contracts" = { version = "4.9.2" }
-"@openzeppelin-contracts-upgradeable" = { version = "4.9.2" }
-"@uniswap-v2-core" = { version = "1.0.1" }
-"@uniswap-v3-core" = { version = "1.0.1-solc-0.8-simulate" }
 clones-with-immutable-args = { version = "1.1.1", git = "git@github.com:wighawag/clones-with-immutable-args.git", rev = "f5ca191afea933d50a36d101009b5644dc28bc99" }
