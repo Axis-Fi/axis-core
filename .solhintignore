@@ -1,4 +1,5 @@
 lib/**
+dependencies/**
 src/modules/Modules.sol
 src/modules/Keycode.sol
 src/lib/**
