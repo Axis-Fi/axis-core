@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: BSL-1.1
 pragma solidity 0.8.19;
 
-import {EncryptedMarginalPrice} from "src/modules/auctions/batch/EMP.sol";
-import {BlastGas} from "src/blast/modules/BlastGas.sol";
+import {EncryptedMarginalPrice} from "../../../../modules/auctions/batch/EMP.sol";
+import {BlastGas} from "../../BlastGas.sol";
 
 contract BlastEMP is EncryptedMarginalPrice, BlastGas {
     // ========== CONSTRUCTOR ========== //

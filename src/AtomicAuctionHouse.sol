@@ -2,21 +2,21 @@
 pragma solidity 0.8.19;
 
 // Interfaces
-import {IAuction} from "src/interfaces/modules/IAuction.sol";
-import {IAtomicAuctionHouse} from "src/interfaces/IAtomicAuctionHouse.sol";
-import {ICallback} from "src/interfaces/ICallback.sol";
+import {IAuction} from "./interfaces/modules/IAuction.sol";
+import {IAtomicAuctionHouse} from "./interfaces/IAtomicAuctionHouse.sol";
+import {ICallback} from "./interfaces/ICallback.sol";
 
 // External libraries
 import {ERC20} from "@solmate-6.7.0/tokens/ERC20.sol";
 
 // Internal libaries
-import {Transfer} from "src/lib/Transfer.sol";
-import {Callbacks} from "src/lib/Callbacks.sol";
+import {Transfer} from "./lib/Transfer.sol";
+import {Callbacks} from "./lib/Callbacks.sol";
 
 // Auction
-import {AuctionHouse} from "src/bases/AuctionHouse.sol";
-import {AuctionModule} from "src/modules/Auction.sol";
-import {AtomicAuctionModule} from "src/modules/auctions/AtomicAuctionModule.sol";
+import {AuctionHouse} from "./bases/AuctionHouse.sol";
+import {AuctionModule} from "./modules/Auction.sol";
+import {AtomicAuctionModule} from "./modules/auctions/AtomicAuctionModule.sol";
 
 /// @title      AtomicAuctionHouse
 /// @notice     As its name implies, the AtomicAuctionHouse is where atomic auction lots are created and purchased. The core protocol logic is implemented here.

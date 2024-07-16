@@ -59,16 +59,14 @@ contract TestData is Script, WithEnvironment {
                 callbackImplParams = abi.encode(uniswapV3PoolFee_);
             }
 
-            routingParams.callbackData = abi.encode(
-                ""
-                // BaseDirectToLiquidity.OnCreateParams({
-                //     proceedsUtilisationPercent: 5000, // 50%
-                //     vestingStart: 0,
-                //     vestingExpiry: 0,
-                //     recipient: msg.sender,
-                //     implParams: callbackImplParams
-                // })
-            );
+            routingParams.callbackData = abi.encode("");
+            // BaseDirectToLiquidity.OnCreateParams({
+            //     proceedsUtilisationPercent: 5000, // 50%
+            //     vestingStart: 0,
+            //     vestingExpiry: 0,
+            //     recipient: msg.sender,
+            //     implParams: callbackImplParams
+            // })
 
             // Approve spending of the base token by the callback (for deposit into the liquidity pool)
             ERC20(baseToken_).approve(callback_, 10e18);
@@ -153,7 +151,7 @@ contract TestData is Script, WithEnvironment {
         console2.log("Timestamp is", block.timestamp);
 
         // bytes memory callbackData =
-            // abi.encode(UniswapV2DirectToLiquidity.OnSettleParams({maxSlippage: 50})); // 0.5%
+        // abi.encode(UniswapV2DirectToLiquidity.OnSettleParams({maxSlippage: 50})); // 0.5%
         bytes memory callbackData = abi.encode("");
 
         vm.broadcast();

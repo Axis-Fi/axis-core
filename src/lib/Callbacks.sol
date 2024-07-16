@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
-import {ICallback} from "src/interfaces/ICallback.sol";
+import {ICallback} from "../interfaces/ICallback.sol";
 
 /// @notice Library for handling callbacks
 /// @dev This library is based on the design of UniswapV4's Hooks library (https://github.com/Uniswap/v4-core/blob/main/src/libraries/Hooks.sol)

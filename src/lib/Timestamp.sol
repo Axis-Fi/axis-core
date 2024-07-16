@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.19;
 
-import {uint2str} from "src/lib/Uint2Str.sol";
+import {uint2str} from "./Uint2Str.sol";
 
 library Timestamp {
     function toPaddedString(uint48 timestamp)

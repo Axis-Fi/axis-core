@@ -2,10 +2,10 @@
 pragma solidity 0.8.19;
 
 // Interfaces
-import {ICallback} from "src/interfaces/ICallback.sol";
+import {ICallback} from "../interfaces/ICallback.sol";
 
 // Internal libraries
-import {Callbacks} from "src/lib/Callbacks.sol";
+import {Callbacks} from "../lib/Callbacks.sol";
 
 /// @title  BaseCallback
 /// @notice This contract implements standard behaviours for callbacks to the Axis auction system.

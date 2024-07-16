@@ -2,15 +2,15 @@
 pragma solidity 0.8.19;
 
 // Interfaces
-import {ICallback} from "src/interfaces/ICallback.sol";
-import {IAuction} from "src/interfaces/modules/IAuction.sol";
-import {IAuctionHouse} from "src/interfaces/IAuctionHouse.sol";
-import {ICatalogue} from "src/interfaces/ICatalogue.sol";
+import {ICallback} from "../interfaces/ICallback.sol";
+import {IAuction} from "../interfaces/modules/IAuction.sol";
+import {IAuctionHouse} from "../interfaces/IAuctionHouse.sol";
+import {ICatalogue} from "../interfaces/ICatalogue.sol";
 
 // Internal dependencies
 import {
     Keycode, keycodeFromVeecode, fromKeycode, Veecode, fromVeecode
-} from "src/modules/Keycode.sol";
+} from "../modules/Keycode.sol";
 
 /// @notice Contract that provides view functions for auctions
 abstract contract Catalogue is ICatalogue {

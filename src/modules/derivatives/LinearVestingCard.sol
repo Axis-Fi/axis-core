@@ -1,9 +1,10 @@
 /// SPDX-License-Identifier: BSL-1.1
 pragma solidity 0.8.19;
 
-import {svg} from "src/lib/SVG.sol";
-import {Timestamp} from "src/lib/Timestamp.sol";
 import {Strings} from "@openzeppelin-contracts-4.9.2/utils/Strings.sol";
+
+import {svg} from "../../lib/SVG.sol";
+import {Timestamp} from "../../lib/Timestamp.sol";
 
 contract LinearVestingCard {
     // solhint-disable quotes

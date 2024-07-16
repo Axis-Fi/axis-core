@@ -2,7 +2,7 @@
 pragma solidity 0.8.19;
 
 import {Owned} from "@solmate-6.7.0/auth/Owned.sol";
-import "src/modules/Keycode.sol";
+import "./Keycode.sol";
 
 /// @notice    Abstract contract that provides functionality for installing and interacting with modules.
 /// @dev       This contract is intended to be inherited by any contract that needs to install modules.
