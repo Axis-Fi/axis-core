@@ -13,7 +13,6 @@ import {BatchAuctionHouse} from "../../src/BatchAuctionHouse.sol";
 import {AtomicCatalogue} from "../../src/AtomicCatalogue.sol";
 import {BatchCatalogue} from "../../src/BatchCatalogue.sol";
 import {Module, Keycode, keycodeFromVeecode} from "../../src/modules/Modules.sol";
-import {Callbacks} from "../../src/lib/Callbacks.sol";
 import {IFeeManager} from "../../src/interfaces/IFeeManager.sol";
 
 // Auction modules
@@ -30,7 +29,6 @@ contract Deploy is Script, WithEnvironment, WithSalts {
     using stdJson for string;
 
     string internal constant _PREFIX_DEPLOYMENT_ROOT = "deployments";
-    string internal constant _PREFIX_CALLBACKS = "deployments.callbacks";
     string internal constant _PREFIX_AUCTION_MODULES = "deployments.auctionModules";
     string internal constant _PREFIX_DERIVATIVE_MODULES = "deployments.derivativeModules";
 
