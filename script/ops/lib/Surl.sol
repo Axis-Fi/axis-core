@@ -108,6 +108,7 @@ library Surl {
         string memory body,
         string memory method
     ) internal returns (uint256 status, bytes memory data) {
+        // solhint-disable quotes
         string memory scriptStart = 'response=$(curl -s -w "\\n%{http_code}" ';
         string memory scriptEnd =
             '); status=$(tail -n1 <<< "$response"); data=$(sed "$ d" <<< "$response");data=$(echo "$data" | tr -d "\\n"); cast abi-encode "response(uint256,string)" "$status" "$data";';
@@ -133,5 +134,6 @@ library Surl {
         bytes memory res = vm.ffi(inputs);
 
         (status, data) = abi.decode(res, (uint256, bytes));
+        // solhint-enable quotes
     }
 }
