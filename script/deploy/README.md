@@ -98,18 +98,3 @@ CHAIN="blast-sepolia" ./script/deploy/deploy.sh --deployFile ./script/deploy/seq
 If the `verify` flag on `deploy.sh` is set, the contract should be verified automatically. If `VERIFIER` is blank or `etherscan`, then `ETHERSCAN_API_KEY` must be set as an environment variable. Additionally, `VERIFIER_URL` can be used to set a custom verifier URL (by default it uses the one configurd in ethers-rs).
 
 If deploying against a Tenderly fork and verifying, [follow the instructions](https://docs.tenderly.co/contract-verification).
-
-## External Dependencies
-
-Note that for each chain Axis is to be deployed on, if the Uniswap V3 DTL callback is to be used, a deployment of G-UNI will be required.
-
-Apart from first-party deployments, the `script/env.json` file contains the addresses of third-party dependencies. These have been sourced from the following locations:
-
-- [Uniswap V2](https://github.com/Uniswap/docs/blob/65d3f21e6cb2879b0672ad791563de0e54fcc089/docs/contracts/v2/reference/smart-contracts/08-deployment-addresses.md)
-  - Exceptions
-    - Arbitrum Sepolia, Base Sepolia, Blast Sepolia and Mode Sepolia are custom deployments, due to the unavailability of the Uniswap V2 contracts.
-- [Uniswap V3](https://github.com/Uniswap/docs/tree/65d3f21e6cb2879b0672ad791563de0e54fcc089/docs/contracts/v3/reference/deployments)
-  - Exceptions
-    - Arbitrum Sepolia and Blast Sepolia are custom deployments by Axis Finance alongside the G-UNI deployment.
-- G-UNI
-  - All of the addresses mentioned are custom deployments by Axis Finance. This is because the addresses from the deployments recorded in the [g-uni-v1-core repository](https://github.com/gelatodigital/g-uni-v1-core/tree/bea63422e2155242b051896b635508b7a99d2a1a/deployments) point to proxies, which have since been upgraded to point to Arrakis contracts that have different interfaces.

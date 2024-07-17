@@ -2,17 +2,17 @@
 pragma solidity 0.8.19;
 
 // Interfaces
-import {IFeeManager} from "src/interfaces/IFeeManager.sol";
+import {IFeeManager} from "../interfaces/IFeeManager.sol";
 
 // Internal libraries
-import {Transfer} from "src/lib/Transfer.sol";
+import {Transfer} from "../lib/Transfer.sol";
 
 // External libraries
 import {ERC20} from "@solmate-6.7.0/tokens/ERC20.sol";
 import {ReentrancyGuard} from "@solmate-6.7.0/utils/ReentrancyGuard.sol";
 import {FixedPointMathLib as Math} from "@solmate-6.7.0/utils/FixedPointMathLib.sol";
 
-import {Keycode} from "src/modules/Keycode.sol";
+import {Keycode} from "../modules/Keycode.sol";
 
 /// @title      FeeManager
 /// @notice     Defines fees for auctions and manages the collection and distribution of fees

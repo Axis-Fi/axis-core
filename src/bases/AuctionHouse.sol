@@ -2,15 +2,15 @@
 pragma solidity 0.8.19;
 
 // Interfaces
-import {IAuction} from "src/interfaces/modules/IAuction.sol";
-import {IAuctionHouse} from "src/interfaces/IAuctionHouse.sol";
-import {ICallback} from "src/interfaces/ICallback.sol";
-import {IDerivative} from "src/interfaces/modules/IDerivative.sol";
-import {IFeeManager} from "src/interfaces/IFeeManager.sol";
+import {IAuction} from "../interfaces/modules/IAuction.sol";
+import {IAuctionHouse} from "../interfaces/IAuctionHouse.sol";
+import {ICallback} from "../interfaces/ICallback.sol";
+import {IDerivative} from "../interfaces/modules/IDerivative.sol";
+import {IFeeManager} from "../interfaces/IFeeManager.sol";
 
 // Internal libraries
-import {Transfer} from "src/lib/Transfer.sol";
-import {Callbacks} from "src/lib/Callbacks.sol";
+import {Transfer} from "../lib/Transfer.sol";
+import {Callbacks} from "../lib/Callbacks.sol";
 
 // External libraries
 import {ERC20} from "@solmate-6.7.0/tokens/ERC20.sol";
@@ -19,13 +19,13 @@ import {ReentrancyGuard} from "@solmate-6.7.0/utils/ReentrancyGuard.sol";
 // Internal dependencies
 import {
     fromKeycode, fromVeecode, keycodeFromVeecode, Keycode, Veecode
-} from "src/modules/Keycode.sol";
-import {Module, WithModules} from "src/modules/Modules.sol";
-import {FeeManager} from "src/bases/FeeManager.sol";
+} from "../modules/Keycode.sol";
+import {Module, WithModules} from "../modules/Modules.sol";
+import {FeeManager} from "../bases/FeeManager.sol";
 
-import {AuctionModule} from "src/modules/Auction.sol";
-import {DerivativeModule} from "src/modules/Derivative.sol";
-import {CondenserModule} from "src/modules/Condenser.sol";
+import {AuctionModule} from "../modules/Auction.sol";
+import {DerivativeModule} from "../modules/Derivative.sol";
+import {CondenserModule} from "../modules/Condenser.sol";
 
 /// @title  AuctionHouse
 /// @notice The base AuctionHouse contract defines common structures and functions across auction types (atomic and batch).

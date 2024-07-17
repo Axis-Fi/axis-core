@@ -2,17 +2,17 @@
 pragma solidity 0.8.19;
 
 // Interfaces
-import {IBatchAuction} from "src/interfaces/modules/IBatchAuction.sol";
-import {IFixedPriceBatch} from "src/interfaces/modules/auctions/IFixedPriceBatch.sol";
+import {IBatchAuction} from "../../../interfaces/modules/IBatchAuction.sol";
+import {IFixedPriceBatch} from "../../../interfaces/modules/auctions/IFixedPriceBatch.sol";
 
 // External libraries
 import {FixedPointMathLib as Math} from "@solady-0.0.124/utils/FixedPointMathLib.sol";
 
 // Auctions
-import {AuctionModule} from "src/modules/Auction.sol";
-import {BatchAuctionModule} from "src/modules/auctions/BatchAuctionModule.sol";
+import {AuctionModule} from "../../Auction.sol";
+import {BatchAuctionModule} from "../BatchAuctionModule.sol";
 
-import {Module, Veecode, toVeecode} from "src/modules/Modules.sol";
+import {Module, Veecode, toVeecode} from "../../Modules.sol";
 
 /// @title  FixedPriceBatch
 /// @notice A module for creating fixed price batch auctions

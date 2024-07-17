@@ -2,21 +2,21 @@
 pragma solidity 0.8.19;
 
 import {Test} from "@forge-std-1.9.1/Test.sol";
-import {Transfer} from "src/lib/Transfer.sol";
+import {Transfer} from "../../src/lib/Transfer.sol";
 
-import {MockAuctionHouse} from "test/AuctionHouse/MockAuctionHouse.sol";
-import {MockAtomicAuctionModule} from "test/modules/Auction/MockAtomicAuctionModule.sol";
-import {MockDerivativeModule} from "test/modules/derivatives/mocks/MockDerivativeModule.sol";
-import {MockCondenserModule} from "test/modules/Condenser/MockCondenserModule.sol";
-import {MockFeeOnTransferERC20} from "test/lib/mocks/MockFeeOnTransferERC20.sol";
-import {Permit2User} from "test/lib/permit2/Permit2User.sol";
-import {MockWrappedDerivative} from "test/lib/mocks/MockWrappedDerivative.sol";
+import {MockAuctionHouse} from "./MockAuctionHouse.sol";
+import {MockAtomicAuctionModule} from "../modules/Auction/MockAtomicAuctionModule.sol";
+import {MockDerivativeModule} from "../modules/derivatives/mocks/MockDerivativeModule.sol";
+import {MockCondenserModule} from "../modules/Condenser/MockCondenserModule.sol";
+import {MockFeeOnTransferERC20} from "../lib/mocks/MockFeeOnTransferERC20.sol";
+import {Permit2User} from "../lib/permit2/Permit2User.sol";
+import {MockWrappedDerivative} from "../lib/mocks/MockWrappedDerivative.sol";
 
 import {ERC20} from "@solmate-6.7.0/tokens/ERC20.sol";
-import {ICallback} from "src/interfaces/ICallback.sol";
-import {IAuctionHouse} from "src/interfaces/IAuctionHouse.sol";
+import {ICallback} from "../../src/interfaces/ICallback.sol";
+import {IAuctionHouse} from "../../src/interfaces/IAuctionHouse.sol";
 
-import {Veecode, toVeecode} from "src/modules/Modules.sol";
+import {Veecode, toVeecode} from "../../src/modules/Modules.sol";
 
 contract SendPayoutTest is Test, Permit2User {
     MockAuctionHouse internal _auctionHouse;

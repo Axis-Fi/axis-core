@@ -3,13 +3,13 @@ pragma solidity 0.8.19;
 
 import {Test} from "@forge-std-1.9.1/Test.sol";
 
-import {MockCallback} from "test/callbacks/MockCallback.sol";
-import {MockAuctionHouse} from "test/AuctionHouse/MockAuctionHouse.sol";
-import {MockFeeOnTransferERC20} from "test/lib/mocks/MockFeeOnTransferERC20.sol";
-import {Permit2User} from "test/lib/permit2/Permit2User.sol";
-import {Callbacks} from "src/lib/Callbacks.sol";
+import {MockCallback} from "../callbacks/MockCallback.sol";
+import {MockAuctionHouse} from "./MockAuctionHouse.sol";
+import {MockFeeOnTransferERC20} from "../lib/mocks/MockFeeOnTransferERC20.sol";
+import {Permit2User} from "../lib/permit2/Permit2User.sol";
+import {Callbacks} from "../../src/lib/Callbacks.sol";
 
-import {WithSalts} from "test/lib/WithSalts.sol";
+import {WithSalts} from "../lib/WithSalts.sol";
 
 contract SendPaymentTest is Test, Permit2User, WithSalts {
     MockAuctionHouse internal _auctionHouse;

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity 0.8.19;
 
-import {BatchScript} from "script/ops/lib/BatchScript.sol";
+import {BatchScript} from "./lib/BatchScript.sol";
 import {stdJson} from "@forge-std-1.9.1/StdJson.sol";
 
 abstract contract Batch is BatchScript {

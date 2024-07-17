@@ -13,7 +13,7 @@ import {
     unwrapVeecode,
     ensureValidVeecode,
     InvalidVeecode
-} from "src/modules/Modules.sol";
+} from "../../../src/modules/Modules.sol";
 
 contract KeycodeTest is Test {
     function test_keycode() external {

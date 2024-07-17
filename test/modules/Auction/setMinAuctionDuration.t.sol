@@ -5,15 +5,15 @@ pragma solidity 0.8.19;
 import {Test} from "@forge-std-1.9.1/Test.sol";
 
 // Mocks
-import {MockAtomicAuctionModule} from "test/modules/Auction/MockAtomicAuctionModule.sol";
-import {Permit2User} from "test/lib/permit2/Permit2User.sol";
+import {MockAtomicAuctionModule} from "./MockAtomicAuctionModule.sol";
+import {Permit2User} from "../../lib/permit2/Permit2User.sol";
 
 // Auctions
-import {AuctionModule} from "src/modules/Auction.sol";
-import {AtomicAuctionHouse} from "src/AtomicAuctionHouse.sol";
+import {AuctionModule} from "../../../src/modules/Auction.sol";
+import {AtomicAuctionHouse} from "../../../src/AtomicAuctionHouse.sol";
 
 // Modules
-import {Module} from "src/modules/Modules.sol";
+import {Module} from "../../../src/modules/Modules.sol";
 
 contract SetMinAuctionDurationTest is Test, Permit2User {
     MockAtomicAuctionModule internal _mockAuctionModule;

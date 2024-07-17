@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: BSL-1.1
 pragma solidity 0.8.19;
 
-import {AuctionHouse} from "src/bases/AuctionHouse.sol";
-import {Veecode} from "src/modules/Modules.sol";
+import {AuctionHouse} from "../bases/AuctionHouse.sol";
+import {Veecode} from "../modules/Modules.sol";
 
 enum YieldMode {
     AUTOMATIC,

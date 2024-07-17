@@ -38,35 +38,6 @@ Assuming that the developer wants to deploy an AtomicAuctionHouse at an address 
 
 The generated salt would be stored in `./script/salts/salts.json` under the key `AtomicAuctionHouse` and a hash of the bytecode. Provided the bytecode is the same, the same salt can be used to deploy the contract at the same address on different chains.
 
-### Generating Salts for Baseline Allocated Allowlist
-
-The Baseline Allocated Allowlist is a single-use Callbacks contract that enables the owner of a fixed-price batch auction to:
-
-- deploy the proceeds using Baseline
-- specify a bid limit for each address
-
-To generate a salt for a specific callback deployment, the following addresses are needed:
-
-- Baseline kernel
-- Owner of the Baseline deployment (which will have the ability to withdraw reserves)
-- Reserve (quote) token
-
-These addresses should match the arguments in the deployment sequence file.
-
-The following script can then be run:
-
-```bash
-./script/salts/dtl-baseline/baseline_allocated_allowlist_salts.sh --kernel <kernel> --owner <owner> --reserveToken <reserveToken>
-```
-
-### Generating Salts for Uniswap Direct to Liquidity
-
-Assuming that the developer wants to deploy a Uniswap V3 direct to liquidity callback for atomic auctions, the following command would be run:
-
-```bash
-./script/salts/dtl-uniswap/uniswap_dtl_salts.sh --type atomic --version 3
-```
-
 ### Generating Salts for Any Contract
 
 For aesthetic, gas or other reasons, certain contracts will need to be deployed at deterministic addresses.

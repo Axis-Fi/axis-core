@@ -6,14 +6,14 @@ import {Test} from "@forge-std-1.9.1/Test.sol";
 import {FixedPointMathLib as Math} from "@solmate-6.7.0/utils/FixedPointMathLib.sol";
 
 // Mocks
-import {Permit2User} from "test/lib/permit2/Permit2User.sol";
+import {Permit2User} from "../../../lib/permit2/Permit2User.sol";
 
 // Modules
-import {BatchAuctionHouse} from "src/BatchAuctionHouse.sol";
-import {IAuction} from "src/interfaces/modules/IAuction.sol";
-import {IBatchAuction} from "src/interfaces/modules/IBatchAuction.sol";
-import {FixedPriceBatch} from "src/modules/auctions/batch/FPB.sol";
-import {IFixedPriceBatch} from "src/interfaces/modules/auctions/IFixedPriceBatch.sol";
+import {BatchAuctionHouse} from "../../../../src/BatchAuctionHouse.sol";
+import {IAuction} from "../../../../src/interfaces/modules/IAuction.sol";
+import {IBatchAuction} from "../../../../src/interfaces/modules/IBatchAuction.sol";
+import {FixedPriceBatch} from "../../../../src/modules/auctions/batch/FPB.sol";
+import {IFixedPriceBatch} from "../../../../src/interfaces/modules/auctions/IFixedPriceBatch.sol";
 
 abstract contract FpbTest is Test, Permit2User {
     uint256 internal constant _BASE_SCALE = 1e18;

@@ -5,19 +5,23 @@ pragma solidity 0.8.19;
 import {Test} from "@forge-std-1.9.1/Test.sol";
 
 // Mocks
-import {MockWithModules} from "test/modules/Modules/MockWithModules.sol";
+import {MockWithModules} from "./MockWithModules.sol";
 import {
     MockModuleV0,
     MockModuleV1,
     MockModuleV2,
     MockModuleV3,
     MockInvalidModule
-} from "test/modules/Modules/MockModule.sol";
+} from "./MockModule.sol";
 
 // Contracts
 import {
-    WithModules, Module, fromKeycode, toKeycode, InvalidVeecode
-} from "src/modules/Modules.sol";
+    WithModules,
+    Module,
+    fromKeycode,
+    toKeycode,
+    InvalidVeecode
+} from "../../../src/modules/Modules.sol";
 
 contract InstallModuleTest is Test {
     WithModules internal _withModules;

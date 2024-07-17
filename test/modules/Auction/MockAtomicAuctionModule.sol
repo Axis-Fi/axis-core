@@ -2,11 +2,11 @@
 pragma solidity 0.8.19;
 
 // Modules
-import {Veecode, toKeycode, wrapVeecode} from "src/modules/Modules.sol";
+import {Veecode, toKeycode, wrapVeecode} from "../../../src/modules/Modules.sol";
 
 // Auctions
-import {AuctionModule} from "src/modules/Auction.sol";
-import {AtomicAuctionModule} from "src/modules/auctions/AtomicAuctionModule.sol";
+import {AuctionModule} from "../../../src/modules/Auction.sol";
+import {AtomicAuctionModule} from "../../../src/modules/auctions/AtomicAuctionModule.sol";
 
 contract MockAtomicAuctionModule is AtomicAuctionModule {
     mapping(uint256 => uint256) public payoutData;

@@ -2,7 +2,7 @@
 pragma solidity 0.8.19;
 
 import {Test} from "@forge-std-1.9.1/Test.sol";
-import {MaxPriorityQueue, Queue, BidEncoding} from "src/lib/MaxPriorityQueue.sol";
+import {MaxPriorityQueue, Queue, BidEncoding} from "../../src/lib/MaxPriorityQueue.sol";
 
 contract MaxPriorityQueueTest is Test {
     using MaxPriorityQueue for Queue;

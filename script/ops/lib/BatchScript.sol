@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: MIT
-pragma solidity >=0.6.2 <0.9.0;
+pragma solidity >=0.7.0 <0.9.0;
 
 // 💬 ABOUT
 // Gnosis Safe transaction batching script
 
 // 🧩 MODULES
 //import {Script, console2, StdChains, stdJson, stdMath, StdStorage, stdStorageSafe, VmSafe} from "@forge-std-1.9.1/Script.sol";
-import "@forge-std-1.9.1/Script.sol";
+import {Script} from "@forge-std-1.9.1/Script.sol";
+import {stdJson} from "@forge-std-1.9.1/StdJson.sol";
+import {console2} from "@forge-std-1.9.1/console2.sol";
 
 import {Surl} from "./Surl.sol";
 import {DelegatePrank} from "./DelegatePrank.sol";
@@ -358,6 +360,7 @@ abstract contract BatchScript is Script, DelegatePrank {
     }
 
     function _stripSlashQuotes(string memory str_) internal returns (string memory) {
+        // solhint-disable quotes
         // Remove slash quotes from string
         string memory command = string.concat(
             "sed 's/",
@@ -378,6 +381,7 @@ abstract contract BatchScript is Script, DelegatePrank {
         inputs[1] = "-c";
         inputs[2] = string.concat(command, "'", str_, "'");
         bytes memory res = vm.ffi(inputs);
+        // solhint-enable quotes
 
         return string(res);
     }

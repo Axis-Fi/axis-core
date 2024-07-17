@@ -3,8 +3,8 @@ pragma solidity 0.8.19;
 
 import {ERC20} from "@solmate-6.7.0/tokens/ERC20.sol";
 
-import {BaseCallback} from "src/callbacks/BaseCallback.sol";
-import {Callbacks} from "src/lib/Callbacks.sol";
+import {BaseCallback} from "../../src/bases/BaseCallback.sol";
+import {Callbacks} from "../../src/lib/Callbacks.sol";
 
 contract MockCallback is BaseCallback {
     constructor(

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: BSL-1.1
 pragma solidity 0.8.19;
 
-import {LinearVesting} from "src/modules/derivatives/LinearVesting.sol";
-import {BlastGas} from "src/blast/modules/BlastGas.sol";
+import {LinearVesting} from "../../../modules/derivatives/LinearVesting.sol";
+import {BlastGas} from "../BlastGas.sol";
 
 contract BlastLinearVesting is LinearVesting, BlastGas {
     // ========== CONSTRUCTOR ========== //

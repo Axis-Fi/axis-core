@@ -2,13 +2,13 @@
 pragma solidity 0.8.19;
 
 // Mocks
-import {MockBatchAuctionModule} from "test/modules/Auction/MockBatchAuctionModule.sol";
+import {MockBatchAuctionModule} from "../modules/Auction/MockBatchAuctionModule.sol";
 
 // Auctions
-import {IAuction} from "src/interfaces/modules/IAuction.sol";
-import {IAuctionHouse} from "src/interfaces/IAuctionHouse.sol";
+import {IAuction} from "../../src/interfaces/modules/IAuction.sol";
+import {IAuctionHouse} from "../../src/interfaces/IAuctionHouse.sol";
 
-import {BatchAuctionHouseTest} from "test/BatchAuctionHouse/AuctionHouseTest.sol";
+import {BatchAuctionHouseTest} from "./AuctionHouseTest.sol";
 
 contract BatchBidTest is BatchAuctionHouseTest {
     uint256 internal constant _BID_AMOUNT = 1e18;

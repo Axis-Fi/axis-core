@@ -2,12 +2,12 @@
 pragma solidity 0.8.19;
 
 // Interfaces
-import {IAuctionHouse} from "src/interfaces/IAuctionHouse.sol";
-import {IBatchCatalogue} from "src/interfaces/IBatchCatalogue.sol";
-import {IBatchAuction} from "src/interfaces/modules/IBatchAuction.sol";
+import {IAuctionHouse} from "./interfaces/IAuctionHouse.sol";
+import {IBatchCatalogue} from "./interfaces/IBatchCatalogue.sol";
+import {IBatchAuction} from "./interfaces/modules/IBatchAuction.sol";
 
 // Base contracts
-import {Catalogue} from "src/bases/Catalogue.sol";
+import {Catalogue} from "./bases/Catalogue.sol";
 
 /// @notice Contract that provides view and aggregation functions for batch auctions without having to know the specific auction module address
 contract BatchCatalogue is IBatchCatalogue, Catalogue {

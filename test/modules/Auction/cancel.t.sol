@@ -6,18 +6,18 @@ import {Test} from "@forge-std-1.9.1/Test.sol";
 
 // Mocks
 import {MockERC20} from "@solmate-6.7.0/test/utils/mocks/MockERC20.sol";
-import {MockAtomicAuctionModule} from "test/modules/Auction/MockAtomicAuctionModule.sol";
-import {Permit2User} from "test/lib/permit2/Permit2User.sol";
+import {MockAtomicAuctionModule} from "./MockAtomicAuctionModule.sol";
+import {Permit2User} from "../../lib/permit2/Permit2User.sol";
 
 // Auctions
-import {AtomicAuctionHouse} from "src/AtomicAuctionHouse.sol";
-import {IAuction} from "src/interfaces/modules/IAuction.sol";
-import {IAuctionHouse} from "src/interfaces/IAuctionHouse.sol";
-import {ICallback} from "src/interfaces/ICallback.sol";
-import {IFeeManager} from "src/interfaces/IFeeManager.sol";
+import {AtomicAuctionHouse} from "../../../src/AtomicAuctionHouse.sol";
+import {IAuction} from "../../../src/interfaces/modules/IAuction.sol";
+import {IAuctionHouse} from "../../../src/interfaces/IAuctionHouse.sol";
+import {ICallback} from "../../../src/interfaces/ICallback.sol";
+import {IFeeManager} from "../../../src/interfaces/IFeeManager.sol";
 
 // Modules
-import {toKeycode, Module, Keycode, keycodeFromVeecode} from "src/modules/Modules.sol";
+import {toKeycode, Module, Keycode, keycodeFromVeecode} from "../../../src/modules/Modules.sol";
 
 contract CancelTest is Test, Permit2User {
     MockERC20 internal _baseToken;

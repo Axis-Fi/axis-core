@@ -2,16 +2,16 @@
 pragma solidity 0.8.19;
 
 // Libraries
-import {BatchAuctionHouseTest} from "test/BatchAuctionHouse/AuctionHouseTest.sol";
-import {Transfer} from "src/lib/Transfer.sol";
+import {BatchAuctionHouseTest} from "./AuctionHouseTest.sol";
+import {Transfer} from "../../src/lib/Transfer.sol";
 
 // Mocks
-import {MockAtomicAuctionModule} from "test/modules/Auction/MockAtomicAuctionModule.sol";
+import {MockAtomicAuctionModule} from "../modules/Auction/MockAtomicAuctionModule.sol";
 import {MockERC20} from "@solmate-6.7.0/test/utils/mocks/MockERC20.sol";
 
-import {IAuction} from "src/interfaces/modules/IAuction.sol";
-import {IAuctionHouse} from "src/interfaces/IAuctionHouse.sol";
-import {ICallback} from "src/interfaces/ICallback.sol";
+import {IAuction} from "../../src/interfaces/modules/IAuction.sol";
+import {IAuctionHouse} from "../../src/interfaces/IAuctionHouse.sol";
+import {ICallback} from "../../src/interfaces/ICallback.sol";
 import {
     Veecode,
     keycodeFromVeecode,
@@ -19,7 +19,7 @@ import {
     WithModules,
     wrapVeecode,
     fromVeecode
-} from "src/modules/Modules.sol";
+} from "../../src/modules/Modules.sol";
 
 contract BatchCreateAuctionTest is BatchAuctionHouseTest {
     MockAtomicAuctionModule internal _atomicAuctionModule;
