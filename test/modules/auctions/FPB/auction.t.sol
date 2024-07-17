@@ -4,7 +4,7 @@ pragma solidity 0.8.19;
 import {Module} from "src/modules/Modules.sol";
 import {IAuction} from "src/interfaces/modules/IAuction.sol";
 import {IFixedPriceBatch} from "src/interfaces/modules/auctions/IFixedPriceBatch.sol";
-import {FixedPointMathLib as Math} from "solady/utils/FixedPointMathLib.sol";
+import {FixedPointMathLib as Math} from "@solady-0.0.124/utils/FixedPointMathLib.sol";
 
 import {FpbTest} from "test/modules/auctions/FPB/FPBTest.sol";
 

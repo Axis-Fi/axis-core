@@ -2,7 +2,7 @@
 pragma solidity 0.8.19;
 
 // Testing Libraries
-import {Test} from "forge-std/Test.sol";
+import {Test} from "@forge-std-1.9.1/Test.sol";
 
 // ECIES
 import {Point} from "src/lib/ECIES.sol";

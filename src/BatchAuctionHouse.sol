@@ -12,7 +12,7 @@ import {Transfer} from "src/lib/Transfer.sol";
 import {Callbacks} from "src/lib/Callbacks.sol";
 
 // External libraries
-import {ERC20} from "solmate/tokens/ERC20.sol";
+import {ERC20} from "@solmate-6.7.0/tokens/ERC20.sol";
 
 // Auctions
 import {AuctionHouse} from "src/bases/AuctionHouse.sol";

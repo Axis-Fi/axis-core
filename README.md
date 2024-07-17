@@ -42,7 +42,7 @@ Axis is built in Solidity using Foundry as the development and test environment.
 ### First-Run
 
 ```shell
-pnpm run full-install
+pnpm install
 ```
 
 ### Build
@@ -96,4 +96,20 @@ Scripts are written in Solidity using Foundry and are divided into `deploy`, `sa
 
 ### Deployments
 
-Deployments are listed in the [Axis documentation](https://docs.axis.finance/references/03-technical/).
+Deployments are listed in the [env.json file](/script/env.json) and periodically updated in the [Axis documentation](https://axis.finance/developer/reference/contract-addresses).
+
+### Dependencies
+
+[soldeer](https://soldeer.xyz/) is used as the dependency manager, as it solves many of the problems inherent in forge's use of git submodules. Soldeer is integrated into `forge`, so should not require any additional installations.
+
+### Packaging
+
+To publish a new package version to soldeer, run the following:
+
+```shell
+pnpm run publish <version>
+```
+
+On first run, this requires authentication with soldeer: `soldeer login`
+
+The [CHANGELOG](CHANGELOG.md) file should also be updated.

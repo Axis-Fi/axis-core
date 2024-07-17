@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.19;
 
-import {ERC20} from "solmate/tokens/ERC20.sol";
+import {ERC20} from "@solmate-6.7.0/tokens/ERC20.sol";
 
 import {BaseCallback} from "src/callbacks/BaseCallback.sol";
 import {Callbacks} from "src/lib/Callbacks.sol";

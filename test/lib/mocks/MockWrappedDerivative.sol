@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.19;
 
-import {ERC20} from "solmate/tokens/ERC20.sol";
-import {ERC6909} from "solmate/tokens/ERC6909.sol";
+import {ERC20} from "@solmate-6.7.0/tokens/ERC20.sol";
+import {ERC6909} from "@solmate-6.7.0/tokens/ERC6909.sol";
 
-import {Clone} from "src/lib/clones/Clone.sol";
+import {Clone} from "@clones-with-immutable-args-1.1.1/Clone.sol";
 
 contract MockWrappedDerivative is ERC20, Clone {
     constructor(

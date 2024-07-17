@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.19;
 
-import {Test} from "forge-std/Test.sol";
+import {Test} from "@forge-std-1.9.1/Test.sol";
 import {Transfer} from "src/lib/Transfer.sol";
 
 import {MockAuctionHouse} from "test/AuctionHouse/MockAuctionHouse.sol";
@@ -12,7 +12,7 @@ import {MockFeeOnTransferERC20} from "test/lib/mocks/MockFeeOnTransferERC20.sol"
 import {Permit2User} from "test/lib/permit2/Permit2User.sol";
 import {MockWrappedDerivative} from "test/lib/mocks/MockWrappedDerivative.sol";
 
-import {ERC20} from "solmate/tokens/ERC20.sol";
+import {ERC20} from "@solmate-6.7.0/tokens/ERC20.sol";
 import {ICallback} from "src/interfaces/ICallback.sol";
 import {IAuctionHouse} from "src/interfaces/IAuctionHouse.sol";
 

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BSL 1.1
 pragma solidity ^0.8.0;
 
-import {FixedPointMathLib as Math} from "lib/solady/src/utils/FixedPointMathLib.sol";
+import {FixedPointMathLib as Math} from "@solady-0.0.124/utils/FixedPointMathLib.sol";
 
 library BidEncoding {
     function encode(

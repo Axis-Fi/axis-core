@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.19;
 
-import {console2} from "forge-std/Script.sol";
+import {console2} from "@forge-std-1.9.1/Script.sol";
 
 // System contracts
 import {BlastAtomicAuctionHouse} from "src/blast/BlastAtomicAuctionHouse.sol";

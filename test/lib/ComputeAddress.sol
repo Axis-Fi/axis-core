@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.19;
 
-import {Create2} from "@openzeppelin/contracts/utils/Create2.sol";
+import {Create2} from "@openzeppelin-contracts-4.9.2/utils/Create2.sol";
 
 library ComputeAddress {
     function computeAddress(

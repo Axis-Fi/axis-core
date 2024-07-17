@@ -3,7 +3,7 @@ pragma solidity 0.8.19;
 
 import {
     ERC20Upgradeable
-} from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
+} from "@openzeppelin-contracts-upgradeable-4.9.2/token/ERC20/ERC20Upgradeable.sol";
 
 contract MockERC20 is ERC20Upgradeable {
     constructor() {

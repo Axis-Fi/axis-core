@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.19;
 
-import {FixedPointMathLib as Math} from "solmate/utils/FixedPointMathLib.sol";
+import {FixedPointMathLib as Math} from "@solmate-6.7.0/utils/FixedPointMathLib.sol";
 
 import {Module} from "src/modules/Modules.sol";
 import {IAuction} from "src/interfaces/modules/IAuction.sol";
@@ -11,7 +11,7 @@ import {BidEncoding} from "src/lib/MaxPriorityQueue.sol";
 
 import {EmpTest} from "test/modules/auctions/EMP/EMPTest.sol";
 
-import {console2} from "forge-std/console2.sol";
+import {console2} from "@forge-std-1.9.1/console2.sol";
 
 contract EmpSettleTest is EmpTest {
     using BidEncoding for bytes32;

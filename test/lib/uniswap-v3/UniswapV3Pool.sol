@@ -8,32 +8,34 @@ import {
     IUniswapV3PoolDerivedState,
     IUniswapV3PoolOwnerActions,
     IUniswapV3Pool
-} from "uniswap-v3-core/interfaces/IUniswapV3Pool.sol";
+} from "@uniswap-v3-core-1.0.1-solc-0.8-simulate/interfaces/IUniswapV3Pool.sol";
 
 import {NoDelegateCall} from "test/lib/uniswap-v3/NoDelegateCall.sol";
 
-import {SafeCast} from "uniswap-v3-core/libraries/SafeCast.sol";
-import {Tick} from "uniswap-v3-core/libraries/Tick.sol";
-import {TickBitmap} from "uniswap-v3-core/libraries/TickBitmap.sol";
-import {Position} from "uniswap-v3-core/libraries/Position.sol";
-import {Oracle} from "uniswap-v3-core/libraries/Oracle.sol";
+import {SafeCast} from "@uniswap-v3-core-1.0.1-solc-0.8-simulate/libraries/SafeCast.sol";
+import {Tick} from "@uniswap-v3-core-1.0.1-solc-0.8-simulate/libraries/Tick.sol";
+import {TickBitmap} from "@uniswap-v3-core-1.0.1-solc-0.8-simulate/libraries/TickBitmap.sol";
+import {Position} from "@uniswap-v3-core-1.0.1-solc-0.8-simulate/libraries/Position.sol";
+import {Oracle} from "@uniswap-v3-core-1.0.1-solc-0.8-simulate/libraries/Oracle.sol";
 
-import {FullMath} from "uniswap-v3-core/libraries/FullMath.sol";
-import {FixedPoint128} from "uniswap-v3-core/libraries/FixedPoint128.sol";
-import {TransferHelper} from "uniswap-v3-core/libraries/TransferHelper.sol";
-import {TickMath} from "uniswap-v3-core/libraries/TickMath.sol";
-import {SqrtPriceMath} from "uniswap-v3-core/libraries/SqrtPriceMath.sol";
-import {SwapMath} from "uniswap-v3-core/libraries/SwapMath.sol";
+import {FullMath} from "@uniswap-v3-core-1.0.1-solc-0.8-simulate/libraries/FullMath.sol";
+import {FixedPoint128} from "@uniswap-v3-core-1.0.1-solc-0.8-simulate/libraries/FixedPoint128.sol";
+import {TransferHelper} from "@uniswap-v3-core-1.0.1-solc-0.8-simulate/libraries/TransferHelper.sol";
+import {TickMath} from "@uniswap-v3-core-1.0.1-solc-0.8-simulate/libraries/TickMath.sol";
+import {SqrtPriceMath} from "@uniswap-v3-core-1.0.1-solc-0.8-simulate/libraries/SqrtPriceMath.sol";
+import {SwapMath} from "@uniswap-v3-core-1.0.1-solc-0.8-simulate/libraries/SwapMath.sol";
 
-import {IUniswapV3PoolDeployer} from "uniswap-v3-core/interfaces/IUniswapV3PoolDeployer.sol";
-import {IUniswapV3Factory} from "uniswap-v3-core/interfaces/IUniswapV3Factory.sol";
-import {IERC20Minimal} from "uniswap-v3-core/interfaces/IERC20Minimal.sol";
+import {IUniswapV3PoolDeployer} from
+    "@uniswap-v3-core-1.0.1-solc-0.8-simulate/interfaces/IUniswapV3PoolDeployer.sol";
+import {IUniswapV3Factory} from
+    "@uniswap-v3-core-1.0.1-solc-0.8-simulate/interfaces/IUniswapV3Factory.sol";
+import {IERC20Minimal} from "@uniswap-v3-core-1.0.1-solc-0.8-simulate/interfaces/IERC20Minimal.sol";
 import {IUniswapV3MintCallback} from
-    "uniswap-v3-core/interfaces/callback/IUniswapV3MintCallback.sol";
+    "@uniswap-v3-core-1.0.1-solc-0.8-simulate/interfaces/callback/IUniswapV3MintCallback.sol";
 import {IUniswapV3SwapCallback} from
-    "uniswap-v3-core/interfaces/callback/IUniswapV3SwapCallback.sol";
+    "@uniswap-v3-core-1.0.1-solc-0.8-simulate/interfaces/callback/IUniswapV3SwapCallback.sol";
 import {IUniswapV3FlashCallback} from
-    "uniswap-v3-core/interfaces/callback/IUniswapV3FlashCallback.sol";
+    "@uniswap-v3-core-1.0.1-solc-0.8-simulate/interfaces/callback/IUniswapV3FlashCallback.sol";
 
 /// @dev    Changed pragma to >=0.8.12
 contract UniswapV3Pool is IUniswapV3Pool, NoDelegateCall {

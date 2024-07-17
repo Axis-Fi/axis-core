@@ -2,7 +2,7 @@
 pragma solidity 0.8.19;
 
 import {BatchScript} from "script/ops/lib/BatchScript.sol";
-import {stdJson} from "forge-std/StdJson.sol";
+import {stdJson} from "@forge-std-1.9.1/StdJson.sol";
 
 abstract contract Batch is BatchScript {
     using stdJson for string;

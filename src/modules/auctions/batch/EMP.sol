@@ -10,7 +10,7 @@ import {ECIES, Point} from "src/lib/ECIES.sol";
 import {MaxPriorityQueue, Queue} from "src/lib/MaxPriorityQueue.sol";
 
 // External libraries
-import {FixedPointMathLib as Math} from "solady/utils/FixedPointMathLib.sol";
+import {FixedPointMathLib as Math} from "@solady-0.0.124/utils/FixedPointMathLib.sol";
 
 // Auctions
 import {AuctionModule} from "src/modules/Auction.sol";

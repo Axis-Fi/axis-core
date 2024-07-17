@@ -2,8 +2,8 @@
 pragma solidity 0.8.19;
 
 // Libraries
-import {Test} from "forge-std/Test.sol";
-import {FixedPointMathLib as Math} from "lib/solmate/src/utils/FixedPointMathLib.sol";
+import {Test} from "@forge-std-1.9.1/Test.sol";
+import {FixedPointMathLib as Math} from "@solmate-6.7.0/utils/FixedPointMathLib.sol";
 
 // Mocks
 import {Permit2User} from "test/lib/permit2/Permit2User.sol";

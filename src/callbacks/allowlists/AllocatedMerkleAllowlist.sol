@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.19;
 
-import {MerkleProof} from "lib/openzeppelin-contracts/contracts/utils/cryptography/MerkleProof.sol";
+import {MerkleProof} from "@openzeppelin-contracts-4.9.2/utils/cryptography/MerkleProof.sol";
 
 import {MerkleAllowlist} from "src/callbacks/allowlists/MerkleAllowlist.sol";
 import {BaseCallback} from "src/callbacks/BaseCallback.sol";

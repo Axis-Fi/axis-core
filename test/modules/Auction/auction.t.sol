@@ -2,11 +2,11 @@
 pragma solidity 0.8.19;
 
 // Libraries
-import {Test} from "forge-std/Test.sol";
-import {console2} from "forge-std/console2.sol";
+import {Test} from "@forge-std-1.9.1/Test.sol";
+import {console2} from "@forge-std-1.9.1/console2.sol";
 
 // Mocks
-import {MockERC20} from "lib/solmate/src/test/utils/mocks/MockERC20.sol";
+import {MockERC20} from "@solmate-6.7.0/test/utils/mocks/MockERC20.sol";
 import {MockAtomicAuctionModule} from "test/modules/Auction/MockAtomicAuctionModule.sol";
 import {Permit2User} from "test/lib/permit2/Permit2User.sol";
 

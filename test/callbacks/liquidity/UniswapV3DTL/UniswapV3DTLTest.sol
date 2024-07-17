@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.19;
 
-import {Test} from "forge-std/Test.sol";
+import {Test} from "@forge-std-1.9.1/Test.sol";
 import {Callbacks} from "src/lib/Callbacks.sol";
 import {Permit2User} from "test/lib/permit2/Permit2User.sol";
 
@@ -11,7 +11,8 @@ import {BatchAuctionHouse} from "src/BatchAuctionHouse.sol";
 
 import {GUniFactory} from "g-uni-v1-core/GUniFactory.sol";
 import {GUniPool} from "g-uni-v1-core/GUniPool.sol";
-import {IUniswapV3Factory} from "uniswap-v3-core/interfaces/IUniswapV3Factory.sol";
+import {IUniswapV3Factory} from
+    "@uniswap-v3-core-1.0.1-solc-0.8-simulate/interfaces/IUniswapV3Factory.sol";
 
 import {UniswapV3Factory} from "test/lib/uniswap-v3/UniswapV3Factory.sol";
 
@@ -22,10 +23,10 @@ import {MockBatchAuctionModule} from "test/modules/Auction/MockBatchAuctionModul
 
 import {keycodeFromVeecode, toKeycode} from "src/modules/Keycode.sol";
 
-import {MockERC20} from "solmate/test/utils/mocks/MockERC20.sol";
+import {MockERC20} from "@solmate-6.7.0/test/utils/mocks/MockERC20.sol";
 
 import {WithSalts} from "test/lib/WithSalts.sol";
-import {console2} from "forge-std/console2.sol";
+import {console2} from "@forge-std-1.9.1/console2.sol";
 import {TestConstants} from "test/Constants.sol";
 
 abstract contract UniswapV3DirectToLiquidityTest is Test, Permit2User, WithSalts, TestConstants {
