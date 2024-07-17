@@ -2,12 +2,12 @@
 pragma solidity >=0.8.0;
 
 // Interfaces
-import {IAuction} from "src/interfaces/modules/IAuction.sol";
-import {ICallback} from "src/interfaces/ICallback.sol";
-import {IDerivative} from "src/interfaces/modules/IDerivative.sol";
+import "src/interfaces/modules/IAuction.sol";
+import "src/interfaces/ICallback.sol";
+import "src/interfaces/modules/IDerivative.sol";
 
 // Internal dependencies
-import {Keycode, Veecode} from "src/modules/Keycode.sol";
+import "src/modules/Keycode.sol";
 
 /// @title  IAuctionHouse
 /// @notice Interface for the Axis AuctionHouse contracts
