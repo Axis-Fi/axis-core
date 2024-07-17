@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.9.0
+
+- Split periphery (callbacks) contracts out into a new repository: `axis-fi/axis-periphery`
+- Split some scripts out into a new repository: `axis-fi/axis-utils`
+- Use soldeer instead of git submodules for external dependencies
+- Change absolute imports to relative imports so that it can be used as a dependency
+
 ## 0.5.1
 
 - Migrates all dependencies over to soldeer packages and away from git submodules (#222)
