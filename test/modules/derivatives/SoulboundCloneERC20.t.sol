@@ -2,12 +2,13 @@
 pragma solidity 0.8.19;
 
 // Libraries
-import {Test} from "forge-std/Test.sol";
-import {ClonesWithImmutableArgs} from "src/lib/clones/ClonesWithImmutableArgs.sol";
-import {StringHelper} from "test/lib/String.sol";
+import {Test} from "@forge-std-1.9.1/Test.sol";
+import {ClonesWithImmutableArgs} from
+    "@clones-with-immutable-args-1.1.1/ClonesWithImmutableArgs.sol";
+import {MockERC20} from "@solmate-6.7.0/test/utils/mocks/MockERC20.sol";
+import {StringHelper} from "../../lib/String.sol";
 
-import {SoulboundCloneERC20} from "src/modules/derivatives/SoulboundCloneERC20.sol";
-import {MockERC20} from "solmate/test/utils/mocks/MockERC20.sol";
+import {SoulboundCloneERC20} from "../../../src/modules/derivatives/SoulboundCloneERC20.sol";
 
 contract SoulboundCloneERC20Test is Test {
     using ClonesWithImmutableArgs for address;

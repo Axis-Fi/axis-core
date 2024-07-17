@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.19;
 
-import {AtomicAuctionHouseTest} from "test/AtomicAuctionHouse/AuctionHouseTest.sol";
+import {AtomicAuctionHouseTest} from "./AuctionHouseTest.sol";
 
 contract AtomicSetProtocolTest is AtomicAuctionHouseTest {
     address internal immutable _NEW_PROTOCOL = address(0x7);

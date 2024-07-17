@@ -3,7 +3,7 @@ pragma solidity 0.8.19;
 
 // Testing Libraries
 import {ECIESFFITest} from "./ECIES_FFI.sol";
-import {console2} from "forge-std/console2.sol";
+import {console2} from "@forge-std-1.9.1/console2.sol";
 
 contract SaltTest is ECIESFFITest {
     function test_salt() public {

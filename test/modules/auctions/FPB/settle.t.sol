@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.19;
 
-import {Module} from "src/modules/Modules.sol";
-import {IAuction} from "src/interfaces/modules/IAuction.sol";
-import {IFixedPriceBatch} from "src/interfaces/modules/auctions/IFixedPriceBatch.sol";
+import {Module} from "../../../../src/modules/Modules.sol";
+import {IAuction} from "../../../../src/interfaces/modules/IAuction.sol";
+import {IFixedPriceBatch} from "../../../../src/interfaces/modules/auctions/IFixedPriceBatch.sol";
 
-import {FpbTest} from "test/modules/auctions/FPB/FPBTest.sol";
-import {console2} from "lib/forge-std/src/console2.sol";
+import {console2} from "@forge-std-1.9.1/console2.sol";
+
+import {FpbTest} from "./FPBTest.sol";
 
 contract FpbSettleTest is FpbTest {
     // [X] when the caller is not the parent
@@ -195,27 +196,27 @@ contract FpbSettleTest is FpbTest {
         vm.prank(address(_auctionHouse));
         _module.bid(_lotId, _BIDDER, _REFERRER, 2e19 - 1, abi.encode(""));
 
-        IFixedPriceBatch.AuctionData memory auctionData_before = _module.getAuctionData(_lotId);
-        IAuction.Lot memory lot_before = _module.getLot(_lotId);
-        console2.log("totalBidAmount before    ==>  ", auctionData_before.totalBidAmount);
-        console2.log("conclusion before        ==>  ", lot_before.conclusion);
+        IFixedPriceBatch.AuctionData memory auctionDataBefore = _module.getAuctionData(_lotId);
+        IAuction.Lot memory lotBefore = _module.getLot(_lotId);
+        console2.log("totalBidAmount before    ==>  ", auctionDataBefore.totalBidAmount);
+        console2.log("conclusion before        ==>  ", lotBefore.conclusion);
 
         vm.prank(address(_auctionHouse));
         _module.bid(_lotId, _BIDDER, _REFERRER, 1e18 + 1, abi.encode(""));
 
-        IFixedPriceBatch.AuctionData memory auctionData_after = _module.getAuctionData(_lotId);
-        IAuction.Lot memory lot_after = _module.getLot(_lotId);
+        IFixedPriceBatch.AuctionData memory auctionDataAfter = _module.getAuctionData(_lotId);
+        IAuction.Lot memory lotAfter = _module.getLot(_lotId);
 
-        console2.log("totalBidAmount after     ==>  ", auctionData_after.totalBidAmount);
-        console2.log("conclusion after         ==>  ", lot_after.conclusion);
-        assertLt(lot_after.conclusion, lot_before.conclusion);
+        console2.log("totalBidAmount after     ==>  ", auctionDataAfter.totalBidAmount);
+        console2.log("conclusion after         ==>  ", lotAfter.conclusion);
+        assertLt(lotAfter.conclusion, lotBefore.conclusion);
 
         vm.prank(address(_auctionHouse));
         _module.settle(_lotId, 100_000);
 
-        IFixedPriceBatch.AuctionData memory auctionData_final = _module.getAuctionData(_lotId);
+        IFixedPriceBatch.AuctionData memory auctionDataFinal = _module.getAuctionData(_lotId);
 
-        console2.log("settlementCleared final  ==>  ", auctionData_final.settlementCleared);
-        assert(auctionData_final.settlementCleared);
+        console2.log("settlementCleared final  ==>  ", auctionDataFinal.settlementCleared);
+        assert(auctionDataFinal.settlementCleared);
     }
 }

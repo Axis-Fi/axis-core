@@ -2,13 +2,13 @@
 pragma solidity 0.8.19;
 
 // Modules
-import {Module, Veecode, toKeycode, wrapVeecode} from "src/modules/Modules.sol";
+import {Module, Veecode, toKeycode, wrapVeecode} from "../../../src/modules/Modules.sol";
 
-import {MockAtomicAuctionModule} from "test/modules/Auction/MockAtomicAuctionModule.sol";
-import {MockDerivativeModule} from "test/modules/derivatives/mocks/MockDerivativeModule.sol";
+import {MockAtomicAuctionModule} from "../Auction/MockAtomicAuctionModule.sol";
+import {MockDerivativeModule} from "../derivatives/mocks/MockDerivativeModule.sol";
 
 // Condenser
-import {CondenserModule} from "src/modules/Condenser.sol";
+import {CondenserModule} from "../../../src/modules/Condenser.sol";
 
 contract MockCondenserModule is CondenserModule {
     constructor(address _owner) Module(_owner) {}

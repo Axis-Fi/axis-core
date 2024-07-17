@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity 0.8.19;
 
-import {Owned} from "lib/solmate/src/auth/Owned.sol";
-import "src/modules/Keycode.sol";
+import {Owned} from "@solmate-6.7.0/auth/Owned.sol";
+import "./Keycode.sol";
 
 /// @notice    Abstract contract that provides functionality for installing and interacting with modules.
 /// @dev       This contract is intended to be inherited by any contract that needs to install modules.

@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.19;
 
-import {IAuction} from "src/interfaces/modules/IAuction.sol";
-import {IAuctionHouse} from "src/interfaces/IAuctionHouse.sol";
+import {IAuction} from "../../src/interfaces/modules/IAuction.sol";
+import {IAuctionHouse} from "../../src/interfaces/IAuctionHouse.sol";
 
-import {ERC20} from "solmate/tokens/ERC20.sol";
-import {Transfer} from "src/lib/Transfer.sol";
+import {ERC20} from "@solmate-6.7.0/tokens/ERC20.sol";
+import {Transfer} from "../../src/lib/Transfer.sol";
 
-import {AuctionHouse} from "src/bases/AuctionHouse.sol";
-import {ICallback} from "src/interfaces/ICallback.sol";
+import {AuctionHouse} from "../../src/bases/AuctionHouse.sol";
+import {ICallback} from "../../src/interfaces/ICallback.sol";
 
 /// @notice     Mock AuctionHouse contract for testing
 /// @dev        It currently exposes some internal functions so that they can be tested in isolation

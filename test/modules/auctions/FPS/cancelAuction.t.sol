@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.19;
 
-import {Module} from "src/modules/Modules.sol";
-import {IAuction} from "src/interfaces/modules/IAuction.sol";
+import {Module} from "../../../../src/modules/Modules.sol";
+import {IAuction} from "../../../../src/interfaces/modules/IAuction.sol";
 
-import {FpsTest} from "test/modules/auctions/FPS/FPSTest.sol";
+import {FpsTest} from "./FPSTest.sol";
 
 contract FpsCancelAuctionTest is FpsTest {
     // [X] when the caller is not the parent

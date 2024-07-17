@@ -2,9 +2,9 @@
 pragma solidity 0.8.19;
 
 // Contracts
-import {WithModules, Veecode} from "src/modules/Modules.sol";
+import {WithModules, Veecode} from "../../../src/modules/Modules.sol";
 
-import {MockModuleV1} from "test/modules/Modules/MockModule.sol";
+import {MockModuleV1} from "./MockModule.sol";
 
 contract MockWithModules is WithModules {
     constructor(address _owner) WithModules(_owner) {}

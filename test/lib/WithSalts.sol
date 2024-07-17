@@ -1,8 +1,8 @@
 /// SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.19;
 
-import {Test} from "forge-std/Test.sol";
-import {stdJson} from "forge-std/StdJson.sol";
+import {Test} from "@forge-std-1.9.1/Test.sol";
+import {stdJson} from "@forge-std-1.9.1/StdJson.sol";
 
 contract WithSalts is Test {
     using stdJson for string;

@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.19;
 
-import {Module} from "src/modules/Modules.sol";
-import {IAuction} from "src/interfaces/modules/IAuction.sol";
-import {IFixedPriceSale} from "src/interfaces/modules/auctions/IFixedPriceSale.sol";
-import {FixedPointMathLib as Math} from "solmate/utils/FixedPointMathLib.sol";
+import {FixedPointMathLib as Math} from "@solmate-6.7.0/utils/FixedPointMathLib.sol";
 
-import {FpsTest} from "test/modules/auctions/FPS/FPSTest.sol";
+import {Module} from "../../../../src/modules/Modules.sol";
+import {IAuction} from "../../../../src/interfaces/modules/IAuction.sol";
+import {IFixedPriceSale} from "../../../../src/interfaces/modules/auctions/IFixedPriceSale.sol";
+
+import {FpsTest} from "./FPSTest.sol";
 
 contract FpsPurchaseTest is FpsTest {
     uint256 internal constant _PURCHASE_AMOUNT = 2e18;

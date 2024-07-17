@@ -2,35 +2,35 @@
 pragma solidity 0.8.19;
 
 // Interfaces
-import {IAuction} from "src/interfaces/modules/IAuction.sol";
-import {IAuctionHouse} from "src/interfaces/IAuctionHouse.sol";
-import {IAtomicAuctionHouse} from "src/interfaces/IAtomicAuctionHouse.sol";
-import {ICallback} from "src/interfaces/ICallback.sol";
-import {IFeeManager} from "src/interfaces/IFeeManager.sol";
+import {IAuction} from "../../src/interfaces/modules/IAuction.sol";
+import {IAuctionHouse} from "../../src/interfaces/IAuctionHouse.sol";
+import {IAtomicAuctionHouse} from "../../src/interfaces/IAtomicAuctionHouse.sol";
+import {ICallback} from "../../src/interfaces/ICallback.sol";
+import {IFeeManager} from "../../src/interfaces/IFeeManager.sol";
 
 // Internal libraries
-import {Callbacks} from "src/lib/Callbacks.sol";
-import {Transfer} from "src/lib/Transfer.sol";
+import {Callbacks} from "../../src/lib/Callbacks.sol";
+import {Transfer} from "../../src/lib/Transfer.sol";
 
 // External libraries
-import {Test} from "forge-std/Test.sol";
-import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
+import {Test} from "@forge-std-1.9.1/Test.sol";
+import {FixedPointMathLib} from "@solmate-6.7.0/utils/FixedPointMathLib.sol";
 
 // Mocks
-import {MockAtomicAuctionModule} from "test/modules/Auction/MockAtomicAuctionModule.sol";
-import {MockDerivativeModule} from "test/modules/derivatives/mocks/MockDerivativeModule.sol";
-import {MockCondenserModule} from "test/modules/Condenser/MockCondenserModule.sol";
-import {MockCallback} from "test/callbacks/MockCallback.sol";
-import {Permit2User} from "test/lib/permit2/Permit2User.sol";
-import {MockFeeOnTransferERC20} from "test/lib/mocks/MockFeeOnTransferERC20.sol";
+import {MockAtomicAuctionModule} from "../modules/Auction/MockAtomicAuctionModule.sol";
+import {MockDerivativeModule} from "../modules/derivatives/mocks/MockDerivativeModule.sol";
+import {MockCondenserModule} from "../modules/Condenser/MockCondenserModule.sol";
+import {MockCallback} from "../callbacks/MockCallback.sol";
+import {Permit2User} from "../lib/permit2/Permit2User.sol";
+import {MockFeeOnTransferERC20} from "../lib/mocks/MockFeeOnTransferERC20.sol";
 
 // Auctions
-import {AtomicAuctionHouse} from "src/AtomicAuctionHouse.sol";
-import {AuctionModule} from "src/modules/Auction.sol";
+import {AtomicAuctionHouse} from "../../src/AtomicAuctionHouse.sol";
+import {AuctionModule} from "../../src/modules/Auction.sol";
 
-import {Veecode, toKeycode, keycodeFromVeecode, Keycode} from "src/modules/Keycode.sol";
+import {Veecode, toKeycode, keycodeFromVeecode, Keycode} from "../../src/modules/Keycode.sol";
 
-import {WithSalts} from "test/lib/WithSalts.sol";
+import {WithSalts} from "../lib/WithSalts.sol";
 
 abstract contract AtomicAuctionHouseTest is Test, Permit2User, WithSalts {
     MockFeeOnTransferERC20 internal _baseToken;

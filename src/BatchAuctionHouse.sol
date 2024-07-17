@@ -2,24 +2,24 @@
 pragma solidity 0.8.19;
 
 // Interfaces
-import {IAuction} from "src/interfaces/modules/IAuction.sol";
-import {ICallback} from "src/interfaces/ICallback.sol";
-import {IBatchAuction} from "src/interfaces/modules/IBatchAuction.sol";
-import {IBatchAuctionHouse} from "src/interfaces/IBatchAuctionHouse.sol";
+import {IAuction} from "./interfaces/modules/IAuction.sol";
+import {ICallback} from "./interfaces/ICallback.sol";
+import {IBatchAuction} from "./interfaces/modules/IBatchAuction.sol";
+import {IBatchAuctionHouse} from "./interfaces/IBatchAuctionHouse.sol";
 
 // Internal libraries
-import {Transfer} from "src/lib/Transfer.sol";
-import {Callbacks} from "src/lib/Callbacks.sol";
+import {Transfer} from "./lib/Transfer.sol";
+import {Callbacks} from "./lib/Callbacks.sol";
 
 // External libraries
-import {ERC20} from "solmate/tokens/ERC20.sol";
+import {ERC20} from "@solmate-6.7.0/tokens/ERC20.sol";
 
 // Auctions
-import {AuctionHouse} from "src/bases/AuctionHouse.sol";
-import {AuctionModule} from "src/modules/Auction.sol";
-import {BatchAuctionModule} from "src/modules/auctions/BatchAuctionModule.sol";
+import {AuctionHouse} from "./bases/AuctionHouse.sol";
+import {AuctionModule} from "./modules/Auction.sol";
+import {BatchAuctionModule} from "./modules/auctions/BatchAuctionModule.sol";
 
-import {fromVeecode} from "src/modules/Keycode.sol";
+import {fromVeecode} from "./modules/Keycode.sol";
 
 /// @title      BatchAuctionHouse
 /// @notice     As its name implies, the BatchAuctionHouse is where batch auctions are created, bid on, and settled. The core protocol logic is implemented here.

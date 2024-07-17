@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: BSL-1.1
 pragma solidity 0.8.19;
 
-import {FixedPriceBatch} from "src/modules/auctions/batch/FPB.sol";
-import {BlastGas} from "src/blast/modules/BlastGas.sol";
+import {FixedPriceBatch} from "../../../../modules/auctions/batch/FPB.sol";
+import {BlastGas} from "../../BlastGas.sol";
 
 contract BlastFPB is FixedPriceBatch, BlastGas {
     // ========== CONSTRUCTOR ========== //

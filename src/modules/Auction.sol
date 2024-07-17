@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: BSL-1.1
 pragma solidity 0.8.19;
 
-import {IAuction} from "src/interfaces/modules/IAuction.sol";
-import {Module} from "src/modules/Modules.sol";
+import {IAuction} from "../interfaces/modules/IAuction.sol";
+import {Module} from "./Modules.sol";
 
 abstract contract AuctionModule is IAuction, Module {
     // ========= STATE ========== //

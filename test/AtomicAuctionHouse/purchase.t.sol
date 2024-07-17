@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.19;
 
-import {IAuctionHouse} from "src/interfaces/IAuctionHouse.sol";
-import {IAuction} from "src/interfaces/modules/IAuction.sol";
-import {AtomicAuctionHouse} from "src/AtomicAuctionHouse.sol";
+import {IAuctionHouse} from "../../src/interfaces/IAuctionHouse.sol";
+import {IAuction} from "../../src/interfaces/modules/IAuction.sol";
+import {AtomicAuctionHouse} from "../../src/AtomicAuctionHouse.sol";
 
-import {MockDerivativeModule} from "test/modules/derivatives/mocks/MockDerivativeModule.sol";
+import {MockDerivativeModule} from "../modules/derivatives/mocks/MockDerivativeModule.sol";
 
-import {AtomicAuctionHouseTest} from "test/AtomicAuctionHouse/AuctionHouseTest.sol";
+import {AtomicAuctionHouseTest} from "./AuctionHouseTest.sol";
 
 contract AtomicPurchaseTest is AtomicAuctionHouseTest {
     uint256 internal constant _AMOUNT_IN = 2e18;

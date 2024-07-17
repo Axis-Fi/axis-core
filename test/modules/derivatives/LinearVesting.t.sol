@@ -2,19 +2,19 @@
 pragma solidity 0.8.19;
 
 // Libraries
-import {Test} from "forge-std/Test.sol";
-import {console2} from "forge-std/console2.sol";
+import {Test} from "@forge-std-1.9.1/Test.sol";
+import {console2} from "@forge-std-1.9.1/console2.sol";
+import {FixedPointMathLib} from "@solmate-6.7.0/utils/FixedPointMathLib.sol";
 
-import {Permit2User} from "test/lib/permit2/Permit2User.sol";
-import {StringHelper} from "test/lib/String.sol";
-import {MockFeeOnTransferERC20} from "test/lib/mocks/MockFeeOnTransferERC20.sol";
-import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
+import {Permit2User} from "../../lib/permit2/Permit2User.sol";
+import {StringHelper} from "../../lib/String.sol";
+import {MockFeeOnTransferERC20} from "../../lib/mocks/MockFeeOnTransferERC20.sol";
 
-import {AtomicAuctionHouse} from "src/AtomicAuctionHouse.sol";
-import {IDerivative} from "src/interfaces/modules/IDerivative.sol";
-import {ILinearVesting} from "src/interfaces/modules/derivatives/ILinearVesting.sol";
-import {LinearVesting} from "src/modules/derivatives/LinearVesting.sol";
-import {SoulboundCloneERC20} from "src/modules/derivatives/SoulboundCloneERC20.sol";
+import {AtomicAuctionHouse} from "../../../src/AtomicAuctionHouse.sol";
+import {IDerivative} from "../../../src/interfaces/modules/IDerivative.sol";
+import {ILinearVesting} from "../../../src/interfaces/modules/derivatives/ILinearVesting.sol";
+import {LinearVesting} from "../../../src/modules/derivatives/LinearVesting.sol";
+import {SoulboundCloneERC20} from "../../../src/modules/derivatives/SoulboundCloneERC20.sol";
 
 contract LinearVestingTest is Test, Permit2User {
     using StringHelper for string;

@@ -2,17 +2,17 @@
 pragma solidity 0.8.19;
 
 // Interfaces
-import {IAtomicAuction} from "src/interfaces/modules/IAtomicAuction.sol";
-import {IFixedPriceSale} from "src/interfaces/modules/auctions/IFixedPriceSale.sol";
+import {IAtomicAuction} from "../../../interfaces/modules/IAtomicAuction.sol";
+import {IFixedPriceSale} from "../../../interfaces/modules/auctions/IFixedPriceSale.sol";
 
 // Protocol dependencies
-import {Module} from "src/modules/Modules.sol";
-import {AuctionModule} from "src/modules/Auction.sol";
-import {Veecode, toVeecode} from "src/modules/Modules.sol";
-import {AtomicAuctionModule} from "src/modules/auctions/AtomicAuctionModule.sol";
+import {Module} from "../../Modules.sol";
+import {AuctionModule} from "../../Auction.sol";
+import {Veecode, toVeecode} from "../../Modules.sol";
+import {AtomicAuctionModule} from "../AtomicAuctionModule.sol";
 
 // External libraries
-import {FixedPointMathLib as Math} from "lib/solmate/src/utils/FixedPointMathLib.sol";
+import {FixedPointMathLib as Math} from "@solmate-6.7.0/utils/FixedPointMathLib.sol";
 
 /// @title  FixedPriceSale
 /// @notice A module for creating fixed price sale (atomic) auctions
