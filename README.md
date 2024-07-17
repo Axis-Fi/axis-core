@@ -101,6 +101,18 @@ Deployments are listed in the [env.json file](/script/env.json) and periodically
 
 [soldeer](https://soldeer.xyz/) is used as the dependency manager, as it solves many of the problems inherent in forge's use of git submodules. Soldeer is integrated into `forge`, so should not require any additional installations.
 
+NOTE: The import path of each dependency is versioned. This ensures that any changes to the dependency version result in clear errors to highlight the potentially-breaking change.
+
+#### Updating Dependencies
+
+When updating the version of a dependency provided through soldeer, the following must be performed:
+
+1. Update the version of the dependency in `foundry.toml` or through `forge soldeer`
+2. Re-run the [installation script](#first-run)
+3. If the version number has changed:
+    - Change the existing entry in [remappings.txt](remappings.txt) to point to the new dependency version
+    - Update imports to use the new remapping
+
 ### Packaging
 
 To publish a new package version to soldeer, run the following:
