@@ -146,4 +146,4 @@ $VERIFY_FLAG \
 $RESUME_FLAG
 
 # Insert for Mantle deployments
-# -g 4000000 --with-gas-price 20000000 --priority-gas-price 10000000 \
+# --legacy -g 1000000 --with-gas-price 20000000 \

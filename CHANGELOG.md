@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.0
+
+- Initial production deployments to arbitrum, base, blast, and mantle
+
 ## 0.9.0
 
 - Split periphery (callbacks) contracts out into a new repository: `axis-fi/axis-periphery`
