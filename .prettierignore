@@ -1,0 +1,8 @@
+# Don't rewrite pnpm lockfile
+pnpm-lock.yaml
+
+# Ignore artifacts:
+build
+coverage
+
+# also includes what is in .gitignore
