@@ -1,26 +1,26 @@
 {
-    "sequence": [
-        {
-            "name": "BatchAuctionHouse"
-        },
-        {
-            "name": "BatchCatalogue"
-        },
-        {
-            "name": "EncryptedMarginalPrice",
-            "installBatchAuctionHouse": true,
-            "maxReferrerFee": 1000,
-            "maxCuratorFee": 1000
-        },
-        {
-            "name": "FixedPriceBatch",
-            "installBatchAuctionHouse": true,
-            "maxReferrerFee": 1000,
-            "maxCuratorFee": 1000
-        },
-        {
-            "name": "BatchLinearVesting",
-            "installBatchAuctionHouse": true
-        }
-    ]
+  "sequence": [
+    {
+      "name": "BatchAuctionHouse"
+    },
+    {
+      "name": "BatchCatalogue"
+    },
+    {
+      "name": "EncryptedMarginalPrice",
+      "installBatchAuctionHouse": true,
+      "maxReferrerFee": 1000,
+      "maxCuratorFee": 1000
+    },
+    {
+      "name": "FixedPriceBatch",
+      "installBatchAuctionHouse": true,
+      "maxReferrerFee": 1000,
+      "maxCuratorFee": 1000
+    },
+    {
+      "name": "BatchLinearVesting",
+      "installBatchAuctionHouse": true
+    }
+  ]
 }

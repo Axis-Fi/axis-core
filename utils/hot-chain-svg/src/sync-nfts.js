@@ -16,31 +16,31 @@ async function main() {
 
   const [mints, names] = await Promise.all([
     contract.queryFilter(
-      contract.filters.TransferSingle(null, ethers.constants.AddressZero)
+      contract.filters.TransferSingle(null, ethers.constants.AddressZero),
     ),
     contract.queryFilter(contract.filters.CollectionNameUpdated()),
   ]);
 
   const collectionNames = Object.fromEntries(
-    names.map((e) => [e.args.collection.toLowerCase(), e.args.name])
+    names.map((e) => [e.args.collection.toLowerCase(), e.args.name]),
   );
 
   const owners = [...new Set(mints.map((e) => e.args.to.toLowerCase()))];
   const ensNames = await Promise.all(
-    owners.map((address) => provider.lookupAddress(address))
+    owners.map((address) => provider.lookupAddress(address)),
   );
 
   const ownerNames = Object.fromEntries(
-    owners.map((address, index) => [address, ensNames[index] || address])
+    owners.map((address, index) => [address, ensNames[index] || address]),
   );
 
   const log = mints.map((e) => {
     const { id, to } = e.args;
     const collection = ethers.utils.hexZeroPad(
       id.and(
-        ethers.BigNumber.from('0xffffffffffffffffffffffffffffffffffffffff')
+        ethers.BigNumber.from('0xffffffffffffffffffffffffffffffffffffffff'),
       ),
-      20
+      20,
     );
 
     const name = collectionNames[collection] || collection;
@@ -55,7 +55,7 @@ async function main() {
   const content = fs.readFileSync(readme, 'utf8');
   const updated = content.replaceAll(
     /<!-- begin_users -->[\s\S]+<!-- end_users -->/gim,
-    ['<!-- begin_users -->', ...log, '<!-- end_users -->'].join('\n')
+    ['<!-- begin_users -->', ...log, '<!-- end_users -->'].join('\n'),
   );
   fs.writeFileSync(readme, updated);
 }

@@ -110,8 +110,8 @@ When updating the version of a dependency provided through soldeer, the followin
 1. Update the version of the dependency in `foundry.toml` or through `forge soldeer`
 2. Re-run the [installation script](#first-run)
 3. If the version number has changed:
-    - Change the existing entry in [remappings.txt](remappings.txt) to point to the new dependency version
-    - Update imports to use the new remapping
+   - Change the existing entry in [remappings.txt](remappings.txt) to point to the new dependency version
+   - Update imports to use the new remapping
 
 ### Packaging
 

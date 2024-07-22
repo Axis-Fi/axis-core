@@ -18,7 +18,7 @@ async function serve(handler) {
       res.writeHead(200);
       handler().then(
         (content) => res.end(webpage(content)),
-        (error) => res.end(webpage(`<pre>${error.message}</pre>`))
+        (error) => res.end(webpage(`<pre>${error.message}</pre>`)),
       );
       return;
     }

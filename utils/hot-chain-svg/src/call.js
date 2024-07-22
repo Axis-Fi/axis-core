@@ -16,7 +16,7 @@ async function call(vm, address, abi, name, args = []) {
   }
 
   const logs = renderResult.execResult.logs?.map(([address, topic, data]) =>
-    data.toString().replace(/\x00/g, '')
+    data.toString().replace(/\x00/g, ''),
   );
 
   if (logs?.length) {
@@ -25,7 +25,7 @@ async function call(vm, address, abi, name, args = []) {
 
   const results = defaultAbiCoder.decode(
     ['string'],
-    renderResult.execResult.returnValue
+    renderResult.execResult.returnValue,
   );
 
   return results[0];

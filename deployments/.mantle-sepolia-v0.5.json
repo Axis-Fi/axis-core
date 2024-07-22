@@ -1,13 +1,13 @@
 {
-"axis.BatchAuctionHouse": "0xBA00000D23A0793d5601d1e8E7B32aE88642cbEF",
-"axis.BatchCatalogue": "0x6c80F20C5C0404a3D5349F71F9B25c0654884092",
-"axis.EncryptedMarginalPrice": "0xaC9957282BeA578f371078ddc4cD12A135B105d6",
-"axis.FixedPriceBatch": "0x8b7e483d96004ca7893EfB14E049f7648b62322b",
-"axis.BatchLinearVesting": "0x16D5Aab9d35f8B3ac7BD086eEDcCe5343682D5F0",
-"axis.BatchCappedMerkleAllowlist": "0x98a27160E2879334AaE4415E24C1feaa3D111392",
-"axis.BatchMerkleAllowlist": "0x987e7515985887092582Cc4ea94be837a99C0b02",
-"axis.BatchTokenAllowlist": "0x989a21D82D86e4934D3B8E94043F13Fb1C312F8a",
-"axis.BatchAllocatedMerkleAllowlist": "0x987E2DB8E83c57Ad9aDf808e5394d77f72b49ab4",
-"axis.BatchUniswapV2DirectToLiquidity": "0xE6feE7a689Ff7493032Ba48B15fE841c6cC30DB9",
-"axis.BatchUniswapV3DirectToLiquidity": "0xE6c1ab82a2b4a194C87e643668bb715619766F0B"
+  "axis.BatchAuctionHouse": "0xBA00000D23A0793d5601d1e8E7B32aE88642cbEF",
+  "axis.BatchCatalogue": "0x6c80F20C5C0404a3D5349F71F9B25c0654884092",
+  "axis.EncryptedMarginalPrice": "0xaC9957282BeA578f371078ddc4cD12A135B105d6",
+  "axis.FixedPriceBatch": "0x8b7e483d96004ca7893EfB14E049f7648b62322b",
+  "axis.BatchLinearVesting": "0x16D5Aab9d35f8B3ac7BD086eEDcCe5343682D5F0",
+  "axis.BatchCappedMerkleAllowlist": "0x98a27160E2879334AaE4415E24C1feaa3D111392",
+  "axis.BatchMerkleAllowlist": "0x987e7515985887092582Cc4ea94be837a99C0b02",
+  "axis.BatchTokenAllowlist": "0x989a21D82D86e4934D3B8E94043F13Fb1C312F8a",
+  "axis.BatchAllocatedMerkleAllowlist": "0x987E2DB8E83c57Ad9aDf808e5394d77f72b49ab4",
+  "axis.BatchUniswapV2DirectToLiquidity": "0xE6feE7a689Ff7493032Ba48B15fE841c6cC30DB9",
+  "axis.BatchUniswapV3DirectToLiquidity": "0xE6c1ab82a2b4a194C87e643668bb715619766F0B"
 }
