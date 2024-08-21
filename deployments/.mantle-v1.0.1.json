@@ -1,0 +1,7 @@
+{
+"deployments.BatchAuctionHouse": "0xBA0000c59d144f2a9aEa064dcb2f963e1a0B3212",
+"deployments.BatchCatalogue": "0x8b7e483d96004ca7893EfB14E049f7648b62322b",
+"deployments.auctionModules.EncryptedMarginalPrice": "0xBFfBef6f8a0Ef38121716860E2Ff824c018a467d",
+"deployments.auctionModules.FixedPriceBatch": "0xB5F02BA844D7A6D07d614eFF40a054E9e24dD4B8",
+"deployments.derivativeModules.BatchLinearVesting": "0x16006e7C3015dC53CD102A9a5eCcfB9749779D91"
+}
