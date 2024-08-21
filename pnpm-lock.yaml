@@ -9,7 +9,7 @@ importers:
   .:
     dependencies:
       solhint-community:
-        specifier: ^3.7.0
+        specifier: 3.7.0
         version: 3.7.0
     devDependencies:
       prettier:
