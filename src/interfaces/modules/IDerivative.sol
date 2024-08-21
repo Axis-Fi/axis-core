@@ -36,7 +36,9 @@ interface IDerivative {
     /// @return underlyingToken The address of the underlying token
     /// @return supply          The total supply of the derivative token
     /// @return data            Implementation-specific data
-    function tokenMetadata(uint256 tokenId)
+    function tokenMetadata(
+        uint256 tokenId
+    )
         external
         view
         returns (

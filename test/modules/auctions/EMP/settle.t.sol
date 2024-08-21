@@ -123,7 +123,9 @@ contract EmpSettleTest is EmpTest {
     //  [X] given the next batch doesn't reach capacity above minimum price
     //   [X] it records settlement as finished with the marginal price as the minimum price
 
-    function _settle(uint256 bidNum_)
+    function _settle(
+        uint256 bidNum_
+    )
         internal
         returns (
             uint256 totalIn_,

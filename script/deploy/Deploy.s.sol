@@ -409,11 +409,9 @@ contract Deploy is Script, WithEnvironment, WithSalts {
 
     // ========== AUCTION MODULE DEPLOYMENTS ========== //
 
-    function deployEncryptedMarginalPrice(bytes memory)
-        public
-        virtual
-        returns (address, string memory)
-    {
+    function deployEncryptedMarginalPrice(
+        bytes memory
+    ) public virtual returns (address, string memory) {
         // No args used
         console2.log("");
         console2.log("Deploying EncryptedMarginalPrice");
@@ -504,11 +502,9 @@ contract Deploy is Script, WithEnvironment, WithSalts {
 
     // ========== DERIVATIVE MODULE DEPLOYMENTS ========== //
 
-    function deployAtomicLinearVesting(bytes memory)
-        public
-        virtual
-        returns (address, string memory)
-    {
+    function deployAtomicLinearVesting(
+        bytes memory
+    ) public virtual returns (address, string memory) {
         // No args used
         console2.log("");
         console2.log("Deploying LinearVesting (Atomic)");
@@ -537,11 +533,9 @@ contract Deploy is Script, WithEnvironment, WithSalts {
         return (address(dmAtomicLinearVesting), _PREFIX_DERIVATIVE_MODULES);
     }
 
-    function deployBatchLinearVesting(bytes memory)
-        public
-        virtual
-        returns (address, string memory)
-    {
+    function deployBatchLinearVesting(
+        bytes memory
+    ) public virtual returns (address, string memory) {
         // No args used
         console2.log("");
         console2.log("Deploying LinearVesting (Batch)");

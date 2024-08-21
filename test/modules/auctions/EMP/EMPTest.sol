@@ -375,11 +375,9 @@ abstract contract EmpTest is Test, Permit2User {
         return Math.fullMulDiv(amount_, 10 ** _baseTokenDecimals, _BASE_SCALE);
     }
 
-    function _getAuctionData(uint96 lotId_)
-        internal
-        view
-        returns (EncryptedMarginalPrice.AuctionData memory)
-    {
+    function _getAuctionData(
+        uint96 lotId_
+    ) internal view returns (EncryptedMarginalPrice.AuctionData memory) {
         (
             uint64 nextBidId_,
             uint64 nextDecryptIndex_,
@@ -412,11 +410,9 @@ abstract contract EmpTest is Test, Permit2User {
         return _module.getLot(lotId_);
     }
 
-    function _getPartialFill(uint96 lotId_)
-        internal
-        view
-        returns (EncryptedMarginalPrice.PartialFill memory)
-    {
+    function _getPartialFill(
+        uint96 lotId_
+    ) internal view returns (EncryptedMarginalPrice.PartialFill memory) {
         (, EncryptedMarginalPrice.PartialFill memory partialFill) = _module.getPartialFill(lotId_);
 
         return partialFill;
