@@ -117,7 +117,6 @@ contract AtomicAuctionHouse is IAtomicAuctionHouse, AuctionHouse {
                 lotFees[params_.lotId].protocolFee,
                 lotFees[params_.lotId].referrerFee,
                 params_.referrer,
-                routing.seller,
                 ERC20(routing.quoteToken),
                 params_.amount
             );

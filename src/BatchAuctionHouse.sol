@@ -324,7 +324,6 @@ contract BatchAuctionHouse is IBatchAuctionHouse, AuctionHouse {
                     protocolFee,
                     referrerFee,
                     bidClaim.referrer,
-                    routing.seller,
                     quoteToken,
                     bidClaim.paid - bidClaim.refund // refund is included in paid
                 );

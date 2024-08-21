@@ -606,21 +606,18 @@ abstract contract AuctionHouse is IAuctionHouse, WithModules, ReentrancyGuard, F
     /// @param   protocolFee_   The fee charged by the protocol
     /// @param   referrerFee_   The fee charged by the referrer
     /// @param   referrer_      The address of the referrer
-    /// @param   seller_        The address of the seller
     /// @param   quoteToken_    The quote token
     /// @param   amount_        The amount of quote tokens
     function _allocateQuoteFees(
         uint48 protocolFee_,
         uint48 referrerFee_,
         address referrer_,
-        address seller_,
         ERC20 quoteToken_,
         uint256 amount_
     ) internal returns (uint256 totalFees) {
         // Calculate fees for purchase
-        (uint256 toReferrer, uint256 toProtocol) = calculateQuoteFees(
-            protocolFee_, referrerFee_, referrer_ != address(0) && referrer_ != seller_, amount_
-        );
+        (uint256 toReferrer, uint256 toProtocol) =
+            calculateQuoteFees(protocolFee_, referrerFee_, referrer_ != address(0), amount_);
 
         // Update fee balances if non-zero
         if (toReferrer > 0) rewards[referrer_][quoteToken_] += toReferrer;
