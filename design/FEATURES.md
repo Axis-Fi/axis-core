@@ -96,22 +96,18 @@ sealed-bid batch auctions could be done on-chain, but are difficult
 Atomic
 
 - Definition
-  - From the whitepaper:
-        > Atomic Auctions are then auctions where a bid is submitted, instantly accepted or rejected, and settled within a single transaction
+  - From the whitepaper: > Atomic Auctions are then auctions where a bid is submitted, instantly accepted or rejected, and settled within a single transaction
   - Atomic auctions are settled at the time of purchase
   - Settled immediately: offered tokens are transferred at time of purchase
 - Examples include:
-  - Sequential Dutch
-        > The main feature of an SDA includes splitting a large number of tokens into multiple discrete Dutch Auctions that are performed over time. This sequence of auctions uses a dynamic exchange rate for two arbitrary ERC20 tokens without the use of oracles.
-  - Gradual Dutch / Australian Auctions
-        > while SDAs split capacity into multiple discrete auctions, GDAs split capacity into infinitely many auctions
+  - Sequential Dutch > The main feature of an SDA includes splitting a large number of tokens into multiple discrete Dutch Auctions that are performed over time. This sequence of auctions uses a dynamic exchange rate for two arbitrary ERC20 tokens without the use of oracles.
+  - Gradual Dutch / Australian Auctions > while SDAs split capacity into multiple discrete auctions, GDAs split capacity into infinitely many auctions
     - The cumulative purchase price is increasing exponentially
 
 Batch
 
 - Definition
-  - From the whitepaper:
-        > Batch Auctions refer to the more familiar auction format of collecting bids from participants over a set duration and then settling the auction at the end based on the best received bids. “Batch” refers to the notion that proceeds are received and auction units distributed in a batch, rather than individually.
+  - From the whitepaper: > Batch Auctions refer to the more familiar auction format of collecting bids from participants over a set duration and then settling the auction at the end based on the best received bids. “Batch” refers to the notion that proceeds are received and auction units distributed in a batch, rather than individually.
   - Two major types:
     - Open
       - Bids are recorded on-chain
@@ -123,10 +119,8 @@ Batch
     - This avoids having to provide functionality for bidders to claim a refund of their quote tokens
   - Payout tokens are transferred at the time of settlement
 - Examples include:
-  - Marginal Price Auction
-        > A marginal price auction, also called a uniform price auction, is a multiunit auction format where bidders place bids that include two variables: price and quantity of items to purchase. The auction is settled by awarding the items to the highest bids until capacity is expended. All winners pay the lowest accepted bid price. The price of this lowest accepted bid is also called the clearing price of the auction.
-  - Vickrey-Clarkes Groves
-        > VCG auctions are a form of second-price auction (sometimes called Vickrey auctions) extended to the multiunit domain. They require a sealed bidding process to incentivize participants to bid their best price.
+  - Marginal Price Auction > A marginal price auction, also called a uniform price auction, is a multiunit auction format where bidders place bids that include two variables: price and quantity of items to purchase. The auction is settled by awarding the items to the highest bids until capacity is expended. All winners pay the lowest accepted bid price. The price of this lowest accepted bid is also called the clearing price of the auction.
+  - Vickrey-Clarkes Groves > VCG auctions are a form of second-price auction (sometimes called Vickrey auctions) extended to the multiunit domain. They require a sealed bidding process to incentivize participants to bid their best price.
 
 ### Auction Configuration
 
@@ -182,8 +176,7 @@ Derivative
       - At a certain expiration date, the full amount is vested
       - Different users can have different cliff dates (hence it requires ERC6909)
     - Linear vesting
-    - Rage vesting
-            > Rage Vesting introduces the concept of Rage Quitting, where users can unlock their proportional share of tokens vested at a point in time but forfeit the remaining balance.
+    - Rage vesting > Rage Vesting introduces the concept of Rage Quitting, where users can unlock their proportional share of tokens vested at a point in time but forfeit the remaining balance.
     - Staked vesting
     - Dynamic
       - Could implement an arbitrary vesting algorithm
@@ -265,9 +258,9 @@ Fees can be taken by the protocol at the following points:
 - Only handle at the auction-level (e.g. `AuctionHouse`) what needs to be done there
   - This means that at least initially, there won't be pass-through functions to auction and derivative modules
   - The reasoning for this is that different auction and derivative types may have different functions and arguments,
-        and catering for those in the `AuctionHouse` core contract will increase complexity
+    and catering for those in the `AuctionHouse` core contract will increase complexity
   - For example, it makes the most sense for quote and payout token transfers to be performed at the level of `AuctionHouse`,
-        while derivative token transfers be handled in the respective derivative module (due to potential variations in behaviour and conditions)\
+    while derivative token transfers be handled in the respective derivative module (due to potential variations in behaviour and conditions)\
   - Data should also be stored in a similar manner
 - Third-parties will mainly interact with the auction and derivative modules
 

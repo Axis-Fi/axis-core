@@ -41,7 +41,7 @@ function compile(source, project_dir) {
   const input = getSolcInput(source);
   process.chdir(project_dir);
   const output = JSON.parse(
-    solc.compile(JSON.stringify(input), { import: findImports })
+    solc.compile(JSON.stringify(input), { import: findImports }),
   );
 
   let errors = [];

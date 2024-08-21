@@ -1,10 +1,7 @@
 {
   "extends": "solhint:recommended",
   "rules": {
-    "compiler-version": [
-      "error",
-      ">=0.7.0"
-    ],
+    "compiler-version": ["error", ">=0.7.0"],
     "avoid-low-level-calls": "off",
     "const-name-snakecase": "warn",
     "var-name-mixedcase": "warn",
