@@ -269,11 +269,9 @@ contract EmpClaimBidsTest is EmpTest {
         assertEq(bidClaimTwoView.refund, bidClaimTwo.refund, "bid two: refund");
     }
 
-    function test_unsuccessfulBid_fuzz(uint256 bidAmountIn_)
-        external
-        givenLotIsCreated
-        givenLotHasStarted
-    {
+    function test_unsuccessfulBid_fuzz(
+        uint256 bidAmountIn_
+    ) external givenLotIsCreated givenLotHasStarted {
         uint256 minFillAmount = _MIN_FILL_PERCENT * _LOT_CAPACITY / 100e2;
         // Bound the amounts
         uint256 bidAmountIn = bound(bidAmountIn_, 1e18, minFillAmount - 1); // Ensures that it cannot settle even at minimum price
@@ -925,11 +923,9 @@ contract EmpClaimBidsTest is EmpTest {
         assertEq(bidClaimThreeView.refund, bidClaimThree.refund, "bid three: refund");
     }
 
-    function test_successfulBid_amountIn_fuzz(uint256 bidAmountIn_)
-        external
-        givenLotIsCreated
-        givenLotHasStarted
-    {
+    function test_successfulBid_amountIn_fuzz(
+        uint256 bidAmountIn_
+    ) external givenLotIsCreated givenLotHasStarted {
         // Bound the amount in
         uint256 bidAmountIn = bound(bidAmountIn_, _BID_AMOUNT, 12e18); // Ensures that the price is greater than _MIN_PRICE and bid 2
 
@@ -1000,11 +996,9 @@ contract EmpClaimBidsTest is EmpTest {
         assertEq(bidClaimTwoView.refund, bidClaimTwo.refund, "bid two: refund");
     }
 
-    function test_successfulBid_amountOut_fuzz(uint256 bidAmountOut_)
-        external
-        givenLotIsCreated
-        givenLotHasStarted
-    {
+    function test_successfulBid_amountOut_fuzz(
+        uint256 bidAmountOut_
+    ) external givenLotIsCreated givenLotHasStarted {
         // Bound the amount out
         uint256 bidAmountOut = bound(bidAmountOut_, _BID_AMOUNT_OUT, 5e18); // Ensures that the lot settles but is not overfilled
         uint256 bidAmountIn = 11e18; // Ensures that the price is greater than bid 2

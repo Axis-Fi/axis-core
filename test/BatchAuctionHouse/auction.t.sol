@@ -127,11 +127,9 @@ contract BatchCreateAuctionTest is BatchAuctionHouseTest {
         _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
     }
 
-    function test_whenBaseTokenDecimalsAreOutOfBounds_reverts(uint8 decimals_)
-        external
-        whenAuctionTypeIsBatch
-        whenBatchAuctionModuleIsInstalled
-    {
+    function test_whenBaseTokenDecimalsAreOutOfBounds_reverts(
+        uint8 decimals_
+    ) external whenAuctionTypeIsBatch whenBatchAuctionModuleIsInstalled {
         uint8 decimals = uint8(bound(decimals_, 0, 50));
         vm.assume(decimals < 6 || decimals > 18);
 
@@ -149,11 +147,9 @@ contract BatchCreateAuctionTest is BatchAuctionHouseTest {
         _auctionHouse.auction(_routingParams, _auctionParams, _INFO_HASH);
     }
 
-    function test_whenQuoteTokenDecimalsAreOutOfBounds_reverts(uint8 decimals_)
-        external
-        whenAuctionTypeIsBatch
-        whenBatchAuctionModuleIsInstalled
-    {
+    function test_whenQuoteTokenDecimalsAreOutOfBounds_reverts(
+        uint8 decimals_
+    ) external whenAuctionTypeIsBatch whenBatchAuctionModuleIsInstalled {
         uint8 decimals = uint8(bound(decimals_, 0, 50));
         vm.assume(decimals < 6 || decimals > 18);
 

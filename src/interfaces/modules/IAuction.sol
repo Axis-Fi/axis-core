@@ -80,7 +80,9 @@ interface IAuction {
     /// @dev    See the `Lot` struct for more information on the return values
     ///
     /// @param  lotId   The lot ID
-    function lotData(uint96 lotId)
+    function lotData(
+        uint96 lotId
+    )
         external
         view
         returns (

@@ -47,12 +47,9 @@ contract AtomicCancelAuctionTest is AtomicAuctionHouseTest {
         _auctionHouse.cancel(_lotId, bytes(""));
     }
 
-    function testReverts_whenUnauthorized(address user_)
-        external
-        whenAuctionTypeIsAtomic
-        whenAtomicAuctionModuleIsInstalled
-        givenLotIsCreated
-    {
+    function testReverts_whenUnauthorized(
+        address user_
+    ) external whenAuctionTypeIsAtomic whenAtomicAuctionModuleIsInstalled givenLotIsCreated {
         vm.assume(user_ != _SELLER);
 
         bytes memory err = abi.encodeWithSelector(IAuctionHouse.NotPermitted.selector, user_);

@@ -189,11 +189,9 @@ abstract contract FpsTest is Test, Permit2User {
         return _module.getLot(lotId_);
     }
 
-    function _getAuctionData(uint96 lotId_)
-        internal
-        view
-        returns (FixedPriceSale.AuctionData memory)
-    {
+    function _getAuctionData(
+        uint96 lotId_
+    ) internal view returns (FixedPriceSale.AuctionData memory) {
         (uint256 price_, uint256 maxPayout_) = _module.auctionData(lotId_);
 
         return IFixedPriceSale.AuctionData({price: price_, maxPayout: maxPayout_});

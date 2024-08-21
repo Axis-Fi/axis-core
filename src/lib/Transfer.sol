@@ -166,11 +166,9 @@ library Transfer {
         }
     }
 
-    function decodePermit2Approval(bytes memory data_)
-        internal
-        pure
-        returns (Permit2Approval memory)
-    {
+    function decodePermit2Approval(
+        bytes memory data_
+    ) internal pure returns (Permit2Approval memory) {
         // If the length is 0, then approval is not provided
         if (data_.length == 0) {
             return Permit2Approval({nonce: 0, deadline: 0, signature: bytes("")});
