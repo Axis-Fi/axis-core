@@ -1,10 +1,10 @@
 name: test
 
 on:
-    push:
-        branches:
-            - master
-    pull_request:
+  push:
+    branches:
+      - master
+  pull_request:
 
 jobs:
   check:
@@ -22,7 +22,7 @@ jobs:
       - name: Install pnpm
         uses: pnpm/action-setup@v4
         with:
-            version: 9
+          version: 9
 
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
@@ -42,8 +42,8 @@ jobs:
 
       - name: Configure sccache
         run: |
-            echo "RUSTC_WRAPPER=sccache" >> $GITHUB_ENV
-            echo "SCCACHE_GHA_ENABLED=true" >> $GITHUB_ENV
+          echo "RUSTC_WRAPPER=sccache" >> $GITHUB_ENV
+          echo "SCCACHE_GHA_ENABLED=true" >> $GITHUB_ENV
 
       - name: Run sccache-cache
         uses: mozilla-actions/sccache-action@v0.0.3

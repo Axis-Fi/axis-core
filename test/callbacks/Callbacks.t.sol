@@ -14,10 +14,9 @@ contract CallbacksTest is Test, WithSalts {
 
     address internal constant _AUCTION_HOUSE = address(0x000000000000000000000000000000000000000A);
 
-    function _getMockCallbackSalt(Callbacks.Permissions memory permissions_)
-        internal
-        returns (bytes32)
-    {
+    function _getMockCallbackSalt(
+        Callbacks.Permissions memory permissions_
+    ) internal returns (bytes32) {
         bytes memory args = abi.encode(_AUCTION_HOUSE, permissions_);
         return _getTestSalt("MockCallback", type(MockCallback).creationCode, args);
     }

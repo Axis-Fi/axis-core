@@ -120,7 +120,8 @@ contract MockCallback is BaseCallback {
 
         if (prefunded_) {
             // Do nothing, as tokens have already been transferred
-        } else {
+        }
+        else {
             if (onPurchaseMultiplier > 0) {
                 payout_ = uint96(uint256(payout_) * onPurchaseMultiplier / 100e2);
             }

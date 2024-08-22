@@ -38,7 +38,9 @@ contract BatchCancelAuctionTest is BatchAuctionHouseTest {
         _auctionHouse.cancel(_lotId, bytes(""));
     }
 
-    function test_whenUnauthorized_reverts(address user_)
+    function test_whenUnauthorized_reverts(
+        address user_
+    )
         external
         whenAuctionTypeIsBatch
         whenBatchAuctionModuleIsInstalled

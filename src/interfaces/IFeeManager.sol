@@ -68,10 +68,9 @@ interface IFeeManager {
     /// @return     protocol       Fee charged by the protocol
     /// @return     maxReferrerFee  Maximum fee that can be paid to a referrer
     /// @return     maxCuratorFee  Maximum fee that a curator can charge
-    function getFees(Keycode auctionType_)
-        external
-        view
-        returns (uint48 protocol, uint48 maxReferrerFee, uint48 maxCuratorFee);
+    function getFees(
+        Keycode auctionType_
+    ) external view returns (uint48 protocol, uint48 maxReferrerFee, uint48 maxCuratorFee);
 
     /// @notice     Gets the fee for a specific auction type and curator
     ///

@@ -86,7 +86,9 @@ abstract contract FeeManager is IFeeManager, ReentrancyGuard {
     }
 
     /// @inheritdoc IFeeManager
-    function getFees(Keycode auctionType_)
+    function getFees(
+        Keycode auctionType_
+    )
         external
         view
         override

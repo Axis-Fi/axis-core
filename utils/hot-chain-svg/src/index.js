@@ -6,7 +6,16 @@ const call = require('./call');
 const compile = require('./compile');
 const deploy = require('./deploy');
 
-const SOURCE = path.join(__dirname, '..', '..', '..', 'src', 'modules', 'derivatives', 'LinearVestingCard.sol');
+const SOURCE = path.join(
+  __dirname,
+  '..',
+  '..',
+  '..',
+  'src',
+  'modules',
+  'derivatives',
+  'LinearVestingCard.sol',
+);
 const PROJECT_DIR = path.join(__dirname, '..', '..', '..');
 
 async function main() {

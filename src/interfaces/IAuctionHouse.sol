@@ -152,7 +152,9 @@ interface IAuctionHouse {
     /// @dev        See the `Routing` struct for more information
     ///
     /// @param      lotId   ID of the auction lot
-    function lotRouting(uint96 lotId)
+    function lotRouting(
+        uint96 lotId
+    )
         external
         view
         returns (
@@ -171,7 +173,9 @@ interface IAuctionHouse {
     /// @dev        See the `FeeData` struct for more information
     ///
     /// @param      lotId   ID of the auction lot
-    function lotFees(uint96 lotId)
+    function lotFees(
+        uint96 lotId
+    )
         external
         view
         returns (

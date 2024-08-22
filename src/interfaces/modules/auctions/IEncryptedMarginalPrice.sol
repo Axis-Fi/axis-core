@@ -196,18 +196,16 @@ interface IEncryptedMarginalPrice {
     ///
     /// @param  lotId_          The lot ID
     /// @return auctionData_    The `AuctionData`
-    function getAuctionData(uint96 lotId_)
-        external
-        view
-        returns (AuctionData memory auctionData_);
+    function getAuctionData(
+        uint96 lotId_
+    ) external view returns (AuctionData memory auctionData_);
 
     /// @notice Returns the `PartialFill` data for an auction lot
     ///
     /// @param  lotId_          The lot ID
     /// @return hasPartialFill  True if a partial fill exists
     /// @return partialFill     The `PartialFill` data
-    function getPartialFill(uint96 lotId_)
-        external
-        view
-        returns (bool hasPartialFill, PartialFill memory partialFill);
+    function getPartialFill(
+        uint96 lotId_
+    ) external view returns (bool hasPartialFill, PartialFill memory partialFill);
 }

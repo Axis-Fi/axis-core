@@ -4,7 +4,7 @@ const VM = require('@ethereumjs/vm').default;
 async function boot() {
   const pk = Buffer.from(
     '1122334455667788112233445566778811223344556677881122334455667788',
-    'hex'
+    'hex',
   );
 
   const accountAddress = Address.fromPrivateKey(pk);

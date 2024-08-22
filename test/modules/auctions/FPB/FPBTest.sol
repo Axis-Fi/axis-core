@@ -218,10 +218,9 @@ abstract contract FpbTest is Test, Permit2User {
         _;
     }
 
-    function _claimBid(uint64 bidId_)
-        internal
-        returns (IBatchAuction.BidClaim[] memory bidClaims, bytes memory auctionOutput)
-    {
+    function _claimBid(
+        uint64 bidId_
+    ) internal returns (IBatchAuction.BidClaim[] memory bidClaims, bytes memory auctionOutput) {
         uint64[] memory bidIds = new uint64[](1);
         bidIds[0] = bidId_;
 

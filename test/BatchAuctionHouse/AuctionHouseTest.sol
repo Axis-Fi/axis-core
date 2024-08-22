@@ -174,11 +174,9 @@ abstract contract BatchAuctionHouseTest is Test, Permit2User, WithSalts {
         return (toReferrer, toProtocol, toReferrer + toProtocol);
     }
 
-    function _calculateCuratorFee(uint256 amountOut_)
-        internal
-        view
-        returns (uint256 curatorPayout_)
-    {
+    function _calculateCuratorFee(
+        uint256 amountOut_
+    ) internal view returns (uint256 curatorPayout_) {
         if (_curatorApproved == false) {
             return 0;
         }

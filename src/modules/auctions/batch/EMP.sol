@@ -892,12 +892,9 @@ contract EncryptedMarginalPrice is BatchAuctionModule, IEncryptedMarginalPrice {
     /// @inheritdoc IEncryptedMarginalPrice
     /// @dev        This function reverts if:
     ///             - The lot ID is invalid
-    function getAuctionData(uint96 lotId_)
-        external
-        view
-        override
-        returns (AuctionData memory auctionData_)
-    {
+    function getAuctionData(
+        uint96 lotId_
+    ) external view override returns (AuctionData memory auctionData_) {
         _revertIfLotInvalid(lotId_);
 
         return auctionData[lotId_];
@@ -909,11 +906,9 @@ contract EncryptedMarginalPrice is BatchAuctionModule, IEncryptedMarginalPrice {
     ///             This function reverts if:
     ///             - The lot ID is invalid
     ///             - The lot is not settled
-    function getPartialFill(uint96 lotId_)
-        external
-        view
-        returns (bool hasPartialFill, PartialFill memory partialFill)
-    {
+    function getPartialFill(
+        uint96 lotId_
+    ) external view returns (bool hasPartialFill, PartialFill memory partialFill) {
         _revertIfLotInvalid(lotId_);
         _revertIfLotNotSettled(lotId_);
 
