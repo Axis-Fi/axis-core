@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.1
+
+- Seller can now be a referrer to an auction and earn the referrer fee. This allows them to effectively not pay a fee when they direct traffic to their own auction
+- Improved linting / formatting for non-solidity files
+- Updated contracts deployed to mainnets and testnets
+
 ## 1.0.0
 
 - Initial production deployments to arbitrum, base, blast, and mantle
