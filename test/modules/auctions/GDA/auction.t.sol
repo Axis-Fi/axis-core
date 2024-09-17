@@ -3,9 +3,17 @@ pragma solidity 0.8.19;
 
 import {Module} from "../../../../src/modules/Modules.sol";
 import {IAuction} from "../../../../src/interfaces/modules/IAuction.sol";
-import {IGradualDutchAuction} from "../../../../src/interfaces/modules/auctions/IGradualDutchAuction.sol";
+import {IGradualDutchAuction} from
+    "../../../../src/interfaces/modules/auctions/IGradualDutchAuction.sol";
 
-import {UD60x18, ud, convert, UNIT, uUNIT, EXP_MAX_INPUT} from "../../../../lib/prb-math/src/UD60x18.sol";
+import {
+    UD60x18,
+    ud,
+    convert,
+    UNIT,
+    uUNIT,
+    EXP_MAX_INPUT
+} from "../../../../lib/prb-math/src/UD60x18.sol";
 import "../../../../lib/prb-math/src/Common.sol" as PRBMath;
 
 import {GdaTest} from "./GDATest.sol";

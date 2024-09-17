@@ -12,7 +12,8 @@ import {Permit2User} from "../../../lib/permit2/Permit2User.sol";
 // Modules
 import {AtomicAuctionHouse} from "../../../../src/AtomicAuctionHouse.sol";
 import {IAuction} from "../../../../src/interfaces/modules/IAuction.sol";
-import {IGradualDutchAuction} from "../../../../src/interfaces/modules/auctions/IGradualDutchAuction.sol";
+import {IGradualDutchAuction} from
+    "../../../../src/interfaces/modules/auctions/IGradualDutchAuction.sol";
 import {GradualDutchAuction} from "../../../../src/modules/auctions/atomic/GDA.sol";
 
 abstract contract GdaTest is Test, Permit2User {
