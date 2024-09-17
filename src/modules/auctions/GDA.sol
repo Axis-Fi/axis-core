@@ -344,7 +344,11 @@ contract GradualDutchAuction is IGradualDutchAuction, AtomicAuctionModule {
         // payout must be less then or equal to initial capacity
         // therefore, the resulting exponent is at most decay constant * duration
         // We convert this to a uint256 and manually perform the mulDivUp to reduce unnecessary operations
-        UD60x18 ekpr = ud(auction.decayConstant.intoUint256().mulDivUp(payout.intoUint256(),auction.emissionsRate.intoUint256())).exp().sub(UNIT);
+        UD60x18 ekpr = ud(
+            auction.decayConstant.intoUint256().mulDivUp(
+                payout.intoUint256(), auction.emissionsRate.intoUint256()
+            )
+        ).exp().sub(UNIT);
 
         // Handle cases of T being positive or negative
         UD60x18 result;
@@ -373,11 +377,19 @@ contract GradualDutchAuction is IGradualDutchAuction, AtomicAuctionModule {
             // This cannot exceed the max exponential input due to the bounds imbosed on auction creation
             // last auction start - current time is guaranteed to be < duration. If not, the auction is over.
             // We round up here since it is a component of the numerator.
-            UD60x18 ekt = ud(auction.decayConstant.intoUint256().mulDivUp(auction.lastAuctionStart - block.timestamp, ONE_DAY.intoUint256())).exp();
+            UD60x18 ekt = ud(
+                auction.decayConstant.intoUint256().mulDivUp(
+                    auction.lastAuctionStart - block.timestamp, ONE_DAY.intoUint256()
+                )
+            ).exp();
 
             // Calculate the first term in the formula
             // We round the overall result up to be conservative.
-            result = ud(priceDiff.intoUint256().mulDivUp(ekpr.intoUint256(), uUNIT).mulDivUp(ekt.intoUint256(), auction.decayConstant.intoUint256()));
+            result = ud(
+                priceDiff.intoUint256().mulDivUp(ekpr.intoUint256(), uUNIT).mulDivUp(
+                    ekt.intoUint256(), auction.decayConstant.intoUint256()
+                )
+            );
         }
 
         // If minimum price is zero, then the first term is the result, otherwise we add the second term
@@ -421,7 +433,7 @@ contract GradualDutchAuction is IGradualDutchAuction, AtomicAuctionModule {
     // r is the emissions rate, k is the decay constant, qm is the minimum price of the auction,
     // q0 is the equilibrium price of the auction, T is the time since the last auction start,
     // C = (q0 - qm)/(qm * e^(k * T)), and W is the Lambert-W function (productLn).
-    // 
+    //
     // The default behavior for integer division is to round down, which is want we want in this case.
     function _payoutAndEmissionsFor(
         uint96 lotId_,

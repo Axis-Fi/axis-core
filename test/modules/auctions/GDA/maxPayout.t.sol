@@ -20,24 +20,17 @@ contract GdaMaxPayoutTest is GdaTest {
         _module.maxPayout(lotId_);
     }
 
-    function testFuzz_maxPayout_success(uint128 capacity_)
-        public
-        givenLotCapacity(capacity_)
-        validateCapacity
-        givenLotIsCreated
-    {
+    function testFuzz_maxPayout_success(
+        uint128 capacity_
+    ) public givenLotCapacity(capacity_) validateCapacity givenLotIsCreated {
         uint256 maxPayout = _module.maxPayout(_lotId);
         uint256 expectedMaxPayout = capacity_;
         assertEq(expectedMaxPayout, maxPayout);
     }
 
-    function testFuzz_maxPayout_minPriceZero_success(uint128 capacity_)
-        public
-        givenLotCapacity(capacity_)
-        validateCapacity
-        givenMinPrice(0)
-        givenLotIsCreated
-    {
+    function testFuzz_maxPayout_minPriceZero_success(
+        uint128 capacity_
+    ) public givenLotCapacity(capacity_) validateCapacity givenMinPrice(0) givenLotIsCreated {
         uint256 maxPayout = _module.maxPayout(_lotId);
         uint256 expectedMaxPayout = capacity_;
         assertEq(expectedMaxPayout, maxPayout);

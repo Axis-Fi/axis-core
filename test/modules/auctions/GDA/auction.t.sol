@@ -82,10 +82,9 @@ contract GdaCreateAuctionTest is GdaTest {
         _createAuctionLot();
     }
 
-    function test_equilibriumPriceIsLessThanMin_reverts(uint128 price_)
-        public
-        givenEquilibriumPrice(price_ % 1e9)
-    {
+    function test_equilibriumPriceIsLessThanMin_reverts(
+        uint128 price_
+    ) public givenEquilibriumPrice(price_ % 1e9) {
         // Expect revert
         bytes memory err =
             abi.encodeWithSelector(IGradualDutchAuction.GDA_InvalidParams.selector, 0);
@@ -119,10 +118,9 @@ contract GdaCreateAuctionTest is GdaTest {
         _createAuctionLot();
     }
 
-    function test_capacityLessThanMin_reverts(uint128 capacity_)
-        public
-        givenLotCapacity(capacity_ % 1e9)
-    {
+    function test_capacityLessThanMin_reverts(
+        uint128 capacity_
+    ) public givenLotCapacity(capacity_ % 1e9) {
         // Expect revert
         bytes memory err =
             abi.encodeWithSelector(IGradualDutchAuction.GDA_InvalidParams.selector, 1);

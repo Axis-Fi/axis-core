@@ -226,12 +226,9 @@ contract GdaPriceForTest is GdaTest {
         assertGe(price, expectedPrice);
     }
 
-    function testFuzz_minPriceZero_varyingTimesteps(uint48 timestep_)
-        public
-        givenMinPrice(0)
-        givenLotIsCreated
-        givenLotHasStarted
-    {
+    function testFuzz_minPriceZero_varyingTimesteps(
+        uint48 timestep_
+    ) public givenMinPrice(0) givenLotIsCreated givenLotHasStarted {
         // Warp to the timestep
         uint48 timestep = timestep_ % _auctionParams.duration;
         console2.log("Warping to timestep:", timestep);
@@ -260,11 +257,9 @@ contract GdaPriceForTest is GdaTest {
         assertApproxEqRel(price, expectedPrice, 1e15); // 0.1%
     }
 
-    function testFuzz_minPriceNonZero_varyingTimesteps(uint48 timestep_)
-        public
-        givenLotIsCreated
-        givenLotHasStarted
-    {
+    function testFuzz_minPriceNonZero_varyingTimesteps(
+        uint48 timestep_
+    ) public givenLotIsCreated givenLotHasStarted {
         // Warp to the timestep
         uint48 timestep = timestep_ % _auctionParams.duration;
         console2.log("Warping to timestep:", timestep);

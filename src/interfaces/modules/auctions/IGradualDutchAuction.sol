@@ -43,8 +43,7 @@ interface IGradualDutchAuction is IAtomicAuction {
     /// @notice Returns the `AuctionData` for a lot
     ///
     /// @param  lotId       The lot ID
-    function auctionData(uint96 lotId)
-        external
-        view
-        returns (uint256, uint256, uint256, UD60x18, UD60x18);
+    function auctionData(
+        uint96 lotId
+    ) external view returns (uint256, uint256, uint256, UD60x18, UD60x18);
 }

@@ -246,11 +246,9 @@ abstract contract GdaTest is Test, Permit2User {
         return _module.getLot(lotId_);
     }
 
-    function _getAuctionData(uint96 lotId_)
-        internal
-        view
-        returns (IGradualDutchAuction.AuctionData memory)
-    {
+    function _getAuctionData(
+        uint96 lotId_
+    ) internal view returns (IGradualDutchAuction.AuctionData memory) {
         (
             uint256 eqPrice,
             uint256 minPrice,

@@ -118,11 +118,9 @@ contract GdaPurchaseTest is GdaTest {
         _createPurchase(_purchaseAmount, _purchaseAmountOut);
     }
 
-    function testFuzz_amountGreaterThanMaxAccepted_reverts(uint256 amount_)
-        public
-        givenLotIsCreated
-        givenLotHasStarted
-    {
+    function testFuzz_amountGreaterThanMaxAccepted_reverts(
+        uint256 amount_
+    ) public givenLotIsCreated givenLotHasStarted {
         uint256 maxAmountAccepted = _module.maxAmountAccepted(_lotId);
         vm.assume(amount_ > maxAmountAccepted);
 
@@ -133,11 +131,9 @@ contract GdaPurchaseTest is GdaTest {
         _createPurchase(amount_, 0); // We don't set the minAmountOut slippage check since trying to calculate the payout would revert
     }
 
-    function testFuzz_minPriceNonZero_success(uint256 amount_)
-        public
-        givenLotIsCreated
-        givenLotHasStarted
-    {
+    function testFuzz_minPriceNonZero_success(
+        uint256 amount_
+    ) public givenLotIsCreated givenLotHasStarted {
         uint256 maxAmountAccepted = _module.maxAmountAccepted(_lotId);
         uint256 amount = amount_ % (maxAmountAccepted + 1);
         console2.log("amount", amount);
@@ -155,7 +151,9 @@ contract GdaPurchaseTest is GdaTest {
         assertEq(lot.sold, expectedPayout, "sold");
     }
 
-    function testFuzz_minPriceNonZero_success_quoteTokenDecimalsLarger(uint256 amount_)
+    function testFuzz_minPriceNonZero_success_quoteTokenDecimalsLarger(
+        uint256 amount_
+    )
         public
         givenQuoteTokenDecimals(17)
         givenBaseTokenDecimals(13)
@@ -178,7 +176,9 @@ contract GdaPurchaseTest is GdaTest {
         assertEq(lot.sold, expectedPayout, "sold");
     }
 
-    function testFuzz_minPriceNonZero_success_quoteTokenDecimalsSmaller(uint256 amount_)
+    function testFuzz_minPriceNonZero_success_quoteTokenDecimalsSmaller(
+        uint256 amount_
+    )
         public
         givenQuoteTokenDecimals(13)
         givenBaseTokenDecimals(17)
@@ -201,10 +201,9 @@ contract GdaPurchaseTest is GdaTest {
         assertEq(lot.sold, expectedPayout, "sold");
     }
 
-    function testFuzz_minPriceNonZero_afterDecay_success(uint256 amount_)
-        public
-        givenLotIsCreated
-    {
+    function testFuzz_minPriceNonZero_afterDecay_success(
+        uint256 amount_
+    ) public givenLotIsCreated {
         // Warp forward in time to late in the auction
         vm.warp(_start + _DURATION - 1 hours);
 
@@ -332,12 +331,9 @@ contract GdaPurchaseTest is GdaTest {
         assertEq(lot.sold, expectedPayout, "sold");
     }
 
-    function testFuzz_minPriceZero_success(uint256 amount_)
-        public
-        givenMinPrice(0)
-        givenLotIsCreated
-        givenLotHasStarted
-    {
+    function testFuzz_minPriceZero_success(
+        uint256 amount_
+    ) public givenMinPrice(0) givenLotIsCreated givenLotHasStarted {
         uint256 maxAmountAccepted = _module.maxAmountAccepted(_lotId);
         uint256 amount = amount_ % (maxAmountAccepted + 1);
         console2.log("amount", amount);
@@ -355,7 +351,9 @@ contract GdaPurchaseTest is GdaTest {
         assertEq(lot.sold, expectedPayout, "sold");
     }
 
-    function testFuzz_minPriceZero_success_quoteTokenDecimalsLarger(uint256 amount_)
+    function testFuzz_minPriceZero_success_quoteTokenDecimalsLarger(
+        uint256 amount_
+    )
         public
         givenMinPrice(0)
         givenQuoteTokenDecimals(17)
@@ -379,7 +377,9 @@ contract GdaPurchaseTest is GdaTest {
         assertEq(lot.sold, expectedPayout, "sold");
     }
 
-    function testFuzz_minPriceZero_success_quoteTokenDecimalsSmaller(uint256 amount_)
+    function testFuzz_minPriceZero_success_quoteTokenDecimalsSmaller(
+        uint256 amount_
+    )
         public
         givenMinPrice(0)
         givenQuoteTokenDecimals(13)
@@ -403,11 +403,9 @@ contract GdaPurchaseTest is GdaTest {
         assertEq(lot.sold, expectedPayout, "sold");
     }
 
-    function testFuzz_minPriceZero_afterDecay_success(uint256 amount_)
-        public
-        givenMinPrice(0)
-        givenLotIsCreated
-    {
+    function testFuzz_minPriceZero_afterDecay_success(
+        uint256 amount_
+    ) public givenMinPrice(0) givenLotIsCreated {
         // Warp forward in time to late in the auction
         vm.warp(_start + _DURATION - 1 hours);
 
