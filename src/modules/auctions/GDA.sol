@@ -25,7 +25,7 @@ import {console2} from "lib/forge-std/src/console2.sol";
 
 /// @notice Continuous Gradual Dutch Auction (GDA) module with exponential decay and a minimum price.
 contract GradualDutchAuction is IGradualDutchAuction, AtomicAuctionModule {
-    using {PRBMath.mulDiv} for uint256;
+    using {PRBMath.mulDiv, PRBMath.mulDivUp} for uint256;
 
     // ========== STATE VARIABLES ========== //
     /* solhint-disable private-vars-leading-underscore */
@@ -312,6 +312,7 @@ contract GradualDutchAuction is IGradualDutchAuction, AtomicAuctionModule {
     // where T is the time since the last auction start, P is the number of payout tokens to purchase.
     //
     // Note: this function is an estimate. The actual price returned will vary some due to the precision of the calculations.
+    // Numerator mulDiv operations are rounded up and denominator mulDiv operations are rounded down to ensure the total rounding is conservative (up).
     function priceFor(uint96 lotId_, uint256 payout_) public view override returns (uint256) {
         // Lot ID must be valid
         _revertIfLotInvalid(lotId_);
@@ -336,15 +337,14 @@ contract GradualDutchAuction is IGradualDutchAuction, AtomicAuctionModule {
         UD60x18 priceDiff = ud(
             (auction.equilibriumPrice - auction.minimumPrice).mulDiv(uUNIT, quoteTokenScale)
         ).mul(auction.emissionsRate);
-        console2.log("price diff:", priceDiff.unwrap());
 
         // Calculate the second numerator factor: e^((k*P)/r) - 1
         // This cannot exceed the max exponential input due to the bounds imbosed on auction creation
         // emissions rate = initial capacity / duration
         // payout must be less then or equal to initial capacity
         // therefore, the resulting exponent is at most decay constant * duration
-        UD60x18 ekpr = auction.decayConstant.mul(payout).div(auction.emissionsRate).exp().sub(UNIT);
-        console2.log("ekpr:", ekpr.unwrap());
+        // We convert this to a uint256 and manually perform the mulDivUp to reduce unnecessary operations
+        UD60x18 ekpr = ud(auction.decayConstant.intoUint256().mulDivUp(payout.intoUint256(),auction.emissionsRate.intoUint256())).exp().sub(UNIT);
 
         // Handle cases of T being positive or negative
         UD60x18 result;
@@ -353,10 +353,10 @@ contract GradualDutchAuction is IGradualDutchAuction, AtomicAuctionModule {
             // Calculate the denominator: ke^(k*T)
             // This cannot exceed the max exponential input due to the bounds imbosed on auction creation
             // Current time - last auction start is guaranteed to be < duration. If not, the auction is over.
+            // We round down here (the default behavior) since it is a component of the denominator.
             UD60x18 kekt = auction.decayConstant.mul(
                 convert(block.timestamp - auction.lastAuctionStart).div(ONE_DAY)
             ).exp().mul(auction.decayConstant);
-            console2.log("kekt:", kekt.unwrap());
 
             // Calculate the first term in the formula
             // We convert this to a uint256 and manually perform the mulDiv
@@ -364,45 +364,30 @@ contract GradualDutchAuction is IGradualDutchAuction, AtomicAuctionModule {
             // multiplication operation.
             // Since we are multiplying and then dividing, the extra 10^18s
             // are cancelled out.
-            // result = priceDiff.mul(ekpr).div(kekt);
-            result = ud(priceDiff.intoUint256().mulDiv(ekpr.intoUint256(), kekt.intoUint256()));
-            console2.log("result:", result.unwrap());
+            // We round the overall result up to be conservative.
+            result = ud(priceDiff.intoUint256().mulDivUp(ekpr.intoUint256(), kekt.intoUint256()));
         } else {
             // T is negative: flip the e^(k * T) term to the numerator
 
             // Calculate the exponential: e^(k*T)
             // This cannot exceed the max exponential input due to the bounds imbosed on auction creation
             // last auction start - current time is guaranteed to be < duration. If not, the auction is over.
-            UD60x18 ekt = auction.decayConstant.mul(
-                convert(auction.lastAuctionStart - block.timestamp)
-            ).div(ONE_DAY).exp();
-            console2.log("ekt:", ekt.unwrap());
+            // We round up here since it is a component of the numerator.
+            UD60x18 ekt = ud(auction.decayConstant.intoUint256().mulDivUp(auction.lastAuctionStart - block.timestamp, ONE_DAY.intoUint256())).exp();
 
             // Calculate the first term in the formula
-            // TODO should we manually calculate this to avoid precision loss?
-            // A little bit trickier to make sure we avoid overflow here.
-            result = priceDiff.mul(ekpr).mul(ekt).div(auction.decayConstant);
-            console2.log("result:", result.unwrap());
+            // We round the overall result up to be conservative.
+            result = ud(priceDiff.intoUint256().mulDivUp(ekpr.intoUint256(), uUNIT).mulDivUp(ekt.intoUint256(), auction.decayConstant.intoUint256()));
         }
 
         // If minimum price is zero, then the first term is the result, otherwise we add the second term
         if (auction.minimumPrice > 0) {
-            UD60x18 minPrice = ud(auction.minimumPrice.mulDiv(uUNIT, quoteTokenScale));
-            result = result + minPrice.mul(payout);
-            console2.log("result with min price", result.unwrap());
+            uint256 minPrice = auction.minimumPrice.mulDiv(uUNIT, quoteTokenScale);
+            result = result + ud(minPrice.mulDivUp(payout.intoUint256(), uUNIT));
         }
 
-        // Scale price back to quote token decimals
+        // Scale price back to quote token decimals and return
         uint256 amount = result.intoUint256().mulDiv(quoteTokenScale, uUNIT);
-
-        // TODO? Add 0.01% to correct for errors and have a conservative estimate
-        // Problem: this makes maxAmountAccepted return values that are too high and revert purchases
-        // We do not use this for calculation input/output amounts during purchase
-        // Therefore, it doesn't need to be exact.
-        // Since it can/will be used off-chain to estimate the amount of quote tokens
-        // required to purchase a certain number of tokens, it's better to be
-        // conservative so that slippage amounts can be set appropriately.
-        // return (amount * (1e4 + 1)) / 1e4;
         return amount;
     }
 
@@ -436,6 +421,8 @@ contract GradualDutchAuction is IGradualDutchAuction, AtomicAuctionModule {
     // r is the emissions rate, k is the decay constant, qm is the minimum price of the auction,
     // q0 is the equilibrium price of the auction, T is the time since the last auction start,
     // C = (q0 - qm)/(qm * e^(k * T)), and W is the Lambert-W function (productLn).
+    // 
+    // The default behavior for integer division is to round down, which is want we want in this case.
     function _payoutAndEmissionsFor(
         uint96 lotId_,
         uint256 amount_
@@ -469,8 +456,6 @@ contract GradualDutchAuction is IGradualDutchAuction, AtomicAuctionModule {
                 UD60x18 ekt = auction.decayConstant.mul(
                     convert(block.timestamp - auction.lastAuctionStart).div(ONE_DAY)
                 ).exp();
-                console2.log("ekt:", ekt.unwrap());
-                console2.log("r * q0:", auction.emissionsRate.mul(q0).unwrap());
 
                 // Calculate the logarithm
                 // Operand is guaranteed to be >= 1, so the result is positive
@@ -486,7 +471,6 @@ contract GradualDutchAuction is IGradualDutchAuction, AtomicAuctionModule {
                 UD60x18 ekt = auction.decayConstant.mul(
                     convert(auction.lastAuctionStart - block.timestamp)
                 ).exp();
-                console2.log("ekt:", ekt.unwrap());
 
                 // Calculate the logarithm
                 // Operand is guaranteed to be >= 1, so the result is positive
@@ -506,7 +490,6 @@ contract GradualDutchAuction is IGradualDutchAuction, AtomicAuctionModule {
 
             // Calculate first term aka F:  (k * Q) / (r * qm)
             UD60x18 f = auction.decayConstant.mul(amount).div(auction.emissionsRate.mul(qm));
-            console2.log("first term:", f.unwrap());
 
             // Calculate second term aka C: (q0 - qm)/(qm * e^(k * T))
             UD60x18 c;
@@ -531,7 +514,6 @@ contract GradualDutchAuction is IGradualDutchAuction, AtomicAuctionModule {
                     ).exp()
                 );
             }
-            console2.log("second term:", c.unwrap());
 
             // Calculate the third term: W(C e^(F + C))
             // 17 wei is the maximum error for values in the
@@ -543,7 +525,6 @@ contract GradualDutchAuction is IGradualDutchAuction, AtomicAuctionModule {
             // We do not need to check for overflow before adding the error correction term
             // since the maximum value returned from the lambert-W function is ~131*10^18
             UD60x18 w = c.add(f).exp().mul(c).productLn() + ud(17);
-            console2.log("third term:", w.unwrap());
 
             // Without error correction, the intermediate term (f + c - w) cannot underflow because
             // firstTerm + c - thirdTerm >= 0 for all amounts >= 0.
@@ -562,10 +543,6 @@ contract GradualDutchAuction is IGradualDutchAuction, AtomicAuctionModule {
             // Therefore, we check for underflow on the term and set a floor at 0.
             UD60x18 fcw = w > f.add(c) ? ZERO : f.add(c).sub(w);
             payout = auction.emissionsRate.mul(fcw).div(auction.decayConstant);
-            console2.log("sum of terms:", fcw.unwrap());
-            console2.log("emissions rate:", auction.emissionsRate.unwrap());
-            console2.log("decay constant:", auction.decayConstant.unwrap());
-            console2.log("payout:", payout.unwrap());
         }
 
         // Calculate seconds of emissions from payout
