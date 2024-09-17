@@ -10,6 +10,7 @@ no-match-test = "optimal"
 
 [fuzz]
 runs = 1024
+max_test_rejects = 20000000
 
 # Remappings are setup using remappings.txt, since forge seems to ignore remappings here
 

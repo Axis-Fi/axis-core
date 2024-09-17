@@ -253,20 +253,18 @@ contract GdaPayoutForTest is GdaTest {
         console2.log("Capacity:", capacity_);
         console2.log("Price:", price_);
 
-        uint256 expectedPayout = _auctionParams.capacity / _DURATION;
+        uint256 expectedPayout = _auctionParams.capacity / _auctionParams.duration;
         uint256 amount = _gdaParams.equilibriumPrice.mulDiv(expectedPayout, _BASE_SCALE);
         console2.log("Amount:", amount);
         uint256 payout = _module.payoutFor(_lotId, amount);
         assertLe(payout, expectedPayout);
-        // assertApproxEqRel(payout, expectedPayout, 1e16); //TODO how to think about these bounds? some extremes have large errors
 
-        vm.warp(_start + _DECAY_PERIOD);
+        vm.warp(_start + _gdaParams.decayPeriod);
         amount = _gdaParams.equilibriumPrice.mulDiv(uUNIT - _gdaParams.decayTarget, uUNIT).mulDiv(
             expectedPayout, _BASE_SCALE
         );
         payout = _module.payoutFor(_lotId, amount);
         assertLe(payout, expectedPayout);
-        // assertApproxEqRel(payout, expectedPayout, 1e16);
     }
 
     function testFuzz_minPriceNonZero_varyingSetup(
@@ -293,15 +291,13 @@ contract GdaPayoutForTest is GdaTest {
         console2.log("Amount:", amount);
         uint256 payout = _module.payoutFor(_lotId, amount);
         assertLe(payout, expectedPayout);
-        // assertApproxEqRel(payout, expectedPayout, 1e16); //TODO how to think about these bounds? some extremes have large errors
 
-        vm.warp(_start + _auctionParams.duration);
+        vm.warp(_start + _gdaParams.decayPeriod);
         amount = _gdaParams.equilibriumPrice.mulDiv(uUNIT - _gdaParams.decayTarget, uUNIT).mulDiv(
             expectedPayout, _BASE_SCALE
         );
         payout = _module.payoutFor(_lotId, amount);
         assertLe(payout, expectedPayout);
-        // assertApproxEqRel(payout, expectedPayout, 1e16);
     }
 
     function testFuzz_minPriceZero_varyingTimesteps(uint48 timestep_)

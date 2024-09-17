@@ -220,7 +220,7 @@ contract GdaPriceForTest is GdaTest {
         uint256 expectedPrice = _gdaParams.equilibriumPrice.mulDiv(payout, _BASE_SCALE);
         assertGe(price, expectedPrice);
 
-        vm.warp(_start + _DECAY_PERIOD);
+        vm.warp(_start + _gdaParams.decayPeriod);
         price = _module.priceFor(_lotId, payout);
         expectedPrice = expectedPrice.mulDiv(uUNIT - _gdaParams.decayTarget, uUNIT);
         assertGe(price, expectedPrice);
