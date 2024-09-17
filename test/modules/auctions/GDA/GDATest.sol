@@ -2,18 +2,18 @@
 pragma solidity 0.8.19;
 
 // Libraries
-import {Test} from "forge-std/Test.sol";
-import {UD60x18, ud, uUNIT, ZERO} from "lib/prb-math/src/UD60x18.sol";
-import "lib/prb-math/src/Common.sol" as PRBMath;
+import {Test} from "@forge-std-1.9.1/Test.sol";
+import {UD60x18, ud, uUNIT, ZERO} from "../../../../lib/prb-math/src/UD60x18.sol";
+import "../../../../lib/prb-math/src/Common.sol" as PRBMath;
 
 // Mocks
-import {Permit2User} from "test/lib/permit2/Permit2User.sol";
+import {Permit2User} from "../../../lib/permit2/Permit2User.sol";
 
 // Modules
-import {AtomicAuctionHouse} from "src/AtomicAuctionHouse.sol";
-import {IAuction} from "src/interfaces/modules/IAuction.sol";
-import {IGradualDutchAuction} from "src/interfaces/modules/auctions/IGradualDutchAuction.sol";
-import {GradualDutchAuction} from "src/modules/auctions/GDA.sol";
+import {AtomicAuctionHouse} from "../../../../src/AtomicAuctionHouse.sol";
+import {IAuction} from "../../../../src/interfaces/modules/IAuction.sol";
+import {IGradualDutchAuction} from "../../../../src/interfaces/modules/auctions/IGradualDutchAuction.sol";
+import {GradualDutchAuction} from "../../../../src/modules/auctions/atomic/GDA.sol";
 
 abstract contract GdaTest is Test, Permit2User {
     using {PRBMath.mulDiv} for uint256;

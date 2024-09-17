@@ -2,11 +2,10 @@
 pragma solidity 0.8.19;
 
 // Protocol dependencies
-import {Module} from "src/modules/Modules.sol";
-import {AuctionModule} from "src/modules/Auction.sol";
-import {Veecode, toVeecode} from "src/modules/Modules.sol";
-import {AtomicAuctionModule} from "src/modules/auctions/AtomicAuctionModule.sol";
-import {IGradualDutchAuction} from "src/interfaces/modules/auctions/IGradualDutchAuction.sol";
+import {Module, Veecode, toVeecode} from "../../Modules.sol";
+import {AuctionModule} from "../../Auction.sol";
+import {AtomicAuctionModule} from "../AtomicAuctionModule.sol";
+import {IGradualDutchAuction} from "../../../interfaces/modules/auctions/IGradualDutchAuction.sol";
 
 // External libraries
 import {
@@ -18,10 +17,10 @@ import {
     EXP_MAX_INPUT,
     ZERO,
     HALF_UNIT
-} from "lib/prb-math/src/UD60x18.sol";
-import "lib/prb-math/src/Common.sol" as PRBMath;
+} from "../../../../lib/prb-math/src/UD60x18.sol";
+import "../../../../lib/prb-math/src/Common.sol" as PRBMath;
 
-import {console2} from "lib/forge-std/src/console2.sol";
+import {console2} from "@forge-std-1.9.1/console2.sol";
 
 /// @notice Continuous Gradual Dutch Auction (GDA) module with exponential decay and a minimum price.
 contract GradualDutchAuction is IGradualDutchAuction, AtomicAuctionModule {

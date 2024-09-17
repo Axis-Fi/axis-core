@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.19;
 
-import {IAuction} from "src/interfaces/modules/IAuction.sol";
-import {uUNIT} from "lib/prb-math/src/UD60x18.sol";
-import "lib/prb-math/src/Common.sol" as PRBMath;
+import {IAuction} from "../../../../src/interfaces/modules/IAuction.sol";
+import {uUNIT} from "../../../../lib/prb-math/src/UD60x18.sol";
+import "../../../../lib/prb-math/src/Common.sol" as PRBMath;
 
-import {GdaTest} from "test/modules/auctions/GDA/GDATest.sol";
-import {console2} from "lib/forge-std/src/console2.sol";
+import {GdaTest} from "./GDATest.sol";
+import {console2} from "@forge-std-1.9.1/console2.sol";
 
 contract GdaMaxAmountAcceptedTest is GdaTest {
     using {PRBMath.mulDiv} for uint256;

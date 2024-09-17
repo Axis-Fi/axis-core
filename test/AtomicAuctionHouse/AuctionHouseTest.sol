@@ -31,6 +31,7 @@ import {AuctionModule} from "../../src/modules/Auction.sol";
 import {Veecode, toKeycode, keycodeFromVeecode, Keycode} from "../../src/modules/Keycode.sol";
 
 import {WithSalts} from "../lib/WithSalts.sol";
+import {TestSaltConstants} from "../../script/salts/TestSaltConstants.sol";
 
 abstract contract AtomicAuctionHouseTest is Test, Permit2User, WithSalts, TestSaltConstants {
     MockFeeOnTransferERC20 internal _baseToken;
